@@ -8,7 +8,7 @@
     "agentsam": "src/cli.js"
   },
   "scripts": {
-    "test": "node src/index.js"
+    "test": "node test/smoke.mjs"
   },
   "repository": {
     "type": "git",
@@ -28,5 +28,9 @@
   "bugs": {
     "url": "https://github.com/SamPrimeaux/agentsam-sdk/issues"
   },
-  "homepage": "https://github.com/SamPrimeaux/agentsam-sdk#readme"
+  "homepage": "https://github.com/SamPrimeaux/agentsam-sdk#readme",
+  "files": [
+    "src",
+    "README.md"
+  ]
 }

@@ -8,9 +8,10 @@ const ask = (q) => new Promise(resolve => rl.question(q, resolve));
 
 const LANES = {
   '1': 'Full Stack',
-  '2': 'Data Solutions',
-  '3': 'Customer Management',
-  '4': 'Creative & Design',
+  '2': 'CMS',
+  '3': 'Data Solutions',
+  '4': 'Customer Management',
+  '5': 'Creative & Design',
 };
 
 const PROVIDERS = {
@@ -21,9 +22,10 @@ const PROVIDERS = {
 
 const AGENTS = {
   '1': 'orchestrator',
-  '2': 'data',
-  '3': 'crm',
-  '4': 'creative',
+  '2': 'cms',
+  '3': 'data',
+  '4': 'crm',
+  '5': 'creative',
 };
 
 async function init() {
@@ -38,33 +40,32 @@ async function init() {
   console.log(`
   Select a lane:
     1) Full Stack
-    2) Data Solutions
-    3) Customer Management
-    4) Creative & Design
+    2) CMS
+    3) Data Solutions
+    4) Customer Management
+    5) Creative & Design
   `);
-  const laneKey = await ask('  Lane [1-4]: ');
+  const laneKey = await ask('  Lane [1-5]: ');
   const lane = LANES[laneKey] ?? 'Full Stack';
 
-  let provider = 'Cloudflare Workers';
-  if (laneKey === '1') {
-    console.log(`
+  console.log(`
   Select a provider:
     1) Cloudflare Workers
     2) GitHub + Cloudflare
     3) Local / Self-hosted
-    `);
-    const providerKey = await ask('  Provider [1-3]: ');
-    provider = PROVIDERS[providerKey] ?? 'Cloudflare Workers';
-  }
+  `);
+  const providerKey = await ask('  Provider [1-3]: ');
+  const provider = PROVIDERS[providerKey] ?? 'Cloudflare Workers';
 
   console.log(`
   Select your default Agent Sam:
     1) Orchestrator    — general purpose, routes to all lanes
-    2) Data Agent      — database ops, migrations, queries
-    3) CRM Agent       — customer management, contacts, billing
-    4) Creative Agent  — design, 3D, media, content
+    2) CMS Agent       — pages, sections, assets, publishing workflows
+    3) Data Agent      — database ops, migrations, queries
+    4) CRM Agent       — customer management, contacts, billing
+    5) Creative Agent  — design, 3D, media, content
   `);
-  const agentKey = await ask('  Agent [1-4]: ');
+  const agentKey = await ask('  Agent [1-5]: ');
   const agent = AGENTS[agentKey] ?? 'orchestrator';
 
   const cfAccountId = await ask('  Cloudflare Account ID (enter to skip): ');
@@ -84,16 +85,22 @@ async function init() {
   const confirm = await ask('  Scaffold project? (y/n): ');
 
   if (confirm.toLowerCase() === 'y') {
-    const dir = scaffoldProject({ projectName, lane, provider, agent, cfAccountId });
-    console.log(`
+    try {
+      const dir = scaffoldProject({ projectName, lane, provider, agent, cfAccountId });
+      console.log(`
   ✓ Project created at ${dir}
 
   Next steps:
     cd ${projectName}
     cp .env.example .env
     npm install
+    npm run smoke
     npm run dev
     `);
+    } catch (error) {
+      console.error(`\n  ✗ ${error.message}\n`);
+      process.exitCode = 1;
+    }
   } else {
     console.log('\n  Cancelled.\n');
   }
@@ -112,6 +119,6 @@ if (command === 'init') {
   Usage:
     agentsam init        Initialize a new Agent Sam project
 
-  Version: 1.0.0
+  Version: 1.1.0
   `);
 }
