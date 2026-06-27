@@ -1,141 +1,123 @@
 import fs from 'fs';
 import path from 'path';
 
-export function scaffoldProject({ projectName, lane, provider, agent, cfAccountId }) {
-  const dir = path.resolve(process.cwd(), projectName);
+const LANE_KEYS = {
+  'Full Stack': 'fullstack',
+  CMS: 'cms',
+  'Data Solutions': 'data',
+  'Customer Management': 'crm',
+  'Creative & Design': 'creative',
+};
 
-  if (fs.existsSync(dir)) {
-    console.error(`\n  ✗ Directory "${projectName}" already exists.\n`);
-    process.exit(1);
-  }
+const AGENT_FOR_LANE = {
+  fullstack: 'orchestrator',
+  cms: 'cms',
+  data: 'data',
+  crm: 'crm',
+  creative: 'creative',
+};
 
-  fs.mkdirSync(dir, { recursive: true });
-  fs.mkdirSync(`${dir}/src`, { recursive: true });
+function write(file, content) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, content.trimStart());
+}
 
-  // agentsam.config.js
-  fs.writeFileSync(`${dir}/agentsam.config.js`, `
+function slugify(value) {
+  return String(value || 'agentsam-project')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'agentsam-project';
+}
+
+function workerTemplate({ projectName, laneKey, agent }) {
+  return `
+import { AgentSam } from '@inneranimalmedia/agentsam-sdk';
+
 export default {
-  project: '${projectName}',
-  lane: '${lane}',
-  provider: '${provider}',
-  agent: '${agent}',
-  cloudflare: {
-    accountId: '${cfAccountId || ''}',
-  },
-  api: {
-    baseUrl: 'https://api.inneranimalmedia.com',
+  async fetch(request, env, ctx) {
+    const agent = new AgentSam({
+      env,
+      ctx,
+      project: '${projectName}',
+      lane: '${laneKey}',
+      agent: '${agent}',
+    });
+
+    return agent.handle(request);
   },
 };
-`.trimStart());
+`;
+}
 
-  // .env.example
-  fs.writeFileSync(`${dir}/.env.example`, `
-AGENTSAM_API_KEY=
-CLOUDFLARE_ACCOUNT_ID=${cfAccountId || ''}
-CLOUDFLARE_API_TOKEN=
-`.trimStart());
-
-  // .gitignore
-  fs.writeFileSync(`${dir}/.gitignore`, `
-node_modules/
-.env
-.dev.vars
-dist/
-`.trimStart());
-
-  // package.json
-  fs.writeFileSync(`${dir}/package.json`, JSON.stringify({
-    name: projectName,
-    version: '0.1.0',
-    type: 'module',
-    scripts: {
-      dev: 'wrangler dev',
-      deploy: 'wrangler deploy',
-    },
-    dependencies: {
-      '@inneranimalmedia/agentsam-sdk': '^1.0.0',
-    },
-  }, null, 2));
-
-  // Lane-specific files
-  if (lane === 'Full Stack' || lane === 'Data Solutions') {
-    fs.mkdirSync(`${dir}/migrations`, { recursive: true });
-    fs.writeFileSync(`${dir}/migrations/0001_init.sql`, `
--- Initial schema for ${projectName}
+function migrationTemplate({ projectName, laneKey }) {
+  return `
+-- AgentSam core schema for ${projectName}
 CREATE TABLE IF NOT EXISTS agent_sessions (
   id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL,
-  created_at INTEGER DEFAULT (unixepoch())
+  agent TEXT NOT NULL,
+  lane TEXT NOT NULL,
+  goal TEXT,
+  status TEXT NOT NULL DEFAULT 'created',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
-`.trimStart());
-  }
 
-  if (lane === 'Full Stack' || provider === 'Cloudflare Workers' || provider === 'GitHub + Cloudflare') {
-    fs.writeFileSync(`${dir}/wrangler.toml`, `
-name = "${projectName}"
-main = "src/index.js"
-compatibility_date = "2025-01-01"
+CREATE TABLE IF NOT EXISTS agent_messages (
+  id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL,
+  role TEXT NOT NULL,
+  content TEXT NOT NULL,
+  metadata_json TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (session_id) REFERENCES agent_sessions(id)
+);
 
-[[d1_databases]]
-binding = "DB"
-database_name = "${projectName}-db"
-database_id = ""
-`.trimStart());
-  }
+CREATE TABLE IF NOT EXISTS agent_tool_calls (
+  id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL,
+  tool_name TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'queued',
+  input_json TEXT,
+  output_json TEXT,
+  requires_approval INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  completed_at TEXT,
+  FOREIGN KEY (session_id) REFERENCES agent_sessions(id)
+);
 
-  // src/index.js — lane-specific worker
-  const workers = {
-    'Full Stack': `
-import { AgentSam } from '@inneranimalmedia/agentsam-sdk';
+${laneKey === 'cms' ? `
+CREATE TABLE IF NOT EXISTS cms_pages (
+  id TEXT PRIMARY KEY,
+  slug TEXT NOT NULL UNIQUE,
+  title TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'draft',
+  hero_asset_key TEXT,
+  content_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 
-export default {
-  async fetch(request, env, ctx) {
-    const agent = new AgentSam({ env, agent: 'orchestrator' });
-    return agent.handle(request);
-  },
-};
-`,
-    'Data Solutions': `
-import { AgentSam } from '@inneranimalmedia/agentsam-sdk';
+CREATE TABLE IF NOT EXISTS cms_assets (
+  id TEXT PRIMARY KEY,
+  r2_key TEXT NOT NULL UNIQUE,
+  title TEXT,
+  alt_text TEXT,
+  metadata_json TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+` : ''}
+`;
+}
 
-export default {
-  async fetch(request, env, ctx) {
-    const agent = new AgentSam({ env, agent: 'data' });
-    return agent.handle(request);
-  },
-};
-`,
-    'Customer Management': `
-import { AgentSam } from '@inneranimalmedia/agentsam-sdk';
-
-export default {
-  async fetch(request, env, ctx) {
-    const agent = new AgentSam({ env, agent: 'crm' });
-    return agent.handle(request);
-  },
-};
-`,
-    'Creative & Design': `
-import { AgentSam } from '@inneranimalmedia/agentsam-sdk';
-
-export default {
-  async fetch(request, env, ctx) {
-    const agent = new AgentSam({ env, agent: 'creative' });
-    return agent.handle(request);
-  },
-};
-`,
-  };
-
-  fs.writeFileSync(`${dir}/src/index.js`, workers[lane].trimStart());
-
-  // README
-  fs.writeFileSync(`${dir}/README.md`, `
+function readmeTemplate({ projectName, lane, provider, agent }) {
+  return `
 # ${projectName}
 
 Scaffolded with [Agent Sam SDK](https://www.npmjs.com/package/@inneranimalmedia/agentsam-sdk).
 
 ## Lane
+
 **${lane}** — ${agent} agent, ${provider}
 
 ## Setup
@@ -151,12 +133,124 @@ npm install
 npm run dev
 \`\`\`
 
+## Smoke test
+
+\`\`\`bash
+npm run smoke
+\`\`\`
+
 ## Deploy
 
 \`\`\`bash
 npm run deploy
 \`\`\`
-`.trimStart());
+
+## Endpoints
+
+- \`GET /api/health\`
+- \`GET /api/agentsam/info\`
+- \`POST /api/agentsam/session\`
+- \`POST /api/agentsam/message\`
+`;
+}
+
+export function scaffoldProject({ projectName, lane, provider, agent, cfAccountId }) {
+  const safeName = slugify(projectName);
+  const dir = path.resolve(process.cwd(), safeName);
+  const laneKey = LANE_KEYS[lane] ?? 'fullstack';
+  const selectedAgent = agent || AGENT_FOR_LANE[laneKey] || 'orchestrator';
+
+  if (fs.existsSync(dir)) {
+    throw new Error(`Directory "${safeName}" already exists.`);
+  }
+
+  fs.mkdirSync(dir, { recursive: true });
+  fs.mkdirSync(`${dir}/src`, { recursive: true });
+  fs.mkdirSync(`${dir}/migrations`, { recursive: true });
+
+  write(`${dir}/agentsam.config.js`, `
+export default {
+  project: '${safeName}',
+  lane: '${laneKey}',
+  provider: '${provider}',
+  agent: '${selectedAgent}',
+  cloudflare: {
+    accountId: '${cfAccountId || ''}',
+  },
+  api: {
+    baseUrl: '/api/agentsam',
+  },
+};
+`);
+
+  write(`${dir}/.env.example`, `
+AGENTSAM_API_KEY=
+CLOUDFLARE_ACCOUNT_ID=${cfAccountId || ''}
+CLOUDFLARE_API_TOKEN=
+`);
+
+  write(`${dir}/.gitignore`, `
+node_modules/
+.env
+.dev.vars
+dist/
+.wrangler/
+`);
+
+  write(`${dir}/package.json`, `${JSON.stringify({
+    name: safeName,
+    version: '0.1.0',
+    type: 'module',
+    scripts: {
+      dev: 'wrangler dev',
+      deploy: 'wrangler deploy',
+      smoke: 'node ./scripts/smoke.mjs',
+    },
+    dependencies: {
+      '@inneranimalmedia/agentsam-sdk': '^1.1.0',
+    },
+    devDependencies: {
+      wrangler: '^4.0.0',
+    },
+  }, null, 2)}\n`);
+
+  write(`${dir}/wrangler.toml`, `
+name = "${safeName}"
+main = "src/index.js"
+compatibility_date = "2026-06-27"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "${safeName}-db"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "${safeName}"
+`);
+
+  write(`${dir}/migrations/0001_agentsam_core.sql`, migrationTemplate({ projectName: safeName, laneKey }));
+  write(`${dir}/src/index.js`, workerTemplate({ projectName: safeName, laneKey, agent: selectedAgent }));
+  write(`${dir}/README.md`, readmeTemplate({ projectName: safeName, lane, provider, agent: selectedAgent }));
+
+  write(`${dir}/scripts/smoke.mjs`, `
+import { AgentSam } from '@inneranimalmedia/agentsam-sdk';
+
+const app = new AgentSam({ project: '${safeName}', lane: '${laneKey}', agent: '${selectedAgent}' });
+const res = await app.handle(new Request('https://example.com/api/health'));
+const data = await res.json();
+
+if (!data.ok) {
+  console.error(data);
+  process.exit(1);
+}
+
+console.log('AgentSam smoke test passed:', data);
+`);
 
   return dir;
 }
