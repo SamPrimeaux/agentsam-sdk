@@ -1,0 +1,32 @@
+{
+  "name": "@inneranimalmedia/agentsam-sdk",
+  "version": "1.1.0",
+  "description": "Agent Sam is a full-stack AI agent SDK for autonomous task execution — covering data management, creative workflows, design commands, and multi-step agentic pipelines.",
+  "main": "src/index.js",
+  "type": "module",
+  "bin": {
+    "agentsam": "src/cli.js"
+  },
+  "scripts": {
+    "test": "node src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/SamPrimeaux/agentsam-sdk.git"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "sdk",
+    "autonomous",
+    "mcp",
+    "cloudflare",
+    "workers"
+  ],
+  "author": "Sam Primeaux <sam@inneranimalmedia.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/SamPrimeaux/agentsam-sdk/issues"
+  },
+  "homepage": "https://github.com/SamPrimeaux/agentsam-sdk#readme"
+}
