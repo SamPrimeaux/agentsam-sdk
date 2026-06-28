@@ -26,12 +26,20 @@ It is not a wrapper around a chat API. It is a command fabric with a conversatio
 npx @inneranimalmedia/agentsam-sdk init
 \`\`\`
 
-You will be guided through:
+Non-interactive (CI / scripts):
 
-- **Lane selection** — Full Stack, CMS, Data Solutions, Customer Management, or Creative & Design
-- **Provider** — Cloudflare Workers, GitHub + Cloudflare, or Local / Self-hosted
-- **Default agent** — Orchestrator, CMS, Data, CRM, or Creative
-- **Project scaffolding** — config, worker template, D1 migrations, KV bindings, Durable Objects, env setup — all generated for your lane
+\`\`\`bash
+npx @inneranimalmedia/agentsam-sdk init \\
+  --name my-agent \\
+  --lane fullstack \\
+  --provider cloudflare \\
+  --agent orchestrator \\
+  --yes
+\`\`\`
+
+Scaffolded workers expose \`GET /health\` and \`POST /chat\` immediately (stub mode without an API key).
+
+See [DEVELOPMENT.md](./DEVELOPMENT.md) for linking the SDK into Inner Animal Media locally.
 
 ---
 
