@@ -16,13 +16,15 @@ function createPrompt() {
 
 const LANES = {
   '1': 'Full Stack',
-  '2': 'Data Solutions',
-  '3': 'Customer Management',
-  '4': 'Creative & Design',
+  '2': 'CMS',
+  '3': 'Data Solutions',
+  '4': 'Customer Management',
+  '5': 'Creative & Design',
 };
 
 const LANE_BY_SLUG = {
   fullstack: 'Full Stack',
+  cms: 'CMS',
   data: 'Data Solutions',
   crm: 'Customer Management',
   creative: 'Creative & Design',
@@ -42,13 +44,14 @@ const PROVIDER_BY_SLUG = {
 
 const AGENTS = {
   '1': 'orchestrator',
-  '2': 'data',
-  '3': 'crm',
-  '4': 'creative',
+  '2': 'cms',
+  '3': 'data',
+  '4': 'crm',
+  '5': 'creative',
 };
 
-function laneKeyFromSlug(slug) {
-  const entry = Object.entries(LANES).find(([, label]) => label === slug);
+function laneKeyFromLabel(label) {
+  const entry = Object.entries(LANES).find(([, v]) => v === label);
   return entry?.[0] ?? '1';
 }
 
@@ -63,9 +66,9 @@ function printHelp() {
 
   Init options (non-interactive):
     --name <name>               Project directory name
-    --lane <fullstack|data|crm|creative>
+    --lane <fullstack|cms|data|crm|creative>
     --provider <cloudflare|github|local>
-    --agent <orchestrator|data|crm|creative>
+    --agent <orchestrator|cms|data|crm|creative>
     --cf-account <id>           Cloudflare account ID
     --yes                       Skip confirmation prompt
   `);
@@ -85,9 +88,13 @@ function parseInitArgs(argv) {
     const arg = argv[i];
     if (arg === '--yes' || arg === '-y') opts.yes = true;
     else if (arg === '--name') opts.projectName = argv[++i] || '';
-    else if (arg === '--lane') opts.lane = LANE_BY_SLUG[argv[++i]] || argv[i] || '';
-    else if (arg === '--provider') opts.provider = PROVIDER_BY_SLUG[argv[++i]] || argv[i] || '';
-    else if (arg === '--agent') opts.agent = argv[++i] || '';
+    else if (arg === '--lane') {
+      const slug = argv[++i] || '';
+      opts.lane = LANE_BY_SLUG[slug] || slug;
+    } else if (arg === '--provider') {
+      const slug = argv[++i] || '';
+      opts.provider = PROVIDER_BY_SLUG[slug] || slug;
+    } else if (arg === '--agent') opts.agent = argv[++i] || '';
     else if (arg === '--cf-account') opts.cfAccountId = argv[++i] || '';
   }
 
@@ -105,11 +112,12 @@ async function runInit(config) {
     prompt = null,
   } = config;
 
+  const safeDir = projectName.trim();
   console.log(`
   ┌─────────────────────────────────────┐
   │  Agent Sam Project Config           │
   ├─────────────────────────────────────┤
-  │  Project:   ${projectName.padEnd(25)}│
+  │  Project:   ${safeDir.padEnd(25)}│
   │  Lane:      ${lane.padEnd(25)}│
   │  Provider:  ${provider.padEnd(25)}│
   │  Agent:     ${agent.padEnd(25)}│
@@ -123,17 +131,29 @@ async function runInit(config) {
   }
 
   if (confirm.toLowerCase() === 'y') {
-    const dir = scaffoldProject({ projectName, lane, provider, agent, cfAccountId, sdkVersion: VERSION });
-    console.log(`
+    try {
+      const dir = scaffoldProject({
+        projectName: safeDir,
+        lane,
+        provider,
+        agent,
+        cfAccountId,
+        sdkVersion: VERSION,
+      });
+      console.log(`
   ✓ Project created at ${dir}
 
   Next steps:
-    cd ${projectName}
+    cd ${dir.split('/').pop()}
     cp .env.example .env
     npm install
+    npm run smoke
     npm run dev
-    curl http://localhost:8787/health
     `);
+    } catch (error) {
+      console.error(`\n  ✗ ${error.message}\n`);
+      process.exitCode = 1;
+    }
   } else {
     console.log('\n  Cancelled.\n');
   }
@@ -154,39 +174,39 @@ async function initInteractive(partial = {}) {
     console.log(`
   Select a lane:
     1) Full Stack
-    2) Data Solutions
-    3) Customer Management
-    4) Creative & Design
+    2) CMS
+    3) Data Solutions
+    4) Customer Management
+    5) Creative & Design
   `);
   }
-  const laneKey = partial.lane ? laneKeyFromSlug(partial.lane) : await prompt.ask('  Lane [1-4]: ');
+  const laneKey = partial.lane ? laneKeyFromLabel(partial.lane) : await prompt.ask('  Lane [1-5]: ');
   const lane = partial.lane || LANES[laneKey] || 'Full Stack';
 
-  let provider = partial.provider || 'Cloudflare Workers';
-  const laneNum = partial.lane ? laneKeyFromSlug(partial.lane) : laneKey;
-  if (!partial.provider && laneNum === '1') {
-    console.log(`
+  console.log(`
   Select a provider:
     1) Cloudflare Workers
     2) GitHub + Cloudflare
     3) Local / Self-hosted
-    `);
-    const providerKey = await prompt.ask('  Provider [1-3]: ');
-    provider = PROVIDERS[providerKey] ?? 'Cloudflare Workers';
-  }
+  `);
+  const providerKey = partial.provider
+    ? Object.entries(PROVIDERS).find(([, v]) => v === partial.provider)?.[0] || '1'
+    : await prompt.ask('  Provider [1-3]: ');
+  const provider = partial.provider || PROVIDERS[providerKey] || 'Cloudflare Workers';
 
   if (!partial.agent) {
     console.log(`
   Select your default Agent Sam:
     1) Orchestrator    — general purpose, routes to all lanes
-    2) Data Agent      — database ops, migrations, queries
-    3) CRM Agent       — customer management, contacts, billing
-    4) Creative Agent  — design, 3D, media, content
+    2) CMS Agent       — pages, sections, assets, publishing workflows
+    3) Data Agent      — database ops, migrations, queries
+    4) CRM Agent       — customer management, contacts, billing
+    5) Creative Agent  — design, 3D, media, content
   `);
   }
   const agentKey = partial.agent
     ? Object.entries(AGENTS).find(([, v]) => v === partial.agent)?.[0] || '1'
-    : await prompt.ask('  Agent [1-4]: ');
+    : await prompt.ask('  Agent [1-5]: ');
   const agent = partial.agent || AGENTS[agentKey] || 'orchestrator';
 
   const cfAccountId =

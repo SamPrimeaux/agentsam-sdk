@@ -13,12 +13,14 @@
   },
   "files": [
     "src",
+    "test",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "DEVELOPMENT.md"
   ],
   "scripts": {
-    "test": "node scripts/smoke.mjs",
-    "smoke": "node scripts/smoke.mjs",
+    "test": "node test/smoke.mjs",
+    "smoke": "node test/smoke.mjs",
     "prepublishOnly": "npm test"
   },
   "engines": {

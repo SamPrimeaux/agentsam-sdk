@@ -2,7 +2,9 @@
 
 import pkg from '../package.json' with { type: 'json' };
 
-export { AgentSam } from './agent.js';
+export { AgentSam } from './AgentSam.js';
+export { routeIntent } from './lib/router.js';
+export { getToolCatalog } from './lib/tools.js';
 export { scaffoldProject } from './lib/scaffold.js';
 
 export const version = pkg.version;
