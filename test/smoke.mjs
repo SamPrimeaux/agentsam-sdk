@@ -2,7 +2,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { AgentSam, routeIntent, getToolCatalog } from '../src/index.js';
+import {
+  AgentSam,
+  collectNpmDependencies,
+  createOsvQueries,
+  getToolCatalog,
+  scanProjectSecurity,
+  routeIntent,
+} from '../src/index.js';
 import { scaffoldProject } from '../src/lib/scaffold.js';
 
 const app = new AgentSam({ project: 'smoke', lane: 'cms', agent: 'cms' });
@@ -34,5 +41,25 @@ process.chdir(cwd);
 assert.ok(fs.existsSync(path.join(dir, 'src/index.js')));
 assert.ok(fs.readFileSync(path.join(dir, 'migrations/0001_agentsam_core.sql'), 'utf8').includes('cms_pages'));
 assert.ok(fs.readFileSync(path.join(dir, 'package.json'), 'utf8').includes('wrangler'));
+
+const securityDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-sca-test-'));
+fs.writeFileSync(path.join(securityDir, 'package-lock.json'), JSON.stringify({
+  lockfileVersion: 3,
+  packages: {
+    '': { dependencies: { lodash: '^4.17.20' } },
+    'node_modules/lodash': { version: '4.17.20' },
+  },
+}, null, 2));
+
+const deps = collectNpmDependencies(securityDir);
+assert.equal(deps.length, 1);
+assert.equal(deps[0].name, 'lodash');
+assert.equal(deps[0].direct, true);
+assert.deepEqual(createOsvQueries(deps), [{ package: { ecosystem: 'npm', name: 'lodash' }, version: '4.17.20' }]);
+
+const securityReport = await scanProjectSecurity({ projectRoot: securityDir, queryOsv: false });
+assert.equal(securityReport.scanner, 'agentsam-sca');
+assert.equal(securityReport.dependency_count, 1);
+assert.equal(securityReport.vulnerable_count, 0);
 
 console.log('SDK smoke tests passed');
