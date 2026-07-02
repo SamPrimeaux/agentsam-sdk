@@ -1,184 +1,301 @@
 # Agent Sam SDK
 
-> The AI agent layer for developers who need more than a chatbot.
+> Build capabilities once. Run them anywhere.
 
-Agent Sam is a full-stack autonomous agent SDK built on Cloudflare Workers, D1, Supabase, Durable Objects, and MCP — designed to converse, plan, and execute real work across your entire stack. CMS websites, full-stack applications, data pipelines, creative workflows, terminal execution, deployments, and multi-step agentic pipelines — all through one unified agent interface.
+Agent Sam is an execution layer for modern software teams. It turns engineering knowledge into reusable, versioned pipelines that can be executed from code, the terminal, AI agents, or a visual dashboard.
 
----
+It is not just another AI SDK. Agent Sam is designed to help teams build, validate, deploy, and maintain software with AI-assisted workflows that are repeatable, inspectable, and safe to ship.
 
-## What is Agent Sam?
+```txt
+Intent
+  → AgentSam pipeline
+  → verified execution
+  → security checks
+  → deployment-ready output
+  → telemetry and audit trail
+```
 
-Agent Sam is a platform operator AI. It sits on top of your infrastructure and can:
+## Why Agent Sam Exists
 
-- **Understand intent** — natural language in, real actions out
-- **Execute across surfaces** — terminal, database, browser, CAD, deploy, MCP tools
-- **Route intelligently** — local machine, cloud VM, or sandboxed environment based on context
-- **Gate high-risk actions** — approval flows before anything destructive runs
-- **Leave an audit trail** — every tool call, command run, and decision is logged
+Most AI developer tools start with a prompt and hope the model does the right thing.
 
-It is not a wrapper around a chat API. It is a command fabric with a conversation interface.
+Agent Sam starts with a pipeline.
 
----
+The goal is to package the best parts of software delivery into reliable commands, SDK modules, dashboard actions, and MCP tools. Whether a user clicks a button, runs a terminal command, or asks an AI agent to execute work, the same underlying workflow should run every time.
+
+```txt
+Dashboard = visual control plane
+SDK       = reusable engine
+CLI       = automation interface
+MCP       = AI execution interface
+```
+
+## Core Principles
+
+### Build once, expose everywhere
+
+A capability should be built once and reused across every interface:
+
+1. Create the workflow.
+2. Refine it until it is reliable.
+3. Export it through the SDK.
+4. Attach a simple CLI command.
+5. Surface it in the dashboard.
+6. Let AI agents execute the same pipeline through MCP.
+
+### Pipelines over prompts
+
+Prompts are flexible, but pipelines are dependable. Agent Sam turns repeatable work into named flows with predictable inputs, outputs, checks, approvals, and logs.
+
+### AI with guardrails
+
+Agent Sam is meant to operate real projects. That means destructive actions, deployments, database changes, secrets, dependencies, and client work need approvals, audit trails, and security checks.
+
+### Productized systems, not one-off templates
+
+The long-term vision is to convert proven internal builds into reusable systems that can be installed, customized, maintained, and sold.
+
+## Install
+
+```bash
+npm install @inneranimalmedia/agentsam-sdk
+```
+
+Or run from the terminal with `npx`:
+
+```bash
+npx @inneranimalmedia/agentsam-sdk --help
+```
 
 ## Quickstart
 
-\`\`\`bash
-npx @inneranimalmedia/agentsam-sdk init
-\`\`\`
+Create a new Agent Sam project:
 
-Non-interactive (CI / scripts):
-
-\`\`\`bash
-npx @inneranimalmedia/agentsam-sdk init \\
-  --name my-agent \\
-  --lane fullstack \\
-  --provider cloudflare \\
-  --agent orchestrator \\
+```bash
+npx @inneranimalmedia/agentsam-sdk init \
+  --name my-agent \
+  --lane fullstack \
+  --provider cloudflare \
+  --agent orchestrator \
   --yes
-\`\`\`
+```
 
-Scaffolded workers expose \`GET /health\` and \`POST /chat\` immediately (stub mode without an API key).
+Scaffolded projects include a Cloudflare Worker entrypoint, `wrangler.toml`, D1 migration starter, environment template, health endpoint, AgentSam message endpoint, and smoke test.
 
-See [DEVELOPMENT.md](./DEVELOPMENT.md) for linking the SDK into Inner Animal Media locally.
+## SDK Usage
 
----
+```js
+import { AgentSam, scanProjectSecurity } from '@inneranimalmedia/agentsam-sdk';
 
-## Installation
+const app = new AgentSam({
+  project: 'my-agent',
+  lane: 'fullstack',
+  agent: 'orchestrator',
+});
 
-\`\`\`bash
-npm install @inneranimalmedia/agentsam-sdk
-\`\`\`
+export default {
+  fetch(request, env, ctx) {
+    return app.handle(request, env, ctx);
+  },
+};
 
----
+const report = await scanProjectSecurity({ projectRoot: process.cwd() });
+console.log(report.ok ? 'safe to continue' : 'security review needed');
+```
 
-## Lanes
+## CLI Usage
 
-| Lane | Best For |
-|------|----------|
-| **Full Stack** | End-to-end apps — agent chat, terminal, deploy, D1, R2, Durable Objects, KV |
-| **CMS** | Content-managed websites — pages, assets, themes, navigation, live edit |
-| **Data Solutions** | Database ops, migrations, queries, Supabase pgvector, Hyperdrive pipelines |
-| **Customer Management** | CRM, contacts, billing, client workflows, multi-tenant isolation |
-| **Creative & Design** | CAD, 3D, media generation, content pipelines |
+```bash
+agentsam init
+agentsam security scan
+agentsam sca scan --json
+agentsam sca scan --offline
+```
 
----
+Planned commands:
 
-## Agents
+```bash
+agentsam doctor
+agentsam deploy
+agentsam logs
+agentsam status
+agentsam workspace audit
+agentsam cms publish
+agentsam database migrate
+agentsam kit install animal-rescue
+```
+
+## Capabilities
+
+### Agents
+
+Agent Sam routes work through specialist lanes:
 
 | Agent | Role |
-|-------|------|
-| **Orchestrator** | General purpose — routes across all lanes and tools |
-| **CMS Agent** | Pages, sections, assets, themes, publishing workflows |
-| **Data Agent** | D1, Supabase, Hyperdrive, migrations, vector search |
-| **CRM Agent** | Customer records, contacts, billing, client isolation |
-| **Creative Agent** | Design commands, 3D generation, CAD, media pipelines |
+|---|---|
+| Orchestrator | General-purpose planning and routing |
+| CMS Agent | Pages, sections, assets, publishing, content workflows |
+| Data Agent | D1, Supabase, Hyperdrive, migrations, queries, vector search |
+| CRM Agent | Contacts, clients, billing, customer operations |
+| Creative Agent | Design commands, media, 3D, CAD, asset pipelines |
 
----
+### Execution lanes
 
-## How It Works
+| Lane | Environment | Purpose |
+|---|---|---|
+| Local | Developer machine | Fast iteration and local control |
+| Cloud | Always-on VM or managed runtime | Remote work when the main machine is unavailable |
+| Sandbox | Isolated environment | Safe experiments, agent tasks, tenant isolation |
 
-\`\`\`
-User Intent (chat or CLI)
-        ↓
-   Agent Sam — intent classification + command match
-        ↓
-   Tool Catalog (D1) — policy check + approval gate
-        ↓
-   Execution — terminal / D1 / Supabase / R2 / KV / DO / browser / deploy / MCP
-        ↓
-   Telemetry — every action logged, measured, improvable
-\`\`\`
+### Security
 
-Capabilities are data-driven — new tools are added via D1, not Worker redeployments. The same tool catalog powers the dashboard, the CLI, and any MCP-connected client like Cursor or Claude Desktop.
+Agent Sam includes the beginning of a security layer built into the SDK and CLI:
 
----
+```bash
+agentsam security scan
+```
 
-## Infrastructure
+Current SCA support:
 
-Agent Sam scaffolds and operates across the full Cloudflare + Supabase stack:
+- Detects npm lockfiles and package manifests
+- Extracts direct and transitive dependencies
+- Queries OSV for known vulnerabilities
+- Produces plain text or JSON reports
+- Supports offline dependency inventory mode
 
-| Layer | Technology | Role |
-|-------|------------|------|
-| **Compute** | Cloudflare Workers | Edge runtime, API, agent dispatch |
-| **Relational DB** | D1 (SQLite) | Tool catalog, sessions, telemetry, CMS, auth |
-| **Vector DB** | Supabase pgvector via Hyperdrive | RAG, semantic search, agent memory |
-| **Object Storage** | R2 | Assets, media, bundles, CMS content |
-| **Key-Value** | Workers KV | Cache, CMS drafts, feature flags |
-| **Stateful Sessions** | Durable Objects | Terminal sessions, collab, real-time state |
-| **Terminal** | ExecOS over cloudflared tunnel | Shell execution, deploy, git, wrangler |
-| **AI Router** | Anthropic + OpenAI | Adaptive Thompson sampling across models |
-| **Protocol** | MCP (Model Context Protocol) | External agent surface for Cursor, Claude, etc. |
+Planned security capabilities:
 
----
+- Secret scanning
+- License checks
+- Dependency diffing per PR
+- Container image scanning
+- Deployment gates
+- Security scorecards per workspace
 
-## Execution Lanes
+## AgentSam Kits
 
-Agent Sam routes work to the right environment automatically:
+Kits are reusable product systems, not just code snippets.
 
-| Lane | Environment | When |
-|------|-------------|------|
-| Local | Your machine | Fastest dev loop |
-| Cloud | Always-on VM via tunnel | Machine asleep or offsite |
-| Sandbox | Isolated workspace | Safe experiments, tenant isolation |
+A kit can package everything needed to launch a repeatable product or client workflow:
 
----
+- UI components
+- Routes and pages
+- CMS fields
+- Database schema
+- Cloudflare configuration
+- Stripe setup
+- R2 asset conventions
+- Agent instructions
+- Security policies
+- Deployment pipeline
+- Brand defaults
+- Smoke tests
+
+Example kit ideas:
+
+```bash
+agentsam kit install nonprofit-cms
+agentsam kit install animal-rescue
+agentsam kit install stripe-campaign
+agentsam kit install glass-dashboard
+agentsam kit install client-portal
+```
+
+This is how Agent Sam can turn proven client work into reusable revenue products.
+
+## Platform Architecture
+
+Agent Sam is designed around one shared execution fabric:
+
+```txt
+User intent
+  → router
+  → tool catalog
+  → policy and approval gate
+  → execution lane
+  → result formatter
+  → telemetry ledger
+```
+
+The same capability should be available from:
+
+| Interface | Purpose |
+|---|---|
+| SDK | Embed Agent Sam inside apps and Workers |
+| CLI | Run repeatable workflows from terminal |
+| Dashboard | Operate projects visually |
+| MCP | Let external AI tools execute approved capabilities |
+
+## Infrastructure Targets
+
+Agent Sam is built for a Cloudflare-first stack with room for hybrid execution:
+
+| Layer | Technology |
+|---|---|
+| Compute | Cloudflare Workers |
+| Database | D1 and Supabase Postgres |
+| Vector memory | Supabase pgvector / vector stores |
+| Storage | R2 |
+| Cache and config | Workers KV |
+| Stateful sessions | Durable Objects |
+| Terminal execution | Local, VM, container, or sandbox |
+| Protocol | MCP |
 
 ## What Gets Scaffolded
 
-Running \`agentsam init\` generates a production-ready project for your lane:
+Running `agentsam init` creates a project with:
 
-**All lanes include:**
-- \`agentsam.config.js\` — project config, lane, provider, agent
-- \`wrangler.toml\` — Worker, D1, R2, KV, Durable Object bindings
-- \`.env.example\` — all required secrets pre-listed
-- \`src/index.js\` — Worker entry point wired to your agent
-- \`README.md\` — setup and deploy instructions
+- `agentsam.config.js`
+- `wrangler.toml`
+- `.env.example`
+- `src/index.js`
+- `migrations/0001_agentsam_core.sql`
+- `scripts/smoke.mjs`
+- project README
 
-**CMS lane adds:**
-- Page, section, asset, and theme schema migrations
-- CMS worker with live edit, draft/publish, and R2 asset pipeline
-
-**Data lane adds:**
-- D1 + Supabase Hyperdrive connection config
-- Vector embedding pipeline scaffold
-- Migration templates for core data models
-
-**Full Stack adds:**
-- Durable Object session scaffold
-- Auth tables and session management
-- Full agent chat + tool loop worker
-
----
-
-## Multi-Tenant & Client Policy
-
-Agent Sam is built for isolation from the ground up:
-
-- Each user or client gets a scoped workspace
-- Terminal execution is path-isolated — no cross-tenant access
-- AI usage is policy-gated — BYOK, managed, or disabled per client
-- D1 and R2 are scoped per tenant at the binding level
-- Every action produces an audit trail
-
----
+All lanes include agent sessions, messages, and tool-call tables. Specialized lanes add their own schema and workflow conventions over time.
 
 ## Roadmap
 
-- [ ] \`agentsam deploy\` — push your project from CLI
-- [ ] \`agentsam status\` — live agent and infrastructure health
-- [ ] \`agentsam logs\` — tail tool call and command logs
-- [ ] \`agentsam kit\` — install pre-built capability kits
-- [ ] Kit marketplace — CMS, ecommerce, nonprofit, SaaS starters
-- [ ] BYOK AI key support per project
+Near-term:
 
----
+- Improve SCA scanner accuracy and package-manager coverage
+- Add `agentsam doctor`
+- Add `agentsam status`
+- Add `agentsam deploy`
+- Add kit registry conventions
+- Add dashboard-to-CLI pipeline parity
 
-## Built By
+Mid-term:
 
-[Inner Animal Media](https://inneranimalmedia.com) — Agent Sam is the operator brain behind the Inner Animal Media platform. The SDK is how we share that infrastructure with other developers.
+- Secret scanning
+- License scanning
+- PR dependency diffing
+- Agent-run security summaries
+- Cloudflare deployment verification
+- Workspace audit reports
 
----
+Long-term:
+
+- AgentSam Kit marketplace
+- Visual pipeline builder
+- Multi-tenant client workspaces
+- Full MCP execution surface
+- Revenue-ready reusable systems for agencies, developers, and small teams
+
+## Development
+
+```bash
+npm install
+npm test
+```
+
+Smoke tests currently validate the AgentSam handler, router, scaffold flow, and offline SCA dependency scan.
 
 ## License
 
 MIT
+
+## Built By
+
+Agent Sam is built by Inner Animal Media as the operator layer behind its software, client systems, CMS workflows, and AI-assisted development platform.
