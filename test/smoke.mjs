@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { AgentSam, routeIntent, getToolCatalog } from '../src/index.js';
-import { scaffoldProject } from '../src/lib/scaffold.js';
+import { writeScaffoldFiles } from '../src/lib/write-files.js';
 
 const app = new AgentSam({ project: 'smoke', lane: 'cms', agent: 'cms' });
 let res = await app.handle(new Request('https://example.com/api/health'));
@@ -27,10 +27,11 @@ assert.equal(routeIntent({ message: 'drop table users' }).requires_approval, tru
 assert.ok(getToolCatalog('Data Solutions').some((tool) => tool.name === 'query'));
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-sdk-test-'));
-const cwd = process.cwd();
-process.chdir(tmp);
-const dir = scaffoldProject({ projectName: 'CMS Demo', lane: 'CMS', provider: 'Cloudflare Workers', agent: 'cms' });
-process.chdir(cwd);
+const dir = writeScaffoldFiles(path.join(tmp, 'demo-project'), [
+  { path: 'src/index.js', content: 'export default {};\n' },
+  { path: 'migrations/0001_agentsam_core.sql', content: 'CREATE TABLE cms_pages (id TEXT);\n' },
+  { path: 'package.json', content: '{"name":"demo","devDependencies":{"wrangler":"^4"}}\n' },
+]);
 assert.ok(fs.existsSync(path.join(dir, 'src/index.js')));
 assert.ok(fs.readFileSync(path.join(dir, 'migrations/0001_agentsam_core.sql'), 'utf8').includes('cms_pages'));
 assert.ok(fs.readFileSync(path.join(dir, 'package.json'), 'utf8').includes('wrangler'));

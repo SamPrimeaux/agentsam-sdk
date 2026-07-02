@@ -2,7 +2,9 @@
 
 import readline from 'readline';
 import pkg from '../package.json' with { type: 'json' };
-import { scaffoldProject } from './lib/scaffold.js';
+import { authenticateViaBrowser } from './lib/auth.js';
+import { getJson, streamScaffold } from './lib/core-client.js';
+import { writeScaffoldFiles, writeExecosEnvSnippet } from './lib/write-files.js';
 import { SLASH_COMMANDS, SHELL_PHASES } from './lib/slash-commands.js';
 
 const VERSION = pkg.version;
@@ -16,149 +18,153 @@ function createPrompt() {
 }
 
 const LANES = {
-  '1': 'Full Stack',
-  '2': 'CMS',
-  '3': 'Data Solutions',
-  '4': 'Customer Management',
-  '5': 'Creative & Design',
+  '1': { key: 'fullstack', label: 'Full Stack' },
+  '2': { key: 'cms', label: 'CMS' },
+  '3': { key: 'data', label: 'Data Solutions' },
+  '4': { key: 'crm', label: 'Customer Management' },
+  '5': { key: 'creative', label: 'Creative & Design' },
 };
 
-const LANE_BY_SLUG = {
-  fullstack: 'Full Stack',
-  cms: 'CMS',
-  data: 'Data Solutions',
-  crm: 'Customer Management',
-  creative: 'Creative & Design',
+const HOSTING = {
+  '1': { key: 'local', label: 'Local machine (git init here)' },
+  '2': { key: 'github', label: 'GitHub + Cloudflare (your repos)' },
+  '3': { key: 'cloudflare', label: 'Cloudflare Workers only' },
 };
-
-const PROVIDERS = {
-  '1': 'Cloudflare Workers',
-  '2': 'GitHub + Cloudflare',
-  '3': 'Local / Self-hosted',
-};
-
-const PROVIDER_BY_SLUG = {
-  cloudflare: 'Cloudflare Workers',
-  github: 'GitHub + Cloudflare',
-  local: 'Local / Self-hosted',
-};
-
-const AGENTS = {
-  '1': 'orchestrator',
-  '2': 'cms',
-  '3': 'data',
-  '4': 'crm',
-  '5': 'creative',
-};
-
-function laneKeyFromLabel(label) {
-  const entry = Object.entries(LANES).find(([, v]) => v === label);
-  return entry?.[0] ?? '1';
-}
 
 function printHelp() {
   console.log(`
   Agent Sam SDK — CLI v${VERSION}
 
   Usage:
-    agentsam init [options]     Scaffold a new Agent Sam project
-    agentsam shell              CLI shell UX info + slash commands (Gorilla Shell)
-    agentsam --version          Print version
-    agentsam --help             Show this help
+    agentsam init              Authenticate + scaffold YOUR project via Agent Sam (CORE)
+    agentsam shell             CLI shell UX info + slash commands
+    agentsam --version
+    agentsam --help
 
-  Init options (non-interactive):
-    --name <name>               Project directory name
+  Init options (non-interactive — requires prior SDK bearer in AGENTSAM_SDK_TOKEN):
+    --name <name>              Project directory name
     --lane <fullstack|cms|data|crm|creative>
-    --provider <cloudflare|github|local>
-    --agent <orchestrator|cms|data|crm|creative>
-    --cf-account <id>           Cloudflare account ID
-    --yes                       Skip confirmation prompt
+    --hosting <local|github|cloudflare>
+    --account-id <cf_id>       When multiple CF accounts on token
+    --token <sdk_bearer>       Skip browser auth
+    --yes                      Skip confirmation
   `);
 }
 
 function parseInitArgs(argv) {
   const opts = {
     projectName: '',
-    lane: '',
-    provider: '',
-    agent: '',
-    cfAccountId: '',
+    lane: 'fullstack',
+    hosting: 'local',
+    accountId: '',
+    token: process.env.AGENTSAM_SDK_TOKEN || '',
     yes: false,
   };
-
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--yes' || arg === '-y') opts.yes = true;
     else if (arg === '--name') opts.projectName = argv[++i] || '';
-    else if (arg === '--lane') {
-      const slug = argv[++i] || '';
-      opts.lane = LANE_BY_SLUG[slug] || slug;
-    } else if (arg === '--provider') {
-      const slug = argv[++i] || '';
-      opts.provider = PROVIDER_BY_SLUG[slug] || slug;
-    } else if (arg === '--agent') opts.agent = argv[++i] || '';
-    else if (arg === '--cf-account') opts.cfAccountId = argv[++i] || '';
+    else if (arg === '--lane') opts.lane = argv[++i] || 'fullstack';
+    else if (arg === '--hosting') opts.hosting = argv[++i] || 'local';
+    else if (arg === '--account-id') opts.accountId = argv[++i] || '';
+    else if (arg === '--token') opts.token = argv[++i] || '';
   }
-
   return opts;
 }
 
-async function runInit(config) {
-  const {
-    projectName,
-    lane,
-    provider,
-    agent,
-    cfAccountId = '',
-    yes = false,
-    prompt = null,
-  } = config;
+async function runScaffoldStream(token, body) {
+  let complete = null;
+  await streamScaffold(body, token, async (evt) => {
+    if (evt.type === 'log') console.log(`  · ${evt.message}`);
+    else if (evt.type === 'warn') console.log(`  ⚠ ${evt.message}`);
+    else if (evt.type === 'account_selection_required') {
+      console.log('\n  Multiple Cloudflare accounts — re-run with --account-id:\n');
+      for (const a of evt.accounts || []) {
+        console.log(`    ${a.id}  ${a.name || ''}`);
+      }
+      throw new Error('cloudflare_account_selection_required');
+    } else if (evt.type === 'error') {
+      throw new Error(evt.error || 'scaffold failed');
+    } else if (evt.type === 'complete') {
+      complete = evt;
+    }
+  });
+  if (!complete) throw new Error('scaffold incomplete');
+  return complete;
+}
 
-  const safeDir = projectName.trim();
+async function runInit(config) {
+  const { projectName, lane, hosting, accountId, token: presetToken, yes, prompt } = config;
+
   console.log(`
   ┌─────────────────────────────────────┐
-  │  Agent Sam Project Config           │
+  │  Agent Sam — your project           │
   ├─────────────────────────────────────┤
-  │  Project:   ${safeDir.padEnd(25)}│
-  │  Lane:      ${lane.padEnd(25)}│
-  │  Provider:  ${provider.padEnd(25)}│
-  │  Agent:     ${agent.padEnd(25)}│
-  │  CF Acct:   ${(cfAccountId || 'not set').padEnd(25)}│
+  │  Name:     ${projectName.padEnd(25)}│
+  │  Lane:     ${lane.padEnd(25)}│
+  │  Hosting:  ${hosting.padEnd(25)}│
   └─────────────────────────────────────┘
   `);
 
-  let confirm = 'y';
   if (!yes && prompt) {
-    confirm = await prompt.ask('  Scaffold project? (y/n): ');
-  }
-
-  if (confirm.toLowerCase() === 'y') {
-    try {
-      const dir = scaffoldProject({
-        projectName: safeDir,
-        lane,
-        provider,
-        agent,
-        cfAccountId,
-        sdkVersion: VERSION,
-      });
-      console.log(`
-  ✓ Project created at ${dir}
-
-  Next steps:
-    cd ${dir.split('/').pop()}
-    cp .env.example .env
-    npm install
-    npm run smoke
-    npm run dev
-    `);
-    } catch (error) {
-      console.error(`\n  ✗ ${error.message}\n`);
-      process.exitCode = 1;
+    const confirm = await prompt.ask('  Agent Sam will provision CF resources in YOUR account. Continue? (y/n): ');
+    if (confirm.toLowerCase() !== 'y') {
+      console.log('\n  Cancelled.\n');
+      return;
     }
-  } else {
-    console.log('\n  Cancelled.\n');
   }
+
+  let token = presetToken;
+  if (!token) {
+    const session = await authenticateViaBrowser();
+    token = session.access_token;
+    console.log(`\n  ✓ Signed in (${session.user_id})\n`);
+  }
+
+  const ctx = await getJson('/api/sdk/context', token);
+  if (!ctx?.cloudflare?.ok) {
+    console.error('\n  ✗ Connect Cloudflare in IAM (Integrations) during browser sign-in.\n');
+    process.exitCode = 1;
+    return;
+  }
+
+  if (ctx.cloudflare.accounts?.length > 1 && !accountId) {
+    console.log('\n  Multiple Cloudflare accounts — pick one with --account-id:\n');
+    for (const a of ctx.cloudflare.accounts) {
+      console.log(`    ${a.id}  ${a.name || ''}`);
+    }
+    console.log('');
+    process.exitCode = 1;
+    return;
+  }
+
+  console.log('  Agent Sam is working (D1, R2, KV, migration, files)…\n');
+
+  const result = await runScaffoldStream(token, {
+    project_name: projectName,
+    lane,
+    hosting,
+    account_id: accountId || undefined,
+    workspace_id: ctx.workspace_id,
+  });
+
+  const dir = writeScaffoldFiles(projectName, result.files || []);
+  const envPath = writeExecosEnvSnippet(dir, result.pty?.execos_env, projectName);
+
+  console.log(`
+  ✓ Your project is ready: ${dir}
+  ✓ Cloudflare account: ${result.cloudflare?.account_id || '—'}
+  ✓ D1: ${result.cloudflare?.d1_database_id || '—'}
+
+  Next steps:`);
+  for (const step of result.next_steps || ['npm install', 'npm run smoke']) {
+    console.log(`    ${step}`);
+  }
+  if (envPath) {
+    console.log(`\n  ExecOS env snippet: ${envPath}`);
+    console.log('  Paste into ExecOS .env → Start local in IAM dashboard works on YOUR machine.');
+  }
+  console.log('\n  This repo is yours. IAM built it; you can ship without us anytime.\n');
 }
 
 async function initInteractive(partial = {}) {
@@ -166,62 +172,40 @@ async function initInteractive(partial = {}) {
 
   console.log(`
   ╔═══════════════════════════════════╗
-  ║       Agent Sam SDK — Init        ║
+  ║   Agent Sam SDK — Init            ║
+  ║   One command. Your CF account.   ║
   ╚═══════════════════════════════════╝
   `);
 
-  const projectName = partial.projectName || (await prompt.ask('  Project name: '));
+  const projectName = partial.projectName || (await prompt.ask('  1) Project name: '));
 
   if (!partial.lane) {
     console.log(`
-  Select a lane:
-    1) Full Stack
-    2) CMS
-    3) Data Solutions
-    4) Customer Management
-    5) Creative & Design
+  2) Lane:
+    1) Full Stack   2) CMS   3) Data   4) CRM   5) Creative
   `);
   }
-  const laneKey = partial.lane ? laneKeyFromLabel(partial.lane) : await prompt.ask('  Lane [1-5]: ');
-  const lane = partial.lane || LANES[laneKey] || 'Full Stack';
+  const laneKey = partial.lane
+    ? Object.values(LANES).find((l) => l.key === partial.lane)?.key || partial.lane
+    : LANES[await prompt.ask('  Pick lane [1-5]: ')]?.key || 'fullstack';
+  const laneLabel = Object.values(LANES).find((l) => l.key === laneKey)?.label || laneKey;
 
-  console.log(`
-  Select a provider:
-    1) Cloudflare Workers
-    2) GitHub + Cloudflare
-    3) Local / Self-hosted
-  `);
-  const providerKey = partial.provider
-    ? Object.entries(PROVIDERS).find(([, v]) => v === partial.provider)?.[0] || '1'
-    : await prompt.ask('  Provider [1-3]: ');
-  const provider = partial.provider || PROVIDERS[providerKey] || 'Cloudflare Workers';
-
-  if (!partial.agent) {
+  if (!partial.hosting) {
     console.log(`
-  Select your default Agent Sam:
-    1) Orchestrator    — general purpose, routes to all lanes
-    2) CMS Agent       — pages, sections, assets, publishing workflows
-    3) Data Agent      — database ops, migrations, queries
-    4) CRM Agent       — customer management, contacts, billing
-    5) Creative Agent  — design, 3D, media, content
+  3) Where does the repo live?
+    1) Local machine   2) GitHub + CF   3) Cloudflare only
   `);
   }
-  const agentKey = partial.agent
-    ? Object.entries(AGENTS).find(([, v]) => v === partial.agent)?.[0] || '1'
-    : await prompt.ask('  Agent [1-5]: ');
-  const agent = partial.agent || AGENTS[agentKey] || 'orchestrator';
-
-  const cfAccountId =
-    partial.cfAccountId !== undefined && partial.cfAccountId !== ''
-      ? partial.cfAccountId
-      : await prompt.ask('  Cloudflare Account ID (enter to skip): ');
+  const hostingKey = partial.hosting
+    ? Object.values(HOSTING).find((h) => h.key === partial.hosting)?.key || partial.hosting
+    : HOSTING[await prompt.ask('  Pick hosting [1-3]: ')]?.key || 'local';
 
   await runInit({
     projectName,
-    lane,
-    provider,
-    agent,
-    cfAccountId,
+    lane: laneKey,
+    hosting: hostingKey,
+    accountId: partial.accountId || '',
+    token: partial.token || '',
     yes: partial.yes,
     prompt,
   });
@@ -235,15 +219,7 @@ async function initFromArgs(argv) {
     console.error('\n  ✗ --name is required for non-interactive init.\n');
     process.exit(1);
   }
-  await runInit({
-    projectName: opts.projectName,
-    lane: opts.lane || 'Full Stack',
-    provider: opts.provider || 'Cloudflare Workers',
-    agent: opts.agent || 'orchestrator',
-    cfAccountId: opts.cfAccountId,
-    yes: true,
-    prompt: null,
-  });
+  await runInit({ ...opts, prompt: null });
 }
 
 async function runShellInfo() {
@@ -253,21 +229,13 @@ async function runShellInfo() {
   ║     Agent Sam Shell (Gorilla)     ║
   ╚═══════════════════════════════════╝
 
-  Game-feel terminal UX for SDK installs — HUD, themes, slash commands, PTY bridge.
-
-  Phase 0 prototype: examples/gorilla-shell/
-  Docs:              docs/CLI_SHELL.md
-  Next milestone:    ${next?.label ?? 'PTY connection'}
+  Next milestone: ${next?.label ?? 'PTY connection'}
 
   Slash commands (${SLASH_COMMANDS.length} registered):
 `);
   for (const row of SLASH_COMMANDS) {
     console.log(`    ${row.cmd.padEnd(14)} ${row.description}`);
   }
-  console.log(`
-  Run the visual prototype:
-    cd examples/gorilla-shell && npm install && npm run dev
-  `);
 }
 
 const command = process.argv[2];

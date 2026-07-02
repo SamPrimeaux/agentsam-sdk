@@ -28,18 +28,18 @@ It is not a wrapper around a chat API. It is a command fabric with a conversatio
 npx @inneranimalmedia/agentsam-sdk init
 ```
 
-Non-interactive (CI / scripts):
+One command. Agent Sam (on IAM CORE) authenticates you, provisions D1/R2/KV in **your** Cloudflare account, writes **your** repo locally, and registers LOCAL-USER PTY. No IAM repo clone. No credential hunting.
+
+Non-interactive (after you have an SDK bearer):
 
 ```bash
 npx @inneranimalmedia/agentsam-sdk init \
   --name my-agent \
   --lane fullstack \
-  --provider cloudflare \
-  --agent orchestrator \
+  --hosting local \
+  --token "$AGENTSAM_SDK_TOKEN" \
   --yes
 ```
-
-Scaffolded workers expose `GET /health` and `POST /chat` immediately (stub mode without an API key).
 
 See [DEVELOPMENT.md](./DEVELOPMENT.md) for linking the SDK into Inner Animal Media locally.
 
