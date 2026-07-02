@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-sdk",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Agent Sam is a full-stack AI agent SDK for autonomous task execution — covering data management, creative workflows, design commands, and multi-step agentic pipelines.",
   "type": "module",
   "main": "./src/index.js",
@@ -13,6 +13,7 @@
   },
   "files": [
     "src",
+    "templates",
     "docs",
     "examples",
     "test",

@@ -5,4 +5,5 @@ node_modules/
 .dev.vars
 .wrangler/
 .*-remote.js
+level-1/
 agentsam-init-smoke/

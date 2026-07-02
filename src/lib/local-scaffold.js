@@ -125,7 +125,7 @@ export function buildLocalScaffoldFiles({
   laneLabel,
   agent,
   runTarget,
-  sdkVersion = '1.5.0',
+  sdkVersion = '1.5.1',
 }) {
   const sdkRange = `^${sdkVersion.split('.').slice(0, 2).join('.')}.0`;
   const migration = migrationSql(laneKey);
@@ -153,6 +153,8 @@ export function buildLocalScaffoldFiles({
           deploy_target: runTarget === 'local' ? null : runTarget,
           pty_port: 3099,
           dev_port: 8787,
+          ui_port: 5173,
+          ui: 'gorilla',
           scaffold_version: sdkVersion,
         },
         null,
@@ -169,10 +171,12 @@ Agent Sam runs a PTY on **your machine** — no accounts, no cloudflared, no IAM
 # Terminal 1 — local PTY (Agent Sam shell bridge)
 npx agentsam start-local
 
-# Terminal 2 — app dev server
+# Terminal 2 — Gorilla Mode UI + local Worker API
 npm run dev
 npm run db:migrate   # first time only
 \`\`\`
+
+Open **http://localhost:5173** — pixel Gorilla shell proxies \`/api\` → Worker on :8787.
 
 PTY listens on \`ws://127.0.0.1:3099\`. Health: \`curl http://127.0.0.1:3099/health\`
 
@@ -202,7 +206,9 @@ dist/
           type: 'module',
           private: true,
           scripts: {
-            dev: 'wrangler dev --local',
+            dev: 'concurrently -k "npm run dev:worker" "npm run dev:ui"',
+            'dev:worker': 'wrangler dev --local --port 8787',
+            'dev:ui': 'vite',
             'dev:node': 'node --watch src/dev-server.js',
             deploy: 'wrangler deploy',
             smoke: 'node ./scripts/smoke.mjs',
@@ -211,14 +217,26 @@ dist/
           },
           dependencies: {
             '@inneranimalmedia/agentsam-sdk': sdkRange,
+            react: '^19.0.0',
+            'react-dom': '^19.0.0',
           },
           devDependencies: {
             wrangler: '^4.0.0',
+            vite: '^6.0.0',
+            '@vitejs/plugin-react': '^4.0.0',
+            concurrently: '^9.0.0',
           },
         },
         null,
         2,
       )}\n`,
+    },
+    {
+      path: '.env',
+      content: `VITE_PROJECT_NAME=${projectName}
+VITE_LANE_KEY=${laneKey}
+VITE_AGENT=${agent}
+`,
     },
     {
       path: 'wrangler.toml',
@@ -317,13 +335,18 @@ console.log('AgentSam smoke test passed:', data);
 
 Built locally with [Agent Sam SDK](https://inneranimalmedia.com) — **${laneLabel}** lane, \`${agent}\` agent.
 
-## Local-first (default)
+## Gorilla Mode (default UI)
 
 \`\`\`bash
 npm install
 npm run smoke
-npx agentsam start-local    # Terminal 1 — local PTY
-npm run dev                 # Terminal 2 — http://127.0.0.1:8787
+npm run dev                 # Worker :8787 + Vite :5173
+\`\`\`
+
+Open **http://localhost:5173** — pixel Gorilla shell. Live \`/health\`, \`/samiam\`, and demo scenarios proxy to your local Worker.
+
+\`\`\`bash
+npx agentsam start-local    # optional — local PTY on :3099
 npm run db:migrate          # apply local D1 schema
 \`\`\`
 
@@ -343,7 +366,7 @@ Run target selected at init: **${runTarget}**
   ];
 }
 
-export function buildLocalScaffoldMeta(body, sdkVersion = '1.5.0') {
+export function buildLocalScaffoldMeta(body, sdkVersion = '1.5.1') {
   const projectName = String(body.projectName || body.project_name || 'agentsam-project')
     .trim()
     .toLowerCase()
@@ -364,9 +387,10 @@ export function buildLocalScaffoldMeta(body, sdkVersion = '1.5.0') {
     next_steps: [
       'npm install',
       'npm run smoke',
-      'npx agentsam start-local',
       'npm run dev',
+      'Open http://localhost:5173 — Gorilla Mode UI',
       'npm run db:migrate',
+      'Optional: npx agentsam start-local',
       'When ready: npx agentsam deploy',
     ],
   };

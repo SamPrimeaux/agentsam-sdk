@@ -4,6 +4,7 @@ import pkg from '../package.json' with { type: 'json' };
 import readline from 'readline';
 import { buildLocalScaffoldMeta, LANE_KEYS, RUN_TARGETS } from './lib/local-scaffold.js';
 import { writeScaffoldFiles } from './lib/write-files.js';
+import { copyGorillaTemplate } from './lib/gorilla-template.js';
 import { printContextSummary } from './lib/detect-context.js';
 import { promptOptionalByokKeys } from './lib/prompt-byok.js';
 import { runStartLocal } from './commands/start-local.js';
@@ -89,9 +90,11 @@ async function runLocalInit(config) {
   `);
 
   const dir = writeScaffoldFiles(meta.projectName, meta.files);
+  copyGorillaTemplate(dir, meta);
 
   console.log(`
   ✓ Project ready: ${dir}
+  ✓ Gorilla Mode UI → gorilla/ (http://localhost:5173 after npm run dev)
 
   Next steps:`);
   for (const step of meta.next_steps) {
@@ -105,9 +108,8 @@ async function runLocalInit(config) {
 
   console.log(`
   Local in ~60 seconds:
-    cd ${meta.projectName} && npm install && npm run smoke
-    npx agentsam start-local
-    npm run dev
+    cd ${meta.projectName} && npm install && npm run smoke && npm run dev
+    open http://localhost:5173
   `);
 }
 

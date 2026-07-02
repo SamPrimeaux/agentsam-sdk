@@ -5,6 +5,7 @@ import path from 'node:path';
 import { AgentSam, routeIntent, getToolCatalog } from '../src/index.js';
 import { buildLocalScaffoldMeta } from '../src/lib/local-scaffold.js';
 import { writeScaffoldFiles } from '../src/lib/write-files.js';
+import { copyGorillaTemplate } from '../src/lib/gorilla-template.js';
 import { printContextSummary, missingForInit } from '../src/lib/detect-context.js';
 
 const app = new AgentSam({ project: 'smoke', lane: 'cms', agent: 'cms' });
@@ -56,6 +57,14 @@ const localMeta = buildLocalScaffoldMeta({ projectName: 'demo', lane: 'cms', run
 assert.equal(localMeta.laneKey, 'cms');
 assert.ok(localMeta.files.some((f) => f.path === '.agentsam/start-local.md'));
 assert.ok(localMeta.files.some((f) => f.path === 'wrangler.toml'));
+assert.ok(localMeta.files.some((f) => f.path === '.env'));
 assert.ok(!localMeta.files.some((f) => f.path.includes('execos')));
+
+const gorillaDir = path.join(tmp, 'gorilla-project');
+writeScaffoldFiles(gorillaDir, localMeta.files);
+copyGorillaTemplate(gorillaDir, localMeta);
+assert.ok(fs.existsSync(path.join(gorillaDir, 'gorilla', 'App.tsx')));
+assert.ok(fs.existsSync(path.join(gorillaDir, 'vite.config.js')));
+assert.ok(fs.readFileSync(path.join(gorillaDir, 'gorilla', 'App.tsx'), 'utf8').includes('demo'));
 
 console.log('SDK smoke tests passed');
