@@ -3,6 +3,7 @@
 import readline from 'readline';
 import pkg from '../package.json' with { type: 'json' };
 import { scaffoldProject } from './lib/scaffold.js';
+import { formatSecurityReport, scanProjectSecurity } from './security/sca.js';
 
 const VERSION = pkg.version;
 
@@ -60,17 +61,24 @@ function printHelp() {
   Agent Sam SDK — CLI v${VERSION}
 
   Usage:
-    agentsam init [options]     Scaffold a new Agent Sam project
-    agentsam --version          Print version
-    agentsam --help             Show this help
+    agentsam init [options]       Scaffold a new Agent Sam project
+    agentsam security scan        Scan npm dependencies for known vulnerabilities
+    agentsam sca scan             Alias for security scan
+    agentsam --version            Print version
+    agentsam --help               Show this help
 
   Init options (non-interactive):
-    --name <name>               Project directory name
+    --name <name>                 Project directory name
     --lane <fullstack|cms|data|crm|creative>
     --provider <cloudflare|github|local>
     --agent <orchestrator|cms|data|crm|creative>
-    --cf-account <id>           Cloudflare account ID
-    --yes                       Skip confirmation prompt
+    --cf-account <id>             Cloudflare account ID
+    --yes                         Skip confirmation prompt
+
+  Security scan options:
+    --path <dir>                  Project path, defaults to current directory
+    --json                        Print JSON report
+    --offline                     Parse dependencies without OSV lookup
   `);
 }
 
@@ -99,6 +107,33 @@ function parseInitArgs(argv) {
   }
 
   return opts;
+}
+
+function parseSecurityArgs(argv) {
+  const opts = { projectRoot: process.cwd(), json: false, queryOsv: true };
+  const args = argv[0] === 'scan' ? argv.slice(1) : argv;
+
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (arg === '--path' || arg === '-p') opts.projectRoot = args[++i] || opts.projectRoot;
+    else if (arg === '--json') opts.json = true;
+    else if (arg === '--offline') opts.queryOsv = false;
+  }
+
+  return opts;
+}
+
+async function runSecurityScan(argv) {
+  const opts = parseSecurityArgs(argv);
+  try {
+    const report = await scanProjectSecurity(opts);
+    if (opts.json) console.log(JSON.stringify(report, null, 2));
+    else console.log(formatSecurityReport(report));
+    process.exitCode = report.ok ? 0 : 1;
+  } catch (error) {
+    console.error(`\n  ✗ ${error.message}\n`);
+    process.exitCode = 1;
+  }
 }
 
 async function runInit(config) {
@@ -258,6 +293,13 @@ if (command === '--version' || command === '-v') {
   } else {
     await initInteractive({});
   }
+} else if (command === 'security' || command === 'sca') {
+  if (rest[0] && rest[0] !== 'scan') {
+    console.error(`\n  Unknown ${command} command: ${rest[0]}\n`);
+    printHelp();
+    process.exit(1);
+  }
+  await runSecurityScan(rest);
 } else {
   console.error(`\n  Unknown command: ${command}\n`);
   printHelp();
