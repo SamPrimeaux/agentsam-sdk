@@ -51,5 +51,8 @@ npx agentsam init \
 ## Known gaps (roadmap)
 
 - `agentsam deploy`, `status`, `logs` — not implemented yet
-- CMS lane in README — CLI has 4 lanes today (Full Stack, Data, CRM, Creative)
+- Gorilla Shell Phase 1 — PTY WebSocket bridge to ExecOS
+- CMS lane in README — CLI has 5 lanes (Full Stack, CMS, Data, CRM, Creative)
 - Published API route may differ; stub mode works without `AGENTSAM_API_KEY`
+
+See [docs/CLI_SHELL.md](./docs/CLI_SHELL.md) for the game-feel terminal UX path.

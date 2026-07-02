@@ -35,4 +35,8 @@ assert.ok(fs.existsSync(path.join(dir, 'src/index.js')));
 assert.ok(fs.readFileSync(path.join(dir, 'migrations/0001_agentsam_core.sql'), 'utf8').includes('cms_pages'));
 assert.ok(fs.readFileSync(path.join(dir, 'package.json'), 'utf8').includes('wrangler'));
 
+import { SLASH_COMMANDS, listSlashCommands } from '../src/lib/slash-commands.js';
+assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/deploy'));
+assert.equal(listSlashCommands({ lane: 'deploy' }).length, 2);
+
 console.log('SDK smoke tests passed');

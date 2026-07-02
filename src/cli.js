@@ -3,6 +3,7 @@
 import readline from 'readline';
 import pkg from '../package.json' with { type: 'json' };
 import { scaffoldProject } from './lib/scaffold.js';
+import { SLASH_COMMANDS, SHELL_PHASES } from './lib/slash-commands.js';
 
 const VERSION = pkg.version;
 
@@ -61,6 +62,7 @@ function printHelp() {
 
   Usage:
     agentsam init [options]     Scaffold a new Agent Sam project
+    agentsam shell              CLI shell UX info + slash commands (Gorilla Shell)
     agentsam --version          Print version
     agentsam --help             Show this help
 
@@ -244,6 +246,30 @@ async function initFromArgs(argv) {
   });
 }
 
+async function runShellInfo() {
+  const next = SHELL_PHASES.find((p) => p.status === 'next');
+  console.log(`
+  ╔═══════════════════════════════════╗
+  ║     Agent Sam Shell (Gorilla)     ║
+  ╚═══════════════════════════════════╝
+
+  Game-feel terminal UX for SDK installs — HUD, themes, slash commands, PTY bridge.
+
+  Phase 0 prototype: examples/gorilla-shell/
+  Docs:              docs/CLI_SHELL.md
+  Next milestone:    ${next?.label ?? 'PTY connection'}
+
+  Slash commands (${SLASH_COMMANDS.length} registered):
+`);
+  for (const row of SLASH_COMMANDS) {
+    console.log(`    ${row.cmd.padEnd(14)} ${row.description}`);
+  }
+  console.log(`
+  Run the visual prototype:
+    cd examples/gorilla-shell && npm install && npm run dev
+  `);
+}
+
 const command = process.argv[2];
 const rest = process.argv.slice(3);
 
@@ -251,6 +277,8 @@ if (command === '--version' || command === '-v') {
   console.log(VERSION);
 } else if (command === '--help' || command === '-h' || !command) {
   printHelp();
+} else if (command === 'shell') {
+  await runShellInfo();
 } else if (command === 'init') {
   const hasFlags = rest.some((a) => a.startsWith('--'));
   if (hasFlags) {

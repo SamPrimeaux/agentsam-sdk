@@ -6,6 +6,12 @@ export { AgentSam } from './AgentSam.js';
 export { routeIntent } from './lib/router.js';
 export { getToolCatalog } from './lib/tools.js';
 export { scaffoldProject } from './lib/scaffold.js';
+export {
+  SLASH_COMMANDS,
+  SHELL_THEMES,
+  SHELL_PHASES,
+  listSlashCommands,
+} from './lib/slash-commands.js';
 
 export const version = pkg.version;
 export const name = pkg.name;

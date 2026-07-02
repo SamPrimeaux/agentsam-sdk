@@ -4,6 +4,8 @@
 
 Agent Sam is a full-stack autonomous agent SDK built on Cloudflare Workers, D1, Supabase, Durable Objects, and MCP — designed to converse, plan, and execute real work across your entire stack. CMS websites, full-stack applications, data pipelines, creative workflows, terminal execution, deployments, and multi-step agentic pipelines — all through one unified agent interface.
 
+**Repo:** [github.com/SamPrimeaux/agentsam-sdk](https://github.com/SamPrimeaux/agentsam-sdk) · **npm:** `@inneranimalmedia/agentsam-sdk`
+
 ---
 
 ## What is Agent Sam?
@@ -22,32 +24,54 @@ It is not a wrapper around a chat API. It is a command fabric with a conversatio
 
 ## Quickstart
 
-\`\`\`bash
+```bash
 npx @inneranimalmedia/agentsam-sdk init
-\`\`\`
+```
 
 Non-interactive (CI / scripts):
 
-\`\`\`bash
-npx @inneranimalmedia/agentsam-sdk init \\
-  --name my-agent \\
-  --lane fullstack \\
-  --provider cloudflare \\
-  --agent orchestrator \\
+```bash
+npx @inneranimalmedia/agentsam-sdk init \
+  --name my-agent \
+  --lane fullstack \
+  --provider cloudflare \
+  --agent orchestrator \
   --yes
-\`\`\`
+```
 
-Scaffolded workers expose \`GET /health\` and \`POST /chat\` immediately (stub mode without an API key).
+Scaffolded workers expose `GET /health` and `POST /chat` immediately (stub mode without an API key).
 
 See [DEVELOPMENT.md](./DEVELOPMENT.md) for linking the SDK into Inner Animal Media locally.
 
 ---
 
+## CLI Shell Experience (Gorilla)
+
+The SDK ships a **game-feel terminal UX** alongside the scaffold CLI — consolidated from the Gorilla Mode experiment:
+
+```bash
+npx @inneranimalmedia/agentsam-sdk shell
+```
+
+| Piece | Location |
+|-------|----------|
+| Slash command registry | `src/lib/slash-commands.js` |
+| Phase 0 visual prototype | `examples/gorilla-shell/` |
+| Architecture + phases | [docs/CLI_SHELL.md](./docs/CLI_SHELL.md) |
+
+Run the prototype:
+
+```bash
+cd examples/gorilla-shell && npm install && npm run dev
+```
+
+---
+
 ## Installation
 
-\`\`\`bash
+```bash
 npm install @inneranimalmedia/agentsam-sdk
-\`\`\`
+```
 
 ---
 
@@ -77,7 +101,7 @@ npm install @inneranimalmedia/agentsam-sdk
 
 ## How It Works
 
-\`\`\`
+```
 User Intent (chat or CLI)
         ↓
    Agent Sam — intent classification + command match
@@ -87,7 +111,7 @@ User Intent (chat or CLI)
    Execution — terminal / D1 / Supabase / R2 / KV / DO / browser / deploy / MCP
         ↓
    Telemetry — every action logged, measured, improvable
-\`\`\`
+```
 
 Capabilities are data-driven — new tools are added via D1, not Worker redeployments. The same tool catalog powers the dashboard, the CLI, and any MCP-connected client like Cursor or Claude Desktop.
 
@@ -125,34 +149,24 @@ Agent Sam routes work to the right environment automatically:
 
 ## What Gets Scaffolded
 
-Running \`agentsam init\` generates a production-ready project for your lane:
+Running `agentsam init` generates a production-ready project for your lane:
 
 **All lanes include:**
-- \`agentsam.config.js\` — project config, lane, provider, agent
-- \`wrangler.toml\` — Worker, D1, R2, KV, Durable Object bindings
-- \`.env.example\` — all required secrets pre-listed
-- \`src/index.js\` — Worker entry point wired to your agent
-- \`README.md\` — setup and deploy instructions
+- `agentsam.config.js` — project config, lane, provider, agent
+- `wrangler.toml` — Worker, D1, R2, KV, Durable Object bindings
+- `.env.example` — all required secrets pre-listed
+- `src/index.js` — Worker entry point wired to your agent
+- `README.md` — setup and deploy instructions
 
-**CMS lane adds:**
-- Page, section, asset, and theme schema migrations
-- CMS worker with live edit, draft/publish, and R2 asset pipeline
+**CMS lane adds:** page/section/asset schema migrations and CMS worker scaffold.
 
-**Data lane adds:**
-- D1 + Supabase Hyperdrive connection config
-- Vector embedding pipeline scaffold
-- Migration templates for core data models
+**Data lane adds:** D1 + Hyperdrive config and migration templates.
 
-**Full Stack adds:**
-- Durable Object session scaffold
-- Auth tables and session management
-- Full agent chat + tool loop worker
+**Full Stack adds:** Durable Object session scaffold, auth tables, full agent chat loop.
 
 ---
 
 ## Multi-Tenant & Client Policy
-
-Agent Sam is built for isolation from the ground up:
 
 - Each user or client gets a scoped workspace
 - Terminal execution is path-isolated — no cross-tenant access
@@ -164,10 +178,12 @@ Agent Sam is built for isolation from the ground up:
 
 ## Roadmap
 
-- [ ] \`agentsam deploy\` — push your project from CLI
-- [ ] \`agentsam status\` — live agent and infrastructure health
-- [ ] \`agentsam logs\` — tail tool call and command logs
-- [ ] \`agentsam kit\` — install pre-built capability kits
+- [x] `agentsam shell` — shell UX info + slash command registry
+- [x] Gorilla Shell Phase 0 prototype in `examples/gorilla-shell/`
+- [ ] `agentsam deploy` — push your project from CLI
+- [ ] `agentsam status` — live agent and infrastructure health
+- [ ] `agentsam logs` — tail tool call and command logs
+- [ ] PTY bridge (Phase 1) — ExecOS WebSocket in shell
 - [ ] Kit marketplace — CMS, ecommerce, nonprofit, SaaS starters
 - [ ] BYOK AI key support per project
 
@@ -175,7 +191,9 @@ Agent Sam is built for isolation from the ground up:
 
 ## Built By
 
-[Inner Animal Media](https://inneranimalmedia.com) — Agent Sam is the operator brain behind the Inner Animal Media platform. The SDK is how we share that infrastructure with other developers.
+[Inner Animal Media](https://inneranimalmedia.com) — Agent Sam is the operator brain behind the platform. The SDK is how we productize that infrastructure for other developers.
+
+**Legacy:** [InnerAnimal/gorilla-mode](https://github.com/InnerAnimal/gorilla-mode) → consolidated here.
 
 ---
 
