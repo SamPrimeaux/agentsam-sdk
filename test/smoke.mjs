@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { AgentSam, routeIntent, getToolCatalog } from '../src/index.js';
+import { buildLocalScaffoldMeta } from '../src/lib/local-scaffold.js';
 import { writeScaffoldFiles } from '../src/lib/write-files.js';
 import { printContextSummary, missingForInit } from '../src/lib/detect-context.js';
 
@@ -48,7 +49,13 @@ printContextSummary({
   github: { source: 'gh-cli', account: 'connor@example.com' },
   cloudflare: { source: 'wrangler', account: 'connor@cloudflare.test' },
 });
-assert.deepEqual(missingForInit({ iam: { ready: true } }), []);
-assert.deepEqual(missingForInit({ iam: { ready: false } }), ['iam']);
+assert.deepEqual(missingForInit({ iam: { ready: false } }, '', { runTarget: 'local' }), []);
+assert.deepEqual(missingForInit({ iam: { ready: false } }, '', { runTarget: 'cloudflare' }), ['iam']);
+
+const localMeta = buildLocalScaffoldMeta({ projectName: 'demo', lane: 'cms', runTarget: 'local' });
+assert.equal(localMeta.laneKey, 'cms');
+assert.ok(localMeta.files.some((f) => f.path === '.agentsam/start-local.md'));
+assert.ok(localMeta.files.some((f) => f.path === 'wrangler.toml'));
+assert.ok(!localMeta.files.some((f) => f.path.includes('execos')));
 
 console.log('SDK smoke tests passed');

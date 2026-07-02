@@ -22,24 +22,42 @@ It is not a wrapper around a chat API. It is a command fabric with a conversatio
 
 ---
 
-## Quickstart
+## Quickstart (local-first — Node only)
 
 ```bash
 npx @inneranimalmedia/agentsam-sdk init
 ```
 
-One command. Agent Sam (on IAM CORE) authenticates you, provisions D1/R2/KV in **your** Cloudflare account, writes **your** repo locally, and registers LOCAL-USER PTY. No IAM repo clone. No credential hunting.
+Default path: **localhost**. No IAM login, no Cloudflare OAuth, no accounts. Under 2 minutes with Node 20+ installed.
 
-Non-interactive (after you have an SDK bearer):
+```bash
+cd my-project
+npm install
+npm run smoke
+npx agentsam start-local   # local PTY on ws://127.0.0.1:3099
+npm run dev                # http://127.0.0.1:8787
+npm run db:migrate         # local D1 schema
+```
+
+When you're ready to ship to **your** Cloudflare account:
+
+```bash
+npx agentsam deploy
+```
+
+Cloudflare OAuth is prompted **only at deploy** — not at init.
+
+Non-interactive init:
 
 ```bash
 npx @inneranimalmedia/agentsam-sdk init \
   --name my-agent \
   --lane fullstack \
-  --hosting local \
-  --token "$AGENTSAM_SDK_TOKEN" \
+  --run-target local \
   --yes
 ```
+
+Run targets at init: `local` (default) · `cloudflare` · `gcp` — all scaffold locally first; cloud credentials come at deploy.
 
 See [DEVELOPMENT.md](./DEVELOPMENT.md) for linking the SDK into Inner Animal Media locally.
 

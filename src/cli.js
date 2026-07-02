@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 
-import readline from 'readline';
 import pkg from '../package.json' with { type: 'json' };
-import { authenticateViaBrowser } from './lib/auth.js';
-import { getJson, streamScaffold } from './lib/core-client.js';
-import { writeScaffoldFiles, writeExecosEnvSnippet } from './lib/write-files.js';
-import { detectContext, printContextSummary, missingForInit } from './lib/detect-context.js';
+import readline from 'readline';
+import { buildLocalScaffoldMeta, LANE_KEYS, RUN_TARGETS } from './lib/local-scaffold.js';
+import { writeScaffoldFiles } from './lib/write-files.js';
+import { printContextSummary } from './lib/detect-context.js';
+import { promptOptionalByokKeys } from './lib/prompt-byok.js';
+import { runStartLocal } from './commands/start-local.js';
+import { runDeploy } from './commands/deploy.js';
 import { SLASH_COMMANDS, SHELL_PHASES } from './lib/slash-commands.js';
 
 const VERSION = pkg.version;
@@ -18,36 +20,25 @@ function createPrompt() {
   };
 }
 
-const LANES = {
-  '1': { key: 'fullstack', label: 'Full Stack' },
-  '2': { key: 'cms', label: 'CMS' },
-  '3': { key: 'data', label: 'Data Solutions' },
-  '4': { key: 'crm', label: 'Customer Management' },
-  '5': { key: 'creative', label: 'Creative & Design' },
-};
-
-const HOSTING = {
-  '1': { key: 'local', label: 'Local machine (git init here)' },
-  '2': { key: 'github', label: 'GitHub + Cloudflare (your repos)' },
-  '3': { key: 'cloudflare', label: 'Cloudflare Workers only' },
-};
-
 function printHelp() {
   console.log(`
   Agent Sam SDK — CLI v${VERSION}
 
   Usage:
-    agentsam init              Authenticate + scaffold YOUR project via Agent Sam (CORE)
-    agentsam shell             CLI shell UX info + slash commands
+    agentsam init              Local-first project scaffold (default: localhost, no accounts)
+    agentsam start-local       Local PTY on ws://127.0.0.1:3099 (no tunnel, no Cloudflare)
+    agentsam deploy            Graduate to Cloudflare / GCP when ready
+    agentsam shell             Slash commands + shell UX info
     agentsam --version
     agentsam --help
 
-  Init options (non-interactive — requires prior SDK bearer in AGENTSAM_SDK_TOKEN):
+  Init is completable with Node only — no IAM login, no OAuth, no Cloudflare.
+  Prove locally first; deploy prompts for accounts only when you choose to ship.
+
+  Init options:
     --name <name>              Project directory name
     --lane <fullstack|cms|data|crm|creative>
-    --hosting <local|github|cloudflare>
-    --account-id <cf_id>       When multiple CF accounts on token
-    --token <sdk_bearer>       Skip browser auth
+    --run-target <local|cloudflare|gcp>   Default: local
     --yes                      Skip confirmation
   `);
 }
@@ -56,9 +47,7 @@ function parseInitArgs(argv) {
   const opts = {
     projectName: '',
     lane: 'fullstack',
-    hosting: 'local',
-    accountId: '',
-    token: process.env.AGENTSAM_SDK_TOKEN || '',
+    runTarget: 'local',
     yes: false,
   };
   for (let i = 0; i < argv.length; i += 1) {
@@ -66,132 +55,60 @@ function parseInitArgs(argv) {
     if (arg === '--yes' || arg === '-y') opts.yes = true;
     else if (arg === '--name') opts.projectName = argv[++i] || '';
     else if (arg === '--lane') opts.lane = argv[++i] || 'fullstack';
-    else if (arg === '--hosting') opts.hosting = argv[++i] || 'local';
-    else if (arg === '--account-id') opts.accountId = argv[++i] || '';
-    else if (arg === '--token') opts.token = argv[++i] || '';
+    else if (arg === '--run-target' || arg === '--target') opts.runTarget = argv[++i] || 'local';
   }
   return opts;
 }
 
-async function runScaffoldStream(token, body) {
-  let complete = null;
-  await streamScaffold(body, token, async (evt) => {
-    if (evt.type === 'log') console.log(`  · ${evt.message}`);
-    else if (evt.type === 'warn') console.log(`  ⚠ ${evt.message}`);
-    else if (evt.type === 'account_selection_required') {
-      console.log('\n  Multiple Cloudflare accounts — re-run with --account-id:\n');
-      for (const a of evt.accounts || []) {
-        console.log(`    ${a.id}  ${a.name || ''}`);
-      }
-      throw new Error('cloudflare_account_selection_required');
-    } else if (evt.type === 'error') {
-      throw new Error(evt.error || 'scaffold failed');
-    } else if (evt.type === 'complete') {
-      complete = evt;
-    }
-  });
-  if (!complete) throw new Error('scaffold incomplete');
-  return complete;
+function parseDeployArgs(argv) {
+  const opts = { target: '', accountId: '' };
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === '--target') opts.target = argv[++i] || '';
+    else if (arg === '--account-id') opts.accountId = argv[++i] || '';
+  }
+  return opts;
 }
 
-async function runInit(config) {
-  const {
-    projectName,
-    lane,
-    hosting,
-    accountId,
-    token: presetToken,
-    yes,
-    prompt,
-    detectedCtx,
-    summaryShown = false,
-  } = config;
+async function runLocalInit(config) {
+  const { projectName, lane, runTarget, prompt } = config;
 
-  const detected = detectedCtx || (await detectContext());
-  if (!summaryShown) printContextSummary(detected);
-
-  const missing = missingForInit(detected, presetToken);
-  if (!yes && prompt) {
-    const msg = missing.includes('iam')
-      ? '  Proceed? IAM sign-in will open in browser for missing credentials. (y/n): '
-      : '  Proceed with detected credentials? (y/n): ';
-    const proceed = await prompt.ask(msg);
-    if (proceed.toLowerCase() !== 'y') {
-      console.log('\n  Cancelled.\n');
-      return;
-    }
-  }
+  const meta = buildLocalScaffoldMeta(
+    { projectName, lane, runTarget },
+    VERSION,
+  );
 
   console.log(`
   ┌─────────────────────────────────────┐
-  │  Agent Sam — your project           │
+  │  Agent Sam — local-first scaffold   │
   ├─────────────────────────────────────┤
-  │  Name:     ${projectName.padEnd(25)}│
-  │  Lane:     ${lane.padEnd(25)}│
-  │  Hosting:  ${hosting.padEnd(25)}│
+  │  Name:     ${meta.projectName.padEnd(25)}│
+  │  Lane:     ${meta.laneKey.padEnd(25)}│
+  │  Run:      ${meta.runTarget.padEnd(25)}│
   └─────────────────────────────────────┘
   `);
 
-  let token = '';
-  if (detected.iam.ready) {
-    token = presetToken || process.env.AGENTSAM_SDK_TOKEN || '';
-    console.log('\n  ✓ IAM SDK token verified\n');
-  } else if (missing.includes('iam')) {
-    const session = await authenticateViaBrowser();
-    token = session.access_token;
-    console.log(`\n  ✓ Signed in (${session.user_id})\n`);
-  }
-
-  if (!token) {
-    console.error('\n  ✗ IAM auth required for init.\n');
-    process.exitCode = 1;
-    return;
-  }
-
-  const ctx = await getJson('/api/sdk/context', token);
-  if (!ctx?.cloudflare?.ok) {
-    console.error('\n  ✗ Connect Cloudflare in IAM (Integrations) during browser sign-in.\n');
-    process.exitCode = 1;
-    return;
-  }
-
-  if (ctx.cloudflare.accounts?.length > 1 && !accountId) {
-    console.log('\n  Multiple Cloudflare accounts — pick one with --account-id:\n');
-    for (const a of ctx.cloudflare.accounts) {
-      console.log(`    ${a.id}  ${a.name || ''}`);
-    }
-    console.log('');
-    process.exitCode = 1;
-    return;
-  }
-
-  console.log('  Agent Sam is working (D1, R2, KV, migration, files)…\n');
-
-  const result = await runScaffoldStream(token, {
-    project_name: projectName,
-    lane,
-    hosting,
-    account_id: accountId || undefined,
-    workspace_id: ctx.workspace_id,
-  });
-
-  const dir = writeScaffoldFiles(projectName, result.files || []);
-  const envPath = writeExecosEnvSnippet(dir, result.pty?.execos_env, projectName);
+  const dir = writeScaffoldFiles(meta.projectName, meta.files);
 
   console.log(`
-  ✓ Your project is ready: ${dir}
-  ✓ Cloudflare account: ${result.cloudflare?.account_id || '—'}
-  ✓ D1: ${result.cloudflare?.d1_database_id || '—'}
+  ✓ Project ready: ${dir}
 
   Next steps:`);
-  for (const step of result.next_steps || ['npm install', 'npm run smoke']) {
+  for (const step of meta.next_steps) {
     console.log(`    ${step}`);
   }
-  if (envPath) {
-    console.log(`\n  ExecOS env snippet: ${envPath}`);
-    console.log('  Paste into ExecOS .env → Start local in IAM dashboard works on YOUR machine.');
+
+  if (prompt && process.env.AGENTSAM_SDK_TOKEN) {
+    console.log('\n  Optional — BYOK keys for IAM dashboard Agent Sam (skip with Enter):\n');
+    await promptOptionalByokKeys(process.env.AGENTSAM_SDK_TOKEN, prompt);
   }
-  console.log('\n  This repo is yours. IAM built it; you can ship without us anytime.\n');
+
+  console.log(`
+  Local in ~60 seconds:
+    cd ${meta.projectName} && npm install && npm run smoke
+    npx agentsam start-local
+    npm run dev
+  `);
 }
 
 async function initInteractive(partial = {}) {
@@ -200,27 +117,15 @@ async function initInteractive(partial = {}) {
   console.log(`
   ╔═══════════════════════════════════╗
   ║   Agent Sam SDK — Init            ║
-  ║   One command. Your CF account.   ║
+  ║   Local-first · Node only         ║
   ╚═══════════════════════════════════╝
   `);
 
-  const detectedCtx = await detectContext({ token: partial.token || '' });
-  printContextSummary(detectedCtx);
+  printContextSummary(await import('./lib/detect-context.js').then((m) => m.detectContext()));
 
-  if (!partial.yes) {
-    const missing = missingForInit(detectedCtx, partial.token || '');
-    const msg = missing.includes('iam')
-      ? '  Proceed? IAM sign-in will open in browser for missing credentials. (y/n): '
-      : '  Proceed with detected credentials? (y/n): ';
-    const proceed = await prompt.ask(msg);
-    if (proceed.toLowerCase() !== 'y') {
-      console.log('\n  Cancelled.\n');
-      prompt.close();
-      return;
-    }
-  }
-
-  const projectName = partial.projectName || (await prompt.ask('  1) Project name: '));
+  const projectName =
+    partial.projectName ||
+    (await prompt.ask('  1) Project name: '));
 
   if (!partial.lane) {
     console.log(`
@@ -229,31 +134,23 @@ async function initInteractive(partial = {}) {
   `);
   }
   const laneKey = partial.lane
-    ? Object.values(LANES).find((l) => l.key === partial.lane)?.key || partial.lane
-    : LANES[await prompt.ask('  Pick lane [1-5]: ')]?.key || 'fullstack';
+    ? partial.lane
+    : LANE_KEYS[await prompt.ask('  Pick lane [1-5]: ')]?.key || 'fullstack';
 
-  if (!partial.hosting) {
+  if (!partial.runTarget) {
     console.log(`
-  3) Where does the repo live?
-    1) Local machine   2) GitHub + CF   3) Cloudflare only
+  3) Where do you want to run your project?
+
+    1) Local (localhost — start here, no accounts needed)
+    2) Cloudflare (Workers, D1, R2 — deploy when ready)
+    3) GCP (your own Google Cloud project)
   `);
   }
-  const hostingKey = partial.hosting
-    ? Object.values(HOSTING).find((h) => h.key === partial.hosting)?.key || partial.hosting
-    : HOSTING[await prompt.ask('  Pick hosting [1-3]: ')]?.key || 'local';
+  const runTarget = partial.runTarget
+    ? partial.runTarget
+    : RUN_TARGETS[await prompt.ask('  Select [1]: ')] || 'local';
 
-  await runInit({
-    projectName,
-    lane: laneKey,
-    hosting: hostingKey,
-    accountId: partial.accountId || '',
-    token: partial.token || '',
-    yes: true,
-    prompt,
-    detectedCtx,
-    summaryShown: true,
-  });
-
+  await runLocalInit({ projectName, lane: laneKey, runTarget, prompt });
   prompt.close();
 }
 
@@ -263,9 +160,7 @@ async function initFromArgs(argv) {
     console.error('\n  ✗ --name is required for non-interactive init.\n');
     process.exit(1);
   }
-  const detectedCtx = await detectContext({ token: opts.token || '' });
-  printContextSummary(detectedCtx);
-  await runInit({ ...opts, prompt: null, detectedCtx, summaryShown: true });
+  await runLocalInit({ ...opts, prompt: null });
 }
 
 async function runShellInfo() {
@@ -275,7 +170,8 @@ async function runShellInfo() {
   ║     Agent Sam Shell (Gorilla)     ║
   ╚═══════════════════════════════════╝
 
-  Next milestone: ${next?.label ?? 'PTY connection'}
+  Local PTY: agentsam start-local (ws://127.0.0.1:3099)
+  Next milestone: ${next?.label ?? 'dashboard bridge after deploy'}
 
   Slash commands (${SLASH_COMMANDS.length} registered):
 `);
@@ -293,6 +189,15 @@ if (command === '--version' || command === '-v') {
   printHelp();
 } else if (command === 'shell') {
   await runShellInfo();
+} else if (command === 'start-local') {
+  await runStartLocal({});
+} else if (command === 'deploy') {
+  try {
+    await runDeploy(parseDeployArgs(rest));
+  } catch (e) {
+    console.error(`\n  ✗ ${e?.message || e}\n`);
+    process.exit(1);
+  }
 } else if (command === 'init') {
   const hasFlags = rest.some((a) => a.startsWith('--'));
   if (hasFlags) {

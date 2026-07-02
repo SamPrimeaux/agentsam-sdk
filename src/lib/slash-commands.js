@@ -26,7 +26,7 @@ export const SLASH_COMMANDS = [
 /** Shell UX rollout phases (gorilla-shell → SDK default CLI experience). */
 export const SHELL_PHASES = [
   { id: '0-prototype', label: 'Visual prototype + demo scenarios', status: 'complete' },
-  { id: 'pty-connection', label: 'ExecOS / iam-pty WebSocket bridge', status: 'next' },
+  { id: 'pty-connection', label: 'Local PTY via agentsam start-local', status: 'current' },
   { id: 'hud-layer', label: 'Quest log, tool gate, XP HUD', status: 'planned' },
   { id: 'buddy-system', label: 'In-shell Agent Sam via MCP', status: 'planned' },
   { id: 'dashboard-embed', label: 'Embeddable shell for IAM dashboard', status: 'planned' },

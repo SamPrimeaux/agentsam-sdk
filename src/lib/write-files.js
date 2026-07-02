@@ -19,10 +19,3 @@ export function writeScaffoldFiles(targetDir, files) {
   }
   return root;
 }
-
-export function writeExecosEnvSnippet(targetDir, execosEnv, projectName) {
-  if (!execosEnv) return null;
-  const dest = path.join(path.resolve(targetDir), `${projectName}.execos.env`);
-  fs.writeFileSync(dest, execosEnv.trimStart(), 'utf8');
-  return dest;
-}

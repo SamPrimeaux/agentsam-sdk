@@ -46,6 +46,10 @@ async function detectGcpVm() {
   let email = await fetchMetadata('/instance/service-accounts/default/email');
   if (!email) email = await fetchMetadata('/instance/service-accounts/default/');
 
+  const projectId = await fetchMetadata('/project/project-id');
+  const userClaim = (process.env.USER_GCP_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || '').trim();
+  const claimedMatch = userClaim && projectId && userClaim === projectId;
+
   let parsed = null;
   try {
     parsed = JSON.parse(tokenRes);
@@ -56,22 +60,37 @@ async function detectGcpVm() {
   return {
     source: 'vm-metadata',
     email: email || null,
-    token_type: parsed?.token_type || 'Bearer',
-    expires_in: parsed?.expires_in ?? null,
+    project_id: projectId || null,
+    scope: claimedMatch ? 'user-claimed' : 'unverified',
+    note: claimedMatch
+      ? 'USER_GCP_PROJECT matches VM metadata'
+      : 'VM metadata alone does not prove this is YOUR project — confirm or run gcloud auth login --no-browser',
   };
 }
 
 async function detectGcloud() {
+  const configuredProject = await tryExec('gcloud', ['config', 'get-value', 'project']);
+  const userClaim = (process.env.USER_GCP_PROJECT || '').trim();
+  const account = await tryExec('gcloud', ['config', 'get-value', 'account']);
+
   const adc = await tryExec('gcloud', ['auth', 'application-default', 'print-access-token']);
   if (adc) {
-    const account = await tryExec('gcloud', ['config', 'get-value', 'account']);
-    return { source: 'application-default', account: account || null };
+    return {
+      source: 'application-default',
+      account: account || null,
+      project_id: configuredProject || null,
+      scope: userClaim && configuredProject === userClaim ? 'user-claimed' : 'local',
+    };
   }
 
   const token = await tryExec('gcloud', ['auth', 'print-access-token']);
   if (!token) return null;
-  const account = await tryExec('gcloud', ['config', 'get-value', 'account']);
-  return { source: 'gcloud', account: account || null };
+  return {
+    source: 'gcloud',
+    account: account || null,
+    project_id: configuredProject || null,
+    scope: 'local',
+  };
 }
 
 async function detectGithub() {
@@ -275,27 +294,37 @@ export async function detectContext(opts = {}) {
 
 function formatCell(label, slot, width = 10) {
   const status = slot ? slot.source || 'yes' : 'not found';
-  const detail = slot?.account || slot?.email || slot?.detail || '';
+  const detail = slot?.account || slot?.email || slot?.project_id || slot?.detail || '';
   const line = `${label.padEnd(8)} ${String(status).padEnd(width)}`;
   return detail ? `${line} (${detail})` : line;
 }
 
 /** @param {Awaited<ReturnType<typeof detectContext>>} ctx */
 export function printContextSummary(ctx) {
-  console.log('\n  Detected credentials:\n');
+  console.log('\n  Detected credentials (informational — local init needs none):\n');
   if (ctx.iam.ready) {
     console.log(`  ${formatCell('IAM', { source: ctx.iam.source, account: ctx.iam.detail })}`);
   } else {
     console.log(`  ${'IAM'.padEnd(8)} not found  (${ctx.iam.detail || 'will open browser'})`);
   }
   console.log(`  ${formatCell('GCP', ctx.gcp)}`);
+  if (ctx.gcp?.scope === 'unverified') {
+    console.log(
+      `  ${''.padEnd(8)} ⚠ VM project ${ctx.gcp.project_id || '?'} — not assumed yours (set USER_GCP_PROJECT to confirm)`,
+    );
+  }
   console.log(`  ${formatCell('GitHub', ctx.github)}`);
   console.log(`  ${formatCell('CF', ctx.cloudflare)}`);
   if (ctx.cloudflare && !ctx.iam.ready) {
     console.log('\n  Note: local wrangler/CF token helps on this machine; scaffold still uses IAM Cloudflare OAuth.');
   }
-  if (ctx.gcp_vm) {
-    console.log('\n  GCP VM metadata detected — gcloud auth available without browser login.');
+  if (ctx.gcp_vm && ctx.gcp?.scope === 'unverified') {
+    console.log(
+      '\n  GCP VM metadata detected — this may be a shared platform VM, not YOUR Google Cloud project.',
+    );
+    console.log('  Connect yours: gcloud auth login --no-browser && gcloud config set project YOUR_PROJECT_ID');
+  } else if (ctx.gcp_vm && ctx.gcp?.scope === 'user-claimed') {
+    console.log('\n  GCP VM verified as your project via USER_GCP_PROJECT.');
   }
   if (Array.isArray(ctx.iam.aux) && ctx.iam.aux.length) {
     console.log('\n  Other env (not SDK IAM auth):');
@@ -306,8 +335,10 @@ export function printContextSummary(ctx) {
   console.log('');
 }
 
-/** @param {Awaited<ReturnType<typeof detectContext>>} ctx */
-export function missingForInit(ctx, presetToken = '') {
+/** @param {Awaited<ReturnType<typeof detectContext>>} ctx @param {string} [presetToken] @param {{ runTarget?: string }} [opts] */
+export function missingForInit(ctx, presetToken = '', opts = {}) {
+  const runTarget = opts.runTarget || 'local';
+  if (runTarget === 'local') return [];
   const missing = [];
   if (!ctx.iam.ready) missing.push('iam');
   return missing;
