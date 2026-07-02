@@ -9,7 +9,7 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "agentsam": "./src/cli.js"
+    "agentsam": "src/cli.js"
   },
   "files": [
     "src",
