@@ -5,6 +5,7 @@ import pkg from '../package.json' with { type: 'json' };
 import { authenticateViaBrowser } from './lib/auth.js';
 import { getJson, streamScaffold } from './lib/core-client.js';
 import { writeScaffoldFiles, writeExecosEnvSnippet } from './lib/write-files.js';
+import { detectContext, printContextSummary, missingForInit } from './lib/detect-context.js';
 import { SLASH_COMMANDS, SHELL_PHASES } from './lib/slash-commands.js';
 
 const VERSION = pkg.version;
@@ -94,7 +95,32 @@ async function runScaffoldStream(token, body) {
 }
 
 async function runInit(config) {
-  const { projectName, lane, hosting, accountId, token: presetToken, yes, prompt } = config;
+  const {
+    projectName,
+    lane,
+    hosting,
+    accountId,
+    token: presetToken,
+    yes,
+    prompt,
+    detectedCtx,
+    summaryShown = false,
+  } = config;
+
+  const detected = detectedCtx || (await detectContext());
+  if (!summaryShown) printContextSummary(detected);
+
+  const missing = missingForInit(detected, presetToken);
+  if (!yes && prompt) {
+    const msg = missing.includes('iam')
+      ? '  Proceed? IAM sign-in will open in browser for missing credentials. (y/n): '
+      : '  Proceed with detected credentials? (y/n): ';
+    const proceed = await prompt.ask(msg);
+    if (proceed.toLowerCase() !== 'y') {
+      console.log('\n  Cancelled.\n');
+      return;
+    }
+  }
 
   console.log(`
   ┌─────────────────────────────────────┐
@@ -106,19 +132,13 @@ async function runInit(config) {
   └─────────────────────────────────────┘
   `);
 
-  if (!yes && prompt) {
-    const confirm = await prompt.ask('  Agent Sam will provision CF resources in YOUR account. Continue? (y/n): ');
-    if (confirm.toLowerCase() !== 'y') {
-      console.log('\n  Cancelled.\n');
-      return;
-    }
-  }
-
-  let token = presetToken;
-  if (!token) {
+  let token = presetToken || process.env.AGENTSAM_SDK_TOKEN || '';
+  if (!token && missing.includes('iam')) {
     const session = await authenticateViaBrowser();
     token = session.access_token;
     console.log(`\n  ✓ Signed in (${session.user_id})\n`);
+  } else if (token) {
+    console.log('\n  ✓ Using existing IAM SDK token\n');
   }
 
   const ctx = await getJson('/api/sdk/context', token);
@@ -177,6 +197,22 @@ async function initInteractive(partial = {}) {
   ╚═══════════════════════════════════╝
   `);
 
+  const detectedCtx = await detectContext();
+  printContextSummary(detectedCtx);
+
+  if (!partial.yes) {
+    const missing = missingForInit(detectedCtx, partial.token || '');
+    const msg = missing.includes('iam')
+      ? '  Proceed? IAM sign-in will open in browser for missing credentials. (y/n): '
+      : '  Proceed with detected credentials? (y/n): ';
+    const proceed = await prompt.ask(msg);
+    if (proceed.toLowerCase() !== 'y') {
+      console.log('\n  Cancelled.\n');
+      prompt.close();
+      return;
+    }
+  }
+
   const projectName = partial.projectName || (await prompt.ask('  1) Project name: '));
 
   if (!partial.lane) {
@@ -188,7 +224,6 @@ async function initInteractive(partial = {}) {
   const laneKey = partial.lane
     ? Object.values(LANES).find((l) => l.key === partial.lane)?.key || partial.lane
     : LANES[await prompt.ask('  Pick lane [1-5]: ')]?.key || 'fullstack';
-  const laneLabel = Object.values(LANES).find((l) => l.key === laneKey)?.label || laneKey;
 
   if (!partial.hosting) {
     console.log(`
@@ -206,8 +241,10 @@ async function initInteractive(partial = {}) {
     hosting: hostingKey,
     accountId: partial.accountId || '',
     token: partial.token || '',
-    yes: partial.yes,
+    yes: true,
     prompt,
+    detectedCtx,
+    summaryShown: true,
   });
 
   prompt.close();
@@ -219,7 +256,9 @@ async function initFromArgs(argv) {
     console.error('\n  ✗ --name is required for non-interactive init.\n');
     process.exit(1);
   }
-  await runInit({ ...opts, prompt: null });
+  const detectedCtx = await detectContext();
+  printContextSummary(detectedCtx);
+  await runInit({ ...opts, prompt: null, detectedCtx, summaryShown: true });
 }
 
 async function runShellInfo() {

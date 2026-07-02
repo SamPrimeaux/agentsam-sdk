@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { AgentSam, routeIntent, getToolCatalog } from '../src/index.js';
 import { writeScaffoldFiles } from '../src/lib/write-files.js';
+import { printContextSummary, missingForInit } from '../src/lib/detect-context.js';
 
 const app = new AgentSam({ project: 'smoke', lane: 'cms', agent: 'cms' });
 let res = await app.handle(new Request('https://example.com/api/health'));
@@ -39,5 +40,15 @@ assert.ok(fs.readFileSync(path.join(dir, 'package.json'), 'utf8').includes('wran
 import { SLASH_COMMANDS, listSlashCommands } from '../src/lib/slash-commands.js';
 assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/deploy'));
 assert.equal(listSlashCommands({ lane: 'deploy' }).length, 2);
+
+printContextSummary({
+  iam: { ready: true, source: 'sdk-token', detail: 'AGENTSAM_SDK_TOKEN' },
+  gcp: { source: 'vm-metadata', email: 'execos@project.iam.gserviceaccount.com' },
+  gcp_vm: true,
+  github: { source: 'gh-cli', account: 'connor@example.com' },
+  cloudflare: { source: 'wrangler', account: 'connor@cloudflare.test' },
+});
+assert.deepEqual(missingForInit({ iam: { ready: true } }), []);
+assert.deepEqual(missingForInit({ iam: { ready: false } }), ['iam']);
 
 console.log('SDK smoke tests passed');
