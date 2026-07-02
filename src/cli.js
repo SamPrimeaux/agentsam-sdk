@@ -132,13 +132,20 @@ async function runInit(config) {
   └─────────────────────────────────────┘
   `);
 
-  let token = presetToken || process.env.AGENTSAM_SDK_TOKEN || '';
-  if (!token && missing.includes('iam')) {
+  let token = '';
+  if (detected.iam.ready) {
+    token = presetToken || process.env.AGENTSAM_SDK_TOKEN || '';
+    console.log('\n  ✓ IAM SDK token verified\n');
+  } else if (missing.includes('iam')) {
     const session = await authenticateViaBrowser();
     token = session.access_token;
     console.log(`\n  ✓ Signed in (${session.user_id})\n`);
-  } else if (token) {
-    console.log('\n  ✓ Using existing IAM SDK token\n');
+  }
+
+  if (!token) {
+    console.error('\n  ✗ IAM auth required for init.\n');
+    process.exitCode = 1;
+    return;
   }
 
   const ctx = await getJson('/api/sdk/context', token);
@@ -197,7 +204,7 @@ async function initInteractive(partial = {}) {
   ╚═══════════════════════════════════╝
   `);
 
-  const detectedCtx = await detectContext();
+  const detectedCtx = await detectContext({ token: partial.token || '' });
   printContextSummary(detectedCtx);
 
   if (!partial.yes) {
@@ -256,7 +263,7 @@ async function initFromArgs(argv) {
     console.error('\n  ✗ --name is required for non-interactive init.\n');
     process.exit(1);
   }
-  const detectedCtx = await detectContext();
+  const detectedCtx = await detectContext({ token: opts.token || '' });
   printContextSummary(detectedCtx);
   await runInit({ ...opts, prompt: null, detectedCtx, summaryShown: true });
 }
