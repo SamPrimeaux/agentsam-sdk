@@ -1,0 +1,162 @@
+/**
+ * terminal-lanes.css
+ * Lane identity chrome for in-app terminal panels.
+ *
+ * How it works:
+ *   1. JS calls getLaneCSSVars(targetType) → CSS var string
+ *   2. Inject on the .terminal-panel wrapper element style
+ *   3. All child elements inherit via var(--lane-*)
+ *
+ * Fallback: set data-lane="local|cloud|sandbox" on .terminal-panel
+ * if you can't inject inline CSS vars.
+ */
+
+/* ─── Panel wrapper ──────────────────────────────────────────────────────── */
+
+.terminal-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--lane-bg, #080808);
+  border-left: 2px solid var(--lane-primary, #22d3c8);
+  box-shadow: inset 0 1px 0 0 color-mix(in srgb, var(--lane-primary, #22d3c8) 30%, transparent);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* ─── Tab / header bar ───────────────────────────────────────────────────── */
+
+.terminal-panel-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--lane-bg, #080808);
+  border-bottom: 1px solid color-mix(in srgb, var(--lane-primary, #22d3c8) 20%, transparent);
+  font-family: "Cascadia Code", "JetBrains Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  user-select: none;
+}
+
+.terminal-panel-tab .lane-icon   { color: var(--lane-primary); font-size: 10px; }
+.terminal-panel-tab .lane-label  { color: var(--lane-primary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; font-size: 10px; }
+.terminal-panel-tab .lane-workspace { color: var(--lane-dim, #666); font-size: 11px; }
+
+/* ─── Status badge ───────────────────────────────────────────────────────── */
+
+.terminal-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-family: "Cascadia Code", monospace;
+  letter-spacing: 0.04em;
+  background: color-mix(in srgb, var(--lane-primary, #22d3c8) 12%, transparent);
+  color: var(--lane-primary, #22d3c8);
+  border: 1px solid color-mix(in srgb, var(--lane-primary, #22d3c8) 30%, transparent);
+}
+
+.terminal-status-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lane-primary, #22d3c8);
+  display: block;
+  flex-shrink: 0;
+}
+
+.terminal-status-badge.connecting::before {
+  background: #fb923c;
+  animation: pulse-badge 1s ease-in-out infinite;
+}
+
+.terminal-status-badge.error::before {
+  background: #ef4444;
+  animation: none;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+/* ─── Split panel container ──────────────────────────────────────────────── */
+
+.terminal-split               { display: grid; height: 100%; gap: 2px; background: #050505; }
+.terminal-split.split-2       { grid-template-columns: 1fr 1fr; }
+.terminal-split.split-3       { grid-template-columns: 1fr 1fr 1fr; }
+.terminal-split.split-vertical-2 { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+
+/* ─── xterm canvas wrapper ───────────────────────────────────────────────── */
+
+.terminal-xterm-wrap {
+  flex: 1;
+  overflow: hidden;
+  padding: 10px 12px;
+  background: var(--lane-bg, #080808);
+}
+
+.terminal-xterm-wrap .xterm-viewport::-webkit-scrollbar       { width: 6px; }
+.terminal-xterm-wrap .xterm-viewport::-webkit-scrollbar-track { background: var(--lane-bg, #080808); }
+.terminal-xterm-wrap .xterm-viewport::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--lane-primary, #22d3c8) 35%, transparent);
+  border-radius: 3px;
+}
+.terminal-xterm-wrap .xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--lane-primary, #22d3c8) 60%, transparent);
+}
+
+/* ─── data-lane fallback attrs ───────────────────────────────────────────── */
+
+.terminal-panel[data-lane="local"] {
+  --lane-primary:   #f59e0b;
+  --lane-secondary: #fbbf24;
+  --lane-bg:        #0d0900;
+  --lane-bg-subtle: #1a1200;
+  --lane-dim:       #78450a;
+  --lane-accent:    #22d3c8;
+}
+
+.terminal-panel[data-lane="cloud"] {
+  --lane-primary:   #22d3c8;
+  --lane-secondary: #5eead4;
+  --lane-bg:        #000d0b;
+  --lane-bg-subtle: #001a17;
+  --lane-dim:       #065f52;
+  --lane-accent:    #f59e0b;
+}
+
+.terminal-panel[data-lane="sandbox"] {
+  --lane-primary:   #a78bfa;
+  --lane-secondary: #c4b5fd;
+  --lane-bg:        #06020d;
+  --lane-bg-subtle: #0d0520;
+  --lane-dim:       #4c1d95;
+  --lane-accent:    #22d3c8;
+}
+
+/* ─── Focus / active panel ───────────────────────────────────────────────── */
+
+.terminal-panel:focus-within {
+  border-left-color: var(--lane-primary);
+  box-shadow:
+    inset 0 1px 0 0 color-mix(in srgb, var(--lane-primary) 40%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--lane-primary) 15%, transparent);
+}
+
+/* ─── Resize handle ──────────────────────────────────────────────────────── */
+
+.terminal-resize-handle {
+  width: 2px;
+  background: #1a1a1a;
+  cursor: col-resize;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.terminal-resize-handle:hover,
+.terminal-resize-handle.dragging { background: #333; }
