@@ -1,13 +1,17 @@
 const CLOUDFLARE_API_BASE = 'https://api.cloudflare.com/client/v4';
 
-export function readCloudflareEnv(env = process.env) {
+function defaultEnv() {
+  return globalThis.process?.env || {};
+}
+
+export function readCloudflareEnv(env = defaultEnv()) {
   return {
     token: env.CLOUDFLARE_API_TOKEN || env.CF_API_TOKEN || '',
     accountId: env.CLOUDFLARE_ACCOUNT_ID || env.CF_ACCOUNT_ID || '',
   };
 }
 
-export function requireCloudflareEnv(env = process.env) {
+export function requireCloudflareEnv(env = defaultEnv()) {
   const cfg = readCloudflareEnv(env);
   const missing = [];
   if (!cfg.token) missing.push('CLOUDFLARE_API_TOKEN');
