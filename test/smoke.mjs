@@ -2,11 +2,20 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { AgentSam, routeIntent, getToolCatalog } from '../src/index.js';
+import {
+  AgentSam,
+  ToolRunner,
+  routeIntent,
+  getToolCatalog,
+  runDoctor,
+  scanCloudflareInventory,
+} from '../src/index.js';
 import { buildLocalScaffoldMeta } from '../src/lib/local-scaffold.js';
 import { writeScaffoldFiles } from '../src/lib/write-files.js';
 import { copyGorillaTemplate } from '../src/lib/gorilla-template.js';
 import { printContextSummary, missingForInit } from '../src/lib/detect-context.js';
+import { runStatus } from '../src/commands/status.js';
+import { runCloudflareCommand } from '../src/commands/cloudflare.js';
 
 const app = new AgentSam({ project: 'smoke', lane: 'cms', agent: 'cms' });
 let res = await app.handle(new Request('https://example.com/api/health'));
@@ -45,7 +54,7 @@ assert.equal(listSlashCommands({ lane: 'deploy' }).length, 2);
 
 printContextSummary({
   iam: { ready: true, source: 'sdk-token', detail: 'AGENTSAM_SDK_TOKEN' },
-  gcp: { source: 'vm-metadata', email: 'execos@project.iam.gserviceaccount.com' },
+  gcp: { source: 'vm-metadata', email: 'connor@example.test' },
   gcp_vm: true,
   github: { source: 'gh-cli', account: 'connor@example.com' },
   cloudflare: { source: 'wrangler', account: 'connor@cloudflare.test' },
@@ -66,5 +75,29 @@ copyGorillaTemplate(gorillaDir, localMeta);
 assert.ok(fs.existsSync(path.join(gorillaDir, 'gorilla', 'App.tsx')));
 assert.ok(fs.existsSync(path.join(gorillaDir, 'vite.config.js')));
 assert.ok(fs.readFileSync(path.join(gorillaDir, 'gorilla', 'App.tsx'), 'utf8').includes('demo'));
+
+const runner = new ToolRunner({ runtime: 'local' });
+runner.registerTool('demo.echo', async (input) => ({ echo: input.value }), { readOnly: true });
+const toolResult = await runner.runTool('demo.echo', { value: 'ok' });
+assert.equal(toolResult.ok, true);
+assert.equal(toolResult.data.echo, 'ok');
+assert.equal(toolResult.trace.runtime, 'local');
+
+const doctor = await runDoctor({ cwd: gorillaDir });
+assert.equal(doctor.ok, true);
+assert.ok(Array.isArray(doctor.data.checks));
+
+const previousToken = process.env.CLOUDFLARE_API_TOKEN;
+const previousAccount = process.env.CLOUDFLARE_ACCOUNT_ID;
+delete process.env.CLOUDFLARE_API_TOKEN;
+delete process.env.CLOUDFLARE_ACCOUNT_ID;
+const inventory = await scanCloudflareInventory();
+assert.equal(inventory.ok, false);
+assert.equal(inventory.error.code, 'cloudflare_env_missing');
+if (previousToken) process.env.CLOUDFLARE_API_TOKEN = previousToken;
+if (previousAccount) process.env.CLOUDFLARE_ACCOUNT_ID = previousAccount;
+
+assert.equal(typeof runStatus, 'function');
+assert.equal(typeof runCloudflareCommand, 'function');
 
 console.log('SDK smoke tests passed');
