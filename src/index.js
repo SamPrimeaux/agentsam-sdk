@@ -12,6 +12,10 @@ export {
   SHELL_PHASES,
   listSlashCommands,
 } from './lib/slash-commands.js';
+export { createTrace, finishTrace, okResult, errorResult } from './core/ToolResult.js';
+export { ToolRunner, createDefaultToolRunner } from './core/ToolRunner.js';
+export { runDoctor } from './tools/local/doctor.js';
+export { scanCloudflareInventory } from './tools/cloudflare/inventory.js';
 
 export const version = pkg.version;
 export const name = pkg.name;
