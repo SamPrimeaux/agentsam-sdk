@@ -5,6 +5,10 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function defaultEnv() {
+  return globalThis.process?.env || {};
+}
+
 function pickResult(data) {
   return asArray(data?.result);
 }
@@ -32,7 +36,7 @@ export async function scanCloudflareInventory(input = {}, context = {}) {
 
   let cfg;
   try {
-    cfg = requireCloudflareEnv(input.env || process.env);
+    cfg = requireCloudflareEnv(input.env || context.env || defaultEnv());
   } catch (error) {
     return errorResult(
       'cloudflare.inventory',
