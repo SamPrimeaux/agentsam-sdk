@@ -26,6 +26,8 @@ res = await app.handle(new Request('https://example.com/api/agentsam/info'));
 const info = await res.json();
 assert.equal(info.agent, 'cms');
 assert.ok(info.capabilities.includes('page'));
+assert.ok(info.tools.some((tool) => tool.name === 'local.doctor'));
+assert.ok(info.tools.some((tool) => tool.name === 'cloudflare.inventory'));
 
 res = await app.handle(new Request('https://example.com/api/agentsam/message', {
   method: 'POST',
@@ -34,6 +36,15 @@ res = await app.handle(new Request('https://example.com/api/agentsam/message', {
 const message = await res.json();
 assert.equal(message.agent, 'cms');
 assert.equal(message.intent, 'cms_build');
+
+res = await app.handle(new Request('https://example.com/api/agentsam/tool', {
+  method: 'POST',
+  body: JSON.stringify({ tool: 'local.doctor', input: { cwd: process.cwd(), ptyHealthUrl: 'http://127.0.0.1:1/health' } }),
+}));
+const endpointToolResult = await res.json();
+assert.equal(res.status, 200);
+assert.equal(endpointToolResult.ok, true);
+assert.equal(endpointToolResult.tool, 'local.doctor');
 
 assert.equal(routeIntent({ message: 'drop table users' }).requires_approval, true);
 assert.ok(getToolCatalog('Data Solutions').some((tool) => tool.name === 'query'));
