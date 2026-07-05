@@ -9,6 +9,8 @@ import { printContextSummary } from './lib/detect-context.js';
 import { promptOptionalByokKeys } from './lib/prompt-byok.js';
 import { runStartLocal } from './commands/start-local.js';
 import { runDeploy } from './commands/deploy.js';
+import { runStatus } from './commands/status.js';
+import { runCloudflareCommand } from './commands/cloudflare.js';
 import { SLASH_COMMANDS, SHELL_PHASES } from './lib/slash-commands.js';
 
 const VERSION = pkg.version;
@@ -28,6 +30,9 @@ function printHelp() {
   Usage:
     agentsam init              Local-first project scaffold (default: localhost, no accounts)
     agentsam start-local       Local PTY on ws://127.0.0.1:3099 (no tunnel, no Cloudflare)
+    agentsam status            Local SDK/project diagnostics
+    agentsam doctor            Alias for status
+    agentsam cloudflare inventory [--json]
     agentsam deploy            Graduate to Cloudflare / GCP when ready
     agentsam shell             Slash commands + shell UX info
     agentsam --version
@@ -193,6 +198,12 @@ if (command === '--version' || command === '-v') {
   await runShellInfo();
 } else if (command === 'start-local') {
   await runStartLocal({});
+} else if (command === 'status' || command === 'doctor') {
+  const result = await runStatus({ json: rest.includes('--json') });
+  if (!result.ok) process.exitCode = 1;
+} else if (command === 'cloudflare') {
+  const result = await runCloudflareCommand(rest);
+  if (result?.ok === false) process.exitCode = 1;
 } else if (command === 'deploy') {
   try {
     await runDeploy(parseDeployArgs(rest));
