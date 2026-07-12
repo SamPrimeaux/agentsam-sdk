@@ -35,10 +35,12 @@ cd my-project
 npm install
 npm run smoke
 npx agentsam start-local   # local PTY on ws://127.0.0.1:3099
+npx agentsam tunnel        # cloudflared → register with IAM (dashboard Local lane)
 npm run dev                # http://127.0.0.1:8787
 npm run db:migrate         # local D1 schema
 ```
 
+`agentsam tunnel` (default `--quick`) starts a Cloudflare quick tunnel to `:3099` and POSTs the `wss://` URL to `/api/sdk/terminal/register-local` so `agentsam_terminal_local` can reach your machine. Use `--named --tunnel-name … --hostname … --zone-id …` for a stable BYOK named tunnel.
 When you're ready to ship to **your** Cloudflare account:
 
 ```bash

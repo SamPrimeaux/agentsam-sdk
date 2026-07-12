@@ -8,6 +8,7 @@ import { copyGorillaTemplate } from './lib/gorilla-template.js';
 import { printContextSummary } from './lib/detect-context.js';
 import { promptOptionalByokKeys } from './lib/prompt-byok.js';
 import { runStartLocal } from './commands/start-local.js';
+import { runTunnel } from './commands/tunnel.js';
 import { runDeploy } from './commands/deploy.js';
 import { SLASH_COMMANDS, SHELL_PHASES } from './lib/slash-commands.js';
 
@@ -28,6 +29,7 @@ function printHelp() {
   Usage:
     agentsam init              Local-first project scaffold (default: localhost, no accounts)
     agentsam start-local       Local PTY on ws://127.0.0.1:3099 (no tunnel, no Cloudflare)
+    agentsam tunnel            Expose local PTY to IAM (cloudflared + register)
     agentsam deploy            Graduate to Cloudflare / GCP when ready
     agentsam shell             Slash commands + shell UX info
     agentsam --version
@@ -35,6 +37,12 @@ function printHelp() {
 
   Init is completable with Node only — no IAM login, no OAuth, no Cloudflare.
   Prove locally first; deploy prompts for accounts only when you choose to ship.
+
+  Tunnel options:
+    --quick                    Quick tunnel (default) — trycloudflare.com URL
+    --named                    Named CF tunnel (needs --tunnel-name --hostname --zone-id)
+    --port <n>                 Local PTY port (default 3099)
+    --token <sdk_…>            Use existing AGENTSAM_SDK_TOKEN (skip browser auth)
 
   Init options:
     --name <name>              Project directory name
@@ -193,6 +201,13 @@ if (command === '--version' || command === '-v') {
   await runShellInfo();
 } else if (command === 'start-local') {
   await runStartLocal({});
+} else if (command === 'tunnel') {
+  try {
+    await runTunnel(rest);
+  } catch (e) {
+    console.error(`\n  ✗ ${e?.message || e}\n`);
+    process.exit(1);
+  }
 } else if (command === 'deploy') {
   try {
     await runDeploy(parseDeployArgs(rest));

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { AgentSam, routeIntent, getToolCatalog } from '../src/index.js';
 import { buildLocalScaffoldMeta } from '../src/lib/local-scaffold.js';
 import { writeScaffoldFiles } from '../src/lib/write-files.js';
@@ -66,5 +67,11 @@ copyGorillaTemplate(gorillaDir, localMeta);
 assert.ok(fs.existsSync(path.join(gorillaDir, 'gorilla', 'App.tsx')));
 assert.ok(fs.existsSync(path.join(gorillaDir, 'vite.config.js')));
 assert.ok(fs.readFileSync(path.join(gorillaDir, 'gorilla', 'App.tsx'), 'utf8').includes('demo'));
+
+const tunnelPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'commands', 'tunnel.js');
+const tunnelSrc = fs.readFileSync(tunnelPath, 'utf8');
+assert.ok(tunnelSrc.includes('register-local'));
+assert.ok(tunnelSrc.includes('cloudflared'));
+assert.ok(fs.existsSync(tunnelPath));
 
 console.log('SDK smoke tests passed');
