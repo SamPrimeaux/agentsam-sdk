@@ -48,8 +48,8 @@ printContextSummary({
   iam: { ready: true, source: 'sdk-token', detail: 'AGENTSAM_SDK_TOKEN' },
   gcp: { source: 'vm-metadata', email: 'execos@project.iam.gserviceaccount.com' },
   gcp_vm: true,
-  github: { source: 'gh-cli', account: 'connor@example.com' },
-  cloudflare: { source: 'wrangler', account: 'connor@cloudflare.test' },
+  github: { source: 'gh-cli', account: 'user@example.com' },
+  cloudflare: { source: 'wrangler', account: 'user@cloudflare.test' },
 });
 assert.deepEqual(missingForInit({ iam: { ready: false } }, '', { runTarget: 'local' }), []);
 assert.deepEqual(missingForInit({ iam: { ready: false } }, '', { runTarget: 'cloudflare' }), ['iam']);

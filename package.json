@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-sdk",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Agent Sam is a full-stack AI agent SDK for autonomous task execution — covering data management, creative workflows, design commands, and multi-step agentic pipelines.",
   "type": "module",
   "main": "./src/index.js",
@@ -9,7 +9,8 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "agentsam": "src/cli.js"
+    "agentsam": "src/cli.js",
+    "agentsam-scaffold": "bin/scaffold.mjs"
   },
   "files": [
     "src",
@@ -19,7 +20,8 @@
     "test",
     "README.md",
     "LICENSE",
-    "DEVELOPMENT.md"
+    "DEVELOPMENT.md",
+    "bin"
   ],
   "scripts": {
     "test": "node test/smoke.mjs",
@@ -30,7 +32,9 @@
     "node": ">=20"
   },
   "dependencies": {
+    "@clack/prompts": "^1.7.0",
     "node-pty": "^1.0.0",
+    "picocolors": "^1.1.1",
     "ws": "^8.18.0"
   },
   "publishConfig": {
@@ -54,5 +58,8 @@
   "bugs": {
     "url": "https://github.com/SamPrimeaux/agentsam-sdk/issues"
   },
-  "homepage": "https://github.com/SamPrimeaux/agentsam-sdk#readme"
+  "homepage": "https://github.com/SamPrimeaux/agentsam-sdk#readme",
+  "allowScripts": {
+    "node-pty@1.1.0": true
+  }
 }
