@@ -1,8 +1,12 @@
-# Python package lane
+# agentsam_sdk (Python) — npm mirror
 
-Portable Python tools (`agentsam_sdk.*`) are dual-homed with
-`inneranimalmedia/agentsam-sdk/agentsam_sdk/`.
+Exact dual-home of `inneranimalmedia/agentsam-sdk/`.
 
-When you change inventory/audits/codeintel here, mirror the same modules into
-the monorepo package (or the reverse) per [`../protocol/README.md`](../protocol/README.md).
-Do **not** leave one side as a stub while the other advances.
+```bash
+cd python && pip install -e .
+agentsam repository inventory --repo-root /path/to/repo --format json
+python3 -m unittest discover -s tests -v
+./scripts/check-host-tooling.sh
+```
+
+Protocol: [`../protocol/README.md`](../protocol/README.md). Do not advance this tree without mirroring the monorepo (or the reverse).

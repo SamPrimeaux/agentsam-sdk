@@ -1,75 +1,53 @@
-"""Unit tests for agentsam_sdk.repository.inventory (no live D1 / network)."""
-
-from __future__ import annotations
-
+import unittest
+from tempfile import TemporaryDirectory
 from pathlib import Path
 
-from agentsam_sdk.repository.inventory import (
-    categorize,
-    find_repo_root,
-    human_bytes,
-    run_inventory,
-    scan,
-)
+from agentsam_sdk.repository import inventory
 from agentsam_sdk.runtime.contract import ToolInput
 
 
-def test_human_bytes():
-    assert human_bytes(500) == "500 B"
-    assert "KiB" in human_bytes(2048)
+class TestRepositoryInventory(unittest.TestCase):
+    def test_counts_files_by_category_size_and_extension(self):
+        with TemporaryDirectory() as repo, TemporaryDirectory() as out:
+            root = Path(repo)
+            (root / "src").mkdir()
+            (root / "src" / "a.py").write_text("x" * 100)
+            (root / "src" / "b.py").write_text("y" * 50)
+            (root / "docs").mkdir()
+            (root / "docs" / "c.md").write_text("z" * 20)
+            (root / "node_modules").mkdir()
+            (root / "node_modules" / "skip.js").write_text("skip me" * 1000)
+
+            ti = ToolInput(
+                params={"repo_root": str(root), "top": 5, "by_ext": True},
+                output_dir=out,
+            )
+            result = inventory.run(ti)
+
+            self.assertTrue(result.ok)
+            self.assertEqual(result.data["file_total"], 3)  # node_modules excluded
+            self.assertEqual(result.data["by_extension"][".py"], 2)
+            self.assertEqual(result.data["by_top_level_dir"]["src"], 2)
+            ids = {c["id"] for c in result.data["categories"]}
+            self.assertIn("worker_src", ids)
+            self.assertIn("docs", ids)
+            self.assertGreater(result.data["totals"]["bytes"], 0)
+            self.assertTrue((Path(out) / "repository-inventory.json").exists())
+            self.assertTrue((Path(out) / "repository-inventory.md").exists())
+            # largest list prefers bigger src file
+            self.assertEqual(result.data["largest_files"][0]["path"], "src/a.py")
+
+    def test_missing_repo_root_is_reported_not_raised(self):
+        ti = ToolInput(params={"repo_root": "/definitely/does/not/exist/xyz"})
+        result = inventory.run(ti)
+        self.assertFalse(result.ok)
+        self.assertEqual(result.error, "repo_root_not_found")
+
+    def test_categorize_helpers(self):
+        self.assertEqual(inventory.categorize(Path("dashboard/App.tsx")), "dashboard")
+        self.assertEqual(inventory.categorize(Path("README.md")), "root_misc")
+        self.assertIn("KiB", inventory.human_bytes(2048))
 
 
-def test_categorize_prefixes():
-    assert categorize(Path("docs/foo.md")) == "docs"
-    assert categorize(Path("dashboard/App.tsx")) == "dashboard"
-    assert categorize(Path("README.md")) == "root_misc"
-    assert categorize(Path("weird/thing.bin")) == "other"
-
-
-def test_scan_fixture_tree(tmp_path: Path):
-    (tmp_path / "docs").mkdir()
-    (tmp_path / "docs" / "a.md").write_text("hello" * 20)
-    (tmp_path / "scripts").mkdir()
-    (tmp_path / "scripts" / "x.py").write_text("print(1)\n")
-    (tmp_path / "node_modules" / "pkg").mkdir(parents=True)
-    (tmp_path / "node_modules" / "pkg" / "big.js").write_text("x" * 10_000)
-
-    report = scan(
-        tmp_path,
-        skip_names=frozenset({"node_modules", ".git"}),
-        top_n=5,
-        min_bytes=0,
-        follow_symlinks=False,
-        by_ext=True,
-    )
-    assert report["ok"] is True
-    assert report["totals"]["file_count"] == 2
-    ids = {c["id"] for c in report["categories"]}
-    assert "docs" in ids
-    assert "scripts" in ids
-    # node_modules skipped — only the two source files
-    assert report["totals"]["bytes"] < 10_000
-    assert any(e["ext"] == ".md" for e in report["by_extension"])
-
-
-def test_run_inventory_contract(tmp_path: Path):
-    (tmp_path / "src").mkdir()
-    (tmp_path / "src" / "index.js").write_text("export {}\n")
-    result = run_inventory(
-        ToolInput(mode="read-only", repo_root=str(tmp_path), params={"top": 3})
-    )
-    assert result.ok is True
-    assert result.tool == "agentsam_sdk.repository.inventory"
-    assert result.receipt["started_unix"] >= 0
-    assert result.receipt["finished_unix"] >= result.receipt["started_unix"]
-    assert result.data["totals"]["file_count"] == 1
-
-
-def test_read_only_enforced(tmp_path: Path):
-    result = run_inventory(ToolInput(mode="write", repo_root=str(tmp_path)))
-    assert result.ok is False
-    assert "read-only" in (result.error or "")
-
-
-def test_find_repo_root_explicit(tmp_path: Path):
-    assert find_repo_root(str(tmp_path)) == tmp_path.resolve()
+if __name__ == "__main__":
+    unittest.main()

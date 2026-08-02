@@ -1,29 +1,28 @@
+"""agentsam_sdk.repository.inventory — repo file counts + sizes by category.
+
+Port of the battle-tested scanner (formerly scripts/repo-size-inventory.py on
+main). Read-only. No secrets, no D1.
+
+JSON is jq-friendly. Examples (host `jq` required for the pipe examples):
+
+  agentsam repository inventory --repo-root .. --format json \\
+    | jq '.data.categories[] | select(.id==\"docs\")'
+
+  agentsam repository inventory --repo-root .. --output-dir /tmp/inv --format json
+  jq '.totals' /tmp/inv/repository-inventory.json
 """
-agentsam_sdk.repository.inventory — repo file counts + sizes by category.
-
-Read-only. No secrets, no D1. Safe on any checkout.
-
-Examples:
-  python3 -m agentsam_sdk.repository.inventory
-  python3 -m agentsam_sdk.repository.inventory --json
-  python3 -m agentsam_sdk.repository.inventory --root /path/to/repo --top 25
-"""
-
 from __future__ import annotations
 
-import argparse
 import json
 import os
-import sys
-import time
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
 
-from agentsam_sdk.runtime.contract import ToolInput, ToolResult, make_receipt
+from agentsam_sdk.runtime.contract import ToolInput, ToolResult, write_receipt, start_timer
 
-TOOL_ID = "agentsam_sdk.repository.inventory"
+TOOL_NAME = "repository.inventory"
 
 DEFAULT_SKIP_DIR_NAMES = frozenset(
     {
@@ -40,10 +39,11 @@ DEFAULT_SKIP_DIR_NAMES = frozenset(
         ".next",
         ".cache",
         ".scratch",
+        "build",
     }
 )
 
-# Top-level (or first path segment) → category id
+# First path segment → category id
 CATEGORY_RULES: list[tuple[str, tuple[str, ...]]] = [
     ("worker_src", ("src",)),
     ("dashboard", ("dashboard",)),
@@ -63,6 +63,7 @@ CATEGORY_RULES: list[tuple[str, tuple[str, ...]]] = [
     ("cms", ("cms-editor", "studio-cms")),
     ("config_cursor", (".cursor", ".agents", ".claude", ".codex", ".githooks")),
     ("ci", (".github",)),
+    ("agentsam_sdk_pkg", ("agentsam-sdk", "agentsam_sdk")),
 ]
 
 CATEGORY_LABELS = {
@@ -84,9 +85,9 @@ CATEGORY_LABELS = {
     "cms": "CMS editor packages",
     "config_cursor": "Cursor / agent config",
     "ci": "CI (.github)",
+    "agentsam_sdk_pkg": "agentsam-sdk package",
     "root_misc": "Repo root files",
     "other": "Other paths",
-    "skipped": "Skipped dirs (counted only if --count-skipped)",
 }
 
 
@@ -113,24 +114,6 @@ def human_bytes(n: int) -> str:
         if x < 1024.0:
             return f"{x:.2f} {u}"
     return f"{x:.2f} PiB"
-
-
-def find_repo_root(explicit: str | None) -> Path:
-    if explicit:
-        p = Path(explicit).expanduser().resolve()
-        if not p.is_dir():
-            raise SystemExit(f"--root not a directory: {p}")
-        return p
-    cwd = Path.cwd().resolve()
-    for candidate in (cwd, *cwd.parents):
-        if (candidate / ".git").exists() and (candidate / "package.json").exists():
-            return candidate
-        if (candidate / ".git").exists() and candidate.name in (
-            "inneranimalmedia",
-            "agentsam-sdk",
-        ):
-            return candidate
-    return cwd
 
 
 def categorize(rel: Path) -> str:
@@ -185,9 +168,9 @@ def scan(
     by_ext: bool,
 ) -> dict[str, Any]:
     buckets: dict[str, Bucket] = {}
-    ext_counts: dict[str, dict[str, int]] = defaultdict(
-        lambda: {"file_count": 0, "bytes": 0}
-    )
+    ext_counts: Counter = Counter()
+    ext_bytes: dict[str, int] = defaultdict(int)
+    top_level: Counter = Counter()
     largest: list[tuple[int, str, str]] = []
 
     def bucket(cat_id: str) -> Bucket:
@@ -210,16 +193,19 @@ def scan(
         file_total += 1
         byte_total += size
 
+        top = rel.parts[0] if rel.parts else "."
+        top_level[top] += 1
+
+        ext = path.suffix.lower() or "(none)"
+        ext_counts[ext] += 1
         if by_ext:
-            ext = path.suffix.lower() or "(none)"
-            ext_counts[ext]["file_count"] += 1
-            ext_counts[ext]["bytes"] += size
+            ext_bytes[ext] += size
 
         if size >= min_bytes:
             largest.append((size, str(rel).replace("\\", "/"), cat))
 
     largest.sort(key=lambda t: t[0], reverse=True)
-    top = [
+    top_files = [
         {"path": p, "bytes": s, "human": human_bytes(s), "category": c}
         for s, p, c in largest[: max(0, top_n)]
     ]
@@ -239,8 +225,9 @@ def scan(
 
     out: dict[str, Any] = {
         "ok": True,
-        "tool": TOOL_ID,
-        "root": str(root),
+        "tool": TOOL_NAME,
+        "repo_root": str(root),
+        "file_total": file_total,
         "totals": {
             "file_count": file_total,
             "bytes": byte_total,
@@ -249,122 +236,33 @@ def scan(
         },
         "skipped_dir_names": sorted(skip_names),
         "categories": categories,
-        "largest_files": top,
+        "largest_files": top_files,
+        # Backward-compatible stub fields (counts only)
+        "by_extension": dict(ext_counts.most_common(40)),
+        "by_top_level_dir": dict(top_level.most_common(40)),
     }
     if by_ext:
-        exts = [
+        out["by_extension_detail"] = [
             {
                 "ext": k,
-                "file_count": v["file_count"],
-                "bytes": v["bytes"],
-                "human": human_bytes(v["bytes"]),
+                "file_count": ext_counts[k],
+                "bytes": ext_bytes[k],
+                "human": human_bytes(ext_bytes[k]),
             }
-            for k, v in sorted(
-                ext_counts.items(), key=lambda kv: kv[1]["bytes"], reverse=True
-            )
+            for k in sorted(ext_bytes, key=lambda e: ext_bytes[e], reverse=True)
         ]
-        out["by_extension"] = exts
     return out
 
 
-def run_inventory(inp: ToolInput | None = None, **kwargs: Any) -> ToolResult:
-    """Contract entry: ToolInput → ToolResult (read-only)."""
-    started = int(time.time())
-    if inp is None:
-        inp = ToolInput(
-            mode=kwargs.pop("mode", "read-only"),
-            repo_root=kwargs.pop("repo_root", None),
-            output_format=kwargs.pop("output_format", "json"),
-            params=kwargs.pop("params", None) or kwargs,
-        )
-    else:
-        # merge leftover kwargs into params for convenience
-        if kwargs:
-            merged = dict(inp.params)
-            merged.update(kwargs)
-            inp.params = merged
-
-    try:
-        inp.assert_read_only()
-    except ValueError as e:
-        finished = int(time.time())
-        return ToolResult(
-            ok=False,
-            tool=TOOL_ID,
-            error=str(e),
-            receipt=make_receipt(
-                tool=TOOL_ID, started_unix=started, finished_unix=finished, mode=inp.mode
-            ),
-        )
-
-    params = inp.params
-    skip = set(params.get("skip_dir_names") or DEFAULT_SKIP_DIR_NAMES)
-    if params.get("include_node_modules"):
-        skip.discard("node_modules")
-    if params.get("include_venvs"):
-        skip.discard(".venv")
-        skip.discard("venv")
-        skip.discard(".venv_agentsam")
-    if params.get("include_git"):
-        skip.discard(".git")
-    if params.get("include_dist"):
-        skip.discard("dist")
-        skip.discard(".wrangler")
-
-    root = find_repo_root(inp.repo_root or params.get("root"))
-    report = scan(
-        root,
-        skip_names=frozenset(skip),
-        top_n=int(params.get("top", 20)),
-        min_bytes=int(params.get("min_bytes", 0)),
-        follow_symlinks=bool(params.get("follow_symlinks", False)),
-        by_ext=bool(params.get("by_ext", False)),
-    )
-    finished = int(time.time())
-    receipt = make_receipt(
-        tool=TOOL_ID,
-        started_unix=started,
-        finished_unix=finished,
-        mode=inp.mode,
-        extra={"root": str(root), "file_count": report["totals"]["file_count"]},
-    )
-    report["receipt"] = receipt
-    return ToolResult(ok=True, tool=TOOL_ID, data=report, receipt=receipt)
-
-
-def print_table(report: dict[str, Any]) -> None:
-    t = report["totals"]
-    print(f"Root: {report['root']}")
-    print(
-        f"Totals: {t['file_count']:,} files · {t['human']} "
-        f"({t['bytes']:,} bytes) · {t['categories']} categories"
-    )
-    print(f"Skipped dir names: {', '.join(report['skipped_dir_names'])}")
-    print()
-    print(f"{'Category':<28} {'Files':>8} {'Size':>12} {'%':>7}")
-    print("-" * 58)
-    for c in report["categories"]:
-        print(
-            f"{c['label']:<28} {c['file_count']:>8,} {c['human']:>12} {c['pct_bytes']:>6.1f}%"
-        )
-    if report.get("largest_files"):
-        print()
-        print(f"Largest files (top {len(report['largest_files'])}):")
-        for f in report["largest_files"]:
-            print(f"  {f['human']:>10}  [{f['category']}]  {f['path']}")
-    if report.get("by_extension"):
-        print()
-        print("By extension (top 20):")
-        for e in report["by_extension"][:20]:
-            print(f"  {e['ext']:<12} {e['file_count']:>8,}  {e['human']:>12}")
-
-
-def report_to_markdown(report: dict[str, Any]) -> str:
+def _markdown(report: dict[str, Any]) -> str:
     lines = [
-        f"# Repo inventory (`{TOOL_ID}`)",
+        "# Repository inventory",
         "",
-        f"- **Root:** `{report['root']}`",
-        f"- **Totals:** {report['totals']['file_count']:,} files · {report['totals']['human']}",
+        f"- **repo_root:** `{report['repo_root']}`",
+        f"- **files:** {report['file_total']:,}",
+        f"- **bytes:** {report['totals']['human']} ({report['totals']['bytes']:,})",
+        "",
+        "## By category",
         "",
         "| Category | Files | Size | % |",
         "|---|---:|---:|---:|",
@@ -377,93 +275,77 @@ def report_to_markdown(report: dict[str, Any]) -> str:
         lines += ["", "## Largest files", ""]
         for f in report["largest_files"]:
             lines.append(f"- `{f['path']}` — {f['human']} (`{f['category']}`)")
+    lines += ["", "## By extension (top)", "", "| Ext | Count |", "|-----|-------|"]
+    for e, c in list(report.get("by_extension", {}).items())[:30]:
+        lines.append(f"| `{e}` | {c} |")
     return "\n".join(lines) + "\n"
 
 
-def build_arg_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(
-        description=f"{TOOL_ID} — file counts + sizes by logical category."
-    )
-    p.add_argument("--root", help="Repo root (default: detect from cwd / git)")
-    p.add_argument("--json", action="store_true", help="Emit JSON (pipe to jq)")
-    p.add_argument(
-        "--markdown",
-        action="store_true",
-        help="Emit markdown table",
-    )
-    p.add_argument("--top", type=int, default=20, help="N largest files (0 to omit)")
-    p.add_argument(
-        "--min-bytes",
-        type=int,
-        default=0,
-        help="Only consider files >= N bytes for largest list",
-    )
-    p.add_argument("--by-ext", action="store_true", help="Also roll up by extension")
-    p.add_argument(
-        "--include-node-modules",
-        action="store_true",
-        help="Do not skip node_modules",
-    )
-    p.add_argument(
-        "--include-venvs",
-        action="store_true",
-        help="Do not skip .venv / .venv_agentsam / venv",
-    )
-    p.add_argument("--include-git", action="store_true", help="Do not skip .git")
-    p.add_argument(
-        "--include-dist",
-        action="store_true",
-        help="Do not skip dist / .wrangler",
-    )
-    p.add_argument(
-        "--follow-symlinks",
-        action="store_true",
-        help="Follow symlinks when walking",
-    )
-    p.add_argument(
-        "--with-receipt",
-        action="store_true",
-        help="Include ToolResult receipt wrapper in JSON output",
-    )
-    return p
+def run(tool_input: ToolInput) -> ToolResult:
+    started = start_timer()
+    p = tool_input.params
+    repo_root = Path(p.get("repo_root", ".")).expanduser().resolve()
+    output_dir = tool_input.output_path()
 
-
-def main(argv: list[str] | None = None) -> int:
-    args = build_arg_parser().parse_args(argv)
-    result = run_inventory(
-        ToolInput(
-            mode="read-only",
-            repo_root=args.root,
-            output_format="json"
-            if args.json
-            else ("markdown" if args.markdown else "table"),
-            params={
-                "top": args.top,
-                "min_bytes": args.min_bytes,
-                "by_ext": args.by_ext,
-                "include_node_modules": args.include_node_modules,
-                "include_venvs": args.include_venvs,
-                "include_git": args.include_git,
-                "include_dist": args.include_dist,
-                "follow_symlinks": args.follow_symlinks,
-            },
+    if not repo_root.exists():
+        result = ToolResult(
+            ok=False,
+            tool=TOOL_NAME,
+            mode=tool_input.mode,
+            request_id=tool_input.request_id,
+            started_at=started,
+            finished_at=start_timer(),
+            summary=f"repo_root does not exist: {repo_root}",
+            error="repo_root_not_found",
         )
+        write_receipt(result, output_dir)
+        return result
+
+    skip = set(p.get("skip_dir_names") or DEFAULT_SKIP_DIR_NAMES)
+    if p.get("include_node_modules"):
+        skip.discard("node_modules")
+    if p.get("include_venvs"):
+        skip.discard(".venv")
+        skip.discard("venv")
+        skip.discard(".venv_agentsam")
+    if p.get("include_git"):
+        skip.discard(".git")
+    if p.get("include_dist"):
+        skip.discard("dist")
+        skip.discard(".wrangler")
+        skip.discard("build")
+
+    report = scan(
+        repo_root,
+        skip_names=frozenset(skip),
+        top_n=int(p.get("top", 20)),
+        min_bytes=int(p.get("min_bytes", 0)),
+        follow_symlinks=bool(p.get("follow_symlinks", False)),
+        by_ext=bool(p.get("by_ext", True)),
     )
-    if not result.ok:
-        print(result.error or "inventory failed", file=sys.stderr)
-        return 1
 
-    report = result.data
-    if args.json:
-        payload = result.to_dict() if args.with_receipt else report
-        json.dump(payload, sys.stdout, indent=2)
-        sys.stdout.write("\n")
-    elif args.markdown:
-        sys.stdout.write(report_to_markdown(report))
-    else:
-        print_table(report)
-    return 0
+    artifacts: list[str] = []
+    if output_dir:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        json_path = output_dir / "repository-inventory.json"
+        md_path = output_dir / "repository-inventory.md"
+        json_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        md_path.write_text(_markdown(report), encoding="utf-8")
+        artifacts = [str(json_path), str(md_path)]
 
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+    result = ToolResult(
+        ok=True,
+        tool=TOOL_NAME,
+        mode=tool_input.mode,
+        request_id=tool_input.request_id,
+        started_at=started,
+        finished_at=start_timer(),
+        summary=(
+            f"{report['file_total']} files · {report['totals']['human']} "
+            f"under {repo_root}"
+        ),
+        data=report,
+        artifacts=artifacts,
+    )
+    write_receipt(result, output_dir)
+    return result

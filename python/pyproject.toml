@@ -5,23 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agentsam-sdk"
 version = "0.1.0"
-description = "Portable Agent Sam tooling (stdlib-first audits, inventory, readiness)."
-readme = "README.md"
+description = "Stdlib-only D1/repository audit toolkit for inneranimalmedia (Agent Sam)."
 requires-python = ">=3.10"
-license = { text = "MIT" }
-authors = [{ name = "Sam Primeaux", email = "sam@inneranimalmedia.com" }]
 dependencies = []
 
-[project.optional-dependencies]
-dev = ["pytest>=8.0"]
-
 [project.scripts]
-agentsam-repo-inventory = "agentsam_sdk.repository.inventory:main"
+agentsam = "agentsam_sdk.cli:main"
 
 [tool.setuptools.packages.find]
-where = ["."]
 include = ["agentsam_sdk*"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["."]
