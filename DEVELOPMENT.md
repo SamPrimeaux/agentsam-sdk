@@ -43,10 +43,16 @@ npx agentsam init \
 
 ## Publish checklist
 
-1. `npm test` passes
-2. Bump version in `package.json`
-3. `npm publish --access public`
-4. Tag: `git tag v1.1.1 && git push origin v1.1.1`
+1. Root `package.json` name is **`@inneranimalmedia/agentsam-sdk`** (never a workspace kit)
+2. `npm test` passes
+3. Bump version in root `package.json`
+4. Confirm `files` includes consumer surfaces (`src`, `bin`, `python`, `protocol`, …)
+5. `npm publish --access public` (manual; requires `npm login` to org)
+6. Tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
+7. Record pairing in [`docs/RELEASES.md`](./docs/RELEASES.md): `iam@<40-sha> ↔ @inneranimalmedia/agentsam-sdk@X.Y.Z`
+
+Workspace packages under `packages/*` (e.g. `@inneranimalmedia/agentsam-shell-kit`) stay
+`private: true` until separately ready — they are **not** the root publish identity.
 
 ## Python tooling (`agentsam_sdk`)
 
