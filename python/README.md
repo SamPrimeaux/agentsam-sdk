@@ -1,32 +1,21 @@
-# agentsam_sdk (Python)
+# Python audit toolkit — wrong tree
 
-Stdlib-first Agent Sam tooling — portable audits and inventory that IAM (and any checkout) can call without copying one-off scripts.
+**Do not develop portable D1/repository audits here.**
 
-## Install (editable)
+Canonical package (PR [#74](https://github.com/SamPrimeaux/inneranimalmedia/pull/74) on
+`feat/agentsam-sdk-d1-audit-port` → `feature/agentsam-sdk-scaffold`):
 
-```bash
-cd agentsam-sdk/python
-python3 -m pip install -e .
-# or: PYTHONPATH=$PWD python3 -m agentsam_sdk.repository.inventory --json
+```
+inneranimalmedia/agentsam-sdk/agentsam_sdk/
 ```
 
-## Modules
+Including:
 
-| Import | Purpose |
-|--------|---------|
-| `agentsam_sdk.repository.inventory` | Repo file counts + sizes by logical category |
-| `agentsam_sdk.runtime.contract` | `ToolInput` / `ToolResult` + receipt envelope |
+- `agentsam_sdk.data.d1_bloat`
+- `agentsam_sdk.data.agentsam_walk`
+- `agentsam_sdk.repository.inventory` (full category + size scan; jq-friendly)
+- Host tooling: `agentsam-sdk/docs/tooling.md` (`jq`, wrangler, env checks)
 
-## Inventory CLI
-
-```bash
-python3 -m agentsam_sdk.repository.inventory
-python3 -m agentsam_sdk.repository.inventory --json
-python3 -m agentsam_sdk.repository.inventory --root /path/to/repo --top 25
-# after pip install -e .:
-agentsam-repo-inventory --json
-```
-
-Mode is always `read-only`. No secrets, no D1.
-
-IAM thin shim (same flags): `inneranimalmedia/scripts/repo-size-inventory.py` resolves this package via `AGENTSAM_SDK_ROOT` or a sibling/`~/agentsam-sdk` checkout.
+This npm repo (`@inneranimalmedia/agentsam-sdk`) remains the **JS** CLI / scaffold.
+Any `python/` tree that briefly landed on `main` here was a mis-route — prefer the
+in-monorepo package above.
