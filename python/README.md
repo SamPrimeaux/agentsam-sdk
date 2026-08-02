@@ -1,21 +1,8 @@
-# Python audit toolkit — wrong tree
+# Python package lane
 
-**Do not develop portable D1/repository audits here.**
+Portable Python tools (`agentsam_sdk.*`) are dual-homed with
+`inneranimalmedia/agentsam-sdk/agentsam_sdk/`.
 
-Canonical package (PR [#74](https://github.com/SamPrimeaux/inneranimalmedia/pull/74) on
-`feat/agentsam-sdk-d1-audit-port` → `feature/agentsam-sdk-scaffold`):
-
-```
-inneranimalmedia/agentsam-sdk/agentsam_sdk/
-```
-
-Including:
-
-- `agentsam_sdk.data.d1_bloat`
-- `agentsam_sdk.data.agentsam_walk`
-- `agentsam_sdk.repository.inventory` (full category + size scan; jq-friendly)
-- Host tooling: `agentsam-sdk/docs/tooling.md` (`jq`, wrangler, env checks)
-
-This npm repo (`@inneranimalmedia/agentsam-sdk`) remains the **JS** CLI / scaffold.
-Any `python/` tree that briefly landed on `main` here was a mis-route — prefer the
-in-monorepo package above.
+When you change inventory/audits/codeintel here, mirror the same modules into
+the monorepo package (or the reverse) per [`../protocol/README.md`](../protocol/README.md).
+Do **not** leave one side as a stub while the other advances.
