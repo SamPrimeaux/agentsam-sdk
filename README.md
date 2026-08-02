@@ -6,6 +6,8 @@ Agent Sam is a full-stack autonomous agent SDK built on Cloudflare Workers, D1, 
 
 **Repo:** [github.com/SamPrimeaux/agentsam-sdk](https://github.com/SamPrimeaux/agentsam-sdk) · **npm:** `@inneranimalmedia/agentsam-sdk`
 
+**Python tooling:** [`python/agentsam_sdk`](./python/) — portable inventory/audits (`agentsam_sdk.repository.inventory`). See [python/README.md](./python/README.md).
+
 ---
 
 ## What is Agent Sam?

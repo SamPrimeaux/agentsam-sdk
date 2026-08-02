@@ -48,6 +48,20 @@ npx agentsam init \
 3. `npm publish --access public`
 4. Tag: `git tag v1.1.1 && git push origin v1.1.1`
 
+## Python tooling (`agentsam_sdk`)
+
+Portable stdlib audits live under [`python/`](./python/) (import path `agentsam_sdk.*`).
+
+```bash
+cd python
+python3 -m pip install -e ".[dev]"
+python3 -m pytest
+python3 -m agentsam_sdk.repository.inventory --json --root /path/to/repo
+```
+
+Inner Animal Media keeps a thin shim at `scripts/repo-size-inventory.py` that adds
+`AGENTSAM_SDK_ROOT/python` (or a sibling/`~/agentsam-sdk` checkout) to `sys.path`.
+
 ## Known gaps (roadmap)
 
 - `agentsam deploy`, `status`, `logs` — not implemented yet
