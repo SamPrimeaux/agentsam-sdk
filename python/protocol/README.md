@@ -37,9 +37,15 @@ tooling.
 ```
 agentsam-sdk/
   protocol/           ← this law
-  agentsam_sdk/       ← Python portable tools (stdlib-first audits / inventory)
+  python/agentsam_sdk ← Python portable tools (stdlib-first audits / inventory)
   src/                ← JS CLI / scaffold (published npm entry)
+  packages/           ← optional workspace packages (not always in npm tarball)
+    agentsam-shell-kit/  ← @inneranimalmedia/agentsam-shell-kit (private until ready)
   docs/gaps.md        ← port status vs IAM scripts + in-app indexers
 ```
 
-Exact folder names may evolve; the dual-home rule does not.
+**npm identity (LOCKED):** root publishable package is always
+`@inneranimalmedia/agentsam-sdk`. Do not overwrite root `package.json` with a
+workspace kit name. Fold UI kits under `packages/*`.
+
+Exact folder names may evolve; the dual-home + root-identity rules do not.
