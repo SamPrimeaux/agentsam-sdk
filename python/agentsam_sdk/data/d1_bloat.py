@@ -190,6 +190,7 @@ def _render_markdown(stats: list[TableStat], db_size, mode, table_total, scanned
 
 def run(tool_input: ToolInput) -> ToolResult:
     started = start_timer()
+    tool_input.assert_read_only()
     p = tool_input.params
     mode = tool_input.mode if tool_input.mode in ("quick", "full") else "quick"
     prefix = p.get("prefix")
