@@ -47,6 +47,13 @@ jq '.by_extension | to_entries | map(select(.value > 100))' \
   /tmp/inv/repository-inventory.json
 ```
 
+## jq recipes (per-file source bloat)
+
+```bash
+agentsam repository scan-bloat --root src --min-kb 10 --top 50 --json-envelope \
+  | jq -r '.files[] | "\(.size_kb)KB\t\(.path)"'
+```
+
 ## jq recipes (D1 audits)
 
 ```bash

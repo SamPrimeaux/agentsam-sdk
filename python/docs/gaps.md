@@ -30,6 +30,7 @@ scope boundary for this pass was P0 only, per the handoff doc's file list.
 | Legacy script | SDK target | Status |
 |---|---|---|
 | `scripts/repo-size-inventory.py` (main) / `repo_inventory.py` | `agentsam_sdk.repository.inventory` | **Ported** (category + byte sizes + largest files + extension rollups; jq-friendly JSON; stub fields `by_extension` / `by_top_level_dir` retained). |
+| `tools/scan_bloat.py` (IAM shim) | `agentsam_sdk.repository.scan_bloat` | **Ported.** Per-file KB/lines/est. tokens; CLI `agentsam repository scan-bloat`. D1: `agentsam_scripts.slug=scan_bloat` (not `agentsam_commands`). |
 | `repo_cleanup_classify.py`, `repo-cleanup.py` | `agentsam_sdk.repository.cleanup_plan` | **Not started** |
 | `audit_dead_code.py` | `agentsam_sdk.repository.dead_paths` | **Not started** |
 | `audit_hardcoded_identity.py`, `guard-no-hardcoded-identity.sh` | `agentsam_sdk.readiness.boundaries` | **Not started** |

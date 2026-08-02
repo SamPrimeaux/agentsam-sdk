@@ -5,6 +5,7 @@ convention: Python tooling here is stdlib-only).
   agentsam data agentsam-walk --prefix agentsam_ --output-dir /tmp/walk
   agentsam repository inventory --repo-root .. --output-dir /tmp/scan --format json
   agentsam repository inventory --repo-root .. --format json | jq '.data.totals'
+  agentsam repository scan-bloat --root src --min-kb 10 --top 30 --format json
 """
 from __future__ import annotations
 
@@ -32,6 +33,17 @@ def _print_result(result: ToolResult, fmt: str) -> None:
                 from agentsam_sdk.repository.inventory import _markdown
 
                 sys.stdout.write(_markdown(result.data))
+        if fmt == "markdown" and result.ok and result.data.get("files") is not None:
+            from agentsam_sdk.repository.scan_bloat import human_table
+
+            sys.stdout.write(
+                human_table(
+                    result.data.get("files") or [],
+                    scanned=int(result.data.get("file_count") or 0),
+                    total_kb=float(result.data.get("total_kb") or 0),
+                    total_tokens=int(result.data.get("total_est_tokens") or 0),
+                )
+            )
 
 
 def _cmd_data_d1_bloat(args: argparse.Namespace) -> int:
@@ -84,6 +96,29 @@ def _cmd_repository_inventory(args: argparse.Namespace) -> int:
         output_dir=args.output_dir,
     )
     result = inventory.run(ti)
+    _print_result(result, args.format)
+    return 0 if result.ok else 1
+
+
+def _cmd_repository_scan_bloat(args: argparse.Namespace) -> int:
+    from agentsam_sdk.repository import scan_bloat
+
+    ti = ToolInput(
+        mode="read-only",
+        params={
+            "root": args.root,
+            "top": args.top,
+            "min_kb": args.min_kb,
+            "ext": args.ext,
+            "exclude": args.exclude,
+        },
+        output_dir=args.output_dir,
+    )
+    result = scan_bloat.run(ti)
+    # Agent capture: --json-envelope prints data payload only (legacy tools/scan_bloat.py)
+    if args.json_envelope:
+        print(json.dumps(result.data if result.ok else {"ok": False, "error": result.error}, indent=2))
+        return 0 if result.ok else 1
     _print_result(result, args.format)
     return 0 if result.ok else 1
 
@@ -141,6 +176,28 @@ def build_parser() -> argparse.ArgumentParser:
     inv.add_argument("--include-dist", action="store_true")
     inv.add_argument("--follow-symlinks", action="store_true")
     inv.set_defaults(func=_cmd_repository_inventory)
+
+    sb = repo_sub.add_parser(
+        "scan-bloat",
+        help="largest runtime source files (KB/lines/est. tokens)",
+    )
+    sb.add_argument("--root", default=".", help="directory to scan (default: cwd)")
+    sb.add_argument("--top", type=int, default=30)
+    sb.add_argument("--min-kb", type=float, default=0)
+    sb.add_argument(
+        "--ext",
+        default=".js,.ts,.jsx,.tsx,.mjs,.cjs",
+        help="comma-separated extensions",
+    )
+    sb.add_argument("--exclude", default="", help="extra dir names to exclude")
+    sb.add_argument("--output-dir")
+    sb.add_argument("--format", choices=["json", "markdown"], default="markdown")
+    sb.add_argument(
+        "--json-envelope",
+        action="store_true",
+        help="print ToolResult.data JSON only (agent/terminal capture)",
+    )
+    sb.set_defaults(func=_cmd_repository_scan_bloat)
 
     return ap
 
