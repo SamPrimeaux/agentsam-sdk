@@ -1,0 +1,274 @@
+schema_version: "1.0"
+
+project:
+  id: agentsam-sdk
+  name: Agent Sam SDK
+  description: >
+    Cross-runtime SDK for building, operating, and extending Agent Sam agents,
+    execution tools, knowledge systems, retrieval pipelines, and platform integrations.
+  repository: SamPrimeaux/agentsam-sdk
+  visibility: public
+  license: MIT
+  status: active
+  maturity: alpha
+  default_branch: main
+  owners:
+    - name: Inner Animal Media
+      role: platform_owner
+
+identity:
+  package_namespace: "@inneranimalmedia"
+  javascript_package: "@inneranimalmedia/agentsam-sdk"
+  python_package: agentsam-sdk
+  cli_command: agentsam
+  product_ids:
+    - agentsam
+    - agentsam-sdk
+    - inneranimalmedia-platform
+
+runtimes:
+  javascript:
+    enabled: true
+    language: javascript
+    module_format: esm
+    minimum_version: "20"
+    package_root: .
+    source_root: src
+    test_root: test
+  python:
+    enabled: true
+    language: python
+    minimum_version: "3.11"
+    package_root: python
+    source_root: python/agentsam_sdk
+    test_root: python/tests
+
+packages:
+  - id: agentsam-sdk-js
+    type: javascript_sdk
+    path: .
+    package_name: "@inneranimalmedia/agentsam-sdk"
+    entrypoint: src/index.js
+    publish: npm
+  - id: agentsam-sdk-python
+    type: python_sdk
+    path: python
+    package_name: agentsam-sdk
+    entrypoint: python/agentsam_sdk/__init__.py
+    publish: pypi
+    publish_enabled: false
+  - id: agentsam-shell-kit
+    type: javascript_package
+    path: packages/agentsam-shell-kit
+    package_name: "@inneranimalmedia/agentsam-shell-kit"
+    publish: npm
+    publish_enabled: false
+
+exports:
+  javascript:
+    root: ./src/index.js
+    knowledge: ./src/knowledge/index.js
+  python:
+    root: agentsam_sdk
+    knowledge: agentsam_sdk.knowledge
+
+capabilities:
+  execution:
+    enabled: true
+    lanes:
+      - id: local
+        description: User-hosted development machine
+      - id: remote
+        description: Persistent cloud development environment
+      - id: sandbox
+        description: Isolated disposable execution environment
+    features:
+      - tool_execution
+      - terminal_execution
+      - project_scaffolding
+      - deployment
+      - session_management
+      - policy_gates
+      - audit_receipts
+  knowledge:
+    enabled: true
+    protocol_path: protocol/knowledge
+    capabilities:
+      - source_discovery
+      - document_parsing
+      - semantic_chunking
+      - structural_chunking
+      - incremental_indexing
+      - semantic_retrieval
+      - lexical_retrieval
+      - structural_retrieval
+      - retrieval_planning
+      - candidate_ranking
+      - context_pack_assembly
+      - evaluation
+
+knowledge_protocol:
+  version: "1.0"
+  format: json_schema
+  draft: "2020-12"
+  contracts:
+    source: protocol/knowledge/source.schema.json
+    document: protocol/knowledge/document.schema.json
+    chunk: protocol/knowledge/chunk.schema.json
+    repository: protocol/knowledge/repository.schema.json
+    retrieval_query: protocol/knowledge/retrieval-query.schema.json
+    retrieval_hit: protocol/knowledge/retrieval-hit.schema.json
+    context_pack: protocol/knowledge/context-pack.schema.json
+    ingest_receipt: protocol/knowledge/ingest-receipt.schema.json
+  compatibility:
+    javascript: required
+    python: required
+    inneranimalmedia_runtime: required
+    mcp_server: required
+
+architecture:
+  authority:
+    reusable_contracts: agentsam-sdk
+    reusable_clients: agentsam-sdk
+    platform_runtime: SamPrimeaux/inneranimalmedia
+    mcp_surface: inneranimalmedia-mcp-server
+  source_of_truth:
+    code: git
+    protocol_contracts: protocol
+    javascript_package: src
+    python_package: python/agentsam_sdk
+  storage_policy:
+    canonical_sources:
+      - git
+      - r2
+      - d1
+    rebuildable_indexes:
+      - cloudflare_vectorize
+      - supabase_pgvector
+      - lexical_index
+      - graph_index
+  rules:
+    - id: no-provider-coupling
+      statement: Public SDK contracts must remain provider-neutral.
+    - id: workspace-scope-required
+      statement: Retrieval and indexing operations must carry authenticated workspace scope.
+    - id: repository-identity-required
+      statement: Code knowledge must preserve repository, ref, commit, and path identity.
+    - id: receipts-required
+      statement: Indexing and mutation operations must return durable, inspectable receipts.
+    - id: no-false-success
+      statement: Empty corpus, no matches, unavailable backend, and failed ingestion are distinct statuses.
+    - id: context-before-generation
+      statement: Retrieval returns evidence and context packs; answer generation is separate.
+
+repositories:
+  dual_home:
+    enabled: true
+    canonical_repository: SamPrimeaux/agentsam-sdk
+    mirror_repository: SamPrimeaux/inneranimalmedia
+    mirror_path: agentsam-sdk
+    protocol:
+      root: protocol
+      documentation: protocol/dual-repo-sync.md
+    rules:
+      - reusable SDK changes land in the SDK repository
+      - mirrored runtime changes preserve commit provenance
+      - npm publishing occurs only from the SDK repository
+      - generated copies never become independent authorities
+
+development:
+  install:
+    javascript: npm ci
+    python: python3 -m pip install -e "./python[dev]"
+  commands:
+    test_javascript: npm test
+    test_knowledge_javascript: npm run test:knowledge
+    test_python: python3 -m pytest python/tests
+    test_all: npm test && npm run test:knowledge && python3 -m pytest python/tests
+  required_checks:
+    - javascript_smoke
+    - javascript_knowledge
+    - python_tests
+    - protocol_schema_validation
+    - package_export_validation
+    - secret_scan
+
+quality:
+  javascript:
+    strict_exports: true
+    runtime_validation: true
+  python:
+    type_hints_required: true
+    minimum_coverage_percent: 80
+  protocol:
+    additional_properties_default: false
+    breaking_changes_require_version_bump: true
+  retrieval:
+    diagnostics_required: true
+    source_provenance_required: true
+    stale_detection_required: true
+    evaluation_metrics:
+      - recall_at_k
+      - precision_at_k
+      - reciprocal_rank
+      - repository_accuracy
+      - source_accuracy
+      - stale_hit_rate
+      - duplicate_rate
+      - context_token_efficiency
+
+security:
+  secrets:
+    allowed_in_repository: false
+  prohibited_values:
+    - api_keys
+    - access_tokens
+    - account_tokens
+    - private_keys
+    - production_database_urls
+    - hardcoded_user_ids
+    - hardcoded_workspace_credentials
+  authorization:
+    workspace_scope_from_auth: true
+    caller_scope_elevation: false
+    destructive_operations_require_policy_check: true
+
+release:
+  javascript:
+    registry: npm
+    package: "@inneranimalmedia/agentsam-sdk"
+    strategy: manual
+    tag_prefix: v
+  python:
+    registry: pypi
+    package: agentsam-sdk
+    enabled: false
+  versioning:
+    strategy: semver
+    protocol_breaking_change: major
+    backwards_compatible_feature: minor
+    backwards_compatible_fix: patch
+
+roadmap:
+  current:
+    - knowledge_sdk_contracts
+    - repository_registry
+    - source_adapter_protocol
+    - parser_protocol
+    - chunking_protocol
+    - retrieval_planner
+    - context_pack
+    - evaluation_harness
+  next:
+    - github_repository_source
+    - markdown_parser
+    - ast_parser_adapter
+    - lexical_candidate_retriever
+    - vector_candidate_retriever
+    - deterministic_ranker
+    - reranker_adapter
+    - mcp_knowledge_tools
+  deferred:
+    - managed_hosted_index
+    - automatic_provider_provisioning
+    - public_python_publish
