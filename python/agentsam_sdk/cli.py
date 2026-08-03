@@ -54,8 +54,7 @@ def _cmd_data_d1_bloat(args: argparse.Namespace) -> int:
         mode=mode,
         params={
             "db": args.db, "config": args.config, "repo_root": args.repo_root,
-            "prefix": args.prefix, "workers": args.workers,
-            "count_only": args.count_only, "top": args.top,
+            "prefix": args.prefix, "workers": args.workers, "top": args.top,
         },
         output_dir=args.output_dir,
     )
@@ -130,16 +129,20 @@ def build_parser() -> argparse.ArgumentParser:
     data = sub.add_parser("data", help="D1 data audits")
     data_sub = data.add_subparsers(dest="cmd", required=True)
 
-    bloat = data_sub.add_parser("d1-bloat", help="find largest/text-heavy D1 tables")
+    bloat = data_sub.add_parser(
+        "d1-bloat",
+        help="database-scoped D1 audit (--quick=counts, --full=text sizes)",
+    )
     bloat.add_argument("--db", help="D1 database name (else AGENTSAM_D1_DB_NAME)")
     bloat.add_argument("--config", help="wrangler config path (else AGENTSAM_WRANGLER_CONFIG)")
     bloat.add_argument("--repo-root", help="repo root wrangler runs from")
-    bloat.add_argument("--quick", action="store_true", default=True)
-    bloat.add_argument("--full", action="store_true")
-    bloat.add_argument("--prefix")
+    bloat.add_argument("--quick", action="store_true", default=True,
+                       help="All tables: COUNT(*) only (default)")
+    bloat.add_argument("--full", action="store_true",
+                       help="All tables: row counts + text/JSON LENGTH estimates")
+    bloat.add_argument("--prefix", help="Only tables whose name starts with this prefix")
     bloat.add_argument("--workers", type=int, default=6)
     bloat.add_argument("--top", type=int, default=40)
-    bloat.add_argument("--count-only", action="store_true")
     bloat.add_argument("--output-dir")
     bloat.add_argument("--format", choices=["json", "markdown"], default="markdown")
     bloat.set_defaults(func=_cmd_data_d1_bloat)
