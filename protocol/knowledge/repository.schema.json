@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/knowledge/repository.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "title": "RepositoryDescriptor",
+  "required": [
+    "repository_id",
+    "full_name",
+    "workspace_id",
+    "default_branch"
+  ],
+  "properties": {
+    "repository_id": {
+      "type": "string"
+    },
+    "full_name": {
+      "type": "string",
+      "pattern": "^[^/]+/[^/]+$"
+    },
+    "workspace_id": {
+      "type": "string"
+    },
+    "default_branch": {
+      "type": "string"
+    },
+    "product_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "indexed_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "enabled_lanes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "include": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "exclude": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "metadata": {
+      "type": "object"
+    }
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/knowledge/chunk.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "title": "Chunk",
+  "required": [
+    "chunk_id",
+    "document_id",
+    "workspace_id",
+    "content",
+    "ordinal",
+    "content_hash"
+  ],
+  "properties": {
+    "chunk_id": {
+      "type": "string"
+    },
+    "document_id": {
+      "type": "string"
+    },
+    "workspace_id": {
+      "type": "string"
+    },
+    "content": {
+      "type": "string"
+    },
+    "ordinal": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "content_hash": {
+      "type": "string"
+    },
+    "token_count": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "repository_full_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "commit_sha": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "symbol": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "heading_path": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "metadata": {
+      "type": "object"
+    }
+  }
+}
