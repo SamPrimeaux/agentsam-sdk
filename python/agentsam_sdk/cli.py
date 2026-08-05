@@ -6,6 +6,7 @@ convention: Python tooling here is stdlib-only).
   agentsam repository inventory --repo-root .. --output-dir /tmp/scan --format json
   agentsam repository inventory --repo-root .. --format json | jq '.data.totals'
   agentsam repository scan-bloat --root src --min-kb 10 --top 30 --format json
+  agentsam repository inspect --repo-root . --json --dupes | jq '.duplicates'
 """
 from __future__ import annotations
 
@@ -122,6 +123,36 @@ def _cmd_repository_scan_bloat(args: argparse.Namespace) -> int:
     return 0 if result.ok else 1
 
 
+def _cmd_repository_inspect(args: argparse.Namespace) -> int:
+    from agentsam_sdk.repository import inspect as repo_inspect
+
+    argv: list[str] = []
+    if args.repo_root:
+        argv.extend(["--repo-root", args.repo_root])
+    want_text = bool(args.text) or args.format in ("text", "markdown")
+    want_json = bool(args.json) or args.format == "json" or not want_text
+    if want_json and not want_text:
+        argv.append("--json")
+    if want_text and not want_json:
+        argv.append("--text")
+    if want_text and want_json:
+        # Explicit both → JSON wins (machine default) unless only --text
+        argv.append("--json")
+    if args.dupes:
+        argv.append("--dupes")
+    if args.all:
+        argv.append("--all")
+    if args.since:
+        argv.extend(["--since", args.since])
+    if args.recent is not None:
+        argv.extend(["--recent", str(args.recent)])
+    if args.largest is not None:
+        argv.extend(["--largest", str(args.largest)])
+    if args.out:
+        argv.extend(["--out", args.out])
+    return repo_inspect.main_cli(argv)
+
+
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="agentsam", description="agentsam_sdk CLI")
     sub = ap.add_subparsers(dest="group", required=True)
@@ -201,6 +232,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="print ToolResult.data JSON only (agent/terminal capture)",
     )
     sb.set_defaults(func=_cmd_repository_scan_bloat)
+
+    insp = repo_sub.add_parser(
+        "inspect",
+        help="file walk: sizes + dates (+ optional --dupes SHA-256 groups)",
+    )
+    insp.add_argument("--repo-root", default=None)
+    insp.add_argument("--format", choices=["json", "markdown", "text"], default="json")
+    insp.add_argument("--json", action="store_true")
+    insp.add_argument("--text", action="store_true")
+    insp.add_argument("--dupes", action="store_true")
+    insp.add_argument("--all", action="store_true")
+    insp.add_argument("--since", default=None)
+    insp.add_argument("--recent", type=int, default=50)
+    insp.add_argument("--largest", type=int, default=30)
+    insp.add_argument("--out", default=None)
+    insp.set_defaults(func=_cmd_repository_inspect)
 
     return ap
 
