@@ -8,10 +8,10 @@ Canonical npm-side table also lives in the SDK repo: `docs/RELEASES.md`.
 | npm version | Published (UTC) | IAM git SHA (40) | Notes |
 |-------------|-----------------|------------------|-------|
 | 1.7.0 | 2026-07-14 | _(pre-receipt)_ | Prior publish |
-| 1.9.0 | _(pending publish)_ | `fc1628505cb3c9946c149e4c468c2e264d6f381e` | `repository.inspect` + `--dupes`; mirrored from IAM agentsam-sdk |
+| 1.9.0 | 2026-08-05T07:12:21.726Z | `fc1628505cb3c9946c149e4c468c2e264d6f381e` | `repository.inspect` + `--dupes`; mirrored from IAM agentsam-sdk |
 | 1.8.0 | 2026-08-02T13:57:12.080Z | `580547301e370b77ec26bd72558979d335feedd9` | `python/` + `protocol/` in tarball; `repository.scan_bloat`; shell-kit under `packages/` |
 
-**Latest pairing (ready to publish):** `iam@fc1628505cb3c9946c149e4c468c2e264d6f381e` ↔ `@inneranimalmedia/agentsam-sdk@1.9.0`
+**Latest pairing :** `iam@fc1628505cb3c9946c149e4c468c2e264d6f381e` ↔ `@inneranimalmedia/agentsam-sdk@1.9.0`
 
 ### Receipt rules
 
