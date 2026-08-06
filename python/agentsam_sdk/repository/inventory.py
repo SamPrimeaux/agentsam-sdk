@@ -283,6 +283,7 @@ def _markdown(report: dict[str, Any]) -> str:
 
 def run(tool_input: ToolInput) -> ToolResult:
     started = start_timer()
+    tool_input.assert_read_only()
     p = tool_input.params
     repo_root = Path(p.get("repo_root", ".")).expanduser().resolve()
     output_dir = tool_input.output_path()

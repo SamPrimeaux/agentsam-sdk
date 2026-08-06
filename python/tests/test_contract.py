@@ -28,5 +28,16 @@ class TestReceipts(unittest.TestCase):
         self.assertIsNone(write_receipt(result, ti.output_path()))
 
 
+class TestReadOnlyGuard(unittest.TestCase):
+    def test_write_true_raises(self):
+        ti = ToolInput(write=True)
+        with self.assertRaises(ValueError):
+            ti.assert_read_only()
+
+    def test_write_false_is_noop(self):
+        ti = ToolInput(write=False)
+        ti.assert_read_only()  # should not raise
+
+
 if __name__ == "__main__":
     unittest.main()
