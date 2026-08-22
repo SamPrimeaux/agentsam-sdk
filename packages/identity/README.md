@@ -16,9 +16,11 @@ const identity = createIdentityClient({
 });
 
 identity.providers.google();
-identity.login(request);   // → Identity Service (server-side)
-identity.session.fromRequest(request);
+identity.login(request);   // alpha: throws until Identity Service adapter is wired
+identity.session.fromRequest(request);  // alpha: throws until adapter is wired
 ```
+
+**Alpha scope:** contracts, provider normalization, auth portal HTML, and `agentsam identity preview`. Runtime login/session/OAuth finalize require a server adapter (D1 or IAM) — methods fail loud with `*_requires_identity_service` until then.
 
 ## Layout
 
@@ -53,14 +55,21 @@ Install in a customer app:
 
 ```bash
 npm install @inneranimalmedia/agentsam-sdk@alpha
-# or pin: @inneranimalmedia/agentsam-sdk@2.0.0-alpha.identity
+# or pin: @inneranimalmedia/agentsam-sdk@2.0.0-alpha.identity.1
 ```
 
 Subpath imports:
 
 ```js
 import { createIdentityClient } from '@inneranimalmedia/agentsam-sdk';
+import { GoogleProvider } from '@inneranimalmedia/agentsam-sdk/identity/providers/google';
 import { finalizeInboundOAuth } from '@inneranimalmedia/agentsam-sdk/identity/oauth/callback';
+```
+
+Local preview before client integration:
+
+```bash
+npx agentsam identity preview --open
 ```
 
 ## IAM design lab

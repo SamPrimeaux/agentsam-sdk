@@ -210,7 +210,8 @@ Running `agentsam init` generates a production-ready project for your lane:
 
 - [x] `agentsam shell` — shell UX info + slash command registry
 - [x] Gorilla Shell Phase 0 prototype in `examples/gorilla-shell/`
-- [ ] `agentsam deploy` — push your project from CLI
+- [x] `agentsam deploy` — push your project from CLI
+- [x] Identity alpha — contracts, providers, auth portal preview (`agentsam identity preview`)
 - [ ] `agentsam status` — live agent and infrastructure health
 - [ ] `agentsam logs` — tail tool call and command logs
 - [ ] PTY bridge (Phase 1) — ExecOS WebSocket in shell

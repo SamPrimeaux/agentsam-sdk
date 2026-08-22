@@ -1,13 +1,28 @@
-# Legendary-OS — @agentsam/identity customer proof
+# Legendary-OS — identity customer proof
 
 Target: fresh install path (Phase 7).
 
-## Day 1
+## Day 1 (alpha — preview + contracts)
 
 ```bash
-npm install @agentsam/identity
-npx agentsam identity init --adapter cloudflare-d1
+npm install @inneranimalmedia/agentsam-sdk@alpha
+npx agentsam identity preview --open
 ```
+
+Verify `/auth/login`, `/auth/signup`, `/auth/reset` match expectations before wiring Worker routes.
+
+Preview login: `preview@example.com` / `preview` (globe exit demo).
+
+```js
+import { createIdentityClient, GoogleProvider } from '@inneranimalmedia/agentsam-sdk';
+
+const identity = createIdentityClient({
+  providers: [GoogleProvider],
+  portal: { brand: { name: 'Legendary OS', logoUrl: '/logo.svg' } },
+});
+```
+
+`agentsam identity init` (D1 scaffold) lands Phase 5 — not in alpha CLI yet.
 
 ## Day 2 proof checklist
 

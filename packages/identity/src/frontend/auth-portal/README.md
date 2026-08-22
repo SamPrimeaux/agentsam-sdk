@@ -11,7 +11,7 @@ Pages copied **verbatim** from IAM `static/pages/auth/*` — reorganize only.
 | Colors | `:root { --auth-bg, ... }` | theme tokens — **no JS changes** |
 | OAuth labels | button text | HTML only |
 
-`agentsam init identity` (Phase 5) injects brand tokens into copied HTML — same globe/login UX, new logo/colors in minutes.
+Phase 5 (`agentsam init identity` — copy portal + inject brand tokens) is not in the CLI yet. Today: edit HTML/CSS directly or use `portal.brand` at `createIdentityClient` init for programmatic apps; preview with `agentsam identity preview`.
 
 ## Source map
 

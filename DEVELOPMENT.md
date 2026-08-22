@@ -87,9 +87,10 @@ Inner Animal Media keeps a thin shim at `scripts/repo-size-inventory.py` that ad
 
 ## Known gaps (roadmap)
 
-- `agentsam deploy`, `status`, `logs` — not implemented yet
+- `agentsam status`, `agentsam logs` — not implemented yet
+- `agentsam identity init` (D1 scaffold) — Phase 5; use `agentsam identity preview` for alpha
 - Gorilla Shell Phase 1 — PTY WebSocket bridge to ExecOS
 - CMS lane in README — CLI has 5 lanes (Full Stack, CMS, Data, CRM, Creative)
-- Published API route may differ; stub mode works without `AGENTSAM_API_KEY`
+- Published API route may differ; stub mode works without `AGENTSAM_SDK_TOKEN`
 
 See [docs/CLI_SHELL.md](./docs/CLI_SHELL.md) for the game-feel terminal UX path.

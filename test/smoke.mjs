@@ -45,6 +45,8 @@ import { createIdentityClient, AUTH_COOKIE_NAME } from '../src/index.js';
 import { finalizeInboundOAuth } from '../packages/identity/src/oauth/callback.js';
 assert.equal(AUTH_COOKIE_NAME, 'session');
 assert.equal(createIdentityClient().providers.google()?.id, 'google');
+const { GoogleProvider } = await import('@inneranimalmedia/agentsam-sdk/identity/providers/google');
+assert.equal(GoogleProvider.id, 'google');
 await assert.rejects(() => finalizeInboundOAuth({}, new Request('https://x'), {}), /adapter/);
 assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/deploy'));
 assert.equal(listSlashCommands({ lane: 'deploy' }).length, 2);
