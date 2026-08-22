@@ -1,0 +1,28 @@
+{
+  "name": "@inneranimalmedia/agentsam-sdk-identity",
+  "version": "2.0.0-alpha.identity",
+  "private": true,
+  "type": "module",
+  "description": "Identity module for @inneranimalmedia/agentsam-sdk (workspace — publish via root SDK)",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./provider-contract": "./src/provider-contract.js",
+    "./providers": "./src/providers/index.js",
+    "./providers/google": "./src/providers/google/index.js",
+    "./providers/github": "./src/providers/github/index.js",
+    "./providers/gcp": "./src/providers/gcp/index.js",
+    "./providers/email": "./src/providers/email/index.js",
+    "./contracts/identity": "./src/contracts/identity.js",
+    "./contracts/session": "./src/contracts/session.js",
+    "./contracts/provider": "./src/contracts/provider.js",
+    "./contracts/external-identity": "./src/contracts/external-identity.js",
+    "./frontend/auth-portal/*": "./src/frontend/auth-portal/*"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
