@@ -13,5 +13,16 @@ export {
   listSlashCommands,
 } from './lib/slash-commands.js';
 
+export {
+  createIdentityClient,
+  createIdentity,
+  GoogleProvider,
+  GithubProvider,
+  GcpProvider,
+  EmailProvider,
+  getIdentityProvider,
+  listIdentityProviders,
+} from '../packages/identity/src/index.js';
+
 export const version = pkg.version;
 export const name = pkg.name;

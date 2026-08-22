@@ -1,60 +1,49 @@
-# @agentsam/identity
+# Identity (`packages/identity`)
 
-**AgentSam SDK package #1** — portable identity infrastructure.
+**Package #1** inside `@inneranimalmedia/agentsam-sdk` — not a separate npm product.
 
-| App | Role |
-|-----|------|
-| **InnerAnimalMedia** | Reference implementation (`adapters/inneranimalmedia`) |
-| **Legendary-OS** | Fresh customer proof (`examples/legendary-os`) |
-
-## Install (after npm publish)
-
-```bash
-npm install @agentsam/identity
+```
+inneranimalmedia (reference) → agentsam-sdk (product) → Legendary-OS (first external proof)
 ```
 
-## Quick start
+## Customer API
 
 ```js
-import {
-  createIdentity,
-  GoogleProvider,
-  GithubProvider,
-} from '@agentsam/identity';
+import { createIdentityClient } from '@inneranimalmedia/agentsam-sdk';
 
-const identity = createIdentity({
-  providers: [GoogleProvider, GithubProvider],
-  storage: { adapter: 'cloudflare-d1', binding: 'DB' },
-  session: { cookie: 'agentsam_session' },
+const identity = createIdentityClient({
+  portal: { brand: { name: 'Legendary OS', logoUrl: '/logo.svg' } },
 });
+
+identity.providers.google();
+identity.login(request);   // → Identity Service (server-side)
+identity.session.fromRequest(request);
 ```
 
 ## Layout
 
 ```
 src/
-  contracts/     # NormalizedExternalIdentity, session contracts
-  providers/     # google, github, gcp, email
-  provider-contract.js
-  index.js       # createIdentity()
-adapters/
-  inneranimalmedia/   # IAM D1 mapping (Sprint 5)
-  cloudflare-d1/      # generic D1 adapter (Sprint 5)
-frontend/auth-portal/ # login/signup/recover kit (Sprint 5)
-examples/
-  legendary-os/       # customer Day-1 proof
+  core/           identity · sessions · accounts · recovery
+  providers/      google · github · gcp · email
+  oauth/          authorize/callback (extract from IAM — next sprint)
+  adapters/       inneranimalmedia · cloudflare-d1
+  contracts/
+  frontend/auth-portal/pages/   login · signup · reset (verbatim IAM HTML)
+migrations/
+examples/legendary-os/
 ```
 
-## Plan
+## SDK philosophy
 
-Full productization: `inneranimalmedia/plans/active/AGENTSAM-IDENTITY-SDK-PRODUCTIZATION-2026-08.md`
+Ship: contracts, clients, adapters, scaffolding.
 
-## npm org note
+Do **not** ship in the client bundle: password DB logic, OAuth secrets, D1 assumptions.
 
-Target publish name: `@agentsam/identity`. If the `@agentsam` org is not provisioned yet, first publish may use `@inneranimalmedia/agentsam-identity` — see plan Phase 8.
+## Publish
 
-## Dual-home
+`npm publish @inneranimalmedia/agentsam-sdk@2.0.0-alpha.identity` (root package includes `packages/identity`).
 
-Canonical source: **this repo** (`agentsam-sdk/packages/identity`).
+## IAM design lab
 
-IAM monorepo `packages/agentsam-identity/` is a staging mirror until `identity-v0.1.0` tags.
+`inneranimalmedia/packages/agentsam-identity/` — contracts experiments only; **not** the package owner.

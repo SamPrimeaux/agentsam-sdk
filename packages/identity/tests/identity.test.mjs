@@ -1,21 +1,21 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
-  createIdentity,
+  createIdentityClient,
   GoogleProvider,
   GithubProvider,
   getIdentityProvider,
 } from '../src/index.js';
 
-describe('@agentsam/identity', () => {
-  it('createIdentity exposes provider registry', () => {
-    const identity = createIdentity({
+describe('@inneranimalmedia/agentsam-sdk identity', () => {
+  it('createIdentityClient exposes provider registry', () => {
+    const identity = createIdentityClient({
       providers: [GoogleProvider, GithubProvider],
       session: { cookie: 'test_session' },
     });
     assert.equal(identity.version, '1.0');
-    assert.equal(identity.session.cookie, 'test_session');
-    assert.equal(identity.getProvider('google')?.id, 'google');
+    assert.equal(identity._runtime.session.cookie, 'test_session');
+    assert.equal(identity.providers.google()?.id, 'google');
   });
 
   it('GoogleProvider normalizes OpenID profile', () => {
