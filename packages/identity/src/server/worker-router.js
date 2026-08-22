@@ -3,9 +3,14 @@ import { createIdentityService } from './identity-service.js';
 import { jsonResponse } from '../core/http-json.js';
 import { hashPassword } from '../core/password-crypto.js';
 import { createPasswordResetService } from '../recovery/password-reset.js';
+import { getGoogleAuthUrl, exchangeGoogleCode } from '../providers/google/oauth.js';
+import { fetchGoogleProfile } from '../providers/google/profile.js';
+import { getGithubAuthUrl, exchangeGithubCode } from '../providers/github/oauth.js';
+import { fetchGithubProfile } from '../providers/github/profile.js';
 import { AUTH_LOGIN_PATH } from '../core/constants.js';
-import { resolveIamPlatformCredentials } from '../oauth/credentials.js';
+import { resolveOAuthCredentialLane } from '../oauth/credentials.js';
 import { iamPlatformOAuthCallback, iamPlatformOAuthStart } from '../oauth/iam-platform.js';
+import { pkceChallenge, pkceVerifier, randomOAuthState } from '../oauth/pkce.js';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -184,26 +189,50 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
     return jsonResponse({ ok: true, redirect: `${AUTH_LOGIN_PATH}?reset=success` });
   }
 
-  // ── OAuth (IAM platform — IAM_CLIENT_ID + IAM_CLIENT_SECRET required) ───
+  // ── OAuth ────────────────────────────────────────────────────────────────
+  // Default: IAM_CLIENT_* (minted). Developer BYOK GOOGLE_*/GITHUB_* take the
+  // matching /api/oauth/{provider}/start button when set.
   if (path === '/api/oauth/iam/callback' && method === 'GET') {
     return iamPlatformOAuthCallback(request, env, adapter, identity);
   }
-
-  if (
-    (path === '/api/oauth/google/start' || path === '/api/oauth/github/start')
-    && method === 'GET'
-  ) {
-    if (!resolveIamPlatformCredentials(env)) {
-      return jsonResponse({ ok: false, error: 'iam_oauth_not_configured' }, 503);
-    }
+  if (path === '/api/oauth/iam/start' && method === 'GET') {
+    const lane = resolveOAuthCredentialLane(env, 'iam');
+    if (!lane) return jsonResponse({ ok: false, error: 'iam_oauth_not_configured' }, 503);
     return iamPlatformOAuthStart(request, env, adapter);
   }
 
-  if (
-    (path === '/api/oauth/google/callback' || path === '/api/oauth/github/callback')
-    && method === 'GET'
-  ) {
-    return iamPlatformOAuthCallback(request, env, adapter, identity);
+  if (path === '/api/oauth/google/start' && method === 'GET') {
+    const lane = resolveOAuthCredentialLane(env, 'google');
+    if (!lane) return jsonResponse({ ok: false, error: 'google_oauth_not_configured' }, 503);
+    if (lane.lane === 'iam_platform') return iamPlatformOAuthStart(request, env, adapter);
+    return oauthStart(request, env, adapter, 'google', lane);
+  }
+  if (path === '/api/oauth/github/start' && method === 'GET') {
+    const lane = resolveOAuthCredentialLane(env, 'github');
+    if (!lane) return jsonResponse({ ok: false, error: 'github_oauth_not_configured' }, 503);
+    if (lane.lane === 'iam_platform') return iamPlatformOAuthStart(request, env, adapter);
+    return oauthStart(request, env, adapter, 'github', lane);
+  }
+
+  if (path === '/api/oauth/google/callback' && method === 'GET') {
+    const lane = resolveOAuthCredentialLane(env, 'google');
+    if (!lane) {
+      return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=oauth_not_configured`, 302);
+    }
+    if (lane.lane === 'iam_platform') {
+      return iamPlatformOAuthCallback(request, env, adapter, identity);
+    }
+    return oauthCallback(request, env, identity, adapter, 'google', lane);
+  }
+  if (path === '/api/oauth/github/callback' && method === 'GET') {
+    const lane = resolveOAuthCredentialLane(env, 'github');
+    if (!lane) {
+      return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=oauth_not_configured`, 302);
+    }
+    if (lane.lane === 'iam_platform') {
+      return iamPlatformOAuthCallback(request, env, adapter, identity);
+    }
+    return oauthCallback(request, env, identity, adapter, 'github', lane);
   }
 
   // ── Auth HTML shells (map IAM paths → static files) ─────────────────────
@@ -241,6 +270,104 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
   }
 
   return jsonResponse({ error: 'not_found', path }, 404);
+}
+
+async function oauthStart(request, env, adapter, provider, creds) {
+  const url = new URL(request.url);
+  if (!creds.clientId) {
+    return jsonResponse({ ok: false, error: `${provider}_oauth_not_configured` }, 503);
+  }
+  const state = randomOAuthState();
+  const codeVerifier = pkceVerifier();
+  const codeChallenge = await pkceChallenge(codeVerifier);
+  const redirectTo = url.searchParams.get('next') || url.searchParams.get('return_to') || '/dashboard/home';
+  await adapter.saveOAuthState({ state, provider, codeVerifier, redirectTo });
+
+  const redirectUri = `${url.origin}/api/oauth/${provider}/callback`;
+  let authUrl;
+  if (provider === 'google') {
+    authUrl = getGoogleAuthUrl({
+      clientId: creds.clientId,
+      redirectUri,
+      state,
+      codeChallenge,
+    });
+  } else {
+    authUrl = getGithubAuthUrl({
+      clientId: creds.clientId,
+      redirectUri,
+      state,
+      codeChallenge,
+    });
+  }
+  return Response.redirect(authUrl, 302);
+}
+
+async function oauthCallback(request, env, identity, adapter, provider, creds) {
+  const url = new URL(request.url);
+  const code = url.searchParams.get('code');
+  const state = url.searchParams.get('state');
+  const err = url.searchParams.get('error');
+  if (err || !code || !state) {
+    return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=oauth_failed`, 302);
+  }
+  const saved = await adapter.consumeOAuthState(state);
+  if (!saved || saved.provider !== provider) {
+    return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=state_mismatch`, 302);
+  }
+  const redirectUri = `${url.origin}/api/oauth/${provider}/callback`;
+  let token;
+  let profile;
+  if (provider === 'google') {
+    token = await exchangeGoogleCode({
+      code,
+      codeVerifier: saved.code_verifier,
+      clientId: creds.clientId,
+      clientSecret: creds.clientSecret,
+      redirectUri,
+    });
+    if (!token?.access_token) {
+      return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=token_exchange_failed`, 302);
+    }
+    profile = await fetchGoogleProfile(token.access_token);
+  } else {
+    token = await exchangeGithubCode({
+      code,
+      codeVerifier: saved.code_verifier,
+      clientId: creds.clientId,
+      clientSecret: creds.clientSecret,
+      redirectUri,
+    });
+    if (!token?.access_token) {
+      return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=token_exchange_failed`, 302);
+    }
+    profile = await fetchGithubProfile(token.access_token);
+  }
+  if (!profile) {
+    return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=userinfo_failed`, 302);
+  }
+
+  const normalized = provider === 'google'
+    ? { subject: profile.sub, email: profile.email, name: profile.name }
+    : { subject: String(profile.id), email: profile.email, name: profile.name || profile.login };
+
+  const result = await identity.provisionOAuthUser({
+    provider,
+    providerSubject: normalized.subject,
+    email: normalized.email,
+    displayName: normalized.name,
+  });
+
+  const redirectTo = saved.redirect_to || '/dashboard/home';
+  const res = identity.buildLoginSuccessResponse(request, result.sessionId, redirectTo);
+  const globeUrl = `${url.origin}${AUTH_LOGIN_PATH}?globe_exit=1&next=${encodeURIComponent(redirectTo)}`;
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: globeUrl,
+      'Set-Cookie': res.headers.get('Set-Cookie') || '',
+    },
+  });
 }
 
 export { createIdentityService, createCloudflareD1Adapter };

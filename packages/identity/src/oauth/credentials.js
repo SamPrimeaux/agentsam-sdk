@@ -1,10 +1,12 @@
 /**
- * OAuth credentials for customer apps — IAM platform only.
+ * OAuth credential lanes for customer apps.
  *
- * Required (Wrangler secrets, minted at install/build):
- *   IAM_CLIENT_ID + IAM_CLIENT_SECRET
+ * Default (minted at install/build): IAM_CLIENT_ID + IAM_CLIENT_SECRET
+ *   — ID may be a plaintext Wrangler var (public by OAuth design).
+ *   — SECRET is wrangler secret put only (encryption is law, not luxury).
  *
- * Encryption is law, not luxury — never put *_CLIENT_SECRET in wrangler.toml plaintext vars.
+ * Developer BYOK: GOOGLE_CLIENT_* / GITHUB_CLIENT_* when set for that provider
+ * take the /api/oauth/{provider}/start button; otherwise the button uses IAM.
  */
 
 export const DEFAULT_IAM_OAUTH_ISSUER = 'https://inneranimalmedia.com';
@@ -32,4 +34,59 @@ export function requireIamPlatformCredentials(env) {
     throw err;
   }
   return creds;
+}
+
+/**
+ * @param {Record<string, unknown> | null | undefined} env
+ * @param {'google' | 'github' | 'iam'} provider
+ * @returns {{
+ *   lane: 'iam_platform' | 'byok_google' | 'byok_github',
+ *   clientId: string,
+ *   clientSecret: string,
+ *   issuer?: string,
+ *   provider: string,
+ * } | null}
+ */
+export function resolveOAuthCredentialLane(env, provider) {
+  if (provider === 'iam') {
+    const iam = resolveIamPlatformCredentials(env);
+    if (!iam) return null;
+    return {
+      lane: 'iam_platform',
+      clientId: iam.clientId,
+      clientSecret: iam.clientSecret,
+      issuer: iam.issuer,
+      provider: 'iam',
+    };
+  }
+
+  if (provider === 'google') {
+    const clientId = String(env?.GOOGLE_CLIENT_ID || '').trim();
+    const clientSecret = String(env?.GOOGLE_CLIENT_SECRET || '').trim();
+    if (clientId && clientSecret) {
+      return { lane: 'byok_google', clientId, clientSecret, provider };
+    }
+  }
+
+  if (provider === 'github') {
+    const clientId = String(env?.GITHUB_CLIENT_ID || '').trim();
+    const clientSecret = String(env?.GITHUB_CLIENT_SECRET || '').trim();
+    if (clientId && clientSecret) {
+      return { lane: 'byok_github', clientId, clientSecret, provider };
+    }
+  }
+
+  // Default: Google/GitHub buttons route through IAM platform when minted.
+  const iam = resolveIamPlatformCredentials(env);
+  if (iam) {
+    return {
+      lane: 'iam_platform',
+      clientId: iam.clientId,
+      clientSecret: iam.clientSecret,
+      issuer: iam.issuer,
+      provider,
+    };
+  }
+
+  return null;
 }

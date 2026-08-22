@@ -1,33 +1,33 @@
-# OAuth credentials (customer apps)
+# OAuth credential lanes
 
-Every app installing `@inneranimalmedia/agentsam-sdk` identity **must** provision:
-
-| Env var | Role |
-|---------|------|
-| `IAM_CLIENT_ID` | OAuth client id minted for the customer worker |
-| `IAM_CLIENT_SECRET` | OAuth client secret (encrypted at rest via Wrangler secrets) |
+| Lane | Env vars | When |
+|------|----------|------|
+| **IAM platform (default)** | `IAM_CLIENT_ID` + `IAM_CLIENT_SECRET` | Minted at install/build for every customer worker |
+| Developer Google | `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` | Takes `/api/oauth/google/start` when set |
+| Developer GitHub | `GITHUB_CLIENT_ID` + `GITHUB_CLIENT_SECRET` | Takes `/api/oauth/github/start` when set |
 
 Optional: `IAM_OAUTH_ISSUER` (default `https://inneranimalmedia.com`).
 
 ## Secrets law
 
-`**_CLIENT_SECRET` values are Wrangler secrets only** — never plaintext in `wrangler.toml` / committed `.env`.
+- `IAM_CLIENT_ID` / `GOOGLE_CLIENT_ID` / `GITHUB_CLIENT_ID` — plaintext Wrangler vars (public by OAuth design).
+- `*_CLIENT_SECRET` — **Wrangler secrets only** — never plaintext in `wrangler.toml`.
 
 ```bash
-npx wrangler secret put IAM_CLIENT_ID
 npx wrangler secret put IAM_CLIENT_SECRET
 ```
 
-## IAM platform flow
+## Routing
 
-1. `GET /api/oauth/google/start` or `/api/oauth/github/start` → `{IAM_OAUTH_ISSUER}/api/oauth/authorize` (PKCE)
-2. User signs in at IAM (Google/GitHub/email on IAM)
-3. `GET /api/oauth/iam/callback` on customer worker → token exchange + userinfo → local session
+1. `/api/oauth/iam/start` → always IAM (requires minted creds)
+2. `/api/oauth/google/start` → BYOK Google if `GOOGLE_*` set, else IAM if minted, else 503
+3. `/api/oauth/github/start` → same for GitHub
+4. Callback: `/api/oauth/iam/callback` (IAM) or `/api/oauth/{google|github}/callback` (BYOK)
 
-Register redirect URI with IAM: `https://<customer-host>/api/oauth/iam/callback`
+Register IAM redirect URI: `https://<customer-host>/api/oauth/iam/callback`
 
 ## Code
 
-- `credentials.js` — `resolveIamPlatformCredentials` / `requireIamPlatformCredentials`
+- `credentials.js` — lane resolution
 - `iam-platform.js` — IAM authorize + token + userinfo
 - `pkce.js` — shared PKCE helpers

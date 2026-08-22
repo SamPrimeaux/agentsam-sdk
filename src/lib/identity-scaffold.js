@@ -72,10 +72,16 @@ database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
 migrations_dir = "migrations"
 `;
 
-  files['.env.example'] = `# Required — minted at install/build, Wrangler secrets only (never commit)
-# IAM_CLIENT_ID=
-# IAM_CLIENT_SECRET=
+  files['.env.example'] = `# Minted at install/build — secrets via wrangler secret put (never commit)
+# IAM_CLIENT_ID=          # plaintext var (public by OAuth design)
+# IAM_CLIENT_SECRET=      # wrangler secret put only
 # IAM_OAUTH_ISSUER=https://inneranimalmedia.com
+
+# Developer BYOK — takes /api/oauth/{google|github}/start when set
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=
+# GITHUB_CLIENT_ID=
+# GITHUB_CLIENT_SECRET=
 `;
 
   files['.gitignore'] = `node_modules/
@@ -100,7 +106,7 @@ npm run dev
 # open http://localhost:8787/auth/login
 \`\`\`
 
-OAuth: \`IAM_CLIENT_ID\` + \`IAM_CLIENT_SECRET\` (Wrangler secrets — minted for each customer worker).
+OAuth: minted \`IAM_CLIENT_ID\` + \`IAM_CLIENT_SECRET\` (default). Developer BYOK: \`GOOGLE_*\` / \`GITHUB_*\` when set.
 
 ## Layout
 
