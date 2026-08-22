@@ -1,22 +1,15 @@
-# Gorilla Shell (Phase 0)
+# Gorilla Shell example (superseded)
 
-Game-feel terminal UI prototype — consolidated from [InnerAnimal/gorilla-mode](https://github.com/InnerAnimal/gorilla-mode) into **Agent Sam SDK**.
+**Canonical scaffold:** [`../../templates/gorilla-shell/`](../../templates/gorilla-shell/)
 
-This is the **unique install experience** layer: pixel HUD, themed moods, slash-command demos, deploy/benchmark scenarios. Phase 1 connects real PTY via ExecOS.
-
-## Run locally
+This directory previously mirrored an older demo that hard-coded IAM D1/host
+literals. Run and customize from `templates/gorilla-shell` instead:
 
 ```bash
-cd examples/gorilla-shell
+cd templates/gorilla-shell
 npm install
 npm run dev
 ```
 
-## What you see
-
-- Gorilla launch screen + sprite reactions
-- Themes: NIGHT, DAY, LAVA, VOID
-- Six demo scenarios (deploy, benchmark, D1, tail, samiam, wrangler)
-- Slash command registry lives in `../../src/lib/slash-commands.js`
-
-Full architecture: [docs/CLI_SHELL.md](../../docs/CLI_SHELL.md)
+Demo CLI strings there use `{{PROJECT_NAME}}`, `{{D1_DATABASE_ID}}`,
+`{{DASHBOARD_HOST}}`, and related placeholders — not live platform IDs.

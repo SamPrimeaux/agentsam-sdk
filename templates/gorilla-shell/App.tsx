@@ -81,7 +81,7 @@ const BENCH_TESTS = [
 function buildDeploy() {
 let d = 0; const L = (text, color, gap=120) => { d+=gap; return {text,color,delay:d}; };
 return [
-L('gorilla@inneranimal ~ % /deploy sandbox','cmd',0),
+L('gorilla@{{PROJECT_NAME}} ~ % /deploy sandbox','cmd',0),
 L('','dim',60),
 L('  ./scripts/with-cloudflare-env.sh npx wrangler deploy','muted',80),
 L('  –config wrangler.sandbox.toml','muted',40),
@@ -93,18 +93,18 @@ L('  Build time: 1.24s','muted',200),
 L('','dim',80),
 L('  Uploading script…','muted',350),
 L('','dim',60),
-L('  Worker         inneranimal-dashboard','info',200),
+L('  Worker         {{WORKER_NAME}}','info',200),
 L('  Compat date    2026-04-08','info',60),
-L('  D1 binding     inneranimalmedia-business [cf87b717]','info',60),
-L('  R2 binding     agent-sam-sandbox-cicd','info',60),
-L('  KV binding     IAM_KV, RATE_LIMIT_KV','info',60),
+L('  D1 binding     {{D1_DATABASE_NAME}} [{{D1_DATABASE_ID}}]','info',60),
+L('  R2 binding     {{R2_BUCKET_BINDING}}','info',60),
+L('  KV binding     {{KV_BINDING}}, RATE_LIMIT_KV','info',60),
 L('  Queues         DEPLOY_QUEUE, AGENT_QUEUE','info',60),
 L('','dim',80),
 L('  Routing table:','muted',200),
-L('    dashboard.inneranimalmedia.com  /* -> inneranimal-dashboard','dim',60),
+L('    {{DASHBOARD_HOST}}  /* -> {{WORKER_NAME}}','dim',60),
 L('','dim',80),
 L('  [OK] Deployed successfully  3.41s','success',400),
-L('  >> https://inneranimal-dashboard.samprimeaux.workers.dev','accent',80),
+L('  >> https://{{WORKER_NAME}}.workers.dev','accent',80),
 L('','dim',100),
 L('  Next: run /benchmark to proceed to prod','warn',200),
 ];
@@ -113,9 +113,9 @@ L('  Next: run /benchmark to proceed to prod','warn',200),
 function buildBenchmark() {
 let d = 0; const L = (text, color, gap=80) => { d+=gap; return {text,color,delay:d}; };
 const lines = [
-L('gorilla@inneranimal ~ % /benchmark','cmd',0),
+L('gorilla@{{PROJECT_NAME}} ~ % /benchmark','cmd',0),
 L('','dim',60),
-L('  Running 31 tests against inneranimal-dashboard…','muted',200),
+L('  Running 31 tests against {{WORKER_NAME}}…','muted',200),
 L('','dim',60),
 ];
 BENCH_TESTS.forEach(([name, ms], i) => {
@@ -136,17 +136,17 @@ function buildD1() {
 let d = 0; const L = (text, color, gap=100) => { d+=gap; return {text,color,delay:d}; };
 const SEP = '  +—————————+———+———————+';
 const rows = [
-['inneranimalmedia','success','2026-04-07 23:10:56'],
-['inneranimal-dashboard','success','2026-04-07 22:55:15'],
-['inneranimal-dashboard','success','2026-04-07 22:06:28'],
-['inneranimalmedia','success','2026-04-06 18:32:11'],
-['inneranimal-dashboard','error','2026-04-06 17:44:03'],
+['{{WORKER_NAME}}','success','2026-04-07 23:10:56'],
+['{{DASHBOARD_WORKER}}','success','2026-04-07 22:55:15'],
+['{{DASHBOARD_WORKER}}','success','2026-04-07 22:06:28'],
+['{{WORKER_NAME}}','success','2026-04-06 18:32:11'],
+['{{DASHBOARD_WORKER}}','error','2026-04-06 17:44:03'],
 ];
 return [
-L('gorilla@inneranimal ~ % /d1 SELECT name, status, created_at FROM deployments ORDER BY created_at DESC LIMIT 5','cmd',0),
+L('gorilla@{{PROJECT_NAME}} ~ % /d1 SELECT name, status, created_at FROM deployments ORDER BY created_at DESC LIMIT 5','cmd',0),
 L('','dim',60),
-L('  DB: inneranimalmedia-business','muted',150),
-L('  ID: cf87b717-d4e2-4cf8-bab0-a81268e32d49','dim',60),
+L('  DB: {{D1_DATABASE_NAME}}','muted',150),
+L('  ID: {{D1_DATABASE_ID}}','dim',60),
 L('','dim',100),
 L(SEP,'table',200),
 L('  | name                      | status  | created_at          |','table',60),
@@ -176,9 +176,9 @@ const reqs = [
 ];
 const delays = [0,320,180,260,400,350,220,310,280,450];
 return [
-L('gorilla@inneranimal ~ % /tail inneranimalmedia','cmd',0),
+L('gorilla@{{PROJECT_NAME}} ~ % /tail {{WORKER_NAME}}','cmd',0),
 L('','dim',60),
-L('  npx wrangler tail inneranimalmedia –format pretty','muted',100),
+L('  npx wrangler tail {{WORKER_NAME}} –format pretty','muted',100),
 L('  Streaming live logs… (CTRL+C to stop)','dim',300),
 L('','dim',100),
 ...reqs.map(([m,p,s,t,tag],i) => L(
@@ -195,15 +195,15 @@ L('  Tip: run /samiam to diagnose','warn',200),
 function buildSamIAm() {
 let d = 0; const L = (text, color, gap=80) => { d+=gap; return {text,color,delay:d}; };
 return [
-L('gorilla@inneranimal ~ % /samiam how is our terminal setup','cmd',0),
+L('gorilla@{{PROJECT_NAME}} ~ % /samiam how is our terminal setup','cmd',0),
 L('','dim',60),
 L('  >> AGENT SAM ACTIVATED','sam',200),
-L('  >> Workspace: ws_inneranimalmedia','sam',100),
+L('  >> Workspace: {{WORKSPACE_ID}}','sam',100),
 L('  >> PTY context: injecting last 30 lines','sam',100),
 L('  >> Routing: claude-sonnet-4-6 (T2)','sam',100),
 L('','dim',200),
 L('  [SAM] Terminal PTY is running clean. Your xterm.js','sam',400),
-L('        bridge is connected to iam-pty via WebSocket.','sam',150),
+L('        bridge is connected to local-pty via WebSocket.','sam',150),
 L('        gorilla-mode shell is rendering on top of it.','sam',150),
 L('','dim',80),
 L('  [SAM] One issue flagging: 50 open errors in status','sam',300),
@@ -212,7 +212,7 @@ L('        rows all pointing to same endpoint, NULL last_used.','sam',150),
 L('        Table is never read by Worker – safe to truncate.','sam',150),
 L('','dim',80),
 L('  [SAM] Also: terminal_sessions user_id backfill is','sam',300),
-L('        still needed in register INSERT (hardcoded sam).','sam',150),
+L('        still needed in register INSERT (use session identity).','sam',150),
 L('','dim',80),
 L('  [1] Show me the mcp_services cleanup query','white',300),
 L('  [2] Run /d1 truncate mcp_services directly','white',80),
@@ -224,18 +224,18 @@ L('  [esc] Skip for now','dim',80),
 function buildWrangler() {
 let d = 0; const L = (text, color, gap=100) => { d+=gap; return {text,color,delay:d}; };
 return [
-L('gorilla@inneranimal ~ % /wrangler tail inneranimalmedia','cmd',0),
+L('gorilla@{{PROJECT_NAME}} ~ % /wrangler tail {{WORKER_NAME}}','cmd',0),
 L('','dim',60),
 L('  [GATE] About to run:','warn',150),
-L('  ./scripts/with-cloudflare-env.sh npx wrangler tail inneranimalmedia','white',80),
+L('  ./scripts/with-cloudflare-env.sh npx wrangler tail {{WORKER_NAME}}','white',80),
 L('','dim',80),
 L('  PROCEED?  [1] YES   [esc] NO','warn',200),
 L('','dim',100),
 L('  >> 1','cmd',600),
 L('','dim',60),
-L('  Connecting to worker: inneranimalmedia','muted',200),
-L('  Account: Inner Animal Media (6f2a…)','muted',80),
-L('  Zone: inneranimalmedia.com','muted',80),
+L('  Connecting to worker: {{WORKER_NAME}}','muted',200),
+L('  Account: {{CF_ACCOUNT_NAME}}','muted',80),
+L('  Zone: {{ZONE_HOST}}','muted',80),
 L('','dim',100),
 L('  [STREAM] Listening for events…','success',300),
 L('','dim',80),

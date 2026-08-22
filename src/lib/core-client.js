@@ -1,5 +1,10 @@
 /**
  * IAM CORE client — SDK is a delivery mechanism; intelligence lives server-side.
+ *
+ * Default base URL https://inneranimalmedia.com is CORRECT-AS-DESIGNED for
+ * multi-tenant client serving (thin client → IAM CORE). Override with
+ * IAM_CORE_URL / AGENTSAM_CORE_URL. Without a CORE backend, consumers get
+ * scaffold/local CLI only.
  */
 
 const DEFAULT_CORE = 'https://inneranimalmedia.com';

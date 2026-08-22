@@ -83,7 +83,7 @@ class TestFormatting(unittest.TestCase):
         ]
         findings = _build_findings(stats, "quick")
         well = _build_doing_well(stats, findings)
-        md = _build_briefing(stats, findings, well, "inneranimalmedia-business", "1.2 MB", "quick", 1)
+        md = _build_briefing(stats, findings, well, "example-d1-database", "1.2 MB", "quick", 1)
         self.assertIn("D1 health", md)
         self.assertIn("database-scoped", md)
         self.assertIn("Verdict", md)

@@ -26,7 +26,7 @@
     "DEVELOPMENT.md"
   ],
   "workspaces": [
-    "packages/*"
+    "packages/agentsam-shell-kit"
   ],
   "scripts": {
     "test": "node test/smoke.mjs",

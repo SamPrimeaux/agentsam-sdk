@@ -78,14 +78,22 @@ npx @inneranimalmedia/agentsam-sdk shell
 | Piece | Location |
 |-------|----------|
 | Slash command registry | `src/lib/slash-commands.js` |
-| Phase 0 visual prototype | `examples/gorilla-shell/` |
+| Phase 0 visual prototype | `templates/gorilla-shell/` (canonical; `examples/gorilla-shell/` is a pointer) |
 | Architecture + phases | [docs/CLI_SHELL.md](./docs/CLI_SHELL.md) |
 
 Run the prototype:
 
 ```bash
-cd examples/gorilla-shell && npm install && npm run dev
+cd templates/gorilla-shell && npm install && npm run dev
 ```
+
+---
+
+## Architecture (CORE default)
+
+`src/lib/core-client.js` defaults to `https://inneranimalmedia.com`. **Correct as designed** for serving many client projects: the npm package is a thin delivery/CLI client; intelligence, tool catalog, and policy live server-side on IAM CORE.
+
+Without an IAM backend (or `IAM_CORE_URL` / `AGENTSAM_CORE_URL` override), strangers who `npm install` get **scaffold + local CLI only** — not a freestanding hosted Agent Sam.
 
 ---
 
