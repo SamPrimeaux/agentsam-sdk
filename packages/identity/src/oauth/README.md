@@ -1,12 +1,11 @@
-# OAuth credential lanes
+# OAuth credentials (customer apps)
 
-Customer apps resolve credentials in this order:
+Every app installing `@inneranimalmedia/agentsam-sdk` identity **must** provision:
 
-| Lane | Env vars | When |
-|------|----------|------|
-| **IAM platform (default)** | `IAM_CLIENT_ID` + `IAM_CLIENT_SECRET` | Inner Animal Media hosted OAuth — register via DCR or platform provisioning |
-| **BYOK Google** | `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` | Customer brings own Google OAuth app (only when IAM creds absent) |
-| **BYOK GitHub** | `GITHUB_CLIENT_ID` + `GITHUB_CLIENT_SECRET` | Customer brings own GitHub OAuth app (only when IAM creds absent) |
+| Env var | Role |
+|---------|------|
+| `IAM_CLIENT_ID` | OAuth client id minted for the customer worker |
+| `IAM_CLIENT_SECRET` | OAuth client secret (encrypted at rest via Wrangler secrets) |
 
 Optional: `IAM_OAUTH_ISSUER` (default `https://inneranimalmedia.com`).
 
@@ -21,18 +20,14 @@ npx wrangler secret put IAM_CLIENT_SECRET
 
 ## IAM platform flow
 
-1. `GET /api/oauth/google/start` or `/api/oauth/github/start` → redirects to `{IAM_OAUTH_ISSUER}/api/oauth/authorize` (PKCE)
+1. `GET /api/oauth/google/start` or `/api/oauth/github/start` → `{IAM_OAUTH_ISSUER}/api/oauth/authorize` (PKCE)
 2. User signs in at IAM (Google/GitHub/email on IAM)
 3. `GET /api/oauth/iam/callback` on customer worker → token exchange + userinfo → local session
 
 Register redirect URI with IAM: `https://<customer-host>/api/oauth/iam/callback`
 
-## BYOK flow
-
-Direct provider OAuth when IAM creds are not set — same paths as before (`/api/oauth/google/callback`, etc.).
-
 ## Code
 
-- `credentials.js` — lane resolution
+- `credentials.js` — `resolveIamPlatformCredentials` / `requireIamPlatformCredentials`
 - `iam-platform.js` — IAM authorize + token + userinfo
 - `pkce.js` — shared PKCE helpers

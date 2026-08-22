@@ -1,8 +1,8 @@
 /**
- * OAuth credential lanes for customer apps.
+ * OAuth credentials for customer apps — IAM platform only.
  *
- * Default (IAM platform): IAM_CLIENT_ID + IAM_CLIENT_SECRET — Wrangler **secrets** only.
- * BYOK (optional): GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET or GITHUB_CLIENT_ID/GITHUB_CLIENT_SECRET.
+ * Required (Wrangler secrets, minted at install/build):
+ *   IAM_CLIENT_ID + IAM_CLIENT_SECRET
  *
  * Encryption is law, not luxury — never put *_CLIENT_SECRET in wrangler.toml plaintext vars.
  */
@@ -24,46 +24,12 @@ export function resolveIamPlatformCredentials(env) {
 }
 
 /** @param {Record<string, unknown> | null | undefined} env */
-export function usesIamPlatformOAuth(env) {
-  return resolveIamPlatformCredentials(env) != null;
-}
-
-/**
- * @param {Record<string, unknown> | null | undefined} env
- * @param {'google' | 'github'} provider
- * @returns {{
- *   lane: 'iam_platform' | 'byok_google' | 'byok_github',
- *   clientId: string,
- *   clientSecret: string,
- *   issuer?: string,
- *   provider: string,
- * } | null}
- */
-export function resolveOAuthCredentialLane(env, provider) {
-  const iam = resolveIamPlatformCredentials(env);
-  if (iam) {
-    return {
-      lane: 'iam_platform',
-      clientId: iam.clientId,
-      clientSecret: iam.clientSecret,
-      issuer: iam.issuer,
-      provider,
-    };
+export function requireIamPlatformCredentials(env) {
+  const creds = resolveIamPlatformCredentials(env);
+  if (!creds) {
+    const err = new Error('iam_oauth_not_configured');
+    err.code = 'iam_oauth_not_configured';
+    throw err;
   }
-
-  if (provider === 'google') {
-    const clientId = String(env?.GOOGLE_CLIENT_ID || '').trim();
-    const clientSecret = String(env?.GOOGLE_CLIENT_SECRET || '').trim();
-    if (!clientId || !clientSecret) return null;
-    return { lane: 'byok_google', clientId, clientSecret, provider };
-  }
-
-  if (provider === 'github') {
-    const clientId = String(env?.GITHUB_CLIENT_ID || '').trim();
-    const clientSecret = String(env?.GITHUB_CLIENT_SECRET || '').trim();
-    if (!clientId || !clientSecret) return null;
-    return { lane: 'byok_github', clientId, clientSecret, provider };
-  }
-
-  return null;
+  return creds;
 }

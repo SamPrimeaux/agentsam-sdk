@@ -72,17 +72,10 @@ database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
 migrations_dir = "migrations"
 `;
 
-  files['.env.example'] = `# Copy to .dev.vars — secrets via wrangler secret put (never commit)
-# Default: IAM platform OAuth (customer Inner Animal Media connector)
+  files['.env.example'] = `# Required — minted at install/build, Wrangler secrets only (never commit)
 # IAM_CLIENT_ID=
 # IAM_CLIENT_SECRET=
 # IAM_OAUTH_ISSUER=https://inneranimalmedia.com
-
-# Optional BYOK (only used when IAM_CLIENT_* are unset)
-# GOOGLE_CLIENT_ID=
-# GOOGLE_CLIENT_SECRET=
-# GITHUB_CLIENT_ID=
-# GITHUB_CLIENT_SECRET=
 `;
 
   files['.gitignore'] = `node_modules/
@@ -107,8 +100,7 @@ npm run dev
 # open http://localhost:8787/auth/login
 \`\`\`
 
-OAuth: default **IAM platform** — \`IAM_CLIENT_ID\` + \`IAM_CLIENT_SECRET\` (Wrangler secrets only).
-Optional BYOK: \`GOOGLE_CLIENT_ID\` / \`GITHUB_CLIENT_ID\` (+ secrets) when IAM creds are unset.
+OAuth: \`IAM_CLIENT_ID\` + \`IAM_CLIENT_SECRET\` (Wrangler secrets — minted for each customer worker).
 
 ## Layout
 

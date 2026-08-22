@@ -20,7 +20,7 @@ identity.login(request);   // alpha: throws until Identity Service adapter is wi
 identity.session.fromRequest(request);  // alpha: throws until adapter is wired
 ```
 
-**Alpha scope:** contracts, D1 adapter, Worker router, `agentsam identity init` scaffold (`app/frontend` + `backend` + migrations), and `agentsam identity preview`. Default OAuth: `IAM_CLIENT_ID` + `IAM_CLIENT_SECRET` (IAM platform). Optional BYOK: `GOOGLE_*` / `GITHUB_*`.
+**Alpha scope:** contracts, D1 adapter, Worker router, `agentsam identity init` scaffold (`app/frontend` + `backend` + migrations), and `agentsam identity preview`. OAuth requires `IAM_CLIENT_ID` + `IAM_CLIENT_SECRET` (Wrangler secrets, minted per customer worker).
 
 ## Layout
 
