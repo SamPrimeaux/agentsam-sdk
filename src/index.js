@@ -22,6 +22,11 @@ export {
   EmailProvider,
   getIdentityProvider,
   listIdentityProviders,
+  AuthError,
+  AUTH_COOKIE_NAME,
+  buildSessionKvPayload,
+  isInboundOAuthSuccess,
+  finalizeInboundOAuth,
 } from '../packages/identity/src/index.js';
 
 export const version = pkg.version;
