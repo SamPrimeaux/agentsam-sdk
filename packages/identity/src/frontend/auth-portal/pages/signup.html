@@ -403,7 +403,7 @@
     />
 
     <h1>Create account</h1>
-    <p class="subtitle">Join Inner Animal Media</p>
+    <p class="subtitle" data-company-subtitle="signup">Join Inner Animal Media</p>
     <p id="registeredMsg" class="subtitle" style="color: #10B981; display: none; margin-top: -16px; margin-bottom: 16px;">Account created. Sign in below.</p>
     <p id="oauthErrorMsg" class="subtitle" style="color: #FF3B30; display: none; margin-top: -16px; margin-bottom: 16px;"></p>
     <p id="cfConnectNotice" class="subtitle" style="color: #fdba74; display: none; margin-top: -12px; margin-bottom: 12px; font-size: 12px; line-height: 1.45; text-align: center; max-width: 320px;">Sign in with Google, GitHub, or Supabase first, then connect Cloudflare from Integrations.</p>
@@ -485,7 +485,7 @@
 </div>
 
 <footer class="auth-min-footer" aria-label="Legal">
-    <span>Inner Animal Media</span>
+    <span data-company-name>Inner Animal Media</span>
     <span class="auth-min-footer-sep" aria-hidden="true">|</span>
     <a href="/privacy">Privacy</a>
     <span class="auth-min-footer-sep" aria-hidden="true">|</span>
@@ -567,7 +567,7 @@
         try {
             var origin = window.location.origin;
             var nextParam = new URLSearchParams(window.location.search).get('next');
-            var res = await fetch(origin + '/api/auth/login', {
+            var res = await fetch(origin + '/api/auth/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: email, password: password, next: nextParam || undefined }),
@@ -576,6 +576,10 @@
             var data = await res.json().catch(function() { return {}; });
 
             if (res.ok && data.ok) {
+                if (data.requires_verification) {
+                    window.location.href = '/auth/login?registered=1&verify=pending' + (nextParam ? '&next=' + encodeURIComponent(nextParam) : '');
+                    return;
+                }
                 btn.textContent = 'Success';
                 btn.style.background = '#10B981';
                 var redirectUrl = data.redirect || '/dashboard/overview';
@@ -586,7 +590,7 @@
                 }
                 return;
             }
-            error.innerText = data.error || 'Invalid Identity or Access Key';
+            error.innerText = data.error || 'Could not create account';
             error.style.color = '#FF3B30';
             error.classList.add('visible');
             btn.disabled = false;
@@ -831,5 +835,6 @@
     });
 })();
 </script>
+<script src="/shared/company-branding.js" defer></script>
 </body>
 </html>

@@ -24,6 +24,8 @@ Phase 5 (`agentsam init identity` — copy portal + inject brand tokens) is not 
 ## API routes (unchanged)
 
 - `POST /api/auth/login`
+- `POST /api/auth/signup` — create account (email/password); portal form must call this, not login
+- `GET /api/company` — public branding SSOT (loaded by `shared/company-branding.js`)
 - OAuth: `/api/oauth/google/start`, `/api/oauth/github/start`
 - GCP: per-client when demanded — scaffold only until requested
 
@@ -45,6 +47,7 @@ Serves production paths (`/auth/login`, `/auth/signup`, `/auth/reset`) with stub
 | Flow | Preview behavior |
 |------|------------------|
 | Password login | `preview@example.com` / `preview` → success + globe exit |
+| Email signup | any email + password (≥8 chars) → success stub |
 | Backup code | any input → success stub |
 | Password reset | always succeeds (stub JSON) |
 | OAuth buttons | stub page + link to globe-exit demo |

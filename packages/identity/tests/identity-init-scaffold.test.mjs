@@ -13,6 +13,7 @@ describe('identity init scaffold', () => {
       brandName: 'Demo Co',
     });
     assert.ok(files['app/frontend/auth/login.html'].includes('Demo Co'));
+    assert.ok(files['app/frontend/auth/signup.html'].includes('/api/auth/signup'));
     assert.ok(files['backend/src/index.js'].includes('handleIdentityWorkerRequest'));
     assert.ok(files['migrations/0001_identity_core.sql'].includes('CREATE TABLE IF NOT EXISTS company'));
     assert.ok(files['migrations/0001_identity_core.sql'].includes('INSERT OR IGNORE INTO company'));

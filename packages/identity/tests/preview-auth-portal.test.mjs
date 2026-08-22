@@ -25,6 +25,16 @@ describe('auth portal preview server', () => {
 
     const signupRes = await fetch(`${baseUrl}/auth/signup`);
     assert.equal(signupRes.status, 200);
+    const signupHtml = await signupRes.text();
+    assert.match(signupHtml, /\/api\/auth\/signup/);
+
+    const brandingRes = await fetch(`${baseUrl}/shared/company-branding.js`);
+    assert.equal(brandingRes.status, 200);
+
+    const companyRes = await fetch(`${baseUrl}/api/company`);
+    const companyJson = await companyRes.json();
+    assert.equal(companyJson.ok, true);
+    assert.equal(companyJson.company.supportEmail, 'hey@inneranimalmedia.com');
 
     const apiRes = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST',
@@ -34,5 +44,13 @@ describe('auth portal preview server', () => {
     const apiJson = await apiRes.json();
     assert.equal(apiJson.ok, true);
     assert.equal(apiJson.redirect, '/preview/dashboard');
+
+    const signupApiRes = await fetch(`${baseUrl}/api/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'new@example.com', password: 'password1' }),
+    });
+    const signupApiJson = await signupApiRes.json();
+    assert.equal(signupApiJson.ok, true);
   });
 });

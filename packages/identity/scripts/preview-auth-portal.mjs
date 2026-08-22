@@ -11,6 +11,7 @@ import { spawn } from 'node:child_process';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const AUTH_PORTAL_PAGES_DIR = path.resolve(__dirname, '../src/frontend/auth-portal/pages');
+export const AUTH_PORTAL_SHARED_DIR = path.resolve(__dirname, '../src/frontend/auth-portal/shared');
 const PREVIEW_DIR = path.resolve(__dirname, '../src/frontend/auth-portal/preview');
 
 const PAGE_ROUTES = {
@@ -98,7 +99,7 @@ function hubHtml(baseUrl) {
 <body>
   <main>
     <h1>Auth portal preview</h1>
-    <p class="muted">Static HTML copied from IAM <code>static/pages/auth/*</code> — paths match production.</p>
+    <p class="muted">Static HTML synced from IAM <code>static/pages/auth/*</code> — paths match production.</p>
     <div class="card">
       <strong>Pages</strong>
       <ul>
@@ -107,12 +108,39 @@ function hubHtml(baseUrl) {
         <li><a href="${baseUrl}/auth/reset">/auth/reset</a></li>
         <li><a href="${baseUrl}/auth/login?globe_exit=1&amp;next=/preview/dashboard">Globe exit demo</a></li>
       </ul>
-      <p><strong>Preview login:</strong> <code>preview@example.com</code> / <code>preview</code> (triggers success + globe transition)</p>
-      <p class="muted">OAuth buttons open a stub — use the globe-exit link to verify the post-login animation.</p>
+      <p><strong>Preview login / signup:</strong> <code>preview@example.com</code> / <code>preview</code></p>
+      <p class="muted">Branding loads from <code>GET /api/company</code> via <code>/shared/company-branding.js</code>.</p>
     </div>
   </main>
 </body>
 </html>`;
+}
+
+const PREVIEW_COMPANY = {
+  id: 'co_default',
+  slug: 'default',
+  name: 'Inner Animal Media',
+  legalName: 'Inner Animals LLC',
+  logoUrl: 'https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/527ab85a-01bb-4125-57bb-694fe8be8700/public',
+  faviconUrl: 'https://inneranimalmedia.com/favicon.ico',
+  primaryColor: '#007AFF',
+  authBgColor: '#050508',
+  supportEmail: 'hey@inneranimalmedia.com',
+  websiteUrl: 'https://inneranimalmedia.com',
+  tagline: 'Instant Access',
+  meta: {
+    privacyUrl: '/privacy',
+    termsUrl: '/terms',
+    contactUrl: '/contact',
+    platform: 'preview',
+  },
+};
+
+function previewLoginSuccess(parsed) {
+  return {
+    ok: true,
+    redirect: parsed.next && String(parsed.next).startsWith('/') ? parsed.next : '/preview/dashboard',
+  };
 }
 
 function oauthStubHtml(provider, baseUrl) {
@@ -130,21 +158,40 @@ function oauthStubHtml(provider, baseUrl) {
 
 async function handleApi(req, res, url) {
   const { pathname } = url;
-  if (req.method === 'POST' && pathname === '/api/auth/login') {
+
+  async function readJsonBody() {
     let body = '';
     for await (const chunk of req) body += chunk;
-    let parsed = {};
-    try { parsed = JSON.parse(body || '{}'); } catch { /* preview */ }
+    try { return JSON.parse(body || '{}'); } catch { return {}; }
+  }
+
+  if (req.method === 'GET' && pathname === '/api/company') {
+    return json(res, 200, { ok: true, company: PREVIEW_COMPANY });
+  }
+
+  if (req.method === 'POST' && pathname === '/api/auth/login') {
+    const parsed = await readJsonBody();
     const email = String(parsed.email || '').trim().toLowerCase();
     const password = String(parsed.password || '');
     if (email === 'preview@example.com' && password === 'preview') {
-      return json(res, 200, {
-        ok: true,
-        redirect: parsed.next && String(parsed.next).startsWith('/') ? parsed.next : '/preview/dashboard',
-      });
+      return json(res, 200, previewLoginSuccess(parsed));
     }
     return json(res, 401, { ok: false, error: 'Invalid Identity or Access Key (preview: preview@example.com / preview)' });
   }
+
+  if (req.method === 'POST' && pathname === '/api/auth/signup') {
+    const parsed = await readJsonBody();
+    const email = String(parsed.email || '').trim().toLowerCase();
+    const password = String(parsed.password || '');
+    if (!email || !password) {
+      return json(res, 400, { ok: false, error: 'email_and_password_required' });
+    }
+    if (password.length < 8) {
+      return json(res, 400, { ok: false, error: 'Password must be at least 8 characters' });
+    }
+    return json(res, 200, previewLoginSuccess(parsed));
+  }
+
   if (req.method === 'POST' && pathname === '/api/auth/backup-code') {
     return json(res, 200, { ok: true, redirect: '/preview/dashboard' });
   }
@@ -190,6 +237,11 @@ export async function createAuthPortalPreviewServer(opts = {}) {
       const pageFile = PAGE_ROUTES[url.pathname];
       if (pageFile) {
         await serveFile(res, path.join(AUTH_PORTAL_PAGES_DIR, pageFile));
+        return;
+      }
+
+      if (url.pathname === '/shared/company-branding.js') {
+        await serveFile(res, path.join(AUTH_PORTAL_SHARED_DIR, 'company-branding.js'));
         return;
       }
 
