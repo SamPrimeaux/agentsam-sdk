@@ -1,18 +1,20 @@
 {
   "name": "@inneranimalmedia/agentsam-sdk",
-  "version": "2.0.0-alpha.identity",
-  "description": "Agent Sam is a full-stack AI agent SDK for autonomous task execution \u2014 covering data management, creative workflows, design commands, and multi-step agentic pipelines.",
+  "version": "2.0.0-alpha.identity.1",
+  "description": "Agent Sam is a full-stack AI agent SDK for autonomous task execution — covering data management, creative workflows, design commands, and multi-step agentic pipelines.",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js",
     "./identity": "./packages/identity/src/index.js",
     "./identity/oauth/callback": "./packages/identity/src/oauth/callback.js",
+    "./identity/auth-portal/preview": "./packages/identity/scripts/preview-auth-portal.mjs",
     "./package.json": "./package.json"
   },
   "bin": {
     "agentsam": "src/cli.js",
-    "agentsam-scaffold": "bin/scaffold.mjs"
+    "agentsam-scaffold": "bin/scaffold.mjs",
+    "agentsam-auth-portal": "packages/identity/scripts/preview-auth-portal.mjs"
   },
   "files": [
     "src",
@@ -36,6 +38,8 @@
     "test": "node test/smoke.mjs && npm --prefix packages/identity test",
     "test:identity": "npm --prefix packages/identity test",
     "smoke": "node test/smoke.mjs",
+    "preview:auth-portal": "node packages/identity/scripts/preview-auth-portal.mjs --open",
+    "postinstall": "node packages/identity/scripts/postinstall-hint.mjs",
     "prepublishOnly": "npm test"
   },
   "engines": {

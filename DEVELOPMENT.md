@@ -5,6 +5,7 @@
 ```bash
 cd agentsam-sdk
 npm test
+npm run preview:auth-portal   # opens /auth/login at http://127.0.0.1:8791
 ```
 
 ## Link into a scaffolded project

@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-sdk-identity",
-  "version": "2.0.0-alpha.identity",
+  "version": "2.0.0-alpha.identity.1",
   "private": true,
   "type": "module",
   "description": "Identity module for @inneranimalmedia/agentsam-sdk (workspace — publish via root SDK)",
@@ -21,7 +21,8 @@
     "./frontend/auth-portal/*": "./src/frontend/auth-portal/*"
   },
   "scripts": {
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "preview:auth-portal": "node scripts/preview-auth-portal.mjs --open"
   },
   "engines": {
     "node": ">=20"

@@ -10,6 +10,7 @@ import { promptOptionalByokKeys } from './lib/prompt-byok.js';
 import { runStartLocal } from './commands/start-local.js';
 import { runTunnel } from './commands/tunnel.js';
 import { runDeploy } from './commands/deploy.js';
+import { runIdentityPreview } from './commands/identity-preview.js';
 import { SLASH_COMMANDS, SHELL_PHASES } from './lib/slash-commands.js';
 
 const VERSION = pkg.version;
@@ -31,6 +32,7 @@ function printHelp() {
     agentsam start-local       Local PTY on ws://127.0.0.1:3099 (no tunnel, no Cloudflare)
     agentsam tunnel            Expose local PTY to IAM (cloudflared + register)
     agentsam deploy            Graduate to Cloudflare / GCP when ready
+    agentsam identity preview  Local auth portal (IAM HTML shells, stub APIs)
     agentsam shell             Slash commands + shell UX info
     agentsam --version
     agentsam --help
@@ -221,6 +223,19 @@ if (command === '--version' || command === '-v') {
     await initFromArgs(rest);
   } else {
     await initInteractive({});
+  }
+} else if (command === 'identity') {
+  const sub = rest[0];
+  if (sub === 'preview') {
+    try {
+      await runIdentityPreview(rest.slice(1));
+    } catch (e) {
+      console.error(`\n  ✗ ${e?.message || e}\n`);
+      process.exit(1);
+    }
+  } else {
+    console.error('\n  Usage: agentsam identity preview [--open] [--port 8791]\n');
+    process.exit(1);
   }
 } else {
   console.error(`\n  Unknown command: ${command}\n`);
