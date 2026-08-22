@@ -88,6 +88,32 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
     });
   }
 
+  if (path === '/api/company' && method === 'GET') {
+    const slug = url.searchParams.get('slug') || undefined;
+    const company = slug ? await adapter.getCompanyBySlug(slug) : await adapter.getDefaultCompany();
+    if (!company) return jsonResponse({ ok: false, error: 'company_not_found' }, 404);
+    return jsonResponse({ ok: true, company });
+  }
+
+  if (path === '/api/company' && method === 'PATCH') {
+    const ctx = await identity.sessionFromRequest(request);
+    if (!ctx) return jsonResponse({ ok: false, error: 'session_required' }, 401);
+    const body = await request.json().catch(() => ({}));
+    const company = await adapter.upsertCompany({
+      name: body.name,
+      legalName: body.legalName,
+      logoUrl: body.logoUrl,
+      faviconUrl: body.faviconUrl,
+      primaryColor: body.primaryColor,
+      authBgColor: body.authBgColor,
+      supportEmail: body.supportEmail,
+      websiteUrl: body.websiteUrl,
+      tagline: body.tagline,
+      meta: body.meta,
+    });
+    return jsonResponse({ ok: true, company });
+  }
+
   if (path === '/api/auth/backup-code' && method === 'POST') {
     return jsonResponse({ ok: false, error: 'backup_code_not_configured' }, 501);
   }

@@ -6,6 +6,7 @@ const SDK_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const IDENTITY_PKG = path.join(SDK_ROOT, 'packages', 'identity');
 const AUTH_PAGES_DIR = path.join(IDENTITY_PKG, 'src', 'frontend', 'auth-portal', 'pages');
 const MIGRATION_FILE = path.join(IDENTITY_PKG, 'src', 'migrations', '0001_identity_core.sql');
+const BRANDING_SCRIPT = path.join(IDENTITY_PKG, 'src', 'frontend', 'auth-portal', 'shared', 'company-branding.js');
 
 /**
  * @param {{ projectName: string, brandName?: string, logoUrl?: string, sdkVersion?: string }} config
@@ -17,19 +18,19 @@ export function buildIdentityAppScaffold(config) {
   const logoUrl = config.logoUrl || '/brand/logo.svg';
   const sdkVersion = config.sdkVersion || 'alpha';
 
-  const migrationSql = fs.readFileSync(MIGRATION_FILE, 'utf8');
-  const loginHtml = applyBrandTokens(fs.readFileSync(path.join(AUTH_PAGES_DIR, 'login.html'), 'utf8'), {
+  const migrationSql = `${fs.readFileSync(MIGRATION_FILE, 'utf8')}\n${buildCompanySeedSql({ brandName, logoUrl })}\n`;
+  const loginHtml = injectBrandingScript(applyBrandTokens(fs.readFileSync(path.join(AUTH_PAGES_DIR, 'login.html'), 'utf8'), {
     brandName,
     logoUrl,
-  });
-  const signupHtml = applyBrandTokens(fs.readFileSync(path.join(AUTH_PAGES_DIR, 'signup.html'), 'utf8'), {
+  }));
+  const signupHtml = injectBrandingScript(applyBrandTokens(fs.readFileSync(path.join(AUTH_PAGES_DIR, 'signup.html'), 'utf8'), {
     brandName,
     logoUrl,
-  });
-  const resetHtml = applyBrandTokens(fs.readFileSync(path.join(AUTH_PAGES_DIR, 'reset.html'), 'utf8'), {
+  }));
+  const resetHtml = injectBrandingScript(applyBrandTokens(fs.readFileSync(path.join(AUTH_PAGES_DIR, 'reset.html'), 'utf8'), {
     brandName,
     logoUrl,
-  });
+  }));
 
   const files = {};
 
@@ -107,7 +108,9 @@ OAuth: set \`GOOGLE_CLIENT_ID\` / \`GITHUB_CLIENT_ID\` (+ secrets) in \`.dev.var
 \`\`\`
 app/frontend/     Auth portal HTML + dashboard stub
 backend/src/      Cloudflare Worker (identity routes)
-migrations/       D1 schema
+migrations/       D1 schema (+ default \`company\` row)
+
+Branding: \`GET /api/company\` (public). Update with \`PATCH /api/company\` when signed in.
 \`\`\`
 `;
 
@@ -116,6 +119,7 @@ migrations/       D1 schema
   files['app/frontend/auth/login.html'] = loginHtml;
   files['app/frontend/auth/signup.html'] = signupHtml;
   files['app/frontend/auth/reset.html'] = resetHtml;
+  files['app/frontend/shared/company-branding.js'] = fs.readFileSync(BRANDING_SCRIPT, 'utf8');
 
   files['app/frontend/dashboard/index.html'] = `<!DOCTYPE html>
 <html lang="en">
@@ -133,7 +137,7 @@ migrations/       D1 schema
 </head>
 <body>
   <header>
-    <strong>${brandName}</strong>
+    <strong id="company-name">${brandName}</strong>
     <button id="logout">Sign out</button>
   </header>
   <main>
@@ -141,6 +145,7 @@ migrations/       D1 schema
     <p class="muted">Session-protected stub — grow from here.</p>
     <p id="user"></p>
   </main>
+  <script src="/shared/company-branding.js"></script>
   <script>
     fetch('/api/auth/me', { credentials: 'include' })
       .then(function(r) { return r.json(); })
@@ -177,6 +182,32 @@ function applyBrandTokens(html, { brandName, logoUrl }) {
     .replace(/Reset password \| Inner Animal Media/g, `Reset password | ${brandName}`)
     .replace(/src="\/brand\/[^"]*"/g, `src="${logoUrl}"`)
     .replace(/href="\/brand\/[^"]*"/g, `href="${logoUrl}"`);
+}
+
+function injectBrandingScript(html) {
+  if (html.includes('company-branding.js')) return html;
+  return html.replace('</body>', '  <script src="/shared/company-branding.js"></script>\n</body>');
+}
+
+function sqlLiteral(value) {
+  return `'${String(value ?? '').replace(/'/g, "''")}'`;
+}
+
+function buildCompanySeedSql({ brandName, logoUrl }) {
+  const ts = Math.floor(Date.now() / 1000);
+  return `-- Default company row (branding SSOT for portal + dashboard)
+INSERT OR IGNORE INTO company (
+  id, slug, name, logo_url, auth_bg_color, primary_color, created_at, updated_at
+) VALUES (
+  'co_default',
+  'default',
+  ${sqlLiteral(brandName)},
+  ${sqlLiteral(logoUrl)},
+  '#050508',
+  '#007AFF',
+  ${ts},
+  ${ts}
+);`;
 }
 
 export function resolveIdentityPagesDir() {

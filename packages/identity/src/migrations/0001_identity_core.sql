@@ -63,3 +63,23 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
   created_at INTEGER NOT NULL,
   FOREIGN KEY (user_id) REFERENCES auth_users(id)
 );
+
+-- Single-tenant company profile (branding, logo, support info). Grow to multi-tenant via slug.
+CREATE TABLE IF NOT EXISTS company (
+  id TEXT PRIMARY KEY NOT NULL,
+  slug TEXT NOT NULL,
+  name TEXT NOT NULL,
+  legal_name TEXT,
+  logo_url TEXT,
+  favicon_url TEXT,
+  primary_color TEXT,
+  auth_bg_color TEXT,
+  support_email TEXT,
+  website_url TEXT,
+  tagline TEXT,
+  meta_json TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_company_slug ON company(slug);

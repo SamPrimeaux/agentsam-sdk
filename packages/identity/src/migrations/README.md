@@ -23,5 +23,6 @@ wrangler d1 execute <database_name> --remote --file=migrations/0001_identity_cor
 | `account_identities` | OAuth provider linkage |
 | `oauth_states` | PKCE/state for OAuth start |
 | `password_reset_tokens` | Reset flow (grow when wired) |
+| `company` | Branding SSOT — name, logo, colors, support info (`GET /api/company`) |
 
 IAM production tables remain the reference; this schema is **portable and boring** for customer Workers.

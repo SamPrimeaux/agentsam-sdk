@@ -14,7 +14,9 @@ describe('identity init scaffold', () => {
     });
     assert.ok(files['app/frontend/auth/login.html'].includes('Demo Co'));
     assert.ok(files['backend/src/index.js'].includes('handleIdentityWorkerRequest'));
-    assert.ok(files['migrations/0001_identity_core.sql'].includes('CREATE TABLE IF NOT EXISTS auth_users'));
+    assert.ok(files['migrations/0001_identity_core.sql'].includes('CREATE TABLE IF NOT EXISTS company'));
+    assert.ok(files['migrations/0001_identity_core.sql'].includes('INSERT OR IGNORE INTO company'));
+    assert.ok(files['app/frontend/shared/company-branding.js'].includes('/api/company'));
 
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'identity-init-'));
     const dir = path.join(tmp, 'demo-identity');

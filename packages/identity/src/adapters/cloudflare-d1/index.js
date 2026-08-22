@@ -1,5 +1,6 @@
 import { newAccountIdentityId, newAuthUserId, newSessionId, nowUnix } from './ids.js';
 import { AUTH_SESSION_TTL_SECONDS } from '../../core/constants.js';
+import { DEFAULT_COMPANY_ID, DEFAULT_COMPANY_SLUG, normalizeCompanyRow } from '../../contracts/company.js';
 
 /**
  * @typedef {object} D1Database
@@ -143,6 +144,81 @@ export function createCloudflareD1Adapter(db, options = {}) {
       await db.prepare(`DELETE FROM oauth_states WHERE state = ?`).bind(state).run();
       if (row.expires_at <= nowUnix()) return null;
       return row;
+    },
+
+    async getCompanyBySlug(slug = DEFAULT_COMPANY_SLUG) {
+      const row = await db.prepare(
+        `SELECT id, slug, name, legal_name, logo_url, favicon_url, primary_color, auth_bg_color,
+                support_email, website_url, tagline, meta_json, created_at, updated_at
+         FROM company WHERE slug = ? LIMIT 1`,
+      ).bind(slug).first();
+      return normalizeCompanyRow(row);
+    },
+
+    async getDefaultCompany() {
+      const bySlug = await this.getCompanyBySlug(DEFAULT_COMPANY_SLUG);
+      if (bySlug) return bySlug;
+      const row = await db.prepare(
+        `SELECT id, slug, name, legal_name, logo_url, favicon_url, primary_color, auth_bg_color,
+                support_email, website_url, tagline, meta_json, created_at, updated_at
+         FROM company WHERE id = ? LIMIT 1`,
+      ).bind(DEFAULT_COMPANY_ID).first();
+      return normalizeCompanyRow(row);
+    },
+
+    async upsertCompany(input) {
+      const ts = nowUnix();
+      const id = input.id || DEFAULT_COMPANY_ID;
+      const slug = input.slug || DEFAULT_COMPANY_SLUG;
+      const existing = await db.prepare(`SELECT id FROM company WHERE id = ? OR slug = ? LIMIT 1`)
+        .bind(id, slug).first();
+      const metaJson = input.meta ? JSON.stringify(input.meta) : (input.metaJson ?? null);
+      if (existing?.id) {
+        await db.prepare(
+          `UPDATE company SET
+            slug = ?, name = ?, legal_name = ?, logo_url = ?, favicon_url = ?,
+            primary_color = ?, auth_bg_color = ?, support_email = ?, website_url = ?,
+            tagline = ?, meta_json = ?, updated_at = ?
+           WHERE id = ?`,
+        ).bind(
+          slug,
+          input.name,
+          input.legalName ?? null,
+          input.logoUrl ?? null,
+          input.faviconUrl ?? null,
+          input.primaryColor ?? null,
+          input.authBgColor ?? null,
+          input.supportEmail ?? null,
+          input.websiteUrl ?? null,
+          input.tagline ?? null,
+          metaJson,
+          ts,
+          existing.id,
+        ).run();
+        return this.getCompanyBySlug(slug);
+      }
+      await db.prepare(
+        `INSERT INTO company
+         (id, slug, name, legal_name, logo_url, favicon_url, primary_color, auth_bg_color,
+          support_email, website_url, tagline, meta_json, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).bind(
+        id,
+        slug,
+        input.name,
+        input.legalName ?? null,
+        input.logoUrl ?? null,
+        input.faviconUrl ?? null,
+        input.primaryColor ?? null,
+        input.authBgColor ?? null,
+        input.supportEmail ?? null,
+        input.websiteUrl ?? null,
+        input.tagline ?? null,
+        metaJson,
+        ts,
+        ts,
+      ).run();
+      return this.getCompanyBySlug(slug);
     },
   });
 }
