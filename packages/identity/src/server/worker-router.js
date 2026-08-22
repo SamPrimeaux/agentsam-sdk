@@ -1,6 +1,8 @@
 import { createCloudflareD1Adapter } from '../adapters/cloudflare-d1/index.js';
 import { createIdentityService } from './identity-service.js';
 import { jsonResponse } from '../core/http-json.js';
+import { hashPassword } from '../core/password-crypto.js';
+import { createPasswordResetService } from '../recovery/password-reset.js';
 import { getGoogleAuthUrl, exchangeGoogleCode } from '../providers/google/oauth.js';
 import { fetchGoogleProfile } from '../providers/google/profile.js';
 import { getGithubAuthUrl, exchangeGithubCode } from '../providers/github/oauth.js';
@@ -30,6 +32,60 @@ function pkceVerifier() {
     .replace(/=+$/, '');
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function resolveKv(env) {
+  return env?.SESSION_CACHE || env?.KV || null;
+}
+
+function buildPasswordResetService(env, adapter, options = {}) {
+  if (options.passwordReset) return options.passwordReset;
+  const kv = resolveKv(env);
+  if (!kv || !adapter) return null;
+  return createPasswordResetService({
+    kv,
+    findEligibleUser: async (email) => adapter.findUserByEmail(email),
+    hashPassword,
+    updatePassword: async (userId, hashHex, saltHex) => {
+      await adapter.updateUserPassword(userId, hashHex, saltHex);
+    },
+    sendResetEmail: async ({ email, name, code }) => {
+      if (!env?.RESEND_API_KEY) {
+        const err = new Error('email_not_configured');
+        err.code = 'email_not_configured';
+        throw err;
+      }
+      const company = await adapter.getDefaultCompany().catch(() => null);
+      const brand = company?.name || 'Your App';
+      const fromEmail = company?.supportEmail || 'hey@inneranimalmedia.com';
+      const html = `<p>Hi ${escapeHtml(name)},</p><p>Your ${escapeHtml(brand)} verification code is:</p><p style="font-size:22px;font-weight:700;letter-spacing:4px;">${escapeHtml(code)}</p><p>Enter this on the reset page. Expires in 15 minutes.</p>`;
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${env.RESEND_API_KEY}`,
+        },
+        body: JSON.stringify({
+          from: `${brand} <${fromEmail}>`,
+          to: [email],
+          subject: 'Your password reset code',
+          html,
+        }),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`resend_failed:${res.status}:${text.slice(0, 120)}`);
+      }
+    },
+  });
+}
+
 /**
  * Worker fetch handler for identity API + auth page routing.
  * @param {Request} request
@@ -43,6 +99,7 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
 
   const adapter = createCloudflareD1Adapter(env.DB);
   const identity = options.identity || createIdentityService({ adapter });
+  const passwordReset = buildPasswordResetService(env, adapter, options);
 
   // ── API: email auth ─────────────────────────────────────────────────────
   if (path === '/api/auth/login' && method === 'POST') {
@@ -119,10 +176,36 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
   }
 
   if (path === '/api/auth/password-reset/request' && method === 'POST') {
-    return jsonResponse({ ok: true, message: 'If an account exists, a reset link was sent.' });
+    if (!passwordReset) {
+      return jsonResponse({ error: 'Service unavailable' }, 503);
+    }
+    const body = await request.json().catch(() => ({}));
+    try {
+      const result = await passwordReset.requestReset({ email: body.email });
+      return jsonResponse(result);
+    } catch (e) {
+      if (e?.code === 'email_not_configured' || e?.message === 'email_not_configured') {
+        return jsonResponse({ error: 'Email not configured' }, 503);
+      }
+      console.error('[password-reset/request]', e?.message ?? e);
+      return jsonResponse({ error: 'Service unavailable' }, 503);
+    }
   }
 
   if (path === '/api/auth/password-reset/confirm' && method === 'POST') {
+    if (!passwordReset) {
+      return jsonResponse({ error: 'Service unavailable' }, 503);
+    }
+    const body = await request.json().catch(() => ({}));
+    const result = await passwordReset.confirmReset({
+      email: body.email,
+      code: body.code,
+      password: body.password,
+      confirmPassword: body.confirm_password ?? body.confirmPassword ?? body.confirm,
+    });
+    if (!result.ok) {
+      return jsonResponse({ error: result.error }, result.status || 400);
+    }
     return jsonResponse({ ok: true, redirect: `${AUTH_LOGIN_PATH}?reset=success` });
   }
 

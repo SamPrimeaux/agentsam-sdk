@@ -48,6 +48,13 @@ export function createCloudflareD1Adapter(db, options = {}) {
       return this.findUserById(id);
     },
 
+    async updateUserPassword(userId, passwordHash, salt) {
+      const ts = nowUnix();
+      await db.prepare(
+        `UPDATE auth_users SET password_hash = ?, salt = ?, updated_at = ? WHERE id = ?`,
+      ).bind(passwordHash, salt, ts, userId).run();
+    },
+
     async findUserByProvider(provider, providerSubject) {
       const row = await db.prepare(
         `SELECT u.id, u.email, u.display_name, u.password_hash, u.salt, u.status, u.created_at, u.updated_at

@@ -41,7 +41,11 @@ export {
 export * from './core/index.js';
 export * from './core/constants.js';
 export { DEFAULT_COMPANY_ID, DEFAULT_COMPANY_SLUG, normalizeCompanyRow } from './contracts/company.js';
-export { finalizeInboundOAuth } from './oauth/callback.js';
+export { createPasswordResetService } from './recovery/password-reset.js';
+export {
+  finalizeInboundOAuth,
+  registerFinalizeInboundOAuth,
+} from './oauth/callback.js';
 export { createCloudflareD1Adapter } from './adapters/cloudflare-d1/index.js';
 export { createIdentityService } from './server/identity-service.js';
 export { handleIdentityWorkerRequest } from './server/worker-router.js';

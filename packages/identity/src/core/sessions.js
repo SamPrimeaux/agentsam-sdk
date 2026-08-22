@@ -57,3 +57,34 @@ export function buildSessionKvPayload(sessionId, fields = {}) {
 export function isInboundOAuthSuccess(result) {
   return result?.ok === true && typeof result.authUserId === 'string';
 }
+
+/**
+ * @typedef {object} InboundOAuthInput
+ * @property {string} provider
+ * @property {string} [sessionProvider]
+ * @property {string} email
+ * @property {string} name
+ * @property {string} providerUid
+ * @property {string|null} [supabaseUserId]
+ * @property {string} source
+ * @property {string} [pageContext]
+ */
+
+/**
+ * @typedef {object} InboundOAuthSuccess
+ * @property {true} ok
+ * @property {string} authUserId
+ * @property {string} sessionId
+ * @property {string} sessionToken
+ * @property {string|null} tenantId
+ */
+
+/**
+ * @typedef {object} InboundOAuthFailure
+ * @property {false} ok
+ * @property {'provision_failed'|'session_failed'} error
+ */
+
+/**
+ * @typedef {(env: unknown, request: Request, input: InboundOAuthInput) => Promise<InboundOAuthSuccess|InboundOAuthFailure>} InboundOAuthFinalizeFn
+ */
