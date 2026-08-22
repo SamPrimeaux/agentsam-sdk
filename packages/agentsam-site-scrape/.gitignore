@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.egg-info/
+dist/
+build/
+agentsam-site-scrape-corpus/
+*.pyc
+.pytest_cache/

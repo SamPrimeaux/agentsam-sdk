@@ -37,6 +37,15 @@ scope boundary for this pass was P0 only, per the handoff doc's file list.
 | `audit_migration_chain.py` | `agentsam_sdk.history.timeline` / `.supersession` | **Not started** |
 | leftover `d1_*_audit.py` | `agentsam_sdk.data.d1` adapters | **Not started** |
 
+## Optional / network packages (outside stdlib core)
+
+These live under `packages/`, **not** under `python/agentsam_sdk/`.
+Core `python/pyproject.toml` stays `dependencies = []`.
+
+| Package | Path | Deps | Status | Dual-home |
+|---|---|---|---|---|
+| `agentsam-site-scrape` | `packages/agentsam-site-scrape/` | `requests` (network + R2 mutate) | **Live experimental** (was planned) | IAM `tools/agentsam-site-scrape/` @ `33fa6c26aa2d007bdb115310473e939191a1940b` |
+
 ## Out of scope (per handoff doc, unchanged)
 
 `scripts/embed_*`, `scripts/ingest_*` (product Vectorize/pgvector pipelines);

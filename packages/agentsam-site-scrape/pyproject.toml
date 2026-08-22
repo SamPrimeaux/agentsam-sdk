@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentsam-site-scrape"
+version = "0.1.0"
+description = "Public-site crawler → image classifier/optimizer → R2 asset organizer (AgentSam CMS ingest)."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Inner Animal Media" }]
+dependencies = [
+  "requests>=2.32.0,<3.0.0",
+]
+
+[project.scripts]
+agentsam-site-scrape = "agentsam_site_scrape.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agentsam_site_scrape*"]

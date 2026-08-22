@@ -1,6 +1,10 @@
 # Host tooling for agentsam-sdk
 
-Python package is **stdlib-only** (`pip install -e .` adds no third-party deps).
+Core Python package (`python/agentsam_sdk`) is **stdlib-only**
+(`pip install -e .` adds no third-party deps). Optional packages under
+`packages/` (e.g. `agentsam-site-scrape` with `requests`) are separate installs
+and do not change that contract. See `docs/gaps.md` → Optional / network packages.
+
 These **host** tools are expected on the operator/CI machine:
 
 | Tool | Required for | Install (macOS) | Check |

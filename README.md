@@ -6,7 +6,7 @@ Agent Sam is a full-stack autonomous agent SDK built on Cloudflare Workers, D1, 
 
 **Repo:** [github.com/SamPrimeaux/agentsam-sdk](https://github.com/SamPrimeaux/agentsam-sdk) · **npm:** `@inneranimalmedia/agentsam-sdk`
 
-**Protocol (dual-home, no drift):** [`protocol/README.md`](./protocol/README.md) — every tool/feature lands in this repo **and** `inneranimalmedia/agentsam-sdk/`; npm publish is manual after mirror. Python lane: [`python/`](./python/).
+**Protocol (dual-home, no drift):** [`protocol/README.md`](./protocol/README.md) — every tool/feature lands in this repo **and** `inneranimalmedia/agentsam-sdk/`; npm publish is manual after mirror. Python lane: [`python/`](./python/) (stdlib-only). Optional network Python package: [`packages/agentsam-site-scrape/`](./packages/agentsam-site-scrape/) (live experimental; does not break the stdlib core).
 
 ---
 
