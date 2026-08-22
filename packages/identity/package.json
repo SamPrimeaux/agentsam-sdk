@@ -1,0 +1,52 @@
+{
+  "name": "@agentsam/identity",
+  "version": "0.1.0",
+  "description": "AgentSam Identity SDK — portable auth, OAuth providers, sessions, and app adapters",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./provider-contract": "./src/provider-contract.js",
+    "./providers": "./src/providers/index.js",
+    "./providers/google": "./src/providers/google/index.js",
+    "./providers/github": "./src/providers/github/index.js",
+    "./providers/gcp": "./src/providers/gcp/index.js",
+    "./providers/email": "./src/providers/email/index.js",
+    "./contracts/identity": "./src/contracts/identity.js",
+    "./contracts/session": "./src/contracts/session.js",
+    "./contracts/provider": "./src/contracts/provider.js",
+    "./contracts/external-identity": "./src/contracts/external-identity.js"
+  },
+  "files": [
+    "src",
+    "adapters",
+    "frontend",
+    "examples",
+    "docs",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/identity"
+  },
+  "keywords": [
+    "agentsam",
+    "identity",
+    "oauth",
+    "authentication",
+    "cloudflare",
+    "workers"
+  ],
+  "author": "Sam Primeaux <sam@inneranimalmedia.com>",
+  "license": "MIT"
+}
