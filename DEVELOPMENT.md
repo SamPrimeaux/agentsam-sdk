@@ -47,9 +47,25 @@ npx agentsam init \
 2. `npm test` passes
 3. Bump version in root `package.json`
 4. Confirm `files` includes consumer surfaces (`src`, `bin`, `python`, `protocol`, …)
-5. `npm publish --access public` (manual; requires `npm login` to org)
-6. Tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
-7. Record pairing in [`docs/RELEASES.md`](./docs/RELEASES.md): `iam@<40-sha> ↔ @inneranimalmedia/agentsam-sdk@X.Y.Z`
+5. `bash scripts/npm-publish-preflight.sh` — must print `npm whoami: inneranimalmedia`
+6. `npm publish --tag alpha --access public` (or `--tag latest` for stable)
+7. Tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
+8. Record pairing in [`docs/RELEASES.md`](./docs/RELEASES.md): `iam@<40-sha> ↔ @inneranimalmedia/agentsam-sdk@X.Y.Z`
+
+### Publish 404 (`PUT … Not found`)
+
+npm returns **404** (not 403) when you are logged in as the **wrong user** for scope `@inneranimalmedia`.
+
+- Registry maintainer for this package: **`inneranimalmedia`** (see `npm view @inneranimalmedia/agentsam-sdk maintainers`)
+- Fix: `npm whoami` must be `inneranimalmedia`
+  ```bash
+  npm logout
+  npm login   # npm user inneranimalmedia (org owner), not personal GitHub-linked account
+  bash scripts/npm-publish-preflight.sh
+  npm publish --tag alpha --access public
+  ```
+- If you use a team org on npmjs.com, invite your daily npm user as **Developer** on the org with publish rights.
+- Always pass `--access public` (already in `package.json` `publishConfig`; flag is harmless).
 
 Workspace packages under `packages/*` (e.g. `@inneranimalmedia/agentsam-shell-kit`) stay
 `private: true` until separately ready — they are **not** the root publish identity.
