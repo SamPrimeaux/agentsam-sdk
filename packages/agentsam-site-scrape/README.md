@@ -10,9 +10,9 @@ package (`requests` dependency). It does **not** live under
 `python/agentsam_sdk/` and does **not** change the stdlib-only
 `dependencies = []` contract of the core Python toolkit.
 
-**Dual-home:** mirrors IAM `tools/agentsam-site-scrape/`
-(source commit `33fa6c26aa2d007bdb115310473e939191a1940b` on
-`feat/agentsam-site-scrape`). Status: **live experimental**.
+**Status:** live experimental. Canonical source is this repo only
+(`packages/agentsam-site-scrape/` on `main`). Do not copy into the IAM platform
+monorepo `tools/` tree.
 
 ## Install
 
