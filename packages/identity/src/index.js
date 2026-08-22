@@ -38,10 +38,8 @@ export {
   EmailProvider,
 };
 
-export * from './core/identity.js';
-export * from './core/sessions.js';
-export * from './core/accounts.js';
-export * from './core/recovery.js';
+export * from './core/index.js';
+export * from './core/constants.js';
 
 /**
  * @typedef {Object} IdentityClientConfig
