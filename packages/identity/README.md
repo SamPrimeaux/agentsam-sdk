@@ -40,9 +40,28 @@ Ship: contracts, clients, adapters, scaffolding.
 
 Do **not** ship in the client bundle: password DB logic, OAuth secrets, D1 assumptions.
 
-## Publish
+## Publish (alpha)
 
-`npm publish @inneranimalmedia/agentsam-sdk@2.0.0-alpha.identity` (root package includes `packages/identity`).
+From `main` after tests pass:
+
+```bash
+npm test
+npm publish --tag alpha
+```
+
+Install in a customer app:
+
+```bash
+npm install @inneranimalmedia/agentsam-sdk@alpha
+# or pin: @inneranimalmedia/agentsam-sdk@2.0.0-alpha.identity
+```
+
+Subpath imports:
+
+```js
+import { createIdentityClient } from '@inneranimalmedia/agentsam-sdk';
+import { finalizeInboundOAuth } from '@inneranimalmedia/agentsam-sdk/identity/oauth/callback';
+```
 
 ## IAM design lab
 

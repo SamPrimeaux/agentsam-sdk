@@ -48,4 +48,27 @@ describe('@inneranimalmedia/agentsam-sdk identity', () => {
     assert.equal(getIdentityProvider('github')?.id, 'github');
     assert.equal(getIdentityProvider('missing'), null);
   });
+
+  it('core session helpers build portable KV payload', async () => {
+    const { buildSessionKvPayload, AuthError, isInboundOAuthSuccess } = await import('../src/index.js');
+    const payload = buildSessionKvPayload('sess_1', {
+      userId: 'au_test',
+      email: 'a@b.com',
+    });
+    assert.equal(payload.session_id, 'sess_1');
+    assert.equal(payload.user_id, 'au_test');
+    assert.throws(() => {
+      throw new AuthError('nope', { code: 'SESSION_MISSING' });
+    }, (e) => e instanceof AuthError && e.code === 'SESSION_MISSING');
+    assert.equal(isInboundOAuthSuccess({ ok: true, authUserId: 'au_x' }), true);
+    assert.equal(isInboundOAuthSuccess({ ok: false }), false);
+  });
+
+  it('finalizeInboundOAuth stub fails loud without adapter', async () => {
+    const { finalizeInboundOAuth } = await import('../src/oauth/callback.js');
+    await assert.rejects(
+      () => finalizeInboundOAuth({}, new Request('https://example.com'), {}),
+      /requires_identity_service_adapter/,
+    );
+  });
 });

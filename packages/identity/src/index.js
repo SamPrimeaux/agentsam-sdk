@@ -40,6 +40,7 @@ export {
 
 export * from './core/index.js';
 export * from './core/constants.js';
+export { finalizeInboundOAuth } from './oauth/callback.js';
 
 /**
  * @typedef {Object} IdentityClientConfig

@@ -41,6 +41,11 @@ assert.ok(fs.readFileSync(path.join(dir, 'migrations/0001_agentsam_core.sql'), '
 assert.ok(fs.readFileSync(path.join(dir, 'package.json'), 'utf8').includes('wrangler'));
 
 import { SLASH_COMMANDS, listSlashCommands } from '../src/lib/slash-commands.js';
+import { createIdentityClient, AUTH_COOKIE_NAME } from '../src/index.js';
+import { finalizeInboundOAuth } from '../packages/identity/src/oauth/callback.js';
+assert.equal(AUTH_COOKIE_NAME, 'session');
+assert.equal(createIdentityClient().providers.google()?.id, 'google');
+await assert.rejects(() => finalizeInboundOAuth({}, new Request('https://x'), {}), /adapter/);
 assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/deploy'));
 assert.equal(listSlashCommands({ lane: 'deploy' }).length, 2);
 
