@@ -8,28 +8,12 @@ import { fetchGoogleProfile } from '../providers/google/profile.js';
 import { getGithubAuthUrl, exchangeGithubCode } from '../providers/github/oauth.js';
 import { fetchGithubProfile } from '../providers/github/profile.js';
 import { AUTH_LOGIN_PATH } from '../core/constants.js';
+import { resolveOAuthCredentialLane, usesIamPlatformOAuth } from '../oauth/credentials.js';
+import { iamPlatformOAuthCallback, iamPlatformOAuthStart } from '../oauth/iam-platform.js';
+import { pkceChallenge, pkceVerifier, randomOAuthState } from '../oauth/pkce.js';
 
 function randomState() {
-  const bytes = crypto.getRandomValues(new Uint8Array(24));
-  return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-async function pkceChallenge(verifier) {
-  const data = new TextEncoder().encode(verifier);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  const b64 = btoa(String.fromCharCode(...new Uint8Array(digest)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-  return b64;
-}
-
-function pkceVerifier() {
-  const bytes = crypto.getRandomValues(new Uint8Array(32));
-  return btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
+  return randomOAuthState();
 }
 
 function escapeHtml(value) {
@@ -210,29 +194,61 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
   }
 
   // ── OAuth start ───────────────────────────────────────────────────────────
+  if (path === '/api/oauth/iam/callback' && method === 'GET') {
+    return iamPlatformOAuthCallback(request, env, adapter, identity);
+  }
+
   if (path === '/api/oauth/google/start' && method === 'GET') {
+    if (usesIamPlatformOAuth(env)) {
+      return iamPlatformOAuthStart(request, env, adapter);
+    }
+    const lane = resolveOAuthCredentialLane(env, 'google');
+    if (!lane || lane.lane !== 'byok_google') {
+      return jsonResponse({ ok: false, error: 'google_oauth_not_configured' }, 503);
+    }
     return oauthStart(request, env, adapter, 'google', {
-      clientId: env.GOOGLE_CLIENT_ID,
-      clientSecret: env.GOOGLE_CLIENT_SECRET,
+      clientId: lane.clientId,
+      clientSecret: lane.clientSecret,
     });
   }
   if (path === '/api/oauth/github/start' && method === 'GET') {
+    if (usesIamPlatformOAuth(env)) {
+      return iamPlatformOAuthStart(request, env, adapter);
+    }
+    const lane = resolveOAuthCredentialLane(env, 'github');
+    if (!lane || lane.lane !== 'byok_github') {
+      return jsonResponse({ ok: false, error: 'github_oauth_not_configured' }, 503);
+    }
     return oauthStart(request, env, adapter, 'github', {
-      clientId: env.GITHUB_CLIENT_ID,
-      clientSecret: env.GITHUB_CLIENT_SECRET,
+      clientId: lane.clientId,
+      clientSecret: lane.clientSecret,
     });
   }
 
   if (path === '/api/oauth/google/callback' && method === 'GET') {
+    if (usesIamPlatformOAuth(env)) {
+      return iamPlatformOAuthCallback(request, env, adapter, identity);
+    }
+    const lane = resolveOAuthCredentialLane(env, 'google');
+    if (!lane || lane.lane !== 'byok_google') {
+      return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=oauth_not_configured`, 302);
+    }
     return oauthCallback(request, env, identity, adapter, 'google', {
-      clientId: env.GOOGLE_CLIENT_ID,
-      clientSecret: env.GOOGLE_CLIENT_SECRET,
+      clientId: lane.clientId,
+      clientSecret: lane.clientSecret,
     });
   }
   if (path === '/api/oauth/github/callback' && method === 'GET') {
+    if (usesIamPlatformOAuth(env)) {
+      return iamPlatformOAuthCallback(request, env, adapter, identity);
+    }
+    const lane = resolveOAuthCredentialLane(env, 'github');
+    if (!lane || lane.lane !== 'byok_github') {
+      return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=oauth_not_configured`, 302);
+    }
     return oauthCallback(request, env, identity, adapter, 'github', {
-      clientId: env.GITHUB_CLIENT_ID,
-      clientSecret: env.GITHUB_CLIENT_SECRET,
+      clientId: lane.clientId,
+      clientSecret: lane.clientSecret,
     });
   }
 
