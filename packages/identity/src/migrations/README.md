@@ -1,5 +1,27 @@
 # Identity D1 migrations
 
-Customer-scoped identity tables ship here after IAM adapter proves schema contract.
+Customer-scoped identity tables for `@inneranimalmedia/agentsam-sdk` identity apps.
 
-IAM production tables (`auth_users`, `accounts`, `auth_sessions`, …) remain unchanged on reference app.
+## Apply
+
+```bash
+# local
+wrangler d1 execute <database_name> --local --file=migrations/0001_identity_core.sql
+
+# remote
+wrangler d1 execute <database_name> --remote --file=migrations/0001_identity_core.sql
+```
+
+`agentsam identity init` copies this migration into the customer project automatically.
+
+## Tables
+
+| Table | Purpose |
+|-------|---------|
+| `auth_users` | Login identity (`au_*` ids) |
+| `auth_sessions` | Browser sessions |
+| `account_identities` | OAuth provider linkage |
+| `oauth_states` | PKCE/state for OAuth start |
+| `password_reset_tokens` | Reset flow (grow when wired) |
+
+IAM production tables remain the reference; this schema is **portable and boring** for customer Workers.

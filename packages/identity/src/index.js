@@ -41,6 +41,9 @@ export {
 export * from './core/index.js';
 export * from './core/constants.js';
 export { finalizeInboundOAuth } from './oauth/callback.js';
+export { createCloudflareD1Adapter } from './adapters/cloudflare-d1/index.js';
+export { createIdentityService } from './server/identity-service.js';
+export { handleIdentityWorkerRequest } from './server/worker-router.js';
 
 /**
  * @typedef {Object} IdentityClientConfig

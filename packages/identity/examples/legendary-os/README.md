@@ -2,27 +2,24 @@
 
 Target: fresh install path (Phase 7).
 
-## Day 1 (alpha — preview + contracts)
+## Day 1 (alpha — scaffold + preview)
 
 ```bash
 npm install @inneranimalmedia/agentsam-sdk@alpha
+npx agentsam identity init --name legendary-os --brand "Legendary OS"
+cd legendary-os
+npm install
+npx wrangler d1 create legendary-os
+# paste database_id into wrangler.toml
+npm run db:migrate:local
+npm run dev
+```
+
+Or preview portal only before init:
+
+```bash
 npx agentsam identity preview --open
 ```
-
-Verify `/auth/login`, `/auth/signup`, `/auth/reset` match expectations before wiring Worker routes.
-
-Preview login: `preview@example.com` / `preview` (globe exit demo).
-
-```js
-import { createIdentityClient, GoogleProvider } from '@inneranimalmedia/agentsam-sdk';
-
-const identity = createIdentityClient({
-  providers: [GoogleProvider],
-  portal: { brand: { name: 'Legendary OS', logoUrl: '/logo.svg' } },
-});
-```
-
-`agentsam identity init` (D1 scaffold) lands Phase 5 — not in alpha CLI yet.
 
 ## Day 2 proof checklist
 

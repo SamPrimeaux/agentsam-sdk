@@ -11,6 +11,7 @@ import { runStartLocal } from './commands/start-local.js';
 import { runTunnel } from './commands/tunnel.js';
 import { runDeploy } from './commands/deploy.js';
 import { runIdentityPreview } from './commands/identity-preview.js';
+import { runIdentityInit } from './commands/identity-init.js';
 import { SLASH_COMMANDS, SHELL_PHASES } from './lib/slash-commands.js';
 
 const VERSION = pkg.version;
@@ -33,6 +34,7 @@ function printHelp() {
     agentsam tunnel            Expose local PTY to IAM (cloudflared + register)
     agentsam deploy            Graduate to Cloudflare / GCP when ready
     agentsam identity preview  Local auth portal (IAM HTML shells, stub APIs)
+    agentsam identity init     Scaffold app/frontend + backend + D1 migrations
     agentsam shell             Slash commands + shell UX info
     agentsam --version
     agentsam --help
@@ -233,8 +235,15 @@ if (command === '--version' || command === '-v') {
       console.error(`\n  ✗ ${e?.message || e}\n`);
       process.exit(1);
     }
+  } else if (sub === 'init') {
+    try {
+      await runIdentityInit(rest);
+    } catch (e) {
+      console.error(`\n  ✗ ${e?.message || e}\n`);
+      process.exit(1);
+    }
   } else {
-    console.error('\n  Usage: agentsam identity preview [--open] [--port 8791]\n');
+    console.error('\n  Usage:\n    agentsam identity preview [--open] [--port 8791]\n    agentsam identity init --name <project> [--brand "Name"]\n');
     process.exit(1);
   }
 } else {

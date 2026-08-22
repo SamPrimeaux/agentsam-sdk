@@ -20,7 +20,7 @@ identity.login(request);   // alpha: throws until Identity Service adapter is wi
 identity.session.fromRequest(request);  // alpha: throws until adapter is wired
 ```
 
-**Alpha scope:** contracts, provider normalization, auth portal HTML, and `agentsam identity preview`. Runtime login/session/OAuth finalize require a server adapter (D1 or IAM) — methods fail loud with `*_requires_identity_service` until then.
+**Alpha scope:** contracts, D1 adapter, Worker router, `agentsam identity init` scaffold (`app/frontend` + `backend` + migrations), and `agentsam identity preview`. Wire OAuth secrets in `.dev.vars` for Google/GitHub.
 
 ## Layout
 
@@ -70,6 +70,12 @@ Local preview before client integration:
 
 ```bash
 npx agentsam identity preview --open
+```
+
+Greenfield app (boring scaffold):
+
+```bash
+npx agentsam identity init --name my-app --brand "My App"
 ```
 
 ## IAM design lab
