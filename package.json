@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-sdk",
-  "version": "2.0.0-alpha.identity.10",
+  "version": "2.0.0-alpha.identity.11",
   "description": "Agent Sam is a full-stack AI agent SDK for autonomous task execution — covering data management, creative workflows, design commands, and multi-step agentic pipelines.",
   "type": "module",
   "main": "./src/index.js",
@@ -18,6 +18,8 @@
     "./identity/contracts/provider": "./packages/identity/src/contracts/provider.js",
     "./identity/contracts/external-identity": "./packages/identity/src/contracts/external-identity.js",
     "./identity/oauth/callback": "./packages/identity/src/oauth/callback.js",
+    "./identity/oauth/finalize-inbound": "./packages/identity/src/oauth/finalize-inbound.js",
+    "./identity/oauth/redirect-paths": "./packages/identity/src/oauth/redirect-paths.js",
     "./identity/oauth/credentials": "./packages/identity/src/oauth/credentials.js",
     "./identity/oauth/iam-platform": "./packages/identity/src/oauth/iam-platform.js",
     "./identity/recovery/password-reset": "./packages/identity/src/recovery/password-reset.js",

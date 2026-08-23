@@ -1,14 +1,16 @@
 /**
- * OAuth inbound finalize contract.
- * IAM reference: inneranimalmedia/src/core/auth/oauth-finalize.js — register via registerFinalizeInboundOAuth.
+ * OAuth inbound finalize — SDK orchestration + boot registry for host adapters.
  */
 export { isInboundOAuthSuccess } from '../core/sessions.js';
+export { createFinalizeInboundOAuth } from './finalize-inbound.js';
+export { createOAuthRedirectHelpers } from './redirect-paths.js';
 
 /** @type {import('../core/sessions.js').InboundOAuthFinalizeFn|null} */
 let registeredFinalize = null;
 
 /**
- * IAM (or customer adapter) registers the production finalize implementation at Worker boot.
+ * Host (IAM) registers production finalize at Worker boot — typically
+ * createFinalizeInboundOAuth(hostPorts) from adapters/inneranimalmedia.
  * @param {import('../core/sessions.js').InboundOAuthFinalizeFn} fn
  */
 export function registerFinalizeInboundOAuth(fn) {
