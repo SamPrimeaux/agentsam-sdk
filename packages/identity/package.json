@@ -11,6 +11,7 @@
     "./providers": "./src/providers/index.js",
     "./providers/google": "./src/providers/google/index.js",
     "./providers/github": "./src/providers/github/index.js",
+    "./providers/iam": "./src/providers/iam/index.js",
     "./providers/gcp": "./src/providers/gcp/index.js",
     "./providers/email": "./src/providers/email/index.js",
     "./contracts/identity": "./src/contracts/identity.js",

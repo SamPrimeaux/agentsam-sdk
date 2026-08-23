@@ -5,4 +5,5 @@ export const IdentityProviders = Object.freeze([
   'google',
   'github',
   'gcp',
+  'iam',
 ]);

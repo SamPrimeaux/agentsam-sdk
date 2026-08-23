@@ -3,6 +3,7 @@ import { GoogleProvider } from './google/index.js';
 import { GithubProvider } from './github/index.js';
 import { GcpProvider } from './gcp/index.js';
 import { EmailProvider } from './email/index.js';
+import { IamProvider } from './iam/index.js';
 
 /** @type {Record<string, import('../provider-contract.js').IdentityProvider>} */
 export const identityProviders = Object.freeze({
@@ -10,6 +11,7 @@ export const identityProviders = Object.freeze({
   github: GithubProvider,
   gcp: GcpProvider,
   email: EmailProvider,
+  iam: IamProvider,
 });
 
 /** @param {string} id */
@@ -22,4 +24,4 @@ export function listIdentityProviders() {
   return IdentityProviders.map((id) => identityProviders[id]).filter(Boolean);
 }
 
-export { GoogleProvider, GithubProvider, GcpProvider, EmailProvider };
+export { GoogleProvider, GithubProvider, GcpProvider, EmailProvider, IamProvider };
