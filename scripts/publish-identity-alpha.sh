@@ -4,6 +4,7 @@
 # Usage:
 #   ./scripts/publish-identity-alpha.sh          # bumps .9 → .10
 #   ./scripts/publish-identity-alpha.sh 10         # explicit suffix → 2.0.0-alpha.identity.10
+#   ./scripts/publish-identity-alpha.sh --publish-only  # test + publish current version (no bump)
 #   ./scripts/publish-identity-alpha.sh --dry-run  # bump + test only, no publish
 #
 # Requires: npm logged in as inneranimalmedia (see npm-publish-preflight.sh).
@@ -13,11 +14,13 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 DRY_RUN=0
+PUBLISH_ONLY=0
 SUFFIX=""
 
 for arg in "$@"; do
   case "$arg" in
     --dry-run) DRY_RUN=1 ;;
+    --publish-only) PUBLISH_ONLY=1 ;;
     -h|--help)
       sed -n '2,10p' "$0"
       exit 0
@@ -28,21 +31,13 @@ for arg in "$@"; do
   esac
 done
 
-if [[ -z "$SUFFIX" ]]; then
-  CURRENT="$(node -p "require('./package.json').version")"
-  if [[ "$CURRENT" =~ ^2\.0\.0-alpha\.identity\.([0-9]+)$ ]]; then
-    SUFFIX=$((BASH_REMATCH[1] + 1))
-  else
-    echo "FAIL: cannot auto-bump from version $CURRENT (expected 2.0.0-alpha.identity.N)" >&2
-    echo "Pass suffix explicitly: ./scripts/publish-identity-alpha.sh 10" >&2
-    exit 1
-  fi
-fi
-
-VERSION="2.0.0-alpha.identity.${SUFFIX}"
-
-echo "=== Bump → ${VERSION} ==="
-VERSION="$VERSION" node -e "
+if [[ "$PUBLISH_ONLY" == "1" ]]; then
+  VERSION="$(node -p "require('./package.json').version")"
+  echo "=== Publish only (no bump) → ${VERSION} ==="
+elif [[ -n "$SUFFIX" ]]; then
+  VERSION="2.0.0-alpha.identity.${SUFFIX}"
+  echo "=== Bump → ${VERSION} ==="
+  VERSION="$VERSION" node -e "
 import { readFileSync, writeFileSync } from 'node:fs';
 const version = process.env.VERSION;
 for (const rel of ['package.json', 'packages/identity/package.json']) {
@@ -52,6 +47,28 @@ for (const rel of ['package.json', 'packages/identity/package.json']) {
   console.log('✓ ' + rel);
 }
 "
+else
+  CURRENT="$(node -p "require('./package.json').version")"
+  if [[ "$CURRENT" =~ ^2\.0\.0-alpha\.identity\.([0-9]+)$ ]]; then
+    SUFFIX=$((BASH_REMATCH[1] + 1))
+  else
+    echo "FAIL: cannot auto-bump from version $CURRENT (expected 2.0.0-alpha.identity.N)" >&2
+    echo "Pass suffix explicitly: ./scripts/publish-identity-alpha.sh 10" >&2
+    exit 1
+  fi
+  VERSION="2.0.0-alpha.identity.${SUFFIX}"
+  echo "=== Bump → ${VERSION} ==="
+  VERSION="$VERSION" node -e "
+import { readFileSync, writeFileSync } from 'node:fs';
+const version = process.env.VERSION;
+for (const rel of ['package.json', 'packages/identity/package.json']) {
+  const j = JSON.parse(readFileSync(rel, 'utf8'));
+  j.version = version;
+  writeFileSync(rel, JSON.stringify(j, null, 2) + '\n', 'utf8');
+  console.log('✓ ' + rel);
+}
+"
+fi
 
 echo ""
 echo "=== Test ==="

@@ -54,6 +54,9 @@
     "test": "node test/smoke.mjs && npm --prefix packages/identity test",
     "test:identity": "npm --prefix packages/identity test",
     "smoke": "node test/smoke.mjs",
+    "publish:identity-alpha": "bash scripts/publish-identity-alpha.sh",
+    "publish:identity-alpha:dry-run": "bash scripts/publish-identity-alpha.sh --dry-run",
+    "publish:identity-alpha:publish-only": "bash scripts/publish-identity-alpha.sh --publish-only",
     "preview:auth-portal": "node packages/identity/scripts/preview-auth-portal.mjs --open",
     "postinstall": "node packages/identity/scripts/postinstall-hint.mjs",
     "prepublishOnly": "npm test"
