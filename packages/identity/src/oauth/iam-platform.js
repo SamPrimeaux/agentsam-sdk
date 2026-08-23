@@ -7,11 +7,10 @@ import {
 import { pkceChallenge, pkceVerifier, randomOAuthState } from './pkce.js';
 import {
   exchangeIamCode,
-  fetchIamProfile,
   getIamAuthUrl,
   IAM_DEFAULT_OIDC_SCOPE,
 } from '../providers/iam/oauth.js';
-import { fetchIamProfile as fetchIamProfileFromProvider } from '../providers/iam/profile.js';
+import { fetchIamProfile } from '../providers/iam/profile.js';
 import { normalizeIamIdentity } from '../providers/iam/mapper.js';
 
 /**
@@ -92,7 +91,7 @@ export async function iamPlatformOAuthCallback(request, env, adapter, identity) 
     return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=token_exchange_failed`, 302);
   }
 
-  const profile = await fetchIamProfileFromProvider({
+  const profile = await fetchIamProfile({
     issuer: creds.issuer,
     accessToken: token.access_token,
   });
