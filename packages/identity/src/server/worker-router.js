@@ -235,14 +235,11 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
     return oauthCallback(request, env, identity, adapter, 'github', lane);
   }
 
-  // ── Auth HTML shells (map IAM paths → static files) ─────────────────────
+  // Auth HTML shells — use extensionless paths; assets serves foo.html at /foo.
   const authPageMap = {
-    '/auth/login': '/auth/login.html',
-    '/auth/signup': '/auth/signup.html',
-    '/auth/reset': '/auth/reset.html',
-    '/dashboard/home': '/dashboard/index.html',
-    '/dashboard/agent': '/dashboard/index.html',
-    '/dashboard': '/dashboard/index.html',
+    '/auth/login': '/auth/login',
+    '/auth/signup': '/auth/signup',
+    '/auth/reset': '/auth/reset',
   };
 
   if (method === 'GET' && authPageMap[path]) {
@@ -253,7 +250,7 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
     return jsonResponse({ error: 'assets_binding_required', path }, 500);
   }
 
-  if (method === 'GET' && path.startsWith('/dashboard')) {
+  if (method === 'GET' && (path === '/dashboard' || path.startsWith('/dashboard/'))) {
     const ctx = await identity.sessionFromRequest(request);
     if (!ctx) {
       const next = encodeURIComponent(path + url.search);
@@ -280,7 +277,7 @@ async function oauthStart(request, env, adapter, provider, creds) {
   const state = randomOAuthState();
   const codeVerifier = pkceVerifier();
   const codeChallenge = await pkceChallenge(codeVerifier);
-  const redirectTo = url.searchParams.get('next') || url.searchParams.get('return_to') || '/dashboard/home';
+  const redirectTo = url.searchParams.get('next') || url.searchParams.get('return_to') || '/dashboard/cms';
   await adapter.saveOAuthState({ state, provider, codeVerifier, redirectTo });
 
   const redirectUri = `${url.origin}/api/oauth/${provider}/callback`;
@@ -358,7 +355,7 @@ async function oauthCallback(request, env, identity, adapter, provider, creds) {
     displayName: normalized.name,
   });
 
-  const redirectTo = saved.redirect_to || '/dashboard/home';
+  const redirectTo = saved.redirect_to || '/dashboard/cms';
   const res = identity.buildLoginSuccessResponse(request, result.sessionId, redirectTo);
   const globeUrl = `${url.origin}${AUTH_LOGIN_PATH}?globe_exit=1&next=${encodeURIComponent(redirectTo)}`;
   return new Response(null, {
