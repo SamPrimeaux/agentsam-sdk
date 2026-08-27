@@ -18,3 +18,5 @@ agentsam tui --check
 ```
 
 The core Python SDK remains stdlib-only; `rich` is an optional extra.
+
+For a zero-dependency Node/ANSI rendering reference, see `../../../../examples/agentsam-tui-ansi.mjs`.
