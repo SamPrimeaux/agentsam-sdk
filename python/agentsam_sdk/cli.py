@@ -153,9 +153,31 @@ def _cmd_repository_inspect(args: argparse.Namespace) -> int:
     return repo_inspect.main_cli(argv)
 
 
+def _cmd_tui(args: argparse.Namespace) -> int:
+    from agentsam_sdk.tui.demo import main as tui_main
+
+    argv = ["--scene", args.scene, "--ticks", str(args.ticks)]
+    if args.check:
+        argv.append("--check")
+    if args.force_color:
+        argv.append("--force-color")
+    return tui_main(argv)
+
+
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="agentsam", description="agentsam_sdk CLI")
     sub = ap.add_subparsers(dest="group", required=True)
+
+    tui = sub.add_parser("tui", help="optional Rich terminal UI / live CLI renderables")
+    tui.add_argument(
+        "--scene",
+        choices=("all", "card", "progress", "dashboard", "events", "sprite", "logs", "ship"),
+        default="all",
+    )
+    tui.add_argument("--ticks", type=int, default=48)
+    tui.add_argument("--check", action="store_true", help="render quickly for smoke/CI")
+    tui.add_argument("--force-color", action="store_true")
+    tui.set_defaults(func=_cmd_tui)
 
     data = sub.add_parser("data", help="D1 data audits")
     data_sub = data.add_subparsers(dest="cmd", required=True)

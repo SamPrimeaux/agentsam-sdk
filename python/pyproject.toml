@@ -5,9 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agentsam-sdk"
 version = "0.1.0"
-description = "Stdlib-only D1/repository audit toolkit for inneranimalmedia (Agent Sam)."
+description = "Stdlib-first Agent Sam repository/data CLI with optional Rich terminal UI."
 requires-python = ">=3.10"
 dependencies = []
+
+[project.optional-dependencies]
+tui = ["rich>=13.7.0"]
 
 [project.scripts]
 agentsam = "agentsam_sdk.cli:main"
