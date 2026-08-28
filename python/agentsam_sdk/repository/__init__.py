@@ -1,12 +1,12 @@
-"""Repository-level audits (inventory, scan_bloat, inspect).
+"""Repository audits and repository intelligence.
 
-Plain relative imports — avoid lazy ``__getattr__`` re-exports. Under unittest
-discovery, ``from agentsam_sdk.repository import X as mod`` inside
-``__getattr__`` recurses and blows the stack.
+The older inventory/scan modules keep their compatibility contracts. New repo-shape
+analysis belongs under ``repository.intelligence`` so it can observe arbitrary
+repositories without encoding one product's directory layout.
 """
 
 from __future__ import annotations
 
-from . import inspect, inventory, scan_bloat
+from . import inspect, intelligence, inventory, scan_bloat
 
-__all__ = ["inventory", "scan_bloat", "inspect"]
+__all__ = ["inventory", "scan_bloat", "inspect", "intelligence"]
