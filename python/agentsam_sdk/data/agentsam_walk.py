@@ -113,6 +113,7 @@ def _render_markdown(walks: list[TableWalk], prefix: str) -> str:
 
 def run(tool_input: ToolInput) -> ToolResult:
     started = start_timer()
+    tool_input.assert_read_only()
     p = tool_input.params
     prefix = p.get("prefix", "agentsam_")
     output_dir = tool_input.output_path()

@@ -48,6 +48,20 @@ class ToolInput:
     def output_path(self) -> Optional[Path]:
         return Path(self.output_dir) if self.output_dir else None
 
+    def assert_read_only(self) -> None:
+        """Enforcement, not just convention: raise if the caller asked for a
+        write when the tool never declared write support. Read-only tools
+        call this at the top of run(); tools that DO support writes skip the
+        call (or gate it behind their own capability check) and must say so
+        loudly in ToolResult.summary per the module docstring.
+        """
+        if self.write:
+            raise ValueError(
+                "write=True passed to a read-only tool. This tool has no "
+                "write path -- if you need one, add it explicitly and "
+                "remove this guard from its run()."
+            )
+
 
 @dataclass
 class ToolResult:
