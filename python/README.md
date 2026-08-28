@@ -1,7 +1,8 @@
 # agentsam_sdk (Python) — npm mirror
 
-Exact dual-home of `inneranimalmedia/agentsam-sdk/`. **Stdlib-only**
-(`dependencies = []` in `pyproject.toml`).
+Core repository/data commands remain **stdlib-only** (`dependencies = []`).
+The Rich terminal UI is an optional `tui` extra and lives with the SDK CLI,
+not in the application tool catalog.
 
 ```bash
 cd python && pip install -e .
@@ -17,3 +18,16 @@ Protocol: [`../protocol/README.md`](../protocol/README.md). Do not advance this 
 | Package | Path | Notes |
 |---------|------|-------|
 | `agentsam-site-scrape` | [`../packages/agentsam-site-scrape/`](../packages/agentsam-site-scrape/) | Optional/network (`requests`); crawl→R2. Dual-homed with IAM `tools/agentsam-site-scrape/`. Does **not** fold into `agentsam_sdk`. |
+
+
+## Optional terminal UI
+
+```bash
+cd python
+pip install -e '.[tui]'
+agentsam tui
+agentsam tui --scene dashboard
+agentsam tui --check
+```
+
+`agentsam_sdk.tui` is presentation-only. It does not define tools or execution policy.
