@@ -5,6 +5,8 @@ set -euo pipefail
 REQUIRED_SCOPE='inneranimalmedia'
 PKG='@inneranimalmedia/agentsam-sdk'
 
+node scripts/verify-package.mjs
+
 who="$(npm whoami 2>/dev/null || true)"
 if [[ -z "$who" ]]; then
   echo "FAIL: not logged in — run: npm login" >&2
@@ -27,4 +29,4 @@ npm view "$PKG" version 2>/dev/null && echo "registry: package exists" || echo "
 ver="$(node -p "require('./package.json').version")"
 echo "local version: $ver"
 echo ""
-echo "Next: npm test && npm publish --tag alpha --access public"
+echo "Next: npm run verify && npm publish --tag alpha --access public"
