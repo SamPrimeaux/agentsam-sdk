@@ -7,6 +7,17 @@ export { routeIntent } from './lib/router.js';
 export { getToolCatalog } from './lib/tools.js';
 export { scaffoldProject } from './lib/scaffold.js';
 export {
+  normalizeGitRemote,
+  resolveGitContext,
+  tryResolveGitContext,
+} from './lib/git-context.js';
+export {
+  resolveAgentSamBaseUrl,
+  resolveBridgeKey,
+  buildBridgeHeaders,
+  createBridgeClient,
+} from './lib/bridge-client.js';
+export {
   SLASH_COMMANDS,
   SHELL_THEMES,
   SHELL_PHASES,
