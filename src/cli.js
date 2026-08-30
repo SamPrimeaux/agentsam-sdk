@@ -12,6 +12,7 @@ import { runTunnel } from './commands/tunnel.js';
 import { runDeploy } from './commands/deploy.js';
 import { runIdentityPreview } from './commands/identity-preview.js';
 import { runIdentityInit } from './commands/identity-init.js';
+import { runContext } from './commands/context.js';
 import { SLASH_COMMANDS, SHELL_PHASES } from './lib/slash-commands.js';
 
 const VERSION = pkg.version;
@@ -29,6 +30,7 @@ function printHelp() {
   Agent Sam SDK — CLI v${VERSION}
 
   Usage:
+    agentsam context [--json]  Git repo/revision + bridge configuration from any repo
     agentsam init              Local-first project scaffold (default: localhost, no accounts)
     agentsam start-local       Local PTY on ws://127.0.0.1:3099 (no tunnel, no Cloudflare)
     agentsam tunnel            Expose local PTY to IAM (cloudflared + register)
@@ -38,6 +40,11 @@ function printHelp() {
     agentsam shell             Slash commands + shell UX info
     agentsam --version
     agentsam --help
+
+  Context options:
+    --json                     Machine-readable output
+    --cwd <path>               Resolve a different working directory
+    --remote <name>            Preferred Git remote (default origin; falls back to first remote)
 
   Init is completable with Node only — no IAM login, no OAuth, no Cloudflare.
   Prove locally first; deploy prompts for accounts only when you choose to ship.
@@ -201,6 +208,13 @@ if (command === '--version' || command === '-v') {
   console.log(VERSION);
 } else if (command === '--help' || command === '-h' || !command) {
   printHelp();
+} else if (command === 'context') {
+  try {
+    await runContext(rest);
+  } catch (e) {
+    console.error(`\n  ✗ ${e?.message || e}\n`);
+    process.exit(1);
+  }
 } else if (command === 'shell') {
   await runShellInfo();
 } else if (command === 'start-local') {
