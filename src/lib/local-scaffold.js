@@ -240,9 +240,20 @@ dist/
     },
     {
       path: '.env',
-      content: `VITE_PROJECT_NAME=${projectName}
-VITE_LANE_KEY=${laneKey}
-VITE_AGENT=${agent}
+      content: `AGENTSAM_PROJECT=${projectName}
+AGENTSAM_LANE=${laneKey}
+AGENTSAM_AGENT=${agent}
+AGENTSAM_DB=.agentsam/data/agentsam.sqlite
+PORT=8787
+`,
+    },
+    {
+      path: '.env.example',
+      content: `AGENTSAM_PROJECT=${projectName}
+AGENTSAM_LANE=${laneKey}
+AGENTSAM_AGENT=${agent}
+AGENTSAM_DB=.agentsam/data/agentsam.sqlite
+PORT=8787
 `,
     },
     {
