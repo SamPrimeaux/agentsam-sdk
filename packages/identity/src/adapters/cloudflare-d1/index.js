@@ -136,19 +136,24 @@ export function createCloudflareD1Adapter(db, options = {}) {
     },
 
     async saveOAuthState({ state, provider, codeVerifier, redirectTo, ttlSeconds = 600 }) {
+      // Dedicated table, deliberately NOT named `oauth_states` -- that name collides
+      // with unrelated Stripe Connect state tracking in customer apps that reuse
+      // their inneranimalmedia D1 instance (id/user_id/provider_id/redirect_uri/
+      // scope schema, no default on primary key). See AgentSamRemix incident,
+      // 2026-08-29: D1_ERROR: table oauth_states has no column named state.
       const ts = nowUnix();
       await db.prepare(
-        `INSERT INTO oauth_states (state, provider, code_verifier, redirect_to, expires_at, created_at)
+        `INSERT INTO identity_oauth_states (state, provider, code_verifier, redirect_to, expires_at, created_at)
          VALUES (?, ?, ?, ?, ?, ?)`,
       ).bind(state, provider, codeVerifier, redirectTo || null, ts + ttlSeconds, ts).run();
     },
 
     async consumeOAuthState(state) {
       const row = await db.prepare(
-        `SELECT state, provider, code_verifier, redirect_to, expires_at FROM oauth_states WHERE state = ? LIMIT 1`,
+        `SELECT state, provider, code_verifier, redirect_to, expires_at FROM identity_oauth_states WHERE state = ? LIMIT 1`,
       ).bind(state).first();
       if (!row) return null;
-      await db.prepare(`DELETE FROM oauth_states WHERE state = ?`).bind(state).run();
+      await db.prepare(`DELETE FROM identity_oauth_states WHERE state = ?`).bind(state).run();
       if (row.expires_at <= nowUnix()) return null;
       return row;
     },
