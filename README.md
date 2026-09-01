@@ -194,20 +194,23 @@ Agent Sam routes work to the right environment automatically:
 
 ## What Gets Scaffolded
 
-Running `agentsam init` generates a production-ready project for your lane:
+Running `agentsam init` generates a portable local project first:
 
 **All lanes include:**
-- `agentsam.config.js` — project config, lane, provider, agent
-- `wrangler.toml` — Worker, D1, R2, KV, Durable Object bindings
-- `.env.example` — all required secrets pre-listed
-- `src/index.js` — Worker entry point wired to your agent
-- `README.md` — setup and deploy instructions
+- a new Git repository
+- `agentsam.config.js` — project/lane/agent configuration
+- `.env` + `.env.example` — local configuration
+- `.agentsam/config.json` — Agent Sam local project metadata
+- `.agentsam/data/agentsam.sqlite` — initialized local SQLite state
+- `db/schema.sql` — portable relational schema
+- `src/agent.js` — runtime-neutral Agent Sam application factory
+- `src/dev-server.js` — local Node HTTP adapter
+- `scripts/smoke.mjs` — health + SQLite persistence proof
+- ANSI and optional Rich TUI commands through the installed SDK
 
-**CMS lane adds:** page/section/asset schema migrations and CMS worker scaffold.
+Lane-specific schema additions remain local-first. For example, CMS adds CMS tables to `db/schema.sql`.
 
-**Data lane adds:** D1 + Hyperdrive config and migration templates.
-
-**Full Stack adds:** Durable Object session scaffold, auth tables, full agent chat loop.
+Cloudflare files are **not** emitted during local init. `agentsam deploy --target cloudflare` generates the Worker adapter, `wrangler.toml`, and a D1 migration from the same local schema when cloud infrastructure is intentionally requested.
 
 ---
 
