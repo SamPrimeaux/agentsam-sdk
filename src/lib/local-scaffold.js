@@ -369,34 +369,44 @@ console.log('  project  ${projectName}');
       path: 'README.md',
       content: `# ${projectName}
 
-Built locally with [Agent Sam SDK](https://inneranimalmedia.com) — **${laneLabel}** lane, \`${agent}\` agent.
+Agent Sam local project — **${laneLabel}** lane, \`${agent}\` agent.
 
-## Gorilla Mode (default UI)
+## Start locally
 
 \`\`\`bash
 npm install
 npm run smoke
-npm run dev                 # Worker :8787 + Vite :5173
+npm run dev
 \`\`\`
 
-Open **http://localhost:5173** — pixel Gorilla shell. Live \`/health\`, \`/samiam\`, and demo scenarios proxy to your local Worker.
+Local API: **http://127.0.0.1:8787**
+
+Local state:
+
+- Git repository initialized by \`agentsam init\`
+- \`.env\` for local configuration
+- SQLite at \`.agentsam/data/agentsam.sqlite\`
+- schema at \`db/schema.sql\`
+
+## Agent Sam terminal experience
 
 \`\`\`bash
-npx agentsam start-local    # optional — local PTY on :3099
-npm run db:migrate          # apply local D1 schema
+npm run tui                  # zero-dependency ANSI dashboard
+npm run tui:rich             # Python Rich dashboard if installed
+npm run tui:rich -- --install
+npm run pty                  # local PTY on ws://127.0.0.1:3099
+npm run db:status
 \`\`\`
 
-Everything works offline. No Cloudflare account required to start.
+No Worker or cloud account is required for local development.
 
-## Graduate to cloud
+## Graduate intentionally
 
 \`\`\`bash
-npx agentsam deploy
+npm run deploy
 \`\`\`
 
-Cloudflare OAuth is prompted **only** when you deploy — not at init.
-
-Run target selected at init: **${runTarget}**
+Selected future deploy target: **${runTarget}**. Cloud-specific adapters and credentials belong to deploy time, not local init.
 `,
     },
   ];
