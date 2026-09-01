@@ -7,11 +7,6 @@ export { routeIntent } from './lib/router.js';
 export { getToolCatalog } from './lib/tools.js';
 export { scaffoldProject } from './lib/scaffold.js';
 export {
-  createLocalSqliteDatabase,
-  initializeLocalSqlite,
-  inspectLocalSqlite,
-} from './local/sqlite.js';
-export {
   normalizeGitRemote,
   resolveGitContext,
   tryResolveGitContext,
