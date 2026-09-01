@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AgentSam, routeIntent, getToolCatalog } from '../src/index.js';
-import { buildLocalScaffoldMeta } from '../src/lib/local-scaffold.js';
+import { buildLocalScaffoldMeta, sdkDependencySpec } from '../src/lib/local-scaffold.js';
 import { writeScaffoldFiles } from '../src/lib/write-files.js';
 import { copyGorillaTemplate } from '../src/lib/gorilla-template.js';
 import { printContextSummary, missingForInit } from '../src/lib/detect-context.js';
@@ -64,6 +64,18 @@ printContextSummary({
 });
 assert.deepEqual(missingForInit({ iam: { ready: false } }, '', { runTarget: 'local' }), []);
 assert.deepEqual(missingForInit({ iam: { ready: false } }, '', { runTarget: 'cloudflare' }), ['iam']);
+
+assert.equal(sdkDependencySpec('2.0.0-alpha.identity.12'), '2.0.0-alpha.identity.12');
+assert.equal(sdkDependencySpec('2.1.3'), '^2.1.3');
+const prereleaseMeta = buildLocalScaffoldMeta(
+  { projectName: 'alpha-demo', lane: 'fullstack', runTarget: 'local' },
+  '2.0.0-alpha.identity.12',
+);
+const prereleasePackage = JSON.parse(prereleaseMeta.files.find((f) => f.path === 'package.json').content);
+assert.equal(
+  prereleasePackage.dependencies['@inneranimalmedia/agentsam-sdk'],
+  '2.0.0-alpha.identity.12',
+);
 
 const localMeta = buildLocalScaffoldMeta({ projectName: 'demo', lane: 'cms', runTarget: 'local' });
 assert.equal(localMeta.laneKey, 'cms');

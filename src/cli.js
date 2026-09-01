@@ -2,6 +2,9 @@
 
 import pkg from '../package.json' with { type: 'json' };
 import readline from 'readline';
+import { spawn } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { buildLocalScaffoldMeta, LANE_KEYS, RUN_TARGETS } from './lib/local-scaffold.js';
 import { writeScaffoldFiles } from './lib/write-files.js';
 import { copyGorillaTemplate } from './lib/gorilla-template.js';
@@ -16,6 +19,8 @@ import { runContext } from './commands/context.js';
 import { SLASH_COMMANDS, SHELL_PHASES } from './lib/slash-commands.js';
 
 const VERSION = pkg.version;
+const CLI_DIR = path.dirname(fileURLToPath(import.meta.url));
+const ANSI_SHELL_DEMO = path.resolve(CLI_DIR, '..', 'examples', 'agentsam-tui-ansi.mjs');
 
 function createPrompt() {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -37,7 +42,8 @@ function printHelp() {
     agentsam deploy            Graduate to Cloudflare / GCP when ready
     agentsam identity preview  Local auth portal (IAM HTML shells, stub APIs)
     agentsam identity init     Scaffold app/frontend + backend + D1 migrations
-    agentsam shell             Slash commands + shell UX info
+    agentsam shell             Shell lab + slash command catalog
+    agentsam shell demo        Run zero-dependency ANSI shell preview locally
     agentsam --version
     agentsam --help
 
@@ -184,15 +190,47 @@ async function initFromArgs(argv) {
   await runLocalInit({ ...opts, prompt: null });
 }
 
-async function runShellInfo() {
+async function runAnsiShellDemo(argv = []) {
+  await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [ANSI_SHELL_DEMO, ...argv], {
+      stdio: 'inherit',
+      env: process.env,
+    });
+    child.once('error', reject);
+    child.once('exit', (code, signal) => {
+      if (signal) reject(new Error(`ANSI shell demo stopped by ${signal}`));
+      else if (code === 0) resolve();
+      else reject(new Error(`ANSI shell demo exited ${code ?? 1}`));
+    });
+  });
+}
+
+async function runShellInfo(argv = []) {
+  const sub = argv[0] || 'list';
+  if (sub === 'demo' || sub === 'ansi') {
+    await runAnsiShellDemo(argv.slice(1));
+    return;
+  }
+  if (sub !== 'list' && sub !== 'status') {
+    throw new Error(`unknown shell command: ${sub}`);
+  }
+
   const next = SHELL_PHASES.find((p) => p.status === 'next');
   console.log(`
   ╔═══════════════════════════════════╗
-  ║     Agent Sam Shell (Gorilla)     ║
+  ║       Agent Sam Shell Lab         ║
   ╚═══════════════════════════════════╝
 
   Local PTY: agentsam start-local (ws://127.0.0.1:3099)
   Next milestone: ${next?.label ?? 'dashboard bridge after deploy'}
+
+  Presentation prototypes:
+    ansi       zero-dependency Node TUI · runnable now
+               agentsam shell demo --scene dashboard
+    rich       optional Python Rich TUI · richer live cards/events
+               cd python && pip install -e '.[tui]' && agentsam tui
+    gorilla    React/Vite game-shell prototype · scaffolded today
+    shell-kit  reusable React work-surface components · WIP/private
 
   Slash commands (${SLASH_COMMANDS.length} registered):
 `);
@@ -216,7 +254,12 @@ if (command === '--version' || command === '-v') {
     process.exit(1);
   }
 } else if (command === 'shell') {
-  await runShellInfo();
+  try {
+    await runShellInfo(rest);
+  } catch (e) {
+    console.error(`\n  ✗ ${e?.message || e}\n`);
+    process.exit(1);
+  }
 } else if (command === 'start-local') {
   await runStartLocal({});
 } else if (command === 'tunnel') {

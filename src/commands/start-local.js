@@ -35,6 +35,10 @@ export async function runStartLocal(opts = {}) {
   Agent Sam — local PTY
   No Cloudflare · no tunnel · no IAM login
   `);
+  if (!config) {
+    console.log(`  ⚠ No .agentsam/config.json found; using current repository/directory as the PTY root.`);
+    console.log(`    Run \`agentsam init\` for a scaffolded project, or continue intentionally in ${root}.\n`);
+  }
 
   const server = await startLocalPtyServer({ cwd: root, port });
 
@@ -44,7 +48,7 @@ export async function runStartLocal(opts = {}) {
   console.log(`  ✓ Shell          ${server.shell}`);
   console.log(`
   Next:
-    npm run dev          → http://127.0.0.1:${config?.dev_port ?? 8787}
+    npm run dev          → UI http://127.0.0.1:${config?.ui_port ?? 5173} + Worker :${config?.dev_port ?? 8787}
     npm run db:migrate   → local D1 schema (first run)
 
   Press Ctrl+C to stop.

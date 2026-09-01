@@ -53,6 +53,12 @@ export function normalizeRunTarget(raw) {
   return RUN_TARGETS[k] || 'local';
 }
 
+export function sdkDependencySpec(rawVersion) {
+  const version = String(rawVersion || '').trim();
+  if (!version) return 'latest';
+  return version.includes('-') ? version : `^${version}`;
+}
+
 function migrationSql(laneKey) {
   const cmsExtra =
     laneKey === 'cms'
@@ -127,7 +133,7 @@ export function buildLocalScaffoldFiles({
   runTarget,
   sdkVersion = '1.5.1',
 }) {
-  const sdkRange = `^${sdkVersion.split('.').slice(0, 2).join('.')}.0`;
+  const sdkRange = sdkDependencySpec(sdkVersion);
   const migration = migrationSql(laneKey);
 
   return [
