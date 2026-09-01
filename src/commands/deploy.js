@@ -20,24 +20,48 @@ function writeConfig(cwd, config) {
   fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, 'utf8');
 }
 
-function patchWranglerToml(cwd, cf) {
+function writeCloudflareAdapter(cwd, config, cf) {
+  const workerName = cf.worker_name || config.project;
+  const adapterPath = path.join(cwd, 'src', 'cloudflare-worker.js');
+  const migrationDir = path.join(cwd, 'migrations');
+  const migrationPath = path.join(migrationDir, '0001_agentsam_core.sql');
+  const localSchemaPath = path.join(cwd, config.db_schema || 'db/schema.sql');
   const tomlPath = path.join(cwd, 'wrangler.toml');
-  if (!fs.existsSync(tomlPath)) return;
-  let text = fs.readFileSync(tomlPath, 'utf8');
-  if (cf.account_id) {
-    if (/^account_id\s*=/m.test(text)) {
-      text = text.replace(/^account_id\s*=.*$/m, `account_id = "${cf.account_id}"`);
-    } else {
-      text = text.replace(/(compatibility_date\s*=.*\n)/, `$1account_id = "${cf.account_id}"\n`);
-    }
+
+  fs.mkdirSync(path.dirname(adapterPath), { recursive: true });
+  fs.mkdirSync(migrationDir, { recursive: true });
+
+  fs.writeFileSync(
+    adapterPath,
+    `import { createAgent } from './agent.js';\n\nexport default {\n  async fetch(request, env) {\n    const app = createAgent({\n      env,\n      project: ${JSON.stringify(config.project)},\n      lane: ${JSON.stringify(config.lane)},\n      agent: ${JSON.stringify(config.agent)},\n    });\n    return app.handle(request);\n  },\n};\n`,
+    'utf8',
+  );
+
+  if (fs.existsSync(localSchemaPath)) {
+    fs.copyFileSync(localSchemaPath, migrationPath);
   }
+
+  const lines = [
+    `name = ${JSON.stringify(workerName)}`,
+    'main = "src/cloudflare-worker.js"',
+    'compatibility_date = "2026-08-31"',
+    'compatibility_flags = ["nodejs_compat"]',
+  ];
+  if (cf.account_id) lines.push(`account_id = ${JSON.stringify(cf.account_id)}`);
   if (cf.d1_database_id) {
-    text = text.replace(/^database_id\s*=.*$/m, `database_id = "${cf.d1_database_id}"`);
+    lines.push('', '[[d1_databases]]');
+    lines.push('binding = "DB"');
+    lines.push(`database_name = ${JSON.stringify(cf.d1_database_name || `${config.project}-db`)}`);
+    lines.push(`database_id = ${JSON.stringify(cf.d1_database_id)}`);
   }
   if (cf.kv_namespace_id) {
-    text = text.replace(/^id\s*=.*$/m, `id = "${cf.kv_namespace_id}"`);
+    lines.push('', '[[kv_namespaces]]');
+    lines.push('binding = "KV"');
+    lines.push(`id = ${JSON.stringify(cf.kv_namespace_id)}`);
   }
-  fs.writeFileSync(tomlPath, text, 'utf8');
+  fs.writeFileSync(tomlPath, `${lines.join('\n')}\n`, 'utf8');
+
+  return { adapterPath, migrationPath, tomlPath };
 }
 
 function ask(question) {
