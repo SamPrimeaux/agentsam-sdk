@@ -10,6 +10,8 @@
     "./bridge-client": "./src/lib/bridge-client.js",
     "./local/sqlite": "./src/local/sqlite.js",
     "./dockerize": "./src/lib/dockerize.js",
+    "./mini": "./src/lib/mini/index.js",
+    "./merkle": "./src/lib/merkle/index.js",
     "./identity": "./packages/identity/src/index.js",
     "./identity/providers": "./packages/identity/src/providers/index.js",
     "./identity/providers/google": "./packages/identity/src/providers/google/index.js",

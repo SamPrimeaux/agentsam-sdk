@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{NAME}} · AgentSam Mini</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body><main>
+  <div class="brand"><span class="dot"></span>AGENTSAM MINI</div>
+  <h1>A little space to focus.</h1><p>One task. A few quiet minutes.</p>
+  <section class="card" aria-label="Focus timer">
+    <label for="minutes">Session length in minutes</label><input id="minutes" type="number" min="1" max="180" value="5">
+    <div class="clock" id="clock" role="timer" aria-label="Time remaining">05:00</div>
+    <div class="row"><button id="toggle" class="primary">Start focus</button><button id="reset">Reset</button></div>
+    <p id="status" class="status" role="status">Ready when you are.</p>
+  </section><footer>{{NAME}} · Changes to the timer stay in this tab.</footer>
+</main></body></html>
