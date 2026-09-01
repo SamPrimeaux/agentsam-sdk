@@ -332,18 +332,37 @@ process.on('SIGTERM', shutdown);
     },
     {
       path: 'scripts/smoke.mjs',
-      content: `import { AgentSam } from '@inneranimalmedia/agentsam-sdk';
+      content: `import { createAgent } from '../src/agent.js';
 
-const app = new AgentSam({ project: '${projectName}', lane: '${laneKey}', agent: '${agent}' });
-const res = await app.handle(new Request('https://example.com/api/health'));
-const data = await res.json();
+const app = await createAgent();
 
-if (!data.ok) {
-  console.error(data);
-  process.exit(1);
+const health = await app.handle(new Request('http://127.0.0.1:8787/api/health'));
+const healthData = await health.json();
+if (!healthData.ok) throw new Error('health check failed');
+
+const created = await app.handle(
+  new Request('http://127.0.0.1:8787/api/agentsam/session', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ goal: 'prove local persistence' }),
+  }),
+);
+const createdData = await created.json();
+if (!createdData.ok || !createdData.session?.id) throw new Error('session create failed');
+
+const loaded = await app.handle(
+  new Request(\`http://127.0.0.1:8787/api/agentsam/session/\${createdData.session.id}\`),
+);
+const loadedData = await loaded.json();
+if (!loadedData.ok || loadedData.session?.id !== createdData.session.id) {
+  throw new Error('local SQLite persistence check failed');
 }
 
-console.log('AgentSam smoke test passed:', data);
+app.env?.DB?.close?.();
+console.log('Agent Sam local smoke passed');
+console.log('  health   ok');
+console.log('  sqlite   session persisted');
+console.log('  project  ${projectName}');
 `,
     },
     {
