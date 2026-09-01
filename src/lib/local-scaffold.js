@@ -327,9 +327,13 @@ process.on('SIGTERM', shutdown);
     },
     {
       path: 'scripts/smoke.mjs',
-      content: `import { createAgent } from '../src/agent.js';
+      content: `import { createLocalSqliteDatabase } from '@inneranimalmedia/agentsam-sdk/local/sqlite';
+import { createAgent } from '../src/agent.js';
 
-const app = await createAgent();
+const DB = await createLocalSqliteDatabase(
+  process.env.AGENTSAM_DB || '.agentsam/data/agentsam.sqlite',
+);
+const app = createAgent({ env: { DB } });
 
 const health = await app.handle(new Request('http://127.0.0.1:8787/api/health'));
 const healthData = await health.json();
