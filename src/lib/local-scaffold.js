@@ -205,7 +205,11 @@ npx agentsam deploy
 .dev.vars
 dist/
 .wrangler/
+.agentsam/data/
+.agentsam/tui-venv/
 *.db
+*.sqlite
+*.sqlite-*
 `,
     },
     {
