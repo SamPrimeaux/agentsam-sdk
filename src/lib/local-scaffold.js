@@ -228,7 +228,7 @@ dist/
             'db:status': 'agentsam db status',
             pty: 'agentsam start-local',
             tui: 'agentsam tui',
-            'tui:rich': 'agentsam tui rich --scene dashboard',
+            'tui:rich': 'agentsam tui rich',
             deploy: 'agentsam deploy',
           },
           engines: {
