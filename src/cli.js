@@ -249,6 +249,13 @@ if (command === '--version' || command === '-v') {
     console.error(`\n  ✗ ${e?.message || e}\n`);
     process.exit(1);
   }
+} else if (command === 'status') {
+  try {
+    await runStatus(rest);
+  } catch (e) {
+    console.error(`\n  ✗ ${e?.message || e}\n`);
+    process.exit(1);
+  }
 } else if (command === 'db') {
   try {
     await runDb(rest);
