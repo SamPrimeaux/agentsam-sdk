@@ -27,18 +27,18 @@ It is not a wrapper around a chat API. It is a command fabric with a conversatio
 ## Quickstart (local-first — Node only)
 
 ```bash
-npx @inneranimalmedia/agentsam-sdk init
+npx @inneranimalmedia/agentsam-sdk init --name my-agent --yes
+cd my-agent
 ```
 
-Default path: **localhost**. No IAM login, no Cloudflare OAuth, no accounts. Under 2 minutes with Node 20+ installed.
+Default path: **localhost**. No IAM login, no Cloudflare OAuth, no accounts. Under 2 minutes with Node 20+ installed. Run `npx @inneranimalmedia/agentsam-sdk init` with no flags for the interactive setup.
 
 ```bash
-cd my-project
 npm install
 npm run smoke
 npx agentsam start-local   # local PTY on ws://127.0.0.1:3099
 npx agentsam tunnel        # cloudflared → register with IAM (dashboard Local lane)
-npm run dev                # http://127.0.0.1:8787
+npm run dev                # UI :5173 + local Worker :8787
 npm run db:migrate         # local D1 schema
 ```
 
