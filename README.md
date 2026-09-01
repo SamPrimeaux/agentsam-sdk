@@ -31,18 +31,28 @@ npx @inneranimalmedia/agentsam-sdk init --name my-agent --yes
 cd my-agent
 ```
 
-Default path: **localhost**. No IAM login, no Cloudflare OAuth, no accounts. Under 2 minutes with Node 20+ installed. Run `npx @inneranimalmedia/agentsam-sdk init` with no flags for the interactive setup.
+Default path: **local**. No IAM login, Cloudflare account, tunnel, hosted database, or Worker is required. Node 22.5+ is required because local persistence uses Node's built-in SQLite. Run `npx @inneranimalmedia/agentsam-sdk init` with no flags for the interactive setup.
+
+`agentsam init` creates the project directory, initializes Git, writes `.env` + `.env.example`, creates `db/schema.sql`, and initializes `.agentsam/data/agentsam.sqlite` before you install project dependencies.
 
 ```bash
 npm install
-npm run smoke
-npx agentsam start-local   # local PTY on ws://127.0.0.1:3099
-npx agentsam tunnel        # cloudflared → register with IAM (dashboard Local lane)
-npm run dev                # UI :5173 + local Worker :8787
-npm run db:migrate         # local D1 schema
+npm run smoke             # health + real SQLite persistence proof
+npm run dev               # local Node API :8787
+npm run tui               # Agent Sam ANSI dashboard
+npm run db:status         # local SQLite receipt
+npm run pty               # optional local PTY :3099
 ```
 
-`agentsam tunnel` (default `--quick`) starts a Cloudflare quick tunnel to `:3099` and POSTs the `wss://` URL to `/api/sdk/terminal/register-local` so `agentsam_terminal_local` can reach your machine. Use `--named --tunnel-name … --hostname … --zone-id …` for a stable BYOK named tunnel.
+The richer Python presentation is optional and isolated:
+
+```bash
+npm run tui:rich -- --install
+```
+
+This creates `.agentsam/tui-venv` and installs Rich there. It does not modify your system Python.
+
+`agentsam tunnel` is an explicit remote-access step. It is not part of local startup. When used, it exposes the local PTY so an authorized remote Agent Sam surface can reach your machine.
 When you're ready to ship to **your** Cloudflare account:
 
 ```bash
