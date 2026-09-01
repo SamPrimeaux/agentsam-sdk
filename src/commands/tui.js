@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { collectLocalStatus } from '../lib/local-status.js';
+import { renderLocalStatus } from '../ui/ansi.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const ANSI_DEMO = path.join(ROOT, 'examples', 'agentsam-tui-ansi.mjs');
