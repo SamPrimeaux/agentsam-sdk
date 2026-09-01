@@ -196,47 +196,33 @@ async function initFromArgs(argv) {
   await runLocalInit({ ...opts, prompt: null });
 }
 
-async function runAnsiShellDemo(argv = []) {
-  await new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [ANSI_SHELL_DEMO, ...argv], {
-      stdio: 'inherit',
-      env: process.env,
-    });
-    child.once('error', reject);
-    child.once('exit', (code, signal) => {
-      if (signal) reject(new Error(`ANSI shell demo stopped by ${signal}`));
-      else if (code === 0) resolve();
-      else reject(new Error(`ANSI shell demo exited ${code ?? 1}`));
-    });
-  });
-}
-
 async function runShellInfo(argv = []) {
   const sub = argv[0] || 'list';
   if (sub === 'demo' || sub === 'ansi') {
-    await runAnsiShellDemo(argv.slice(1));
+    await runTui(['ansi', ...argv.slice(1)]);
+    return;
+  }
+  if (sub === 'rich') {
+    await runTui(['rich', ...argv.slice(1)]);
     return;
   }
   if (sub !== 'list' && sub !== 'status') {
     throw new Error(`unknown shell command: ${sub}`);
   }
 
-  const next = SHELL_PHASES.find((p) => p.status === 'next');
+  const next = SHELL_PHASES.find((p) => p.status === 'next' || p.status === 'current');
   console.log(`
   ╔═══════════════════════════════════╗
-  ║       Agent Sam Shell Lab         ║
+  ║        Agent Sam Terminal         ║
   ╚═══════════════════════════════════╝
 
-  Local PTY: agentsam start-local (ws://127.0.0.1:3099)
-  Next milestone: ${next?.label ?? 'dashboard bridge after deploy'}
+  Local PTY   agentsam start-local     ws://127.0.0.1:3099
+  ANSI TUI    agentsam tui             zero-dependency Node UI
+  Rich TUI    agentsam tui rich        optional richer Python UI
+              agentsam tui rich --install
+  DB          agentsam db status       local SQLite
 
-  Presentation prototypes:
-    ansi       zero-dependency Node TUI · runnable now
-               agentsam shell demo --scene dashboard
-    rich       optional Python Rich TUI · richer live cards/events
-               cd python && pip install -e '.[tui]' && agentsam tui
-    gorilla    React/Vite game-shell prototype · scaffolded today
-    shell-kit  reusable React work-surface components · WIP/private
+  Current milestone: ${next?.label ?? 'local terminal experience'}
 
   Slash commands (${SLASH_COMMANDS.length} registered):
 `);
