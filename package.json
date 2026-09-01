@@ -33,6 +33,7 @@
   },
   "bin": {
     "agentsam": "src/cli.js",
+    "agentsam-sdk": "src/cli.js",
     "agentsam-scaffold": "bin/scaffold.mjs",
     "agentsam-auth-portal": "packages/identity/scripts/preview-auth-portal.mjs"
   },
