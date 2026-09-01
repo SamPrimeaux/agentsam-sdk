@@ -228,13 +228,18 @@ Cloudflare files are **not** emitted during local init. `agentsam deploy --targe
 
 ## Roadmap
 
-- [x] `agentsam shell` — shell UX info + slash command registry
-- [x] Gorilla Shell Phase 0 prototype in `examples/gorilla-shell/`
-- [x] `agentsam deploy` — push your project from CLI
+- [x] `agentsam init` — local Git + `.env` + SQLite + runtime-neutral Node agent
+- [x] `agentsam status` — live Git + SQLite + API + PTY health
+- [x] `agentsam tui` — zero-dependency ANSI live status + explicit demo scenes
+- [x] `agentsam tui rich` — optional Rich live status with isolated local venv install
+- [x] `agentsam shell` — terminal command catalog over the same local capabilities
+- [x] `agentsam start-local` — local PTY server on the user's machine
+- [x] `agentsam deploy` — add cloud adapters intentionally at deploy time
 - [x] Identity alpha — contracts, providers, auth portal preview (`agentsam identity preview`)
-- [ ] `agentsam status` — live agent and infrastructure health
-- [ ] `agentsam logs` — tail tool call and command logs
-- [ ] PTY bridge (Phase 1) — ExecOS WebSocket in shell
+- [x] Gorilla Phase 0 retained as an optional visual experiment, not the default shell
+- [ ] `agentsam logs` — tail local/tool execution events through the terminal UX
+- [ ] Interactive PTY command bridge inside the TUI
+- [ ] Publish reusable browser shell-kit surfaces
 - [ ] Kit marketplace — CMS, ecommerce, nonprofit, SaaS starters
 - [ ] BYOK AI key support per project
 
