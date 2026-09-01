@@ -285,39 +285,49 @@ export async function createAgent(options = {}) {
     },
     {
       path: 'src/dev-server.js',
-      content: `/**
- * Plain Node dev server — no Cloudflare account required.
- * Use when wrangler is unavailable: npm run dev:node
- */
-import { createServer } from 'node:http';
-import { AgentSam } from '@inneranimalmedia/agentsam-sdk';
-
-const app = new AgentSam({
-  project: '${projectName}',
-  lane: '${laneKey}',
-  agent: '${agent}',
-});
+      content: `import { createServer } from 'node:http';
+import { createAgent } from './agent.js';
 
 const port = Number(process.env.PORT || 8787);
+const app = await createAgent();
 
-createServer(async (req, res) => {
-  const url = \`http://127.0.0.1\${req.url || '/'}\`;
+const server = createServer(async (req, res) => {
+  const url = \`http://127.0.0.1:\${port}\${req.url || '/'}\`;
   const headers = new Headers();
-  for (const [k, v] of Object.entries(req.headers)) {
-    if (v != null) headers.set(k, Array.isArray(v) ? v.join(', ') : v);
+  for (const [key, value] of Object.entries(req.headers)) {
+    if (value != null) headers.set(key, Array.isArray(value) ? value.join(', ') : value);
   }
+
   let body;
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
     body = Buffer.concat(chunks);
   }
-  const response = await app.handle(new Request(url, { method: req.method, headers, body }));
-  res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
-  res.end(Buffer.from(await response.arrayBuffer()));
-}).listen(port, '127.0.0.1', () => {
-  console.log(\`Agent Sam dev server http://127.0.0.1:\${port}\`);
+
+  try {
+    const response = await app.handle(new Request(url, { method: req.method, headers, body }));
+    res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
+    res.end(Buffer.from(await response.arrayBuffer()));
+  } catch (error) {
+    res.writeHead(500, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ ok: false, error: error?.message || String(error) }));
+  }
 });
+
+server.listen(port, '127.0.0.1', () => {
+  console.log(\`Agent Sam local API  http://127.0.0.1:\${port}\`);
+  console.log(\`SQLite               \${process.env.AGENTSAM_DB || '.agentsam/data/agentsam.sqlite'}\`);
+});
+
+function shutdown() {
+  server.close(() => {
+    app.env?.DB?.close?.();
+    process.exit(0);
+  });
+}
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
 `,
     },
     {
