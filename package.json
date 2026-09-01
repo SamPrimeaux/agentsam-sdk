@@ -70,7 +70,7 @@
     "prepublishOnly": "npm run verify"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.5.0"
   },
   "dependencies": {
     "@clack/prompts": "^1.7.0",
