@@ -15,11 +15,11 @@ import { runDeploy } from './commands/deploy.js';
 import { runIdentityPreview } from './commands/identity-preview.js';
 import { runIdentityInit } from './commands/identity-init.js';
 import { runContext } from './commands/context.js';
+import { runDb } from './commands/db.js';
+import { runTui } from './commands/tui.js';
 import { SLASH_COMMANDS, SHELL_PHASES } from './lib/slash-commands.js';
 
 const VERSION = pkg.version;
-const CLI_DIR = path.dirname(fileURLToPath(import.meta.url));
-const ANSI_SHELL_DEMO = path.resolve(CLI_DIR, '..', 'examples', 'agentsam-tui-ansi.mjs');
 
 function createPrompt() {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
