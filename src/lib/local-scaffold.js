@@ -357,7 +357,7 @@ if (!loadedData.ok || loadedData.session?.id !== createdData.session.id) {
   throw new Error('local SQLite persistence check failed');
 }
 
-app.env?.DB?.close?.();
+DB.close();
 console.log('Agent Sam local smoke passed');
 console.log('  health   ok');
 console.log('  sqlite   session persisted');
