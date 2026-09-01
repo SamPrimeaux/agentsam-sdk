@@ -58,6 +58,8 @@ try {
   assert.ok(!fs.existsSync(path.join(project, 'wrangler.toml')));
   assert.ok(!fs.existsSync(path.join(project, 'gorilla')));
 
+  run(['status', '--json'], { cwd: project });
+  run(['tui'], { cwd: project });
   run(['tui', '--scene', 'dashboard', '--check']);
   run(['db', 'status'], { cwd: project });
 
