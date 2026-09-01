@@ -114,13 +114,22 @@ async function runLocalInit(config) {
   `);
 
   const dir = writeScaffoldFiles(meta.projectName, meta.files);
-  copyGorillaTemplate(dir, meta);
+  const git = initializeGitRepository(dir);
+  const db = await initializeLocalSqlite({
+    dbPath: path.join(dir, '.agentsam', 'data', 'agentsam.sqlite'),
+    schemaPath: path.join(dir, 'db', 'schema.sql'),
+  });
 
   console.log(`
-  ✓ Project ready: ${dir}
-  ✓ Gorilla Mode UI → gorilla/ (http://localhost:5173 after npm run dev)
+  ✓ Project      ${dir}
+  ${git.ok ? '✓' : '⚠'} Git          ${git.ok ? 'initialized' : 'git not found; initialize it when available'}
+  ✓ Environment  ${path.join(dir, '.env')}
+  ✓ SQLite       ${db.dbPath} (${db.tables.length} tables)
+  ✓ Local API    Node · http://127.0.0.1:8787
+  ✓ Terminal UI  ANSI built in · Rich optional
 
-  Next steps:`);
+  Next:`);
+  console.log(`    cd ${meta.projectName}`);
   for (const step of meta.next_steps) {
     console.log(`    ${step}`);
   }
@@ -131,9 +140,7 @@ async function runLocalInit(config) {
   }
 
   console.log(`
-  Local in ~60 seconds:
-    cd ${meta.projectName} && npm install && npm run smoke && npm run dev
-    open http://localhost:5173
+  Local means local: no Worker, tunnel, IAM login, or cloud database is required.
   `);
 }
 
