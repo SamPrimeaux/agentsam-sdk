@@ -82,16 +82,28 @@ assert.equal(
 const localMeta = buildLocalScaffoldMeta({ projectName: 'demo', lane: 'cms', runTarget: 'local' });
 assert.equal(localMeta.laneKey, 'cms');
 assert.ok(localMeta.files.some((f) => f.path === '.agentsam/start-local.md'));
-assert.ok(localMeta.files.some((f) => f.path === 'wrangler.toml'));
+assert.ok(localMeta.files.some((f) => f.path === 'db/schema.sql'));
 assert.ok(localMeta.files.some((f) => f.path === '.env'));
+assert.ok(localMeta.files.some((f) => f.path === '.env.example'));
+assert.ok(localMeta.files.some((f) => f.path === 'src/agent.js'));
+assert.ok(!localMeta.files.some((f) => f.path === 'wrangler.toml'));
+assert.ok(!localMeta.files.some((f) => f.path.startsWith('gorilla/')));
 assert.ok(!localMeta.files.some((f) => f.path.includes('execos')));
 
-const gorillaDir = path.join(tmp, 'gorilla-project');
-writeScaffoldFiles(gorillaDir, localMeta.files);
-copyGorillaTemplate(gorillaDir, localMeta);
-assert.ok(fs.existsSync(path.join(gorillaDir, 'gorilla', 'App.tsx')));
-assert.ok(fs.existsSync(path.join(gorillaDir, 'vite.config.js')));
-assert.ok(fs.readFileSync(path.join(gorillaDir, 'gorilla', 'App.tsx'), 'utf8').includes('demo'));
+const localDir = path.join(tmp, 'local-project');
+writeScaffoldFiles(localDir, localMeta.files);
+const localDb = await initializeLocalSqlite({
+  dbPath: path.join(localDir, '.agentsam', 'data', 'agentsam.sqlite'),
+  schemaPath: path.join(localDir, 'db', 'schema.sql'),
+});
+assert.ok(localDb.tables.includes('agent_sessions'));
+const d1Like = await createLocalSqliteDatabase(localDb.dbPath);
+await d1Like.prepare('INSERT INTO agent_sessions (id, agent, lane, status) VALUES (?, ?, ?, ?)').bind(
+  'sess_test', 'cms', 'cms', 'created',
+).run();
+const persisted = await d1Like.prepare('SELECT id FROM agent_sessions WHERE id = ?').bind('sess_test').first();
+assert.equal(persisted.id, 'sess_test');
+d1Like.close();
 
 const tunnelPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'commands', 'tunnel.js');
 const tunnelSrc = fs.readFileSync(tunnelPath, 'utf8');
