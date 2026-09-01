@@ -78,6 +78,20 @@ See [DEVELOPMENT.md](./DEVELOPMENT.md) for linking the SDK into Inner Animal Med
 
 ---
 
+## Mini gadgets and quick previews
+
+```bash
+agentsam mini focus-timer --open
+agentsam mini landing --template page
+agentsam mini json-viewer --template data
+agentsam mini sketch --write-only
+agentsam mini preview ./sketch
+```
+
+A mini is a small folder of HTML, CSS, and JavaScript with no install step. Previews run locally in the foreground, stop with Ctrl+C, and automatically close after 20 minutes. Files remain for reuse. Use `--timeout <seconds>` to change the lifetime. See [Mini](docs/MINI.md) for starters and options.
+
+---
+
 ## Agent Sam terminal experience
 
 The CLI has two presentation layers over the same local tooling:
