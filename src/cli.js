@@ -189,15 +189,47 @@ async function initFromArgs(argv) {
   await runLocalInit({ ...opts, prompt: null });
 }
 
-async function runShellInfo() {
+async function runAnsiShellDemo(argv = []) {
+  await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [ANSI_SHELL_DEMO, ...argv], {
+      stdio: 'inherit',
+      env: process.env,
+    });
+    child.once('error', reject);
+    child.once('exit', (code, signal) => {
+      if (signal) reject(new Error(`ANSI shell demo stopped by ${signal}`));
+      else if (code === 0) resolve();
+      else reject(new Error(`ANSI shell demo exited ${code ?? 1}`));
+    });
+  });
+}
+
+async function runShellInfo(argv = []) {
+  const sub = argv[0] || 'list';
+  if (sub === 'demo' || sub === 'ansi') {
+    await runAnsiShellDemo(argv.slice(1));
+    return;
+  }
+  if (sub !== 'list' && sub !== 'status') {
+    throw new Error(`unknown shell command: ${sub}`);
+  }
+
   const next = SHELL_PHASES.find((p) => p.status === 'next');
   console.log(`
   ╔═══════════════════════════════════╗
-  ║     Agent Sam Shell (Gorilla)     ║
+  ║       Agent Sam Shell Lab         ║
   ╚═══════════════════════════════════╝
 
   Local PTY: agentsam start-local (ws://127.0.0.1:3099)
   Next milestone: ${next?.label ?? 'dashboard bridge after deploy'}
+
+  Presentation prototypes:
+    ansi       zero-dependency Node TUI · runnable now
+               agentsam shell demo --scene dashboard
+    rich       optional Python Rich TUI · richer live cards/events
+               cd python && pip install -e '.[tui]' && agentsam tui
+    gorilla    React/Vite game-shell prototype · scaffolded today
+    shell-kit  reusable React work-surface components · WIP/private
 
   Slash commands (${SLASH_COMMANDS.length} registered):
 `);
