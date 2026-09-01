@@ -53,7 +53,9 @@ const { buildIdentityAppScaffold } = await import('../src/lib/identity-scaffold.
 assert.ok(buildIdentityAppScaffold({ projectName: 'x' })['backend/src/index.js']);
 await assert.rejects(() => finalizeInboundOAuth({}, new Request('https://x'), {}), /adapter/);
 assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/deploy'));
-assert.equal(listSlashCommands({ lane: 'deploy' }).length, 2);
+assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/db'));
+assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/agent'));
+assert.equal(listSlashCommands({ lane: 'deploy' }).length, 1);
 
 printContextSummary({
   iam: { ready: true, source: 'sdk-token', detail: 'AGENTSAM_SDK_TOKEN' },
