@@ -92,6 +92,20 @@ A mini is a small folder of HTML, CSS, and JavaScript with no install step. Prev
 
 ---
 
+## Merkle integrity and tree explorer
+
+```bash
+agentsam merkle root .
+agentsam merkle snapshot .
+agentsam merkle verify .agentsam/merkle.json --tui
+agentsam merkle diff ./copy-a ./copy-b --json
+agentsam tui merkle .
+```
+
+Deterministic SHA-256 file trees work with any directory. Save a baseline, compare copies, or explore changed branches with keyboard navigation and live rescan. Only `snapshot` writes files. See [Merkle CLI](docs/MERKLE.md) for ignore rules, JSON output, and cross-machine verification.
+
+---
+
 ## Agent Sam terminal experience
 
 The CLI has two presentation layers over the same local tooling:

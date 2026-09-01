@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { collectLocalStatus } from '../lib/local-status.js';
 import { renderLocalStatus } from '../ui/ansi.js';
+import { runMerkle } from './merkle.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const ANSI_DEMO = path.join(ROOT, 'examples', 'agentsam-tui-ansi.mjs');
@@ -100,6 +101,7 @@ async function runRich(args) {
 }
 
 export async function runTui(argv = []) {
+  if (argv[0] === 'merkle') return runMerkle(['tui', ...argv.slice(1)]);
   const args = [...argv];
   const mode = args[0] === 'rich' || args[0] === 'ansi' ? args.shift() : 'ansi';
 
