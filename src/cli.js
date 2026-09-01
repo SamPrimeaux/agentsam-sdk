@@ -16,6 +16,7 @@ import { runIdentityPreview } from './commands/identity-preview.js';
 import { runIdentityInit } from './commands/identity-init.js';
 import { runContext } from './commands/context.js';
 import { runDb } from './commands/db.js';
+import { runStatus } from './commands/status.js';
 import { runTui } from './commands/tui.js';
 import { SLASH_COMMANDS, SHELL_PHASES } from './lib/slash-commands.js';
 
