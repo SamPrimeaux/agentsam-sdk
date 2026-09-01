@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { AgentSam, routeIntent, getToolCatalog } from '../src/index.js';
 import { buildLocalScaffoldMeta, sdkDependencySpec } from '../src/lib/local-scaffold.js';
 import { writeScaffoldFiles } from '../src/lib/write-files.js';
-import { copyGorillaTemplate } from '../src/lib/gorilla-template.js';
+import { initializeLocalSqlite, createLocalSqliteDatabase } from '../src/local/sqlite.js';
 import { printContextSummary, missingForInit } from '../src/lib/detect-context.js';
 
 const app = new AgentSam({ project: 'smoke', lane: 'cms', agent: 'cms' });
