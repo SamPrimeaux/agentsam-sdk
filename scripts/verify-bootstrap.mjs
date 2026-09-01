@@ -45,10 +45,20 @@ try {
   );
   assert.equal(config.project, 'my-agent');
   assert.equal(config.run_target, 'local');
+  assert.equal(config.db_path, '.agentsam/data/agentsam.sqlite');
+  assert.equal(config.ui, 'terminal');
+  assert.ok(fs.existsSync(path.join(project, '.git')));
+  assert.ok(fs.existsSync(path.join(project, '.env')));
+  assert.ok(fs.existsSync(path.join(project, '.env.example')));
+  assert.ok(fs.existsSync(path.join(project, 'db', 'schema.sql')));
+  assert.ok(fs.existsSync(path.join(project, '.agentsam', 'data', 'agentsam.sqlite')));
+  assert.ok(fs.existsSync(path.join(project, 'src', 'agent.js')));
   assert.ok(fs.existsSync(path.join(project, 'scripts', 'smoke.mjs')));
-  assert.ok(fs.existsSync(path.join(project, 'gorilla', 'App.tsx')));
+  assert.ok(!fs.existsSync(path.join(project, 'wrangler.toml')));
+  assert.ok(!fs.existsSync(path.join(project, 'gorilla')));
 
-  run(['shell', 'demo', '--scene', 'dashboard', '--check']);
+  run(['tui', '--scene', 'dashboard', '--check']);
+  run(['db', 'status'], { cwd: project });
 
   console.log(`verify-bootstrap OK ${sdkPackage.name}@${sdkPackage.version}`);
 } finally {
