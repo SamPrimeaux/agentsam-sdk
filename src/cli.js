@@ -46,7 +46,7 @@ function printHelp() {
     agentsam shell             Terminal commands + presentation catalog
     agentsam tunnel            Explicitly expose local PTY when remote access is wanted
     agentsam deploy            Graduate to Cloudflare / GCP when ready
-    agentsam dockerize         Generate + build + run a fresh, ephemeral local Docker container
+    agentsam dockerize         Generate + build + run a fresh, ephemeral local Docker container (--list, --stop, --timeout)
     agentsam identity preview  Local auth portal preview
     agentsam identity init     Add reusable identity package surfaces
     agentsam --version

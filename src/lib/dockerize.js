@@ -1,18 +1,22 @@
-// Portable Dockerfile/.dockerignore/docker-compose.yml generator + build/run orchestration.
-// Ported from AgentSamWorkMode-Prototype's dockerfileTemplates.ts/dockerFileOps.ts so any
-// repo — including AgentSam itself — can spin up a fresh, ephemeral local container without
-// depending on that app's UI. No shell-heredoc needed here: we're native Node, so files are
-// written directly via fs.
+// Portable Dockerfile/.dockerignore/docker-compose.yml generator + build/run orchestration,
+// with content-hash versioning, a lightweight per-project JSON manifest, and integration
+// into agentsam-sdk's own cross-repo hashtag ledger (bin/tag / tags/registry.json).
 //
-// Design intent carried over from the original work:
+// Design intent:
 //   - docker run defaults to --rm + capped memory/cpu (ephemeral, no idle-container billing)
-//   - assumes nothing pre-exists on disk; every file is generated fresh
-//   - four app shapes cover the common prototyping cases, including a fully offline
-//     Cloudflare Worker lane (wrangler dev --local — no live CF resources touched)
+//   - every build is content-addressed: identical Dockerfile+compose -> identical hash ->
+//     identical image tag. Multiple versions coexist under .agentsam/docker/<hash>/ instead
+//     of silently clobbering each other at the project root.
+//   - every container gets agentsam.* labels so `docker ps` itself is the source of truth
+//     for "what's running" -- no separate state file that can drift out of sync.
+//   - optional --timeout auto-stops a container; every run still prints an explicit manual
+//     stop command regardless, so nothing is ever silently left running.
 
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 export const DOCKER_APP_TYPES = ['static', 'vite_react', 'node_service', 'wrangler_dev'];
 
@@ -30,6 +34,8 @@ const DEFAULT_PORTS = {
   wrangler_dev: 8787,
 };
 
+const AGENTSAM_DOCKER_DIR = '.agentsam/docker';
+
 export function slugifyForDocker(input) {
   return (
     String(input || '')
@@ -38,6 +44,15 @@ export function slugifyForDocker(input) {
       .replace(/[^a-z0-9-]+/g, '-')
       .replace(/^-+|-+$/g, '') || 'app'
   );
+}
+
+/** Content hash of the versioned files (Dockerfile + compose) -- the "hashtag" identity. */
+export function computeFileSetHash(fileSet) {
+  const h = crypto.createHash('sha256');
+  h.update(fileSet.dockerfile);
+  h.update('\u0000');
+  h.update(fileSet.compose);
+  return h.digest('hex').slice(0, 10);
 }
 
 const COMMON_DOCKERIGNORE = `node_modules
@@ -162,23 +177,52 @@ export function generateDockerFileSet(appType, opts = {}) {
   }
 }
 
-/** Writes Dockerfile/.dockerignore/docker-compose.yml into targetDir. Refuses to clobber unless overwrite:true. */
-export function writeDockerFileSet(targetDir, fileSet, { overwrite = false } = {}) {
-  const files = {
-    Dockerfile: fileSet.dockerfile,
-    '.dockerignore': fileSet.dockerignore,
-    'docker-compose.yml': fileSet.compose,
-  };
-  const written = [];
-  for (const [name, content] of Object.entries(files)) {
-    const filePath = path.join(targetDir, name);
-    if (!overwrite && fs.existsSync(filePath)) {
-      throw new Error(`${name} already exists at ${filePath} — pass { overwrite: true } to replace it.`);
-    }
-    fs.writeFileSync(filePath, content, 'utf8');
-    written.push(filePath);
+function manifestPath(targetDir) {
+  return path.join(targetDir, AGENTSAM_DOCKER_DIR, 'index.json');
+}
+
+/** Reads the per-project JSON manifest mapping hash -> build metadata. Empty object if none yet. */
+export function readManifest(targetDir) {
+  const p = manifestPath(targetDir);
+  if (!fs.existsSync(p)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(p, 'utf8'));
+  } catch {
+    return {};
   }
-  return written;
+}
+
+function writeManifestEntry(targetDir, hash, entry) {
+  const p = manifestPath(targetDir);
+  const manifest = readManifest(targetDir);
+  manifest[hash] = { ...manifest[hash], ...entry };
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.writeFileSync(p, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
+  return manifest;
+}
+
+/**
+ * Writes the versioned files under .agentsam/docker/<hash>/Dockerfile + docker-compose.yml
+ * (content-addressed -- always safe/idempotent to rewrite, same hash means same bytes) and
+ * .dockerignore at the project root (shared across versions; respects `overwrite`).
+ */
+export function writeDockerFileSet(targetDir, fileSet, hash, { overwrite = false } = {}) {
+  const versionDir = path.join(targetDir, AGENTSAM_DOCKER_DIR, hash);
+  fs.mkdirSync(versionDir, { recursive: true });
+
+  const dockerfilePath = path.join(versionDir, 'Dockerfile');
+  const composePath = path.join(versionDir, 'docker-compose.yml');
+  fs.writeFileSync(dockerfilePath, fileSet.dockerfile, 'utf8');
+  fs.writeFileSync(composePath, fileSet.compose, 'utf8');
+
+  const dockerignorePath = path.join(targetDir, '.dockerignore');
+  if (!overwrite && fs.existsSync(dockerignorePath)) {
+    // shared/mutable file -- leave existing one alone unless explicitly told to replace it
+  } else {
+    fs.writeFileSync(dockerignorePath, fileSet.dockerignore, 'utf8');
+  }
+
+  return { dockerfilePath, composePath, dockerignorePath, versionDir };
 }
 
 function runCommand(cmd, args, { cwd, onData } = {}) {
@@ -205,14 +249,17 @@ function runCommand(cmd, args, { cwd, onData } = {}) {
   });
 }
 
-export async function buildDockerImage(targetDir, imageTag, { noCache = false, onData } = {}) {
-  const args = noCache ? ['build', '--no-cache', '-t', imageTag, '.'] : ['build', '-t', imageTag, '.'];
+export async function buildDockerImage(targetDir, { dockerfilePath, imageTag, latestTag, noCache = false, onData } = {}) {
+  const args = ['build', '-f', dockerfilePath, '-t', imageTag];
+  if (latestTag) args.push('-t', latestTag);
+  if (noCache) args.splice(1, 0, '--no-cache');
+  args.push('.');
   return runCommand('docker', args, { cwd: targetDir, onData });
 }
 
 export async function runDockerContainer(
   imageTag,
-  { name, hostPort, containerPort, memory = '512m', cpus = '1', detach = true, rm = true, extraArgs = [], onData } = {},
+  { name, hostPort, containerPort, memory = '512m', cpus = '1', detach = true, rm = true, labels = {}, extraArgs = [], onData } = {},
 ) {
   const args = [];
   if (detach) args.push('-d');
@@ -221,6 +268,7 @@ export async function runDockerContainer(
   args.push(`--memory=${memory}`, `--cpus=${cpus}`);
   if (hostPort && containerPort) args.push('-p', `${hostPort}:${containerPort}`);
   if (name) args.push('--name', name);
+  for (const [k, v] of Object.entries(labels)) args.push('--label', `${k}=${v}`);
   args.push(...extraArgs, imageTag);
   return runCommand('docker', args, { onData });
 }
@@ -229,28 +277,114 @@ export async function stopDockerContainer(name) {
   return runCommand('docker', ['stop', name]);
 }
 
+/** All containers (running or stopped) that agentsam dockerize has launched, via label filter. */
+export async function listManagedContainers() {
+  const res = await runCommand('docker', [
+    'ps', '-a',
+    '--filter', 'label=agentsam.managed=true',
+    '--format', '{{json .}}',
+  ]);
+  if (!res.ok) return { ok: false, containers: [], stderr: res.stderr };
+  const containers = res.stdout
+    .trim()
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => {
+      try {
+        return JSON.parse(line);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+  return { ok: true, containers };
+}
+
+/** Schedules an auto-stop after timeoutSeconds. Caller (CLI) is responsible for staying alive. */
+export function scheduleAutoStop(name, timeoutSeconds, onStopped) {
+  const timer = setTimeout(async () => {
+    const res = await stopDockerContainer(name);
+    onStopped?.(res);
+  }, timeoutSeconds * 1000);
+  return () => clearTimeout(timer);
+}
+
+const SDK_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+const TAG_SCRIPT = path.join(SDK_ROOT, 'bin', 'tag');
+
+/**
+ * Registers this build in agentsam-sdk's own cross-repo hashtag ledger (bin/tag / tags/registry.json)
+ * so a dockerize build is findable the same way as any other cross-repo ref. Best-effort: never
+ * throws, never blocks dockerize() -- a machine without bin/tag or jq just skips this quietly.
+ */
+export async function registerDockerTag({ hashtag, repo, ref, note }) {
+  if (!fs.existsSync(TAG_SCRIPT)) return { ok: false, skipped: true, reason: 'bin/tag not found' };
+  const res = await runCommand('bash', [TAG_SCRIPT, 'add', hashtag, '--repo', repo, '--ref', ref, '--note', note]);
+  return { ok: res.ok, skipped: false, stdout: res.stdout, stderr: res.stderr };
+}
+
 export function buildDockerDeployPlan(appType, opts = {}) {
   const files = generateDockerFileSet(appType, opts);
+  const hash = computeFileSetHash(files);
   const slug = slugifyForDocker(opts.appSlug || 'app');
   const hostPort = opts.port ?? DEFAULT_PORTS[appType];
   const containerPort = appType === 'static' || appType === 'vite_react' ? 80 : hostPort;
-  return { files, slug, hostPort, containerPort, imageTag: `${slug}:local` };
+  return {
+    files,
+    hash,
+    slug,
+    hostPort,
+    containerPort,
+    imageTag: `${slug}:${hash}`,
+    latestTag: `${slug}:latest`,
+    hashtag: `#docker-${slug}-${hash}`,
+  };
 }
 
 /**
- * Full "assume nothing exists" flow: write files, build, run --rm (ephemeral, capped).
+ * Full "assume nothing exists" flow: write versioned files, build (dual-tagged), run --rm
+ * (ephemeral, capped, labeled), optionally auto-stop after opts.timeoutSeconds, and register
+ * the build in the cross-repo hashtag ledger.
  * Pass { writeOnly: true } or { buildOnly: true } to stop early.
- * Returns { plan, written, build, run } — build/run are null if skipped.
+ * Returns { plan, written, manifest, build, run, tagRegistration, cancelAutoStop } --
+ * fields are null/undefined when skipped.
  */
 export async function dockerize(targetDir, appType, opts = {}) {
   const plan = buildDockerDeployPlan(appType, opts);
-  const written = writeDockerFileSet(targetDir, plan.files, { overwrite: opts.overwrite });
-  const result = { plan, written, build: null, run: null };
+  const written = writeDockerFileSet(targetDir, plan.files, plan.hash, { overwrite: opts.overwrite });
+  const manifest = writeManifestEntry(targetDir, plan.hash, {
+    appType,
+    appSlug: plan.slug,
+    port: plan.hostPort,
+    imageTag: plan.imageTag,
+    latestTag: plan.latestTag,
+    hashtag: plan.hashtag,
+    dockerfilePath: written.dockerfilePath,
+    composePath: written.composePath,
+    createdAt: new Date().toISOString(),
+  });
 
+  const result = { plan, written, manifest, build: null, run: null, tagRegistration: null, cancelAutoStop: null };
   if (opts.writeOnly) return result;
 
-  result.build = await buildDockerImage(targetDir, plan.imageTag, { noCache: opts.noCache, onData: opts.onData });
+  result.build = await buildDockerImage(targetDir, {
+    dockerfilePath: written.dockerfilePath,
+    imageTag: plan.imageTag,
+    latestTag: plan.latestTag,
+    noCache: opts.noCache,
+    onData: opts.onData,
+  });
   if (!result.build.ok || opts.buildOnly) return result;
+
+  const labels = {
+    'agentsam.managed': 'true',
+    'agentsam.hash': plan.hash,
+    'agentsam.type': appType,
+    'agentsam.slug': plan.slug,
+  };
+  if (opts.timeoutSeconds) {
+    labels['agentsam.expires-at'] = new Date(Date.now() + opts.timeoutSeconds * 1000).toISOString();
+  }
 
   result.run = await runDockerContainer(plan.imageTag, {
     name: plan.slug,
@@ -258,7 +392,23 @@ export async function dockerize(targetDir, appType, opts = {}) {
     containerPort: plan.containerPort,
     memory: opts.memory,
     cpus: opts.cpus,
+    labels,
     onData: opts.onData,
   });
+  if (!result.run.ok) return result;
+
+  if (opts.timeoutSeconds) {
+    result.cancelAutoStop = scheduleAutoStop(plan.slug, opts.timeoutSeconds, opts.onAutoStop);
+  }
+
+  if (opts.registerTag !== false) {
+    result.tagRegistration = await registerDockerTag({
+      hashtag: plan.hashtag,
+      repo: opts.repoLabel || path.basename(targetDir),
+      ref: plan.imageTag,
+      note: `agentsam dockerize --type ${appType} --port ${plan.hostPort} (${targetDir})`,
+    });
+  }
+
   return result;
 }
