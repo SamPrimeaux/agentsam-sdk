@@ -1,6 +1,6 @@
 /**
  * Local-first scaffold — no IAM, no Cloudflare, no OAuth.
- * Connor proves the pattern on localhost; `agentsam deploy` graduates to cloud.
+ * Prove the project locally; `agentsam deploy` adds cloud adapters only when requested.
  */
 
 const LANE_KEYS = {
