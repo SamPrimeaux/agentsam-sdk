@@ -224,6 +224,7 @@ dist/
             dev: 'node --env-file=.env --watch src/dev-server.js',
             start: 'node --env-file=.env src/dev-server.js',
             smoke: 'node --env-file=.env ./scripts/smoke.mjs',
+            status: 'agentsam status',
             'db:init': 'agentsam db init',
             'db:status': 'agentsam db status',
             pty: 'agentsam start-local',
