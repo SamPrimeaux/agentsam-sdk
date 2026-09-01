@@ -67,6 +67,15 @@ assert.deepEqual(missingForInit({ iam: { ready: false } }, '', { runTarget: 'clo
 
 assert.equal(sdkDependencySpec('2.0.0-alpha.identity.12'), '2.0.0-alpha.identity.12');
 assert.equal(sdkDependencySpec('2.1.3'), '^2.1.3');
+const prereleaseMeta = buildLocalScaffoldMeta(
+  { projectName: 'alpha-demo', lane: 'fullstack', runTarget: 'local' },
+  '2.0.0-alpha.identity.12',
+);
+const prereleasePackage = JSON.parse(prereleaseMeta.files.find((f) => f.path === 'package.json').content);
+assert.equal(
+  prereleasePackage.dependencies['@inneranimalmedia/agentsam-sdk'],
+  '2.0.0-alpha.identity.12',
+);
 
 const localMeta = buildLocalScaffoldMeta({ projectName: 'demo', lane: 'cms', runTarget: 'local' });
 assert.equal(localMeta.laneKey, 'cms');
