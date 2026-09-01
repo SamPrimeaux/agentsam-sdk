@@ -32,13 +32,13 @@ assert.ok(getToolCatalog('Data Solutions').some((tool) => tool.name === 'query')
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-sdk-test-'));
 const dir = writeScaffoldFiles(path.join(tmp, 'demo-project'), [
-  { path: 'src/index.js', content: 'export default {};\n' },
-  { path: 'migrations/0001_agentsam_core.sql', content: 'CREATE TABLE cms_pages (id TEXT);\n' },
-  { path: 'package.json', content: '{"name":"demo","devDependencies":{"wrangler":"^4"}}\n' },
+  { path: 'src/agent.js', content: 'export function createAgent() {}\n' },
+  { path: 'db/schema.sql', content: 'CREATE TABLE cms_pages (id TEXT PRIMARY KEY);\n' },
+  { path: '.env.example', content: 'AGENTSAM_DB=.agentsam/data/agentsam.sqlite\n' },
 ]);
-assert.ok(fs.existsSync(path.join(dir, 'src/index.js')));
-assert.ok(fs.readFileSync(path.join(dir, 'migrations/0001_agentsam_core.sql'), 'utf8').includes('cms_pages'));
-assert.ok(fs.readFileSync(path.join(dir, 'package.json'), 'utf8').includes('wrangler'));
+assert.ok(fs.existsSync(path.join(dir, 'src/agent.js')));
+assert.ok(fs.readFileSync(path.join(dir, 'db/schema.sql'), 'utf8').includes('cms_pages'));
+assert.ok(fs.readFileSync(path.join(dir, '.env.example'), 'utf8').includes('AGENTSAM_DB'));
 
 import { SLASH_COMMANDS, listSlashCommands } from '../src/lib/slash-commands.js';
 import { createIdentityClient, AUTH_COOKIE_NAME } from '../src/index.js';
