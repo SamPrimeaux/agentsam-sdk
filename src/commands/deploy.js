@@ -114,21 +114,26 @@ async function runCloudflareDeploy(cwd, config, accountId) {
 
   if (!complete?.cloudflare) throw new Error('deploy incomplete — no cloudflare ids returned');
 
-  patchWranglerToml(cwd, complete.cloudflare);
+  const adapter = writeCloudflareAdapter(cwd, config, complete.cloudflare);
   writeConfig(cwd, {
     ...config,
     deploy_target: 'cloudflare',
     cloudflare: complete.cloudflare,
+    cloud_adapter: path.relative(cwd, adapter.adapterPath),
     deployed_at: new Date().toISOString(),
   });
 
   console.log(`
   ✓ Cloudflare resources provisioned in YOUR account
-  ✓ wrangler.toml updated
+  ✓ Cloudflare adapter generated: ${path.relative(cwd, adapter.adapterPath)}
+  ✓ Wrangler config generated: ${path.relative(cwd, adapter.tomlPath)}
+  ✓ D1 migration generated from local schema
+
+  Your local project remains unchanged as the development authority.
 
   Next:
     npx wrangler deploy
-    npm run db:migrate -- --remote   # when ready for remote D1
+    npx wrangler d1 migrations apply DB --remote
   `);
 }
 
