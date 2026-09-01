@@ -42,7 +42,8 @@ function printHelp() {
     agentsam deploy            Graduate to Cloudflare / GCP when ready
     agentsam identity preview  Local auth portal (IAM HTML shells, stub APIs)
     agentsam identity init     Scaffold app/frontend + backend + D1 migrations
-    agentsam shell             Slash commands + shell UX info
+    agentsam shell             Shell lab + slash command catalog
+    agentsam shell demo        Run zero-dependency ANSI shell preview locally
     agentsam --version
     agentsam --help
 
