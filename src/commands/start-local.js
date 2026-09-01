@@ -48,7 +48,7 @@ export async function runStartLocal(opts = {}) {
   console.log(`  ✓ Shell          ${server.shell}`);
   console.log(`
   Next:
-    npm run dev          → http://127.0.0.1:${config?.dev_port ?? 8787}
+    npm run dev          → UI http://127.0.0.1:${config?.ui_port ?? 5173} + Worker :${config?.dev_port ?? 8787}
     npm run db:migrate   → local D1 schema (first run)
 
   Press Ctrl+C to stop.
