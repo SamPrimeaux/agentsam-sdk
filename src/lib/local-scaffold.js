@@ -177,6 +177,7 @@ Local is the default authority. No Worker, Cloudflare account, tunnel, or hosted
 \`\`\`bash
 npm install
 npm run smoke
+npm run status
 npm run dev
 \`\`\`
 
@@ -380,6 +381,7 @@ Agent Sam local project — **${laneLabel}** lane, \`${agent}\` agent.
 \`\`\`bash
 npm install
 npm run smoke
+npm run status
 npm run dev
 \`\`\`
 
