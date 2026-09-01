@@ -253,7 +253,12 @@ if (command === '--version' || command === '-v') {
     process.exit(1);
   }
 } else if (command === 'shell') {
-  await runShellInfo();
+  try {
+    await runShellInfo(rest);
+  } catch (e) {
+    console.error(`\n  ✗ ${e?.message || e}\n`);
+    process.exit(1);
+  }
 } else if (command === 'start-local') {
   await runStartLocal({});
 } else if (command === 'tunnel') {
