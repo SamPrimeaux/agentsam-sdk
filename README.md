@@ -216,11 +216,12 @@ Cloudflare files are **not** emitted during local init. `agentsam deploy --targe
 
 ## Multi-Tenant & Client Policy
 
-- Each user or client gets a scoped workspace
-- Terminal execution is path-isolated — no cross-tenant access
-- AI usage is policy-gated — BYOK, managed, or disabled per client
-- D1 and R2 are scoped per tenant at the binding level
-- Every action produces an audit trail
+- Authenticated user/session identity is the primary security boundary
+- Workspaces may organize projects but are not required to run local tooling
+- Terminal execution is user/path scoped — no cross-user access
+- AI usage can be BYOK, managed, or disabled by policy
+- Cloud storage bindings are isolated when a project graduates to hosted infrastructure
+- Every privileged action should produce an audit trail
 
 ---
 
