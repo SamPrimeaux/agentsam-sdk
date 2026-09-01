@@ -277,10 +277,14 @@ export function createAgent(options = {}) {
     {
       path: 'src/dev-server.js',
       content: `import { createServer } from 'node:http';
+import { createLocalSqliteDatabase } from '@inneranimalmedia/agentsam-sdk/local/sqlite';
 import { createAgent } from './agent.js';
 
 const port = Number(process.env.PORT || 8787);
-const app = await createAgent();
+const DB = await createLocalSqliteDatabase(
+  process.env.AGENTSAM_DB || '.agentsam/data/agentsam.sqlite',
+);
+const app = createAgent({ env: { DB } });
 
 const server = createServer(async (req, res) => {
   const url = \`http://127.0.0.1:\${port}\${req.url || '/'}\`;
@@ -313,7 +317,7 @@ server.listen(port, '127.0.0.1', () => {
 
 function shutdown() {
   server.close(() => {
-    app.env?.DB?.close?.();
+    DB.close();
     process.exit(0);
   });
 }
