@@ -77,25 +77,30 @@ See [DEVELOPMENT.md](./DEVELOPMENT.md) for linking the SDK into Inner Animal Med
 
 ---
 
-## CLI Shell Experience (Gorilla)
+## Agent Sam terminal experience
 
-The SDK ships a **game-feel terminal UX** alongside the scaffold CLI — consolidated from the Gorilla Mode experiment:
+The CLI has two presentation layers over the same local tooling:
 
 ```bash
-npx @inneranimalmedia/agentsam-sdk shell
+agentsam tui                         # zero-dependency Node/ANSI dashboard
+agentsam tui --scene logs            # ANSI scene
+agentsam tui rich                    # Python Rich dashboard, if available
+agentsam tui rich --install          # isolated .agentsam/tui-venv
+agentsam shell                       # command catalog + PTY/DB/TUI status
 ```
+
+The ANSI renderer is the default because it ships with the npm package and needs no second runtime. The Rich renderer is the higher-fidelity optional presentation for live cards, progress, event tables, logs, and staged job receipts.
+
+Gorilla remains in `templates/gorilla-shell/` as a visual experiment/theme reference. It is **not** scaffolded by default and is not the shell architecture.
 
 | Piece | Location |
 |-------|----------|
 | Slash command registry | `src/lib/slash-commands.js` |
-| Phase 0 visual prototype | `templates/gorilla-shell/` (canonical; `examples/gorilla-shell/` is a pointer) |
-| Architecture + phases | [docs/CLI_SHELL.md](./docs/CLI_SHELL.md) |
-
-Run the prototype:
-
-```bash
-cd templates/gorilla-shell && npm install && npm run dev
-```
+| ANSI renderer | `examples/agentsam-tui-ansi.mjs` |
+| Rich renderer | `python/agentsam_sdk/tui/` |
+| Reusable browser components | `packages/agentsam-shell-kit/` |
+| Legacy Gorilla experiment | `templates/gorilla-shell/` |
+| Architecture | [docs/CLI_SHELL.md](./docs/CLI_SHELL.md) |
 
 ---
 
