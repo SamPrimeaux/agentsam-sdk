@@ -133,7 +133,7 @@ export function buildLocalScaffoldFiles({
   runTarget,
   sdkVersion = '1.5.1',
 }) {
-  const sdkRange = `^${sdkVersion.split('.').slice(0, 2).join('.')}.0`;
+  const sdkRange = sdkDependencySpec(sdkVersion);
   const migration = migrationSql(laneKey);
 
   return [
