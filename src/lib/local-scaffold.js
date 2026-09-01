@@ -53,6 +53,12 @@ export function normalizeRunTarget(raw) {
   return RUN_TARGETS[k] || 'local';
 }
 
+export function sdkDependencySpec(rawVersion) {
+  const version = String(rawVersion || '').trim();
+  if (!version) return 'latest';
+  return version.includes('-') ? version : `^${version}`;
+}
+
 function migrationSql(laneKey) {
   const cmsExtra =
     laneKey === 'cms'
