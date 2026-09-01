@@ -439,6 +439,7 @@ export function buildLocalScaffoldMeta(body, sdkVersion = '1.5.1') {
     next_steps: [
       'npm install',
       'npm run smoke',
+      'npm run status',
       'npm run dev',
       'npm run tui',
       'npm run db:status',
