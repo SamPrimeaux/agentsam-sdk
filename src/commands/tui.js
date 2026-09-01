@@ -84,12 +84,19 @@ async function runRich(args) {
     );
   }
 
-  const tuiArgs = hasScene(forwarded) ? forwarded : ['--scene', 'dashboard', ...forwarded];
   const env = {
     ...process.env,
     PYTHONPATH: [PYTHON_ROOT, process.env.PYTHONPATH].filter(Boolean).join(path.delimiter),
   };
-  await run(python, ['-m', 'agentsam_sdk.tui', ...tuiArgs], { env });
+
+  if (!hasScene(forwarded)) {
+    const status = await collectLocalStatus();
+    env.AGENTSAM_STATUS_JSON = JSON.stringify(status);
+    await run(python, ['-m', 'agentsam_sdk.tui.status'], { env });
+    return;
+  }
+
+  await run(python, ['-m', 'agentsam_sdk.tui', ...forwarded], { env });
 }
 
 export async function runTui(argv = []) {
@@ -101,6 +108,11 @@ export async function runTui(argv = []) {
     return;
   }
 
-  const ansiArgs = hasScene(args) ? args : ['--scene', 'dashboard', ...args];
-  await run(process.execPath, [ANSI_DEMO, ...ansiArgs]);
+  if (!hasScene(args)) {
+    const status = await collectLocalStatus();
+    process.stdout.write(`\n${renderLocalStatus(status)}\n\n`);
+    return;
+  }
+
+  await run(process.execPath, [ANSI_DEMO, ...args]);
 }
