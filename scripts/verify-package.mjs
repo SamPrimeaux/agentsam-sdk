@@ -26,6 +26,11 @@ for (const exportKey of ['./git-context', './bridge-client']) {
 }
 
 assert.equal(pkg.bin?.agentsam, 'src/cli.js');
+assert.equal(
+  pkg.bin?.['agentsam-sdk'],
+  'src/cli.js',
+  'package-name bin alias is required so `npx @inneranimalmedia/agentsam-sdk` can select an executable',
+);
 assert.ok(readFileSync(join(root, pkg.bin.agentsam), 'utf8').startsWith('#!/usr/bin/env node'));
 assert.ok(pkg.files?.includes('src'), 'published files must include src');
 assert.ok(pkg.files?.includes('packages/identity'), 'published files must include identity workspace');
