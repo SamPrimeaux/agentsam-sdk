@@ -1,0 +1,30 @@
+[
+  {
+    "tag": "#remix-workmode",
+    "repo": "AgentSamRemix",
+    "ref": "cursor/integrate-workmode-ui-8edb",
+    "note": "3-commit patch landed: chat/nav/browser/terminal WorkMode UI, agentsam-sdk git-dep pin, MCP bridge verify script",
+    "date": "2026-09-01T20:36:47Z"
+  },
+  {
+    "tag": "#sdk-allowscripts",
+    "repo": "agentsam-sdk",
+    "ref": "npm_config_userconfig=/dev/null workaround",
+    "note": "Global ~/.npmrc allow-scripts=esbuild,workerd conflicts with npm's git-dep prep subprocess when the dep declares its own allowScripts (EALLOWSCRIPTS). Bypass per-command, don't edit ~/.npmrc.",
+    "date": "2026-09-01T20:36:47Z"
+  },
+  {
+    "tag": "#workmode-promote",
+    "repo": "AgentSamWorkMode-Prototype",
+    "ref": "bin/agentsam/step1-workmode-step2-remix.sh",
+    "note": "Auto-diffs WorkMode src/ against Remix app/workmode/ and builds git-am-able patches. npm run promote:list / promote:pending",
+    "date": "2026-09-01T20:36:47Z"
+  },
+  {
+    "tag": "#remix-workmode-pending",
+    "repo": "AgentSamRemix",
+    "ref": "28 files as of 2026-09-01",
+    "note": "shell/CfUnifiedCommandPalette, workbench/DockerDeployPanel+RuntimeTargetPicker, contexts/, hooks/, lib/, services/agentEngine.ts not yet promoted -- run promote:list for current count",
+    "date": "2026-09-01T20:36:47Z"
+  }
+]
