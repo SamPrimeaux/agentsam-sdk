@@ -38,6 +38,7 @@ Default path: **local**. No IAM login, Cloudflare account, tunnel, hosted databa
 ```bash
 npm install
 npm run smoke             # health + real SQLite persistence proof
+npm run status            # Git + SQLite + API + PTY truth
 npm run dev               # local Node API :8787
 npm run tui               # Agent Sam ANSI dashboard
 npm run db:status         # local SQLite receipt
