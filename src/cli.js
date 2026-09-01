@@ -158,8 +158,6 @@ async function initInteractive(partial = {}) {
   ╚═══════════════════════════════════╝
   `);
 
-  printContextSummary(await import('./lib/detect-context.js').then((m) => m.detectContext()));
-
   const projectName =
     partial.projectName ||
     (await prompt.ask('  1) Project name: '));
@@ -186,6 +184,17 @@ async function initInteractive(partial = {}) {
   const runTarget = partial.runTarget
     ? partial.runTarget
     : RUN_TARGETS[await prompt.ask('  Select [1]: ')] || 'local';
+
+  // Credential detection is demand-driven, not unconditional: missingForInit()
+  // already knows local needs nothing (`if (runTarget === 'local') return []`)
+  // — it just never got consulted before this fix, because detectContext()
+  // used to run before runTarget was even known. Only scan when the chosen
+  // target would actually need something.
+  const { detectContext, missingForInit } = await import('./lib/detect-context.js');
+  const ctx = await detectContext();
+  if (missingForInit(ctx, process.env.AGENTSAM_SDK_TOKEN || '', { runTarget }).length) {
+    printContextSummary(ctx);
+  }
 
   await runLocalInit({ projectName, lane: laneKey, runTarget, prompt });
   prompt.close();
