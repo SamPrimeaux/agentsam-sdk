@@ -267,9 +267,9 @@ PORT=8787
 export function createAgent(options = {}) {
   return new AgentSam({
     env: options.env || {},
-    project: process.env.AGENTSAM_PROJECT || '${projectName}',
-    lane: process.env.AGENTSAM_LANE || '${laneKey}',
-    agent: process.env.AGENTSAM_AGENT || '${agent}',
+    project: options.project || process.env.AGENTSAM_PROJECT || '${projectName}',
+    lane: options.lane || process.env.AGENTSAM_LANE || '${laneKey}',
+    agent: options.agent || process.env.AGENTSAM_AGENT || '${agent}',
   });
 }
 `,
