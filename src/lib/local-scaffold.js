@@ -261,21 +261,26 @@ PORT=8787
       content: `${migration}\n`,
     },
     {
-      path: 'src/index.js',
-      content: `import { AgentSam } from '@inneranimalmedia/agentsam-sdk';
+      path: 'src/agent.js',
+      content: `import {
+  AgentSam,
+  createLocalSqliteDatabase,
+} from '@inneranimalmedia/agentsam-sdk';
 
-export default {
-  async fetch(request, env, ctx) {
-    const agent = new AgentSam({
-      env,
-      ctx,
-      project: '${projectName}',
-      lane: '${laneKey}',
-      agent: '${agent}',
-    });
-    return agent.handle(request);
-  },
-};
+export async function createAgent(options = {}) {
+  const DB =
+    options.DB ||
+    (await createLocalSqliteDatabase(
+      process.env.AGENTSAM_DB || '.agentsam/data/agentsam.sqlite',
+    ));
+
+  return new AgentSam({
+    env: { ...(options.env || {}), DB },
+    project: process.env.AGENTSAM_PROJECT || '${projectName}',
+    lane: process.env.AGENTSAM_LANE || '${laneKey}',
+    agent: process.env.AGENTSAM_AGENT || '${agent}',
+  });
+}
 `,
     },
     {
