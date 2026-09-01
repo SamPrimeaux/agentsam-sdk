@@ -176,11 +176,11 @@ async function initInteractive(partial = {}) {
 
   if (!partial.runTarget) {
     console.log(`
-  3) Where do you want to run your project?
+  3) Future deploy target?
 
-    1) Local (localhost — start here, no accounts needed)
-    2) Cloudflare (Workers, D1, R2 — deploy when ready)
-    3) GCP (your own Google Cloud project)
+    1) Local only / decide later
+    2) Cloudflare later (Worker + D1 adapter at deploy time)
+    3) GCP later (your Google Cloud project)
   `);
   }
   const runTarget = partial.runTarget
