@@ -35,6 +35,10 @@ export async function runStartLocal(opts = {}) {
   Agent Sam — local PTY
   No Cloudflare · no tunnel · no IAM login
   `);
+  if (!config) {
+    console.log(`  ⚠ No .agentsam/config.json found; using current repository/directory as the PTY root.`);
+    console.log(`    Run \`agentsam init\` for a scaffolded project, or continue intentionally in ${root}.\n`);
+  }
 
   const server = await startLocalPtyServer({ cwd: root, port });
 
