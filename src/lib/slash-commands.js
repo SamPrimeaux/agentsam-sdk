@@ -7,20 +7,17 @@ export const SHELL_THEMES = ['NIGHT', 'DAY', 'LAVA', 'VOID'];
 
 /** @type {Array<{ cmd: string, description: string, lane?: string }>} */
 export const SLASH_COMMANDS = [
-  { cmd: '/cd', description: 'Change working directory', lane: 'terminal' },
+  { cmd: '/help', description: 'Show Agent Sam commands' },
+  { cmd: '/status', description: 'Local project, DB, Git, and PTY health', lane: 'local' },
+  { cmd: '/context', description: 'Current Git repository and revision', lane: 'git' },
   { cmd: '/pwd', description: 'Print working directory', lane: 'terminal' },
-  { cmd: '/gh', description: 'GitHub operations (status, PR, issue)', lane: 'git' },
-  { cmd: '/wrangler', description: 'Wrangler deploy and bindings', lane: 'deploy' },
-  { cmd: '/workspace', description: 'Switch or show active workspace', lane: 'platform' },
-  { cmd: '/samiam', description: 'Agent Sam quick invoke', lane: 'agent' },
-  { cmd: '/claude', description: 'Route prompt to Claude arm', lane: 'agent' },
-  { cmd: '/codex', description: 'Route prompt to Codex arm', lane: 'agent' },
-  { cmd: '/tail', description: 'Tail worker logs', lane: 'observability' },
-  { cmd: '/d1', description: 'D1 query helper', lane: 'data' },
-  { cmd: '/deploy', description: 'Deploy worker (sandbox or prod gate)', lane: 'deploy' },
-  { cmd: '/buddy', description: 'Open Agent Sam buddy panel (MCP)', lane: 'agent' },
-  { cmd: '/status', description: 'Platform + project health', lane: 'platform' },
-  { cmd: '/diagnostics', description: 'Run diagnostic scenario', lane: 'platform' },
+  { cmd: '/cd', description: 'Change working directory', lane: 'terminal' },
+  { cmd: '/git', description: 'Git status, diff, branch, commit, and remote', lane: 'git' },
+  { cmd: '/db', description: 'Local SQLite status and query helpers', lane: 'data' },
+  { cmd: '/agent', description: 'Send a goal to the configured Agent Sam', lane: 'agent' },
+  { cmd: '/logs', description: 'Show local Agent Sam execution events', lane: 'observability' },
+  { cmd: '/tui', description: 'Switch or preview terminal presentation', lane: 'terminal' },
+  { cmd: '/deploy', description: 'Add a cloud adapter and deploy intentionally', lane: 'deploy' },
 ];
 
 /** Shell UX rollout phases (gorilla-shell → SDK default CLI experience). */

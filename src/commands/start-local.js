@@ -47,9 +47,10 @@ export async function runStartLocal(opts = {}) {
   console.log(`  ✓ Project root   ${server.cwd}`);
   console.log(`  ✓ Shell          ${server.shell}`);
   console.log(`
-  Next:
-    npm run dev          → UI http://127.0.0.1:${config?.ui_port ?? 5173} + Worker :${config?.dev_port ?? 8787}
-    npm run db:migrate   → local D1 schema (first run)
+  Project services:
+    npm run dev          → local Agent Sam API http://127.0.0.1:${config?.dev_port ?? 8787}
+    npm run db:status    → inspect local SQLite
+    npm run tui          → ANSI Agent Sam dashboard
 
   Press Ctrl+C to stop.
   `);

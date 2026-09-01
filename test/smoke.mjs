@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { AgentSam, routeIntent, getToolCatalog } from '../src/index.js';
 import { buildLocalScaffoldMeta, sdkDependencySpec } from '../src/lib/local-scaffold.js';
 import { writeScaffoldFiles } from '../src/lib/write-files.js';
-import { copyGorillaTemplate } from '../src/lib/gorilla-template.js';
+import { initializeLocalSqlite, createLocalSqliteDatabase } from '../src/local/sqlite.js';
 import { printContextSummary, missingForInit } from '../src/lib/detect-context.js';
 
 const app = new AgentSam({ project: 'smoke', lane: 'cms', agent: 'cms' });
@@ -32,13 +32,13 @@ assert.ok(getToolCatalog('Data Solutions').some((tool) => tool.name === 'query')
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-sdk-test-'));
 const dir = writeScaffoldFiles(path.join(tmp, 'demo-project'), [
-  { path: 'src/index.js', content: 'export default {};\n' },
-  { path: 'migrations/0001_agentsam_core.sql', content: 'CREATE TABLE cms_pages (id TEXT);\n' },
-  { path: 'package.json', content: '{"name":"demo","devDependencies":{"wrangler":"^4"}}\n' },
+  { path: 'src/agent.js', content: 'export function createAgent() {}\n' },
+  { path: 'db/schema.sql', content: 'CREATE TABLE cms_pages (id TEXT PRIMARY KEY);\n' },
+  { path: '.env.example', content: 'AGENTSAM_DB=.agentsam/data/agentsam.sqlite\n' },
 ]);
-assert.ok(fs.existsSync(path.join(dir, 'src/index.js')));
-assert.ok(fs.readFileSync(path.join(dir, 'migrations/0001_agentsam_core.sql'), 'utf8').includes('cms_pages'));
-assert.ok(fs.readFileSync(path.join(dir, 'package.json'), 'utf8').includes('wrangler'));
+assert.ok(fs.existsSync(path.join(dir, 'src/agent.js')));
+assert.ok(fs.readFileSync(path.join(dir, 'db/schema.sql'), 'utf8').includes('cms_pages'));
+assert.ok(fs.readFileSync(path.join(dir, '.env.example'), 'utf8').includes('AGENTSAM_DB'));
 
 import { SLASH_COMMANDS, listSlashCommands } from '../src/lib/slash-commands.js';
 import { createIdentityClient, AUTH_COOKIE_NAME } from '../src/index.js';
@@ -53,7 +53,9 @@ const { buildIdentityAppScaffold } = await import('../src/lib/identity-scaffold.
 assert.ok(buildIdentityAppScaffold({ projectName: 'x' })['backend/src/index.js']);
 await assert.rejects(() => finalizeInboundOAuth({}, new Request('https://x'), {}), /adapter/);
 assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/deploy'));
-assert.equal(listSlashCommands({ lane: 'deploy' }).length, 2);
+assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/db'));
+assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/agent'));
+assert.equal(listSlashCommands({ lane: 'deploy' }).length, 1);
 
 printContextSummary({
   iam: { ready: true, source: 'sdk-token', detail: 'AGENTSAM_SDK_TOKEN' },
@@ -80,16 +82,28 @@ assert.equal(
 const localMeta = buildLocalScaffoldMeta({ projectName: 'demo', lane: 'cms', runTarget: 'local' });
 assert.equal(localMeta.laneKey, 'cms');
 assert.ok(localMeta.files.some((f) => f.path === '.agentsam/start-local.md'));
-assert.ok(localMeta.files.some((f) => f.path === 'wrangler.toml'));
+assert.ok(localMeta.files.some((f) => f.path === 'db/schema.sql'));
 assert.ok(localMeta.files.some((f) => f.path === '.env'));
+assert.ok(localMeta.files.some((f) => f.path === '.env.example'));
+assert.ok(localMeta.files.some((f) => f.path === 'src/agent.js'));
+assert.ok(!localMeta.files.some((f) => f.path === 'wrangler.toml'));
+assert.ok(!localMeta.files.some((f) => f.path.startsWith('gorilla/')));
 assert.ok(!localMeta.files.some((f) => f.path.includes('execos')));
 
-const gorillaDir = path.join(tmp, 'gorilla-project');
-writeScaffoldFiles(gorillaDir, localMeta.files);
-copyGorillaTemplate(gorillaDir, localMeta);
-assert.ok(fs.existsSync(path.join(gorillaDir, 'gorilla', 'App.tsx')));
-assert.ok(fs.existsSync(path.join(gorillaDir, 'vite.config.js')));
-assert.ok(fs.readFileSync(path.join(gorillaDir, 'gorilla', 'App.tsx'), 'utf8').includes('demo'));
+const localDir = path.join(tmp, 'local-project');
+writeScaffoldFiles(localDir, localMeta.files);
+const localDb = await initializeLocalSqlite({
+  dbPath: path.join(localDir, '.agentsam', 'data', 'agentsam.sqlite'),
+  schemaPath: path.join(localDir, 'db', 'schema.sql'),
+});
+assert.ok(localDb.tables.includes('agent_sessions'));
+const d1Like = await createLocalSqliteDatabase(localDb.dbPath);
+await d1Like.prepare('INSERT INTO agent_sessions (id, agent, lane, status) VALUES (?, ?, ?, ?)').bind(
+  'sess_test', 'cms', 'cms', 'created',
+).run();
+const persisted = await d1Like.prepare('SELECT id FROM agent_sessions WHERE id = ?').bind('sess_test').first();
+assert.equal(persisted.id, 'sess_test');
+d1Like.close();
 
 const tunnelPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'commands', 'tunnel.js');
 const tunnelSrc = fs.readFileSync(tunnelPath, 'utf8');

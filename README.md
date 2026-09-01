@@ -31,18 +31,29 @@ npx @inneranimalmedia/agentsam-sdk init --name my-agent --yes
 cd my-agent
 ```
 
-Default path: **localhost**. No IAM login, no Cloudflare OAuth, no accounts. Under 2 minutes with Node 20+ installed. Run `npx @inneranimalmedia/agentsam-sdk init` with no flags for the interactive setup.
+Default path: **local**. No IAM login, Cloudflare account, tunnel, hosted database, or Worker is required. Node 22.5+ is required because local persistence uses Node's built-in SQLite. Run `npx @inneranimalmedia/agentsam-sdk init` with no flags for the interactive setup.
+
+`agentsam init` creates the project directory, initializes Git, writes `.env` + `.env.example`, creates `db/schema.sql`, and initializes `.agentsam/data/agentsam.sqlite` before you install project dependencies.
 
 ```bash
 npm install
-npm run smoke
-npx agentsam start-local   # local PTY on ws://127.0.0.1:3099
-npx agentsam tunnel        # cloudflared → register with IAM (dashboard Local lane)
-npm run dev                # UI :5173 + local Worker :8787
-npm run db:migrate         # local D1 schema
+npm run smoke             # health + real SQLite persistence proof
+npm run status            # Git + SQLite + API + PTY truth
+npm run dev               # local Node API :8787
+npm run tui               # Agent Sam ANSI dashboard
+npm run db:status         # local SQLite receipt
+npm run pty               # optional local PTY :3099
 ```
 
-`agentsam tunnel` (default `--quick`) starts a Cloudflare quick tunnel to `:3099` and POSTs the `wss://` URL to `/api/sdk/terminal/register-local` so `agentsam_terminal_local` can reach your machine. Use `--named --tunnel-name … --hostname … --zone-id …` for a stable BYOK named tunnel.
+The richer Python presentation is optional and isolated:
+
+```bash
+npm run tui:rich -- --install
+```
+
+This creates `.agentsam/tui-venv` and installs Rich there. It does not modify your system Python.
+
+`agentsam tunnel` is an explicit remote-access step. It is not part of local startup. When used, it exposes the local PTY so an authorized remote Agent Sam surface can reach your machine.
 When you're ready to ship to **your** Cloudflare account:
 
 ```bash
@@ -67,25 +78,30 @@ See [DEVELOPMENT.md](./DEVELOPMENT.md) for linking the SDK into Inner Animal Med
 
 ---
 
-## CLI Shell Experience (Gorilla)
+## Agent Sam terminal experience
 
-The SDK ships a **game-feel terminal UX** alongside the scaffold CLI — consolidated from the Gorilla Mode experiment:
+The CLI has two presentation layers over the same local tooling:
 
 ```bash
-npx @inneranimalmedia/agentsam-sdk shell
+agentsam tui                         # zero-dependency Node/ANSI dashboard
+agentsam tui --scene logs            # ANSI scene
+agentsam tui rich                    # Python Rich dashboard, if available
+agentsam tui rich --install          # isolated .agentsam/tui-venv
+agentsam shell                       # command catalog + PTY/DB/TUI status
 ```
+
+The ANSI renderer is the default because it ships with the npm package and needs no second runtime. The Rich renderer is the higher-fidelity optional presentation for live cards, progress, event tables, logs, and staged job receipts.
+
+Gorilla remains in `templates/gorilla-shell/` as a visual experiment/theme reference. It is **not** scaffolded by default and is not the shell architecture.
 
 | Piece | Location |
 |-------|----------|
 | Slash command registry | `src/lib/slash-commands.js` |
-| Phase 0 visual prototype | `templates/gorilla-shell/` (canonical; `examples/gorilla-shell/` is a pointer) |
-| Architecture + phases | [docs/CLI_SHELL.md](./docs/CLI_SHELL.md) |
-
-Run the prototype:
-
-```bash
-cd templates/gorilla-shell && npm install && npm run dev
-```
+| ANSI renderer | `examples/agentsam-tui-ansi.mjs` |
+| Rich renderer | `python/agentsam_sdk/tui/` |
+| Reusable browser components | `packages/agentsam-shell-kit/` |
+| Legacy Gorilla experiment | `templates/gorilla-shell/` |
+| Architecture | [docs/CLI_SHELL.md](./docs/CLI_SHELL.md) |
 
 ---
 
@@ -179,42 +195,51 @@ Agent Sam routes work to the right environment automatically:
 
 ## What Gets Scaffolded
 
-Running `agentsam init` generates a production-ready project for your lane:
+Running `agentsam init` generates a portable local project first:
 
 **All lanes include:**
-- `agentsam.config.js` — project config, lane, provider, agent
-- `wrangler.toml` — Worker, D1, R2, KV, Durable Object bindings
-- `.env.example` — all required secrets pre-listed
-- `src/index.js` — Worker entry point wired to your agent
-- `README.md` — setup and deploy instructions
+- a new Git repository
+- `agentsam.config.js` — project/lane/agent configuration
+- `.env` + `.env.example` — local configuration
+- `.agentsam/config.json` — Agent Sam local project metadata
+- `.agentsam/data/agentsam.sqlite` — initialized local SQLite state
+- `db/schema.sql` — portable relational schema
+- `src/agent.js` — runtime-neutral Agent Sam application factory
+- `src/dev-server.js` — local Node HTTP adapter
+- `scripts/smoke.mjs` — health + SQLite persistence proof
+- ANSI and optional Rich TUI commands through the installed SDK
 
-**CMS lane adds:** page/section/asset schema migrations and CMS worker scaffold.
+Lane-specific schema additions remain local-first. For example, CMS adds CMS tables to `db/schema.sql`.
 
-**Data lane adds:** D1 + Hyperdrive config and migration templates.
-
-**Full Stack adds:** Durable Object session scaffold, auth tables, full agent chat loop.
+Cloudflare files are **not** emitted during local init. `agentsam deploy --target cloudflare` generates the Worker adapter, `wrangler.toml`, and a D1 migration from the same local schema when cloud infrastructure is intentionally requested.
 
 ---
 
 ## Multi-Tenant & Client Policy
 
-- Each user or client gets a scoped workspace
-- Terminal execution is path-isolated — no cross-tenant access
-- AI usage is policy-gated — BYOK, managed, or disabled per client
-- D1 and R2 are scoped per tenant at the binding level
-- Every action produces an audit trail
+- Authenticated user/session identity is the primary security boundary
+- Workspaces may organize projects but are not required to run local tooling
+- Terminal execution is user/path scoped — no cross-user access
+- AI usage can be BYOK, managed, or disabled by policy
+- Cloud storage bindings are isolated when a project graduates to hosted infrastructure
+- Every privileged action should produce an audit trail
 
 ---
 
 ## Roadmap
 
-- [x] `agentsam shell` — shell UX info + slash command registry
-- [x] Gorilla Shell Phase 0 prototype in `examples/gorilla-shell/`
-- [x] `agentsam deploy` — push your project from CLI
+- [x] `agentsam init` — local Git + `.env` + SQLite + runtime-neutral Node agent
+- [x] `agentsam status` — live Git + SQLite + API + PTY health
+- [x] `agentsam tui` — zero-dependency ANSI live status + explicit demo scenes
+- [x] `agentsam tui rich` — optional Rich live status with isolated local venv install
+- [x] `agentsam shell` — terminal command catalog over the same local capabilities
+- [x] `agentsam start-local` — local PTY server on the user's machine
+- [x] `agentsam deploy` — add cloud adapters intentionally at deploy time
 - [x] Identity alpha — contracts, providers, auth portal preview (`agentsam identity preview`)
-- [ ] `agentsam status` — live agent and infrastructure health
-- [ ] `agentsam logs` — tail tool call and command logs
-- [ ] PTY bridge (Phase 1) — ExecOS WebSocket in shell
+- [x] Gorilla Phase 0 retained as an optional visual experiment, not the default shell
+- [ ] `agentsam logs` — tail local/tool execution events through the terminal UX
+- [ ] Interactive PTY command bridge inside the TUI
+- [ ] Publish reusable browser shell-kit surfaces
 - [ ] Kit marketplace — CMS, ecommerce, nonprofit, SaaS starters
 - [ ] BYOK AI key support per project
 

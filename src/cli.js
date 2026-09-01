@@ -2,12 +2,11 @@
 
 import pkg from '../package.json' with { type: 'json' };
 import readline from 'readline';
-import { spawn } from 'node:child_process';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { buildLocalScaffoldMeta, LANE_KEYS, RUN_TARGETS } from './lib/local-scaffold.js';
 import { writeScaffoldFiles } from './lib/write-files.js';
-import { copyGorillaTemplate } from './lib/gorilla-template.js';
+import { initializeGitRepository } from './lib/init-git.js';
+import { initializeLocalSqlite } from './local/sqlite.js';
 import { printContextSummary } from './lib/detect-context.js';
 import { promptOptionalByokKeys } from './lib/prompt-byok.js';
 import { runStartLocal } from './commands/start-local.js';
@@ -16,11 +15,12 @@ import { runDeploy } from './commands/deploy.js';
 import { runIdentityPreview } from './commands/identity-preview.js';
 import { runIdentityInit } from './commands/identity-init.js';
 import { runContext } from './commands/context.js';
+import { runDb } from './commands/db.js';
+import { runStatus } from './commands/status.js';
+import { runTui } from './commands/tui.js';
 import { SLASH_COMMANDS, SHELL_PHASES } from './lib/slash-commands.js';
 
 const VERSION = pkg.version;
-const CLI_DIR = path.dirname(fileURLToPath(import.meta.url));
-const ANSI_SHELL_DEMO = path.resolve(CLI_DIR, '..', 'examples', 'agentsam-tui-ansi.mjs');
 
 function createPrompt() {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -36,14 +36,17 @@ function printHelp() {
 
   Usage:
     agentsam context [--json]  Git repo/revision + bridge configuration from any repo
-    agentsam init              Local-first project scaffold (default: localhost, no accounts)
+    agentsam init              Scaffold local Git + .env + SQLite + Node agent
+    agentsam status [--json]   Live local Git + DB + API + PTY status
+    agentsam db init|status    Manage the project-local SQLite database
+    agentsam tui               Zero-dependency ANSI Agent Sam dashboard
+    agentsam tui rich          Optional Python Rich dashboard (--install for local venv)
     agentsam start-local       Local PTY on ws://127.0.0.1:3099 (no tunnel, no Cloudflare)
-    agentsam tunnel            Expose local PTY to IAM (cloudflared + register)
+    agentsam shell             Terminal commands + presentation catalog
+    agentsam tunnel            Explicitly expose local PTY when remote access is wanted
     agentsam deploy            Graduate to Cloudflare / GCP when ready
-    agentsam identity preview  Local auth portal (IAM HTML shells, stub APIs)
-    agentsam identity init     Scaffold app/frontend + backend + D1 migrations
-    agentsam shell             Shell lab + slash command catalog
-    agentsam shell demo        Run zero-dependency ANSI shell preview locally
+    agentsam identity preview  Local auth portal preview
+    agentsam identity init     Add reusable identity package surfaces
     agentsam --version
     agentsam --help
 
@@ -115,13 +118,22 @@ async function runLocalInit(config) {
   `);
 
   const dir = writeScaffoldFiles(meta.projectName, meta.files);
-  copyGorillaTemplate(dir, meta);
+  const git = initializeGitRepository(dir);
+  const db = await initializeLocalSqlite({
+    dbPath: path.join(dir, '.agentsam', 'data', 'agentsam.sqlite'),
+    schemaPath: path.join(dir, 'db', 'schema.sql'),
+  });
 
   console.log(`
-  ✓ Project ready: ${dir}
-  ✓ Gorilla Mode UI → gorilla/ (http://localhost:5173 after npm run dev)
+  ✓ Project      ${dir}
+  ${git.ok ? '✓' : '⚠'} Git          ${git.ok ? 'initialized' : 'git not found; initialize it when available'}
+  ✓ Environment  ${path.join(dir, '.env')}
+  ✓ SQLite       ${db.dbPath} (${db.tables.length} tables)
+  ✓ Local API    Node · http://127.0.0.1:8787
+  ✓ Terminal UI  ANSI built in · Rich optional
 
-  Next steps:`);
+  Next:`);
+  console.log(`    cd ${meta.projectName}`);
   for (const step of meta.next_steps) {
     console.log(`    ${step}`);
   }
@@ -132,9 +144,7 @@ async function runLocalInit(config) {
   }
 
   console.log(`
-  Local in ~60 seconds:
-    cd ${meta.projectName} && npm install && npm run smoke && npm run dev
-    open http://localhost:5173
+  Local means local: no Worker, tunnel, IAM login, or cloud database is required.
   `);
 }
 
@@ -166,11 +176,11 @@ async function initInteractive(partial = {}) {
 
   if (!partial.runTarget) {
     console.log(`
-  3) Where do you want to run your project?
+  3) Future deploy target?
 
-    1) Local (localhost — start here, no accounts needed)
-    2) Cloudflare (Workers, D1, R2 — deploy when ready)
-    3) GCP (your own Google Cloud project)
+    1) Local only / decide later
+    2) Cloudflare later (Worker + D1 adapter at deploy time)
+    3) GCP later (your Google Cloud project)
   `);
   }
   const runTarget = partial.runTarget
@@ -190,47 +200,33 @@ async function initFromArgs(argv) {
   await runLocalInit({ ...opts, prompt: null });
 }
 
-async function runAnsiShellDemo(argv = []) {
-  await new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [ANSI_SHELL_DEMO, ...argv], {
-      stdio: 'inherit',
-      env: process.env,
-    });
-    child.once('error', reject);
-    child.once('exit', (code, signal) => {
-      if (signal) reject(new Error(`ANSI shell demo stopped by ${signal}`));
-      else if (code === 0) resolve();
-      else reject(new Error(`ANSI shell demo exited ${code ?? 1}`));
-    });
-  });
-}
-
 async function runShellInfo(argv = []) {
   const sub = argv[0] || 'list';
   if (sub === 'demo' || sub === 'ansi') {
-    await runAnsiShellDemo(argv.slice(1));
+    await runTui(['ansi', ...argv.slice(1)]);
+    return;
+  }
+  if (sub === 'rich') {
+    await runTui(['rich', ...argv.slice(1)]);
     return;
   }
   if (sub !== 'list' && sub !== 'status') {
     throw new Error(`unknown shell command: ${sub}`);
   }
 
-  const next = SHELL_PHASES.find((p) => p.status === 'next');
+  const next = SHELL_PHASES.find((p) => p.status === 'next' || p.status === 'current');
   console.log(`
   ╔═══════════════════════════════════╗
-  ║       Agent Sam Shell Lab         ║
+  ║        Agent Sam Terminal         ║
   ╚═══════════════════════════════════╝
 
-  Local PTY: agentsam start-local (ws://127.0.0.1:3099)
-  Next milestone: ${next?.label ?? 'dashboard bridge after deploy'}
+  Local PTY   agentsam start-local     ws://127.0.0.1:3099
+  ANSI TUI    agentsam tui             zero-dependency Node UI
+  Rich TUI    agentsam tui rich        optional richer Python UI
+              agentsam tui rich --install
+  DB          agentsam db status       local SQLite
 
-  Presentation prototypes:
-    ansi       zero-dependency Node TUI · runnable now
-               agentsam shell demo --scene dashboard
-    rich       optional Python Rich TUI · richer live cards/events
-               cd python && pip install -e '.[tui]' && agentsam tui
-    gorilla    React/Vite game-shell prototype · scaffolded today
-    shell-kit  reusable React work-surface components · WIP/private
+  Current milestone: ${next?.label ?? 'local terminal experience'}
 
   Slash commands (${SLASH_COMMANDS.length} registered):
 `);
@@ -249,6 +245,27 @@ if (command === '--version' || command === '-v') {
 } else if (command === 'context') {
   try {
     await runContext(rest);
+  } catch (e) {
+    console.error(`\n  ✗ ${e?.message || e}\n`);
+    process.exit(1);
+  }
+} else if (command === 'status') {
+  try {
+    await runStatus(rest);
+  } catch (e) {
+    console.error(`\n  ✗ ${e?.message || e}\n`);
+    process.exit(1);
+  }
+} else if (command === 'db') {
+  try {
+    await runDb(rest);
+  } catch (e) {
+    console.error(`\n  ✗ ${e?.message || e}\n`);
+    process.exit(1);
+  }
+} else if (command === 'tui') {
+  try {
+    await runTui(rest);
   } catch (e) {
     console.error(`\n  ✗ ${e?.message || e}\n`);
     process.exit(1);

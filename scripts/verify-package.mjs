@@ -19,7 +19,7 @@ assert.equal(pkg.dependencies?.[pkg.name], undefined, 'SDK must never depend on 
 assert.equal(lock.packages?.[`node_modules/${pkg.name}`], undefined, 'lockfile must not contain nested SDK self-install');
 assert.equal(pkg.scripts?.postinstall, undefined, 'root SDK install must be side-effect free');
 
-for (const exportKey of ['./git-context', './bridge-client']) {
+for (const exportKey of ['./git-context', './bridge-client', './local/sqlite']) {
   const target = pkg.exports?.[exportKey];
   assert.ok(target, `missing public export ${exportKey}`);
   assert.ok(existsSync(join(root, target)), `public export target missing: ${target}`);

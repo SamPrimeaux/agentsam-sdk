@@ -1,6 +1,6 @@
 /**
  * Local-first scaffold — no IAM, no Cloudflare, no OAuth.
- * Connor proves the pattern on localhost; `agentsam deploy` graduates to cloud.
+ * Prove the project locally; `agentsam deploy` adds cloud adapters only when requested.
  */
 
 const LANE_KEYS = {
@@ -159,8 +159,9 @@ export function buildLocalScaffoldFiles({
           deploy_target: runTarget === 'local' ? null : runTarget,
           pty_port: 3099,
           dev_port: 8787,
-          ui_port: 5173,
-          ui: 'gorilla',
+          db_path: '.agentsam/data/agentsam.sqlite',
+          db_schema: 'db/schema.sql',
+          ui: 'terminal',
           scaffold_version: sdkVersion,
         },
         null,
@@ -169,24 +170,29 @@ export function buildLocalScaffoldFiles({
     },
     {
       path: '.agentsam/start-local.md',
-      content: `# Local terminal (no Cloudflare tunnel)
+      content: `# Agent Sam local project
 
-Agent Sam runs a PTY on **your machine** — no accounts, no cloudflared, no IAM login required.
+Local is the default authority. No Worker, Cloudflare account, tunnel, or hosted database is required.
 
 \`\`\`bash
-# Terminal 1 — local PTY (Agent Sam shell bridge)
-npx agentsam start-local
-
-# Terminal 2 — Gorilla Mode UI + local Worker API
+npm install
+npm run smoke
+npm run status
 npm run dev
-npm run db:migrate   # first time only
 \`\`\`
 
-Open **http://localhost:5173** — pixel Gorilla shell proxies \`/api\` → Worker on :8787.
+Useful local surfaces:
 
-PTY listens on \`ws://127.0.0.1:3099\`. Health: \`curl http://127.0.0.1:3099/health\`
+\`\`\`bash
+npm run db:status
+npm run tui
+npm run tui:rich -- --install   # optional Rich UI in isolated .agentsam venv
+npx agentsam start-local        # PTY on ws://127.0.0.1:3099
+\`\`\`
 
-When you're ready to ship to Cloudflare or GCP:
+The local SQLite database lives at \`.agentsam/data/agentsam.sqlite\` and is initialized from \`db/schema.sql\`.
+
+When you're intentionally ready to add cloud infrastructure:
 
 \`\`\`bash
 npx agentsam deploy
@@ -200,7 +206,11 @@ npx agentsam deploy
 .dev.vars
 dist/
 .wrangler/
+.agentsam/data/
+.agentsam/tui-venv/
 *.db
+*.sqlite
+*.sqlite-*
 `,
     },
     {
@@ -212,25 +222,22 @@ dist/
           type: 'module',
           private: true,
           scripts: {
-            dev: 'concurrently -k "npm run dev:worker" "npm run dev:ui"',
-            'dev:worker': 'wrangler dev --local --port 8787',
-            'dev:ui': 'vite',
-            'dev:node': 'node --watch src/dev-server.js',
-            deploy: 'wrangler deploy',
-            smoke: 'node ./scripts/smoke.mjs',
-            'db:migrate': 'wrangler d1 migrations apply DB --local',
-            'start:pty': 'agentsam start-local',
+            dev: 'node --env-file=.env --watch src/dev-server.js',
+            start: 'node --env-file=.env src/dev-server.js',
+            smoke: 'node --env-file=.env ./scripts/smoke.mjs',
+            status: 'agentsam status',
+            'db:init': 'agentsam db init',
+            'db:status': 'agentsam db status',
+            pty: 'agentsam start-local',
+            tui: 'agentsam tui',
+            'tui:rich': 'agentsam tui rich',
+            deploy: 'agentsam deploy',
+          },
+          engines: {
+            node: '>=22.5.0',
           },
           dependencies: {
             '@inneranimalmedia/agentsam-sdk': sdkRange,
-            react: '^19.0.0',
-            'react-dom': '^19.0.0',
-          },
-          devDependencies: {
-            wrangler: '^4.0.0',
-            vite: '^6.0.0',
-            '@vitejs/plugin-react': '^4.0.0',
-            concurrently: '^9.0.0',
           },
         },
         null,
@@ -239,134 +246,173 @@ dist/
     },
     {
       path: '.env',
-      content: `VITE_PROJECT_NAME=${projectName}
-VITE_LANE_KEY=${laneKey}
-VITE_AGENT=${agent}
+      content: `AGENTSAM_PROJECT=${projectName}
+AGENTSAM_LANE=${laneKey}
+AGENTSAM_AGENT=${agent}
+AGENTSAM_DB=.agentsam/data/agentsam.sqlite
+PORT=8787
 `,
     },
     {
-      path: 'wrangler.toml',
-      content: `name = "${projectName}"
-main = "src/index.js"
-compatibility_date = "2026-06-27"
-
-[[d1_databases]]
-binding = "DB"
-database_name = "${projectName}-db"
-database_id = "local-dev"
-
-[dev]
-port = 8787
-local_protocol = "http"
+      path: '.env.example',
+      content: `AGENTSAM_PROJECT=${projectName}
+AGENTSAM_LANE=${laneKey}
+AGENTSAM_AGENT=${agent}
+AGENTSAM_DB=.agentsam/data/agentsam.sqlite
+PORT=8787
 `,
     },
     {
-      path: 'migrations/0001_agentsam_core.sql',
+      path: 'db/schema.sql',
       content: `${migration}\n`,
     },
     {
-      path: 'src/index.js',
+      path: 'src/agent.js',
       content: `import { AgentSam } from '@inneranimalmedia/agentsam-sdk';
 
-export default {
-  async fetch(request, env, ctx) {
-    const agent = new AgentSam({
-      env,
-      ctx,
-      project: '${projectName}',
-      lane: '${laneKey}',
-      agent: '${agent}',
-    });
-    return agent.handle(request);
-  },
-};
+export function createAgent(options = {}) {
+  return new AgentSam({
+    env: options.env || {},
+    project: options.project || process.env.AGENTSAM_PROJECT || '${projectName}',
+    lane: options.lane || process.env.AGENTSAM_LANE || '${laneKey}',
+    agent: options.agent || process.env.AGENTSAM_AGENT || '${agent}',
+  });
+}
 `,
     },
     {
       path: 'src/dev-server.js',
-      content: `/**
- * Plain Node dev server — no Cloudflare account required.
- * Use when wrangler is unavailable: npm run dev:node
- */
-import { createServer } from 'node:http';
-import { AgentSam } from '@inneranimalmedia/agentsam-sdk';
-
-const app = new AgentSam({
-  project: '${projectName}',
-  lane: '${laneKey}',
-  agent: '${agent}',
-});
+      content: `import { createServer } from 'node:http';
+import { createLocalSqliteDatabase } from '@inneranimalmedia/agentsam-sdk/local/sqlite';
+import { createAgent } from './agent.js';
 
 const port = Number(process.env.PORT || 8787);
+const DB = await createLocalSqliteDatabase(
+  process.env.AGENTSAM_DB || '.agentsam/data/agentsam.sqlite',
+);
+const app = createAgent({ env: { DB } });
 
-createServer(async (req, res) => {
-  const url = \`http://127.0.0.1\${req.url || '/'}\`;
+const server = createServer(async (req, res) => {
+  const url = \`http://127.0.0.1:\${port}\${req.url || '/'}\`;
   const headers = new Headers();
-  for (const [k, v] of Object.entries(req.headers)) {
-    if (v != null) headers.set(k, Array.isArray(v) ? v.join(', ') : v);
+  for (const [key, value] of Object.entries(req.headers)) {
+    if (value != null) headers.set(key, Array.isArray(value) ? value.join(', ') : value);
   }
+
   let body;
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
     body = Buffer.concat(chunks);
   }
-  const response = await app.handle(new Request(url, { method: req.method, headers, body }));
-  res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
-  res.end(Buffer.from(await response.arrayBuffer()));
-}).listen(port, '127.0.0.1', () => {
-  console.log(\`Agent Sam dev server http://127.0.0.1:\${port}\`);
+
+  try {
+    const response = await app.handle(new Request(url, { method: req.method, headers, body }));
+    res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
+    res.end(Buffer.from(await response.arrayBuffer()));
+  } catch (error) {
+    res.writeHead(500, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ ok: false, error: error?.message || String(error) }));
+  }
 });
+
+server.listen(port, '127.0.0.1', () => {
+  console.log(\`Agent Sam local API  http://127.0.0.1:\${port}\`);
+  console.log(\`SQLite               \${process.env.AGENTSAM_DB || '.agentsam/data/agentsam.sqlite'}\`);
+});
+
+function shutdown() {
+  server.close(() => {
+    DB.close();
+    process.exit(0);
+  });
+}
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
 `,
     },
     {
       path: 'scripts/smoke.mjs',
-      content: `import { AgentSam } from '@inneranimalmedia/agentsam-sdk';
+      content: `import { createLocalSqliteDatabase } from '@inneranimalmedia/agentsam-sdk/local/sqlite';
+import { createAgent } from '../src/agent.js';
 
-const app = new AgentSam({ project: '${projectName}', lane: '${laneKey}', agent: '${agent}' });
-const res = await app.handle(new Request('https://example.com/api/health'));
-const data = await res.json();
+const DB = await createLocalSqliteDatabase(
+  process.env.AGENTSAM_DB || '.agentsam/data/agentsam.sqlite',
+);
+const app = createAgent({ env: { DB } });
 
-if (!data.ok) {
-  console.error(data);
-  process.exit(1);
+const health = await app.handle(new Request('http://127.0.0.1:8787/api/health'));
+const healthData = await health.json();
+if (!healthData.ok) throw new Error('health check failed');
+
+const created = await app.handle(
+  new Request('http://127.0.0.1:8787/api/agentsam/session', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ goal: 'prove local persistence' }),
+  }),
+);
+const createdData = await created.json();
+if (!createdData.ok || !createdData.session?.id) throw new Error('session create failed');
+
+const loaded = await app.handle(
+  new Request(\`http://127.0.0.1:8787/api/agentsam/session/\${createdData.session.id}\`),
+);
+const loadedData = await loaded.json();
+if (!loadedData.ok || loadedData.session?.id !== createdData.session.id) {
+  throw new Error('local SQLite persistence check failed');
 }
 
-console.log('AgentSam smoke test passed:', data);
+DB.close();
+console.log('Agent Sam local smoke passed');
+console.log('  health   ok');
+console.log('  sqlite   session persisted');
+console.log('  project  ${projectName}');
 `,
     },
     {
       path: 'README.md',
       content: `# ${projectName}
 
-Built locally with [Agent Sam SDK](https://inneranimalmedia.com) — **${laneLabel}** lane, \`${agent}\` agent.
+Agent Sam local project — **${laneLabel}** lane, \`${agent}\` agent.
 
-## Gorilla Mode (default UI)
+## Start locally
 
 \`\`\`bash
 npm install
 npm run smoke
-npm run dev                 # Worker :8787 + Vite :5173
+npm run status
+npm run dev
 \`\`\`
 
-Open **http://localhost:5173** — pixel Gorilla shell. Live \`/health\`, \`/samiam\`, and demo scenarios proxy to your local Worker.
+Local API: **http://127.0.0.1:8787**
+
+Local state:
+
+- Git repository initialized by \`agentsam init\`
+- \`.env\` for local configuration
+- SQLite at \`.agentsam/data/agentsam.sqlite\`
+- schema at \`db/schema.sql\`
+
+## Agent Sam terminal experience
 
 \`\`\`bash
-npx agentsam start-local    # optional — local PTY on :3099
-npm run db:migrate          # apply local D1 schema
+npm run tui                  # zero-dependency ANSI dashboard
+npm run tui:rich             # Python Rich dashboard if installed
+npm run tui:rich -- --install
+npm run pty                  # local PTY on ws://127.0.0.1:3099
+npm run db:status
 \`\`\`
 
-Everything works offline. No Cloudflare account required to start.
+No Worker or cloud account is required for local development.
 
-## Graduate to cloud
+## Graduate intentionally
 
 \`\`\`bash
-npx agentsam deploy
+npm run deploy
 \`\`\`
 
-Cloudflare OAuth is prompted **only** when you deploy — not at init.
-
-Run target selected at init: **${runTarget}**
+Selected future deploy target: **${runTarget}**. Cloud-specific adapters and credentials belong to deploy time, not local init.
 `,
     },
   ];
@@ -393,11 +439,13 @@ export function buildLocalScaffoldMeta(body, sdkVersion = '1.5.1') {
     next_steps: [
       'npm install',
       'npm run smoke',
+      'npm run status',
       'npm run dev',
-      'Open http://localhost:5173 — Gorilla Mode UI',
-      'npm run db:migrate',
-      'Optional: npx agentsam start-local',
-      'When ready: npx agentsam deploy',
+      'npm run tui',
+      'npm run db:status',
+      'Optional: npm run tui:rich -- --install',
+      'Optional: npm run pty',
+      'When ready for cloud: npm run deploy',
     ],
   };
 }

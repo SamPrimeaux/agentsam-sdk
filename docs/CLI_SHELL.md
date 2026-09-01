@@ -1,90 +1,120 @@
-# Agent Sam SDK — CLI Shell Experience
+# Agent Sam SDK — terminal experience
 
-The SDK ships two complementary surfaces:
+The Agent Sam terminal is a presentation layer over real local capabilities. It is not a second execution engine and it is not tied to Gorilla, Cloudflare, or a particular model provider.
 
-1. **`agentsam init`** — scaffold Workers + D1 + agent loop (resell/scale path)
-2. **Gorilla Shell** (`examples/gorilla-shell/`) — game-feel terminal UX layer (unique install experience)
+## Default experience
 
-Gorilla Mode was consolidated from the standalone [InnerAnimal/gorilla-mode](https://github.com/InnerAnimal/gorilla-mode) experiment into this repo. **Do not start new work in gorilla-mode** — extend here.
+```bash
+agentsam tui
+```
 
----
+Runs the bundled zero-dependency Node/ANSI renderer. This is the default because it is available anywhere the npm CLI runs.
 
-## Why a game shell?
+```bash
+agentsam tui rich
+agentsam tui rich --install
+```
 
-Developers installing `@inneranimalmedia/agentsam-sdk` get:
+Runs the optional Python Rich renderer. `--install` creates an isolated `.agentsam/tui-venv` and installs Rich there; system Python is left alone.
 
-- Efficient tooling (`init`, future `deploy` / `status` / `logs`)
-- A **memorable CLI identity** — pixel HUD, slash commands, themed moods, deploy reactions
+```bash
+agentsam shell
+```
 
-The shell is not a toy terminal emulator. It is a **presentation layer** on real PTY + MCP + D1 tool execution — the same stack IAM runs in production.
-
----
+Shows the command catalog and local PTY / DB / TUI surfaces.
 
 ## Architecture
 
-```
-User
-  └─ agentsam shell (CLI) or embedded <AgentSamShell />
-       └─ Gorilla HUD (themes, sprite, quest log)
-            └─ xterm.js ↔ ExecOS / iam-pty WebSocket
-                 └─ Slash commands → SDK router → MCP / wrangler / D1
-```
+```text
+CLI command / execution state
+        |
+        +--> Node ANSI renderer        default, zero extra dependencies
+        |
+        +--> Python Rich renderer      optional high-fidelity live presentation
+        |
+        +--> browser shell-kit         reusable React components, separate surface
 
-| Layer | Location in SDK |
-|-------|-----------------|
-| Slash command registry | `src/lib/slash-commands.js` |
-| Phase 0 visual prototype | `examples/gorilla-shell/App.tsx` |
-| Scaffold + Worker agent | `src/lib/scaffold.js`, `src/AgentSam.js` |
-| Future PTY bridge | `src/lib/shell/` (Phase 1) |
+Capabilities underneath presentation:
 
----
-
-## Phases
-
-See `SHELL_PHASES` in `src/lib/slash-commands.js`. Current status:
-
-| Phase | Status |
-|-------|--------|
-| 0 — Visual prototype | **Complete** (demo scenarios, themes, sprite) |
-| 1 — Real PTY | **Next** — wire to ExecOS / `terminal.inneranimalmedia.com` |
-| 2 — HUD (quest log, tool gate, XP) | Planned |
-| 3 — Buddy (`/buddy`, MCP stream) | Planned |
-| 4 — Dashboard embed | Planned |
-| 5 — Standalone PWA as SDK default | Planned |
-
----
-
-## Run the prototype
-
-```bash
-cd examples/gorilla-shell
-npm install
-npm run dev
+Git context
+Local SQLite
+Local PTY
+Agent/tool execution
+Logs/events
+Deploy adapters
 ```
 
-Deploy preview (Cloudflare Pages):
+Presentation consumes state. It does not authorize tools, decide policy, own databases, or execute cloud operations by itself.
 
-```bash
-npm run build
-npx wrangler pages deploy dist
+## Local project contract
+
+`agentsam init` creates:
+
+```text
+.git/
+.env
+.env.example
+agentsam.config.js
+.agentsam/config.json
+.agentsam/data/agentsam.sqlite
+db/schema.sql
+src/agent.js
+src/dev-server.js
+scripts/smoke.mjs
 ```
 
----
+There is no Worker requirement in this contract.
 
-## Platform linkage (IAM)
+`src/agent.js` is runtime-neutral. The Node development adapter injects local SQLite. A cloud adapter may later inject D1 or another compatible store.
 
-| Shell feature | IAM SSOT |
-|---------------|----------|
-| PTY sessions | `terminal_connections` + ExecOS |
-| Tool execution | `agentsam_tools` → catalog executor |
-| Buddy / MCP | `mcp.inneranimalmedia.com` |
-| XP (future) | `gorilla_xp` D1 table |
-| Themes (future) | user preferences / `cms_themes` pattern |
+## TUI ownership
 
----
+| Surface | Location | Role |
+|---|---|---|
+| ANSI | `examples/agentsam-tui-ansi.mjs` | npm-native default terminal renderer |
+| Rich | `python/agentsam_sdk/tui/` | optional richer cards, progress, events, logs |
+| shell-kit | `packages/agentsam-shell-kit/` | reusable React/browser work-surface components |
+| Gorilla | `templates/gorilla-shell/` | visual/theme experiment only |
 
-## Repo history
+Gorilla is intentionally not scaffolded by default.
 
-- **Before:** `InnerAnimal/gorilla-mode` (Phase 0 only, single-file React artifact)
-- **Now:** `SamPrimeaux/agentsam-sdk/examples/gorilla-shell`
-- **D1 project:** `proj_agentsam_sdk` (replaces `proj_gorilla_mode` on the IAM projects grid)
+## Commands
+
+```text
+/help       show commands
+/status     local project / DB / Git / PTY health
+/context    current repository + revision
+/pwd        working directory
+/cd         change directory
+/git        Git operations
+/db         local SQLite
+/agent      invoke configured Agent Sam
+/logs       local execution events
+/tui        terminal presentation
+/deploy     intentionally add a cloud adapter
+```
+
+Provider-specific commands such as `/claude` or `/codex` are not part of the generic shell contract. Model routing belongs behind Agent Sam.
+
+Workspace switching is not required for local tooling. Authenticated user/session identity is the security boundary; workspace/project labels are organizational metadata.
+
+## Cloud graduation
+
+Cloud infrastructure is generated when requested, not during local init.
+
+```text
+local project
+   |
+   +--> agentsam deploy --target cloudflare
+           |
+           +--> src/cloudflare-worker.js
+           +--> wrangler.toml
+           +--> migrations/0001_agentsam_core.sql
+           +--> provisioned account bindings
+```
+
+The same `src/agent.js` remains application authority.
+
+## Design rule
+
+A CLI operation should be understandable in plain text first, then enhanced by ANSI/Rich presentation. CI and agent capture must always have a deterministic non-interactive path (`--check`, JSON receipts where applicable).
