@@ -2,12 +2,11 @@
 
 import pkg from '../package.json' with { type: 'json' };
 import readline from 'readline';
-import { spawn } from 'node:child_process';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { buildLocalScaffoldMeta, LANE_KEYS, RUN_TARGETS } from './lib/local-scaffold.js';
 import { writeScaffoldFiles } from './lib/write-files.js';
-import { copyGorillaTemplate } from './lib/gorilla-template.js';
+import { initializeGitRepository } from './lib/init-git.js';
+import { initializeLocalSqlite } from './local/sqlite.js';
 import { printContextSummary } from './lib/detect-context.js';
 import { promptOptionalByokKeys } from './lib/prompt-byok.js';
 import { runStartLocal } from './commands/start-local.js';
