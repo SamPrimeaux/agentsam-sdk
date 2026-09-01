@@ -9,6 +9,7 @@
     "./git-context": "./src/lib/git-context.js",
     "./bridge-client": "./src/lib/bridge-client.js",
     "./local/sqlite": "./src/local/sqlite.js",
+    "./dockerize": "./src/lib/dockerize.js",
     "./identity": "./packages/identity/src/index.js",
     "./identity/providers": "./packages/identity/src/providers/index.js",
     "./identity/providers/google": "./packages/identity/src/providers/google/index.js",
@@ -75,6 +76,7 @@
   },
   "dependencies": {
     "@clack/prompts": "^1.7.0",
+    "@inneranimalmedia/agentsam-sdk": "^2.0.0-alpha.identity.12",
     "node-pty": "^1.0.0",
     "picocolors": "^1.1.1",
     "ws": "^8.18.0"
