@@ -257,23 +257,7 @@ PORT=8787
 `,
     },
     {
-      path: 'wrangler.toml',
-      content: `name = "${projectName}"
-main = "src/index.js"
-compatibility_date = "2026-06-27"
-
-[[d1_databases]]
-binding = "DB"
-database_name = "${projectName}-db"
-database_id = "local-dev"
-
-[dev]
-port = 8787
-local_protocol = "http"
-`,
-    },
-    {
-      path: 'migrations/0001_agentsam_core.sql',
+      path: 'db/schema.sql',
       content: `${migration}\n`,
     },
     {
