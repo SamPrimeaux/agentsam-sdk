@@ -170,24 +170,28 @@ export function buildLocalScaffoldFiles({
     },
     {
       path: '.agentsam/start-local.md',
-      content: `# Local terminal (no Cloudflare tunnel)
+      content: `# Agent Sam local project
 
-Agent Sam runs a PTY on **your machine** — no accounts, no cloudflared, no IAM login required.
+Local is the default authority. No Worker, Cloudflare account, tunnel, or hosted database is required.
 
 \`\`\`bash
-# Terminal 1 — local PTY (Agent Sam shell bridge)
-npx agentsam start-local
-
-# Terminal 2 — Gorilla Mode UI + local Worker API
+npm install
+npm run smoke
 npm run dev
-npm run db:migrate   # first time only
 \`\`\`
 
-Open **http://localhost:5173** — pixel Gorilla shell proxies \`/api\` → Worker on :8787.
+Useful local surfaces:
 
-PTY listens on \`ws://127.0.0.1:3099\`. Health: \`curl http://127.0.0.1:3099/health\`
+\`\`\`bash
+npm run db:status
+npm run tui
+npm run tui:rich -- --install   # optional Rich UI in isolated .agentsam venv
+npx agentsam start-local        # PTY on ws://127.0.0.1:3099
+\`\`\`
 
-When you're ready to ship to Cloudflare or GCP:
+The local SQLite database lives at \`.agentsam/data/agentsam.sqlite\` and is initialized from \`db/schema.sql\`.
+
+When you're intentionally ready to add cloud infrastructure:
 
 \`\`\`bash
 npx agentsam deploy
