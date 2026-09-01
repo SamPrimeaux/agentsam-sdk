@@ -37,6 +37,7 @@ function printHelp() {
   Usage:
     agentsam context [--json]  Git repo/revision + bridge configuration from any repo
     agentsam init              Scaffold local Git + .env + SQLite + Node agent
+    agentsam status [--json]   Live local Git + DB + API + PTY status
     agentsam db init|status    Manage the project-local SQLite database
     agentsam tui               Zero-dependency ANSI Agent Sam dashboard
     agentsam tui rich          Optional Python Rich dashboard (--install for local venv)
