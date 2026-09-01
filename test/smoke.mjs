@@ -65,6 +65,9 @@ printContextSummary({
 assert.deepEqual(missingForInit({ iam: { ready: false } }, '', { runTarget: 'local' }), []);
 assert.deepEqual(missingForInit({ iam: { ready: false } }, '', { runTarget: 'cloudflare' }), ['iam']);
 
+assert.equal(sdkDependencySpec('2.0.0-alpha.identity.12'), '2.0.0-alpha.identity.12');
+assert.equal(sdkDependencySpec('2.1.3'), '^2.1.3');
+
 const localMeta = buildLocalScaffoldMeta({ projectName: 'demo', lane: 'cms', runTarget: 'local' });
 assert.equal(localMeta.laneKey, 'cms');
 assert.ok(localMeta.files.some((f) => f.path === '.agentsam/start-local.md'));
