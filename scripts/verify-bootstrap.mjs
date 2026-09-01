@@ -34,8 +34,10 @@ try {
   const generatedPackage = JSON.parse(fs.readFileSync(path.join(project, 'package.json'), 'utf8'));
   const config = JSON.parse(fs.readFileSync(path.join(project, '.agentsam', 'config.json'), 'utf8'));
 
-  assert.equal(generatedPackage.scripts?.smoke, 'node ./scripts/smoke.mjs');
-  assert.equal(generatedPackage.scripts?.['start:pty'], 'agentsam start-local');
+  assert.equal(generatedPackage.scripts?.smoke, 'node --env-file=.env ./scripts/smoke.mjs');
+  assert.equal(generatedPackage.scripts?.pty, 'agentsam start-local');
+  assert.equal(generatedPackage.scripts?.['db:status'], 'agentsam db status');
+  assert.equal(generatedPackage.scripts?.tui, 'agentsam tui');
   assert.equal(
     generatedPackage.dependencies?.['@inneranimalmedia/agentsam-sdk'],
     sdkPackage.version,
