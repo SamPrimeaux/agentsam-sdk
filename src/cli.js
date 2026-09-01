@@ -35,14 +35,16 @@ function printHelp() {
 
   Usage:
     agentsam context [--json]  Git repo/revision + bridge configuration from any repo
-    agentsam init              Local-first project scaffold (default: localhost, no accounts)
+    agentsam init              Scaffold local Git + .env + SQLite + Node agent
+    agentsam db init|status    Manage the project-local SQLite database
+    agentsam tui               Zero-dependency ANSI Agent Sam dashboard
+    agentsam tui rich          Optional Python Rich dashboard (--install for local venv)
     agentsam start-local       Local PTY on ws://127.0.0.1:3099 (no tunnel, no Cloudflare)
-    agentsam tunnel            Expose local PTY to IAM (cloudflared + register)
+    agentsam shell             Terminal commands + presentation catalog
+    agentsam tunnel            Explicitly expose local PTY when remote access is wanted
     agentsam deploy            Graduate to Cloudflare / GCP when ready
-    agentsam identity preview  Local auth portal (IAM HTML shells, stub APIs)
-    agentsam identity init     Scaffold app/frontend + backend + D1 migrations
-    agentsam shell             Shell lab + slash command catalog
-    agentsam shell demo        Run zero-dependency ANSI shell preview locally
+    agentsam identity preview  Local auth portal preview
+    agentsam identity init     Add reusable identity package surfaces
     agentsam --version
     agentsam --help
 
