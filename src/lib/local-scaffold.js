@@ -434,10 +434,11 @@ export function buildLocalScaffoldMeta(body, sdkVersion = '1.5.1') {
       'npm install',
       'npm run smoke',
       'npm run dev',
-      'Open http://localhost:5173 — Gorilla Mode UI',
-      'npm run db:migrate',
-      'Optional: npx agentsam start-local',
-      'When ready: npx agentsam deploy',
+      'npm run tui',
+      'npm run db:status',
+      'Optional: npm run tui:rich -- --install',
+      'Optional: npm run pty',
+      'When ready for cloud: npm run deploy',
     ],
   };
 }
