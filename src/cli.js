@@ -2,6 +2,9 @@
 
 import pkg from '../package.json' with { type: 'json' };
 import readline from 'readline';
+import { spawn } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { buildLocalScaffoldMeta, LANE_KEYS, RUN_TARGETS } from './lib/local-scaffold.js';
 import { writeScaffoldFiles } from './lib/write-files.js';
 import { copyGorillaTemplate } from './lib/gorilla-template.js';
