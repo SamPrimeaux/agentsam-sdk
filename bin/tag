@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# ============================================================================
+# bin/tag  (agentsam-sdk)
+#
+# WHAT THIS IS:
+#   Cross-repo hashtag ledger. Machine-random identifiers (commit SHAs,
+#   branch suffixes like "8edb", patch filenames, D1 UUIDs) are impossible
+#   to remember. This maps a human hashtag -> whatever the real ref is,
+#   across ALL your repos, in one file: tags/registry.json (in this repo,
+#   since agentsam-sdk is the one thing every project already touches).
+#
+#   Convention: #<repo-shorthand>-<theme>[-<seq>], lowercase, hyphenated.
+#   e.g. #remix-workmode, #sdk-allowscripts, #workmode-promote
+#
+# USAGE:
+#   bin/tag add "#name" --repo <repo> --ref <sha|branch|patch|url> --note "..."
+#   bin/tag find "#name"        (substring match on tag, repo, or note)
+#   bin/tag list                (everything, most recent first)
+#   bin/tag list --repo <repo>
+# ============================================================================
+set -euo pipefail
+
+SDK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REGISTRY="$SDK_ROOT/tags/registry.json"
+mkdir -p "$(dirname "$REGISTRY")"
+[[ -f "$REGISTRY" ]] || echo "[]" > "$REGISTRY"
+
+norm_tag() {
+  local t="$1"
+  [[ "$t" == \#* ]] || t="#$t"
+  echo "$t" | tr '[:upper:]' '[:lower:]'
+}
+
+cmd_add() {
+  local tag="" repo="" ref="" note=""
+  tag="$(norm_tag "$1")"; shift
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --repo) repo="$2"; shift 2 ;;
+      --ref)  ref="$2"; shift 2 ;;
+      --note) note="$2"; shift 2 ;;
+      *) echo "Unknown arg: $1" >&2; exit 1 ;;
+    esac
+  done
+  local date
+  date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  local tmp
+  tmp="$(mktemp)"
+  jq --arg tag "$tag" --arg repo "$repo" --arg ref "$ref" --arg note "$note" --arg date "$date" \
+    '. + [{tag:$tag, repo:$repo, ref:$ref, note:$note, date:$date}]' \
+    "$REGISTRY" > "$tmp" && mv "$tmp" "$REGISTRY"
+  echo "added $tag"
+}
+
+cmd_find() {
+  local q
+  q="$(echo "${1:-}" | tr '[:upper:]' '[:lower:]')"
+  jq -r --arg q "$q" '
+    [.[] | select(
+      (.tag | ascii_downcase | contains($q)) or
+      (.repo | ascii_downcase | contains($q)) or
+      (.note | ascii_downcase | contains($q))
+    )] | sort_by(.date) | reverse | .[] |
+    "\(.date)  \(.tag)  [\(.repo)]  \(.ref)\n    \(.note)\n"
+  ' "$REGISTRY"
+}
+
+cmd_list() {
+  local repo_filter=""
+  if [[ "${1:-}" == "--repo" ]]; then repo_filter="${2:-}"; fi
+  jq -r --arg repo "$repo_filter" '
+    (if $repo == "" then . else [.[] | select(.repo == $repo)] end)
+    | sort_by(.date) | reverse | .[] |
+    "\(.date)  \(.tag)  [\(.repo)]  \(.ref)\n    \(.note)\n"
+  ' "$REGISTRY"
+}
+
+case "${1:-list}" in
+  add)  shift; cmd_add "$@" ;;
+  find) shift; cmd_find "$@" ;;
+  list) shift; cmd_list "$@" ;;
+  *) echo "Usage: $0 {add \"#tag\" --repo R --ref REF --note N|find \"#tag\"|list [--repo R]}" >&2; exit 1 ;;
+esac

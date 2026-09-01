@@ -18,6 +18,7 @@ import { runContext } from './commands/context.js';
 import { runDb } from './commands/db.js';
 import { runStatus } from './commands/status.js';
 import { runTui } from './commands/tui.js';
+import { runDockerize } from './commands/dockerize.js';
 import { SLASH_COMMANDS, SHELL_PHASES } from './lib/slash-commands.js';
 
 const VERSION = pkg.version;
@@ -45,6 +46,7 @@ function printHelp() {
     agentsam shell             Terminal commands + presentation catalog
     agentsam tunnel            Explicitly expose local PTY when remote access is wanted
     agentsam deploy            Graduate to Cloudflare / GCP when ready
+    agentsam dockerize         Generate + build + run a fresh, ephemeral local Docker container (--list, --stop, --timeout)
     agentsam identity preview  Local auth portal preview
     agentsam identity init     Add reusable identity package surfaces
     agentsam --version
@@ -289,6 +291,13 @@ if (command === '--version' || command === '-v') {
 } else if (command === 'deploy') {
   try {
     await runDeploy(parseDeployArgs(rest));
+  } catch (e) {
+    console.error(`\n  ✗ ${e?.message || e}\n`);
+    process.exit(1);
+  }
+} else if (command === 'dockerize') {
+  try {
+    await runDockerize(rest);
   } catch (e) {
     console.error(`\n  ✗ ${e?.message || e}\n`);
     process.exit(1);
