@@ -24,6 +24,7 @@ export function parseDockerizeArgs(argv) {
     timeoutSeconds: undefined,
     list: false,
     stopName: '',
+    repositories: [],
   };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
@@ -38,13 +39,19 @@ export function parseDockerizeArgs(argv) {
     else if (a === '--timeout') opts.timeoutSeconds = Number(argv[++i]) || undefined;
     else if (a === '--list') opts.list = true;
     else if (a === '--stop') opts.stopName = argv[++i] || '';
+    else if (a === '--repository') opts.repositories.push(argv[++i] || '');
+    else if (a === '--volume') opts.volume = argv[++i] || '';
+    else if (a === '--memory') opts.memory = argv[++i] || '';
+    else if (a === '--cpus') opts.cpus = argv[++i] || '';
+    else if (a === '--no-register-tag') opts.registerTag = false;
+    else throw new Error(`Unknown dockerize option: ${a}`);
   }
   return opts;
 }
 
 export function printDockerizeHelp() {
   console.log(`
-  agentsam dockerize — generate + build + run a fresh, ephemeral local Docker container
+  agentsam dockerize — generate, build, and run a local Docker container
 
   Usage:
     agentsam dockerize --type <static|vite_react|node_service|wrangler_dev> [options]
@@ -63,6 +70,11 @@ export function printDockerizeHelp() {
     --timeout <secs>  Auto-stop the container after N seconds (process stays alive until then)
     --list            Show every agentsam-managed container (running or stopped), any project
     --stop <name>     Stop a running container by name
+    --repository <alias=path> Read-only repository for knowledge_service (repeatable)
+    --volume <name>   Persistent knowledge data volume (default: <name>-data)
+    --memory <size>   Memory cap (knowledge: 768m; other types: 512m)
+    --cpus <number>   CPU cap (default: 1)
+    --no-register-tag Skip the SDK tag ledger
 
   App types:
 ${DOCKER_APP_TYPES.map((t) => `    ${t.padEnd(14)} ${DOCKER_APP_TYPE_LABELS[t].label} — ${DOCKER_APP_TYPE_LABELS[t].sublabel}`).join('\n')}
@@ -75,6 +87,8 @@ ${DOCKER_APP_TYPES.map((t) => `    ${t.padEnd(14)} ${DOCKER_APP_TYPE_LABELS[t].l
   Every run is ephemeral by default: --rm + capped memory/cpu. Nothing auto-stops unless
   you pass --timeout — the container keeps running until you (or --timeout) stop it. Every
   run prints the exact stop command so nothing is ever silently left running.
+  knowledge_service is persistent: localhost only, restart unless-stopped, durable data
+  volume, read-only repository mounts, generated token, and no embedding calls by default.
   `);
 }
 
@@ -140,6 +154,11 @@ export async function runDockerize(argv) {
       noCache: opts.noCache,
       overwrite: opts.overwrite,
       timeoutSeconds: opts.timeoutSeconds,
+      repositories: opts.repositories,
+      volume: opts.volume,
+      memory: opts.memory,
+      cpus: opts.cpus,
+      registerTag: opts.registerTag,
       onData: (chunk) => process.stdout.write(chunk),
       onAutoStop: () => console.log(`\n  ⏱  --timeout reached — auto-stopped ${appSlug}\n`),
     });
@@ -172,6 +191,11 @@ export async function runDockerize(argv) {
     process.exit(1);
   }
   console.log(`  ✓ Running — http://localhost:${result.plan.hostPort}  (container: ${result.plan.slug})`);
+  if (result.tokenFile) {
+    console.log(`  Service token file: ${result.tokenFile} (value hidden)`);
+    console.log(`  Persistent data volume: ${result.volume}`);
+    console.log('  Embeddings disabled. Submit scoped indexing jobs through /v1/jobs.');
+  }
 
   if (result.tagRegistration?.ok) {
     console.log(`  ✓ Registered ${result.plan.hashtag} in the cross-repo tag ledger`);

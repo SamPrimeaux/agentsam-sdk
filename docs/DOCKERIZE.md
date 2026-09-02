@@ -1,5 +1,8 @@
 # agentsam dockerize
 
+For persistent background indexing, use the [`knowledge_service` preset](knowledge-service.md).
+It adds durable jobs, read-only repository mounts, a localhost API, and a named data volume.
+
 Generate + build + run a fresh, ephemeral local Docker container for any prototype — no
 account, no metered hosting, works fully offline once images are cached.
 

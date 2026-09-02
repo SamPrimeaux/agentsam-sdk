@@ -24,6 +24,8 @@ try {
   const installed = path.join(consumer, 'node_modules/@inneranimalmedia/agentsam-sdk/src/cli.js');
   const exported = run(process.execPath, ['--input-type=module', '-e', 'import {runIndex, KnowledgeClient} from "@inneranimalmedia/agentsam-sdk/knowledge"; console.log(typeof runIndex, typeof KnowledgeClient)'], consumer);
   assert.equal(exported.trim(), 'function function');
+  const clientExport = run(process.execPath, ['--input-type=module', '-e', 'import {createKnowledgeServiceClient} from "@inneranimalmedia/agentsam-sdk/knowledge-service-client"; console.log(typeof createKnowledgeServiceClient)'], consumer);
+  assert.equal(clientExport.trim(), 'function');
   for (const name of ['warehouse', 'design-system']) {
     const repo = path.join(tmp, name); fs.mkdirSync(path.join(repo, 'lib'), { recursive: true });
     run('git', ['init', '-q'], repo);
@@ -39,6 +41,12 @@ try {
     cli(['repo', 'snapshot', '--save']);
     assert.equal(cli(['repo', 'compare']).counts.total_lines.delta, 1);
     assert.equal(cli(['repo', 'history']).length, 2);
+    run(process.execPath, [installed, 'dockerize', '--type', 'knowledge_service', '--name', `knowledge-${name}`, '--repository', `${name}=${repo}`, '--write-only'], repo);
+    const manifest = JSON.parse(fs.readFileSync(path.join(repo, '.agentsam/docker/index.json'), 'utf8'));
+    const build = Object.values(manifest)[0];
+    assert.ok(fs.existsSync(path.join(path.dirname(build.dockerfilePath), 'context/package-lock.json')));
+    assert.ok(fs.existsSync(path.join(path.dirname(build.dockerfilePath), 'context/src/knowledge/service/server.js')));
+    assert.equal(fs.existsSync(path.join(path.dirname(build.dockerfilePath), 'context/lib/task.ts')), false);
   }
   console.log(`verify-knowledge-package OK: installed ${packed.filename}; two independent repositories, retrieval and saved evolution`);
 } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
