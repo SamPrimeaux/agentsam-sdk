@@ -78,6 +78,34 @@ See [DEVELOPMENT.md](./DEVELOPMENT.md) for linking the SDK into Inner Animal Med
 
 ---
 
+## Mini gadgets and quick previews
+
+```bash
+agentsam mini focus-timer --open
+agentsam mini landing --template page
+agentsam mini json-viewer --template data
+agentsam mini sketch --write-only
+agentsam mini preview ./sketch
+```
+
+A mini is a small folder of HTML, CSS, and JavaScript with no install step. Previews run locally in the foreground, stop with Ctrl+C, and automatically close after 20 minutes. Files remain for reuse. Use `--timeout <seconds>` to change the lifetime. See [Mini](docs/MINI.md) for starters and options.
+
+---
+
+## Merkle integrity and tree explorer
+
+```bash
+agentsam merkle root .
+agentsam merkle snapshot .
+agentsam merkle verify .agentsam/merkle.json --tui
+agentsam merkle diff ./copy-a ./copy-b --json
+agentsam tui merkle .
+```
+
+Deterministic SHA-256 file trees work with any directory. Save a baseline, compare copies, or explore changed branches with keyboard navigation and live rescan. Only `snapshot` writes files. See [Merkle CLI](docs/MERKLE.md) for ignore rules, JSON output, and cross-machine verification.
+
+---
+
 ## Agent Sam terminal experience
 
 The CLI has two presentation layers over the same local tooling:

@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{NAME}} · AgentSam Mini</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body><main>
+  <div class="brand"><span class="dot"></span>AGENTSAM MINI</div>
+  <h1>Make a little sense of it.</h1><p>Paste JSON, explore the records, and find what matters. Everything stays in this tab.</p>
+  <section class="card" aria-label="JSON viewer"><label for="json">Sample JSON — replace with your own</label><textarea id="json" spellcheck="false">[
+  { "name": "First idea", "status": "ready" },
+  { "name": "Small experiment", "status": "draft" },
+  { "name": "Quick preview", "status": "ready" }
+]</textarea>
+    <label class="space" for="search">Filter records</label><input id="search" type="search" placeholder="Search values or keys">
+    <p id="status" class="status" role="status"></p><pre id="result" aria-label="Matching JSON"></pre>
+  </section><footer>{{NAME}} · Refreshing resets the sample.</footer>
+</main></body></html>

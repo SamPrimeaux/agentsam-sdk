@@ -18,6 +18,9 @@ import { runContext } from './commands/context.js';
 import { runDb } from './commands/db.js';
 import { runStatus } from './commands/status.js';
 import { runTui } from './commands/tui.js';
+import { runDockerize } from './commands/dockerize.js';
+import { runMini } from './commands/mini.js';
+import { runMerkle } from './commands/merkle.js';
 import { SLASH_COMMANDS, SHELL_PHASES } from './lib/slash-commands.js';
 
 const VERSION = pkg.version;
@@ -37,6 +40,8 @@ function printHelp() {
   Usage:
     agentsam context [--json]  Git repo/revision + bridge configuration from any repo
     agentsam init              Scaffold local Git + .env + SQLite + Node agent
+    agentsam mini <name>       Create and preview a small local gadget (--help for options)
+    agentsam merkle            File integrity, snapshots, comparisons, and TUI (--help)
     agentsam status [--json]   Live local Git + DB + API + PTY status
     agentsam db init|status    Manage the project-local SQLite database
     agentsam tui               Zero-dependency ANSI Agent Sam dashboard
@@ -45,6 +50,7 @@ function printHelp() {
     agentsam shell             Terminal commands + presentation catalog
     agentsam tunnel            Explicitly expose local PTY when remote access is wanted
     agentsam deploy            Graduate to Cloudflare / GCP when ready
+    agentsam dockerize         Generate + build + run a fresh, ephemeral local Docker container (--list, --stop, --timeout)
     agentsam identity preview  Local auth portal preview
     agentsam identity init     Add reusable identity package surfaces
     agentsam --version
@@ -304,6 +310,22 @@ if (command === '--version' || command === '-v') {
   } catch (e) {
     console.error(`\n  ✗ ${e?.message || e}\n`);
     process.exit(1);
+  }
+} else if (command === 'dockerize') {
+  try {
+    await runDockerize(rest);
+  } catch (e) {
+    console.error(`\n  ✗ ${e?.message || e}\n`);
+    process.exit(1);
+  }
+} else if (command === 'merkle') {
+  await runMerkle(rest);
+} else if (command === 'mini') {
+  try {
+    await runMini(rest);
+  } catch (e) {
+    console.error(`\n  ${e?.message || e}\n`);
+    process.exitCode = 1;
   }
 } else if (command === 'init') {
   const hasFlags = rest.some((a) => a.startsWith('--'));

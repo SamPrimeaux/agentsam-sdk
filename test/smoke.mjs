@@ -55,7 +55,11 @@ await assert.rejects(() => finalizeInboundOAuth({}, new Request('https://x'), {}
 assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/deploy'));
 assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/db'));
 assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/agent'));
-assert.equal(listSlashCommands({ lane: 'deploy' }).length, 1);
+assert.deepEqual(
+  listSlashCommands({ lane: 'deploy' }).map(({ cmd }) => cmd),
+  ['/help', '/deploy'],
+  'deploy lane keeps global help and excludes commands from other lanes',
+);
 
 printContextSummary({
   iam: { ready: true, source: 'sdk-token', detail: 'AGENTSAM_SDK_TOKEN' },
