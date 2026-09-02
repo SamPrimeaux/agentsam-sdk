@@ -23,6 +23,8 @@ import { runMini } from './commands/mini.js';
 import { runMerkle } from './commands/merkle.js';
 import { runSecurity } from './commands/security.js';
 import { SLASH_COMMANDS, SHELL_PHASES } from './lib/slash-commands.js';
+import fs from 'node:fs';
+import { repositoryRoot } from './knowledge/config.js';
 
 const VERSION = pkg.version;
 
@@ -40,7 +42,10 @@ function printHelp() {
 
   Usage:
     agentsam context [--json]  Git repo/revision + bridge configuration from any repo
-    agentsam init              Scaffold local Git + .env + SQLite + Node agent
+    agentsam init              Configure knowledge in this repo; --name scaffolds a new project
+    agentsam index             Plan/run incremental AST and optional embeddings (--help)
+    agentsam search "query"    Retrieve indexed code/text; --semantic enables embeddings
+    agentsam repo snapshot     Git composition/churn; --save retains observations
     agentsam mini <name>       Create and preview a small local gadget (--help for options)
     agentsam merkle            File integrity, snapshots, comparisons, and TUI (--help)
     agentsam security          Dependency scan, log triage, and verified repair (--help)
@@ -178,7 +183,7 @@ async function initInteractive(partial = {}) {
   }
   const laneKey = partial.lane
     ? partial.lane
-    : LANE_KEYS[await prompt.ask('  Pick lane [1-5]: ')]?.key || 'fullstack';
+    : LANE_KEYS[await prompt.ask('  Pick lane [1-5]: ')] || 'fullstack';
 
   if (!partial.runTarget) {
     console.log(`
@@ -331,13 +336,19 @@ if (command === '--version' || command === '-v') {
     console.error(`\n  ${e?.message || e}\n`);
     process.exitCode = 1;
   }
+} else if (['index', 'search', 'repo'].includes(command)) {
+  try {
+    const commands = await import('./commands/knowledge.js');
+    await ({ index: commands.runKnowledge, search: commands.runSearch, repo: commands.runRepository })[command](rest);
+  } catch (e) { console.error(e.message); process.exitCode = 1; }
 } else if (command === 'init') {
-  const hasFlags = rest.some((a) => a.startsWith('--'));
-  if (hasFlags) {
-    await initFromArgs(rest);
-  } else {
-    await initInteractive({});
-  }
+  try {
+    const existing = !rest.includes('--name') && (rest.includes('.') || rest.includes('--existing') || rest.includes('--cwd') || fs.existsSync(path.join(repositoryRoot(), '.git')));
+    if (existing) await (await import('./commands/knowledge.js')).runRepositoryInit(rest);
+    else if (rest.includes('--help') || rest.includes('-h')) printHelp();
+    else if (rest.some((a) => a.startsWith('--'))) await initFromArgs(rest);
+    else await initInteractive({});
+  } catch (e) { console.error(e.message); process.exitCode = 1; }
 } else if (command === 'identity') {
   const sub = rest[0];
   if (sub === 'preview') {

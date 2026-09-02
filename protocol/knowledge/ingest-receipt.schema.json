@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/knowledge/ingest-receipt.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "title": "IngestReceipt",
+  "required": [
+    "run_id",
+    "source_id",
+    "status"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string"
+    },
+    "source_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "queued",
+        "running",
+        "succeeded",
+        "partial",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "documents_seen": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "documents_indexed": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "chunks_indexed": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "chunks_deleted": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "metadata": {
+      "type": "object"
+    }
+  }
+}
