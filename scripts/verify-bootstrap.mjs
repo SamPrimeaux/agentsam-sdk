@@ -25,7 +25,79 @@ function run(args, options = {}) {
   return result;
 }
 
+async function verifyInteractiveInit(target, answer) {
+  const { spawn } = await import('node:child_process');
+  const calls = path.join(tmp, `credential-probes-${target}.log`);
+  const preload = path.join(tmp, `credential-probes-${target}.mjs`);
+  fs.writeFileSync(preload, `
+    import fs from 'node:fs';
+    import childProcess from 'node:child_process';
+    import { syncBuiltinESMExports } from 'node:module';
+    const record = (kind) => fs.appendFileSync(${JSON.stringify(calls)}, kind + '\\n');
+    childProcess.execFile = (command, ...args) => {
+      record(command);
+      const callback = args.at(-1);
+      queueMicrotask(() => callback(new Error('credential probe stubbed')));
+      return { kill() {} };
+    };
+    syncBuiltinESMExports();
+    globalThis.fetch = async () => {
+      record('fetch');
+      throw new Error('network probe stubbed');
+    };
+  `);
+  const questions = [
+    ['1) Project name:', `interactive-${target}`],
+    ['Pick lane [1-5]:', '1'],
+    ['Select [1]:', answer],
+  ];
+  let output = '';
+  let question = 0;
+  const child = spawn(process.execPath, ['--import', preload, cli, 'init'], {
+    cwd: tmp,
+    env: { ...process.env, AGENTSAM_SDK_TOKEN: '', NO_COLOR: '1' },
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+  await new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      child.kill('SIGKILL');
+      reject(new Error(`interactive ${target} init timed out: ${output}`));
+    }, 20_000);
+    child.on('error', (error) => { clearTimeout(timeout); reject(error); });
+    child.stderr.on('data', (chunk) => { output += chunk; });
+    child.stdin.on('error', (error) => { child.kill(); reject(error); });
+    child.stdout.on('data', (chunk) => {
+      output += chunk;
+      if (question < questions.length && output.includes(questions[question][0])) {
+        if (fs.existsSync(calls)) {
+          child.kill();
+          reject(new Error('init probed credentials before the deploy target was chosen'));
+          return;
+        }
+        child.stdin.write(questions[question++][1] + '\n');
+      }
+    });
+    child.on('close', (code) => {
+      clearTimeout(timeout);
+      if (code !== 0) reject(new Error(`interactive init exited ${code}: ${output}`));
+      else resolve();
+    });
+  });
+  assert.equal(question, questions.length, 'wizard must ask all three questions');
+  assert.equal(fs.existsSync(calls), target !== 'local',
+    'local init must skip credential probes; cloud targets retain deferred detection');
+  if (target === 'local') assert.ok(!output.includes('Detected credentials'));
+  const project = path.join(tmp, `interactive-${target}`);
+  const config = JSON.parse(fs.readFileSync(path.join(project, '.agentsam/config.json'), 'utf8'));
+  assert.equal(config.run_target, 'local');
+  assert.equal(config.deploy_target, target === 'local' ? null : target);
+  assert.ok(fs.existsSync(path.join(project, '.agentsam/data/agentsam.sqlite')));
+}
+
 try {
+  await verifyInteractiveInit('local', '1');
+  await verifyInteractiveInit('cloudflare', '2');
+  await verifyInteractiveInit('gcp', '3');
   run(['init', '--name', 'my-agent', '--lane', 'fullstack', '--run-target', 'local', '--yes'], {
     cwd: tmp,
   });
