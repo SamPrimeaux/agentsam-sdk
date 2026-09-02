@@ -1,9 +1,9 @@
 import { spawn } from 'node:child_process';
 
-export function runProcess(command, args, { cwd, timeoutMs = 300_000, signal, maxBytes = 8 * 1024 * 1024 } = {}) {
+export function runProcess(command, args, { cwd, timeoutMs = 300_000, signal, env = process.env, maxBytes = 8 * 1024 * 1024 } = {}) {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) return reject(new Error('Command cancelled'));
-    const child = spawn(command, args, { cwd, env: process.env, shell: false, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(command, args, { cwd, env, shell: false, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '', stderr = '', size = 0, failure, hardKill;
     function kill(sig) {
       try { process.kill(process.platform === 'win32' ? child.pid : -child.pid, sig); } catch { /* already exited */ }
