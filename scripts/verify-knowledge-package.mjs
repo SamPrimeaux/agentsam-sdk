@@ -13,7 +13,8 @@ try {
   const shipped = new Set(packed.files.map(f => f.path));
   for (const file of ['src/knowledge/engine.js', 'src/knowledge/stores/postgres.sql', 'protocol/knowledge/context-pack.schema.json', 'python/agentsam_sdk/repository/intelligence/__main__.py', 'docs/knowledge-branch-recovery.md']) assert.ok(shipped.has(file), `Missing packed asset: ${file}`);
   const consumer = path.join(tmp, 'consumer'); fs.mkdirSync(consumer);
-  fs.writeFileSync(path.join(consumer, 'package.json'), '{"private":true,"type":"module"}\n');
+  // Explicitly allow no lifecycle scripts, including when the parent npm exports allow-scripts.
+  fs.writeFileSync(path.join(consumer, 'package.json'), '{"private":true,"type":"module","allowScripts":{}}\n');
   run('npm', ['install', path.join(tmp, packed.filename), '--ignore-scripts', '--no-audit', '--no-fund', ...(process.argv.includes('--offline') ? ['--offline'] : [])], consumer);
   const installed = path.join(consumer, 'node_modules/@inneranimalmedia/agentsam-sdk/src/cli.js');
   const exported = run(process.execPath, ['--input-type=module', '-e', 'import {runIndex, KnowledgeClient} from "@inneranimalmedia/agentsam-sdk/knowledge"; console.log(typeof runIndex, typeof KnowledgeClient)'], consumer);
