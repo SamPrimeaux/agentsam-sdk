@@ -1,6 +1,7 @@
 name: AgentSam SDK CI
 
 on:
+  workflow_dispatch:
   pull_request:
   push:
     branches:
@@ -24,10 +25,19 @@ jobs:
           cache: npm
 
       - name: Install
-        run: npm ci
+        run: node src/security/cli.mjs run --json -- npm ci > "$RUNNER_TEMP/dependency-health.json"
 
       - name: Verify SDK
         run: npm run verify
 
       - name: CLI context smoke
         run: node src/cli.js context --json
+
+      - name: Dependency health receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-health
+          path: ${{ runner.temp }}/dependency-health.json
+          if-no-files-found: ignore
+          retention-days: 14

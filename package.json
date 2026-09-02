@@ -33,7 +33,8 @@
     "./identity/server/identity-service": "./packages/identity/src/server/identity-service.js",
     "./identity/adapters/cloudflare-d1": "./packages/identity/src/adapters/cloudflare-d1/index.js",
     "./identity/auth-portal/preview": "./packages/identity/scripts/preview-auth-portal.mjs",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./security": "./src/security/index.js"
   },
   "bin": {
     "agentsam": "src/cli.js",
@@ -71,7 +72,9 @@
     "publish:identity-alpha:dry-run": "bash scripts/publish-identity-alpha.sh --dry-run",
     "publish:identity-alpha:publish-only": "bash scripts/publish-identity-alpha.sh --publish-only",
     "preview:auth-portal": "node packages/identity/scripts/preview-auth-portal.mjs --open",
-    "prepublishOnly": "npm run verify"
+    "prepublishOnly": "npm run verify && npm run security:check",
+    "security:check": "node src/security/cli.mjs scan",
+    "security:repair": "node src/security/cli.mjs repair"
   },
   "engines": {
     "node": ">=22.5.0"

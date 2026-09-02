@@ -106,6 +106,17 @@ Deterministic SHA-256 file trees work with any directory. Save a baseline, compa
 
 ---
 
+## Dependency health and verified repair
+
+```bash
+agentsam security scan
+agentsam security check --log /tmp/deploy.log --json
+agentsam security run -- npm run build
+agentsam security repair --apply --verify verify
+```
+
+Scan exact npm lockfile versions against OSV, turn install/deployment warnings into structured actions, and prepare repairs in an isolated Git worktree. Repairs must pass installation, project verification, and a fresh scan. Offline or incomplete checks cannot report success. CI and alpha publishing enforce dependency health; weekly maintenance prepares verified repair branches and PRs when repository settings permit. See [Dependency health](docs/SECURITY.md) for coverage, exit codes, and automation behavior.
+
 ## Agent Sam terminal experience
 
 The CLI has two presentation layers over the same local tooling:
