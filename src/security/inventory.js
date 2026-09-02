@@ -54,6 +54,22 @@ export function collectNpmDependencies(projectRoot = process.cwd()) {
         const direct = !parent || !parent.includes('node_modules/');
         add(pkg.name || installedName, pkg, location, direct && installedName in declarations(owner));
       }
+      // Every required edge must resolve through the lock graph, including transitive edges.
+      const resolveEdge = (owner, name) => {
+        let at = owner;
+        for (;;) {
+          if (lock.packages[(at ? at + '/' : '') + 'node_modules/' + name]) return true;
+          if (!at) return false;
+          const parent = path.posix.dirname(at);
+          at = parent === '.' ? '' : parent;
+        }
+      };
+      for (const [location, pkg] of Object.entries(lock.packages)) {
+        for (const name of Object.keys({ ...pkg.dependencies, ...pkg.peerDependencies })) {
+          if (name in (pkg.optionalDependencies || {}) || pkg.peerDependenciesMeta?.[name]?.optional) continue;
+          if (!resolveEdge(location, name)) issues.push('Missing locked dependency edge: ' + (location || '.') + ' -> ' + name);
+        }
+      }
       // Missing direct locked entries must never look like an empty, clean graph.
       for (const [location, pkg] of Object.entries(lock.packages)) {
         if (location.includes('node_modules/')) continue;

@@ -172,3 +172,12 @@ test('workspace stale locks and external links are incomplete', async t => {
   f.write();
   assert.equal((await scanProjectSecurity({projectRoot:f.root,fetch:empty})).complete,false);
 });
+
+test('a missing transitive dependency cannot pass as complete coverage', async t => {
+  const f=fixture(t);
+  f.lock.packages['node_modules/lodash'].dependencies={missing:'^1.0.0'};
+  f.write();
+  const report=await scanProjectSecurity({projectRoot:f.root,fetch:empty});
+  assert.equal(report.complete,false);
+  assert.ok(report.issues.some(issue=>issue.includes('Missing locked dependency edge')));
+});
