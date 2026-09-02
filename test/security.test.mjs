@@ -26,6 +26,9 @@ test('npm v3 exact graph supports scoped aliases, nested versions and workspace 
   f.lock.packages['node_modules/alias']={name:'@scope/real',version:'1.2.3'};
   f.lock.packages['node_modules/lodash/node_modules/lodash']={version:'3.0.0'};
   f.lock.packages['node_modules/workspace']={link:true,resolved:'packages/workspace'};
+  f.lock.packages['packages/workspace']={name:'workspace',version:'1.0.0'};
+  fs.mkdirSync(path.join(f.root,'packages/workspace'),{recursive:true});
+  fs.writeFileSync(path.join(f.root,'packages/workspace/package.json'),JSON.stringify(f.lock.packages['packages/workspace']));
   f.write();
   const result=collectNpmDependencies(f.root);
   assert.equal(result.dependencies.length,3);
@@ -145,4 +148,27 @@ test('repair isolates lock updates, verifies and rescans while preserving source
   assert.ok(calls.some(a=>a[0]==='run'&&a[1]==='verify'));
   assert.ok(calls.filter(a=>a[0]!=='run').every(a=>a.includes('--ignore-scripts')));
   assert.ok(calls.every(a=>!a.includes('--force')));
+});
+
+test('repair retains failed candidates and never labels failed verification as fixed', async t => {
+  const f=fixture(t);
+  const g=(...args)=>execFileSync('git',args,{cwd:f.root,encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
+  g('init');g('add','.');g('-c','user.name=Test','-c','user.email=test@example.invalid','commit','-m','fixture');
+  const scan=options=>scanProjectSecurity({...options,fetch:async()=>Response.json({vulns:[advisory()]})});
+  const run=async(command,args,options)=>{
+    if(command!=='npm')return runProcess(command,args,options);
+    if(args[0]==='audit')return {code:0,stdout:JSON.stringify({audit:{}}),stderr:''};
+    return {code:args[0]==='run'?1:0,stdout:'',stderr:''};
+  };
+  const result=await repairProject({projectRoot:f.root,apply:true,scan,run});
+  f.cleanup.push(()=>{g('worktree','remove','--force',result.worktree);fs.rmSync(path.dirname(result.worktree),{recursive:true,force:true});});
+  assert.equal(result.verified,false);assert.equal(result.ok,false);
+  assert.equal(g('status','--porcelain'),'');
+  assert.match(result.reason,/command failed/);
+});
+test('workspace stale locks and external links are incomplete', async t => {
+  const f=fixture(t);
+  f.lock.packages['node_modules/external']={link:true,resolved:'../elsewhere'};
+  f.write();
+  assert.equal((await scanProjectSecurity({projectRoot:f.root,fetch:empty})).complete,false);
 });

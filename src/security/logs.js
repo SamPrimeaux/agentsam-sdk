@@ -14,7 +14,7 @@ export function triageLog(text) {
       add('deprecated', line, 'update-within-ranges', match && packageName(match[1]) ? { package: match[1], version: match[2].slice(0, 100) } : {});
     } else if (/EBADENGINE|unsupported engine|incompatible.*(?:node|engine)/i.test(raw)) add('engine', line, 'align-runtime');
     else if (/ERESOLVE|unmet peer|peer dependency|overriding peer/i.test(raw)) add('peer', line, 'reconcile-peer-ranges');
-    else if (/\b([1-9]\d*)\s+(?:(?:low|moderate|high|critical)\s+)?vulnerabilit/i.test(raw) || /npm audit fix/i.test(raw)) add('audit', line, 'rescan-current-lockfile');
+    else if (/\b([1-9]\d*)\s+(?:(?:low|moderate|high|critical)\s+(?:severity\s+)?)?vulnerabilit/i.test(raw) || /npm audit fix/i.test(raw)) add('audit', line, 'rescan-current-lockfile');
     else if (/ExperimentalWarning/.test(raw)) add('experimental-runtime', line, 'informational', { blocking: false });
     else if (/new (?:release|(?:patch |minor |major )?version).*(?:pip|npm)|(?:pip|npm).*new (?:release|version)/i.test(raw)) add('tool-update', line, 'informational', { blocking: false });
     else if (/npm (?:warn|warning).*config/i.test(raw)) add('configuration', line, 'review-package-manager-config');

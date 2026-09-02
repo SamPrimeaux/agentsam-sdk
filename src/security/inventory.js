@@ -47,6 +47,7 @@ export function collectNpmDependencies(projectRoot = process.cwd()) {
       }
       for (const [location, pkg] of Object.entries(lock.packages)) {
         if (!location || !location.includes('node_modules/')) continue;
+        if (pkg.link && (!pkg.resolved || !lock.packages[pkg.resolved] || pkg.resolved.includes('..') || path.isAbsolute(pkg.resolved))) issues.push('Unresolved local link: ' + location);
         const installedName = location.split('node_modules/').at(-1);
         const parent = location.slice(0, location.lastIndexOf('node_modules/')).replace(/\/$/, '');
         const owner = lock.packages[parent] || {};
@@ -56,6 +57,15 @@ export function collectNpmDependencies(projectRoot = process.cwd()) {
       // Missing direct locked entries must never look like an empty, clean graph.
       for (const [location, pkg] of Object.entries(lock.packages)) {
         if (location.includes('node_modules/')) continue;
+        if (location) {
+          const workspacePath = path.resolve(root, location);
+          const relative = path.relative(root, fs.realpathSync(workspacePath));
+          if (relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('Workspace escapes project root');
+          const workspace = readJson(path.join(workspacePath, 'package.json'));
+          for (const field of fields) {
+            if (JSON.stringify(Object.entries(workspace[field] || {}).sort()) !== JSON.stringify(Object.entries(pkg[field] || {}).sort())) issues.push('Workspace manifest and lockfile disagree: ' + location + ':' + field);
+          }
+        }
         for (const name of Object.keys({ ...pkg.dependencies, ...pkg.devDependencies })) {
           if (name in (pkg.optionalDependencies || {})) continue;
           const found = Object.keys(lock.packages).some(p => p === 'node_modules/' + name || p === location + '/node_modules/' + name);

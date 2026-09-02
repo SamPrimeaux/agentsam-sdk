@@ -40,8 +40,19 @@ async function request(body, options, signal) {
         continue;
       }
       if (!response.ok) throw new Error('OSV HTTP ' + response.status);
-      const text = await response.text();
-      if (text.length > 32 * 1024 * 1024) throw new Error('OSV response too large');
+      const chunks = []; let size = 0;
+      if (!response.body) throw new Error('Empty OSV response body');
+      const reader = response.body.getReader();
+      try {
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          size += value.length;
+          if (size > 32 * 1024 * 1024) { await reader.cancel(); throw new Error('OSV response too large'); }
+          chunks.push(value);
+        }
+      } finally { reader.releaseLock(); }
+      const text = Buffer.concat(chunks).toString('utf8');
       const data = JSON.parse(text);
       if (!data || Array.isArray(data) || typeof data !== 'object' || data.error || (data.vulns !== undefined && !Array.isArray(data.vulns))) throw new Error('Malformed OSV response');
       if (data.next_page_token !== undefined && typeof data.next_page_token !== 'string') throw new Error('Malformed OSV page token');

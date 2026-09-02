@@ -7,7 +7,7 @@ export async function scanProjectSecurity(options = {}) {
   const results = options.offline
     ? inventory.dependencies.map(d => ({ ...d, checked: false, advisories: [] }))
     : await queryOsv(inventory.dependencies, options);
-  const complete = !options.offline && !inventory.issues.length && results.every(r => r.checked);
+  const complete = !options.offline && !options.signal?.aborted && !inventory.issues.length && results.every(r => r.checked);
   const logFindings = resolveLogFindings(triageLog(options.log || ''), { complete, results });
   const findings = [
     ...results.flatMap(r => r.advisories.map(a => ({ kind: 'vulnerability', package: r.name, version: r.version, advisory: a, action: 'audit-fix-within-ranges' }))),

@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { scanProjectSecurity, remediationPlan } from './scan.js';
-import { readJson } from './inventory.js';
+import { readJson, collectNpmDependencies } from './inventory.js';
 import { runProcess } from './process.js';
 
 export async function repairProject(options = {}) {
@@ -56,8 +56,9 @@ export async function repairProject(options = {}) {
     if (changed.code) throw new Error('Cannot inspect candidate changes');
     receipt.changed_files = changed.stdout.trim().split('\n').filter(Boolean);
     if (receipt.changed_files.some(p => p !== before.lockfile)) throw new Error('Repair changed files outside the selected lockfile');
-    const afterInventory = readJson(path.join(worktree, before.lockfile));
-    const versions = afterInventory.packages || {};
+    const afterInventory = collectNpmDependencies(worktree);
+    if (afterInventory.issues.length) throw new Error('Repaired lockfile coverage is incomplete');
+    const versions = Object.fromEntries(afterInventory.dependencies.flatMap(d => d.paths.map(p => [p, d])));
     for (const dependency of before.results) for (const location of dependency.paths) {
       if (versions[location]?.version && versions[location].version.split('.')[0] !== dependency.version.split('.')[0]) {
         throw new Error('A major version change needs explicit review');

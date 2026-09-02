@@ -19,7 +19,8 @@ const help = [
   ''
 ].join('\n');
 export async function runSecurity(argv) {
-  if (argv.includes('--help') || argv.includes('-h') || !argv.length) { process.stdout.write(help); return; }
+  const ownArgs = argv.slice(0, argv.indexOf('--') < 0 ? argv.length : argv.indexOf('--'));
+  if (ownArgs.includes('--help') || ownArgs.includes('-h') || !argv.length) { process.stdout.write(help); return; }
   const command = argv[0], options = { json: argv.slice(0, argv.indexOf('--') < 0 ? argv.length : argv.indexOf('--')).includes('--json') }, booleans = new Map([['--offline','offline'],['--json','json'],['--apply','apply']]);
   let childArgs;
   try {
