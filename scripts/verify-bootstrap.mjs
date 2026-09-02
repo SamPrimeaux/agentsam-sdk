@@ -114,8 +114,8 @@ try {
   assert.equal(generatedPackage.scripts?.tui, 'agentsam tui');
   assert.equal(
     generatedPackage.dependencies?.['@inneranimalmedia/agentsam-sdk'],
-    sdkPackage.version,
-    'prerelease scaffolds must install the exact SDK version that generated them',
+    sdkPackage.version.includes('-') ? sdkPackage.version : `^${sdkPackage.version}`,
+    'scaffolds pin prereleases and accept compatible stable SDK versions',
   );
   assert.equal(config.project, 'my-agent');
   assert.equal(config.run_target, 'local');

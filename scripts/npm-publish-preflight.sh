@@ -2,7 +2,6 @@
 # Preflight before `npm publish` for @inneranimalmedia/agentsam-sdk.
 set -euo pipefail
 
-REQUIRED_SCOPE='inneranimalmedia'
 PKG='@inneranimalmedia/agentsam-sdk'
 
 node scripts/verify-package.mjs
@@ -15,18 +14,16 @@ fi
 
 echo "npm whoami: $who"
 
-if [[ "$who" != "$REQUIRED_SCOPE" ]]; then
-  echo "FAIL: publish account must be npm user '$REQUIRED_SCOPE' (package maintainer)." >&2
-  echo "      You are '$who'. Logout and login as the org owner, or get Developer+ on the org." >&2
-  echo "      npm logout && npm login" >&2
-  exit 1
-fi
-
-echo "OK: maintainer account"
+echo "Authenticated. npm will enforce this account's package publishing permissions."
 echo "Package: $PKG"
 npm view "$PKG" version 2>/dev/null && echo "registry: package exists" || echo "registry: first publish under this scope"
 
 ver="$(node -p "require('./package.json').version")"
 echo "local version: $ver"
 echo ""
-echo "Next: npm run verify && npm publish --tag alpha --access public"
+if [[ "$ver" == *-* ]]; then
+  echo "Next: npm publish --tag alpha --access public"
+else
+  echo "Next: npm publish --tag latest --access public"
+fi
+echo "The prepublishOnly hook runs the complete release verification before upload."

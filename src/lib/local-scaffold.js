@@ -3,6 +3,8 @@
  * Prove the project locally; `agentsam deploy` adds cloud adapters only when requested.
  */
 
+import pkg from '../../package.json' with { type: 'json' };
+
 const LANE_KEYS = {
   '1': 'fullstack',
   '2': 'cms',
@@ -131,7 +133,7 @@ export function buildLocalScaffoldFiles({
   laneLabel,
   agent,
   runTarget,
-  sdkVersion = '1.5.1',
+  sdkVersion = pkg.version,
 }) {
   const sdkRange = sdkDependencySpec(sdkVersion);
   const migration = migrationSql(laneKey);
@@ -418,7 +420,7 @@ Selected future deploy target: **${runTarget}**. Cloud-specific adapters and cre
   ];
 }
 
-export function buildLocalScaffoldMeta(body, sdkVersion = '1.5.1') {
+export function buildLocalScaffoldMeta(body, sdkVersion = pkg.version) {
   const projectName = String(body.projectName || body.project_name || 'agentsam-project')
     .trim()
     .toLowerCase()

@@ -1,7 +1,7 @@
 {
   "name": "@inneranimalmedia/agentsam-sdk",
-  "version": "2.0.0-alpha.identity.12",
-  "description": "Agent Sam is a full-stack AI agent SDK for autonomous task execution — covering data management, creative workflows, design commands, and multi-step agentic pipelines.",
+  "version": "2.0.0",
+  "description": "Portable AgentSam SDK and CLI kits for local scaffolding, repository intelligence, incremental indexing, identity adapters, and verified dependency maintenance.",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
@@ -71,13 +71,15 @@
     "verify:package": "node scripts/verify-package.mjs",
     "verify:bootstrap": "node scripts/verify-bootstrap.mjs",
     "verify:knowledge-package": "node scripts/verify-knowledge-package.mjs",
+    "test:python": "node scripts/verify-python.mjs",
+    "verify:release": "npm run verify && npm run verify:knowledge-package && npm run test:python && npm run security:check",
     "pack:check": "npm pack --dry-run --json",
     "verify": "npm test && npm run verify:package && npm run verify:bootstrap && npm run pack:check",
     "publish:identity-alpha": "bash scripts/publish-identity-alpha.sh",
     "publish:identity-alpha:dry-run": "bash scripts/publish-identity-alpha.sh --dry-run",
     "publish:identity-alpha:publish-only": "bash scripts/publish-identity-alpha.sh --publish-only",
     "preview:auth-portal": "node packages/identity/scripts/preview-auth-portal.mjs --open",
-    "prepublishOnly": "npm run verify && npm run security:check",
+    "prepublishOnly": "npm run verify:release",
     "security:check": "node src/security/cli.mjs scan",
     "security:repair": "node src/security/cli.mjs repair"
   },

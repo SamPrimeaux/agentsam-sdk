@@ -1,97 +1,80 @@
-# Developing agentsam-sdk with Inner Animal Media
+# Developing AgentSam SDK
+
+This is the canonical repository for portable AgentSam kits. Read
+[protocol/README.md](protocol/README.md) for ownership and host-adapter boundaries.
 
 ## Local verification
 
-```bash
-cd agentsam-sdk
+```sh
 npm ci
 npm run verify
-npm run preview:auth-portal   # optional; opens /auth/login at http://127.0.0.1:8791
+npm run verify:knowledge-package
+npm run test:python
+npm run security:check
 ```
 
-`npm run verify` is the canonical pre-merge/pre-publish proof. It runs the SDK smoke tests, portable-context tests, identity tests, package invariants, and an npm pack dry-run.
+`npm run verify:release` combines all four verification commands. The `prepublishOnly`
+hook runs it automatically before npm publication. `verify` covers SDK and identity
+tests, package invariants, scaffold/bootstrap checks, and a pack dry-run.
 
-Knowledge changes also run `npm run verify:knowledge-package`: install the packed artifact in an unrelated temporary consumer, then exercise init, AST indexing, retrieval and saved evolution on two independent repositories. `-- --offline` is available when dependencies are already cached. The regular test suite exercises pgvector SQL with development-only PGlite dependencies; no Gemini calls or production database are needed. Run `PYTHONPATH=python python3 -B -m unittest discover -s python/tests -p 'test_knowledge*.py' -v` for recovered Python transport contracts.
+The installed-tarball proof generates and runs a fresh app, then initializes, indexes,
+searches, snapshots, and stages the Docker knowledge service in two unrelated repositories.
+It installs the candidate tarball so a release never accidentally tests an older registry
+version. Use `npm run verify:knowledge-package -- --offline` when dependencies are cached.
 
-## Run from any Git repo
+The Python suite uses unittest and bundled standard-library tooling. Rich is optional.
+Postgres/pgvector checks use development-only PGlite; no production database or embedding
+API call is required by the tests. Dependency scanning requires access to OSV.
 
-After installing/linking the SDK:
+## Use in a consumer
 
-```bash
-agentsam context
+```sh
+npm link
+cd /path/to/consumer
+npm link @inneranimalmedia/agentsam-sdk
 agentsam context --json
 ```
 
-This resolves the repository/revision directly from Git and reports whether `AGENTSAM_BRIDGE_KEY` machine auth is configured. It does not require per-user or per-workspace shell variables. See [`docs/PORTABLE_CONTEXT.md`](./docs/PORTABLE_CONTEXT.md).
+Git context is derived from the checkout. Host authorization and credentials are supplied
+through explicit adapters. See [portable context](docs/PORTABLE_CONTEXT.md).
 
-## Link into a consumer repo
+For a new local application:
 
-```bash
-cd agentsam-sdk && npm link
-cd /path/to/your-project && npm link @inneranimalmedia/agentsam-sdk
-agentsam context --json
+```sh
+agentsam init --name my-agent --lane fullstack --run-target local --yes
 ```
 
-Then in any Worker or Node script:
+For an existing repository:
 
-```js
-import {
-  AgentSam,
-  resolveGitContext,
-  createBridgeClient,
-} from '@inneranimalmedia/agentsam-sdk';
+```sh
+agentsam init . --yes --include src,docs
 ```
 
-## Non-interactive init (CI / smoke)
+## Publish
 
-```bash
-npx agentsam init \
-  --name my-agent \
-  --lane fullstack \
-  --run-target local \
-  --yes
+Use [the stable 2.0 release guide](docs/sdk-2.0-release.md). The root package is the only
+npm publication; identity and shell-kit workspaces remain private. Versions in the root
+manifest, lockfile and identity workspace must match. All export targets and the shipped
+knowledge-service runtime assets are checked before publication.
+
+`scripts/npm-publish-preflight.sh` checks package invariants and npm login. Package
+publishing rights are enforced by npm, not a hardcoded local username. Scoped public
+publication uses `--access public`.
+
+Stable publishing is manual:
+
+```sh
+npm publish --tag latest --access public
 ```
 
-## Publish checklist
+Legacy `publish:identity-alpha` commands and the manual alpha workflow only accept alpha
+versions. They do not publish a stable version under the alpha tag.
 
-1. Root `package.json` name is **`@inneranimalmedia/agentsam-sdk`**.
-2. `npm run verify` passes.
-3. `package.json`, `package-lock.json`, and `packages/identity/package.json` versions match.
-4. Root package does not depend on itself and has no install-time side effects.
-5. `npm pack --dry-run --json` contains the expected consumer surfaces.
-6. Bump/prep an alpha with `bash scripts/publish-identity-alpha.sh --dry-run` (or an explicit suffix).
-7. Commit the version + lockfile bump.
-8. Publish either locally with `bash scripts/publish-identity-alpha.sh --publish-only` or manually dispatch **Publish AgentSam SDK Alpha** from `main` (requires repository secret `NPM_TOKEN`).
-9. Record the release in [`docs/RELEASES.md`](./docs/RELEASES.md).
-10. Update consumers and replace any temporary local SDK-candidate shims.
+## Remaining integration work
 
-### Publish 404 (`PUT … Not found`)
+The local status command is implemented. Hosted execution/orchestration, production
+knowledge-service routing, additional embedding adapters, scheduled indexing, and retention
+are separate host or feature work. The archived execution branch is mapped in
+[branch archive](docs/branch-archive-2026-09-02.md); it is not an implemented API surface.
 
-npm can return **404** when you are logged in as the wrong user for scope `@inneranimalmedia`.
-
-- Registry maintainer for this package: `inneranimalmedia`
-- Local publish preflight: `bash scripts/npm-publish-preflight.sh`
-- Always pass `--access public` (also set in `publishConfig`).
-
-Workspace packages under `packages/*` (for example `@inneranimalmedia/agentsam-shell-kit`) stay `private: true` until separately ready; they are not the root publish identity.
-
-## Python tooling (`agentsam_sdk`)
-
-Portable stdlib audits live under [`python/`](./python/) (import path `agentsam_sdk.*`).
-
-```bash
-cd python
-python3 -m pip install -e ".[dev]"
-python3 -m pytest
-python3 -m agentsam_sdk.repository.inventory --json --root /path/to/repo
-```
-
-Consumer repos should keep only thin shims around portable SDK behavior instead of copying SDK implementations.
-
-## Known gaps (roadmap)
-
-- `agentsam status`, `agentsam logs` — not implemented yet
-- Gorilla Shell Phase 1 — PTY WebSocket bridge to ExecOS
-- Published server routes may evolve; portable Git context remains local/deterministic
-
-See [docs/CLI_SHELL.md](./docs/CLI_SHELL.md) for terminal UX work.
+Gorilla remains a visual experiment. It is not the default scaffold or a production shell.

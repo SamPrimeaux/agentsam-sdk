@@ -1,5 +1,9 @@
 # `@inneranimalmedia/agentsam-sdk` release receipts
 
+**2.0.0 is prepared, not yet published.** See [stable release instructions](sdk-2.0-release.md).
+Add its publication receipt only after npm confirms success; this preparation does not
+publish the private identity workspace or create a `v2.0.0` release tag.
+
 | npm version | Published (UTC) | IAM git SHA (40) | Notes |
 |-------------|-----------------|------------------|-------|
 | 2.0.0-alpha.identity.5 | _(pending npm)_ | `df064114eb7f8888f163e4a07dfddf19035b7169` | Password reset service, `registerFinalizeInboundOAuth`, IAM live proof. |
