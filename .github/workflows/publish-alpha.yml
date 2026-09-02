@@ -24,7 +24,7 @@ jobs:
           cache: npm
 
       - name: Install
-        run: npm ci
+        run: node src/security/cli.mjs run --json -- npm ci > "$RUNNER_TEMP/dependency-health.json"
 
       - name: Verify SDK
         run: npm run verify

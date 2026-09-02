@@ -1,0 +1,39 @@
+name: Dependency maintenance
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '15 8 * * 1'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: dependency-maintenance
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Prepare verified dependency repair
+        run: node scripts/security-maintenance.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Repair receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-repair
+          path: ${{ runner.temp }}/dependency-repair.json
+          if-no-files-found: warn
+          retention-days: 14
