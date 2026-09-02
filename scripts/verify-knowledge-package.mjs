@@ -26,6 +26,15 @@ try {
   assert.equal(exported.trim(), 'function function');
   const clientExport = run(process.execPath, ['--input-type=module', '-e', 'import {createKnowledgeServiceClient} from "@inneranimalmedia/agentsam-sdk/knowledge-service-client"; console.log(typeof createKnowledgeServiceClient)'], consumer);
   assert.equal(clientExport.trim(), 'function');
+  // Prove the installed package can generate and run a fresh application too.
+  // Install this tarball into the fixture so unpublished release candidates never
+  // silently test an older registry release.
+  run(process.execPath, [installed, 'init', '--name', 'fresh-app', '--yes'], tmp);
+  const app = path.join(tmp, 'fresh-app');
+  const manifest = JSON.parse(fs.readFileSync(path.join(app, 'package.json'), 'utf8'));
+  assert.equal(manifest.dependencies['@inneranimalmedia/agentsam-sdk'], packed.version.includes('-') ? packed.version : `^${packed.version}`);
+  run('npm', ['install', path.join(tmp, packed.filename), '--ignore-scripts', '--no-audit', '--no-fund', ...(process.argv.includes('--offline') ? ['--offline'] : [])], app);
+  run('npm', ['run', 'smoke'], app);
   for (const name of ['warehouse', 'design-system']) {
     const repo = path.join(tmp, name); fs.mkdirSync(path.join(repo, 'lib'), { recursive: true });
     run('git', ['init', '-q'], repo);
@@ -48,5 +57,5 @@ try {
     assert.ok(fs.existsSync(path.join(path.dirname(build.dockerfilePath), 'context/src/knowledge/service/server.js')));
     assert.equal(fs.existsSync(path.join(path.dirname(build.dockerfilePath), 'context/lib/task.ts')), false);
   }
-  console.log(`verify-knowledge-package OK: installed ${packed.filename}; two independent repositories, retrieval and saved evolution`);
+  console.log(`verify-knowledge-package OK: installed ${packed.filename}; fresh app smoke, two independent repositories, retrieval, evolution, and Docker service staging`);
 } finally { fs.rmSync(tmp, { recursive: true, force: true }); }

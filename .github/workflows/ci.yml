@@ -30,6 +30,12 @@ jobs:
       - name: Verify SDK
         run: npm run verify
 
+      - name: Verify installed package in unrelated repositories
+        run: npm run verify:knowledge-package
+
+      - name: Verify Python tools
+        run: npm run test:python
+
       - name: CLI context smoke
         run: node src/cli.js context --json
 

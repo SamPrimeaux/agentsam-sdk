@@ -1,8 +1,8 @@
 /**
- * @deprecated Local scaffold replaced by CORE POST /api/sdk/scaffold — use `agentsam init`.
+ * @deprecated Use the local CLI's `agentsam init --name <project>`.
  */
 export function scaffoldProject() {
   throw new Error(
-    'Local scaffold is disabled. Run: npx @inneranimalmedia/agentsam-sdk init — Agent Sam provisions resources in YOUR Cloudflare account via CORE.',
+    'scaffoldProject() is deprecated. Run: npx @inneranimalmedia/agentsam-sdk init --name my-agent --yes. Local scaffolding does not require a cloud account.',
   );
 }

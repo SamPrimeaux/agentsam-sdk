@@ -67,6 +67,11 @@ else
   set_versions "$VERSION"
 fi
 
+if [[ ! "$VERSION" =~ ^2\.0\.0-alpha\.identity\.[0-9]+$ ]]; then
+  echo "FAIL: identity-alpha publishing requires 2.0.0-alpha.identity.N; use the stable release instructions for $VERSION." >&2
+  exit 1
+fi
+
 echo ""
 echo "=== Verify ==="
 npm run verify
