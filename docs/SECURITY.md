@@ -58,7 +58,7 @@ The command never uses force, edits dependency declarations, selects a major upg
 
 CI and the alpha publication workflow wrap npm installation with the dependency-health gate. The root prepublish hook also performs an online security scan after verification.
 
-The dependency-maintenance workflow runs weekly and can be dispatched manually. It prepares and verifies a repair, then opens a PR when a verified lockfile change exists. It does not auto-merge or publish. An existing repair PR prevents duplicates. Unresolved or incomplete runs fail visibly and upload a JSON receipt. GitHub repository settings must permit Actions to create pull requests.
+The dependency-maintenance workflow runs weekly and can be dispatched manually. It prepares and verifies a repair, then opens a PR when a verified lockfile change exists. It does not auto-merge or publish. It explicitly dispatches CI for its generated branch because GitHub-token-created PRs do not trigger another workflow automatically. An existing repair PR prevents duplicates. If repository settings block PR creation, the verified branch and compare URL remain in the failed run receipt for follow-up. Unresolved or incomplete runs fail visibly and upload a JSON receipt. GitHub repository settings must permit Actions to create pull requests.
 
 Other projects opt in by wrapping their existing build/install commands or calling the exported @inneranimalmedia/agentsam-sdk/security API. This SDK does not silently monitor unrelated deployments.
 

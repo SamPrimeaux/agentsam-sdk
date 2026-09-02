@@ -3,7 +3,8 @@ import path from 'node:path';
 import { repairProject } from '../src/security/repair.js';
 import { runProcess } from '../src/security/process.js';
 
-const output = path.join(process.env.RUNNER_TEMP || process.cwd(), 'dependency-repair.json');
+if (process.env.GITHUB_ACTIONS !== 'true' || process.env.GITHUB_REF !== 'refs/heads/main') throw new Error('Maintenance runner is restricted to GitHub Actions on main; use agentsam security repair locally.');
+const output = path.join(process.env.RUNNER_TEMP, 'dependency-repair.json');
 const token = process.env.GH_TOKEN;
 delete process.env.GH_TOKEN;
 delete process.env.GITHUB_TOKEN;
@@ -32,7 +33,9 @@ try {
         '',
         'No package declarations or major versions were changed. This PR does not publish or deploy.',
       ].join('\n'), { mode: 0o600 });
+      receipt.compare_url = 'https://github.com/' + process.env.GITHUB_REPOSITORY + '/compare/main...' + encodeURIComponent(receipt.branch);
       receipt.pull_request = await run('gh',['pr','create','--base','main','--head',receipt.branch,'--title','fix(deps): verified dependency maintenance','--body-file',body],receipt.worktree);
+      await run('gh',['workflow','run','ci.yml','--ref',receipt.branch],receipt.worktree);
     }
   }
 } catch {

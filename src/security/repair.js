@@ -58,6 +58,12 @@ export async function repairProject(options = {}) {
     if (receipt.changed_files.some(p => p !== before.lockfile)) throw new Error('Repair changed files outside the selected lockfile');
     const afterInventory = collectNpmDependencies(worktree);
     if (afterInventory.issues.length) throw new Error('Repaired lockfile coverage is incomplete');
+    const oldMajors = new Map();
+    for (const d of before.results) {
+      if (!oldMajors.has(d.name)) oldMajors.set(d.name, new Set());
+      oldMajors.get(d.name).add(d.version.split('.')[0]);
+    }
+    if (afterInventory.dependencies.some(d => oldMajors.has(d.name) && !oldMajors.get(d.name).has(d.version.split('.')[0]))) throw new Error('A major version change needs explicit review');
     const versions = Object.fromEntries(afterInventory.dependencies.flatMap(d => d.paths.map(p => [p, d])));
     for (const dependency of before.results) for (const location of dependency.paths) {
       if (versions[location]?.version && versions[location].version.split('.')[0] !== dependency.version.split('.')[0]) {
@@ -69,6 +75,8 @@ export async function repairProject(options = {}) {
     receipt.after = await scan({ ...options, projectRoot: worktree, log: (options.log || '') + '\n' + logs, offline: false });
     const finalDiff = await invoke('git',['diff','--name-only','HEAD'],worktree);
     if (finalDiff.code || finalDiff.stdout.trim().split('\n').filter(Boolean).some(p => p !== before.lockfile)) throw new Error('Verification changed tracked source files');
+    if (collectNpmDependencies(worktree).fingerprint !== receipt.after.lock_fingerprint) throw new Error('Lockfile changed during verification');
+    if (afterInventory.fingerprint !== receipt.after.lock_fingerprint) throw new Error('Verification modified the candidate lockfile');
     receipt.complete = receipt.after.complete;
     receipt.verified = receipt.after.ok;
     receipt.ok = receipt.after.ok;
