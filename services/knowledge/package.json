@@ -1,0 +1,7 @@
+{
+  "name": "agentsam-knowledge-service-runtime",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": { "typescript": "5.9.3" }
+}

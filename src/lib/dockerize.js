@@ -17,14 +17,16 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { generateKnowledgeDocker, prepareKnowledgeDeployment, stageKnowledgeContext, knowledgeRunArguments } from './knowledge-docker.js';
 
-export const DOCKER_APP_TYPES = ['static', 'vite_react', 'node_service', 'wrangler_dev'];
+export const DOCKER_APP_TYPES = ['static', 'vite_react', 'node_service', 'wrangler_dev', 'knowledge_service'];
 
 export const DOCKER_APP_TYPE_LABELS = {
   static: { label: 'Static site', sublabel: 'HTML/dist export -> nginx' },
   vite_react: { label: 'Vite / React app', sublabel: 'npm build -> nginx (multi-stage)' },
   node_service: { label: 'Node service', sublabel: 'Express/Fastify/etc, npm start' },
   wrangler_dev: { label: 'Cloudflare Worker (offline)', sublabel: 'wrangler dev --local, no CF resources hit' },
+  knowledge_service: { label: 'Knowledge service', sublabel: 'Durable background indexing, read-only repositories, localhost API' },
 };
 
 const DEFAULT_PORTS = {
@@ -32,6 +34,7 @@ const DEFAULT_PORTS = {
   vite_react: 4173,
   node_service: 3000,
   wrangler_dev: 8787,
+  knowledge_service: 8792,
 };
 
 const AGENTSAM_DOCKER_DIR = '.agentsam/docker';
@@ -164,6 +167,8 @@ CMD ["npx", "wrangler", "dev", "${entry}", "--ip", "0.0.0.0", "--port", "${port}
 
 export function generateDockerFileSet(appType, opts = {}) {
   switch (appType) {
+    case 'knowledge_service':
+      return generateKnowledgeDocker({ ...opts, appSlug: slugifyForDocker(opts.appSlug || 'agentsam-knowledge') });
     case 'static':
       return generateStatic(opts);
     case 'vite_react':
@@ -206,7 +211,7 @@ function writeManifestEntry(targetDir, hash, entry) {
  * (content-addressed -- always safe/idempotent to rewrite, same hash means same bytes) and
  * .dockerignore at the project root (shared across versions; respects `overwrite`).
  */
-export function writeDockerFileSet(targetDir, fileSet, hash, { overwrite = false } = {}) {
+export function writeDockerFileSet(targetDir, fileSet, hash, { overwrite = false, isolatedContext = false } = {}) {
   const versionDir = path.join(targetDir, AGENTSAM_DOCKER_DIR, hash);
   fs.mkdirSync(versionDir, { recursive: true });
 
@@ -215,7 +220,8 @@ export function writeDockerFileSet(targetDir, fileSet, hash, { overwrite = false
   fs.writeFileSync(dockerfilePath, fileSet.dockerfile, 'utf8');
   fs.writeFileSync(composePath, fileSet.compose, 'utf8');
 
-  const dockerignorePath = path.join(targetDir, '.dockerignore');
+  const dockerignorePath = isolatedContext ? path.join(versionDir, 'context/.dockerignore') : path.join(targetDir, '.dockerignore');
+  fs.mkdirSync(path.dirname(dockerignorePath), { recursive: true });
   if (!overwrite && fs.existsSync(dockerignorePath)) {
     // shared/mutable file -- leave existing one alone unless explicitly told to replace it
   } else {
@@ -259,14 +265,14 @@ export async function buildDockerImage(targetDir, { dockerfilePath, imageTag, la
 
 export async function runDockerContainer(
   imageTag,
-  { name, hostPort, containerPort, memory = '512m', cpus = '1', detach = true, rm = true, labels = {}, extraArgs = [], onData } = {},
+  { name, hostPort, containerPort, hostIp, memory = '512m', cpus = '1', detach = true, rm = true, labels = {}, extraArgs = [], onData } = {},
 ) {
   const args = [];
   if (detach) args.push('-d');
   if (rm) args.push('--rm');
   args.unshift('run');
   args.push(`--memory=${memory}`, `--cpus=${cpus}`);
-  if (hostPort && containerPort) args.push('-p', `${hostPort}:${containerPort}`);
+  if (hostPort && containerPort) args.push('-p', `${hostIp ? hostIp + ':' : ''}${hostPort}:${containerPort}`);
   if (name) args.push('--name', name);
   for (const [k, v] of Object.entries(labels)) args.push('--label', `${k}=${v}`);
   args.push(...extraArgs, imageTag);
@@ -350,8 +356,14 @@ export function buildDockerDeployPlan(appType, opts = {}) {
  * fields are null/undefined when skipped.
  */
 export async function dockerize(targetDir, appType, opts = {}) {
+  const knowledge = appType === 'knowledge_service';
+  if (knowledge) {
+    if (opts.timeoutSeconds) throw new Error('knowledge_service is persistent; use agentsam dockerize --stop instead of --timeout.');
+    opts = prepareKnowledgeDeployment(path.resolve(targetDir), { ...opts, appSlug: slugifyForDocker(opts.appSlug || 'agentsam-knowledge') });
+  }
   const plan = buildDockerDeployPlan(appType, opts);
-  const written = writeDockerFileSet(targetDir, plan.files, plan.hash, { overwrite: opts.overwrite });
+  const written = writeDockerFileSet(targetDir, plan.files, plan.hash, { overwrite: opts.overwrite, isolatedContext: knowledge });
+  const buildContext = knowledge ? stageKnowledgeContext(written.versionDir) : targetDir;
   const manifest = writeManifestEntry(targetDir, plan.hash, {
     appType,
     appSlug: plan.slug,
@@ -364,10 +376,11 @@ export async function dockerize(targetDir, appType, opts = {}) {
     createdAt: new Date().toISOString(),
   });
 
-  const result = { plan, written, manifest, build: null, run: null, tagRegistration: null, cancelAutoStop: null };
+  const result = { plan, written, manifest, build: null, run: null, tagRegistration: null, cancelAutoStop: null,
+    ...(knowledge ? { configurationDir: opts.configurationDir, tokenFile: opts.tokenFile, volume: opts.volume } : {}) };
   if (opts.writeOnly) return result;
 
-  result.build = await buildDockerImage(targetDir, {
+  result.build = await buildDockerImage(buildContext, {
     dockerfilePath: written.dockerfilePath,
     imageTag: plan.imageTag,
     latestTag: plan.latestTag,
@@ -390,12 +403,30 @@ export async function dockerize(targetDir, appType, opts = {}) {
     name: plan.slug,
     hostPort: plan.hostPort,
     containerPort: plan.containerPort,
-    memory: opts.memory,
+    memory: opts.memory || (knowledge ? '768m' : undefined),
     cpus: opts.cpus,
+    ...(knowledge ? { hostIp: '127.0.0.1', rm: false, extraArgs: knowledgeRunArguments(opts) } : {}),
     labels,
     onData: opts.onData,
   });
   if (!result.run.ok) return result;
+
+  if (knowledge) {
+    const deadline = Date.now() + 15000;
+    let ready = false;
+    while (Date.now() < deadline && !ready) {
+      try {
+        const response = await fetch(`http://127.0.0.1:${plan.hostPort}/healthz`, { signal: AbortSignal.timeout(1000) });
+        ready = response.ok && (await response.json()).service === 'agentsam-knowledge';
+      } catch { /* Container is still starting. */ }
+      if (!ready) await new Promise(resolve => setTimeout(resolve, 250));
+    }
+    if (!ready) {
+      await stopDockerContainer(plan.slug);
+      result.run = { ...result.run, ok: false, code: 1, stderr: `Knowledge service did not become ready; stopped ${plan.slug}. Inspect docker logs; data volume retained.` };
+      return result;
+    }
+  }
 
   if (opts.timeoutSeconds) {
     result.cancelAutoStop = scheduleAutoStop(plan.slug, opts.timeoutSeconds, opts.onAutoStop);
