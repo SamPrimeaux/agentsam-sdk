@@ -89,7 +89,8 @@ async function verifyInteractiveInit(target, answer) {
   if (target === 'local') assert.ok(!output.includes('Detected credentials'));
   const project = path.join(tmp, `interactive-${target}`);
   const config = JSON.parse(fs.readFileSync(path.join(project, '.agentsam/config.json'), 'utf8'));
-  assert.equal(config.run_target, target);
+  assert.equal(config.run_target, 'local');
+  assert.equal(config.deploy_target, target === 'local' ? null : target);
   assert.ok(fs.existsSync(path.join(project, '.agentsam/data/agentsam.sqlite')));
 }
 
