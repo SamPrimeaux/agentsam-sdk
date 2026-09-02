@@ -38,7 +38,7 @@ export async function repairProject(options = {}) {
   try {
     let logs = '';
     const npm = async (args, allowFindings = false) => {
-      const result = await invoke('npm', args, worktree);
+      const result = await invoke('npm', [...args, '--global=false', '--prefix', worktree], worktree);
       logs += result.stdout + '\n' + result.stderr + '\n';
       if (Buffer.byteLength(logs) > 8 * 1024 * 1024) throw new Error('Repair logs exceeded 8 MiB');
       receipt.steps.push({ command: ['npm', ...args], exit_code: result.code });
