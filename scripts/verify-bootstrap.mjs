@@ -25,7 +25,7 @@ function run(args, options = {}) {
   return result;
 }
 
-async function verifyInteractiveInit(target, answer) {
+async function verifyInteractiveInit(target, answer, laneAnswer = '1', expectedLane = 'fullstack') {
   const { spawn } = await import('node:child_process');
   const calls = path.join(tmp, `credential-probes-${target}.log`);
   const preload = path.join(tmp, `credential-probes-${target}.mjs`);
@@ -48,7 +48,7 @@ async function verifyInteractiveInit(target, answer) {
   `);
   const questions = [
     ['1) Project name:', `interactive-${target}`],
-    ['Pick lane [1-5]:', '1'],
+    ['Pick lane [1-5]:', laneAnswer],
     ['Select [1]:', answer],
   ];
   let output = '';
@@ -90,12 +90,13 @@ async function verifyInteractiveInit(target, answer) {
   const project = path.join(tmp, `interactive-${target}`);
   const config = JSON.parse(fs.readFileSync(path.join(project, '.agentsam/config.json'), 'utf8'));
   assert.equal(config.run_target, 'local');
+  assert.equal(config.lane, expectedLane, 'numbered lane must select the requested scaffold');
   assert.equal(config.deploy_target, target === 'local' ? null : target);
   assert.ok(fs.existsSync(path.join(project, '.agentsam/data/agentsam.sqlite')));
 }
 
 try {
-  await verifyInteractiveInit('local', '1');
+  await verifyInteractiveInit('local', '1', '3', 'data');
   await verifyInteractiveInit('cloudflare', '2');
   await verifyInteractiveInit('gcp', '3');
   run(['init', '--name', 'my-agent', '--lane', 'fullstack', '--run-target', 'local', '--yes'], {

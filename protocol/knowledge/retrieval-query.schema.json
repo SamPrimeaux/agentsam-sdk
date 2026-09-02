@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/knowledge/retrieval-query.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "title": "RetrievalQuery",
+  "required": [
+    "text",
+    "workspace_id"
+  ],
+  "properties": {
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "workspace_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "repositories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "product_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "intent": {
+      "type": "string",
+      "default": "auto"
+    },
+    "lanes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "top_k": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "default": 12
+    },
+    "token_budget": {
+      "type": "integer",
+      "minimum": 256,
+      "default": 8000
+    },
+    "require_current_ref": {
+      "type": "boolean",
+      "default": true
+    },
+    "include_archived": {
+      "type": "boolean",
+      "default": false
+    },
+    "explain": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

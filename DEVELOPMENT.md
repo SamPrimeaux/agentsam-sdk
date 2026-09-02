@@ -11,6 +11,8 @@ npm run preview:auth-portal   # optional; opens /auth/login at http://127.0.0.1:
 
 `npm run verify` is the canonical pre-merge/pre-publish proof. It runs the SDK smoke tests, portable-context tests, identity tests, package invariants, and an npm pack dry-run.
 
+Knowledge changes also run `npm run verify:knowledge-package`: install the packed artifact in an unrelated temporary consumer, then exercise init, AST indexing, retrieval and saved evolution on two independent repositories. `-- --offline` is available when dependencies are already cached. The regular test suite exercises pgvector SQL with development-only PGlite dependencies; no Gemini calls or production database are needed. Run `PYTHONPATH=python python3 -B -m unittest discover -s python/tests -p 'test_knowledge*.py' -v` for recovered Python transport contracts.
+
 ## Run from any Git repo
 
 After installing/linking the SDK:
