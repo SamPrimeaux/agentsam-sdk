@@ -7,7 +7,12 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-consumer-'));
-const run = (bin, args, cwd) => execFileSync(bin, args, { cwd, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
+// npm run exports allow-scripts as an environment option, which newer npm rejects
+// for nested project installs. Remove that inherited allowance in the child only;
+// --ignore-scripts and the consumer's empty allowScripts still prohibit all hooks.
+const childEnv = { ...process.env };
+for (const key of Object.keys(childEnv)) if (/^npm_config_allow[_-]scripts$/i.test(key)) delete childEnv[key];
+const run = (bin, args, cwd) => execFileSync(bin, args, { cwd, env: childEnv, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
 try {
   const packed = JSON.parse(run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', tmp], root))[0];
   const shipped = new Set(packed.files.map(f => f.path));
