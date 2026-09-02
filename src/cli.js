@@ -21,6 +21,7 @@ import { runTui } from './commands/tui.js';
 import { runDockerize } from './commands/dockerize.js';
 import { runMini } from './commands/mini.js';
 import { runMerkle } from './commands/merkle.js';
+import { runSecurity } from './commands/security.js';
 import { SLASH_COMMANDS, SHELL_PHASES } from './lib/slash-commands.js';
 
 const VERSION = pkg.version;
@@ -42,6 +43,7 @@ function printHelp() {
     agentsam init              Scaffold local Git + .env + SQLite + Node agent
     agentsam mini <name>       Create and preview a small local gadget (--help for options)
     agentsam merkle            File integrity, snapshots, comparisons, and TUI (--help)
+    agentsam security          Dependency scan, log triage, and verified repair (--help)
     agentsam status [--json]   Live local Git + DB + API + PTY status
     agentsam db init|status    Manage the project-local SQLite database
     agentsam tui               Zero-dependency ANSI Agent Sam dashboard
@@ -318,6 +320,8 @@ if (command === '--version' || command === '-v') {
     console.error(`\n  ✗ ${e?.message || e}\n`);
     process.exit(1);
   }
+} else if (command === 'security' || command === 'sca') {
+  await runSecurity(rest);
 } else if (command === 'merkle') {
   await runMerkle(rest);
 } else if (command === 'mini') {
