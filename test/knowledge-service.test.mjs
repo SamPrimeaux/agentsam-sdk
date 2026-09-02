@@ -28,7 +28,7 @@ test('service isolates scopes, authenticates, deduplicates, indexes, searches, a
   const token = 't'.repeat(64), repositories = { sample: { root, config: defaultConfig({ include: ['src'] }) } };
   let service;
   try {
-    service = await startKnowledgeService({ stateDir, repositories, token, port: 0 });
+    service = await startKnowledgeService({ stateDir, repositories, token, port: 0, maxFiles: 1 });
     let baseUrl = `http://127.0.0.1:${service.address.port}`;
     let client = createKnowledgeServiceClient({ baseUrl, token });
     assert.equal((await fetch(baseUrl + '/healthz')).status, 200);
@@ -47,8 +47,17 @@ test('service isolates scopes, authenticates, deduplicates, indexes, searches, a
     const second = await completed(client, (await client.submit(request)).id);
     assert.equal(second.result.no_change, true); assert.equal(second.result.parsed_files, 0);
     assert.equal(second.result.generation_id, first.result.generation_id);
+    fs.writeFileSync(path.join(root, 'src/unindexed.ts'), 'export const later = true;');
     const search = await completed(client, (await client.submit({ repository: 'sample', operation: 'search', query: 'add' })).id);
     assert.match(JSON.stringify(search.result), /src\/math.ts/);
+    const narrow = await client.submit({ repository: 'sample', operation: 'search', query: 'add', include: ['src/unindexed.ts'] });
+    for (let i = 0; i < 200; i++) {
+      const job = await client.job(narrow.id);
+      if (job.status === 'failed') { assert.match(job.error, /exceeds the requested scope/); break; }
+      if (i === 199) assert.fail('Narrowed scope should fail without leaking broader snapshot contents.');
+      await new Promise(resolve => setTimeout(resolve, 25));
+    }
+    fs.unlinkSync(path.join(root, 'src/unindexed.ts'));
     const plan = await completed(client, (await client.submit({ repository: 'sample', operation: 'plan', embed: true })).id);
     assert.ok(plan.result.embedding_inputs > 0); // Costs can be estimated without credentials.
     await service.close(); service = null;
