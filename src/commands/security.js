@@ -20,7 +20,7 @@ const help = [
 ].join('\n');
 export async function runSecurity(argv) {
   if (argv.includes('--help') || argv.includes('-h') || !argv.length) { process.stdout.write(help); return; }
-  const command = argv[0], options = {}, booleans = new Map([['--offline','offline'],['--json','json'],['--apply','apply']]);
+  const command = argv[0], options = { json: argv.slice(0, argv.indexOf('--') < 0 ? argv.length : argv.indexOf('--')).includes('--json') }, booleans = new Map([['--offline','offline'],['--json','json'],['--apply','apply']]);
   let childArgs;
   try {
     if (!['scan','check','repair','run'].includes(command)) throw new Error('Unknown security command');

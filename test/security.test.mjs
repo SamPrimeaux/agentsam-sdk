@@ -12,12 +12,13 @@ const cli = fileURLToPath(new URL('../src/security/cli.mjs', import.meta.url));
 const advisory = (name = 'lodash') => ({ id: 'GHSA-test', summary: 'test advisory', database_specific: { severity: 'HIGH' }, affected: [{ package: { name, ecosystem: 'npm' }, ranges: [{ type: 'SEMVER', events: [{ introduced: '0' }, { fixed: '4.17.21' }] }] }] });
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-security-test-'));
-  t.after(() => fs.rmSync(root,{ recursive:true, force:true }));
+  const cleanup = [];
+  t.after(() => { for (const fn of cleanup) fn(); fs.rmSync(root,{ recursive:true, force:true }); });
   const pkg = { name:'fixture', version:'1.0.0', scripts:{ verify:'node -e "process.exit(0)"' }, dependencies:{ lodash:'^4.17.20' } };
   const lock = { name:'fixture', version:'1.0.0', lockfileVersion:3, packages:{ '':pkg, 'node_modules/lodash':{ version:'4.17.20' } } };
   const write = () => { fs.writeFileSync(path.join(root,'package.json'),JSON.stringify(pkg)); fs.writeFileSync(path.join(root,'package-lock.json'),JSON.stringify(lock)); };
   write();
-  return { root,pkg,lock,write };
+  return { root,pkg,lock,write,cleanup };
 }
 const empty = async () => Response.json({});
 test('npm v3 exact graph supports scoped aliases, nested versions and workspace links', t => {
@@ -137,7 +138,7 @@ test('repair isolates lock updates, verifies and rescans while preserving source
     return {code:0,stdout:'',stderr:''};
   };
   const result=await repairProject({projectRoot:f.root,apply:true,scan,run});
-  t.after(()=>{g('worktree','remove','--force',result.worktree);fs.rmSync(path.dirname(result.worktree),{recursive:true,force:true});});
+  f.cleanup.push(()=>{g('worktree','remove','--force',result.worktree);fs.rmSync(path.dirname(result.worktree),{recursive:true,force:true});});
   assert.equal(result.status,'verified-candidate');assert.equal(result.verified,true);
   assert.equal(fs.readFileSync(path.join(f.root,'package-lock.json'),'utf8'),original);
   assert.equal(g('status','--porcelain'),'');
