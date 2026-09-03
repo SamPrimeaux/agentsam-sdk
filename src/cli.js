@@ -21,6 +21,7 @@ import { runTui } from './commands/tui.js';
 import { runDockerize } from './commands/dockerize.js';
 import { runMini } from './commands/mini.js';
 import { runMerkle } from './commands/merkle.js';
+import { runDeployReceipt } from './commands/deploy-receipt.js';
 import { runSecurity } from './commands/security.js';
 import { SLASH_COMMANDS, SHELL_PHASES } from './lib/slash-commands.js';
 import fs from 'node:fs';
