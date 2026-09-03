@@ -12,6 +12,7 @@
     "./dockerize": "./src/lib/dockerize.js",
     "./mini": "./src/lib/mini/index.js",
     "./merkle": "./src/lib/merkle/index.js",
+    "./deploy-receipt": "./src/lib/deploy-receipt/index.js",
     "./knowledge": "./src/knowledge/index.js",
     "./knowledge-service-client": "./src/knowledge/service/client.js",
     "./identity": "./packages/identity/src/index.js",
