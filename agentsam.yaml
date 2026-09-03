@@ -211,11 +211,14 @@ security_contract:
 release:
   root_sdk:
     target_version: "2.0.0"
-    state: prepared_not_published
+    state: published
     registry: npm
-    current_latest: "1.9.0"
+    current_latest: "2.0.0"
     current_alpha: "2.0.0-alpha.identity.12"
-    tag_after_successful_publish: v2.0.0
+    published_at_utc: "2026-09-03T02:21:44.857Z"
+    published_git_head: ed629869e701809d2bf4c61bd56d05d8d8d1e183
+    dist_integrity: sha512-lXnBp8GR1iduKWxxHSRHSd9Q1fjTUZvX1UecwtS8xdDxMdZRd2BSHtDygm0OMNYchrtUP1nR6g0t3MqZTkE5HA==
+    git_tag: v2.0.0
     verification_command: npm run verify:release
     publish_mode: manual
   identity:
