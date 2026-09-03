@@ -1,0 +1,247 @@
+schema_version: "2.0"
+
+project:
+  id: agentsam-sdk
+  name: AgentSam SDK
+  description: >-
+    Portable AgentSam SDK and CLI kits for local scaffolding, repository intelligence,
+    incremental indexing, identity adapters, dependency maintenance, optional local
+    services, and host integration.
+  repository: SamPrimeaux/agentsam-sdk
+  default_branch: main
+  visibility: public
+  license: MIT
+  status: active
+
+ownership:
+  canonical_repository: SamPrimeaux/agentsam-sdk
+  portable_code_policy: single_home
+  rules:
+    - Portable SDK code, contracts, CLI tooling, and reusable packages land here once.
+    - Host-specific credentials, authorization, deployment wiring, and runtime policy stay with the consuming host.
+    - Reusable contracts live under protocol/ and travel with the SDK.
+    - Host applications import or adapt SDK code instead of mirroring SDK source trees.
+    - Repository tools are provider-neutral and read-only by default unless mutation is explicit.
+
+runtime:
+  node:
+    enabled: true
+    module_format: esm
+    minimum_version: "22.5.0"
+    source_root: src
+    test_root: test
+  python:
+    enabled: true
+    minimum_version: "3.10"
+    package_root: python
+    source_root: python/agentsam_sdk
+    test_root: python/tests
+    optional_dependencies:
+      tui:
+        - "rich>=13.7.0"
+  docker:
+    required: false
+    purpose: optional container target for supported local/background services
+
+packages:
+  root_sdk:
+    name: "@inneranimalmedia/agentsam-sdk"
+    version: "2.0.0"
+    path: .
+    private: false
+    registry: npm
+    access: public
+    entrypoint: ./src/index.js
+    cli:
+      - agentsam
+      - agentsam-sdk
+      - agentsam-scaffold
+      - agentsam-auth-portal
+  identity:
+    name: "@inneranimalmedia/agentsam-sdk-identity"
+    version: "2.0.0"
+    path: packages/identity
+    private: true
+    separately_published: false
+    distribution: bundled through root SDK exports
+    public_import_prefix: "@inneranimalmedia/agentsam-sdk/identity"
+  shell_kit:
+    name: "@inneranimalmedia/agentsam-shell-kit"
+    version: "0.1.0"
+    path: packages/agentsam-shell-kit
+    private: true
+    separately_published: false
+  python_tools:
+    name: agentsam-sdk
+    version: "0.1.0"
+    path: python
+    registry: pypi
+    published: false
+  knowledge_service_runtime:
+    name: agentsam-knowledge-service-runtime
+    version: "1.0.0"
+    path: services/knowledge
+    private: true
+
+exports:
+  root: ./src/index.js
+  git_context: ./src/lib/git-context.js
+  bridge_client: ./src/lib/bridge-client.js
+  local_sqlite: ./src/local/sqlite.js
+  dockerize: ./src/lib/dockerize.js
+  cad_docker: ./src/lib/cad-docker.js
+  mini: ./src/lib/mini/index.js
+  merkle: ./src/lib/merkle/index.js
+  knowledge: ./src/knowledge/index.js
+  knowledge_service_client: ./src/knowledge/service/client.js
+  security: ./src/security/index.js
+  identity: ./packages/identity/src/index.js
+
+capabilities:
+  local_development:
+    - project_scaffolding
+    - sqlite
+    - local_status
+    - terminal_ui
+    - optional_local_pty
+  repository:
+    - git_context
+    - repository_composition
+    - git_churn_snapshot
+    - merkle_integrity
+  knowledge:
+    - incremental_js_ts_ast_indexing
+    - text_indexing
+    - lexical_retrieval
+    - versioned_generations
+    - explicit_gemini_embeddings
+    - sqlite_store
+    - postgres_pgvector_store
+    - optional_background_knowledge_service
+  identity:
+    - reusable_identity_contracts
+    - provider_adapters
+    - oauth_helpers
+    - password_recovery_helpers
+    - cloudflare_d1_adapter
+    - local_auth_portal_preview
+  security:
+    - npm_dependency_inventory
+    - osv_vulnerability_scan
+    - deployment_log_triage
+    - isolated_verified_dependency_repair
+  containers:
+    - generic_dockerize
+    - knowledge_service
+    - cad_service
+  prototypes:
+    - mini_apps
+
+cli:
+  commands:
+    - context
+    - init
+    - index
+    - search
+    - repo
+    - mini
+    - merkle
+    - security
+    - status
+    - db
+    - tui
+    - start-local
+    - shell
+    - tunnel
+    - deploy
+    - dockerize
+    - identity
+
+boundaries:
+  sdk_provides:
+    - portable_modules
+    - cli_and_scaffolds
+    - reusable_contracts
+    - local_tooling
+    - optional_service_building_blocks
+  host_provides:
+    - authenticated_user_context
+    - authorization_and_policy
+    - provider_credentials
+    - production_storage_configuration
+    - production_tool_execution_policy
+    - model_orchestration
+    - deployment_bindings
+  workspace_policy: >-
+    Workspace identifiers are optional host/application context, not a universal SDK
+    authorization requirement. Portable SDK contracts must not hard-code tenant,
+    workspace, provider, or repository-specific identity assumptions.
+  no_false_success: true
+
+knowledge_contracts:
+  root: protocol/knowledge
+  format: json_schema
+  contracts:
+    - source.schema.json
+    - document.schema.json
+    - chunk.schema.json
+    - repository.schema.json
+    - retrieval-query.schema.json
+    - retrieval-hit.schema.json
+    - context-pack.schema.json
+    - ingest-receipt.schema.json
+    - index-config.schema.json
+  notes:
+    - AST relationships are syntactic and may remain unresolved.
+    - Embeddings are opt-in rather than required for initial indexing.
+    - Source provenance is retained across saved generations.
+
+security_contract:
+  secrets_in_repository: false
+  repairs:
+    default_mode: plan
+    apply_requires_clean_git: true
+    isolated_branch_and_worktree: true
+    verification_required: true
+    auto_publish: false
+    auto_deploy: false
+  supported_dependency_graph: npm_lockfile
+  unsupported_managers_are_incomplete: true
+
+release:
+  root_sdk:
+    target_version: "2.0.0"
+    state: prepared_not_published
+    registry: npm
+    current_latest: "1.9.0"
+    current_alpha: "2.0.0-alpha.identity.12"
+    tag_after_successful_publish: v2.0.0
+    verification_command: npm run verify:release
+    publish_mode: manual
+  identity:
+    publish_separately: false
+  python:
+    publish_to_pypi: false
+
+verification:
+  required:
+    - node_sdk_tests
+    - identity_tests
+    - package_exports
+    - bootstrap
+    - npm_pack_dry_run
+    - installed_tarball_consumer_proof
+    - knowledge_package_proof
+    - python_tests
+    - complete_dependency_scan
+  command: npm run verify:release
+
+layout:
+  src: Node SDK, CLI commands, local runtime helpers, knowledge, security, and UI helpers
+  packages: private/focused workspaces including identity and shell-kit
+  protocol: shared portable contracts and ownership rules
+  python: bundled Python repository/data tooling and optional Rich TUI
+  services: optional service runtimes such as knowledge and CAD
+  templates: project and UI scaffold templates
+  docs: product, release, security, and developer documentation
+  test: Node verification suites
