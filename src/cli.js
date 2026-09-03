@@ -331,6 +331,8 @@ if (command === '--version' || command === '-v') {
   await runSecurity(rest);
 } else if (command === 'merkle') {
   await runMerkle(rest);
+} else if (command === 'deploy-receipt') {
+  await runDeployReceipt(rest);
 } else if (command === 'mini') {
   try {
     await runMini(rest);
