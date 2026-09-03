@@ -7,6 +7,14 @@ export { routeIntent } from './lib/router.js';
 export { getToolCatalog } from './lib/tools.js';
 export { scaffoldProject } from './lib/scaffold.js';
 export {
+  DEFAULT_DEPLOY_EXCLUDES,
+  captureDeployReceipt,
+  finalizeDeployReceipt,
+  showLatestDeployReceipt,
+  captureCheckpoint,
+  promoteCheckpoint,
+} from './lib/deploy-receipt/index.js';
+export {
   normalizeGitRemote,
   resolveGitContext,
   tryResolveGitContext,
