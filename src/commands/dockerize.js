@@ -25,10 +25,12 @@ export function parseDockerizeArgs(argv) {
     list: false,
     stopName: '',
     repositories: [],
+    tools: undefined,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
-    if (a === '--type') opts.type = argv[++i] || opts.type;
+    if (i === 0 && a === 'cad') opts.type = 'cad_service';
+    else if (a === '--type') opts.type = argv[++i] || opts.type;
     else if (a === '--name') opts.name = argv[++i] || '';
     else if (a === '--port') opts.port = Number(argv[++i]) || undefined;
     else if (a === '--cwd') opts.cwd = path.resolve(argv[++i] || opts.cwd);
@@ -43,6 +45,7 @@ export function parseDockerizeArgs(argv) {
     else if (a === '--volume') opts.volume = argv[++i] || '';
     else if (a === '--memory') opts.memory = argv[++i] || '';
     else if (a === '--cpus') opts.cpus = argv[++i] || '';
+    else if (a === '--tools' || a === '--cad-tools') opts.tools = argv[++i] || undefined;
     else if (a === '--no-register-tag') opts.registerTag = false;
     else throw new Error(`Unknown dockerize option: ${a}`);
   }
@@ -54,7 +57,8 @@ export function printDockerizeHelp() {
   agentsam dockerize — generate, build, and run a local Docker container
 
   Usage:
-    agentsam dockerize --type <static|vite_react|node_service|wrangler_dev> [options]
+    agentsam dockerize --type <static|vite_react|node_service|wrangler_dev|knowledge_service|cad_service> [options]
+    agentsam dockerize cad [--tools openscad|openscad,freecad,blender|all] [options]
     agentsam dockerize --list
     agentsam dockerize --stop <name>
 
@@ -72,8 +76,9 @@ export function printDockerizeHelp() {
     --stop <name>     Stop a running container by name
     --repository <alias=path> Read-only repository for knowledge_service (repeatable)
     --volume <name>   Persistent knowledge data volume (default: <name>-data)
-    --memory <size>   Memory cap (knowledge: 768m; other types: 512m)
-    --cpus <number>   CPU cap (default: 1)
+    --memory <size>   Memory cap (knowledge: 768m; CAD: 1g/2g/4g by selected tools)
+    --cpus <number>   CPU cap (CAD defaults: 1 core OpenSCAD; 2 with FreeCAD/Blender)
+    --tools <list>     CAD tools: openscad (default), freecad, blender, comma-separated, or all
     --no-register-tag Skip the SDK tag ledger
 
   App types:
@@ -89,6 +94,9 @@ ${DOCKER_APP_TYPES.map((t) => `    ${t.padEnd(14)} ${DOCKER_APP_TYPE_LABELS[t].l
   run prints the exact stop command so nothing is ever silently left running.
   knowledge_service is persistent: localhost only, restart unless-stopped, durable data
   volume, read-only repository mounts, generated token, and no embedding calls by default.
+  cad_service is localhost-only, token-authenticated, read-only/rootless, and persistent until
+  stopped. 'agentsam dockerize cad' installs OpenSCAD by default; add --tools all only when
+  you actually need the much larger FreeCAD/Blender toolchain.
   `);
 }
 
@@ -137,7 +145,7 @@ export async function runDockerize(argv) {
     process.exit(1);
   }
 
-  const appSlug = opts.name || path.basename(opts.cwd);
+  const appSlug = opts.name || (opts.type === 'cad_service' ? 'agentsam-cad' : path.basename(opts.cwd));
   const meta = DOCKER_APP_TYPE_LABELS[opts.type];
 
   console.log(`\n  agentsam dockerize — ${meta.label} (${meta.sublabel})`);
@@ -158,6 +166,7 @@ export async function runDockerize(argv) {
       volume: opts.volume,
       memory: opts.memory,
       cpus: opts.cpus,
+      tools: opts.tools,
       registerTag: opts.registerTag,
       onData: (chunk) => process.stdout.write(chunk),
       onAutoStop: () => console.log(`\n  ⏱  --timeout reached — auto-stopped ${appSlug}\n`),
@@ -193,8 +202,14 @@ export async function runDockerize(argv) {
   console.log(`  ✓ Running — http://localhost:${result.plan.hostPort}  (container: ${result.plan.slug})`);
   if (result.tokenFile) {
     console.log(`  Service token file: ${result.tokenFile} (value hidden)`);
-    console.log(`  Persistent data volume: ${result.volume}`);
-    console.log('  Embeddings disabled. Submit scoped indexing jobs through /v1/jobs.');
+    if (opts.type === 'knowledge_service') {
+      console.log(`  Persistent data volume: ${result.volume}`);
+      console.log('  Embeddings disabled. Submit scoped indexing jobs through /v1/jobs.');
+    } else if (opts.type === 'cad_service') {
+      console.log(`  CAD tools: ${(result.tools || []).join(', ')}`);
+      console.log(`  Health:    http://127.0.0.1:${result.plan.hostPort}/healthz`);
+      console.log('  OpenSCAD:  POST /v1/openscad/compile (Bearer token required)');
+    }
   }
 
   if (result.tagRegistration?.ok) {
