@@ -1,6 +1,6 @@
 # AgentSam SDK 2.0.0 release
 
-Status: prepared for manual npm publication; no publish is performed by branch cleanup.
+Status: published to npm as `@inneranimalmedia/agentsam-sdk@2.0.0`; npm `latest` points to 2.0.0.
 
 ## Product boundaries
 
@@ -32,8 +32,8 @@ automatic retention, multi-user authorization and production routing remain host
 
 ## Changes from 1.9 and the identity alphas
 
-- The npm `latest` tag was 1.9.0 at preparation; the alpha tag was
-  2.0.0-alpha.identity.12. Version 2.0.0 was not present in the registry.
+- npm `latest` advanced from 1.9.0 to 2.0.0. The alpha tag remains
+  2.0.0-alpha.identity.12 for the final identity prerelease line.
 - Node 22.5+ is required. Python 3.10+ is required for Python repository intelligence;
   Docker is required only when actually building/running containers.
 - In an existing repository, `agentsam init` configures repository knowledge. Use
@@ -43,36 +43,34 @@ automatic retention, multi-user authorization and production routing remain host
 - Knowledge and Docker features from PRs #20 and #21 are integrated in main.
 - Publication runs the installed-tarball consumer proof, Python tests, and dependency scan
   in addition to the existing SDK, identity, bootstrap and package checks.
-- The legacy alpha workflow refuses stable versions. Stable npm publication stays manual.
+- The legacy alpha workflow refuses stable versions. Stable npm publication remains manual.
 
-## Publish from the clean main checkout
+## Publication receipt
 
-```sh
-cd /Users/samprimeaux/agentsam-sdk
-git status --short
-git pull --ff-only
-npm ci
-bash scripts/npm-publish-preflight.sh
-npm publish --tag latest --access public
+Version 2.0.0 was published on 2026-09-03 at `2026-09-03T02:21:44.857Z` from SDK git SHA
+`ed629869e701809d2bf4c61bd56d05d8d8d1e183`. npm recorded this integrity value:
+
+```text
+sha512-lXnBp8GR1iduKWxxHSRHSd9Q1fjTUZvX1UecwtS8xdDxMdZRd2BSHtDygm0OMNYchrtUP1nR6g0t3MqZTkE5HA==
 ```
 
-The `prepublishOnly` hook runs `npm run verify:release` before upload. This runs the SDK and
-identity suites, package/bootstrap checks, installed-tarball fixtures, Python tests and a
-complete dependency scan. The tests do not call embedding providers or production databases.
-If npm requests login or a one-time code, complete that in your terminal. Do not publish
-with `--workspaces`: identity and shell-kit workspaces remain private.
+The `prepublishOnly` hook ran `npm run verify:release` before upload. That verification ran
+the SDK and identity suites, package/bootstrap checks, installed-tarball fixtures, Python
+tests and the complete dependency scan. The private identity and shell-kit workspaces were
+not published separately.
 
-After a successful publish, verify the registry and record the receipt:
+Verify the live registry state with:
 
 ```sh
-npm view @inneranimalmedia/agentsam-sdk@2.0.0 version dist.integrity
+npm view @inneranimalmedia/agentsam-sdk@2.0.0 version gitHead dist.integrity
 npm view @inneranimalmedia/agentsam-sdk dist-tags --json
 npm install -g @inneranimalmedia/agentsam-sdk@2.0.0
 agentsam --version
 ```
 
-Record the actual publication date and SDK commit in `docs/RELEASES.md`; only then create
-the `v2.0.0` release tag. A published npm name/version cannot be overwritten.
+The publication receipt is recorded in `docs/RELEASES.md`. Git tag `v2.0.0` identifies the
+exact npm `gitHead`. A published npm name/version cannot be overwritten; subsequent package
+changes require a new version.
 
 ## Branch consolidation
 
