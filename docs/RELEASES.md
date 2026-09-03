@@ -1,11 +1,11 @@
 # `@inneranimalmedia/agentsam-sdk` release receipts
 
-**2.0.0 is prepared, not yet published.** See [stable release instructions](sdk-2.0-release.md).
-Add its publication receipt only after npm confirms success; this preparation does not
-publish the private identity workspace or create a `v2.0.0` release tag.
+**2.0.0 is published on npm and is the `latest` dist-tag.** The private identity workspace
+continues to ship through the root SDK exports and is not published separately.
 
 | npm version | Published (UTC) | IAM git SHA (40) | Notes |
 |-------------|-----------------|------------------|-------|
+| 2.0.0 | 2026-09-03T02:21:44.857Z | `ed629869e701809d2bf4c61bd56d05d8d8d1e183` | Stable SDK 2.0.0; npm `latest`; identity bundled through root exports; release verification and dependency scan passed before publish. |
 | 2.0.0-alpha.identity.5 | _(pending npm)_ | `df064114eb7f8888f163e4a07dfddf19035b7169` | Password reset service, `registerFinalizeInboundOAuth`, IAM live proof. |
 | 2.0.0-alpha.identity.4 | 2026-08-22 | `df064114eb7f8888f163e4a07dfddf19035b7169` | IAM auth portal sync: signup→`/api/auth/signup`, `company-branding.js`, preview stubs. SDK git `d7498ca`. |
 | 2.0.0-alpha.identity.3 | 2026-08-22 | `559bc37267f76790136004f5fa94a2bb3cd6a721` | `company` table + `GET/PATCH /api/company` branding SSOT. |
