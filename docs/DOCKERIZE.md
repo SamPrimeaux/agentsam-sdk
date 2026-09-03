@@ -124,3 +124,65 @@ Round-tripped end-to-end multiple times through this SDK's own `agentsam dockeri
 
 `node --test test/dockerize.test.mjs` covers the pure generator/hash/manifest logic (no
 Docker daemon required, CI-safe).
+
+## CAD execution service
+
+`agentsam dockerize cad` creates a local, token-authenticated native CAD service without
+requiring the project itself to contain a Dockerfile. The default image installs only
+OpenSCAD so first-time setup stays relatively small:
+
+```bash
+agentsam dockerize cad
+```
+
+Heavier tools are opt-in:
+
+```bash
+agentsam dockerize cad --tools openscad,freecad
+agentsam dockerize cad --tools all
+```
+
+The service binds to `127.0.0.1:8793`, runs as a non-root user with a read-only root
+filesystem, drops Linux capabilities, uses temporary `/work` storage, and writes a
+random service token under `.agentsam/docker/cad/<name>/service.token`. It is persistent
+(`restart unless-stopped`) but the native CAD applications are not resident in memory
+while idle; stop it whenever you do not want the local API available:
+
+```bash
+agentsam dockerize --list
+agentsam dockerize --stop agentsam-cad
+```
+
+Resource defaults scale with the selected toolchain: OpenSCAD gets 1 GB / 1 CPU,
+FreeCAD raises that to 2 GB / 2 CPUs, and a Blender image defaults to 4 GB / 2 CPUs.
+Override them with `--memory` and `--cpus` when needed.
+
+### Local API
+
+Health does not require the token:
+
+```bash
+curl http://127.0.0.1:8793/healthz
+```
+
+Capabilities and compilation do. The CLI prints the token file path but never the token
+itself. For a shell test:
+
+```bash
+TOKEN="$(cat .agentsam/docker/cad/agentsam-cad/service.token)"
+
+curl -s http://127.0.0.1:8793/v1/capabilities \
+  -H "Authorization: Bearer $TOKEN" | jq
+
+curl -s -X POST http://127.0.0.1:8793/v1/openscad/compile \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"source":"cube([20,20,20]);","format":"stl","filename":"cube.stl"}' \
+  | jq '{ok,filename,size_bytes,sha256}'
+```
+
+The OpenSCAD endpoint uses `exec`-style argument arrays rather than a shell, rejects
+external `include`, `use`, `import()` and `surface()` file access, enforces source/output
+limits and timeouts, and runs inside the restricted container workspace. FreeCAD and
+Blender are currently installable capabilities only; they are deliberately not exposed
+as arbitrary-script HTTP endpoints yet.

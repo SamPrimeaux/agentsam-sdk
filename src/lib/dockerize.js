@@ -18,8 +18,9 @@ import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { generateKnowledgeDocker, prepareKnowledgeDeployment, stageKnowledgeContext, knowledgeRunArguments } from './knowledge-docker.js';
+import { generateCadDocker, prepareCadDeployment, stageCadContext, cadRunArguments, cadDefaultResources } from './cad-docker.js';
 
-export const DOCKER_APP_TYPES = ['static', 'vite_react', 'node_service', 'wrangler_dev', 'knowledge_service'];
+export const DOCKER_APP_TYPES = ['static', 'vite_react', 'node_service', 'wrangler_dev', 'knowledge_service', 'cad_service'];
 
 export const DOCKER_APP_TYPE_LABELS = {
   static: { label: 'Static site', sublabel: 'HTML/dist export -> nginx' },
@@ -27,6 +28,7 @@ export const DOCKER_APP_TYPE_LABELS = {
   node_service: { label: 'Node service', sublabel: 'Express/Fastify/etc, npm start' },
   wrangler_dev: { label: 'Cloudflare Worker (offline)', sublabel: 'wrangler dev --local, no CF resources hit' },
   knowledge_service: { label: 'Knowledge service', sublabel: 'Durable background indexing, read-only repositories, localhost API' },
+  cad_service: { label: 'CAD execution service', sublabel: 'Local OpenSCAD / optional FreeCAD + Blender runtime' },
 };
 
 const DEFAULT_PORTS = {
@@ -35,6 +37,7 @@ const DEFAULT_PORTS = {
   node_service: 3000,
   wrangler_dev: 8787,
   knowledge_service: 8792,
+  cad_service: 8793,
 };
 
 const AGENTSAM_DOCKER_DIR = '.agentsam/docker';
@@ -169,6 +172,8 @@ export function generateDockerFileSet(appType, opts = {}) {
   switch (appType) {
     case 'knowledge_service':
       return generateKnowledgeDocker({ ...opts, appSlug: slugifyForDocker(opts.appSlug || 'agentsam-knowledge') });
+    case 'cad_service':
+      return generateCadDocker({ ...opts, appSlug: slugifyForDocker(opts.appSlug || 'agentsam-cad') });
     case 'static':
       return generateStatic(opts);
     case 'vite_react':
@@ -283,6 +288,45 @@ export async function stopDockerContainer(name) {
   return runCommand('docker', ['stop', name]);
 }
 
+/**
+ * Remove an existing container name only when it belongs to AgentSam and matches
+ * the expected managed service type. This makes persistent service setup idempotent
+ * without ever deleting an unrelated user container that happens to share the name.
+ */
+export async function replaceManagedContainer(name, expectedType) {
+  const inspect = await runCommand('docker', [
+    'inspect',
+    '--format', '{{json .Config.Labels}}',
+    name,
+  ]);
+  if (!inspect.ok) {
+    const missing = /No such object|No such container/i.test(`${inspect.stdout}
+${inspect.stderr}`);
+    return missing
+      ? { ok: true, existed: false, removed: false }
+      : { ok: false, existed: false, removed: false, stderr: inspect.stderr || inspect.stdout };
+  }
+
+  let labels = {};
+  try {
+    labels = JSON.parse(inspect.stdout.trim() || '{}') || {};
+  } catch {
+    return { ok: false, existed: true, removed: false, stderr: `Could not inspect labels for existing container ${name}.` };
+  }
+
+  if (labels['agentsam.managed'] !== 'true' || (expectedType && labels['agentsam.type'] !== expectedType)) {
+    return {
+      ok: false,
+      existed: true,
+      removed: false,
+      stderr: `Container name ${name} is already in use by a container not managed as AgentSam ${expectedType || 'service'}; refusing to remove it.`,
+    };
+  }
+
+  const removed = await runCommand('docker', ['rm', '-f', name]);
+  return { ...removed, existed: true, removed: removed.ok };
+}
+
 /** All containers (running or stopped) that agentsam dockerize has launched, via label filter. */
 export async function listManagedContainers() {
   const res = await runCommand('docker', [
@@ -357,13 +401,18 @@ export function buildDockerDeployPlan(appType, opts = {}) {
  */
 export async function dockerize(targetDir, appType, opts = {}) {
   const knowledge = appType === 'knowledge_service';
+  const cad = appType === 'cad_service';
   if (knowledge) {
     if (opts.timeoutSeconds) throw new Error('knowledge_service is persistent; use agentsam dockerize --stop instead of --timeout.');
     opts = prepareKnowledgeDeployment(path.resolve(targetDir), { ...opts, appSlug: slugifyForDocker(opts.appSlug || 'agentsam-knowledge') });
   }
+  if (cad) {
+    opts = prepareCadDeployment(path.resolve(targetDir), { ...opts, appSlug: slugifyForDocker(opts.appSlug || 'agentsam-cad') });
+  }
   const plan = buildDockerDeployPlan(appType, opts);
-  const written = writeDockerFileSet(targetDir, plan.files, plan.hash, { overwrite: opts.overwrite, isolatedContext: knowledge });
-  const buildContext = knowledge ? stageKnowledgeContext(written.versionDir) : targetDir;
+  const isolatedContext = knowledge || cad;
+  const written = writeDockerFileSet(targetDir, plan.files, plan.hash, { overwrite: opts.overwrite, isolatedContext });
+  const buildContext = knowledge ? stageKnowledgeContext(written.versionDir) : cad ? stageCadContext(written.versionDir) : targetDir;
   const manifest = writeManifestEntry(targetDir, plan.hash, {
     appType,
     appSlug: plan.slug,
@@ -374,10 +423,12 @@ export async function dockerize(targetDir, appType, opts = {}) {
     dockerfilePath: written.dockerfilePath,
     composePath: written.composePath,
     createdAt: new Date().toISOString(),
+    ...(cad ? { tools: opts.tools } : {}),
   });
 
   const result = { plan, written, manifest, build: null, run: null, tagRegistration: null, cancelAutoStop: null,
-    ...(knowledge ? { configurationDir: opts.configurationDir, tokenFile: opts.tokenFile, volume: opts.volume } : {}) };
+    ...(knowledge ? { configurationDir: opts.configurationDir, tokenFile: opts.tokenFile, volume: opts.volume } : {}),
+    ...(cad ? { configurationDir: opts.configurationDir, tokenFile: opts.tokenFile, tools: opts.tools } : {}) };
   if (opts.writeOnly) return result;
 
   result.build = await buildDockerImage(buildContext, {
@@ -399,13 +450,23 @@ export async function dockerize(targetDir, appType, opts = {}) {
     labels['agentsam.expires-at'] = new Date(Date.now() + opts.timeoutSeconds * 1000).toISOString();
   }
 
+  if (cad) {
+    const replacement = await replaceManagedContainer(plan.slug, 'cad_service');
+    if (!replacement.ok) {
+      result.run = { ok: false, code: 1, stdout: '', stderr: replacement.stderr || `Could not prepare container name ${plan.slug}.` };
+      return result;
+    }
+  }
+
+  const cadResources = cad ? cadDefaultResources(opts.tools) : null;
   result.run = await runDockerContainer(plan.imageTag, {
     name: plan.slug,
     hostPort: plan.hostPort,
     containerPort: plan.containerPort,
-    memory: opts.memory || (knowledge ? '768m' : undefined),
-    cpus: opts.cpus,
+    memory: opts.memory || (knowledge ? '768m' : cad ? cadResources.memory : undefined),
+    cpus: opts.cpus || (cad ? cadResources.cpus : undefined),
     ...(knowledge ? { hostIp: '127.0.0.1', rm: false, extraArgs: knowledgeRunArguments(opts) } : {}),
+    ...(cad ? { hostIp: '127.0.0.1', rm: false, extraArgs: cadRunArguments(opts) } : {}),
     labels,
     onData: opts.onData,
   });
@@ -426,6 +487,26 @@ export async function dockerize(targetDir, appType, opts = {}) {
       result.run = { ...result.run, ok: false, code: 1, stderr: `Knowledge service did not become ready; stopped ${plan.slug}. Inspect docker logs; data volume retained.` };
       return result;
     }
+  }
+
+  if (cad) {
+    const deadline = Date.now() + 60000;
+    let ready = false;
+    let health = null;
+    while (Date.now() < deadline && !ready) {
+      try {
+        const response = await fetch(`http://127.0.0.1:${plan.hostPort}/healthz`, { signal: AbortSignal.timeout(2000) });
+        health = response.ok ? await response.json() : null;
+        ready = health?.service === 'agentsam-cad';
+      } catch { /* Native CAD packages can make first startup slightly slower. */ }
+      if (!ready) await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    if (!ready) {
+      await stopDockerContainer(plan.slug);
+      result.run = { ...result.run, ok: false, code: 1, stderr: `CAD service did not become ready; stopped ${plan.slug}. Inspect docker logs.` };
+      return result;
+    }
+    result.health = health;
   }
 
   if (opts.timeoutSeconds) {
