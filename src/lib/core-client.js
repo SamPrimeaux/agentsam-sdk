@@ -3,16 +3,14 @@ import { resolveIamOrigin } from '../../packages/identity/src/contracts/auth-con
 /**
  * IAM CORE client — SDK is a delivery mechanism; intelligence lives server-side.
  *
- * Default base URL https://inneranimalmedia.com is CORRECT-AS-DESIGNED for
- * multi-tenant client serving (thin client → IAM CORE). Override with
- * IAM_CORE_URL / AGENTSAM_CORE_URL. Without a CORE backend, consumers get
- * scaffold/local CLI only.
+ * IAM_ORIGIN is the canonical platform authority/API origin. During the
+ * migration window IAM_CORE_URL / AGENTSAM_CORE_URL remain compatibility-only
+ * fallbacks. Without a CORE backend, consumers get scaffold/local CLI only.
  */
 
-const DEFAULT_CORE = 'https://inneranimalmedia.com';
-
-export function coreBaseUrl() {
-  return (process.env.IAM_CORE_URL || process.env.AGENTSAM_CORE_URL || DEFAULT_CORE).replace(/\/$/, '');
+export function coreBaseUrl(env = process.env) {
+  const explicit = env?.IAM_ORIGIN || env?.IAM_CORE_URL || env?.AGENTSAM_CORE_URL || '';
+  return resolveIamOrigin(env, explicit);
 }
 
 export async function postJson(path, body, token) {
