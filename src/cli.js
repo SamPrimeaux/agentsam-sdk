@@ -190,6 +190,7 @@ async function runLocalInit(config) {
   console.log(`
   Local means local: no Worker, tunnel, IAM login, or cloud database is required.
   `);
+  return { dir, meta };
 }
 
 async function initInteractive(partial = {}) {
