@@ -10,10 +10,19 @@ Inspect views are **derived projections**, not new repository identities. A proj
 
 ## Agent routing flow
 
-Start with a small facet index instead of injecting every file record:
+Start with a small facet index instead of injecting every file record. The CLI defaults to this bounded index view; `--view full` is explicit:
 
 ```sh
-agentsam inspect --cwd . --view index --json
+agentsam inspect --cwd . --json
+agentsam inspect --cwd . --view full --json   # persistence/verification only
+```
+
+For repeated agent turns, capture the canonical snapshot once and reuse it. This avoids repeating Merkle + AST + repository-intelligence work while preserving the exact same canonical identities:
+
+```sh
+agentsam inspect --cwd . --save-snapshot /tmp/repository.snapshot.json --json
+agentsam inspect --cwd . --snapshot-file /tmp/repository.snapshot.json \
+  --view files --system identity --tag authentication --limit 40 --json
 ```
 
 Then request only the likely feature surface:

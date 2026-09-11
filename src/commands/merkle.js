@@ -3,6 +3,7 @@ import path from 'node:path';
 import { buildMerkleTree, saveSnapshot, readSnapshot, diffTrees, normalizePolicy } from '../lib/merkle/index.js';
 import { renderSummary, safeText } from '../ui/merkle/render.js';
 import { runMerkleExplorer } from '../ui/merkle/explorer.js';
+import { runMerklePersist } from './merkle-persist.js';
 
 export function printMerkleHelp() {
   console.log(`
@@ -13,6 +14,7 @@ export function printMerkleHelp() {
   verify <snapshot>           Check current files against a saved manifest
   diff <a> <b>                Compare two directories or snapshot files
   inspect [path]              Show every path and hash (also accepts a snapshot)
+  persist <snapshot>          Publish a saved snapshot through WEBSITE_ASSETS/DB bindings
   tui [path]                  Open the interactive tree explorer
 
   --out <file>                Snapshot destination
@@ -80,6 +82,14 @@ async function comparison(opts, progress) {
 }
 
 export async function runMerkle(argv = []) {
+  if (argv[0] === 'persist') {
+    try { return await runMerklePersist(argv.slice(1)); }
+    catch (error) {
+      process.exitCode = 2;
+      process.stderr.write(argv.includes('--json') ? JSON.stringify({ error: error.message }) + '\n' : `Merkle persist: ${safeText(error.message)}\n`);
+      return null;
+    }
+  }
   if (!argv.length || argv.includes('--help') || argv.includes('-h')) { printMerkleHelp(); return; }
   let opts;
   try {
