@@ -5,6 +5,7 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { coreBaseUrl } from './core-client.js';
+import { resolveSdkKey } from '../../packages/identity/src/contracts/auth-config.js';
 
 const execFileAsync = promisify(execFile);
 
