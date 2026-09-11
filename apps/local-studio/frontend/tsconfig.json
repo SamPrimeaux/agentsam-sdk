@@ -22,14 +22,12 @@
     "baseUrl": ".",
     "paths": {
       "@/*": [
-        "./frontend/src/*"
+        "./src/*"
       ]
     },
     "allowImportingTsExtensions": true
   },
   "include": [
-    "frontend/src",
-    "backend/server",
-    "shared/agentsam/src"
+    "src"
   ]
 }

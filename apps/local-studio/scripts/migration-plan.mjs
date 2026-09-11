@@ -5,10 +5,10 @@
  *
  * Applied files are keyed by BASENAME, so the same file applies once no matter
  * which directory it is globbed from. That is what makes the auth schema safe to
- * copy from `migrations/auth/` into `migrations/` when an app turns sign-in on:
+ * copy from `backend/migrations/auth/` into `backend/migrations/` when an app turns sign-in on:
  * a database that already has `0001_auth.sql` will not re-run it.
  *
- * Neither applier descends into subdirectories, so `migrations/auth/*.sql` is
+ * Neither applier descends into subdirectories, so `backend/migrations/auth/*.sql` is
  * out of scope for both until it is copied up.
  */
 
@@ -31,7 +31,7 @@ export function isMigrationFile(path) {
 
 /**
  * Migrations in `paths` that are not yet in `applied`, in apply order.
- * Non-`.sql` entries (a `readdir` also yields `migrations/auth/`) are dropped.
+ * Non-`.sql` entries (a `readdir` also yields `backend/migrations/auth/`) are dropped.
  * @param {Iterable<string>} paths
  * @param {Iterable<string>} applied
  * @returns {Array<{ name: string, path: string }>}

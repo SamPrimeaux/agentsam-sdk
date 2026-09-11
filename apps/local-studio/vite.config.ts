@@ -12,10 +12,10 @@ import { grokPwaPlugin } from "./scripts/grok-pwa-plugin.mjs";
 import { appEnvPlugin } from "./scripts/app-env-plugin.mjs";
 import { isMigrationFile } from "./scripts/migration-plan.mjs";
 
-/** The files `app/frontend/src/lib/db.ts` globs — same directory, same non-recursive scope. */
+/** The files `frontend/src/lib/db.ts` globs — same directory, same non-recursive scope. */
 function hasGlobbedMigrations(root: string): boolean {
   try {
-    return readdirSync(join(root, "app/backend/migrations")).some(isMigrationFile);
+    return readdirSync(join(root, "backend/migrations")).some(isMigrationFile);
   } catch {
     return false;
   }
@@ -37,7 +37,7 @@ function pgliteBootstrapPlugin(): Plugin {
     async configureServer(server) {
       if (!hasGlobbedMigrations(server.config.root)) return;
       try {
-        const mod = (await server.ssrLoadModule("/app/frontend/src/lib/db.ts")) as {
+        const mod = (await server.ssrLoadModule("/frontend/src/lib/db.ts")) as {
           ensureDbReady?: () => Promise<void>;
         };
         if (typeof mod.ensureDbReady === "function") {
@@ -68,7 +68,7 @@ function authPopupPlugin(): Plugin {
     configureServer(server) {
       // Register immediately (not in a returned post-hook) so we run BEFORE
       // TanStack Start / the SPA HTML fallback. A model-authored
-      // `app/frontend/src/routes/auth/popup.tsx` React page must never win this path.
+      // `frontend/src/routes/auth/popup.tsx` React page must never win this path.
       server.middlewares.use(async (req, res, next) => {
         try {
           const rawUrl = req.url ?? "";
@@ -109,7 +109,7 @@ function authPopupPlugin(): Plugin {
             headers: requestHeaders,
           });
 
-          const mod = (await server.ssrLoadModule("/app/frontend/src/lib/auth/popup.server.ts")) as {
+          const mod = (await server.ssrLoadModule("/frontend/src/lib/auth/popup.server.ts")) as {
             handleAuthPopupRequest: (req: Request) => Promise<Response>;
           };
           const response = await mod.handleAuthPopupRequest(request);
@@ -143,10 +143,10 @@ function authPopupPlugin(): Plugin {
 }
 
 // `0.0.0.0:8080` is the live-preview contract — don't change host/port.
-// The dev server starts once `src/router.tsx` and `app/frontend/src/routes/` exist — see
+// The dev server starts once `frontend/src/router.tsx` and `frontend/src/routes/` exist — see
 // AGENTS.md § "First scaffold".
 export default defineConfig(({ command, isPreview }) => ({
-  publicDir: "app/frontend/public",
+  publicDir: "frontend/public",
   server: {
     host: "0.0.0.0",
     port: 8080,
@@ -167,7 +167,7 @@ export default defineConfig(({ command, isPreview }) => ({
     // PWA head + ?install=1 tutorial page; runs before Start/Nitro.
     grokPwaPlugin(),
     tailwindcss(),
-    tanstackStart({ srcDirectory: "app/frontend/src" }),
+    tanstackStart({ srcDirectory: "frontend/src" }),
     ...(command === "build" || isPreview
       ? [
           nitro({
@@ -175,7 +175,7 @@ export default defineConfig(({ command, isPreview }) => ({
             // Auto-registers server/middleware/* (the PWA install page +
             // manifest + head-tag middleware). Nitro v3 defaults serverDir to
             // false, so removing this silently unwires /?install=1 on deploys.
-            serverDir: "./app/backend/server",
+            serverDir: "./backend/server",
           }),
         ]
       : []),

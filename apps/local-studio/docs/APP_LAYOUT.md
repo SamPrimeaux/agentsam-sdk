@@ -20,11 +20,11 @@ GitHub API; it cannot push that merge commit.
 After you push the merge (commands in `scripts/finish-mobile-shell-merge.sh`),
 run `scripts/restructure-app-layout.sh` to move:
 
-- `src/` → `app/frontend/`
-- `public/` → `app/frontend/public/`
-- `worker/` → `app/backend/worker/`
-- `wrangler*.toml` → `app/backend/`
-- `migrations/` → `app/backend/migrations/`
+- `src/` → `frontend/`
+- `public/` → `frontend/public/`
+- `worker/` → `backend/worker/`
+- `wrangler*.toml` → `backend/`
+- `migrations/` → `backend/migrations/`
 
 Vite / wrangler paths are updated by the same script.
 

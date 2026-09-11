@@ -15,4 +15,4 @@ Studio fullscreen (header maximize) keeps the composer docked so an agent can ta
 
 Keys stay in vault / `.env`. The UI Worker never hosts model weights.
 
-Contract: `app/frontend/src/lib/work/computer-use.ts`
+Contract: `frontend/src/lib/work/computer-use.ts`
