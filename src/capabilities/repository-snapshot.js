@@ -61,6 +61,10 @@ function readPackageInventory(root, manifests = []) {
         private: parsed.private === true,
         type: parsed.type || null,
         bins: parsed.bin || null,
+        exports: parsed.exports && typeof parsed.exports === 'object' ? Object.keys(parsed.exports) : [],
+        scripts: parsed.scripts && typeof parsed.scripts === 'object' ? Object.keys(parsed.scripts).sort() : [],
+        dependencies: parsed.dependencies && typeof parsed.dependencies === 'object' ? Object.keys(parsed.dependencies).sort() : [],
+        dev_dependencies: parsed.devDependencies && typeof parsed.devDependencies === 'object' ? Object.keys(parsed.devDependencies).sort() : [],
         workspaces: parsed.workspaces || null,
       });
     } catch {
