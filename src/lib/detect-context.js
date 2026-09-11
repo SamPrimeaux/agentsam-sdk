@@ -221,14 +221,14 @@ async function detectIam(explicitToken = '') {
     });
   }
 
-  const sdkToken = explicitToken || process.env.AGENTSAM_SDK_TOKEN || '';
+  const sdkToken = resolveSdkKey(process.env, explicitToken);
   if (sdkToken.trim()) {
     const probe = await probeSdkBearer(sdkToken);
     if (probe.valid) {
       return {
-        source: 'sdk-token',
+        source: 'sdk-key',
         ready: true,
-        detail: `AGENTSAM_SDK_TOKEN · user ${probe.user_id || '?'}`,
+        detail: `AGENTSAM_SDK_KEY · user ${probe.user_id || '?'}`,
         probe,
         aux,
       };
