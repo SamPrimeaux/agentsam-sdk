@@ -264,6 +264,11 @@ AGENTSAM_LANE=${laneKey}
 AGENTSAM_AGENT=${agent}
 AGENTSAM_DB=.agentsam/data/agentsam.sqlite
 PORT=8787
+
+# Optional free/local model runtime. Enable with: agentsam ollama setup
+# OLLAMA_BASE_URL=http://127.0.0.1:11434
+# OLLAMA_MODEL=qwen2.5-coder
+# OLLAMA_EMBED_MODEL=mxbai-embed-large
 `,
     },
     {
