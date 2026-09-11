@@ -37,6 +37,7 @@ export function getIamAuthUrl({
  * @param {import('../../provider-contract.js').OAuthExchangeInput & { issuer: string }} input
  */
 export async function exchangeIamCode({
+  origin,
   issuer,
   code,
   codeVerifier,
