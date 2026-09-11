@@ -318,7 +318,7 @@ if (command === '--version' || command === '-v') {
   }
 } else if (command === 'shell') {
   try {
-    await runShellInfo(rest);
+    await runShell(rest);
   } catch (e) {
     console.error(`\n  ✗ ${e?.message || e}\n`);
     process.exit(1);
