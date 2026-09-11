@@ -76,7 +76,7 @@ export function discoverBlender({
   if (explicit) {
     const resolved = path.resolve(explicit);
     if (!isFile(resolved, existsSync)) throw new Error(`Blender binary not found: ${resolved}`);
-    return resolved;
+    return canonicalExecutable(resolved);
   }
 
   const configured = String(env.AGENTSAM_BLENDER_BIN || '').trim();
