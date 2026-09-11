@@ -27,6 +27,7 @@ function shrinkEvidence(evidence, characterBudget) {
   const shrinkable = [
     ['pressure_points', 12, 6, 3],
     ['top_level', 20, 10, 5],
+    ['file_paths', 400, 200, 100],
     ['packages', 40, 20, 10],
     ['languages', 30, 15, 8],
     ['manifests', 40, 20, 10],
