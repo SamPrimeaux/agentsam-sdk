@@ -11,7 +11,7 @@ Pages copied **verbatim** from IAM `static/pages/auth/*` — reorganize only.
 | Colors | `:root { --auth-bg, ... }` | theme tokens — **no JS changes** |
 | OAuth labels | button text | HTML only |
 
-Phase 5 (`agentsam init identity` — copy portal + inject brand tokens) is not in the CLI yet. Today: edit HTML/CSS directly or use `portal.brand` at `createIdentityClient` init for programmatic apps; preview with `agentsam identity preview`.
+The CLI can now scaffold the reusable identity app surfaces directly with `agentsam identity init --name <project> --brand "App Name"`. This copies the portal, Worker adapter, and migrations into a standalone app layout. Use `portal.brand` at `createIdentityClient` init for programmatic configuration, or `agentsam identity preview` for the local preview server.
 
 ## Source map
 
