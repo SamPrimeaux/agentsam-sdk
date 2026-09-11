@@ -1,0 +1,8 @@
+{
+  "source_repository": "SamPrimeaux/inneranimalmedia",
+  "source_path": "packages/client-cms-editor",
+  "source_commit": "5957af19dfb67e1551d0174b72141dd65acc4972",
+  "source_ref": "origin/main",
+  "imported_as": "apps/client-cms-editor",
+  "note": "Imported as real files, then normalized into an independent npm workspace root. Canonical platform CMS server/domain code remains in inneranimalmedia src/core/agentsam/cms until a dedicated agentsam-cms package extraction."
+}

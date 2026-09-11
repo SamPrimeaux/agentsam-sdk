@@ -4,3 +4,4 @@ export * from './Composer';
 export * from './ModelSelect';
 export * from './ToolReceipt';
 export * from './ArtifactCard';
+export * from './ConnectedAgentPanel';
