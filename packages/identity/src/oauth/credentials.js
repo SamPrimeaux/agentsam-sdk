@@ -47,6 +47,7 @@ export function requireIamPlatformCredentials(env) {
  *   lane: 'iam_platform' | 'byok_google' | 'byok_github',
  *   clientId: string,
  *   clientSecret: string,
+ *   origin?: string,
  *   issuer?: string,
  *   provider: string,
  * } | null}
