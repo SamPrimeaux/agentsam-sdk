@@ -66,7 +66,9 @@ export function resolveGitContext(options = {}) {
     ? preferredRemote
     : availableRemotes[0] || preferredRemote;
   const remoteUrl = runGit(root, ['remote', 'get-url', remote], { required: false });
-  const revisionSha = runGit(root, ['rev-parse', 'HEAD']);
+  // A newly initialized repository can have an unborn HEAD. Repository identity
+  // and local inspection must still work before the first commit.
+  const revisionSha = runGit(root, ['rev-parse', 'HEAD'], { required: false }) || null;
   const branch = runGit(root, ['branch', '--show-current'], { required: false }) || null;
   const status = runGit(root, ['status', '--porcelain=v1'], { required: false });
 
