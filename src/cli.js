@@ -257,41 +257,6 @@ async function initFromArgs(argv) {
   await runLocalInit({ ...opts, prompt: null });
 }
 
-async function runShellInfo(argv = []) {
-  const sub = argv[0] || 'list';
-  if (sub === 'demo' || sub === 'ansi') {
-    await runTui(['ansi', ...argv.slice(1)]);
-    return;
-  }
-  if (sub === 'rich') {
-    await runTui(['rich', ...argv.slice(1)]);
-    return;
-  }
-  if (sub !== 'list' && sub !== 'status') {
-    throw new Error(`unknown shell command: ${sub}`);
-  }
-
-  const next = SHELL_PHASES.find((p) => p.status === 'next' || p.status === 'current');
-  console.log(`
-  ╔═══════════════════════════════╗
-  ║        Agent Sam Terminal         ║
-  ╚════════════════════════════════╝
-
-  Local PTY   agentsam start-local     ws://127.0.0.1:3099
-  ANSI TUI    agentsam tui             zero-dependency Node UI
-  Rich TUI    agentsam tui rich        optional richer Python UI
-              agentsam tui rich --install
-  DB          agentsam db status       local SQLite
-
-  Current milestone: ${next?.label ?? 'local terminal experience'}
-
-  Slash commands (${SLASH_COMMANDS.length} registered):
-`);
-  for (const row of SLASH_COMMANDS) {
-    console.log(`    ${row.cmd.padEnd(14)} ${row.description}`);
-  }
-}
-
 const command = process.argv[2];
 const rest = process.argv.slice(3);
 
