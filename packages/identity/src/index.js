@@ -35,6 +35,7 @@ export {
   listIdentityProviders,
   GoogleProvider,
   GithubProvider,
+  IamProvider,
   GcpProvider,
   EmailProvider,
 };
