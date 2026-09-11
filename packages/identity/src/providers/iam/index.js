@@ -12,15 +12,15 @@ import { normalizeIamIdentity } from './mapper.js';
 import { DEFAULT_IAM_ORIGIN } from '../../contracts/auth-config.js';
 
 /**
- * @param {string} [issuer]
+ * @param {string} [origin]
  */
-export function createIamIdentityProvider(issuer = DEFAULT_IAM_OAUTH_ISSUER) {
-  const resolvedIssuer = String(issuer || DEFAULT_IAM_OAUTH_ISSUER).replace(/\/+$/, '');
+export function createIamIdentityProvider(origin = DEFAULT_IAM_ORIGIN) {
+  const resolvedOrigin = String(origin || DEFAULT_IAM_ORIGIN).replace(/\/+$/, '');
   return createIdentityProvider({
     id: 'iam',
-    authorizeUrl: (input) => getIamAuthUrl({ ...input, issuer: resolvedIssuer }),
-    exchangeCode: (input) => exchangeIamCode({ ...input, issuer: resolvedIssuer }),
-    getProfile: (accessToken) => fetchIamProfile({ issuer: resolvedIssuer, accessToken }),
+    authorizeUrl: (input) => getIamAuthUrl({ ...input, origin: resolvedOrigin }),
+    exchangeCode: (input) => exchangeIamCode({ ...input, origin: resolvedOrigin }),
+    getProfile: (accessToken) => fetchIamProfile({ origin: resolvedOrigin, accessToken }),
     normalizeIdentity: normalizeIamIdentity,
   });
 }
