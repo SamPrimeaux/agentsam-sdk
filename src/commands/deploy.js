@@ -6,6 +6,7 @@ import path from 'node:path';
 import readline from 'node:readline';
 import { authenticateViaBrowser } from '../lib/auth.js';
 import { getJson, streamScaffold } from '../lib/core-client.js';
+import { resolveSdkKey } from '../../packages/identity/src/contracts/auth-config.js';
 
 function readConfig(cwd) {
   const configPath = path.join(cwd, '.agentsam', 'config.json');
