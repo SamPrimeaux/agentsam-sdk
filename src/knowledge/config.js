@@ -65,5 +65,11 @@ export function initRepository(root, options = {}) {
   fs.writeFileSync(target, JSON.stringify(config, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
   return config;
 }
-export const scopeKey = config => fingerprint([config.workspace_id, config.repository_id, config.scope.name]);
-export const cacheNamespace = config => fingerprint([config.workspace_id, config.repository_id]);
+// New portable configs are repository-scoped. Legacy configs that still carry
+// workspace_id retain their original namespace so existing local generations stay readable.
+export const scopeKey = config => config.workspace_id
+  ? fingerprint([config.workspace_id, config.repository_id, config.scope.name])
+  : fingerprint([config.repository_id, config.scope.name]);
+export const cacheNamespace = config => config.workspace_id
+  ? fingerprint([config.workspace_id, config.repository_id])
+  : fingerprint([config.repository_id]);
