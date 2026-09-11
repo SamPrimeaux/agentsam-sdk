@@ -146,6 +146,9 @@ export async function repositorySnapshot({ cwd = process.cwd(), churnDays = 30 }
     tree: {
       merkle_root: merkle.rootHash,
       stats: merkle.stats,
+      paths: merkle.entries
+        .filter((entry) => entry.type === 'file' || entry.type === 'symlink')
+        .map((entry) => entry.path),
     },
     intelligence: {
       summary: intelligence.summary,
