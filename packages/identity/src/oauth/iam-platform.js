@@ -42,7 +42,7 @@ export async function iamPlatformOAuthStart(request, env, adapter) {
 
   const redirectUri = `${url.origin}${IAM_PLATFORM_CALLBACK_PATH}`;
   const authUrl = getIamAuthUrl({
-    issuer: creds.issuer,
+    origin: creds.origin,
     clientId: creds.clientId,
     redirectUri,
     state,
