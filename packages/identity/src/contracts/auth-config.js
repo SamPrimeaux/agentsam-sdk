@@ -5,20 +5,24 @@
  * may provide storage/verification adapters without inventing competing aliases.
  *
  * Canonical variables:
- *   IAM_ORIGIN            IAM authority + browser/OAuth/API origin
+ *   IAM_OAUTH_ISSUER      public authorization-server authority (issuer)
  *   IAM_CLIENT_ID         OAuth client id
  *   IAM_CLIENT_SECRET     OAuth client secret
+ *   IAM_ORIGIN            deprecated alias of IAM_OAUTH_ISSUER (migration window)
  *   AGENTSAM_SDK_KEY      account/delegated sdk_* bearer
  *   AGENTSAM_BRIDGE_KEY   machine/integration credential
  *
  * Migration-only fallbacks:
- *   IAM_OAUTH_ISSUER      -> IAM_ORIGIN
+ *   IAM_ORIGIN            -> IAM_OAUTH_ISSUER
  *   AGENTSAM_SDK_TOKEN    -> AGENTSAM_SDK_KEY
  */
 
-export const DEFAULT_IAM_ORIGIN = 'https://inneranimalmedia.com';
+export const DEFAULT_IAM_OAUTH_ISSUER = 'https://inneranimalmedia.com';
+/** @deprecated Use DEFAULT_IAM_OAUTH_ISSUER. */
+export const DEFAULT_IAM_ORIGIN = DEFAULT_IAM_OAUTH_ISSUER;
 
 export const AGENTSAM_AUTH_ENV = Object.freeze({
+  iamIssuer: 'IAM_OAUTH_ISSUER',
   iamOrigin: 'IAM_ORIGIN',
   iamClientId: 'IAM_CLIENT_ID',
   iamClientSecret: 'IAM_CLIENT_SECRET',
@@ -27,7 +31,7 @@ export const AGENTSAM_AUTH_ENV = Object.freeze({
 });
 
 export const AGENTSAM_AUTH_LEGACY_ENV = Object.freeze({
-  iamOrigin: 'IAM_OAUTH_ISSUER',
+  iamOrigin: 'IAM_ORIGIN',
   sdkKey: 'AGENTSAM_SDK_TOKEN',
 });
 
@@ -35,6 +39,7 @@ export const AGENTSAM_AUTH_CONTRACT = Object.freeze({
   version: 1,
   authority: 'agentsam-sdk',
   iam: Object.freeze({
+    issuer: AGENTSAM_AUTH_ENV.iamIssuer,
     origin: AGENTSAM_AUTH_ENV.iamOrigin,
     clientId: AGENTSAM_AUTH_ENV.iamClientId,
     clientSecret: AGENTSAM_AUTH_ENV.iamClientSecret,
@@ -54,6 +59,7 @@ export const AGENTSAM_AUTH_CONTRACT = Object.freeze({
   }),
   compatibility: Object.freeze({
     iamOriginFallback: AGENTSAM_AUTH_LEGACY_ENV.iamOrigin,
+    iamIssuerCanonical: AGENTSAM_AUTH_ENV.iamIssuer,
     sdkKeyFallback: AGENTSAM_AUTH_LEGACY_ENV.sdkKey,
   }),
 });
@@ -66,11 +72,16 @@ function normalizeOrigin(value) {
   return clean(value).replace(/\/+$/, '');
 }
 
-/** Resolve canonical IAM authority origin with one migration fallback. */
-export function resolveIamOrigin(env = {}, explicit = '') {
+/** Resolve canonical IAM issuer. IAM_OAUTH_ISSUER wins; IAM_ORIGIN is compatibility only. */
+export function resolveIamIssuer(env = {}, explicit = '') {
   return normalizeOrigin(
-    explicit || env?.IAM_ORIGIN || env?.IAM_OAUTH_ISSUER || DEFAULT_IAM_ORIGIN,
+    explicit || env?.IAM_OAUTH_ISSUER || env?.IAM_ORIGIN || DEFAULT_IAM_OAUTH_ISSUER,
   );
+}
+
+/** @deprecated Use resolveIamIssuer. Same resolution order as issuer. */
+export function resolveIamOrigin(env = {}, explicit = '') {
+  return resolveIamIssuer(env, explicit);
 }
 
 /** Resolve account/delegated SDK bearer; canonical name wins over legacy. */

@@ -15,6 +15,7 @@ import { runOllama } from './commands/ollama.js';
 import { runModels } from './commands/models.js';
 import { runTunnel } from './commands/tunnel.js';
 import { runDeploy } from './commands/deploy.js';
+import { runConnections } from './commands/connections.js';
 import { runIdentityPreview } from './commands/identity-preview.js';
 import { runIdentityInit } from './commands/identity-init.js';
 import { runContext } from './commands/context.js';
@@ -143,11 +144,13 @@ function parseInitArgs(argv) {
 }
 
 function parseDeployArgs(argv) {
-  const opts = { target: '', accountId: '' };
+  const opts = { target: '', accountId: '', dryRun: false, plan: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--target') opts.target = argv[++i] || '';
     else if (arg === '--account-id') opts.accountId = argv[++i] || '';
+    else if (arg === '--dry-run') opts.dryRun = true;
+    else if (arg === '--plan') opts.plan = true;
   }
   return opts;
 }
@@ -375,6 +378,13 @@ if (command === '--version' || command === '-v') {
 } else if (command === 'tunnel') {
   try {
     await runTunnel(rest);
+  } catch (e) {
+    console.error(`\n  ✗ ${e?.message || e}\n`);
+    process.exit(1);
+  }
+} else if (command === 'connections' || command === 'connection') {
+  try {
+    await runConnections(rest);
   } catch (e) {
     console.error(`\n  ✗ ${e?.message || e}\n`);
     process.exit(1);

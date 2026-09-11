@@ -1,4 +1,5 @@
 import nitroWorker from "../../.output/server/index.mjs";
+import { handleCloudflareConnectionRequest, isCloudflareConnectionPath } from "../../../../packages/connectors/cloudflare/src/routes.js";
 
 /**
  * AgentSam Workmode — vault Worker
@@ -335,9 +336,14 @@ export default {
   async fetch(request, env, context) {
     const url = new URL(request.url);
     const isVault = url.pathname.startsWith("/api/vault/");
+    const isCfConnection = isCloudflareConnectionPath(url.pathname);
 
     // The checked-in Worker owns vault + health routes. Everything else belongs
     // to the generated Nitro application handler.
+    if (isCfConnection) {
+      return handleCloudflareConnectionRequest(request, env);
+    }
+
     if (!isVault && url.pathname !== "/health") {
       return nitroWorker.fetch(request, env, context);
     }
@@ -364,6 +370,19 @@ export default {
           database: env.D1_DATABASE_NAME || "inneranimalmedia-business",
           vault_key: Boolean(env.VAULT_MASTER_KEY || env.VAULT_KEY),
           api_key: Boolean(env.WORKMODE_API_KEY),
+          identity: {
+            iam: Boolean(env.IAM_CLIENT_ID && env.IAM_CLIENT_SECRET),
+          },
+          connections: {
+            cloudflare: {
+              configured: Boolean(
+                env.CLOUDFLARE_OAUTH_CLIENT_ID &&
+                  env.CLOUDFLARE_OAUTH_CLIENT_SECRET &&
+                  env.CLOUDFLARE_OAUTH_CLIENT_ID !== "sillynotreal" &&
+                  env.CLOUDFLARE_OAUTH_CLIENT_SECRET !== "sillynotreal-secret",
+              ),
+            },
+          },
         },
         200,
         headers,

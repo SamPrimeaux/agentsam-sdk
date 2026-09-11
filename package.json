@@ -57,8 +57,8 @@
     "./skills/catalog": "./skills/catalog.json"
   },
   "bin": {
-    "agentsam": "src/cli.js",
-    "agentsam-sdk": "src/cli.js",
+    "agentsam": "bin/agentsam",
+    "agentsam-sdk": "bin/agentsam",
     "agentsam-scaffold": "bin/scaffold.mjs",
     "agentsam-auth-portal": "packages/identity/scripts/preview-auth-portal.mjs"
   },
@@ -88,7 +88,7 @@
     "packages/agentsam-workbench"
   ],
   "scripts": {
-    "test": "node test/smoke.mjs && node --test test/*.test.mjs && npm --prefix packages/identity test",
+    "test": "node test/smoke.mjs && node --test test/*.test.mjs && npm --prefix packages/identity test && npm run test:connectors",
     "test:identity": "npm --prefix packages/identity test",
     "smoke": "node test/smoke.mjs",
     "verify:package": "node scripts/verify-package.mjs",
@@ -105,10 +105,13 @@
     "prepublishOnly": "npm run verify:release",
     "security:check": "node src/security/cli.mjs scan",
     "security:repair": "node src/security/cli.mjs repair",
-    "ui:preview": "node scripts/ui-preview.mjs"
+    "ui:preview": "node scripts/ui-preview.mjs",
+    "test:connectors": "node --test packages/connectors/cloudflare/tests/**/*.test.mjs",
+    "verify:npm10-lock": "node apps/local-studio/scripts/verify-npm10-lock.mjs"
   },
   "engines": {
-    "node": ">=22.5.0"
+    "node": ">=22 <25",
+    "npm": ">=10 <12"
   },
   "dependencies": {
     "@clack/prompts": "^1.7.0",
@@ -146,5 +149,6 @@
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",
     "@electric-sql/pglite-pgvector": "0.0.9"
-  }
+  },
+  "packageManager": "npm@10.9.2"
 }

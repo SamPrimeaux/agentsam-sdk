@@ -8,6 +8,7 @@ import { authenticateViaBrowser } from '../lib/auth.js';
 import { getJson, streamScaffold } from '../lib/core-client.js';
 import { resolveSdkKey } from '../../packages/identity/src/contracts/auth-config.js';
 import { getDefaultProfile, getDeployTarget, getLocalSchemaPath, getProjectName, getProjectPreset, readProjectConfig, setDeployTarget, writeProjectConfig } from '../lib/project-config.js';
+import { isLocalStudioCheckout, runLocalStudioDeploy } from '../lib/deploy/local-studio.js';
 
 function writeCloudflareAdapter(cwd, config, cf) {
   const projectName = getProjectName(config, path.basename(cwd));
@@ -122,10 +123,45 @@ async function runCloudflareDeploy(cwd, config, accountId) {
 }
 
 /**
- * @param {{ cwd?: string, target?: string, accountId?: string }} [opts]
+ * @param {{ cwd?: string, target?: string, accountId?: string, dryRun?: boolean, plan?: boolean }} [opts]
  */
 export async function runDeploy(opts = {}) {
   const cwd = path.resolve(opts.cwd || process.cwd());
+
+  if (isLocalStudioCheckout(cwd)) {
+    const result = await runLocalStudioDeploy({
+      cwd,
+      dryRun: Boolean(opts.dryRun),
+      planOnly: Boolean(opts.plan),
+      execute: !opts.plan,
+    });
+    const payload = {
+      provider: result.plan.provider,
+      app: result.plan.app,
+      wranglerConfig: result.plan.wranglerConfig,
+      wranglerArgs: result.plan.wranglerArgs,
+      cwd: result.plan.cwd,
+      envLoaded: result.plan.envLoaded,
+      fingerprint: result.plan.fingerprint,
+      skip: result.plan.skip,
+      dryRun: Boolean(opts.dryRun),
+      plan: Boolean(opts.plan),
+      genericRootDeploy: false,
+      receipt: result.receipt,
+    };
+    console.log(JSON.stringify(payload, null, 2));
+    if (result.plan.skip) {
+      console.log('skip: unchanged deploy fingerprint');
+    } else if (opts.plan) {
+      console.log('plan only — no wrangler deploy');
+    } else if (opts.dryRun) {
+      console.log('wrangler dry-run complete');
+    } else {
+      console.log('local-studio deploy complete');
+    }
+    return result;
+  }
+
   const config = readProjectConfig(cwd);
 
   let target = opts.target || getDeployTarget(config) || 'cloudflare';

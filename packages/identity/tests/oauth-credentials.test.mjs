@@ -46,18 +46,18 @@ describe('oauth credentials', () => {
     assert.equal(resolveOAuthCredentialLane(env, 'iam')?.lane, 'iam_platform');
   });
 
-  it('prefers IAM_ORIGIN and exposes origin as the canonical authority', () => {
+  it('prefers IAM_OAUTH_ISSUER and exposes issuer as the canonical authority', () => {
     const creds = resolveIamPlatformCredentials({
       IAM_CLIENT_ID: 'c',
       IAM_CLIENT_SECRET: 's',
-      IAM_ORIGIN: 'https://iam.example.test/',
-      IAM_OAUTH_ISSUER: 'https://legacy.example.test/',
+      IAM_ORIGIN: 'https://legacy.example.test/',
+      IAM_OAUTH_ISSUER: 'https://iam.example.test/',
     });
     assert.equal(creds?.origin, 'https://iam.example.test');
     assert.equal(creds?.issuer, 'https://iam.example.test');
   });
 
-  it('accepts IAM_OAUTH_ISSUER only as a migration fallback', () => {
+  it('accepts IAM_ORIGIN only as a migration fallback', () => {
     const creds = resolveIamPlatformCredentials({
       IAM_CLIENT_ID: 'c',
       IAM_CLIENT_SECRET: 's',

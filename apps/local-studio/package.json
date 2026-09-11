@@ -32,7 +32,8 @@
     "cf:dry-run": "npm run build && npm run cf:verify-output && wrangler deploy -c backend/wrangler.jsonc --dry-run",
     "cf:deploy": "npm run build && npm run cf:verify-output && bash scripts/with-cloudflare-env.sh wrangler deploy -c backend/wrangler.jsonc",
     "cf:tail": "wrangler tail agentsam-sdk -c backend/wrangler.jsonc",
-    "cf:env": "bash scripts/with-cloudflare-env.sh"
+    "cf:env": "bash scripts/with-cloudflare-env.sh",
+    "verify:npm10-lock": "node scripts/verify-npm10-lock.mjs"
   },
   "dependencies": {
     "pg": "^8.16.3"
@@ -58,5 +59,10 @@
     "typescript-eslint": "^8.56.1",
     "vite": "^8.2.0",
     "wrangler": "4.131.1"
-  }
+  },
+  "engines": {
+    "node": ">=22 <25",
+    "npm": ">=10 <12"
+  },
+  "packageManager": "npm@10.9.2"
 }

@@ -9,21 +9,25 @@ import {
 } from '../src/contracts/auth-config.js';
 
 describe('auth configuration contract', () => {
-  it('prefers canonical IAM_ORIGIN over the migration alias', () => {
+  it('prefers canonical IAM_OAUTH_ISSUER over IAM_ORIGIN', () => {
     assert.equal(
       resolveIamOrigin({
-        IAM_ORIGIN: 'https://canonical.example.test/',
-        IAM_OAUTH_ISSUER: 'https://legacy.example.test/',
+        IAM_ORIGIN: 'https://legacy.example.test/',
+        IAM_OAUTH_ISSUER: 'https://canonical.example.test/',
       }),
       'https://canonical.example.test',
     );
   });
 
-  it('accepts IAM_OAUTH_ISSUER as migration-only fallback', () => {
+  it('accepts IAM_ORIGIN as migration-only fallback', () => {
     assert.equal(
-      resolveIamOrigin({ IAM_OAUTH_ISSUER: 'https://legacy.example.test/' }),
+      resolveIamOrigin({ IAM_ORIGIN: 'https://legacy.example.test/' }),
       'https://legacy.example.test',
     );
+  });
+
+  it('defaults issuer when neither IAM_OAUTH_ISSUER nor IAM_ORIGIN exists', () => {
+    assert.equal(resolveIamOrigin({}), 'https://inneranimalmedia.com');
   });
 
   it('prefers AGENTSAM_SDK_KEY over AGENTSAM_SDK_TOKEN', () => {
