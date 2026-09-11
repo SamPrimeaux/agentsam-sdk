@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { runTui } from '../src/commands/tui.js';
+import { runTui } from './internal/ui-preview-runner.mjs';
 
 const args = process.argv.slice(2);
 if (!args.length || args.includes('--help') || args.includes('-h')) {

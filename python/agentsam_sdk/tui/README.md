@@ -24,4 +24,4 @@ PYTHONPATH=. python -m agentsam_sdk.tui --scene dashboard --check
 
 The core Python SDK remains stdlib-only; `rich` is an optional extra. The intended product progression is small: **brand/boot → detect project context → first-run keyboard choices when needed → quiet ready prompt**.
 
-For the zero-dependency Node/ANSI animation lab, see `../../../../examples/agentsam-tui-ansi.mjs`.
+For the zero-dependency Node/ANSI animation lab, see `../../../../scripts/internal/ansi-ui-preview.mjs`.

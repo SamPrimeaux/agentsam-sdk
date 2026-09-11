@@ -115,7 +115,7 @@ capabilities:
     - project_scaffolding
     - sqlite
     - local_status
-    - terminal_ui
+    - interactive_terminal
     - optional_local_pty
   repository:
     - git_context
@@ -162,7 +162,6 @@ cli:
     - security
     - status
     - db
-    - tui
     - start-local
     - shell
     - tunnel
@@ -223,15 +222,16 @@ security_contract:
 
 release:
   root_sdk:
-    target_version: "2.0.0"
-    state: published
+    target_version: "2.5.0"
+    state: release_candidate
     registry: npm
-    current_latest: "2.0.0"
+    current_latest: "2.4.1"
     current_alpha: "2.0.0-alpha.identity.12"
-    published_at_utc: "2026-09-03T02:21:44.857Z"
-    published_git_head: ed629869e701809d2bf4c61bd56d05d8d8d1e183
-    dist_integrity: sha512-lXnBp8GR1iduKWxxHSRHSd9Q1fjTUZvX1UecwtS8xdDxMdZRd2BSHtDygm0OMNYchrtUP1nR6g0t3MqZTkE5HA==
-    git_tag: v2.0.0
+    candidate_base_head: 236afa84b553fb0d0109abe41939488945c4fc74
+    published_at_utc: null
+    published_git_head: null
+    dist_integrity: null
+    git_tag: null
     verification_command: npm run verify:release
     publish_mode: manual
   identity:
@@ -256,7 +256,7 @@ layout:
   src: Node SDK, CLI commands, local runtime helpers, knowledge, security, and UI helpers
   packages: private/focused workspaces including identity and shell-kit
   protocol: shared portable contracts and ownership rules
-  python: bundled Python repository/data tooling and optional Rich TUI
+  python: bundled Python repository/data tooling and optional Rich terminal renderer lab
   services: optional service runtimes such as knowledge and CAD
   templates: project and UI scaffold templates
   docs: product, release, security, and developer documentation

@@ -2,12 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { collectLocalStatus } from '../lib/local-status.js';
-import { renderLocalStatus } from '../ui/ansi.js';
-import { runMerkle } from './merkle.js';
+import { collectLocalStatus } from '../../src/lib/local-status.js';
+import { renderLocalStatus } from '../../src/ui/ansi.js';
+import { runMerkle } from '../../src/commands/merkle.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const ANSI_DEMO = path.join(ROOT, 'examples', 'agentsam-tui-ansi.mjs');
+const ANSI_DEMO = path.join(ROOT, 'scripts', 'internal', 'ansi-ui-preview.mjs');
 const PYTHON_ROOT = path.join(ROOT, 'python');
 
 function run(command, args, options = {}) {

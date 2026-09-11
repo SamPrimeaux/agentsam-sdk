@@ -10,7 +10,7 @@ python -m agentsam_sdk.repository.intelligence --repo-root ..
 python -m agentsam_sdk.repository.intelligence --repo-root .. --json
 ```
 
-The snapshot is deterministic evidence suitable for CLI/TUI presentation or downstream agent reasoning. Scores are relative within a snapshot, not quality grades:
+The snapshot is deterministic evidence suitable for CLI/terminal UI presentation or downstream agent reasoning. Scores are relative within a snapshot, not quality grades:
 
 - **density** — code/file concentration
 - **activity** — recent changed lines and commit touches

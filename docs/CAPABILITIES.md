@@ -18,7 +18,7 @@ agentsam capabilities
 agentsam capabilities repository.snapshot --json
 ```
 
-This registry is intended to drive CLI/TUI discovery, AgentSam/MCP tool selection, docs, verification, and workflow capability resolution. It is deliberately not a second hosted tools database.
+This registry is intended to drive CLI/terminal UI discovery, AgentSam/MCP tool selection, docs, verification, and workflow capability resolution. It is deliberately not a second hosted tools database.
 
 ## repository.snapshot
 

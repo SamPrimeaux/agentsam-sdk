@@ -2,13 +2,13 @@
 
 A deterministic-first application and agent toolkit: reusable repository, knowledge, integrity,
 security, identity, scaffolding, and delivery capabilities with optional AgentSam/LLM composition.
-CLI/TUI surfaces make those same primitives easy to use without making a model part of the implementation.
+The interactive CLI makes those same primitives easy to use without making a model part of the implementation.
 
 **npm:** `@inneranimalmedia/agentsam-sdk` · **Source:** [GitHub](https://github.com/SamPrimeaux/agentsam-sdk)
 
 Node 22.5+ is required. Docker is optional for container commands. Python 3.10+ is required
-for the bundled Python repository tools; Rich is optional for the richer terminal UI.
-See the [2.0 release guide](docs/sdk-2.0-release.md) for publication status and migration notes.
+for the bundled Python repository tools. Rich is optional for the contributor-only terminal renderer lab.
+See [release receipts](docs/RELEASES.md) for publication status.
 
 ## Install
 
@@ -81,7 +81,7 @@ read-only `repository.snapshot` composition primitive. See [Capabilities and pre
 | Recon bounded-worker packets | `agentsam recon pack\|validate` | [Recon](docs/RECON.md) |
 | Local containers | `agentsam dockerize`; `/dockerize` | [Dockerize](docs/DOCKERIZE.md) |
 | Background indexing service | Docker `knowledge_service`; `/knowledge-service-client` | [Knowledge service](docs/knowledge-service.md) |
-| Local status, DB, terminal UI | `agentsam status`, `db`, `tui`, `start-local` | [Terminal UI](docs/CLI_SHELL.md) |
+| Interactive Agent Sam + local runtime | `agentsam`, `agentsam status`, `db`, `models`, `start-local` | [CLI shell](docs/CLI_SHELL.md) |
 
 Export suffixes such as `/identity` mean imports from
 `@inneranimalmedia/agentsam-sdk/identity`. Use `agentsam <command> --help` where supported.
@@ -123,7 +123,7 @@ npm run verify:release
 
 Release verification runs Node/identity tests, bootstrap and package checks, installed
 tarball fixtures in unrelated repositories, Python tests, and a complete dependency scan.
-[Development](DEVELOPMENT.md) · [Release guide](docs/sdk-2.0-release.md) ·
+[Development](DEVELOPMENT.md) · [Release receipts](docs/RELEASES.md) ·
 [Branch archive](docs/branch-archive-2026-09-02.md).
 
 License: MIT. Optional visual experiments and host-specific integrations retain their
