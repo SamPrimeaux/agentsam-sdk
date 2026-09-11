@@ -62,10 +62,16 @@ The JavaScript/TypeScript parser records syntactic relationships, not a fully re
 semantic call graph. Model/dimension changes create a distinct embedding profile.
 Python-backed snapshots capture repository composition and Git churn.
 
-## Available kits
+## Capability discovery and available kits
+
+The canonical machine-readable capability registry is available through `agentsam capabilities --json`
+and `@inneranimalmedia/agentsam-sdk/capabilities`. `agentsam inspect --json` runs the canonical
+read-only `repository.snapshot` composition primitive. See [Capabilities and presets](docs/CAPABILITIES.md).
 
 | Capability | Entry point | Guide |
 | --- | --- | --- |
+| Capability registry + presets | `agentsam capabilities`, `/capabilities`, `/presets` | [Capabilities](docs/CAPABILITIES.md) |
+| Canonical repository snapshot | `agentsam inspect --json`; `/repository` | [Capabilities](docs/CAPABILITIES.md) |
 | Git context and bridge client | `agentsam context --json`; `/git-context`, `/bridge-client` | [Portable context](docs/PORTABLE_CONTEXT.md) |
 | Identity contracts and adapters | `/identity`; `agentsam identity init` | [Identity](packages/identity/README.md) |
 | Repository knowledge | `agentsam index`, `search`, `repo`; `/knowledge` | [Knowledge](docs/portable-knowledge.md) |
