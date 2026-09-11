@@ -83,7 +83,7 @@ export function discoverBlender({
   if (configured) {
     const resolved = path.resolve(configured);
     if (!isFile(resolved, existsSync)) throw new Error(`AGENTSAM_BLENDER_BIN does not exist: ${resolved}`);
-    return resolved;
+    return canonicalExecutable(resolved);
   }
 
   const candidates = [
