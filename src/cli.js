@@ -27,7 +27,6 @@ import { runSecurity } from './commands/security.js';
 import { runRecon } from './commands/recon.js';
 import { applyPresetSelection, runAdd, runCapabilities, runDev, runInspect } from './commands/product.js';
 import { listPresets, resolvePreset } from './presets/index.js';
-import { SLASH_COMMANDS, SHELL_PHASES } from './lib/slash-commands.js';
 import fs from 'node:fs';
 import { repositoryRoot } from './knowledge/config.js';
 
