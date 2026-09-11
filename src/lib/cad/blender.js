@@ -92,7 +92,8 @@ export function discoverBlender({
     ...(platform === 'darwin' ? ['/Applications/Blender.app/Contents/MacOS/Blender'] : []),
     ...(platform === 'linux' ? ['/usr/bin/blender', '/usr/local/bin/blender', '/snap/bin/blender'] : []),
   ];
-  return candidates.find(candidate => isFile(candidate, existsSync)) || null;
+  const found = candidates.find(candidate => isFile(candidate, existsSync));
+  return found ? canonicalExecutable(found) : null;
 }
 
 export function sha256File(file) {
