@@ -24,8 +24,9 @@ const unitStatus = run(
 );
 
 if (unitStatus === 0) {
+  const adapter = path.join(root, 'services/cad/blender/adapter.py');
   run(
-    ['-B', '-m', 'py_compile', path.join(root, 'services/cad/blender/adapter.py')],
+    ['-B', '-c', 'import pathlib,sys; p=pathlib.Path(sys.argv[1]); compile(p.read_text(encoding="utf-8"), str(p), "exec")', adapter],
     root,
   );
 }
