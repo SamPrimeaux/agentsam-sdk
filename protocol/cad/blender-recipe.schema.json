@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/cad/blender-recipe.schema.json",
+  "title": "AgentSam Blender modeling recipe",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "operations"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "units": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "system": { "enum": ["NONE", "METRIC", "IMPERIAL"] },
+        "scale_length": { "type": "number", "exclusiveMinimum": 0 },
+        "length_unit": { "type": "string", "minLength": 1 }
+      }
+    },
+    "operations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": { "$ref": "#/$defs/operation" }
+    }
+  },
+  "$defs": {
+    "vec3": {
+      "type": "array",
+      "prefixItems": [{ "type": "number" }, { "type": "number" }, { "type": "number" }],
+      "items": false,
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "vec4": {
+      "type": "array",
+      "prefixItems": [{ "type": "number" }, { "type": "number" }, { "type": "number" }, { "type": "number" }],
+      "items": false,
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "operation": {
+      "type": "object",
+      "required": ["op"],
+      "properties": {
+        "op": {
+          "enum": ["clear_scene", "add", "transform", "duplicate", "delete", "join", "bevel", "solidify", "array", "mirror", "boolean", "material", "assign_material", "add_camera", "add_light"]
+        },
+        "primitive": { "enum": ["cube", "uv_sphere", "ico_sphere", "cylinder", "cone", "plane", "torus"] },
+        "name": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "object": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "with": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "objects": { "type": "array", "minItems": 2, "maxItems": 128, "items": { "type": "string", "minLength": 1, "maxLength": 160 } },
+        "location": { "$ref": "#/$defs/vec3" },
+        "rotation": { "$ref": "#/$defs/vec3" },
+        "scale": { "$ref": "#/$defs/vec3" },
+        "size": { "type": "number" },
+        "radius": { "type": "number" },
+        "radius1": { "type": "number" },
+        "radius2": { "type": "number" },
+        "depth": { "type": "number" },
+        "segments": { "type": "integer" },
+        "rings": { "type": "integer" },
+        "vertices": { "type": "integer" },
+        "subdivisions": { "type": "integer" },
+        "major_segments": { "type": "integer" },
+        "minor_segments": { "type": "integer" },
+        "major_radius": { "type": "number" },
+        "minor_radius": { "type": "number" },
+        "width": { "type": "number" },
+        "thickness": { "type": "number" },
+        "offset": { "type": "number" },
+        "count": { "type": "integer" },
+        "relative_offset": { "$ref": "#/$defs/vec3" },
+        "axes": { "type": "string", "pattern": "^[XYZxyz]+$" },
+        "operation": { "enum": ["UNION", "DIFFERENCE", "INTERSECT"] },
+        "apply": { "type": "boolean" },
+        "delete_operand": { "type": "boolean" },
+        "limit_method": { "enum": ["NONE", "ANGLE", "WEIGHT", "VGROUP"] },
+        "material": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "base_color": { "$ref": "#/$defs/vec4" },
+        "metallic": { "type": "number", "minimum": 0, "maximum": 1 },
+        "roughness": { "type": "number", "minimum": 0, "maximum": 1 },
+        "clear": { "type": "boolean" },
+        "active": { "type": "boolean" },
+        "lens": { "type": "number" },
+        "type": { "enum": ["POINT", "SUN", "SPOT", "AREA"] },
+        "energy": { "type": "number", "minimum": 0 },
+        "color": { "$ref": "#/$defs/vec3" }
+      }
+    }
+  }
+}
