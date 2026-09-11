@@ -62,7 +62,7 @@ assert.deepEqual(
 );
 
 printContextSummary({
-  iam: { ready: true, source: 'sdk-token', detail: 'AGENTSAM_SDK_TOKEN' },
+  iam: { ready: true, source: 'sdk-key', detail: 'AGENTSAM_SDK_KEY' },
   gcp: { source: 'vm-metadata', email: 'execos@project.iam.gserviceaccount.com' },
   gcp_vm: true,
   github: { source: 'gh-cli', account: 'user@example.com' },
