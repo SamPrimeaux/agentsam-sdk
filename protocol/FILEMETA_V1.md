@@ -12,7 +12,8 @@
   "classifier": {
     "format": "agentsam-filemeta",
     "version": 1,
-    "source": "path+package+ast",
+    "source": "path+package+ast+execution-boundary",
+    "trust_boundary": "execution-domain-v1",
     "ast_parser": "typescript",
     "ast_parser_version": "5.9.3"
   },
@@ -44,20 +45,24 @@ Semantic entries correspond one-for-one with non-directory content entries and r
   "kind": "source",
   "language": "javascript",
   "role": "business-logic",
+  "execution_domain": "unknown",
   "tags": ["account-scoped", "authentication"],
   "symbols": ["accountLinkingNotConfigured"],
   "imports": [],
+  "resolved_imports": [],
+  "env_accesses": [],
   "ast": {
     "indexed": true,
     "parser": "typescript",
     "symbol_count": 1,
     "dependency_count": 0,
+    "env_access_count": 0,
     "parse_error_count": 0
   }
 }
 ```
 
-`hash` is the content Merkle entry hash and `size` must match the linked content entry. `mode` is the observed Unix permission bits in decimal. Semantic metadata is derived by convention from repository/package paths, nearest `package.json` metadata, and syntax parsing. JavaScript/TypeScript-family source files up to the implementation size limit receive AST symbol/import metadata.
+`hash` is the content Merkle entry hash and `size` must match the linked content entry. `mode` is the observed Unix permission bits in decimal. Semantic metadata is derived by convention from repository/package paths, nearest `package.json` metadata, and syntax parsing. JavaScript/TypeScript-family source files up to the implementation size limit receive AST symbol/import metadata, local import-resolution evidence, and environment-variable access names. Values are never read or stored. `execution_domain` classifies observed code as `browser`, `server`, `shared`, `test`, `tooling`, `framework`, or `unknown`; the trust-boundary analyzer consumes these Merkle-bound facts rather than treating directory names as security authority.
 
 ## Package overrides
 
@@ -71,13 +76,14 @@ A package may declare stable package-level semantics without tagging every file:
     "kind": "library",
     "tags": ["authentication", "account-scoped"],
     "classify": [
-      { "glob": "src/core/**", "role": "business-logic" }
+      { "glob": "src/core/**", "role": "business-logic" },
+      { "glob": "src/lib/db.ts", "execution_domain": "server", "tags": ["server-only"] }
     ]
   }
 }
 ```
 
-Convention remains the default. `agentsam.classify` is an optional deterministic override layer for exceptional package layouts.
+Convention remains the default. `agentsam.classify` is an optional deterministic override layer for exceptional package layouts such as framework-owned server-function bridges or server-only modules that physically live beneath a frontend package. Overrides are themselves hashed into the metadata root through the resulting semantic entries/classifier contract; they do not weaken the client/server rule.
 
 ## Identity boundary
 

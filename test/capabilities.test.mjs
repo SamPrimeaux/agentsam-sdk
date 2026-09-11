@@ -6,6 +6,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { getCapability, getCapabilityManifest, repositorySnapshot } from '../src/capabilities/index.js';
 import { getPreset, resolvePreset } from '../src/presets/index.js';
+import { scanTrustBoundary } from '../src/security/trust-boundary.js';
 
 const CLI = path.resolve('src/cli.js');
 
@@ -63,9 +64,37 @@ test('repository.snapshot composes deterministic evidence and content addressing
   assert.equal(source.system, 'snapshot-fixture');
   assert.equal(source.language, 'javascript');
   assert.deepEqual(source.symbols, ['value']);
+  assert.equal(one.analysis.trust_boundary.analyzer, 'agentsam-execution-boundary');
+  assert.equal(one.analysis.trust_boundary.metadata_root, one.tree.metadata_root);
+  assert.equal(one.analysis.trust_boundary.complete, true);
+  assert.equal(one.analysis.trust_boundary.status, 'clean');
   assert.ok(one.intelligence.summary.file_count >= 2);
   assert.equal(one.packages[0].name, 'snapshot-fixture');
   assert.equal(one.knowledge.configured, false);
+});
+
+test('repository inspection and security scan share one Git-ignore/Merkle trust authority', async t => {
+  const root = fixture();
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(root, 'frontend'));
+  fs.mkdirSync(path.join(root, 'backend'));
+  fs.mkdirSync(path.join(root, 'ignored'));
+  fs.writeFileSync(path.join(root, 'frontend', 'client.ts'), "import { secretValue } from '../backend/secrets.ts';\nexport const value = secretValue;\n");
+  fs.writeFileSync(path.join(root, 'backend', 'secrets.ts'), "export const secretValue = process.env.API_KEY;\n");
+  fs.writeFileSync(path.join(root, 'ignored', 'noise.ts'), "import fs from 'node:fs'; export const x = process.env.PRIVATE_TOKEN + String(fs);\n");
+  fs.writeFileSync(path.join(root, '.gitignore'), 'ignored/\n');
+
+  const snapshot = await repositorySnapshot({ cwd: root, churnDays: 30 });
+  const boundary = await scanTrustBoundary(root);
+  assert.equal(snapshot.tree.metadata_root, boundary.metadata_root);
+  assert.equal(snapshot.tree.merkle_root, boundary.merkle_root);
+  assert.equal(snapshot.analysis.trust_boundary.status, 'action-required');
+  assert.deepEqual(
+    snapshot.analysis.trust_boundary.findings.map((item) => [item.kind, item.source, item.target]),
+    boundary.findings.map((item) => [item.kind, item.source, item.target]),
+  );
+  assert.equal(snapshot.tree.paths.some((value) => value.startsWith('ignored/')), false);
+  assert.equal(boundary.findings.some((item) => item.source.startsWith('ignored/')), false);
 });
 
 test('product UX creates a preset project, adds a feature, and inspects before first commit', t => {
@@ -100,4 +129,5 @@ test('product UX creates a preset project, adds a feature, and inspects before f
   assert.equal(snapshot.repository.identity_source, 'project-config');
   assert.equal(snapshot.repository.revision_sha, null);
   assert.ok(snapshot.tree.stats.files > 0);
+  assert.ok(snapshot.analysis?.trust_boundary);
 });

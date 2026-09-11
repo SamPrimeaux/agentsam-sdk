@@ -3,16 +3,16 @@ import { scanProjectSecurity, reportExitCode, repairProject, formatSecurityRepor
 import { runProcess } from '../security/process.js';
 
 const help = [
-  'Agent Sam · dependency health',
+  'Agent Sam · security',
   '  agentsam security scan [--path DIR] [--offline] [--json]',
   '  agentsam security check --log FILE [--path DIR] [--json]',
   '  agentsam security run [--path DIR] [--json] -- COMMAND ARGS...',
   '  agentsam security repair [--path DIR] [--log FILE] [--apply] [--verify SCRIPT] [--json]',
   '  agentsam sca ...                 alias',
   '',
-  'scan/check: exact npm lockfile versions, full OSV advisories, deprecations and log triage.',
+  'scan/check: npm/OSV evidence plus AST+Merkle client/server trust-boundary contradictions.',
   'run: execute an explicitly supplied install/build command, then check its logs and dependencies.',
-  'repair: plan by default; --apply updates an isolated Git worktree, installs, verifies and rescans.',
+  'repair: plans dependency + trust-boundary repairs; --apply automates dependency-only repairs in an isolated worktree.',
   'Online lookup sends package names/versions to OSV, never source code or deployment logs.',
   'Offline is inventory only and exits 2. pnpm/Yarn/Bun graphs are explicitly unsupported.',
   'Exit: 0 clean/verified, 1 unresolved findings or command failure, 2 incomplete/error.',

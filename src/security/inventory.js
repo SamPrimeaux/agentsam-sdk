@@ -76,7 +76,10 @@ export function collectNpmDependencies(projectRoot = process.cwd()) {
         if (location) {
           const workspacePath = path.resolve(root, location);
           const relative = path.relative(root, fs.realpathSync(workspacePath));
-          if (relative.startsWith('..') || path.isAbsolute(relative)) throw new Error('Workspace escapes project root');
+          if (relative.startsWith('..') || path.isAbsolute(relative)) {
+            issues.push('Linked package escapes project root and cannot be fully verified here: ' + location);
+            continue;
+          }
           const workspace = readJson(path.join(workspacePath, 'package.json'));
           for (const field of fields) {
             if (JSON.stringify(Object.entries(workspace[field] || {}).sort()) !== JSON.stringify(Object.entries(pkg[field] || {}).sort())) issues.push('Workspace manifest and lockfile disagree: ' + location + ':' + field);

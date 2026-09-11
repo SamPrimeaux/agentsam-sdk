@@ -142,6 +142,9 @@ capabilities:
     - npm_dependency_inventory
     - osv_vulnerability_scan
     - deployment_log_triage
+    - ast_merkle_execution_trust_boundary
+    - deterministic_contradiction_findings
+    - mechanical_boundary_repair_suggestions
     - isolated_verified_dependency_repair
   containers:
     - generic_dockerize
@@ -250,6 +253,7 @@ verification:
     - knowledge_package_proof
     - python_tests
     - complete_dependency_scan
+    - merkle_bound_trust_boundary_scan
   command: npm run verify:release
 
 layout:

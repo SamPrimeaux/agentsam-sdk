@@ -113,7 +113,7 @@
       "runtime": "node",
       "package": "@inneranimalmedia/agentsam-sdk/security",
       "cli": "agentsam security scan",
-      "description": "Inventory dependency state and optionally query vulnerability evidence.",
+      "description": "Scan dependency vulnerability evidence and Merkle-bound AST execution trust boundaries; return deterministic contradiction and repair evidence.",
       "deterministic": true,
       "model_required": false,
       "side_effects": "network-optional",

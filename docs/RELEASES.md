@@ -19,6 +19,7 @@ publish commit will be recorded here after release. Publishing remains manual an
 - `agentsam-jr-dev` is the first portable AgentSam skill, with deeper teaching references loaded on demand.
 - Local model inventory/Ollama support remains preference-only and does not become a second routing authority.
 - Merkle/repository evidence, knowledge receipts, and project identity share the same portable repository identity.
+- `agentsam security scan` now combines OSV/dependency evidence with Merkle-bound AST execution trust-boundary contradictions; `agentsam inspect` exposes the same bounded analysis and mechanical repair actions.
 
 | npm version | Published (UTC) | IAM git SHA (40) | Notes |
 |-------------|-----------------|------------------|-------|

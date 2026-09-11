@@ -195,3 +195,24 @@ test('CLI snapshot/verify/diff supports JSON, moved roots, and distinct mismatch
   assert.equal(piped.status, 0, piped.stderr);
   assert.ok(!piped.stdout.includes('\x1b'));
 });
+
+test('semantic index records execution domains, environment access, and resolved local imports as Merkle-bound evidence', async (t) => {
+  const root = await fixture(t);
+  await write(root, 'package.json', JSON.stringify({ name: 'boundary-fixture', version: '1.0.0' }));
+  await write(root, 'frontend/client.ts', "import { contract } from '../shared/contract.ts';\nexport const api = import.meta.env.VITE_API_URL + contract;\n");
+  await write(root, 'shared/contract.ts', "export const contract = 'v1';\n");
+  await write(root, 'backend/private.ts', "export const key = process.env.API_KEY;\n");
+  const tree = await buildMerkleTree(root, { semantic: true });
+  const client = tree.semantic.entries.find((entry) => entry.path === 'frontend/client.ts');
+  const shared = tree.semantic.entries.find((entry) => entry.path === 'shared/contract.ts');
+  const backend = tree.semantic.entries.find((entry) => entry.path === 'backend/private.ts');
+  assert.equal(client.execution_domain, 'browser');
+  assert.equal(shared.execution_domain, 'shared');
+  assert.equal(backend.execution_domain, 'server');
+  assert.deepEqual(client.env_accesses, [{ source: 'import.meta.env', name: 'VITE_API_URL' }]);
+  assert.deepEqual(client.resolved_imports, [{ specifier: '../shared/contract.ts', target: 'shared/contract.ts' }]);
+  assert.deepEqual(backend.env_accesses, [{ source: 'process.env', name: 'API_KEY' }]);
+  assert.equal(tree.semantic.stats.by_execution_domain.browser, 1);
+  assert.equal(tree.semantic.stats.by_execution_domain.server, 1);
+  assert.equal(tree.semantic.classifier.trust_boundary, 'execution-domain-v1');
+});

@@ -1,22 +1,32 @@
-# Dependency health and repair
+# Security scan and evidence-backed repair
 
-AgentSam checks npm dependency graphs against known OSV advisories, reads dependency warnings from install/build/deploy logs, and prepares verified repairs. A passing report means no findings in the supported checks; it is not proof that application code is secure.
+AgentSam combines dependency security evidence with a deterministic execution trust-boundary analysis. `agentsam security scan` checks the npm dependency graph against OSV **and** derives browser/server/shared execution facts from the repository's AST + Merkle semantic index.
+
+The core security rule is execution authority, not folder naming:
+
+> Code executed on hardware controlled by the user is untrusted client code. Code executed on hardware controlled by the application operator is the trusted server boundary.
+
+Anything sent to a browser can be read or modified. Client validation is useful UX, but authentication, authorization, ownership, prices, permissions, resource identity, and other security/correctness invariants must be re-verified by server-owned code. Secrets must never enter the browser dependency graph or public environment.
+
+A clean scan means no findings in the checks AgentSam could completely evaluate. It is **not** a proof that an application is secure, and the local AST analyzer currently covers JavaScript/TypeScript-family source. Hosted/custom repository knowledge providers may supply richer structural evidence for additional languages.
 
 ## Commands
 
 ~~~bash
 agentsam security scan --path .
 agentsam security check --path . --log /tmp/deploy.log --json
-agentsam security run --path . -- npm run build
+agentsam security run --path . --json -- npm run build
 agentsam security repair --path . --log /tmp/deploy.log --json
 agentsam security repair --path . --apply --verify verify --json
 ~~~
 
-The alias is "agentsam sca". Offline scanning lists dependency inventory but **always exits 2**, because no vulnerability lookup was performed. Use "node src/security/cli.mjs" inside this repository before dependencies are installed.
+The alias is `agentsam sca`. Offline scanning still performs the deterministic AST/Merkle trust-boundary analysis, but dependency vulnerability coverage is incomplete without OSV and therefore the overall command exits 2.
 
-The run command executes the exact argument vector after "--", without a shell, captures up to 8 MiB, and checks the resulting logs and lockfile. It preserves a failed command as a failed result. Logs are captured rather than streamed; receipts contain categories and line numbers, never raw log lines. Use it around an existing deployment command to make warnings visible, or around the build before deployment. It does not roll back a deployment already performed by that command.
+The `run` command executes the exact argument vector after `--`, without a shell, captures up to 8 MiB, and checks the resulting logs, dependency graph, and source trust boundary. It preserves a failed command as a failed result. Logs are captured rather than streamed; receipts contain categories and line numbers, never raw log lines. It does not roll back a deployment already performed by that command.
 
 ## What is checked
+
+### Dependencies and logs
 
 - Exact npm package-lock / shrinkwrap versions 1, 2 and 3, including nested dependencies, aliases, and workspaces. npm-shrinkwrap takes precedence.
 - Lockfile consistency with root/workspace manifest declarations and missing direct lock entries.
@@ -25,41 +35,68 @@ The run command executes the exact argument vector after "--", without a shell, 
 - Engine mismatches, peer conflicts, package-manager configuration warnings, audit summaries, and unclassified warnings.
 - Experimental runtime and pip/npm update notices are explicitly informational.
 
-An old audit summary can be resolved by a complete fresh scan. A deprecated-package log warning is resolved when the package is absent or its version changed and the new lock entry is not deprecated. Engine/peer/configuration/unclassified warnings stay actionable until reviewed at their source.
+### Execution trust boundary
 
-## Coverage and exit codes
+AgentSam's semantic Merkle pass records, for indexed JS/TS files:
 
-- **0:** complete and clean, already clean, or verified repair candidate.
-- **1:** unresolved findings, failed wrapped command, or manual action needed.
-- **2:** incomplete lookup/coverage, offline inventory, invalid input, or failed repair execution.
+- content hash and metadata root;
+- inferred/declared `execution_domain` (`browser`, `server`, `shared`, `test`, `tooling`, `framework`, `unknown`);
+- AST imports plus resolved local import edges;
+- names of `process.env` / `import.meta.env` accesses, never their values;
+- parser coverage/errors.
 
-The npm graph adapter does not pretend to parse pnpm, Yarn or Bun formats. Those managers produce an explicit incomplete result. Missing lockfiles, unresolved ranges, external file/Git dependencies, and mismatched workspace manifests also make coverage incomplete. A package.json-only scan cannot prove transitive coverage.
+The deterministic analyzer then follows the browser-reachable graph and reports contradictions such as:
 
-The scanner includes development and optional dependencies present in the lockfile. It queries OSV for each unique registry package name/version with four concurrent requests, a two-minute overall deadline, per-request timeouts, bounded response bodies, transient-status retries, and pagination-loop detection. Names and versions go to OSV; project source and log contents do not. No local credentials are sent to OSV. Unknown severities remain actionable and raw CVSS vectors are retained rather than guessed.
+- browser code importing server-owned modules;
+- browser-reachable code importing Node/server-only runtime dependencies;
+- browser code reading private server environment names;
+- public environment names that look secret-bearing (`VITE_*`, `NEXT_PUBLIC_*`, etc. do **not** make a secret safe);
+- shared code depending on server environment state.
 
-## Repair contract
+Findings carry source/target hashes and the semantic `metadata_root`, so a repair can be tied to exact evidence rather than a prose guess. The same analyzer is embedded in `repository.snapshot`, so `agentsam inspect` and `agentsam security scan` do not maintain competing architecture models.
 
-Repair produces a plan by default. Applying requires an online complete scan, a clean Git repository root, and an existing npm verification script (verify, otherwise test, or explicit --verify SCRIPT). Automated repair currently requires macOS/Linux; Windows can scan and triage.
+Framework adapters are not guessed away. Exceptional layouts can declare deterministic `agentsam.classify` rules in the nearest package manifest. For example, a server-only DB module physically located in a frontend workspace can declare `execution_domain: "server"`; a generated router/server-function bridge can declare `framework`. Tests and known build-tool config files are separately classified instead of being mistaken for shipped browser roots.
 
-The command creates a new agentsam/security-* branch and worktree under the system temporary directory, leaving the source checkout untouched. It:
+## Mechanical repair contract
+
+Every trust-boundary finding has a deterministic repair action such as:
+
+- `move-server-call-behind-api-boundary`
+- `move-server-dependency-out-of-browser-graph`
+- `move-secret-to-server-runtime`
+- `split-shared-contract-from-server-implementation`
+
+`agentsam security repair` includes these in its plan with the exact evidence refs. They are deliberately `automatic: false` today. Moving an application boundary can change behavior, so AgentSam does not blindly rewrite architecture and claim success.
+
+The reliable automatic-repair target is an isolated-worktree workflow: capture the Merkle/metadata baseline, apply a bounded recipe, rebuild/retest, create a fresh semantic snapshot, prove the contradiction disappeared without introducing new ones, and return a before/after receipt. Dependency repair already uses this isolated verified pattern; source-boundary repair will only become automatic when a recipe can satisfy the same proof standard.
+
+## Dependency repair
+
+Dependency repair produces a plan by default. Applying requires an online complete dependency scan, a clean Git repository root, and an existing npm verification script (`verify`, otherwise `test`, or explicit `--verify SCRIPT`). Automated dependency repair currently requires macOS/Linux; Windows can scan and triage.
+
+The command creates a new `agentsam/security-*` branch and worktree under the system temporary directory, leaving the source checkout untouched. It:
 
 1. Runs npm audit fix with package-lock-only, ignore-scripts, force=false and legacy-peer-deps=false.
 2. For deprecated dependencies, also runs npm update within existing declared ranges, with scripts disabled and no manifest saving.
 3. Rejects changes outside the selected lockfile and major-version changes at existing dependency paths.
 4. Runs a fresh npm ci with install scripts disabled, then the configured verification script.
-5. Rescans OSV and triages the original plus new install/verification logs.
+5. Rescans OSV, logs, and the AST/Merkle trust boundary.
 6. Returns a structured receipt with branch, worktree, step exit codes, before/after reports, and verified status.
 
-A verified candidate remains available for review/commit. Failed or unresolved candidates are retained for inspection and never marked fixed. Native packages needing lifecycle builds may fail verification; that remains visible rather than silently enabling install scripts. The existing verification script runs as trusted project code.
+A verified candidate remains available for review/commit. Failed or unresolved candidates are retained for inspection and never marked fixed. The command never force-pushes, publishes, deploys, executes instructions copied from logs/advisories, or treats an advisory's fixed version as proof of application compatibility.
 
-The command never uses force, edits dependency declarations, selects a major upgrade, suppresses warnings, executes instructions copied from logs/advisories, publishes, or deploys. Fixed versions listed by an advisory are evidence, not a promise they are compatible with your application. Breaking upgrades, package replacements, engine changes, and peer-range design decisions remain explicit follow-up work.
+## Coverage and exit codes
+
+- **0:** complete and clean, already clean, or verified repair candidate.
+- **1:** complete scan with unresolved findings, failed wrapped command, or manual action needed.
+- **2:** incomplete lookup/coverage, offline dependency inventory, invalid input, or failed repair execution.
+
+The npm adapter does not pretend to parse pnpm, Yarn or Bun lock formats. Missing lockfiles, unresolved/external dependencies, and mismatched workspace manifests remain explicitly incomplete. An app workspace that links packages outside its own root can still receive a complete trust-boundary result while its dependency section reports that external package coverage must be scanned at the owning repository root.
 
 ## Installed automation in this repository
 
-CI and the alpha publication workflow wrap npm installation with the dependency-health gate. The root prepublish hook also performs an online security scan after verification.
+CI and publication workflows use the same `agentsam security` implementation. The root `prepublishOnly` hook runs `npm run verify:release`, which includes the online security scan. The dependency-maintenance workflow can prepare verified lockfile repairs but does not auto-merge, publish, or deploy.
 
-The dependency-maintenance workflow runs weekly and can be dispatched manually. It prepares and verifies a repair, then opens a PR when a verified lockfile change exists. It does not auto-merge or publish. It explicitly dispatches CI for its generated branch because GitHub-token-created PRs do not trigger another workflow automatically. An existing repair PR prevents duplicates. If repository settings block PR creation, the verified branch and compare URL remain in the failed run receipt for follow-up. Unresolved or incomplete runs fail visibly and upload a JSON receipt. GitHub repository settings must permit Actions to create pull requests.
-
-Other projects opt in by wrapping their existing build/install commands or calling the exported @inneranimalmedia/agentsam-sdk/security API. This SDK does not silently monitor unrelated deployments.
+Other projects can use the CLI or the exported `@inneranimalmedia/agentsam-sdk/security` API. Repository inspection also carries bounded trust-boundary analysis through `repository.snapshot`; observability/index evidence is not injected wholesale into model context.
 
 References: [OSV query API](https://google.github.io/osv.dev/post-v1-query/), [npm audit](https://docs.npmjs.com/cli/v11/commands/npm-audit/), [npm update](https://docs.npmjs.com/cli/v11/commands/npm-update/).

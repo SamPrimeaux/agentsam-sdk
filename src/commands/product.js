@@ -34,7 +34,7 @@ export async function runInspect(argv = []) {
   };
   const filterFlags = new Map([
     ['--system', 'system'], ['--package', 'package'], ['--category', 'category'], ['--layer', 'layer'],
-    ['--kind', 'kind'], ['--language', 'language'], ['--role', 'role'], ['--tag', 'tag'],
+    ['--kind', 'kind'], ['--language', 'language'], ['--role', 'role'], ['--execution-domain', 'execution_domain'], ['--tag', 'tag'],
     ['--path', 'path'], ['--symbol', 'symbol'], ['--import', 'import'], ['--match', 'match'],
   ]);
   for (let i = 0; i < opts.positionals.length; i += 1) {
@@ -82,7 +82,16 @@ export async function runInspect(argv = []) {
     console.log(`  matched    ${output.projection.matched}${output.projection.truncated ? ` (showing ${output.projection.returned})` : ''}`);
     const systems = output.facets.systems.slice(0, 12).map((row) => `${row.value}:${row.count}`).join(', ');
     if (systems) console.log(`  systems    ${systems}`);
-    if (view === 'files') for (const file of output.files) console.log(`  ${file.path}  [${file.system || '-'} / ${file.category || '-'}]`);
+    const trust = output.analysis?.trust_boundary;
+    if (trust) {
+      console.log(`  trust      ${trust.status}${trust.finding_count ? ` · ${trust.finding_count} contradiction${trust.finding_count === 1 ? '' : 's'}` : ''}`);
+      for (const finding of trust.findings || []) {
+        console.log(`    ! ${finding.kind}: ${finding.source}${finding.target ? ` → ${finding.target}` : finding.specifier ? ` · ${finding.specifier}` : finding.env ? ` · ${finding.env}` : ''}`);
+        if (finding.repair_action) console.log(`      repair: ${finding.repair_action}`);
+      }
+      if (trust.findings_truncated) console.log(`    … ${trust.finding_count - trust.findings_returned} more contradiction(s); use --view full --json for full evidence`);
+    }
+    if (view === 'files') for (const file of output.files) console.log(`  ${file.path}  [${file.system || '-'} / ${file.category || '-'} / ${file.execution_domain || 'unknown'}]`);
     console.log('');
   } else {
     console.log(`\nRepository snapshot ${result.snapshot_id}`);
@@ -92,6 +101,8 @@ export async function runInspect(argv = []) {
     console.log(`  metadata   ${result.tree.metadata_root}`);
     console.log(`  files      ${result.intelligence.summary?.file_count ?? result.tree.stats?.files ?? 'unknown'}`);
     console.log(`  knowledge  ${result.knowledge?.indexed ? result.knowledge.generation_id : result.knowledge?.configured ? 'configured / not indexed' : 'not configured'}`);
+    const trust = result.analysis?.trust_boundary;
+    if (trust) console.log(`  trust      ${trust.status}${trust.findings?.length ? ` · ${trust.findings.length} contradiction${trust.findings.length === 1 ? '' : 's'}` : ''}`);
     console.log(`  deploy     ${result.deploy?.status || 'no trusted receipt'}`);
     console.log(`  content    ${result.content_hash}\n`);
   }

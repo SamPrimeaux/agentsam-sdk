@@ -4,3 +4,5 @@ export {
   createRepositoryKnowledgeClient,
   describeRepositoryKnowledgeProvider,
 } from './provider.js';
+
+export { analyzeExecutionBoundaries, repairSuggestionForBoundaryFinding } from './execution-boundary.js';

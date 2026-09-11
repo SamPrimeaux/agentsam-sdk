@@ -7,6 +7,8 @@ import { createHash } from 'node:crypto';
 import { resolveGitContext } from '../lib/git-context.js';
 import { getRepositoryId, tryReadProjectConfig } from '../lib/project-config.js';
 import { buildMerkleTree } from '../lib/merkle/index.js';
+import { gitIgnoredPaths } from '../lib/merkle/git-ignore.js';
+import { analyzeExecutionBoundaries } from '../indexing/execution-boundary.js';
 import { showLatestDeployReceipt } from '../lib/deploy-receipt/index.js';
 import { CONFIG_PATH, canonical, readConfig, scopeKey } from '../knowledge/config.js';
 import { openSqliteStore } from '../knowledge/stores/sqlite.js';
@@ -25,16 +27,6 @@ function providerForHost(host) {
   return value ? 'git' : null;
 }
 
-async function gitIgnoredPaths(root) {
-  const result = await execute('git', ['status', '--porcelain=v1', '--ignored=matching'], {
-    cwd: root,
-    maxBuffer: 16 * 1024 * 1024,
-  });
-  return [...new Set(result.stdout.split('\n')
-    .filter((line) => line.startsWith('!! '))
-    .map((line) => line.slice(3).trim().replace(/\/$/, ''))
-    .filter((value) => value && !value.includes('\\') && !value.split('/').includes('..')))];
-}
 
 async function runRepositoryIntelligence(root, churnDays) {
   const pythonRoot = fileURLToPath(new URL('../../python', import.meta.url));
@@ -139,6 +131,7 @@ export async function repositorySnapshot({ cwd = process.cwd(), churnDays = 30 }
   }
   const repositoryId = projectRepositoryId || knowledge.repository_id || portableRepositoryId;
   const packages = readPackageInventory(root, intelligence.manifests || []);
+  const trustBoundary = analyzeExecutionBoundaries(merkle.semantic);
 
   const evidence = {
     repository: {
@@ -177,6 +170,9 @@ export async function repositorySnapshot({ cwd = process.cwd(), churnDays = 30 }
     },
     packages,
     knowledge,
+    analysis: {
+      trust_boundary: trustBoundary,
+    },
     deploy: deployReceipt ? {
       status: deployReceipt.status,
       root_hash: deployReceipt.root_hash,

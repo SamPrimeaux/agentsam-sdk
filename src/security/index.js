@@ -4,3 +4,4 @@ export { triageLog, resolveLogFindings } from './logs.js';
 export { scanProjectSecurity, remediationPlan, reportExitCode } from './scan.js';
 export { repairProject } from './repair.js';
 export { formatSecurityReport } from './render.js';
+export { scanTrustBoundary } from './trust-boundary.js';

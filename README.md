@@ -76,7 +76,7 @@ read-only `repository.snapshot` composition primitive. See [Capabilities and pre
 | Identity contracts and adapters | `/identity`; `agentsam identity init` | [Identity](packages/identity/README.md) |
 | Repository knowledge | `agentsam index`, `search`, `repo`; `/knowledge` | [Knowledge](docs/portable-knowledge.md) |
 | File integrity | `agentsam merkle`; `/merkle` | [Merkle](docs/MERKLE.md) |
-| Dependency health and repair | `agentsam security`; `/security` | [Security](docs/SECURITY.md) |
+| Security, trust-boundary scan, and repair | `agentsam security`; `/security` | [Security](docs/SECURITY.md) |
 | Mini prototypes | `agentsam mini`; `/mini` | [Mini](docs/MINI.md) |
 | Recon bounded-worker packets | `agentsam recon pack\|validate` | [Recon](docs/RECON.md) |
 | Local containers | `agentsam dockerize`; `/dockerize` | [Dockerize](docs/DOCKERIZE.md) |

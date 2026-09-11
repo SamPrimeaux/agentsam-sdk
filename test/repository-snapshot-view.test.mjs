@@ -26,29 +26,37 @@ function snapshot() {
         {
           path: 'packages/identity/src/core/accounts.js', type: 'file', size: 213, mode: 420, hash: `sha256:${'a'.repeat(64)}`,
           package: '@inneranimalmedia/agentsam-sdk-identity', package_root: 'packages/identity', system: 'identity',
-          category: 'accounts', layer: 'core', kind: 'source', language: 'javascript', role: 'business-logic',
+          category: 'accounts', layer: 'core', kind: 'source', language: 'javascript', role: 'business-logic', execution_domain: 'unknown',
           tags: ['account-scoped', 'authentication'], symbols: ['accountLinkingNotConfigured'], imports: [],
         },
         {
           path: 'packages/identity/src/oauth/login.js', type: 'file', size: 300, mode: 420, hash: `sha256:${'b'.repeat(64)}`,
           package: '@inneranimalmedia/agentsam-sdk-identity', package_root: 'packages/identity', system: 'identity',
-          category: 'login', layer: 'oauth', kind: 'source', language: 'javascript', role: 'business-logic',
+          category: 'login', layer: 'oauth', kind: 'source', language: 'javascript', role: 'business-logic', execution_domain: 'unknown',
           tags: ['authentication'], symbols: ['login'], imports: ['./accounts.js'],
         },
         {
           path: 'apps/cms/src/editor.tsx', type: 'file', size: 250, mode: 420, hash: `sha256:${'c'.repeat(64)}`,
           package: '@inneranimalmedia/cms', package_root: 'apps/cms', system: 'cms-frontend', category: 'editor', layer: 'ui',
-          kind: 'source', language: 'typescript', role: 'ui', tags: ['cms'], symbols: ['CmsEditor'], imports: ['react'],
+          kind: 'source', language: 'typescript', role: 'ui', execution_domain: 'browser', tags: ['cms'], symbols: ['CmsEditor'], imports: ['react'],
         },
         {
           path: 'apps/cms/src/assets.ts', type: 'file', size: 237, mode: 420, hash: `sha256:${'d'.repeat(64)}`,
           package: '@inneranimalmedia/cms', package_root: 'apps/cms', system: 'cms-frontend', category: 'assets', layer: 'data',
-          kind: 'source', language: 'typescript', role: 'business-logic', tags: ['cms', 'assets'], symbols: ['loadAsset'], imports: [],
+          kind: 'source', language: 'typescript', role: 'business-logic', execution_domain: 'browser', tags: ['cms', 'assets'], symbols: ['loadAsset'], imports: [],
         },
       ],
     },
     intelligence: { summary: { file_count: 4 } },
-    packages: [], knowledge: { configured: false }, deploy: null,
+    packages: [], knowledge: { configured: false },
+    analysis: {
+      trust_boundary: {
+        schema_version: 1, analyzer: 'agentsam-execution-boundary', metadata_root: `sha256:${'3'.repeat(64)}`,
+        complete: true, status: 'action-required', ok: false, browser_roots: 2, browser_reachable_files: 2, ast_files: 4,
+        findings: [{ kind: 'browser-server-import', severity: 'high', source: 'apps/cms/src/editor.tsx', target: 'server/secrets.ts', repair: { action: 'move-server-call-behind-api-boundary' } }],
+      },
+    },
+    deploy: null,
   };
 }
 
@@ -65,13 +73,16 @@ test('repository snapshot index is bounded and preserves the three canonical ide
   assert.match(view.projection.projection_hash, /^sha256:[a-f0-9]{64}$/);
   assert.equal(view.tree.paths, undefined);
   assert.equal(view.tree.files, undefined);
+  assert.equal(view.analysis.trust_boundary.status, 'action-required');
+  assert.equal(view.analysis.trust_boundary.finding_count, 1);
+  assert.equal(view.analysis.trust_boundary.findings[0].repair_action, 'move-server-call-behind-api-boundary');
 });
 
 test('repository snapshot files view filters semantics before bounding output', () => {
   const full = snapshot();
   const view = projectRepositorySnapshot(full, {
     view: 'files',
-    filters: { system: ['identity'], tag: ['authentication'], category: ['accounts'] },
+    filters: { system: ['identity'], tag: ['authentication'], category: ['accounts'], execution_domain: ['unknown'] },
     limit: 1,
   });
   assert.equal(view.projection.matched, 1);
@@ -93,4 +104,9 @@ test('path globs, AST selectors, and facet counts are deterministic', () => {
     { value: 'identity', count: 2 },
   ]);
   assert.deepEqual(facets.tags.find((row) => row.value === 'authentication'), { value: 'authentication', count: 2 });
+  assert.deepEqual(facets.execution_domains, [
+    { value: 'browser', count: 2 },
+    { value: 'unknown', count: 2 },
+  ]);
+  assert.equal(repositoryFileMatches(files[2], { execution_domain: ['browser'] }), true);
 });

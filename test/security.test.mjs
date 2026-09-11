@@ -181,3 +181,49 @@ test('a missing transitive dependency cannot pass as complete coverage', async t
   assert.equal(report.complete,false);
   assert.ok(report.issues.some(issue=>issue.includes('Missing locked dependency edge')));
 });
+
+test('security scan includes AST/Merkle trust-boundary contradictions and mechanical repair evidence', async t => {
+  const f = fixture(t);
+  fs.mkdirSync(path.join(f.root, 'frontend'), { recursive: true });
+  fs.mkdirSync(path.join(f.root, 'backend'), { recursive: true });
+  fs.writeFileSync(path.join(f.root, 'frontend', 'client.ts'), [
+    "import { secretValue } from '../backend/secrets.ts';",
+    "export const value = secretValue;",
+  ].join('\n'));
+  fs.writeFileSync(path.join(f.root, 'backend', 'secrets.ts'), [
+    "export const secretValue = process.env.API_KEY;",
+  ].join('\n'));
+
+  const report = await scanProjectSecurity({ projectRoot: f.root, fetch: empty });
+  assert.equal(report.complete, true);
+  assert.equal(report.ok, false);
+  assert.equal(report.status, 'action-required');
+  assert.match(report.trust_boundary.merkle_root, /^sha256:/);
+  assert.match(report.trust_boundary.metadata_root, /^sha256:/);
+  const finding = report.trust_boundary.findings.find((item) => item.kind === 'browser-server-import');
+  assert.ok(finding);
+  assert.equal(finding.source, 'frontend/client.ts');
+  assert.equal(finding.target, 'backend/secrets.ts');
+  assert.equal(finding.repair.action, 'move-server-call-behind-api-boundary');
+  assert.equal(reportExitCode(report), 1);
+  const text = formatSecurityReport(report);
+  assert.match(text, /Trust boundary/);
+  assert.match(text, /frontend\/client\.ts/);
+  assert.match(text, /move-server-call-behind-api-boundary/);
+});
+
+test('browser env and server-runtime imports are derived from syntax rather than folder names alone', async t => {
+  const f = fixture(t);
+  fs.mkdirSync(path.join(f.root, 'frontend', 'src'), { recursive: true });
+  fs.writeFileSync(path.join(f.root, 'frontend', 'src', 'client.ts'), [
+    "import fs from 'node:fs';",
+    "export const leaked = import.meta.env.VITE_API_KEY;",
+    "export const privateValue = process.env.INTERNAL_TOKEN;",
+    "export const exists = Boolean(fs);",
+  ].join('\n'));
+  const report = await scanProjectSecurity({ projectRoot: f.root, fetch: empty });
+  const kinds = new Set(report.trust_boundary.findings.map((item) => item.kind));
+  assert.ok(kinds.has('browser-server-runtime-import'));
+  assert.ok(kinds.has('browser-public-secret-name'));
+  assert.ok(kinds.has('browser-private-env-access'));
+});

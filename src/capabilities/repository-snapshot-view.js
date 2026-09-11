@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 const VIEW_NAMES = new Set(['index', 'files', 'full']);
 const FILTER_FIELDS = Object.freeze([
-  'system', 'package', 'category', 'layer', 'kind', 'language', 'role', 'tag', 'path', 'symbol', 'import', 'match',
+  'system', 'package', 'category', 'layer', 'kind', 'language', 'role', 'execution_domain', 'tag', 'path', 'symbol', 'import', 'match',
 ]);
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 500;
@@ -68,7 +68,7 @@ function listMatches(list, selectors) {
 function lexicalMatches(entry, terms) {
   if (!terms.length) return true;
   const haystack = [
-    entry.path, entry.system, entry.package, entry.category, entry.layer, entry.kind, entry.language, entry.role,
+    entry.path, entry.system, entry.package, entry.category, entry.layer, entry.kind, entry.language, entry.role, entry.execution_domain,
     ...(entry.tags || []), ...(entry.symbols || []), ...(entry.imports || []),
   ].map(clean).join('\n').toLowerCase();
   return terms.every((term) => haystack.includes(term.toLowerCase()));
@@ -87,6 +87,7 @@ export function repositoryFileMatches(entry, filters = {}) {
     && scalarMatches(entry.kind, f.kind || [])
     && scalarMatches(entry.language, f.language || [])
     && scalarMatches(entry.role, f.role || [])
+    && scalarMatches(entry.execution_domain, f.execution_domain || [])
     && listMatches(entry.tags, f.tag || [])
     && pathMatches(entry.path, f.path || [])
     && listMatches(entry.symbols, f.symbol || [])
@@ -117,6 +118,7 @@ export function buildRepositorySnapshotFacets(entries = [], { limit = DEFAULT_FA
     packages: countFacet(entries, scalar('package'), bounded),
     layers: countFacet(entries, scalar('layer'), bounded),
     roles: countFacet(entries, scalar('role'), bounded),
+    execution_domains: countFacet(entries, scalar('execution_domain'), bounded),
     kinds: countFacet(entries, scalar('kind'), bounded),
     languages: countFacet(entries, scalar('language'), bounded),
     tags: countFacet(entries, (entry) => entry.tags || [], bounded),
@@ -135,9 +137,41 @@ function compactEntry(entry) {
     ...(entry.kind ? { kind: entry.kind } : {}),
     ...(entry.language ? { language: entry.language } : {}),
     ...(entry.role ? { role: entry.role } : {}),
+    ...(entry.execution_domain ? { execution_domain: entry.execution_domain } : {}),
     ...(entry.tags?.length ? { tags: entry.tags } : {}),
     ...(entry.symbols?.length ? { symbols: entry.symbols } : {}),
     ...(entry.imports?.length ? { imports: entry.imports } : {}),
+  };
+}
+
+function compactTrustBoundary(analysis, limit = 20) {
+  const source = analysis?.trust_boundary;
+  if (!source) return undefined;
+  const findings = Array.isArray(source.findings) ? source.findings : [];
+  return {
+    trust_boundary: {
+      schema_version: source.schema_version,
+      analyzer: source.analyzer,
+      metadata_root: source.metadata_root,
+      complete: source.complete,
+      status: source.status,
+      ok: source.ok,
+      browser_roots: source.browser_roots,
+      browser_reachable_files: source.browser_reachable_files,
+      ast_files: source.ast_files,
+      finding_count: findings.length,
+      findings_returned: Math.min(findings.length, limit),
+      findings_truncated: findings.length > limit,
+      findings: findings.slice(0, limit).map((item) => ({
+        kind: item.kind,
+        severity: item.severity,
+        source: item.source,
+        ...(item.target ? { target: item.target } : {}),
+        ...(item.specifier ? { specifier: item.specifier } : {}),
+        ...(item.env ? { env: item.env } : {}),
+        ...(item.repair?.action ? { repair_action: item.repair.action } : {}),
+      })),
+    },
   };
 }
 
@@ -157,6 +191,7 @@ function projectionBase(snapshot) {
       stats: snapshot.tree?.stats || null,
       semantic_stats: snapshot.tree?.semantic_stats || null,
     },
+    ...(compactTrustBoundary(snapshot.analysis) ? { analysis: compactTrustBoundary(snapshot.analysis) } : {}),
   };
 }
 

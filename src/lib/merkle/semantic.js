@@ -95,6 +95,22 @@ function inferRole(relative, layer, kind) {
   return kind === 'source' ? 'runtime' : kind;
 }
 
+function inferExecutionDomain(relative, layer, role, kind) {
+  const lower = relative.toLowerCase();
+  const parts = lower.split('/');
+  const filename = parts.at(-1) || '';
+  if (kind === 'test') return 'test';
+  if (/^(?:vite|vitest|eslint|tailwind|postcss|playwright|next|nuxt|astro)\.config\.[cm]?[jt]s$/.test(filename)) return 'tooling';
+  if (/\.gen\.[cm]?[jt]sx?$/.test(filename) || filename.endsWith('.generated.ts') || filename.endsWith('.generated.js')) return 'framework';
+  if (/\.server\.[cm]?[jt]sx?$/.test(filename) || /^(server|worker)\.[cm]?[jt]s$/.test(filename) || filename.includes('server-only')) return 'server';
+  if (parts.includes('backend') || parts.includes('worker') || /(^|\/)routes?\/api(\/|$)/.test(lower) || /(^|\/)api(\/|$)/.test(lower)) return 'server';
+  if (/\.client\.[cm]?[jt]sx?$/.test(filename)) return 'browser';
+  if (parts.includes('shared') || layer === 'shared' || role === 'contract') return 'shared';
+  if (parts.includes('frontend') || layer === 'frontend') return 'browser';
+  if (layer === 'backend' || layer === 'server' || layer === 'api') return 'server';
+  return 'unknown';
+}
+
 function globRegex(glob) {
   let source = '^';
   for (let i = 0; i < glob.length; i++) {
@@ -114,7 +130,7 @@ function packageRule(localPath, pkg) {
   const tags = new Set();
   for (const rule of rules) {
     if (!rule || typeof rule.glob !== 'string' || !globRegex(rule.glob).test(localPath)) continue;
-    for (const key of ['system', 'category', 'layer', 'kind', 'language', 'role']) if (typeof rule[key] === 'string' && rule[key]) out[key] = rule[key];
+    for (const key of ['system', 'category', 'layer', 'kind', 'language', 'role', 'execution_domain']) if (typeof rule[key] === 'string' && rule[key]) out[key] = rule[key];
     if (Array.isArray(rule.tags)) for (const tag of rule.tags) if (typeof tag === 'string' && tag) tags.add(tag);
   }
   if (tags.size) out.tags = [...tags].sort();
@@ -145,6 +161,7 @@ function astMetadata(relative, source) {
   const file = ts.createSourceFile(relative, source, ts.ScriptTarget.Latest, true, scriptKind(ext));
   const symbols = new Set();
   const imports = new Set();
+  const envAccesses = new Set();
   for (const statement of file.statements) {
     for (const name of declarationNames(statement)) symbols.add(name);
     if (ts.isImportDeclaration(statement) || ts.isExportDeclaration(statement)) {
@@ -152,7 +169,15 @@ function astMetadata(relative, source) {
       if (value && ts.isStringLiteralLike(value)) imports.add(value.text);
     }
   }
+  const recordEnvAccess = (node) => {
+    if (!ts.isPropertyAccessExpression(node) && !ts.isElementAccessExpression(node)) return;
+    const text = node.getText(file);
+    let match = text.match(/^(process\.env|import\.meta\.env)\.([A-Za-z_][A-Za-z0-9_]*)$/);
+    if (!match) match = text.match(/^(process\.env|import\.meta\.env)\[['\"]([A-Za-z_][A-Za-z0-9_]*)['\"]\]$/);
+    if (match) envAccesses.add(`${match[1]}:${match[2]}`);
+  };
   const visit = (node) => {
+    recordEnvAccess(node);
     if (ts.isCallExpression(node) && node.arguments.length === 1 && ts.isStringLiteralLike(node.arguments[0])) {
       if (ts.isIdentifier(node.expression) && node.expression.text === 'require') imports.add(node.arguments[0].text);
       else if (node.expression.kind === ts.SyntaxKind.ImportKeyword) imports.add(node.arguments[0].text);
@@ -162,17 +187,49 @@ function astMetadata(relative, source) {
   visit(file);
   const symbolList = [...symbols].sort();
   const importList = [...imports].sort();
+  const envList = [...envAccesses].sort().map((value) => {
+    const split = value.indexOf(':');
+    return { source: value.slice(0, split), name: value.slice(split + 1) };
+  });
   return {
     symbols: symbolList,
     imports: importList,
+    env_accesses: envList,
     ast: {
       indexed: true,
       parser: 'typescript',
       symbol_count: symbolList.length,
       dependency_count: importList.length,
+      env_access_count: envList.length,
       parse_error_count: Array.isArray(file.parseDiagnostics) ? file.parseDiagnostics.length : 0,
     },
   };
+}
+
+function resolveLocalImport(sourcePath, specifier, files) {
+  if (!specifier.startsWith('.')) return null;
+  const base = path.posix.normalize(path.posix.join(path.posix.dirname(sourcePath), specifier));
+  const candidates = [base];
+  const ext = path.posix.extname(base);
+  if (!ext) {
+    for (const suffix of ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json']) candidates.push(base + suffix);
+    for (const suffix of ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json']) candidates.push(path.posix.join(base, 'index' + suffix));
+  } else if (['.js', '.jsx', '.mjs', '.cjs'].includes(ext)) {
+    const stem = base.slice(0, -ext.length);
+    for (const suffix of ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']) candidates.push(stem + suffix);
+  }
+  return candidates.find((candidate) => files.has(candidate)) || null;
+}
+
+function attachResolvedImports(entries) {
+  const files = new Set(entries.filter((entry) => entry.type === 'file').map((entry) => entry.path));
+  for (const entry of entries) {
+    if (!Array.isArray(entry.imports) || !entry.imports.length) continue;
+    entry.resolved_imports = entry.imports.map((specifier) => {
+      const target = resolveLocalImport(entry.path, specifier, files);
+      return target ? { specifier, target } : { specifier };
+    });
+  }
 }
 
 async function readVerifiedFile(rootPath, entry) {
@@ -212,10 +269,12 @@ async function readPackages(rootPath, tree) {
 function summarize(entries, packages) {
   const bySystem = {};
   const byLanguage = {};
+  const byExecutionDomain = {};
   let astIndexed = 0;
   for (const entry of entries) {
     if (entry.system) bySystem[entry.system] = (bySystem[entry.system] || 0) + 1;
     if (entry.language) byLanguage[entry.language] = (byLanguage[entry.language] || 0) + 1;
+    if (entry.execution_domain) byExecutionDomain[entry.execution_domain] = (byExecutionDomain[entry.execution_domain] || 0) + 1;
     if (entry.ast?.indexed) astIndexed++;
   }
   return {
@@ -226,6 +285,7 @@ function summarize(entries, packages) {
     ast_indexed: astIndexed,
     by_system: Object.fromEntries(Object.entries(bySystem).sort()),
     by_language: Object.fromEntries(Object.entries(byLanguage).sort()),
+    by_execution_domain: Object.fromEntries(Object.entries(byExecutionDomain).sort()),
   };
 }
 
@@ -234,7 +294,8 @@ export async function buildSemanticMetadata(rootPath, tree) {
   const classifier = {
     format: FILEMETA_FORMAT,
     version: FILEMETA_VERSION,
-    source: 'path+package+ast',
+    source: 'path+package+ast+execution-boundary',
+    trust_boundary: 'execution-domain-v1',
     ast_parser: 'typescript',
     ast_parser_version: ts.version,
   };
@@ -278,11 +339,13 @@ export async function buildSemanticMetadata(rootPath, tree) {
       kind: explicit.kind || kind,
       ...(explicit.language || language ? { language: explicit.language || language } : {}),
       role: explicit.role || inferRole(contentEntry.path, explicit.layer || layer, explicit.kind || kind),
+      execution_domain: explicit.execution_domain || inferExecutionDomain(contentEntry.path, explicit.layer || layer, explicit.role || inferRole(contentEntry.path, explicit.layer || layer, explicit.kind || kind), explicit.kind || kind),
       tags: [...tags].sort(),
     };
     if (sourceBuffer) Object.assign(record, astMetadata(contentEntry.path, sourceBuffer.toString('utf8')));
     entries.push(record);
   }
+  attachResolvedImports(entries);
   entries.sort((a, b) => comparePaths(a.path, b.path));
   return {
     format: FILEMETA_FORMAT,

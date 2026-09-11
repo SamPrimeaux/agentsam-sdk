@@ -26,7 +26,8 @@ This registry is intended to drive CLI/terminal UI discovery, AgentSam/MCP tool 
 
 - Git resource identity and revision
 - Python repository intelligence
-- Merkle root and tree statistics
+- Merkle root, semantic metadata root, execution-domain facts, and tree statistics
+- deterministic client/server trust-boundary contradictions derived from the Merkle-bound AST graph
 - package/manifests
 - local knowledge/index generation when configured
 - last trusted local deployment receipt when available
@@ -36,6 +37,7 @@ It does **not** call an LLM, mutate source, index the repository, provision clou
 
 ```sh
 agentsam inspect --json
+agentsam inspect --execution-domain browser --view files --json
 ```
 
 ```js
@@ -43,7 +45,7 @@ import { repositorySnapshot } from '@inneranimalmedia/agentsam-sdk/repository';
 const snapshot = await repositorySnapshot({ cwd: process.cwd() });
 ```
 
-The timestamp is not included in the content hash, so unchanged evidence produces the same `content_hash` and `snapshot_id`.
+The timestamp is not included in the content hash, so unchanged evidence produces the same `content_hash` and `snapshot_id`. The default bounded index view carries a compact `analysis.trust_boundary` summary (up to 20 contradiction cards) while the canonical full snapshot retains all deterministic findings. `agentsam security scan` consumes the same analyzer rather than maintaining a separate architecture model.
 
 ## Optional AgentSam/LLM composition
 
