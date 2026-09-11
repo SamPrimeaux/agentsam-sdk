@@ -4,11 +4,14 @@ AgentSam SDK treats useful mechanics as deterministic capabilities first. Model/
 
 ## Contract
 
-A capability has a stable ID, runtime, side-effect class, CLI/library entry point where applicable, and explicit model requirement. The canonical registry lives in `src/capabilities/manifest.js` and is exposed through:
+A capability has a stable ID, kind, runtime, side-effect class, CLI/library entry point where applicable, and explicit model requirement. The canonical data SSOT is `protocol/capabilities/manifest.json`; `src/capabilities/manifest.js` is only its runtime reader. Presets follow the same rule through `protocol/presets/catalog.json`.
 
 ```js
 import { getCapabilityManifest, repositorySnapshot } from '@inneranimalmedia/agentsam-sdk/capabilities';
+import { getPresetCatalog } from '@inneranimalmedia/agentsam-sdk/presets';
 ```
+
+Raw machine-readable data is also shipped through the `/capability-manifest` and `/preset-catalog` package subpaths.
 
 ```sh
 agentsam capabilities
