@@ -55,7 +55,7 @@ async function verifyInteractiveInit(target, answer, laneAnswer = '1', expectedL
   let question = 0;
   const child = spawn(process.execPath, ['--import', preload, cli, 'init'], {
     cwd: tmp,
-    env: { ...process.env, AGENTSAM_SDK_TOKEN: '', NO_COLOR: '1' },
+    env: { ...process.env, AGENTSAM_SDK_KEY: '', AGENTSAM_SDK_TOKEN: '', NO_COLOR: '1' },
     stdio: ['pipe', 'pipe', 'pipe'],
   });
   await new Promise((resolve, reject) => {
