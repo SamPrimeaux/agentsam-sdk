@@ -1,0 +1,53 @@
+{
+  "id": "cad-studio",
+  "kind": "starter",
+  "version": 1,
+  "title": "AgentSam CAD Studio",
+  "description": "2D/3D architectural design studio with AgentSam CAD runtime",
+  "capabilities": [
+    "cad.project",
+    "cad.design.compile",
+    "cad.design.render",
+    "cad.design.export",
+    "blender.status",
+    "blender.inspect",
+    "blender.build",
+    "blender.render_preview",
+    "blender.export"
+  ],
+  "runtime": {
+    "default": "local-mock",
+    "optional": [
+      "native-blender",
+      "cad-container",
+      "cloudflare-worker",
+      "gcp-cloud-run"
+    ]
+  },
+  "scaffold": {
+    "ignore": [
+      "node_modules",
+      "dist",
+      ".git",
+      ".env*",
+      "storage/cad/artifacts/**",
+      "storage/cad/renders/**",
+      "storage/cad/temp/**",
+      ".DS_Store"
+    ],
+    "variables": {
+      "BLENDER_PATH": {
+        "description": "Path to local Blender executable (optional)",
+        "default": ""
+      },
+      "CAD_RUNTIME_LANE": {
+        "description": "Active execution lane (local-mock, native-blender, cad-container)",
+        "default": "native-blender"
+      },
+      "CAD_STORAGE_ROOT": {
+        "description": "Path to bounded CAD artifacts directory",
+        "default": "./storage/cad"
+      }
+    }
+  }
+}

@@ -1,0 +1,205 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AgentSamCadProject",
+  "description": "Canonical normalized project schema for AgentSam CAD Studio",
+  "type": "object",
+  "required": ["schema_version", "id", "name", "units", "walls", "rooms", "fixtures"],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "default": 1
+    },
+    "id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "units": {
+      "type": "string",
+      "enum": ["in", "ft", "mm", "m"],
+      "default": "in"
+    },
+    "scale": {
+      "type": "number",
+      "default": 1
+    },
+    "gridSize": {
+      "type": "number",
+      "default": 12
+    },
+    "snapToGrid": {
+      "type": "boolean",
+      "default": true
+    },
+    "ceilingHeight": {
+      "type": "number",
+      "default": 108
+    },
+    "roofType": {
+      "type": "string",
+      "enum": ["none", "flat", "gable"],
+      "default": "flat"
+    },
+    "project": {
+      "type": "object",
+      "description": "High-level project metadata and architectural constraints",
+      "properties": {
+        "buildingType": { "type": "string" },
+        "footprintAreaSqFt": { "type": "number" },
+        "levels": { "type": "integer", "default": 1 }
+      }
+    },
+    "walls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "x1", "y1", "x2", "y2", "thickness", "height3D", "material"],
+        "properties": {
+          "id": { "type": "string" },
+          "x1": { "type": "number" },
+          "y1": { "type": "number" },
+          "x2": { "type": "number" },
+          "y2": { "type": "number" },
+          "thickness": { "type": "number", "default": 6 },
+          "height3D": { "type": "number", "default": 108 },
+          "material": {
+            "type": "string",
+            "enum": ["drywall", "brick", "concrete", "glass", "wood_panel", "steel"]
+          },
+          "exterior": { "type": "boolean", "default": false },
+          "color": { "type": "string" }
+        }
+      }
+    },
+    "openings": {
+      "type": "array",
+      "description": "Combined doors and windows hosted inside wall elements",
+      "items": {
+        "type": "object",
+        "required": ["id", "wallId", "type", "distanceAlongWall", "width", "height"],
+        "properties": {
+          "id": { "type": "string" },
+          "wallId": { "type": "string" },
+          "type": { "type": "string", "enum": ["door", "window"] },
+          "distanceAlongWall": { "type": "number", "minimum": 0, "maximum": 1 },
+          "width": { "type": "number" },
+          "height": { "type": "number" },
+          "elevation": { "type": "number", "default": 0 },
+          "swing": { "type": "string", "enum": ["left", "right", "sliding", "double", "pocket"] },
+          "style": { "type": "string", "enum": ["casement", "sliding", "picture", "hung"] }
+        }
+      }
+    },
+    "rooms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "points", "floorMaterial"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "points": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": { "type": "number" },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "areaSqFt": { "type": "number" },
+          "floorMaterial": {
+            "type": "string",
+            "enum": ["hardwood", "marble", "tile", "polished_concrete", "carpet", "terrazzo"]
+          },
+          "color": { "type": "string" }
+        }
+      }
+    },
+    "fixtures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "category", "name", "x", "y", "w", "d", "h", "rotation", "color"],
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string" },
+          "category": { "type": "string" },
+          "name": { "type": "string" },
+          "x": { "type": "number" },
+          "y": { "type": "number" },
+          "w": { "type": "number" },
+          "d": { "type": "number" },
+          "h": { "type": "number" },
+          "rotation": { "type": "number" },
+          "color": { "type": "string" },
+          "material": { "type": "string" },
+          "parametricObjectId": { "type": "string" }
+        }
+      }
+    },
+    "materials": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "color", "roughness"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "color": { "type": "string" },
+          "roughness": { "type": "number" },
+          "metallic": { "type": "number" },
+          "textureUrl": { "type": "string" }
+        }
+      }
+    },
+    "cameras": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "position": {
+            "type": "object",
+            "properties": {
+              "x": { "type": "number" },
+              "y": { "type": "number" },
+              "z": { "type": "number" }
+            }
+          },
+          "target": {
+            "type": "object",
+            "properties": {
+              "x": { "type": "number" },
+              "y": { "type": "number" },
+              "z": { "type": "number" }
+            }
+          },
+          "fov": { "type": "number", "default": 50 }
+        }
+      }
+    },
+    "lights": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string", "enum": ["sun", "point", "spot", "ambient"] },
+          "intensity": { "type": "number" },
+          "color": { "type": "string" },
+          "position": {
+            "type": "object",
+            "properties": {
+              "x": { "type": "number" },
+              "y": { "type": "number" },
+              "z": { "type": "number" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

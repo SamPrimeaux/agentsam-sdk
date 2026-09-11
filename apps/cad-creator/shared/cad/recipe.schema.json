@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AgentSamCadRecipe",
+  "description": "Declarative JSON CAD Recipe for deterministic CAD/Blender mesh synthesis",
+  "type": "object",
+  "required": ["schema_version", "recipe_id", "operations"],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "default": 1
+    },
+    "recipe_id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "units": {
+      "type": "string",
+      "enum": ["in", "ft", "mm", "m"],
+      "default": "in"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "author": { "type": "string" },
+        "generator": { "type": "string" },
+        "createdAt": { "type": "integer" }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "properties": {
+        "sunAltitude": { "type": "number" },
+        "sunAzimuth": { "type": "number" },
+        "ambientColor": { "type": "string" },
+        "shadows": { "type": "boolean" }
+      }
+    },
+    "operations": {
+      "type": "array",
+      "description": "Strict sequence of deterministic CAD generation primitives",
+      "items": {
+        "type": "object",
+        "required": ["op", "id"],
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "create_collection",
+              "extrude_wall",
+              "boolean_opening",
+              "create_floor_slab",
+              "place_fixture",
+              "assign_material",
+              "create_camera",
+              "setup_sunlight"
+            ]
+          },
+          "id": { "type": "string" },
+          "collection": { "type": "string" },
+          "params": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}
