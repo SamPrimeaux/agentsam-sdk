@@ -1,0 +1,22 @@
+{
+  "name": "@inneranimalmedia/agentsam-cms-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./api": "./src/api/client.ts",
+    "./model": "./src/model.ts",
+    "./preview": "./src/preview/bridge.ts",
+    "./routing": "./src/routing/index.js"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@inneranimalmedia/agentsam-cms-shared": "0.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

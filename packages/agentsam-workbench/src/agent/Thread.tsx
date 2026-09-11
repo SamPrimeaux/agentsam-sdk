@@ -35,7 +35,7 @@ export function AgentThread({
   }
 
   return (
-    <div ref={scroller} className={scrollerClassName} onScroll={onScroll}>
+    <div ref={scroller} className={scrollerClassName} data-agent-thread="" onScroll={onScroll}>
       <div className={listClassName}>
         {messages.length === 0
           ? empty

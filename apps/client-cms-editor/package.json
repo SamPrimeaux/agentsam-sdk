@@ -1,0 +1,19 @@
+{
+  "name": "@inneranimalmedia/client-cms-editor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "frontend",
+    "backend",
+    "shared/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @inneranimalmedia/agentsam-cms-frontend",
+    "build": "npm run build -w @inneranimalmedia/agentsam-cms-frontend",
+    "preview": "npm run preview -w @inneranimalmedia/agentsam-cms-frontend",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "clean": "rm -rf frontend/dist coverage"
+  }
+}

@@ -13,7 +13,8 @@
     "./artifacts": "./src/artifacts.ts",
     "./context": "./src/context.ts",
     "./adapter": "./src/adapter.ts",
-    "./models": "./src/models.ts"
+    "./models": "./src/models.ts",
+    "./identity": "./src/identity.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

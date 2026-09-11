@@ -6,6 +6,7 @@ Current lanes:
 
 - `local-studio/` — full AgentSam local product shell, imported from `SamPrimeaux/AgentSam-Grok-Workmode` before normalization. This is the UI/UX donor for `agentsam start-local`; it is not published verbatim in the root npm package.
 - `cad-creator/` — self-contained CAD/BIM npm workspace (`frontend/`, `backend/`, `shared/cad/`) imported from `agentsam-design-studio.zip`; it remains independent from the SDK root workspace graph.
+- `client-cms-editor/` — self-contained CMS authoring/control workspace imported from `inneranimalmedia/packages/client-cms-editor`; consumes the shared AgentSam contracts/workbench and stays separate from the small public CMS runtime.
 - `frontend/` — public-site/CMS authoring lane. `public/site/` contains the current landing-page seed and will be normalized around shared header/footer plus D1-driven page records and R2-published HTML/assets.
 - `_incoming/` — optional drop zone for additional ZIP donors. Run `python3 scripts/ingest-app-zips.py` to preview an import, then add `--apply` to ingest it.
 

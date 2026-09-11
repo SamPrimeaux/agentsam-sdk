@@ -1,0 +1,21 @@
+{
+  "name": "@inneranimalmedia/agentsam-cms-shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./publication": "./src/publication.ts",
+    "./bindings": "./src/cloudflare-bindings.ts",
+    "./context": "./src/agent-context.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@inneranimalmedia/agentsam-contracts": "file:../../../../packages/agentsam-contracts"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

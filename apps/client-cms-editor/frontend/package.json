@@ -1,0 +1,33 @@
+{
+  "name": "@inneranimalmedia/agentsam-cms-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles/studio.css": "./src/styles/studio.css"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@inneranimalmedia/agentsam-cms-backend": "0.1.0",
+    "@inneranimalmedia/agentsam-cms-shared": "0.1.0",
+    "@inneranimalmedia/agentsam-contracts": "file:../../../packages/agentsam-contracts",
+    "@inneranimalmedia/agentsam-workbench": "file:../../../packages/agentsam-workbench",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.3",
+    "vitest": "^4.1.11"
+  }
+}
