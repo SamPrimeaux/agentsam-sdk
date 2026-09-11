@@ -95,6 +95,7 @@ export function buildRepositoryAuditPacket({
     evidence_index: Object.freeze({
       repository: `${prefix}#repository`,
       tree: `${prefix}#tree`,
+      file_paths: `${prefix}#tree.paths`,
       summary: `${prefix}#intelligence.summary`,
       languages: `${prefix}#intelligence.languages`,
       manifests: `${prefix}#intelligence.manifests`,
