@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/capabilities/repository-audit.schema.json",
+  "title": "repository.audit result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "primitive", "snapshot_id", "snapshot_content_hash", "generated_at", "summary", "packages", "binaries", "commands", "capabilities", "services", "protocols", "notable_combinations", "findings", "cleanup_candidates", "recommended_routes", "evidence_refs", "artifacts"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "primitive": { "const": "repository.audit" },
+    "snapshot_id": { "type": "string" },
+    "snapshot_content_hash": { "type": "string" },
+    "generated_at": { "type": "string" },
+    "summary": { "type": "string", "minLength": 1 },
+    "repository_map": {},
+    "file_tree": {},
+    "packages": { "type": "array" },
+    "binaries": { "type": "array" },
+    "commands": { "type": "array" },
+    "capabilities": { "type": "array" },
+    "services": { "type": "array" },
+    "protocols": { "type": "array" },
+    "notable_combinations": { "type": "array" },
+    "findings": { "type": "array" },
+    "cleanup_candidates": { "type": "array" },
+    "recommended_routes": { "type": "array" },
+    "evidence_refs": { "type": "array", "items": { "type": "string" } },
+    "artifacts": { "type": "array" }
+  }
+}

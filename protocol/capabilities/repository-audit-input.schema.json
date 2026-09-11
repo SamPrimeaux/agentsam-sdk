@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/capabilities/repository-audit-input.schema.json",
+  "title": "repository.audit input",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "snapshot": { "type": "object" },
+    "focus": { "type": "array", "maxItems": 24, "items": { "type": "string" } },
+    "depth": { "enum": ["quick", "standard", "deep"], "default": "standard" },
+    "requestedSections": { "type": "array", "maxItems": 24, "items": { "type": "string" } },
+    "evidenceBudget": { "type": "integer", "minimum": 1000, "maximum": 64000, "default": 8000 }
+  }
+}
