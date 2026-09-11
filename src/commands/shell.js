@@ -10,6 +10,7 @@ import { runDeploy } from './deploy.js';
 import { runStatus } from './status.js';
 import { runModels } from './models.js';
 import { configureCliPreferences } from './preferences.js';
+import { createRuntimeActivity } from '../ui/runtime-activity.js';
 
 function writeLine(write, value = '') {
   write(`${value}\n`);
@@ -106,25 +107,43 @@ function parseDeployOptions(args, cwd) {
 }
 
 
-async function runLocalAgent(goal, write) {
+export async function runLocalAgent(goal, write, options = {}) {
   if (!goal) {
     writeLine(write, '  Usage: /agent <goal>');
     writeLine(write, '  Requires the local Agent Sam dev server (default http://127.0.0.1:8787).');
     return;
   }
   const base = String(process.env.AGENTSAM_LOCAL_URL || 'http://127.0.0.1:8787').replace(/\/$/, '');
+  const fetchImpl = options.fetchImpl || fetch;
+  const activity = options.activity || createRuntimeActivity({
+    write,
+    phase: 'thinking',
+    interactive: options.interactive,
+  });
   let response;
+  activity.start('thinking');
   try {
-    response = await fetch(`${base}/api/agentsam/message`, {
+    response = await fetchImpl(`${base}/api/agentsam/message`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ message: goal }),
     });
   } catch (error) {
+    activity.fail('unavailable');
     throw new Error(`local Agent Sam unavailable at ${base} — run \`npm run dev\` first (${error?.message || error})`);
   }
-  const text = await response.text();
-  if (!response.ok) throw new Error(`local Agent Sam returned HTTP ${response.status}: ${text.slice(0, 400)}`);
+  let text;
+  try {
+    text = await response.text();
+  } catch (error) {
+    activity.fail('response error');
+    throw new Error(`local Agent Sam response could not be read: ${error?.message || error}`);
+  }
+  if (!response.ok) {
+    activity.fail(`HTTP ${response.status}`);
+    throw new Error(`local Agent Sam returned HTTP ${response.status}: ${text.slice(0, 400)}`);
+  }
+  activity.succeed('done');
   try {
     writeLine(write, JSON.stringify(JSON.parse(text), null, 2));
   } catch {
@@ -202,7 +221,7 @@ export async function dispatchShellLine(line, state = {}) {
         await runDb(args.length ? args : ['status'], { cwd: state.cwd });
         break;
       case '/agent':
-        await runLocalAgent(args.join(' '), write);
+        await runLocalAgent(args.join(' '), write, { interactive: state.interactive });
         break;
       case '/models':
         await runModels(args, { cwd: state.cwd, write });
@@ -232,7 +251,7 @@ export async function dispatchShellLine(line, state = {}) {
 
 export async function runShell(argv = [], options = {}) {
   const write = options.write || ((text) => process.stdout.write(text));
-  const state = { cwd: path.resolve(options.cwd || process.cwd()), write };
+  const state = { cwd: path.resolve(options.cwd || process.cwd()), write, interactive: options.interactive ?? Boolean(process.stdin.isTTY && process.stdout.isTTY) };
   const sub = argv[0] || '';
 
   if (sub === 'list' || sub === 'status') {

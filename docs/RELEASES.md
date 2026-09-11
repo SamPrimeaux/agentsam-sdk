@@ -10,7 +10,7 @@ publish commit will be recorded here after release. Publishing remains manual an
 
 ## 2.5.0 candidate highlights
 
-- `agentsam` is the interactive product entrypoint; renderer selection is internal.
+- `agentsam` is the interactive product entrypoint; renderer selection is internal, and live thinking/activity scenes now run automatically around real Agent Sam work.
 - Portable project authority is `.agentsam/config.json` + `.agentsamrules`; local CLI preferences remain non-authoritative.
 - Public SDK seams include `/context`, `/tools`, `/indexing`, `/repository`, `/knowledge`, and `/skills`.
 - Context resolution is bounded by independent budgets and result policies; consumed tool results compact to evidence-preserving receipts.

@@ -26,6 +26,7 @@ test('dead branded splash paths are gone and UI preview stays dev-only', () => {
   for (const rel of ['scripts/internal/ui-preview-runner.mjs', 'scripts/internal/ansi-ui-preview.mjs']) {
     assert.equal(fs.existsSync(path.join(root, rel)), true, `${rel} should remain available to contributors`);
   }
+  assert.equal(fs.existsSync(path.join(root, 'src/ui/runtime-activity.js')), true, 'automatic runtime activity must ship with the product CLI');
 
   const pkg = JSON.parse(read('package.json'));
   assert.ok(pkg.files.includes('skills'));

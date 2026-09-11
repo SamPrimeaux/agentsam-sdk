@@ -25,6 +25,8 @@ $ agentsam
 
 The model stored by the CLI is a **preference only**. It does not replace the connected host/runtime as model-routing authority.
 
+Live terminal scenes are automatic product behavior. When Agent Sam is actively handling an `/agent` request, the installed CLI renders the compact thinking/activity panel itself; users never run a renderer or preview command. The same shipped activity seam accepts model, tool, and context-compaction lifecycle events from richer hosts. Pipes and CI remain plain/deterministic.
+
 Use `/settings` inside Agent Sam to revisit the keyboard choices and `/models` to inspect providers and locally available models.
 
 ## One-shot commands
