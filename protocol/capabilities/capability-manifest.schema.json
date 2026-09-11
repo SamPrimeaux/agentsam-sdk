@@ -12,9 +12,10 @@
       "type": "object",
       "additionalProperties": {
         "type": "object",
-        "required": ["id", "version", "domain", "runtime", "description", "deterministic", "model_required", "side_effects", "status"],
+        "required": ["id", "kind", "version", "domain", "runtime", "description", "deterministic", "model_required", "side_effects", "status"],
         "properties": {
           "id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]+$" },
+          "kind": { "enum": ["capability", "agent_primitive"] },
           "version": { "type": "integer", "minimum": 1 },
           "domain": { "type": "string", "minLength": 1 },
           "runtime": { "type": "string", "minLength": 1 },
