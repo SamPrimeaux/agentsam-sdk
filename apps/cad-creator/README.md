@@ -12,6 +12,46 @@ This repository is an early prototype of that vision.
 
 ---
 
+## Repository workspace layout
+
+This app is an independent npm workspace root inside the SDK repository. It intentionally does **not** join the SDK root workspace graph.
+
+```text
+apps/cad-creator/
+├─ package.json
+├─ package-lock.json
+├─ frontend/
+│  ├─ package.json
+│  ├─ index.html
+│  ├─ public/
+│  └─ src/
+├─ backend/
+│  ├─ package.json
+│  └─ src/server.ts
+├─ shared/
+│  └─ cad/
+│     ├─ package.json
+│     └─ src/
+└─ reference/
+   └─ donor/import artifacts
+```
+
+The frontend owns CAD/agent UI, the backend owns the application API/WebSocket bridge, and `shared/cad` owns the currently-active pure TypeScript CAD project/operation contracts. The imported `bun.lock` and unused duplicate donor schema are reference-only; the active workspace uses one root `package-lock.json`.
+
+Run from `apps/cad-creator/`:
+
+```bash
+npm ci
+npm run typecheck
+npm test
+npm run build
+npm run dev
+```
+
+The next architectural phase extracts product-neutral AgentSam contracts/workbench packages at the SDK `packages/` layer. CAD must consume those packages rather than depending on `apps/local-studio/`.
+
+---
+
 ## Vision
 
 Traditional CAD software is powerful, but much of the workflow still depends on manually translating intent into geometry:
