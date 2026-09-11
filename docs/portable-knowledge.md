@@ -12,7 +12,7 @@ agentsam search "snapshot integrity"
 agentsam index show
 ```
 
-Bare `agentsam init` detects an existing Git repository and offers a setup wizard. `agentsam init --name new-project` retains the scaffold workflow. Setup creates `.agentsam/knowledge.json` exclusively and preserves existing source/configuration. The config's `repository_id` is generated once; workspace identity is explicit, never inferred from a Git owner. Commit this non-secret config to share identity across checkouts. Use a distinct repository ID when cloning it for another customer.
+Bare `agentsam init` detects an existing Git repository and offers a setup wizard. `agentsam init --name new-project` retains the scaffold workflow. Setup creates `.agentsam/knowledge.json` exclusively and preserves existing source/configuration. The config's `repository_id` is generated once and is the portable knowledge identity. New configs do not require or create a workspace identifier. Legacy configs that already contain `workspace_id` remain readable and retain their previous cache/generation namespace for compatibility. Commit this non-secret config to share identity across checkouts. Use a distinct repository ID when the same source must represent a different repository corpus.
 
 Scope entries are literal relative files/directories, comma-separated on the CLI, not glob expressions. Supported AST languages are JS/JSX/TS/TSX including `.mjs`, `.cjs`, `.mts`, `.cts`; Markdown/MDX, SQL and JSON are bounded text chunks, not AST parsers. Imports, re-exports and call expressions are syntactic observations marked `resolved: false`, not a type-resolved cross-file call graph. Syntax errors abort publication.
 
