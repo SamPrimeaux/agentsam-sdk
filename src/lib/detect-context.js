@@ -234,9 +234,9 @@ async function detectIam(explicitToken = '') {
       };
     }
     return {
-      source: 'sdk-token',
+      source: 'sdk-key',
       ready: false,
-      detail: `AGENTSAM_SDK_TOKEN invalid (${probe.error}) → will open browser`,
+      detail: `AGENTSAM_SDK_KEY invalid (${probe.error}) → will open browser`,
       probe,
       aux,
     };
