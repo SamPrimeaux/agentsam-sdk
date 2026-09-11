@@ -71,6 +71,7 @@ read-only `repository.snapshot` composition primitive. See [Capabilities and pre
 | Capability | Entry point | Guide |
 | --- | --- | --- |
 | Capability registry + presets | `agentsam capabilities`, `/capabilities`, `/presets` | [Capabilities](docs/CAPABILITIES.md) |
+| Portable AgentSam skills | `agentsam skills`; `/skills` | [Skills](skills/README.md) |
 | Canonical repository snapshot | `agentsam inspect --json`; `/repository` | [Capabilities](docs/CAPABILITIES.md) |
 | Git context and bridge client | `agentsam context --json`; `/git-context`, `/bridge-client` | [Portable context](docs/PORTABLE_CONTEXT.md) |
 | Identity contracts and adapters | `/identity`; `agentsam identity init` | [Identity](packages/identity/README.md) |

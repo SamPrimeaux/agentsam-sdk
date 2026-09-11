@@ -3,13 +3,49 @@
   "skills": [
     {
       "id": "agentsam-jr-dev",
-      "aliases": ["agentsam_jr_dev", "jr-dev"],
+      "aliases": [
+        "agentsam_jr_dev",
+        "jr-dev"
+      ],
       "title": "AgentSam Jr Dev",
       "description": "Teach, inspect, build, and revise real software using beginner-friendly language grounded in repository and runtime evidence.",
       "entry": "agentsam-jr-dev/SKILL.md",
       "references": [
         "agentsam-jr-dev/references/web-application-fundamentals.md",
         "agentsam-jr-dev/references/real-application-logic.md"
+      ],
+      "user_invocable": true
+    },
+    {
+      "id": "agentsam-app-fundamentals",
+      "aliases": [
+        "app-fundamentals",
+        "application-fundamentals",
+        "quick-bytes"
+      ],
+      "title": "AgentSam Application Fundamentals",
+      "description": "Build and review applications using explicit execution ownership, contracts, credentialed destinations, dependency graphs, AST evidence, and Merkle evidence.",
+      "entry": "agentsam-app-fundamentals/SKILL.md",
+      "references": [
+        "agentsam-app-fundamentals/references/trust-credentials-and-destinations.md",
+        "agentsam-app-fundamentals/references/graphs-contracts-ast-merkle.md"
+      ],
+      "user_invocable": true
+    },
+    {
+      "id": "agentsam-progression-guard",
+      "aliases": [
+        "progression-guard",
+        "no-regress",
+        "ship-guard",
+        "release-guard"
+      ],
+      "title": "AgentSam Progression Guard",
+      "description": "Prevent silent regression with explicit local, CI, predeploy, deploy, postdeploy, promotion, and runtime evidence gates.",
+      "entry": "agentsam-progression-guard/SKILL.md",
+      "references": [
+        "agentsam-progression-guard/references/checkpoint-chain.md",
+        "agentsam-progression-guard/references/hooks-operational-io.md"
       ],
       "user_invocable": true
     }

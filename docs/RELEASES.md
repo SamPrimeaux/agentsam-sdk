@@ -16,7 +16,7 @@ publish commit will be recorded here after release. Publishing remains manual an
 - Context resolution is bounded by independent budgets and result policies; consumed tool results compact to evidence-preserving receipts.
 - Tool discovery is cards-first rather than full-schema catalog injection.
 - `RepositoryKnowledgeProvider` keeps local, hosted, and custom repository-intelligence implementations behind one contract.
-- `agentsam-jr-dev` is the first portable AgentSam skill, with deeper teaching references loaded on demand.
+- Portable skills now include `agentsam-jr-dev`, `agentsam-app-fundamentals` (`quick-bytes`), and `agentsam-progression-guard` (`no-regress`), with deeper references loaded on demand and CLI discovery through `agentsam skills`.
 - Local model inventory/Ollama support remains preference-only and does not become a second routing authority.
 - Merkle/repository evidence, knowledge receipts, and project identity share the same portable repository identity.
 - `agentsam security scan` now combines OSV/dependency evidence with Merkle-bound AST execution trust-boundary contradictions; `agentsam inspect` exposes the same bounded analysis and mechanical repair actions.

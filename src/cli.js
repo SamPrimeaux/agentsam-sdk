@@ -29,6 +29,7 @@ import { runDeployReceipt } from './commands/deploy-receipt.js';
 import { runSecurity } from './commands/security.js';
 import { runRecon } from './commands/recon.js';
 import { runCad } from './commands/cad.js';
+import { runSkills } from './commands/skills.js';
 import { applyPresetSelection, runAdd, runCapabilities, runDev, runInspect } from './commands/product.js';
 import { listPresets, resolvePreset } from './presets/index.js';
 import fs from 'node:fs';
@@ -59,6 +60,7 @@ function printHelp() {
 
   Capability discovery:
     agentsam capabilities [capability-id] [--json]
+    agentsam skills [skill-id-or-alias] [--references] [--json]
 
   Power-user UX:
     agentsam context [--json]  Git repo/revision + bridge configuration from any repo
@@ -400,6 +402,13 @@ if (command === '--version' || command === '-v') {
   }
 } else if (command === 'security' || command === 'sca') {
   await runSecurity(rest);
+} else if (command === 'skills' || command === 'skill') {
+  try {
+    runSkills(rest);
+  } catch (e) {
+    console.error(`\n  ✗ ${e?.message || e}\n`);
+    process.exitCode = 1;
+  }
 } else if (command === 'merkle') {
   await runMerkle(rest);
 } else if (command === 'deploy-receipt') {
