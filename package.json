@@ -44,6 +44,7 @@
     "./identity/auth-portal/preview": "./packages/identity/scripts/preview-auth-portal.mjs",
     "./package.json": "./package.json",
     "./security": "./src/security/index.js",
+    "./cad": "./src/lib/cad/index.js",
     "./cad-docker": "./src/lib/cad-docker.js"
   },
   "bin": {
@@ -64,6 +65,7 @@
     "services/knowledge/package.json",
     "services/knowledge/package-lock.json",
     "services/cad/server.py",
+    "services/cad/blender",
     "bin",
     "README.md",
     "LICENSE",
