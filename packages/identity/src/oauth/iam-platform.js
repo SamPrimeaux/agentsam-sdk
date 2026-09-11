@@ -92,7 +92,7 @@ export async function iamPlatformOAuthCallback(request, env, adapter, identity) 
   }
 
   const profile = await fetchIamProfile({
-    issuer: creds.issuer,
+    origin: creds.origin,
     accessToken: token.access_token,
   });
   const normalized = profile ? normalizeIamIdentity(profile) : null;
