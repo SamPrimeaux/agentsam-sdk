@@ -69,7 +69,8 @@ export function buildRepositoryAuditPacket({
 
   const evidence = shrinkEvidence({
     repository: snapshot.repository,
-    tree: snapshot.tree,
+    tree: { merkle_root: snapshot.tree?.merkle_root, stats: snapshot.tree?.stats },
+    file_paths: snapshot.tree?.paths || [],
     summary: snapshot.intelligence?.summary || {},
     languages: snapshot.intelligence?.languages || [],
     manifests: snapshot.intelligence?.manifests || [],
