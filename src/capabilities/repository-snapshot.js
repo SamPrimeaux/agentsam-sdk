@@ -116,9 +116,10 @@ export async function repositorySnapshot({ cwd = process.cwd(), churnDays = 30 }
   }
   const git = resolveGitContext({ cwd });
   const root = git.root;
+  const ignored = await gitIgnoredPaths(root);
   const [intelligence, merkle, knowledge, deployReceipt] = await Promise.all([
     runRepositoryIntelligence(root, churnDays),
-    buildMerkleTree(root),
+    buildMerkleTree(root, { exclude: ignored }),
     readKnowledgeState(root),
     showLatestDeployReceipt({ root }),
   ]);
