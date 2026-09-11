@@ -1,3 +1,5 @@
+import { resolveIamOrigin } from '../../packages/identity/src/contracts/auth-config.js';
+
 /**
  * IAM CORE client — SDK is a delivery mechanism; intelligence lives server-side.
  *
