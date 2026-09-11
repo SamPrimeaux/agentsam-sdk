@@ -45,6 +45,7 @@ export {
   createIdentity,
   GoogleProvider,
   GithubProvider,
+  IamProvider,
   GcpProvider,
   EmailProvider,
   getIdentityProvider,
