@@ -11,7 +11,8 @@ import { DEFAULT_IAM_ORIGIN, resolveIamOrigin } from '../contracts/auth-config.j
  * take the /api/oauth/{provider}/start button; otherwise the button uses IAM.
  */
 
-export const DEFAULT_IAM_OAUTH_ISSUER = 'https://inneranimalmedia.com';
+/** @deprecated Use DEFAULT_IAM_ORIGIN from the auth configuration contract. */
+export const DEFAULT_IAM_OAUTH_ISSUER = DEFAULT_IAM_ORIGIN;
 export const IAM_PLATFORM_STATE_PROVIDER = 'iam_platform';
 export const IAM_PLATFORM_CALLBACK_PATH = '/api/oauth/iam/callback';
 
