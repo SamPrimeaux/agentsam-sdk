@@ -9,7 +9,7 @@ import {
 } from './oauth.js';
 import { fetchIamProfile } from './profile.js';
 import { normalizeIamIdentity } from './mapper.js';
-import { DEFAULT_IAM_OAUTH_ISSUER } from '../../oauth/credentials.js';
+import { DEFAULT_IAM_ORIGIN } from '../../contracts/auth-config.js';
 
 /**
  * @param {string} [issuer]
