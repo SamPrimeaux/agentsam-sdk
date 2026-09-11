@@ -1,8 +1,8 @@
 # agentsam_sdk (Python) — npm mirror
 
 Core repository/data commands remain **stdlib-only** (`dependencies = []`).
-The Rich terminal UI is an optional `tui` extra and lives with the SDK CLI,
-not in the application tool catalog.
+Rich is an optional renderer dependency used by the SDK's internal terminal preview lab;
+it is not exposed as an installed-user renderer command.
 
 ```bash
 cd python && pip install -e .
@@ -20,14 +20,22 @@ Protocol: [`../protocol/README.md`](../protocol/README.md). Do not advance this 
 | `agentsam-site-scrape` | [`../packages/agentsam-site-scrape/`](../packages/agentsam-site-scrape/) | Optional/network (`requests`); crawl→R2. Dual-homed with IAM `tools/agentsam-site-scrape/`. Does **not** fold into `agentsam_sdk`. |
 
 
-## Optional terminal UI
+## Internal Rich renderer preview
+
+The npm SDK owns the public interactive experience. For renderer development only:
+
+```bash
+cd ..
+npm run ui:preview -- tour
+npm run ui:preview -- thinking
+```
+
+The Python module can also be invoked directly after installing the optional extra:
 
 ```bash
 cd python
 pip install -e '.[tui]'
-agentsam tui
-agentsam tui --scene dashboard
-agentsam tui --check
+PYTHONPATH=. python -m agentsam_sdk.tui --scene dashboard --check
 ```
 
-`agentsam_sdk.tui` is presentation-only. It does not define tools or execution policy.
+`agentsam_sdk.tui` is presentation-only. It does not define tools, execution policy, or public CLI vocabulary.

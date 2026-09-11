@@ -4,19 +4,74 @@
   "type": "object",
   "additionalProperties": false,
   "title": "RetrievalQuery",
-  "required": ["text"],
+  "required": [
+    "text"
+  ],
   "properties": {
-    "text": { "type": "string", "minLength": 1 },
-    "workspace_id": { "type": "string", "minLength": 1, "deprecated": true, "description": "Legacy compatibility metadata only; repository selection is explicit through repository identity." },
-    "repositories": { "type": "array", "items": { "type": "string" } },
-    "product_ids": { "type": "array", "items": { "type": "string" } },
-    "refs": { "type": "array", "items": { "type": "string" } },
-    "intent": { "type": "string", "default": "auto" },
-    "lanes": { "type": "array", "items": { "type": "string" } },
-    "top_k": { "type": "integer", "minimum": 1, "maximum": 100, "default": 12 },
-    "token_budget": { "type": "integer", "minimum": 256, "default": 8000 },
-    "require_current_ref": { "type": "boolean", "default": true },
-    "include_archived": { "type": "boolean", "default": false },
-    "explain": { "type": "boolean", "default": true }
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "workspace_id": {
+      "type": "string",
+      "minLength": 1,
+      "deprecated": true,
+      "description": "Legacy compatibility metadata only; repository selection is explicit through repository identity."
+    },
+    "repositories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "product_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "intent": {
+      "type": "string",
+      "default": "auto"
+    },
+    "lanes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "top_k": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8,
+      "default": 8
+    },
+    "token_budget": {
+      "type": "integer",
+      "minimum": 256,
+      "default": 6000,
+      "maximum": 6000
+    },
+    "require_current_ref": {
+      "type": "boolean",
+      "default": true
+    },
+    "include_archived": {
+      "type": "boolean",
+      "default": false
+    },
+    "explain": {
+      "type": "boolean",
+      "default": true
+    },
+    "result_policy": {
+      "$ref": "../context/result-policy.schema.json"
+    }
   }
 }

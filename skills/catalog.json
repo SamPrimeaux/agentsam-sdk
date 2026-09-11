@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "skills": [
+    {
+      "id": "agentsam-jr-dev",
+      "aliases": ["agentsam_jr_dev", "jr-dev"],
+      "title": "AgentSam Jr Dev",
+      "description": "Teach, inspect, build, and revise real software using beginner-friendly language grounded in repository and runtime evidence.",
+      "entry": "agentsam-jr-dev/SKILL.md",
+      "references": [
+        "agentsam-jr-dev/references/web-application-fundamentals.md",
+        "agentsam-jr-dev/references/real-application-logic.md"
+      ],
+      "user_invocable": true
+    }
+  ]
+}

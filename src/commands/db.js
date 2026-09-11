@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { initializeLocalSqlite, inspectLocalSqlite } from '../local/sqlite.js';
+import { getLocalDatabasePath, getLocalSchemaPath, readProjectConfig } from '../lib/project-config.js';
 
 function findProjectRoot(startDir) {
   let dir = path.resolve(startDir);
@@ -13,14 +14,10 @@ function findProjectRoot(startDir) {
   throw new Error('Not an Agent Sam project — run `agentsam init` first.');
 }
 
-function readConfig(root) {
-  return JSON.parse(fs.readFileSync(path.join(root, '.agentsam', 'config.json'), 'utf8'));
-}
-
 function resolveDb(root, config) {
   return {
-    dbPath: path.resolve(root, config.db_path || '.agentsam/data/agentsam.sqlite'),
-    schemaPath: path.resolve(root, config.db_schema || 'db/schema.sql'),
+    dbPath: path.resolve(root, getLocalDatabasePath(config)),
+    schemaPath: path.resolve(root, getLocalSchemaPath(config)),
   };
 }
 
@@ -31,7 +28,7 @@ export async function runDb(argv = [], opts = {}) {
   }
 
   const root = findProjectRoot(opts.cwd || process.cwd());
-  const config = readConfig(root);
+  const config = readProjectConfig(root);
   const paths = resolveDb(root, config);
 
   if (sub === 'init') {

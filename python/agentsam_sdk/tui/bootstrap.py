@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 _MISSING = (
-    "Python package 'rich' is required for the Agent Sam TUI.\n"
+    "Python package 'rich' is required for the internal Agent Sam Rich preview.\n"
     "  pip install -e './python[tui]'\n"
-    "  agentsam tui\n"
+    "  python -m agentsam_sdk.tui --scene boot\n"
 )
 
 

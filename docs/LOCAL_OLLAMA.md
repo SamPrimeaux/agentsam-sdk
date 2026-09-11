@@ -16,7 +16,7 @@ OLLAMA_EMBED_MODEL=mxbai-embed-large
 agentsam ollama setup
 ```
 
-That writes the three values into the current project's `.env` and, when `.agentsam/config.json` exists, records a non-secret `local_model` capability there. It does **not** silently install software or download models.
+That writes the three values into the current project's `.env` and, when `.agentsam/config.json` exists, records only portable `models.local` metadata (provider + environment variable names). Machine URLs and chosen model values stay in `.env` / `.agentsam/cli.json`, not the committed project manifest. It does **not** silently install software or download models.
 
 Explicit opt-ins are available:
 

@@ -1,15 +1,15 @@
 /**
  * @file src/ui/theme.js
- * @description IAM Terminal Theme System — single source of truth for
- * per-lane color identity. Used by:
- *   - xterm.js panels in XTermShell.tsx (pass theme object to Terminal constructor)
- *   - CLI ANSI output in agentsam-sdk (import ANSI constants)
- *   - Splash/HUD renders in both contexts
+ * @description Agent Sam terminal theme system — portable color and semantic
+ * status tokens for native ANSI output and browser/xterm consumers.
  *
- * Lane identity:
- *   LOCAL   → amber  (samsmac tunnel, darwin)
- *   CLOUD   → teal   (GCP platform_vm, iam-pty)
- *   SANDBOX → purple (CF container, isolated exec)
+ * Lane identity is intentionally provider-neutral:
+ *   LOCAL   → amber  (the user's current machine / real shell)
+ *   REMOTE  → teal   (a connected remote runtime, provider chosen by the host)
+ *   SANDBOX → purple (an isolated/disposable runtime, provider chosen by the host)
+ *
+ * Infrastructure names, domains, machine names, and account-specific routing
+ * never belong in this SDK theme. Hosts may supply their own runtime labels.
  *
  * No dependencies. ESM + CJS compatible (conditional exports in package.json).
  */
@@ -31,7 +31,7 @@ export const PALETTE = {
   ghost:       '#aaaaaa',
   white:       '#e8e8e8',
 
-  // LOCAL lane — amber/gold (samsmac, darwin_arm64)
+  // LOCAL lane — amber/gold (current machine / real shell)
   amber900:    '#0d0900',
   amber800:    '#1a1200',
   amber700:    '#2d1f00',
@@ -43,7 +43,7 @@ export const PALETTE = {
   amber100:    '#fde68a',
   amber050:    '#fef3c7',
 
-  // CLOUD lane — teal/cyan (GCP, iam-pty, platform_vm)
+  // REMOTE lane — teal/cyan (provider-neutral connected runtime)
   teal900:     '#000d0b',
   teal800:     '#001a17',
   teal700:     '#002e28',
@@ -55,7 +55,7 @@ export const PALETTE = {
   teal100:     '#99f6e4',
   teal050:     '#ccfbf1',
 
-  // SANDBOX lane — purple (CF container, isolated build exec)
+  // SANDBOX lane — purple (provider-neutral isolated runtime)
   purple900:   '#06020d',
   purple800:   '#0d0520',
   purple700:   '#1e0a3d',
@@ -130,26 +130,26 @@ const makeLane = ({ bg, bgSubtle, primary, secondary, dim, accent, name, label, 
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// THE THREE LANES
+// PORTABLE EXECUTION LANES
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const LOCAL = makeLane({
   name: 'local', label: 'Local', icon: '◈',
-  tunnelHint: 'samsmac → localpty.inneranimalmedia.com',
+  tunnelHint: 'current machine · real shell',
   bg: '#0d0900', bgSubtle: '#1a1200',
   primary: '#f59e0b', secondary: '#fbbf24', dim: '#78450a', accent: '#22d3c8',
 });
 
 export const CLOUD = makeLane({
-  name: 'cloud', label: 'Cloud', icon: '●',
-  tunnelHint: 'inneranimalmedia → terminal.inneranimalmedia.com (GCP iam-tunnel)',
+  name: 'remote', label: 'Remote', icon: '●',
+  tunnelHint: 'connected remote runtime',
   bg: '#000d0b', bgSubtle: '#001a17',
   primary: '#22d3c8', secondary: '#5eead4', dim: '#065f52', accent: '#f59e0b',
 });
 
 export const SANDBOX = makeLane({
   name: 'sandbox', label: 'Sandbox', icon: '◌',
-  tunnelHint: 'CF Container → MY_CONTAINER DO (inneranimalmedia)',
+  tunnelHint: 'isolated disposable runtime',
   bg: '#06020d', bgSubtle: '#0d0520',
   primary: '#a78bfa', secondary: '#c4b5fd', dim: '#4c1d95', accent: '#22d3c8',
 });
@@ -173,11 +173,12 @@ export function getLaneTheme(targetType) {
 
 /**
  * Get lane theme by name string (for SDK CLI use).
- * @param {'local'|'cloud'|'sandbox'|string} name
+ * @param {'local'|'remote'|'cloud'|'sandbox'|string} name
  */
 export function getLaneThemeByName(name) {
   switch (name?.toLowerCase()) {
     case 'local':   return LOCAL;
+    case 'remote':
     case 'cloud':   return CLOUD;
     case 'sandbox': return SANDBOX;
     default:        return CLOUD;

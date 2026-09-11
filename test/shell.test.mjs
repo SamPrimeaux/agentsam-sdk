@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
-import { dispatchShellLine, renderShellCatalog, tokenizeShellLine } from '../src/commands/shell.js';
+import { dispatchShellLine, renderShellCatalog, renderShellPrompt, tokenizeShellLine } from '../src/commands/shell.js';
 
 const repoRoot = path.resolve(new URL('..', import.meta.url).pathname);
 
@@ -12,6 +12,13 @@ test('shell tokenizer preserves Windows paths and quoted arguments', () => {
   assert.deepEqual(tokenizeShellLine('/cd C:\\Users\\conno\\fuelnreetime'), ['/cd', 'C:\\Users\\conno\\fuelnreetime']);
   assert.deepEqual(tokenizeShellLine('/cd "C:\\Users\\Connor Smith\\repo"'), ['/cd', 'C:\\Users\\Connor Smith\\repo']);
   assert.deepEqual(tokenizeShellLine('/agent "inspect this repo"'), ['/agent', 'inspect this repo']);
+});
+
+test('interactive prompt derives username and cwd instead of hardcoding Agent Sam identity', () => {
+  const env = { USER: 'alice', HOME: '/Users/alice' };
+  assert.equal(renderShellPrompt('/Users/alice/code/demo', env), 'alice ~/code/demo > ');
+  assert.equal(renderShellPrompt('/Users/alice', env), 'alice ~ > ');
+  assert.equal(renderShellPrompt('/tmp/demo', env), 'alice /tmp/demo > ');
 });
 
 test('shell catalog advertises commands that the REPL owns', () => {

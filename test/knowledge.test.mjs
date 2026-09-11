@@ -152,5 +152,5 @@ test('recovered KnowledgeClient contracts remain usable with injected transports
   const client = new KnowledgeClient({ transport: { async request(op, payload) { operations.push([op, payload]); return { query_id: 'test', hits: [] }; } } });
   await client.retrieve({ text: 'find parser', workspace_id: 'customer' });
   await client.index('repository');
-  assert.equal(operations[0][1].top_k, 12); assert.equal(operations[1][0], 'knowledge.index');
+  assert.equal(operations[0][1].top_k, 8); assert.equal(operations[0][1].token_budget, 6000); assert.equal(operations[0][1].result_policy.max_items, 8); assert.equal(operations[1][0], 'knowledge.index');
 });

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { getCapability, getCapabilityManifest, listCapabilities, projectRepositorySnapshot, repositorySnapshot } from '../capabilities/index.js';
 import { getAddon, listAddons, listPresets } from '../presets/index.js';
+import { projectConfigPath, readProjectConfig, setDeployTarget, setProductPreset, writeProjectConfig } from '../lib/project-config.js';
 
 function parseCommon(argv = []) {
   const out = { json: false, cwd: process.cwd(), positionals: [] };
@@ -112,16 +113,15 @@ export async function runCapabilities(argv = []) {
   return result;
 }
 
-function projectConfigPath(cwd) { return path.join(cwd, '.agentsam', 'config.json'); }
 function featureStatePath(cwd) { return path.join(cwd, '.agentsam', 'features.json'); }
 
 export function applyPresetSelection(cwd, preset) {
   const filename = projectConfigPath(cwd);
   if (!fs.existsSync(filename)) throw new Error('not_agentsam_project');
-  const config = JSON.parse(fs.readFileSync(filename, 'utf8'));
-  const next = { ...config, preset: preset.id, features: [...preset.features], capabilities: [...preset.capabilities] };
-  fs.writeFileSync(filename, `${JSON.stringify(next, null, 2)}\n`, 'utf8');
-  return next;
+  const config = readProjectConfig(cwd);
+  setProductPreset(config, preset);
+  writeProjectConfig(cwd, config);
+  return config;
 }
 
 export async function runAdd(argv = []) {
@@ -143,9 +143,9 @@ export async function runAdd(argv = []) {
   state.features[addon.id] = { selected: true, capabilities: addon.capabilities, selected_at: new Date().toISOString() };
   fs.writeFileSync(featureStatePath(cwd), `${JSON.stringify(state, null, 2)}\n`, 'utf8');
   if (addon.id === 'deploy-cloudflare') {
-    const config = JSON.parse(fs.readFileSync(projectConfigPath(cwd), 'utf8'));
-    config.deploy_target = 'cloudflare';
-    fs.writeFileSync(projectConfigPath(cwd), `${JSON.stringify(config, null, 2)}\n`, 'utf8');
+    const config = readProjectConfig(cwd);
+    setDeployTarget(config, 'cloudflare');
+    writeProjectConfig(cwd, config);
   }
   const result = { ok: true, feature: addon.id, capabilities: addon.capabilities, description: addon.description, state_file: '.agentsam/features.json' };
   if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);

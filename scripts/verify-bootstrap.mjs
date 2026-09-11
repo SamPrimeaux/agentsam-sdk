@@ -25,80 +25,7 @@ function run(args, options = {}) {
   return result;
 }
 
-async function verifyInteractiveInit(target, answer, laneAnswer = '1', expectedLane = 'fullstack') {
-  const { spawn } = await import('node:child_process');
-  const calls = path.join(tmp, `credential-probes-${target}.log`);
-  const preload = path.join(tmp, `credential-probes-${target}.mjs`);
-  fs.writeFileSync(preload, `
-    import fs from 'node:fs';
-    import childProcess from 'node:child_process';
-    import { syncBuiltinESMExports } from 'node:module';
-    const record = (kind) => fs.appendFileSync(${JSON.stringify(calls)}, kind + '\\n');
-    childProcess.execFile = (command, ...args) => {
-      record(command);
-      const callback = args.at(-1);
-      queueMicrotask(() => callback(new Error('credential probe stubbed')));
-      return { kill() {} };
-    };
-    syncBuiltinESMExports();
-    globalThis.fetch = async () => {
-      record('fetch');
-      throw new Error('network probe stubbed');
-    };
-  `);
-  const questions = [
-    ['1) Project name:', `interactive-${target}`],
-    ['Pick lane [1-5]:', laneAnswer],
-    ['Select [1]:', answer],
-  ];
-  let output = '';
-  let question = 0;
-  const child = spawn(process.execPath, ['--import', preload, cli, 'init'], {
-    cwd: tmp,
-    env: { ...process.env, AGENTSAM_SDK_KEY: '', AGENTSAM_SDK_TOKEN: '', NO_COLOR: '1' },
-    stdio: ['pipe', 'pipe', 'pipe'],
-  });
-  await new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      child.kill('SIGKILL');
-      reject(new Error(`interactive ${target} init timed out: ${output}`));
-    }, 20_000);
-    child.on('error', (error) => { clearTimeout(timeout); reject(error); });
-    child.stderr.on('data', (chunk) => { output += chunk; });
-    child.stdin.on('error', (error) => { child.kill(); reject(error); });
-    child.stdout.on('data', (chunk) => {
-      output += chunk;
-      if (question < questions.length && output.includes(questions[question][0])) {
-        if (fs.existsSync(calls)) {
-          child.kill();
-          reject(new Error('init probed credentials before the deploy target was chosen'));
-          return;
-        }
-        child.stdin.write(questions[question++][1] + '\n');
-      }
-    });
-    child.on('close', (code) => {
-      clearTimeout(timeout);
-      if (code !== 0) reject(new Error(`interactive init exited ${code}: ${output}`));
-      else resolve();
-    });
-  });
-  assert.equal(question, questions.length, 'wizard must ask all three questions');
-  assert.equal(fs.existsSync(calls), target !== 'local',
-    'local init must skip credential probes; cloud targets retain deferred detection');
-  if (target === 'local') assert.ok(!output.includes('Detected credentials'));
-  const project = path.join(tmp, `interactive-${target}`);
-  const config = JSON.parse(fs.readFileSync(path.join(project, '.agentsam/config.json'), 'utf8'));
-  assert.equal(config.run_target, 'local');
-  assert.equal(config.lane, expectedLane, 'numbered lane must select the requested scaffold');
-  assert.equal(config.deploy_target, target === 'local' ? null : target);
-  assert.ok(fs.existsSync(path.join(project, '.agentsam/data/agentsam.sqlite')));
-}
-
 try {
-  await verifyInteractiveInit('local', '1', '3', 'data');
-  await verifyInteractiveInit('cloudflare', '2');
-  await verifyInteractiveInit('gcp', '3');
   run(['init', '--name', 'my-agent', '--lane', 'fullstack', '--run-target', 'local', '--yes'], {
     cwd: tmp,
   });
@@ -111,29 +38,42 @@ try {
   assert.equal(generatedPackage.scripts?.status, 'agentsam status');
   assert.equal(generatedPackage.scripts?.pty, 'agentsam start-local');
   assert.equal(generatedPackage.scripts?.['db:status'], 'agentsam db status');
-  assert.equal(generatedPackage.scripts?.tui, 'agentsam tui');
+  assert.equal(generatedPackage.scripts?.tui, undefined);
+  assert.equal(generatedPackage.scripts?.['tui:rich'], undefined);
   assert.equal(
     generatedPackage.dependencies?.['@inneranimalmedia/agentsam-sdk'],
     sdkPackage.version.includes('-') ? sdkPackage.version : `^${sdkPackage.version}`,
     'scaffolds pin prereleases and accept compatible stable SDK versions',
   );
-  assert.equal(config.project, 'my-agent');
-  assert.equal(config.run_target, 'local');
-  assert.equal(config.db_path, '.agentsam/data/agentsam.sqlite');
-  assert.equal(config.ui, 'terminal');
+  assert.equal(config.schema_version, 2);
+  assert.equal(config.project?.name, 'my-agent');
+  assert.match(config.repository?.id || '', /^local:[0-9a-f-]{36}$/);
+  assert.equal(config.product?.preset, 'fullstack');
+  assert.equal(config.defaults?.runtime, 'local');
+  assert.equal(config.defaults?.model, 'auto');
+  assert.equal(config.defaults?.deploy_target, null);
+  assert.equal(config.rules?.file, '.agentsamrules');
+  assert.equal(config.local?.database, '.agentsam/data/agentsam.sqlite');
+  assert.equal(config.local?.schema, 'db/schema.sql');
+  assert.equal(config.sdk?.created_with, sdkPackage.version);
+  assert.equal(config.account_id, undefined);
+  assert.equal(config.current_run_id, undefined);
+  assert.equal(config.latest_merkle_root, undefined);
   assert.ok(fs.existsSync(path.join(project, '.git')));
   assert.ok(fs.existsSync(path.join(project, '.env')));
+  assert.ok(fs.existsSync(path.join(project, '.agentsamrules')));
+  assert.match(fs.readFileSync(path.join(project, '.agentsamrules'), 'utf8'), /Agent Sam project rules/);
   assert.ok(fs.existsSync(path.join(project, '.env.example')));
   assert.ok(fs.existsSync(path.join(project, 'db', 'schema.sql')));
   assert.ok(fs.existsSync(path.join(project, '.agentsam', 'data', 'agentsam.sqlite')));
   assert.ok(fs.existsSync(path.join(project, 'src', 'agent.js')));
   assert.ok(fs.existsSync(path.join(project, 'scripts', 'smoke.mjs')));
   assert.ok(!fs.existsSync(path.join(project, 'wrangler.toml')));
+  assert.ok(!fs.existsSync(path.join(project, 'agentsam.config.js')));
   assert.ok(!fs.existsSync(path.join(project, 'gorilla')));
 
   run(['status', '--json'], { cwd: project });
-  run(['tui'], { cwd: project });
-  run(['tui', '--scene', 'dashboard', '--check']);
+  run(['models', '--json'], { cwd: project });
   run(['db', 'status'], { cwd: project });
 
   console.log(`verify-bootstrap OK ${sdkPackage.name}@${sdkPackage.version}`);

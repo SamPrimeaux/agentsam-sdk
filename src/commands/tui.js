@@ -65,9 +65,9 @@ async function runRich(args) {
 
   if (!python && install) {
     const systemPython = await findSystemPython();
-    if (!systemPython) throw new Error('Python 3 is required for the optional Rich TUI.');
+    if (!systemPython) throw new Error('Python 3 is required for the optional Rich UI preview.');
     fs.mkdirSync(path.dirname(projectVenv), { recursive: true });
-    console.log(`\n  Agent Sam Rich TUI setup\n  · creating ${projectVenv}`);
+    console.log(`\n  Agent Sam Rich UI preview setup\n  · creating ${projectVenv}`);
     await run(systemPython, ['-m', 'venv', projectVenv]);
     python = venvPython(projectVenv);
     console.log('  · installing rich into isolated Agent Sam venv');
@@ -81,7 +81,7 @@ async function runRich(args) {
 
   if (!python) {
     throw new Error(
-      'Rich TUI is optional and not installed. Run `agentsam tui rich --install` to create an isolated .agentsam/tui-venv.',
+      'Rich UI preview is optional and not installed. Run `npm run ui:preview -- rich --install` inside the SDK repo.',
     );
   }
 

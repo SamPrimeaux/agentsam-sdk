@@ -7,3 +7,10 @@ node_modules/
 .*-remote.js
 level-1/
 agentsam-init-smoke/
+.agentsam/cli.json
+.agentsam/data/
+.agentsam/tui-venv/
+.agentsam/knowledge/
+.agentsam/cache/
+.agentsam/merkle/
+.agentsam/merkle.json

@@ -1,3 +1,5 @@
+import { DEFAULT_RESULT_POLICY } from '../context/result-policy.js';
+
 const CATALOG = {
   fullstack: [
     { name: 'plan', description: 'Break a goal into implementation steps.' },
@@ -30,9 +32,13 @@ export function normalizeLane(lane = 'fullstack') {
 
 export function getToolCatalog(lane = 'fullstack') {
   const key = normalizeLane(lane);
-  if (key.includes('cms')) return CATALOG.cms;
-  if (key.includes('data')) return CATALOG.data;
-  if (key.includes('customer') || key.includes('crm')) return CATALOG.crm;
-  if (key.includes('creative') || key.includes('design')) return CATALOG.creative;
-  return CATALOG.fullstack;
+  const rows = key.includes('cms') ? CATALOG.cms
+    : key.includes('data') ? CATALOG.data
+      : (key.includes('customer') || key.includes('crm')) ? CATALOG.crm
+        : (key.includes('creative') || key.includes('design')) ? CATALOG.creative
+          : CATALOG.fullstack;
+  return rows.map((tool) => ({
+    ...tool,
+    result_policy: { ...DEFAULT_RESULT_POLICY },
+  }));
 }

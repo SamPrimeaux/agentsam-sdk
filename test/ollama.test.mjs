@@ -12,6 +12,7 @@ import {
   updateProjectOllamaConfig,
   upsertOllamaEnvFile,
 } from '../src/commands/ollama.js';
+import { createProjectManifest } from '../src/lib/project-config.js';
 
 test('Ollama defaults are local-only and match the SDK local-dev contract', () => {
   assert.deepEqual(OLLAMA_DEFAULTS, {
@@ -55,15 +56,18 @@ test('setup env writer updates only canonical OLLAMA keys and preserves other co
   assert.equal((text.match(/^OLLAMA_MODEL=/gm) || []).length, 1);
 });
 
-test('project config records Ollama as local-only non-secret capability', () => {
+test('project config records only portable Ollama capability metadata', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-ollama-config-'));
   fs.mkdirSync(path.join(root, '.agentsam'));
-  fs.writeFileSync(path.join(root, '.agentsam', 'config.json'), '{"project":"demo"}\n');
+  fs.writeFileSync(path.join(root, '.agentsam', 'config.json'), `${JSON.stringify(createProjectManifest({ projectName: 'demo', repositoryId: 'local:demo' }), null, 2)}\n`);
   const filename = updateProjectOllamaConfig(root, OLLAMA_DEFAULTS);
   const config = JSON.parse(fs.readFileSync(filename, 'utf8'));
-  assert.equal(config.local_model.provider, 'ollama');
-  assert.equal(config.local_model.local_only, true);
-  assert.equal(config.local_model.base_url_env, 'OLLAMA_BASE_URL');
+  assert.equal(config.models.local.provider, 'ollama');
+  assert.equal(config.models.local.base_url_env, 'OLLAMA_BASE_URL');
+  assert.equal(config.models.local.model_env, 'OLLAMA_MODEL');
+  assert.equal(config.models.local.embed_model_env, 'OLLAMA_EMBED_MODEL');
+  assert.equal(JSON.stringify(config).includes('127.0.0.1'), false);
+  assert.equal(JSON.stringify(config).includes('qwen2.5-coder'), false);
   assert.equal(JSON.stringify(config).includes('token'), false);
 });
 

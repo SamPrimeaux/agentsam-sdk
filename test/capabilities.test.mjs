@@ -77,10 +77,15 @@ test('product UX creates a preset project, adds a feature, and inspects before f
   });
   const project = path.join(parent, 'demo');
   const config = JSON.parse(fs.readFileSync(path.join(project, '.agentsam', 'config.json'), 'utf8'));
-  assert.equal(config.preset, 'cms');
-  assert.equal(config.lane, 'cms');
-  assert.deepEqual(config.features, ['cms', 'knowledge']);
-  assert.ok(config.capabilities.includes('repository.snapshot'));
+  assert.equal(config.schema_version, 2);
+  assert.equal(config.project.name, 'demo');
+  assert.equal(config.product.preset, 'cms');
+  assert.deepEqual(config.product.features, ['cms', 'knowledge']);
+  assert.ok(config.product.capabilities.includes('repository.snapshot'));
+  assert.match(config.repository.id, /^local:[0-9a-f-]{36}$/);
+  assert.equal(config.defaults.runtime, 'local');
+  assert.equal(config.defaults.model, 'auto');
+  assert.equal(fs.existsSync(path.join(project, 'agentsam.config.js')), false);
 
   execFileSync(process.execPath, [CLI, 'add', 'knowledge', '--cwd', project, '--json'], { stdio: 'pipe' });
   const features = JSON.parse(fs.readFileSync(path.join(project, '.agentsam', 'features.json'), 'utf8'));
@@ -91,6 +96,8 @@ test('product UX creates a preset project, adds a feature, and inspects before f
     stdio: ['ignore', 'pipe', 'pipe'],
   }));
   assert.equal(snapshot.capability, 'repository.snapshot');
+  assert.equal(snapshot.repository.repository_id, config.repository.id);
+  assert.equal(snapshot.repository.identity_source, 'project-config');
   assert.equal(snapshot.repository.revision_sha, null);
   assert.ok(snapshot.tree.stats.files > 0);
 });

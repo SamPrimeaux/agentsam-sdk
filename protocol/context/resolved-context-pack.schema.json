@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/context/resolved-context-pack.schema.json",
+  "title": "ResolvedContextPack",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["objective", "refs", "items", "budget", "receipt"],
+  "properties": {
+    "objective": { "type": "string", "minLength": 1 },
+    "refs": { "type": "array", "items": { "type": "string" } },
+    "rules": { "type": ["object", "null"] },
+    "items": {
+      "type": "array",
+      "items": { "$ref": "./context-item.schema.json" }
+    },
+    "budget": { "$ref": "./context-budget.schema.json" },
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chars",
+        "evidence_chars",
+        "system_chars",
+        "estimated_tokens",
+        "sources_considered",
+        "sources_included",
+        "sources_deferred",
+        "deferred_refs"
+      ],
+      "properties": {
+        "chars": { "type": "integer", "minimum": 0 },
+        "evidence_chars": { "type": "integer", "minimum": 0 },
+        "system_chars": { "type": "integer", "minimum": 0 },
+        "estimated_tokens": { "type": "integer", "minimum": 0 },
+        "sources_considered": { "type": "integer", "minimum": 0 },
+        "sources_included": { "type": "integer", "minimum": 0 },
+        "sources_deferred": { "type": "integer", "minimum": 0 },
+        "deferred_refs": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

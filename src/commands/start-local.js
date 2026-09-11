@@ -50,7 +50,7 @@ export async function runStartLocal(opts = {}) {
   Project services:
     npm run dev          → local Agent Sam API http://127.0.0.1:${config?.dev_port ?? 8787}
     npm run db:status    → inspect local SQLite
-    npm run tui          → ANSI Agent Sam dashboard
+    npx agentsam          → enter Agent Sam
 
   Press Ctrl+C to stop.
   `);

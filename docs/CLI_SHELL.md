@@ -1,131 +1,104 @@
 # Agent Sam SDK — terminal experience
 
-The Agent Sam terminal is a presentation layer over real local capabilities. It is not a second execution engine and it is not tied to Gorilla, Cloudflare, or a particular model provider.
+`agentsam` is the product entrypoint. Users do not choose a renderer or need to know whether a screen is implemented with ANSI, Rich, Clack, or another terminal library.
 
-## Default experience
-
-```bash
-agentsam tui
-```
-
-Runs the bundled zero-dependency Node/ANSI renderer. This is the default because it is available anywhere the npm CLI runs.
+## Product entrypoint
 
 ```bash
-agentsam tui rich
-agentsam tui rich --install
+agentsam
 ```
 
-Runs the optional Python Rich renderer. `--install` creates an isolated `.agentsam/tui-venv` and installs Rich there; system Python is left alone.
+On the first run for a project, Agent Sam opens keyboard-driven setup for the project, runtime, terminal, and model preference. On later runs it shows a short project-aware boot transition and enters the Agent Sam prompt.
+
+```text
+$ agentsam
+
+  Agent Sam
+  my-project · main · qwen2.5-coder
+
+  ✓ project
+  ✓ runtime
+  ✓ model
+
+  username ~/path/to/project >
+```
+
+The model stored by the CLI is a **preference only**. It does not replace the connected host/runtime as model-routing authority.
+
+Use `/settings` inside Agent Sam to revisit the keyboard choices and `/models` to inspect providers and locally available models.
+
+## One-shot commands
+
+Normal commands remain deterministic and scriptable:
 
 ```bash
-agentsam shell
+agentsam status
+agentsam models
+agentsam inspect --json
+agentsam deploy
+agentsam --help
 ```
 
-Starts the interactive Agent Sam slash-command shell. Once the `agentsam>` prompt is visible, commands such as `/help`, `/status`, `/pwd`, and `/git` are handled by Agent Sam instead of the host shell (PowerShell, bash, or zsh). Use `/exit` to return to the host terminal.
+`agentsam shell` remains an explicit/secondary way to enter the slash-command shell. Bare `agentsam` is the normal interactive entrypoint.
 
-Do not type `/help` directly at a PowerShell/bash prompt; enter `agentsam shell` first.
-
-For scripts and regression tests, a single slash command can be dispatched without opening the REPL:
+For regression tests, one slash command can still be dispatched without opening an interactive terminal:
 
 ```bash
 agentsam shell --command /help
 ```
 
-## Architecture
+## Internal UI engine
+
+The renderer is implementation detail:
 
 ```text
-CLI command / execution state
+Agent Sam lifecycle/state
         |
-        +--> Node ANSI renderer        default, zero extra dependencies
-        |
-        +--> Python Rich renderer      optional high-fidelity live presentation
-        |
-        +--> browser shell-kit         reusable React components, separate surface
-
-Capabilities underneath presentation:
-
-Git context
-Local SQLite
-Local PTY
-Agent/tool execution
-Logs/events
-Deploy adapters
+        +--> ANSI / picocolors       semantic color + cursor control
+        +--> Rich renderer           high-fidelity live render experiments
+        +--> Clack prompts           arrow-key selects / confirms / text input
+        +--> node-pty                real shell/process/filesystem
 ```
 
-Presentation consumes state. It does not authorize tools, decide policy, own databases, or execute cloud operations by itself.
+SDK developers can preview render experiments from this repository without exposing renderer names as product commands:
 
-## Local project contract
-
-`agentsam init` creates:
-
-```text
-.git/
-.env
-.env.example
-agentsam.config.js
-.agentsam/config.json
-.agentsam/data/agentsam.sqlite
-db/schema.sql
-src/agent.js
-src/dev-server.js
-scripts/smoke.mjs
+```bash
+npm run ui:preview -- tour
+npm run ui:preview -- boot
+npm run ui:preview -- setup
+npm run ui:preview -- thinking
+npm run ui:preview -- ready
+npm run ui:preview -- ansi
 ```
 
-There is no Worker requirement in this contract.
+These preview commands are a design lab, not part of the installed user vocabulary.
 
-`src/agent.js` is runtime-neutral. The Node development adapter injects local SQLite. A cloud adapter may later inject D1 or another compatible store.
-
-## TUI ownership
-
-| Surface | Location | Role |
-|---|---|---|
-| ANSI | `examples/agentsam-tui-ansi.mjs` | npm-native default terminal renderer |
-| Rich | `python/agentsam_sdk/tui/` | optional richer cards, progress, events, logs |
-| workbench | `packages/agentsam-workbench/` | reusable React/browser AgentSam workbench components |
-| contracts | `packages/agentsam-contracts/` | framework-neutral AgentSam message/run/tool/context contracts |
-| shell-kit | `packages/agentsam-shell-kit/` | compatibility facade; new code uses workbench |
-| Gorilla | `templates/gorilla-shell/` | visual/theme experiment only |
-
-Gorilla is intentionally not scaffolded by default.
-
-## Commands
+## Slash commands
 
 ```text
 /help       show commands
 /status     local project / DB / Git / PTY health
 /context    current repository + revision
 /pwd        working directory
-/cd         change directory
+/cd         change working directory
 /git        Git operations
 /db         local SQLite
 /agent      invoke configured Agent Sam
+/models     inspect available providers and local models
+/settings   choose project/runtime/terminal/model preference
 /logs       local execution events
-/tui        terminal presentation
 /deploy     intentionally add a cloud adapter
-/exit       exit Agent Sam shell and return to the host terminal
+/exit       exit Agent Sam and return to the host terminal
 ```
 
-Provider-specific commands such as `/claude` or `/codex` are not part of the generic shell contract. Model routing belongs behind Agent Sam.
+Provider-specific commands such as `/claude` or `/codex` are not part of the generic shell contract. Model execution/routing belongs behind Agent Sam.
 
-Workspace switching is not required for local tooling. Authenticated user/session identity is the security boundary; workspace/project labels are organizational metadata.
+## Local project contract
 
-## Cloud graduation
+`agentsam init` creates a local project with Git, `.env`, `.agentsam/config.json`, a committed `.agentsamrules` project-instruction file, local SQLite, and the project runtime files. The setup wizard uses keyboard-driven Clack prompts in an interactive terminal; flags keep non-interactive creation deterministic.
 
-Cloud infrastructure is generated when requested, not during local init.
-
-```text
-local project
-   |
-   +--> agentsam deploy --target cloudflare
-           |
-           +--> src/cloudflare-worker.js
-           +--> wrangler.toml
-           +--> migrations/0001_agentsam_core.sql
-           +--> provisioned account bindings
-```
-
-The same `src/agent.js` remains application authority.
+Local development requires no Worker or cloud account. Cloud infrastructure is added intentionally at deploy time.
 
 ## Design rule
 
-A CLI operation should be understandable in plain text first, then enhanced by ANSI/Rich presentation. CI and agent capture must always have a deterministic non-interactive path (`--check`, JSON receipts where applicable).
+A CLI operation must remain understandable in plain text and deterministic in CI/pipes. Interactive terminals may enhance that state with color, cursor redraw, prompts, progress, and animation. Presentation does not authorize tools, own execution policy, or silently become model-routing authority.

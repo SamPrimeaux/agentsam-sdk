@@ -136,7 +136,7 @@ async function main() {
     if (which === "sprite" || which === "all") await sceneSprite({ ticks, delay });
     if (which === "dashboard" || which === "all") await sceneDashboard({ ticks, delay });
     if (which === "logs" || which === "all") await sceneLogs({ delay: check ? 0 : 120 });
-    process.stdout.write(`\n${GREEN}${BOLD}Done.${RESET}  Use the Python agentsam tui command for Rich layouts.\n`);
+    process.stdout.write(`\n${GREEN}${BOLD}Done.${RESET}  Compare Rich scenes with `npm run ui:preview -- tour`.\n`);
   } finally {
     process.stdout.write(SHOW);
   }

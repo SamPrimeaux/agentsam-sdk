@@ -4,6 +4,8 @@
  */
 
 import pkg from '../../package.json' with { type: 'json' };
+import { createProjectManifest } from './project-config.js';
+import { defaultProjectRules } from './project-rules.js';
 
 const LANE_KEYS = {
   '1': 'fullstack',
@@ -140,35 +142,22 @@ export function buildLocalScaffoldFiles({
 
   return [
     {
-      path: 'agentsam.config.js',
-      content: `export default {
-  project: '${projectName}',
-  lane: '${laneKey}',
-  agent: '${agent}',
-  runTarget: '${runTarget}',
-  api: { baseUrl: '/api/agentsam' },
-};
-`,
-    },
-    {
       path: '.agentsam/config.json',
       content: `${JSON.stringify(
-        {
-          project: projectName,
-          lane: laneKey,
-          agent,
-          run_target: 'local',
-          deploy_target: runTarget === 'local' ? null : runTarget,
-          pty_port: 3099,
-          dev_port: 8787,
-          db_path: '.agentsam/data/agentsam.sqlite',
-          db_schema: 'db/schema.sql',
-          ui: 'terminal',
-          scaffold_version: sdkVersion,
-        },
+        createProjectManifest({
+          projectName,
+          preset: laneKey,
+          profile: agent,
+          runTarget,
+          sdkVersion,
+        }),
         null,
         2,
       )}\n`,
+    },
+    {
+      path: '.agentsamrules',
+      content: defaultProjectRules(projectName),
     },
     {
       path: '.agentsam/start-local.md',
@@ -187,8 +176,7 @@ Useful local surfaces:
 
 \`\`\`bash
 npm run db:status
-npm run tui
-npm run tui:rich -- --install   # optional Rich UI in isolated .agentsam venv
+npx agentsam                    # enter Agent Sam
 npx agentsam start-local        # PTY on ws://127.0.0.1:3099
 npm run ollama:setup            # optional local/free model config
 npm run ollama:status           # probe local Ollama + models
@@ -211,7 +199,12 @@ npx agentsam deploy
 dist/
 .wrangler/
 .agentsam/data/
+.agentsam/cli.json
 .agentsam/tui-venv/
+.agentsam/knowledge/
+.agentsam/cache/
+.agentsam/merkle/
+.agentsam/merkle.json
 *.db
 *.sqlite
 *.sqlite-*
@@ -235,8 +228,6 @@ dist/
             pty: 'agentsam start-local',
             'ollama:setup': 'agentsam ollama setup',
             'ollama:status': 'agentsam ollama status',
-            tui: 'agentsam tui',
-            'tui:rich': 'agentsam tui rich',
             deploy: 'agentsam deploy',
           },
           engines: {
@@ -408,9 +399,7 @@ Local state:
 ## Agent Sam terminal experience
 
 \`\`\`bash
-npm run tui                  # zero-dependency ANSI dashboard
-npm run tui:rich             # Python Rich dashboard if installed
-npm run tui:rich -- --install
+npx agentsam                  # enter the interactive Agent Sam experience
 npm run pty                  # local PTY on ws://127.0.0.1:3099
 npm run db:status
 npm run ollama:setup         # optional local/free model config
@@ -456,10 +445,9 @@ export function buildLocalScaffoldMeta(body, sdkVersion = pkg.version) {
       'npm run smoke',
       'npm run status',
       'npm run dev',
-      'npm run tui',
+      'npx agentsam',
       'npm run db:status',
       'Optional free/local models: npm run ollama:setup',
-      'Optional: npm run tui:rich -- --install',
       'Optional: npm run pty',
       'When ready for cloud: npm run deploy',
     ],

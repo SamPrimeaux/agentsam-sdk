@@ -7,26 +7,15 @@ import readline from 'node:readline';
 import { authenticateViaBrowser } from '../lib/auth.js';
 import { getJson, streamScaffold } from '../lib/core-client.js';
 import { resolveSdkKey } from '../../packages/identity/src/contracts/auth-config.js';
-
-function readConfig(cwd) {
-  const configPath = path.join(cwd, '.agentsam', 'config.json');
-  if (!fs.existsSync(configPath)) {
-    throw new Error('Not an Agent Sam project — run agentsam init first.');
-  }
-  return JSON.parse(fs.readFileSync(configPath, 'utf8'));
-}
-
-function writeConfig(cwd, config) {
-  const configPath = path.join(cwd, '.agentsam', 'config.json');
-  fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, 'utf8');
-}
+import { getDefaultProfile, getDeployTarget, getLocalSchemaPath, getProjectName, getProjectPreset, readProjectConfig, setDeployTarget, writeProjectConfig } from '../lib/project-config.js';
 
 function writeCloudflareAdapter(cwd, config, cf) {
-  const workerName = cf.worker_name || config.project;
+  const projectName = getProjectName(config, path.basename(cwd));
+  const workerName = cf.worker_name || projectName;
   const adapterPath = path.join(cwd, 'src', 'cloudflare-worker.js');
   const migrationDir = path.join(cwd, 'migrations');
   const migrationPath = path.join(migrationDir, '0001_agentsam_core.sql');
-  const localSchemaPath = path.join(cwd, config.db_schema || 'db/schema.sql');
+  const localSchemaPath = path.join(cwd, getLocalSchemaPath(config));
   const tomlPath = path.join(cwd, 'wrangler.toml');
 
   fs.mkdirSync(path.dirname(adapterPath), { recursive: true });
@@ -34,7 +23,7 @@ function writeCloudflareAdapter(cwd, config, cf) {
 
   fs.writeFileSync(
     adapterPath,
-    `import { createAgent } from './agent.js';\n\nexport default {\n  async fetch(request, env) {\n    const app = createAgent({\n      env,\n      project: ${JSON.stringify(config.project)},\n      lane: ${JSON.stringify(config.lane)},\n      agent: ${JSON.stringify(config.agent)},\n    });\n    return app.handle(request);\n  },\n};\n`,
+    `import { createAgent } from './agent.js';\n\nexport default {\n  async fetch(request, env) {\n    const app = createAgent({\n      env,\n      project: ${JSON.stringify(projectName)},\n      lane: ${JSON.stringify(getProjectPreset(config))},\n      agent: ${JSON.stringify(getDefaultProfile(config))},\n    });\n    return app.handle(request);\n  },\n};\n`,
     'utf8',
   );
 
@@ -52,7 +41,7 @@ function writeCloudflareAdapter(cwd, config, cf) {
   if (cf.d1_database_id) {
     lines.push('', '[[d1_databases]]');
     lines.push('binding = "DB"');
-    lines.push(`database_name = ${JSON.stringify(cf.d1_database_name || `${config.project}-db`)}`);
+    lines.push(`database_name = ${JSON.stringify(cf.d1_database_name || `${projectName}-db`)}`);
     lines.push(`database_id = ${JSON.stringify(cf.d1_database_id)}`);
   }
   if (cf.kv_namespace_id) {
@@ -93,8 +82,8 @@ async function runCloudflareDeploy(cwd, config, accountId) {
   let complete = null;
   await streamScaffold(
     {
-      project_name: config.project,
-      lane: config.lane,
+      project_name: getProjectName(config, path.basename(cwd)),
+      lane: getProjectPreset(config),
       hosting: 'cloudflare',
       provision_only: true,
       account_id: accountId || undefined,
@@ -115,13 +104,8 @@ async function runCloudflareDeploy(cwd, config, accountId) {
   if (!complete?.cloudflare) throw new Error('deploy incomplete — no cloudflare ids returned');
 
   const adapter = writeCloudflareAdapter(cwd, config, complete.cloudflare);
-  writeConfig(cwd, {
-    ...config,
-    deploy_target: 'cloudflare',
-    cloudflare: complete.cloudflare,
-    cloud_adapter: path.relative(cwd, adapter.adapterPath),
-    deployed_at: new Date().toISOString(),
-  });
+  setDeployTarget(config, 'cloudflare');
+  writeProjectConfig(cwd, config);
 
   console.log(`
   ✓ Cloudflare resources provisioned in YOUR account
@@ -142,10 +126,10 @@ async function runCloudflareDeploy(cwd, config, accountId) {
  */
 export async function runDeploy(opts = {}) {
   const cwd = path.resolve(opts.cwd || process.cwd());
-  const config = readConfig(cwd);
+  const config = readProjectConfig(cwd);
 
-  let target = opts.target || config.deploy_target || 'cloudflare';
-  if (!opts.target && !config.deploy_target) {
+  let target = opts.target || getDeployTarget(config) || 'cloudflare';
+  if (!opts.target && !getDeployTarget(config)) {
     console.log(`
   Where do you want to deploy?
 
@@ -167,7 +151,8 @@ export async function runDeploy(opts = {}) {
   Your local project keeps running with npm run dev.
   Container/Worker deploy scripts are project-specific — add when ready.
   `);
-    writeConfig(cwd, { ...config, deploy_target: 'gcp' });
+    setDeployTarget(config, 'gcp');
+    writeProjectConfig(cwd, config);
     return;
   }
 

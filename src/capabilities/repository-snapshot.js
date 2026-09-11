@@ -5,6 +5,7 @@ import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { resolveGitContext } from '../lib/git-context.js';
+import { getRepositoryId, tryReadProjectConfig } from '../lib/project-config.js';
 import { buildMerkleTree } from '../lib/merkle/index.js';
 import { showLatestDeployReceipt } from '../lib/deploy-receipt/index.js';
 import { CONFIG_PATH, canonical, readConfig, scopeKey } from '../knowledge/config.js';
@@ -121,6 +122,7 @@ export async function repositorySnapshot({ cwd = process.cwd(), churnDays = 30 }
   const git = resolveGitContext({ cwd });
   const root = git.root;
   const ignored = await gitIgnoredPaths(root);
+  const projectConfig = tryReadProjectConfig(root);
   const [intelligence, merkle, knowledge, deployReceipt] = await Promise.all([
     runRepositoryIntelligence(root, churnDays),
     buildMerkleTree(root, { exclude: ignored, semantic: true }),
@@ -128,14 +130,20 @@ export async function repositorySnapshot({ cwd = process.cwd(), churnDays = 30 }
     showLatestDeployReceipt({ root }),
   ]);
   const provider = providerForHost(git.remoteHost);
-  const portableRepositoryId = provider && git.repoFullName ? `${provider}:${git.repoFullName}` : null;
-  const repositoryId = knowledge.repository_id || portableRepositoryId;
+  const portableRepositoryId = provider && git.repoFullName
+    ? `${provider}:${provider === 'github' ? git.repoFullName.toLowerCase() : git.repoFullName}`
+    : null;
+  const projectRepositoryId = getRepositoryId(projectConfig);
+  if (projectRepositoryId && knowledge.repository_id && projectRepositoryId !== knowledge.repository_id) {
+    throw new Error(`repository_identity_mismatch: project=${projectRepositoryId} knowledge=${knowledge.repository_id}`);
+  }
+  const repositoryId = projectRepositoryId || knowledge.repository_id || portableRepositoryId;
   const packages = readPackageInventory(root, intelligence.manifests || []);
 
   const evidence = {
     repository: {
       repository_id: repositoryId,
-      identity_source: knowledge.repository_id ? 'knowledge-config' : portableRepositoryId ? 'git-remote' : 'unresolved',
+      identity_source: projectRepositoryId ? 'project-config' : knowledge.repository_id ? 'knowledge-config' : portableRepositoryId ? 'git-remote' : 'unresolved',
       provider,
       full_name: git.repoFullName,
       remote_url: git.remoteUrl || null,

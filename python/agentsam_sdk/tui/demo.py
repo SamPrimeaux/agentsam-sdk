@@ -1,11 +1,15 @@
-"""Agent Sam Rich TUI demos — six reusable terminal patterns.
+"""Internal Agent Sam Rich render previews.
 
-Run from repo root:
+Run from repo root through the SDK design lane:
+
+    npm run ui:preview -- tour
+    npm run ui:preview -- boot
+    npm run ui:preview -- thinking
+
+Or invoke the renderer module directly after installing the optional Rich extra:
 
     pip install -e './python[tui]'
-    agentsam tui
-    agentsam tui --scene dashboard
-    agentsam tui --check
+    PYTHONPATH=python python -m agentsam_sdk.tui --scene dashboard --check
 """
 
 from __future__ import annotations
@@ -33,6 +37,7 @@ from rich.text import Text
 
 from .frames import COMET, THINK, WALKER
 from .theme import CYAN
+from .onboarding import preview_boot, preview_ready, preview_setup, preview_thinking, preview_tour
 from .widgets import (
     IndexDashboard,
     IndexState,
@@ -45,7 +50,8 @@ from .widgets import (
     tty_hint,
 )
 
-SCENES = ("card", "progress", "dashboard", "events", "sprite", "logs", "ship")
+SCENES = ("boot", "setup", "ready", "thinking", "card", "progress", "dashboard", "events", "sprite", "logs", "ship")
+PREVIEW_SCENES = ("tour", *SCENES)
 
 
 def _sleep(seconds: float, *, fast: bool) -> None:
@@ -182,7 +188,7 @@ def demo_ship_lane(console, *, ticks: int = 24, fast: bool = False) -> None:
     steps = [
         ("validate", "python tests"),
         ("package", "agentsam-sdk"),
-        ("cli", "agentsam tui"),
+        ("cli", "internal UI preview"),
         ("run", "operator action"),
         ("receipt", "status captured"),
         ("done", "command complete"),
@@ -219,6 +225,10 @@ def demo_ship_lane(console, *, ticks: int = 24, fast: bool = False) -> None:
 
 
 SCENE_FNS = {
+    "boot": preview_boot,
+    "setup": preview_setup,
+    "ready": preview_ready,
+    "thinking": preview_thinking,
     "card": demo_status_card,
     "progress": demo_progress,
     "dashboard": demo_live_dashboard,
@@ -230,11 +240,16 @@ SCENE_FNS = {
 
 
 def run_scene(name: str, console, *, ticks: int, fast: bool) -> None:
+    if name == "tour":
+        console.print()
+        console.print(Rule("[bold iam.cyan]guided CLI tour[/]"))
+        preview_tour(console, fast=fast, ticks=ticks)
+        return
     fn = SCENE_FNS[name]
     console.print()
     console.print(Rule(f"[bold iam.cyan]{name}[/]"))
     kwargs = {"fast": fast}
-    if name in {"progress", "dashboard", "sprite", "ship"}:
+    if name in {"boot", "setup", "ready", "thinking", "progress", "dashboard", "sprite", "ship"}:
         kwargs["ticks"] = ticks
     fn(console, **kwargs)
 
@@ -246,7 +261,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--scene",
-        choices=("all", *SCENES),
+        choices=("all", *PREVIEW_SCENES),
         default="all",
         help="Which demo to run (default: all)",
     )
@@ -283,7 +298,7 @@ def main(argv: list[str] | None = None) -> int:
         run_scene(name, console, ticks=ticks, fast=fast)
 
     console.print()
-    console.print("[bold iam.green]Done.[/]  Next: wire these renderables into real SDK CLI commands.")
+    console.print("[bold iam.green]Preview complete.[/]  Internal renderer lab; bare `agentsam` owns the product boot flow.")
     return 0
 
 

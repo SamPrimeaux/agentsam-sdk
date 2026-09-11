@@ -57,7 +57,7 @@
       "runtime": "node",
       "package": "@inneranimalmedia/agentsam-sdk/knowledge",
       "cli": "agentsam index run",
-      "description": "Build a coherent incremental AST/text generation with optional embeddings.",
+      "description": "Build the SDK local/portable coherent incremental structural/text generation with optional embeddings.",
       "deterministic": true,
       "model_required": false,
       "side_effects": "local-state",
@@ -71,7 +71,7 @@
       "runtime": "node",
       "package": "@inneranimalmedia/agentsam-sdk/knowledge",
       "cli": "agentsam search \"query\"",
-      "description": "Retrieve bounded repository context from a published knowledge generation.",
+      "description": "Retrieve bounded repository context from the SDK local/portable published knowledge generation.",
       "deterministic": true,
       "model_required": false,
       "side_effects": "none",
@@ -249,6 +249,35 @@
       "deterministic": false,
       "model_required": false,
       "side_effects": "artifact-write",
+      "status": "experimental"
+    },
+    "tools.search": {
+      "id": "tools.search",
+      "kind": "capability",
+      "version": 1,
+      "domain": "agent",
+      "runtime": "node",
+      "package": "@inneranimalmedia/agentsam-sdk/tools",
+      "export": "searchToolCards",
+      "description": "Discover compact capability cards without injecting the full tool catalog or full schemas.",
+      "deterministic": true,
+      "model_required": false,
+      "side_effects": "none",
+      "status": "experimental"
+    },
+    "context.resolve": {
+      "id": "context.resolve",
+      "kind": "capability",
+      "version": 1,
+      "domain": "agent",
+      "runtime": "node",
+      "package": "@inneranimalmedia/agentsam-sdk/context",
+      "export": "resolveContext",
+      "description": "Select bounded evidence against an explicit model-aware context budget and return a measurable receipt.",
+      "deterministic": true,
+      "model_required": false,
+      "side_effects": "none",
+      "output_schema": "protocol/context/resolved-context-pack.schema.json",
       "status": "experimental"
     }
   }

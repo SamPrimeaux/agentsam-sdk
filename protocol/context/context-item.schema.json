@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/context/context-item.schema.json",
+  "title": "ContextItem",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ref", "kind", "chars", "priority"],
+  "properties": {
+    "ref": { "type": "string", "minLength": 1 },
+    "kind": {
+      "type": "string",
+      "enum": ["file", "symbol", "memory", "tool_result", "repo", "artifact"]
+    },
+    "chars": { "type": "integer", "minimum": 0 },
+    "hash": { "type": "string" },
+    "priority": { "type": "number" },
+    "content": { "type": "string" },
+    "truncated": { "type": "boolean" }
+  }
+}

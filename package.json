@@ -46,7 +46,15 @@
     "./package.json": "./package.json",
     "./security": "./src/security/index.js",
     "./cad": "./src/lib/cad/index.js",
-    "./cad-docker": "./src/lib/cad-docker.js"
+    "./cad-docker": "./src/lib/cad-docker.js",
+    "./context": "./src/context/index.js",
+    "./indexing": "./src/indexing/index.js",
+    "./tools": "./src/tools/index.js",
+    "./context/result-policy-schema": "./protocol/context/result-policy.schema.json",
+    "./context/budget-schema": "./protocol/context/context-budget.schema.json",
+    "./context/pack-schema": "./protocol/context/resolved-context-pack.schema.json",
+    "./skills": "./src/skills/index.js",
+    "./skills/catalog": "./skills/catalog.json"
   },
   "bin": {
     "agentsam": "src/cli.js",
@@ -63,6 +71,7 @@
     "test",
     "python",
     "protocol",
+    "skills",
     "services/knowledge/package.json",
     "services/knowledge/package-lock.json",
     "services/cad/server.py",
@@ -95,7 +104,8 @@
     "preview:auth-portal": "node packages/identity/scripts/preview-auth-portal.mjs --open",
     "prepublishOnly": "npm run verify:release",
     "security:check": "node src/security/cli.mjs scan",
-    "security:repair": "node src/security/cli.mjs repair"
+    "security:repair": "node src/security/cli.mjs repair",
+    "ui:preview": "node scripts/ui-preview.mjs"
   },
   "engines": {
     "node": ">=22.5.0"

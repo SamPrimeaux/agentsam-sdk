@@ -30,7 +30,7 @@ function normalizeRequest(body, repositories, allowEmbeddings) {
   };
   const request = { ...body, embed: body.embed ?? false, semantic: body.semantic ?? false,
     max_inputs: bounded('max_inputs', 100, 0, 1000), max_characters: bounded('max_characters', 200000, 0, 2000000),
-    top_k: bounded('top_k', 8, 1, 100), token_budget: bounded('token_budget', 8000, 256, 32000) };
+    top_k: bounded('top_k', 8, 1, 8), token_budget: bounded('token_budget', 6000, 256, 6000) };
   const config = structuredClone(repo.config);
   if (body.scope !== undefined) config.scope.name = body.scope;
   if (body.include !== undefined) config.scope.include = body.include;

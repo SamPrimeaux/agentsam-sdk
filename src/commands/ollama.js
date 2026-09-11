@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
+import { readProjectConfig, setLocalModelCapability, writeProjectConfig } from '../lib/project-config.js';
 
 export const OLLAMA_DEFAULTS = Object.freeze({
   baseUrl: 'http://127.0.0.1:11434',
@@ -76,22 +77,12 @@ export function upsertOllamaEnvFile(filename, config) {
 }
 
 export function updateProjectOllamaConfig(cwd, config) {
-  const filename = path.join(path.resolve(cwd), '.agentsam', 'config.json');
+  const root = path.resolve(cwd);
+  const filename = path.join(root, '.agentsam', 'config.json');
   if (!fs.existsSync(filename)) return null;
-  const parsed = JSON.parse(fs.readFileSync(filename, 'utf8'));
-  parsed.local_model = {
-    provider: 'ollama',
-    local_only: true,
-    base_url_env: 'OLLAMA_BASE_URL',
-    model_env: 'OLLAMA_MODEL',
-    embed_model_env: 'OLLAMA_EMBED_MODEL',
-    defaults: {
-      base_url: config.baseUrl,
-      model: config.model,
-      embed_model: config.embedModel,
-    },
-  };
-  fs.writeFileSync(filename, `${JSON.stringify(parsed, null, 2)}\n`, 'utf8');
+  const project = readProjectConfig(root);
+  setLocalModelCapability(project, 'ollama');
+  writeProjectConfig(root, project);
   return filename;
 }
 

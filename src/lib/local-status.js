@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { tryResolveGitContext } from './git-context.js';
 import { inspectLocalSqlite } from '../local/sqlite.js';
+import { getCreatedWithVersion, getDefaultProfile, getDeployTarget, getLocalDatabasePath, getProjectName, getProjectPreset, getRepositoryId, tryReadProjectConfig } from './project-config.js';
 
 export function findAgentSamProjectRoot(startDir = process.cwd()) {
   let dir = path.resolve(startDir);
@@ -12,16 +13,6 @@ export function findAgentSamProjectRoot(startDir = process.cwd()) {
     dir = parent;
   }
   return path.resolve(startDir);
-}
-
-function readProjectConfig(root) {
-  const configPath = path.join(root, '.agentsam', 'config.json');
-  if (!fs.existsSync(configPath)) return null;
-  try {
-    return JSON.parse(fs.readFileSync(configPath, 'utf8'));
-  } catch {
-    return null;
-  }
 }
 
 async function probe(url) {
@@ -35,12 +26,12 @@ async function probe(url) {
 
 export async function collectLocalStatus(cwd = process.cwd()) {
   const root = findAgentSamProjectRoot(cwd);
-  const config = readProjectConfig(root);
+  const config = tryReadProjectConfig(root);
   const git = tryResolveGitContext({ cwd: root });
 
   let db = { ok: false, exists: false, tables: [] };
   if (config) {
-    db = await inspectLocalSqlite(path.join(root, config.db_path || '.agentsam/data/agentsam.sqlite'));
+    db = await inspectLocalSqlite(path.join(root, getLocalDatabasePath(config)));
   }
 
   const devPort = config?.dev_port ?? 8787;
@@ -54,11 +45,12 @@ export async function collectLocalStatus(cwd = process.cwd()) {
     schemaVersion: 'agentsam-local-status-v1',
     configured: Boolean(config),
     root,
-    project: config?.project || path.basename(root),
-    lane: config?.lane || null,
-    agent: config?.agent || null,
-    deployTarget: config?.deploy_target || null,
-    scaffoldVersion: config?.scaffold_version || null,
+    project: getProjectName(config, path.basename(root)),
+    repositoryId: getRepositoryId(config),
+    lane: getProjectPreset(config),
+    agent: getDefaultProfile(config),
+    deployTarget: getDeployTarget(config),
+    scaffoldVersion: getCreatedWithVersion(config),
     git: git
       ? {
           repo: git.repoFullName || null,

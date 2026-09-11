@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { validateConfig, fingerprint, scopeKey, cacheNamespace, gitEvidence } from './config.js';
 import { PARSER, inventory, readSource, parseSource } from './source.js';
 import { createContextPack } from './context-pack.js';
+import { normalizeResultPolicy } from '../context/result-policy.js';
 
 export const embeddingProfileId = profile => fingerprint({ ...profile, input_format: 'agentsam-code-content:1' });
 export function validateVector(vector, dimensions) {
@@ -72,10 +73,13 @@ export async function runIndex({ root, config, store, embedder, embed = false, m
   return { ...receipt, generation_id: generation.id, published: true };
 }
 
-export async function retrieve({ store, config: input, text, semantic = false, embedder, topK = 8, tokenBudget = 8000, generationId }) {
+export async function retrieve({ store, config: input, text, semantic = false, embedder, topK = 8, tokenBudget = 6000, generationId, resultPolicy: requestedResultPolicy }) {
   const config = validateConfig(input);
   if (typeof text !== 'string' || !text.trim()) throw new Error('A nonempty query is required.');
-  if (!Number.isInteger(topK) || topK < 1 || topK > 100 || !Number.isInteger(tokenBudget) || tokenBudget < 256) throw new Error('topK must be 1..100 and tokenBudget at least 256.');
+  const resultPolicy = normalizeResultPolicy(requestedResultPolicy || {});
+  if (!Number.isInteger(topK) || topK < 1 || topK > resultPolicy.max_items) throw new Error(`topK must be 1..${resultPolicy.max_items} under the active result policy.`);
+  const maxTokenBudget = Math.max(256, Math.floor(resultPolicy.max_chars / 4));
+  if (!Number.isInteger(tokenBudget) || tokenBudget < 256 || tokenBudget > maxTokenBudget) throw new Error(`tokenBudget must be 256..${maxTokenBudget} under the active result policy.`);
   const generation = generationId ? await store?.getGeneration(scopeKey(config), generationId) : await store?.active(scopeKey(config));
   if (!generation) throw new Error('No generation found for this repository/scope. Run agentsam index run.');
   let queryVector;
@@ -113,6 +117,6 @@ export async function retrieve({ store, config: input, text, semantic = false, e
       metadata: { generation_id: generation.id, symbol: hit.symbol, content_hash: hit.content_hash, freshness: 'working tree not checked' } }); estimatedTokens += tokens;
     if (hits.length === topK) break;
   }
-  return createContextPack({ queryId: randomUUID(), query: { text, top_k: topK, token_budget: tokenBudget }, hits,
+  return createContextPack({ queryId: randomUUID(), query: { text, top_k: topK, token_budget: tokenBudget, result_policy: resultPolicy }, hits,
     diagnostics: { generation_id: generation.id, source_hash: generation.source_hash, scope: generation.config.scope, mode: semantic ? 'semantic-exact' : 'lexical', freshness: 'snapshot; working tree not checked' } });
 }

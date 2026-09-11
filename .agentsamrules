@@ -1,0 +1,11 @@
+# Agent Sam project rules
+
+These instructions are committed with agentsam-sdk and apply when Agent Sam works in this repository.
+
+- Keep the SDK portable; platform-specific infrastructure belongs behind adapters.
+- Prefer structural retrieval before semantic retrieval when exact code evidence can answer the question.
+- Treat indexes as retrieval substrates, never as prompt dumps.
+- Keep context bounded and attach receipts to selected evidence.
+- Keep runtime/account state out of `.agentsam/config.json`.
+- Preserve real local process/filesystem behavior for CLI workflows.
+- Run focused tests first, then release verification for contract changes.

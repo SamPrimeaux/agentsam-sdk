@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/context/context-budget.schema.json",
+  "title": "ContextBudget",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "windowTokens",
+    "windowChars",
+    "charsPerToken",
+    "targetInputRatio",
+    "hardInputRatio",
+    "targetInputTokens",
+    "hardInputTokens",
+    "targetInputChars",
+    "hardInputChars",
+    "maxSystemChars",
+    "maxToolSchemaChars",
+    "maxEvidenceChars",
+    "maxFileCharsPerRead",
+    "maxFileCharsPerTurn",
+    "maxToolResultChars"
+  ],
+  "properties": {
+    "windowTokens": { "type": "integer", "minimum": 1 },
+    "windowChars": { "type": "integer", "minimum": 1 },
+    "charsPerToken": { "type": "number", "exclusiveMinimum": 0 },
+    "targetInputRatio": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+    "hardInputRatio": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+    "targetInputTokens": { "type": "integer", "minimum": 1 },
+    "hardInputTokens": { "type": "integer", "minimum": 1 },
+    "targetInputChars": { "type": "integer", "minimum": 1 },
+    "hardInputChars": { "type": "integer", "minimum": 1 },
+    "maxSystemChars": { "type": "integer", "minimum": 1 },
+    "maxToolSchemaChars": { "type": "integer", "minimum": 1 },
+    "maxEvidenceChars": { "type": "integer", "minimum": 1 },
+    "maxFileCharsPerRead": { "type": "integer", "minimum": 1 },
+    "maxFileCharsPerTurn": { "type": "integer", "minimum": 1 },
+    "maxToolResultChars": { "type": "integer", "minimum": 1 }
+  }
+}

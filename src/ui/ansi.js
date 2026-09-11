@@ -40,7 +40,7 @@ export function renderLocalStatus(status) {
     return lines.join('\n');
   }
 
-  lines.push(row('lane', `${status.lane} · ${status.agent}`, width));
+  lines.push(row('profile', `${status.lane || 'custom'} · ${status.agent || 'default'}`, width));
   lines.push(
     row(
       'git',

@@ -2,8 +2,9 @@
 
 import pkg from '../package.json' with { type: 'json' };
 import readline from 'readline';
+import { cancel, intro, isCancel, outro, select, text } from '@clack/prompts';
 import path from 'node:path';
-import { buildLocalScaffoldMeta, LANE_KEYS, RUN_TARGETS } from './lib/local-scaffold.js';
+import { buildLocalScaffoldMeta } from './lib/local-scaffold.js';
 import { writeScaffoldFiles } from './lib/write-files.js';
 import { initializeGitRepository } from './lib/init-git.js';
 import { initializeLocalSqlite } from './local/sqlite.js';
@@ -11,6 +12,7 @@ import { printContextSummary } from './lib/detect-context.js';
 import { promptOptionalByokKeys } from './lib/prompt-byok.js';
 import { runStartLocal } from './commands/start-local.js';
 import { runOllama } from './commands/ollama.js';
+import { runModels } from './commands/models.js';
 import { runTunnel } from './commands/tunnel.js';
 import { runDeploy } from './commands/deploy.js';
 import { runIdentityPreview } from './commands/identity-preview.js';
@@ -18,7 +20,7 @@ import { runIdentityInit } from './commands/identity-init.js';
 import { runContext } from './commands/context.js';
 import { runDb } from './commands/db.js';
 import { runStatus } from './commands/status.js';
-import { runTui } from './commands/tui.js';
+import { runInteractive } from './commands/interactive.js';
 import { runShell } from './commands/shell.js';
 import { runDockerize } from './commands/dockerize.js';
 import { runMini } from './commands/mini.js';
@@ -48,6 +50,7 @@ function printHelp() {
   Agent Sam SDK — CLI v${VERSION}
 
   Product UX:
+    agentsam                     Enter the interactive Agent Sam experience
     agentsam create <name> --preset <fullstack|cms|prototype|data>
     agentsam add <auth|cms|knowledge|agent|deploy-cloudflare>
     agentsam dev               Run this project's existing npm dev script
@@ -65,14 +68,13 @@ function printHelp() {
     agentsam repo snapshot     Git composition/churn; --save retains observations
     agentsam cad blender       Programmatic Blender inspect/build/render/export (--help)
     agentsam mini <name>       Create and preview a small local gadget (--help for options)
-    agentsam merkle            File integrity, snapshots, comparisons, and TUI (--help)
+    agentsam merkle            File integrity, snapshots, comparisons, and interactive explorer (--help)
     agentsam deploy-receipt    Merkle deploy/checkpoint capture + promote/failure receipts (--help)
     agentsam recon             Bounded-worker task packets + finding-report validation (--help)
     agentsam security          Dependency scan, log triage, and verified repair (--help)
     agentsam status [--json]   Live local Git + DB + API + PTY status
     agentsam db init|status    Manage the project-local SQLite database
-    agentsam tui               Zero-dependency ANSI Agent Sam dashboard
-    agentsam tui rich          Optional Python Rich dashboard (--install for local venv)
+    agentsam models            Show configured providers and local model inventory
     agentsam start-local       Local PTY on ws://127.0.0.1:3099 (no tunnel, no Cloudflare)
     agentsam ollama            Opt-in local Ollama setup/status/model management
     agentsam shell             Interactive Agent Sam slash-command shell
@@ -194,7 +196,7 @@ async function runLocalInit(config) {
   ✓ Environment  ${path.join(dir, '.env')}
   ✓ SQLite       ${db.dbPath} (${db.tables.length} tables)
   ✓ Local API    Node · http://127.0.0.1:8787
-  ✓ Terminal UI  ANSI built in · Rich optional
+  ✓ Agent Sam     interactive CLI ready
 
   Next:`);
   console.log(`    cd ${meta.projectName}`);
@@ -215,48 +217,46 @@ async function runLocalInit(config) {
 }
 
 async function initInteractive(partial = {}) {
-  const prompt = createPrompt();
+  const pick = (value) => {
+    if (!isCancel(value)) return value;
+    cancel('Agent Sam init cancelled.');
+    const error = new Error('init_cancelled');
+    error.code = 'AGENTSAM_INIT_CANCELLED';
+    throw error;
+  };
 
-  console.log(`
-  ╔════════════════════════════════╗
-  ║   Agent Sam SDK — Init            ║
-  ║   Local-first · Node only         ║
-  ╚════════════════════════════════╝
-  `);
+  intro('Create an Agent Sam project');
 
-  const projectName =
-    partial.projectName ||
-    (await prompt.ask('  1) Project name: '));
+  const projectName = partial.projectName || pick(await text({
+    message: 'Project name',
+    placeholder: 'my-agent',
+    validate(value) {
+      if (!String(value || '').trim()) return 'Project name is required';
+    },
+  }));
 
-  if (!partial.lane) {
-    console.log(`
-  2) Lane:
-    1) Full Stack   2) CMS   3) Data   4) CRM   5) Creative
-  `);
-  }
-  const laneKey = partial.lane
-    ? partial.lane
-    : LANE_KEYS[await prompt.ask('  Pick lane [1-5]: ')] || 'fullstack';
+  const laneKey = partial.lane || pick(await select({
+    message: 'Project type',
+    initialValue: 'fullstack',
+    options: [
+      { value: 'fullstack', label: 'Full Stack' },
+      { value: 'cms', label: 'CMS' },
+      { value: 'data', label: 'Data Solutions' },
+      { value: 'crm', label: 'Customer Management' },
+      { value: 'creative', label: 'Creative & Design' },
+    ],
+  }));
 
-  if (!partial.runTarget) {
-    console.log(`
-  3) Future deploy target?
+  const runTarget = partial.runTarget || pick(await select({
+    message: 'Future deploy target',
+    initialValue: 'local',
+    options: [
+      { value: 'local', label: 'Local only / decide later' },
+      { value: 'cloudflare', label: 'Cloudflare later' },
+      { value: 'gcp', label: 'GCP later' },
+    ],
+  }));
 
-    1) Local only / decide later
-    2) Cloudflare later (Worker + D1 adapter at deploy time)
-    3) GCP later (your Google Cloud project)
-  `);
-  }
-  const runTarget = partial.runTarget
-    ? partial.runTarget
-    : RUN_TARGETS[await prompt.ask('  Select [1]: ')] || 'local';
-
-  // Credential detection is demand-driven, not unconditional. missingForInit()
-  // already knows local needs nothing (`if (runTarget === 'local') return []`)
-  // — it just never got consulted before this fix, because detectContext()
-  // used to run before runTarget was even known. runTarget alone is enough
-  // to decide whether detection is needed at all, so skip the subprocess
-  // calls entirely for local instead of just hiding their output.
   if (runTarget !== 'local') {
     const { detectContext, missingForInit } = await import('./lib/detect-context.js');
     const ctx = await detectContext();
@@ -265,8 +265,13 @@ async function initInteractive(partial = {}) {
     }
   }
 
-  await runLocalInit({ projectName, lane: laneKey, runTarget, prompt });
-  prompt.close();
+  const prompt = resolveSdkKey(process.env) ? createPrompt() : null;
+  try {
+    await runLocalInit({ projectName, lane: laneKey, runTarget, prompt });
+  } finally {
+    prompt?.close();
+  }
+  outro(`Created ${projectName}`);
 }
 
 async function initFromArgs(argv) {
@@ -283,8 +288,20 @@ const rest = process.argv.slice(3);
 
 if (command === '--version' || command === '-v') {
   console.log(VERSION);
-} else if (command === '--help' || command === '-h' || !command) {
+} else if (command === '--help' || command === '-h') {
   printHelp();
+} else if (!command) {
+  if (process.stdin.isTTY && process.stdout.isTTY) {
+    try { await runInteractive(); }
+    catch (e) {
+      if (e?.code !== 'AGENTSAM_SETUP_CANCELLED') {
+        console.error(`\n  ✗ ${e?.message || e}\n`);
+        process.exitCode = 1;
+      }
+    }
+  } else {
+    printHelp();
+  }
 } else if (command === 'create') {
   try {
     const opts = parseCreateArgs(rest);
@@ -330,9 +347,9 @@ if (command === '--version' || command === '-v') {
     console.error(`\n  ✗ ${e?.message || e}\n`);
     process.exit(1);
   }
-} else if (command === 'tui') {
+} else if (command === 'models') {
   try {
-    await runTui(rest);
+    await runModels(rest);
   } catch (e) {
     console.error(`\n  ✗ ${e?.message || e}\n`);
     process.exit(1);

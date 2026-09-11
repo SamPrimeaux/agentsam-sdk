@@ -15,7 +15,7 @@ export function printMerkleHelp() {
   diff <a> <b>                Compare two directories or snapshot files
   inspect [path]              Show every path and hash (also accepts a snapshot)
   persist <snapshot>          Publish a saved snapshot through WEBSITE_ASSETS/DB bindings
-  tui [path]                  Open the interactive tree explorer
+  explore [path]              Open the interactive tree explorer
 
   --out <file>                Snapshot destination
   --force                     Replace an existing snapshot file
@@ -23,17 +23,17 @@ export function printMerkleHelp() {
   --root <path>               Verify a snapshot against a different directory
   --include <default-rule>    Include an ignored category, e.g. --include dist
   --exclude <path-or-name>    Ignore an additional name or relative subtree
-  --tui                       Explore root/inspect/verify/diff interactively
-  --json                      Machine-readable output; never opens a TUI
+  --interactive               Explore root/inspect/verify/diff interactively
+  --json                      Machine-readable output; never opens the interactive explorer
 
   Examples:
     agentsam merkle root .
     agentsam merkle snapshot . --semantic --out .agentsam/merkle.json
-    agentsam merkle verify .agentsam/merkle.json --tui
-    agentsam merkle diff ./mac-copy ./vm-copy --tui
-    agentsam tui merkle .
+    agentsam merkle verify .agentsam/merkle.json --interactive
+    agentsam merkle diff ./mac-copy ./vm-copy --interactive
+    agentsam merkle explore .
 
-  TUI: arrows or j/k to move; Enter/right to expand; left to collapse;
+  Explorer: arrows or j/k to move; Enter/right to expand; left to collapse;
        c to filter changes; r to rescan; q/Esc/Ctrl+C to close.
   Exit codes: 0 success/match, 1 differences, 2 error, 130 interrupted scan.
   Includes/excludes are literal rules, not globs or .gitignore syntax.
@@ -42,14 +42,16 @@ export function printMerkleHelp() {
 
 function parse(argv) {
   const [command, ...args] = argv;
-  if (!['root', 'snapshot', 'verify', 'diff', 'inspect', 'tui'].includes(command)) throw new Error(`Unknown Merkle command: ${command}`);
-  const opts = { command, paths: [], include: [], exclude: [], tui: command === 'tui', json: false, force: false, semantic: false };
+  if (!['root', 'snapshot', 'verify', 'diff', 'inspect', 'explore', 'tui'].includes(command)) throw new Error(`Unknown Merkle command: ${command}`);
+  const publicCommand = command === 'tui' ? 'explore' : command;
+  const opts = { command: publicCommand, paths: [], include: [], exclude: [], tui: publicCommand === 'explore', json: false, force: false, semantic: false };
   let positionalOnly = false;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === '--' && !positionalOnly) { positionalOnly = true; continue; }
     if (positionalOnly || !arg.startsWith('-')) opts.paths.push(arg);
-    else if (['--tui', '--json', '--force', '--semantic'].includes(arg)) opts[arg.slice(2)] = true;
+    else if (arg === '--interactive' || arg === '--tui') opts.tui = true;
+    else if (['--json', '--force', '--semantic'].includes(arg)) opts[arg.slice(2)] = true;
     else if (['--out', '--root', '--include', '--exclude'].includes(arg)) {
       const value = args[++i];
       if (!value || value.startsWith('--')) throw new Error(`Missing value for ${arg}`);
@@ -62,7 +64,7 @@ function parse(argv) {
   if (!count && !opts.paths.length) opts.paths.push('.');
   if ((opts.out || opts.force) && command !== 'snapshot') throw new Error('--out and --force apply only to snapshot.');
   if (opts.root && command !== 'verify') throw new Error('--root applies only to verify.');
-  if (command === 'snapshot' && opts.tui) throw new Error('Use inspect --tui after saving a snapshot.');
+  if (command === 'snapshot' && opts.tui) throw new Error('Use inspect --interactive after saving a snapshot.');
   if (opts.semantic && !['root', 'snapshot', 'inspect'].includes(command)) throw new Error('--semantic applies only to root, snapshot, or inspect.');
   if (command === 'verify' && (opts.include.length || opts.exclude.length)) throw new Error('Verification uses the snapshot\'s saved ignore rules.');
   opts.policy = normalizePolicy(opts);
@@ -106,7 +108,7 @@ export async function runMerkle(argv = []) {
         const { snapshot: tree, output } = await saveSnapshot(target, { ...progress, policy: opts.policy, out: opts.out, force: opts.force, semantic: opts.semantic });
         return { title: 'Merkle snapshot', tree, output };
       }
-      const isSnapshot = ['inspect', 'tui'].includes(opts.command) && !(await fs.stat(target)).isDirectory();
+      const isSnapshot = ['inspect', 'explore'].includes(opts.command) && !(await fs.stat(target)).isDirectory();
       if (isSnapshot && (opts.include.length || opts.exclude.length)) throw new Error('Snapshot inspection uses saved ignore rules.');
       const tree = isSnapshot ? await readSnapshot(target) : await buildMerkleTree(target, { ...progress, policy: opts.policy, semantic: opts.semantic });
       return { title: isSnapshot ? 'Saved Merkle tree' : 'Merkle root', tree };

@@ -1,16 +1,37 @@
 import readline from 'node:readline';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { SLASH_COMMANDS, SHELL_PHASES } from '../lib/slash-commands.js';
 import { runContext } from './context.js';
 import { runDb } from './db.js';
 import { runDeploy } from './deploy.js';
 import { runStatus } from './status.js';
-import { runTui } from './tui.js';
+import { runModels } from './models.js';
+import { configureCliPreferences } from './preferences.js';
 
 function writeLine(write, value = '') {
   write(`${value}\n`);
+}
+
+export function compactCwd(value, home = process.env.HOME || process.env.USERPROFILE || '') {
+  const cwd = path.resolve(value);
+  const resolvedHome = home ? path.resolve(home) : '';
+  if (!resolvedHome) return cwd;
+  if (cwd === resolvedHome) return '~';
+  return cwd.startsWith(`${resolvedHome}${path.sep}`) ? `~${cwd.slice(resolvedHome.length)}` : cwd;
+}
+
+export function shellUsername(env = process.env) {
+  const fromEnv = String(env.USER || env.USERNAME || '').trim();
+  if (fromEnv) return fromEnv;
+  try { return String(os.userInfo().username || '').trim() || 'user'; }
+  catch { return 'user'; }
+}
+
+export function renderShellPrompt(cwd, env = process.env) {
+  return `${shellUsername(env)} ${compactCwd(cwd, env.HOME || env.USERPROFILE || '')} > `;
 }
 
 export function tokenizeShellLine(input = '') {
@@ -63,9 +84,7 @@ export function renderShellCatalog() {
   ╚════════════════════════════════╝
 
   Local PTY   agentsam start-local     ws://127.0.0.1:3099
-  ANSI TUI    agentsam tui             zero-dependency Node UI
-  Rich TUI    agentsam tui rich        optional richer Python UI
-              agentsam tui rich --install
+  Models      agentsam models          providers + local model inventory
   DB          agentsam db status       local SQLite
 
   Current milestone: ${next?.label ?? 'local terminal experience'}
@@ -86,15 +105,6 @@ function parseDeployOptions(args, cwd) {
   return opts;
 }
 
-async function withProcessCwd(cwd, fn) {
-  const previous = process.cwd();
-  process.chdir(cwd);
-  try {
-    return await fn();
-  } finally {
-    process.chdir(previous);
-  }
-}
 
 async function runLocalAgent(goal, write) {
   if (!goal) {
@@ -194,11 +204,16 @@ export async function dispatchShellLine(line, state = {}) {
       case '/agent':
         await runLocalAgent(args.join(' '), write);
         break;
+      case '/models':
+        await runModels(args, { cwd: state.cwd, write });
+        break;
+      case '/settings': {
+        const configured = await configureCliPreferences({ cwd: state.cwd, firstRun: false });
+        state.cwd = configured.identity.root;
+        break;
+      }
       case '/logs':
         await showLocalLogs(state.cwd, write);
-        break;
-      case '/tui':
-        await withProcessCwd(state.cwd, () => runTui(args));
         break;
       case '/deploy':
         await runDeploy(parseDeployOptions(args, state.cwd));
@@ -232,13 +247,20 @@ export async function runShell(argv = [], options = {}) {
   }
   if (sub) throw new Error(`unknown shell option: ${sub}`);
 
-  write(renderShellCatalog());
-  writeLine(write, '  Interactive shell ready. Type /help for commands; /exit to return to your host shell.');
-  writeLine(write, '');
+  if (options.intro !== 'quiet') {
+    write(renderShellCatalog());
+    writeLine(write, '  Interactive shell ready. Type /help for commands; /exit to return to your host shell.');
+    writeLine(write, '');
+  }
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: Boolean(process.stdin.isTTY && process.stdout.isTTY) });
+  const promptText = () => {
+    if (typeof options.prompt === 'function') return options.prompt(state);
+    if (typeof options.prompt === 'string' && options.prompt) return options.prompt;
+    return renderShellPrompt(state.cwd);
+  };
   if (rl.terminal) {
-    rl.setPrompt('agentsam> ');
+    rl.setPrompt(promptText());
     rl.prompt();
   }
 
@@ -248,6 +270,9 @@ export async function runShell(argv = [], options = {}) {
       rl.close();
       break;
     }
-    if (rl.terminal) rl.prompt();
+    if (rl.terminal) {
+      rl.setPrompt(promptText());
+      rl.prompt();
+    }
   }
 }

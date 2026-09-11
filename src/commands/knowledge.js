@@ -6,12 +6,15 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
+import pkg from '../../package.json' with { type: 'json' };
 import { CONFIG_PATH, repositoryRoot, initRepository, readConfig, scopeKey, cacheNamespace } from '../knowledge/config.js';
 import { openSqliteStore } from '../knowledge/stores/sqlite.js';
 import { openPostgresStore } from '../knowledge/stores/postgres.js';
 import { planIndex, runIndex, retrieve } from '../knowledge/engine.js';
 import { createGeminiEmbedder } from '../knowledge/providers/gemini.js';
 import { compareObservations } from '../knowledge/evolution.js';
+import { ensureProjectManifest, getProjectName, getRepositoryId } from '../lib/project-config.js';
+import { ensureProjectRules } from '../lib/project-rules.js';
 
 const execute = promisify(execFile);
 const split = text => text.split(',').map(s => s.trim()).filter(Boolean);
@@ -28,7 +31,20 @@ export async function runRepositoryInit(argv) {
   if (opts.help) { console.log('agentsam init [.] [--cwd PATH] [--yes] [--include src,docs] [--exclude src/generated] [--scope NAME] [--target local|production] [--dimensions 768]'); return; }
   if (positionals.length > 1 || (positionals[0] && positionals[0] !== '.')) throw new Error('Use init . --cwd PATH to adopt an existing repository, or init --name NAME to scaffold.');
   const root = repositoryRoot(opts.cwd);
-  if (fs.existsSync(path.join(root, CONFIG_PATH))) throw new Error(`${CONFIG_PATH} already exists; edit it to change scope/profile. Existing configuration was preserved.`);
+  const knowledgePath = path.join(root, CONFIG_PATH);
+  const existingKnowledge = fs.existsSync(knowledgePath) ? readConfig(root) : null;
+  const projectManifest = ensureProjectManifest(root, {
+    repositoryId: existingKnowledge?.repository_id || undefined,
+    sdkVersion: pkg.version,
+  });
+  ensureProjectRules(root, getProjectName(projectManifest));
+  const projectRepositoryId = getRepositoryId(projectManifest);
+  if (existingKnowledge) {
+    if (projectRepositoryId && existingKnowledge.repository_id !== projectRepositoryId) {
+      throw new Error(`repository_identity_mismatch: project=${projectRepositoryId} knowledge=${existingKnowledge.repository_id}`);
+    }
+    throw new Error(`${CONFIG_PATH} already exists; edit it to change scope/profile. Existing configuration was preserved.`);
+  }
   let include = opts.include, exclude = opts.exclude, target = opts.target, dimensions = opts.dimensions;
   if (!opts.yes) {
     if (!process.stdin.isTTY) throw new Error('Existing-repository setup needs a terminal or --yes with explicit options.');
@@ -41,7 +57,14 @@ export async function runRepositoryInit(argv) {
       dimensions ??= await prompt.question('4) Gemini Embedding 2 dimensions [768]: ') || '768';
     } finally { prompt.close(); }
   }
-  const config = initRepository(root, { include: split(include || '.'), exclude: split(exclude || ''), scope: opts.scope || 'default', target: target || 'local', dimensions: Number(dimensions || 768) });
+  const config = initRepository(root, {
+    include: split(include || '.'),
+    exclude: split(exclude || ''),
+    scope: opts.scope || 'default',
+    target: target || 'local',
+    dimensions: Number(dimensions || 768),
+    repositoryId: projectRepositoryId,
+  });
   show({ root, config: CONFIG_PATH, storage: config.storage.driver, next: config.storage.driver === 'postgres' ? ['agentsam index setup-store', 'agentsam index plan', 'agentsam index run'] : ['agentsam index plan', 'agentsam index run', 'agentsam search "your symbol"'], note: 'No indexing, credentials, network calls, or source-file changes during setup.' });
 }
 
@@ -73,9 +96,9 @@ export async function runKnowledge(argv) {
 
 export async function runSearch(argv) {
   const { values: opts, positionals } = flags(argv, { semantic: { type: 'boolean' }, 'top-k': { type: 'string' }, 'token-budget': { type: 'string' }, generation: { type: 'string' } });
-  if (opts.help) { console.log('agentsam search "query" [--cwd PATH] [--semantic] [--top-k 8] [--token-budget 8000] [--generation ID]'); return; }
+  if (opts.help) { console.log('agentsam search "query" [--cwd PATH] [--semantic] [--top-k 8] [--token-budget 6000] [--generation ID]'); return; }
   const root = repositoryRoot(opts.cwd), config = readConfig(root), store = await openStore(root, config, true);
-  try { show(await retrieve({ store, config, text: positionals.join(' '), semantic: opts.semantic, embedder: opts.semantic ? provider() : null, topK: Number(opts['top-k'] || 8), tokenBudget: Number(opts['token-budget'] || 8000), generationId: opts.generation })); }
+  try { show(await retrieve({ store, config, text: positionals.join(' '), semantic: opts.semantic, embedder: opts.semantic ? provider() : null, topK: Number(opts['top-k'] || 8), tokenBudget: Number(opts['token-budget'] || 6000), generationId: opts.generation })); }
   finally { await store?.close(); }
 }
 

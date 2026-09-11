@@ -1,5 +1,6 @@
 import { tryResolveGitContext } from '../lib/git-context.js';
 import { resolveAgentSamBaseUrl, resolveBridgeKey } from '../lib/bridge-client.js';
+import { loadProjectRules } from '../lib/project-rules.js';
 
 function parseArgs(argv = []) {
   const options = { json: false, cwd: process.cwd(), remote: 'origin' };
@@ -15,10 +16,20 @@ function parseArgs(argv = []) {
 
 export function buildContextReport(options = {}) {
   const env = options.env || process.env;
-  const git = tryResolveGitContext({ cwd: options.cwd || process.cwd(), remote: options.remote || 'origin' });
+  const cwd = options.cwd || process.cwd();
+  const git = tryResolveGitContext({ cwd, remote: options.remote || 'origin' });
+  const rules = loadProjectRules(cwd);
   return {
-    schemaVersion: 'agentsam-context-v1',
+    schemaVersion: 'agentsam-context-v2',
     git,
+    rules: {
+      found: rules.found,
+      path: rules.path,
+      chars: rules.chars,
+      source_chars: rules.source_chars || 0,
+      truncated: rules.truncated,
+      hash: rules.hash,
+    },
     bridge: {
       baseUrl: resolveAgentSamBaseUrl(env),
       configured: Boolean(resolveBridgeKey(env)),
@@ -46,6 +57,7 @@ export async function runContext(argv = []) {
   } else {
     console.log('  repo       not inside a Git repository');
   }
+  console.log(`  rules      ${report.rules.found ? `${report.rules.path} · ${report.rules.chars} chars` : 'none'}`);
   console.log(`  core       ${report.bridge.baseUrl}`);
   console.log(`  bridge     ${report.bridge.configured ? 'configured' : 'AGENTSAM_BRIDGE_KEY not set'}`);
   console.log('');

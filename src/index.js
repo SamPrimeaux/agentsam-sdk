@@ -4,6 +4,7 @@ import pkg from '../package.json' with { type: 'json' };
 
 export { AgentSam } from './AgentSam.js';
 export { routeIntent } from './lib/router.js';
+export { searchToolCards, toToolCard } from './tools/index.js';
 export { getToolCatalog } from './lib/tools.js';
 export { scaffoldProject } from './lib/scaffold.js';
 export {
@@ -39,6 +40,21 @@ export {
   repositorySnapshot,
 } from './capabilities/index.js';
 export { getPreset, listPresets, resolvePreset, getAddon, listAddons } from './presets/index.js';
+export {
+  DEFAULT_CONTEXT_RATIOS,
+  DEFAULT_RESULT_POLICY,
+  createContextBudget,
+  normalizeResultPolicy,
+  resolveContext,
+  resolveProjectContext,
+  compactConsumedToolResult,
+  loadProjectRules,
+} from './context/index.js';
+export {
+  assertRepositoryKnowledgeProvider,
+  createRepositoryKnowledgeClient,
+  describeRepositoryKnowledgeProvider,
+} from './indexing/index.js';
 
 export {
   createIdentityClient,

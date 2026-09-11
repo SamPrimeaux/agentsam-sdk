@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/context/result-policy.schema.json",
+  "title": "ResultPolicy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["max_items", "max_chars", "detail"],
+  "properties": {
+    "max_items": { "type": "integer", "minimum": 1, "default": 8 },
+    "max_chars": { "type": "integer", "minimum": 1, "default": 24000 },
+    "detail": {
+      "type": "string",
+      "enum": ["metadata", "card", "excerpt", "range", "full"],
+      "default": "excerpt"
+    }
+  }
+}

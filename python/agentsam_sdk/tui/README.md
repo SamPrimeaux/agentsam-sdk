@@ -1,22 +1,27 @@
-# Agent Sam TUI
+# Agent Sam Rich renderer lab
 
-Optional terminal presentation for the Python `agentsam` CLI.
+Internal high-fidelity terminal presentation experiments for Agent Sam. This package is a renderer/design surface, not a public user command, tool registry, execution adapter, workflow, or permission boundary.
 
-**Ownership:** UI only. This package is not an Agent Sam tool, tool registry,
-execution adapter, workflow, or permission boundary. It renders state produced
-by real SDK commands.
+The installed npm CLI owns the product lifecycle. Users type `agentsam`; they do not select ANSI versus Rich.
 
-Migrated from `inneranimalmedia/tools_py/agentsam_tui` so the product repo no
-longer presents a TUI prototype as a reusable runtime tool.
+From the SDK repository, preview scenes with:
+
+```bash
+npm run ui:preview -- tour
+npm run ui:preview -- boot
+npm run ui:preview -- setup
+npm run ui:preview -- thinking
+npm run ui:preview -- ready
+```
+
+The Node script selects the renderer internally. For direct Python renderer work:
 
 ```bash
 cd python
 pip install -e '.[tui]'
-agentsam tui
-agentsam tui --scene dashboard
-agentsam tui --check
+PYTHONPATH=. python -m agentsam_sdk.tui --scene dashboard --check
 ```
 
-The core Python SDK remains stdlib-only; `rich` is an optional extra.
+The core Python SDK remains stdlib-only; `rich` is an optional extra. The intended product progression is small: **brand/boot → detect project context → first-run keyboard choices when needed → quiet ready prompt**.
 
-For a zero-dependency Node/ANSI rendering reference, see `../../../../examples/agentsam-tui-ansi.mjs`.
+For the zero-dependency Node/ANSI animation lab, see `../../../../examples/agentsam-tui-ansi.mjs`.
