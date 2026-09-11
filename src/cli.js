@@ -49,7 +49,7 @@ function printHelp() {
     agentsam create <name> --preset <fullstack|cms|prototype|data>
     agentsam add <auth|cms|knowledge|agent|deploy-cloudflare>
     agentsam dev               Run this project's existing npm dev script
-    agentsam inspect [--json]  Canonical deterministic repository.snapshot
+    agentsam inspect [--json]  Canonical repository snapshot; --view index|files bounds agent context
     agentsam deploy            Graduate an AgentSam project intentionally
 
   Capability discovery:
@@ -84,6 +84,18 @@ function printHelp() {
   Context options:
     --json                     Machine-readable output
     --cwd <path>               Resolve a different working directory
+
+  Inspect options:
+    --view <full|index|files>  Full authority envelope, facet index, or bounded matching files
+    --system/--package <name>  Filter semantic ownership
+    --category/--tag <value>   Filter semantic classification
+    --layer/--role <value>     Filter architecture role
+    --path <prefix|glob>       Filter repository paths (supports * and **)
+    --symbol/--import <value>  Filter AST symbols or imports
+    --match <text>             Lexical AND-match across semantic routing metadata
+    --limit <1..500>           Bound files view (default 50)
+    --facet-limit <1..200>     Bound each facet list (default 48)
+    --pretty                   Pretty-print JSON; machine JSON is compact by default
     --remote <name>            Preferred Git remote (default origin; falls back to first remote)
 
   Init is completable with Node only — no IAM login, no OAuth, no Cloudflare.

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
-import { getCapability, getCapabilityManifest, listCapabilities, repositorySnapshot } from '../capabilities/index.js';
+import { getCapability, getCapabilityManifest, listCapabilities, projectRepositorySnapshot, repositorySnapshot } from '../capabilities/index.js';
 import { getAddon, listAddons, listPresets } from '../presets/index.js';
 
 function parseCommon(argv = []) {
@@ -18,14 +18,54 @@ function parseCommon(argv = []) {
 export async function runInspect(argv = []) {
   const opts = parseCommon(argv);
   let churnDays = 30;
+  let view = 'full';
+  let limit = 50;
+  let facetLimit = 48;
+  let pretty = false;
+  const filters = {};
+  const addFilter = (field, value) => {
+    const clean = String(value || '').trim();
+    if (!clean) throw new Error(`inspect_${field}_value_required`);
+    (filters[field] ||= []).push(clean);
+  };
+  const filterFlags = new Map([
+    ['--system', 'system'], ['--package', 'package'], ['--category', 'category'], ['--layer', 'layer'],
+    ['--kind', 'kind'], ['--language', 'language'], ['--role', 'role'], ['--tag', 'tag'],
+    ['--path', 'path'], ['--symbol', 'symbol'], ['--import', 'import'], ['--match', 'match'],
+  ]);
   for (let i = 0; i < opts.positionals.length; i += 1) {
-    if (opts.positionals[i] === '--churn-days') churnDays = Number(opts.positionals[++i] || 30);
-    else if (opts.positionals[i] === 'repository') continue;
-    else throw new Error(`unknown inspect option: ${opts.positionals[i]}`);
+    const arg = opts.positionals[i];
+    if (arg === '--churn-days') churnDays = Number(opts.positionals[++i] || 30);
+    else if (arg === '--view') view = String(opts.positionals[++i] || '').trim().toLowerCase();
+    else if (arg === '--limit') limit = Number(opts.positionals[++i] || 50);
+    else if (arg === '--facet-limit') facetLimit = Number(opts.positionals[++i] || 48);
+    else if (arg === '--pretty') pretty = true;
+    else if (arg === '--full') view = 'full';
+    else if (arg === '--index') view = 'index';
+    else if (filterFlags.has(arg)) addFilter(filterFlags.get(arg), opts.positionals[++i]);
+    else if (arg === 'repository') continue;
+    else throw new Error(`unknown inspect option: ${arg}`);
   }
+  if (!['full', 'index', 'files'].includes(view)) throw new Error(`invalid inspect view: ${view}`);
+  if (!Number.isInteger(limit) || limit < 1 || limit > 500) throw new Error('inspect limit must be an integer from 1..500');
+  if (!Number.isInteger(facetLimit) || facetLimit < 1 || facetLimit > 200) throw new Error('inspect facet limit must be an integer from 1..200');
+  if (Object.keys(filters).length && view === 'full') view = 'files';
+
   const result = await repositorySnapshot({ cwd: opts.cwd, churnDays });
-  if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-  else {
+  const output = view === 'full' ? result : projectRepositorySnapshot(result, { view, filters, limit, facetLimit });
+  if (opts.json) process.stdout.write(`${JSON.stringify(output, null, pretty ? 2 : 0)}\n`);
+  else if (view !== 'full') {
+    console.log(`\nRepository snapshot ${result.snapshot_id} · ${view}`);
+    console.log(`  repo       ${result.repository.full_name || result.repository.repository_id || '(local)'}`);
+    console.log(`  revision   ${result.repository.revision_sha}`);
+    console.log(`  merkle     ${result.tree.merkle_root}`);
+    console.log(`  metadata   ${result.tree.metadata_root}`);
+    console.log(`  matched    ${output.projection.matched}${output.projection.truncated ? ` (showing ${output.projection.returned})` : ''}`);
+    const systems = output.facets.systems.slice(0, 12).map((row) => `${row.value}:${row.count}`).join(', ');
+    if (systems) console.log(`  systems    ${systems}`);
+    if (view === 'files') for (const file of output.files) console.log(`  ${file.path}  [${file.system || '-'} / ${file.category || '-'}]`);
+    console.log('');
+  } else {
     console.log(`\nRepository snapshot ${result.snapshot_id}`);
     console.log(`  repo       ${result.repository.full_name || result.repository.repository_id || '(local)'}`);
     console.log(`  revision   ${result.repository.revision_sha}`);
@@ -36,7 +76,7 @@ export async function runInspect(argv = []) {
     console.log(`  deploy     ${result.deploy?.status || 'no trusted receipt'}`);
     console.log(`  content    ${result.content_hash}\n`);
   }
-  return result;
+  return output;
 }
 
 export async function runCapabilities(argv = []) {

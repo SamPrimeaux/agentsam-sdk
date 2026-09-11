@@ -8,3 +8,12 @@ export async function buildSemanticMetadata(...args) {
   return semantic.buildSemanticMetadata(...args);
 }
 export { validateSemanticMetadata, metadataRoot, FILEMETA_FORMAT, FILEMETA_VERSION } from './filemeta.js';
+
+export {
+  MERKLE_SNAPSHOT_SCHEMA_SQL,
+  MERKLE_SNAPSHOT_STORAGE_PREFIX,
+  MERKLE_SNAPSHOT_TABLE,
+  MERKLE_WEBSITE_ASSETS_BINDING,
+  merkleSnapshotStorageKey,
+  normalizeMerkleStoragePrefix,
+} from './persistence.js';
