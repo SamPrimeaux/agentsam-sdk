@@ -3,7 +3,7 @@
 ```bash
 agentsam merkle root .
 agentsam merkle root . --include dist
-agentsam merkle snapshot . --out .agentsam/merkle.json
+agentsam merkle snapshot . --semantic --out .agentsam/merkle.json
 agentsam merkle verify .agentsam/merkle.json
 agentsam merkle diff ./copy-a ./copy-b --tui
 agentsam merkle inspect .
@@ -23,9 +23,11 @@ The commands work on ordinary folders, including a mini prototype. Git, cloud ac
 | `inspect [path]` | Prints the full tree/hash breakdown; also accepts a snapshot. |
 | `tui [path]` | Opens the keyboard-driven explorer. Alias: `agentsam tui merkle [path]`. |
 
+`--semantic` works with root, snapshot, and directory inspection. It adds deterministic `agentsam-filemeta` package/system/category/layer metadata plus JavaScript/TypeScript AST symbols/imports while leaving the v1 content root unchanged. Semantic snapshots validate both roots when reloaded.
+
 `--tui` also works with root, inspect, verify, and diff. Up/down or j/k select an entry; Enter/right expands a directory; left collapses it. `c` filters changes, `r` rescans, and q/Esc/Ctrl+C exits. The UI uses real scan counts, honors `NO_COLOR`, adapts to terminal resize, wraps the selected hash on narrow screens, and restores the cursor and terminal mode on exit. `r` does not update a saved baseline. Failed rescans remain visible and exit as an error.
 
-With piped output or `TERM=dumb`, the TUI prints once and exits. `--json` always bypasses interactive mode. Root JSON contains `rootPath`, `rootHash`, `stats`, and `policy`; verify/diff JSON contains `equal`, roots, counts, and the changed entries. Inspect/snapshot output contains the full manifest (snapshot adds `output`).
+With piped output or `TERM=dumb`, the TUI prints once and exits. `--json` always bypasses interactive mode. Root JSON contains `rootPath`, `rootHash`, `stats`, and `policy`; with `--semantic` it also contains `metadataRoot`, `classifier`, and `semanticStats`; verify/diff JSON contains `equal`, roots, counts, and the changed entries. Inspect/snapshot output contains the full manifest (snapshot adds `output`).
 
 Exit codes: **0** success/match, **1** differences, **2** invalid input/scan error, **130** interrupted non-interactive scan. Interactive quit after a completed comparison retains its match/difference exit code.
 
@@ -37,7 +39,7 @@ Copy a manifest to another machine, then explicitly select that machine's checko
 agentsam merkle verify ./baseline.json --root ./local-copy --tui
 ```
 
-Verification uses the saved include/exclude policy. Roots are independent of absolute paths, timestamps, permissions, and creation order. Matching roots mean the **included relative names, file bytes, and literal symlink targets** match, subject to SHA-256 collision resistance. Empty directories are omitted. Line endings, Unicode filename normalization, and symlink target spelling are not normalized.
+Verification uses the saved include/exclude policy. Content roots are independent of absolute paths, timestamps, permissions, and creation order. Permission `mode` may still be recorded as metadata and, when semantic enrichment is enabled, contributes to the separate metadata root. Matching roots mean the **included relative names, file bytes, and literal symlink targets** match, subject to SHA-256 collision resistance. Empty directories are omitted. Line endings, Unicode filename normalization, and symlink target spelling are not normalized.
 
 Snapshots are baselines, not signatures or attestations of who created them. Protect a trusted baseline separately. For a consistent scan, avoid editing the directory while hashing it; detectable changes/read errors fail the scan, but this is not an atomic filesystem snapshot.
 
@@ -67,4 +69,4 @@ const current = await buildMerkleTree('./checkout', { policy: baseline.policy })
 const comparison = diffTrees(baseline, current);
 ```
 
-The library is local filesystem tooling. It adds no Worker bindings, user/workspace identity, network calls, or package dependencies. The interoperable hash format is specified in [MERKLE_V1](../protocol/MERKLE_V1.md).
+The library is local filesystem tooling. It adds no Worker bindings, user/workspace identity, or network calls. Semantic enrichment uses the SDK runtime TypeScript parser only when requested. The interoperable content hash format is specified in [MERKLE_V1](../protocol/MERKLE_V1.md), and the independent semantic identity is specified in [FILEMETA_V1](../protocol/FILEMETA_V1.md).

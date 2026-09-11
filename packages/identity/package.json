@@ -4,6 +4,11 @@
   "private": true,
   "type": "module",
   "description": "Identity module for @inneranimalmedia/agentsam-sdk (workspace — publish via root SDK)",
+  "agentsam": {
+    "system": "identity",
+    "kind": "library",
+    "tags": ["authentication", "account-scoped"]
+  },
   "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js",

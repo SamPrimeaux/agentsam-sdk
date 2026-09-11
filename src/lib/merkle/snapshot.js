@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto';
 import { directoryHash, linkHash, comparePaths } from './hash.js';
 import { validPath, normalizePolicy, isIgnored } from './policy.js';
 import { buildMerkleTree } from './tree.js';
+import { validateSemanticMetadata } from './filemeta.js';
 
 export function validateSnapshot(value) {
   const fail = (message) => { throw new Error(`Invalid Merkle snapshot: ${message}`); };
@@ -17,6 +18,7 @@ export function validateSnapshot(value) {
   for (const entry of value.entries) {
     if (!entry || !validPath(entry.path, true) || entry.path.split('/').length > 257 || nodes.has(entry.path)) fail('invalid/duplicate path');
     if (!/^sha256:[a-f0-9]{64}$/.test(entry.hash)) fail('invalid hash');
+    if (entry.mode != null && (!Number.isInteger(entry.mode) || entry.mode < 0 || entry.mode > 0o7777)) fail('invalid mode');
     if (entry.path && isIgnored(entry.path, policy)) fail('entry contradicts ignore policy');
     if (entry.type === 'file') {
       if (!Number.isSafeInteger(entry.size) || entry.size < 0) fail('invalid file size');
@@ -43,9 +45,11 @@ export function validateSnapshot(value) {
     }
   }
   if (value.rootHash !== nodes.get('').hash) fail('root hash mismatch');
+  const entries = [...nodes.values()].sort((a, b) => comparePaths(a.path, b.path));
+  const semantic = value.semantic ? validateSemanticMetadata(value.semantic, entries) : null;
   return { format: value.format, version: 1, algorithm: 'sha256', rootPath: value.rootPath,
     createdAt: value.createdAt, policy, rootHash: value.rootHash, stats,
-    entries: [...nodes.values()].sort((a, b) => comparePaths(a.path, b.path)) };
+    entries, ...(semantic ? { semantic } : {}) };
 }
 
 export async function readSnapshot(filename) {

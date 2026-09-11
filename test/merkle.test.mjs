@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { buildMerkleTree, saveSnapshot, readSnapshot, validateSnapshot, diffTrees } from '../src/lib/merkle/index.js';
+import { buildMerkleTree, saveSnapshot, readSnapshot, validateSnapshot, diffTrees, metadataRoot } from '../src/lib/merkle/index.js';
 
 const cli = fileURLToPath(new URL('../src/cli.js', import.meta.url));
 async function fixture(t) {
@@ -60,6 +60,53 @@ test('default ignores, explicit dist inclusion, literal exclusions, and empty-di
   assert.equal(excluded.stats.files, 0);
 });
 
+test('semantic metadata adds package/system/category/mode and AST evidence without changing the content root', async (t) => {
+  const root = await fixture(t);
+  await write(root, 'package.json', JSON.stringify({ name: 'fixture-root', version: '1.0.0' }));
+  await write(root, 'packages/identity/package.json', JSON.stringify({
+    name: '@example/identity',
+    version: '1.0.0',
+    agentsam: { system: 'identity', kind: 'library', tags: ['authentication'] },
+  }));
+  await write(root, 'packages/identity/src/core/accounts.js', "import { helper } from '../shared/helper.js';\nexport function resolveAccount() { return helper; }\n");
+  await write(root, 'packages/identity/src/shared/helper.js', 'export const helper = 1;\n');
+  await fs.chmod(path.join(root, 'packages/identity/src/core/accounts.js'), 0o644);
+
+  const plain = await buildMerkleTree(root);
+  const enriched = await buildMerkleTree(root, { semantic: true });
+  assert.equal(enriched.rootHash, plain.rootHash);
+  assert.equal(enriched.version, 1);
+  assert.match(enriched.semantic.rootHash, /^sha256:[a-f0-9]{64}$/);
+  assert.equal(enriched.semantic.classifier.format, 'agentsam-filemeta');
+  assert.equal(enriched.semantic.classifier.version, 1);
+
+  const accounts = enriched.semantic.entries.find((entry) => entry.path === 'packages/identity/src/core/accounts.js');
+  assert.equal(accounts.mode, 420);
+  assert.equal(accounts.package, '@example/identity');
+  assert.equal(accounts.package_root, 'packages/identity');
+  assert.equal(accounts.package_kind, 'library');
+  assert.equal(accounts.system, 'identity');
+  assert.equal(accounts.category, 'accounts');
+  assert.equal(accounts.layer, 'core');
+  assert.equal(accounts.kind, 'source');
+  assert.equal(accounts.language, 'javascript');
+  assert.equal(accounts.role, 'business-logic');
+  assert.deepEqual(accounts.tags, ['authentication']);
+  assert.deepEqual(accounts.symbols, ['resolveAccount']);
+  assert.deepEqual(accounts.imports, ['../shared/helper.js']);
+  assert.equal(accounts.ast.indexed, true);
+
+  const changedClassifier = { ...enriched.semantic.classifier, version: 2 };
+  assert.notEqual(metadataRoot(enriched.semantic.entries, changedClassifier), enriched.semantic.rootHash);
+
+  await fs.chmod(path.join(root, 'packages/identity/src/core/accounts.js'), 0o755);
+  const permissionOnly = await buildMerkleTree(root, { semantic: true });
+  const permissionRecord = permissionOnly.semantic.entries.find((entry) => entry.path === 'packages/identity/src/core/accounts.js');
+  assert.equal(permissionOnly.rootHash, plain.rootHash);
+  assert.equal(permissionRecord.mode, 493);
+  assert.notEqual(permissionOnly.semantic.rootHash, enriched.semantic.rootHash);
+});
+
 test('symlinks hash their literal target, including cycles, without reading the target', { skip: process.platform === 'win32' }, async (t) => {
   const root = await fixture(t), outside = await fixture(t);
   await write(outside, 'secret.txt', 'not read');
@@ -78,10 +125,13 @@ test('default and custom snapshots exclude themselves and preserve baseline unti
   const root = await fixture(t);
   await write(root, 'file.txt', 'baseline');
   const initial = await buildMerkleTree(root);
-  const { snapshot, output } = await saveSnapshot(root);
+  const { snapshot, output } = await saveSnapshot(root, { semantic: true });
   assert.equal(initial.rootHash, snapshot.rootHash);
+  assert.match(snapshot.semantic.rootHash, /^sha256:[a-f0-9]{64}$/);
   assert.ok(diffTrees(snapshot, await buildMerkleTree(root, { policy: snapshot.policy })).equal);
-  assert.equal((await readSnapshot(output)).rootHash, snapshot.rootHash);
+  const reloaded = await readSnapshot(output);
+  assert.equal(reloaded.rootHash, snapshot.rootHash);
+  assert.equal(reloaded.semantic.rootHash, snapshot.semantic.rootHash);
   await assert.rejects(saveSnapshot(root), /exists/);
   await write(root, 'file.txt', 'edited');
   assert.equal(diffTrees(snapshot, await buildMerkleTree(root, { policy: snapshot.policy })).stats.modified, 1);

@@ -49,10 +49,10 @@ export async function buildMerkleTree(root = '.', options = {}) {
       const target = raw.toString('utf8');
       if (!Buffer.from(target).equals(raw)) throw new Error(`Symlink target is not UTF-8: ${relative}`);
       if (!unchanged(stat, await fs.lstat(absolute, { bigint: true }))) throw new Error(`Symlink changed while scanning: ${relative}`);
-      entry = { path: relative, type: 'symlink', hash: linkHash(target), target };
+      entry = { path: relative, type: 'symlink', hash: linkHash(target), target, mode: Number(stat.mode & 0o7777n) };
       stats.symlinks++;
     } else if (stat.isFile()) {
-      entry = { path: relative, type: 'file', ...await hashFile(absolute, stat, signal) };
+      entry = { path: relative, type: 'file', ...await hashFile(absolute, stat, signal), mode: Number(stat.mode & 0o7777n) };
       stats.files++; stats.bytes += entry.size;
     } else if (stat.isDirectory()) {
       const names = await namesAt(absolute, relative);
@@ -68,7 +68,7 @@ export async function buildMerkleTree(root = '.', options = {}) {
       }
       // Empty directories have no file content identity, including snapshot-only parents.
       if (relative && children.length === 0) return null;
-      entry = { path: relative, type: 'directory', hash: directoryHash(children) };
+      entry = { path: relative, type: 'directory', hash: directoryHash(children), mode: Number(stat.mode & 0o7777n) };
       stats.directories++;
     } else throw new Error(`Unsupported filesystem entry: ${relative} (only files, directories, and symlinks are supported)`);
     entries.push(entry);
@@ -76,7 +76,12 @@ export async function buildMerkleTree(root = '.', options = {}) {
     return entry;
   }
   const rootEntry = await walk('');
-  return { format: 'agentsam-merkle', version: 1, algorithm: 'sha256', rootPath,
+  const tree = { format: 'agentsam-merkle', version: 1, algorithm: 'sha256', rootPath,
     createdAt: new Date().toISOString(), policy, rootHash: rootEntry.hash, stats,
     entries: entries.sort((a, b) => comparePaths(a.path, b.path)) };
+  if (options.semantic) {
+    const { buildSemanticMetadata } = await import('./semantic.js');
+    tree.semantic = await buildSemanticMetadata(rootPath, tree);
+  }
+  return tree;
 }
