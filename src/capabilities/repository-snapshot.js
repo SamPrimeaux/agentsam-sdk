@@ -24,6 +24,17 @@ function providerForHost(host) {
   return value ? 'git' : null;
 }
 
+async function gitIgnoredPaths(root) {
+  const result = await execute('git', ['status', '--porcelain=v1', '--ignored=matching'], {
+    cwd: root,
+    maxBuffer: 16 * 1024 * 1024,
+  });
+  return [...new Set(result.stdout.split('\n')
+    .filter((line) => line.startsWith('!! '))
+    .map((line) => line.slice(3).trim().replace(/\/$/, ''))
+    .filter((value) => value && !value.includes('\\') && !value.split('/').includes('..')))];
+}
+
 async function runRepositoryIntelligence(root, churnDays) {
   const pythonRoot = fileURLToPath(new URL('../../python', import.meta.url));
   const result = await execute(process.platform === 'win32' ? 'python' : 'python3', [
