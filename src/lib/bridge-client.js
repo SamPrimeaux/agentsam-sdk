@@ -1,4 +1,7 @@
-const DEFAULT_BASE_URL = 'https://inneranimalmedia.com';
+import {
+  resolveBridgeKey as resolveContractBridgeKey,
+  resolveIamOrigin,
+} from '../../packages/identity/src/contracts/auth-config.js';
 
 function clean(value) {
   return value == null ? '' : String(value).trim();
