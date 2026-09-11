@@ -44,12 +44,13 @@ For trusted operator/service calls, configure one secret:
 export AGENTSAM_BRIDGE_KEY='...'
 ```
 
-Optional base URL overrides:
+Canonical IAM/platform origin:
 
 ```bash
-export AGENTSAM_BASE_URL='https://agentsam.example.com'
-# AGENTSAM_CORE_URL and IAM_CORE_URL are also supported.
+export IAM_ORIGIN='https://agentsam.example.com'
 ```
+
+`AGENTSAM_BASE_URL`, `AGENTSAM_CORE_URL`, and `IAM_CORE_URL` remain compatibility-only read fallbacks during the migration window.
 
 Programmatic API:
 
