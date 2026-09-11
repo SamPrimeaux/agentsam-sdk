@@ -1,7 +1,8 @@
 # AgentSam SDK
 
-Portable SDK modules and CLI kits for creating local projects, inspecting repositories,
-indexing selected code, integrating identity, and maintaining dependencies.
+A deterministic-first application and agent toolkit: reusable repository, knowledge, integrity,
+security, identity, scaffolding, and delivery capabilities with optional AgentSam/LLM composition.
+CLI/TUI surfaces make those same primitives easy to use without making a model part of the implementation.
 
 **npm:** `@inneranimalmedia/agentsam-sdk` · **Source:** [GitHub](https://github.com/SamPrimeaux/agentsam-sdk)
 
