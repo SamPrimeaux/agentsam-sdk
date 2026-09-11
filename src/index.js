@@ -31,6 +31,14 @@ export {
   SHELL_PHASES,
   listSlashCommands,
 } from './lib/slash-commands.js';
+export {
+  CAPABILITY_MANIFEST_VERSION,
+  getCapability,
+  getCapabilityManifest,
+  listCapabilities,
+  repositorySnapshot,
+} from './capabilities/index.js';
+export { getPreset, listPresets, resolvePreset, getAddon, listAddons } from './presets/index.js';
 
 export {
   createIdentityClient,
