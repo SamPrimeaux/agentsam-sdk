@@ -1,0 +1,68 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "agentsam-sdk",
+  "account_id": "ede6590ac0d2fb7daf155b35653457b2",
+  "main": "../.output/server/index.mjs",
+  "compatibility_date": "2026-09-11",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "observability": {
+    "enabled": true
+  },
+  "routes": [
+    {
+      "pattern": "agentsam.inneranimalmedia.com",
+      "custom_domain": true
+    }
+  ],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "../.output/public"
+  },
+  "vars": {
+    "IAM_ORIGIN": "https://inneranimalmedia.com",
+    "OLLAMA_MODEL": "qwen2.5-coder",
+    "OLLAMA_EMBED_MODEL": "mxbai-embed-large"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "inneranimalmedia-business",
+      "database_id": "cf87b717-d4e2-4cf8-bab0-a81268e32d49"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "WEBSITE_ASSETS",
+      "bucket_name": "agentsam-os-blueprint-content"
+    }
+  ],
+  "ai": {
+    "binding": "AGENTSAM_WAI"
+  },
+  "services": [
+    {
+      "binding": "EXECOS",
+      "service": "execos"
+    }
+  ],
+  "vpc_services": [
+    {
+      "binding": "PTY_SERVICE",
+      "service_id": "019db639-7c70-7071-8ef3-32ec0392a9ff",
+      "remote": true
+    }
+  ]
+
+  // IAM_CLIENT_ID is a public OAuth client id and is added after this service's
+  // dedicated registration is minted. Server-only values are Worker secrets:
+  // IAM_CLIENT_SECRET, AGENTSAM_SDK_KEY, AGENTSAM_BRIDGE_KEY,
+  // XAI_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY.
+  //
+  // Ollama intentionally has no production OLLAMA_BASE_URL. The Worker reaches
+  // the developer's local 127.0.0.1:11434 through EXECOS target=local; PTY_SERVICE
+  // remains the VPC/PTY transport binding.
+  //
+  // Optional Grok gate identity remains a separate auth lane and may receive
+  // GROK_PROJECT_ID / GROK_GATE_ORIGIN from its deployer. It is not XAI inference.
+}
