@@ -18,10 +18,13 @@ function parseCommon(argv = []) {
 export async function runInspect(argv = []) {
   const opts = parseCommon(argv);
   let churnDays = 30;
-  let view = 'full';
+  let view = 'index';
+  let viewExplicit = false;
   let limit = 50;
   let facetLimit = 48;
   let pretty = false;
+  let snapshotFile = '';
+  let saveSnapshot = '';
   const filters = {};
   const addFilter = (field, value) => {
     const clean = String(value || '').trim();
@@ -36,12 +39,14 @@ export async function runInspect(argv = []) {
   for (let i = 0; i < opts.positionals.length; i += 1) {
     const arg = opts.positionals[i];
     if (arg === '--churn-days') churnDays = Number(opts.positionals[++i] || 30);
-    else if (arg === '--view') view = String(opts.positionals[++i] || '').trim().toLowerCase();
+    else if (arg === '--view') { view = String(opts.positionals[++i] || '').trim().toLowerCase(); viewExplicit = true; }
     else if (arg === '--limit') limit = Number(opts.positionals[++i] || 50);
     else if (arg === '--facet-limit') facetLimit = Number(opts.positionals[++i] || 48);
     else if (arg === '--pretty') pretty = true;
-    else if (arg === '--full') view = 'full';
-    else if (arg === '--index') view = 'index';
+    else if (arg === '--full') { view = 'full'; viewExplicit = true; }
+    else if (arg === '--index') { view = 'index'; viewExplicit = true; }
+    else if (arg === '--snapshot-file') snapshotFile = String(opts.positionals[++i] || '').trim();
+    else if (arg === '--save-snapshot') saveSnapshot = String(opts.positionals[++i] || '').trim();
     else if (filterFlags.has(arg)) addFilter(filterFlags.get(arg), opts.positionals[++i]);
     else if (arg === 'repository') continue;
     else throw new Error(`unknown inspect option: ${arg}`);
@@ -49,9 +54,22 @@ export async function runInspect(argv = []) {
   if (!['full', 'index', 'files'].includes(view)) throw new Error(`invalid inspect view: ${view}`);
   if (!Number.isInteger(limit) || limit < 1 || limit > 500) throw new Error('inspect limit must be an integer from 1..500');
   if (!Number.isInteger(facetLimit) || facetLimit < 1 || facetLimit > 200) throw new Error('inspect facet limit must be an integer from 1..200');
-  if (Object.keys(filters).length && view === 'full') view = 'files';
+  if (Object.keys(filters).length && !viewExplicit) view = 'files';
+  else if (Object.keys(filters).length && view === 'full') view = 'files';
+  if (argv.includes('--snapshot-file') && !snapshotFile) throw new Error('inspect_snapshot_file_value_required');
+  if (argv.includes('--save-snapshot') && !saveSnapshot) throw new Error('inspect_save_snapshot_value_required');
 
-  const result = await repositorySnapshot({ cwd: opts.cwd, churnDays });
+  const result = snapshotFile
+    ? JSON.parse(fs.readFileSync(path.resolve(opts.cwd, snapshotFile), 'utf8'))
+    : await repositorySnapshot({ cwd: opts.cwd, churnDays });
+  if (!result || result.capability !== 'repository.snapshot' || !result.snapshot_id || !result.tree) {
+    throw new Error('inspect_snapshot_file_invalid');
+  }
+  if (saveSnapshot) {
+    const filename = path.resolve(opts.cwd, saveSnapshot);
+    fs.mkdirSync(path.dirname(filename), { recursive: true });
+    fs.writeFileSync(filename, `${JSON.stringify(result)}\n`, 'utf8');
+  }
   const output = view === 'full' ? result : projectRepositorySnapshot(result, { view, filters, limit, facetLimit });
   if (opts.json) process.stdout.write(`${JSON.stringify(output, null, pretty ? 2 : 0)}\n`);
   else if (view !== 'full') {

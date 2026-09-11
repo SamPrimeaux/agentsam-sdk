@@ -17,3 +17,10 @@ export {
   merkleSnapshotStorageKey,
   normalizeMerkleStoragePrefix,
 } from './persistence.js';
+export {
+  buildMerklePersistencePlan,
+  merklePersistenceUpsertSql,
+  persistMerkleSnapshotCloudflare,
+  readWranglerPersistenceBindings,
+  resolveWranglerMerklePersistence,
+} from './cloudflare-persistence.js';

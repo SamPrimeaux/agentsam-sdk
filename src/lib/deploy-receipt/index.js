@@ -146,7 +146,7 @@ export async function captureDeployReceipt({
     }
   }
 
-  const tree = await buildMerkleTree(rootPath, { policy });
+  const tree = await buildMerkleTree(rootPath, { policy, semantic: true });
   await atomicJson(state.pendingSnapshot, tree);
 
   let diff = null;
@@ -163,7 +163,7 @@ export async function captureDeployReceipt({
   const receipt = {
     format: 'agentsam-deploy-merkle',
     version: 1,
-    engine: 'agentsam-merkle-v1',
+    engine: tree.semantic ? 'agentsam-merkle-v1+agentsam-filemeta-v1' : 'agentsam-merkle-v1',
     status: 'captured',
     project: project || path.basename(rootPath),
     repository: gitInfo.repository || null,
@@ -171,6 +171,9 @@ export async function captureDeployReceipt({
     git_branch: gitInfo.git_branch || null,
     captured_at: new Date().toISOString(),
     root_hash: tree.rootHash,
+    policy_hash: tree.policyHash || null,
+    metadata_root: tree.semantic?.rootHash || null,
+    classifier: tree.semantic?.classifier || null,
     previous_root_hash: baseline?.rootHash || null,
     has_baseline: Boolean(baseline),
     baseline_source: resolvedBaselineSource,
