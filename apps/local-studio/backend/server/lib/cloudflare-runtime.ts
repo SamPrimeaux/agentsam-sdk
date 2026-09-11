@@ -109,6 +109,21 @@ export type ExecOsResult = {
   error?: string;
 };
 
+async function sha256(value: string): Promise<Uint8Array> {
+  return new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)));
+}
+
+export async function hasSdkBearer(request: Request, env: AgentSamCloudflareEnv): Promise<boolean> {
+  const expected = String(env.AGENTSAM_SDK_KEY || "").trim();
+  const presented = String(request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "").trim();
+  if (!expected || !presented) return false;
+  const [a, b] = await Promise.all([sha256(expected), sha256(presented)]);
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
+
 export async function executeLocalViaExecOs(
   env: AgentSamCloudflareEnv,
   command: string,
