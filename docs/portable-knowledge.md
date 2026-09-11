@@ -36,7 +36,7 @@ Limits count unique uncached inputs and content characters, not total billable a
 ## Incremental and history guarantees
 
 - Structural parse cache keys include source content, language, parser version and chunking policy.
-- Vector keys include workspace/repository namespace, model, revision, dimensions, parameters, input-format version and actual chunk content. Paths/commit IDs are retrieval metadata, so a pure move reuses vectors.
+- Vector keys include the repository namespace, model, revision, dimensions, parameters, input-format version and actual chunk content. Legacy configs with `workspace_id` preserve their prior workspace-qualified namespace so existing cached vectors remain readable. Paths/commit IDs are retrieval metadata, so a pure move reuses vectors.
 - Scope expansion rechecks the complete selected inventory. Named scopes have separate active generations. Different customers/repositories do not share caches.
 - An unchanged run performs zero embedding requests. An edit embeds only changed chunks; changing the profile creates a separate embedding space.
 - A run stages completed cache work, rechecks source hashes, then atomically publishes a generation with compare-and-swap protection. Provider failure, invalid dimensions, concurrent publication or mid-run source edits leave the previous active generation intact.
