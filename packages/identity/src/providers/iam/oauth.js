@@ -19,7 +19,7 @@ export function getIamAuthUrl({
   codeChallenge,
   scope,
 } = {}) {
-  const base = normalizeIssuer(issuer);
+  const base = normalizeOrigin(origin, issuer);
   const url = new URL(`${base}${IAM_IDENTITY_AUTHORIZE_PATH}`);
   url.searchParams.set('client_id', clientId || '');
   url.searchParams.set('redirect_uri', redirectUri || '');
@@ -46,7 +46,7 @@ export async function exchangeIamCode({
   redirectUri,
 }) {
   try {
-    const base = normalizeIssuer(issuer);
+    const base = normalizeOrigin(origin, issuer);
     const body = new URLSearchParams();
     body.set('grant_type', 'authorization_code');
     body.set('code', code || '');
