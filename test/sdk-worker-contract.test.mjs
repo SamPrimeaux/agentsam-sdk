@@ -57,11 +57,11 @@ test('model providers include Grok independently from Grok gate authentication',
   assert.match(providers, /binding: "EXECOS"/);
 });
 
-test('Ollama uses local loopback behind ExecOS with an explicit cwd resolved from PTY health', () => {
+test('Ollama uses local loopback behind ExecOS with a portable explicit cwd', () => {
   assert.match(runtime, /baseUrl: "http:\/\/127\.0\.0\.1:11434"/);
   assert.match(runtime, /target: "local"/);
   assert.match(runtime, /x-bridge-key/);
-  assert.match(runtime, /data\.default_cwd \|\| data\.workspaces_root/);
+  assert.match(runtime, /return explicit \|\| "\/"/);
   assert.match(runtime, /JSON\.stringify\(\{ command, target: "local", cwd \}\)/);
   assert.match(runtime, /public_base_url: false/);
   assert.doesNotMatch(runtime, /ollama\.inneranimalmedia\.com/);
