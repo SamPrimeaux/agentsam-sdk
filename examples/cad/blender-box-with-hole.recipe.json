@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "units": {
+    "system": "METRIC",
+    "scale_length": 0.001,
+    "length_unit": "MILLIMETERS"
+  },
+  "operations": [
+    {
+      "op": "clear_scene"
+    },
+    {
+      "op": "add",
+      "primitive": "cube",
+      "name": "Plate",
+      "size": 2,
+      "scale": [40, 25, 2]
+    },
+    {
+      "op": "bevel",
+      "object": "Plate",
+      "width": 0.08,
+      "segments": 3,
+      "apply": true
+    },
+    {
+      "op": "add",
+      "primitive": "cylinder",
+      "name": "CenterHole",
+      "vertices": 64,
+      "radius": 6,
+      "depth": 10
+    },
+    {
+      "op": "boolean",
+      "object": "Plate",
+      "with": "CenterHole",
+      "operation": "DIFFERENCE",
+      "apply": true,
+      "delete_operand": true
+    },
+    {
+      "op": "material",
+      "name": "AgentSam Blue",
+      "base_color": [0.08, 0.2, 0.8, 1.0],
+      "metallic": 0.15,
+      "roughness": 0.35
+    },
+    {
+      "op": "assign_material",
+      "object": "Plate",
+      "material": "AgentSam Blue"
+    },
+    {
+      "op": "add_camera",
+      "name": "Preview Camera",
+      "location": [110, -110, 85],
+      "rotation": [1.0472, 0, 0.7854],
+      "lens": 55,
+      "active": true
+    },
+    {
+      "op": "add_light",
+      "name": "Key Light",
+      "type": "AREA",
+      "location": [60, -60, 100],
+      "energy": 1200,
+      "size": 60
+    }
+  ]
+}
