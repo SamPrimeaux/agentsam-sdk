@@ -346,6 +346,13 @@ if (command === '--version' || command === '-v') {
   }
 } else if (command === 'start-local') {
   await runStartLocal({});
+} else if (command === 'ollama') {
+  try {
+    await runOllama(rest);
+  } catch (e) {
+    console.error(`\n  ✗ ${e?.message || e}\n`);
+    process.exitCode = 1;
+  }
 } else if (command === 'tunnel') {
   try {
     await runTunnel(rest);
