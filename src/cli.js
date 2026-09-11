@@ -10,6 +10,7 @@ import { initializeLocalSqlite } from './local/sqlite.js';
 import { printContextSummary } from './lib/detect-context.js';
 import { promptOptionalByokKeys } from './lib/prompt-byok.js';
 import { runStartLocal } from './commands/start-local.js';
+import { runOllama } from './commands/ollama.js';
 import { runTunnel } from './commands/tunnel.js';
 import { runDeploy } from './commands/deploy.js';
 import { runIdentityPreview } from './commands/identity-preview.js';
