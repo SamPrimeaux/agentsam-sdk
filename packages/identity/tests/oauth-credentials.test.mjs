@@ -46,12 +46,23 @@ describe('oauth credentials', () => {
     assert.equal(resolveOAuthCredentialLane(env, 'iam')?.lane, 'iam_platform');
   });
 
-  it('honors IAM_OAUTH_ISSUER override', () => {
+  it('prefers IAM_ORIGIN and exposes origin as the canonical authority', () => {
+    const creds = resolveIamPlatformCredentials({
+      IAM_CLIENT_ID: 'c',
+      IAM_CLIENT_SECRET: 's',
+      IAM_ORIGIN: 'https://iam.example.test/',
+      IAM_OAUTH_ISSUER: 'https://legacy.example.test/',
+    });
+    assert.equal(creds?.origin, 'https://iam.example.test');
+    assert.equal(creds?.issuer, 'https://iam.example.test');
+  });
+
+  it('accepts IAM_OAUTH_ISSUER only as a migration fallback', () => {
     const creds = resolveIamPlatformCredentials({
       IAM_CLIENT_ID: 'c',
       IAM_CLIENT_SECRET: 's',
       IAM_OAUTH_ISSUER: 'https://staging.inneranimalmedia.com/',
     });
-    assert.equal(creds?.issuer, 'https://staging.inneranimalmedia.com');
+    assert.equal(creds?.origin, 'https://staging.inneranimalmedia.com');
   });
 });
