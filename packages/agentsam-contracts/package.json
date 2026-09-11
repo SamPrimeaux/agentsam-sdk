@@ -1,0 +1,25 @@
+{
+  "name": "@inneranimalmedia/agentsam-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Framework-neutral AgentSam workbench contracts for messages, runs, tools, artifacts, context and adapters.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./agent": "./src/agent.ts",
+    "./events": "./src/events.ts",
+    "./tools": "./src/tools.ts",
+    "./artifacts": "./src/artifacts.ts",
+    "./context": "./src/context.ts",
+    "./adapter": "./src/adapter.ts",
+    "./models": "./src/models.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --test test/*.test.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

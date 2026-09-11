@@ -65,12 +65,25 @@ packages:
     separately_published: false
     distribution: bundled through root SDK exports
     public_import_prefix: "@inneranimalmedia/agentsam-sdk/identity"
+  agentsam_contracts:
+    name: "@inneranimalmedia/agentsam-contracts"
+    version: "0.1.0"
+    path: packages/agentsam-contracts
+    private: true
+    separately_published: false
+  agentsam_workbench:
+    name: "@inneranimalmedia/agentsam-workbench"
+    version: "0.1.0"
+    path: packages/agentsam-workbench
+    private: true
+    separately_published: false
   shell_kit:
     name: "@inneranimalmedia/agentsam-shell-kit"
     version: "0.1.0"
     path: packages/agentsam-shell-kit
     private: true
     separately_published: false
+    compatibility_facade_for: "@inneranimalmedia/agentsam-workbench/shell"
   python_tools:
     name: agentsam-sdk
     version: "0.1.0"

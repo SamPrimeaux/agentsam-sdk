@@ -1,24 +1,5 @@
-# `@inneranimalmedia/agentsam-shell-kit`
+# @inneranimalmedia/agentsam-shell-kit
 
-> The work surface, unified.
+Compatibility facade only. New product code must import `@inneranimalmedia/agentsam-workbench` (or its `/shell` subpath).
 
-Private **npm workspace** package under `@inneranimalmedia/agentsam-sdk`.
-Not published separately yet (`private: true`).
-
-WIP name `@agentsam/shell-kit` was folded here under the Inner Animal Media org scope.
-
-## Status
-
-| Area | State |
-|------|--------|
-| `shell/` (Breadcrumb, surfaceRegistry) | Present |
-| `tickets/` / `verify/` / `tokens/` | Planned — do not invent stubs at import time |
-
-## Usage (local workspace)
-
-```tsx
-import { Breadcrumb } from '@inneranimalmedia/agentsam-shell-kit';
-```
-
-When this surface is ready for consumers, drop `private`, bump, and publish
-from `packages/agentsam-shell-kit` (or re-export from the root SDK).
+The product-neutral shell primitives formerly started here now live in `packages/agentsam-workbench/` so Local Studio, CAD Studio, and CMS Studio cannot drift into separate AgentSam shell stacks.

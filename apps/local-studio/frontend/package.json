@@ -66,7 +66,9 @@
     "vaul": "^1.1.2",
     "zod": "^4.4.0",
     "zustand": "^5.0.0",
-    "@inneranimalmedia/agentsam-local-shared": "0.0.0"
+    "@inneranimalmedia/agentsam-local-shared": "0.0.0",
+    "@inneranimalmedia/agentsam-contracts": "file:../../../packages/agentsam-contracts",
+    "@inneranimalmedia/agentsam-workbench": "file:../../../packages/agentsam-workbench"
   },
   "devDependencies": {
     "@types/node": "^22.16.5",

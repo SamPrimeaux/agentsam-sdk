@@ -1,7 +1,7 @@
-import { useRef, type KeyboardEvent } from "react";
+import { useRef } from "react";
 import { ArrowUp, Paperclip, Square } from "lucide-react";
+import { AgentComposer } from "@inneranimalmedia/agentsam-workbench/agent";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/input";
 import { ModelSelect } from "@/components/workbench/model-select";
 import { cn } from "@/lib/utils";
 import { useWorkStore } from "@/lib/work/store";
@@ -21,21 +21,6 @@ export function Composer({
   const stop = useWorkStore((s) => s.stop);
   const streaming = useWorkStore((s) => s.streamingIds.includes(targetId));
   const fileRef = useRef<HTMLInputElement>(null);
-  const areaRef = useRef<HTMLTextAreaElement>(null);
-
-  function resize() {
-    const el = areaRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 220)}px`;
-  }
-
-  function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      if (!streaming) void send(targetId, targetKind);
-    }
-  }
 
   async function onFiles(files: FileList | null) {
     if (!files?.length) return;
@@ -47,85 +32,91 @@ export function Composer({
     }
     if (!chunks.length) return;
     setDraft(targetId, [value, ...chunks].filter(Boolean).join("\n\n"));
-    requestAnimationFrame(resize);
   }
+
+  const attachControl = (
+    <>
+      <input
+        ref={fileRef}
+        type="file"
+        className="hidden"
+        suppressHydrationWarning
+        multiple
+        onChange={(event) => {
+          void onFiles(event.target.files);
+          event.target.value = "";
+        }}
+      />
+      <Button
+        type="button"
+        size="icon-sm"
+        variant="ghost"
+        aria-label="Attach a file"
+        onClick={() => fileRef.current?.click()}
+      >
+        <Paperclip className="size-4" />
+      </Button>
+      <ModelSelect compact />
+    </>
+  );
+
+  const sendControl = (
+    <Button
+      type="button"
+      size="icon-sm"
+      aria-label="Send"
+      className="rounded-full"
+      disabled={!value.trim()}
+      onClick={() => void send(targetId, targetKind)}
+    >
+      <ArrowUp className="size-4" />
+    </Button>
+  );
+
+  const cancelControl = (
+    <Button
+      type="button"
+      size="icon-sm"
+      variant="secondary"
+      aria-label="Stop"
+      className="rounded-full"
+      onClick={() => stop(targetId)}
+    >
+      <Square className="size-3 fill-current" />
+    </Button>
+  );
 
   return (
     <div className="px-3 pb-[max(1rem,env(safe-area-inset-bottom))] md:px-4 md:pb-4">
-      <div
-        className={cn(
+      <AgentComposer
+        value={value}
+        onChange={(next) => setDraft(targetId, next)}
+        onSend={() => send(targetId, targetKind)}
+        onCancel={() => stop(targetId)}
+        streaming={streaming}
+        placeholder={placeholder}
+        toolbarStart={attachControl}
+        sendControl={sendControl}
+        cancelControl={cancelControl}
+        containerClassName={cn(
           "mx-auto flex w-full max-w-3xl flex-col rounded-2xl bg-card p-2 pl-3 shadow-hairline",
           "focus-within:shadow-[0_0_0_1px_var(--color-ring)]",
         )}
-      >
-        <Textarea
-          ref={areaRef}
-          value={value}
-          rows={1}
-          placeholder={placeholder}
-          onChange={(e) => {
-            setDraft(targetId, e.target.value);
-            resize();
-          }}
-          onKeyDown={onKeyDown}
-          onInput={resize}
-          onPaste={(e) => {
-            if (e.clipboardData.files.length) {
-              e.preventDefault();
-              void onFiles(e.clipboardData.files);
+        inputClassName={cn(
+          "flex min-h-[44px] max-h-52 w-full resize-none rounded-lg bg-transparent px-1 py-2.5 text-sm text-foreground placeholder:text-muted-foreground",
+          "focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40",
+        )}
+        toolbarClassName="flex items-center gap-1 pt-1 max-md:pr-14"
+        textareaProps={{
+          suppressHydrationWarning: true,
+          onPaste: (event) => {
+            if (event.clipboardData.files.length) {
+              event.preventDefault();
+              void onFiles(event.clipboardData.files);
             }
-          }}
-          className="max-h-52 min-h-[44px] py-2.5"
-          aria-label={placeholder}
-        />
-        <div className="flex items-center gap-1 pt-1 max-md:pr-14">
-          <input
-            ref={fileRef}
-            type="file"
-            className="hidden"
-            suppressHydrationWarning
-            multiple
-            onChange={(e) => {
-              void onFiles(e.target.files);
-              e.target.value = "";
-            }}
-          />
-          <Button
-            type="button"
-            size="icon-sm"
-            variant="ghost"
-            aria-label="Attach a file"
-            onClick={() => fileRef.current?.click()}
-          >
-            <Paperclip className="size-4" />
-          </Button>
-          <ModelSelect compact />
-          <span className="ml-auto" />
-          {streaming ? (
-            <Button
-              type="button"
-              size="icon-sm"
-              variant="secondary"
-              aria-label="Stop"
-              className="rounded-full"
-              onClick={() => stop(targetId)}
-            >
-              <Square className="size-3 fill-current" />
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              size="icon-sm"
-              aria-label="Send"
-              className="rounded-full"
-              disabled={!value.trim()}
-              onClick={() => void send(targetId, targetKind)}
-            >
-              <ArrowUp className="size-4" />
-            </Button>
-          )}
-        </div>
-      </div>
+          },
+        }}
+      />
     </div>
   );
 }

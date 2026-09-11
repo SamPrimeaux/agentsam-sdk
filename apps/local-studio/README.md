@@ -47,9 +47,9 @@ The current build writes `.output/` as an intermediate donor-compatible build. T
 
 - `frontend/` is the only active UI source authority. The donor's old duplicate root `src/` is preserved under `reference/donor-root-src/` only.
 - `backend/` owns server middleware, migrations, Worker adapters and deployment-specific code.
-- `shared/agentsam/` owns contracts that can be consumed across the frontend/backend boundary. Do not make it a dumping ground for UI components.
+- `shared/agentsam/` owns Local Studio-only project/trail/shell state. Product-neutral agent contracts live in `packages/agentsam-contracts/`, and reusable UI lives in `packages/agentsam-workbench/`.
 - Keep exactly one `package-lock.json`, at this directory root. Do not create nested lockfiles.
-- Do not add these workspaces to the SDK root `workspaces` list.
+- Do not add these app workspaces to the SDK root `workspaces` list. Shared `packages/agentsam-*` packages are separate SDK-root workspaces and are consumed through package imports.
 - Do not make `apps/local-studio` depend on the published `@inneranimalmedia/agentsam-sdk`; the SDK is the parent product and will package the built Studio artifact.
 - Existing route names are temporary donor behavior. Preserve capabilities and UX while route/product boundaries are redesigned.
 

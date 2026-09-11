@@ -12,5 +12,8 @@
   },
   "devDependencies": {
     "typescript": "^5.7.0"
+  },
+  "dependencies": {
+    "@inneranimalmedia/agentsam-contracts": "file:../../../../packages/agentsam-contracts"
   }
 }

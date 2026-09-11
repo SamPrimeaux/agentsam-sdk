@@ -81,7 +81,9 @@ There is no Worker requirement in this contract.
 |---|---|---|
 | ANSI | `examples/agentsam-tui-ansi.mjs` | npm-native default terminal renderer |
 | Rich | `python/agentsam_sdk/tui/` | optional richer cards, progress, events, logs |
-| shell-kit | `packages/agentsam-shell-kit/` | reusable React/browser work-surface components |
+| workbench | `packages/agentsam-workbench/` | reusable React/browser AgentSam workbench components |
+| contracts | `packages/agentsam-contracts/` | framework-neutral AgentSam message/run/tool/context contracts |
+| shell-kit | `packages/agentsam-shell-kit/` | compatibility facade; new code uses workbench |
 | Gorilla | `templates/gorilla-shell/` | visual/theme experiment only |
 
 Gorilla is intentionally not scaffolded by default.

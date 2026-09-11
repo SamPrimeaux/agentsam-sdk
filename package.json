@@ -73,7 +73,9 @@
   ],
   "workspaces": [
     "packages/agentsam-shell-kit",
-    "packages/identity"
+    "packages/identity",
+    "packages/agentsam-contracts",
+    "packages/agentsam-workbench"
   ],
   "scripts": {
     "test": "node test/smoke.mjs && node --test test/*.test.mjs && npm --prefix packages/identity test",

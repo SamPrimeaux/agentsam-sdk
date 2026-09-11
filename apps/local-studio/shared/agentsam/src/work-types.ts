@@ -1,11 +1,8 @@
-export type Role = "user" | "assistant" | "system";
+import type { AgentMessage, AgentRole } from "@inneranimalmedia/agentsam-contracts";
 
-export type ChatMessage = {
-  id: string;
-  role: Role;
-  content: string;
-  createdAt: number;
-};
+export type Role = Exclude<AgentRole, "tool">;
+
+export type ChatMessage = Omit<AgentMessage, "role"> & { role: Role };
 
 export type ArtifactKind = "code" | "preview" | "deploy" | "log" | "bundle";
 

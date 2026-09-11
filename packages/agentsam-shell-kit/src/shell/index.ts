@@ -1,3 +1,2 @@
-export { Breadcrumb } from './Breadcrumb.js';
-export type { BreadcrumbProps, BreadcrumbSegment } from './Breadcrumb.js';
-export * from './surfaceRegistry.js';
+/** @deprecated New product code should import @inneranimalmedia/agentsam-workbench/shell. */
+export * from '@inneranimalmedia/agentsam-workbench/shell';

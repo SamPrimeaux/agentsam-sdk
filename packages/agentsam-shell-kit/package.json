@@ -2,7 +2,7 @@
   "name": "@inneranimalmedia/agentsam-shell-kit",
   "version": "0.1.0",
   "private": true,
-  "description": "Agent Sam work-surface UI kit (shell, tickets, verify) — workspace package under @inneranimalmedia/agentsam-sdk.",
+  "description": "Compatibility facade for the AgentSam workbench shell. New code uses @inneranimalmedia/agentsam-workbench.",
   "type": "module",
   "main": "./src/index.ts",
   "exports": {
@@ -37,5 +37,8 @@
     "type": "git",
     "url": "git+ssh://git@github.com/SamPrimeaux/agentsam-sdk.git",
     "directory": "packages/agentsam-shell-kit"
+  },
+  "dependencies": {
+    "@inneranimalmedia/agentsam-workbench": "0.1.0"
   }
 }

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { AgentThread } from "@inneranimalmedia/agentsam-workbench/agent";
 import { MessageMarkdown } from "@/components/workbench/markdown";
 import { Composer } from "@/components/workbench/composer";
 import { StudioMark } from "@/components/mark";
@@ -67,36 +68,22 @@ export function MessageList({
   trailId?: string;
   streaming: boolean;
 }) {
-  const scroller = useRef<HTMLDivElement>(null);
-  const stick = useRef(true);
-
-  useEffect(() => {
-    const el = scroller.current;
-    if (!el || !stick.current) return;
-    el.scrollTop = el.scrollHeight;
-  }, [messages, streaming]);
-
   return (
-    <div
-      ref={scroller}
-      className="scrollbar-thin flex-1 overflow-y-auto px-4 py-6"
-      onScroll={(e) => {
-        const el = e.currentTarget;
-        stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-      }}
-    >
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-        {messages.map((message, index) => (
-          <MessageBubble
-            key={message.id}
-            message={message}
-            trailId={trailId}
-            streaming={streaming && index === messages.length - 1 && message.role === "assistant"}
-            startedAt={streaming ? message.createdAt : undefined}
-          />
-        ))}
-      </div>
-    </div>
+    <AgentThread
+      messages={messages}
+      streaming={streaming}
+      scrollerClassName="scrollbar-thin flex-1 overflow-y-auto px-4 py-6"
+      listClassName="mx-auto flex w-full max-w-3xl flex-col gap-6"
+      renderMessage={(message, index) => (
+        <MessageBubble
+          key={message.id}
+          message={message as ChatMessage}
+          trailId={trailId}
+          streaming={streaming && index === messages.length - 1 && message.role === "assistant"}
+          startedAt={streaming ? message.createdAt : undefined}
+        />
+      )}
+    />
   );
 }
 

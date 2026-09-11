@@ -1,4 +1,4 @@
-import type { ChatMessage } from "@inneranimalmedia/agentsam-local-shared";
+import type { AgentMessage as ChatMessage } from "@inneranimalmedia/agentsam-contracts";
 
 export async function streamChat(opts: {
   messages: Pick<ChatMessage, "role" | "content">[];
