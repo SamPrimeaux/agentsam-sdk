@@ -45,6 +45,23 @@ const snapshot = await repositorySnapshot({ cwd: process.cwd() });
 
 The timestamp is not included in the content hash, so unchanged evidence produces the same `content_hash` and `snapshot_id`.
 
+## Optional AgentSam/LLM composition
+
+`repository.audit` is intentionally a different kind of manifest entry: an `agent_primitive`, not a deterministic evidence collector. It accepts a certified `repository.snapshot`, builds a bounded read-only evidence packet, and requires the caller to inject a `reasoner(packet)` function. The SDK does not choose a provider or model.
+
+```js
+import { createCapabilityAdapter, runRepositoryAudit } from '@inneranimalmedia/agentsam-sdk/agent';
+
+const audit = await runRepositoryAudit({
+  snapshot,
+  reasoner: async packet => myModelAnalyze(packet),
+});
+```
+
+The audit validator rejects mutation-oriented output keys such as jobs, executions, commits, deployments, mutations, and patches. A host Workflow may later turn validated findings/routes into plans or proposed jobs; that durable process remains outside the SDK.
+
+`createCapabilityAdapter()` converts the same canonical manifest into a small executable tool surface. Built-in `repository.snapshot` is available without a model; `repository.audit` becomes available only when a reasoner is supplied; other capability handlers can be injected explicitly by a host. This is the intended search-and-execute boundary rather than exposing every SDK command to every agent turn.
+
 ## Product UX and power-user UX
 
 Product entry points are intentionally small:
