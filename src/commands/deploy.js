@@ -78,7 +78,7 @@ function ask(question) {
 async function runCloudflareDeploy(cwd, config, accountId) {
   console.log('\n  Cloudflare deploy — browser sign-in + resource provisioning…\n');
 
-  let token = process.env.AGENTSAM_SDK_TOKEN || '';
+  let token = resolveSdkKey(process.env);
   if (!token) {
     const session = await authenticateViaBrowser();
     token = session.access_token;
