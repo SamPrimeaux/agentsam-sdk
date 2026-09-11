@@ -37,7 +37,8 @@ export function validateConfig(input) {
   allowed(c.embedding, ['provider', 'model', 'revision', 'dimensions', 'parameters'], 'embedding');
   allowed(c.storage, ['driver', 'connection_env'], 'storage');
   if (c.version !== 1) throw new Error('Unsupported knowledge configuration version.');
-  for (const key of ['repository_id', 'workspace_id']) if (typeof c[key] !== 'string' || !c[key].trim()) throw new Error(`${key} is required.`);
+  if (typeof c.repository_id !== 'string' || !c.repository_id.trim()) throw new Error('repository_id is required.');
+  if (c.workspace_id != null && (typeof c.workspace_id !== 'string' || !c.workspace_id.trim())) throw new Error('workspace_id must be a non-empty string when present.');
   if (typeof c.scope?.name !== 'string' || !c.scope.name.trim() || !Array.isArray(c.scope.include) || !c.scope.include.length) throw new Error('A named scope with at least one include path is required.');
   c.scope.include = [...new Set(c.scope.include.map(relativeSelection))].sort();
   c.scope.exclude = [...new Set((c.scope.exclude || []).map(relativeSelection))].sort();
