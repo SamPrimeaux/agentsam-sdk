@@ -51,7 +51,7 @@ test('Blender status uses argv execution and returns version without shell parsi
   });
   assert.equal(result.available, true);
   assert.equal(result.version, 'Blender 4.5.3 LTS');
-  assert.deepEqual(calls, [{ command: path.resolve(binary), args: ['--version'] }]);
+  assert.deepEqual(calls, [{ command: fs.realpathSync(binary), args: ['--version'] }]);
 });
 
 test('typed Blender recipe rejects arbitrary or unknown operations', () => {
