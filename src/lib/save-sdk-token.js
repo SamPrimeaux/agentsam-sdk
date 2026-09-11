@@ -11,7 +11,7 @@ export function saveSdkTokenHint(cwd, token) {
   fs.mkdirSync(dir, { recursive: true });
   const hintPath = path.join(dir, 'credentials.env.example');
   const content = `# Agent Sam SDK — add to your shell profile (optional)
-export AGENTSAM_SDK_TOKEN=${t}
+export AGENTSAM_SDK_KEY=${t}
 export USER_GCP_PROJECT=YOUR_GCP_PROJECT_ID
 `;
   fs.writeFileSync(hintPath, content, 'utf8');
