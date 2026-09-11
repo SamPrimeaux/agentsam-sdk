@@ -104,11 +104,12 @@ authorizes its caller. Other local tooling uses Node APIs.
 
 ## Host integration and ownership
 
-The root `AgentSam` helper supplies routing/session primitives. Full model orchestration,
-tool execution policy, provider credentials, user authorization, and production storage
-belong to the consuming host application. The npm package alone does not provide a hosted
-autonomous agent platform. The old `scaffoldProject()` export is deprecated; use the local
-CLI scaffold command.
+Deterministic SDK capabilities remain useful without a model. The root `AgentSam` helper supplies an
+optional routing/session wrapper, while model orchestration, tool execution policy, provider credentials,
+actor/account authorization, workflow durability, approvals, jobs, and production application records
+belong to the consuming host application. Git/repository identity never proves actor authority, and the SDK
+does not create a second platform tools database. The old `scaffoldProject()` export is deprecated; use
+`agentsam create` or the local scaffold commands.
 
 This repository owns portable code once. Applications import it and provide adapters;
 they do not mirror SDK trees. [Ownership protocol](protocol/README.md).
