@@ -7,6 +7,8 @@ import { execFileSync } from 'node:child_process';
 import { getCapability, getCapabilityManifest, repositorySnapshot } from '../src/capabilities/index.js';
 import { getPreset, resolvePreset } from '../src/presets/index.js';
 
+const CLI = path.resolve('src/cli.js');
+
 function git(cwd, args) { return execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim(); }
 
 function fixture() {
@@ -52,4 +54,31 @@ test('repository.snapshot composes deterministic evidence and content addressing
   assert.ok(one.intelligence.summary.file_count >= 2);
   assert.equal(one.packages[0].name, 'snapshot-fixture');
   assert.equal(one.knowledge.configured, false);
+});
+
+test('product UX creates a preset project, adds a feature, and inspects before first commit', t => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-product-'));
+  t.after(() => fs.rmSync(parent, { recursive: true, force: true }));
+  execFileSync(process.execPath, [CLI, 'create', 'demo', '--preset', 'cms', '--target', 'local'], {
+    cwd: parent,
+    stdio: 'pipe',
+  });
+  const project = path.join(parent, 'demo');
+  const config = JSON.parse(fs.readFileSync(path.join(project, '.agentsam', 'config.json'), 'utf8'));
+  assert.equal(config.preset, 'cms');
+  assert.equal(config.lane, 'cms');
+  assert.deepEqual(config.features, ['cms', 'knowledge']);
+  assert.ok(config.capabilities.includes('repository.snapshot'));
+
+  execFileSync(process.execPath, [CLI, 'add', 'knowledge', '--cwd', project, '--json'], { stdio: 'pipe' });
+  const features = JSON.parse(fs.readFileSync(path.join(project, '.agentsam', 'features.json'), 'utf8'));
+  assert.equal(features.features.knowledge.selected, true);
+
+  const snapshot = JSON.parse(execFileSync(process.execPath, [CLI, 'inspect', '--cwd', project, '--json'], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  }));
+  assert.equal(snapshot.capability, 'repository.snapshot');
+  assert.equal(snapshot.repository.revision_sha, null);
+  assert.ok(snapshot.tree.stats.files > 0);
 });

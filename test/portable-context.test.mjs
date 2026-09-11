@@ -39,6 +39,16 @@ test('resolveGitContext derives repository identity from Git without user/worksp
   assert.equal('userId' in ctx, false);
 });
 
+test('resolveGitContext supports an initialized repository before its first commit', () => {
+  const root = mkdtempSync(join(tmpdir(), 'agentsam-sdk-unborn-'));
+  execFileSync('git', ['init'], { cwd: root, stdio: 'ignore' });
+  writeFileSync(join(root, 'README.md'), '# unborn\n');
+  const ctx = resolveGitContext({ cwd: root });
+  assert.equal(ctx.root, root);
+  assert.equal(ctx.revisionSha, null);
+  assert.equal(ctx.dirty, true);
+});
+
 test('bridge headers authenticate only the machine principal', () => {
   const headers = buildBridgeHeaders({
     env: {
