@@ -18,6 +18,7 @@ export const SLASH_COMMANDS = [
   { cmd: '/logs', description: 'Show local Agent Sam execution events', lane: 'observability' },
   { cmd: '/tui', description: 'Switch or preview terminal presentation', lane: 'terminal' },
   { cmd: '/deploy', description: 'Add a cloud adapter and deploy intentionally', lane: 'deploy' },
+  { cmd: '/exit', description: 'Exit Agent Sam shell and return to the host terminal' },
 ];
 
 /** Shell UX rollout phases (gorilla-shell → SDK default CLI experience). */
