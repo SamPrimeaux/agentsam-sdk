@@ -47,4 +47,4 @@ agentsam merkle persist .agentsam/merkle.json \
 
 `agentsam merkle persist` resolves `WEBSITE_ASSETS` and `DB` from the selected Wrangler config. It never hard-codes a customer's bucket or database and never invents `owner_user_id`. `--dry-run` emits the resolved R2 key and D1 row without writes; `--r2-only` is available when the host intentionally does not maintain the index table.
 
-The SDK development Workmode Worker currently binds `WEBSITE_ASSETS` to `agentsam-os-blueprint-content`. That physical name is an installation choice, not part of the portable protocol; generated/customer Workers should bind `WEBSITE_ASSETS` to their selected bucket while retaining the `agentsam_fs_merkle_snapshots/` object namespace.
+The canonical `agentsam-sdk` Worker binds `WEBSITE_ASSETS` to `agentsam-os-blueprint-content` for the SDK's own development/deployment snapshots. That physical name is an installation choice, not part of the portable protocol; generated/customer Workers should bind `WEBSITE_ASSETS` to their selected bucket while retaining the `agentsam_fs_merkle_snapshots/` object namespace.
