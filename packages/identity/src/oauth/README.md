@@ -6,7 +6,7 @@
 | Developer Google | `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` | Takes `/api/oauth/google/start` when set |
 | Developer GitHub | `GITHUB_CLIENT_ID` + `GITHUB_CLIENT_SECRET` | Takes `/api/oauth/github/start` when set |
 
-Optional: `IAM_OAUTH_ISSUER` (default `https://inneranimalmedia.com`).
+Optional: `IAM_ORIGIN` (default `https://inneranimalmedia.com`).
 
 ## Secrets law
 
@@ -30,7 +30,7 @@ Register IAM redirect URI: `https://<customer-host>/api/oauth/iam/callback`
 
 ## IAM authorization server endpoints (issuer)
 
-The customer worker redirects users to the **issuer** (`IAM_OAUTH_ISSUER`, default production IAM):
+The customer worker redirects users to the **issuer** (`IAM_ORIGIN`, default production IAM):
 
 | Step | Endpoint |
 |------|----------|
