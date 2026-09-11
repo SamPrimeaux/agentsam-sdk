@@ -8,13 +8,12 @@ function clean(value) {
 }
 
 export function resolveAgentSamBaseUrl(env = process.env, explicit = '') {
-  return clean(
-    explicit || env.AGENTSAM_BASE_URL || env.AGENTSAM_CORE_URL || env.IAM_CORE_URL || DEFAULT_BASE_URL,
-  ).replace(/\/$/, '');
+  const compatibilityBase = env?.AGENTSAM_BASE_URL || env?.AGENTSAM_CORE_URL || env?.IAM_CORE_URL || '';
+  return resolveIamOrigin(env, explicit || env?.IAM_ORIGIN || compatibilityBase);
 }
 
 export function resolveBridgeKey(env = process.env, explicit = '') {
-  return clean(explicit || env.AGENTSAM_BRIDGE_KEY);
+  return resolveContractBridgeKey(env, explicit);
 }
 
 /**
