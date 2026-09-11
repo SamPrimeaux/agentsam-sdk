@@ -24,8 +24,8 @@ async function openStore(root, config, readOnly = false) {
 function provider() { return createGeminiEmbedder({ apiKey: process.env.GEMINI_API_KEY }); }
 
 export async function runRepositoryInit(argv) {
-  const { values: opts, positionals } = flags(argv, { existing: { type: 'boolean' }, yes: { type: 'boolean', short: 'y' }, include: { type: 'string' }, exclude: { type: 'string' }, scope: { type: 'string' }, workspace: { type: 'string' }, target: { type: 'string' }, dimensions: { type: 'string' } });
-  if (opts.help) { console.log('agentsam init [.] [--cwd PATH] [--yes] [--include src,docs] [--exclude src/generated] [--scope NAME] [--target local|production] [--workspace ID] [--dimensions 768]'); return; }
+  const { values: opts, positionals } = flags(argv, { existing: { type: 'boolean' }, yes: { type: 'boolean', short: 'y' }, include: { type: 'string' }, exclude: { type: 'string' }, scope: { type: 'string' }, target: { type: 'string' }, dimensions: { type: 'string' } });
+  if (opts.help) { console.log('agentsam init [.] [--cwd PATH] [--yes] [--include src,docs] [--exclude src/generated] [--scope NAME] [--target local|production] [--dimensions 768]'); return; }
   if (positionals.length > 1 || (positionals[0] && positionals[0] !== '.')) throw new Error('Use init . --cwd PATH to adopt an existing repository, or init --name NAME to scaffold.');
   const root = repositoryRoot(opts.cwd);
   if (fs.existsSync(path.join(root, CONFIG_PATH))) throw new Error(`${CONFIG_PATH} already exists; edit it to change scope/profile. Existing configuration was preserved.`);
