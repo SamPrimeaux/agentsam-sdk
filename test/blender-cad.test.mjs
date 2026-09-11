@@ -35,7 +35,7 @@ test('Blender adapter is packaged at the SDK-owned fixed path', () => {
 
 test('discoverBlender honors explicit binary before environment discovery', t => {
   const { binary } = fixture(t);
-  assert.equal(discoverBlender({ blenderBin: binary, env: { AGENTSAM_BLENDER_BIN: '/wrong' } }), path.resolve(binary));
+  assert.equal(discoverBlender({ blenderBin: binary, env: { AGENTSAM_BLENDER_BIN: '/wrong' } }), fs.realpathSync(binary));
   assert.throws(() => discoverBlender({ blenderBin: path.join(path.dirname(binary), 'missing') }), /not found/);
 });
 
