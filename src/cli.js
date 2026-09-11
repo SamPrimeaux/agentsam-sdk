@@ -18,6 +18,7 @@ import { runContext } from './commands/context.js';
 import { runDb } from './commands/db.js';
 import { runStatus } from './commands/status.js';
 import { runTui } from './commands/tui.js';
+import { runShell } from './commands/shell.js';
 import { runDockerize } from './commands/dockerize.js';
 import { runMini } from './commands/mini.js';
 import { runMerkle } from './commands/merkle.js';
