@@ -351,10 +351,10 @@ def _configure_units(units: Any) -> None:
         settings.scale_length = _number(units["scale_length"], "units.scale_length", minimum=1e-12, maximum=1e12)
     if "length_unit" in units:
         value = str(units["length_unit"]).upper()
-        valid = {item.identifier for item in settings.bl_rna.properties["length_unit"].enum_items}
-        if value not in valid:
-            raise ValueError(f"unsupported length_unit: {value}")
-        settings.length_unit = value
+        try:
+            settings.length_unit = value
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"unsupported length_unit: {value}") from exc
 
 
 def _build(request: dict[str, Any]) -> dict[str, Any]:
