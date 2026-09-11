@@ -231,6 +231,8 @@ dist/
             'db:init': 'agentsam db init',
             'db:status': 'agentsam db status',
             pty: 'agentsam start-local',
+            'ollama:setup': 'agentsam ollama setup',
+            'ollama:status': 'agentsam ollama status',
             tui: 'agentsam tui',
             'tui:rich': 'agentsam tui rich',
             deploy: 'agentsam deploy',
