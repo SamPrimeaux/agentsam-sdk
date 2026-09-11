@@ -44,6 +44,7 @@ function shrinkEvidence(evidence, characterBudget) {
     out.pressure_points = [];
   }
   if (JSON.stringify(out).length > characterBudget) {
+    out.file_paths = [];
     out.packages = [];
     out.languages = [];
     out.manifests = [];
