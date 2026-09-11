@@ -80,7 +80,7 @@ export async function iamPlatformOAuthCallback(request, env, adapter, identity) 
 
   const redirectUri = `${url.origin}${IAM_PLATFORM_CALLBACK_PATH}`;
   const token = await exchangeIamCode({
-    issuer: creds.issuer,
+    origin: creds.origin,
     clientId: creds.clientId,
     clientSecret: creds.clientSecret,
     code,
