@@ -113,6 +113,6 @@ export async function retrieve({ store, config: input, text, semantic = false, e
       metadata: { generation_id: generation.id, symbol: hit.symbol, content_hash: hit.content_hash, freshness: 'working tree not checked' } }); estimatedTokens += tokens;
     if (hits.length === topK) break;
   }
-  return createContextPack({ queryId: randomUUID(), query: { text, workspace_id: config.workspace_id, top_k: topK, token_budget: tokenBudget }, hits,
+  return createContextPack({ queryId: randomUUID(), query: { text, top_k: topK, token_budget: tokenBudget }, hits,
     diagnostics: { generation_id: generation.id, source_hash: generation.source_hash, scope: generation.config.scope, mode: semantic ? 'semantic-exact' : 'lexical', freshness: 'snapshot; working tree not checked' } });
 }
