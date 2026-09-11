@@ -33,7 +33,7 @@ function parseArgs(argv) {
     else if (a === '--platform') opts.platform = argv[++i] || opts.platform;
     else if (a === '--shell') opts.shell = argv[++i] || opts.shell;
     else if (a === '--token' && argv[i + 1]) {
-      process.env.AGENTSAM_SDK_TOKEN = argv[++i];
+      process.env.AGENTSAM_SDK_KEY = argv[++i];
     }
   }
   return opts;
