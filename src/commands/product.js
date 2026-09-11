@@ -30,6 +30,7 @@ export async function runInspect(argv = []) {
     console.log(`  repo       ${result.repository.full_name || result.repository.repository_id || '(local)'}`);
     console.log(`  revision   ${result.repository.revision_sha}`);
     console.log(`  merkle     ${result.tree.merkle_root}`);
+    console.log(`  metadata   ${result.tree.metadata_root}`);
     console.log(`  files      ${result.intelligence.summary?.file_count ?? result.tree.stats?.files ?? 'unknown'}`);
     console.log(`  knowledge  ${result.knowledge?.indexed ? result.knowledge.generation_id : result.knowledge?.configured ? 'configured / not indexed' : 'not configured'}`);
     console.log(`  deploy     ${result.deploy?.status || 'no trusted receipt'}`);

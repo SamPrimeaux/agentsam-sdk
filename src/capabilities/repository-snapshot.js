@@ -5,7 +5,7 @@ import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { resolveGitContext } from '../lib/git-context.js';
-import { buildMerkleTree } from '../lib/merkle/index.js';
+import { buildMerkleTree, policyHash } from '../lib/merkle/index.js';
 import { showLatestDeployReceipt } from '../lib/deploy-receipt/index.js';
 import { CONFIG_PATH, canonical, readConfig, scopeKey } from '../knowledge/config.js';
 import { openSqliteStore } from '../knowledge/stores/sqlite.js';
@@ -123,7 +123,7 @@ export async function repositorySnapshot({ cwd = process.cwd(), churnDays = 30 }
   const ignored = await gitIgnoredPaths(root);
   const [intelligence, merkle, knowledge, deployReceipt] = await Promise.all([
     runRepositoryIntelligence(root, churnDays),
-    buildMerkleTree(root, { exclude: ignored }),
+    buildMerkleTree(root, { exclude: ignored, semantic: true }),
     readKnowledgeState(root),
     showLatestDeployReceipt({ root }),
   ]);
@@ -145,10 +145,20 @@ export async function repositorySnapshot({ cwd = process.cwd(), churnDays = 30 }
     },
     tree: {
       merkle_root: merkle.rootHash,
+      metadata_root: merkle.semantic.rootHash,
+      manifest: {
+        format: merkle.format,
+        version: merkle.version,
+        hash_algorithm: merkle.algorithm,
+        policy_hash: policyHash(merkle.policy),
+      },
+      classifier: merkle.semantic.classifier,
       stats: merkle.stats,
+      semantic_stats: merkle.semantic.stats,
       paths: merkle.entries
         .filter((entry) => entry.type === 'file' || entry.type === 'symlink')
         .map((entry) => entry.path),
+      files: merkle.semantic.entries,
     },
     intelligence: {
       summary: intelligence.summary,

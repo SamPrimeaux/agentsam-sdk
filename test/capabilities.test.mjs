@@ -51,6 +51,18 @@ test('repository.snapshot composes deterministic evidence and content addressing
   assert.equal(one.snapshot_id, two.snapshot_id);
   assert.equal(one.repository.revision_sha, git(root, ['rev-parse', 'HEAD']));
   assert.ok(one.tree.merkle_root);
+  assert.match(one.tree.metadata_root, /^sha256:[a-f0-9]{64}$/);
+  assert.equal(one.tree.manifest.format, 'agentsam-merkle');
+  assert.equal(one.tree.manifest.version, 1);
+  assert.equal(one.tree.manifest.hash_algorithm, 'sha256');
+  assert.match(one.tree.manifest.policy_hash, /^sha256:[a-f0-9]{64}$/);
+  assert.equal(one.tree.classifier.format, 'agentsam-filemeta');
+  assert.equal(one.tree.classifier.version, 1);
+  const source = one.tree.files.find((entry) => entry.path === 'src/index.js');
+  assert.equal(source.mode, 420);
+  assert.equal(source.system, 'snapshot-fixture');
+  assert.equal(source.language, 'javascript');
+  assert.deepEqual(source.symbols, ['value']);
   assert.ok(one.intelligence.summary.file_count >= 2);
   assert.equal(one.packages[0].name, 'snapshot-fixture');
   assert.equal(one.knowledge.configured, false);

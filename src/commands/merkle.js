@@ -17,6 +17,7 @@ export function printMerkleHelp() {
 
   --out <file>                Snapshot destination
   --force                     Replace an existing snapshot file
+  --semantic                  Add agentsam-filemeta classification + AST metadata
   --root <path>               Verify a snapshot against a different directory
   --include <default-rule>    Include an ignored category, e.g. --include dist
   --exclude <path-or-name>    Ignore an additional name or relative subtree
@@ -25,7 +26,7 @@ export function printMerkleHelp() {
 
   Examples:
     agentsam merkle root .
-    agentsam merkle snapshot . --out .agentsam/merkle.json
+    agentsam merkle snapshot . --semantic --out .agentsam/merkle.json
     agentsam merkle verify .agentsam/merkle.json --tui
     agentsam merkle diff ./mac-copy ./vm-copy --tui
     agentsam tui merkle .
@@ -40,13 +41,13 @@ export function printMerkleHelp() {
 function parse(argv) {
   const [command, ...args] = argv;
   if (!['root', 'snapshot', 'verify', 'diff', 'inspect', 'tui'].includes(command)) throw new Error(`Unknown Merkle command: ${command}`);
-  const opts = { command, paths: [], include: [], exclude: [], tui: command === 'tui', json: false, force: false };
+  const opts = { command, paths: [], include: [], exclude: [], tui: command === 'tui', json: false, force: false, semantic: false };
   let positionalOnly = false;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === '--' && !positionalOnly) { positionalOnly = true; continue; }
     if (positionalOnly || !arg.startsWith('-')) opts.paths.push(arg);
-    else if (['--tui', '--json', '--force'].includes(arg)) opts[arg.slice(2)] = true;
+    else if (['--tui', '--json', '--force', '--semantic'].includes(arg)) opts[arg.slice(2)] = true;
     else if (['--out', '--root', '--include', '--exclude'].includes(arg)) {
       const value = args[++i];
       if (!value || value.startsWith('--')) throw new Error(`Missing value for ${arg}`);
@@ -60,6 +61,7 @@ function parse(argv) {
   if ((opts.out || opts.force) && command !== 'snapshot') throw new Error('--out and --force apply only to snapshot.');
   if (opts.root && command !== 'verify') throw new Error('--root applies only to verify.');
   if (command === 'snapshot' && opts.tui) throw new Error('Use inspect --tui after saving a snapshot.');
+  if (opts.semantic && !['root', 'snapshot', 'inspect'].includes(command)) throw new Error('--semantic applies only to root, snapshot, or inspect.');
   if (command === 'verify' && (opts.include.length || opts.exclude.length)) throw new Error('Verification uses the snapshot\'s saved ignore rules.');
   opts.policy = normalizePolicy(opts);
   return opts;
@@ -91,12 +93,12 @@ export async function runMerkle(argv = []) {
       }
       if (opts.command === 'diff') return comparison(opts, progress);
       if (opts.command === 'snapshot') {
-        const { snapshot: tree, output } = await saveSnapshot(target, { ...progress, policy: opts.policy, out: opts.out, force: opts.force });
+        const { snapshot: tree, output } = await saveSnapshot(target, { ...progress, policy: opts.policy, out: opts.out, force: opts.force, semantic: opts.semantic });
         return { title: 'Merkle snapshot', tree, output };
       }
       const isSnapshot = ['inspect', 'tui'].includes(opts.command) && !(await fs.stat(target)).isDirectory();
       if (isSnapshot && (opts.include.length || opts.exclude.length)) throw new Error('Snapshot inspection uses saved ignore rules.');
-      const tree = isSnapshot ? await readSnapshot(target) : await buildMerkleTree(target, { ...progress, policy: opts.policy });
+      const tree = isSnapshot ? await readSnapshot(target) : await buildMerkleTree(target, { ...progress, policy: opts.policy, semantic: opts.semantic });
       return { title: isSnapshot ? 'Saved Merkle tree' : 'Merkle root', tree };
     };
     let result;
@@ -108,9 +110,10 @@ export async function runMerkle(argv = []) {
       try { result = await load({ signal: controller.signal }); }
       finally { process.removeListener('SIGINT', stop); process.removeListener('SIGTERM', stop); }
       if (opts.json) {
-        const { rootPath, rootHash, stats, policy } = result.tree;
+        const { rootPath, rootHash, stats, policy, semantic } = result.tree;
+        const semanticSummary = semantic ? { metadataRoot: semantic.rootHash, classifier: semantic.classifier, semanticStats: semantic.stats } : {};
         const value = result.diff ? { ...result.diff, rootPath, policy } : opts.command === 'snapshot' ? { ...result.tree, output: result.output }
-          : opts.command === 'root' ? { rootPath, rootHash, stats, policy } : result.tree;
+          : opts.command === 'root' ? { rootPath, rootHash, stats, policy, ...semanticSummary } : result.tree;
         process.stdout.write(JSON.stringify(value, null, 2) + '\n');
       } else process.stdout.write(renderSummary(result, { inspect: opts.command === 'inspect', color: process.stdout.isTTY && !Object.hasOwn(process.env, 'NO_COLOR') }));
     }

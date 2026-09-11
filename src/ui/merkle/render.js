@@ -79,6 +79,7 @@ export function renderSummary(result, { inspect = false, color = false } = {}) {
   const { tree, diff } = result;
   const lines = [paint(`Agent Sam · ${safeText(result.title)}`, '1;36', color), `  path:  ${safeText(tree.rootPath)}`,
     `  files: ${tree.stats.files}  links: ${tree.stats.symlinks}  bytes: ${tree.stats.bytes}`, `  root:  ${tree.rootHash}`];
+  if (tree.semantic) lines.push(`  meta:  ${tree.semantic.rootHash}  (${tree.semantic.classifier.format}/v${tree.semantic.classifier.version})`);
   if (result.output) lines.push(`  saved: ${safeText(result.output)}`);
   if (diff) {
     lines.push(`  ${diff.equal ? 'MATCH' : 'CHANGED'}  ` + Object.entries(diff.stats).map(([key, value]) => `${value} ${key}`).join(' · '));

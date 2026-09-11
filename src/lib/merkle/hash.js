@@ -4,6 +4,7 @@ export const comparePaths = (a, b) => Buffer.compare(Buffer.from(a), Buffer.from
 export const digest = (type, value) => 'sha256:' + createHash('sha256')
   .update(`agentsam-merkle:${type}:v1\0`).update(value).digest('hex');
 export const linkHash = (target) => digest('symlink', target);
+export const policyHash = (policy) => digest('policy', JSON.stringify(policy));
 export const directoryHash = (children) => digest('directory', JSON.stringify(
   [...children].sort((a, b) => comparePaths(a.name, b.name)).map(({ name, type, hash }) => [name, type, hash]),
 ));
