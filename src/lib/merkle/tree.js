@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import { constants } from 'node:fs';
 import path from 'node:path';
-import { directoryHash, fileHasher, linkHash, comparePaths } from './hash.js';
+import { directoryHash, fileHasher, linkHash, comparePaths, policyHash } from './hash.js';
 import { normalizePolicy, isIgnored, validPath } from './policy.js';
 
 const unchanged = (a, b) => ['dev', 'ino', 'size', 'mtimeNs', 'ctimeNs'].every((key) => a[key] === b[key]);
@@ -77,7 +77,7 @@ export async function buildMerkleTree(root = '.', options = {}) {
   }
   const rootEntry = await walk('');
   const tree = { format: 'agentsam-merkle', version: 1, algorithm: 'sha256', rootPath,
-    createdAt: new Date().toISOString(), policy, rootHash: rootEntry.hash, stats,
+    createdAt: new Date().toISOString(), policy, policyHash: policyHash(policy), rootHash: rootEntry.hash, stats,
     entries: entries.sort((a, b) => comparePaths(a.path, b.path)) };
   if (options.semantic) {
     const { buildSemanticMetadata } = await import('./semantic.js');

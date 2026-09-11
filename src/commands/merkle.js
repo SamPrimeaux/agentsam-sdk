@@ -110,10 +110,10 @@ export async function runMerkle(argv = []) {
       try { result = await load({ signal: controller.signal }); }
       finally { process.removeListener('SIGINT', stop); process.removeListener('SIGTERM', stop); }
       if (opts.json) {
-        const { rootPath, rootHash, stats, policy, semantic } = result.tree;
+        const { rootPath, rootHash, stats, policy, policyHash, semantic } = result.tree;
         const semanticSummary = semantic ? { metadataRoot: semantic.rootHash, classifier: semantic.classifier, semanticStats: semantic.stats } : {};
         const value = result.diff ? { ...result.diff, rootPath, policy } : opts.command === 'snapshot' ? { ...result.tree, output: result.output }
-          : opts.command === 'root' ? { rootPath, rootHash, stats, policy, ...semanticSummary } : result.tree;
+          : opts.command === 'root' ? { rootPath, rootHash, stats, policy, policyHash, ...semanticSummary } : result.tree;
         process.stdout.write(JSON.stringify(value, null, 2) + '\n');
       } else process.stdout.write(renderSummary(result, { inspect: opts.command === 'inspect', color: process.stdout.isTTY && !Object.hasOwn(process.env, 'NO_COLOR') }));
     }

@@ -27,7 +27,7 @@ The commands work on ordinary folders, including a mini prototype. Git, cloud ac
 
 `--tui` also works with root, inspect, verify, and diff. Up/down or j/k select an entry; Enter/right expands a directory; left collapses it. `c` filters changes, `r` rescans, and q/Esc/Ctrl+C exits. The UI uses real scan counts, honors `NO_COLOR`, adapts to terminal resize, wraps the selected hash on narrow screens, and restores the cursor and terminal mode on exit. `r` does not update a saved baseline. Failed rescans remain visible and exit as an error.
 
-With piped output or `TERM=dumb`, the TUI prints once and exits. `--json` always bypasses interactive mode. Root JSON contains `rootPath`, `rootHash`, `stats`, and `policy`; with `--semantic` it also contains `metadataRoot`, `classifier`, and `semanticStats`; verify/diff JSON contains `equal`, roots, counts, and the changed entries. Inspect/snapshot output contains the full manifest (snapshot adds `output`).
+With piped output or `TERM=dumb`, the TUI prints once and exits. `--json` always bypasses interactive mode. Root JSON contains `rootPath`, `rootHash`, `policyHash`, `stats`, and `policy`; with `--semantic` it also contains `metadataRoot`, `classifier`, and `semanticStats`; verify/diff JSON contains `equal`, roots, counts, and the changed entries. Inspect/snapshot output contains the full manifest (snapshot adds `output`).
 
 Exit codes: **0** success/match, **1** differences, **2** invalid input/scan error, **130** interrupted non-interactive scan. Interactive quit after a completed comparison retains its match/difference exit code.
 
