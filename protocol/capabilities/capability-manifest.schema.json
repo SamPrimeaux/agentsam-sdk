@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/capabilities/manifest.schema.json",
+  "title": "AgentSam capability manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "package", "capabilities"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "package": { "type": "string", "minLength": 1 },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["id", "version", "domain", "runtime", "description", "deterministic", "model_required", "side_effects", "status"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]+$" },
+          "version": { "type": "integer", "minimum": 1 },
+          "domain": { "type": "string", "minLength": 1 },
+          "runtime": { "type": "string", "minLength": 1 },
+          "package": { "type": "string" },
+          "export": { "type": "string" },
+          "cli": { "type": "string" },
+          "description": { "type": "string", "minLength": 1 },
+          "deterministic": { "type": "boolean" },
+          "model_required": { "type": "boolean" },
+          "side_effects": { "type": "string" },
+          "input_schema": { "type": "string" },
+          "output_schema": { "type": "string" },
+          "status": { "enum": ["stable", "experimental", "deprecated"] }
+        }
+      }
+    }
+  }
+}
