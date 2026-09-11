@@ -452,6 +452,7 @@ export function buildLocalScaffoldMeta(body, sdkVersion = pkg.version) {
       'npm run dev',
       'npm run tui',
       'npm run db:status',
+      'Optional free/local models: npm run ollama:setup',
       'Optional: npm run tui:rich -- --install',
       'Optional: npm run pty',
       'When ready for cloud: npm run deploy',
