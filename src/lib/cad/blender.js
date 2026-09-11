@@ -32,6 +32,11 @@ function isFile(value, existsSync = fs.existsSync) {
   catch { return false; }
 }
 
+function canonicalExecutable(value) {
+  try { return fs.realpathSync.native ? fs.realpathSync.native(value) : fs.realpathSync(value); }
+  catch { return value; }
+}
+
 function pathCandidates(pathEnv, platform) {
   const names = platform === 'win32' ? ['blender.exe', 'blender'] : ['blender'];
   return String(pathEnv || '')
