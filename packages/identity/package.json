@@ -26,6 +26,7 @@
     "./contracts/session": "./src/contracts/session.js",
     "./contracts/provider": "./src/contracts/provider.js",
     "./contracts/external-identity": "./src/contracts/external-identity.js",
+    "./contracts/auth-config": "./src/contracts/auth-config.js",
     "./oauth/callback": "./src/oauth/callback.js",
     "./frontend/auth-portal/*": "./src/frontend/auth-portal/*"
   },
