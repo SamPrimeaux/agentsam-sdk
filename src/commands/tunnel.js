@@ -7,6 +7,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { authenticateViaBrowser } from '../lib/auth.js';
 import { postJson } from '../lib/core-client.js';
+import { resolveSdkKey } from '../../packages/identity/src/contracts/auth-config.js';
 
 const DEFAULT_PORT = 3099;
 
