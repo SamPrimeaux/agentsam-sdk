@@ -128,6 +128,21 @@ function parseDeployArgs(argv) {
   return opts;
 }
 
+function parseCreateArgs(argv) {
+  const opts = { projectName: '', preset: 'fullstack', runTarget: 'local', help: false };
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === '--help' || arg === '-h') opts.help = true;
+    else if (arg === '--preset') opts.preset = argv[++i] || 'fullstack';
+    else if (arg === '--run-target' || arg === '--target') opts.runTarget = argv[++i] || 'local';
+    else if (arg === '--yes' || arg === '-y') continue;
+    else if (arg.startsWith('-')) throw new Error(`unknown create option: ${arg}`);
+    else if (!opts.projectName) opts.projectName = arg;
+    else throw new Error(`unexpected create argument: ${arg}`);
+  }
+  return opts;
+}
+
 async function runLocalInit(config) {
   const { projectName, lane, runTarget, prompt } = config;
 
