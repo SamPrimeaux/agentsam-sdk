@@ -1,0 +1,29 @@
+# Example / local override. Live SSOT: wrangler.workmode.toml
+#
+# Vault Worker: agentsam-workmode
+# UI Worker (dashboard): agentsam-grok-workmode → simple.inneranimalmedia.com
+# Account: ede6590ac0d2fb7daf155b35653457b2
+
+name = "agentsam-workmode"
+account_id = "ede6590ac0d2fb7daf155b35653457b2"
+main = "worker/index.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "inneranimalmedia-business"
+database_id = "cf87b717-d4e2-4cf8-bab0-a81268e32d49"
+
+[[routes]]
+pattern = "simple.inneranimalmedia.com/api/vault*"
+zone_name = "inneranimalmedia.com"
+
+[[routes]]
+pattern = "simple.inneranimalmedia.com/health"
+zone_name = "inneranimalmedia.com"
+
+[vars]
+WORKMODE_APP = "agentsam-workmode"
+D1_DATABASE_NAME = "inneranimalmedia-business"
+CLOUDFLARE_ACCOUNT_ID = "ede6590ac0d2fb7daf155b35653457b2"

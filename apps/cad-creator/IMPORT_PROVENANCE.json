@@ -1,0 +1,22 @@
+{
+  "kind": "agentsam-app-zip-import",
+  "app": "cad-creator",
+  "source_zip": "apps/cad-creator/_imports/agentsam-design-studio.zip",
+  "source_sha256": "42849e6002365572b819c11f911619d7bcbbce8460a8098871ae512a3431f87c",
+  "stripped_single_wrapper": null,
+  "imported_file_count": 52,
+  "policy": {
+    "skipped": [
+      ".DS_Store",
+      ".git",
+      ".output",
+      ".wrangler",
+      "__MACOSX",
+      "build",
+      "dist",
+      "node_modules"
+    ],
+    "dotenv": "real .env files excluded; .env.example allowed",
+    "normalization": "source preserved; agents solidify after import"
+  }
+}

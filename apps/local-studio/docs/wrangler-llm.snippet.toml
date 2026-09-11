@@ -1,0 +1,23 @@
+# Add to the UI Worker agentsam-grok-workmode (not the vault worker).
+# Share D1 with agentsam-workmode instead of creating a second database.
+
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "inneranimalmedia-business"
+# database_id = "cf87b717-d4e2-4cf8-bab0-a81268e32d49"
+
+# [[r2_buckets]]
+# binding = "WEBSITE_ASSETS"
+# bucket_name = "YOUR_BUCKET"
+
+# [[kv_namespaces]]
+# binding = "SESSION_CACHE"
+# id = "YOUR_KV_ID"
+
+# [vars]
+# OLLAMA_MODEL = "qwen2.5-coder"
+# OLLAMA_EMBED_MODEL = "mxbai-embed-large"
+
+# Secrets (dashboard or wrangler secret put):
+#   OLLAMA_BASE_URL   https://ollama.YOUR_TUNNEL_HOST
+#   OLLAMA_TOKEN      (or CF Access service token)

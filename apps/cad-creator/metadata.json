@@ -1,0 +1,6 @@
+{
+  "name": "AgentSam Design Studio",
+  "description": "Multimodal AI architectural design studio with real-time collaboration, 2D CAD floor planning, live 3D BIM synchronization, parametric CAD modeling, image-to-BIM sketch parsing, Gemini image generation, and Veo cinematic walkthrough video animation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

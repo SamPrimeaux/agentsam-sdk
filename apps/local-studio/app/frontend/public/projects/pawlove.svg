@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-label="PawLove Rescue">
+  <rect width="1200" height="900" fill="#070708"/>
+  <circle cx="864.0" cy="378.0" r="198.0" fill="none" stroke="#C4B8A8" stroke-width="1.5" opacity="0.45"/>
+  <circle cx="864.0" cy="378.0" r="117.0" fill="none" stroke="#8A7F72" stroke-width="1.2" opacity="0.7"/>
+  <circle cx="864.0" cy="378.0" r="40.5" fill="#F3F1EC" opacity="0.9"/>
+  <text x="72" y="790" fill="#F3F1EC" font-family="Georgia, serif" font-size="54">PawLove Rescue</text>
+  <text x="72" y="836" fill="#8A7F72" font-family="ui-sans-serif, system-ui, sans-serif" font-size="22" letter-spacing="3">NONPROFIT</text>
+</svg>

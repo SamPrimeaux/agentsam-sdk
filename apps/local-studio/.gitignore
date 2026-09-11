@@ -1,0 +1,14 @@
+node_modules/
+.project_id
+.github_repo
+.env
+.env.*
+wrangler.toml
+.wrangler/
+.dev.vars
+.vercel/
+screenshots/
+/tmp/
+!.env.cloudflare.example
+.agentsam/
+.output/

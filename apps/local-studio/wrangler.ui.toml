@@ -1,0 +1,26 @@
+# UI Worker — TanStack Start / Nitro cloudflare-module
+# Account: Inner Animal Media (ede6590ac0d2fb7daf155b35653457b2)
+# Domain: simple.inneranimalmedia.com (UI owns /*; vault keeps /health and /api/vault*)
+#
+# Deploy:
+#   npm run build && npm run cf:deploy:ui
+
+name = "agentsam-grok-workmode"
+account_id = "ede6590ac0d2fb7daf155b35653457b2"
+main = ".output/server/index.mjs"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[assets]
+directory = ".output/public"
+binding = "ASSETS"
+
+[[routes]]
+pattern = "simple.inneranimalmedia.com/*"
+zone_name = "inneranimalmedia.com"
+
+[vars]
+UI_WORKER = "agentsam-grok-workmode"
+PRODUCT_HOST = "simple.inneranimalmedia.com"
+ZONE_NAME = "inneranimalmedia.com"

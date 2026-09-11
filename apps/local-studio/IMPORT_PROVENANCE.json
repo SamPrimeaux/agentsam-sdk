@@ -1,0 +1,12 @@
+{
+  "kind": "agentsam-local-studio-source-snapshot",
+  "source_repository": "SamPrimeaux/AgentSam-Grok-Workmode",
+  "source_ref": "main",
+  "source_sha": "7e4329d197ab084ffcee2a9dde7c752bb5cb077e",
+  "purpose": "Authoring/reference SSOT for the AgentSam local product shell before normalization into dist/local-studio and templates/generated.",
+  "notes": [
+    "Imported as a full tracked source snapshot before structural cleanup.",
+    "This app is not intended to be shipped verbatim in the root npm package.",
+    "Build/export steps will later select the local-safe runtime payload."
+  ]
+}
