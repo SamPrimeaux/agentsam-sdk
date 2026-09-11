@@ -75,7 +75,7 @@ migrations_dir = "migrations"
   files['.env.example'] = `# Minted at install/build — secrets via wrangler secret put (never commit)
 # IAM_CLIENT_ID=          # plaintext var (public by OAuth design)
 # IAM_CLIENT_SECRET=      # wrangler secret put only
-# IAM_OAUTH_ISSUER=https://inneranimalmedia.com
+# IAM_ORIGIN=https://inneranimalmedia.com
 
 # Developer BYOK — takes /api/oauth/{google|github}/start when set
 # GOOGLE_CLIENT_ID=
