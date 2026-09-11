@@ -1,26 +1,13 @@
 /**
  * Browser OAuth for SDK init — one click IAM login + Cloudflare connect.
  */
-import http from 'http';
-import { randomBytes } from 'crypto';
+import http from 'node:http';
+import { randomBytes } from 'node:crypto';
 import { postJson } from './core-client.js';
+import { promptToOpenUrl } from './open-url.js';
 
 function randomState() {
   return randomBytes(16).toString('hex');
-}
-
-function openBrowser(url) {
-  const start =
-    process.platform === 'darwin'
-      ? ['open', url]
-      : process.platform === 'win32'
-        ? ['cmd', '/c', 'start', '', url]
-        : ['xdg-open', url];
-  import('child_process').then(({ spawn }) => {
-    spawn(start[0], start.slice(1), { stdio: 'ignore', detached: true }).unref();
-  }).catch(() => {
-    console.log(`\n  Open in browser:\n  ${url}\n`);
-  });
 }
 
 /**
@@ -35,6 +22,8 @@ export async function authenticateViaBrowser() {
     redirect_uri: redirectUri,
     state,
   });
+
+  if (!authUrl) throw new Error('IAM auth did not return an authorization URL');
 
   const codePromise = new Promise((resolve, reject) => {
     const server = http.createServer((req, res) => {
@@ -55,7 +44,7 @@ export async function authenticateViaBrowser() {
           return;
         }
         res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end('<html><body style="font-family:system-ui"><h1>Agent Sam</h1><p>You can close this tab.</p></body></html>');
+        res.end('<html><body style="font-family:system-ui"><h1>Agent Sam</h1><p>Authentication complete. You can close this tab and return to your terminal.</p></body></html>');
         resolve(code);
         server.close();
       } catch (e) {
@@ -67,8 +56,10 @@ export async function authenticateViaBrowser() {
     server.listen(port, '127.0.0.1');
   });
 
-  console.log('\n  Opening browser for IAM sign-in + Cloudflare connect…\n');
-  openBrowser(authUrl);
+  await promptToOpenUrl(authUrl, {
+    heading: 'Authenticate your InnerAnimalMedia account at:',
+    prompt: 'Press ENTER to open InnerAnimalMedia sign-in in your browser.',
+  });
 
   const code = await codePromise;
   const session = await postJson('/api/sdk/auth/exchange', { code, state });
