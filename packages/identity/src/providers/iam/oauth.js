@@ -3,8 +3,8 @@ export const IAM_IDENTITY_TOKEN_PATH = '/api/oauth/identity/token';
 export const IAM_IDENTITY_USERINFO_PATH = '/api/oauth/identity/userinfo';
 export const IAM_DEFAULT_OIDC_SCOPE = 'openid profile email';
 
-function normalizeIssuer(issuer) {
-  return String(issuer || '').replace(/\/+$/, '');
+function normalizeOrigin(origin, issuer) {
+  return String(origin || issuer || '').replace(/\/+$/, '');
 }
 
 /**
