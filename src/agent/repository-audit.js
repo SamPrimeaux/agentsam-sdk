@@ -126,8 +126,14 @@ function normalizeAnalysis(value, snapshotId) {
     file_tree: value.file_tree ?? null,
   };
   for (const field of ARRAY_FIELDS) result[field] = Array.isArray(value[field]) ? structuredClone(value[field]) : [];
-  for (const ref of result.evidence_refs) {
+  const validateRef = (ref) => {
     if (typeof ref !== 'string' || !ref.startsWith(prefix)) throw new Error(`repository.audit invalid evidence ref: ${ref}`);
+  };
+  for (const ref of result.evidence_refs) validateRef(ref);
+  for (const finding of result.findings) {
+    if (finding && typeof finding === 'object' && Array.isArray(finding.evidence_refs)) {
+      for (const ref of finding.evidence_refs) validateRef(ref);
+    }
   }
   return result;
 }
