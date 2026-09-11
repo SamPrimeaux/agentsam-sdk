@@ -59,7 +59,7 @@ This wraps the existing bundled Python repository-intelligence module (Python 3.
 ## Backend Postgres / Supabase
 
 ```sh
-agentsam init . --yes --include backend/feature --target production --workspace customer-workspace
+agentsam init . --yes --include backend/feature --target production
 # Supply AGENTSAM_DATABASE_URL through a secret manager.
 agentsam index setup-store
 agentsam index plan
