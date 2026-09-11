@@ -18,14 +18,15 @@ export const IAM_PLATFORM_CALLBACK_PATH = '/api/oauth/iam/callback';
 
 /**
  * @param {Record<string, unknown> | null | undefined} env
- * @returns {{ clientId: string, clientSecret: string, issuer: string } | null}
+ * @returns {{ clientId: string, clientSecret: string, origin: string, issuer: string } | null}
  */
 export function resolveIamPlatformCredentials(env) {
   const clientId = String(env?.IAM_CLIENT_ID || '').trim();
   const clientSecret = String(env?.IAM_CLIENT_SECRET || '').trim();
   if (!clientId || !clientSecret) return null;
-  const issuer = String(env?.IAM_OAUTH_ISSUER || DEFAULT_IAM_OAUTH_ISSUER).replace(/\/+$/, '');
-  return { clientId, clientSecret, issuer };
+  const origin = resolveIamOrigin(env);
+  // `issuer` remains for one migration window so existing consumers do not break.
+  return { clientId, clientSecret, origin, issuer: origin };
 }
 
 /** @param {Record<string, unknown> | null | undefined} env */
