@@ -70,7 +70,7 @@ function printHelp() {
     agentsam tui               Zero-dependency ANSI Agent Sam dashboard
     agentsam tui rich          Optional Python Rich dashboard (--install for local venv)
     agentsam start-local       Local PTY on ws://127.0.0.1:3099 (no tunnel, no Cloudflare)
-    agentsam shell             Terminal commands + presentation catalog
+    agentsam shell             Interactive Agent Sam slash-command shell
     agentsam tunnel            Explicitly expose local PTY when remote access is wanted
     agentsam deploy            Graduate to Cloudflare / GCP when ready
     agentsam dockerize         Build/run app, knowledge, or CAD containers (--help)
