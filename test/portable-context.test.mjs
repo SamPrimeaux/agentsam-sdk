@@ -44,7 +44,7 @@ test('resolveGitContext supports an initialized repository before its first comm
   execFileSync('git', ['init'], { cwd: root, stdio: 'ignore' });
   writeFileSync(join(root, 'README.md'), '# unborn\n');
   const ctx = resolveGitContext({ cwd: root });
-  assert.equal(ctx.root, root);
+  assert.equal(ctx.root, realpathSync(root));
   assert.equal(ctx.revisionSha, null);
   assert.equal(ctx.dirty, true);
 });
