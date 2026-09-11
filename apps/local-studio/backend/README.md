@@ -1,16 +1,30 @@
-# backend
+# Local Studio backend
 
-Destination for:
+This package owns the server/runtime side of the `agentsam-sdk` Local Studio application.
 
-- `worker/` (vault Worker + future `/api/llm/*` proxy)
-- `wrangler.workmode.toml`
-- `migrations/`
-- `server/`
-
-Deploy stays:
-
-```
-npx wrangler deploy -c backend/wrangler.workmode.toml
+```text
+backend/
+├─ package.json
+├─ wrangler.jsonc       Cloudflare deployment SSOT
+├─ migrations/
+└─ server/              Nitro server routes, middleware, runtime adapters
 ```
 
-after the restructure script. Until then use repo-root `wrangler.workmode.toml`.
+There is intentionally no handwritten `backend/worker/` entry point. TanStack Start + Nitro emits the production Worker into the Local Studio workspace root:
+
+```text
+../.output/server/index.mjs
+../.output/public/
+```
+
+From `apps/local-studio/`:
+
+```sh
+npm ci
+npm run build
+npm run cf:verify-output
+npm run cf:dry-run
+npm run cf:deploy
+```
+
+Production Worker: `agentsam-sdk` at `https://agentsam.inneranimalmedia.com`. The workers.dev route is disabled.

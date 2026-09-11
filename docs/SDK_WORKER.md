@@ -1,66 +1,92 @@
-# `agentsam-sdk` Cloudflare Worker
+# `agentsam-sdk` Cloudflare application
 
-The canonical SDK service is the Cloudflare Worker named `agentsam-sdk`. It is separate from Local Studio / Workmode. The root `wrangler.jsonc` is the deployment SSOT for the SDK Worker.
+`agentsam-sdk` is the package/contract owner. The deployed Cloudflare application is owned by the nested Local Studio backend, not by a second Worker shell at the SDK repository root.
+
+```text
+agentsam-sdk/
+├─ package.json
+├─ package-lock.json
+├─ packages/...
+└─ apps/local-studio/
+   ├─ package.json
+   ├─ package-lock.json
+   ├─ frontend/package.json
+   ├─ backend/
+   │  ├─ package.json
+   │  ├─ wrangler.jsonc
+   │  └─ server/
+   └─ shared/agentsam/package.json
+```
+
+The TanStack/Nitro build is the Worker runtime:
+
+```text
+apps/local-studio/.output/server/index.mjs
+apps/local-studio/.output/public/
+```
+
+Because `wrangler.jsonc` lives in `backend/`, its paths are deliberately relative to that directory:
+
+```text
+main             = ../.output/server/index.mjs
+assets.directory = ../.output/public
+```
+
+Run installs from `apps/local-studio/` with its committed lockfile:
+
+```sh
+npm ci
+npm run build
+npm run cf:verify-output
+npm run cf:dry-run
+```
+
+Production uses only `https://agentsam.inneranimalmedia.com`; `workers_dev` is disabled.
 
 ## Binding contract
 
 ```text
 agentsam-sdk
-├─ DB                 -> D1
-├─ WEBSITE_ASSETS     -> R2
-├─ AGENTSAM_WAI       -> optional Workers AI capability
-├─ IAM_ORIGIN         -> public runtime variable
-├─ IAM_CLIENT_ID      -> public runtime variable
+├─ DB                 -> inneranimalmedia-business
+├─ WEBSITE_ASSETS     -> agentsam-os-blueprint-content
+├─ AGENTSAM_WAI       -> Workers AI provider
+├─ EXECOS             -> execos service binding
+├─ PTY_SERVICE        -> iam-vpc VPC service
+├─ IAM_ORIGIN         -> https://inneranimalmedia.com
+├─ IAM_CLIENT_ID      -> public OAuth client id
 ├─ IAM_CLIENT_SECRET  -> secret
 ├─ AGENTSAM_SDK_KEY   -> secret
 └─ AGENTSAM_BRIDGE_KEY -> secret
 ```
 
-For the Inner Animal Media SDK deployment the physical resources are:
+Hosted model credentials are secrets: `XAI_API_KEY`, `OPENAI_API_KEY`, and `GEMINI_API_KEY`. Grok model inference is the `XAI_API_KEY` provider lane and is independent from the pre-wired Grok gate viewer identity/session system.
+
+`AGENTSAM_WORKER_ROLE` is not part of the SDK contract. `IAM_OAUTH_ISSUER` and `AGENTSAM_SDK_TOKEN` are SDK 2.5 migration-read aliases only; new configuration uses `IAM_ORIGIN` and `AGENTSAM_SDK_KEY`.
+
+## Ollama
+
+Ollama is local compute with two ways to reach it:
 
 ```text
-DB             = inneranimalmedia-business
-WEBSITE_ASSETS = agentsam-os-blueprint-content
-IAM_ORIGIN     = https://inneranimalmedia.com
+CLI on developer machine
+  -> http://127.0.0.1:11434
+
+agentsam-sdk Worker
+  -> EXECOS service binding
+  -> explicit target=local
+  -> existing local execution/tunnel fabric
+  -> http://127.0.0.1:11434
 ```
 
-`IAM_CLIENT_ID` is public by OAuth design. `IAM_CLIENT_SECRET`, `AGENTSAM_SDK_KEY`, and `AGENTSAM_BRIDGE_KEY` belong in Cloudflare secret storage and must never be committed.
+There is no production `OLLAMA_BASE_URL` and no public Ollama hostname. `PTY_SERVICE` remains available as the lower-level VPC/PTY transport and health lane, but model execution goes through ExecOS rather than bypassing the dispatcher.
 
-`AGENTSAM_WORKER_ROLE` is not part of the SDK contract. The migration aliases `IAM_OAUTH_ISSUER` and `AGENTSAM_SDK_TOKEN` remain read-compatible inside SDK 2.5 for existing consumers, but they are not part of new Worker configuration.
-
-## Local Ollama boundary
-
-Ollama is a local CLI capability, not an edge binding. Do not configure `OLLAMA_BASE_URL`, `OLLAMA_MODEL`, or `OLLAMA_EMBED_MODEL` on the SDK Worker. The defaults live in the local development kit:
-
-```text
-OLLAMA_BASE_URL=http://127.0.0.1:11434
-OLLAMA_MODEL=qwen2.5-coder
-OLLAMA_EMBED_MODEL=mxbai-embed-large
-```
-
-A remote AgentSam session uses the existing user-hosted terminal tunnel to execute `agentsam ollama ...` on the developer machine. That local process reaches loopback from the machine itself. Workers AI may remain available independently as `AGENTSAM_WAI`; it is not an Ollama proxy.
-
-## Secrets
-
-Install the three server-side values without printing them:
-
-```sh
-printf '%s' "$IAM_CLIENT_SECRET" | wrangler secret put IAM_CLIENT_SECRET --name agentsam-sdk
-printf '%s' "$AGENTSAM_SDK_KEY" | wrangler secret put AGENTSAM_SDK_KEY --name agentsam-sdk
-printf '%s' "$AGENTSAM_BRIDGE_KEY" | wrangler secret put AGENTSAM_BRIDGE_KEY --name agentsam-sdk
-```
+Default local models are `qwen2.5-coder` for chat/code and `mxbai-embed-large` for embeddings.
 
 ## Merkle persistence
 
-The SDK Worker owns the development deployment binding for semantic snapshots:
+Semantic deployment snapshots use the logical `WEBSITE_ASSETS` binding and the provider-neutral `agentsam_fs_merkle_snapshots/` namespace. D1 indexes the snapshot row in `agentsam_fs_merkle_snapshots`; R2 stores the full document. Customer/generated Workers keep the same logical binding and may point it at their own selected storage.
 
-```text
-WEBSITE_ASSETS/agentsam_fs_merkle_snapshots/
-```
-
-The physical bucket is installation-specific. Customer/generated Workers keep the logical binding name `WEBSITE_ASSETS` and can point it at their own selected R2 bucket. The searchable row contract remains `agentsam_fs_merkle_snapshots`; R2 stores the full snapshot document.
-
-The three identities remain independent:
+The identities remain independent:
 
 ```text
 root_hash      = content identity
