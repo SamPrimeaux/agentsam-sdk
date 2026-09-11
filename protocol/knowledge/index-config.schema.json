@@ -4,11 +4,11 @@
   "title": "Portable index configuration v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["version", "repository_id", "workspace_id", "scope", "chunking", "embedding", "storage"],
+  "required": ["version", "repository_id", "scope", "chunking", "embedding", "storage"],
   "properties": {
     "version": { "const": 1 },
     "repository_id": { "type": "string", "minLength": 1 },
-    "workspace_id": { "type": "string", "minLength": 1 },
+    "workspace_id": { "type": "string", "minLength": 1, "deprecated": true, "description": "Legacy compatibility metadata. New portable configs are repository-scoped and must not require this field." },
     "scope": {
       "type": "object", "additionalProperties": false, "required": ["name", "include"],
       "properties": {
