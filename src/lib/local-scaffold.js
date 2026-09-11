@@ -190,6 +190,8 @@ npm run db:status
 npm run tui
 npm run tui:rich -- --install   # optional Rich UI in isolated .agentsam venv
 npx agentsam start-local        # PTY on ws://127.0.0.1:3099
+npm run ollama:setup            # optional local/free model config
+npm run ollama:status           # probe local Ollama + models
 \`\`\`
 
 The local SQLite database lives at \`.agentsam/data/agentsam.sqlite\` and is initialized from \`db/schema.sql\`.
