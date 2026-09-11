@@ -100,6 +100,7 @@ Gorilla is intentionally not scaffolded by default.
 /logs       local execution events
 /tui        terminal presentation
 /deploy     intentionally add a cloud adapter
+/exit       exit Agent Sam shell and return to the host terminal
 ```
 
 Provider-specific commands such as `/claude` or `/codex` are not part of the generic shell contract. Model routing belongs behind Agent Sam.
