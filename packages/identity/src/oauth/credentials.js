@@ -1,3 +1,5 @@
+import { DEFAULT_IAM_ORIGIN, resolveIamOrigin } from '../contracts/auth-config.js';
+
 /**
  * OAuth credential lanes for customer apps.
  *
