@@ -258,7 +258,7 @@ async function initInteractive(partial = {}) {
   if (runTarget !== 'local') {
     const { detectContext, missingForInit } = await import('./lib/detect-context.js');
     const ctx = await detectContext();
-    if (missingForInit(ctx, process.env.AGENTSAM_SDK_TOKEN || '', { runTarget }).length) {
+    if (missingForInit(ctx, resolveSdkKey(process.env), { runTarget }).length) {
       printContextSummary(ctx);
     }
   }
