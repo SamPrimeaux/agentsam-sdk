@@ -60,6 +60,7 @@ export function resolveOAuthCredentialLane(env, provider) {
       lane: 'iam_platform',
       clientId: iam.clientId,
       clientSecret: iam.clientSecret,
+      origin: iam.origin,
       issuer: iam.issuer,
       provider: 'iam',
     };
