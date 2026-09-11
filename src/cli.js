@@ -44,7 +44,17 @@ function printHelp() {
   console.log(`
   Agent Sam SDK — CLI v${VERSION}
 
-  Usage:
+  Product UX:
+    agentsam create <name> --preset <fullstack|cms|prototype|data>
+    agentsam add <auth|cms|knowledge|agent|deploy-cloudflare>
+    agentsam dev               Run this project's existing npm dev script
+    agentsam inspect [--json]  Canonical deterministic repository.snapshot
+    agentsam deploy            Graduate an AgentSam project intentionally
+
+  Capability discovery:
+    agentsam capabilities [capability-id] [--json]
+
+  Power-user UX:
     agentsam context [--json]  Git repo/revision + bridge configuration from any repo
     agentsam init              Configure knowledge in this repo; --name scaffolds a new project
     agentsam index             Plan/run incremental AST and optional embeddings (--help)
