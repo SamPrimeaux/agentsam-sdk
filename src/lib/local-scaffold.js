@@ -413,7 +413,11 @@ npm run tui:rich             # Python Rich dashboard if installed
 npm run tui:rich -- --install
 npm run pty                  # local PTY on ws://127.0.0.1:3099
 npm run db:status
+npm run ollama:setup         # optional local/free model config
+npm run ollama:status        # local Ollama + model readiness
 \`\`\`
+
+Ollama is optional and local-only; it is not deployed as an edge model. Remote AgentSam sessions can reach it by executing the CLI through the existing user-hosted terminal tunnel.
 
 No Worker or cloud account is required for local development.
 
