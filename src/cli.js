@@ -109,7 +109,7 @@ function printHelp() {
     --quick                    Quick tunnel (default) — trycloudflare.com URL
     --named                    Named CF tunnel (needs --tunnel-name --hostname --zone-id)
     --port <n>                 Local PTY port (default 3099)
-    --token <sdk_…>            Use existing AGENTSAM_SDK_TOKEN (skip browser auth)
+    --token <sdk_…>            Use existing AGENTSAM_SDK_KEY (skip browser auth)
 
   Init options:
     --name <name>              Project directory name
