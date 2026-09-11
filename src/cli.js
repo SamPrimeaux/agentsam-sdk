@@ -299,6 +299,30 @@ if (command === '--version' || command === '-v') {
   console.log(VERSION);
 } else if (command === '--help' || command === '-h' || !command) {
   printHelp();
+} else if (command === 'create') {
+  try {
+    const opts = parseCreateArgs(rest);
+    if (opts.help || !opts.projectName) {
+      console.log(`agentsam create <name> --preset <${listPresets().map((row) => row.id).join('|')}> [--target local|cloudflare|gcp]`);
+    } else {
+      const preset = resolvePreset(opts.preset);
+      const created = await runLocalInit({ projectName: opts.projectName, lane: preset.lane, runTarget: opts.runTarget, prompt: null });
+      applyPresetSelection(created.dir, preset);
+      console.log(`  ✓ Preset      ${preset.id}\n  ✓ Features    ${preset.features.join(', ') || 'none'}\n  ✓ Capabilities ${preset.capabilities.length}\n`);
+    }
+  } catch (e) { console.error(`\n  ✗ ${e?.message || e}\n`); process.exitCode = 1; }
+} else if (command === 'add') {
+  try { await runAdd(rest); }
+  catch (e) { console.error(`\n  ✗ ${e?.message || e}\n`); process.exitCode = 1; }
+} else if (command === 'dev') {
+  try { await runDev(rest); }
+  catch (e) { console.error(`\n  ✗ ${e?.message || e}\n`); process.exitCode = 1; }
+} else if (command === 'inspect') {
+  try { await runInspect(rest); }
+  catch (e) { console.error(`\n  ✗ ${e?.message || e}\n`); process.exitCode = 1; }
+} else if (command === 'capabilities') {
+  try { await runCapabilities(rest); }
+  catch (e) { console.error(`\n  ✗ ${e?.message || e}\n`); process.exitCode = 1; }
 } else if (command === 'context') {
   try {
     await runContext(rest);
