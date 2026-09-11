@@ -2,7 +2,7 @@
   "$schema": "../node_modules/wrangler/config-schema.json",
   "name": "agentsam-sdk",
   "account_id": "ede6590ac0d2fb7daf155b35653457b2",
-  "main": "../.output/server/index.mjs",
+  "main": "worker/index.js",
   "compatibility_date": "2026-09-11",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,

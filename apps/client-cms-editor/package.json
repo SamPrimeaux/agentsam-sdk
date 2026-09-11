@@ -14,6 +14,10 @@
     "preview": "npm run preview -w @inneranimalmedia/agentsam-cms-frontend",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "clean": "rm -rf frontend/dist coverage"
+    "clean": "rm -rf frontend/dist coverage",
+    "cf:dry-run": "npm run build && wrangler deploy -c backend/wrangler.jsonc --dry-run"
+  },
+  "devDependencies": {
+    "wrangler": "4.130.0"
   }
 }

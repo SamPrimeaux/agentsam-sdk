@@ -1,22 +1,34 @@
 # AgentSam apps
 
-`apps/` is the development/authoring source of truth for runnable AgentSam product surfaces and reusable reference applications.
+`apps/` is the development/authoring source of truth for runnable AgentSam product surfaces. Product apps are independently extractable and are intentionally **not** members of the SDK root npm workspace graph.
 
-Current lanes:
+## Product app law
 
-- `local-studio/` — full AgentSam local product shell, imported from `SamPrimeaux/AgentSam-Grok-Workmode` before normalization. This is the UI/UX donor for `agentsam start-local`; it is not published verbatim in the root npm package.
-- `cad-creator/` — self-contained CAD/BIM npm workspace (`frontend/`, `backend/`, `shared/cad/`) imported from `agentsam-design-studio.zip`; it remains independent from the SDK root workspace graph.
-- `client-cms-editor/` — self-contained CMS authoring/control workspace imported from `inneranimalmedia/packages/client-cms-editor`; consumes the shared AgentSam contracts/workbench and stays separate from the small public CMS runtime.
-- `frontend/` — public-site/CMS authoring lane. `public/site/` contains the current landing-page seed and will be normalized around shared header/footer plus D1-driven page records and R2-published HTML/assets.
-- `_incoming/` — optional drop zone for additional ZIP donors. Run `python3 scripts/ingest-app-zips.py` to preview an import, then add `--apply` to ingest it.
-
-Build/publish direction:
+Every deployable product app follows the same ownership boundary:
 
 ```text
-apps/*                  development SSOT
-  -> dist/gallery/*     runtime previews
-  -> templates/generated/* scaffold payloads
-  -> dist/local-studio/* local product runtime
+apps/<app>/
+├─ package.json
+├─ package-lock.json          one lockfile for the whole app
+├─ frontend/
+│  └─ package.json
+├─ backend/
+│  ├─ package.json
+│  ├─ wrangler.jsonc         Cloudflare binding/deploy SSOT
+│  ├─ worker/
+│  │  └─ index.js            canonical Cloudflare Worker entry
+│  └─ server/ or src/        application/backend modules
+└─ shared/<domain>/
+   └─ package.json
 ```
 
-The root npm package should publish built/exported payloads, not entire app authoring trees.
+Rules:
+
+- `apps/<app>/` is a self-contained npm workspace root with workspaces `frontend`, `backend`, and `shared/*`.
+- Frontend/backend do not get independent lockfiles.
+- `backend/worker/index.js` is the checked-in Cloudflare runtime boundary. Generated framework output may be imported by it, but generated output is not the deployment owner.
+- `backend/wrangler.jsonc` is the app's Cloudflare configuration SSOT. Do not add app Workers or Wrangler configs at the SDK repository root.
+- `shared/<domain>/` is app-local shared code. Promote code to `packages/*` only when it is genuinely SDK-wide/reusable.
+- The SDK root owns package/tooling release concerns; app workspace dependencies stay inside each app.
+
+Current product apps governed by the architecture test are `local-studio/`, `cad-creator/`, and `client-cms-editor/`. `frontend/` remains a public-site seed lane rather than a self-contained product workspace, and `_incoming/` is an import drop zone.

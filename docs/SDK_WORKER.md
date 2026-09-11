@@ -1,6 +1,6 @@
 # `agentsam-sdk` Cloudflare application
 
-`agentsam-sdk` is the package/contract owner. The deployed Cloudflare application is owned by the nested Local Studio backend, not by a second Worker shell at the SDK repository root.
+The SDK repository root owns package/tooling concerns. Each deployable product under `apps/` owns its own runtime. For Local Studio, the production Cloudflare application is owned by `apps/local-studio/backend/`.
 
 ```text
 agentsam-sdk/
@@ -14,21 +14,16 @@ agentsam-sdk/
    ├─ backend/
    │  ├─ package.json
    │  ├─ wrangler.jsonc
-   │  └─ server/
+   │  ├─ worker/
+   │  │  └─ index.js        checked-in Worker authority
+   │  └─ server/            Nitro routes/runtime modules
    └─ shared/agentsam/package.json
 ```
 
-The TanStack/Nitro build is the Worker runtime:
+`backend/worker/index.js` is the stable Cloudflare entrypoint and imports the generated Nitro handler from `../../.output/server/index.mjs`. `backend/wrangler.jsonc` therefore points to `worker/index.js`; assets remain generated under `../.output/public`.
 
 ```text
-apps/local-studio/.output/server/index.mjs
-apps/local-studio/.output/public/
-```
-
-Because `wrangler.jsonc` lives in `backend/`, its paths are deliberately relative to that directory:
-
-```text
-main             = ../.output/server/index.mjs
+main             = worker/index.js
 assets.directory = ../.output/public
 ```
 
@@ -41,21 +36,21 @@ npm run cf:verify-output
 npm run cf:dry-run
 ```
 
-Production uses only `https://agentsam.inneranimalmedia.com`; `workers_dev` is disabled.
+Production uses only `https://agentsam.inneranimalmedia.com`; `workers_dev` is disabled. The SDK root has no production `worker/` or `wrangler.jsonc`.
 
 ## Binding contract
 
 ```text
 agentsam-sdk
-├─ DB                 -> inneranimalmedia-business
-├─ WEBSITE_ASSETS     -> agentsam-os-blueprint-content
-├─ AGENTSAM_WAI       -> Workers AI provider
-├─ EXECOS             -> execos service binding
-├─ PTY_SERVICE        -> iam-vpc VPC service
-├─ IAM_ORIGIN         -> https://inneranimalmedia.com
-├─ IAM_CLIENT_ID      -> public OAuth client id
-├─ IAM_CLIENT_SECRET  -> secret
-├─ AGENTSAM_SDK_KEY   -> secret
+├─ DB                  -> inneranimalmedia-business
+├─ WEBSITE_ASSETS      -> agentsam-os-blueprint-content
+├─ AGENTSAM_WAI        -> Workers AI provider
+├─ EXECOS              -> execos service binding
+├─ PTY_SERVICE         -> iam-vpc VPC service
+├─ IAM_ORIGIN          -> https://inneranimalmedia.com
+├─ IAM_CLIENT_ID       -> public OAuth client id
+├─ IAM_CLIENT_SECRET   -> secret
+├─ AGENTSAM_SDK_KEY    -> secret
 └─ AGENTSAM_BRIDGE_KEY -> secret
 ```
 
@@ -78,15 +73,11 @@ agentsam-sdk Worker
   -> http://127.0.0.1:11434
 ```
 
-There is no production `OLLAMA_BASE_URL` and no public Ollama hostname. `PTY_SERVICE` remains available as the lower-level VPC/PTY transport and health lane, but model execution goes through ExecOS rather than bypassing the dispatcher.
-
-Default local models are `qwen2.5-coder` for chat/code and `mxbai-embed-large` for embeddings.
+There is no production `OLLAMA_BASE_URL` and no public Ollama hostname. `PTY_SERVICE` remains available as the lower-level VPC/PTY transport and health lane, but model execution goes through ExecOS rather than bypassing the dispatcher. Default local models are `qwen2.5-coder` for chat/code and `mxbai-embed-large` for embeddings.
 
 ## Merkle persistence
 
 Semantic deployment snapshots use the logical `WEBSITE_ASSETS` binding and the provider-neutral `agentsam_fs_merkle_snapshots/` namespace. D1 indexes the snapshot row in `agentsam_fs_merkle_snapshots`; R2 stores the full document. Customer/generated Workers keep the same logical binding and may point it at their own selected storage.
-
-The identities remain independent:
 
 ```text
 root_hash      = content identity

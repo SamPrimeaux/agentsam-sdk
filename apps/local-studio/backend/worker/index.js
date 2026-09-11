@@ -1,3 +1,5 @@
+import nitroWorker from "../../.output/server/index.mjs";
+
 /**
  * AgentSam Workmode — vault Worker
  * AES-256-GCM secrets against D1 inneranimalmedia-business.
@@ -329,15 +331,24 @@ async function handleUnwrap(env, userId, body) {
 }
 
 export default {
-  async fetch(request, env) {
+  ...nitroWorker,
+  async fetch(request, env, context) {
     const url = new URL(request.url);
+    const isVault = url.pathname.startsWith("/api/vault/");
+
+    // The checked-in Worker owns vault + health routes. Everything else belongs
+    // to the generated Nitro application handler.
+    if (!isVault && url.pathname !== "/health") {
+      return nitroWorker.fetch(request, env, context);
+    }
+
     const headers = cors(request);
 
-    if (request.method === "OPTIONS") {
+    if (isVault && request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers });
     }
 
-    if (url.pathname === "/health" || url.pathname === "/") {
+    if (url.pathname === "/health") {
       let d1 = false;
       try {
         await env.DB.prepare("SELECT 1 AS ok").first();
@@ -348,7 +359,7 @@ export default {
       return json(
         {
           ok: true,
-          app: env.WORKMODE_APP || "agentsam-workmode",
+          app: env.WORKMODE_APP || "agentsam-sdk",
           d1,
           database: env.D1_DATABASE_NAME || "inneranimalmedia-business",
           vault_key: Boolean(env.VAULT_MASTER_KEY || env.VAULT_KEY),

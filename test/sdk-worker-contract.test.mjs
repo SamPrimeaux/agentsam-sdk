@@ -8,20 +8,21 @@ const exists = (relative) => fs.existsSync(new URL(`../${relative}`, import.meta
 const wrangler = read('apps/local-studio/backend/wrangler.jsonc');
 const providers = read('apps/local-studio/shared/agentsam/src/model-providers.ts');
 const runtime = read('apps/local-studio/backend/server/lib/cloudflare-runtime.ts');
+const worker = read('apps/local-studio/backend/worker/index.js');
 
 test('Local Studio backend is the only agentsam-sdk Cloudflare application owner', () => {
   assert.equal(exists('wrangler.jsonc'), false);
   assert.equal(exists('worker/index.js'), false);
   assert.equal(exists('scripts/with-cloudflare-env.sh'), false);
-  assert.equal(exists('apps/local-studio/backend/worker/index.js'), false);
+  assert.ok(exists('apps/local-studio/backend/worker/index.js'));
   assert.equal(exists('apps/local-studio/backend/wrangler.ui.toml'), false);
   assert.equal(exists('apps/local-studio/backend/wrangler.workmode.toml'), false);
   assert.ok(exists('apps/local-studio/backend/wrangler.jsonc'));
 });
 
-test('agentsam-sdk Worker uses Nitro output, custom domain only, and canonical bindings', () => {
+test('agentsam-sdk Worker uses the backend Worker entry, custom domain only, and canonical bindings', () => {
   assert.match(wrangler, /"name"\s*:\s*"agentsam-sdk"/);
-  assert.match(wrangler, /"main"\s*:\s*"\.\.\/\.output\/server\/index\.mjs"/);
+  assert.match(wrangler, /"main"\s*:\s*"worker\/index\.js"/);
   assert.match(wrangler, /"directory"\s*:\s*"\.\.\/\.output\/public"/);
   assert.match(wrangler, /"workers_dev"\s*:\s*false/);
   assert.match(wrangler, /"pattern"\s*:\s*"agentsam\.inneranimalmedia\.com"/);
@@ -36,8 +37,15 @@ test('agentsam-sdk Worker uses Nitro output, custom domain only, and canonical b
   assert.match(wrangler, /"service_id"\s*:\s*"019db639-7c70-7071-8ef3-32ec0392a9ff"/);
   assert.match(wrangler, /"IAM_ORIGIN"\s*:\s*"https:\/\/inneranimalmedia\.com"/);
   assert.doesNotMatch(wrangler, /AGENTSAM_WORKER_ROLE/);
-  assert.doesNotMatch(wrangler, /OLLAMA_BASE_URL/);
+  assert.doesNotMatch(wrangler, /"OLLAMA_BASE_URL"\s*:/);
   assert.doesNotMatch(wrangler, /workers\.dev/);
+});
+
+test('canonical Worker preserves vault routes and delegates app traffic to Nitro', () => {
+  assert.match(worker, /url\.pathname\.startsWith\("\/api\/vault\/"\)/);
+  assert.match(worker, /\/api\/vault\/secrets/);
+  assert.match(worker, /\/api\/vault\/unwrap/);
+  assert.match(worker, /return nitroWorker\.fetch\(request, env, context\)/);
 });
 
 test('model providers include Grok independently from Grok gate authentication', () => {

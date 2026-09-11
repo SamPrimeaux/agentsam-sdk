@@ -6,16 +6,13 @@ This package owns the server/runtime side of the `agentsam-sdk` Local Studio app
 backend/
 ├─ package.json
 ├─ wrangler.jsonc       Cloudflare deployment SSOT
+├─ worker/
+│  └─ index.js          canonical checked-in Worker entry
 ├─ migrations/
 └─ server/              Nitro server routes, middleware, runtime adapters
 ```
 
-There is intentionally no handwritten `backend/worker/` entry point. TanStack Start + Nitro emits the production Worker into the Local Studio workspace root:
-
-```text
-../.output/server/index.mjs
-../.output/public/
-```
+`backend/worker/index.js` is the stable Cloudflare boundary. It delegates to the generated Nitro application handler at `../.output/server/index.mjs`; generated output is implementation detail, not deployment ownership.
 
 From `apps/local-studio/`:
 
