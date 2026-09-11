@@ -7,6 +7,9 @@ import {
   blenderRenderPreview,
   blenderStatus,
 } from '../lib/cad/index.js';
+import { promptToOpenUrl } from '../lib/open-url.js';
+
+const BLENDER_DOWNLOAD_URL = 'https://www.blender.org/download/';
 
 function usage() {
   return `AgentSam programmatic CAD
@@ -24,6 +27,7 @@ Shared options:
   --cwd <path>          Resolve input/output paths from another directory.
   --json                Machine-readable output.
 
+If Blender is missing, AgentSam explains what is required and can open the official Blender download page.
 The build command consumes a typed recipe; it never evaluates arbitrary Python.`;
 }
 
@@ -49,18 +53,51 @@ function parseArgs(argv) {
   return opts;
 }
 
+function withBlenderInstallGuidance(value) {
+  if (value?.available !== false) return value;
+  return {
+    ...value,
+    install: {
+      required: true,
+      app: 'Blender',
+      url: BLENDER_DOWNLOAD_URL,
+      message: 'Install Blender, then rerun this command. AgentSam will discover standard installs automatically.',
+      alternatives: [
+        'Pass --blender-bin <path> for a custom Blender executable.',
+        'Set AGENTSAM_BLENDER_BIN for a persistent custom executable path.',
+      ],
+    },
+  };
+}
+
 function output(value, json) {
   if (json) {
     console.log(JSON.stringify(value));
     return;
   }
   if (value.capability === 'blender.status') {
-    console.log(value.available
-      ? `Blender available: ${value.version || 'unknown version'}\n${value.binary}`
-      : `Blender unavailable${value.error ? `: ${value.error}` : ''}`);
+    if (value.available) {
+      console.log(`Blender available: ${value.version || 'unknown version'}\n${value.binary}`);
+    } else {
+      console.log(`Blender unavailable${value.error ? `: ${value.error}` : ''}`);
+      if (value.install?.message) console.log(value.install.message);
+      if (value.install?.url) console.log(`Download: ${value.install.url}`);
+    }
     return;
   }
   console.log(JSON.stringify(value, null, 2));
+}
+
+async function presentMissingBlender(value, json) {
+  const guided = withBlenderInstallGuidance(value);
+  output(guided, json);
+  if (!json) {
+    await promptToOpenUrl(BLENDER_DOWNLOAD_URL, {
+      heading: 'Blender is required for AgentSam programmatic CAD:',
+      prompt: 'Press ENTER to open the official Blender download page.',
+    });
+  }
+  return guided;
 }
 
 function required(value, message) {
@@ -90,10 +127,23 @@ export async function runCad(argv) {
     cwd,
   };
 
-  let result;
   if (action === 'status') {
-    result = await blenderStatus(shared);
-  } else if (action === 'inspect') {
+    const status = withBlenderInstallGuidance(await blenderStatus(shared));
+    output(status, opts.json);
+    if (!status.available && !opts.json) {
+      await promptToOpenUrl(BLENDER_DOWNLOAD_URL, {
+        heading: 'Install Blender to enable AgentSam CAD:',
+        prompt: 'Press ENTER to open the official Blender download page.',
+      });
+    }
+    return status;
+  }
+
+  const availability = await blenderStatus(shared);
+  if (!availability.available) return presentMissingBlender(availability, opts.json);
+
+  let result;
+  if (action === 'inspect') {
     result = await blenderInspect({ ...shared, input: required(opts.positional[0], 'inspect requires <model.blend>') });
   } else if (action === 'build') {
     const recipeFile = path.resolve(cwd, required(opts.positional[0], 'build requires <recipe.json>'));
