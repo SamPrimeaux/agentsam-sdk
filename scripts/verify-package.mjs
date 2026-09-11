@@ -9,6 +9,8 @@ const readJson = (rel) => JSON.parse(readFileSync(join(root, rel), 'utf8'));
 const pkg = readJson('package.json');
 const lock = readJson('package-lock.json');
 const identity = readJson('packages/identity/package.json');
+const capabilityManifest = readJson('protocol/capabilities/manifest.json');
+const presetCatalog = readJson('protocol/presets/catalog.json');
 
 assert.equal(pkg.name, '@inneranimalmedia/agentsam-sdk');
 assert.equal(pkg.version, lock.version, 'package.json and package-lock.json versions must match');
