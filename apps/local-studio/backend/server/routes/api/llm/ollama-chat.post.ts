@@ -1,8 +1,11 @@
 import { defineHandler } from "nitro/h3";
-import { cloudflareEnv, ollamaViaExecOs, OLLAMA_DEFAULTS } from "../../../lib/cloudflare-runtime";
+import { cloudflareEnv, hasSdkBearer, ollamaViaExecOs, OLLAMA_DEFAULTS } from "../../../lib/cloudflare-runtime";
 
 export default defineHandler(async (event) => {
   const env = cloudflareEnv(event);
+  if (!(await hasSdkBearer(event.req as unknown as Request, env))) {
+    return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
   const body = (await event.req.json().catch(() => ({}))) as {
     model?: string;
     messages?: unknown[];
