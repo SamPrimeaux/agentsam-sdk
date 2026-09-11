@@ -28,11 +28,11 @@
     "cf:whoami": "wrangler whoami",
     "cf:d1:list": "wrangler d1 list",
     "cf:d1:tables": "wrangler d1 execute inneranimalmedia-business --remote --command=\"SELECT name FROM sqlite_master WHERE type='table' AND (name LIKE '%secret%' OR name LIKE '%oauth%' OR name='agentsam_user_ui_preferences') ORDER BY name;\"",
-    "cf:deploy": "bash scripts/with-cloudflare-env.sh npx wrangler deploy -c backend/wrangler.workmode.toml",
-    "cf:tail": "wrangler tail agentsam-workmode",
-    "cf:tail:ui": "wrangler tail agentsam-grok-workmode",
-    "cf:env": "bash scripts/with-cloudflare-env.sh",
-    "cf:deploy:ui": "bash scripts/with-cloudflare-env.sh npx wrangler deploy -c backend/wrangler.ui.toml"
+    "cf:verify-output": "node scripts/verify-cloudflare-output.mjs",
+    "cf:dry-run": "npm run build && npm run cf:verify-output && wrangler deploy -c backend/wrangler.jsonc --dry-run",
+    "cf:deploy": "npm run build && npm run cf:verify-output && bash scripts/with-cloudflare-env.sh wrangler deploy -c backend/wrangler.jsonc",
+    "cf:tail": "wrangler tail agentsam-sdk -c backend/wrangler.jsonc",
+    "cf:env": "bash scripts/with-cloudflare-env.sh"
   },
   "dependencies": {
     "pg": "^8.16.3"
