@@ -17,6 +17,7 @@ import {
   listIdentityProviders,
   GoogleProvider,
   GithubProvider,
+  IamProvider,
   GcpProvider,
   EmailProvider,
 } from './providers/index.js';
