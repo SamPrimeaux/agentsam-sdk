@@ -25,7 +25,8 @@
         "./src/*"
       ]
     },
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "preserveSymlinks": true
   },
   "include": [
     "src"
