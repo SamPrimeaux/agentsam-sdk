@@ -11,6 +11,7 @@ function normalizeOrigin(origin, issuer) {
  * @param {import('../../provider-contract.js').OAuthAuthorizeInput & { issuer: string }} input
  */
 export function getIamAuthUrl({
+  origin,
   issuer,
   clientId,
   redirectUri,
