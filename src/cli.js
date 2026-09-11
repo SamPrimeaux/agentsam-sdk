@@ -200,9 +200,10 @@ async function runLocalInit(config) {
     console.log(`    ${step}`);
   }
 
-  if (prompt && process.env.AGENTSAM_SDK_TOKEN) {
+  const sdkKey = resolveSdkKey(process.env);
+  if (prompt && sdkKey) {
     console.log('\n  Optional — BYOK keys for IAM dashboard Agent Sam (skip with Enter):\n');
-    await promptOptionalByokKeys(process.env.AGENTSAM_SDK_TOKEN, prompt);
+    await promptOptionalByokKeys(sdkKey, prompt);
   }
 
   console.log(`
