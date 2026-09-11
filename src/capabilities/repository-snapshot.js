@@ -5,7 +5,7 @@ import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { resolveGitContext } from '../lib/git-context.js';
-import { buildMerkleTree, policyHash } from '../lib/merkle/index.js';
+import { buildMerkleTree } from '../lib/merkle/index.js';
 import { showLatestDeployReceipt } from '../lib/deploy-receipt/index.js';
 import { CONFIG_PATH, canonical, readConfig, scopeKey } from '../knowledge/config.js';
 import { openSqliteStore } from '../knowledge/stores/sqlite.js';
@@ -150,7 +150,7 @@ export async function repositorySnapshot({ cwd = process.cwd(), churnDays = 30 }
         format: merkle.format,
         version: merkle.version,
         hash_algorithm: merkle.algorithm,
-        policy_hash: policyHash(merkle.policy),
+        policy_hash: merkle.policyHash,
       },
       classifier: merkle.semantic.classifier,
       stats: merkle.stats,

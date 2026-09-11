@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { directoryHash, linkHash, comparePaths } from './hash.js';
+import { directoryHash, linkHash, comparePaths, policyHash } from './hash.js';
 import { validPath, normalizePolicy, isIgnored } from './policy.js';
 import { buildMerkleTree } from './tree.js';
 import { validateSemanticMetadata } from './filemeta.js';
@@ -12,6 +12,8 @@ export function validateSnapshot(value) {
   if (typeof value.rootPath !== 'string' || !value.rootPath || value.rootPath.includes('\0')) fail('missing root path');
   if (!value.policy || !Array.isArray(value.entries) || value.entries.length === 0) fail('missing entries/policy');
   const policy = normalizePolicy(value.policy);
+  const normalizedPolicyHash = policyHash(policy);
+  if (value.policyHash != null && value.policyHash !== normalizedPolicyHash) fail('policy hash mismatch');
   const nodes = new Map();
   const children = new Map();
   const stats = { files: 0, symlinks: 0, directories: 0, bytes: 0 };
@@ -48,7 +50,7 @@ export function validateSnapshot(value) {
   const entries = [...nodes.values()].sort((a, b) => comparePaths(a.path, b.path));
   const semantic = value.semantic ? validateSemanticMetadata(value.semantic, entries) : null;
   return { format: value.format, version: 1, algorithm: 'sha256', rootPath: value.rootPath,
-    createdAt: value.createdAt, policy, rootHash: value.rootHash, stats,
+    createdAt: value.createdAt, policy, policyHash: normalizedPolicyHash, rootHash: value.rootHash, stats,
     entries, ...(semantic ? { semantic } : {}) };
 }
 

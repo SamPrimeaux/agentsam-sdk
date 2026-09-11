@@ -75,6 +75,8 @@ test('semantic metadata adds package/system/category/mode and AST evidence witho
   const plain = await buildMerkleTree(root);
   const enriched = await buildMerkleTree(root, { semantic: true });
   assert.equal(enriched.rootHash, plain.rootHash);
+  assert.match(enriched.policyHash, /^sha256:[a-f0-9]{64}$/);
+  assert.equal(enriched.policyHash, plain.policyHash);
   assert.equal(enriched.version, 1);
   assert.match(enriched.semantic.rootHash, /^sha256:[a-f0-9]{64}$/);
   assert.equal(enriched.semantic.classifier.format, 'agentsam-filemeta');
@@ -131,6 +133,7 @@ test('default and custom snapshots exclude themselves and preserve baseline unti
   assert.ok(diffTrees(snapshot, await buildMerkleTree(root, { policy: snapshot.policy })).equal);
   const reloaded = await readSnapshot(output);
   assert.equal(reloaded.rootHash, snapshot.rootHash);
+  assert.equal(reloaded.policyHash, snapshot.policyHash);
   assert.equal(reloaded.semantic.rootHash, snapshot.semantic.rootHash);
   await assert.rejects(saveSnapshot(root), /exists/);
   await write(root, 'file.txt', 'edited');
