@@ -43,6 +43,7 @@ export {
 export * from './core/index.js';
 export * from './core/constants.js';
 export { DEFAULT_COMPANY_ID, DEFAULT_COMPANY_SLUG, normalizeCompanyRow } from './contracts/company.js';
+export * from './contracts/auth-config.js';
 export { createPasswordResetService } from './recovery/password-reset.js';
 export {
   finalizeInboundOAuth,
