@@ -50,10 +50,9 @@ export function validateConfig(input) {
   if (c.storage.driver === 'postgres' && !/^[A-Z_][A-Z0-9_]*$/.test(c.storage.connection_env || '')) throw new Error('Postgres requires a connection_env name, never a connection string in config.');
   return c;
 }
-export function defaultConfig({ include = ['.'], exclude = [], scope = 'default', workspace = 'local', target = 'local', dimensions = 768 } = {}) {
+export function defaultConfig({ include = ['.'], exclude = [], scope = 'default', target = 'local', dimensions = 768 } = {}) {
   if (!['local', 'production'].includes(target)) throw new Error('target must be local or production.');
-  if (target === 'production' && workspace === 'local') throw new Error('Production requires an explicit workspace identifier.');
-  return validateConfig({ version: 1, repository_id: randomUUID(), workspace_id: workspace,
+  return validateConfig({ version: 1, repository_id: randomUUID(),
     scope: { name: scope, include, exclude }, chunking: { max_chars: 4000 },
     embedding: { provider: 'gemini', model: 'gemini-embedding-2', revision: '1', dimensions, parameters: { task: 'code retrieval' } },
     storage: target === 'local' ? { driver: 'sqlite' } : { driver: 'postgres', connection_env: 'AGENTSAM_DATABASE_URL' } });
