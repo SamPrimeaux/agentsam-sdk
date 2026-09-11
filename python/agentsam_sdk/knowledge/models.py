@@ -1,40 +1,46 @@
-"""Provider-neutral contracts for indexing and retrieval."""
+"""Provider-neutral contracts for indexing and retrieval.
+
+Portable knowledge is repository-scoped. ``workspace_id`` remains optional compatibility
+metadata only; it is never required to identify repository knowledge.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping
 
 JsonMap = Mapping[str, Any]
+
 
 @dataclass(frozen=True, slots=True)
 class Source:
     source_id: str
     source_type: str
-    workspace_id: str
     uri: str
     repository_full_name: str | None = None
     ref: str | None = None
     commit_sha: str | None = None
+    workspace_id: str | None = None
     metadata: JsonMap = field(default_factory=dict)
+
 
 @dataclass(frozen=True, slots=True)
 class Document:
     document_id: str
     source_id: str
-    workspace_id: str
     content_hash: str
     media_type: str
     title: str | None = None
     path: str | None = None
     text: str | None = None
+    workspace_id: str | None = None
     metadata: JsonMap = field(default_factory=dict)
+
 
 @dataclass(frozen=True, slots=True)
 class Chunk:
     chunk_id: str
     document_id: str
-    workspace_id: str
     content: str
     ordinal: int
     content_hash: str
@@ -45,25 +51,27 @@ class Chunk:
     path: str | None = None
     symbol: str | None = None
     heading_path: tuple[str, ...] = ()
+    workspace_id: str | None = None
     metadata: JsonMap = field(default_factory=dict)
+
 
 @dataclass(frozen=True, slots=True)
 class RepositoryDescriptor:
     repository_id: str
     full_name: str
-    workspace_id: str
     default_branch: str
     product_ids: tuple[str, ...] = ()
     indexed_refs: tuple[str, ...] = ()
     enabled_lanes: tuple[str, ...] = ("code", "docs")
     include: tuple[str, ...] = ()
     exclude: tuple[str, ...] = ()
+    workspace_id: str | None = None
     metadata: JsonMap = field(default_factory=dict)
+
 
 @dataclass(frozen=True, slots=True)
 class RetrievalQuery:
     text: str
-    workspace_id: str
     repositories: tuple[str, ...] = ()
     product_ids: tuple[str, ...] = ()
     refs: tuple[str, ...] = ()
@@ -74,6 +82,8 @@ class RetrievalQuery:
     require_current_ref: bool = True
     include_archived: bool = False
     explain: bool = True
+    workspace_id: str | None = None
+
 
 @dataclass(frozen=True, slots=True)
 class RetrievalHit:
@@ -92,6 +102,7 @@ class RetrievalHit:
     stale: bool = False
     metadata: JsonMap = field(default_factory=dict)
 
+
 @dataclass(frozen=True, slots=True)
 class ContextPack:
     query_id: str
@@ -100,6 +111,7 @@ class ContextPack:
     estimated_tokens: int
     confidence: str = "unknown"
     diagnostics: JsonMap = field(default_factory=dict)
+
 
 @dataclass(frozen=True, slots=True)
 class IngestReceipt:

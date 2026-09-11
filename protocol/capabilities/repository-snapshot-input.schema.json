@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/capabilities/repository-snapshot-input.schema.json",
+  "title": "repository.snapshot input",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "cwd": { "type": "string", "minLength": 1 },
+    "churnDays": { "type": "integer", "minimum": 1, "maximum": 3650, "default": 30 }
+  }
+}

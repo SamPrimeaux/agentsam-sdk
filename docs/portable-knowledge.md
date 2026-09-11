@@ -12,7 +12,7 @@ agentsam search "snapshot integrity"
 agentsam index show
 ```
 
-Bare `agentsam init` detects an existing Git repository and offers a setup wizard. `agentsam init --name new-project` retains the scaffold workflow. Setup creates `.agentsam/knowledge.json` exclusively and preserves existing source/configuration. The config's `repository_id` is generated once; workspace identity is explicit, never inferred from a Git owner. Commit this non-secret config to share identity across checkouts. Use a distinct repository ID when cloning it for another customer.
+Bare `agentsam init` detects an existing Git repository and offers a setup wizard. `agentsam init --name new-project` retains the scaffold workflow. Setup creates `.agentsam/knowledge.json` exclusively and preserves existing source/configuration. The config's `repository_id` is generated once and is the portable knowledge identity. New configs do not require or create a workspace identifier. Legacy configs that already contain `workspace_id` remain readable and retain their previous cache/generation namespace for compatibility. Commit this non-secret config to share identity across checkouts. Use a distinct repository ID when the same source must represent a different repository corpus.
 
 Scope entries are literal relative files/directories, comma-separated on the CLI, not glob expressions. Supported AST languages are JS/JSX/TS/TSX including `.mjs`, `.cjs`, `.mts`, `.cts`; Markdown/MDX, SQL and JSON are bounded text chunks, not AST parsers. Imports, re-exports and call expressions are syntactic observations marked `resolved: false`, not a type-resolved cross-file call graph. Syntax errors abort publication.
 
@@ -36,7 +36,7 @@ Limits count unique uncached inputs and content characters, not total billable a
 ## Incremental and history guarantees
 
 - Structural parse cache keys include source content, language, parser version and chunking policy.
-- Vector keys include workspace/repository namespace, model, revision, dimensions, parameters, input-format version and actual chunk content. Paths/commit IDs are retrieval metadata, so a pure move reuses vectors.
+- Vector keys include the repository namespace, model, revision, dimensions, parameters, input-format version and actual chunk content. Legacy configs with `workspace_id` preserve their prior workspace-qualified namespace so existing cached vectors remain readable. Paths/commit IDs are retrieval metadata, so a pure move reuses vectors.
 - Scope expansion rechecks the complete selected inventory. Named scopes have separate active generations. Different customers/repositories do not share caches.
 - An unchanged run performs zero embedding requests. An edit embeds only changed chunks; changing the profile creates a separate embedding space.
 - A run stages completed cache work, rechecks source hashes, then atomically publishes a generation with compare-and-swap protection. Provider failure, invalid dimensions, concurrent publication or mid-run source edits leave the previous active generation intact.
@@ -59,14 +59,14 @@ This wraps the existing bundled Python repository-intelligence module (Python 3.
 ## Backend Postgres / Supabase
 
 ```sh
-agentsam init . --yes --include backend/feature --target production --workspace customer-workspace
+agentsam init . --yes --include backend/feature --target production
 # Supply AGENTSAM_DATABASE_URL through a secret manager.
 agentsam index setup-store
 agentsam index plan
 agentsam index run
 ```
 
-Production selects the storage destination; execution still runs from this checkout. Review [`postgres.sql`](../src/knowledge/stores/postgres.sql) before `setup-store`, which explicitly applies it to the configured database. Init/plan/search never migrate a database. Use a dedicated backend connection with TLS appropriate to your environment. The private `agentsam_knowledge` schema is not intended for browser access or Supabase's exposed REST schemas; tenant authorization belongs in the host. Workspace-qualified IDs provide isolation in queries, not authentication.
+Production selects the storage destination; execution still runs from this checkout. Review [`postgres.sql`](../src/knowledge/stores/postgres.sql) before `setup-store`, which explicitly applies it to the configured database. Init/plan/search never migrate a database. Use a dedicated backend connection with TLS appropriate to your environment. The private `agentsam_knowledge` schema is not intended for browser access or Supabase's exposed REST schemas; account/tenant authorization belongs in the host. Repository ID plus named scope isolates portable knowledge generations; it is resource identity, not actor authentication.
 
 SQLite stores cache entries plus immutable generation/observation payloads locally under `.agentsam/knowledge/`, excluded from Git. Postgres stores the same versioned facts in JSONB and embeddings in native pgvector, with exact cosine ranking restricted to the selected generation's vector keys. This first slice uses exact search, not an ANN index; large indexes need per-profile partitions/indexes and benchmarks. The unconstrained vector column permits multiple dimensional profiles, but queries never mix them. Retention/garbage collection is intentionally absent so initial history is preserved; configure a retention policy before large production backfills.
 

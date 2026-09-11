@@ -37,7 +37,8 @@ export function validateConfig(input) {
   allowed(c.embedding, ['provider', 'model', 'revision', 'dimensions', 'parameters'], 'embedding');
   allowed(c.storage, ['driver', 'connection_env'], 'storage');
   if (c.version !== 1) throw new Error('Unsupported knowledge configuration version.');
-  for (const key of ['repository_id', 'workspace_id']) if (typeof c[key] !== 'string' || !c[key].trim()) throw new Error(`${key} is required.`);
+  if (typeof c.repository_id !== 'string' || !c.repository_id.trim()) throw new Error('repository_id is required.');
+  if (c.workspace_id != null && (typeof c.workspace_id !== 'string' || !c.workspace_id.trim())) throw new Error('workspace_id must be a non-empty string when present.');
   if (typeof c.scope?.name !== 'string' || !c.scope.name.trim() || !Array.isArray(c.scope.include) || !c.scope.include.length) throw new Error('A named scope with at least one include path is required.');
   c.scope.include = [...new Set(c.scope.include.map(relativeSelection))].sort();
   c.scope.exclude = [...new Set((c.scope.exclude || []).map(relativeSelection))].sort();
@@ -49,10 +50,9 @@ export function validateConfig(input) {
   if (c.storage.driver === 'postgres' && !/^[A-Z_][A-Z0-9_]*$/.test(c.storage.connection_env || '')) throw new Error('Postgres requires a connection_env name, never a connection string in config.');
   return c;
 }
-export function defaultConfig({ include = ['.'], exclude = [], scope = 'default', workspace = 'local', target = 'local', dimensions = 768 } = {}) {
+export function defaultConfig({ include = ['.'], exclude = [], scope = 'default', target = 'local', dimensions = 768 } = {}) {
   if (!['local', 'production'].includes(target)) throw new Error('target must be local or production.');
-  if (target === 'production' && workspace === 'local') throw new Error('Production requires an explicit workspace identifier.');
-  return validateConfig({ version: 1, repository_id: randomUUID(), workspace_id: workspace,
+  return validateConfig({ version: 1, repository_id: randomUUID(),
     scope: { name: scope, include, exclude }, chunking: { max_chars: 4000 },
     embedding: { provider: 'gemini', model: 'gemini-embedding-2', revision: '1', dimensions, parameters: { task: 'code retrieval' } },
     storage: target === 'local' ? { driver: 'sqlite' } : { driver: 'postgres', connection_env: 'AGENTSAM_DATABASE_URL' } });
@@ -65,5 +65,11 @@ export function initRepository(root, options = {}) {
   fs.writeFileSync(target, JSON.stringify(config, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
   return config;
 }
-export const scopeKey = config => fingerprint([config.workspace_id, config.repository_id, config.scope.name]);
-export const cacheNamespace = config => fingerprint([config.workspace_id, config.repository_id]);
+// New portable configs are repository-scoped. Legacy configs that still carry
+// workspace_id retain their original namespace so existing local generations stay readable.
+export const scopeKey = config => config.workspace_id
+  ? fingerprint([config.workspace_id, config.repository_id, config.scope.name])
+  : fingerprint([config.repository_id, config.scope.name]);
+export const cacheNamespace = config => config.workspace_id
+  ? fingerprint([config.workspace_id, config.repository_id])
+  : fingerprint([config.repository_id]);

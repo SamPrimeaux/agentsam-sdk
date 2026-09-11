@@ -4,54 +4,16 @@
   "type": "object",
   "additionalProperties": false,
   "title": "Document",
-  "required": [
-    "document_id",
-    "source_id",
-    "workspace_id",
-    "content_hash",
-    "media_type"
-  ],
+  "required": ["document_id", "source_id", "content_hash", "media_type"],
   "properties": {
-    "document_id": {
-      "type": "string",
-      "minLength": 1
-    },
-    "source_id": {
-      "type": "string",
-      "minLength": 1
-    },
-    "workspace_id": {
-      "type": "string",
-      "minLength": 1
-    },
-    "content_hash": {
-      "type": "string",
-      "minLength": 1
-    },
-    "media_type": {
-      "type": "string",
-      "minLength": 1
-    },
-    "title": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "path": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "text": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "metadata": {
-      "type": "object"
-    }
+    "document_id": { "type": "string", "minLength": 1 },
+    "source_id": { "type": "string", "minLength": 1 },
+    "workspace_id": { "type": "string", "minLength": 1, "deprecated": true, "description": "Legacy compatibility metadata only." },
+    "content_hash": { "type": "string", "minLength": 1 },
+    "media_type": { "type": "string", "minLength": 1 },
+    "title": { "type": ["string", "null"] },
+    "path": { "type": ["string", "null"] },
+    "text": { "type": ["string", "null"] },
+    "metadata": { "type": "object" }
   }
 }

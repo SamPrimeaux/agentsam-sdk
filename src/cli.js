@@ -24,6 +24,8 @@ import { runMerkle } from './commands/merkle.js';
 import { runDeployReceipt } from './commands/deploy-receipt.js';
 import { runSecurity } from './commands/security.js';
 import { runRecon } from './commands/recon.js';
+import { applyPresetSelection, runAdd, runCapabilities, runDev, runInspect } from './commands/product.js';
+import { listPresets, resolvePreset } from './presets/index.js';
 import { SLASH_COMMANDS, SHELL_PHASES } from './lib/slash-commands.js';
 import fs from 'node:fs';
 import { repositoryRoot } from './knowledge/config.js';
@@ -42,7 +44,17 @@ function printHelp() {
   console.log(`
   Agent Sam SDK — CLI v${VERSION}
 
-  Usage:
+  Product UX:
+    agentsam create <name> --preset <fullstack|cms|prototype|data>
+    agentsam add <auth|cms|knowledge|agent|deploy-cloudflare>
+    agentsam dev               Run this project's existing npm dev script
+    agentsam inspect [--json]  Canonical deterministic repository.snapshot
+    agentsam deploy            Graduate an AgentSam project intentionally
+
+  Capability discovery:
+    agentsam capabilities [capability-id] [--json]
+
+  Power-user UX:
     agentsam context [--json]  Git repo/revision + bridge configuration from any repo
     agentsam init              Configure knowledge in this repo; --name scaffolds a new project
     agentsam index             Plan/run incremental AST and optional embeddings (--help)
@@ -116,6 +128,21 @@ function parseDeployArgs(argv) {
   return opts;
 }
 
+function parseCreateArgs(argv) {
+  const opts = { projectName: '', preset: 'fullstack', runTarget: 'local', help: false };
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === '--help' || arg === '-h') opts.help = true;
+    else if (arg === '--preset') opts.preset = argv[++i] || 'fullstack';
+    else if (arg === '--run-target' || arg === '--target') opts.runTarget = argv[++i] || 'local';
+    else if (arg === '--yes' || arg === '-y') continue;
+    else if (arg.startsWith('-')) throw new Error(`unknown create option: ${arg}`);
+    else if (!opts.projectName) opts.projectName = arg;
+    else throw new Error(`unexpected create argument: ${arg}`);
+  }
+  return opts;
+}
+
 async function runLocalInit(config) {
   const { projectName, lane, runTarget, prompt } = config;
 
@@ -163,6 +190,7 @@ async function runLocalInit(config) {
   console.log(`
   Local means local: no Worker, tunnel, IAM login, or cloud database is required.
   `);
+  return { dir, meta };
 }
 
 async function initInteractive(partial = {}) {
@@ -271,6 +299,30 @@ if (command === '--version' || command === '-v') {
   console.log(VERSION);
 } else if (command === '--help' || command === '-h' || !command) {
   printHelp();
+} else if (command === 'create') {
+  try {
+    const opts = parseCreateArgs(rest);
+    if (opts.help || !opts.projectName) {
+      console.log(`agentsam create <name> --preset <${listPresets().map((row) => row.id).join('|')}> [--target local|cloudflare|gcp]`);
+    } else {
+      const preset = resolvePreset(opts.preset);
+      const created = await runLocalInit({ projectName: opts.projectName, lane: preset.lane, runTarget: opts.runTarget, prompt: null });
+      applyPresetSelection(created.dir, preset);
+      console.log(`  ✓ Preset      ${preset.id}\n  ✓ Features    ${preset.features.join(', ') || 'none'}\n  ✓ Capabilities ${preset.capabilities.length}\n`);
+    }
+  } catch (e) { console.error(`\n  ✗ ${e?.message || e}\n`); process.exitCode = 1; }
+} else if (command === 'add') {
+  try { await runAdd(rest); }
+  catch (e) { console.error(`\n  ✗ ${e?.message || e}\n`); process.exitCode = 1; }
+} else if (command === 'dev') {
+  try { await runDev(rest); }
+  catch (e) { console.error(`\n  ✗ ${e?.message || e}\n`); process.exitCode = 1; }
+} else if (command === 'inspect') {
+  try { await runInspect(rest); }
+  catch (e) { console.error(`\n  ✗ ${e?.message || e}\n`); process.exitCode = 1; }
+} else if (command === 'capabilities') {
+  try { await runCapabilities(rest); }
+  catch (e) { console.error(`\n  ✗ ${e?.message || e}\n`); process.exitCode = 1; }
 } else if (command === 'context') {
   try {
     await runContext(rest);

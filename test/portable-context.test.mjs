@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -37,6 +37,16 @@ test('resolveGitContext derives repository identity from Git without user/worksp
   assert.equal(ctx.dirty, false);
   assert.equal('workspaceId' in ctx, false);
   assert.equal('userId' in ctx, false);
+});
+
+test('resolveGitContext supports an initialized repository before its first commit', () => {
+  const root = mkdtempSync(join(tmpdir(), 'agentsam-sdk-unborn-'));
+  execFileSync('git', ['init'], { cwd: root, stdio: 'ignore' });
+  writeFileSync(join(root, 'README.md'), '# unborn\n');
+  const ctx = resolveGitContext({ cwd: root });
+  assert.equal(ctx.root, realpathSync(root));
+  assert.equal(ctx.revisionSha, null);
+  assert.equal(ctx.dirty, true);
 });
 
 test('bridge headers authenticate only the machine principal', () => {

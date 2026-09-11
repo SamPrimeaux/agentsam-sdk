@@ -24,12 +24,12 @@ async function openStore(root, config, readOnly = false) {
 function provider() { return createGeminiEmbedder({ apiKey: process.env.GEMINI_API_KEY }); }
 
 export async function runRepositoryInit(argv) {
-  const { values: opts, positionals } = flags(argv, { existing: { type: 'boolean' }, yes: { type: 'boolean', short: 'y' }, include: { type: 'string' }, exclude: { type: 'string' }, scope: { type: 'string' }, workspace: { type: 'string' }, target: { type: 'string' }, dimensions: { type: 'string' } });
-  if (opts.help) { console.log('agentsam init [.] [--cwd PATH] [--yes] [--include src,docs] [--exclude src/generated] [--scope NAME] [--target local|production] [--workspace ID] [--dimensions 768]'); return; }
+  const { values: opts, positionals } = flags(argv, { existing: { type: 'boolean' }, yes: { type: 'boolean', short: 'y' }, include: { type: 'string' }, exclude: { type: 'string' }, scope: { type: 'string' }, target: { type: 'string' }, dimensions: { type: 'string' } });
+  if (opts.help) { console.log('agentsam init [.] [--cwd PATH] [--yes] [--include src,docs] [--exclude src/generated] [--scope NAME] [--target local|production] [--dimensions 768]'); return; }
   if (positionals.length > 1 || (positionals[0] && positionals[0] !== '.')) throw new Error('Use init . --cwd PATH to adopt an existing repository, or init --name NAME to scaffold.');
   const root = repositoryRoot(opts.cwd);
   if (fs.existsSync(path.join(root, CONFIG_PATH))) throw new Error(`${CONFIG_PATH} already exists; edit it to change scope/profile. Existing configuration was preserved.`);
-  let include = opts.include, exclude = opts.exclude, target = opts.target, workspace = opts.workspace, dimensions = opts.dimensions;
+  let include = opts.include, exclude = opts.exclude, target = opts.target, dimensions = opts.dimensions;
   if (!opts.yes) {
     if (!process.stdin.isTTY) throw new Error('Existing-repository setup needs a terminal or --yes with explicit options.');
     const prompt = createInterface({ input: process.stdin, output: process.stdout });
@@ -38,11 +38,10 @@ export async function runRepositoryInit(argv) {
       include ??= await prompt.question('1) Include files/directories, comma-separated [.]: ') || '.';
       exclude ??= await prompt.question('2) Exclude files/directories [none]: ') || '';
       target ??= await prompt.question('3) Storage: local or production [local]: ') || 'local';
-      if (target === 'production') workspace ??= await prompt.question('4) Workspace identifier: ');
-      dimensions ??= await prompt.question('5) Gemini Embedding 2 dimensions [768]: ') || '768';
+      dimensions ??= await prompt.question('4) Gemini Embedding 2 dimensions [768]: ') || '768';
     } finally { prompt.close(); }
   }
-  const config = initRepository(root, { include: split(include || '.'), exclude: split(exclude || ''), scope: opts.scope || 'default', target: target || 'local', workspace: workspace || 'local', dimensions: Number(dimensions || 768) });
+  const config = initRepository(root, { include: split(include || '.'), exclude: split(exclude || ''), scope: opts.scope || 'default', target: target || 'local', dimensions: Number(dimensions || 768) });
   show({ root, config: CONFIG_PATH, storage: config.storage.driver, next: config.storage.driver === 'postgres' ? ['agentsam index setup-store', 'agentsam index plan', 'agentsam index run'] : ['agentsam index plan', 'agentsam index run', 'agentsam search "your symbol"'], note: 'No indexing, credentials, network calls, or source-file changes during setup.' });
 }
 

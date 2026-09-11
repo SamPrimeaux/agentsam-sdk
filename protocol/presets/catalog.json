@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "presets": {
+    "fullstack": {
+      "id": "fullstack",
+      "version": 1,
+      "lane": "fullstack",
+      "description": "Local-first application with AgentSam runtime, repository primitives, knowledge, and delivery hooks.",
+      "features": ["agent", "knowledge"],
+      "capabilities": ["scaffold.create", "repository.snapshot", "knowledge.index", "knowledge.search", "security.scan", "deploy.receipt"],
+      "defaults": { "database": "sqlite", "assets": "local", "deploy": "local" }
+    },
+    "cms": {
+      "id": "cms",
+      "version": 1,
+      "lane": "cms",
+      "description": "Content-oriented application starting from local CMS primitives with explicit auth/deploy opt-ins.",
+      "features": ["cms", "knowledge"],
+      "capabilities": ["scaffold.create", "repository.snapshot", "knowledge.index", "knowledge.search", "site.scrape", "deploy.receipt"],
+      "defaults": { "database": "sqlite", "assets": "local", "deploy": "local" }
+    },
+    "prototype": {
+      "id": "prototype",
+      "version": 1,
+      "lane": "fullstack",
+      "description": "Small local prototype with the minimum deterministic AgentSam runtime.",
+      "features": ["agent"],
+      "capabilities": ["scaffold.create", "repository.snapshot", "security.scan"],
+      "defaults": { "database": "sqlite", "assets": "local", "deploy": "local" }
+    },
+    "data": {
+      "id": "data",
+      "version": 1,
+      "lane": "data",
+      "description": "Data-oriented local application with repository knowledge and explicit production storage graduation.",
+      "features": ["knowledge"],
+      "capabilities": ["scaffold.create", "repository.snapshot", "knowledge.index", "knowledge.search", "security.scan"],
+      "defaults": { "database": "sqlite", "assets": "local", "deploy": "local" }
+    }
+  },
+  "addons": {
+    "agent": { "id": "agent", "capabilities": ["scaffold.create"], "description": "AgentSam local runtime selection." },
+    "auth": { "id": "auth", "capabilities": ["identity.init"], "description": "Identity package selection; use `agentsam identity init` when a standalone auth app scaffold is required." },
+    "cms": { "id": "cms", "capabilities": ["site.scrape"], "description": "CMS/content feature selection." },
+    "knowledge": { "id": "knowledge", "capabilities": ["knowledge.index", "knowledge.search"], "description": "Portable repository indexing and retrieval." },
+    "deploy-cloudflare": { "id": "deploy-cloudflare", "capabilities": ["deploy.receipt"], "description": "Select Cloudflare as the intended deploy target; provisioning remains explicit at deploy time." }
+  }
+}

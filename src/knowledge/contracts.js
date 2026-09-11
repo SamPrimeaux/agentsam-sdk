@@ -8,7 +8,7 @@ export const KNOWLEDGE_OPERATIONS = Object.freeze({
 export function assertRetrievalQuery(value) {
   if (!value || typeof value !== "object") throw new TypeError("RetrievalQuery must be an object");
   if (!String(value.text || "").trim()) throw new TypeError("RetrievalQuery.text is required");
-  if (!String(value.workspace_id || "").trim()) throw new TypeError("RetrievalQuery.workspace_id is required");
+  if (value.workspace_id != null && !String(value.workspace_id).trim()) throw new TypeError("RetrievalQuery.workspace_id must be non-empty when present");
   const topK = value.top_k ?? 12;
   if (!Number.isInteger(topK) || topK < 1 || topK > 100) throw new RangeError("top_k must be 1..100");
   if (!Number.isInteger(value.token_budget ?? 8000) || (value.token_budget ?? 8000) < 256) throw new RangeError("token_budget must be at least 256");

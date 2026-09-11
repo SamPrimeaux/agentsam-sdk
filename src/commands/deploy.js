@@ -97,7 +97,6 @@ async function runCloudflareDeploy(cwd, config, accountId) {
       hosting: 'cloudflare',
       provision_only: true,
       account_id: accountId || undefined,
-      workspace_id: ctx.workspace_id,
     },
     token,
     async (evt) => {

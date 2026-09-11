@@ -1,3 +1,3 @@
-from agentsam_sdk.repository.inventory import main
+from agentsam_sdk.repository.intelligence.cli import main_cli
 
-raise SystemExit(main())
+raise SystemExit(main_cli())

@@ -4,49 +4,15 @@
   "type": "object",
   "additionalProperties": false,
   "title": "Source",
-  "required": [
-    "source_id",
-    "source_type",
-    "workspace_id",
-    "uri"
-  ],
+  "required": ["source_id", "source_type", "uri"],
   "properties": {
-    "source_id": {
-      "type": "string",
-      "minLength": 1
-    },
-    "source_type": {
-      "type": "string",
-      "minLength": 1
-    },
-    "workspace_id": {
-      "type": "string",
-      "minLength": 1
-    },
-    "uri": {
-      "type": "string",
-      "minLength": 1
-    },
-    "repository_full_name": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "ref": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "commit_sha": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "metadata": {
-      "type": "object"
-    }
+    "source_id": { "type": "string", "minLength": 1 },
+    "source_type": { "type": "string", "minLength": 1 },
+    "workspace_id": { "type": "string", "minLength": 1, "deprecated": true, "description": "Legacy compatibility metadata only." },
+    "uri": { "type": "string", "minLength": 1 },
+    "repository_full_name": { "type": ["string", "null"] },
+    "ref": { "type": ["string", "null"] },
+    "commit_sha": { "type": ["string", "null"] },
+    "metadata": { "type": "object" }
   }
 }

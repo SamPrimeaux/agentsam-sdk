@@ -100,7 +100,7 @@ export async function startKnowledgeService({ stateDir, repositories, token, por
     });
     // Re-resolve registry on replay. Removed repositories do not get resumed.
     const payload = JSON.parse(row.payload), registered = repositories[payload.request.repository];
-    if (!registered || registered.config.repository_id !== payload.config.repository_id || registered.config.workspace_id !== payload.config.workspace_id || fingerprint(registered.config.scope) !== payload.registered_scope || (!allowEmbeddings && ((payload.request.embed && payload.request.operation !== 'plan') || payload.request.semantic))) {
+    if (!registered || registered.config.repository_id !== payload.config.repository_id || fingerprint(registered.config.scope) !== payload.registered_scope || (!allowEmbeddings && ((payload.request.embed && payload.request.operation !== 'plan') || payload.request.semantic))) {
       response = { ok: false, error: 'Repository registration changed; resubmit this job.' }; child.kill(); return;
     }
     child.send({ ...payload, root: registered.root, filename: path.join(stateDir, 'knowledge.sqlite'), maxFiles });
@@ -124,7 +124,7 @@ export async function startKnowledgeService({ stateDir, repositories, token, por
       payload.registered_scope = fingerprint(repositories[payload.request.repository].config.scope);
       const key = req.headers['idempotency-key'];
       if (key !== undefined && (typeof key !== 'string' || !/^[\w:.-]{1,128}$/.test(key))) throw fail(400, 'Invalid Idempotency-Key.');
-      const digest = fingerprint(payload), idem = key ? fingerprint([payload.config.workspace_id, payload.config.repository_id, key]) : null;
+      const digest = fingerprint(payload), idem = key ? fingerprint([payload.config.repository_id, payload.registered_scope, key]) : null;
       const previous = idem && db.prepare('SELECT * FROM jobs WHERE idem=?').get(idem);
       if (previous) {
         if (previous.digest !== digest) throw fail(409, 'Idempotency-Key already used for a different job.');

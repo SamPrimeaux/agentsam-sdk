@@ -1,7 +1,8 @@
 # AgentSam SDK
 
-Portable SDK modules and CLI kits for creating local projects, inspecting repositories,
-indexing selected code, integrating identity, and maintaining dependencies.
+A deterministic-first application and agent toolkit: reusable repository, knowledge, integrity,
+security, identity, scaffolding, and delivery capabilities with optional AgentSam/LLM composition.
+CLI/TUI surfaces make those same primitives easy to use without making a model part of the implementation.
 
 **npm:** `@inneranimalmedia/agentsam-sdk` · **Source:** [GitHub](https://github.com/SamPrimeaux/agentsam-sdk)
 
@@ -24,19 +25,23 @@ or use local scaffolding/indexing.
 ## Create a local application
 
 ```sh
-agentsam init --name my-agent --yes
+agentsam create my-agent --preset fullstack
 cd my-agent
 npm install
 npm run smoke
-npm run dev
+agentsam dev
 ```
 
-This creates a Git repository, local SQLite database, environment templates, a Node API,
-and terminal commands. Local setup does not require an IAM account, cloud credentials,
-or a tunnel. `npm run status`, `npm run tui`, and `npm run pty` inspect or operate the
-generated project. A configured host/provider is required when selecting cloud operations.
+Presets are deterministic configuration bundles, not model prompts. Available starting presets are
+`fullstack`, `cms`, `prototype`, and `data`; they select an existing scaffold lane plus explicit feature
+and capability IDs. They do not silently provision cloud resources. The older
+`agentsam init --name my-agent --yes` scaffold entry point remains available for compatibility.
 
-Without a global install, use `npx @inneranimalmedia/agentsam-sdk init --name my-agent --yes`.
+The generated project contains a Git repository, local SQLite database, environment templates, a Node
+API, and terminal commands. Local setup does not require an IAM account, cloud credentials, a model, or
+a tunnel. Use `agentsam add <feature>` to record an explicit feature selection and its capability set.
+
+Without a global install, use `npx @inneranimalmedia/agentsam-sdk create my-agent --preset fullstack`.
 
 ## Index an existing repository
 
@@ -57,10 +62,16 @@ The JavaScript/TypeScript parser records syntactic relationships, not a fully re
 semantic call graph. Model/dimension changes create a distinct embedding profile.
 Python-backed snapshots capture repository composition and Git churn.
 
-## Available kits
+## Capability discovery and available kits
+
+The canonical machine-readable capability registry is available through `agentsam capabilities --json`
+and `@inneranimalmedia/agentsam-sdk/capabilities`. `agentsam inspect --json` runs the canonical
+read-only `repository.snapshot` composition primitive. See [Capabilities and presets](docs/CAPABILITIES.md).
 
 | Capability | Entry point | Guide |
 | --- | --- | --- |
+| Capability registry + presets | `agentsam capabilities`, `/capabilities`, `/presets` | [Capabilities](docs/CAPABILITIES.md) |
+| Canonical repository snapshot | `agentsam inspect --json`; `/repository` | [Capabilities](docs/CAPABILITIES.md) |
 | Git context and bridge client | `agentsam context --json`; `/git-context`, `/bridge-client` | [Portable context](docs/PORTABLE_CONTEXT.md) |
 | Identity contracts and adapters | `/identity`; `agentsam identity init` | [Identity](packages/identity/README.md) |
 | Repository knowledge | `agentsam index`, `search`, `repo`; `/knowledge` | [Knowledge](docs/portable-knowledge.md) |
@@ -93,11 +104,12 @@ authorizes its caller. Other local tooling uses Node APIs.
 
 ## Host integration and ownership
 
-The root `AgentSam` helper supplies routing/session primitives. Full model orchestration,
-tool execution policy, provider credentials, user authorization, and production storage
-belong to the consuming host application. The npm package alone does not provide a hosted
-autonomous agent platform. The old `scaffoldProject()` export is deprecated; use the local
-CLI scaffold command.
+Deterministic SDK capabilities remain useful without a model. The root `AgentSam` helper supplies an
+optional routing/session wrapper, while model orchestration, tool execution policy, provider credentials,
+actor/account authorization, workflow durability, approvals, jobs, and production application records
+belong to the consuming host application. Git/repository identity never proves actor authority, and the SDK
+does not create a second platform tools database. The old `scaffoldProject()` export is deprecated; use
+`agentsam create` or the local scaffold commands.
 
 This repository owns portable code once. Applications import it and provide adapters;
 they do not mirror SDK trees. [Ownership protocol](protocol/README.md).
