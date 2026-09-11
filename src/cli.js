@@ -18,6 +18,7 @@ import { runContext } from './commands/context.js';
 import { runDb } from './commands/db.js';
 import { runStatus } from './commands/status.js';
 import { runTui } from './commands/tui.js';
+import { runShell } from './commands/shell.js';
 import { runDockerize } from './commands/dockerize.js';
 import { runMini } from './commands/mini.js';
 import { runMerkle } from './commands/merkle.js';
@@ -26,7 +27,6 @@ import { runSecurity } from './commands/security.js';
 import { runRecon } from './commands/recon.js';
 import { applyPresetSelection, runAdd, runCapabilities, runDev, runInspect } from './commands/product.js';
 import { listPresets, resolvePreset } from './presets/index.js';
-import { SLASH_COMMANDS, SHELL_PHASES } from './lib/slash-commands.js';
 import fs from 'node:fs';
 import { repositoryRoot } from './knowledge/config.js';
 
@@ -70,7 +70,7 @@ function printHelp() {
     agentsam tui               Zero-dependency ANSI Agent Sam dashboard
     agentsam tui rich          Optional Python Rich dashboard (--install for local venv)
     agentsam start-local       Local PTY on ws://127.0.0.1:3099 (no tunnel, no Cloudflare)
-    agentsam shell             Terminal commands + presentation catalog
+    agentsam shell             Interactive Agent Sam slash-command shell
     agentsam tunnel            Explicitly expose local PTY when remote access is wanted
     agentsam deploy            Graduate to Cloudflare / GCP when ready
     agentsam dockerize         Build/run app, knowledge, or CAD containers (--help)
@@ -257,41 +257,6 @@ async function initFromArgs(argv) {
   await runLocalInit({ ...opts, prompt: null });
 }
 
-async function runShellInfo(argv = []) {
-  const sub = argv[0] || 'list';
-  if (sub === 'demo' || sub === 'ansi') {
-    await runTui(['ansi', ...argv.slice(1)]);
-    return;
-  }
-  if (sub === 'rich') {
-    await runTui(['rich', ...argv.slice(1)]);
-    return;
-  }
-  if (sub !== 'list' && sub !== 'status') {
-    throw new Error(`unknown shell command: ${sub}`);
-  }
-
-  const next = SHELL_PHASES.find((p) => p.status === 'next' || p.status === 'current');
-  console.log(`
-  ╔═══════════════════════════════╗
-  ║        Agent Sam Terminal         ║
-  ╚════════════════════════════════╝
-
-  Local PTY   agentsam start-local     ws://127.0.0.1:3099
-  ANSI TUI    agentsam tui             zero-dependency Node UI
-  Rich TUI    agentsam tui rich        optional richer Python UI
-              agentsam tui rich --install
-  DB          agentsam db status       local SQLite
-
-  Current milestone: ${next?.label ?? 'local terminal experience'}
-
-  Slash commands (${SLASH_COMMANDS.length} registered):
-`);
-  for (const row of SLASH_COMMANDS) {
-    console.log(`    ${row.cmd.padEnd(14)} ${row.description}`);
-  }
-}
-
 const command = process.argv[2];
 const rest = process.argv.slice(3);
 
@@ -353,7 +318,7 @@ if (command === '--version' || command === '-v') {
   }
 } else if (command === 'shell') {
   try {
-    await runShellInfo(rest);
+    await runShell(rest);
   } catch (e) {
     console.error(`\n  ✗ ${e?.message || e}\n`);
     process.exit(1);

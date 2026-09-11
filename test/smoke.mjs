@@ -57,8 +57,8 @@ assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/db'));
 assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/agent'));
 assert.deepEqual(
   listSlashCommands({ lane: 'deploy' }).map(({ cmd }) => cmd),
-  ['/help', '/deploy'],
-  'deploy lane keeps global help and excludes commands from other lanes',
+  ['/help', '/deploy', '/exit'],
+  'deploy lane keeps global shell controls and excludes commands from other lanes',
 );
 
 printContextSummary({

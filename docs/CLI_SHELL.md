@@ -21,7 +21,15 @@ Runs the optional Python Rich renderer. `--install` creates an isolated `.agents
 agentsam shell
 ```
 
-Shows the command catalog and local PTY / DB / TUI surfaces.
+Starts the interactive Agent Sam slash-command shell. Once the `agentsam>` prompt is visible, commands such as `/help`, `/status`, `/pwd`, and `/git` are handled by Agent Sam instead of the host shell (PowerShell, bash, or zsh). Use `/exit` to return to the host terminal.
+
+Do not type `/help` directly at a PowerShell/bash prompt; enter `agentsam shell` first.
+
+For scripts and regression tests, a single slash command can be dispatched without opening the REPL:
+
+```bash
+agentsam shell --command /help
+```
 
 ## Architecture
 
@@ -92,6 +100,7 @@ Gorilla is intentionally not scaffolded by default.
 /logs       local execution events
 /tui        terminal presentation
 /deploy     intentionally add a cloud adapter
+/exit       exit Agent Sam shell and return to the host terminal
 ```
 
 Provider-specific commands such as `/claude` or `/codex` are not part of the generic shell contract. Model routing belongs behind Agent Sam.
