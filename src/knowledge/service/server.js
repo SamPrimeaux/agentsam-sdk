@@ -100,7 +100,7 @@ export async function startKnowledgeService({ stateDir, repositories, token, por
     });
     // Re-resolve registry on replay. Removed repositories do not get resumed.
     const payload = JSON.parse(row.payload), registered = repositories[payload.request.repository];
-    if (!registered || registered.config.repository_id !== payload.config.repository_id || registered.config.workspace_id !== payload.config.workspace_id || fingerprint(registered.config.scope) !== payload.registered_scope || (!allowEmbeddings && ((payload.request.embed && payload.request.operation !== 'plan') || payload.request.semantic))) {
+    if (!registered || registered.config.repository_id !== payload.config.repository_id || fingerprint(registered.config.scope) !== payload.registered_scope || (!allowEmbeddings && ((payload.request.embed && payload.request.operation !== 'plan') || payload.request.semantic))) {
       response = { ok: false, error: 'Repository registration changed; resubmit this job.' }; child.kill(); return;
     }
     child.send({ ...payload, root: registered.root, filename: path.join(stateDir, 'knowledge.sqlite'), maxFiles });
