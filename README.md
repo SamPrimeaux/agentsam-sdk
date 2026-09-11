@@ -25,19 +25,23 @@ or use local scaffolding/indexing.
 ## Create a local application
 
 ```sh
-agentsam init --name my-agent --yes
+agentsam create my-agent --preset fullstack
 cd my-agent
 npm install
 npm run smoke
-npm run dev
+agentsam dev
 ```
 
-This creates a Git repository, local SQLite database, environment templates, a Node API,
-and terminal commands. Local setup does not require an IAM account, cloud credentials,
-or a tunnel. `npm run status`, `npm run tui`, and `npm run pty` inspect or operate the
-generated project. A configured host/provider is required when selecting cloud operations.
+Presets are deterministic configuration bundles, not model prompts. Available starting presets are
+`fullstack`, `cms`, `prototype`, and `data`; they select an existing scaffold lane plus explicit feature
+and capability IDs. They do not silently provision cloud resources. The older
+`agentsam init --name my-agent --yes` scaffold entry point remains available for compatibility.
 
-Without a global install, use `npx @inneranimalmedia/agentsam-sdk init --name my-agent --yes`.
+The generated project contains a Git repository, local SQLite database, environment templates, a Node
+API, and terminal commands. Local setup does not require an IAM account, cloud credentials, a model, or
+a tunnel. Use `agentsam add <feature>` to record an explicit feature selection and its capability set.
+
+Without a global install, use `npx @inneranimalmedia/agentsam-sdk create my-agent --preset fullstack`.
 
 ## Index an existing repository
 
