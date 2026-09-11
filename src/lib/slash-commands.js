@@ -1,6 +1,6 @@
 /**
  * Canonical slash-command surface for Agent Sam SDK CLI / shell UX.
- * Consumed by the gorilla-shell example and future `agentsam shell` PTY bridge.
+ * Consumed by the interactive `agentsam shell` REPL and presentation layers.
  */
 
 export const SHELL_THEMES = ['NIGHT', 'DAY', 'LAVA', 'VOID'];
