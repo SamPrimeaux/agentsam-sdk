@@ -67,13 +67,14 @@ CLI on developer machine
   -> http://127.0.0.1:11434
 
 agentsam-sdk Worker
+  -> PTY_SERVICE /health resolves an explicit Darwin cwd
   -> EXECOS service binding
-  -> explicit target=local
+  -> explicit target=local + cwd
   -> existing local execution/tunnel fabric
   -> http://127.0.0.1:11434
 ```
 
-There is no production `OLLAMA_BASE_URL` and no public Ollama hostname. `PTY_SERVICE` remains available as the lower-level VPC/PTY transport and health lane, but model execution goes through ExecOS rather than bypassing the dispatcher. Default local models are `qwen2.5-coder` for chat/code and `mxbai-embed-large` for embeddings.
+There is no production `OLLAMA_BASE_URL` and no public Ollama hostname. `PTY_SERVICE` remains the lower-level VPC/PTY health/discovery lane and supplies the explicit local cwd required by ExecOS; model execution still goes through ExecOS rather than bypassing the dispatcher. Default local models are `qwen2.5-coder` for chat/code and `mxbai-embed-large` for embeddings.
 
 ## Merkle persistence
 

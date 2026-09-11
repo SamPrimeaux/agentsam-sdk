@@ -28,6 +28,7 @@ export interface AgentSamCloudflareEnv {
   GEMINI_API_KEY?: string;
   OLLAMA_MODEL?: string;
   OLLAMA_EMBED_MODEL?: string;
+  OLLAMA_LOCAL_CWD?: string;
 }
 
 export const OLLAMA_DEFAULTS = Object.freeze({
@@ -51,11 +52,15 @@ export function providerReadiness(env: AgentSamCloudflareEnv) {
     gemini: { configured: configured(env.GEMINI_API_KEY), transport: "edge-api" },
     "workers-ai": { configured: Boolean(env.AGENTSAM_WAI), transport: "workers-ai" },
     ollama: {
-      configured: Boolean(env.EXECOS?.fetch) && configured(env.AGENTSAM_BRIDGE_KEY),
+      configured:
+        Boolean(env.EXECOS?.fetch) &&
+        configured(env.AGENTSAM_BRIDGE_KEY) &&
+        (configured(env.OLLAMA_LOCAL_CWD) || Boolean(env.PTY_SERVICE?.fetch)),
       transport: "execos-local",
       model: env.OLLAMA_MODEL || OLLAMA_DEFAULTS.model,
       embed_model: env.OLLAMA_EMBED_MODEL || OLLAMA_DEFAULTS.embedModel,
       public_base_url: false,
+      cwd_source: configured(env.OLLAMA_LOCAL_CWD) ? "config" : "pty-health",
     },
   } satisfies Record<ModelProviderId, Record<string, unknown>>;
 }
@@ -124,6 +129,33 @@ export async function hasSdkBearer(request: Request, env: AgentSamCloudflareEnv)
   return diff === 0;
 }
 
+let cachedLocalCwd: { value: string; expiresAt: number } | null = null;
+
+async function resolveLocalExecCwd(env: AgentSamCloudflareEnv): Promise<string | null> {
+  const explicit = String(env.OLLAMA_LOCAL_CWD || "").trim();
+  if (explicit) return explicit;
+
+  const now = Date.now();
+  if (cachedLocalCwd && cachedLocalCwd.expiresAt > now) return cachedLocalCwd.value;
+  if (!env.PTY_SERVICE?.fetch) return null;
+
+  for (const target of ["http://localhost:3099/health", "http://localhost/health"]) {
+    try {
+      const response = await env.PTY_SERVICE.fetch(new Request(target));
+      if (!response.ok) continue;
+      const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+      const candidate = String(data.default_cwd || data.workspaces_root || "").trim();
+      if (!candidate.startsWith("/Users/") && !candidate.startsWith("/Volumes/")) continue;
+      cachedLocalCwd = { value: candidate, expiresAt: now + 60_000 };
+      return candidate;
+    } catch {
+      // Try the next canonical PTY health address.
+    }
+  }
+
+  return null;
+}
+
 export async function executeLocalViaExecOs(
   env: AgentSamCloudflareEnv,
   command: string,
@@ -136,6 +168,11 @@ export async function executeLocalViaExecOs(
     return { ok: false, exit_code: null, stdout: "", stderr: "", error: "agentsam_bridge_key_required" };
   }
 
+  const cwd = await resolveLocalExecCwd(env);
+  if (!cwd) {
+    return { ok: false, exit_code: null, stdout: "", stderr: "", error: "local_cwd_required" };
+  }
+
   try {
     const response = await env.EXECOS.fetch("https://internal/run", {
       method: "POST",
@@ -143,7 +180,7 @@ export async function executeLocalViaExecOs(
         "content-type": "application/json",
         "x-bridge-key": String(env.AGENTSAM_BRIDGE_KEY),
       },
-      body: JSON.stringify({ command, target: "local" }),
+      body: JSON.stringify({ command, target: "local", cwd }),
       signal: AbortSignal.timeout(timeoutMs),
     });
     const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
