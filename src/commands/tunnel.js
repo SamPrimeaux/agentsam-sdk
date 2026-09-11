@@ -51,12 +51,12 @@ function ensureCloudflared() {
 }
 
 async function resolveToken() {
-  const existing = String(process.env.AGENTSAM_SDK_TOKEN || '').trim();
+  const existing = resolveSdkKey(process.env);
   if (existing.startsWith('sdk_')) return existing;
   const session = await authenticateViaBrowser();
   const tok = String(session?.access_token || '').trim();
-  if (!tok.startsWith('sdk_')) throw new Error('IAM auth did not return an sdk_ bearer token');
-  process.env.AGENTSAM_SDK_TOKEN = tok;
+  if (!tok.startsWith('sdk_')) throw new Error('IAM auth did not return an sdk_ bearer key');
+  process.env.AGENTSAM_SDK_KEY = tok;
   return tok;
 }
 
