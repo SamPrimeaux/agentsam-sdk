@@ -1,5 +1,6 @@
 import nitroWorker from "../../.output/server/index.mjs";
 import { handleCloudflareConnectionRequest, isCloudflareConnectionPath } from "../../../../packages/connectors/cloudflare/src/routes.js";
+import { resolveCloudflareOAuthClient } from "../../../../packages/connectors/cloudflare/src/index.js";
 
 /**
  * AgentSam Workmode — vault Worker
@@ -375,12 +376,7 @@ export default {
           },
           connections: {
             cloudflare: {
-              configured: Boolean(
-                env.CLOUDFLARE_OAUTH_CLIENT_ID &&
-                  env.CLOUDFLARE_OAUTH_CLIENT_SECRET &&
-                  env.CLOUDFLARE_OAUTH_CLIENT_ID !== "sillynotreal" &&
-                  env.CLOUDFLARE_OAUTH_CLIENT_SECRET !== "sillynotreal-secret",
-              ),
+              configured: resolveCloudflareOAuthClient(env).productionReady,
             },
           },
         },

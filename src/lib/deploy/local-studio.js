@@ -2,7 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { assertProductionDeployAllowed } from './git-guard.js';
+import { assertProductionDeployAllowed, inspectDeployGit } from './git-guard.js';
+import { assertNoDeploySecrets } from './secret-scan.js';
+import { parseWranglerVersionId, probeDeployHealth, resolveHealthOrigin } from './health.js';
 
 export const LOCAL_STUDIO_REL = 'apps/local-studio';
 export const WRANGLER_CONFIG_REL = 'backend/wrangler.jsonc';
@@ -129,7 +131,15 @@ export function isLocalStudioCheckout(cwd = process.cwd()) {
   }
 }
 
-export async function runLocalStudioDeploy({ cwd = process.cwd(), dryRun = false, planOnly = false, skipBuild = false, execute = true } = {}) {
+export async function runLocalStudioDeploy({
+  cwd = process.cwd(),
+  dryRun = false,
+  planOnly = false,
+  skipBuild = false,
+  execute = true,
+  skipSecretScan = false,
+  probeHealth = null,
+} = {}) {
   const target = resolveLocalStudioDeployable(cwd);
   if (path.resolve(cwd) === target.repoRoot && !target.wranglerConfig.endsWith(path.join('backend', 'wrangler.jsonc')) && !target.wranglerConfig.endsWith('backend/wrangler.jsonc')) {
     throw new Error('refusing generic repo-root wrangler deploy');
@@ -137,6 +147,9 @@ export async function runLocalStudioDeploy({ cwd = process.cwd(), dryRun = false
   const envFile = loadOptionalCloudflareEnv(target.appRoot);
   const fingerprint = computeDeployFingerprint(target.repoRoot);
   const baseline = readBaselineFingerprint(target.appRoot);
+  const gitInfo = inspectDeployGit(target.repoRoot);
+  const wranglerText = fs.readFileSync(target.wranglerConfig, 'utf8');
+  const healthOrigin = resolveHealthOrigin({ env: { ...process.env, ...envFile.vars }, wranglerConfigText: wranglerText });
   const plan = {
     provider: 'cloudflare',
     app: 'local-studio',
@@ -149,7 +162,22 @@ export async function runLocalStudioDeploy({ cwd = process.cwd(), dryRun = false
     skip: Boolean(baseline && baseline === fingerprint && !dryRun && !planOnly),
     genericRootDeploy: false,
     productionGitRequired: Boolean(execute && !dryRun && !planOnly),
+    healthOrigin,
+    git: {
+      branch: gitInfo.branch,
+      head: gitInfo.head,
+      originMain: gitInfo.originMain,
+      equal: Boolean(gitInfo.head && gitInfo.head === gitInfo.originMain),
+    },
   };
+  if (!skipSecretScan) {
+    plan.secretScan = assertNoDeploySecrets([
+      target.wranglerConfig,
+      path.join(target.appRoot, '.env.cloudflare.example'),
+      path.join(target.appRoot, 'backend/worker/index.js'),
+      path.join(target.repoRoot, 'packages/connectors/cloudflare/src/index.js'),
+    ]);
+  }
   if (plan.skip) {
     const receipt = {
       ok: true,
@@ -157,17 +185,39 @@ export async function runLocalStudioDeploy({ cwd = process.cwd(), dryRun = false
       reason: 'unchanged_deploy_fingerprint',
       deployProjectionHash: fingerprint,
       promoted: false,
+      git: plan.git,
+      wranglerConfig: plan.wranglerConfig,
+      hostname: healthOrigin.replace(/^https?:\/\//, ''),
     };
     writeDeployReceipt(target.appRoot, receipt);
     return { target, plan, receipt };
   }
-  if (!execute || planOnly) return { target, plan, receipt: null };
+  if (!execute || planOnly) {
+    return {
+      target,
+      plan,
+      receipt: {
+        ok: true,
+        skipped: false,
+        plan: true,
+        dryRun,
+        deployProjectionHash: fingerprint,
+        promoted: false,
+        git: plan.git,
+        wranglerConfig: plan.wranglerConfig,
+        hostname: healthOrigin.replace(/^https?:\/\//, ''),
+      },
+    };
+  }
 
   if (!dryRun) {
     plan.git = assertProductionDeployAllowed(target.repoRoot);
+    plan.git.equal = plan.git.head === plan.git.originMain;
   }
 
   const env = { ...process.env, ...envFile.vars };
+  const lock = spawnSync('npm', ['run', 'verify:npm10-lock'], { cwd: target.appRoot, env, encoding: 'utf8' });
+  if (lock.status !== 0) throw new Error(lock.stderr || lock.stdout || 'verify:npm10-lock failed');
   if (!skipBuild) {
     const build = spawnSync('npm', ['run', 'build'], { cwd: target.appRoot, env, encoding: 'utf8' });
     if (build.status !== 0) throw new Error(build.stderr || build.stdout || 'build failed');
@@ -176,16 +226,40 @@ export async function runLocalStudioDeploy({ cwd = process.cwd(), dryRun = false
   }
   const cmd = wranglerDeployCommand(target, { dryRun });
   const deployed = spawnSync(cmd.bin, cmd.args, { cwd: cmd.cwd, env, encoding: 'utf8' });
+  const wranglerOut = `${deployed.stdout || ''}\n${deployed.stderr || ''}`;
+  const workerVersion = parseWranglerVersionId(wranglerOut);
   if (deployed.status !== 0) {
     const receipt = {
       ok: false,
       skipped: false,
       deployProjectionHash: fingerprint,
       promoted: false,
-      error: deployed.stderr || deployed.stdout,
+      git: plan.git,
+      workerVersion,
+      error: wranglerOut,
     };
     writeDeployReceipt(target.appRoot, receipt);
     throw new Error(receipt.error || 'wrangler deploy failed');
+  }
+  let health = null;
+  if (!dryRun) {
+    const probe = probeHealth || probeDeployHealth;
+    health = await probe(healthOrigin);
+    if (!health.ok) {
+      const receipt = {
+        ok: false,
+        skipped: false,
+        deployProjectionHash: fingerprint,
+        promoted: false,
+        git: plan.git,
+        workerVersion,
+        hostname: healthOrigin.replace(/^https?:\/\//, ''),
+        health,
+        error: 'postdeploy_health_failed',
+      };
+      writeDeployReceipt(target.appRoot, receipt);
+      throw new Error('postdeploy_health_failed');
+    }
   }
   const receipt = {
     ok: true,
@@ -196,6 +270,12 @@ export async function runLocalStudioDeploy({ cwd = process.cwd(), dryRun = false
     provider: 'cloudflare',
     app: 'local-studio',
     wranglerConfig: plan.wranglerConfig,
+    git: plan.git,
+    worker: 'agentsam-sdk',
+    workerVersion,
+    hostname: healthOrigin.replace(/^https?:\/\//, ''),
+    health,
+    originMainEqual: Boolean(plan.git?.head && plan.git.head === plan.git.originMain),
   };
   writeDeployReceipt(target.appRoot, receipt);
   return { target, plan, receipt };

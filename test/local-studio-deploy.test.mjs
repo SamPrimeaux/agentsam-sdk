@@ -41,7 +41,10 @@ describe('local-studio deploy resolver', () => {
     assert.equal(result.plan.provider, 'cloudflare');
     assert.equal(result.plan.wranglerConfig, 'apps/local-studio/backend/wrangler.jsonc');
     assert.equal(result.plan.genericRootDeploy, false);
-    assert.equal(result.receipt, null);
+    assert.equal(result.receipt.plan, true);
+    assert.equal(result.receipt.promoted, false);
+    assert.equal(result.receipt.wranglerConfig, 'apps/local-studio/backend/wrangler.jsonc');
+    assert.equal(result.receipt.hostname, 'agentsam.inneranimalmedia.com');
   });
 
   it('blocks production deploys from feat branches', () => {

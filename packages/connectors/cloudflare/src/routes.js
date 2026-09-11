@@ -63,12 +63,15 @@ export async function handleCloudflareConnectionRequest(request, env) {
     body = await request.json().catch(() => ({}));
   }
 
-  let ownerId;
+  const isCallback = url.pathname === CLOUDFLARE_CALLBACK_PATH && request.method === 'GET';
+  let ownerId = '';
   try {
     ownerId = await resolveAuthenticatedOwner(request, env, url, body);
   } catch (err) {
-    const code = err.code || 'unauthenticated';
-    return json({ ok: false, error: code }, code === 'untrusted_owner_hint' ? 400 : 401);
+    if (!isCallback || err.code === 'untrusted_owner_hint') {
+      const code = err.code || 'unauthenticated';
+      return json({ ok: false, error: code }, code === 'untrusted_owner_hint' ? 400 : 401);
+    }
   }
 
   if (!client.productionReady) {
@@ -148,7 +151,11 @@ export async function handleCloudflareConnectionRequest(request, env) {
       stored = env.oauthState.get(state);
       if (stored) stored = { owner_id: stored.ownerId, code_verifier: stored.verifier };
     }
-    if (!stored || stored.owner_id !== ownerId) {
+    if (!stored) {
+      return json({ ok: false, error: 'cloudflare_connection_forbidden' }, 403);
+    }
+    if (!ownerId) ownerId = stored.owner_id;
+    if (stored.owner_id !== ownerId) {
       return json({ ok: false, error: 'cloudflare_connection_forbidden' }, 403);
     }
     const tokenRes = await fetch(CLOUDFLARE_OAUTH_TOKEN_URL, {

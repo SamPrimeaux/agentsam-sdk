@@ -63,4 +63,34 @@ describe('cloudflare connector routes', () => {
     assert.equal(json.fixture, true);
     assert.equal(JSON.stringify(json).includes('sillynotreal-secret'), false);
   });
+
+  it('rejects owner_id in the JSON body', async () => {
+    const env = { sessions: new Map([['sess_1', 'user-sam']]) };
+    const res = await handleCloudflareConnectionRequest(
+      req('https://agentsam.inneranimalmedia.com/api/connections/cloudflare/disconnect', {
+        method: 'POST',
+        headers: { cookie: 'agentsam_session=sess_1', 'content-type': 'application/json' },
+        body: JSON.stringify({ owner_id: 'evil' }),
+      }),
+      env,
+    );
+    assert.equal(res.status, 400);
+    const json = await res.json();
+    assert.equal(json.error, 'untrusted_owner_hint');
+  });
+
+  it('rejects callback without a stored oauth state', async () => {
+    const env = {
+      CLOUDFLARE_OAUTH_CLIENT_ID: 'real-client-id',
+      CLOUDFLARE_OAUTH_CLIENT_SECRET: 'real-client-secret-value',
+      oauthState: new Map(),
+    };
+    const res = await handleCloudflareConnectionRequest(
+      req('https://agentsam.inneranimalmedia.com/api/connections/cloudflare/callback?code=abc&state=missing'),
+      env,
+    );
+    assert.equal(res.status, 403);
+    const json = await res.json();
+    assert.equal(json.error, 'cloudflare_connection_forbidden');
+  });
 });
