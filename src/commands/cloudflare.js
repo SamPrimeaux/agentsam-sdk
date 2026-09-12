@@ -51,6 +51,7 @@ export async function runCloudflare(argv = [], options = {}) {
   } catch (error) {
     if (args.json) write(`${JSON.stringify({ ok: false, error: error?.diagnostic || { code: error?.code || 'cloudflare_operation_failed', message: error?.message || String(error) } })}\n`);
     else write(`${renderDiagnosticError(error)}\n`);
+    error.reported = true;
     throw error;
   }
 }
