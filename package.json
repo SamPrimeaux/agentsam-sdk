@@ -100,8 +100,9 @@
     "packages/agentsam-workbench"
   ],
   "scripts": {
-    "test": "node test/smoke.mjs && node --test test/*.test.mjs && npm --prefix packages/identity test && npm run test:connectors",
+    "test": "node test/smoke.mjs && node --test test/*.test.mjs test/integration/*.test.mjs && npm --prefix packages/identity test && npm run test:connectors",
     "test:identity": "npm --prefix packages/identity test",
+    "test:workspaces": "npm --prefix packages/agentsam-contracts test && npm --prefix packages/agentsam-contracts run typecheck && npm --prefix packages/agentsam-workbench test && npm --prefix packages/agentsam-workbench run typecheck && npm --prefix packages/agentsam-shell-kit run typecheck",
     "smoke": "node test/smoke.mjs",
     "verify:package": "node scripts/verify-package.mjs",
     "verify:bootstrap": "node scripts/verify-bootstrap.mjs",
