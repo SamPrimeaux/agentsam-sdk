@@ -29,7 +29,7 @@ export async function collectWhoami(options = {}) {
         account_id: context?.account_id || null,
         email: context?.email || context?.user?.email || null,
       },
-      sdk_credential: { configured: true, source: 'AGENTSAM_SDK_KEY', valid: true },
+      sdk_credential: { configured: true, source: sdk.source, valid: true },
       provider_credentials: credentials,
       cloudflare_connected: context?.cloudflare?.ok === true,
       byok: context?.byok && typeof context.byok === 'object'
