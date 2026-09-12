@@ -26,11 +26,11 @@ test('portable Merkle persistence names one table, prefix, and logical asset rol
 test('snapshot storage keys stay beneath the canonical prefix and encode repo identity', () => {
   const key = merkleSnapshotStorageKey({
     accountId: 'au_example',
-    repoId: 'github:owner/repo',
+    repositoryId: 'github:owner/repo',
     snapshotId: 'mrs_example',
   });
   assert.equal(key, 'agentsam_fs_merkle_snapshots/au_example/github%3Aowner%2Frepo/mrs_example.json');
-  const escaped = merkleSnapshotStorageKey({ accountId: '../oops', repoId: 'repo', snapshotId: 'snap' });
+  const escaped = merkleSnapshotStorageKey({ accountId: '../oops', repositoryId: 'repo', snapshotId: 'snap' });
   assert.ok(!escaped.includes('/../'));
   assert.ok(escaped.includes('..%2Foops'));
 });
@@ -63,7 +63,7 @@ test('persistence plan keeps content, policy, and metadata identities separate',
     },
   };
   const plan = buildMerklePersistencePlan({
-    snapshot, root: process.cwd(), accountId: 'au_test', repoId: 'github:owner/repo', source: 'github',
+    snapshot, root: process.cwd(), accountId: 'au_test', repositoryId: 'github:owner/repo', source: 'github',
     captureKind: 'agent', connectionId: 'conn_test',
     wrangler: { storage_bucket: 'customer-assets', r2_binding: 'WEBSITE_ASSETS', database_name: 'customer-db', d1_binding: 'DB' },
   });
@@ -85,7 +85,7 @@ test('non-deploy persistence requires execution provenance', () => {
     policyHash: `sha256:${'2'.repeat(64)}`, entries: [], stats: { files: 0, directories: 0, symlinks: 0, bytes: 0 },
   };
   assert.throws(() => buildMerklePersistencePlan({
-    snapshot, root: process.cwd(), accountId: 'au_test', repoId: 'github:owner/repo', captureKind: 'agent',
+    snapshot, root: process.cwd(), accountId: 'au_test', repositoryId: 'github:owner/repo', captureKind: 'agent',
     wrangler: { storage_bucket: 'customer-assets', r2_binding: 'WEBSITE_ASSETS', database_name: 'customer-db', d1_binding: 'DB' },
   }), /execution_provenance_required/);
 });
