@@ -1,5 +1,7 @@
 # AgentSam Merkle Persistence v1
 
+> Superseded for current company persistence by `MERKLE_PERSISTENCE_V2.md`. V1 is retained only as the historical contract shipped before the account/repository hard cut.
+
 Persistence is a host concern layered on top of the portable Merkle protocol. The SDK exposes the canonical table name, storage prefix, logical asset binding, storage-key helper, and portable SQL schema without owning a customer's database or cloud credentials.
 
 ## Authority split
