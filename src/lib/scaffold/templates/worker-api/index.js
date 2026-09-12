@@ -2,31 +2,36 @@
  * Worker API template generator.
  */
 
-export function workerApiTemplates({ projectName, routes, cfAccountId }) {
+export function workerApiTemplates({ projectName, routes, cfAccountId, dbKind = 'd1' }) {
   const files = {};
+
+  const pkgScripts = {
+    deploy: 'wrangler deploy',
+    dev: 'wrangler dev',
+    ...(dbKind === 'hyperdrive'
+      ? { 'db:migrate': 'psql "$DATABASE_URL" -f migrations/001_init.sql' }
+      : { 'db:migrate': `wrangler d1 execute ${projectName} --file=migrations/001_init.sql --remote` }),
+  };
 
   files['package.json'] = JSON.stringify({
     name: projectName,
     version: '0.1.0',
     private: true,
-    scripts: {
-      deploy: 'wrangler deploy',
-      dev: 'wrangler dev',
-      'db:migrate': `wrangler d1 execute ${projectName} --file=migrations/001_init.sql --remote`,
-    },
+    scripts: pkgScripts,
     devDependencies: { wrangler: '^3.0.0' },
+    ...(dbKind === 'hyperdrive' ? { dependencies: { postgres: '^3.4.0' } } : {}),
   }, null, 2);
+
+  const dbBindingBlock = dbKind === 'hyperdrive'
+    ? `[[hyperdrive]]\nbinding = "HYPERDRIVE"\nid = "REPLACE_WITH_YOUR_HYPERDRIVE_ID"\n`
+    : `[[d1_databases]]\nbinding = "DB"\ndatabase_name = "${projectName}"\ndatabase_id = "REPLACE_WITH_YOUR_D1_ID"\n`;
 
   files['wrangler.toml'] = `name = "${projectName}"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
 account_id = "${cfAccountId}"
-
-[[d1_databases]]
-binding = "DB"
-database_name = "${projectName}"
-database_id = "REPLACE_WITH_YOUR_D1_ID"
-`;
+${dbKind === 'hyperdrive' ? 'compatibility_flags = ["nodejs_compat"]\n' : ''}
+${dbBindingBlock}`;
 
   // Entry
   const routeImports = routes.map(r => `import { handle${cap(r)} } from './routes/${r}.js';`).join('\n');
@@ -83,6 +88,37 @@ ${routeMatches}
   }
 
   if (routes.includes('users')) {
+    if (dbKind === 'hyperdrive') {
+    files['src/routes/users.js'] = `import postgres from 'postgres';
+
+export async function handleUsers(request, env) {
+  const sql = postgres(env.HYPERDRIVE.connectionString);
+  const url = new URL(request.url);
+  const id = url.pathname.replace('/users/', '').replace('/users', '') || null;
+
+  if (request.method === 'GET' && !id) {
+    const rows = await sql\`SELECT * FROM users LIMIT 50\`;
+    return Response.json(rows);
+  }
+  if (request.method === 'GET' && id) {
+    const rows = await sql\`SELECT * FROM users WHERE id = \${id}\`;
+    if (!rows[0]) return Response.json({ error: 'Not found' }, { status: 404 });
+    return Response.json(rows[0]);
+  }
+  if (request.method === 'POST') {
+    const body = await request.json();
+    const newId = crypto.randomUUID();
+    await sql\`INSERT INTO users (id, email) VALUES (\${newId}, \${body.email})\`;
+    return Response.json({ id: newId }, { status: 201 });
+  }
+  if (request.method === 'DELETE' && id) {
+    await sql\`DELETE FROM users WHERE id = \${id}\`;
+    return Response.json({ ok: true });
+  }
+  return Response.json({ error: 'Method not allowed' }, { status: 405 });
+}
+`;
+    } else {
     files['src/routes/users.js'] = `export async function handleUsers(request, env) {
   const url = new URL(request.url);
   const id = url.pathname.replace('/users/', '').replace('/users', '') || null;
@@ -109,9 +145,38 @@ ${routeMatches}
   return Response.json({ error: 'Method not allowed' }, { status: 405 });
 }
 `;
+    }
   }
 
   if (routes.includes('content')) {
+    if (dbKind === 'hyperdrive') {
+    files['src/routes/content.js'] = `import postgres from 'postgres';
+
+export async function handleContent(request, env) {
+  const sql = postgres(env.HYPERDRIVE.connectionString);
+  const url = new URL(request.url);
+  const slug = url.pathname.replace('/content/', '').replace('/content', '') || null;
+
+  if (request.method === 'GET' && !slug) {
+    const rows = await sql\`SELECT id, slug, title, status FROM cms_pages LIMIT 50\`;
+    return Response.json(rows);
+  }
+  if (request.method === 'GET' && slug) {
+    const rows = await sql\`SELECT * FROM cms_pages WHERE slug = \${slug}\`;
+    if (!rows[0]) return Response.json({ error: 'Not found' }, { status: 404 });
+    return Response.json(rows[0]);
+  }
+  if (request.method === 'POST') {
+    const body = await request.json();
+    const id = crypto.randomUUID();
+    await sql\`INSERT INTO cms_pages (id, slug, title, template, content_json)
+      VALUES (\${id}, \${body.slug}, \${body.title}, \${body.template ?? 'default'}, \${JSON.stringify(body.content ?? {})})\`;
+    return Response.json({ id }, { status: 201 });
+  }
+  return Response.json({ error: 'Method not allowed' }, { status: 405 });
+}
+`;
+    } else {
     files['src/routes/content.js'] = `export async function handleContent(request, env) {
   const url = new URL(request.url);
   const slug = url.pathname.replace('/content/', '').replace('/content', '') || null;
@@ -136,6 +201,7 @@ ${routeMatches}
   return Response.json({ error: 'Method not allowed' }, { status: 405 });
 }
 `;
+    }
   }
 
   if (routes.includes('webhook')) {
@@ -154,13 +220,17 @@ ${routeMatches}
 `;
   }
 
-  // Migration
+  // Migration — column syntax differs: SQLite (D1) uses INTEGER/unixepoch(), Postgres uses TIMESTAMPTZ/NOW()
+  const createdAtCol = dbKind === 'hyperdrive'
+    ? 'created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()'
+    : 'created_at INTEGER NOT NULL DEFAULT (unixepoch())';
+
   let sql = `-- ${projectName} initial schema\n\n`;
   if (routes.includes('users')) {
     sql += `CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   email TEXT NOT NULL UNIQUE,
-  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+  ${createdAtCol}
 );\n\n`;
   }
   if (routes.includes('content')) {
@@ -171,11 +241,22 @@ ${routeMatches}
   template TEXT NOT NULL DEFAULT 'default',
   content_json TEXT,
   status TEXT NOT NULL DEFAULT 'draft',
-  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+  ${createdAtCol}
 );\n\n`;
   }
 
   files['migrations/001_init.sql'] = sql;
+
+  const deploySteps = dbKind === 'hyperdrive'
+    ? `npm install
+npx wrangler hyperdrive create ${projectName} --connection-string="postgres://user:pass@host:5432/db"
+# paste the returned Hyperdrive id into wrangler.toml as HYPERDRIVE binding
+npx wrangler deploy`
+    : `npm install
+npx wrangler d1 create ${projectName}
+# paste database_id into wrangler.toml
+npx wrangler d1 execute ${projectName} --file=migrations/001_init.sql --remote
+npx wrangler deploy`;
 
   files['README.md'] = `# ${projectName}
 
@@ -185,14 +266,14 @@ Scaffolded by [@inneranimalmedia/agentsam-sdk](https://github.com/SamPrimeaux/ag
 
 ${routes.map(r => `- \`/${r}\``).join('\n')}
 
+## Database
+
+${dbKind === 'hyperdrive' ? 'Your own Postgres, via Cloudflare Hyperdrive.' : 'Cloudflare D1 (SQLite).'}
+
 ## Deploy
 
 \`\`\`bash
-npm install
-npx wrangler d1 create ${projectName}
-# paste database_id into wrangler.toml
-npx wrangler d1 execute ${projectName} --file=migrations/001_init.sql --remote
-npx wrangler deploy
+${deploySteps}
 \`\`\`
 `;
 

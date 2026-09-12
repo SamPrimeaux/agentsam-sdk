@@ -5,6 +5,7 @@
 
 import {
   text,
+  select,
   multiselect,
   confirm,
   spinner,
@@ -42,6 +43,15 @@ export async function runWorkerApiWizard() {
   });
   if (isCancel(routes)) { cancel('Cancelled.'); process.exit(0); }
 
+  const dbKind = await select({
+    message: 'Database?',
+    options: [
+      { value: 'd1', label: 'Cloudflare D1', hint: 'Native, free tier, SQLite' },
+      { value: 'hyperdrive', label: 'Your own Postgres (Hyperdrive)', hint: 'Supabase, Neon, RDS, etc.' },
+    ],
+  });
+  if (isCancel(dbKind)) { cancel('Cancelled.'); process.exit(0); }
+
   const cfAccountId = await text({
     message: 'Cloudflare account ID?',
     placeholder: 'abc123...',
@@ -57,20 +67,26 @@ export async function runWorkerApiWizard() {
   const s = spinner();
   s.start('Generating files...');
 
-  const config = { projectName: projectName.trim(), routes, cfAccountId: cfAccountId.trim() };
+  const config = { projectName: projectName.trim(), routes, cfAccountId: cfAccountId.trim(), dbKind };
   const fileTree = workerApiTemplates(config);
   await writeFileTree(`./${config.projectName}`, fileTree);
 
   s.stop(pc.green(`Files written to ./${config.projectName}/`));
 
-  note(
-    [
-      `cd ${config.projectName}`,
-      `npm install`,
-      `npx wrangler d1 create ${config.projectName}`,
-      `npx wrangler d1 execute ${config.projectName} --file=migrations/001_init.sql --remote`,
-      `npx wrangler deploy`,
-    ].join('\n'),
-    'Next steps'
-  );
+  const nextSteps = dbKind === 'hyperdrive'
+    ? [
+        `cd ${config.projectName}`,
+        `npm install`,
+        `npx wrangler hyperdrive create ${config.projectName} --connection-string="postgres://user:pass@host:5432/db"`,
+        `# paste the returned Hyperdrive id into wrangler.toml`,
+        `npx wrangler deploy`,
+      ]
+    : [
+        `cd ${config.projectName}`,
+        `npm install`,
+        `npx wrangler d1 create ${config.projectName}`,
+        `npx wrangler d1 execute ${config.projectName} --file=migrations/001_init.sql --remote`,
+        `npx wrangler deploy`,
+      ];
+  note(nextSteps.join('\n'), 'Next steps');
 }
