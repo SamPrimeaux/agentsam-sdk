@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { spawnSync } from 'node:child_process';
-import { isCancel, select } from '@clack/prompts';
+import { confirm, isCancel, select } from '@clack/prompts';
 import { SLASH_COMMANDS, SHELL_PHASES } from '../lib/slash-commands.js';
 import { runContext } from './context.js';
 import { runDb } from './db.js';
