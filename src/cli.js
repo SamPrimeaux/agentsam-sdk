@@ -285,7 +285,7 @@ async function initInteractive(partial = {}) {
     }
   }
 
-  const prompt = resolveSdkKey(process.env) ? createPrompt() : null;
+  const prompt = resolveAccountSdkKey({ env: process.env }).value ? createPrompt() : null;
   try {
     await runLocalInit({ projectName, lane: laneKey, runTarget, prompt });
   } finally {
