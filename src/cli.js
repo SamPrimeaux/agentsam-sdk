@@ -370,6 +370,13 @@ if (command === '--version' || command === '-v') {
     console.error(`\n  ✗ ${e?.message || e}\n`);
     process.exit(1);
   }
+} else if (command === 'cloudflare' || command === 'cf') {
+  try {
+    await runCloudflare(rest);
+  } catch (e) {
+    if (!e?.reported) console.error(`\n  ✗ ${e?.message || e}\n`);
+    process.exitCode = 1;
+  }
 } else if (command === 'shell') {
   try {
     await runShell(rest);
