@@ -4,7 +4,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { resolveGitContext } from '../lib/git-context.js';
+import { resolveGitContext } from '../../packages/agentsam-repository/src/git-context.js';
 import { getRepositoryId, tryReadProjectConfig } from '../lib/project-config.js';
 import { buildMerkleTree } from '../lib/merkle/index.js';
 import { gitIgnoredPaths } from '../lib/merkle/git-ignore.js';
