@@ -495,7 +495,9 @@ export async function runShell(argv = [], options = {}) {
     cwd: path.resolve(options.cwd || process.cwd()),
     write,
     interactive: options.interactive ?? Boolean(process.stdin.isTTY && process.stdout.isTTY),
-    usageSnapshot: options.usageSnapshot || null,
+    usageSnapshot: options.usageSnapshot || options.session?.usage_snapshot || null,
+    session: options.session || null,
+    home: options.home,
   };
   const sub = argv[0] || '';
   if (sub === 'list' || sub === 'status') { write(renderShellCatalog()); return; }
