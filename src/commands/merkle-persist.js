@@ -90,8 +90,8 @@ export async function runMerklePersist(args = []) {
   const plan = buildMerklePersistencePlan({
     snapshot,
     root,
-    ownerUserId: opts.ownerUserId,
-    repoId: opts.repoId,
+    accountId: opts.accountId,
+    repositoryId: opts.repositoryId,
     source: opts.source,
     captureKind: opts.captureKind,
     connectionId: opts.connectionId,
