@@ -7,14 +7,13 @@
   "required": ["ref", "kind", "chars", "priority"],
   "properties": {
     "ref": { "type": "string", "minLength": 1 },
-    "kind": {
-      "type": "string",
-      "enum": ["file", "symbol", "memory", "tool_result", "repo", "artifact"]
-    },
+    "kind": { "type": "string", "enum": ["file", "symbol", "memory", "tool_result", "repo", "artifact"] },
     "chars": { "type": "integer", "minimum": 0 },
     "hash": { "type": "string" },
     "priority": { "type": "number" },
     "content": { "type": "string" },
-    "truncated": { "type": "boolean" }
+    "truncated": { "type": "boolean" },
+    "compacted": { "type": "boolean" },
+    "source_chars": { "type": "integer", "minimum": 0 }
   }
 }

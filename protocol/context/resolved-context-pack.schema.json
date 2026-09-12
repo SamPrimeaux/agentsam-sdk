@@ -9,33 +9,38 @@
     "objective": { "type": "string", "minLength": 1 },
     "refs": { "type": "array", "items": { "type": "string" } },
     "rules": { "type": ["object", "null"] },
-    "items": {
-      "type": "array",
-      "items": { "$ref": "./context-item.schema.json" }
-    },
+    "items": { "type": "array", "items": { "$ref": "./context-item.schema.json" } },
     "budget": { "$ref": "./context-budget.schema.json" },
     "receipt": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "chars",
-        "evidence_chars",
-        "system_chars",
-        "estimated_tokens",
-        "sources_considered",
-        "sources_included",
-        "sources_deferred",
-        "deferred_refs"
+        "chars", "system_chars", "instruction_chars", "tool_schema_chars", "history_chars", "evidence_chars", "tool_result_chars",
+        "estimated_tokens", "estimated_input_tokens", "window_tokens", "utilization_ratio", "pricing_threshold_tokens",
+        "tokens_until_pricing_threshold", "pressure", "estimate_kind", "sources_considered", "sources_included",
+        "sources_deferred", "deferred_refs", "rehydratable_refs"
       ],
       "properties": {
         "chars": { "type": "integer", "minimum": 0 },
-        "evidence_chars": { "type": "integer", "minimum": 0 },
         "system_chars": { "type": "integer", "minimum": 0 },
+        "instruction_chars": { "type": "integer", "minimum": 0 },
+        "tool_schema_chars": { "type": "integer", "minimum": 0 },
+        "history_chars": { "type": "integer", "minimum": 0 },
+        "evidence_chars": { "type": "integer", "minimum": 0 },
+        "tool_result_chars": { "type": "integer", "minimum": 0 },
         "estimated_tokens": { "type": "integer", "minimum": 0 },
+        "estimated_input_tokens": { "type": "integer", "minimum": 0 },
+        "window_tokens": { "type": "integer", "minimum": 1 },
+        "utilization_ratio": { "type": "number", "minimum": 0 },
+        "pricing_threshold_tokens": { "type": ["integer", "null"] },
+        "tokens_until_pricing_threshold": { "type": ["integer", "null"] },
+        "pressure": { "type": "string", "enum": ["normal", "target", "compact", "intervene", "max-normal", "hard"] },
+        "estimate_kind": { "type": "string", "enum": ["local", "provider"] },
         "sources_considered": { "type": "integer", "minimum": 0 },
         "sources_included": { "type": "integer", "minimum": 0 },
         "sources_deferred": { "type": "integer", "minimum": 0 },
-        "deferred_refs": { "type": "array", "items": { "type": "string" } }
+        "deferred_refs": { "type": "array", "items": { "type": "string" } },
+        "rehydratable_refs": { "type": "array", "items": { "type": "string" } }
       }
     }
   }
