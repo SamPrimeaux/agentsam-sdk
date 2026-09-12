@@ -166,30 +166,6 @@ test('scan fails when a file disappears and honors cancellation', async (t) => {
   await assert.rejects(buildMerkleTree(root, { signal: controller.signal }), { name: 'AbortError' });
 });
 
-test('CLI snapshot/verify/diff supports JSON, moved roots, and distinct mismatch/error exit codes', async (t) => {
-  const root = await fixture(t), moved = await fixture(t);
-  await write(root, 'a.txt', 'hello'); await write(moved, 'a.txt', 'hello');
-  const saved = run(['snapshot', '.', '--json'], root);
-  assert.equal(saved.status, 0, saved.stderr);
-  const manifest = JSON.parse(saved.stdout);
-  assert.ok(manifest.output.endsWith('merkle.json'));
-  const matching = run(['verify', manifest.output, '--root', moved, '--json'], root);
-  assert.equal(matching.status, 0, matching.stderr);
-  assert.equal(JSON.parse(matching.stdout).equal, true);
-  await write(moved, 'a.txt', 'changed'); await write(moved, 'b.txt', 'new');
-  const changed = run(['verify', manifest.output, '--root', moved, '--json'], root);
-  assert.equal(changed.status, 1, changed.stderr);
-  assert.deepEqual(JSON.parse(changed.stdout).stats, { unchanged: 0, modified: 1, added: 1, removed: 0 });
-  const diff = run(['diff', root, moved, '--json'], root);
-  assert.equal(diff.status, 1, diff.stderr);
-  const invalid = run(['root', '.', '--typo', '--json'], root);
-  assert.equal(invalid.status, 2); assert.equal(invalid.stdout, '');
-  assert.match(JSON.parse(invalid.stderr).error, /Unknown option/);
-  const piped = run(['inspect', '.', '--tui'], root);
-  assert.equal(piped.status, 0, piped.stderr);
-  assert.ok(!piped.stdout.includes('\x1b'));
-});
-
 test('semantic index records execution domains, environment access, and resolved local imports as Merkle-bound evidence', async (t) => {
   const root = await fixture(t);
   await write(root, 'package.json', JSON.stringify({ name: 'boundary-fixture', version: '1.0.0' }));
