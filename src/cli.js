@@ -311,7 +311,7 @@ if (command === '--version' || command === '-v') {
     try { await runInteractive(); }
     catch (e) {
       if (e?.code !== 'AGENTSAM_SETUP_CANCELLED') {
-        console.error(`\n  ✗ ${e?.message || e}\n`);
+        reportCliError(e);
         process.exitCode = 1;
       }
     }
@@ -329,66 +329,66 @@ if (command === '--version' || command === '-v') {
       applyPresetSelection(created.dir, preset);
       console.log(`  ✓ Preset      ${preset.id}\n  ✓ Features    ${preset.features.join(', ') || 'none'}\n  ✓ Capabilities ${preset.capabilities.length}\n`);
     }
-  } catch (e) { console.error(`\n  ✗ ${e?.message || e}\n`); process.exitCode = 1; }
+  } catch (e) { reportCliError(e); process.exitCode = 1; }
 } else if (command === 'add') {
   try { await runAdd(rest); }
-  catch (e) { console.error(`\n  ✗ ${e?.message || e}\n`); process.exitCode = 1; }
+  catch (e) { reportCliError(e); process.exitCode = 1; }
 } else if (command === 'dev') {
   try { await runDev(rest); }
-  catch (e) { console.error(`\n  ✗ ${e?.message || e}\n`); process.exitCode = 1; }
+  catch (e) { reportCliError(e); process.exitCode = 1; }
 } else if (command === 'inspect') {
   try { await runInspect(rest); }
-  catch (e) { console.error(`\n  ✗ ${e?.message || e}\n`); process.exitCode = 1; }
+  catch (e) { reportCliError(e); process.exitCode = 1; }
 } else if (command === 'capabilities') {
   try { await runCapabilities(rest); }
-  catch (e) { console.error(`\n  ✗ ${e?.message || e}\n`); process.exitCode = 1; }
+  catch (e) { reportCliError(e); process.exitCode = 1; }
 } else if (command === 'context') {
   try {
     await runContext(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exit(1);
   }
 } else if (command === 'status') {
   try {
     await runStatus(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exit(1);
   }
 } else if (command === 'db') {
   try {
     await runDb(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exit(1);
   }
 } else if (command === 'models') {
   try {
     await runModels(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exit(1);
   }
 } else if (command === 'eval') {
   try {
     await runEval(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exit(1);
   }
 } else if (command === 'cloudflare' || command === 'cf') {
   try {
     await runCloudflare(rest);
   } catch (e) {
-    if (!e?.reported) console.error(`\n  ✗ ${e?.message || e}\n`);
+    if (!e?.reported) reportCliError(e);
     process.exitCode = 1;
   }
 } else if (command === 'shell') {
   try {
     await runShell(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exit(1);
   }
 } else if (command === 'start-local') {
@@ -397,42 +397,42 @@ if (command === '--version' || command === '-v') {
   try {
     await runOllama(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exitCode = 1;
   }
 } else if (command === 'tunnel') {
   try {
     await runTunnel(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exit(1);
   }
 } else if (command === 'connections' || command === 'connection') {
   try {
     await runConnections(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exit(1);
   }
 } else if (command === 'deploy') {
   try {
     await runDeploy(parseDeployArgs(rest));
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exit(1);
   }
 } else if (command === 'dockerize') {
   try {
     await runDockerize(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exit(1);
   }
 } else if (command === 'cad') {
   try {
     await runCad(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exitCode = 1;
   }
 } else if (command === 'security' || command === 'sca') {
@@ -441,7 +441,7 @@ if (command === '--version' || command === '-v') {
   try {
     runSkills(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exitCode = 1;
   }
 } else if (command === 'merkle') {
@@ -476,14 +476,14 @@ if (command === '--version' || command === '-v') {
     try {
       await runIdentityPreview(rest.slice(1));
     } catch (e) {
-      console.error(`\n  ✗ ${e?.message || e}\n`);
+      reportCliError(e);
       process.exit(1);
     }
   } else if (sub === 'init') {
     try {
       await runIdentityInit(rest);
     } catch (e) {
-      console.error(`\n  ✗ ${e?.message || e}\n`);
+      reportCliError(e);
       process.exit(1);
     }
   } else {
