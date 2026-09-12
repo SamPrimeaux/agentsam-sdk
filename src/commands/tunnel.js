@@ -51,7 +51,7 @@ function ensureCloudflared() {
 }
 
 async function resolveToken() {
-  const existing = resolveSdkKey(process.env);
+  const existing = resolveAccountSdkKey({ env: process.env }).value;
   if (existing.startsWith('sdk_')) return existing;
   const session = await authenticateViaBrowser();
   const tok = String(session?.access_token || '').trim();
