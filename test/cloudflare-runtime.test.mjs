@@ -33,6 +33,10 @@ test('Wrangler native result preserves JSON and real exit code on failure', asyn
     runWranglerNative('versions.list', { cwd: root }, { run: async () => ({ code: 7, stdout: '', stderr: 'upstream failed' }) }),
     (error) => error.diagnostic?.exit_code === 7 && error.diagnostic?.code === 'wrangler_exit_nonzero',
   );
+  await assert.rejects(
+    runWranglerNative('deployments.list', { cwd: root }, { run: async () => ({ code: 1, stdout: '', stderr: 'Authentication error [code: 10000]\nRequest ID: req_cf_1\nCF-Ray: ray-123' }) }),
+    (error) => error.diagnostic?.code === '10000' && error.diagnostic?.request_id === 'req_cf_1' && error.diagnostic?.ray_id === 'ray-123',
+  );
 });
 
 test('CPU profile summary ranks self-time hotspots and explicitly rejects production timer inference', () => {
