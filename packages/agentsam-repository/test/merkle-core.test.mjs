@@ -43,7 +43,7 @@ test('default ignores, explicit dist inclusion, literal exclusions, and empty-di
   const root = await fixture(t);
   await write(root, 'src/app.js');
   const first = await buildMerkleTree(root);
-  for (const name of ['.git/config', 'node_modules/pkg/file', 'dist/app.js', '.DS_Store', '.agentsam/cache/data', '.agentsam/merkle/old.json']) await write(root, name);
+  for (const name of ['.git/config', 'node_modules/pkg/file', 'dist/app.js', '.DS_Store', '.agentsam/cache/data', '.agentsam/merkle/old.json', '.agentsam/backups/pre-cleanup.bak', '.agentsam/intelligence/archive/20260912/repo_intelligence.json']) await write(root, name);
   await fs.mkdir(path.join(root, 'empty'));
   assert.equal(first.rootHash, (await buildMerkleTree(root)).rootHash);
   const withDist = await buildMerkleTree(root, { include: ['dist'] });

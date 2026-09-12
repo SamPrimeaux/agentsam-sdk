@@ -2,6 +2,7 @@ import { comparePaths } from './hash.js';
 
 export const DEFAULT_IGNORES = Object.freeze([
   '.git', 'node_modules', 'dist', '.DS_Store', '.agentsam/cache', '.agentsam/merkle', '.agentsam/merkle.json',
+  '.agentsam/backups', '.agentsam/intelligence/archive',
 ]);
 export function validPath(value, allowRoot = false) {
   return typeof value === 'string' && ((allowRoot && value === '') || (value.length > 0 &&
