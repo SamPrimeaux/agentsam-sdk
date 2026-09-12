@@ -7,7 +7,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { authenticateViaBrowser } from '../lib/auth.js';
 import { postJson } from '../lib/core-client.js';
-import { resolveSdkKey } from '../../packages/identity/src/contracts/auth-config.js';
+import { resolveAccountSdkKey } from '../lib/account-session.js';
 
 const DEFAULT_PORT = 3099;
 
@@ -51,7 +51,7 @@ function ensureCloudflared() {
 }
 
 async function resolveToken() {
-  const existing = resolveSdkKey(process.env);
+  const existing = resolveAccountSdkKey({ env: process.env }).value;
   if (existing.startsWith('sdk_')) return existing;
   const session = await authenticateViaBrowser();
   const tok = String(session?.access_token || '').trim();

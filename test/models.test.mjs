@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 import { collectModelsStatus, renderModelsStatus } from '../src/commands/models.js';
 
@@ -6,8 +9,16 @@ function response(body, status = 200) {
   return { ok: status >= 200 && status < 300, status, async json() { return body; } };
 }
 
-test('model inventory reports configured API providers without exposing credentials', async () => {
+function tempHome(t) {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-model-home-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  return home;
+}
+
+test('model inventory reports configured API providers without exposing credentials', async t => {
+  const home = tempHome(t);
   const status = await collectModelsStatus({
+    home,
     discoverRemote: false,
     env: {
       OPENAI_API_KEY: 'secret-openai', GEMINI_API_KEY: '', XAI_API_KEY: 'secret-xai', ANTHROPIC_API_KEY: 'secret-anthropic',

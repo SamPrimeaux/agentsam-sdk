@@ -78,6 +78,37 @@ test('runner owns cwd, executes selected tool, preserves call_id and returns pro
   assert.ok(events.some(event => event.type === 'tool.completed'));
 });
 
+test('runtime approval hook can deny a model-triggered tool before execution', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-runner-denied-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.writeFileSync(path.join(root, 'package.json'), '{"name":"denied-demo"}');
+  let invoked = false;
+  const capabilityAdapter = createCapabilityAdapter({
+    handlers: {
+      'repository.snapshot': async () => { invoked = true; return { ok: true }; },
+    },
+  });
+  const provider = {
+    async create() {
+      return {
+        response_id: 'resp_deny', output_text: '', actual_service_tier: 'default',
+        tool_calls: [{ call_id: 'call_deny', name: capabilityFunctionName('repository.snapshot'), arguments: '{}' }],
+        usage_snapshot: usage(10_000), cost: cost(0.01),
+      };
+    },
+    async continueWithToolOutputs() { throw new Error('continuation_should_not_run'); },
+  };
+  await assert.rejects(() => runResponsesAgent({
+    provider, capabilityAdapter, cwd: root, prompt: 'snapshot repository', model: 'gpt-6-astra', reasoningEffort: 'low', serviceTier: 'default',
+    beforeTool: async request => {
+      assert.equal(request.capability_id, 'repository.snapshot');
+      assert.equal(request.cwd, root);
+      return false;
+    },
+  }), /tool_execution_not_approved:repository\.snapshot/);
+  assert.equal(invoked, false);
+});
+
 test('runner compacts before a projected high-context continuation rather than crossing normal policy blindly', async () => {
   let compactCalls = 0;
   let createInput = null;

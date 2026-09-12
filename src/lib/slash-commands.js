@@ -11,6 +11,10 @@ export const SLASH_COMMANDS = [
   { cmd: '/context', description: 'Show model context economics; add repo for Git bridge context', lane: 'context' },
   { cmd: '/status', description: 'Local project, DB, Git, and PTY health', lane: 'local' },
   { cmd: '/models', description: 'Probe providers and provider-verified known models', lane: 'model' },
+  { cmd: '/login', description: 'Authenticate IAM and save the machine-local Agent Sam session', lane: 'identity' },
+  { cmd: '/logout', description: 'Remove the local IAM session without deleting provider keys', lane: 'identity' },
+  { cmd: '/whoami', description: 'Show authenticated IAM identity and safe credential status', lane: 'identity' },
+  { cmd: '/session', description: 'Show current session usage, cost, and resume receipt', lane: 'observability' },
   { cmd: '/cf', description: 'Cloudflare native reads, Wrangler status, and CPU profile analysis', lane: 'cloudflare' },
   { cmd: '/settings', description: 'Choose project, runtime, terminal, and model policy' },
   { cmd: '/pwd', description: 'Print working directory', lane: 'terminal' },
@@ -29,8 +33,8 @@ export const SLASH_COMMANDS = [
 export const SHELL_PHASES = [
   { id: '0-prototype', label: 'Visual prototype + demo scenarios', status: 'complete' },
   { id: 'pty-connection', label: 'Local PTY via agentsam start-local', status: 'complete' },
-  { id: 'model-context-controls', label: 'Model, reasoning, processing, and context economics', status: 'current' },
-  { id: 'run-telemetry', label: 'Provider usage + cost stream wired into interactive runtime', status: 'next' },
+  { id: 'model-context-controls', label: 'Model, reasoning, processing, and context economics', status: 'complete' },
+  { id: 'run-telemetry', label: 'Provider usage, cost, resumable sessions, and permission receipts', status: 'current' },
   { id: 'dashboard-embed', label: 'Embeddable shell for IAM dashboard', status: 'planned' },
 ];
 

@@ -33,11 +33,14 @@ import { runCad } from './commands/cad.js';
 import { runSkills } from './commands/skills.js';
 import { runEval } from './commands/eval.js';
 import { runCloudflare } from './commands/cloudflare.js';
+import { runWhoami } from './commands/whoami.js';
+import { runResume } from './commands/resume.js';
+import { runLogin, runLogout } from './commands/account-auth.js';
 import { applyPresetSelection, runAdd, runCapabilities, runDev, runInspect } from './commands/product.js';
 import { listPresets, resolvePreset } from './presets/index.js';
 import fs from 'node:fs';
 import { repositoryRoot } from './knowledge/config.js';
-import { resolveSdkKey } from '../packages/identity/src/contracts/auth-config.js';
+import { resolveAccountSdkKey } from './lib/account-session.js';
 import { renderDiagnosticError } from './errors/index.js';
 
 const VERSION = pkg.version;
@@ -87,6 +90,10 @@ function printHelp() {
     agentsam status [--json]   Live local Git + DB + API + PTY status
     agentsam db init|status    Manage the project-local SQLite database
     agentsam models            Verify configured providers and selectable hosted/local models
+    agentsam login             Authenticate IAM and persist a secure machine-local session
+    agentsam logout            Remove the local IAM session; provider keys stay untouched
+    agentsam whoami [--json]   Authenticated IAM identity + safe credential status
+    agentsam resume [session]  Resume a saved Agent Sam session; omit id for picker
     agentsam eval context      Offline context-strategy/economics fixtures (--help)
     agentsam cloudflare        Native Wrangler reads + Worker CPU profile analysis (--help)
     agentsam start-local       Local PTY on ws://127.0.0.1:3099 (no tunnel, no Cloudflare)
@@ -220,7 +227,7 @@ async function runLocalInit(config) {
     console.log(`    ${step}`);
   }
 
-  const sdkKey = resolveSdkKey(process.env);
+  const sdkKey = resolveAccountSdkKey({ env: process.env }).value;
   if (prompt && sdkKey) {
     console.log('\n  Optional — BYOK keys for IAM dashboard Agent Sam (skip with Enter):\n');
     await promptOptionalByokKeys(sdkKey, prompt);
@@ -276,12 +283,12 @@ async function initInteractive(partial = {}) {
   if (runTarget !== 'local') {
     const { detectContext, missingForInit } = await import('./lib/detect-context.js');
     const ctx = await detectContext();
-    if (missingForInit(ctx, resolveSdkKey(process.env), { runTarget }).length) {
+    if (missingForInit(ctx, resolveAccountSdkKey({ env: process.env }).value, { runTarget }).length) {
       printContextSummary(ctx);
     }
   }
 
-  const prompt = resolveSdkKey(process.env) ? createPrompt() : null;
+  const prompt = resolveAccountSdkKey({ env: process.env }).value ? createPrompt() : null;
   try {
     await runLocalInit({ projectName, lane: laneKey, runTarget, prompt });
   } finally {
@@ -382,6 +389,34 @@ if (command === '--version' || command === '-v') {
     await runCloudflare(rest);
   } catch (e) {
     if (!e?.reported) reportCliError(e);
+    process.exitCode = 1;
+  }
+} else if (command === 'login') {
+  try {
+    await runLogin(rest);
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
+  }
+} else if (command === 'logout') {
+  try {
+    runLogout(rest);
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
+  }
+} else if (command === 'whoami') {
+  try {
+    await runWhoami(rest);
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
+  }
+} else if (command === 'resume') {
+  try {
+    await runResume(rest);
+  } catch (e) {
+    reportCliError(e);
     process.exitCode = 1;
   }
 } else if (command === 'shell') {

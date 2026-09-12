@@ -5,6 +5,7 @@ import http from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { postJson } from './core-client.js';
 import { promptToOpenUrl } from './open-url.js';
+import { saveAccountSession } from './account-session.js';
 
 function randomState() {
   return randomBytes(16).toString('hex');
@@ -63,5 +64,8 @@ export async function authenticateViaBrowser() {
 
   const code = await codePromise;
   const session = await postJson('/api/sdk/auth/exchange', { code, state });
+  if (String(session?.access_token || '').trim().startsWith('sdk_')) {
+    saveAccountSession(session);
+  }
   return session;
 }

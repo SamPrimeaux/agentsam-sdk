@@ -2,7 +2,8 @@
 
 A deterministic-first application and agent toolkit: reusable repository, knowledge, integrity,
 security, identity, scaffolding, and delivery capabilities with optional AgentSam/LLM composition.
-The interactive CLI makes those same primitives easy to use without making a model part of the implementation.
+The interactive CLI can run the same bounded capabilities through an explicitly selected model while
+keeping model choice, reasoning effort, processing tier, credentials, approvals, context, and cost inspectable.
 
 **npm:** `@inneranimalmedia/agentsam-sdk` · **Source:** [GitHub](https://github.com/SamPrimeaux/agentsam-sdk)
 
@@ -82,7 +83,7 @@ read-only `repository.snapshot` composition primitive. See [Capabilities and pre
 | Recon bounded-worker packets | `agentsam recon pack\|validate` | [Recon](docs/RECON.md) |
 | Local containers | `agentsam dockerize`; `/dockerize` | [Dockerize](docs/DOCKERIZE.md) |
 | Background indexing service | Docker `knowledge_service`; `/knowledge-service-client` | [Knowledge service](docs/knowledge-service.md) |
-| Interactive Agent Sam + local runtime | `agentsam`, `agentsam status`, `db`, `models`, `start-local` | [CLI shell](docs/CLI_SHELL.md) |
+| Interactive Agent Sam + resumable local runtime | `agentsam`, `agentsam resume`, `whoami`, `status`, `models`, `start-local` | [CLI shell](docs/CLI_SHELL.md) |
 
 Export suffixes such as `/identity` mean imports from
 `@inneranimalmedia/agentsam-sdk/identity`. Use `agentsam <command> --help` where supported.
@@ -105,12 +106,15 @@ authorizes its caller. Other local tooling uses Node APIs.
 
 ## Host integration and ownership
 
-Deterministic SDK capabilities remain useful without a model. The root `AgentSam` helper supplies an
-optional routing/session wrapper, while model orchestration, tool execution policy, provider credentials,
-actor/account authorization, workflow durability, approvals, jobs, and production application records
-belong to the consuming host application. Git/repository identity never proves actor authority, and the SDK
-does not create a second platform tools database. The old `scaffoldProject()` export is deprecated; use
-`agentsam create` or the local scaffold commands.
+Deterministic SDK capabilities remain useful without a model. The installed CLI adds a portable local
+runtime for explicit model selection, bounded tool orchestration, secure machine-local credential lookup,
+project-scoped execution approvals, provider-neutral resumable sessions, and usage/cost receipts. Those
+local records live under the user's AgentSam home state rather than portable repository config.
+
+Production actor/account authorization, shared credential vaults, workflow durability, remote job ownership,
+and application records still belong to the consuming host. Git/repository identity never proves actor
+authority, and the SDK does not create a second platform tools database. The old `scaffoldProject()` export
+is deprecated; use `agentsam create` or the local scaffold commands.
 
 This repository owns portable code once. Applications import it and provide adapters;
 they do not mirror SDK trees. [Ownership protocol](protocol/README.md).

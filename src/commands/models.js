@@ -1,6 +1,7 @@
 import pc from 'picocolors';
 import { probeOllama, resolveOllamaConfig } from './ollama.js';
 import { listModelCatalog } from '../models/index.js';
+import { resolveProviderCredential } from '../lib/provider-credentials.js';
 
 const API_PROVIDERS = Object.freeze([
   { id: 'openai', label: 'OpenAI', credential: 'OPENAI_API_KEY' },
@@ -34,16 +35,21 @@ export async function collectModelsStatus(options = {}) {
   const providerFetchImpl = options.providerFetchImpl || fetch;
   const ollamaConfig = resolveOllamaConfig({}, env);
   const ollama = await probeOllama(ollamaConfig, ollamaFetchImpl);
-  const providers = API_PROVIDERS.map((provider) => ({
-    ...provider,
-    configured: configured(env[provider.credential]),
-    source: 'environment',
-  }));
+  const credentials = new Map(API_PROVIDERS.map((provider) => [provider.id, resolveProviderCredential(provider.id, { env, home: options.home })]));
+  const providers = API_PROVIDERS.map((provider) => {
+    const credential = credentials.get(provider.id);
+    return {
+      ...provider,
+      configured: credential?.configured === true,
+      source: credential?.source || null,
+      credentialError: credential?.error || null,
+    };
+  });
 
-  const openaiProvider = providers.find((row) => row.id === 'openai');
-  const shouldDiscover = options.discoverRemote !== false && Boolean(openaiProvider?.configured);
+  const openaiCredential = credentials.get('openai');
+  const shouldDiscover = options.discoverRemote !== false && Boolean(openaiCredential?.configured);
   const openai = shouldDiscover
-    ? await discoverOpenAIModels(clean(env.OPENAI_API_KEY), providerFetchImpl)
+    ? await discoverOpenAIModels(clean(openaiCredential?.value), providerFetchImpl)
     : { attempted: false, ok: false, models: [], error: null };
   const availableIds = new Set(openai.models);
   const catalogModels = listModelCatalog().map((record) => ({
@@ -94,8 +100,8 @@ export function renderModelsStatus(status) {
   lines.push('');
 
   for (const provider of status.providers) {
-    const state = provider.configured ? pc.green('configured') : pc.dim('not configured');
-    const detail = provider.configured ? 'credential available' : provider.credential;
+    const state = provider.configured ? pc.green('configured') : pc.dim(provider.credentialError ? 'blocked' : 'not configured');
+    const detail = provider.configured ? `credential available · ${provider.source || 'runtime'}` : provider.credentialError ? `${provider.credential} · ${provider.credentialError}` : provider.credential;
     lines.push(`  ${statusMark(provider.configured)}  ${pc.cyan(provider.label.padEnd(10))} ${state.padEnd(20)} ${pc.dim(detail)}`);
   }
 

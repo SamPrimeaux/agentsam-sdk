@@ -12,6 +12,7 @@ Platform repositories may consume the SDK, provide host adapters, or incubate pr
 4. **Contracts travel with the SDK.** Shared schemas and protocol definitions live under `protocol/` and are versioned with the code that consumes them.
 5. **No copied package trees.** Do not duplicate `protocol/`, `agentsam_sdk/`, or package source under another path in this repository or another repository merely to keep two homes in sync.
 6. **Repository tools observe before they prescribe.** Generic repository intelligence must accept an explicit repo root, be read-only by default, and must not hardcode one repository's folder names, tenant IDs, workspace IDs, providers, or framework layout.
+7. **Model facts have one authority chain.** `/models`, CLI JSON, runtime selection, and usage receipts must follow the normative model SSOT contract in `protocol/models/README.md`; provider facts retain authoritative provenance while AgentSam recommendations remain separate policy.
 
 ## Layout
 

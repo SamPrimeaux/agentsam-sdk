@@ -5,7 +5,7 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { coreBaseUrl } from './core-client.js';
-import { resolveSdkKey } from '../../packages/identity/src/contracts/auth-config.js';
+import { resolveAccountSdkKey } from './account-session.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -221,7 +221,7 @@ async function detectIam(explicitToken = '') {
     });
   }
 
-  const sdkToken = resolveSdkKey(process.env, explicitToken);
+  const sdkToken = resolveAccountSdkKey({ env: process.env, explicit: explicitToken }).value;
   if (sdkToken.trim()) {
     const probe = await probeSdkBearer(sdkToken);
     if (probe.valid) {
