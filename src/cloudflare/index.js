@@ -3,6 +3,7 @@ export {
   WRANGLER_OPERATION_FAMILIES,
   buildWranglerInvocation,
   listWranglerNativeCommands,
+  parseWranglerErrorEvidence,
   runWranglerNative,
 } from './wrangler.js';
 export {
