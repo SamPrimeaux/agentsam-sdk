@@ -36,8 +36,8 @@ export function merkleSnapshotStorageKey({ accountId, repositoryId, snapshotId, 
 /** Portable D1/SQLite schema for hosts that opt into persisted Merkle snapshots. */
 export const MERKLE_SNAPSHOT_SCHEMA_SQL = `CREATE TABLE IF NOT EXISTS ${MERKLE_SNAPSHOT_TABLE} (
   snapshot_id TEXT PRIMARY KEY NOT NULL,
-  owner_user_id TEXT NOT NULL,
-  repo_id TEXT NOT NULL,
+  account_id TEXT NOT NULL,
+  repository_id TEXT NOT NULL,
   repository TEXT,
   source TEXT NOT NULL CHECK (source IN ('github','gitlab','bitbucket','local','upload')),
   manifest_format TEXT NOT NULL DEFAULT 'agentsam-merkle',
