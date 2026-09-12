@@ -100,8 +100,8 @@ export function renderModelsStatus(status) {
   lines.push('');
 
   for (const provider of status.providers) {
-    const state = provider.configured ? pc.green('configured') : pc.dim('not configured');
-    const detail = provider.configured ? 'credential available' : provider.credential;
+    const state = provider.configured ? pc.green('configured') : pc.dim(provider.credentialError ? 'blocked' : 'not configured');
+    const detail = provider.configured ? `credential available · ${provider.source || 'runtime'}` : provider.credentialError ? `${provider.credential} · ${provider.credentialError}` : provider.credential;
     lines.push(`  ${statusMark(provider.configured)}  ${pc.cyan(provider.label.padEnd(10))} ${state.padEnd(20)} ${pc.dim(detail)}`);
   }
 
