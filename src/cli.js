@@ -89,6 +89,8 @@ function printHelp() {
     agentsam status [--json]   Live local Git + DB + API + PTY status
     agentsam db init|status    Manage the project-local SQLite database
     agentsam models            Verify configured providers and selectable hosted/local models
+    agentsam whoami [--json]   Authenticated IAM identity + safe credential status
+    agentsam resume [session]  Resume a saved Agent Sam session; omit id for picker
     agentsam eval context      Offline context-strategy/economics fixtures (--help)
     agentsam cloudflare        Native Wrangler reads + Worker CPU profile analysis (--help)
     agentsam start-local       Local PTY on ws://127.0.0.1:3099 (no tunnel, no Cloudflare)
