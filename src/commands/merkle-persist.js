@@ -79,13 +79,14 @@ export function resolveMerklePersistenceIdentity(root, options = {}) {
   if (!accountId) throw new Error('agentsam_login_required_for_merkle_persistence');
 
   const projectConfig = options.projectConfig ?? tryReadProjectConfig(root);
-  const repositoryId = portableRepositoryIdFromGit(root) || getRepositoryId(projectConfig);
+  const gitRepositoryId = portableRepositoryIdFromGit(root);
+  const repositoryId = gitRepositoryId || getRepositoryId(projectConfig);
   if (!repositoryId) throw new Error('repository_identity_unresolved');
 
   return {
     accountId,
     repositoryId,
-    repositoryIdentitySource: portableRepositoryIdFromGit(root) ? 'git' : 'project_manifest',
+    repositoryIdentitySource: gitRepositoryId ? 'git' : 'project_manifest',
   };
 }
 
