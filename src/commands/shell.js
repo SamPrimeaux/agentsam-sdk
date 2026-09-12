@@ -15,6 +15,8 @@ import { createRuntimeActivity } from '../ui/runtime-activity.js';
 import { getModelRecord } from '../models/index.js';
 import { readCliPreferences, updateCliPreferences } from '../lib/cli-preferences.js';
 import { buildContextEconomicsReport, renderContextEconomics } from './context-economics.js';
+import { createOpenAIResponsesAdapter } from '../providers/index.js';
+import { createCapabilityAdapter, runResponsesAgent } from '../agent/index.js';
 
 function writeLine(write, value = '') { write(`${value}\n`); }
 
