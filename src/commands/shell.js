@@ -13,7 +13,7 @@ import { runModels } from './models.js';
 import { configureCliPreferences } from './preferences.js';
 import { runCloudflare } from './cloudflare.js';
 import { createRuntimeActivity } from '../ui/runtime-activity.js';
-import { renderDiagnosticError } from '../errors/index.js';
+import { diagnosticFromError, renderDiagnosticError } from '../errors/index.js';
 import { getModelRecord } from '../models/index.js';
 import { readCliPreferences, updateCliPreferences } from '../lib/cli-preferences.js';
 import { buildContextEconomicsReport, renderContextEconomics } from './context-economics.js';
