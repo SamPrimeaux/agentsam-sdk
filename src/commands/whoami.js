@@ -42,7 +42,7 @@ export async function collectWhoami(options = {}) {
       authenticated: false,
       authority: 'iam',
       identity: null,
-      sdk_credential: { configured: true, source: 'AGENTSAM_SDK_KEY', valid: false, error: error?.message || String(error) },
+      sdk_credential: { configured: true, source: sdk.source, valid: false, error: error?.message || String(error) },
       provider_credentials: credentials,
     };
   }
