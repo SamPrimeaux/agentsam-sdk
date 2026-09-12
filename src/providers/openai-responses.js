@@ -188,6 +188,7 @@ export function createOpenAIResponsesAdapter(options = {}) {
     emitEvent(emit, 'cost.snapshot', cost, meta);
     emitEvent(emit, 'model.completed', {
       provider: 'openai', model, response_id: response.id, status: response.status,
+      request_id: http?.request_id || null, ray_id: http?.ray_id || null,
       requested_service_tier: serviceTier, actual_service_tier: actualServiceTier,
     }, meta);
 
@@ -196,6 +197,8 @@ export function createOpenAIResponsesAdapter(options = {}) {
       model,
       response_id: response.id,
       status: response.status,
+      request_id: http?.request_id || null,
+      ray_id: http?.ray_id || null,
       output_text: extractOpenAIOutputText(response),
       tool_calls: Object.freeze(extractOpenAIFunctionCalls(response)),
       usage_delta: Object.freeze(delta),
