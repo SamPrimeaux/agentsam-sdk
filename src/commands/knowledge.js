@@ -13,7 +13,7 @@ import { openPostgresStore } from '../knowledge/stores/postgres.js';
 import { planIndex, runIndex, retrieve } from '../knowledge/engine.js';
 import { createGeminiEmbedder } from '../knowledge/providers/gemini.js';
 import { compareObservations } from '../knowledge/evolution.js';
-import { ensureProjectManifest, getProjectName, getRepositoryId } from '../lib/project-config.js';
+import { ensureProjectManifest, getProjectName, getRepositoryId, portableRepositoryIdFromGit, tryReadProjectConfig } from '../lib/project-config.js';
 import { ensureProjectRules } from '../lib/project-rules.js';
 
 const execute = promisify(execFile);
