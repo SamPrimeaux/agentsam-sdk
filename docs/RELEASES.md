@@ -1,14 +1,22 @@
 # `@inneranimalmedia/agentsam-sdk` release receipts
 
-**2.5.0 is the current release candidate on `main`; it is not published yet.**
-The npm `latest` dist-tag is **2.4.1**. The private identity workspace continues to
+**2.6.0 is the current release candidate on `main`; it is not published yet.**
+The npm `latest` dist-tag is **2.5.0**. The private identity workspace continues to
 ship through root SDK exports and is not published separately.
 
-Release-candidate base: `236afa84b553fb0d0109abe41939488945c4fc74`. The final tagged
-publish commit will be recorded here after release. Publishing remains manual and
-`prepublishOnly` runs `npm run verify:release`.
+Release-candidate base: `2643c164b0a745d0772f1aa9808c03bbe3873c94`. The final tagged publish commit will be recorded
+here after release. Publishing remains manual and `prepublishOnly` runs
+`npm run verify:release`.
 
-## 2.5.0 candidate highlights
+## 2.6.0 candidate highlights
+
+- Interactive AgentSam now has persistent machine-local account/session identity with explicit `login`, `logout`, `whoami`, and `resume` flows.
+- `/models` and model-selection UX bind to the canonical model inventory v2 contract instead of maintaining a second CLI catalog.
+- Provider credentials and account BYOK resolution are scoped, source-aware, and reusable across interactive, deploy, and tunnel flows without storing secrets in project state.
+- Runtime receipts now model account-owned runs, provider usage, approvals, and terminal jobs with stable lineage and no tenant/workspace/user ownership aliases.
+- Cloudflare diagnostics, context economics, repository evidence, and security/indexing contracts accumulated after 2.5.0 are included in the same verified release lineage.
+
+## 2.5.0 highlights
 
 - `agentsam` is the interactive product entrypoint; renderer selection is internal, and live thinking/activity scenes now run automatically around real Agent Sam work.
 - Portable project authority is `.agentsam/config.json` + `.agentsamrules`; local CLI preferences remain non-authoritative.
@@ -23,7 +31,8 @@ publish commit will be recorded here after release. Publishing remains manual an
 
 | npm version | Published (UTC) | IAM git SHA (40) | Notes |
 |-------------|-----------------|------------------|-------|
-| 2.5.0 | _(pending)_ | _(tag at publish)_ | Release candidate; full verification required immediately before publish. |
+| 2.6.0 | _(pending)_ | _(tag at publish)_ | Release candidate; interactive model/session SSOT and account-scoped runtime receipts. |
+| 2.5.0 | 2026-09-11T21:27:11.516Z | `da28623dc4808025b77605ed09aa16217b1db607` | Published package; registry `gitHead` receipt. |
 | 2.4.1 | 2026-09-11T05:45:03.622Z | `a256ababededd904da555e7898bc8afd753737d2` | Latest published package before 2.5.0. |
 | 2.4.0 | 2026-09-11T05:29:02.811Z | `81c8659977953bed53c2adb0a341ce7382be4794` | Published 2.4 line. |
 | 2.3.0 | 2026-09-11T05:09:40.046Z | `b517a720fb9b90f35c26f9ef87a84abd60d7ee01` | Published 2.3 line. |

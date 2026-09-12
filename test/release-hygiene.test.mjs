@@ -6,15 +6,15 @@ import test from 'node:test';
 const root = path.resolve(import.meta.dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 
-test('2.5 release metadata and public terminal vocabulary are aligned', () => {
+test('2.6 release metadata and public terminal vocabulary are aligned', () => {
   const pkg = JSON.parse(read('package.json'));
   const manifest = read('agentsam.yaml');
   const readme = read('README.md');
 
-  assert.equal(pkg.version, '2.5.0');
-  assert.match(manifest, /target_version: "2\.5\.0"/);
+  assert.equal(pkg.version, '2.6.0');
+  assert.match(manifest, /target_version: "2.6.0"/);
   assert.match(manifest, /state: release_candidate/);
-  assert.match(manifest, /current_latest: "2\.4\.1"/);
+  assert.match(manifest, /current_latest: "2.5.0"/);
   assert.doesNotMatch(manifest, /^\s*- tui\s*$/m);
   assert.doesNotMatch(readme, /agentsam tui|CLI\/TUI/);
 });
