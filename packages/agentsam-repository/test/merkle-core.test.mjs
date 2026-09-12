@@ -13,8 +13,6 @@ async function write(root, name, content = name) {
   await fs.mkdir(path.dirname(path.join(root, name)), { recursive: true });
   await fs.writeFile(path.join(root, name), content);
 }
-function run(args, cwd) { return spawnSync(process.execPath, [cli, 'merkle', ...args], { cwd, encoding: 'utf8', timeout: 15000 }); }
-
 test('version 1 hashes match independent SHA-256 protocol vectors', async (t) => {
   const root = await fixture(t);
   assert.equal((await buildMerkleTree(root)).rootHash, 'sha256:6ce8ca443f3cf6c719c5cb9acc121403addf3f499eefa3db25edacf2c7fe0f94');
