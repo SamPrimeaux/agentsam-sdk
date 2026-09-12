@@ -1,6 +1,6 @@
 export { repositorySnapshot } from '../capabilities/repository-snapshot.js';
 export { buildMerkleTree, diffTrees, readSnapshot, saveSnapshot, validateSnapshot } from '../../packages/agentsam-repository/src/merkle/index.js';
-export { resolveGitContext, tryResolveGitContext, normalizeGitRemote } from '../lib/git-context.js';
+export { resolveGitContext, tryResolveGitContext, normalizeGitRemote } from '../../packages/agentsam-repository/src/git-context.js';
 export { buildRetrievalPlan, createContextPack } from '../knowledge/index.js';
 export {
   COMPANY_REPOSITORY_GRAPH_SCHEMA_VERSION,
