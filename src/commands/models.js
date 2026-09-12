@@ -1,6 +1,7 @@
 import pc from 'picocolors';
 import { probeOllama, resolveOllamaConfig } from './ollama.js';
 import { listModelCatalog } from '../models/index.js';
+import { resolveProviderCredential } from '../lib/provider-credentials.js';
 
 const API_PROVIDERS = Object.freeze([
   { id: 'openai', label: 'OpenAI', credential: 'OPENAI_API_KEY' },
