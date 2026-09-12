@@ -7,7 +7,7 @@ import {
   createRepositoryContract,
   createRepositoryDependency,
   createRepositoryIdentity,
-} from '../../src/repository/contracts.js';
+} from '../../packages/agentsam-repository/src/contracts.js';
 
 const root = path.resolve(import.meta.dirname, '../..');
 
