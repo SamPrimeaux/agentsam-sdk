@@ -65,7 +65,6 @@
     "knowledge.test.mjs",
     "local-sessions.test.mjs",
     "local-studio-deploy.test.mjs",
-    "merkle-persistence.test.mjs",
     "merkle-render.test.mjs",
     "merkle.test.mjs",
     "mini.test.mjs",
