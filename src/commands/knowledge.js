@@ -81,7 +81,7 @@ export async function runKnowledge(argv) {
   const command = positionals[0] || 'plan';
   if (opts.help) { console.log('agentsam index plan|run|status|history|show|setup-store [--cwd PATH] [--embed] [--max-inputs 100] [--max-characters 200000] [--generation ID] [--json]\nplan is read-only; run defaults to AST/text only; --embed sends selected chunks to the configured provider.'); return; }
   if (positionals.length > 1 || !['plan', 'run', 'status', 'history', 'show', 'setup-store'].includes(command)) throw new Error('Unknown index command; use agentsam index --help.');
-  const root = repositoryRoot(opts.cwd), config = readConfig(root);
+  const root = repositoryRoot(opts.cwd), config = resolveKnowledgeConfig(root);
   const store = await openStore(root, config, !['run', 'setup-store'].includes(command));
   try {
     if (command === 'setup-store') {
