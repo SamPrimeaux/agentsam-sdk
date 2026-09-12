@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/capabilities/cloudflare-wrangler-native-input.schema.json",
+  "title": "cloudflare.wrangler.native input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["command"],
+  "properties": {
+    "command": { "enum": ["whoami", "deployments.list", "versions.list", "types.check", "queues.list"] },
+    "cwd": { "type": "string", "minLength": 1 },
+    "name": { "type": "string" },
+    "account": { "type": "string" },
+    "config": { "type": "string" },
+    "env": { "type": "string" },
+    "profile": { "type": "string" },
+    "path": { "type": "string" },
+    "page": { "type": "integer", "minimum": 1 }
+  }
+}
