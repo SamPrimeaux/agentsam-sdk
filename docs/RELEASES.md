@@ -31,7 +31,7 @@ Publishing remains manual and `prepublishOnly` runs `npm run verify:release`.
 
 | npm version | Published (UTC) | IAM git SHA (40) | Notes |
 |-------------|-----------------|------------------|-------|
-| 2.6.0 | _(pending)_ | _(tag at publish)_ | Release candidate; interactive model/session SSOT and account-scoped runtime receipts. |
+| 2.6.0 | 2026-09-12T21:14:57.827Z | `ae32fba0a761cb18c5f940957bdcd58e3cab6072` | Published package; npm `latest`; registry `gitHead`, shasum, integrity, and `v2.6.0` tag verified. |
 | 2.5.0 | 2026-09-11T21:27:11.516Z | `da28623dc4808025b77605ed09aa16217b1db607` | Published package; registry `gitHead` receipt. |
 | 2.4.1 | 2026-09-11T05:45:03.622Z | `a256ababededd904da555e7898bc8afd753737d2` | Latest published package before 2.5.0. |
 | 2.4.0 | 2026-09-11T05:29:02.811Z | `81c8659977953bed53c2adb0a341ce7382be4794` | Published 2.4 line. |
