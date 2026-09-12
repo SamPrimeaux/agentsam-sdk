@@ -7,7 +7,7 @@ import { CONFIG_PATH, defaultConfig, readConfig } from '../knowledge/config.js';
 
 const sdkRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const runtimeFiles = () => {
-  const files = ['services/knowledge/package.json', 'services/knowledge/package-lock.json', 'src/lib/merkle/hash.js'];
+  const files = ['services/knowledge/package.json', 'services/knowledge/package-lock.json', 'packages/agentsam-repository/src/merkle/hash.js'];
   const walk = dir => { for (const entry of fs.readdirSync(path.join(sdkRoot, dir), { withFileTypes: true })) {
     const file = `${dir}/${entry.name}`;
     if (entry.isDirectory()) walk(file); else if (entry.isFile() && /\.(js|sql)$/.test(entry.name)) files.push(file);
