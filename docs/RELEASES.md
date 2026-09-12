@@ -1,14 +1,14 @@
 # `@inneranimalmedia/agentsam-sdk` release receipts
 
-**2.6.0 is the current release candidate on `main`; it is not published yet.**
-The npm `latest` dist-tag is **2.5.0**. The private identity workspace continues to
+**2.6.0 is published and is the npm `latest` release.** The private identity workspace continues to
 ship through root SDK exports and is not published separately.
 
-Release-candidate base: `2643c164b0a745d0772f1aa9808c03bbe3873c94`. The final tagged publish commit will be recorded
-here after release. Publishing remains manual and `prepublishOnly` runs
-`npm run verify:release`.
+Published at `2026-09-12T21:14:57.827Z` from git SHA
+`ae32fba0a761cb18c5f940957bdcd58e3cab6072`, tagged `v2.6.0`. Registry integrity:
+`sha512-98xvyIXGcX6/S0nFUkB2+s4zPxF5WvN/eYBjt6s575uC/ux/xB9Y0dH+pw7ur5TMRkQj7JDR4XN5cSy6I2Hr+w==`.
+Publishing remains manual and `prepublishOnly` runs `npm run verify:release`.
 
-## 2.6.0 candidate highlights
+## 2.6.0 highlights
 
 - Interactive AgentSam now has persistent machine-local account/session identity with explicit `login`, `logout`, `whoami`, and `resume` flows.
 - `/models` and model-selection UX bind to the canonical model inventory v2 contract instead of maintaining a second CLI catalog.
