@@ -83,7 +83,7 @@ read-only `repository.snapshot` composition primitive. See [Capabilities and pre
 | Recon bounded-worker packets | `agentsam recon pack\|validate` | [Recon](docs/RECON.md) |
 | Local containers | `agentsam dockerize`; `/dockerize` | [Dockerize](docs/DOCKERIZE.md) |
 | Background indexing service | Docker `knowledge_service`; `/knowledge-service-client` | [Knowledge service](docs/knowledge-service.md) |
-| Interactive Agent Sam + local runtime | `agentsam`, `agentsam status`, `db`, `models`, `start-local` | [CLI shell](docs/CLI_SHELL.md) |
+| Interactive Agent Sam + resumable local runtime | `agentsam`, `agentsam resume`, `whoami`, `status`, `models`, `start-local` | [CLI shell](docs/CLI_SHELL.md) |
 
 Export suffixes such as `/identity` mean imports from
 `@inneranimalmedia/agentsam-sdk/identity`. Use `agentsam <command> --help` where supported.
