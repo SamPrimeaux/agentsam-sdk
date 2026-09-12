@@ -44,6 +44,7 @@ export {
   DEFAULT_CONTEXT_RATIOS,
   DEFAULT_RESULT_POLICY,
   createContextBudget,
+  assessContextUsage,
   normalizeResultPolicy,
   resolveContext,
   resolveProjectContext,
