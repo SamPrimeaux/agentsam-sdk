@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { buildMerkleTree } from '../lib/merkle/index.js';
+import { buildMerkleTree } from '../../packages/agentsam-repository/src/merkle/index.js';
 import { gitIgnoredPaths } from '../lib/merkle/git-ignore.js';
 import { analyzeExecutionBoundaries } from '../indexing/execution-boundary.js';
 
