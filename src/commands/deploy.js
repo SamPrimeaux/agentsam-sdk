@@ -6,7 +6,7 @@ import path from 'node:path';
 import readline from 'node:readline';
 import { authenticateViaBrowser } from '../lib/auth.js';
 import { getJson, streamScaffold } from '../lib/core-client.js';
-import { resolveSdkKey } from '../../packages/identity/src/contracts/auth-config.js';
+import { resolveAccountSdkKey } from '../lib/account-session.js';
 import { getDefaultProfile, getDeployTarget, getLocalSchemaPath, getProjectName, getProjectPreset, readProjectConfig, setDeployTarget, writeProjectConfig } from '../lib/project-config.js';
 import { isLocalStudioCheckout, runLocalStudioDeploy } from '../lib/deploy/local-studio.js';
 
