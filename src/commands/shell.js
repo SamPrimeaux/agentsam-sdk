@@ -239,11 +239,14 @@ function persistSession(state, patch = {}) {
 }
 
 function recordSessionInput(state, input) {
-  if (!state.session || !String(input || '').trim()) return;
+  const value = String(input || '').trim();
+  if (!state.session || !value) return;
+  const housekeeping = new Set(['/exit', '/quit', '/session', '/help', '/', '/menu', '/clear']);
+  if (housekeeping.has(value.toLowerCase())) return;
   persistSession(state, {
     status: 'active',
-    last_input: String(input).trim(),
-    title: sessionTitleFromInput(input),
+    last_input: value,
+    title: sessionTitleFromInput(value),
   });
 }
 
