@@ -71,6 +71,7 @@
   "files": [
     "src",
     "packages/identity",
+    "packages/connectors/cloudflare",
     "templates",
     "docs",
     "examples",
