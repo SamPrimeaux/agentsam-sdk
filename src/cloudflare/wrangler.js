@@ -111,8 +111,8 @@ export async function runWranglerNative(id, input = {}, options = {}) {
       request_id: evidence.request_id,
       ray_id: evidence.ray_id,
       cwd: plan.cwd,
-      stderr: String(result.stderr || '').slice(0, 12_000) || null,
-      stdout: String(result.stdout || '').slice(0, 4_000) || null,
+      stderr: redactDiagnosticValue(String(result.stderr || '').slice(0, 12_000)) || null,
+      stdout: redactDiagnosticValue(String(result.stdout || '').slice(0, 4_000)) || null,
       details: evidence.details,
     });
   }
