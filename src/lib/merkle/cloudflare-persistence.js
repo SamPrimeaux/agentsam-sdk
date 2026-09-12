@@ -157,8 +157,8 @@ function sqlInt(value) {
 export function buildMerklePersistencePlan({
   snapshot,
   root = process.cwd(),
-  ownerUserId,
-  repoId,
+  accountId,
+  repositoryId,
   source = 'local',
   captureKind = 'manual',
   connectionId = null,
@@ -170,24 +170,24 @@ export function buildMerklePersistencePlan({
   wrangler,
 } = {}) {
   if (!snapshot?.rootHash || !Array.isArray(snapshot?.entries)) throw new Error('merkle_snapshot_required');
-  const owner = clean(ownerUserId);
-  if (!owner) throw new Error('owner_user_id_required');
+  const account = clean(accountId);
+  const repository = clean(repositoryId);
+  if (!account) throw new Error('account_id_required');
+  if (!repository) throw new Error('repository_id_required');
   if (!CAPTURE_KINDS.has(captureKind)) throw new Error(`capture_kind_invalid:${captureKind}`);
   if (!SOURCES.has(source)) throw new Error(`source_invalid:${source}`);
   if (captureKind !== 'deploy' && !clean(connectionId) && !clean(runtimeLeaseId)) throw new Error('execution_provenance_required');
   let git = null;
   try { git = resolveGitContext({ cwd: root }); } catch { git = null; }
-  const resolvedRepoId = clean(repoId) || providerRepoId(git);
-  if (!resolvedRepoId) throw new Error('repo_id_required');
-  const snapshotId = snapshotIdFor({ snapshot, repoId: resolvedRepoId, captureKind, deploymentId });
+  const snapshotId = snapshotIdFor({ snapshot, repositoryId: repository, captureKind, deploymentId });
   const prefix = normalizeMerkleStoragePrefix(storagePrefix);
-  const storageKey = merkleSnapshotStorageKey({ ownerUserId: owner, repoId: resolvedRepoId, snapshotId, prefix });
+  const storageKey = merkleSnapshotStorageKey({ accountId: account, repositoryId: repository, snapshotId, prefix });
   const createdAt = Math.floor(Date.now() / 1000);
   const classifier = snapshot.semantic?.classifier || null;
   const row = {
     snapshot_id: snapshotId,
-    owner_user_id: owner,
-    repo_id: resolvedRepoId,
+    account_id: account,
+    repository_id: repository,
     repository: git?.remoteUrl || null,
     source,
     manifest_format: snapshot.format || 'agentsam-merkle',
