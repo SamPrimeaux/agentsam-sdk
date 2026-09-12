@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/repository/repository-dependency.schema.json",
+  "title": "AgentSam Repository Dependency Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "account_id", "source_repository_id", "target_repository_id", "dependency_type", "criticality", "failure_policy"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "account_id": { "type": "string", "minLength": 1 },
+    "source_repository_id": { "type": "string", "minLength": 1 },
+    "target_repository_id": { "type": "string", "minLength": 1 },
+    "dependency_type": { "enum": ["runtime", "build", "contract", "package", "deploy", "tool", "data"] },
+    "contract_id": { "type": ["string", "null"] },
+    "criticality": { "enum": ["informational", "compatible", "strict", "critical"] },
+    "required_version": { "type": ["string", "null"] },
+    "required_contract_hash": { "type": ["string", "null"] },
+    "failure_policy": { "enum": ["warn", "block_certification", "block_deploy", "degrade"] },
+    "description": { "type": ["string", "null"] },
+    "created_at": { "type": ["integer", "null"], "minimum": 0 },
+    "updated_at": { "type": ["integer", "null"], "minimum": 0 }
+  }
+}

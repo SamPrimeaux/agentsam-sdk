@@ -129,25 +129,15 @@ export function resolveWranglerMerklePersistence({
   };
 }
 
-function providerRepoId(git) {
-  const host = clean(git?.remoteHost).toLowerCase();
-  const fullName = clean(git?.repoFullName);
-  if (!fullName) return null;
-  if (host === 'github.com') return `github:${fullName}`;
-  if (host === 'gitlab.com') return `gitlab:${fullName}`;
-  if (host === 'bitbucket.org') return `bitbucket:${fullName}`;
-  return null;
-}
-
 function safeId(value) {
   return clean(value).replace(/[^A-Za-z0-9._-]+/g, '').slice(0, 96);
 }
 
-function snapshotIdFor({ snapshot, repoId, captureKind, deploymentId }) {
+function snapshotIdFor({ snapshot, repositoryId, captureKind, deploymentId }) {
   const deployment = safeId(deploymentId);
   if (captureKind === 'deploy' && deployment) return `mrs_dep_${deployment.toLowerCase()}`;
   const digest = createHash('sha256')
-    .update([repoId, snapshot.rootHash, snapshot.semantic?.rootHash || '', captureKind].join('\0'))
+    .update([repositoryId, snapshot.rootHash, snapshot.semantic?.rootHash || '', captureKind].join('\0'))
     .digest('hex');
   return `mrs_${digest.slice(0, 24)}`;
 }
@@ -167,8 +157,8 @@ function sqlInt(value) {
 export function buildMerklePersistencePlan({
   snapshot,
   root = process.cwd(),
-  ownerUserId,
-  repoId,
+  accountId,
+  repositoryId,
   source = 'local',
   captureKind = 'manual',
   connectionId = null,
@@ -180,24 +170,24 @@ export function buildMerklePersistencePlan({
   wrangler,
 } = {}) {
   if (!snapshot?.rootHash || !Array.isArray(snapshot?.entries)) throw new Error('merkle_snapshot_required');
-  const owner = clean(ownerUserId);
-  if (!owner) throw new Error('owner_user_id_required');
+  const account = clean(accountId);
+  const repository = clean(repositoryId);
+  if (!account) throw new Error('account_id_required');
+  if (!repository) throw new Error('repository_id_required');
   if (!CAPTURE_KINDS.has(captureKind)) throw new Error(`capture_kind_invalid:${captureKind}`);
   if (!SOURCES.has(source)) throw new Error(`source_invalid:${source}`);
   if (captureKind !== 'deploy' && !clean(connectionId) && !clean(runtimeLeaseId)) throw new Error('execution_provenance_required');
   let git = null;
   try { git = resolveGitContext({ cwd: root }); } catch { git = null; }
-  const resolvedRepoId = clean(repoId) || providerRepoId(git);
-  if (!resolvedRepoId) throw new Error('repo_id_required');
-  const snapshotId = snapshotIdFor({ snapshot, repoId: resolvedRepoId, captureKind, deploymentId });
+  const snapshotId = snapshotIdFor({ snapshot, repositoryId: repository, captureKind, deploymentId });
   const prefix = normalizeMerkleStoragePrefix(storagePrefix);
-  const storageKey = merkleSnapshotStorageKey({ ownerUserId: owner, repoId: resolvedRepoId, snapshotId, prefix });
+  const storageKey = merkleSnapshotStorageKey({ accountId: account, repositoryId: repository, snapshotId, prefix });
   const createdAt = Math.floor(Date.now() / 1000);
   const classifier = snapshot.semantic?.classifier || null;
   const row = {
     snapshot_id: snapshotId,
-    owner_user_id: owner,
-    repo_id: resolvedRepoId,
+    account_id: account,
+    repository_id: repository,
     repository: git?.remoteUrl || null,
     source,
     manifest_format: snapshot.format || 'agentsam-merkle',
@@ -235,7 +225,7 @@ export function buildMerklePersistencePlan({
 
 export function merklePersistenceUpsertSql(row) {
   return `INSERT INTO ${MERKLE_SNAPSHOT_TABLE} (
-  snapshot_id, owner_user_id, repo_id, repository, source,
+  snapshot_id, account_id, repository_id, repository, source,
   manifest_format, manifest_version, hash_algorithm, root_hash, policy_hash,
   resolved_commit_sha, resolved_tree_sha, git_branch, working_tree_dirty,
   connection_id, runtime_lease_id, storage_backend, storage_bucket, storage_key,
@@ -243,7 +233,7 @@ export function merklePersistenceUpsertSql(row) {
   capture_kind, deployment_id, worker_version_id, reference_label,
   created_at, persisted_at, metadata_root, classifier_format, classifier_version, classifier_source
 ) VALUES (
-  ${sqlText(row.snapshot_id)}, ${sqlText(row.owner_user_id)}, ${sqlText(row.repo_id)}, ${sqlText(row.repository)}, ${sqlText(row.source)},
+  ${sqlText(row.snapshot_id)}, ${sqlText(row.account_id)}, ${sqlText(row.repository_id)}, ${sqlText(row.repository)}, ${sqlText(row.source)},
   ${sqlText(row.manifest_format)}, ${sqlInt(row.manifest_version)}, ${sqlText(row.hash_algorithm)}, ${sqlText(row.root_hash)}, ${sqlText(row.policy_hash)},
   ${sqlText(row.resolved_commit_sha)}, ${sqlText(row.resolved_tree_sha)}, ${sqlText(row.git_branch)}, ${sqlInt(row.working_tree_dirty)},
   ${sqlText(row.connection_id)}, ${sqlText(row.runtime_lease_id)}, ${sqlText(row.storage_backend)}, ${sqlText(row.storage_bucket)}, ${sqlText(row.storage_key)},

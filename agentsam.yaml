@@ -105,6 +105,8 @@ exports:
   cad_docker: ./src/lib/cad-docker.js
   mini: ./src/lib/mini/index.js
   merkle: ./src/lib/merkle/index.js
+  repository: ./src/repository/index.js
+  repository_contracts: ./src/repository/contracts.js
   knowledge: ./src/knowledge/index.js
   knowledge_service_client: ./src/knowledge/service/client.js
   security: ./src/security/index.js
@@ -122,6 +124,9 @@ capabilities:
     - repository_composition
     - git_churn_snapshot
     - merkle_integrity
+    - company_repository_identity
+    - company_repository_contracts
+    - company_repository_dependencies
   knowledge:
     - incremental_js_ts_ast_indexing
     - text_indexing

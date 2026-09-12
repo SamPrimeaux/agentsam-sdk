@@ -1,5 +1,7 @@
 import path from 'node:path';
 import { readSnapshot } from '../lib/merkle/snapshot.js';
+import { readAccountSession } from '../lib/account-session.js';
+import { getRepositoryId, portableRepositoryIdFromGit, tryReadProjectConfig } from '../lib/project-config.js';
 import {
   buildMerklePersistencePlan,
   persistMerkleSnapshotCloudflare,
@@ -17,8 +19,6 @@ export function printMerklePersistHelp() {
   agentsam merkle persist <snapshot.json> — publish a saved Merkle snapshot through host bindings
 
   --wrangler-config <file>    Worker config containing WEBSITE_ASSETS and optionally DB
-  --owner-user-id <id>        Snapshot owner authority (or AGENTSAM_OWNER_USER_ID)
-  --repo-id <id>              Canonical repo id; inferred for GitHub/GitLab/Bitbucket when possible
   --capture-kind <kind>       deploy|manual|agent|index (default manual)
   --connection-id <id>        Execution provenance for non-deploy captures
   --runtime-lease-id <id>     Alternative execution provenance for non-deploy captures
@@ -35,9 +35,11 @@ export function printMerklePersistHelp() {
   --dry-run                   Resolve bindings and emit the exact storage/index plan without writes
   --json                      Machine-readable output
 
-  The SDK never infers owner identity. Hosts should pass authenticated owner_user_id.
-  Physical bucket/database names come from Wrangler bindings, so customer installs keep
-  WEBSITE_ASSETS/DB while selecting their own storage resources.
+  CLI ownership comes from the authenticated AgentSam session, while repository identity is
+  derived from Git/provider identity (with the committed project manifest as local fallback).
+  Programmatic hosts pass account_id + repository_id directly to the persistence plan. Physical
+  bucket/database names come from Wrangler bindings, so customer installs keep WEBSITE_ASSETS/DB
+  while selecting their own storage resources.
 `);
 }
 
@@ -55,7 +57,7 @@ function parse(args) {
     if (arg === '--dry-run') { opts.dryRun = true; continue; }
     if (arg === '--r2-only') { opts.r2Only = true; continue; }
     const map = {
-      '--wrangler-config': 'wranglerConfig', '--owner-user-id': 'ownerUserId', '--repo-id': 'repoId',
+      '--wrangler-config': 'wranglerConfig',
       '--capture-kind': 'captureKind', '--connection-id': 'connectionId', '--runtime-lease-id': 'runtimeLeaseId',
       '--deployment-id': 'deploymentId', '--worker-version': 'workerVersionId', '--reference-label': 'referenceLabel',
       '--source': 'source', '--prefix': 'storagePrefix', '--r2-binding': 'r2Binding', '--d1-binding': 'd1Binding',
@@ -65,11 +67,27 @@ function parse(args) {
     throw new Error(`Unknown merkle persist option: ${arg}`);
   }
   if (!opts.snapshotPath) throw new Error('snapshot_file_required');
-  opts.ownerUserId ||= process.env.AGENTSAM_OWNER_USER_ID || '';
   opts.wranglerConfig ||= process.env.AGENTSAM_WRANGLER_CONFIG || '';
   opts.connectionId ||= process.env.AGENTSAM_CONNECTION_ID || '';
   opts.runtimeLeaseId ||= process.env.AGENTSAM_RUNTIME_LEASE_ID || '';
   return opts;
+}
+
+export function resolveMerklePersistenceIdentity(root, options = {}) {
+  const session = options.session ?? readAccountSession(options.sessionOptions || {});
+  const accountId = String(session?.account_id || '').trim();
+  if (!accountId) throw new Error('agentsam_login_required_for_merkle_persistence');
+
+  const projectConfig = options.projectConfig ?? tryReadProjectConfig(root);
+  const gitRepositoryId = portableRepositoryIdFromGit(root);
+  const repositoryId = gitRepositoryId || getRepositoryId(projectConfig);
+  if (!repositoryId) throw new Error('repository_identity_unresolved');
+
+  return {
+    accountId,
+    repositoryId,
+    repositoryIdentitySource: gitRepositoryId ? 'git' : 'project_manifest',
+  };
 }
 
 export async function runMerklePersist(args = []) {
@@ -78,6 +96,7 @@ export async function runMerklePersist(args = []) {
   const snapshotPath = path.resolve(opts.snapshotPath);
   const snapshot = await readSnapshot(snapshotPath);
   const root = path.resolve(opts.root || snapshot.rootPath || process.cwd());
+  const identity = resolveMerklePersistenceIdentity(root);
   const wrangler = resolveWranglerMerklePersistence({
     configPath: opts.wranglerConfig,
     environment: opts.environment || null,
@@ -88,8 +107,8 @@ export async function runMerklePersist(args = []) {
   const plan = buildMerklePersistencePlan({
     snapshot,
     root,
-    ownerUserId: opts.ownerUserId,
-    repoId: opts.repoId,
+    accountId: identity.accountId,
+    repositoryId: identity.repositoryId,
     source: opts.source,
     captureKind: opts.captureKind,
     connectionId: opts.connectionId,

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  MERKLE_PERSISTENCE_SCHEMA_VERSION,
   MERKLE_SNAPSHOT_SCHEMA_SQL,
   MERKLE_SNAPSHOT_STORAGE_PREFIX,
   MERKLE_SNAPSHOT_TABLE,
@@ -15,9 +16,13 @@ import os from 'node:os';
 import path from 'node:path';
 
 test('portable Merkle persistence names one table, prefix, and logical asset role', () => {
+  assert.equal(MERKLE_PERSISTENCE_SCHEMA_VERSION, 2);
   assert.equal(MERKLE_SNAPSHOT_TABLE, 'agentsam_fs_merkle_snapshots');
   assert.equal(MERKLE_SNAPSHOT_STORAGE_PREFIX, 'agentsam_fs_merkle_snapshots');
   assert.equal(MERKLE_WEBSITE_ASSETS_BINDING, 'WEBSITE_ASSETS');
+  assert.match(MERKLE_SNAPSHOT_SCHEMA_SQL, /account_id TEXT NOT NULL/);
+  assert.match(MERKLE_SNAPSHOT_SCHEMA_SQL, /repository_id TEXT NOT NULL/);
+  assert.doesNotMatch(MERKLE_SNAPSHOT_SCHEMA_SQL, /owner_user_id|\brepo_id\b/);
   assert.match(MERKLE_SNAPSHOT_SCHEMA_SQL, /metadata_root TEXT/);
   assert.match(MERKLE_SNAPSHOT_SCHEMA_SQL, /classifier_format TEXT/);
   assert.match(MERKLE_SNAPSHOT_SCHEMA_SQL, /storage_bucket TEXT/);
@@ -25,12 +30,12 @@ test('portable Merkle persistence names one table, prefix, and logical asset rol
 
 test('snapshot storage keys stay beneath the canonical prefix and encode repo identity', () => {
   const key = merkleSnapshotStorageKey({
-    ownerUserId: 'au_example',
-    repoId: 'github:owner/repo',
+    accountId: 'au_example',
+    repositoryId: 'github:owner/repo',
     snapshotId: 'mrs_example',
   });
   assert.equal(key, 'agentsam_fs_merkle_snapshots/au_example/github%3Aowner%2Frepo/mrs_example.json');
-  const escaped = merkleSnapshotStorageKey({ ownerUserId: '../oops', repoId: 'repo', snapshotId: 'snap' });
+  const escaped = merkleSnapshotStorageKey({ accountId: '../oops', repositoryId: 'repo', snapshotId: 'snap' });
   assert.ok(!escaped.includes('/../'));
   assert.ok(escaped.includes('..%2Foops'));
 });
@@ -63,7 +68,7 @@ test('persistence plan keeps content, policy, and metadata identities separate',
     },
   };
   const plan = buildMerklePersistencePlan({
-    snapshot, root: process.cwd(), ownerUserId: 'au_test', repoId: 'github:owner/repo', source: 'github',
+    snapshot, root: process.cwd(), accountId: 'au_test', repositoryId: 'github:owner/repo', source: 'github',
     captureKind: 'agent', connectionId: 'conn_test',
     wrangler: { storage_bucket: 'customer-assets', r2_binding: 'WEBSITE_ASSETS', database_name: 'customer-db', d1_binding: 'DB' },
   });
@@ -85,7 +90,7 @@ test('non-deploy persistence requires execution provenance', () => {
     policyHash: `sha256:${'2'.repeat(64)}`, entries: [], stats: { files: 0, directories: 0, symlinks: 0, bytes: 0 },
   };
   assert.throws(() => buildMerklePersistencePlan({
-    snapshot, root: process.cwd(), ownerUserId: 'au_test', repoId: 'github:owner/repo', captureKind: 'agent',
+    snapshot, root: process.cwd(), accountId: 'au_test', repositoryId: 'github:owner/repo', captureKind: 'agent',
     wrangler: { storage_bucket: 'customer-assets', r2_binding: 'WEBSITE_ASSETS', database_name: 'customer-db', d1_binding: 'DB' },
   }), /execution_provenance_required/);
 });

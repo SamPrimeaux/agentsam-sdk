@@ -41,6 +41,18 @@ export {
 } from './capabilities/index.js';
 export { getPreset, listPresets, resolvePreset, getAddon, listAddons } from './presets/index.js';
 export {
+  COMPANY_REPOSITORY_GRAPH_SCHEMA_VERSION,
+  REPOSITORY_STATUSES,
+  REPOSITORY_CONTRACT_TYPES,
+  REPOSITORY_CONTRACT_STATUSES,
+  REPOSITORY_DEPENDENCY_TYPES,
+  REPOSITORY_DEPENDENCY_CRITICALITIES,
+  REPOSITORY_FAILURE_POLICIES,
+  createRepositoryIdentity,
+  createRepositoryContract,
+  createRepositoryDependency,
+} from './repository/contracts.js';
+export {
   DEFAULT_CONTEXT_RATIOS,
   DEFAULT_RESULT_POLICY,
   createContextBudget,
