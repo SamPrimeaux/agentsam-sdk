@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { buildWranglerInvocation, listWranglerNativeCommands, runWranglerNative, summarizeCloudflareCpuProfile, summarizeCloudflareCpuProfileFile } from '../src/cloudflare/index.js';
+import { createCapabilityAdapter } from '../src/agent/capability-adapter.js';
 
 function tempRoot() { return fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-cf-')); }
 
