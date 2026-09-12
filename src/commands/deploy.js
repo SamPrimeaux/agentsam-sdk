@@ -68,7 +68,7 @@ function ask(question) {
 async function runCloudflareDeploy(cwd, config, accountId) {
   console.log('\n  Cloudflare deploy — browser sign-in + resource provisioning…\n');
 
-  let token = resolveSdkKey(process.env);
+  let token = resolveAccountSdkKey({ env: process.env }).value;
   if (!token) {
     const session = await authenticateViaBrowser();
     token = session.access_token;
