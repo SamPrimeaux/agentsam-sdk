@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { readSnapshot } from '../lib/merkle/snapshot.js';
+import { readSnapshot } from '../../packages/agentsam-repository/src/merkle/snapshot.js';
 import { readAccountSession } from '../lib/account-session.js';
 import { getRepositoryId, portableRepositoryIdFromGit, tryReadProjectConfig } from '../lib/project-config.js';
 import {
