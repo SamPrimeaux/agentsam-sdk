@@ -78,7 +78,8 @@ function printHelp() {
     agentsam security          Dependency scan, log triage, and verified repair (--help)
     agentsam status [--json]   Live local Git + DB + API + PTY status
     agentsam db init|status    Manage the project-local SQLite database
-    agentsam models            Show configured providers and local model inventory
+    agentsam models            Verify configured providers and selectable hosted/local models
+    agentsam eval context      Offline context-strategy/economics fixtures (--help)
     agentsam start-local       Local PTY on ws://127.0.0.1:3099 (no tunnel, no Cloudflare)
     agentsam ollama            Opt-in local Ollama setup/status/model management
     agentsam shell             Interactive Agent Sam slash-command shell
