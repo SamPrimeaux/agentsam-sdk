@@ -68,7 +68,7 @@ export function classifyOpenAIError({ status, type, code, message, param } = {})
   if (normalizedCode === 'previous_response_not_found') return { category: 'continuation', retriable: true, retry_strategy: 'retry_full_context' };
   if (normalizedCode === 'websocket_connection_limit_reached') return { category: 'connection_lifetime', retriable: true, retry_strategy: 'reconnect' };
   if (OPENAI_NON_RETRY_CODES.has(normalizedCode)) return { category: 'billing_or_quota', retriable: false, retry_strategy: 'operator_action' };
-  if (httpStatus === 400 && /service[_ -]?tier/.test(`${normalizedCode} ${normalizedType}`)) return { category: 'service_tier', retriable: false, retry_strategy: 'change_configuration' };
+  if (httpStatus === 400 && /service[_ -]?tier/.test(diagnosticText)) return { category: 'service_tier', retriable: false, retry_strategy: 'change_configuration' };
   if (httpStatus === 400) return { category: 'invalid_request', retriable: false, retry_strategy: 'change_request' };
   if (httpStatus === 401) return { category: 'authentication', retriable: false, retry_strategy: 'fix_credentials' };
   if (httpStatus === 403) return { category: 'authorization_or_region', retriable: false, retry_strategy: 'operator_action' };
