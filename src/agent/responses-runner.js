@@ -233,6 +233,23 @@ export async function runResponsesAgent(options = {}) {
       if (!capabilityId) throw new Error(`unrecognized_tool_call:${call.name}`);
       const descriptor = toolSurface.descriptors.find((row) => row.name === capabilityId);
       const args = sanitizeToolInput(parseArguments(call.arguments), descriptor, cwd);
+      if (typeof options.beforeTool === 'function') {
+        const approved = await options.beforeTool({
+          call_id: call.call_id,
+          capability_id: capabilityId,
+          descriptor: descriptor ? { ...descriptor, input_schema: undefined } : null,
+          input: args,
+          cwd,
+        });
+        if (approved === false) {
+          const denied = new Error(`tool_execution_not_approved:${capabilityId}`);
+          denied.code = 'AGENTSAM_TOOL_NOT_APPROVED';
+          const diagnostic = diagnosticFromError(denied, { source: 'tool', kind: 'tool_execution_denied' });
+          event(emit, 'tool.failed', { call_id: call.call_id, capability_id: capabilityId, error: diagnostic }, runId);
+          event(emit, 'error.observed', { ...diagnostic, call_id: call.call_id, capability_id: capabilityId }, runId);
+          throw denied;
+        }
+      }
       event(emit, 'tool.started', { call_id: call.call_id, capability_id: capabilityId }, runId);
       try {
         const value = await options.capabilityAdapter.invoke(capabilityId, args);
