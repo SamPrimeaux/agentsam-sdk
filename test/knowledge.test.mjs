@@ -114,6 +114,22 @@ test('source safety and setup preserve repository files; read-only plan creates 
   assert.ok(!paths.includes('.env.js')); assert.ok(!paths.includes('ignored/hidden.ts'));
 });
 
+test('index and search derive safe local defaults when knowledge.json is absent', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-configless-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  execFileSync('git', ['init', '-q'], { cwd: root });
+  execFileSync('git', ['remote', 'add', 'origin', 'git@github.com:ExampleOrg/ConfiglessRepo.git'], { cwd: root });
+  write(root, 'src/real.ts', 'export function configlessSymbol() { return 7; }\n');
+  const run = args => JSON.parse(execFileSync(process.execPath, [cli, ...args], { cwd: root, encoding: 'utf8' }));
+  assert.equal(fs.existsSync(path.join(root, '.agentsam/knowledge.json')), false);
+  const plan = run(['index', 'plan']);
+  assert.ok(plan.files >= 1); assert.equal(plan.embedding_inputs, 0);
+  assert.equal(fs.existsSync(path.join(root, '.agentsam/knowledge.json')), false);
+  assert.equal(run(['index', 'run']).published, true);
+  assert.equal(fs.existsSync(path.join(root, '.agentsam/knowledge.json')), false);
+  assert.equal(run(['search', 'configlessSymbol']).hits[0].path, 'src/real.ts');
+});
+
 test('two independent repositories work through the same CLI and exported package', async t => {
   for (const name of ['customer-a', 'customer-b']) {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), name));
