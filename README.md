@@ -2,7 +2,8 @@
 
 A deterministic-first application and agent toolkit: reusable repository, knowledge, integrity,
 security, identity, scaffolding, and delivery capabilities with optional AgentSam/LLM composition.
-The interactive CLI makes those same primitives easy to use without making a model part of the implementation.
+The interactive CLI can run the same bounded capabilities through an explicitly selected model while
+keeping model choice, reasoning effort, processing tier, credentials, approvals, context, and cost inspectable.
 
 **npm:** `@inneranimalmedia/agentsam-sdk` · **Source:** [GitHub](https://github.com/SamPrimeaux/agentsam-sdk)
 
