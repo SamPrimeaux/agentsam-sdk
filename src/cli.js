@@ -454,7 +454,7 @@ if (command === '--version' || command === '-v') {
   try {
     await runMini(rest);
   } catch (e) {
-    console.error(`\n  ${e?.message || e}\n`);
+    reportCliError(e);
     process.exitCode = 1;
   }
 } else if (['index', 'search', 'repo'].includes(command)) {
