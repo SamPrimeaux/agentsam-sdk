@@ -32,6 +32,7 @@ import { runRecon } from './commands/recon.js';
 import { runCad } from './commands/cad.js';
 import { runSkills } from './commands/skills.js';
 import { runEval } from './commands/eval.js';
+import { runCloudflare } from './commands/cloudflare.js';
 import { applyPresetSelection, runAdd, runCapabilities, runDev, runInspect } from './commands/product.js';
 import { listPresets, resolvePreset } from './presets/index.js';
 import fs from 'node:fs';
