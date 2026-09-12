@@ -39,7 +39,7 @@ import { applyPresetSelection, runAdd, runCapabilities, runDev, runInspect } fro
 import { listPresets, resolvePreset } from './presets/index.js';
 import fs from 'node:fs';
 import { repositoryRoot } from './knowledge/config.js';
-import { resolveSdkKey } from '../packages/identity/src/contracts/auth-config.js';
+import { resolveAccountSdkKey } from './lib/account-session.js';
 import { renderDiagnosticError } from './errors/index.js';
 
 const VERSION = pkg.version;
