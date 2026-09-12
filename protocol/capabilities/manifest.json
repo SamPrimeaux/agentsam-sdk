@@ -279,6 +279,53 @@
       "side_effects": "none",
       "output_schema": "protocol/context/resolved-context-pack.schema.json",
       "status": "experimental"
+    },
+    "cloudflare.wrangler.native": {
+      "id": "cloudflare.wrangler.native",
+      "kind": "capability",
+      "version": 1,
+      "domain": "cloudflare",
+      "runtime": "node+wrangler",
+      "package": "@inneranimalmedia/agentsam-sdk/cloudflare",
+      "export": "runWranglerNative",
+      "cli": "agentsam cloudflare run <command>",
+      "description": "Execute one allowlisted read-only Wrangler operation with argv-safe cwd/config scoping and structured diagnostics.",
+      "deterministic": false,
+      "model_required": false,
+      "side_effects": "network-read",
+      "input_schema": "protocol/capabilities/cloudflare-wrangler-native-input.schema.json",
+      "status": "experimental"
+    },
+    "cloudflare.cpu.profile": {
+      "id": "cloudflare.cpu.profile",
+      "kind": "capability",
+      "version": 1,
+      "domain": "cloudflare",
+      "runtime": "node",
+      "package": "@inneranimalmedia/agentsam-sdk/cloudflare",
+      "export": "summarizeCloudflareCpuProfileFile",
+      "cli": "agentsam cloudflare cpu analyze <profile.cpuprofile>",
+      "description": "Summarize a local workerd/DevTools CPU profile into bounded ranked self-time evidence.",
+      "deterministic": true,
+      "model_required": false,
+      "side_effects": "none",
+      "input_schema": "protocol/capabilities/cloudflare-cpu-profile-input.schema.json",
+      "status": "experimental"
+    },
+    "cloudflare.cpu.audit": {
+      "id": "cloudflare.cpu.audit",
+      "kind": "agent_primitive",
+      "version": 1,
+      "domain": "cloudflare",
+      "runtime": "node",
+      "package": "@inneranimalmedia/agentsam-sdk/cloudflare",
+      "export": "runCloudflareCpuAudit",
+      "description": "Analyze a bounded Cloudflare CPU profile and selected source evidence through an injected reasoning adapter without deploy authority.",
+      "deterministic": false,
+      "model_required": true,
+      "side_effects": "none",
+      "input_schema": "protocol/capabilities/cloudflare-cpu-profile-input.schema.json",
+      "status": "experimental"
     }
   }
 }
