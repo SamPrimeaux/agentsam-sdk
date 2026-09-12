@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { runProcess } from '../security/process.js';
-import { createProcessDiagnosticError, redactDiagnosticValue } from '../errors/index.js';
+import { AgentSamDiagnosticError, redactDiagnosticValue } from '../errors/index.js';
 
 function clean(value) { return value == null ? '' : String(value).trim(); }
 function positiveInteger(value, fallback) { const n = Number(value); return Number.isInteger(n) && n > 0 ? n : fallback; }
