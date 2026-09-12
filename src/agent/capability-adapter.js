@@ -39,7 +39,7 @@ export function createCapabilityAdapter({ handlers = {}, reasoner } = {}) {
     list(options = {}) { return listCapabilities(options); },
     describe,
     toolDescriptors({ domain, kind, includeUnavailable = false } = {}) {
-      return listCapabilities({ domain, kind }).filter((row) => includeUnavailable || executable.has(row.id)).map((row) => ({
+      return listCapabilities({ domain, kind, status: null }).filter((row) => includeUnavailable || executable.has(row.id)).map((row) => ({
         name: row.id,
         description: row.description,
         category: row.domain,
