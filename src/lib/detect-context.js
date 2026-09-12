@@ -221,7 +221,7 @@ async function detectIam(explicitToken = '') {
     });
   }
 
-  const sdkToken = resolveSdkKey(process.env, explicitToken);
+  const sdkToken = resolveAccountSdkKey({ env: process.env, explicit: explicitToken }).value;
   if (sdkToken.trim()) {
     const probe = await probeSdkBearer(sdkToken);
     if (probe.valid) {
