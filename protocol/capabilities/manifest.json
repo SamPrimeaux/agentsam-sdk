@@ -324,7 +324,7 @@
       "deterministic": false,
       "model_required": true,
       "side_effects": "none",
-      "input_schema": "protocol/capabilities/cloudflare-cpu-profile-input.schema.json",
+      "input_schema": "protocol/capabilities/cloudflare-cpu-audit-input.schema.json",
       "status": "experimental"
     }
   }
