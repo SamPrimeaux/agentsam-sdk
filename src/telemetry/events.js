@@ -1,5 +1,6 @@
 export const AGENT_EVENT_TYPES = Object.freeze([
   'run.started', 'run.status', 'run.completed', 'run.failed',
+  'error.observed',
   'model.started', 'model.delta', 'model.completed',
   'usage.snapshot', 'cost.snapshot',
   'context.snapshot', 'context.compaction.started', 'context.compaction.completed',
