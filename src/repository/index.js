@@ -13,4 +13,4 @@ export {
   createRepositoryIdentity,
   createRepositoryContract,
   createRepositoryDependency,
-} from './contracts.js';
+} from '../../packages/agentsam-repository/src/contracts.js';
