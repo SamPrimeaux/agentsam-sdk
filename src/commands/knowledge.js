@@ -7,7 +7,7 @@ import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import pkg from '../../package.json' with { type: 'json' };
-import { CONFIG_PATH, repositoryRoot, initRepository, readConfig, scopeKey, cacheNamespace } from '../knowledge/config.js';
+import { CONFIG_PATH, repositoryRoot, initRepository, readConfig, defaultConfig, scopeKey, cacheNamespace } from '../knowledge/config.js';
 import { openSqliteStore } from '../knowledge/stores/sqlite.js';
 import { openPostgresStore } from '../knowledge/stores/postgres.js';
 import { planIndex, runIndex, retrieve } from '../knowledge/engine.js';
