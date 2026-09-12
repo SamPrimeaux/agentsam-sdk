@@ -3,8 +3,10 @@ import { listWranglerNativeCommands, runWranglerNative, summarizeCloudflareCpuPr
 import { renderDiagnosticError } from '../errors/index.js';
 
 function parse(argv = []) {
-  const out = { subcommand: argv[0] || 'status', action: argv[1] || '', cwd: process.cwd(), json: false, name: '', account: '', config: '', env: '', profile: '', path: '', page: null, file: '' };
-  for (let i = 2; i < argv.length; i += 1) {
+  const subcommand = argv[0] || 'status';
+  const takesAction = subcommand === 'run' || subcommand === 'cpu';
+  const out = { subcommand, action: takesAction ? (argv[1] || '') : '', cwd: process.cwd(), json: false, name: '', account: '', config: '', env: '', profile: '', path: '', page: null, file: '' };
+  for (let i = takesAction ? 2 : 1; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--json') out.json = true;
     else if (arg === '--cwd') out.cwd = argv[++i] || out.cwd;
