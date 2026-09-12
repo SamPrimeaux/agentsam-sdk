@@ -509,6 +509,21 @@ export async function runShell(argv = [], options = {}) {
   }
   if (sub) throw new Error(`unknown shell option: ${sub}`);
 
+  if (state.session) {
+    state.cwd = path.resolve(state.session.cwd || state.cwd);
+    state.session = saveLocalSession({ ...state.session, status: 'active', cwd: state.cwd }, { home: state.home });
+    state.usageSnapshot = state.session.usage_snapshot || state.usageSnapshot;
+  } else {
+    const preferences = readCliPreferences(state.cwd) || {};
+    state.session = createLocalSession({
+      cwd: state.cwd,
+      status: 'active',
+      model_key: preferences.modelPreference !== 'auto' ? preferences.modelPreference : null,
+      reasoning_effort: preferences.reasoningEffort !== 'auto' ? preferences.reasoningEffort : null,
+      requested_service_tier: preferences.serviceTier || 'default',
+    }, { home: state.home });
+  }
+
   if (options.intro !== 'quiet') {
     write(renderShellCatalog());
     writeLine(write, '  Interactive shell ready. Type / for the command picker; /exit to return to your host shell.\n');
