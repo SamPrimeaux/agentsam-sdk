@@ -25,6 +25,14 @@ async function openStore(root, config, readOnly = false) {
   return config.storage.driver === 'sqlite' ? openSqliteStore(localPath(root), { readOnly }) : openPostgresStore(process.env[config.storage.connection_env]);
 }
 function provider() { return createGeminiEmbedder({ apiKey: process.env.GEMINI_API_KEY }); }
+function resolveKnowledgeConfig(root) {
+  const filename = path.join(root, CONFIG_PATH);
+  if (fs.existsSync(filename)) return readConfig(root);
+  const project = tryReadProjectConfig(root);
+  const repositoryId = getRepositoryId(project) || portableRepositoryIdFromGit(root);
+  if (!repositoryId) throw new Error(`${CONFIG_PATH} is absent and repository identity could not be derived; run agentsam init . --yes to configure this repository.`);
+  return defaultConfig({ repositoryId });
+}
 
 export async function runRepositoryInit(argv) {
   const { values: opts, positionals } = flags(argv, { existing: { type: 'boolean' }, yes: { type: 'boolean', short: 'y' }, include: { type: 'string' }, exclude: { type: 'string' }, scope: { type: 'string' }, target: { type: 'string' }, dimensions: { type: 'string' } });
