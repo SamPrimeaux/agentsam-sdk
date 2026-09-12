@@ -249,8 +249,10 @@ export async function runResponsesAgent(options = {}) {
           truncated: bounded.truncated,
         }, runId);
       } catch (error) {
-        event(emit, 'tool.failed', { call_id: call.call_id, capability_id: capabilityId, message: error?.message || String(error) }, runId);
-        outputs.push({ call_id: call.call_id, output: JSON.stringify({ ok: false, error: error?.message || String(error) }) });
+        const diagnostic = diagnosticFromError(error, { source: 'tool', kind: 'tool_execution_error' });
+        event(emit, 'tool.failed', { call_id: call.call_id, capability_id: capabilityId, error: diagnostic }, runId);
+        event(emit, 'error.observed', { ...diagnostic, call_id: call.call_id, capability_id: capabilityId }, runId);
+        outputs.push({ call_id: call.call_id, output: JSON.stringify({ ok: false, error: diagnostic }) });
       }
     }
     response = await provider.continueWithToolOutputs({
