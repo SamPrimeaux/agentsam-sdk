@@ -32,6 +32,15 @@ test('billing and spend errors are explicitly non-retriable while provider overl
   assert.equal(classifyOpenAIError({ status: 401 }).category, 'authentication');
 });
 
+test('OpenAI retry classifier distinguishes configuration, continuation, rate, server, and operator-action failures', () => {
+  assert.deepEqual(classifyOpenAIError({ status: 400, message: 'Invalid service_tier argument' }), { category: 'service_tier', retriable: false, retry_strategy: 'change_configuration' });
+  assert.deepEqual(classifyOpenAIError({ status: 400, code: 'previous_response_not_found' }), { category: 'continuation', retriable: true, retry_strategy: 'retry_full_context' });
+  assert.deepEqual(classifyOpenAIError({ status: 400, code: 'websocket_connection_limit_reached' }), { category: 'connection_lifetime', retriable: true, retry_strategy: 'reconnect' });
+  assert.deepEqual(classifyOpenAIError({ status: 429, type: 'rate_limit_error', code: 'slow_down' }), { category: 'ramp_rate', retriable: true, retry_strategy: 'retry_after_backoff' });
+  assert.deepEqual(classifyOpenAIError({ status: 500 }), { category: 'provider_server', retriable: true, retry_strategy: 'retry_backoff' });
+  assert.deepEqual(classifyOpenAIError({ status: 403 }), { category: 'authorization_or_region', retriable: false, retry_strategy: 'operator_action' });
+});
+
 test('Responses adapter throws a diagnostic error instead of flattening the provider response', async () => {
   const adapter = createOpenAIResponsesAdapter({
     apiKey: 'sk-test',
