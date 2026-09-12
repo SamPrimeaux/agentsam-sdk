@@ -111,6 +111,6 @@ export function resolveContext(options = {}) {
 
 export function resolveProjectContext(options = {}) {
   const budget = options.budget?.windowTokens ? options.budget : createContextBudget(options.budget || {});
-  const rules = loadProjectRules(options.cwd || process.cwd(), { maxChars: Math.min(24_000, budget.maxSystemChars) });
+  const rules = compileAgentInstructions(options.cwd || process.cwd(), { maxChars: Math.min(24_000, budget.maxSystemChars) });
   return resolveContext({ ...options, budget, rules });
 }
