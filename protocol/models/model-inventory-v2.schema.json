@@ -1,0 +1,212 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inneranimalmedia.com/protocol/models/model-inventory-v2.schema.json",
+  "title": "AgentSam Model Inventory v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "generatedAt", "providers", "models"],
+  "properties": {
+    "schemaVersion": {
+      "const": "agentsam-model-inventory-v2"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "selection": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/selection" }
+      ]
+    },
+    "providers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/provider" }
+    },
+    "models": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/model" }
+    }
+  },
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceKind"],
+      "properties": {
+        "sourceKind": {
+          "enum": [
+            "provider_api",
+            "provider_published",
+            "local_runtime",
+            "agentsam_policy",
+            "unknown"
+          ]
+        },
+        "sourceRef": { "type": ["string", "null"] },
+        "observedAt": { "type": ["string", "null"], "format": "date-time" },
+        "pricingAsOf": { "type": ["string", "null"] },
+        "status": {
+          "enum": ["current", "stale", "unavailable", "unknown"]
+        }
+      }
+    },
+    "provider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "configured", "secretHidden"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "configured": { "type": "boolean" },
+        "present": { "type": ["boolean", "null"] },
+        "valid": { "type": ["boolean", "null"] },
+        "authorized": { "type": ["boolean", "null"] },
+        "credentialSourceClass": { "type": ["string", "null"] },
+        "credentialPath": { "type": ["string", "null"] },
+        "verifiedAt": { "type": ["string", "null"], "format": "date-time" },
+        "modelsDiscovered": { "type": ["integer", "null"], "minimum": 0 },
+        "secretHidden": { "const": true },
+        "error": { "type": ["string", "null"] }
+      }
+    },
+    "priceSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "input": { "type": ["number", "null"], "minimum": 0 },
+        "cachedInput": { "type": ["number", "null"], "minimum": 0 },
+        "cacheWrite": { "type": ["number", "null"], "minimum": 0 },
+        "output": { "type": ["number", "null"], "minimum": 0 }
+      }
+    },
+    "pricing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currency", "unit", "provenance"],
+      "properties": {
+        "currency": { "type": "string", "minLength": 1 },
+        "unit": { "type": "string", "minLength": 1 },
+        "standard": { "$ref": "#/$defs/priceSet" },
+        "fast": { "$ref": "#/$defs/priceSet" },
+        "flex": { "$ref": "#/$defs/priceSet" },
+        "batch": { "$ref": "#/$defs/priceSet" },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "provenance": { "$ref": "#/$defs/provenance" }
+      }
+    },
+    "providerCapabilities": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "contextTokens": { "type": ["integer", "null"], "minimum": 1 },
+        "maxOutputTokens": { "type": ["integer", "null"], "minimum": 1 },
+        "reasoningEfforts": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "serviceTiers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "modalities": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "tools": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        }
+      }
+    },
+    "runtimeCompatibility": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "interactive": { "type": ["boolean", "null"] },
+        "functionCalling": { "type": ["boolean", "null"] },
+        "vision": { "type": ["boolean", "null"] },
+        "toolLoop": { "type": ["boolean", "null"] },
+        "notes": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "agentsamPolicy": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "recommended": { "type": "boolean" },
+        "rank": { "type": ["integer", "null"], "minimum": 1 },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "workingContextTarget": { "type": ["integer", "null"], "minimum": 1 },
+        "compactAt": { "type": ["integer", "null"], "minimum": 1 },
+        "interveneAt": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "modelId",
+        "available",
+        "providerCapabilities",
+        "runtimeCompatibility",
+        "provenance",
+        "agentsam"
+      ],
+      "properties": {
+        "provider": { "type": "string", "minLength": 1 },
+        "modelId": { "type": "string", "minLength": 1 },
+        "label": { "type": ["string", "null"] },
+        "available": { "type": "boolean" },
+        "providerCapabilities": { "$ref": "#/$defs/providerCapabilities" },
+        "runtimeCompatibility": { "$ref": "#/$defs/runtimeCompatibility" },
+        "pricing": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/pricing" }
+          ]
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["availability", "capabilities"],
+          "properties": {
+            "availability": { "$ref": "#/$defs/provenance" },
+            "capabilities": { "$ref": "#/$defs/provenance" }
+          }
+        },
+        "agentsam": { "$ref": "#/$defs/agentsamPolicy" }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "modelId"],
+      "properties": {
+        "provider": { "type": "string", "minLength": 1 },
+        "modelId": { "type": "string", "minLength": 1 },
+        "reasoningEffort": { "type": ["string", "null"] },
+        "serviceTier": { "type": ["string", "null"] },
+        "selectedAt": { "type": ["string", "null"], "format": "date-time" }
+      }
+    }
+  }
+}
