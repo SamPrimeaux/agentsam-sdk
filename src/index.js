@@ -77,6 +77,26 @@ export {
   extractOpenAIFunctionCalls,
 } from './providers/index.js';
 export {
+  AgentSamDiagnosticError,
+  classifyOpenAIError,
+  createOpenAIHttpError,
+  createProcessDiagnosticError,
+  diagnosticFromError,
+  redactDiagnosticValue,
+  renderDiagnosticError,
+} from './errors/index.js';
+export {
+  WRANGLER_NATIVE_COMMANDS,
+  WRANGLER_OPERATION_FAMILIES,
+  buildWranglerInvocation,
+  listWranglerNativeCommands,
+  runWranglerNative,
+  summarizeCloudflareCpuProfile,
+  summarizeCloudflareCpuProfileFile,
+  buildCloudflareCpuAuditPacket,
+  runCloudflareCpuAudit,
+} from './cloudflare/index.js';
+export {
   createCapabilityAdapter,
   buildAgentToolSurface,
   capabilityFunctionName,
