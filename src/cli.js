@@ -388,6 +388,20 @@ if (command === '--version' || command === '-v') {
     if (!e?.reported) reportCliError(e);
     process.exitCode = 1;
   }
+} else if (command === 'whoami') {
+  try {
+    await runWhoami(rest);
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
+  }
+} else if (command === 'resume') {
+  try {
+    await runResume(rest);
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
+  }
 } else if (command === 'shell') {
   try {
     await runShell(rest);
