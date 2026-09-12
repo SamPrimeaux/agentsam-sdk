@@ -50,6 +50,8 @@
     "./context": "./src/context/index.js",
     "./indexing": "./src/indexing/index.js",
     "./tools": "./src/tools/index.js",
+    "./models": "./src/models/index.js",
+    "./telemetry": "./src/telemetry/index.js",
     "./context/result-policy-schema": "./protocol/context/result-policy.schema.json",
     "./context/budget-schema": "./protocol/context/context-budget.schema.json",
     "./context/pack-schema": "./protocol/context/resolved-context-pack.schema.json",
