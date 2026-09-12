@@ -208,8 +208,9 @@ function formatCount(value) {
 function formatUsd(value) {
   const amount = Number(value || 0);
   if (!Number.isFinite(amount)) return 'unavailable';
-  if (amount === 0) return '$0.000000';
-  return amount < 0.01 ? `${amount.toFixed(6)}` : `${amount.toFixed(4)}`;
+  const currency = String.fromCharCode(36);
+  if (amount === 0) return currency + '0.000000';
+  return currency + (amount < 0.01 ? amount.toFixed(6) : amount.toFixed(4));
 }
 
 export function renderSessionReceipt(session) {
