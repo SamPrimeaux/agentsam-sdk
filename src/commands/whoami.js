@@ -6,7 +6,8 @@ function writeLine(write, value = '') { write(`${value}\n`); }
 
 export async function collectWhoami(options = {}) {
   const env = options.env || process.env;
-  const token = resolveSdkKey(env, options.token || '');
+  const sdk = resolveAccountSdkKey({ env, explicit: options.token || '', home: options.home });
+  const token = sdk.value;
   const credentials = listProviderCredentialStatus({ env, home: options.home });
   if (!token) return {
     schema_version: 1,
