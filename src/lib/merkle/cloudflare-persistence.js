@@ -129,16 +129,6 @@ export function resolveWranglerMerklePersistence({
   };
 }
 
-function providerRepoId(git) {
-  const host = clean(git?.remoteHost).toLowerCase();
-  const fullName = clean(git?.repoFullName);
-  if (!fullName) return null;
-  if (host === 'github.com') return `github:${fullName}`;
-  if (host === 'gitlab.com') return `gitlab:${fullName}`;
-  if (host === 'bitbucket.org') return `bitbucket:${fullName}`;
-  return null;
-}
-
 function safeId(value) {
   return clean(value).replace(/[^A-Za-z0-9._-]+/g, '').slice(0, 96);
 }
