@@ -20,9 +20,14 @@ function loadSchema(value) {
 export function createCapabilityAdapter({ handlers = {}, reasoner } = {}) {
   const executable = new Map([
     ['repository.snapshot', (input) => repositorySnapshot(input)],
+    ['cloudflare.wrangler.native', (input = {}) => runWranglerNative(input.command, input)],
+    ['cloudflare.cpu.profile', (input = {}) => summarizeCloudflareCpuProfileFile(input)],
     ...Object.entries(handlers),
   ]);
-  if (typeof reasoner === 'function') executable.set('repository.audit', (input = {}) => runRepositoryAudit({ ...input, reasoner }));
+  if (typeof reasoner === 'function') {
+    executable.set('repository.audit', (input = {}) => runRepositoryAudit({ ...input, reasoner }));
+    executable.set('cloudflare.cpu.audit', (input = {}) => runCloudflareCpuAudit({ ...input, reasoner }));
+  }
 
   function describe(id) {
     const capability = getCapability(id);
