@@ -105,6 +105,7 @@
     "test:workspaces": "npm --prefix packages/agentsam-contracts test && npm --prefix packages/agentsam-contracts run typecheck && npm --prefix packages/agentsam-workbench test && npm --prefix packages/agentsam-workbench run typecheck && npm --prefix packages/agentsam-shell-kit run typecheck",
     "smoke": "node test/smoke.mjs",
     "verify:package": "node scripts/verify-package.mjs",
+    "verify:boundaries": "node scripts/verify-source-boundaries.mjs",
     "verify:bootstrap": "node scripts/verify-bootstrap.mjs",
     "verify:knowledge-package": "node scripts/verify-knowledge-package.mjs",
     "test:python": "node scripts/verify-python.mjs",
