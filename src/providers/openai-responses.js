@@ -101,10 +101,20 @@ export function createOpenAIResponsesAdapter(options = {}) {
       signal: optionalSignal(runtime.timeoutMs ?? timeoutMs),
     });
     let rawText = '';
-    try { rawText = await response.text(); } catch { rawText = ''; }
     let parsed = null;
-    if (rawText) {
-      try { parsed = JSON.parse(rawText); } catch { parsed = null; }
+    if (typeof response.text === 'function') {
+      try { rawText = await response.text(); } catch { rawText = ''; }
+      if (rawText) {
+        try { parsed = JSON.parse(rawText); } catch { parsed = null; }
+      }
+    } else if (typeof response.json === 'function') {
+      try {
+        parsed = await response.json();
+        rawText = JSON.stringify(parsed ?? null);
+      } catch {
+        parsed = null;
+        rawText = '';
+      }
     }
     if (!response.ok) {
       throw createOpenAIHttpError({
