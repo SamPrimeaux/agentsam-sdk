@@ -419,7 +419,14 @@ export async function dispatchShellLine(line, state = {}) {
         await runStatus(args, { cwd: state.cwd });
         break;
       case '/models':
-        await runModels(args, { cwd: state.cwd, write });
+        await runModels(args, { cwd: state.cwd, write, home: state.home });
+        break;
+      case '/whoami':
+        await runWhoami(args, { write, home: state.home });
+        break;
+      case '/session':
+        if (state.session) write(renderSessionReceipt(state.session));
+        else writeLine(write, '  No persistent session is active in this shell invocation.');
         break;
       case '/cf':
       case '/cloudflare':
