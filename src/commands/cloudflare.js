@@ -29,6 +29,7 @@ const help = `Agent Sam · Cloudflare\n\n  agentsam cloudflare status [--cwd PAT
 
 export async function runCloudflare(argv = [], options = {}) {
   const args = parse(argv);
+  if (options.cwd && !argv.includes('--cwd')) args.cwd = path.resolve(options.cwd);
   const write = options.write || ((value) => process.stdout.write(value));
   if (args.help) { write(help); return null; }
   try {
