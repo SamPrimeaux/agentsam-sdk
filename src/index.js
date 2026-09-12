@@ -19,7 +19,7 @@ export {
   normalizeGitRemote,
   resolveGitContext,
   tryResolveGitContext,
-} from './lib/git-context.js';
+} from '../packages/agentsam-repository/src/git-context.js';
 export {
   resolveAgentSamBaseUrl,
   resolveBridgeKey,
