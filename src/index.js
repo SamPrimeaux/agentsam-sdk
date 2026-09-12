@@ -4,7 +4,7 @@ import pkg from '../package.json' with { type: 'json' };
 
 export { AgentSam } from './AgentSam.js';
 export { routeIntent } from './lib/router.js';
-export { searchToolCards, toToolCard } from './tools/index.js';
+export { searchToolCards, toToolCard, hydrateToolSchemas } from './tools/index.js';
 export { getToolCatalog } from './lib/tools.js';
 export { scaffoldProject } from './lib/scaffold.js';
 export {
