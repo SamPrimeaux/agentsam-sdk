@@ -3,7 +3,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { buildMerkleTree, diffTrees, readSnapshot, validateSnapshot } from '../../../packages/agentsam-repository/src/merkle/index.js';
-import { normalizePolicy } from '../merkle/policy.js';
+import { normalizePolicy } from '../../../packages/agentsam-repository/src/merkle/policy.js';
 
 export const DEFAULT_DEPLOY_EXCLUDES = Object.freeze([
   '.agentsam/deploy-merkle',
