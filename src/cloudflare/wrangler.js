@@ -27,7 +27,7 @@ export function listWranglerNativeCommands() { return WRANGLER_NATIVE_COMMANDS.m
 
 function descriptor(id) {
   const row = WRANGLER_NATIVE_COMMANDS.find((item) => item.id === clean(id));
-  if (!row) throw new RangeError(`unsupported_wranger_native_command:${id}`);
+  if (!row) throw new RangeError(`unsupported_wrangler_native_command:${id}`);
   return row;
 }
 
