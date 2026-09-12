@@ -27,15 +27,14 @@ The hosting application chooses physical storage and database bindings. The SDK 
 ## CLI publication
 
 ```sh
+agentsam login
 agentsam merkle snapshot . --semantic --out .agentsam/merkle.json
 agentsam merkle persist .agentsam/merkle.json \
   --wrangler-config path/to/wrangler.toml \
-  --account-id "$AGENTSAM_ACCOUNT_ID" \
-  --repository-id "$AGENTSAM_REPOSITORY_ID" \
   --capture-kind deploy \
   --deployment-id "$DEPLOYMENT_ID"
 ```
 
-`--account-id` and `--repository-id` are required by the persistence plan. For non-deploy captures, execution provenance remains required through a connection or runtime lease. `--dry-run` emits the exact storage/index plan without writes; `--r2-only` uploads the manifest without a D1 index write.
+The CLI reads `account_id` from the authenticated local AgentSam session and resolves `repository_id` from Git/provider identity, with the committed project manifest as fallback for local repositories. Programmatic hosts still pass authenticated `account_id + repository_id` directly to `buildMerklePersistencePlan`. For non-deploy captures, execution provenance remains required through a connection or runtime lease. `--dry-run` emits the exact storage/index plan without writes; `--r2-only` uploads the manifest without a D1 index write.
 
 Version 1 used `owner_user_id` / `repo_id` and is superseded for current company persistence.
