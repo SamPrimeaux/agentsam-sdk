@@ -16,9 +16,13 @@ import os from 'node:os';
 import path from 'node:path';
 
 test('portable Merkle persistence names one table, prefix, and logical asset role', () => {
+  assert.equal(MERKLE_PERSISTENCE_SCHEMA_VERSION, 2);
   assert.equal(MERKLE_SNAPSHOT_TABLE, 'agentsam_fs_merkle_snapshots');
   assert.equal(MERKLE_SNAPSHOT_STORAGE_PREFIX, 'agentsam_fs_merkle_snapshots');
   assert.equal(MERKLE_WEBSITE_ASSETS_BINDING, 'WEBSITE_ASSETS');
+  assert.match(MERKLE_SNAPSHOT_SCHEMA_SQL, /account_id TEXT NOT NULL/);
+  assert.match(MERKLE_SNAPSHOT_SCHEMA_SQL, /repository_id TEXT NOT NULL/);
+  assert.doesNotMatch(MERKLE_SNAPSHOT_SCHEMA_SQL, /owner_user_id|\brepo_id\b/);
   assert.match(MERKLE_SNAPSHOT_SCHEMA_SQL, /metadata_root TEXT/);
   assert.match(MERKLE_SNAPSHOT_SCHEMA_SQL, /classifier_format TEXT/);
   assert.match(MERKLE_SNAPSHOT_SCHEMA_SQL, /storage_bucket TEXT/);
