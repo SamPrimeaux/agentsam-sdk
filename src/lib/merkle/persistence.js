@@ -27,8 +27,10 @@ export function normalizeMerkleStoragePrefix(value = MERKLE_SNAPSHOT_STORAGE_PRE
  * Provider-neutral object key. The host chooses which physical bucket is bound
  * to the logical WEBSITE_ASSETS role; the SDK never owns cloud credentials.
  */
-export function merkleSnapshotStorageKey({ ownerUserId, repoId, snapshotId, prefix = MERKLE_SNAPSHOT_STORAGE_PREFIX } = {}) {
-  return `${normalizeMerkleStoragePrefix(prefix)}/${safeSegment(ownerUserId, 'owner_user_id')}/${safeSegment(repoId, 'repo_id')}/${safeSegment(snapshotId, 'snapshot_id')}.json`;
+export const MERKLE_PERSISTENCE_SCHEMA_VERSION = 2;
+
+export function merkleSnapshotStorageKey({ accountId, repositoryId, snapshotId, prefix = MERKLE_SNAPSHOT_STORAGE_PREFIX } = {}) {
+  return `${normalizeMerkleStoragePrefix(prefix)}/${safeSegment(accountId, 'account_id')}/${safeSegment(repositoryId, 'repository_id')}/${safeSegment(snapshotId, 'snapshot_id')}.json`;
 }
 
 /** Portable D1/SQLite schema for hosts that opt into persisted Merkle snapshots. */
