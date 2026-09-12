@@ -58,3 +58,14 @@ test('CPU profile file cannot escape runtime cwd', () => {
   assert.equal(summarizeCloudflareCpuProfileFile({ cwd: root, file: 'profile.cpuprofile' }).file, 'profile.cpuprofile');
   assert.throws(() => summarizeCloudflareCpuProfileFile({ cwd: root, file: '../profile.cpuprofile' }), /outside_cwd/);
 });
+
+test('explicitly executable experimental Cloudflare capabilities enter cards-first discovery without exposing unavailable commands', () => {
+  const adapter = createCapabilityAdapter();
+  const rows = adapter.toolDescriptors();
+  const ids = rows.map((row) => row.name);
+  assert.ok(ids.includes('cloudflare.wrangler.native'));
+  assert.ok(ids.includes('cloudflare.cpu.profile'));
+  assert.ok(!ids.includes('cloudflare.cpu.audit'));
+  assert.ok(!ids.includes('blender.build'));
+  assert.equal(rows.find((row) => row.name === 'cloudflare.wrangler.native').risk, 'read');
+});
