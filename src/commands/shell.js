@@ -529,6 +529,11 @@ export async function runShell(argv = [], options = {}) {
     writeLine(write, '  Interactive shell ready. Type / for the command picker; /exit to return to your host shell.\n');
   }
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: Boolean(process.stdin.isTTY && process.stdout.isTTY) });
+  let interrupted = false;
+  rl.on('SIGINT', () => {
+    interrupted = true;
+    rl.close();
+  });
   const promptText = () => {
     if (typeof options.prompt === 'function') return options.prompt(state);
     if (typeof options.prompt === 'string' && options.prompt) return options.prompt;
@@ -536,8 +541,14 @@ export async function runShell(argv = [], options = {}) {
   };
   if (rl.terminal) { rl.setPrompt(promptText()); rl.prompt(); }
   for await (const line of rl) {
+    recordSessionInput(state, line);
     const result = await dispatchShellLine(line, state);
     if (result.exit) { rl.close(); break; }
     if (rl.terminal) { rl.setPrompt(promptText()); rl.prompt(); }
   }
+  if (state.session) {
+    persistSession(state, { status: interrupted ? 'interrupted' : 'paused', cwd: state.cwd });
+    if (options.receipt !== false) write(renderSessionReceipt(state.session));
+  }
+  return state.session;
 }
