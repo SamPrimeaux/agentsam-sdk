@@ -171,6 +171,22 @@ export async function runResponsesAgent(options = {}) {
   if (Number.isFinite(options.maxCallCostUsd) && projectedCost.total_usd > options.maxCallCostUsd) {
     throw new Error(`projected_call_cost_exceeds_budget:${projectedCost.total_usd.toFixed(6)}>${Number(options.maxCallCostUsd).toFixed(6)}`);
   }
+  const preflight = Object.freeze({
+    model: record.provider_model_id,
+    reasoning_effort: reasoningEffort,
+    service_tier: serviceTier,
+    estimated_input_tokens: projected,
+    max_output_tokens: maxOutputTokens,
+    projected_max_call_cost_usd: projectedCost.total_usd,
+    pricing_threshold_tokens: budget.pricingThresholdTokens,
+    tokens_until_pricing_threshold: pressure.tokensUntilPricingThreshold,
+    compacted_before_turn: Boolean(compacted),
+    estimate_kind: 'local',
+  });
+  if (typeof options.beforeRequest === 'function') {
+    const approved = await options.beforeRequest(preflight);
+    if (approved === false) throw new Error('model_request_not_approved');
+  }
   event(emit, 'context.snapshot', {
     estimate_kind: 'local',
     estimated_input_tokens: projected,
