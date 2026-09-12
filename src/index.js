@@ -90,6 +90,7 @@ export {
   WRANGLER_OPERATION_FAMILIES,
   buildWranglerInvocation,
   listWranglerNativeCommands,
+  parseWranglerErrorEvidence,
   runWranglerNative,
   summarizeCloudflareCpuProfile,
   summarizeCloudflareCpuProfileFile,
