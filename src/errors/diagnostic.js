@@ -95,7 +95,7 @@ export function createOpenAIHttpError({ status, body, headers, requestedServiceT
   const type = clean(providerError.type) || null;
   const code = clean(providerError.code) || null;
   const message = clean(providerError.message || payload.message || rawText) || `OpenAI API returned HTTP ${status}`;
-  const classification = classifyOpenAIError({ status, type, code });
+  const classification = classifyOpenAIError({ status, type, code, message, param: providerError.param });
   const diagnostic = {
     source: 'openai',
     kind: 'provider_http_error',
