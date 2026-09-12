@@ -68,8 +68,13 @@ export {
 } from './models/index.js';
 export {
   AGENT_EVENT_TYPES,
+  RUNTIME_RECEIPT_SCHEMA_VERSION,
   createAgentEvent,
   createUsageSnapshot,
+  createRunReceipt,
+  createUsageReceipt,
+  createApprovalReceipt,
+  createTerminalJobReceipt,
 } from './telemetry/index.js';
 export {
   createOpenAIResponsesAdapter,
