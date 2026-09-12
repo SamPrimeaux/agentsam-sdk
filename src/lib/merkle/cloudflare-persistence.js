@@ -225,7 +225,7 @@ export function buildMerklePersistencePlan({
 
 export function merklePersistenceUpsertSql(row) {
   return `INSERT INTO ${MERKLE_SNAPSHOT_TABLE} (
-  snapshot_id, owner_user_id, repo_id, repository, source,
+  snapshot_id, account_id, repository_id, repository, source,
   manifest_format, manifest_version, hash_algorithm, root_hash, policy_hash,
   resolved_commit_sha, resolved_tree_sha, git_branch, working_tree_dirty,
   connection_id, runtime_lease_id, storage_backend, storage_bucket, storage_key,
