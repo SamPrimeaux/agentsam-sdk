@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/repository/repository-contract.schema.json",
+  "title": "AgentSam Repository Contract Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "account_id", "repository_id", "contract_key", "contract_version", "contract_type", "name", "contract_hash", "status"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "account_id": { "type": "string", "minLength": 1 },
+    "repository_id": { "type": "string", "minLength": 1 },
+    "contract_key": { "type": "string", "minLength": 1 },
+    "contract_version": { "type": "string", "minLength": 1 },
+    "contract_type": { "enum": ["api", "schema", "runtime", "cli", "event", "receipt", "package"] },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": ["string", "null"] },
+    "manifest_path": { "type": ["string", "null"] },
+    "contract_hash": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["active", "deprecated", "retired"] },
+    "created_at": { "type": ["integer", "null"], "minimum": 0 },
+    "updated_at": { "type": ["integer", "null"], "minimum": 0 }
+  }
+}
