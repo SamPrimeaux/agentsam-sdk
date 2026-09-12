@@ -246,6 +246,10 @@ export async function dispatchShellLine(line, state = {}) {
       case '/models':
         await runModels(args, { cwd: state.cwd, write });
         break;
+      case '/cf':
+      case '/cloudflare':
+        await runCloudflare(args.length ? args : ['commands'], { cwd: state.cwd, write });
+        break;
       case '/settings': {
         const configured = await configureCliPreferences({ cwd: state.cwd, firstRun: false });
         state.cwd = configured.identity.root;
