@@ -105,7 +105,7 @@ export async function runKnowledge(argv) {
 export async function runSearch(argv) {
   const { values: opts, positionals } = flags(argv, { semantic: { type: 'boolean' }, 'top-k': { type: 'string' }, 'token-budget': { type: 'string' }, generation: { type: 'string' } });
   if (opts.help) { console.log('agentsam search "query" [--cwd PATH] [--semantic] [--top-k 8] [--token-budget 6000] [--generation ID]'); return; }
-  const root = repositoryRoot(opts.cwd), config = readConfig(root), store = await openStore(root, config, true);
+  const root = repositoryRoot(opts.cwd), config = resolveKnowledgeConfig(root), store = await openStore(root, config, true);
   try { show(await retrieve({ store, config, text: positionals.join(' '), semantic: opts.semantic, embedder: opts.semantic ? provider() : null, topK: Number(opts['top-k'] || 8), tokenBudget: Number(opts['token-budget'] || 6000), generationId: opts.generation })); }
   finally { await store?.close(); }
 }
