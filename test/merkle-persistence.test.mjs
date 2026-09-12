@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  MERKLE_PERSISTENCE_SCHEMA_VERSION,
   MERKLE_SNAPSHOT_SCHEMA_SQL,
   MERKLE_SNAPSHOT_STORAGE_PREFIX,
   MERKLE_SNAPSHOT_TABLE,
