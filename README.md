@@ -106,12 +106,15 @@ authorizes its caller. Other local tooling uses Node APIs.
 
 ## Host integration and ownership
 
-Deterministic SDK capabilities remain useful without a model. The root `AgentSam` helper supplies an
-optional routing/session wrapper, while model orchestration, tool execution policy, provider credentials,
-actor/account authorization, workflow durability, approvals, jobs, and production application records
-belong to the consuming host application. Git/repository identity never proves actor authority, and the SDK
-does not create a second platform tools database. The old `scaffoldProject()` export is deprecated; use
-`agentsam create` or the local scaffold commands.
+Deterministic SDK capabilities remain useful without a model. The installed CLI adds a portable local
+runtime for explicit model selection, bounded tool orchestration, secure machine-local credential lookup,
+project-scoped execution approvals, provider-neutral resumable sessions, and usage/cost receipts. Those
+local records live under the user's AgentSam home state rather than portable repository config.
+
+Production actor/account authorization, shared credential vaults, workflow durability, remote job ownership,
+and application records still belong to the consuming host. Git/repository identity never proves actor
+authority, and the SDK does not create a second platform tools database. The old `scaffoldProject()` export
+is deprecated; use `agentsam create` or the local scaffold commands.
 
 This repository owns portable code once. Applications import it and provide adapters;
 they do not mirror SDK trees. [Ownership protocol](protocol/README.md).
