@@ -391,6 +391,20 @@ if (command === '--version' || command === '-v') {
     if (!e?.reported) reportCliError(e);
     process.exitCode = 1;
   }
+} else if (command === 'login') {
+  try {
+    await runLogin(rest);
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
+  }
+} else if (command === 'logout') {
+  try {
+    runLogout(rest);
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
+  }
 } else if (command === 'whoami') {
   try {
     await runWhoami(rest);
