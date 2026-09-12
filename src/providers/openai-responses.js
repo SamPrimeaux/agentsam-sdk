@@ -238,11 +238,27 @@ export function createOpenAIResponsesAdapter(options = {}) {
       ...(params.promptCacheOptions ? { prompt_cache_options: params.promptCacheOptions } : {}),
     };
     emitEvent(emit, 'context.compaction.started', { provider: 'openai', model, previous_response_id: body.previous_response_id || null }, meta);
-    const response = await request('/responses/compact', body, params);
+    let response;
+    let http;
+    try {
+      const result = await request('/responses/compact', body, params);
+      response = result.data;
+      http = result.http;
+    } catch (error) {
+      const diagnostic = diagnosticFromError(error, { source: 'openai', kind: 'provider_error' });
+      emitEvent(emit, 'error.observed', diagnostic, meta);
+      emitEvent(emit, 'run.failed', { stage: 'compaction', provider: 'openai', model, error: diagnostic }, meta);
+      throw error;
+    }
     emitEvent(emit, 'context.compaction.completed', {
       provider: 'openai', model, compaction_id: response.id, usage: response.usage || null,
+      request_id: http?.request_id || null, ray_id: http?.ray_id || null,
     }, meta);
-    return Object.freeze({ provider: 'openai', model, compaction_id: response.id, output: Object.freeze(response.output || []), usage: response.usage || null, raw: response });
+    return Object.freeze({
+      provider: 'openai', model, compaction_id: response.id,
+      request_id: http?.request_id || null, ray_id: http?.ray_id || null,
+      output: Object.freeze(response.output || []), usage: response.usage || null, raw: response,
+    });
   }
 
   return Object.freeze({ provider: 'openai', create, continueWithToolOutputs, compact });
