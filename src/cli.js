@@ -90,6 +90,8 @@ function printHelp() {
     agentsam status [--json]   Live local Git + DB + API + PTY status
     agentsam db init|status    Manage the project-local SQLite database
     agentsam models            Verify configured providers and selectable hosted/local models
+    agentsam login             Authenticate IAM and persist a secure machine-local session
+    agentsam logout            Remove the local IAM session; provider keys stay untouched
     agentsam whoami [--json]   Authenticated IAM identity + safe credential status
     agentsam resume [session]  Resume a saved Agent Sam session; omit id for picker
     agentsam eval context      Offline context-strategy/economics fixtures (--help)
