@@ -48,6 +48,24 @@
         "agentsam-progression-guard/references/hooks-operational-io.md"
       ],
       "user_invocable": true
+    },
+    {
+      "id": "agentsam-cloudflare-workers",
+      "aliases": [
+        "cloudflare",
+        "workers",
+        "wrangler",
+        "cf-native"
+      ],
+      "title": "AgentSam Cloudflare Workers",
+      "description": "Operate and debug Cloudflare Workers with typed Wrangler operations, runtime-aware observability, structured errors, and CPU profiling discipline.",
+      "entry": "agentsam-cloudflare-workers/SKILL.md",
+      "references": [
+        "agentsam-cloudflare-workers/references/wrangler-native-map.md",
+        "agentsam-cloudflare-workers/references/errors-and-observability.md",
+        "agentsam-cloudflare-workers/references/cpu-profiling.md"
+      ],
+      "user_invocable": true
     }
   ]
 }
