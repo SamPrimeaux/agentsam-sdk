@@ -18,6 +18,7 @@ function tempHome(t) {
 test('model inventory reports configured API providers without exposing credentials', async t => {
   const home = tempHome(t);
   const status = await collectModelsStatus({
+    home,
     discoverRemote: false,
     env: {
       OPENAI_API_KEY: 'secret-openai', GEMINI_API_KEY: '', XAI_API_KEY: 'secret-xai', ANTHROPIC_API_KEY: 'secret-anthropic',
