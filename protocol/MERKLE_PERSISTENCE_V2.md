@@ -12,7 +12,7 @@ account_id      = authenticated ownership authority
 repository_id   = canonical repository-registry identity
 ```
 
-A Git remote, checkout path, provider owner/name, workspace, or user ID must not be promoted into `repository_id` by inference.
+A checkout path, workspace, or user identity must never become `repository_id`. For registered Git repositories, the SDK may derive the canonical provider identity directly from the Git remote (for example `github:owner/repo`), matching the `code_repositories.id` convention; local repositories may fall back to the committed project manifest.
 
 The optional searchable index table remains `agentsam_fs_merkle_snapshots`. Full manifests may be stored under the provider-neutral object prefix `agentsam_fs_merkle_snapshots/`.
 
