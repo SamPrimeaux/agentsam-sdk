@@ -7,9 +7,9 @@ import {
   createRepositoryContract,
   createRepositoryDependency,
   createRepositoryIdentity,
-} from '../src/repository/contracts.js';
+} from '../../src/repository/contracts.js';
 
-const root = path.resolve(import.meta.dirname, '..');
+const root = path.resolve(import.meta.dirname, '../..');
 
 function schema(relative) {
   return JSON.parse(fs.readFileSync(path.join(root, relative), 'utf8'));
