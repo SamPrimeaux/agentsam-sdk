@@ -201,6 +201,177 @@ async function showLocalLogs(cwd, write) {
   } finally { db.close(); }
 }
 
+function formatCount(value) {
+  return Math.max(0, Number(value || 0)).toLocaleString('en-US');
+}
+
+function formatUsd(value) {
+  const amount = Number(value || 0);
+  if (!Number.isFinite(amount)) return 'unavailable';
+  if (amount === 0) return '$0.000000';
+  return amount < 0.01 ? `${amount.toFixed(6)}` : `${amount.toFixed(4)}`;
+}
+
+export function renderSessionReceipt(session) {
+  if (!session) return '';
+  const usage = session.cumulative_usage || {};
+  const input = Number(usage.input_tokens || 0);
+  const output = Number(usage.output_tokens || 0);
+  const cached = Number(usage.cached_input_tokens || 0);
+  const reasoning = Number(usage.reasoning_tokens || 0);
+  const total = input + output;
+  const active = Number(session.usage_snapshot?.current_context?.input_tokens || 0);
+  const lines = [
+    '',
+    `Token usage: total=${formatCount(total)} input=${formatCount(input)}${cached ? ` (+ ${formatCount(cached)} cached)` : ''} output=${formatCount(output)}${reasoning ? ` reasoning=${formatCount(reasoning)}` : ''}`,
+    `Cost: ${formatUsd(session.total_cost_usd)} · ${session.model_key || 'model unavailable'}${session.actual_service_tier ? ` · ${session.actual_service_tier}` : ''}`,
+  ];
+  if (active) lines.push(`Active context: ${formatCount(active)} tokens`);
+  lines.push('', 'To continue this session, run:', `  agentsam resume ${session.id}`, '', 'Or run:', '  agentsam resume', '', 'and select:', `  ${session.title || 'this session'}`, '');
+  return lines.join('\n');
+}
+
+function persistSession(state, patch = {}) {
+  if (!state.session) return null;
+  state.session = saveLocalSession({ ...state.session, ...patch }, { home: state.home });
+  return state.session;
+}
+
+function recordSessionInput(state, input) {
+  if (!state.session || !String(input || '').trim()) return;
+  persistSession(state, {
+    status: 'active',
+    last_input: String(input).trim(),
+    title: sessionTitleFromInput(input),
+  });
+}
+
+function safeToolInput(value, depth = 0) {
+  if (depth > 3) return '[nested]';
+  if (Array.isArray(value)) return value.slice(0, 12).map((row) => safeToolInput(row, depth + 1));
+  if (!value || typeof value !== 'object') return value;
+  const output = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (/token|secret|password|api[_-]?key|authorization/i.test(key)) output[key] = '[REDACTED]';
+    else output[key] = safeToolInput(item, depth + 1);
+  }
+  return output;
+}
+
+async function approveModelRequest(preflight, state) {
+  const approvedCeiling = Number(state.session?.approved_projected_call_cost_usd || 0);
+  if (approvedCeiling > 0 && preflight.projected_max_call_cost_usd <= approvedCeiling) return true;
+  if (!state.interactive) return false;
+  writeLine(state.write, '');
+  writeLine(state.write, '  Model request');
+  writeLine(state.write, `  model       ${preflight.model}`);
+  writeLine(state.write, `  reasoning   ${preflight.reasoning_effort}`);
+  writeLine(state.write, `  processing  ${preflight.service_tier}`);
+  writeLine(state.write, `  context     ~${formatCount(preflight.estimated_input_tokens)} input tokens`);
+  writeLine(state.write, `  max call    ${formatUsd(preflight.projected_max_call_cost_usd)} conservative ceiling`);
+  if (Number.isFinite(preflight.tokens_until_pricing_threshold)) writeLine(state.write, `  price cliff ${formatCount(preflight.tokens_until_pricing_threshold)} tokens headroom`);
+  const approved = await confirm({ message: 'Send this request?', initialValue: true });
+  if (isCancel(approved) || approved !== true) return false;
+  persistSession(state, { approved_projected_call_cost_usd: Math.max(approvedCeiling, preflight.projected_max_call_cost_usd) });
+  return true;
+}
+
+async function approveToolExecution(request, state) {
+  const sideEffects = request?.descriptor?.side_effects || 'none';
+  if (sideEffects === 'none') return true;
+  const key = toolApprovalKey(request.capability_id, request.input);
+  if (isExecutionApproved({ cwd: state.cwd, key }, { home: state.home })) return true;
+  if (!state.interactive) return false;
+
+  const summary = JSON.stringify(safeToolInput(request.input || {}));
+  writeLine(state.write, '');
+  writeLine(state.write, '  Agent Sam needs execution permission');
+  writeLine(state.write, `  action  ${key}`);
+  writeLine(state.write, `  target  local runtime · ${compactCwd(state.cwd)}`);
+  writeLine(state.write, `  effect  ${sideEffects}`);
+  if (summary && summary !== '{}') writeLine(state.write, `  input   ${summary.length > 500 ? `${summary.slice(0, 497)}...` : summary}`);
+  writeLine(state.write, '  secrets remain runtime-owned and are not included in the model-visible result.');
+
+  const choice = await select({
+    message: `Allow ${key}?`,
+    options: [
+      { value: 'once', label: 'Allow once' },
+      { value: 'always', label: `Always allow ${key} in this project` },
+      { value: 'deny', label: 'Deny' },
+    ],
+  });
+  if (isCancel(choice) || choice === 'deny') return false;
+  if (choice === 'always') grantExecutionApproval({ cwd: state.cwd, key, label: key }, { home: state.home });
+  return true;
+}
+
+async function runInteractiveModelTurn(prompt, state) {
+  const { preferences, model } = selectedModel(state.cwd);
+  if (model.provider !== 'openai') throw new Error(`interactive_provider_not_implemented:${model.provider}`);
+  const credential = resolveProviderCredential(model.provider, { home: state.home });
+  if (!credential.configured) throw new Error(`provider_credential_unavailable:${model.provider}:${credential.error || credential.env || 'not_configured'}`);
+
+  const activity = createRuntimeActivity({ write: state.write, phase: 'thinking', interactive: state.interactive });
+  const provider = createOpenAIResponsesAdapter({ apiKey: credential.value });
+  const capabilityAdapter = createCapabilityAdapter();
+  const samePolicy = state.session
+    && state.session.model_key === model.model_key
+    && state.session.reasoning_effort === preferences.reasoningEffort
+    && state.session.requested_service_tier === preferences.serviceTier;
+  const previousResponseId = samePolicy ? state.session?.provider_state?.previous_response_id : null;
+  const previousUsageSnapshot = samePolicy ? state.session?.usage_snapshot : null;
+
+  activity.start('thinking');
+  let result;
+  try {
+    result = await runResponsesAgent({
+      provider,
+      capabilityAdapter,
+      cwd: state.cwd,
+      prompt,
+      model: model.model_key,
+      reasoningEffort: preferences.reasoningEffort,
+      serviceTier: preferences.serviceTier,
+      previousResponseId,
+      previousUsageSnapshot,
+      cumulativeUsage: state.session?.cumulative_usage || null,
+      promptCacheKey: state.session?.id || undefined,
+      runId: state.session?.id || undefined,
+      beforeRequest: (preflight) => approveModelRequest(preflight, state),
+      beforeTool: (request) => approveToolExecution(request, state),
+      emit(event) {
+        if (event?.type === 'usage.snapshot') state.usageSnapshot = event.payload;
+      },
+    });
+  } catch (error) {
+    activity.fail('failed');
+    throw error;
+  }
+  activity.succeed('done');
+  if (result.output_text) {
+    writeLine(state.write, '');
+    writeLine(state.write, result.output_text);
+    writeLine(state.write, '');
+  }
+  state.usageSnapshot = result.usage_snapshot;
+  if (state.session) {
+    persistSession(state, {
+      status: 'active',
+      model_key: model.model_key,
+      provider_model_id: result.model,
+      reasoning_effort: result.reasoning_effort,
+      requested_service_tier: result.requested_service_tier,
+      actual_service_tier: result.actual_service_tier,
+      provider_state: { provider: model.provider, previous_response_id: result.response_id },
+      usage_snapshot: result.usage_snapshot,
+      cumulative_usage: result.cumulative_usage,
+      total_cost_usd: Number(state.session.total_cost_usd || 0) + Number(result.total_cost_usd || 0),
+      last_error: null,
+    });
+  }
+  return result;
+}
+
 export async function dispatchShellLine(line, state = {}) {
   const tokens = tokenizeShellLine(line);
   const write = state.write || ((text) => process.stdout.write(text));
