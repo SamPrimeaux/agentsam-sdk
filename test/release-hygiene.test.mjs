@@ -13,8 +13,11 @@ test('2.6 release metadata and public terminal vocabulary are aligned', () => {
 
   assert.equal(pkg.version, '2.6.0');
   assert.match(manifest, /target_version: "2.6.0"/);
-  assert.match(manifest, /state: release_candidate/);
-  assert.match(manifest, /current_latest: "2.5.0"/);
+  assert.match(manifest, /state: published/);
+  assert.match(manifest, /current_latest: "2.6.0"/);
+  assert.match(manifest, /published_at_utc: "2026-09-12T21:14:57.827Z"/);
+  assert.match(manifest, /published_git_head: ae32fba0a761cb18c5f940957bdcd58e3cab6072/);
+  assert.match(manifest, /git_tag: v2.6.0/);
   assert.doesNotMatch(manifest, /^\s*- tui\s*$/m);
   assert.doesNotMatch(readme, /agentsam tui|CLI\/TUI/);
 });
