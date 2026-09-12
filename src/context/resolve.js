@@ -1,5 +1,5 @@
 import { assessContextUsage, createContextBudget, estimateContextTokens } from './budget.js';
-import { loadProjectRules } from '../lib/project-rules.js';
+import { compileAgentInstructions } from '../lib/agent-instructions.js';
 
 export const CONTEXT_ITEM_KINDS = Object.freeze(['file', 'symbol', 'memory', 'tool_result', 'repo', 'artifact']);
 
