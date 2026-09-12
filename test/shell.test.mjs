@@ -24,7 +24,7 @@ test('interactive prompt derives username and cwd instead of hardcoding Agent Sa
 
 test('shell catalog only advertises implemented core controls', () => {
   const catalog = renderShellCatalog();
-  for (const command of ['/model', '/reasoning', '/fast', '/flex', '/standard', '/context', '/diff', '/clear', '/exit']) {
+  for (const command of ['/model', '/reasoning', '/fast', '/flex', '/standard', '/context', '/cf', '/diff', '/clear', '/exit']) {
     assert.match(catalog, new RegExp(command.replace('/', '\\/')));
   }
   assert.match(catalog, /scrollable command picker/);
