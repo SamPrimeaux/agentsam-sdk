@@ -37,6 +37,10 @@ assert.ok(agentsamBin.startsWith('#!/usr/bin/env node'), 'agentsam bin must be d
 assert.match(agentsamBin, /import ['"]\.\.\/src\/cli\.js['"];/, 'agentsam bin wrapper must delegate to the canonical CLI entry');
 assert.ok(pkg.files?.includes('src'), 'published files must include src');
 assert.ok(pkg.files?.includes('packages/identity'), 'published files must include identity workspace');
+assert.ok(
+  pkg.files?.includes('packages/connectors/cloudflare') && existsSync(join(root, 'packages/connectors/cloudflare/src/index.js')),
+  'published files must include the Cloudflare connector imported by the CLI',
+);
 assert.ok(pkg.files?.includes('AGENTSAM.md') && existsSync(join(root, 'AGENTSAM.md')), 'published files must include the stable AgentSam runtime contract');
 assert.equal(identity.private, true, 'identity is distributed through the root SDK, not separately published');
 for (const file of ['services/knowledge/package.json', 'services/knowledge/package-lock.json']) {
