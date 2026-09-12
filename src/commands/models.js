@@ -5,6 +5,7 @@ const API_PROVIDERS = Object.freeze([
   { id: 'openai', label: 'OpenAI', credential: 'OPENAI_API_KEY' },
   { id: 'gemini', label: 'Gemini', credential: 'GEMINI_API_KEY' },
   { id: 'grok', label: 'Grok', credential: 'XAI_API_KEY' },
+  { id: 'anthropic', label: 'Anthropic', credential: 'ANTHROPIC_API_KEY' },
 ]);
 
 function clean(value) {
