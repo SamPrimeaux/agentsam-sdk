@@ -470,6 +470,10 @@ export async function dispatchShellLine(line, state = {}) {
         write('\x1b[2J\x1b[H');
         break;
       default:
+        if (!command.startsWith('/')) {
+          await runInteractiveModelTurn(line, state);
+          break;
+        }
         writeLine(write, `  Unknown Agent Sam command: ${command}`);
         writeLine(write, '  Type / or /help for available commands.');
         return { handled: false, exit: false, cwd: state.cwd };
