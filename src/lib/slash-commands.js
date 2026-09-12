@@ -31,8 +31,8 @@ export const SLASH_COMMANDS = [
 export const SHELL_PHASES = [
   { id: '0-prototype', label: 'Visual prototype + demo scenarios', status: 'complete' },
   { id: 'pty-connection', label: 'Local PTY via agentsam start-local', status: 'complete' },
-  { id: 'model-context-controls', label: 'Model, reasoning, processing, and context economics', status: 'current' },
-  { id: 'run-telemetry', label: 'Provider usage + cost stream wired into interactive runtime', status: 'next' },
+  { id: 'model-context-controls', label: 'Model, reasoning, processing, and context economics', status: 'complete' },
+  { id: 'run-telemetry', label: 'Provider usage, cost, resumable sessions, and permission receipts', status: 'current' },
   { id: 'dashboard-embed', label: 'Embeddable shell for IAM dashboard', status: 'planned' },
 ];
 
