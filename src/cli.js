@@ -81,6 +81,7 @@ function printHelp() {
     agentsam db init|status    Manage the project-local SQLite database
     agentsam models            Verify configured providers and selectable hosted/local models
     agentsam eval context      Offline context-strategy/economics fixtures (--help)
+    agentsam cloudflare        Native Wrangler reads + Worker CPU profile analysis (--help)
     agentsam start-local       Local PTY on ws://127.0.0.1:3099 (no tunnel, no Cloudflare)
     agentsam ollama            Opt-in local Ollama setup/status/model management
     agentsam shell             Interactive Agent Sam slash-command shell
