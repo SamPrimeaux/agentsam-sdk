@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { tryResolveGitContext } from './git-context.js';
+import { tryResolveGitContext } from '../../packages/agentsam-repository/src/git-context.js';
 import { inspectLocalSqlite } from '../local/sqlite.js';
 import { getCreatedWithVersion, getDefaultProfile, getDeployTarget, getLocalDatabasePath, getProjectName, getProjectPreset, getRepositoryId, tryReadProjectConfig } from './project-config.js';
 
