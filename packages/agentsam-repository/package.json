@@ -1,0 +1,25 @@
+{
+  "name": "@inneranimalmedia/agentsam-repository",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Portable AgentSam repository identity, Merkle, semantic file metadata, persistence, and repository graph runtime contracts.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./git-context": "./src/git-context.js",
+    "./contracts": "./src/contracts.js",
+    "./merkle": "./src/merkle/index.js",
+    "./merkle/persistence": "./src/merkle/persistence.js",
+    "./merkle/cloudflare-persistence": "./src/merkle/cloudflare-persistence.js"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  }
+}
