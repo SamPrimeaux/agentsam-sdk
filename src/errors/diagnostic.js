@@ -60,10 +60,11 @@ const OPENAI_NON_RETRY_CODES = new Set([
   'organization_usage_limit_exceeded',
 ]);
 
-export function classifyOpenAIError({ status, type, code } = {}) {
+export function classifyOpenAIError({ status, type, code, message, param } = {}) {
   const httpStatus = Number(status || 0);
   const normalizedType = clean(type).toLowerCase();
   const normalizedCode = clean(code).toLowerCase();
+  const diagnosticText = `${normalizedCode} ${normalizedType} ${clean(param).toLowerCase()} ${clean(message).toLowerCase()}`;
   if (normalizedCode === 'previous_response_not_found') return { category: 'continuation', retriable: true, retry_strategy: 'retry_full_context' };
   if (normalizedCode === 'websocket_connection_limit_reached') return { category: 'connection_lifetime', retriable: true, retry_strategy: 'reconnect' };
   if (OPENAI_NON_RETRY_CODES.has(normalizedCode)) return { category: 'billing_or_quota', retriable: false, retry_strategy: 'operator_action' };
