@@ -479,6 +479,9 @@ export async function dispatchShellLine(line, state = {}) {
         return { handled: false, exit: false, cwd: state.cwd };
     }
   } catch (error) {
+    if (state.session) {
+      persistSession(state, { last_error: diagnosticFromError(error, { source: 'shell', kind: 'interactive_error' }) });
+    }
     if (!error?.reported) {
       for (const line of renderDiagnosticError(error).split('\n')) writeLine(write, `  ${line}`);
     }
