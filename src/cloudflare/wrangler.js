@@ -98,15 +98,22 @@ export async function runWranglerNative(id, input = {}, options = {}) {
     maxBytes: options.maxBytes || 2 * 1024 * 1024,
   });
   if (result.code !== 0) {
-    throw createProcessDiagnosticError({
-      code: 'wrangler_exit_nonzero',
-      message: `Wrangler ${plan.command_id} exited ${result.code}`,
-      command: 'wrangler',
-      args: plan.args,
+    const evidence = parseWranglerErrorEvidence(result.stderr, result.stdout);
+    throw new AgentSamDiagnosticError({
+      source: 'cloudflare',
+      kind: 'wrangler_error',
+      code: evidence.code || 'wrangler_exit_nonzero',
+      message: evidence.message || `Wrangler ${plan.command_id} exited ${result.code}`,
+      retriable: false,
+      retry_strategy: 'inspect_error',
+      operation: plan.command_id,
+      exit_code: result.code,
+      request_id: evidence.request_id,
+      ray_id: evidence.ray_id,
       cwd: plan.cwd,
-      exitCode: result.code,
-      stderr: result.stderr,
-      stdout: result.stdout,
+      stderr: String(result.stderr || '').slice(0, 12_000) || null,
+      stdout: String(result.stdout || '').slice(0, 4_000) || null,
+      details: evidence.details,
     });
   }
   const parsed = plan.output === 'json' ? parseJsonOutput(result.stdout) : null;
