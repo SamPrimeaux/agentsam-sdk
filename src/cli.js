@@ -461,7 +461,7 @@ if (command === '--version' || command === '-v') {
   try {
     const commands = await import('./commands/knowledge.js');
     await ({ index: commands.runKnowledge, search: commands.runSearch, repo: commands.runRepository })[command](rest);
-  } catch (e) { console.error(e.message); process.exitCode = 1; }
+  } catch (e) { reportCliError(e); process.exitCode = 1; }
 } else if (command === 'init') {
   try {
     const existing = !rest.includes('--name') && (rest.includes('.') || rest.includes('--existing') || rest.includes('--cwd') || fs.existsSync(path.join(repositoryRoot(), '.git')));
@@ -469,7 +469,7 @@ if (command === '--version' || command === '-v') {
     else if (rest.includes('--help') || rest.includes('-h')) printHelp();
     else if (rest.some((a) => a.startsWith('--'))) await initFromArgs(rest);
     else await initInteractive({});
-  } catch (e) { console.error(e.message); process.exitCode = 1; }
+  } catch (e) { reportCliError(e); process.exitCode = 1; }
 } else if (command === 'identity') {
   const sub = rest[0];
   if (sub === 'preview') {
