@@ -18,15 +18,15 @@ function cost(total = 0.1) { return { total_usd: total }; }
 test('capability adapter hydrates packaged JSON schemas and tool surface exposes only selected executable schemas', () => {
   const adapter = createCapabilityAdapter();
   const descriptors = adapter.toolDescriptors();
-  assert.equal(descriptors.length, 1);
-  assert.equal(descriptors[0].name, 'repository.snapshot');
-  assert.equal(descriptors[0].input_schema.type, 'object');
-  assert.ok(descriptors[0].input_schema.properties.cwd);
+  assert.deepEqual(descriptors.map((row) => row.name).sort(), ['cloudflare.cpu.profile', 'cloudflare.wrangler.native', 'repository.snapshot']);
+  const repository = descriptors.find((row) => row.name === 'repository.snapshot');
+  assert.equal(repository.input_schema.type, 'object');
+  assert.ok(repository.input_schema.properties.cwd);
   const surface = buildAgentToolSurface(adapter, 'snapshot inspect repository');
   assert.equal(surface.tools.length, 1);
   assert.equal(surface.tools[0].name, capabilityFunctionName('repository.snapshot'));
   assert.equal(surface.tools[0].parameters.type, 'object');
-  assert.equal(surface.receipt.catalog_tools, 1);
+  assert.equal(surface.receipt.catalog_tools, 3);
 });
 
 test('runner owns cwd, executes selected tool, preserves call_id and returns provider-authoritative continuation', async t => {
