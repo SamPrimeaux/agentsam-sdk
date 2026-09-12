@@ -17,8 +17,8 @@ export function printMerklePersistHelp() {
   agentsam merkle persist <snapshot.json> — publish a saved Merkle snapshot through host bindings
 
   --wrangler-config <file>    Worker config containing WEBSITE_ASSETS and optionally DB
-  --owner-user-id <id>        Snapshot owner authority (or AGENTSAM_OWNER_USER_ID)
-  --repo-id <id>              Canonical repo id; inferred for GitHub/GitLab/Bitbucket when possible
+  --account-id <id>           Authenticated account authority (or AGENTSAM_ACCOUNT_ID)
+  --repository-id <id>        Canonical code_repositories.id; never inferred from Git remotes
   --capture-kind <kind>       deploy|manual|agent|index (default manual)
   --connection-id <id>        Execution provenance for non-deploy captures
   --runtime-lease-id <id>     Alternative execution provenance for non-deploy captures
