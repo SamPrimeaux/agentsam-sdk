@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { tryResolveGitContext } from './git-context.js';
+import { tryResolveGitContext } from '../../packages/agentsam-repository/src/git-context.js';
 
 export const PROJECT_CONFIG_PATH = '.agentsam/config.json';
 export const PROJECT_CONFIG_SCHEMA_VERSION = 2;

@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { buildMerkleTree, saveSnapshot, readSnapshot, diffTrees, normalizePolicy } from '../lib/merkle/index.js';
+import { buildMerkleTree, saveSnapshot, readSnapshot, diffTrees, normalizePolicy } from '../../packages/agentsam-repository/src/merkle/index.js';
 import { renderSummary, safeText } from '../ui/merkle/render.js';
 import { runMerkleExplorer } from '../ui/merkle/explorer.js';
 import { runMerklePersist } from './merkle-persist.js';

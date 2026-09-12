@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import ts from 'typescript';
-import { fileHasher } from '../lib/merkle/hash.js';
+import { fileHasher } from '../../packages/agentsam-repository/src/merkle/hash.js';
 import { fingerprint } from './config.js';
 
 export const PARSER = `typescript:${ts.version}:agentsam-1`;

@@ -1,12 +1,12 @@
 import path from 'node:path';
-import { readSnapshot } from '../lib/merkle/snapshot.js';
+import { readSnapshot } from '../../packages/agentsam-repository/src/merkle/snapshot.js';
 import { readAccountSession } from '../lib/account-session.js';
 import { getRepositoryId, portableRepositoryIdFromGit, tryReadProjectConfig } from '../lib/project-config.js';
 import {
   buildMerklePersistencePlan,
   persistMerkleSnapshotCloudflare,
   resolveWranglerMerklePersistence,
-} from '../lib/merkle/cloudflare-persistence.js';
+} from '../../packages/agentsam-repository/src/merkle/cloudflare-persistence.js';
 
 function value(args, index, flag) {
   const next = args[index + 1];

@@ -1,4 +1,4 @@
-import { tryResolveGitContext } from '../lib/git-context.js';
+import { tryResolveGitContext } from '../../packages/agentsam-repository/src/git-context.js';
 import { resolveAgentSamBaseUrl, resolveBridgeKey } from '../lib/bridge-client.js';
 import { loadProjectRules } from '../lib/project-rules.js';
 

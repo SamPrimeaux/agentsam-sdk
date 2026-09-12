@@ -11,7 +11,6 @@
     "dockerize.js",
     "execution-approvals.js",
     "gcp-setup.js",
-    "git-context.js",
     "gorilla-template.js",
     "identity-scaffold.js",
     "init-git.js",
@@ -37,7 +36,6 @@
     "cad",
     "deploy",
     "deploy-receipt",
-    "merkle",
     "mini",
     "scaffold"
   ],
@@ -67,7 +65,6 @@
     "knowledge.test.mjs",
     "local-sessions.test.mjs",
     "local-studio-deploy.test.mjs",
-    "merkle-persistence.test.mjs",
     "merkle-render.test.mjs",
     "merkle.test.mjs",
     "mini.test.mjs",

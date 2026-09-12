@@ -19,7 +19,7 @@ export {
   normalizeGitRemote,
   resolveGitContext,
   tryResolveGitContext,
-} from './lib/git-context.js';
+} from '../packages/agentsam-repository/src/git-context.js';
 export {
   resolveAgentSamBaseUrl,
   resolveBridgeKey,
@@ -51,7 +51,7 @@ export {
   createRepositoryIdentity,
   createRepositoryContract,
   createRepositoryDependency,
-} from './repository/contracts.js';
+} from '../packages/agentsam-repository/src/contracts.js';
 export {
   DEFAULT_CONTEXT_RATIOS,
   DEFAULT_RESULT_POLICY,

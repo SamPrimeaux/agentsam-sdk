@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { buildMerkleTree, saveSnapshot, readSnapshot, validateSnapshot, diffTrees, metadataRoot } from '../src/lib/merkle/index.js';
+import { buildMerkleTree, saveSnapshot, readSnapshot, validateSnapshot, diffTrees, metadataRoot } from '../packages/agentsam-repository/src/merkle/index.js';
 
 const cli = fileURLToPath(new URL('../src/cli.js', import.meta.url));
 async function fixture(t) {

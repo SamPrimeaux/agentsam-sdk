@@ -15,13 +15,16 @@ New reusable code should have an explicit owner:
 
 `src/lib/` is a legacy extraction zone. Its current files are supported, but new unrelated reusable modules must not be added there. The source-boundary verifier freezes that surface so it can shrink over time.
 
-## Next package extractions
+## Package extraction status
 
 Do not split the repo into micro-packages for their own sake. Extract a subsystem when it has a coherent public responsibility and can own its tests.
 
-1. **Repository/Merkle** — Git identity, Merkle/filemeta, repository graph contracts/runtime normalization, snapshot persistence, and repository-focused tests. This is the next extraction because it is already consumed company-wide by `inneranimalmedia`, `inneranimalmedia-mcp-server`, and ExecOS.
-2. **Runtime/core** — account session, provider credentials, execution approvals, run/session primitives, and telemetry composition that are not CLI-specific.
-3. **Knowledge/indexing** — repository knowledge engine, stores, indexing provider contracts, and service client/runtime seams.
+**Extracted:** `packages/agentsam-repository/` now owns Git identity, Merkle/filemeta algorithms, repository graph runtime normalization, and snapshot persistence. Root SDK exports and CLI/runtime consumers compose that package without restoring `src/lib/merkle` or `src/lib/git-context.js`.
+
+Next coherent extractions:
+
+1. **Runtime/core** — account session, provider credentials, execution approvals, run/session primitives, and telemetry composition that are not CLI-specific.
+2. **Knowledge/indexing** — repository knowledge engine, stores, indexing provider contracts, and service client/runtime seams.
 
 The root CLI should depend on these packages; packages must not depend on root CLI/commands/UI internals.
 

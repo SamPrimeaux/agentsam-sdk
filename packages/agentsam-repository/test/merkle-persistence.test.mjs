@@ -10,7 +10,7 @@ import {
   merklePersistenceUpsertSql,
   merkleSnapshotStorageKey,
   resolveWranglerMerklePersistence,
-} from '../src/lib/merkle/index.js';
+} from '../src/merkle/index.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';

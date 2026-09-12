@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import {
   normalizeGitRemote,
   resolveGitContext,
-} from '../src/lib/git-context.js';
+} from '../packages/agentsam-repository/src/git-context.js';
 import {
   buildBridgeHeaders,
   createBridgeClient,
