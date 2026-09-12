@@ -98,6 +98,7 @@
     "packages/agentsam-shell-kit",
     "packages/identity",
     "packages/agentsam-contracts",
+    "packages/agentsam-repository",
     "packages/agentsam-workbench"
   ],
   "scripts": {
