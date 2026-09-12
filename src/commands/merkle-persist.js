@@ -106,8 +106,8 @@ export async function runMerklePersist(args = []) {
   const plan = buildMerklePersistencePlan({
     snapshot,
     root,
-    accountId: opts.accountId,
-    repositoryId: opts.repositoryId,
+    accountId: identity.accountId,
+    repositoryId: identity.repositoryId,
     source: opts.source,
     captureKind: opts.captureKind,
     connectionId: opts.connectionId,
