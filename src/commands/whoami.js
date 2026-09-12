@@ -1,5 +1,5 @@
 import { getJson } from '../lib/core-client.js';
-import { resolveSdkKey } from '../../packages/identity/src/contracts/auth-config.js';
+import { resolveAccountSdkKey } from '../lib/account-session.js';
 import { listProviderCredentialStatus } from '../lib/provider-credentials.js';
 
 function writeLine(write, value = '') { write(`${value}\n`); }
