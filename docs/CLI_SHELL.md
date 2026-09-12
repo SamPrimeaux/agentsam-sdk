@@ -10,11 +10,14 @@ agentsam
 
 On first use in a project, Agent Sam asks whether the directory is trusted before project-local instructions, hooks, or execution policy can load. The setup flow then uses keyboard-driven selectors for runtime and model policy.
 
-Model policy is explicit:
+Model policy is explicit and is governed by the normative model-selection SSOT contract in `protocol/models/README.md`:
 
-1. **Model** — the exact provider-verified model when interactive model execution is wanted.
-2. **Reasoning level** — one of the reasoning efforts declared by that model.
-3. **Processing** — Standard, Fast, Flex, or another tier only when that model declares it.
+1. **Provider** — the explicit provider lane selected by the user.
+2. **Model** — the exact provider-verified model; provider-level pseudo-models such as `automatic` or `default` are not substitutes for exact selection.
+3. **Reasoning level** — one of the reasoning efforts declared by that model.
+4. **Processing** — Standard, Fast, Flex, or another tier only when that model declares it.
+
+`/models`, `agentsam models`, exact `-m <model_id>` selection, runtime execution, and usage receipts must all resolve through that same inventory/selection authority. AgentSam may curate and rank a useful first page, but provider availability, capabilities, limits, and pricing retain provider-authoritative provenance.
 
 For models with materially different pricing by reasoning, service tier, or context size, these controls are user-visible policy. They are not hidden prompt hints.
 
