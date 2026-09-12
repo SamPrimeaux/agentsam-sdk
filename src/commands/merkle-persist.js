@@ -6,7 +6,7 @@ import {
   buildMerklePersistencePlan,
   persistMerkleSnapshotCloudflare,
   resolveWranglerMerklePersistence,
-} from '../lib/merkle/cloudflare-persistence.js';
+} from '../../packages/agentsam-repository/src/merkle/cloudflare-persistence.js';
 
 function value(args, index, flag) {
   const next = args[index + 1];
