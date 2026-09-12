@@ -4,3 +4,4 @@ export { CONTEXT_ITEM_KINDS, normalizeContextItem, resolveContext, resolveProjec
 export { PROJECT_RULES_FILENAME, DEFAULT_PROJECT_RULES_MAX_CHARS, defaultProjectRules, ensureProjectRules, findProjectRules, loadProjectRules } from '../lib/project-rules.js';
 export { AGENT_RUNTIME_FILENAME, AGENT_INSTRUCTION_PRECEDENCE, findAgentRuntimeContract, compileAgentInstructions } from '../lib/agent-instructions.js';
 export { DEFAULT_CONSUMED_CONTEXT_CHARS, compactContextItem, compactConsumedToolResult } from './compact.js';
+export { rehydrateContextRef } from './rehydrate.js';
