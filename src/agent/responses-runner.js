@@ -4,6 +4,7 @@ import { assessContextUsage, compileAgentInstructions, createContextBudget, esti
 import { getModelRecord, calculateModelCost } from '../models/index.js';
 import { searchToolCards, hydrateToolSchemas } from '../tools/index.js';
 import { createAgentEvent } from '../telemetry/index.js';
+import { diagnosticFromError } from '../errors/index.js';
 
 const RUNTIME_OWNED_KEYS = new Set(['account_id', 'user_id', 'tenant_id', 'workspace_id', 'connection_id', 'runtime_lease_id', 'execution_id']);
 
