@@ -3,14 +3,12 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { getProjectName, tryReadProjectConfig } from './project-config.js';
 
-export const CLI_PREFERENCES_SCHEMA = 'agentsam-cli-preferences-v1';
+export const CLI_PREFERENCES_SCHEMA = 'agentsam-cli-preferences-v2';
+export const LEGACY_CLI_PREFERENCES_SCHEMA = 'agentsam-cli-preferences-v1';
 
 function readJson(filename) {
-  try {
-    return JSON.parse(fs.readFileSync(filename, 'utf8'));
-  } catch {
-    return null;
-  }
+  try { return JSON.parse(fs.readFileSync(filename, 'utf8')); }
+  catch { return null; }
 }
 
 function gitValue(cwd, args) {
@@ -22,14 +20,9 @@ export function findCliProjectRoot(startDir = process.cwd()) {
   const cwd = path.resolve(startDir);
   const gitRoot = gitValue(cwd, ['rev-parse', '--show-toplevel']);
   if (gitRoot) return path.resolve(gitRoot);
-
   let dir = cwd;
   for (let i = 0; i < 16; i += 1) {
-    if (
-      fs.existsSync(path.join(dir, '.agentsam', 'cli.json')) ||
-      fs.existsSync(path.join(dir, '.agentsam', 'config.json')) ||
-      fs.existsSync(path.join(dir, 'package.json'))
-    ) return dir;
+    if (fs.existsSync(path.join(dir, '.agentsam', 'cli.json')) || fs.existsSync(path.join(dir, '.agentsam', 'config.json')) || fs.existsSync(path.join(dir, 'package.json'))) return dir;
     const parent = path.dirname(dir);
     if (parent === dir) break;
     dir = parent;
@@ -48,27 +41,38 @@ export function detectCliProject(startDir = process.cwd()) {
   return { root, project, branch, remote, website, configured: Boolean(getProjectName(config)) };
 }
 
-export function cliPreferencesPath(root) {
-  return path.join(path.resolve(root), '.agentsam', 'cli.json');
+export function cliPreferencesPath(root) { return path.join(path.resolve(root), '.agentsam', 'cli.json'); }
+
+function normalizePreferences(value = {}) {
+  return {
+    schemaVersion: CLI_PREFERENCES_SCHEMA,
+    trustedDirectory: value.trustedDirectory === true,
+    runtime: value.runtime || 'local',
+    terminal: value.terminal || '',
+    modelPreference: value.modelPreference || 'auto',
+    reasoningEffort: value.reasoningEffort || 'auto',
+    serviceTier: value.serviceTier || 'default',
+    modelAuthority: 'preference-only',
+    updatedAt: value.updatedAt || null,
+  };
 }
 
 export function readCliPreferences(root) {
   const value = readJson(cliPreferencesPath(root));
-  if (!value || value.schemaVersion !== CLI_PREFERENCES_SCHEMA) return null;
-  return value;
+  if (!value) return null;
+  if (value.schemaVersion !== CLI_PREFERENCES_SCHEMA && value.schemaVersion !== LEGACY_CLI_PREFERENCES_SCHEMA) return null;
+  return normalizePreferences(value);
 }
 
 export function writeCliPreferences(root, value = {}) {
   const filename = cliPreferencesPath(root);
   fs.mkdirSync(path.dirname(filename), { recursive: true });
-  const next = {
-    schemaVersion: CLI_PREFERENCES_SCHEMA,
-    runtime: value.runtime || 'local',
-    terminal: value.terminal || '',
-    modelPreference: value.modelPreference || 'auto',
-    modelAuthority: 'preference-only',
-    updatedAt: new Date().toISOString(),
-  };
+  const previous = readCliPreferences(root) || {};
+  const next = normalizePreferences({ ...previous, ...value, updatedAt: new Date().toISOString() });
   fs.writeFileSync(filename, `${JSON.stringify(next, null, 2)}\n`);
   return next;
+}
+
+export function updateCliPreferences(root, patch = {}) {
+  return writeCliPreferences(root, { ...(readCliPreferences(root) || {}), ...patch });
 }

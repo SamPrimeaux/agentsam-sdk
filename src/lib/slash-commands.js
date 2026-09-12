@@ -1,35 +1,36 @@
-/**
- * Canonical slash-command surface for Agent Sam SDK CLI / shell UX.
- * Consumed by the interactive `agentsam shell` REPL and presentation layers.
- */
+/** Canonical, implemented slash-command surface for Agent Sam SDK CLI. */
 
 export const SHELL_THEMES = ['NIGHT', 'DAY', 'LAVA', 'VOID'];
 
-/** @type {Array<{ cmd: string, description: string, lane?: string }>} */
 export const SLASH_COMMANDS = [
-  { cmd: '/help', description: 'Show Agent Sam commands' },
+  { cmd: '/model', description: 'Choose exact model, reasoning level, and processing tier', lane: 'model' },
+  { cmd: '/reasoning', description: 'Set reasoning effort for the selected model', lane: 'model' },
+  { cmd: '/fast', description: 'Use provider Fast processing when the selected model supports it', lane: 'model' },
+  { cmd: '/flex', description: 'Use provider Flex processing when the selected model supports it', lane: 'model' },
+  { cmd: '/standard', description: 'Return to Standard provider processing', lane: 'model' },
+  { cmd: '/context', description: 'Show model context economics; add repo for Git bridge context', lane: 'context' },
   { cmd: '/status', description: 'Local project, DB, Git, and PTY health', lane: 'local' },
-  { cmd: '/context', description: 'Current Git repository and revision', lane: 'git' },
+  { cmd: '/models', description: 'Probe providers and provider-verified known models', lane: 'model' },
+  { cmd: '/settings', description: 'Choose project, runtime, terminal, and model policy' },
   { cmd: '/pwd', description: 'Print working directory', lane: 'terminal' },
   { cmd: '/cd', description: 'Change working directory', lane: 'terminal' },
-  { cmd: '/git', description: 'Git status, diff, branch, commit, and remote', lane: 'git' },
+  { cmd: '/git', description: 'Run an explicit Git subcommand', lane: 'git' },
+  { cmd: '/diff', description: 'Show the current Git diff', lane: 'git' },
   { cmd: '/db', description: 'Local SQLite status and query helpers', lane: 'data' },
-  { cmd: '/agent', description: 'Send a goal to the configured Agent Sam', lane: 'agent' },
-  { cmd: '/models', description: 'Show available model providers and local models' },
-  { cmd: '/settings', description: 'Choose project, runtime, terminal, and model preference' },
+  { cmd: '/agent', description: 'Send a goal to the configured local Agent Sam runtime', lane: 'agent' },
   { cmd: '/logs', description: 'Show local Agent Sam execution events', lane: 'observability' },
   { cmd: '/deploy', description: 'Add a cloud adapter and deploy intentionally', lane: 'deploy' },
+  { cmd: '/clear', description: 'Clear the terminal display', lane: 'terminal' },
+  { cmd: '/help', description: 'Show the factual implemented command catalog' },
   { cmd: '/exit', description: 'Exit Agent Sam shell and return to the host terminal' },
 ];
 
-/** Shell UX rollout phases (gorilla-shell → SDK default CLI experience). */
 export const SHELL_PHASES = [
   { id: '0-prototype', label: 'Visual prototype + demo scenarios', status: 'complete' },
-  { id: 'pty-connection', label: 'Local PTY via agentsam start-local', status: 'current' },
-  { id: 'hud-layer', label: 'Quest log, tool gate, XP HUD', status: 'planned' },
-  { id: 'buddy-system', label: 'In-shell Agent Sam via MCP', status: 'planned' },
+  { id: 'pty-connection', label: 'Local PTY via agentsam start-local', status: 'complete' },
+  { id: 'model-context-controls', label: 'Model, reasoning, processing, and context economics', status: 'current' },
+  { id: 'run-telemetry', label: 'Provider usage + cost stream wired into interactive runtime', status: 'next' },
   { id: 'dashboard-embed', label: 'Embeddable shell for IAM dashboard', status: 'planned' },
-  { id: 'standalone-pwa', label: 'Installable PWA / SDK default shell', status: 'planned' },
 ];
 
 export function listSlashCommands(opts = {}) {
