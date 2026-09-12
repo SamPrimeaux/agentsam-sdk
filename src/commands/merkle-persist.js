@@ -73,6 +73,22 @@ function parse(args) {
   return opts;
 }
 
+export function resolveMerklePersistenceIdentity(root, options = {}) {
+  const session = options.session ?? readAccountSession(options.sessionOptions || {});
+  const accountId = String(session?.account_id || '').trim();
+  if (!accountId) throw new Error('agentsam_login_required_for_merkle_persistence');
+
+  const projectConfig = options.projectConfig ?? tryReadProjectConfig(root);
+  const repositoryId = portableRepositoryIdFromGit(root) || getRepositoryId(projectConfig);
+  if (!repositoryId) throw new Error('repository_identity_unresolved');
+
+  return {
+    accountId,
+    repositoryId,
+    repositoryIdentitySource: portableRepositoryIdFromGit(root) ? 'git' : 'project_manifest',
+  };
+}
+
 export async function runMerklePersist(args = []) {
   const opts = parse(args);
   if (opts.help) { printMerklePersistHelp(); return null; }
