@@ -157,10 +157,15 @@ export function createOpenAIResponsesAdapter(options = {}) {
     }, meta);
 
     let response;
+    let http;
     try {
-      response = await request('/responses', body, params);
+      const result = await request('/responses', body, params);
+      response = result.data;
+      http = result.http;
     } catch (error) {
-      emitEvent(emit, 'run.failed', { stage: 'model', provider: 'openai', model, message: error.message, status: error.status || null }, meta);
+      const diagnostic = diagnosticFromError(error, { source: 'openai', kind: 'provider_error' });
+      emitEvent(emit, 'error.observed', diagnostic, meta);
+      emitEvent(emit, 'run.failed', { stage: 'model', provider: 'openai', model, error: diagnostic }, meta);
       throw error;
     }
 
