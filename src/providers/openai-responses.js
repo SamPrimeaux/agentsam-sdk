@@ -1,5 +1,6 @@
 import { calculateModelCost, getModelRecord } from '../models/index.js';
 import { createAgentEvent, createUsageSnapshot } from '../telemetry/index.js';
+import { createOpenAIHttpError, diagnosticFromError } from '../errors/index.js';
 
 const DEFAULT_BASE_URL = 'https://api.openai.com/v1';
 
