@@ -18,7 +18,7 @@
     "./capabilities": "./src/capabilities/index.js",
     "./capability-manifest": "./protocol/capabilities/manifest.json",
     "./repository": "./src/repository/index.js",
-    "./repository/contracts": "./src/repository/contracts.js",
+    "./repository/contracts": "./packages/agentsam-repository/src/contracts.js",
     "./repository/identity-schema": "./protocol/repository/repository-identity.schema.json",
     "./repository/contract-schema": "./protocol/repository/repository-contract.schema.json",
     "./repository/dependency-schema": "./protocol/repository/repository-dependency.schema.json",
