@@ -35,8 +35,9 @@ export function printMerklePersistHelp() {
   --dry-run                   Resolve bindings and emit the exact storage/index plan without writes
   --json                      Machine-readable output
 
-  The SDK never infers owner identity. Hosts should pass authenticated owner_user_id.
-  Physical bucket/database names come from Wrangler bindings, so customer installs keep
+  The SDK never infers account or repository authority. Hosts must pass authenticated account_id
+  and the canonical repository_id from their repository registry. Physical bucket/database names
+  come from Wrangler bindings, so customer installs keep
   WEBSITE_ASSETS/DB while selecting their own storage resources.
 `);
 }
