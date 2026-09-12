@@ -11,6 +11,8 @@ export const SLASH_COMMANDS = [
   { cmd: '/context', description: 'Show model context economics; add repo for Git bridge context', lane: 'context' },
   { cmd: '/status', description: 'Local project, DB, Git, and PTY health', lane: 'local' },
   { cmd: '/models', description: 'Probe providers and provider-verified known models', lane: 'model' },
+  { cmd: '/login', description: 'Authenticate IAM and save the machine-local Agent Sam session', lane: 'identity' },
+  { cmd: '/logout', description: 'Remove the local IAM session without deleting provider keys', lane: 'identity' },
   { cmd: '/whoami', description: 'Show authenticated IAM identity and safe credential status', lane: 'identity' },
   { cmd: '/session', description: 'Show current session usage, cost, and resume receipt', lane: 'observability' },
   { cmd: '/cf', description: 'Cloudflare native reads, Wrangler status, and CPU profile analysis', lane: 'cloudflare' },
