@@ -360,6 +360,13 @@ if (command === '--version' || command === '-v') {
     console.error(`\n  ✗ ${e?.message || e}\n`);
     process.exit(1);
   }
+} else if (command === 'eval') {
+  try {
+    await runEval(rest);
+  } catch (e) {
+    console.error(`\n  ✗ ${e?.message || e}\n`);
+    process.exit(1);
+  }
 } else if (command === 'shell') {
   try {
     await runShell(rest);
