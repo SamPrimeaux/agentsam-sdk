@@ -100,15 +100,29 @@ export function createOpenAIResponsesAdapter(options = {}) {
       body: JSON.stringify(body),
       signal: optionalSignal(runtime.timeoutMs ?? timeoutMs),
     });
+    let rawText = '';
+    try { rawText = await response.text(); } catch { rawText = ''; }
     let parsed = null;
-    try { parsed = await response.json(); } catch { parsed = null; }
-    if (!response.ok) {
-      const error = new Error(errorMessage(parsed, response.status));
-      error.status = response.status;
-      error.body = parsed;
-      throw error;
+    if (rawText) {
+      try { parsed = JSON.parse(rawText); } catch { parsed = null; }
     }
-    return parsed;
+    if (!response.ok) {
+      throw createOpenAIHttpError({
+        status: response.status,
+        body: parsed,
+        rawText,
+        headers: response.headers,
+        requestedServiceTier: body?.service_tier,
+      });
+    }
+    return Object.freeze({
+      data: parsed ?? {},
+      http: Object.freeze({
+        status: response.status,
+        request_id: clean(response.headers?.get?.('x-request-id') || response.headers?.get?.('openai-request-id')) || null,
+        ray_id: clean(response.headers?.get?.('cf-ray')) || null,
+      }),
+    });
   }
 
   async function create(params = {}) {
