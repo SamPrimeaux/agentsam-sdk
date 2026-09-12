@@ -6,7 +6,7 @@
   "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js",
-    "./git-context": "./src/lib/git-context.js",
+    "./git-context": "./packages/agentsam-repository/src/git-context.js",
     "./bridge-client": "./src/lib/bridge-client.js",
     "./local/sqlite": "./src/local/sqlite.js",
     "./dockerize": "./src/lib/dockerize.js",
