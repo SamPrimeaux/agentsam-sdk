@@ -21,7 +21,7 @@ export async function rehydrateContextRef(ref, adapter, options = {}) {
     throw new Error(`rehydration_hash_mismatch:${sourceRef}`);
   }
   const bounded = content.length > maxChars ? `${content.slice(0, Math.max(0, maxChars - 1))}…` : content;
-  return normalizeContextItem({
+  const item = normalizeContextItem({
     ref: sourceRef,
     kind: options.kind || value.kind || 'artifact',
     hash: expectedHash || computedHash,
@@ -31,4 +31,5 @@ export async function rehydrateContextRef(ref, adapter, options = {}) {
     truncated: bounded.length < content.length,
     source_chars: content.length > bounded.length ? content.length : undefined,
   });
+  return Object.freeze({ ...item, truncated: bounded.length < content.length });
 }
