@@ -56,6 +56,18 @@ export {
   createRepositoryKnowledgeClient,
   describeRepositoryKnowledgeProvider,
 } from './indexing/index.js';
+export {
+  MODEL_CATALOG_SCHEMA,
+  MODEL_CATALOG,
+  listModelCatalog,
+  getModelRecord,
+  calculateModelCost,
+} from './models/index.js';
+export {
+  AGENT_EVENT_TYPES,
+  createAgentEvent,
+  createUsageSnapshot,
+} from './telemetry/index.js';
 
 export {
   createIdentityClient,
