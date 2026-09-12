@@ -133,11 +133,11 @@ function safeId(value) {
   return clean(value).replace(/[^A-Za-z0-9._-]+/g, '').slice(0, 96);
 }
 
-function snapshotIdFor({ snapshot, repoId, captureKind, deploymentId }) {
+function snapshotIdFor({ snapshot, repositoryId, captureKind, deploymentId }) {
   const deployment = safeId(deploymentId);
   if (captureKind === 'deploy' && deployment) return `mrs_dep_${deployment.toLowerCase()}`;
   const digest = createHash('sha256')
-    .update([repoId, snapshot.rootHash, snapshot.semantic?.rootHash || '', captureKind].join('\0'))
+    .update([repositoryId, snapshot.rootHash, snapshot.semantic?.rootHash || '', captureKind].join('\0'))
     .digest('hex');
   return `mrs_${digest.slice(0, 24)}`;
 }
