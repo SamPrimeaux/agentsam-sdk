@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/capabilities/cloudflare-cpu-profile-input.schema.json",
+  "title": "cloudflare.cpu.profile input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["file"],
+  "properties": {
+    "cwd": { "type": "string", "minLength": 1 },
+    "file": { "type": "string", "minLength": 1 },
+    "maxFrames": { "type": "integer", "minimum": 1, "maximum": 100 }
+  }
+}

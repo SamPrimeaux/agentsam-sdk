@@ -4,7 +4,7 @@ import pkg from '../package.json' with { type: 'json' };
 
 export { AgentSam } from './AgentSam.js';
 export { routeIntent } from './lib/router.js';
-export { searchToolCards, toToolCard } from './tools/index.js';
+export { searchToolCards, toToolCard, hydrateToolSchemas } from './tools/index.js';
 export { getToolCatalog } from './lib/tools.js';
 export { scaffoldProject } from './lib/scaffold.js';
 export {
@@ -44,17 +44,66 @@ export {
   DEFAULT_CONTEXT_RATIOS,
   DEFAULT_RESULT_POLICY,
   createContextBudget,
+  assessContextUsage,
   normalizeResultPolicy,
   resolveContext,
   resolveProjectContext,
   compactConsumedToolResult,
+  rehydrateContextRef,
   loadProjectRules,
+  compileAgentInstructions,
+  AGENT_INSTRUCTION_PRECEDENCE,
 } from './context/index.js';
 export {
   assertRepositoryKnowledgeProvider,
   createRepositoryKnowledgeClient,
   describeRepositoryKnowledgeProvider,
 } from './indexing/index.js';
+export {
+  MODEL_CATALOG_SCHEMA,
+  MODEL_CATALOG,
+  listModelCatalog,
+  getModelRecord,
+  calculateModelCost,
+} from './models/index.js';
+export {
+  AGENT_EVENT_TYPES,
+  createAgentEvent,
+  createUsageSnapshot,
+} from './telemetry/index.js';
+export {
+  createOpenAIResponsesAdapter,
+  extractOpenAIOutputText,
+  extractOpenAIFunctionCalls,
+} from './providers/index.js';
+export {
+  AgentSamDiagnosticError,
+  classifyOpenAIError,
+  createOpenAIHttpError,
+  createProcessDiagnosticError,
+  diagnosticFromError,
+  redactDiagnosticValue,
+  renderDiagnosticError,
+} from './errors/index.js';
+export {
+  WRANGLER_NATIVE_COMMANDS,
+  WRANGLER_OPERATION_FAMILIES,
+  buildWranglerInvocation,
+  listWranglerNativeCommands,
+  parseWranglerErrorEvidence,
+  runWranglerNative,
+  summarizeCloudflareCpuProfile,
+  summarizeCloudflareCpuProfileFile,
+  buildCloudflareCpuAuditPacket,
+  runCloudflareCpuAudit,
+} from './cloudflare/index.js';
+export {
+  createCapabilityAdapter,
+  buildAgentToolSurface,
+  capabilityFunctionName,
+  runResponsesAgent,
+} from './agent/index.js';
+export { listContextEvalFixtures, evaluateContextFixture } from './eval/index.js';
 
 export {
   createIdentityClient,

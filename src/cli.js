@@ -31,13 +31,22 @@ import { runSecurity } from './commands/security.js';
 import { runRecon } from './commands/recon.js';
 import { runCad } from './commands/cad.js';
 import { runSkills } from './commands/skills.js';
+import { runEval } from './commands/eval.js';
+import { runCloudflare } from './commands/cloudflare.js';
 import { applyPresetSelection, runAdd, runCapabilities, runDev, runInspect } from './commands/product.js';
 import { listPresets, resolvePreset } from './presets/index.js';
 import fs from 'node:fs';
 import { repositoryRoot } from './knowledge/config.js';
 import { resolveSdkKey } from '../packages/identity/src/contracts/auth-config.js';
+import { renderDiagnosticError } from './errors/index.js';
 
 const VERSION = pkg.version;
+
+function reportCliError(error) {
+  if (error?.reported) return;
+  const rendered = renderDiagnosticError(error).split('\n').map((line) => `  ${line}`).join('\n');
+  console.error(`\n${rendered}\n`);
+}
 
 function createPrompt() {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -77,7 +86,9 @@ function printHelp() {
     agentsam security          Dependency scan, log triage, and verified repair (--help)
     agentsam status [--json]   Live local Git + DB + API + PTY status
     agentsam db init|status    Manage the project-local SQLite database
-    agentsam models            Show configured providers and local model inventory
+    agentsam models            Verify configured providers and selectable hosted/local models
+    agentsam eval context      Offline context-strategy/economics fixtures (--help)
+    agentsam cloudflare        Native Wrangler reads + Worker CPU profile analysis (--help)
     agentsam start-local       Local PTY on ws://127.0.0.1:3099 (no tunnel, no Cloudflare)
     agentsam ollama            Opt-in local Ollama setup/status/model management
     agentsam shell             Interactive Agent Sam slash-command shell
@@ -300,7 +311,7 @@ if (command === '--version' || command === '-v') {
     try { await runInteractive(); }
     catch (e) {
       if (e?.code !== 'AGENTSAM_SETUP_CANCELLED') {
-        console.error(`\n  ✗ ${e?.message || e}\n`);
+        reportCliError(e);
         process.exitCode = 1;
       }
     }
@@ -318,52 +329,66 @@ if (command === '--version' || command === '-v') {
       applyPresetSelection(created.dir, preset);
       console.log(`  ✓ Preset      ${preset.id}\n  ✓ Features    ${preset.features.join(', ') || 'none'}\n  ✓ Capabilities ${preset.capabilities.length}\n`);
     }
-  } catch (e) { console.error(`\n  ✗ ${e?.message || e}\n`); process.exitCode = 1; }
+  } catch (e) { reportCliError(e); process.exitCode = 1; }
 } else if (command === 'add') {
   try { await runAdd(rest); }
-  catch (e) { console.error(`\n  ✗ ${e?.message || e}\n`); process.exitCode = 1; }
+  catch (e) { reportCliError(e); process.exitCode = 1; }
 } else if (command === 'dev') {
   try { await runDev(rest); }
-  catch (e) { console.error(`\n  ✗ ${e?.message || e}\n`); process.exitCode = 1; }
+  catch (e) { reportCliError(e); process.exitCode = 1; }
 } else if (command === 'inspect') {
   try { await runInspect(rest); }
-  catch (e) { console.error(`\n  ✗ ${e?.message || e}\n`); process.exitCode = 1; }
+  catch (e) { reportCliError(e); process.exitCode = 1; }
 } else if (command === 'capabilities') {
   try { await runCapabilities(rest); }
-  catch (e) { console.error(`\n  ✗ ${e?.message || e}\n`); process.exitCode = 1; }
+  catch (e) { reportCliError(e); process.exitCode = 1; }
 } else if (command === 'context') {
   try {
     await runContext(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exit(1);
   }
 } else if (command === 'status') {
   try {
     await runStatus(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exit(1);
   }
 } else if (command === 'db') {
   try {
     await runDb(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exit(1);
   }
 } else if (command === 'models') {
   try {
     await runModels(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exit(1);
+  }
+} else if (command === 'eval') {
+  try {
+    await runEval(rest);
+  } catch (e) {
+    reportCliError(e);
+    process.exit(1);
+  }
+} else if (command === 'cloudflare' || command === 'cf') {
+  try {
+    await runCloudflare(rest);
+  } catch (e) {
+    if (!e?.reported) reportCliError(e);
+    process.exitCode = 1;
   }
 } else if (command === 'shell') {
   try {
     await runShell(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exit(1);
   }
 } else if (command === 'start-local') {
@@ -372,42 +397,42 @@ if (command === '--version' || command === '-v') {
   try {
     await runOllama(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exitCode = 1;
   }
 } else if (command === 'tunnel') {
   try {
     await runTunnel(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exit(1);
   }
 } else if (command === 'connections' || command === 'connection') {
   try {
     await runConnections(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exit(1);
   }
 } else if (command === 'deploy') {
   try {
     await runDeploy(parseDeployArgs(rest));
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exit(1);
   }
 } else if (command === 'dockerize') {
   try {
     await runDockerize(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exit(1);
   }
 } else if (command === 'cad') {
   try {
     await runCad(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exitCode = 1;
   }
 } else if (command === 'security' || command === 'sca') {
@@ -416,7 +441,7 @@ if (command === '--version' || command === '-v') {
   try {
     runSkills(rest);
   } catch (e) {
-    console.error(`\n  ✗ ${e?.message || e}\n`);
+    reportCliError(e);
     process.exitCode = 1;
   }
 } else if (command === 'merkle') {
@@ -429,14 +454,14 @@ if (command === '--version' || command === '-v') {
   try {
     await runMini(rest);
   } catch (e) {
-    console.error(`\n  ${e?.message || e}\n`);
+    reportCliError(e);
     process.exitCode = 1;
   }
 } else if (['index', 'search', 'repo'].includes(command)) {
   try {
     const commands = await import('./commands/knowledge.js');
     await ({ index: commands.runKnowledge, search: commands.runSearch, repo: commands.runRepository })[command](rest);
-  } catch (e) { console.error(e.message); process.exitCode = 1; }
+  } catch (e) { reportCliError(e); process.exitCode = 1; }
 } else if (command === 'init') {
   try {
     const existing = !rest.includes('--name') && (rest.includes('.') || rest.includes('--existing') || rest.includes('--cwd') || fs.existsSync(path.join(repositoryRoot(), '.git')));
@@ -444,21 +469,21 @@ if (command === '--version' || command === '-v') {
     else if (rest.includes('--help') || rest.includes('-h')) printHelp();
     else if (rest.some((a) => a.startsWith('--'))) await initFromArgs(rest);
     else await initInteractive({});
-  } catch (e) { console.error(e.message); process.exitCode = 1; }
+  } catch (e) { reportCliError(e); process.exitCode = 1; }
 } else if (command === 'identity') {
   const sub = rest[0];
   if (sub === 'preview') {
     try {
       await runIdentityPreview(rest.slice(1));
     } catch (e) {
-      console.error(`\n  ✗ ${e?.message || e}\n`);
+      reportCliError(e);
       process.exit(1);
     }
   } else if (sub === 'init') {
     try {
       await runIdentityInit(rest);
     } catch (e) {
-      console.error(`\n  ✗ ${e?.message || e}\n`);
+      reportCliError(e);
       process.exit(1);
     }
   } else {

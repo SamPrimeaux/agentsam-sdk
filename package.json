@@ -50,6 +50,12 @@
     "./context": "./src/context/index.js",
     "./indexing": "./src/indexing/index.js",
     "./tools": "./src/tools/index.js",
+    "./models": "./src/models/index.js",
+    "./telemetry": "./src/telemetry/index.js",
+    "./providers": "./src/providers/index.js",
+    "./errors": "./src/errors/index.js",
+    "./cloudflare": "./src/cloudflare/index.js",
+    "./eval": "./src/eval/index.js",
     "./context/result-policy-schema": "./protocol/context/result-policy.schema.json",
     "./context/budget-schema": "./protocol/context/context-budget.schema.json",
     "./context/pack-schema": "./protocol/context/resolved-context-pack.schema.json",
@@ -65,6 +71,7 @@
   "files": [
     "src",
     "packages/identity",
+    "packages/connectors/cloudflare",
     "templates",
     "docs",
     "examples",
@@ -79,7 +86,8 @@
     "bin",
     "README.md",
     "LICENSE",
-    "DEVELOPMENT.md"
+    "DEVELOPMENT.md",
+    "AGENTSAM.md"
   ],
   "workspaces": [
     "packages/agentsam-shell-kit",

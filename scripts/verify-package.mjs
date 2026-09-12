@@ -26,15 +26,22 @@ for (const [exportKey, target] of Object.entries(pkg.exports || {})) {
   assert.ok(existsSync(join(root, target)), `public export target missing: ${target}`);
 }
 
-assert.equal(pkg.bin?.agentsam, 'src/cli.js');
+assert.equal(pkg.bin?.agentsam, 'bin/agentsam');
 assert.equal(
   pkg.bin?.['agentsam-sdk'],
-  'src/cli.js',
+  'bin/agentsam',
   'package-name bin alias is required so `npx @inneranimalmedia/agentsam-sdk` can select an executable',
 );
-assert.ok(readFileSync(join(root, pkg.bin.agentsam), 'utf8').startsWith('#!/usr/bin/env node'));
+const agentsamBin = readFileSync(join(root, pkg.bin.agentsam), 'utf8');
+assert.ok(agentsamBin.startsWith('#!/usr/bin/env node'), 'agentsam bin must be directly executable by Node');
+assert.match(agentsamBin, /import ['"]\.\.\/src\/cli\.js['"];/, 'agentsam bin wrapper must delegate to the canonical CLI entry');
 assert.ok(pkg.files?.includes('src'), 'published files must include src');
 assert.ok(pkg.files?.includes('packages/identity'), 'published files must include identity workspace');
+assert.ok(
+  pkg.files?.includes('packages/connectors/cloudflare') && existsSync(join(root, 'packages/connectors/cloudflare/src/index.js')),
+  'published files must include the Cloudflare connector imported by the CLI',
+);
+assert.ok(pkg.files?.includes('AGENTSAM.md') && existsSync(join(root, 'AGENTSAM.md')), 'published files must include the stable AgentSam runtime contract');
 assert.equal(identity.private, true, 'identity is distributed through the root SDK, not separately published');
 for (const file of ['services/knowledge/package.json', 'services/knowledge/package-lock.json']) {
   assert.ok(pkg.files.includes(file) && existsSync(join(root, file)), `missing knowledge service runtime asset: ${file}`);

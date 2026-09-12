@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import { scanProjectSecurity, reportExitCode, repairProject, formatSecurityReport } from '../security/index.js';
 import { runProcess } from '../security/process.js';
+import { diagnosticFromError, renderDiagnosticError } from '../errors/index.js';
 
 const help = [
   'Agent Sam · security',
@@ -63,9 +64,10 @@ export async function runSecurity(argv) {
     }
     process.stdout.write(options.json ? JSON.stringify(report, null, 2) + '\n' : formatSecurityReport(report, { color: Boolean(process.stdout.isTTY && !process.env.NO_COLOR) }));
     process.exitCode = reportExitCode(report);
-  } catch {
-    const report = { schema_version: 1, ok: false, complete: false, status: 'error', error: 'Security operation failed. Check command options, manifest/log validity, network access, and Git prerequisites. Use --help.' };
-    process.stdout.write(options.json ? JSON.stringify(report) + '\n' : report.error + '\n');
+  } catch (error) {
+    const diagnostic = diagnosticFromError(error, { source: 'security', kind: 'security_operation_error' });
+    const report = { schema_version: 1, ok: false, complete: false, status: 'error', error: diagnostic };
+    process.stdout.write(options.json ? JSON.stringify(report) + '\n' : `${renderDiagnosticError(error)}\n`);
     process.exitCode = 2;
   }
 }

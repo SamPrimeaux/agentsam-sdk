@@ -55,9 +55,12 @@ await assert.rejects(() => finalizeInboundOAuth({}, new Request('https://x'), {}
 assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/deploy'));
 assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/db'));
 assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/agent'));
+assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/model'));
+assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/reasoning'));
+assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/fast'));
 assert.deepEqual(
   listSlashCommands({ lane: 'deploy' }).map(({ cmd }) => cmd),
-  ['/help', '/models', '/settings', '/deploy', '/exit'],
+  ['/settings', '/deploy', '/help', '/exit'],
   'deploy lane keeps global shell controls and excludes commands from other lanes',
 );
 
