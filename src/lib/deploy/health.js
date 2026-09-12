@@ -1,4 +1,5 @@
 export const DEFAULT_HEALTH_ORIGIN = 'https://agentsam.inneranimalmedia.com';
+export const HEALTH_USER_AGENT = 'AgentSam-deploy-health/1';
 
 export function parseWranglerVersionId(output = '') {
   const text = String(output || '');
@@ -24,7 +25,13 @@ export async function probeDeployHealth(origin, { fetchImpl = globalThis.fetch, 
   for (const p of paths) {
     const url = `${String(origin).replace(/\/+$/, '')}${p}`;
     try {
-      const res = await fetchImpl(url, { redirect: 'manual' });
+      const res = await fetchImpl(url, {
+        redirect: 'manual',
+        headers: {
+          'User-Agent': HEALTH_USER_AGENT,
+          Accept: 'application/json,text/html,*/*',
+        },
+      });
       let body = null;
       if (p === '/health') {
         try { body = await res.json(); } catch { body = null; }

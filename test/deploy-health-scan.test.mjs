@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { scanTextForSecrets } from '../src/lib/deploy/secret-scan.js';
-import { parseWranglerVersionId, probeDeployHealth, resolveHealthOrigin } from '../src/lib/deploy/health.js';
+import { HEALTH_USER_AGENT, parseWranglerVersionId, probeDeployHealth, resolveHealthOrigin } from '../src/lib/deploy/health.js';
 
 describe('deploy secret scan', () => {
   it('allows fixture oauth values', () => {
@@ -48,5 +48,20 @@ describe('deploy health', () => {
     assert.equal(health.ok, true);
     assert.equal(health.results['/health'].appOk, true);
     assert.equal(health.results['/health'].cloudflareConfigured, false);
+  });
+
+  it('sends a browser-safe User-Agent so WAF does not 403 the probe', async () => {
+    const seen = [];
+    const fetchImpl = async (url, init = {}) => {
+      seen.push({ url, init });
+      return {
+        status: 200,
+        json: async () => ({ ok: true, connections: { cloudflare: { configured: false } } }),
+      };
+    };
+    await probeDeployHealth('https://agentsam.inneranimalmedia.com', { fetchImpl, paths: ['/health'] });
+    assert.equal(seen.length, 1);
+    assert.equal(seen[0].init.headers['User-Agent'], HEALTH_USER_AGENT);
+    assert.match(seen[0].init.headers.Accept, /application\/json/);
   });
 });

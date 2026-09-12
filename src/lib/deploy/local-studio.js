@@ -12,6 +12,7 @@ export const DEPLOY_INPUT_GLOBS = Object.freeze([
   'apps/local-studio',
   'packages/agentsam-contracts',
   'packages/agentsam-workbench',
+  'packages/connectors/cloudflare',
 ]);
 
 export function findRepoRoot(start = process.cwd()) {

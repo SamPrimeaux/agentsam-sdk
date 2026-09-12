@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
+  DEPLOY_INPUT_GLOBS,
   loadOptionalCloudflareEnv,
   resolveLocalStudioDeployable,
   wranglerDeployCommand,
@@ -27,6 +28,11 @@ describe('local-studio deploy resolver', () => {
     assert.equal(cmd.bin, 'npx');
     assert.equal(cmd.cwd, target.appRoot);
     assert.deepEqual(cmd.args, ['wrangler', 'deploy', '-c', 'backend/wrangler.jsonc', '--dry-run']);
+  });
+
+  it('fingerprints the cloudflare connector package', () => {
+    assert.equal(DEPLOY_INPUT_GLOBS.includes('packages/connectors/cloudflare'), true);
+    assert.equal(DEPLOY_INPUT_GLOBS.includes('apps/local-studio'), true);
   });
 
   it('treats missing .env.cloudflare as optional', () => {
