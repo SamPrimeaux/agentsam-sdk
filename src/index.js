@@ -50,6 +50,8 @@ export {
   resolveProjectContext,
   compactConsumedToolResult,
   loadProjectRules,
+  compileAgentInstructions,
+  AGENT_INSTRUCTION_PRECEDENCE,
 } from './context/index.js';
 export {
   assertRepositoryKnowledgeProvider,
