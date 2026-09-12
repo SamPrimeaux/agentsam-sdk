@@ -49,6 +49,7 @@ export {
   resolveContext,
   resolveProjectContext,
   compactConsumedToolResult,
+  rehydrateContextRef,
   loadProjectRules,
   compileAgentInstructions,
   AGENT_INSTRUCTION_PRECEDENCE,
