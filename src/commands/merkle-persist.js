@@ -57,7 +57,7 @@ function parse(args) {
     if (arg === '--dry-run') { opts.dryRun = true; continue; }
     if (arg === '--r2-only') { opts.r2Only = true; continue; }
     const map = {
-      '--wrangler-config': 'wranglerConfig', '--account-id': 'accountId', '--repository-id': 'repositoryId',
+      '--wrangler-config': 'wranglerConfig',
       '--capture-kind': 'captureKind', '--connection-id': 'connectionId', '--runtime-lease-id': 'runtimeLeaseId',
       '--deployment-id': 'deploymentId', '--worker-version': 'workerVersionId', '--reference-label': 'referenceLabel',
       '--source': 'source', '--prefix': 'storagePrefix', '--r2-binding': 'r2Binding', '--d1-binding': 'd1Binding',
