@@ -66,6 +66,27 @@ function parseJsonOutput(text) {
   try { return JSON.parse(source); } catch { return null; }
 }
 
+function stripAnsi(value) { return String(value || '').replace(/\x1b\[[0-?]*[ -\/]*[@-~]/g, ''); }
+function nestedError(payload) {
+  if (!payload || typeof payload !== 'object') return null;
+  const rows = [payload.error, ...(Array.isArray(payload.errors) ? payload.errors : [])].filter((row) => row && typeof row === 'object');
+  return rows[0] || payload;
+}
+
+export function parseWranglerErrorEvidence(stderr = '', stdout = '') {
+  const errorText = stripAnsi(stderr);
+  const outputText = stripAnsi(stdout);
+  let payload = parseJsonOutput(outputText) || parseJsonOutput(errorText);
+  const error = nestedError(payload);
+  const combined = `${errorText}\n${outputText}`;
+  const regexCode = combined.match(/\[code:\s*([A-Za-z0-9_.:-]+)\]/i)?.[1] || combined.match(/\bcode[:=\s]+([A-Za-z0-9_.:-]+)/i)?.[1] || '';
+  const code = clean(error?.code || regexCode) || null;
+  const requestId = clean(error?.request_id || error?.requestId || combined.match(/\brequest[_ -]?id[:=\s]+([A-Za-z0-9_-]+)/i)?.[1]) || null;
+  const rayId = clean(error?.ray_id || error?.rayId || combined.match(/\b(?:cf[- ]?ray|ray id)[:=\s]+([A-Za-z0-9-]+)/i)?.[1]) || null;
+  const message = clean(error?.message || error?.error || errorText.split('\n').find((line) => clean(line)) || outputText.split('\n').find((line) => clean(line))) || 'Wrangler operation failed';
+  return Object.freeze({ code, request_id: requestId, ray_id: rayId, message, details: payload ? redactDiagnosticValue(payload) : null });
+}
+
 export async function runWranglerNative(id, input = {}, options = {}) {
   const plan = buildWranglerInvocation(id, input);
   const runner = options.run || runProcess;
