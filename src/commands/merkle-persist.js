@@ -35,10 +35,11 @@ export function printMerklePersistHelp() {
   --dry-run                   Resolve bindings and emit the exact storage/index plan without writes
   --json                      Machine-readable output
 
-  The SDK never infers account or repository authority. Hosts must pass authenticated account_id
-  and the canonical repository_id from their repository registry. Physical bucket/database names
-  come from Wrangler bindings, so customer installs keep
-  WEBSITE_ASSETS/DB while selecting their own storage resources.
+  CLI ownership comes from the authenticated AgentSam session, while repository identity is
+  derived from Git/provider identity (with the committed project manifest as local fallback).
+  Programmatic hosts pass account_id + repository_id directly to the persistence plan. Physical
+  bucket/database names come from Wrangler bindings, so customer installs keep WEBSITE_ASSETS/DB
+  while selecting their own storage resources.
 `);
 }
 
