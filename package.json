@@ -81,7 +81,8 @@
     "bin",
     "README.md",
     "LICENSE",
-    "DEVELOPMENT.md"
+    "DEVELOPMENT.md",
+    "AGENTSAM.md"
   ],
   "workspaces": [
     "packages/agentsam-shell-kit",
