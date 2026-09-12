@@ -95,6 +95,7 @@ export async function runMerklePersist(args = []) {
   const snapshotPath = path.resolve(opts.snapshotPath);
   const snapshot = await readSnapshot(snapshotPath);
   const root = path.resolve(opts.root || snapshot.rootPath || process.cwd());
+  const identity = resolveMerklePersistenceIdentity(root);
   const wrangler = resolveWranglerMerklePersistence({
     configPath: opts.wranglerConfig,
     environment: opts.environment || null,
