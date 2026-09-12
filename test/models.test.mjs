@@ -9,7 +9,14 @@ function response(body, status = 200) {
   return { ok: status >= 200 && status < 300, status, async json() { return body; } };
 }
 
-test('model inventory reports configured API providers without exposing credentials', async () => {
+function tempHome(t) {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-model-home-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  return home;
+}
+
+test('model inventory reports configured API providers without exposing credentials', async t => {
+  const home = tempHome(t);
   const status = await collectModelsStatus({
     discoverRemote: false,
     env: {
