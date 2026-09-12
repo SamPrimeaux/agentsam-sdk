@@ -293,7 +293,9 @@ export async function dispatchShellLine(line, state = {}) {
         return { handled: false, exit: false, cwd: state.cwd };
     }
   } catch (error) {
-    writeLine(write, `  ✗ ${error?.message || error}`);
+    if (!error?.reported) {
+      for (const line of renderDiagnosticError(error).split('\n')) writeLine(write, `  ${line}`);
+    }
   }
   return { handled: true, exit: false, cwd: state.cwd };
 }
