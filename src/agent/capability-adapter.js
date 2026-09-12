@@ -43,7 +43,7 @@ export function createCapabilityAdapter({ handlers = {}, reasoner } = {}) {
         name: row.id,
         description: row.description,
         category: row.domain,
-        risk: row.side_effects === 'none' ? 'read' : 'write',
+        risk: row.side_effects === 'none' || row.side_effects === 'network-read' ? 'read' : 'write',
         input_schema: loadSchema(row.input_schema),
         side_effects: row.side_effects,
         deterministic: row.deterministic,
