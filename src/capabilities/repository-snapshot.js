@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import { resolveGitContext } from '../../packages/agentsam-repository/src/git-context.js';
 import { getRepositoryId, tryReadProjectConfig } from '../lib/project-config.js';
 import { buildMerkleTree } from '../../packages/agentsam-repository/src/merkle/index.js';
-import { gitIgnoredPaths } from '../lib/merkle/git-ignore.js';
+import { gitIgnoredPaths } from '../../packages/agentsam-repository/src/merkle/git-ignore.js';
 import { analyzeExecutionBoundaries } from '../indexing/execution-boundary.js';
 import { showLatestDeployReceipt } from '../lib/deploy-receipt/index.js';
 import { CONFIG_PATH, canonical, readConfig, scopeKey } from '../knowledge/config.js';
