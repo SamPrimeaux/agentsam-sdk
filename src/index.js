@@ -71,6 +71,18 @@ export {
   createAgentEvent,
   createUsageSnapshot,
 } from './telemetry/index.js';
+export {
+  createOpenAIResponsesAdapter,
+  extractOpenAIOutputText,
+  extractOpenAIFunctionCalls,
+} from './providers/index.js';
+export {
+  createCapabilityAdapter,
+  buildAgentToolSurface,
+  capabilityFunctionName,
+  runResponsesAgent,
+} from './agent/index.js';
+export { listContextEvalFixtures, evaluateContextFixture } from './eval/index.js';
 
 export {
   createIdentityClient,
