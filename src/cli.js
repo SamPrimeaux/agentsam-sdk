@@ -38,8 +38,15 @@ import { listPresets, resolvePreset } from './presets/index.js';
 import fs from 'node:fs';
 import { repositoryRoot } from './knowledge/config.js';
 import { resolveSdkKey } from '../packages/identity/src/contracts/auth-config.js';
+import { renderDiagnosticError } from './errors/index.js';
 
 const VERSION = pkg.version;
+
+function reportCliError(error) {
+  if (error?.reported) return;
+  const rendered = renderDiagnosticError(error).split('\n').map((line) => `  ${line}`).join('\n');
+  console.error(`\n${rendered}\n`);
+}
 
 function createPrompt() {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
