@@ -67,8 +67,6 @@ function parse(args) {
     throw new Error(`Unknown merkle persist option: ${arg}`);
   }
   if (!opts.snapshotPath) throw new Error('snapshot_file_required');
-  opts.accountId ||= process.env.AGENTSAM_ACCOUNT_ID || '';
-  opts.repositoryId ||= process.env.AGENTSAM_REPOSITORY_ID || '';
   opts.wranglerConfig ||= process.env.AGENTSAM_WRANGLER_CONFIG || '';
   opts.connectionId ||= process.env.AGENTSAM_CONNECTION_ID || '';
   opts.runtimeLeaseId ||= process.env.AGENTSAM_RUNTIME_LEASE_ID || '';
