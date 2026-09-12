@@ -35,6 +35,7 @@ import { runEval } from './commands/eval.js';
 import { runCloudflare } from './commands/cloudflare.js';
 import { runWhoami } from './commands/whoami.js';
 import { runResume } from './commands/resume.js';
+import { runLogin, runLogout } from './commands/account-auth.js';
 import { applyPresetSelection, runAdd, runCapabilities, runDev, runInspect } from './commands/product.js';
 import { listPresets, resolvePreset } from './presets/index.js';
 import fs from 'node:fs';
