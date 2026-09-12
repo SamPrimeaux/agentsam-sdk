@@ -224,7 +224,7 @@ async function runLocalInit(config) {
     console.log(`    ${step}`);
   }
 
-  const sdkKey = resolveSdkKey(process.env);
+  const sdkKey = resolveAccountSdkKey({ env: process.env }).value;
   if (prompt && sdkKey) {
     console.log('\n  Optional — BYOK keys for IAM dashboard Agent Sam (skip with Enter):\n');
     await promptOptionalByokKeys(sdkKey, prompt);
