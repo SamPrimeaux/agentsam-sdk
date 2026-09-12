@@ -233,7 +233,7 @@ export function merklePersistenceUpsertSql(row) {
   capture_kind, deployment_id, worker_version_id, reference_label,
   created_at, persisted_at, metadata_root, classifier_format, classifier_version, classifier_source
 ) VALUES (
-  ${sqlText(row.snapshot_id)}, ${sqlText(row.owner_user_id)}, ${sqlText(row.repo_id)}, ${sqlText(row.repository)}, ${sqlText(row.source)},
+  ${sqlText(row.snapshot_id)}, ${sqlText(row.account_id)}, ${sqlText(row.repository_id)}, ${sqlText(row.repository)}, ${sqlText(row.source)},
   ${sqlText(row.manifest_format)}, ${sqlInt(row.manifest_version)}, ${sqlText(row.hash_algorithm)}, ${sqlText(row.root_hash)}, ${sqlText(row.policy_hash)},
   ${sqlText(row.resolved_commit_sha)}, ${sqlText(row.resolved_tree_sha)}, ${sqlText(row.git_branch)}, ${sqlInt(row.working_tree_dirty)},
   ${sqlText(row.connection_id)}, ${sqlText(row.runtime_lease_id)}, ${sqlText(row.storage_backend)}, ${sqlText(row.storage_bucket)}, ${sqlText(row.storage_key)},
