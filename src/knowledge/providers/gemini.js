@@ -1,6 +1,11 @@
+import { AgentSamError, classifyGeminiFailure } from '../../errors/index.js';
+
 /** Gemini Embedding 2 adapter; profile is supplied per job, never read globally. */
 export function createGeminiEmbedder({ apiKey, fetchImpl = globalThis.fetch, sleep = ms => new Promise(r => setTimeout(r, ms)), maxAttempts = 3, timeoutMs = 30000 } = {}) {
-  if (!apiKey) throw new Error('GEMINI_API_KEY is required only for embedding/search with --semantic.');
+  if (!apiKey) throw new AgentSamError(classifyGeminiFailure({
+    credential_state: 'missing',
+    message: 'GEMINI_API_KEY is required only for embedding/search with --semantic.',
+  }, { domain: 'knowledge', tool: 'gemini', stage: 'embedding' }));
   if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 5) throw new Error('maxAttempts must be 1..5.');
   return {
     validate(profile) {
