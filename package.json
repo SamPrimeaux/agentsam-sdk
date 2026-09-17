@@ -170,7 +170,9 @@
   },
   "homepage": "https://github.com/SamPrimeaux/agentsam-sdk#readme",
   "allowScripts": {
-    "node-pty@1.1.0": true
+    "node-pty@1.1.0": true,
+    "grpc-tools@1.13.1": true,
+    "protobufjs@7.6.6": true
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",
