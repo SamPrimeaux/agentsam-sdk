@@ -41,7 +41,7 @@ function reasonFromGenericEvidence(evidence = {}) {
   if (status === 401 || /invalid[_ -]?(api[_ -]?)?key|authentication_error|unauthenticated/.test(text)) return ERROR_REASON.PROVIDER_CREDENTIAL_INVALID;
   if (status === 403 || /permission|forbidden|scope/.test(text)) return ERROR_REASON.PROVIDER_SCOPE_INSUFFICIENT;
   if (status === 429 || /rate[_ -]?limit|too many requests|slow[_ -]?down/.test(text)) return ERROR_REASON.PROVIDER_RATE_LIMITED;
-  if (status === 503 || status === 529 || /overload|overloaded|capacity/.test(text)) return ERROR_REASON.PROVIDER_OVERLOADED;
+  if (status === 529 || /overload|overloaded|capacity/.test(text)) return ERROR_REASON.PROVIDER_OVERLOADED;
   if (status >= 500) return ERROR_REASON.PROVIDER_UNAVAILABLE;
   if (status === 404) return ERROR_REASON.TARGET_NOT_FOUND;
   if (status === 400 || status === 409 || status === 422) return ERROR_REASON.PROVIDER_REQUEST_INVALID;
