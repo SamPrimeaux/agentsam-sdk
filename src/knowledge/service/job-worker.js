@@ -33,7 +33,15 @@ process.once('message', async ({ root, config, filename, request, maxFiles }) =>
       const generation = request.generation_id ? await store.getGeneration(scopeKey(config), request.generation_id) : await store.active(scopeKey(config));
       const under = (file, selection) => selection === '.' || file === selection || file.startsWith(selection + '/');
       if (generation?.files.some(file => !config.scope.include.some(p => under(file.path, p)) || config.scope.exclude.some(p => under(file.path, p)))) {
-        throw new Error('Generation exceeds the requested scope; select a matching scope or reindex.');
+        throw new AgentSamError(createErrorEnvelope({
+          reason: ERROR_REASON.PRECONDITION_FAILED,
+          message: 'Generation exceeds the requested scope; select a matching scope or reindex.',
+          source: { kind: 'user', name: 'knowledge_request' },
+          domain: 'knowledge',
+          stage: 'search',
+          remediation: { action: 'change_configuration', message: 'Select a matching indexed scope or reindex the requested scope.' },
+          resource: { type: 'repository', id: config.repository_id || null },
+        }));
       }
       result = await retrieve({ store, config, text: request.query, semantic: request.semantic, embedder,
         topK: request.top_k, tokenBudget: request.token_budget, generationId: request.generation_id });
