@@ -1,3 +1,5 @@
+import { AgentSamError, fromHttpError } from '../../errors/index.js';
+
 /** Fetch-only client: safe to import in Cloudflare Workers; no Node runtime dependencies. */
 export function createKnowledgeServiceClient({ baseUrl, token, fetchImpl = globalThis.fetch, timeoutMs = 15000 } = {}) {
   const url = new URL(baseUrl);
