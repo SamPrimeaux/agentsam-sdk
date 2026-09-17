@@ -6,12 +6,15 @@ export function createGeminiEmbedder({ apiKey, fetchImpl = globalThis.fetch, sle
     credential_state: 'missing',
     message: 'GEMINI_API_KEY is required only for embedding/search with --semantic.',
   }, { domain: 'knowledge', tool: 'gemini', stage: 'embedding' }));
-  if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 5) throw new Error('maxAttempts must be 1..5.');
+  if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 5) throw new AgentSamError(classifyGeminiFailure({
+    status: 400,
+    message: 'maxAttempts must be 1..5.',
+  }, { domain: 'knowledge', tool: 'gemini', stage: 'configuration', request_origin: 'user' }));
   return {
     validate(profile) {
-      if (profile.provider !== 'gemini' || profile.model !== 'gemini-embedding-2') throw new Error('This adapter supports gemini-embedding-2; inject a different adapter for other models.');
-      if (profile.dimensions < 128 || profile.dimensions > 3072) throw new Error('Gemini Embedding 2 dimensions must be 128..3072.');
-      if (Object.keys(profile.parameters).some(k => k !== 'task') || !['code retrieval', 'search result', 'question answering'].includes(profile.parameters.task)) throw new Error('Unsupported Gemini embedding parameters.');
+      if (profile.provider !== 'gemini' || profile.model !== 'gemini-embedding-2') throw new AgentSamError(classifyGeminiFailure({ status: 400, message: 'This adapter supports gemini-embedding-2; inject a different adapter for other models.' }, { domain: 'knowledge', tool: 'gemini', stage: 'configuration', request_origin: 'user' }));
+      if (profile.dimensions < 128 || profile.dimensions > 3072) throw new AgentSamError(classifyGeminiFailure({ status: 400, message: 'Gemini Embedding 2 dimensions must be 128..3072.' }, { domain: 'knowledge', tool: 'gemini', stage: 'configuration', request_origin: 'user' }));
+      if (Object.keys(profile.parameters).some(k => k !== 'task') || !['code retrieval', 'search result', 'question answering'].includes(profile.parameters.task)) throw new AgentSamError(classifyGeminiFailure({ status: 400, message: 'Unsupported Gemini embedding parameters.' }, { domain: 'knowledge', tool: 'gemini', stage: 'configuration', request_origin: 'user' }));
     },
     async embed(text, profile, { kind = 'document' } = {}) {
       this.validate(profile);
