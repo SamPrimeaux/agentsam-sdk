@@ -8,6 +8,11 @@ import {
   defaultHttpStatusForCode,
   grpcStatusForCode,
 } from '../../errors/contract.js';
+import {
+  AgentSamError,
+  isErrorEnvelope,
+  normalizeError,
+} from '../../errors/index.js';
 
 const require = createRequire(import.meta.url);
 const knowledgePb = require('../../rpc/generated/knowledge_pb.js');
