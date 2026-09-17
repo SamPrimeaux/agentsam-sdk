@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package agentsam.knowledge.v1;
+
+service KnowledgeService {
+  rpc ListRepositories(ListRepositoriesRequest) returns (ListRepositoriesResponse);
+  rpc SubmitJob(SubmitJobRequest) returns (KnowledgeJob);
+  rpc GetJob(GetJobRequest) returns (KnowledgeJob);
+  rpc WatchJob(WatchJobRequest) returns (stream KnowledgeJobEvent);
+}
+
+message ListRepositoriesRequest {}
+
+message ListRepositoriesResponse {
+  repeated string repositories = 1;
+  bool embeddings_enabled = 2;
+}
+
+message SubmitJobRequest {
+  string repository = 1;
+  string operation = 2;
+  optional string scope = 3;
+  repeated string include = 4;
+  repeated string exclude = 5;
+  optional bool embed = 6;
+  optional bool semantic = 7;
+  optional string query = 8;
+  optional uint32 top_k = 9;
+  optional uint32 token_budget = 10;
+  optional string generation_id = 11;
+  optional uint32 max_inputs = 12;
+  optional uint32 max_characters = 13;
+}
+
+message GetJobRequest {
+  string id = 1;
+}
+
+message WatchJobRequest {
+  string id = 1;
+}
+
+message KnowledgeJob {
+  string id = 1;
+  string status = 2;
+  uint32 attempts = 3;
+  string created_at = 4;
+  string updated_at = 5;
+  optional string result_json = 6;
+  optional string error = 7;
+}
+
+message KnowledgeJobEvent {
+  KnowledgeJob job = 1;
+  string phase = 2;
+}
