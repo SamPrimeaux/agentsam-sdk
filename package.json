@@ -58,6 +58,8 @@
     "./telemetry": "./src/telemetry/index.js",
     "./providers": "./src/providers/index.js",
     "./errors": "./packages/agentsam-errors/src/index.js",
+    "./errors/schema": "./protocol/errors/error-envelope.schema.json",
+    "./errors/catalog": "./protocol/errors/error-catalog.json",
     "./cloudflare": "./src/cloudflare/index.js",
     "./eval": "./src/eval/index.js",
     "./context/result-policy-schema": "./protocol/context/result-policy.schema.json",
