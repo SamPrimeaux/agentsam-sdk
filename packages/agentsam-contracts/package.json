@@ -15,7 +15,8 @@
     "./adapter": "./src/adapter.ts",
     "./models": "./src/models.ts",
     "./identity": "./src/identity.ts",
-    "./repository": "./src/repository.ts"
+    "./repository": "./src/repository.ts",
+    "./errors": "./src/errors.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
