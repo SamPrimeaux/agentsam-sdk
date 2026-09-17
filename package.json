@@ -76,6 +76,8 @@
   "files": [
     "src",
     "packages/identity",
+    "packages/agentsam-contracts",
+    "packages/agentsam-errors",
     "packages/agentsam-repository",
     "packages/connectors/cloudflare",
     "templates",
