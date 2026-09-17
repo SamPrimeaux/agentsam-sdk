@@ -52,6 +52,84 @@ function jobId(value) {
   id.setValue(value || '');
   return id;
 }
+function json(value) { return value == null ? '' : JSON.stringify(value); }
+function parseJson(value) {
+  if (!value) return null;
+  try { return JSON.parse(value); } catch { return null; }
+}
+
+export function encodeErrorDetail(value) {
+  const envelope = isErrorEnvelope(value) ? value : normalizeError(value);
+  const detail = new errorsPb.ErrorDetail();
+  detail.setCode(protoErrorCode(envelope.code));
+  detail.setMessage(envelope.message);
+  detail.setRetryable(envelope.retryable);
+  detail.setReason(envelope.reason);
+  if (envelope.http_status != null) detail.setHttpStatus(envelope.http_status);
+  if (envelope.retry_after_ms != null) detail.setRetryAfterMs(envelope.retry_after_ms);
+  if (envelope.provider) detail.setProvider(envelope.provider);
+  if (envelope.provider_code) detail.setProviderCode(envelope.provider_code);
+  detail.setSeverity(envelope.severity);
+  detail.setSourceKind(envelope.source.kind);
+  detail.setSourceName(envelope.source.name);
+  if (envelope.source.service) detail.setSourceService(envelope.source.service);
+  detail.setResolutionOwner(envelope.resolution_owner);
+  detail.setDomain(envelope.domain);
+  if (envelope.tool) detail.setTool(envelope.tool);
+  if (envelope.stage) detail.setStage(envelope.stage);
+  detail.setRemediationAction(envelope.remediation.action);
+  if (envelope.remediation.message) detail.setRemediationMessage(envelope.remediation.message);
+  detail.setFingerprint(envelope.fingerprint);
+  if (envelope.trace_id) detail.setTraceId(envelope.trace_id);
+  if (envelope.transport) detail.setTransport(envelope.transport);
+  if (envelope.resource) detail.setResourceJson(json(envelope.resource));
+  if (envelope.native) detail.setNativeJson(json(envelope.native));
+  if (envelope.environment) detail.setEnvironmentJson(json(envelope.environment));
+  if (envelope.details != null) detail.setDetailsJson(json(envelope.details));
+  detail.setOccurrenceCount(envelope.occurrence_count || 1);
+  if (envelope.request_id) detail.setRequestId(envelope.request_id);
+  detail.setSchemaVersion(envelope.schema_version || 1);
+  return detail;
+}
+
+export function decodeErrorDetail(detail) {
+  if (!detail) return null;
+  const code = errorCodeNames.get(detail.getCode()) || ERROR_CODE.UNKNOWN;
+  const provider = detail.hasProvider?.() ? detail.getProvider() : null;
+  return createErrorEnvelope({
+    code,
+    reason: detail.getReason?.() || ERROR_REASON.UNKNOWN,
+    message: detail.getMessage?.() || 'Operation failed',
+    retryable: detail.getRetryable?.() || false,
+    retry_after_ms: detail.hasRetryAfterMs?.() ? detail.getRetryAfterMs() : null,
+    http_status: detail.hasHttpStatus?.() ? detail.getHttpStatus() : defaultHttpStatusForCode(code),
+    provider,
+    provider_code: detail.hasProviderCode?.() ? detail.getProviderCode() : null,
+    severity: detail.hasSeverity?.() ? detail.getSeverity() : undefined,
+    source: {
+      kind: detail.hasSourceKind?.() ? detail.getSourceKind() : (provider ? 'provider' : 'agentsam'),
+      name: detail.hasSourceName?.() ? detail.getSourceName() : (provider || 'agentsam-sdk'),
+      service: detail.hasSourceService?.() ? detail.getSourceService() : null,
+    },
+    resolution_owner: detail.hasResolutionOwner?.() ? detail.getResolutionOwner() : undefined,
+    domain: detail.hasDomain?.() ? detail.getDomain() : 'runtime',
+    tool: detail.hasTool?.() ? detail.getTool() : null,
+    stage: detail.hasStage?.() ? detail.getStage() : null,
+    remediation: {
+      action: detail.hasRemediationAction?.() ? detail.getRemediationAction() : undefined,
+      message: detail.hasRemediationMessage?.() ? detail.getRemediationMessage() : null,
+    },
+    fingerprint: detail.hasFingerprint?.() ? detail.getFingerprint() : undefined,
+    trace_id: detail.hasTraceId?.() ? detail.getTraceId() : null,
+    transport: detail.hasTransport?.() ? detail.getTransport() : null,
+    resource: detail.hasResourceJson?.() ? parseJson(detail.getResourceJson()) : null,
+    native: detail.hasNativeJson?.() ? parseJson(detail.getNativeJson()) : null,
+    environment: detail.hasEnvironmentJson?.() ? parseJson(detail.getEnvironmentJson()) : null,
+    details: detail.hasDetailsJson?.() ? parseJson(detail.getDetailsJson()) : null,
+    occurrence_count: detail.hasOccurrenceCount?.() ? detail.getOccurrenceCount() : 1,
+    request_id: detail.hasRequestId?.() ? detail.getRequestId() : null,
+  });
+}
 
 export { grpc, knowledgePb, errorsPb, KnowledgeServiceService, KnowledgeServiceClient };
 
