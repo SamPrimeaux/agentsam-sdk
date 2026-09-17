@@ -160,10 +160,22 @@ export function createKnowledgeJobEngine({
   db.exec(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;
     CREATE TABLE IF NOT EXISTS jobs (id TEXT PRIMARY KEY, idem TEXT UNIQUE, digest TEXT NOT NULL,
       payload TEXT NOT NULL, status TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL, updated_at TEXT NOT NULL, result TEXT, error TEXT);
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL, result TEXT, error TEXT, failure_json TEXT);
     CREATE INDEX IF NOT EXISTS jobs_pending ON jobs(status, created_at);`);
+  const columns = new Set(db.prepare('PRAGMA table_info(jobs)').all().map(row => row.name));
+  if (!columns.has('failure_json')) db.exec('ALTER TABLE jobs ADD COLUMN failure_json TEXT');
   fs.chmodSync(jobsFile, 0o600);
-  db.prepare("UPDATE jobs SET status=CASE WHEN attempts>=3 THEN 'failed' ELSE 'queued' END, error=CASE WHEN attempts>=3 THEN 'Interrupted three times; submit a new job after investigation.' ELSE NULL END WHERE status='running'").run();
+  const interruptedFailure = createErrorEnvelope({
+    reason: ERROR_REASON.EXECUTION_FAILED,
+    message: 'Interrupted three times; submit a new job after investigation.',
+    source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'job_engine' },
+    domain: 'knowledge',
+    stage: 'recovery',
+  });
+  db.prepare("UPDATE jobs SET status=CASE WHEN attempts>=3 THEN 'failed' ELSE 'queued' END, error=CASE WHEN attempts>=3 THEN ? ELSE NULL END, failure_json=CASE WHEN attempts>=3 THEN ? ELSE NULL END WHERE status='running'").run(
+    interruptedFailure.message,
+    JSON.stringify(interruptedFailure),
+  );
 
   let child = null;
   let closing = false;
