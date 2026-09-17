@@ -83,7 +83,27 @@ proto.agentsam.knowledge.v1.ErrorDetail.toObject = function(includeInstance, msg
     httpStatus: jspb.Message.getFieldWithDefault(msg, 5, 0),
     retryAfterMs: jspb.Message.getFieldWithDefault(msg, 6, 0),
     provider: jspb.Message.getFieldWithDefault(msg, 7, ""),
-    providerCode: jspb.Message.getFieldWithDefault(msg, 8, "")
+    providerCode: jspb.Message.getFieldWithDefault(msg, 8, ""),
+    severity: jspb.Message.getFieldWithDefault(msg, 9, ""),
+    sourceKind: jspb.Message.getFieldWithDefault(msg, 10, ""),
+    sourceName: jspb.Message.getFieldWithDefault(msg, 11, ""),
+    sourceService: jspb.Message.getFieldWithDefault(msg, 12, ""),
+    resolutionOwner: jspb.Message.getFieldWithDefault(msg, 13, ""),
+    domain: jspb.Message.getFieldWithDefault(msg, 14, ""),
+    tool: jspb.Message.getFieldWithDefault(msg, 15, ""),
+    stage: jspb.Message.getFieldWithDefault(msg, 16, ""),
+    remediationAction: jspb.Message.getFieldWithDefault(msg, 17, ""),
+    remediationMessage: jspb.Message.getFieldWithDefault(msg, 18, ""),
+    fingerprint: jspb.Message.getFieldWithDefault(msg, 19, ""),
+    traceId: jspb.Message.getFieldWithDefault(msg, 20, ""),
+    transport: jspb.Message.getFieldWithDefault(msg, 21, ""),
+    resourceJson: jspb.Message.getFieldWithDefault(msg, 22, ""),
+    nativeJson: jspb.Message.getFieldWithDefault(msg, 23, ""),
+    environmentJson: jspb.Message.getFieldWithDefault(msg, 24, ""),
+    detailsJson: jspb.Message.getFieldWithDefault(msg, 25, ""),
+    occurrenceCount: jspb.Message.getFieldWithDefault(msg, 26, 0),
+    requestId: jspb.Message.getFieldWithDefault(msg, 27, ""),
+    schemaVersion: jspb.Message.getFieldWithDefault(msg, 28, 0)
   };
 
   if (includeInstance) {
@@ -151,6 +171,86 @@ proto.agentsam.knowledge.v1.ErrorDetail.deserializeBinaryFromReader = function(m
     case 8:
       var value = /** @type {string} */ (reader.readString());
       msg.setProviderCode(value);
+      break;
+    case 9:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setSeverity(value);
+      break;
+    case 10:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setSourceKind(value);
+      break;
+    case 11:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setSourceName(value);
+      break;
+    case 12:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setSourceService(value);
+      break;
+    case 13:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setResolutionOwner(value);
+      break;
+    case 14:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setDomain(value);
+      break;
+    case 15:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setTool(value);
+      break;
+    case 16:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setStage(value);
+      break;
+    case 17:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setRemediationAction(value);
+      break;
+    case 18:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setRemediationMessage(value);
+      break;
+    case 19:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setFingerprint(value);
+      break;
+    case 20:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setTraceId(value);
+      break;
+    case 21:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setTransport(value);
+      break;
+    case 22:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setResourceJson(value);
+      break;
+    case 23:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setNativeJson(value);
+      break;
+    case 24:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setEnvironmentJson(value);
+      break;
+    case 25:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setDetailsJson(value);
+      break;
+    case 26:
+      var value = /** @type {number} */ (reader.readUint32());
+      msg.setOccurrenceCount(value);
+      break;
+    case 27:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setRequestId(value);
+      break;
+    case 28:
+      var value = /** @type {number} */ (reader.readUint32());
+      msg.setSchemaVersion(value);
       break;
     default:
       reader.skipField();
@@ -234,6 +334,146 @@ proto.agentsam.knowledge.v1.ErrorDetail.serializeBinaryToWriter = function(messa
   if (f != null) {
     writer.writeString(
       8,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 9));
+  if (f != null) {
+    writer.writeString(
+      9,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 10));
+  if (f != null) {
+    writer.writeString(
+      10,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 11));
+  if (f != null) {
+    writer.writeString(
+      11,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 12));
+  if (f != null) {
+    writer.writeString(
+      12,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 13));
+  if (f != null) {
+    writer.writeString(
+      13,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 14));
+  if (f != null) {
+    writer.writeString(
+      14,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 15));
+  if (f != null) {
+    writer.writeString(
+      15,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 16));
+  if (f != null) {
+    writer.writeString(
+      16,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 17));
+  if (f != null) {
+    writer.writeString(
+      17,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 18));
+  if (f != null) {
+    writer.writeString(
+      18,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 19));
+  if (f != null) {
+    writer.writeString(
+      19,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 20));
+  if (f != null) {
+    writer.writeString(
+      20,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 21));
+  if (f != null) {
+    writer.writeString(
+      21,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 22));
+  if (f != null) {
+    writer.writeString(
+      22,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 23));
+  if (f != null) {
+    writer.writeString(
+      23,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 24));
+  if (f != null) {
+    writer.writeString(
+      24,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 25));
+  if (f != null) {
+    writer.writeString(
+      25,
+      f
+    );
+  }
+  f = /** @type {number} */ (jspb.Message.getField(message, 26));
+  if (f != null) {
+    writer.writeUint32(
+      26,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 27));
+  if (f != null) {
+    writer.writeString(
+      27,
+      f
+    );
+  }
+  f = /** @type {number} */ (jspb.Message.getField(message, 28));
+  if (f != null) {
+    writer.writeUint32(
+      28,
       f
     );
   }
@@ -453,6 +693,726 @@ proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearProviderCode = function()
  */
 proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasProviderCode = function() {
   return jspb.Message.getField(this, 8) != null;
+};
+
+
+/**
+ * optional string severity = 9;
+ * @return {string}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getSeverity = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 9, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setSeverity = function(value) {
+  return jspb.Message.setField(this, 9, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearSeverity = function() {
+  return jspb.Message.setField(this, 9, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasSeverity = function() {
+  return jspb.Message.getField(this, 9) != null;
+};
+
+
+/**
+ * optional string source_kind = 10;
+ * @return {string}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getSourceKind = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 10, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setSourceKind = function(value) {
+  return jspb.Message.setField(this, 10, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearSourceKind = function() {
+  return jspb.Message.setField(this, 10, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasSourceKind = function() {
+  return jspb.Message.getField(this, 10) != null;
+};
+
+
+/**
+ * optional string source_name = 11;
+ * @return {string}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getSourceName = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 11, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setSourceName = function(value) {
+  return jspb.Message.setField(this, 11, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearSourceName = function() {
+  return jspb.Message.setField(this, 11, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasSourceName = function() {
+  return jspb.Message.getField(this, 11) != null;
+};
+
+
+/**
+ * optional string source_service = 12;
+ * @return {string}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getSourceService = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 12, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setSourceService = function(value) {
+  return jspb.Message.setField(this, 12, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearSourceService = function() {
+  return jspb.Message.setField(this, 12, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasSourceService = function() {
+  return jspb.Message.getField(this, 12) != null;
+};
+
+
+/**
+ * optional string resolution_owner = 13;
+ * @return {string}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getResolutionOwner = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 13, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setResolutionOwner = function(value) {
+  return jspb.Message.setField(this, 13, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearResolutionOwner = function() {
+  return jspb.Message.setField(this, 13, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasResolutionOwner = function() {
+  return jspb.Message.getField(this, 13) != null;
+};
+
+
+/**
+ * optional string domain = 14;
+ * @return {string}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getDomain = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 14, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setDomain = function(value) {
+  return jspb.Message.setField(this, 14, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearDomain = function() {
+  return jspb.Message.setField(this, 14, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasDomain = function() {
+  return jspb.Message.getField(this, 14) != null;
+};
+
+
+/**
+ * optional string tool = 15;
+ * @return {string}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getTool = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 15, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setTool = function(value) {
+  return jspb.Message.setField(this, 15, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearTool = function() {
+  return jspb.Message.setField(this, 15, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasTool = function() {
+  return jspb.Message.getField(this, 15) != null;
+};
+
+
+/**
+ * optional string stage = 16;
+ * @return {string}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getStage = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 16, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setStage = function(value) {
+  return jspb.Message.setField(this, 16, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearStage = function() {
+  return jspb.Message.setField(this, 16, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasStage = function() {
+  return jspb.Message.getField(this, 16) != null;
+};
+
+
+/**
+ * optional string remediation_action = 17;
+ * @return {string}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getRemediationAction = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 17, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setRemediationAction = function(value) {
+  return jspb.Message.setField(this, 17, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearRemediationAction = function() {
+  return jspb.Message.setField(this, 17, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasRemediationAction = function() {
+  return jspb.Message.getField(this, 17) != null;
+};
+
+
+/**
+ * optional string remediation_message = 18;
+ * @return {string}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getRemediationMessage = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 18, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setRemediationMessage = function(value) {
+  return jspb.Message.setField(this, 18, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearRemediationMessage = function() {
+  return jspb.Message.setField(this, 18, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasRemediationMessage = function() {
+  return jspb.Message.getField(this, 18) != null;
+};
+
+
+/**
+ * optional string fingerprint = 19;
+ * @return {string}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getFingerprint = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 19, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setFingerprint = function(value) {
+  return jspb.Message.setField(this, 19, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearFingerprint = function() {
+  return jspb.Message.setField(this, 19, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasFingerprint = function() {
+  return jspb.Message.getField(this, 19) != null;
+};
+
+
+/**
+ * optional string trace_id = 20;
+ * @return {string}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getTraceId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 20, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setTraceId = function(value) {
+  return jspb.Message.setField(this, 20, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearTraceId = function() {
+  return jspb.Message.setField(this, 20, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasTraceId = function() {
+  return jspb.Message.getField(this, 20) != null;
+};
+
+
+/**
+ * optional string transport = 21;
+ * @return {string}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getTransport = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 21, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setTransport = function(value) {
+  return jspb.Message.setField(this, 21, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearTransport = function() {
+  return jspb.Message.setField(this, 21, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasTransport = function() {
+  return jspb.Message.getField(this, 21) != null;
+};
+
+
+/**
+ * optional string resource_json = 22;
+ * @return {string}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getResourceJson = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 22, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setResourceJson = function(value) {
+  return jspb.Message.setField(this, 22, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearResourceJson = function() {
+  return jspb.Message.setField(this, 22, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasResourceJson = function() {
+  return jspb.Message.getField(this, 22) != null;
+};
+
+
+/**
+ * optional string native_json = 23;
+ * @return {string}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getNativeJson = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 23, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setNativeJson = function(value) {
+  return jspb.Message.setField(this, 23, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearNativeJson = function() {
+  return jspb.Message.setField(this, 23, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasNativeJson = function() {
+  return jspb.Message.getField(this, 23) != null;
+};
+
+
+/**
+ * optional string environment_json = 24;
+ * @return {string}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getEnvironmentJson = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 24, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setEnvironmentJson = function(value) {
+  return jspb.Message.setField(this, 24, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearEnvironmentJson = function() {
+  return jspb.Message.setField(this, 24, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasEnvironmentJson = function() {
+  return jspb.Message.getField(this, 24) != null;
+};
+
+
+/**
+ * optional string details_json = 25;
+ * @return {string}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getDetailsJson = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 25, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setDetailsJson = function(value) {
+  return jspb.Message.setField(this, 25, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearDetailsJson = function() {
+  return jspb.Message.setField(this, 25, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasDetailsJson = function() {
+  return jspb.Message.getField(this, 25) != null;
+};
+
+
+/**
+ * optional uint32 occurrence_count = 26;
+ * @return {number}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getOccurrenceCount = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 26, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setOccurrenceCount = function(value) {
+  return jspb.Message.setField(this, 26, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearOccurrenceCount = function() {
+  return jspb.Message.setField(this, 26, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasOccurrenceCount = function() {
+  return jspb.Message.getField(this, 26) != null;
+};
+
+
+/**
+ * optional string request_id = 27;
+ * @return {string}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getRequestId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 27, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setRequestId = function(value) {
+  return jspb.Message.setField(this, 27, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearRequestId = function() {
+  return jspb.Message.setField(this, 27, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasRequestId = function() {
+  return jspb.Message.getField(this, 27) != null;
+};
+
+
+/**
+ * optional uint32 schema_version = 28;
+ * @return {number}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getSchemaVersion = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 28, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setSchemaVersion = function(value) {
+  return jspb.Message.setField(this, 28, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearSchemaVersion = function() {
+  return jspb.Message.setField(this, 28, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasSchemaVersion = function() {
+  return jspb.Message.getField(this, 28) != null;
 };
 
 
