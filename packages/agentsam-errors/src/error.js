@@ -6,6 +6,9 @@ export class AgentSamError extends Error {
     super(normalized.message, options.cause ? { cause: options.cause } : undefined);
     this.name = 'AgentSamError';
     this.envelope = normalized;
+    // Compatibility alias for pre-v1 callers. It points at the canonical
+    // envelope; it is not a second diagnostic vocabulary.
+    this.diagnostic = normalized;
     this.code = normalized.code;
     this.reason = normalized.reason;
     this.severity = normalized.severity;
