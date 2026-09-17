@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package agentsam.rpc.v1;
+
+message Timestamp {
+  int64 unix_millis = 1;
+}
+
+message Empty {}
