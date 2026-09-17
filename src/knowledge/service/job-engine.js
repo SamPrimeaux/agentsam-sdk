@@ -274,7 +274,17 @@ export function createKnowledgeJobEngine({
     const payload = JSON.parse(row.payload);
     const registered = registry[payload.request.repository];
     if (!registered || registered.config.repository_id !== payload.config.repository_id || fingerprint(registered.config.scope) !== payload.registered_scope || (!allowEmbeddings && ((payload.request.embed && payload.request.operation !== 'plan') || payload.request.semantic))) {
-      response = { ok: false, error: 'Repository registration changed; resubmit this job.' };
+      response = {
+        ok: false,
+        failure: createErrorEnvelope({
+          reason: ERROR_REASON.REPOSITORY_CHANGED,
+          message: 'Repository registration changed; resubmit this job.',
+          source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'repository_registry' },
+          domain: 'repository',
+          stage: 'execute',
+          resource: { type: 'repository', id: payload.config.repository_id || null },
+        }),
+      };
       child.kill();
       return;
     }
