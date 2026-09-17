@@ -50,8 +50,14 @@ process.once('message', async ({ root, config, filename, request, maxFiles }) =>
     process.send({ ok: true, result }, () => process.exit(0));
   } catch (error) {
     await store?.close();
-    // Provider error strings may include sensitive request details. Never persist them.
-    const message = request.embed || request.semantic ? 'Embedding job failed; check provider configuration, budgets, and availability.' : String(error.message).slice(0, 500);
-    process.send({ ok: false, error: message }, () => process.exit(1));
+    const failure = normalizeError(error, {
+      source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'job_worker' },
+      domain: 'knowledge',
+      stage: request.embed || request.semantic ? 'embedding' : request.operation || 'execute',
+      message: request.embed || request.semantic
+        ? 'Embedding job failed; inspect the canonical failure for provider/configuration details.'
+        : undefined,
+    });
+    process.send({ ok: false, failure }, () => process.exit(1));
   }
 });
