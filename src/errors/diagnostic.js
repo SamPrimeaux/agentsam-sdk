@@ -23,6 +23,7 @@ function retryStrategy(envelope, input = {}) {
     if (envelope.reason === 'provider_credential_invalid') return 'fix_credentials';
     return 'inspect_error';
   }
+  if (['provider_rate_limited','provider_capacity_exhausted','provider_overloaded'].includes(envelope.reason)) return 'retry_after_backoff';
   return envelope.retry_after_ms != null ? 'retry_after_backoff' : 'retry_backoff';
 }
 
