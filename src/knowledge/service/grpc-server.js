@@ -73,7 +73,6 @@ export async function startKnowledgeGrpcServer({
   const boundPort = await new Promise((resolve, reject) => {
     server.bindAsync(`${host}:${port}`, credentials, (error, actualPort) => error ? reject(error) : resolve(actualPort));
   });
-  server.start();
   return {
     server,
     address: { host, port: boundPort },
