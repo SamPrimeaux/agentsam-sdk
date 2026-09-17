@@ -1,0 +1,6 @@
+# Copy to backend/.dev.vars for local Wrangler development.
+# Add GEMINI_API_KEY to that untracked file or use Wrangler secret configuration.
+# Never commit a real provider key.
+
+CAD_ROBOTICS_DEFAULT_MODEL=gemini-robotics-er-2-preview
+CAD_ROBOTICS_PERCEPTION_MODELS=gemini-robotics-er-2-preview,gemini-flash-latest

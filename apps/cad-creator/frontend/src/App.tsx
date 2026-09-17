@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   ProjectState, 
   ActiveTool, 
@@ -15,6 +15,9 @@ import { Canvas2D } from './components/Canvas2D';
 import { Viewport3D } from './components/Viewport3D';
 import { SketchCanvasTLDraw } from './components/SketchCanvasTLDraw';
 import { ParametricEditor } from './components/ParametricEditor';
+import { RoboticsWorkspace } from './workspaces/robotics/RoboticsWorkspace';
+import { MujocoSimulationProvider } from './lib/robotics/simulation/mujoco-provider';
+import type { SimulationProvider } from './lib/robotics/simulation/provider';
 import { ExportPublishModal } from './components/ExportPublishModal';
 import { AgentSidebar } from './components/AgentSidebar';
 import { FurniturePicker } from './components/FurniturePicker';
@@ -51,7 +54,8 @@ import {
   AlertCircle,
   X,
   Code,
-  Pencil
+  Pencil,
+  Cpu
 } from 'lucide-react';
 
 export function App() {
@@ -70,6 +74,12 @@ export function App() {
   const [selectedFurnitureType, setSelectedFurnitureType] = useState<string | null>(null);
   const [unit, setUnit] = useState<MeasurementUnit>('ft');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // Robotics workspace runtime is isolated from architectural project state.
+  const roboticsContainerRef = useRef<HTMLDivElement>(null);
+  const roboticsSimulationProviderRef = useRef<SimulationProvider | null>(new MujocoSimulationProvider());
+  const [roboticsDarkMode, setRoboticsDarkMode] = useState(true);
+  const [showRoboticsDiagnostics, setShowRoboticsDiagnostics] = useState(false);
 
   // 3. Modals State
   const [isFurniturePickerOpen, setIsFurniturePickerOpen] = useState(false);
@@ -380,6 +390,17 @@ export function App() {
             </button>
 
             <button
+              onClick={() => setViewMode('robotics')}
+              className={`px-2.5 py-1 rounded text-xs font-medium flex items-center space-x-1.5 transition ${
+                viewMode === 'robotics' ? 'bg-emerald-600 text-white shadow-sm' : 'text-emerald-400 hover:text-white hover:bg-emerald-950/40'
+              }`}
+              title="MuJoCo robotics simulation and embodied reasoning"
+            >
+              <Cpu className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Robotics</span>
+            </button>
+
+            <button
               onClick={() => setViewMode('sketch')}
               className={`px-2.5 py-1 rounded text-xs font-medium flex items-center space-x-1.5 transition ${
                 viewMode === 'sketch' ? 'bg-pink-600 text-white shadow-sm' : 'text-pink-400 hover:text-white hover:bg-pink-950/40'
@@ -577,7 +598,7 @@ export function App() {
       {/* Main Studio Workspace Area */}
       <main className="flex flex-1 overflow-hidden relative">
         {/* Left: AgentSam AI Chat Copilot */}
-        {isSidebarOpen && (
+        {isSidebarOpen && viewMode !== 'robotics' && (
           <AgentSidebar
             project={project}
             onApplyPlan={handleApplyAIPlan}
@@ -627,6 +648,25 @@ export function App() {
                 onUpdateProject={(newProj) => updateProject(() => newProj)}
                 canEdit={!isViewer}
               />
+            </div>
+          )}
+
+          {/* Robotics / MuJoCo Physical Design Workspace */}
+          {viewMode === 'robotics' && (
+            <div className="w-full h-full relative">
+              <div ref={roboticsContainerRef} className="absolute inset-0" />
+              <div className="absolute inset-0 z-10 pointer-events-none">
+                <div className="w-full h-full pointer-events-auto">
+                  <RoboticsWorkspace
+                    containerRef={roboticsContainerRef}
+                    simProviderRef={roboticsSimulationProviderRef}
+                    isDarkMode={roboticsDarkMode}
+                    toggleDarkMode={() => setRoboticsDarkMode((value) => !value)}
+                    showDiagnostics={showRoboticsDiagnostics}
+                    setShowDiagnostics={setShowRoboticsDiagnostics}
+                  />
+                </div>
+              </div>
             </div>
           )}
 

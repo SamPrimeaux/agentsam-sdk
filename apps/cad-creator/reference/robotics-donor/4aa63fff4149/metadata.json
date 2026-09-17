@@ -1,0 +1,8 @@
+{
+  "name": "AgentSam CAD Creator",
+  "description": "Physical-design workbench integrating OpenSCAD, Blender, FreeCAD, Meshy 3D assets, and real-time MuJoCo robotics simulation with Gemini embodied perception.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,176 @@
+{
+  "kind": "agentsam-robotics-productization-import",
+  "source_repo": "https://github.com/SamPrimeaux/AgentSam-Robotics.git",
+  "source_ref": "main",
+  "source_commit": "4aa63fff414998b935eeb03f6fa09b9512275b4c",
+  "imported_at_utc": "2026-09-17T21:17:35.707221+00:00",
+  "target_workspace": "apps/cad-creator",
+  "target_package": "@inneranimalmedia/agentsam-cad-creator",
+  "policy": {
+    "full_donor_snapshot": "reference/robotics-donor/4aa63fff4149",
+    "active_runtime_import": "robotics-only",
+    "existing_cad_app_overwrite": false,
+    "frontend_provider_secrets": false,
+    "mock_cad_providers_promoted": false
+  },
+  "active_files": [
+    {
+      "source": "CapsuleGeometry.ts",
+      "destination": "frontend/src/lib/robotics/runtime/CapsuleGeometry.ts",
+      "sha256": "e9cc4882e9eb1cc71740e9587f724a1894914e1c3e286af6154ee5a58a4e830d"
+    },
+    {
+      "source": "DragStateManager.ts",
+      "destination": "frontend/src/lib/robotics/runtime/DragStateManager.ts",
+      "sha256": "09e09795cf93ef0ee589ba328a004cd8067389a44f889c1bfa3dd84176c291e3"
+    },
+    {
+      "source": "FrankaAnalyticalIK.ts",
+      "destination": "frontend/src/lib/robotics/runtime/FrankaAnalyticalIK.ts",
+      "sha256": "4d27641e837610127e06a5a8a8afecef00a341af1a05ba021a4a91ea575e6e14"
+    },
+    {
+      "source": "IkSystem.ts",
+      "destination": "frontend/src/lib/robotics/runtime/IkSystem.ts",
+      "sha256": "197d738cf5abfe7db8dbf4af68ea051e536a7f0cd99b123b9d6e1fec49d3804c"
+    },
+    {
+      "source": "MatMath.ts",
+      "destination": "frontend/src/lib/robotics/runtime/MatMath.ts",
+      "sha256": "0af29066ca12674359b72c484adddacb8f93db8442becf272fe6a6297b4fa4c9"
+    },
+    {
+      "source": "MujocoSim.ts",
+      "destination": "frontend/src/lib/robotics/runtime/MujocoSim.ts",
+      "sha256": "73551e31b9461183215310a0bc36324ae136ac142aa51014757e82b83e6928dd"
+    },
+    {
+      "source": "Reflector.ts",
+      "destination": "frontend/src/lib/robotics/runtime/Reflector.ts",
+      "sha256": "a3fbf68b609e7380f93e4d44d0fabaecd830b7327b9b655039699ece2af11f35"
+    },
+    {
+      "source": "RenderSystem.ts",
+      "destination": "frontend/src/lib/robotics/runtime/RenderSystem.ts",
+      "sha256": "c820a283e1c86db414c16f0c37db294bec1f8a1df1c265b5981e18eee2f38baa"
+    },
+    {
+      "source": "RobotLoader.ts",
+      "destination": "frontend/src/lib/robotics/runtime/RobotLoader.ts",
+      "sha256": "4ba40a3ac289a630121bfc8b575facebaa8109785126e0e9763712272a196cce"
+    },
+    {
+      "source": "SelectionManager.ts",
+      "destination": "frontend/src/lib/robotics/runtime/SelectionManager.ts",
+      "sha256": "2c006acb61254576703bab3b070052c9a1cb091b9f1ba1bb4847927d7e7cac0b"
+    },
+    {
+      "source": "SequenceAnimator.ts",
+      "destination": "frontend/src/lib/robotics/runtime/SequenceAnimator.ts",
+      "sha256": "3ab90cbbcfa09d7f0b4551fc33071966956c00e0f066b94a20141b23f17528db"
+    },
+    {
+      "source": "types.ts",
+      "destination": "frontend/src/lib/robotics/runtime/types.ts",
+      "sha256": "ed28bddbb180840c869a219961297a84106c99f78c4fc8deb5e957b2d2bcd3d2"
+    },
+    {
+      "source": "rendering/GeomBuilder.ts",
+      "destination": "frontend/src/lib/robotics/runtime/rendering/GeomBuilder.ts",
+      "sha256": "62f85f12f1b940626edee729021554003b3b6b381acb35d7d029fac5ac4e2510"
+    },
+    {
+      "source": "utils/StringUtils.ts",
+      "destination": "frontend/src/lib/robotics/runtime/utils/StringUtils.ts",
+      "sha256": "d30540e719d435eb6f642e4f7541cf480346dde14ad784fa25bf7dcbbfe96dcf"
+    },
+    {
+      "source": "lib/robotics/types.ts",
+      "destination": "frontend/src/lib/robotics/types.ts",
+      "sha256": "f488ceb52b36c882ff416071565479c71058b122e6159654075363ed8fc29566"
+    },
+    {
+      "source": "lib/robotics/simulation/provider.ts",
+      "destination": "frontend/src/lib/robotics/simulation/provider.ts",
+      "sha256": "a734df71aa6d5968558060155877e5aea2e383441beeb97725e20a16aee82b33"
+    },
+    {
+      "source": "lib/robotics/simulation/mujoco-provider.ts",
+      "destination": "frontend/src/lib/robotics/simulation/mujoco-provider.ts",
+      "sha256": "ea4bc91822df6df7827df9d72ca9da02e4dd5684e9c9c3d51ab0d21e56bdcef0"
+    },
+    {
+      "source": "lib/robotics/perception/provider.ts",
+      "destination": "frontend/src/lib/robotics/perception/provider.ts",
+      "sha256": "e562a2fda2d50e6701a3836216fb51eb74f9aaa79ce4eaa47d20814695f48a46"
+    },
+    {
+      "source": "workspaces/robotics/DiagnosticOverlay.tsx",
+      "destination": "frontend/src/workspaces/robotics/DiagnosticOverlay.tsx",
+      "sha256": "00518aff2b7aeeb4bd88eff5618f9d0ea239b2e2aaaa5e84809fd3104e24edc2"
+    },
+    {
+      "source": "workspaces/robotics/EmbodiedReasoningPanel.tsx",
+      "destination": "frontend/src/workspaces/robotics/EmbodiedReasoningPanel.tsx",
+      "sha256": "c5a08a163cbe096392f94e6dacbb9db72b1ca53a7d377606b0270e44e7e70cf8"
+    },
+    {
+      "source": "workspaces/robotics/RobotSelector.tsx",
+      "destination": "frontend/src/workspaces/robotics/RobotSelector.tsx",
+      "sha256": "b063ea5b92f5fc2035c1d1b7db93d398759a7d62796f3329b5bbdf2e1041fb3f"
+    },
+    {
+      "source": "workspaces/robotics/RoboticsToolbar.tsx",
+      "destination": "frontend/src/workspaces/robotics/RoboticsToolbar.tsx",
+      "sha256": "684c7869561454a4370df97557781afe96ef8e3bd13f06cf197b193f5660929e"
+    },
+    {
+      "source": "workspaces/robotics/RoboticsWorkspace.tsx",
+      "destination": "frontend/src/workspaces/robotics/RoboticsWorkspace.tsx",
+      "sha256": "b29e93df38a16f73e1b31b288c86287983232ad12976ac3ed3e1ed051b22e8bf"
+    },
+    {
+      "source": "workspaces/robotics/useSimulationStats.ts",
+      "destination": "frontend/src/workspaces/robotics/useSimulationStats.ts",
+      "sha256": "04d84441147e809408703abc01b6d8823c393bad0ea4df7c8b7e8249d29333b0"
+    },
+    {
+      "source": "components/RobotSelector.tsx",
+      "destination": "frontend/src/workspaces/robotics/components/RobotSelector.tsx",
+      "sha256": "292d87f57f22fd2f07016a25b79afdac9698d3cb4e25929c00c7586078a50f28"
+    },
+    {
+      "source": "components/Toolbar.tsx",
+      "destination": "frontend/src/workspaces/robotics/components/Toolbar.tsx",
+      "sha256": "23bfe4683eeae0bd06f68039dd165980809f2da9d81d5ff1887d931e65d7b4b0"
+    },
+    {
+      "source": "components/UnifiedSidebar.tsx",
+      "destination": "frontend/src/workspaces/robotics/components/UnifiedSidebar.tsx",
+      "sha256": "be846d546708d919b92425d0a0ac0e66a2bd38767c75705f3fed796834e97ee0"
+    },
+    {
+      "source": "shared/cad/src/robotics/types.ts",
+      "destination": "shared/cad/src/robotics/types.ts",
+      "sha256": "5464ee9e2a32cd4ece13f71180ada7030002808b107cf9664af6ab7b30df390f"
+    }
+  ],
+  "integration": {
+    "robotics_view_mode_wired": true,
+    "frontend_perception_transport": "POST /api/robotics/perception/detect",
+    "node_backend_route": true,
+    "cloudflare_worker_route": true,
+    "provider_secret_location": "server_or_worker_only",
+    "mock_cad_providers_promoted": false
+  },
+  "verification": {
+    "verified_at_utc": "2026-09-17T21:29:57.365747+00:00",
+    "typecheck": "pass",
+    "tests": "pass_no_test_files",
+    "production_build": "pass",
+    "wrangler_dry_run": "pass",
+    "node_robotics_capabilities_smoke": "pass",
+    "worker_robotics_capabilities_smoke": "pass",
+    "live_provider_smoke": "not_run_no_local_gemini_secret"
+  }
+}

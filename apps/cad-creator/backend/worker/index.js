@@ -1,3 +1,5 @@
+import { getRoboticsPerceptionCapabilities, runRoboticsPerception } from '../src/robotics/perception.ts';
+
 /**
  * Canonical Cloudflare Worker boundary for CAD Creator.
  *
@@ -15,10 +17,27 @@ function json(body, status = 200) {
 }
 
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     const url = new URL(request.url);
     if (request.method === "GET" && (url.pathname === "/health" || url.pathname === "/api/health")) {
       return json({ ok: true, app: APP, runtime: "cloudflare-worker-scaffold" });
+    }
+    if (request.method === "GET" && url.pathname === "/api/robotics/capabilities") {
+      return json(getRoboticsPerceptionCapabilities(env));
+    }
+    if (request.method === "POST" && url.pathname === "/api/robotics/perception/detect") {
+      try {
+        const body = await request.json();
+        return json(await runRoboticsPerception(body, env));
+      } catch (error) {
+        const status = Number(error?.statusCode) || 500;
+        return json({
+          error: {
+            code: error?.code || "robotics_perception_failed",
+            message: error?.message || "Robotics perception failed",
+          },
+        }, status);
+      }
     }
     return json({
       ok: false,

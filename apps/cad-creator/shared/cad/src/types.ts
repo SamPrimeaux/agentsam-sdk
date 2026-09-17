@@ -503,5 +503,5 @@ export type ActiveTool =
 
 export type StudioTabMode = 'plan' | 'sketch' | '3d' | 'parametric' | 'render';
 
-export type ViewMode = 'split' | '2d' | '3d' | 'firstperson' | 'sketch' | 'parametric';
+export type ViewMode = 'split' | '2d' | '3d' | 'firstperson' | 'sketch' | 'parametric' | 'robotics';
 

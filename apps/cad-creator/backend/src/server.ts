@@ -5,6 +5,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
+import { getRoboticsPerceptionCapabilities, runRoboticsPerception } from './robotics/perception';
 
 const CAD_ROOT = path.resolve(process.cwd(), '..');
 const FRONTEND_ROOT = path.join(CAD_ROOT, 'frontend');
@@ -372,7 +373,31 @@ app.post('/api/video/download', async (req, res) => {
 });
 
 // ----------------------------------------------------
-// 5. SERVER-SIDE OPENSCAD / CAD EXECUTION API
+// 5. ROBOTICS PERCEPTION / EMBODIED REASONING API
+// ----------------------------------------------------
+app.get('/api/robotics/capabilities', (_req, res) => {
+  return res.json(getRoboticsPerceptionCapabilities(process.env));
+});
+
+app.post('/api/robotics/perception/detect', async (req, res) => {
+  try {
+    const result = await runRoboticsPerception(req.body, process.env);
+    return res.json(result);
+  } catch (error: any) {
+    const status = Number(error?.statusCode) || 500;
+    const code = error?.code || 'robotics_perception_failed';
+    console.error('Robotics perception error:', code, error?.message || error);
+    return res.status(status).json({
+      error: {
+        code,
+        message: error?.message || 'Robotics perception failed',
+      },
+    });
+  }
+});
+
+// ----------------------------------------------------
+// 6. SERVER-SIDE OPENSCAD / CAD EXECUTION API
 // ----------------------------------------------------
 app.get('/api/cad/capabilities', (req, res) => {
   return res.json({
