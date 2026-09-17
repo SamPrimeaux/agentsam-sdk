@@ -12,7 +12,17 @@ export function createKnowledgeServiceClient({ baseUrl, token, fetchImpl = globa
     const response = await fetchImpl(new URL(route, url), { method: body ? 'POST' : 'GET', headers,
       body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(timeoutMs), redirect: 'error' });
     const value = await response.json();
-    if (!response.ok) throw Object.assign(new Error(value.error || `Knowledge service returned ${response.status}`), { status: response.status });
+    if (!response.ok) {
+      const envelope = fromHttpError({
+        status: response.status,
+        body: value,
+        headers: response.headers,
+        source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'http_server' },
+        domain: 'knowledge',
+        stage: 'request',
+      });
+      throw new AgentSamError(envelope);
+    }
     return value;
   };
   return { repositories: () => call('/v1/repositories'), submit: (body, idempotencyKey) => call('/v1/jobs', { body, idempotencyKey }),
