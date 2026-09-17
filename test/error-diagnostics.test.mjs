@@ -1,6 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { classifyOpenAIError, createOpenAIHttpError, diagnosticFromError } from '../src/errors/index.js';
+import {
+  ERROR_CODE,
+  ERROR_REASON,
+  canonicalCodeFromGrpcStatus,
+  classifyCloudflareFailure,
+  classifyOAuthFailure,
+  classifyOpenAIError,
+  createErrorEnvelope,
+  createOpenAIHttpError,
+  diagnosticFromError,
+  grpcStatusForCode,
+} from '../src/errors/index.js';
 import { createOpenAIResponsesAdapter } from '../src/providers/openai-responses.js';
 
 function response(status, body, headers = {}) { return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', ...headers } }); }
@@ -56,4 +67,49 @@ test('Responses adapter throws a diagnostic error instead of flattening the prov
       return true;
     },
   );
+});
+
+
+test('canonical error contract preserves transport-neutral code and reason mappings', () => {
+  const envelope = createErrorEnvelope({
+    code: ERROR_CODE.UNAVAILABLE,
+    reason: ERROR_REASON.TUNNEL_CONNECTOR_UNAVAILABLE,
+    message: 'Local terminal tunnel has no healthy connector.',
+    retryable: true,
+    http_status: 530,
+    provider: 'cloudflare',
+    provider_code: '1033',
+    transport: 'cloudflare_tunnel',
+  });
+  assert.equal(envelope.ok, false);
+  assert.equal(envelope.code, 'UNAVAILABLE');
+  assert.equal(envelope.reason, 'tunnel_connector_unavailable');
+  assert.equal(envelope.http_status, 530);
+  assert.equal(envelope.grpc_status, 14);
+  assert.equal(envelope.retryable, true);
+  assert.equal(canonicalCodeFromGrpcStatus(14), ERROR_CODE.UNAVAILABLE);
+  assert.equal(grpcStatusForCode(ERROR_CODE.UNAUTHENTICATED), 16);
+});
+
+test('Cloudflare and OAuth boundary classifiers map native failures into canonical AgentSam semantics', () => {
+  assert.deepEqual(classifyCloudflareFailure({ httpStatus: 530, cloudflareCode: 1033 }), {
+    code: ERROR_CODE.UNAVAILABLE,
+    reason: ERROR_REASON.TUNNEL_CONNECTOR_UNAVAILABLE,
+    retryable: true,
+  });
+  assert.deepEqual(classifyCloudflareFailure({ httpStatus: 526 }), {
+    code: ERROR_CODE.UNAVAILABLE,
+    reason: ERROR_REASON.TLS_CERTIFICATE_INVALID,
+    retryable: false,
+  });
+  assert.deepEqual(classifyOAuthFailure('invalid_grant'), {
+    code: ERROR_CODE.UNAUTHENTICATED,
+    reason: ERROR_REASON.AUTH_INVALID,
+    retryable: false,
+  });
+  assert.deepEqual(classifyOAuthFailure('access_denied'), {
+    code: ERROR_CODE.PERMISSION_DENIED,
+    reason: ERROR_REASON.PERMISSION_DENIED,
+    retryable: false,
+  });
 });

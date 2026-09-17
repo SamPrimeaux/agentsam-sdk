@@ -1,5 +1,13 @@
 import grpc from '@grpc/grpc-js';
 import { createRequire } from 'node:module';
+import {
+  ERROR_CODE,
+  ERROR_REASON,
+  canonicalCodeFromHttpStatus,
+  createErrorEnvelope,
+  defaultHttpStatusForCode,
+  grpcStatusForCode,
+} from '../../errors/contract.js';
 
 const require = createRequire(import.meta.url);
 const knowledgePb = require('../../rpc/generated/knowledge_pb.js');
@@ -20,32 +28,13 @@ const statusToProto = {
   failed: knowledgePb.JobStatus.JOB_STATUS_FAILED,
 };
 const statusFromProto = new Map(Object.entries(statusToProto).map(([key, value]) => [value, key]));
-const errorCodeToProto = {
-  INVALID_ARGUMENT: errorsPb.ErrorCode.ERROR_CODE_INVALID_ARGUMENT,
-  UNAUTHENTICATED: errorsPb.ErrorCode.ERROR_CODE_UNAUTHENTICATED,
-  PERMISSION_DENIED: errorsPb.ErrorCode.ERROR_CODE_PERMISSION_DENIED,
-  NOT_FOUND: errorsPb.ErrorCode.ERROR_CODE_NOT_FOUND,
-  CONFLICT: errorsPb.ErrorCode.ERROR_CODE_CONFLICT,
-  RESOURCE_EXHAUSTED: errorsPb.ErrorCode.ERROR_CODE_RESOURCE_EXHAUSTED,
-  UNAVAILABLE: errorsPb.ErrorCode.ERROR_CODE_UNAVAILABLE,
-  DEADLINE_EXCEEDED: errorsPb.ErrorCode.ERROR_CODE_DEADLINE_EXCEEDED,
-  CANCELLED: errorsPb.ErrorCode.ERROR_CODE_CANCELLED,
-  INTERNAL: errorsPb.ErrorCode.ERROR_CODE_INTERNAL,
-  JOB_FAILED: errorsPb.ErrorCode.ERROR_CODE_JOB_FAILED,
-};
+const protoErrorCode = code => errorsPb.ErrorCode[`ERROR_CODE_${code}`] ?? errorsPb.ErrorCode.ERROR_CODE_UNKNOWN;
 const errorCodeNames = new Map(Object.entries(errorsPb.ErrorCode).map(([key, value]) => [value, key.replace(/^ERROR_CODE_/, '')]));
 
-const httpToGrpc = new Map([
-  [400, grpc.status.INVALID_ARGUMENT], [401, grpc.status.UNAUTHENTICATED], [403, grpc.status.PERMISSION_DENIED],
-  [404, grpc.status.NOT_FOUND], [409, grpc.status.ALREADY_EXISTS], [413, grpc.status.RESOURCE_EXHAUSTED],
-  [415, grpc.status.INVALID_ARGUMENT], [429, grpc.status.RESOURCE_EXHAUSTED], [503, grpc.status.UNAVAILABLE],
-]);
-const grpcToHttp = new Map([
-  [grpc.status.CANCELLED, 499], [grpc.status.INVALID_ARGUMENT, 400], [grpc.status.DEADLINE_EXCEEDED, 504],
-  [grpc.status.NOT_FOUND, 404], [grpc.status.ALREADY_EXISTS, 409], [grpc.status.PERMISSION_DENIED, 403],
-  [grpc.status.RESOURCE_EXHAUSTED, 429], [grpc.status.FAILED_PRECONDITION, 412], [grpc.status.ABORTED, 409],
-  [grpc.status.UNAUTHENTICATED, 401], [grpc.status.UNAVAILABLE, 503],
-]);
+const grpcToHttp = new Map(Object.entries({
+  1: 499, 2: 500, 3: 400, 4: 504, 5: 404, 6: 409, 7: 403, 8: 429,
+  9: 400, 10: 409, 11: 400, 12: 501, 13: 500, 14: 503, 15: 500, 16: 401,
+}).map(([key, value]) => [Number(key), value]));
 
 function timestamp(value) {
   const message = new Timestamp();
@@ -71,9 +60,11 @@ export function encodeJob(job) {
   if (job.result !== null && job.result !== undefined) message.setResultJson(JSON.stringify(job.result));
   if (job.error) {
     const failure = new errorsPb.ErrorDetail();
-    failure.setCode(errorsPb.ErrorCode.ERROR_CODE_JOB_FAILED);
+    failure.setCode(protoErrorCode(ERROR_CODE.INTERNAL));
     failure.setMessage(job.error);
     failure.setRetryable(false);
+    failure.setReason(ERROR_REASON.EXECUTION_FAILED);
+    failure.setHttpStatus(500);
     message.setFailure(failure);
   }
   return message;
@@ -184,14 +175,39 @@ export function authorizationFromMetadata(metadata) {
 
 export function toGrpcError(error) {
   const safeMessage = error?.status ? error.message : 'Service request failed.';
+  const legacyCode = error?.code === 'CONFLICT' ? ERROR_CODE.ABORTED : error?.code;
+  const code = Object.values(ERROR_CODE).includes(legacyCode) ? legacyCode : canonicalCodeFromHttpStatus(error?.status);
+  const reason = error?.reason || (code === ERROR_CODE.UNAUTHENTICATED ? ERROR_REASON.AUTH_INVALID
+    : code === ERROR_CODE.PERMISSION_DENIED ? ERROR_REASON.PERMISSION_DENIED
+      : code === ERROR_CODE.NOT_FOUND ? ERROR_REASON.TARGET_NOT_FOUND
+        : code === ERROR_CODE.ABORTED ? ERROR_REASON.CONFLICT
+          : code === ERROR_CODE.RESOURCE_EXHAUSTED ? ERROR_REASON.CAPACITY_EXHAUSTED
+            : code === ERROR_CODE.UNAVAILABLE ? ERROR_REASON.PROVIDER_UNAVAILABLE
+              : code === ERROR_CODE.INVALID_ARGUMENT ? ERROR_REASON.INPUT_INVALID
+                : ERROR_REASON.INTERNAL);
+  const envelope = createErrorEnvelope({
+    code,
+    reason,
+    message: safeMessage,
+    retryable: error?.retryable ?? (error?.status === 429 || error?.status === 503),
+    retry_after_ms: error?.retry_after_ms ?? null,
+    http_status: error?.status ?? defaultHttpStatusForCode(code),
+    provider: error?.provider ?? null,
+    provider_code: error?.provider_code ?? null,
+  });
   const detail = new errorsPb.ErrorDetail();
-  detail.setCode(errorCodeToProto[error?.code] ?? errorsPb.ErrorCode.ERROR_CODE_INTERNAL);
-  detail.setMessage(safeMessage);
-  detail.setRetryable(error?.status === 429 || error?.status === 503);
+  detail.setCode(protoErrorCode(envelope.code));
+  detail.setMessage(envelope.message);
+  detail.setRetryable(envelope.retryable);
+  detail.setReason(envelope.reason);
+  if (envelope.http_status != null) detail.setHttpStatus(envelope.http_status);
+  if (envelope.retry_after_ms != null) detail.setRetryAfterMs(envelope.retry_after_ms);
+  if (envelope.provider) detail.setProvider(envelope.provider);
+  if (envelope.provider_code) detail.setProviderCode(envelope.provider_code);
   const metadata = new grpc.Metadata();
   metadata.set('agentsam-error-bin', Buffer.from(detail.serializeBinary()));
   return Object.assign(new Error(safeMessage), {
-    code: httpToGrpc.get(error?.status) ?? grpc.status.INTERNAL,
+    code: grpcStatusForCode(envelope.code),
     details: safeMessage,
     metadata,
   });
@@ -205,11 +221,16 @@ export function fromGrpcError(error) {
     if (binary) detail = errorsPb.ErrorDetail.deserializeBinary(new Uint8Array(binary));
   } catch { /* fall back to gRPC status */ }
   const message = detail?.getMessage() || error?.details || error?.message || 'Knowledge RPC failed.';
+  const rpcCode = detail ? errorCodeNames.get(detail.getCode()) || 'UNKNOWN' : undefined;
   return Object.assign(new Error(message), {
-    status: grpcToHttp.get(error?.code) ?? 500,
+    status: detail?.hasHttpStatus?.() ? detail.getHttpStatus() : grpcToHttp.get(error?.code) ?? 500,
     grpcCode: error?.code,
-    rpcCode: detail ? errorCodeNames.get(detail.getCode()) || 'INTERNAL' : undefined,
+    rpcCode,
+    reason: detail?.getReason?.() || ERROR_REASON.UNKNOWN,
     retryable: detail?.getRetryable() || false,
+    retry_after_ms: detail?.hasRetryAfterMs?.() ? detail.getRetryAfterMs() : null,
+    provider: detail?.hasProvider?.() ? detail.getProvider() : null,
+    provider_code: detail?.hasProviderCode?.() ? detail.getProviderCode() : null,
   });
 }
 

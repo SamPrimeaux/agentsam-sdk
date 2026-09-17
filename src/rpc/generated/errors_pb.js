@@ -78,7 +78,12 @@ proto.agentsam.knowledge.v1.ErrorDetail.toObject = function(includeInstance, msg
   var f, obj = {
     code: jspb.Message.getFieldWithDefault(msg, 1, 0),
     message: jspb.Message.getFieldWithDefault(msg, 2, ""),
-    retryable: jspb.Message.getBooleanFieldWithDefault(msg, 3, false)
+    retryable: jspb.Message.getBooleanFieldWithDefault(msg, 3, false),
+    reason: jspb.Message.getFieldWithDefault(msg, 4, ""),
+    httpStatus: jspb.Message.getFieldWithDefault(msg, 5, 0),
+    retryAfterMs: jspb.Message.getFieldWithDefault(msg, 6, 0),
+    provider: jspb.Message.getFieldWithDefault(msg, 7, ""),
+    providerCode: jspb.Message.getFieldWithDefault(msg, 8, "")
   };
 
   if (includeInstance) {
@@ -127,6 +132,26 @@ proto.agentsam.knowledge.v1.ErrorDetail.deserializeBinaryFromReader = function(m
       var value = /** @type {boolean} */ (reader.readBool());
       msg.setRetryable(value);
       break;
+    case 4:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setReason(value);
+      break;
+    case 5:
+      var value = /** @type {number} */ (reader.readUint32());
+      msg.setHttpStatus(value);
+      break;
+    case 6:
+      var value = /** @type {number} */ (reader.readUint32());
+      msg.setRetryAfterMs(value);
+      break;
+    case 7:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setProvider(value);
+      break;
+    case 8:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setProviderCode(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -174,6 +199,41 @@ proto.agentsam.knowledge.v1.ErrorDetail.serializeBinaryToWriter = function(messa
   if (f) {
     writer.writeBool(
       3,
+      f
+    );
+  }
+  f = message.getReason();
+  if (f.length > 0) {
+    writer.writeString(
+      4,
+      f
+    );
+  }
+  f = /** @type {number} */ (jspb.Message.getField(message, 5));
+  if (f != null) {
+    writer.writeUint32(
+      5,
+      f
+    );
+  }
+  f = /** @type {number} */ (jspb.Message.getField(message, 6));
+  if (f != null) {
+    writer.writeUint32(
+      6,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 7));
+  if (f != null) {
+    writer.writeString(
+      7,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 8));
+  if (f != null) {
+    writer.writeString(
+      8,
       f
     );
   }
@@ -235,21 +295,188 @@ proto.agentsam.knowledge.v1.ErrorDetail.prototype.setRetryable = function(value)
 
 
 /**
+ * optional string reason = 4;
+ * @return {string}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getReason = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 4, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setReason = function(value) {
+  return jspb.Message.setProto3StringField(this, 4, value);
+};
+
+
+/**
+ * optional uint32 http_status = 5;
+ * @return {number}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getHttpStatus = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 5, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setHttpStatus = function(value) {
+  return jspb.Message.setField(this, 5, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearHttpStatus = function() {
+  return jspb.Message.setField(this, 5, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasHttpStatus = function() {
+  return jspb.Message.getField(this, 5) != null;
+};
+
+
+/**
+ * optional uint32 retry_after_ms = 6;
+ * @return {number}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getRetryAfterMs = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 6, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setRetryAfterMs = function(value) {
+  return jspb.Message.setField(this, 6, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearRetryAfterMs = function() {
+  return jspb.Message.setField(this, 6, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasRetryAfterMs = function() {
+  return jspb.Message.getField(this, 6) != null;
+};
+
+
+/**
+ * optional string provider = 7;
+ * @return {string}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getProvider = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 7, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setProvider = function(value) {
+  return jspb.Message.setField(this, 7, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearProvider = function() {
+  return jspb.Message.setField(this, 7, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasProvider = function() {
+  return jspb.Message.getField(this, 7) != null;
+};
+
+
+/**
+ * optional string provider_code = 8;
+ * @return {string}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getProviderCode = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 8, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setProviderCode = function(value) {
+  return jspb.Message.setField(this, 8, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearProviderCode = function() {
+  return jspb.Message.setField(this, 8, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasProviderCode = function() {
+  return jspb.Message.getField(this, 8) != null;
+};
+
+
+/**
  * @enum {number}
  */
 proto.agentsam.knowledge.v1.ErrorCode = {
-  ERROR_CODE_UNSPECIFIED: 0,
-  ERROR_CODE_INVALID_ARGUMENT: 1,
-  ERROR_CODE_UNAUTHENTICATED: 2,
-  ERROR_CODE_PERMISSION_DENIED: 3,
-  ERROR_CODE_NOT_FOUND: 4,
-  ERROR_CODE_CONFLICT: 5,
-  ERROR_CODE_RESOURCE_EXHAUSTED: 6,
-  ERROR_CODE_UNAVAILABLE: 7,
-  ERROR_CODE_DEADLINE_EXCEEDED: 8,
-  ERROR_CODE_CANCELLED: 9,
-  ERROR_CODE_INTERNAL: 10,
-  ERROR_CODE_JOB_FAILED: 11
+  ERROR_CODE_OK: 0,
+  ERROR_CODE_CANCELLED: 1,
+  ERROR_CODE_UNKNOWN: 2,
+  ERROR_CODE_INVALID_ARGUMENT: 3,
+  ERROR_CODE_DEADLINE_EXCEEDED: 4,
+  ERROR_CODE_NOT_FOUND: 5,
+  ERROR_CODE_ALREADY_EXISTS: 6,
+  ERROR_CODE_PERMISSION_DENIED: 7,
+  ERROR_CODE_RESOURCE_EXHAUSTED: 8,
+  ERROR_CODE_FAILED_PRECONDITION: 9,
+  ERROR_CODE_ABORTED: 10,
+  ERROR_CODE_OUT_OF_RANGE: 11,
+  ERROR_CODE_UNIMPLEMENTED: 12,
+  ERROR_CODE_INTERNAL: 13,
+  ERROR_CODE_UNAVAILABLE: 14,
+  ERROR_CODE_DATA_LOSS: 15,
+  ERROR_CODE_UNAUTHENTICATED: 16
 };
 
 goog.object.extend(exports, proto.agentsam.knowledge.v1);
