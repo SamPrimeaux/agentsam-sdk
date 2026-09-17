@@ -27,10 +27,42 @@ export function createGeminiEmbedder({ apiKey, fetchImpl = globalThis.fetch, sle
             method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey }, signal: AbortSignal.timeout(timeoutMs),
             body: JSON.stringify({ model: `models/${profile.model}`, content: { parts: [{ text: input }] }, outputDimensionality: profile.dimensions }),
           });
-        } catch { if (attempt + 1 === maxAttempts) throw new Error('Gemini embedding request failed or timed out.'); }
+        } catch (cause) {
+          if (attempt + 1 === maxAttempts) {
+            throw new AgentSamError(classifyGeminiFailure({
+              status: 504,
+              status_name: 'UNAVAILABLE',
+              message: 'Gemini embedding request failed or timed out.',
+              exception_type: cause?.name,
+              stack: cause?.stack,
+            }, { domain: 'knowledge', tool: 'gemini', stage: 'embedding', reason: 'transport_timeout' }), { cause });
+          }
+        }
         if (response?.ok) return (await response.json()).embedding?.values;
-        if (response && ![408, 429, 500, 502, 503, 504].includes(response.status)) throw new Error(`Gemini embedding failed (HTTP ${response.status}).`);
-        if (attempt + 1 === maxAttempts) throw new Error(`Gemini embedding retry limit reached${response ? ` (HTTP ${response.status})` : ''}.`);
+        let providerBody = null;
+        if (response) {
+          try { providerBody = await response.clone().json(); } catch { providerBody = null; }
+        }
+        if (response && ![408, 429, 500, 502, 503, 504].includes(response.status)) {
+          throw new AgentSamError(classifyGeminiFailure({
+            status: response.status,
+            status_name: providerBody?.error?.status,
+            code: providerBody?.error?.code,
+            message: providerBody?.error?.message || `Gemini embedding failed (HTTP ${response.status}).`,
+            headers: response.headers,
+            body: providerBody,
+          }, { domain: 'knowledge', tool: 'gemini', stage: 'embedding', request_origin: 'agentsam' }));
+        }
+        if (attempt + 1 === maxAttempts) {
+          throw new AgentSamError(classifyGeminiFailure({
+            status: response?.status || 503,
+            status_name: providerBody?.error?.status,
+            code: providerBody?.error?.code,
+            message: providerBody?.error?.message || `Gemini embedding retry limit reached${response ? ` (HTTP ${response.status})` : ''}.`,
+            headers: response?.headers,
+            body: providerBody,
+          }, { domain: 'knowledge', tool: 'gemini', stage: 'embedding' }));
+        }
         await response?.body?.cancel();
         await sleep(Math.min(10000, 500 * 2 ** attempt + Math.floor(Math.random() * 250)));
       }
