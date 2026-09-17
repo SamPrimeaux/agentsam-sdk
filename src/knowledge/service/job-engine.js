@@ -223,15 +223,49 @@ export function createKnowledgeJobEngine({
     child = fork(workerPath, [], { execArgv: [], stdio: ['ignore', 'ignore', 'ignore', 'ipc'], env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' } });
     const timer = setTimeout(() => { timedOut = true; child?.kill('SIGKILL'); }, jobTimeoutMs);
     child.once('message', value => { response = value; });
-    child.once('error', () => { response = { ok: false, error: 'Could not start indexing process.' }; });
+    child.once('error', (cause) => {
+      response = {
+        ok: false,
+        failure: createErrorEnvelope({
+          reason: ERROR_REASON.INTERNAL_DEPENDENCY_FAILED,
+          message: 'Could not start indexing process.',
+          source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'job_worker' },
+          domain: 'knowledge',
+          stage: 'spawn',
+          native: { code: cause?.code || null, exception_type: cause?.name || null, stack: cause?.stack || null },
+        }),
+      };
+    });
     child.once('close', () => {
       clearTimeout(timer);
       child = null;
       if (!closing) {
         const ok = response?.ok && !timedOut;
+        let failure = null;
+        if (!ok) {
+          if (timedOut) {
+            failure = createErrorEnvelope({
+              reason: ERROR_REASON.EXECUTION_TIMEOUT,
+              message: 'Knowledge job exceeded its time limit; narrow the scope and retry.',
+              source: { kind: 'runtime', name: 'agentsam-knowledge-worker' },
+              domain: 'knowledge',
+              stage: 'execute',
+            });
+          } else if (response?.failure) {
+            failure = normalizeError(response.failure, { source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'job_worker' }, domain: 'knowledge', stage: 'execute' });
+          } else {
+            failure = createErrorEnvelope({
+              reason: ERROR_REASON.EXECUTION_FAILED,
+              message: response?.error || 'Indexing process exited unexpectedly.',
+              source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'job_worker' },
+              domain: 'knowledge',
+              stage: 'execute',
+            });
+          }
+        }
         updateStatus(row.id, ok ? 'completed' : 'failed', {
           result: ok ? response.result : null,
-          error: ok ? null : timedOut ? 'Job exceeded its time limit; narrow the scope.' : response?.error || 'Indexing process exited unexpectedly.',
+          failure,
         });
       }
       pumping = false;
