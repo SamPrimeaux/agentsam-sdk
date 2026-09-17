@@ -57,7 +57,7 @@
     "./models": "./src/models/index.js",
     "./telemetry": "./src/telemetry/index.js",
     "./providers": "./src/providers/index.js",
-    "./errors": "./src/errors/index.js",
+    "./errors": "./packages/agentsam-errors/src/index.js",
     "./cloudflare": "./src/cloudflare/index.js",
     "./eval": "./src/eval/index.js",
     "./context/result-policy-schema": "./protocol/context/result-policy.schema.json",
