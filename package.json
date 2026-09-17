@@ -101,6 +101,7 @@
     "packages/agentsam-shell-kit",
     "packages/identity",
     "packages/agentsam-contracts",
+    "packages/agentsam-errors",
     "packages/agentsam-repository",
     "packages/agentsam-workbench"
   ],
