@@ -141,21 +141,20 @@ export function encodeJob(job) {
   message.setCreatedAt(timestamp(job.created_at));
   message.setUpdatedAt(timestamp(job.updated_at));
   if (job.result !== null && job.result !== undefined) message.setResultJson(JSON.stringify(job.result));
-  if (job.error) {
-    const failure = new errorsPb.ErrorDetail();
-    failure.setCode(protoErrorCode(ERROR_CODE.INTERNAL));
-    failure.setMessage(job.error);
-    failure.setRetryable(false);
-    failure.setReason(ERROR_REASON.EXECUTION_FAILED);
-    failure.setHttpStatus(500);
-    message.setFailure(failure);
-  }
+  const failure = job.failure || (job.error ? createErrorEnvelope({
+    reason: ERROR_REASON.EXECUTION_FAILED,
+    message: job.error,
+    source: { kind: 'agentsam', name: 'agentsam-knowledge' },
+    domain: 'knowledge',
+    stage: 'execute',
+  }) : null);
+  if (failure) message.setFailure(encodeErrorDetail(failure));
   return message;
 }
 
 export function decodeJob(message) {
   const resultJson = message.getResultJson();
-  const failure = message.hasFailure() ? message.getFailure() : null;
+  const failure = message.hasFailure() ? decodeErrorDetail(message.getFailure()) : null;
   return {
     id: message.hasId() ? message.getId().getValue() : '',
     status: statusFromProto.get(message.getStatus()) || 'unknown',
@@ -163,7 +162,8 @@ export function decodeJob(message) {
     created_at: iso(message.getCreatedAt()),
     updated_at: iso(message.getUpdatedAt()),
     result: resultJson ? JSON.parse(resultJson) : null,
-    error: failure ? failure.getMessage() : null,
+    failure,
+    error: failure?.message || null,
   };
 }
 
