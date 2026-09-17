@@ -133,6 +133,8 @@
   },
   "dependencies": {
     "@clack/prompts": "^1.7.0",
+    "@grpc/grpc-js": "^1.14.4",
+    "google-protobuf": "^3.21.4",
     "node-pty": "^1.0.0",
     "pg": "8.16.3",
     "picocolors": "^1.1.1",
