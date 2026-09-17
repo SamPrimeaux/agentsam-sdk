@@ -5,23 +5,83 @@ import { fork } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 import { fingerprint, validateConfig } from '../config.js';
+import {
+  AgentSamError,
+  ERROR_CODE,
+  ERROR_REASON,
+  createErrorEnvelope,
+  normalizeError,
+  parseError,
+} from '../../errors/index.js';
 
 const defaultWorkerPath = fileURLToPath(new URL('./job-worker.js', import.meta.url));
 const TERMINAL_STATUSES = new Set(['completed', 'failed']);
 
+function serviceReason(code) {
+  switch (code) {
+    case ERROR_CODE.UNAUTHENTICATED: return ERROR_REASON.AUTH_INVALID;
+    case ERROR_CODE.PERMISSION_DENIED: return ERROR_REASON.PERMISSION_DENIED;
+    case ERROR_CODE.NOT_FOUND: return ERROR_REASON.TARGET_NOT_FOUND;
+    case ERROR_CODE.ABORTED: return ERROR_REASON.CONFLICT;
+    case ERROR_CODE.RESOURCE_EXHAUSTED: return ERROR_REASON.CAPACITY_EXHAUSTED;
+    case ERROR_CODE.UNAVAILABLE: return ERROR_REASON.TRANSPORT_UNREACHABLE;
+    case ERROR_CODE.DEADLINE_EXCEEDED: return ERROR_REASON.DEADLINE_EXCEEDED;
+    case ERROR_CODE.INVALID_ARGUMENT: return ERROR_REASON.INPUT_INVALID;
+    default: return ERROR_REASON.INTERNAL;
+  }
+}
+
 export function serviceError(status, message, code) {
-  return Object.assign(new Error(message), { status, code });
+  const canonical = code === 'CONFLICT' ? ERROR_CODE.ABORTED : (Object.values(ERROR_CODE).includes(code) ? code : ERROR_CODE.INTERNAL);
+  const envelope = createErrorEnvelope({
+    code: canonical,
+    reason: serviceReason(canonical),
+    message,
+    http_status: status,
+    retryable: [429, 503, 504].includes(Number(status)),
+    source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'job_engine' },
+    resolution_owner: canonical === ERROR_CODE.UNAVAILABLE ? 'agentsam' : undefined,
+    domain: 'knowledge',
+    stage: 'request',
+  });
+  return new AgentSamError(envelope);
+}
+
+function decodeFailure(row) {
+  if (row?.failure_json) {
+    try { return parseError(row.failure_json); }
+    catch {
+      return createErrorEnvelope({
+        reason: ERROR_REASON.INTERNAL_CONTRACT_VIOLATION,
+        message: 'Stored knowledge failure could not be decoded.',
+        source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'job_engine' },
+        domain: 'knowledge',
+        stage: 'persistence',
+      });
+    }
+  }
+  if (!row?.error) return null;
+  return createErrorEnvelope({
+    reason: ERROR_REASON.EXECUTION_FAILED,
+    message: row.error,
+    source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'legacy_job_row' },
+    domain: 'knowledge',
+    stage: 'execute',
+  });
 }
 
 function decode(row) {
-  return row && {
+  if (!row) return null;
+  const failure = decodeFailure(row);
+  return {
     id: row.id,
     status: row.status,
     attempts: row.attempts,
     created_at: row.created_at,
     updated_at: row.updated_at,
     result: row.result ? JSON.parse(row.result) : null,
-    error: row.error,
+    failure,
+    error: failure?.message || row.error || null,
   };
 }
 
