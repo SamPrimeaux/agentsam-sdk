@@ -2,8 +2,8 @@ import { classifyProviderFailure } from './provider.js';
 import { ERROR_REASON } from '../vocabulary.js';
 
 export function classifyCloudflareFailure(evidence = {}, context = {}) {
-  const status = Number(evidence.status || evidence.http_status || 0);
-  const cf = Number(evidence.cloudflare_code || evidence.provider_code || evidence.code || 0) || null;
+  const status = Number(evidence.status || evidence.http_status || evidence.httpStatus || 0);
+  const cf = Number(evidence.cloudflare_code || evidence.cloudflareCode || evidence.provider_code || evidence.code || 0) || null;
   const text = `${evidence.message || ''} ${evidence.error || ''}`.toLowerCase();
   let reason = context.reason;
   if (!reason && cf === 1033) reason = ERROR_REASON.TUNNEL_CONNECTOR_UNAVAILABLE;
