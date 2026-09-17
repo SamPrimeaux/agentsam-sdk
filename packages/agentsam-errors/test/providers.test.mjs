@@ -29,6 +29,29 @@ test('OpenAI rejected key and exhausted budget stay distinct', () => {
   assert.equal(budget.remediation.action, 'add_budget');
 });
 
+test('the same provider budget response is internal when the provider account is AgentSam-owned', () => {
+  const error = classifyOpenAIFailure(
+    { status: 429, code: 'project_spend_limit_exceeded', message: 'budget reached' },
+    { credential_owner: 'agentsam' },
+  );
+  assert.equal(error.reason, 'provider_budget_exhausted');
+  assert.equal(error.source.kind, 'provider');
+  assert.equal(error.source.name, 'openai');
+  assert.equal(error.resolution_owner, 'agentsam');
+  assert.equal(error.severity, 'blocking_internal');
+  assert.equal(error.remediation.action, 'inspect_platform');
+});
+
+test('organization-owned provider account failures route to the organization administrator', () => {
+  const error = classifyGeminiFailure(
+    { status_name: 'RESOURCE_EXHAUSTED', message: 'Quota exceeded' },
+    { account_owner: 'organization' },
+  );
+  assert.equal(error.reason, 'provider_quota_exhausted');
+  assert.equal(error.resolution_owner, 'organization_admin');
+  assert.equal(error.remediation.action, 'contact_organization_admin');
+});
+
 test('provider invalid request can be attributed to AgentSam when AgentSam authored it', () => {
   const error = classifyOpenAIFailure({ status: 400, code: 'invalid_request_error', message: 'invalid generated request' }, { request_origin: 'agentsam' });
   assert.equal(error.reason, 'provider_request_invalid');
