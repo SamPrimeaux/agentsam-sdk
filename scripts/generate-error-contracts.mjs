@@ -27,7 +27,12 @@ function typescriptContracts() {
 
 function jsonSchema() {
   const nullableString = { anyOf: [{ type: 'string' }, { type: 'null' }] };
-  const nullableInteger = (minimum, maximum) => ({ anyOf: [{ type: 'integer', minimum, ...(maximum == null ? {} : { maximum }) }, { type: 'null' }] });
+  const nullableInteger = (minimum, maximum) => ({
+    anyOf: [
+      { type: 'integer', minimum, ...(maximum == null ? {} : { maximum }) },
+      { type: 'null' },
+    ],
+  });
   const schema = {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
     $id: 'https://agentsam.inneranimalmedia.com/protocol/errors/error-envelope.schema.json',
@@ -35,38 +40,25 @@ function jsonSchema() {
     type: 'object',
     additionalProperties: false,
     required: [
-      'ok','schema_version','code','reason','severity','source','resolution_owner','domain','tool','stage','message',
-      'retryable','retry_after_ms','remediation','resource','native','environment','http_status','grpc_status','transport',
-      'provider','provider_code','request_id','trace_id','fingerprint','occurrence_count','details',
+      'ok', 'schema_version', 'code', 'reason', 'severity', 'source', 'resolution_owner', 'domain', 'tool', 'stage', 'message',
+      'retryable', 'retry_after_ms', 'remediation', 'resource', 'native', 'environment', 'http_status', 'grpc_status', 'transport',
+      'provider', 'provider_code', 'request_id', 'trace_id', 'fingerprint', 'occurrence_count', 'details',
     ],
     properties: {
       ok: { const: false },
       schema_version: { const: catalog.schema_version },
       code: { enum: catalog.codes.filter(row => row.name !== 'OK').map(row => row.name) },
-      reason: { type: 'string', pattern: '^[a-z][a-z0-9_]{0,127}
-  return {
-    'packages/agentsam-errors/src/vocabulary.js': runtimeVocabulary(),
-    'packages/agentsam-contracts/src/errors.ts': typescriptContracts(),
-  };
-}
-
-export function writeGeneratedErrorContracts() {
-  for (const [relative, content] of Object.entries(generatedErrorContracts())) {
-    const filename = path.join(root, relative);
-    fs.mkdirSync(path.dirname(filename), { recursive: true });
-    fs.writeFileSync(filename, content);
-  }
-}
-
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  writeGeneratedErrorContracts();
-  console.log('Generated AgentSam error vocabulary and contracts.');
-}
- },
+      reason: { type: 'string', pattern: '^[a-z][a-z0-9_]{0,127}$' },
       severity: { enum: catalog.severities },
       source: {
-        type: 'object', additionalProperties: false, required: ['kind','name','service'],
-        properties: { kind: { enum: catalog.source_kinds }, name: { type: 'string', minLength: 1, maxLength: 256 }, service: nullableString },
+        type: 'object',
+        additionalProperties: false,
+        required: ['kind', 'name', 'service'],
+        properties: {
+          kind: { enum: catalog.source_kinds },
+          name: { type: 'string', minLength: 1, maxLength: 256 },
+          service: nullableString,
+        },
       },
       resolution_owner: { enum: catalog.resolution_owners },
       domain: { enum: catalog.domains },
@@ -76,32 +68,65 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       retryable: { type: 'boolean' },
       retry_after_ms: nullableInteger(0),
       remediation: {
-        type: 'object', additionalProperties: false, required: ['action','message','automatic','command','url'],
+        type: 'object',
+        additionalProperties: false,
+        required: ['action', 'message', 'automatic', 'command', 'url'],
         properties: {
-          action: { enum: catalog.remediation_actions }, message: nullableString, automatic: { type: 'boolean' },
-          command: nullableString, url: nullableString,
+          action: { enum: catalog.remediation_actions },
+          message: nullableString,
+          automatic: { type: 'boolean' },
+          command: nullableString,
+          url: nullableString,
         },
       },
       resource: {
         anyOf: [
-          { type: 'object', additionalProperties: false, required: ['type','id','name'], properties: { type: { type: 'string', minLength: 1, maxLength: 128 }, id: nullableString, name: nullableString } },
+          {
+            type: 'object',
+            additionalProperties: false,
+            required: ['type', 'id', 'name'],
+            properties: {
+              type: { type: 'string', minLength: 1, maxLength: 128 },
+              id: nullableString,
+              name: nullableString,
+            },
+          },
           { type: 'null' },
         ],
       },
       native: {
         anyOf: [
-          { type: 'object', additionalProperties: false, required: ['code','exception_type','exit_code','signal','stderr','stdout','stack'], properties: {
-            code: nullableString, exception_type: nullableString, exit_code: nullableInteger(-2147483648, 2147483647), signal: nullableString,
-            stderr: nullableString, stdout: nullableString, stack: nullableString,
-          } },
+          {
+            type: 'object',
+            additionalProperties: false,
+            required: ['code', 'exception_type', 'exit_code', 'signal', 'stderr', 'stdout', 'stack'],
+            properties: {
+              code: nullableString,
+              exception_type: nullableString,
+              exit_code: nullableInteger(-2147483648, 2147483647),
+              signal: nullableString,
+              stderr: nullableString,
+              stdout: nullableString,
+              stack: nullableString,
+            },
+          },
           { type: 'null' },
         ],
       },
       environment: {
         anyOf: [
-          { type: 'object', additionalProperties: false, required: ['detected_version','required_version','component','runtime','platform'], properties: {
-            detected_version: nullableString, required_version: nullableString, component: nullableString, runtime: nullableString, platform: nullableString,
-          } },
+          {
+            type: 'object',
+            additionalProperties: false,
+            required: ['detected_version', 'required_version', 'component', 'runtime', 'platform'],
+            properties: {
+              detected_version: nullableString,
+              required_version: nullableString,
+              component: nullableString,
+              runtime: nullableString,
+              platform: nullableString,
+            },
+          },
           { type: 'null' },
         ],
       },
@@ -112,26 +137,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       provider_code: nullableString,
       request_id: nullableString,
       trace_id: nullableString,
-      fingerprint: { type: 'string', pattern: '^err_[a-zA-Z0-9_-]{8,128}
-  return {
-    'packages/agentsam-errors/src/vocabulary.js': runtimeVocabulary(),
-    'packages/agentsam-contracts/src/errors.ts': typescriptContracts(),
-  };
-}
-
-export function writeGeneratedErrorContracts() {
-  for (const [relative, content] of Object.entries(generatedErrorContracts())) {
-    const filename = path.join(root, relative);
-    fs.mkdirSync(path.dirname(filename), { recursive: true });
-    fs.writeFileSync(filename, content);
-  }
-}
-
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  writeGeneratedErrorContracts();
-  console.log('Generated AgentSam error vocabulary and contracts.');
-}
- },
+      fingerprint: { type: 'string', pattern: '^err_[A-Za-z0-9_-]{8,128}$' },
       occurrence_count: { type: 'integer', minimum: 1 },
       details: {},
     },
@@ -143,6 +149,7 @@ export function generatedErrorContracts() {
   return {
     'packages/agentsam-errors/src/vocabulary.js': runtimeVocabulary(),
     'packages/agentsam-contracts/src/errors.ts': typescriptContracts(),
+    'protocol/errors/error-envelope.schema.json': jsonSchema(),
   };
 }
 
