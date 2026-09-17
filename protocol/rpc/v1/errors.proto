@@ -23,6 +23,9 @@ enum ErrorCode {
   ERROR_CODE_UNAUTHENTICATED = 16;
 }
 
+// Transport representation of the canonical AgentSam ErrorEnvelope. String
+// vocabulary is deliberate: SDK reason/severity/source catalogs evolve faster
+// than protobuf enum releases, while code retains the canonical gRPC mapping.
 message ErrorDetail {
   ErrorCode code = 1;
   string message = 2;
@@ -32,4 +35,25 @@ message ErrorDetail {
   optional uint32 retry_after_ms = 6;
   optional string provider = 7;
   optional string provider_code = 8;
+
+  optional string severity = 9;
+  optional string source_kind = 10;
+  optional string source_name = 11;
+  optional string source_service = 12;
+  optional string resolution_owner = 13;
+  optional string domain = 14;
+  optional string tool = 15;
+  optional string stage = 16;
+  optional string remediation_action = 17;
+  optional string remediation_message = 18;
+  optional string fingerprint = 19;
+  optional string trace_id = 20;
+  optional string transport = 21;
+  optional string resource_json = 22;
+  optional string native_json = 23;
+  optional string environment_json = 24;
+  optional string details_json = 25;
+  optional uint32 occurrence_count = 26;
+  optional string request_id = 27;
+  optional uint32 schema_version = 28;
 }
