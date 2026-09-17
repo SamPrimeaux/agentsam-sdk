@@ -192,11 +192,17 @@ export function createKnowledgeJobEngine({
     }
     if (TERMINAL_STATUSES.has(job.status)) watchers.delete(job.id);
   };
-  const updateStatus = (id, status, { result = null, error = null } = {}) => {
-    db.prepare('UPDATE jobs SET status=?,result=?,error=?,updated_at=? WHERE id=?').run(
+  const updateStatus = (id, status, { result = null, failure = null, error = null } = {}) => {
+    const normalizedFailure = failure
+      ? normalizeError(failure, { source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'job_engine' }, domain: 'knowledge', stage: 'execute' })
+      : error
+        ? createErrorEnvelope({ reason: ERROR_REASON.EXECUTION_FAILED, message: error, source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'job_engine' }, domain: 'knowledge', stage: 'execute' })
+        : null;
+    db.prepare('UPDATE jobs SET status=?,result=?,error=?,failure_json=?,updated_at=? WHERE id=?').run(
       status,
       result === null ? null : JSON.stringify(result),
-      error,
+      normalizedFailure?.message || null,
+      normalizedFailure ? JSON.stringify(normalizedFailure) : null,
       new Date().toISOString(),
       id,
     );
