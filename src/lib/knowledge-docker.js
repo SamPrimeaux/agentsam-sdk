@@ -7,12 +7,22 @@ import { CONFIG_PATH, defaultConfig, readConfig } from '../knowledge/config.js';
 
 const sdkRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const runtimeFiles = () => {
-  const files = ['services/knowledge/package.json', 'services/knowledge/package-lock.json', 'packages/agentsam-repository/src/merkle/hash.js'];
+  const files = [
+    'services/knowledge/package.json',
+    'services/knowledge/package-lock.json',
+    'packages/agentsam-repository/src/merkle/hash.js',
+    'packages/agentsam-errors/package.json',
+    'src/errors/contract.js',
+  ];
   const walk = dir => { for (const entry of fs.readdirSync(path.join(sdkRoot, dir), { withFileTypes: true })) {
     const file = `${dir}/${entry.name}`;
-    if (entry.isDirectory()) walk(file); else if (entry.isFile() && /\.(js|sql)$/.test(entry.name)) files.push(file);
+    if (entry.isDirectory()) walk(file);
+    else if (entry.isFile() && (/\.(js|sql)$/.test(entry.name) || file === 'src/rpc/generated/package.json')) files.push(file);
   } };
-  walk('src/knowledge'); return files.sort();
+  walk('src/knowledge');
+  walk('src/rpc/generated');
+  walk('packages/agentsam-errors/src');
+  return files.sort();
 };
 
 export function generateKnowledgeDocker(opts = {}) {
