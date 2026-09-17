@@ -14,7 +14,16 @@ import {
 process.once('message', async ({ root, config, filename, request, maxFiles }) => {
   let store;
   try {
-    if (request.operation !== 'search' && inventory(root, config.scope).length > maxFiles) throw new Error(`Scope exceeds ${maxFiles} files; choose a smaller include set.`);
+    if (request.operation !== 'search' && inventory(root, config.scope).length > maxFiles) throw new AgentSamError(createErrorEnvelope({
+      reason: ERROR_REASON.INPUT_OUT_OF_RANGE,
+      message: `Scope exceeds ${maxFiles} files; choose a smaller include set.`,
+      source: { kind: 'user', name: 'knowledge_request' },
+      resolution_owner: 'user',
+      domain: 'knowledge',
+      stage: 'inventory',
+      remediation: { action: 'reduce_scope', message: 'Narrow the repository include scope and retry.' },
+      resource: { type: 'repository', id: config.repository_id || null },
+    }));
     store = await openSqliteStore(filename);
     const embedder = request.operation !== 'plan' && (request.embed || request.semantic) ? createGeminiEmbedder({ apiKey: process.env.GEMINI_API_KEY }) : undefined;
     let result;
