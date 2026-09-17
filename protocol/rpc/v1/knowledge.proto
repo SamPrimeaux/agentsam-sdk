@@ -16,12 +16,16 @@ message ListRepositoriesResponse {
   bool embeddings_enabled = 2;
 }
 
+message StringList {
+  repeated string values = 1;
+}
+
 message SubmitJobRequest {
   string repository = 1;
   string operation = 2;
   optional string scope = 3;
-  repeated string include = 4;
-  repeated string exclude = 5;
+  optional StringList include = 4;
+  optional StringList exclude = 5;
   optional bool embed = 6;
   optional bool semantic = 7;
   optional string query = 8;
