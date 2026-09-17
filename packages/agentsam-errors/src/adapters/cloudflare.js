@@ -17,5 +17,5 @@ export function classifyCloudflareFailure(evidence = {}, context = {}) {
   else if (!reason && /durable object/.test(text)) reason = ERROR_REASON.CLOUDFLARE_DURABLE_OBJECT_UNAVAILABLE;
   else if (!reason && /\bd1\b/.test(text)) reason = ERROR_REASON.CLOUDFLARE_D1_UNAVAILABLE;
   else if (!reason && /\br2\b/.test(text)) reason = ERROR_REASON.CLOUDFLARE_R2_UNAVAILABLE;
-  return classifyProviderFailure('cloudflare', { ...evidence, code: cf ?? evidence.code }, { ...context, reason, domain: context.domain || 'transport' });
+  return classifyProviderFailure('cloudflare', { ...evidence, status, code: cf ?? evidence.code }, { ...context, reason, domain: context.domain || 'transport' });
 }
