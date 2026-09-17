@@ -128,7 +128,9 @@
     "test:connectors": "node --test packages/connectors/cloudflare/tests/**/*.test.mjs",
     "verify:npm10-lock": "node apps/local-studio/scripts/verify-npm10-lock.mjs",
     "proto:generate": "node scripts/generate-proto.mjs",
-    "proto:check": "node scripts/verify-proto.mjs"
+    "proto:check": "node scripts/verify-proto.mjs",
+    "errors:generate": "node scripts/generate-error-contracts.mjs",
+    "errors:check": "node scripts/verify-error-contracts.mjs"
   },
   "engines": {
     "node": ">=22 <25",
