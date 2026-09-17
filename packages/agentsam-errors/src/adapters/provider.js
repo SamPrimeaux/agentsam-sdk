@@ -53,17 +53,43 @@ export function classifyProviderFailure(provider, evidence = {}, context = {}) {
   const reason = context.reason || reasonFromGenericEvidence(evidence);
   const providerCode = clean(evidence.code || evidence.provider_code || evidence.type) || null;
   const requestOrigin = clean(context.request_origin || evidence.request_origin).toLowerCase();
+  const configuredOwner = clean(context.credential_owner || context.account_owner || context.configuration_owner).toLowerCase();
   const internalRequestFailure = reason === ERROR_REASON.PROVIDER_REQUEST_INVALID && requestOrigin === 'agentsam';
+  const ownerSensitiveFailure = [
+    ERROR_REASON.PROVIDER_NOT_CONNECTED,
+    ERROR_REASON.PROVIDER_CREDENTIAL_MISSING,
+    ERROR_REASON.PROVIDER_CREDENTIAL_INVALID,
+    ERROR_REASON.PROVIDER_CREDENTIAL_EXPIRED,
+    ERROR_REASON.PROVIDER_SCOPE_INSUFFICIENT,
+    ERROR_REASON.PROVIDER_BUDGET_EXHAUSTED,
+    ERROR_REASON.PROVIDER_QUOTA_EXHAUSTED,
+  ].includes(reason);
+  const platformOwnedFailure = ownerSensitiveFailure && ['agentsam','inneranimalmedia','platform'].includes(configuredOwner);
+  const organizationOwnedFailure = ownerSensitiveFailure && ['organization','organization_admin','org'].includes(configuredOwner);
   const localConfigurationFailure = [ERROR_REASON.PROVIDER_NOT_CONNECTED, ERROR_REASON.PROVIDER_CREDENTIAL_MISSING].includes(reason);
+  const resolutionOwner = internalRequestFailure || platformOwnedFailure
+    ? 'agentsam'
+    : organizationOwnedFailure
+      ? 'organization_admin'
+      : context.resolution_owner;
+  const severity = internalRequestFailure || platformOwnedFailure ? 'blocking_internal' : context.severity;
+  const remediation = internalRequestFailure || platformOwnedFailure
+    ? { action: 'inspect_platform', message: 'AgentSam must inspect its provider integration or platform-owned credential.' }
+    : organizationOwnedFailure
+      ? { action: 'contact_organization_admin', message: 'An organization administrator must update this provider connection or account.' }
+      : context.remediation;
+  const source = context.source || (localConfigurationFailure
+    ? platformOwnedFailure
+      ? { kind: 'agentsam', name: 'inneranimalmedia', service: name }
+      : { kind: 'user', name: organizationOwnedFailure ? 'organization_configuration' : 'project_configuration', service: name }
+    : { kind: 'provider', name, service: clean(context.service || evidence.service) || null });
   return createErrorEnvelope({
     reason,
     message: context.message || evidence.message || evidence.error || `${name} request failed`,
-    source: context.source || (localConfigurationFailure
-      ? { kind: 'user', name: 'project_configuration', service: name }
-      : { kind: 'provider', name, service: clean(context.service || evidence.service) || null }),
-    resolution_owner: internalRequestFailure ? 'agentsam' : context.resolution_owner,
-    severity: internalRequestFailure ? 'blocking_internal' : context.severity,
-    remediation: internalRequestFailure ? { action: 'inspect_platform' } : context.remediation,
+    source,
+    resolution_owner: resolutionOwner,
+    severity,
+    remediation,
     domain: context.domain || 'provider',
     tool: context.tool || name,
     stage: context.stage || 'request',
