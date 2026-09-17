@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package agentsam.knowledge.v1;
+
+message JobId {
+  string value = 1;
+}
+
+message RepositoryRef {
+  string alias = 1;
+  string repository_id = 2;
+}
+
+message StringList {
+  repeated string values = 1;
+}

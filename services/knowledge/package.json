@@ -3,5 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "dependencies": { "typescript": "5.9.3" }
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.4",
+    "google-protobuf": "^3.21.4",
+    "typescript": "5.9.3"
+  }
 }
