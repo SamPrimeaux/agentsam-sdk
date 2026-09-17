@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createBearerTokenVerifier } from './auth.js';
 import { createKnowledgeJobEngine, serviceError } from './job-engine.js';
+import { normalizeError, toHttpError } from '../../errors/index.js';
 
 async function readBody(req) {
   const chunks = [];
