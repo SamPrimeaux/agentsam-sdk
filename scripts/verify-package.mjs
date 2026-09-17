@@ -9,6 +9,9 @@ const readJson = (rel) => JSON.parse(readFileSync(join(root, rel), 'utf8'));
 const pkg = readJson('package.json');
 const lock = readJson('package-lock.json');
 const identity = readJson('packages/identity/package.json');
+const errors = readJson('packages/agentsam-errors/package.json');
+const errorCatalog = readJson('protocol/errors/error-catalog.json');
+const errorSchema = readJson('protocol/errors/error-envelope.schema.json');
 const capabilityManifest = readJson('protocol/capabilities/manifest.json');
 const presetCatalog = readJson('protocol/presets/catalog.json');
 
