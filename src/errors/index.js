@@ -9,3 +9,8 @@ export {
   redactDiagnosticValue,
   renderDiagnosticError,
 } from './diagnostic.js';
+
+export {
+  classifyCloudflareFailure,
+  classifyOAuthFailure,
+} from './contract.js';
