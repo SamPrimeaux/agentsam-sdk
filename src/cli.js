@@ -13,6 +13,7 @@ import { promptOptionalByokKeys } from './lib/prompt-byok.js';
 import { runStartLocal } from './commands/start-local.js';
 import { runOllama } from './commands/ollama.js';
 import { runModels } from './commands/models.js';
+import { runEnv } from './commands/env.js';
 import { runTunnel } from './commands/tunnel.js';
 import { runDeploy } from './commands/deploy.js';
 import { runConnections } from './commands/connections.js';
@@ -90,6 +91,7 @@ function printHelp() {
     agentsam status [--json]   Live local Git + DB + API + PTY status
     agentsam db init|status    Manage the project-local SQLite database
     agentsam models            Verify configured providers and selectable hosted/local models
+    agentsam env init <name>   Create a secure provider profile + reusable shell loader
     agentsam login             Sign in to Inner Animal Media and persist a secure machine-local session
     agentsam logout            Sign out locally; provider credentials stay untouched
     agentsam whoami [--json]   Authenticated account identity + safe credential status
@@ -374,6 +376,13 @@ if (command === '--version' || command === '-v') {
 } else if (command === 'models') {
   try {
     await runModels(rest);
+  } catch (e) {
+    reportCliError(e);
+    process.exit(1);
+  }
+} else if (command === 'env') {
+  try {
+    await runEnv(rest);
   } catch (e) {
     reportCliError(e);
     process.exit(1);

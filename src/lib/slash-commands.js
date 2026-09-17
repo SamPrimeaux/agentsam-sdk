@@ -15,6 +15,7 @@ export const SLASH_COMMANDS = [
   { cmd: '/logout', description: 'Sign out locally without deleting provider credentials', lane: 'identity' },
   { cmd: '/whoami', description: 'Show authenticated account identity and safe credential status', lane: 'identity' },
   { cmd: '/session', description: 'Show current session usage, cost, and resume receipt', lane: 'observability' },
+  { cmd: '/usage', description: 'Show token usage, spend breakdown, and resume command', lane: 'observability' },
   { cmd: '/cf', description: 'Cloudflare native reads, Wrangler status, and CPU profile analysis', lane: 'cloudflare' },
   { cmd: '/settings', description: 'Choose project, runtime, terminal, and model policy' },
   { cmd: '/pwd', description: 'Print working directory', lane: 'terminal' },
