@@ -90,9 +90,9 @@ function printHelp() {
     agentsam status [--json]   Live local Git + DB + API + PTY status
     agentsam db init|status    Manage the project-local SQLite database
     agentsam models            Verify configured providers and selectable hosted/local models
-    agentsam login             Authenticate IAM and persist a secure machine-local session
-    agentsam logout            Remove the local IAM session; provider keys stay untouched
-    agentsam whoami [--json]   Authenticated IAM identity + safe credential status
+    agentsam login             Sign in to Inner Animal Media and persist a secure machine-local session
+    agentsam logout            Sign out locally; provider credentials stay untouched
+    agentsam whoami [--json]   Authenticated account identity + safe credential status
     agentsam resume [session]  Resume a saved Agent Sam session; omit id for picker
     agentsam eval context      Offline context-strategy/economics fixtures (--help)
     agentsam cloudflare        Native Wrangler reads + Worker CPU profile analysis (--help)
@@ -102,8 +102,9 @@ function printHelp() {
     agentsam tunnel            Explicitly expose local PTY when remote access is wanted
     agentsam deploy            Graduate to Cloudflare / GCP when ready
     agentsam dockerize         Build/run app, knowledge, or CAD containers (--help)
-    agentsam identity preview  Local auth portal preview
+    agentsam identity preview  Preview the reusable local auth portal (not production login)
     agentsam identity init     Add reusable identity package surfaces
+    agentsam help
     agentsam --version
     agentsam --help
 
@@ -127,8 +128,8 @@ function printHelp() {
     --pretty                   Pretty-print JSON; machine JSON is compact by default
     --remote <name>            Preferred Git remote (default origin; falls back to first remote)
 
-  Init is completable with Node only — no IAM login, no OAuth, no Cloudflare.
-  Prove locally first; deploy prompts for accounts only when you choose to ship.
+  Run agentsam from any project to enter the account-aware interactive experience.
+  Account, model-provider, terminal, and deploy permissions are requested only when the related capability needs them.
 
   Tunnel options:
     --quick                    Quick tunnel (default) — trycloudflare.com URL
@@ -311,7 +312,7 @@ const rest = process.argv.slice(3);
 
 if (command === '--version' || command === '-v') {
   console.log(VERSION);
-} else if (command === '--help' || command === '-h') {
+} else if (command === 'help' || command === '--help' || command === '-h') {
   printHelp();
 } else if (!command) {
   if (process.stdin.isTTY && process.stdout.isTTY) {

@@ -23,6 +23,7 @@ import { resolveProviderCredential } from '../lib/provider-credentials.js';
 import { createLocalSession, saveLocalSession, sessionTitleFromInput } from '../lib/local-sessions.js';
 import { grantExecutionApproval, isExecutionApproved, toolApprovalKey } from '../lib/execution-approvals.js';
 import { runWhoami } from './whoami.js';
+import { runLogin, runLogout } from './account-auth.js';
 
 function writeLine(write, value = '') { write(`${value}\n`); }
 
@@ -424,6 +425,12 @@ export async function dispatchShellLine(line, state = {}) {
         break;
       case '/models':
         await runModels(args, { cwd: state.cwd, write, home: state.home });
+        break;
+      case '/login':
+        await runLogin(args, { write, home: state.home });
+        break;
+      case '/logout':
+        runLogout(args, { write, home: state.home });
         break;
       case '/whoami':
         await runWhoami(args, { write, home: state.home });
