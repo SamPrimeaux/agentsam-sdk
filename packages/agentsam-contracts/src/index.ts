@@ -7,3 +7,4 @@ export * from './adapter';
 export * from './models';
 export * from './identity';
 export * from './repository';
+export * from './errors';
