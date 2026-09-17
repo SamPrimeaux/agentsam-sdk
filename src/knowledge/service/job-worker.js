@@ -3,6 +3,12 @@ import { openSqliteStore } from '../stores/sqlite.js';
 import { createGeminiEmbedder } from '../providers/gemini.js';
 import { inventory } from '../source.js';
 import { scopeKey } from '../config.js';
+import {
+  AgentSamError,
+  ERROR_REASON,
+  createErrorEnvelope,
+  normalizeError,
+} from '../../errors/index.js';
 
 // Parsing and vector ranking run in a child process, keeping HTTP acceptance responsive.
 process.once('message', async ({ root, config, filename, request, maxFiles }) => {
