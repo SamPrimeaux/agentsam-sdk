@@ -8,6 +8,7 @@ const API_PROVIDERS = Object.freeze([
   { id: 'gemini', label: 'Gemini', credential: 'GEMINI_API_KEY' },
   { id: 'grok', label: 'Grok', credential: 'XAI_API_KEY' },
   { id: 'anthropic', label: 'Anthropic', credential: 'ANTHROPIC_API_KEY' },
+  { id: 'cloudflare', label: 'Cloudflare', credential: 'CLOUDFLARE_API_TOKEN' },
 ]);
 
 function clean(value) { return value == null ? '' : String(value).trim(); }
@@ -23,6 +24,35 @@ async function discoverOpenAIModels(apiKey, fetchImpl) {
     if (!response.ok) return { attempted: true, ok: false, models: [], error: `HTTP ${response.status}` };
     const body = await response.json();
     const models = Array.isArray(body?.data) ? body.data.map((row) => clean(row?.id)).filter(Boolean) : [];
+    return { attempted: true, ok: true, models, error: null };
+  } catch (error) {
+    return { attempted: true, ok: false, models: [], error: error?.message || String(error) };
+  }
+}
+
+function cloudflareTaskName(task) {
+  if (typeof task === 'string') return clean(task);
+  if (task && typeof task === 'object') return clean(task.name || task.id);
+  return '';
+}
+
+async function discoverCloudflareModels(apiToken, accountId, fetchImpl) {
+  if (!apiToken) return { attempted: false, ok: false, models: [], error: null };
+  if (!accountId) return { attempted: true, ok: false, models: [], error: 'ACCOUNT_ID is required for Workers AI discovery' };
+  try {
+    const response = await fetchImpl(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/models/search`, {
+      headers: { authorization: `Bearer ${apiToken}` },
+      signal: typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(8_000) : undefined,
+    });
+    if (!response.ok) return { attempted: true, ok: false, models: [], error: `HTTP ${response.status}` };
+    const body = await response.json();
+    if (body?.success === false) return { attempted: true, ok: false, models: [], error: clean(body?.errors?.[0]?.message) || 'Cloudflare API error' };
+    const models = (Array.isArray(body?.result) ? body.result : []).map((row) => ({
+      id: clean(row?.name),
+      task: cloudflareTaskName(row?.task),
+      author: clean(row?.author) || null,
+      description: clean(row?.description) || null,
+    })).filter((row) => row.id);
     return { attempted: true, ok: true, models, error: null };
   } catch (error) {
     return { attempted: true, ok: false, models: [], error: error?.message || String(error) };
@@ -47,10 +77,15 @@ export async function collectModelsStatus(options = {}) {
   });
 
   const openaiCredential = credentials.get('openai');
-  const shouldDiscover = options.discoverRemote !== false && Boolean(openaiCredential?.configured);
-  const openai = shouldDiscover
+  const cloudflareCredential = credentials.get('cloudflare');
+  const shouldDiscover = options.discoverRemote !== false;
+  const openai = shouldDiscover && openaiCredential?.configured
     ? await discoverOpenAIModels(clean(openaiCredential?.value), providerFetchImpl)
     : { attempted: false, ok: false, models: [], error: null };
+  const cloudflare = shouldDiscover && cloudflareCredential?.configured
+    ? await discoverCloudflareModels(clean(cloudflareCredential?.value), clean(cloudflareCredential?.account_id), providerFetchImpl)
+    : { attempted: false, ok: false, models: [], error: null };
+  const cloudflareTextModels = cloudflare.models.filter((row) => row.task.toLowerCase() === 'text generation');
   const availableIds = new Set(openai.models);
   const catalogModels = listModelCatalog().map((record) => ({
     model_key: record.model_key,
@@ -73,6 +108,17 @@ export async function collectModelsStatus(options = {}) {
         error: openai.error,
         returnedModelCount: openai.models.length,
       },
+      cloudflare: {
+        attempted: cloudflare.attempted,
+        ok: cloudflare.ok,
+        error: cloudflare.error,
+        accountId: cloudflareCredential?.account_id || null,
+        returnedModelCount: cloudflare.models.length,
+        textGenerationModelCount: cloudflareTextModels.length,
+      },
+    },
+    providerModels: {
+      cloudflare: cloudflareTextModels,
     },
     catalogModels,
     availableModels: catalogModels.filter((row) => row.availability === 'available'),
@@ -113,6 +159,17 @@ export function renderModelsStatus(status) {
   } else if (status.discovery?.openai?.attempted) {
     lines.push('');
     lines.push(`  ${pc.dim(`OpenAI discovery ${status.discovery.openai.ok ? 'completed; no catalog models matched' : `failed: ${status.discovery.openai.error || 'unknown error'}`}`)}`);
+  }
+
+  const cloudflare = status.discovery?.cloudflare;
+  if (cloudflare?.attempted) {
+    lines.push('');
+    if (cloudflare.ok) {
+      lines.push(`  ${pc.dim(`Cloudflare Workers AI · ${cloudflare.textGenerationModelCount} account-visible text-generation models`)}`);
+      for (const model of status.providerModels?.cloudflare || []) lines.push(`    ${pc.green('•')} ${model.id}`);
+    } else {
+      lines.push(`  ${pc.dim(`Cloudflare discovery failed: ${cloudflare.error || 'unknown error'}`)}`);
+    }
   }
 
   const local = status.local;

@@ -202,6 +202,11 @@ export async function runResponsesAgent(options = {}) {
 
   let cumulativeUsage = options.cumulativeUsage || null;
   let totalCostUsd = 0;
+  const costBreakdownUsd = { input: 0, cached_input: 0, cache_write: 0, output: 0 };
+  const accumulateCost = (cost) => {
+    totalCostUsd += Number(cost?.total_usd || 0);
+    for (const key of Object.keys(costBreakdownUsd)) costBreakdownUsd[key] += Number(cost?.components_usd?.[key] || 0);
+  };
   let response = await provider.create({
     model: record.provider_model_id,
     input,
@@ -216,7 +221,7 @@ export async function runResponsesAgent(options = {}) {
     emit,
     runId,
   });
-  totalCostUsd += response.cost?.total_usd || 0;
+  accumulateCost(response.cost);
   cumulativeUsage = response.usage_snapshot?.cumulative || cumulativeUsage;
 
   const toolReceipts = [];
@@ -286,7 +291,7 @@ export async function runResponsesAgent(options = {}) {
       emit,
       runId,
     });
-    totalCostUsd += response.cost?.total_usd || 0;
+    accumulateCost(response.cost);
     cumulativeUsage = response.usage_snapshot?.cumulative || cumulativeUsage;
   }
 
@@ -313,6 +318,7 @@ export async function runResponsesAgent(options = {}) {
     usage_snapshot: response.usage_snapshot,
     cumulative_usage: cumulativeUsage,
     total_cost_usd: totalCostUsd,
+    cost_breakdown_usd: Object.freeze({ ...costBreakdownUsd }),
     tool_surface: toolSurface.receipt,
     tool_receipts: Object.freeze(toolReceipts),
     compacted_before_turn: Boolean(compacted),

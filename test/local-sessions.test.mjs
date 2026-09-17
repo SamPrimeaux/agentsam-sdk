@@ -27,6 +27,7 @@ test('local sessions persist provider-neutral continuation, usage, cost, and las
     usage_snapshot: { current_context: { input_tokens: 21_244, window_tokens: 1_050_000 } },
     cumulative_usage: { input_tokens: 21_244, cached_input_tokens: 60_544, output_tokens: 219, reasoning_tokens: 31 },
     total_cost_usd: 0.123456,
+    cost_breakdown_usd: { input: 0.08, cached_input: 0.01, cache_write: 0.003456, output: 0.03 },
   }, { home });
 
   const loaded = loadLocalSession(session.id, { home });
@@ -36,7 +37,8 @@ test('local sessions persist provider-neutral continuation, usage, cost, and las
 
   const receipt = renderSessionReceipt(loaded);
   assert.match(receipt, /Token usage: total=21,463 input=21,244 \(\+ 60,544 cached\) output=219 reasoning=31/);
-  assert.match(receipt, /Cost: \$0\.1235/);
+  assert.match(receipt, /Spent: \$0\.1235/);
+  assert.match(receipt, /Cost breakdown: input \$0\.0800 · cached \$0\.0100 · cache write \$0\.003456 · output \$0\.0300/);
   assert.match(receipt, new RegExp(`agentsam resume ${session.id}`));
   assert.match(receipt, /Run wrangler whoami/);
 });

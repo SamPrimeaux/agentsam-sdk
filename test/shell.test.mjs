@@ -53,6 +53,44 @@ test('dispatch handles help, menu fallback, pwd, cd, and exit without falling th
   assert.equal(result.exit, true);
 });
 
+test('/usage renders the current session receipt without ending the session', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-shell-usage-'));
+  let output = '';
+  const state = {
+    cwd: root, interactive: false, write: (text) => { output += text; },
+    session: {
+      id: 'asess_00000000-0000-4000-8000-000000000001', title: 'Usage test', model_key: 'openai:gpt-6-astra',
+      cumulative_usage: { input_tokens: 21_244, cached_input_tokens: 60_544, output_tokens: 219 },
+      total_cost_usd: 0.42, cost_breakdown_usd: { input: 0.2, cached_input: 0.02, output: 0.2 },
+    },
+  };
+  const result = await dispatchShellLine('/usage', state);
+  assert.equal(result.exit, false);
+  assert.match(output, /Token usage: total=21,463 input=21,244 \(\+ 60,544 cached\) output=219/);
+  assert.match(output, /Spent: \$0\.4200/);
+  assert.match(output, /agentsam resume asess_00000000-0000-4000-8000-000000000001/);
+});
+
+test('/logout signs out locally and emits the same resumable usage receipt', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-shell-logout-'));
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-shell-home-'));
+  let output = '';
+  const state = {
+    cwd: root, home, interactive: false, write: (text) => { output += text; },
+    session: {
+      id: 'asess_00000000-0000-4000-8000-000000000002', title: 'Logout test', model_key: 'openai:gpt-6-astra',
+      cumulative_usage: { input_tokens: 100, cached_input_tokens: 50, output_tokens: 25 },
+      total_cost_usd: 0.0125, cost_breakdown_usd: { input: 0.005, cached_input: 0.0025, output: 0.005 },
+    },
+  };
+  const result = await dispatchShellLine('/logout', state);
+  assert.equal(result.exit, false);
+  assert.match(output, /No local Agent Sam IAM session was stored/);
+  assert.match(output, /Token usage: total=125 input=100 \(\+ 50 cached\) output=25/);
+  assert.match(output, /Spent: \$0\.0125/);
+  assert.match(output, /agentsam resume asess_00000000-0000-4000-8000-000000000002/);
+});
+
 test('reasoning and service-tier commands persist only supported controls for an exact model', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-shell-model-'));
   fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'model-demo' }));

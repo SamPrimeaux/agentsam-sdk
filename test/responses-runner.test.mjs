@@ -13,7 +13,7 @@ function usage(input = 10_000, cumulative = input) {
     estimate_kind: 'provider', provider_authoritative: true,
   };
 }
-function cost(total = 0.1) { return { total_usd: total }; }
+function cost(total = 0.1) { return { total_usd: total, components_usd: { input: total * 0.5, cached_input: total * 0.1, cache_write: total * 0.1, output: total * 0.3 } }; }
 
 test('capability adapter hydrates packaged JSON schemas and tool surface exposes only selected executable schemas', () => {
   const adapter = createCapabilityAdapter();
@@ -73,6 +73,8 @@ test('runner owns cwd, executes selected tool, preserves call_id and returns pro
   assert.equal(result.output_text, 'done');
   assert.equal(result.response_id, 'resp_2');
   assert.equal(result.total_cost_usd, 0.5);
+  assert.equal(result.cost_breakdown_usd.input, 0.25);
+  assert.equal(result.cost_breakdown_usd.output, 0.15);
   assert.equal(result.continuation.compact_before_next_turn, false);
   assert.ok(events.some(event => event.type === 'tool.search'));
   assert.ok(events.some(event => event.type === 'tool.completed'));

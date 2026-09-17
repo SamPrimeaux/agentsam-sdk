@@ -23,6 +23,7 @@ import { resolveProviderCredential } from '../lib/provider-credentials.js';
 import { createLocalSession, saveLocalSession, sessionTitleFromInput } from '../lib/local-sessions.js';
 import { grantExecutionApproval, isExecutionApproved, toolApprovalKey } from '../lib/execution-approvals.js';
 import { runWhoami } from './whoami.js';
+import { runLogin, runLogout } from './account-auth.js';
 
 function writeLine(write, value = '') { write(`${value}\n`); }
 
@@ -219,14 +220,21 @@ export function renderSessionReceipt(session) {
   const input = Number(usage.input_tokens || 0);
   const output = Number(usage.output_tokens || 0);
   const cached = Number(usage.cached_input_tokens || 0);
+  const cacheWrite = Number(usage.cache_write_tokens || 0);
   const reasoning = Number(usage.reasoning_tokens || 0);
   const total = input + output;
   const active = Number(session.usage_snapshot?.current_context?.input_tokens || 0);
+  const model = session.provider_model_id || session.model_key || 'model unavailable';
+  const breakdown = session.cost_breakdown_usd || {};
+  const componentTotal = ['input', 'cached_input', 'cache_write', 'output'].reduce((sum, key) => sum + Number(breakdown[key] || 0), 0);
   const lines = [
     '',
-    `Token usage: total=${formatCount(total)} input=${formatCount(input)}${cached ? ` (+ ${formatCount(cached)} cached)` : ''} output=${formatCount(output)}${reasoning ? ` reasoning=${formatCount(reasoning)}` : ''}`,
-    `Cost: ${formatUsd(session.total_cost_usd)} · ${session.model_key || 'model unavailable'}${session.actual_service_tier ? ` · ${session.actual_service_tier}` : ''}`,
+    `Token usage: total=${formatCount(total)} input=${formatCount(input)}${cached ? ` (+ ${formatCount(cached)} cached)` : ''}${cacheWrite ? ` (+ ${formatCount(cacheWrite)} cache write)` : ''} output=${formatCount(output)}${reasoning ? ` reasoning=${formatCount(reasoning)}` : ''}`,
+    `Spent: ${formatUsd(session.total_cost_usd)} · ${model}${session.actual_service_tier ? ` · ${session.actual_service_tier}` : ''}`,
   ];
+  if (componentTotal > 0) {
+    lines.push(`Cost breakdown: input ${formatUsd(breakdown.input)} · cached ${formatUsd(breakdown.cached_input)} · cache write ${formatUsd(breakdown.cache_write)} · output ${formatUsd(breakdown.output)}`);
+  }
   if (active) lines.push(`Active context: ${formatCount(active)} tokens`);
   lines.push('', 'To continue this session, run:', `  agentsam resume ${session.id}`, '', 'Or run:', '  agentsam resume', '', 'and select:', `  ${session.title || 'this session'}`, '');
   return lines.join('\n');
@@ -370,6 +378,9 @@ async function runInteractiveModelTurn(prompt, state) {
       usage_snapshot: result.usage_snapshot,
       cumulative_usage: result.cumulative_usage,
       total_cost_usd: Number(state.session.total_cost_usd || 0) + Number(result.total_cost_usd || 0),
+      cost_breakdown_usd: Object.fromEntries(['input', 'cached_input', 'cache_write', 'output'].map((key) => [
+        key, Number(state.session.cost_breakdown_usd?.[key] || 0) + Number(result.cost_breakdown_usd?.[key] || 0),
+      ])),
       last_error: null,
     });
   }
@@ -425,10 +436,18 @@ export async function dispatchShellLine(line, state = {}) {
       case '/models':
         await runModels(args, { cwd: state.cwd, write, home: state.home });
         break;
+      case '/login':
+        await runLogin(args, { write, home: state.home });
+        break;
+      case '/logout':
+        runLogout(args, { write, home: state.home });
+        if (state.session) write(renderSessionReceipt(state.session));
+        break;
       case '/whoami':
         await runWhoami(args, { write, home: state.home });
         break;
       case '/session':
+      case '/usage':
         if (state.session) write(renderSessionReceipt(state.session));
         else writeLine(write, '  No persistent session is active in this shell invocation.');
         break;

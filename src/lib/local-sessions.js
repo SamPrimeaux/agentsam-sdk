@@ -52,6 +52,15 @@ function normalizeUsage(value = {}) {
   };
 }
 
+function normalizeCostBreakdown(value = {}) {
+  return {
+    input: Number(value.input || 0),
+    cached_input: Number(value.cached_input || 0),
+    cache_write: Number(value.cache_write || 0),
+    output: Number(value.output || 0),
+  };
+}
+
 export function normalizeLocalSession(value = {}) {
   const createdAt = clean(value.created_at) || now();
   return {
@@ -72,6 +81,7 @@ export function normalizeLocalSession(value = {}) {
     usage_snapshot: value.usage_snapshot && typeof value.usage_snapshot === 'object' ? structuredClone(value.usage_snapshot) : null,
     cumulative_usage: normalizeUsage(value.cumulative_usage || {}),
     total_cost_usd: Number(value.total_cost_usd || 0),
+    cost_breakdown_usd: normalizeCostBreakdown(value.cost_breakdown_usd || {}),
     approved_projected_call_cost_usd: Number(value.approved_projected_call_cost_usd || 0),
     last_error: value.last_error && typeof value.last_error === 'object' ? structuredClone(value.last_error) : null,
   };
