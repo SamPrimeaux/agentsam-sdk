@@ -2,30 +2,45 @@ syntax = "proto3";
 
 package agentsam.knowledge.v1;
 
+import "google/protobuf/timestamp.proto";
+import "common.proto";
+import "errors.proto";
+
 service KnowledgeService {
   rpc ListRepositories(ListRepositoriesRequest) returns (ListRepositoriesResponse);
-  rpc SubmitJob(SubmitJobRequest) returns (KnowledgeJob);
-  rpc GetJob(GetJobRequest) returns (KnowledgeJob);
-  rpc WatchJob(WatchJobRequest) returns (stream KnowledgeJobEvent);
+  rpc SubmitJob(SubmitJobRequest) returns (Job);
+  rpc GetJob(GetJobRequest) returns (Job);
+  rpc WatchJob(WatchJobRequest) returns (stream JobEvent);
 }
 
 message ListRepositoriesRequest {}
 
 message ListRepositoriesResponse {
-  repeated string repositories = 1;
+  repeated RepositoryRef repositories = 1;
   bool embeddings_enabled = 2;
 }
 
-message StringList {
-  repeated string values = 1;
+enum JobOperation {
+  JOB_OPERATION_UNSPECIFIED = 0;
+  JOB_OPERATION_INDEX = 1;
+  JOB_OPERATION_PLAN = 2;
+  JOB_OPERATION_SEARCH = 3;
+}
+
+enum JobStatus {
+  JOB_STATUS_UNSPECIFIED = 0;
+  JOB_STATUS_QUEUED = 1;
+  JOB_STATUS_RUNNING = 2;
+  JOB_STATUS_COMPLETED = 3;
+  JOB_STATUS_FAILED = 4;
 }
 
 message SubmitJobRequest {
   string repository = 1;
-  string operation = 2;
+  JobOperation operation = 2;
   optional string scope = 3;
-  optional StringList include = 4;
-  optional StringList exclude = 5;
+  StringList include = 4;
+  StringList exclude = 5;
   optional bool embed = 6;
   optional bool semantic = 7;
   optional string query = 8;
@@ -34,27 +49,29 @@ message SubmitJobRequest {
   optional string generation_id = 11;
   optional uint32 max_inputs = 12;
   optional uint32 max_characters = 13;
+  optional string idempotency_key = 14;
 }
 
 message GetJobRequest {
-  string id = 1;
+  JobId job_id = 1;
 }
 
 message WatchJobRequest {
-  string id = 1;
+  JobId job_id = 1;
 }
 
-message KnowledgeJob {
-  string id = 1;
-  string status = 2;
+message Job {
+  JobId id = 1;
+  JobStatus status = 2;
   uint32 attempts = 3;
-  string created_at = 4;
-  string updated_at = 5;
-  optional string result_json = 6;
-  optional string error = 7;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+  string result_json = 6;
+  ErrorDetail failure = 7;
 }
 
-message KnowledgeJobEvent {
-  KnowledgeJob job = 1;
-  string phase = 2;
+message JobEvent {
+  Job job = 1;
+  google.protobuf.Timestamp observed_at = 2;
+  uint64 sequence = 3;
 }

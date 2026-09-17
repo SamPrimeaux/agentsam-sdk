@@ -1,9 +1,16 @@
 syntax = "proto3";
 
-package agentsam.rpc.v1;
+package agentsam.knowledge.v1;
 
-message Timestamp {
-  int64 unix_millis = 1;
+message JobId {
+  string value = 1;
 }
 
-message Empty {}
+message RepositoryRef {
+  string alias = 1;
+  string repository_id = 2;
+}
+
+message StringList {
+  repeated string values = 1;
+}
