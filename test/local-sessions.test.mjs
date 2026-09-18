@@ -28,6 +28,9 @@ test('local sessions persist provider-neutral continuation, usage, cost, and las
     cumulative_usage: { input_tokens: 21_244, cached_input_tokens: 60_544, output_tokens: 219, reasoning_tokens: 31 },
     total_cost_usd: 0.123456,
     cost_breakdown_usd: { input: 0.08, cached_input: 0.01, cache_write: 0.003456, output: 0.03 },
+    status: 'paused',
+    active_elapsed_ms: 90_000,
+    active_started_at: null,
   }, { home });
 
   const loaded = loadLocalSession(session.id, { home });
