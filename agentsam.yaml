@@ -59,7 +59,7 @@ packages:
       - agentsam-auth-portal
   identity:
     name: "@inneranimalmedia/agentsam-sdk-identity"
-    version: "2.6.0"
+    version: "2.6.1"
     path: packages/identity
     private: true
     separately_published: false
