@@ -78,6 +78,7 @@ export async function initializeLocalSqlite({
   const db = await createLocalSqliteDatabase(resolvedDb);
   try {
     db.exec(schema);
+    await applyRuntimeMigrations(db);
   } finally {
     db.close();
   }
