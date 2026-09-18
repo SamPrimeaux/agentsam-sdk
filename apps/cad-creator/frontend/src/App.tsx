@@ -387,6 +387,8 @@ export function App() {
             </button>
 
             <button
+              onMouseEnter={() => { void preloadRoboticsWorkspace(); }}
+              onFocus={() => { void preloadRoboticsWorkspace(); }}
               onClick={() => setViewMode('robotics')}
               className={`px-2.5 py-1 rounded text-xs font-medium flex items-center space-x-1.5 transition ${
                 viewMode === 'robotics' ? 'bg-emerald-600 text-white shadow-sm' : 'text-emerald-400 hover:text-white hover:bg-emerald-950/40'
