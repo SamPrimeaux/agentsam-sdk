@@ -155,17 +155,20 @@ export async function runResponsesAgent(options = {}) {
   let compacted = null;
   let projected = projectedInputTokens({ instructions, input, toolSurface, priorActiveTokens, budget });
 
-  if (projected >= budget.compactAtTokens && previousResponseId && options.autoCompact !== false && typeof provider.compact === 'function') {
+  if (budget && projected >= budget.compactAtTokens && providerState && options.autoCompact !== false && typeof provider.compact === 'function') {
     compacted = await provider.compact({
       model: record.provider_model_id,
+      modelRecord: record,
       previousResponseId,
+      providerState,
       instructions,
       promptCacheKey: options.promptCacheKey,
       emit,
       runId,
     });
-    input = [...(compacted.output || []), userMessage(objective)];
-    previousResponseId = null;
+    if (Array.isArray(compacted.output) && compacted.output.length) input = [...compacted.output, userMessage(objective)];
+    providerState = compacted.provider_state || null;
+    previousResponseId = clean(providerState?.previous_response_id) || null;
     priorActiveTokens = null;
     projected = projectedInputTokens({ instructions, input, toolSurface, priorActiveTokens, budget });
   }
