@@ -46,7 +46,7 @@ runtime:
 packages:
   root_sdk:
     name: "@inneranimalmedia/agentsam-sdk"
-    version: "2.6.0"
+    version: "2.6.1"
     path: .
     private: false
     registry: npm
