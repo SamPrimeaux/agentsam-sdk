@@ -26,9 +26,22 @@ export function buildContextEconomicsReport(cwd, options = {}) {
     });
   }
 
+  const windowTokens = Number(model.context_window);
+  if (!(Number.isFinite(windowTokens) && windowTokens > 0)) {
+    return Object.freeze({
+      model: model.provider_model_id,
+      model_key: model.model_key,
+      resolved: false,
+      reason: 'This provider verified the model but did not expose a trustworthy context-window limit. Agent Sam will show ctx unknown rather than guess.',
+      reasoning_effort: preferences.reasoningEffort || 'auto',
+      service_tier: preferences.serviceTier || 'default',
+      active_input_tokens: Number.isFinite(options.activeInputTokens) ? Math.floor(options.activeInputTokens) : null,
+    });
+  }
+
   const policy = model.context_policy || {};
   const budget = createContextBudget({
-    windowTokens: model.context_window,
+    windowTokens,
     targetInputTokens: policy.target_input_tokens,
     compactAtTokens: policy.compact_at_tokens,
     interveneAtTokens: policy.intervene_at_tokens,
