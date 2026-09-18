@@ -123,51 +123,15 @@ export async function startLocalPtyServer(opts = {}) {
     const cols = parsePort(url.searchParams.get('cols'), 80);
     const rows = parsePort(url.searchParams.get('rows'), 24);
 
-    const term = pty.spawn(shell, [], {
-      name: 'xterm-256color',
+    attachLocalPtySession({
+      ws,
+      pty,
+      shell,
+      cwd: sessionCwd,
       cols,
       rows,
-      cwd: sessionCwd,
-      env: { ...process.env, TERM: 'xterm-256color', AGENTSAM_LOCAL_PTY: '1' },
+      env: process.env,
     });
-
-    const sessionId = `local_${Date.now().toString(36)}`;
-    ws.send(JSON.stringify({ type: 'session_id', session_id: sessionId }));
-
-    term.onData((data) => {
-      if (ws.readyState === ws.OPEN) ws.send(data);
-    });
-
-    ws.on('message', (raw) => {
-      const text = raw.toString();
-      try {
-        const msg = JSON.parse(text);
-        if (msg.type === 'resize' && msg.cols && msg.rows) {
-          term.resize(msg.cols, msg.rows);
-          return;
-        }
-        if (msg.type === 'slash' && msg.line) {
-          term.write(`${msg.line}\r`);
-          return;
-        }
-      } catch {
-        /* raw PTY input */
-      }
-      term.write(text);
-    });
-
-    const cleanup = () => {
-      try {
-        term.kill();
-      } catch {
-        /* ignore */
-      }
-    };
-    term.onExit(() => {
-      if (ws.readyState === ws.OPEN) ws.close();
-    });
-    ws.on('close', cleanup);
-    ws.on('error', cleanup);
   });
 
   await new Promise((resolve) => {
