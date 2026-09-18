@@ -55,6 +55,70 @@ test('OpenAI-compatible adapter accepts provider-discovered records and preserve
   assert.equal(result.usage_snapshot.current_context.window_tokens, 128000);
 });
 
+
+
+test('xAI adapter supports native compaction without requiring a live API key in tests', async () => {
+  const requests = [];
+  const record = {
+    model_key: 'grok:grok-test',
+    provider: 'grok',
+    provider_model_id: 'grok-test',
+    context_window: 256000,
+    max_output_tokens: 8192,
+    reasoning_efforts: ['auto'],
+    service_tiers: ['default'],
+    capabilities: { responses: true, compaction: true, prompt_caching: true },
+    pricing: null,
+  };
+  const provider = createProviderAdapter({
+    modelRecord: record,
+    credential: { value: 'xai-key' },
+    fetchImpl: async (url, init) => {
+      const body = JSON.parse(init.body);
+      requests.push({ url, body });
+      if (url.endsWith('/responses/compact')) {
+        return response({
+          id: 'cmp_1',
+          object: 'response.compaction',
+          output: [{ type: 'compaction', id: 'cmp_1', encrypted_content: 'opaque' }],
+          usage: { input_tokens: 1000, output_tokens: 120, input_tokens_details: { cached_tokens: 0 } },
+        });
+      }
+      return response({
+        id: 'resp_xai_1',
+        status: 'completed',
+        output_text: 'first answer',
+        output: [{ type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'first answer' }] }],
+        usage: { input_tokens: 50, output_tokens: 10, input_tokens_details: { cached_tokens: 20 } },
+      });
+    },
+  });
+
+  const first = await provider.create({
+    modelRecord: record,
+    input: 'hello',
+    instructions: 'stable system prefix',
+    promptCacheKey: 'session-xai',
+  });
+  assert.equal(first.provider_state.previous_response_id, 'resp_xai_1');
+  assert.equal(Array.isArray(first.provider_state.compaction_input), true);
+  assert.equal(first.provider_state.compaction_input[0].role, 'system');
+
+  const compacted = await provider.compact({
+    modelRecord: record,
+    providerState: first.provider_state,
+    tokensBefore: 1000,
+  });
+  assert.match(requests.at(-1).url, /\/v1\/responses\/compact$/);
+  assert.equal(Array.isArray(requests.at(-1).body.input), true);
+  assert.equal(requests.at(-1).body.previous_response_id, undefined);
+  assert.deepEqual(compacted.provider_state.compaction_input, [
+    { type: 'compaction', id: 'cmp_1', encrypted_content: 'opaque' },
+  ]);
+  assert.equal(compacted.provider_state.previous_response_id, null);
+});
+
+
 test('Anthropic adapter keeps append-only provider state and tool calls', async () => {
   const record = {
     model_key: 'anthropic:claude-test', provider: 'anthropic', provider_model_id: 'claude-test',
