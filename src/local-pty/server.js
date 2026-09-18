@@ -17,7 +17,8 @@ function shellForPlatform() {
   return process.env.SHELL || '/bin/zsh';
 }
 
-async function loadPty() {
+async function loadPty(override) {
+  if (override?.spawn) return override;
   try {
     const mod = await import('node-pty');
     return mod.default || mod;
