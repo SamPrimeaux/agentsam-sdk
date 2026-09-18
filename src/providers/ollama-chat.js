@@ -119,5 +119,30 @@ export function createOllamaChatAdapter(options = {}) {
     return send([...prior, ...toolMessages], params);
   }
 
-  return Object.freeze({ provider: 'ollama', create, continueWithToolOutputs });
+  async function compact(params = {}) {
+    const prior = Array.isArray(params.providerState?.messages) ? params.providerState.messages : [];
+    if (!prior.length) throw new Error('ollama_provider_state_required');
+    const emitFn = params.emit || options.emit;
+    const startedAt = Date.now();
+    emit(emitFn, 'context.compaction.started', { provider: 'ollama', model: params.model }, params.runId);
+    const summary = await send([...prior, {
+      role: 'user',
+      content: 'Create a compact continuation summary of this conversation. Preserve the objective, decisions, changed files, active plan, unresolved failures, tool results that still matter, and constraints. Do not add new work.',
+    }], { ...params, tools: [], maxOutputTokens: Math.min(Number(params.maxOutputTokens) || 4096, 4096) });
+    const summaryText = String(summary.output_text || '').trim();
+    const messages = [];
+    if (params.instructions) messages.push({ role: 'system', content: String(params.instructions) });
+    messages.push({ role: 'user', content: 'Prior conversation continuation summary:' });
+    messages.push({ role: 'assistant', content: summaryText });
+    const compactState = Object.freeze({ messages });
+    emit(emitFn, 'context.compaction.completed', {
+      provider: 'ollama', model: params.model, summary_text: summaryText,
+      tokens_before: params.tokensBefore ?? null,
+      tokens_after: Math.ceil(summaryText.length / 4),
+      duration_ms: Date.now() - startedAt,
+    }, params.runId);
+    return Object.freeze({ provider: 'ollama', output: Object.freeze([]), provider_state: compactState, summary_text: summaryText, usage: summary.usage_delta || null });
+  }
+
+  return Object.freeze({ provider: 'ollama', create, continueWithToolOutputs, compact });
 }
