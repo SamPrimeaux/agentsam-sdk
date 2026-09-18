@@ -129,8 +129,10 @@ export async function configureCliPreferences({ cwd = process.cwd(), firstRun = 
     }
   }
 
-  let runtime = existing.runtime || 'local';
-  let terminal = existing.terminal || availableShells()[0];
+  const accountConnected = Boolean(readAccountSession({ home, env })?.account_id);
+  const runtimes = runtimeOptions({ accountConnected });
+  let runtime = runtimes.some((row) => row.value === existing.runtime) ? existing.runtime : 'local';
+  let terminal = existing.terminal || availableShells(env)[0];
   if (!firstRun && section === 'all') {
     const projectChoice = stopIfCancelled(await select({
       message: 'Where should Agent Sam work?',
