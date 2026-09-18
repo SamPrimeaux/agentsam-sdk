@@ -230,8 +230,8 @@ security_contract:
 
 release:
   root_sdk:
-    target_version: "2.6.0"
-    state: published
+    target_version: "2.6.1"
+    state: candidate
     registry: npm
     current_latest: "2.6.0"
     current_alpha: "2.0.0-alpha.identity.12"
