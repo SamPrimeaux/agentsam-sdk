@@ -4,7 +4,6 @@ import path from 'path';
 import { WebSocketServer, WebSocket } from 'ws';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
-import { createServer as createViteServer } from 'vite';
 import { getRoboticsPerceptionCapabilities, runRoboticsPerception } from './robotics/perception';
 
 const CAD_ROOT = path.resolve(process.cwd(), '..');
