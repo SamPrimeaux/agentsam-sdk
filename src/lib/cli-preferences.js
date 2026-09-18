@@ -3,8 +3,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { getProjectName, tryReadProjectConfig } from './project-config.js';
 
-export const CLI_PREFERENCES_SCHEMA = 'agentsam-cli-preferences-v2';
-export const LEGACY_CLI_PREFERENCES_SCHEMA = 'agentsam-cli-preferences-v1';
+export const CLI_PREFERENCES_SCHEMA = 'agentsam-cli-preferences-v3';
+export const LEGACY_CLI_PREFERENCES_SCHEMAS = new Set(['agentsam-cli-preferences-v1', 'agentsam-cli-preferences-v2']);
 
 function readJson(filename) {
   try { return JSON.parse(fs.readFileSync(filename, 'utf8')); }
