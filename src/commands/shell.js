@@ -359,6 +359,7 @@ async function approveToolExecution(request, state) {
   });
   if (isCancel(choice) || choice === 'deny') return false;
   if (choice === 'always') grantExecutionApproval({ cwd: state.cwd, key, label: key }, { home: state.home });
+  state.activity?.start?.(`Working · ${request.capability_id}`);
   return true;
 }
 
