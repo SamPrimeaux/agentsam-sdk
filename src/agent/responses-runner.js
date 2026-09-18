@@ -163,6 +163,7 @@ export async function runResponsesAgent(options = {}) {
       providerState,
       instructions,
       promptCacheKey: options.promptCacheKey,
+      tokensBefore: Number.isFinite(priorActiveTokens) ? priorActiveTokens : projected,
       emit,
       runId,
     });
