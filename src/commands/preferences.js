@@ -20,6 +20,17 @@ function commandExists(command) {
   return spawnSync(probe[0], probe[1], { stdio: 'ignore' }).status === 0;
 }
 
+export function runtimeOptions({ accountConnected = false } = {}) {
+  const rows = [{ value: 'local', label: 'Local machine', hint: 'standalone · real shell + filesystem' }];
+  if (accountConnected) {
+    rows.push(
+      { value: 'remote', label: 'Remote', hint: 'IAM-connected enrolled runtime' },
+      { value: 'sandbox', label: 'Sandbox', hint: 'IAM-connected isolated runtime' },
+    );
+  }
+  return rows;
+}
+
 export function availableShells(env = process.env) {
   const values = [];
   const detected = path.basename(env.SHELL || env.ComSpec || '').trim();
