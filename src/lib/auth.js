@@ -137,12 +137,15 @@ export async function refreshAccountSession(options = {}) {
  */
 export async function resolveAccountAuthority(options = {}) {
   const apiKey = resolveAccountApiKey(options);
-  if (apiKey.value || apiKey.error) return apiKey;
+  if (apiKey.value) return apiKey;
+  if (clean(options.explicit) && apiKey.error) return apiKey;
 
   let session = readAccountSession(options);
-  if (!session?.access_token) return { value: '', source: null, kind: null, session: null };
+  if (!session?.access_token) {
+    return apiKey.error ? apiKey : { value: '', source: null, kind: null, session: null };
+  }
 
-  if (isBrowserSessionExpired(session, options)) {
+  if (options.forceRefresh === true || isBrowserSessionExpired(session, options)) {
     if (!session.refresh_token) {
       return {
         value: '',
@@ -171,6 +174,7 @@ export async function resolveAccountAuthority(options = {}) {
     source: 'agentsam_browser_oauth',
     kind: 'browser_oauth',
     session,
+    fallback_error: apiKey.error || null,
   };
 }
 

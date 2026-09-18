@@ -12,6 +12,7 @@ import {
   resolveBrowserSessionCredential,
   saveAccountSession,
 } from '../src/lib/account-session.js';
+import { resolveAccountAuthority } from '../src/lib/auth.js';
 
 function tempHome(t) {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-account-'));
@@ -62,6 +63,33 @@ test('explicit/environment aak_ API key outranks browser login while legacy SDK 
     resolveAccountAuth({ env: { AGENTSAM_SDK_KEY: 'legacy_ignored' }, home }).value,
     'browser_session_disk',
   );
+});
+
+test('invalid environment API key cannot shadow a valid browser login', t => {
+  const home = tempHome(t);
+  saveAccountSession({ access_token: 'browser_session_machine_test' }, { home });
+  const resolved = resolveAccountAuth({ env: { AGENTSAM_API_KEY: 'not-an-aak' }, home });
+  assert.equal(resolved.value, 'browser_session_machine_test');
+  assert.equal(resolved.kind, 'browser_oauth');
+  assert.equal(resolved.fallback_error, 'invalid_api_key_prefix');
+});
+
+test('async IAM authority also falls back from invalid environment key to browser OAuth', async t => {
+  const home = tempHome(t);
+  saveAccountSession({ access_token: 'browser_session_machine_test' }, { home });
+  const resolved = await resolveAccountAuthority({ env: { AGENTSAM_API_KEY: 'not-an-aak' }, home });
+  assert.equal(resolved.value, 'browser_session_machine_test');
+  assert.equal(resolved.kind, 'browser_oauth');
+  assert.equal(resolved.fallback_error, 'invalid_api_key_prefix');
+});
+
+test('invalid explicitly supplied API key remains authoritative and fails visibly', t => {
+  const home = tempHome(t);
+  saveAccountSession({ access_token: 'browser_session_machine_test' }, { home });
+  const resolved = resolveAccountAuth({ env: {}, explicit: 'not-an-aak', home });
+  assert.equal(resolved.value, '');
+  assert.equal(resolved.error, 'invalid_api_key_prefix');
+  assert.equal(resolved.source, 'explicit');
 });
 
 test('browser session storage refuses reusable aak_ credentials', t => {

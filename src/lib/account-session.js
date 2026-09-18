@@ -147,8 +147,14 @@ export function resolveBrowserSessionCredential(options = {}) {
  */
 export function resolveAccountAuth(options = {}) {
   const apiKey = resolveAccountApiKey(options);
-  if (apiKey.value || apiKey.error) return apiKey;
-  return resolveBrowserSessionCredential(options);
+  if (apiKey.value) return apiKey;
+  if (clean(options.explicit) && apiKey.error) return apiKey;
+  const browser = resolveBrowserSessionCredential(options);
+  if (browser.value) {
+    return apiKey.error ? { ...browser, fallback_error: apiKey.error } : browser;
+  }
+  if (browser.error) return browser;
+  return apiKey.error ? apiKey : browser;
 }
 
 export function describeAccountSession(options = {}) {

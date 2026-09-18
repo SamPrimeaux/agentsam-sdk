@@ -18,7 +18,7 @@ function cost(total = 0.1) { return { total_usd: total, components_usd: { input:
 test('capability adapter hydrates packaged JSON schemas and tool surface exposes only selected executable schemas', () => {
   const adapter = createCapabilityAdapter();
   const descriptors = adapter.toolDescriptors();
-  assert.deepEqual(descriptors.map((row) => row.name).sort(), ['cloudflare.cpu.profile', 'cloudflare.wrangler.native', 'repository.snapshot']);
+  assert.deepEqual(descriptors.map((row) => row.name).sort(), ['cloudflare.cpu.profile', 'cloudflare.wrangler.native', 'repository.snapshot', 'terminal.exec']);
   const repository = descriptors.find((row) => row.name === 'repository.snapshot');
   assert.equal(repository.input_schema.type, 'object');
   assert.ok(repository.input_schema.properties.cwd);
@@ -26,7 +26,7 @@ test('capability adapter hydrates packaged JSON schemas and tool surface exposes
   assert.equal(surface.tools.length, 1);
   assert.equal(surface.tools[0].name, capabilityFunctionName('repository.snapshot'));
   assert.equal(surface.tools[0].parameters.type, 'object');
-  assert.equal(surface.receipt.catalog_tools, 3);
+  assert.equal(surface.receipt.catalog_tools, 4);
 });
 
 test('runner owns cwd, executes selected tool, preserves call_id and returns provider-authoritative continuation', async t => {

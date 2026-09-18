@@ -1,18 +1,59 @@
 import { getJson } from '../lib/core-client.js';
+import { resolveAccountAuthority } from '../lib/auth.js';
 import {
   describeAccountSession,
   resolveAccountApiKey,
-  resolveAccountAuth,
 } from '../lib/account-session.js';
 import { listProviderCredentialStatus } from '../lib/provider-credentials.js';
 
 function writeLine(write, value = '') { write(`${value}\n`); }
 
+function safeTerminalContext(value = {}) {
+  return {
+    available: value?.available === true,
+    instances: (value?.instances || []).map((row) => ({
+      id: row?.id || null,
+      name: row?.name || null,
+      kind: row?.kind || null,
+      provider: row?.provider || null,
+      status: row?.status || null,
+      platform: row?.platform || null,
+      arch: row?.arch || null,
+      active_connection_count: Number(row?.active_connection_count || 0),
+      default_connection_id: row?.default_connection_id || null,
+      last_seen_at: row?.last_seen_at || null,
+    })),
+    connections: (value?.connections || []).map((row) => ({
+      id: row?.id || null,
+      instance_id: row?.instance_id || null,
+      name: row?.name || null,
+      kind: row?.kind || null,
+      provider: row?.provider || null,
+      transport: row?.transport || null,
+      transport_provider: row?.transport_provider || null,
+      is_active: row?.is_active === true,
+      is_default: row?.is_default === true,
+      health_status: row?.health_status || 'unknown',
+      last_seen_at: row?.last_seen_at || null,
+    })),
+  };
+}
+
 export async function collectWhoami(options = {}) {
   const env = options.env || process.env;
   const apiKey = resolveAccountApiKey({ env, explicit: options.token || '', home: options.home });
   const browserSession = describeAccountSession({ env, home: options.home });
-  const active = resolveAccountAuth({ env, explicit: options.token || '', home: options.home });
+  const authorityLoader = options.authorityLoader || resolveAccountAuthority;
+  const active = await authorityLoader({
+    env,
+    explicit: options.token || '',
+    home: options.home,
+    nowMs: options.nowMs,
+    skewMs: options.skewMs,
+    refreshImpl: options.refreshImpl,
+    fetchImpl: options.fetchImpl,
+    signal: options.signal,
+  });
   const credentials = listProviderCredentialStatus({ env, home: options.home });
 
   const base = {
@@ -40,7 +81,16 @@ export async function collectWhoami(options = {}) {
   if (!active.value) return base;
 
   try {
-    const loader = options.contextLoader || ((token) => getJson('/api/sdk/context', token));
+    const loader = options.contextLoader || (() => getJson('/api/sdk/context', {
+      env,
+      home: options.home,
+      explicit: options.token || '',
+      fetchImpl: options.fetchImpl,
+      refreshImpl: options.refreshImpl,
+      nowMs: options.nowMs,
+      skewMs: options.skewMs,
+      signal: options.signal,
+    }));
     const context = await loader(active.value);
     return {
       ...base,
@@ -56,6 +106,7 @@ export async function collectWhoami(options = {}) {
       byok: context?.byok && typeof context.byok === 'object'
         ? Object.fromEntries(Object.entries(context.byok).map(([key, value]) => [key, { configured: value?.configured === true }]))
         : {},
+      terminal: safeTerminalContext(context?.terminal),
     };
   } catch (error) {
     const message = error?.message || String(error);

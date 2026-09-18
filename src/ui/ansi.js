@@ -65,3 +65,48 @@ export function renderLocalStatus(status) {
   lines.push(`${pc.cyan('╰')}${pc.cyan('─'.repeat(width - 2))}${pc.cyan('╯')}`);
   return lines.join('\n');
 }
+
+function yesNo(value, yes = 'ready', no = 'not ready') {
+  return value ? pc.green(`● ${yes}`) : pc.yellow(`○ ${no}`);
+}
+
+export function renderRuntimeStatus(status) {
+  const lines = [
+    `  ${pc.bold(`Agent Sam · ${status.local?.project || 'runtime'}`)}`,
+    `  ${status.ready ? pc.green('Ready for authenticated model + terminal work') : pc.yellow('Setup or repair required')}`,
+    '',
+    `  account      ${yesNo(status.checks?.account, status.identity?.active_auth?.kind || 'authenticated', 'not authenticated')}`,
+  ];
+  if (status.identity?.identity?.email) lines.push(`  identity     ${status.identity.identity.email}`);
+  if (status.identity?.api_key?.valid === false && status.identity?.active_auth?.kind === 'browser_oauth') {
+    lines.push(`  auth note    ${pc.yellow('invalid environment API key ignored; browser OAuth is active')}`);
+  }
+
+  const configuredProviders = status.model_summary?.configured_providers || [];
+  lines.push(`  models       ${yesNo(status.checks?.models, `${status.model_summary?.verified_provider_models || 0} provider-verified`, 'no verified model')}`);
+  lines.push(`  providers    ${configuredProviders.length ? configuredProviders.join(', ') : pc.dim('none configured')}`);
+
+  const terminal = status.terminal || {};
+  lines.push(`  terminal     ${yesNo(status.checks?.terminal, `${terminal.active_connection_count || 0} active remote · local PTY ${terminal.local_pty?.online ? 'online' : 'offline'}`, 'no usable connection')}`);
+  for (const connection of (terminal.connections || []).filter((row) => row.active).slice(0, 6)) {
+    lines.push(`    ${connection.default ? '★' : '•'} ${connection.name || connection.id} · ${connection.kind || 'terminal'} · ${connection.health || 'unknown'}`);
+  }
+  if (terminal.error && !status.offline) lines.push(`  terminal err ${pc.yellow(terminal.error)}`);
+
+  const cloudflare = status.cloudflare || {};
+  if (cloudflare.configured) {
+    const version = cloudflare.version?.number != null ? `v${cloudflare.version.number}` : 'version unknown';
+    lines.push(`  deployment   ${yesNo(status.checks?.cloudflare, `${cloudflare.worker_name} · ${version}`, `${cloudflare.worker_name || 'Worker'} not verified`)}`);
+    lines.push(`  bindings     ${cloudflare.bindings?.match ? pc.green(`${cloudflare.bindings.live.length} live · declared contract satisfied`) : pc.yellow(`${cloudflare.bindings?.missing?.length || 0} missing`)}`);
+    lines.push(`  health       ${cloudflare.health?.ok ? pc.green(`HTTP ${cloudflare.health.status}`) : pc.yellow(cloudflare.health?.error || 'not verified')}`);
+    if (cloudflare.error) lines.push(`  cloud error  ${pc.yellow(cloudflare.error)}`);
+  } else {
+    lines.push(`  deployment   ${pc.dim('not configured for this project')}`);
+  }
+
+  lines.push('');
+  lines.push(`  git          ${status.local?.git ? `${status.local.git.branch || 'detached'} · ${status.local.git.dirty ? pc.yellow('dirty') : pc.green('clean')} · ${String(status.local.git.revision || '').slice(0, 8)}` : pc.dim('not a git repository')}`);
+  lines.push(`  project      ${status.local?.root || ''}`);
+  if (status.offline) lines.push(`  mode         ${pc.dim('offline snapshot; live identity/models/terminal/deployment not verified')}`);
+  return lines.join('\n');
+}

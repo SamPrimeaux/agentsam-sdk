@@ -38,6 +38,7 @@ export {
   getCapabilityManifest,
   listCapabilities,
   repositorySnapshot,
+  terminalExec,
 } from './capabilities/index.js';
 export { getPreset, listPresets, resolvePreset, getAddon, listAddons } from './presets/index.js';
 export {

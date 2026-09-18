@@ -6,6 +6,7 @@ export {
   parseWranglerErrorEvidence,
   runWranglerNative,
 } from './wrangler.js';
+export { readCloudflareDeploymentContract, collectCloudflareDeploymentStatus } from './runtime-status.js';
 export {
   summarizeCloudflareCpuProfile,
   summarizeCloudflareCpuProfileFile,
