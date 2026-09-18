@@ -30,6 +30,63 @@ async function loadPty(override) {
 }
 
 /**
+ * Attach the portable PTY wire protocol to an already-created WebSocket-like transport.
+ * Exported so the release gate can test terminal semantics against an in-memory mock transport.
+ */
+export function attachLocalPtySession({ ws, pty, shell, cwd, cols = 80, rows = 24, env = process.env, sessionId } = {}) {
+  if (!ws?.on || !ws?.send) throw new TypeError('ws transport with on/send is required');
+  if (!pty?.spawn) throw new TypeError('pty transport with spawn is required');
+  const term = pty.spawn(shell, [], {
+    name: 'xterm-256color',
+    cols,
+    rows,
+    cwd,
+    env: { ...env, TERM: 'xterm-256color', AGENTSAM_LOCAL_PTY: '1' },
+  });
+  const id = sessionId || `local_${Date.now().toString(36)}`;
+  const openState = ws.OPEN ?? 1;
+  const isOpen = () => ws.readyState == null || ws.readyState === openState;
+
+  ws.send(JSON.stringify({ type: 'session_id', session_id: id }));
+
+  term.onData((data) => {
+    if (isOpen()) ws.send(data);
+  });
+
+  ws.on('message', (raw) => {
+    const text = raw.toString();
+    try {
+      const msg = JSON.parse(text);
+      if (msg.type === 'resize' && msg.cols && msg.rows) {
+        term.resize(msg.cols, msg.rows);
+        return;
+      }
+      if (msg.type === 'slash' && msg.line) {
+        term.write(`${msg.line}\r`);
+        return;
+      }
+    } catch {
+      /* raw PTY input */
+    }
+    term.write(text);
+  });
+
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    try { term.kill(); } catch { /* ignore */ }
+  };
+  term.onExit(() => {
+    if (isOpen() && ws.close) ws.close();
+  });
+  ws.on('close', cleanup);
+  ws.on('error', cleanup);
+
+  return Object.freeze({ session_id: id, term, cleanup });
+}
+
+/**
  * @param {{ cwd?: string, port?: number, host?: string, pty?: { spawn: Function } }} [opts]
  */
 export async function startLocalPtyServer(opts = {}) {
