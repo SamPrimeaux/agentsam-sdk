@@ -87,7 +87,7 @@ function normalizePreferences(value = {}) {
 export function readCliPreferences(root) {
   const value = readJson(cliPreferencesPath(root));
   if (!value) return null;
-  if (value.schemaVersion !== CLI_PREFERENCES_SCHEMA && value.schemaVersion !== LEGACY_CLI_PREFERENCES_SCHEMA) return null;
+  if (value.schemaVersion !== CLI_PREFERENCES_SCHEMA && !LEGACY_CLI_PREFERENCES_SCHEMAS.has(value.schemaVersion)) return null;
   return normalizePreferences(value);
 }
 
