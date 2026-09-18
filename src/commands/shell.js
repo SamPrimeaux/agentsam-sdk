@@ -733,7 +733,13 @@ export async function runShell(argv = [], options = {}) {
     if (rl.terminal) { rl.setPrompt(promptText()); rl.prompt(); }
   }
   if (state.session) {
-    persistSession(state, { status: interrupted ? 'interrupted' : 'paused', cwd: state.cwd });
+    const activeElapsedMs = localSessionElapsedMs(state.session);
+    persistSession(state, {
+      status: interrupted ? 'interrupted' : 'paused',
+      cwd: state.cwd,
+      active_elapsed_ms: activeElapsedMs,
+      active_started_at: null,
+    });
     if (options.receipt !== false) write(renderSessionReceipt(state.session));
   }
   return state.session;
