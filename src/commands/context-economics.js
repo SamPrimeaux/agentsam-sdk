@@ -12,7 +12,9 @@ function percent(value) {
 
 export function buildContextEconomicsReport(cwd, options = {}) {
   const preferences = options.preferences || readCliPreferences(cwd) || {};
-  const model = getModelRecord(preferences.modelPreference);
+  const model = preferences.modelSnapshot?.model_key === preferences.modelPreference
+    ? preferences.modelSnapshot
+    : getModelRecord(preferences.modelPreference);
   if (!model) {
     return Object.freeze({
       model: preferences.modelPreference || 'auto',
