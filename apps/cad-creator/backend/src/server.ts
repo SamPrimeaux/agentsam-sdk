@@ -679,6 +679,7 @@ function broadcastToRoom(roomId: string, senderWs: WebSocket | null, payload: an
 // ----------------------------------------------------
 async function start() {
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       root: FRONTEND_ROOT,
       configFile: path.join(FRONTEND_ROOT, 'vite.config.ts'),
