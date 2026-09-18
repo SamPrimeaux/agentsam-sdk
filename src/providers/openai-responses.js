@@ -28,10 +28,17 @@ function historyItems(input) {
 }
 
 function xaiCompactionHistory(params = {}, response = {}) {
-  if (params.providerState?.compaction_input && Array.isArray(params.providerState.compaction_input)) {
+  const prior = Array.isArray(params.providerState?.compaction_input)
+    ? structuredClone(params.providerState.compaction_input)
+    : [];
+  const current = historyItems(params.input);
+  const currentAlreadyStartsWithPrior = prior.length > 0
+    && current.length >= prior.length
+    && JSON.stringify(current.slice(0, prior.length)) === JSON.stringify(prior);
+  if (prior.length) {
     return [
-      ...structuredClone(params.providerState.compaction_input),
-      ...historyItems(params.input),
+      ...(currentAlreadyStartsWithPrior ? [] : prior),
+      ...current,
       ...structuredClone(response.output || []),
     ];
   }
@@ -40,7 +47,7 @@ function xaiCompactionHistory(params = {}, response = {}) {
     : [];
   return [
     ...prefix,
-    ...historyItems(params.input),
+    ...current,
     ...structuredClone(response.output || []),
   ];
 }
