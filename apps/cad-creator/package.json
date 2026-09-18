@@ -1,12 +1,37 @@
 {
-  "name": "@inneranimalmedia/agentsam-cad-creator",
-  "version": "0.0.0",
-  "private": true,
+  "name": "@inneranimalmedia/agentsam-sdk-cad-creator",
+  "version": "0.1.0",
+  "description": "Prepackaged AgentSam CAD, spatial design, and robotics application kit.",
   "type": "module",
+  "license": "UNLICENSED",
   "workspaces": [
     "frontend",
     "backend",
     "shared/*"
+  ],
+  "bin": {
+    "agentsam-cad-creator": "bin/agentsam-cad-creator.mjs"
+  },
+  "files": [
+    ".env.example",
+    "README.md",
+    "agentsam.app.json",
+    "bin/",
+    "frontend/dist/",
+    "frontend/src/",
+    "frontend/public/",
+    "frontend/index.html",
+    "frontend/package.json",
+    "frontend/tsconfig.json",
+    "frontend/vite.config.ts",
+    "backend/dist/",
+    "backend/src/",
+    "backend/worker/",
+    "backend/wrangler.jsonc",
+    "backend/package.json",
+    "backend/tsconfig.json",
+    "backend/.dev.vars.example",
+    "shared/cad/"
   ],
   "scripts": {
     "dev": "npm run dev -w @inneranimalmedia/agentsam-cad-backend",
@@ -16,9 +41,23 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "clean": "rm -rf frontend/dist backend/dist coverage",
-    "cf:dry-run": "npm run build && wrangler deploy -c backend/wrangler.jsonc --dry-run"
+    "cf:dry-run": "npm run build && wrangler deploy -c backend/wrangler.jsonc --dry-run",
+    "package:verify": "npm run build && npm run typecheck && npm test && node scripts/verify-publish-package.mjs",
+    "prepack": "npm run package:verify"
+  },
+  "dependencies": {
+    "@google/genai": "^2.4.0",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "wrangler": "4.130.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
