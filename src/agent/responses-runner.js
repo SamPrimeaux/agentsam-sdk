@@ -204,12 +204,12 @@ export async function runResponsesAgent(options = {}) {
   event(emit, 'context.snapshot', {
     estimate_kind: 'local',
     estimated_input_tokens: projected,
-    window_tokens: budget.windowTokens,
-    utilization_ratio: pressure.utilizationRatio,
-    pricing_threshold_tokens: budget.pricingThresholdTokens,
-    tokens_until_pricing_threshold: pressure.tokensUntilPricingThreshold,
-    pressure: pressure.stage,
-    projected_max_call_cost_usd: projectedCost.total_usd,
+    window_tokens: budget?.windowTokens ?? null,
+    utilization_ratio: pressure?.utilizationRatio ?? null,
+    pricing_threshold_tokens: budget?.pricingThresholdTokens ?? null,
+    tokens_until_pricing_threshold: pressure?.tokensUntilPricingThreshold ?? null,
+    pressure: pressure?.stage ?? 'unknown',
+    projected_max_call_cost_usd: projectedCost?.total_usd ?? null,
     tool_surface: toolSurface.receipt,
   }, runId);
 
