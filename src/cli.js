@@ -43,6 +43,7 @@ import fs from 'node:fs';
 import { repositoryRoot } from './knowledge/config.js';
 import { resolveAccountSdkKey } from './lib/account-session.js';
 import { renderDiagnosticError } from './errors/index.js';
+import { renderHelpOverview, runHelp } from './ui/cli/help.js';
 
 const VERSION = pkg.version;
 
