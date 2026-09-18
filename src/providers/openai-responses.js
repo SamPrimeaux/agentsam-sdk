@@ -395,7 +395,9 @@ export function createOpenAIResponsesAdapter(options = {}) {
       request_id: http?.request_id || null,
       ray_id: http?.ray_id || null,
       output: Object.freeze(response.output || []),
-      provider_state: Object.freeze({ previous_response_id: null }),
+      provider_state: providerId === 'grok'
+        ? Object.freeze({ previous_response_id: null, compaction_input: structuredClone(response.output || []) })
+        : Object.freeze({ previous_response_id: null }),
       usage: response.usage || null,
       cost: compactCost,
       raw: response,
