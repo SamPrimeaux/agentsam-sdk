@@ -72,11 +72,13 @@ function normalizeTools(tools = []) {
   });
 }
 
-function assertRuntimeConfig(model, reasoningEffort, serviceTier) {
-  const record = getModelRecord(model);
-  if (!record || record.provider !== 'openai') throw new RangeError(`unsupported OpenAI model catalog entry: ${model}`);
-  if (!record.reasoning_efforts.includes(reasoningEffort)) throw new RangeError(`unsupported reasoning effort for ${record.provider_model_id}: ${reasoningEffort}`);
-  if (!record.service_tiers.includes(serviceTier)) throw new RangeError(`unsupported service tier for ${record.provider_model_id}: ${serviceTier}`);
+function assertRuntimeConfig(model, reasoningEffort, serviceTier, explicitRecord, expectedProvider = 'openai') {
+  const record = explicitRecord || getModelRecord(model);
+  if (!record || record.provider !== expectedProvider) throw new RangeError(`unsupported ${expectedProvider} model record: ${model}`);
+  const reasoning = Array.isArray(record.reasoning_efforts) && record.reasoning_efforts.length ? record.reasoning_efforts : ['auto'];
+  const tiers = Array.isArray(record.service_tiers) && record.service_tiers.length ? record.service_tiers : ['default'];
+  if (!reasoning.includes(reasoningEffort) && reasoningEffort !== 'auto') throw new RangeError(`unsupported reasoning effort for ${record.provider_model_id}: ${reasoningEffort}`);
+  if (!tiers.includes(serviceTier)) throw new RangeError(`unsupported service tier for ${record.provider_model_id}: ${serviceTier}`);
   return record;
 }
 
