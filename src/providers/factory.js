@@ -2,6 +2,7 @@ import { createOpenAIResponsesAdapter } from './openai-responses.js';
 import { createAnthropicMessagesAdapter } from './anthropic-messages.js';
 import { createGeminiGenerateContentAdapter } from './gemini-generate-content.js';
 import { createOllamaChatAdapter } from './ollama-chat.js';
+import { createCloudflareChatAdapter } from './cloudflare-chat.js';
 
 export function createProviderAdapter(options = {}) {
   const record = options.modelRecord;
