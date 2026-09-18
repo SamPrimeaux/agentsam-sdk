@@ -665,6 +665,7 @@ export async function runShell(argv = [], options = {}) {
     usageSnapshot: options.usageSnapshot || options.session?.usage_snapshot || null,
     session: options.session || null,
     home: options.home,
+    providerFetchImpl: options.providerFetchImpl,
   };
   const sub = argv[0] || '';
   if (sub === 'list' || sub === 'status') { write(renderShellCatalog()); return; }
