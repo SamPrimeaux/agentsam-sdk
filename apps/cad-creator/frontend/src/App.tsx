@@ -73,9 +73,8 @@ export function App() {
   const [unit, setUnit] = useState<MeasurementUnit>('ft');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  // Robotics workspace runtime is isolated from architectural project state.
+  // Robotics is an optional heavy workspace. Keep MuJoCo/WASM/runtime code out of the base CAD bundle.
   const roboticsContainerRef = useRef<HTMLDivElement>(null);
-  const roboticsSimulationProviderRef = useRef<SimulationProvider | null>(new MujocoSimulationProvider());
   const [roboticsDarkMode, setRoboticsDarkMode] = useState(true);
   const [showRoboticsDiagnostics, setShowRoboticsDiagnostics] = useState(false);
 
