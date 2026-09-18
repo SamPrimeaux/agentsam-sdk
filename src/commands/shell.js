@@ -340,6 +340,7 @@ async function approveToolExecution(request, state) {
   if (!state.interactive) return false;
 
   const summary = JSON.stringify(safeToolInput(request.input || {}));
+  state.activity?.clear?.();
   writeLine(state.write, '');
   writeLine(state.write, '  Agent Sam needs execution permission');
   writeLine(state.write, `  action  ${key}`);
