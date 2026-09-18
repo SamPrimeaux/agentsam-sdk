@@ -58,3 +58,20 @@ test('Local Studio retired donor-era duplicate deployment configs', () => {
     assert.equal(exists('apps', 'local-studio', 'backend', file), false, `retire ${file}`);
   }
 });
+
+test('CAD creator keeps the robotics runtime lazy and the perception key server-side', () => {
+  const app = read('apps', 'cad-creator', 'frontend', 'src', 'App.tsx');
+  const lazy = read('apps', 'cad-creator', 'frontend', 'src', 'workspaces', 'robotics', 'lazy.tsx');
+  const httpProvider = read('apps', 'cad-creator', 'frontend', 'src', 'lib', 'robotics', 'perception', 'http-provider.ts');
+  const perception = read('apps', 'cad-creator', 'backend', 'src', 'robotics', 'perception.ts');
+  const worker = read('apps', 'cad-creator', 'backend', 'worker', 'index.js');
+
+  assert.doesNotMatch(app, /from ['\"]\.\/workspaces\/robotics\/RoboticsWorkspace['\"]/);
+  assert.doesNotMatch(app, /MujocoSimulationProvider/);
+  assert.match(app, /LazyRoboticsWorkspace/);
+  assert.match(lazy, /import\(['\"]\.\/RoboticsWorkspace['\"]\)/);
+  assert.match(httpProvider, /\/api\/robotics\/perception\/detect/);
+  assert.doesNotMatch(httpProvider, /GEMINI_API_KEY|GOOGLE_API_KEY/);
+  assert.match(perception, /env\.GEMINI_API_KEY/);
+  assert.match(worker, /\/api\/robotics\/perception\/detect/);
+});
