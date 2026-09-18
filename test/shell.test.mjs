@@ -41,10 +41,11 @@ test('dispatch handles help, menu fallback, pwd, cd, and exit without falling th
   const state = { cwd: root, write: (text) => { output += text; }, interactive: false };
   let result = await dispatchShellLine('/help', state);
   assert.equal(result.handled, true);
-  assert.match(output, /Slash commands/);
+  assert.match(output, /Type normally to work with Agent Sam/);
+  assert.match(output, /agentsam help <topic>/);
   output = '';
   await dispatchShellLine('/', state);
-  assert.match(output, /Agent Sam Terminal/);
+  assert.match(output, /command picker/);
   output = '';
   await dispatchShellLine('/pwd', state);
   assert.equal(output.trim(), root);
