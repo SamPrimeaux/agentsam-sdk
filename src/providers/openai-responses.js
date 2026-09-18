@@ -214,10 +214,16 @@ export function createOpenAIResponsesAdapter(options = {}) {
     const meta = { runId: params.runId, sequence: params.sequence };
     const tools = normalizeTools(params.tools || []);
     const previousResponseId = clean(params.previousResponseId || params.providerState?.previous_response_id);
+    const requestInput = providerId === 'grok'
+      && !previousResponseId
+      && Array.isArray(params.providerState?.compaction_input)
+      && params.providerState.compaction_input.length
+      ? [...structuredClone(params.providerState.compaction_input), ...historyItems(params.input)]
+      : params.input ?? '';
 
     const body = {
       model,
-      input: params.input ?? '',
+      input: requestInput,
       ...(reasoningEffort !== 'auto' ? { reasoning: { effort: reasoningEffort } } : {}),
       ...(providerId === 'openai' || serviceTier !== 'default' ? { service_tier: serviceTier } : {}),
       store: params.store !== false,
