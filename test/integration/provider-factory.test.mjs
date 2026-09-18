@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createProviderAdapter } from '../src/providers/index.js';
+import { createProviderAdapter } from '../../src/providers/index.js';
 
 function response(body, status = 200, headers = {}) {
   return {
