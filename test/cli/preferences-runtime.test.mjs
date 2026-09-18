@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { runtimeOptions } from '../src/commands/preferences.js';
+import { runtimeOptions } from '../../src/commands/preferences.js';
 
 test('standalone users only see local execution', () => {
   assert.deepEqual(runtimeOptions({ accountConnected: false }).map((row) => row.value), ['local']);
