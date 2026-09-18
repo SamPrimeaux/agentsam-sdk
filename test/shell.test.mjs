@@ -130,7 +130,7 @@ test('bare /context shows truthful economics without inventing active token usag
 test('CLI supports a deterministic one-shot slash command for regression tests', () => {
   const result = spawnSync(process.execPath, ['src/cli.js', 'shell', '--command', '/help'], { cwd: repoRoot, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /Agent Sam Terminal/);
-  assert.match(result.stdout, /\/model/);
-  assert.match(result.stdout, /\/exit/);
+  assert.match(result.stdout, /Type normally to work with Agent Sam/);
+  assert.match(result.stdout, /agentsam help <topic>/);
+  assert.match(result.stdout, /command picker/);
 });
