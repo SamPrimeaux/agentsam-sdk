@@ -59,6 +59,28 @@ test('Local Studio retired donor-era duplicate deployment configs', () => {
   }
 });
 
+test('CAD creator app package is curated for third-party installation', () => {
+  const pkg = packageJson('apps', 'cad-creator');
+  const manifest = JSON.parse(read('apps', 'cad-creator', 'agentsam.app.json'));
+
+  assert.equal(pkg.name, '@inneranimalmedia/agentsam-sdk-cad-creator');
+  assert.notEqual(pkg.private, true);
+  assert.equal(pkg.bin['agentsam-cad-creator'], 'bin/agentsam-cad-creator.mjs');
+  assert.equal(pkg.publishConfig.access, 'public');
+  assert.ok(pkg.files.includes('frontend/dist/'));
+  assert.ok(pkg.files.includes('backend/dist/'));
+  assert.ok(pkg.files.includes('backend/worker/'));
+  assert.equal(pkg.files.some((entry) => entry.startsWith('reference')), false);
+  assert.equal(pkg.files.some((entry) => entry.includes('.wrangler/state')), false);
+
+  assert.equal(manifest.schema, 'agentsam.app.v1');
+  assert.equal(manifest.id, 'cad-creator');
+  assert.equal(manifest.package, pkg.name);
+  assert.equal(manifest.runtime.local_preview, 'ready');
+  assert.equal(manifest.runtime.source_scaffold, 'ready');
+  assert.equal(manifest.runtime.cloudflare, 'scaffold');
+});
+
 test('CAD creator keeps the robotics runtime lazy and the perception key server-side', () => {
   const app = read('apps', 'cad-creator', 'frontend', 'src', 'App.tsx');
   const lazy = read('apps', 'cad-creator', 'frontend', 'src', 'workspaces', 'robotics', 'lazy.tsx');
