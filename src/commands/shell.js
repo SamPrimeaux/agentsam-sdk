@@ -474,6 +474,34 @@ async function runInteractiveModelTurn(prompt, state) {
   }
 
   state.usageSnapshot = result.usage_snapshot;
+  if (runtimeRunId) {
+    try {
+      await finishRuntimeRun({
+        cwd: state.cwd,
+        id: runtimeRunId,
+        status: 'completed',
+        actual_service_tier: result.actual_service_tier,
+        usage: result.cumulative_usage || result.usage_snapshot?.cumulative || {},
+        cost_usd: result.total_cost_usd || 0,
+        latency_ms: Date.now() - startedAt,
+      });
+      if (presenter.state.lastCompaction) {
+        await recordRuntimeCompaction({
+          cwd: state.cwd,
+          account_id: accountId,
+          agent_run_id: runtimeRunId,
+          session_id: state.session?.id,
+          provider: model.provider,
+          model_key: model.model_key,
+          tokens_before: presenter.state.lastCompaction.tokens_before,
+          tokens_after: presenter.state.lastCompaction.tokens_after,
+          summary_text: presenter.state.lastCompaction.summary_text || '',
+          source_kind: model.provider === 'ollama' ? 'filesystem' : 'api',
+          metadata: { verification: resolved.verification, compaction_id: presenter.state.lastCompaction.compaction_id || null },
+        });
+      }
+    } catch { /* local telemetry persistence is best-effort */ }
+  }
   if (state.session) {
     persistSession(state, {
       status: 'active',
