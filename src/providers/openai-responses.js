@@ -96,7 +96,7 @@ export function createOpenAIResponsesAdapter(options = {}) {
   const timeoutMs = options.timeoutMs;
 
   async function request(pathname, body, runtime = {}) {
-    if (!apiKey) throw new Error('OPENAI_API_KEY is required for OpenAI Responses execution');
+    if (!apiKey) throw new Error(`${providerId}_api_key_required`);
     const response = await fetchImpl(`${baseUrl}${pathname}`, {
       method: 'POST',
       headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
