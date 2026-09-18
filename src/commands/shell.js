@@ -446,6 +446,18 @@ async function runInteractiveModelTurn(prompt, state) {
   } catch (error) {
     activity.fail('Failed');
     state.activity = null;
+    if (runtimeRunId) {
+      try {
+        await finishRuntimeRun({
+          cwd: state.cwd,
+          id: runtimeRunId,
+          status: 'failed',
+          error_code: error?.code || 'interactive_error',
+          error_message: error?.message || String(error),
+          latency_ms: Date.now() - startedAt,
+        });
+      } catch { /* execution result remains primary */ }
+    }
     throw error;
   }
 
