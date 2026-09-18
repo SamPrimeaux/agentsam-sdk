@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { initializeLocalSqlite, inspectLocalSqlite } from '../local/sqlite.js';
+import { createLocalSqliteDatabase, initializeLocalSqlite, inspectLocalSqlite } from '../local/sqlite.js';
+import { applyRuntimeMigrations } from '../local/migrations.js';
 import { getLocalDatabasePath, getLocalSchemaPath, readProjectConfig } from '../lib/project-config.js';
 
 function findProjectRoot(startDir) {
