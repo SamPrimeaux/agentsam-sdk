@@ -130,7 +130,19 @@ async function resolveModelForTurn(cwd, state) {
   const { preferences } = selected;
   let model = selected.model;
 
-  if (model.provider === 'ollama') return { preferences, model, credential: null, verification: 'local_runtime' };
+  if (model.provider === 'ollama') {
+    const config = resolveOllamaConfig({}, process.env);
+    const probe = await probeOllamaModel(model.provider_model_id, config, state.providerFetchImpl || fetch);
+    if (!probe.ok) throw new Error(`ollama_model_probe_failed:${model.provider_model_id}:${probe.error || 'unknown'}`);
+    model = {
+      ...model,
+      context_window: probe.context_window,
+      context_window_source: probe.context_window_source || 'unknown',
+      capabilities: { ...(model.capabilities || {}), local_runtime: true, ...(Object.fromEntries((probe.capabilities || []).map((name) => [name, true]))) },
+    };
+    updateCliPreferences(cwd, { modelPreference: model.model_key, modelSnapshot: model });
+    return { preferences: readCliPreferences(cwd) || preferences, model, credential: null, verification: 'local_runtime' };
+  }
 
   const credential = resolveProviderCredential(model.provider, { home: state.home });
   if (!credential.configured) {
