@@ -531,7 +531,7 @@ export async function dispatchShellLine(line, state = {}) {
         await runCloudflare(args.length ? args : ['commands'], { cwd: state.cwd, write });
         break;
       case '/settings': {
-        const configured = await configureCliPreferences({ cwd: state.cwd, firstRun: false });
+        const configured = await configureCliPreferences({ cwd: state.cwd, firstRun: false, home: state.home });
         state.cwd = configured.identity.root;
         break;
       }
