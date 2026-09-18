@@ -83,6 +83,26 @@ test('status probe recognizes configured chat and embedding models', async () =>
   assert.equal(status.embed_ready, true);
 });
 
+test('local model metadata is accepted only after Ollama itself verifies the model', async () => {
+  let seenBody = null;
+  const fakeFetch = async (url, init) => {
+    assert.match(url, /\/api\/show$/);
+    seenBody = JSON.parse(init.body);
+    return new Response(JSON.stringify({
+      model_info: { 'qwen2.context_length': 32768 },
+      capabilities: ['completion', 'tools'],
+      details: { family: 'qwen2' },
+    }), { status: 200, headers: { 'content-type': 'application/json' } });
+  };
+
+  const result = await probeOllamaModel('qwen2.5-coder', OLLAMA_DEFAULTS, fakeFetch);
+  assert.equal(seenBody.model, 'qwen2.5-coder');
+  assert.equal(result.ok, true);
+  assert.equal(result.context_window, 32768);
+  assert.equal(result.context_window_source, 'local_runtime');
+  assert.deepEqual(result.capabilities, ['completion', 'tools']);
+});
+
 test('automatic install plans use local package managers, never a remote shell script', () => {
   assert.deepEqual(ollamaInstallPlan('darwin', { brew: true }), {
     command: 'brew', args: ['install', 'ollama'], manager: 'homebrew',
