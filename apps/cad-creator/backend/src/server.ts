@@ -695,8 +695,8 @@ async function start() {
     });
   }
 
-  server.listen(PORT, '0.0.0.0', () => {
-    console.log(`AgentSam DesignStudio server running on http://0.0.0.0:${PORT}`);
+  server.listen(PORT, HOST, () => {
+    console.log(`AgentSam DesignStudio server running on http://${HOST}:${PORT}`);
   });
 }
 
