@@ -29,6 +29,8 @@ import { grantExecutionApproval, isExecutionApproved, toolApprovalKey } from '..
 import { runWhoami } from './whoami.js';
 import { runLogin, runLogout } from './account-auth.js';
 import { runHelp } from '../ui/cli/help.js';
+import { readAccountSession } from '../lib/account-session.js';
+import { startRuntimeRun, finishRuntimeRun, recordRuntimeCompaction } from '../local/runtime-store.js';
 
 function writeLine(write, value = '') { write(`${value}\n`); }
 
