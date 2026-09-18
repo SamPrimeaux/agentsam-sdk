@@ -229,6 +229,7 @@ export async function runResponsesAgent(options = {}) {
     serviceTier,
     tools: toolSurface.tools,
     previousResponseId: previousResponseId || undefined,
+    providerState,
     maxOutputTokens,
     promptCacheKey: options.promptCacheKey,
     cumulativeUsage,
