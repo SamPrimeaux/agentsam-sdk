@@ -9,16 +9,29 @@ function run(...args) {
   return spawnSync(process.execPath, ['src/cli.js', ...args], { cwd: repoRoot, encoding: 'utf8' });
 }
 
-test('agentsam help is a first-class alias of --help', () => {
+test('agentsam help is concise, topic-aware, and deterministic outside a TTY', () => {
   const help = run('help');
   assert.equal(help.status, 0, help.stderr);
   assert.doesNotMatch(help.stderr, /Unknown command/);
-  assert.match(help.stdout, /Agent Sam SDK — CLI v/);
-  assert.match(help.stdout, /agentsam help/);
-  assert.match(help.stdout, /account-aware interactive experience/);
-  assert.doesNotMatch(help.stdout, /Prove locally first/);
+  assert.match(help.stdout, /Agent Sam/);
+  assert.match(help.stdout, /Type normally to work with Agent Sam/);
+  assert.match(help.stdout, /agentsam help <topic>/);
+  assert.match(help.stdout, /press \/ for the command picker/i);
+  assert.doesNotMatch(help.stdout, /Inspect options:/);
+
+  const topic = run('help', 'runtime');
+  assert.equal(topic.status, 0, topic.stderr);
+  assert.match(topic.stdout, /Runtime \/ terminal/);
+  assert.match(topic.stdout, /agentsam connections/);
+  assert.match(topic.stdout, /agentsam deploy/);
+
+  const all = run('help', '--all');
+  assert.equal(all.status, 0, all.stderr);
+  assert.match(all.stdout, /Build \/ inspect/);
+  assert.match(all.stdout, /Create \/ extend/);
 
   const flag = run('--help');
   assert.equal(flag.status, 0, flag.stderr);
-  assert.equal(help.stdout, flag.stdout);
+  assert.match(flag.stdout, /agentsam help <topic>/);
+  assert.doesNotMatch(flag.stdout, /Inspect options:/);
 });
