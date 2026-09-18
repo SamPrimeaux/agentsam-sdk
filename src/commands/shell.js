@@ -15,7 +15,7 @@ import { runCloudflare } from './cloudflare.js';
 import { createRuntimeActivity } from '../ui/runtime-activity.js';
 import { diagnosticFromError, renderDiagnosticError } from '../errors/index.js';
 import { getModelRecord } from '../models/index.js';
-import { collectModelsStatus } from './models.js';
+import { discoverProviderModels } from '../models/discovery.js';
 import { readCliPreferences, updateCliPreferences } from '../lib/cli-preferences.js';
 import { buildContextEconomicsReport, renderContextEconomics } from './context-economics.js';
 import { createProviderAdapter } from '../providers/index.js';
