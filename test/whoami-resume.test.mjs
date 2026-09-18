@@ -32,8 +32,8 @@ test('whoami validates persisted IAM browser identity while never returning acco
   });
   assert.equal(status.authenticated, true);
   assert.equal(status.identity.account_id, 'acct_server');
-  assert.equal(status.active_auth.source, 'agentsam_browser_session');
-  assert.equal(status.active_auth.kind, 'browser_session');
+  assert.equal(status.active_auth.source, 'agentsam_browser_oauth');
+  assert.equal(status.active_auth.kind, 'browser_oauth');
   assert.equal(status.provider_credentials.find(row => row.provider === 'openai').configured, true);
   const serialized = JSON.stringify(status);
   assert.doesNotMatch(serialized, /browser_session_do_not_print|sk-never-print-this|masked/);

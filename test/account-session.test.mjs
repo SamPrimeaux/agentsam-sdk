@@ -36,8 +36,8 @@ test('opaque browser login persists in machine-local storage and resolves indepe
   const loaded = readAccountSession({ home });
   assert.equal(loaded.access_token, 'browser_session_machine_test');
   const browser = resolveBrowserSessionCredential({ env: {}, home });
-  assert.equal(browser.source, 'agentsam_browser_session');
-  assert.equal(browser.kind, 'browser_session');
+  assert.equal(browser.source, 'agentsam_browser_oauth');
+  assert.equal(browser.kind, 'browser_oauth');
   assert.equal(browser.value, 'browser_session_machine_test');
   assert.equal(resolveAccountApiKey({ env: {}, home }).value, '');
   assert.equal(resolveAccountAuth({ env: {}, home }).value, 'browser_session_machine_test');
@@ -68,6 +68,6 @@ test('browser session storage refuses reusable aak_ credentials', t => {
   const home = tempHome(t);
   assert.throws(
     () => saveAccountSession({ access_token: 'aak_should_not_be_browser_session' }, { home }),
-    /account_browser_session_required/,
+    /account_browser_oauth_session_required/,
   );
 });
