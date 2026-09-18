@@ -23,9 +23,11 @@ function userMessage(text) {
 }
 
 function modelBudget(record) {
+  const windowTokens = Number(record?.context_window);
+  if (!Number.isFinite(windowTokens) || windowTokens <= 0) return null;
   const policy = record.context_policy || {};
   return createContextBudget({
-    windowTokens: record.context_window,
+    windowTokens,
     targetInputTokens: policy.target_input_tokens,
     compactAtTokens: policy.compact_at_tokens,
     interveneAtTokens: policy.intervene_at_tokens,
@@ -102,6 +104,7 @@ function boundedToolOutput(value, callId, maxChars) {
 }
 
 function toolResultCharBudget(activeTokens, budget) {
+  if (!budget) return 48_000;
   if (!Number.isFinite(activeTokens) || activeTokens < 0) return budget.maxToolResultChars;
   const reserveTokens = 4_000;
   const headroomTokens = Math.max(256, budget.maxNormalInputTokens - Math.ceil(activeTokens) - reserveTokens);
@@ -110,12 +113,13 @@ function toolResultCharBudget(activeTokens, budget) {
 
 function projectedInputTokens({ instructions, input, toolSurface, priorActiveTokens, budget }) {
   const inputChars = typeof input === 'string' ? input.length : JSON.stringify(input ?? '').length;
-  const newTokens = estimateContextTokens(String(instructions || '').length + inputChars + toolSurface.receipt.hydrated_schema_chars, budget.charsPerToken);
+  const charsPerToken = budget?.charsPerToken || 4;
+  const newTokens = estimateContextTokens(String(instructions || '').length + inputChars + toolSurface.receipt.hydrated_schema_chars, charsPerToken);
   return Math.max(newTokens, Number.isFinite(priorActiveTokens) ? Math.ceil(priorActiveTokens) + newTokens : newTokens);
 }
 
 function assertEconomicPreflight(projectedTokens, budget, allowOverride) {
-  if (allowOverride) return;
+  if (!budget || allowOverride) return;
   if (budget.pricingThresholdTokens != null && projectedTokens > budget.pricingThresholdTokens) {
     throw new Error(`context_preflight_pricing_threshold:${projectedTokens}>${budget.pricingThresholdTokens}`);
   }
@@ -130,46 +134,56 @@ export async function runResponsesAgent(options = {}) {
   const cwd = path.resolve(options.cwd || process.cwd());
   const objective = clean(options.prompt);
   if (!objective) throw new TypeError('prompt is required');
-  const record = getModelRecord(options.model);
+  const record = options.modelRecord || getModelRecord(options.model);
   if (!record) throw new RangeError(`unknown model: ${options.model}`);
-  const reasoningEffort = clean(options.reasoningEffort || 'low');
+  const reasoningEffort = clean(options.reasoningEffort || 'auto');
   const serviceTier = clean(options.serviceTier || 'default');
   const budget = modelBudget(record);
-  const instructionSet = options.instructions == null ? compileAgentInstructions(cwd, { maxChars: budget.maxSystemChars }) : null;
+  const instructionSet = options.instructions == null ? compileAgentInstructions(cwd, { maxChars: budget?.maxSystemChars || 48_000 }) : null;
   const instructions = options.instructions == null ? instructionSet.content : String(options.instructions);
   const toolSurface = buildAgentToolSurface(options.capabilityAdapter, objective, options);
   const emit = options.emit;
   const runId = options.runId;
   event(emit, 'tool.search', toolSurface.receipt, runId);
 
-  let previousResponseId = clean(options.previousResponseId) || null;
+  let previousResponseId = clean(options.previousResponseId || options.previousProviderState?.previous_response_id) || null;
+  let providerState = options.previousProviderState && typeof options.previousProviderState === 'object'
+    ? structuredClone(options.previousProviderState)
+    : previousResponseId ? { previous_response_id: previousResponseId } : null;
   let priorActiveTokens = options.previousUsageSnapshot?.current_context?.input_tokens;
   let input = objective;
   let compacted = null;
   let projected = projectedInputTokens({ instructions, input, toolSurface, priorActiveTokens, budget });
 
-  if (projected >= budget.compactAtTokens && previousResponseId && options.autoCompact !== false && typeof provider.compact === 'function') {
+  if (budget && projected >= budget.compactAtTokens && providerState && options.autoCompact !== false && typeof provider.compact === 'function') {
     compacted = await provider.compact({
       model: record.provider_model_id,
+      modelRecord: record,
       previousResponseId,
+      providerState,
       instructions,
       promptCacheKey: options.promptCacheKey,
+      tokensBefore: Number.isFinite(priorActiveTokens) ? priorActiveTokens : projected,
       emit,
       runId,
     });
-    input = [...(compacted.output || []), userMessage(objective)];
-    previousResponseId = null;
+    if (Array.isArray(compacted.output) && compacted.output.length) input = [...compacted.output, userMessage(objective)];
+    providerState = compacted.provider_state || null;
+    previousResponseId = clean(providerState?.previous_response_id) || null;
     priorActiveTokens = null;
     projected = projectedInputTokens({ instructions, input, toolSurface, priorActiveTokens, budget });
   }
 
   assertEconomicPreflight(projected, budget, options.allowEconomicOverride === true);
-  const pressure = assessContextUsage(projected, budget);
+  const pressure = budget ? assessContextUsage(projected, budget) : null;
+  const declaredMaxOutput = Number(record.max_output_tokens);
   const maxOutputTokens = Number.isInteger(options.maxOutputTokens) && options.maxOutputTokens > 0
-    ? Math.min(options.maxOutputTokens, record.max_output_tokens)
-    : Math.min(32_768, record.max_output_tokens);
-  const projectedCost = calculateModelCost(record, { input_tokens: projected, output_tokens: maxOutputTokens }, { serviceTier });
-  if (Number.isFinite(options.maxCallCostUsd) && projectedCost.total_usd > options.maxCallCostUsd) {
+    ? (Number.isFinite(declaredMaxOutput) && declaredMaxOutput > 0 ? Math.min(options.maxOutputTokens, declaredMaxOutput) : options.maxOutputTokens)
+    : (Number.isFinite(declaredMaxOutput) && declaredMaxOutput > 0 ? Math.min(32_768, declaredMaxOutput) : 16_384);
+  const projectedCost = record.pricing
+    ? calculateModelCost(record, { input_tokens: projected, output_tokens: maxOutputTokens }, { serviceTier })
+    : null;
+  if (Number.isFinite(options.maxCallCostUsd) && projectedCost && projectedCost.total_usd > options.maxCallCostUsd) {
     throw new Error(`projected_call_cost_exceeds_budget:${projectedCost.total_usd.toFixed(6)}>${Number(options.maxCallCostUsd).toFixed(6)}`);
   }
   const preflight = Object.freeze({
@@ -178,9 +192,9 @@ export async function runResponsesAgent(options = {}) {
     service_tier: serviceTier,
     estimated_input_tokens: projected,
     max_output_tokens: maxOutputTokens,
-    projected_max_call_cost_usd: projectedCost.total_usd,
-    pricing_threshold_tokens: budget.pricingThresholdTokens,
-    tokens_until_pricing_threshold: pressure.tokensUntilPricingThreshold,
+    projected_max_call_cost_usd: projectedCost?.total_usd ?? null,
+    pricing_threshold_tokens: budget?.pricingThresholdTokens ?? null,
+    tokens_until_pricing_threshold: pressure?.tokensUntilPricingThreshold ?? null,
     compacted_before_turn: Boolean(compacted),
     estimate_kind: 'local',
   });
@@ -191,12 +205,12 @@ export async function runResponsesAgent(options = {}) {
   event(emit, 'context.snapshot', {
     estimate_kind: 'local',
     estimated_input_tokens: projected,
-    window_tokens: budget.windowTokens,
-    utilization_ratio: pressure.utilizationRatio,
-    pricing_threshold_tokens: budget.pricingThresholdTokens,
-    tokens_until_pricing_threshold: pressure.tokensUntilPricingThreshold,
-    pressure: pressure.stage,
-    projected_max_call_cost_usd: projectedCost.total_usd,
+    window_tokens: budget?.windowTokens ?? null,
+    utilization_ratio: pressure?.utilizationRatio ?? null,
+    pricing_threshold_tokens: budget?.pricingThresholdTokens ?? null,
+    tokens_until_pricing_threshold: pressure?.tokensUntilPricingThreshold ?? null,
+    pressure: pressure?.stage ?? 'unknown',
+    projected_max_call_cost_usd: projectedCost?.total_usd ?? null,
     tool_surface: toolSurface.receipt,
   }, runId);
 
@@ -209,12 +223,14 @@ export async function runResponsesAgent(options = {}) {
   };
   let response = await provider.create({
     model: record.provider_model_id,
+    modelRecord: record,
     input,
     instructions,
     reasoningEffort,
     serviceTier,
     tools: toolSurface.tools,
     previousResponseId: previousResponseId || undefined,
+    providerState,
     maxOutputTokens,
     promptCacheKey: options.promptCacheKey,
     cumulativeUsage,
@@ -222,6 +238,7 @@ export async function runResponsesAgent(options = {}) {
     runId,
   });
   accumulateCost(response.cost);
+  providerState = response.provider_state || (response.response_id ? { previous_response_id: response.response_id } : providerState);
   cumulativeUsage = response.usage_snapshot?.cumulative || cumulativeUsage;
 
   const toolReceipts = [];
@@ -280,6 +297,8 @@ export async function runResponsesAgent(options = {}) {
     response = await provider.continueWithToolOutputs({
       model: record.provider_model_id,
       previousResponseId: response.response_id,
+      providerState: response.provider_state || providerState,
+      modelRecord: record,
       toolOutputs: outputs,
       instructions,
       reasoningEffort,
@@ -292,20 +311,21 @@ export async function runResponsesAgent(options = {}) {
       runId,
     });
     accumulateCost(response.cost);
+    providerState = response.provider_state || (response.response_id ? { previous_response_id: response.response_id } : providerState);
     cumulativeUsage = response.usage_snapshot?.cumulative || cumulativeUsage;
   }
 
   const active = response.usage_snapshot?.current_context?.input_tokens ?? 0;
-  const finalPressure = assessContextUsage(active, budget);
+  const finalPressure = budget ? assessContextUsage(active, budget) : null;
   event(emit, 'context.snapshot', {
     estimate_kind: 'provider',
     active_input_tokens: active,
-    window_tokens: budget.windowTokens,
-    utilization_ratio: finalPressure.utilizationRatio,
-    pricing_threshold_tokens: budget.pricingThresholdTokens,
-    tokens_until_pricing_threshold: finalPressure.tokensUntilPricingThreshold,
-    pressure: finalPressure.stage,
-    compact_before_next_turn: finalPressure.shouldCompact,
+    window_tokens: budget?.windowTokens ?? null,
+    utilization_ratio: finalPressure?.utilizationRatio ?? null,
+    pricing_threshold_tokens: budget?.pricingThresholdTokens ?? null,
+    tokens_until_pricing_threshold: finalPressure?.tokensUntilPricingThreshold ?? null,
+    pressure: finalPressure?.stage ?? 'unknown',
+    compact_before_next_turn: finalPressure?.shouldCompact ?? false,
   }, runId);
 
   return Object.freeze({
@@ -322,10 +342,12 @@ export async function runResponsesAgent(options = {}) {
     tool_surface: toolSurface.receipt,
     tool_receipts: Object.freeze(toolReceipts),
     compacted_before_turn: Boolean(compacted),
+    provider_state: providerState,
     continuation: Object.freeze({
-      previous_response_id: response.response_id,
+      previous_response_id: response.response_id || providerState?.previous_response_id || null,
+      provider_state: providerState,
       usage_snapshot: response.usage_snapshot,
-      compact_before_next_turn: finalPressure.shouldCompact,
+      compact_before_next_turn: finalPressure?.shouldCompact ?? false,
     }),
   });
 }

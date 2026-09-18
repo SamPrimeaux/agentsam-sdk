@@ -39,6 +39,19 @@ test('model inventory reports configured API providers without exposing credenti
   assert.doesNotMatch(rendered, /secret-openai|secret-xai|secret-anthropic|secret-cf/);
 });
 
+test('static/reference metadata never invents hosted model availability', async () => {
+  const status = await collectModelsStatus({
+    env: { OPENAI_API_KEY: 'secret-openai', OLLAMA_BASE_URL: 'http://127.0.0.1:11434' },
+    fetchImpl: async () => response({ models: [] }),
+    providerFetchImpl: async () => response({ data: [{ id: 'some-other-model' }] }),
+  });
+
+  assert.deepEqual(status.availableModels.map((row) => row.provider_model_id), ['some-other-model']);
+  const referenceOnly = status.catalogModels.find((row) => row.provider_model_id === 'gpt-6-astra');
+  assert.equal(referenceOnly?.availability, 'unverified');
+  assert.equal(referenceOnly?.availability_source, 'sdk_reference');
+});
+
 test('exact hosted model availability is verified against the provider inventory', async () => {
   const status = await collectModelsStatus({
     env: { OPENAI_API_KEY: 'secret-openai', OLLAMA_BASE_URL: 'http://127.0.0.1:11434' },
@@ -47,8 +60,62 @@ test('exact hosted model availability is verified against the provider inventory
   });
   assert.equal(status.discovery.openai.ok, true);
   assert.equal(status.discovery.openai.returnedModelCount, 2);
-  assert.deepEqual(status.availableModels.map((row) => row.provider_model_id), ['gpt-6-astra']);
-  assert.equal(status.catalogModels[0].availability, 'available');
+  assert.deepEqual(status.availableModels.map((row) => row.provider_model_id), ['gpt-6-astra', 'some-other-model']);
+  assert.equal(status.availableModels[0].availability_source, 'provider_api');
+  assert.equal(status.availableModels[0].context_window_source, 'sdk_reference');
+});
+
+
+
+
+test('Gemini and xAI discovery keep per-key limits from provider metadata', async () => {
+  const seen = [];
+  const status = await collectModelsStatus({
+    env: {
+      GEMINI_API_KEY: 'gem-key',
+      XAI_API_KEY: 'xai-key',
+      OLLAMA_BASE_URL: 'http://127.0.0.1:11434',
+    },
+    fetchImpl: async () => response({ models: [] }),
+    providerFetchImpl: async (url, options) => {
+      seen.push(url);
+      if (url.includes('generativelanguage.googleapis.com')) {
+        return response({ models: [{
+          name: 'models/gemini-test',
+          baseModelId: 'gemini-test',
+          displayName: 'Gemini Test',
+          inputTokenLimit: 123456,
+          outputTokenLimit: 8192,
+          supportedGenerationMethods: ['generateContent'],
+          thinking: true,
+        }] });
+      }
+      if (url.includes('api.x.ai')) {
+        return response({ data: [{
+          id: 'grok-test',
+          context_length: 256000,
+          prompt_text_token_price: 1000,
+          cached_prompt_text_token_price: 500,
+          completion_text_token_price: 4000,
+        }] });
+      }
+      throw new Error('unexpected URL ' + url);
+    },
+  });
+
+  const gemini = status.providerModels.gemini[0];
+  assert.equal(gemini.provider_model_id, 'gemini-test');
+  assert.equal(gemini.context_window, 123456);
+  assert.equal(gemini.context_window_source, 'provider_api');
+  assert.deepEqual(gemini.reasoning_efforts, ['auto', 'low', 'medium', 'high']);
+
+  const grok = status.providerModels.grok[0];
+  assert.equal(grok.provider_model_id, 'grok-test');
+  assert.equal(grok.context_window, 256000);
+  assert.equal(grok.pricing.input, 1);
+  assert.equal(grok.pricing.output, 4);
+  assert.equal(seen.some((url) => url.includes('generativelanguage.googleapis.com')), true);
+  assert.equal(seen.some((url) => url.includes('api.x.ai')), true);
 });
 
 
@@ -70,9 +137,10 @@ test('Cloudflare discovery is scoped to the loaded account and surfaces text-gen
   assert.equal(seen.length, 1);
   assert.match(seen[0].url, /accounts\/44444444444444444444444444444444\/ai\/models\/search$/);
   assert.equal(status.discovery.cloudflare.ok, true);
-  assert.equal(status.discovery.cloudflare.returnedModelCount, 2);
-  assert.equal(status.discovery.cloudflare.textGenerationModelCount, 1);
-  assert.deepEqual(status.providerModels.cloudflare.map((row) => row.id), ['@cf/qwen/code']);
+  assert.equal(status.discovery.cloudflare.returnedModelCount, 1);
+  assert.deepEqual(status.providerModels.cloudflare.map((row) => row.provider_model_id), ['@cf/qwen/code']);
+  assert.equal(status.providerModels.cloudflare[0].availability_source, 'provider_api');
+  assert.equal(status.providerModels.cloudflare[0].context_window_source, 'unknown');
   const rendered = renderModelsStatus(status);
   assert.match(rendered, /@cf\/qwen\/code/);
   assert.doesNotMatch(rendered, /@cf\/baai\/embed/);

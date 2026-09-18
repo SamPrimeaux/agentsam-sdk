@@ -5,6 +5,7 @@ import { cancel, confirm, intro, isCancel, outro, select, text } from '@clack/pr
 import { collectModelsStatus } from './models.js';
 import { getModelRecord } from '../models/index.js';
 import { detectCliProject, readCliPreferences, writeCliPreferences } from '../lib/cli-preferences.js';
+import { readAccountSession } from '../lib/account-session.js';
 
 function stopIfCancelled(value) {
   if (!isCancel(value)) return value;
@@ -19,6 +20,17 @@ function commandExists(command) {
   return spawnSync(probe[0], probe[1], { stdio: 'ignore' }).status === 0;
 }
 
+export function runtimeOptions({ accountConnected = false } = {}) {
+  const rows = [{ value: 'local', label: 'Local machine', hint: 'standalone · real shell + filesystem' }];
+  if (accountConnected) {
+    rows.push(
+      { value: 'remote', label: 'Remote', hint: 'IAM-connected enrolled runtime' },
+      { value: 'sandbox', label: 'Sandbox', hint: 'IAM-connected isolated runtime' },
+    );
+  }
+  return rows;
+}
+
 export function availableShells(env = process.env) {
   const values = [];
   const detected = path.basename(env.SHELL || env.ComSpec || '').trim();
@@ -28,23 +40,38 @@ export function availableShells(env = process.env) {
 }
 
 export function modelOptions(status) {
-  const options = [{ value: 'auto', label: 'Automatic', hint: 'runtime chooses; exact economics unavailable until resolved' }];
+  const options = [{ value: 'auto', label: 'Automatic', hint: 'runtime chooses from this credential\'s verified inventory', model: null }];
   for (const model of status.availableModels || []) {
-    options.push({ value: model.model_key, label: model.label, hint: `${model.provider_model_id} · provider verified` });
+    const context = Number(model.context_window) > 0 ? ` · ctx ${Math.round(Number(model.context_window) / 1000)}k` : ' · ctx unknown';
+    options.push({
+      value: model.model_key,
+      label: `${model.provider} · ${model.label}`,
+      hint: `${model.provider_model_id}${context} · provider verified`,
+      model,
+    });
   }
   if (status.local?.online) {
-    for (const row of status.local.models || []) if (row?.name) options.push({ value: `ollama:${row.name}`, label: `Ollama · ${row.name}`, hint: 'local' });
-  }
-  for (const provider of status.providers || []) {
-    if (provider.configured && !options.some((row) => row.value.startsWith(`${provider.id}:`) && row.value !== `${provider.id}:auto`)) {
-      options.push({ value: `${provider.id}:auto`, label: `${provider.label} · automatic`, hint: 'credential proven; exact model not verified' });
-    }
+    for (const row of status.local.models || []) if (row?.name) options.push({
+      value: `ollama:${row.name}`,
+      label: `Ollama · ${row.name}`,
+      hint: 'local',
+      model: {
+        model_key: `ollama:${row.name}`, provider: 'ollama', provider_model_id: row.name, label: row.name,
+        availability: 'available', availability_source: 'local_runtime', context_window: null, context_window_source: 'unknown',
+        max_output_tokens: null, max_output_tokens_source: 'unknown', reasoning_efforts: ['auto'], service_tiers: ['default'], capabilities: { chat: true },
+      },
+    });
   }
   return options;
 }
 
-function reasoningOptions(modelPreference) {
-  const record = getModelRecord(modelPreference);
+function resolvedModel(modelPreference, modelSnapshot) {
+  if (modelSnapshot?.model_key === modelPreference) return modelSnapshot;
+  return getModelRecord(modelPreference);
+}
+
+function reasoningOptions(modelPreference, modelSnapshot) {
+  const record = resolvedModel(modelPreference, modelSnapshot);
   if (!record) return [{ value: 'auto', label: 'Automatic', hint: 'runtime/provider default' }];
   return record.reasoning_efforts.map((value) => ({
     value,
@@ -53,8 +80,8 @@ function reasoningOptions(modelPreference) {
   }));
 }
 
-function serviceTierOptions(modelPreference) {
-  const record = getModelRecord(modelPreference);
+function serviceTierOptions(modelPreference, modelSnapshot) {
+  const record = resolvedModel(modelPreference, modelSnapshot);
   if (!record) return [{ value: 'default', label: 'Standard', hint: 'default provider processing' }];
   return record.service_tiers.map((value) => {
     if (value === 'fast') return { value, label: 'Fast', hint: 'lower latency · 2× applicable token rates for Astra' };
@@ -68,20 +95,22 @@ async function promptModelPreferences(identity, existing, options = {}) {
   try { status = await collectModelsStatus(options.modelStatusOptions || {}); } catch { /* inventory remains best-effort */ }
   const models = modelOptions(status);
   const initialModel = models.some((row) => row.value === existing.modelPreference) ? existing.modelPreference : 'auto';
-  const modelPreference = stopIfCancelled(await select({ message: 'Model', initialValue: initialModel, options: models }));
+  const modelPreference = stopIfCancelled(await select({ message: 'Model', initialValue: initialModel, options: models.map(({ model, ...row }) => row) }));
+  const selected = models.find((row) => row.value === modelPreference)?.model || null;
+  const modelSnapshot = selected || (existing.modelSnapshot?.model_key === modelPreference ? existing.modelSnapshot : null);
 
-  const reasoning = reasoningOptions(modelPreference);
+  const reasoning = reasoningOptions(modelPreference, modelSnapshot);
   const initialReasoning = reasoning.some((row) => row.value === existing.reasoningEffort) ? existing.reasoningEffort : reasoning[0].value;
   const reasoningEffort = stopIfCancelled(await select({ message: 'Reasoning level', initialValue: initialReasoning, options: reasoning }));
 
-  const tiers = serviceTierOptions(modelPreference);
+  const tiers = serviceTierOptions(modelPreference, modelSnapshot);
   const initialTier = tiers.some((row) => row.value === existing.serviceTier) ? existing.serviceTier : tiers[0].value;
   const serviceTier = stopIfCancelled(await select({ message: 'Processing', initialValue: initialTier, options: tiers }));
 
-  return { modelPreference, reasoningEffort, serviceTier };
+  return { modelPreference, modelSnapshot, reasoningEffort, serviceTier };
 }
 
-export async function configureCliPreferences({ cwd = process.cwd(), firstRun = false, section = 'all', modelStatusOptions } = {}) {
+export async function configureCliPreferences({ cwd = process.cwd(), firstRun = false, section = 'all', modelStatusOptions, home, env = process.env } = {}) {
   let identity = detectCliProject(cwd);
   const existing = readCliPreferences(identity.root) || {};
   intro(firstRun ? `You are in ${identity.root}` : section === 'model' ? 'Agent Sam model' : 'Agent Sam settings');
@@ -100,8 +129,10 @@ export async function configureCliPreferences({ cwd = process.cwd(), firstRun = 
     }
   }
 
-  let runtime = existing.runtime || 'local';
-  let terminal = existing.terminal || availableShells()[0];
+  const accountConnected = Boolean(readAccountSession({ home, env })?.account_id);
+  const runtimes = runtimeOptions({ accountConnected });
+  let runtime = runtimes.some((row) => row.value === existing.runtime) ? existing.runtime : 'local';
+  let terminal = existing.terminal || availableShells(env)[0];
   if (!firstRun && section === 'all') {
     const projectChoice = stopIfCancelled(await select({
       message: 'Where should Agent Sam work?',
@@ -124,20 +155,16 @@ export async function configureCliPreferences({ cwd = process.cwd(), firstRun = 
     }
     runtime = stopIfCancelled(await select({
       message: 'Runtime', initialValue: runtime,
-      options: [
-        { value: 'local', label: 'Local machine', hint: 'real shell + filesystem' },
-        { value: 'remote', label: 'Remote', hint: 'connected remote runtime' },
-        { value: 'sandbox', label: 'Sandbox', hint: 'isolated disposable runtime' },
-      ],
+      options: runtimes,
     }));
-    const shells = availableShells();
+    const shells = availableShells(env);
     terminal = stopIfCancelled(await select({
       message: 'Terminal', initialValue: terminal && shells.includes(terminal) ? terminal : shells[0],
       options: shells.map((shell) => ({ value: shell, label: shell, hint: shell === shells[0] ? 'detected/default' : undefined })),
     }));
   }
 
-  const model = await promptModelPreferences(identity, existing, { modelStatusOptions });
+  const model = await promptModelPreferences(identity, existing, { modelStatusOptions: { home, env, ...(modelStatusOptions || {}) } });
   const preferences = writeCliPreferences(identity.root, { trustedDirectory, runtime, terminal, ...model });
   outro(`Ready · ${identity.project}`);
   return { identity, preferences };

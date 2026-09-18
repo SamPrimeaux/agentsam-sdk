@@ -61,17 +61,28 @@ function normalizeCostBreakdown(value = {}) {
   };
 }
 
+export function localSessionElapsedMs(session = {}, at = Date.now()) {
+  const accumulated = Math.max(0, Number(session.active_elapsed_ms || 0));
+  const startedAt = Date.parse(clean(session.active_started_at));
+  if (clean(session.status) !== 'active' || !Number.isFinite(startedAt)) return accumulated;
+  return accumulated + Math.max(0, Number(at) - startedAt);
+}
+
 export function normalizeLocalSession(value = {}) {
   const createdAt = clean(value.created_at) || now();
+  const status = clean(value.status) || 'active';
+  const updatedAt = clean(value.updated_at) || createdAt;
   return {
     schema_version: LOCAL_SESSION_SCHEMA,
     id: validateSessionId(value.id || createLocalSessionId()),
-    status: clean(value.status) || 'active',
+    status,
     cwd: path.resolve(clean(value.cwd) || process.cwd()),
     title: clean(value.title) || sessionTitleFromInput(value.last_input),
     last_input: clean(value.last_input) || null,
     created_at: createdAt,
-    updated_at: clean(value.updated_at) || createdAt,
+    updated_at: updatedAt,
+    active_elapsed_ms: Math.max(0, Number(value.active_elapsed_ms || 0)),
+    active_started_at: clean(value.active_started_at) || (status === 'active' ? updatedAt : null),
     model_key: clean(value.model_key) || null,
     provider_model_id: clean(value.provider_model_id) || null,
     reasoning_effort: clean(value.reasoning_effort) || null,

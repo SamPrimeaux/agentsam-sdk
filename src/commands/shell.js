@@ -12,18 +12,25 @@ import { runStatus } from './status.js';
 import { runModels } from './models.js';
 import { configureCliPreferences } from './preferences.js';
 import { runCloudflare } from './cloudflare.js';
-import { createRuntimeActivity } from '../ui/runtime-activity.js';
+import { probeOllamaModel, resolveOllamaConfig } from './ollama.js';
+import { createInlineActivity } from '../ui/cli/activity.js';
+import { createCliRuntimePresenter } from '../ui/cli/runtime-events.js';
+import { renderCliFooter } from '../ui/cli/footer.js';
 import { diagnosticFromError, renderDiagnosticError } from '../errors/index.js';
 import { getModelRecord } from '../models/index.js';
+import { discoverProviderModels } from '../models/discovery.js';
 import { readCliPreferences, updateCliPreferences } from '../lib/cli-preferences.js';
 import { buildContextEconomicsReport, renderContextEconomics } from './context-economics.js';
-import { createOpenAIResponsesAdapter } from '../providers/index.js';
+import { createProviderAdapter } from '../providers/index.js';
 import { createCapabilityAdapter, runResponsesAgent } from '../agent/index.js';
 import { resolveProviderCredential } from '../lib/provider-credentials.js';
-import { createLocalSession, saveLocalSession, sessionTitleFromInput } from '../lib/local-sessions.js';
+import { createLocalSession, saveLocalSession, sessionTitleFromInput, localSessionElapsedMs } from '../lib/local-sessions.js';
 import { grantExecutionApproval, isExecutionApproved, toolApprovalKey } from '../lib/execution-approvals.js';
 import { runWhoami } from './whoami.js';
 import { runLogin, runLogout } from './account-auth.js';
+import { runHelp } from '../ui/cli/help.js';
+import { readAccountSession } from '../lib/account-session.js';
+import { startRuntimeRun, finishRuntimeRun, recordRuntimeCompaction } from '../local/runtime-store.js';
 
 function writeLine(write, value = '') { write(`${value}\n`); }
 
@@ -77,18 +84,20 @@ export function tokenizeShellLine(input = '') {
 
 export function renderShellCatalog() {
   const next = SHELL_PHASES.find((phase) => phase.status === 'next' || phase.status === 'current');
-  const rows = SLASH_COMMANDS.map((row) => `    ${row.cmd.padEnd(14)} ${row.description}`).join('\n');
-  return `
-  ╔════════════════════════════════╗
-  ║        Agent Sam Terminal      ║
-  ╚════════════════════════════════╝
-
-  Current milestone: ${next?.label ?? 'interactive runtime'}
-  Type / and press Enter for the scrollable command picker.
-
-  Slash commands (${SLASH_COMMANDS.length} implemented):
-${rows}
-`;
+  return [
+    '',
+    '  Agent Sam',
+    '  Type normally to work with the selected model.',
+    '',
+    '    /        command picker',
+    '    /model   model · reasoning · processing',
+    '    /usage   tokens · cost · resume receipt',
+    '    /help    focused help',
+    '    /exit    return to host shell',
+    '',
+    `  ${next?.label ?? 'interactive runtime'} · ${SLASH_COMMANDS.length} commands available through /`,
+    '',
+  ].join('\n');
 }
 
 function parseDeployOptions(args, cwd) {
@@ -110,9 +119,51 @@ function spawnGit(cwd, args) {
 
 function selectedModel(cwd) {
   const preferences = readCliPreferences(cwd) || {};
-  const model = getModelRecord(preferences.modelPreference);
+  const snapshot = preferences.modelSnapshot?.model_key === preferences.modelPreference
+    ? preferences.modelSnapshot
+    : null;
+  const model = snapshot || getModelRecord(preferences.modelPreference);
   if (!model) throw new Error('Select an exact provider-verified model with /model first so Agent Sam can verify supported runtime controls.');
   return { preferences, model };
+}
+
+async function resolveModelForTurn(cwd, state) {
+  const selected = selectedModel(cwd);
+  const { preferences } = selected;
+  let model = selected.model;
+
+  if (model.provider === 'ollama') {
+    const config = resolveOllamaConfig({}, process.env);
+    const probe = await probeOllamaModel(model.provider_model_id, config, state.providerFetchImpl || fetch);
+    if (!probe.ok) throw new Error(`ollama_model_probe_failed:${model.provider_model_id}:${probe.error || 'unknown'}`);
+    model = {
+      ...model,
+      context_window: probe.context_window,
+      context_window_source: probe.context_window_source || 'unknown',
+      capabilities: { ...(model.capabilities || {}), local_runtime: true, ...(Object.fromEntries((probe.capabilities || []).map((name) => [name, true]))) },
+    };
+    updateCliPreferences(cwd, { modelPreference: model.model_key, modelSnapshot: model });
+    return { preferences: readCliPreferences(cwd) || preferences, model, credential: null, verification: 'local_runtime' };
+  }
+
+  const credential = resolveProviderCredential(model.provider, { home: state.home });
+  if (!credential.configured) {
+    throw new Error(`provider_credential_unavailable:${model.provider}:${credential.error || credential.env || 'not_configured'}`);
+  }
+
+  const discovery = await discoverProviderModels(model.provider, credential, { fetchImpl: state.providerFetchImpl || fetch });
+  if (discovery.ok) {
+    const live = discovery.models.find((row) => row.provider_model_id === model.provider_model_id || row.model_key === model.model_key);
+    if (!live) throw new Error(`selected_model_not_available_for_credential:${model.provider}:${model.provider_model_id}`);
+    model = live;
+    updateCliPreferences(cwd, { modelPreference: live.model_key, modelSnapshot: live });
+    return { preferences: readCliPreferences(cwd) || preferences, model, credential, verification: 'provider_api' };
+  }
+
+  if (preferences.modelSnapshot?.availability === 'available') {
+    return { preferences, model, credential, verification: 'cached_provider_snapshot', discoveryError: discovery.error || null };
+  }
+  throw new Error(`provider_model_discovery_failed:${model.provider}:${discovery.error || 'unknown'}`);
 }
 
 async function chooseReasoning(cwd, args, state) {
@@ -168,7 +219,7 @@ export async function runLocalAgent(goal, write, options = {}) {
   }
   const base = String(process.env.AGENTSAM_LOCAL_URL || 'http://127.0.0.1:8787').replace(/\/$/, '');
   const fetchImpl = options.fetchImpl || fetch;
-  const activity = options.activity || createRuntimeActivity({ write, phase: 'thinking', interactive: options.interactive });
+  const activity = options.activity || createInlineActivity({ write, label: 'Thinking', interactive: options.interactive });
   let response;
   activity.start('thinking');
   try {
@@ -214,6 +265,16 @@ function formatUsd(value) {
   return currency + (amount < 0.01 ? amount.toFixed(6) : amount.toFixed(4));
 }
 
+function formatElapsed(ms) {
+  const totalSeconds = Math.max(0, Math.round(Number(ms || 0) / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours) return `${hours}h ${minutes}m ${seconds}s`;
+  if (minutes) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
+}
+
 export function renderSessionReceipt(session) {
   if (!session) return '';
   const usage = session.cumulative_usage || {};
@@ -227,10 +288,13 @@ export function renderSessionReceipt(session) {
   const model = session.provider_model_id || session.model_key || 'model unavailable';
   const breakdown = session.cost_breakdown_usd || {};
   const componentTotal = ['input', 'cached_input', 'cache_write', 'output'].reduce((sum, key) => sum + Number(breakdown[key] || 0), 0);
+  const elapsed = localSessionElapsedMs(session);
   const lines = [
     '',
+    'Session summary',
     `Token usage: total=${formatCount(total)} input=${formatCount(input)}${cached ? ` (+ ${formatCount(cached)} cached)` : ''}${cacheWrite ? ` (+ ${formatCount(cacheWrite)} cache write)` : ''} output=${formatCount(output)}${reasoning ? ` reasoning=${formatCount(reasoning)}` : ''}`,
     `Spent: ${formatUsd(session.total_cost_usd)} · ${model}${session.actual_service_tier ? ` · ${session.actual_service_tier}` : ''}`,
+    `Elapsed: ${formatElapsed(elapsed)}`,
   ];
   if (componentTotal > 0) {
     lines.push(`Cost breakdown: input ${formatUsd(breakdown.input)} · cached ${formatUsd(breakdown.cached_input)} · cache write ${formatUsd(breakdown.cache_write)} · output ${formatUsd(breakdown.output)}`);
@@ -271,20 +335,28 @@ function safeToolInput(value, depth = 0) {
 }
 
 async function approveModelRequest(preflight, state) {
+  const projected = Number(preflight.projected_max_call_cost_usd);
+  const threshold = Number(process.env.AGENTSAM_CONFIRM_CALL_COST_USD || 0);
+  if (!(Number.isFinite(projected) && projected >= 0)) return true;
+  if (!(Number.isFinite(threshold) && threshold > 0) || projected <= threshold) return true;
+
   const approvedCeiling = Number(state.session?.approved_projected_call_cost_usd || 0);
-  if (approvedCeiling > 0 && preflight.projected_max_call_cost_usd <= approvedCeiling) return true;
+  if (approvedCeiling > 0 && projected <= approvedCeiling) return true;
   if (!state.interactive) return false;
+
+  state.activity?.clear?.();
   writeLine(state.write, '');
-  writeLine(state.write, '  Model request');
-  writeLine(state.write, `  model       ${preflight.model}`);
-  writeLine(state.write, `  reasoning   ${preflight.reasoning_effort}`);
-  writeLine(state.write, `  processing  ${preflight.service_tier}`);
-  writeLine(state.write, `  context     ~${formatCount(preflight.estimated_input_tokens)} input tokens`);
-  writeLine(state.write, `  max call    ${formatUsd(preflight.projected_max_call_cost_usd)} conservative ceiling`);
-  if (Number.isFinite(preflight.tokens_until_pricing_threshold)) writeLine(state.write, `  price cliff ${formatCount(preflight.tokens_until_pricing_threshold)} tokens headroom`);
-  const approved = await confirm({ message: 'Send this request?', initialValue: true });
+  writeLine(state.write, '  ◆ Model cost approval');
+  writeLine(state.write, `    model       ${preflight.model}`);
+  writeLine(state.write, `    reasoning   ${preflight.reasoning_effort}`);
+  writeLine(state.write, `    processing  ${preflight.service_tier}`);
+  writeLine(state.write, `    context     ~${formatCount(preflight.estimated_input_tokens)} input tokens`);
+  writeLine(state.write, `    max call    ${formatUsd(projected)} conservative ceiling`);
+  if (Number.isFinite(preflight.tokens_until_pricing_threshold)) writeLine(state.write, `    headroom    ${formatCount(preflight.tokens_until_pricing_threshold)} tokens`);
+  const approved = await confirm({ message: 'Allow this call?', initialValue: false });
   if (isCancel(approved) || approved !== true) return false;
-  persistSession(state, { approved_projected_call_cost_usd: Math.max(approvedCeiling, preflight.projected_max_call_cost_usd) });
+  persistSession(state, { approved_projected_call_cost_usd: Math.max(approvedCeiling, projected) });
+  state.activity?.start?.('Working');
   return true;
 }
 
@@ -296,6 +368,7 @@ async function approveToolExecution(request, state) {
   if (!state.interactive) return false;
 
   const summary = JSON.stringify(safeToolInput(request.input || {}));
+  state.activity?.clear?.();
   writeLine(state.write, '');
   writeLine(state.write, '  Agent Sam needs execution permission');
   writeLine(state.write, `  action  ${key}`);
@@ -314,26 +387,52 @@ async function approveToolExecution(request, state) {
   });
   if (isCancel(choice) || choice === 'deny') return false;
   if (choice === 'always') grantExecutionApproval({ cwd: state.cwd, key, label: key }, { home: state.home });
+  state.activity?.start?.(`Working · ${request.capability_id}`);
   return true;
 }
 
 async function runInteractiveModelTurn(prompt, state) {
-  const { preferences, model } = selectedModel(state.cwd);
-  if (model.provider !== 'openai') throw new Error(`interactive_provider_not_implemented:${model.provider}`);
-  const credential = resolveProviderCredential(model.provider, { home: state.home });
-  if (!credential.configured) throw new Error(`provider_credential_unavailable:${model.provider}:${credential.error || credential.env || 'not_configured'}`);
-
-  const activity = createRuntimeActivity({ write: state.write, phase: 'thinking', interactive: state.interactive });
-  const provider = createOpenAIResponsesAdapter({ apiKey: credential.value });
+  const resolved = await resolveModelForTurn(state.cwd, state);
+  const { preferences, model, credential } = resolved;
+  const provider = createProviderAdapter({
+    modelRecord: model,
+    credential,
+    endpoint: model.provider === 'ollama' ? process.env.OLLAMA_BASE_URL : undefined,
+    fetchImpl: state.providerFetchImpl,
+  });
   const capabilityAdapter = createCapabilityAdapter();
+
   const samePolicy = state.session
     && state.session.model_key === model.model_key
     && state.session.reasoning_effort === preferences.reasoningEffort
     && state.session.requested_service_tier === preferences.serviceTier;
-  const previousResponseId = samePolicy ? state.session?.provider_state?.previous_response_id : null;
+  const previousProviderState = samePolicy ? state.session?.provider_state : null;
   const previousUsageSnapshot = samePolicy ? state.session?.usage_snapshot : null;
+  const accountId = readAccountSession({ home: state.home })?.account_id || null;
+  let runtimeRunId = null;
+  try {
+    runtimeRunId = await startRuntimeRun({
+      cwd: state.cwd,
+      account_id: accountId,
+      mode: 'agent',
+      model_key: model.model_key,
+      reasoning_effort: preferences.reasoningEffort,
+      service_tier: preferences.serviceTier,
+    });
+  } catch {
+    runtimeRunId = null;
+  }
 
-  activity.start('thinking');
+  const activity = createInlineActivity({
+    write: state.write,
+    interactive: state.interactive,
+    label: `Thinking · ${model.provider_model_id}`,
+  });
+  state.activity = activity;
+  const presenter = createCliRuntimePresenter({ activity, write: state.write, state });
+  const startedAt = Date.now();
+  activity.start(`Thinking · ${model.provider_model_id}`);
+
   let result;
   try {
     result = await runResponsesAgent({
@@ -342,30 +441,80 @@ async function runInteractiveModelTurn(prompt, state) {
       cwd: state.cwd,
       prompt,
       model: model.model_key,
+      modelRecord: model,
       reasoningEffort: preferences.reasoningEffort,
       serviceTier: preferences.serviceTier,
-      previousResponseId,
+      previousProviderState,
       previousUsageSnapshot,
       cumulativeUsage: state.session?.cumulative_usage || null,
       promptCacheKey: state.session?.id || undefined,
-      runId: state.session?.id || undefined,
+      runId: runtimeRunId || state.session?.id || undefined,
       beforeRequest: (preflight) => approveModelRequest(preflight, state),
       beforeTool: (request) => approveToolExecution(request, state),
       emit(event) {
+        presenter.handle(event);
         if (event?.type === 'usage.snapshot') state.usageSnapshot = event.payload;
       },
     });
   } catch (error) {
-    activity.fail('failed');
+    activity.fail('Failed');
+    state.activity = null;
+    if (runtimeRunId) {
+      try {
+        await finishRuntimeRun({
+          cwd: state.cwd,
+          id: runtimeRunId,
+          status: 'failed',
+          error_code: error?.code || 'interactive_error',
+          error_message: error?.message || String(error),
+          latency_ms: Date.now() - startedAt,
+        });
+      } catch { /* execution result remains primary */ }
+    }
     throw error;
   }
-  activity.succeed('done');
+
+  activity.succeed(result.tool_receipts?.length ? `Done · ${result.tool_receipts.length} tool call${result.tool_receipts.length === 1 ? '' : 's'}` : 'Done');
+  state.activity = null;
+
+  const compacted = presenter.compactionReceipt();
+  if (compacted) writeLine(state.write, compacted);
+
   if (result.output_text) {
     writeLine(state.write, '');
     writeLine(state.write, result.output_text);
     writeLine(state.write, '');
   }
+
   state.usageSnapshot = result.usage_snapshot;
+  if (runtimeRunId) {
+    try {
+      await finishRuntimeRun({
+        cwd: state.cwd,
+        id: runtimeRunId,
+        status: 'completed',
+        actual_service_tier: result.actual_service_tier,
+        usage: result.cumulative_usage || result.usage_snapshot?.cumulative || {},
+        cost_usd: result.total_cost_usd || 0,
+        latency_ms: Date.now() - startedAt,
+      });
+      if (presenter.state.lastCompaction) {
+        await recordRuntimeCompaction({
+          cwd: state.cwd,
+          account_id: accountId,
+          agent_run_id: runtimeRunId,
+          session_id: state.session?.id,
+          provider: model.provider,
+          model_key: model.model_key,
+          tokens_before: presenter.state.lastCompaction.tokens_before,
+          tokens_after: presenter.state.lastCompaction.tokens_after,
+          summary_text: presenter.state.lastCompaction.summary_text || '',
+          source_kind: model.provider === 'ollama' ? 'filesystem' : 'api',
+          metadata: { verification: resolved.verification, compaction_id: presenter.state.lastCompaction.compaction_id || null },
+        });
+      }
+    } catch { /* local telemetry persistence is best-effort */ }
+  }
   if (state.session) {
     persistSession(state, {
       status: 'active',
@@ -374,7 +523,7 @@ async function runInteractiveModelTurn(prompt, state) {
       reasoning_effort: result.reasoning_effort,
       requested_service_tier: result.requested_service_tier,
       actual_service_tier: result.actual_service_tier,
-      provider_state: { provider: model.provider, previous_response_id: result.response_id },
+      provider_state: { provider: model.provider, ...(result.provider_state || {}) },
       usage_snapshot: result.usage_snapshot,
       cumulative_usage: result.cumulative_usage,
       total_cost_usd: Number(state.session.total_cost_usd || 0) + Number(result.total_cost_usd || 0),
@@ -384,6 +533,14 @@ async function runInteractiveModelTurn(prompt, state) {
       last_error: null,
     });
   }
+
+  writeLine(state.write, renderCliFooter({
+    model: result.model || model.provider_model_id,
+    usageSnapshot: result.usage_snapshot,
+    tier: result.actual_service_tier,
+    elapsedMs: Date.now() - startedAt,
+  }));
+  writeLine(state.write, '');
   return result;
 }
 
@@ -401,13 +558,13 @@ export async function dispatchShellLine(line, state = {}) {
         await showCommandPicker(state);
         break;
       case '/help':
-        write(renderShellCatalog());
+        await runHelp(args, { write, interactive: state.interactive });
         break;
       case '/exit':
       case '/quit':
         return { handled: true, exit: true, cwd: state.cwd };
       case '/model': {
-        const configured = await configureCliPreferences({ cwd: state.cwd, firstRun: false, section: 'model' });
+        const configured = await configureCliPreferences({ cwd: state.cwd, firstRun: false, section: 'model', home: state.home });
         state.cwd = configured.identity.root;
         break;
       }
@@ -456,7 +613,7 @@ export async function dispatchShellLine(line, state = {}) {
         await runCloudflare(args.length ? args : ['commands'], { cwd: state.cwd, write });
         break;
       case '/settings': {
-        const configured = await configureCliPreferences({ cwd: state.cwd, firstRun: false });
+        const configured = await configureCliPreferences({ cwd: state.cwd, firstRun: false, home: state.home });
         state.cwd = configured.identity.root;
         break;
       }
@@ -521,6 +678,7 @@ export async function runShell(argv = [], options = {}) {
     usageSnapshot: options.usageSnapshot || options.session?.usage_snapshot || null,
     session: options.session || null,
     home: options.home,
+    providerFetchImpl: options.providerFetchImpl,
   };
   const sub = argv[0] || '';
   if (sub === 'list' || sub === 'status') { write(renderShellCatalog()); return; }
@@ -534,7 +692,12 @@ export async function runShell(argv = [], options = {}) {
 
   if (state.session) {
     state.cwd = path.resolve(state.session.cwd || state.cwd);
-    state.session = saveLocalSession({ ...state.session, status: 'active', cwd: state.cwd }, { home: state.home });
+    state.session = saveLocalSession({
+      ...state.session,
+      status: 'active',
+      cwd: state.cwd,
+      active_started_at: new Date().toISOString(),
+    }, { home: state.home });
     state.usageSnapshot = state.session.usage_snapshot || state.usageSnapshot;
   } else {
     const preferences = readCliPreferences(state.cwd) || {};
@@ -570,7 +733,13 @@ export async function runShell(argv = [], options = {}) {
     if (rl.terminal) { rl.setPrompt(promptText()); rl.prompt(); }
   }
   if (state.session) {
-    persistSession(state, { status: interrupted ? 'interrupted' : 'paused', cwd: state.cwd });
+    const activeElapsedMs = localSessionElapsedMs(state.session);
+    persistSession(state, {
+      status: interrupted ? 'interrupted' : 'paused',
+      cwd: state.cwd,
+      active_elapsed_ms: activeElapsedMs,
+      active_started_at: null,
+    });
     if (options.receipt !== false) write(renderSessionReceipt(state.session));
   }
   return state.session;

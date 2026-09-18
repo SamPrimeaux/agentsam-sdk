@@ -2,7 +2,10 @@
  * Agent Sam local PTY — localhost WebSocket shell, no tunnel, no IAM.
  * Compatible with iam-pty wire format (raw bytes + JSON resize/slash).
  */
+import fs from 'node:fs';
 import http from 'node:http';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 
 const DEFAULT_PORT = 3099;
@@ -17,8 +20,45 @@ function shellForPlatform() {
   return process.env.SHELL || '/bin/zsh';
 }
 
-async function loadPty() {
+export function ensureNodePtySpawnHelperExecutable(options = {}) {
+  const platform = options.platform || process.platform;
+  const arch = options.arch || process.arch;
+  if (platform !== 'darwin') return Object.freeze({ checked: false, changed: false, path: null });
+
+  const resolveModule = options.resolveModule || ((specifier) => import.meta.resolve(specifier));
+  const fsImpl = options.fs || fs;
+  const entryUrl = resolveModule('node-pty');
+  const packageRoot = path.resolve(path.dirname(fileURLToPath(entryUrl)), '..');
+  const helperPath = path.join(packageRoot, 'prebuilds', `darwin-${arch}`, 'spawn-helper');
+
+  if (!fsImpl.existsSync(helperPath)) {
+    return Object.freeze({ checked: true, changed: false, path: helperPath, missing: true });
+  }
+
+  const stat = fsImpl.statSync(helperPath);
+  if ((stat.mode & 0o111) !== 0) {
+    return Object.freeze({ checked: true, changed: false, path: helperPath });
+  }
+
   try {
+    fsImpl.chmodSync(helperPath, stat.mode | 0o111);
+  } catch (error) {
+    const wrapped = new Error(
+      `node-pty spawn-helper is not executable and Agent Sam could not repair it at ${helperPath}. ` +
+      `Reinstall node-pty with install scripts enabled or make that helper executable. ${error?.message || error}`,
+    );
+    wrapped.code = 'node_pty_spawn_helper_not_executable';
+    wrapped.cause = error;
+    throw wrapped;
+  }
+
+  return Object.freeze({ checked: true, changed: true, path: helperPath });
+}
+
+async function loadPty(override) {
+  if (override?.spawn) return override;
+  try {
+    ensureNodePtySpawnHelperExecutable();
     const mod = await import('node-pty');
     return mod.default || mod;
   } catch (e) {
@@ -29,12 +69,69 @@ async function loadPty() {
 }
 
 /**
- * @param {{ cwd?: string, port?: number, host?: string }} [opts]
+ * Attach the portable PTY wire protocol to an already-created WebSocket-like transport.
+ * Exported so the release gate can test terminal semantics against an in-memory mock transport.
+ */
+export function attachLocalPtySession({ ws, pty, shell, cwd, cols = 80, rows = 24, env = process.env, sessionId } = {}) {
+  if (!ws?.on || !ws?.send) throw new TypeError('ws transport with on/send is required');
+  if (!pty?.spawn) throw new TypeError('pty transport with spawn is required');
+  const term = pty.spawn(shell, [], {
+    name: 'xterm-256color',
+    cols,
+    rows,
+    cwd,
+    env: { ...env, TERM: 'xterm-256color', AGENTSAM_LOCAL_PTY: '1' },
+  });
+  const id = sessionId || `local_${Date.now().toString(36)}`;
+  const openState = ws.OPEN ?? 1;
+  const isOpen = () => ws.readyState == null || ws.readyState === openState;
+
+  ws.send(JSON.stringify({ type: 'session_id', session_id: id }));
+
+  term.onData((data) => {
+    if (isOpen()) ws.send(data);
+  });
+
+  ws.on('message', (raw) => {
+    const text = raw.toString();
+    try {
+      const msg = JSON.parse(text);
+      if (msg.type === 'resize' && msg.cols && msg.rows) {
+        term.resize(msg.cols, msg.rows);
+        return;
+      }
+      if (msg.type === 'slash' && msg.line) {
+        term.write(`${msg.line}\r`);
+        return;
+      }
+    } catch {
+      /* raw PTY input */
+    }
+    term.write(text);
+  });
+
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    try { term.kill(); } catch { /* ignore */ }
+  };
+  term.onExit(() => {
+    if (isOpen() && ws.close) ws.close();
+  });
+  ws.on('close', cleanup);
+  ws.on('error', cleanup);
+
+  return Object.freeze({ session_id: id, term, cleanup });
+}
+
+/**
+ * @param {{ cwd?: string, port?: number, host?: string, pty?: { spawn: Function } }} [opts]
  */
 export async function startLocalPtyServer(opts = {}) {
-  const pty = await loadPty();
+  const pty = await loadPty(opts.pty);
   const cwd = opts.cwd || process.cwd();
-  const port = parsePort(opts.port ?? process.env.PTY_PORT, DEFAULT_PORT);
+  const requestedPort = opts.port === 0 ? 0 : parsePort(opts.port ?? process.env.PTY_PORT, DEFAULT_PORT);
   const host = opts.host || '127.0.0.1';
   const shell = shellForPlatform();
 
@@ -47,7 +144,7 @@ export async function startLocalPtyServer(opts = {}) {
           ok: true,
           service: 'agentsam-local-pty',
           cwd,
-          port,
+          port: Number(httpServer.address()?.port || requestedPort),
           shell,
         }),
       );
@@ -65,64 +162,29 @@ export async function startLocalPtyServer(opts = {}) {
     const cols = parsePort(url.searchParams.get('cols'), 80);
     const rows = parsePort(url.searchParams.get('rows'), 24);
 
-    const term = pty.spawn(shell, [], {
-      name: 'xterm-256color',
+    attachLocalPtySession({
+      ws,
+      pty,
+      shell,
+      cwd: sessionCwd,
       cols,
       rows,
-      cwd: sessionCwd,
-      env: { ...process.env, TERM: 'xterm-256color', AGENTSAM_LOCAL_PTY: '1' },
+      env: process.env,
     });
-
-    const sessionId = `local_${Date.now().toString(36)}`;
-    ws.send(JSON.stringify({ type: 'session_id', session_id: sessionId }));
-
-    term.onData((data) => {
-      if (ws.readyState === ws.OPEN) ws.send(data);
-    });
-
-    ws.on('message', (raw) => {
-      const text = raw.toString();
-      try {
-        const msg = JSON.parse(text);
-        if (msg.type === 'resize' && msg.cols && msg.rows) {
-          term.resize(msg.cols, msg.rows);
-          return;
-        }
-        if (msg.type === 'slash' && msg.line) {
-          term.write(`${msg.line}\r`);
-          return;
-        }
-      } catch {
-        /* raw PTY input */
-      }
-      term.write(text);
-    });
-
-    const cleanup = () => {
-      try {
-        term.kill();
-      } catch {
-        /* ignore */
-      }
-    };
-    term.onExit(() => {
-      if (ws.readyState === ws.OPEN) ws.close();
-    });
-    ws.on('close', cleanup);
-    ws.on('error', cleanup);
   });
 
   await new Promise((resolve) => {
-    httpServer.listen(port, host, resolve);
+    httpServer.listen(requestedPort, host, resolve);
   });
+  const boundPort = Number(httpServer.address()?.port || requestedPort);
 
   return {
-    port,
+    port: boundPort,
     host,
     cwd,
     shell,
-    url: `ws://${host}:${port}`,
-    healthUrl: `http://${host}:${port}/health`,
+    url: `ws://${host}:${boundPort}`,
+    healthUrl: `http://${host}:${boundPort}/health`,
     close: () =>
       new Promise((resolve, reject) => {
         wss.close(() => {

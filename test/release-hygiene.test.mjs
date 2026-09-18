@@ -6,18 +6,23 @@ import test from 'node:test';
 const root = path.resolve(import.meta.dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 
-test('2.6 release metadata and public terminal vocabulary are aligned', () => {
+test('release candidate metadata and public terminal vocabulary are aligned', () => {
   const pkg = JSON.parse(read('package.json'));
   const manifest = read('agentsam.yaml');
   const readme = read('README.md');
+  const escapedVersion = pkg.version.replaceAll('.', '\\.');
 
-  assert.equal(pkg.version, '2.6.0');
-  assert.match(manifest, /target_version: "2.6.0"/);
-  assert.match(manifest, /state: published/);
-  assert.match(manifest, /current_latest: "2.6.0"/);
-  assert.match(manifest, /published_at_utc: "2026-09-12T21:14:57.827Z"/);
-  assert.match(manifest, /published_git_head: ae32fba0a761cb18c5f940957bdcd58e3cab6072/);
-  assert.match(manifest, /git_tag: v2.6.0/);
+  assert.match(
+    manifest,
+    new RegExp(`packages:[\\s\\S]*?root_sdk:[\\s\\S]*?version: "${escapedVersion}"`),
+  );
+  assert.match(
+    manifest,
+    new RegExp(`release:[\\s\\S]*?root_sdk:[\\s\\S]*?target_version: "${escapedVersion}"`),
+  );
+  assert.match(manifest, /state: (candidate|published)/);
+  assert.match(manifest, /current_latest: "\d+\.\d+\.\d+"/);
+  assert.match(manifest, /verification_command: npm run verify:release/);
   assert.doesNotMatch(manifest, /^\s*- tui\s*$/m);
   assert.doesNotMatch(readme, /agentsam tui|CLI\/TUI/);
 });

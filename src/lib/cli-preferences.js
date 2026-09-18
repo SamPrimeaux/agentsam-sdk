@@ -3,8 +3,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { getProjectName, tryReadProjectConfig } from './project-config.js';
 
-export const CLI_PREFERENCES_SCHEMA = 'agentsam-cli-preferences-v2';
-export const LEGACY_CLI_PREFERENCES_SCHEMA = 'agentsam-cli-preferences-v1';
+export const CLI_PREFERENCES_SCHEMA = 'agentsam-cli-preferences-v3';
+export const LEGACY_CLI_PREFERENCES_SCHEMAS = new Set(['agentsam-cli-preferences-v1', 'agentsam-cli-preferences-v2']);
 
 function readJson(filename) {
   try { return JSON.parse(fs.readFileSync(filename, 'utf8')); }
@@ -43,16 +43,43 @@ export function detectCliProject(startDir = process.cwd()) {
 
 export function cliPreferencesPath(root) { return path.join(path.resolve(root), '.agentsam', 'cli.json'); }
 
+function safeModelSnapshot(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const provider = String(value.provider || '').trim();
+  const providerModelId = String(value.provider_model_id || '').trim();
+  if (!provider || !providerModelId) return null;
+  return {
+    model_key: String(value.model_key || `${provider}:${providerModelId}`),
+    provider,
+    provider_model_id: providerModelId,
+    label: String(value.label || providerModelId),
+    availability: value.availability === 'available' ? 'available' : 'unverified',
+    availability_source: String(value.availability_source || ''),
+    context_window: Number.isFinite(Number(value.context_window)) && Number(value.context_window) > 0 ? Number(value.context_window) : null,
+    context_window_source: String(value.context_window_source || 'unknown'),
+    max_output_tokens: Number.isFinite(Number(value.max_output_tokens)) && Number(value.max_output_tokens) > 0 ? Number(value.max_output_tokens) : null,
+    max_output_tokens_source: String(value.max_output_tokens_source || 'unknown'),
+    reasoning_efforts: Array.isArray(value.reasoning_efforts) && value.reasoning_efforts.length ? value.reasoning_efforts.map(String) : ['auto'],
+    service_tiers: Array.isArray(value.service_tiers) && value.service_tiers.length ? value.service_tiers.map(String) : ['default'],
+    capabilities: value.capabilities && typeof value.capabilities === 'object' ? { ...value.capabilities } : {},
+    pricing: value.pricing && typeof value.pricing === 'object' ? { ...value.pricing } : null,
+    context_policy: value.context_policy && typeof value.context_policy === 'object' ? { ...value.context_policy } : null,
+    source: value.source && typeof value.source === 'object' ? { ...value.source } : null,
+  };
+}
+
 function normalizePreferences(value = {}) {
+  const modelSnapshot = safeModelSnapshot(value.modelSnapshot);
   return {
     schemaVersion: CLI_PREFERENCES_SCHEMA,
     trustedDirectory: value.trustedDirectory === true,
     runtime: value.runtime || 'local',
     terminal: value.terminal || '',
     modelPreference: value.modelPreference || 'auto',
+    modelSnapshot,
     reasoningEffort: value.reasoningEffort || 'auto',
     serviceTier: value.serviceTier || 'default',
-    modelAuthority: 'preference-only',
+    modelAuthority: modelSnapshot?.availability === 'available' ? 'provider-verified' : 'preference-only',
     updatedAt: value.updatedAt || null,
   };
 }
@@ -60,7 +87,7 @@ function normalizePreferences(value = {}) {
 export function readCliPreferences(root) {
   const value = readJson(cliPreferencesPath(root));
   if (!value) return null;
-  if (value.schemaVersion !== CLI_PREFERENCES_SCHEMA && value.schemaVersion !== LEGACY_CLI_PREFERENCES_SCHEMA) return null;
+  if (value.schemaVersion !== CLI_PREFERENCES_SCHEMA && !LEGACY_CLI_PREFERENCES_SCHEMAS.has(value.schemaVersion)) return null;
   return normalizePreferences(value);
 }
 

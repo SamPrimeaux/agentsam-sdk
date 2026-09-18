@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { applyRuntimeMigrations } from './migrations.js';
 
 async function loadSqlite() {
   try {
@@ -77,6 +78,7 @@ export async function initializeLocalSqlite({
   const db = await createLocalSqliteDatabase(resolvedDb);
   try {
     db.exec(schema);
+    await applyRuntimeMigrations(db);
   } finally {
     db.close();
   }

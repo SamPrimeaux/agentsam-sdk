@@ -43,6 +43,7 @@ import fs from 'node:fs';
 import { repositoryRoot } from './knowledge/config.js';
 import { resolveAccountSdkKey } from './lib/account-session.js';
 import { renderDiagnosticError } from './errors/index.js';
+import { renderHelpOverview, runHelp } from './ui/cli/help.js';
 
 const VERSION = pkg.version;
 
@@ -61,6 +62,10 @@ function createPrompt() {
 }
 
 function printHelp() {
+  console.log(renderHelpOverview(VERSION));
+}
+
+function printLegacyHelp() {
   console.log(`
   Agent Sam SDK — CLI v${VERSION}
 
@@ -314,7 +319,9 @@ const rest = process.argv.slice(3);
 
 if (command === '--version' || command === '-v') {
   console.log(VERSION);
-} else if (command === 'help' || command === '--help' || command === '-h') {
+} else if (command === 'help') {
+  await runHelp(rest, { version: VERSION });
+} else if (command === '--help' || command === '-h') {
   printHelp();
 } else if (!command) {
   if (process.stdin.isTTY && process.stdout.isTTY) {

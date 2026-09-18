@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-sdk",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "description": "Portable AgentSam SDK and CLI kits for local scaffolding, repository intelligence, incremental indexing, identity adapters, and verified dependency maintenance.",
   "type": "module",
   "main": "./src/index.js",
@@ -84,6 +84,7 @@
     "test",
     "python",
     "protocol",
+    "migrations",
     "skills",
     "services/knowledge/package.json",
     "services/knowledge/package-lock.json",
@@ -103,7 +104,13 @@
     "packages/agentsam-workbench"
   ],
   "scripts": {
-    "test": "node test/smoke.mjs && node --test test/*.test.mjs test/integration/*.test.mjs && npm --prefix packages/identity test && npm run test:connectors",
+    "test": "npm run test:standard && npm --prefix packages/identity test && npm run test:connectors",
+    "test:standard": "node test/smoke.mjs && npm run test:unit && npm run test:cli && npm run test:integration:mock && npm run test:terminal:mock",
+    "test:unit": "node --test test/*.test.mjs",
+    "test:cli": "node --test test/cli/*.test.mjs",
+    "test:integration:mock": "node --test test/integration/*.test.mjs",
+    "test:terminal:mock": "node --test test/terminal/*.test.mjs",
+    "test:live:terminal": "node --test test/live/*.live.test.mjs",
     "test:identity": "npm --prefix packages/identity test",
     "test:workspaces": "npm --prefix packages/agentsam-contracts test && npm --prefix packages/agentsam-contracts run typecheck && npm --prefix packages/agentsam-repository test && npm --prefix packages/agentsam-workbench test && npm --prefix packages/agentsam-workbench run typecheck && npm --prefix packages/agentsam-shell-kit run typecheck",
     "smoke": "node test/smoke.mjs",

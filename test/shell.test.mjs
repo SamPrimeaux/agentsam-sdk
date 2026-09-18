@@ -22,12 +22,15 @@ test('interactive prompt derives username and cwd instead of hardcoding Agent Sa
   assert.equal(renderShellPrompt('/tmp/demo', env), 'alice /tmp/demo > ');
 });
 
-test('shell catalog only advertises implemented core controls', () => {
+test('shell startup stays quiet and points to the picker', () => {
   const catalog = renderShellCatalog();
-  for (const command of ['/model', '/reasoning', '/fast', '/flex', '/standard', '/context', '/cf', '/diff', '/clear', '/exit']) {
+  for (const command of ['/model', '/usage', '/help', '/exit']) {
     assert.match(catalog, new RegExp(command.replace('/', '\\/')));
   }
-  assert.match(catalog, /scrollable command picker/);
+  assert.match(catalog, /command picker/);
+  assert.match(catalog, /Type normally to work with the selected model/);
+  assert.doesNotMatch(catalog, /Slash commands \(/);
+  assert.doesNotMatch(catalog, /\/reasoning\s+Set reasoning/);
 });
 
 test('dispatch handles help, menu fallback, pwd, cd, and exit without falling through to host shell', async () => {
@@ -38,10 +41,11 @@ test('dispatch handles help, menu fallback, pwd, cd, and exit without falling th
   const state = { cwd: root, write: (text) => { output += text; }, interactive: false };
   let result = await dispatchShellLine('/help', state);
   assert.equal(result.handled, true);
-  assert.match(output, /Slash commands/);
+  assert.match(output, /Type normally to work with Agent Sam/);
+  assert.match(output, /agentsam help <topic>/);
   output = '';
   await dispatchShellLine('/', state);
-  assert.match(output, /Agent Sam Terminal/);
+  assert.match(output, /command picker/);
   output = '';
   await dispatchShellLine('/pwd', state);
   assert.equal(output.trim(), root);
@@ -126,7 +130,7 @@ test('bare /context shows truthful economics without inventing active token usag
 test('CLI supports a deterministic one-shot slash command for regression tests', () => {
   const result = spawnSync(process.execPath, ['src/cli.js', 'shell', '--command', '/help'], { cwd: repoRoot, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /Agent Sam Terminal/);
-  assert.match(result.stdout, /\/model/);
-  assert.match(result.stdout, /\/exit/);
+  assert.match(result.stdout, /Type normally to work with Agent Sam/);
+  assert.match(result.stdout, /agentsam help <topic>/);
+  assert.match(result.stdout, /command picker/);
 });
