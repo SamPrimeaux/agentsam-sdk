@@ -116,6 +116,17 @@ test('xAI adapter supports native compaction without requiring a live API key in
     { type: 'compaction', id: 'cmp_1', encrypted_content: 'opaque' },
   ]);
   assert.equal(compacted.provider_state.previous_response_id, null);
+
+  await provider.create({
+    modelRecord: record,
+    providerState: compacted.provider_state,
+    input: 'continue after compaction',
+    promptCacheKey: 'session-xai',
+  });
+  assert.deepEqual(requests.at(-1).body.input, [
+    { type: 'compaction', id: 'cmp_1', encrypted_content: 'opaque' },
+    { role: 'user', content: 'continue after compaction' },
+  ]);
 });
 
 
