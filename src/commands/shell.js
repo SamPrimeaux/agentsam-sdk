@@ -395,6 +395,20 @@ async function runInteractiveModelTurn(prompt, state) {
     && state.session.requested_service_tier === preferences.serviceTier;
   const previousProviderState = samePolicy ? state.session?.provider_state : null;
   const previousUsageSnapshot = samePolicy ? state.session?.usage_snapshot : null;
+  const accountId = readAccountSession({ home: state.home })?.account_id || null;
+  let runtimeRunId = null;
+  try {
+    runtimeRunId = await startRuntimeRun({
+      cwd: state.cwd,
+      account_id: accountId,
+      mode: 'agent',
+      model_key: model.model_key,
+      reasoning_effort: preferences.reasoningEffort,
+      service_tier: preferences.serviceTier,
+    });
+  } catch {
+    runtimeRunId = null;
+  }
 
   const activity = createInlineActivity({
     write: state.write,
