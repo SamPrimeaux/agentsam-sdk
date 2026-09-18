@@ -151,8 +151,8 @@ export function createOpenAIResponsesAdapter(options = {}) {
     const body = {
       model,
       input: params.input ?? '',
-      reasoning: { effort: reasoningEffort },
-      service_tier: serviceTier,
+      ...(reasoningEffort !== 'auto' ? { reasoning: { effort: reasoningEffort } } : {}),
+      ...(providerId === 'openai' || serviceTier !== 'default' ? { service_tier: serviceTier } : {}),
       store: params.store !== false,
       truncation: 'disabled',
       parallel_tool_calls: params.parallelToolCalls !== false,
