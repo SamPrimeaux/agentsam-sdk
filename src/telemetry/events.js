@@ -5,7 +5,10 @@ export const AGENT_EVENT_TYPES = Object.freeze([
   'usage.snapshot', 'cost.snapshot',
   'context.snapshot', 'context.compaction.started', 'context.compaction.completed',
   'tool.search', 'tool.started', 'tool.completed', 'tool.failed',
-  'task.updated',
+  'approval.requested', 'approval.resolved',
+  'plan.updated', 'task.updated',
+  'timer.started', 'timer.updated', 'timer.completed',
+  'runtime.waiting_input',
 ]);
 
 function integer(value, label) {
