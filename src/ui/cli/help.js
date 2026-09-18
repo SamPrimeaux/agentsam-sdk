@@ -1,5 +1,6 @@
 import pc from 'picocolors';
 import { isCancel, select } from '@clack/prompts';
+import pkg from '../../../package.json' with { type: 'json' };
 
 const HELP_TOPICS = Object.freeze([
   {
