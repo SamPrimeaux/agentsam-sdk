@@ -281,6 +281,13 @@ export function createOpenAIResponsesAdapter(options = {}) {
       actual_service_tier: actualServiceTier,
     }, meta);
 
+    const providerState = providerId === 'grok'
+      ? Object.freeze({
+          previous_response_id: response.id || null,
+          compaction_input: xaiCompactionHistory(params, response),
+        })
+      : Object.freeze({ previous_response_id: response.id || null });
+
     return Object.freeze({
       provider: providerId,
       model,
