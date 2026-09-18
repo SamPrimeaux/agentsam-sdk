@@ -24,7 +24,7 @@ function resolveDb(root, config) {
 
 export async function runDb(argv = [], opts = {}) {
   const sub = argv[0] || 'status';
-  if (!['init', 'status'].includes(sub)) {
+  if (!['init', 'migrate', 'status'].includes(sub)) {
     throw new Error(`unknown db command: ${sub}`);
   }
 
