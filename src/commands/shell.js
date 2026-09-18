@@ -24,6 +24,7 @@ import { createLocalSession, saveLocalSession, sessionTitleFromInput } from '../
 import { grantExecutionApproval, isExecutionApproved, toolApprovalKey } from '../lib/execution-approvals.js';
 import { runWhoami } from './whoami.js';
 import { runLogin, runLogout } from './account-auth.js';
+import { runHelp } from '../ui/cli/help.js';
 
 function writeLine(write, value = '') { write(`${value}\n`); }
 
