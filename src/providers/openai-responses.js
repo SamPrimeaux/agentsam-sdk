@@ -88,7 +88,8 @@ function emitEvent(emit, type, payload, meta = {}) {
 }
 
 export function createOpenAIResponsesAdapter(options = {}) {
-  const apiKey = clean(options.apiKey || process.env.OPENAI_API_KEY);
+  const providerId = clean(options.providerId || 'openai').toLowerCase();
+  const apiKey = clean(options.apiKey || (providerId === 'openai' ? process.env.OPENAI_API_KEY : ''));
   const baseUrl = clean(options.baseUrl || DEFAULT_BASE_URL).replace(/\/$/, '');
   const fetchImpl = options.fetchImpl || fetch;
   const defaultEmit = options.emit;
