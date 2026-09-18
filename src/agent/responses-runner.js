@@ -237,6 +237,7 @@ export async function runResponsesAgent(options = {}) {
     runId,
   });
   accumulateCost(response.cost);
+  providerState = response.provider_state || (response.response_id ? { previous_response_id: response.response_id } : providerState);
   cumulativeUsage = response.usage_snapshot?.cumulative || cumulativeUsage;
 
   const toolReceipts = [];
