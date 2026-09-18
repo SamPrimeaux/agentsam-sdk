@@ -24,7 +24,7 @@ import { buildContextEconomicsReport, renderContextEconomics } from './context-e
 import { createProviderAdapter } from '../providers/index.js';
 import { createCapabilityAdapter, runResponsesAgent } from '../agent/index.js';
 import { resolveProviderCredential } from '../lib/provider-credentials.js';
-import { createLocalSession, saveLocalSession, sessionTitleFromInput } from '../lib/local-sessions.js';
+import { createLocalSession, saveLocalSession, sessionTitleFromInput, localSessionElapsedMs } from '../lib/local-sessions.js';
 import { grantExecutionApproval, isExecutionApproved, toolApprovalKey } from '../lib/execution-approvals.js';
 import { runWhoami } from './whoami.js';
 import { runLogin, runLogout } from './account-auth.js';
