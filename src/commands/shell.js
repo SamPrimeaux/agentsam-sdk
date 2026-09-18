@@ -12,6 +12,7 @@ import { runStatus } from './status.js';
 import { runModels } from './models.js';
 import { configureCliPreferences } from './preferences.js';
 import { runCloudflare } from './cloudflare.js';
+import { probeOllamaModel, resolveOllamaConfig } from './ollama.js';
 import { createInlineActivity } from '../ui/cli/activity.js';
 import { createCliRuntimePresenter } from '../ui/cli/runtime-events.js';
 import { renderCliFooter } from '../ui/cli/footer.js';
