@@ -5,6 +5,7 @@ import { cancel, confirm, intro, isCancel, outro, select, text } from '@clack/pr
 import { collectModelsStatus } from './models.js';
 import { getModelRecord } from '../models/index.js';
 import { detectCliProject, readCliPreferences, writeCliPreferences } from '../lib/cli-preferences.js';
+import { readAccountSession } from '../lib/account-session.js';
 
 function stopIfCancelled(value) {
   if (!isCancel(value)) return value;
