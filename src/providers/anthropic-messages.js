@@ -167,5 +167,26 @@ export function createAnthropicMessagesAdapter(options = {}) {
     return send([...prior, { role: 'user', content }], params);
   }
 
-  return Object.freeze({ provider: 'anthropic', create, continueWithToolOutputs });
+  async function compact(params = {}) {
+    const prior = Array.isArray(params.providerState?.messages) ? params.providerState.messages : [];
+    if (!prior.length) throw new Error('anthropic_provider_state_required');
+    const emitFn = params.emit || options.emit;
+    const startedAt = Date.now();
+    emit(emitFn, 'context.compaction.started', { provider: 'anthropic', model: params.model }, params.runId);
+    const summary = await send([...prior, {
+      role: 'user',
+      content: [{ type: 'text', text: 'Create a compact continuation summary of this conversation. Preserve the objective, decisions, changed files, active plan, unresolved failures, tool results that still matter, and constraints. Do not add new work.' }],
+    }], { ...params, tools: [], maxOutputTokens: Math.min(Number(params.maxOutputTokens) || 4096, 4096) });
+    const summaryText = String(summary.output_text || '').trim();
+    const compactState = Object.freeze({ messages: [{ role: 'user', content: [{ type: 'text', text: `Prior conversation continuation summary:\n${summaryText}` }] }] });
+    emit(emitFn, 'context.compaction.completed', {
+      provider: 'anthropic', model: params.model, summary_text: summaryText,
+      tokens_before: params.tokensBefore ?? null,
+      tokens_after: Math.ceil(summaryText.length / 4),
+      duration_ms: Date.now() - startedAt,
+    }, params.runId);
+    return Object.freeze({ provider: 'anthropic', output: Object.freeze([]), provider_state: compactState, summary_text: summaryText, usage: summary.usage_delta || null });
+  }
+
+  return Object.freeze({ provider: 'anthropic', create, continueWithToolOutputs, compact });
 }
