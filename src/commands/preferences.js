@@ -28,23 +28,38 @@ export function availableShells(env = process.env) {
 }
 
 export function modelOptions(status) {
-  const options = [{ value: 'auto', label: 'Automatic', hint: 'runtime chooses; exact economics unavailable until resolved' }];
+  const options = [{ value: 'auto', label: 'Automatic', hint: 'runtime chooses from this credential\'s verified inventory', model: null }];
   for (const model of status.availableModels || []) {
-    options.push({ value: model.model_key, label: model.label, hint: `${model.provider_model_id} · provider verified` });
+    const context = Number(model.context_window) > 0 ? ` · ctx ${Math.round(Number(model.context_window) / 1000)}k` : ' · ctx unknown';
+    options.push({
+      value: model.model_key,
+      label: `${model.provider} · ${model.label}`,
+      hint: `${model.provider_model_id}${context} · provider verified`,
+      model,
+    });
   }
   if (status.local?.online) {
-    for (const row of status.local.models || []) if (row?.name) options.push({ value: `ollama:${row.name}`, label: `Ollama · ${row.name}`, hint: 'local' });
-  }
-  for (const provider of status.providers || []) {
-    if (provider.configured && !options.some((row) => row.value.startsWith(`${provider.id}:`) && row.value !== `${provider.id}:auto`)) {
-      options.push({ value: `${provider.id}:auto`, label: `${provider.label} · automatic`, hint: 'credential proven; exact model not verified' });
-    }
+    for (const row of status.local.models || []) if (row?.name) options.push({
+      value: `ollama:${row.name}`,
+      label: `Ollama · ${row.name}`,
+      hint: 'local',
+      model: {
+        model_key: `ollama:${row.name}`, provider: 'ollama', provider_model_id: row.name, label: row.name,
+        availability: 'available', availability_source: 'local_runtime', context_window: null, context_window_source: 'unknown',
+        max_output_tokens: null, max_output_tokens_source: 'unknown', reasoning_efforts: ['auto'], service_tiers: ['default'], capabilities: { chat: true },
+      },
+    });
   }
   return options;
 }
 
-function reasoningOptions(modelPreference) {
-  const record = getModelRecord(modelPreference);
+function resolvedModel(modelPreference, modelSnapshot) {
+  if (modelSnapshot?.model_key === modelPreference) return modelSnapshot;
+  return getModelRecord(modelPreference);
+}
+
+function reasoningOptions(modelPreference, modelSnapshot) {
+  const record = resolvedModel(modelPreference, modelSnapshot);
   if (!record) return [{ value: 'auto', label: 'Automatic', hint: 'runtime/provider default' }];
   return record.reasoning_efforts.map((value) => ({
     value,
