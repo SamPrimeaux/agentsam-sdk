@@ -68,8 +68,8 @@ function reasoningOptions(modelPreference, modelSnapshot) {
   }));
 }
 
-function serviceTierOptions(modelPreference) {
-  const record = getModelRecord(modelPreference);
+function serviceTierOptions(modelPreference, modelSnapshot) {
+  const record = resolvedModel(modelPreference, modelSnapshot);
   if (!record) return [{ value: 'default', label: 'Standard', hint: 'default provider processing' }];
   return record.service_tiers.map((value) => {
     if (value === 'fast') return { value, label: 'Fast', hint: 'lower latency · 2× applicable token rates for Astra' };
