@@ -10,6 +10,7 @@ import { runDb } from './db.js';
 import { runDeploy } from './deploy.js';
 import { runStatus } from './status.js';
 import { runModels } from './models.js';
+import { runProviders } from './providers.js';
 import { configureCliPreferences } from './preferences.js';
 import { runCloudflare } from './cloudflare.js';
 import { probeOllamaModel, resolveOllamaConfig } from './ollama.js';
@@ -592,6 +593,9 @@ export async function dispatchShellLine(line, state = {}) {
         break;
       case '/models':
         await runModels(args, { cwd: state.cwd, write, home: state.home });
+        break;
+      case '/providers':
+        await runProviders(args, { write, home: state.home, interactive: state.interactive });
         break;
       case '/login':
         await runLogin(args, { write, home: state.home });

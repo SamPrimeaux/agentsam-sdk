@@ -47,16 +47,17 @@ agentsam-sdk
 ├─ AGENTSAM_WAI        -> Workers AI provider
 ├─ EXECOS              -> execos service binding
 ├─ PTY_SERVICE         -> iam-vpc VPC service
-├─ IAM_ORIGIN          -> https://inneranimalmedia.com
+├─ IAM_OAUTH_ISSUER    -> https://inneranimalmedia.com
+├─ IAM_ORIGIN          -> migration fallback
 ├─ IAM_CLIENT_ID       -> public OAuth client id
 ├─ IAM_CLIENT_SECRET   -> secret
-├─ AGENTSAM_SDK_KEY    -> secret
+├─ AGENTSAM_API_KEY    -> aak_ account credential (only when a reusable account credential is needed)
 └─ AGENTSAM_BRIDGE_KEY -> secret
 ```
 
 Hosted model credentials are secrets: `XAI_API_KEY`, `OPENAI_API_KEY`, and `GEMINI_API_KEY`. Grok model inference is the `XAI_API_KEY` provider lane and is independent from the pre-wired Grok gate viewer identity/session system.
 
-`AGENTSAM_WORKER_ROLE` is not part of the SDK contract. `IAM_OAUTH_ISSUER` and `AGENTSAM_SDK_TOKEN` are SDK 2.5 migration-read aliases only; new configuration uses `IAM_ORIGIN` and `AGENTSAM_SDK_KEY`.
+`AGENTSAM_WORKER_ROLE` is not part of the SDK contract. `IAM_OAUTH_ISSUER` is the canonical IAM authority; `IAM_ORIGIN` is a migration fallback. Reusable account API credentials use `AGENTSAM_API_KEY` with an `aak_` prefix. Browser login sessions and machine/infrastructure credentials remain separate and must not be promoted into account API keys.
 
 ## Ollama
 

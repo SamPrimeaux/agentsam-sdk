@@ -3,6 +3,7 @@ const SECRET_KEY = /(?:authorization|api[-_]?key|access[-_]?token|refresh[-_]?to
 const SECRET_VALUE_PATTERNS = [
   /\bBearer\s+[A-Za-z0-9._~+\/-]+=*/gi,
   /\bsk-[A-Za-z0-9_-]{12,}\b/g,
+  /\baak_[A-Za-z0-9_-]{8,}\b/g,
   /\bsdk_[A-Za-z0-9_-]{8,}\b/g,
   /\bgh[pousr]_[A-Za-z0-9]{20,}\b/g,
 ];

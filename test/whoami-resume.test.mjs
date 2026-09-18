@@ -14,9 +14,9 @@ function tempHome(t) {
   return home;
 }
 
-test('whoami validates persisted IAM identity while never returning the SDK or provider secret', async t => {
+test('whoami validates persisted IAM browser identity while never returning account or provider secrets', async t => {
   const home = tempHome(t);
-  saveAccountSession({ access_token: 'sdk_do_not_print', user_id: 'au_local' }, { home });
+  saveAccountSession({ access_token: 'browser_session_do_not_print', user_id: 'au_local' }, { home });
   const envDir = path.join(home, '.agentsam', 'env.d');
   fs.mkdirSync(envDir, { recursive: true });
   const openaiFile = path.join(envDir, 'openai.env');
@@ -26,16 +26,17 @@ test('whoami validates persisted IAM identity while never returning the SDK or p
   const status = await collectWhoami({
     env: {}, home,
     contextLoader: async token => {
-      assert.equal(token, 'sdk_do_not_print');
+      assert.equal(token, 'browser_session_do_not_print');
       return { user_id: 'au_server', account_id: 'acct_server', email: 'dev@example.test', cloudflare: { ok: true }, byok: { openai: { configured: true, masked: 'secret' } } };
     },
   });
   assert.equal(status.authenticated, true);
   assert.equal(status.identity.account_id, 'acct_server');
-  assert.equal(status.sdk_credential.source, 'agentsam_account_session');
+  assert.equal(status.active_auth.source, 'agentsam_browser_session');
+  assert.equal(status.active_auth.kind, 'browser_session');
   assert.equal(status.provider_credentials.find(row => row.provider === 'openai').configured, true);
   const serialized = JSON.stringify(status);
-  assert.doesNotMatch(serialized, /sdk_do_not_print|sk-never-print-this|masked/);
+  assert.doesNotMatch(serialized, /browser_session_do_not_print|sk-never-print-this|masked/);
 });
 
 test('resume restores saved cwd and session through the canonical shell runtime', async t => {

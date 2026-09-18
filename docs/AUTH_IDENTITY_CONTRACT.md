@@ -6,47 +6,45 @@ The `agentsam-sdk` package owns the portable public configuration contract. Cons
 
 | Variable | Meaning |
 | --- | --- |
-| `IAM_ORIGIN` | Canonical IAM authority and browser/OAuth/API origin. |
+| `IAM_OAUTH_ISSUER` | Canonical IAM authority/issuer for browser OAuth and platform account requests. |
+| `IAM_ORIGIN` | Migration fallback for the IAM issuer. New code resolves `IAM_OAUTH_ISSUER` first. |
 | `IAM_CLIENT_ID` | OAuth client id for an application using IAM identity. |
 | `IAM_CLIENT_SECRET` | OAuth client secret. Keep it server-side. |
-| `AGENTSAM_SDK_KEY` | Account/delegated SDK bearer. Raw values use the `sdk_` prefix and are sent as `Authorization: Bearer …`. |
-| `AGENTSAM_BRIDGE_KEY` | Machine/integration credential. It is never a substitute for user SDK authentication. |
+| `AGENTSAM_API_KEY` | Reusable account/delegated API credential. Raw values use the `aak_` prefix and are sent as `Authorization: Bearer …`. |
+| `AGENTSAM_BRIDGE_KEY` | Infrastructure/machine integration trust. It is never a substitute for account authentication. |
 
-The host-side durable verifier for SDK credentials is `agentsam_sdk_tokens`. The SDK defines the public credential semantics; the host owns the database and authorization implementation.
+The host-side durable verifier for reusable AgentSam API credentials is `agentsam_api_credentials`. The SDK defines the public credential semantics; the host owns credential issuance, hashing, storage, revocation, and authorization.
 
-`AGENTSAM_BRIDGE_KEY` remains the direct machine-secret environment variable. A host may additionally resolve a hashed credential from `agentsam_sdk_tokens` when that row has `token_type='integration'`. That does not turn the bridge credential into user authentication.
+Interactive browser login is intentionally separate from `AGENTSAM_API_KEY`. The CLI stores an opaque machine-local browser session under `~/.agentsam/auth/session.json`; it does not turn that session into a reusable API key.
 
 ## Migration compatibility
 
-The current migration window accepts two deprecated read fallbacks:
+The issuer resolver accepts `IAM_ORIGIN` only when `IAM_OAUTH_ISSUER` is absent. The retired `AGENTSAM_SDK_KEY`, `AGENTSAM_SDK_TOKEN`, `sdk_` bearer, and `agentsam_sdk_tokens` account-auth contract is not read by the current SDK.
 
-```text
-IAM_ORIGIN
-  fallback: IAM_OAUTH_ISSUER
-
-AGENTSAM_SDK_KEY
-  fallback: AGENTSAM_SDK_TOKEN
-```
-
-Canonical names always win when both are present. New scaffolds, docs, and writes emit only the canonical names. Compatibility aliases are intentionally not a permanent parallel configuration surface.
-
-Older platform-base aliases (`IAM_CORE_URL`, `AGENTSAM_CORE_URL`, `AGENTSAM_BASE_URL`) are compatibility-only. SDK clients prefer `IAM_ORIGIN`.
+Older platform-base aliases (`IAM_CORE_URL`, `AGENTSAM_CORE_URL`, `AGENTSAM_BASE_URL`) remain compatibility-only where legacy clients still consume them.
 
 ## Credential boundaries
 
 ```text
-human/account SDK lane
-  AGENTSAM_SDK_KEY
-    -> sdk_* bearer
-    -> Authorization: Bearer <sdk_*>
+reusable account API lane
+  AGENTSAM_API_KEY
+    -> aak_* bearer
+    -> Authorization: Bearer <aak_*>
     -> account/delegated authority
-    -> agentsam_sdk_tokens
+    -> agentsam_api_credentials (hashed verifier on the host)
 
-machine/integration lane
-  AGENTSAM_BRIDGE_KEY
+interactive browser lane
+  agentsam login
+    -> opaque browser session credential
+    -> ~/.agentsam/auth/session.json
+    -> interactive account authority
+    -> never rewritten as AGENTSAM_API_KEY
+
+machine/infrastructure lane
+  enrolled opaque machine credential / infrastructure bridge trust
     -> machine principal
-    -> no user/workspace identity injection
-    -> host env secret OR agentsam_sdk_tokens(token_type='integration')
+    -> server resolves connection -> instance -> account
+    -> never accepted as account API auth
 ```
 
-Browser OAuth uses `IAM_ORIGIN` together with `IAM_CLIENT_ID` and `IAM_CLIENT_SECRET`. Repository identity, workspace labels, or machine trust do not prove account authority.
+Repository identity, workspace labels, terminal instance ids, and machine trust do not prove reusable account authority. Provider credentials such as `OPENAI_API_KEY`, `GEMINI_API_KEY`, `CURSOR_API_KEY`, and Cloudflare credentials are managed separately by the machine provider-credential service.

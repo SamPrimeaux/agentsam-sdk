@@ -56,6 +56,7 @@ assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/deploy'));
 assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/db'));
 assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/agent'));
 assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/model'));
+assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/providers'));
 assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/reasoning'));
 assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/fast'));
 assert.deepEqual(
@@ -65,7 +66,7 @@ assert.deepEqual(
 );
 
 printContextSummary({
-  iam: { ready: true, source: 'sdk-key', detail: 'AGENTSAM_SDK_KEY' },
+  iam: { ready: true, source: 'api_key', detail: 'AGENTSAM_API_KEY' },
   gcp: { source: 'vm-metadata', email: 'execos@project.iam.gserviceaccount.com' },
   gcp_vm: true,
   github: { source: 'gh-cli', account: 'user@example.com' },

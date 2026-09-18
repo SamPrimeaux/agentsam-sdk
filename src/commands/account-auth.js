@@ -11,7 +11,7 @@ export async function runLogin(argv = [], options = {}) {
   const write = options.write || ((text) => process.stdout.write(text));
   const authenticate = options.authenticateImpl || authenticateViaBrowser;
   const session = await authenticate();
-  if (!String(session?.access_token || '').trim().startsWith('sdk_')) throw new Error('Agent Sam login did not return a valid SDK session');
+  if (!String(session?.access_token || '').trim()) throw new Error('Agent Sam login did not return a browser session credential');
   // authenticateViaBrowser persists by default. Keep injected transports/test flows equivalent.
   if (!readAccountSession({ home: options.home })) saveAccountSession(session, { home: options.home });
   const status = await collectWhoami({ home: options.home, env: options.env || process.env, contextLoader: options.contextLoader });

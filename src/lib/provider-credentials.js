@@ -2,20 +2,56 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-const PROVIDER_CREDENTIALS = Object.freeze({
-  openai: Object.freeze({ env: 'OPENAI_API_KEY', files: ['openai.env'] }),
-  gemini: Object.freeze({ env: 'GEMINI_API_KEY', files: ['gemini.env'] }),
-  anthropic: Object.freeze({ env: 'ANTHROPIC_API_KEY', files: ['anthropic.env'] }),
-  grok: Object.freeze({ env: 'XAI_API_KEY', files: ['grok.env', 'xai.env'] }),
-  cloudflare: Object.freeze({ env: 'CLOUDFLARE_API_TOKEN', files: ['cloudflare.env'], accountEnv: ['ACCOUNT_ID', 'CLOUDFLARE_ACCOUNT_ID'] }),
+export const PROVIDER_CREDENTIALS = Object.freeze({
+  openai: Object.freeze({ label: 'OpenAI', env: 'OPENAI_API_KEY', files: ['openai.env'], modelProvider: 'openai' }),
+  anthropic: Object.freeze({ label: 'Anthropic', env: 'ANTHROPIC_API_KEY', files: ['anthropic.env'], modelProvider: 'anthropic' }),
+  gemini: Object.freeze({ label: 'Gemini', env: 'GEMINI_API_KEY', files: ['gemini.env'], modelProvider: 'gemini' }),
+  cursor: Object.freeze({ label: 'Cursor', env: 'CURSOR_API_KEY', files: ['cursor.env'], modelProvider: 'cursor' }),
+  xai: Object.freeze({ label: 'xAI', env: 'XAI_API_KEY', files: ['xai.env', 'grok.env'], modelProvider: 'xai' }),
+  cloudflare: Object.freeze({
+    label: 'Cloudflare',
+    env: 'CLOUDFLARE_API_TOKEN',
+    files: ['cloudflare.env'],
+    modelProvider: 'cloudflare',
+    accountEnv: ['ACCOUNT_ID', 'CLOUDFLARE_ACCOUNT_ID'],
+  }),
+  inneranimalmedia: Object.freeze({
+    label: 'InnerAnimalMedia',
+    env: 'AGENTSAM_API_KEY',
+    files: ['inneranimalmedia.env'],
+    tokenPrefix: 'aak_',
+    platformCredential: true,
+  }),
+});
+
+const PROVIDER_ALIASES = Object.freeze({
+  grok: 'xai',
+  iam: 'inneranimalmedia',
+  inneranimal: 'inneranimalmedia',
 });
 
 function clean(value) { return value == null ? '' : String(value).trim(); }
+
+export function normalizeProviderId(provider) {
+  const id = clean(provider).toLowerCase();
+  return PROVIDER_ALIASES[id] || id;
+}
+
 function normalizeCloudflareAccountId(value) {
   const id = clean(value);
   if (!id) return '';
   if (!/^[a-f0-9]{32}$/i.test(id)) throw new Error('invalid_cloudflare_account_id');
   return id;
+}
+
+function validateCredentialValue(spec, value) {
+  const secret = clean(value);
+  if (!secret) throw new Error('credential_required');
+  if (/[\r\n\0]/.test(secret)) throw new Error('credential_must_be_single_line');
+  if (spec.tokenPrefix && !secret.startsWith(spec.tokenPrefix)) {
+    throw new Error(`credential_prefix_required:${spec.tokenPrefix}`);
+  }
+  return secret;
 }
 
 function homeDirectory(options = {}) {
@@ -58,6 +94,23 @@ function firstRuntimeValue(env, names = []) {
   return '';
 }
 
+function atomicWrite(filename, source, mode = 0o600) {
+  const dir = path.dirname(filename);
+  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  if (process.platform !== 'win32') fs.chmodSync(dir, 0o700);
+  const temp = `${filename}.${process.pid}.${Date.now()}.tmp`;
+  fs.writeFileSync(temp, source, { mode });
+  if (process.platform !== 'win32') fs.chmodSync(temp, mode);
+  fs.renameSync(temp, filename);
+  if (process.platform !== 'win32') fs.chmodSync(filename, mode);
+}
+
+function envLiteral(value) {
+  const text = String(value ?? '');
+  if (/['"\r\n\0]/.test(text)) throw new Error('credential_contains_unsupported_profile_character');
+  return `"${text}"`;
+}
+
 export function agentEnvDirectory(options = {}) {
   return path.join(homeDirectory(options), '.agentsam', 'env.d');
 }
@@ -68,83 +121,143 @@ export function agentEnvLoaderPath(options = {}) {
 
 export function ensureAgentEnvLoader(options = {}) {
   const filename = agentEnvLoaderPath(options);
-  fs.mkdirSync(path.dirname(filename), { recursive: true, mode: 0o700 });
+  const supported = Object.keys(PROVIDER_CREDENTIALS).join('|');
   const source = `# AgentSam provider environment loader. Source this file; do not execute it.
-_agentsam_profile=\"\${1:-}\"
-case \"\$_agentsam_profile\" in
-  openai|anthropic|gemini|grok|cloudflare) ;;
-  *) echo \"usage: source ~/.agentsam/load-agent-env.sh <openai|anthropic|gemini|grok|cloudflare>\" >&2; return 2 2>/dev/null || exit 2 ;;
-esac
-_agentsam_file=\"\${HOME}/.agentsam/env.d/\${_agentsam_profile}.env\"
-if [ ! -f \"\$_agentsam_file\" ]; then
-  echo \"AgentSam provider profile not found: \$_agentsam_file\" >&2
-  return 1 2>/dev/null || exit 1
+if [ "$#" -eq 0 ]; then
+  echo "usage: source ~/.agentsam/load-agent-env.sh <profile> [profile ...]" >&2
+  return 2 2>/dev/null || exit 2
 fi
-set -a
-. \"\$_agentsam_file\"
-set +a
-if [ \"\$_agentsam_profile\" = cloudflare ]; then
-  if [ -z \"\${ACCOUNT_ID:-}\" ] && [ -n \"\${CLOUDFLARE_ACCOUNT_ID:-}\" ]; then export ACCOUNT_ID=\"\$CLOUDFLARE_ACCOUNT_ID\"; fi
-  if [ -z \"\${CLOUDFLARE_ACCOUNT_ID:-}\" ] && [ -n \"\${ACCOUNT_ID:-}\" ]; then export CLOUDFLARE_ACCOUNT_ID=\"\$ACCOUNT_ID\"; fi
-fi
+for _agentsam_profile in "$@"; do
+  case "$_agentsam_profile" in
+    grok) _agentsam_profile="xai" ;;
+    ${supported}) ;;
+    *) echo "unknown AgentSam provider profile: $_agentsam_profile" >&2; return 2 2>/dev/null || exit 2 ;;
+  esac
+  _agentsam_file="\${HOME}/.agentsam/env.d/\${_agentsam_profile}.env"
+  if [ ! -f "$_agentsam_file" ]; then
+    echo "AgentSam provider profile not found: $_agentsam_file" >&2
+    return 1 2>/dev/null || exit 1
+  fi
+  set -a
+  . "$_agentsam_file"
+  set +a
+  if [ "$_agentsam_profile" = cloudflare ]; then
+    if [ -z "\${ACCOUNT_ID:-}" ] && [ -n "\${CLOUDFLARE_ACCOUNT_ID:-}" ]; then export ACCOUNT_ID="$CLOUDFLARE_ACCOUNT_ID"; fi
+    if [ -z "\${CLOUDFLARE_ACCOUNT_ID:-}" ] && [ -n "\${ACCOUNT_ID:-}" ]; then export CLOUDFLARE_ACCOUNT_ID="$ACCOUNT_ID"; fi
+  fi
+done
 unset _agentsam_file _agentsam_profile
 `;
-  fs.writeFileSync(filename, source, { mode: 0o700 });
-  if (process.platform !== 'win32') fs.chmodSync(filename, 0o700);
+  atomicWrite(filename, source, 0o700);
   return filename;
 }
 
-function profileTemplate(provider, options = {}) {
-  if (provider === 'cloudflare') {
-    const accountId = normalizeCloudflareAccountId(options.accountId);
-    return `# AgentSam Cloudflare profile\n# ACCOUNT_ID is your Cloudflare account identifier; it is not a secret.\nexport ACCOUNT_ID=\"${accountId}\"\nexport CLOUDFLARE_API_TOKEN=\"\"\n`;
+function profileSource(provider, credential = '', options = {}) {
+  const spec = providerCredentialSpec(provider);
+  if (!spec) throw new Error(`unsupported_provider:${normalizeProviderId(provider)}`);
+  const lines = [`# AgentSam ${spec.label} provider profile`];
+  if (spec.provider === 'cloudflare') {
+    lines.push('# ACCOUNT_ID is your Cloudflare account identifier; it is not a secret.');
+    lines.push(`export ACCOUNT_ID=${envLiteral(normalizeCloudflareAccountId(options.accountId))}`);
   }
-  const spec = PROVIDER_CREDENTIALS[provider];
-  if (!spec) throw new Error(`unsupported_provider:${provider}`);
-  return `# AgentSam ${provider} provider profile\nexport ${spec.env}=\"\"\n`;
+  lines.push(`export ${spec.env}=${envLiteral(credential)}`);
+  return `${lines.join('\n')}\n`;
+}
+
+export function providerCredentialSpec(provider) {
+  const id = normalizeProviderId(provider);
+  const spec = PROVIDER_CREDENTIALS[id];
+  return spec ? Object.freeze({ provider: id, ...spec }) : null;
 }
 
 export function ensureProviderEnvProfile(provider, options = {}) {
   const spec = providerCredentialSpec(provider);
-  if (!spec) throw new Error(`unsupported_provider:${clean(provider).toLowerCase()}`);
+  if (!spec) throw new Error(`unsupported_provider:${normalizeProviderId(provider)}`);
   const dir = agentEnvDirectory(options);
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
   if (process.platform !== 'win32') fs.chmodSync(dir, 0o700);
   const filename = path.join(dir, spec.files[0]);
   let created = false;
   if (!fs.existsSync(filename)) {
-    fs.writeFileSync(filename, profileTemplate(spec.provider, options), { mode: 0o600 });
+    atomicWrite(filename, profileSource(spec.provider, '', options), 0o600);
     created = true;
-  } else if (spec.provider === 'cloudflare' && clean(options.accountId)) {
-    const source = fs.readFileSync(filename, 'utf8');
-    const current = firstEnvValue(source, spec.accountEnv || []);
-    if (!current) {
-      const accountId = normalizeCloudflareAccountId(options.accountId);
-      const line = `export ACCOUNT_ID=\"${accountId}\"`;
-      const next = /^(?:export\s+)?ACCOUNT_ID=.*$/m.test(source)
-        ? source.replace(/^(?:export\s+)?ACCOUNT_ID=.*$/m, line)
-        : `${line}\n${source}`;
-      fs.writeFileSync(filename, next, { mode: 0o600 });
+  } else {
+    const safety = secureFile(filename);
+    if (!safety.ok) throw new Error(safety.error);
+    if (process.platform !== 'win32') fs.chmodSync(filename, 0o600);
+    if (spec.provider === 'cloudflare' && clean(options.accountId)) {
+      const source = fs.readFileSync(filename, 'utf8');
+      const current = firstEnvValue(source, spec.accountEnv || []);
+      if (!current) {
+        const accountId = normalizeCloudflareAccountId(options.accountId);
+        const line = `export ACCOUNT_ID=${envLiteral(accountId)}`;
+        const next = /^(?:export\s+)?ACCOUNT_ID=.*$/m.test(source)
+          ? source.replace(/^(?:export\s+)?ACCOUNT_ID=.*$/m, line)
+          : `${line}\n${source}`;
+        atomicWrite(filename, next, 0o600);
+      }
     }
   }
-  if (process.platform !== 'win32') fs.chmodSync(filename, 0o600);
   const loader = ensureAgentEnvLoader(options);
-  return Object.freeze({ provider: spec.provider, file: filename, loader, created, source_command: `source ~/.agentsam/load-agent-env.sh ${spec.provider}` });
+  return Object.freeze({
+    provider: spec.provider,
+    file: filename,
+    loader,
+    created,
+    source_command: `source ~/.agentsam/load-agent-env.sh ${spec.provider}`,
+  });
 }
 
-export function providerCredentialSpec(provider) {
-  const id = clean(provider).toLowerCase();
-  const spec = PROVIDER_CREDENTIALS[id];
-  return spec ? Object.freeze({ provider: id, ...spec }) : null;
+export function setProviderCredential(provider, credential, options = {}) {
+  const spec = providerCredentialSpec(provider);
+  if (!spec) throw new Error(`unsupported_provider:${normalizeProviderId(provider)}`);
+  const value = validateCredentialValue(spec, credential);
+  const filename = path.join(agentEnvDirectory(options), spec.files[0]);
+  atomicWrite(filename, profileSource(spec.provider, value, options), 0o600);
+  const loader = ensureAgentEnvLoader(options);
+  return Object.freeze({
+    provider: spec.provider,
+    file: filename,
+    loader,
+    source_command: `source ~/.agentsam/load-agent-env.sh ${spec.provider}`,
+  });
+}
+
+export function removeProviderCredential(provider, options = {}) {
+  const spec = providerCredentialSpec(provider);
+  if (!spec) throw new Error(`unsupported_provider:${normalizeProviderId(provider)}`);
+  const dir = agentEnvDirectory(options);
+  let removed = false;
+  for (const basename of spec.files) {
+    const filename = path.join(dir, basename);
+    if (!fs.existsSync(filename)) continue;
+    const safety = secureFile(filename);
+    if (!safety.ok) throw new Error(safety.error);
+    fs.rmSync(filename, { force: true });
+    removed = true;
+  }
+  return Object.freeze({ provider: spec.provider, removed });
 }
 
 export function resolveProviderCredential(provider, options = {}) {
   const spec = providerCredentialSpec(provider);
-  if (!spec) return Object.freeze({ provider: clean(provider).toLowerCase(), configured: false, source: null, error: 'unsupported_provider', value: '' });
+  if (!spec) return Object.freeze({ provider: normalizeProviderId(provider), configured: false, source: null, error: 'unsupported_provider', value: '' });
   const env = options.env || process.env;
   const accountIdFromEnv = firstRuntimeValue(env, spec.accountEnv || []);
   const fromEnv = clean(env?.[spec.env]);
-  if (fromEnv) return Object.freeze({ provider: spec.provider, configured: true, source: 'environment', env: spec.env, file: null, error: null, value: fromEnv, account_id: accountIdFromEnv || null });
+  if (fromEnv) {
+    const prefixError = spec.tokenPrefix && !fromEnv.startsWith(spec.tokenPrefix) ? `credential_prefix_required:${spec.tokenPrefix}` : null;
+    return Object.freeze({
+      provider: spec.provider,
+      configured: !prefixError,
+      source: 'environment',
+      env: spec.env,
+      file: null,
+      error: prefixError,
+      value: prefixError ? '' : fromEnv,
+      account_id: accountIdFromEnv || null,
+    });
+  }
 
   const dir = agentEnvDirectory({ ...options, env });
   for (const basename of spec.files) {
@@ -156,19 +269,22 @@ export function resolveProviderCredential(provider, options = {}) {
       const source = fs.readFileSync(filename, 'utf8');
       const value = clean(parseEnvValue(source, spec.env));
       const accountId = accountIdFromEnv || firstEnvValue(source, spec.accountEnv || []);
-      if (value) return Object.freeze({ provider: spec.provider, configured: true, source: 'agentsam_env_file', env: spec.env, file: filename, error: null, value, account_id: accountId || null });
-      return Object.freeze({ provider: spec.provider, configured: false, source: 'agentsam_env_file', env: spec.env, file: filename, error: 'credential_variable_missing', value: '' });
+      const prefixError = spec.tokenPrefix && value && !value.startsWith(spec.tokenPrefix) ? `credential_prefix_required:${spec.tokenPrefix}` : null;
+      if (value && !prefixError) return Object.freeze({ provider: spec.provider, configured: true, source: 'agentsam_env_file', env: spec.env, file: filename, error: null, value, account_id: accountId || null });
+      return Object.freeze({ provider: spec.provider, configured: false, source: 'agentsam_env_file', env: spec.env, file: filename, error: prefixError || 'credential_variable_missing', value: '' });
     } catch (error) {
       return Object.freeze({ provider: spec.provider, configured: false, source: 'agentsam_env_file', env: spec.env, file: filename, error: error?.message || String(error), value: '' });
     }
   }
-  return Object.freeze({ provider: spec.provider, configured: false, source: null, env: spec.env, file: null, error: null, value: '' });
+  return Object.freeze({ provider: spec.provider, configured: false, source: null, env: spec.env, file: null, error: null, value: '', account_id: accountIdFromEnv || null });
 }
 
 export function describeProviderCredential(provider, options = {}) {
   const resolved = resolveProviderCredential(provider, options);
+  const spec = providerCredentialSpec(provider);
   return Object.freeze({
     provider: resolved.provider,
+    label: spec?.label || resolved.provider,
     configured: resolved.configured,
     source: resolved.source,
     env: resolved.env || null,

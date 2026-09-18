@@ -1,49 +1,68 @@
 import { getJson } from '../lib/core-client.js';
-import { resolveAccountSdkKey } from '../lib/account-session.js';
+import {
+  describeAccountSession,
+  resolveAccountApiKey,
+  resolveAccountAuth,
+} from '../lib/account-session.js';
 import { listProviderCredentialStatus } from '../lib/provider-credentials.js';
 
 function writeLine(write, value = '') { write(`${value}\n`); }
 
 export async function collectWhoami(options = {}) {
   const env = options.env || process.env;
-  const sdk = resolveAccountSdkKey({ env, explicit: options.token || '', home: options.home });
-  const token = sdk.value;
+  const apiKey = resolveAccountApiKey({ env, explicit: options.token || '', home: options.home });
+  const browserSession = describeAccountSession({ env, home: options.home });
+  const active = resolveAccountAuth({ env, explicit: options.token || '', home: options.home });
   const credentials = listProviderCredentialStatus({ env, home: options.home });
-  if (!token) return {
-    schema_version: 1,
+
+  const base = {
+    schema_version: 2,
     authenticated: false,
     authority: 'iam',
     identity: null,
-    sdk_credential: { configured: false, source: null },
+    active_auth: {
+      configured: Boolean(active.value || active.error),
+      kind: active.kind || null,
+      source: active.source || null,
+      valid: null,
+      error: active.error || null,
+    },
+    api_key: {
+      configured: Boolean(apiKey.value || apiKey.error),
+      source: apiKey.source || null,
+      valid: apiKey.error ? false : null,
+      error: apiKey.error || null,
+    },
+    browser_session: browserSession,
     provider_credentials: credentials,
   };
+
+  if (!active.value) return base;
+
   try {
-    const loader = options.contextLoader || ((sdkKey) => getJson('/api/sdk/context', sdkKey));
-    const context = await loader(token);
+    const loader = options.contextLoader || ((token) => getJson('/api/sdk/context', token));
+    const context = await loader(active.value);
     return {
-      schema_version: 1,
+      ...base,
       authenticated: true,
-      authority: 'iam',
       identity: {
         user_id: context?.user_id || null,
         account_id: context?.account_id || null,
         email: context?.email || context?.user?.email || null,
       },
-      sdk_credential: { configured: true, source: sdk.source, valid: true },
-      provider_credentials: credentials,
+      active_auth: { ...base.active_auth, valid: true, error: null },
+      api_key: active.kind === 'api_key' ? { ...base.api_key, valid: true, error: null } : base.api_key,
       cloudflare_connected: context?.cloudflare?.ok === true,
       byok: context?.byok && typeof context.byok === 'object'
         ? Object.fromEntries(Object.entries(context.byok).map(([key, value]) => [key, { configured: value?.configured === true }]))
         : {},
     };
   } catch (error) {
+    const message = error?.message || String(error);
     return {
-      schema_version: 1,
-      authenticated: false,
-      authority: 'iam',
-      identity: null,
-      sdk_credential: { configured: true, source: sdk.source, valid: false, error: error?.message || String(error) },
-      provider_credentials: credentials,
+      ...base,
+      active_auth: { ...base.active_auth, valid: false, error: message },
+      api_key: active.kind === 'api_key' ? { ...base.api_key, valid: false, error: message } : base.api_key,
     };
   }
 }
@@ -56,17 +75,19 @@ export function renderWhoami(status) {
     if (status.identity?.email) lines.push(`  email          ${status.identity.email}`);
     if (status.identity?.account_id) lines.push(`  account        ${status.identity.account_id}`);
     if (status.identity?.user_id) lines.push(`  user           ${status.identity.user_id}`);
+    lines.push(`  active auth    ${status.active_auth?.kind || 'unknown'} · ${status.active_auth?.source || 'runtime'}`);
   } else {
     lines.push('  authenticated  no');
-    lines.push(`  SDK key        ${status.sdk_credential?.configured ? 'present but not validated' : 'not configured'}`);
-    if (status.sdk_credential?.error) lines.push(`  error          ${status.sdk_credential.error}`);
+    lines.push(`  API key        ${status.api_key?.configured ? status.api_key?.valid === false ? 'invalid' : 'configured' : 'not configured'}`);
+    lines.push(`  browser login  ${status.browser_session?.configured ? 'stored' : 'not configured'}`);
+    if (status.active_auth?.error) lines.push(`  error          ${status.active_auth.error}`);
   }
   lines.push('');
   lines.push('  Provider credentials');
   for (const row of status.provider_credentials || []) {
     const state = row.configured ? 'available' : row.error ? `blocked (${row.error})` : 'not configured';
     const source = row.source ? ` · ${row.source}` : '';
-    lines.push(`  ${String(row.provider).padEnd(12)} ${state}${source}`);
+    lines.push(`  ${String(row.provider).padEnd(16)} ${state}${source}`);
   }
   lines.push('');
   lines.push('  Secret values are never printed by whoami.');

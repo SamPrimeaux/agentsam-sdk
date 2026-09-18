@@ -21,7 +21,6 @@
     "open-url.js",
     "project-config.js",
     "project-rules.js",
-    "prompt-byok.js",
     "provider-credentials.js",
     "responses.js",
     "router.js",

@@ -64,7 +64,7 @@ export async function authenticateViaBrowser() {
 
   const code = await codePromise;
   const session = await postJson('/api/sdk/auth/exchange', { code, state });
-  if (String(session?.access_token || '').trim().startsWith('sdk_')) {
+  if (String(session?.access_token || '').trim()) {
     saveAccountSession(session);
   }
   return session;

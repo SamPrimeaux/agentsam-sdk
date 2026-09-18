@@ -5,7 +5,7 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { coreBaseUrl } from './core-client.js';
-import { resolveAccountSdkKey } from './account-session.js';
+import { resolveAccountAuth } from './account-session.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -167,11 +167,9 @@ async function detectCloudflare() {
   };
 }
 
-async function probeSdkBearer(token) {
+async function probeAccountBearer(token) {
   const t = String(token || '').trim();
-  if (!t || !t.startsWith('sdk_')) {
-    return { valid: false, error: 'not_sdk_bearer' };
-  }
+  if (!t) return { valid: false, error: 'account_auth_required' };
   try {
     const res = await fetch(`${coreBaseUrl()}/api/sdk/context`, {
       headers: { Accept: 'application/json', Authorization: `Bearer ${t}` },
@@ -197,7 +195,7 @@ function envPresent(name) {
   return v != null && String(v).trim() !== '';
 }
 
-/** IAM auth for SDK init — only verified sdk_* bearer counts as ready. */
+/** IAM auth for SDK init — accepts a verified account API key or browser session credential. */
 async function detectIam(explicitToken = '') {
   const aux = [];
 
@@ -210,9 +208,9 @@ async function detectIam(explicitToken = '') {
     });
   }
 
-  const workerKey = envPresent('IAM_API_KEY') || envPresent('AGENTSAM_API_KEY');
+  const workerKey = envPresent('IAM_API_KEY');
   if (workerKey) {
-    const name = envPresent('IAM_API_KEY') ? 'IAM_API_KEY' : 'AGENTSAM_API_KEY';
+    const name = 'IAM_API_KEY';
     aux.push({
       var: name,
       role: 'Worker runtime secret',
@@ -221,22 +219,22 @@ async function detectIam(explicitToken = '') {
     });
   }
 
-  const sdkToken = resolveAccountSdkKey({ env: process.env, explicit: explicitToken }).value;
-  if (sdkToken.trim()) {
-    const probe = await probeSdkBearer(sdkToken);
+  const accountAuth = resolveAccountAuth({ env: process.env, explicit: explicitToken });
+  if (accountAuth.value) {
+    const probe = await probeAccountBearer(accountAuth.value);
     if (probe.valid) {
       return {
-        source: 'sdk-key',
+        source: accountAuth.kind || 'account-auth',
         ready: true,
-        detail: `AGENTSAM_SDK_KEY · user ${probe.user_id || '?'}`,
+        detail: `${accountAuth.kind === 'api_key' ? 'AGENTSAM_API_KEY' : 'browser session'} · user ${probe.user_id || '?'}`,
         probe,
         aux,
       };
     }
     return {
-      source: 'sdk-key',
+      source: accountAuth.kind || 'account-auth',
       ready: false,
-      detail: `AGENTSAM_SDK_KEY invalid (${probe.error}) → will open browser`,
+      detail: `${accountAuth.kind === 'api_key' ? 'AGENTSAM_API_KEY' : 'browser session'} invalid (${probe.error}) → will open browser`,
       probe,
       aux,
     };
@@ -247,7 +245,7 @@ async function detectIam(explicitToken = '') {
     return {
       source: 'execos-env',
       ready: false,
-      detail: `IAM_PTY_USER_ID set (ExecOS identity — SDK bearer still needed)`,
+      detail: `IAM_PTY_USER_ID set (ExecOS identity — account auth still needed)`,
       aux,
     };
   }

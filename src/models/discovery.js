@@ -242,6 +242,40 @@ export async function discoverXaiModels(apiKey, fetchImpl = fetch) {
   } catch (error) { return failure(error); }
 }
 
+
+export async function discoverCursorModels(apiKey, fetchImpl = fetch) {
+  if (!clean(apiKey)) return failure('credential unavailable', false);
+  try {
+    const body = await fetchJson(fetchImpl, 'https://api.cursor.com/v1/models', {
+      headers: { authorization: `Bearer ${clean(apiKey)}` },
+    });
+    const models = (Array.isArray(body?.items) ? body.items : [])
+      .map((row) => {
+        const id = clean(row?.id);
+        if (!id) return null;
+        const params = Array.isArray(row?.parameters) ? row.parameters : [];
+        const reasoning = params.find((param) => /reason|thinking/i.test(clean(param?.id)));
+        const reasoningEfforts = Array.isArray(reasoning?.values)
+          ? reasoning.values.map((entry) => clean(entry?.value)).filter(Boolean)
+          : [];
+        return baseRecord('cursor', id, {
+          label: clean(row?.displayName) || id,
+          reasoning_efforts: reasoningEfforts.length ? reasoningEfforts : ['auto'],
+          source_url: 'https://api.cursor.com/v1/models',
+          capabilities: { cursor_cloud_agent: true, agent_workflow: true },
+          metadata: {
+            description: clean(row?.description) || null,
+            aliases: Array.isArray(row?.aliases) ? row.aliases : [],
+            parameters: params,
+            variants: Array.isArray(row?.variants) ? row.variants : [],
+          },
+        });
+      })
+      .filter(Boolean);
+    return { attempted: true, ok: true, models, error: null };
+  } catch (error) { return failure(error); }
+}
+
 function cloudflareTaskName(task) {
   if (typeof task === 'string') return clean(task);
   if (task && typeof task === 'object') return clean(task.name || task.id);
@@ -286,6 +320,7 @@ export async function discoverProviderModels(provider, credential, options = {})
     case 'gemini': return discoverGeminiModels(credential?.value, fetchImpl);
     case 'grok':
     case 'xai': return discoverXaiModels(credential?.value, fetchImpl);
+    case 'cursor': return discoverCursorModels(credential?.value, fetchImpl);
     case 'cloudflare': return discoverCloudflareModels(credential?.value, credential?.account_id, fetchImpl);
     default: return failure(`unsupported provider: ${provider}`, false);
   }

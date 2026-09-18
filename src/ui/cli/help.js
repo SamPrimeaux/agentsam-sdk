@@ -12,7 +12,8 @@ const HELP_TOPICS = Object.freeze([
       ['agentsam resume [session]', 'Resume a saved Agent Sam session'],
       ['agentsam whoami', 'Show authenticated account and credential status'],
       ['agentsam models', 'Probe account-visible hosted/local models'],
-      ['agentsam env init <provider>', 'Create a secure local provider profile'],
+      ['agentsam providers', 'Configure and verify machine provider credentials'],
+      ['agentsam env init <provider>', 'Low-level provider profile compatibility command'],
     ],
   },
   {
@@ -48,6 +49,7 @@ const HELP_TOPICS = Object.freeze([
     rows: [
       ['/', 'Open the keyboard command picker'],
       ['/model', 'Choose model, reasoning, and processing tier'],
+      ['/providers', 'Configure and verify machine provider credentials'],
       ['/context', 'Show live context economics'],
       ['/usage', 'Show token/cost/session receipt'],
       ['/settings', 'Change runtime, terminal, and model policy'],

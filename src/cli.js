@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import pkg from '../package.json' with { type: 'json' };
-import readline from 'readline';
 import { cancel, intro, isCancel, outro, select, text } from '@clack/prompts';
 import path from 'node:path';
 import { buildLocalScaffoldMeta } from './lib/local-scaffold.js';
@@ -9,10 +8,10 @@ import { writeScaffoldFiles } from './lib/write-files.js';
 import { initializeGitRepository } from './lib/init-git.js';
 import { initializeLocalSqlite } from './local/sqlite.js';
 import { printContextSummary } from './lib/detect-context.js';
-import { promptOptionalByokKeys } from './lib/prompt-byok.js';
 import { runStartLocal } from './commands/start-local.js';
 import { runOllama } from './commands/ollama.js';
 import { runModels } from './commands/models.js';
+import { runProviders } from './commands/providers.js';
 import { runEnv } from './commands/env.js';
 import { runTunnel } from './commands/tunnel.js';
 import { runDeploy } from './commands/deploy.js';
@@ -41,7 +40,7 @@ import { applyPresetSelection, runAdd, runCapabilities, runDev, runInspect } fro
 import { listPresets, resolvePreset } from './presets/index.js';
 import fs from 'node:fs';
 import { repositoryRoot } from './knowledge/config.js';
-import { resolveAccountSdkKey } from './lib/account-session.js';
+import { resolveAccountAuth } from './lib/account-session.js';
 import { renderDiagnosticError } from './errors/index.js';
 import { renderHelpOverview, runHelp } from './ui/cli/help.js';
 
@@ -53,13 +52,6 @@ function reportCliError(error) {
   console.error(`\n${rendered}\n`);
 }
 
-function createPrompt() {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  return {
-    ask: (q) => new Promise((resolve) => rl.question(q, resolve)),
-    close: () => rl.close(),
-  };
-}
 
 function printHelp() {
   console.log(renderHelpOverview(VERSION));
@@ -96,6 +88,7 @@ function printLegacyHelp() {
     agentsam status [--json]   Live local Git + DB + API + PTY status
     agentsam db init|status    Manage the project-local SQLite database
     agentsam models            Verify configured providers and selectable hosted/local models
+    agentsam providers         Configure, verify, and remove machine provider credentials
     agentsam env init <name>   Create a secure provider profile + reusable shell loader
     agentsam login             Sign in to Inner Animal Media and persist a secure machine-local session
     agentsam logout            Sign out locally; provider credentials stay untouched
@@ -142,7 +135,7 @@ function printLegacyHelp() {
     --quick                    Quick tunnel (default) — trycloudflare.com URL
     --named                    Named CF tunnel (needs --tunnel-name --hostname --zone-id)
     --port <n>                 Local PTY port (default 3099)
-    --token <sdk_…>            Use existing AGENTSAM_SDK_KEY (skip browser auth)
+    --token <aak_…>            Use AGENTSAM_API_KEY-compatible account credential
 
   Init options:
     --name <name>              Project directory name
@@ -235,11 +228,6 @@ async function runLocalInit(config) {
     console.log(`    ${step}`);
   }
 
-  const sdkKey = resolveAccountSdkKey({ env: process.env }).value;
-  if (prompt && sdkKey) {
-    console.log('\n  Optional — BYOK keys for IAM dashboard Agent Sam (skip with Enter):\n');
-    await promptOptionalByokKeys(sdkKey, prompt);
-  }
 
   console.log(`
   Local means local: no Worker, tunnel, IAM login, or cloud database is required.
@@ -291,17 +279,12 @@ async function initInteractive(partial = {}) {
   if (runTarget !== 'local') {
     const { detectContext, missingForInit } = await import('./lib/detect-context.js');
     const ctx = await detectContext();
-    if (missingForInit(ctx, resolveAccountSdkKey({ env: process.env }).value, { runTarget }).length) {
+    if (missingForInit(ctx, resolveAccountAuth({ env: process.env }).value, { runTarget }).length) {
       printContextSummary(ctx);
     }
   }
 
-  const prompt = resolveAccountSdkKey({ env: process.env }).value ? createPrompt() : null;
-  try {
-    await runLocalInit({ projectName, lane: laneKey, runTarget, prompt });
-  } finally {
-    prompt?.close();
-  }
+  await runLocalInit({ projectName, lane: laneKey, runTarget, prompt: null });
   outro(`Created ${projectName}`);
 }
 
@@ -383,6 +366,13 @@ if (command === '--version' || command === '-v') {
 } else if (command === 'models') {
   try {
     await runModels(rest);
+  } catch (e) {
+    reportCliError(e);
+    process.exit(1);
+  }
+} else if (command === 'providers') {
+  try {
+    await runProviders(rest);
   } catch (e) {
     reportCliError(e);
     process.exit(1);

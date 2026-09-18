@@ -7,7 +7,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { authenticateViaBrowser } from '../lib/auth.js';
 import { postJson } from '../lib/core-client.js';
-import { resolveAccountSdkKey } from '../lib/account-session.js';
+import { resolveAccountAuth } from '../lib/account-session.js';
 
 const DEFAULT_PORT = 3099;
 
@@ -33,7 +33,7 @@ function parseArgs(argv) {
     else if (a === '--platform') opts.platform = argv[++i] || opts.platform;
     else if (a === '--shell') opts.shell = argv[++i] || opts.shell;
     else if (a === '--token' && argv[i + 1]) {
-      process.env.AGENTSAM_SDK_KEY = argv[++i];
+      process.env.AGENTSAM_API_KEY = argv[++i];
     }
   }
   return opts;
@@ -51,13 +51,13 @@ function ensureCloudflared() {
 }
 
 async function resolveToken() {
-  const existing = resolveAccountSdkKey({ env: process.env }).value;
-  if (existing.startsWith('sdk_')) return existing;
+  const existing = resolveAccountAuth({ env: process.env });
+  if (existing.value) return existing.value;
+  if (existing.error) throw new Error(existing.error);
   const session = await authenticateViaBrowser();
-  const tok = String(session?.access_token || '').trim();
-  if (!tok.startsWith('sdk_')) throw new Error('IAM auth did not return an sdk_ bearer key');
-  process.env.AGENTSAM_SDK_KEY = tok;
-  return tok;
+  const token = String(session?.access_token || '').trim();
+  if (!token) throw new Error('IAM auth did not return a browser session credential');
+  return token;
 }
 
 async function assertLocalPty(port) {
