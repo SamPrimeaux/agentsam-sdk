@@ -319,12 +319,12 @@ export async function runResponsesAgent(options = {}) {
   event(emit, 'context.snapshot', {
     estimate_kind: 'provider',
     active_input_tokens: active,
-    window_tokens: budget.windowTokens,
-    utilization_ratio: finalPressure.utilizationRatio,
-    pricing_threshold_tokens: budget.pricingThresholdTokens,
-    tokens_until_pricing_threshold: finalPressure.tokensUntilPricingThreshold,
-    pressure: finalPressure.stage,
-    compact_before_next_turn: finalPressure.shouldCompact,
+    window_tokens: budget?.windowTokens ?? null,
+    utilization_ratio: finalPressure?.utilizationRatio ?? null,
+    pricing_threshold_tokens: budget?.pricingThresholdTokens ?? null,
+    tokens_until_pricing_threshold: finalPressure?.tokensUntilPricingThreshold ?? null,
+    pressure: finalPressure?.stage ?? 'unknown',
+    compact_before_next_turn: finalPressure?.shouldCompact ?? false,
   }, runId);
 
   return Object.freeze({
