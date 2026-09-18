@@ -61,12 +61,21 @@ function normalizeCostBreakdown(value = {}) {
   };
 }
 
+export function localSessionElapsedMs(session = {}, at = Date.now()) {
+  const accumulated = Math.max(0, Number(session.active_elapsed_ms || 0));
+  const startedAt = Date.parse(clean(session.active_started_at));
+  if (clean(session.status) !== 'active' || !Number.isFinite(startedAt)) return accumulated;
+  return accumulated + Math.max(0, Number(at) - startedAt);
+}
+
 export function normalizeLocalSession(value = {}) {
   const createdAt = clean(value.created_at) || now();
+  const status = clean(value.status) || 'active';
+  const updatedAt = clean(value.updated_at) || createdAt;
   return {
     schema_version: LOCAL_SESSION_SCHEMA,
     id: validateSessionId(value.id || createLocalSessionId()),
-    status: clean(value.status) || 'active',
+    status,
     cwd: path.resolve(clean(value.cwd) || process.cwd()),
     title: clean(value.title) || sessionTitleFromInput(value.last_input),
     last_input: clean(value.last_input) || null,
