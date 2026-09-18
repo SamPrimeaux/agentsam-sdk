@@ -62,6 +62,10 @@ function createPrompt() {
 }
 
 function printHelp() {
+  console.log(renderHelpOverview(VERSION));
+}
+
+function printLegacyHelp() {
   console.log(`
   Agent Sam SDK — CLI v${VERSION}
 
