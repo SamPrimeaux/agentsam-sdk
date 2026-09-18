@@ -8,6 +8,7 @@ import {
   ollamaInstallPlan,
   parseOllamaArgs,
   probeOllama,
+  probeOllamaModel,
   resolveOllamaConfig,
   updateProjectOllamaConfig,
   upsertOllamaEnvFile,
