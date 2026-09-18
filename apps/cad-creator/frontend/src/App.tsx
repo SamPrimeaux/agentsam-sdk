@@ -656,14 +656,24 @@ export function App() {
               <div ref={roboticsContainerRef} className="absolute inset-0" />
               <div className="absolute inset-0 z-10 pointer-events-none">
                 <div className="w-full h-full pointer-events-auto">
-                  <RoboticsWorkspace
-                    containerRef={roboticsContainerRef}
-                    simProviderRef={roboticsSimulationProviderRef}
-                    isDarkMode={roboticsDarkMode}
-                    toggleDarkMode={() => setRoboticsDarkMode((value) => !value)}
-                    showDiagnostics={showRoboticsDiagnostics}
-                    setShowDiagnostics={setShowRoboticsDiagnostics}
-                  />
+                  <React.Suspense
+                    fallback={(
+                      <div className="absolute inset-0 flex items-center justify-center bg-slate-950 text-slate-300">
+                        <div className="flex items-center gap-3 text-xs font-mono">
+                          <div className="h-4 w-4 rounded-full border-2 border-emerald-500/30 border-t-emerald-400 animate-spin" />
+                          Loading robotics runtime…
+                        </div>
+                      </div>
+                    )}
+                  >
+                    <LazyRoboticsWorkspace
+                      containerRef={roboticsContainerRef}
+                      isDarkMode={roboticsDarkMode}
+                      toggleDarkMode={() => setRoboticsDarkMode((value) => !value)}
+                      showDiagnostics={showRoboticsDiagnostics}
+                      setShowDiagnostics={setShowRoboticsDiagnostics}
+                    />
+                  </React.Suspense>
                 </div>
               </div>
             </div>
