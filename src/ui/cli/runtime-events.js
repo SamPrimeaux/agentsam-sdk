@@ -2,6 +2,34 @@ import { renderPlanUpdate } from './plan.js';
 import { renderWaitingInput } from './waiting.js';
 import { renderCompactionReceipt } from './compaction.js';
 
+export const RUNTIME_EVENT_ENVELOPE_SCHEMA = 'agentsam-runtime-event-v1';
+
+/**
+ * Transport-neutral event contract shared by standalone and future platform-connected runs.
+ * A platform SSE/WebSocket producer only needs to emit this normalized envelope; the SDK does
+ * not hardcode or invent the platform endpoint that will carry it.
+ */
+export function normalizeRuntimeEventEnvelope(value = {}) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError('runtime event envelope must be an object');
+  }
+  const type = String(value.type || '').trim();
+  if (!type) throw new TypeError('runtime event envelope type is required');
+  const sequence = Number(value.sequence);
+  const envelope = {
+    schema: RUNTIME_EVENT_ENVELOPE_SCHEMA,
+    schema_version: Number.isInteger(Number(value.schema_version)) ? Number(value.schema_version) : 1,
+    type,
+    timestamp: String(value.timestamp || new Date().toISOString()),
+    ...(value.run_id ? { run_id: String(value.run_id) } : {}),
+    ...(Number.isInteger(sequence) && sequence >= 0 ? { sequence } : {}),
+    payload: value.payload && typeof value.payload === 'object' && !Array.isArray(value.payload)
+      ? value.payload
+      : value.payload == null ? {} : { value: value.payload },
+  };
+  return Object.freeze(envelope);
+}
+
 function line(write, text) {
   if (text) write(text.endsWith('\n') ? text : text + '\n');
 }
