@@ -404,7 +404,7 @@ export async function dispatchShellLine(line, state = {}) {
         await showCommandPicker(state);
         break;
       case '/help':
-        write(renderShellCatalog());
+        await runHelp(args, { write, interactive: state.interactive });
         break;
       case '/exit':
       case '/quit':
