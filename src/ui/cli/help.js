@@ -147,7 +147,7 @@ export function renderAllHelp(version) {
 }
 
 export async function runHelp(argv = [], options = {}) {
-  const version = String(options.version || 'unknown');
+  const version = String(options.version || pkg.version || 'unknown');
   const write = options.write || ((value) => process.stdout.write(value));
   const args = argv.filter((arg) => arg !== '--interactive');
 
