@@ -288,10 +288,13 @@ export function renderSessionReceipt(session) {
   const model = session.provider_model_id || session.model_key || 'model unavailable';
   const breakdown = session.cost_breakdown_usd || {};
   const componentTotal = ['input', 'cached_input', 'cache_write', 'output'].reduce((sum, key) => sum + Number(breakdown[key] || 0), 0);
+  const elapsed = localSessionElapsedMs(session);
   const lines = [
     '',
+    'Session summary',
     `Token usage: total=${formatCount(total)} input=${formatCount(input)}${cached ? ` (+ ${formatCount(cached)} cached)` : ''}${cacheWrite ? ` (+ ${formatCount(cacheWrite)} cache write)` : ''} output=${formatCount(output)}${reasoning ? ` reasoning=${formatCount(reasoning)}` : ''}`,
     `Spent: ${formatUsd(session.total_cost_usd)} · ${model}${session.actual_service_tier ? ` · ${session.actual_service_tier}` : ''}`,
+    `Elapsed: ${formatElapsed(elapsed)}`,
   ];
   if (componentTotal > 0) {
     lines.push(`Cost breakdown: input ${formatUsd(breakdown.input)} · cached ${formatUsd(breakdown.cached_input)} · cache write ${formatUsd(breakdown.cache_write)} · output ${formatUsd(breakdown.output)}`);
