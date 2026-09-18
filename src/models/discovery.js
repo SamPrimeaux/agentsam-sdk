@@ -12,8 +12,36 @@ function failure(error, attempted = true) {
   return { attempted, ok: false, models: [], error: error?.message || String(error || 'unknown error') };
 }
 
+function providerReference(provider, id) {
+  if (provider !== 'anthropic') return null;
+  const million = new Set([
+    'claude-fable-5', 'claude-opus-5', 'claude-opus-4-8', 'claude-opus-4-7',
+    'claude-opus-4-6', 'claude-sonnet-5', 'claude-sonnet-4-6',
+  ]);
+  const twoHundredK = new Set([
+    'claude-opus-4-5-20251101', 'claude-sonnet-4-5-20250929', 'claude-haiku-4-5-20251001',
+  ]);
+  const contextWindow = million.has(id) ? 1_000_000 : twoHundredK.has(id) ? 200_000 : null;
+  if (!contextWindow) return null;
+  return Object.freeze({
+    model_key: `anthropic:${id}`,
+    provider: 'anthropic',
+    provider_model_id: id,
+    label: id,
+    context_window: contextWindow,
+    max_output_tokens: ['claude-opus-5', 'claude-sonnet-5'].includes(id) ? 128_000 : null,
+    reasoning_efforts: Object.freeze(['auto']),
+    service_tiers: Object.freeze(['default']),
+    capabilities: Object.freeze({ messages: true, function_calling: true, prompt_caching: true, compaction: true }),
+    source: Object.freeze({
+      url: 'https://docs.anthropic.com/en/docs/about-claude/models/overview',
+      as_of: '2026-09-17',
+    }),
+  });
+}
+
 function fallbackRecord(provider, id) {
-  const record = getModelRecord(`${provider}:${id}`) || getModelRecord(id);
+  const record = getModelRecord(`${provider}:${id}`) || getModelRecord(id) || providerReference(provider, id);
   return record || null;
 }
 
