@@ -37,8 +37,24 @@ export async function runDb(argv = [], opts = {}) {
     console.log(`\n  Agent Sam local DB\n`);
     console.log(`  ✓ SQLite      ${result.dbPath}`);
     console.log(`  ✓ Tables      ${result.tables.length}`);
-    console.log(`  ✓ Schema      ${paths.schemaPath}\n`);
+    console.log(`  ✓ Schema      ${paths.schemaPath}`);
+    console.log('  ✓ Migrations  current\n');
     return result;
+  }
+
+  if (sub === 'migrate') {
+    if (!fs.existsSync(paths.dbPath)) throw new Error('Local DB is not initialized — run `agentsam db init` first.');
+    const db = await createLocalSqliteDatabase(paths.dbPath);
+    try {
+      const result = await applyRuntimeMigrations(db);
+      console.log(`\n  Agent Sam local DB migrations\n`);
+      console.log(`  applied       ${result.applied}`);
+      console.log(`  known         ${result.total}`);
+      console.log(`  path          ${paths.dbPath}\n`);
+      return result;
+    } finally {
+      db.close();
+    }
   }
 
   const result = await inspectLocalSqlite(paths.dbPath);
