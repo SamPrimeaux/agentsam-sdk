@@ -30,12 +30,12 @@ async function loadPty(override) {
 }
 
 /**
- * @param {{ cwd?: string, port?: number, host?: string }} [opts]
+ * @param {{ cwd?: string, port?: number, host?: string, pty?: { spawn: Function } }} [opts]
  */
 export async function startLocalPtyServer(opts = {}) {
-  const pty = await loadPty();
+  const pty = await loadPty(opts.pty);
   const cwd = opts.cwd || process.cwd();
-  const port = parsePort(opts.port ?? process.env.PTY_PORT, DEFAULT_PORT);
+  const requestedPort = opts.port === 0 ? 0 : parsePort(opts.port ?? process.env.PTY_PORT, DEFAULT_PORT);
   const host = opts.host || '127.0.0.1';
   const shell = shellForPlatform();
 
