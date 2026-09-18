@@ -47,6 +47,15 @@ export function createProviderAdapter(options = {}) {
     });
   }
 
+  if (provider === 'cloudflare') {
+    return createCloudflareChatAdapter({
+      credential: options.credential,
+      modelRecord: record,
+      fetchImpl: options.fetchImpl,
+      emit: options.emit,
+    });
+  }
+
   if (provider === 'ollama') {
     return createOllamaChatAdapter({
       endpoint: options.endpoint,
