@@ -219,7 +219,7 @@ export async function runLocalAgent(goal, write, options = {}) {
   }
   const base = String(process.env.AGENTSAM_LOCAL_URL || 'http://127.0.0.1:8787').replace(/\/$/, '');
   const fetchImpl = options.fetchImpl || fetch;
-  const activity = options.activity || createRuntimeActivity({ write, phase: 'thinking', interactive: options.interactive });
+  const activity = options.activity || createInlineActivity({ write, label: 'Thinking', interactive: options.interactive });
   let response;
   activity.start('thinking');
   try {
