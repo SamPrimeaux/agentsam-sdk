@@ -105,8 +105,9 @@
   ],
   "scripts": {
     "test": "npm run test:standard && npm --prefix packages/identity test && npm run test:connectors",
-    "test:standard": "node test/smoke.mjs && npm run test:unit && npm run test:integration:mock && npm run test:terminal:mock",
+    "test:standard": "node test/smoke.mjs && npm run test:unit && npm run test:cli && npm run test:integration:mock && npm run test:terminal:mock",
     "test:unit": "node --test test/*.test.mjs",
+    "test:cli": "node --test test/cli/*.test.mjs",
     "test:integration:mock": "node --test test/integration/*.test.mjs",
     "test:terminal:mock": "node --test test/terminal/*.test.mjs",
     "test:live:terminal": "node --test test/live/*.live.test.mjs",
