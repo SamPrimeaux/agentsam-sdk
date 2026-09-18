@@ -354,6 +354,7 @@ export function createOpenAIResponsesAdapter(options = {}) {
       output: Object.freeze(response.output || []),
       provider_state: Object.freeze({ previous_response_id: null }),
       usage: response.usage || null,
+      cost: compactCost,
       raw: response,
     });
   }
