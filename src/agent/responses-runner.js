@@ -23,9 +23,11 @@ function userMessage(text) {
 }
 
 function modelBudget(record) {
+  const windowTokens = Number(record?.context_window);
+  if (!Number.isFinite(windowTokens) || windowTokens <= 0) return null;
   const policy = record.context_policy || {};
   return createContextBudget({
-    windowTokens: record.context_window,
+    windowTokens,
     targetInputTokens: policy.target_input_tokens,
     compactAtTokens: policy.compact_at_tokens,
     interveneAtTokens: policy.intervene_at_tokens,
