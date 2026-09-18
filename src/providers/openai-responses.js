@@ -321,7 +321,7 @@ export function createOpenAIResponsesAdapter(options = {}) {
   }
 
   async function compact(params = {}) {
-    if (providerId !== 'openai') throw new Error(`native_compaction_unavailable:${providerId}`);
+    if (providerId !== 'openai' && providerId !== 'grok') throw new Error(`native_compaction_unavailable:${providerId}`);
     const modelRecord = params.modelRecord || options.modelRecord || getModelRecord(params.model);
     const model = modelRecord?.provider_model_id || clean(params.model);
     if (!modelRecord || modelRecord.provider !== providerId) {
