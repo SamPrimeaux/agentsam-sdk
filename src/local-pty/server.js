@@ -48,7 +48,7 @@ export async function startLocalPtyServer(opts = {}) {
           ok: true,
           service: 'agentsam-local-pty',
           cwd,
-          port,
+          port: Number(httpServer.address()?.port || requestedPort),
           shell,
         }),
       );
