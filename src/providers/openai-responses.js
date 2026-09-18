@@ -20,6 +20,31 @@ function normalizeServiceTier(value, requested = 'default') {
   return tier;
 }
 
+function historyItems(input) {
+  if (input == null) return [];
+  if (Array.isArray(input)) return structuredClone(input);
+  if (typeof input === 'string') return [{ role: 'user', content: input }];
+  return [structuredClone(input)];
+}
+
+function xaiCompactionHistory(params = {}, response = {}) {
+  if (params.providerState?.compaction_input && Array.isArray(params.providerState.compaction_input)) {
+    return [
+      ...structuredClone(params.providerState.compaction_input),
+      ...historyItems(params.input),
+      ...structuredClone(response.output || []),
+    ];
+  }
+  const prefix = clean(params.instructions)
+    ? [{ role: 'system', content: String(params.instructions) }]
+    : [];
+  return [
+    ...prefix,
+    ...historyItems(params.input),
+    ...structuredClone(response.output || []),
+  ];
+}
+
 export function extractOpenAIOutputText(response = {}) {
   if (typeof response.output_text === 'string') return response.output_text;
   const chunks = [];
