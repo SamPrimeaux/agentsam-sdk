@@ -114,9 +114,39 @@ function spawnGit(cwd, args) {
 
 function selectedModel(cwd) {
   const preferences = readCliPreferences(cwd) || {};
-  const model = getModelRecord(preferences.modelPreference);
+  const snapshot = preferences.modelSnapshot?.model_key === preferences.modelPreference
+    ? preferences.modelSnapshot
+    : null;
+  const model = snapshot || getModelRecord(preferences.modelPreference);
   if (!model) throw new Error('Select an exact provider-verified model with /model first so Agent Sam can verify supported runtime controls.');
   return { preferences, model };
+}
+
+async function resolveModelForTurn(cwd, state) {
+  const selected = selectedModel(cwd);
+  const { preferences } = selected;
+  let model = selected.model;
+
+  if (model.provider === 'ollama') return { preferences, model, credential: null, verification: 'local_runtime' };
+
+  const credential = resolveProviderCredential(model.provider, { home: state.home });
+  if (!credential.configured) {
+    throw new Error(`provider_credential_unavailable:${model.provider}:${credential.error || credential.env || 'not_configured'}`);
+  }
+
+  const discovery = await discoverProviderModels(model.provider, credential, { fetchImpl: state.providerFetchImpl || fetch });
+  if (discovery.ok) {
+    const live = discovery.models.find((row) => row.provider_model_id === model.provider_model_id || row.model_key === model.model_key);
+    if (!live) throw new Error(`selected_model_not_available_for_credential:${model.provider}:${model.provider_model_id}`);
+    model = live;
+    updateCliPreferences(cwd, { modelPreference: live.model_key, modelSnapshot: live });
+    return { preferences: readCliPreferences(cwd) || preferences, model, credential, verification: 'provider_api' };
+  }
+
+  if (preferences.modelSnapshot?.availability === 'available') {
+    return { preferences, model, credential, verification: 'cached_provider_snapshot', discoveryError: discovery.error || null };
+  }
+  throw new Error(`provider_model_discovery_failed:${model.provider}:${discovery.error || 'unknown'}`);
 }
 
 async function chooseReasoning(cwd, args, state) {
