@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createInlineActivity } from '../src/ui/cli/activity.js';
 import { renderCliFooter } from '../src/ui/cli/footer.js';
-import { createCliRuntimePresenter } from '../src/ui/cli/runtime-events.js';
+import { createCliRuntimePresenter, normalizeRuntimeEventEnvelope, RUNTIME_EVENT_ENVELOPE_SCHEMA } from '../src/ui/cli/runtime-events.js';
 import { renderWaitingInput } from '../src/ui/cli/waiting.js';
 
 test('CLI footer reports unknown context honestly', () => {
