@@ -180,5 +180,29 @@ export function createGeminiGenerateContentAdapter(options = {}) {
     return send([...prior, { role: 'user', parts }], params);
   }
 
-  return Object.freeze({ provider: 'gemini', create, continueWithToolOutputs });
+  async function compact(params = {}) {
+    const prior = Array.isArray(params.providerState?.contents) ? params.providerState.contents : [];
+    if (!prior.length) throw new Error('gemini_provider_state_required');
+    const emitFn = params.emit || options.emit;
+    const startedAt = Date.now();
+    emit(emitFn, 'context.compaction.started', { provider: 'gemini', model: params.model }, params.runId);
+    const summary = await send([...prior, {
+      role: 'user',
+      parts: [{ text: 'Create a compact continuation summary of this conversation. Preserve the objective, decisions, changed files, active plan, unresolved failures, tool results that still matter, and constraints. Do not add new work.' }],
+    }], { ...params, tools: [], maxOutputTokens: Math.min(Number(params.maxOutputTokens) || 4096, 4096) });
+    const summaryText = String(summary.output_text || '').trim();
+    const compactState = Object.freeze({ contents: [
+      { role: 'user', parts: [{ text: 'Prior conversation continuation summary:' }] },
+      { role: 'model', parts: [{ text: summaryText }] },
+    ], pending_tools: [] });
+    emit(emitFn, 'context.compaction.completed', {
+      provider: 'gemini', model: params.model, summary_text: summaryText,
+      tokens_before: params.tokensBefore ?? null,
+      tokens_after: Math.ceil(summaryText.length / 4),
+      duration_ms: Date.now() - startedAt,
+    }, params.runId);
+    return Object.freeze({ provider: 'gemini', output: Object.freeze([]), provider_state: compactState, summary_text: summaryText, usage: summary.usage_delta || null });
+  }
+
+  return Object.freeze({ provider: 'gemini', create, continueWithToolOutputs, compact });
 }
