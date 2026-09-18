@@ -1,62 +1,58 @@
 import pc from 'picocolors';
 import { probeOllama, resolveOllamaConfig } from './ollama.js';
 import { listModelCatalog } from '../models/index.js';
+import { discoverProviderModels } from '../models/discovery.js';
 import { resolveProviderCredential } from '../lib/provider-credentials.js';
 
-const API_PROVIDERS = Object.freeze([
+export const API_PROVIDERS = Object.freeze([
   { id: 'openai', label: 'OpenAI', credential: 'OPENAI_API_KEY' },
-  { id: 'gemini', label: 'Gemini', credential: 'GEMINI_API_KEY' },
-  { id: 'grok', label: 'Grok', credential: 'XAI_API_KEY' },
   { id: 'anthropic', label: 'Anthropic', credential: 'ANTHROPIC_API_KEY' },
+  { id: 'gemini', label: 'Gemini', credential: 'GEMINI_API_KEY' },
+  { id: 'grok', label: 'Grok / xAI', credential: 'XAI_API_KEY' },
   { id: 'cloudflare', label: 'Cloudflare', credential: 'CLOUDFLARE_API_TOKEN' },
 ]);
 
 function clean(value) { return value == null ? '' : String(value).trim(); }
-function configured(value) { return Boolean(clean(value)); }
 
-async function discoverOpenAIModels(apiKey, fetchImpl) {
-  if (!apiKey) return { attempted: false, ok: false, models: [], error: null };
-  try {
-    const response = await fetchImpl('https://api.openai.com/v1/models', {
-      headers: { authorization: `Bearer ${apiKey}` },
-      signal: typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(8_000) : undefined,
-    });
-    if (!response.ok) return { attempted: true, ok: false, models: [], error: `HTTP ${response.status}` };
-    const body = await response.json();
-    const models = Array.isArray(body?.data) ? body.data.map((row) => clean(row?.id)).filter(Boolean) : [];
-    return { attempted: true, ok: true, models, error: null };
-  } catch (error) {
-    return { attempted: true, ok: false, models: [], error: error?.message || String(error) };
-  }
+function emptyDiscovery() {
+  return { attempted: false, ok: false, models: [], error: null };
 }
 
-function cloudflareTaskName(task) {
-  if (typeof task === 'string') return clean(task);
-  if (task && typeof task === 'object') return clean(task.name || task.id);
-  return '';
+function providerSummary(result = {}) {
+  return {
+    attempted: result.attempted === true,
+    ok: result.ok === true,
+    error: result.error || null,
+    returnedModelCount: Array.isArray(result.models) ? result.models.length : 0,
+  };
 }
 
-async function discoverCloudflareModels(apiToken, accountId, fetchImpl) {
-  if (!apiToken) return { attempted: false, ok: false, models: [], error: null };
-  if (!accountId) return { attempted: true, ok: false, models: [], error: 'ACCOUNT_ID is required for Workers AI discovery' };
-  try {
-    const response = await fetchImpl(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/models/search`, {
-      headers: { authorization: `Bearer ${apiToken}` },
-      signal: typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(8_000) : undefined,
+function mergeStaticFallbacks(discovered = []) {
+  const byKey = new Map(discovered.map((row) => [row.model_key, row]));
+  const out = [...discovered];
+  for (const record of listModelCatalog()) {
+    if (byKey.has(record.model_key)) continue;
+    out.push({
+      model_key: record.model_key,
+      provider: record.provider,
+      provider_model_id: record.provider_model_id,
+      label: record.label,
+      availability: 'unverified',
+      availability_source: 'sdk_reference',
+      context_window: record.context_window,
+      context_window_source: 'sdk_reference',
+      max_output_tokens: record.max_output_tokens,
+      max_output_tokens_source: 'sdk_reference',
+      reasoning_efforts: [...record.reasoning_efforts],
+      service_tiers: [...record.service_tiers],
+      capabilities: { ...record.capabilities },
+      pricing: record.pricing || null,
+      context_policy: record.context_policy || null,
+      batch: record.batch || null,
+      source: record.source || null,
     });
-    if (!response.ok) return { attempted: true, ok: false, models: [], error: `HTTP ${response.status}` };
-    const body = await response.json();
-    if (body?.success === false) return { attempted: true, ok: false, models: [], error: clean(body?.errors?.[0]?.message) || 'Cloudflare API error' };
-    const models = (Array.isArray(body?.result) ? body.result : []).map((row) => ({
-      id: clean(row?.name),
-      task: cloudflareTaskName(row?.task),
-      author: clean(row?.author) || null,
-      description: clean(row?.description) || null,
-    })).filter((row) => row.id);
-    return { attempted: true, ok: true, models, error: null };
-  } catch (error) {
-    return { attempted: true, ok: false, models: [], error: error?.message || String(error) };
   }
+  return out;
 }
 
 export async function collectModelsStatus(options = {}) {
@@ -65,7 +61,13 @@ export async function collectModelsStatus(options = {}) {
   const providerFetchImpl = options.providerFetchImpl || fetch;
   const ollamaConfig = resolveOllamaConfig({}, env);
   const ollama = await probeOllama(ollamaConfig, ollamaFetchImpl);
-  const credentials = new Map(API_PROVIDERS.map((provider) => [provider.id, resolveProviderCredential(provider.id, { env, home: options.home })]));
+  const credentials = new Map(
+    API_PROVIDERS.map((provider) => [
+      provider.id,
+      resolveProviderCredential(provider.id, { env, home: options.home }),
+    ]),
+  );
+
   const providers = API_PROVIDERS.map((provider) => {
     const credential = credentials.get(provider.id);
     return {
@@ -76,52 +78,32 @@ export async function collectModelsStatus(options = {}) {
     };
   });
 
-  const openaiCredential = credentials.get('openai');
-  const cloudflareCredential = credentials.get('cloudflare');
   const shouldDiscover = options.discoverRemote !== false;
-  const openai = shouldDiscover && openaiCredential?.configured
-    ? await discoverOpenAIModels(clean(openaiCredential?.value), providerFetchImpl)
-    : { attempted: false, ok: false, models: [], error: null };
-  const cloudflare = shouldDiscover && cloudflareCredential?.configured
-    ? await discoverCloudflareModels(clean(cloudflareCredential?.value), clean(cloudflareCredential?.account_id), providerFetchImpl)
-    : { attempted: false, ok: false, models: [], error: null };
-  const cloudflareTextModels = cloudflare.models.filter((row) => row.task.toLowerCase() === 'text generation');
-  const availableIds = new Set(openai.models);
-  const catalogModels = listModelCatalog().map((record) => ({
-    model_key: record.model_key,
-    provider: record.provider,
-    provider_model_id: record.provider_model_id,
-    label: record.label,
-    availability: record.provider === 'openai' && openai.ok
-      ? (availableIds.has(record.provider_model_id) ? 'available' : 'unavailable')
-      : 'unverified',
-    source: record.source,
+  const discovery = {};
+  const providerModels = {};
+
+  await Promise.all(API_PROVIDERS.map(async (provider) => {
+    const credential = credentials.get(provider.id);
+    const result = shouldDiscover && credential?.configured
+      ? await discoverProviderModels(provider.id, credential, { fetchImpl: providerFetchImpl })
+      : emptyDiscovery();
+    discovery[provider.id] = providerSummary(result);
+    providerModels[provider.id] = result.models || [];
   }));
 
+  const discovered = Object.values(providerModels).flat();
+  const exactAvailable = discovered.filter((row) => row.availability === 'available');
+  const catalogModels = mergeStaticFallbacks(discovered);
+
   return {
-    schemaVersion: 'agentsam-model-inventory-v2',
+    schemaVersion: 'agentsam-model-inventory-v3',
+    generatedAt: new Date().toISOString(),
+    authority: 'per_credential_provider_discovery',
     providers,
-    discovery: {
-      openai: {
-        attempted: openai.attempted,
-        ok: openai.ok,
-        error: openai.error,
-        returnedModelCount: openai.models.length,
-      },
-      cloudflare: {
-        attempted: cloudflare.attempted,
-        ok: cloudflare.ok,
-        error: cloudflare.error,
-        accountId: cloudflareCredential?.account_id || null,
-        returnedModelCount: cloudflare.models.length,
-        textGenerationModelCount: cloudflareTextModels.length,
-      },
-    },
-    providerModels: {
-      cloudflare: cloudflareTextModels,
-    },
+    discovery,
+    providerModels,
     catalogModels,
-    availableModels: catalogModels.filter((row) => row.availability === 'available'),
+    availableModels: exactAvailable,
     local: {
       provider: 'ollama',
       configured: ollama.online,
@@ -137,71 +119,90 @@ export async function collectModelsStatus(options = {}) {
 
 function statusMark(ok) { return ok ? pc.green('●') : pc.dim('○'); }
 function writeLine(write, value = '') { write(`${value}\n`); }
+function contextLabel(model) {
+  const value = Number(model?.context_window);
+  if (!Number.isFinite(value) || value <= 0) return 'ctx unknown';
+  return `ctx ${Math.round(value / 1000).toLocaleString('en-US')}k`;
+}
 
 export function renderModelsStatus(status) {
   const lines = [];
   lines.push('');
   lines.push(`  ${pc.bold('Agent Sam · models')}`);
-  lines.push(`  ${pc.dim('Credential presence is local evidence; exact hosted-model availability is provider-verified when discovery succeeds.')}`);
+  lines.push(`  ${pc.dim('Availability is verified with this machine\'s own provider credentials. Limits are provider-derived when exposed; otherwise marked unknown/reference.')}`);
   lines.push('');
 
   for (const provider of status.providers) {
-    const state = provider.configured ? pc.green('configured') : pc.dim(provider.credentialError ? 'blocked' : 'not configured');
-    const detail = provider.configured ? `credential available · ${provider.source || 'runtime'}` : provider.credentialError ? `${provider.credential} · ${provider.credentialError}` : provider.credential;
-    lines.push(`  ${statusMark(provider.configured)}  ${pc.cyan(provider.label.padEnd(10))} ${state.padEnd(20)} ${pc.dim(detail)}`);
+    const state = provider.configured
+      ? pc.green('configured')
+      : pc.dim(provider.credentialError ? 'blocked' : 'not configured');
+    const discovery = status.discovery?.[provider.id];
+    const detail = provider.configured
+      ? discovery?.attempted
+        ? discovery.ok
+          ? `${discovery.returnedModelCount} account-visible models`
+          : `discovery failed · ${discovery.error || 'unknown error'}`
+        : `credential available · ${provider.source || 'runtime'}`
+      : provider.credentialError
+        ? `${provider.credential} · ${provider.credentialError}`
+        : provider.credential;
+    lines.push(`  ${statusMark(provider.configured)}  ${pc.cyan(provider.label.padEnd(12))} ${state.padEnd(20)} ${pc.dim(detail)}`);
   }
 
-  const exact = status.availableModels || [];
-  if (exact.length) {
+  for (const provider of API_PROVIDERS) {
+    const models = status.providerModels?.[provider.id] || [];
+    if (!models.length) continue;
     lines.push('');
-    lines.push(`  ${pc.dim('provider-verified selectable models')}`);
-    for (const model of exact) lines.push(`    ${pc.green('•')} ${model.provider_model_id}`);
-  } else if (status.discovery?.openai?.attempted) {
-    lines.push('');
-    lines.push(`  ${pc.dim(`OpenAI discovery ${status.discovery.openai.ok ? 'completed; no catalog models matched' : `failed: ${status.discovery.openai.error || 'unknown error'}`}`)}`);
-  }
-
-  const cloudflare = status.discovery?.cloudflare;
-  if (cloudflare?.attempted) {
-    lines.push('');
-    if (cloudflare.ok) {
-      lines.push(`  ${pc.dim(`Cloudflare Workers AI · ${cloudflare.textGenerationModelCount} account-visible text-generation models`)}`);
-      for (const model of status.providerModels?.cloudflare || []) lines.push(`    ${pc.green('•')} ${model.id}`);
-    } else {
-      lines.push(`  ${pc.dim(`Cloudflare discovery failed: ${cloudflare.error || 'unknown error'}`)}`);
+    lines.push(`  ${pc.dim(`${provider.label} · provider-verified for this credential`)}`);
+    const visible = models.slice(0, 30);
+    for (const model of visible) {
+      const source = model.context_window_source === 'provider_api'
+        ? contextLabel(model)
+        : model.context_window_source === 'sdk_reference'
+          ? `${contextLabel(model)} · reference`
+          : 'ctx unknown';
+      lines.push(`    ${pc.green('•')} ${model.provider_model_id} ${pc.dim('· ' + source)}`);
     }
+    if (models.length > visible.length) lines.push(`    ${pc.dim(`… ${models.length - visible.length} more`)}`);
   }
 
   const local = status.local;
   const localState = local.online ? pc.green('online') : pc.dim('offline');
-  lines.push(`  ${statusMark(local.online)}  ${pc.cyan('Ollama'.padEnd(10))} ${localState.padEnd(20)} ${pc.dim('local only')}`);
+  lines.push('');
+  lines.push(`  ${statusMark(local.online)}  ${pc.cyan('Ollama'.padEnd(12))} ${localState.padEnd(20)} ${pc.dim('local only')}`);
   if (local.online) {
     const names = local.models.map((row) => row.name).filter(Boolean);
-    lines.push('');
-    lines.push(`  ${pc.dim('local models')}`);
-    if (names.length) for (const name of names) lines.push(`    ${pc.green('•')} ${name}`);
-    else lines.push(`    ${pc.dim('no models reported')}`);
-    lines.push('');
-    lines.push(`  ${pc.dim('chat default')}   ${local.chatModel}`);
-    lines.push(`  ${pc.dim('embed default')}  ${local.embedModel}`);
+    for (const name of names.slice(0, 30)) lines.push(`    ${pc.green('•')} ${name}`);
+    if (names.length > 30) lines.push(`    ${pc.dim(`… ${names.length - 30} more`)}`);
   }
+
   lines.push('');
-  lines.push(`  ${pc.dim('Use /model inside Agent Sam to choose an exact verified model, reasoning effort, and processing tier.')}`);
+  lines.push(`  ${pc.dim('Use /model inside Agent Sam. The picker is built from the models visible to your own connected provider credentials.')}`);
   lines.push('');
   return lines.join('\n');
 }
 
 export async function runModels(argv = [], options = {}) {
   if (argv.some((arg) => arg === '--help' || arg === '-h')) {
-    const text = 'agentsam models [--json] [--no-discover]\n\nShow configured providers, provider-verified known models when available, and local Ollama inventory.\n';
+    const text = [
+      'agentsam models [--json] [--no-discover]',
+      '',
+      'Probe the provider accounts configured on this machine and list the models visible to those exact credentials.',
+      'Context/output limits are taken from provider metadata when available; otherwise Agent Sam reports unknown or a clearly-labeled SDK reference.',
+      '',
+    ].join('\n');
     (options.write || process.stdout.write.bind(process.stdout))(text);
     return;
   }
+
   const allowed = new Set(['--json', '--no-discover']);
   const unknown = argv.filter((arg) => !allowed.has(arg));
   if (unknown.length) throw new Error(`unknown models option: ${unknown[0]}`);
 
-  const status = await collectModelsStatus({ ...options, discoverRemote: !argv.includes('--no-discover') });
+  const status = await collectModelsStatus({
+    ...options,
+    discoverRemote: !argv.includes('--no-discover'),
+  });
   const write = options.write || ((text) => process.stdout.write(text));
   if (argv.includes('--json')) writeLine(write, JSON.stringify(status, null, 2));
   else write(renderModelsStatus(status));
