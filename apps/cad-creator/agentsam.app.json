@@ -1,0 +1,30 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "cad-creator",
+  "name": "AgentSam CAD Creator",
+  "package": "@inneranimalmedia/agentsam-sdk-cad-creator",
+  "version": "0.1.0",
+  "surfaces": [
+    "cad-2d",
+    "cad-3d",
+    "sketch",
+    "parametric-openscad",
+    "robotics-mujoco",
+    "embodied-reasoning"
+  ],
+  "runtime": {
+    "local_preview": "ready",
+    "source_scaffold": "ready",
+    "cloudflare": "scaffold",
+    "github": "source-ready"
+  },
+  "commands": {
+    "preview": "agentsam-cad-creator",
+    "scaffold": "agentsam-cad-creator scaffold <directory>"
+  },
+  "secrets": {
+    "server_only": [
+      "GEMINI_API_KEY"
+    ]
+  }
+}
