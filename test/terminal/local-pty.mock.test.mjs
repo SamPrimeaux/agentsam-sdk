@@ -1,80 +1,115 @@
 import assert from 'node:assert/strict';
+import { EventEmitter } from 'node:events';
 import test from 'node:test';
-import { WebSocket } from 'ws';
-import { startLocalPtyServer } from '../../src/local-pty/server.js';
+import {
+  attachLocalPtySession,
+  startLocalPtyServer,
+} from '../../src/local-pty/server.js';
 
-function nextMessage(ws) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('timed out waiting for websocket message')), 2000);
-    ws.once('message', (data) => {
-      clearTimeout(timer);
-      resolve(data.toString());
-    });
-    ws.once('error', reject);
-  });
-}
-
-test('local PTY transport is release-testable with a mock process and no ExecOS/tunnel', async (t) => {
+function fakeTransports() {
   const writes = [];
   const resizes = [];
-  let killed = false;
-  let onData = null;
-  let onExit = null;
+  let killed = 0;
+  let dataHandler = null;
+  let exitHandler = null;
 
-  const fakePty = {
+  const pty = {
     spawn(shell, args, options) {
       assert.equal(Array.isArray(args), true);
       assert.equal(options.env.AGENTSAM_LOCAL_PTY, '1');
       return {
-        write(value) {
-          writes.push(value);
-          onData?.(`echo:${value}`);
-        },
+        write(value) { writes.push(value); },
         resize(cols, rows) { resizes.push([cols, rows]); },
-        kill() { killed = true; },
-        onData(fn) { onData = fn; },
-        onExit(fn) { onExit = fn; },
+        kill() { killed += 1; },
+        onData(fn) { dataHandler = fn; },
+        onExit(fn) { exitHandler = fn; },
       };
     },
   };
 
+  class FakeWs extends EventEmitter {
+    OPEN = 1;
+    readyState = 1;
+    sent = [];
+    send(value) { this.sent.push(String(value)); }
+    close() {
+      if (this.readyState !== this.OPEN) return;
+      this.readyState = 3;
+      this.emit('close');
+    }
+  }
+
+  const ws = new FakeWs();
+  return {
+    pty,
+    ws,
+    writes,
+    resizes,
+    killed: () => killed,
+    emitData(value) { dataHandler?.(value); },
+    emitExit() { exitHandler?.(); },
+  };
+}
+
+test('local PTY wire protocol is release-testable entirely in memory', () => {
+  const transport = fakeTransports();
+  const session = attachLocalPtySession({
+    ws: transport.ws,
+    pty: transport.pty,
+    shell: '/bin/test-shell',
+    cwd: '/tmp/test-project',
+    cols: 80,
+    rows: 24,
+    env: {},
+    sessionId: 'local_test',
+  });
+
+  assert.equal(session.session_id, 'local_test');
+  assert.deepEqual(JSON.parse(transport.ws.sent[0]), {
+    type: 'session_id',
+    session_id: 'local_test',
+  });
+
+  transport.ws.emit('message', Buffer.from(JSON.stringify({ type: 'resize', cols: 120, rows: 40 })));
+  transport.ws.emit('message', Buffer.from(JSON.stringify({ type: 'slash', line: '/pwd' })));
+  transport.ws.emit('message', Buffer.from('raw input'));
+
+  assert.deepEqual(transport.resizes, [[120, 40]]);
+  assert.deepEqual(transport.writes, ['/pwd\r', 'raw input']);
+
+  transport.emitData('terminal output');
+  assert.equal(transport.ws.sent.at(-1), 'terminal output');
+
+  transport.ws.close();
+  assert.equal(transport.killed(), 1);
+
+  // Cleanup is idempotent even when transport error/close paths race.
+  transport.ws.emit('error', new Error('synthetic transport close'));
+  session.cleanup();
+  assert.equal(transport.killed(), 1);
+});
+
+test('local PTY server health check uses an ephemeral local port and no ExecOS tunnel', async () => {
+  const transport = fakeTransports();
   const server = await startLocalPtyServer({
     cwd: process.cwd(),
     host: '127.0.0.1',
     port: 0,
-    pty: fakePty,
+    pty: transport.pty,
   });
-  t.after(async () => { await server.close().catch(() => {}); });
 
-  const health = await fetch(server.healthUrl);
-  assert.equal(health.status, 200);
-  const healthBody = await health.json();
-  assert.equal(healthBody.ok, true);
-  assert.equal(healthBody.service, 'agentsam-local-pty');
-  assert.equal(healthBody.port, server.port);
+  try {
+    const health = await fetch(server.healthUrl);
+    assert.equal(health.status, 200);
+    const body = await health.json();
+    assert.equal(body.ok, true);
+    assert.equal(body.service, 'agentsam-local-pty');
+    assert.equal(body.port, server.port);
+    assert.equal(server.port > 0, true);
+  } finally {
+    await server.close();
+  }
 
-  const ws = new WebSocket(server.url);
-  await new Promise((resolve, reject) => {
-    ws.once('open', resolve);
-    ws.once('error', reject);
-  });
-  t.after(() => { try { ws.close(); } catch {} });
-
-  const sessionFrame = JSON.parse(await nextMessage(ws));
-  assert.equal(sessionFrame.type, 'session_id');
-  assert.match(sessionFrame.session_id, /^local_/);
-
-  const echoedPromise = nextMessage(ws);
-  ws.send(JSON.stringify({ type: 'resize', cols: 120, rows: 40 }));
-  ws.send(JSON.stringify({ type: 'slash', line: '/pwd' }));
-  const echoed = await echoedPromise;
-
-  assert.deepEqual(resizes, [[120, 40]]);
-  assert.equal(writes.includes('/pwd\r'), true);
-  assert.equal(echoed, 'echo:/pwd\r');
-
-  ws.close();
-  await new Promise((resolve) => ws.once('close', resolve));
-  assert.equal(killed, true);
-  onExit?.();
+  // No WebSocket session was opened, so the PTY process was never spawned.
+  assert.equal(transport.killed(), 0);
 });
