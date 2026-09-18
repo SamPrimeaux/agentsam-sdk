@@ -265,6 +265,16 @@ function formatUsd(value) {
   return currency + (amount < 0.01 ? amount.toFixed(6) : amount.toFixed(4));
 }
 
+function formatElapsed(ms) {
+  const totalSeconds = Math.max(0, Math.round(Number(ms || 0) / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours) return `${hours}h ${minutes}m ${seconds}s`;
+  if (minutes) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
+}
+
 export function renderSessionReceipt(session) {
   if (!session) return '';
   const usage = session.cumulative_usage || {};
