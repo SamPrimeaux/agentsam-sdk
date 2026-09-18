@@ -78,18 +78,20 @@ export function tokenizeShellLine(input = '') {
 
 export function renderShellCatalog() {
   const next = SHELL_PHASES.find((phase) => phase.status === 'next' || phase.status === 'current');
-  const rows = SLASH_COMMANDS.map((row) => `    ${row.cmd.padEnd(14)} ${row.description}`).join('\n');
-  return `
-  ╔════════════════════════════════╗
-  ║        Agent Sam Terminal      ║
-  ╚════════════════════════════════╝
-
-  Current milestone: ${next?.label ?? 'interactive runtime'}
-  Type / and press Enter for the scrollable command picker.
-
-  Slash commands (${SLASH_COMMANDS.length} implemented):
-${rows}
-`;
+  return [
+    '',
+    '  Agent Sam',
+    '  Type normally to work with the selected model.',
+    '',
+    '    /        command picker',
+    '    /model   model · reasoning · processing',
+    '    /usage   tokens · cost · resume receipt',
+    '    /help    focused help',
+    '    /exit    return to host shell',
+    '',
+    `  ${next?.label ?? 'interactive runtime'} · ${SLASH_COMMANDS.length} commands available through /`,
+    '',
+  ].join('\n');
 }
 
 function parseDeployOptions(args, cwd) {
