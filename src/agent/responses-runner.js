@@ -296,6 +296,8 @@ export async function runResponsesAgent(options = {}) {
     response = await provider.continueWithToolOutputs({
       model: record.provider_model_id,
       previousResponseId: response.response_id,
+      providerState: response.provider_state || providerState,
+      modelRecord: record,
       toolOutputs: outputs,
       instructions,
       reasoningEffort,
