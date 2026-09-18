@@ -18,7 +18,7 @@ import {
 
 export const AGENTSAM_NATIVE_OAUTH_CLIENT_ID = 'iam_cli_agentsam';
 export const AGENTSAM_NATIVE_OAUTH_SCOPE = 'openid profile email offline_access';
-export const AGENTSAM_OAUTH_CALLBACK_PATH = '/oauth/callback';
+export const AGENTSAM_OAUTH_CALLBACK_PATH = '/callback';
 
 function clean(value) { return value == null ? '' : String(value).trim(); }
 function base64url(value) {
