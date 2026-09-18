@@ -110,7 +110,7 @@ async function promptModelPreferences(identity, existing, options = {}) {
   return { modelPreference, modelSnapshot, reasoningEffort, serviceTier };
 }
 
-export async function configureCliPreferences({ cwd = process.cwd(), firstRun = false, section = 'all', modelStatusOptions } = {}) {
+export async function configureCliPreferences({ cwd = process.cwd(), firstRun = false, section = 'all', modelStatusOptions, home, env = process.env } = {}) {
   let identity = detectCliProject(cwd);
   const existing = readCliPreferences(identity.root) || {};
   intro(firstRun ? `You are in ${identity.root}` : section === 'model' ? 'Agent Sam model' : 'Agent Sam settings');
