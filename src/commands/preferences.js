@@ -83,17 +83,19 @@ async function promptModelPreferences(identity, existing, options = {}) {
   try { status = await collectModelsStatus(options.modelStatusOptions || {}); } catch { /* inventory remains best-effort */ }
   const models = modelOptions(status);
   const initialModel = models.some((row) => row.value === existing.modelPreference) ? existing.modelPreference : 'auto';
-  const modelPreference = stopIfCancelled(await select({ message: 'Model', initialValue: initialModel, options: models }));
+  const modelPreference = stopIfCancelled(await select({ message: 'Model', initialValue: initialModel, options: models.map(({ model, ...row }) => row) }));
+  const selected = models.find((row) => row.value === modelPreference)?.model || null;
+  const modelSnapshot = selected || (existing.modelSnapshot?.model_key === modelPreference ? existing.modelSnapshot : null);
 
-  const reasoning = reasoningOptions(modelPreference);
+  const reasoning = reasoningOptions(modelPreference, modelSnapshot);
   const initialReasoning = reasoning.some((row) => row.value === existing.reasoningEffort) ? existing.reasoningEffort : reasoning[0].value;
   const reasoningEffort = stopIfCancelled(await select({ message: 'Reasoning level', initialValue: initialReasoning, options: reasoning }));
 
-  const tiers = serviceTierOptions(modelPreference);
+  const tiers = serviceTierOptions(modelPreference, modelSnapshot);
   const initialTier = tiers.some((row) => row.value === existing.serviceTier) ? existing.serviceTier : tiers[0].value;
   const serviceTier = stopIfCancelled(await select({ message: 'Processing', initialValue: initialTier, options: tiers }));
 
-  return { modelPreference, reasoningEffort, serviceTier };
+  return { modelPreference, modelSnapshot, reasoningEffort, serviceTier };
 }
 
 export async function configureCliPreferences({ cwd = process.cwd(), firstRun = false, section = 'all', modelStatusOptions } = {}) {
