@@ -328,11 +328,19 @@ export function createOpenAIResponsesAdapter(options = {}) {
       throw error;
     }
 
+    const compactUsage = usageParts(response);
+    const compactCost = modelRecord.pricing
+      ? calculateModelCost(modelRecord, { ...compactUsage, estimate_kind: 'provider' }, { serviceTier: 'default' })
+      : null;
+    if (compactCost) emitEvent(emit, 'cost.snapshot', compactCost, meta);
     emitEvent(emit, 'context.compaction.completed', {
       provider: providerId,
       model,
       compaction_id: response.id,
       usage: response.usage || null,
+      tokens_before: Number(params.tokensBefore || compactUsage.input_tokens || 0),
+      tokens_after: Number(compactUsage.output_tokens || 0),
+      duration_ms: Date.now() - compactStartedAt,
       request_id: http?.request_id || null,
       ray_id: http?.ray_id || null,
     }, meta);
