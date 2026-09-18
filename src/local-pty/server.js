@@ -20,9 +20,45 @@ function shellForPlatform() {
   return process.env.SHELL || '/bin/zsh';
 }
 
+export function ensureNodePtySpawnHelperExecutable(options = {}) {
+  const platform = options.platform || process.platform;
+  const arch = options.arch || process.arch;
+  if (platform !== 'darwin') return Object.freeze({ checked: false, changed: false, path: null });
+
+  const resolveModule = options.resolveModule || ((specifier) => import.meta.resolve(specifier));
+  const fsImpl = options.fs || fs;
+  const entryUrl = resolveModule('node-pty');
+  const packageRoot = path.resolve(path.dirname(fileURLToPath(entryUrl)), '..');
+  const helperPath = path.join(packageRoot, 'prebuilds', `darwin-${arch}`, 'spawn-helper');
+
+  if (!fsImpl.existsSync(helperPath)) {
+    return Object.freeze({ checked: true, changed: false, path: helperPath, missing: true });
+  }
+
+  const stat = fsImpl.statSync(helperPath);
+  if ((stat.mode & 0o111) !== 0) {
+    return Object.freeze({ checked: true, changed: false, path: helperPath });
+  }
+
+  try {
+    fsImpl.chmodSync(helperPath, stat.mode | 0o111);
+  } catch (error) {
+    const wrapped = new Error(
+      `node-pty spawn-helper is not executable and Agent Sam could not repair it at ${helperPath}. ` +
+      `Reinstall node-pty with install scripts enabled or make that helper executable. ${error?.message || error}`,
+    );
+    wrapped.code = 'node_pty_spawn_helper_not_executable';
+    wrapped.cause = error;
+    throw wrapped;
+  }
+
+  return Object.freeze({ checked: true, changed: true, path: helperPath });
+}
+
 async function loadPty(override) {
   if (override?.spawn) return override;
   try {
+    ensureNodePtySpawnHelperExecutable();
     const mod = await import('node-pty');
     return mod.default || mod;
   } catch (e) {
