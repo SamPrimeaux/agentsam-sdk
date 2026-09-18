@@ -64,9 +64,10 @@ test('local PTY transport is release-testable with a mock process and no ExecOS/
   assert.equal(sessionFrame.type, 'session_id');
   assert.match(sessionFrame.session_id, /^local_/);
 
+  const echoedPromise = nextMessage(ws);
   ws.send(JSON.stringify({ type: 'resize', cols: 120, rows: 40 }));
   ws.send(JSON.stringify({ type: 'slash', line: '/pwd' }));
-  const echoed = await nextMessage(ws);
+  const echoed = await echoedPromise;
 
   assert.deepEqual(resizes, [[120, 40]]);
   assert.equal(writes.includes('/pwd\r'), true);
