@@ -164,7 +164,7 @@ export async function configureCliPreferences({ cwd = process.cwd(), firstRun = 
     }));
   }
 
-  const model = await promptModelPreferences(identity, existing, { modelStatusOptions });
+  const model = await promptModelPreferences(identity, existing, { modelStatusOptions: { home, env, ...(modelStatusOptions || {}) } });
   const preferences = writeCliPreferences(identity.root, { trustedDirectory, runtime, terminal, ...model });
   outro(`Ready · ${identity.project}`);
   return { identity, preferences };
