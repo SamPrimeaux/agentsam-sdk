@@ -482,7 +482,7 @@ export async function dispatchShellLine(line, state = {}) {
       case '/quit':
         return { handled: true, exit: true, cwd: state.cwd };
       case '/model': {
-        const configured = await configureCliPreferences({ cwd: state.cwd, firstRun: false, section: 'model' });
+        const configured = await configureCliPreferences({ cwd: state.cwd, firstRun: false, section: 'model', home: state.home });
         state.cwd = configured.identity.root;
         break;
       }
