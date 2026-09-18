@@ -310,11 +310,12 @@ export async function runResponsesAgent(options = {}) {
       runId,
     });
     accumulateCost(response.cost);
+    providerState = response.provider_state || (response.response_id ? { previous_response_id: response.response_id } : providerState);
     cumulativeUsage = response.usage_snapshot?.cumulative || cumulativeUsage;
   }
 
   const active = response.usage_snapshot?.current_context?.input_tokens ?? 0;
-  const finalPressure = assessContextUsage(active, budget);
+  const finalPressure = budget ? assessContextUsage(active, budget) : null;
   event(emit, 'context.snapshot', {
     estimate_kind: 'provider',
     active_input_tokens: active,
