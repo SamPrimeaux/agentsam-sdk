@@ -300,7 +300,7 @@ export function createOpenAIResponsesAdapter(options = {}) {
       usage_delta: Object.freeze(delta),
       usage_snapshot: usageSnapshot,
       cost,
-      provider_state: Object.freeze({ previous_response_id: response.id || null }),
+      provider_state: providerState,
       requested_service_tier: serviceTier,
       actual_service_tier: actualServiceTier,
       raw: response,
