@@ -319,7 +319,9 @@ const rest = process.argv.slice(3);
 
 if (command === '--version' || command === '-v') {
   console.log(VERSION);
-} else if (command === 'help' || command === '--help' || command === '-h') {
+} else if (command === 'help') {
+  await runHelp(rest, { version: VERSION });
+} else if (command === '--help' || command === '-h') {
   printHelp();
 } else if (!command) {
   if (process.stdin.isTTY && process.stdout.isTTY) {
