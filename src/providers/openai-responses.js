@@ -5,8 +5,14 @@ import { createOpenAIHttpError, diagnosticFromError } from '../errors/index.js';
 const DEFAULT_BASE_URL = 'https://api.openai.com/v1';
 
 function clean(value) { return value == null ? '' : String(value).trim(); }
-function integer(value) { const n = Number(value ?? 0); return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0; }
-
+function integer(value) {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
+}
+function optionalSignal(timeoutMs) {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) return undefined;
+  return typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(Math.floor(timeoutMs)) : undefined;
+}
 function normalizeServiceTier(value, requested = 'default') {
   const tier = clean(value).toLowerCase();
   if (tier === 'priority') return 'fast';
@@ -27,13 +33,15 @@ export function extractOpenAIOutputText(response = {}) {
 }
 
 export function extractOpenAIFunctionCalls(response = {}) {
-  return (response.output || []).filter((item) => item?.type === 'function_call').map((item) => Object.freeze({
-    id: item.id || null,
-    call_id: item.call_id,
-    name: item.name,
-    arguments: item.arguments || '{}',
-    status: item.status || null,
-  }));
+  return (response.output || [])
+    .filter((item) => item?.type === 'function_call')
+    .map((item) => Object.freeze({
+      id: item.id || null,
+      call_id: item.call_id,
+      name: item.name,
+      arguments: item.arguments || '{}',
+      status: item.status || null,
+    }));
 }
 
 function usageParts(response = {}) {
@@ -47,20 +55,12 @@ function usageParts(response = {}) {
   };
 }
 
-function errorMessage(body, status) {
-  return body?.error?.message || body?.message || `OpenAI Responses API returned HTTP ${status}`;
-}
-
-function optionalSignal(timeoutMs) {
-  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) return undefined;
-  if (typeof AbortSignal?.timeout !== 'function') return undefined;
-  return AbortSignal.timeout(Math.floor(timeoutMs));
-}
-
 function normalizeTools(tools = []) {
   if (!Array.isArray(tools)) throw new TypeError('tools must be an array');
   return tools.map((tool) => {
-    if (tool?.type !== 'function' || !clean(tool.name)) throw new TypeError('OpenAI adapter tools must be Responses function tool descriptors');
+    if (tool?.type !== 'function' || !clean(tool.name)) {
+      throw new TypeError('OpenAI-compatible adapter tools must be Responses function tool descriptors');
+    }
     return {
       type: 'function',
       name: clean(tool.name),
@@ -72,13 +72,23 @@ function normalizeTools(tools = []) {
   });
 }
 
-function assertRuntimeConfig(model, reasoningEffort, serviceTier, explicitRecord, expectedProvider = 'openai') {
+function assertRuntimeConfig(model, reasoningEffort, serviceTier, explicitRecord, expectedProvider) {
   const record = explicitRecord || getModelRecord(model);
-  if (!record || record.provider !== expectedProvider) throw new RangeError(`unsupported ${expectedProvider} model record: ${model}`);
-  const reasoning = Array.isArray(record.reasoning_efforts) && record.reasoning_efforts.length ? record.reasoning_efforts : ['auto'];
-  const tiers = Array.isArray(record.service_tiers) && record.service_tiers.length ? record.service_tiers : ['default'];
-  if (!reasoning.includes(reasoningEffort) && reasoningEffort !== 'auto') throw new RangeError(`unsupported reasoning effort for ${record.provider_model_id}: ${reasoningEffort}`);
-  if (!tiers.includes(serviceTier)) throw new RangeError(`unsupported service tier for ${record.provider_model_id}: ${serviceTier}`);
+  if (!record || record.provider !== expectedProvider) {
+    throw new RangeError(`unsupported ${expectedProvider} model record: ${model}`);
+  }
+  const reasoning = Array.isArray(record.reasoning_efforts) && record.reasoning_efforts.length
+    ? record.reasoning_efforts
+    : ['auto'];
+  const tiers = Array.isArray(record.service_tiers) && record.service_tiers.length
+    ? record.service_tiers
+    : ['default'];
+  if (reasoningEffort !== 'auto' && !reasoning.includes(reasoningEffort)) {
+    throw new RangeError(`unsupported reasoning effort for ${record.provider_model_id}: ${reasoningEffort}`);
+  }
+  if (!tiers.includes(serviceTier)) {
+    throw new RangeError(`unsupported service tier for ${record.provider_model_id}: ${serviceTier}`);
+  }
   return record;
 }
 
@@ -87,9 +97,24 @@ function emitEvent(emit, type, payload, meta = {}) {
   emit(createAgentEvent(type, payload, meta));
 }
 
+function genericHttpError(providerId, response, parsed, rawText) {
+  const error = new Error(
+    clean(parsed?.error?.message || parsed?.message) ||
+    `${providerId} Responses API returned HTTP ${response.status}`,
+  );
+  error.status = response.status;
+  error.provider = providerId;
+  error.body = parsed;
+  error.rawText = rawText;
+  return error;
+}
+
 export function createOpenAIResponsesAdapter(options = {}) {
   const providerId = clean(options.providerId || 'openai').toLowerCase();
-  const apiKey = clean(options.apiKey || (providerId === 'openai' ? process.env.OPENAI_API_KEY : ''));
+  const apiKey = clean(
+    options.apiKey ||
+    (providerId === 'openai' ? process.env.OPENAI_API_KEY : providerId === 'grok' ? process.env.XAI_API_KEY : ''),
+  );
   const baseUrl = clean(options.baseUrl || DEFAULT_BASE_URL).replace(/\/$/, '');
   const fetchImpl = options.fetchImpl || fetch;
   const defaultEmit = options.emit;
@@ -103,6 +128,7 @@ export function createOpenAIResponsesAdapter(options = {}) {
       body: JSON.stringify(body),
       signal: optionalSignal(runtime.timeoutMs ?? timeoutMs),
     });
+
     let rawText = '';
     let parsed = null;
     if (typeof response.text === 'function') {
@@ -116,23 +142,30 @@ export function createOpenAIResponsesAdapter(options = {}) {
         rawText = JSON.stringify(parsed ?? null);
       } catch {
         parsed = null;
-        rawText = '';
       }
     }
+
     if (!response.ok) {
-      throw createOpenAIHttpError({
-        status: response.status,
-        body: parsed,
-        rawText,
-        headers: response.headers,
-        requestedServiceTier: body?.service_tier,
-      });
+      if (providerId === 'openai') {
+        throw createOpenAIHttpError({
+          status: response.status,
+          body: parsed,
+          rawText,
+          headers: response.headers,
+          requestedServiceTier: body?.service_tier,
+        });
+      }
+      throw genericHttpError(providerId, response, parsed, rawText);
     }
+
     return Object.freeze({
       data: parsed ?? {},
       http: Object.freeze({
         status: response.status,
-        request_id: clean(response.headers?.get?.('x-request-id') || response.headers?.get?.('openai-request-id')) || null,
+        request_id: clean(
+          response.headers?.get?.('x-request-id') ||
+          response.headers?.get?.('openai-request-id'),
+        ) || null,
         ray_id: clean(response.headers?.get?.('cf-ray')) || null,
       }),
     });
@@ -148,6 +181,8 @@ export function createOpenAIResponsesAdapter(options = {}) {
     const emit = params.emit || defaultEmit;
     const meta = { runId: params.runId, sequence: params.sequence };
     const tools = normalizeTools(params.tools || []);
+    const previousResponseId = clean(params.previousResponseId || params.providerState?.previous_response_id);
+
     const body = {
       model,
       input: params.input ?? '',
@@ -158,8 +193,10 @@ export function createOpenAIResponsesAdapter(options = {}) {
       parallel_tool_calls: params.parallelToolCalls !== false,
       ...(clean(params.instructions) ? { instructions: String(params.instructions) } : {}),
       ...(tools.length ? { tools } : {}),
-      ...(clean(params.previousResponseId) ? { previous_response_id: clean(params.previousResponseId) } : {}),
-      ...(Number.isInteger(params.maxOutputTokens) && params.maxOutputTokens > 0 ? { max_output_tokens: params.maxOutputTokens } : {}),
+      ...(previousResponseId ? { previous_response_id: previousResponseId } : {}),
+      ...(Number.isInteger(params.maxOutputTokens) && params.maxOutputTokens > 0
+        ? { max_output_tokens: params.maxOutputTokens }
+        : {}),
       ...(clean(params.promptCacheKey) ? { prompt_cache_key: clean(params.promptCacheKey) } : {}),
       ...(params.promptCacheOptions ? { prompt_cache_options: params.promptCacheOptions } : {}),
       ...(params.metadata ? { metadata: params.metadata } : {}),
@@ -167,7 +204,10 @@ export function createOpenAIResponsesAdapter(options = {}) {
     };
 
     emitEvent(emit, 'model.started', {
-      provider: 'openai', model, reasoning_effort: reasoningEffort, requested_service_tier: serviceTier,
+      provider: providerId,
+      model,
+      reasoning_effort: reasoningEffort,
+      requested_service_tier: serviceTier,
     }, meta);
 
     let response;
@@ -177,17 +217,22 @@ export function createOpenAIResponsesAdapter(options = {}) {
       response = result.data;
       http = result.http;
     } catch (error) {
-      const diagnostic = diagnosticFromError(error, { source: 'openai', kind: 'provider_error' });
+      const diagnostic = diagnosticFromError(error, { source: providerId, kind: 'provider_error' });
       emitEvent(emit, 'error.observed', diagnostic, meta);
-      emitEvent(emit, 'run.failed', { stage: 'model', provider: 'openai', model, error: diagnostic }, meta);
+      emitEvent(emit, 'run.failed', { stage: 'model', provider: providerId, model, error: diagnostic }, meta);
       throw error;
     }
 
     const delta = usageParts(response);
     const actualServiceTier = normalizeServiceTier(response.service_tier, serviceTier);
-    const cost = calculateModelCost(record, { ...delta, estimate_kind: 'provider' }, { serviceTier: actualServiceTier });
+    const cost = record.pricing
+      ? calculateModelCost(record, { ...delta, estimate_kind: 'provider' }, { serviceTier: actualServiceTier })
+      : null;
     const usageSnapshot = createUsageSnapshot({
-      current_context: { input_tokens: delta.input_tokens, window_tokens: record.context_window },
+      current_context: {
+        input_tokens: delta.input_tokens,
+        window_tokens: Number(record.context_window) || 0,
+      },
       cumulative: params.cumulativeUsage ? {
         input_tokens: integer(params.cumulativeUsage.input_tokens) + delta.input_tokens,
         output_tokens: integer(params.cumulativeUsage.output_tokens) + delta.output_tokens,
@@ -199,18 +244,23 @@ export function createOpenAIResponsesAdapter(options = {}) {
     });
 
     emitEvent(emit, 'usage.snapshot', usageSnapshot, meta);
-    emitEvent(emit, 'cost.snapshot', cost, meta);
+    if (cost) emitEvent(emit, 'cost.snapshot', cost, meta);
     emitEvent(emit, 'model.completed', {
-      provider: 'openai', model, response_id: response.id, status: response.status,
-      request_id: http?.request_id || null, ray_id: http?.ray_id || null,
-      requested_service_tier: serviceTier, actual_service_tier: actualServiceTier,
-    }, meta);
-
-    return Object.freeze({
-      provider: 'openai',
+      provider: providerId,
       model,
       response_id: response.id,
       status: response.status,
+      request_id: http?.request_id || null,
+      ray_id: http?.ray_id || null,
+      requested_service_tier: serviceTier,
+      actual_service_tier: actualServiceTier,
+    }, meta);
+
+    return Object.freeze({
+      provider: providerId,
+      model,
+      response_id: response.id || null,
+      status: response.status || 'completed',
       request_id: http?.request_id || null,
       ray_id: http?.ray_id || null,
       output_text: extractOpenAIOutputText(response),
@@ -218,6 +268,7 @@ export function createOpenAIResponsesAdapter(options = {}) {
       usage_delta: Object.freeze(delta),
       usage_snapshot: usageSnapshot,
       cost,
+      provider_state: Object.freeze({ previous_response_id: response.id || null }),
       requested_service_tier: serviceTier,
       actual_service_tier: actualServiceTier,
       raw: response,
@@ -225,7 +276,7 @@ export function createOpenAIResponsesAdapter(options = {}) {
   }
 
   async function continueWithToolOutputs(params = {}) {
-    const previousResponseId = clean(params.previousResponseId);
+    const previousResponseId = clean(params.previousResponseId || params.providerState?.previous_response_id);
     if (!previousResponseId) throw new TypeError('previousResponseId is required');
     const outputs = (params.toolOutputs || []).map((row) => {
       const callId = clean(row.call_id || row.callId);
@@ -238,20 +289,31 @@ export function createOpenAIResponsesAdapter(options = {}) {
   }
 
   async function compact(params = {}) {
-    const modelRecord = getModelRecord(params.model);
+    if (providerId !== 'openai') throw new Error(`native_compaction_unavailable:${providerId}`);
+    const modelRecord = params.modelRecord || options.modelRecord || getModelRecord(params.model);
     const model = modelRecord?.provider_model_id || clean(params.model);
-    if (!modelRecord || modelRecord.provider !== 'openai') throw new RangeError(`unsupported OpenAI model catalog entry: ${params.model}`);
+    if (!modelRecord || modelRecord.provider !== providerId) {
+      throw new RangeError(`unsupported ${providerId} model record: ${params.model}`);
+    }
+
     const emit = params.emit || defaultEmit;
     const meta = { runId: params.runId, sequence: params.sequence };
+    const previousResponseId = clean(params.previousResponseId || params.providerState?.previous_response_id);
     const body = {
       model,
-      ...(clean(params.previousResponseId) ? { previous_response_id: clean(params.previousResponseId) } : {}),
+      ...(previousResponseId ? { previous_response_id: previousResponseId } : {}),
       ...(params.input != null ? { input: params.input } : {}),
       ...(clean(params.instructions) ? { instructions: String(params.instructions) } : {}),
       ...(clean(params.promptCacheKey) ? { prompt_cache_key: clean(params.promptCacheKey) } : {}),
       ...(params.promptCacheOptions ? { prompt_cache_options: params.promptCacheOptions } : {}),
     };
-    emitEvent(emit, 'context.compaction.started', { provider: 'openai', model, previous_response_id: body.previous_response_id || null }, meta);
+
+    emitEvent(emit, 'context.compaction.started', {
+      provider: providerId,
+      model,
+      previous_response_id: previousResponseId || null,
+    }, meta);
+
     let response;
     let http;
     try {
@@ -259,21 +321,38 @@ export function createOpenAIResponsesAdapter(options = {}) {
       response = result.data;
       http = result.http;
     } catch (error) {
-      const diagnostic = diagnosticFromError(error, { source: 'openai', kind: 'provider_error' });
+      const diagnostic = diagnosticFromError(error, { source: providerId, kind: 'provider_error' });
       emitEvent(emit, 'error.observed', diagnostic, meta);
-      emitEvent(emit, 'run.failed', { stage: 'compaction', provider: 'openai', model, error: diagnostic }, meta);
+      emitEvent(emit, 'run.failed', { stage: 'compaction', provider: providerId, model, error: diagnostic }, meta);
       throw error;
     }
+
     emitEvent(emit, 'context.compaction.completed', {
-      provider: 'openai', model, compaction_id: response.id, usage: response.usage || null,
-      request_id: http?.request_id || null, ray_id: http?.ray_id || null,
+      provider: providerId,
+      model,
+      compaction_id: response.id,
+      usage: response.usage || null,
+      request_id: http?.request_id || null,
+      ray_id: http?.ray_id || null,
     }, meta);
+
     return Object.freeze({
-      provider: 'openai', model, compaction_id: response.id,
-      request_id: http?.request_id || null, ray_id: http?.ray_id || null,
-      output: Object.freeze(response.output || []), usage: response.usage || null, raw: response,
+      provider: providerId,
+      model,
+      compaction_id: response.id,
+      request_id: http?.request_id || null,
+      ray_id: http?.ray_id || null,
+      output: Object.freeze(response.output || []),
+      provider_state: Object.freeze({ previous_response_id: null }),
+      usage: response.usage || null,
+      raw: response,
     });
   }
 
-  return Object.freeze({ provider: 'openai', create, continueWithToolOutputs, compact });
+  return Object.freeze({
+    provider: providerId,
+    create,
+    continueWithToolOutputs,
+    ...(providerId === 'openai' ? { compact } : {}),
+  });
 }
