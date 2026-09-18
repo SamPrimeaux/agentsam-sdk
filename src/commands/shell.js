@@ -692,7 +692,12 @@ export async function runShell(argv = [], options = {}) {
 
   if (state.session) {
     state.cwd = path.resolve(state.session.cwd || state.cwd);
-    state.session = saveLocalSession({ ...state.session, status: 'active', cwd: state.cwd }, { home: state.home });
+    state.session = saveLocalSession({
+      ...state.session,
+      status: 'active',
+      cwd: state.cwd,
+      active_started_at: new Date().toISOString(),
+    }, { home: state.home });
     state.usageSnapshot = state.session.usage_snapshot || state.usageSnapshot;
   } else {
     const preferences = readCliPreferences(state.cwd) || {};
