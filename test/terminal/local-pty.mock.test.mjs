@@ -56,6 +56,37 @@ function fakeTransports() {
   };
 }
 
+test('macOS node-pty helper is made executable before runtime import', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-node-pty-helper-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const libDir = path.join(root, 'lib');
+  const helperDir = path.join(root, 'prebuilds', 'darwin-arm64');
+  fs.mkdirSync(libDir, { recursive: true });
+  fs.mkdirSync(helperDir, { recursive: true });
+  fs.writeFileSync(path.join(libDir, 'index.js'), '');
+  const helper = path.join(helperDir, 'spawn-helper');
+  fs.writeFileSync(helper, 'fake');
+  fs.chmodSync(helper, 0o644);
+
+  const result = ensureNodePtySpawnHelperExecutable({
+    platform: 'darwin',
+    arch: 'arm64',
+    resolveModule: () => pathToFileURL(path.join(libDir, 'index.js')).href,
+  });
+
+  assert.equal(result.checked, true);
+  assert.equal(result.changed, true);
+  assert.equal(result.path, helper);
+  assert.notEqual(fs.statSync(helper).mode & 0o111, 0);
+
+  const second = ensureNodePtySpawnHelperExecutable({
+    platform: 'darwin',
+    arch: 'arm64',
+    resolveModule: () => pathToFileURL(path.join(libDir, 'index.js')).href,
+  });
+  assert.equal(second.changed, false);
+});
+
 test('local PTY wire protocol is release-testable entirely in memory', () => {
   const transport = fakeTransports();
   const session = attachLocalPtySession({
