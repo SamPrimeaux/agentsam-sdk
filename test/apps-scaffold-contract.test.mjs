@@ -13,6 +13,10 @@ function packageJson(...parts) {
   return JSON.parse(fs.readFileSync(at(...parts, 'package.json'), 'utf8'));
 }
 
+function read(...parts) {
+  return fs.readFileSync(at(...parts), 'utf8');
+}
+
 test('product apps are self-contained npm workspace roots with one lockfile', () => {
   for (const app of productApps) {
     const base = ['apps', app];
