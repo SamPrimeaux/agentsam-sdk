@@ -191,9 +191,9 @@ export async function runResponsesAgent(options = {}) {
     service_tier: serviceTier,
     estimated_input_tokens: projected,
     max_output_tokens: maxOutputTokens,
-    projected_max_call_cost_usd: projectedCost.total_usd,
-    pricing_threshold_tokens: budget.pricingThresholdTokens,
-    tokens_until_pricing_threshold: pressure.tokensUntilPricingThreshold,
+    projected_max_call_cost_usd: projectedCost?.total_usd ?? null,
+    pricing_threshold_tokens: budget?.pricingThresholdTokens ?? null,
+    tokens_until_pricing_threshold: pressure?.tokensUntilPricingThreshold ?? null,
     compacted_before_turn: Boolean(compacted),
     estimate_kind: 'local',
   });
