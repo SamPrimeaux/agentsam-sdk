@@ -435,7 +435,7 @@ async function runInteractiveModelTurn(prompt, state) {
       previousUsageSnapshot,
       cumulativeUsage: state.session?.cumulative_usage || null,
       promptCacheKey: state.session?.id || undefined,
-      runId: state.session?.id || undefined,
+      runId: runtimeRunId || state.session?.id || undefined,
       beforeRequest: (preflight) => approveModelRequest(preflight, state),
       beforeTool: (request) => approveToolExecution(request, state),
       emit(event) {
