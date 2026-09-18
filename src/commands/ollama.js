@@ -148,6 +148,32 @@ function hasModel(models, desired) {
   return models.some((row) => normalizeModelName(row.name || row.model) === want);
 }
 
+export async function probeOllamaModel(model, config, fetchImpl = fetch) {
+  const endpoint = `${config.baseUrl}/api/show`;
+  try {
+    const response = await fetchImpl(endpoint, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ model }),
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!response.ok) return { ok: false, model, context_window: null, error: `HTTP ${response.status}` };
+    const body = await response.json();
+    const info = body?.model_info && typeof body.model_info === 'object' ? body.model_info : {};
+    const contextEntry = Object.entries(info).find(([key, value]) => key.endsWith('.context_length') && Number(value) > 0);
+    return {
+      ok: true,
+      model,
+      context_window: contextEntry ? Math.floor(Number(contextEntry[1])) : null,
+      context_window_source: contextEntry ? 'local_runtime' : 'unknown',
+      capabilities: Array.isArray(body?.capabilities) ? body.capabilities : [],
+      details: body?.details || null,
+    };
+  } catch (error) {
+    return { ok: false, model, context_window: null, error: error?.message || String(error) };
+  }
+}
+
 export async function probeOllama(config, fetchImpl = fetch) {
   const endpoint = `${config.baseUrl}/api/tags`;
   try {
