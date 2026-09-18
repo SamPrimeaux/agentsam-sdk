@@ -408,6 +408,6 @@ export function createOpenAIResponsesAdapter(options = {}) {
     provider: providerId,
     create,
     continueWithToolOutputs,
-    ...(providerId === 'openai' ? { compact } : {}),
+    ...(['openai', 'grok'].includes(providerId) ? { compact } : {}),
   });
 }
