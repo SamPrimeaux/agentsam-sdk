@@ -35,9 +35,13 @@ test('agentsam-sdk Worker uses the backend Worker entry, custom domain only, and
   assert.match(wrangler, /"service"\s*:\s*"execos"/);
   assert.match(wrangler, /"binding"\s*:\s*"PTY_SERVICE"/);
   assert.match(wrangler, /"service_id"\s*:\s*"019db639-7c70-7071-8ef3-32ec0392a9ff"/);
-  assert.match(wrangler, /"IAM_ORIGIN"\s*:\s*"https:\/\/inneranimalmedia\.com"/);
+  assert.match(wrangler, /"IAM_OAUTH_ISSUER"\s*:\s*"https:\/\/inneranimalmedia\.com"/);
+  assert.match(wrangler, /"IAM_CLIENT_ID"\s*:\s*"iam_agentsam_sdk_web"/);
+  assert.doesNotMatch(wrangler, /"IAM_ORIGIN"\s*:/);
   assert.doesNotMatch(wrangler, /AGENTSAM_WORKER_ROLE/);
   assert.doesNotMatch(wrangler, /"OLLAMA_BASE_URL"\s*:/);
+  assert.doesNotMatch(wrangler, /"OLLAMA_MODEL"\s*:/);
+  assert.doesNotMatch(wrangler, /"OLLAMA_EMBED_MODEL"\s*:/);
   assert.doesNotMatch(wrangler, /workers\.dev/);
 });
 
