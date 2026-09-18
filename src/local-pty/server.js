@@ -2,7 +2,10 @@
  * Agent Sam local PTY — localhost WebSocket shell, no tunnel, no IAM.
  * Compatible with iam-pty wire format (raw bytes + JSON resize/slash).
  */
+import fs from 'node:fs';
 import http from 'node:http';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 
 const DEFAULT_PORT = 3099;
