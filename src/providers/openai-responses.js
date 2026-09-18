@@ -308,6 +308,7 @@ export function createOpenAIResponsesAdapter(options = {}) {
       ...(params.promptCacheOptions ? { prompt_cache_options: params.promptCacheOptions } : {}),
     };
 
+    const compactStartedAt = Date.now();
     emitEvent(emit, 'context.compaction.started', {
       provider: providerId,
       model,
