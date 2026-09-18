@@ -341,10 +341,12 @@ export async function runResponsesAgent(options = {}) {
     tool_surface: toolSurface.receipt,
     tool_receipts: Object.freeze(toolReceipts),
     compacted_before_turn: Boolean(compacted),
+    provider_state: providerState,
     continuation: Object.freeze({
-      previous_response_id: response.response_id,
+      previous_response_id: response.response_id || providerState?.previous_response_id || null,
+      provider_state: providerState,
       usage_snapshot: response.usage_snapshot,
-      compact_before_next_turn: finalPressure.shouldCompact,
+      compact_before_next_turn: finalPressure?.shouldCompact ?? false,
     }),
   });
 }
