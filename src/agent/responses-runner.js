@@ -222,6 +222,7 @@ export async function runResponsesAgent(options = {}) {
   };
   let response = await provider.create({
     model: record.provider_model_id,
+    modelRecord: record,
     input,
     instructions,
     reasoningEffort,
