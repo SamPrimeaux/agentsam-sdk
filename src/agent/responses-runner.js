@@ -174,12 +174,15 @@ export async function runResponsesAgent(options = {}) {
   }
 
   assertEconomicPreflight(projected, budget, options.allowEconomicOverride === true);
-  const pressure = assessContextUsage(projected, budget);
+  const pressure = budget ? assessContextUsage(projected, budget) : null;
+  const declaredMaxOutput = Number(record.max_output_tokens);
   const maxOutputTokens = Number.isInteger(options.maxOutputTokens) && options.maxOutputTokens > 0
-    ? Math.min(options.maxOutputTokens, record.max_output_tokens)
-    : Math.min(32_768, record.max_output_tokens);
-  const projectedCost = calculateModelCost(record, { input_tokens: projected, output_tokens: maxOutputTokens }, { serviceTier });
-  if (Number.isFinite(options.maxCallCostUsd) && projectedCost.total_usd > options.maxCallCostUsd) {
+    ? (Number.isFinite(declaredMaxOutput) && declaredMaxOutput > 0 ? Math.min(options.maxOutputTokens, declaredMaxOutput) : options.maxOutputTokens)
+    : (Number.isFinite(declaredMaxOutput) && declaredMaxOutput > 0 ? Math.min(32_768, declaredMaxOutput) : 16_384);
+  const projectedCost = record.pricing
+    ? calculateModelCost(record, { input_tokens: projected, output_tokens: maxOutputTokens }, { serviceTier })
+    : null;
+  if (Number.isFinite(options.maxCallCostUsd) && projectedCost && projectedCost.total_usd > options.maxCallCostUsd) {
     throw new Error(`projected_call_cost_exceeds_budget:${projectedCost.total_usd.toFixed(6)}>${Number(options.maxCallCostUsd).toFixed(6)}`);
   }
   const preflight = Object.freeze({
