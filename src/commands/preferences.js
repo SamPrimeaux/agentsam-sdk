@@ -155,13 +155,9 @@ export async function configureCliPreferences({ cwd = process.cwd(), firstRun = 
     }
     runtime = stopIfCancelled(await select({
       message: 'Runtime', initialValue: runtime,
-      options: [
-        { value: 'local', label: 'Local machine', hint: 'real shell + filesystem' },
-        { value: 'remote', label: 'Remote', hint: 'connected remote runtime' },
-        { value: 'sandbox', label: 'Sandbox', hint: 'isolated disposable runtime' },
-      ],
+      options: runtimes,
     }));
-    const shells = availableShells();
+    const shells = availableShells(env);
     terminal = stopIfCancelled(await select({
       message: 'Terminal', initialValue: terminal && shells.includes(terminal) ? terminal : shells[0],
       options: shells.map((shell) => ({ value: shell, label: shell, hint: shell === shells[0] ? 'detected/default' : undefined })),
