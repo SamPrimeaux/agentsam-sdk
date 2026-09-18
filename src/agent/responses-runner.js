@@ -119,7 +119,7 @@ function projectedInputTokens({ instructions, input, toolSurface, priorActiveTok
 }
 
 function assertEconomicPreflight(projectedTokens, budget, allowOverride) {
-  if (allowOverride) return;
+  if (!budget || allowOverride) return;
   if (budget.pricingThresholdTokens != null && projectedTokens > budget.pricingThresholdTokens) {
     throw new Error(`context_preflight_pricing_threshold:${projectedTokens}>${budget.pricingThresholdTokens}`);
   }
