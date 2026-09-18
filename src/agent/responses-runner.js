@@ -146,7 +146,10 @@ export async function runResponsesAgent(options = {}) {
   const runId = options.runId;
   event(emit, 'tool.search', toolSurface.receipt, runId);
 
-  let previousResponseId = clean(options.previousResponseId) || null;
+  let previousResponseId = clean(options.previousResponseId || options.previousProviderState?.previous_response_id) || null;
+  let providerState = options.previousProviderState && typeof options.previousProviderState === 'object'
+    ? structuredClone(options.previousProviderState)
+    : previousResponseId ? { previous_response_id: previousResponseId } : null;
   let priorActiveTokens = options.previousUsageSnapshot?.current_context?.input_tokens;
   let input = objective;
   let compacted = null;
