@@ -18,7 +18,7 @@ import { getModelRecord } from '../models/index.js';
 import { collectModelsStatus } from './models.js';
 import { readCliPreferences, updateCliPreferences } from '../lib/cli-preferences.js';
 import { buildContextEconomicsReport, renderContextEconomics } from './context-economics.js';
-import { createOpenAIResponsesAdapter } from '../providers/index.js';
+import { createProviderAdapter } from '../providers/index.js';
 import { createCapabilityAdapter, runResponsesAgent } from '../agent/index.js';
 import { resolveProviderCredential } from '../lib/provider-credentials.js';
 import { createLocalSession, saveLocalSession, sessionTitleFromInput } from '../lib/local-sessions.js';
