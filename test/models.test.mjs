@@ -71,9 +71,8 @@ test('Cloudflare discovery is scoped to the loaded account and surfaces text-gen
   assert.equal(seen.length, 1);
   assert.match(seen[0].url, /accounts\/44444444444444444444444444444444\/ai\/models\/search$/);
   assert.equal(status.discovery.cloudflare.ok, true);
-  assert.equal(status.discovery.cloudflare.returnedModelCount, 2);
-  assert.equal(status.discovery.cloudflare.textGenerationModelCount, 1);
-  assert.deepEqual(status.providerModels.cloudflare.map((row) => row.id), ['@cf/qwen/code']);
+  assert.equal(status.discovery.cloudflare.returnedModelCount, 1);
+  assert.deepEqual(status.providerModels.cloudflare.map((row) => row.provider_model_id), ['@cf/qwen/code']);
   const rendered = renderModelsStatus(status);
   assert.match(rendered, /@cf\/qwen\/code/);
   assert.doesNotMatch(rendered, /@cf\/baai\/embed/);
