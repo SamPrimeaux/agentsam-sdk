@@ -139,11 +139,12 @@ export function createOpenAIResponsesAdapter(options = {}) {
   }
 
   async function create(params = {}) {
-    const modelRecord = getModelRecord(params.model);
+    const suppliedRecord = params.modelRecord || options.modelRecord || null;
+    const modelRecord = suppliedRecord || getModelRecord(params.model);
     const model = modelRecord?.provider_model_id || clean(params.model);
-    const reasoningEffort = clean(params.reasoningEffort || params.reasoning_effort || 'low');
+    const reasoningEffort = clean(params.reasoningEffort || params.reasoning_effort || 'auto');
     const serviceTier = clean(params.serviceTier || params.service_tier || 'default');
-    const record = assertRuntimeConfig(model, reasoningEffort, serviceTier);
+    const record = assertRuntimeConfig(model, reasoningEffort, serviceTier, modelRecord, providerId);
     const emit = params.emit || defaultEmit;
     const meta = { runId: params.runId, sequence: params.sequence };
     const tools = normalizeTools(params.tools || []);
