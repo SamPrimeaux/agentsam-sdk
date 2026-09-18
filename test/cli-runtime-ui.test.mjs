@@ -19,6 +19,24 @@ test('CLI footer reports unknown context honestly', () => {
   assert.match(text, /cache 2k/);
 });
 
+test('runtime event envelope is the single standalone/platform producer contract', () => {
+  const envelope = normalizeRuntimeEventEnvelope({
+    schema_version: 1,
+    type: 'tool.started',
+    timestamp: '2026-09-18T00:00:00.000Z',
+    run_id: 'run_1',
+    sequence: 3,
+    payload: { capability_id: 'repo.inspect' },
+  });
+  assert.equal(envelope.schema, RUNTIME_EVENT_ENVELOPE_SCHEMA);
+  assert.equal(envelope.schema_version, 1);
+  assert.equal(envelope.type, 'tool.started');
+  assert.equal(envelope.run_id, 'run_1');
+  assert.equal(envelope.sequence, 3);
+  assert.deepEqual(envelope.payload, { capability_id: 'repo.inspect' });
+  assert.throws(() => normalizeRuntimeEventEnvelope({ payload: {} }), /type is required/);
+});
+
 test('runtime presenter turns events into one-line activity and waiting handoff', () => {
   let output = '';
   let now = 1_000;
