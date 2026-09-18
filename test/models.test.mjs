@@ -47,8 +47,9 @@ test('exact hosted model availability is verified against the provider inventory
   });
   assert.equal(status.discovery.openai.ok, true);
   assert.equal(status.discovery.openai.returnedModelCount, 2);
-  assert.deepEqual(status.availableModels.map((row) => row.provider_model_id), ['gpt-6-astra']);
-  assert.equal(status.catalogModels[0].availability, 'available');
+  assert.deepEqual(status.availableModels.map((row) => row.provider_model_id), ['gpt-6-astra', 'some-other-model']);
+  assert.equal(status.availableModels[0].availability_source, 'provider_api');
+  assert.equal(status.availableModels[0].context_window_source, 'sdk_reference');
 });
 
 
