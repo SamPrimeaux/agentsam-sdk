@@ -39,6 +39,19 @@ test('model inventory reports configured API providers without exposing credenti
   assert.doesNotMatch(rendered, /secret-openai|secret-xai|secret-anthropic|secret-cf/);
 });
 
+test('static/reference metadata never invents hosted model availability', async () => {
+  const status = await collectModelsStatus({
+    env: { OPENAI_API_KEY: 'secret-openai', OLLAMA_BASE_URL: 'http://127.0.0.1:11434' },
+    fetchImpl: async () => response({ models: [] }),
+    providerFetchImpl: async () => response({ data: [{ id: 'some-other-model' }] }),
+  });
+
+  assert.deepEqual(status.availableModels.map((row) => row.provider_model_id), ['some-other-model']);
+  const referenceOnly = status.catalogModels.find((row) => row.provider_model_id === 'gpt-6-astra');
+  assert.equal(referenceOnly?.availability, 'unverified');
+  assert.equal(referenceOnly?.availability_source, 'sdk_reference');
+});
+
 test('exact hosted model availability is verified against the provider inventory', async () => {
   const status = await collectModelsStatus({
     env: { OPENAI_API_KEY: 'secret-openai', OLLAMA_BASE_URL: 'http://127.0.0.1:11434' },
