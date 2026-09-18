@@ -40,9 +40,8 @@ export function createCliRuntimePresenter(options = {}) {
   const state = options.state || {};
 
   function handle(event = {}) {
-    const type = String(event.type || '');
-    const payload = event.payload || {};
-    if (!type) return;
+    const envelope = normalizeRuntimeEventEnvelope(event);
+    const { type, payload } = envelope;
 
     if (type === 'usage.snapshot') {
       state.usageSnapshot = payload;
