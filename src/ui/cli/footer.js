@@ -3,8 +3,14 @@ import pc from 'picocolors';
 function count(value) {
   const n = Number(value || 0);
   if (!Number.isFinite(n)) return '0';
-  if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1) + 'm';
-  if (Math.abs(n) >= 1_000) return (n / 1_000).toFixed(n >= 100_000 ? 0 : 1) + 'k';
+  if (Math.abs(n) >= 1_000_000) {
+    const scaled = n / 1_000_000;
+    return (Number.isInteger(scaled) ? String(scaled) : scaled.toFixed(Math.abs(n) >= 10_000_000 ? 0 : 1)) + 'm';
+  }
+  if (Math.abs(n) >= 1_000) {
+    const scaled = n / 1_000;
+    return (Number.isInteger(scaled) ? String(scaled) : scaled.toFixed(Math.abs(n) >= 100_000 ? 0 : 1)) + 'k';
+  }
   return String(Math.round(n));
 }
 
