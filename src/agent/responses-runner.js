@@ -134,12 +134,12 @@ export async function runResponsesAgent(options = {}) {
   const cwd = path.resolve(options.cwd || process.cwd());
   const objective = clean(options.prompt);
   if (!objective) throw new TypeError('prompt is required');
-  const record = getModelRecord(options.model);
+  const record = options.modelRecord || getModelRecord(options.model);
   if (!record) throw new RangeError(`unknown model: ${options.model}`);
-  const reasoningEffort = clean(options.reasoningEffort || 'low');
+  const reasoningEffort = clean(options.reasoningEffort || 'auto');
   const serviceTier = clean(options.serviceTier || 'default');
   const budget = modelBudget(record);
-  const instructionSet = options.instructions == null ? compileAgentInstructions(cwd, { maxChars: budget.maxSystemChars }) : null;
+  const instructionSet = options.instructions == null ? compileAgentInstructions(cwd, { maxChars: budget?.maxSystemChars || 48_000 }) : null;
   const instructions = options.instructions == null ? instructionSet.content : String(options.instructions);
   const toolSurface = buildAgentToolSurface(options.capabilityAdapter, objective, options);
   const emit = options.emit;
