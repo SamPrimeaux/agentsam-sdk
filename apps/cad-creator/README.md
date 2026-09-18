@@ -454,3 +454,80 @@ I especially like the **“AI proposes operations; the design engine owns geomet
 Also, I noticed something useful while reading the prototype: `server.ts` still routes planning and sketch parsing through **`gemini-2.5-flash`** even though the actual AI Studio build that impressed you was 3.7 Flash. That lines up perfectly with the catalog audit we were just doing—this repo is a good candidate to move off hard-coded model names entirely and eventually ask AgentSam's model fleet/router for a `spatial_design` / `vision_design` capability instead. 
 
 If you want, I can also **put this directly into `SamPrimeaux/AgentSamCadCreation` as `README.md` on a branch and open the PR**.
+
+---
+
+## Installable AgentSam app package
+
+CAD Creator is packaged independently from the core SDK as:
+
+```text
+@inneranimalmedia/agentsam-sdk-cad-creator
+```
+
+The package deliberately contains both:
+
+1. a **prebuilt local preview** so someone can install and try the actual UI immediately, and
+2. a **curated editable scaffold** containing the frontend, backend, shared CAD contracts, and deployment manifests.
+
+It deliberately does **not** publish `reference/`, donor ZIPs/snapshots, `node_modules`, local `.wrangler/state`, build caches, or local environment files.
+
+### Try the packaged UI locally
+
+Once published:
+
+```bash
+npx @inneranimalmedia/agentsam-sdk-cad-creator
+```
+
+or after installing it:
+
+```bash
+npm install @inneranimalmedia/agentsam-sdk-cad-creator
+npx agentsam-cad-creator --port 3000
+```
+
+Then open:
+
+```text
+http://127.0.0.1:3000
+```
+
+The normal Design Studio shell loads first. The MuJoCo/robotics workspace remains a separate lazy chunk and is loaded only when the user enters or preloads the Robotics surface.
+
+`GEMINI_API_KEY` is **not required to view and exercise the local UI**. It is required for Gemini-backed planning, image/video, and embodied-reasoning requests.
+
+### Materialize an editable project
+
+```bash
+npx @inneranimalmedia/agentsam-sdk-cad-creator scaffold ./my-cad-app
+cd ./my-cad-app
+npm install
+npm run dev
+```
+
+That gives the user an ordinary self-contained project rather than asking them to develop inside `node_modules`.
+
+From there it is source-ready for a Git repository:
+
+```bash
+git init
+git add .
+git commit -m "Initial AgentSam CAD Creator app"
+```
+
+### Cloudflare status
+
+`backend/worker/index.js` and `backend/wrangler.jsonc` ship with the scaffold. The Worker boundary currently implements health and robotics perception endpoints. The complete Node CAD API/WebSocket backend is **not yet fully Worker-native**, so `npm run cf:dry-run` verifies the existing Worker scaffold but should not be represented as a full production Cloudflare deployment of every CAD feature yet.
+
+The intended progression is:
+
+```text
+npm package
+  → local preview
+  → editable scaffold
+  → Git repo / customization
+  → complete Worker route port
+  → Cloudflare deployment
+```
+
