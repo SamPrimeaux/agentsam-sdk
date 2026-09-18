@@ -331,14 +331,25 @@ export function createOpenAIResponsesAdapter(options = {}) {
     const emit = params.emit || defaultEmit;
     const meta = { runId: params.runId, sequence: params.sequence };
     const previousResponseId = clean(params.previousResponseId || params.providerState?.previous_response_id);
-    const body = {
-      model,
-      ...(previousResponseId ? { previous_response_id: previousResponseId } : {}),
-      ...(params.input != null ? { input: params.input } : {}),
-      ...(clean(params.instructions) ? { instructions: String(params.instructions) } : {}),
-      ...(clean(params.promptCacheKey) ? { prompt_cache_key: clean(params.promptCacheKey) } : {}),
-      ...(params.promptCacheOptions ? { prompt_cache_options: params.promptCacheOptions } : {}),
-    };
+    const xaiHistory = Array.isArray(params.providerState?.compaction_input)
+      ? structuredClone(params.providerState.compaction_input)
+      : [];
+    if (providerId === 'grok' && !xaiHistory.length) {
+      throw new Error('xai_compaction_history_unavailable');
+    }
+    const body = providerId === 'grok'
+      ? {
+          model,
+          input: xaiHistory,
+        }
+      : {
+          model,
+          ...(previousResponseId ? { previous_response_id: previousResponseId } : {}),
+          ...(params.input != null ? { input: params.input } : {}),
+          ...(clean(params.instructions) ? { instructions: String(params.instructions) } : {}),
+          ...(clean(params.promptCacheKey) ? { prompt_cache_key: clean(params.promptCacheKey) } : {}),
+          ...(params.promptCacheOptions ? { prompt_cache_options: params.promptCacheOptions } : {}),
+        };
 
     const compactStartedAt = Date.now();
     emitEvent(emit, 'context.compaction.started', {
