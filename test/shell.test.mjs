@@ -22,12 +22,15 @@ test('interactive prompt derives username and cwd instead of hardcoding Agent Sa
   assert.equal(renderShellPrompt('/tmp/demo', env), 'alice /tmp/demo > ');
 });
 
-test('shell catalog only advertises implemented core controls', () => {
+test('shell startup stays quiet and points to the picker', () => {
   const catalog = renderShellCatalog();
-  for (const command of ['/model', '/reasoning', '/fast', '/flex', '/standard', '/context', '/cf', '/diff', '/clear', '/exit']) {
+  for (const command of ['/model', '/usage', '/help', '/exit']) {
     assert.match(catalog, new RegExp(command.replace('/', '\\/')));
   }
-  assert.match(catalog, /scrollable command picker/);
+  assert.match(catalog, /command picker/);
+  assert.match(catalog, /Type normally to work with the selected model/);
+  assert.doesNotMatch(catalog, /Slash commands \(/);
+  assert.doesNotMatch(catalog, /\/reasoning\s+Set reasoning/);
 });
 
 test('dispatch handles help, menu fallback, pwd, cd, and exit without falling through to host shell', async () => {
