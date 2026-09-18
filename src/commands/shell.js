@@ -307,20 +307,28 @@ function safeToolInput(value, depth = 0) {
 }
 
 async function approveModelRequest(preflight, state) {
+  const projected = Number(preflight.projected_max_call_cost_usd);
+  const threshold = Number(process.env.AGENTSAM_CONFIRM_CALL_COST_USD || 0);
+  if (!(Number.isFinite(projected) && projected >= 0)) return true;
+  if (!(Number.isFinite(threshold) && threshold > 0) || projected <= threshold) return true;
+
   const approvedCeiling = Number(state.session?.approved_projected_call_cost_usd || 0);
-  if (approvedCeiling > 0 && preflight.projected_max_call_cost_usd <= approvedCeiling) return true;
+  if (approvedCeiling > 0 && projected <= approvedCeiling) return true;
   if (!state.interactive) return false;
+
+  state.activity?.clear?.();
   writeLine(state.write, '');
-  writeLine(state.write, '  Model request');
-  writeLine(state.write, `  model       ${preflight.model}`);
-  writeLine(state.write, `  reasoning   ${preflight.reasoning_effort}`);
-  writeLine(state.write, `  processing  ${preflight.service_tier}`);
-  writeLine(state.write, `  context     ~${formatCount(preflight.estimated_input_tokens)} input tokens`);
-  writeLine(state.write, `  max call    ${formatUsd(preflight.projected_max_call_cost_usd)} conservative ceiling`);
-  if (Number.isFinite(preflight.tokens_until_pricing_threshold)) writeLine(state.write, `  price cliff ${formatCount(preflight.tokens_until_pricing_threshold)} tokens headroom`);
-  const approved = await confirm({ message: 'Send this request?', initialValue: true });
+  writeLine(state.write, '  ◆ Model cost approval');
+  writeLine(state.write, `    model       ${preflight.model}`);
+  writeLine(state.write, `    reasoning   ${preflight.reasoning_effort}`);
+  writeLine(state.write, `    processing  ${preflight.service_tier}`);
+  writeLine(state.write, `    context     ~${formatCount(preflight.estimated_input_tokens)} input tokens`);
+  writeLine(state.write, `    max call    ${formatUsd(projected)} conservative ceiling`);
+  if (Number.isFinite(preflight.tokens_until_pricing_threshold)) writeLine(state.write, `    headroom    ${formatCount(preflight.tokens_until_pricing_threshold)} tokens`);
+  const approved = await confirm({ message: 'Allow this call?', initialValue: false });
   if (isCancel(approved) || approved !== true) return false;
-  persistSession(state, { approved_projected_call_cost_usd: Math.max(approvedCeiling, preflight.projected_max_call_cost_usd) });
+  persistSession(state, { approved_projected_call_cost_usd: Math.max(approvedCeiling, projected) });
+  state.activity?.start?.('Working');
   return true;
 }
 
