@@ -84,6 +84,7 @@
     "test",
     "python",
     "protocol",
+    "migrations",
     "skills",
     "services/knowledge/package.json",
     "services/knowledge/package-lock.json",
