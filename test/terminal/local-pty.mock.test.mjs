@@ -1,8 +1,13 @@
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
+import { pathToFileURL } from 'node:url';
 import {
   attachLocalPtySession,
+  ensureNodePtySpawnHelperExecutable,
   startLocalPtyServer,
 } from '../../src/local-pty/server.js';
 
