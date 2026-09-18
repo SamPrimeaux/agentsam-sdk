@@ -114,16 +114,17 @@ export async function startLocalPtyServer(opts = {}) {
   });
 
   await new Promise((resolve) => {
-    httpServer.listen(port, host, resolve);
+    httpServer.listen(requestedPort, host, resolve);
   });
+  const boundPort = Number(httpServer.address()?.port || requestedPort);
 
   return {
-    port,
+    port: boundPort,
     host,
     cwd,
     shell,
-    url: `ws://${host}:${port}`,
-    healthUrl: `http://${host}:${port}/health`,
+    url: `ws://${host}:${boundPort}`,
+    healthUrl: `http://${host}:${boundPort}/health`,
     close: () =>
       new Promise((resolve, reject) => {
         wss.close(() => {
