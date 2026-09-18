@@ -362,22 +362,33 @@ async function approveToolExecution(request, state) {
 }
 
 async function runInteractiveModelTurn(prompt, state) {
-  const { preferences, model } = selectedModel(state.cwd);
-  if (model.provider !== 'openai') throw new Error(`interactive_provider_not_implemented:${model.provider}`);
-  const credential = resolveProviderCredential(model.provider, { home: state.home });
-  if (!credential.configured) throw new Error(`provider_credential_unavailable:${model.provider}:${credential.error || credential.env || 'not_configured'}`);
-
-  const activity = createRuntimeActivity({ write: state.write, phase: 'thinking', interactive: state.interactive });
-  const provider = createOpenAIResponsesAdapter({ apiKey: credential.value });
+  const resolved = await resolveModelForTurn(state.cwd, state);
+  const { preferences, model, credential } = resolved;
+  const provider = createProviderAdapter({
+    modelRecord: model,
+    credential,
+    endpoint: model.provider === 'ollama' ? process.env.OLLAMA_BASE_URL : undefined,
+    fetchImpl: state.providerFetchImpl,
+  });
   const capabilityAdapter = createCapabilityAdapter();
+
   const samePolicy = state.session
     && state.session.model_key === model.model_key
     && state.session.reasoning_effort === preferences.reasoningEffort
     && state.session.requested_service_tier === preferences.serviceTier;
-  const previousResponseId = samePolicy ? state.session?.provider_state?.previous_response_id : null;
+  const previousProviderState = samePolicy ? state.session?.provider_state : null;
   const previousUsageSnapshot = samePolicy ? state.session?.usage_snapshot : null;
 
-  activity.start('thinking');
+  const activity = createInlineActivity({
+    write: state.write,
+    interactive: state.interactive,
+    label: `Thinking · ${model.provider_model_id}`,
+  });
+  state.activity = activity;
+  const presenter = createCliRuntimePresenter({ activity, write: state.write, state });
+  const startedAt = Date.now();
+  activity.start(`Thinking · ${model.provider_model_id}`);
+
   let result;
   try {
     result = await runResponsesAgent({
@@ -386,9 +397,10 @@ async function runInteractiveModelTurn(prompt, state) {
       cwd: state.cwd,
       prompt,
       model: model.model_key,
+      modelRecord: model,
       reasoningEffort: preferences.reasoningEffort,
       serviceTier: preferences.serviceTier,
-      previousResponseId,
+      previousProviderState,
       previousUsageSnapshot,
       cumulativeUsage: state.session?.cumulative_usage || null,
       promptCacheKey: state.session?.id || undefined,
@@ -396,19 +408,28 @@ async function runInteractiveModelTurn(prompt, state) {
       beforeRequest: (preflight) => approveModelRequest(preflight, state),
       beforeTool: (request) => approveToolExecution(request, state),
       emit(event) {
+        presenter.handle(event);
         if (event?.type === 'usage.snapshot') state.usageSnapshot = event.payload;
       },
     });
   } catch (error) {
-    activity.fail('failed');
+    activity.fail('Failed');
+    state.activity = null;
     throw error;
   }
-  activity.succeed('done');
+
+  activity.succeed(result.tool_receipts?.length ? `Done · ${result.tool_receipts.length} tool call${result.tool_receipts.length === 1 ? '' : 's'}` : 'Done');
+  state.activity = null;
+
+  const compacted = presenter.compactionReceipt();
+  if (compacted) writeLine(state.write, compacted);
+
   if (result.output_text) {
     writeLine(state.write, '');
     writeLine(state.write, result.output_text);
     writeLine(state.write, '');
   }
+
   state.usageSnapshot = result.usage_snapshot;
   if (state.session) {
     persistSession(state, {
@@ -418,7 +439,7 @@ async function runInteractiveModelTurn(prompt, state) {
       reasoning_effort: result.reasoning_effort,
       requested_service_tier: result.requested_service_tier,
       actual_service_tier: result.actual_service_tier,
-      provider_state: { provider: model.provider, previous_response_id: result.response_id },
+      provider_state: { provider: model.provider, ...(result.provider_state || {}) },
       usage_snapshot: result.usage_snapshot,
       cumulative_usage: result.cumulative_usage,
       total_cost_usd: Number(state.session.total_cost_usd || 0) + Number(result.total_cost_usd || 0),
@@ -428,6 +449,14 @@ async function runInteractiveModelTurn(prompt, state) {
       last_error: null,
     });
   }
+
+  writeLine(state.write, renderCliFooter({
+    model: result.model || model.provider_model_id,
+    usageSnapshot: result.usage_snapshot,
+    tier: result.actual_service_tier,
+    elapsedMs: Date.now() - startedAt,
+  }));
+  writeLine(state.write, '');
   return result;
 }
 
