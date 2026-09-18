@@ -104,6 +104,7 @@ function boundedToolOutput(value, callId, maxChars) {
 }
 
 function toolResultCharBudget(activeTokens, budget) {
+  if (!budget) return 48_000;
   if (!Number.isFinite(activeTokens) || activeTokens < 0) return budget.maxToolResultChars;
   const reserveTokens = 4_000;
   const headroomTokens = Math.max(256, budget.maxNormalInputTokens - Math.ceil(activeTokens) - reserveTokens);
@@ -112,7 +113,8 @@ function toolResultCharBudget(activeTokens, budget) {
 
 function projectedInputTokens({ instructions, input, toolSurface, priorActiveTokens, budget }) {
   const inputChars = typeof input === 'string' ? input.length : JSON.stringify(input ?? '').length;
-  const newTokens = estimateContextTokens(String(instructions || '').length + inputChars + toolSurface.receipt.hydrated_schema_chars, budget.charsPerToken);
+  const charsPerToken = budget?.charsPerToken || 4;
+  const newTokens = estimateContextTokens(String(instructions || '').length + inputChars + toolSurface.receipt.hydrated_schema_chars, charsPerToken);
   return Math.max(newTokens, Number.isFinite(priorActiveTokens) ? Math.ceil(priorActiveTokens) + newTokens : newTokens);
 }
 
