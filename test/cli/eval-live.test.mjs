@@ -180,3 +180,40 @@ test('finishLiveEvalRun preserves active run state and receipts if remote persis
   const clearedStatus = getLiveEvalStatus({ home });
   assert.equal(clearedStatus.active, false, 'Forced finish clears active run');
 });
+
+test('finishLiveEvalRun reuses the configured inneranimalmedia MCP bearer for remote persistence', { concurrency: false }, async () => {
+  const home = tempHome();
+  const mcpDir = path.join(home, '.agentsam', 'mcp');
+  fs.mkdirSync(mcpDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(mcpDir, 'inneranimalmedia.json'),
+    JSON.stringify({ auth: { type: 'bearer', token: 'fixture-eval-token' } }),
+  );
+
+  startLiveEvalRun({ case: 'authenticated-remote-eval' }, { home });
+
+  const originalFetch = globalThis.fetch;
+  let authorization = null;
+  try {
+    globalThis.fetch = async (_url, init = {}) => {
+      authorization = new Headers(init.headers).get('Authorization');
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    };
+
+    const result = await finishLiveEvalRun({
+      home,
+      remote: true,
+      evalEndpoint: 'https://example.test/api/eval/record',
+      wranglerFallback: false,
+    });
+
+    assert.equal(authorization, 'Bearer fixture-eval-token');
+    assert.equal(result.summary.d1_executed, true);
+    assert.equal(result.summary.persistence_method, 'http_endpoint');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
