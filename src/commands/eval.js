@@ -26,6 +26,12 @@ function parse(argv) {
     suite: '',
     case: '',
     gate: '',
+    tenant: '',
+    workspace: '',
+    user: '',
+    database: '',
+    endpoint: '',
+    force: false,
     remote: false,
     json: false,
     list: false,
@@ -44,6 +50,12 @@ function parse(argv) {
     else if (arg === '--suite') out.suite = argv[++i] || '';
     else if (arg === '--case') out.case = argv[++i] || '';
     else if (arg === '--gate') out.gate = argv[++i] || '';
+    else if (arg === '--tenant') out.tenant = argv[++i] || '';
+    else if (arg === '--workspace') out.workspace = argv[++i] || '';
+    else if (arg === '--user') out.user = argv[++i] || '';
+    else if (arg === '--database' || arg === '--db') out.database = argv[++i] || '';
+    else if (arg === '--endpoint') out.endpoint = argv[++i] || '';
+    else if (arg === '--force') out.force = true;
     else if (arg === '--remote') out.remote = true;
     else if (arg === '--json') out.json = true;
     else if (arg === '--list') out.list = true;
@@ -125,6 +137,10 @@ export async function runEval(argv = [], options = {}) {
           provider: args.provider,
           client: args.client,
           reasoning: args.reasoning,
+          tenant: args.tenant,
+          workspace: args.workspace,
+          user: args.user,
+          database: args.database,
         },
         options
       );
@@ -137,6 +153,7 @@ export async function runEval(argv = [], options = {}) {
       write(`\n  ✓ Started live eval run: ${run.run_id}\n`);
       write(`      Suite:      ${run.suite_id}\n`);
       write(`      Case:       ${run.case_id}\n`);
+      write(`      Tenant:     ${run.tenant_id}\n`);
       write(`      Model:      ${run.model} (${run.reasoning} reasoning)\n`);
       write(`      Client:     ${run.client} (${run.provider})\n`);
       write(`      Base Git:   ${run.base_commit.slice(0, 7) || 'clean'} on ${run.branch || 'main'}\n`);
@@ -159,6 +176,7 @@ export async function runEval(argv = [], options = {}) {
       const elapsedSec = (status.elapsed_ms / 1000).toFixed(1);
       write(`\n  Live Eval In Progress · ${status.run_id}\n`);
       write(`      Case:       ${status.case_id} (${status.suite_id})\n`);
+      write(`      Tenant:     ${status.tenant_id || 'default'}\n`);
       write(`      Model:      ${status.model} [${status.client}]\n`);
       write(`      Elapsed:    ${elapsedSec}s\n`);
       write(`      Tool calls: ${status.receipts_summary?.tool_call_count || 0} (${status.receipts_summary?.mcp_call_count || 0} MCP)\n\n`);
@@ -170,6 +188,12 @@ export async function runEval(argv = [], options = {}) {
         ...options,
         gate: args.gate,
         remote: args.remote,
+        tenant: args.tenant,
+        workspace: args.workspace,
+        user: args.user,
+        database: args.database,
+        evalEndpoint: args.endpoint,
+        force: args.force,
       });
 
       if (args.json) {
@@ -184,7 +208,9 @@ export async function runEval(argv = [], options = {}) {
       write(`  ────────────────────────────────────────────────────────────\n`);
       write(`  Model:             ${s.model} (${s.reasoning || 'high'})\n`);
       write(`  Case:              ${s.case_id} (${s.suite_id})\n`);
+      write(`  Tenant:            ${s.tenant_id}\n`);
       write(`  Run ID:            ${result.evalRunRow.id}\n`);
+      write(`  Observation ID:    ${result.modelObservationRow?.id || 'N/A'}\n`);
       write(`  Elapsed:           ${elapsedMin}m (${(s.elapsed_ms / 1000).toFixed(1)}s)\n`);
       write(`  Files changed:     ${s.files_changed} (+${s.insertions} / -${s.deletions})\n`);
       write(`  Tool calls:        ${s.tool_call_count} total\n`);
@@ -195,10 +221,14 @@ export async function runEval(argv = [], options = {}) {
       write(`    • Retries:       ${s.failure_count}\n`);
       write(`  Gate status:       ${s.gate_status}\n`);
       write(`  Commit:            ${s.head_commit?.slice(0, 7) || 'N/A'}\n`);
+      write(`  Local Archive:     ${result.local_file}\n`);
       if (s.d1_executed) {
-        write(`  D1 Record:         ✓ Recorded to inneranimalmedia-business\n`);
+        write(`  D1 Record:         ✓ Recorded to ${s.tenant_id} (runs & observations via ${s.persistence_method || 'remote'})\n`);
       } else if (s.d1_error) {
-        write(`  D1 Record:         ⚠ Error: ${s.d1_error}\n`);
+        write(`  D1 Record:         ⚠ Remote persistence failed: ${s.d1_error}\n`);
+        if (s.state_preserved) {
+          write(`  Status:            Active run & telemetry preserved. Retry with --remote or pass --force\n`);
+        }
       } else {
         write(`  D1 Record:         ○ Local only (use --remote to push)\n`);
       }

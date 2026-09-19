@@ -5,6 +5,12 @@ import crypto from 'node:crypto';
 import { execSync } from 'node:child_process';
 import { getSessionToolReceipts, clearSessionToolReceipts, summarizeToolReceipts } from '../mcp/telemetry.js';
 
+export const DEFAULT_EVAL_RECORD_ENDPOINT = 'https://mcp.inneranimalmedia.com/api/eval/record';
+export const DEFAULT_D1_DATABASE = 'inneranimalmedia-business';
+export const DEFAULT_TENANT_ID = 'iam';
+export const DEFAULT_WORKSPACE_ID = 'agentsam-sdk';
+export const DEFAULT_USER_ID = 'samprimeaux';
+
 function clean(value) {
   return value == null ? '' : String(value).trim();
 }
@@ -28,6 +34,11 @@ function safeGit(cmd, cwd = process.cwd()) {
   }
 }
 
+function escapeSqlString(str) {
+  if (str == null) return 'NULL';
+  return `'${String(str).replace(/'/g, "''")}'`;
+}
+
 export function startLiveEvalRun(config = {}, options = {}) {
   const filePath = getEvalStatePath(options);
   if (fs.existsSync(filePath)) {
@@ -45,6 +56,11 @@ export function startLiveEvalRun(config = {}, options = {}) {
   const client = clean(config.client) || 'cursor';
   const reasoning = clean(config.reasoning) || 'high';
 
+  const tenantId = clean(config.tenant || config.tenantId) || clean(options.tenantId) || clean(process.env.AGENTSAM_TENANT_ID) || DEFAULT_TENANT_ID;
+  const workspaceId = clean(config.workspace || config.workspaceId) || clean(options.workspaceId) || clean(process.env.AGENTSAM_WORKSPACE_ID) || DEFAULT_WORKSPACE_ID;
+  const userId = clean(config.user || config.userId) || clean(options.userId) || clean(process.env.AGENTSAM_USER_ID) || clean(process.env.USER) || DEFAULT_USER_ID;
+  const database = clean(config.database || config.db) || clean(options.database || options.db) || clean(process.env.AGENTSAM_D1_DATABASE) || DEFAULT_D1_DATABASE;
+
   const baseCommit = safeGit('git rev-parse HEAD', options.cwd);
   const branch = safeGit('git branch --show-current', options.cwd);
   const now = new Date().toISOString();
@@ -54,7 +70,10 @@ export function startLiveEvalRun(config = {}, options = {}) {
     run_id: runId,
     suite_id: suiteId,
     case_id: caseId,
-    tenant_id: 'inneranimalmedia',
+    tenant_id: tenantId,
+    workspace_id: workspaceId,
+    user_id: userId,
+    database,
     model,
     provider,
     client,
@@ -131,12 +150,17 @@ export async function finishLiveEvalRun(options = {}) {
   const passed = options.gate ? options.gate.toUpperCase() === 'PASS' : (options.passed !== false);
   const gateStatus = passed ? 'PASS' : 'FAIL';
 
-  // Construct D1 eval run record
+  const tenantId = clean(options.tenantId || options.tenant) || state.tenant_id || DEFAULT_TENANT_ID;
+  const workspaceId = clean(options.workspaceId || options.workspace) || state.workspace_id || DEFAULT_WORKSPACE_ID;
+  const userId = clean(options.userId || options.user) || state.user_id || DEFAULT_USER_ID;
+  const targetDb = clean(options.database || options.db) || state.database || DEFAULT_D1_DATABASE;
+
+  // 1. Construct canonical D1 eval run record (agentsam_eval_runs)
   const evalRunRow = {
     id: state.run_id,
     suite_id: state.suite_id,
     case_id: state.case_id,
-    tenant_id: state.tenant_id || 'inneranimalmedia',
+    tenant_id: tenantId,
     model_key: state.model,
     provider: state.provider,
     input_tokens: Number(options.inputTokens || 0),
@@ -152,70 +176,253 @@ export async function finishLiveEvalRun(options = {}) {
     retry_count: toolSummary.failure_count,
   };
 
-  // Construct D1 model eval observation record
+  // 2. Construct canonical D1 model eval observation record (agentsam_model_eval_observations)
   const observationId = `obs_${state.run_id}`;
+  const totalTokens = evalRunRow.input_tokens + evalRunRow.output_tokens;
+  const fileLocations = {
+    branch: state.branch || null,
+    base_sha: state.base_commit || null,
+    commit_sha: headCommit || null,
+    files_changed: filesChanged,
+    insertions,
+    deletions,
+    gate_status: gateStatus,
+    tool_summary: toolSummary,
+  };
+
   const modelObservationRow = {
     id: observationId,
     run_id: state.run_id,
     created_at: now,
-    tenant_id: state.tenant_id || 'inneranimalmedia',
+    tenant_id: tenantId,
+    workspace_id: workspaceId,
+    user_id: userId,
     provider: state.provider,
     model_key: state.model,
     task_key: state.case_id,
+    profile_slug: state.reasoning ? `reasoning-${state.reasoning}` : 'engineering-high',
+    route_key: state.branch || null,
     passed: passed ? 1 : 0,
     status: 'completed',
+    failure_class: passed ? null : (options.failureClass || 'verification_failed'),
+    error_message: passed ? null : (options.errorMessage || null),
     latency_ms: durationMs,
     input_tokens: evalRunRow.input_tokens,
     output_tokens: evalRunRow.output_tokens,
-    total_tokens: evalRunRow.input_tokens + evalRunRow.output_tokens,
+    total_tokens: totalTokens,
     estimated_cost_usd: evalRunRow.cost_usd,
+    response_id: headCommit ? `commit_${headCommit.slice(0, 7)}` : null,
+    output_chars: Number(options.outputChars || 0),
+    output_sha256: headCommit ? headCommit.slice(0, 7) : null,
     expected_markers_found: passed ? 1 : 0,
     expected_markers_total: 1,
+    artifact_path: options.cwd || process.cwd(),
+    raw_response_path: state.branch ? `origin/${state.branch}` : null,
+    file_locations_json: JSON.stringify(fileLocations),
+    updated_at: Math.floor(Date.now() / 1000),
   };
 
-  // If remote D1 write requested, execute or generate SQL
-  let d1Sql = `INSERT INTO agentsam_eval_runs (id, suite_id, case_id, tenant_id, model_key, provider, latency_ms, passed, tool_calls_attempted, tool_calls_succeeded, retry_count, run_at) VALUES ('${evalRunRow.id}', '${evalRunRow.suite_id}', '${evalRunRow.case_id}', '${evalRunRow.tenant_id}', '${evalRunRow.model_key}', '${evalRunRow.provider}', ${evalRunRow.latency_ms}, ${evalRunRow.passed}, ${evalRunRow.tool_calls_attempted}, ${evalRunRow.tool_calls_succeeded}, ${evalRunRow.retry_count}, '${evalRunRow.run_at}');`;
+  // 3. Build SQL statements for both tables
+  const sqlSuite = `INSERT OR IGNORE INTO agentsam_eval_suites (id, tenant_id, name, created_at, updated_at) VALUES (${escapeSqlString(evalRunRow.suite_id)}, ${escapeSqlString(evalRunRow.tenant_id)}, ${escapeSqlString(evalRunRow.suite_id)}, ${escapeSqlString(now)}, ${escapeSqlString(now)});`;
+  const sqlCase = `INSERT OR IGNORE INTO agentsam_eval_cases (id, suite_id, tenant_id, input_prompt, created_at) VALUES (${escapeSqlString(evalRunRow.case_id)}, ${escapeSqlString(evalRunRow.suite_id)}, ${escapeSqlString(evalRunRow.tenant_id)}, ${escapeSqlString(evalRunRow.case_id)}, ${escapeSqlString(now)});`;
 
+  const sqlRuns = `INSERT OR REPLACE INTO agentsam_eval_runs (
+    id, suite_id, case_id, tenant_id, model_key, provider,
+    latency_ms, cost_usd, input_tokens, output_tokens,
+    score_quality, score_overall, passed,
+    tool_calls_attempted, tool_calls_succeeded, retry_count, run_at
+  ) VALUES (
+    ${escapeSqlString(evalRunRow.id)},
+    ${escapeSqlString(evalRunRow.suite_id)},
+    ${escapeSqlString(evalRunRow.case_id)},
+    ${escapeSqlString(evalRunRow.tenant_id)},
+    ${escapeSqlString(evalRunRow.model_key)},
+    ${escapeSqlString(evalRunRow.provider)},
+    ${evalRunRow.latency_ms},
+    ${evalRunRow.cost_usd},
+    ${evalRunRow.input_tokens},
+    ${evalRunRow.output_tokens},
+    ${evalRunRow.score_quality},
+    ${evalRunRow.score_overall},
+    ${evalRunRow.passed},
+    ${evalRunRow.tool_calls_attempted},
+    ${evalRunRow.tool_calls_succeeded},
+    ${evalRunRow.retry_count},
+    ${escapeSqlString(evalRunRow.run_at)}
+  );`;
+
+  const sqlObs = `INSERT OR REPLACE INTO agentsam_model_eval_observations (
+    id, run_id, created_at, tenant_id, workspace_id, user_id,
+    provider, model_key, task_key, profile_slug, route_key,
+    passed, status, failure_class, error_message, latency_ms,
+    input_tokens, output_tokens, total_tokens, estimated_cost_usd,
+    response_id, output_chars, output_sha256,
+    expected_markers_found, expected_markers_total,
+    artifact_path, raw_response_path, file_locations_json, updated_at
+  ) VALUES (
+    ${escapeSqlString(modelObservationRow.id)},
+    ${escapeSqlString(modelObservationRow.run_id)},
+    ${escapeSqlString(modelObservationRow.created_at)},
+    ${escapeSqlString(modelObservationRow.tenant_id)},
+    ${escapeSqlString(modelObservationRow.workspace_id)},
+    ${escapeSqlString(modelObservationRow.user_id)},
+    ${escapeSqlString(modelObservationRow.provider)},
+    ${escapeSqlString(modelObservationRow.model_key)},
+    ${escapeSqlString(modelObservationRow.task_key)},
+    ${escapeSqlString(modelObservationRow.profile_slug)},
+    ${escapeSqlString(modelObservationRow.route_key)},
+    ${modelObservationRow.passed},
+    ${escapeSqlString(modelObservationRow.status)},
+    ${escapeSqlString(modelObservationRow.failure_class)},
+    ${escapeSqlString(modelObservationRow.error_message)},
+    ${modelObservationRow.latency_ms},
+    ${modelObservationRow.input_tokens},
+    ${modelObservationRow.output_tokens},
+    ${modelObservationRow.total_tokens},
+    ${modelObservationRow.estimated_cost_usd},
+    ${escapeSqlString(modelObservationRow.response_id)},
+    ${modelObservationRow.output_chars},
+    ${escapeSqlString(modelObservationRow.output_sha256)},
+    ${modelObservationRow.expected_markers_found},
+    ${modelObservationRow.expected_markers_total},
+    ${escapeSqlString(modelObservationRow.artifact_path)},
+    ${escapeSqlString(modelObservationRow.raw_response_path)},
+    ${escapeSqlString(modelObservationRow.file_locations_json)},
+    ${modelObservationRow.updated_at}
+  );`;
+
+  const combinedSql = `${sqlSuite}\n\n${sqlCase}\n\n${sqlRuns}\n\n${sqlObs}\n`;
+
+  const summary = {
+    model: state.model,
+    provider: state.provider,
+    client: state.client,
+    reasoning: state.reasoning,
+    suite_id: state.suite_id,
+    case_id: state.case_id,
+    tenant_id: tenantId,
+    workspace_id: workspaceId,
+    database: targetDb,
+    elapsed_ms: durationMs,
+    files_changed: filesChanged,
+    insertions,
+    deletions,
+    head_commit: headCommit,
+    gate_status: gateStatus,
+    ...toolSummary,
+    d1_sql: combinedSql,
+  };
+
+  // 4. Always archive the run evidence locally before anything else
+  const runsDir = path.join(homeDirectory(options), '.agentsam', 'eval', 'runs');
+  fs.mkdirSync(runsDir, { recursive: true });
+  const localRunFile = path.join(runsDir, `${state.run_id}.json`);
+  const runPayload = {
+    schema_version: 'agentsam.eval.run-record.v1',
+    evalRunRow,
+    modelObservationRow,
+    summary,
+    receipts,
+  };
+  fs.writeFileSync(localRunFile, JSON.stringify(runPayload, null, 2) + '\n', 'utf8');
+
+  // 5. Remote persistence execution (if requested)
   let d1Executed = false;
   let d1Error = null;
+  let persistenceMethod = null;
 
   if (options.remote) {
+    const endpoint = clean(options.evalEndpoint) || clean(process.env.AGENTSAM_EVAL_ENDPOINT) || DEFAULT_EVAL_RECORD_ENDPOINT;
+
+    // Primary route: structured HTTP POST (credential-boundary compliant, no local raw D1 shellout)
     try {
-      execSync(`npx wrangler d1 execute inneranimalmedia-business --remote --command="${d1Sql.replace(/"/g, '\\"')}"`, {
-        cwd: options.cwd || process.cwd(),
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'pipe'],
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), Number(options.timeoutMs || 8000));
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
+        },
+        body: JSON.stringify({ evalRunRow, modelObservationRow }),
       });
-      d1Executed = true;
-    } catch (err) {
-      d1Error = err.message;
+      clearTimeout(timer);
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.ok) {
+          d1Executed = true;
+          persistenceMethod = 'http_endpoint';
+        } else {
+          throw new Error(data?.error || `HTTP ${res.status}`);
+        }
+      } else {
+        throw new Error(`HTTP ${res.status}`);
+      }
+    } catch (httpErr) {
+      // Secondary fallback if wrangler is explicitly available/requested
+      if (options.wranglerFallback !== false) {
+        let tmpFile = null;
+        try {
+          tmpFile = path.join(os.tmpdir(), `agentsam_eval_${state.run_id}_${Date.now()}.sql`);
+          fs.writeFileSync(tmpFile, combinedSql, 'utf8');
+          execSync(`npx wrangler d1 execute ${targetDb} --remote --file="${tmpFile}"`, {
+            cwd: options.cwd || process.cwd(),
+            encoding: 'utf8',
+            stdio: ['ignore', 'pipe', 'pipe'],
+          });
+          d1Executed = true;
+          persistenceMethod = 'wrangler_file';
+        } catch (wranglerErr) {
+          d1Error = `HTTP (${httpErr.message}) & Wrangler (${wranglerErr.message})`;
+        } finally {
+          if (tmpFile && fs.existsSync(tmpFile)) {
+            try { fs.unlinkSync(tmpFile); } catch {}
+          }
+        }
+      } else {
+        d1Error = httpErr.message;
+      }
     }
   }
 
-  // Clear state and telemetry
-  fs.unlinkSync(filePath);
+  // 6. Evidence preservation check:
+  // If remote persistence was requested and failed, DO NOT erase active run or tool receipts unless --force
+  if (options.remote && !d1Executed && !options.force) {
+    return {
+      evalRunRow,
+      modelObservationRow,
+      persisted_locally: true,
+      local_file: localRunFile,
+      summary: {
+        ...summary,
+        d1_executed: false,
+        d1_error: d1Error,
+        persisted_remote: false,
+        state_preserved: true,
+      },
+      error: `remote_persistence_failed: ${d1Error}. Active run state preserved at ${filePath}. Retry with 'agentsam eval live finish --remote' or pass '--force' to finalize locally.`,
+    };
+  }
+
+  // 7. Clear active run and session receipts only upon successful persistence or local completion
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+  }
   clearSessionToolReceipts(options);
 
   return {
     evalRunRow,
     modelObservationRow,
+    persisted_locally: true,
+    local_file: localRunFile,
     summary: {
-      model: state.model,
-      provider: state.provider,
-      client: state.client,
-      reasoning: state.reasoning,
-      suite_id: state.suite_id,
-      case_id: state.case_id,
-      elapsed_ms: durationMs,
-      files_changed: filesChanged,
-      insertions,
-      deletions,
-      head_commit: headCommit,
-      gate_status: gateStatus,
-      ...toolSummary,
+      ...summary,
       d1_executed: d1Executed,
       d1_error: d1Error,
-      d1_sql: d1Sql,
+      persistence_method: persistenceMethod,
+      persisted_remote: d1Executed,
     },
   };
 }
