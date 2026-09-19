@@ -23,6 +23,7 @@ import { Route as ApiCloudflareRouteImport } from './routes/api/cloudflare'
 import { Route as ApiGithubRouteImport } from './routes/api/github'
 import { Route as AppTrailsIndexRouteImport } from './routes/_app/trails/index'
 import { Route as AppTrailsTrailIdRouteImport } from './routes/_app/trails/$trailId'
+import { Route as ApiLlmInventoryRouteImport } from './routes/api/llm.inventory'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -93,6 +94,11 @@ const AppTrailsTrailIdRoute = AppTrailsTrailIdRouteImport.update({
   path: '/trails/$trailId',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiLlmInventoryRoute = ApiLlmInventoryRouteImport.update({
+  id: '/api/llm/inventory',
+  path: '/api/llm/inventory',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -107,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
   '/trails/$trailId': typeof AppTrailsTrailIdRoute
+  '/api/llm/inventory': typeof ApiLlmInventoryRoute
   '/trails/': typeof AppTrailsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
   '/trails/$trailId': typeof AppTrailsTrailIdRoute
+  '/api/llm/inventory': typeof ApiLlmInventoryRoute
   '/trails': typeof AppTrailsIndexRoute
 }
 export interface FileRoutesById {
@@ -139,6 +147,7 @@ export interface FileRoutesById {
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
   '/_app/trails/$trailId': typeof AppTrailsTrailIdRoute
+  '/api/llm/inventory': typeof ApiLlmInventoryRoute
   '/_app/trails/': typeof AppTrailsIndexRoute
 }
 export interface FileRouteTypes {
@@ -156,6 +165,7 @@ export interface FileRouteTypes {
     | '/api/cloudflare'
     | '/api/github'
     | '/trails/$trailId'
+    | '/api/llm/inventory'
     | '/trails/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -171,6 +181,7 @@ export interface FileRouteTypes {
     | '/api/cloudflare'
     | '/api/github'
     | '/trails/$trailId'
+    | '/api/llm/inventory'
     | '/trails'
   id:
     | '__root__'
@@ -187,6 +198,7 @@ export interface FileRouteTypes {
     | '/api/cloudflare'
     | '/api/github'
     | '/_app/trails/$trailId'
+    | '/api/llm/inventory'
     | '/_app/trails/'
   fileRoutesById: FileRoutesById
 }
@@ -196,6 +208,7 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute
   ApiCloudflareRoute: typeof ApiCloudflareRoute
   ApiGithubRoute: typeof ApiGithubRoute
+  ApiLlmInventoryRoute: typeof ApiLlmInventoryRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -298,6 +311,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTrailsTrailIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/llm/inventory': {
+      id: '/api/llm/inventory'
+      path: '/api/llm/inventory'
+      fullPath: '/api/llm/inventory'
+      preLoaderRoute: typeof ApiLlmInventoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -333,6 +353,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   ApiCloudflareRoute: ApiCloudflareRoute,
   ApiGithubRoute: ApiGithubRoute,
+  ApiLlmInventoryRoute: ApiLlmInventoryRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
