@@ -354,7 +354,7 @@ export async function finishLiveEvalRun(options = {}) {
         signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
-          ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
+          ...(bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {}),
         },
         body: JSON.stringify({ evalRunRow, modelObservationRow }),
       });
