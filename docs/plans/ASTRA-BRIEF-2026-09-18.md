@@ -1,19 +1,23 @@
 # Astra Brief — agentsam-sdk consolidation, 2026-09-18
 
-> Historical planning snapshot. On 2026-09-19, `release/2.6.2-auth-closure`
-> was confirmed fully merged into `main` at `0c3d63f`. The work-graph and
-> scaffold changes described below were being completed on
-> `fix/model-picker-cursor-portable-catalog-20260918`. Recheck live branch and
-> runtime state before using any "still open" statement below.
+> **HISTORICAL / BACKLOG ONLY — not live status.**
+>
+> Current status authority:
+> [`RECONCILIATION-2026-09-19.md`](./RECONCILIATION-2026-09-19.md)
+>
+> As of 2026-09-19, `main` / `origin/main` is
+> `88cb30daadf20b8ca22aad29dad826055cec6998` (PR #51 merged — project-owned
+> SQLite runtime). Do **not** use the old “main is at 0795d92 (PR #50)” line.
+>
+> Also superseded here: auth-closure “still open”, `help all` broken,
+> work-graph still orphaned, and treating `platform_identity_missing` as an
+> OAuth/auth-closure fix. Remote terminal enrollment remains open as a
+> **separate** pairing/provisioning gap — see the reconciliation doc.
 
-Read this whole file before doing anything. This is the consolidated state
-of every audit/fix pass from tonight's session so you don't need to be
-re-briefed piecemeal. Treat it as ground truth over anything you infer from
-poking around cold — everything below was verified against the actual
-repo, not guessed.
-
-Repo: `/Users/samprimeaux/agentsam-sdk`, branch `main`, HEAD from tonight's
-session onward includes the fixes in "Already done" below.
+This file remains useful as backlog/reference for architectural drift items
+and scaffold-from-real-app design questions. It is **not** ground truth over
+live git. Recheck every “still open” claim against the reconciliation doc
+and `origin/main` before acting.
 
 ---
 
@@ -111,11 +115,8 @@ summary of what to actually do:
   generates CLI routing, slash routing, help output, and tool-card
   discovery from one source. `printLegacyHelp()` is already known-stale —
   delete/replace it once the manifest exists.
-- **`agentsam help all` is broken** (routes to fuzzy search → lands on
-  "runtime" topic instead of the full map). Fix: `all` should be an
-  explicit alias for `--all`, not fuzzy-searched text. Small, standalone,
-  do this one first — it's a five-minute fix and it's been bugging Sam
-  repeatedly.
+- **`agentsam help all`** — **superseded 2026-09-19:** implemented in
+  `src/ui/cli/help.js` (`all` / `--all` → full map). Verified live on main.
 - **Stale vocabulary.** `workspace_id` is marked deprecated in
   `protocol/knowledge/retrieval-query.schema.json` but still actively
   validated in `src/knowledge/contracts.js`. Needs a
@@ -213,31 +214,17 @@ above is blocked on decisions.
 
 ---
 
-## 5. `release/2.6.2-auth-closure` — still open, likely blocking more than auth
+## 5. `release/2.6.2-auth-closure` — SUPERSEDED (merged)
 
-The full 14-point task for this branch was already handed to you in a
-separate detailed brief (native `agentsam login` OAuth/PKCE, provider
-credential UX via `src/lib/provider-credentials.js`, real `/model` picker
-including Cursor, real `agentsam whoami`, authoritative `agentsam status`
-composing local+cloud state, wiring the existing identity portal into
-`apps/local-studio`, Worker config cleanup, credential-boundary audit,
-tests, git discipline, then merge to main and deploy the `agentsam-sdk`
-Worker). Follow that brief exactly — it already says not to expand into
-an identity-package redesign; the reusable pieces exist, this is wiring
-and finishing.
+**Superseded 2026-09-19:** this branch tip is an ancestor of `main`. Do not
+treat auth-closure as still open.
 
-**New information as of tonight:** the platform's remote/cloud-desk
-terminal lane is currently failing with:
-```
-terminal_exec_401 → platform_identity_missing
-exec_url: https://terminal.inneranimalmedia.com/run
-```
-This is very likely downstream of the same incomplete IAM session work
-this branch is meant to finish — `platform_identity_missing` is exactly
-the failure mode of no valid IAM session for the account context. Treat
-finishing this branch as the probable fix for that connection too, not a
-separate ticket. Confirm once `agentsam whoami` returns a real account and
-native login completes against live IAM.
+**Remote terminal note (corrected):** `platform_identity_missing` on
+`terminal_remote` is **not** the CLI OAuth bug and was **not** closed by
+auth-closure / PR #450. Live host evidence showed `connection_key_set: false`
+with null `account_id` / `connection_id` / `instance_id` under
+`control_plane_auth_mode: platform_bridge` — an enrollment/pairing gap.
+See `RECONCILIATION-2026-09-19.md` §B.
 
 ---
 
@@ -255,19 +242,15 @@ path if the check would add latency — background check + cache is fine.
 
 ## 7. Suggested order of operations
 
-1. `agentsam help all` alias fix (trivial, do first).
-2. `packages/work-graph` extraction + manifest registration (mechanical,
-   self-contained, no design decisions blocking it).
-3. Scaffold-from-real-app design doc for `cms`/`cad-creator` (come back
-   with the plan, then implement).
-4. `release/2.6.2-auth-closure` completion per its existing 14-point brief
-   — this likely also resolves the remote terminal 401.
-5. `agentsam` self-update UX (small, anytime, good filler task).
-6. The bigger architectural items in §2 (legacy runtime island, tool
-   dispatch unification, command manifest, lineage object,
-   `architecture/modules.yaml`) — ongoing, not a single sprint, but check
-   this section before any structural change so new work doesn't add to
-   the same drift.
+Order superseded — use `RECONCILIATION-2026-09-19.md` §D. Historical list
+kept only for archaeology:
+
+1. ~~`agentsam help all`~~ done on main.
+2. ~~`packages/work-graph` extraction~~ present on main.
+3. Scaffold-from-real-app design doc for `cms`/`cad-creator` (still open).
+4. ~~`release/2.6.2-auth-closure`~~ merged; remote terminal is a separate enrollment track.
+5. `agentsam` self-update UX (still open, low priority).
+6. Bigger architectural items in §2 — backlog only.
 
 Report back the way the auth-closure brief specifies: what's done, what's
 verified live (paste actual output, not "should work"), what's
