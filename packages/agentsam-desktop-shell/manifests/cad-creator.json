@@ -1,0 +1,21 @@
+{
+  "$schema": "./schema.json",
+  "app_id": "cad-creator",
+  "app_name": "AgentSam CAD Creator",
+  "bundle_identifier": "com.inneranimalmedia.cad-creator",
+  "base_url": "https://agentsam.inneranimalmedia.com",
+  "surface": "app",
+  "launch_path": "/agentsam/apps/cad",
+  "deep_link_scheme": "agentsamcad",
+  "identity_provider": "inneranimalmedia",
+  "icon_set": "icons/cad-creator",
+  "theme": {
+    "primary_color": "#0d1117",
+    "accent_color": "#38bdf8"
+  },
+  "feature_flags": {
+    "tray": true,
+    "auto_update": true,
+    "local_execution_node": true
+  }
+}

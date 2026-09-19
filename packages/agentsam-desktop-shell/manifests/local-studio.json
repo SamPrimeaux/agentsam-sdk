@@ -1,0 +1,21 @@
+{
+  "$schema": "./schema.json",
+  "app_id": "local-studio",
+  "app_name": "AgentSam Local Studio",
+  "bundle_identifier": "com.inneranimalmedia.local-studio",
+  "base_url": "https://agentsam.inneranimalmedia.com",
+  "surface": "app",
+  "launch_path": "/",
+  "deep_link_scheme": "agentsamstudio",
+  "identity_provider": "inneranimalmedia",
+  "icon_set": "icons/local-studio",
+  "theme": {
+    "primary_color": "#0a0a0c",
+    "accent_color": "#6366f1"
+  },
+  "feature_flags": {
+    "tray": true,
+    "auto_update": true,
+    "local_execution_node": true
+  }
+}

@@ -8,6 +8,15 @@
     "app_name": { "type": "string" },
     "bundle_identifier": { "type": "string", "pattern": "^[a-z0-9.-]+$" },
     "base_url": { "type": "string", "format": "uri" },
+    "surface": {
+      "type": "string",
+      "enum": ["workspace", "app", "store", "portal", "brand"]
+    },
+    "launch_path": { "type": "string", "pattern": "^/.*" },
+    "allowed_web_origins": {
+      "type": "array",
+      "items": { "type": "string", "format": "uri" }
+    },
     "deep_link_scheme": { "type": "string", "pattern": "^[a-z][a-z0-9]*$" },
     "icon_set": { "type": "string" },
     "identity_provider": {

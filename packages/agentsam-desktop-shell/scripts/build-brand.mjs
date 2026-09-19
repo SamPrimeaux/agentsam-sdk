@@ -77,6 +77,26 @@ try {
   fail(`base_url is not a valid URL: ${manifest.base_url}`);
 }
 
+const VALID_SURFACES = ['workspace', 'app', 'store', 'portal', 'brand'];
+if (manifest.surface && !VALID_SURFACES.includes(manifest.surface)) {
+  fail(`surface must be one of ${VALID_SURFACES.join(', ')}, got: ${manifest.surface}`);
+}
+if (manifest.launch_path && (!manifest.launch_path.startsWith('/') || manifest.launch_path.includes(' '))) {
+  fail(`launch_path must start with '/' and contain no spaces, got: ${manifest.launch_path}`);
+}
+if (manifest.allowed_web_origins) {
+  if (!Array.isArray(manifest.allowed_web_origins)) {
+    fail(`allowed_web_origins must be an array, got: ${typeof manifest.allowed_web_origins}`);
+  }
+  for (const origin of manifest.allowed_web_origins) {
+    try {
+      new URL(origin);
+    } catch {
+      fail(`allowed_web_origin is not a valid URL: ${origin}`);
+    }
+  }
+}
+
 console.log(`[build-brand] manifest OK: ${manifest.app_id} (${manifest.app_name})`);
 
 // --- 3. load the update signing public key ---
@@ -126,6 +146,8 @@ const UPDATES_DOMAIN = 'https://updates.agentsam.dev';
 const updaterEndpoint = `${UPDATES_DOMAIN}/updates/${manifest.app_id}/{{target}}/{{arch}}/{{current_version}}`;
 
 // --- 6. assemble tauri.conf.json ---
+const launchUrl = new URL(manifest.launch_path || '/', manifest.base_url).toString();
+
 const config = {
   $schema: 'https://schema.tauri.app/config/2',
   productName: manifest.app_name,
@@ -141,6 +163,7 @@ const config = {
         title: manifest.app_name,
         width: 1200,
         height: 800,
+        url: launchUrl,
       },
     ],
     trayIcon: manifest.feature_flags?.tray === false ? undefined : { iconPath: 'icons/icon.png' },

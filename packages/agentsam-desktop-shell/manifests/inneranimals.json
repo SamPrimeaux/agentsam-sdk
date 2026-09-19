@@ -1,0 +1,21 @@
+{
+  "$schema": "./schema.json",
+  "app_id": "inneranimals",
+  "app_name": "Inner Animals",
+  "bundle_identifier": "com.inneranimals.app",
+  "base_url": "https://inneranimals.com",
+  "surface": "store",
+  "launch_path": "/",
+  "deep_link_scheme": "inneranimals",
+  "identity_provider": "inneranimalmedia",
+  "icon_set": "icons/inneranimals",
+  "theme": {
+    "primary_color": "#6358ff",
+    "accent_color": "#09090b"
+  },
+  "feature_flags": {
+    "tray": true,
+    "auto_update": true,
+    "local_execution_node": false
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "./schema.json",
+  "app_id": "fuelnfreetime",
+  "app_name": "Fuel & Free Time",
+  "bundle_identifier": "com.fuelnfreetime.app",
+  "base_url": "https://fuelnfreetime.com",
+  "surface": "store",
+  "launch_path": "/",
+  "deep_link_scheme": "fuelnfreetime",
+  "identity_provider": "inneranimalmedia",
+  "icon_set": "icons/fuelnfreetime",
+  "theme": {
+    "primary_color": "#18181b",
+    "accent_color": "#f59e0b"
+  },
+  "feature_flags": {
+    "tray": true,
+    "auto_update": true,
+    "local_execution_node": false
+  }
+}

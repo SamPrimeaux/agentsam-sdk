@@ -1,0 +1,25 @@
+{
+  "$schema": "./schema.json",
+  "app_id": "inneranimalmedia",
+  "app_name": "Inner Animal Media",
+  "bundle_identifier": "com.inneranimalmedia.app",
+  "base_url": "https://inneranimalmedia.com",
+  "surface": "workspace",
+  "launch_path": "/dashboard",
+  "allowed_web_origins": [
+    "https://inneranimalmedia.com",
+    "https://studio.inneranimalmedia.com"
+  ],
+  "deep_link_scheme": "inneranimalmedia",
+  "identity_provider": "inneranimalmedia",
+  "icon_set": "icons/inneranimalmedia",
+  "theme": {
+    "primary_color": "#09090b",
+    "accent_color": "#e11d48"
+  },
+  "feature_flags": {
+    "tray": true,
+    "auto_update": true,
+    "local_execution_node": true
+  }
+}

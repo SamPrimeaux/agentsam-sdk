@@ -1,0 +1,25 @@
+{
+  "$schema": "./schema.json",
+  "app_id": "meauxbility",
+  "app_name": "Meauxbility Foundation",
+  "bundle_identifier": "org.meauxbility.app",
+  "base_url": "https://meauxbility.org",
+  "surface": "portal",
+  "launch_path": "/",
+  "allowed_web_origins": [
+    "https://meauxbility.org",
+    "https://admin.meauxbility.org"
+  ],
+  "deep_link_scheme": "meauxbility",
+  "identity_provider": "inneranimalmedia",
+  "icon_set": "icons/meauxbility",
+  "theme": {
+    "primary_color": "#0f172a",
+    "accent_color": "#3b82f6"
+  },
+  "feature_flags": {
+    "tray": true,
+    "auto_update": true,
+    "local_execution_node": false
+  }
+}
