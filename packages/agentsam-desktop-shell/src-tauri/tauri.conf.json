@@ -9,13 +9,24 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "AgentSam",
         "width": 1200,
         "height": 800
       }
-    ]
+    ],
+    "trayIcon": {
+      "iconPath": "icons/icon.png"
+    }
   },
   "bundle": {
     "active": false
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["agentsam"]
+      }
+    }
   }
 }
