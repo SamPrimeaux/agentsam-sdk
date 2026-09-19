@@ -24,13 +24,17 @@ export async function runResume(argv = [], options = {}) {
   const write = options.write || ((text) => process.stdout.write(text));
   const json = argv.includes('--json');
   const listOnly = argv.includes('--list');
-  const positional = argv.filter((arg) => !arg.startsWith('-'));
-  const unknown = argv.filter((arg) => arg.startsWith('-') && !['--json', '--list'].includes(arg));
+  const cwdIndex = argv.indexOf('--cwd');
+  if (cwdIndex >= 0 && !argv[cwdIndex + 1]) throw new Error('--cwd requires a project path');
+  const cwd = cwdIndex >= 0 ? path.resolve(argv[cwdIndex + 1]) : path.resolve(options.cwd || process.cwd());
+  const args = argv.filter((_, index) => cwdIndex < 0 || (index !== cwdIndex && index !== cwdIndex + 1));
+  const positional = args.filter((arg) => !arg.startsWith('-'));
+  const unknown = args.filter((arg) => arg.startsWith('-') && !['--json', '--list'].includes(arg));
   if (unknown.length) throw new Error(`unknown resume option: ${unknown[0]}`);
   if (positional.length > 1) throw new Error('agentsam resume accepts at most one session id');
 
   if (listOnly || (json && !positional[0])) {
-    const sessions = listLocalSessions({ home: options.home, limit: 30 });
+    const sessions = listLocalSessions({ home: options.home, cwd, limit: 30 });
     if (json) writeLine(write, JSON.stringify(sessions, null, 2));
     else write(renderSessionList(sessions));
     return sessions;
@@ -38,7 +42,7 @@ export async function runResume(argv = [], options = {}) {
 
   let sessionId = positional[0] || '';
   if (!sessionId) {
-    const sessions = listLocalSessions({ home: options.home, limit: 30 });
+    const sessions = listLocalSessions({ home: options.home, cwd, limit: 30 });
     if (!sessions.length) { write(renderSessionList([])); return null; }
     const interactive = options.interactive ?? Boolean(process.stdin.isTTY && process.stdout.isTTY);
     if (!interactive) { write(renderSessionList(sessions)); return null; }
@@ -54,7 +58,7 @@ export async function runResume(argv = [], options = {}) {
     sessionId = choice;
   }
 
-  const session = loadLocalSession(sessionId, { home: options.home });
+  const session = loadLocalSession(sessionId, { home: options.home, cwd });
   if (!session) throw new Error(`session_not_found:${sessionId}`);
   if (json) { writeLine(write, JSON.stringify(session, null, 2)); return session; }
 

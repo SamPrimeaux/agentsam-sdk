@@ -2,6 +2,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { findCliProjectRoot } from './cli-preferences.js';
+import { runtimeDatabasePath, SQLITE_RUNTIME_CAPABILITIES } from '../local/runtime-store.js';
+import { createLocalSqliteDatabaseSync } from '../local/sqlite.js';
+import { applyRuntimeMigrationsSync } from '../local/migrations.js';
 
 export const LOCAL_SESSION_SCHEMA = 'agentsam-local-session-v1';
 
@@ -33,13 +37,49 @@ function filenameFor(sessionId, options = {}) {
   return path.join(localSessionDirectory(options), `${validateSessionId(sessionId)}.json`);
 }
 
-function ensureDirectory(options = {}) {
-  const dir = localSessionDirectory(options);
-  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
-  if (process.platform !== 'win32') {
-    try { fs.chmodSync(dir, 0o700); } catch { /* best effort */ }
+function projectRoot(value = {}, options = {}) {
+  return findCliProjectRoot(options.projectRoot || value.project_root || value.cwd || options.cwd || process.cwd());
+}
+
+function withSessionDb(root, fn) {
+  const db = createLocalSqliteDatabaseSync(runtimeDatabasePath(root));
+  try {
+    applyRuntimeMigrationsSync(db);
+    return fn(db);
+  } finally {
+    db.close();
   }
-  return dir;
+}
+
+function safeProviderState(value) {
+  if (!value || typeof value !== 'object') return {};
+  // Opaque response IDs allow provider-side continuation. Message arrays and
+  // compaction input can carry prompts, tool output, or credential values.
+  return {
+    ...(clean(value.provider) ? { provider: clean(value.provider) } : {}),
+    ...(clean(value.previous_response_id) ? { previous_response_id: clean(value.previous_response_id) } : {}),
+  };
+}
+
+function safeLastError(value) {
+  if (!value || typeof value !== 'object') return null;
+  return {
+    code: clean(value.code) || null,
+    kind: clean(value.kind) || null,
+    source: clean(value.source) || null,
+  };
+}
+
+function safeUsageSnapshot(value) {
+  if (!value || typeof value !== 'object') return null;
+  const inputTokens = Number(value.current_context?.input_tokens);
+  const windowTokens = Number(value.current_context?.window_tokens);
+  return {
+    current_context: {
+      input_tokens: Number.isFinite(inputTokens) ? Math.max(0, inputTokens) : 0,
+      window_tokens: Number.isFinite(windowTokens) ? Math.max(0, windowTokens) : null,
+    },
+  };
 }
 
 function normalizeUsage(value = {}) {
@@ -72,13 +112,18 @@ export function normalizeLocalSession(value = {}) {
   const createdAt = clean(value.created_at) || now();
   const status = clean(value.status) || 'active';
   const updatedAt = clean(value.updated_at) || createdAt;
+  const root = projectRoot(value);
+  const dbPath = runtimeDatabasePath(root);
+  const relativeDbPath = path.relative(root, dbPath);
   return {
     schema_version: LOCAL_SESSION_SCHEMA,
     id: validateSessionId(value.id || createLocalSessionId()),
     status,
+    project_root: root,
+    storage: { runtime: 'sqlite', path: relativeDbPath.startsWith('..') ? dbPath : relativeDbPath, remote: null, capabilities: SQLITE_RUNTIME_CAPABILITIES },
     cwd: path.resolve(clean(value.cwd) || process.cwd()),
-    title: clean(value.title) || sessionTitleFromInput(value.last_input),
-    last_input: clean(value.last_input) || null,
+    title: clean(value.title) || 'Agent Sam session',
+    last_input: null,
     created_at: createdAt,
     updated_at: updatedAt,
     active_elapsed_ms: Math.max(0, Number(value.active_elapsed_ms || 0)),
@@ -88,26 +133,28 @@ export function normalizeLocalSession(value = {}) {
     reasoning_effort: clean(value.reasoning_effort) || null,
     requested_service_tier: clean(value.requested_service_tier) || null,
     actual_service_tier: clean(value.actual_service_tier) || null,
-    provider_state: value.provider_state && typeof value.provider_state === 'object' ? { ...value.provider_state } : {},
-    usage_snapshot: value.usage_snapshot && typeof value.usage_snapshot === 'object' ? structuredClone(value.usage_snapshot) : null,
+    provider_state: safeProviderState(value.provider_state),
+    usage_snapshot: safeUsageSnapshot(value.usage_snapshot),
     cumulative_usage: normalizeUsage(value.cumulative_usage || {}),
     total_cost_usd: Number(value.total_cost_usd || 0),
     cost_breakdown_usd: normalizeCostBreakdown(value.cost_breakdown_usd || {}),
     approved_projected_call_cost_usd: Number(value.approved_projected_call_cost_usd || 0),
-    last_error: value.last_error && typeof value.last_error === 'object' ? structuredClone(value.last_error) : null,
+    last_error: safeLastError(value.last_error),
   };
 }
 
 export function saveLocalSession(session, options = {}) {
-  const normalized = normalizeLocalSession({ ...session, updated_at: now() });
-  ensureDirectory(options);
-  const filename = filenameFor(normalized.id, options);
-  const temp = `${filename}.${process.pid}.tmp`;
-  fs.writeFileSync(temp, `${JSON.stringify(normalized, null, 2)}\n`, { mode: 0o600 });
-  if (process.platform !== 'win32') {
-    try { fs.chmodSync(temp, 0o600); } catch { /* best effort */ }
-  }
-  fs.renameSync(temp, filename);
+  const normalized = normalizeLocalSession({ ...session, project_root: projectRoot(session, options), updated_at: now() });
+  withSessionDb(normalized.project_root, (db) => {
+    db.prepare(`
+      INSERT INTO agentsam_project_sessions (id, project_root, cwd, status, title, state_json, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        cwd = excluded.cwd, status = excluded.status, title = excluded.title,
+        state_json = excluded.state_json, updated_at = excluded.updated_at
+    `).run(normalized.id, normalized.project_root, normalized.cwd, normalized.status,
+      normalized.title, JSON.stringify(normalized), normalized.created_at, normalized.updated_at);
+  });
   return normalized;
 }
 
@@ -116,11 +163,23 @@ export function createLocalSession(value = {}, options = {}) {
 }
 
 export function loadLocalSession(sessionId, options = {}) {
+  const root = projectRoot({}, options);
+  const dbPath = runtimeDatabasePath(root);
+  if (fs.existsSync(dbPath)) {
+    const row = withSessionDb(root, (db) => db.prepare(
+      'SELECT state_json FROM agentsam_project_sessions WHERE id = ? AND project_root = ?'
+    ).get(validateSessionId(sessionId), root));
+    if (row) return normalizeLocalSession(JSON.parse(row.state_json));
+  }
+  // Read-only compatibility with older ~/.agentsam/sessions/*.json state.
+  // Import only when the saved cwd belongs to the selected project; never
+  // create new home-level session files or resume a different project's row.
   const filename = filenameFor(sessionId, options);
   if (!fs.existsSync(filename)) return null;
   const parsed = JSON.parse(fs.readFileSync(filename, 'utf8'));
   if (parsed?.schema_version !== LOCAL_SESSION_SCHEMA) throw new Error(`unsupported_local_session_schema:${parsed?.schema_version || 'missing'}`);
-  return normalizeLocalSession(parsed);
+  if (projectRoot(parsed) !== root) return null;
+  return saveLocalSession(parsed, { projectRoot: root });
 }
 
 export function updateLocalSession(sessionId, patch = {}, options = {}) {
@@ -130,19 +189,18 @@ export function updateLocalSession(sessionId, patch = {}, options = {}) {
 }
 
 export function listLocalSessions(options = {}) {
+  const root = projectRoot({}, options);
   const dir = localSessionDirectory(options);
-  if (!fs.existsSync(dir)) return [];
-  const cwd = clean(options.cwd) ? path.resolve(options.cwd) : '';
-  const limit = Number.isInteger(options.limit) && options.limit > 0 ? Math.min(options.limit, 100) : 20;
-  const rows = [];
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (!entry.isFile() || !entry.name.startsWith('asess_') || !entry.name.endsWith('.json')) continue;
-    try {
-      const parsed = JSON.parse(fs.readFileSync(path.join(dir, entry.name), 'utf8'));
-      if (parsed?.schema_version !== LOCAL_SESSION_SCHEMA) continue;
-      const session = normalizeLocalSession(parsed);
-      if (!cwd || session.cwd === cwd) rows.push(session);
-    } catch { /* skip corrupt session file */ }
+  if (fs.existsSync(dir)) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (!entry.isFile() || !entry.name.startsWith('asess_') || !entry.name.endsWith('.json')) continue;
+      try { loadLocalSession(entry.name.slice(0, -5), { ...options, projectRoot: root }); }
+      catch { /* legacy corrupt files remain untouched */ }
+    }
   }
-  return rows.sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at))).slice(0, limit);
+  if (!fs.existsSync(runtimeDatabasePath(root))) return [];
+  const limit = Number.isInteger(options.limit) && options.limit > 0 ? Math.min(options.limit, 100) : 20;
+  return withSessionDb(root, (db) => db.prepare(
+    'SELECT state_json FROM agentsam_project_sessions WHERE project_root = ? ORDER BY updated_at DESC LIMIT ?'
+  ).all(root, limit).map((row) => normalizeLocalSession(JSON.parse(row.state_json))));
 }

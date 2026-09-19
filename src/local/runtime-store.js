@@ -2,12 +2,28 @@ import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { createLocalSqliteDatabase } from './sqlite.js';
 import { applyRuntimeMigrations } from './migrations.js';
+import { findCliProjectRoot } from '../lib/cli-preferences.js';
+import { getLocalDatabasePath, tryReadProjectConfig } from '../lib/project-config.js';
 
 function clean(value) { return value == null ? '' : String(value).trim(); }
 function hash(value) { return createHash('sha256').update(String(value || '')).digest('hex'); }
 
-export function runtimeDatabasePath(cwd = process.cwd()) {
-  return path.join(path.resolve(cwd), '.agentsam', 'data', 'agentsam.sqlite');
+export const SQLITE_RUNTIME_CAPABILITIES = Object.freeze({
+  transactions: true,
+  relational_queries: true,
+  ttl_cleanup: 'application_managed',
+  remote_shared_state: false,
+  local_only: true,
+  concurrent_writers: 'sqlite_serialized',
+  migrations: true,
+  vector_search: false,
+  blob_storage: false,
+  distributed_actor_semantics: false,
+});
+
+export function runtimeDatabasePath(startDir = process.cwd()) {
+  const root = findCliProjectRoot(startDir);
+  return path.resolve(root, getLocalDatabasePath(tryReadProjectConfig(root)));
 }
 
 async function withStore(cwd, fn) {
@@ -26,7 +42,7 @@ export function createRuntimeRunId() {
 
 export async function startRuntimeRun(value = {}) {
   const id = clean(value.id) || createRuntimeRunId();
-  await withStore(value.cwd, async (db) => {
+  await withStore(value.projectRoot || value.cwd, async (db) => {
     await db.prepare(`
       INSERT INTO agentsam_agent_run (
         id, account_id, source_client, surface, mode, model_key,
@@ -46,7 +62,7 @@ export async function startRuntimeRun(value = {}) {
 
 export async function finishRuntimeRun(value = {}) {
   if (!clean(value.id)) return;
-  await withStore(value.cwd, async (db) => {
+  await withStore(value.projectRoot || value.cwd, async (db) => {
     const usage = value.usage || {};
     await db.prepare(`
       UPDATE agentsam_agent_run
@@ -87,7 +103,7 @@ export async function recordRuntimeCompaction(value = {}) {
   const after = Math.max(0, Math.round(Number(value.tokens_after || 0)));
   const sourceHash = hash(summary || JSON.stringify(value.metadata || {}));
 
-  await withStore(value.cwd, async (db) => {
+  await withStore(value.projectRoot || value.cwd, async (db) => {
     await db.prepare(`
       INSERT INTO agentsam_compaction_events (
         id, account_id, agent_run_id, compaction_type, compaction_scope,
@@ -138,4 +154,14 @@ export async function recordRuntimeCompaction(value = {}) {
     }
   });
   return id;
+}
+
+export async function pruneExpiredRuntimeState(value = {}) {
+  const nowUnix = Number.isFinite(Number(value.nowUnix)) ? Math.floor(Number(value.nowUnix)) : Math.floor(Date.now() / 1000);
+  return withStore(value.projectRoot || value.cwd, async (db) => {
+    const digests = await db.prepare('DELETE FROM agentsam_context_digest WHERE expires_at_unix IS NOT NULL AND expires_at_unix <= ?').bind(nowUnix).run();
+    const compactions = await db.prepare('DELETE FROM agentsam_compaction_events WHERE expires_at_epoch IS NOT NULL AND expires_at_epoch <= ?').bind(nowUnix).run();
+    const approvals = await db.prepare("UPDATE agentsam_approval_queue SET status = 'expired' WHERE status = 'pending' AND expires_at IS NOT NULL AND expires_at <= ?").bind(nowUnix).run();
+    return { digests: Number(digests.changes || 0), compactions: Number(compactions.changes || 0), approvals_expired: Number(approvals.changes || 0) };
+  });
 }

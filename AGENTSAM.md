@@ -32,6 +32,37 @@ This file defines stable behavior for AgentSam agents using the portable SDK. It
 - Git owns source-control history. Merkle owns filesystem evidence and snapshot lineage. Runtime/hosted stores own run and execution history.
 - Portable project configuration must not become an account/session/run database.
 
+## Storage architecture law
+
+- Ordinary AgentSam operation is local first. Its own ProjectSession, runs,
+  receipts, and resumability use the project-owned
+  `.agentsam/data/agentsam.sqlite` and versioned `migrations/runtime/` by
+  default. The project root, rather than a moving shell cwd or model choice,
+  determines that database.
+- Durable Objects are **not** part of the default AgentSam SDK runtime or
+  execution path. A product may opt into an actor adapter only for a proven
+  distributed actor requirement; ordinary sessions, plans, tools, terminals,
+  and task state must not acquire a hidden Durable Object dependency.
+- A project's application data keeps its existing authority. This repository's
+  live Local Studio Worker uses its real D1, Hyperdrive, R2, AI, and service
+  bindings for the purposes they already serve. AgentSam's local session
+  SQLite does not replace those bindings or silently sync to them. A user may
+  explicitly choose connected infrastructure where it fits the required data.
+  For application features, inspect and prefer the user's real project storage;
+  use local SQLite for application data when selected or clearly beneficial.
+- Persist only state that supports continuity, recovery, meaningful receipts,
+  or valuable caches. Give new state a persistent, session, work_cycle, ttl,
+  or scratch lifecycle; expire disposable planner/search state. Do not persist
+  hidden reasoning, unlimited transcripts, or credential values in generic
+  runtime state.
+- Keep runtime relational persistence behind the existing SQLite runtime and
+  migration path. Object/blob, vector, and optional actor semantics remain
+  separate capabilities. Declare storage capabilities truthfully; do not
+  pretend SQLite provides distributed actor behavior.
+
+See [Storage architecture](docs/architecture/STORAGE.md) for enforcement and
+the current compatibility boundary.
+
 ## Model and run policy
 
 - Model, reasoning effort, service tier, budget, and permissions are runtime configuration, not hidden prompt instructions.

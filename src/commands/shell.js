@@ -25,7 +25,9 @@ import { buildContextEconomicsReport, renderContextEconomics } from './context-e
 import { createProviderAdapter } from '../providers/index.js';
 import { createCapabilityAdapter, runResponsesAgent } from '../agent/index.js';
 import { resolveProviderCredential } from '../lib/provider-credentials.js';
-import { createLocalSession, saveLocalSession, sessionTitleFromInput, localSessionElapsedMs } from '../lib/local-sessions.js';
+import { createLocalSession, saveLocalSession, localSessionElapsedMs } from '../lib/local-sessions.js';
+import { findCliProjectRoot } from '../lib/cli-preferences.js';
+import { runtimeDatabasePath } from '../local/runtime-store.js';
 import { grantExecutionApproval, isExecutionApproved, toolApprovalKey } from '../lib/execution-approvals.js';
 import { runWhoami } from './whoami.js';
 import { runLogin, runLogout } from './account-auth.js';
@@ -241,15 +243,15 @@ export async function runLocalAgent(goal, write, options = {}) {
 }
 
 async function showLocalLogs(cwd, write) {
-  const dbPath = path.join(cwd, '.agentsam', 'data', 'agentsam.sqlite');
-  if (!fs.existsSync(dbPath)) { writeLine(write, '  No local Agent Sam DB found. Run `agentsam init . --yes` first.'); return; }
+  const dbPath = runtimeDatabasePath(cwd);
+  if (!fs.existsSync(dbPath)) { writeLine(write, '  No local Agent Sam runs yet.'); return; }
   const { createLocalSqliteDatabase } = await import('../local/sqlite.js');
   const db = await createLocalSqliteDatabase(dbPath);
   try {
-    const calls = await db.prepare('SELECT id, session_id, tool_name, status, created_at, completed_at FROM agent_tool_calls ORDER BY created_at DESC LIMIT 20').all();
-    if (!calls.results.length) { writeLine(write, '  No local Agent Sam tool-call events yet.'); return; }
-    writeLine(write, '\n  Recent Agent Sam tool calls');
-    for (const row of calls.results) writeLine(write, `  ${String(row.created_at || '').padEnd(20)} ${String(row.status || '').padEnd(10)} ${row.tool_name}`);
+    const runs = await db.prepare('SELECT id, model_key, status, started_at_unix FROM agentsam_agent_run ORDER BY started_at_unix DESC LIMIT 20').all();
+    if (!runs.results.length) { writeLine(write, '  No local Agent Sam runs yet.'); return; }
+    writeLine(write, '\n  Recent Agent Sam runs');
+    for (const row of runs.results) writeLine(write, `  ${new Date(Number(row.started_at_unix) * 1000).toISOString()} ${String(row.status || '').padEnd(10)} ${row.model_key || 'model unknown'} · ${row.id}`);
     writeLine(write, '');
   } finally { db.close(); }
 }
@@ -307,7 +309,7 @@ export function renderSessionReceipt(session) {
 
 function persistSession(state, patch = {}) {
   if (!state.session) return null;
-  state.session = saveLocalSession({ ...state.session, ...patch }, { home: state.home });
+  state.session = saveLocalSession({ ...state.session, ...patch }, { home: state.home, projectRoot: state.projectRoot });
   return state.session;
 }
 
@@ -318,8 +320,6 @@ function recordSessionInput(state, input) {
   if (housekeeping.has(value.toLowerCase())) return;
   persistSession(state, {
     status: 'active',
-    last_input: value,
-    title: sessionTitleFromInput(value),
   });
 }
 
@@ -407,13 +407,13 @@ async function runInteractiveModelTurn(prompt, state) {
     && state.session.model_key === model.model_key
     && state.session.reasoning_effort === preferences.reasoningEffort
     && state.session.requested_service_tier === preferences.serviceTier;
-  const previousProviderState = samePolicy ? state.session?.provider_state : null;
+  const previousProviderState = samePolicy ? (state.providerState || state.session?.provider_state) : null;
   const previousUsageSnapshot = samePolicy ? state.session?.usage_snapshot : null;
   const accountId = readAccountSession({ home: state.home })?.account_id || null;
   let runtimeRunId = null;
   try {
     runtimeRunId = await startRuntimeRun({
-      cwd: state.cwd,
+      projectRoot: state.projectRoot,
       account_id: accountId,
       mode: 'agent',
       model_key: model.model_key,
@@ -463,7 +463,7 @@ async function runInteractiveModelTurn(prompt, state) {
     if (runtimeRunId) {
       try {
         await finishRuntimeRun({
-          cwd: state.cwd,
+          projectRoot: state.projectRoot,
           id: runtimeRunId,
           status: 'failed',
           error_code: error?.code || 'interactive_error',
@@ -488,10 +488,11 @@ async function runInteractiveModelTurn(prompt, state) {
   }
 
   state.usageSnapshot = result.usage_snapshot;
+  state.providerState = result.provider_state || null;
   if (runtimeRunId) {
     try {
       await finishRuntimeRun({
-        cwd: state.cwd,
+        projectRoot: state.projectRoot,
         id: runtimeRunId,
         status: 'completed',
         actual_service_tier: result.actual_service_tier,
@@ -501,7 +502,7 @@ async function runInteractiveModelTurn(prompt, state) {
       });
       if (presenter.state.lastCompaction) {
         await recordRuntimeCompaction({
-          cwd: state.cwd,
+          projectRoot: state.projectRoot,
           account_id: accountId,
           agent_run_id: runtimeRunId,
           session_id: state.session?.id,
@@ -550,6 +551,7 @@ export async function dispatchShellLine(line, state = {}) {
   const write = state.write || ((text) => process.stdout.write(text));
   state.write = write;
   state.cwd = path.resolve(state.cwd || process.cwd());
+  state.projectRoot ||= findCliProjectRoot(state.cwd);
   if (!tokens.length) return { handled: true, exit: false, cwd: state.cwd };
   const [command, ...args] = tokens;
   try {
@@ -567,6 +569,7 @@ export async function dispatchShellLine(line, state = {}) {
       case '/model': {
         const configured = await configureCliPreferences({ cwd: state.cwd, firstRun: false, section: 'model', home: state.home });
         state.cwd = configured.identity.root;
+        state.projectRoot = findCliProjectRoot(state.cwd);
         break;
       }
       case '/reasoning':
@@ -619,6 +622,7 @@ export async function dispatchShellLine(line, state = {}) {
       case '/settings': {
         const configured = await configureCliPreferences({ cwd: state.cwd, firstRun: false, home: state.home });
         state.cwd = configured.identity.root;
+        state.projectRoot = findCliProjectRoot(state.cwd);
         break;
       }
       case '/pwd':
@@ -628,6 +632,16 @@ export async function dispatchShellLine(line, state = {}) {
         const destination = args.length ? args.join(' ') : process.env.HOME || process.env.USERPROFILE || state.cwd;
         const next = path.resolve(state.cwd, destination);
         if (!fs.existsSync(next) || !fs.statSync(next).isDirectory()) throw new Error(`directory not found: ${next}`);
+        const nextRoot = findCliProjectRoot(next);
+        if (nextRoot !== (state.projectRoot || findCliProjectRoot(state.cwd))) {
+          if (state.session) {
+            persistSession(state, { status: 'paused', active_elapsed_ms: localSessionElapsedMs(state.session), active_started_at: null });
+            state.session = createLocalSession({ cwd: next, project_root: nextRoot }, { projectRoot: nextRoot, home: state.home });
+          }
+          state.projectRoot = nextRoot;
+          state.usageSnapshot = null;
+          state.providerState = null;
+        }
         state.cwd = next;
         writeLine(write, state.cwd);
         break;
@@ -677,9 +691,11 @@ export async function runShell(argv = [], options = {}) {
   const write = options.write || ((text) => process.stdout.write(text));
   const state = {
     cwd: path.resolve(options.cwd || process.cwd()),
+    projectRoot: findCliProjectRoot(options.session?.project_root || options.cwd || process.cwd()),
     write,
     interactive: options.interactive ?? Boolean(process.stdin.isTTY && process.stdout.isTTY),
     usageSnapshot: options.usageSnapshot || options.session?.usage_snapshot || null,
+    providerState: null,
     session: options.session || null,
     home: options.home,
     providerFetchImpl: options.providerFetchImpl,
@@ -701,17 +717,18 @@ export async function runShell(argv = [], options = {}) {
       status: 'active',
       cwd: state.cwd,
       active_started_at: new Date().toISOString(),
-    }, { home: state.home });
+    }, { home: state.home, projectRoot: state.projectRoot });
     state.usageSnapshot = state.session.usage_snapshot || state.usageSnapshot;
   } else {
     const preferences = readCliPreferences(state.cwd) || {};
     state.session = createLocalSession({
       cwd: state.cwd,
+      project_root: state.projectRoot,
       status: 'active',
       model_key: preferences.modelPreference !== 'auto' ? preferences.modelPreference : null,
       reasoning_effort: preferences.reasoningEffort !== 'auto' ? preferences.reasoningEffort : null,
       requested_service_tier: preferences.serviceTier || 'default',
-    }, { home: state.home });
+    }, { home: state.home, projectRoot: state.projectRoot });
   }
 
   if (options.intro !== 'quiet') {
