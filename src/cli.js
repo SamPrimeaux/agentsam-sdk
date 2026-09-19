@@ -33,6 +33,7 @@ import { runRecon } from './commands/recon.js';
 import { runCad } from './commands/cad.js';
 import { runSkills } from './commands/skills.js';
 import { runEval } from './commands/eval.js';
+import { runMcp } from './commands/mcp.js';
 import { runCloudflare } from './commands/cloudflare.js';
 import { runWhoami } from './commands/whoami.js';
 import { runResume } from './commands/resume.js';
@@ -400,6 +401,13 @@ if (command === '--version' || command === '-v') {
   } catch (e) {
     reportCliError(e);
     process.exit(1);
+  }
+} else if (command === 'mcp') {
+  try {
+    await runMcp(rest);
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
   }
 } else if (command === 'cloudflare' || command === 'cf') {
   try {

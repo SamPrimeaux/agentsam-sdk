@@ -38,6 +38,8 @@ const HELP_TOPICS = Object.freeze([
       ['agentsam start-local', 'Start the local PTY service'],
       ['agentsam connections', 'Inspect available execution connections'],
       ['agentsam tunnel', 'List, inspect, and run real Cloudflare Tunnels through Wrangler'],
+      ['agentsam mcp <add|status|doctor|list|remove>', 'Manage MCP connections and client adapters (Cursor, Claude)'],
+      ['agentsam eval <context|live>', 'Deterministic context scoring or live agent evaluation telemetry'],
       ['agentsam deploy', 'Graduate intentionally to cloud infrastructure'],
       ['agentsam cloudflare', 'Wrangler and Cloudflare runtime diagnostics'],
     ],
@@ -80,6 +82,7 @@ const TOPIC_ALIASES = new Map([
   ['models', 'start'], ['model', 'start'], ['provider', 'start'], ['providers', 'start'], ['resume', 'start'],
   ['repo', 'work'], ['repository', 'work'], ['inspect', 'work'], ['index', 'work'], ['security', 'work'],
   ['terminal', 'runtime'], ['connections', 'runtime'], ['remote', 'runtime'], ['sandbox', 'runtime'], ['deploy', 'runtime'],
+  ['mcp', 'runtime'], ['eval', 'runtime'],
   ['slash', 'inside'], ['commands', 'inside'], ['session', 'inside'], ['usage', 'inside'], ['context', 'inside'],
   ['create', 'create'], ['scaffold', 'create'], ['capabilities', 'create'], ['skills', 'create'],
 ]);
