@@ -50,51 +50,83 @@ function bindingKey(row = {}) {
   return String(row.name || '').trim();
 }
 
+function bindingTypeLabel(type = '') {
+  switch (String(type || '').trim()) {
+    case 'plain_text': return 'Variable';
+    case 'json': return 'Variable (JSON)';
+    case 'secret_text': return 'Secret';
+    case 'secret_key': return 'Secret key';
+    case 'ai': return 'Workers AI';
+    case 'd1': return 'D1 database';
+    case 'service': return 'Service binding';
+    case 'hyperdrive': return 'Hyperdrive';
+    case 'vpc_service': return 'VPC Service';
+    case 'r2_bucket': return 'R2 bucket';
+    case 'assets': return 'Assets';
+    default: return String(type || 'Binding');
+  }
+}
+
+function bindingTarget(row = {}) {
+  if (row.type === 'secret_text' || row.type === 'secret_key') return 'Value encrypted';
+  if (row.value != null) return String(row.value);
+  if (row.database_name) return row.database_name;
+  if (row.bucket_name) return row.bucket_name;
+  if (row.service) return row.environment ? `${row.service} · ${row.environment}` : row.service;
+  if (row.index_name) return row.index_name;
+  if (row.database_id) return row.database_id;
+  if (row.service_id) return row.service_id;
+  if (row.id) return row.id;
+  if (row.namespace) return row.namespace;
+  if (row.store_id && row.secret_name) return `${row.store_id} · ${row.secret_name}`;
+  return '';
+}
+
+function renderBindingRows(rows = []) {
+  if (!rows.length) return ['    none'];
+  const width = Math.min(32, Math.max(4, ...rows.map((row) => bindingKey(row).length)));
+  return rows.map((row) => {
+    const name = bindingKey(row).padEnd(width);
+    const type = bindingTypeLabel(row.type);
+    const target = bindingTarget(row);
+    return `    ${name}  ${type}${target ? ` · ${target}` : ''}`;
+  });
+}
+
 function renderWorkerBindings(status) {
   const cloudflare = status.cloudflare || {};
   const bindings = cloudflare.bindings;
-  if (!bindings) return ['  Worker bindings   not verified'];
+  if (!bindings) return ['  Worker runtime    not verified'];
 
+  const variables = Array.isArray(bindings.runtime_variables) ? bindings.runtime_variables : [];
+  const secrets = Array.isArray(bindings.runtime_secrets) ? bindings.runtime_secrets : [];
+  const resources = Array.isArray(bindings.resources) ? bindings.resources : [];
   const declared = Array.isArray(bindings.declared) ? bindings.declared : [];
-  const live = Array.isArray(bindings.live) ? bindings.live : [];
   const missing = Array.isArray(bindings.missing) ? bindings.missing : [];
   const mismatches = Array.isArray(bindings.type_mismatches) ? bindings.type_mismatches : [];
 
-  const liveByName = new Map(live.map((row) => [bindingKey(row), row]));
-  const missingNames = new Set(missing.map(bindingKey));
-  const mismatchByName = new Map(mismatches.map((row) => [bindingKey(row), row]));
-
-  const summary = bindings.match
-    ? `${declared.length} declared · ${live.length} live · contract satisfied`
-    : `${declared.length} declared · ${live.length} live · ${missing.length} missing · ${mismatches.length} type mismatch`;
-
-  const lines = [`  Worker bindings   ${summary}`];
-  if (cloudflare.config) lines.push(`    declared from   ${cloudflare.config}`);
+  const lines = [];
   if (cloudflare.version?.id || cloudflare.version?.number != null) {
     const versionLabel = cloudflare.version?.number != null ? `v${cloudflare.version.number}` : 'version';
-    lines.push(`    live from       ${versionLabel}${cloudflare.version?.id ? ` · ${cloudflare.version.id}` : ''}`);
+    lines.push(`  live Worker       ${versionLabel}${cloudflare.version?.id ? ` · ${cloudflare.version.id}` : ''}`);
   }
 
-  const seen = new Set();
-  for (const row of declared) {
-    const name = bindingKey(row);
-    if (!name) continue;
-    seen.add(name);
-    const liveRow = liveByName.get(name);
-    const mismatch = mismatchByName.get(name);
-    if (missingNames.has(name) || !liveRow) {
-      lines.push(`    ✗ ${name} · declared ${row.type || 'unknown'} · MISSING LIVE`);
-    } else if (mismatch) {
-      lines.push(`    ! ${name} · declared ${mismatch.declared || row.type || 'unknown'} · live ${mismatch.live || liveRow.type || 'unknown'}`);
-    } else {
-      lines.push(`    ✓ ${name} · ${liveRow.type || row.type || 'unknown'} · declared + live`);
-    }
-  }
+  lines.push('');
+  lines.push(`  Runtime variables and secrets  ${variables.length} variables · ${secrets.length} secrets`);
+  lines.push(...renderBindingRows([...variables, ...secrets].sort((a, b) => bindingKey(a).localeCompare(bindingKey(b)))));
 
-  for (const row of live) {
-    const name = bindingKey(row);
-    if (!name || seen.has(name)) continue;
-    lines.push(`    • ${name} · ${row.type || 'unknown'} · live only`);
+  lines.push('');
+  lines.push(`  Bindings          ${resources.length} live resources`);
+  lines.push(...renderBindingRows(resources.sort((a, b) => bindingKey(a).localeCompare(bindingKey(b)))));
+
+  lines.push('');
+  lines.push(`  Config comparison ${declared.length} declared locally · ${missing.length} missing live · ${mismatches.length} type mismatch`);
+  if (cloudflare.config) lines.push(`    source           ${cloudflare.config}`);
+  if (missing.length) {
+    for (const row of missing) lines.push(`    ✗ ${bindingKey(row)} · declared ${row.type || 'unknown'} · missing from live version`);
+  }
+  if (mismatches.length) {
+    for (const row of mismatches) lines.push(`    ! ${bindingKey(row)} · declared ${row.declared || 'unknown'} · live ${row.live || 'unknown'}`);
   }
 
   return lines;
@@ -112,7 +144,7 @@ function renderConnections(status) {
   lines.push(`  Worker            ${status.cloudflare?.connected ? `${status.cloudflare.worker_name} · live` : status.cloudflare?.configured ? `${status.cloudflare.worker_name} · not verified` : 'not configured'}`);
   lines.push(...renderWorkerBindings(status));
   lines.push('');
-  lines.push('  Binding names and types are shown; secret values and terminal endpoint credentials are never printed.');
+  lines.push('  Live Cloudflare binding names/targets are shown; secret values and terminal endpoint credentials are never printed.');
   lines.push('');
   return lines.join('\n');
 }
