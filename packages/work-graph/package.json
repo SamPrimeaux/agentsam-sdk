@@ -1,0 +1,19 @@
+{
+  "name": "@inneranimalmedia/work-graph",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Core AgentSam work-graph primitive: one graph model (WorkItem, Dependency, TimelineEvent, Artifact, Evidence, Actor) powering an engineering adapter (git/MCP/tests/deploys) and a business adapter (projects/clients/approvals/milestones), with Gantt/timeline rendering as a pure projection over the graph rather than its own source of truth.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./renderers/gantt-model": "./src/renderers/gantt-model.js",
+    "./renderers/timeline": "./src/renderers/timeline.js",
+    "./adapters/engineering/git": "./src/adapters/engineering/git.js",
+    "./adapters/engineering/mcp": "./src/adapters/engineering/mcp.js",
+    "./adapters/business/projects": "./src/adapters/business/projects.js"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  }
+}
