@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
-import { dispatchShellLine, renderShellCatalog, renderShellPrompt, tokenizeShellLine } from '../src/commands/shell.js';
+import { dispatchShellLine, installPasteCollapse, renderCollapsedPaste, renderShellCatalog, renderShellPrompt, shouldCollapsePaste, tokenizeShellLine } from '../src/commands/shell.js';
 import { readCliPreferences, writeCliPreferences } from '../src/lib/cli-preferences.js';
 
 const repoRoot = path.resolve(new URL('..', import.meta.url).pathname);
@@ -139,4 +139,27 @@ test('CLI supports a deterministic one-shot slash command for regression tests',
   assert.match(result.stdout, /Type normally to work with Agent Sam/);
   assert.match(result.stdout, /agentsam help <topic>/);
   assert.match(result.stdout, /command picker/);
+});
+
+test('large pastes collapse into a single confirmation line', () => {
+  const pasted = ['one', 'two', 'three', 'four', 'five', 'six'].join('\n');
+  assert.equal(shouldCollapsePaste('short'), false);
+  assert.equal(shouldCollapsePaste(pasted), true);
+  assert.equal(shouldCollapsePaste('x'.repeat(301)), true);
+  assert.equal(renderCollapsedPaste(pasted), '[Pasted 6 lines — Enter to run, Backspace to clear]');
+
+  const writes = [];
+  const rl = {
+    terminal: true,
+    line: '',
+    cursor: 0,
+    _refreshLine() { writes.push(this.line); },
+    _ttyWrite(s) { this.line += s || ''; this.cursor = this.line.length; },
+  };
+  const restore = installPasteCollapse(rl);
+  rl._ttyWrite(pasted);
+  assert.equal(rl.line, '[Pasted 6 lines — Enter to run, Backspace to clear]');
+  rl._ttyWrite('', { name: 'backspace' });
+  assert.equal(rl.line, '');
+  restore();
 });

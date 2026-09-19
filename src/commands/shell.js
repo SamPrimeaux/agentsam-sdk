@@ -16,17 +16,16 @@ import { runCloudflare } from './cloudflare.js';
 import { probeOllamaModel, resolveOllamaConfig } from './ollama.js';
 import { createInlineActivity } from '../ui/cli/activity.js';
 import { createCliRuntimePresenter } from '../ui/cli/runtime-events.js';
-import { renderCliFooter, renderUsagePanel } from '../ui/cli/footer.js';
+import { renderCliFooter, renderDiffPreview, renderUsagePanel } from '../ui/cli/footer.js';
 import { diagnosticFromError, renderDiagnosticError } from '../errors/index.js';
 import { getModelRecord } from '../models/index.js';
 import { discoverProviderModels } from '../models/discovery.js';
-import { readCliPreferences, updateCliPreferences } from '../lib/cli-preferences.js';
+import { detectCliProject, findCliProjectRoot, readCliPreferences, updateCliPreferences } from '../lib/cli-preferences.js';
 import { buildContextEconomicsReport, renderContextEconomics } from './context-economics.js';
 import { createProviderAdapter } from '../providers/index.js';
 import { createCapabilityAdapter, runResponsesAgent } from '../agent/index.js';
 import { resolveProviderCredential } from '../lib/provider-credentials.js';
 import { createLocalSession, saveLocalSession, localSessionElapsedMs } from '../lib/local-sessions.js';
-import { findCliProjectRoot } from '../lib/cli-preferences.js';
 import { runtimeDatabasePath } from '../local/runtime-store.js';
 import { grantExecutionApproval, isExecutionApproved, toolApprovalKey } from '../lib/execution-approvals.js';
 import { runWhoami } from './whoami.js';
@@ -54,6 +53,134 @@ export function shellUsername(env = process.env) {
 
 export function renderShellPrompt(cwd, env = process.env) {
   return `${shellUsername(env)} ${compactCwd(cwd, env.HOME || env.USERPROFILE || '')} > `;
+}
+
+export const PASTE_COLLAPSE_LINE_THRESHOLD = 5;
+export const PASTE_COLLAPSE_CHAR_THRESHOLD = 300;
+const BRACKETED_PASTE_START = '\x1b[200~';
+const BRACKETED_PASTE_END = '\x1b[201~';
+const BRACKETED_PASTE_ENABLE = '\x1b[?2004h';
+const BRACKETED_PASTE_DISABLE = '\x1b[?2004l';
+
+export function countPasteLines(text) {
+  const source = String(text ?? '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  if (!source) return 0;
+  const parts = source.split('\n');
+  if (parts[parts.length - 1] === '') parts.pop();
+  return Math.max(parts.length, source ? 1 : 0);
+}
+
+export function shouldCollapsePaste(text) {
+  const source = String(text ?? '');
+  return countPasteLines(source) > PASTE_COLLAPSE_LINE_THRESHOLD || source.length > PASTE_COLLAPSE_CHAR_THRESHOLD;
+}
+
+export function renderCollapsedPaste(text) {
+  return `[Pasted ${countPasteLines(text)} lines — Enter to run, Backspace to clear]`;
+}
+
+export function installPasteCollapse(rl, options = {}) {
+  if (!rl || rl.terminal === false || typeof rl._ttyWrite !== 'function') return () => {};
+  const original = rl._ttyWrite.bind(rl);
+  let collapsed = null;
+  let collecting = '';
+  let inPaste = false;
+
+  function refresh(line) {
+    rl.line = line;
+    rl.cursor = line.length;
+    if (typeof rl._refreshLine === 'function') rl._refreshLine();
+  }
+
+  function showCollapsed(text) {
+    collapsed = text;
+    refresh(renderCollapsedPaste(text));
+  }
+
+  function consumePaste(body) {
+    inPaste = false;
+    collecting = '';
+    if (shouldCollapsePaste(body)) {
+      showCollapsed(body);
+      return true;
+    }
+    original(body);
+    return true;
+  }
+
+  rl._ttyWrite = (s, key) => {
+    const str = s == null ? '' : String(s);
+
+    if (str.includes(BRACKETED_PASTE_START) || key?.name === 'paste-start') {
+      inPaste = true;
+      collecting = str.replace(BRACKETED_PASTE_START, '');
+      if (collecting.includes(BRACKETED_PASTE_END) || key?.name === 'paste-end') {
+        return consumePaste(collecting.replace(BRACKETED_PASTE_END, ''));
+      }
+      return undefined;
+    }
+    if (inPaste) {
+      collecting += str;
+      if (collecting.includes(BRACKETED_PASTE_END) || key?.name === 'paste-end') {
+        return consumePaste(collecting.replace(BRACKETED_PASTE_END, ''));
+      }
+      return undefined;
+    }
+
+    if (collapsed) {
+      if (key?.name === 'backspace' || key?.name === 'delete') {
+        collapsed = null;
+        refresh('');
+        return undefined;
+      }
+      if (key?.name === 'return' || key?.name === 'enter') {
+        const text = collapsed;
+        collapsed = null;
+        rl.line = text;
+        rl.cursor = text.length;
+        return original('\n', { name: 'return' });
+      }
+    }
+
+    if (str && !key?.name && shouldCollapsePaste(str.replace(/\n$/, ''))) {
+      const payload = str.endsWith('\n') ? str.slice(0, -1) : str;
+      showCollapsed(payload);
+      return undefined;
+    }
+
+    return original(s, key);
+  };
+
+  try { options.output?.write?.(BRACKETED_PASTE_ENABLE); } catch { /* ignore */ }
+  return () => {
+    rl._ttyWrite = original;
+    try { options.output?.write?.(BRACKETED_PASTE_DISABLE); } catch { /* ignore */ }
+  };
+}
+
+function resolveShellIdentity(state) {
+  if (state.identity && state.identityCwd === state.cwd) return state.identity;
+  try { state.identity = detectCliProject(state.cwd); }
+  catch { state.identity = { project: path.basename(state.cwd || ''), branch: '', root: state.cwd }; }
+  state.identityCwd = state.cwd;
+  return state.identity;
+}
+
+function renderShellSessionFooter(state) {
+  const identity = resolveShellIdentity(state);
+  const preferences = readCliPreferences(state.cwd) || {};
+  return renderCliFooter({
+    projectName: identity.project,
+    branch: identity.branch,
+    cwd: compactCwd(state.cwd),
+    model: state.session?.provider_model_id || state.session?.model_key || preferences.modelPreference,
+    provider: state.providerState?.provider || state.session?.provider_state?.provider,
+    effort: state.session?.reasoning_effort || preferences.reasoningEffort,
+    tier: state.session?.actual_service_tier || state.session?.requested_service_tier || preferences.serviceTier,
+    usageSnapshot: state.usageSnapshot || state.session?.usage_snapshot,
+    elapsedMs: state.lastTurnElapsedMs ?? (state.session ? localSessionElapsedMs(state.session) : undefined),
+    action: state.activity?.active ? 'working' : '',
+  });
 }
 
 export function tokenizeShellLine(input = '') {
@@ -489,6 +616,7 @@ async function runInteractiveModelTurn(prompt, state) {
 
   state.usageSnapshot = result.usage_snapshot;
   state.providerState = result.provider_state || null;
+  state.lastTurnElapsedMs = Date.now() - startedAt;
   if (runtimeRunId) {
     try {
       await finishRuntimeRun({
@@ -536,13 +664,20 @@ async function runInteractiveModelTurn(prompt, state) {
     });
   }
 
+  const identity = resolveShellIdentity(state);
   writeLine(state.write, renderCliFooter({
+    projectName: identity.project,
+    branch: identity.branch,
+    cwd: compactCwd(state.cwd),
     model: result.model || model.provider_model_id,
+    provider: model.provider,
+    effort: result.reasoning_effort,
     usageSnapshot: result.usage_snapshot,
     tier: result.actual_service_tier,
-    elapsedMs: Date.now() - startedAt,
+    elapsedMs: state.lastTurnElapsedMs,
   }));
   writeLine(state.write, '');
+  state.wroteTurnFooter = true;
   return result;
 }
 
@@ -655,15 +790,23 @@ export async function dispatchShellLine(line, state = {}) {
           state.providerState = null;
         }
         state.cwd = next;
+        state.identity = null;
+        state.identityCwd = null;
         writeLine(write, state.cwd);
         break;
       }
       case '/git':
         spawnGit(state.cwd, args.length ? args : ['status', '--short', '--branch']);
         break;
-      case '/diff':
-        spawnGit(state.cwd, ['diff', ...args]);
+      case '/diff': {
+        const result = spawnSync('git', ['diff', '--no-color', ...args], { cwd: state.cwd, encoding: 'utf8', shell: false });
+        if (result.error) throw result.error;
+        if (result.status !== 0 && !String(result.stdout || '').trim()) {
+          throw new Error(String(result.stderr || `git exited ${result.status}`).trim());
+        }
+        write(renderDiffPreview(result.stdout || ''));
         break;
+      }
       case '/db':
         await runDb(args.length ? args : ['status'], { cwd: state.cwd });
         break;
@@ -693,8 +836,14 @@ export async function dispatchShellLine(line, state = {}) {
       persistSession(state, { last_error: diagnosticFromError(error, { source: 'shell', kind: 'interactive_error' }) });
     }
     if (!error?.reported) {
-      for (const line of renderDiagnosticError(error).split('\n')) writeLine(write, `  ${line}`);
+      for (const errorLine of renderDiagnosticError(error).split('\n')) writeLine(write, `  ${errorLine}`);
     }
+  }
+  const skipFooter = state.wroteTurnFooter;
+  state.wroteTurnFooter = false;
+  if (state.persistFooter && !skipFooter) {
+    writeLine(write, renderShellSessionFooter(state));
+    writeLine(write, '');
   }
   return { handled: true, exit: false, cwd: state.cwd };
 }
@@ -711,6 +860,7 @@ export async function runShell(argv = [], options = {}) {
     session: options.session || null,
     home: options.home,
     providerFetchImpl: options.providerFetchImpl,
+    persistFooter: options.persistFooter === true,
   };
   const sub = argv[0] || '';
   if (sub === 'list' || sub === 'status') { write(renderShellCatalog()); return; }
@@ -747,7 +897,11 @@ export async function runShell(argv = [], options = {}) {
     write(renderShellCatalog());
     writeLine(write, '  Interactive shell ready. Type / for the command picker; /exit to return to your host shell.\n');
   }
+  state.persistFooter = options.persistFooter !== false;
+  writeLine(write, renderShellSessionFooter(state));
+  writeLine(write, '');
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: Boolean(process.stdin.isTTY && process.stdout.isTTY) });
+  const restorePaste = installPasteCollapse(rl, { output: process.stdout });
   let interrupted = false;
   rl.on('SIGINT', () => {
     interrupted = true;
@@ -758,12 +912,16 @@ export async function runShell(argv = [], options = {}) {
     if (typeof options.prompt === 'string' && options.prompt) return options.prompt;
     return renderShellPrompt(state.cwd);
   };
-  if (rl.terminal) { rl.setPrompt(promptText()); rl.prompt(); }
-  for await (const line of rl) {
-    recordSessionInput(state, line);
-    const result = await dispatchShellLine(line, state);
-    if (result.exit) { rl.close(); break; }
+  try {
     if (rl.terminal) { rl.setPrompt(promptText()); rl.prompt(); }
+    for await (const line of rl) {
+      recordSessionInput(state, line);
+      const result = await dispatchShellLine(line, state);
+      if (result.exit) { rl.close(); break; }
+      if (rl.terminal) { rl.setPrompt(promptText()); rl.prompt(); }
+    }
+  } finally {
+    restorePaste();
   }
   if (state.session) {
     const activeElapsedMs = localSessionElapsedMs(state.session);
