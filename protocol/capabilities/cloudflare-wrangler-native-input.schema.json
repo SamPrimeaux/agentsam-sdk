@@ -4,17 +4,55 @@
   "title": "cloudflare.wrangler.native input",
   "type": "object",
   "additionalProperties": false,
-  "required": ["command"],
+  "required": [
+    "command"
+  ],
   "properties": {
-    "command": { "enum": ["whoami", "deployments.list", "versions.list", "versions.view", "types.check", "queues.list"] },
-    "cwd": { "type": "string", "minLength": 1 },
-    "name": { "type": "string" },
-    "account": { "type": "string" },
-    "config": { "type": "string" },
-    "env": { "type": "string" },
-    "profile": { "type": "string" },
-    "path": { "type": "string" },
-    "page": { "type": "integer", "minimum": 1 },
-    "version_id": { "type": "string", "minLength": 1 }
+    "command": {
+      "enum": [
+        "whoami",
+        "deployments.list",
+        "versions.list",
+        "versions.view",
+        "types.check",
+        "queues.list",
+        "tunnel.list",
+        "tunnel.info"
+      ]
+    },
+    "cwd": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string"
+    },
+    "account": {
+      "type": "string"
+    },
+    "config": {
+      "type": "string"
+    },
+    "env": {
+      "type": "string"
+    },
+    "profile": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string"
+    },
+    "page": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "version_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tunnel": {
+      "type": "string",
+      "minLength": 1
+    }
   }
 }
