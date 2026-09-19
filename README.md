@@ -19,6 +19,17 @@ npm install @inneranimalmedia/agentsam-sdk
 npm install -g @inneranimalmedia/agentsam-sdk
 ```
 
+Or install without a local Node/npm setup via the hosted installer (currently
+an npm-bootstrap script; standalone SEA binaries are planned, not shipped yet):
+
+```sh
+curl -fsSL https://agentsam.inneranimalmedia.com/install | bash
+# a specific version, channel, or bundled app launcher:
+curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --version 2.6.2
+curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --channel beta
+curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --app cad
+```
+
 The identity workspace is included through `@inneranimalmedia/agentsam-sdk/identity`.
 It is not a separate npm installation. A container is not required to import SDK modules
 or use local scaffolding/indexing.
@@ -107,6 +118,55 @@ read-only `repository.snapshot` composition primitive. See [Capabilities and pre
 
 Export suffixes such as `/identity` mean imports from
 `@inneranimalmedia/agentsam-sdk/identity`. Use `agentsam <command> --help` where supported.
+
+## AgentSam apps
+
+Reusable, independently runnable products live under `apps/` — currently
+`cad-creator` (CAD/robotics engineering station) and `client-cms-editor`
+(CMS authoring), with `local-studio` as the hosting Worker. Each declares an
+`agentsam.app.json` manifest (id, package name, surfaces, runtime readiness,
+and its own `preview`/`info`/`doctor`/`scaffold` commands) and ships its
+own `bin/` entry point, so an app is usable standalone via its own binary
+(e.g. `agentsam-cad-creator`) or discoverable through the parent CLI:
+
+```sh
+agentsam app list
+agentsam app info cad-creator
+agentsam app doctor cad-creator
+agentsam app preview cad-creator
+agentsam app scaffold cad-creator ./my-project
+```
+
+An app remaining independently runnable/testable/packageable while AgentSam
+gives it a uniform discovery surface is the intended shape — not every app is
+equally far along yet; `agentsam app info <id>` reports each app's actual
+runtime readiness rather than assuming parity.
+
+## MCP client & client adapters
+
+AgentSam manages MCP server connections as the connection authority (`~/.agentsam/mcp/`)
+and materializes client configurations for installed editors (Cursor `~/.cursor/mcp.json`,
+Claude Desktop config):
+
+```sh
+agentsam mcp add inneranimalmedia
+agentsam mcp list
+agentsam mcp status inneranimalmedia
+agentsam mcp doctor inneranimalmedia
+agentsam mcp remove inneranimalmedia --client cursor
+```
+
+## Live agent evaluation telemetry
+
+Capture real live agent receipts (MCP tool telemetry, git diff, gate verification,
+and run metadata) into `agentsam_eval_runs` and `agentsam_model_eval_observations`:
+
+```sh
+agentsam eval live start --suite sdk-real-work-20260919 --case cad-shell-unification --client cursor --model "Muse Spark 1.3"
+# ... agent executes real work ...
+agentsam eval live status
+agentsam eval live finish --gate PASS --remote
+```
 
 ## Optional background service
 

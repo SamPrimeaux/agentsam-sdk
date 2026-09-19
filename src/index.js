@@ -161,7 +161,46 @@ export {
   capabilityFunctionName,
   runResponsesAgent,
 } from './agent/index.js';
-export { listContextEvalFixtures, evaluateContextFixture } from './eval/index.js';
+export {
+  listContextEvalFixtures,
+  evaluateContextFixture,
+  startLiveEvalRun,
+  getLiveEvalStatus,
+  finishLiveEvalRun,
+} from './eval/index.js';
+export {
+  MCP_AUTHORITY_SCHEMA,
+  SERVER_CATALOG_CACHE_SCHEMA,
+  DEFAULT_SERVER_CATALOG_URL,
+  SEED_MCP_SERVER_CATALOG,
+  MCP_PRESETS,
+  readMcpServer,
+  writeMcpServer,
+  listMcpServers,
+  deleteMcpServer,
+  fetchMcpServerCatalog,
+  listKnownServers,
+  resolveServerPreset,
+  SUPPORTED_CLIENTS,
+  DEFAULT_CLIENT_REGISTRY_URL,
+  CLIENT_REGISTRY_CACHE_SCHEMA,
+  SEED_EXTERNAL_CLIENT_REGISTRY,
+  fetchExternalClientRegistry,
+  listRegisteredClients,
+  isClientRegistered,
+  getClientConfigPath,
+  detectInstalledClients,
+  syncServerToClient,
+  removeServerFromClient,
+  inspectClientAdapter,
+  pingMcpServer,
+  listMcpTools,
+  callMcpTool,
+  recordToolReceipt,
+  getSessionToolReceipts,
+  clearSessionToolReceipts,
+  summarizeToolReceipts,
+} from './mcp/index.js';
 
 export {
   createIdentityClient,
