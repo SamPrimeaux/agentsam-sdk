@@ -68,6 +68,7 @@ const HELP_TOPICS = Object.freeze([
       ['agentsam capabilities [id]', 'Inspect capability contracts'],
       ['agentsam skills [id]', 'Inspect packaged skills'],
       ['agentsam identity init', 'Add reusable identity surfaces'],
+      ['agentsam scaffold <cms|worker-api>', 'Generate a Cloudflare starter project'],
       ['agentsam dockerize', 'Build supported container targets'],
     ],
   },
@@ -153,7 +154,7 @@ export async function runHelp(argv = [], options = {}) {
   const write = options.write || ((value) => process.stdout.write(value));
   const args = argv.filter((arg) => arg !== '--interactive');
 
-  if (args.includes('--all')) {
+  if (args.includes('--all') || args.some((arg) => clean(arg) === 'all')) {
     write(renderAllHelp(version));
     return;
   }

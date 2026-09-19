@@ -532,6 +532,14 @@ if (command === '--version' || command === '-v') {
     console.error('\n  Usage:\n    agentsam identity preview [--open] [--port 8791]\n    agentsam identity init --name <project> [--brand "Name"]\n');
     process.exit(1);
   }
+} else if (command === 'scaffold') {
+  try {
+    const { runScaffold } = await import('./lib/scaffold/index.js');
+    await runScaffold(rest[0] ?? null);
+  } catch (e) {
+    reportCliError(e);
+    process.exit(1);
+  }
 } else {
   console.error(`\n  Unknown command: ${command}\n`);
   printHelp();

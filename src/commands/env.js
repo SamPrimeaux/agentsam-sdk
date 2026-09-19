@@ -5,7 +5,7 @@ const PROVIDERS = Object.freeze(['openai', 'anthropic', 'gemini', 'grok', 'cloud
 
 function writeLine(write, value = '') { write(`${value}\n`); }
 
-function detectCloudflareAccounts(options = {}) {
+export function detectCloudflareAccounts(options = {}) {
   const env = options.env || process.env;
   const explicit = String(options.accountId || env.ACCOUNT_ID || env.CLOUDFLARE_ACCOUNT_ID || '').trim();
   if (explicit) return { accounts: [{ id: explicit, name: null }], source: 'environment' };
