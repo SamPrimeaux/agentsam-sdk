@@ -460,12 +460,84 @@ export function probeMujoco() {
   };
 }
 
+export async function probeDockerServiceHealth(options = {}) {
+  const env = options.env || process.env;
+  const url = (options.serviceUrl || env.AGENTSAM_CAD_SERVICE_URL || 'http://127.0.0.1:8793').replace(/\/+$/, '');
+  const token = options.token || env.AGENTSAM_CAD_TOKEN || null;
+  const timeoutMs = options.timeoutMs ?? 2000;
+
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+
+  try {
+    const headers = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const res = await fetch(`${url}/healthz`, {
+      method: 'GET',
+      headers,
+      signal: controller?.signal,
+    });
+    if (timer) clearTimeout(timer);
+    if (!res.ok) return { available: false, url };
+    const data = await res.json();
+    return {
+      available: Boolean(data?.ok),
+      url,
+      service: data?.service || 'agentsam-cad',
+      version: data?.version || null,
+      tools: data?.tools || {},
+    };
+  } catch (err) {
+    if (timer) clearTimeout(timer);
+    return { available: false, url, error: err.message };
+  }
+}
+
 export async function probeAllCadTools(env = process.env, platform = process.platform, cache = true) {
   const [openscad, freecad, blender] = await Promise.all([
     probeOpenScad(env, platform),
     probeFreeCad(env, platform),
     probeBlender(env, platform),
   ]);
+
+  // If any CAD tools are missing natively on host, probe containerized Docker service
+  if (!openscad.available || !freecad.available || !blender.available) {
+    try {
+      const dockerHealth = await probeDockerServiceHealth({ env });
+      if (dockerHealth.available && dockerHealth.tools) {
+        if (!openscad.available && dockerHealth.tools.openscad?.installed) {
+          openscad.available = true;
+          openscad.binary = `docker://${dockerHealth.service || 'agentsam-cad'}/openscad`;
+          openscad.version = dockerHealth.tools.openscad.version || 'docker-container';
+          openscad.source = 'docker_service';
+          openscad.execution_lane = 'docker_service';
+          openscad.install_guidance = null;
+          openscad.error = null;
+        }
+        if (!freecad.available && dockerHealth.tools.freecad?.installed) {
+          freecad.available = true;
+          freecad.binary = `docker://${dockerHealth.service || 'agentsam-cad'}/freecad`;
+          freecad.version = dockerHealth.tools.freecad.version || 'docker-container';
+          freecad.source = 'docker_service';
+          freecad.execution_lane = 'docker_service';
+          freecad.install_guidance = null;
+          freecad.error = null;
+        }
+        if (!blender.available && dockerHealth.tools.blender?.installed) {
+          blender.available = true;
+          blender.binary = `docker://${dockerHealth.service || 'agentsam-cad'}/blender`;
+          blender.version = dockerHealth.tools.blender.version || 'docker-container';
+          blender.source = 'docker_service';
+          blender.execution_lane = 'docker_service';
+          blender.install_guidance = null;
+          blender.error = null;
+        }
+      }
+    } catch {
+      // Docker service check is best-effort
+    }
+  }
 
   const meshy = probeMeshy(env);
   const mujoco = probeMujoco();
@@ -477,13 +549,13 @@ export async function probeAllCadTools(env = process.env, platform = process.pla
     const existingConfig = loadCadConfig() || {};
     const toolsConfig = existingConfig.tools || {};
 
-    if (openscad.available && openscad.binary) {
+    if (openscad.available && openscad.binary && openscad.execution_lane === 'native') {
       toolsConfig.openscad = { binary: openscad.binary, version: openscad.version, source: openscad.source };
     }
-    if (freecad.available && freecad.binary) {
+    if (freecad.available && freecad.binary && freecad.execution_lane === 'native') {
       toolsConfig.freecad = { binary: freecad.binary, version: freecad.version, source: freecad.source };
     }
-    if (blender.available && blender.binary) {
+    if (blender.available && blender.binary && blender.execution_lane === 'native') {
       toolsConfig.blender = { binary: blender.binary, version: blender.version, source: blender.source };
     }
 

@@ -4,6 +4,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { runProcess } from '../../security/process.js';
+import { probeDockerServiceHealth, executeBlenderDocker } from './docker-executor.js';
 
 const sdkRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 export const BLENDER_ADAPTER_PATH = path.join(sdkRoot, 'services/cad/blender/adapter.py');
@@ -172,9 +173,37 @@ async function invokeBlender({
   runProcessImpl = runProcess,
 }) {
   const binary = discoverBlender({ blenderBin });
-  if (!binary) throw new Error('Blender is not installed or could not be discovered; use --blender-bin or AGENTSAM_BLENDER_BIN');
-  if (!fs.existsSync(BLENDER_ADAPTER_PATH)) throw new Error(`Bundled Blender adapter is missing: ${BLENDER_ADAPTER_PATH}`);
   const timeout = boundedInteger(timeoutSeconds, 120, 1, 600, 'timeout');
+
+  if (!binary || !fs.existsSync(BLENDER_ADAPTER_PATH)) {
+    try {
+      const dockerHealth = await probeDockerServiceHealth();
+      if (dockerHealth.available && dockerHealth.tools?.blender?.installed) {
+        const dockerRes = await executeBlenderDocker({
+          operation,
+          recipe: request.recipe || (request.operations ? { schema_version: 1, operations: request.operations } : undefined),
+          format: request.format || 'glb',
+          filename: request.output ? path.basename(request.output) : undefined,
+          timeoutMs: timeout * 1000,
+        });
+
+        if (request.output && dockerRes.artifactBase64) {
+          const outputPath = path.resolve(cwd, request.output);
+          fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+          fs.writeFileSync(outputPath, Buffer.from(dockerRes.artifactBase64, 'base64'));
+        }
+
+        return {
+          result: dockerRes.result || { ok: true, blender_version: dockerHealth.tools.blender.version },
+          binary: `docker://${dockerHealth.service || 'agentsam-cad'}/blender`,
+          duration_ms: dockerRes.durationMs,
+          execution_lane: 'docker_service',
+        };
+      }
+    } catch {}
+
+    throw new Error('Blender is not installed or could not be discovered; use --blender-bin, AGENTSAM_BLENDER_BIN, or launch AgentSam CAD Docker service');
+  }
   const requestDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-blender-'));
   const requestPath = path.join(requestDir, 'request.json');
   fs.writeFileSync(requestPath, JSON.stringify({ schema_version: 1, ...request }, null, 2), { mode: 0o600 });

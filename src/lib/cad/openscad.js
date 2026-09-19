@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { runProcess } from '../../security/process.js';
 import { discoverOpenScad, openScadStatus } from './discovery.js';
+import { probeDockerServiceHealth, executeOpenScadDocker } from './docker-executor.js';
 
 export const FORBIDDEN_OPENSCAD_PATTERNS = [
   /\bimport\s*\(/i,
@@ -131,6 +132,26 @@ export async function openScadCompile({
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
+  }
+
+  // 2. Check if containerized Docker CAD service is available
+  try {
+    const dockerHealth = await probeDockerServiceHealth();
+    if (dockerHealth.available && dockerHealth.tools?.openscad?.installed) {
+      const dockerResult = await executeOpenScadDocker({
+        source,
+        outputFormat: format,
+        parameters,
+        filename: outFilename,
+        timeoutMs,
+      });
+      return {
+        ...dockerResult,
+        engine: 'openscad-docker',
+      };
+    }
+  } catch {
+    // Docker service error/unavailable -> fall through to procedural fallback
   }
 
   // Graceful fallback for headless or restricted environments lacking OpenSCAD executable

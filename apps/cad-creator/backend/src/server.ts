@@ -8,6 +8,8 @@ import { getRoboticsPerceptionCapabilities, runRoboticsPerception } from './robo
 import { probeAllCadTools } from './cad/discovery';
 import { executeOpenScadCompiler } from './cad/openscad';
 import { executeFreeCadBuild } from './cad/freecad';
+import { executeBlenderBuild } from './cad/blender';
+import { probeDockerServiceHealth } from './cad/docker-executor';
 
 const CAD_ROOT = path.resolve(process.cwd(), '..');
 const FRONTEND_ROOT = path.join(CAD_ROOT, 'frontend');
@@ -419,12 +421,21 @@ app.get('/api/cad/tools', async (req, res) => {
 app.get('/api/cad/health', async (req, res) => {
   try {
     const report = await probeAllCadTools(process.env);
+    const dockerHealth = await probeDockerServiceHealth();
+    const hasDockerLane = report.tools.some((t) => t.execution_lane === 'docker_service');
+    const backend = hasDockerLane || dockerHealth.available ? 'docker-service' : 'local-browser';
+
     return res.json({
       status: report.all_systems_ready ? 'healthy' : 'degraded',
-      backend: 'docker-service',
+      backend,
       version: '2026.04',
       availableTools: report.available_tools,
       totalTools: report.total_tools,
+      dockerService: {
+        available: dockerHealth.available,
+        url: dockerHealth.url,
+        version: dockerHealth.version,
+      },
       message: report.all_systems_ready
         ? 'All CAD execution kernels online'
         : 'Some CAD execution engines unavailable',
@@ -437,6 +448,18 @@ app.get('/api/cad/health', async (req, res) => {
   }
 });
 
+app.get('/api/cad/docker/status', async (req, res) => {
+  try {
+    const health = await probeDockerServiceHealth();
+    return res.json(health);
+  } catch (err: any) {
+    return res.status(500).json({
+      available: false,
+      error: err?.message || 'Failed to probe Docker service',
+    });
+  }
+});
+
 app.get('/api/cad/capabilities', (req, res) => {
   return res.json({
     provider: 'AgentSam-Server-CSG',
@@ -444,7 +467,8 @@ app.get('/api/cad/capabilities', (req, res) => {
     supportsWorkerSandbox: true,
     supportsBimCompilation: true,
     supportsFreeCadSolidKernel: true,
-    maxExecutionTimeMs: 30000,
+    supportsBlenderEngine: true,
+    maxExecutionTimeMs: 45000,
   });
 });
 
@@ -493,6 +517,28 @@ app.post('/api/cad/freecad/execute', async (req, res) => {
     return res.status(500).json({
       success: false,
       error: err.message || 'FreeCAD solid modeling failure',
+      logs: [`[ERROR] ${err.message}`],
+    });
+  }
+});
+
+app.post('/api/cad/blender/execute', async (req, res) => {
+  try {
+    const { operation = 'build', recipe, operations, format = 'glb', filename, timeoutMs = 45000 } = req.body;
+    const result = await executeBlenderBuild({
+      operation,
+      recipe,
+      operations,
+      format,
+      filename,
+      timeoutMs,
+    });
+
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      error: err.message || 'Blender execution failure',
       logs: [`[ERROR] ${err.message}`],
     });
   }

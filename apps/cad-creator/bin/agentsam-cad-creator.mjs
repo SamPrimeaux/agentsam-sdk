@@ -196,6 +196,7 @@ async function runDoctor(args = []) {
     }
     console.log('');
     console.log('  Run "agentsam-cad-creator setup" to probe and cache paths, or set AGENTSAM_<TOOL>_BIN.');
+    console.log('  Container alternative: run "agentsam dockerize cad" to launch the isolated Docker CAD service.');
   } else {
     console.log('');
     console.log('All local CAD engines are operational.');

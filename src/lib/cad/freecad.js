@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runProcess } from '../../security/process.js';
 import { discoverFreeCad, freeCadStatus } from './discovery.js';
+import { probeDockerServiceHealth, executeFreeCadDocker } from './docker-executor.js';
 
 const sdkRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 export const FREECAD_ADAPTER_PATH = path.join(sdkRoot, 'services/cad/freecad/adapter.py');
@@ -97,11 +98,29 @@ export async function freeCadBuild({
   runProcessImpl = runProcess,
 } = {}) {
   const { pythonBin, libDir } = discoverFreeCadPython({ freecadBin });
-  if (!pythonBin) {
-    throw new Error('FreeCAD Python environment is not available; install FreeCAD or set AGENTSAM_FREECAD_PYTHON');
-  }
-  if (!fs.existsSync(FREECAD_ADAPTER_PATH)) {
-    throw new Error(`Bundled FreeCAD adapter is missing: ${FREECAD_ADAPTER_PATH}`);
+  if (!pythonBin || !fs.existsSync(FREECAD_ADAPTER_PATH)) {
+    try {
+      const dockerHealth = await probeDockerServiceHealth();
+      if (dockerHealth.available && dockerHealth.tools?.freecad?.installed) {
+        const dockerRes = await executeFreeCadDocker({
+          recipe,
+          operations: recipe?.operations || [],
+          format,
+          filename: output ? path.basename(output) : undefined,
+          timeoutMs: timeoutSeconds * 1000,
+        });
+        if (output) {
+          const outputPath = path.resolve(cwd, output);
+          fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+          fs.writeFileSync(outputPath, Buffer.from(dockerRes.artifactBase64, 'base64'));
+        }
+        return {
+          ...dockerRes,
+          engine: 'freecad-docker',
+        };
+      }
+    } catch {}
+    throw new Error('FreeCAD Python environment is not available; install FreeCAD, set AGENTSAM_FREECAD_PYTHON, or launch AgentSam CAD Docker service');
   }
 
   const outputPath = path.resolve(cwd, output);

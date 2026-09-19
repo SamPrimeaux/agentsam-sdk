@@ -4,6 +4,7 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { discoverOpenScad } from './discovery';
+import { probeDockerServiceHealth, executeOpenScadDocker } from './docker-executor';
 
 const execFileAsync = promisify(execFile);
 
@@ -42,7 +43,7 @@ export interface OpenScadExecuteOptions {
 
 export interface OpenScadExecuteResult {
   success: boolean;
-  engine: 'openscad-native' | 'procedural-fallback';
+  engine: 'openscad-native' | 'openscad-docker' | 'procedural-fallback';
   artifactContent: string;
   mimeType: string;
   filename: string;
@@ -124,6 +125,26 @@ export async function executeOpenScadCompiler({
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
+  }
+
+  // 2. Check if containerized Docker CAD service is available
+  try {
+    const dockerHealth = await probeDockerServiceHealth();
+    if (dockerHealth.available && dockerHealth.tools?.openscad?.installed) {
+      const dockerResult = await executeOpenScadDocker({
+        source,
+        outputFormat: format,
+        parameters,
+        filename,
+        timeoutMs,
+      });
+      return {
+        ...dockerResult,
+        engine: 'openscad-docker',
+      };
+    }
+  } catch (err: any) {
+    // Docker service error or not reachable -> fall through to procedural fallback
   }
 
   // Graceful fallback for environments lacking local OpenSCAD binary

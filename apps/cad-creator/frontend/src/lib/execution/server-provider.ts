@@ -4,11 +4,15 @@ import {
   ExecutionHealth,
   OpenScadExecutionRequest,
   OpenScadExecutionResult,
+  FreeCadExecutionRequest,
+  FreeCadExecutionResult,
+  BlenderExecutionRequest,
+  BlenderExecutionResult,
 } from './types';
 import { LocalExecutionProvider } from './local-provider';
 
 export class ServerExecutionProvider implements DesignExecutionProvider {
-  id = 'server-docker';
+  id = 'docker-service';
   displayName = 'Isolated CAD Container Service';
   private fallback = new LocalExecutionProvider();
 
@@ -23,7 +27,7 @@ export class ServerExecutionProvider implements DesignExecutionProvider {
       supportsNativeOpenScad: true,
       supportsClientSideCsg: true,
       supportedFormats: ['stl', '3mf', 'dxf', 'obj', 'scad'],
-      maxTimeoutMs: 10000,
+      maxTimeoutMs: 45000,
       environmentName: 'Server Sandboxed Execution Container',
     };
   }
@@ -63,4 +67,35 @@ export class ServerExecutionProvider implements DesignExecutionProvider {
       return localResult;
     }
   }
+
+  async executeFreeCad(request: FreeCadExecutionRequest): Promise<FreeCadExecutionResult> {
+    const res = await fetch('/api/cad/freecad/execute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+
+    if (res.ok) {
+      return await res.json();
+    }
+    const errData = await res.json().catch(() => ({ error: 'FreeCAD execution failed' }));
+    throw new Error(errData.error || 'FreeCAD execution failed');
+  }
+
+  async executeBlender(request: BlenderExecutionRequest): Promise<BlenderExecutionResult> {
+    const res = await fetch('/api/cad/blender/execute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+
+    if (res.ok) {
+      return await res.json();
+    }
+    const errData = await res.json().catch(() => ({ error: 'Blender execution failed' }));
+    throw new Error(errData.error || 'Blender execution failed');
+  }
 }
+
+export const DockerExecutionProvider = ServerExecutionProvider;
+export const DockerServiceExecutionProvider = ServerExecutionProvider;

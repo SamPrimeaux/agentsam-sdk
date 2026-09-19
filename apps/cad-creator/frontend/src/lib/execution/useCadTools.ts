@@ -49,11 +49,13 @@ export function useCadTools() {
         if (Array.isArray(data.tools) && data.tools.length > 0) {
           const mapped: RuntimeCapabilityStatus[] = data.tools.map((t) => {
             const lane: RuntimeCapabilityStatus['lane'] =
-              t.execution_lane === 'cloud_byok'
-                ? 'cloud_byok'
-                : t.execution_lane === 'browser_wasm'
-                  ? 'browser'
-                  : 'local_native';
+              t.execution_lane === 'docker_service' || t.source === 'docker_service'
+                ? 'docker'
+                : t.execution_lane === 'cloud_byok'
+                  ? 'cloud_byok'
+                  : t.execution_lane === 'browser_wasm'
+                    ? 'browser'
+                    : 'local_native';
 
             const status: RuntimeCapabilityStatus['status'] = t.available
               ? t.tool === 'freecad'

@@ -37,6 +37,8 @@ TOOL_COMMANDS = {
 }
 
 OPENSCAD_FORMATS = {"stl", "3mf", "dxf", "svg", "csg", "off", "amf"}
+FREECAD_FORMATS = {"step", "stp", "iges", "brep", "stl"}
+BLENDER_FORMATS = {"glb", "stl", "obj", "png"}
 FORBIDDEN_OPENSCAD = [
     (re.compile(r"\binclude\s*<", re.I), "include directives are disabled"),
     (re.compile(r"\buse\s*<", re.I), "use directives are disabled"),
@@ -83,8 +85,8 @@ def _capabilities() -> dict[str, Any]:
         "tools": tools,
         "endpoints": {
             "openscad_compile": tools["openscad"]["installed"],
-            "freecad_execute": False,
-            "blender_execute": False,
+            "freecad_execute": tools["freecad"]["installed"],
+            "blender_execute": tools["blender"]["installed"],
         },
         "limits": {
             "max_source_chars": MAX_SOURCE_CHARS,
@@ -202,6 +204,245 @@ def _compile_openscad(payload: dict[str, Any]) -> dict[str, Any]:
         }
 
 
+def _find_freecad_adapter() -> Path:
+    candidates = [
+        Path("/srv/freecad/adapter.py"),
+        Path("/srv/services/cad/freecad/adapter.py"),
+        Path(__file__).parent / "freecad" / "adapter.py",
+        Path(__file__).parent / "freecad_adapter.py",
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    raise RuntimeError("FreeCAD adapter script not found in CAD service container")
+
+
+def _find_blender_adapter() -> Path:
+    candidates = [
+        Path("/srv/blender/adapter.py"),
+        Path("/srv/services/cad/blender/adapter.py"),
+        Path(__file__).parent / "blender" / "adapter.py",
+        Path(__file__).parent / "blender_adapter.py",
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    raise RuntimeError("Blender adapter script not found in CAD service container")
+
+
+def _freecad_command(adapter_path: Path, request_path: Path, operation: str = "build") -> list[str]:
+    for cmd in ["FreeCADCmd", "freecadcmd", "/usr/lib/freecad/bin/FreeCADCmd"]:
+        binary = shutil.which(cmd)
+        if binary or Path(cmd).exists():
+            return [binary or cmd, str(adapter_path), "--operation", operation, "--request", str(request_path)]
+    for py in ["/usr/lib/freecad/bin/python", "python3"]:
+        binary = shutil.which(py)
+        if binary or Path(py).exists():
+            return [binary or py, str(adapter_path), "--operation", operation, "--request", str(request_path)]
+    raise RuntimeError("FreeCAD runtime binary not found in container")
+
+
+def _blender_command(adapter_path: Path, request_path: Path, operation: str = "build") -> list[str]:
+    for cmd in ["blender", "/usr/bin/blender", "/usr/local/bin/blender"]:
+        binary = shutil.which(cmd)
+        if binary or Path(cmd).exists():
+            return [binary or cmd, "-b", "--python", str(adapter_path), "--", "--operation", operation, "--request", str(request_path)]
+    raise RuntimeError("Blender runtime binary not found in container")
+
+
+def _execute_freecad(payload: dict[str, Any]) -> dict[str, Any]:
+    adapter_path = _find_freecad_adapter()
+    operations = payload.get("operations") or (payload.get("recipe", {}).get("operations") if isinstance(payload.get("recipe"), dict) else None)
+    if not isinstance(operations, list) or len(operations) == 0:
+        raise ValueError("operations must be a non-empty list of modeling operations")
+    if len(operations) > 256:
+        raise ValueError("operations list exceeds maximum limit of 256")
+
+    output_format = str(payload.get("format", "step")).lower().lstrip(".")
+    if output_format not in FREECAD_FORMATS:
+        raise ValueError(f"unsupported FreeCAD format: {output_format}")
+
+    timeout = payload.get("timeout_seconds", 30)
+    try:
+        timeout = int(timeout)
+    except (TypeError, ValueError):
+        timeout = 30
+    timeout = max(1, min(timeout, MAX_TIMEOUT_SECONDS))
+
+    filename = str(payload.get("filename") or f"model.{output_format}")
+    filename = re.sub(r"[^A-Za-z0-9._-]+", "_", Path(filename).name)[:160] or f"model.{output_format}"
+    if not filename.lower().endswith(f".{output_format}"):
+        filename += f".{output_format}"
+
+    WORK_ROOT.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="freecad-", dir=WORK_ROOT) as temp:
+        temp_path = Path(temp)
+        output_path = temp_path / filename
+        request_path = temp_path / "request.json"
+
+        request_data = {
+            "schema_version": 1,
+            "output": str(output_path),
+            "format": output_format,
+            "operations": operations,
+        }
+        request_path.write_text(json.dumps(request_data, indent=2), encoding="utf-8")
+
+        command = _freecad_command(adapter_path, request_path, operation="build")
+        env = os.environ.copy()
+        env.setdefault("QT_QPA_PLATFORM", "offscreen")
+        env.setdefault("PYTHONPATH", "/usr/lib/freecad/lib")
+
+        try:
+            proc = subprocess.run(
+                command,
+                cwd=temp,
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError(f"FreeCAD execution exceeded {timeout}s") from exc
+
+        stdout = proc.stdout or ""
+        stderr = proc.stderr or ""
+        logs = (stdout + "\n" + stderr).strip()
+
+        result_envelope = None
+        for line in reversed(stdout.splitlines()):
+            if line.startswith("AGENTSAM_RESULT="):
+                try:
+                    result_envelope = json.loads(line[len("AGENTSAM_RESULT="):])
+                    break
+                except json.JSONDecodeError:
+                    pass
+
+        if not result_envelope or not result_envelope.get("ok"):
+            err_msg = result_envelope.get("error") if result_envelope else f"exit {proc.returncode}"
+            raise RuntimeError(f"FreeCAD modeling failed ({err_msg}): {logs[-4000:]}")
+
+        if not output_path.exists():
+            raise RuntimeError(f"FreeCAD failed to produce output file {filename}")
+
+        artifact = output_path.read_bytes()
+        if len(artifact) > MAX_ARTIFACT_BYTES:
+            raise RuntimeError(f"artifact is {len(artifact)} bytes; exceeds {MAX_ARTIFACT_BYTES} bytes")
+
+        digest = hashlib.sha256(artifact).hexdigest()
+
+        return {
+            "ok": True,
+            "tool": "freecad",
+            "format": output_format,
+            "filename": filename,
+            "size_bytes": len(artifact),
+            "sha256": digest,
+            "artifact_base64": base64.b64encode(artifact).decode("ascii"),
+            "metrics": result_envelope.get("metrics", {}),
+            "logs": logs[-8000:],
+        }
+
+
+def _execute_blender(payload: dict[str, Any]) -> dict[str, Any]:
+    adapter_path = _find_blender_adapter()
+    operation = str(payload.get("operation") or "build").lower()
+    if operation not in ("build", "inspect", "render_preview", "export"):
+        raise ValueError(f"unsupported Blender operation: {operation}")
+
+    recipe = payload.get("recipe")
+    if recipe is None and "operations" in payload:
+        recipe = {"schema_version": 1, "operations": payload["operations"]}
+    if not isinstance(recipe, dict):
+        raise ValueError("recipe must be an object")
+
+    output_format = str(payload.get("format", "glb")).lower().lstrip(".")
+    if output_format not in BLENDER_FORMATS:
+        raise ValueError(f"unsupported Blender format: {output_format}")
+
+    timeout = payload.get("timeout_seconds", 30)
+    try:
+        timeout = int(timeout)
+    except (TypeError, ValueError):
+        timeout = 30
+    timeout = max(1, min(timeout, MAX_TIMEOUT_SECONDS))
+
+    filename = str(payload.get("filename") or f"model.{output_format}")
+    filename = re.sub(r"[^A-Za-z0-9._-]+", "_", Path(filename).name)[:160] or f"model.{output_format}"
+    if not filename.lower().endswith(f".{output_format}"):
+        filename += f".{output_format}"
+
+    WORK_ROOT.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="blender-", dir=WORK_ROOT) as temp:
+        temp_path = Path(temp)
+        output_path = temp_path / filename
+        request_path = temp_path / "request.json"
+
+        request_data = {
+            "schema_version": 1,
+            "output": str(output_path),
+            "format": output_format,
+            **recipe,
+        }
+        request_path.write_text(json.dumps(request_data, indent=2), encoding="utf-8")
+
+        command = _blender_command(adapter_path, request_path, operation=operation)
+        env = os.environ.copy()
+        env.setdefault("HOME", "/tmp/home")
+
+        try:
+            proc = subprocess.run(
+                command,
+                cwd=temp,
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError(f"Blender execution exceeded {timeout}s") from exc
+
+        stdout = proc.stdout or ""
+        stderr = proc.stderr or ""
+        logs = (stdout + "\n" + stderr).strip()
+
+        result_envelope = None
+        for line in reversed(stdout.splitlines()):
+            if line.startswith("AGENTSAM_RESULT="):
+                try:
+                    result_envelope = json.loads(line[len("AGENTSAM_RESULT="):])
+                    break
+                except json.JSONDecodeError:
+                    pass
+
+        if not result_envelope or not result_envelope.get("ok"):
+            err_msg = result_envelope.get("error") if result_envelope else f"exit {proc.returncode}"
+            raise RuntimeError(f"Blender execution failed ({err_msg}): {logs[-4000:]}")
+
+        artifact = b""
+        if output_path.exists():
+            artifact = output_path.read_bytes()
+            if len(artifact) > MAX_ARTIFACT_BYTES:
+                raise RuntimeError(f"artifact is {len(artifact)} bytes; exceeds {MAX_ARTIFACT_BYTES} bytes")
+
+        digest = hashlib.sha256(artifact).hexdigest() if artifact else None
+
+        return {
+            "ok": True,
+            "tool": "blender",
+            "operation": operation,
+            "format": output_format,
+            "filename": filename if artifact else None,
+            "size_bytes": len(artifact),
+            "sha256": digest,
+            "artifact_base64": base64.b64encode(artifact).decode("ascii") if artifact else None,
+            "result": result_envelope,
+            "logs": logs[-8000:],
+        }
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "AgentSamCAD/1"
 
@@ -261,6 +502,12 @@ class Handler(BaseHTTPRequestHandler):
             payload = self._read_json()
             if self.path == "/v1/openscad/compile":
                 self._json(HTTPStatus.OK, _compile_openscad(payload))
+                return
+            if self.path == "/v1/freecad/execute":
+                self._json(HTTPStatus.OK, _execute_freecad(payload))
+                return
+            if self.path == "/v1/blender/execute":
+                self._json(HTTPStatus.OK, _execute_blender(payload))
                 return
             self._json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not_found"})
         except ValueError as exc:

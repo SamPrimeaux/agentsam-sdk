@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { runProcess } from '../../security/process.js';
 import { discoverBlender, blenderStatus } from './blender.js';
+import { probeDockerServiceHealth } from './docker-executor.js';
 
 function isFile(value, existsSync = fs.existsSync) {
   try {
@@ -538,6 +539,44 @@ export async function discoverAllCadTools({
     error: blenderRaw.error || null,
   };
 
+  // If any CAD tools are missing natively on host, probe containerized Docker service
+  if (!openscad.available || !freecad.available || !blender.available) {
+    try {
+      const dockerHealth = await probeDockerServiceHealth({ env });
+      if (dockerHealth.available && dockerHealth.tools) {
+        if (!openscad.available && dockerHealth.tools.openscad?.installed) {
+          openscad.available = true;
+          openscad.binary = `docker://${dockerHealth.service || 'agentsam-cad'}/openscad`;
+          openscad.version = dockerHealth.tools.openscad.version || 'docker-container';
+          openscad.source = 'docker_service';
+          openscad.execution_lane = 'docker_service';
+          openscad.install_guidance = null;
+          openscad.error = null;
+        }
+        if (!freecad.available && dockerHealth.tools.freecad?.installed) {
+          freecad.available = true;
+          freecad.binary = `docker://${dockerHealth.service || 'agentsam-cad'}/freecad`;
+          freecad.version = dockerHealth.tools.freecad.version || 'docker-container';
+          freecad.source = 'docker_service';
+          freecad.execution_lane = 'docker_service';
+          freecad.install_guidance = null;
+          freecad.error = null;
+        }
+        if (!blender.available && dockerHealth.tools.blender?.installed) {
+          blender.available = true;
+          blender.binary = `docker://${dockerHealth.service || 'agentsam-cad'}/blender`;
+          blender.version = dockerHealth.tools.blender.version || 'docker-container';
+          blender.source = 'docker_service';
+          blender.execution_lane = 'docker_service';
+          blender.install_guidance = null;
+          blender.error = null;
+        }
+      }
+    } catch {
+      // Docker service check is best-effort
+    }
+  }
+
   const meshy = meshyStatus({ env });
   const mujoco = mujocoStatus();
 
@@ -549,13 +588,13 @@ export async function discoverAllCadTools({
     const existingConfig = loadCadConfig() || {};
     const toolsConfig = existingConfig.tools || {};
 
-    if (openscad.available && openscad.binary) {
+    if (openscad.available && openscad.binary && openscad.execution_lane === 'native') {
       toolsConfig.openscad = { binary: openscad.binary, version: openscad.version, source: openscad.source };
     }
-    if (freecad.available && freecad.binary) {
+    if (freecad.available && freecad.binary && freecad.execution_lane === 'native') {
       toolsConfig.freecad = { binary: freecad.binary, version: freecad.version, source: freecad.source };
     }
-    if (blender.available && blender.binary) {
+    if (blender.available && blender.binary && blender.execution_lane === 'native') {
       toolsConfig.blender = { binary: blender.binary, version: blender.version, source: blender.source };
     }
 

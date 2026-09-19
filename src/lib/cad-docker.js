@@ -48,6 +48,10 @@ export function generateCadDocker(opts = {}) {
 
   const packages = ['python3', 'ca-certificates', 'passwd', ...new Set(tools.flatMap(tool => APT_PACKAGES[tool]))];
   const q = JSON.stringify;
+  const copyLines = ['COPY server.py /srv/server.py'];
+  if (tools.includes('freecad')) copyLines.push('COPY freecad/ /srv/freecad/');
+  if (tools.includes('blender')) copyLines.push('COPY blender/ /srv/blender/');
+
   const dockerfile = `# AgentSam CAD runtime SHA-256: ${runtimeDigest()}
 # Tools: ${tools.join(', ')}
 FROM debian:bookworm-slim
@@ -59,7 +63,7 @@ RUN apt-get update \\
  && mkdir -p /srv /work \\
  && chown -R cad:cad /work
 WORKDIR /srv
-COPY server.py /srv/server.py
+${copyLines.join('\n')}
 ENV PORT=${port} AGENTSAM_CAD_TOKEN_FILE=/config/service.token AGENTSAM_CAD_WORK_ROOT=/work AGENTSAM_CAD_TOOLS=${tools.join(',')} QT_QPA_PLATFORM=offscreen PYTHONUNBUFFERED=1 HOME=/tmp/home XDG_CACHE_HOME=/tmp/cache XDG_CONFIG_HOME=/tmp/config
 EXPOSE ${port}
 USER cad
@@ -128,10 +132,25 @@ export function prepareCadDeployment(targetDir, opts = {}) {
   return { ...opts, configurationDir, tokenFile, tools };
 }
 
-export function stageCadContext(versionDir) {
+export function stageCadContext(versionDir, opts = {}) {
   const context = path.join(versionDir, 'context');
   fs.mkdirSync(context, { recursive: true });
   fs.copyFileSync(path.join(sdkRoot, CAD_SERVER_FILE), path.join(context, 'server.py'));
+  const tools = opts.tools ? normalizeCadTools(opts.tools) : [];
+  if (tools.includes('freecad')) {
+    const freecadAdapter = path.join(sdkRoot, 'services/cad/freecad/adapter.py');
+    if (fs.existsSync(freecadAdapter)) {
+      fs.mkdirSync(path.join(context, 'freecad'), { recursive: true });
+      fs.copyFileSync(freecadAdapter, path.join(context, 'freecad', 'adapter.py'));
+    }
+  }
+  if (tools.includes('blender')) {
+    const blenderAdapter = path.join(sdkRoot, 'services/cad/blender/adapter.py');
+    if (fs.existsSync(blenderAdapter)) {
+      fs.mkdirSync(path.join(context, 'blender'), { recursive: true });
+      fs.copyFileSync(blenderAdapter, path.join(context, 'blender', 'adapter.py'));
+    }
+  }
   return context;
 }
 

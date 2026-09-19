@@ -42,4 +42,14 @@ export {
   freeCadInspect,
 } from './freecad.js';
 
+export {
+  DEFAULT_CAD_DOCKER_PORT,
+  DEFAULT_CAD_DOCKER_URL,
+  resolveDockerServiceConfig,
+  probeDockerServiceHealth,
+  executeOpenScadDocker,
+  executeFreeCadDocker,
+  executeBlenderDocker,
+} from './docker-executor.js';
+
 
