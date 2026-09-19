@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createInlineActivity } from '../../src/ui/cli/activity.js';
-import { renderCliFooter } from '../../src/ui/cli/footer.js';
+import { createInlineActivity, INTERRUPT_HINT, renderShimmer } from '../../src/ui/cli/activity.js';
+import { renderCliFooter, renderDiffPreview } from '../../src/ui/cli/footer.js';
 import { createCliRuntimePresenter, normalizeRuntimeEventEnvelope, RUNTIME_EVENT_ENVELOPE_SCHEMA } from '../../src/ui/cli/runtime-events.js';
 import { renderWaitingInput } from '../../src/ui/cli/waiting.js';
+
+const stripAnsi = (text) => String(text || '').replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
 
 test('CLI footer reports unknown context honestly', () => {
   const text = renderCliFooter({
@@ -17,6 +19,71 @@ test('CLI footer reports unknown context honestly', () => {
   assert.match(text, /ctx 1\.2k \/ unknown/);
   assert.match(text, /↑5k ↓600/);
   assert.match(text, /cache 2k/);
+});
+
+test('CLI footer shows project identity, branch, and shortcut hints', () => {
+  const text = stripAnsi(renderCliFooter({
+    project: 'agentsam-sdk',
+    cwd: '/Users/sam/agentsam-sdk',
+    branch: 'feat/cli-interactive-presence',
+    model: 'claude-test',
+  }));
+  assert.match(text, /agentsam-sdk/);
+  assert.match(text, /feat\/cli-interactive-presence/);
+  assert.match(text, /ctrl-c to cancel/);
+  assert.match(text, /\/ commands/);
+});
+
+test('diff preview colors hunks and keeps NO_COLOR output readable', () => {
+  const diff = [
+    'diff --git a/src/ui/cli/footer.js b/src/ui/cli/footer.js',
+    '--- a/src/ui/cli/footer.js',
+    '+++ b/src/ui/cli/footer.js',
+    '@@ -1,3 +1,4 @@',
+    ' import pc from \'picocolors\';',
+    '-const old = 1;',
+    '+const next = 2;',
+    ' keep',
+  ].join('\n');
+  const colored = renderDiffPreview(diff, { color: true });
+  assert.match(colored, /\x1b\[/);
+  assert.match(stripAnsi(colored), /\+const next = 2;/);
+  const plain = renderDiffPreview(diff, { color: false });
+  assert.doesNotMatch(plain, /\x1b\[/);
+  assert.match(plain, /-const old = 1;/);
+  assert.equal(stripAnsi(renderDiffPreview('', { color: false })).trim(), 'no changes');
+});
+
+test('inline activity shows elapsed time and ctrl-c cancel hint', () => {
+  let output = '';
+  let now = 0;
+  let tick = null;
+  const activity = createInlineActivity({
+    write: (value) => { output += value; },
+    interactive: true,
+    env: { NO_COLOR: '1' },
+    now: () => now,
+    setInterval: (fn) => { tick = fn; return 1; },
+    clearInterval() {},
+  });
+  activity.start('Working');
+  now = 1500;
+  tick();
+  const clean = stripAnsi(output);
+  assert.match(clean, /Working/);
+  assert.match(clean, /1\.5s/);
+  assert.match(clean, new RegExp(INTERRUPT_HINT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  activity.clear();
+});
+
+test('shimmer uses color when allowed and stays plain under NO_COLOR', () => {
+  const colored = renderShimmer('Working', 4, { env: { COLORTERM: 'truecolor' } });
+  assert.match(colored, /\x1b\[38;2;/);
+  assert.match(stripAnsi(colored), /Working/);
+  const fallback = renderShimmer('Working', 4, { env: { TERM: 'xterm-256color' } });
+  assert.match(fallback, /\x1b\[38;5;/);
+  const plain = renderShimmer('Working', 4, { env: { NO_COLOR: '1', COLORTERM: 'truecolor' } });
+  assert.equal(plain, 'Working');
 });
 
 test('runtime event envelope is the single standalone/platform producer contract', () => {

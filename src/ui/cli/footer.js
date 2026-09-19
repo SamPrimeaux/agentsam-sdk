@@ -27,6 +27,8 @@ function money(value) {
   return `$${n.toFixed(n >= 1 ? 2 : 3)}`;
 }
 
+export const FOOTER_HINTS = '/ commands · @ files · ! shell · ctrl-c to cancel';
+
 export function renderCliFooter(value = {}) {
   const usage = value.usage || value.usageSnapshot || {};
   const cumulative = usage.cumulative || {};
@@ -34,13 +36,17 @@ export function renderCliFooter(value = {}) {
   const provider = String(value.provider || '').trim();
   const effort = String(value.effort || value.reasoning || '').trim();
   const tier = String(value.tier || '').trim();
-  const cwd = String(value.cwd || value.project || '').trim();
+  const projectName = String(value.projectName || value.identity || (value.cwd ? value.project : '') || '').trim();
+  const branch = String(value.branch || value.gitBranch || '').trim();
+  const cwd = String(value.cwd || (!value.projectName && !value.identity ? value.project : '') || '').trim();
   const action = String(value.action || value.statusLabel || '').trim();
   const filesEdited = Number(value.filesEdited || value.files_edited || 0);
   const elapsedMs = Number(value.elapsedMs);
   const cost = money(value.cost ?? cumulative.cost_usd ?? usage.cost_usd);
 
   const primary = [];
+  if (projectName) primary.push(projectName);
+  if (branch) primary.push(branch);
   if (cwd) primary.push(cwd.replace(String(process.env.HOME || ''), '~'));
   if (action) primary.push(action);
   primary.push([provider, model, effort].filter(Boolean).join(' ') || model);
@@ -54,11 +60,37 @@ export function renderCliFooter(value = {}) {
     primary.push(elapsedMs < 60_000 ? `${(elapsedMs / 1000).toFixed(1)}s` : `${Math.floor(elapsedMs / 60_000)}m${Math.floor((elapsedMs % 60_000) / 1000)}s`);
   }
 
-  const hints = String(value.hints || '/ commands · @ files · ! shell · esc interrupt');
+  const hints = String(value.hints || FOOTER_HINTS);
   return [
     pc.dim('  ' + primary.join(' · ')),
     pc.dim('  ' + hints),
   ].join('\n');
+}
+
+export function renderDiffPreview(diffText, options = {}) {
+  const source = String(diffText || '');
+  const color = options.color ?? !Object.hasOwn(process.env, 'NO_COLOR');
+  const paint = (text, style) => {
+    if (!color) return text;
+    const code = style === 'add' ? '32' : style === 'del' ? '31' : style === 'hunk' ? '36' : style === 'meta' ? '1' : '2';
+    return `\x1b[${code}m${text}\x1b[0m`;
+  };
+  if (!source.trim()) return `  ${paint('no changes', 'dim')}\n`;
+  const maxLines = Math.max(20, Number(options.maxLines) || 200);
+  const lines = source.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const truncated = lines.length > maxLines;
+  const shown = truncated ? lines.slice(0, maxLines) : lines;
+  const out = shown.map((line) => {
+    if (line.startsWith('diff ') || line.startsWith('index ') || line.startsWith('+++') || line.startsWith('---')) {
+      return `  ${paint(line, 'meta')}`;
+    }
+    if (line.startsWith('@@')) return `  ${paint(line, 'hunk')}`;
+    if (line.startsWith('+')) return `  ${paint(line, 'add')}`;
+    if (line.startsWith('-')) return `  ${paint(line, 'del')}`;
+    return `  ${line}`;
+  });
+  if (truncated) out.push(`  ${paint(`… ${lines.length - maxLines} more lines`, 'dim')}`);
+  return `${out.join('\n')}\n`;
 }
 
 export function renderUsagePanel(value = {}) {
