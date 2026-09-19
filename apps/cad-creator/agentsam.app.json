@@ -26,5 +26,6 @@
     "server_only": [
       "GEMINI_API_KEY"
     ]
-  }
+  },
+  "bin": "bin/agentsam-cad-creator.mjs"
 }

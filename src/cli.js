@@ -11,6 +11,7 @@ import { printContextSummary } from './lib/detect-context.js';
 import { runStartLocal } from './commands/start-local.js';
 import { runOllama } from './commands/ollama.js';
 import { runModels } from './commands/models.js';
+import { runApp } from './commands/app.js';
 import { runProviders } from './commands/providers.js';
 import { runEnv } from './commands/env.js';
 import { runTunnel } from './commands/tunnel.js';
@@ -366,6 +367,13 @@ if (command === '--version' || command === '-v') {
 } else if (command === 'models') {
   try {
     await runModels(rest);
+  } catch (e) {
+    reportCliError(e);
+    process.exit(1);
+  }
+} else if (command === 'app' || command === 'apps') {
+  try {
+    await runApp(rest);
   } catch (e) {
     reportCliError(e);
     process.exit(1);

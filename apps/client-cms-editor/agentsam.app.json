@@ -1,0 +1,25 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "client-cms-editor",
+  "name": "AgentSam CMS Editor",
+  "package": "@inneranimalmedia/agentsam-sdk-client-cms-editor",
+  "version": "0.1.0",
+  "surfaces": [
+    "cms-editor",
+    "content-inspector",
+    "page-section-block"
+  ],
+  "runtime": {
+    "local_preview": "ready",
+    "source_scaffold": "ready",
+    "cloudflare": "scaffold",
+    "github": "source-ready"
+  },
+  "commands": {
+    "preview": "agentsam-cms",
+    "info": "agentsam-cms info",
+    "doctor": "agentsam-cms doctor",
+    "scaffold": "agentsam-cms scaffold <directory>"
+  },
+  "bin": "bin/agentsam-cms.mjs"
+}
