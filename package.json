@@ -115,7 +115,8 @@
     "packages/agentsam-errors",
     "packages/agentsam-repository",
     "packages/work-graph",
-    "packages/agentsam-workbench"
+    "packages/agentsam-workbench",
+    "packages/agentsam-desktop-shell"
   ],
   "scripts": {
     "test": "npm run test:standard && npm --prefix packages/identity test && npm run test:connectors",
