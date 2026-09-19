@@ -4,6 +4,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { execSync } from 'node:child_process';
 import { getSessionToolReceipts, clearSessionToolReceipts, summarizeToolReceipts } from '../mcp/telemetry.js';
+import { readMcpServer } from '../mcp/authority.js';
 import { resolveProjectD1Database } from '../cloudflare/index.js';
 
 export const DEFAULT_EVAL_RECORD_ENDPOINT = 'https://mcp.inneranimalmedia.com/api/eval/record';
