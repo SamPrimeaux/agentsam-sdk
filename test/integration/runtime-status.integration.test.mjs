@@ -152,7 +152,8 @@ test('renderRuntimeStatus explicitly displays DB and other resource bindings', (
     },
   };
 
-  const rendered = renderRuntimeStatus(status);
+  const stripAnsi = (text) => String(text || '').replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
+  const rendered = stripAnsi(renderRuntimeStatus(status));
   assert.match(rendered, /bindings\s+.*5 live/);
   assert.match(rendered, /• DB · d1 \(inneranimalmedia-business\)/);
   assert.match(rendered, /• WEBSITE_ASSETS · r2 \(agentsam-os-blueprint-content\)/);
