@@ -48,7 +48,7 @@ async function handleCheck(env, appId, target, arch, currentVersion) {
 
   const row = await env.DB.prepare(
     `SELECT version, url, signature, notes, pub_date
-       FROM releases
+       FROM desktop_shell_releases
       WHERE app_id = ? AND target = ? AND arch = ?
       ORDER BY created_at DESC
       LIMIT 1`,
@@ -95,7 +95,7 @@ async function handlePublish(request, env, appId) {
   const pubDate = new Date().toISOString();
 
   await env.DB.prepare(
-    `INSERT INTO releases (id, app_id, target, arch, version, url, signature, notes, pub_date, created_at)
+    `INSERT INTO desktop_shell_releases (id, app_id, target, arch, version, url, signature, notes, pub_date, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(id, appId, target, arch, version, url, signature, notes || null, pubDate, now)

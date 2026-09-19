@@ -2,13 +2,15 @@ name = "agentsam-desktop-updates"
 main = "src/index.js"
 compatibility_date = "2026-09-19"
 
-# Run `wrangler d1 create agentsam-desktop-updates` then paste the real
-# database_id here. Never hardcode it before that -- this placeholder
-# is intentional and will fail loudly (not silently) until replaced.
+# Same D1 every other inneranimalmedia Worker binds to -- see
+# inneranimalmedia/migrations/20260919_desktop_shell_releases.sql for
+# the table this Worker reads/writes. No dedicated database: all
+# current desktop-shell brands already run under this account, so a
+# separate D1 bought no real isolation, just sprawl.
 [[d1_databases]]
 binding = "DB"
-database_name = "agentsam-desktop-updates"
-database_id = "REPLACE_ME_RUN_WRANGLER_D1_CREATE"
+database_name = "inneranimalmedia-business"
+database_id = "cf87b717-d4e2-4cf8-bab0-a81268e32d49"
 
 # Set with: wrangler secret put UPDATE_PUBLISH_SECRET
 # Bearer token required to POST new releases. Never commit a real value.
