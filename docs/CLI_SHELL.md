@@ -55,6 +55,8 @@ Current controls include:
 /whoami      authenticated IAM identity + safe credential status
 /session     current cumulative token/cost/resume receipt
 /cf          bounded Cloudflare/Workers operations
+/connections live account / terminal / Worker / Cloudflare connection evidence
+/tunnel      real Cloudflare Tunnel picker backed by Wrangler
 /status      local project / DB / Git / PTY health
 /settings    project/runtime/terminal/model preferences
 /pwd         working directory
@@ -86,7 +88,7 @@ Provider files are machine-local and must not be group/world-readable on POSIX s
 
 `agentsam models` uses the credential internally for safe provider discovery but never returns the secret. Its public status reports only safe facts such as provider, configured state, source class, and provider-verified model availability.
 
-IAM login is also machine-local rather than repository state. A successful browser authentication may persist the `sdk_` bearer under `~/.agentsam/auth/session.json` with restrictive permissions. `agentsam whoami`, deploy, tunnel, and context detection can reuse that validated session. Project `.agentsam/config.json` remains portable and must not become a second identity database.
+IAM login is also machine-local rather than repository state. A successful browser authentication may persist the `sdk_` bearer under `~/.agentsam/auth/session.json` with restrictive permissions. `agentsam whoami`, deploy, and context detection can reuse that validated session. Cloudflare Tunnel management uses Wrangler's own authenticated Cloudflare identity rather than IAM bearer state. Project `.agentsam/config.json` remains portable and must not become a second identity database.
 
 ```bash
 agentsam whoami
@@ -209,7 +211,7 @@ SDK developers can preview rendering experiments from this repository, but those
 
 `agentsam init` owns portable repository/project setup. User identity, provider secrets, session history, execution approvals, and provider continuation state are machine/account runtime state and must not be written into portable project configuration.
 
-Local development does not require a cloud account. Cloud infrastructure is added intentionally.
+Local development does not require a cloud account. Cloud infrastructure is added intentionally. When Cloudflare Tunnel is selected, Agent Sam delegates discovery and lifecycle to Wrangler (`tunnel list`, `info`, `run`, `create`, and `quick-start`) instead of maintaining a parallel named-tunnel implementation.
 
 ## Design rule
 
