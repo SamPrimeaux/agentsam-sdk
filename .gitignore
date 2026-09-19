@@ -16,3 +16,4 @@ agentsam-init-smoke/
 .agentsam/cache/
 .agentsam/merkle/
 .agentsam/merkle.json
+.agentsam/docker/

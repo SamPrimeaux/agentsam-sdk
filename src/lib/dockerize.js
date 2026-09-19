@@ -98,6 +98,7 @@ function generateViteReact(opts) {
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY package*.json ./
+RUN apk add --no-cache python3 make g++
 RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 COPY . .
 RUN ${buildCmd}
@@ -125,6 +126,7 @@ function generateNodeService(opts) {
 FROM node:20-alpine
 WORKDIR /app
 COPY package*.json ./
+RUN apk add --no-cache python3 make g++
 RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi
 COPY . .
 ENV PORT=${port}
@@ -152,6 +154,7 @@ function generateWranglerDev(opts) {
 FROM node:20-alpine
 WORKDIR /app
 COPY package*.json ./
+RUN apk add --no-cache python3 make g++
 RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 COPY . .
 EXPOSE ${port}
