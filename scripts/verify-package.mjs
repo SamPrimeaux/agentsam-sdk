@@ -9,6 +9,9 @@ const readJson = (rel) => JSON.parse(readFileSync(join(root, rel), 'utf8'));
 const pkg = readJson('package.json');
 const lock = readJson('package-lock.json');
 const identity = readJson('packages/identity/package.json');
+const errors = readJson('packages/agentsam-errors/package.json');
+const errorCatalog = readJson('protocol/errors/error-catalog.json');
+const errorSchema = readJson('protocol/errors/error-envelope.schema.json');
 const capabilityManifest = readJson('protocol/capabilities/manifest.json');
 const presetCatalog = readJson('protocol/presets/catalog.json');
 
@@ -37,6 +40,15 @@ assert.ok(agentsamBin.startsWith('#!/usr/bin/env node'), 'agentsam bin must be d
 assert.match(agentsamBin, /import ['"]\.\.\/src\/cli\.js['"];/, 'agentsam bin wrapper must delegate to the canonical CLI entry');
 assert.ok(pkg.files?.includes('src'), 'published files must include src');
 assert.ok(pkg.files?.includes('packages/identity'), 'published files must include identity workspace');
+assert.ok(pkg.files?.includes('packages/agentsam-contracts'), 'published files must include framework-neutral contracts');
+assert.ok(pkg.files?.includes('packages/agentsam-errors'), 'published files must include canonical errors runtime');
+assert.equal(errors.private, true, 'errors runtime is distributed through the root SDK, not separately published');
+assert.equal(pkg.exports?.['./errors'], './src/errors/index.js', 'errors subpath must resolve to the canonical facade');
+assert.equal(pkg.exports?.['./errors/schema'], './protocol/errors/error-envelope.schema.json', 'errors JSON Schema export must be stable');
+assert.equal(pkg.exports?.['./errors/catalog'], './protocol/errors/error-catalog.json', 'errors catalog export must be stable');
+assert.equal(errorCatalog.schema_version, 1, 'error catalog schema version must be 1');
+assert.equal(errorSchema.properties?.schema_version?.const, 1, 'error envelope JSON Schema must match catalog version');
+assert.ok(errorSchema.properties?.code?.enum?.includes('INTERNAL'), 'error envelope schema must publish canonical codes');
 assert.ok(
   pkg.files?.includes('packages/connectors/cloudflare') && existsSync(join(root, 'packages/connectors/cloudflare/src/index.js')),
   'published files must include the Cloudflare connector imported by the CLI',

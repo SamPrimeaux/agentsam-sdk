@@ -16,6 +16,15 @@ import { createOpenAIResponsesAdapter } from '../src/providers/openai-responses.
 
 function response(status, body, headers = {}) { return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', ...headers } }); }
 
+
+test('public errors subpath preserves canonical and legacy diagnostic APIs', async () => {
+  const errors = await import('@inneranimalmedia/agentsam-sdk/errors');
+  assert.equal(typeof errors.createErrorEnvelope, 'function');
+  assert.equal(typeof errors.classifyCloudflareFailure, 'function');
+  assert.equal(typeof errors.classifyOpenAIError, 'function');
+  assert.equal(typeof errors.diagnosticFromError, 'function');
+});
+
 test('OpenAI diagnostics preserve machine code, request id, retry metadata and redact secrets', () => {
   const error = createOpenAIHttpError({
     status: 429,

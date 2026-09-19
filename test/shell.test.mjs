@@ -57,6 +57,8 @@ test('dispatch handles help, menu fallback, pwd, cd, and exit without falling th
   assert.equal(result.exit, true);
 });
 
+const stripAnsi = (text) => String(text || '').replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
+
 test('/usage renders the current session receipt without ending the session', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-shell-usage-'));
   let output = '';
@@ -70,12 +72,13 @@ test('/usage renders the current session receipt without ending the session', as
   };
   const result = await dispatchShellLine('/usage', state);
   assert.equal(result.exit, false);
-  assert.match(output, /AgentSam · Usage/);
-  assert.match(output, /input\s+21\.2k/);
-  assert.match(output, /output\s+219/);
-  assert.match(output, /cached\s+60\.5k/);
-  assert.match(output, /cost\s+\$0\.420/);
-  assert.match(output, /agentsam resume asess_00000000-0000-4000-8000-000000000001/);
+  const clean = stripAnsi(output);
+  assert.match(clean, /AgentSam · Usage/);
+  assert.match(clean, /input\s+21\.2k/);
+  assert.match(clean, /output\s+219/);
+  assert.match(clean, /cached\s+60\.5k/);
+  assert.match(clean, /cost\s+\$0\.420/);
+  assert.match(clean, /agentsam resume asess_00000000-0000-4000-8000-000000000001/);
 });
 
 test('/logout signs out locally and emits the same resumable usage receipt', async () => {

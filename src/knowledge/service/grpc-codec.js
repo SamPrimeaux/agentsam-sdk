@@ -8,6 +8,11 @@ import {
   defaultHttpStatusForCode,
   grpcStatusForCode,
 } from '../../errors/contract.js';
+import {
+  AgentSamError,
+  isErrorEnvelope,
+  normalizeError,
+} from '../../errors/index.js';
 
 const require = createRequire(import.meta.url);
 const knowledgePb = require('../../rpc/generated/knowledge_pb.js');
@@ -47,6 +52,84 @@ function jobId(value) {
   id.setValue(value || '');
   return id;
 }
+function json(value) { return value == null ? '' : JSON.stringify(value); }
+function parseJson(value) {
+  if (!value) return null;
+  try { return JSON.parse(value); } catch { return null; }
+}
+
+export function encodeErrorDetail(value) {
+  const envelope = isErrorEnvelope(value) ? value : normalizeError(value);
+  const detail = new errorsPb.ErrorDetail();
+  detail.setCode(protoErrorCode(envelope.code));
+  detail.setMessage(envelope.message);
+  detail.setRetryable(envelope.retryable);
+  detail.setReason(envelope.reason);
+  if (envelope.http_status != null) detail.setHttpStatus(envelope.http_status);
+  if (envelope.retry_after_ms != null) detail.setRetryAfterMs(envelope.retry_after_ms);
+  if (envelope.provider) detail.setProvider(envelope.provider);
+  if (envelope.provider_code) detail.setProviderCode(envelope.provider_code);
+  detail.setSeverity(envelope.severity);
+  detail.setSourceKind(envelope.source.kind);
+  detail.setSourceName(envelope.source.name);
+  if (envelope.source.service) detail.setSourceService(envelope.source.service);
+  detail.setResolutionOwner(envelope.resolution_owner);
+  detail.setDomain(envelope.domain);
+  if (envelope.tool) detail.setTool(envelope.tool);
+  if (envelope.stage) detail.setStage(envelope.stage);
+  detail.setRemediationAction(envelope.remediation.action);
+  if (envelope.remediation.message) detail.setRemediationMessage(envelope.remediation.message);
+  detail.setFingerprint(envelope.fingerprint);
+  if (envelope.trace_id) detail.setTraceId(envelope.trace_id);
+  if (envelope.transport) detail.setTransport(envelope.transport);
+  if (envelope.resource) detail.setResourceJson(json(envelope.resource));
+  if (envelope.native) detail.setNativeJson(json(envelope.native));
+  if (envelope.environment) detail.setEnvironmentJson(json(envelope.environment));
+  if (envelope.details != null) detail.setDetailsJson(json(envelope.details));
+  detail.setOccurrenceCount(envelope.occurrence_count || 1);
+  if (envelope.request_id) detail.setRequestId(envelope.request_id);
+  detail.setSchemaVersion(envelope.schema_version || 1);
+  return detail;
+}
+
+export function decodeErrorDetail(detail) {
+  if (!detail) return null;
+  const code = errorCodeNames.get(detail.getCode()) || ERROR_CODE.UNKNOWN;
+  const provider = detail.hasProvider?.() ? detail.getProvider() : null;
+  return createErrorEnvelope({
+    code,
+    reason: detail.getReason?.() || ERROR_REASON.UNKNOWN,
+    message: detail.getMessage?.() || 'Operation failed',
+    retryable: detail.getRetryable?.() || false,
+    retry_after_ms: detail.hasRetryAfterMs?.() ? detail.getRetryAfterMs() : null,
+    http_status: detail.hasHttpStatus?.() ? detail.getHttpStatus() : defaultHttpStatusForCode(code),
+    provider,
+    provider_code: detail.hasProviderCode?.() ? detail.getProviderCode() : null,
+    severity: detail.hasSeverity?.() ? detail.getSeverity() : undefined,
+    source: {
+      kind: detail.hasSourceKind?.() ? detail.getSourceKind() : (provider ? 'provider' : 'agentsam'),
+      name: detail.hasSourceName?.() ? detail.getSourceName() : (provider || 'agentsam-sdk'),
+      service: detail.hasSourceService?.() ? detail.getSourceService() : null,
+    },
+    resolution_owner: detail.hasResolutionOwner?.() ? detail.getResolutionOwner() : undefined,
+    domain: detail.hasDomain?.() ? detail.getDomain() : 'runtime',
+    tool: detail.hasTool?.() ? detail.getTool() : null,
+    stage: detail.hasStage?.() ? detail.getStage() : null,
+    remediation: {
+      action: detail.hasRemediationAction?.() ? detail.getRemediationAction() : undefined,
+      message: detail.hasRemediationMessage?.() ? detail.getRemediationMessage() : null,
+    },
+    fingerprint: detail.hasFingerprint?.() ? detail.getFingerprint() : undefined,
+    trace_id: detail.hasTraceId?.() ? detail.getTraceId() : null,
+    transport: detail.hasTransport?.() ? detail.getTransport() : null,
+    resource: detail.hasResourceJson?.() ? parseJson(detail.getResourceJson()) : null,
+    native: detail.hasNativeJson?.() ? parseJson(detail.getNativeJson()) : null,
+    environment: detail.hasEnvironmentJson?.() ? parseJson(detail.getEnvironmentJson()) : null,
+    details: detail.hasDetailsJson?.() ? parseJson(detail.getDetailsJson()) : null,
+    occurrence_count: detail.hasOccurrenceCount?.() ? detail.getOccurrenceCount() : 1,
+    request_id: detail.hasRequestId?.() ? detail.getRequestId() : null,
+  });
+}
 
 export { grpc, knowledgePb, errorsPb, KnowledgeServiceService, KnowledgeServiceClient };
 
@@ -58,21 +141,20 @@ export function encodeJob(job) {
   message.setCreatedAt(timestamp(job.created_at));
   message.setUpdatedAt(timestamp(job.updated_at));
   if (job.result !== null && job.result !== undefined) message.setResultJson(JSON.stringify(job.result));
-  if (job.error) {
-    const failure = new errorsPb.ErrorDetail();
-    failure.setCode(protoErrorCode(ERROR_CODE.INTERNAL));
-    failure.setMessage(job.error);
-    failure.setRetryable(false);
-    failure.setReason(ERROR_REASON.EXECUTION_FAILED);
-    failure.setHttpStatus(500);
-    message.setFailure(failure);
-  }
+  const failure = job.failure || (job.error ? createErrorEnvelope({
+    reason: ERROR_REASON.EXECUTION_FAILED,
+    message: job.error,
+    source: { kind: 'agentsam', name: 'agentsam-knowledge' },
+    domain: 'knowledge',
+    stage: 'execute',
+  }) : null);
+  if (failure) message.setFailure(encodeErrorDetail(failure));
   return message;
 }
 
 export function decodeJob(message) {
   const resultJson = message.getResultJson();
-  const failure = message.hasFailure() ? message.getFailure() : null;
+  const failure = message.hasFailure() ? decodeErrorDetail(message.getFailure()) : null;
   return {
     id: message.hasId() ? message.getId().getValue() : '',
     status: statusFromProto.get(message.getStatus()) || 'unknown',
@@ -80,7 +162,8 @@ export function decodeJob(message) {
     created_at: iso(message.getCreatedAt()),
     updated_at: iso(message.getUpdatedAt()),
     result: resultJson ? JSON.parse(resultJson) : null,
-    error: failure ? failure.getMessage() : null,
+    failure,
+    error: failure?.message || null,
   };
 }
 
@@ -174,42 +257,46 @@ export function authorizationFromMetadata(metadata) {
 }
 
 export function toGrpcError(error) {
-  const safeMessage = error?.status ? error.message : 'Service request failed.';
-  const legacyCode = error?.code === 'CONFLICT' ? ERROR_CODE.ABORTED : error?.code;
-  const code = Object.values(ERROR_CODE).includes(legacyCode) ? legacyCode : canonicalCodeFromHttpStatus(error?.status);
-  const reason = error?.reason || (code === ERROR_CODE.UNAUTHENTICATED ? ERROR_REASON.AUTH_INVALID
-    : code === ERROR_CODE.PERMISSION_DENIED ? ERROR_REASON.PERMISSION_DENIED
-      : code === ERROR_CODE.NOT_FOUND ? ERROR_REASON.TARGET_NOT_FOUND
-        : code === ERROR_CODE.ABORTED ? ERROR_REASON.CONFLICT
-          : code === ERROR_CODE.RESOURCE_EXHAUSTED ? ERROR_REASON.CAPACITY_EXHAUSTED
-            : code === ERROR_CODE.UNAVAILABLE ? ERROR_REASON.PROVIDER_UNAVAILABLE
-              : code === ERROR_CODE.INVALID_ARGUMENT ? ERROR_REASON.INPUT_INVALID
-                : ERROR_REASON.INTERNAL);
-  const envelope = createErrorEnvelope({
-    code,
-    reason,
-    message: safeMessage,
-    retryable: error?.retryable ?? (error?.status === 429 || error?.status === 503),
-    retry_after_ms: error?.retry_after_ms ?? null,
-    http_status: error?.status ?? defaultHttpStatusForCode(code),
-    provider: error?.provider ?? null,
-    provider_code: error?.provider_code ?? null,
-  });
-  const detail = new errorsPb.ErrorDetail();
-  detail.setCode(protoErrorCode(envelope.code));
-  detail.setMessage(envelope.message);
-  detail.setRetryable(envelope.retryable);
-  detail.setReason(envelope.reason);
-  if (envelope.http_status != null) detail.setHttpStatus(envelope.http_status);
-  if (envelope.retry_after_ms != null) detail.setRetryAfterMs(envelope.retry_after_ms);
-  if (envelope.provider) detail.setProvider(envelope.provider);
-  if (envelope.provider_code) detail.setProviderCode(envelope.provider_code);
+  let envelope;
+  if (isErrorEnvelope(error) || error instanceof AgentSamError || isErrorEnvelope(error?.envelope)) {
+    envelope = normalizeError(error);
+  } else {
+    const safeMessage = error?.status ? error.message : 'Service request failed.';
+    const legacyCode = error?.code === 'CONFLICT' ? ERROR_CODE.ABORTED : error?.code;
+    const code = Object.values(ERROR_CODE).includes(legacyCode) ? legacyCode : canonicalCodeFromHttpStatus(error?.status);
+    const reason = error?.reason || (code === ERROR_CODE.UNAUTHENTICATED ? ERROR_REASON.AUTH_INVALID
+      : code === ERROR_CODE.PERMISSION_DENIED ? ERROR_REASON.PERMISSION_DENIED
+        : code === ERROR_CODE.NOT_FOUND ? ERROR_REASON.TARGET_NOT_FOUND
+          : code === ERROR_CODE.ABORTED ? ERROR_REASON.CONFLICT
+            : code === ERROR_CODE.RESOURCE_EXHAUSTED ? ERROR_REASON.CAPACITY_EXHAUSTED
+              : code === ERROR_CODE.UNAVAILABLE ? ERROR_REASON.TRANSPORT_UNREACHABLE
+                : code === ERROR_CODE.DEADLINE_EXCEEDED ? ERROR_REASON.DEADLINE_EXCEEDED
+                  : code === ERROR_CODE.INVALID_ARGUMENT ? ERROR_REASON.INPUT_INVALID
+                    : ERROR_REASON.INTERNAL);
+    envelope = createErrorEnvelope({
+      code,
+      reason,
+      message: safeMessage,
+      retryable: error?.retryable ?? (error?.status === 429 || error?.status === 503 || error?.status === 504),
+      retry_after_ms: error?.retry_after_ms ?? null,
+      http_status: error?.status ?? defaultHttpStatusForCode(code),
+      provider: error?.provider ?? null,
+      provider_code: error?.provider_code ?? null,
+      source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'grpc' },
+      resolution_owner: code === ERROR_CODE.UNAVAILABLE ? 'agentsam' : undefined,
+      domain: 'knowledge',
+      stage: 'request',
+      trace_id: error?.trace_id ?? null,
+    });
+  }
+  const detail = encodeErrorDetail(envelope);
   const metadata = new grpc.Metadata();
   metadata.set('agentsam-error-bin', Buffer.from(detail.serializeBinary()));
-  return Object.assign(new Error(safeMessage), {
+  return Object.assign(new Error(envelope.message), {
     code: grpcStatusForCode(envelope.code),
-    details: safeMessage,
+    details: envelope.message,
     metadata,
+    envelope,
   });
 }
 
@@ -220,17 +307,33 @@ export function fromGrpcError(error) {
     const binary = values.find(value => Buffer.isBuffer(value));
     if (binary) detail = errorsPb.ErrorDetail.deserializeBinary(new Uint8Array(binary));
   } catch { /* fall back to gRPC status */ }
-  const message = detail?.getMessage() || error?.details || error?.message || 'Knowledge RPC failed.';
-  const rpcCode = detail ? errorCodeNames.get(detail.getCode()) || 'UNKNOWN' : undefined;
-  return Object.assign(new Error(message), {
-    status: detail?.hasHttpStatus?.() ? detail.getHttpStatus() : grpcToHttp.get(error?.code) ?? 500,
+  let envelope;
+  if (detail) {
+    envelope = decodeErrorDetail(detail);
+  } else {
+    const status = grpcToHttp.get(error?.code) ?? 500;
+    const code = canonicalCodeFromHttpStatus(status);
+    envelope = createErrorEnvelope({
+      code,
+      reason: code === ERROR_CODE.UNAUTHENTICATED ? ERROR_REASON.AUTH_INVALID
+        : code === ERROR_CODE.PERMISSION_DENIED ? ERROR_REASON.PERMISSION_DENIED
+          : code === ERROR_CODE.NOT_FOUND ? ERROR_REASON.TARGET_NOT_FOUND
+            : code === ERROR_CODE.RESOURCE_EXHAUSTED ? ERROR_REASON.CAPACITY_EXHAUSTED
+              : code === ERROR_CODE.UNAVAILABLE ? ERROR_REASON.TRANSPORT_UNREACHABLE
+                : code === ERROR_CODE.DEADLINE_EXCEEDED ? ERROR_REASON.DEADLINE_EXCEEDED
+                  : code === ERROR_CODE.INVALID_ARGUMENT ? ERROR_REASON.INPUT_INVALID
+                    : ERROR_REASON.INTERNAL,
+      message: error?.details || error?.message || 'Knowledge RPC failed.',
+      http_status: status,
+      retryable: [8, 14, 4].includes(Number(error?.code)),
+      source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'grpc' },
+      domain: 'knowledge',
+      stage: 'request',
+    });
+  }
+  return Object.assign(new AgentSamError(envelope), {
     grpcCode: error?.code,
-    rpcCode,
-    reason: detail?.getReason?.() || ERROR_REASON.UNKNOWN,
-    retryable: detail?.getRetryable() || false,
-    retry_after_ms: detail?.hasRetryAfterMs?.() ? detail.getRetryAfterMs() : null,
-    provider: detail?.hasProvider?.() ? detail.getProvider() : null,
-    provider_code: detail?.hasProviderCode?.() ? detail.getProviderCode() : null,
+    rpcCode: envelope.code,
   });
 }
 

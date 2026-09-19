@@ -1,0 +1,17 @@
+{
+  "name": "@inneranimalmedia/agentsam-errors",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Canonical AgentSam runtime error normalization, classification, transport, remediation and rendering.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  }
+}

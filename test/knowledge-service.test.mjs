@@ -93,6 +93,10 @@ test('portable dockerize stages only SDK runtime, preserves identities/tokens, a
     assert.equal(fs.existsSync(path.join(context, 'src/rpc/generated/knowledge_grpc_pb.js')), true);
     assert.equal(fs.existsSync(path.join(context, 'src/rpc/generated/package.json')), true);
     assert.equal(fs.existsSync(path.join(context, 'src/errors/contract.js')), true);
+    assert.equal(fs.existsSync(path.join(context, 'packages/agentsam-errors/src/index.js')), true);
+    assert.equal(fs.existsSync(path.join(context, 'packages/agentsam-errors/package.json')), true);
+    assert.equal(fs.existsSync(path.join(context, 'packages/agentsam-repository/src/merkle/hash.js')), true);
+    assert.match(result.plan.files.dockerfile, /COPY packages \.\/packages/);
     assert.equal(fs.existsSync(path.join(context, 'package-lock.json')), true);
     const token = fs.readFileSync(result.tokenFile, 'utf8');
     assert.equal(fs.statSync(result.tokenFile).mode & 0o777, 0o600);
