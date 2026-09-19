@@ -13,7 +13,7 @@ export function coreBaseUrl(env = process.env) {
 }
 
 function authOptions(options) {
-  if (typeof options === 'string') return { explicit: options };
+  if (typeof options === 'string') return { bearer: options };
   return options && typeof options === 'object' ? options : {};
 }
 
@@ -30,6 +30,7 @@ export async function resolveCoreAuthority(options = {}) {
     nowMs: resolvedOptions.nowMs,
     skewMs: resolvedOptions.skewMs,
     refreshImpl: resolvedOptions.refreshImpl,
+    forceRefresh: resolvedOptions.forceRefresh === true,
   });
   if (authority?.error) throw new Error(authority.error);
   if (!authority?.value) throw new Error('account_auth_required');
@@ -37,11 +38,22 @@ export async function resolveCoreAuthority(options = {}) {
 }
 
 async function authorizedHeaders(headers, options = {}) {
+  if (String(options?.bearer || '').trim()) {
+    return { headers: { ...headers, Authorization: `Bearer ${String(options.bearer).trim()}` }, authority: { kind: 'resolved_bearer' } };
+  }
   const authority = await resolveCoreAuthority(options);
-  return {
-    ...headers,
-    Authorization: `Bearer ${authority.value}`,
-  };
+  return { headers: { ...headers, Authorization: `Bearer ${authority.value}` }, authority };
+}
+
+async function authorizedFetch(url, init, options = {}) {
+  const baseHeaders = init.headers || {};
+  let resolved = await authorizedHeaders(baseHeaders, options);
+  let response = await (options.fetchImpl || fetch)(url, { ...init, headers: resolved.headers });
+  if (response.status === 401 && resolved.authority?.kind === 'browser_oauth' && options.forceRefresh !== true) {
+    resolved = await authorizedHeaders(baseHeaders, { ...options, forceRefresh: true });
+    response = await (options.fetchImpl || fetch)(url, { ...init, headers: resolved.headers });
+  }
+  return response;
 }
 
 async function responseJson(res) {
@@ -51,16 +63,16 @@ async function responseJson(res) {
 export async function postJson(path, body, options = {}) {
   const resolvedOptions = authOptions(options);
   const fetchImpl = resolvedOptions.fetchImpl || fetch;
-  const headers = await authorizedHeaders({
+  const headers = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
-  }, resolvedOptions);
-  const res = await fetchImpl(`${coreBaseUrl(resolvedOptions.env || process.env)}${path}`, {
+  };
+  const res = await authorizedFetch(`${coreBaseUrl(resolvedOptions.env || process.env)}${path}`, {
     method: 'POST',
     headers,
     body: JSON.stringify(body ?? {}),
     signal: resolvedOptions.signal,
-  });
+  }, { ...resolvedOptions, fetchImpl });
   const data = await responseJson(res);
   if (!res.ok) {
     const msg = data?.error || data?.message || `HTTP ${res.status}`;
@@ -72,11 +84,10 @@ export async function postJson(path, body, options = {}) {
 export async function getJson(path, options = {}) {
   const resolvedOptions = authOptions(options);
   const fetchImpl = resolvedOptions.fetchImpl || fetch;
-  const headers = await authorizedHeaders({ Accept: 'application/json' }, resolvedOptions);
-  const res = await fetchImpl(`${coreBaseUrl(resolvedOptions.env || process.env)}${path}`, {
-    headers,
+  const res = await authorizedFetch(`${coreBaseUrl(resolvedOptions.env || process.env)}${path}`, {
+    headers: { Accept: 'application/json' },
     signal: resolvedOptions.signal,
-  });
+  }, { ...resolvedOptions, fetchImpl });
   const data = await responseJson(res);
   if (!res.ok) {
     const msg = data?.error || data?.message || `HTTP ${res.status}`;
@@ -91,16 +102,16 @@ export async function getJson(path, options = {}) {
 export async function streamScaffold(body, onEvent, options = {}) {
   const resolvedOptions = authOptions(options);
   const fetchImpl = resolvedOptions.fetchImpl || fetch;
-  const headers = await authorizedHeaders({
+  const headers = {
     'Content-Type': 'application/json',
     Accept: 'application/x-ndjson',
-  }, resolvedOptions);
-  const res = await fetchImpl(`${coreBaseUrl(resolvedOptions.env || process.env)}/api/sdk/scaffold`, {
+  };
+  const res = await authorizedFetch(`${coreBaseUrl(resolvedOptions.env || process.env)}/api/sdk/scaffold`, {
     method: 'POST',
     headers,
     body: JSON.stringify(body),
     signal: resolvedOptions.signal,
-  });
+  }, { ...resolvedOptions, fetchImpl });
   if (!res.ok) {
     const data = await responseJson(res);
     throw new Error(data?.error || `scaffold HTTP ${res.status}`);

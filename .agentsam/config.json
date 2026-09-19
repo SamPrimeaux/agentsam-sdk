@@ -17,7 +17,14 @@
     "profile": "default",
     "runtime": "local",
     "model": "auto",
-    "deploy_target": null
+    "deploy_target": "cloudflare"
+  },
+  "deployment": {
+    "cloudflare": {
+      "worker_name": "agentsam-sdk",
+      "config": "apps/local-studio/backend/wrangler.jsonc",
+      "health_url": "https://agentsam.inneranimalmedia.com/health"
+    }
   },
   "merkle": {
     "enabled": true,

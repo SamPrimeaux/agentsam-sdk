@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/capabilities/terminal-exec-input.schema.json",
+  "title": "terminal.exec input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["command", "args"],
+  "properties": {
+    "command": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._+-]*$",
+      "description": "Executable name resolved through PATH. Shell strings and absolute executable paths are not accepted."
+    },
+    "args": {
+      "type": "array",
+      "maxItems": 128,
+      "items": { "type": "string", "maxLength": 8192 },
+      "description": "Exact argv entries. Do not include shell quoting, pipes, redirects, or command substitution."
+    },
+    "cwd": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Runtime-owned project root; model-provided values are ignored."
+    },
+    "relative_cwd": {
+      "type": "string",
+      "maxLength": 2048,
+      "description": "Optional working directory relative to the runtime-owned project root."
+    },
+    "timeout_ms": { "type": "integer", "minimum": 1, "maximum": 900000, "default": 120000 },
+    "max_output_bytes": { "type": "integer", "minimum": 1024, "maximum": 2097152, "default": 524288 }
+  }
+}

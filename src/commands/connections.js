@@ -9,6 +9,7 @@ import {
   resolveCloudflareOAuthClient,
 } from '../../packages/connectors/cloudflare/src/index.js';
 import { resolveIamIssuer } from '../../packages/identity/src/contracts/auth-config.js';
+import { collectRuntimeStatus } from './runtime-status.js';
 
 const PRODUCTION_CALLBACK = `https://agentsam.inneranimalmedia.com${CLOUDFLARE_CALLBACK_PATH}`;
 
@@ -45,49 +46,59 @@ function printSetup(env = process.env) {
   return 0;
 }
 
-export async function runConnections(args = []) {
+function renderConnections(status) {
+  const lines = ['', '  Agent Sam · connections', ''];
+  lines.push(`  IAM account       ${status.identity?.authenticated ? 'connected' : 'not connected'}`);
+  lines.push(`  active auth       ${status.identity?.active_auth?.kind || 'none'}`);
+  lines.push(`  model providers   ${(status.model_summary?.configured_providers || []).join(', ') || 'none configured'}`);
+  lines.push(`  terminal registry ${status.terminal?.connected ? `${status.terminal.active_connection_count} active / ${status.terminal.connections.length} total` : `unavailable · ${status.terminal?.error || 'not authenticated'}`}`);
+  for (const row of status.terminal?.connections || []) {
+    lines.push(`    ${row.default ? '★' : '•'} ${row.name || row.id} · ${row.kind || 'terminal'} · ${row.active ? 'active' : 'inactive'} · ${row.health}`);
+  }
+  lines.push(`  Worker            ${status.cloudflare?.connected ? `${status.cloudflare.worker_name} · live` : status.cloudflare?.configured ? `${status.cloudflare.worker_name} · not verified` : 'not configured'}`);
+  lines.push(`  Worker bindings   ${status.cloudflare?.bindings?.match ? 'declared contract satisfied' : status.cloudflare?.bindings ? `${status.cloudflare.bindings.missing.length} missing` : 'not verified'}`);
+  lines.push('');
+  lines.push('  Secret values and terminal endpoint credentials are never printed.');
+  lines.push('');
+  return lines.join('\n');
+}
+
+export async function runConnections(args = [], options = {}) {
   const argv = args.filter((a) => a !== '--json');
   const jsonMode = args.includes('--json');
-  const env = process.env;
+  const env = options.env || process.env;
+  const write = options.write || ((value) => process.stdout.write(value));
   if (argv[0] === 'cloudflare' && argv[1] === 'setup') {
     if (jsonMode) {
-      console.log(JSON.stringify({
+      write(`${JSON.stringify({
         callback: PRODUCTION_CALLBACK,
         authorize: 'https://dash.cloudflare.com/oauth2/auth',
         token: 'https://dash.cloudflare.com/oauth2/token',
         revoke: 'https://dash.cloudflare.com/oauth2/revoke',
         mintsRealClient: false,
         client: resolveCloudflareOAuthClient(env),
-      }, null, 2));
+      }, null, 2)}\n`);
       return 0;
     }
     return printSetup(env);
   }
-  const report = doctor(env);
+  if (argv.length) throw new Error(`unknown connections option: ${argv[0]}`);
+  const status = await (options.collectRuntime || collectRuntimeStatus)({
+    ...options,
+    env,
+    cwd: options.cwd || process.cwd(),
+    discoverModels: true,
+  });
   if (jsonMode) {
-    console.log(JSON.stringify({ identity: report.identity, cloudflare: report.cloudflare }, null, 2));
-    return 0;
+    write(`${JSON.stringify({
+      schema_version: status.schema_version,
+      identity: status.identity,
+      providers: status.models?.providers || [],
+      terminal: status.terminal,
+      cloudflare: status.cloudflare,
+    }, null, 2)}\n`);
+    return status;
   }
-  const iam = report.identity;
-  const cf = report.cloudflare;
-  const client = report.client;
-  console.log('AgentSam Identity');
-  console.log('');
-  console.log('IAM client');
-  console.log(`  ${iam.clientId ? '✓' : '•'} client id`);
-  console.log(`  ✓ issuer ${iam.issuer}`);
-  console.log(`  ${iam.serverSecret ? '✓' : '•'} server secret configured`);
-  if (iam.originAlias) console.log('Compatibility\n  IAM_ORIGIN -> deprecated alias');
-  console.log('');
-  console.log('Cloudflare connection');
-  console.log('');
-  console.log('OAuth client');
-  console.log(`  client id: ${cf.clientId}`);
-  console.log(`  secret: ${cf.secret}`);
-  console.log(`  status: ${client.status}`);
-  if (client.fixture) {
-    console.log('  OAuth client fixture configured');
-    console.log('  real Cloudflare OAuth client still required');
-  }
-  return 0;
+  write(renderConnections(status));
+  return status;
 }

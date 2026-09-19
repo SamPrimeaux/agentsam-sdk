@@ -10,6 +10,7 @@ export const WRANGLER_NATIVE_COMMANDS = Object.freeze([
   Object.freeze({ id: 'whoami', argv: ['whoami', '--json'], risk: 'read', output: 'json', description: 'Read authenticated Cloudflare user/account membership without exposing the auth token.' }),
   Object.freeze({ id: 'deployments.list', argv: ['deployments', 'list', '--json'], risk: 'read', output: 'json', description: 'List recent Worker deployments.' }),
   Object.freeze({ id: 'versions.list', argv: ['versions', 'list', '--json'], risk: 'read', output: 'json', description: 'List recent Worker versions.' }),
+  Object.freeze({ id: 'versions.view', argv: ['versions', 'view'], risk: 'read', output: 'json', description: 'Read one exact Worker version, including its binding names and types but never secret values.' }),
   Object.freeze({ id: 'types.check', argv: ['types', '--check'], risk: 'read', output: 'text', description: 'Check generated Worker binding/runtime types without rewriting them.' }),
   Object.freeze({ id: 'queues.list', argv: ['queues', 'list'], risk: 'read', output: 'text', description: 'List Workers Queues visible to the active Cloudflare identity.' }),
 ]);
@@ -51,6 +52,12 @@ export function buildWranglerInvocation(id, input = {}) {
   const args = [...row.argv];
   if (id === 'whoami' && clean(input.account)) args.push('--account', clean(input.account));
   if ((id === 'deployments.list' || id === 'versions.list') && clean(input.name)) args.push('--name', clean(input.name));
+  if (id === 'versions.view') {
+    const versionId = clean(input.version_id);
+    if (!versionId) throw new Error('cloudflare_version_id_required');
+    args.push(versionId, '--json');
+    if (clean(input.name)) args.push('--name', clean(input.name));
+  }
   if (id === 'types.check' && clean(input.path)) args.splice(1, 0, clean(input.path));
   if (id === 'queues.list' && input.page != null) args.push('--page', String(positiveInteger(input.page, 1)));
   const config = resolveConfig(cwd, input.config);

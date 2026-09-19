@@ -74,7 +74,9 @@ function parse(args) {
 }
 
 export function resolveMerklePersistenceIdentity(root, options = {}) {
-  const session = options.session ?? readAccountSession(options.sessionOptions || {});
+  const session = Object.hasOwn(options, 'session')
+    ? options.session
+    : readAccountSession(options.sessionOptions || {});
   const accountId = String(session?.account_id || '').trim();
   if (!accountId) throw new Error('agentsam_login_required_for_merkle_persistence');
 

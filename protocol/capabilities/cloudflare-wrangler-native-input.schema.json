@@ -6,7 +6,7 @@
   "additionalProperties": false,
   "required": ["command"],
   "properties": {
-    "command": { "enum": ["whoami", "deployments.list", "versions.list", "types.check", "queues.list"] },
+    "command": { "enum": ["whoami", "deployments.list", "versions.list", "versions.view", "types.check", "queues.list"] },
     "cwd": { "type": "string", "minLength": 1 },
     "name": { "type": "string" },
     "account": { "type": "string" },
@@ -14,6 +14,7 @@
     "env": { "type": "string" },
     "profile": { "type": "string" },
     "path": { "type": "string" },
-    "page": { "type": "integer", "minimum": 1 }
+    "page": { "type": "integer", "minimum": 1 },
+    "version_id": { "type": "string", "minLength": 1 }
   }
 }

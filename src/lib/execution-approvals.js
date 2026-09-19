@@ -33,6 +33,7 @@ export function toolApprovalKey(capabilityId, input = {}) {
   const id = clean(capabilityId);
   const command = clean(input?.command);
   if (id === 'cloudflare.wrangler.native' && /^[A-Za-z0-9._-]+$/.test(command)) return `${id}:${command}`;
+  if (id === 'terminal.exec' && /^[A-Za-z0-9._+-]+$/.test(command)) return `${id}:${command}`;
   return id;
 }
 

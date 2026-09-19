@@ -140,7 +140,14 @@ export async function runResponsesAgent(options = {}) {
   const serviceTier = clean(options.serviceTier || 'default');
   const budget = modelBudget(record);
   const instructionSet = options.instructions == null ? compileAgentInstructions(cwd, { maxChars: budget?.maxSystemChars || 48_000 }) : null;
-  const instructions = options.instructions == null ? instructionSet.content : String(options.instructions);
+  const projectContext = [
+    '<!-- agentsam:runtime:terminal-context -->',
+    `You are operating in a real CLI at project root ${JSON.stringify(cwd)}.`,
+    'Use terminal.exec for concrete repository commands when needed. It executes argv directly without a shell, is scoped to this project, and requires runtime approval for side effects.',
+    'Never request, print, or search for credentials, tokens, private keys, cookies, or secret environment files.',
+  ].join('\n');
+  const compiledInstructions = options.instructions == null ? instructionSet.content : String(options.instructions);
+  const instructions = `${projectContext}\n\n${compiledInstructions}`;
   const toolSurface = buildAgentToolSurface(options.capabilityAdapter, objective, options);
   const emit = options.emit;
   const runId = options.runId;

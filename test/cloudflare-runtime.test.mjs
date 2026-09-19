@@ -10,8 +10,15 @@ function tempRoot() { return fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-cf-
 
 test('Cloudflare native command catalog exposes bounded read operations and never an auth-token secret read', () => {
   const ids = listWranglerNativeCommands().map((row) => row.id);
-  assert.deepEqual(ids, ['whoami', 'deployments.list', 'versions.list', 'types.check', 'queues.list']);
+  assert.deepEqual(ids, ['whoami', 'deployments.list', 'versions.list', 'versions.view', 'types.check', 'queues.list']);
   assert.ok(!ids.some((id) => id.includes('token') || id.includes('secret') || id === 'deploy'));
+});
+
+test('Wrangler version view requires an exact version and keeps secret values unavailable', () => {
+  const root = tempRoot();
+  const plan = buildWranglerInvocation('versions.view', { cwd: root, name: 'demo', version_id: 'ver_123' });
+  assert.deepEqual(plan.args, ['versions', 'view', 'ver_123', '--json', '--name', 'demo']);
+  assert.throws(() => buildWranglerInvocation('versions.view', { cwd: root, name: 'demo' }), /version_id_required/);
 });
 
 test('Wrangler native invocation is argv-based and cwd/config scoped', () => {

@@ -5,6 +5,7 @@ import { getCapability, listCapabilities } from '../capabilities/manifest.js';
 import { repositorySnapshot } from '../capabilities/repository-snapshot.js';
 import { runWranglerNative, summarizeCloudflareCpuProfileFile, runCloudflareCpuAudit } from '../cloudflare/index.js';
 import { runRepositoryAudit } from './repository-audit.js';
+import { terminalExec } from '../capabilities/terminal-exec.js';
 
 const PACKAGE_ROOT = path.resolve(fileURLToPath(new URL('../../', import.meta.url)));
 
@@ -20,6 +21,7 @@ function loadSchema(value) {
 export function createCapabilityAdapter({ handlers = {}, reasoner } = {}) {
   const executable = new Map([
     ['repository.snapshot', (input) => repositorySnapshot(input)],
+    ['terminal.exec', (input = {}) => terminalExec(input)],
     ['cloudflare.wrangler.native', (input = {}) => runWranglerNative(input.command, input)],
     ['cloudflare.cpu.profile', (input = {}) => summarizeCloudflareCpuProfileFile(input)],
     ...Object.entries(handlers),

@@ -27,7 +27,15 @@ test('whoami validates persisted IAM browser identity while never returning acco
     env: {}, home,
     contextLoader: async token => {
       assert.equal(token, 'browser_session_do_not_print');
-      return { user_id: 'au_server', account_id: 'acct_server', email: 'dev@example.test', cloudflare: { ok: true }, byok: { openai: { configured: true, masked: 'secret' } } };
+      return {
+        user_id: 'au_server', account_id: 'acct_server', email: 'dev@example.test',
+        cloudflare: { ok: true }, byok: { openai: { configured: true, masked: 'secret' } },
+        terminal: {
+          available: true,
+          instances: [{ id: 'inst_1', name: 'Mac', metadata_json: 'secret' }],
+          connections: [{ id: 'conn_1', instance_id: 'inst_1', name: 'Tunnel', is_active: true, endpoint_url: 'wss://secret' }],
+        },
+      };
     },
   });
   assert.equal(status.authenticated, true);
@@ -35,8 +43,53 @@ test('whoami validates persisted IAM browser identity while never returning acco
   assert.equal(status.active_auth.source, 'agentsam_browser_oauth');
   assert.equal(status.active_auth.kind, 'browser_oauth');
   assert.equal(status.provider_credentials.find(row => row.provider === 'openai').configured, true);
+  assert.equal(status.terminal.connections[0].id, 'conn_1');
   const serialized = JSON.stringify(status);
-  assert.doesNotMatch(serialized, /browser_session_do_not_print|sk-never-print-this|masked/);
+  assert.doesNotMatch(serialized, /browser_session_do_not_print|sk-never-print-this|masked|endpoint_url|metadata_json|wss:\/\/secret/);
+});
+
+test('whoami uses a valid browser session when a stale environment API key is invalid', async t => {
+  const home = tempHome(t);
+  saveAccountSession({ access_token: 'browser_session_do_not_print', user_id: 'au_local' }, { home });
+  const status = await collectWhoami({
+    env: { AGENTSAM_API_KEY: 'stale-invalid-key' },
+    home,
+    contextLoader: async token => {
+      assert.equal(token, 'browser_session_do_not_print');
+      return { user_id: 'au_server', account_id: 'acct_server' };
+    },
+  });
+  assert.equal(status.authenticated, true);
+  assert.equal(status.active_auth.kind, 'browser_oauth');
+  assert.equal(status.api_key.valid, false);
+  assert.equal(status.api_key.error, 'invalid_api_key_prefix');
+});
+
+test('whoami refreshes an expired browser session before validating IAM context', async t => {
+  const home = tempHome(t);
+  const nowMs = Date.now();
+  saveAccountSession({
+    access_token: 'expired_browser_token',
+    refresh_token: 'refresh_token',
+    expires_in: 1,
+  }, { home, nowMs: nowMs - 120_000 });
+  let refreshed = 0;
+  const status = await collectWhoami({
+    env: {},
+    home,
+    nowMs,
+    refreshImpl: async ({ session }) => {
+      refreshed += 1;
+      return { ...session, access_token: 'fresh_browser_token', expires_at: new Date(nowMs + 3_600_000).toISOString() };
+    },
+    contextLoader: async token => {
+      assert.equal(token, 'fresh_browser_token');
+      return { user_id: 'au_server', account_id: 'acct_server' };
+    },
+  });
+  assert.equal(refreshed, 1);
+  assert.equal(status.authenticated, true);
+  assert.equal(status.active_auth.kind, 'browser_oauth');
 });
 
 test('resume restores saved cwd and session through the canonical shell runtime', async t => {

@@ -280,6 +280,21 @@
       "output_schema": "protocol/context/resolved-context-pack.schema.json",
       "status": "experimental"
     },
+    "terminal.exec": {
+      "id": "terminal.exec",
+      "kind": "capability",
+      "version": 1,
+      "domain": "terminal",
+      "runtime": "node",
+      "package": "@inneranimalmedia/agentsam-sdk",
+      "export": "terminalExec",
+      "description": "Run a real argv-safe CLI process inside the runtime-owned project, with bounded output, credential-stripped environment, and explicit execution approval.",
+      "deterministic": false,
+      "model_required": false,
+      "side_effects": "local-runtime",
+      "input_schema": "protocol/capabilities/terminal-exec-input.schema.json",
+      "status": "experimental"
+    },
     "cloudflare.wrangler.native": {
       "id": "cloudflare.wrangler.native",
       "kind": "capability",
