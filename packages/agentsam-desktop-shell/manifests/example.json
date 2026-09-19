@@ -1,0 +1,13 @@
+{
+  "app_id": "test-fixture",
+  "app_name": "Test Fixture App",
+  "bundle_identifier": "com.example.test-fixture",
+  "base_url": "https://example.com/dashboard",
+  "deep_link_scheme": "testfixture",
+  "identity_provider": "inneranimalmedia",
+  "feature_flags": {
+    "tray": true,
+    "auto_update": true,
+    "local_execution_node": false
+  }
+}

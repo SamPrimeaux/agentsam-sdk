@@ -1,0 +1,14 @@
+name = "agentsam-desktop-updates"
+main = "src/index.js"
+compatibility_date = "2026-09-19"
+
+# Run `wrangler d1 create agentsam-desktop-updates` then paste the real
+# database_id here. Never hardcode it before that -- this placeholder
+# is intentional and will fail loudly (not silently) until replaced.
+[[d1_databases]]
+binding = "DB"
+database_name = "agentsam-desktop-updates"
+database_id = "REPLACE_ME_RUN_WRANGLER_D1_CREATE"
+
+# Set with: wrangler secret put UPDATE_PUBLISH_SECRET
+# Bearer token required to POST new releases. Never commit a real value.
