@@ -115,8 +115,8 @@ d1Like.close();
 
 const tunnelPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'commands', 'tunnel.js');
 const tunnelSrc = fs.readFileSync(tunnelPath, 'utf8');
-assert.ok(tunnelSrc.includes('register-local'));
-assert.ok(tunnelSrc.includes('cloudflared'));
+assert.ok(tunnelSrc.includes('parseWranglerTunnelList'));
+assert.ok(tunnelSrc.includes('wrangler'));
 assert.ok(fs.existsSync(tunnelPath));
 
 console.log('SDK smoke tests passed');
