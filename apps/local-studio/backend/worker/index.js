@@ -36,6 +36,13 @@ function isProtectedAppPath(pathname) {
  *
  * Auth (v1): Authorization: Bearer <WORKMODE_API_KEY>
  *            X-User-Id: <user_id>  (required for vault + inventory routes)
+ *
+ * Auth (session lane): requests carrying a valid identity session cookie are
+ * authenticated without the desk API key for GET /api/llm/inventory, and the
+ * session user is authoritative everywhere a user_id is needed — a
+ * client-asserted X-User-Id never overrides the validated session. POST
+ * /api/chat bound for Nitro gets its X-User-Id rewritten to the session user
+ * so downstream vault BYOK resolution cannot be spoofed.
  */
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -129,10 +136,40 @@ function requireApiKey(request, env) {
   return { ok: true };
 }
 
-function requireUserId(request) {
-  const userId = (request.headers.get("x-user-id") || "").trim();
-  if (!userId || userId.length < 3) return { ok: false, error: "X-User-Id required", status: 400 };
-  return { ok: true, userId };
+/**
+ * Resolve the validated session user via the identity package (D1
+ * auth_sessions). Returns null when there is no session cookie, no DB
+ * binding, or the session is missing/expired/revoked. Skips the D1 lookup
+ * entirely when the request carries no Cookie header (service callers).
+ */
+async function resolveSessionUserId(request, env) {
+  if (!env.DB) return null;
+  if (!request.headers.get("cookie")) return null;
+  try {
+    const adapter = createCloudflareD1Adapter(env.DB);
+    const identity = createIdentityService({ adapter });
+    const ctx = await identity.sessionFromRequest(request);
+    return ctx?.user?.id || null;
+  } catch (err) {
+    console.error("session_resolve_error", String(err));
+    return null;
+  }
+}
+
+/**
+ * Bind a Nitro-bound Studio request to the validated session user by
+ * rewriting X-User-Id. Returns the (possibly cloned) request. Only the
+ * session value is ever written — the client header can narrow nothing.
+ */
+function bindSessionUser(request, sessionUserId) {
+  try {
+    const headers = new Headers(request.headers);
+    headers.set("x-user-id", sessionUserId);
+    return new Request(request, { headers });
+  } catch (err) {
+    console.error("session_bind_error", String(err));
+    return null;
+  }
 }
 
 function cors(request) {
@@ -424,14 +461,17 @@ async function handleLlmInventory(env, userId, request) {
 
   // Worker stays boundary-safe: return credential provenance only (no root src import).
   // Live model discovery for Studio UI uses the Nitro/TanStack inventory route.
+  // Cloudflare counts as configured when the Workers AI binding is present,
+  // even with no API token — chat routes through env.AGENTSAM_WAI (platform).
   const providers = [
     'openai', 'anthropic', 'gemini', 'grok', 'cursor', 'cloudflare',
   ].map((id) => {
     const row = merged.get(id);
+    const viaWorkersAI = id === 'cloudflare' && Boolean(env.AGENTSAM_WAI);
     return {
       id,
-      configured: Boolean(row?.value),
-      source: row?.source || null,
+      configured: Boolean(row?.value) || viaWorkersAI,
+      source: row?.source || (viaWorkersAI ? 'platform' : null),
     };
   });
 
@@ -487,7 +527,25 @@ export default {
       }
     }
 
+    // Authenticated identity for Studio routes. Resolved lazily (single D1
+    // session lookup, skipped entirely when no Cookie header is present) so
+    // static-asset traffic through the Worker pays nothing.
+    let sessionUserId;
+    async function sessionUser() {
+      if (sessionUserId === undefined) sessionUserId = await resolveSessionUserId(request, env);
+      return sessionUserId;
+    }
+
     if (!isVault && !isLlmInventory && url.pathname !== "/health") {
+      // Nitro-bound Studio chat runs per-user vault BYOK downstream: bind the
+      // client-asserted user to the validated session when one exists.
+      if (url.pathname === "/api/chat" && request.method === "POST") {
+        const sid = await sessionUser();
+        if (sid && (request.headers.get("x-user-id") || "").trim() !== sid) {
+          const bound = bindSessionUser(request, sid);
+          if (bound) request = bound;
+        }
+      }
       return nitroWorker.fetch(request, env, context);
     }
 
@@ -530,44 +588,63 @@ export default {
       );
     }
 
+    // GET /api/llm/inventory: desk API key OR a valid session authenticates.
+    // The session user is authoritative; the client header is a fallback for
+    // API-key service callers.
+    if (isLlmInventory && request.method === "GET") {
+      const gate = requireApiKey(request, env);
+      const sid = await sessionUser();
+      if (!gate.ok && !sid) return json({ ok: false, error: gate.error }, gate.status, headers);
+      const userId = sid || (request.headers.get("x-user-id") || "").trim();
+      if (!userId || userId.length < 3) {
+        return json({ ok: false, error: "X-User-Id required" }, 400, headers);
+      }
+      try {
+        const res = await handleLlmInventory(env, userId, request);
+        Object.entries(headers).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
+      } catch (err) {
+        console.error("workmode_error", String(err));
+        return json({ ok: false, error: "internal_error", detail: String(err).slice(0, 200) }, 500, headers);
+      }
+    }
+
+    // Vault routes stay desk-key-only (server callers); the user still
+    // resolves session-first so an authenticated operator needs no header.
     const gate = requireApiKey(request, env);
     if (!gate.ok) return json({ ok: false, error: gate.error }, gate.status, headers);
 
-    const user = requireUserId(request);
-    if (!user.ok && (url.pathname.startsWith("/api/vault/") || isLlmInventory)) {
-      return json({ ok: false, error: user.error }, user.status, headers);
+    const headerUser = (request.headers.get("x-user-id") || "").trim();
+    const sessionId = await sessionUser();
+    const userId = sessionId || headerUser;
+    if (!userId || userId.length < 3) {
+      return json({ ok: false, error: "X-User-Id required" }, 400, headers);
     }
 
     try {
-      if (isLlmInventory && request.method === "GET") {
-        const res = await handleLlmInventory(env, user.userId, request);
-        Object.entries(headers).forEach(([k, v]) => res.headers.set(k, v));
-        return res;
-      }
-
       if (url.pathname === "/api/vault/secrets" && request.method === "GET") {
-        const res = await handleList(env, user.userId);
+        const res = await handleList(env, userId);
         Object.entries(headers).forEach(([k, v]) => res.headers.set(k, v));
         return res;
       }
 
       if (url.pathname === "/api/vault/secrets" && request.method === "POST") {
         const body = await request.json().catch(() => ({}));
-        const res = await handleCreate(env, user.userId, body);
+        const res = await handleCreate(env, userId, body);
         Object.entries(headers).forEach(([k, v]) => res.headers.set(k, v));
         return res;
       }
 
       if (url.pathname === "/api/vault/unwrap" && request.method === "POST") {
         const body = await request.json().catch(() => ({}));
-        const res = await handleUnwrap(env, user.userId, body);
+        const res = await handleUnwrap(env, userId, body);
         Object.entries(headers).forEach(([k, v]) => res.headers.set(k, v));
         return res;
       }
 
       const del = url.pathname.match(/^\/api\/vault\/secrets\/([^/]+)$/);
       if (del && request.method === "DELETE") {
-        const res = await handleDelete(env, user.userId, decodeURIComponent(del[1]));
+        const res = await handleDelete(env, userId, decodeURIComponent(del[1]));
         Object.entries(headers).forEach(([k, v]) => res.headers.set(k, v));
         return res;
       }

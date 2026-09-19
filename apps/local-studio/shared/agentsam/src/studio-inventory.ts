@@ -1,7 +1,13 @@
 /**
  * Studio-local inventory helpers (no root src imports — source-boundary safe).
  * Semantics mirror src/models/inventory-core.js for the Studio plane.
+ *
+ * Credential provenance comes from `studio-vault.ts`: callers merge the user's
+ * unwrapped vault map over `platformCredentials(env)` so BYOK (`user_vault`)
+ * wins and desk secrets (`platform`) fill the gaps. Responses carry only
+ * `configured`/`source` flags — never credential values.
  */
+import { credentialPlaneFor, type StudioCredential } from "./studio-vault";
 export const STUDIO_PROVIDERS = Object.freeze([
   { id: "openai", label: "OpenAI", env: "OPENAI_API_KEY" },
   { id: "anthropic", label: "Anthropic", env: "ANTHROPIC_API_KEY" },
@@ -122,7 +128,7 @@ async function discover(provider: string, apiKey: string, accountId?: string | n
 }
 
 export function platformCredentials(env: NodeJS.ProcessEnv) {
-  const map = new Map<string, { value: string; source: string; account_id?: string | null }>();
+  const map = new Map<string, StudioCredential>();
   const put = (id: string, value?: string, extra: Record<string, string | null | undefined> = {}) => {
     if (!value || !clean(value)) return;
     map.set(id, { value: clean(value), source: "platform", ...extra });
@@ -138,7 +144,7 @@ export function platformCredentials(env: NodeJS.ProcessEnv) {
   return map;
 }
 
-export async function buildStudioInventory(credentials: Map<string, { value: string; source: string; account_id?: string | null }>) {
+export async function buildStudioInventory(credentials: Map<string, StudioCredential>) {
   const providers = [];
   const discovery: Record<string, unknown> = {};
   const availableModels = [];
@@ -166,7 +172,7 @@ export async function buildStudioInventory(credentials: Map<string, { value: str
     schemaVersion: "agentsam-model-inventory-v3",
     generatedAt: new Date().toISOString(),
     authority: "per_credential_provider_discovery",
-    credential_plane: "platform",
+    credential_plane: credentialPlaneFor(credentials),
     providers,
     discovery,
     availableModels,
