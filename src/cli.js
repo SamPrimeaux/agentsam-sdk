@@ -100,7 +100,7 @@ function printLegacyHelp() {
     agentsam start-local       Local PTY on ws://127.0.0.1:3099 (no tunnel, no Cloudflare)
     agentsam ollama            Opt-in local Ollama setup/status/model management
     agentsam shell             Interactive Agent Sam slash-command shell
-    agentsam tunnel            Explicitly expose local PTY when remote access is wanted
+    agentsam tunnel            Choose/list/inspect/run real Cloudflare Tunnels via Wrangler
     agentsam deploy            Graduate to Cloudflare / GCP when ready
     agentsam dockerize         Build/run app, knowledge, or CAD containers (--help)
     agentsam identity preview  Preview the reusable local auth portal (not production login)
@@ -132,11 +132,13 @@ function printLegacyHelp() {
   Run agentsam from any project to enter the account-aware interactive experience.
   Account, model-provider, terminal, and deploy permissions are requested only when the related capability needs them.
 
-  Tunnel options:
-    --quick                    Quick tunnel (default) — trycloudflare.com URL
-    --named                    Named CF tunnel (needs --tunnel-name --hostname --zone-id)
-    --port <n>                 Local PTY port (default 3099)
-    --token <aak_…>            Use AGENTSAM_API_KEY-compatible account credential
+  Tunnel commands:
+    agentsam tunnel            Guided picker over Wrangler-visible tunnels
+    agentsam tunnel list       List real Cloudflare Tunnels
+    agentsam tunnel info <id>  Inspect one tunnel
+    agentsam tunnel run <id>   Run/start a connector on this machine
+    agentsam tunnel create <name>
+    agentsam tunnel quick-start [url]
 
   Init options:
     --name <name>              Project directory name

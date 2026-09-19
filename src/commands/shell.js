@@ -13,6 +13,8 @@ import { runModels } from './models.js';
 import { runProviders } from './providers.js';
 import { configureCliPreferences } from './preferences.js';
 import { runCloudflare } from './cloudflare.js';
+import { runConnections } from './connections.js';
+import { runTunnel } from './tunnel.js';
 import { probeOllamaModel, resolveOllamaConfig } from './ollama.js';
 import { createInlineActivity } from '../ui/cli/activity.js';
 import { createCliRuntimePresenter } from '../ui/cli/runtime-events.js';
@@ -765,6 +767,13 @@ export async function dispatchShellLine(line, state = {}) {
       case '/cf':
       case '/cloudflare':
         await runCloudflare(args.length ? args : ['commands'], { cwd: state.cwd, write });
+        break;
+      case '/connections':
+      case '/connect':
+        await runConnections(args, { cwd: state.cwd, write, home: state.home });
+        break;
+      case '/tunnel':
+        await runTunnel(args, { cwd: state.cwd, write, home: state.home, interactive: state.interactive });
         break;
       case '/settings': {
         const configured = await configureCliPreferences({ cwd: state.cwd, firstRun: false, home: state.home });

@@ -10,7 +10,7 @@ function tempRoot() { return fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-cf-
 
 test('Cloudflare native command catalog exposes bounded read operations and never an auth-token secret read', () => {
   const ids = listWranglerNativeCommands().map((row) => row.id);
-  assert.deepEqual(ids, ['whoami', 'deployments.list', 'versions.list', 'versions.view', 'types.check', 'queues.list']);
+  assert.deepEqual(ids, ['whoami', 'deployments.list', 'versions.list', 'versions.view', 'types.check', 'queues.list', 'tunnel.list', 'tunnel.info']);
   assert.ok(!ids.some((id) => id.includes('token') || id.includes('secret') || id === 'deploy'));
 });
 
