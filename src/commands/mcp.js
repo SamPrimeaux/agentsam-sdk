@@ -1,13 +1,16 @@
 import {
-  MCP_PRESETS,
   deleteMcpServer,
   detectInstalledClients,
   inspectClientAdapter,
+  isClientRegistered,
+  listKnownServers,
   listMcpServers,
   listMcpTools,
+  listRegisteredClients,
   pingMcpServer,
   readMcpServer,
   removeServerFromClient,
+  resolveServerPreset,
   syncServerToClient,
   writeMcpServer,
 } from '../mcp/index.js';
@@ -28,6 +31,7 @@ export function parseMcpArgs(argv = []) {
   let url = '';
   let token = '';
   let json = false;
+  let catalog = false;
 
   for (let i = 1; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -35,6 +39,7 @@ export function parseMcpArgs(argv = []) {
     else if (arg === '--url') url = argv[++i] || '';
     else if (arg === '--token') token = argv[++i] || '';
     else if (arg === '--json') json = true;
+    else if (arg === '--catalog' || arg === '--all') catalog = true;
     else if (arg === '--help' || arg === '-h') help = true;
   }
 
@@ -45,27 +50,42 @@ export function parseMcpArgs(argv = []) {
     url,
     token,
     json,
+    catalog,
     help,
   };
 }
 
-function renderHelp() {
+function renderHelp(options = {}) {
+  const clients = listRegisteredClients(options);
+  const servers = listKnownServers(options);
+
+  const presetRows = servers.map((s) => {
+    const key = (s.name || s.server_key || '').padEnd(24);
+    const desc = s.description || s.display_name || s.health_status || '';
+    return `    ${key} ${s.url} (${desc})`;
+  }).join('\n');
+
+  const clientRows = clients.map((c) => {
+    const key = c.client_key.padEnd(24);
+    const note = c.notes || c.display_name;
+    return `    ${key} ${c.display_name} (${note})`;
+  }).join('\n');
+
   return `
   AgentSam · MCP Client Management
 
   Usage:
-    agentsam mcp add <name> [--client cursor|claude|all] [--url <url>] [--token <token>]
-    agentsam mcp list [--json]
+    agentsam mcp add <name> [--client <client>|all] [--url <url>] [--token <token>]
+    agentsam mcp list [--catalog|--all] [--json]
     agentsam mcp status [<name>] [--json]
     agentsam mcp doctor [<name>] [--json]
-    agentsam mcp remove <name> [--client cursor|claude|all]
+    agentsam mcp remove <name> [--client <client>|all]
 
-  Known presets:
-    inneranimalmedia   https://mcp.inneranimalmedia.com/mcp (218 tools, D1 telemetry)
+  Known server presets:
+${presetRows}
 
-  Client adapters:
-    cursor             ~/.cursor/mcp.json
-    claude             ~/Library/Application Support/Claude/claude_desktop_config.json
+  Recognized client adapters:
+${clientRows}
 `;
 }
 
@@ -74,13 +94,29 @@ export async function runMcp(argv = [], options = {}) {
   const write = options.write || ((text) => process.stdout.write(text));
 
   if (args.help || !args.subcommand) {
-    write(renderHelp());
+    write(renderHelp(options));
     return null;
   }
 
   const { subcommand, target } = args;
 
   if (subcommand === 'list') {
+    if (args.catalog) {
+      const catalog = listKnownServers(options);
+      if (args.json) {
+        write(JSON.stringify({ catalog }, null, 2) + '\n');
+        return catalog;
+      }
+      write('\n  Known MCP Server Catalog (Registry: agentsam_mcp_servers)\n\n');
+      for (const s of catalog) {
+        write(`  • ${s.name || s.server_key} (${s.display_name || s.name})\n`);
+        write(`      url:       ${s.url}\n`);
+        write(`      auth_type: ${s.auth_type || 'none'}\n`);
+        write(`      health:    ${s.health_status || 'unknown'}${s.avg_latency_ms != null ? ` · ${s.avg_latency_ms}ms` : ''}\n\n`);
+      }
+      return catalog;
+    }
+
     const servers = listMcpServers(options);
     if (args.json) {
       write(JSON.stringify({ servers }, null, 2) + '\n');
@@ -103,24 +139,32 @@ export async function runMcp(argv = [], options = {}) {
 
   if (subcommand === 'add') {
     const name = target || 'inneranimalmedia';
-    const preset = MCP_PRESETS[name];
+    const preset = resolveServerPreset(name, options);
     const url = args.url || preset?.url;
 
     if (!url) {
       throw new Error(`missing_url: specify --url for custom MCP server "${name}"`);
     }
 
-    const requestedClients = args.client
-      ? (args.client === 'all' ? ['cursor', 'claude'] : [args.client])
-      : (preset?.defaultClients || ['cursor']);
+    let requestedClients = ['cursor'];
+    if (args.client) {
+      if (args.client === 'all') {
+        const detected = detectInstalledClients(options);
+        requestedClients = detected.length > 0 ? detected : ['cursor', 'claude'];
+      } else {
+        requestedClients = [args.client];
+      }
+    } else if (preset?.defaultClients?.length) {
+      requestedClients = preset.defaultClients;
+    }
 
     const serverConfig = {
       name,
       url,
       protocol: preset?.protocol || 'sse',
-      auth: args.token ? { type: 'bearer', token: args.token } : null,
+      auth: args.token ? { type: preset?.auth_type || 'bearer', token: args.token } : null,
       clients: requestedClients,
-      metadata: preset ? { preset: name, description: preset.description } : {},
+      metadata: preset ? { preset: name, description: preset.description, health_status: preset.health_status } : {},
     };
 
     // Store in AgentSam authority
@@ -171,7 +215,7 @@ export async function runMcp(argv = [], options = {}) {
 
     const ping = await pingMcpServer(server, options);
     const clientStatuses = (server.clients || ['cursor']).map((c) =>
-      inspectClientAdapter(c, name, options)
+      inspectClientAdapter(c, name, options),
     );
 
     const report = {
@@ -209,9 +253,10 @@ export async function runMcp(argv = [], options = {}) {
       return errPayload;
     }
 
+    const preset = resolveServerPreset(name, options);
     const ping = await pingMcpServer(server, options);
     const clientStatuses = (server.clients || ['cursor']).map((c) =>
-      inspectClientAdapter(c, name, options)
+      inspectClientAdapter(c, name, options),
     );
     const toolsProbe = ping.ok ? await listMcpTools(server, options) : { count: 0, tools: [] };
 
@@ -226,6 +271,11 @@ export async function runMcp(argv = [], options = {}) {
       discoveredTools: toolsProbe.count,
       clients: clientStatuses,
       detectedHostClients: detectedClients,
+      catalogHealth: preset ? {
+        health_status: preset.health_status,
+        avg_latency_ms: preset.avg_latency_ms,
+        error_rate: preset.error_rate,
+      } : null,
     };
 
     if (args.json) {
@@ -236,9 +286,12 @@ export async function runMcp(argv = [], options = {}) {
     write(`\n  AgentSam MCP Doctor · ${name}\n\n`);
     write(`  [1] Authority state:   ✓ Valid (~/.agentsam/mcp/${name}.json)\n`);
     write(`  [2] Endpoint ping:     ${ping.ok ? `✓ Reachable (${ping.latencyMs}ms)` : `✗ Unreachable (${ping.error})`}\n`);
-    write(`  [3] Auth credential:   ${diagnostics.authConfigured ? '✓ Token configured' : '○ Unauthenticated / public'}\n`);
-    write(`  [4] Tool discovery:    ${toolsProbe.count > 0 ? `✓ Found ${toolsProbe.count} tools` : '○ 0 tools discovered'}\n`);
-    write(`  [5] Client adapters:\n`);
+    if (preset?.health_status) {
+      write(`  [3] Live health data:  ${preset.health_status} (avg latency: ${preset.avg_latency_ms ?? 0}ms, error rate: ${preset.error_rate ?? 0}%)\n`);
+    }
+    write(`  [4] Auth credential:   ${diagnostics.authConfigured ? '✓ Token configured' : '○ Unauthenticated / public'}\n`);
+    write(`  [5] Tool discovery:    ${toolsProbe.count > 0 ? `✓ Found ${toolsProbe.count} tools` : '○ 0 tools discovered'}\n`);
+    write(`  [6] Client adapters:\n`);
     for (const c of clientStatuses) {
       write(`        • ${c.client}: ${c.configured ? '✓ Synced' : '✗ Desynced'} (${c.path})\n`);
     }
@@ -252,7 +305,7 @@ export async function runMcp(argv = [], options = {}) {
 
     const server = readMcpServer(name, options);
     const targetClients = args.client
-      ? (args.client === 'all' ? ['cursor', 'claude'] : [args.client])
+      ? (args.client === 'all' ? (server?.clients || ['cursor', 'claude']) : [args.client])
       : (server?.clients || ['cursor', 'claude']);
 
     const removedAdapters = [];

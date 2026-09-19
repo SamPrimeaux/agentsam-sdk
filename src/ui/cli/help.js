@@ -38,7 +38,7 @@ const HELP_TOPICS = Object.freeze([
       ['agentsam start-local', 'Start the local PTY service'],
       ['agentsam connections', 'Inspect available execution connections'],
       ['agentsam tunnel', 'List, inspect, and run real Cloudflare Tunnels through Wrangler'],
-      ['agentsam mcp <add|status|doctor|list|remove>', 'Manage MCP connections and client adapters (Cursor, Claude)'],
+      ['agentsam mcp <add|status|doctor|list|remove>', 'Manage MCP connections, server catalogs, and client adapters'],
       ['agentsam eval <context|live>', 'Deterministic context scoring or live agent evaluation telemetry'],
       ['agentsam deploy', 'Graduate intentionally to cloud infrastructure'],
       ['agentsam cloudflare', 'Wrangler and Cloudflare runtime diagnostics'],
