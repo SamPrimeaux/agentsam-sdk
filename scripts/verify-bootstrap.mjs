@@ -73,7 +73,7 @@ try {
   assert.ok(!fs.existsSync(path.join(project, 'gorilla')));
 
   run(['status', '--json'], { cwd: project });
-  run(['models', '--json'], { cwd: project });
+  run(['models', '--json', '--no-discover'], { cwd: project });
   run(['db', 'status'], { cwd: project });
 
   console.log(`verify-bootstrap OK ${sdkPackage.name}@${sdkPackage.version}`);
