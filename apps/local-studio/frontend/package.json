@@ -68,7 +68,10 @@
     "zustand": "^5.0.0",
     "@inneranimalmedia/agentsam-local-shared": "0.0.0",
     "@inneranimalmedia/agentsam-contracts": "file:../../../packages/agentsam-contracts",
-    "@inneranimalmedia/agentsam-workbench": "file:../../../packages/agentsam-workbench"
+    "@inneranimalmedia/agentsam-workbench": "file:../../../packages/agentsam-workbench",
+    "@inneranimalmedia/agentsam-cms-frontend": "file:../../client-cms-editor/frontend",
+    "@inneranimalmedia/agentsam-cms-backend": "file:../../client-cms-editor/backend",
+    "@inneranimalmedia/agentsam-cms-shared": "file:../../client-cms-editor/shared/cms"
   },
   "devDependencies": {
     "@types/node": "^22.16.5",

@@ -6,6 +6,7 @@
  */
 
 import { createCmsDbClient } from './cms-db.js';
+import { fetchSitePartial, putSitePartial, injectSitePartials } from './site-partials.js';
 
 function json(body, status = 200, headers = {}) {
   return new Response(JSON.stringify(body), {
@@ -276,6 +277,38 @@ export async function handleCmsWorkerRequest(request, env) {
     if (url.pathname === '/api/cms/templates' && method === 'GET') {
       const templates = await dbClient.getTemplates();
       return json({ ok: true, templates });
+    }
+
+    // ── PARTIALS (R2 Edge WEBSITE_ASSETS) ──
+    const partialMatch = url.pathname.match(/^\/api\/cms\/partials\/([^/]+)$/);
+    if (partialMatch) {
+      const partialName = decodeURIComponent(partialMatch[1]);
+      if (method === 'GET') {
+        const content = await fetchSitePartial(env, siteSlug, partialName);
+        return json({ ok: true, partial: partialName, site: siteSlug, content: content || '' });
+      }
+      if (method === 'PUT' || method === 'POST') {
+        const content = typeof body?.content === 'string' ? body.content : String(body || '');
+        await putSitePartial(env, siteSlug, partialName, content);
+        return json({ ok: true, partial: partialName, site: siteSlug });
+      }
+    }
+
+    // ── RENDER PAGE (with HTMLRewriter edge partial injection) ──
+    if (url.pathname === '/api/cms/render-page' && method === 'GET') {
+      const pageId = url.searchParams.get('page_id') || url.searchParams.get('id');
+      const page = pageId ? await dbClient.getPageById(pageId) : (await dbClient.getPages())[0];
+      if (!page) return json({ ok: false, error: 'page_not_found' }, 404);
+      const sections = await dbClient.getSectionsForPage(page.id);
+      const sectionsHtml = sections
+        .filter((s) => s.is_visible)
+        .map((s) => `<section id="${s.id}" data-section-type="${s.section_type}" class="cms-section ${s.css_classes || ''}"><h2>${s.section_name}</h2></section>`)
+        .join('\n');
+      const rawHtml = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>${page.title}</title></head><body data-route="${page.route_path}"><main class="cms-main">${sectionsHtml}</main></body></html>`;
+      const baseResponse = new Response(rawHtml, {
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+      });
+      return injectSitePartials(baseResponse, env, siteSlug);
     }
 
     // ── CONTACTS ──

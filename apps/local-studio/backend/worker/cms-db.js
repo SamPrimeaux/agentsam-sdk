@@ -20,9 +20,10 @@ export function createCmsDbClient(db, rawProjectSlug) {
     projectSlug,
 
     async getProject() {
+      const sanitizedSlug = projectSlug.replace(/[^a-zA-Z0-9_]/g, '_');
       const res = await db
-        .prepare('SELECT * FROM projects WHERE id = ? OR name = ? OR client_name = ? LIMIT 1')
-        .bind(`proj_${projectSlug.replace(/[^a-zA-Z0-9_]/g, '_')}`, projectSlug, projectSlug)
+        .prepare('SELECT * FROM projects WHERE id = ? OR id = ? OR project_id = ? OR name = ? LIMIT 1')
+        .bind(projectSlug, `proj_${sanitizedSlug}`, projectSlug, projectSlug)
         .all();
       return res.results?.[0] || null;
     },
@@ -382,17 +383,22 @@ export function createCmsDbClient(db, rawProjectSlug) {
     },
 
     async getLiquidImports() {
+      const sanitizedSlug = projectSlug.replace(/[^a-zA-Z0-9_]/g, '_');
       const res = await db
-        .prepare('SELECT * FROM cms_liquid_imports WHERE tenant_id = ? OR project_id = ? ORDER BY created_at DESC')
-        .bind('tenant_sam_primeaux', `proj_${projectSlug}`)
+        .prepare('SELECT * FROM cms_liquid_imports WHERE project_id = ? OR project_id = ? ORDER BY created_at DESC')
+        .bind(projectSlug, `proj_${sanitizedSlug}`)
         .all();
       return res.results || [];
     },
 
     async getActivity() {
       const res = await db
-        .prepare('SELECT * FROM cms_activity_log WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 20')
-        .bind('tenant_sam_primeaux')
+        .prepare(
+          `SELECT a.* FROM cms_activity_log a
+           WHERE a.resource_id IN (SELECT id FROM cms_pages WHERE project_slug = ?)
+           ORDER BY a.created_at DESC LIMIT 20`
+        )
+        .bind(projectSlug)
         .all();
       return res.results || [];
     },
