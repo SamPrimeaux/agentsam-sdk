@@ -375,7 +375,7 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
   const redo = useCallback(() => { if (!page) return; const next = future[0]; if (!next) return; setHistory(h => [...h, page.sections]); setFuture(f => f.slice(1)); updatePages(ps => ps.map(p => p.id === page.id ? { ...p, sections: next } : p)); toast("Change restored", "info"); }, [future, page, updatePages, toast]);
 
   const chooseSection = (id: string) => { if (dirty && id !== selectedId && !window.confirm("You have unsaved changes. Discard and continue?")) return; setSelectedId(id); setSelectedBlockId(""); setDirty(false); setRail("sections"); setTab("content"); postCmsEditorPreviewMessage(iframeRef.current?.contentWindow, { type: CMS_EDITOR_PREVIEW_TYPES.HIGHLIGHT, section_id: id }); };
-  const choosePage = (id: string) => { if (dirty && !window.confirm("You have unsaved changes. Discard and continue?")) return; const p = site.pages.find(x => x.id === id); if (!p) return; setPageId(id); setSelectedId(p.sections[0]?.id); setSelectedBlockId(""); setDirty(false); toast(`Opened ${p.title}`, "info"); };
+  const choosePage = (id: string) => { if (dirty && !window.confirm("You have unsaved changes. Discard and continue?")) return; const p = site.pages.find(x => x.id === id); if (!p) return; setPageId(id); setSelectedId(p.sections[0]?.id || ""); setSelectedBlockId(""); setDirty(false); setTab("content"); toast(`Opened ${p.title}`, "info"); };
   const chooseSite = (id: string) => { const s = sites.find(x => x.id === id); if (!s) return; setSiteSwitcher(false); if (onSiteChange) { onSiteChange(id); toast(`Opening ${s.name}`, "info"); return; } setSiteId(id); if (s.pages[0]) { setPageId(s.pages[0].id); setSelectedId(s.pages[0].sections[0]?.id || ""); setSelectedBlockId(""); } toast(`Switched to ${s.name}`, "info"); };
 
   useEffect(() => { const t = dirty ? setTimeout(() => { save(); toast("Auto-save started", "info"); }, 30000) : undefined; return () => { if (t !== undefined) clearTimeout(t); }; }, [dirty, selected?.fields, save, toast]);
@@ -406,35 +406,42 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
     if (!page) return "<!doctype html><html><body></body></html>";
     const visible = page.sections.filter(s => s.visible);
     const content = visible.map((s, i) => {
-      const f = s.fields;
-      const isNav = s.type === "Navigation";
-      const isFooter = s.type === "Footer";
-      const img = f.hero_image_url;
+      const f = s.fields || {};
+      const typeLower = String(s.type || "").toLowerCase();
+      const nameLower = String(s.name || "").toLowerCase();
+      const isNav = typeLower === "navigation" || typeLower === "header" || typeLower === "nav" || nameLower.includes("header") || nameLower.includes("nav");
+      const isFooter = typeLower === "footer" || nameLower.includes("footer");
+      const isHero = typeLower === "hero" || nameLower.includes("hero");
+      const img = f.hero_image_url || f.image_url;
       const sectionId = escapeCmsText(s.id);
       if (isNav) {
-        const links = Array.isArray(f.nav_links) ? f.nav_links : [];
-        return `<section data-cms-id="${sectionId}" class="nav"><b>${escapeCmsText(f.brand_name || f.title || site?.name || "Agent Sam")}</b><nav>${links.map((x: any) => {
+        const links = Array.isArray(f.nav_links) ? f.nav_links : Array.isArray(f.links) ? f.links : [];
+        const brand = f.brand_name || f.title || f.brand || site?.name || "Agent Sam";
+        const cta = f.nav_cta_label || f.cta_text || f.cta_label || "Get Started";
+        return `<section data-cms-id="${sectionId}" class="nav"><b>${escapeCmsText(brand)}</b><nav>${links.map((x: any) => {
           if (x && typeof x === "object") {
             const lbl = escapeCmsText(x.label || x.title || x.text || x.name || "Link");
             const href = escapeCmsText(x.href || x.url || x.path || "#");
             return `<a href="${href}">${lbl}</a>`;
           }
           return `<span>${escapeCmsText(x)}</span>`;
-        }).join("")}</nav><button>${escapeCmsText(f.nav_cta_label || "Get Started")}</button></section>`;
+        }).join("")}</nav><button>${escapeCmsText(cta)}</button></section>`;
       }
-      if (String(s.type).toLowerCase() === "hero") {
+      if (isHero) {
         const rawImg = typeof f.image === "string" ? f.image : (f.image && typeof f.image === "object" ? String((f.image as any).url || (f.image as any).src || "") : img || "");
         const imgUrl = safeCmsAssetUrl(rawImg);
         const cta = f.primaryCta && typeof f.primaryCta === "object" ? f.primaryCta as any : null;
-        const ctaLabel = cta ? String(cta.label || cta.text || "") : String(f.hero_primary_cta || "");
-        const heading = String(f.heading || f.hero_title || s.name || "Hero");
-        const body = String(f.body || f.hero_body || "");
-        const eyebrow = String(f.eyebrow || "");
+        const ctaLabel = cta ? String(cta.label || cta.text || "") : String(f.cta_text || f.hero_primary_cta || f.button_label || "");
+        const heading = String(f.headline || f.heading || f.hero_title || f.title || s.name || "Hero");
+        const body = String(f.subline || f.body || f.hero_body || f.description || "");
+        const eyebrow = String(f.eyebrow || f.section_label || "");
         return `<section data-cms-id="${sectionId}" class="hero" style="background-image:linear-gradient(90deg,rgba(7,7,10,.8),rgba(7,7,10,.15)),url('${imgUrl}')"><div><small>${escapeCmsText(eyebrow)}</small><h1>${escapeCmsText(heading)}</h1><p>${escapeCmsText(body)}</p>${ctaLabel ? `<button>${escapeCmsText(ctaLabel)}</button>` : ""}${f.hero_secondary_cta ? `<a>${escapeCmsText(f.hero_secondary_cta)} →</a>` : ""}</div></section>`;
       }
       if (isFooter) {
-        const links = Array.isArray(f.footer_links) ? f.footer_links : [];
-        return `<section data-cms-id="${sectionId}" class="footer"><b>${escapeCmsText(f.brand_name || site?.name || "Site")}</b><p>${escapeCmsText(f.copyright_text || "")}</p><span>${links.map((x: any) => {
+        const links = Array.isArray(f.footer_links) ? f.footer_links : Array.isArray(f.links) ? f.links : [];
+        const brand = f.brand_name || site?.name || "Agent Sam";
+        const copyright = f.copyright || f.copyright_text || `© ${new Date().getFullYear()} ${brand}`;
+        return `<section data-cms-id="${sectionId}" class="footer"><b>${escapeCmsText(brand)}</b><p>${escapeCmsText(copyright)}</p><span>${links.map((x: any) => {
           if (x && typeof x === "object") {
             const lbl = escapeCmsText(x.label || x.title || x.text || x.name || "Link");
             const href = escapeCmsText(x.href || x.url || x.path || "#");
@@ -443,14 +450,19 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
           return escapeCmsText(x);
         }).join(" · ")}</span></section>`;
       }
-      return `<section data-cms-id="${sectionId}" class="content s${i}" style="background:${safeCmsCssValue(s.color) || 'transparent'}"><small>${escapeCmsText(f.section_label || s.type)}</small><h2>${escapeCmsText(f.title || f.heading || f.quote || s.name)}</h2><p>${escapeCmsText(f.description || f.body || f.author_name || "Distinctive systems, thoughtfully made.")}</p>${f.button_label ? `<button>${escapeCmsText(f.button_label)}</button>` : ""}</section>`;
+      const title = String(f.title || f.heading || f.headline || f.quote || s.name || "");
+      const description = String(f.description || f.body || f.subline || f.author_name || "");
+      const label = String(f.section_label || s.type || "");
+      const cta = String(f.button_label || f.cta_text || "");
+      const email = f.email ? `<p><a href="mailto:${escapeCmsText(f.email)}" style="color:var(--brand-primary);">${escapeCmsText(f.email)}</a></p>` : "";
+      return `<section data-cms-id="${sectionId}" class="content s${i}" style="background:${safeCmsCssValue(s.color) || 'transparent'}"><small>${escapeCmsText(label)}</small><h2>${escapeCmsText(title)}</h2><p>${escapeCmsText(description)}</p>${email}${cta ? `<button>${escapeCmsText(cta)}</button>` : ""}</section>`;
     }).join("");
     const vars = Object.entries(theme)
       .filter(([key]) => /^--[a-z0-9-]+$/i.test(key))
       .map(([key, value]) => `${key}:${safeCmsCssValue(value)}`)
       .filter((entry) => !entry.endsWith(':'))
       .join(";");
-    return `<!doctype html><html><head><meta charset="utf-8"><style>:root{${vars}}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:var(--font-body),Arial;background:#f5f2ea;color:#101014}section{position:relative;transition:.18s;cursor:default}.nav{height:68px;display:flex;align-items:center;padding:0 clamp(24px,6vw,84px);gap:30px;background:#0c0c10;color:white}.nav b{font-size:18px;margin-right:auto}.nav nav{display:flex;gap:22px;font-size:12px;color:#aaa}.nav button,.hero button,.content button{border:0;border-radius:999px;padding:11px 18px;background:var(--brand-primary);color:white}.hero{min-height:620px;background-size:cover;background-position:center;display:flex;align-items:end;padding:clamp(48px,9vw,120px);color:white}.hero>div{max-width:760px}.hero small,.content small{text-transform:uppercase;letter-spacing:.18em;font-size:11px;font-weight:700}.hero h1{font-size:clamp(44px,6.5vw,92px);line-height:.94;letter-spacing:-.055em;margin:20px 0}.hero p{font-size:18px;max-width:580px;line-height:1.6;color:#d8d8de}.hero a{margin-left:18px;font-size:13px}.content{min-height:390px;padding:clamp(60px,9vw,120px);display:flex;flex-direction:column;justify-content:center}.content h2{font-size:clamp(32px,5vw,66px);line-height:1;margin:20px 0;max-width:880px;letter-spacing:-.04em}.content p{max-width:660px;line-height:1.7}.s2,.s5{color:#0d0d10}.footer{min-height:250px;padding:70px;background:#09090b;color:white;display:grid;gap:30px;align-content:center}.cms-highlight{outline:3px solid #4d8dff!important;outline-offset:-3px}.cms-highlight:after{content:attr(data-cms-name);position:absolute;top:5px;left:5px;background:#3b82f6;color:#fff;padding:4px 7px;border-radius:4px;font:11px Arial;z-index:10}</style></head><body>${content}<script>window.parent.postMessage({type:'cms:ready'},'*');document.querySelectorAll('[data-cms-id]').forEach(el=>{el.dataset.cmsName='Section';el.addEventListener('click',e=>{e.stopPropagation();window.parent.postMessage({type:'cms:section-click',sectionId:el.dataset.cmsId},'*')})});addEventListener('message',e=>{const m=e.data;document.querySelectorAll('[data-cms-id]').forEach(x=>x.classList.remove('cms-highlight'));if(m.type==='cms:highlight'){const x=document.querySelector('[data-cms-id="'+m.sectionId+'"]');x&&x.classList.add('cms-highlight')}if(m.type==='cms:scroll-to'){document.querySelector('[data-cms-id="'+m.sectionId+'"]')?.scrollIntoView({behavior:'smooth'})}if(m.type==='cms:theme-vars'){Object.entries(m.vars||{}).forEach(([k,v])=>document.documentElement.style.setProperty(k,v))}if(m.type==='cms:style'){const x=document.querySelector('[data-cms-id="'+m.sectionId+'"]');if(x)Object.assign(x.style,(m.css&&typeof m.css==='object')?m.css:{})}});addEventListener('scroll',()=>window.parent.postMessage({type:'cms:scroll',scrollY:scrollY},'*'))</script></body></html>`;
+    return `<!doctype html><html><head><meta charset="utf-8"><style>:root{${vars}}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:var(--font-body),Arial;background:#f5f2ea;color:#101014}section{position:relative;transition:.18s;cursor:default}.nav{height:68px;display:flex;align-items:center;padding:0 clamp(24px,6vw,84px);gap:30px;background:#0c0c10;color:white}.nav b{font-size:18px;margin-right:auto}.nav nav{display:flex;gap:22px;font-size:12px;color:#aaa}.nav nav a{color:#aaa;text-decoration:none;transition:color .15s}.nav nav a:hover{color:#fff}.nav button,.hero button,.content button{border:0;border-radius:999px;padding:11px 18px;background:var(--brand-primary);color:white;cursor:pointer}.hero{min-height:520px;background-size:cover;background-position:center;display:flex;align-items:end;padding:clamp(48px,9vw,100px);color:white;background-color:#0d0d12}.hero>div{max-width:760px}.hero small,.content small{text-transform:uppercase;letter-spacing:.18em;font-size:11px;font-weight:700;color:var(--brand-primary)}.hero h1{font-size:clamp(40px,6vw,84px);line-height:1.02;letter-spacing:-.045em;margin:16px 0}.hero p{font-size:18px;max-width:580px;line-height:1.6;color:#d8d8de}.hero a{margin-left:18px;font-size:13px;color:#fff}.content{min-height:300px;padding:clamp(48px,8vw,90px);display:flex;flex-direction:column;justify-content:center}.content h2{font-size:clamp(28px,4.5vw,56px);line-height:1.05;margin:16px 0;max-width:880px;letter-spacing:-.03em}.content p{max-width:660px;line-height:1.7;color:#444}.footer{min-height:180px;padding:50px clamp(24px,6vw,84px);background:#09090b;color:white;display:grid;gap:16px;align-content:center}.footer a{color:#aaa;text-decoration:none}.footer a:hover{color:#fff}.cms-highlight{outline:3px solid #4d8dff!important;outline-offset:-3px}.cms-highlight:after{content:attr(data-cms-name);position:absolute;top:5px;left:5px;background:#3b82f6;color:#fff;padding:4px 7px;border-radius:4px;font:11px Arial;z-index:10}</style></head><body>${content}<script>window.parent.postMessage({type:'cms:ready'},'*');document.querySelectorAll('[data-cms-id]').forEach(el=>{el.dataset.cmsName=el.querySelector('h1,h2,b')?.textContent || 'Section';el.addEventListener('click',e=>{e.stopPropagation();window.parent.postMessage({type:'cms:section-click',section_id:el.dataset.cmsId},'*')})});addEventListener('message',e=>{const m=e.data;document.querySelectorAll('[data-cms-id]').forEach(x=>x.classList.remove('cms-highlight'));if(m.type==='cms:highlight'){const x=document.querySelector('[data-cms-id="'+m.sectionId+'"]');x&&x.classList.add('cms-highlight')}if(m.type==='cms:scroll-to'){document.querySelector('[data-cms-id="'+m.sectionId+'"]')?.scrollIntoView({behavior:'smooth'})}if(m.type==='cms:theme-vars'){Object.entries(m.vars||{}).forEach(([k,v])=>document.documentElement.style.setProperty(k,v))}if(m.type==='cms:style'){const x=document.querySelector('[data-cms-id="'+m.sectionId+'"]');if(x)Object.assign(x.style,(m.css&&typeof m.css==='object')?m.css:{})}});addEventListener('scroll',()=>window.parent.postMessage({type:'cms:scroll',scrollY:scrollY},'*'))</script></body></html>`;
   }, [page, theme, site?.name]);
 
   const filteredPages = page && site ? site.pages.filter(p => p.title.toLowerCase().includes(search.toLowerCase())) : [];
@@ -840,9 +852,14 @@ function ContentInspector({ section, schemas, update, toast }: any) {
   const [rich, setRich] = useState<string>("");
   const schema = (schemas || []).find((row: any) => row.type === section.type || row.type === String(section.type || "").toLowerCase() || row.label === section.name);
   const fieldDefs = schema?.fields && typeof schema.fields === "object" ? schema.fields as Record<string, any> : null;
-  const entries = fieldDefs
-    ? Object.keys(fieldDefs).map((key) => [key, section.fields?.[key] ?? schema?.defaults?.[key] ?? ""] as const)
-    : Object.entries(section.fields || {});
+  const sectionFieldKeys = Object.keys(section.fields || {});
+  const allKeys = fieldDefs
+    ? Array.from(new Set([...Object.keys(fieldDefs), ...sectionFieldKeys]))
+    : sectionFieldKeys;
+  const entries = allKeys.map((key) => [
+    key,
+    section.fields?.[key] ?? schema?.defaults?.[key] ?? "",
+  ] as const);
   return <div className="panel-form"><div className="panel-note"><Icon name="info"/><p>{schema ? <>Fields from registry schema <b>{schema.type}</b> (v{schema.version}).</> : <>Fields are mapped to <b>{section.name}</b>.</>} Changes preview instantly and save as structured content.</p></div>{entries.map(([key, value]) => {
     const def = fieldDefs?.[key];
     const label = (def?.label as string) || key.replace(/_/g, " ").replace(/\b\w/g, (x: string) => x.toUpperCase());
@@ -923,7 +940,7 @@ function ListField({ label, raw, value, update }: any) {
                       value={String(v.label ?? v.title ?? v.name ?? v.text ?? "")}
                       onChange={(e) => {
                         const a = [...arr];
-                        const key = "title" in v ? "title" : "name" in v ? "name" : "text" in v ? "text" : "label";
+                        const key = "label" in v ? "label" : "title" in v ? "title" : "name" in v ? "name" : "text" in v ? "text" : "label";
                         a[i] = { ...v, [key]: e.target.value };
                         update(a);
                       }}
@@ -933,7 +950,7 @@ function ListField({ label, raw, value, update }: any) {
                       value={String(v.href ?? v.url ?? v.path ?? "")}
                       onChange={(e) => {
                         const a = [...arr];
-                        const key = "url" in v ? "url" : "path" in v ? "path" : "href";
+                        const key = "href" in v ? "href" : "url" in v ? "url" : "path" in v ? "path" : "href";
                         a[i] = { ...v, [key]: e.target.value };
                         update(a);
                       }}

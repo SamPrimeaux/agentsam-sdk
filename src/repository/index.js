@@ -14,3 +14,9 @@ export {
   createRepositoryContract,
   createRepositoryDependency,
 } from '../../packages/agentsam-repository/src/contracts.js';
+export {
+  scanGitCommits,
+  generateGitCommitIngestSql,
+  syncGitCommitsToD1,
+} from '../../packages/agentsam-repository/src/work-tracking.js';
+

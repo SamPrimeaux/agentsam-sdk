@@ -51,11 +51,15 @@ function parse(argv) {
     if (arg === '--' && !positionalOnly) { positionalOnly = true; continue; }
     if (positionalOnly || !arg.startsWith('-')) opts.paths.push(arg);
     else if (arg === '--interactive' || arg === '--tui') opts.tui = true;
-    else if (['--json', '--force', '--semantic'].includes(arg)) opts[arg.slice(2)] = true;
-    else if (['--out', '--root', '--include', '--exclude'].includes(arg)) {
+    else if (['--json', '--force', '--semantic', '--persist'].includes(arg)) opts[arg.slice(2)] = true;
+    else if (['--out', '--root', '--include', '--exclude', '--connection-id', '--runtime-lease-id', '--capture-kind', '--wrangler-config'].includes(arg)) {
       const value = args[++i];
       if (!value || value.startsWith('--')) throw new Error(`Missing value for ${arg}`);
       if (['--include', '--exclude'].includes(arg)) opts[arg.slice(2)].push(value);
+      else if (arg === '--connection-id') opts.connectionId = value;
+      else if (arg === '--runtime-lease-id') opts.runtimeLeaseId = value;
+      else if (arg === '--capture-kind') opts.captureKind = value;
+      else if (arg === '--wrangler-config') opts.wranglerConfig = value;
       else opts[arg.slice(2)] = value;
     } else throw new Error(`Unknown option: ${arg}`);
   }
@@ -106,7 +110,18 @@ export async function runMerkle(argv = []) {
       if (opts.command === 'diff') return comparison(opts, progress);
       if (opts.command === 'snapshot') {
         const { snapshot: tree, output } = await saveSnapshot(target, { ...progress, policy: opts.policy, out: opts.out, force: opts.force, semantic: opts.semantic });
-        return { title: 'Merkle snapshot', tree, output };
+        let persisted = null;
+        if (opts.persist || opts.connectionId || opts.runtimeLeaseId) {
+          const persistArgs = [output];
+          if (opts.wranglerConfig) persistArgs.push('--wrangler-config', opts.wranglerConfig);
+          if (opts.captureKind) persistArgs.push('--capture-kind', opts.captureKind);
+          else if (opts.connectionId || opts.runtimeLeaseId) persistArgs.push('--capture-kind', 'agent');
+          if (opts.connectionId) persistArgs.push('--connection-id', opts.connectionId);
+          if (opts.runtimeLeaseId) persistArgs.push('--runtime-lease-id', opts.runtimeLeaseId);
+          if (opts.json) persistArgs.push('--json');
+          persisted = await runMerklePersist(persistArgs);
+        }
+        return { title: 'Merkle snapshot', tree, output, persisted };
       }
       const isSnapshot = ['inspect', 'explore'].includes(opts.command) && !(await fs.stat(target)).isDirectory();
       if (isSnapshot && (opts.include.length || opts.exclude.length)) throw new Error('Snapshot inspection uses saved ignore rules.');
