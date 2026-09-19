@@ -101,7 +101,51 @@ export function renderRuntimeStatus(status) {
   if (cloudflare.configured) {
     const version = cloudflare.version?.number != null ? `v${cloudflare.version.number}` : 'version unknown';
     lines.push(`  deployment   ${yesNo(status.checks?.cloudflare, `${cloudflare.worker_name} · ${version}`, `${cloudflare.worker_name || 'Worker'} not verified`)}`);
-    lines.push(`  bindings     ${cloudflare.bindings?.match ? pc.green(`${cloudflare.bindings.live.length} live · declared contract satisfied`) : pc.yellow(`${cloudflare.bindings?.missing?.length || 0} missing`)}`);
+
+    const hasLive = Array.isArray(cloudflare.bindings?.live) && cloudflare.bindings.live.length > 0;
+    const summary = hasLive
+      ? (cloudflare.bindings.match
+          ? pc.green(`${cloudflare.bindings.live.length} live · declared contract satisfied`)
+          : pc.yellow(`${cloudflare.bindings?.missing?.length || 0} missing`))
+      : pc.dim(`${(cloudflare.bindings?.declared || []).length} declared contract bindings`);
+    lines.push(`  bindings     ${summary}`);
+
+    const liveBindings = cloudflare.bindings?.live || [];
+    const declaredBindings = cloudflare.bindings?.declared || [];
+    const declaredMap = new Map((Array.isArray(declaredBindings) ? declaredBindings : []).map((row) => [row.name, row]));
+
+    const rawResources = (cloudflare.bindings?.resources && cloudflare.bindings.resources.length > 0)
+      ? cloudflare.bindings.resources
+      : (liveBindings.length > 0 ? liveBindings : declaredBindings).filter(
+          (r) => r.type !== 'plain_text' && r.type !== 'json' && r.type !== 'secret_text' && r.type !== 'secret_key'
+        );
+
+    const sortedResources = [...rawResources].sort((a, b) => {
+      if (a.name === 'DB') return -1;
+      if (b.name === 'DB') return 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    for (const b of sortedResources) {
+      const decl = declaredMap.get(b.name) || {};
+      const detail = b.database_name || decl.database_name || b.bucket_name || decl.bucket_name || b.service || decl.service || b.id || decl.id || '';
+      const typeDisplay = b.type === 'r2_bucket' ? 'r2' : b.type;
+      const detailStr = detail ? pc.dim(` (${detail})`) : '';
+      lines.push(`               • ${pc.bold(b.name)} · ${typeDisplay}${detailStr}`);
+    }
+
+    const varCount = cloudflare.bindings?.runtime_variables?.length
+      ?? (liveBindings.length > 0 ? liveBindings : declaredBindings).filter((r) => r.type === 'plain_text' || r.type === 'json').length;
+    const secretCount = cloudflare.bindings?.runtime_secrets?.length
+      ?? (liveBindings.length > 0 ? liveBindings : declaredBindings).filter((r) => r.type === 'secret_text' || r.type === 'secret_key').length;
+    if (varCount > 0 || secretCount > 0) {
+      lines.push(`               • ${pc.dim(`${varCount} vars · ${secretCount} secrets`)}`);
+    }
+
+    if (cloudflare.bindings?.missing?.length) {
+      lines.push(`               ${pc.red(`✗ missing: ${cloudflare.bindings.missing.map((b) => b.name).join(', ')}`)}`);
+    }
+
     lines.push(`  health       ${cloudflare.health?.ok ? pc.green(`HTTP ${cloudflare.health.status}`) : pc.yellow(cloudflare.health?.error || 'not verified')}`);
     if (cloudflare.error) lines.push(`  cloud error  ${pc.yellow(cloudflare.error)}`);
   } else {

@@ -51,7 +51,14 @@ export async function runRepositoryInit(argv) {
     if (projectRepositoryId && existingKnowledge.repository_id !== projectRepositoryId) {
       throw new Error(`repository_identity_mismatch: project=${projectRepositoryId} knowledge=${existingKnowledge.repository_id}`);
     }
-    throw new Error(`${CONFIG_PATH} already exists; edit it to change scope/profile. Existing configuration was preserved.`);
+    show({
+      root,
+      config: CONFIG_PATH,
+      storage: existingKnowledge.storage?.driver || 'sqlite',
+      status: 'already_initialized',
+      note: `${CONFIG_PATH} already exists; existing configuration was preserved.`,
+    });
+    return;
   }
   let include = opts.include, exclude = opts.exclude, target = opts.target, dimensions = opts.dimensions;
   if (!opts.yes) {

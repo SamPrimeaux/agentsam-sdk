@@ -4,6 +4,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { execSync } from 'node:child_process';
 import { getSessionToolReceipts, clearSessionToolReceipts, summarizeToolReceipts } from '../mcp/telemetry.js';
+import { resolveProjectD1Database } from '../cloudflare/index.js';
 
 export const DEFAULT_EVAL_RECORD_ENDPOINT = 'https://mcp.inneranimalmedia.com/api/eval/record';
 export const DEFAULT_D1_DATABASE = '';
@@ -59,7 +60,8 @@ export function startLiveEvalRun(config = {}, options = {}) {
   const tenantId = clean(config.tenant || config.tenantId) || clean(options.tenantId) || clean(process.env.AGENTSAM_TENANT_ID) || DEFAULT_TENANT_ID;
   const workspaceId = clean(config.workspace || config.workspaceId) || clean(options.workspaceId) || clean(process.env.AGENTSAM_WORKSPACE_ID) || (options.cwd ? path.basename(options.cwd) : path.basename(process.cwd())) || DEFAULT_WORKSPACE_ID;
   const userId = clean(config.user || config.userId) || clean(options.userId) || clean(process.env.AGENTSAM_USER_ID) || clean(process.env.USER) || clean(os.userInfo?.()?.username) || DEFAULT_USER_ID;
-  const database = clean(config.database || config.db) || clean(options.database || options.db) || clean(process.env.AGENTSAM_D1_DATABASE) || DEFAULT_D1_DATABASE;
+  const explicitDb = clean(config.database || config.db) || clean(options.database || options.db);
+  const database = explicitDb || resolveProjectD1Database(options.cwd ? path.resolve(options.cwd) : process.cwd()) || DEFAULT_D1_DATABASE;
 
   const baseCommit = safeGit('git rev-parse HEAD', options.cwd);
   const branch = safeGit('git branch --show-current', options.cwd);
@@ -153,7 +155,7 @@ export async function finishLiveEvalRun(options = {}) {
   const tenantId = clean(options.tenantId || options.tenant) || state.tenant_id || DEFAULT_TENANT_ID;
   const workspaceId = clean(options.workspaceId || options.workspace) || state.workspace_id || DEFAULT_WORKSPACE_ID;
   const userId = clean(options.userId || options.user) || state.user_id || DEFAULT_USER_ID;
-  const targetDb = clean(options.database || options.db) || state.database || DEFAULT_D1_DATABASE;
+  const targetDb = clean(options.database || options.db) || state.database || resolveProjectD1Database(options.cwd ? path.resolve(options.cwd) : process.cwd()) || DEFAULT_D1_DATABASE;
 
   // 1. Construct canonical D1 eval run record (agentsam_eval_runs)
   const evalRunRow = {
