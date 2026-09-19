@@ -3,20 +3,33 @@ import type { AgentMessage as ChatMessage } from "@inneranimalmedia/agentsam-con
 export async function streamChat(opts: {
   messages: Pick<ChatMessage, "role" | "content">[];
   mode: "trail" | "side";
-  model?: string;
+  provider?: string;
+  model_id?: string;
   parentTitle?: string | null;
   parentExcerpt?: string | null;
   workspace?: { path: string; content: string }[];
   signal: AbortSignal;
   onDelta: (chunk: string) => void;
 }): Promise<string> {
+  if (!opts.provider || !opts.model_id) {
+    throw new Error("Select a provider and model before chatting.");
+  }
+
+  const userId =
+    (typeof window !== "undefined" && window.localStorage.getItem("agentsam-user-id")) ||
+    "studio-local";
+
   const res = await fetch("/api/chat", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "X-User-Id": userId,
+    },
     body: JSON.stringify({
       messages: opts.messages.map((m) => ({ role: m.role, content: m.content })),
       mode: opts.mode,
-      model: opts.model,
+      provider: opts.provider,
+      model_id: opts.model_id,
       parentTitle: opts.parentTitle ?? undefined,
       parentExcerpt: opts.parentExcerpt ?? undefined,
       workspace: opts.workspace,

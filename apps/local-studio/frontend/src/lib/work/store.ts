@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { titleFromText, uid } from "@/lib/utils";
 import { extractArtifacts, mergeArtifacts } from "@/lib/work/files";
-import { DEFAULT_MODEL_ID } from "@/lib/work/models";
+import { DEFAULT_SELECTION, type StudioModelSelection } from "@/lib/work/models";
 import { newProject } from "@/lib/work/seed";
 import { streamChat } from "@/lib/work/stream";
 import type {
@@ -122,7 +122,7 @@ type WorkState = {
   terminalHeight: number;
   settingsOpen: boolean;
   navView: NavView;
-  modelId: string;
+  modelSelection: StudioModelSelection;
   sideTabs: SideTab[];
   activeSideTabId: string | null;
   streamingIds: string[];
@@ -134,7 +134,7 @@ type WorkState = {
   setSearch: (value: string) => void;
   setDraft: (id: string, value: string) => void;
   setNavView: (view: NavView) => void;
-  setModelId: (id: string) => void;
+  setModelSelection: (selection: StudioModelSelection) => void;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
   setMobileNavOpen: (open: boolean) => void;
@@ -185,7 +185,7 @@ function ensureShape(raw: Partial<WorkState> | undefined): Pick<
   | "terminalOpen"
   | "terminalHeight"
   | "navView"
-  | "modelId"
+  | "modelSelection"
   | "sideTabs"
   | "activeSideTabId"
 > {
@@ -233,7 +233,10 @@ function ensureShape(raw: Partial<WorkState> | undefined): Pick<
         ? Math.min(0.88, Math.max(0.22, raw.terminalHeight))
         : 0.38,
     navView: raw?.navView ?? "trails",
-    modelId: raw?.modelId || DEFAULT_MODEL_ID,
+    modelSelection:
+      raw?.modelSelection && raw.modelSelection.provider && raw.modelSelection.model_id
+        ? raw.modelSelection
+        : { ...DEFAULT_SELECTION },
     sideTabs: (raw?.sideTabs ?? []).map((t) => {
       const tab = t as SideTab;
       return {
@@ -266,7 +269,7 @@ export const useWorkStore = create<WorkState>()(
       setSearch: (search) => set({ search }),
       setDraft: (id, value) => set((s) => ({ drafts: { ...s.drafts, [id]: value } })),
       setNavView: (navView) => set({ navView, sidebarOpen: true }),
-      setModelId: (modelId) => set({ modelId }),
+      setModelSelection: (modelSelection) => set({ modelSelection }),
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
       setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
       setMobileNavOpen: (mobileNavOpen) => set({ mobileNavOpen }),
@@ -415,7 +418,8 @@ export const useWorkStore = create<WorkState>()(
             await streamChat({
               messages: payload,
               mode: item.targetKind,
-              model: after.modelId,
+              provider: after.modelSelection?.provider,
+              model_id: after.modelSelection?.model_id,
               parentTitle,
               parentExcerpt,
               workspace: workspacePayload(project),
@@ -845,7 +849,8 @@ export const useWorkStore = create<WorkState>()(
           await streamChat({
             messages: payload,
             mode: targetKind,
-            model: after.modelId,
+            provider: after.modelSelection?.provider,
+            model_id: after.modelSelection?.model_id,
             parentTitle,
             parentExcerpt,
             workspace: workspacePayload(project),
@@ -901,7 +906,7 @@ export const useWorkStore = create<WorkState>()(
         terminalOpen: s.terminalOpen,
         terminalHeight: s.terminalHeight,
         navView: s.navView,
-        modelId: s.modelId,
+        modelSelection: s.modelSelection,
         sideTabs: s.sideTabs,
         activeSideTabId: s.activeSideTabId,
         offlineQueue: s.offlineQueue,
