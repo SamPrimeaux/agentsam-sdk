@@ -343,6 +343,7 @@ export async function finishLiveEvalRun(options = {}) {
 
   if (options.remote) {
     const endpoint = clean(options.evalEndpoint) || clean(process.env.AGENTSAM_EVAL_ENDPOINT) || DEFAULT_EVAL_RECORD_ENDPOINT;
+    const bearerToken = resolveEvalBearerToken(options);
 
     // Primary route: structured HTTP POST (credential-boundary compliant, no local raw D1 shellout)
     try {
