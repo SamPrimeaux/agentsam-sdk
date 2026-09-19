@@ -221,9 +221,6 @@ export function setProviderCredential(provider, credential, options = {}) {
   if (!spec) throw new Error(`unsupported_provider:${normalizeProviderId(provider)}`);
   const value = validateCredentialValue(spec, credential);
   setSecureProviderKey(spec.provider, { value, accountId: options.accountId }, options);
-  const filename = path.join(agentEnvDirectory(options), spec.files[0]);
-  atomicWrite(filename, profileSource(spec.provider, value, options), 0o600);
-  const loader = ensureAgentEnvLoader(options);
   if (typeof process !== 'undefined' && process.env) {
     process.env[spec.env] = value;
     if (spec.provider === 'cloudflare' && options.accountId) {
@@ -231,6 +228,34 @@ export function setProviderCredential(provider, credential, options = {}) {
       process.env.CLOUDFLARE_ACCOUNT_ID = options.accountId;
     }
   }
+  let file = null;
+  let loader = null;
+  let sourceCommand = null;
+  if (options.exportProfile === true || options.writeEnvProfile === true) {
+    const filename = path.join(agentEnvDirectory(options), spec.files[0]);
+    atomicWrite(filename, profileSource(spec.provider, value, options), 0o600);
+    loader = ensureAgentEnvLoader(options);
+    file = filename;
+    sourceCommand = `source ~/.agentsam/load-agent-env.sh ${spec.provider}`;
+  }
+  return Object.freeze({
+    provider: spec.provider,
+    file,
+    loader,
+    source_command: sourceCommand,
+  });
+}
+
+export function exportProviderEnvProfile(provider, options = {}) {
+  const spec = providerCredentialSpec(provider);
+  if (!spec) throw new Error(`unsupported_provider:${normalizeProviderId(provider)}`);
+  const resolved = resolveProviderCredential(spec.provider, options);
+  if (!resolved.configured || !resolved.value) {
+    throw new Error(`provider_not_configured:${spec.provider}`);
+  }
+  const filename = path.join(agentEnvDirectory(options), spec.files[0]);
+  atomicWrite(filename, profileSource(spec.provider, resolved.value, { ...options, accountId: resolved.account_id }), 0o600);
+  const loader = ensureAgentEnvLoader(options);
   return Object.freeze({
     provider: spec.provider,
     file: filename,

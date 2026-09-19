@@ -18,10 +18,12 @@ import {
   resolveProviderCredential,
   setProviderCredential,
   removeProviderCredential,
+  exportProviderEnvProfile,
 } from '../src/lib/provider-credentials.js';
 import {
   validateAndSaveProviderCredential,
   providerChoices,
+  runProviders,
 } from '../src/commands/providers.js';
 import { renderModelsStatus } from '../src/commands/models.js';
 
@@ -181,7 +183,7 @@ test('validateAndSaveProviderCredential rejects invalid key and does NOT persist
   assert.equal(retrieved, null);
 });
 
-test('validateAndSaveProviderCredential verifies valid key and saves to local vault', async (t) => {
+test('validateAndSaveProviderCredential verifies valid key and saves ONLY to local vault without plaintext file', async (t) => {
   const home = createTempHome(t);
   const opts = {
     home,
@@ -203,6 +205,35 @@ test('validateAndSaveProviderCredential verifies valid key and saves to local va
   // Verify it was saved to local vault
   const retrieved = getSecureProviderKey('openai', opts);
   assert.equal(retrieved.value, 'sk-valid-key-xyz');
+
+  // CRITICAL: Plaintext .env profile file MUST NOT be created automatically!
+  const plaintextFile = path.join(home, '.agentsam', 'env.d', 'openai.env');
+  assert.equal(fs.existsSync(plaintextFile), false, 'Plaintext .env file must NOT exist after secure provider setup');
+});
+
+test('exportProviderEnvProfile and agentsam providers export create plaintext .env file ONLY on explicit opt-in', async (t) => {
+  const home = createTempHome(t);
+  const opts = { home, disableOsStore: true };
+
+  // Set up provider key in secure vault
+  setProviderCredential('anthropic', 'sk-ant-test-export-key', opts);
+
+  // Confirm NO plaintext file exists yet
+  const plaintextFile = path.join(home, '.agentsam', 'env.d', 'anthropic.env');
+  assert.equal(fs.existsSync(plaintextFile), false);
+
+  // Explicit opt-in export via CLI command
+  let output = '';
+  const exported = await runProviders(['export', 'anthropic'], {
+    ...opts,
+    write: (text) => { output += text; },
+  });
+
+  assert.equal(exported.provider, 'anthropic');
+  assert.equal(fs.existsSync(plaintextFile), true);
+  const content = fs.readFileSync(plaintextFile, 'utf8');
+  assert.match(content, /ANTHROPIC_API_KEY="sk-ant-test-export-key"/);
+  assert.match(output, /Exported anthropic profile/);
 });
 
 test('renderModelsStatus shows tip: Select your preferred provider when providers are unconfigured', () => {

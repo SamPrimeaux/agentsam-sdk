@@ -14,6 +14,7 @@ import { getJson } from '../lib/core-client.js';
 import {
   PROVIDER_CREDENTIALS,
   describeProviderCredential,
+  exportProviderEnvProfile,
   listProviderCredentialStatus,
   normalizeProviderId,
   providerCredentialSpec,
@@ -118,8 +119,8 @@ export function renderProviderStatus(rows = []) {
     lines.push(`  ${String(row.label || row.provider).padEnd(18)} ${state}${verification}`);
   }
   lines.push('');
-  lines.push('  Profiles: ~/.agentsam/env.d/<provider>.env · mode 0600');
-  lines.push('  Load one or many: source ~/.agentsam/load-agent-env.sh openai gemini cursor');
+  lines.push('  Storage: Encrypted local vault (AES-256-GCM / OS keychain) — no plaintext on disk.');
+  lines.push('  Optional export for non-AgentSam shells: agentsam providers export <provider>');
   lines.push('');
   return lines.join('\n');
 }
@@ -257,7 +258,7 @@ function parseArgs(argv = []) {
   const out = { command: 'interactive', provider: '', json: false, verify: false, yes: false, fromEnv: '' };
   const args = [...argv];
   if (args[0] && !args[0].startsWith('-')) out.command = args.shift();
-  if (['add', 'set', 'remove', 'verify', 'status'].includes(out.command) && args[0] && !args[0].startsWith('-')) {
+  if (['add', 'set', 'remove', 'verify', 'status', 'export'].includes(out.command) && args[0] && !args[0].startsWith('-')) {
     out.provider = normalizeProviderId(args.shift());
   }
   while (args.length) {
@@ -281,6 +282,7 @@ export async function runProviders(argv = [], options = {}) {
       'agentsam providers',
       'agentsam providers status [provider] [--verify] [--json]',
       'agentsam providers add <provider> [--from-env NAME]',
+      'agentsam providers export <provider>',
       'agentsam providers verify [provider] [--json]',
       'agentsam providers remove <provider> [--yes]',
       '',
@@ -354,6 +356,16 @@ export async function runProviders(argv = [], options = {}) {
     const result = await promptAndConfigureProvider(parsed.provider, options);
     if (!result) return null;
     writeLine(write, result.ok ? `  ${parsed.provider} verified` : `  ${parsed.provider} verification failed: ${result.error}`);
+    return result;
+  }
+
+  if (parsed.command === 'export') {
+    if (!parsed.provider) throw new Error('providers export requires a provider');
+    const result = exportProviderEnvProfile(parsed.provider, options);
+    writeLine(write, '');
+    writeLine(write, `  Exported ${parsed.provider} profile: ${result.file} (mode 0600)`);
+    writeLine(write, `  Load into external shell: ${result.source_command}`);
+    writeLine(write, '');
     return result;
   }
 
