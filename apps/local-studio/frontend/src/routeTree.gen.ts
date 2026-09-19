@@ -24,6 +24,7 @@ import { Route as ApiGithubRouteImport } from './routes/api/github'
 import { Route as AppTrailsIndexRouteImport } from './routes/_app/trails/index'
 import { Route as AppTrailsTrailIdRouteImport } from './routes/_app/trails/$trailId'
 import { Route as ApiLlmInventoryRouteImport } from './routes/api/llm.inventory'
+import { Route as AppAgentsamAppsCadRouteImport } from './routes/_app/agentsam.apps.cad'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -99,10 +100,15 @@ const ApiLlmInventoryRoute = ApiLlmInventoryRouteImport.update({
   path: '/api/llm/inventory',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppAgentsamAppsCadRoute = AppAgentsamAppsCadRouteImport.update({
+  id: '/apps/cad',
+  path: '/apps/cad',
+  getParentRoute: () => AppAgentsamRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/agentsam': typeof AppAgentsamRoute
+  '/agentsam': typeof AppAgentsamRouteWithChildren
   '/artifacts': typeof AppArtifactsRoute
   '/browse': typeof AppBrowseRoute
   '/cli': typeof AppCliRoute
@@ -115,10 +121,11 @@ export interface FileRoutesByFullPath {
   '/trails/$trailId': typeof AppTrailsTrailIdRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
   '/trails/': typeof AppTrailsIndexRoute
+  '/agentsam/apps/cad': typeof AppAgentsamAppsCadRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/agentsam': typeof AppAgentsamRoute
+  '/agentsam': typeof AppAgentsamRouteWithChildren
   '/artifacts': typeof AppArtifactsRoute
   '/browse': typeof AppBrowseRoute
   '/cli': typeof AppCliRoute
@@ -131,12 +138,13 @@ export interface FileRoutesByTo {
   '/trails/$trailId': typeof AppTrailsTrailIdRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
   '/trails': typeof AppTrailsIndexRoute
+  '/agentsam/apps/cad': typeof AppAgentsamAppsCadRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
-  '/_app/agentsam': typeof AppAgentsamRoute
+  '/_app/agentsam': typeof AppAgentsamRouteWithChildren
   '/_app/artifacts': typeof AppArtifactsRoute
   '/_app/browse': typeof AppBrowseRoute
   '/_app/cli': typeof AppCliRoute
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/_app/trails/$trailId': typeof AppTrailsTrailIdRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
   '/_app/trails/': typeof AppTrailsIndexRoute
+  '/_app/agentsam/apps/cad': typeof AppAgentsamAppsCadRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/trails/$trailId'
     | '/api/llm/inventory'
     | '/trails/'
+    | '/agentsam/apps/cad'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -183,6 +193,7 @@ export interface FileRouteTypes {
     | '/trails/$trailId'
     | '/api/llm/inventory'
     | '/trails'
+    | '/agentsam/apps/cad'
   id:
     | '__root__'
     | '/'
@@ -200,6 +211,7 @@ export interface FileRouteTypes {
     | '/_app/trails/$trailId'
     | '/api/llm/inventory'
     | '/_app/trails/'
+    | '/_app/agentsam/apps/cad'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -318,11 +330,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLlmInventoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/agentsam/apps/cad': {
+      id: '/_app/agentsam/apps/cad'
+      path: '/apps/cad'
+      fullPath: '/agentsam/apps/cad'
+      preLoaderRoute: typeof AppAgentsamAppsCadRouteImport
+      parentRoute: typeof AppAgentsamRoute
+    }
   }
 }
 
+interface AppAgentsamRouteChildren {
+  AppAgentsamAppsCadRoute: typeof AppAgentsamAppsCadRoute
+}
+
+const AppAgentsamRouteChildren: AppAgentsamRouteChildren = {
+  AppAgentsamAppsCadRoute: AppAgentsamAppsCadRoute,
+}
+
+const AppAgentsamRouteWithChildren = AppAgentsamRoute._addFileChildren(
+  AppAgentsamRouteChildren,
+)
+
 interface AppRouteChildren {
-  AppAgentsamRoute: typeof AppAgentsamRoute
+  AppAgentsamRoute: typeof AppAgentsamRouteWithChildren
   AppArtifactsRoute: typeof AppArtifactsRoute
   AppBrowseRoute: typeof AppBrowseRoute
   AppCliRoute: typeof AppCliRoute
@@ -334,7 +365,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppAgentsamRoute: AppAgentsamRoute,
+  AppAgentsamRoute: AppAgentsamRouteWithChildren,
   AppArtifactsRoute: AppArtifactsRoute,
   AppBrowseRoute: AppBrowseRoute,
   AppCliRoute: AppCliRoute,

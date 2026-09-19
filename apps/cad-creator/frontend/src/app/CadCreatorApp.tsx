@@ -30,6 +30,7 @@ import { CloudProjectsModal } from '../components/CloudProjectsModal';
 import { TemplateLibraryModal } from '../components/TemplateLibraryModal';
 import { CadCreatorShell } from './CadCreatorShell';
 import { CadStatusStrip } from './CadStatusStrip';
+import { installCadPreviewGuestBridge } from '../lib/agentsam-preview-bridge';
 import {
   WORKSPACE_REGISTRY,
   WorkspaceDescriptor,
@@ -135,6 +136,17 @@ export function CadCreatorApp({
       setToastMessage((prev) => (prev === msg ? null : prev));
     }, 4000);
   };
+
+  // Connect to AgentSam Preview Bridge when embedded in host
+  useEffect(() => {
+    if (presentation !== 'embedded') return;
+    const cleanup = installCadPreviewGuestBridge({
+      activeWorkspace,
+      onSelectWorkspace: (wsId) => handleSelectWorkspace(wsId),
+      onSetTheme: (dark) => setIsDarkMode(dark)
+    });
+    return cleanup;
+  }, [presentation, activeWorkspace]);
 
   // Preload robotics when user hovers or selects robotics
   const handleSelectWorkspace = (wsId: WorkspaceId) => {
