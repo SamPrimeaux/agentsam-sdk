@@ -246,6 +246,12 @@ export function setProviderCredential(provider, credential, options = {}) {
   });
 }
 
+/**
+ * Exports a configured provider credential from the secure vault to a plaintext .env file.
+ * This is an explicit opt-in action for operators who need to source credentials into external shells.
+ * The standard AgentSam setup flows (interactive picker, models --setup, providers add)
+ * intentionally do NOT invoke this, keeping the credential strictly inside the encrypted vault.
+ */
 export function exportProviderEnvProfile(provider, options = {}) {
   const spec = providerCredentialSpec(provider);
   if (!spec) throw new Error(`unsupported_provider:${normalizeProviderId(provider)}`);
