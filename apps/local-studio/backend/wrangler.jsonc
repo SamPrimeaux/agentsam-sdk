@@ -5,6 +5,13 @@
   "main": "worker/index.js",
   "compatibility_date": "2026-09-11",
   "compatibility_flags": ["nodejs_compat"],
+  "rules": [
+    {
+      "type": "Text",
+      "globs": ["**/*.sh"],
+      "fallthrough": true
+    }
+  ],
   "workers_dev": false,
   "observability": {
     "enabled": true

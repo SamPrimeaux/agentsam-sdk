@@ -6,7 +6,8 @@ set -euo pipefail
 PACKAGE="${AGENTSAM_PACKAGE:-@inneranimalmedia/agentsam-sdk}"
 CHANNEL="${AGENTSAM_CHANNEL:-latest}"
 VERSION=""
-APP_SELECTOR=""
+APP_SELECTOR="${AGENTSAM_DEFAULT_APP:-}"
+APP_BIN=""
 INSTALL_ROOT="${AGENTSAM_HOME:-$HOME/.agentsam}"
 BIN_DIR="${AGENTSAM_BIN_DIR:-$HOME/.local/bin}"
 MODE="npm"
@@ -23,18 +24,50 @@ AgentSam installer
 Flags:
   --version <ver>   Install a specific npm package version
   --channel <name>  latest|beta (npm dist-tag)
-  --app <id>        cad|cms|studio (records preferred app; npm package still installs CLI)
+  --app <id>        cad|cms|studio (install an app launcher alongside agentsam)
   --prefix <dir>    Bin directory (default: ~/.local/bin)
   --help            Show this help
 EOF
 }
 
+select_app() {
+  case "$1" in
+    cad|cad-creator)
+      APP_SELECTOR="cad-creator"
+      APP_BIN="agentsam-cad-creator"
+      ;;
+    cms|client-cms-editor)
+      APP_SELECTOR="client-cms-editor"
+      APP_BIN="agentsam-cms"
+      ;;
+    studio|local-studio)
+      APP_SELECTOR="local-studio"
+      APP_BIN="agentsam-studio"
+      ;;
+    *)
+      echo "unknown app: $1 (expected cad, cms, or studio)" >&2
+      exit 2
+      ;;
+  esac
+}
+
+require_value() {
+  if [ "$#" -lt 2 ] || [ -z "$2" ]; then
+    echo "$1 requires a value" >&2
+    exit 2
+  fi
+}
+
+if [ -n "$APP_SELECTOR" ]; then
+  select_app "$APP_SELECTOR"
+fi
+
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --version) VERSION="${2:-}"; shift 2 ;;
-    --channel) CHANNEL="${2:-}"; shift 2 ;;
-    --app) APP_SELECTOR="${2:-}"; shift 2 ;;
-    --prefix) BIN_DIR="${2:-}"; shift 2 ;;
+    --version) require_value "$@"; VERSION="$2"; shift 2 ;;
+    --channel) require_value "$@"; CHANNEL="$2"; shift 2 ;;
+    --app) require_value "$@"; select_app "$2"; shift 2 ;;
+    --prefix) require_value "$@"; BIN_DIR="$2"; shift 2 ;;
     --help|-h) usage; exit 0 ;;
     *) echo "unknown flag: $1" >&2; usage; exit 2 ;;
   esac
@@ -89,6 +122,21 @@ echo "Installing $SPEC ..."
 npm install --global "$SPEC"
 
 mkdir -p "$INSTALL_ROOT" "$BIN_DIR"
+AGENTSAM_COMMAND="$(command -v agentsam || true)"
+if [ -z "$AGENTSAM_COMMAND" ]; then
+  AGENTSAM_COMMAND="agentsam"
+fi
+
+if [ -n "$APP_SELECTOR" ]; then
+  APP_LAUNCHER="$BIN_DIR/$APP_BIN"
+  {
+    printf '%s\n' '#!/usr/bin/env sh' 'set -eu'
+    printf 'AGENTSAM_BIN=${AGENTSAM_BIN:-%q}\n' "$AGENTSAM_COMMAND"
+    printf 'exec "$AGENTSAM_BIN" app preview %q "$@"\n' "$APP_SELECTOR"
+  } > "$APP_LAUNCHER"
+  chmod +x "$APP_LAUNCHER"
+fi
+
 cat > "$INSTALL_ROOT/install-receipt.json" <<EOF
 {
   "schema": "agentsam.install.v1",
@@ -116,8 +164,15 @@ else
 fi
 printf '  config      %s\n' "$INSTALL_ROOT"
 printf '  receipt     %s/install-receipt.json\n' "$INSTALL_ROOT"
+if [ -n "$APP_SELECTOR" ]; then
+  printf '  app         %s\n' "$BIN_DIR/$APP_BIN"
+fi
 echo
 echo "Run:"
 echo
-echo "  agentsam"
+if [ -n "$APP_SELECTOR" ]; then
+  printf '  %s\n' "$APP_BIN"
+else
+  echo "  agentsam"
+fi
 echo
