@@ -99,7 +99,7 @@ test('resume restores saved cwd and session through the canonical shell runtime'
   const session = createLocalSession({ cwd, title: 'Run wrangler whoami', model_key: 'openai:gpt-6-astra' }, { home });
   let called = null;
   const restored = await runResume([session.id], {
-    home,
+    home, cwd,
     write() {},
     runShellImpl: async (argv, options) => { called = { argv, options }; },
   });

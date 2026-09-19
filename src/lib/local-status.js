@@ -1,18 +1,11 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import { tryResolveGitContext } from '../../packages/agentsam-repository/src/git-context.js';
 import { inspectLocalSqlite } from '../local/sqlite.js';
 import { getCreatedWithVersion, getDefaultProfile, getDeployTarget, getLocalDatabasePath, getProjectName, getProjectPreset, getRepositoryId, tryReadProjectConfig } from './project-config.js';
+import { findCliProjectRoot } from './cli-preferences.js';
 
 export function findAgentSamProjectRoot(startDir = process.cwd()) {
-  let dir = path.resolve(startDir);
-  for (let i = 0; i < 16; i += 1) {
-    if (fs.existsSync(path.join(dir, '.agentsam', 'config.json'))) return dir;
-    const parent = path.dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
-  return path.resolve(startDir);
+  return findCliProjectRoot(startDir);
 }
 
 async function probe(url) {
@@ -60,7 +53,7 @@ export async function collectLocalStatus(cwd = process.cwd()) {
         }
       : null,
     db: {
-      ready: Boolean(db.exists),
+      ready: Boolean(db.exists && db.tables?.includes('agentsam_schema_migrations') && db.tables?.includes('agentsam_project_sessions')),
       path: db.dbPath || path.join(root, '.agentsam/data/agentsam.sqlite'),
       tables: db.tables || [],
       sizeBytes: db.sizeBytes || 0,

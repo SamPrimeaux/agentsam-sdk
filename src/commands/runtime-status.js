@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { collectWhoami } from './whoami.js';
 import { collectModelsStatus } from './models.js';
 import { collectCloudflareDeploymentStatus } from '../cloudflare/index.js';
@@ -125,8 +126,17 @@ export async function collectRuntimeStatus(options = {}) {
     generated_at: new Date().toISOString(),
     offline,
     ready: Object.values(checks).every(Boolean),
+    local_ready: local.db?.ready === true || local.db?.exists === false,
     checks,
     local,
+    state_storage: {
+      runtime: 'sqlite',
+      project_root: local.root,
+      path: local.db?.path || path.join(local.root, '.agentsam/data/agentsam.sqlite'),
+      migrated: local.db?.ready === true,
+      actor_runtime: 'none',
+      connected_bindings: (cloudflare.bindings?.live || []).map((row) => ({ name: row.name, type: row.type })),
+    },
     identity,
     models: modelStatus,
     model_summary: {

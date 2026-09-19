@@ -88,6 +88,39 @@ export async function applyRuntimeMigrations(db, options = {}) {
   });
 }
 
+// Synchronous entry point for the interactive shell. Both runners consume the
+// same versioned SQL and checksums; schema ownership stays in migrations/runtime.
+export function applyRuntimeMigrationsSync(db, options = {}) {
+  const dir = path.resolve(options.migrationsDir || DEFAULT_MIGRATIONS_DIR);
+  ensureLedger(db);
+  const applied = new Map(db.prepare(
+    'SELECT id, applied_at_unix, checksum FROM agentsam_schema_migrations ORDER BY id'
+  ).all().map((row) => [String(row.id), row]));
+  const results = [];
+  for (const filename of migrationFiles(dir)) {
+    const id = filename.replace(/\.sql$/i, '');
+    const source = fs.readFileSync(path.join(dir, filename), 'utf8');
+    const checksum = checksumSource(source);
+    const previous = applied.get(id);
+    if (previous) {
+      if (previous.checksum && previous.checksum !== checksum) throw new Error('migration_checksum_mismatch:' + id);
+      results.push({ id, filename, status: 'already_applied', checksum });
+      continue;
+    }
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      db.exec(source);
+      db.prepare('INSERT INTO agentsam_schema_migrations (id, checksum) VALUES (?, ?)').run(id, checksum);
+      db.exec('COMMIT');
+      results.push({ id, filename, status: 'applied', checksum });
+    } catch (error) {
+      try { db.exec('ROLLBACK'); } catch {}
+      throw new Error('migration_failed:' + id + ':' + (error?.message || error));
+    }
+  }
+  return Object.freeze({ migrationsDir: dir, total: results.length, applied: results.filter((row) => row.status === 'applied').length, results: Object.freeze(results) });
+}
+
 export function runtimeMigrationsDirectory() {
   return DEFAULT_MIGRATIONS_DIR;
 }

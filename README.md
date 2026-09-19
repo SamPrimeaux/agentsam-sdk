@@ -42,6 +42,10 @@ The generated project contains a Git repository, local SQLite database, environm
 API, and terminal commands. Local setup does not require an IAM account, cloud credentials, a model, or
 a tunnel. Use `agentsam add <feature>` to record an explicit feature selection and its capability set.
 
+AgentSam's own local session and run state uses one SQLite database at
+`<projectRoot>/.agentsam/data/agentsam.sqlite`. A deployed project's application
+storage remains its declared infrastructure; see [storage architecture](docs/architecture/STORAGE.md).
+
 Without a global install, use `npx @inneranimalmedia/agentsam-sdk create my-agent --preset fullstack`.
 
 ## MCP setup

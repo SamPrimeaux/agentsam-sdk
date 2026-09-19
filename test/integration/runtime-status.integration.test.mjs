@@ -58,8 +58,23 @@ test('unified status is ready only when account, model, terminal, deployment and
     collectCloudflare: async () => ({ configured: true, connected: true, worker_name: 'agentsam-sdk', bindings: { match: true, live: [] }, health: { ok: true, status: 200 } }),
   });
   assert.equal(status.ready, true);
+  assert.equal(status.local_ready, true);
+  assert.equal(status.state_storage.actor_runtime, 'none');
   assert.deepEqual(status.checks, { account: true, models: true, terminal: true, cloudflare: true });
   assert.equal(status.model_summary.verified_provider_models, 1);
+});
+
+test('fresh local project can start before SQLite has been initialized', async () => {
+  const status = await collectRuntimeStatus({
+    cwd: root,
+    collectLocal: async () => ({ root, project: 'agentsam-sdk', configured: false, git: null, pty: { online: false }, api: {}, db: { exists: false, ready: false } }),
+    collectIdentity: async () => ({ authenticated: false, active_auth: {}, api_key: {} }),
+    collectModels: async () => ({ providers: [], providerModels: {}, local: { online: false, models: [] } }),
+    collectCloudflare: async () => ({ configured: false, bindings: { live: [] } }),
+  });
+  assert.equal(status.local_ready, true);
+  assert.equal(status.state_storage.migrated, false);
+  assert.equal(status.state_storage.runtime, 'sqlite');
 });
 
 test('unified status consumes the CLI-authorized terminal inventory returned by IAM context', async () => {

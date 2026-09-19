@@ -82,6 +82,31 @@ for (const appFile of walk(path.join(root, 'apps'))) {
   }
 }
 
+// Local-first storage law: a default AgentSam turn cannot acquire a hidden
+// Durable Object dependency or a second session database. Product-specific
+// Workers remain free to own their declared application bindings.
+const defaultRuntimeFiles = [
+  ...walk(path.join(root, 'src/agent')),
+  ...walk(path.join(root, 'src/commands')),
+  ...walk(path.join(root, 'src/local')),
+  ...walk(path.join(root, 'src/providers')),
+  path.join(root, 'src/lib/local-sessions.js'),
+].filter((file) => fs.existsSync(file));
+for (const file of defaultRuntimeFiles) {
+  const source = fs.readFileSync(file, 'utf8');
+  const relative = path.relative(root, file);
+  if (/\bDurableObject\b|\bdurable_objects\b|\bidFromName\s*\(/.test(source)) {
+    failures.push(`${relative} introduces Durable Object semantics in the default AgentSam runtime`);
+  }
+  if (relative !== 'src/local/migrations.js' && /\bCREATE\s+TABLE\b/i.test(source)) {
+    failures.push(`${relative} defines runtime tables outside migrations/runtime`);
+  }
+}
+const localSessionsSource = fs.readFileSync(path.join(root, 'src/lib/local-sessions.js'), 'utf8');
+if (!localSessionsSource.includes('runtimeDatabasePath(') || /\bwriteFileSync\s*\(/.test(localSessionsSource)) {
+  failures.push('resumable sessions must use the canonical project SQLite database, not a new JSON store');
+}
+
 if (failures.length) {
   console.error('AgentSam source boundary verification failed:');
   for (const failure of failures) console.error(`- ${failure}`);

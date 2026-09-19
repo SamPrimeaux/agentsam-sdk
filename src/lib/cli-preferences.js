@@ -18,9 +18,19 @@ function gitValue(cwd, args) {
 
 export function findCliProjectRoot(startDir = process.cwd()) {
   const cwd = path.resolve(startDir);
+  // An explicit AgentSam project inside a larger Git checkout owns its own
+  // state. Git is the fallback boundary, not an override for that manifest.
+  let dir = cwd;
+  for (let i = 0; i < 16; i += 1) {
+    if (fs.existsSync(path.join(dir, '.agentsam', 'config.json'))) return dir;
+    if (fs.existsSync(path.join(dir, '.git'))) break;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
   const gitRoot = gitValue(cwd, ['rev-parse', '--show-toplevel']);
   if (gitRoot) return path.resolve(gitRoot);
-  let dir = cwd;
+  dir = cwd;
   for (let i = 0; i < 16; i += 1) {
     if (fs.existsSync(path.join(dir, '.agentsam', 'cli.json')) || fs.existsSync(path.join(dir, '.agentsam', 'config.json')) || fs.existsSync(path.join(dir, 'package.json'))) return dir;
     const parent = path.dirname(dir);

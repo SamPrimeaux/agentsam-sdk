@@ -12,7 +12,7 @@ test('portable runtime migration installs AgentSam CLI state tables idempotently
   const db = await createLocalSqliteDatabase(path.join(root, 'agentsam.sqlite'));
   try {
     const first = await applyRuntimeMigrations(db);
-    assert.equal(first.applied, 1);
+    assert.equal(first.applied, 2);
 
     const tables = await db.prepare(
       "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'agentsam_%' ORDER BY name"
@@ -25,6 +25,7 @@ test('portable runtime migration installs AgentSam CLI state tables idempotently
       'agentsam_context_digest',
       'agentsam_cron_runs',
       'agentsam_plans',
+      'agentsam_project_sessions',
       'agentsam_schema_migrations',
       'agentsam_todo',
     ]) assert.equal(names.has(name), true, name);

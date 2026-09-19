@@ -12,12 +12,14 @@ function tempHome(t) {
   return home;
 }
 
-test('local sessions persist provider-neutral continuation, usage, cost, and last-input title', t => {
+test('local sessions persist safe continuation, usage, cost, and an explicit title', t => {
   const home = tempHome(t);
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-session-project-'));
   t.after(() => fs.rmSync(cwd, { recursive: true, force: true }));
   let session = createLocalSession({ cwd, last_input: 'Run wrangler whoami' }, { home });
   assert.match(session.id, /^asess_[0-9a-f-]{36}$/i);
+  assert.equal(session.title, 'Agent Sam session');
+  assert.equal(session.last_input, null);
   session = saveLocalSession({
     ...session,
     title: sessionTitleFromInput('Run wrangler whoami'),
@@ -33,10 +35,17 @@ test('local sessions persist provider-neutral continuation, usage, cost, and las
     active_started_at: null,
   }, { home });
 
-  const loaded = loadLocalSession(session.id, { home });
+  const loaded = loadLocalSession(session.id, { home, cwd });
   assert.equal(loaded.provider_state.previous_response_id, 'resp_123');
   assert.equal(loaded.cumulative_usage.cached_input_tokens, 60_544);
   assert.equal(listLocalSessions({ home, cwd })[0].id, session.id);
+  assert.equal(loaded.project_root, cwd);
+  assert.equal(loaded.storage.runtime, 'sqlite');
+  assert.equal(loaded.storage.path, '.agentsam/data/agentsam.sqlite');
+  assert.equal(loaded.storage.remote, null);
+  assert.equal(loaded.storage.capabilities.local_only, true);
+  assert.equal(fs.existsSync(path.join(home, '.agentsam', 'sessions', `${session.id}.json`)), false);
+  assert.equal(fs.existsSync(path.join(cwd, '.agentsam', 'data', 'agentsam.sqlite')), true);
 
   const receipt = renderSessionReceipt(loaded);
   assert.match(receipt, /Token usage: total=21,463 input=21,244 \(\+ 60,544 cached\) output=219 reasoning=31/);

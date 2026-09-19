@@ -73,10 +73,14 @@ function yesNo(value, yes = 'ready', no = 'not ready') {
 export function renderRuntimeStatus(status) {
   const lines = [
     `  ${pc.bold(`Agent Sam · ${status.local?.project || 'runtime'}`)}`,
-    `  ${status.ready ? pc.green('Ready for authenticated model + terminal work') : pc.yellow('Setup or repair required')}`,
+    `  ${status.ready ? pc.green('Ready for authenticated model + terminal work') : status.local_ready ? pc.green('Local Agent Sam available · connected features need setup') : pc.yellow('Local state needs setup or repair')}`,
     '',
     `  account      ${yesNo(status.checks?.account, status.identity?.active_auth?.kind || 'authenticated', 'not authenticated')}`,
   ];
+  if (status.state_storage) {
+    lines.push(`  state        SQLite · ${status.state_storage.migrated ? 'migrated' : 'not initialized'} · ${status.state_storage.path}`);
+    lines.push(`  actor       ${pc.dim(status.state_storage.actor_runtime || 'none')}`);
+  }
   if (status.identity?.identity?.email) lines.push(`  identity     ${status.identity.identity.email}`);
   if (status.identity?.api_key?.valid === false && status.identity?.active_auth?.kind === 'browser_oauth') {
     lines.push(`  auth note    ${pc.yellow('invalid environment API key ignored; browser OAuth is active')}`);
