@@ -36,6 +36,68 @@ function parseJsonc(source) {
   return JSON.parse(output.replace(/,\s*([}\]])/g, '$1'));
 }
 
+export function parseWranglerToml(source = '') {
+  const result = { vars: {}, d1_databases: [], r2_buckets: [], hyperdrive: [], kv_namespaces: [], services: [] };
+  const lines = source.split(/\r?\n/);
+  let currentSection = '';
+  let currentBlock = null;
+
+  for (let line of lines) {
+    line = line.replace(/#.*$/, '').trim();
+    if (!line) continue;
+
+    const arrMatch = line.match(/^\[\[([a-zA-Z0-9_.]+)\]\]$/);
+    if (arrMatch) {
+      currentSection = arrMatch[1];
+      currentBlock = {};
+      if (currentSection === 'd1_databases') result.d1_databases.push(currentBlock);
+      else if (currentSection === 'r2_buckets') result.r2_buckets.push(currentBlock);
+      else if (currentSection === 'hyperdrive') result.hyperdrive.push(currentBlock);
+      else if (currentSection === 'kv_namespaces') result.kv_namespaces.push(currentBlock);
+      else if (currentSection === 'services') result.services.push(currentBlock);
+      continue;
+    }
+
+    const tableMatch = line.match(/^\[([a-zA-Z0-9_.]+)\]$/);
+    if (tableMatch) {
+      currentSection = tableMatch[1];
+      currentBlock = null;
+      if (currentSection === 'ai' && !result.ai) result.ai = {};
+      if (currentSection === 'assets' && !result.assets) result.assets = {};
+      continue;
+    }
+
+    const kvMatch = line.match(/^([a-zA-Z0-9_.-]+)\s*=\s*(.*)$/);
+    if (kvMatch) {
+      const key = kvMatch[1].trim();
+      let rawVal = kvMatch[2].trim();
+      let val = rawVal;
+      if ((rawVal.startsWith('"') && rawVal.endsWith('"')) || (rawVal.startsWith("'") && rawVal.endsWith("'"))) {
+        val = rawVal.slice(1, -1);
+      } else if (rawVal === 'true') {
+        val = true;
+      } else if (rawVal === 'false') {
+        val = false;
+      } else if (/^\d+$/.test(rawVal)) {
+        val = parseInt(rawVal, 10);
+      }
+
+      if (currentBlock) {
+        currentBlock[key] = val;
+      } else if (currentSection === 'vars') {
+        result.vars[key] = val;
+      } else if (currentSection === 'ai') {
+        result.ai[key] = val;
+      } else if (currentSection === 'assets') {
+        result.assets[key] = val;
+      } else if (!currentSection) {
+        result[key] = val;
+      }
+    }
+  }
+  return result;
+}
+
 function declaredBindings(config = {}) {
   const rows = [];
   const add = (row = {}) => {
@@ -96,6 +158,25 @@ function declaredBindings(config = {}) {
     directory: clean(config.assets?.directory) || null,
     source: 'wrangler_config',
   });
+  for (const row of config.kv_namespaces || []) add({
+    name: row?.binding,
+    type: 'kv_namespace',
+    id: clean(row?.id) || null,
+    source: 'wrangler_config',
+  });
+  for (const row of config.vectorize || []) add({
+    name: row?.binding,
+    type: 'vectorize',
+    index_name: clean(row?.index_name) || null,
+    source: 'wrangler_config',
+  });
+  const queueProducers = Array.isArray(config.queues?.producers) ? config.queues.producers : [];
+  for (const row of queueProducers) add({
+    name: row?.binding,
+    type: 'queue',
+    queue_name: clean(row?.queue) || null,
+    source: 'wrangler_config',
+  });
 
   return rows.sort((left, right) => left.name.localeCompare(right.name));
 }
@@ -151,13 +232,48 @@ function bindingCategory(row = {}) {
 
 export function readCloudflareDeploymentContract(root, projectConfig = {}) {
   const deployment = projectConfig?.deployment?.cloudflare || {};
-  const workerName = clean(deployment.worker_name);
-  const relativeConfig = clean(deployment.config);
-  const configPath = relativeConfig ? path.resolve(root, relativeConfig) : null;
+  let workerName = clean(deployment.worker_name);
+  let relativeConfig = clean(deployment.config);
+  let configPath = relativeConfig ? path.resolve(root, relativeConfig) : null;
+
+  // Auto-discover candidate wrangler config when not explicitly specified
+  if (!workerName && !configPath) {
+    const candidates = [
+      'wrangler.jsonc',
+      'wrangler.json',
+      'wrangler.toml',
+      'backend/wrangler.jsonc',
+      'backend/wrangler.json',
+      'backend/wrangler.toml',
+      'worker/wrangler.jsonc',
+      'worker/wrangler.json',
+      'worker/wrangler.toml',
+      'apps/local-studio/backend/wrangler.jsonc',
+    ];
+    for (const rel of candidates) {
+      const candidatePath = path.resolve(root, rel);
+      if (fs.existsSync(candidatePath)) {
+        try {
+          const raw = fs.readFileSync(candidatePath, 'utf8');
+          const parsed = rel.endsWith('.toml') ? parseWranglerToml(raw) : parseJsonc(raw);
+          if (clean(parsed?.name)) {
+            workerName = clean(parsed.name);
+            relativeConfig = rel;
+            configPath = candidatePath;
+            break;
+          }
+        } catch {
+          // ignore candidate error
+        }
+      }
+    }
+  }
+
   if (!workerName && !configPath) return { configured: false, worker_name: null, config: null, bindings: [], routes: [], health_url: null };
   if (!workerName || !configPath) throw new Error('cloudflare_deployment_contract_incomplete');
   if (configPath !== path.resolve(root) && !configPath.startsWith(`${path.resolve(root)}${path.sep}`)) throw new Error('cloudflare_deployment_config_outside_project');
-  const parsed = parseJsonc(fs.readFileSync(configPath, 'utf8'));
+  const rawSource = fs.readFileSync(configPath, 'utf8');
+  const parsed = configPath.endsWith('.toml') ? parseWranglerToml(rawSource) : parseJsonc(rawSource);
   if (clean(parsed.name) !== workerName) throw new Error(`cloudflare_worker_name_mismatch:${workerName}:${clean(parsed.name) || 'missing'}`);
   const routes = (parsed.routes || []).map((row) => typeof row === 'string' ? row : clean(row?.pattern)).filter(Boolean);
   const customDomain = routes.find((value) => !value.includes('*')) || '';
@@ -170,6 +286,22 @@ export function readCloudflareDeploymentContract(root, projectConfig = {}) {
     routes,
     health_url: clean(deployment.health_url) || (customDomain ? `https://${customDomain}/health` : null),
   };
+}
+
+export function resolveProjectD1Database(root = process.cwd()) {
+  try {
+    const contract = readCloudflareDeploymentContract(root);
+    if (contract?.bindings) {
+      const dbBinding = contract.bindings.find((b) => b.name === 'DB' && b.type === 'd1')
+        || contract.bindings.find((b) => b.type === 'd1');
+      if (dbBinding) {
+        return clean(dbBinding.database_name) || clean(dbBinding.name) || '';
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return clean(process.env.DB) || '';
 }
 
 function newest(rows = [], dateAt) {

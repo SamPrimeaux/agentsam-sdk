@@ -1,0 +1,30 @@
+{
+  "name": "@inneranimalmedia/agentsam-desktop-shell",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tauri desktop shell for AgentSam-powered brand dashboards — manifest-driven, multi-brand installs.",
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "node scripts/build-brand.mjs && tauri build",
+    "typecheck": "echo \"agentsam-desktop-shell: no TS surface yet\" && exit 0",
+    "test": "echo \"agentsam-desktop-shell: scaffolding only, not buildable end-to-end yet\" && exit 0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  },
+  "keywords": [
+    "agentsam",
+    "desktop",
+    "tauri",
+    "shell",
+    "multi-brand"
+  ],
+  "author": "Sam Primeaux <sam@inneranimalmedia.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/agentsam-desktop-shell"
+  }
+}

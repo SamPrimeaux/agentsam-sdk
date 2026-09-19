@@ -163,3 +163,21 @@ test('large pastes collapse into a single confirmation line', () => {
   assert.equal(rl.line, '');
   restore();
 });
+
+test('dispatchShellLine accepts "agentsam <cmd>" and bare common verbs without slash prefix', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-shell-verb-'));
+  let output = '';
+  const state = { cwd: root, write: (text) => { output += text; }, interactive: false };
+
+  const r1 = await dispatchShellLine('agentsam help', state);
+  assert.equal(r1.handled, true);
+  assert.match(output, /Type normally to work with Agent Sam/);
+
+  output = '';
+  const r2 = await dispatchShellLine('help', state);
+  assert.equal(r2.handled, true);
+  assert.match(output, /Type normally to work with Agent Sam/);
+
+  const r3 = await dispatchShellLine('exit', state);
+  assert.equal(r3.exit, true);
+});

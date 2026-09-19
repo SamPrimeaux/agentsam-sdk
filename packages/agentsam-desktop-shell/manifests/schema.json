@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AgentSam Desktop Brand Manifest",
+  "type": "object",
+  "required": ["app_id", "app_name", "bundle_identifier", "base_url", "deep_link_scheme", "identity_provider"],
+  "properties": {
+    "app_id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "app_name": { "type": "string" },
+    "bundle_identifier": { "type": "string", "pattern": "^[a-z0-9.-]+$" },
+    "base_url": { "type": "string", "format": "uri" },
+    "deep_link_scheme": { "type": "string", "pattern": "^[a-z][a-z0-9]*$" },
+    "icon_set": { "type": "string" },
+    "identity_provider": {
+      "type": "string",
+      "enum": ["inneranimalmedia", "google", "github", "gcp", "email"]
+    },
+    "theme": {
+      "type": "object",
+      "properties": {
+        "primary_color": { "type": "string" },
+        "accent_color": { "type": "string" }
+      }
+    },
+    "feature_flags": {
+      "type": "object",
+      "properties": {
+        "tray": { "type": "boolean", "default": true },
+        "auto_update": { "type": "boolean", "default": true },
+        "local_execution_node": { "type": "boolean", "default": false }
+      }
+    }
+  }
+}

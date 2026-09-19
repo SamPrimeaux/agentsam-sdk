@@ -254,7 +254,10 @@ function selectedModel(cwd) {
   const snapshot = preferences.modelSnapshot?.model_key === preferences.modelPreference
     ? preferences.modelSnapshot
     : null;
-  const model = snapshot || getModelRecord(preferences.modelPreference);
+  let model = snapshot || getModelRecord(preferences.modelPreference);
+  if (!model && (preferences.modelPreference === 'auto' || !preferences.modelPreference)) {
+    model = preferences.modelSnapshot || listModelCatalog()[0];
+  }
   if (!model) throw new Error('Select an exact provider-verified model with /model first so Agent Sam can verify supported runtime controls.');
   return { preferences, model };
 }
@@ -684,12 +687,31 @@ async function runInteractiveModelTurn(prompt, state) {
 }
 
 export async function dispatchShellLine(line, state = {}) {
-  const tokens = tokenizeShellLine(line);
+  let tokens = tokenizeShellLine(line);
   const write = state.write || ((text) => process.stdout.write(text));
   state.write = write;
   state.cwd = path.resolve(state.cwd || process.cwd());
   state.projectRoot ||= findCliProjectRoot(state.cwd);
   if (!tokens.length) return { handled: true, exit: false, cwd: state.cwd };
+
+  // Handle prefix "agentsam <cmd>" or bare common commands without "/"
+  if (tokens[0].toLowerCase() === 'agentsam') {
+    tokens = tokens.slice(1);
+    if (!tokens.length) tokens = ['help'];
+    tokens[0] = `/${tokens[0].replace(/^\/+/, '')}`;
+  } else if (!tokens[0].startsWith('/')) {
+    const bare = tokens[0].toLowerCase();
+    const commonVerbs = [
+      'help', 'exit', 'quit', 'clear', 'status', 'models', 'model',
+      'whoami', 'cf', 'cloudflare', 'db', 'tunnel', 'connections',
+      'connect', 'usage', 'session', 'providers', 'settings', 'logs',
+      'git', 'diff', 'pwd', 'cd', 'fast', 'flex', 'standard', 'reasoning',
+    ];
+    if (commonVerbs.includes(bare)) {
+      tokens[0] = `/${bare}`;
+    }
+  }
+
   const [command, ...args] = tokens;
   try {
     switch (command.toLowerCase()) {
@@ -704,9 +726,15 @@ export async function dispatchShellLine(line, state = {}) {
       case '/quit':
         return { handled: true, exit: true, cwd: state.cwd };
       case '/model': {
-        const configured = await configureCliPreferences({ cwd: state.cwd, firstRun: false, section: 'model', home: state.home });
-        state.cwd = configured.identity.root;
-        state.projectRoot = findCliProjectRoot(state.cwd);
+        state.rl?.pause?.();
+        try {
+          const configured = await configureCliPreferences({ cwd: state.cwd, firstRun: false, section: 'model', home: state.home });
+          state.cwd = configured.identity.root;
+          state.projectRoot = findCliProjectRoot(state.cwd);
+        } finally {
+          if (process.stdin.isPaused()) process.stdin.resume();
+          state.rl?.resume?.();
+        }
         break;
       }
       case '/reasoning':
@@ -735,7 +763,13 @@ export async function dispatchShellLine(line, state = {}) {
         await runModels(args, { cwd: state.cwd, write, home: state.home });
         break;
       case '/providers':
-        await runProviders(args, { write, home: state.home, interactive: state.interactive });
+        state.rl?.pause?.();
+        try {
+          await runProviders(args, { write, home: state.home, interactive: state.interactive });
+        } finally {
+          if (process.stdin.isPaused()) process.stdin.resume();
+          state.rl?.resume?.();
+        }
         break;
       case '/login':
         await runLogin(args, { write, home: state.home });
@@ -776,9 +810,15 @@ export async function dispatchShellLine(line, state = {}) {
         await runTunnel(args, { cwd: state.cwd, write, home: state.home, interactive: state.interactive });
         break;
       case '/settings': {
-        const configured = await configureCliPreferences({ cwd: state.cwd, firstRun: false, home: state.home });
-        state.cwd = configured.identity.root;
-        state.projectRoot = findCliProjectRoot(state.cwd);
+        state.rl?.pause?.();
+        try {
+          const configured = await configureCliPreferences({ cwd: state.cwd, firstRun: false, home: state.home });
+          state.cwd = configured.identity.root;
+          state.projectRoot = findCliProjectRoot(state.cwd);
+        } finally {
+          if (process.stdin.isPaused()) process.stdin.resume();
+          state.rl?.resume?.();
+        }
         break;
       }
       case '/pwd':
@@ -910,6 +950,7 @@ export async function runShell(argv = [], options = {}) {
   writeLine(write, renderShellSessionFooter(state));
   writeLine(write, '');
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: Boolean(process.stdin.isTTY && process.stdout.isTTY) });
+  state.rl = rl;
   const restorePaste = installPasteCollapse(rl, { output: process.stdout });
   let interrupted = false;
   rl.on('SIGINT', () => {
@@ -927,10 +968,14 @@ export async function runShell(argv = [], options = {}) {
       recordSessionInput(state, line);
       const result = await dispatchShellLine(line, state);
       if (result.exit) { rl.close(); break; }
+      if (process.stdin.isPaused()) {
+        process.stdin.resume();
+      }
       if (rl.terminal) { rl.setPrompt(promptText()); rl.prompt(); }
     }
   } finally {
     restorePaste();
+    state.rl = null;
   }
   if (state.session) {
     const activeElapsedMs = localSessionElapsedMs(state.session);

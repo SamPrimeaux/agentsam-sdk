@@ -1,0 +1,6 @@
+# NEVER commit the private signing key. Only .pub is safe to share/commit.
+update-signing.key
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/

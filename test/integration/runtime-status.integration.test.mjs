@@ -1,10 +1,16 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import test from 'node:test';
-import { collectCloudflareDeploymentStatus, readCloudflareDeploymentContract } from '../../src/cloudflare/runtime-status.js';
+import {
+  collectCloudflareDeploymentStatus,
+  readCloudflareDeploymentContract,
+  parseWranglerToml,
+  resolveProjectD1Database,
+} from '../../src/cloudflare/runtime-status.js';
 import { collectRuntimeStatus } from '../../src/commands/runtime-status.js';
 import { readProjectConfig } from '../../src/lib/project-config.js';
 import { runStatus } from '../../src/commands/status.js';
+import { renderRuntimeStatus } from '../../src/ui/ansi.js';
 
 const root = path.resolve(new URL('../..', import.meta.url).pathname);
 
@@ -107,4 +113,95 @@ test('status command supports machine-readable injected runtime status', async (
   const result = await runStatus(['--json'], { collectRuntime: async () => expected, write(value) { output += value; } });
   assert.equal(result, expected);
   assert.deepEqual(JSON.parse(output), expected);
+});
+
+test('renderRuntimeStatus explicitly displays DB and other resource bindings', () => {
+  const status = {
+    local: { project: 'agentsam-sdk', root: '/path/to/project' },
+    ready: true,
+    local_ready: true,
+    checks: { account: true, models: true, terminal: true, cloudflare: true },
+    cloudflare: {
+      configured: true,
+      worker_name: 'agentsam-sdk',
+      version: { number: 43 },
+      bindings: {
+        match: true,
+        live: [
+          { name: 'DB', type: 'd1', database_name: 'inneranimalmedia-business' },
+          { name: 'WEBSITE_ASSETS', type: 'r2_bucket', bucket_name: 'agentsam-os-blueprint-content' },
+          { name: 'AGENTSAM_WAI', type: 'ai' },
+          { name: 'IAM_CLIENT_ID', type: 'plain_text' },
+          { name: 'OPENAI_API_KEY', type: 'secret_text' },
+        ],
+        declared: [
+          { name: 'DB', type: 'd1', database_name: 'inneranimalmedia-business' },
+          { name: 'WEBSITE_ASSETS', type: 'r2_bucket', bucket_name: 'agentsam-os-blueprint-content' },
+          { name: 'AGENTSAM_WAI', type: 'ai' },
+        ],
+        resources: [
+          { name: 'DB', type: 'd1', database_name: 'inneranimalmedia-business' },
+          { name: 'WEBSITE_ASSETS', type: 'r2_bucket', bucket_name: 'agentsam-os-blueprint-content' },
+          { name: 'AGENTSAM_WAI', type: 'ai' },
+        ],
+        runtime_variables: [{ name: 'IAM_CLIENT_ID', type: 'plain_text' }],
+        runtime_secrets: [{ name: 'OPENAI_API_KEY', type: 'secret_text' }],
+        missing: [],
+      },
+      health: { ok: true, status: 200 },
+    },
+  };
+
+  const stripAnsi = (text) => String(text || '').replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
+  const rendered = stripAnsi(renderRuntimeStatus(status));
+  assert.match(rendered, /bindings\s+.*5 live/);
+  assert.match(rendered, /• DB · d1 \(inneranimalmedia-business\)/);
+  assert.match(rendered, /• WEBSITE_ASSETS · r2 \(agentsam-os-blueprint-content\)/);
+  assert.match(rendered, /• AGENTSAM_WAI · ai/);
+  assert.match(rendered, /1 vars · 1 secrets/);
+});
+
+test('parseWranglerToml parses worker name, d1 databases, r2, hyperdrive, and vars', () => {
+  const sample = `
+name = "my-sample-worker"
+main = "src/index.js"
+
+[vars]
+ENVIRONMENT = "production"
+PORT = 8080
+
+[[d1_databases]]
+binding = "DB"
+database_name = "sample-production-db"
+database_id = "d1-uuid-123"
+
+[[r2_buckets]]
+binding = "UPLOADS"
+bucket_name = "sample-bucket"
+
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "hd-uuid-456"
+
+[ai]
+binding = "AI"
+`;
+
+  const parsed = parseWranglerToml(sample);
+  assert.equal(parsed.name, 'my-sample-worker');
+  assert.equal(parsed.vars.ENVIRONMENT, 'production');
+  assert.equal(parsed.vars.PORT, 8080);
+  assert.equal(parsed.d1_databases.length, 1);
+  assert.equal(parsed.d1_databases[0].binding, 'DB');
+  assert.equal(parsed.d1_databases[0].database_name, 'sample-production-db');
+  assert.equal(parsed.r2_buckets.length, 1);
+  assert.equal(parsed.r2_buckets[0].binding, 'UPLOADS');
+  assert.equal(parsed.hyperdrive.length, 1);
+  assert.equal(parsed.hyperdrive[0].binding, 'HYPERDRIVE');
+  assert.equal(parsed.ai.binding, 'AI');
+});
+
+test('resolveProjectD1Database discovers project DB binding from checked-in config', () => {
+  const resolved = resolveProjectD1Database(root);
+  assert.equal(resolved, 'inneranimalmedia-business');
 });
