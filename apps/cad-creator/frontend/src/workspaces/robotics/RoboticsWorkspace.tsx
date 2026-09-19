@@ -32,6 +32,15 @@ interface RoboticsWorkspaceProps {
   showDiagnostics: boolean;
   setShowDiagnostics: (show: boolean) => void;
   onOpenToolIntegration?: (toolId: 'blender' | 'openscad' | 'freecad' | 'meshy') => void;
+  toolCapabilities?: Array<{
+    id: string;
+    name: string;
+    status: 'ready' | 'connected' | 'not_connected' | 'unavailable';
+    version?: string;
+    lane?: string;
+    description: string;
+    supportedFormats: string[];
+  }>;
 }
 
 export function RoboticsWorkspace({
@@ -43,7 +52,8 @@ export function RoboticsWorkspace({
   toggleDarkMode,
   showDiagnostics,
   setShowDiagnostics,
-  onOpenToolIntegration
+  onOpenToolIntegration,
+  toolCapabilities,
 }: RoboticsWorkspaceProps) {
   const isMounted = useRef(true);
   const fallbackProviderRef = useRef<SimulationProvider | null>(null);
@@ -333,6 +343,7 @@ export function RoboticsWorkspace({
         stats={simulationStats}
         isDarkMode={isDarkMode}
         onOpenToolIntegration={onOpenToolIntegration}
+        toolCapabilities={toolCapabilities}
       />
 
       {/* Expanded API Log Modal */}

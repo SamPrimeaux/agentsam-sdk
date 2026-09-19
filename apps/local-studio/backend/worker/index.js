@@ -8,6 +8,7 @@ import {
   createCloudflareD1Adapter,
 } from "../../../../packages/identity/src/server/worker-router.js";
 import { handleCmsWorkerRequest } from "./cms-service.js";
+import { serveCanonicalHomepage } from "./canonical-homepage.js";
 
 // Paths owned by the identity package (auth pages, auth API, OAuth, company branding).
 const IDENTITY_EXACT_PATHS = new Set(["/auth/login", "/auth/signup", "/auth/reset", "/api/company"]);
@@ -540,6 +541,11 @@ export default {
 
     if (request.method === "GET" && Object.hasOwn(INSTALL_APP_TARGETS, url.pathname)) {
       return serveInstallScript(url.pathname);
+    }
+
+    // Canonical public homepage with edge HTMLRewriter site partials
+    if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
+      return serveCanonicalHomepage(request, env);
     }
 
     // The checked-in Worker owns vault + health + llm inventory. Everything else belongs

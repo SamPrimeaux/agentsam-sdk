@@ -13,3 +13,14 @@ export {
   sha256File,
   validateBlenderRecipe,
 } from './blender.js';
+
+export {
+  discoverOpenScad,
+  openScadStatus,
+  discoverFreeCad,
+  freeCadStatus,
+  meshyStatus,
+  mujocoStatus,
+  discoverAllCadTools,
+} from './discovery.js';
+

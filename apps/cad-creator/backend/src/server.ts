@@ -5,6 +5,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { getRoboticsPerceptionCapabilities, runRoboticsPerception } from './robotics/perception';
+import { probeAllCadTools } from './cad/discovery';
 
 const CAD_ROOT = path.resolve(process.cwd(), '..');
 const FRONTEND_ROOT = path.join(CAD_ROOT, 'frontend');
@@ -397,8 +398,22 @@ app.post('/api/robotics/perception/detect', async (req, res) => {
 });
 
 // ----------------------------------------------------
-// 6. SERVER-SIDE OPENSCAD / CAD EXECUTION API
+// 6. SERVER-SIDE OPENSCAD / CAD EXECUTION & TOOL DISCOVERY API
 // ----------------------------------------------------
+app.get('/api/cad/tools', async (req, res) => {
+  try {
+    const report = await probeAllCadTools(process.env);
+    return res.json(report);
+  } catch (err: any) {
+    return res.status(500).json({
+      error: {
+        code: 'CAD_TOOL_DISCOVERY_FAILED',
+        message: err?.message || 'Failed to probe CAD tools',
+      },
+    });
+  }
+});
+
 app.get('/api/cad/capabilities', (req, res) => {
   return res.json({
     provider: 'AgentSam-Server-CSG',

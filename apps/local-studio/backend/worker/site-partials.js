@@ -42,7 +42,7 @@ export async function putSitePartial(env, siteSlug, partialName, content) {
  * @returns {Promise<Response>} Transformed response with edge-injected partials
  */
 export async function injectSitePartials(response, env, siteSlug = 'agentsam-sdk') {
-  const contentType = response.headers.get('content-type') || '';
+  const contentType = (response.headers.get('content-type') || '').toLowerCase();
   if (!contentType.includes('text/html')) {
     return response;
   }

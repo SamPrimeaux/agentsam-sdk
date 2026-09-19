@@ -204,4 +204,46 @@ test('site-partials service injects header and footer from R2 into HTML response
   assert.ok(transformedText.includes('<header id="updated">Updated</header>'), 'Response must contain injected header');
   assert.ok(transformedText.includes('<footer id="injected-footer">Footer Content</footer>'), 'Response must contain injected footer');
   assert.ok(transformedText.includes('<main>Main Content</main>'), 'Response must preserve main content');
+
+  // Verify non-text/html responses are guarded and untouched
+  const jsonResponse = new Response(JSON.stringify({ ok: true }), {
+    headers: { 'content-type': 'application/json' },
+  });
+  const unedited = await injectSitePartials(jsonResponse, env, 'agentsam-sdk');
+  assert.equal(await unedited.text(), JSON.stringify({ ok: true }));
 });
+
+test('Local Studio canonical homepage serves with edge HTMLRewriter partial injection and text/html', async () => {
+  const { serveCanonicalHomepage } = await import('../../apps/local-studio/backend/worker/canonical-homepage.js');
+
+  const mockR2 = {
+    async get(key) {
+      if (key.includes('header')) return { text: async () => '<header id="live-header">SDK Header</header>' };
+      if (key.includes('footer')) return { text: async () => '<footer id="live-footer">SDK Footer</footer>' };
+      return null;
+    },
+  };
+
+  const env = { WEBSITE_ASSETS: mockR2 };
+
+  const rootReq = new Request('https://agentsam.inneranimalmedia.com/', { method: 'GET' });
+  const rootRes = await serveCanonicalHomepage(rootReq, env, 'agentsam-sdk');
+  assert.equal(rootRes.status, 200);
+  assert.ok(rootRes.headers.get('content-type')?.includes('text/html'), 'Content type must be text/html');
+  const rootText = await rootRes.text();
+  assert.ok(rootText.includes('<header id="live-header">SDK Header</header>'), 'Edge injection must inject header at /');
+  assert.ok(rootText.includes('<footer id="live-footer">SDK Footer</footer>'), 'Edge injection must inject footer at /');
+  assert.ok(rootText.includes('@inneranimalmedia/agentsam-sdk'), 'Canonical homepage content must be present');
+
+  // Verify index.js routes / and /index.html to serveCanonicalHomepage
+  const indexJsContent = fs.readFileSync(at('apps/local-studio/backend/worker/index.js'), 'utf8');
+  assert.ok(
+    indexJsContent.includes('serveCanonicalHomepage(request, env)'),
+    'index.js must call serveCanonicalHomepage for root route'
+  );
+  assert.ok(
+    indexJsContent.includes('url.pathname === "/" || url.pathname === "/index.html"'),
+    'index.js must match both / and /index.html'
+  );
+});
+

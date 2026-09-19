@@ -31,6 +31,7 @@ import { TemplateLibraryModal } from '../components/TemplateLibraryModal';
 import { CadCreatorShell } from './CadCreatorShell';
 import { CadStatusStrip } from './CadStatusStrip';
 import { installCadPreviewGuestBridge } from '../lib/agentsam-preview-bridge';
+import { useCadTools } from '../lib/execution/useCadTools';
 import {
   WORKSPACE_REGISTRY,
   WorkspaceDescriptor,
@@ -90,6 +91,9 @@ export function CadCreatorApp({
   const roboticsContainerRef = useRef<HTMLDivElement>(null);
   const [roboticsDarkMode, setRoboticsDarkMode] = useState(true);
   const [showRoboticsDiagnostics, setShowRoboticsDiagnostics] = useState(false);
+
+  // Real-time CAD tool discovery (OpenSCAD, FreeCAD, Blender, Meshy, MuJoCo)
+  const { capabilities: liveCapabilities, report: cadToolsReport } = useCadTools();
 
   // 3. Modals State
   const [isFurniturePickerOpen, setIsFurniturePickerOpen] = useState(false);
@@ -552,6 +556,29 @@ export function CadCreatorApp({
                       toggleDarkMode={() => setRoboticsDarkMode((value) => !value)}
                       showDiagnostics={showRoboticsDiagnostics}
                       setShowDiagnostics={setShowRoboticsDiagnostics}
+                      onOpenToolIntegration={(toolId) => {
+                        if (toolId === 'openscad') setActiveWorkspace('parametric');
+                        else if (toolId === 'blender' || toolId === 'meshy') setActiveWorkspace('render');
+                        else setActiveWorkspace('model');
+                      }}
+                      toolCapabilities={liveCapabilities.map((c) => ({
+                        id: c.id,
+                        name: c.name,
+                        status: c.status,
+                        version: c.version,
+                        lane: c.lane,
+                        description: c.description || '',
+                        supportedFormats:
+                          c.id === 'openscad'
+                            ? ['SCAD', 'STL', 'DXF', '3MF']
+                            : c.id === 'blender'
+                              ? ['BLEND', 'GLB', 'OBJ', 'PNG']
+                              : c.id === 'freecad'
+                                ? ['STEP', 'IGES', 'BREP', 'FCStd']
+                                : c.id === 'meshy'
+                                  ? ['GLB', 'USDZ', 'FBX']
+                                  : ['XML', 'MJCF', 'URDF'],
+                      }))}
                     />
                   </React.Suspense>
                 </div>
@@ -598,9 +625,10 @@ export function CadCreatorApp({
         activeTool={activeTool}
         unit={unit}
         selectionCount={currentUser.selectedIds.length}
-        jobStatus="Engine Ready"
+        jobStatus={cadToolsReport ? `${cadToolsReport.available_tools}/${cadToolsReport.total_tools} Engines Online` : 'Engine Ready'}
         isSynced={isSynced}
         isDarkMode={isDarkMode}
+        capabilities={liveCapabilities}
       />
 
       {/* 5. Modals */}
