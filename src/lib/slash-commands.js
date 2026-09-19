@@ -18,6 +18,8 @@ export const SLASH_COMMANDS = [
   { cmd: '/session', description: 'Show current session usage, cost, and resume receipt', lane: 'observability' },
   { cmd: '/usage', description: 'Show token usage, spend breakdown, and resume command', lane: 'observability' },
   { cmd: '/cf', description: 'Cloudflare native reads, Wrangler status, and CPU profile analysis', lane: 'cloudflare' },
+  { cmd: '/connections', description: 'Inspect live account, terminal, Worker, and Cloudflare connection evidence', lane: 'cloudflare' },
+  { cmd: '/tunnel', description: 'Choose and run a real Cloudflare Tunnel through Wrangler', lane: 'cloudflare' },
   { cmd: '/settings', description: 'Choose project, runtime, terminal, and model policy' },
   { cmd: '/pwd', description: 'Print working directory', lane: 'terminal' },
   { cmd: '/cd', description: 'Change working directory', lane: 'terminal' },
