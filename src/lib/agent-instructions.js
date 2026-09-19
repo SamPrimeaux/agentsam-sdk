@@ -6,6 +6,9 @@ import { findProjectRules } from './project-rules.js';
 export const AGENT_RUNTIME_FILENAME = 'AGENTSAM.md';
 export const AGENT_INSTRUCTION_PRECEDENCE = Object.freeze(['AGENTSAM.md', '.agentsamrules']);
 
+/** Provider/editor adapters that must redirect to AGENTSAM.md — never compiled as policy. */
+export const AGENT_INSTRUCTION_COMPAT_SHIMS = Object.freeze(['AGENTS.md', 'CLAUDE.md']);
+
 function sha256(value) {
   return `sha256:${createHash('sha256').update(value).digest('hex')}`;
 }

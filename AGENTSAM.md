@@ -80,7 +80,13 @@ the current compatibility boundary.
 
 AgentSam compiles instructions deterministically in this order:
 
-1. `AGENTSAM.md` — stable runtime behavior.
+1. `AGENTSAM.md` — stable runtime behavior (this file).
 2. `.agentsamrules` — repository-specific rules, loaded after the stable contract and therefore more specific where the two address the same repository behavior.
+
+Compatibility adapters for other coding agents (`AGENTS.md` for Cursor/Codex,
+`CLAUDE.md` for Claude Code) must only redirect here. They must not duplicate
+AgentSam policy. If a shim and this file conflict, this file is authoritative.
+Nested app-level `AGENTS.md` files under `apps/` are app-specific contracts,
+not substitutes for this runtime file.
 
 Live account, authorization, model, run, task, terminal, and usage state never belong in either file.

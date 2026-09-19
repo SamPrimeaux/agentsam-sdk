@@ -115,6 +115,21 @@ test('AgentSam instructions compile in stable then repository-specific precedenc
   assert.ok(compiled.content.indexOf('base law') < compiled.content.indexOf('local law'));
 });
 
+test('compatibility shims are not compiled into AgentSam instruction authority', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-instruction-shims-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(root, '.git'));
+  fs.writeFileSync(path.join(root, 'AGENTSAM.md'), '# Stable\ncanonical only\n');
+  fs.writeFileSync(path.join(root, 'AGENTS.md'), 'shim should not become policy\n');
+  fs.writeFileSync(path.join(root, 'CLAUDE.md'), 'claude shim should not become policy\n');
+  const compiled = compileAgentInstructions(root);
+  assert.equal(compiled.sources.length, 1);
+  assert.equal(compiled.sources[0].filename, 'AGENTSAM.md');
+  assert.match(compiled.content, /canonical only/);
+  assert.doesNotMatch(compiled.content, /shim should not become policy/);
+  assert.doesNotMatch(compiled.content, /claude shim should not become policy/);
+});
+
 test('project context loads bounded compiled AgentSam instructions', t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-context-rules-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
