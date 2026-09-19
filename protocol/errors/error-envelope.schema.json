@@ -1,0 +1,544 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.inneranimalmedia.com/protocol/errors/error-envelope.schema.json",
+  "title": "AgentSam ErrorEnvelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "ok",
+    "schema_version",
+    "code",
+    "reason",
+    "severity",
+    "source",
+    "resolution_owner",
+    "domain",
+    "tool",
+    "stage",
+    "message",
+    "retryable",
+    "retry_after_ms",
+    "remediation",
+    "resource",
+    "native",
+    "environment",
+    "http_status",
+    "grpc_status",
+    "transport",
+    "provider",
+    "provider_code",
+    "request_id",
+    "trace_id",
+    "fingerprint",
+    "occurrence_count",
+    "details"
+  ],
+  "properties": {
+    "ok": {
+      "const": false
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "code": {
+      "enum": [
+        "CANCELLED",
+        "UNKNOWN",
+        "INVALID_ARGUMENT",
+        "DEADLINE_EXCEEDED",
+        "NOT_FOUND",
+        "ALREADY_EXISTS",
+        "PERMISSION_DENIED",
+        "RESOURCE_EXHAUSTED",
+        "FAILED_PRECONDITION",
+        "ABORTED",
+        "OUT_OF_RANGE",
+        "UNIMPLEMENTED",
+        "INTERNAL",
+        "UNAVAILABLE",
+        "DATA_LOSS",
+        "UNAUTHENTICATED"
+      ]
+    },
+    "reason": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,127}$"
+    },
+    "severity": {
+      "enum": [
+        "transient",
+        "blocking_user_fixable",
+        "blocking_internal",
+        "policy_blocking"
+      ]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name",
+        "service"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "user",
+            "agentsam",
+            "provider",
+            "dependency",
+            "runtime",
+            "policy"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "service": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "resolution_owner": {
+      "enum": [
+        "user",
+        "agentsam",
+        "provider",
+        "organization_admin",
+        "policy",
+        "unknown"
+      ]
+    },
+    "domain": {
+      "enum": [
+        "runtime",
+        "provider",
+        "auth",
+        "device",
+        "terminal",
+        "transport",
+        "repository",
+        "indexing",
+        "knowledge",
+        "cad",
+        "deployment",
+        "persistence",
+        "policy",
+        "tool"
+      ]
+    },
+    "tool": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "stage": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "retryable": {
+      "type": "boolean"
+    },
+    "retry_after_ms": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "remediation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action",
+        "message",
+        "automatic",
+        "command",
+        "url"
+      ],
+      "properties": {
+        "action": {
+          "enum": [
+            "none",
+            "retry",
+            "retry_later",
+            "reauthenticate",
+            "connect_provider",
+            "configure_provider_credential",
+            "refresh_provider_credential",
+            "request_permission",
+            "reenroll_device",
+            "reconnect_service",
+            "install_dependency",
+            "upgrade_dependency",
+            "configure_dependency",
+            "change_configuration",
+            "change_input",
+            "reduce_scope",
+            "increase_quota",
+            "add_budget",
+            "select_model",
+            "change_region",
+            "restart_runtime",
+            "inspect_platform",
+            "contact_provider",
+            "contact_agentsam",
+            "contact_organization_admin"
+          ]
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "automatic": {
+          "type": "boolean"
+        },
+        "command": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "resource": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "name"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "native": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "exception_type",
+            "exit_code",
+            "signal",
+            "stderr",
+            "stdout",
+            "stack"
+          ],
+          "properties": {
+            "code": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "exception_type": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "exit_code": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": -2147483648,
+                  "maximum": 2147483647
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "signal": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "stderr": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "stdout": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "stack": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "environment": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "detected_version",
+            "required_version",
+            "component",
+            "runtime",
+            "platform"
+          ],
+          "properties": {
+            "detected_version": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "required_version": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "component": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "runtime": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "platform": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "http_status": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 599
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "grpc_status": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "transport": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provider": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provider_code": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "request_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "trace_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^err_[A-Za-z0-9_-]{8,128}$"
+    },
+    "occurrence_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "details": {}
+  }
+}

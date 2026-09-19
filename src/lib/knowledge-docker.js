@@ -7,7 +7,13 @@ import { CONFIG_PATH, defaultConfig, readConfig } from '../knowledge/config.js';
 
 const sdkRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const runtimeFiles = () => {
-  const files = ['services/knowledge/package.json', 'services/knowledge/package-lock.json', 'packages/agentsam-repository/src/merkle/hash.js', 'src/errors/contract.js'];
+  const files = [
+    'services/knowledge/package.json',
+    'services/knowledge/package-lock.json',
+    'packages/agentsam-repository/src/merkle/hash.js',
+    'packages/agentsam-errors/package.json',
+    'src/errors/contract.js',
+  ];
   const walk = dir => { for (const entry of fs.readdirSync(path.join(sdkRoot, dir), { withFileTypes: true })) {
     const file = `${dir}/${entry.name}`;
     if (entry.isDirectory()) walk(file);
@@ -15,6 +21,7 @@ const runtimeFiles = () => {
   } };
   walk('src/knowledge');
   walk('src/rpc/generated');
+  walk('packages/agentsam-errors/src');
   return files.sort();
 };
 
@@ -31,6 +38,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 COPY src ./src
+COPY packages ./packages
 ENV NODE_ENV=production PORT=${port} GIT_OPTIONAL_LOCKS=0
 EXPOSE ${port}
 HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=3 CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"

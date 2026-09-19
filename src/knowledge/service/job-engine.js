@@ -5,23 +5,83 @@ import { fork } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 import { fingerprint, validateConfig } from '../config.js';
+import {
+  AgentSamError,
+  ERROR_CODE,
+  ERROR_REASON,
+  createErrorEnvelope,
+  normalizeError,
+  parseError,
+} from '../../errors/index.js';
 
 const defaultWorkerPath = fileURLToPath(new URL('./job-worker.js', import.meta.url));
 const TERMINAL_STATUSES = new Set(['completed', 'failed']);
 
+function serviceReason(code) {
+  switch (code) {
+    case ERROR_CODE.UNAUTHENTICATED: return ERROR_REASON.AUTH_INVALID;
+    case ERROR_CODE.PERMISSION_DENIED: return ERROR_REASON.PERMISSION_DENIED;
+    case ERROR_CODE.NOT_FOUND: return ERROR_REASON.TARGET_NOT_FOUND;
+    case ERROR_CODE.ABORTED: return ERROR_REASON.CONFLICT;
+    case ERROR_CODE.RESOURCE_EXHAUSTED: return ERROR_REASON.CAPACITY_EXHAUSTED;
+    case ERROR_CODE.UNAVAILABLE: return ERROR_REASON.TRANSPORT_UNREACHABLE;
+    case ERROR_CODE.DEADLINE_EXCEEDED: return ERROR_REASON.DEADLINE_EXCEEDED;
+    case ERROR_CODE.INVALID_ARGUMENT: return ERROR_REASON.INPUT_INVALID;
+    default: return ERROR_REASON.INTERNAL;
+  }
+}
+
 export function serviceError(status, message, code) {
-  return Object.assign(new Error(message), { status, code });
+  const canonical = code === 'CONFLICT' ? ERROR_CODE.ABORTED : (Object.values(ERROR_CODE).includes(code) ? code : ERROR_CODE.INTERNAL);
+  const envelope = createErrorEnvelope({
+    code: canonical,
+    reason: serviceReason(canonical),
+    message,
+    http_status: status,
+    retryable: [429, 503, 504].includes(Number(status)),
+    source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'job_engine' },
+    resolution_owner: canonical === ERROR_CODE.UNAVAILABLE ? 'agentsam' : undefined,
+    domain: 'knowledge',
+    stage: 'request',
+  });
+  return new AgentSamError(envelope);
+}
+
+function decodeFailure(row) {
+  if (row?.failure_json) {
+    try { return parseError(row.failure_json); }
+    catch {
+      return createErrorEnvelope({
+        reason: ERROR_REASON.INTERNAL_CONTRACT_VIOLATION,
+        message: 'Stored knowledge failure could not be decoded.',
+        source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'job_engine' },
+        domain: 'knowledge',
+        stage: 'persistence',
+      });
+    }
+  }
+  if (!row?.error) return null;
+  return createErrorEnvelope({
+    reason: ERROR_REASON.EXECUTION_FAILED,
+    message: row.error,
+    source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'legacy_job_row' },
+    domain: 'knowledge',
+    stage: 'execute',
+  });
 }
 
 function decode(row) {
-  return row && {
+  if (!row) return null;
+  const failure = decodeFailure(row);
+  return {
     id: row.id,
     status: row.status,
     attempts: row.attempts,
     created_at: row.created_at,
     updated_at: row.updated_at,
     result: row.result ? JSON.parse(row.result) : null,
-    error: row.error,
+    failure,
+    error: failure?.message || row.error || null,
   };
 }
 
@@ -100,10 +160,22 @@ export function createKnowledgeJobEngine({
   db.exec(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;
     CREATE TABLE IF NOT EXISTS jobs (id TEXT PRIMARY KEY, idem TEXT UNIQUE, digest TEXT NOT NULL,
       payload TEXT NOT NULL, status TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL, updated_at TEXT NOT NULL, result TEXT, error TEXT);
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL, result TEXT, error TEXT, failure_json TEXT);
     CREATE INDEX IF NOT EXISTS jobs_pending ON jobs(status, created_at);`);
+  const columns = new Set(db.prepare('PRAGMA table_info(jobs)').all().map(row => row.name));
+  if (!columns.has('failure_json')) db.exec('ALTER TABLE jobs ADD COLUMN failure_json TEXT');
   fs.chmodSync(jobsFile, 0o600);
-  db.prepare("UPDATE jobs SET status=CASE WHEN attempts>=3 THEN 'failed' ELSE 'queued' END, error=CASE WHEN attempts>=3 THEN 'Interrupted three times; submit a new job after investigation.' ELSE NULL END WHERE status='running'").run();
+  const interruptedFailure = createErrorEnvelope({
+    reason: ERROR_REASON.EXECUTION_FAILED,
+    message: 'Interrupted three times; submit a new job after investigation.',
+    source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'job_engine' },
+    domain: 'knowledge',
+    stage: 'recovery',
+  });
+  db.prepare("UPDATE jobs SET status=CASE WHEN attempts>=3 THEN 'failed' ELSE 'queued' END, error=CASE WHEN attempts>=3 THEN ? ELSE NULL END, failure_json=CASE WHEN attempts>=3 THEN ? ELSE NULL END WHERE status='running'").run(
+    interruptedFailure.message,
+    JSON.stringify(interruptedFailure),
+  );
 
   let child = null;
   let closing = false;
@@ -120,11 +192,17 @@ export function createKnowledgeJobEngine({
     }
     if (TERMINAL_STATUSES.has(job.status)) watchers.delete(job.id);
   };
-  const updateStatus = (id, status, { result = null, error = null } = {}) => {
-    db.prepare('UPDATE jobs SET status=?,result=?,error=?,updated_at=? WHERE id=?').run(
+  const updateStatus = (id, status, { result = null, failure = null, error = null } = {}) => {
+    const normalizedFailure = failure
+      ? normalizeError(failure, { source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'job_engine' }, domain: 'knowledge', stage: 'execute' })
+      : error
+        ? createErrorEnvelope({ reason: ERROR_REASON.EXECUTION_FAILED, message: error, source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'job_engine' }, domain: 'knowledge', stage: 'execute' })
+        : null;
+    db.prepare('UPDATE jobs SET status=?,result=?,error=?,failure_json=?,updated_at=? WHERE id=?').run(
       status,
       result === null ? null : JSON.stringify(result),
-      error,
+      normalizedFailure?.message || null,
+      normalizedFailure ? JSON.stringify(normalizedFailure) : null,
       new Date().toISOString(),
       id,
     );
@@ -145,15 +223,49 @@ export function createKnowledgeJobEngine({
     child = fork(workerPath, [], { execArgv: [], stdio: ['ignore', 'ignore', 'ignore', 'ipc'], env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' } });
     const timer = setTimeout(() => { timedOut = true; child?.kill('SIGKILL'); }, jobTimeoutMs);
     child.once('message', value => { response = value; });
-    child.once('error', () => { response = { ok: false, error: 'Could not start indexing process.' }; });
+    child.once('error', (cause) => {
+      response = {
+        ok: false,
+        failure: createErrorEnvelope({
+          reason: ERROR_REASON.INTERNAL_DEPENDENCY_FAILED,
+          message: 'Could not start indexing process.',
+          source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'job_worker' },
+          domain: 'knowledge',
+          stage: 'spawn',
+          native: { code: cause?.code || null, exception_type: cause?.name || null, stack: cause?.stack || null },
+        }),
+      };
+    });
     child.once('close', () => {
       clearTimeout(timer);
       child = null;
       if (!closing) {
         const ok = response?.ok && !timedOut;
+        let failure = null;
+        if (!ok) {
+          if (timedOut) {
+            failure = createErrorEnvelope({
+              reason: ERROR_REASON.EXECUTION_TIMEOUT,
+              message: 'Knowledge job exceeded its time limit; narrow the scope and retry.',
+              source: { kind: 'runtime', name: 'agentsam-knowledge-worker' },
+              domain: 'knowledge',
+              stage: 'execute',
+            });
+          } else if (response?.failure) {
+            failure = normalizeError(response.failure, { source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'job_worker' }, domain: 'knowledge', stage: 'execute' });
+          } else {
+            failure = createErrorEnvelope({
+              reason: ERROR_REASON.EXECUTION_FAILED,
+              message: response?.error || 'Indexing process exited unexpectedly.',
+              source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'job_worker' },
+              domain: 'knowledge',
+              stage: 'execute',
+            });
+          }
+        }
         updateStatus(row.id, ok ? 'completed' : 'failed', {
           result: ok ? response.result : null,
-          error: ok ? null : timedOut ? 'Job exceeded its time limit; narrow the scope.' : response?.error || 'Indexing process exited unexpectedly.',
+          failure,
         });
       }
       pumping = false;
@@ -162,7 +274,17 @@ export function createKnowledgeJobEngine({
     const payload = JSON.parse(row.payload);
     const registered = registry[payload.request.repository];
     if (!registered || registered.config.repository_id !== payload.config.repository_id || fingerprint(registered.config.scope) !== payload.registered_scope || (!allowEmbeddings && ((payload.request.embed && payload.request.operation !== 'plan') || payload.request.semantic))) {
-      response = { ok: false, error: 'Repository registration changed; resubmit this job.' };
+      response = {
+        ok: false,
+        failure: createErrorEnvelope({
+          reason: ERROR_REASON.REPOSITORY_CHANGED,
+          message: 'Repository registration changed; resubmit this job.',
+          source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'repository_registry' },
+          domain: 'repository',
+          stage: 'execute',
+          resource: { type: 'repository', id: payload.config.repository_id || null },
+        }),
+      };
       child.kill();
       return;
     }

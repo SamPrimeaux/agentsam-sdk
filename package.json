@@ -65,6 +65,8 @@
     "./work-graph/adapters/engineering/mcp": "./packages/work-graph/src/adapters/engineering/mcp.js",
     "./work-graph/adapters/business/projects": "./packages/work-graph/src/adapters/business/projects.js",
     "./errors": "./src/errors/index.js",
+    "./errors/schema": "./protocol/errors/error-envelope.schema.json",
+    "./errors/catalog": "./protocol/errors/error-catalog.json",
     "./cloudflare": "./src/cloudflare/index.js",
     "./eval": "./src/eval/index.js",
     "./context/result-policy-schema": "./protocol/context/result-policy.schema.json",
@@ -82,6 +84,8 @@
   "files": [
     "src",
     "packages/identity",
+    "packages/agentsam-contracts",
+    "packages/agentsam-errors",
     "packages/agentsam-repository",
     "packages/work-graph",
     "packages/connectors/cloudflare",
@@ -107,6 +111,7 @@
     "packages/agentsam-shell-kit",
     "packages/identity",
     "packages/agentsam-contracts",
+    "packages/agentsam-errors",
     "packages/agentsam-repository",
     "packages/work-graph",
     "packages/agentsam-workbench"
@@ -120,7 +125,7 @@
     "test:terminal:mock": "node --test test/terminal/*.test.mjs",
     "test:live:terminal": "node --test test/live/*.live.test.mjs",
     "test:identity": "npm --prefix packages/identity test",
-    "test:workspaces": "npm --prefix packages/agentsam-contracts test && npm --prefix packages/agentsam-contracts run typecheck && npm --prefix packages/agentsam-repository test && npm --prefix packages/agentsam-workbench test && npm --prefix packages/agentsam-workbench run typecheck && npm --prefix packages/agentsam-shell-kit run typecheck && npm --prefix packages/work-graph test",
+    "test:workspaces": "npm --prefix packages/agentsam-contracts test && npm --prefix packages/agentsam-contracts run typecheck && npm --prefix packages/agentsam-errors test && npm --prefix packages/agentsam-repository test && npm --prefix packages/agentsam-workbench test && npm --prefix packages/agentsam-workbench run typecheck && npm --prefix packages/agentsam-shell-kit run typecheck && npm --prefix packages/work-graph test",
     "smoke": "node test/smoke.mjs",
     "verify:package": "node scripts/verify-package.mjs",
     "verify:boundaries": "node scripts/verify-source-boundaries.mjs",
@@ -129,7 +134,7 @@
     "test:python": "node scripts/verify-python.mjs",
     "verify:release": "npm run verify && npm run verify:knowledge-package && npm run test:python && npm run security:check",
     "pack:check": "npm pack --dry-run --json",
-    "verify": "npm run proto:check && npm test && npm run test:workspaces && npm run verify:boundaries && npm run verify:package && npm run verify:bootstrap && npm run pack:check",
+    "verify": "npm run errors:check && npm run proto:check && npm test && npm run test:workspaces && npm run verify:boundaries && npm run verify:package && npm run verify:bootstrap && npm run pack:check",
     "publish:identity-alpha": "bash scripts/publish-identity-alpha.sh",
     "publish:identity-alpha:dry-run": "bash scripts/publish-identity-alpha.sh --dry-run",
     "publish:identity-alpha:publish-only": "bash scripts/publish-identity-alpha.sh --publish-only",
@@ -141,7 +146,9 @@
     "test:connectors": "node --test packages/connectors/cloudflare/tests/**/*.test.mjs",
     "verify:npm10-lock": "node apps/local-studio/scripts/verify-npm10-lock.mjs",
     "proto:generate": "node scripts/generate-proto.mjs",
-    "proto:check": "node scripts/verify-proto.mjs"
+    "proto:check": "node scripts/verify-proto.mjs",
+    "errors:generate": "node scripts/generate-error-contracts.mjs",
+    "errors:check": "node scripts/verify-error-contracts.mjs"
   },
   "engines": {
     "node": ">=22 <25",
@@ -181,7 +188,9 @@
   },
   "homepage": "https://github.com/SamPrimeaux/agentsam-sdk#readme",
   "allowScripts": {
-    "node-pty@1.1.0": true
+    "node-pty@1.1.0": true,
+    "grpc-tools@1.13.1": true,
+    "protobufjs@7.6.6": true
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",

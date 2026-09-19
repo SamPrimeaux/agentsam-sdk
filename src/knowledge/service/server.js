@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createBearerTokenVerifier } from './auth.js';
 import { createKnowledgeJobEngine, serviceError } from './job-engine.js';
+import { normalizeError, toHttpError } from '../../errors/index.js';
 
 async function readBody(req) {
   const chunks = [];
@@ -44,7 +45,15 @@ export async function startKnowledgeHttpServer({ engine, token, verifyToken, por
       const { job, created } = engine.submitJob(await readBody(req), { idempotencyKey: req.headers['idempotency-key'] });
       return send(created ? 202 : 200, job);
     } catch (error) {
-      if (!res.writableEnded) send(error.status || 500, { error: error.status ? error.message : 'Service request failed.' });
+      if (!res.writableEnded) {
+        const envelope = normalizeError(error, {
+          source: { kind: 'agentsam', name: 'agentsam-knowledge', service: 'http_server' },
+          domain: 'knowledge',
+          stage: 'request',
+        });
+        const httpError = toHttpError(envelope);
+        send(httpError.status, httpError.body);
+      }
     }
   });
   server.requestTimeout = 15000;
