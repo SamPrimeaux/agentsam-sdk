@@ -6,6 +6,8 @@ import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { getRoboticsPerceptionCapabilities, runRoboticsPerception } from './robotics/perception';
 import { probeAllCadTools } from './cad/discovery';
+import { executeOpenScadCompiler } from './cad/openscad';
+import { executeFreeCadBuild } from './cad/freecad';
 
 const CAD_ROOT = path.resolve(process.cwd(), '..');
 const FRONTEND_ROOT = path.join(CAD_ROOT, 'frontend');
@@ -414,98 +416,84 @@ app.get('/api/cad/tools', async (req, res) => {
   }
 });
 
+app.get('/api/cad/health', async (req, res) => {
+  try {
+    const report = await probeAllCadTools(process.env);
+    return res.json({
+      status: report.all_systems_ready ? 'healthy' : 'degraded',
+      backend: 'docker-service',
+      version: '2026.04',
+      availableTools: report.available_tools,
+      totalTools: report.total_tools,
+      message: report.all_systems_ready
+        ? 'All CAD execution kernels online'
+        : 'Some CAD execution engines unavailable',
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      status: 'unavailable',
+      message: err?.message || 'Health check failed',
+    });
+  }
+});
+
 app.get('/api/cad/capabilities', (req, res) => {
   return res.json({
     provider: 'AgentSam-Server-CSG',
-    supportedFormats: ['stl', 'dxf', 'svg', 'obj', 'scad', 'json', 'gltf'],
+    supportedFormats: ['stl', 'dxf', 'svg', 'obj', 'scad', 'json', 'gltf', 'step', 'iges', 'brep'],
     supportsWorkerSandbox: true,
     supportsBimCompilation: true,
-    maxExecutionTimeMs: 15000,
+    supportsFreeCadSolidKernel: true,
+    maxExecutionTimeMs: 30000,
   });
 });
 
-app.post('/api/cad/execute', (req, res) => {
+app.post('/api/cad/execute', async (req, res) => {
   try {
-    const { source, outputFormat = 'stl', parameters = {}, filename = 'model.stl' } = req.body;
+    const { source, outputFormat = 'stl', parameters = {}, filename = 'model.stl', timeoutMs = 20000 } = req.body;
     if (!source) {
       return res.status(400).json({ error: 'Source code is required' });
     }
 
-    // Safety checks on source code
-    const FORBIDDEN_PATTERNS = [
-      /\bimport\s*\(/i,
-      /\binclude\s*<(?!\s*MCAD)/i,
-      /\buse\s*<(?!\s*MCAD)/i,
-      /\bexec\s*\(/i,
-      /\bsystem\s*\(/i,
-      /\bchild_process\b/i,
-      /\bread_file\b/i,
-      /\bwrite_file\b/i,
-      /\bprocess\.env\b/i,
-      /\.\.\//,
-    ];
-
-    for (const pat of FORBIDDEN_PATTERNS) {
-      if (pat.test(source)) {
-        return res.status(403).json({
-          success: false,
-          error: `Security Violation: forbidden pattern detected (${pat.toString()})`,
-          logs: ['[ERROR] Code execution aborted due to security sandbox policy.'],
-        });
-      }
-    }
-
-    const startTime = Date.now();
-    const logs: string[] = [
-      `[KERNEL] OpenSCAD Server Compiler v2026.04`,
-      `[PARSE] AST verification completed in 1.2ms`,
-      `[PARAMETERS] Injected ${Object.keys(parameters).length} dynamic variables`,
-      `[CSG] Evaluated geometry mesh and boolean subtractions`,
-    ];
-
-    // Build synthesized mesh format
-    let artifactContent: string = '';
-    const nameSlug = filename.replace(/\.[^/.]+$/, '');
-
-    if (outputFormat === 'stl') {
-      const facets: string[] = [];
-      const w = Number(parameters.deskWidth || parameters.unitWidth || 48) * 0.0254;
-      const d = Number(parameters.deskDepth || parameters.unitDepth || 24) * 0.0254;
-      const h = Number(parameters.deskHeight || parameters.unitHeight || 30) * 0.0254;
-
-      facets.push(
-        `  facet normal 0 0 1\n    outer loop\n      vertex 0 0 ${h}\n      vertex ${w} 0 ${h}\n      vertex ${w} ${d} ${h}\n    endloop\n  endfacet`,
-        `  facet normal 0 0 1\n    outer loop\n      vertex 0 0 ${h}\n      vertex ${w} ${d} ${h}\n      vertex 0 ${d} ${h}\n    endloop\n  endfacet`,
-        `  facet normal 0 0 -1\n    outer loop\n      vertex 0 0 0\n      vertex ${w} ${d} 0\n      vertex ${w} 0 0\n    endloop\n  endfacet`,
-        `  facet normal 0 0 -1\n    outer loop\n      vertex 0 0 0\n      vertex 0 ${d} 0\n      vertex ${w} ${d} 0\n    endloop\n  endfacet`
-      );
-
-      artifactContent = `solid ${nameSlug}\n${facets.join('\n')}\nendsolid ${nameSlug}`;
-      logs.push(`[EXPORT] Synthesized watertight ASCII STL (${facets.length} facets)`);
-    } else if (outputFormat === 'dxf') {
-      artifactContent = `0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n0\nENDSEC\n0\nEOF\n`;
-      logs.push(`[EXPORT] Generated DXF R12 entities`);
-    } else {
-      artifactContent = source;
-      logs.push(`[EXPORT] Output raw source script`);
-    }
-
-    const durationMs = Date.now() - startTime;
-    logs.push(`[SUCCESS] Compiled ${filename} in ${durationMs}ms`);
-
-    return res.json({
-      success: true,
-      artifactContent,
+    const result = await executeOpenScadCompiler({
+      source,
       outputFormat,
+      parameters,
       filename,
-      logs,
-      executionTimeMs: durationMs,
+      timeoutMs,
     });
+
+    return res.json(result);
+  } catch (err: any) {
+    const isSecurity = String(err?.message || '').includes('Security Violation');
+    return res.status(isSecurity ? 403 : 500).json({
+      success: false,
+      error: err.message || 'OpenSCAD execution failure',
+      logs: [`[ERROR] ${err.message}`],
+    });
+  }
+});
+
+app.post('/api/cad/freecad/execute', async (req, res) => {
+  try {
+    const { operations, format = 'step', filename, timeoutMs = 30000 } = req.body;
+    if (!Array.isArray(operations) || operations.length === 0) {
+      return res.status(400).json({ error: 'operations must be a non-empty array' });
+    }
+
+    const result = await executeFreeCadBuild({
+      operations,
+      format,
+      filename,
+      timeoutMs,
+    });
+
+    return res.json(result);
   } catch (err: any) {
     return res.status(500).json({
       success: false,
-      error: err.message || 'Execution failure',
-      logs: [`[CRITICAL] ${err.message}`],
+      error: err.message || 'FreeCAD solid modeling failure',
+      logs: [`[ERROR] ${err.message}`],
     });
   }
 });

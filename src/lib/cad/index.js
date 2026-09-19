@@ -24,3 +24,18 @@ export {
   discoverAllCadTools,
 } from './discovery.js';
 
+export {
+  openScadCompile,
+  validateOpenScadSource,
+  FORBIDDEN_OPENSCAD_PATTERNS,
+} from './openscad.js';
+
+export {
+  FREECAD_ADAPTER_PATH,
+  FREECAD_EXPORT_FORMATS,
+  discoverFreeCadPython,
+  freeCadBuild,
+  freeCadInspect,
+} from './freecad.js';
+
+
