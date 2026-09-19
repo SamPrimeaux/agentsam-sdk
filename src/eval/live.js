@@ -4,6 +4,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { execSync } from 'node:child_process';
 import { getSessionToolReceipts, clearSessionToolReceipts, summarizeToolReceipts } from '../mcp/telemetry.js';
+import { readMcpServer } from '../mcp/authority.js';
 import { resolveProjectD1Database } from '../cloudflare/index.js';
 
 export const DEFAULT_EVAL_RECORD_ENDPOINT = 'https://mcp.inneranimalmedia.com/api/eval/record';
@@ -14,6 +15,13 @@ export const DEFAULT_USER_ID = 'default';
 
 function clean(value) {
   return value == null ? '' : String(value).trim();
+}
+
+function resolveEvalBearerToken(options = {}) {
+  const explicit = clean(options.token);
+  if (explicit) return explicit;
+  const serverName = clean(options.mcpServer) || 'inneranimalmedia';
+  return clean(readMcpServer(serverName, options)?.auth?.token);
 }
 
 export function homeDirectory(options = {}) {
@@ -335,6 +343,7 @@ export async function finishLiveEvalRun(options = {}) {
 
   if (options.remote) {
     const endpoint = clean(options.evalEndpoint) || clean(process.env.AGENTSAM_EVAL_ENDPOINT) || DEFAULT_EVAL_RECORD_ENDPOINT;
+    const bearerToken = resolveEvalBearerToken(options);
 
     // Primary route: structured HTTP POST (credential-boundary compliant, no local raw D1 shellout)
     try {
@@ -345,7 +354,7 @@ export async function finishLiveEvalRun(options = {}) {
         signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
-          ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
+          ...(bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {}),
         },
         body: JSON.stringify({ evalRunRow, modelObservationRow }),
       });
