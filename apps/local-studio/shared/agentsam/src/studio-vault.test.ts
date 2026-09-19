@@ -14,8 +14,8 @@ import {
   studioServerBindings,
   vaultAad,
   vaultCredentialsForUser,
-  VaultD1Binding,
 } from "./studio-vault.ts";
+import type { VaultD1Binding } from "./studio-vault.ts";
 
 // 32-byte master key material (base64), generated for tests only.
 const MASTER_B64 = Buffer.from("0123456789abcdef0123456789abcdef").toString("base64");
