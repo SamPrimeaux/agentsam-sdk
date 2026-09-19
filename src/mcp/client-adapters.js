@@ -276,6 +276,11 @@ export function getClientConfigPath(clientName, options = {}) {
     return path.join(getMcpDir(options), 'clients', 'chatgpt-connector.json');
   }
 
+  // AgentSam apps/ family and standalone binary adapter
+  if (client === 'agentsam') {
+    return path.join(home, '.agentsam', 'mcp.json');
+  }
+
   // Any other active client in registry: adapter configuration JSON
   if (isClientRegistered(client, options)) {
     return path.join(getMcpDir(options), 'clients', `${client}.json`);
@@ -304,6 +309,12 @@ export function detectInstalledClients(options = {}) {
   const chatgptConfig = getClientConfigPath('chatgpt', options);
   if (fs.existsSync(chatgptConfig)) {
     detected.push('chatgpt');
+  }
+
+  // Check AgentSam family adapter target (~/.agentsam)
+  const agentsamDir = path.join(home, '.agentsam');
+  if (fs.existsSync(agentsamDir)) {
+    detected.push('agentsam');
   }
 
   return detected;

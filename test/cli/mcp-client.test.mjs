@@ -125,12 +125,28 @@ test('MCP client adapters materialize Cursor, Claude, and ChatGPT configurations
   assert.equal(chatgptContent.server_url, 'https://mcp.inneranimalmedia.com/mcp');
   assert.equal(chatgptContent.schema, 'agentsam.mcp.client-adapter.chatgpt.v1');
 
+  // Sync to AgentSam family adapter (~/.agentsam/mcp.json)
+  const agentsamResult = syncServerToClient('agentsam', 'inneranimalmedia', serverConfig, { home });
+  assert.equal(agentsamResult.synced, true);
+  const agentsamConfigPath = getClientConfigPath('agentsam', { home });
+  assert.equal(agentsamConfigPath, path.join(home, '.agentsam', 'mcp.json'));
+  assert.ok(fs.existsSync(agentsamConfigPath));
+  const agentsamContent = JSON.parse(fs.readFileSync(agentsamConfigPath, 'utf8'));
+  assert.equal(agentsamContent.mcpServers.inneranimalmedia.url, 'https://mcp.inneranimalmedia.com/mcp');
+  assert.equal(agentsamContent.mcpServers.inneranimalmedia.headers.Authorization, 'Bearer oauth_cursor_123');
+
   // Remove from Cursor
   const removeResult = removeServerFromClient('cursor', 'inneranimalmedia', { home });
   assert.equal(removeResult.removed, true);
   const postRemove = JSON.parse(fs.readFileSync(cursorConfigPath, 'utf8'));
   assert.equal(postRemove.mcpServers.inneranimalmedia, undefined);
   assert.ok(postRemove.mcpServers.other_server, 'Still preserved other server');
+
+  // Remove from AgentSam family adapter
+  const removeAgentsam = removeServerFromClient('agentsam', 'inneranimalmedia', { home });
+  assert.equal(removeAgentsam.removed, true);
+  const postRemoveAgentsam = JSON.parse(fs.readFileSync(agentsamConfigPath, 'utf8'));
+  assert.equal(postRemoveAgentsam.mcpServers.inneranimalmedia, undefined);
 
   // Remove from ChatGPT
   const removeChatgpt = removeServerFromClient('chatgpt', 'inneranimalmedia', { home });

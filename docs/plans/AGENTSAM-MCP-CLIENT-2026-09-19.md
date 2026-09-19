@@ -83,6 +83,32 @@ adapters written *from* that state, not edited by hand and not treated as
 sources of truth. Same "one authority, N adapters" pattern as everything
 else audited in this repo tonight — don't special-case MCP.
 
+### The role of `~/.agentsam/mcp.json` vs the connection authority
+
+A natural question arises: why not also materialize `~/.agentsam/mcp.json`?
+
+1. **Not for the main CLI itself (avoiding self-indirection):**
+   The main CLI process is the codebase that owns the authority
+   (`~/.agentsam/mcp/<server>.json`). That authoritative file holds rich
+   metadata: protocol, auth flow details, registered clients, health metrics,
+   and custom headers. Having the main CLI write a stripped-down
+   `~/.agentsam/mcp.json` (`{ mcpServers: { ... } }`) and then read that back
+   would be pure self-indirection and introduces drift between two
+   representations of the same state in the exact same process.
+
+2. **As the portable adapter for the `apps/` family and standalone SEAs:**
+   Where `~/.agentsam/mcp.json` is genuinely useful is serving other
+   independent binaries in the AgentSam ecosystem (`apps/cad-creator`,
+   `apps/local-studio`, `agentsam-cms`, or standalone Node-free SEAs). These
+   are separate executables that may act as MCP clients. They must NOT be
+   tightly coupled to the CLI's internal `authority.js` module or its internal
+   file layout. Materializing `~/.agentsam/mcp.json` provides a standard,
+   portable, standards-compliant `{ "mcpServers": { ... } }` config that any
+   sibling app can read directly without module coupling.
+
+Therefore, `~/.agentsam/mcp.json` is treated strictly as an **adapter for
+sibling apps/binaries**, never as the CLI's internal source of truth.
+
 ## Catalog merging — the actual hard part
 
 Once connected, an MCP server's tool list has to sit alongside the native
