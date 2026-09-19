@@ -76,12 +76,17 @@ function CmsPage() {
     );
   }
 
+  const editorPanel =
+    (["pages", "sections", "templates", "imports", "theme"] as const).find(
+      (p) => p === search.panel
+    ) || "sections";
+
   return (
     <div className="size-full overflow-hidden">
       <CmsEditor
         projectSlug={siteSlug}
         initialPageId={search.page || null}
-        initialPanel={(search.panel === "hub" ? "sections" : search.panel) || "sections"}
+        initialPanel={editorPanel}
         siteCatalog={siteCatalog}
         basePath="/cms"
         onSiteChange={(slug) => {

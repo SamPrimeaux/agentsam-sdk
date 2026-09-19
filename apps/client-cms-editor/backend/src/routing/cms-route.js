@@ -33,17 +33,29 @@ export const CMS_PANELS = new Set([
   'preview',
 ]);
 
+/**
+ * @param {any} value
+ * @returns {string | null}
+ */
 function clean(value) {
   const text = value == null ? '' : String(value).trim();
   return text || null;
 }
 
+/**
+ * @param {any} [basePath]
+ * @returns {string}
+ */
 function normalizeBasePath(basePath = DEFAULT_CMS_BASE_PATH) {
   const raw = clean(basePath) || DEFAULT_CMS_BASE_PATH;
   const withSlash = raw.startsWith('/') ? raw : `/${raw}`;
   return withSlash.length > 1 ? withSlash.replace(/\/+$/, '') : withSlash;
 }
 
+/**
+ * @param {any} searchParams
+ * @returns {URLSearchParams}
+ */
 function asSearchParams(searchParams) {
   if (searchParams instanceof URLSearchParams) return searchParams;
   if (typeof searchParams === 'string') {
@@ -52,6 +64,10 @@ function asSearchParams(searchParams) {
   return new URLSearchParams(searchParams || undefined);
 }
 
+/**
+ * @param {URLSearchParams} searchParams
+ * @returns {string | null}
+ */
 function siteQuery(searchParams) {
   return clean(
     searchParams.get('site') ||
@@ -60,6 +76,16 @@ function siteQuery(searchParams) {
   );
 }
 
+/**
+ * @param {{
+ *   view?: string;
+ *   siteSlug?: string | null;
+ *   pageId?: string | null;
+ *   panel?: string;
+ *   legacy?: boolean;
+ *   legacyTarget?: string | null;
+ * }} [params]
+ */
 function routeResult({
   view = 'sites',
   siteSlug = null,
@@ -78,12 +104,22 @@ function routeResult({
   };
 }
 
-export function buildCmsHubPath(siteSlug, { basePath = DEFAULT_CMS_BASE_PATH } = {}) {
+/**
+ * @param {string | null} [siteSlug]
+ * @param {{ basePath?: string }} [options]
+ * @returns {string}
+ */
+export function buildCmsHubPath(siteSlug = null, { basePath = DEFAULT_CMS_BASE_PATH } = {}) {
   const base = normalizeBasePath(basePath);
   const site = clean(siteSlug);
   return site ? `${base}?site=${encodeURIComponent(site)}` : base;
 }
 
+/**
+ * @param {{ panel?: string; pageId?: string | null; siteSlug?: string | null }} [params]
+ * @param {{ basePath?: string }} [options]
+ * @returns {string}
+ */
 export function buildCmsPath(
   { panel = 'pages', pageId = null, siteSlug = null } = {},
   { basePath = DEFAULT_CMS_BASE_PATH } = {},
@@ -105,6 +141,11 @@ export function buildCmsPath(
   return `${base}/pages${siteQs}`;
 }
 
+/**
+ * @param {any} [pathname]
+ * @param {any} [basePath]
+ * @returns {string[]}
+ */
 function cmsRest(pathname, basePath) {
   const normalizedPath = `/${String(pathname || '').split('?')[0].split('#')[0].split('/').filter(Boolean).join('/')}`;
   const base = normalizeBasePath(basePath);
@@ -120,6 +161,11 @@ function cmsRest(pathname, basePath) {
   return cmsIdx >= 0 ? parts.slice(cmsIdx + 1) : [];
 }
 
+/**
+ * @param {any} pathname
+ * @param {any} [searchParamsInput]
+ * @param {{ basePath?: string }} [options]
+ */
 export function parseCmsRoute(
   pathname,
   searchParamsInput,
@@ -221,12 +267,24 @@ export function parseCmsRoute(
   return routeResult({ view: 'sites', siteSlug: siteFromQuery, panel: 'pages' });
 }
 
+/**
+ * @param {any} pathname
+ * @param {any} [searchParams]
+ * @param {any} [options]
+ * @returns {boolean}
+ */
 export function isCmsStudioEditorRoute(pathname, searchParams, options) {
   const parsed = parseCmsRoute(pathname, searchParams, options);
   if (parsed.view === 'sites' || parsed.view === 'hub') return false;
   return ['pages', 'theme-editor', 'online-store', 'media'].includes(parsed.view);
 }
 
+/**
+ * @param {any} pathname
+ * @param {any} [searchParams]
+ * @param {any} [options]
+ * @returns {boolean}
+ */
 export function isCmsEditorFullscreenRoute(pathname, searchParams, options) {
   const parsed = parseCmsRoute(pathname, searchParams, options);
   if (parsed.view === 'hub') return true;

@@ -30,13 +30,25 @@ const CAD_WORKSPACES = [
   { id: "render", label: "Render", icon: SunMedium },
 ];
 
+function defaultCadUrl() {
+  if (typeof window !== "undefined") {
+    const envUrl = (import.meta as any).env?.VITE_CAD_CREATOR_URL;
+    if (envUrl) return envUrl;
+    if (window.location.hostname.includes("inneranimalmedia.com")) {
+      return "https://cad.inneranimalmedia.com?presentation=embedded";
+    }
+  }
+  return "http://localhost:3000?presentation=embedded";
+}
+
 export function AppPreviewStage({
   tab,
-  initialUrl = "http://localhost:3000?presentation=embedded",
+  initialUrl,
   appId = "cad-creator"
 }: AppPreviewStageProps) {
+  const resolvedInitialUrl = initialUrl || defaultCadUrl();
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [url, setUrl] = useState(tab?.url || initialUrl);
+  const [url, setUrl] = useState(tab?.url || resolvedInitialUrl);
   const [activeWorkspace, setActiveWorkspace] = useState("plan");
   const [reloadKey, setReloadKey] = useState(0);
   const [isReady, setIsReady] = useState(false);

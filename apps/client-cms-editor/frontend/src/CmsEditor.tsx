@@ -413,7 +413,14 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
       const sectionId = escapeCmsText(s.id);
       if (isNav) {
         const links = Array.isArray(f.nav_links) ? f.nav_links : [];
-        return `<section data-cms-id="${sectionId}" class="nav"><b>${escapeCmsText(f.brand_name)}</b><nav>${links.map((x: unknown) => `<span>${escapeCmsText(x)}</span>`).join("")}</nav><button>${escapeCmsText(f.nav_cta_label)}</button></section>`;
+        return `<section data-cms-id="${sectionId}" class="nav"><b>${escapeCmsText(f.brand_name || f.title || site?.name || "Agent Sam")}</b><nav>${links.map((x: any) => {
+          if (x && typeof x === "object") {
+            const lbl = escapeCmsText(x.label || x.title || x.text || x.name || "Link");
+            const href = escapeCmsText(x.href || x.url || x.path || "#");
+            return `<a href="${href}">${lbl}</a>`;
+          }
+          return `<span>${escapeCmsText(x)}</span>`;
+        }).join("")}</nav><button>${escapeCmsText(f.nav_cta_label || "Get Started")}</button></section>`;
       }
       if (String(s.type).toLowerCase() === "hero") {
         const rawImg = typeof f.image === "string" ? f.image : (f.image && typeof f.image === "object" ? String((f.image as any).url || (f.image as any).src || "") : img || "");
@@ -427,7 +434,14 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
       }
       if (isFooter) {
         const links = Array.isArray(f.footer_links) ? f.footer_links : [];
-        return `<section data-cms-id="${sectionId}" class="footer"><b>${escapeCmsText(f.brand_name || site?.name || "Site")}</b><p>${escapeCmsText(f.copyright_text || "")}</p><span>${links.map(escapeCmsText).join(" · ")}</span></section>`;
+        return `<section data-cms-id="${sectionId}" class="footer"><b>${escapeCmsText(f.brand_name || site?.name || "Site")}</b><p>${escapeCmsText(f.copyright_text || "")}</p><span>${links.map((x: any) => {
+          if (x && typeof x === "object") {
+            const lbl = escapeCmsText(x.label || x.title || x.text || x.name || "Link");
+            const href = escapeCmsText(x.href || x.url || x.path || "#");
+            return `<a href="${href}">${lbl}</a>`;
+          }
+          return escapeCmsText(x);
+        }).join(" · ")}</span></section>`;
       }
       return `<section data-cms-id="${sectionId}" class="content s${i}" style="background:${safeCmsCssValue(s.color) || 'transparent'}"><small>${escapeCmsText(f.section_label || s.type)}</small><h2>${escapeCmsText(f.title || f.heading || f.quote || s.name)}</h2><p>${escapeCmsText(f.description || f.body || f.author_name || "Distinctive systems, thoughtfully made.")}</p>${f.button_label ? `<button>${escapeCmsText(f.button_label)}</button>` : ""}</section>`;
     }).join("");
@@ -820,7 +834,7 @@ function SectionLabel({title}:any){return <div className="section-label"><span>{
 function Field({label,raw,children}:any){return <label className="field"><span>{label}{raw&&<i title={raw}>?</i>}</span>{children}</label>}
 function ToggleRow({label,copy,value,set}:any){return <div className="toggle-row"><span><b>{label}</b><small>{copy}</small></span><button className={`toggle ${value?"on":""}`} onClick={()=>set(!value)}><span/></button></div>}
 
-function BlockInspector({ block, update, toast }: any) { return <div className="panel-form"><div className="panel-note"><Icon name="info"/><p>Editing canonical <b>{block.type}</b> block data.</p></div>{Object.entries(block.data || {}).map(([key,value]) => { const label=key.replace(/_/g," ").replace(/\b\w/g,x=>x.toUpperCase()); if(typeof value==="boolean")return <Field key={key} label={label}><ToggleRow label={value?"Enabled":"Disabled"} copy="Boolean field" value={value} set={(v:boolean)=>update(key,v)}/></Field>; if(typeof value==="number")return <Field key={key} label={label}><input type="number" value={value} onChange={e=>update(key,Number(e.target.value))}/></Field>; if(typeof value==="object")return <Field key={key} label={label}><textarea className="code-area" rows={6} value={JSON.stringify(value,null,2)} onChange={e=>{try{update(key,JSON.parse(e.target.value))}catch{}}} onBlur={e=>{try{JSON.parse(e.target.value)}catch{toast("This block field contains invalid JSON","error")}}}/></Field>; return <Field key={key} label={label}><input value={String(value??"")} onChange={e=>update(key,e.target.value)}/></Field>; })}{!Object.keys(block.data || {}).length && <EmptyState icon="puzzle" title="Empty block" copy="This block has no editable data fields yet."/>}</div>; }
+function BlockInspector({ block, update, toast }: any) { return <div className="panel-form"><div className="panel-note"><Icon name="info"/><p>Editing canonical <b>{block.type}</b> block data.</p></div>{Object.entries(block.data || {}).map(([key,value]) => { const label=key.replace(/_/g," ").replace(/\b\w/g,x=>x.toUpperCase()); if(typeof value==="boolean")return <Field key={key} label={label}><ToggleRow label={value?"Enabled":"Disabled"} copy="Boolean field" value={value} set={(v:boolean)=>update(key,v)}/></Field>; if(typeof value==="number")return <Field key={key} label={label}><input type="number" value={value} onChange={e=>update(key,Number(e.target.value))}/></Field>; if(Array.isArray(value)) return <ListField key={key} label={label} raw={key} value={value} update={(v: any) => update(key, v)}/>; if(typeof value==="object")return <Field key={key} label={label}><textarea className="code-area" rows={6} value={JSON.stringify(value,null,2)} onChange={e=>{try{update(key,JSON.parse(e.target.value))}catch{}}} onBlur={e=>{try{JSON.parse(e.target.value)}catch{toast("This block field contains invalid JSON","error")}}}/></Field>; return <Field key={key} label={label}><input value={String(value??"")} onChange={e=>update(key,e.target.value)}/></Field>; })}{!Object.keys(block.data || {}).length && <EmptyState icon="puzzle" title="Empty block" copy="This block has no editable data fields yet."/>}</div>; }
 function ContentInspector({ section, schemas, update, toast }: any) {
   const [raw, setRaw] = useState(false);
   const [rich, setRich] = useState<string>("");
@@ -850,7 +864,147 @@ function ContentInspector({ section, schemas, update, toast }: any) {
   })}<button className="disclosure" onClick={() => setRaw((v) => !v)}><Icon name={raw ? "down" : "chevron"}/><span>Raw fields JSON</span></button>{raw && <div className="raw-json"><button onClick={() => { navigator.clipboard?.writeText(JSON.stringify(section.fields, null, 2)); toast("Fields JSON copied"); }}><Icon name="copy"/></button><pre>{JSON.stringify(section.fields, null, 2)}</pre></div>}</div>;
 }
 
-function ListField({label,raw,value,update}:any){const drag=useRef<number|null>(null);return <Field label={label} raw={raw}><div className="list-field">{value.map((v:any,i:number)=><div key={i} draggable onDragStart={()=>drag.current=i} onDragOver={e=>e.preventDefault()} onDrop={()=>{const a=[...value];const [m]=a.splice(drag.current!,1);a.splice(i,0,m);update(a)}}><span>⠿</span><input value={String(v)} onChange={e=>{const a=[...value];a[i]=e.target.value;update(a)}}/><button onClick={()=>update(value.filter((_:any,x:number)=>x!==i))}><Icon name="close"/></button></div>)}<Button icon="plus" onClick={()=>update([...value,""])}>Add item</Button></div></Field>}
+function ListField({ label, raw, value, update }: any) {
+  const drag = useRef<number | null>(null);
+  const arr = Array.isArray(value) ? value : [];
+  const isObjectArray = arr.some((item: any) => item && typeof item === "object" && !Array.isArray(item));
+
+  const isLinkLike = isObjectArray && (
+    String(raw || "").toLowerCase().includes("link") ||
+    String(raw || "").toLowerCase().includes("nav") ||
+    String(label || "").toLowerCase().includes("link") ||
+    String(label || "").toLowerCase().includes("nav") ||
+    arr.some((x: any) => x && typeof x === "object" && ("label" in x || "href" in x || "url" in x || "title" in x))
+  );
+
+  const getNewItem = () => {
+    if (!isObjectArray && !isLinkLike) return "";
+    const existing = arr.find((x: any) => x && typeof x === "object" && !Array.isArray(x));
+    if (existing) {
+      return Object.fromEntries(Object.keys(existing).map((k) => [k, ""]));
+    }
+    return isLinkLike ? { label: "", href: "" } : { title: "", text: "" };
+  };
+
+  return (
+    <Field label={label} raw={raw}>
+      <div className="list-field">
+        {arr.map((v: any, i: number) => {
+          const isItemObject = v && typeof v === "object" && !Array.isArray(v);
+
+          return (
+            <div
+              key={i}
+              draggable
+              onDragStart={() => (drag.current = i)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => {
+                const a = [...arr];
+                const [m] = a.splice(drag.current!, 1);
+                a.splice(i, 0, m);
+                update(a);
+              }}
+              style={{
+                alignItems: isItemObject && Object.keys(v).length > 2 ? "flex-start" : "center",
+              }}
+            >
+              <span title="Drag to reorder" style={{ cursor: "grab", userSelect: "none" }}>
+                ⠿
+              </span>
+
+              {isItemObject ? (
+                ("label" in v || "href" in v || "url" in v || "title" in v || Object.keys(v).length <= 2) ? (
+                  <div
+                    className="two-fields"
+                    style={{ flex: 1, padding: 0, gap: 4, display: "grid", gridTemplateColumns: "1fr 1fr" }}
+                  >
+                    <input
+                      placeholder="Title / Label"
+                      value={String(v.label ?? v.title ?? v.name ?? v.text ?? "")}
+                      onChange={(e) => {
+                        const a = [...arr];
+                        const key = "title" in v ? "title" : "name" in v ? "name" : "text" in v ? "text" : "label";
+                        a[i] = { ...v, [key]: e.target.value };
+                        update(a);
+                      }}
+                    />
+                    <input
+                      placeholder="Link (href / url)"
+                      value={String(v.href ?? v.url ?? v.path ?? "")}
+                      onChange={(e) => {
+                        const a = [...arr];
+                        const key = "url" in v ? "url" : "path" in v ? "path" : "href";
+                        a[i] = { ...v, [key]: e.target.value };
+                        update(a);
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      flex: 1,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 4,
+                      background: "var(--surface-1, rgba(0,0,0,0.03))",
+                      border: "1px solid var(--border-2, #e5e5e5)",
+                      borderRadius: 6,
+                      padding: "6px 8px",
+                    }}
+                  >
+                    {Object.keys(v).map((propKey) => (
+                      <div key={propKey} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        <span
+                          style={{
+                            fontSize: "8px",
+                            fontWeight: 600,
+                            textTransform: "uppercase",
+                            color: "var(--text-3, #888)",
+                          }}
+                        >
+                          {propKey.replace(/_/g, " ")}
+                        </span>
+                        <input
+                          value={String(v[propKey] ?? "")}
+                          onChange={(e) => {
+                            const a = [...arr];
+                            a[i] = { ...v, [propKey]: e.target.value };
+                            update(a);
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : (
+                <input
+                  value={String(v ?? "")}
+                  onChange={(e) => {
+                    const a = [...arr];
+                    a[i] = e.target.value;
+                    update(a);
+                  }}
+                />
+              )}
+
+              <button
+                type="button"
+                title="Remove item"
+                onClick={() => update(arr.filter((_: any, x: number) => x !== i))}
+              >
+                <Icon name="close" />
+              </button>
+            </div>
+          );
+        })}
+
+        <Button icon="plus" onClick={() => update([...arr, getNewItem()])}>
+          Add {isLinkLike ? "link" : "item"}
+        </Button>
+      </div>
+    </Field>
+  );
+}
 
 function StyleInspector({ section, update }: any) { const css=section.css||{}; const [linked,setLinked]=useState(true); const [bg,setBg]=useState("Color"); const [display,setDisplay]=useState("block"); return <div className="panel-form"><SectionLabel title="Spacing"/><div className="box-control"><div className="box-grid">{["Top","Right","Bottom","Left"].map((x,i)=><Field key={x} label={x}><input type="number" value={parseInt(css[`padding${x}`]||"24")} onChange={e=>{const v=e.target.value+"px";if(linked)["Top","Right","Bottom","Left"].forEach(y=>update(`padding${y}`,v));else update(`padding${x}`,v)}}/></Field>)}</div><button className={linked?"active":""} onClick={()=>setLinked(v=>!v)}><Icon name="link"/></button></div><SectionLabel title="Background"/><Field label="Type"><select value={bg} onChange={e=>setBg(e.target.value)}>{["None","Color","Gradient","Image","Video"].map(x=><option key={x}>{x}</option>)}</select></Field>{bg==="Color"&&<Field label="Background color"><div className="color-input"><input type="color" value={css.backgroundColor||section.color} onChange={e=>update("backgroundColor",e.target.value)}/><input value={css.backgroundColor||section.color} onChange={e=>update("backgroundColor",e.target.value)}/></div></Field>}{bg==="Gradient"&&<><div className="gradient-preview"/><div className="two-fields"><input type="color" defaultValue="#6358ff"/><input type="color" defaultValue="#cfef5b"/></div><Field label="Angle"><input type="range" min="0" max="360" defaultValue="135"/></Field></>}<SectionLabel title="Typography"/><Field label="Font family"><select onChange={e=>update("fontFamily",e.target.value)}>{["Inter","Manrope","DM Sans","Space Grotesk","Playfair Display","JetBrains Mono"].map(x=><option key={x}>{x}</option>)}</select></Field><div className="two-fields"><Field label="Size"><input type="number" defaultValue="16" onChange={e=>update("fontSize",e.target.value+"px")}/></Field><Field label="Weight"><select onChange={e=>update("fontWeight",e.target.value)}>{[400,500,600,700,800].map(x=><option key={x}>{x}</option>)}</select></Field></div><Field label="Alignment"><div className="button-group">{["left","center","right","justify"].map(x=><button key={x} onClick={()=>update("textAlign",x)}>{x[0].toUpperCase()}</button>)}</div></Field><SectionLabel title="Border & shadow"/><div className="two-fields"><Field label="Width"><input type="number" defaultValue="0" onChange={e=>update("borderWidth",e.target.value+"px")}/></Field><Field label="Style"><select onChange={e=>update("borderStyle",e.target.value)}>{["none","solid","dashed","dotted"].map(x=><option key={x}>{x}</option>)}</select></Field></div><Field label="Radius"><input type="range" min="0" max="64" defaultValue="0" onChange={e=>update("borderRadius",e.target.value+"px")}/></Field><div className="shadow-builder"><b>Shadow 1</b><div className="four-fields">{["X","Y","Blur","Spread"].map((x,i)=><Field key={x} label={x}><input type="number" defaultValue={[0,12,32,0][i]}/></Field>)}</div><ToggleRow label="Inset" copy="Draw inside the element" value={false} set={()=>{}}/></div><SectionLabel title="Layout"/><Field label="Display"><select value={display} onChange={e=>{setDisplay(e.target.value);update("display",e.target.value)}}>{["block","flex","grid"].map(x=><option key={x}>{x}</option>)}</select></Field>{display==="flex"&&<><Field label="Direction"><div className="button-group">{["row","column"].map(x=><button key={x} onClick={()=>update("flexDirection",x)}>{x}</button>)}</div></Field><Field label="Align"><select onChange={e=>update("alignItems",e.target.value)}>{["stretch","start","center","end"].map(x=><option key={x}>{x}</option>)}</select></Field></>}{display==="grid"&&<div className="two-fields"><Field label="Columns"><input type="number" defaultValue="3"/></Field><Field label="Gap"><input type="number" defaultValue="24"/></Field></div>}<SectionLabel title="Effects & motion"/><Field label="Opacity"><div className="range-input"><input type="range" min="0" max="100" defaultValue="100" onChange={e=>update("opacity",Number(e.target.value)/100)}/><output>100%</output></div></Field><Field label="Transition"><select>{["None","Fade in","Slide up","Slide left","Zoom in"].map(x=><option key={x}>{x}</option>)}</select></Field></div>; }
 

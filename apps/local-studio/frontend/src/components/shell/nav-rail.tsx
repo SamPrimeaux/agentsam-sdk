@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Box, FileCode, FolderGit2, Globe, LayoutTemplate, MessageSquare, SquareTerminal, Upload } from "lucide-react";
+import { Box, FileCode, FolderGit2, Globe, Layers, LayoutTemplate, MessageSquare, SquareTerminal, Upload } from "lucide-react";
 import { StudioMark } from "@/components/mark";
 import { cn } from "@/lib/utils";
 import { useWorkStore } from "@/lib/work/store";
@@ -7,6 +7,7 @@ import { useWorkStore } from "@/lib/work/store";
 const ITEMS = [
   { to: "/agentsam", label: "Studio", icon: MessageSquare, match: (p: string) => p === "/agentsam" || p.startsWith("/trails") },
   { to: "/cms", label: "CMS", icon: LayoutTemplate, match: (p: string) => p.startsWith("/cms") },
+  { to: "/cad", label: "CAD", icon: Layers, match: (p: string) => p.startsWith("/cad") },
   { to: "/projects", label: "Projects", icon: FolderGit2, match: (p: string) => p.startsWith("/projects") },
   { to: "/artifacts", label: "Artifacts", icon: Box, match: (p: string) => p.startsWith("/artifacts") },
   { to: "/files", label: "Files", icon: FileCode, match: (p: string) => p.startsWith("/files") },

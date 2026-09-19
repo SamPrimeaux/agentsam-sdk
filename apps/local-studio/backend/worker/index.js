@@ -588,17 +588,36 @@ export default {
       return sessionUserId;
     }
 
-    if (!isVault && !isLlmInventory && url.pathname !== "/health") {
-      // Nitro-bound Studio chat runs per-user vault BYOK downstream: bind the
-      // client-asserted user to the validated session when one exists.
-      if (url.pathname === "/api/chat" && request.method === "POST") {
+    if (!isVault && url.pathname !== "/health") {
+      // Nitro-bound Studio chat and model inventory run per-user vault BYOK downstream:
+      // bind the client-asserted user to the validated session when one exists.
+      if (
+        (url.pathname === "/api/chat" && request.method === "POST") ||
+        (url.pathname === "/api/llm/inventory" && request.method === "GET")
+      ) {
         const sid = await sessionUser();
         if (sid && (request.headers.get("x-user-id") || "").trim() !== sid) {
           const bound = bindSessionUser(request, sid);
           if (bound) request = bound;
         }
       }
-      return nitroWorker.fetch(request, env, context);
+
+      if (isLlmInventory) {
+        // Pass through to Nitro/TanStack /api/llm/inventory route for live model discovery.
+        // Fall back to worker-level credential provenance if Nitro is not mounted or returns 404.
+        if (typeof nitroWorker?.fetch === "function") {
+          try {
+            const nitroRes = await nitroWorker.fetch(request, env, context);
+            if (nitroRes && nitroRes.status !== 404) {
+              return nitroRes;
+            }
+          } catch (err) {
+            console.error("nitro_llm_inventory_passthrough_error", String(err));
+          }
+        }
+      } else {
+        return nitroWorker.fetch(request, env, context);
+      }
     }
 
     const headers = cors(request);
