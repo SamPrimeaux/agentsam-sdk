@@ -36,6 +36,6 @@ pub fn set_token(app_id: String, account: String, token: String) -> Result<(), K
 #[tauri::command]
 pub fn delete_token(app_id: String, account: String) -> Result<(), KeychainError> {
     entry(&app_id, &account)?
-        .delete_password()
+        .delete_credential()
         .map_err(|e| KeychainError { message: e.to_string() })
 }
