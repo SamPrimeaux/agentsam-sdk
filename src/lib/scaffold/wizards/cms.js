@@ -22,6 +22,7 @@ import {
 import pc from 'picocolors';
 import { writeFileTree } from '../writer.js';
 import { cmsTemplates } from '../templates/cms/index.js';
+import { resolveCloudflareAccountId } from '../resolve-cloudflare-account.js';
 
 export async function runCmsWizard() {
   note('A Cloudflare Worker + D1 + R2 CMS site with reusable page templates.', 'CMS Site');
@@ -111,14 +112,7 @@ export async function runCmsWizard() {
   }
 
   // ── Step 7: Cloudflare account details ────────────────────────────────────
-  const cfAccountId = await text({
-    message: 'Cloudflare account ID? (from dash.cloudflare.com → right sidebar)',
-    placeholder: 'abc123...',
-    validate(val) {
-      if (!val || val.trim().length === 0) return 'Required for wrangler.toml.';
-    },
-  });
-  if (isCancel(cfAccountId)) { cancel('Cancelled.'); process.exit(0); }
+  const cfAccountId = await resolveCloudflareAccountId({ text, select, isCancel, cancel, note, pc });
 
   // ── Step 8: Confirm before writing ───────────────────────────────────────
   const summary = [

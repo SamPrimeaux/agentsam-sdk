@@ -44,6 +44,22 @@ a tunnel. Use `agentsam add <feature>` to record an explicit feature selection a
 
 Without a global install, use `npx @inneranimalmedia/agentsam-sdk create my-agent --preset fullstack`.
 
+## MCP setup
+
+Cloudflare's API MCP server uses `https://mcp.cloudflare.com/mcp`. Add that URL
+to the agent client you use, then complete its Cloudflare OAuth flow. For Codex:
+
+```sh
+codex mcp add cloudflare-api --url https://mcp.cloudflare.com/mcp
+codex mcp login cloudflare-api
+```
+
+`agentsam mcp add cloudflare-api --url https://mcp.cloudflare.com/mcp` is not
+currently an AgentSam CLI command. The repo's `.agentsam/config.json` is a
+portable project manifest, not an MCP client configuration; it cannot register
+this server for every agent tool on clone. Keep OAuth tokens in each client's
+credential store rather than committing them to the repository.
+
 ## Index an existing repository
 
 ```sh

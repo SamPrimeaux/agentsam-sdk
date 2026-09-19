@@ -16,6 +16,7 @@ import {
 import pc from 'picocolors';
 import { writeFileTree } from '../writer.js';
 import { workerApiTemplates } from '../templates/worker-api/index.js';
+import { resolveCloudflareAccountId } from '../resolve-cloudflare-account.js';
 
 export async function runWorkerApiWizard() {
   note('A typed Cloudflare Worker with route handlers, D1 binding, and CORS ready.', 'Worker API');
@@ -52,14 +53,7 @@ export async function runWorkerApiWizard() {
   });
   if (isCancel(dbKind)) { cancel('Cancelled.'); process.exit(0); }
 
-  const cfAccountId = await text({
-    message: 'Cloudflare account ID?',
-    placeholder: 'abc123...',
-    validate(val) {
-      if (!val || val.trim().length === 0) return 'Required.';
-    },
-  });
-  if (isCancel(cfAccountId)) { cancel('Cancelled.'); process.exit(0); }
+  const cfAccountId = await resolveCloudflareAccountId({ text, select, isCancel, cancel, note, pc });
 
   const confirmed = await confirm({ message: `Write files to ./${projectName.trim()}/?` });
   if (isCancel(confirmed) || !confirmed) { cancel('Cancelled.'); process.exit(0); }

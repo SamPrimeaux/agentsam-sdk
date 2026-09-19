@@ -30,6 +30,10 @@ test('agentsam help is concise, topic-aware, and deterministic outside a TTY', (
   assert.match(all.stdout, /Build \/ inspect/);
   assert.match(all.stdout, /Create \/ extend/);
 
+  const allAlias = run('help', 'all');
+  assert.equal(allAlias.status, 0, allAlias.stderr);
+  assert.equal(allAlias.stdout, all.stdout);
+
   const flag = run('--help');
   assert.equal(flag.status, 0, flag.stderr);
   assert.match(flag.stdout, /agentsam help <topic>/);
