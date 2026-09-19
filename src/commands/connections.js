@@ -46,6 +46,60 @@ function printSetup(env = process.env) {
   return 0;
 }
 
+function bindingKey(row = {}) {
+  return String(row.name || '').trim();
+}
+
+function renderWorkerBindings(status) {
+  const cloudflare = status.cloudflare || {};
+  const bindings = cloudflare.bindings;
+  if (!bindings) return ['  Worker bindings   not verified'];
+
+  const declared = Array.isArray(bindings.declared) ? bindings.declared : [];
+  const live = Array.isArray(bindings.live) ? bindings.live : [];
+  const missing = Array.isArray(bindings.missing) ? bindings.missing : [];
+  const mismatches = Array.isArray(bindings.type_mismatches) ? bindings.type_mismatches : [];
+
+  const liveByName = new Map(live.map((row) => [bindingKey(row), row]));
+  const missingNames = new Set(missing.map(bindingKey));
+  const mismatchByName = new Map(mismatches.map((row) => [bindingKey(row), row]));
+
+  const summary = bindings.match
+    ? `${declared.length} declared · ${live.length} live · contract satisfied`
+    : `${declared.length} declared · ${live.length} live · ${missing.length} missing · ${mismatches.length} type mismatch`;
+
+  const lines = [`  Worker bindings   ${summary}`];
+  if (cloudflare.config) lines.push(`    declared from   ${cloudflare.config}`);
+  if (cloudflare.version?.id || cloudflare.version?.number != null) {
+    const versionLabel = cloudflare.version?.number != null ? `v${cloudflare.version.number}` : 'version';
+    lines.push(`    live from       ${versionLabel}${cloudflare.version?.id ? ` · ${cloudflare.version.id}` : ''}`);
+  }
+
+  const seen = new Set();
+  for (const row of declared) {
+    const name = bindingKey(row);
+    if (!name) continue;
+    seen.add(name);
+    const liveRow = liveByName.get(name);
+    const mismatch = mismatchByName.get(name);
+    if (missingNames.has(name) || !liveRow) {
+      lines.push(`    ✗ ${name} · declared ${row.type || 'unknown'} · MISSING LIVE`);
+    } else if (mismatch) {
+      lines.push(`    ! ${name} · declared ${mismatch.declared || row.type || 'unknown'} · live ${mismatch.live || liveRow.type || 'unknown'}`);
+    } else {
+      lines.push(`    ✓ ${name} · ${liveRow.type || row.type || 'unknown'} · declared + live`);
+    }
+  }
+
+  for (const row of live) {
+    const name = bindingKey(row);
+    if (!name || seen.has(name)) continue;
+    lines.push(`    • ${name} · ${row.type || 'unknown'} · live only`);
+  }
+
+  return lines;
+}
+
 function renderConnections(status) {
   const lines = ['', '  Agent Sam · connections', ''];
   lines.push(`  IAM account       ${status.identity?.authenticated ? 'connected' : 'not connected'}`);
@@ -56,9 +110,9 @@ function renderConnections(status) {
     lines.push(`    ${row.default ? '★' : '•'} ${row.name || row.id} · ${row.kind || 'terminal'} · ${row.active ? 'active' : 'inactive'} · ${row.health}`);
   }
   lines.push(`  Worker            ${status.cloudflare?.connected ? `${status.cloudflare.worker_name} · live` : status.cloudflare?.configured ? `${status.cloudflare.worker_name} · not verified` : 'not configured'}`);
-  lines.push(`  Worker bindings   ${status.cloudflare?.bindings?.match ? 'declared contract satisfied' : status.cloudflare?.bindings ? `${status.cloudflare.bindings.missing.length} missing` : 'not verified'}`);
+  lines.push(...renderWorkerBindings(status));
   lines.push('');
-  lines.push('  Secret values and terminal endpoint credentials are never printed.');
+  lines.push('  Binding names and types are shown; secret values and terminal endpoint credentials are never printed.');
   lines.push('');
   return lines.join('\n');
 }
