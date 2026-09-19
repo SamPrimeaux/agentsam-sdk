@@ -6,10 +6,10 @@ import { execSync } from 'node:child_process';
 import { getSessionToolReceipts, clearSessionToolReceipts, summarizeToolReceipts } from '../mcp/telemetry.js';
 
 export const DEFAULT_EVAL_RECORD_ENDPOINT = 'https://mcp.inneranimalmedia.com/api/eval/record';
-export const DEFAULT_D1_DATABASE = 'inneranimalmedia-business';
-export const DEFAULT_TENANT_ID = 'iam';
-export const DEFAULT_WORKSPACE_ID = 'agentsam-sdk';
-export const DEFAULT_USER_ID = 'samprimeaux';
+export const DEFAULT_D1_DATABASE = '';
+export const DEFAULT_TENANT_ID = 'default';
+export const DEFAULT_WORKSPACE_ID = 'default';
+export const DEFAULT_USER_ID = 'default';
 
 function clean(value) {
   return value == null ? '' : String(value).trim();
@@ -57,8 +57,8 @@ export function startLiveEvalRun(config = {}, options = {}) {
   const reasoning = clean(config.reasoning) || 'high';
 
   const tenantId = clean(config.tenant || config.tenantId) || clean(options.tenantId) || clean(process.env.AGENTSAM_TENANT_ID) || DEFAULT_TENANT_ID;
-  const workspaceId = clean(config.workspace || config.workspaceId) || clean(options.workspaceId) || clean(process.env.AGENTSAM_WORKSPACE_ID) || DEFAULT_WORKSPACE_ID;
-  const userId = clean(config.user || config.userId) || clean(options.userId) || clean(process.env.AGENTSAM_USER_ID) || clean(process.env.USER) || DEFAULT_USER_ID;
+  const workspaceId = clean(config.workspace || config.workspaceId) || clean(options.workspaceId) || clean(process.env.AGENTSAM_WORKSPACE_ID) || (options.cwd ? path.basename(options.cwd) : path.basename(process.cwd())) || DEFAULT_WORKSPACE_ID;
+  const userId = clean(config.user || config.userId) || clean(options.userId) || clean(process.env.AGENTSAM_USER_ID) || clean(process.env.USER) || clean(os.userInfo?.()?.username) || DEFAULT_USER_ID;
   const database = clean(config.database || config.db) || clean(options.database || options.db) || clean(process.env.AGENTSAM_D1_DATABASE) || DEFAULT_D1_DATABASE;
 
   const baseCommit = safeGit('git rev-parse HEAD', options.cwd);
