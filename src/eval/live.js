@@ -17,6 +17,13 @@ function clean(value) {
   return value == null ? '' : String(value).trim();
 }
 
+function resolveEvalBearerToken(options = {}) {
+  const explicit = clean(options.token);
+  if (explicit) return explicit;
+  const serverName = clean(options.mcpServer) || 'inneranimalmedia';
+  return clean(readMcpServer(serverName, options)?.auth?.token);
+}
+
 export function homeDirectory(options = {}) {
   return path.resolve(clean(options.home) || clean(options.env?.HOME) || clean(options.env?.USERPROFILE) || os.homedir());
 }
