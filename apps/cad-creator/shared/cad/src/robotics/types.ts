@@ -147,6 +147,34 @@ export interface SimulationTelemetry {
 }
 
 /**
+ * Historical telemetry sample for sparkline charts and trend analysis
+ */
+export interface TelemetryHistoryPoint {
+  timestamp: number;
+  fps: number;
+  stepRateHz: number;
+  collisionCount: number;
+  robotContacts: number;
+  environmentContacts: number;
+  gripperForce: number;
+  maxJointVelocity: number;
+  endEffectorVel: number;
+}
+
+/**
+ * Summary trend metrics derived from historical telemetry stream
+ */
+export interface SimulationTrendMetrics {
+  avgFps: number;
+  minFps: number;
+  maxFps: number;
+  peakForce: number;
+  peakVelocity: number;
+  totalCollisions: number;
+  activeContacts: number;
+}
+
+/**
  * Alias for canonical simulation telemetry data model
  */
 export type SimulationTelemetryData = SimulationTelemetry;
