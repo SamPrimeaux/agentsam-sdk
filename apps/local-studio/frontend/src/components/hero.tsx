@@ -1,4 +1,3 @@
-import { Link } from "@tanstack/react-router";
 
 export function Hero() {
   return (
@@ -19,9 +18,9 @@ export function Hero() {
           <a href="#work" className="inline-flex h-11 items-center rounded-md bg-bone px-5 text-sm font-medium text-bg transition-colors duration-150 hover:bg-stone">
             View our work
           </a>
-          <Link to="/agentsam" className="inline-flex h-11 items-center rounded-md px-5 text-sm text-stone transition-colors hover:text-bone">
+          <a href="/auth/login?next=/agentsam" className="inline-flex h-11 items-center rounded-md border border-clay/40 px-5 text-sm font-medium text-bone transition-colors hover:border-bone hover:bg-bone/10">
             Open studio
-          </Link>
+          </a>
         </div>
       </div>
     </section>

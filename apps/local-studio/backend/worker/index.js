@@ -1,6 +1,27 @@
 import nitroWorker from "../../.output/server/index.mjs";
 import { handleCloudflareConnectionRequest, isCloudflareConnectionPath } from "../../../../packages/connectors/cloudflare/src/routes.js";
 import { resolveCloudflareOAuthClient } from "../../../../packages/connectors/cloudflare/src/index.js";
+import {
+  handleIdentityWorkerRequest,
+  createIdentityService,
+  createCloudflareD1Adapter,
+} from "../../../../packages/identity/src/server/worker-router.js";
+
+// Paths owned by the identity package (auth pages, auth API, OAuth, company branding).
+const IDENTITY_EXACT_PATHS = new Set(["/auth/login", "/auth/signup", "/auth/reset", "/api/company"]);
+function isIdentityPath(pathname) {
+  return (
+    IDENTITY_EXACT_PATHS.has(pathname) ||
+    pathname.startsWith("/api/auth/") ||
+    pathname.startsWith("/api/oauth/")
+  );
+}
+
+// Studio app routes that require a signed-in session before the SPA shell loads.
+const PROTECTED_APP_PATHS = ["/agentsam", "/projects", "/artifacts", "/files", "/browse", "/cli", "/ship"];
+function isProtectedAppPath(pathname) {
+  return PROTECTED_APP_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
 
 /**
  * AgentSam Workmode — vault Worker
@@ -444,6 +465,26 @@ export default {
     // to the generated Nitro application handler.
     if (isCfConnection) {
       return handleCloudflareConnectionRequest(request, env);
+    }
+
+    // Identity package owns auth pages, auth API, OAuth, and company branding.
+    if (isIdentityPath(url.pathname)) {
+      return handleIdentityWorkerRequest(request, env);
+    }
+
+    // Gate authenticated Studio app routes on a real session before the SPA shell loads.
+    if (request.method === "GET" && isProtectedAppPath(url.pathname)) {
+      try {
+        const adapter = createCloudflareD1Adapter(env.DB);
+        const identity = createIdentityService({ adapter });
+        const ctx = await identity.sessionFromRequest(request);
+        if (!ctx) {
+          const next = encodeURIComponent(url.pathname + url.search);
+          return Response.redirect(`${url.origin}/auth/login?next=${next}`, 302);
+        }
+      } catch (err) {
+        console.error("session_gate_error", String(err));
+      }
     }
 
     if (!isVault && !isLlmInventory && url.pathname !== "/health") {
