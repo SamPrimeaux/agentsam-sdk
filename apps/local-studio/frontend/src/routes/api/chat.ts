@@ -4,7 +4,15 @@ import {
   assertModelAvailable,
   buildStudioInventory,
   platformCredentials,
+  WORKERS_AI_CURATED,
 } from "@inneranimalmedia/agentsam-local-shared/studio-inventory";
+import {
+  mergeStudioCredentials,
+  resolveStudioUserId,
+  shouldUseWorkersAI,
+  studioServerBindings,
+  vaultCredentialsForUser,
+} from "@inneranimalmedia/agentsam-local-shared/studio-vault";
 
 const Body = z.object({
   messages: z
@@ -46,16 +54,7 @@ Assume a short summary of your reply will be handed back to the lead chat.`;
 
 const BUILD_EXTRA = `You are in vibecode mode. Write complete, runnable files. Prefer small static sites, wrangler.toml, and GitHub Actions that deploy to Cloudflare Pages.`;
 
-function platformCredential(provider: string, env: NodeJS.ProcessEnv) {
-  const id = provider.toLowerCase();
-  if (id === "openai") return env.OPENAI_API_KEY || "";
-  if (id === "anthropic") return env.ANTHROPIC_API_KEY || "";
-  if (id === "gemini") return env.GEMINI_API_KEY || "";
-  if (id === "grok" || id === "xai") return env.XAI_API_KEY || "";
-  if (id === "cursor") return env.CURSOR_API_KEY || "";
-  if (id === "cloudflare") return env.CLOUDFLARE_API_TOKEN || "";
-  return "";
-}
+type ChatMessage = { role: string; content: string };
 
 function upstreamFor(provider: string, modelId: string, apiKey: string, body: unknown) {
   const id = provider.toLowerCase();
@@ -124,10 +123,67 @@ function upstreamFor(provider: string, modelId: string, apiKey: string, body: un
   return null;
 }
 
+/**
+ * Run a Cloudflare chat turn through the Workers AI binding (request/response,
+ * not SSE). The binding object is opaque on purpose — only `.run()` is used.
+ */
+async function runWorkersAIText(
+  binding: unknown,
+  modelId: string,
+  messages: ChatMessage[],
+): Promise<string> {
+  const run = (binding as { run?: unknown }).run;
+  if (typeof run !== "function") throw new Error("workers_ai_binding_unavailable");
+  const out = await (run as (model: string, input: unknown) => Promise<unknown>).call(
+    binding,
+    modelId,
+    { messages },
+  );
+  if (typeof out === "string" && out) return out;
+  const text = (out as { response?: unknown } | null)?.response;
+  if (typeof text === "string" && text) return text;
+  throw new Error("workers_ai_unexpected_response");
+}
+
+/**
+ * Token fallback for Cloudflare when no Workers AI binding is exposed
+ * (local dev): plain REST `ai/run`, returned as a single text payload.
+ */
+async function runCloudflareRestText(
+  apiKey: string,
+  accountId: string,
+  modelId: string,
+  messages: ChatMessage[],
+): Promise<string> {
+  const res = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${encodeURIComponent(modelId)}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ messages }),
+    },
+  );
+  const body = (await res.json().catch(() => null)) as {
+    success?: boolean;
+    result?: { response?: unknown };
+    errors?: Array<{ message?: string }>;
+  } | null;
+  if (!res.ok || body?.success === false) {
+    throw new Error(body?.errors?.[0]?.message || `cloudflare_rest_${res.status}`);
+  }
+  const text = body?.result?.response;
+  if (typeof text !== "string" || !text) throw new Error("cloudflare_rest_empty_response");
+  return text;
+}
+
 export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
-      POST: async ({ request }) => {
+      POST: async (ctx) => {
+        const request = (ctx as { request: Request }).request;
         let parsed: z.infer<typeof Body>;
         try {
           parsed = Body.parse(await request.json());
@@ -136,12 +192,25 @@ export const Route = createFileRoute("/api/chat")({
         }
 
         const provider = parsed.provider.trim().toLowerCase();
+        const providerId = provider === "xai" ? "grok" : provider;
         const modelId = parsed.model_id.trim();
-        const apiKey = platformCredential(provider, process.env);
-        if (!apiKey) {
+
+        // Session -> user_id -> vault BYOK -> platform fallback. In production
+        // the Worker edge binds X-User-Id to the validated session before
+        // Nitro runs; vault rows are unwrapped server-side (AES-256-GCM, same
+        // contract as backend/worker/index.js) and never leave the server.
+        const bindings = studioServerBindings(ctx);
+        const userId = resolveStudioUserId(request);
+        const vault = userId ? await vaultCredentialsForUser(bindings, userId) : new Map();
+        const credentials = mergeStudioCredentials(vault, platformCredentials(bindings.env));
+
+        const viaWorkersAI = shouldUseWorkersAI(providerId, bindings.workersAI);
+        const credential = viaWorkersAI ? null : credentials.get(providerId);
+        const apiKey = credential?.value || "";
+        if (!viaWorkersAI && !apiKey) {
           return Response.json(
             {
-              error: `provider_credential_unavailable:${provider}`,
+              error: `provider_credential_unavailable:${providerId}`,
               detail: "No Studio credential for the selected provider. Connect that provider — do not expect another key to substitute.",
             },
             { status: 503 },
@@ -149,8 +218,16 @@ export const Route = createFileRoute("/api/chat")({
         }
 
         try {
-          const inventory = await buildStudioInventory(platformCredentials(process.env));
-          assertModelAvailable(inventory, provider === "xai" ? "grok" : provider, modelId);
+          if (viaWorkersAI) {
+            // Binding-only lane has no token for live discovery: validate
+            // against the curated Workers AI allowlist instead.
+            if (!(WORKERS_AI_CURATED as readonly string[]).includes(modelId)) {
+              throw new Error(`selected_model_not_available_for_credential:${providerId}:${modelId}`);
+            }
+          } else {
+            const inventory = await buildStudioInventory(credentials);
+            assertModelAvailable(inventory, providerId, modelId);
+          }
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           return Response.json({ error: message }, { status: 409 });
@@ -196,10 +273,41 @@ export const Route = createFileRoute("/api/chat")({
           messages,
         };
 
-        const upstream = await upstreamFor(provider, modelId, apiKey, chatBody);
+        const plainHeaders = {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          "X-Content-Type-Options": "nosniff",
+          "X-AgentSam-Provider": providerId,
+          "X-AgentSam-Model": modelId,
+        };
+
+        // Cloudflare lane: Workers AI binding first, token REST fallback.
+        // Both are request/response (no SSE), so the turn returns as one text
+        // payload on the same plain-text contract as the streamed lanes.
+        if (providerId === "cloudflare") {
+          try {
+            const accountId =
+              credential?.account_id ||
+              bindings.env.CLOUDFLARE_ACCOUNT_ID ||
+              bindings.env.ACCOUNT_ID ||
+              "";
+            const text = viaWorkersAI
+              ? await runWorkersAIText(bindings.workersAI, modelId, messages)
+              : await runCloudflareRestText(apiKey, accountId, modelId, messages);
+            return new Response(text, { headers: plainHeaders });
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return Response.json(
+              { error: `Studio model error cloudflare: ${message.slice(0, 180)}` },
+              { status: 502 },
+            );
+          }
+        }
+
+        const upstream = await upstreamFor(providerId, modelId, apiKey, chatBody);
         if (!upstream) {
           return Response.json(
-            { error: `unsupported_studio_provider:${provider}` },
+            { error: `unsupported_studio_provider:${providerId}` },
             { status: 400 },
           );
         }
@@ -261,11 +369,7 @@ export const Route = createFileRoute("/api/chat")({
 
         return new Response(stream, {
           headers: {
-            "Content-Type": "text/plain; charset=utf-8",
-            "Cache-Control": "no-cache, no-transform",
-            "X-Content-Type-Options": "nosniff",
-            "X-AgentSam-Provider": provider,
-            "X-AgentSam-Model": modelId,
+            ...plainHeaders,
           },
         });
       },

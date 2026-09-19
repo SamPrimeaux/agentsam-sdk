@@ -6,10 +6,12 @@
   "exports": {
     ".": "./src/index.ts",
     "./work-types": "./src/work-types.ts",
-    "./studio-inventory": "./src/studio-inventory.ts"
+    "./studio-inventory": "./src/studio-inventory.ts",
+    "./studio-vault": "./src/studio-vault.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --experimental-strip-types --test src/studio-vault.test.ts"
   },
   "devDependencies": {
     "typescript": "^5.7.0"
