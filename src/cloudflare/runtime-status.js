@@ -38,16 +38,115 @@ function parseJsonc(source) {
 
 function declaredBindings(config = {}) {
   const rows = [];
-  const add = (name, type) => { if (clean(name)) rows.push({ name: clean(name), type }); };
-  for (const name of Object.keys(config.vars || {})) add(name, 'plain_text');
-  for (const row of config.d1_databases || []) add(row?.binding, 'd1');
-  for (const row of config.hyperdrive || []) add(row?.binding, 'hyperdrive');
-  for (const row of config.r2_buckets || []) add(row?.binding, 'r2_bucket');
-  for (const row of config.services || []) add(row?.binding, 'service');
-  for (const row of config.vpc_services || []) add(row?.binding, 'vpc_service');
-  add(config.ai?.binding, 'ai');
-  add(config.assets?.binding, 'assets');
+  const add = (row = {}) => {
+    const name = clean(row.name);
+    if (name) rows.push({ ...row, name });
+  };
+
+  for (const [name, value] of Object.entries(config.vars || {})) {
+    add({
+      name,
+      type: typeof value === 'object' && value !== null ? 'json' : 'plain_text',
+      value: typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value),
+      source: 'wrangler_config',
+    });
+  }
+
+  for (const name of config.secrets?.required || []) {
+    add({ name, type: 'secret_text', encrypted: true, source: 'wrangler_required_secret' });
+  }
+
+  for (const row of config.d1_databases || []) add({
+    name: row?.binding,
+    type: 'd1',
+    database_name: clean(row?.database_name) || null,
+    database_id: clean(row?.database_id) || null,
+    source: 'wrangler_config',
+  });
+  for (const row of config.hyperdrive || []) add({
+    name: row?.binding,
+    type: 'hyperdrive',
+    id: clean(row?.id) || null,
+    source: 'wrangler_config',
+  });
+  for (const row of config.r2_buckets || []) add({
+    name: row?.binding,
+    type: 'r2_bucket',
+    bucket_name: clean(row?.bucket_name) || null,
+    source: 'wrangler_config',
+  });
+  for (const row of config.services || []) add({
+    name: row?.binding,
+    type: 'service',
+    service: clean(row?.service) || null,
+    environment: clean(row?.environment) || null,
+    entrypoint: clean(row?.entrypoint) || null,
+    source: 'wrangler_config',
+  });
+  for (const row of config.vpc_services || []) add({
+    name: row?.binding,
+    type: 'vpc_service',
+    service_id: clean(row?.service_id) || null,
+    source: 'wrangler_config',
+  });
+  if (config.ai?.binding) add({ name: config.ai.binding, type: 'ai', source: 'wrangler_config' });
+  if (config.assets?.binding) add({
+    name: config.assets.binding,
+    type: 'assets',
+    directory: clean(config.assets?.directory) || null,
+    source: 'wrangler_config',
+  });
+
   return rows.sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function safeLiveBinding(row = {}) {
+  const name = clean(row?.name);
+  const type = clean(row?.type);
+  if (!name) return null;
+
+  const output = { name, type: type || 'unknown', source: 'cloudflare_live_version' };
+  if (type === 'secret_text' || type === 'secret_key') {
+    output.encrypted = true;
+    return output;
+  }
+
+  if (type === 'plain_text') {
+    const value = row?.text ?? row?.value;
+    if (value != null) output.value = String(value);
+  } else if (type === 'json') {
+    const value = row?.json ?? row?.value;
+    if (value != null) output.value = typeof value === 'string' ? value : JSON.stringify(value);
+  }
+
+  for (const key of [
+    'id',
+    'database_id',
+    'database_name',
+    'bucket_name',
+    'service',
+    'environment',
+    'entrypoint',
+    'service_id',
+    'index_name',
+    'namespace',
+    'class_name',
+    'script_name',
+    'store_id',
+    'secret_name',
+  ]) {
+    const value = row?.[key];
+    if (value != null && clean(value)) output[key] = clean(value);
+  }
+
+  return output;
+}
+
+function bindingCategory(row = {}) {
+  const type = clean(row?.type);
+  if (type === 'secret_text' || type === 'secret_key') return 'secret';
+  if (type === 'plain_text' || type === 'json') return 'variable';
+  return 'resource';
 }
 
 export function readCloudflareDeploymentContract(root, projectConfig = {}) {
@@ -114,11 +213,19 @@ export async function collectCloudflareDeploymentStatus(options = {}) {
     const activeVersionId = clean(activeDeployment?.versions?.find((row) => Number(row?.percentage) === 100)?.version_id)
       || clean(newest(versionRows, row => row?.metadata?.created_on)?.id);
     const version = activeVersionId ? await runner('versions.view', { ...base, version_id: activeVersionId }) : null;
-    const liveBindings = Array.isArray(version?.data?.resources?.bindings) ? version.data.resources.bindings : [];
-    const liveByName = new Map(liveBindings.map((row) => [clean(row?.name), clean(row?.type)]));
+    const rawLiveBindings = Array.isArray(version?.data?.resources?.bindings)
+      ? version.data.resources.bindings
+      : Array.isArray(version?.data?.bindings)
+        ? version.data.bindings
+        : [];
+    const liveBindings = rawLiveBindings.map(safeLiveBinding).filter(Boolean);
+    const liveByName = new Map(liveBindings.map((row) => [row.name, row]));
     const missing = contract.bindings.filter((row) => !liveByName.has(row.name));
-    const typeMismatches = contract.bindings.filter((row) => liveByName.has(row.name) && liveByName.get(row.name) !== row.type)
-      .map((row) => ({ name: row.name, declared: row.type, live: liveByName.get(row.name) }));
+    const typeMismatches = contract.bindings.filter((row) => liveByName.has(row.name) && liveByName.get(row.name).type !== row.type)
+      .map((row) => ({ name: row.name, declared: row.type, live: liveByName.get(row.name).type }));
+    const runtimeVariables = liveBindings.filter((row) => bindingCategory(row) === 'variable');
+    const runtimeSecrets = liveBindings.filter((row) => bindingCategory(row) === 'secret');
+    const resourceBindings = liveBindings.filter((row) => bindingCategory(row) === 'resource');
     return {
       ...contract,
       connected: true,
@@ -137,7 +244,10 @@ export async function collectCloudflareDeploymentStatus(options = {}) {
       } : null,
       bindings: {
         declared: contract.bindings,
-        live: liveBindings.map((row) => ({ name: clean(row?.name), type: clean(row?.type) })).filter((row) => row.name),
+        live: liveBindings,
+        runtime_variables: runtimeVariables,
+        runtime_secrets: runtimeSecrets,
+        resources: resourceBindings,
         missing,
         type_mismatches: typeMismatches,
         match: missing.length === 0 && typeMismatches.length === 0,
