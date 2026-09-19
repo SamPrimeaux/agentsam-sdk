@@ -1,4 +1,4 @@
-import { Box, FileCode, Globe, Plus, Upload, Users, X } from "lucide-react";
+import { Box, FileCode, Globe, Layers, Plus, Upload, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,6 +13,7 @@ import { BrowserStage } from "@/components/workbench/browser";
 import { FilesStage } from "@/components/workbench/files";
 import { ArtifactsStage } from "@/components/workbench/artifacts";
 import { DeployStage } from "@/components/workbench/deploy";
+import { AppPreviewStage } from "@/components/workbench/app-preview-stage";
 import { cn } from "@/lib/utils";
 import { useActiveSideTab, useWorkStore } from "@/lib/work/store";
 import { StudioMark } from "@/components/mark";
@@ -22,6 +23,7 @@ function TabIcon({ kind }: { kind: string }) {
   if (kind === "browser") return <Globe className="size-3.5" />;
   if (kind === "artifacts") return <Box className="size-3.5" />;
   if (kind === "deploy") return <Upload className="size-3.5" />;
+  if (kind === "app") return <Layers className="size-3.5" />;
   return <FileCode className="size-3.5" />;
 }
 
@@ -94,6 +96,10 @@ export function SideStage() {
                 <Upload className="size-3.5" />
                 Ship
               </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => openSideTab("app", { ephemeral: false })}>
+                <Layers className="size-3.5" />
+                CAD Creator
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -115,6 +121,7 @@ export function SideStage() {
         {tab?.kind === "files" ? <FilesStage tab={tab} /> : null}
         {tab?.kind === "artifacts" ? <ArtifactsStage /> : null}
         {tab?.kind === "deploy" ? <DeployStage /> : null}
+        {tab?.kind === "app" ? <AppPreviewStage tab={tab} /> : null}
         {!tab ? (
           <div className="flex h-full flex-col items-center justify-center px-6 text-center">
             <p className="text-sm text-muted-foreground">Open a co-worker, browser, or files pane.</p>

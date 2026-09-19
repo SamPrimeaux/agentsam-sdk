@@ -82,7 +82,9 @@ test('CAD creator app package is curated for third-party installation', () => {
 });
 
 test('CAD creator keeps the robotics runtime lazy and the perception key server-side', () => {
-  const app = read('apps', 'cad-creator', 'frontend', 'src', 'App.tsx');
+  const app = exists('apps', 'cad-creator', 'frontend', 'src', 'app', 'CadCreatorApp.tsx')
+    ? read('apps', 'cad-creator', 'frontend', 'src', 'app', 'CadCreatorApp.tsx')
+    : read('apps', 'cad-creator', 'frontend', 'src', 'App.tsx');
   const lazy = read('apps', 'cad-creator', 'frontend', 'src', 'workspaces', 'robotics', 'lazy.tsx');
   const httpProvider = read('apps', 'cad-creator', 'frontend', 'src', 'lib', 'robotics', 'perception', 'http-provider.ts');
   const perception = read('apps', 'cad-creator', 'backend', 'src', 'robotics', 'perception.ts');

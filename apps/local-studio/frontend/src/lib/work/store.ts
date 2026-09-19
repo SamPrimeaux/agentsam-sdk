@@ -67,6 +67,7 @@ const SIDE_TITLES: Record<SideKind, string> = {
   terminal: "CLI",
   artifacts: "Artifacts",
   deploy: "Ship",
+  app: "CAD Creator",
 };
 
 function newSideTab(kind: SideKind, extra?: Partial<SideTab>): SideTab {

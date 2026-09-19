@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { DetectionLogOverlay as LogOverlay } from './DetectionLogOverlay';
 import { RobotSelector } from './components/RobotSelector';
 import { Toolbar } from './components/Toolbar';
-import { UnifiedSidebar } from './components/UnifiedSidebar';
+import { EmbodiedReasoningPanel } from './EmbodiedReasoningPanel';
 import { HttpRoboticsPerceptionProvider } from '../../lib/robotics/perception/http-provider';
 import { MujocoSimulationProvider } from '../../lib/robotics/simulation/mujoco-provider';
 import { SimulationProvider } from '../../lib/robotics/simulation/provider';
@@ -311,7 +311,7 @@ export function RoboticsWorkspace({
 
       {/* Right Side Embodied Reasoning Panel */}
       {!isLoading && !loadError && (
-        <UnifiedSidebar
+        <EmbodiedReasoningPanel
           isOpen={showSidebar}
           onClose={() => setShowSidebar(false)}
           onSend={handleErSend}

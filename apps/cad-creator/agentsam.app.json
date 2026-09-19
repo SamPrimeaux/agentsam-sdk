@@ -5,13 +5,18 @@
   "package": "@inneranimalmedia/agentsam-sdk-cad-creator",
   "version": "0.1.0",
   "surfaces": [
-    "cad-2d",
-    "cad-3d",
-    "sketch",
-    "parametric-openscad",
-    "robotics-mujoco",
-    "embodied-reasoning"
+    "plan",
+    "model",
+    "parametric",
+    "robotics",
+    "render"
   ],
+  "preview": {
+    "kind": "web",
+    "bridge": "agentsam.preview.v1",
+    "entry": "/",
+    "dashboard_route": "/agentsam/apps/cad"
+  },
   "runtime": {
     "local_preview": "ready",
     "source_scaffold": "ready",
@@ -20,7 +25,9 @@
   },
   "commands": {
     "preview": "agentsam-cad-creator",
-    "scaffold": "agentsam-cad-creator scaffold <directory>"
+    "doctor": "agentsam-cad-creator doctor",
+    "scaffold": "agentsam-cad-creator scaffold <directory>",
+    "info": "agentsam-cad-creator info"
   },
   "secrets": {
     "server_only": [

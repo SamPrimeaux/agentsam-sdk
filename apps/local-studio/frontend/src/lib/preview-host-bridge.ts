@@ -15,11 +15,18 @@ export {
   resolveParentEmbedderOrigin,
 } from "./preview-embedder-origin";
 
+export const AGENTSAM_PREVIEW_BRIDGE_CHANNEL = "agentsam-preview-bridge" as const;
+export const AGENTSAM_PREVIEW_BRIDGE_VERSION = 1 as const;
 export const PREVIEW_BRIDGE_CHANNEL = "grok-preview-bridge" as const;
 export const PREVIEW_BRIDGE_VERSION = 1 as const;
 
+export const SUPPORTED_PREVIEW_CHANNELS = [
+  AGENTSAM_PREVIEW_BRIDGE_CHANNEL,
+  PREVIEW_BRIDGE_CHANNEL,
+] as const;
+
 const EnvelopeSchema = z.object({
-  channel: z.literal(PREVIEW_BRIDGE_CHANNEL),
+  channel: z.enum([AGENTSAM_PREVIEW_BRIDGE_CHANNEL, PREVIEW_BRIDGE_CHANNEL]),
   version: z.number().int().positive(),
   type: z.string().min(1),
 });
@@ -123,14 +130,19 @@ export function installPreviewHostBridge(
     // ignore if the document cannot be marked
   }
 
-  const post = (message: object) => {
-    window.parent.postMessage(message, parentOrigin);
+  const post = (message: { type: string; [key: string]: unknown }) => {
+    window.parent.postMessage(
+      { ...message, channel: AGENTSAM_PREVIEW_BRIDGE_CHANNEL, version: AGENTSAM_PREVIEW_BRIDGE_VERSION },
+      parentOrigin,
+    );
+    window.parent.postMessage(
+      { ...message, channel: PREVIEW_BRIDGE_CHANNEL, version: PREVIEW_BRIDGE_VERSION },
+      parentOrigin,
+    );
   };
 
   const reportLocation = () => {
     post({
-      channel: PREVIEW_BRIDGE_CHANNEL,
-      version: PREVIEW_BRIDGE_VERSION,
       type: "location",
       path: window.location.pathname || "/",
       search: window.location.search,
@@ -141,8 +153,6 @@ export function installPreviewHostBridge(
   const reportRoutes = () => {
     const paths = options.getRoutePaths?.() ?? [];
     post({
-      channel: PREVIEW_BRIDGE_CHANNEL,
-      version: PREVIEW_BRIDGE_VERSION,
       type: "routes",
       paths,
     });
@@ -174,8 +184,6 @@ export function installPreviewHostBridge(
     reportLocation();
     reportRoutes();
     post({
-      channel: PREVIEW_BRIDGE_CHANNEL,
-      version: PREVIEW_BRIDGE_VERSION,
       type: "ready",
     });
   };

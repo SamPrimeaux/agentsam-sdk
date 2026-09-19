@@ -11,11 +11,15 @@ AgentSam CAD Creator
 
   agentsam-cad-creator [preview] [--port 3000]
   agentsam-cad-creator scaffold <directory>
+  agentsam-cad-creator doctor
   agentsam-cad-creator info
 
 preview
   Run the packaged production UI locally. No build step required.
   GEMINI_API_KEY is optional for viewing the UI and required only for AI-backed calls.
+
+doctor
+  Check local runtime health and packaged assets.
 
 scaffold
   Materialize the editable frontend/backend/shared source into a normal project.
@@ -131,6 +135,15 @@ try {
     await preview(command === args[0] ? args.slice(1) : args);
   } else if (command === 'scaffold') {
     scaffold(args[1]);
+  } else if (command === 'doctor') {
+    const server = path.join(packageRoot, 'backend', 'dist', 'server.cjs');
+    const index = path.join(packageRoot, 'frontend', 'dist', 'index.html');
+    console.log('AgentSam CAD Creator Doctor');
+    console.log(`  Package root:   ${packageRoot}`);
+    console.log(`  Frontend build: ${fs.existsSync(index) ? 'ready' : 'missing'}`);
+    console.log(`  Backend build:  ${fs.existsSync(server) ? 'ready' : 'missing'}`);
+    console.log(`  Node version:   ${process.version}`);
+    console.log(`  Workspaces:     plan, model, parametric, robotics, render`);
   } else if (command === 'info') {
     const manifest = JSON.parse(fs.readFileSync(path.join(packageRoot, 'agentsam.app.json'), 'utf8'));
     console.log(JSON.stringify(manifest, null, 2));
