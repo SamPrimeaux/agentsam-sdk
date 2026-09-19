@@ -1,6 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { DEFAULT_MODEL_ID, MODEL_IDS, getModel } from "@/lib/work/models";
+import {
+  assertModelAvailable,
+  buildStudioInventory,
+  platformCredentials,
+} from "@inneranimalmedia/agentsam-local-shared/studio-inventory";
 
 const Body = z.object({
   messages: z
@@ -13,7 +17,8 @@ const Body = z.object({
     .min(1)
     .max(24),
   mode: z.enum(["trail", "side"]).optional(),
-  model: z.string().max(80).optional(),
+  provider: z.string().min(1).max(40),
+  model_id: z.string().min(1).max(160),
   parentTitle: z.string().max(200).optional(),
   parentExcerpt: z.string().max(8000).optional(),
   workspace: z
@@ -41,15 +46,88 @@ Assume a short summary of your reply will be handed back to the lead chat.`;
 
 const BUILD_EXTRA = `You are in vibecode mode. Write complete, runnable files. Prefer small static sites, wrangler.toml, and GitHub Actions that deploy to Cloudflare Pages.`;
 
+function platformCredential(provider: string, env: NodeJS.ProcessEnv) {
+  const id = provider.toLowerCase();
+  if (id === "openai") return env.OPENAI_API_KEY || "";
+  if (id === "anthropic") return env.ANTHROPIC_API_KEY || "";
+  if (id === "gemini") return env.GEMINI_API_KEY || "";
+  if (id === "grok" || id === "xai") return env.XAI_API_KEY || "";
+  if (id === "cursor") return env.CURSOR_API_KEY || "";
+  if (id === "cloudflare") return env.CLOUDFLARE_API_TOKEN || "";
+  return "";
+}
+
+function upstreamFor(provider: string, modelId: string, apiKey: string, body: unknown) {
+  const id = provider.toLowerCase();
+  if (id === "openai") {
+    return fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+  }
+  if (id === "grok" || id === "xai") {
+    return fetch("https://api.x.ai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+  }
+  if (id === "anthropic") {
+    const parsed = body as {
+      messages: Array<{ role: string; content: string }>;
+      max_tokens: number;
+      stream: boolean;
+      temperature: number;
+    };
+    const system = parsed.messages.filter((m) => m.role === "system").map((m) => m.content).join("\n\n");
+    const messages = parsed.messages.filter((m) => m.role !== "system");
+    return fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: modelId,
+        max_tokens: parsed.max_tokens,
+        stream: true,
+        system: system || undefined,
+        messages,
+      }),
+    });
+  }
+  if (id === "gemini") {
+    return fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelId)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(apiKey)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: (body as { messages: Array<{ role: string; content: string }> }).messages
+            .filter((m) => m.role !== "system")
+            .map((m) => ({
+              role: m.role === "assistant" ? "model" : "user",
+              parts: [{ text: m.content }],
+            })),
+        }),
+      },
+    );
+  }
+  return null;
+}
+
 export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const apiKey = process.env.XAI_API_KEY;
-        if (!apiKey) {
-          return Response.json({ error: "AI is not available in this environment." }, { status: 503 });
-        }
-
         let parsed: z.infer<typeof Body>;
         try {
           parsed = Body.parse(await request.json());
@@ -57,13 +135,32 @@ export const Route = createFileRoute("/api/chat")({
           return Response.json({ error: "Invalid request." }, { status: 400 });
         }
 
+        const provider = parsed.provider.trim().toLowerCase();
+        const modelId = parsed.model_id.trim();
+        const apiKey = platformCredential(provider, process.env);
+        if (!apiKey) {
+          return Response.json(
+            {
+              error: `provider_credential_unavailable:${provider}`,
+              detail: "No Studio credential for the selected provider. Connect that provider — do not expect another key to substitute.",
+            },
+            { status: 503 },
+          );
+        }
+
+        try {
+          const inventory = await buildStudioInventory(platformCredentials(process.env));
+          assertModelAvailable(inventory, provider === "xai" ? "grok" : provider, modelId);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return Response.json({ error: message }, { status: 409 });
+        }
+
         const mode = parsed.mode ?? "trail";
-        const modelId = parsed.model && MODEL_IDS.has(parsed.model) ? parsed.model : DEFAULT_MODEL_ID;
-        const model = getModel(modelId);
         const system = mode === "side" ? SIDE_SYSTEM : TRAIL_SYSTEM;
         const messages: { role: string; content: string }[] = [{ role: "system", content: system }];
 
-        if (modelId === "grok-build-0.1") {
+        if (/build/i.test(modelId)) {
           messages.push({ role: "system", content: BUILD_EXTRA });
         }
 
@@ -90,22 +187,22 @@ export const Route = createFileRoute("/api/chat")({
           messages.push({ role: message.role, content: message.content });
         }
 
-        const maxTokens = mode === "side" ? Math.min(2200, model.maxTokens) : model.maxTokens;
+        const maxTokens = mode === "side" ? 2200 : 4200;
+        const chatBody = {
+          model: modelId,
+          stream: true,
+          temperature: 0.6,
+          max_tokens: maxTokens,
+          messages,
+        };
 
-        const upstream = await fetch("https://api.x.ai/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            model: model.id,
-            stream: true,
-            temperature: model.id === "grok-build-0.1" ? 0.4 : 0.6,
-            max_tokens: maxTokens,
-            messages,
-          }),
-        });
+        const upstream = await upstreamFor(provider, modelId, apiKey, chatBody);
+        if (!upstream) {
+          return Response.json(
+            { error: `unsupported_studio_provider:${provider}` },
+            { status: 400 },
+          );
+        }
 
         if (!upstream.ok || !upstream.body) {
           const detail = await upstream.text().catch(() => "");
@@ -136,8 +233,15 @@ export const Route = createFileRoute("/api/chat")({
                   try {
                     const json = JSON.parse(data) as {
                       choices?: { delta?: { content?: string } }[];
+                      type?: string;
+                      delta?: { text?: string };
+                      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
                     };
-                    const delta = json.choices?.[0]?.delta?.content;
+                    const openAiDelta = json.choices?.[0]?.delta?.content;
+                    const anthropicDelta =
+                      json.type === "content_block_delta" ? json.delta?.text : undefined;
+                    const geminiDelta = json.candidates?.[0]?.content?.parts?.[0]?.text;
+                    const delta = openAiDelta || anthropicDelta || geminiDelta;
                     if (delta) controller.enqueue(encoder.encode(delta));
                   } catch {
                     /* ignore malformed chunks */
@@ -160,6 +264,8 @@ export const Route = createFileRoute("/api/chat")({
             "Content-Type": "text/plain; charset=utf-8",
             "Cache-Control": "no-cache, no-transform",
             "X-Content-Type-Options": "nosniff",
+            "X-AgentSam-Provider": provider,
+            "X-AgentSam-Model": modelId,
           },
         });
       },

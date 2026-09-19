@@ -11,9 +11,10 @@ import { resolveCloudflareOAuthClient } from "../../../../packages/connectors/cl
  *   GET  /api/vault/secrets          metadata for caller user
  *   POST /api/vault/secrets          encrypt + upsert (never returns plaintext)
  *   DELETE /api/vault/secrets/:id    soft-revoke
+ *   GET  /api/llm/inventory          per-user vault (+ optional platform) model inventory
  *
  * Auth (v1): Authorization: Bearer <WORKMODE_API_KEY>
- *            X-User-Id: <user_id>  (required for vault routes)
+ *            X-User-Id: <user_id>  (required for vault + inventory routes)
  */
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -332,26 +333,129 @@ async function handleUnwrap(env, userId, body) {
   });
 }
 
+const SERVICE_TO_PROVIDER = Object.freeze({
+  openai: 'openai',
+  anthropic: 'anthropic',
+  gemini: 'gemini',
+  xai: 'grok',
+  grok: 'grok',
+  cursor: 'cursor',
+  cloudflare: 'cloudflare',
+});
+
+async function loadVaultCredentialsForUser(env, userId) {
+  const { results } = await env.DB.prepare(
+    `SELECT id, secret_name, service_name, secret_value_encrypted
+     FROM user_secrets
+     WHERE user_id = ? AND is_active = 1
+     ORDER BY updated_at DESC
+     LIMIT 100`,
+  )
+    .bind(userId)
+    .all();
+
+  const byProvider = new Map();
+  for (const row of results || []) {
+    const providerId = SERVICE_TO_PROVIDER[String(row.service_name || '').toLowerCase()];
+    if (!providerId || byProvider.has(providerId)) continue;
+    const aad = `${userId}:${row.service_name}:${row.secret_name}`;
+    try {
+      const value = await decryptSecret(env, row.secret_value_encrypted, aad);
+      const entry = { value, source: 'user_vault' };
+      if (providerId === 'cloudflare') {
+        entry.account_id = env.CLOUDFLARE_ACCOUNT_ID || env.ACCOUNT_ID || null;
+      }
+      byProvider.set(providerId, entry);
+    } catch (err) {
+      console.error('vault_inventory_decrypt_failed', providerId, String(err));
+    }
+  }
+  return byProvider;
+}
+
+function platformCredentials(env) {
+  const map = new Map();
+  const put = (providerId, value, extra = {}) => {
+    if (!value || !String(value).trim()) return;
+    if (map.has(providerId)) return;
+    map.set(providerId, { value: String(value).trim(), source: 'platform', ...extra });
+  };
+  put('openai', env.OPENAI_API_KEY);
+  put('anthropic', env.ANTHROPIC_API_KEY);
+  put('gemini', env.GEMINI_API_KEY);
+  put('grok', env.XAI_API_KEY);
+  put('cursor', env.CURSOR_API_KEY);
+  put('cloudflare', env.CLOUDFLARE_API_TOKEN, {
+    account_id: env.CLOUDFLARE_ACCOUNT_ID || env.ACCOUNT_ID || null,
+  });
+  return map;
+}
+
+async function handleLlmInventory(env, userId, request) {
+  const includePlatform = new URL(request.url).searchParams.get('include_platform') !== '0';
+  const vault = await loadVaultCredentialsForUser(env, userId);
+  const platform = includePlatform ? platformCredentials(env) : new Map();
+  const merged = new Map();
+  for (const [id, row] of vault.entries()) merged.set(id, row);
+  for (const [id, row] of platform.entries()) {
+    if (!merged.has(id)) merged.set(id, row);
+  }
+
+  // Worker stays boundary-safe: return credential provenance only (no root src import).
+  // Live model discovery for Studio UI uses the Nitro/TanStack inventory route.
+  const providers = [
+    'openai', 'anthropic', 'gemini', 'grok', 'cursor', 'cloudflare',
+  ].map((id) => {
+    const row = merged.get(id);
+    return {
+      id,
+      configured: Boolean(row?.value),
+      source: row?.source || null,
+    };
+  });
+
+  return json({
+    ok: true,
+    user_id: userId,
+    schemaVersion: 'agentsam-model-inventory-v3',
+    authority: 'per_credential_provider_discovery',
+    credential_plane: vault.size ? (platform.size ? 'mixed' : 'studio_vault') : 'platform',
+    providers,
+    availableModels: [],
+    discovery: Object.fromEntries(providers.map((p) => [p.id, {
+      attempted: false,
+      ok: false,
+      error: p.configured ? 'discover_via_studio_inventory_route' : null,
+      returnedModelCount: 0,
+    }])),
+    note: 'Worker inventory returns vault/platform credential provenance. Call Studio /api/llm/inventory for live model discovery.',
+  });
+}
+
 export default {
   ...nitroWorker,
   async fetch(request, env, context) {
     const url = new URL(request.url);
     const isVault = url.pathname.startsWith("/api/vault/");
+    const isLlmInventory = url.pathname === "/api/llm/inventory";
     const isCfConnection = isCloudflareConnectionPath(url.pathname);
 
-    // The checked-in Worker owns vault + health routes. Everything else belongs
+    // The checked-in Worker owns vault + health + llm inventory. Everything else belongs
     // to the generated Nitro application handler.
     if (isCfConnection) {
       return handleCloudflareConnectionRequest(request, env);
     }
 
-    if (!isVault && url.pathname !== "/health") {
+    if (!isVault && !isLlmInventory && url.pathname !== "/health") {
       return nitroWorker.fetch(request, env, context);
     }
 
     const headers = cors(request);
 
     if (isVault && request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers });
+    }
+    if (isLlmInventory && request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers });
     }
 
@@ -389,11 +493,17 @@ export default {
     if (!gate.ok) return json({ ok: false, error: gate.error }, gate.status, headers);
 
     const user = requireUserId(request);
-    if (!user.ok && url.pathname.startsWith("/api/vault/")) {
+    if (!user.ok && (url.pathname.startsWith("/api/vault/") || isLlmInventory)) {
       return json({ ok: false, error: user.error }, user.status, headers);
     }
 
     try {
+      if (isLlmInventory && request.method === "GET") {
+        const res = await handleLlmInventory(env, user.userId, request);
+        Object.entries(headers).forEach(([k, v]) => res.headers.set(k, v));
+        return res;
+      }
+
       if (url.pathname === "/api/vault/secrets" && request.method === "GET") {
         const res = await handleList(env, user.userId);
         Object.entries(headers).forEach(([k, v]) => res.headers.set(k, v));

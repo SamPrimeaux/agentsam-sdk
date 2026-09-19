@@ -16,7 +16,7 @@ import { runCloudflare } from './cloudflare.js';
 import { probeOllamaModel, resolveOllamaConfig } from './ollama.js';
 import { createInlineActivity } from '../ui/cli/activity.js';
 import { createCliRuntimePresenter } from '../ui/cli/runtime-events.js';
-import { renderCliFooter } from '../ui/cli/footer.js';
+import { renderCliFooter, renderUsagePanel } from '../ui/cli/footer.js';
 import { diagnosticFromError, renderDiagnosticError } from '../errors/index.js';
 import { getModelRecord } from '../models/index.js';
 import { discoverProviderModels } from '../models/discovery.js';
@@ -611,9 +611,21 @@ export async function dispatchShellLine(line, state = {}) {
         await runWhoami(args, { write, home: state.home });
         break;
       case '/session':
-      case '/usage':
         if (state.session) write(renderSessionReceipt(state.session));
         else writeLine(write, '  No persistent session is active in this shell invocation.');
+        break;
+      case '/usage':
+        write(renderUsagePanel({
+          session: state.session,
+          usage: state.usageSnapshot || state.session?.usage_snapshot,
+          provider: state.providerState?.provider || state.session?.provider,
+          model: state.providerState?.model || state.session?.model,
+          effort: state.providerState?.reasoning_effort || state.session?.reasoning_effort,
+          tier: state.providerState?.service_tier || state.session?.service_tier,
+          estimateKind: state.usageSnapshot?.estimate_kind,
+          elapsedMs: state.session ? localSessionElapsedMs(state.session) : null,
+          cost: state.usageSnapshot?.cumulative?.cost_usd ?? state.session?.cumulative_usage?.cost_usd,
+        }));
         break;
       case '/cf':
       case '/cloudflare':

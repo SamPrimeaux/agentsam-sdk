@@ -1,0 +1,37 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "local-studio",
+  "name": "AgentSam Local Studio",
+  "package": "@inneranimalmedia/agentsam-local-studio",
+  "version": "0.0.0",
+  "surfaces": [
+    "workbench",
+    "auth-portal",
+    "vault",
+    "ship",
+    "cli-drawer"
+  ],
+  "runtime": {
+    "local_preview": "ready",
+    "source_scaffold": "ready",
+    "cloudflare": "ready",
+    "github": "source-ready"
+  },
+  "commands": {
+    "preview": "agentsam-studio",
+    "info": "agentsam-studio info",
+    "doctor": "agentsam-studio doctor"
+  },
+  "bin": "bin/agentsam-studio.mjs",
+  "secrets": {
+    "server_only": [
+      "XAI_API_KEY",
+      "OPENAI_API_KEY",
+      "GEMINI_API_KEY",
+      "ANTHROPIC_API_KEY",
+      "CURSOR_API_KEY",
+      "VAULT_MASTER_KEY",
+      "WORKMODE_API_KEY"
+    ]
+  }
+}

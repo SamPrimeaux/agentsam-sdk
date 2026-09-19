@@ -3,12 +3,20 @@ import { probeOllama, resolveOllamaConfig } from './ollama.js';
 import { listModelCatalog } from '../models/index.js';
 import { discoverProviderModels } from '../models/discovery.js';
 import { resolveProviderCredential } from '../lib/provider-credentials.js';
+import {
+  WORKERS_AI_CURATED_MODEL_IDS,
+  filterWorkersAiCurated,
+  sanitizeInventoryForClient,
+} from '../models/inventory-core.js';
+
+export { WORKERS_AI_CURATED_MODEL_IDS, filterWorkersAiCurated, sanitizeInventoryForClient };
 
 export const API_PROVIDERS = Object.freeze([
   { id: 'openai', label: 'OpenAI', credential: 'OPENAI_API_KEY' },
   { id: 'anthropic', label: 'Anthropic', credential: 'ANTHROPIC_API_KEY' },
   { id: 'gemini', label: 'Gemini', credential: 'GEMINI_API_KEY' },
   { id: 'grok', label: 'Grok / xAI', credential: 'XAI_API_KEY' },
+  { id: 'cursor', label: 'Cursor', credential: 'CURSOR_API_KEY' },
   { id: 'cloudflare', label: 'Cloudflare', credential: 'CLOUDFLARE_API_TOKEN' },
 ]);
 
@@ -55,18 +63,34 @@ function mergeStaticFallbacks(discovered = []) {
   return out;
 }
 
+/**
+ * Build credential-scoped model inventory.
+ *
+ * @param {object} [options]
+ * @param {Record<string, string>} [options.env]
+ * @param {string} [options.home]
+ * @param {boolean} [options.discoverRemote]
+ * @param {'machine'|'studio_vault'|'mixed'} [options.credentialPlane]
+ * @param {(providerId: string) => Promise<object|null>|object|null} [options.resolveCredential]
+ *   Injected resolver (Studio vault). When omitted, uses machine env.d / process env.
+ * @param {boolean} [options.curateWorkersAi] default true — intersect Cloudflare models with curated allowlist
+ * @param {boolean} [options.includeLocal] default true — probe Ollama (machine plane only by default)
+ */
 export async function collectModelsStatus(options = {}) {
   const env = options.env || process.env;
   const ollamaFetchImpl = options.fetchImpl || fetch;
   const providerFetchImpl = options.providerFetchImpl || fetch;
-  const ollamaConfig = resolveOllamaConfig({}, env);
-  const ollama = await probeOllama(ollamaConfig, ollamaFetchImpl);
-  const credentials = new Map(
-    API_PROVIDERS.map((provider) => [
-      provider.id,
-      resolveProviderCredential(provider.id, { env, home: options.home }),
-    ]),
-  );
+  const credentialPlane = options.credentialPlane || (options.resolveCredential ? 'studio_vault' : 'machine');
+  const includeLocal = options.includeLocal ?? credentialPlane === 'machine';
+  const curateWorkersAi = options.curateWorkersAi !== false;
+
+  const resolveCredential = options.resolveCredential
+    || ((providerId) => resolveProviderCredential(providerId, { env, home: options.home }));
+
+  const credentials = new Map();
+  for (const provider of API_PROVIDERS) {
+    credentials.set(provider.id, await resolveCredential(provider.id));
+  }
 
   const providers = API_PROVIDERS.map((provider) => {
     const credential = credentials.get(provider.id);
@@ -84,10 +108,20 @@ export async function collectModelsStatus(options = {}) {
 
   await Promise.all(API_PROVIDERS.map(async (provider) => {
     const credential = credentials.get(provider.id);
-    const result = shouldDiscover && credential?.configured
+    let result = shouldDiscover && credential?.configured
       ? await discoverProviderModels(provider.id, credential, { fetchImpl: providerFetchImpl })
       : emptyDiscovery();
+    if (provider.id === 'cloudflare' && result.ok && curateWorkersAi) {
+      const curated = filterWorkersAiCurated(result.models || [], { curated: true });
+      result = {
+        ...result,
+        models: curated,
+        returnedModelCount: curated.length,
+        curation: 'agentsam_workers_ai_allowlist',
+      };
+    }
     discovery[provider.id] = providerSummary(result);
+    if (result.curation) discovery[provider.id].curation = result.curation;
     providerModels[provider.id] = result.models || [];
   }));
 
@@ -95,16 +129,20 @@ export async function collectModelsStatus(options = {}) {
   const exactAvailable = discovered.filter((row) => row.availability === 'available');
   const catalogModels = mergeStaticFallbacks(discovered);
 
-  return {
-    schemaVersion: 'agentsam-model-inventory-v3',
-    generatedAt: new Date().toISOString(),
-    authority: 'per_credential_provider_discovery',
-    providers,
-    discovery,
-    providerModels,
-    catalogModels,
-    availableModels: exactAvailable,
-    local: {
+  let local = {
+    provider: 'ollama',
+    configured: false,
+    online: false,
+    endpoint: null,
+    chatModel: null,
+    embedModel: null,
+    models: [],
+    error: null,
+  };
+  if (includeLocal) {
+    const ollamaConfig = resolveOllamaConfig({}, env);
+    const ollama = await probeOllama(ollamaConfig, ollamaFetchImpl);
+    local = {
       provider: 'ollama',
       configured: ollama.online,
       online: ollama.online,
@@ -113,7 +151,20 @@ export async function collectModelsStatus(options = {}) {
       embedModel: ollamaConfig.embedModel,
       models: ollama.models || [],
       error: ollama.error || null,
-    },
+    };
+  }
+
+  return {
+    schemaVersion: 'agentsam-model-inventory-v3',
+    generatedAt: new Date().toISOString(),
+    authority: 'per_credential_provider_discovery',
+    credential_plane: credentialPlane,
+    providers,
+    discovery,
+    providerModels,
+    catalogModels,
+    availableModels: exactAvailable,
+    local,
   };
 }
 

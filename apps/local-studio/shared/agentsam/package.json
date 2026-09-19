@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./work-types": "./src/work-types.ts"
+    "./work-types": "./src/work-types.ts",
+    "./studio-inventory": "./src/studio-inventory.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"

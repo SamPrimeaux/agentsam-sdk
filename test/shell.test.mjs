@@ -70,8 +70,11 @@ test('/usage renders the current session receipt without ending the session', as
   };
   const result = await dispatchShellLine('/usage', state);
   assert.equal(result.exit, false);
-  assert.match(output, /Token usage: total=21,463 input=21,244 \(\+ 60,544 cached\) output=219/);
-  assert.match(output, /Spent: \$0\.4200/);
+  assert.match(output, /AgentSam · Usage/);
+  assert.match(output, /input\s+21\.2k/);
+  assert.match(output, /output\s+219/);
+  assert.match(output, /cached\s+60\.5k/);
+  assert.match(output, /cost\s+\$0\.420/);
   assert.match(output, /agentsam resume asess_00000000-0000-4000-8000-000000000001/);
 });
 
