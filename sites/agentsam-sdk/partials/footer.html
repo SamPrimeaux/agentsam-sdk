@@ -1,0 +1,411 @@
+<style>
+  #iam-footer {
+    font-family: 'Nunito', sans-serif;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #iam-footer-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0;
+    transition: opacity 1.4s ease;
+  }
+  #iam-footer-canvas.visible { opacity: 0.13; }
+
+  /* ── DARK ── */
+  #iam-footer[data-theme="dark"] {
+    background: #1a1f2e;
+    color: #fff;
+  }
+  #iam-footer[data-theme="dark"] .ft-headline        { color: rgba(255,255,255,0.92); }
+  #iam-footer[data-theme="dark"] .ft-contact a       { color: rgba(255,255,255,0.52); }
+  #iam-footer[data-theme="dark"] .ft-contact a:hover { color: #fff; }
+  #iam-footer[data-theme="dark"] .ft-col-label       { color: rgba(255,255,255,0.28); }
+  #iam-footer[data-theme="dark"] .ft-col a           { color: rgba(255,255,255,0.6); }
+  #iam-footer[data-theme="dark"] .ft-col a:hover     { color: #fff; }
+  #iam-footer[data-theme="dark"] .ft-col a.active    { color: #fff; font-weight: 700; }
+  #iam-footer[data-theme="dark"] .ft-bar             { border-top: 1px solid rgba(255,255,255,0.07); }
+  #iam-footer[data-theme="dark"] .ft-copy            { color: rgba(255,255,255,0.28); }
+  #iam-footer[data-theme="dark"] .ft-legal a         { color: rgba(255,255,255,0.42); }
+  #iam-footer[data-theme="dark"] .ft-legal a:hover   { color: #fff; }
+  #iam-footer[data-theme="dark"] .ft-dev-label       { color: rgba(255,255,255,0.28); }
+  #iam-footer[data-theme="dark"] .ft-sig-dark        { display: none; }
+  #iam-footer[data-theme="dark"] .ft-sig-light       { display: block; }
+  #iam-footer[data-theme="dark"] .ft-logo-light      { opacity: 1; }
+  #iam-footer[data-theme="dark"] .ft-logo-dark       { opacity: 0; }
+
+  /* ── LIGHT ── */
+  #iam-footer[data-theme="light"] {
+    background: #F0F3F8;
+    color: #0A1628;
+  }
+  #iam-footer[data-theme="light"] .ft-headline        { color: rgba(10,22,40,0.88); }
+  #iam-footer[data-theme="light"] .ft-contact a       { color: rgba(10,22,40,0.48); }
+  #iam-footer[data-theme="light"] .ft-contact a:hover { color: #0A1628; }
+  #iam-footer[data-theme="light"] .ft-col-label       { color: rgba(10,22,40,0.28); }
+  #iam-footer[data-theme="light"] .ft-col a           { color: rgba(10,22,40,0.58); }
+  #iam-footer[data-theme="light"] .ft-col a:hover     { color: #0A1628; }
+  #iam-footer[data-theme="light"] .ft-col a.active    { color: #167BFC; font-weight: 700; }
+  #iam-footer[data-theme="light"] .ft-bar             { border-top: 1px solid rgba(10,22,40,0.08); }
+  #iam-footer[data-theme="light"] .ft-copy            { color: rgba(10,22,40,0.28); }
+  #iam-footer[data-theme="light"] .ft-legal a         { color: rgba(10,22,40,0.42); }
+  #iam-footer[data-theme="light"] .ft-legal a:hover   { color: #0A1628; }
+  #iam-footer[data-theme="light"] .ft-dev-label       { color: rgba(10,22,40,0.28); }
+  #iam-footer[data-theme="light"] .ft-sig-light       { display: none; }
+  #iam-footer[data-theme="light"] .ft-sig-dark        { display: block; }
+  #iam-footer[data-theme="light"] .ft-logo-light      { opacity: 0; }
+  #iam-footer[data-theme="light"] .ft-logo-dark       { opacity: 1; }
+
+  /* ── MAIN BODY ── */
+  .ft-body {
+    position: relative;
+    z-index: 1;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 96px 48px 80px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 80px;
+    align-items: start;
+  }
+
+  /* ── LEFT ── */
+  .ft-left {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    max-width: 440px;
+  }
+
+  .ft-logo-wrap {
+    display: inline-block;
+    width: 64px;
+    height: 64px;
+    position: relative;
+  }
+
+  .ft-logo-wrap img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .ft-headline {
+    font-size: clamp(36px, 5vw, 56px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+  }
+
+  .ft-contact {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .ft-contact a {
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  /* ── RIGHT ── */
+  .ft-right {
+    display: flex;
+    gap: 64px;
+    padding-top: 8px;
+  }
+
+  .ft-col {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 120px;
+  }
+
+  .ft-col-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .ft-col ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .ft-col a {
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  /* ── BOTTOM BAR ── */
+  .ft-bar {
+    position: relative;
+    z-index: 1;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 24px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+  }
+
+  .ft-bar-center {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .ft-copy { font-weight: 500; }
+
+  .ft-legal {
+    display: flex;
+    gap: 16px;
+  }
+
+  .ft-legal a {
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .ft-dev {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ft-dev-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .ft-sig {
+    height: 18px;
+    width: auto;
+    display: block;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .ft-body {
+      grid-template-columns: 1fr;
+      gap: 56px;
+      padding: 64px 32px 56px;
+    }
+    .ft-bar {
+      padding: 20px 32px;
+      flex-direction: column;
+      gap: 16px;
+      align-items: flex-start;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .ft-right {
+      gap: 40px;
+      flex-wrap: wrap;
+    }
+    .ft-bar-center {
+      gap: 12px;
+    }
+  }
+</style>
+
+<footer id="iam-footer" data-theme="dark">
+  <canvas id="iam-footer-canvas" aria-hidden="true"></canvas>
+
+  <div class="ft-body">
+
+    <!-- LEFT -->
+    <div class="ft-left">
+      <a href="/" class="ft-logo-wrap" aria-label="Inner Animal Media">
+        <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/dbb316af-9c97-4959-f09f-bf58b2783d00/avatar"
+             alt="" class="ft-logo-light" width="64" height="64" loading="lazy">
+        <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/11f6af46-0a3c-482a-abe8-83edc5a8a200/avatar"
+             alt="" class="ft-logo-dark"  width="64" height="64" loading="lazy">
+      </a>
+
+      <div class="ft-headline">Let's Talk</div>
+
+      <div class="ft-contact">
+        <a href="mailto:hey@inneranimalmedia.com">hey@inneranimalmedia.com</a>
+        <a href="tel:+13374509998">337-450-9998</a>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="ft-right">
+      <div class="ft-col">
+        <div class="ft-col-label">Company</div>
+        <ul>
+          <li><a href="/work"     data-fnav="work">Work</a></li>
+          <li><a href="/about"    data-fnav="about">About</a></li>
+          <li><a href="/services" data-fnav="services">Services</a></li>
+          <li><a href="/contact"  data-fnav="contact">Contact</a></li>
+        </ul>
+      </div>
+      <div class="ft-col">
+        <div class="ft-col-label">Products</div>
+        <ul>
+          <li><a href="/games"   data-fnav="games">Games</a></li>
+          <li><a href="/pricing" data-fnav="pricing">Pricing</a></li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM BAR -->
+  <div class="ft-bar">
+    <div class="ft-bar-center">
+      <span class="ft-copy">&copy; 2026 Inner Animal Media</span>
+      <nav class="ft-legal" aria-label="Legal">
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="/sitemap">Sitemap</a>
+      </nav>
+    </div>
+
+    <div class="ft-dev">
+      <span class="ft-dev-label">Developed by</span>
+      <img src="https://assets.inneranimalmedia.com/svg/sam-signature-white.svg"
+           alt="Sam Primeaux" class="ft-sig ft-sig-light" height="18" loading="lazy">
+      <img src="https://assets.inneranimalmedia.com/svg/sam-signature-black.svg"
+           alt="Sam Primeaux" class="ft-sig ft-sig-dark"  height="18" loading="lazy">
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var seg = window.location.pathname === '/'
+    ? 'home'
+    : window.location.pathname.split('/').filter(Boolean)[0];
+  document.querySelectorAll('[data-fnav]').forEach(function (a) {
+    if (a.dataset.fnav === seg) a.classList.add('active');
+  });
+
+  var footer = document.getElementById('iam-footer');
+  var canvas = document.getElementById('iam-footer-canvas');
+  if (!footer || !canvas) return;
+
+  function boot() {
+    if (window._iamFooterBooted) return;
+    window._iamFooterBooted = true;
+
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+    s.onload = function () {
+      var s2 = document.createElement('script');
+      s2.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js';
+      s2.onload = initThree;
+      document.head.appendChild(s2);
+    };
+    document.head.appendChild(s);
+  }
+
+  function initThree() {
+    var renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true, powerPreference: 'low-power' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    renderer.setSize(footer.clientWidth, footer.clientHeight);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
+
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(40, footer.clientWidth / footer.clientHeight, 0.1, 100);
+    camera.position.set(0, 0, 7.5);
+
+    var ambient = new THREE.AmbientLight(0xffffff, 1.2);
+    scene.add(ambient);
+
+    var blueLight = new THREE.DirectionalLight(0x167BFC, 2.5);
+    blueLight.position.set(-4, 3, 4);
+    scene.add(blueLight);
+
+    var warmLight = new THREE.DirectionalLight(0xffeedd, 1.2);
+    warmLight.position.set(4, -2, 2);
+    scene.add(warmLight);
+
+    var mesh = null;
+    var targetRotY = 0;
+    var targetRotX = 0;
+
+    var loader = new THREE.GLTFLoader();
+    loader.load('https://assets.inneranimalmedia.com/glb/inneranimalmediafooterglb.glb',
+      function (gltf) {
+        mesh = gltf.scene;
+        var box = new THREE.Box3().setFromObject(mesh);
+        var center = box.getCenter(new THREE.Vector3());
+        var size = box.getSize(new THREE.Vector3());
+        var maxDim = Math.max(size.x, size.y, size.z);
+        mesh.scale.setScalar(3.2 / maxDim);
+        mesh.position.sub(center.multiplyScalar(3.2 / maxDim));
+        scene.add(mesh);
+        canvas.classList.add('visible');
+      },
+      undefined,
+      function (err) {
+        canvas.style.display = 'none';
+      }
+    );
+
+    var isDark = footer.getAttribute('data-theme') !== 'light';
+    footer.addEventListener('mousemove', function (e) {
+      var rect = footer.getBoundingClientRect();
+      var x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      var y = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
+      targetRotY = x * 0.45;
+      targetRotX = -y * 0.25;
+    });
+
+    var running = true;
+    function animate() {
+      if (!running) return;
+      requestAnimationFrame(animate);
+      if (mesh) {
+        mesh.rotation.y += (targetRotY - mesh.rotation.y) * 0.05 + 0.003;
+        mesh.rotation.x += (targetRotX - mesh.rotation.x) * 0.05;
+      }
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    var ro = new ResizeObserver(function () {
+      if (!footer.clientWidth || !footer.clientHeight) return;
+      camera.aspect = footer.clientWidth / footer.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(footer.clientWidth, footer.clientHeight);
+    });
+    ro.observe(footer);
+  }
+
+  if ('IntersectionObserver' in window) {
+    var obs = new IntersectionObserver(function (e) {
+      if (e[0].isIntersecting) { boot(); obs.disconnect(); }
+    }, { rootMargin: '500px' });
+    obs.observe(footer);
+  } else {
+    boot();
+  }
+})();
+</script>

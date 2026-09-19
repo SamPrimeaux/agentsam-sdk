@@ -7,6 +7,7 @@ import {
   createIdentityService,
   createCloudflareD1Adapter,
 } from "../../../../packages/identity/src/server/worker-router.js";
+import { handleCmsWorkerRequest } from "./cms-service.js";
 
 // Paths owned by the identity package (auth pages, auth API, OAuth, company branding).
 const IDENTITY_EXACT_PATHS = new Set(["/auth/login", "/auth/signup", "/auth/reset", "/api/company"]);
@@ -550,6 +551,11 @@ export default {
     // Identity package owns auth pages, auth API, OAuth, and company branding.
     if (isIdentityPath(url.pathname)) {
       return handleIdentityWorkerRequest(request, env);
+    }
+
+    // Studio CMS API endpoints
+    if (url.pathname.startsWith("/api/cms/")) {
+      return handleCmsWorkerRequest(request, env);
     }
 
     // Gate authenticated Studio app routes on a real session before the SPA shell loads.

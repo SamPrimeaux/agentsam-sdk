@@ -23,6 +23,24 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@inneranimalmedia/agentsam-cms-frontend": [
+        "../../client-cms-editor/frontend/src/index.ts"
+      ],
+      "@inneranimalmedia/agentsam-cms-frontend/*": [
+        "../../client-cms-editor/frontend/src/*"
+      ],
+      "@inneranimalmedia/agentsam-cms-backend/*": [
+        "../../client-cms-editor/backend/src/*"
+      ],
+      "@inneranimalmedia/agentsam-cms-backend": [
+        "../../client-cms-editor/backend/src/index.ts"
+      ],
+      "@inneranimalmedia/agentsam-cms-shared": [
+        "../../client-cms-editor/shared/cms/src/index.ts"
+      ],
+      "@inneranimalmedia/agentsam-cms-shared/*": [
+        "../../client-cms-editor/shared/cms/src/*"
       ]
     },
     "allowImportingTsExtensions": true,

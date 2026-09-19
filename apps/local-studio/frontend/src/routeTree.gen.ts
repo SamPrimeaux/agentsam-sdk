@@ -15,6 +15,7 @@ import { Route as AppAgentsamRouteImport } from './routes/_app/agentsam'
 import { Route as AppArtifactsRouteImport } from './routes/_app/artifacts'
 import { Route as AppBrowseRouteImport } from './routes/_app/browse'
 import { Route as AppCliRouteImport } from './routes/_app/cli'
+import { Route as AppCmsRouteImport } from './routes/_app/cms'
 import { Route as AppFilesRouteImport } from './routes/_app/files'
 import { Route as AppProjectsRouteImport } from './routes/_app/projects'
 import { Route as AppShipRouteImport } from './routes/_app/ship'
@@ -53,6 +54,11 @@ const AppBrowseRoute = AppBrowseRouteImport.update({
 const AppCliRoute = AppCliRouteImport.update({
   id: '/cli',
   path: '/cli',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCmsRoute = AppCmsRouteImport.update({
+  id: '/cms',
+  path: '/cms',
   getParentRoute: () => AppRoute,
 } as any)
 const AppFilesRoute = AppFilesRouteImport.update({
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/artifacts': typeof AppArtifactsRoute
   '/browse': typeof AppBrowseRoute
   '/cli': typeof AppCliRoute
+  '/cms': typeof AppCmsRoute
   '/files': typeof AppFilesRoute
   '/projects': typeof AppProjectsRoute
   '/ship': typeof AppShipRoute
@@ -129,6 +136,7 @@ export interface FileRoutesByTo {
   '/artifacts': typeof AppArtifactsRoute
   '/browse': typeof AppBrowseRoute
   '/cli': typeof AppCliRoute
+  '/cms': typeof AppCmsRoute
   '/files': typeof AppFilesRoute
   '/projects': typeof AppProjectsRoute
   '/ship': typeof AppShipRoute
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   '/_app/artifacts': typeof AppArtifactsRoute
   '/_app/browse': typeof AppBrowseRoute
   '/_app/cli': typeof AppCliRoute
+  '/_app/cms': typeof AppCmsRoute
   '/_app/files': typeof AppFilesRoute
   '/_app/projects': typeof AppProjectsRoute
   '/_app/ship': typeof AppShipRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
     | '/artifacts'
     | '/browse'
     | '/cli'
+    | '/cms'
     | '/files'
     | '/projects'
     | '/ship'
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
     | '/artifacts'
     | '/browse'
     | '/cli'
+    | '/cms'
     | '/files'
     | '/projects'
     | '/ship'
@@ -202,6 +213,7 @@ export interface FileRouteTypes {
     | '/_app/artifacts'
     | '/_app/browse'
     | '/_app/cli'
+    | '/_app/cms'
     | '/_app/files'
     | '/_app/projects'
     | '/_app/ship'
@@ -265,6 +277,13 @@ declare module '@tanstack/react-router' {
       path: '/cli'
       fullPath: '/cli'
       preLoaderRoute: typeof AppCliRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/cms': {
+      id: '/_app/cms'
+      path: '/cms'
+      fullPath: '/cms'
+      preLoaderRoute: typeof AppCmsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/files': {
@@ -357,6 +376,7 @@ interface AppRouteChildren {
   AppArtifactsRoute: typeof AppArtifactsRoute
   AppBrowseRoute: typeof AppBrowseRoute
   AppCliRoute: typeof AppCliRoute
+  AppCmsRoute: typeof AppCmsRoute
   AppFilesRoute: typeof AppFilesRoute
   AppProjectsRoute: typeof AppProjectsRoute
   AppShipRoute: typeof AppShipRoute
@@ -369,6 +389,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppArtifactsRoute: AppArtifactsRoute,
   AppBrowseRoute: AppBrowseRoute,
   AppCliRoute: AppCliRoute,
+  AppCmsRoute: AppCmsRoute,
   AppFilesRoute: AppFilesRoute,
   AppProjectsRoute: AppProjectsRoute,
   AppShipRoute: AppShipRoute,
