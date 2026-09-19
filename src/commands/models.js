@@ -3,6 +3,13 @@ import { probeOllama, resolveOllamaConfig } from './ollama.js';
 import { listModelCatalog } from '../models/index.js';
 import { discoverProviderModels } from '../models/discovery.js';
 import { resolveProviderCredential } from '../lib/provider-credentials.js';
+import {
+  WORKERS_AI_CURATED_MODEL_IDS,
+  filterWorkersAiCurated,
+  sanitizeInventoryForClient,
+} from '../models/inventory-core.js';
+
+export { WORKERS_AI_CURATED_MODEL_IDS, filterWorkersAiCurated, sanitizeInventoryForClient };
 
 export const API_PROVIDERS = Object.freeze([
   { id: 'openai', label: 'OpenAI', credential: 'OPENAI_API_KEY' },
@@ -12,25 +19,6 @@ export const API_PROVIDERS = Object.freeze([
   { id: 'cursor', label: 'Cursor', credential: 'CURSOR_API_KEY' },
   { id: 'cloudflare', label: 'Cloudflare', credential: 'CLOUDFLARE_API_TOKEN' },
 ]);
-
-/** Workers AI text-generation ids AgentSam surfaces by default (intersect with live discovery). */
-export const WORKERS_AI_CURATED_MODEL_IDS = Object.freeze([
-  '@cf/qwen/qwen2.5-coder-32b-instruct',
-  '@cf/moonshotai/kimi-k2.7-code',
-  '@cf/zai-org/glm-5.3',
-  '@cf/deepseek-ai/deepseek-v4-pro-0813',
-  '@cf/deepseek-ai/deepseek-v4-flash-0731',
-  '@cf/qwen/qwen3.8-27b',
-  '@cf/openai/gpt-oss-120b',
-  '@cf/meta/llama-4-scout-17b-16e-instruct',
-]);
-
-const WORKERS_AI_CURATED_SET = new Set(WORKERS_AI_CURATED_MODEL_IDS);
-
-export function filterWorkersAiCurated(models = [], options = {}) {
-  if (options.curated === false) return [...models];
-  return models.filter((row) => WORKERS_AI_CURATED_SET.has(String(row?.provider_model_id || row?.model_id || '')));
-}
 
 function clean(value) { return value == null ? '' : String(value).trim(); }
 
@@ -177,43 +165,6 @@ export async function collectModelsStatus(options = {}) {
     catalogModels,
     availableModels: exactAvailable,
     local,
-  };
-}
-
-/** Public helper: normalize inventory for Studio/JSON clients (never includes secrets). */
-export function sanitizeInventoryForClient(status = {}) {
-  return {
-    schemaVersion: status.schemaVersion,
-    generatedAt: status.generatedAt,
-    authority: status.authority,
-    credential_plane: status.credential_plane,
-    providers: (status.providers || []).map((row) => ({
-      id: row.id,
-      label: row.label,
-      configured: row.configured === true,
-      source: row.source || null,
-      credentialError: row.credentialError || null,
-    })),
-    discovery: status.discovery || {},
-    availableModels: (status.availableModels || []).map((row) => ({
-      provider: row.provider,
-      model_id: row.provider_model_id || row.model_id,
-      model_key: row.model_key || null,
-      label: row.label || row.provider_model_id || row.model_id,
-      availability: row.availability,
-      availability_source: row.availability_source || null,
-      context_window: row.context_window ?? null,
-      reasoning_efforts: row.reasoning_efforts || [],
-      service_tiers: row.service_tiers || [],
-      capabilities: row.capabilities || {},
-    })),
-    local: status.local
-      ? {
-          provider: status.local.provider,
-          online: status.local.online === true,
-          models: (status.local.models || []).map((row) => ({ name: row.name })),
-        }
-      : null,
   };
 }
 
