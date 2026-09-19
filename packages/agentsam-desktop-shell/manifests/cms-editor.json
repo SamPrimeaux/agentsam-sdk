@@ -1,0 +1,21 @@
+{
+  "$schema": "./schema.json",
+  "app_id": "cms-editor",
+  "app_name": "AgentSam CMS Editor",
+  "bundle_identifier": "com.inneranimalmedia.cms-editor",
+  "base_url": "https://agentsam.inneranimalmedia.com",
+  "surface": "app",
+  "launch_path": "/cms",
+  "deep_link_scheme": "agentsamcms",
+  "identity_provider": "inneranimalmedia",
+  "icon_set": "icons/cms-editor",
+  "theme": {
+    "primary_color": "#0a0a0c",
+    "accent_color": "#10b981"
+  },
+  "feature_flags": {
+    "tray": true,
+    "auto_update": true,
+    "local_execution_node": true
+  }
+}

@@ -5,7 +5,7 @@
   "bundle_identifier": "com.inneranimalmedia.cad-creator",
   "base_url": "https://agentsam.inneranimalmedia.com",
   "surface": "app",
-  "launch_path": "/agentsam/apps/cad",
+  "launch_path": "/cad",
   "deep_link_scheme": "agentsamcad",
   "identity_provider": "inneranimalmedia",
   "icon_set": "icons/cad-creator",

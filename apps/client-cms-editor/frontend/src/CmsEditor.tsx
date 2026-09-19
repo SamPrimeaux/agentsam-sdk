@@ -135,6 +135,8 @@ export type CmsEditorProps = {
   siteCatalog?: Array<{ slug: string; name?: string; domain?: string | null }>;
   onSiteChange?: (slug: string) => void;
   agent?: CmsEditorAgentConfig;
+  basePath?: string;
+  onNavigate?: (path: string) => void;
 };
 
 function exportContactsCsv(contacts: any[]) {
@@ -149,7 +151,16 @@ function exportContactsCsv(contacts: any[]) {
   URL.revokeObjectURL(link.href);
 }
 
-export default function CmsEditor({ projectSlug = "", initialPageId = null, initialPanel = "sections", siteCatalog = [], onSiteChange, agent }: CmsEditorProps) {
+export default function CmsEditor({
+  projectSlug = "",
+  initialPageId = null,
+  initialPanel = "sections",
+  siteCatalog = [],
+  onSiteChange,
+  agent,
+  basePath = "/cms",
+  onNavigate,
+}: CmsEditorProps) {
   const [sites, setSites] = useState<Site[]>(initialSites);
   const [siteId, setSiteId] = useStored("cms-active-site", projectSlug);
   const site = sites.find((s) => s.id === siteId) || sites.find((s) => s.pages?.length) || sites[0] || null;
@@ -581,7 +592,14 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
           <div className="topbar-left">
             <button
               className="button ghost hub-exit"
-              onClick={() => window.parent.postMessage({ type: "iam-studio-cms-navigate", path: "/dashboard/cms" }, window.location.origin)}
+              onClick={() => {
+                const target = basePath || "/cms";
+                if (onNavigate) {
+                  onNavigate(target);
+                } else {
+                  window.parent.postMessage({ type: "iam-studio-cms-navigate", path: target }, window.location.origin);
+                }
+              }}
               title="Back to CMS overview"
             ><Icon name="collapse" size={14}/> Overview</button>
             <div className="site-trigger-wrap">
@@ -646,7 +664,14 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
       <div className="topbar-left">
         <button
           className="button ghost hub-exit"
-          onClick={() => window.parent.postMessage({ type: "iam-studio-cms-navigate", path: "/dashboard/cms" }, window.location.origin)}
+          onClick={() => {
+            const target = basePath || "/cms";
+            if (onNavigate) {
+              onNavigate(target);
+            } else {
+              window.parent.postMessage({ type: "iam-studio-cms-navigate", path: target }, window.location.origin);
+            }
+          }}
           title="Back to CMS overview"
         ><Icon name="collapse" size={14}/> Overview</button>
         <div className="site-trigger-wrap"><button className="site-trigger" onClick={() => setSiteSwitcher(v => !v)}><span className="site-avatar" style={{background:site.color}}>{site.initials}</span><span><b>{site.name}</b><small>{site.domain}</small></span><Icon name="down" size={13}/></button>{siteSwitcher && <SiteSwitcher sites={sites} active={site.id} choose={chooseSite} close={() => setSiteSwitcher(false)} newSite={() => { setSiteSwitcher(false); toast("Create sites from the CMS hub", "info"); }}/>}</div>

@@ -81,6 +81,19 @@ test('CAD creator app package is curated for third-party installation', () => {
   assert.equal(manifest.runtime.cloudflare, 'scaffold');
 });
 
+test('client-cms-editor app manifest points to authoritative package name', () => {
+  const pkg = packageJson('apps', 'client-cms-editor');
+  const manifest = JSON.parse(read('apps', 'client-cms-editor', 'agentsam.app.json'));
+
+  assert.equal(pkg.name, '@inneranimalmedia/client-cms-editor');
+  assert.equal(manifest.schema, 'agentsam.app.v1');
+  assert.equal(manifest.id, 'client-cms-editor');
+  assert.equal(manifest.package, pkg.name);
+  assert.equal(manifest.runtime.local_preview, 'ready');
+  assert.equal(manifest.runtime.source_scaffold, 'ready');
+  assert.equal(manifest.runtime.cloudflare, 'ready');
+});
+
 test('CAD creator keeps the robotics runtime lazy and the perception key server-side', () => {
   const app = exists('apps', 'cad-creator', 'frontend', 'src', 'app', 'CadCreatorApp.tsx')
     ? read('apps', 'cad-creator', 'frontend', 'src', 'app', 'CadCreatorApp.tsx')

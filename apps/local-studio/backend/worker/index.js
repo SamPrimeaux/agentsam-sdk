@@ -19,7 +19,17 @@ function isIdentityPath(pathname) {
 }
 
 // Studio app routes that require a signed-in session before the SPA shell loads.
-const PROTECTED_APP_PATHS = ["/agentsam", "/projects", "/artifacts", "/files", "/browse", "/cli", "/ship"];
+const PROTECTED_APP_PATHS = [
+  "/agentsam",
+  "/projects",
+  "/artifacts",
+  "/files",
+  "/browse",
+  "/cli",
+  "/ship",
+  "/cad",
+  "/cms",
+];
 function isProtectedAppPath(pathname) {
   return PROTECTED_APP_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }

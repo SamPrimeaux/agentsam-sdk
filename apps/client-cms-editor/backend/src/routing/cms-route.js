@@ -1,12 +1,11 @@
 /**
  * Canonical CMS route semantics.
  *
- * Host-neutral by design: /dashboard/cms is only the default mount point.
- * A future standalone CMS/Vite host can supply a different basePath without
- * changing site/page/editor routing semantics.
+ * The package itself owns /cms; consumers can explicitly provide another mount
+ * point only when they intentionally embed the package.
  */
 
-export const DEFAULT_CMS_BASE_PATH = '/dashboard/cms';
+export const DEFAULT_CMS_BASE_PATH = '/cms';
 
 export const CMS_RESERVED_SEGMENTS = new Set([
   'sites',
@@ -19,6 +18,8 @@ export const CMS_RESERVED_SEGMENTS = new Set([
   'studio',
   'online-store',
   'theme-editor',
+  'settings',
+  'preview',
 ]);
 
 export const CMS_PANELS = new Set([
@@ -28,6 +29,8 @@ export const CMS_PANELS = new Set([
   'media',
   'online-store',
   'theme-editor',
+  'settings',
+  'preview',
 ]);
 
 function clean(value) {
@@ -96,6 +99,8 @@ export function buildCmsPath(
   if (normalizedPanel === 'templates') return `${base}/templates${siteQs}`;
   if (normalizedPanel === 'imports') return `${base}/imports${siteQs}`;
   if (normalizedPanel === 'media') return `${base}/media${siteQs}`;
+  if (normalizedPanel === 'settings') return `${base}/settings${siteQs}`;
+  if (normalizedPanel === 'preview') return `${base}/preview${siteQs}`;
   if (page) return `${base}/pages/${encodeURIComponent(page)}${siteQs}`;
   return `${base}/pages${siteQs}`;
 }
@@ -176,6 +181,14 @@ export function parseCmsRoute(
 
   if (rest[0] === 'theme-editor') {
     return routeResult({ view: 'theme-editor', siteSlug: siteFromQuery, panel: 'theme-editor' });
+  }
+
+  if (rest[0] === 'settings') {
+    return routeResult({ view: 'settings', siteSlug: siteFromQuery, panel: 'settings' });
+  }
+
+  if (rest[0] === 'preview') {
+    return routeResult({ view: 'preview', siteSlug: siteFromQuery, panel: 'preview' });
   }
 
   // Legacy slug-in-path: /cms/{slug}/pages[/:pageId]
