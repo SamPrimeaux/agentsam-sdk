@@ -105,11 +105,13 @@ export async function runWranglerNative(id, input = {}, options = {}) {
   const plan = buildWranglerInvocation(id, input);
   const runner = options.run || runProcess;
   const timeoutMs = Number.isFinite(options.timeoutMs) ? options.timeoutMs : 30_000;
-  const result = await runner(options.bin || 'npx', ['--yes', 'wrangler', ...plan.args], {
+  const defaultBin = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+  const result = await runner(options.bin || defaultBin, ['--yes', 'wrangler', ...plan.args], {
     cwd: plan.cwd,
     timeoutMs,
     signal: options.signal,
     maxBytes: options.maxBytes || 2 * 1024 * 1024,
+    shell: process.platform === 'win32',
   });
   if (result.code !== 0) {
     const evidence = parseWranglerErrorEvidence(result.stderr, result.stdout);

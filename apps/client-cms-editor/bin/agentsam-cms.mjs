@@ -66,7 +66,8 @@ function preview(args) {
     console.error('no preview/dev script in package.json');
     process.exit(1);
   }
-  const result = spawnSync('npm', ['run', script, '--', ...args], {
+  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const result = spawnSync(npmCmd, ['run', script, '--', ...args], {
     cwd: packageRoot,
     stdio: 'inherit',
     shell: process.platform === 'win32',

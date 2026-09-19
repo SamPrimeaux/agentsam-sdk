@@ -25,7 +25,7 @@ describe('local-studio deploy resolver', () => {
     assert.deepEqual(target.wranglerArgs, ['deploy', '-c', 'backend/wrangler.jsonc']);
     assert.equal(isLocalStudioCheckout(root), true);
     const cmd = wranglerDeployCommand(target, { dryRun: true });
-    assert.equal(cmd.bin, 'npx');
+    assert.equal(cmd.bin, process.platform === 'win32' ? 'npx.cmd' : 'npx');
     assert.equal(cmd.cwd, target.appRoot);
     assert.deepEqual(cmd.args, ['wrangler', 'deploy', '-c', 'backend/wrangler.jsonc', '--dry-run']);
   });

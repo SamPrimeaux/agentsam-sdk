@@ -233,13 +233,13 @@ async function runSetup(args = []) {
     }
   }
 
-  if (doInstall && process.platform === 'darwin') {
+  if (doInstall) {
     const { execSync } = await import('node:child_process');
-    const missing = cadReport.tools.filter(t => !t.available && t.install_guidance);
+    const missing = cadReport.tools.filter(t => !t.available && t.install_guidance?.command);
     for (const tool of missing) {
       console.log(`\nExecuting: ${tool.install_guidance.command}`);
       try {
-        execSync(tool.install_guidance.command, { stdio: 'inherit' });
+        execSync(tool.install_guidance.command, { stdio: 'inherit', shell: true });
       } catch (err) {
         console.error(`Failed to install ${tool.name}: ${err.message}`);
       }

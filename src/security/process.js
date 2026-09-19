@@ -1,13 +1,29 @@
 import { spawn } from 'node:child_process';
 import { createProcessDiagnosticError } from '../errors/index.js';
 
-export function runProcess(command, args, { cwd, timeoutMs = 300_000, signal, env = process.env, maxBytes = 8 * 1024 * 1024 } = {}) {
+export function resolveExecutableCommand(command, platform = process.platform) {
+  if (platform !== 'win32' || !command) return { command: String(command || ''), shell: false };
+  const str = String(command).trim();
+  const lower = str.toLowerCase();
+  if (lower === 'npx') return { command: 'npx.cmd', shell: true };
+  if (lower === 'npm') return { command: 'npm.cmd', shell: true };
+  if (lower === 'wrangler') return { command: 'wrangler.cmd', shell: true };
+  if (lower === 'pnpm') return { command: 'pnpm.cmd', shell: true };
+  if (lower === 'yarn') return { command: 'yarn.cmd', shell: true };
+  if (lower.endsWith('.cmd') || lower.endsWith('.bat')) return { command: str, shell: true };
+  return { command: str, shell: false };
+}
+
+export function runProcess(command, args, { cwd, timeoutMs = 300_000, signal, env = process.env, maxBytes = 8 * 1024 * 1024, shell } = {}) {
   return new Promise((resolve, reject) => {
     const safeArgs = Array.isArray(args) ? args : [];
+    const resolved = resolveExecutableCommand(command);
+    const useShell = shell ?? resolved.shell;
+    const finalCommand = resolved.command;
     const diagnostic = (code, message, extra = {}) => createProcessDiagnosticError({
       code,
       message,
-      command,
+      command: finalCommand,
       args: safeArgs,
       cwd,
       stdout,
@@ -15,8 +31,8 @@ export function runProcess(command, args, { cwd, timeoutMs = 300_000, signal, en
       ...extra,
     });
     let stdout = '', stderr = '', size = 0, failure, hardKill;
-    if (signal?.aborted) return reject(createProcessDiagnosticError({ code: 'process_cancelled', message: 'Command cancelled', command, args: safeArgs, cwd }));
-    const child = spawn(command, safeArgs, { cwd, env, shell: false, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'] });
+    if (signal?.aborted) return reject(createProcessDiagnosticError({ code: 'process_cancelled', message: 'Command cancelled', command: finalCommand, args: safeArgs, cwd }));
+    const child = spawn(finalCommand, safeArgs, { cwd, env, shell: useShell, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'] });
     function kill(sig) {
       try { process.kill(process.platform === 'win32' ? child.pid : -child.pid, sig); } catch { /* already exited */ }
     }

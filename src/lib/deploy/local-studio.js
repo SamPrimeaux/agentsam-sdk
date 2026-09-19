@@ -120,7 +120,7 @@ export function writeDeployReceipt(appRoot, receipt) {
 export function wranglerDeployCommand(target, { dryRun = false } = {}) {
   const args = ['wrangler', ...target.wranglerArgs];
   if (dryRun) args.push('--dry-run');
-  return { cwd: target.appRoot, args, bin: 'npx' };
+  return { cwd: target.appRoot, args, bin: process.platform === 'win32' ? 'npx.cmd' : 'npx' };
 }
 
 export function isLocalStudioCheckout(cwd = process.cwd()) {
@@ -217,16 +217,17 @@ export async function runLocalStudioDeploy({
   }
 
   const env = { ...process.env, ...envFile.vars };
-  const lock = spawnSync('npm', ['run', 'verify:npm10-lock'], { cwd: target.appRoot, env, encoding: 'utf8' });
+  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const lock = spawnSync(npmCmd, ['run', 'verify:npm10-lock'], { cwd: target.appRoot, env, encoding: 'utf8', shell: process.platform === 'win32' });
   if (lock.status !== 0) throw new Error(lock.stderr || lock.stdout || 'verify:npm10-lock failed');
   if (!skipBuild) {
-    const build = spawnSync('npm', ['run', 'build'], { cwd: target.appRoot, env, encoding: 'utf8' });
+    const build = spawnSync(npmCmd, ['run', 'build'], { cwd: target.appRoot, env, encoding: 'utf8', shell: process.platform === 'win32' });
     if (build.status !== 0) throw new Error(build.stderr || build.stdout || 'build failed');
-    const verify = spawnSync('npm', ['run', 'cf:verify-output'], { cwd: target.appRoot, env, encoding: 'utf8' });
+    const verify = spawnSync(npmCmd, ['run', 'cf:verify-output'], { cwd: target.appRoot, env, encoding: 'utf8', shell: process.platform === 'win32' });
     if (verify.status !== 0) throw new Error(verify.stderr || verify.stdout || 'cf:verify-output failed');
   }
   const cmd = wranglerDeployCommand(target, { dryRun });
-  const deployed = spawnSync(cmd.bin, cmd.args, { cwd: cmd.cwd, env, encoding: 'utf8' });
+  const deployed = spawnSync(cmd.bin, cmd.args, { cwd: cmd.cwd, env, encoding: 'utf8', shell: process.platform === 'win32' });
   const wranglerOut = `${deployed.stdout || ''}\n${deployed.stderr || ''}`;
   const workerVersion = parseWranglerVersionId(wranglerOut);
   if (deployed.status !== 0) {

@@ -33,6 +33,7 @@ import { grantExecutionApproval, isExecutionApproved, toolApprovalKey } from '..
 import { runWhoami } from './whoami.js';
 import { runLogin, runLogout } from './account-auth.js';
 import { runHelp } from '../ui/cli/help.js';
+import { hydrateSecureCredentials } from '../security/local-vault.js';
 import { readAccountSession } from '../lib/account-session.js';
 import { startRuntimeRun, finishRuntimeRun, recordRuntimeCompaction } from '../local/runtime-store.js';
 
@@ -760,7 +761,13 @@ export async function dispatchShellLine(line, state = {}) {
         await runStatus(args, { cwd: state.cwd });
         break;
       case '/models':
-        await runModels(args, { cwd: state.cwd, write, home: state.home });
+        state.rl?.pause?.();
+        try {
+          await runModels(args, { cwd: state.cwd, write, home: state.home, interactive: state.interactive });
+        } finally {
+          if (process.stdin.isPaused()) process.stdin.resume();
+          state.rl?.resume?.();
+        }
         break;
       case '/providers':
         state.rl?.pause?.();
@@ -912,6 +919,7 @@ export async function runShell(argv = [], options = {}) {
     persistFooter: options.persistFooter === true,
   };
   const sub = argv[0] || '';
+  hydrateSecureCredentials(process.env, { home: state.home });
   if (sub === 'list' || sub === 'status') { write(renderShellCatalog()); return; }
   if (sub === '--command' || sub === '--once') {
     const line = argv.slice(1).join(' ');

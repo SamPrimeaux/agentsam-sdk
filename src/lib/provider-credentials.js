@@ -1,6 +1,14 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import {
+  getSecureProviderKey,
+  setSecureProviderKey,
+  deleteSecureProviderKey,
+  hydrateSecureCredentials,
+} from '../security/local-vault.js';
+
+export { hydrateSecureCredentials };
 
 export const PROVIDER_CREDENTIALS = Object.freeze({
   openai: Object.freeze({ label: 'OpenAI', env: 'OPENAI_API_KEY', files: ['openai.env'], modelProvider: 'openai' }),
@@ -212,9 +220,17 @@ export function setProviderCredential(provider, credential, options = {}) {
   const spec = providerCredentialSpec(provider);
   if (!spec) throw new Error(`unsupported_provider:${normalizeProviderId(provider)}`);
   const value = validateCredentialValue(spec, credential);
+  setSecureProviderKey(spec.provider, { value, accountId: options.accountId }, options);
   const filename = path.join(agentEnvDirectory(options), spec.files[0]);
   atomicWrite(filename, profileSource(spec.provider, value, options), 0o600);
   const loader = ensureAgentEnvLoader(options);
+  if (typeof process !== 'undefined' && process.env) {
+    process.env[spec.env] = value;
+    if (spec.provider === 'cloudflare' && options.accountId) {
+      process.env.ACCOUNT_ID = options.accountId;
+      process.env.CLOUDFLARE_ACCOUNT_ID = options.accountId;
+    }
+  }
   return Object.freeze({
     provider: spec.provider,
     file: filename,
@@ -226,6 +242,7 @@ export function setProviderCredential(provider, credential, options = {}) {
 export function removeProviderCredential(provider, options = {}) {
   const spec = providerCredentialSpec(provider);
   if (!spec) throw new Error(`unsupported_provider:${normalizeProviderId(provider)}`);
+  deleteSecureProviderKey(spec.provider, options);
   const dir = agentEnvDirectory(options);
   let removed = false;
   for (const basename of spec.files) {
@@ -235,6 +252,9 @@ export function removeProviderCredential(provider, options = {}) {
     if (!safety.ok) throw new Error(safety.error);
     fs.rmSync(filename, { force: true });
     removed = true;
+  }
+  if (typeof process !== 'undefined' && process.env) {
+    delete process.env[spec.env];
   }
   return Object.freeze({ provider: spec.provider, removed });
 }
@@ -256,6 +276,22 @@ export function resolveProviderCredential(provider, options = {}) {
       error: prefixError,
       value: prefixError ? '' : fromEnv,
       account_id: accountIdFromEnv || null,
+    });
+  }
+
+  const secure = getSecureProviderKey(spec.provider, options);
+  if (secure && clean(secure.value)) {
+    const val = clean(secure.value);
+    const prefixError = spec.tokenPrefix && !val.startsWith(spec.tokenPrefix) ? `credential_prefix_required:${spec.tokenPrefix}` : null;
+    return Object.freeze({
+      provider: spec.provider,
+      configured: !prefixError,
+      source: secure.source || 'local_vault',
+      env: spec.env,
+      file: null,
+      error: prefixError,
+      value: prefixError ? '' : val,
+      account_id: accountIdFromEnv || secure.accountId || null,
     });
   }
 

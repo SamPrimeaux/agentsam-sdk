@@ -43,7 +43,8 @@ function doctor() {
 }
 
 function preview(args) {
-  const result = spawnSync('npm', ['run', 'preview', '--', ...args], {
+  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const result = spawnSync(npmCmd, ['run', 'preview', '--', ...args], {
     cwd: packageRoot,
     stdio: 'inherit',
     shell: process.platform === 'win32',

@@ -1,8 +1,10 @@
 import pc from 'picocolors';
+import { isCancel, select } from '@clack/prompts';
 import { probeOllama, resolveOllamaConfig } from './ollama.js';
 import { listModelCatalog } from '../models/index.js';
 import { discoverProviderModels } from '../models/discovery.js';
 import { resolveProviderCredential } from '../lib/provider-credentials.js';
+import { providerChoices, promptAndConfigureProvider } from './providers.js';
 import {
   WORKERS_AI_CURATED_MODEL_IDS,
   filterWorkersAiCurated,
@@ -227,6 +229,10 @@ export function renderModelsStatus(status) {
     if (names.length > 30) lines.push(`    ${pc.dim(`… ${names.length - 30} more`)}`);
   }
 
+  const unconfiguredCount = status.providers.filter((p) => !p.configured).length;
+  if (unconfiguredCount > 0) {
+    lines.push(`  ${pc.yellow('Tip:')} Select your preferred provider to continue, or run 'agentsam providers'.`);
+  }
   lines.push('');
   lines.push(`  ${pc.dim('Use /model inside Agent Sam. The picker is built from the models visible to your own connected provider credentials.')}`);
   lines.push('');
@@ -236,7 +242,7 @@ export function renderModelsStatus(status) {
 export async function runModels(argv = [], options = {}) {
   if (argv.some((arg) => arg === '--help' || arg === '-h')) {
     const text = [
-      'agentsam models [--json] [--no-discover]',
+      'agentsam models [--json] [--no-discover] [--setup]',
       '',
       'Probe the provider accounts configured on this machine and list the models visible to those exact credentials.',
       'Context/output limits are taken from provider metadata when available; otherwise Agent Sam reports unknown or a clearly-labeled SDK reference.',
@@ -246,7 +252,7 @@ export async function runModels(argv = [], options = {}) {
     return;
   }
 
-  const allowed = new Set(['--json', '--no-discover']);
+  const allowed = new Set(['--json', '--no-discover', '--setup']);
   const unknown = argv.filter((arg) => !allowed.has(arg));
   if (unknown.length) throw new Error(`unknown models option: ${unknown[0]}`);
 
@@ -255,7 +261,36 @@ export async function runModels(argv = [], options = {}) {
     discoverRemote: !argv.includes('--no-discover'),
   });
   const write = options.write || ((text) => process.stdout.write(text));
-  if (argv.includes('--json')) writeLine(write, JSON.stringify(status, null, 2));
-  else write(renderModelsStatus(status));
+  if (argv.includes('--json')) {
+    writeLine(write, JSON.stringify(status, null, 2));
+    return status;
+  }
+  write(renderModelsStatus(status));
+
+  const allUnconfigured = status.providers.every((p) => !p.configured);
+  const interactive = options.interactive ?? Boolean(process.stdin.isTTY && process.stdout.isTTY);
+  if (interactive && (argv.includes('--setup') || allUnconfigured)) {
+    const promptSelect = options.selectImpl || select;
+    const choices = [
+      ...providerChoices(options),
+      { value: '__skip__', label: 'Skip / Continue', hint: 'set up provider credentials later' },
+    ];
+    const choice = await promptSelect({
+      message: 'Tip: Select your preferred provider to continue',
+      options: choices,
+    });
+    if (!isCancel(choice) && choice !== '__skip__') {
+      const result = await promptAndConfigureProvider(choice, options);
+      if (result?.saved) {
+        const updated = await collectModelsStatus({
+          ...options,
+          discoverRemote: !argv.includes('--no-discover'),
+        });
+        write(renderModelsStatus(updated));
+        return updated;
+      }
+    }
+  }
+
   return status;
 }

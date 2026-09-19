@@ -6,6 +6,7 @@ import {
   multiselect,
   outro,
   password,
+  select,
   spinner,
   text,
 } from '@clack/prompts';
@@ -123,9 +124,63 @@ export function renderProviderStatus(rows = []) {
   return lines.join('\n');
 }
 
-async function promptProviderCredential(provider, options = {}) {
-  const spec = providerCredentialSpec(provider);
-  if (!spec) throw new Error(`unsupported_provider:${provider}`);
+export async function validateAndSaveProviderCredential(provider, secret, options = {}) {
+  const id = normalizeProviderId(provider);
+  const spec = providerCredentialSpec(id);
+  if (!spec) throw new Error(`unsupported_provider:${id}`);
+  const cleanSecret = clean(secret);
+  if (!cleanSecret) return { attempted: false, ok: false, error: 'Credential is required', models: [] };
+  if (spec.tokenPrefix && !cleanSecret.startsWith(spec.tokenPrefix)) {
+    return { attempted: false, ok: false, error: `Expected ${spec.tokenPrefix}…`, models: [] };
+  }
+
+  const accountId = clean(options.accountId);
+  if (id === 'cloudflare' && !accountId) {
+    return { attempted: false, ok: false, error: 'Cloudflare account ID is required', models: [] };
+  }
+
+  const tempCredential = {
+    provider: id,
+    configured: true,
+    value: cleanSecret,
+    account_id: accountId || null,
+  };
+
+  let verification;
+  if (id === 'inneranimalmedia') {
+    verification = await verifyInnerAnimalMedia(tempCredential, options);
+  } else {
+    verification = await discoverProviderModels(id, tempCredential, { fetchImpl: options.fetchImpl || fetch });
+  }
+
+  if (!verification.ok) {
+    return {
+      attempted: true,
+      ok: false,
+      error: verification.error || 'Provider verification failed',
+      models: [],
+      saved: false,
+    };
+  }
+
+  // Key is verified! Now persist securely to OS store + AES-256-GCM vault + env profile
+  setProviderCredential(id, cleanSecret, { ...options, accountId });
+
+  return {
+    attempted: true,
+    ok: true,
+    error: null,
+    models: verification.models || [],
+    model_count: verification.models?.length || 0,
+    identity: verification.identity || null,
+    saved: true,
+  };
+}
+
+export async function promptAndConfigureProvider(provider, options = {}) {
+  const id = normalizeProviderId(provider);
+  const spec = providerCredentialSpec(id);
+  if (!spec) throw new Error(`unsupported_provider:${id}`);
   const promptPassword = options.passwordImpl || password;
   const promptText = options.textImpl || text;
   const secret = await promptPassword({
@@ -140,50 +195,60 @@ async function promptProviderCredential(provider, options = {}) {
   if (isCancel(secret)) return null;
 
   let accountId = '';
-  if (provider === 'cloudflare') {
+  if (id === 'cloudflare') {
     const answer = await promptText({
       message: 'Cloudflare account ID',
       placeholder: '32-character account ID',
       validate(value) {
-        const id = clean(value);
-        if (!id) return 'Cloudflare account ID is required';
-        if (!/^[a-f0-9]{32}$/i.test(id)) return 'Expected a 32-character hexadecimal account ID';
+        const val = clean(value);
+        if (!val) return 'Cloudflare account ID is required';
+        if (!/^[a-f0-9]{32}$/i.test(val)) return 'Expected a 32-character hexadecimal account ID';
       },
     });
     if (isCancel(answer)) return null;
     accountId = clean(answer);
   }
 
-  setProviderCredential(provider, String(secret), { ...options, accountId });
-  return verifyProviderCredential(provider, options);
+  const spin = options.spinnerImpl ? options.spinnerImpl() : spinner();
+  spin.start(`Verifying ${spec.label} API credential`);
+
+  const result = await validateAndSaveProviderCredential(id, String(secret), { ...options, accountId });
+
+  if (!result.ok) {
+    spin.stop(`Verification failed: ${result.error || 'invalid key'} · Key was NOT saved`, 1);
+    return { ...result, saved: false };
+  }
+
+  const count = result.models?.length || 0;
+  const suffix = count ? ` · ${count} models visible` : '';
+  spin.stop(`Verified${suffix} · saved securely to local vault`);
+
+  return { ...result, saved: true };
 }
 
 async function runInteractiveProviders(options = {}) {
-  const promptMultiselect = options.multiselectImpl || multiselect;
-  const selected = await promptMultiselect({
-    message: 'Providers to configure',
-    required: false,
-    options: providerChoices(options),
-  });
-  if (isCancel(selected)) {
-    cancel('Provider setup cancelled.');
-    return collectProviderStatus(options);
-  }
-  if (!selected.length) return collectProviderStatus(options);
+  const promptSelect = options.selectImpl || select;
 
   intro('Agent Sam provider setup');
-  const spin = options.spinnerImpl ? options.spinnerImpl() : spinner();
-  for (const provider of selected) {
-    const result = await promptProviderCredential(provider, options);
-    if (!result) continue;
-    spin.start(`Verifying ${providerCredentialSpec(provider)?.label || provider}`);
-    if (result.ok) {
-      const suffix = result.models?.length ? ` · ${result.models.length} models` : '';
-      spin.stop(`Verified${suffix}`);
-    } else {
-      spin.stop(`Saved · verification failed: ${result.error || 'unknown'}`, 1);
+
+  while (true) {
+    const choices = [
+      ...providerChoices(options),
+      { value: '__done__', label: 'Done / Return to shell', hint: 'finish provider setup' },
+    ];
+
+    const choice = await promptSelect({
+      message: 'Select your preferred provider to continue',
+      options: choices,
+    });
+
+    if (isCancel(choice) || choice === '__done__') {
+      break;
     }
+
+    await promptAndConfigureProvider(choice, options);
   }
+
   outro('Provider setup complete');
   return collectProviderStatus(options);
 }
@@ -276,15 +341,19 @@ export async function runProviders(argv = [], options = {}) {
     if (parsed.fromEnv) {
       const value = clean((options.env || process.env)[parsed.fromEnv]);
       if (!value) throw new Error(`environment credential missing: ${parsed.fromEnv}`);
-      setProviderCredential(parsed.provider, value, options);
-      return verifyProviderCredential(parsed.provider, options);
+      const verified = await validateAndSaveProviderCredential(parsed.provider, value, options);
+      if (!verified.ok) {
+        throw new Error(`Provider verification failed: ${verified.error}. Credential was not saved.`);
+      }
+      writeLine(write, `  ${parsed.provider} verified · ${verified.model_count || 0} models`);
+      return verified;
     }
     if (options.interactive === false || !(options.interactive ?? Boolean(process.stdin.isTTY && process.stdout.isTTY))) {
       throw new Error('providers add requires an interactive terminal or --from-env NAME');
     }
-    const result = await promptProviderCredential(parsed.provider, options);
+    const result = await promptAndConfigureProvider(parsed.provider, options);
     if (!result) return null;
-    writeLine(write, result.ok ? `  ${parsed.provider} verified` : `  ${parsed.provider} saved · verification failed: ${result.error}`);
+    writeLine(write, result.ok ? `  ${parsed.provider} verified` : `  ${parsed.provider} verification failed: ${result.error}`);
     return result;
   }
 

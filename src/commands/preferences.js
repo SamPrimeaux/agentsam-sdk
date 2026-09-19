@@ -62,6 +62,12 @@ export function modelOptions(status) {
       },
     });
   }
+  options.push({
+    value: '__configure_provider__',
+    label: '+ Configure an AI Provider',
+    hint: 'Add OpenAI, Anthropic, Gemini, Cursor, or Grok API key',
+    model: null,
+  });
   return options;
 }
 
@@ -96,6 +102,11 @@ async function promptModelPreferences(identity, existing, options = {}) {
   const models = modelOptions(status);
   const initialModel = models.some((row) => row.value === existing.modelPreference) ? existing.modelPreference : 'auto';
   const modelPreference = stopIfCancelled(await select({ message: 'Model', initialValue: initialModel, options: models.map(({ model, ...row }) => row) }));
+  if (modelPreference === '__configure_provider__') {
+    const { runProviders } = await import('./providers.js');
+    await runProviders([], { interactive: true, ...(options.modelStatusOptions || {}) });
+    return promptModelPreferences(identity, existing, options);
+  }
   const selected = models.find((row) => row.value === modelPreference)?.model || null;
   const modelSnapshot = selected || (existing.modelSnapshot?.model_key === modelPreference ? existing.modelSnapshot : null);
 

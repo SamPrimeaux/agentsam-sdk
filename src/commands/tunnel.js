@@ -49,6 +49,7 @@ function runInteractiveWrangler(args, options = {}) {
       cwd,
       stdio: 'inherit',
       env: options.env || process.env,
+      shell: process.platform === 'win32',
     });
     child.once('error', reject);
     child.once('exit', (code, signal) => {

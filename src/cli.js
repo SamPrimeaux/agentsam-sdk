@@ -45,6 +45,7 @@ import { repositoryRoot } from './knowledge/config.js';
 import { resolveAccountAuth } from './lib/account-session.js';
 import { renderDiagnosticError } from './errors/index.js';
 import { renderHelpOverview, runHelp } from './ui/cli/help.js';
+import { hydrateSecureCredentials } from './security/local-vault.js';
 
 const VERSION = pkg.version;
 
@@ -303,6 +304,8 @@ async function initFromArgs(argv) {
 
 const command = process.argv[2];
 const rest = process.argv.slice(3);
+
+hydrateSecureCredentials(process.env);
 
 if (command === '--version' || command === '-v') {
   console.log(VERSION);

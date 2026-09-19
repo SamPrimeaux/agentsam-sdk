@@ -10,7 +10,8 @@ export function detectCloudflareAccounts(options = {}) {
   const explicit = String(options.accountId || env.ACCOUNT_ID || env.CLOUDFLARE_ACCOUNT_ID || '').trim();
   if (explicit) return { accounts: [{ id: explicit, name: null }], source: 'environment' };
   const spawn = options.spawnSyncImpl || spawnSync;
-  const result = spawn('npx', ['--no-install', 'wrangler', 'whoami', '--json'], { cwd: options.cwd || process.cwd(), env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  const npxBin = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+  const result = spawn(npxBin, ['--no-install', 'wrangler', 'whoami', '--json'], { cwd: options.cwd || process.cwd(), env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], shell: process.platform === 'win32' });
   if (result?.status !== 0) return { accounts: [], source: 'wrangler', error: String(result?.stderr || '').trim() || `wrangler exited ${result?.status ?? 'unknown'}` };
   try {
     const parsed = JSON.parse(String(result.stdout || '{}'));
