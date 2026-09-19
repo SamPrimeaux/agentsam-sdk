@@ -13,6 +13,8 @@ export const WRANGLER_NATIVE_COMMANDS = Object.freeze([
   Object.freeze({ id: 'versions.view', argv: ['versions', 'view'], risk: 'read', output: 'json', description: 'Read one exact Worker version, including its binding names and types but never secret values.' }),
   Object.freeze({ id: 'types.check', argv: ['types', '--check'], risk: 'read', output: 'text', description: 'Check generated Worker binding/runtime types without rewriting them.' }),
   Object.freeze({ id: 'queues.list', argv: ['queues', 'list'], risk: 'read', output: 'text', description: 'List Workers Queues visible to the active Cloudflare identity.' }),
+  Object.freeze({ id: 'tunnel.list', argv: ['tunnel', 'list'], risk: 'read', output: 'text', description: 'List real Cloudflare Tunnels visible to the active Wrangler identity.' }),
+  Object.freeze({ id: 'tunnel.info', argv: ['tunnel', 'info'], risk: 'read', output: 'text', description: 'Read connector/status details for one real Cloudflare Tunnel.' }),
 ]);
 
 export const WRANGLER_OPERATION_FAMILIES = Object.freeze([
@@ -60,6 +62,11 @@ export function buildWranglerInvocation(id, input = {}) {
   }
   if (id === 'types.check' && clean(input.path)) args.splice(1, 0, clean(input.path));
   if (id === 'queues.list' && input.page != null) args.push('--page', String(positiveInteger(input.page, 1)));
+  if (id === 'tunnel.info') {
+    const tunnel = clean(input.tunnel);
+    if (!tunnel) throw new Error('cloudflare_tunnel_required');
+    args.push(tunnel);
+  }
   const config = resolveConfig(cwd, input.config);
   if (config) args.push('--config', config);
   if (clean(input.env)) args.push('--env', clean(input.env));
