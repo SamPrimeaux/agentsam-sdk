@@ -6,53 +6,23 @@ import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
 
-export interface InstallGuidance {
-  command: string;
-  description: string;
-  url: string;
-}
-
-export interface CadToolDiscoveryReceipt {
-  tool: string;
-  name: string;
-  category: 'deterministic_cad' | 'solid_kernel' | 'renderer' | 'generative_ai' | 'simulation';
-  available: boolean;
-  binary: string | null;
-  version: string | null;
-  source: 'explicit' | 'env' | 'path' | 'user_config' | 'standard_install' | 'bundled' | 'none' | 'error';
-  execution_lane: 'native' | 'cloud_byok' | 'browser_wasm';
-  supportedFormats: string[];
-  install_guidance?: InstallGuidance | null;
-  error?: string | null;
-}
-
-export interface CadToolsResponse {
-  schema_version: number;
-  timestamp: string;
-  total_tools: number;
-  available_tools: number;
-  all_systems_ready: boolean;
-  tools: CadToolDiscoveryReceipt[];
-}
-
-function isFile(value: string | null | undefined): boolean {
-  if (!value) return false;
+function isFile(value) {
   try {
-    return fs.existsSync(value) && fs.statSync(value).isFile();
+    return Boolean(value) && fs.existsSync(value) && fs.statSync(value).isFile();
   } catch {
     return false;
   }
 }
 
-function canonicalExecutable(value: string): string {
+function canonicalExecutable(value) {
   try {
-    return (fs.realpathSync as any).native ? (fs.realpathSync as any).native(value) : fs.realpathSync(value);
+    return fs.realpathSync.native ? fs.realpathSync.native(value) : fs.realpathSync(value);
   } catch {
     return value;
   }
 }
 
-function pathCandidates(names: string[], pathEnv = process.env.PATH, platform = process.platform): string[] {
+function pathCandidates(names, pathEnv = process.env.PATH, platform = process.platform) {
   const binaryNames = platform === 'win32'
     ? names.flatMap(n => (n.endsWith('.exe') ? [n] : [`${n}.exe`, n]))
     : names;
@@ -62,30 +32,30 @@ function pathCandidates(names: string[], pathEnv = process.env.PATH, platform = 
     .flatMap(dir => binaryNames.map(name => path.join(dir, name)));
 }
 
-export function getCadConfigPath(): string {
+export function getCadConfigPath() {
   const home = os.homedir();
   return path.join(home, '.agentsam', 'cad.json');
 }
 
-export function loadCadConfig(): any {
+export function loadCadConfig() {
   try {
-    const p = getCadConfigPath();
-    if (fs.existsSync(p)) {
-      return JSON.parse(fs.readFileSync(p, 'utf8'));
+    const configPath = getCadConfigPath();
+    if (fs.existsSync(configPath)) {
+      return JSON.parse(fs.readFileSync(configPath, 'utf8'));
     }
   } catch {}
   return null;
 }
 
-export function saveCadConfig(config: any): void {
+export function saveCadConfig(config) {
   try {
-    const p = getCadConfigPath();
-    fs.mkdirSync(path.dirname(p), { recursive: true });
-    fs.writeFileSync(p, JSON.stringify(config, null, 2), 'utf8');
+    const configPath = getCadConfigPath();
+    fs.mkdirSync(path.dirname(configPath), { recursive: true });
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
   } catch {}
 }
 
-export function getInstallGuidance(tool: string, platform = process.platform): InstallGuidance | null {
+export function getInstallGuidance(tool, platform = process.platform) {
   switch (tool) {
     case 'openscad':
       if (platform === 'darwin') {
@@ -155,13 +125,12 @@ export function getInstallGuidance(tool: string, platform = process.platform): I
   }
 }
 
-export function discoverOpenScad(env = process.env, platform = process.platform): { binary: string | null; source: CadToolDiscoveryReceipt['source'] } {
+export function discoverOpenScad(env = process.env, platform = process.platform) {
   const configured = String(env.AGENTSAM_OPENSCAD_BIN || '').trim();
   if (configured && isFile(configured)) {
     return { binary: canonicalExecutable(configured), source: 'env' };
   }
 
-  // Check user config cache
   const config = loadCadConfig();
   if (config?.tools?.openscad?.binary && isFile(config.tools.openscad.binary)) {
     return { binary: canonicalExecutable(config.tools.openscad.binary), source: 'user_config' };
@@ -200,8 +169,8 @@ export function discoverOpenScad(env = process.env, platform = process.platform)
   return { binary: null, source: 'none' };
 }
 
-export async function probeOpenScad(env = process.env): Promise<CadToolDiscoveryReceipt> {
-  const { binary, source } = discoverOpenScad(env);
+export async function probeOpenScad(env = process.env, platform = process.platform) {
+  const { binary, source } = discoverOpenScad(env, platform);
   if (!binary) {
     return {
       tool: 'openscad',
@@ -212,7 +181,7 @@ export async function probeOpenScad(env = process.env): Promise<CadToolDiscovery
       version: null,
       source: 'none',
       execution_lane: 'native',
-      install_guidance: getInstallGuidance('openscad'),
+      install_guidance: getInstallGuidance('openscad', platform),
       supportedFormats: ['stl', 'dxf', 'svg', '3mf', 'csg', 'scad'],
     };
   }
@@ -234,7 +203,7 @@ export async function probeOpenScad(env = process.env): Promise<CadToolDiscovery
       execution_lane: 'native',
       supportedFormats: ['stl', 'dxf', 'svg', '3mf', 'csg', 'scad'],
     };
-  } catch (err: any) {
+  } catch (err) {
     return {
       tool: 'openscad',
       name: 'OpenSCAD',
@@ -245,19 +214,18 @@ export async function probeOpenScad(env = process.env): Promise<CadToolDiscovery
       source,
       execution_lane: 'native',
       error: err.message,
-      install_guidance: getInstallGuidance('openscad'),
+      install_guidance: getInstallGuidance('openscad', platform),
       supportedFormats: ['stl', 'dxf', 'svg', '3mf', 'csg', 'scad'],
     };
   }
 }
 
-export function discoverFreeCad(env = process.env, platform = process.platform): { binary: string | null; source: CadToolDiscoveryReceipt['source'] } {
+export function discoverFreeCad(env = process.env, platform = process.platform) {
   const configured = String(env.AGENTSAM_FREECAD_BIN || '').trim();
   if (configured && isFile(configured)) {
     return { binary: canonicalExecutable(configured), source: 'env' };
   }
 
-  // Check user config cache
   const config = loadCadConfig();
   if (config?.tools?.freecad?.binary && isFile(config.tools.freecad.binary)) {
     return { binary: canonicalExecutable(config.tools.freecad.binary), source: 'user_config' };
@@ -322,8 +290,8 @@ export function discoverFreeCad(env = process.env, platform = process.platform):
   return { binary: null, source: 'none' };
 }
 
-export async function probeFreeCad(env = process.env): Promise<CadToolDiscoveryReceipt> {
-  const { binary, source } = discoverFreeCad(env);
+export async function probeFreeCad(env = process.env, platform = process.platform) {
+  const { binary, source } = discoverFreeCad(env, platform);
   if (!binary) {
     return {
       tool: 'freecad',
@@ -334,7 +302,7 @@ export async function probeFreeCad(env = process.env): Promise<CadToolDiscoveryR
       version: null,
       source: 'none',
       execution_lane: 'native',
-      install_guidance: getInstallGuidance('freecad'),
+      install_guidance: getInstallGuidance('freecad', platform),
       supportedFormats: ['step', 'iges', 'brep', 'fcstd'],
     };
   }
@@ -356,7 +324,7 @@ export async function probeFreeCad(env = process.env): Promise<CadToolDiscoveryR
       execution_lane: 'native',
       supportedFormats: ['step', 'iges', 'brep', 'fcstd'],
     };
-  } catch (err: any) {
+  } catch (err) {
     return {
       tool: 'freecad',
       name: 'FreeCAD / OpenCASCADE',
@@ -367,19 +335,18 @@ export async function probeFreeCad(env = process.env): Promise<CadToolDiscoveryR
       source,
       execution_lane: 'native',
       error: err.message,
-      install_guidance: getInstallGuidance('freecad'),
+      install_guidance: getInstallGuidance('freecad', platform),
       supportedFormats: ['step', 'iges', 'brep', 'fcstd'],
     };
   }
 }
 
-export function discoverBlender(env = process.env, platform = process.platform): { binary: string | null; source: CadToolDiscoveryReceipt['source'] } {
+export function discoverBlender(env = process.env, platform = process.platform) {
   const configured = String(env.AGENTSAM_BLENDER_BIN || '').trim();
   if (configured && isFile(configured)) {
     return { binary: canonicalExecutable(configured), source: 'env' };
   }
 
-  // Check user config cache
   const config = loadCadConfig();
   if (config?.tools?.blender?.binary && isFile(config.tools.blender.binary)) {
     return { binary: canonicalExecutable(config.tools.blender.binary), source: 'user_config' };
@@ -414,8 +381,8 @@ export function discoverBlender(env = process.env, platform = process.platform):
   return { binary: null, source: 'none' };
 }
 
-export async function probeBlender(env = process.env): Promise<CadToolDiscoveryReceipt> {
-  const { binary, source } = discoverBlender(env);
+export async function probeBlender(env = process.env, platform = process.platform) {
+  const { binary, source } = discoverBlender(env, platform);
   if (!binary) {
     return {
       tool: 'blender',
@@ -426,7 +393,7 @@ export async function probeBlender(env = process.env): Promise<CadToolDiscoveryR
       version: null,
       source: 'none',
       execution_lane: 'native',
-      install_guidance: getInstallGuidance('blender'),
+      install_guidance: getInstallGuidance('blender', platform),
       supportedFormats: ['blend', 'glb', 'obj', 'stl', 'png'],
     };
   }
@@ -447,7 +414,7 @@ export async function probeBlender(env = process.env): Promise<CadToolDiscoveryR
       execution_lane: 'native',
       supportedFormats: ['blend', 'glb', 'obj', 'stl', 'png'],
     };
-  } catch (err: any) {
+  } catch (err) {
     return {
       tool: 'blender',
       name: 'Blender',
@@ -458,13 +425,13 @@ export async function probeBlender(env = process.env): Promise<CadToolDiscoveryR
       source,
       execution_lane: 'native',
       error: err.message,
-      install_guidance: getInstallGuidance('blender'),
+      install_guidance: getInstallGuidance('blender', platform),
       supportedFormats: ['blend', 'glb', 'obj', 'stl', 'png'],
     };
   }
 }
 
-export function probeMeshy(env = process.env): CadToolDiscoveryReceipt {
+export function probeMeshy(env = process.env) {
   const apiKey = String(env.MESHY_API_KEY || env.AGENTSAM_MESHY_API_KEY || '').trim();
   return {
     tool: 'meshy',
@@ -479,7 +446,7 @@ export function probeMeshy(env = process.env): CadToolDiscoveryReceipt {
   };
 }
 
-export function probeMujoco(): CadToolDiscoveryReceipt {
+export function probeMujoco() {
   return {
     tool: 'mujoco',
     name: 'MuJoCo Physics',
@@ -493,11 +460,11 @@ export function probeMujoco(): CadToolDiscoveryReceipt {
   };
 }
 
-export async function probeAllCadTools(env = process.env, cache = true): Promise<CadToolsResponse> {
+export async function probeAllCadTools(env = process.env, platform = process.platform, cache = true) {
   const [openscad, freecad, blender] = await Promise.all([
-    probeOpenScad(env),
-    probeFreeCad(env),
-    probeBlender(env),
+    probeOpenScad(env, platform),
+    probeFreeCad(env, platform),
+    probeBlender(env, platform),
   ]);
 
   const meshy = probeMeshy(env);

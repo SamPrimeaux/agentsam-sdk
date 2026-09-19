@@ -90,34 +90,34 @@ export const DEFAULT_RUNTIME_CAPABILITIES: RuntimeCapabilityStatus[] = [
   {
     id: 'openscad',
     name: 'OpenSCAD',
-    available: true,
-    version: '2025.09',
+    available: false,
+    version: undefined,
     lane: 'local_native',
-    source: 'PATH',
-    binary: '/opt/homebrew/bin/openscad',
-    status: 'ready',
+    source: 'unprobed',
+    binary: undefined,
+    status: 'not_connected',
     description: 'Parametric CSG compiler for precision solid geometry and STL/DXF export.'
   },
   {
     id: 'freecad',
     name: 'FreeCAD',
-    available: true,
-    version: '1.0.0',
+    available: false,
+    version: undefined,
     lane: 'local_native',
-    source: 'standard_install',
-    binary: '/Applications/FreeCAD.app/Contents/Resources/bin/FreeCADCmd',
-    status: 'connected',
+    source: 'unprobed',
+    binary: undefined,
+    status: 'not_connected',
     description: 'Precision B-Rep solid modeling with ISO 10303 STEP/IGES interchange.'
   },
   {
     id: 'blender',
     name: 'Blender',
-    available: true,
-    version: '5.0.1',
+    available: false,
+    version: undefined,
     lane: 'local_native',
-    source: 'PATH',
-    binary: '/usr/local/bin/blender',
-    status: 'ready',
+    source: 'unprobed',
+    binary: undefined,
+    status: 'not_connected',
     description: 'High-fidelity PBR rendering, camera baking, and GLTF/GLB production pipeline.'
   },
   {
@@ -145,7 +145,7 @@ export const DEFAULT_RUNTIME_CAPABILITIES: RuntimeCapabilityStatus[] = [
     name: 'Meshy',
     available: false,
     lane: 'cloud_byok',
-    source: 'credential_registry',
+    source: 'unprobed',
     status: 'not_connected',
     description: 'Generative AI text/image-to-3D asset synthesis for automated obstacles and props.'
   }

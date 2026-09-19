@@ -9,12 +9,15 @@ const configPath = path.join(backend, "wrangler.jsonc");
 const workerEntry = path.join(backend, "worker", "index.js");
 const serverEntry = path.join(root, ".output", "server", "index.mjs");
 const assetsDir = path.join(root, ".output", "public");
+const siteHomepage = path.join(assetsDir, "site", "homepage.html");
 
 assert.ok(fs.existsSync(configPath), "backend/wrangler.jsonc is required");
 assert.ok(fs.existsSync(workerEntry), "backend/worker/index.js is required");
 assert.ok(fs.existsSync(serverEntry), ".output/server/index.mjs is required; run npm run build");
 assert.ok(fs.statSync(serverEntry).isFile(), "Nitro server entry must be a file");
 assert.ok(fs.existsSync(assetsDir) && fs.statSync(assetsDir).isDirectory(), ".output/public is required");
+assert.ok(fs.existsSync(siteHomepage) && fs.statSync(siteHomepage).size > 20000, ".output/public/site/homepage.html is required (>20KB)");
+
 
 const config = fs.readFileSync(configPath, "utf8");
 const worker = fs.readFileSync(workerEntry, "utf8");

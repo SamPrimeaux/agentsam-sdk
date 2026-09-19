@@ -11,6 +11,7 @@ import {
   meshyStatus,
   mujocoStatus,
   discoverAllCadTools,
+  getInstallGuidance,
 } from '../src/lib/cad/index.js';
 
 function makeFixture(t, name) {
@@ -134,3 +135,24 @@ test('discoverAllCadTools aggregates deterministic receipts across engines', asy
   assert.equal(report.all_systems_ready, true);
   assert.equal(report.tools.length, 5);
 });
+
+test('getInstallGuidance provides exact OS package manager commands', () => {
+  const darwinOpenScad = getInstallGuidance('openscad', 'darwin');
+  assert.equal(darwinOpenScad.command, 'brew install openscad');
+
+  const linuxFreeCad = getInstallGuidance('freecad', 'linux');
+  assert.match(linuxFreeCad.command, /apt-get install.*freecad/);
+
+  const winBlender = getInstallGuidance('blender', 'win32');
+  assert.equal(winBlender.command, 'winget install BlenderFoundation.Blender');
+});
+
+test('discoverOpenScad returns binary: null when not found on host (no hardcoded defaults)', () => {
+  const emptyDiscovery = discoverOpenScad({
+    env: { PATH: '' },
+    platform: 'unknown_os',
+  });
+  assert.equal(emptyDiscovery.binary, null);
+  assert.equal(emptyDiscovery.source, 'none');
+});
+

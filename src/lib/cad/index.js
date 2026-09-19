@@ -22,6 +22,10 @@ export {
   meshyStatus,
   mujocoStatus,
   discoverAllCadTools,
+  getCadConfigPath,
+  loadCadConfig,
+  saveCadConfig,
+  getInstallGuidance,
 } from './discovery.js';
 
 export {

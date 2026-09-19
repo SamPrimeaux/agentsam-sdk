@@ -35,3 +35,13 @@ cpSync(
   path.join(outPublic, "shared/company-branding.js"),
 );
 console.log("[copy-auth-portal] shared/company-branding.js -> .output/public/shared/company-branding.js");
+
+// Copy canonical site homepage to build assets so Worker env.ASSETS can serve it directly
+const siteSource = path.join(appRoot, "frontend/public/site/homepage.html");
+const siteDestDir = path.join(outPublic, "site");
+if (existsSync(siteSource)) {
+  mkdirSync(siteDestDir, { recursive: true });
+  cpSync(siteSource, path.join(siteDestDir, "homepage.html"));
+  console.log("[copy-auth-portal] site/homepage.html -> .output/public/site/homepage.html");
+}
+

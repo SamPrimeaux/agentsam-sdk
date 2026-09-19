@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { runProcess } from '../../security/process.js';
 import { discoverBlender, blenderStatus } from './blender.js';
@@ -30,11 +31,117 @@ function pathCandidates(names, pathEnv, platform) {
 }
 
 /**
- * Discovers OpenSCAD executable across 4 deterministic tiers:
+ * Returns the path to the per-user CAD configuration file.
+ */
+export function getCadConfigPath() {
+  const home = os.homedir();
+  return path.join(home, '.agentsam', 'cad.json');
+}
+
+/**
+ * Loads cached CAD configuration from ~/.agentsam/cad.json.
+ */
+export function loadCadConfig() {
+  try {
+    const configPath = getCadConfigPath();
+    if (fs.existsSync(configPath)) {
+      return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    }
+  } catch {}
+  return null;
+}
+
+/**
+ * Saves discovered CAD binary paths into ~/.agentsam/cad.json.
+ */
+export function saveCadConfig(config) {
+  try {
+    const configPath = getCadConfigPath();
+    fs.mkdirSync(path.dirname(configPath), { recursive: true });
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
+  } catch {}
+}
+
+/**
+ * Returns OS-specific installation instructions for CAD tools.
+ */
+export function getInstallGuidance(tool, platform = process.platform) {
+  switch (tool) {
+    case 'openscad':
+      if (platform === 'darwin') {
+        return {
+          command: 'brew install openscad',
+          description: 'Install OpenSCAD via Homebrew on macOS',
+          url: 'https://openscad.org/downloads.html',
+        };
+      }
+      if (platform === 'win32') {
+        return {
+          command: 'winget install OpenSCAD.OpenSCAD',
+          description: 'Install OpenSCAD via Windows Package Manager',
+          url: 'https://openscad.org/downloads.html',
+        };
+      }
+      return {
+        command: 'sudo apt-get install -y openscad',
+        description: 'Install OpenSCAD via apt package manager on Linux',
+        url: 'https://openscad.org/downloads.html',
+      };
+
+    case 'freecad':
+      if (platform === 'darwin') {
+        return {
+          command: 'brew install --cask freecad',
+          description: 'Install FreeCAD via Homebrew Cask on macOS',
+          url: 'https://www.freecad.org/downloads.php',
+        };
+      }
+      if (platform === 'win32') {
+        return {
+          command: 'winget install FreeCAD.FreeCAD',
+          description: 'Install FreeCAD via Windows Package Manager',
+          url: 'https://www.freecad.org/downloads.php',
+        };
+      }
+      return {
+        command: 'sudo apt-get install -y freecad',
+        description: 'Install FreeCAD via apt package manager on Linux',
+        url: 'https://www.freecad.org/downloads.php',
+      };
+
+    case 'blender':
+      if (platform === 'darwin') {
+        return {
+          command: 'brew install --cask blender',
+          description: 'Install Blender via Homebrew Cask on macOS',
+          url: 'https://www.blender.org/download/',
+        };
+      }
+      if (platform === 'win32') {
+        return {
+          command: 'winget install BlenderFoundation.Blender',
+          description: 'Install Blender via Windows Package Manager',
+          url: 'https://www.blender.org/download/',
+        };
+      }
+      return {
+        command: 'sudo apt-get install -y blender',
+        description: 'Install Blender via apt package manager on Linux',
+        url: 'https://www.blender.org/download/',
+      };
+
+    default:
+      return null;
+  }
+}
+
+/**
+ * Discovers OpenSCAD executable across 5 deterministic tiers:
  * 1. explicit command option
  * 2. AGENTSAM_OPENSCAD_BIN
- * 3. PATH
- * 4. allowlisted OS installation paths
+ * 3. ~/.agentsam/cad.json cached binary
+ * 4. PATH
+ * 5. allowlisted OS installation paths (both Apple Silicon and Intel Mac, Linux, Windows)
  */
 export function discoverOpenScad({
   openscadBin,
@@ -54,6 +161,12 @@ export function discoverOpenScad({
     const resolved = path.resolve(configured);
     if (!isFile(resolved, existsSync)) throw new Error(`AGENTSAM_OPENSCAD_BIN does not exist: ${resolved}`);
     return { binary: canonicalExecutable(resolved), source: 'env' };
+  }
+
+  // Check user config cache
+  const config = loadCadConfig();
+  if (config?.tools?.openscad?.binary && isFile(config.tools.openscad.binary, existsSync)) {
+    return { binary: canonicalExecutable(config.tools.openscad.binary), source: 'user_config' };
   }
 
   const inPath = pathCandidates(['openscad'], env.PATH, platform).find(c => isFile(c, existsSync));
@@ -95,11 +208,12 @@ export function discoverOpenScad({
 export async function openScadStatus({
   openscadBin,
   env = process.env,
+  platform = process.platform,
   runProcessImpl = runProcess,
 } = {}) {
   let discovery;
   try {
-    discovery = discoverOpenScad({ openscadBin, env });
+    discovery = discoverOpenScad({ openscadBin, env, platform });
   } catch (err) {
     return {
       tool: 'openscad',
@@ -111,6 +225,7 @@ export async function openScadStatus({
       source: 'error',
       execution_lane: 'native',
       error: err.message,
+      install_guidance: getInstallGuidance('openscad', platform),
       supportedFormats: ['stl', 'dxf', 'svg', '3mf', 'csg', 'scad'],
     };
   }
@@ -125,6 +240,7 @@ export async function openScadStatus({
       version: null,
       source: 'none',
       execution_lane: 'native',
+      install_guidance: getInstallGuidance('openscad', platform),
       supportedFormats: ['stl', 'dxf', 'svg', '3mf', 'csg', 'scad'],
     };
   }
@@ -160,17 +276,19 @@ export async function openScadStatus({
       source: discovery.source,
       execution_lane: 'native',
       error: err.message,
+      install_guidance: getInstallGuidance('openscad', platform),
       supportedFormats: ['stl', 'dxf', 'svg', '3mf', 'csg', 'scad'],
     };
   }
 }
 
 /**
- * Discovers FreeCAD / FreeCADCmd executable across 4 deterministic tiers:
+ * Discovers FreeCAD / FreeCADCmd executable across 5 deterministic tiers:
  * 1. explicit command option
  * 2. AGENTSAM_FREECAD_BIN
- * 3. PATH
- * 4. allowlisted OS installation paths
+ * 3. ~/.agentsam/cad.json cached binary
+ * 4. PATH (both FreeCADCmd and FreeCAD)
+ * 5. allowlisted OS installation paths
  */
 export function discoverFreeCad({
   freecadBin,
@@ -192,9 +310,16 @@ export function discoverFreeCad({
     return { binary: canonicalExecutable(resolved), source: 'env' };
   }
 
+  // Check user config cache
+  const config = loadCadConfig();
+  if (config?.tools?.freecad?.binary && isFile(config.tools.freecad.binary, existsSync)) {
+    return { binary: canonicalExecutable(config.tools.freecad.binary), source: 'user_config' };
+  }
+
   const cmdCandidates = [
     ...(platform === 'darwin'
       ? [
+          '/Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd',
           '/Applications/FreeCAD.app/Contents/Resources/bin/FreeCADCmd',
           '/Applications/FreeCAD.app/Contents/MacOS/FreeCADCmd',
           '/opt/homebrew/bin/FreeCADCmd',
@@ -258,11 +383,12 @@ export function discoverFreeCad({
 export async function freeCadStatus({
   freecadBin,
   env = process.env,
+  platform = process.platform,
   runProcessImpl = runProcess,
 } = {}) {
   let discovery;
   try {
-    discovery = discoverFreeCad({ freecadBin, env });
+    discovery = discoverFreeCad({ freecadBin, env, platform });
   } catch (err) {
     return {
       tool: 'freecad',
@@ -274,6 +400,7 @@ export async function freeCadStatus({
       source: 'error',
       execution_lane: 'native',
       error: err.message,
+      install_guidance: getInstallGuidance('freecad', platform),
       supportedFormats: ['step', 'iges', 'brep', 'fcstd'],
     };
   }
@@ -288,6 +415,7 @@ export async function freeCadStatus({
       version: null,
       source: 'none',
       execution_lane: 'native',
+      install_guidance: getInstallGuidance('freecad', platform),
       supportedFormats: ['step', 'iges', 'brep', 'fcstd'],
     };
   }
@@ -323,6 +451,7 @@ export async function freeCadStatus({
       source: discovery.source,
       execution_lane: 'native',
       error: err.message,
+      install_guidance: getInstallGuidance('freecad', platform),
       supportedFormats: ['step', 'iges', 'brep', 'fcstd'],
     };
   }
@@ -365,18 +494,30 @@ export function mujocoStatus() {
 
 /**
  * Discovers all CAD engines and generative tools, returning deterministic receipts.
+ * Caches found binary paths in ~/.agentsam/cad.json for subsequent instant runs.
  */
 export async function discoverAllCadTools({
   openscadBin,
   freecadBin,
   blenderBin,
   env = process.env,
+  platform = process.platform,
   runProcessImpl = runProcess,
+  cache = true,
 } = {}) {
+  // Check if blender has user config cached
+  let resolvedBlenderBin = blenderBin;
+  if (!resolvedBlenderBin) {
+    const config = loadCadConfig();
+    if (config?.tools?.blender?.binary && isFile(config.tools.blender.binary)) {
+      resolvedBlenderBin = config.tools.blender.binary;
+    }
+  }
+
   const [openscad, freecad, blenderRaw] = await Promise.all([
-    openScadStatus({ openscadBin, env, runProcessImpl }),
-    freeCadStatus({ freecadBin, env, runProcessImpl }),
-    blenderStatus({ blenderBin, runProcessImpl }),
+    openScadStatus({ openscadBin, env, platform, runProcessImpl }),
+    freeCadStatus({ freecadBin, env, platform, runProcessImpl }),
+    blenderStatus({ blenderBin: resolvedBlenderBin, runProcessImpl }),
   ]);
 
   const blender = {
@@ -386,8 +527,13 @@ export async function discoverAllCadTools({
     available: blenderRaw.available,
     binary: blenderRaw.binary,
     version: blenderRaw.version,
-    source: blenderRaw.binary ? (blenderRaw.binary.includes('/Applications/') ? 'standard_install' : 'path') : 'none',
+    source: blenderRaw.binary
+      ? blenderRaw.binary.includes('/Applications/')
+        ? 'standard_install'
+        : 'path'
+      : 'none',
     execution_lane: 'native',
+    install_guidance: blenderRaw.available ? null : getInstallGuidance('blender', platform),
     supportedFormats: ['blend', 'glb', 'obj', 'stl', 'png'],
     error: blenderRaw.error || null,
   };
@@ -397,6 +543,28 @@ export async function discoverAllCadTools({
 
   const tools = [openscad, freecad, blender, meshy, mujoco];
   const availableCount = tools.filter(t => t.available).length;
+
+  // Persist to ~/.agentsam/cad.json cache if enabled
+  if (cache) {
+    const existingConfig = loadCadConfig() || {};
+    const toolsConfig = existingConfig.tools || {};
+
+    if (openscad.available && openscad.binary) {
+      toolsConfig.openscad = { binary: openscad.binary, version: openscad.version, source: openscad.source };
+    }
+    if (freecad.available && freecad.binary) {
+      toolsConfig.freecad = { binary: freecad.binary, version: freecad.version, source: freecad.source };
+    }
+    if (blender.available && blender.binary) {
+      toolsConfig.blender = { binary: blender.binary, version: blender.version, source: blender.source };
+    }
+
+    saveCadConfig({
+      version: 1,
+      updated_at: new Date().toISOString(),
+      tools: toolsConfig,
+    });
+  }
 
   return {
     schema_version: 1,

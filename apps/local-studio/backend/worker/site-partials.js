@@ -82,6 +82,7 @@ export async function injectSitePartials(response, env, siteSlug = 'agentsam-sdk
     }
     const headers = new Headers(response.headers);
     headers.delete('content-length');
+    headers.set('x-site-partials-engine', 'string-replace');
     return new Response(text, {
       status: response.status,
       statusText: response.statusText,
@@ -107,5 +108,12 @@ export async function injectSitePartials(response, env, siteSlug = 'agentsam-sdk
     });
   }
 
-  return rewriter.transform(response);
+  const rewritten = rewriter.transform(response);
+  const outHeaders = new Headers(rewritten.headers);
+  outHeaders.set('x-site-partials-engine', 'htmlrewriter');
+  return new Response(rewritten.body, {
+    status: rewritten.status,
+    statusText: rewritten.statusText,
+    headers: outHeaders,
+  });
 }

@@ -2,6 +2,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import {
+  probeAllCadTools,
+  getCadConfigPath,
+  loadCadConfig,
+  saveCadConfig,
+  getInstallGuidance,
+} from './cad-discovery.mjs';
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -11,7 +18,8 @@ AgentSam CAD Creator
 
   agentsam-cad-creator [preview] [--port 3000]
   agentsam-cad-creator scaffold <directory>
-  agentsam-cad-creator doctor
+  agentsam-cad-creator doctor [--json]
+  agentsam-cad-creator setup [--install] [--json]
   agentsam-cad-creator info
 
 preview
@@ -19,7 +27,13 @@ preview
   GEMINI_API_KEY is optional for viewing the UI and required only for AI-backed calls.
 
 doctor
-  Check local runtime health and packaged assets.
+  Check local runtime health, packaged assets, and probe CAD engines.
+  Pass --json for programmatic machine discovery output.
+
+setup
+  Run local-machine discovery, probe PATH & OS standard install paths,
+  and cache executable binary paths in ~/.agentsam/cad.json.
+  Optionally pass --install on macOS to invoke brew for missing tools.
 
 scaffold
   Materialize the editable frontend/backend/shared source into a normal project.
@@ -126,6 +140,115 @@ async function preview(args) {
   await import(pathToFileURL(server).href);
 }
 
+async function runDoctor(args = []) {
+  const isJson = args.includes('--json');
+  const server = path.join(packageRoot, 'backend', 'dist', 'server.cjs');
+  const index = path.join(packageRoot, 'frontend', 'dist', 'index.html');
+  const configPath = getCadConfigPath();
+  const configExists = fs.existsSync(configPath);
+
+  const cadReport = await probeAllCadTools(process.env, process.platform, true);
+
+  if (isJson) {
+    console.log(JSON.stringify({
+      package_root: packageRoot,
+      frontend_build: fs.existsSync(index) ? 'ready' : 'missing',
+      backend_build: fs.existsSync(server) ? 'ready' : 'missing',
+      node_version: process.version,
+      config_path: configPath,
+      config_exists: configExists,
+      cad: cadReport,
+    }, null, 2));
+    return;
+  }
+
+  console.log('AgentSam CAD Creator Doctor');
+  console.log(`  Package root:   ${packageRoot}`);
+  console.log(`  Frontend build: ${fs.existsSync(index) ? 'ready' : 'missing'}`);
+  console.log(`  Backend build:  ${fs.existsSync(server) ? 'ready' : 'missing'}`);
+  console.log(`  Node version:   ${process.version}`);
+  console.log(`  Config cache:   ${configExists ? configPath : '(none yet - run setup to cache)'}`);
+  console.log(`  Workspaces:     plan, model, parametric, robotics, render`);
+  console.log('');
+  console.log('CAD Engines & Discovery:');
+
+  const missingTools = [];
+
+  for (const tool of cadReport.tools) {
+    const symbol = tool.available ? '✓' : '○';
+    const statusText = tool.available
+      ? `${tool.binary || 'available'} (${tool.version || 'unknown version'}) [${tool.execution_lane} / ${tool.source}]`
+      : `not found [${tool.execution_lane}]`;
+    console.log(`  ${symbol} ${tool.name.padEnd(24)} ${statusText}`);
+
+    if (!tool.available && tool.install_guidance) {
+      missingTools.push(tool);
+    }
+  }
+
+  if (missingTools.length > 0) {
+    console.log('');
+    console.log('Recommended Engine Installations:');
+    for (const tool of missingTools) {
+      console.log(`  • ${tool.name}:`);
+      console.log(`      ${tool.install_guidance.command}`);
+      console.log(`      URL: ${tool.install_guidance.url}`);
+    }
+    console.log('');
+    console.log('  Run "agentsam-cad-creator setup" to probe and cache paths, or set AGENTSAM_<TOOL>_BIN.');
+  } else {
+    console.log('');
+    console.log('All local CAD engines are operational.');
+  }
+}
+
+async function runSetup(args = []) {
+  const isJson = args.includes('--json');
+  const doInstall = args.includes('--install');
+  const configPath = getCadConfigPath();
+
+  console.log('Probing machine for CAD engines across PATH and standard OS locations...');
+  const cadReport = await probeAllCadTools(process.env, process.platform, true);
+
+  if (isJson) {
+    console.log(JSON.stringify({
+      config_path: configPath,
+      report: cadReport,
+    }, null, 2));
+    return;
+  }
+
+  console.log(`Updated cache at: ${configPath}`);
+  console.log('');
+  for (const tool of cadReport.tools) {
+    if (tool.available && tool.binary) {
+      console.log(`  ✓ ${tool.name}: ${tool.binary} (${tool.version || 'detected'})`);
+    } else if (tool.available) {
+      console.log(`  ✓ ${tool.name}: ${tool.version || 'ready'} [${tool.source}]`);
+    } else {
+      console.log(`  ✗ ${tool.name}: missing`);
+      if (tool.install_guidance) {
+        console.log(`      Install command: ${tool.install_guidance.command}`);
+      }
+    }
+  }
+
+  if (doInstall && process.platform === 'darwin') {
+    const { execSync } = await import('node:child_process');
+    const missing = cadReport.tools.filter(t => !t.available && t.install_guidance);
+    for (const tool of missing) {
+      console.log(`\nExecuting: ${tool.install_guidance.command}`);
+      try {
+        execSync(tool.install_guidance.command, { stdio: 'inherit' });
+      } catch (err) {
+        console.error(`Failed to install ${tool.name}: ${err.message}`);
+      }
+    }
+    console.log('\nRe-probing tools...');
+    await probeAllCadTools(process.env, process.platform, true);
+  }
+}
+
 const args = process.argv.slice(2);
 const first = args[0];
 const command = first === '--help' || first === '-h' ? 'help' : first && !first.startsWith('-') ? first : 'preview';
@@ -136,14 +259,9 @@ try {
   } else if (command === 'scaffold') {
     scaffold(args[1]);
   } else if (command === 'doctor') {
-    const server = path.join(packageRoot, 'backend', 'dist', 'server.cjs');
-    const index = path.join(packageRoot, 'frontend', 'dist', 'index.html');
-    console.log('AgentSam CAD Creator Doctor');
-    console.log(`  Package root:   ${packageRoot}`);
-    console.log(`  Frontend build: ${fs.existsSync(index) ? 'ready' : 'missing'}`);
-    console.log(`  Backend build:  ${fs.existsSync(server) ? 'ready' : 'missing'}`);
-    console.log(`  Node version:   ${process.version}`);
-    console.log(`  Workspaces:     plan, model, parametric, robotics, render`);
+    await runDoctor(command === args[0] ? args.slice(1) : args);
+  } else if (command === 'setup' || command === 'install') {
+    await runSetup(command === args[0] ? args.slice(1) : args);
   } else if (command === 'info') {
     const manifest = JSON.parse(fs.readFileSync(path.join(packageRoot, 'agentsam.app.json'), 'utf8'));
     console.log(JSON.stringify(manifest, null, 2));
