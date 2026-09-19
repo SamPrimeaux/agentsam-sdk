@@ -1,4 +1,5 @@
 import nitroWorker from "../../.output/server/index.mjs";
+import installScript from "../../../../scripts/install.sh";
 import { handleCloudflareConnectionRequest, isCloudflareConnectionPath } from "../../../../packages/connectors/cloudflare/src/routes.js";
 import { resolveCloudflareOAuthClient } from "../../../../packages/connectors/cloudflare/src/index.js";
 import {
@@ -21,6 +22,31 @@ function isIdentityPath(pathname) {
 const PROTECTED_APP_PATHS = ["/agentsam", "/projects", "/artifacts", "/files", "/browse", "/cli", "/ship"];
 function isProtectedAppPath(pathname) {
   return PROTECTED_APP_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+const INSTALL_APP_TARGETS = Object.freeze({
+  "/install": "",
+  "/install/cad": "cad-creator",
+  "/install/cms": "client-cms-editor",
+  "/install/studio": "local-studio",
+});
+
+function serveInstallScript(pathname) {
+  const appTarget = INSTALL_APP_TARGETS[pathname];
+  const body = appTarget
+    ? installScript.replace(
+        'APP_SELECTOR="${AGENTSAM_DEFAULT_APP:-}"',
+        `APP_SELECTOR="\${AGENTSAM_DEFAULT_APP:-${appTarget}}"`,
+      )
+    : installScript;
+
+  return new Response(body, {
+    headers: {
+      "content-type": "text/x-shellscript; charset=utf-8",
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+    },
+  });
 }
 
 /**
@@ -460,6 +486,10 @@ export default {
     const isVault = url.pathname.startsWith("/api/vault/");
     const isLlmInventory = url.pathname === "/api/llm/inventory";
     const isCfConnection = isCloudflareConnectionPath(url.pathname);
+
+    if (request.method === "GET" && Object.hasOwn(INSTALL_APP_TARGETS, url.pathname)) {
+      return serveInstallScript(url.pathname);
+    }
 
     // The checked-in Worker owns vault + health + llm inventory. Everything else belongs
     // to the generated Nitro application handler.
