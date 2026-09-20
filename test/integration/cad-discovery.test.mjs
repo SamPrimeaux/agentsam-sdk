@@ -12,7 +12,7 @@ import {
   mujocoStatus,
   discoverAllCadTools,
   getInstallGuidance,
-} from '../src/lib/cad/index.js';
+} from '../../src/lib/cad/index.js';
 
 function makeFixture(t, name) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), `agentsam-${name}-test-`));

@@ -12,8 +12,8 @@ import {
   executeOpenScadDocker,
   executeFreeCadDocker,
   executeBlenderDocker,
-} from '../src/lib/cad/docker-executor.js';
-import { discoverAllCadTools } from '../src/lib/cad/discovery.js';
+} from '../../src/lib/cad/docker-executor.js';
+import { discoverAllCadTools } from '../../src/lib/cad/discovery.js';
 
 test('resolveDockerServiceConfig resolves URL and token from env or options', () => {
   const conf1 = resolveDockerServiceConfig({
