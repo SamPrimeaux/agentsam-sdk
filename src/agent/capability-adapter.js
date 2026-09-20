@@ -6,6 +6,7 @@ import { repositorySnapshot } from '../capabilities/repository-snapshot.js';
 import { runWranglerNative, summarizeCloudflareCpuProfileFile, runCloudflareCpuAudit } from '../cloudflare/index.js';
 import { runRepositoryAudit } from './repository-audit.js';
 import { terminalExec } from '../capabilities/terminal-exec.js';
+import { runKnowledgeSearch } from '../commands/knowledge.js';
 
 const PACKAGE_ROOT = path.resolve(fileURLToPath(new URL('../../', import.meta.url)));
 
@@ -24,6 +25,7 @@ export function createCapabilityAdapter({ handlers = {}, reasoner } = {}) {
     ['terminal.exec', (input = {}) => terminalExec(input)],
     ['cloudflare.wrangler.native', (input = {}) => runWranglerNative(input.command, input)],
     ['cloudflare.cpu.profile', (input = {}) => summarizeCloudflareCpuProfileFile(input)],
+    ['knowledge.search', (input = {}) => runKnowledgeSearch(input)],
     ...Object.entries(handlers),
   ]);
   if (typeof reasoner === 'function') {

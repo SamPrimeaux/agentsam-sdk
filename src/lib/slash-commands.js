@@ -27,6 +27,7 @@ export const SLASH_COMMANDS = [
   { cmd: '/diff', description: 'Show the current Git diff', lane: 'git' },
   { cmd: '/db', description: 'Local SQLite status and query helpers', lane: 'data' },
   { cmd: '/agent', description: 'Send a goal to the configured local Agent Sam runtime', lane: 'agent' },
+  { cmd: '/goap', description: 'Inspect GOAP blackboard: /goap [status|goal|why|plan]', lane: 'agent' },
   { cmd: '/logs', description: 'Show local Agent Sam execution events', lane: 'observability' },
   { cmd: '/deploy', description: 'Add a cloud adapter and deploy intentionally', lane: 'deploy' },
   { cmd: '/clear', description: 'Clear the terminal display', lane: 'terminal' },

@@ -36,6 +36,10 @@ import { runHelp } from '../ui/cli/help.js';
 import { hydrateSecureCredentials } from '../security/local-vault.js';
 import { readAccountSession } from '../lib/account-session.js';
 import { startRuntimeRun, finishRuntimeRun, recordRuntimeCompaction } from '../local/runtime-store.js';
+import { tryResolveGitContext } from '../../packages/agentsam-repository/src/git-context.js';
+import { syncWorkspaceStateToD1, readWorkspaceStateFromD1 } from '../../packages/agentsam-repository/src/workspace-state.js';
+import { syncGitCommitsToD1 } from '../../packages/agentsam-repository/src/work-tracking.js';
+import { readGoapState, renderGoapStatus, renderGoapGoal, renderGoapWhy, renderGoapPlan } from '../../packages/agentsam-repository/src/goap.js';
 
 function writeLine(write, value = '') { write(`${value}\n`); }
 
@@ -869,6 +873,19 @@ export async function dispatchShellLine(line, state = {}) {
       case '/agent':
         await runLocalAgent(args.join(' '), write, { interactive: state.interactive });
         break;
+      case '/goap': {
+        const sub = (args[0] || 'status').toLowerCase();
+        const goapState = await readGoapState({ cwd: state.cwd });
+        if (!goapState.ok) {
+          writeLine(write, `  Failed to read GOAP state: ${goapState.error || 'unknown error'}`);
+          break;
+        }
+        if (sub === 'goal') writeLine(write, renderGoapGoal(goapState));
+        else if (sub === 'why') writeLine(write, renderGoapWhy(goapState));
+        else if (sub === 'plan') writeLine(write, renderGoapPlan(goapState));
+        else writeLine(write, renderGoapStatus(goapState));
+        break;
+      }
       case '/logs':
         await showLocalLogs(state.cwd, write);
         break;

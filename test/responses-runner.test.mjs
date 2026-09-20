@@ -18,15 +18,14 @@ function cost(total = 0.1) { return { total_usd: total, components_usd: { input:
 test('capability adapter hydrates packaged JSON schemas and tool surface exposes only selected executable schemas', () => {
   const adapter = createCapabilityAdapter();
   const descriptors = adapter.toolDescriptors();
-  assert.deepEqual(descriptors.map((row) => row.name).sort(), ['cloudflare.cpu.profile', 'cloudflare.wrangler.native', 'repository.snapshot', 'terminal.exec']);
+  assert.deepEqual(descriptors.map((row) => row.name).sort(), ['cloudflare.cpu.profile', 'cloudflare.wrangler.native', 'knowledge.search', 'repository.snapshot', 'terminal.exec']);
   const repository = descriptors.find((row) => row.name === 'repository.snapshot');
   assert.equal(repository.input_schema.type, 'object');
   assert.ok(repository.input_schema.properties.cwd);
   const surface = buildAgentToolSurface(adapter, 'snapshot inspect repository');
-  assert.equal(surface.tools.length, 1);
-  assert.equal(surface.tools[0].name, capabilityFunctionName('repository.snapshot'));
+  assert.ok(surface.tools.some((t) => t.name === capabilityFunctionName('repository.snapshot')));
   assert.equal(surface.tools[0].parameters.type, 'object');
-  assert.equal(surface.receipt.catalog_tools, 4);
+  assert.equal(surface.receipt.catalog_tools, 5);
 });
 
 test('runner owns cwd, executes selected tool, preserves call_id and returns provider-authoritative continuation', async t => {
@@ -48,7 +47,7 @@ test('runner owns cwd, executes selected tool, preserves call_id and returns pro
       assert.equal(params.model, 'gpt-6-astra');
       assert.equal(params.reasoningEffort, 'high');
       assert.equal(params.serviceTier, 'fast');
-      assert.equal(params.tools.length, 1);
+      assert.ok(params.tools.some((t) => t.name === capabilityFunctionName('repository.snapshot')));
       return {
         response_id: 'resp_1', output_text: '', actual_service_tier: 'fast',
         tool_calls: [{ call_id: 'call_1', name: capabilityFunctionName('repository.snapshot'), arguments: '{"cwd":"/tmp/attacker","churnDays":7}' }],

@@ -62,6 +62,7 @@ export function generateGitCommitIngestSql({
   commits = [],
   trackerKey = 'git_commit_ingest',
   branch = 'main',
+  ticketId = null,
 }) {
   const account = clean(accountId);
   const repository = clean(repositoryId);
@@ -110,6 +111,29 @@ ON CONFLICT(account_id, repository_id, tracker_key) DO UPDATE SET
   last_run_at = excluded.last_run_at,
   cursor_json = excluded.cursor_json,
   updated_at = excluded.updated_at;`);
+
+    // Wire git observation to active tickets
+    statements.push(`UPDATE agentsam_tickets
+SET linked_commit = ${sqlText(latestSha)}, updated_at = unixepoch()
+WHERE (${sqlText(ticketId)} IS NOT NULL AND id = ${sqlText(ticketId)})
+   OR (status = 'active' AND (linked_commit IS NULL OR linked_commit = '') AND (
+     id = (SELECT current_task_id FROM agentsam_workspace_state WHERE repository_id = ${sqlText(repository)} AND current_task_id IS NOT NULL)
+     OR project = 'inneranimalmedia'
+   ));`);
+
+    statements.push(`INSERT INTO agentsam_ticket_events (
+  id, ticket_id, event_type, commit_sha, detail, actor_type, created_at
+) SELECT
+  'tke_' || lower(hex(randomblob(8))),
+  id,
+  'commit_linked',
+  ${sqlText(latestSha)},
+  'git observation linked commit ' || ${sqlText(latestSha)},
+  'agentsam_git_observation',
+  unixepoch()
+FROM agentsam_tickets
+WHERE linked_commit = ${sqlText(latestSha)}
+  AND updated_at >= unixepoch() - 2;`);
   }
 
   return statements.join('\n\n');
@@ -122,6 +146,7 @@ export async function syncGitCommitsToD1({
   cwd = process.cwd(),
   accountId,
   repositoryId,
+  ticketId = null,
   wranglerConfig = 'apps/local-studio/backend/wrangler.jsonc',
   databaseName = 'inneranimalmedia-business',
   limit = 25,
@@ -143,6 +168,7 @@ export async function syncGitCommitsToD1({
     commits,
     trackerKey,
     branch: git?.branch || 'main',
+    ticketId,
   });
 
   const tmpFile = path.join(os.tmpdir(), `agentsam-commit-sync-${Date.now()}.sql`);

@@ -109,6 +109,47 @@ export async function runKnowledge(argv) {
   } finally { await store?.close(); }
 }
 
+export async function runKnowledgeSearch({
+  cwd = process.cwd(),
+  query = '',
+  text = '',
+  semantic = false,
+  topK = 8,
+  tokenBudget = 6000,
+  generationId = null,
+} = {}) {
+  const q = String(query || text || '').trim();
+  const root = repositoryRoot(cwd);
+  const sqliteFile = localPath(root);
+  if (!fs.existsSync(sqliteFile)) {
+    return {
+      queryId: 'none',
+      query: { text: q, top_k: topK, token_budget: tokenBudget },
+      hits: [],
+      diagnostics: {
+        indexed: false,
+        message: 'Knowledge store not initialized. Run `agentsam index run` to build repository index.',
+      },
+    };
+  }
+  const config = resolveKnowledgeConfig(root);
+  const store = await openStore(root, config, true);
+  try {
+    return await retrieve({
+      store,
+      config,
+      text: q,
+      semantic: Boolean(semantic),
+      embedder: semantic ? provider() : null,
+      topK: Number(topK || 8),
+      tokenBudget: Number(tokenBudget || 6000),
+      generationId,
+    });
+  } finally {
+    await store?.close();
+  }
+}
+
 export async function runSearch(argv) {
   const { values: opts, positionals } = flags(argv, { semantic: { type: 'boolean' }, 'top-k': { type: 'string' }, 'token-budget': { type: 'string' }, generation: { type: 'string' } });
   if (opts.help) { console.log('agentsam search "query" [--cwd PATH] [--semantic] [--top-k 8] [--token-budget 6000] [--generation ID]'); return; }
