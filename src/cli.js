@@ -24,6 +24,7 @@ import { runDb } from './commands/db.js';
 import { runStatus } from './commands/status.js';
 import { runInteractive } from './commands/interactive.js';
 import { runShell } from './commands/shell.js';
+import { runGoap } from './commands/goap.js';
 import { runDockerize } from './commands/dockerize.js';
 import { runMini } from './commands/mini.js';
 import { runMerkle } from './commands/merkle.js';
@@ -453,6 +454,16 @@ if (command === '--version' || command === '-v') {
   } catch (e) {
     reportCliError(e);
     process.exit(1);
+  }
+} else if (command === 'goap') {
+  try {
+    await runGoap(rest[0], {
+      cwd: process.cwd(),
+      json: rest.includes('--json'),
+    });
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
   }
 } else if (command === 'start-local') {
   await runStartLocal({});

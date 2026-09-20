@@ -19,4 +19,23 @@ export {
   generateGitCommitIngestSql,
   syncGitCommitsToD1,
 } from '../../packages/agentsam-repository/src/work-tracking.js';
+export {
+  createAgentRunId,
+  createTicketId,
+  generateTicketCreateSql,
+  generateTicketActivationSql,
+  generateTicketCloseSql,
+} from '../../packages/agentsam-repository/src/tickets.js';
+export {
+  generateWorkspaceStateUpsertSql,
+  readWorkspaceStateFromD1,
+  syncWorkspaceStateToD1,
+} from '../../packages/agentsam-repository/src/workspace-state.js';
+export {
+  readGoapState,
+  renderGoapStatus,
+  renderGoapGoal,
+  renderGoapWhy,
+  renderGoapPlan,
+} from '../../packages/agentsam-repository/src/goap.js';
 

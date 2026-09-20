@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { assessContextUsage, compileAgentInstructions, createContextBudget, estimateContextTokens, truncateResultText } from '../context/index.js';
+import { assessContextUsage, compileAgentInstructions, createContextBudget, estimateContextTokens, truncateResultText, resolveProjectContext, buildProjectCard } from '../context/index.js';
 import { getModelRecord, calculateModelCost } from '../models/index.js';
 import { searchToolCards, hydrateToolSchemas } from '../tools/index.js';
 import { createAgentEvent } from '../telemetry/index.js';
@@ -139,15 +139,39 @@ export async function runResponsesAgent(options = {}) {
   const reasoningEffort = clean(options.reasoningEffort || 'auto');
   const serviceTier = clean(options.serviceTier || 'default');
   const budget = modelBudget(record);
-  const instructionSet = options.instructions == null ? compileAgentInstructions(cwd, { maxChars: budget?.maxSystemChars || 48_000 }) : null;
-  const projectContext = [
-    '<!-- agentsam:runtime:terminal-context -->',
-    `You are operating in a real CLI at project root ${JSON.stringify(cwd)}.`,
-    'Use terminal.exec for concrete repository commands when needed. It executes argv directly without a shell, is scoped to this project, and requires runtime approval for side effects.',
-    'Never request, print, or search for credentials, tokens, private keys, cookies, or secret environment files.',
-  ].join('\n');
-  const compiledInstructions = options.instructions == null ? instructionSet.content : String(options.instructions);
-  const instructions = `${projectContext}\n\n${compiledInstructions}`;
+  let instructions;
+  let resolvedContext = null;
+  if (options.instructions == null) {
+    const card = buildProjectCard(cwd, {
+      activeTaskId: options.activeTaskId || options.taskId,
+      lockedBy: options.lockedBy,
+      checkpointSha: options.checkpointSha,
+      beliefs: options.beliefs || options.workspaceState,
+    });
+    resolvedContext = resolveProjectContext({
+      cwd,
+      objective,
+      budget,
+      items: [
+        {
+          kind: 'repo',
+          ref: 'project://card',
+          priority: 100,
+          content: card.content,
+        },
+        ...(options.contextItems || []),
+      ],
+    });
+    const cardContent = resolvedContext.items.find((i) => i.ref === 'project://card')?.content || card.content;
+    const extraContent = resolvedContext.items
+      .filter((i) => i.ref !== 'project://card')
+      .map((i) => i.content)
+      .join('\n\n');
+    const ruleContent = resolvedContext.rules?.content || '';
+    instructions = [cardContent, extraContent, ruleContent].filter(Boolean).join('\n\n');
+  } else {
+    instructions = String(options.instructions);
+  }
   const toolSurface = buildAgentToolSurface(options.capabilityAdapter, objective, options);
   const emit = options.emit;
   const runId = options.runId;
@@ -219,6 +243,7 @@ export async function runResponsesAgent(options = {}) {
     pressure: pressure?.stage ?? 'unknown',
     projected_max_call_cost_usd: projectedCost?.total_usd ?? null,
     tool_surface: toolSurface.receipt,
+    resolver_receipt: resolvedContext?.receipt || null,
   }, runId);
 
   let cumulativeUsage = options.cumulativeUsage || null;

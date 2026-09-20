@@ -296,3 +296,28 @@ CREATE TABLE IF NOT EXISTS agentsam_cron_runs (
 
 CREATE INDEX IF NOT EXISTS idx_agentsam_cron_runs_job_started
   ON agentsam_cron_runs(job_name, started_at DESC);
+
+CREATE TABLE IF NOT EXISTS agentsam_workspace_state (
+  id                TEXT PRIMARY KEY DEFAULT ('wss_' || lower(hex(randomblob(8)))),
+  repository_id     TEXT UNIQUE,
+  workspace_id      TEXT,
+  conversation_id   TEXT,
+  workspace_type    TEXT NOT NULL DEFAULT 'ide',
+  active_file       TEXT,
+  files_open        TEXT NOT NULL DEFAULT '[]',
+  state_json        TEXT NOT NULL DEFAULT '{}',
+  locked_by         TEXT,
+  lock_expires_at   INTEGER,
+  lock_reason       TEXT,
+  agent_session_id  TEXT,
+  current_task_id   TEXT,
+  last_agent_action TEXT,
+  agent_id          TEXT,
+  checkpoint_label  TEXT,
+  checkpoint_sha    TEXT,
+  created_at        INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at        INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+CREATE INDEX IF NOT EXISTS idx_agentsam_workspace_state_repo
+  ON agentsam_workspace_state(repository_id);

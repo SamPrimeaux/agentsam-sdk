@@ -5,3 +5,4 @@ export { PROJECT_RULES_FILENAME, DEFAULT_PROJECT_RULES_MAX_CHARS, defaultProject
 export { AGENT_RUNTIME_FILENAME, AGENT_INSTRUCTION_PRECEDENCE, AGENT_INSTRUCTION_COMPAT_SHIMS, findAgentRuntimeContract, compileAgentInstructions } from '../lib/agent-instructions.js';
 export { DEFAULT_CONSUMED_CONTEXT_CHARS, compactContextItem, compactConsumedToolResult } from './compact.js';
 export { rehydrateContextRef } from './rehydrate.js';
+export { buildProjectCard } from './project-card.js';
