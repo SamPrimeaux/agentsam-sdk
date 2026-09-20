@@ -12,20 +12,28 @@ import {
   hydrateSecureCredentials,
   localVaultPath,
   localVaultSaltPath,
-} from '../src/security/local-vault.js';
-import { resolveExecutableCommand } from '../src/security/process.js';
+} from '../../src/security/local-vault.js';
+import { resolveExecutableCommand } from '../../src/security/process.js';
 import {
   resolveProviderCredential,
   setProviderCredential,
   removeProviderCredential,
   exportProviderEnvProfile,
-} from '../src/lib/provider-credentials.js';
+} from '../../src/lib/provider-credentials.js';
 import {
   validateAndSaveProviderCredential,
   providerChoices,
   runProviders,
-} from '../src/commands/providers.js';
-import { renderModelsStatus } from '../src/commands/models.js';
+} from '../../src/commands/providers.js';
+import { renderModelsStatus } from '../../src/commands/models.js';
+
+// picocolors color-detection differs between local runs and CI runners (CI often
+// reports TTY-like support that enables ANSI output) - strip escape codes before
+// asserting on rendered text content so this test checks content, not incidental
+// terminal color state.
+// eslint-disable-next-line no-control-regex
+const ANSI_PATTERN = /\x1B\[[0-9;]*m/g;
+const stripAnsi = (s) => String(s).replace(ANSI_PATTERN, '');
 
 function createTempHome(t) {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-vault-test-'));
@@ -247,7 +255,7 @@ test('renderModelsStatus shows tip: Select your preferred provider when provider
     local: { online: false, models: [] },
   };
 
-  const output = renderModelsStatus(status);
+  const output = stripAnsi(renderModelsStatus(status));
   assert.match(output, /Tip:\s*Select your preferred provider/i);
 });
 
