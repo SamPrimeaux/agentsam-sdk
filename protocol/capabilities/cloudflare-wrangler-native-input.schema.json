@@ -5,7 +5,17 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "command"
+    "command",
+    "cwd",
+    "name",
+    "account",
+    "config",
+    "env",
+    "profile",
+    "path",
+    "page",
+    "version_id",
+    "tunnel"
   ],
   "properties": {
     "command": {

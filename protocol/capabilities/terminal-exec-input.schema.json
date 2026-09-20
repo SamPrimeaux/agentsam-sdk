@@ -4,7 +4,14 @@
   "title": "terminal.exec input",
   "type": "object",
   "additionalProperties": false,
-  "required": ["command", "args"],
+  "required": [
+    "command",
+    "args",
+    "cwd",
+    "relative_cwd",
+    "timeout_ms",
+    "max_output_bytes"
+  ],
   "properties": {
     "command": {
       "type": "string",
@@ -16,7 +23,10 @@
     "args": {
       "type": "array",
       "maxItems": 128,
-      "items": { "type": "string", "maxLength": 8192 },
+      "items": {
+        "type": "string",
+        "maxLength": 8192
+      },
       "description": "Exact argv entries. Do not include shell quoting, pipes, redirects, or command substitution."
     },
     "cwd": {
@@ -29,7 +39,17 @@
       "maxLength": 2048,
       "description": "Optional working directory relative to the runtime-owned project root."
     },
-    "timeout_ms": { "type": "integer", "minimum": 1, "maximum": 900000, "default": 120000 },
-    "max_output_bytes": { "type": "integer", "minimum": 1024, "maximum": 2097152, "default": 524288 }
+    "timeout_ms": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 900000,
+      "default": 120000
+    },
+    "max_output_bytes": {
+      "type": "integer",
+      "minimum": 1024,
+      "maximum": 2097152,
+      "default": 524288
+    }
   }
 }

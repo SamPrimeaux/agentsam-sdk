@@ -4,16 +4,40 @@
   "title": "cloudflare.cpu.audit input",
   "type": "object",
   "additionalProperties": false,
-  "required": ["file"],
+  "required": [
+    "cwd",
+    "file",
+    "sources",
+    "maxFrames",
+    "maxSourceChars"
+  ],
   "properties": {
-    "cwd": { "type": "string", "minLength": 1 },
-    "file": { "type": "string", "minLength": 1 },
+    "cwd": {
+      "type": "string",
+      "minLength": 1
+    },
+    "file": {
+      "type": "string",
+      "minLength": 1
+    },
     "sources": {
       "type": "array",
       "maxItems": 12,
-      "items": { "type": "string", "minLength": 1 }
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
-    "maxFrames": { "type": "integer", "minimum": 1, "maximum": 100 },
-    "maxSourceChars": { "type": "integer", "minimum": 1000, "maximum": 64000, "default": 24000 }
+    "maxFrames": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "maxSourceChars": {
+      "type": "integer",
+      "minimum": 1000,
+      "maximum": 64000,
+      "default": 24000
+    }
   }
 }
