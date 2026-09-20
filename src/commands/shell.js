@@ -699,12 +699,20 @@ export async function dispatchShellLine(line, state = {}) {
   state.projectRoot ||= findCliProjectRoot(state.cwd);
   if (!tokens.length) return { handled: true, exit: false, cwd: state.cwd };
 
-  // Handle prefix "agentsam <cmd>" or bare common commands without "/"
+  // Strip a leading "agentsam" prefix if present -- it should never change
+  // whether the rest of the line resolves, only whether it was typed at all.
   if (tokens[0].toLowerCase() === 'agentsam') {
     tokens = tokens.slice(1);
     if (!tokens.length) tokens = ['help'];
-    tokens[0] = `/${tokens[0].replace(/^\/+/, '')}`;
-  } else if (!tokens[0].startsWith('/')) {
+  }
+
+  // Recognized short verbs (with or without a stripped "agentsam" prefix)
+  // become their slash command. Anything unrecognized -- typo, a host-CLI-only
+  // verb like "merkle" typed here, whatever -- is left as plain text and
+  // falls through to the natural-language model turn below. There is no
+  // path left that hard-errors on an unrecognized word; "unknown command"
+  // only fires for input that explicitly starts with "/".
+  if (!tokens[0].startsWith('/')) {
     const bare = tokens[0].toLowerCase();
     const commonVerbs = [
       'help', 'exit', 'quit', 'clear', 'status', 'models', 'model',
