@@ -37,12 +37,6 @@ function checksumSource(source) {
   return 'fnv1a32:' + (hash >>> 0).toString(16).padStart(8, '0');
 }
 
-function isIdempotentSafe(source) {
-  const statements = source.split(';').map((stmt) => stmt.trim()).filter(Boolean);
-  const IDEMPOTENT_RE = /^(CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS|CREATE\s+(UNIQUE\s+)?INDEX\s+IF\s+NOT\s+EXISTS|PRAGMA|--)/i;
-  return statements.length > 0 && statements.every((stmt) => IDEMPOTENT_RE.test(stmt));
-}
-
 export async function listAppliedMigrations(db) {
   ensureLedger(db);
   const result = await db.prepare(
@@ -66,23 +60,7 @@ export async function applyRuntimeMigrations(db, options = {}) {
 
     if (previous) {
       if (previous.checksum && previous.checksum !== checksum) {
-        if (!isIdempotentSafe(source)) throw new Error('migration_checksum_mismatch:' + id);
-        // File grew via additive, idempotent statements only (e.g. a new
-        // CREATE TABLE IF NOT EXISTS appended for a later feature). Safe to
-        // re-run and accept the new checksum rather than hard-lock the CLI.
-        db.exec('BEGIN IMMEDIATE');
-        try {
-          db.exec(source);
-          await db.prepare(
-            'UPDATE agentsam_schema_migrations SET checksum = ? WHERE id = ?'
-          ).bind(checksum, id).run();
-          db.exec('COMMIT');
-          results.push({ id, filename, status: 'repaired', checksum, previous_checksum: previous.checksum });
-          continue;
-        } catch (error) {
-          try { db.exec('ROLLBACK'); } catch {}
-          throw new Error('migration_repair_failed:' + id + ':' + (error?.message || error));
-        }
+        throw new Error('migration_checksum_mismatch:' + id);
       }
       results.push({ id, filename, status: 'already_applied', checksum });
       continue;
@@ -125,20 +103,7 @@ export function applyRuntimeMigrationsSync(db, options = {}) {
     const checksum = checksumSource(source);
     const previous = applied.get(id);
     if (previous) {
-      if (previous.checksum && previous.checksum !== checksum) {
-        if (!isIdempotentSafe(source)) throw new Error('migration_checksum_mismatch:' + id);
-        db.exec('BEGIN IMMEDIATE');
-        try {
-          db.exec(source);
-          db.prepare('UPDATE agentsam_schema_migrations SET checksum = ? WHERE id = ?').run(checksum, id);
-          db.exec('COMMIT');
-          results.push({ id, filename, status: 'repaired', checksum, previous_checksum: previous.checksum });
-          continue;
-        } catch (error) {
-          try { db.exec('ROLLBACK'); } catch {}
-          throw new Error('migration_repair_failed:' + id + ':' + (error?.message || error));
-        }
-      }
+      if (previous.checksum && previous.checksum !== checksum) throw new Error('migration_checksum_mismatch:' + id);
       results.push({ id, filename, status: 'already_applied', checksum });
       continue;
     }

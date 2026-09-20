@@ -1,8 +1,0 @@
-{
-  "name": "FuelnFreeTime-product-Visualization",
-  "description": "Modular package-quality ecommerce and admin application shell with Completeful POD, decoupled host adapters, write-only SecretStore, and AgentSam autonomous model catalog.",
-  "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
-}
