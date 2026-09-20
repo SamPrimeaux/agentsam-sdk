@@ -48,6 +48,32 @@ test('whoami validates persisted IAM browser identity while never returning acco
   assert.doesNotMatch(serialized, /browser_session_do_not_print|sk-never-print-this|masked|endpoint_url|metadata_json|wss:\/\/secret/);
 });
 
+test('whoami sends the exact authority returned by the resolver to the default context loader', async t => {
+  const home = tempHome(t);
+  let request = null;
+  const status = await collectWhoami({
+    env: { IAM_OAUTH_ISSUER: 'https://iam.example.test' },
+    home,
+    authorityLoader: async () => ({
+      value: 'resolved_authority_token',
+      kind: 'browser_oauth',
+      source: 'test_authority',
+    }),
+    fetchImpl: async (url, init) => {
+      request = { url, init };
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ user_id: 'au_server', account_id: 'acct_server' }),
+      };
+    },
+  });
+  assert.equal(request.url, 'https://iam.example.test/api/sdk/context');
+  assert.equal(request.init.headers.Authorization, 'Bearer resolved_authority_token');
+  assert.equal(status.authenticated, true);
+  assert.equal(status.identity.account_id, 'acct_server');
+});
+
 test('whoami uses a valid browser session when a stale environment API key is invalid', async t => {
   const home = tempHome(t);
   saveAccountSession({ access_token: 'browser_session_do_not_print', user_id: 'au_local' }, { home });
