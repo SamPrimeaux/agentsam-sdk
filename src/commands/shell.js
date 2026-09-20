@@ -984,17 +984,36 @@ export async function runShell(argv = [], options = {}) {
   writeLine(write, '');
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: Boolean(process.stdin.isTTY && process.stdout.isTTY) });
   state.rl = rl;
+  let promptTextRef = () => renderShellPrompt(state.cwd);
   const restorePaste = installPasteCollapse(rl, { output: process.stdout });
   let interrupted = false;
+  let lastSigintAt = 0;
+  const SIGINT_EXIT_WINDOW_MS = 2000;
   rl.on('SIGINT', () => {
-    interrupted = true;
-    rl.close();
+    const now = Date.now();
+    if (now - lastSigintAt < SIGINT_EXIT_WINDOW_MS) {
+      // Second Ctrl+C within the window: actually exit, matching the
+      // near-universal CLI convention (bash, node REPL, Claude Code, Codex).
+      interrupted = true;
+      rl.close();
+      return;
+    }
+    // First Ctrl+C: cancel the current line/prompt only, matching what the
+    // footer already tells the user ("ctrl-c to cancel"). A single press
+    // used to close the whole session outright -- that's the discrepancy
+    // being fixed here, not the intended behavior.
+    lastSigintAt = now;
+    write('\n  (Ctrl+C again within 2s to exit)\n');
+    rl.line = '';
+    rl.cursor = 0;
+    if (rl.terminal) { rl.setPrompt(promptTextRef()); rl.prompt(); }
   });
   const promptText = () => {
     if (typeof options.prompt === 'function') return options.prompt(state);
     if (typeof options.prompt === 'string' && options.prompt) return options.prompt;
     return renderShellPrompt(state.cwd);
   };
+  promptTextRef = promptText;
   try {
     if (rl.terminal) { rl.setPrompt(promptText()); rl.prompt(); }
     for await (const line of rl) {
