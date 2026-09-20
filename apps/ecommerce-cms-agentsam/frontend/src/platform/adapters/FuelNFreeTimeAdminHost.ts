@@ -62,26 +62,28 @@ class CloudflareSecretStoreAdapter implements SecretStoreAdapter {
     return res.json();
   }
 
-  async deleteSecret(params: { provider: string; credential_key: string; environment: string }): Promise<void> {
-    const res = await fetch(`${this.apiBase}/vault/secrets/${params.provider}/${params.credential_key}?env=${params.environment}`, {
+  async deleteSecret(params: { provider: string; credential_key: string; environment?: string }): Promise<void> {
+    const environment = params.environment ?? 'production';
+    const res = await fetch(`${this.apiBase}/vault/secrets/${params.provider}/${params.credential_key}?env=${environment}`, {
       method: 'DELETE'
     });
     if (!res.ok) throw new Error(`Vault delete failed: ${res.statusText}`);
   }
 
-  async describeSecret(params: { provider: string; credential_key: string; environment: string }): Promise<SecretDescriptor | null> {
-    const res = await fetch(`${this.apiBase}/vault/secrets/${params.provider}/${params.credential_key}?env=${params.environment}`);
+  async describeSecret(params: { provider: string; credential_key: string; environment?: string }): Promise<SecretDescriptor | null> {
+    const environment = params.environment ?? 'production';
+    const res = await fetch(`${this.apiBase}/vault/secrets/${params.provider}/${params.credential_key}?env=${environment}`);
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(`Vault describe failed: ${res.statusText}`);
     return res.json();
   }
 
-  async exists(params: { provider: string; credential_key: string; environment: string }): Promise<boolean> {
+  async exists(params: { provider: string; credential_key: string; environment?: string }): Promise<boolean> {
     const desc = await this.describeSecret(params);
     return desc !== null;
   }
 
-  async verifySecret(params: { provider: string; credential_key: string; environment: string }) {
+  async verifySecret(params: { provider: string; credential_key: string; environment?: string }) {
     const res = await fetch(`${this.apiBase}/vault/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -94,7 +96,7 @@ class CloudflareSecretStoreAdapter implements SecretStoreAdapter {
 
 export function createFuelNFreeTimeAdminHost(options: {
   apiBaseUrl?: string;
-  currentUser?: HostUser;
+  currentUser: HostUser;
   onNavigate?: (path: string) => void;
 }): AdminHostConfig {
   const apiBase = options.apiBaseUrl || '/api/admin';
@@ -119,7 +121,8 @@ export function createFuelNFreeTimeAdminHost(options: {
               .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v!)}`)
               .join('&')
           : '';
-        options.onNavigate(path + qs);
+        if (options.onNavigate) options.onNavigate(path + qs);
+        else window.history.pushState({}, '', path + qs);
       }
     },
 

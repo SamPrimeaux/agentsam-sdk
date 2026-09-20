@@ -37,6 +37,7 @@ export const CredentialEditorModal: React.FC<CredentialEditorModalProps> = ({
 
   if (!provider) return null;
 
+  const requiredSecrets = provider.requiredSecrets ?? [];
   const currentKey = selectedKey || provider.credentials?.[0]?.key || '';
   const currentReq = provider.credentials?.find((s) => s.key === currentKey);
   const existingDesc = existingSecrets.find((s) => (s.keyName || s.credential_key) === currentKey);
@@ -101,13 +102,13 @@ export const CredentialEditorModal: React.FC<CredentialEditorModalProps> = ({
     >
       <div className="space-y-4">
         {/* Selector if multiple keys required */}
-        {provider.requiredSecrets.length > 1 && (
+        {requiredSecrets.length > 1 && (
           <div>
             <label className="block text-xs font-medium text-zinc-300 mb-1.5">
               Select Secret Parameter
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {provider.requiredSecrets.map((req) => (
+              {requiredSecrets.map((req) => (
                 <button
                   key={req.key}
                   type="button"

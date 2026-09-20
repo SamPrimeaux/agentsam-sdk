@@ -104,22 +104,25 @@ class InMemorySecretStore implements SecretStoreAdapter {
     return this.putSecret(input);
   }
 
-  async deleteSecret(params: { provider: string; credential_key: string; environment: string }): Promise<void> {
-    const compositeKey = `${params.provider}:${params.credential_key}:${params.environment}`;
+  async deleteSecret(params: { provider: string; credential_key: string; environment?: string }): Promise<void> {
+    const environment = params.environment ?? 'preview';
+    const compositeKey = `${params.provider}:${params.credential_key}:${environment}`;
     this.secrets.delete(compositeKey);
   }
 
-  async describeSecret(params: { provider: string; credential_key: string; environment: string }): Promise<SecretDescriptor | null> {
-    const compositeKey = `${params.provider}:${params.credential_key}:${params.environment}`;
+  async describeSecret(params: { provider: string; credential_key: string; environment?: string }): Promise<SecretDescriptor | null> {
+    const environment = params.environment ?? 'preview';
+    const compositeKey = `${params.provider}:${params.credential_key}:${environment}`;
     return this.secrets.get(compositeKey) || null;
   }
 
-  async exists(params: { provider: string; credential_key: string; environment: string }): Promise<boolean> {
-    const compositeKey = `${params.provider}:${params.credential_key}:${params.environment}`;
+  async exists(params: { provider: string; credential_key: string; environment?: string }): Promise<boolean> {
+    const environment = params.environment ?? 'preview';
+    const compositeKey = `${params.provider}:${params.credential_key}:${environment}`;
     return this.secrets.has(compositeKey);
   }
 
-  async verifySecret(params: { provider: string; credential_key: string; environment: string }) {
+  async verifySecret(params: { provider: string; credential_key: string; environment?: string }) {
     await new Promise((r) => setTimeout(r, 600));
     return {
       valid: true,
