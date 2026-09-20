@@ -37,10 +37,50 @@ function checksumSource(source) {
   return 'fnv1a32:' + (hash >>> 0).toString(16).padStart(8, '0');
 }
 
+// A naive source.split(';') breaks on ANY semicolon -- including one
+// inside a wrapped comment line's prose ("...available; standalone...")
+// and every semicolon inside a CREATE TRIGGER's BEGIN...END body. Both
+// happen in real migration files (this one has both). Comment-strip first,
+// then split statement-aware: only treat ';' as a terminator outside a
+// BEGIN/END block, so a trigger body survives as one statement instead of
+// fragmenting into pieces that don't individually look like anything.
+function stripSqlComments(source) {
+  return source
+    .split('\n')
+    .map((line) => (line.trim().startsWith('--') ? '' : line))
+    .join('\n');
+}
+
+function splitSqlStatements(source) {
+  const clean = stripSqlComments(source);
+  // CASE ... END is also closed by the bare keyword END (no BEGIN of its
+  // own) -- a trigger body containing a CASE expression has one more END
+  // than BEGIN. Track BEGIN and CASE as the same depth-increasing class so
+  // a CASE's END doesn't prematurely close the enclosing trigger's depth.
+  const tokens = clean.split(/(\bBEGIN\b|\bCASE\b|\bEND\b|;)/i);
+  const statements = [];
+  let current = '';
+  let depth = 0;
+  for (const token of tokens) {
+    if (/^(BEGIN|CASE)$/i.test(token)) { depth += 1; current += token; continue; }
+    if (/^END$/i.test(token)) { depth = Math.max(0, depth - 1); current += token; continue; }
+    if (token === ';' && depth === 0) {
+      const trimmed = current.trim();
+      if (trimmed) statements.push(trimmed);
+      current = '';
+      continue;
+    }
+    current += token;
+  }
+  const trimmed = current.trim();
+  if (trimmed) statements.push(trimmed);
+  return statements;
+}
+
 function isIdempotentSafe(source) {
-  const statements = source.split(';').map((stmt) => stmt.trim()).filter(Boolean);
-  const IDEMPOTENT_RE = /^(CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS|CREATE\s+(UNIQUE\s+)?INDEX\s+IF\s+NOT\s+EXISTS|PRAGMA|--)/i;
-  return statements.length > 0 && statements.every((stmt) => IDEMPOTENT_RE.test(stmt));
+  const statements = splitSqlStatements(source);
+  const IDEMPOTENT_RE = /^(CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS|CREATE\s+(UNIQUE\s+)?INDEX\s+IF\s+NOT\s+EXISTS|CREATE\s+TRIGGER\s+IF\s+NOT\s+EXISTS|PRAGMA)/i;
+  return statements.length > 0 && statements.every((stmt) => IDEMPOTENT_RE.test(stmt.trim()));
 }
 
 export async function listAppliedMigrations(db) {
