@@ -59,7 +59,7 @@ export async function collectWhoami(options = {}) {
   const base = {
     schema_version: 2,
     authenticated: false,
-    authority: 'iam',
+    authority: 'inneranimalmedia',
     identity: null,
     active_auth: {
       configured: Boolean(active.value || active.error),
@@ -138,7 +138,8 @@ export function renderWhoami(status) {
   for (const row of status.provider_credentials || []) {
     const state = row.configured ? 'available' : row.error ? `blocked (${row.error})` : 'not configured';
     const source = row.source ? ` · ${row.source}` : '';
-    lines.push(`  ${String(row.provider).padEnd(16)} ${state}${source}`);
+    const label = row.provider === 'inneranimalmedia' ? 'inneranimalmedia (API key)' : String(row.provider);
+    lines.push(`  ${label.padEnd(28)} ${state}${source}`);
   }
   lines.push('');
   lines.push('  Secret values are never printed by whoami.');
