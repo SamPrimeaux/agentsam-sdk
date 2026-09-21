@@ -82,6 +82,19 @@ export function resolveOAuthCredentialLane(env, provider) {
     }
   }
 
+  if (provider === 'cloudflare') {
+    // Reuses the same Worker secrets as the Local Studio Cloudflare resource
+    // connector (packages/connectors/cloudflare). clientSecret may be empty
+    // if that client is configured as PKCE-only (Token Authentication
+    // Method = None) — exchangeCloudflareCode() omits it in that case.
+    const clientId = String(env?.CLOUDFLARE_OAUTH_CLIENT_ID || '').trim();
+    const clientSecret = String(env?.CLOUDFLARE_OAUTH_CLIENT_SECRET || '').trim();
+    if (clientId) {
+      return { lane: 'byok_cloudflare', clientId, clientSecret, provider };
+    }
+    return null;
+  }
+
   // Default: Google/GitHub buttons route through IAM platform when minted.
   const iam = resolveIamPlatformCredentials(env);
   if (iam) {
