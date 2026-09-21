@@ -120,7 +120,9 @@ test('S8: canonical migrations upgrade an older runtime database for project ses
 
   createLocalSession({ cwd: projectA }, { home });
   const upgraded = createLocalSqliteDatabaseSync(runtimeDatabasePath(projectA));
-  assert.equal(upgraded.prepare("SELECT COUNT(*) AS n FROM agentsam_schema_migrations").get().n, 2);
+  const migrationCount = fs.readdirSync(path.join(repoRoot, 'migrations', 'runtime'))
+    .filter((name) => /^\d+.*\.sql$/i.test(name)).length;
+  assert.equal(upgraded.prepare("SELECT COUNT(*) AS n FROM agentsam_schema_migrations").get().n, migrationCount);
   assert.ok(upgraded.prepare("SELECT name FROM sqlite_master WHERE name = 'agentsam_project_sessions'").get());
   upgraded.close();
 });
