@@ -10,6 +10,7 @@ import {
 import { handleCmsWorkerRequest } from "./cms-service.js";
 import { serveCanonicalHomepage } from "./canonical-homepage.js";
 import { loadConnectionsRegistry } from "./connections-registry.js";
+import { createLocalStudioPluginRuntime } from "./plugin-registry.js";
 
 // Paths owned by the identity package (auth pages, auth API, OAuth, company branding).
 const IDENTITY_EXACT_PATHS = new Set(["/auth/login", "/auth/signup", "/auth/reset", "/api/company"]);
@@ -74,11 +75,11 @@ function serveInstallScript(pathname) {
  *   DELETE /api/vault/secrets/:id    soft-revoke
  *   GET  /api/llm/inventory          per-user vault (+ optional platform) model inventory
  *
- * Auth (v1): Authorization: Bearer <WORKMODE_API_KEY>
- *            X-User-Id: <user_id>  (required for vault + inventory routes)
+ * Service auth: Authorization: Bearer <AGENTSAM_BRIDGE_KEY> or X-Bridge-Key.
+ *               X-User-Id identifies the service-requested account.
  *
  * Auth (session lane): requests carrying a valid identity session cookie are
- * authenticated without the desk API key for GET /api/llm/inventory, and the
+ * authenticated without the service bridge for GET /api/llm/inventory, and the
  * session user is authoritative everywhere a user_id is needed — a
  * client-asserted X-User-Id never overrides the validated session. POST
  * /api/chat bound for Nitro gets its X-User-Id rewritten to the session user
@@ -167,13 +168,64 @@ async function decryptSecret(env, packedB64, aad) {
   return dec.decode(plain);
 }
 
-function requireApiKey(request, env) {
-  const expected = env.WORKMODE_API_KEY;
-  if (!expected) return { ok: false, error: "WORKMODE_API_KEY not configured", status: 503 };
+async function constantTimeSecretEqual(left, right) {
+  const encoder = new TextEncoder();
+  const [leftHash, rightHash] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(String(left || ""))),
+    crypto.subtle.digest("SHA-256", encoder.encode(String(right || ""))),
+  ]);
+  return crypto.subtle.timingSafeEqual(leftHash, rightHash);
+}
+
+async function requireBridgeKey(request, env) {
+  const expected = String(env.AGENTSAM_BRIDGE_KEY || "").trim();
+  if (!expected) return { ok: false, error: "AGENTSAM_BRIDGE_KEY not configured", status: 503 };
   const auth = request.headers.get("authorization") || "";
-  const token = auth.toLowerCase().startsWith("bearer ") ? auth.slice(7).trim() : "";
-  if (!token || token !== expected) return { ok: false, error: "unauthorized", status: 401 };
+  const bearer = auth.toLowerCase().startsWith("bearer ") ? auth.slice(7).trim() : "";
+  const token = (request.headers.get("x-bridge-key") || "").trim() || bearer;
+  if (!token || !(await constantTimeSecretEqual(token, expected))) {
+    return { ok: false, error: "unauthorized", status: 401 };
+  }
   return { ok: true };
+}
+
+async function probeInnerAnimalMediaOAuth(env) {
+  const issuer = String(env.IAM_OAUTH_ISSUER || "").trim().replace(/\/$/, "");
+  const configured = Boolean(issuer && env.IAM_CLIENT_ID && env.IAM_CLIENT_SECRET);
+  const checkedAt = Math.floor(Date.now() / 1000);
+  if (!configured) return { configured: false, healthy: false, status: "unconfigured", checked_at: checkedAt };
+  const started = Date.now();
+  try {
+    const response = await fetch(`${issuer}/.well-known/oauth-authorization-server`, {
+      headers: { accept: "application/json" },
+      signal: AbortSignal.timeout(4000),
+    });
+    const metadata = await response.json().catch(() => null);
+    const healthy = response.ok
+      && metadata?.issuer === issuer
+      && typeof metadata?.authorization_endpoint === "string"
+      && typeof metadata?.token_endpoint === "string"
+      && metadata?.code_challenge_methods_supported?.includes?.("S256");
+    return {
+      configured: true,
+      healthy,
+      status: healthy ? "healthy" : "unhealthy",
+      issuer,
+      http_status: response.status,
+      latency_ms: Date.now() - started,
+      checked_at: checkedAt,
+    };
+  } catch (error) {
+    return {
+      configured: true,
+      healthy: false,
+      status: "unreachable",
+      issuer,
+      latency_ms: Date.now() - started,
+      error: String(error?.name || "oauth_probe_failed"),
+      checked_at: checkedAt,
+    };
+  }
 }
 
 /**
@@ -554,6 +606,7 @@ export default {
     const isLlmInventory = url.pathname === "/api/llm/inventory";
     const isCfConnection = isCloudflareConnectionPath(url.pathname);
     const isConnectionsRegistry = url.pathname === "/api/connections";
+    const isPluginToolExecute = url.pathname === "/api/plugins/tools/execute";
 
     if (request.method === "GET" && Object.hasOwn(INSTALL_APP_TARGETS, url.pathname)) {
       return serveInstallScript(url.pathname);
@@ -620,6 +673,37 @@ export default {
       }
     }
 
+    if (isPluginToolExecute) {
+      if (request.method !== "POST") {
+        return json({ ok: false, error: "method_not_allowed" }, 405, { allow: "POST" });
+      }
+      const userId = await sessionUser();
+      if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
+      const body = await request.json().catch(() => ({}));
+      const toolKey = String(body?.tool_key || "").trim();
+      if (!toolKey) return json({ ok: false, error: "tool_key_required" }, 400);
+      try {
+        const runtime = await createLocalStudioPluginRuntime(env, userId, {
+          authorizeTool: ({ tool }) => ({
+            allowed: tool.account_id === userId && tool.plugin_key === "agentsam-mcp",
+          }),
+          requireApproval: () => body?.approved === true,
+        });
+        const result = await runtime.execute(toolKey, body?.arguments || {}, {
+          accountId: userId,
+          agentRunId: body?.agent_run_id || null,
+          conversationId: body?.conversation_id || null,
+          callIndex: body?.call_index,
+          sourceClient: "local-studio",
+        });
+        return json({ ok: true, tool_key: toolKey, result });
+      } catch (error) {
+        const code = String(error?.code || error?.message || "plugin_tool_error");
+        const status = code === "AGENTSAM_TOOL_NOT_APPROVED" ? 409 : code.includes("not_found") ? 404 : 400;
+        return json({ ok: false, error: code.slice(0, 160) }, status);
+      }
+    }
+
     if (!isVault && url.pathname !== "/health") {
       // Nitro-bound Studio chat and model inventory run per-user vault BYOK downstream:
       // bind the client-asserted user to the validated session when one exists.
@@ -669,6 +753,7 @@ export default {
       } catch {
         d1 = false;
       }
+      const inneranimalmedia = await probeInnerAnimalMediaOAuth(env);
       return json(
         {
           ok: true,
@@ -676,9 +761,12 @@ export default {
           d1,
           database: env.D1_DATABASE_NAME || "inneranimalmedia-business",
           vault_key: Boolean(env.VAULT_MASTER_KEY || env.VAULT_KEY),
-          api_key: Boolean(env.WORKMODE_API_KEY),
+          service_auth: {
+            agentsam_bridge: Boolean(env.AGENTSAM_BRIDGE_KEY),
+          },
           identity: {
-            iam: Boolean(env.IAM_CLIENT_ID && env.IAM_CLIENT_SECRET),
+            inneranimalmedia: inneranimalmedia.healthy,
+            oauth: inneranimalmedia,
           },
           connections: {
             cloudflare: {
@@ -695,7 +783,7 @@ export default {
     // The session user is authoritative; the client header is a fallback for
     // API-key service callers.
     if (isLlmInventory && request.method === "GET") {
-      const gate = requireApiKey(request, env);
+      const gate = await requireBridgeKey(request, env);
       const sid = await sessionUser();
       if (!gate.ok && !sid) return json({ ok: false, error: gate.error }, gate.status, headers);
       const userId = sid || (request.headers.get("x-user-id") || "").trim();
@@ -715,7 +803,7 @@ export default {
     // Vault routes stay desk-key-only (server callers); the user still
     // resolves session-first so an authenticated operator needs no header.
     const sessionId = await sessionUser();
-    const gate = requireApiKey(request, env);
+    const gate = await requireBridgeKey(request, env);
     if (!sessionId && !gate.ok) {
       return json({ ok: false, error: gate.error }, gate.status, headers);
     }

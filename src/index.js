@@ -5,6 +5,21 @@ import pkg from '../package.json' with { type: 'json' };
 export { AgentSam } from './AgentSam.js';
 export { routeIntent } from './lib/router.js';
 export { searchToolCards, toToolCard, hydrateToolSchemas } from './tools/index.js';
+export {
+  AGENTSAM_PLUGIN_SCHEMA_VERSION,
+  AGENTSAM_MCP_PLUGIN_MANIFEST,
+  CLOUDFLARE_PLUGIN_MANIFEST,
+  normalizePluginKey,
+  normalizePluginManifest,
+  installPlugin,
+  listPlugins,
+  listPluginTools,
+  recordPluginHealthCheck,
+  recordToolCall,
+  createPluginRuntime,
+  createPluginCapabilityAdapter,
+  executeAgentSamTool,
+} from './plugins/index.js';
 export { getToolCatalog } from './lib/tools.js';
 export { scaffoldProject } from './lib/scaffold.js';
 export {
@@ -159,6 +174,8 @@ export {
   createCapabilityAdapter,
   buildAgentToolSurface,
   capabilityFunctionName,
+  runAgentSamModelTurn,
+  runAgentSamTurn,
   runResponsesAgent,
 } from './agent/index.js';
 export {

@@ -1,4 +1,5 @@
 import { cloudflareConnectionSafeStatus } from "../../../../packages/connectors/cloudflare/src/index.js";
+import { loadPluginRegistry, materializeCloudflarePlugin } from "./plugin-registry.js";
 
 export const BYOK_PROVIDER_DEFINITIONS = Object.freeze([
   { provider: "openai", service: "openai", label: "OpenAI" },
@@ -44,7 +45,7 @@ export async function loadConnectionsRegistry(env, userId) {
       `SELECT connection_id, owner_id, cloudflare_account_id, scopes, status,
               created_at, updated_at, expires_at
        FROM agentsam_cloudflare_connections
-       WHERE owner_id = ?
+       WHERE owner_id = ? AND status = 'connected'
        ORDER BY updated_at DESC
        LIMIT 1`,
     )
@@ -68,6 +69,18 @@ export async function loadConnectionsRegistry(env, userId) {
     userId,
   );
   const oauthConnected = cloudflare.status === "connected";
+  let pluginRegistry = { plugins: [], tools: [] };
+  try {
+    await materializeCloudflarePlugin(env, userId, {
+      connected: oauthConnected,
+      available: cloudflare.configured,
+      checkSource: "page_load",
+    });
+    pluginRegistry = await loadPluginRegistry(env, userId);
+  } catch (error) {
+    console.error("cloudflare_plugin_registry_error", String(error));
+  }
+  const cloudflarePlugin = pluginRegistry.plugins.find((row) => row.plugin_key === "agentsam-mcp") || null;
 
   const latestByProvider = new Map();
   for (const row of secretsResult?.results || []) {
@@ -88,15 +101,31 @@ export async function loadConnectionsRegistry(env, userId) {
   }
 
   return {
+    plugins: pluginRegistry.plugins,
+    tools: pluginRegistry.tools,
     connections: [
       {
         provider: "cloudflare",
+        plugin_key: "agentsam-mcp",
+        display_name: "AgentSam MCP",
         kind: "oauth",
         status: oauthConnected ? "connected" : "not_configured",
         available: cloudflare.configured,
         client_status: cloudflare.status,
         callback_path: cloudflare.callbackPath,
         connection: cloudflare.connection,
+        plugin: cloudflarePlugin ? {
+          id: cloudflarePlugin.id,
+          plugin_key: cloudflarePlugin.plugin_key,
+          setup_status: cloudflarePlugin.setup_status,
+          health_status: cloudflarePlugin.health_status,
+          health_strategy: cloudflarePlugin.health_strategy,
+          last_health_at: cloudflarePlugin.last_health_at,
+          last_healthy_at: cloudflarePlugin.last_healthy_at,
+          consecutive_failures: cloudflarePlugin.consecutive_failures,
+          avg_latency_ms: cloudflarePlugin.avg_latency_ms,
+          last_error_code: cloudflarePlugin.last_error_code,
+        } : null,
       },
       ...BYOK_PROVIDER_DEFINITIONS.map((definition) => {
         const credential = latestByProvider.get(definition.provider) || null;

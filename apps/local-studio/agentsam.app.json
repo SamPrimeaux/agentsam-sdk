@@ -31,7 +31,7 @@
       "ANTHROPIC_API_KEY",
       "CURSOR_API_KEY",
       "VAULT_MASTER_KEY",
-      "WORKMODE_API_KEY"
+      "AGENTSAM_BRIDGE_KEY"
     ]
   }
 }

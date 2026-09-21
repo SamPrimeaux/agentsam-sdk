@@ -39,6 +39,7 @@ import { runCloudflare } from './commands/cloudflare.js';
 import { runWhoami } from './commands/whoami.js';
 import { runResume } from './commands/resume.js';
 import { runLogin, runLogout } from './commands/account-auth.js';
+import { runPlugins } from './commands/plugins.js';
 import { applyPresetSelection, runAdd, runCapabilities, runDev, runInspect } from './commands/product.js';
 import { listPresets, resolvePreset } from './presets/index.js';
 import fs from 'node:fs';
@@ -69,6 +70,7 @@ function printLegacyHelp() {
     agentsam                     Enter the interactive Agent Sam experience
     agentsam create <name> --preset <fullstack|cms|prototype|data>
     agentsam add <auth|cms|knowledge|agent|deploy-cloudflare>
+    agentsam plugins list|install|remove [@agentsam-mcp]
     agentsam dev               Run this project's existing npm dev script
     agentsam inspect [--json]  Bounded repository index by default; use --view full for authority envelope
     agentsam deploy            Graduate an AgentSam project intentionally
@@ -340,6 +342,12 @@ if (command === '--version' || command === '-v') {
   } catch (e) { reportCliError(e); process.exitCode = 1; }
 } else if (command === 'add') {
   try { await runAdd(rest); }
+  catch (e) { reportCliError(e); process.exitCode = 1; }
+} else if (command === 'plugins') {
+  try { await runPlugins(rest); }
+  catch (e) { reportCliError(e); process.exitCode = 1; }
+} else if (command === 'install' && rest[0] === 'plugins') {
+  try { await runPlugins(['install', rest[1] || 'agentsam-mcp', ...rest.slice(2)]); }
   catch (e) { reportCliError(e); process.exitCode = 1; }
 } else if (command === 'dev') {
   try { await runDev(rest); }

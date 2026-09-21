@@ -55,6 +55,7 @@
     "./context": "./src/context/index.js",
     "./indexing": "./src/indexing/index.js",
     "./tools": "./src/tools/index.js",
+    "./plugins": "./src/plugins/index.js",
     "./models": "./src/models/index.js",
     "./telemetry": "./src/telemetry/index.js",
     "./providers": "./src/providers/index.js",

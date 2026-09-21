@@ -29,6 +29,7 @@
   "vars": {
     "IAM_OAUTH_ISSUER": "https://inneranimalmedia.com",
     "IAM_CLIENT_ID": "iam_agentsam_sdk_web",
+    "AGENTSAM_CONNECT_RETURN_ORIGINS": "https://fuelnfreetime.com",
     "DEFAULT_AFTER_LOGIN_PATH": "/agentsam"
   },
   "d1_databases": [
@@ -65,11 +66,16 @@
       "service_id": "019db639-7c70-7071-8ef3-32ec0392a9ff",
       "remote": true
     }
+  ],
+  "worker_loaders": [
+    {
+      "binding": "LOADER"
+    }
   ]
 
   // IAM_CLIENT_ID is a public OAuth client id and is added after this service's
   // dedicated registration is minted. Server-only values are Worker secrets:
-  // IAM_CLIENT_ID, IAM_CLIENT_SECRET, AGENTSAM_SDK_KEY, AGENTSAM_BRIDGE_KEY,
+  // IAM_CLIENT_SECRET, AGENTSAM_BRIDGE_KEY,
   // XAI_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY.
   //
   // IAM_ORIGIN is deprecated compat-only (see resolveIamIssuer()); new

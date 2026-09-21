@@ -38,6 +38,7 @@
     "verify:npm10-lock": "node scripts/verify-npm10-lock.mjs"
   },
   "dependencies": {
+    "@cloudflare/codemode": "^0.5.2",
     "pg": "^8.16.3"
   },
   "devDependencies": {

@@ -6,6 +6,7 @@ import { getModelRecord, calculateModelCost } from '../models/index.js';
 import { searchToolCards, hydrateToolSchemas } from '../tools/index.js';
 import { createAgentEvent } from '../telemetry/index.js';
 import { diagnosticFromError } from '../errors/index.js';
+import { runAgentSamModelTurn } from './model-turn.js';
 
 const RUNTIME_OWNED_KEYS = new Set(['account_id', 'user_id', 'tenant_id', 'workspace_id', 'connection_id', 'runtime_lease_id', 'execution_id']);
 
@@ -155,10 +156,18 @@ function assertEconomicPreflight(projectedTokens, budget, allowOverride) {
   if (projectedTokens >= budget.compactAtTokens) throw new Error(`context_preflight_compaction_required:${projectedTokens}>=${budget.compactAtTokens}`);
 }
 
-export async function runResponsesAgent(options = {}) {
+export async function runAgentSamTurn(options = {}) {
   const provider = options.provider;
   if (!provider?.create || !provider?.continueWithToolOutputs) throw new TypeError('Responses provider adapter is required');
   if (!options.capabilityAdapter) throw new TypeError('capabilityAdapter is required');
+  // Keep provider wire-format handling behind the inference-only boundary.
+  // This runner owns context, authorization, and the tool loop; the model
+  // adapter only returns a normalized turn (the raw provider response is
+  // retained below for continuation bookkeeping).
+  const modelTurn = async (request) => {
+    const turn = await runAgentSamModelTurn(request);
+    return turn.raw;
+  };
   const cwd = path.resolve(options.cwd || process.cwd());
   const objective = clean(options.prompt);
   if (!objective) throw new TypeError('prompt is required');
@@ -296,7 +305,8 @@ export async function runResponsesAgent(options = {}) {
     for (const key of Object.keys(costBreakdownUsd)) costBreakdownUsd[key] += Number(cost?.components_usd?.[key] || 0);
   };
   accumulateCost(compacted?.cost);
-  let response = await provider.create({
+  let response = await modelTurn({
+    provider,
     model: record.provider_model_id,
     modelRecord: record,
     input,
@@ -392,7 +402,8 @@ export async function runResponsesAgent(options = {}) {
     if (repeatedRoundCount >= maxNoProgressRounds) {
       throw new Error(`no_progress_detected:${repeatedRoundCount + 1}`);
     }
-    response = await provider.continueWithToolOutputs({
+    response = await modelTurn({
+      provider,
       model: record.provider_model_id,
       previousResponseId: response.response_id,
       providerState: response.provider_state || providerState,
@@ -459,3 +470,6 @@ export async function runResponsesAgent(options = {}) {
     }),
   });
 }
+
+/** @deprecated Use runAgentSamTurn(). */
+export const runResponsesAgent = runAgentSamTurn;

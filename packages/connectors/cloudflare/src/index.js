@@ -267,7 +267,7 @@ export function resolveCloudflareOAuthClient(env = {}) {
 
 export function cloudflareConnectionSafeStatus(env = {}, connection = null, ownerId = '') {
   const client = resolveCloudflareOAuthClient(env);
-  const record = connection && connection.ownerId === ownerId ? connection : null;
+  const record = connection && connection.ownerId === ownerId && connection.status === 'connected' ? connection : null;
   return {
     provider: 'cloudflare',
     status: record ? 'connected' : client.status === 'ready' ? 'ready' : client.status,
@@ -303,6 +303,101 @@ export function assertConnectionOwner(connection, ownerId) {
     throw err;
   }
   return connection;
+}
+
+export async function loadCloudflareAccessToken(env, ownerId, options = {}) {
+  if (!env?.DB || !ownerId) return null;
+  const row = await env.DB.prepare(`
+    SELECT connection_id, owner_id, cloudflare_account_id, scopes, status,
+           access_token_encrypted, refresh_token_encrypted, expires_at
+    FROM agentsam_cloudflare_connections
+    WHERE owner_id = ? AND status = 'connected'
+    ORDER BY updated_at DESC LIMIT 1
+  `).bind(ownerId).first();
+  if (!row?.access_token_encrypted || row.owner_id !== ownerId) return null;
+  const { decryptSecret, sealToken } = await import('./vault.js');
+  const aad = `cloudflare-connection:${ownerId}`;
+  let accessToken = await decryptSecret(env, row.access_token_encrypted, aad);
+  let refreshToken = row.refresh_token_encrypted
+    ? await decryptSecret(env, row.refresh_token_encrypted, aad)
+    : '';
+  let expiresAt = Number(row.expires_at || 0) || null;
+  let scopes = row.scopes ? String(row.scopes).split(' ').filter(Boolean) : [];
+  const now = Math.floor(Date.now() / 1000);
+  if (expiresAt && expiresAt <= now + 60) {
+    if (!refreshToken) throw new Error('cloudflare_refresh_token_missing');
+    const refreshParams = new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: String(env.CLOUDFLARE_OAUTH_CLIENT_ID || ''),
+    });
+    if (env.CLOUDFLARE_OAUTH_CLIENT_SECRET) {
+      refreshParams.set('client_secret', String(env.CLOUDFLARE_OAUTH_CLIENT_SECRET));
+    }
+    const refreshResponse = await (options.fetchImpl || fetch)(CLOUDFLARE_OAUTH_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: refreshParams,
+    });
+    if (!refreshResponse.ok) throw new Error(`cloudflare_token_refresh_failed:${refreshResponse.status}`);
+    const refreshed = await refreshResponse.json();
+    if (!refreshed?.access_token) throw new Error('cloudflare_token_refresh_missing_access_token');
+    accessToken = refreshed.access_token;
+    refreshToken = refreshed.refresh_token || refreshToken;
+    scopes = String(refreshed.scope || row.scopes || '').split(' ').filter(Boolean);
+    expiresAt = refreshed.expires_in ? now + Number(refreshed.expires_in) : null;
+    const [accessEncrypted, refreshEncrypted] = await Promise.all([
+      sealToken(env, accessToken, aad),
+      sealToken(env, refreshToken, aad),
+    ]);
+    await env.DB.prepare(`
+      UPDATE agentsam_cloudflare_connections
+      SET access_token_encrypted = ?, refresh_token_encrypted = ?, scopes = ?,
+          expires_at = ?, status = 'connected', updated_at = unixepoch()
+      WHERE connection_id = ? AND owner_id = ?
+    `).bind(accessEncrypted, refreshEncrypted, scopes.join(' '), expiresAt, row.connection_id, ownerId).run();
+  }
+  return {
+    accessToken,
+    connectionId: row.connection_id,
+    accountId: row.cloudflare_account_id || null,
+    scopes,
+    expiresAt,
+  };
+}
+
+export async function probeCloudflareConnection(env, ownerId, options = {}) {
+  const startedAt = Date.now();
+  const checkedAt = Math.floor(startedAt / 1000);
+  try {
+    const connection = await loadCloudflareAccessToken(env, ownerId, options);
+    if (!connection) return { status: 'auth_error', healthy: false, checked_at: checkedAt, error_code: 'cloudflare_connection_missing' };
+    const response = await (options.fetchImpl || fetch)('https://dash.cloudflare.com/oauth2/userinfo', {
+      headers: { authorization: `Bearer ${connection.accessToken}`, accept: 'application/json' },
+      signal: typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(5000) : undefined,
+    });
+    const body = await response.json().catch(() => null);
+    const healthy = response.ok && body?.error == null;
+    return {
+      status: healthy ? 'healthy' : response.status === 401 || response.status === 403 ? 'auth_error' : 'unhealthy',
+      healthy,
+      checked_at: checkedAt,
+      latency_ms: Date.now() - startedAt,
+      http_status: response.status,
+      provider_request_id: response.headers.get('cf-ray') || null,
+      account_id: connection.accountId,
+      scopes: connection.scopes,
+      error_code: healthy
+        ? null
+        : body?.error || (body?.errors?.[0]?.code ? String(body.errors[0].code) : `cloudflare_http_${response.status}`),
+      error_message: healthy ? null : body?.error_description || body?.errors?.[0]?.message || 'Cloudflare OAuth probe failed',
+    };
+  } catch (error) {
+    return {
+      status: 'unreachable', healthy: false, checked_at: checkedAt, latency_ms: Date.now() - startedAt,
+      error_code: 'cloudflare_probe_failed', error_message: String(error?.message || error).slice(0, 240),
+    };
+  }
 }
 
 export function buildAuthorizeUrl({ clientId, redirectUri, state, codeChallenge, scopes }) {

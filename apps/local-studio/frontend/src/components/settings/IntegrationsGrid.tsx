@@ -54,8 +54,8 @@ export function IntegrationsGrid() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("connection") !== "cloudflare") return;
     const result = params.get("result");
-    if (result === "connected") toast.success("Cloudflare connected");
-    if (result === "error") toast.error(params.get("error") || "Cloudflare connection failed");
+    if (result === "connected") toast.success("AgentSam MCP connected");
+    if (result === "error") toast.error(params.get("error") || "AgentSam MCP connection failed");
     params.delete("connection");
     params.delete("result");
     params.delete("error");
@@ -105,7 +105,7 @@ export function IntegrationsGrid() {
       const data = (await response.json().catch(() => ({}))) as { error?: string };
       if (!response.ok) throw new Error(data.error || "Could not disconnect Cloudflare");
       setDrawerOpen(false);
-      toast.success("Cloudflare disconnected");
+      toast.success("AgentSam MCP disconnected");
       await load();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not disconnect Cloudflare");
@@ -182,8 +182,8 @@ export function IntegrationsGrid() {
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
             {tab === "connected"
-              ? "Open Available to connect Cloudflare."
-              : "Manage Cloudflare from the Connected tab."}
+              ? "Open Available to connect AgentSam MCP."
+              : "Manage AgentSam MCP from the Connected tab."}
           </p>
           <Button
             type="button"

@@ -9,7 +9,7 @@ import {
   assertConnectionOwner,
 } from './index.js';
 import { resolveAuthenticatedOwner } from './owner.js';
-import { sealToken, vaultConfigured } from './vault.js';
+import { decryptSecret, sealToken, vaultConfigured } from './vault.js';
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -22,12 +22,31 @@ function redirect(location) {
   return new Response(null, { status: 302, headers: { location } });
 }
 
-function settingsRedirect(url, result, error = '') {
-  const destination = new URL('/settings/integrations', url.origin);
+function settingsRedirect(url, result, error = '', returnTo = '') {
+  const destination = returnTo ? new URL(returnTo) : new URL('/settings/integrations', url.origin);
   destination.searchParams.set('connection', 'cloudflare');
   destination.searchParams.set('result', result);
   if (error) destination.searchParams.set('error', error);
   return redirect(destination.toString());
+}
+
+function allowedReturnOrigins(url, env) {
+  return new Set([
+    url.origin,
+    ...String(env.AGENTSAM_CONNECT_RETURN_ORIGINS || '').split(',').map((value) => value.trim()).filter(Boolean),
+  ]);
+}
+
+function resolveReturnTo(url, env) {
+  const raw = url.searchParams.get('return_to') || '';
+  if (!raw) return '';
+  try {
+    const destination = new URL(raw, url.origin);
+    if (destination.protocol !== 'https:' && destination.origin !== url.origin) return '';
+    return allowedReturnOrigins(url, env).has(destination.origin) ? destination.toString() : '';
+  } catch {
+    return '';
+  }
 }
 
 async function deleteOAuthState(env, state) {
@@ -65,8 +84,18 @@ async function ensureTables(env) {
     state TEXT PRIMARY KEY,
     owner_id TEXT NOT NULL,
     code_verifier TEXT NOT NULL,
-    created_at INTEGER
+    created_at INTEGER,
+    return_to TEXT
   )`).run();
+  const stateInfo = env.DB.prepare(`PRAGMA table_info(agentsam_cloudflare_oauth_state)`);
+  const stateColumns = typeof stateInfo.all === 'function' ? await stateInfo.all() : null;
+  if (!(stateColumns?.results || []).some((column) => column.name === 'return_to')) {
+    try {
+      await env.DB.prepare(`ALTER TABLE agentsam_cloudflare_oauth_state ADD COLUMN return_to TEXT`).run();
+    } catch {
+      // A concurrent request may have added it between the pragma and ALTER.
+    }
+  }
 }
 
 export async function handleCloudflareConnectionRequest(request, env) {
@@ -116,7 +145,9 @@ export async function handleCloudflareConnectionRequest(request, env) {
     if (env.DB) {
       const row = await env.DB.prepare(
         `SELECT connection_id, owner_id, cloudflare_account_id, scopes, status, created_at, updated_at, expires_at
-         FROM agentsam_cloudflare_connections WHERE owner_id = ? LIMIT 1`,
+         FROM agentsam_cloudflare_connections
+         WHERE owner_id = ? AND status = 'connected'
+         ORDER BY updated_at DESC LIMIT 1`,
       ).bind(ownerId).first();
       if (row) {
         connection = {
@@ -140,12 +171,14 @@ export async function handleCloudflareConnectionRequest(request, env) {
     const verifier = btoa(String.fromCharCode(...verifierBytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
     const challenge = btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const returnTo = resolveReturnTo(url, env);
     if (env.DB) {
       await env.DB.prepare(
-        `INSERT INTO agentsam_cloudflare_oauth_state (state, owner_id, code_verifier, created_at) VALUES (?, ?, ?, unixepoch())`,
-      ).bind(state, ownerId, verifier).run();
+        `INSERT INTO agentsam_cloudflare_oauth_state (state, owner_id, code_verifier, created_at, return_to)
+         VALUES (?, ?, ?, unixepoch(), ?)`,
+      ).bind(state, ownerId, verifier, returnTo || null).run();
     } else if (env.oauthState instanceof Map) {
-      env.oauthState.set(state, { ownerId, verifier });
+      env.oauthState.set(state, { ownerId, verifier, returnTo });
     }
     const redirectUri = `${url.origin}${CLOUDFLARE_CALLBACK_PATH}`;
     const authorize = buildAuthorizeUrl({
@@ -164,32 +197,32 @@ export async function handleCloudflareConnectionRequest(request, env) {
     let stored = null;
     if (env.DB) {
       stored = await env.DB.prepare(
-        `SELECT owner_id, code_verifier, created_at
+        `SELECT owner_id, code_verifier, created_at, return_to
          FROM agentsam_cloudflare_oauth_state WHERE state = ?`,
       ).bind(state).first();
     } else if (env.oauthState instanceof Map) {
       stored = env.oauthState.get(state);
-      if (stored) stored = { owner_id: stored.ownerId, code_verifier: stored.verifier };
+      if (stored) stored = { owner_id: stored.ownerId, code_verifier: stored.verifier, return_to: stored.returnTo || '' };
     }
     if (!stored) {
       return settingsRedirect(url, 'error', 'cloudflare_connection_forbidden');
     }
     if (!ownerId) ownerId = stored.owner_id;
     if (stored.owner_id !== ownerId) {
-      return settingsRedirect(url, 'error', 'cloudflare_connection_forbidden');
+      return settingsRedirect(url, 'error', 'cloudflare_connection_forbidden', stored.return_to || '');
     }
     const createdAt = Number(stored.created_at || 0);
     const now = Math.floor(Date.now() / 1000);
     if (createdAt && now - createdAt > 10 * 60) {
       await deleteOAuthState(env, state);
-      return settingsRedirect(url, 'error', 'oauth_state_expired');
+      return settingsRedirect(url, 'error', 'oauth_state_expired', stored.return_to || '');
     }
     await deleteOAuthState(env, state);
     if (providerError) {
-      return settingsRedirect(url, 'error', providerError);
+      return settingsRedirect(url, 'error', providerError, stored.return_to || '');
     }
     if (!code) {
-      return settingsRedirect(url, 'error', 'authorization_code_missing');
+      return settingsRedirect(url, 'error', 'authorization_code_missing', stored.return_to || '');
     }
     // client_secret is only included when configured (PKCE-only "None"
     // clients on the Cloudflare dashboard have no secret at all).
@@ -210,12 +243,12 @@ export async function handleCloudflareConnectionRequest(request, env) {
     });
     if (!tokenRes.ok) {
       console.error('cloudflare_token_exchange_failed', tokenRes.status);
-      return settingsRedirect(url, 'error', 'token_exchange_failed');
+      return settingsRedirect(url, 'error', 'token_exchange_failed', stored.return_to || '');
     }
     const tokens = await tokenRes.json();
     const connectionId = `cfconn_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
     if (tokens.access_token && !vaultConfigured(env)) {
-      return settingsRedirect(url, 'error', 'vault_unavailable');
+      return settingsRedirect(url, 'error', 'vault_unavailable', stored.return_to || '');
     }
     const aad = `cloudflare-connection:${ownerId}`;
     let accessEnc = null;
@@ -224,11 +257,14 @@ export async function handleCloudflareConnectionRequest(request, env) {
       accessEnc = await sealToken(env, tokens.access_token, aad);
       refreshEnc = await sealToken(env, tokens.refresh_token, aad);
     } catch (err) {
-      return settingsRedirect(url, 'error', err.code || 'vault_unavailable');
+      return settingsRedirect(url, 'error', err.code || 'vault_unavailable', stored.return_to || '');
     }
     if (env.DB) {
       const removePrevious = env.DB.prepare(
-        `DELETE FROM agentsam_cloudflare_connections WHERE owner_id = ?`,
+        `UPDATE agentsam_cloudflare_connections
+         SET status = 'superseded', access_token_encrypted = NULL,
+             refresh_token_encrypted = NULL, updated_at = unixepoch()
+         WHERE owner_id = ? AND status = 'connected'`,
       ).bind(ownerId);
       const insertConnection = env.DB.prepare(
         `INSERT INTO agentsam_cloudflare_connections (
@@ -251,20 +287,46 @@ export async function handleCloudflareConnectionRequest(request, env) {
         await insertConnection.run();
       }
     }
-    return settingsRedirect(url, 'connected');
+    return settingsRedirect(url, 'connected', '', stored.return_to || '');
   }
 
   if (url.pathname === '/api/connections/cloudflare/disconnect' && request.method === 'POST') {
+    let providerRevoked = false;
     if (env.DB) {
       const row = await env.DB.prepare(
-        `SELECT connection_id, owner_id FROM agentsam_cloudflare_connections WHERE owner_id = ?`,
+        `SELECT connection_id, owner_id, access_token_encrypted
+         FROM agentsam_cloudflare_connections
+         WHERE owner_id = ? AND status = 'connected'
+         ORDER BY updated_at DESC LIMIT 1`,
       ).bind(ownerId).first();
       if (row) {
         assertConnectionOwner({ ownerId: row.owner_id, connectionId: row.connection_id }, ownerId);
-        await env.DB.prepare(`DELETE FROM agentsam_cloudflare_connections WHERE owner_id = ?`).bind(ownerId).run();
+        if (row.access_token_encrypted) {
+          try {
+            const token = await decryptSecret(env, row.access_token_encrypted, `cloudflare-connection:${ownerId}`);
+            const revokeParams = new URLSearchParams({ token, client_id: String(env.CLOUDFLARE_OAUTH_CLIENT_ID) });
+            if (env.CLOUDFLARE_OAUTH_CLIENT_SECRET) {
+              revokeParams.set('client_secret', String(env.CLOUDFLARE_OAUTH_CLIENT_SECRET));
+            }
+            const revokeResponse = await fetch(CLOUDFLARE_OAUTH_REVOKE_URL, {
+              method: 'POST',
+              headers: { 'content-type': 'application/x-www-form-urlencoded' },
+              body: revokeParams,
+            });
+            providerRevoked = revokeResponse.ok;
+          } catch (error) {
+            console.error('cloudflare_token_revoke_failed', String(error?.message || error));
+          }
+        }
+        await env.DB.prepare(`
+          UPDATE agentsam_cloudflare_connections
+          SET status = 'revoked', access_token_encrypted = NULL,
+              refresh_token_encrypted = NULL, expires_at = unixepoch(), updated_at = unixepoch()
+          WHERE connection_id = ? AND owner_id = ?
+        `).bind(row.connection_id, ownerId).run();
       }
     }
-    return json({ ok: true, status: 'not_configured' });
+    return json({ ok: true, status: 'not_configured', provider_revoked: providerRevoked });
   }
 
   return json({ ok: false, error: 'not_found' }, 404);

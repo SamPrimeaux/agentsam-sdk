@@ -11,12 +11,26 @@ export type CloudflareConnection = {
 
 export type OAuthConnectionRecord = {
   provider: "cloudflare";
+  plugin_key: "agentsam-mcp";
+  display_name: "AgentSam MCP";
   kind: "oauth";
   status: "connected" | "not_configured";
   available: boolean;
   client_status: string;
   callback_path: string;
   connection: CloudflareConnection | null;
+  plugin: {
+    id: string;
+    plugin_key: string;
+    setup_status: string;
+    health_status: "unknown" | "healthy" | "degraded" | "unhealthy" | "unreachable" | "auth_error" | "disabled";
+    health_strategy: string;
+    last_health_at: number | null;
+    last_healthy_at: number | null;
+    consecutive_failures: number;
+    avg_latency_ms: number | null;
+    last_error_code: string | null;
+  } | null;
 };
 
 export type VaultSecret = {

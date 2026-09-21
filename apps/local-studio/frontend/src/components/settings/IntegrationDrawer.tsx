@@ -30,6 +30,7 @@ export function IntegrationDrawer({
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const connected = connection?.status === "connected";
   const details = connection?.connection;
+  const plugin = connection?.plugin;
 
   return (
     <DialogPrimitive.Root
@@ -49,10 +50,10 @@ export function IntegrationDrawer({
               </span>
               <div className="min-w-0">
                 <DialogPrimitive.Title className="text-lg font-medium tracking-tight">
-                  Cloudflare
+                  AgentSam MCP
                 </DialogPrimitive.Title>
                 <DialogPrimitive.Description className="mt-1 text-sm text-muted-foreground">
-                  Connection status and authorization details
+                  Cloudflare account authorization and runtime health
                 </DialogPrimitive.Description>
               </div>
             </div>
@@ -84,6 +85,30 @@ export function IntegrationDrawer({
                   {connected ? "Active" : "Available"}
                 </span>
               </div>
+            </section>
+
+            <section aria-labelledby="cloudflare-health-heading">
+              <h3 id="cloudflare-health-heading" className="text-sm font-medium text-foreground">
+                Provider health
+              </h3>
+              <dl className="mt-3 divide-y divide-border rounded-2xl bg-muted px-4 shadow-hairline">
+                <div className="flex items-center justify-between gap-4 py-3">
+                  <dt className="text-sm text-muted-foreground">Latest evidence</dt>
+                  <dd className="text-sm font-medium capitalize text-foreground">
+                    {(plugin?.health_status || "unknown").replaceAll("_", " ")}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-4 py-3">
+                  <dt className="text-sm text-muted-foreground">Checked</dt>
+                  <dd className="text-right text-sm text-foreground">{formatDate(plugin?.last_health_at)}</dd>
+                </div>
+                {plugin?.avg_latency_ms != null ? (
+                  <div className="flex items-center justify-between gap-4 py-3">
+                    <dt className="text-sm text-muted-foreground">Average latency</dt>
+                    <dd className="text-sm tabular-nums text-foreground">{Math.round(plugin.avg_latency_ms)} ms</dd>
+                  </div>
+                ) : null}
+              </dl>
             </section>
 
             {details ? (
@@ -125,7 +150,7 @@ export function IntegrationDrawer({
               confirmDisconnect ? (
                 <div className="space-y-3 rounded-xl bg-destructive/10 p-3">
                   <p className="text-sm text-foreground">
-                    Disconnect this Cloudflare account from Local Studio?
+                    Disconnect this Cloudflare account from AgentSam MCP?
                   </p>
                   <div className="flex flex-wrap justify-end gap-2">
                     <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmDisconnect(false)}>

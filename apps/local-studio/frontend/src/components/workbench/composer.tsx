@@ -1,10 +1,72 @@
-import { useRef } from "react";
-import { ArrowUp, Paperclip, Square } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
+import { ArrowUp, Check, Cloud, Loader2, Paperclip, Plus, Square } from "lucide-react";
 import { AgentComposer } from "@inneranimalmedia/agentsam-workbench/agent";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ModelSelect } from "@/components/workbench/model-select";
 import { cn } from "@/lib/utils";
 import { useWorkStore } from "@/lib/work/store";
+
+function PluginMenu({ onMention }: { onMention: (mention: string) => void }) {
+  const [status, setStatus] = useState<"unknown" | "loading" | "connected" | "available">("unknown");
+
+  const load = useCallback(async () => {
+    setStatus("loading");
+    try {
+      const response = await fetch("/api/connections", { credentials: "same-origin" });
+      const body = (await response.json().catch(() => ({}))) as {
+        connections?: Array<{ provider?: string; kind?: string; status?: string }>;
+      };
+      const connection = body.connections?.find((row) => row.provider === "cloudflare" && row.kind === "oauth");
+      setStatus(connection?.status === "connected" ? "connected" : "available");
+    } catch {
+      setStatus("available");
+    }
+  }, []);
+
+  const select = useCallback(async () => {
+    if (status === "connected") {
+      onMention("@agentsam-mcp");
+      return;
+    }
+    const response = await fetch("/api/connections/cloudflare/start", { credentials: "same-origin" });
+    const body = (await response.json().catch(() => ({}))) as { authorize_url?: string };
+    if (response.ok && body.authorize_url) window.location.assign(body.authorize_url);
+  }, [onMention, status]);
+
+  return (
+    <DropdownMenu onOpenChange={(open) => { if (open) void load(); }}>
+      <DropdownMenuTrigger asChild>
+        <Button type="button" size="icon-sm" variant="ghost" aria-label="Add an AgentSam plugin">
+          <Plus className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-72">
+        <DropdownMenuLabel>Connected tools</DropdownMenuLabel>
+        <DropdownMenuItem onSelect={() => void select()}>
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-accent">
+            <Cloud className="size-4" />
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="font-medium">AgentSam MCP</span>
+            <span className="truncate text-[11px] text-muted-foreground">Cloudflare account access</span>
+          </span>
+          {status === "loading" ? <Loader2 className="size-3.5 animate-spin text-muted-foreground" /> : null}
+          {status === "connected" ? <Check className="size-4 text-accent" aria-label="Connected" /> : null}
+          {status === "available" || status === "unknown" ? (
+            <span className="text-xs font-medium text-accent">Connect</span>
+          ) : null}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export function Composer({
   targetId,
@@ -45,6 +107,12 @@ export function Composer({
         onChange={(event) => {
           void onFiles(event.target.files);
           event.target.value = "";
+        }}
+      />
+      <PluginMenu
+        onMention={(mention) => {
+          const next = [value.trimEnd(), mention].filter(Boolean).join(" ");
+          setDraft(targetId, `${next} `);
         }}
       />
       <Button
