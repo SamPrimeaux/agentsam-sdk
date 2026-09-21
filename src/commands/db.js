@@ -1,3 +1,4 @@
+import { discoverProjectStores, selectKnowledgeStore } from '../knowledge/store-discovery.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createLocalSqliteDatabase, initializeLocalSqlite, inspectLocalSqlite } from '../local/sqlite.js';
@@ -24,6 +25,12 @@ function resolveDb(root, config) {
 
 export async function runDb(argv = [], opts = {}) {
   const sub = argv[0] || 'status';
+  if (sub === 'sources' || sub === 'select') {
+    if (sub === 'select' && (argv[1] !== 'knowledge' || !argv[2] || argv.length > 4)) throw new Error('Usage: /db select knowledge sqlite|postgres [CONNECTION_ENV]');
+    const result = sub === 'sources' ? await discoverProjectStores(opts.cwd || process.cwd()) : selectKnowledgeStore(opts.cwd || process.cwd(), argv[2], argv[3]);
+    (opts.write || console.log)(JSON.stringify(result, null, 2) + '\n');
+    return result;
+  }
   if (!['init', 'migrate', 'status'].includes(sub)) {
     throw new Error(`unknown db command: ${sub}`);
   }

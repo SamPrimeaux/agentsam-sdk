@@ -93,3 +93,18 @@ test('compaction is an explicit provider operation and has no arbitrary default 
   assert.equal(body.previous_response_id, 'resp_previous');
   assert.equal(compacted.compaction_id, 'cmp_1');
 });
+
+test('OpenAI server-side compaction uses canonical policy and honors disable with previous_response_id', async () => {
+  const { getModelRecord } = await import('../src/models/index.js');
+  const bodies = [];
+  const adapter = createOpenAIResponsesAdapter({ apiKey: 'test', fetchImpl: async (_, init) => {
+    bodies.push(JSON.parse(init.body));
+    return jsonResponse({ id: 'resp_1', output: [], usage: {} });
+  } });
+  await adapter.create({ model: 'gpt-6-astra', previousResponseId: 'resp_previous', input: 'new message' });
+  assert.deepEqual(bodies[0].context_management, [{ type: 'compaction', compact_threshold: getModelRecord('gpt-6-astra').context_policy.compact_at_tokens }]);
+  assert.equal(bodies[0].input, 'new message');
+  assert.equal(bodies[0].previous_response_id, 'resp_previous');
+  await adapter.create({ model: 'gpt-6-astra', input: 'test', autoCompact: false });
+  assert.equal(bodies[1].context_management, undefined);
+});

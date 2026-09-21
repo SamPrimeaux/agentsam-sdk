@@ -1,3 +1,4 @@
+import { compileToolSchema, restoreOptionalArguments } from '../providers/tool-schema.js';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { assessContextUsage, compileAgentInstructions, createContextBudget, estimateContextTokens, truncateResultText, resolveProjectContext, buildProjectCard } from '../context/index.js';
@@ -51,7 +52,9 @@ export function buildAgentToolSurface(capabilityAdapter, objective, options = {}
       type: 'function',
       name: alias,
       description: descriptor.description,
-      parameters: descriptor.input_schema || { type: 'object', properties: {} },
+      parameters: ['openai', 'grok', 'gemini'].includes(options.schemaProvider)
+        ? compileToolSchema({ provider: options.schemaProvider, canonicalSchema: descriptor.input_schema, name: alias }).providerSchema
+        : descriptor.input_schema || { type: 'object', properties: {}, required: [], additionalProperties: false },
       strict: true,
     });
   });
@@ -64,7 +67,7 @@ export function buildAgentToolSurface(capabilityAdapter, objective, options = {}
       cards_returned: searched.receipt.returned_items,
       card_chars: searched.receipt.chars,
       hydrated_tools: hydrated.receipt.hydrated_tools,
-      hydrated_schema_chars: hydrated.receipt.schema_chars,
+      hydrated_schema_chars: tools.reduce((sum, tool) => sum + JSON.stringify(tool.parameters).length, 0),
       deferred_tools: Object.freeze(hydrated.receipt.deferred_tools),
     }),
   });
@@ -172,7 +175,7 @@ export async function runResponsesAgent(options = {}) {
   } else {
     instructions = String(options.instructions);
   }
-  const toolSurface = buildAgentToolSurface(options.capabilityAdapter, objective, options);
+  const toolSurface = buildAgentToolSurface(options.capabilityAdapter, objective, { ...options, schemaProvider: record.provider });
   const emit = options.emit;
   const runId = options.runId;
   event(emit, 'tool.search', toolSurface.receipt, runId);
@@ -183,6 +186,12 @@ export async function runResponsesAgent(options = {}) {
     : previousResponseId ? { previous_response_id: previousResponseId } : null;
   let priorActiveTokens = options.previousUsageSnapshot?.current_context?.input_tokens;
   let input = objective;
+  const pendingCompactedInput = providerState?.compacted_input;
+  if (!previousResponseId && Array.isArray(providerState?.compacted_input)) {
+    input = [...providerState.compacted_input, userMessage(objective)];
+    providerState = { ...providerState, compacted_input: undefined, compaction_input: undefined, has_compacted_input: undefined };
+    priorActiveTokens = null;
+  }
   let compacted = null;
   let projected = projectedInputTokens({ instructions, input, toolSurface, priorActiveTokens, budget });
 
@@ -192,15 +201,19 @@ export async function runResponsesAgent(options = {}) {
       modelRecord: record,
       previousResponseId,
       providerState,
+      input: !previousResponseId && pendingCompactedInput ? pendingCompactedInput : undefined,
       instructions,
       promptCacheKey: options.promptCacheKey,
       tokensBefore: Number.isFinite(priorActiveTokens) ? priorActiveTokens : projected,
       emit,
       runId,
     });
-    if (Array.isArray(compacted.output) && compacted.output.length) input = [...compacted.output, userMessage(objective)];
-    providerState = compacted.provider_state || null;
-    previousResponseId = clean(providerState?.previous_response_id) || null;
+    if (!Array.isArray(compacted.output) || !compacted.output.length) throw new Error('provider_compaction_output_missing');
+    input = [...compacted.output, userMessage(objective)];
+    // The returned output is the canonical input; do not prepend it again in the adapter.
+    providerState = null;
+    previousResponseId = null;
+    if (typeof options.onCompaction === 'function') await options.onCompaction(compacted);
     priorActiveTokens = null;
     projected = projectedInputTokens({ instructions, input, toolSurface, priorActiveTokens, budget });
   }
@@ -247,12 +260,17 @@ export async function runResponsesAgent(options = {}) {
   }, runId);
 
   let cumulativeUsage = options.cumulativeUsage || null;
+  if (compacted?.usage_delta || compacted?.usage) {
+    const delta = compacted.usage_delta || compacted.usage;
+    cumulativeUsage = Object.fromEntries(['input_tokens', 'output_tokens', 'cached_input_tokens', 'cache_write_tokens', 'reasoning_tokens'].map(key => [key, Number(cumulativeUsage?.[key] || 0) + Number(delta[key] || 0)]));
+  }
   let totalCostUsd = 0;
   const costBreakdownUsd = { input: 0, cached_input: 0, cache_write: 0, output: 0 };
   const accumulateCost = (cost) => {
     totalCostUsd += Number(cost?.total_usd || 0);
     for (const key of Object.keys(costBreakdownUsd)) costBreakdownUsd[key] += Number(cost?.components_usd?.[key] || 0);
   };
+  accumulateCost(compacted?.cost);
   let response = await provider.create({
     model: record.provider_model_id,
     modelRecord: record,
@@ -260,6 +278,7 @@ export async function runResponsesAgent(options = {}) {
     instructions,
     reasoningEffort,
     serviceTier,
+    autoCompact: options.autoCompact,
     tools: toolSurface.tools,
     previousResponseId: previousResponseId || undefined,
     providerState,
@@ -286,7 +305,7 @@ export async function runResponsesAgent(options = {}) {
       const capabilityId = toolSurface.aliases.get(call.name);
       if (!capabilityId) throw new Error(`unrecognized_tool_call:${call.name}`);
       const descriptor = toolSurface.descriptors.find((row) => row.name === capabilityId);
-      const args = sanitizeToolInput(parseArguments(call.arguments), descriptor, cwd);
+      const args = sanitizeToolInput(restoreOptionalArguments(parseArguments(call.arguments), descriptor?.input_schema), descriptor, cwd);
       if (typeof options.beforeTool === 'function') {
         const approved = await options.beforeTool({
           call_id: call.call_id,
@@ -335,6 +354,7 @@ export async function runResponsesAgent(options = {}) {
       instructions,
       reasoningEffort,
       serviceTier,
+      autoCompact: options.autoCompact,
       tools: toolSurface.tools,
       maxOutputTokens,
       promptCacheKey: options.promptCacheKey,
@@ -373,6 +393,7 @@ export async function runResponsesAgent(options = {}) {
     cost_breakdown_usd: Object.freeze({ ...costBreakdownUsd }),
     tool_surface: toolSurface.receipt,
     tool_receipts: Object.freeze(toolReceipts),
+    compaction: compacted ? { compaction_id: compacted.compaction_id, provider: record.provider, model: record.provider_model_id, created_at: new Date().toISOString(), usage: compacted.usage_delta || compacted.usage || {}, cost_usd: compacted.cost?.total_usd || 0 } : null,
     compacted_before_turn: Boolean(compacted),
     provider_state: providerState,
     continuation: Object.freeze({

@@ -1,3 +1,4 @@
+import { compileToolSchema } from './tool-schema.js';
 import { createAgentEvent, createUsageSnapshot } from '../telemetry/index.js';
 import { calculateModelCost } from '../models/index.js';
 import { diagnosticFromError } from '../errors/index.js';
@@ -14,7 +15,7 @@ function toolDeclarations(tools = []) {
   return tools.map((tool) => ({
     name: tool.name,
     description: tool.description || '',
-    parameters: tool.parameters || { type: 'object', properties: {} },
+    parametersJsonSchema: compileToolSchema({ provider: 'gemini', canonicalSchema: tool.parameters, name: tool.name }).providerSchema,
   }));
 }
 function usageParts(response = {}) {

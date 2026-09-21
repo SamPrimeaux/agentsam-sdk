@@ -27,7 +27,7 @@ import { buildContextEconomicsReport, renderContextEconomics } from './context-e
 import { createProviderAdapter } from '../providers/index.js';
 import { createCapabilityAdapter, runResponsesAgent } from '../agent/index.js';
 import { resolveProviderCredential } from '../lib/provider-credentials.js';
-import { createLocalSession, saveLocalSession, localSessionElapsedMs } from '../lib/local-sessions.js';
+import { createLocalSession, saveLocalSession, localSessionElapsedMs, loadSessionContinuation } from '../lib/local-sessions.js';
 import { runtimeDatabasePath } from '../local/runtime-store.js';
 import { grantExecutionApproval, isExecutionApproved, toolApprovalKey } from '../lib/execution-approvals.js';
 import { runWhoami } from './whoami.js';
@@ -439,6 +439,7 @@ export function renderSessionReceipt(session) {
   if (componentTotal > 0) {
     lines.push(`Cost breakdown: input ${formatUsd(breakdown.input)} · cached ${formatUsd(breakdown.cached_input)} · cache write ${formatUsd(breakdown.cache_write)} · output ${formatUsd(breakdown.output)}`);
   }
+  if (session.latest_compaction) lines.push(`Latest compaction: ${session.latest_compaction.compaction_id || 'completed'} · ${formatUsd(session.latest_compaction.cost_usd)}`);
   if (active) lines.push(`Active context: ${formatCount(active)} tokens`);
   lines.push('', 'To continue this session, run:', `  agentsam resume ${session.id}`, '', 'Or run:', '  agentsam resume', '', 'and select:', `  ${session.title || 'this session'}`, '');
   return lines.join('\n');
@@ -529,6 +530,55 @@ async function approveToolExecution(request, state) {
   return true;
 }
 
+async function runInteractiveCompaction(args, state) {
+  if (args.length > 1 || (args.length && args[0] !== 'status')) throw new Error('Usage: /compact [status]');
+  const { model } = selectedModel(state.cwd);
+  const supported = ['openai', 'grok'].includes(model.provider) && model.capabilities?.compaction === true;
+  const report = buildContextEconomicsReport(state.cwd, { activeInputTokens: state.usageSnapshot?.current_context?.input_tokens ?? state.session?.usage_snapshot?.current_context?.input_tokens });
+  if (args[0] === 'status') {
+    writeLine(state.write, `  Compaction · ${model.provider}/${model.provider_model_id}`);
+    writeLine(state.write, `  support       ${supported ? 'native' : 'unavailable'}`);
+    writeLine(state.write, `  active        ${report.active_input_tokens ?? 'unknown'} tokens`);
+    writeLine(state.write, `  threshold     ${report.compact_at_tokens ?? 'unknown'} tokens`);
+    writeLine(state.write, `  automatic     ${supported && state.session?.auto_compact !== false ? 'enabled' : 'disabled'}`);
+    const receipt = state.session?.latest_compaction;
+    writeLine(state.write, `  latest        ${receipt ? `${receipt.compaction_id} · ${receipt.created_at} · ${formatUsd(receipt.cost_usd)}` : 'none'}`);
+    return;
+  }
+  if (!supported) throw new Error(`native_compaction_unavailable:${model.provider}`);
+  if (!state.session || state.session.model_key !== model.model_key) throw new Error('compaction_active_model_session_required');
+  const previous = state.providerState || loadSessionContinuation(state.session);
+  if (!previous?.previous_response_id && !previous?.compacted_input?.length && !previous?.compaction_input?.length) throw new Error('compaction_context_unavailable');
+  const credential = resolveProviderCredential(model.provider, { home: state.home });
+  const provider = createProviderAdapter({ modelRecord: model, credential, fetchImpl: state.providerFetchImpl });
+  if (typeof provider.compact !== 'function') throw new Error(`native_compaction_unavailable:${model.provider}`);
+  const result = await provider.compact({
+    model: model.provider_model_id, modelRecord: model, providerState: previous,
+    promptCacheKey: state.session.id,
+    tokensBefore: report.active_input_tokens, cumulativeUsage: state.session.cumulative_usage,
+  });
+  if (!Array.isArray(result.output) || !result.output.length) throw new Error('provider_compaction_output_missing');
+  const receipt = checkpointCompaction(state, model, result);
+  writeLine(state.write, `  Compacted · ${receipt.compaction_id} · ${formatUsd(receipt.cost_usd)} · continuation saved`);
+}
+
+function checkpointCompaction(state, model, result) {
+  const delta = result.usage_delta || result.usage || {};
+  const cumulative = Object.fromEntries(['input_tokens', 'output_tokens', 'cached_input_tokens', 'cache_write_tokens', 'reasoning_tokens'].map(key => [key, Number(state.session.cumulative_usage?.[key] || 0) + Number(delta[key] || 0)]));
+  const providerState = { provider: model.provider, ...(result.provider_state || {}), previous_response_id: null, compacted_input: result.output };
+  const usageSnapshot = { current_context: { input_tokens: Math.ceil(JSON.stringify(result.output).length / 4), window_tokens: model.context_window }, cumulative, estimate_kind: 'local' };
+  const receipt = { compaction_id: result.compaction_id, provider: model.provider, model: model.provider_model_id, created_at: new Date().toISOString(), usage: delta, cost_usd: result.cost?.total_usd || 0 };
+  persistSession(state, {
+    provider_state: providerState, usage_snapshot: usageSnapshot, cumulative_usage: cumulative,
+    latest_compaction: receipt,
+    total_cost_usd: Number(state.session.total_cost_usd || 0) + Number(result.cost?.total_usd || 0),
+    cost_breakdown_usd: Object.fromEntries(['input', 'cached_input', 'cache_write', 'output'].map(key => [key, Number(state.session.cost_breakdown_usd?.[key] || 0) + Number(result.cost?.components_usd?.[key] || 0)])),
+  });
+  state.providerState = providerState;
+  state.usageSnapshot = usageSnapshot;
+  return receipt;
+}
+
 async function runInteractiveModelTurn(prompt, state) {
   const resolved = await resolveModelForTurn(state.cwd, state);
   const { preferences, model, credential } = resolved;
@@ -540,11 +590,9 @@ async function runInteractiveModelTurn(prompt, state) {
   });
   const capabilityAdapter = createCapabilityAdapter();
 
-  const samePolicy = state.session
-    && state.session.model_key === model.model_key
-    && state.session.reasoning_effort === preferences.reasoningEffort
-    && state.session.requested_service_tier === preferences.serviceTier;
-  const previousProviderState = samePolicy ? (state.providerState || state.session?.provider_state) : null;
+  // Reasoning/tier changes do not change the provider conversation's owner.
+  const samePolicy = state.session && state.session.model_key === model.model_key;
+  const previousProviderState = samePolicy ? (state.providerState || loadSessionContinuation(state.session)) : null;
   const previousUsageSnapshot = samePolicy ? state.session?.usage_snapshot : null;
   const accountId = readAccountSession({ home: state.home })?.account_id || null;
   let runtimeRunId = null;
@@ -568,6 +616,8 @@ async function runInteractiveModelTurn(prompt, state) {
   });
   state.activity = activity;
   const presenter = createCliRuntimePresenter({ activity, write: state.write, state });
+  const startingCostUsd = Number(state.session?.total_cost_usd || 0);
+  const startingCostBreakdown = { ...state.session?.cost_breakdown_usd };
   const startedAt = Date.now();
   activity.start(`Thinking · ${model.provider_model_id}`);
 
@@ -585,6 +635,8 @@ async function runInteractiveModelTurn(prompt, state) {
       previousProviderState,
       previousUsageSnapshot,
       cumulativeUsage: state.session?.cumulative_usage || null,
+      autoCompact: state.session?.auto_compact !== false,
+      onCompaction: result => { if (state.session) checkpointCompaction(state, model, result); },
       promptCacheKey: state.session?.id || undefined,
       runId: runtimeRunId || state.session?.id || undefined,
       beforeRequest: (preflight) => approveModelRequest(preflight, state),
@@ -666,9 +718,10 @@ async function runInteractiveModelTurn(prompt, state) {
       provider_state: { provider: model.provider, ...(result.provider_state || {}) },
       usage_snapshot: result.usage_snapshot,
       cumulative_usage: result.cumulative_usage,
-      total_cost_usd: Number(state.session.total_cost_usd || 0) + Number(result.total_cost_usd || 0),
+      latest_compaction: result.compaction || state.session.latest_compaction,
+      total_cost_usd: startingCostUsd + Number(result.total_cost_usd || 0),
       cost_breakdown_usd: Object.fromEntries(['input', 'cached_input', 'cache_write', 'output'].map((key) => [
-        key, Number(state.session.cost_breakdown_usd?.[key] || 0) + Number(result.cost_breakdown_usd?.[key] || 0),
+        key, Number(startingCostBreakdown[key] || 0) + Number(result.cost_breakdown_usd?.[key] || 0),
       ])),
       last_error: null,
     });
@@ -762,11 +815,15 @@ export async function dispatchShellLine(line, state = {}) {
       case '/standard':
         setServiceTier(state.cwd, 'default', write);
         break;
+      case '/compact':
+        await runInteractiveCompaction(args, state);
+        break;
       case '/context':
         if (args[0] === 'repo' || args[0] === 'git') await runContext(['--cwd', state.cwd, ...args.slice(1)]);
         else write(renderContextEconomics(buildContextEconomicsReport(state.cwd, {
           activeInputTokens: state.usageSnapshot?.current_context?.input_tokens,
           estimateKind: state.usageSnapshot?.estimate_kind,
+          autoCompact: state.session?.auto_compact,
         })));
         break;
       case '/status':
@@ -876,7 +933,7 @@ export async function dispatchShellLine(line, state = {}) {
         break;
       }
       case '/db':
-        await runDb(args.length ? args : ['status'], { cwd: state.cwd });
+        await runDb(args.length ? args : ['status'], { cwd: state.projectRoot || state.cwd, write });
         break;
       case '/agent':
         await runLocalAgent(args.join(' '), write, { interactive: state.interactive });

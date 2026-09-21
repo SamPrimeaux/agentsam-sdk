@@ -58,6 +58,7 @@ function safeProviderState(value) {
   return {
     ...(clean(value.provider) ? { provider: clean(value.provider) } : {}),
     ...(clean(value.previous_response_id) ? { previous_response_id: clean(value.previous_response_id) } : {}),
+    ...(value.has_compacted_input === true ? { has_compacted_input: true } : {}),
   };
 }
 
@@ -75,6 +76,7 @@ function safeUsageSnapshot(value) {
   const inputTokens = Number(value.current_context?.input_tokens);
   const windowTokens = Number(value.current_context?.window_tokens);
   return {
+    estimate_kind: value.estimate_kind === 'provider' ? 'provider' : 'local',
     current_context: {
       input_tokens: Number.isFinite(inputTokens) ? Math.max(0, inputTokens) : 0,
       window_tokens: Number.isFinite(windowTokens) ? Math.max(0, windowTokens) : null,
@@ -134,6 +136,15 @@ export function normalizeLocalSession(value = {}) {
     requested_service_tier: clean(value.requested_service_tier) || null,
     actual_service_tier: clean(value.actual_service_tier) || null,
     provider_state: safeProviderState(value.provider_state),
+    latest_compaction: value.latest_compaction ? {
+      compaction_id: clean(value.latest_compaction.compaction_id) || null,
+      provider: clean(value.latest_compaction.provider) || null,
+      model: clean(value.latest_compaction.model) || null,
+      created_at: clean(value.latest_compaction.created_at) || null,
+      usage: normalizeUsage(value.latest_compaction.usage),
+      cost_usd: Number(value.latest_compaction.cost_usd || 0),
+    } : null,
+    auto_compact: value.auto_compact !== false,
     usage_snapshot: safeUsageSnapshot(value.usage_snapshot),
     cumulative_usage: normalizeUsage(value.cumulative_usage || {}),
     total_cost_usd: Number(value.total_cost_usd || 0),
@@ -145,15 +156,27 @@ export function normalizeLocalSession(value = {}) {
 
 export function saveLocalSession(session, options = {}) {
   const normalized = normalizeLocalSession({ ...session, project_root: projectRoot(session, options), updated_at: now() });
+  const compactedInput = session.provider_state?.compacted_input;
+  const serialized = Array.isArray(compactedInput) ? JSON.stringify(compactedInput) : null;
+  if (serialized && Buffer.byteLength(serialized) > 10 * 1024 * 1024) throw new Error('provider_continuation_too_large');
+  if (serialized) normalized.provider_state.has_compacted_input = true;
   withSessionDb(normalized.project_root, (db) => {
-    db.prepare(`
-      INSERT INTO agentsam_project_sessions (id, project_root, cwd, status, title, state_json, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        cwd = excluded.cwd, status = excluded.status, title = excluded.title,
-        state_json = excluded.state_json, updated_at = excluded.updated_at
-    `).run(normalized.id, normalized.project_root, normalized.cwd, normalized.status,
-      normalized.title, JSON.stringify(normalized), normalized.created_at, normalized.updated_at);
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      db.prepare(`
+        INSERT INTO agentsam_project_sessions (id, project_root, cwd, status, title, state_json, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          cwd = excluded.cwd, status = excluded.status, title = excluded.title,
+          state_json = excluded.state_json, updated_at = excluded.updated_at
+      `).run(normalized.id, normalized.project_root, normalized.cwd, normalized.status,
+        normalized.title, JSON.stringify(normalized), normalized.created_at, normalized.updated_at);
+      if (serialized) db.prepare(`INSERT INTO agentsam_provider_continuations (session_id, provider, output_json, updated_at)
+        VALUES (?, ?, ?, ?) ON CONFLICT(session_id) DO UPDATE SET provider=excluded.provider, output_json=excluded.output_json, updated_at=excluded.updated_at`
+      ).run(normalized.id, normalized.provider_state.provider || '', serialized, normalized.updated_at);
+      else if (!normalized.provider_state.has_compacted_input) db.prepare('DELETE FROM agentsam_provider_continuations WHERE session_id = ?').run(normalized.id);
+      db.exec('COMMIT');
+    } catch (error) { db.exec('ROLLBACK'); throw error; }
   });
   return normalized;
 }
@@ -203,4 +226,13 @@ export function listLocalSessions(options = {}) {
   return withSessionDb(root, (db) => db.prepare(
     'SELECT state_json FROM agentsam_project_sessions WHERE project_root = ? ORDER BY updated_at DESC LIMIT ?'
   ).all(root, limit).map((row) => normalizeLocalSession(JSON.parse(row.state_json))));
+}
+
+export function loadSessionContinuation(session) {
+  if (!session?.provider_state?.has_compacted_input) return session?.provider_state || null;
+  return withSessionDb(projectRoot(session), db => {
+    const row = db.prepare('SELECT provider, output_json FROM agentsam_provider_continuations WHERE session_id = ?').get(validateSessionId(session.id));
+    if (!row || row.provider !== session.provider_state.provider) throw new Error('provider_continuation_missing');
+    return { ...session.provider_state, compacted_input: JSON.parse(row.output_json) };
+  });
 }

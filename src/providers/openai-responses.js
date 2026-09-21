@@ -1,3 +1,4 @@
+import { compileToolSchema } from './tool-schema.js';
 import { calculateModelCost, getModelRecord } from '../models/index.js';
 import { createAgentEvent, createUsageSnapshot } from '../telemetry/index.js';
 import { createOpenAIHttpError, diagnosticFromError } from '../errors/index.js';
@@ -87,7 +88,7 @@ function usageParts(response = {}) {
   };
 }
 
-function normalizeTools(tools = []) {
+function normalizeTools(tools = [], provider = 'openai') {
   if (!Array.isArray(tools)) throw new TypeError('tools must be an array');
   return tools.map((tool) => {
     if (tool?.type !== 'function' || !clean(tool.name)) {
@@ -97,7 +98,7 @@ function normalizeTools(tools = []) {
       type: 'function',
       name: clean(tool.name),
       description: clean(tool.description) || undefined,
-      parameters: tool.parameters || { type: 'object', properties: {} },
+      parameters: compileToolSchema({ provider, canonicalSchema: tool.parameters, strict: tool.strict !== false, name: tool.name }).providerSchema,
       strict: tool.strict !== false,
       ...(tool.async === true ? { async: true } : {}),
     };
@@ -212,9 +213,11 @@ export function createOpenAIResponsesAdapter(options = {}) {
     const record = assertRuntimeConfig(model, reasoningEffort, serviceTier, modelRecord, providerId);
     const emit = params.emit || defaultEmit;
     const meta = { runId: params.runId, sequence: params.sequence };
-    const tools = normalizeTools(params.tools || []);
+    const tools = normalizeTools(params.tools || [], providerId);
     const previousResponseId = clean(params.previousResponseId || params.providerState?.previous_response_id);
-    const requestInput = providerId === 'grok'
+    const requestInput = !previousResponseId && Array.isArray(params.providerState?.compacted_input)
+      ? [...structuredClone(params.providerState.compacted_input), ...historyItems(params.input)]
+      : providerId === 'grok'
       && !previousResponseId
       && Array.isArray(params.providerState?.compaction_input)
       && params.providerState.compaction_input.length
@@ -228,6 +231,8 @@ export function createOpenAIResponsesAdapter(options = {}) {
       ...(providerId === 'openai' || serviceTier !== 'default' ? { service_tier: serviceTier } : {}),
       store: params.store !== false,
       truncation: 'disabled',
+      ...(providerId === 'openai' && record.capabilities?.compaction === true && params.autoCompact !== false && Number.isInteger(record.context_policy?.compact_at_tokens)
+        ? { context_management: [{ type: 'compaction', compact_threshold: record.context_policy.compact_at_tokens }] } : {}),
       parallel_tool_calls: params.parallelToolCalls !== false,
       ...(clean(params.instructions) ? { instructions: String(params.instructions) } : {}),
       ...(tools.length ? { tools } : {}),
@@ -347,18 +352,18 @@ export function createOpenAIResponsesAdapter(options = {}) {
     const xaiHistory = Array.isArray(params.providerState?.compaction_input)
       ? structuredClone(params.providerState.compaction_input)
       : [];
-    if (providerId === 'grok' && !xaiHistory.length) {
+    if (providerId === 'grok' && !xaiHistory.length && !params.providerState?.compacted_input?.length && !Array.isArray(params.input)) {
       throw new Error('xai_compaction_history_unavailable');
     }
     const body = providerId === 'grok'
       ? {
           model,
-          input: xaiHistory,
+          input: xaiHistory.length ? xaiHistory : params.providerState?.compacted_input || params.input,
         }
       : {
           model,
           ...(previousResponseId ? { previous_response_id: previousResponseId } : {}),
-          ...(params.input != null ? { input: params.input } : {}),
+          ...(params.input != null ? { input: params.input } : Array.isArray(params.providerState?.compacted_input) ? { input: params.providerState.compacted_input } : {}),
           ...(clean(params.instructions) ? { instructions: String(params.instructions) } : {}),
           ...(clean(params.promptCacheKey) ? { prompt_cache_key: clean(params.promptCacheKey) } : {}),
           ...(params.promptCacheOptions ? { prompt_cache_options: params.promptCacheOptions } : {}),
@@ -384,6 +389,7 @@ export function createOpenAIResponsesAdapter(options = {}) {
       throw error;
     }
 
+    if (!Array.isArray(response.output) || !response.output.length) throw new Error('provider_compaction_output_missing');
     const compactUsage = usageParts(response);
     const compactCost = modelRecord.pricing
       ? calculateModelCost(modelRecord, { ...compactUsage, estimate_kind: 'provider' }, { serviceTier: 'default' })
@@ -412,6 +418,7 @@ export function createOpenAIResponsesAdapter(options = {}) {
         ? Object.freeze({ previous_response_id: null, compaction_input: structuredClone(response.output || []) })
         : Object.freeze({ previous_response_id: null }),
       usage: response.usage || null,
+      usage_delta: compactUsage,
       cost: compactCost,
       raw: response,
     });

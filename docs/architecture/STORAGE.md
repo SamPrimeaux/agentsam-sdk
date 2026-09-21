@@ -36,8 +36,15 @@ matches the selected project. New sessions do not write there.
 `agentsam resume --cwd <project-path>` when invoking it elsewhere. Opaque
 provider response IDs can continue across process restarts. Provider message
 arrays remain in memory for the active shell and are not stored in generic
-session state, so providers without an opaque continuation ID start a fresh
-model conversation after process restart.
+session state. An explicit native compaction saves only its latest returned
+window in the separate `agentsam_provider_continuations` session record, bounded
+to 10 MiB. It is replaced on compaction and deleted after successful continuation.
+Generic session JSON retains only a presence marker and a usage/cost receipt.
+The returned window may contain plaintext provider items as well as encrypted
+items; local SQLite file permissions protect access, not application-level
+encryption. It is never a knowledge source. Outside that explicit checkpoint,
+providers without an opaque continuation ID start a fresh model conversation
+after process restart.
 
 | Lifecycle | Keep | Expire or discard |
 | --- | --- | --- |
@@ -74,3 +81,7 @@ that resumable sessions use the canonical project SQLite database and that
 runtime schema definitions stay in versioned migrations. Focused storage tests
 cover project-root selection, project isolation, model-independent session
 storage, migration behavior, and secret-free session rows.
+
+See [Provider tools and compaction](PROVIDER-TOOLS-AND-COMPACTION.md) for the
+continuation contract and [knowledge lifecycle proposal](../../protocol/knowledge/LIFECYCLE.md)
+for blackboard, knowledge, evidence, and store-selection boundaries.

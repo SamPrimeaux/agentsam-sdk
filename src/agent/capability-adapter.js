@@ -11,7 +11,7 @@ import { runKnowledgeSearch } from '../commands/knowledge.js';
 const PACKAGE_ROOT = path.resolve(fileURLToPath(new URL('../../', import.meta.url)));
 
 function loadSchema(value) {
-  if (!value) return { type: 'object', properties: {} };
+  if (!value) return { type: 'object', properties: {}, required: [], additionalProperties: false };
   if (typeof value === 'object' && !Array.isArray(value)) return structuredClone(value);
   const filename = path.resolve(PACKAGE_ROOT, String(value));
   if (filename !== PACKAGE_ROOT && !filename.startsWith(`${PACKAGE_ROOT}${path.sep}`)) throw new Error(`capability_schema_outside_package:${value}`);

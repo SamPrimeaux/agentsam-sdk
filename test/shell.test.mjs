@@ -181,3 +181,60 @@ test('dispatchShellLine accepts "agentsam <cmd>" and bare common verbs without s
   const r3 = await dispatchShellLine('exit', state);
   assert.equal(r3.exit, true);
 });
+
+test('/compact is discoverable, invokes native compaction, persists exact continuation and usage across resume', async () => {
+  const { SLASH_COMMANDS } = await import('../src/lib/slash-commands.js');
+  const { createLocalSession, loadLocalSession, loadSessionContinuation } = await import('../src/lib/local-sessions.js');
+  const { runResponsesAgent } = await import('../src/agent/responses-runner.js');
+  const { createOpenAIResponsesAdapter } = await import('../src/providers/openai-responses.js');
+  assert.ok(SLASH_COMMANDS.some(row => row.cmd === '/compact'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-compact-'));
+  fs.writeFileSync(path.join(root, 'package.json'), '{"name":"compact-test"}');
+  writeCliPreferences(root, { modelPreference: 'openai:gpt-6-astra', reasoningEffort: 'low', serviceTier: 'default' });
+  const session = createLocalSession({ cwd: root, project_root: root, model_key: 'openai:gpt-6-astra', reasoning_effort: 'low', requested_service_tier: 'default', provider_state: { provider: 'openai', previous_response_id: 'resp_prior' }, cumulative_usage: { input_tokens: 10 } });
+  const output = [{ type: 'message', role: 'user', content: [{ type: 'input_text', text: 'Keep the selected architecture' }] }, { type: 'compaction', id: 'cmp_item', encrypted_content: 'opaque+/==exact' }];
+  const oldKey = process.env.OPENAI_API_KEY;
+  process.env.OPENAI_API_KEY = 'fixture-key';
+  let rendered = '', calls = 0;
+  const state = { cwd: root, projectRoot: root, interactive: false, session, write: text => { rendered += text; }, providerFetchImpl: async (url, init) => {
+    calls++;
+    assert.match(url, /responses\/compact$/);
+    assert.equal(JSON.parse(init.body).previous_response_id, 'resp_prior');
+    return { ok: true, status: 200, json: async () => ({ id: 'cmp_test', output, usage: { input_tokens: 1000, output_tokens: 100, input_tokens_details: { cached_tokens: 100 } } }) };
+  } };
+  try { await dispatchShellLine('/compact', state); }
+  finally { if (oldKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = oldKey; }
+  assert.equal(calls, 1);
+  assert.match(rendered, /continuation saved/);
+  const resumed = loadLocalSession(session.id, { projectRoot: root });
+  assert.equal(resumed.cumulative_usage.input_tokens, 1010);
+  assert.equal(resumed.cumulative_usage.cached_input_tokens, 100);
+  assert.ok(resumed.total_cost_usd > 0);
+  assert.equal(resumed.latest_compaction.compaction_id, 'cmp_test');
+  const continuation = loadSessionContinuation(resumed);
+  assert.deepEqual(continuation.compacted_input, output);
+  assert.equal(resumed.provider_state.previous_response_id, undefined);
+  const adapter = createOpenAIResponsesAdapter({ apiKey: 'test', fetchImpl: async (_, init) => {
+    const body = JSON.parse(init.body);
+    assert.deepEqual(body.input.slice(0, output.length), output);
+    assert.equal(body.previous_response_id, undefined);
+    return { ok: true, status: 200, json: async () => ({ id: 'resp_next', output_text: 'done', output: [], usage: { input_tokens: 120, output_tokens: 10 } }) };
+  } });
+  await runResponsesAgent({ provider: adapter, capabilityAdapter: { toolDescriptors: () => [] }, model: 'gpt-6-astra', prompt: 'continue', cwd: root, instructions: '', previousProviderState: continuation, previousUsageSnapshot: resumed.usage_snapshot });
+  rendered = '';
+  await dispatchShellLine('/compact status', state);
+  assert.match(rendered, /180000/);
+  assert.match(rendered, /cmp_test/);
+  await dispatchShellLine('/session', state);
+  assert.match(rendered, /Latest compaction: cmp_test/);
+});
+
+test('/compact fails closed for unsupported provider without an HTTP request', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-compact-unsupported-'));
+  fs.writeFileSync(path.join(root, 'package.json'), '{"name":"unsupported"}');
+  writeCliPreferences(root, { modelPreference: 'gemini:test', modelSnapshot: { provider: 'gemini', model_key: 'gemini:test', provider_model_id: 'test', context_window: 128000, capabilities: {} } });
+  let rendered = '', calls = 0;
+  await dispatchShellLine('/compact', { cwd: root, interactive: false, write: text => { rendered += text; }, providerFetchImpl: async () => { calls++; } });
+  assert.equal(calls, 0);
+  assert.match(rendered, /native_compaction_unavailable:gemini/);
+});

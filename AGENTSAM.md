@@ -55,6 +55,13 @@ This file defines stable behavior for AgentSam agents using the portable SDK. It
   or scratch lifecycle; expire disposable planner/search state. Do not persist
   hidden reasoning, unlimited transcripts, or credential values in generic
   runtime state.
+- Provider-returned compacted continuation windows are session-scoped protocol
+  state, stored separately from generic session JSON in the project SQLite.
+  Preserve their exact output until successful continuation replaces it; never
+  promote them into knowledge or interpret encrypted provider content.
+- Blackboard state describes the current work cycle; knowledge describes reusable
+  understanding; evidence supports either. Provider continuation is a separate
+  inference artifact. None substitutes for the other authorities.
 - Keep runtime relational persistence behind the existing SQLite runtime and
   migration path. Object/blob, vector, and optional actor semantics remain
   separate capabilities. Declare storage capabilities truthfully; do not

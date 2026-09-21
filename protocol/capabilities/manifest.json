@@ -75,7 +75,8 @@
       "deterministic": true,
       "model_required": false,
       "side_effects": "none",
-      "status": "stable"
+      "status": "stable",
+      "input_schema": "protocol/capabilities/knowledge-search-input.schema.json"
     },
     "merkle.snapshot": {
       "id": "merkle.snapshot",

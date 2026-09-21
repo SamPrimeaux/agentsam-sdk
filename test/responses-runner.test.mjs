@@ -147,3 +147,15 @@ test('runner refuses an oversized initial context and supports an explicit proje
     provider, capabilityAdapter, cwd: process.cwd(), prompt: 'small task', model: 'gpt-6-astra', reasoningEffort: 'low', serviceTier: 'fast', maxCallCostUsd: 0.01,
   }), /projected_call_cost_exceeds_budget/);
 });
+
+test('invalid selected tool surface is rejected before paid compaction or inference', async () => {
+  let calls = 0;
+  await assert.rejects(runResponsesAgent({
+    model: 'gpt-6-astra', prompt: 'broken', instructions: '',
+    previousProviderState: { previous_response_id: 'resp_prior' },
+    previousUsageSnapshot: { current_context: { input_tokens: 190000 } },
+    capabilityAdapter: { toolDescriptors: () => [{ name: 'broken', description: 'broken', input_schema: { type: 'object', properties: { value: { $ref: 'https://unknown' } } } }] },
+    provider: { compact: async () => { calls++; }, create: async () => { calls++; }, continueWithToolOutputs: async () => {} },
+  }), /tool_schema_invalid/);
+  assert.equal(calls, 0);
+});

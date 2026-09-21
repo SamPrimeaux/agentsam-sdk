@@ -121,7 +121,8 @@ export async function runKnowledgeSearch({
   const q = String(query || text || '').trim();
   const root = repositoryRoot(cwd);
   const sqliteFile = localPath(root);
-  if (!fs.existsSync(sqliteFile)) {
+  const config = resolveKnowledgeConfig(root);
+  if (config.storage.driver === 'sqlite' && !fs.existsSync(sqliteFile)) {
     return {
       queryId: 'none',
       query: { text: q, top_k: topK, token_budget: tokenBudget },
@@ -132,7 +133,6 @@ export async function runKnowledgeSearch({
       },
     };
   }
-  const config = resolveKnowledgeConfig(root);
   const store = await openStore(root, config, true);
   try {
     return await retrieve({
