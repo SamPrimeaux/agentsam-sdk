@@ -1,0 +1,8 @@
+{
+  "source_repository": "SamPrimeaux/fuelnfreetime-remixed-dashboard-seed",
+  "source_commit": "485671960a944a553a77b7c8658d4a1d77e79cb9",
+  "source_ref": "main",
+  "imported_as": "apps/ecommerce-cms-agentsam/reference/gemini-remixed-dashboard-seed",
+  "provenance": "Gemini-generated architecture donor, audited 2026-09-19 against the real F&FT (fuelnfreetime) Worker API shape before import. Harvest into frontend/src/ began the same day, rescued from an uncommitted working-tree state via a dedicated rescue commit before being merged here.",
+  "note": "reference/gemini-remixed-dashboard-seed is the preserved donor snapshot and is never runtime authority. frontend/src is the actively harvested target. A standalone Vite/React local preview package was completed 2026-09-20 using the mock AdminHost adapter; production provider/backend capabilities remain intentionally disabled."
+}

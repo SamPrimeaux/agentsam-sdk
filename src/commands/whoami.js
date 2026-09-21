@@ -81,10 +81,10 @@ export async function collectWhoami(options = {}) {
   if (!active.value) return base;
 
   try {
-    const loader = options.contextLoader || (() => getJson('/api/sdk/context', {
+    const loader = options.contextLoader || ((token) => getJson('/api/sdk/context', {
       env,
       home: options.home,
-      explicit: options.token || '',
+      bearer: token,
       fetchImpl: options.fetchImpl,
       refreshImpl: options.refreshImpl,
       nowMs: options.nowMs,

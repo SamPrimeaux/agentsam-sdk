@@ -1,0 +1,116 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ * Package: @inneranimalmedia/ecommerce-cms-agentsam
+ * Design System Tokens & Glassmorphism Surfaces
+ */
+
+:root {
+  --admin-bg: #050505;
+  --admin-surface: #0c0d0e;
+  --admin-surface-glass: rgba(14, 15, 18, 0.72);
+  --admin-header-glass: rgba(10, 10, 12, 0.82);
+  --admin-sidebar-glass: rgba(12, 13, 16, 0.84);
+  --admin-sidebar-white-glass: rgba(255, 255, 255, 0.92);
+  --admin-sidebar-border: rgba(228, 228, 231, 0.9);
+  
+  --admin-border-subtle: rgba(255, 255, 255, 0.07);
+  --admin-border-medium: rgba(255, 255, 255, 0.12);
+  --admin-border-accent: rgba(245, 158, 11, 0.35);
+
+  --admin-accent-amber: #f59e0b;
+  --admin-accent-orange: #ea580c;
+  --admin-accent-indigo: #6366f1;
+  --admin-accent-emerald: #10b981;
+  --admin-accent-red: #ef4444;
+
+  --admin-text-primary: #f4f4f5;
+  --admin-text-secondary: #a1a1aa;
+  --admin-text-muted: #71717a;
+
+  --admin-radius-sm: 8px;
+  --admin-radius-md: 12px;
+  --admin-radius-lg: 16px;
+  --admin-radius-xl: 20px;
+}
+
+/* Frosted glass surfaces */
+.glass-header {
+  background: var(--admin-header-glass);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border-bottom: 1px solid var(--admin-border-subtle);
+  box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.45);
+}
+
+.glass-sidebar {
+  background: var(--admin-sidebar-glass);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-right: 1px solid var(--admin-border-subtle);
+  box-shadow: 4px 0 24px -2px rgba(0, 0, 0, 0.4);
+}
+
+.glass-card {
+  background: var(--admin-surface-glass);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--admin-border-subtle);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+  border-color: var(--admin-border-medium);
+}
+
+.glass-card-interactive:hover {
+  border-color: var(--admin-border-accent);
+  box-shadow: 0 8px 30px -4px rgba(245, 158, 11, 0.12);
+  transform: translateY(-1px);
+}
+
+/* Subtle grain texture overlay */
+.bg-grain {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+/* Custom Scrollbars */
+.custom-scroll::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 4px;
+}
+.custom-scroll::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+/* White Frosted Glassmorphism for Admin Sidebar */
+.glass-sidebar-white {
+  background: var(--admin-sidebar-white-glass);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border-right: 1px solid var(--admin-sidebar-border);
+  box-shadow: 2px 0 24px -2px rgba(0, 0, 0, 0.06);
+}
+
+.custom-scroll-light::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scroll-light::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scroll-light::-webkit-scrollbar-thumb {
+  background: #e4e4e7;
+  border-radius: 4px;
+}
+.custom-scroll-light::-webkit-scrollbar-thumb:hover {
+  background: #d4d4d8;
+}
