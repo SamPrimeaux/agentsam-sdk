@@ -12,7 +12,7 @@
  * Browser-submitted account_id / user_id / owner_id / X-User-Id are never authority.
  */
 
-import { createIdentityService, createCloudflareD1Adapter } from '../../identity/src/server/worker-router.js';
+import { createIdentityService, createCloudflareD1Adapter } from '../../../identity/src/server/worker-router.js';
 
 const UNTRUSTED = new Set(['account_id', 'user_id', 'owner_id', 'workspace_id']);
 
