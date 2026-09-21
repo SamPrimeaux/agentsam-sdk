@@ -1,5 +1,6 @@
 import { readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve as resolvePath } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
 import { defineConfig } from "vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
@@ -11,6 +12,14 @@ import { grokPwaPlugin } from "./scripts/grok-pwa-plugin.mjs";
 // @ts-expect-error JS plugin alongside the TS vite config
 import { appEnvPlugin } from "./scripts/app-env-plugin.mjs";
 import { isMigrationFile } from "./scripts/migration-plan.mjs";
+
+// The CMS frontend is linked from a sibling application. With
+// `preserveSymlinks`, imports inside that linked source resolve from its real
+// path, not Local Studio's node_modules. Keep its public Workbench dependency
+// on the package boundary while giving source builds one deterministic target.
+const workbenchSource = resolvePath(
+  fileURLToPath(new URL("../../packages/agentsam-workbench/src", import.meta.url)),
+);
 
 /** The files `frontend/src/lib/db.ts` globs — same directory, same non-recursive scope. */
 function hasGlobbedMigrations(root: string): boolean {
@@ -157,7 +166,13 @@ export default defineConfig(({ command, isPreview }) => ({
     port: 8081,
     strictPort: true,
   },
-  resolve: { tsconfigPaths: true, preserveSymlinks: true },
+  resolve: {
+    tsconfigPaths: true,
+    preserveSymlinks: true,
+    alias: {
+      "@inneranimalmedia/agentsam-workbench": workbenchSource,
+    },
+  },
   plugins: [
     pgliteBootstrapPlugin(),
     // Before tanstackStart so /auth/popup never falls through to the SPA.
