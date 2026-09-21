@@ -39,7 +39,7 @@ export async function readGoapState({
     const configPath = path.resolve(wranglerConfig);
     const sql = `
 SELECT * FROM agentsam_workspace_state WHERE repository_id = '${sqlEsc(repoId)}' LIMIT 1;
-SELECT * FROM agentsam_tickets WHERE (id = (SELECT current_task_id FROM agentsam_workspace_state WHERE repository_id = '${sqlEsc(repoId)}') OR status = 'active') ORDER BY (id = (SELECT current_task_id FROM agentsam_workspace_state WHERE repository_id = '${sqlEsc(repoId)}')) DESC, updated_at DESC LIMIT 1;
+SELECT * FROM agentsam_tickets WHERE id = (SELECT current_task_id FROM agentsam_workspace_state WHERE repository_id = '${sqlEsc(repoId)}') ORDER BY (id = (SELECT current_task_id FROM agentsam_workspace_state WHERE repository_id = '${sqlEsc(repoId)}')) DESC, updated_at DESC LIMIT 1;
 SELECT * FROM agentsam_agent_run WHERE id = (SELECT agent_run_id FROM agentsam_tickets WHERE id = (SELECT current_task_id FROM agentsam_workspace_state WHERE repository_id = '${sqlEsc(repoId)}') OR status = 'active' ORDER BY updated_at DESC LIMIT 1) LIMIT 1;
 SELECT sha, message, committed_at FROM agentsam_work_git_commits WHERE repository_id = '${sqlEsc(repoId)}' ORDER BY committed_at DESC LIMIT 3;
 SELECT * FROM agentsam_work_tracking_checkpoint WHERE repository_id = '${sqlEsc(repoId)}' AND tracker_key = 'git_commit_ingest' LIMIT 1;
