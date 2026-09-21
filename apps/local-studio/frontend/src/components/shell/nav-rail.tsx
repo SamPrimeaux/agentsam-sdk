@@ -1,5 +1,6 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { useRouterState } from "@tanstack/react-router";
 import { Box, FileCode, FolderGit2, Globe, Layers, LayoutTemplate, MessageSquare, Settings, SquareTerminal, Upload } from "lucide-react";
+import { Nav } from "@inneranimalmedia/agentsam-nav";
 import { StudioMark } from "@/components/mark";
 import { cn } from "@/lib/utils";
 import { useWorkStore } from "@/lib/work/store";
@@ -21,89 +22,50 @@ export function NavRail() {
   const cliActive = pathname.startsWith("/cli") || terminalOpen;
 
   return (
-    <nav
-      aria-label="Studio"
-      className="flex w-14 shrink-0 flex-col items-center gap-1 border-r border-border bg-sidebar py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:w-12"
-    >
-      <Link
-        to="/agentsam"
-        aria-label="Studio home"
-        className="mb-2 flex size-11 items-center justify-center rounded-xl text-accent md:size-9"
-      >
-        <StudioMark className="size-7" />
-      </Link>
-
-      {ITEMS.map((item) => {
-        const active = item.match(pathname);
-        const Icon = item.icon;
-        return (
-          <Link
-            key={item.to}
-            to={item.to}
-            aria-label={item.label}
-            aria-current={active ? "page" : undefined}
-            title={item.label}
-            className={cn(
-              "flex size-11 items-center justify-center rounded-xl text-muted-foreground transition-colors duration-150 md:size-9 md:rounded-lg",
-              "hover:bg-muted hover:text-foreground",
-              active && "bg-muted text-foreground",
-            )}
-          >
-            <Icon className="size-5 md:size-4" />
-          </Link>
-        );
-      })}
-
-      <button
-        type="button"
-        aria-label="CLI"
-        aria-pressed={cliActive}
-        title="CLI"
-        onClick={() => {
-          if (pathname.startsWith("/cli")) return;
-          toggleTerminal();
-        }}
-        onDoubleClick={() => {
-          window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: "/cli" } }));
-        }}
-        className={cn(
-          "flex size-11 items-center justify-center rounded-xl text-muted-foreground transition-colors duration-150 md:size-9 md:rounded-lg",
-          "hover:bg-muted hover:text-foreground",
-          cliActive && "bg-muted text-foreground",
-          !cliActive && "text-stone",
-        )}
-      >
-        <SquareTerminal className="size-5 md:size-4" />
-      </button>
-
-      <div className="mt-auto flex flex-col gap-1">
-        <Link
-          to="/settings/integrations"
-          aria-label="Settings"
-          aria-current={pathname.startsWith("/settings") ? "page" : undefined}
-          title="Settings"
-          className={cn(
-            "flex size-11 items-center justify-center rounded-xl text-muted-foreground transition-colors duration-150 md:size-9 md:rounded-lg",
-            "hover:bg-muted hover:text-foreground",
-            pathname.startsWith("/settings") && "bg-muted text-foreground",
-          )}
-        >
-          <Settings className="size-5 md:size-4" />
-        </Link>
-        <Link
-          to="/ship"
-          aria-label="Ship"
-          aria-current={pathname.startsWith("/ship") ? "page" : undefined}
-          title="Ship"
-          className={cn(
-            "flex size-11 items-center justify-center rounded-xl text-muted-foreground transition-colors duration-150 md:size-9 md:rounded-lg",
-            "hover:bg-muted hover:text-foreground",
-            pathname.startsWith("/ship") && "bg-muted text-foreground",
-          )}
-        >
-          <Upload className="size-5 md:size-4" />
-        </Link>
-      </div>
-    </nav>
+    <Nav>
+      <Nav.Header className="flex items-center justify-between">
+        <button type="button" aria-label="Studio home" className="flex size-10 items-center justify-center rounded-xl text-accent" onClick={() => window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: "/agentsam" } }))}>
+          <StudioMark className="size-7" />
+        </button>
+        <Nav.Trigger className="hidden md:inline-grid" />
+      </Nav.Header>
+      <Nav.Content>
+        <Nav.Group>
+          <Nav.GroupLabel>Studio</Nav.GroupLabel>
+          <Nav.Menu>
+            {ITEMS.map((item) => (
+              <Nav.MenuItem key={item.to}>
+                <Nav.MenuButton icon={item.icon} active={item.match(pathname)} itemId={item.label.toLowerCase()} onClick={() => window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: item.to } }))}>
+                  {item.label}
+                </Nav.MenuButton>
+              </Nav.MenuItem>
+            ))}
+            <Nav.MenuItem>
+              <Nav.MenuButton icon={SquareTerminal} active={cliActive} itemId="cli" onClick={() => { if (!pathname.startsWith("/cli")) toggleTerminal(); }} onDoubleClick={() => window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: "/cli" } }))}>
+                CLI
+              </Nav.MenuButton>
+            </Nav.MenuItem>
+          </Nav.Menu>
+        </Nav.Group>
+        <Nav.Group>
+          <Nav.GroupLabel>Workspace</Nav.GroupLabel>
+          <Nav.Menu>
+            <Nav.MenuItem>
+              <Nav.Collapsible defaultOpen={pathname.startsWith("/settings")}>
+                <Nav.CollapsibleTrigger render={<Nav.MenuButton icon={Settings} active={pathname.startsWith("/settings")}>Settings <Nav.MenuChevron /></Nav.MenuButton>} />
+                <Nav.CollapsibleContent>
+                  <Nav.MenuSub>
+                    <li><Nav.MenuSubButton href="/settings/integrations" active={pathname === "/settings/integrations"}>Integrations</Nav.MenuSubButton></li>
+                    <li><Nav.MenuSubButton href="/settings/keys" active={pathname === "/settings/keys"}>API keys</Nav.MenuSubButton></li>
+                  </Nav.MenuSub>
+                </Nav.CollapsibleContent>
+              </Nav.Collapsible>
+            </Nav.MenuItem>
+            <Nav.MenuItem><Nav.MenuButton icon={Upload} active={pathname.startsWith("/ship")} itemId="ship" onClick={() => window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: "/ship" } }))}>Ship</Nav.MenuButton></Nav.MenuItem>
+          </Nav.Menu>
+        </Nav.Group>
+      </Nav.Content>
+      <Nav.Footer><Nav.Trigger /></Nav.Footer>
+    </Nav>
   );
 }

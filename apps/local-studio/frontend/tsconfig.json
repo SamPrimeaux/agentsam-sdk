@@ -41,6 +41,9 @@
       ],
       "@inneranimalmedia/agentsam-cms-shared/*": [
         "../../client-cms-editor/shared/cms/src/*"
+      ],
+      "@inneranimalmedia/agentsam-nav": [
+        "../../../packages/agentsam-nav/src/index.ts"
       ]
     },
     "allowImportingTsExtensions": true,

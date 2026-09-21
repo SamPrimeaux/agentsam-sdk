@@ -20,6 +20,9 @@ import { isMigrationFile } from "./scripts/migration-plan.mjs";
 const workbenchSource = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-workbench/src", import.meta.url)),
 );
+const navSource = resolvePath(
+  fileURLToPath(new URL("../../packages/agentsam-nav/src", import.meta.url)),
+);
 
 /** The files `frontend/src/lib/db.ts` globs — same directory, same non-recursive scope. */
 function hasGlobbedMigrations(root: string): boolean {
@@ -171,6 +174,7 @@ export default defineConfig(({ command, isPreview }) => ({
     preserveSymlinks: true,
     alias: {
       "@inneranimalmedia/agentsam-workbench": workbenchSource,
+      "@inneranimalmedia/agentsam-nav": navSource,
     },
   },
   plugins: [

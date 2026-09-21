@@ -12,6 +12,7 @@ import { useOnline } from "@/hooks/use-online";
 import { cn } from "@/lib/utils";
 import { useWorkStore } from "@/lib/work/store";
 import { applyTheme, readTheme } from "@/lib/work/theme";
+import { Nav } from "@inneranimalmedia/agentsam-nav";
 
 /**
  * Canonical Local Studio dashboard/workbench shell.
@@ -73,25 +74,30 @@ export function AppShellFrame() {
 
   return (
     <TooltipProvider>
-      <div className="flex h-dvh overflow-hidden bg-background text-foreground" data-agentsam-app-shell="local-studio">
-        <NavRail />
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <OfflineBanner />
-          <main className="min-h-0 flex-1 overflow-hidden">
-            <Outlet />
-          </main>
+      <Nav.Provider defaultOpen mobileBreakpoint={768} peekable resizable>
+        <div className="flex h-dvh overflow-hidden bg-background text-foreground" data-agentsam-app-shell="local-studio">
+          <NavRail />
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <header className="flex h-14 shrink-0 items-center border-b border-border px-3 md:hidden">
+              <Nav.Trigger />
+            </header>
+            <OfflineBanner />
+            <main className="min-h-0 flex-1 overflow-hidden">
+              <Outlet />
+            </main>
+          </div>
+          <CliDrawer />
+          <CommandPalette />
+          <SettingsDialog />
+          <Toaster
+            theme="dark"
+            position="bottom-center"
+            toastOptions={{
+              className: cn("border-border bg-card text-foreground"),
+            }}
+          />
         </div>
-        <CliDrawer />
-        <CommandPalette />
-        <SettingsDialog />
-        <Toaster
-          theme="dark"
-          position="bottom-center"
-          toastOptions={{
-            className: cn("border-border bg-card text-foreground"),
-          }}
-        />
-      </div>
+      </Nav.Provider>
     </TooltipProvider>
   );
 }
