@@ -22,6 +22,24 @@ function redirect(location) {
   return new Response(null, { status: 302, headers: { location } });
 }
 
+function settingsRedirect(url, result, error = '') {
+  const destination = new URL('/settings/integrations', url.origin);
+  destination.searchParams.set('connection', 'cloudflare');
+  destination.searchParams.set('result', result);
+  if (error) destination.searchParams.set('error', error);
+  return redirect(destination.toString());
+}
+
+async function deleteOAuthState(env, state) {
+  if (env.DB) {
+    await env.DB.prepare(
+      `DELETE FROM agentsam_cloudflare_oauth_state WHERE state = ?`,
+    ).bind(state).run();
+  } else if (env.oauthState instanceof Map) {
+    env.oauthState.delete(state);
+  }
+}
+
 export function isCloudflareConnectionPath(pathname) {
   return pathname === '/api/connections/cloudflare'
     || pathname === '/api/connections/cloudflare/start'
@@ -142,21 +160,36 @@ export async function handleCloudflareConnectionRequest(request, env) {
   if (url.pathname === CLOUDFLARE_CALLBACK_PATH && request.method === 'GET') {
     const code = url.searchParams.get('code') || '';
     const state = url.searchParams.get('state') || '';
+    const providerError = url.searchParams.get('error') || '';
     let stored = null;
     if (env.DB) {
       stored = await env.DB.prepare(
-        `SELECT owner_id, code_verifier FROM agentsam_cloudflare_oauth_state WHERE state = ?`,
+        `SELECT owner_id, code_verifier, created_at
+         FROM agentsam_cloudflare_oauth_state WHERE state = ?`,
       ).bind(state).first();
     } else if (env.oauthState instanceof Map) {
       stored = env.oauthState.get(state);
       if (stored) stored = { owner_id: stored.ownerId, code_verifier: stored.verifier };
     }
     if (!stored) {
-      return json({ ok: false, error: 'cloudflare_connection_forbidden' }, 403);
+      return settingsRedirect(url, 'error', 'cloudflare_connection_forbidden');
     }
     if (!ownerId) ownerId = stored.owner_id;
     if (stored.owner_id !== ownerId) {
-      return json({ ok: false, error: 'cloudflare_connection_forbidden' }, 403);
+      return settingsRedirect(url, 'error', 'cloudflare_connection_forbidden');
+    }
+    const createdAt = Number(stored.created_at || 0);
+    const now = Math.floor(Date.now() / 1000);
+    if (createdAt && now - createdAt > 10 * 60) {
+      await deleteOAuthState(env, state);
+      return settingsRedirect(url, 'error', 'oauth_state_expired');
+    }
+    await deleteOAuthState(env, state);
+    if (providerError) {
+      return settingsRedirect(url, 'error', providerError);
+    }
+    if (!code) {
+      return settingsRedirect(url, 'error', 'authorization_code_missing');
     }
     // client_secret is only included when configured (PKCE-only "None"
     // clients on the Cloudflare dashboard have no secret at all).
@@ -176,12 +209,13 @@ export async function handleCloudflareConnectionRequest(request, env) {
       body: new URLSearchParams(tokenParams),
     });
     if (!tokenRes.ok) {
-      return json({ ok: false, error: 'token_exchange_failed' }, 502);
+      console.error('cloudflare_token_exchange_failed', tokenRes.status);
+      return settingsRedirect(url, 'error', 'token_exchange_failed');
     }
     const tokens = await tokenRes.json();
     const connectionId = `cfconn_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
     if (tokens.access_token && !vaultConfigured(env)) {
-      return json({ ok: false, error: 'vault_unavailable' }, 503);
+      return settingsRedirect(url, 'error', 'vault_unavailable');
     }
     const aad = `cloudflare-connection:${ownerId}`;
     let accessEnc = null;
@@ -190,10 +224,13 @@ export async function handleCloudflareConnectionRequest(request, env) {
       accessEnc = await sealToken(env, tokens.access_token, aad);
       refreshEnc = await sealToken(env, tokens.refresh_token, aad);
     } catch (err) {
-      return json({ ok: false, error: err.code || 'vault_unavailable' }, 503);
+      return settingsRedirect(url, 'error', err.code || 'vault_unavailable');
     }
     if (env.DB) {
-      await env.DB.prepare(
+      const removePrevious = env.DB.prepare(
+        `DELETE FROM agentsam_cloudflare_connections WHERE owner_id = ?`,
+      ).bind(ownerId);
+      const insertConnection = env.DB.prepare(
         `INSERT INTO agentsam_cloudflare_connections (
            connection_id, owner_id, cloudflare_account_id, scopes, status,
            access_token_encrypted, refresh_token_encrypted, created_at, updated_at, expires_at
@@ -206,9 +243,15 @@ export async function handleCloudflareConnectionRequest(request, env) {
         accessEnc,
         refreshEnc,
         tokens.expires_in ? Math.floor(Date.now() / 1000) + Number(tokens.expires_in) : null,
-      ).run();
+      );
+      if (typeof env.DB.batch === 'function') {
+        await env.DB.batch([removePrevious, insertConnection]);
+      } else {
+        await removePrevious.run();
+        await insertConnection.run();
+      }
     }
-    return redirect(`/agentsam?connection=cloudflare`);
+    return settingsRedirect(url, 'connected');
   }
 
   if (url.pathname === '/api/connections/cloudflare/disconnect' && request.method === 'POST') {

@@ -9,6 +9,7 @@ import {
 } from "../../../../packages/identity/src/server/worker-router.js";
 import { handleCmsWorkerRequest } from "./cms-service.js";
 import { serveCanonicalHomepage } from "./canonical-homepage.js";
+import { loadConnectionsRegistry } from "./connections-registry.js";
 
 // Paths owned by the identity package (auth pages, auth API, OAuth, company branding).
 const IDENTITY_EXACT_PATHS = new Set(["/auth/login", "/auth/signup", "/auth/reset", "/api/company"]);
@@ -31,6 +32,7 @@ const PROTECTED_APP_PATHS = [
   "/ship",
   "/cad",
   "/cms",
+  "/settings",
 ];
 function isProtectedAppPath(pathname) {
   return PROTECTED_APP_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -249,7 +251,7 @@ async function handleList(env, userId) {
   const { results } = await env.DB.prepare(
     `SELECT id, secret_name, secret_type, service_name, description, is_active,
             expires_at, last_used_at, usage_count, workspace_id, created_at, updated_at,
-            substr(secret_value_encrypted, -4) AS hint
+            metadata_json
      FROM user_secrets
      WHERE user_id = ? AND is_active = 1
      ORDER BY updated_at DESC
@@ -261,20 +263,28 @@ async function handleList(env, userId) {
   return json({
     ok: true,
     count: results?.length ?? 0,
-    secrets: (results || []).map((r) => ({
-      id: r.id,
-      name: r.secret_name,
-      type: r.secret_type,
-      service: r.service_name,
-      description: r.description,
-      workspace_id: r.workspace_id,
-      expires_at: r.expires_at,
-      last_used_at: r.last_used_at,
-      usage_count: r.usage_count,
-      created_at: r.created_at,
-      updated_at: r.updated_at,
-      // never ciphertext; hint is not last4 of plaintext — omit misleading field
-    })),
+    secrets: (results || []).map((r) => {
+      let metadata = {};
+      try {
+        metadata = JSON.parse(String(r.metadata_json || "{}"));
+      } catch {
+        metadata = {};
+      }
+      return {
+        id: r.id,
+        name: r.secret_name,
+        type: r.secret_type,
+        service: r.service_name,
+        description: r.description,
+        workspace_id: r.workspace_id,
+        expires_at: r.expires_at,
+        last_used_at: r.last_used_at,
+        usage_count: r.usage_count,
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+        last4: typeof metadata.last4 === "string" ? metadata.last4 : null,
+      };
+    }),
   });
 }
 
@@ -320,7 +330,12 @@ async function handleCreate(env, userId, body) {
       workspaceId,
       now,
       now,
-      JSON.stringify({ key_version: 1, aad_bound: true, source: "agentsam-workmode" }),
+      JSON.stringify({
+        key_version: 1,
+        aad_bound: true,
+        source: "agentsam-workmode",
+        last4: last4(value),
+      }),
     )
     .run();
 
@@ -538,6 +553,7 @@ export default {
     const isVault = url.pathname.startsWith("/api/vault/");
     const isLlmInventory = url.pathname === "/api/llm/inventory";
     const isCfConnection = isCloudflareConnectionPath(url.pathname);
+    const isConnectionsRegistry = url.pathname === "/api/connections";
 
     if (request.method === "GET" && Object.hasOwn(INSTALL_APP_TARGETS, url.pathname)) {
       return serveInstallScript(url.pathname);
@@ -586,6 +602,22 @@ export default {
     async function sessionUser() {
       if (sessionUserId === undefined) sessionUserId = await resolveSessionUserId(request, env);
       return sessionUserId;
+    }
+
+    if (isConnectionsRegistry) {
+      if (request.method !== "GET") {
+        return json({ ok: false, error: "method_not_allowed" }, 405, {
+          allow: "GET",
+        });
+      }
+      const userId = await sessionUser();
+      if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
+      try {
+        return json({ ok: true, ...(await loadConnectionsRegistry(env, userId)) });
+      } catch (err) {
+        console.error("connections_registry_error", String(err));
+        return json({ ok: false, error: "internal_error" }, 500);
+      }
     }
 
     if (!isVault && url.pathname !== "/health") {
@@ -682,11 +714,13 @@ export default {
 
     // Vault routes stay desk-key-only (server callers); the user still
     // resolves session-first so an authenticated operator needs no header.
+    const sessionId = await sessionUser();
     const gate = requireApiKey(request, env);
-    if (!gate.ok) return json({ ok: false, error: gate.error }, gate.status, headers);
+    if (!sessionId && !gate.ok) {
+      return json({ ok: false, error: gate.error }, gate.status, headers);
+    }
 
     const headerUser = (request.headers.get("x-user-id") || "").trim();
-    const sessionId = await sessionUser();
     const userId = sessionId || headerUser;
     if (!userId || userId.length < 3) {
       return json({ ok: false, error: "X-User-Id required" }, 400, headers);

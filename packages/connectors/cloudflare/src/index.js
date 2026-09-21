@@ -261,7 +261,7 @@ export function resolveCloudflareOAuthClient(env = {}) {
     fixture,
     status: fixture ? 'fixture' : 'ready',
     clientIdConfigured: true,
-    secretConfigured: true,
+    secretConfigured: Boolean(clientSecret),
   };
 }
 

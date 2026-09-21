@@ -5,6 +5,7 @@ import {
   cloudflareConnectionSafeStatus,
   resolveCloudflareOAuthClient,
 } from '../src/index.js';
+import { handleCloudflareConnectionRequest } from '../src/routes.js';
 
 describe('cloudflare connector', () => {
   it('reports not_configured when credentials are absent', () => {
@@ -40,5 +41,79 @@ describe('cloudflare connector', () => {
     const record = { ownerId: 'sam', connectionId: 'c1' };
     assert.throws(() => assertConnectionOwner(record, 'connor'), /cloudflare_connection_forbidden/);
     assert.equal(assertConnectionOwner(record, 'sam').connectionId, 'c1');
+  });
+
+  it('supports a production PKCE client with no client secret', () => {
+    const client = resolveCloudflareOAuthClient({
+      CLOUDFLARE_OAUTH_CLIENT_ID: 'real-client-id',
+    });
+    assert.equal(client.productionReady, true);
+    assert.equal(client.clientIdConfigured, true);
+    assert.equal(client.secretConfigured, false);
+  });
+
+  it('consumes callback state and stores only encrypted OAuth tokens', async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const calls = [];
+    const statements = [];
+    const DB = {
+      prepare(sql) {
+        const statement = {
+          sql,
+          args: [],
+          bind(...args) {
+            this.args = args;
+            return this;
+          },
+          async first() {
+            if (sql.includes('agentsam_cloudflare_oauth_state')) {
+              return { owner_id: 'user_123', code_verifier: 'verifier', created_at: now };
+            }
+            return null;
+          },
+          async run() {
+            calls.push({ sql, args: this.args });
+            return { success: true };
+          },
+        };
+        statements.push(statement);
+        return statement;
+      },
+      async batch(batchStatements) {
+        for (const statement of batchStatements) await statement.run();
+        return batchStatements.map(() => ({ success: true }));
+      },
+    };
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => new Response(JSON.stringify({
+      access_token: 'access-plaintext',
+      refresh_token: 'refresh-plaintext',
+      account_id: 'account_123',
+      scope: 'd1.read workers-scripts.write',
+      expires_in: 3600,
+    }), { status: 200, headers: { 'content-type': 'application/json' } });
+
+    try {
+      const response = await handleCloudflareConnectionRequest(
+        new Request('https://agentsam.example/api/connections/cloudflare/callback?code=code_123&state=state_123'),
+        {
+          DB,
+          CLOUDFLARE_OAUTH_CLIENT_ID: 'real-client-id',
+          VAULT_MASTER_KEY: '01234567890123456789012345678901',
+        },
+      );
+      assert.equal(response.status, 302);
+      assert.equal(
+        response.headers.get('location'),
+        'https://agentsam.example/settings/integrations?connection=cloudflare&result=connected',
+      );
+      assert.equal(calls.some((call) => call.sql.includes('DELETE FROM agentsam_cloudflare_oauth_state')), true);
+      const insert = calls.find((call) => call.sql.includes('INSERT INTO agentsam_cloudflare_connections'));
+      assert.ok(insert);
+      assert.notEqual(insert.args[4], 'access-plaintext');
+      assert.notEqual(insert.args[5], 'refresh-plaintext');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });

@@ -19,10 +19,14 @@ import { Route as AppCliRouteImport } from './routes/_app/cli'
 import { Route as AppCmsRouteImport } from './routes/_app/cms'
 import { Route as AppFilesRouteImport } from './routes/_app/files'
 import { Route as AppProjectsRouteImport } from './routes/_app/projects'
+import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppShipRouteImport } from './routes/_app/ship'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiCloudflareRouteImport } from './routes/api/cloudflare'
 import { Route as ApiGithubRouteImport } from './routes/api/github'
+import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
+import { Route as AppSettingsIntegrationsRouteImport } from './routes/_app/settings/integrations'
+import { Route as AppSettingsKeysRouteImport } from './routes/_app/settings/keys'
 import { Route as AppTrailsIndexRouteImport } from './routes/_app/trails/index'
 import { Route as AppTrailsTrailIdRouteImport } from './routes/_app/trails/$trailId'
 import { Route as ApiLlmInventoryRouteImport } from './routes/api/llm.inventory'
@@ -77,6 +81,11 @@ const AppProjectsRoute = AppProjectsRouteImport.update({
   path: '/projects',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppShipRoute = AppShipRouteImport.update({
   id: '/ship',
   path: '/ship',
@@ -96,6 +105,21 @@ const ApiGithubRoute = ApiGithubRouteImport.update({
   id: '/api/github',
   path: '/api/github',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsIntegrationsRoute = AppSettingsIntegrationsRouteImport.update({
+  id: '/integrations',
+  path: '/integrations',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsKeysRoute = AppSettingsKeysRouteImport.update({
+  id: '/keys',
+  path: '/keys',
+  getParentRoute: () => AppSettingsRoute,
 } as any)
 const AppTrailsIndexRoute = AppTrailsIndexRouteImport.update({
   id: '/trails/',
@@ -128,12 +152,16 @@ export interface FileRoutesByFullPath {
   '/cms': typeof AppCmsRoute
   '/files': typeof AppFilesRoute
   '/projects': typeof AppProjectsRoute
+  '/settings': typeof AppSettingsRouteWithChildren
   '/ship': typeof AppShipRoute
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/settings/integrations': typeof AppSettingsIntegrationsRoute
+  '/settings/keys': typeof AppSettingsKeysRoute
   '/trails/$trailId': typeof AppTrailsTrailIdRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
+  '/settings/': typeof AppSettingsIndexRoute
   '/trails/': typeof AppTrailsIndexRoute
   '/agentsam/apps/cad': typeof AppAgentsamAppsCadRoute
 }
@@ -151,8 +179,11 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/settings/integrations': typeof AppSettingsIntegrationsRoute
+  '/settings/keys': typeof AppSettingsKeysRoute
   '/trails/$trailId': typeof AppTrailsTrailIdRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
+  '/settings': typeof AppSettingsIndexRoute
   '/trails': typeof AppTrailsIndexRoute
   '/agentsam/apps/cad': typeof AppAgentsamAppsCadRoute
 }
@@ -168,12 +199,16 @@ export interface FileRoutesById {
   '/_app/cms': typeof AppCmsRoute
   '/_app/files': typeof AppFilesRoute
   '/_app/projects': typeof AppProjectsRoute
+  '/_app/settings': typeof AppSettingsRouteWithChildren
   '/_app/ship': typeof AppShipRoute
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/_app/settings/integrations': typeof AppSettingsIntegrationsRoute
+  '/_app/settings/keys': typeof AppSettingsKeysRoute
   '/_app/trails/$trailId': typeof AppTrailsTrailIdRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
+  '/_app/settings/': typeof AppSettingsIndexRoute
   '/_app/trails/': typeof AppTrailsIndexRoute
   '/_app/agentsam/apps/cad': typeof AppAgentsamAppsCadRoute
 }
@@ -189,12 +224,16 @@ export interface FileRouteTypes {
     | '/cms'
     | '/files'
     | '/projects'
+    | '/settings'
     | '/ship'
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/settings/integrations'
+    | '/settings/keys'
     | '/trails/$trailId'
     | '/api/llm/inventory'
+    | '/settings/'
     | '/trails/'
     | '/agentsam/apps/cad'
   fileRoutesByTo: FileRoutesByTo
@@ -212,8 +251,11 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/settings/integrations'
+    | '/settings/keys'
     | '/trails/$trailId'
     | '/api/llm/inventory'
+    | '/settings'
     | '/trails'
     | '/agentsam/apps/cad'
   id:
@@ -228,12 +270,16 @@ export interface FileRouteTypes {
     | '/_app/cms'
     | '/_app/files'
     | '/_app/projects'
+    | '/_app/settings'
     | '/_app/ship'
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/_app/settings/integrations'
+    | '/_app/settings/keys'
     | '/_app/trails/$trailId'
     | '/api/llm/inventory'
+    | '/_app/settings/'
     | '/_app/trails/'
     | '/_app/agentsam/apps/cad'
   fileRoutesById: FileRoutesById
@@ -319,6 +365,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProjectsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/ship': {
       id: '/_app/ship'
       path: '/ship'
@@ -346,6 +399,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/github'
       preLoaderRoute: typeof ApiGithubRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/settings/': {
+      id: '/_app/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof AppSettingsIndexRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/integrations': {
+      id: '/_app/settings/integrations'
+      path: '/integrations'
+      fullPath: '/settings/integrations'
+      preLoaderRoute: typeof AppSettingsIntegrationsRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/keys': {
+      id: '/_app/settings/keys'
+      path: '/keys'
+      fullPath: '/settings/keys'
+      preLoaderRoute: typeof AppSettingsKeysRouteImport
+      parentRoute: typeof AppSettingsRoute
     }
     '/_app/trails/': {
       id: '/_app/trails/'
@@ -390,6 +464,22 @@ const AppAgentsamRouteWithChildren = AppAgentsamRoute._addFileChildren(
   AppAgentsamRouteChildren,
 )
 
+interface AppSettingsRouteChildren {
+  AppSettingsIntegrationsRoute: typeof AppSettingsIntegrationsRoute
+  AppSettingsKeysRoute: typeof AppSettingsKeysRoute
+  AppSettingsIndexRoute: typeof AppSettingsIndexRoute
+}
+
+const AppSettingsRouteChildren: AppSettingsRouteChildren = {
+  AppSettingsIntegrationsRoute: AppSettingsIntegrationsRoute,
+  AppSettingsKeysRoute: AppSettingsKeysRoute,
+  AppSettingsIndexRoute: AppSettingsIndexRoute,
+}
+
+const AppSettingsRouteWithChildren = AppSettingsRoute._addFileChildren(
+  AppSettingsRouteChildren,
+)
+
 interface AppRouteChildren {
   AppAgentsamRoute: typeof AppAgentsamRouteWithChildren
   AppArtifactsRoute: typeof AppArtifactsRoute
@@ -399,6 +489,7 @@ interface AppRouteChildren {
   AppCmsRoute: typeof AppCmsRoute
   AppFilesRoute: typeof AppFilesRoute
   AppProjectsRoute: typeof AppProjectsRoute
+  AppSettingsRoute: typeof AppSettingsRouteWithChildren
   AppShipRoute: typeof AppShipRoute
   AppTrailsTrailIdRoute: typeof AppTrailsTrailIdRoute
   AppTrailsIndexRoute: typeof AppTrailsIndexRoute
@@ -413,6 +504,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppCmsRoute: AppCmsRoute,
   AppFilesRoute: AppFilesRoute,
   AppProjectsRoute: AppProjectsRoute,
+  AppSettingsRoute: AppSettingsRouteWithChildren,
   AppShipRoute: AppShipRoute,
   AppTrailsTrailIdRoute: AppTrailsTrailIdRoute,
   AppTrailsIndexRoute: AppTrailsIndexRoute,

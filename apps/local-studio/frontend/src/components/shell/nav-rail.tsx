@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Box, FileCode, FolderGit2, Globe, Layers, LayoutTemplate, MessageSquare, SquareTerminal, Upload } from "lucide-react";
+import { Box, FileCode, FolderGit2, Globe, Layers, LayoutTemplate, MessageSquare, Settings, SquareTerminal, Upload } from "lucide-react";
 import { StudioMark } from "@/components/mark";
 import { cn } from "@/lib/utils";
 import { useWorkStore } from "@/lib/work/store";
@@ -77,6 +77,19 @@ export function NavRail() {
       </button>
 
       <div className="mt-auto flex flex-col gap-1">
+        <Link
+          to="/settings/integrations"
+          aria-label="Settings"
+          aria-current={pathname.startsWith("/settings") ? "page" : undefined}
+          title="Settings"
+          className={cn(
+            "flex size-11 items-center justify-center rounded-xl text-muted-foreground transition-colors duration-150 md:size-9 md:rounded-lg",
+            "hover:bg-muted hover:text-foreground",
+            pathname.startsWith("/settings") && "bg-muted text-foreground",
+          )}
+        >
+          <Settings className="size-5 md:size-4" />
+        </Link>
         <Link
           to="/ship"
           aria-label="Ship"
