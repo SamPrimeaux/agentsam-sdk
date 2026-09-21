@@ -1,8 +1,88 @@
 [
   {
+    "tag": "#agentsam-sdk",
+    "repo": "SamPrimeaux/agentsam-sdk",
+    "ref": "main",
+    "kind": "core-runtime",
+    "status": "active",
+    "source_commit": "49b9decf8ae93d2b7c11488acdbca088b8ce2363",
+    "worker": "agentsam-sdk",
+    "worker_config": "apps/local-studio/backend/wrangler.jsonc",
+    "endpoint": "https://agentsam.inneranimalmedia.com",
+    "bindings": {
+      "EXECOS": "execos"
+    },
+    "role": "Canonical portable AgentSam SDK/CLI plus the Local Studio Worker surface.",
+    "note": "Core SDK authority. The deployed Local Studio Worker is registered separately from the portable package boundary but remains sourced from this repository.",
+    "observed_worker_modified_at": "2026-09-21T12:10:35.541516Z",
+    "date": "2026-09-21T14:01:00Z"
+  },
+  {
+    "tag": "#inneranimalmedia-core",
+    "repo": "SamPrimeaux/inneranimalmedia",
+    "ref": "main",
+    "kind": "core-runtime",
+    "status": "active",
+    "source_commit": "f8b81351064249ce5ec8370a01ffe5a3b9561688",
+    "worker": "inneranimalmedia",
+    "worker_config": "wrangler.jsonc",
+    "production_config": "wrangler.production.toml",
+    "endpoint": "https://inneranimalmedia.com",
+    "bindings": {
+      "EXECOS": "execos",
+      "CMS_PIPELINE": "iam-cms-pipeline",
+      "IAM_WORKFLOWS": "iam-workflows"
+    },
+    "role": "Primary IAM/platform control plane: identity, AgentSam orchestration, shared D1/R2/Hyperdrive/Vectorize authority, browser/chat surfaces, and service routing.",
+    "note": "Core platform Worker and canonical IAM authority. It is a peer registry entry, not an implementation detail of agentsam-sdk.",
+    "observed_worker_modified_at": "2026-09-20T22:44:00.409262Z",
+    "date": "2026-09-21T14:01:00Z"
+  },
+  {
+    "tag": "#inneranimalmedia-mcp",
+    "repo": "SamPrimeaux/inneranimalmedia-mcp-server",
+    "ref": "main",
+    "kind": "core-runtime",
+    "status": "active",
+    "source_commit": "b572fcbf21b4498675246badfd09777c0ec986c1",
+    "worker": "inneranimalmedia-mcp-server",
+    "worker_config": "wrangler.jsonc",
+    "endpoint": "https://mcp.inneranimalmedia.com",
+    "bindings": {
+      "IAM_MAIN": "inneranimalmedia",
+      "EXECOS": "execos"
+    },
+    "role": "OAuth MCP gateway and tool plane bridging external AI clients into IAM-owned tools, data, memory, GitHub, and terminal execution.",
+    "note": "Core MCP Worker. Tool catalog is D1-driven; this registry records the runtime/repository identity and its service-binding topology.",
+    "observed_worker_modified_at": "2026-09-20T23:31:17.562453Z",
+    "date": "2026-09-21T14:01:00Z"
+  },
+  {
+    "tag": "#execos",
+    "repo": "SamPrimeaux/ExecOS",
+    "ref": "main",
+    "kind": "core-runtime",
+    "status": "active",
+    "source_commit": "48b7e356fee5df89746b5b5252c8bd36a27e5617",
+    "worker": "execos",
+    "worker_config": "wrangler.jsonc",
+    "secondary_worker_config": "dispatcher/wrangler.jsonc",
+    "endpoint": "https://execos.inneranimalmedia.com",
+    "machine_endpoints": [
+      "https://terminal.inneranimalmedia.com",
+      "https://localpty.inneranimalmedia.com"
+    ],
+    "role": "Execution and terminal runtime plane: resolved dispatch, async runs, PTY/session lifecycle, and machine-host execution.",
+    "note": "Core execution Worker and machine-runtime repository. IAM and MCP bind to this Worker; terminal/localpty hosts remain machine endpoints behind the dispatcher contract.",
+    "observed_worker_modified_at": "2026-09-18T03:39:08.298555Z",
+    "date": "2026-09-21T14:01:00Z"
+  },
+  {
     "tag": "#remix-workmode",
     "repo": "AgentSamRemix",
     "ref": "cursor/integrate-workmode-ui-8edb",
+    "kind": "historical",
+    "status": "legacy",
     "note": "3-commit patch landed: chat/nav/browser/terminal WorkMode UI, agentsam-sdk git-dep pin, MCP bridge verify script",
     "date": "2026-09-01T20:36:47Z"
   },
@@ -10,6 +90,8 @@
     "tag": "#sdk-allowscripts",
     "repo": "agentsam-sdk",
     "ref": "npm_config_userconfig=/dev/null workaround",
+    "kind": "historical",
+    "status": "legacy",
     "note": "Global ~/.npmrc allow-scripts=esbuild,workerd conflicts with npm's git-dep prep subprocess when the dep declares its own allowScripts (EALLOWSCRIPTS). Bypass per-command, don't edit ~/.npmrc.",
     "date": "2026-09-01T20:36:47Z"
   },
@@ -17,6 +99,8 @@
     "tag": "#workmode-promote",
     "repo": "AgentSamWorkMode-Prototype",
     "ref": "bin/agentsam/step1-workmode-step2-remix.sh",
+    "kind": "historical",
+    "status": "legacy",
     "note": "Auto-diffs WorkMode src/ against Remix app/workmode/ and builds git-am-able patches. npm run promote:list / promote:pending",
     "date": "2026-09-01T20:36:47Z"
   },
@@ -24,6 +108,8 @@
     "tag": "#remix-workmode-pending",
     "repo": "AgentSamRemix",
     "ref": "28 files as of 2026-09-01",
+    "kind": "historical",
+    "status": "legacy",
     "note": "shell/CfUnifiedCommandPalette, workbench/DockerDeployPanel+RuntimeTargetPicker, contexts/, hooks/, lib/, services/agentEngine.ts not yet promoted -- run promote:list for current count",
     "date": "2026-09-01T20:36:47Z"
   }
