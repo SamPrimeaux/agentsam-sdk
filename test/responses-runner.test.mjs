@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { createCapabilityAdapter } from '../src/agent/capability-adapter.js';
 import { buildAgentToolSurface, capabilityFunctionName, runResponsesAgent } from '../src/agent/responses-runner.js';
+import { getModelRecord } from '../src/models/index.js';
 
 function usage(input = 10_000, cumulative = input) {
   return {
@@ -135,6 +136,38 @@ test('runner compacts before a projected high-context continuation rather than c
   assert.ok(Array.isArray(createInput));
   assert.equal(createInput[0].type, 'compaction');
   assert.equal(result.compacted_before_turn, true);
+});
+
+test('runner applies a cumulative input guardrail inside tool-heavy turns', async () => {
+  let compactCalls = 0;
+  let resumedInput = null;
+  const capabilityAdapter = createCapabilityAdapter({
+    handlers: { 'repository.snapshot': async () => ({ ok: true, evidence: 'bounded' }) },
+  });
+  const baseModel = getModelRecord('gpt-6-astra');
+  const modelRecord = {
+    ...baseModel,
+    context_policy: {
+      ...baseModel.context_policy,
+      max_cumulative_input_tokens: 30_000,
+    },
+  };
+  const provider = {
+    async create(params) {
+      if (params.input?.[0]?.type === 'compaction') {
+        resumedInput = params.input;
+        return { response_id: 'resp_after_compaction', output_text: 'done', tool_calls: [], usage_snapshot: usage(18_000, 49_000), cost: cost(0.1) };
+      }
+      return { response_id: 'resp_initial', output_text: '', tool_calls: [{ call_id: 'call_1', name: capabilityFunctionName('repository.snapshot'), arguments: '{}' }], usage_snapshot: usage(18_000, 40_000), cost: cost(0.1) };
+    },
+    async continueWithToolOutputs() { throw new Error('must compact before continuation'); },
+    async compact() { compactCalls += 1; return { compaction_id: 'cmp_mid_turn', output: [{ type: 'compaction', encrypted_content: 'opaque' }], usage_delta: { input_tokens: 1_000, output_tokens: 100, cached_input_tokens: 0, cache_write_tokens: 0, reasoning_tokens: 0 }, cost: cost(0.01) }; },
+  };
+  const guarded = await runResponsesAgent({ provider, capabilityAdapter, cwd: process.cwd(), prompt: 'snapshot repository', model: 'gpt-6-astra', modelRecord });
+  assert.equal(guarded.output_text, 'done');
+  assert.equal(compactCalls, 1);
+  assert.ok(resumedInput.some((row) => row.type === 'function_call_output'));
+  assert.equal(guarded.continuation_compactions[0].compaction_id, 'cmp_mid_turn');
 });
 
 test('runner refuses an oversized initial context and supports an explicit projected call-cost ceiling', async () => {

@@ -34,6 +34,7 @@ function modelBudget(record) {
     interveneAtTokens: policy.intervene_at_tokens,
     maxNormalInputTokens: policy.max_normal_input_tokens,
     pricingThresholdTokens: policy.pricing_threshold_tokens,
+    maxCumulativeInputTokens: policy.max_cumulative_input_tokens,
     safetyMarginTokens: policy.safety_margin_tokens,
   });
 }
@@ -128,6 +129,18 @@ function assertEconomicPreflight(projectedTokens, budget, allowOverride) {
   }
   if (projectedTokens >= budget.maxNormalInputTokens) throw new Error(`context_preflight_max_normal:${projectedTokens}>=${budget.maxNormalInputTokens}`);
   if (projectedTokens >= budget.compactAtTokens) throw new Error(`context_preflight_compaction_required:${projectedTokens}>=${budget.compactAtTokens}`);
+}
+
+function cumulativeInputTokens(usage) {
+  return Math.max(0, Math.floor(Number(usage?.cumulative?.input_tokens ?? usage?.input_tokens ?? 0)));
+}
+
+function toolOutputInput(outputs) {
+  return outputs.map((row) => ({
+    type: 'function_call_output',
+    call_id: row.call_id,
+    output: typeof row.output === 'string' ? row.output : JSON.stringify(row.output ?? null),
+  }));
 }
 
 export async function runResponsesAgent(options = {}) {
@@ -266,6 +279,8 @@ export async function runResponsesAgent(options = {}) {
   }
   let totalCostUsd = 0;
   const costBreakdownUsd = { input: 0, cached_input: 0, cache_write: 0, output: 0 };
+  const continuationCompactions = [];
+  let continuationGuardTriggered = false;
   const accumulateCost = (cost) => {
     totalCostUsd += Number(cost?.total_usd || 0);
     for (const key of Object.keys(costBreakdownUsd)) costBreakdownUsd[key] += Number(cost?.components_usd?.[key] || 0);
@@ -345,23 +360,70 @@ export async function runResponsesAgent(options = {}) {
         outputs.push({ call_id: call.call_id, output: JSON.stringify({ ok: false, error: diagnostic }) });
       }
     }
-    response = await provider.continueWithToolOutputs({
-      model: record.provider_model_id,
-      previousResponseId: response.response_id,
-      providerState: response.provider_state || providerState,
-      modelRecord: record,
-      toolOutputs: outputs,
-      instructions,
-      reasoningEffort,
-      serviceTier,
-      autoCompact: options.autoCompact,
-      tools: toolSurface.tools,
-      maxOutputTokens,
-      promptCacheKey: options.promptCacheKey,
-      cumulativeUsage,
-      emit,
-      runId,
-    });
+    const nextCumulativeInput = cumulativeInputTokens(response.usage_snapshot);
+    const cumulativeLimit = budget?.maxCumulativeInputTokens ?? null;
+    const guardrailCrossed = cumulativeLimit != null && nextCumulativeInput > cumulativeLimit;
+    if (guardrailCrossed && !options.allowEconomicOverride && continuationGuardTriggered) {
+      throw new Error(`cumulative_input_guardrail_exceeded:${nextCumulativeInput}>${cumulativeLimit}`);
+    }
+
+    if (guardrailCrossed && !options.allowEconomicOverride && !continuationGuardTriggered) {
+      if (typeof provider.compact !== 'function') {
+        throw new Error(`cumulative_input_compaction_unavailable:${nextCumulativeInput}>${cumulativeLimit}`);
+      }
+      const midTurnCompaction = await provider.compact({
+        model: record.provider_model_id,
+        modelRecord: record,
+        previousResponseId: response.response_id,
+        providerState: response.provider_state || providerState,
+        instructions,
+        promptCacheKey: options.promptCacheKey,
+        tokensBefore: response.usage_snapshot?.current_context?.input_tokens || nextCumulativeInput,
+        emit,
+        runId,
+      });
+      if (!Array.isArray(midTurnCompaction.output) || !midTurnCompaction.output.length) throw new Error('provider_compaction_output_missing');
+      continuationCompactions.push(midTurnCompaction);
+      accumulateCost(midTurnCompaction.cost);
+      const delta = midTurnCompaction.usage_delta || midTurnCompaction.usage;
+      if (delta) {
+        cumulativeUsage = Object.fromEntries(['input_tokens', 'output_tokens', 'cached_input_tokens', 'cache_write_tokens', 'reasoning_tokens'].map(key => [key, Number(cumulativeUsage?.[key] || 0) + Number(delta[key] || 0)]));
+      }
+      continuationGuardTriggered = true;
+      response = await provider.create({
+        model: record.provider_model_id,
+        modelRecord: record,
+        input: [...midTurnCompaction.output, ...toolOutputInput(outputs)],
+        instructions,
+        reasoningEffort,
+        serviceTier,
+        autoCompact: options.autoCompact,
+        tools: toolSurface.tools,
+        maxOutputTokens,
+        promptCacheKey: options.promptCacheKey,
+        cumulativeUsage,
+        emit,
+        runId,
+      });
+    } else {
+      response = await provider.continueWithToolOutputs({
+        model: record.provider_model_id,
+        previousResponseId: response.response_id,
+        providerState: response.provider_state || providerState,
+        modelRecord: record,
+        toolOutputs: outputs,
+        instructions,
+        reasoningEffort,
+        serviceTier,
+        autoCompact: options.autoCompact,
+        tools: toolSurface.tools,
+        maxOutputTokens,
+        promptCacheKey: options.promptCacheKey,
+        cumulativeUsage,
+        emit,
+        runId,
+      });
+    }
     accumulateCost(response.cost);
     providerState = response.provider_state || (response.response_id ? { previous_response_id: response.response_id } : providerState);
     cumulativeUsage = response.usage_snapshot?.cumulative || cumulativeUsage;
@@ -394,6 +456,7 @@ export async function runResponsesAgent(options = {}) {
     tool_surface: toolSurface.receipt,
     tool_receipts: Object.freeze(toolReceipts),
     compaction: compacted ? { compaction_id: compacted.compaction_id, provider: record.provider, model: record.provider_model_id, created_at: new Date().toISOString(), usage: compacted.usage_delta || compacted.usage || {}, cost_usd: compacted.cost?.total_usd || 0 } : null,
+    continuation_compactions: Object.freeze(continuationCompactions.map((row) => ({ compaction_id: row.compaction_id, provider: record.provider, model: record.provider_model_id, usage: row.usage_delta || row.usage || {}, cost_usd: row.cost?.total_usd || 0 }))),
     compacted_before_turn: Boolean(compacted),
     provider_state: providerState,
     continuation: Object.freeze({

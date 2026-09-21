@@ -51,6 +51,7 @@ const GPT_6_ASTRA = Object.freeze({
     intervene_at_tokens: 220_000,
     max_normal_input_tokens: 250_000,
     pricing_threshold_tokens: 272_000,
+    max_cumulative_input_tokens: 544_000,
     safety_margin_tokens: 22_000,
   }),
   batch: Object.freeze({

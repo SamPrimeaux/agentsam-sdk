@@ -57,6 +57,11 @@ export function createContextBudget(options = {}) {
   }
 
   const pricingThresholdTokens = nullablePositiveInteger(options.pricingThresholdTokens, 'pricingThresholdTokens');
+  const maxCumulativeInputTokens = positiveInteger(
+    options.maxCumulativeInputTokens
+      ?? (pricingThresholdTokens ? pricingThresholdTokens * 2 : maxNormalInputTokens * 4),
+    'maxCumulativeInputTokens',
+  );
   const safetyMarginTokens = Number.isInteger(options.safetyMarginTokens) && options.safetyMarginTokens >= 0
     ? options.safetyMarginTokens
     : pricingThresholdTokens && pricingThresholdTokens > maxNormalInputTokens
@@ -78,6 +83,7 @@ export function createContextBudget(options = {}) {
     maxNormalInputTokens,
     hardInputTokens,
     pricingThresholdTokens,
+    maxCumulativeInputTokens,
     safetyMarginTokens,
     targetInputChars,
     hardInputChars,
