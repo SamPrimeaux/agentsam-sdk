@@ -1,4 +1,4 @@
-import { AUTH_COOKIE_NAME, AUTH_SESSION_TTL_SECONDS, DASHBOARD_AFTER_LOGIN_PATH } from '../core/constants.js';
+import { AUTH_COOKIE_NAME, AUTH_SESSION_TTL_SECONDS } from '../core/constants.js';
 import { hashPassword, verifyPassword } from '../core/password-crypto.js';
 import { jsonResponse } from '../core/http-json.js';
 import { sanitizeBrowserNextPath } from '../core/browser-paths.js';
@@ -16,7 +16,16 @@ export function createIdentityService(config) {
   const adapter = config.adapter;
   if (!adapter) throw new Error('identity_service_requires_adapter');
   const cookieName = config.cookieName || AUTH_COOKIE_NAME;
-  const defaultRedirect = config.defaultRedirect || config.env?.DEFAULT_AFTER_LOGIN_PATH || DASHBOARD_AFTER_LOGIN_PATH;
+  // Direct sign-in has no navigation intent to restore. Land at the site root;
+  // protected routes always provide their own validated `next` path.
+  const defaultRedirect = sanitizeBrowserNextPath(config.defaultRedirect) || '/';
+
+  // OAuth state is durable and may outlive a deployment. Normalize both the
+  // incoming request value and a value read back from prior state so an old or
+  // malformed value can never become an open redirect.
+  function resolvePostLoginPath(nextPath) {
+    return sanitizeBrowserNextPath(nextPath) || defaultRedirect;
+  }
 
   function sessionCookieHeader(sessionId, requestUrl, maxAge = AUTH_SESSION_TTL_SECONDS) {
     const secure = new URL(requestUrl).protocol === 'https:';
@@ -127,7 +136,7 @@ export function createIdentityService(config) {
     },
 
     buildLoginSuccessResponse(request, sessionId, nextPath) {
-      const redirect = sanitizeBrowserNextPath(nextPath) || defaultRedirect;
+      const redirect = resolvePostLoginPath(nextPath);
       return jsonResponse(
         { ok: true, redirect },
         200,
@@ -150,6 +159,7 @@ export function createIdentityService(config) {
 
     parseSessionId,
     sessionCookieHeader,
+    resolvePostLoginPath,
   });
 }
 

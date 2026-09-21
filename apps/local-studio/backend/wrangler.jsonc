@@ -29,8 +29,7 @@
   "vars": {
     "IAM_OAUTH_ISSUER": "https://inneranimalmedia.com",
     "IAM_CLIENT_ID": "iam_agentsam_sdk_web",
-    "AGENTSAM_CONNECT_RETURN_ORIGINS": "https://fuelnfreetime.com",
-    "DEFAULT_AFTER_LOGIN_PATH": "/agentsam"
+    "CLOUDFLARE_CONNECT_RETURN_ORIGINS": "https://fuelnfreetime.com"
   },
   "d1_databases": [
     {

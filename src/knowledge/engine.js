@@ -3,6 +3,7 @@ import { validateConfig, fingerprint, scopeKey, cacheNamespace, gitEvidence } fr
 import { PARSER, inventory, readSource, parseSource } from './source.js';
 import { createContextPack } from './context-pack.js';
 import { normalizeResultPolicy } from '../context/result-policy.js';
+import { buildMerkleTree } from '../../packages/agentsam-repository/src/merkle/index.js';
 
 export const embeddingProfileId = profile => fingerprint({ ...profile, input_format: 'agentsam-code-content:1' });
 export function validateVector(vector, dimensions) {
@@ -14,20 +15,27 @@ function changes(before = [], after = []) {
   return { added: after.filter(f => !old.has(f.path)).map(f => f.path), changed: after.filter(f => old.has(f.path) && old.get(f.path) !== f.hash).map(f => f.path), removed: before.filter(f => !now.has(f.path)).map(f => f.path) };
 }
 /** Planning never persists, calls an embedding provider, or changes active state. */
-export async function planIndex({ root, config: input, store, embed = false }) {
+export async function planIndex({ root, config: input, store, embed = false, limits = null }) {
   const config = validateConfig(input), scope = scopeKey(config), namespace = cacheNamespace(config);
+  if (embed && config.embedding.provider === 'none') throw new Error('Embedding is explicitly disabled for this knowledge profile. Configure a provider before --embed.');
+  const maxFiles = limits?.maxFiles == null ? Infinity : Number(limits.maxFiles);
+  const maxChunks = limits?.maxChunks == null ? Infinity : Number(limits.maxChunks);
+  if ((maxFiles !== Infinity && (!Number.isInteger(maxFiles) || maxFiles < 1)) || (maxChunks !== Infinity && (!Number.isInteger(maxChunks) || maxChunks < 1))) throw new Error('Index limits must be positive integers.');
   const previous = await store?.active(scope), profileId = embed ? embeddingProfileId(config.embedding) : null;
   const files = [], chunks = [], symbols = [], edges = [], parseWrites = [], skipped = [];
   const parseProfile = fingerprint([PARSER, config.chunking]);
   let parsedFiles = 0;
-  for (const file of inventory(root, config.scope)) {
+  for (const file of inventory(root, config.scope).slice(0, maxFiles)) {
     const source = readSource(root, file);
     if (!source) { skipped.push(file); continue; }
     const key = `${namespace}:parse:${fingerprint([source.hash, file.split('.').pop(), parseProfile])}`;
     let parsed = await store?.cacheGet(key);
     if (!parsed) { parsed = parseSource(file, source.content, config.chunking.max_chars); parseWrites.push([key, parsed]); parsedFiles++; }
     files.push({ path: file, hash: source.hash, bytes: source.bytes, parser: parsed.parser });
-    for (const [ordinal, c] of parsed.chunks.entries()) chunks.push({ ...c, path: file, ordinal, id: fingerprint([file, ordinal, c.content_hash]), embedding_key: embed ? `${namespace}:vector:${profileId}:${c.content_hash}` : null });
+    for (const [ordinal, c] of parsed.chunks.entries()) {
+      if (chunks.length >= maxChunks) break;
+      chunks.push({ ...c, path: file, ordinal, id: fingerprint([file, ordinal, c.content_hash]), embedding_key: embed ? `${namespace}:vector:${profileId}:${c.content_hash}` : null });
+    }
     symbols.push(...parsed.symbols.map(s => ({ ...s, path: file })));
     edges.push(...parsed.edges.map(e => ({ ...e, path: file })));
   }
@@ -36,19 +44,25 @@ export async function planIndex({ root, config: input, store, embed = false }) {
     if (!missing.has(chunk.embedding_key) && !(await store?.cacheGet(chunk.embedding_key))) missing.set(chunk.embedding_key, chunk.content);
   }
   const sourceHash = fingerprint(files.map(f => [f.path, f.hash]));
-  const configHash = fingerprint([config.scope, config.chunking, PARSER, profileId]);
+  const configHash = fingerprint([config.scope, config.chunking, PARSER, profileId, Number.isFinite(maxFiles) ? maxFiles : null, Number.isFinite(maxChunks) ? maxChunks : null]);
+  let merkle = null;
+  try { merkle = await buildMerkleTree(root, { semantic: true }); } catch { merkle = null; }
+  const previousMerkle = previous?.receipt?.merkle_root || null;
+  const changedMerklePaths = merkle && previousMerkle !== merkle.rootHash ? files.filter(file => !previous?.files?.some(before => before.path === file.path && before.hash === file.hash)).map(file => file.path) : [];
   const noChange = previous?.source_hash === sourceHash && previous?.config_hash === configHash && !missing.size;
   return { root, config, previous, files, chunks, symbols, edges, parseWrites, missing,
     receipt: { scope: config.scope, files: files.length, chunks: chunks.length, symbols: symbols.length, edges: edges.length,
       parsed_files: parsedFiles, embedding_inputs: missing.size, embedding_characters: [...missing.values()].reduce((n, s) => n + s.length, 0),
       estimated_tokens: Math.ceil([...missing.values()].reduce((n, s) => n + s.length + 24, 0) / 4), token_estimate_method: 'characters / 4; not billable usage',
-      profile_id: profileId, skipped, changes: changes(previous?.files, files), no_change: Boolean(noChange), source_hash: sourceHash, config_hash: configHash } };
+      profile_id: profileId, skipped, changes: changes(previous?.files, files), no_change: Boolean(noChange), source_hash: sourceHash, config_hash: configHash,
+      merkle_root: merkle?.rootHash || null, semantic_metadata_root: merkle?.semantic?.rootHash || null, merkle_changed_paths: changedMerklePaths,
+      limits: Number.isFinite(maxFiles) || Number.isFinite(maxChunks) ? { max_files: maxFiles, max_chunks: maxChunks } : null } };
 }
 
-export async function runIndex({ root, config, store, embedder, embed = false, maxInputs = 100, maxCharacters = 200000 }) {
+export async function runIndex({ root, config, store, embedder, embed = false, maxInputs = 100, maxCharacters = 200000, limits = null }) {
   if (!store) throw new Error('A writable knowledge store is required.');
   if (!Number.isInteger(maxInputs) || maxInputs < 0 || !Number.isInteger(maxCharacters) || maxCharacters < 0) throw new Error('Embedding budgets must be nonnegative integers.');
-  const plan = await planIndex({ root, config, store, embed });
+  const plan = await planIndex({ root, config, store, embed, limits });
   const { receipt } = plan;
   if (receipt.no_change) return { ...receipt, generation_id: plan.previous.id, published: false };
   if (receipt.embedding_inputs > maxInputs || receipt.embedding_characters > maxCharacters) throw new Error(`Embedding budget exceeded: ${receipt.embedding_inputs} unique inputs / ${receipt.embedding_characters} characters. Review index plan before raising limits.`);
@@ -64,7 +78,8 @@ export async function runIndex({ root, config, store, embedder, embed = false, m
   }
   // A generation describes one coherent source snapshot. Never publish after a mid-run edit.
   const check = [];
-  for (const file of inventory(root, plan.config.scope)) { const source = readSource(root, file); if (source) check.push([file, source.hash]); }
+  const checkFiles = inventory(root, plan.config.scope).slice(0, limits?.maxFiles == null ? Infinity : limits.maxFiles);
+  for (const file of checkFiles) { const source = readSource(root, file); if (source) check.push([file, source.hash]); }
   if (fingerprint(check) !== receipt.source_hash) throw new Error('Repository changed while indexing; cached work retained, active generation unchanged. Rerun.');
   const generation = { id: randomUUID(), scope_key: scopeKey(plan.config), created_at: new Date().toISOString(),
     source_hash: receipt.source_hash, config_hash: receipt.config_hash, config: plan.config, profile_id: receipt.profile_id,

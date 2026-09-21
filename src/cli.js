@@ -539,6 +539,9 @@ if (command === '--version' || command === '-v') {
     reportCliError(e);
     process.exitCode = 1;
   }
+} else if (command === 'autorag') {
+  try { await (await import('./commands/autorag.js')).runAutoRag(rest); }
+  catch (e) { reportCliError(e); process.exitCode = 1; }
 } else if (['index', 'search', 'repo'].includes(command)) {
   try {
     const commands = await import('./commands/knowledge.js');

@@ -66,6 +66,21 @@ function createMemoryAdapter() {
 }
 
 describe('identity service', () => {
+  it('owns its fallback and rejects external OAuth return targets', () => {
+    const identity = createIdentityService({
+      adapter: createMemoryAdapter(),
+      defaultRedirect: '/agentsam',
+    });
+
+    assert.equal(identity.resolvePostLoginPath('/projects?tab=recent'), '/projects?tab=recent');
+    assert.equal(identity.resolvePostLoginPath('https://attacker.example/'), '/agentsam');
+    assert.equal(identity.resolvePostLoginPath('//attacker.example/'), '/agentsam');
+    assert.equal(identity.resolvePostLoginPath(null), '/agentsam');
+
+    const neutral = createIdentityService({ adapter: createMemoryAdapter() });
+    assert.equal(neutral.resolvePostLoginPath(null), '/');
+  });
+
   it('signup and login issue session', async () => {
     const identity = createIdentityService({ adapter: createMemoryAdapter() });
     const signup = await identity.signup({

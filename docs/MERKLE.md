@@ -68,3 +68,7 @@ const comparison = diffTrees(baseline, current);
 ```
 
 The library is local filesystem tooling. It adds no Worker bindings, user/workspace identity, or network calls. The interoperable content hash format is specified in [MERKLE_V1](../protocol/MERKLE_V1.md), and semantic identity in [FILEMETA_V1](../protocol/FILEMETA_V1.md).
+
+## AutoRAG use
+
+AutoRAG consumes this package's content root and optional semantic metadata root as source evidence. During a code plan it compares those roots with the previous generation, reports changed paths, and reuses unchanged parsed chunks/vectors where their content identity still matches. Merkle is deterministic filesystem evidence; it is not a dependency graph, an AST graph, a vector index, or a replacement for Git history.

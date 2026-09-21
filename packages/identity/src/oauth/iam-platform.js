@@ -19,7 +19,7 @@ import { normalizeIamIdentity } from '../providers/iam/mapper.js';
  * @param {Record<string, unknown>} env
  * @param {import('../adapters/cloudflare-d1/index.js').CloudflareD1Adapter} adapter
  */
-export async function iamPlatformOAuthStart(request, env, adapter) {
+export async function iamPlatformOAuthStart(request, env, adapter, identity) {
   const creds = resolveIamPlatformCredentials(env);
   if (!creds) {
     return Response.json({ ok: false, error: 'iam_oauth_not_configured' }, 503);
@@ -29,10 +29,9 @@ export async function iamPlatformOAuthStart(request, env, adapter) {
   const state = randomOAuthState();
   const codeVerifier = pkceVerifier();
   const codeChallenge = await pkceChallenge(codeVerifier);
-  const redirectTo = url.searchParams.get('next')
-    || url.searchParams.get('return_to')
-    || env.DEFAULT_AFTER_LOGIN_PATH
-    || '/dashboard/cms';
+  const redirectTo = identity?.resolvePostLoginPath(
+    url.searchParams.get('next') || url.searchParams.get('return_to'),
+  ) || '/';
 
   await adapter.saveOAuthState({
     state,
@@ -108,7 +107,7 @@ export async function iamPlatformOAuthCallback(request, env, adapter, identity) 
     displayName: normalized.name || normalized.email.split('@')[0] || 'User',
   });
 
-  const redirectTo = saved.redirect_to || env.DEFAULT_AFTER_LOGIN_PATH || '/dashboard/cms';
+  const redirectTo = identity.resolvePostLoginPath(saved.redirect_to);
   const res = identity.buildLoginSuccessResponse(request, result.sessionId, redirectTo);
   const globeUrl = `${url.origin}${AUTH_LOGIN_PATH}?globe_exit=1&next=${encodeURIComponent(redirectTo)}`;
   return new Response(null, {

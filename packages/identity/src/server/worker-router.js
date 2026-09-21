@@ -210,19 +210,19 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
   if (path === '/api/oauth/iam/start' && method === 'GET') {
     const lane = resolveOAuthCredentialLane(env, 'iam');
     if (!lane) return jsonResponse({ ok: false, error: 'iam_oauth_not_configured' }, 503);
-    return iamPlatformOAuthStart(request, env, adapter);
+    return iamPlatformOAuthStart(request, env, adapter, identity);
   }
 
   if (path === '/api/oauth/google/start' && method === 'GET') {
     const lane = resolveOAuthCredentialLane(env, 'google');
     if (!lane) return jsonResponse({ ok: false, error: 'google_oauth_not_configured' }, 503);
-    if (lane.lane === 'iam_platform') return iamPlatformOAuthStart(request, env, adapter);
+    if (lane.lane === 'iam_platform') return iamPlatformOAuthStart(request, env, adapter, identity);
     return oauthStart(request, env, adapter, 'google', lane);
   }
   if (path === '/api/oauth/github/start' && method === 'GET') {
     const lane = resolveOAuthCredentialLane(env, 'github');
     if (!lane) return jsonResponse({ ok: false, error: 'github_oauth_not_configured' }, 503);
-    if (lane.lane === 'iam_platform') return iamPlatformOAuthStart(request, env, adapter);
+    if (lane.lane === 'iam_platform') return iamPlatformOAuthStart(request, env, adapter, identity);
     return oauthStart(request, env, adapter, 'github', lane);
   }
   if (path === '/api/oauth/cloudflare/start' && method === 'GET') {
@@ -301,7 +301,9 @@ async function oauthStart(request, env, adapter, provider, creds) {
   const state = randomOAuthState();
   const codeVerifier = pkceVerifier();
   const codeChallenge = await pkceChallenge(codeVerifier);
-  const redirectTo = url.searchParams.get('next') || url.searchParams.get('return_to') || env.DEFAULT_AFTER_LOGIN_PATH || '/dashboard/cms';
+  const redirectTo = identity.resolvePostLoginPath(
+    url.searchParams.get('next') || url.searchParams.get('return_to'),
+  );
   await adapter.saveOAuthState({ state, provider, codeVerifier, redirectTo });
 
   const redirectUri = `${url.origin}/api/oauth/${provider}/callback`;
@@ -408,7 +410,7 @@ async function oauthCallback(request, env, identity, adapter, provider, creds) {
     userId: result.authUserId, eventType: 'login', status: 'ok', provider, request,
   });
 
-  const redirectTo = saved.redirect_to || env.DEFAULT_AFTER_LOGIN_PATH || '/dashboard/cms';
+  const redirectTo = identity.resolvePostLoginPath(saved.redirect_to);
   const res = identity.buildLoginSuccessResponse(request, result.sessionId, redirectTo);
   const globeUrl = `${url.origin}${AUTH_LOGIN_PATH}?globe_exit=1&next=${encodeURIComponent(redirectTo)}`;
   return new Response(null, {

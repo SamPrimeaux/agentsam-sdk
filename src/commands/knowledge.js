@@ -11,7 +11,7 @@ import { CONFIG_PATH, repositoryRoot, initRepository, readConfig, defaultConfig,
 import { openSqliteStore } from '../knowledge/stores/sqlite.js';
 import { openPostgresStore } from '../knowledge/stores/postgres.js';
 import { planIndex, runIndex, retrieve } from '../knowledge/engine.js';
-import { createGeminiEmbedder } from '../knowledge/providers/gemini.js';
+import { createProviderRegistry } from '../../packages/agentsam-knowledge/src/providers/index.js';
 import { compareObservations } from '../knowledge/evolution.js';
 import { ensureProjectManifest, getProjectName, getRepositoryId, portableRepositoryIdFromGit, tryReadProjectConfig } from '../lib/project-config.js';
 import { ensureProjectRules } from '../lib/project-rules.js';
@@ -24,7 +24,18 @@ const localPath = root => path.join(root, '.agentsam', 'knowledge', 'index.sqlit
 async function openStore(root, config, readOnly = false) {
   return config.storage.driver === 'sqlite' ? openSqliteStore(localPath(root), { readOnly }) : openPostgresStore(process.env[config.storage.connection_env]);
 }
-function provider() { return createGeminiEmbedder({ apiKey: process.env.GEMINI_API_KEY }); }
+function provider(profile) {
+  if (profile?.provider === 'none') throw new Error('Embedding is disabled for this profile. Configure an explicit provider with `agentsam autorag configure --provider … --semantic`.');
+  const adapter = createProviderRegistry().get(profile?.provider);
+  return {
+    validate: input => adapter.validate(input),
+    async embed(text, input, context) {
+      return context?.kind === 'query'
+        ? adapter.embedQuery(text, input, context)
+        : (await adapter.embedDocuments([text], input, context))[0];
+    },
+  };
+}
 function resolveKnowledgeConfig(root) {
   const filename = path.join(root, CONFIG_PATH);
   if (fs.existsSync(filename)) return readConfig(root);
@@ -98,7 +109,7 @@ export async function runKnowledge(argv) {
     else if (command === 'run') {
       // Lazy adapter creation means a fully cached --embed run needs no API key.
       let adapter;
-      const embedder = { embed: (...args) => (adapter ??= provider()).embed(...args) };
+      const embedder = { validate: (...args) => (adapter ??= provider(config.embedding)).validate(...args), embed: (...args) => (adapter ??= provider(config.embedding)).embed(...args) };
       show(await runIndex({ root, config, store, embed: opts.embed, embedder, maxInputs: Number(opts['max-inputs'] ?? 100), maxCharacters: Number(opts['max-characters'] ?? 200000) }));
     } else if (command === 'history') show((await store?.history(scopeKey(config)) || []).map(g => ({ id: g.id, created_at: g.created_at, git: g.git, ...g.receipt })));
     else {
@@ -140,7 +151,7 @@ export async function runKnowledgeSearch({
       config,
       text: q,
       semantic: Boolean(semantic),
-      embedder: semantic ? provider() : null,
+      embedder: semantic ? provider(config.embedding) : null,
       topK: Number(topK || 8),
       tokenBudget: Number(tokenBudget || 6000),
       generationId,
@@ -154,7 +165,7 @@ export async function runSearch(argv) {
   const { values: opts, positionals } = flags(argv, { semantic: { type: 'boolean' }, 'top-k': { type: 'string' }, 'token-budget': { type: 'string' }, generation: { type: 'string' } });
   if (opts.help) { console.log('agentsam search "query" [--cwd PATH] [--semantic] [--top-k 8] [--token-budget 6000] [--generation ID]'); return; }
   const root = repositoryRoot(opts.cwd), config = resolveKnowledgeConfig(root), store = await openStore(root, config, true);
-  try { show(await retrieve({ store, config, text: positionals.join(' '), semantic: opts.semantic, embedder: opts.semantic ? provider() : null, topK: Number(opts['top-k'] || 8), tokenBudget: Number(opts['token-budget'] || 6000), generationId: opts.generation })); }
+  try { show(await retrieve({ store, config, text: positionals.join(' '), semantic: opts.semantic, embedder: opts.semantic ? provider(config.embedding) : null, topK: Number(opts['top-k'] || 8), tokenBudget: Number(opts['token-budget'] || 6000), generationId: opts.generation })); }
   finally { await store?.close(); }
 }
 

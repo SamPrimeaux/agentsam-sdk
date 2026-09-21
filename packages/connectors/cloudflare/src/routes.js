@@ -33,7 +33,7 @@ function settingsRedirect(url, result, error = '', returnTo = '') {
 function allowedReturnOrigins(url, env) {
   return new Set([
     url.origin,
-    ...String(env.AGENTSAM_CONNECT_RETURN_ORIGINS || '').split(',').map((value) => value.trim()).filter(Boolean),
+    ...String(env.CLOUDFLARE_CONNECT_RETURN_ORIGINS || '').split(',').map((value) => value.trim()).filter(Boolean),
   ]);
 }
 

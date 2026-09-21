@@ -1,0 +1,15 @@
+{
+  "name": "@inneranimalmedia/agentsam-knowledge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Portable AutoRAG discovery, adapter registries, probes, and company routing contracts for AgentSam.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./autorag": "./src/autorag/index.js",
+    "./providers": "./src/providers/index.js",
+    "./backends": "./src/backends/index.js"
+  },
+  "scripts": { "test": "node --test test/*.test.mjs" },
+  "engines": { "node": ">=22 <25" }
+}

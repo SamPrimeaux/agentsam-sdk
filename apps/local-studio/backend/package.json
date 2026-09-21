@@ -6,6 +6,9 @@
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
+  "dependencies": {
+    "@inneranimalmedia/agentsam-sdk": "file:../../.."
+  },
   "devDependencies": {
     "@types/node": "^22.16.5",
     "typescript": "^5.7.0",

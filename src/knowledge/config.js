@@ -31,31 +31,39 @@ export function validateConfig(input) {
     if (!object || typeof object !== 'object' || Array.isArray(object)) throw new Error(`${label} must be an object.`);
     for (const key of Object.keys(object)) if (!keys.includes(key)) throw new Error(`Unknown ${label} field: ${key}`);
   };
-  allowed(c, ['version', 'repository_id', 'workspace_id', 'scope', 'chunking', 'embedding', 'storage'], 'configuration');
+  allowed(c, ['version', 'repository_id', 'project_key', 'workspace_id', 'scope', 'chunking', 'embedding', 'storage', 'lane'], 'configuration');
   allowed(c.scope, ['name', 'include', 'exclude'], 'scope');
   allowed(c.chunking, ['max_chars'], 'chunking');
   allowed(c.embedding, ['provider', 'model', 'revision', 'dimensions', 'parameters'], 'embedding');
   allowed(c.storage, ['driver', 'connection_env'], 'storage');
-  if (c.version !== 1) throw new Error('Unsupported knowledge configuration version.');
+  if (c.lane != null) allowed(c.lane, ['id', 'backend', 'resource', 'binding', 'index', 'metric'], 'lane');
+  if (![1, 2].includes(c.version)) throw new Error('Unsupported knowledge configuration version.');
   if (typeof c.repository_id !== 'string' || !c.repository_id.trim()) throw new Error('repository_id is required.');
+  if (c.project_key != null && (typeof c.project_key !== 'string' || !c.project_key.trim())) throw new Error('project_key must be a non-empty string when present.');
   if (c.workspace_id != null && (typeof c.workspace_id !== 'string' || !c.workspace_id.trim())) throw new Error('workspace_id must be a non-empty string when present.');
   if (typeof c.scope?.name !== 'string' || !c.scope.name.trim() || !Array.isArray(c.scope.include) || !c.scope.include.length) throw new Error('A named scope with at least one include path is required.');
   c.scope.include = [...new Set(c.scope.include.map(relativeSelection))].sort();
   c.scope.exclude = [...new Set((c.scope.exclude || []).map(relativeSelection))].sort();
   if (!Number.isInteger(c.chunking?.max_chars) || c.chunking.max_chars < 256 || c.chunking.max_chars > 12000) throw new Error('chunking.max_chars must be 256..12000.');
   const e = c.embedding;
-  if (!e || ['provider', 'model', 'revision'].some(k => typeof e[k] !== 'string' || !e[k].trim()) || !Number.isInteger(e.dimensions) || e.dimensions < 1 || e.dimensions > 3072) throw new Error('Embedding provider, model, revision and dimensions (1..3072) are required.');
+  const disabledEmbedding = e?.provider === 'none' && e?.model === 'none' && e?.dimensions === 0;
+  if (!e || ['provider', 'model', 'revision'].some(k => typeof e[k] !== 'string' || !e[k].trim()) || !Number.isInteger(e.dimensions) || (!disabledEmbedding && (e.dimensions < 1 || e.dimensions > 3072))) throw new Error('Embedding provider, model, revision and dimensions (1..3072, or explicit none/0) are required.');
   if (!e.parameters || typeof e.parameters !== 'object' || Array.isArray(e.parameters)) throw new Error('Embedding parameters must be an object.');
   if (!['sqlite', 'postgres'].includes(c.storage?.driver)) throw new Error('storage.driver must be sqlite or postgres.');
   if (c.storage.driver === 'postgres' && !/^[A-Z_][A-Z0-9_]*$/.test(c.storage.connection_env || '')) throw new Error('Postgres requires a connection_env name, never a connection string in config.');
+  if (c.lane) {
+    if (typeof c.lane.id !== 'string' || !c.lane.id.trim() || !['local_exact', 'postgres_pgvector', 'supabase_pgvector', 'cloudflare_vectorize'].includes(c.lane.backend)) throw new Error('Knowledge lane requires an explicit supported backend.');
+    if (c.lane.backend === 'cloudflare_vectorize' && (!c.lane.binding || !c.lane.index)) throw new Error('Cloudflare Vectorize lanes require explicit binding and index.');
+  }
   return c;
 }
 export function defaultConfig({ include = ['.'], exclude = [], scope = 'default', target = 'local', dimensions = 768, repositoryId = '' } = {}) {
   if (!['local', 'production'].includes(target)) throw new Error('target must be local or production.');
-  return validateConfig({ version: 1, repository_id: String(repositoryId || '').trim() || randomUUID(),
+  return validateConfig({ version: 2, repository_id: String(repositoryId || '').trim() || randomUUID(), project_key: String(repositoryId || '').trim() || undefined,
     scope: { name: scope, include, exclude }, chunking: { max_chars: 4000 },
     embedding: { provider: 'gemini', model: 'gemini-embedding-2', revision: '1', dimensions, parameters: { task: 'code retrieval' } },
-    storage: target === 'local' ? { driver: 'sqlite' } : { driver: 'postgres', connection_env: 'AGENTSAM_DATABASE_URL' } });
+    storage: target === 'local' ? { driver: 'sqlite' } : { driver: 'postgres', connection_env: 'AGENTSAM_DATABASE_URL' },
+    lane: { id: `${scope}-default`, backend: target === 'local' ? 'local_exact' : 'postgres_pgvector', resource: null, binding: null, index: null, metric: 'cosine' } });
 }
 export function readConfig(root) { return validateConfig(JSON.parse(fs.readFileSync(path.join(root, CONFIG_PATH), 'utf8'))); }
 export function initRepository(root, options = {}) {

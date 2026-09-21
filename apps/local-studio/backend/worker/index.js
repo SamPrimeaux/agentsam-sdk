@@ -636,8 +636,7 @@ export default {
     // Gate authenticated Studio app routes on a real session before the SPA shell loads.
     if (request.method === "GET" && isProtectedAppPath(url.pathname)) {
       try {
-        const adapter = createCloudflareD1Adapter(env.DB);
-        const identity = createIdentityService({ adapter, env });
+        const identity = createIdentityService({ adapter: createCloudflareD1Adapter(env.DB) });
         const ctx = await identity.sessionFromRequest(request);
         if (!ctx) {
           const next = encodeURIComponent(url.pathname + url.search);

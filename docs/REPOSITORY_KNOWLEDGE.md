@@ -72,6 +72,8 @@ The current SDK contains a portable/local knowledge slice with deterministic rep
 
 That is useful as a standalone implementation. It is not presented as the architecture of every Agent Sam host.
 
+`@inneranimalmedia/agentsam-sdk/autorag` is the higher-level façade over that same engine. It performs discovery, recommends bounded source scopes, manages the existing knowledge config, selects explicit provider/backend lanes, and runs probes. It never becomes a second indexing runtime. The lower-level engine remains available through `@inneranimalmedia/agentsam-sdk/knowledge`.
+
 ## InnerAnimal production implementation
 
 The InnerAnimal platform is a separate host implementation with a broader code-intelligence pipeline: repository/index generations, a dedicated Tree-sitter parsing service, D1 structural nodes/edges, structural-first graph retrieval, semantic projections, and bounded hydration.

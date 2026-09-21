@@ -57,9 +57,12 @@ Current schema:
 D1 / runtime stores         runs, plans, tasks, executions, model history, subagents
 Merkle snapshot store       filesystem evidence and snapshot lineage
 Git                         source-control authority
+knowledge generations       indexed evidence history; never mutable project config
 ```
 
 Do **not** add account/user/tenant/workspace identity, current run IDs, active task state, PTY/session/connection IDs, current Merkle roots, provider credentials, deployment receipts, model history, or subagent execution records to the project manifest.
+
+AutoRAG manages the existing `.agentsam/knowledge.json` authority. It may add a portable repository/project key and explicit lane/profile settings there; it does not create per-lane, retrieval, backend, or credential config files. `workspace_id` is legacy read compatibility only, not universal knowledge authority.
 
 `repository.id` is the portable repository authority for Agent Sam surfaces. Existing `knowledge.json.repository_id` remains readable during migration, but when both files exist the IDs must agree. Git remote discovery is fallback/adoption evidence rather than a second persistent identity.
 

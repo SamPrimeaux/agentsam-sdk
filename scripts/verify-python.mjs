@@ -3,7 +3,13 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const python = process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3');
+function supportsRequiredPython(command) {
+  const result = spawnSync(command, ['-c', 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)'], { stdio: 'ignore' });
+  return !result.error && result.status === 0;
+}
+const candidates = process.env.PYTHON ? [process.env.PYTHON] : (process.platform === 'win32' ? ['python'] : ['python3.12', 'python3.11', 'python3.10', 'python3']);
+const python = candidates.find(supportsRequiredPython);
+if (!python) throw new Error('Python 3.10+ is required by python/pyproject.toml; set PYTHON to a compatible interpreter.');
 
 function run(args, cwd, env = {}) {
   const result = spawnSync(python, args, {

@@ -16,7 +16,7 @@ const run = (bin, args, cwd) => execFileSync(bin, args, { cwd, env: childEnv, en
 try {
   const packed = JSON.parse(run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', tmp], root))[0];
   const shipped = new Set(packed.files.map(f => f.path));
-  for (const file of ['src/knowledge/engine.js', 'src/knowledge/stores/postgres.sql', 'protocol/knowledge/context-pack.schema.json', 'python/agentsam_sdk/repository/intelligence/__main__.py', 'docs/knowledge-branch-recovery.md']) assert.ok(shipped.has(file), `Missing packed asset: ${file}`);
+  for (const file of ['src/knowledge/engine.js', 'src/knowledge/stores/postgres.sql', 'packages/agentsam-knowledge/src/autorag/index.js', 'protocol/knowledge/context-pack.schema.json', 'python/agentsam_sdk/repository/intelligence/__main__.py', 'docs/knowledge-branch-recovery.md']) assert.ok(shipped.has(file), `Missing packed asset: ${file}`);
   const consumer = path.join(tmp, 'consumer'); fs.mkdirSync(consumer);
   // Explicitly allow no lifecycle scripts, including when the parent npm exports allow-scripts.
   fs.writeFileSync(path.join(consumer, 'package.json'), '{"private":true,"type":"module","allowScripts":{}}\n');
@@ -24,6 +24,8 @@ try {
   const installed = path.join(consumer, 'node_modules/@inneranimalmedia/agentsam-sdk/src/cli.js');
   const exported = run(process.execPath, ['--input-type=module', '-e', 'import {runIndex, KnowledgeClient} from "@inneranimalmedia/agentsam-sdk/knowledge"; console.log(typeof runIndex, typeof KnowledgeClient)'], consumer);
   assert.equal(exported.trim(), 'function function');
+  const autoragExport = run(process.execPath, ['--input-type=module', '-e', 'import {discoverAutoRag, runAutoRagProbe} from "@inneranimalmedia/agentsam-sdk/autorag"; console.log(typeof discoverAutoRag, typeof runAutoRagProbe)'], consumer);
+  assert.equal(autoragExport.trim(), 'function function');
   const clientExport = run(process.execPath, ['--input-type=module', '-e', 'import {createKnowledgeServiceClient} from "@inneranimalmedia/agentsam-sdk/knowledge-service-client"; console.log(typeof createKnowledgeServiceClient)'], consumer);
   assert.equal(clientExport.trim(), 'function');
   // Prove the installed package can generate and run a fresh application too.
@@ -40,7 +42,10 @@ try {
     run('git', ['init', '-q'], repo);
     fs.writeFileSync(path.join(repo, 'lib/task.ts'), 'export function customerFeature() { return 42; }\n');
     const cli = args => JSON.parse(run(process.execPath, [installed, ...args], repo));
-    cli(['init', '--yes', '--include', 'lib']);
+    cli(['autorag', 'setup', '--yes', '--kind', 'code', '--scope', 'lib']);
+    assert.equal(cli(['autorag', 'status']).config.scope.include[0], 'lib');
+    assert.equal(cli(['autorag', 'doctor']).ok, true);
+    assert.ok(cli(['autorag', 'probe', '--query', 'customerFeature']).generation);
     assert.equal(cli(['index', 'plan']).embedding_inputs, 0);
     assert.equal(cli(['index', 'run']).published, true);
     assert.equal(cli(['index', 'run']).published, false);
@@ -57,5 +62,5 @@ try {
     assert.ok(fs.existsSync(path.join(path.dirname(build.dockerfilePath), 'context/src/knowledge/service/server.js')));
     assert.equal(fs.existsSync(path.join(path.dirname(build.dockerfilePath), 'context/lib/task.ts')), false);
   }
-  console.log(`verify-knowledge-package OK: installed ${packed.filename}; fresh app smoke, two independent repositories, retrieval, evolution, and Docker service staging`);
+  console.log(`verify-knowledge-package OK: installed ${packed.filename}; two unrelated consumers passed installed AutoRAG setup/status/doctor/probe, index/search, retrieval, evolution, and optional Docker service staging`);
 } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
