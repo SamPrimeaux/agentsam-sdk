@@ -91,8 +91,14 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
       password: body.password,
     });
     if (!result.ok) {
+      await adapter.logAuthEvent({
+        eventType: 'login', status: 'failed', provider: 'email', request,
+      });
       return jsonResponse({ ok: false, error: result.error }, 401);
     }
+    await adapter.logAuthEvent({
+      userId: result.user.id, eventType: 'login', status: 'ok', provider: 'email', request,
+    });
     return identity.buildLoginSuccessResponse(request, result.sessionId, body.next);
   }
 
@@ -110,7 +116,11 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
   }
 
   if (path === '/api/auth/logout' && method === 'POST') {
+    const sessionCtx = await identity.sessionFromRequest(request).catch(() => null);
     await identity.logout(request);
+    await adapter.logAuthEvent({
+      userId: sessionCtx?.user?.id, eventType: 'logout', status: 'ok', request,
+    });
     return identity.buildLogoutResponse(request);
   }
 
@@ -327,10 +337,12 @@ async function oauthCallback(request, env, identity, adapter, provider, creds) {
   const state = url.searchParams.get('state');
   const err = url.searchParams.get('error');
   if (err || !code || !state) {
+    await adapter.logAuthEvent({ eventType: 'login', status: 'failed', provider, request, metadata: { reason: 'oauth_failed' } });
     return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=oauth_failed`, 302);
   }
   const saved = await adapter.consumeOAuthState(state);
   if (!saved || saved.provider !== provider) {
+    await adapter.logAuthEvent({ eventType: 'login', status: 'failed', provider, request, metadata: { reason: 'state_mismatch' } });
     return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=state_mismatch`, 302);
   }
   const redirectUri = `${url.origin}/api/oauth/${provider}/callback`;
@@ -391,6 +403,9 @@ async function oauthCallback(request, env, identity, adapter, provider, creds) {
     providerSubject: normalized.subject,
     email: normalized.email,
     displayName: normalized.name,
+  });
+  await adapter.logAuthEvent({
+    userId: result.authUserId, eventType: 'login', status: 'ok', provider, request,
   });
 
   const redirectTo = saved.redirect_to || env.DEFAULT_AFTER_LOGIN_PATH || '/dashboard/cms';

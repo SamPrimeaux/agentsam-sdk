@@ -10,6 +10,10 @@ export function newSessionId() {
   return crypto.randomUUID();
 }
 
+export function newAuthEventId() {
+  return `aev_${crypto.randomUUID().replace(/-/g, '')}`;
+}
+
 export function nowUnix() {
   return Math.floor(Date.now() / 1000);
 }

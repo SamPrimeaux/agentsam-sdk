@@ -1,4 +1,4 @@
-import { newAccountIdentityId, newAuthUserId, newSessionId, nowUnix } from './ids.js';
+import { newAccountIdentityId, newAuthUserId, newSessionId, newAuthEventId, nowUnix } from './ids.js';
 import { AUTH_SESSION_TTL_SECONDS } from '../../core/constants.js';
 import { DEFAULT_COMPANY_ID, DEFAULT_COMPANY_SLUG, normalizeCompanyRow } from '../../contracts/company.js';
 
@@ -12,6 +12,14 @@ import { DEFAULT_COMPANY_ID, DEFAULT_COMPANY_SLUG, normalizeCompanyRow } from '.
  * @param {D1Database} db
  * @param {{ sessionTtlSeconds?: number }} [options]
  */
+async function hashValue(value) {
+  const v = String(value || '').trim();
+  if (!v) return null;
+  const bytes = new TextEncoder().encode(v);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 export function createCloudflareD1Adapter(db, options = {}) {
   if (!db?.prepare) {
     throw new Error('cloudflare_d1_adapter_requires_db_binding');
@@ -20,6 +28,36 @@ export function createCloudflareD1Adapter(db, options = {}) {
 
   return Object.freeze({
     sessionTtlSeconds,
+
+    /**
+     * Append-only login/logout/failed-attempt audit trail (auth_event_log).
+     * Never throws -- an observability write must not break a real auth flow.
+     * ip/userAgent are hashed (SHA-256) before storage, matching the
+     * ip_hash/user_agent_hash column names -- raw values are never persisted.
+     */
+    async logAuthEvent({ userId, eventType, status = 'ok', provider, metadata, request }) {
+      try {
+        const ip = request?.headers?.get?.('cf-connecting-ip') || request?.headers?.get?.('x-forwarded-for') || '';
+        const ua = request?.headers?.get?.('user-agent') || '';
+        const [ipHash, uaHash] = await Promise.all([hashValue(ip), hashValue(ua)]);
+        await db.prepare(
+          `INSERT INTO auth_event_log
+           (id, user_id, event_type, status, provider, metadata_json, ip_hash, user_agent_hash)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).bind(
+          newAuthEventId(),
+          userId || null,
+          eventType,
+          status,
+          provider || null,
+          metadata ? JSON.stringify(metadata) : '{}',
+          ipHash,
+          uaHash,
+        ).run();
+      } catch {
+        // Never let audit logging break a real login/OAuth flow.
+      }
+    },
 
     async findUserByEmail(email) {
       const row = await db.prepare(
