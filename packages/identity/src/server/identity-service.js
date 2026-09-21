@@ -16,7 +16,7 @@ export function createIdentityService(config) {
   const adapter = config.adapter;
   if (!adapter) throw new Error('identity_service_requires_adapter');
   const cookieName = config.cookieName || AUTH_COOKIE_NAME;
-  const defaultRedirect = config.defaultRedirect || DASHBOARD_AFTER_LOGIN_PATH;
+  const defaultRedirect = config.defaultRedirect || config.env?.DEFAULT_AFTER_LOGIN_PATH || DASHBOARD_AFTER_LOGIN_PATH;
 
   function sessionCookieHeader(sessionId, requestUrl, maxAge = AUTH_SESSION_TTL_SECONDS) {
     const secure = new URL(requestUrl).protocol === 'https:';

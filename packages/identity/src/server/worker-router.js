@@ -7,6 +7,8 @@ import { getGoogleAuthUrl, exchangeGoogleCode } from '../providers/google/oauth.
 import { fetchGoogleProfile } from '../providers/google/profile.js';
 import { getGithubAuthUrl, exchangeGithubCode } from '../providers/github/oauth.js';
 import { fetchGithubProfile } from '../providers/github/profile.js';
+import { getCloudflareAuthUrl, exchangeCloudflareCode } from '../providers/cloudflare/oauth.js';
+import { fetchCloudflareProfile } from '../providers/cloudflare/profile.js';
 import { AUTH_LOGIN_PATH } from '../core/constants.js';
 import { resolveOAuthCredentialLane } from '../oauth/credentials.js';
 import { iamPlatformOAuthCallback, iamPlatformOAuthStart } from '../oauth/iam-platform.js';
@@ -213,6 +215,11 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
     if (lane.lane === 'iam_platform') return iamPlatformOAuthStart(request, env, adapter);
     return oauthStart(request, env, adapter, 'github', lane);
   }
+  if (path === '/api/oauth/cloudflare/start' && method === 'GET') {
+    const lane = resolveOAuthCredentialLane(env, 'cloudflare');
+    if (!lane) return jsonResponse({ ok: false, error: 'cloudflare_oauth_not_configured' }, 503);
+    return oauthStart(request, env, adapter, 'cloudflare', lane);
+  }
 
   if (path === '/api/oauth/google/callback' && method === 'GET') {
     const lane = resolveOAuthCredentialLane(env, 'google');
@@ -233,6 +240,13 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
       return iamPlatformOAuthCallback(request, env, adapter, identity);
     }
     return oauthCallback(request, env, identity, adapter, 'github', lane);
+  }
+  if (path === '/api/oauth/cloudflare/callback' && method === 'GET') {
+    const lane = resolveOAuthCredentialLane(env, 'cloudflare');
+    if (!lane) {
+      return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=oauth_not_configured`, 302);
+    }
+    return oauthCallback(request, env, identity, adapter, 'cloudflare', lane);
   }
 
   // Auth HTML shells — use extensionless paths; assets serves foo.html at /foo.
@@ -277,13 +291,20 @@ async function oauthStart(request, env, adapter, provider, creds) {
   const state = randomOAuthState();
   const codeVerifier = pkceVerifier();
   const codeChallenge = await pkceChallenge(codeVerifier);
-  const redirectTo = url.searchParams.get('next') || url.searchParams.get('return_to') || '/dashboard/cms';
+  const redirectTo = url.searchParams.get('next') || url.searchParams.get('return_to') || env.DEFAULT_AFTER_LOGIN_PATH || '/dashboard/cms';
   await adapter.saveOAuthState({ state, provider, codeVerifier, redirectTo });
 
   const redirectUri = `${url.origin}/api/oauth/${provider}/callback`;
   let authUrl;
   if (provider === 'google') {
     authUrl = getGoogleAuthUrl({
+      clientId: creds.clientId,
+      redirectUri,
+      state,
+      codeChallenge,
+    });
+  } else if (provider === 'cloudflare') {
+    authUrl = getCloudflareAuthUrl({
       clientId: creds.clientId,
       redirectUri,
       state,
@@ -327,6 +348,18 @@ async function oauthCallback(request, env, identity, adapter, provider, creds) {
       return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=token_exchange_failed`, 302);
     }
     profile = await fetchGoogleProfile(token.access_token);
+  } else if (provider === 'cloudflare') {
+    token = await exchangeCloudflareCode({
+      code,
+      codeVerifier: saved.code_verifier,
+      clientId: creds.clientId,
+      clientSecret: creds.clientSecret,
+      redirectUri,
+    });
+    if (!token?.access_token) {
+      return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=token_exchange_failed`, 302);
+    }
+    profile = await fetchCloudflareProfile(token.access_token);
   } else {
     token = await exchangeGithubCode({
       code,
@@ -344,9 +377,14 @@ async function oauthCallback(request, env, identity, adapter, provider, creds) {
     return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=userinfo_failed`, 302);
   }
 
-  const normalized = provider === 'google'
-    ? { subject: profile.sub, email: profile.email, name: profile.name }
-    : { subject: String(profile.id), email: profile.email, name: profile.name || profile.login };
+  let normalized;
+  if (provider === 'google') {
+    normalized = { subject: profile.sub, email: profile.email, name: profile.name };
+  } else if (provider === 'cloudflare') {
+    normalized = { subject: String(profile.sub), email: profile.email, name: profile.name || profile.email };
+  } else {
+    normalized = { subject: String(profile.id), email: profile.email, name: profile.name || profile.login };
+  }
 
   const result = await identity.provisionOAuthUser({
     provider,
@@ -355,7 +393,7 @@ async function oauthCallback(request, env, identity, adapter, provider, creds) {
     displayName: normalized.name,
   });
 
-  const redirectTo = saved.redirect_to || '/dashboard/cms';
+  const redirectTo = saved.redirect_to || env.DEFAULT_AFTER_LOGIN_PATH || '/dashboard/cms';
   const res = identity.buildLoginSuccessResponse(request, result.sessionId, redirectTo);
   const globeUrl = `${url.origin}${AUTH_LOGIN_PATH}?globe_exit=1&next=${encodeURIComponent(redirectTo)}`;
   return new Response(null, {

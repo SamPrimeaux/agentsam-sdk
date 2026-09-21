@@ -31,6 +31,7 @@ export async function iamPlatformOAuthStart(request, env, adapter) {
   const codeChallenge = await pkceChallenge(codeVerifier);
   const redirectTo = url.searchParams.get('next')
     || url.searchParams.get('return_to')
+    || env.DEFAULT_AFTER_LOGIN_PATH
     || '/dashboard/cms';
 
   await adapter.saveOAuthState({
@@ -107,7 +108,7 @@ export async function iamPlatformOAuthCallback(request, env, adapter, identity) 
     displayName: normalized.name || normalized.email.split('@')[0] || 'User',
   });
 
-  const redirectTo = saved.redirect_to || '/dashboard/cms';
+  const redirectTo = saved.redirect_to || env.DEFAULT_AFTER_LOGIN_PATH || '/dashboard/cms';
   const res = identity.buildLoginSuccessResponse(request, result.sessionId, redirectTo);
   const globeUrl = `${url.origin}${AUTH_LOGIN_PATH}?globe_exit=1&next=${encodeURIComponent(redirectTo)}`;
   return new Response(null, {

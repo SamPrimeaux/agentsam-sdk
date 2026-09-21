@@ -28,7 +28,8 @@
   },
   "vars": {
     "IAM_OAUTH_ISSUER": "https://inneranimalmedia.com",
-    "IAM_CLIENT_ID": "iam_agentsam_sdk_web"
+    "IAM_CLIENT_ID": "iam_agentsam_sdk_web",
+    "DEFAULT_AFTER_LOGIN_PATH": "/agentsam"
   },
   "d1_databases": [
     {

@@ -185,7 +185,7 @@ async function resolveSessionUserId(request, env) {
   if (!request.headers.get("cookie")) return null;
   try {
     const adapter = createCloudflareD1Adapter(env.DB);
-    const identity = createIdentityService({ adapter });
+    const identity = createIdentityService({ adapter, env });
     const ctx = await identity.sessionFromRequest(request);
     return ctx?.user?.id || null;
   } catch (err) {
@@ -568,7 +568,7 @@ export default {
     if (request.method === "GET" && isProtectedAppPath(url.pathname)) {
       try {
         const adapter = createCloudflareD1Adapter(env.DB);
-        const identity = createIdentityService({ adapter });
+        const identity = createIdentityService({ adapter, env });
         const ctx = await identity.sessionFromRequest(request);
         if (!ctx) {
           const next = encodeURIComponent(url.pathname + url.search);

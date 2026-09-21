@@ -158,17 +158,22 @@ export async function handleCloudflareConnectionRequest(request, env) {
     if (stored.owner_id !== ownerId) {
       return json({ ok: false, error: 'cloudflare_connection_forbidden' }, 403);
     }
+    // client_secret is only included when configured (PKCE-only "None"
+    // clients on the Cloudflare dashboard have no secret at all).
+    const tokenParams = {
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: `${url.origin}${CLOUDFLARE_CALLBACK_PATH}`,
+      client_id: String(env.CLOUDFLARE_OAUTH_CLIENT_ID),
+      code_verifier: stored.code_verifier,
+    };
+    if (env.CLOUDFLARE_OAUTH_CLIENT_SECRET) {
+      tokenParams.client_secret = String(env.CLOUDFLARE_OAUTH_CLIENT_SECRET);
+    }
     const tokenRes = await fetch(CLOUDFLARE_OAUTH_TOKEN_URL, {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: `${url.origin}${CLOUDFLARE_CALLBACK_PATH}`,
-        client_id: String(env.CLOUDFLARE_OAUTH_CLIENT_ID),
-        client_secret: String(env.CLOUDFLARE_OAUTH_CLIENT_SECRET),
-        code_verifier: stored.code_verifier,
-      }),
+      body: new URLSearchParams(tokenParams),
     });
     if (!tokenRes.ok) {
       return json({ ok: false, error: 'token_exchange_failed' }, 502);

@@ -51,7 +51,11 @@ export function isFixtureCloudflareCredential(value) {
 export function resolveCloudflareOAuthClient(env = {}) {
   const clientId = clean(env.CLOUDFLARE_OAUTH_CLIENT_ID);
   const clientSecret = clean(env.CLOUDFLARE_OAUTH_CLIENT_SECRET);
-  const present = Boolean(clientId && clientSecret);
+  // client_secret is optional: this client may run as a PKCE-only public
+  // client (Token Authentication Method = None on the Cloudflare dashboard),
+  // in which case only client_id is required. If a secret IS present, the
+  // token exchange in routes.js sends it (client_secret_post-style).
+  const present = Boolean(clientId);
   const fixture = isFixtureCloudflareCredential(clientId) || isFixtureCloudflareCredential(clientSecret);
   if (!present) {
     return {
