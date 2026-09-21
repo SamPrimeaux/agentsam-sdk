@@ -62,6 +62,7 @@ export type Project = {
   git: GitState;
   deploy: DeployTarget;
   cwd: string;
+  pinned?: boolean;
 };
 
 export type Trail = {

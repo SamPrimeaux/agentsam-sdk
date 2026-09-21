@@ -37,7 +37,7 @@ const STARTER_TRAIL: Trail = {
   title: "Studio",
   createdAt: 1_746_000_000_000,
   updatedAt: 1_746_000_000_000,
-  pinned: true,
+  pinned: false,
   messages: [WELCOME_MESSAGE],
   files: [],
   projectId: PROJECT_ID,
@@ -154,6 +154,7 @@ type WorkState = {
   setActiveProject: (id: string) => void;
   createProject: (name?: string) => string;
   renameProject: (id: string, name: string) => void;
+  pinProject: (id: string) => void;
   deleteProject: (id: string) => void;
   patchProject: (id: string, patch: Partial<Project> | ((p: Project) => Project)) => void;
   upsertFile: (projectId: string, file: Artifact) => void;
@@ -473,7 +474,7 @@ export const useWorkStore = create<WorkState>()(
       },
       createProject: (name) => {
         const project = newProject(name?.trim() || "Untitled");
-        const trail = newTrail({ projectId: project.id, title: project.name, pinned: true });
+        const trail = newTrail({ projectId: project.id, title: project.name, pinned: false });
         set((s) => ({
           projects: [project, ...s.projects],
           trails: [trail, ...s.trails],
@@ -487,6 +488,12 @@ export const useWorkStore = create<WorkState>()(
         set((s) => ({
           projects: s.projects.map((p) =>
             p.id === id ? { ...p, name: name.trim() || p.name, updatedAt: Date.now() } : p,
+          ),
+        })),
+      pinProject: (id) =>
+        set((s) => ({
+          projects: s.projects.map((p) =>
+            p.id === id ? { ...p, pinned: !p.pinned, updatedAt: Date.now() } : p,
           ),
         })),
       deleteProject: (id) =>

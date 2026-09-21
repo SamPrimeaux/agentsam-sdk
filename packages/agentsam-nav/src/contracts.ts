@@ -9,6 +9,7 @@ export interface NavConversation { id: string; title: string; projectId?: string
 export interface NavAccount { id: string; name: string; plan?: string; avatar?: string }
 export interface NavAction { id: string; label: string; icon?: ReactNode; disabled?: boolean; destructive?: boolean; separatorBefore?: boolean; children?: NavAction[]; onSelect?: () => void }
 export interface NavDestination { id: string; label: string; icon?: ReactNode; href?: string; onSelect?: () => void; active?: boolean }
+
 /** Consumer-owned context. This package never fetches or persists application data. */
 export interface NavValue {
   brand?: NavBrand;
@@ -24,6 +25,8 @@ export interface NavValue {
   projectActions?: NavAction[];
   conversationActions?: NavAction[];
   resourceActions?: NavAction[];
+  getProjectActions?: (project: NavProject) => NavAction[];
+  getConversationActions?: (conversation: NavConversation) => NavAction[];
   onNavigate?: (href: string) => void;
   onModeChange?: (mode: NavMode) => void;
   onCreateConversation?: () => void;
@@ -31,6 +34,10 @@ export interface NavValue {
   onSelectProject?: (id: string) => void;
   onPinConversation?: (id: string) => void;
   onRenameConversation?: (id: string, title: string) => void;
+  onDeleteConversation?: (id: string) => void;
+  onPinProject?: (id: string) => void;
+  onRenameProject?: (id: string, name: string) => void;
+  onDeleteProject?: (id: string) => void;
   onAccountChange?: (id: string) => void;
   onShare?: () => void;
 }
