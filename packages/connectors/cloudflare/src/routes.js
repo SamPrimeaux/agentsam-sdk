@@ -250,7 +250,9 @@ export async function handleCloudflareConnectionRequest(request, env) {
       if (stored) stored = { owner_id: stored.ownerId, code_verifier: stored.verifier, return_to: stored.returnTo || '' };
     }
     if (!stored) {
-      return settingsRedirect(url, 'error', 'cloudflare_connection_forbidden');
+      // A callback without a one-time PKCE state is forged or expired. Keep
+      // this as an explicit 403 instead of redirecting into a misleading UI.
+      return json({ ok: false, error: 'cloudflare_connection_forbidden' }, 403);
     }
     if (!ownerId) ownerId = stored.owner_id;
     if (stored.owner_id !== ownerId) {

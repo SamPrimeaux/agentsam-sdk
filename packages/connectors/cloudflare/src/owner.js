@@ -13,6 +13,9 @@
  */
 
 import { createIdentityService, createCloudflareD1Adapter } from '../../../identity/src/server/worker-router.js';
+import { fetchIamProfile } from '../../../identity/src/providers/iam/profile.js';
+import { normalizeIamIdentity } from '../../../identity/src/providers/iam/mapper.js';
+import { resolveIamIssuer } from '../../../identity/src/contracts/auth-config.js';
 
 const UNTRUSTED = new Set(['account_id', 'user_id', 'owner_id', 'workspace_id']);
 
@@ -36,6 +39,14 @@ export function rejectUntrustedOwnerHints(request, url, body = {}) {
 
 export async function resolveAuthenticatedOwner(request, env, url, body) {
   rejectUntrustedOwnerHints(request, url, body);
+  // Test/portable adapters may expose an in-memory session map. Keep this
+  // compatibility lane deliberately opt-in; production authority is D1.
+  const fixtureToken = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  const fixtureCookie = (request.headers.get('cookie') || '').match(/(?:^|;\s*)agentsam_session=([^;]+)/)?.[1] || '';
+  if (env?.sessions instanceof Map) {
+    const fixtureOwner = env.sessions.get(fixtureToken || fixtureCookie);
+    if (fixtureOwner) return String(fixtureOwner);
+  }
   if (!env?.DB) {
     const err = new Error('unauthenticated');
     err.code = 'unauthenticated';
@@ -44,10 +55,25 @@ export async function resolveAuthenticatedOwner(request, env, url, body) {
   const adapter = createCloudflareD1Adapter(env.DB);
   const identity = createIdentityService({ adapter, env });
   const ctx = await identity.sessionFromRequest(request);
-  if (!ctx?.user?.id) {
-    const err = new Error('unauthenticated');
-    err.code = 'unauthenticated';
-    throw err;
+  if (ctx?.user?.id) return String(ctx.user.id);
+
+  // Native CLI OAuth returns a bearer access token rather than a browser
+  // cookie. Resolve that token through IAM userinfo, then map the verified
+  // IAM subject to the local auth user. No caller-supplied owner id is used.
+  const bearer = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  if (bearer) {
+    const profile = await fetchIamProfile({
+      issuer: resolveIamIssuer(env),
+      accessToken: bearer,
+    });
+    const identityProfile = profile ? normalizeIamIdentity(profile) : null;
+    if (identityProfile?.subject) {
+      const user = await adapter.findUserByProvider('iam', identityProfile.subject);
+      if (user?.id) return String(user.id);
+    }
   }
-  return String(ctx.user.id);
+
+  const err = new Error('unauthenticated');
+  err.code = 'unauthenticated';
+  throw err;
 }

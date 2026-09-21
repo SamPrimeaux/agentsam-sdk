@@ -70,7 +70,7 @@ function printLegacyHelp() {
     agentsam                     Enter the interactive Agent Sam experience
     agentsam create <name> --preset <fullstack|cms|prototype|data>
     agentsam add <auth|cms|knowledge|agent|deploy-cloudflare>
-    agentsam plugins list|install|remove [@agentsam-mcp]
+    agentsam plugins list|install|connect|status|remove [@agentsam-mcp]
     agentsam dev               Run this project's existing npm dev script
     agentsam inspect [--json]  Bounded repository index by default; use --view full for authority envelope
     agentsam deploy            Graduate an AgentSam project intentionally
