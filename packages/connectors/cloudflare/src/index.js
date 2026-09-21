@@ -22,7 +22,7 @@ export const CLOUDFLARE_CAPABILITY_SCOPES = Object.freeze({
     why: 'Inspect D1 databases bound to the deployable.',
   },
   r2_inspect: {
-    scopes: ['workers-r2-storage.read'],
+    scopes: ['workers-r2.read'],
     why: 'Inspect R2 buckets bound to the deployable.',
   },
   worker_logs: {
