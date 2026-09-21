@@ -1,20 +1,20 @@
 /**
- * Cloudflare connection ownership is derived from authenticated AgentSam session.
+ * Cloudflare connection ownership is derived from the REAL AgentSam identity
+ * session (packages/identity — the same `session` cookie set by
+ * /api/auth/login and every OAuth login callback). This previously
+ * hand-rolled its own cookie name (`agentsam_session`) and session table
+ * names (`agentsam_sessions`/`sessions`/`identity_sessions`) that never
+ * matched the actual identity system (cookie name `session`, sessions
+ * resolved via identity.sessionFromRequest against the real adapter) — so
+ * this connector could never actually authenticate anyone. Fixed to call
+ * the real identity service instead of guessing at its storage shape.
+ *
  * Browser-submitted account_id / user_id / owner_id / X-User-Id are never authority.
  */
 
-const UNTRUSTED = new Set(['account_id', 'user_id', 'owner_id', 'workspace_id']);
+import { createIdentityService, createCloudflareD1Adapter } from '../../identity/src/server/worker-router.js';
 
-export function extractSessionToken(request) {
-  const auth = request.headers.get('authorization') || '';
-  if (/^bearer\s+/i.test(auth)) {
-    const token = auth.replace(/^bearer\s+/i, '').trim();
-    if (token && !token.startsWith('cf_') && token !== 'sillynotreal-secret') return token;
-  }
-  const cookie = request.headers.get('cookie') || '';
-  const match = cookie.match(/(?:^|;\s*)agentsam_session=([^;]+)/);
-  return match ? decodeURIComponent(match[1]).trim() : '';
-}
+const UNTRUSTED = new Set(['account_id', 'user_id', 'owner_id', 'workspace_id']);
 
 export function rejectUntrustedOwnerHints(request, url, body = {}) {
   const headerUser = (request.headers.get('x-user-id') || '').trim();
@@ -36,41 +36,18 @@ export function rejectUntrustedOwnerHints(request, url, body = {}) {
 
 export async function resolveAuthenticatedOwner(request, env, url, body) {
   rejectUntrustedOwnerHints(request, url, body);
-  const sessionToken = extractSessionToken(request);
-  if (!sessionToken) {
+  if (!env?.DB) {
     const err = new Error('unauthenticated');
     err.code = 'unauthenticated';
     throw err;
   }
-  if (env?.sessions instanceof Map) {
-    const owner = env.sessions.get(sessionToken);
-    if (!owner) {
-      const err = new Error('unauthenticated');
-      err.code = 'unauthenticated';
-      throw err;
-    }
-    return String(owner);
+  const adapter = createCloudflareD1Adapter(env.DB);
+  const identity = createIdentityService({ adapter, env });
+  const ctx = await identity.sessionFromRequest(request);
+  if (!ctx?.user?.id) {
+    const err = new Error('unauthenticated');
+    err.code = 'unauthenticated';
+    throw err;
   }
-  if (env?.DB?.prepare) {
-    const tables = [
-      ['agentsam_sessions', 'session_token', 'user_id'],
-      ['sessions', 'id', 'user_id'],
-      ['identity_sessions', 'session_token', 'user_id'],
-    ];
-    for (const [table, tokenCol, userCol] of tables) {
-      try {
-        const row = await env.DB.prepare(
-          `SELECT ${userCol} AS user_id FROM ${table} WHERE ${tokenCol} = ? LIMIT 1`,
-        )
-          .bind(sessionToken)
-          .first();
-        if (row?.user_id) return String(row.user_id);
-      } catch {
-        // table may not exist yet
-      }
-    }
-  }
-  const err = new Error('unauthenticated');
-  err.code = 'unauthenticated';
-  throw err;
+  return String(ctx.user.id);
 }
