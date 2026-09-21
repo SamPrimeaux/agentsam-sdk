@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { compileToolSchema, restoreOptionalArguments } from '../src/providers/tool-schema.js';
-import { createCapabilityAdapter } from '../src/agent/capability-adapter.js';
-import { createOpenAIResponsesAdapter } from '../src/providers/openai-responses.js';
-import { createGeminiGenerateContentAdapter } from '../src/providers/gemini-generate-content.js';
+import { compileToolSchema, restoreOptionalArguments } from '../../src/providers/tool-schema.js';
+import { createCapabilityAdapter } from '../../src/agent/capability-adapter.js';
+import { createOpenAIResponsesAdapter } from '../../src/providers/openai-responses.js';
+import { createGeminiGenerateContentAdapter } from '../../src/providers/gemini-generate-content.js';
 
 const canonical = { $schema: 'https://json-schema.org/draft/2020-12/schema', $id: 'sample', type: 'object', properties: {
   text: { type: 'string' }, rows: { type: 'array', items: { type: 'object', properties: { label: { type: 'string', enum: ['x'] } } } },

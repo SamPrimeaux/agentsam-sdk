@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { discoverProjectStores, selectKnowledgeStore } from '../src/knowledge/store-discovery.js';
-import { initRepository, readConfig } from '../src/knowledge/config.js';
-import { dispatchShellLine } from '../src/commands/shell.js';
+import { discoverProjectStores, selectKnowledgeStore } from '../../src/knowledge/store-discovery.js';
+import { initRepository, readConfig } from '../../src/knowledge/config.js';
+import { dispatchShellLine } from '../../src/commands/shell.js';
 
 test('store discovery reads JSONC bindings without leaking credentials or selecting application storage', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-store-discovery-'));
