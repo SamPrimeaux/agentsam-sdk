@@ -30,7 +30,7 @@ describe('cloudflare connector routes', () => {
     const env = {
       CLOUDFLARE_OAUTH_CLIENT_ID: 'sillynotreal',
       CLOUDFLARE_OAUTH_CLIENT_SECRET: 'sillynotreal-secret',
-      sessions: new Map([['sess_1', 'user-sam']]),
+      fixtureSessions: new Map([['sess_1', 'user-sam']]),
     };
     const res = await handleCloudflareConnectionRequest(
       req('https://agentsam.inneranimalmedia.com/api/connections/cloudflare/start', {
@@ -48,7 +48,7 @@ describe('cloudflare connector routes', () => {
     const env = {
       CLOUDFLARE_OAUTH_CLIENT_ID: 'sillynotreal',
       CLOUDFLARE_OAUTH_CLIENT_SECRET: 'sillynotreal-secret',
-      sessions: new Map([['sess_1', 'user-sam']]),
+      fixtureSessions: new Map([['sess_1', 'user-sam']]),
     };
     const res = await handleCloudflareConnectionRequest(
       req('https://agentsam.inneranimalmedia.com/api/connections/cloudflare', {
@@ -65,7 +65,7 @@ describe('cloudflare connector routes', () => {
   });
 
   it('rejects owner_id in the JSON body', async () => {
-    const env = { sessions: new Map([['sess_1', 'user-sam']]) };
+    const env = { fixtureSessions: new Map([['sess_1', 'user-sam']]) };
     const res = await handleCloudflareConnectionRequest(
       req('https://agentsam.inneranimalmedia.com/api/connections/cloudflare/disconnect', {
         method: 'POST',

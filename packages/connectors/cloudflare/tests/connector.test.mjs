@@ -52,6 +52,33 @@ describe('cloudflare connector', () => {
     assert.equal(client.secretConfigured, false);
   });
 
+  it('keeps connector return paths same-origin', async () => {
+    const calls = [];
+    const DB = {
+      prepare(sql) {
+        return {
+          args: [],
+          bind(...args) { this.args = args; return this; },
+          async run() { calls.push({ sql, args: this.args }); return { success: true }; },
+        };
+      },
+    };
+    const response = await handleCloudflareConnectionRequest(
+      new Request('https://agentsam.example/api/connections/cloudflare/start?return_to=https://untrusted.example/after', {
+        headers: { authorization: 'Bearer fixture' },
+      }),
+      {
+        DB,
+        fixtureSessions: new Map([['fixture', 'user_123']]),
+        CLOUDFLARE_OAUTH_CLIENT_ID: 'real-client-id',
+      },
+    );
+    assert.equal(response.status, 200);
+    const stateInsert = calls.find((call) => call.sql.includes('INSERT INTO agentsam_cloudflare_oauth_state'));
+    assert.ok(stateInsert);
+    assert.equal(stateInsert.args.at(-1), null);
+  });
+
   it('consumes callback state and stores only encrypted OAuth tokens', async () => {
     const now = Math.floor(Date.now() / 1000);
     const calls = [];

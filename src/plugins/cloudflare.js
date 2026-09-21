@@ -23,6 +23,7 @@ export const AGENTSAM_MCP_PLUGIN_MANIFEST = normalizePluginManifest({
   config: {
     oauth_authority: 'cloudflare',
     oauth_client_id: 'c0704bd7a7aab7216b362603e1985499',
+    callback_url: 'https://agentsam.inneranimalmedia.com/api/connections/cloudflare/callback',
     authorization_endpoint: 'https://dash.cloudflare.com/oauth2/auth',
     token_endpoint: 'https://dash.cloudflare.com/oauth2/token',
     revoke_endpoint: 'https://dash.cloudflare.com/oauth2/revoke',
@@ -62,3 +63,38 @@ export const AGENTSAM_MCP_PLUGIN_MANIFEST = normalizePluginManifest({
 // Backward-compatible export name for early SDK adopters. The installed
 // identity is @agentsam-mcp; Cloudflare is the provider and OAuth authority.
 export const CLOUDFLARE_PLUGIN_MANIFEST = AGENTSAM_MCP_PLUGIN_MANIFEST;
+
+// Inner Animal Media Platform owns a separate confidential Cloudflare OAuth
+// client. It is a distinct installation from Local Studio's public PKCE client
+// and deliberately has no SDK-dispatched tools.
+export const INNERANIMALMEDIA_CLOUDFLARE_OAUTH_PLUGIN_MANIFEST = normalizePluginManifest({
+  plugin_key: 'inneranimalmedia-cf-oauth',
+  provider_key: 'cloudflare',
+  installation_key: 'default',
+  plugin_kind: 'oauth',
+  category: 'developer_platform',
+  display_name: 'Inner Animal Media Cloudflare OAuth',
+  short_name: 'IAM Cloudflare',
+  description: 'Inner Animal Media Platform confidential Cloudflare OAuth connection.',
+  mention_aliases: ['@inneranimalmedia-cf-oauth'],
+  endpoint_url: 'https://dash.cloudflare.com/oauth2/auth',
+  transport: 'http_rest',
+  auth_type: 'oauth_via_iam',
+  oauth_connect_url: 'https://inneranimalmedia.com/api/oauth/cloudflare/start',
+  capabilities: [],
+  tool_lanes: [],
+  resource_scope: { owner: 'account', token_authority: 'inneranimalmedia_platform' },
+  config: {
+    oauth_client_id: '0f2f3c826d800118b70863d8d59e12cc',
+    client_name: 'Inner Animal Media Platform',
+    client_uri: 'https://inneranimalmedia.com',
+    callback_url: 'https://inneranimalmedia.com/api/oauth/cloudflare/callback',
+    authorization_endpoint: 'https://dash.cloudflare.com/oauth2/auth',
+    token_endpoint: 'https://dash.cloudflare.com/oauth2/token',
+    token_auth_method: 'client_secret_basic',
+    secret_authority: 'inneranimalmedia_platform_vault',
+  },
+  metadata: { execution_strategy: 'host_owned', client_visibility: 'public' },
+  health_strategy: 'oauth_probe',
+  tools: [],
+});

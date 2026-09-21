@@ -19,7 +19,7 @@ test('checked-in Cloudflare deployment contract resolves the real Worker and por
   assert.equal(contract.worker_name, 'agentsam-sdk');
   assert.equal(contract.config, 'apps/local-studio/backend/wrangler.jsonc');
   assert.deepEqual(contract.bindings.map((row) => row.name), [
-    'AGENTSAM_WAI', 'ASSETS', 'CLOUDFLARE_CONNECT_RETURN_ORIGINS', 'DB', 'EXECOS', 'HYPERDRIVE', 'IAM_CLIENT_ID',
+    'AGENTSAM_WAI', 'ASSETS', 'DB', 'EXECOS', 'HYPERDRIVE', 'IAM_CLIENT_ID',
     'IAM_OAUTH_ISSUER', 'PTY_SERVICE', 'WEBSITE_ASSETS',
   ]);
 });

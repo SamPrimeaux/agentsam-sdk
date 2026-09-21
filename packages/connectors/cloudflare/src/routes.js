@@ -30,20 +30,12 @@ function settingsRedirect(url, result, error = '', returnTo = '') {
   return redirect(destination.toString());
 }
 
-function allowedReturnOrigins(url, env) {
-  return new Set([
-    url.origin,
-    ...String(env.CLOUDFLARE_CONNECT_RETURN_ORIGINS || '').split(',').map((value) => value.trim()).filter(Boolean),
-  ]);
-}
-
-function resolveReturnTo(url, env) {
+function resolveReturnTo(url) {
   const raw = url.searchParams.get('return_to') || '';
   if (!raw) return '';
   try {
     const destination = new URL(raw, url.origin);
-    if (destination.protocol !== 'https:' && destination.origin !== url.origin) return '';
-    return allowedReturnOrigins(url, env).has(destination.origin) ? destination.toString() : '';
+    return destination.origin === url.origin ? destination.toString() : '';
   } catch {
     return '';
   }
@@ -101,15 +93,6 @@ async function ensureTables(env) {
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`).run();
-  const stateInfo = env.DB.prepare(`PRAGMA table_info(agentsam_cloudflare_oauth_state)`);
-  const stateColumns = typeof stateInfo.all === 'function' ? await stateInfo.all() : null;
-  if (!(stateColumns?.results || []).some((column) => column.name === 'return_to')) {
-    try {
-      await env.DB.prepare(`ALTER TABLE agentsam_cloudflare_oauth_state ADD COLUMN return_to TEXT`).run();
-    } catch {
-      // A concurrent request may have added it between the pragma and ALTER.
-    }
-  }
 }
 
 async function seedKnownCloudflareResources(env, ownerId, connectionId, cloudflareAccountId) {
@@ -218,7 +201,7 @@ export async function handleCloudflareConnectionRequest(request, env) {
     const verifier = btoa(String.fromCharCode(...verifierBytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
     const challenge = btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    const returnTo = resolveReturnTo(url, env);
+    const returnTo = resolveReturnTo(url);
     if (env.DB) {
       await env.DB.prepare(
         `INSERT INTO agentsam_cloudflare_oauth_state (state, owner_id, code_verifier, created_at, return_to)

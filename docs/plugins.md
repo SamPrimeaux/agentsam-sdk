@@ -18,6 +18,13 @@ connected plugin and not AgentSam’s reasoning loop. The execute tool uses
 `dispatch_target = 'codemode'` internally; users connect AgentSam MCP and
 never need to install an `@codemode` provider.
 
+`inneranimalmedia-cf-oauth` is a separate, host-owned confidential Cloudflare
+OAuth installation for Inner Animal Media Platform. It uses
+`https://inneranimalmedia.com/api/oauth/cloudflare/start` and its callback is
+`https://inneranimalmedia.com/api/oauth/cloudflare/callback`. It is not a
+replacement for Local Studio's PKCE `agentsam-mcp` installation and has no
+SDK-dispatched tool rows.
+
 Install the portable D1 contract and local plugin manifest in an application:
 
 ```sh

@@ -11,11 +11,16 @@ import { probeCloudflareConnection } from '../../../../packages/connectors/cloud
 import { callCloudflareMcpTool, executeAgentSamCloudflareProgram, searchCloudflareApi } from './cloudflare-code-mode.js';
 import { executeCompletefulNative } from './completeful-native.js';
 
+const LOCAL_STUDIO_CLOUDFLARE_MANIFEST = Object.freeze({
+  ...CLOUDFLARE_PLUGIN_MANIFEST,
+  installation_key: 'local-studio-pkce',
+});
+
 export async function materializeCloudflarePlugin(env, accountId, options = {}) {
   const installed = await installPlugin(env.DB, {
     accountId,
     environment: options.environment || 'production',
-    manifest: CLOUDFLARE_PLUGIN_MANIFEST,
+    manifest: LOCAL_STUDIO_CLOUDFLARE_MANIFEST,
   });
   const probe = options.connected ? await probeCloudflareConnection(env, accountId) : null;
   if (probe) {

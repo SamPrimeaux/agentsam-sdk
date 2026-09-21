@@ -28,8 +28,7 @@
   },
   "vars": {
     "IAM_OAUTH_ISSUER": "https://inneranimalmedia.com",
-    "IAM_CLIENT_ID": "iam_agentsam_sdk_web",
-    "CLOUDFLARE_CONNECT_RETURN_ORIGINS": "https://fuelnfreetime.com"
+    "IAM_CLIENT_ID": "iam_agentsam_sdk_web"
   },
   "d1_databases": [
     {

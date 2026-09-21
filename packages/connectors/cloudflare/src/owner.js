@@ -43,8 +43,8 @@ export async function resolveAuthenticatedOwner(request, env, url, body) {
   // compatibility lane deliberately opt-in; production authority is D1.
   const fixtureToken = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   const fixtureCookie = (request.headers.get('cookie') || '').match(/(?:^|;\s*)agentsam_session=([^;]+)/)?.[1] || '';
-  if (env?.sessions instanceof Map) {
-    const fixtureOwner = env.sessions.get(fixtureToken || fixtureCookie);
+  if (env?.fixtureSessions instanceof Map) {
+    const fixtureOwner = env.fixtureSessions.get(fixtureToken || fixtureCookie);
     if (fixtureOwner) return String(fixtureOwner);
   }
   if (!env?.DB) {
