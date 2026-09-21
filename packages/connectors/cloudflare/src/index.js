@@ -7,7 +7,6 @@ export const CLOUDFLARE_OAUTH_AUTHORIZE_URL = 'https://dash.cloudflare.com/oauth
 export const CLOUDFLARE_OAUTH_TOKEN_URL = 'https://dash.cloudflare.com/oauth2/token';
 export const CLOUDFLARE_CALLBACK_PATH = '/api/connections/cloudflare/callback';
 export const CLOUDFLARE_FIXTURE_CLIENT_ID = 'sillynotreal';
-export const CLOUDFLARE_FIXTURE_CLIENT_SECRET = 'sillynotreal-secret';
 
 export const CLOUDFLARE_OAUTH_REVOKE_URL = 'https://dash.cloudflare.com/oauth2/revoke';
 
@@ -233,18 +232,17 @@ function clean(value) {
 
 export function isFixtureCloudflareCredential(value) {
   const v = clean(value);
-  return v === CLOUDFLARE_FIXTURE_CLIENT_ID || v === CLOUDFLARE_FIXTURE_CLIENT_SECRET;
+  return v === CLOUDFLARE_FIXTURE_CLIENT_ID;
 }
 
 export function resolveCloudflareOAuthClient(env = {}) {
   const clientId = clean(env.CLOUDFLARE_OAUTH_CLIENT_ID);
-  const clientSecret = clean(env.CLOUDFLARE_OAUTH_CLIENT_SECRET);
-  // client_secret is optional: this client may run as a PKCE-only public
-  // client (Token Authentication Method = None on the Cloudflare dashboard),
-  // in which case only client_id is required. If a secret IS present, the
-  // token exchange in routes.js sends it (client_secret_post-style).
+  // AgentSam Local Studio uses Cloudflare's public PKCE client. It must never
+  // read a client secret: stale Worker secrets would turn an otherwise valid
+  // PKCE exchange into an invalid mixed-auth request. Confidential Cloudflare
+  // clients belong to their owning host adapter, not this connector.
   const present = Boolean(clientId);
-  const fixture = isFixtureCloudflareCredential(clientId) || isFixtureCloudflareCredential(clientSecret);
+  const fixture = isFixtureCloudflareCredential(clientId);
   if (!present) {
     return {
       configured: false,
@@ -252,7 +250,7 @@ export function resolveCloudflareOAuthClient(env = {}) {
       fixture: false,
       status: 'not_configured',
       clientIdConfigured: Boolean(clientId),
-      secretConfigured: Boolean(clientSecret),
+      tokenAuthMethod: 'none_pkce',
     };
   }
   return {
@@ -261,7 +259,7 @@ export function resolveCloudflareOAuthClient(env = {}) {
     fixture,
     status: fixture ? 'fixture' : 'ready',
     clientIdConfigured: true,
-    secretConfigured: Boolean(clientSecret),
+    tokenAuthMethod: 'none_pkce',
   };
 }
 
@@ -274,7 +272,7 @@ export function cloudflareConnectionSafeStatus(env = {}, connection = null, owne
     configured: client.configured && client.productionReady,
     fixture: client.fixture,
     clientId: client.clientIdConfigured ? 'configured' : 'missing',
-    secret: client.secretConfigured ? 'configured' : 'missing',
+    token_auth_method: client.tokenAuthMethod,
     callbackPath: CLOUDFLARE_CALLBACK_PATH,
     connection: record
       ? {
@@ -331,9 +329,6 @@ export async function loadCloudflareAccessToken(env, ownerId, options = {}) {
       refresh_token: refreshToken,
       client_id: String(env.CLOUDFLARE_OAUTH_CLIENT_ID || ''),
     });
-    if (env.CLOUDFLARE_OAUTH_CLIENT_SECRET) {
-      refreshParams.set('client_secret', String(env.CLOUDFLARE_OAUTH_CLIENT_SECRET));
-    }
     const refreshResponse = await (options.fetchImpl || fetch)(CLOUDFLARE_OAUTH_TOKEN_URL, {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },

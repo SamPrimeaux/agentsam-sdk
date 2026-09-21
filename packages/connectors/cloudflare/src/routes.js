@@ -256,8 +256,9 @@ export async function handleCloudflareConnectionRequest(request, env) {
     if (!code) {
       return settingsRedirect(url, 'error', 'authorization_code_missing', stored.return_to || '');
     }
-    // client_secret is only included when configured (PKCE-only "None"
-    // clients on the Cloudflare dashboard have no secret at all).
+    // This is Cloudflare's public PKCE client (Token Authentication Method:
+    // None). Do not add client_secret, even if an obsolete Worker binding is
+    // present; a mixed-auth exchange is rejected by Cloudflare.
     const tokenParams = {
       grant_type: 'authorization_code',
       code,
@@ -265,9 +266,6 @@ export async function handleCloudflareConnectionRequest(request, env) {
       client_id: String(env.CLOUDFLARE_OAUTH_CLIENT_ID),
       code_verifier: stored.code_verifier,
     };
-    if (env.CLOUDFLARE_OAUTH_CLIENT_SECRET) {
-      tokenParams.client_secret = String(env.CLOUDFLARE_OAUTH_CLIENT_SECRET);
-    }
     const tokenRes = await fetch(CLOUDFLARE_OAUTH_TOKEN_URL, {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -338,9 +336,6 @@ export async function handleCloudflareConnectionRequest(request, env) {
           try {
             const token = await decryptSecret(env, row.access_token_encrypted, `cloudflare-connection:${ownerId}`);
             const revokeParams = new URLSearchParams({ token, client_id: String(env.CLOUDFLARE_OAUTH_CLIENT_ID) });
-            if (env.CLOUDFLARE_OAUTH_CLIENT_SECRET) {
-              revokeParams.set('client_secret', String(env.CLOUDFLARE_OAUTH_CLIENT_SECRET));
-            }
             const revokeResponse = await fetch(CLOUDFLARE_OAUTH_REVOKE_URL, {
               method: 'POST',
               headers: { 'content-type': 'application/x-www-form-urlencoded' },

@@ -18,7 +18,6 @@ describe('cloudflare connector', () => {
   it('loads fake fixtures without treating them as production authority', () => {
     const client = resolveCloudflareOAuthClient({
       CLOUDFLARE_OAUTH_CLIENT_ID: 'sillynotreal',
-      CLOUDFLARE_OAUTH_CLIENT_SECRET: 'sillynotreal-secret',
     });
     assert.equal(client.configured, true);
     assert.equal(client.fixture, true);
@@ -33,7 +32,7 @@ describe('cloudflare connector', () => {
     });
     const blob = JSON.stringify(status);
     assert.equal(blob.includes('sillynotreal-secret'), false);
-    assert.equal(status.secret, 'configured');
+    assert.equal(status.token_auth_method, 'none_pkce');
     assert.equal(status.configured, false);
   });
 
@@ -49,7 +48,7 @@ describe('cloudflare connector', () => {
     });
     assert.equal(client.productionReady, true);
     assert.equal(client.clientIdConfigured, true);
-    assert.equal(client.secretConfigured, false);
+    assert.equal(client.tokenAuthMethod, 'none_pkce');
   });
 
   it('keeps connector return paths same-origin', async () => {
@@ -112,13 +111,17 @@ describe('cloudflare connector', () => {
       },
     };
     const originalFetch = globalThis.fetch;
-    globalThis.fetch = async () => new Response(JSON.stringify({
-      access_token: 'access-plaintext',
-      refresh_token: 'refresh-plaintext',
-      account_id: 'account_123',
-      scope: 'd1.read workers-scripts.write',
-      expires_in: 3600,
-    }), { status: 200, headers: { 'content-type': 'application/json' } });
+    globalThis.fetch = async (_input, init) => {
+      const body = new URLSearchParams(init.body);
+      assert.equal(body.get('client_secret'), null);
+      return new Response(JSON.stringify({
+        access_token: 'access-plaintext',
+        refresh_token: 'refresh-plaintext',
+        account_id: 'account_123',
+        scope: 'd1.read workers-scripts.write',
+        expires_in: 3600,
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    };
 
     try {
       const response = await handleCloudflareConnectionRequest(
@@ -126,6 +129,7 @@ describe('cloudflare connector', () => {
         {
           DB,
           CLOUDFLARE_OAUTH_CLIENT_ID: 'real-client-id',
+          CLOUDFLARE_OAUTH_CLIENT_SECRET: 'obsolete-secret-must-not-be-sent',
           VAULT_MASTER_KEY: '01234567890123456789012345678901',
         },
       );

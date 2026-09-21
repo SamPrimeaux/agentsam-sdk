@@ -29,7 +29,6 @@ describe('cloudflare connector routes', () => {
   it('returns 503 on start when only fixture credentials exist', async () => {
     const env = {
       CLOUDFLARE_OAUTH_CLIENT_ID: 'sillynotreal',
-      CLOUDFLARE_OAUTH_CLIENT_SECRET: 'sillynotreal-secret',
       fixtureSessions: new Map([['sess_1', 'user-sam']]),
     };
     const res = await handleCloudflareConnectionRequest(
@@ -47,7 +46,6 @@ describe('cloudflare connector routes', () => {
   it('status stays safe and does not treat fixture as production configured', async () => {
     const env = {
       CLOUDFLARE_OAUTH_CLIENT_ID: 'sillynotreal',
-      CLOUDFLARE_OAUTH_CLIENT_SECRET: 'sillynotreal-secret',
       fixtureSessions: new Map([['sess_1', 'user-sam']]),
     };
     const res = await handleCloudflareConnectionRequest(
@@ -82,7 +80,6 @@ describe('cloudflare connector routes', () => {
   it('rejects callback without a stored oauth state', async () => {
     const env = {
       CLOUDFLARE_OAUTH_CLIENT_ID: 'real-client-id',
-      CLOUDFLARE_OAUTH_CLIENT_SECRET: 'real-client-secret-value',
       oauthState: new Map(),
     };
     const res = await handleCloudflareConnectionRequest(
