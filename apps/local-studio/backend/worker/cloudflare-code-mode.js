@@ -51,6 +51,28 @@ export async function searchCloudflareApi(query, options = {}) {
   return { query: clean(query), total: results.length, results: results.slice(0, 20), source: OPENAPI_SPEC_URL };
 }
 
+export async function callCloudflareMcpTool(toolName, args = {}, options = {}) {
+  const endpoint = clean(options.endpoint || 'https://mcp.cloudflare.com/mcp');
+  const response = await (options.fetchImpl || fetch)(endpoint, {
+    method: 'POST',
+    headers: { accept: 'application/json, text/event-stream', 'content-type': 'application/json' },
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: `agentsam-${Date.now()}`,
+      method: 'tools/call',
+      params: { name: clean(toolName), arguments: args },
+    }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || payload?.error || payload?.result?.isError) {
+    const message = payload?.error?.message || `cloudflare_mcp_http_${response.status}`;
+    const error = new Error(message);
+    error.code = payload?.error?.code ? `cloudflare_mcp_${payload.error.code}` : 'cloudflare_mcp_call_failed';
+    throw error;
+  }
+  return payload?.result ?? payload;
+}
+
 function buildApiUrl(requestOptions, accountId) {
   let path = clean(requestOptions?.path);
   if (!path.startsWith('/') || path.startsWith('//') || path.includes('://')) {

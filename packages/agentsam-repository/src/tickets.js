@@ -45,6 +45,10 @@ export function generateTicketCreateSql({
   priority = 'P2',
   docPath = null,
   surface = 'platform',
+  accountIdForTicket = accountId,
+  repositoryId = null,
+  ownerRef = null,
+  source = 'agentsam_sdk',
   dedupKey = null,
   now = Math.floor(Date.now() / 1000),
   agentRunId = null,
@@ -68,11 +72,14 @@ export function generateTicketCreateSql({
 
   statements.push(`INSERT INTO agentsam_tickets (
   id, title, description, status, status_reason, project, subsystem,
-  priority, doc_path, surface, dedup_key, agent_run_id, created_at, updated_at, closed_at
+  priority, doc_path, surface, dedup_key, agent_run_id, owner_ref, source,
+  account_id, repository_id, created_at, updated_at, closed_at
 ) VALUES (
   ${sqlText(ticketId)}, ${sqlText(tTitle.slice(0, 240))}, ${sqlText(description)}, ${sqlText(status)},
   ${sqlText(statusReason)}, ${sqlText(project)}, ${sqlText(subsystem)}, ${sqlText(priority)},
   ${sqlText(docPath)}, ${sqlText(surface)}, ${sqlText(dedupKey)}, ${sqlText(runId || null)},
+  ${sqlText(ownerRef)}, ${sqlText(source)},
+  ${sqlText(accountIdForTicket)}, ${sqlText(repositoryId)},
   ${sqlInt(now)}, ${sqlInt(now)}, ${status === 'shipped' || status === 'abandoned' ? sqlInt(now) : 'NULL'}
 );`);
 

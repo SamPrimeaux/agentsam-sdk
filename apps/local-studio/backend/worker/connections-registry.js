@@ -69,17 +69,12 @@ export async function loadConnectionsRegistry(env, userId) {
     userId,
   );
   const oauthConnected = cloudflare.status === "connected";
-  let pluginRegistry = { plugins: [], tools: [] };
-  try {
-    await materializeCloudflarePlugin(env, userId, {
-      connected: oauthConnected,
-      available: cloudflare.configured,
-      checkSource: "page_load",
-    });
-    pluginRegistry = await loadPluginRegistry(env, userId);
-  } catch (error) {
-    console.error("cloudflare_plugin_registry_error", String(error));
-  }
+  await materializeCloudflarePlugin(env, userId, {
+    connected: oauthConnected,
+    available: cloudflare.configured,
+    checkSource: "page_load",
+  });
+  const pluginRegistry = await loadPluginRegistry(env, userId);
   const cloudflarePlugin = pluginRegistry.plugins.find((row) => row.plugin_key === "agentsam-mcp") || null;
 
   const latestByProvider = new Map();

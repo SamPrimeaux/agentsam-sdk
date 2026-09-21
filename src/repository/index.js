@@ -33,9 +33,13 @@ export {
 } from '../../packages/agentsam-repository/src/workspace-state.js';
 export {
   readGoapState,
+  listGoapTickets,
+  createGoapGoal,
+  switchGoapGoal,
+  closeGoapGoal,
   renderGoapStatus,
+  renderGoapList,
   renderGoapGoal,
   renderGoapWhy,
   renderGoapPlan,
 } from '../../packages/agentsam-repository/src/goap.js';
-

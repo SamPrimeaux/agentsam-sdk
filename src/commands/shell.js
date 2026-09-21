@@ -39,7 +39,7 @@ import { startRuntimeRun, finishRuntimeRun, recordRuntimeCompaction } from '../l
 import { tryResolveGitContext } from '../../packages/agentsam-repository/src/git-context.js';
 import { syncWorkspaceStateToD1, readWorkspaceStateFromD1 } from '../../packages/agentsam-repository/src/workspace-state.js';
 import { syncGitCommitsToD1 } from '../../packages/agentsam-repository/src/work-tracking.js';
-import { readGoapState, renderGoapStatus, renderGoapGoal, renderGoapWhy, renderGoapPlan } from '../../packages/agentsam-repository/src/goap.js';
+import { readGoapState, listGoapTickets, createGoapGoal, switchGoapGoal, closeGoapGoal, renderGoapStatus, renderGoapList, renderGoapGoal, renderGoapWhy, renderGoapPlan } from '../../packages/agentsam-repository/src/goap.js';
 
 function writeLine(write, value = '') { write(`${value}\n`); }
 
@@ -946,7 +946,54 @@ export async function dispatchShellLine(line, state = {}) {
         break;
       case '/goap': {
         const sub = (args[0] || 'status').toLowerCase();
-        const goapState = await readGoapState({ cwd: state.cwd });
+        if (sub === 'list' || sub === 'ls') {
+          const listState = await listGoapTickets({ cwd: state.cwd });
+          if (!listState.ok) {
+            writeLine(write, `  Failed to list GOAP tickets: ${listState.error || 'unknown error'}`);
+          } else {
+            writeLine(write, renderGoapList(listState));
+          }
+          break;
+        }
+        if (sub === 'new' || sub === 'create') {
+          const title = args.slice(1).join(' ').trim();
+          if (!title) {
+            writeLine(write, '  Usage: /goap new <title>');
+            break;
+          }
+          const res = await createGoapGoal({ cwd: state.cwd, title, accountId: readAccountSession({ home: state.home })?.account_id || null });
+          if (!res.ok) {
+            writeLine(write, `  Failed to create GOAP goal: ${res.error || 'unknown error'}`);
+          } else {
+            writeLine(write, `  Created and activated goal: ${res.ticketId} ("${res.title}")`);
+          }
+          break;
+        }
+        if (sub === 'switch' || sub === 'select') {
+          const tid = args[1]?.trim();
+          if (!tid) {
+            writeLine(write, '  Usage: /goap switch <ticket_id>');
+            break;
+          }
+          const res = await switchGoapGoal({ cwd: state.cwd, ticketId: tid, accountId: readAccountSession({ home: state.home })?.account_id || null });
+          if (!res.ok) {
+            writeLine(write, `  Failed to switch GOAP goal: ${res.error || 'unknown error'}`);
+          } else {
+            writeLine(write, `  Switched active GOAP goal to: ${res.ticketId}`);
+          }
+          break;
+        }
+        if (sub === 'close') {
+          const tid = args[1]?.trim() || null;
+          const res = await closeGoapGoal({ cwd: state.cwd, ticketId: tid, accountId: readAccountSession({ home: state.home })?.account_id || null });
+          if (!res.ok) {
+            writeLine(write, `  Failed to close GOAP goal: ${res.error || 'unknown error'}`);
+          } else {
+            writeLine(write, `  Closed GOAP goal: ${res.ticketId} [${res.status}]`);
+          }
+          break;
+        }
+        const goapState = await readGoapState({ cwd: state.cwd, accountId: readAccountSession({ home: state.home })?.account_id || null });
         if (!goapState.ok) {
           writeLine(write, `  Failed to read GOAP state: ${goapState.error || 'unknown error'}`);
           break;

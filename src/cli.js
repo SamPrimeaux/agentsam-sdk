@@ -467,7 +467,7 @@ if (command === '--version' || command === '-v') {
   try {
     await runGoap(rest[0], {
       cwd: process.cwd(),
-      json: rest.includes('--json'),
+      json: rest.includes('--json'), args: rest.slice(1),
     });
   } catch (e) {
     reportCliError(e);

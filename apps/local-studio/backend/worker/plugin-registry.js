@@ -7,7 +7,7 @@ import {
   createPluginRuntime,
 } from '../../../../src/plugins/index.js';
 import { probeCloudflareConnection } from '../../../../packages/connectors/cloudflare/src/index.js';
-import { executeAgentSamCloudflareProgram, searchCloudflareApi } from './cloudflare-code-mode.js';
+import { callCloudflareMcpTool, executeAgentSamCloudflareProgram, searchCloudflareApi } from './cloudflare-code-mode.js';
 
 export async function materializeCloudflarePlugin(env, accountId, options = {}) {
   const installed = await installPlugin(env.DB, {
@@ -108,10 +108,23 @@ export async function createLocalStudioPluginRuntime(env, accountId, options = {
       throw error;
     }
   };
+  const mcpDispatch = async ({ tool, args }) => {
+    const startedAt = Date.now();
+    try {
+      const result = await callCloudflareMcpTool(tool.handler_config?.remote_tool || tool.handler_key, args, {
+        endpoint: tool.handler_config?.server_url,
+      });
+      await recordToolHealth(env, accountId, plugin, 'healthy', startedAt);
+      return result;
+    } catch (error) {
+      await recordToolHealth(env, accountId, plugin, 'unhealthy', startedAt, error);
+      throw error;
+    }
+  };
   return createPluginRuntime({
     tools: registry.tools,
     db: env.DB,
-    dispatchers: { plugin: dispatch, codemode: dispatch },
+    dispatchers: { plugin: dispatch, codemode: dispatch, mcp: mcpDispatch },
     authorizeTool: options.authorizeTool,
     requireApproval: options.requireApproval,
   });

@@ -51,7 +51,7 @@ export function buildProjectCard(cwd = process.cwd(), options = {}) {
     `- Repository: ${repoName} (${remoteUrl})`,
     `- Branch: ${branch} | HEAD: ${headSha} (${dirty ? 'working tree dirty' : 'clean'})`,
     `- Project Root: ${root}`,
-    `- Active Task: ${activeTask || 'tkt_solidify_five_items_2026_09'}`,
+    `- Active Task: ${activeTask || 'none'}`,
     `- Locked By: ${lockedBy}`,
     `- Checkpoint SHA: ${checkpoint ? checkpoint.slice(0, 10) : headSha}`,
     `- Stack: ${stackSummary}`,

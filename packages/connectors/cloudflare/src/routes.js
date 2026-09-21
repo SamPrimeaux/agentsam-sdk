@@ -87,6 +87,20 @@ async function ensureTables(env) {
     created_at INTEGER,
     return_to TEXT
   )`).run();
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS integration_resources (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    connection_id TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    resource_type TEXT NOT NULL,
+    provider_resource_id TEXT,
+    name TEXT,
+    url TEXT,
+    metadata_json TEXT DEFAULT '{}',
+    synced_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`).run();
   const stateInfo = env.DB.prepare(`PRAGMA table_info(agentsam_cloudflare_oauth_state)`);
   const stateColumns = typeof stateInfo.all === 'function' ? await stateInfo.all() : null;
   if (!(stateColumns?.results || []).some((column) => column.name === 'return_to')) {
@@ -96,6 +110,37 @@ async function ensureTables(env) {
       // A concurrent request may have added it between the pragma and ALTER.
     }
   }
+}
+
+async function seedKnownCloudflareResources(env, ownerId, connectionId, cloudflareAccountId) {
+  if (!env?.DB?.prepare || !cloudflareAccountId) return;
+  const resources = [
+    { key: 'agentsam-sdk', type: 'worker', id: 'agentsam-sdk', name: 'AgentSam SDK / Local Studio' },
+    { key: 'agentsam-cad-creator', type: 'worker', id: 'agentsam-cad-creator', name: 'AgentSam CAD Creator' },
+    { key: 'agentsam-client-cms-editor', type: 'worker', id: 'agentsam-client-cms-editor', name: 'AgentSam Client CMS Editor' },
+    { key: 'fuelnfreetime', type: 'worker', id: 'fuelnfreetime', name: 'Fuel & Free Time', metadata: {
+      zone_id: '816a5d2284103e4481987ceeb16c2ca9',
+      d1_database_id: '9fd6ff92-e407-4b51-8b01-3c93f3845bb2',
+      r2_bucket: 'fuelnfreetime',
+      vectorize_index: 'fnf-agentsam-bge-m3-1024',
+    } },
+  ];
+  const statements = resources.map((resource) => env.DB.prepare(`
+    INSERT OR REPLACE INTO integration_resources (
+      id, tenant_id, connection_id, provider, resource_type, provider_resource_id,
+      name, metadata_json, synced_at, updated_at
+    ) VALUES (?, ?, ?, 'cloudflare', ?, ?, ?, ?, datetime('now'), datetime('now'))
+  `).bind(
+    `ires_cf_${cloudflareAccountId}_${resource.key}`,
+    ownerId,
+    connectionId,
+    resource.type,
+    resource.id,
+    resource.name,
+    JSON.stringify({ cloudflare_account_id: cloudflareAccountId, ...(resource.metadata || {}) }),
+  ));
+  if (typeof env.DB.batch === 'function') await env.DB.batch(statements);
+  else for (const statement of statements) await statement.run();
 }
 
 export async function handleCloudflareConnectionRequest(request, env) {
@@ -286,6 +331,7 @@ export async function handleCloudflareConnectionRequest(request, env) {
         await removePrevious.run();
         await insertConnection.run();
       }
+      await seedKnownCloudflareResources(env, ownerId, connectionId, tokens.account_id || null);
     }
     return settingsRedirect(url, 'connected', '', stored.return_to || '');
   }

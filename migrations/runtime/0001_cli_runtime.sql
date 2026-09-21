@@ -191,6 +191,48 @@ CREATE TABLE IF NOT EXISTS agentsam_plans (
   updated_at_unix INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
+-- GOAP ticket authority. Existing hosted deployments may already own this
+-- table; these columns mirror the live contract and let fresh SDK installs
+-- create portable, repository-scoped goals without a singleton fallback.
+CREATE TABLE IF NOT EXISTS agentsam_tickets (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  status TEXT NOT NULL DEFAULT 'backlog'
+    CHECK(status IN ('backlog','active','blocked','shipped','abandoned')),
+  status_reason TEXT,
+  project TEXT,
+  subsystem TEXT,
+  tags TEXT,
+  priority TEXT NOT NULL DEFAULT 'P2',
+  doc_path TEXT,
+  blocks TEXT,
+  blocked_by TEXT,
+  supersedes TEXT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  closed_at INTEGER,
+  dedup_key TEXT,
+  description_json TEXT,
+  surface TEXT NOT NULL DEFAULT 'platform',
+  owner_kind TEXT NOT NULL DEFAULT 'unassigned',
+  owner_ref TEXT,
+  account_id TEXT,
+  repository_id TEXT,
+  parent_ticket_id TEXT,
+  agent_run_id TEXT REFERENCES agentsam_agent_run(id) ON DELETE SET NULL,
+  worktree TEXT,
+  linked_commit TEXT,
+  source TEXT NOT NULL DEFAULT 'manual'
+);
+
+CREATE INDEX IF NOT EXISTS idx_agentsam_tickets_owner_updated
+  ON agentsam_tickets(owner_ref, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agentsam_tickets_account_repository
+  ON agentsam_tickets(account_id, repository_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agentsam_tickets_status_priority
+  ON agentsam_tickets(status, priority, updated_at DESC);
+
 CREATE TABLE IF NOT EXISTS agentsam_todo (
   id TEXT PRIMARY KEY,
   account_id TEXT,
