@@ -9,6 +9,14 @@ import { diagnosticFromError } from '../errors/index.js';
 
 const RUNTIME_OWNED_KEYS = new Set(['account_id', 'user_id', 'tenant_id', 'workspace_id', 'connection_id', 'runtime_lease_id', 'execution_id']);
 
+// A single integer ceiling ("die after 8 rounds") is not a meaningful safety
+// invariant for genuine engineering work -- it stops runs mid-task for no
+// reason tied to risk, cost, or progress. Replace it with named modes so
+// callers pick a budget that matches the work, while `quick` preserves the
+// exact previous default (8) for any caller that doesn't opt in.
+const RUN_MODE_BUDGETS = Object.freeze({ quick: 8, interactive: 32, agent: 128, long: 512 });
+const DEFAULT_NO_PROGRESS_LIMIT = 4;
+
 function clean(value) { return value == null ? '' : String(value).trim(); }
 function hash(value) { return `sha256:${createHash('sha256').update(String(value)).digest('hex')}`; }
 function event(emit, type, payload, runId) { if (typeof emit === 'function') emit(createAgentEvent(type, payload, { runId })); }
@@ -17,6 +25,23 @@ export function capabilityFunctionName(id) {
   const source = clean(id).replace(/[^A-Za-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '') || 'capability';
   if (source.length <= 58) return `as_${source}`;
   return `as_${source.slice(0, 45)}_${createHash('sha256').update(source).digest('hex').slice(0, 10)}`;
+}
+
+// A turn's tool surface is a relevance-scored, maxTools-capped subset of the
+// full capability catalog (see buildAgentToolSurface). Provider conversation
+// state (previousResponseId) can carry a tool name from an earlier turn into
+// a later turn whose narrower surface no longer hydrated that capability, so
+// the model can legitimately call a real, executable capability whose alias
+// simply isn't in *this round's* toolSurface.aliases map. Before treating
+// that as an unrecognized/hallucinated call, check it against the adapter's
+// full executable catalog: if the alias resolves to a real, currently
+// invocable capability, honor it rather than failing a legitimate call.
+export function resolveCapabilityFallback(capabilityAdapter, aliasName) {
+  if (!capabilityAdapter?.toolDescriptors) return null;
+  const fullCatalog = capabilityAdapter.toolDescriptors({ includeUnavailable: false });
+  const descriptor = fullCatalog.find((row) => capabilityFunctionName(row.name) === aliasName);
+  if (!descriptor) return null;
+  return { capabilityId: descriptor.name, descriptor };
 }
 
 function userMessage(text) {
@@ -293,19 +318,35 @@ export async function runResponsesAgent(options = {}) {
   cumulativeUsage = response.usage_snapshot?.cumulative || cumulativeUsage;
 
   const toolReceipts = [];
-  const maxToolRounds = Number.isInteger(options.maxToolRounds) && options.maxToolRounds > 0 ? options.maxToolRounds : 8;
+  const maxToolRounds = Number.isInteger(options.maxToolRounds) && options.maxToolRounds > 0
+    ? options.maxToolRounds
+    : (RUN_MODE_BUDGETS[options.runMode] ?? RUN_MODE_BUDGETS.quick);
+  const maxNoProgressRounds = Number.isInteger(options.maxNoProgressRounds) && options.maxNoProgressRounds > 0
+    ? options.maxNoProgressRounds
+    : DEFAULT_NO_PROGRESS_LIMIT;
+  const runStartedAt = Date.now();
+  let toolCallCount = 0;
+  let lastRoundSignature = null;
+  let repeatedRoundCount = 0;
   let rounds = 0;
   while (response.tool_calls?.length) {
     rounds += 1;
     if (rounds > maxToolRounds) throw new Error(`tool_round_limit_exceeded:${maxToolRounds}`);
+    toolCallCount += response.tool_calls.length;
+    const roundSignatureParts = [];
     const outputs = [];
     const activeTokens = response.usage_snapshot?.current_context?.input_tokens;
     const maxToolChars = toolResultCharBudget(activeTokens, budget);
     for (const call of response.tool_calls) {
-      const capabilityId = toolSurface.aliases.get(call.name);
+      let capabilityId = toolSurface.aliases.get(call.name);
+      let descriptor = capabilityId ? toolSurface.descriptors.find((row) => row.name === capabilityId) : null;
+      if (!capabilityId) {
+        const fallback = resolveCapabilityFallback(options.capabilityAdapter, call.name);
+        if (fallback) { capabilityId = fallback.capabilityId; descriptor = fallback.descriptor; }
+      }
       if (!capabilityId) throw new Error(`unrecognized_tool_call:${call.name}`);
-      const descriptor = toolSurface.descriptors.find((row) => row.name === capabilityId);
       const args = sanitizeToolInput(restoreOptionalArguments(parseArguments(call.arguments), descriptor?.input_schema), descriptor, cwd);
+      roundSignatureParts.push(`${capabilityId}:${JSON.stringify(args)}`);
       if (typeof options.beforeTool === 'function') {
         const approved = await options.beforeTool({
           call_id: call.call_id,
@@ -344,6 +385,12 @@ export async function runResponsesAgent(options = {}) {
         event(emit, 'error.observed', { ...diagnostic, call_id: call.call_id, capability_id: capabilityId }, runId);
         outputs.push({ call_id: call.call_id, output: JSON.stringify({ ok: false, error: diagnostic }) });
       }
+    }
+    const roundSignature = roundSignatureParts.slice().sort().join('|');
+    repeatedRoundCount = (roundSignature && roundSignature === lastRoundSignature) ? repeatedRoundCount + 1 : 0;
+    lastRoundSignature = roundSignature;
+    if (repeatedRoundCount >= maxNoProgressRounds) {
+      throw new Error(`no_progress_detected:${repeatedRoundCount + 1}`);
     }
     response = await provider.continueWithToolOutputs({
       model: record.provider_model_id,
@@ -393,6 +440,14 @@ export async function runResponsesAgent(options = {}) {
     cost_breakdown_usd: Object.freeze({ ...costBreakdownUsd }),
     tool_surface: toolSurface.receipt,
     tool_receipts: Object.freeze(toolReceipts),
+    run_budget: Object.freeze({
+      run_mode: options.runMode || 'quick',
+      max_tool_rounds: maxToolRounds,
+      tool_rounds: rounds,
+      tool_calls: toolCallCount,
+      elapsed_ms: Date.now() - runStartedAt,
+      max_no_progress_rounds: maxNoProgressRounds,
+    }),
     compaction: compacted ? { compaction_id: compacted.compaction_id, provider: record.provider, model: record.provider_model_id, created_at: new Date().toISOString(), usage: compacted.usage_delta || compacted.usage || {}, cost_usd: compacted.cost?.total_usd || 0 } : null,
     compacted_before_turn: Boolean(compacted),
     provider_state: providerState,

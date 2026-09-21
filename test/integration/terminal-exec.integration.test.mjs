@@ -35,6 +35,41 @@ test('terminal.exec runs a real argv process inside the runtime-owned project', 
   assert.equal(seen[0].options.env.PATH, process.env.PATH);
 });
 
+test('terminal.exec expands a leading ~ in argv and cwd override (spawn never invokes a shell)', async t => {
+  const home = os.homedir();
+  const seen = [];
+  const result = await terminalExec({
+    cwd: process.cwd(),
+    command: 'git',
+    args: ['-C', '~/agentsam-sdk', 'status'],
+  }, {
+    env: { PATH: process.env.PATH },
+    run: async (command, args, options) => {
+      seen.push({ command, args, options });
+      return { code: 0, signal: null, stdout: '', stderr: '' };
+    },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(seen[0].args[1], path.join(home, 'agentsam-sdk'));
+  assert.equal(seen[0].args[1].startsWith('~'), false);
+});
+
+test('terminal.exec leaves non-leading tildes and bare relative args untouched', async t => {
+  const seen = [];
+  await terminalExec({
+    cwd: process.cwd(),
+    command: 'echo',
+    args: ['user~name', 'plain-arg'],
+  }, {
+    env: { PATH: process.env.PATH },
+    run: async (command, args, options) => {
+      seen.push({ command, args, options });
+      return { code: 0, signal: null, stdout: '', stderr: '' };
+    },
+  });
+  assert.deepEqual(seen[0].args, ['user~name', 'plain-arg']);
+});
+
 test('terminal.exec rejects shell strings and working-directory escape', async t => {
   const cwd = root(t);
   await assert.rejects(terminalExec({ cwd, command: 'git status', args: [] }), /pathless_executable/);

@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { createCapabilityAdapter } from '../src/agent/capability-adapter.js';
-import { buildAgentToolSurface, capabilityFunctionName, runResponsesAgent } from '../src/agent/responses-runner.js';
+import { buildAgentToolSurface, capabilityFunctionName, resolveCapabilityFallback, runResponsesAgent } from '../src/agent/responses-runner.js';
 
 function usage(input = 10_000, cumulative = input) {
   return {
@@ -158,4 +158,202 @@ test('invalid selected tool surface is rejected before paid compaction or infere
     provider: { compact: async () => { calls++; }, create: async () => { calls++; }, continueWithToolOutputs: async () => {} },
   }), /tool_schema_invalid/);
   assert.equal(calls, 0);
+});
+
+
+// --- run-budget: named modes replace the unexplained literal 8 ---
+
+function multiRoundProvider({ rounds, toolCallName, toolArgs }) {
+  let createCalls = 0;
+  let continueCalls = 0;
+  const argsFor = (n) => toolArgs !== undefined ? toolArgs : JSON.stringify({ step: n });
+  return {
+    async create() {
+      createCalls += 1;
+      const remaining = rounds - continueCalls;
+      if (remaining <= 0) {
+        return { response_id: `resp_${createCalls}`, output_text: 'done', actual_service_tier: 'default', tool_calls: [], usage_snapshot: usage(10_000), cost: cost(0.01) };
+      }
+      return {
+        response_id: 'resp_create',
+        output_text: '', actual_service_tier: 'default',
+        tool_calls: [{ call_id: `call_${continueCalls}`, name: toolCallName, arguments: argsFor(continueCalls) }],
+        usage_snapshot: usage(10_000), cost: cost(0.01),
+      };
+    },
+    async continueWithToolOutputs() {
+      continueCalls += 1;
+      const remaining = rounds - continueCalls;
+      if (remaining <= 0) {
+        return { response_id: `resp_final_${continueCalls}`, output_text: 'done', actual_service_tier: 'default', tool_calls: [], usage_snapshot: usage(10_000), cost: cost(0.01) };
+      }
+      return {
+        response_id: `resp_${continueCalls}`,
+        output_text: '', actual_service_tier: 'default',
+        tool_calls: [{ call_id: `call_${continueCalls}`, name: toolCallName, arguments: argsFor(continueCalls) }],
+        usage_snapshot: usage(10_000), cost: cost(0.01),
+      };
+    },
+    async compact() { throw new Error('should_not_compact'); },
+  };
+}
+
+test('default (quick) run mode preserves the exact previous behavior: stops at round 8', async () => {
+  const capabilityAdapter = createCapabilityAdapter({ handlers: { 'repository.snapshot': async () => ({ ok: true }) } });
+  const provider = multiRoundProvider({ rounds: 50, toolCallName: capabilityFunctionName('repository.snapshot') });
+  await assert.rejects(() => runResponsesAgent({
+    provider, capabilityAdapter, cwd: process.cwd(), prompt: 'snapshot repository', model: 'gpt-6-astra', reasoningEffort: 'low', serviceTier: 'default',
+  }), /tool_round_limit_exceeded:8/);
+});
+
+test('an explicit maxToolRounds still overrides any run mode', async () => {
+  const capabilityAdapter = createCapabilityAdapter({ handlers: { 'repository.snapshot': async () => ({ ok: true }) } });
+  const provider = multiRoundProvider({ rounds: 50, toolCallName: capabilityFunctionName('repository.snapshot') });
+  await assert.rejects(() => runResponsesAgent({
+    provider, capabilityAdapter, cwd: process.cwd(), prompt: 'snapshot repository', model: 'gpt-6-astra', reasoningEffort: 'low', serviceTier: 'default',
+    runMode: 'agent', maxToolRounds: 3,
+  }), /tool_round_limit_exceeded:3/);
+});
+
+test('agent run mode survives well past the old 8-round ceiling and reports the run-budget receipt', async () => {
+  const capabilityAdapter = createCapabilityAdapter({ handlers: { 'repository.snapshot': async () => ({ ok: true, at: Date.now() }) } });
+  // 15 real tool rounds: strictly more than the old hard-coded 8, proving the
+  // ceiling is gone under agent mode without needing a literal 128-round run.
+  const provider = multiRoundProvider({ rounds: 15, toolCallName: capabilityFunctionName('repository.snapshot') });
+  const result = await runResponsesAgent({
+    provider, capabilityAdapter, cwd: process.cwd(), prompt: 'snapshot repository', model: 'gpt-6-astra', reasoningEffort: 'low', serviceTier: 'default',
+    runMode: 'agent',
+  });
+  assert.equal(result.output_text, 'done');
+  assert.equal(result.run_budget.run_mode, 'agent');
+  assert.equal(result.run_budget.max_tool_rounds, 128);
+  assert.equal(result.run_budget.tool_rounds, 15);
+  assert.equal(result.run_budget.tool_calls, 15);
+  assert.ok(Number.isInteger(result.run_budget.elapsed_ms));
+  assert.ok(result.run_budget.elapsed_ms >= 0);
+});
+
+test('multiple tool calls in one provider response count as one round but multiple calls', async () => {
+  const capabilityAdapter = createCapabilityAdapter({ handlers: { 'repository.snapshot': async () => ({ ok: true }) } });
+  const alias = capabilityFunctionName('repository.snapshot');
+  let step = 0;
+  const provider = {
+    async create() {
+      step = 1;
+      return {
+        response_id: 'resp_1', output_text: '', actual_service_tier: 'default',
+        tool_calls: [
+          { call_id: 'a', name: alias, arguments: '{"churnDays":1}' },
+          { call_id: 'b', name: alias, arguments: '{"churnDays":2}' },
+          { call_id: 'c', name: alias, arguments: '{"churnDays":3}' },
+        ],
+        usage_snapshot: usage(10_000), cost: cost(0.01),
+      };
+    },
+    async continueWithToolOutputs() {
+      step = 2;
+      return { response_id: 'resp_2', output_text: 'done', actual_service_tier: 'default', tool_calls: [], usage_snapshot: usage(10_000), cost: cost(0.01) };
+    },
+    async compact() { throw new Error('should_not_compact'); },
+  };
+  const result = await runResponsesAgent({
+    provider, capabilityAdapter, cwd: process.cwd(), prompt: 'snapshot repository', model: 'gpt-6-astra', reasoningEffort: 'low', serviceTier: 'default',
+  });
+  assert.equal(step, 2);
+  assert.equal(result.run_budget.tool_rounds, 1);
+  assert.equal(result.run_budget.tool_calls, 3);
+});
+
+test('denial still terminates correctly under any run mode (budget change does not weaken approval gating)', async () => {
+  const capabilityAdapter = createCapabilityAdapter({ handlers: { 'repository.snapshot': async () => { throw new Error('must_not_invoke'); } } });
+  const provider = multiRoundProvider({ rounds: 50, toolCallName: capabilityFunctionName('repository.snapshot') });
+  await assert.rejects(() => runResponsesAgent({
+    provider, capabilityAdapter, cwd: process.cwd(), prompt: 'snapshot repository', model: 'gpt-6-astra', reasoningEffort: 'low', serviceTier: 'default',
+    runMode: 'agent',
+    beforeTool: async () => false,
+  }), /tool_execution_not_approved:repository\.snapshot/);
+});
+
+test('repeated identical tool calls trigger no-progress protection independently of the round budget', async () => {
+  const capabilityAdapter = createCapabilityAdapter({ handlers: { 'repository.snapshot': async () => ({ ok: true }) } });
+  // Same capability, same arguments, every single round -- a stuck loop.
+  // Even under the largest budget (long: 512), this must fail fast on
+  // repetition rather than grinding to round 512.
+  const provider = multiRoundProvider({ rounds: 500, toolCallName: capabilityFunctionName('repository.snapshot'), toolArgs: '{"churnDays":7}' });
+  await assert.rejects(() => runResponsesAgent({
+    provider, capabilityAdapter, cwd: process.cwd(), prompt: 'snapshot repository', model: 'gpt-6-astra', reasoningEffort: 'low', serviceTier: 'default',
+    runMode: 'long',
+  }), /no_progress_detected:\d+/);
+});
+
+test('varying tool-call arguments across rounds does not trip the no-progress guard', async () => {
+  const capabilityAdapter = createCapabilityAdapter({ handlers: { 'repository.snapshot': async () => ({ ok: true }) } });
+  const alias = capabilityFunctionName('repository.snapshot');
+  let n = 0;
+  const provider = {
+    async create() {
+      n += 1;
+      return { response_id: `r${n}`, output_text: '', actual_service_tier: 'default', tool_calls: [{ call_id: `c${n}`, name: alias, arguments: JSON.stringify({ churnDays: n }) }], usage_snapshot: usage(10_000), cost: cost(0.01) };
+    },
+    async continueWithToolOutputs() {
+      n += 1;
+      if (n > 12) return { response_id: `r${n}`, output_text: 'done', actual_service_tier: 'default', tool_calls: [], usage_snapshot: usage(10_000), cost: cost(0.01) };
+      return { response_id: `r${n}`, output_text: '', actual_service_tier: 'default', tool_calls: [{ call_id: `c${n}`, name: alias, arguments: JSON.stringify({ churnDays: n }) }], usage_snapshot: usage(10_000), cost: cost(0.01) };
+    },
+    async compact() { throw new Error('should_not_compact'); },
+  };
+  const result = await runResponsesAgent({
+    provider, capabilityAdapter, cwd: process.cwd(), prompt: 'snapshot repository', model: 'gpt-6-astra', reasoningEffort: 'low', serviceTier: 'default',
+    runMode: 'agent',
+  });
+  assert.equal(result.output_text, 'done');
+  assert.ok(result.run_budget.tool_rounds >= 12);
+});
+
+// --- alias-drift fallback: a real capability not hydrated this round still dispatches ---
+
+test('resolveCapabilityFallback recovers a real, currently-executable capability whose alias was not hydrated this round', () => {
+  const capabilityAdapter = createCapabilityAdapter({ handlers: { 'terminal.exec': async () => ({ ok: true }) } });
+  const alias = capabilityFunctionName('terminal.exec');
+  const resolved = resolveCapabilityFallback(capabilityAdapter, alias);
+  assert.ok(resolved);
+  assert.equal(resolved.capabilityId, 'terminal.exec');
+  assert.equal(resolved.descriptor.name, 'terminal.exec');
+});
+
+test('resolveCapabilityFallback returns null for a genuinely unknown / hallucinated alias', () => {
+  const capabilityAdapter = createCapabilityAdapter();
+  const resolved = resolveCapabilityFallback(capabilityAdapter, 'as_totally_made_up_capability');
+  assert.equal(resolved, null);
+});
+
+test('runner dispatches a tool call whose alias is absent from this turn\'s hydrated tool surface, via fallback resolution', async () => {
+  let invoked = null;
+  const capabilityAdapter = createCapabilityAdapter({
+    handlers: { 'terminal.exec': async (input) => { invoked = input; return { ok: true, ...input }; } },
+  });
+  const alias = capabilityFunctionName('terminal.exec');
+  const provider = {
+    async create() {
+      // Simulate provider-side conversation memory carrying a tool name the
+      // *current* turn's toolSurface didn't offer (see buildAgentToolSurface's
+      // relevance-scored, maxTools-capped selection) -- the exact shape of the
+      // production unrecognized_tool_call:as_terminal_exec failure.
+      return {
+        response_id: 'resp_1', output_text: '', actual_service_tier: 'default',
+        tool_calls: [{ call_id: 'call_1', name: alias, arguments: '{"command":"git","args":["status"]}' }],
+        usage_snapshot: usage(10_000), cost: cost(0.01),
+      };
+    },
+    async continueWithToolOutputs(params) {
+      assert.equal(params.toolOutputs[0].call_id, 'call_1');
+      return { response_id: 'resp_2', output_text: 'done', actual_service_tier: 'default', tool_calls: [], usage_snapshot: usage(10_000), cost: cost(0.01) };
+    },
+    async compact() { throw new Error('should_not_compact'); },
+  };
+  const result = await runResponsesAgent({
+    provider, capabilityAdapter, cwd: process.cwd(), prompt: 'snapshot inspect repository', model: 'gpt-6-astra', reasoningEffort: 'low', serviceTier: 'default',
+  });
+  assert.equal(result.output_text, 'done');
+  assert.equal(invoked.command, 'git');
 });
