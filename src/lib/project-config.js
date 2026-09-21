@@ -76,6 +76,9 @@ export function createProjectManifest({
     knowledge: {
       config: '.agentsam/knowledge.json',
     },
+    // Project-owned plugin/resource declarations. Bindings, indexes, models,
+    // and dimensions belong here rather than in a global SDK default.
+    plugins: {},
     local: {
       database: '.agentsam/data/agentsam.sqlite',
       schema: 'db/schema.sql',
@@ -149,6 +152,12 @@ export function getProjectRulesPath(config) {
 
 export function getKnowledgeConfigPath(config) {
   return clean(config?.knowledge?.config) || '.agentsam/knowledge.json';
+}
+
+export function getProjectPluginConfig(config, pluginKey) {
+  const key = clean(pluginKey).replace(/^@/, '');
+  const plugins = config?.plugins || config?.integrations || {};
+  return plugins[key] || plugins[`@${key}`] || null;
 }
 
 export function getLocalDatabasePath(config) {

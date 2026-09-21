@@ -114,6 +114,8 @@ async function ensureTables(env) {
 
 async function seedKnownCloudflareResources(env, ownerId, connectionId, cloudflareAccountId) {
   if (!env?.DB?.prepare || !cloudflareAccountId) return;
+  let configuredScopes = {};
+  try { configuredScopes = JSON.parse(env.AGENTSAM_RESOURCE_SCOPE_JSON || '{}'); } catch { configuredScopes = {}; }
   const resources = [
     { key: 'agentsam-sdk', type: 'worker', id: 'agentsam-sdk', name: 'AgentSam SDK / Local Studio' },
     { key: 'agentsam-cad-creator', type: 'worker', id: 'agentsam-cad-creator', name: 'AgentSam CAD Creator' },
@@ -122,7 +124,7 @@ async function seedKnownCloudflareResources(env, ownerId, connectionId, cloudfla
       zone_id: '816a5d2284103e4481987ceeb16c2ca9',
       d1_database_id: '9fd6ff92-e407-4b51-8b01-3c93f3845bb2',
       r2_bucket: 'fuelnfreetime',
-      vectorize_index: 'fnf-agentsam-bge-m3-1024',
+      ...(configuredScopes.fuelnfreetime || {}),
     } },
   ];
   const statements = resources.map((resource) => env.DB.prepare(`

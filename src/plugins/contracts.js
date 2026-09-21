@@ -3,7 +3,7 @@ export const AGENTSAM_PLUGIN_SCHEMA_VERSION = 1;
 const KINDS = new Set(['mcp', 'api', 'oauth', 'native', 'webhook', 'database', 'storage', 'ai']);
 const TRANSPORTS = new Set(['remote_jsonrpc', 'iam_mcp_catalog', 'http_rest', 'http_graphql', 'webhook', 'workers_binding', 'native', 'none']);
 const AUTH_TYPES = new Set(['none', 'bridge', 'oauth', 'oauth_via_iam', 'bearer_secret', 'api_key_secret', 'workers_binding']);
-const DISPATCH_TARGETS = new Set(['native', 'plugin', 'mcp', 'codemode', 'workflow']);
+const DISPATCH_TARGETS = new Set(['native', 'internal', 'plugin', 'mcp', 'codemode', 'workflow']);
 
 function clean(value) { return value == null ? '' : String(value).trim(); }
 function object(value) { return Boolean(value) && typeof value === 'object' && !Array.isArray(value); }
@@ -25,7 +25,9 @@ export function normalizePluginManifest(value) {
   if (!AUTH_TYPES.has(authType)) throw new Error(`invalid_plugin_auth_type:${authType}`);
   const tools = (value.tools || []).map((tool) => {
     const toolKey = clean(tool.tool_key || tool.tool_name);
-    if (!toolKey.startsWith(`${pluginKey}.`)) throw new Error(`plugin_tool_key_must_start_with:${pluginKey}.`);
+    if (!toolKey.startsWith(`${pluginKey}.`) && !toolKey.startsWith(`${pluginKey}_`)) {
+      throw new Error(`plugin_tool_key_must_start_with:${pluginKey}.`);
+    }
     const dispatchTarget = clean(tool.dispatch_target || 'plugin');
     if (!DISPATCH_TARGETS.has(dispatchTarget)) throw new Error(`invalid_dispatch_target:${dispatchTarget}`);
     return Object.freeze({

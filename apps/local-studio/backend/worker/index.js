@@ -685,7 +685,10 @@ export default {
       try {
         const runtime = await createLocalStudioPluginRuntime(env, userId, {
           authorizeTool: ({ tool }) => ({
-            allowed: tool.account_id === userId && tool.plugin_key === "agentsam-mcp",
+            // Registry rows are already account-scoped; the tool contract,
+            // not a hard-coded provider allowlist, decides which installed
+            // plugin may execute.
+            allowed: tool.account_id === userId && Boolean(tool.plugin_key),
           }),
           requireApproval: () => body?.approved === true,
         });

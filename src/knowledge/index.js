@@ -8,3 +8,4 @@ export { openSqliteStore } from './stores/sqlite.js';
 export { createPostgresStore, openPostgresStore, postgresSchema } from './stores/postgres.js';
 export { createGeminiEmbedder } from './providers/gemini.js';
 export { compareObservations } from './evolution.js';
+export { normalizeRetrievalLane, selectProjectRetrievalLanes, loadProjectRetrievalLanes } from './lane-registry.js';

@@ -5,3 +5,4 @@ export {
   getModelRecord,
   calculateModelCost,
 } from './catalog.js';
+export { normalizeModelPolicy, loadModelPolicy } from './policy.js';

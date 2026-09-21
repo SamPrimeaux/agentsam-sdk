@@ -93,6 +93,8 @@ export {
   listModelCatalog,
   getModelRecord,
   calculateModelCost,
+  normalizeModelPolicy,
+  loadModelPolicy,
 } from './models/index.js';
 export {
   AGENT_EVENT_TYPES,

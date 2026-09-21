@@ -5,9 +5,11 @@ import {
   listPluginTools,
   recordPluginHealthCheck,
   createPluginRuntime,
+  executeVectorizeTool,
 } from '../../../../src/plugins/index.js';
 import { probeCloudflareConnection } from '../../../../packages/connectors/cloudflare/src/index.js';
 import { callCloudflareMcpTool, executeAgentSamCloudflareProgram, searchCloudflareApi } from './cloudflare-code-mode.js';
+import { executeCompletefulNative } from './completeful-native.js';
 
 export async function materializeCloudflarePlugin(env, accountId, options = {}) {
   const installed = await installPlugin(env.DB, {
@@ -121,10 +123,19 @@ export async function createLocalStudioPluginRuntime(env, accountId, options = {
       throw error;
     }
   };
+  const nativeDispatch = async ({ tool, args, context }) => {
+    if (tool.handler_type === 'vectorize') {
+      return executeVectorizeTool({ tool, args, context: { ...context, env } });
+    }
+    if (tool.handler_key === 'completeful' || tool.plugin_key === 'completeful') {
+      return executeCompletefulNative(env, tool, args);
+    }
+    throw new Error(`native_handler_unavailable:${tool.handler_type || tool.handler_key || 'unknown'}`);
+  };
   return createPluginRuntime({
     tools: registry.tools,
     db: env.DB,
-    dispatchers: { plugin: dispatch, codemode: dispatch, mcp: mcpDispatch },
+    dispatchers: { plugin: dispatch, codemode: dispatch, mcp: mcpDispatch, native: nativeDispatch, internal: nativeDispatch },
     authorizeTool: options.authorizeTool,
     requireApproval: options.requireApproval,
   });

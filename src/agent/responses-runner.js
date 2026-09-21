@@ -2,7 +2,7 @@ import { compileToolSchema, restoreOptionalArguments } from '../providers/tool-s
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { assessContextUsage, compileAgentInstructions, createContextBudget, estimateContextTokens, truncateResultText, resolveProjectContext, buildProjectCard } from '../context/index.js';
-import { getModelRecord, calculateModelCost } from '../models/index.js';
+import { getModelRecord, calculateModelCost, loadModelPolicy } from '../models/index.js';
 import { searchToolCards, hydrateToolSchemas } from '../tools/index.js';
 import { createAgentEvent } from '../telemetry/index.js';
 import { diagnosticFromError } from '../errors/index.js';
@@ -49,10 +49,10 @@ function userMessage(text) {
   return { role: 'user', content: [{ type: 'input_text', text: String(text) }] };
 }
 
-function modelBudget(record) {
+function modelBudget(record, policyOverride = null) {
   const windowTokens = Number(record?.context_window);
   if (!Number.isFinite(windowTokens) || windowTokens <= 0) return null;
-  const policy = record.context_policy || {};
+  const policy = { ...(record.context_policy || {}), ...(policyOverride || {}) };
   return createContextBudget({
     windowTokens,
     targetInputTokens: policy.target_input_tokens,
@@ -184,11 +184,17 @@ export async function runAgentSamTurn(options = {}) {
   const cwd = path.resolve(options.cwd || process.cwd());
   const objective = clean(options.prompt);
   if (!objective) throw new TypeError('prompt is required');
-  const record = options.modelRecord || getModelRecord(options.model);
-  if (!record) throw new RangeError(`unknown model: ${options.model}`);
+  const baseRecord = options.modelRecord || getModelRecord(options.model);
+  if (!baseRecord) throw new RangeError(`unknown model: ${options.model}`);
   const reasoningEffort = clean(options.reasoningEffort || 'auto');
   const serviceTier = clean(options.serviceTier || 'default');
-  const budget = modelBudget(record);
+  const dynamicPolicy = options.modelPolicy || (options.policyDb
+    ? await loadModelPolicy(options.policyDb, { provider: baseRecord.provider, modelKey: baseRecord.model_key })
+    : null);
+  const record = dynamicPolicy
+    ? Object.freeze({ ...baseRecord, context_policy: Object.freeze({ ...(baseRecord.context_policy || {}), ...dynamicPolicy }) })
+    : baseRecord;
+  const budget = modelBudget(record, dynamicPolicy);
   let instructions;
   let resolvedContext = null;
   if (options.instructions == null) {
@@ -307,6 +313,16 @@ export async function runAgentSamTurn(options = {}) {
   }, runId);
 
   let cumulativeUsage = options.cumulativeUsage || null;
+  let observedCumulativeInput = Number(cumulativeUsage?.input_tokens || 0);
+  const observeCumulativeInput = (snapshot) => {
+    const reported = Number(snapshot?.cumulative?.input_tokens);
+    if (Number.isFinite(reported) && reported >= 0) observedCumulativeInput = Math.max(observedCumulativeInput, reported);
+    else {
+      const perCall = Number(snapshot?.input_tokens || 0);
+      if (Number.isFinite(perCall) && perCall > 0) observedCumulativeInput += perCall;
+    }
+    return observedCumulativeInput;
+  };
   if (compacted?.usage_delta || compacted?.usage) {
     const delta = compacted.usage_delta || compacted.usage;
     cumulativeUsage = Object.fromEntries(['input_tokens', 'output_tokens', 'cached_input_tokens', 'cache_write_tokens', 'reasoning_tokens'].map(key => [key, Number(cumulativeUsage?.[key] || 0) + Number(delta[key] || 0)]));
@@ -339,6 +355,7 @@ export async function runAgentSamTurn(options = {}) {
     runId,
   });
   accumulateCost(response.cost);
+  observeCumulativeInput(response.usage_snapshot);
   providerState = response.provider_state || (response.response_id ? { previous_response_id: response.response_id } : providerState);
   cumulativeUsage = response.usage_snapshot?.cumulative || cumulativeUsage;
 
@@ -417,7 +434,7 @@ export async function runAgentSamTurn(options = {}) {
     if (repeatedRoundCount >= maxNoProgressRounds) {
       throw new Error(`no_progress_detected:${repeatedRoundCount + 1}`);
     }
-    const nextCumulativeInput = cumulativeInputTokens(response.usage_snapshot);
+    const nextCumulativeInput = Math.max(cumulativeInputTokens(response.usage_snapshot), observedCumulativeInput);
     const cumulativeLimit = budget?.maxCumulativeInputTokens ?? null;
     const guardrailCrossed = cumulativeLimit != null && nextCumulativeInput > cumulativeLimit;
     if (guardrailCrossed && !options.allowEconomicOverride && continuationGuardTriggered) {
@@ -485,6 +502,7 @@ export async function runAgentSamTurn(options = {}) {
     }
     accumulateCost(response.cost);
     providerState = response.provider_state || (response.response_id ? { previous_response_id: response.response_id } : providerState);
+    observeCumulativeInput(response.usage_snapshot);
     cumulativeUsage = response.usage_snapshot?.cumulative || cumulativeUsage;
   }
 

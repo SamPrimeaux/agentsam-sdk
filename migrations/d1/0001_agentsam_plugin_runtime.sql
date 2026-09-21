@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS agentsam_tools (
   tool_name TEXT NOT NULL UNIQUE,
   display_name TEXT NOT NULL,
   tool_category TEXT NOT NULL,
-  handler_type TEXT NOT NULL DEFAULT 'mcp' CHECK (handler_type IN ('mcp','r2','github','terminal','http','proxy','ai','d1','hyperdrive','supabase','kv','durable_object','filesystem','browser_agentic','mybrowser','websearch','telemetry','eval','task.planner','task.organizer','task.manager','workspace.reader','cf','deploy','git','memory','notify','workflow','agent','browser','media','canvas','integrations','cms')),
+  handler_type TEXT NOT NULL DEFAULT 'mcp' CHECK (handler_type IN ('mcp','r2','github','terminal','http','proxy','ai','d1','hyperdrive','supabase','kv','durable_object','filesystem','browser_agentic','mybrowser','websearch','telemetry','eval','task.planner','task.organizer','task.manager','workspace.reader','cf','deploy','git','memory','notify','workflow','agent','browser','media','canvas','integrations','cms','completeful','vectorize')),
   description TEXT,
   input_schema TEXT,
   output_schema TEXT,

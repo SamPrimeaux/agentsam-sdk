@@ -30,7 +30,15 @@ export async function executeAgentSamTool(options = {}) {
       }
     }
     const target = clean(tool.dispatch_target || 'plugin');
-    const dispatcher = options.dispatchers?.[target];
+    // The persisted row selects the lane and handler family. This keeps
+    // installed plugins generic instead of embedding provider names in the
+    // AgentSam orchestration loop.
+    const dispatcher = typeof options.resolveDispatcher === 'function'
+      ? await options.resolveDispatcher({ tool, target, context })
+      : options.dispatchers?.[target]
+        || options.dispatchers?.[clean(tool.handler_type)]
+        || options.handlers?.[clean(tool.handler_type)]
+        || options.handlers?.[clean(tool.handler_key)];
     if (typeof dispatcher !== 'function') throw new Error(`tool_dispatcher_unavailable:${target}`);
     return await dispatcher({ tool, args: options.args || {}, context });
   } catch (error) {
@@ -84,6 +92,7 @@ export function createPluginRuntime(options = {}) {
       if (!tool) throw new Error(`agentsam_tool_not_found:${toolKey}`);
       return executeAgentSamTool({
         tool, args, context, db: options.db, dispatchers: options.dispatchers,
+        handlers: options.handlers, resolveDispatcher: options.resolveDispatcher,
         authorizeTool: options.authorizeTool, requireApproval: options.requireApproval,
       });
     },
