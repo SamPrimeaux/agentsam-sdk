@@ -31,7 +31,8 @@
     "cf:d1:tables": "wrangler d1 execute inneranimalmedia-business --remote --command=\"SELECT name FROM sqlite_master WHERE type='table' AND (name LIKE '%secret%' OR name LIKE '%oauth%' OR name='agentsam_user_ui_preferences') ORDER BY name;\"",
     "cf:verify-output": "node scripts/verify-cloudflare-output.mjs",
     "cf:dry-run": "npm run build && npm run cf:verify-output && wrangler deploy -c backend/wrangler.jsonc --dry-run",
-    "cf:deploy": "npm run build && npm run cf:verify-output && bash scripts/with-cloudflare-env.sh wrangler deploy -c backend/wrangler.jsonc",
+    "cf:ensure-vault": "bash scripts/with-cloudflare-env.sh node scripts/ensure-vault-secret.mjs",
+    "cf:deploy": "npm run build && npm run cf:verify-output && npm run cf:ensure-vault && bash scripts/with-cloudflare-env.sh wrangler deploy -c backend/wrangler.jsonc",
     "cf:tail": "wrangler tail agentsam-sdk -c backend/wrangler.jsonc",
     "cf:env": "bash scripts/with-cloudflare-env.sh",
     "verify:npm10-lock": "node scripts/verify-npm10-lock.mjs"
