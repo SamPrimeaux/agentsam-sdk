@@ -6,6 +6,8 @@ import test from 'node:test';
 import { createLocalSqliteDatabase } from '../../src/local/sqlite.js';
 import { applyRuntimeMigrations } from '../../src/local/migrations.js';
 
+const repoRoot = path.resolve(new URL('../..', import.meta.url).pathname);
+
 test('portable runtime migration installs AgentSam CLI state tables idempotently', async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-runtime-migration-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
