@@ -16,7 +16,7 @@ function DropdownMenuContent({
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   return (
-    <DropdownMenuPrimitive.Portal>
+    <DropdownMenuPrimitive.Portal container={typeof document === 'undefined' ? undefined : document.querySelector<HTMLElement>('.agentsam-shell')}>
       <DropdownMenuPrimitive.Content
         sideOffset={sideOffset}
         className={cn(

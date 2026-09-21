@@ -11,7 +11,7 @@ function DialogTrigger(props: React.ComponentProps<typeof DialogPrimitive.Trigge
 }
 
 function DialogPortal(props: React.ComponentProps<typeof DialogPrimitive.Portal>) {
-  return <DialogPrimitive.Portal {...props} />;
+  return <DialogPrimitive.Portal container={typeof document === 'undefined' ? undefined : document.querySelector<HTMLElement>('.agentsam-shell')} {...props} />;
 }
 
 function DialogOverlay({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {

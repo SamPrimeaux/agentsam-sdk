@@ -1,3 +1,5 @@
+@import './shell.css';
+
 :root[data-theme="light"] {
   --nav-glass-bg: color-mix(in srgb, var(--dashboard-panel, var(--color-card)) 72%, transparent);
   --nav-glass-border: color-mix(in srgb, var(--dashboard-border, var(--color-border)) 60%, transparent);

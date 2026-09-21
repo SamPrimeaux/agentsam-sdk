@@ -1,6 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
+import type { NavTheme, NavValue, NavTokens } from './contracts.js';
 
 export type NavContextValue = {
+  data: NavValue;
+  tokens: NavTokens;
+  theme: NavTheme;
+  accentColor: string;
+  menu: string | null;
+  setMenu: (menu: string | null) => void;
   open: boolean;
   isMobile: boolean;
   isPeeking: boolean;
@@ -19,6 +26,10 @@ export type NavContextValue = {
 const NavContext = createContext<NavContextValue | null>(null);
 
 export type NavProviderProps = PropsWithChildren<{
+  value?: NavValue;
+  tokens?: NavTokens;
+  theme?: NavTheme;
+  accentColor?: string;
   defaultOpen?: boolean;
   mobileBreakpoint?: number;
   peekable?: boolean;
@@ -27,11 +38,16 @@ export type NavProviderProps = PropsWithChildren<{
 
 export function NavProvider({
   children,
+  value: data = {},
+  tokens = {},
+  theme = 'dark',
+  accentColor = '#8B5CF6',
   defaultOpen = true,
   mobileBreakpoint = 768,
   peekable = false,
   resizable = false,
 }: NavProviderProps) {
+  const [menu, setMenu] = useState<string | null>(null);
   const [desktopOpen, setDesktopOpen] = useState(defaultOpen);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -76,6 +92,7 @@ export function NavProvider({
   }, []);
 
   const value = useMemo<NavContextValue>(() => ({
+    data, tokens, theme, accentColor, menu, setMenu,
     open,
     isMobile,
     isPeeking,
@@ -89,7 +106,7 @@ export function NavProvider({
     setPeeking,
     setWidth,
     scrollToItem,
-  }), [close, isMobile, isPeeking, mobileBreakpoint, open, peekable, resizable, scrollToItem, setOpen, setWidth, toggle, width]);
+  }), [data, tokens, theme, accentColor, menu, close, isMobile, isPeeking, mobileBreakpoint, open, peekable, resizable, scrollToItem, setOpen, setWidth, toggle, width]);
 
   return <NavContext.Provider value={value}>{children}</NavContext.Provider>;
 }

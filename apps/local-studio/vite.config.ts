@@ -170,12 +170,16 @@ export default defineConfig(({ command, isPreview }) => ({
     strictPort: true,
   },
   resolve: {
+    dedupe: ["react", "react-dom"],
     tsconfigPaths: true,
     preserveSymlinks: true,
     alias: {
       "@inneranimalmedia/agentsam-workbench": workbenchSource,
       "@inneranimalmedia/agentsam-nav": navSource,
     },
+  },
+  ssr: {
+    noExternal: [/^@radix-ui\//],
   },
   plugins: [
     pgliteBootstrapPlugin(),
@@ -186,7 +190,7 @@ export default defineConfig(({ command, isPreview }) => ({
     // PWA head + ?install=1 tutorial page; runs before Start/Nitro.
     grokPwaPlugin(),
     tailwindcss(),
-    tanstackStart({ srcDirectory: "frontend/src" }),
+    tanstackStart({ srcDirectory: "frontend/src", router: { routeFileIgnorePattern: '^_app(?:\\.tsx)?$' } }),
     ...(command === "build" || isPreview
       ? [
           nitro({

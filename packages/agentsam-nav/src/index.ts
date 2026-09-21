@@ -1,4 +1,6 @@
 export { Nav } from './Nav.js';
+export * from './contracts.js';
+export * from './Surfaces.js';
 export { NavProvider, useNav, type NavProviderProps, type NavContextValue } from './NavProvider.js';
 export { NavHeader } from './NavHeader.js';
 export { NavFooter } from './NavFooter.js';

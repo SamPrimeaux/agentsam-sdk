@@ -71,7 +71,7 @@ export function SideStage() {
           ))}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button type="button" size="icon-sm" variant="ghost" aria-label="Add side pane">
+              <Button type="button" size="icon-sm" variant="ghost" aria-label="Add Side Panel tab">
                 <Plus className="size-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -108,7 +108,7 @@ export function SideStage() {
           size="icon-sm"
           variant="ghost"
           className="ml-auto"
-          aria-label="Close side stage"
+          aria-label="Close Side Panel"
           onClick={() => setSideOpen(false)}
         >
           <X className="size-4" />

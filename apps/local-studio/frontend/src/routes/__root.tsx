@@ -1,4 +1,5 @@
-import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
+import { createRootRoute, HeadContent, Outlet, Scripts, useRouterState } from "@tanstack/react-router";
+import { AgentSamShell } from "../../agentsam/AgentSamShell";
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
@@ -45,10 +46,16 @@ export const Route = createRootRoute({
       <body className="bg-background font-sans text-foreground">
         <PreviewHostBridge />
         <AuthProvider>
-          <Outlet />
+          <ApplicationOutlet />
         </AuthProvider>
         <Scripts />
       </body>
     </html>
   ),
 });
+
+function ApplicationOutlet() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const isApp = /^\/(agentsam|trails|cms|cad|projects|artifacts|files|browse|cli|ship|settings)(\/|$)/.test(pathname);
+  return isApp ? <AgentSamShell /> : <Outlet />;
+}

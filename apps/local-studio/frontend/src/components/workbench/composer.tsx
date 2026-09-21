@@ -12,32 +12,36 @@ import {
 import { ModelSelect } from "@/components/workbench/model-select";
 import { cn } from "@/lib/utils";
 import { useWorkStore } from "@/lib/work/store";
+import { composerPlugins, type ComposerPlugin } from '../../../agentsam/plugins';
+import { toast } from 'sonner';
 
 function PluginMenu({ onMention }: { onMention: (mention: string) => void }) {
-  const [status, setStatus] = useState<"unknown" | "loading" | "connected" | "available">("unknown");
+  const [status, setStatus] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
-    setStatus("loading");
+    setStatus(Object.fromEntries(composerPlugins.map((plugin) => [plugin.id, 'loading'])));
     try {
       const response = await fetch("/api/connections", { credentials: "same-origin" });
       const body = (await response.json().catch(() => ({}))) as {
         connections?: Array<{ provider?: string; kind?: string; status?: string }>;
       };
-      const connection = body.connections?.find((row) => row.provider === "cloudflare" && row.kind === "oauth");
-      setStatus(connection?.status === "connected" ? "connected" : "available");
+      setStatus(Object.fromEntries(composerPlugins.map((plugin) => [plugin.id, body.connections?.some((row) => row.provider === plugin.provider && row.kind === plugin.kind && row.status === 'connected') ? 'connected' : 'available'])));
     } catch {
-      setStatus("available");
+      setStatus({});
     }
   }, []);
 
-  const select = useCallback(async () => {
-    if (status === "connected") {
-      onMention("@agentsam-mcp");
+  const select = useCallback(async (plugin: ComposerPlugin) => {
+    if (status[plugin.id] === "connected") {
+      onMention(plugin.mention);
       return;
     }
-    const response = await fetch("/api/connections/cloudflare/start", { credentials: "same-origin" });
-    const body = (await response.json().catch(() => ({}))) as { authorize_url?: string };
-    if (response.ok && body.authorize_url) window.location.assign(body.authorize_url);
+    try {
+      const response = await fetch(plugin.connectUrl, { credentials: "same-origin" });
+      const body = (await response.json().catch(() => ({}))) as { authorize_url?: string };
+      if (response.ok && body.authorize_url) window.location.assign(body.authorize_url);
+      else toast('Connection is unavailable. Try again later.');
+    } catch { toast('Could not start the connection.'); }
   }, [onMention, status]);
 
   return (
@@ -49,20 +53,20 @@ function PluginMenu({ onMention }: { onMention: (mention: string) => void }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-72">
         <DropdownMenuLabel>Connected tools</DropdownMenuLabel>
-        <DropdownMenuItem onSelect={() => void select()}>
+        {composerPlugins.map((plugin) => <DropdownMenuItem key={plugin.id} disabled={status[plugin.id] === 'loading'} onSelect={() => void select(plugin)}>
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-accent">
-            <Cloud className="size-4" />
+            {plugin.iconUrl ? <img src={plugin.iconUrl} alt="" className="size-4 object-contain" /> : <Cloud className="size-4" />}
           </span>
           <span className="flex min-w-0 flex-1 flex-col">
-            <span className="font-medium">AgentSam MCP</span>
-            <span className="truncate text-[11px] text-muted-foreground">Cloudflare account access</span>
+            <span className="font-medium">{plugin.label}</span>
+            <span className="truncate text-[11px] text-muted-foreground">{plugin.description}</span>
           </span>
-          {status === "loading" ? <Loader2 className="size-3.5 animate-spin text-muted-foreground" /> : null}
-          {status === "connected" ? <Check className="size-4 text-accent" aria-label="Connected" /> : null}
-          {status === "available" || status === "unknown" ? (
+          {status[plugin.id] === "loading" ? <Loader2 className="size-3.5 animate-spin text-muted-foreground" /> : null}
+          {status[plugin.id] === "connected" ? <Check className="size-4 text-accent" aria-label="Connected" /> : null}
+          {status[plugin.id] !== "connected" && status[plugin.id] !== "loading" ? (
             <span className="text-xs font-medium text-accent">Connect</span>
           ) : null}
-        </DropdownMenuItem>
+        </DropdownMenuItem>)}
       </DropdownMenuContent>
     </DropdownMenu>
   );

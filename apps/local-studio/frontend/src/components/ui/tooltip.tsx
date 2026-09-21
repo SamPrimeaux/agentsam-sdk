@@ -23,7 +23,7 @@ function TooltipContent({
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Content>) {
   return (
-    <TooltipPrimitive.Portal>
+    <TooltipPrimitive.Portal container={typeof document === 'undefined' ? undefined : document.querySelector<HTMLElement>('.agentsam-shell')}>
       <TooltipPrimitive.Content
         sideOffset={sideOffset}
         className={cn(

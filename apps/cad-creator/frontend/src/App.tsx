@@ -7,7 +7,8 @@ import React from 'react';
 import { CadCreatorApp } from './app/CadCreatorApp';
 
 export function App() {
-  return <CadCreatorApp presentation="standalone" />;
+  const embedded = new URLSearchParams(window.location.search).get('presentation') === 'embedded';
+  return <CadCreatorApp presentation={embedded ? 'embedded' : 'standalone'} />;
 }
 
 export default App;

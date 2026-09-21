@@ -50,6 +50,7 @@
     "preserveSymlinks": true
   },
   "include": [
-    "src"
-  ]
+    "src", "agentsam/**/*.tsx", "agentsam/**/*.ts"
+  ],
+  "exclude": ["src/routes/_app", "src/routes/_app.tsx"]
 }

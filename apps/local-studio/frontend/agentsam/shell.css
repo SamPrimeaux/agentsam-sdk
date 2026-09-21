@@ -1,0 +1,33 @@
+.agentsam-shell {
+  --color-background: var(--nav-canvas); --color-foreground: var(--nav-text);
+  --color-card: var(--nav-surface); --color-card-foreground: var(--nav-text);
+  --color-popover: var(--nav-popover); --color-popover-foreground: var(--nav-text);
+  --color-muted: var(--nav-selected); --color-muted-foreground: var(--nav-muted);
+  --color-border: var(--nav-border); --color-accent: var(--nav-accent); --color-accent-foreground: #fff;
+  --color-ring: var(--nav-accent); --color-primary: var(--nav-text); --color-primary-foreground: var(--nav-canvas);
+  --color-secondary: var(--nav-surface); --color-secondary-foreground: var(--nav-text);
+  --color-clay: var(--nav-muted); --color-ink: var(--nav-canvas);
+  display: flex; height: 100dvh; overflow: hidden; background: var(--nav-canvas);
+}
+.agentsam-main { display: flex; flex: 1; min-width: 0; min-height: 0; flex-direction: column; }
+.agentsam-route { flex: 1; min-height: 0; overflow: hidden; }
+.agentsam-page-layout { display: flex; height: 100%; flex-direction: column; }
+.agentsam-workspace { display: flex; min-height: 0; flex: 1; }
+.agentsam-conversation { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.agentsam-welcome { flex: 1; display: flex; min-height: 0; align-items: center; justify-content: center; flex-direction: column; padding: 24px; overflow-y: auto; }
+.agentsam-welcome h1 { font: 500 26px/1.3 var(--nav-font); margin: 0 0 28px; letter-spacing: -.025em; text-align: center; }
+.agentsam-welcome > div:has([data-agent-composer]) { width: 100%; max-width: 840px; }
+.agentsam-shell [data-agent-composer] { max-width: 840px; padding: 12px 14px; border: 1px solid var(--nav-border); border-radius: 22px; box-shadow: none; background: var(--nav-surface); }
+.agentsam-shell [data-agent-composer]:focus-within { border-color: color-mix(in srgb, var(--nav-accent) 55%, var(--nav-border)); box-shadow: none; }
+.agentsam-shell [data-agent-composer] textarea { font: 400 16px/24px var(--nav-font); min-height: 48px; }
+.agentsam-shell [data-agent-composer] button { flex-shrink: 0; }
+.agentsam-start-context { margin-top: 4px; color: var(--nav-muted); font-size: 12px; }
+.agentsam-start-context .as-nav-title, .agentsam-start-context .as-nav-separator, .agentsam-start-context .as-nav-mode-label { display: none; }
+.agentsam-dock { flex-shrink: 0; padding-top: 12px; }
+.agentsam-conversation > [data-agent-thread] { font-size: 16px; line-height: 1.65; }
+.agentsam-side-panel { min-width: 280px; max-width: 70%; border-left: 1px solid var(--nav-border); overflow: auto; }
+.agentsam-workspace > .studio-separator { width: 5px; flex-shrink: 0; background: transparent; cursor: col-resize; }
+.agentsam-workspace > .studio-separator:hover, .agentsam-workspace > .studio-separator:focus-visible { background: var(--nav-accent); }
+@media (max-width: 1000px) { .agentsam-side-panel { width: 46%; min-width: 280px; } }
+@media (max-width: 767px) { .agentsam-welcome { padding: 16px 0; } .agentsam-welcome h1 { font-size: 24px; } .agentsam-side-panel { position: absolute; inset: 56px 0 0; z-index: 50; width: 100%; max-width: 100%; min-width: 0; resize: none; background: var(--nav-canvas); } .agentsam-start-context { max-width: 90%; } }
+@media (max-width: 767px) { .agentsam-side-panel { width: 100% !important; } .agentsam-workspace > .studio-separator { display: none; } }
