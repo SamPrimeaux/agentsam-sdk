@@ -632,6 +632,12 @@ async function runInteractiveModelTurn(prompt, state) {
       modelRecord: model,
       reasoningEffort: preferences.reasoningEffort,
       serviceTier: preferences.serviceTier,
+      // The interactive CLI turn is the main agentic engineering loop, not a
+      // one-shot lookup -- the previous unconfigurable default (quick: 8
+      // rounds) killed genuine multi-step work for no reason tied to risk,
+      // cost, or progress. `agent` (128 rounds) is the right default here;
+      // preferences.runMode leaves room for a future explicit override.
+      runMode: preferences.runMode || 'agent',
       previousProviderState,
       previousUsageSnapshot,
       cumulativeUsage: state.session?.cumulative_usage || null,
