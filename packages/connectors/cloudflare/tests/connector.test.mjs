@@ -73,6 +73,10 @@ describe('cloudflare connector', () => {
       },
     );
     assert.equal(response.status, 200);
+    assert.equal(
+      calls.some((call) => call.sql.includes('DELETE FROM agentsam_cloudflare_oauth_state WHERE created_at < unixepoch() - 600')),
+      true,
+    );
     const stateInsert = calls.find((call) => call.sql.includes('INSERT INTO agentsam_cloudflare_oauth_state'));
     assert.ok(stateInsert);
     assert.equal(stateInsert.args.at(-1), null);

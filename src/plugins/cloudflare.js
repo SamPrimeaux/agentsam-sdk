@@ -23,6 +23,8 @@ export const AGENTSAM_MCP_PLUGIN_MANIFEST = normalizePluginManifest({
   config: {
     oauth_authority: 'cloudflare',
     oauth_client_id: 'c0704bd7a7aab7216b362603e1985499',
+    client_name: 'AgentSam Local Studio',
+    client_uri: 'https://agentsam.inneranimalmedia.com',
     callback_url: 'https://agentsam.inneranimalmedia.com/api/connections/cloudflare/callback',
     authorization_endpoint: 'https://dash.cloudflare.com/oauth2/auth',
     token_endpoint: 'https://dash.cloudflare.com/oauth2/token',
@@ -30,6 +32,7 @@ export const AGENTSAM_MCP_PLUGIN_MANIFEST = normalizePluginManifest({
     userinfo_endpoint: 'https://dash.cloudflare.com/oauth2/userinfo',
     jwks_uri: 'https://dash.cloudflare.com/.well-known/jwks.json',
     openid_configuration: 'https://dash.cloudflare.com/.well-known/openid-configuration',
+    token_auth_method: 'none_pkce',
     disconnect_url: '/api/connections/cloudflare/disconnect',
     status_url: '/api/connections/cloudflare',
   },

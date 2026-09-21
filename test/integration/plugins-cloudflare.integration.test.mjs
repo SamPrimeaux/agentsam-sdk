@@ -13,6 +13,7 @@ test('Cloudflare OAuth installations have distinct client and callback contracts
     AGENTSAM_MCP_PLUGIN_MANIFEST.config.callback_url,
     'https://agentsam.inneranimalmedia.com/api/connections/cloudflare/callback',
   );
+  assert.equal(AGENTSAM_MCP_PLUGIN_MANIFEST.config.token_auth_method, 'none_pkce');
 
   assert.equal(INNERANIMALMEDIA_CLOUDFLARE_OAUTH_PLUGIN_MANIFEST.plugin_key, 'inneranimalmedia-cf-oauth');
   assert.equal(INNERANIMALMEDIA_CLOUDFLARE_OAUTH_PLUGIN_MANIFEST.auth_type, 'oauth_via_iam');

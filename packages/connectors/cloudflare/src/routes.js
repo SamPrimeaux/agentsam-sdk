@@ -204,6 +204,9 @@ export async function handleCloudflareConnectionRequest(request, env) {
     const returnTo = resolveReturnTo(url);
     if (env.DB) {
       await env.DB.prepare(
+        `DELETE FROM agentsam_cloudflare_oauth_state WHERE created_at < unixepoch() - 600`,
+      ).run();
+      await env.DB.prepare(
         `INSERT INTO agentsam_cloudflare_oauth_state (state, owner_id, code_verifier, created_at, return_to)
          VALUES (?, ?, ?, unixepoch(), ?)`,
       ).bind(state, ownerId, verifier, returnTo || null).run();
