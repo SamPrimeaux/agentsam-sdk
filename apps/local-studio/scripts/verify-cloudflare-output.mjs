@@ -17,6 +17,11 @@ assert.ok(fs.existsSync(serverEntry), ".output/server/index.mjs is required; run
 assert.ok(fs.statSync(serverEntry).isFile(), "Nitro server entry must be a file");
 assert.ok(fs.existsSync(assetsDir) && fs.statSync(assetsDir).isDirectory(), ".output/public is required");
 assert.ok(fs.existsSync(siteHomepage) && fs.statSync(siteHomepage).size > 20000, ".output/public/site/homepage.html is required (>20KB)");
+const cadHtml = path.join(assetsDir, 'cad-creator', 'index.html');
+assert.ok(fs.existsSync(cadHtml), 'CAD frontend index must be staged into Worker assets');
+for (const match of fs.readFileSync(cadHtml, 'utf8').matchAll(/(?:src|href)="(\/cad-creator\/assets\/[^\"]+)"/g)) {
+  assert.ok(fs.existsSync(path.join(assetsDir, match[1])), `CAD asset missing: ${match[1]}`);
+}
 
 
 const config = fs.readFileSync(configPath, "utf8");
