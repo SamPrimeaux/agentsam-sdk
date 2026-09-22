@@ -107,22 +107,38 @@ SELECT * FROM agentsam_tickets WHERE id = (SELECT current_task_id FROM agentsam_
 SELECT * FROM agentsam_agent_run WHERE id = (SELECT agent_run_id FROM agentsam_tickets WHERE id = (SELECT current_task_id FROM agentsam_workspace_state WHERE repository_id = '${sqlEsc(repoId)}') AND account_id = '${sqlEsc(accId)}' AND repository_id = '${sqlEsc(repoId)}' LIMIT 1) LIMIT 1;
 SELECT sha, message, committed_at FROM agentsam_work_git_commits WHERE repository_id = '${sqlEsc(repoId)}' ORDER BY committed_at DESC LIMIT 3;
 SELECT * FROM agentsam_work_tracking_checkpoint WHERE repository_id = '${sqlEsc(repoId)}' AND tracker_key = 'git_commit_ingest' LIMIT 1;
-SELECT id, title, status, sort_order FROM agentsam_todo
-WHERE plan_id IN (SELECT id FROM agentsam_plans WHERE agent_run_id = (SELECT agent_run_id FROM agentsam_tickets WHERE id = (SELECT current_task_id FROM agentsam_workspace_state WHERE repository_id = '${sqlEsc(repoId)}') LIMIT 1))
-ORDER BY sort_order, created_at_unix;
 `;
-  const data = await executeD1JsonQuery({ cwd, sql, query, wranglerConfig, databaseName });
+    const data = await executeD1JsonQuery({ cwd, sql, query, wranglerConfig, databaseName });
     const workspaceState = data?.[0]?.results?.[0] || null;
     const activeTicket = data?.[1]?.results?.[0] || null;
     const agentRun = data?.[2]?.results?.[0] || null;
     const recentCommits = data?.[3]?.results || [];
     const checkpoint = data?.[4]?.results?.[0] || null;
-    const steps = (data?.[5]?.results || []).map((row) => ({
-      id: row.id,
-      title: row.title,
-      status: row.status,
-      sort_order: row.sort_order,
-    }));
+
+    // Steps/TODO linkage is best-effort and non-fatal: agentsam_plans has no
+    // agent_run_id column on every repository's schema state yet (feature
+    // gap, not drift), so one unbuilt join must never take the whole GOAP
+    // status read down with it.
+    let steps = [];
+    let stepsUnavailable = false;
+    let stepsError = null;
+    try {
+      const stepsSql = `
+SELECT id, title, status, sort_order FROM agentsam_todo
+WHERE plan_id IN (SELECT id FROM agentsam_plans WHERE agent_run_id = (SELECT agent_run_id FROM agentsam_tickets WHERE id = (SELECT current_task_id FROM agentsam_workspace_state WHERE repository_id = '${sqlEsc(repoId)}') LIMIT 1))
+ORDER BY sort_order, created_at_unix;
+`;
+      const stepsData = await executeD1JsonQuery({ cwd, sql: stepsSql, query, wranglerConfig, databaseName });
+      steps = (stepsData?.[0]?.results || []).map((row) => ({
+        id: row.id,
+        title: row.title,
+        status: row.status,
+        sort_order: row.sort_order,
+      }));
+    } catch (stepsErr) {
+      stepsUnavailable = true;
+      stepsError = stepsErr?.stderr || stepsErr?.message || String(stepsErr);
+    }
 
     let cursor = {};
     if (checkpoint?.cursor_json) {
@@ -140,6 +156,8 @@ ORDER BY sort_order, created_at_unix;
       checkpoint,
       cursor,
       steps,
+      stepsUnavailable,
+      stepsError,
     };
   } catch (err) {
     return {
@@ -470,10 +488,19 @@ export function renderGoapStatus(state = {}) {
     `Last Action:   ${ws.last_agent_action || 'none'}`,
     `Updated:       ${formatDate(ws.updated_at || ticket.updated_at)}`,
     '--------------------------------------------------------------------------------',
+    ...(!ticket.id && !ws.current_task_id ? [
+      '  No active goal. What are you trying to achieve?',
+      '  Set one with: agentsam goap new "<your goal>" [--priority P1] [--subsystem name]',
+      '--------------------------------------------------------------------------------',
+    ] : []),
     `Recent Ingested Commits (${state.recentCommits?.length || 0}):`,
     ...(state.recentCommits && state.recentCommits.length
       ? state.recentCommits.map((c) => `  * ${c.sha.slice(0, 8)} ${c.message?.slice(0, 65)} (${formatDate(c.committed_at)})`)
       : ['  (no commits ingested yet)']),
+    ...(state.stepsUnavailable
+      ? ['--------------------------------------------------------------------------------',
+         '  (note: step/plan linkage unavailable — agentsam_plans has no agent_run_id column yet)']
+      : []),
     '================================================================================',
   ].join('\n');
 }
@@ -537,6 +564,27 @@ export function renderGoapGoal(state = {}) {
   const ws = state.workspaceState || {};
   const ticket = state.activeTicket || {};
   const run = state.agentRun || {};
+
+  if (!ticket.id && !ws.current_task_id) {
+    return [
+      '================================================================================',
+      '                              GOAP ACTIVE GOAL                                  ',
+      '================================================================================',
+      '  No active goal set for this repository yet.',
+      '',
+      '  What are you trying to achieve? A goal needs a short, concrete title:',
+      '    "Fix failing provider tests"',
+      '    "Ship the ecommerce media pipeline"',
+      '    "Repair the GOAP state read"',
+      '',
+      '  Set one with:',
+      '    agentsam goap new "<your goal>" [--priority P1] [--subsystem name]',
+      '',
+      '  Or see everything already tracked:',
+      '    agentsam goap list',
+      '================================================================================',
+    ].join('\n');
+  }
 
   return [
     '================================================================================',

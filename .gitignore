@@ -17,3 +17,4 @@ agentsam-init-smoke/
 .agentsam/merkle/
 .agentsam/merkle.json
 .agentsam/docker/
+*.bak-*
