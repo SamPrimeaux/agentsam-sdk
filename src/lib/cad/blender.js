@@ -180,10 +180,19 @@ async function invokeBlender({
     try {
       const dockerHealth = await probeDockerServiceHealth();
       if (dockerHealth.available && dockerHealth.tools?.blender?.installed) {
+        // Forward the full operation request (recipe/scene/camera/width/height/
+        // format/objects/collection/apply_modifiers as applicable) — the
+        // docker service has no access to `request.output`'s local path, so
+        // strip it and let the container pick its own temp output path.
+        const { output: _localOutput, ...requestRest } = request || {};
+        const inputBase64 = input && fs.existsSync(input) ? fs.readFileSync(input).toString('base64') : null;
+
         const dockerRes = await executeBlenderDocker({
           operation,
-          recipe: request.recipe || (request.operations ? { schema_version: 1, operations: request.operations } : undefined),
-          format: request.format || 'glb',
+          request: requestRest,
+          inputBase64,
+          format: requestRest.format
+            || (operation === 'build' ? 'blend' : operation === 'render_preview' ? 'png' : 'glb'),
           filename: request.output ? path.basename(request.output) : undefined,
           timeoutMs: timeout * 1000,
         });

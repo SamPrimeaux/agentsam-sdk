@@ -279,6 +279,14 @@ export async function executeBlenderDocker(options = {}) {
   const filename = options.filename || `model.${format}`;
   const timeoutMs = options.timeoutMs || 45_000;
 
+  // Full operation-specific request (recipe for build; scene/camera/width/height
+  // for render_preview; format/objects/collection/apply_modifiers for export;
+  // {} for inspect) — falls back to the legacy recipe/operations-only shape
+  // for callers that haven't been updated.
+  const requestPayload = options.request
+    || (options.recipe ? { recipe: options.recipe }
+      : (options.operations ? { recipe: { schema_version: 1, operations: options.operations } } : {}));
+
   const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
   const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
 
@@ -291,8 +299,11 @@ export async function executeBlenderDocker(options = {}) {
       headers,
       body: JSON.stringify({
         operation,
-        recipe: options.recipe || (options.operations ? { schema_version: 1, operations: options.operations } : undefined),
-        format,
+        request: { format, ...requestPayload },
+        // Base64 bytes of the source .blend when this operation edits an
+        // existing file (inspect/render_preview/export/edit-build); the
+        // container has no access to the caller's local filesystem.
+        input_base64: options.inputBase64 || null,
         filename,
         timeout_seconds: Math.ceil(timeoutMs / 1000),
       }),
