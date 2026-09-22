@@ -91,7 +91,15 @@ export async function getJson(path, options = {}) {
   const data = await responseJson(res);
   if (!res.ok) {
     const msg = data?.error || data?.message || `HTTP ${res.status}`;
-    throw new Error(String(msg));
+    const error = new Error(String(msg));
+    // Previously discarded: status code and which endpoint failed. Both are
+    // known here and cost nothing to keep -- callers (whoami, etc.) can now
+    // surface "Unauthorized (HTTP 401 from /api/sdk/context)" instead of a
+    // bare "Unauthorized" with no way to tell what actually failed.
+    error.status = res.status;
+    error.endpoint = path;
+    error.requestId = res.headers?.get?.('cf-ray') || data?.request_id || null;
+    throw error;
   }
   return data;
 }

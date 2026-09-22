@@ -109,7 +109,14 @@ export async function collectWhoami(options = {}) {
       terminal: safeTerminalContext(context?.terminal),
     };
   } catch (error) {
-    const message = error?.message || String(error);
+    const rawMessage = error?.message || String(error);
+    // error.status/endpoint come from getJson (src/lib/core-client.js) when
+    // the failure was an HTTP response -- previously discarded, now kept so
+    // "Unauthorized" tells you WHERE it came from instead of just that it
+    // happened.
+    const message = error?.status
+      ? `${rawMessage} (HTTP ${error.status} from ${error.endpoint || 'server'})`
+      : rawMessage;
     return {
       ...base,
       active_auth: { ...base.active_auth, valid: false, error: message },
@@ -132,6 +139,19 @@ export function renderWhoami(status) {
     lines.push(`  API key        ${status.api_key?.configured ? status.api_key?.valid === false ? 'invalid' : 'configured' : 'not configured'}`);
     lines.push(`  browser login  ${status.browser_session?.configured ? 'stored' : 'not configured'}`);
     if (status.active_auth?.error) lines.push(`  error          ${status.active_auth.error}`);
+    lines.push('');
+    if (status.browser_session?.configured && status.active_auth?.error) {
+      // A session file exists locally but the server rejected it on this
+      // call -- that's not "not logged in", it's a rejected token. Say so
+      // plainly instead of leaving the person to guess why "stored" didn't
+      // mean "working".
+      lines.push('  tip            A login session is saved locally, but the server rejected it on this');
+      lines.push('                 request (see error above). This is not the same as never having logged');
+      lines.push('                 in -- run `agentsam login` again for a fresh token, or `agentsam whoami --json`');
+      lines.push('                 for the full response.');
+    } else if (!status.api_key?.configured) {
+      lines.push('  tip            Run `agentsam login` to authenticate interactively.');
+    }
   }
   lines.push('');
   lines.push('  Provider credentials');
