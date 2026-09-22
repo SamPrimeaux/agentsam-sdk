@@ -26,9 +26,14 @@ export function resolveDockerServiceConfig(options = {}) {
   ).trim();
   const url = rawUrl.replace(/\/+$/, '');
 
+  // AGENTSAM_CAD_TOKEN is an explicit override; otherwise reuse
+  // AGENTSAM_BRIDGE_KEY, the machine-to-machine secret iam-cad-worker's
+  // /cad/run lane already trusts, rather than requiring a second credential
+  // provisioned just for this route.
   let token = String(
     options.token ||
     env.AGENTSAM_CAD_TOKEN ||
+    env.AGENTSAM_BRIDGE_KEY ||
     ''
   ).trim();
 
