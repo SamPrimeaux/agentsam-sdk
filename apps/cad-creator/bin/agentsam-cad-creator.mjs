@@ -69,8 +69,9 @@ function scaffoldRootPackage(targetRoot) {
     type: 'module',
     workspaces: ['frontend', 'backend', 'shared/*'],
     scripts: {
-      dev: 'npm run dev -w @inneranimalmedia/agentsam-cad-backend',
-      build: 'npm run build -w @inneranimalmedia/agentsam-cad-frontend && npm run build -w @inneranimalmedia/agentsam-cad-backend',
+      dev: 'npm run prepare:runtime && npm run dev -w @inneranimalmedia/agentsam-cad-backend',
+      build: 'npm run prepare:runtime && npm run build -w @inneranimalmedia/agentsam-cad-frontend && npm run build -w @inneranimalmedia/agentsam-cad-backend',
+      'prepare:runtime': 'node scripts/prepare-cad-runtime.mjs',
       start: 'npm run start -w @inneranimalmedia/agentsam-cad-backend',
       preview: 'npm run preview -w @inneranimalmedia/agentsam-cad-frontend',
       typecheck: 'npm run typecheck --workspaces --if-present',
@@ -108,6 +109,8 @@ function scaffold(targetArg) {
     'backend/tsconfig.json',
     'backend/wrangler.jsonc',
     'backend/src',
+    'backend/runtime',
+    'scripts/prepare-cad-runtime.mjs',
     'backend/worker',
     'shared/cad'
   ]) {
@@ -126,7 +129,7 @@ async function preview(args) {
   const port = valueAfter('--port', args) || process.env.PORT || '3000';
   if (!/^\d+$/.test(String(port))) throw new Error(`invalid --port: ${port}`);
 
-  const server = path.join(packageRoot, 'backend', 'dist', 'server.cjs');
+  const server = path.join(packageRoot, 'backend', 'dist', 'server.mjs');
   const index = path.join(packageRoot, 'frontend', 'dist', 'index.html');
   if (!fs.existsSync(server) || !fs.existsSync(index)) {
     throw new Error('packaged build output is missing; reinstall the package or run npm run build from source');
@@ -142,7 +145,7 @@ async function preview(args) {
 
 async function runDoctor(args = []) {
   const isJson = args.includes('--json');
-  const server = path.join(packageRoot, 'backend', 'dist', 'server.cjs');
+  const server = path.join(packageRoot, 'backend', 'dist', 'server.mjs');
   const index = path.join(packageRoot, 'frontend', 'dist', 'index.html');
   const configPath = getCadConfigPath();
   const configExists = fs.existsSync(configPath);

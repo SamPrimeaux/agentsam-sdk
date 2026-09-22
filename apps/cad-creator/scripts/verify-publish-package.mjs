@@ -10,7 +10,7 @@ function must(relative) {
 
 for (const relative of [
   'frontend/dist/index.html',
-  'backend/dist/server.cjs',
+  'backend/dist/server.mjs',
   'bin/agentsam-cad-creator.mjs',
   'agentsam.app.json',
   'backend/worker/index.js',

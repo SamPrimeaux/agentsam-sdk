@@ -1,4 +1,5 @@
 import express from 'express';
+import { installProjectRoutes } from './cad/project-routes';
 import http from 'http';
 import path from 'path';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -20,6 +21,7 @@ const HOST = process.env.HOST || '127.0.0.1';
 const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+installProjectRoutes(app);
 
 // Lazy Gemini API initialization helper
 let aiClient: GoogleGenAI | null = null;

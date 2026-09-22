@@ -106,6 +106,7 @@ function required(value, message) {
 }
 
 export async function runCad(argv) {
+  if (argv[0] === 'project') return (await import('../lib/cad/project-cli.js')).runProjectCli(argv.slice(1));
   const engine = argv[0];
   if (!engine || engine === '--help' || engine === '-h') {
     console.log(usage());

@@ -31,11 +31,13 @@
     "backend/package.json",
     "backend/tsconfig.json",
     "backend/.dev.vars.example",
-    "shared/cad/"
+    "shared/cad/",
+    "backend/runtime/",
+    "scripts/prepare-cad-runtime.mjs"
   ],
   "scripts": {
-    "dev": "npm run dev -w @inneranimalmedia/agentsam-cad-backend",
-    "build": "npm run build -w @inneranimalmedia/agentsam-cad-frontend && npm run build -w @inneranimalmedia/agentsam-cad-backend",
+    "dev": "npm run prepare:runtime && npm run dev -w @inneranimalmedia/agentsam-cad-backend",
+    "build": "npm run prepare:runtime && npm run build -w @inneranimalmedia/agentsam-cad-frontend && npm run build -w @inneranimalmedia/agentsam-cad-backend",
     "start": "npm run start -w @inneranimalmedia/agentsam-cad-backend",
     "preview": "npm run preview -w @inneranimalmedia/agentsam-cad-frontend",
     "typecheck": "npm run typecheck --workspaces --if-present",
@@ -43,7 +45,8 @@
     "clean": "rm -rf frontend/dist backend/dist coverage",
     "cf:dry-run": "npm run build && wrangler deploy -c backend/wrangler.jsonc --dry-run",
     "package:verify": "npm run build && npm run typecheck && npm test && node scripts/verify-publish-package.mjs",
-    "prepack": "npm run package:verify"
+    "prepack": "npm run package:verify",
+    "prepare:runtime": "node scripts/prepare-cad-runtime.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

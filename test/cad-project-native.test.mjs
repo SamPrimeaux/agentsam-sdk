@@ -1,0 +1,24 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {localProjectRuntime} from '../src/lib/cad/project-cli.js';
+const enabled=process.env.AGENTSAM_TEST_NATIVE_CAD==='1';
+test('courtyard real build inspect export render and restored revision rebuild',{skip:!enabled&&'Set AGENTSAM_TEST_NATIVE_CAD=1; enabled runs must find Blender'},async t=>{
+ const root=process.env.AGENTSAM_CAD_TEST_OUTPUT||fs.mkdtempSync(path.join(os.tmpdir(),'cad-house-native-'));
+ if(!process.env.AGENTSAM_CAD_TEST_OUTPUT)t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+ const p=JSON.parse(fs.readFileSync(new URL('./fixtures/cad/courtyard-house.json',import.meta.url),'utf8'));
+ p.id='courtyard-'+Date.now();
+ const run=localProjectRuntime(root),saved=await run.execute('design_project_save',{project:p,expected_revision:0});
+ const input={project_id:p.id,revision:saved.revision};
+ const build=await run.execute('design_model_build',input);assert.ok(build.artifact.size_bytes>0);
+ const inspection=await run.execute('design_model_inspect',input);assert.ok(inspection.ok);
+ const glb=await run.execute('design_model_export',{...input,format:'glb'});assert.equal(fs.readFileSync(glb.artifact.path).subarray(0,4).toString(),'glTF');
+ const png=await run.execute('design_model_render',input);assert.equal(fs.readFileSync(png.artifact.path).subarray(1,4).toString(),'PNG');
+ const edited=await run.execute('design_apply_operation',{project_id:p.id,expected_revision:1,operation:{type:'update_wall',wallId:'wall-0',updates:{height3D:132}}});
+ assert.equal(edited.revision,2);
+ const restored=await run.execute('design_project_restore',{project_id:p.id,revision:1,expected_revision:2});assert.equal(restored.project.walls[0].height3D,120);
+ await run.execute('design_model_build',{project_id:p.id,revision:3});
+ console.log(JSON.stringify({root,project_id:p.id,build:build.artifact,glb:glb.artifact,png:png.artifact,restored_revision:3}));
+});

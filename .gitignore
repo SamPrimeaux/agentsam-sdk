@@ -18,3 +18,8 @@ agentsam-init-smoke/
 .agentsam/merkle.json
 .agentsam/docker/
 *.bak-*
+
+# Generated CAD project state and app runtime
+.agentsam/cad/
+.agentsam/cad-native-proof/
+apps/cad-creator/backend/runtime/

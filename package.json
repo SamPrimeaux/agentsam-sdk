@@ -77,7 +77,8 @@
     "./context/budget-schema": "./protocol/context/context-budget.schema.json",
     "./context/pack-schema": "./protocol/context/resolved-context-pack.schema.json",
     "./skills": "./src/skills/index.js",
-    "./skills/catalog": "./skills/catalog.json"
+    "./skills/catalog": "./skills/catalog.json",
+    "./cad-project": "./src/lib/cad/project-cli.js"
   },
   "bin": {
     "agentsam": "bin/agentsam",
@@ -112,7 +113,8 @@
     "README.md",
     "LICENSE",
     "DEVELOPMENT.md",
-    "AGENTSAM.md"
+    "AGENTSAM.md",
+    "apps/cad-creator/shared/cad"
   ],
   "workspaces": [
     "packages/agentsam-shell-kit",

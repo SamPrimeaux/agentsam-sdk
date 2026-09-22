@@ -29,6 +29,7 @@ import { SketchUploadModal } from '../components/SketchUploadModal';
 import { CloudProjectsModal } from '../components/CloudProjectsModal';
 import { TemplateLibraryModal } from '../components/TemplateLibraryModal';
 import { CadCreatorShell } from './CadCreatorShell';
+import { ProjectRuntimePanel } from '../components/ProjectRuntimePanel';
 import { CadStatusStrip } from './CadStatusStrip';
 import { installCadPreviewGuestBridge } from '../lib/agentsam-preview-bridge';
 import { useCadTools } from '../lib/execution/useCadTools';
@@ -256,6 +257,7 @@ export function CadCreatorApp({
   return (
     <div className={`flex flex-col h-screen w-screen font-sans overflow-hidden select-none ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
       {/* 1. Global Shell Header (5 Workspaces, Project, Sync, Undo/Redo, AgentSam, Export) */}
+      <ProjectRuntimePanel project={project} onLoad={setProject} readOnly={isViewer} />
       <CadCreatorShell
         activeWorkspace={activeWorkspace}
         onSelectWorkspace={handleSelectWorkspace}

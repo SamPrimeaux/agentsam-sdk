@@ -7,7 +7,8 @@ import { runProcess } from '../../security/process.js';
 import { probeDockerServiceHealth, executeBlenderDocker } from './docker-executor.js';
 
 const sdkRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-export const BLENDER_ADAPTER_PATH = path.join(sdkRoot, 'services/cad/blender/adapter.py');
+const packagedAdapter = path.join(path.dirname(fileURLToPath(import.meta.url)), 'cad/blender/adapter.py');
+export const BLENDER_ADAPTER_PATH = fs.existsSync(packagedAdapter) ? packagedAdapter : path.join(sdkRoot, 'services/cad/blender/adapter.py');
 export const BLENDER_RESULT_PREFIX = 'AGENTSAM_RESULT=';
 export const BLENDER_EXPORT_FORMATS = Object.freeze(['glb', 'stl', 'obj']);
 export const BLENDER_RECIPE_OPS = Object.freeze([

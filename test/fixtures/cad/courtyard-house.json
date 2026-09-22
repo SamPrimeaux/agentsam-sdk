@@ -1,0 +1,208 @@
+{
+  "id": "courtyard-house-fixture",
+  "name": "Courtyard House — baseline study",
+  "units": "in",
+  "scale": 1,
+  "gridSize": 12,
+  "snapToGrid": true,
+  "walls": [
+    {
+      "id": "wall-0",
+      "x1": 0,
+      "y1": 0,
+      "x2": 864,
+      "y2": 0,
+      "thickness": 6,
+      "height3D": 120,
+      "material": "wood_panel",
+      "exterior": true
+    },
+    {
+      "id": "wall-1",
+      "x1": 864,
+      "y1": 0,
+      "x2": 864,
+      "y2": 720,
+      "thickness": 6,
+      "height3D": 120,
+      "material": "wood_panel",
+      "exterior": true
+    },
+    {
+      "id": "wall-2",
+      "x1": 864,
+      "y1": 720,
+      "x2": 600,
+      "y2": 720,
+      "thickness": 6,
+      "height3D": 120,
+      "material": "wood_panel",
+      "exterior": true
+    },
+    {
+      "id": "wall-3",
+      "x1": 600,
+      "y1": 720,
+      "x2": 600,
+      "y2": 192,
+      "thickness": 6,
+      "height3D": 120,
+      "material": "wood_panel",
+      "exterior": true
+    },
+    {
+      "id": "wall-4",
+      "x1": 600,
+      "y1": 192,
+      "x2": 264,
+      "y2": 192,
+      "thickness": 6,
+      "height3D": 120,
+      "material": "wood_panel",
+      "exterior": true
+    },
+    {
+      "id": "wall-5",
+      "x1": 264,
+      "y1": 192,
+      "x2": 264,
+      "y2": 720,
+      "thickness": 6,
+      "height3D": 120,
+      "material": "wood_panel",
+      "exterior": true
+    },
+    {
+      "id": "wall-6",
+      "x1": 264,
+      "y1": 720,
+      "x2": 0,
+      "y2": 720,
+      "thickness": 6,
+      "height3D": 120,
+      "material": "wood_panel",
+      "exterior": true
+    },
+    {
+      "id": "wall-7",
+      "x1": 0,
+      "y1": 720,
+      "x2": 0,
+      "y2": 0,
+      "thickness": 6,
+      "height3D": 120,
+      "material": "wood_panel",
+      "exterior": true
+    }
+  ],
+  "doors": [
+    {
+      "id": "courtyard-door",
+      "wallId": "wall-4",
+      "distanceAlongWall": 0.5,
+      "width": 96,
+      "height": 96,
+      "swing": "double",
+      "openAngle": 0
+    }
+  ],
+  "windows": [],
+  "rooms": [
+    {
+      "id": "left-wing",
+      "name": "Primary / kitchen wing",
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          264,
+          0
+        ],
+        [
+          264,
+          720
+        ],
+        [
+          0,
+          720
+        ]
+      ],
+      "areaSqFt": 1320,
+      "floorMaterial": "hardwood",
+      "color": "#ac9875"
+    },
+    {
+      "id": "right-wing",
+      "name": "Bedroom / media wing",
+      "points": [
+        [
+          600,
+          0
+        ],
+        [
+          864,
+          0
+        ],
+        [
+          864,
+          720
+        ],
+        [
+          600,
+          720
+        ]
+      ],
+      "areaSqFt": 1320,
+      "floorMaterial": "hardwood",
+      "color": "#ac9875"
+    },
+    {
+      "id": "living",
+      "name": "Living connection",
+      "points": [
+        [
+          264,
+          0
+        ],
+        [
+          600,
+          0
+        ],
+        [
+          600,
+          192
+        ],
+        [
+          264,
+          192
+        ]
+      ],
+      "areaSqFt": 448,
+      "floorMaterial": "hardwood",
+      "color": "#ac9875"
+    }
+  ],
+  "furniture": [],
+  "annotations": [],
+  "parametricObjects": [],
+  "lighting": {
+    "sunAltitude": 45,
+    "sunAzimuth": 135,
+    "intensity": 1,
+    "timeOfDay": "noon",
+    "shadows": true,
+    "ambientColor": "#334155"
+  },
+  "roofType": "none",
+  "ceilingHeight": 120,
+  "version": 1,
+  "updatedAt": 0,
+  "metadata": {
+    "createdAt": 0,
+    "updatedAt": 0,
+    "revision": 1,
+    "description": "Regression fixture, not final house plan. 72x60 ft reference envelope; rear courtyard opens +Y. 10ft height assumed. Roof intentionally omitted until supported."
+  }
+}
