@@ -108,6 +108,16 @@ function workspacePayload(project: Project) {
     }));
 }
 
+type FollowupQueuedSend = {
+  id: string;
+  targetId: string;
+  targetKind: "trail" | "side";
+  text: string;
+  projectId: string;
+  modelSelection: StudioModelSelection;
+  createdAt: number;
+};
+
 type WorkState = {
   hydrated: boolean;
   projects: Project[];
@@ -131,6 +141,8 @@ type WorkState = {
   confirmDiscardId: string | null;
   pendingCommands: string[];
   offlineQueue: OfflineQueuedSend[];
+  followupQueue: FollowupQueuedSend[];
+  pausedQueueTargets: string[];
   setHydrated: (value: boolean) => void;
   setSearch: (value: string) => void;
   setDraft: (id: string, value: string) => void;
@@ -152,7 +164,9 @@ type WorkState = {
   pinTrail: (id: string) => void;
   deleteTrail: (id: string) => void;
   setActiveProject: (id: string) => void;
+  moveTrailToProject: (trailId: string, projectId: string) => void;
   createProject: (name?: string) => string;
+  createProjectForTrail: (trailId: string, name?: string) => string;
   renameProject: (id: string, name: string) => void;
   pinProject: (id: string) => void;
   deleteProject: (id: string) => void;
@@ -171,8 +185,16 @@ type WorkState = {
   keepSideChat: (id: string) => string | null;
   enqueueCommand: (cmd: string) => void;
   consumeCommands: () => string[];
-  send: (targetId: string, targetKind: "trail" | "side", text?: string) => Promise<void>;
+  send: (
+    targetId: string,
+    targetKind: "trail" | "side",
+    text?: string,
+    context?: { projectId?: string; modelSelection?: StudioModelSelection },
+  ) => Promise<void>;
   stop: (id: string) => void;
+  removeFollowup: (id: string) => void;
+  updateFollowup: (id: string, text: string) => void;
+  resumeFollowups: (targetId: string) => void;
 };
 
 function ensureShape(raw: Partial<WorkState> | undefined): Pick<
@@ -266,6 +288,8 @@ export const useWorkStore = create<WorkState>()(
       confirmDiscardId: null,
       pendingCommands: [],
       offlineQueue: [],
+      followupQueue: [],
+      pausedQueueTargets: [],
       terminalHeight: 0.38,
       setHydrated: (value) => set({ hydrated: value }),
       setSearch: (search) => set({ search }),
@@ -472,6 +496,16 @@ export const useWorkStore = create<WorkState>()(
           navView: "trails",
         });
       },
+      moveTrailToProject: (trailId, projectId) => {
+        if (!get().projects.some((project) => project.id === projectId)) return;
+        set((s) => ({
+          activeProjectId: projectId,
+          activeTrailId: trailId,
+          trails: s.trails.map((trail) =>
+            trail.id === trailId ? { ...trail, projectId, updatedAt: Date.now() } : trail,
+          ),
+        }));
+      },
       createProject: (name) => {
         const project = newProject(name?.trim() || "Untitled");
         const trail = newTrail({ projectId: project.id, title: project.name, pinned: false });
@@ -480,6 +514,19 @@ export const useWorkStore = create<WorkState>()(
           trails: [trail, ...s.trails],
           activeProjectId: project.id,
           activeTrailId: trail.id,
+          navView: "trails",
+        }));
+        return project.id;
+      },
+      createProjectForTrail: (trailId, name) => {
+        const project = newProject(name?.trim() || "Untitled");
+        set((s) => ({
+          projects: [project, ...s.projects],
+          trails: s.trails.map((trail) =>
+            trail.id === trailId ? { ...trail, projectId: project.id, updatedAt: Date.now() } : trail,
+          ),
+          activeProjectId: project.id,
+          activeTrailId: trailId,
           navView: "trails",
         }));
         return project.id;
@@ -691,13 +738,51 @@ export const useWorkStore = create<WorkState>()(
       stop: (id) => {
         aborts.get(id)?.abort();
         aborts.delete(id);
-        set((s) => ({ streamingIds: s.streamingIds.filter((x) => x !== id) }));
+        set((s) => ({
+          streamingIds: s.streamingIds.filter((x) => x !== id),
+          pausedQueueTargets: s.pausedQueueTargets.includes(id)
+            ? s.pausedQueueTargets
+            : [...s.pausedQueueTargets, id],
+        }));
       },
-      send: async (targetId, targetKind, text) => {
+      removeFollowup: (id) =>
+        set((s) => ({ followupQueue: s.followupQueue.filter((item) => item.id !== id) })),
+      updateFollowup: (id, text) =>
+        set((s) => ({
+          followupQueue: s.followupQueue.map((item) =>
+            item.id === id ? { ...item, text: text.slice(0, 12000) } : item,
+          ),
+        })),
+      resumeFollowups: (targetId) => {
+        set((s) => ({ pausedQueueTargets: s.pausedQueueTargets.filter((id) => id !== targetId) }));
+        const next = get().followupQueue.find((item) => item.targetId === targetId);
+        if (!next || get().streamingIds.includes(targetId)) return;
+        set((s) => ({ followupQueue: s.followupQueue.filter((item) => item.id !== next.id) }));
+        void get().send(next.targetId, next.targetKind, next.text, {
+          projectId: next.projectId,
+          modelSelection: next.modelSelection,
+        });
+      },
+      send: async (targetId, targetKind, text, context) => {
         const state = get();
-        if (state.streamingIds.includes(targetId)) return;
         const draft = (text ?? state.drafts[targetId] ?? "").trim();
         if (!draft) return;
+        if (state.streamingIds.includes(targetId)) {
+          const queued: FollowupQueuedSend = {
+            id: uid(),
+            targetId,
+            targetKind,
+            text: draft.slice(0, 12000),
+            projectId: state.activeProjectId,
+            modelSelection: { ...state.modelSelection },
+            createdAt: Date.now(),
+          };
+          set((s) => ({
+            drafts: { ...s.drafts, [targetId]: "" },
+            followupQueue: [...s.followupQueue, queued],
+          }));
+          return;
+        }
 
         const offline = typeof navigator !== "undefined" && !navigator.onLine;
         if (offline) {
@@ -811,7 +896,8 @@ export const useWorkStore = create<WorkState>()(
           .slice(-16)
           .map((m) => ({ role: m.role, content: m.content }));
 
-        const project = after.projects.find((p) => p.id === after.activeProjectId) ?? after.projects[0]!;
+        const projectId = context?.projectId ?? after.activeProjectId;
+        const project = after.projects.find((p) => p.id === projectId) ?? after.projects[0]!;
 
         const write = (content: string, done = false) => {
           if (targetKind === "trail") {
@@ -852,13 +938,14 @@ export const useWorkStore = create<WorkState>()(
           }
         };
 
+        let completed = false;
         try {
           let assembled = "";
           await streamChat({
             messages: payload,
             mode: targetKind,
-            provider: after.modelSelection?.provider,
-            model_id: after.modelSelection?.model_id,
+            provider: context?.modelSelection?.provider ?? after.modelSelection?.provider,
+            model_id: context?.modelSelection?.model_id ?? after.modelSelection?.model_id,
             parentTitle,
             parentExcerpt,
             workspace: workspacePayload(project),
@@ -869,6 +956,7 @@ export const useWorkStore = create<WorkState>()(
             },
           });
           write(assembled, true);
+          completed = true;
           if (targetKind === "side") {
             const tab = get().sideTabs.find((t) => t.id === targetId);
             if (tab?.reportToLead && assembled.trim()) {
@@ -880,12 +968,28 @@ export const useWorkStore = create<WorkState>()(
             }
           }
         } catch (err) {
-          if ((err as Error).name === "AbortError") return;
-          const message = err instanceof Error ? err.message : "The studio model could not reply.";
-          write(message, true);
+          if ((err as Error).name !== "AbortError") {
+            const message = err instanceof Error ? err.message : "The studio model could not reply.";
+            write(message, true);
+            set((s) => ({
+              pausedQueueTargets: s.pausedQueueTargets.includes(targetId)
+                ? s.pausedQueueTargets
+                : [...s.pausedQueueTargets, targetId],
+            }));
+          }
         } finally {
           aborts.delete(targetId);
           set((s) => ({ streamingIds: s.streamingIds.filter((x) => x !== targetId) }));
+          if (completed && !get().pausedQueueTargets.includes(targetId)) {
+            const next = get().followupQueue.find((item) => item.targetId === targetId);
+            if (next) {
+              set((s) => ({ followupQueue: s.followupQueue.filter((item) => item.id !== next.id) }));
+              void get().send(next.targetId, next.targetKind, next.text, {
+                projectId: next.projectId,
+                modelSelection: next.modelSelection,
+              });
+            }
+          }
         }
       },
     }),
@@ -893,7 +997,7 @@ export const useWorkStore = create<WorkState>()(
       name: "agentsam-work-v1",
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
-      version: 2,
+      version: 3,
       merge: (persisted, current) => {
         const raw = (persisted ?? {}) as Partial<WorkState>;
         const shaped = ensureShape(raw);
@@ -901,6 +1005,8 @@ export const useWorkStore = create<WorkState>()(
           ...current,
           ...shaped,
           offlineQueue: Array.isArray(raw.offlineQueue) ? raw.offlineQueue : [],
+          followupQueue: Array.isArray(raw.followupQueue) ? raw.followupQueue : [],
+          pausedQueueTargets: Array.isArray(raw.pausedQueueTargets) ? raw.pausedQueueTargets : [],
         };
       },
       partialize: (s) => ({
@@ -918,6 +1024,8 @@ export const useWorkStore = create<WorkState>()(
         sideTabs: s.sideTabs,
         activeSideTabId: s.activeSideTabId,
         offlineQueue: s.offlineQueue,
+        followupQueue: s.followupQueue,
+        pausedQueueTargets: s.pausedQueueTargets,
       }),
     },
   ),
