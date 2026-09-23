@@ -16,6 +16,70 @@ function usage(input = 10_000, cumulative = input) {
 }
 function cost(total = 0.1) { return { total_usd: total, components_usd: { input: total * 0.5, cached_input: total * 0.1, cache_write: total * 0.1, output: total * 0.3 } }; }
 
+
+test('runner accepts provider-verified models whose context window is unknown', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-unknown-window-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(root, '.git'));
+  fs.writeFileSync(path.join(root, 'package.json'), '{"name":"unknown-window-demo"}');
+
+  const modelRecord = Object.freeze({
+    model_key: 'openai:gpt-5.6-luna',
+    provider: 'openai',
+    provider_model_id: 'gpt-5.6-luna',
+    label: 'gpt-5.6-luna',
+    availability: 'available',
+    availability_source: 'provider_api',
+    context_window: null,
+    context_window_source: 'unknown',
+    max_output_tokens: null,
+    reasoning_efforts: Object.freeze(['auto']),
+    service_tiers: Object.freeze(['default']),
+    capabilities: Object.freeze({ responses: true }),
+    pricing: null,
+    context_policy: null,
+  });
+  const events = [];
+  let instructions = '';
+  const provider = {
+    async create(params) {
+      instructions = params.instructions || '';
+      return {
+        response_id: 'resp_unknown_window',
+        output_text: 'working',
+        actual_service_tier: 'default',
+        tool_calls: [],
+        usage_snapshot: {
+          current_context: { input_tokens: 1200, window_tokens: 0 },
+          cumulative: { input_tokens: 1200, output_tokens: 10, cached_input_tokens: 0, cache_write_tokens: 0, reasoning_tokens: 0 },
+          estimate_kind: 'provider',
+          provider_authoritative: true,
+        },
+        cost: null,
+      };
+    },
+    async continueWithToolOutputs() { throw new Error('unused'); },
+  };
+
+  const result = await runResponsesAgent({
+    provider,
+    capabilityAdapter: createCapabilityAdapter(),
+    cwd: root,
+    prompt: 'inspect this repository',
+    model: modelRecord.model_key,
+    modelRecord,
+    emit: event => events.push(event),
+  });
+
+  assert.equal(result.output_text, 'working');
+  assert.match(instructions, /Project Card: unknown-window-demo/);
+  const localSnapshot = events.find(event => event.type === 'context.snapshot' && event.payload?.estimate_kind === 'local');
+  assert.ok(localSnapshot);
+  assert.equal(localSnapshot.payload.window_tokens, null);
+  assert.equal(localSnapshot.payload.pressure, 'unknown');
+  assert.equal(localSnapshot.payload.resolver_receipt?.fallback_policy, 'bounded_unknown_model_window');
+});
+
 test('capability adapter hydrates packaged JSON schemas and tool surface exposes only selected executable schemas', () => {
   const adapter = createCapabilityAdapter();
   const descriptors = adapter.toolDescriptors();

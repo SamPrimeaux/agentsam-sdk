@@ -65,6 +65,66 @@ function modelBudget(record, policyOverride = null) {
   });
 }
 
+const UNKNOWN_WINDOW_CONTEXT_LIMITS = Object.freeze({
+  maxSystemChars: 24_000,
+  maxEvidenceChars: 48_000,
+  maxItemChars: 16_000,
+});
+
+function resolveUnknownWindowContext(cwd, card, contextItems = []) {
+  const rules = compileAgentInstructions(cwd, { maxChars: UNKNOWN_WINDOW_CONTEXT_LIMITS.maxSystemChars });
+  let remainingEvidenceChars = UNKNOWN_WINDOW_CONTEXT_LIMITS.maxEvidenceChars;
+  const included = [{
+    kind: 'repo',
+    ref: 'project://card',
+    priority: 100,
+    content: card.content,
+    chars: card.content.length,
+  }];
+  const deferred = [];
+
+  for (const item of contextItems) {
+    const ref = clean(item?.ref) || 'context://anonymous';
+    if (remainingEvidenceChars <= 0) {
+      deferred.push(ref);
+      continue;
+    }
+    const source = String(item?.content ?? '');
+    if (!source) continue;
+    const maxChars = Math.max(1, Math.min(UNKNOWN_WINDOW_CONTEXT_LIMITS.maxItemChars, remainingEvidenceChars));
+    const bounded = truncateResultText(source, maxChars);
+    included.push(Object.freeze({
+      ...item,
+      ref,
+      content: bounded.text,
+      chars: bounded.chars,
+      ...(bounded.truncated ? { truncated: true, source_chars: bounded.source_chars } : {}),
+    }));
+    remainingEvidenceChars -= bounded.chars;
+    if (bounded.truncated) deferred.push(ref + '#remainder');
+  }
+
+  const evidenceChars = UNKNOWN_WINDOW_CONTEXT_LIMITS.maxEvidenceChars - remainingEvidenceChars;
+  return Object.freeze({
+    objective_window_known: false,
+    rules,
+    items: Object.freeze(included),
+    receipt: Object.freeze({
+      estimate_kind: 'local',
+      window_tokens: null,
+      utilization_ratio: null,
+      pressure: 'unknown',
+      system_chars: rules.chars,
+      evidence_chars: evidenceChars,
+      sources_considered: contextItems.length + 1,
+      sources_included: included.length,
+      sources_deferred: deferred.length,
+      deferred_refs: Object.freeze(deferred),
+      fallback_policy: 'bounded_unknown_model_window',
+    }),
+  });
+}
+
 export function buildAgentToolSurface(capabilityAdapter, objective, options = {}) {
   if (!capabilityAdapter?.toolDescriptors) throw new TypeError('capabilityAdapter.toolDescriptors is required');
   const catalog = capabilityAdapter.toolDescriptors({ includeUnavailable: false });
@@ -204,20 +264,22 @@ export async function runAgentSamTurn(options = {}) {
       checkpointSha: options.checkpointSha,
       beliefs: options.beliefs || options.workspaceState,
     });
-    resolvedContext = resolveProjectContext({
-      cwd,
-      objective,
-      budget,
-      items: [
-        {
-          kind: 'repo',
-          ref: 'project://card',
-          priority: 100,
-          content: card.content,
-        },
-        ...(options.contextItems || []),
-      ],
-    });
+    resolvedContext = budget
+      ? resolveProjectContext({
+          cwd,
+          objective,
+          budget,
+          items: [
+            {
+              kind: 'repo',
+              ref: 'project://card',
+              priority: 100,
+              content: card.content,
+            },
+            ...(options.contextItems || []),
+          ],
+        })
+      : resolveUnknownWindowContext(cwd, card, options.contextItems || []);
     const cardContent = resolvedContext.items.find((i) => i.ref === 'project://card')?.content || card.content;
     const extraContent = resolvedContext.items
       .filter((i) => i.ref !== 'project://card')
