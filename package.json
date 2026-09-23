@@ -136,7 +136,7 @@
     "test:terminal:mock": "node --test test/terminal/*.test.mjs",
     "test:live:terminal": "node --test test/live/*.live.test.mjs",
     "test:identity": "npm --prefix packages/identity test",
-    "test:workspaces": "npm --prefix packages/agentsam-contracts test && npm --prefix packages/agentsam-contracts run typecheck && npm --prefix packages/agentsam-errors test && npm --prefix packages/agentsam-repository test && npm --prefix packages/agentsam-workbench test && npm --prefix packages/agentsam-workbench run typecheck && npm --prefix packages/agentsam-nav run typecheck && npm --prefix packages/agentsam-shell-kit run typecheck && npm --prefix packages/work-graph test",
+    "test:workspaces": "npm --prefix packages/agentsam-contracts test && npm --prefix packages/agentsam-contracts run typecheck && npm --prefix packages/agentsam-errors test && npm --prefix packages/agentsam-repository test && npm --prefix packages/agentsam-workbench test && npm --prefix packages/agentsam-workbench run typecheck && npm --prefix packages/agentsam-nav run typecheck && npm --prefix packages/agentsam-shell-kit run typecheck && npm --prefix packages/work-graph test && npm --prefix packages/agentsam-queue-control test",
     "test:autorag": "npm --prefix packages/agentsam-knowledge test",
     "smoke": "node test/smoke.mjs",
     "verify:package": "node scripts/verify-package.mjs",
