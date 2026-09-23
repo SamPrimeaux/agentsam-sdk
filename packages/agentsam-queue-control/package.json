@@ -1,0 +1,31 @@
+{
+  "name": "@inneranimalmedia/agentsam-queue-control",
+  "version": "0.1.0",
+  "description": "Portable AgentSam queue, job-routing, batching, and execution-control primitives with Cloudflare-first adapters.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./contracts": "./src/contracts.js",
+    "./policy": "./src/policy.js",
+    "./topology": "./src/topology.js",
+    "./dispatch": "./src/dispatch.js",
+    "./adapters/memory": "./src/adapters/memory.js",
+    "./adapters/cloudflare": "./src/adapters/cloudflare.js"
+  },
+  "files": [
+    "src",
+    "schemas",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT"
+}
