@@ -94,6 +94,7 @@
     "packages/agentsam-knowledge",
     "packages/agentsam-nav",
     "packages/work-graph",
+    "packages/agentsam-queue-control",
     "packages/connectors/cloudflare",
     "templates",
     "docs",
