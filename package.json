@@ -61,6 +61,7 @@
     "./telemetry": "./src/telemetry/index.js",
     "./providers": "./src/providers/index.js",
     "./work-graph": "./packages/work-graph/src/index.js",
+    "./queue-control": "./packages/agentsam-queue-control/src/index.js",
     "./work-graph/renderers/timeline": "./packages/work-graph/src/renderers/timeline.js",
     "./work-graph/renderers/gantt-model": "./packages/work-graph/src/renderers/gantt-model.js",
     "./work-graph/adapters/engineering/git": "./packages/work-graph/src/adapters/engineering/git.js",
