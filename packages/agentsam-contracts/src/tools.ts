@@ -19,6 +19,8 @@ export type AgentToolSideEffectLevel =
 
 export type AgentToolRiskLevel = 'low' | 'moderate' | 'high' | 'critical';
 
+export type AgentToolReceiptMode = 'full' | 'redacted' | 'metadata_only';
+
 export type AgentToolIdempotencyMode =
   | 'not_applicable'
   | 'intrinsic'
@@ -63,6 +65,9 @@ export interface AgentToolDefinition {
   idempotencyMode: AgentToolIdempotencyMode;
   timeoutMs?: number;
   retryPolicy?: AgentToolRetryPolicy;
+  receiptMode?: AgentToolReceiptMode;
+  sensitiveInputPaths?: string[];
+  sensitiveOutputPaths?: string[];
   emitsEvents?: string[];
   active?: boolean;
   metadata?: Record<string, unknown>;

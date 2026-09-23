@@ -1,15 +1,64 @@
 const authority = [{ type: 'secret', ref: 'completeful.api_key', provider: 'completeful' }];
 
-function objectSchema(properties = {}, required = []) {
+const webhookTopics = [
+  'order:created',
+  'order:updated',
+  'order:sent-to-production',
+  'order:cancelled',
+  'order:refunded',
+  'order:shipment:created',
+  'catalog:product:created',
+  'catalog:product:updated',
+  'catalog:product:price_changed',
+  'catalog:product:availability_changed',
+  'product:created',
+  'product:updated',
+  'product:deleted',
+  'product:publish:started',
+  'product:publish:succeeded',
+  'product:publish:failed',
+  'shop:disconnected',
+  'ping',
+];
+
+function objectSchema(properties = {}, required = [], extra = {}) {
   return {
     type: 'object',
     additionalProperties: false,
     properties,
     ...(required.length ? { required } : {}),
+    ...extra,
   };
 }
 
-function readTool({ toolKey, displayName, description, inputSchema, emitsEvents = [] }) {
+function retryPolicy(maxAttempts) {
+  return {
+    maxAttempts,
+    backoff: maxAttempts > 1 ? 'exponential' : 'none',
+    ...(maxAttempts > 1
+      ? {
+          baseDelayMs: 500,
+          maxDelayMs: 5_000,
+          retryableReasons: ['provider_rate_limited', 'provider_unavailable', 'transport_timeout'],
+        }
+      : {}),
+  };
+}
+
+function toolDefinition({
+  toolKey,
+  displayName,
+  description,
+  inputSchema,
+  riskLevel = 'low',
+  sideEffectLevel = 'none',
+  idempotencyMode = 'intrinsic',
+  maxAttempts = 3,
+  receiptMode = 'full',
+  sensitiveInputPaths = [],
+  sensitiveOutputPaths = [],
+  emitsEvents = [],
+}) {
   return Object.freeze({
     toolKey,
     displayName,
@@ -20,35 +69,94 @@ function readTool({ toolKey, displayName, description, inputSchema, emitsEvents 
     inputSchema,
     outputSchema: { type: 'object' },
     authority,
-    riskLevel: 'low',
-    sideEffectLevel: 'none',
-    idempotencyMode: 'intrinsic',
+    riskLevel,
+    sideEffectLevel,
+    idempotencyMode,
     timeoutMs: 30_000,
-    retryPolicy: {
-      maxAttempts: 3,
-      backoff: 'exponential',
-      baseDelayMs: 500,
-      maxDelayMs: 5_000,
-      retryableReasons: ['provider_rate_limited', 'provider_unavailable', 'transport_timeout'],
-    },
+    retryPolicy: retryPolicy(maxAttempts),
+    receiptMode,
+    sensitiveInputPaths,
+    sensitiveOutputPaths,
     emitsEvents,
     active: true,
   });
 }
 
+const orderBodySchema = {
+  type: 'object',
+  additionalProperties: true,
+  properties: {
+    external_order_id: { type: ['string', 'null'] },
+    shipping_address: { type: 'object' },
+    billing_address: { type: 'object' },
+    email: { type: ['string', 'null'] },
+    currency: { type: 'string', enum: ['USD'] },
+    notes: { type: ['string', 'null'] },
+    shipping_method: { type: ['string', 'null'], enum: ['standard', null] },
+    line_items: { type: 'array', minItems: 1, items: { type: 'object' } },
+  },
+  required: ['shipping_address', 'line_items'],
+};
+
+const productCreateBodySchema = {
+  type: 'object',
+  additionalProperties: true,
+  properties: {
+    catalog_product_id: { type: 'string', minLength: 1 },
+    title: { type: 'string' },
+    description: { type: ['string', 'null'] },
+    retail_price: { type: 'number', minimum: 0 },
+    compare_at_price: { type: ['number', 'null'] },
+    sku: { type: ['string', 'null'] },
+    design_id: { type: ['string', 'null'] },
+    artfile_url: { type: ['string', 'null'] },
+    print_files: { type: ['array', 'null'], minItems: 1, items: { type: 'object' } },
+    design: { type: 'object' },
+    design_options: { type: 'array', items: { type: 'object' } },
+    variants: { type: 'object' },
+    publish_to: { type: 'array', uniqueItems: true, items: { type: 'string', enum: ['shopify', 'etsy'] } },
+    tags: { type: 'array', items: { type: 'string' } },
+    images: { type: 'array', items: { type: 'object' } },
+    personalization_enabled: { type: 'boolean' },
+  },
+  required: ['catalog_product_id'],
+};
+
+const designCreateBodySchema = {
+  type: 'object',
+  additionalProperties: true,
+  properties: {
+    name: { type: 'string', minLength: 1 },
+    canvas_json: { type: 'object' },
+    artfile_url: { type: ['string', 'null'] },
+    image_url: { type: ['string', 'null'] },
+    url: { type: ['string', 'null'] },
+    width: { type: ['number', 'null'] },
+    height: { type: ['number', 'null'] },
+    thumbnail_url: { type: ['string', 'null'] },
+    tags: { type: 'array', items: { type: 'string' } },
+    personalization_enabled: { type: 'boolean' },
+    personalization_fields: { type: 'array', items: { type: 'object' } },
+    shop_id: { type: ['string', 'null'] },
+    external_user_id: { type: ['string', 'null'] },
+    collection: { type: ['string', 'null'] },
+  },
+  required: ['name'],
+};
+
 export const COMPLETEFUL_TOOL_DEFINITIONS = Object.freeze([
-  readTool({
+  toolDefinition({
     toolKey: 'completeful.shop.list',
     displayName: 'List Completeful shops',
     description: 'List shops available to the resolved Completeful API authority.',
     inputSchema: objectSchema(),
   }),
-  readTool({
+  toolDefinition({
     toolKey: 'completeful.shop.get',
     displayName: 'Get Completeful shop',
     inputSchema: objectSchema({ shop_id: { type: 'string', minLength: 1 } }, ['shop_id']),
   }),
-  readTool({
+  toolDefinition({
     toolKey: 'completeful.catalog.list',
     displayName: 'List Completeful catalog products',
     inputSchema: objectSchema({
@@ -60,7 +168,7 @@ export const COMPLETEFUL_TOOL_DEFINITIONS = Object.freeze([
       include: { type: 'string' },
     }),
   }),
-  readTool({
+  toolDefinition({
     toolKey: 'completeful.catalog.get',
     displayName: 'Get Completeful catalog product',
     inputSchema: objectSchema(
@@ -71,7 +179,7 @@ export const COMPLETEFUL_TOOL_DEFINITIONS = Object.freeze([
       ['product_id'],
     ),
   }),
-  readTool({
+  toolDefinition({
     toolKey: 'completeful.catalog.semantic',
     displayName: 'Search Completeful catalog semantically',
     inputSchema: objectSchema(
@@ -83,7 +191,73 @@ export const COMPLETEFUL_TOOL_DEFINITIONS = Object.freeze([
       ['q'],
     ),
   }),
-  readTool({
+  toolDefinition({
+    toolKey: 'completeful.design.create',
+    displayName: 'Create Completeful design',
+    inputSchema: objectSchema(
+      {
+        body: designCreateBodySchema,
+        idempotency_key: { type: 'string', minLength: 1 },
+      },
+      ['body', 'idempotency_key'],
+    ),
+    riskLevel: 'moderate',
+    sideEffectLevel: 'external_write',
+    idempotencyMode: 'required',
+    emitsEvents: ['completeful.design.created'],
+  }),
+  toolDefinition({
+    toolKey: 'completeful.product.create',
+    displayName: 'Create Completeful shop product',
+    inputSchema: objectSchema(
+      {
+        shop_id: { type: 'string', minLength: 1 },
+        body: productCreateBodySchema,
+        idempotency_key: { type: 'string', minLength: 1 },
+      },
+      ['shop_id', 'body', 'idempotency_key'],
+    ),
+    riskLevel: 'moderate',
+    sideEffectLevel: 'external_write',
+    idempotencyMode: 'required',
+    emitsEvents: ['completeful.product.created'],
+  }),
+  toolDefinition({
+    toolKey: 'completeful.product.publish',
+    displayName: 'Publish Completeful shop product',
+    inputSchema: objectSchema(
+      {
+        shop_id: { type: 'string', minLength: 1 },
+        product_id: { type: 'string', minLength: 1 },
+      },
+      ['shop_id', 'product_id'],
+    ),
+    riskLevel: 'high',
+    sideEffectLevel: 'external_write',
+    idempotencyMode: 'not_applicable',
+    maxAttempts: 1,
+    emitsEvents: ['completeful.product.publish.started'],
+  }),
+  toolDefinition({
+    toolKey: 'completeful.order.quote',
+    displayName: 'Quote Completeful order',
+    inputSchema: objectSchema(
+      {
+        shop_id: { type: 'string', minLength: 1 },
+        body: orderBodySchema,
+      },
+      ['shop_id', 'body'],
+    ),
+    receiptMode: 'redacted',
+    sensitiveInputPaths: [
+      'body.shipping_address',
+      'body.billing_address',
+      'body.email',
+      'body.notes',
+    ],
+    sensitiveOutputPaths: ['shipping_address', 'billing_address', 'email', 'notes'],
+  }),
+  toolDefinition({
     toolKey: 'completeful.order.get',
     displayName: 'Get Completeful order',
     inputSchema: objectSchema(
@@ -93,11 +267,91 @@ export const COMPLETEFUL_TOOL_DEFINITIONS = Object.freeze([
       },
       ['shop_id', 'order_id'],
     ),
+    receiptMode: 'redacted',
+    sensitiveOutputPaths: ['shipping_address', 'billing_address', 'email', 'notes'],
   }),
-  readTool({
+  toolDefinition({
+    toolKey: 'completeful.order.create',
+    displayName: 'Create Completeful order',
+    description: 'Create a fulfillment order. Requires Idempotency-Key or body.external_order_id.',
+    inputSchema: objectSchema(
+      {
+        shop_id: { type: 'string', minLength: 1 },
+        body: orderBodySchema,
+        idempotency_key: { type: 'string', minLength: 1 },
+      },
+      ['shop_id', 'body'],
+      {
+        anyOf: [
+          { required: ['idempotency_key'] },
+          {
+            properties: {
+              body: {
+                ...orderBodySchema,
+                required: [...orderBodySchema.required, 'external_order_id'],
+              },
+            },
+          },
+        ],
+      },
+    ),
+    riskLevel: 'high',
+    sideEffectLevel: 'billable_external_write',
+    idempotencyMode: 'required',
+    receiptMode: 'redacted',
+    sensitiveInputPaths: [
+      'body.shipping_address',
+      'body.billing_address',
+      'body.email',
+      'body.notes',
+    ],
+    sensitiveOutputPaths: ['shipping_address', 'billing_address', 'email', 'notes'],
+    emitsEvents: ['completeful.order.created'],
+  }),
+  toolDefinition({
+    toolKey: 'completeful.order.cancel',
+    displayName: 'Cancel Completeful order',
+    inputSchema: objectSchema(
+      {
+        shop_id: { type: 'string', minLength: 1 },
+        order_id: { type: 'string', minLength: 1 },
+      },
+      ['shop_id', 'order_id'],
+    ),
+    riskLevel: 'high',
+    sideEffectLevel: 'external_write',
+    idempotencyMode: 'not_applicable',
+    maxAttempts: 1,
+    emitsEvents: ['completeful.order.cancelled'],
+  }),
+  toolDefinition({
     toolKey: 'completeful.webhook.list',
     displayName: 'List Completeful webhook subscriptions',
     inputSchema: objectSchema({ shop_id: { type: 'string', minLength: 1 } }, ['shop_id']),
+    receiptMode: 'redacted',
+    sensitiveOutputPaths: ['secret', 'signing_secret', 'webhook_secret'],
+  }),
+  toolDefinition({
+    toolKey: 'completeful.webhook.ensure',
+    displayName: 'Ensure Completeful webhook subscription',
+    description: 'Return the existing subscription for a topic or create it exactly once with an idempotency key.',
+    inputSchema: objectSchema(
+      {
+        shop_id: { type: 'string', minLength: 1 },
+        url: { type: 'string', minLength: 1 },
+        topic: { type: 'string', enum: webhookTopics },
+        secret: { type: 'string', minLength: 1 },
+        idempotency_key: { type: 'string', minLength: 1 },
+      },
+      ['shop_id', 'url', 'topic', 'idempotency_key'],
+    ),
+    riskLevel: 'moderate',
+    sideEffectLevel: 'external_write',
+    idempotencyMode: 'required',
+    receiptMode: 'redacted',
+    sensitiveInputPaths: ['secret'],
+    sensitiveOutputPaths: ['secret', 'signing_secret', 'webhook_secret'],
+    emitsEvents: ['completeful.webhook.ensured'],
   }),
 ]);
 
@@ -113,12 +367,56 @@ function requireString(input, key) {
   return value;
 }
 
+function requireBody(input) {
+  if (!input?.body || typeof input.body !== 'object' || Array.isArray(input.body)) {
+    throw new TypeError('body is required');
+  }
+  return input.body;
+}
+
+function codedError(message, code) {
+  const error = new Error(message);
+  error.code = code;
+  return error;
+}
+
 function result({ data, meta }) {
   return {
     output: data,
     providerRequestId: meta?.request_id || undefined,
     metadata: { provider_meta: meta || null },
   };
+}
+
+function collectionItems(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.webhooks)) return data.webhooks;
+  if (Array.isArray(data?.subscriptions)) return data.subscriptions;
+  return [];
+}
+
+function webhookTopic(item) {
+  if (item?.topic) return String(item.topic);
+  if (item?.event) return String(item.event);
+  if (item?.type) return String(item.type);
+  if (Array.isArray(item?.events) && item.events[0]) return String(item.events[0]);
+  return '';
+}
+
+function webhookUrl(item) {
+  return String(item?.url || item?.endpoint_url || '');
+}
+
+function redactSecrets(value) {
+  if (Array.isArray(value)) return value.map(redactSecrets);
+  if (!value || typeof value !== 'object') return value;
+  const output = {};
+  for (const [key, child] of Object.entries(value)) {
+    if (/secret|token/i.test(key)) continue;
+    output[key] = redactSecrets(child);
+  }
+  return output;
 }
 
 export async function executeCompletefulProviderTool(client, toolKey, input = {}) {
@@ -152,6 +450,46 @@ export async function executeCompletefulProviderTool(client, toolKey, input = {}
       );
     }
 
+    case 'completeful.design.create': {
+      client.assertMutationAllowed();
+      const body = requireBody(input);
+      const idempotencyKey = requireString(input, 'idempotency_key');
+      return result(await client.request('POST', '/designs', { body, idempotencyKey }));
+    }
+
+    case 'completeful.product.create': {
+      client.assertMutationAllowed();
+      const shopId = requireString(input, 'shop_id');
+      const body = requireBody(input);
+      const idempotencyKey = requireString(input, 'idempotency_key');
+      return result(
+        await client.request('POST', `/shops/${encodeURIComponent(shopId)}/products`, {
+          body,
+          idempotencyKey,
+        }),
+      );
+    }
+
+    case 'completeful.product.publish': {
+      client.assertMutationAllowed();
+      const shopId = requireString(input, 'shop_id');
+      const productId = requireString(input, 'product_id');
+      return result(
+        await client.request(
+          'POST',
+          `/shops/${encodeURIComponent(shopId)}/products/${encodeURIComponent(productId)}/publish`,
+        ),
+      );
+    }
+
+    case 'completeful.order.quote': {
+      const shopId = requireString(input, 'shop_id');
+      const body = requireBody(input);
+      return result(
+        await client.request('POST', `/shops/${encodeURIComponent(shopId)}/orders/quote`, { body }),
+      );
+    }
+
     case 'completeful.order.get': {
       const shopId = requireString(input, 'shop_id');
       const orderId = requireString(input, 'order_id');
@@ -163,11 +501,76 @@ export async function executeCompletefulProviderTool(client, toolKey, input = {}
       );
     }
 
+    case 'completeful.order.create': {
+      client.assertMutationAllowed();
+      const shopId = requireString(input, 'shop_id');
+      const body = requireBody(input);
+      const idempotencyKey = String(input.idempotency_key || '').trim();
+      if (!idempotencyKey && !String(body.external_order_id || '').trim()) {
+        throw codedError(
+          'completeful.order.create requires idempotency_key or body.external_order_id',
+          'completeful_idempotency_required',
+        );
+      }
+      return result(
+        await client.request('POST', `/shops/${encodeURIComponent(shopId)}/orders`, {
+          body,
+          idempotencyKey: idempotencyKey || null,
+        }),
+      );
+    }
+
+    case 'completeful.order.cancel': {
+      client.assertMutationAllowed();
+      const shopId = requireString(input, 'shop_id');
+      const orderId = requireString(input, 'order_id');
+      return result(
+        await client.request(
+          'POST',
+          `/shops/${encodeURIComponent(shopId)}/orders/${encodeURIComponent(orderId)}/cancel`,
+        ),
+      );
+    }
+
     case 'completeful.webhook.list': {
       const shopId = requireString(input, 'shop_id');
-      return result(
-        await client.request('GET', `/shops/${encodeURIComponent(shopId)}/webhooks`),
+      const response = await client.request('GET', `/shops/${encodeURIComponent(shopId)}/webhooks`);
+      return result({ data: redactSecrets(response.data), meta: response.meta });
+    }
+
+    case 'completeful.webhook.ensure': {
+      const shopId = requireString(input, 'shop_id');
+      const url = requireString(input, 'url');
+      const topic = requireString(input, 'topic');
+      const idempotencyKey = requireString(input, 'idempotency_key');
+
+      const listed = await client.request('GET', `/shops/${encodeURIComponent(shopId)}/webhooks`);
+      const existing = collectionItems(listed.data).find((item) => webhookTopic(item) === topic);
+      if (existing) {
+        if (webhookUrl(existing) && webhookUrl(existing) !== url) {
+          throw codedError(
+            `Webhook topic ${topic} already exists for a different URL`,
+            'completeful_webhook_topic_conflict',
+          );
+        }
+        return result({
+          data: { ensured: true, created: false, webhook: redactSecrets(existing) },
+          meta: listed.meta,
+        });
+      }
+
+      client.assertMutationAllowed();
+      const body = { url, topic };
+      if (input.secret) body.secret = String(input.secret);
+      const created = await client.request(
+        'POST',
+        `/shops/${encodeURIComponent(shopId)}/webhooks`,
+        { body, idempotencyKey },
       );
+      return result({
+        data: { ensured: true, created: true, webhook: redactSecrets(created.data) },
+        meta: created.meta,
+      });
     }
 
     default:
