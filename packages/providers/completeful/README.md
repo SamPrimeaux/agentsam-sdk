@@ -25,4 +25,14 @@ The initial read-first tool surface is:
 - `completeful.order.get`
 - `completeful.webhook.list`
 
-Write tools will be added only with explicit side-effect/idempotency metadata and fail-closed mutation authority. The Completeful pinned OpenAPI contract remains under `apps/ecommerce-cms-agentsam/providers/completeful/reference/`.
+The first mutation set is also present, with fail-closed live-write checks and explicit side-effect/idempotency metadata:
+
+- `completeful.design.create`
+- `completeful.product.create`
+- `completeful.product.publish`
+- `completeful.order.quote`
+- `completeful.order.create`
+- `completeful.order.cancel`
+- `completeful.webhook.ensure`
+
+Order reads/writes declare redacted receipt policy for address/email fields, and webhook tools declare/redact secret-bearing paths. The Completeful pinned OpenAPI contract remains under `apps/ecommerce-cms-agentsam/providers/completeful/reference/`.

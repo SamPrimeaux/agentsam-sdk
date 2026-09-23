@@ -14,6 +14,7 @@ The contracts intentionally separate portable definitions from host/provider mec
 - **orchestration event** — a provider, tool, workflow or system fact that can trigger downstream work.
 - **hook definition** — when matching events occur, which tool/workflow/event actions should run.
 - **execution receipt** — normalized status/output/error/usage/event evidence from an invocation.
+- **receipt policy** — portable redaction/metadata-only hints so PII, tokens and signing secrets do not leak into durable receipts or prompts.
 
 MCP, CLI, Work Graph, queue-control, application routes and provider packages should consume/project these same contracts rather than define competing tool schemas.
 

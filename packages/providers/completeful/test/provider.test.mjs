@@ -108,3 +108,87 @@ test('webhook verification is portable and event normalization keeps provider pr
   assert.equal(event.source.provider, 'completeful');
   assert.equal(event.accountId, 'acct_1');
 });
+
+
+test('order creation requires explicit idempotency and is marked billable/high risk', async () => {
+  const definition = COMPLETEFUL_TOOL_DEFINITIONS.find((tool) => tool.toolKey === 'completeful.order.create');
+  assert.equal(definition.sideEffectLevel, 'billable_external_write');
+  assert.equal(definition.idempotencyMode, 'required');
+  assert.equal(definition.riskLevel, 'high');
+  assert.equal(definition.receiptMode, 'redacted');
+
+  const client = createCompletefulClient({
+    apiKey: 'capp_test_example',
+    fetchImpl: async () => new Response(JSON.stringify({ id: 'ord_1' }), { status: 201 }),
+  });
+  const adapter = createCompletefulProviderAdapter(client);
+  await assert.rejects(
+    () =>
+      adapter.invoke({
+        id: 'inv_order',
+        toolKey: 'completeful.order.create',
+        input: {
+          shop_id: 'shop_1',
+          body: { shipping_address: {}, line_items: [{}] },
+        },
+        requestedAt: Date.now(),
+      }),
+    (error) => error?.code === 'completeful_idempotency_required',
+  );
+});
+
+test('write tools fail closed for live credentials', async () => {
+  const client = createCompletefulClient({
+    apiKey: 'capp_live_example',
+    fetchImpl: async () => new Response('{}', { status: 200 }),
+  });
+  const adapter = createCompletefulProviderAdapter(client);
+  await assert.rejects(
+    () =>
+      adapter.invoke({
+        id: 'inv_publish',
+        toolKey: 'completeful.product.publish',
+        input: { shop_id: 'shop_1', product_id: 'prod_1' },
+        requestedAt: Date.now(),
+      }),
+    /live writes are disabled/i,
+  );
+});
+
+test('webhook.ensure does not duplicate an existing topic and redacts secrets', async () => {
+  let calls = 0;
+  const client = createCompletefulClient({
+    apiKey: 'capp_test_example',
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response(
+        JSON.stringify({
+          items: [
+            {
+              id: 'wh_1',
+              topic: 'order:created',
+              url: 'https://example.com/webhooks/completeful',
+              secret: 'must-not-leak',
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+    },
+  });
+  const adapter = createCompletefulProviderAdapter(client);
+  const result = await adapter.invoke({
+    id: 'inv_webhook',
+    toolKey: 'completeful.webhook.ensure',
+    input: {
+      shop_id: 'shop_1',
+      topic: 'order:created',
+      url: 'https://example.com/webhooks/completeful',
+      idempotency_key: 'ensure-order-created-v1',
+    },
+    requestedAt: Date.now(),
+  });
+  assert.equal(calls, 1);
+  assert.equal(result.output.created, false);
+  assert.equal(result.output.webhook.secret, undefined);
+});
