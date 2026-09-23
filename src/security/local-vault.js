@@ -403,7 +403,6 @@ export function hydrateSecureCredentials(env = process.env, options = {}) {
       if (cred?.value) {
         env[spec.env] = cred.value;
         if (providerId === 'cloudflare' && cred.accountId) {
-          if (!env.ACCOUNT_ID) env.ACCOUNT_ID = cred.accountId;
           if (!env.CLOUDFLARE_ACCOUNT_ID) env.CLOUDFLARE_ACCOUNT_ID = cred.accountId;
         }
         hydrated.push(providerId);

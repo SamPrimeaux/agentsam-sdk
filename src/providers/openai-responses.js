@@ -88,20 +88,42 @@ function usageParts(response = {}) {
   };
 }
 
-function normalizeTools(tools = [], provider = 'openai') {
+const RESPONSES_BUILTIN_TOOL_CAPABILITIES = Object.freeze({
+  web_search: 'web_search',
+  file_search: 'file_search',
+  image_generation: 'image_generation',
+  code_interpreter: 'code_interpreter',
+  shell: 'hosted_shell',
+  mcp: 'mcp',
+  tool_search: 'tool_search',
+});
+
+function normalizeTools(tools = [], provider = 'openai', capabilities = {}) {
   if (!Array.isArray(tools)) throw new TypeError('tools must be an array');
   return tools.map((tool) => {
-    if (tool?.type !== 'function' || !clean(tool.name)) {
-      throw new TypeError('OpenAI-compatible adapter tools must be Responses function tool descriptors');
+    if (tool?.type === 'function') {
+      if (!clean(tool.name)) throw new TypeError('Responses function tools require a name');
+      return {
+        type: 'function',
+        name: clean(tool.name),
+        description: clean(tool.description) || undefined,
+        parameters: compileToolSchema({ provider, canonicalSchema: tool.parameters, strict: tool.strict !== false, name: tool.name }).providerSchema,
+        strict: tool.strict !== false,
+        ...(tool.async === true ? { async: true } : {}),
+        ...(tool.defer_loading === true ? { defer_loading: true } : {}),
+        ...(Array.isArray(tool.allowed_callers) ? { allowed_callers: [...tool.allowed_callers] } : {}),
+      };
     }
-    return {
-      type: 'function',
-      name: clean(tool.name),
-      description: clean(tool.description) || undefined,
-      parameters: compileToolSchema({ provider, canonicalSchema: tool.parameters, strict: tool.strict !== false, name: tool.name }).providerSchema,
-      strict: tool.strict !== false,
-      ...(tool.async === true ? { async: true } : {}),
-    };
+
+    const type = clean(tool?.type);
+    const capability = RESPONSES_BUILTIN_TOOL_CAPABILITIES[type];
+    if (provider !== 'openai' || !capability) {
+      throw new TypeError('OpenAI-compatible adapter tool type is not supported by this runtime: ' + (type || 'unknown'));
+    }
+    if (capabilities?.[capability] !== true) {
+      throw new RangeError('selected model does not declare Responses tool support: ' + type);
+    }
+    return structuredClone(tool);
   });
 }
 
@@ -213,7 +235,7 @@ export function createOpenAIResponsesAdapter(options = {}) {
     const record = assertRuntimeConfig(model, reasoningEffort, serviceTier, modelRecord, providerId);
     const emit = params.emit || defaultEmit;
     const meta = { runId: params.runId, sequence: params.sequence };
-    const tools = normalizeTools(params.tools || [], providerId);
+    const tools = normalizeTools(params.tools || [], providerId, record.capabilities || {});
     const previousResponseId = clean(params.previousResponseId || params.providerState?.previous_response_id);
     const requestInput = !previousResponseId && Array.isArray(params.providerState?.compacted_input)
       ? [...structuredClone(params.providerState.compacted_input), ...historyItems(params.input)]

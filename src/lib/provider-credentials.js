@@ -21,7 +21,7 @@ export const PROVIDER_CREDENTIALS = Object.freeze({
     env: 'CLOUDFLARE_API_TOKEN',
     files: ['cloudflare.env'],
     modelProvider: 'cloudflare',
-    accountEnv: ['ACCOUNT_ID', 'CLOUDFLARE_ACCOUNT_ID'],
+    accountEnv: ['CLOUDFLARE_ACCOUNT_ID'],
   }),
   inneranimalmedia: Object.freeze({
     label: 'InnerAnimalMedia',
@@ -149,10 +149,6 @@ for _agentsam_profile in "$@"; do
   set -a
   . "$_agentsam_file"
   set +a
-  if [ "$_agentsam_profile" = cloudflare ]; then
-    if [ -z "\${ACCOUNT_ID:-}" ] && [ -n "\${CLOUDFLARE_ACCOUNT_ID:-}" ]; then export ACCOUNT_ID="$CLOUDFLARE_ACCOUNT_ID"; fi
-    if [ -z "\${CLOUDFLARE_ACCOUNT_ID:-}" ] && [ -n "\${ACCOUNT_ID:-}" ]; then export CLOUDFLARE_ACCOUNT_ID="$ACCOUNT_ID"; fi
-  fi
 done
 unset _agentsam_file _agentsam_profile
 `;
@@ -165,8 +161,8 @@ function profileSource(provider, credential = '', options = {}) {
   if (!spec) throw new Error(`unsupported_provider:${normalizeProviderId(provider)}`);
   const lines = [`# AgentSam ${spec.label} provider profile`];
   if (spec.provider === 'cloudflare') {
-    lines.push('# ACCOUNT_ID is your Cloudflare account identifier; it is not a secret.');
-    lines.push(`export ACCOUNT_ID=${envLiteral(normalizeCloudflareAccountId(options.accountId))}`);
+    lines.push('# CLOUDFLARE_ACCOUNT_ID is your Cloudflare account identifier; it is not a secret.');
+    lines.push(`export CLOUDFLARE_ACCOUNT_ID=${envLiteral(normalizeCloudflareAccountId(options.accountId))}`);
   }
   lines.push(`export ${spec.env}=${envLiteral(credential)}`);
   return `${lines.join('\n')}\n`;
@@ -198,9 +194,9 @@ export function ensureProviderEnvProfile(provider, options = {}) {
       const current = firstEnvValue(source, spec.accountEnv || []);
       if (!current) {
         const accountId = normalizeCloudflareAccountId(options.accountId);
-        const line = `export ACCOUNT_ID=${envLiteral(accountId)}`;
-        const next = /^(?:export\s+)?ACCOUNT_ID=.*$/m.test(source)
-          ? source.replace(/^(?:export\s+)?ACCOUNT_ID=.*$/m, line)
+        const line = `export CLOUDFLARE_ACCOUNT_ID=${envLiteral(accountId)}`;
+        const next = /^(?:export\s+)?CLOUDFLARE_ACCOUNT_ID=.*$/m.test(source)
+          ? source.replace(/^(?:export\s+)?CLOUDFLARE_ACCOUNT_ID=.*$/m, line)
           : `${line}\n${source}`;
         atomicWrite(filename, next, 0o600);
       }
@@ -224,7 +220,6 @@ export function setProviderCredential(provider, credential, options = {}) {
   if (typeof process !== 'undefined' && process.env) {
     process.env[spec.env] = value;
     if (spec.provider === 'cloudflare' && options.accountId) {
-      process.env.ACCOUNT_ID = options.accountId;
       process.env.CLOUDFLARE_ACCOUNT_ID = options.accountId;
     }
   }

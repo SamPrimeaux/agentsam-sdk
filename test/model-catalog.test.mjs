@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { calculateModelCost, getModelRecord } from '../src/models/index.js';
+import { calculateModelCost, getModelRecord, mergeModelReference } from '../src/models/index.js';
 
 test('Astra catalog separates technical window, reasoning controls, service tiers, and economics', () => {
   const model = getModelRecord('gpt-6-astra');
@@ -40,4 +40,31 @@ test('service tier and cache pricing stay explicit rather than hidden in prompts
   assert.equal(batch.total_usd, standard.total_usd * 0.5);
   assert.equal(standard.rates_per_million.cached_input, 1);
   assert.equal(standard.rates_per_million.cache_write, 12.5);
+});
+
+
+test('GPT-6 Luna reference hydrates a stale provider-verified snapshot without changing availability authority', () => {
+  const merged = mergeModelReference({
+    model_key: 'openai:gpt-6-luna',
+    provider: 'openai',
+    provider_model_id: 'gpt-6-luna',
+    availability: 'available',
+    availability_source: 'provider_api',
+    context_window: null,
+    context_window_source: 'unknown',
+    max_output_tokens: null,
+    max_output_tokens_source: 'unknown',
+    reasoning_efforts: ['auto'],
+    service_tiers: ['default'],
+    capabilities: { responses: true },
+  });
+  assert.equal(merged.availability, 'available');
+  assert.equal(merged.availability_source, 'provider_api');
+  assert.equal(merged.context_window, 1_050_000);
+  assert.equal(merged.context_window_source, 'sdk_reference');
+  assert.equal(merged.max_output_tokens, 128_000);
+  assert.deepEqual(merged.reasoning_efforts, ['none', 'low', 'medium', 'high', 'xhigh', 'max']);
+  assert.equal(merged.default_reasoning_effort, 'medium');
+  assert.equal(merged.capabilities.responses, true);
+  assert.equal(merged.capabilities.function_calling, true);
 });

@@ -50,10 +50,12 @@ function baseRecord(provider, id, values = {}) {
   const contextWindow = positiveInt(values.context_window ?? values.contextWindow ?? fallback?.context_window);
   const maxOutput = positiveInt(values.max_output_tokens ?? values.maxOutputTokens ?? fallback?.max_output_tokens);
   return Object.freeze({
-    model_key: `${provider}:${id}`,
+    model_key: provider + ':' + id,
     provider,
     provider_model_id: id,
     label: clean(values.label) || fallback?.label || id,
+    kind: clean(values.kind) || fallback?.kind || 'unknown',
+    description: clean(values.description) || fallback?.description || null,
     availability: 'available',
     availability_source: 'provider_api',
     context_window: contextWindow,
@@ -64,6 +66,8 @@ function baseRecord(provider, id, values = {}) {
     max_output_tokens_source: values.max_output_tokens != null || values.maxOutputTokens != null
       ? 'provider_api'
       : fallback?.max_output_tokens ? 'sdk_reference' : 'unknown',
+    knowledge_cutoff: values.knowledge_cutoff || fallback?.knowledge_cutoff || null,
+    default_reasoning_effort: clean(values.default_reasoning_effort) || fallback?.default_reasoning_effort || null,
     reasoning_efforts: Object.freeze(
       Array.isArray(values.reasoning_efforts) && values.reasoning_efforts.length
         ? [...values.reasoning_efforts]
@@ -87,8 +91,24 @@ function baseRecord(provider, id, values = {}) {
       discovered_at: new Date().toISOString(),
       fallback: fallback?.source || null,
     }),
-    metadata: Object.freeze(values.metadata && typeof values.metadata === 'object' ? { ...values.metadata } : {}),
+    metadata: Object.freeze({
+      ...(fallback?.metadata && typeof fallback.metadata === 'object' ? fallback.metadata : {}),
+      ...(values.metadata && typeof values.metadata === 'object' ? values.metadata : {}),
+    }),
   });
+}
+
+function openAIModelCapabilities(id) {
+  const fallback = fallbackRecord('openai', id);
+  if (fallback?.capabilities) return {};
+  if (/^text-embedding-/i.test(id)) return { agent_runtime: false, embeddings: true };
+  if (/^(?:gpt-image|chatgpt-image|gpt-audio|gpt-realtime|sora|tts|whisper|omni-moderation)/i.test(id)) {
+    return { agent_runtime: false };
+  }
+  if (/^(?:gpt-(?:4o|4\.1|5|6)|o[1-9])/i.test(id)) {
+    return { agent_runtime: true, responses: true };
+  }
+  return { agent_runtime: false };
 }
 
 async function fetchJson(fetchImpl, url, init) {
@@ -115,7 +135,7 @@ export async function discoverOpenAIModels(apiKey, fetchImpl = fetch) {
       .filter(Boolean)
       .map((id) => baseRecord('openai', id, {
         source_url: 'https://api.openai.com/v1/models',
-        capabilities: { responses: true },
+        capabilities: openAIModelCapabilities(id),
       }));
     return { attempted: true, ok: true, models, error: null };
   } catch (error) { return failure(error); }
@@ -284,7 +304,7 @@ function cloudflareTaskName(task) {
 
 export async function discoverCloudflareModels(apiToken, accountId, fetchImpl = fetch) {
   if (!clean(apiToken)) return failure('credential unavailable', false);
-  if (!clean(accountId)) return failure('ACCOUNT_ID is required for Workers AI discovery');
+  if (!clean(accountId)) return failure('CLOUDFLARE_ACCOUNT_ID is required for Workers AI discovery');
   try {
     const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(clean(accountId))}/ai/models/search`;
     const body = await fetchJson(fetchImpl, url, {

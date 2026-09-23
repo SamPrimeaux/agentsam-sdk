@@ -21,7 +21,7 @@ test('model inventory reports configured API providers without exposing credenti
     home,
     discoverRemote: false,
     env: {
-      OPENAI_API_KEY: 'secret-openai', GEMINI_API_KEY: '', XAI_API_KEY: 'secret-xai', ANTHROPIC_API_KEY: 'secret-anthropic', CLOUDFLARE_API_TOKEN: 'secret-cf', ACCOUNT_ID: '33333333333333333333333333333333',
+      OPENAI_API_KEY: 'secret-openai', GEMINI_API_KEY: '', XAI_API_KEY: 'secret-xai', ANTHROPIC_API_KEY: 'secret-anthropic', CLOUDFLARE_API_TOKEN: 'secret-cf', CLOUDFLARE_ACCOUNT_ID: '33333333333333333333333333333333',
       OLLAMA_BASE_URL: 'http://127.0.0.1:11434', OLLAMA_MODEL: 'qwen:test', OLLAMA_EMBED_MODEL: 'embed:test',
     },
     fetchImpl: async () => response({ models: [{ name: 'qwen:test' }, { name: 'embed:test' }] }),
@@ -131,7 +131,7 @@ test('Cloudflare discovery is scoped to the loaded account and surfaces text-gen
   const status = await collectModelsStatus({
     home,
     curateWorkersAi: false,
-    env: { CLOUDFLARE_API_TOKEN: 'secret-cf', ACCOUNT_ID: '44444444444444444444444444444444', OLLAMA_BASE_URL: 'http://127.0.0.1:11434' },
+    env: { CLOUDFLARE_API_TOKEN: 'secret-cf', CLOUDFLARE_ACCOUNT_ID: '44444444444444444444444444444444', OLLAMA_BASE_URL: 'http://127.0.0.1:11434' },
     fetchImpl: async () => response({ models: [] }),
     providerFetchImpl: async (url, options) => {
       seen.push({ url, auth: options.headers.authorization });
@@ -247,7 +247,7 @@ test('Workers AI curated allowlist intersects live Cloudflare discovery', async 
   const status = await collectModelsStatus({
     home,
     curateWorkersAi: true,
-    env: { CLOUDFLARE_API_TOKEN: 'secret-cf', ACCOUNT_ID: '44444444444444444444444444444444', OLLAMA_BASE_URL: 'http://127.0.0.1:11434' },
+    env: { CLOUDFLARE_API_TOKEN: 'secret-cf', CLOUDFLARE_ACCOUNT_ID: '44444444444444444444444444444444', OLLAMA_BASE_URL: 'http://127.0.0.1:11434' },
     fetchImpl: async () => response({ models: [] }),
     providerFetchImpl: async () => response({
       success: true,

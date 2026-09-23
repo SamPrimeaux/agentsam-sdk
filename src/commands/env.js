@@ -7,7 +7,7 @@ function writeLine(write, value = '') { write(`${value}\n`); }
 
 export function detectCloudflareAccounts(options = {}) {
   const env = options.env || process.env;
-  const explicit = String(options.accountId || env.ACCOUNT_ID || env.CLOUDFLARE_ACCOUNT_ID || '').trim();
+  const explicit = String(options.accountId || env.CLOUDFLARE_ACCOUNT_ID || '').trim();
   if (explicit) return { accounts: [{ id: explicit, name: null }], source: 'environment' };
   const spawn = options.spawnSyncImpl || spawnSync;
   const npxBin = process.platform === 'win32' ? 'npx.cmd' : 'npx';
@@ -68,7 +68,7 @@ export async function runEnv(argv = [], options = {}) {
     if (provider === 'cloudflare') {
       if (accountId) writeLine(write, `  account  detected/configured (${cloudflareAccounts?.source || 'explicit'})`);
       else if ((cloudflareAccounts?.accounts || []).length > 1) writeLine(write, `  account  ${cloudflareAccounts.accounts.length} Wrangler accounts found · rerun with --account-id <id>`);
-      else writeLine(write, '  account  not detected · set ACCOUNT_ID in the profile or rerun with --account-id <id>');
+      else writeLine(write, '  account  not detected · set CLOUDFLARE_ACCOUNT_ID in the profile or rerun with --account-id <id>');
       cloudflareGuidance(write);
     }
     writeLine(write, '');

@@ -29,7 +29,7 @@ test('Cloudflare env init backfills exactly one Wrangler account without printin
     spawnSyncImpl: () => ({ status: 0, stdout: JSON.stringify({ accounts: [{ id: '11111111111111111111111111111111', name: 'Example' }] }), stderr: '' }),
   });
   const profile = fs.readFileSync(path.join(home, '.agentsam', 'env.d', 'cloudflare.env'), 'utf8');
-  assert.match(profile, /ACCOUNT_ID="11111111111111111111111111111111"/);
+  assert.match(profile, /CLOUDFLARE_ACCOUNT_ID="11111111111111111111111111111111"/);
   assert.match(profile, /CLOUDFLARE_API_TOKEN=""/);
   assert.match(output, /account  detected\/configured/);
   assert.doesNotMatch(output, /CLOUDFLARE_API_TOKEN=.*[^ ]/);

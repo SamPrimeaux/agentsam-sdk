@@ -41,6 +41,51 @@ test('Responses adapter sends reasoning/service tier without legacy sampling par
   assert.deepEqual(events.map(event => event.type), ['model.started', 'usage.snapshot', 'cost.snapshot', 'model.completed']);
 });
 
+test('Responses adapter carries hosted built-ins and function tools through /v1/responses with model capability checks', async () => {
+  let request = null;
+  const adapter = createOpenAIResponsesAdapter({
+    apiKey: 'test-key',
+    fetchImpl: async (url, options) => {
+      request = { url, body: JSON.parse(options.body) };
+      return jsonResponse({
+        id: 'resp_tools',
+        status: 'completed',
+        service_tier: 'default',
+        output: [{ type: 'message', content: [{ type: 'output_text', text: 'done' }] }],
+        usage: { input_tokens: 100, output_tokens: 10 },
+      });
+    },
+  });
+
+  await adapter.create({
+    model: 'gpt-6-luna',
+    input: 'research and summarize',
+    reasoningEffort: 'medium',
+    serviceTier: 'default',
+    tools: [
+      { type: 'web_search' },
+      { type: 'function', name: 'repository_snapshot', description: 'Snapshot repo', parameters: { type: 'object', properties: {} } },
+    ],
+  });
+
+  assert.equal(request.url, 'https://api.openai.com/v1/responses');
+  assert.equal(request.body.reasoning.effort, 'medium');
+  assert.deepEqual(request.body.tools[0], { type: 'web_search' });
+  assert.equal(request.body.tools[1].type, 'function');
+  assert.equal(request.body.tools[1].name, 'repository_snapshot');
+
+  await assert.rejects(
+    () => adapter.create({
+      model: 'gpt-5.3-codex',
+      input: 'search',
+      reasoningEffort: 'medium',
+      serviceTier: 'default',
+      tools: [{ type: 'web_search' }],
+    }),
+    /does not declare Responses tool support: web_search/,
+  );
+});
+
 test('Responses adapter preserves function call_id when returning tool output', async () => {
   const bodies = [];
   const adapter = createOpenAIResponsesAdapter({

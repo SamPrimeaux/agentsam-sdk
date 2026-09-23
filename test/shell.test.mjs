@@ -120,6 +120,47 @@ test('reasoning and service-tier commands persist only supported controls for an
   assert.match(output, /Flex trades latency/);
 });
 
+test('stale provider snapshots hydrate GPT-6 reasoning controls from the current catalog', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-shell-stale-model-'));
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'stale-model-demo' }));
+  writeCliPreferences(root, {
+    trustedDirectory: true,
+    modelPreference: 'openai:gpt-6-luna',
+    reasoningEffort: 'auto',
+    serviceTier: 'default',
+    modelSnapshot: {
+      model_key: 'openai:gpt-6-luna',
+      provider: 'openai',
+      provider_model_id: 'gpt-6-luna',
+      label: 'gpt-6-luna',
+      availability: 'available',
+      availability_source: 'provider_api',
+      context_window: null,
+      context_window_source: 'unknown',
+      max_output_tokens: null,
+      max_output_tokens_source: 'unknown',
+      reasoning_efforts: ['auto'],
+      service_tiers: ['default'],
+      capabilities: { responses: true },
+    },
+  });
+
+  let output = '';
+  const state = { cwd: root, write: (text) => { output += text; }, interactive: false };
+  await dispatchShellLine('/reasoning', state);
+  assert.match(output, /auto \| none \| low \| medium \| high \| xhigh \| max/);
+  assert.match(output, /provider default: medium/);
+
+  output = '';
+  await dispatchShellLine('/reasoning high', state);
+  assert.equal(readCliPreferences(root).reasoningEffort, 'high');
+  assert.match(output, /reasoning → high/);
+
+  output = '';
+  await dispatchShellLine('/context', state);
+  assert.match(output, /1,050,000/);
+});
+
 test('bare /context shows truthful economics without inventing active token usage', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-shell-context-'));
   fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'context-demo' }));

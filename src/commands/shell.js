@@ -20,7 +20,7 @@ import { createInlineActivity } from '../ui/cli/activity.js';
 import { createCliRuntimePresenter } from '../ui/cli/runtime-events.js';
 import { renderCliFooter, renderDiffPreview, renderUsagePanel } from '../ui/cli/footer.js';
 import { diagnosticFromError, renderDiagnosticError } from '../errors/index.js';
-import { getModelRecord } from '../models/index.js';
+import { getModelRecord, mergeModelReference } from '../models/index.js';
 import { discoverProviderModels } from '../models/discovery.js';
 import { detectCliProject, findCliProjectRoot, readCliPreferences, updateCliPreferences } from '../lib/cli-preferences.js';
 import { buildContextEconomicsReport, renderContextEconomics } from './context-economics.js';
@@ -257,11 +257,11 @@ function spawnGit(cwd, args) {
 function selectedModel(cwd) {
   const preferences = readCliPreferences(cwd) || {};
   const snapshot = preferences.modelSnapshot?.model_key === preferences.modelPreference
-    ? preferences.modelSnapshot
+    ? mergeModelReference(preferences.modelSnapshot)
     : null;
   let model = snapshot || getModelRecord(preferences.modelPreference);
   if (!model && (preferences.modelPreference === 'auto' || !preferences.modelPreference)) {
-    model = preferences.modelSnapshot || listModelCatalog()[0];
+    model = mergeModelReference(preferences.modelSnapshot) || listModelCatalog()[0];
   }
   if (!model) throw new Error('Select an exact provider-verified model with /model first so Agent Sam can verify supported runtime controls.');
   return { preferences, model };
@@ -308,24 +308,32 @@ async function resolveModelForTurn(cwd, state) {
 
 async function chooseReasoning(cwd, args, state) {
   const { preferences, model } = selectedModel(cwd);
+  const supported = ['auto', ...model.reasoning_efforts.filter((value) => value !== 'auto')];
   let effort = String(args[0] || '').trim().toLowerCase();
   if (!effort) {
     if (!state.interactive) {
-      writeLine(state.write, `  ${model.provider_model_id} reasoning: ${model.reasoning_efforts.join(' | ')}`);
-      writeLine(state.write, `  current: ${preferences.reasoningEffort || 'auto'}`);
+      writeLine(state.write, '  ' + model.provider_model_id + ' reasoning: ' + supported.join(' | '));
+      writeLine(state.write, '  provider default: ' + (model.default_reasoning_effort || 'unknown'));
+      writeLine(state.write, '  current: ' + (preferences.reasoningEffort || 'auto'));
       return;
     }
     const choice = await select({
-      message: `Reasoning level · ${model.provider_model_id}`,
-      initialValue: model.reasoning_efforts.includes(preferences.reasoningEffort) ? preferences.reasoningEffort : model.reasoning_efforts[0],
-      options: model.reasoning_efforts.map((value) => ({ value, label: value === 'xhigh' ? 'Extra high' : value === 'max' ? 'Max' : value[0].toUpperCase() + value.slice(1) })),
+      message: 'Reasoning level · ' + model.provider_model_id,
+      initialValue: supported.includes(preferences.reasoningEffort) ? preferences.reasoningEffort : 'auto',
+      options: supported.map((value) => ({
+        value,
+        label: value === 'auto' ? 'Automatic' : value === 'xhigh' ? 'Extra high' : value === 'max' ? 'Max' : value[0].toUpperCase() + value.slice(1),
+        hint: value === 'auto'
+          ? 'omit reasoning.effort · provider default ' + (model.default_reasoning_effort || 'unknown')
+          : value === model.default_reasoning_effort ? 'provider default' : undefined,
+      })),
     });
     if (isCancel(choice)) return;
     effort = choice;
   }
-  if (!model.reasoning_efforts.includes(effort)) throw new Error(`unsupported reasoning level for ${model.provider_model_id}: ${effort}`);
+  if (!supported.includes(effort)) throw new Error('unsupported reasoning level for ' + model.provider_model_id + ': ' + effort);
   updateCliPreferences(cwd, { reasoningEffort: effort });
-  writeLine(state.write, `  reasoning → ${effort}`);
+  writeLine(state.write, '  reasoning → ' + effort);
 }
 
 function setServiceTier(cwd, tier, write) {

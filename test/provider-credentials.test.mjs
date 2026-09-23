@@ -63,14 +63,24 @@ test('provider env profiles create a secure reusable source loader without embed
 
   const cloudflare = ensureProviderEnvProfile('cloudflare', { home });
   const source = fs.readFileSync(cloudflare.file, 'utf8');
-  assert.match(source, /ACCOUNT_ID=""/);
+  assert.match(source, /CLOUDFLARE_ACCOUNT_ID=""/);
   assert.match(source, /CLOUDFLARE_API_TOKEN=""/);
+});
+
+test('Cloudflare credential identity never falls back to generic ACCOUNT_ID', t => {
+  const home = fixtureHome(t);
+  const resolved = resolveProviderCredential('cloudflare', {
+    env: { CLOUDFLARE_API_TOKEN: 'token-secret', ACCOUNT_ID: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },
+    home,
+  });
+  assert.equal(resolved.configured, true);
+  assert.equal(resolved.account_id, null);
 });
 
 test('Cloudflare credential status carries non-secret account identity from the provider profile', t => {
   const home = fixtureHome(t);
   const profile = path.join(home, '.agentsam', 'env.d', 'cloudflare.env');
-  fs.writeFileSync(profile, 'export ACCOUNT_ID="0123456789abcdef0123456789abcdef"\nexport CLOUDFLARE_API_TOKEN="token-secret"\n', { mode: 0o600 });
+  fs.writeFileSync(profile, 'export CLOUDFLARE_ACCOUNT_ID="0123456789abcdef0123456789abcdef"\nexport CLOUDFLARE_API_TOKEN="token-secret"\n', { mode: 0o600 });
   if (process.platform !== 'win32') fs.chmodSync(profile, 0o600);
   const resolved = resolveProviderCredential('cloudflare', { env: {}, home });
   assert.equal(resolved.account_id, '0123456789abcdef0123456789abcdef');
@@ -83,14 +93,14 @@ test('Cloudflare credential status carries non-secret account identity from the 
 test('Cloudflare profile account backfill never overwrites an existing token or account choice', t => {
   const home = fixtureHome(t);
   const profile = path.join(home, '.agentsam', 'env.d', 'cloudflare.env');
-  fs.writeFileSync(profile, 'export ACCOUNT_ID=""\nexport CLOUDFLARE_API_TOKEN="keep-me"\n', { mode: 0o600 });
+  fs.writeFileSync(profile, 'export CLOUDFLARE_ACCOUNT_ID=""\nexport CLOUDFLARE_API_TOKEN="keep-me"\n', { mode: 0o600 });
   ensureProviderEnvProfile('cloudflare', { home, accountId: '11111111111111111111111111111111' });
   let source = fs.readFileSync(profile, 'utf8');
-  assert.match(source, /ACCOUNT_ID="11111111111111111111111111111111"/);
+  assert.match(source, /CLOUDFLARE_ACCOUNT_ID="11111111111111111111111111111111"/);
   assert.match(source, /CLOUDFLARE_API_TOKEN="keep-me"/);
 
   ensureProviderEnvProfile('cloudflare', { home, accountId: '22222222222222222222222222222222' });
   source = fs.readFileSync(profile, 'utf8');
-  assert.match(source, /ACCOUNT_ID="11111111111111111111111111111111"/);
+  assert.match(source, /CLOUDFLARE_ACCOUNT_ID="11111111111111111111111111111111"/);
   assert.doesNotMatch(source, /22222222222222222222222222222222/);
 });

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { cancel, confirm, intro, isCancel, outro, select, text } from '@clack/prompts';
 import { collectModelsStatus } from './models.js';
-import { getModelRecord } from '../models/index.js';
+import { getModelRecord, mergeModelReference } from '../models/index.js';
 import { detectCliProject, readCliPreferences, writeCliPreferences } from '../lib/cli-preferences.js';
 import { readAccountSession } from '../lib/account-session.js';
 
@@ -42,6 +42,7 @@ export function availableShells(env = process.env) {
 export function modelOptions(status) {
   const options = [{ value: 'auto', label: 'Automatic', hint: 'runtime chooses from this credential\'s verified inventory', model: null }];
   for (const model of status.availableModels || []) {
+    if (model.provider === 'openai' && model.capabilities?.agent_runtime !== true) continue;
     const context = Number(model.context_window) > 0 ? ` · ctx ${Math.round(Number(model.context_window) / 1000)}k` : ' · ctx unknown';
     options.push({
       value: model.model_key,
@@ -72,18 +73,26 @@ export function modelOptions(status) {
 }
 
 function resolvedModel(modelPreference, modelSnapshot) {
-  if (modelSnapshot?.model_key === modelPreference) return modelSnapshot;
+  if (modelSnapshot?.model_key === modelPreference) return mergeModelReference(modelSnapshot);
   return getModelRecord(modelPreference);
 }
 
 function reasoningOptions(modelPreference, modelSnapshot) {
   const record = resolvedModel(modelPreference, modelSnapshot);
   if (!record) return [{ value: 'auto', label: 'Automatic', hint: 'runtime/provider default' }];
-  return record.reasoning_efforts.map((value) => ({
-    value,
-    label: value === 'xhigh' ? 'Extra high' : value === 'max' ? 'Max' : value[0].toUpperCase() + value.slice(1),
-    hint: value === 'low' ? 'lighter reasoning' : value === 'max' ? 'highest supported reasoning depth' : undefined,
-  }));
+  const providerDefault = record.default_reasoning_effort || 'provider default';
+  return [
+    { value: 'auto', label: 'Automatic', hint: 'omit reasoning.effort · provider default ' + providerDefault },
+    ...record.reasoning_efforts.map((value) => ({
+      value,
+      label: value === 'xhigh' ? 'Extra high' : value === 'max' ? 'Max' : value[0].toUpperCase() + value.slice(1),
+      hint: value === record.default_reasoning_effort
+        ? 'provider default'
+        : value === 'low' ? 'lighter reasoning'
+        : value === 'max' ? 'highest supported reasoning depth'
+        : undefined,
+    })),
+  ];
 }
 
 function serviceTierOptions(modelPreference, modelSnapshot) {
@@ -108,7 +117,7 @@ async function promptModelPreferences(identity, existing, options = {}) {
     return promptModelPreferences(identity, existing, options);
   }
   const selected = models.find((row) => row.value === modelPreference)?.model || null;
-  const modelSnapshot = selected || (existing.modelSnapshot?.model_key === modelPreference ? existing.modelSnapshot : null);
+  const modelSnapshot = selected || (existing.modelSnapshot?.model_key === modelPreference ? mergeModelReference(existing.modelSnapshot) : null);
 
   const reasoning = reasoningOptions(modelPreference, modelSnapshot);
   const initialReasoning = reasoning.some((row) => row.value === existing.reasoningEffort) ? existing.reasoningEffort : reasoning[0].value;

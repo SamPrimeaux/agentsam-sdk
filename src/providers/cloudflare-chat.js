@@ -48,7 +48,7 @@ function toolCalls(message = {}) {
 export function createCloudflareChatAdapter(options = {}) {
   const credential = options.credential || {};
   const apiToken = clean(credential.value || process.env.CLOUDFLARE_API_TOKEN);
-  const accountId = clean(credential.account_id || process.env.CLOUDFLARE_ACCOUNT_ID || process.env.ACCOUNT_ID);
+  const accountId = clean(credential.account_id || process.env.CLOUDFLARE_ACCOUNT_ID);
   const gatewayId = clean(options.gatewayId || process.env.CLOUDFLARE_AI_GATEWAY_ID || 'default');
   const fetchImpl = options.fetchImpl || fetch;
 

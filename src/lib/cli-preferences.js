@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { getProjectName, tryReadProjectConfig } from './project-config.js';
+import { mergeModelReference } from '../models/index.js';
 
 export const CLI_PREFERENCES_SCHEMA = 'agentsam-cli-preferences-v3';
 export const LEGACY_CLI_PREFERENCES_SCHEMAS = new Set(['agentsam-cli-preferences-v1', 'agentsam-cli-preferences-v2']);
@@ -63,12 +64,16 @@ function safeModelSnapshot(value) {
     provider,
     provider_model_id: providerModelId,
     label: String(value.label || providerModelId),
+    kind: String(value.kind || 'unknown'),
+    description: value.description ? String(value.description) : null,
     availability: value.availability === 'available' ? 'available' : 'unverified',
     availability_source: String(value.availability_source || ''),
     context_window: Number.isFinite(Number(value.context_window)) && Number(value.context_window) > 0 ? Number(value.context_window) : null,
     context_window_source: String(value.context_window_source || 'unknown'),
     max_output_tokens: Number.isFinite(Number(value.max_output_tokens)) && Number(value.max_output_tokens) > 0 ? Number(value.max_output_tokens) : null,
     max_output_tokens_source: String(value.max_output_tokens_source || 'unknown'),
+    knowledge_cutoff: value.knowledge_cutoff ? String(value.knowledge_cutoff) : null,
+    default_reasoning_effort: value.default_reasoning_effort ? String(value.default_reasoning_effort) : null,
     reasoning_efforts: Array.isArray(value.reasoning_efforts) && value.reasoning_efforts.length ? value.reasoning_efforts.map(String) : ['auto'],
     service_tiers: Array.isArray(value.service_tiers) && value.service_tiers.length ? value.service_tiers.map(String) : ['default'],
     capabilities: value.capabilities && typeof value.capabilities === 'object' ? { ...value.capabilities } : {},
@@ -79,7 +84,7 @@ function safeModelSnapshot(value) {
 }
 
 function normalizePreferences(value = {}) {
-  const modelSnapshot = safeModelSnapshot(value.modelSnapshot);
+  const modelSnapshot = mergeModelReference(safeModelSnapshot(value.modelSnapshot));
   return {
     schemaVersion: CLI_PREFERENCES_SCHEMA,
     trustedDirectory: value.trustedDirectory === true,
