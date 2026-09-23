@@ -78,7 +78,8 @@
     "./context/pack-schema": "./protocol/context/resolved-context-pack.schema.json",
     "./skills": "./src/skills/index.js",
     "./skills/catalog": "./skills/catalog.json",
-    "./cad-project": "./src/lib/cad/project-cli.js"
+    "./cad-project": "./src/lib/cad/project-cli.js",
+    "./providers/completeful": "./packages/providers/completeful/src/index.js"
   },
   "bin": {
     "agentsam": "bin/agentsam",
@@ -99,6 +100,7 @@
     "packages/work-graph",
     "packages/agentsam-queue-control",
     "packages/connectors/cloudflare",
+    "packages/providers/completeful",
     "templates",
     "docs",
     "examples",
@@ -132,7 +134,7 @@
     "packages/agentsam-desktop-shell"
   ],
   "scripts": {
-    "test": "npm run test:standard && npm --prefix packages/identity test && npm run test:connectors",
+    "test": "npm run test:standard && npm --prefix packages/identity test && npm run test:connectors && npm run test:providers",
     "test:standard": "node test/smoke.mjs && npm run test:unit && npm run test:cli && npm run test:integration:mock && npm run test:terminal:mock",
     "test:unit": "node --test test/*.test.mjs",
     "test:cli": "node --test test/cli/*.test.mjs",
@@ -165,7 +167,8 @@
     "proto:check": "node scripts/verify-proto.mjs",
     "errors:generate": "node scripts/generate-error-contracts.mjs",
     "errors:check": "node scripts/verify-error-contracts.mjs",
-    "cad:registry:check": "node scripts/cad-registry.mjs --check"
+    "cad:registry:check": "node scripts/cad-registry.mjs --check",
+    "test:providers": "node --test packages/providers/completeful/test/*.test.mjs"
   },
   "engines": {
     "node": ">=22 <25",
