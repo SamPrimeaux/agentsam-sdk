@@ -197,9 +197,8 @@ export const COMPLETEFUL_TOOL_DEFINITIONS = Object.freeze([
     inputSchema: objectSchema(
       {
         body: designCreateBodySchema,
-        idempotency_key: { type: 'string', minLength: 1 },
       },
-      ['body', 'idempotency_key'],
+      ['body'],
     ),
     riskLevel: 'moderate',
     sideEffectLevel: 'external_write',
@@ -213,9 +212,8 @@ export const COMPLETEFUL_TOOL_DEFINITIONS = Object.freeze([
       {
         shop_id: { type: 'string', minLength: 1 },
         body: productCreateBodySchema,
-        idempotency_key: { type: 'string', minLength: 1 },
       },
-      ['shop_id', 'body', 'idempotency_key'],
+      ['shop_id', 'body'],
     ),
     riskLevel: 'moderate',
     sideEffectLevel: 'external_write',
@@ -278,22 +276,8 @@ export const COMPLETEFUL_TOOL_DEFINITIONS = Object.freeze([
       {
         shop_id: { type: 'string', minLength: 1 },
         body: orderBodySchema,
-        idempotency_key: { type: 'string', minLength: 1 },
       },
       ['shop_id', 'body'],
-      {
-        anyOf: [
-          { required: ['idempotency_key'] },
-          {
-            properties: {
-              body: {
-                ...orderBodySchema,
-                required: [...orderBodySchema.required, 'external_order_id'],
-              },
-            },
-          },
-        ],
-      },
     ),
     riskLevel: 'high',
     sideEffectLevel: 'billable_external_write',
@@ -341,9 +325,8 @@ export const COMPLETEFUL_TOOL_DEFINITIONS = Object.freeze([
         url: { type: 'string', minLength: 1 },
         topic: { type: 'string', enum: webhookTopics },
         secret: { type: 'string', minLength: 1 },
-        idempotency_key: { type: 'string', minLength: 1 },
       },
-      ['shop_id', 'url', 'topic', 'idempotency_key'],
+      ['shop_id', 'url', 'topic'],
     ),
     riskLevel: 'moderate',
     sideEffectLevel: 'external_write',
@@ -419,7 +402,14 @@ function redactSecrets(value) {
   return output;
 }
 
-export async function executeCompletefulProviderTool(client, toolKey, input = {}) {
+function invocationIdempotencyKey(invocation, { allowExternalOrderId = false, body = null } = {}) {
+  const key = String(invocation?.idempotencyKey || invocation?.id || '').trim();
+  if (key) return key;
+  if (allowExternalOrderId && String(body?.external_order_id || '').trim()) return null;
+  throw codedError('AgentSam invocation requires an idempotency key', 'completeful_idempotency_required');
+}
+
+export async function executeCompletefulProviderTool(client, toolKey, input = {}, invocation = {}) {
   switch (toolKey) {
     case 'completeful.shop.list':
       return result(await client.request('GET', '/shops'));
@@ -453,7 +443,7 @@ export async function executeCompletefulProviderTool(client, toolKey, input = {}
     case 'completeful.design.create': {
       client.assertMutationAllowed();
       const body = requireBody(input);
-      const idempotencyKey = requireString(input, 'idempotency_key');
+      const idempotencyKey = invocationIdempotencyKey(invocation);
       return result(await client.request('POST', '/designs', { body, idempotencyKey }));
     }
 
@@ -461,7 +451,7 @@ export async function executeCompletefulProviderTool(client, toolKey, input = {}
       client.assertMutationAllowed();
       const shopId = requireString(input, 'shop_id');
       const body = requireBody(input);
-      const idempotencyKey = requireString(input, 'idempotency_key');
+      const idempotencyKey = invocationIdempotencyKey(invocation);
       return result(
         await client.request('POST', `/shops/${encodeURIComponent(shopId)}/products`, {
           body,
@@ -505,17 +495,14 @@ export async function executeCompletefulProviderTool(client, toolKey, input = {}
       client.assertMutationAllowed();
       const shopId = requireString(input, 'shop_id');
       const body = requireBody(input);
-      const idempotencyKey = String(input.idempotency_key || '').trim();
-      if (!idempotencyKey && !String(body.external_order_id || '').trim()) {
-        throw codedError(
-          'completeful.order.create requires idempotency_key or body.external_order_id',
-          'completeful_idempotency_required',
-        );
-      }
+      const idempotencyKey = invocationIdempotencyKey(invocation, {
+        allowExternalOrderId: true,
+        body,
+      });
       return result(
         await client.request('POST', `/shops/${encodeURIComponent(shopId)}/orders`, {
           body,
-          idempotencyKey: idempotencyKey || null,
+          idempotencyKey,
         }),
       );
     }
@@ -542,7 +529,7 @@ export async function executeCompletefulProviderTool(client, toolKey, input = {}
       const shopId = requireString(input, 'shop_id');
       const url = requireString(input, 'url');
       const topic = requireString(input, 'topic');
-      const idempotencyKey = requireString(input, 'idempotency_key');
+      const idempotencyKey = invocationIdempotencyKey(invocation);
 
       const listed = await client.request('GET', `/shops/${encodeURIComponent(shopId)}/webhooks`);
       const existing = collectionItems(listed.data).find((item) => webhookTopic(item) === topic);
@@ -586,7 +573,7 @@ export function createCompletefulProviderAdapter(client) {
       return [...COMPLETEFUL_TOOL_DEFINITIONS];
     },
     invoke(invocation) {
-      return executeCompletefulProviderTool(client, invocation.toolKey, invocation.input);
+      return executeCompletefulProviderTool(client, invocation.toolKey, invocation.input, invocation);
     },
   };
 }

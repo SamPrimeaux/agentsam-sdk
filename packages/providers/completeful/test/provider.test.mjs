@@ -110,31 +110,34 @@ test('webhook verification is portable and event normalization keeps provider pr
 });
 
 
-test('order creation requires explicit idempotency and is marked billable/high risk', async () => {
+test('order creation uses canonical invocation idempotency and is marked billable/high risk', async () => {
   const definition = COMPLETEFUL_TOOL_DEFINITIONS.find((tool) => tool.toolKey === 'completeful.order.create');
   assert.equal(definition.sideEffectLevel, 'billable_external_write');
   assert.equal(definition.idempotencyMode, 'required');
   assert.equal(definition.riskLevel, 'high');
   assert.equal(definition.receiptMode, 'redacted');
 
+  let captured = null;
   const client = createCompletefulClient({
     apiKey: 'capp_test_example',
-    fetchImpl: async () => new Response(JSON.stringify({ id: 'ord_1' }), { status: 201 }),
+    fetchImpl: async (url, init) => {
+      captured = { url, init };
+      return new Response(JSON.stringify({ id: 'ord_1' }), { status: 201 });
+    },
   });
   const adapter = createCompletefulProviderAdapter(client);
-  await assert.rejects(
-    () =>
-      adapter.invoke({
-        id: 'inv_order',
-        toolKey: 'completeful.order.create',
-        input: {
-          shop_id: 'shop_1',
-          body: { shipping_address: {}, line_items: [{}] },
-        },
-        requestedAt: Date.now(),
-      }),
-    (error) => error?.code === 'completeful_idempotency_required',
-  );
+  const result = await adapter.invoke({
+    id: 'inv_order',
+    idempotencyKey: 'idem_order_1',
+    toolKey: 'completeful.order.create',
+    input: {
+      shop_id: 'shop_1',
+      body: { shipping_address: {}, line_items: [{}] },
+    },
+    requestedAt: Date.now(),
+  });
+  assert.equal(result.output.id, 'ord_1');
+  assert.equal(captured.init.headers.get('Idempotency-Key'), 'idem_order_1');
 });
 
 test('write tools fail closed for live credentials', async () => {
@@ -184,7 +187,6 @@ test('webhook.ensure does not duplicate an existing topic and redacts secrets', 
       shop_id: 'shop_1',
       topic: 'order:created',
       url: 'https://example.com/webhooks/completeful',
-      idempotency_key: 'ensure-order-created-v1',
     },
     requestedAt: Date.now(),
   });

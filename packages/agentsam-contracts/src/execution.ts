@@ -40,6 +40,7 @@ export interface AgentToolExecutionReceipt<TOutput = unknown> {
   completedAt?: number;
   durationMs?: number;
   provider?: string;
+  input?: unknown;
   output?: TOutput;
   error?: AgentSamErrorEnvelope;
   emittedEventIds?: string[];
