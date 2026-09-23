@@ -4,12 +4,12 @@ import test from 'node:test';
 import {
   createToolExecutor,
   createToolRegistry,
-} from '../src/tools/index.js';
+} from '../../src/tools/index.js';
 import {
   COMPLETEFUL_TOOL_DEFINITIONS,
   createCompletefulClient,
   createCompletefulProviderAdapter,
-} from '../packages/providers/completeful/src/index.js';
+} from '../../packages/providers/completeful/src/index.js';
 
 test('tool runtime owns idempotency, redacts durable receipts, and emits safe events', async () => {
   let captured = null;
