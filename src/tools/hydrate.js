@@ -1,12 +1,16 @@
 function clean(value) { return value == null ? '' : String(value).trim(); }
 
+function toolName(tool) {
+  return clean(tool?.toolKey || tool?.tool || tool?.name);
+}
+
 export function hydrateToolSchemas(catalog = [], selected = [], options = {}) {
   if (!Array.isArray(catalog)) throw new TypeError('catalog must be an array');
   if (!Array.isArray(selected)) throw new TypeError('selected must be an array');
   const maxTools = Number.isInteger(options.maxTools) && options.maxTools > 0 ? options.maxTools : 8;
   const maxChars = Number.isInteger(options.maxChars) && options.maxChars > 0 ? options.maxChars : 40_000;
   const wanted = [...new Set(selected.map(clean).filter(Boolean))].slice(0, maxTools);
-  const byName = new Map(catalog.map((tool) => [clean(tool.tool || tool.name), tool]).filter(([name]) => name));
+  const byName = new Map(catalog.map((tool) => [toolName(tool), tool]).filter(([name]) => name));
   const tools = [];
   const missing = [];
   const deferred = [];

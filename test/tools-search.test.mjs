@@ -38,3 +38,36 @@ test('selected schemas hydrate without loading the full tool catalog', () => {
   assert.equal(result.receipt.hydrated_tools, 2);
   assert.ok(result.receipt.schema_chars < 5_000);
 });
+
+
+test('canonical AgentSam tool definitions participate in legacy discovery and hydration', () => {
+  const canonical = {
+    toolKey: 'completeful.order.create',
+    displayName: 'Create Completeful order',
+    description: 'Create a fulfillment order through Completeful.',
+    provider: 'completeful',
+    capabilityKey: 'completeful.order.create',
+    inputSchema: {
+      type: 'object',
+      required: ['shop_id', 'body'],
+      properties: {
+        shop_id: { type: 'string' },
+        body: { type: 'object' },
+      },
+    },
+    outputSchema: { type: 'object' },
+    riskLevel: 'high',
+    sideEffectLevel: 'billable_external_write',
+    idempotencyMode: 'required',
+  };
+
+  const searched = searchToolCards([canonical], 'completeful order');
+  assert.equal(searched.cards[0].tool, 'completeful.order.create');
+  assert.equal(searched.cards[0].category, 'completeful');
+  assert.equal(searched.cards[0].risk, 'high');
+  assert.deepEqual(searched.cards[0].required, ['shop_id', 'body']);
+
+  const hydrated = hydrateToolSchemas([canonical], ['completeful.order.create']);
+  assert.equal(hydrated.tools[0].toolKey, 'completeful.order.create');
+  assert.equal(hydrated.tools[0].inputSchema.type, 'object');
+});

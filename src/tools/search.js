@@ -2,19 +2,32 @@ import { DEFAULT_RESULT_POLICY, normalizeResultPolicy } from '../context/result-
 
 function text(value) { return value == null ? '' : String(value).trim(); }
 
+function toolName(tool) {
+  return text(tool.toolKey || tool.tool || tool.name);
+}
+
+function toolRisk(tool) {
+  const legacy = text(tool.risk);
+  if (legacy) return legacy;
+  if (tool.sideEffectLevel === 'none') return 'read';
+  return text(tool.riskLevel) || 'write';
+}
+
 export function toToolCard(tool = {}) {
   const required = Array.isArray(tool.required)
     ? tool.required
-    : Array.isArray(tool.input_schema?.required)
-      ? tool.input_schema.required
-      : [];
+    : Array.isArray(tool.inputSchema?.required)
+      ? tool.inputSchema.required
+      : Array.isArray(tool.input_schema?.required)
+        ? tool.input_schema.required
+        : [];
   return Object.freeze({
-    tool: text(tool.tool || tool.name),
-    summary: text(tool.summary || tool.description),
-    category: text(tool.category) || undefined,
-    risk: text(tool.risk) || 'read',
+    tool: toolName(tool),
+    summary: text(tool.summary || tool.description || tool.displayName),
+    category: text(tool.category || tool.provider || tool.pluginId) || undefined,
+    risk: toolRisk(tool),
     required: Object.freeze([...required]),
-    result_class: text(tool.result_class) || 'bounded_evidence',
+    result_class: text(tool.result_class || tool.resultClass) || 'bounded_evidence',
   });
 }
 
