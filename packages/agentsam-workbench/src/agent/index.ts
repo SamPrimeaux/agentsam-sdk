@@ -5,3 +5,4 @@ export * from './ModelSelect';
 export * from './ToolReceipt';
 export * from './ArtifactCard';
 export * from './ConnectedAgentPanel';
+export * from './GoalStatusStrip';

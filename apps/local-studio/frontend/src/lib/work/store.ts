@@ -14,6 +14,7 @@ import type {
   SideKind,
   SideTab,
   Trail,
+  WorkGoal,
 } from "@inneranimalmedia/agentsam-local-shared";
 
 const WELCOME_ID = "trail-studio";
@@ -68,6 +69,7 @@ const SIDE_TITLES: Record<SideKind, string> = {
   artifacts: "Artifacts",
   deploy: "Ship",
   app: "CAD Creator",
+  goal: "Edit goal",
 };
 
 function newSideTab(kind: SideKind, extra?: Partial<SideTab>): SideTab {
@@ -143,6 +145,11 @@ type WorkState = {
   offlineQueue: OfflineQueuedSend[];
   followupQueue: FollowupQueuedSend[];
   pausedQueueTargets: string[];
+  goals: Record<string, WorkGoal>;
+  setGoal: (trailId: string, title: string, preview?: string) => void;
+  updateGoal: (trailId: string, patch: Pick<WorkGoal, "title" | "preview">) => void;
+  clearGoal: (trailId: string) => void;
+  toggleGoalPaused: (trailId: string) => void;
   setHydrated: (value: boolean) => void;
   setSearch: (value: string) => void;
   setDraft: (id: string, value: string) => void;
@@ -212,6 +219,7 @@ function ensureShape(raw: Partial<WorkState> | undefined): Pick<
   | "modelSelection"
   | "sideTabs"
   | "activeSideTabId"
+  | "goals"
 > {
   const seed = starterProject();
   let projects = Array.isArray(raw?.projects) && raw!.projects!.length ? raw!.projects! : [seed];
@@ -273,6 +281,7 @@ function ensureShape(raw: Partial<WorkState> | undefined): Pick<
       };
     }),
     activeSideTabId: raw?.activeSideTabId ?? null,
+    goals: raw?.goals && typeof raw.goals === "object" ? raw.goals : {},
   };
 }
 
@@ -290,6 +299,38 @@ export const useWorkStore = create<WorkState>()(
       offlineQueue: [],
       followupQueue: [],
       pausedQueueTargets: [],
+      goals: {},
+      setGoal: (trailId, title, preview = "") => {
+        const now = Date.now();
+        set((s) => ({
+          goals: {
+            ...s.goals,
+            [trailId]: { id: "goal_" + uid(), trailId, title: title.slice(0, 12000), preview: preview.slice(0, 500), status: "active", startedAt: now, updatedAt: now },
+          },
+        }));
+      },
+      updateGoal: (trailId, patch) => set((s) => {
+        const goal = s.goals[trailId];
+        if (!goal) return s;
+        return { goals: { ...s.goals, [trailId]: { ...goal, title: patch.title.slice(0, 12000), preview: patch.preview.slice(0, 500), updatedAt: Date.now() } } };
+      }),
+      clearGoal: (trailId) => set((s) => {
+        const goals = { ...s.goals };
+        delete goals[trailId];
+        return { goals };
+      }),
+      toggleGoalPaused: (trailId) => {
+        const goal = get().goals[trailId];
+        if (!goal) return;
+        if (goal.status === "active" && get().streamingIds.includes(trailId)) {
+          aborts.get(trailId)?.abort();
+          aborts.delete(trailId);
+        }
+        set((s) => ({
+          goals: { ...s.goals, [trailId]: { ...goal, status: goal.status === "active" ? "paused" : "active", updatedAt: Date.now() } },
+          streamingIds: goal.status === "active" ? s.streamingIds.filter((id) => id !== trailId) : s.streamingIds,
+        }));
+      },
       terminalHeight: 0.38,
       setHydrated: (value) => set({ hydrated: value }),
       setSearch: (search) => set({ search }),
@@ -608,7 +649,7 @@ export const useWorkStore = create<WorkState>()(
           return "terminal";
         }
         const existing =
-          kind === "files" || kind === "artifacts" || kind === "deploy"
+          kind === "files" || kind === "artifacts" || kind === "deploy" || kind === "goal"
             ? get().sideTabs.find((t) => t.kind === kind)
             : undefined;
         if (existing) {
@@ -767,6 +808,10 @@ export const useWorkStore = create<WorkState>()(
         const state = get();
         const draft = (text ?? state.drafts[targetId] ?? "").trim();
         if (!draft) return;
+        if (targetKind === "trail" && !state.goals[targetId]) {
+          const project = state.projects.find((item) => item.id === state.activeProjectId);
+          get().setGoal(targetId, draft, project ? "Working in " + project.name : "Working in this workspace");
+        }
         if (state.streamingIds.includes(targetId)) {
           const queued: FollowupQueuedSend = {
             id: uid(),
@@ -997,7 +1042,7 @@ export const useWorkStore = create<WorkState>()(
       name: "agentsam-work-v1",
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
-      version: 3,
+      version: 4,
       merge: (persisted, current) => {
         const raw = (persisted ?? {}) as Partial<WorkState>;
         const shaped = ensureShape(raw);
@@ -1007,6 +1052,7 @@ export const useWorkStore = create<WorkState>()(
           offlineQueue: Array.isArray(raw.offlineQueue) ? raw.offlineQueue : [],
           followupQueue: Array.isArray(raw.followupQueue) ? raw.followupQueue : [],
           pausedQueueTargets: Array.isArray(raw.pausedQueueTargets) ? raw.pausedQueueTargets : [],
+          goals: raw.goals && typeof raw.goals === "object" ? raw.goals : {},
         };
       },
       partialize: (s) => ({
@@ -1026,6 +1072,7 @@ export const useWorkStore = create<WorkState>()(
         offlineQueue: s.offlineQueue,
         followupQueue: s.followupQueue,
         pausedQueueTargets: s.pausedQueueTargets,
+        goals: s.goals,
       }),
     },
   ),

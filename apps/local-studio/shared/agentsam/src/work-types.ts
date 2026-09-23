@@ -76,7 +76,17 @@ export type Trail = {
   projectId: string;
 };
 
-export type SideKind = "chat" | "browser" | "files" | "terminal" | "artifacts" | "deploy" | "app";
+export type SideKind = "chat" | "browser" | "files" | "terminal" | "artifacts" | "deploy" | "app" | "goal";
+
+export type WorkGoal = {
+  id: string;
+  trailId: string;
+  title: string;
+  preview: string;
+  status: "active" | "paused";
+  startedAt: number;
+  updatedAt: number;
+};
 
 export type SideTab = {
   id: string;

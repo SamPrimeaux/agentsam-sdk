@@ -97,6 +97,12 @@
     font: inherit;
   }
 
+  [data-agent-composer] textarea:focus,
+  [data-agent-composer] textarea:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
   body[data-resizing] {
     cursor: col-resize;
     user-select: none;
@@ -361,7 +367,6 @@
 }
 
 .studio-pane:hover::after,
-.studio-pane:focus-within::after,
 .studio-pane[data-pane="hover"]::after {
   border-color: rgb(196 184 168 / 0.72);
   box-shadow:

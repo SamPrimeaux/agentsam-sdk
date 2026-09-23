@@ -1,7 +1,8 @@
-import { useCallback, useRef, useState } from "react";
-import { ArrowUp, Check, Cloud, Loader2, Paperclip, Plus, Square } from "lucide-react";
-import { AgentComposer } from "@inneranimalmedia/agentsam-workbench/agent";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowUp, Check, Cloud, Loader2, Maximize2, Paperclip, Pause, Play, Plus, Square, Target, Trash2 } from "lucide-react";
+import { AgentComposer, GoalStatusStrip } from "@inneranimalmedia/agentsam-workbench/agent";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ModelSelect } from "@/components/workbench/model-select";
-import { cn } from "@/lib/utils";
+import { cn, formatElapsed } from "@/lib/utils";
 import { useWorkStore } from "@/lib/work/store";
 import { composerPlugins, type ComposerPlugin } from '../../../agentsam/plugins';
 import { toast } from 'sonner';
@@ -87,6 +88,17 @@ export function Composer({
   const stop = useWorkStore((s) => s.stop);
   const streaming = useWorkStore((s) => s.streamingIds.includes(targetId));
   const fileRef = useRef<HTMLInputElement>(null);
+  const goal = useWorkStore((s) => targetKind === "trail" ? s.goals[targetId] : undefined);
+  const clearGoal = useWorkStore((s) => s.clearGoal);
+  const toggleGoalPaused = useWorkStore((s) => s.toggleGoalPaused);
+  const openSideTab = useWorkStore((s) => s.openSideTab);
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    if (!goal || goal.status !== "active") return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [goal?.id, goal?.status]);
 
   async function onFiles(files: FileList | null) {
     if (!files?.length) return;
@@ -160,6 +172,44 @@ export function Composer({
 
   return (
     <div className="px-3 pb-[max(1rem,env(safe-area-inset-bottom))] md:px-4 md:pb-4">
+      {goal ? (
+        <GoalStatusStrip
+          className="mx-auto mb-2 w-full max-w-3xl rounded-xl bg-card/70 px-3 py-2 text-foreground shadow-hairline backdrop-blur"
+          icon={<Target className="size-3.5 text-accent" />}
+          label={goal.status === "paused" ? "Goal paused" : "Pursuing goal"}
+          title={goal.title}
+          preview={goal.preview}
+          elapsed={formatElapsed(Math.max(0, now - goal.startedAt))}
+          actions={
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button type="button" size="icon-sm" variant="ghost" className="size-7" aria-label="Clear goal" onClick={() => clearGoal(targetId)}>
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Clear goal</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button type="button" size="icon-sm" variant="ghost" className="size-7" aria-label={goal.status === "paused" ? "Resume goal" : "Pause goal"} onClick={() => toggleGoalPaused(targetId)}>
+                    {goal.status === "paused" ? <Play className="size-3.5" /> : <Pause className="size-3.5" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{goal.status === "paused" ? "Resume goal" : "Pause goal"}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button type="button" size="icon-sm" variant="ghost" className="size-7" aria-label="Edit goal" onClick={() => openSideTab("goal", { title: "Edit goal", parentTrailId: targetId, ephemeral: false })}>
+                    <Maximize2 className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Edit goal</TooltipContent>
+              </Tooltip>
+            </>
+          }
+        />
+      ) : null}
       <AgentComposer
         value={value}
         onChange={(next) => setDraft(targetId, next)}
@@ -172,11 +222,11 @@ export function Composer({
         cancelControl={cancelControl}
         containerClassName={cn(
           "mx-auto flex w-full max-w-3xl flex-col rounded-2xl bg-card p-2 pl-3 shadow-hairline",
-          "focus-within:shadow-[0_0_0_1px_var(--color-ring)]",
+          "focus-within:shadow-[0_0_0_1.5px_var(--color-accent)]",
         )}
         inputClassName={cn(
           "flex min-h-[44px] max-h-52 w-full resize-none rounded-lg bg-transparent px-1 py-2.5 text-sm text-foreground placeholder:text-muted-foreground",
-          "focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40",
+          "focus:outline-none focus-visible:outline-none focus-visible:shadow-none disabled:cursor-not-allowed disabled:opacity-40",
         )}
         toolbarClassName="flex items-center gap-1 pt-1 max-md:pr-14"
         textareaProps={{

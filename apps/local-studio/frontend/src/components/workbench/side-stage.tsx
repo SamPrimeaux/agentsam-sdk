@@ -1,4 +1,5 @@
-import { Box, FileCode, Globe, Layers, Plus, Upload, Users, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Box, FileCode, Globe, Layers, Plus, Target, Upload, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -24,6 +25,7 @@ function TabIcon({ kind }: { kind: string }) {
   if (kind === "artifacts") return <Box className="size-3.5" />;
   if (kind === "deploy") return <Upload className="size-3.5" />;
   if (kind === "app") return <Layers className="size-3.5" />;
+  if (kind === "goal") return <Target className="size-3.5" />;
   return <FileCode className="size-3.5" />;
 }
 
@@ -76,6 +78,10 @@ export function SideStage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
+              <DropdownMenuItem onSelect={() => openSideTab("goal", { title: "Edit goal", parentTrailId: useWorkStore.getState().activeTrailId, ephemeral: false })}>
+                <Target className="size-3.5" />
+                Edit goal
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => openSideTab("chat")}>
                 <Users className="size-3.5" />
                 Co-worker
@@ -122,6 +128,7 @@ export function SideStage() {
         {tab?.kind === "artifacts" ? <ArtifactsStage /> : null}
         {tab?.kind === "deploy" ? <DeployStage /> : null}
         {tab?.kind === "app" ? <AppPreviewStage tab={tab} /> : null}
+        {tab?.kind === "goal" ? <GoalEditor trailId={tab.parentTrailId ?? undefined} /> : null}
         {!tab ? (
           <div className="flex h-full flex-col items-center justify-center px-6 text-center">
             <p className="text-sm text-muted-foreground">Open a co-worker, browser, or files pane.</p>
@@ -211,6 +218,73 @@ function CoworkerChat({ tabId }: { tabId: string }) {
         <MessageList messages={tab.messages} trailId={parent?.id} streaming={streaming} />
       )}
       <Composer targetId={tab.id} targetKind="side" placeholder="Brief the co-worker" />
+    </div>
+  );
+}
+
+
+function GoalEditor({ trailId }: { trailId?: string }) {
+  const activeTrailId = useWorkStore((s) => s.activeTrailId);
+  const id = trailId ?? activeTrailId;
+  const goal = useWorkStore((s) => s.goals[id]);
+  const updateGoal = useWorkStore((s) => s.updateGoal);
+  const clearGoal = useWorkStore((s) => s.clearGoal);
+  const [title, setTitle] = useState(goal?.title ?? "");
+  const [preview, setPreview] = useState(goal?.preview ?? "");
+
+  useEffect(() => {
+    setTitle(goal?.title ?? "");
+    setPreview(goal?.preview ?? "");
+  }, [goal?.id, goal?.updatedAt]);
+
+  if (!goal) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+        <Target className="mb-3 size-8 text-muted-foreground" />
+        <h2 className="text-base font-medium">No active goal</h2>
+        <p className="mt-1 max-w-sm text-sm text-muted-foreground">Send a lead request and AgentSam will create a goal for this chat.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="border-b border-border px-4 py-3">
+        <div className="flex items-center gap-2">
+          <Target className="size-4 text-accent" />
+          <div>
+            <h2 className="text-sm font-medium">Edit goal</h2>
+            <p className="text-[11px] text-muted-foreground">Last updated {new Date(goal.updatedAt).toLocaleString()}</p>
+          </div>
+        </div>
+      </div>
+      <div className="scrollbar-thin flex-1 space-y-5 overflow-y-auto p-4">
+        <label className="block">
+          <span className="mb-2 block text-xs font-medium text-muted-foreground">Goal</span>
+          <textarea
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            className="min-h-40 w-full resize-y rounded-xl bg-card p-3 text-sm leading-relaxed shadow-hairline outline-none focus:shadow-[0_0_0_1px_var(--color-accent)]"
+            placeholder="What should AgentSam pursue?"
+          />
+        </label>
+        <label className="block">
+          <span className="mb-2 block text-xs font-medium text-muted-foreground">Working context</span>
+          <input
+            value={preview}
+            onChange={(event) => setPreview(event.target.value)}
+            className="h-10 w-full rounded-xl bg-card px-3 text-sm shadow-hairline outline-none focus:shadow-[0_0_0_1px_var(--color-accent)]"
+            placeholder="Working in Studio"
+          />
+        </label>
+        <div className="rounded-xl bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+          Status: <span className="font-medium text-foreground">{goal.status === "paused" ? "Paused" : "Pursuing"}</span>
+        </div>
+      </div>
+      <div className="flex items-center justify-between border-t border-border p-3">
+        <Button type="button" variant="ghost" className="text-muted-foreground" onClick={() => clearGoal(id)}>Clear goal</Button>
+        <Button type="button" onClick={() => updateGoal(id, { title: title.trim() || goal.title, preview: preview.trim() })}>Save</Button>
+      </div>
     </div>
   );
 }
