@@ -131,6 +131,7 @@
     "packages/work-graph",
     "packages/agentsam-queue-control",
     "packages/agentsam-workbench",
+    "packages/providers/completeful",
     "packages/agentsam-desktop-shell"
   ],
   "scripts": {

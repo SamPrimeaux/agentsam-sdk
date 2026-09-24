@@ -1,7 +1,7 @@
 {
   "name": "@inneranimalmedia/agentsam-provider-completeful",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "description": "Portable Completeful provider adapter and AgentSam tool definitions.",
   "type": "module",
   "main": "./src/index.js",
@@ -14,5 +14,16 @@
   },
   "scripts": {
     "test": "node --test test/*.test.mjs"
-  }
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT"
 }
