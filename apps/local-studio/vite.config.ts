@@ -23,6 +23,12 @@ const workbenchSource = resolvePath(
 const navSource = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-nav/src", import.meta.url)),
 );
+const cmsBackendSource = resolvePath(
+  fileURLToPath(new URL("../client-cms-editor/backend/src", import.meta.url)),
+);
+const cmsSharedSource = resolvePath(
+  fileURLToPath(new URL("../client-cms-editor/shared/cms/src", import.meta.url)),
+);
 
 /** The files `frontend/src/lib/db.ts` globs — same directory, same non-recursive scope. */
 function hasGlobbedMigrations(root: string): boolean {
@@ -173,10 +179,52 @@ export default defineConfig(({ command, isPreview }) => ({
     dedupe: ["react", "react-dom"],
     tsconfigPaths: true,
     preserveSymlinks: true,
-    alias: {
-      "@inneranimalmedia/agentsam-workbench": workbenchSource,
-      "@inneranimalmedia/agentsam-nav": navSource,
-    },
+    alias: [
+      {
+        find: "@inneranimalmedia/agentsam-workbench",
+        replacement: workbenchSource,
+      },
+      {
+        find: "@inneranimalmedia/agentsam-nav",
+        replacement: navSource,
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-cms-backend$/,
+        replacement: resolvePath(cmsBackendSource, "index.ts"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-cms-backend\/api$/,
+        replacement: resolvePath(cmsBackendSource, "api/client.ts"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-cms-backend\/model$/,
+        replacement: resolvePath(cmsBackendSource, "model.ts"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-cms-backend\/preview$/,
+        replacement: resolvePath(cmsBackendSource, "preview/bridge.ts"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-cms-backend\/routing$/,
+        replacement: resolvePath(cmsBackendSource, "routing/index.js"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-cms-shared$/,
+        replacement: resolvePath(cmsSharedSource, "index.ts"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-cms-shared\/publication$/,
+        replacement: resolvePath(cmsSharedSource, "publication.ts"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-cms-shared\/bindings$/,
+        replacement: resolvePath(cmsSharedSource, "cloudflare-bindings.ts"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-cms-shared\/context$/,
+        replacement: resolvePath(cmsSharedSource, "agent-context.ts"),
+      },
+    ],
   },
   ssr: {
     noExternal: [/^@radix-ui\//],
