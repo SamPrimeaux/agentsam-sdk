@@ -21,3 +21,19 @@ Do not delete the work store, composer, SideStage, browser, terminal, CMS packag
 ## Consumer portability
 
 Fuel & Free Time can mount the same package via React or `mountNav` in its plain JavaScript shell. Its routes, identity, account choices, and colorway are supplied by the host. No Fuel & Free Time production files are changed by this integration. The nav package intentionally excludes its composer and plugin connections.
+# Composer plugins and annotation
+
+`PluginPicker` supplies one composer-width menu for `+` and `@`, keyboard selection,
+and compact available-plugin previews. `plugins.ts` projects the authenticated
+`/api/connections` response from `agentsam_plugins`; it does not maintain a second
+hard-coded plugin catalog. Disabled or hidden installations are excluded. OAuth
+requires connected status; configured native/binding plugins may be selected.
+Unhealthy connections lead to settings. A mention is explicit user intent, not
+proof of tool execution or permission to bypass the backend runtime.
+
+`AnnotationHelper` adapts the portable workbench `MiniAgentSam` to the current
+conversation draft. The shell and browser toolbars start the same selection mode.
+The helper inherits the selected theme and preserves iframe isolation. The chat
+route currently streams provider text; automatic execution of mentioned plugins
+still requires integrating the existing plugin runtime with that chat route.
+The existing `/api/plugins/tools/execute` endpoint remains the execution authority.

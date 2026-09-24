@@ -20,6 +20,12 @@ function database({ cloudflare = null, secrets = [] } = {}) {
         async all() {
           return sql.includes("user_secrets") ? { results: secrets } : { results: [] };
         },
+        async run() {
+          return { success: true };
+        },
+        async run() {
+          return { success: true };
+        },
       };
     },
   };

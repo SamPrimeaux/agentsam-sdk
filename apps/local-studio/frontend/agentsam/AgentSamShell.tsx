@@ -14,6 +14,7 @@ import { registerOfflineShell } from '@/lib/offline/register-sw';
 import { brand } from './brand';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import './shell.css';
+import { AnnotationHelper } from './AnnotationHelper';
 
 const accents = ['#8B5CF6', '#2563EB', '#0D9488', '#BE185D'];
 
@@ -111,6 +112,7 @@ export function AgentSamShell() {
         <OfflineBanner /><main className="agentsam-route"><Outlet /></main>
       </div><CliDrawer /><CommandPalette /><SettingsDialog />
       <Dialog open={sharing} onOpenChange={setSharing}><DialogContent><DialogTitle>Share conversation</DialogTitle><DialogDescription>Copy this conversation as text to share it. This does not create a public link.</DialogDescription><button type="button" className="as-nav-button" onClick={() => { if (!trail) return; void navigator.clipboard.writeText(trail.messages.map((item) => `${item.role}\n${item.content}`).join('\n\n')).then(() => { toast('Conversation copied'); setSharing(false); }, () => toast('Could not copy conversation')); }}><Copy size={18} />Copy conversation</button></DialogContent></Dialog>
+      <AnnotationHelper />
       <Toaster theme={theme === 'light' ? 'light' : 'dark'} position="bottom-center" />
     </Nav.Scope>
   </Nav.Provider></TooltipProvider>;

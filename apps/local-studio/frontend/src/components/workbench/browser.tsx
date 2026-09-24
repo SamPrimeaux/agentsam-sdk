@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useWorkStore } from "@/lib/work/store";
 import type { SideTab } from "@inneranimalmedia/agentsam-local-shared";
+import { AnnotationToggle } from '../../../agentsam/AnnotationHelper';
 
 const BOOKMARKS = [
   { label: "MDN", url: "https://developer.mozilla.org/" },
@@ -50,8 +51,9 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background">
+    <div className="flex h-full min-h-0 flex-col bg-background" data-agentsam-resource={`browser:${tab.id}`} aria-label={`Browser preview: ${tab.url || tab.title}. Annotation refers to the preview frame; embedded page contents are not captured.`}>
       <form onSubmit={onSubmit} className="flex items-center gap-1 border-b border-border px-2 py-2">
+        <AnnotationToggle />
         <Button
           type="button"
           size="icon"

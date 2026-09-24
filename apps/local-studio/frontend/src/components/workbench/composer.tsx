@@ -1,77 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowUp, Check, Cloud, Loader2, Maximize2, Paperclip, Pause, Play, Plus, Square, Target, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowUp, Maximize2, Paperclip, Pause, Play, Square, Target, Trash2 } from "lucide-react";
 import { AgentComposer, GoalStatusStrip } from "@inneranimalmedia/agentsam-workbench/agent";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { ModelSelect } from "@/components/workbench/model-select";
 import { cn, formatElapsed } from "@/lib/utils";
 import { useWorkStore } from "@/lib/work/store";
-import { composerPlugins, type ComposerPlugin } from '../../../agentsam/plugins';
-import { toast } from 'sonner';
-
-function PluginMenu({ onMention }: { onMention: (mention: string) => void }) {
-  const [status, setStatus] = useState<Record<string, string>>({});
-
-  const load = useCallback(async () => {
-    setStatus(Object.fromEntries(composerPlugins.map((plugin) => [plugin.id, 'loading'])));
-    try {
-      const response = await fetch("/api/connections", { credentials: "same-origin" });
-      const body = (await response.json().catch(() => ({}))) as {
-        connections?: Array<{ provider?: string; kind?: string; status?: string }>;
-      };
-      setStatus(Object.fromEntries(composerPlugins.map((plugin) => [plugin.id, body.connections?.some((row) => row.provider === plugin.provider && row.kind === plugin.kind && row.status === 'connected') ? 'connected' : 'available'])));
-    } catch {
-      setStatus({});
-    }
-  }, []);
-
-  const select = useCallback(async (plugin: ComposerPlugin) => {
-    if (status[plugin.id] === "connected") {
-      onMention(plugin.mention);
-      return;
-    }
-    try {
-      const response = await fetch(plugin.connectUrl, { credentials: "same-origin" });
-      const body = (await response.json().catch(() => ({}))) as { authorize_url?: string };
-      if (response.ok && body.authorize_url) window.location.assign(body.authorize_url);
-      else toast('Connection is unavailable. Try again later.');
-    } catch { toast('Could not start the connection.'); }
-  }, [onMention, status]);
-
-  return (
-    <DropdownMenu onOpenChange={(open) => { if (open) void load(); }}>
-      <DropdownMenuTrigger asChild>
-        <Button type="button" size="icon-sm" variant="ghost" aria-label="Add an AgentSam plugin">
-          <Plus className="size-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-72">
-        <DropdownMenuLabel>Connected tools</DropdownMenuLabel>
-        {composerPlugins.map((plugin) => <DropdownMenuItem key={plugin.id} disabled={status[plugin.id] === 'loading'} onSelect={() => void select(plugin)}>
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-accent">
-            {plugin.iconUrl ? <img src={plugin.iconUrl} alt="" className="size-4 object-contain" /> : <Cloud className="size-4" />}
-          </span>
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="font-medium">{plugin.label}</span>
-            <span className="truncate text-[11px] text-muted-foreground">{plugin.description}</span>
-          </span>
-          {status[plugin.id] === "loading" ? <Loader2 className="size-3.5 animate-spin text-muted-foreground" /> : null}
-          {status[plugin.id] === "connected" ? <Check className="size-4 text-accent" aria-label="Connected" /> : null}
-          {status[plugin.id] !== "connected" && status[plugin.id] !== "loading" ? (
-            <span className="text-xs font-medium text-accent">Connect</span>
-          ) : null}
-        </DropdownMenuItem>)}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
+import { PluginPicker } from '../../../agentsam/PluginPicker';
+import { Nav } from '@inneranimalmedia/agentsam-nav';
 
 export function Composer({
   targetId,
@@ -123,12 +59,6 @@ export function Composer({
         onChange={(event) => {
           void onFiles(event.target.files);
           event.target.value = "";
-        }}
-      />
-      <PluginMenu
-        onMention={(mention) => {
-          const next = [value.trimEnd(), mention].filter(Boolean).join(" ");
-          setDraft(targetId, `${next} `);
         }}
       />
       <Button
@@ -210,14 +140,14 @@ export function Composer({
           }
         />
       ) : null}
-      <AgentComposer
+      <PluginPicker value={value} onChange={(next) => setDraft(targetId, next)}>{({ trigger, onKeyDown, onSelect }) => <AgentComposer
         value={value}
         onChange={(next) => setDraft(targetId, next)}
         onSend={() => send(targetId, targetKind)}
         onCancel={() => stop(targetId)}
         streaming={streaming}
         placeholder={placeholder}
-        toolbarStart={attachControl}
+        toolbarStart={<>{trigger}{attachControl}</>}
         sendControl={sendControl}
         cancelControl={cancelControl}
         containerClassName={cn(
@@ -230,6 +160,9 @@ export function Composer({
         )}
         toolbarClassName="flex items-center gap-1 pt-1 max-md:pr-14"
         textareaProps={{
+          onKeyDown,
+          onSelect: (event) => onSelect(event.currentTarget.selectionStart),
+          onInput: (event) => onSelect(event.currentTarget.selectionStart),
           suppressHydrationWarning: true,
           onPaste: (event) => {
             if (event.clipboardData.files.length) {
@@ -238,7 +171,8 @@ export function Composer({
             }
           },
         }}
-      />
+      />}</PluginPicker>
+      {targetKind === 'trail' && <div className="agentsam-start-context"><Nav.ProjectContext /></div>}
     </div>
   );
 }
