@@ -61,11 +61,18 @@
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.56.1",
     "vite": "^8.2.0",
-    "wrangler": "^4.136.0"
+    "wrangler": "4.137.0"
   },
   "engines": {
     "node": ">=22 <25",
     "npm": ">=10 <12"
   },
-  "packageManager": "npm@10.9.2"
+  "packageManager": "npm@10.9.2",
+  "allowScripts": {
+    "fsevents@2.3.3": true,
+    "esbuild@0.28.1": true,
+    "node-pty@1.1.0": true,
+    "protobufjs@7.6.6": true,
+    "workerd@1.20260921.1": true
+  }
 }

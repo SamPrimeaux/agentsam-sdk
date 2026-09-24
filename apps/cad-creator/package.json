@@ -55,7 +55,7 @@
     "ws": "^8.21.3"
   },
   "devDependencies": {
-    "wrangler": "4.130.0"
+    "wrangler": "4.137.0"
   },
   "publishConfig": {
     "access": "public"
@@ -65,5 +65,14 @@
   },
   "overrides": {
     "qs": "6.16.0"
+  },
+  "allowScripts": {
+    "fsevents@2.3.3": true,
+    "protobufjs@7.6.6": true,
+    "@google/genai@2.22.0": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.2": true,
+    "esbuild@0.28.1": true,
+    "workerd@1.20260921.1": true
   }
 }

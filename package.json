@@ -93,7 +93,9 @@
     "packages/agentsam-errors",
     "packages/agentsam-repository",
     "packages/agentsam-knowledge",
-    "packages/agentsam-nav",
+    "packages/agentsam-nav/package.json",
+    "packages/agentsam-nav/README.md",
+    "packages/agentsam-nav/dist",
     "packages/work-graph",
     "packages/agentsam-queue-control",
     "packages/connectors/cloudflare",
@@ -147,7 +149,7 @@
     "verify:knowledge-package": "node scripts/verify-knowledge-package.mjs && npm run test:autorag",
     "test:python": "node scripts/verify-python.mjs",
     "verify:release": "npm run verify && npm run verify:knowledge-package && npm run test:python && npm run security:check",
-    "pack:check": "npm pack --dry-run --json",
+    "pack:check": "node scripts/verify-pack.mjs",
     "verify": "npm run errors:check && npm run proto:check && npm test && npm run test:workspaces && npm run cad:registry:check && npm run verify:boundaries && npm run verify:package && npm run verify:bootstrap && npm run pack:check",
     "publish:identity-alpha": "bash scripts/publish-identity-alpha.sh",
     "publish:identity-alpha:dry-run": "bash scripts/publish-identity-alpha.sh --dry-run",
@@ -178,7 +180,7 @@
     "pg": "8.16.3",
     "picocolors": "^1.1.1",
     "typescript": "5.9.3",
-    "wrangler": "^4.136.0",
+    "wrangler": "4.137.0",
     "ws": "^8.18.0"
   },
   "publishConfig": {
@@ -208,7 +210,8 @@
     "grpc-tools@1.13.1": true,
     "protobufjs@7.6.6": true,
     "esbuild@0.28.1": true,
-    "workerd@1.20260918.1": true
+    "fsevents@2.3.3": true,
+    "workerd@1.20260921.1": true
   },
   "devDependencies": {
     "@changesets/changelog-github": "^1.0.1",

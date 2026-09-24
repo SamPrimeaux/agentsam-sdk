@@ -18,6 +18,6 @@
     "cf:dry-run": "npm run build && wrangler deploy -c backend/wrangler.jsonc --dry-run"
   },
   "devDependencies": {
-    "wrangler": "4.130.0"
+    "wrangler": "4.137.0"
   }
 }
