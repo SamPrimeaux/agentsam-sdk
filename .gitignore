@@ -30,3 +30,8 @@ apps/cad-creator/backend/runtime/
 !packages/**/.agentsam/**
 generated/
 work/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
