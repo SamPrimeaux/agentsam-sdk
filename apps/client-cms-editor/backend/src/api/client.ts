@@ -22,7 +22,7 @@ function demoOk<T extends Json = Json>(payload: T = {} as T): Promise<T> {
   return Promise.resolve(payload);
 }
 
-async function api<T = Json>(path: string, init: ApiInit = {}): Promise<T> {
+async function api<T extends Json = Json>(path: string, init: ApiInit = {}): Promise<T> {
   if (useDemoBootstrap()) {
     return demoOk<T>({} as T);
   }
