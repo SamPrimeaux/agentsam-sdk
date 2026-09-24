@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { AgentPrincipal, AgentWorkbenchAdapter } from '@inneranimalmedia/agentsam-contracts';
 import { ConnectedAgentPanel } from '@inneranimalmedia/agentsam-workbench/agent';
 import {
@@ -11,10 +11,12 @@ import {
   phaseLabel,
 } from '@inneranimalmedia/agentsam-workbench/agent';
 import { createCmsAgentContextProvider } from '@inneranimalmedia/agentsam-cms-shared';
+import '@inneranimalmedia/agentsam-workbench/agent/contextual-composer.css';
 
 export type CmsAgentSurfaceProps = {
-  adapter: AgentWorkbenchAdapter;
-  principal: AgentPrincipal;
+  /** Required for classic ConnectedAgentPanel; optional when `contextual` (demo / local stubs). */
+  adapter?: AgentWorkbenchAdapter | null;
+  principal?: AgentPrincipal | null;
   projectId: string;
   conversationId: string;
   route?: string;
@@ -40,7 +42,7 @@ export type CmsAgentSurfaceProps = {
  * Host supplies authenticated principal + explicit CMS selection state.
  *
  * `contextual` enables the select → suggest → generate → land loop
- * (see docs/CMS_CONTEXTUAL_COMPOSER.md).
+ * (see docs/CMS_CONTEXTUAL_COMPOSER.md). FnF layout: left inspector · canvas · right composer.
  */
 export function CmsAgentSurface({
   adapter,
@@ -64,7 +66,11 @@ export function CmsAgentSurface({
   children,
 }: CmsAgentSurfaceProps) {
   const contextProvider = useMemo(() => createCmsAgentContextProvider(() => ({
-    principal,
+    principal: principal || {
+      accountId: 'demo',
+      authUserId: 'demo',
+      displayName: 'Demo',
+    },
     projectId,
     route,
     pageId,
@@ -86,7 +92,19 @@ export function CmsAgentSurface({
   );
   const [flashKeys, setFlashKeys] = useState<string[]>([]);
 
+  useEffect(() => {
+    if (!propertyValues) return;
+    setValues((prev) => ({ ...prev, ...propertyValues, padding: { ...(prev.padding || { top: 0, bottom: 0, left: 0, right: 0 }), ...(propertyValues.padding || {}) } }));
+  }, [propertyValues]);
+
   if (!contextual) {
+    if (!adapter) {
+      return (
+        <div className={className} data-cms-agent-empty="">
+          Agent adapter is required for the classic panel. Pass `contextual` for the FnF composer shell.
+        </div>
+      );
+    }
     return (
       <ConnectedAgentPanel
         className={className}
@@ -158,30 +176,16 @@ async function demoRunGeneration(
   for (const phase of phases) {
     if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
     emit({ phase, label: phaseLabel(phase) });
-    const snippets = [
-      `/* ${phase} · ${suggestion.title} */`,
-      `.ai-block--${(suggestion.selectionId || 'new').slice(0, 8)} {`,
-      `  width: {{ block.settings.desktop_width }};`,
-      `  /* scroll-trigger: ${phase === 'wiring-settings' ? 'armed' : 'pending'} */`,
-      `}`,
-    ];
-    for (const line of snippets) {
-      if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-      lines.push(line);
-      emit({ codeLines: [...lines] });
-      await wait(180);
-    }
+    await new Promise((r) => setTimeout(r, 280));
+    lines.push(`// ${phaseLabel(phase)}`);
+    lines.push(`apply("${suggestion.title.replace(/"/g, '\\"')}");`);
+    emit({ codeLines: [...lines] });
   }
+  emit({ phase: 'done', label: phaseLabel('done') });
   return {
-    confirmation: `Applied “${suggestion.title}”. Keep customizing — text, color, and scroll settings are live in the left inspector.`,
-    propertyPatch: {
-      text: suggestion.selectionLabel ? `Announcement · ${suggestion.selectionLabel}` : 'Announcement',
-      typographyPreset: 'Heading 4',
-      width: 'fill' as const,
-    },
+    confirmation: `Applied “${suggestion.title}” to ${suggestion.selectionLabel || 'the selection'}.`,
+    propertyPatch: suggestion.selectionLabel
+      ? { text: suggestion.selectionLabel }
+      : undefined,
   };
-}
-
-function wait(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }

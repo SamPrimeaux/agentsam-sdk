@@ -2,7 +2,9 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AgentPrincipal, AgentWorkbenchAdapter } from "@inneranimalmedia/agentsam-contracts";
-import { CmsAgentSurface } from "./CmsAgentSurface";
+import { MiniAgentSam, type AnnotationSelection } from "@inneranimalmedia/agentsam-workbench/agent";
+import "@inneranimalmedia/agentsam-workbench/agent/mini-agentsam.css";
+import { AgentSamDrawer } from "./AgentSamDrawer";
 import { escapeCmsText, safeCmsAssetUrl, safeCmsCssValue, sanitizeCmsRichText } from "./lib/content-safety";
 import {
   createCmsEditorBlock,
@@ -84,8 +86,8 @@ function useStored<T>(key: string, initial: T) {
   return [value, setValue] as const;
 }
 
-function Button({ children, icon, kind = "ghost", onClick, disabled, className = "", title }: any) {
-  return <button className={`button ${kind} ${className}`} onClick={onClick} disabled={disabled} title={title}>{icon && <Icon name={icon} />}{children}</button>;
+function Button({ children, icon, kind = "ghost", onClick, disabled, className = "", title, ...rest }: any) {
+  return <button className={`button ${kind} ${className}`} onClick={onClick} disabled={disabled} title={title} {...rest}>{icon && <Icon name={icon} />}{children}</button>;
 }
 
 function Search({ value, onChange, placeholder = "Search" }: any) {
@@ -172,9 +174,15 @@ export default function CmsEditor({
   const selectedBlock = selected?.blocks?.find((block) => block.id === selectedBlockId) || null;
   const [rail, setRail] = useState<RailMode>(initialPanel === "theme" ? "sections" : initialPanel === "imports" ? "templates" : initialPanel);
   const [tab, setTab] = useState<InspectorTab>(initialPanel === "theme" ? "theme" : "content");
-  const [sidebarCollapsed, setSidebarCollapsed] = useStored("cms-sidebar-collapsed", typeof window !== "undefined" ? window.innerWidth < 1200 : false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useStored("cms-sidebar-collapsed", false);
   const [inspectorCollapsed, setInspectorCollapsed] = useStored("cms-inspector-collapsed", false);
-  const [viewport, setViewport] = useStored<Viewport>("cms-viewport", "desktop");
+  const [agentSamOpen, setAgentSamOpen] = useStored("cms-agentsam-open", false);
+  const [inspectorSheetOpen, setInspectorSheetOpen] = useState(false);
+  const [annotateSelecting, setAnnotateSelecting] = useState(false);
+  const [annotatePrompt, setAnnotatePrompt] = useState<string | null>(null);
+  const canvasScopeRef = useRef<HTMLElement | null>(null);
+  const iframeSandbox = "allow-scripts allow-same-origin";
+  const [viewport, setViewport] = useStored<Viewport>("cms-viewport", "phone");
   const [zoom, setZoom] = useState("Fit");
   const [responsive, setResponsive] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -384,6 +392,38 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
   const redo = useCallback(() => { if (!page) return; const next = future[0]; if (!next) return; setHistory(h => [...h, page.sections]); setFuture(f => f.slice(1)); updatePages(ps => ps.map(p => p.id === page.id ? { ...p, sections: next } : p)); toast("Change restored", "info"); }, [future, page, updatePages, toast]);
 
   const chooseSection = (id: string) => { if (dirty && id !== selectedId && !window.confirm("You have unsaved changes. Discard and continue?")) return; setSelectedId(id); setSelectedBlockId(""); setDirty(false); setRail("sections"); setTab("content"); postCmsEditorPreviewMessage(iframeRef.current?.contentWindow, { type: CMS_EDITOR_PREVIEW_TYPES.HIGHLIGHT, section_id: id }); };
+
+  const selectAnnotatedResource = useCallback((id: string) => {
+    if (!page) return;
+    const resourceId = id.startsWith("page:") ? id.slice(5) : id;
+    if (resourceId === page.id || id === `page:${page.id}`) {
+      setSelectedId(page.sections[0]?.id || "");
+      setSelectedBlockId("");
+      return;
+    }
+    const section = page.sections.find((row) => row.id === resourceId || row.id === id);
+    if (section) {
+      chooseSection(section.id);
+      return;
+    }
+    for (const row of page.sections) {
+      const block = (row.blocks || []).find((item) => item.id === resourceId || item.id === id);
+      if (block) {
+        setSelectedId(row.id);
+        chooseBlock(block.id);
+        postCmsEditorPreviewMessage(iframeRef.current?.contentWindow, { type: CMS_EDITOR_PREVIEW_TYPES.HIGHLIGHT, section_id: row.id });
+        return;
+      }
+    }
+  }, [page, chooseBlock]);
+
+  const onAnnotateSubmit = useCallback(async (prompt: string, annotation: AnnotationSelection) => {
+    selectAnnotatedResource(annotation.id);
+    setAgentSamOpen(true);
+    setAnnotatePrompt(prompt);
+    toast(`Annotated “${annotation.label || annotation.tag}”`, "info");
+    window.dispatchEvent(new CustomEvent("agentsam:cms-annotate", { detail: { prompt, annotation } }));
+  }, [selectAnnotatedResource, setAgentSamOpen, toast]);
   const choosePage = (id: string) => { if (dirty && !window.confirm("You have unsaved changes. Discard and continue?")) return; const p = site.pages.find(x => x.id === id); if (!p) return; setPageId(id); setSelectedId(p.sections[0]?.id || ""); setSelectedBlockId(""); setDirty(false); setTab("content"); toast(`Opened ${p.title}`, "info"); };
   const chooseSite = (id: string) => { const s = sites.find(x => x.id === id); if (!s) return; setSiteSwitcher(false); if (onSiteChange) { onSiteChange(id); toast(`Opening ${s.name}`, "info"); return; } setSiteId(id); if (s.pages[0]) { setPageId(s.pages[0].id); setSelectedId(s.pages[0].sections[0]?.id || ""); setSelectedBlockId(""); } toast(`Switched to ${s.name}`, "info"); };
 
@@ -408,8 +448,13 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
     if (cmd && e.shiftKey && e.key === ".") { e.preventDefault(); setSidebarCollapsed(v => !v); }
     if (cmd && e.shiftKey && e.key === ",") { e.preventDefault(); setInspectorCollapsed(v => !v); }
     if (cmd && /^[1-7]$/.test(e.key)) { e.preventDefault(); setRail(railItems[Number(e.key)-1].id); }
-    if (e.key === "Escape") { if (preview) setPreview(false); else if (modal) setModal(null); else { setSelectedId(""); postCmsEditorPreviewMessage(iframeRef.current?.contentWindow, { type: CMS_EDITOR_PREVIEW_TYPES.DESELECT }); } }
-  }; window.addEventListener("keydown", down); return () => window.removeEventListener("keydown", down); }, [modal, preview, save, undo, redo, setSidebarCollapsed, setInspectorCollapsed]);
+    if (e.key === "Escape") {
+      if (annotateSelecting) { setAnnotateSelecting(false); return; }
+      if (preview) setPreview(false);
+      else if (modal) setModal(null);
+      else { setSelectedId(""); postCmsEditorPreviewMessage(iframeRef.current?.contentWindow, { type: CMS_EDITOR_PREVIEW_TYPES.DESELECT }); }
+    }
+  }; window.addEventListener("keydown", down); return () => window.removeEventListener("keydown", down); }, [annotateSelecting, modal, preview, save, undo, redo, setSidebarCollapsed, setInspectorCollapsed]);
 
   const frameHtml = useMemo(() => {
     if (!page) return "<!doctype html><html><body></body></html>";
@@ -427,7 +472,7 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
         const links = Array.isArray(f.nav_links) ? f.nav_links : Array.isArray(f.links) ? f.links : [];
         const brand = f.brand_name || f.title || f.brand || site?.name || "Agent Sam";
         const cta = f.nav_cta_label || f.cta_text || f.cta_label || "Get Started";
-        return `<section data-cms-id="${sectionId}" class="nav"><b>${escapeCmsText(brand)}</b><nav>${links.map((x: any) => {
+        return `<section data-cms-id="${sectionId}" data-agentsam-resource="${sectionId}" class="nav"><b>${escapeCmsText(brand)}</b><nav>${links.map((x: any) => {
           if (x && typeof x === "object") {
             const lbl = escapeCmsText(x.label || x.title || x.text || x.name || "Link");
             const href = escapeCmsText(x.href || x.url || x.path || "#");
@@ -445,7 +490,7 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
         const body = String(f.subline || f.subhead || f.body || f.hero_body || f.description || "");
         const eyebrow = String(f.eyebrow || f.section_label || "");
         const bg = safeCmsCssValue(f.bg_color || f.background || "") || "#0d0d12";
-        return `<section data-cms-id="${sectionId}" class="hero" style="background-color:${bg};background-image:linear-gradient(90deg,rgba(7,7,10,.8),rgba(7,7,10,.15))${imgUrl ? `,url('${imgUrl}')` : ''}"><div><small>${escapeCmsText(eyebrow)}</small><h1>${escapeCmsText(heading)}</h1><p>${escapeCmsText(body)}</p>${ctaLabel ? `<button>${escapeCmsText(ctaLabel)}</button>` : ""}${f.hero_secondary_cta ? `<a>${escapeCmsText(f.hero_secondary_cta)} →</a>` : ""}</div></section>`;
+        return `<section data-cms-id="${sectionId}" data-agentsam-resource="${sectionId}" class="hero" style="background-color:${bg};background-image:linear-gradient(90deg,rgba(7,7,10,.8),rgba(7,7,10,.15))${imgUrl ? `,url('${imgUrl}')` : ''}"><div><small>${escapeCmsText(eyebrow)}</small><h1>${escapeCmsText(heading)}</h1><p>${escapeCmsText(body)}</p>${ctaLabel ? `<button>${escapeCmsText(ctaLabel)}</button>` : ""}${f.hero_secondary_cta ? `<a>${escapeCmsText(f.hero_secondary_cta)} →</a>` : ""}</div></section>`;
       }
       if (isFooter) {
         const links = Array.isArray(f.footer_links) ? f.footer_links : Array.isArray(f.links) ? f.links : [];
@@ -453,11 +498,14 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
         const copyright = f.copyright || f.copyright_text || `© ${new Date().getFullYear()} ${brand}`;
         const blockCopy = (s.blocks || [])
           .filter((b) => b.visible !== false)
-          .map((b) => escapeCmsText(String(b.data?.text || b.data?.title || b.type || "")))
+          .map((b) => {
+            const blockId = escapeCmsText(b.id);
+            const text = escapeCmsText(String(b.data?.text || b.data?.title || b.type || ""));
+            return text ? `<p class="footer-block" data-agentsam-resource="${blockId}">${text}</p>` : "";
+          })
           .filter(Boolean)
-          .map((t) => `<p class="footer-block">${t}</p>`)
           .join("");
-        return `<section data-cms-id="${sectionId}" class="footer"><b>${escapeCmsText(brand)}</b>${blockCopy}<p>${escapeCmsText(copyright)}</p><span>${links.map((x: any) => {
+        return `<section data-cms-id="${sectionId}" data-agentsam-resource="${sectionId}" class="footer"><b>${escapeCmsText(brand)}</b>${blockCopy}<p>${escapeCmsText(copyright)}</p><span>${links.map((x: any) => {
           if (x && typeof x === "object") {
             const lbl = escapeCmsText(x.label || x.title || x.text || x.name || "Link");
             const href = escapeCmsText(x.href || x.url || x.path || "#");
@@ -470,16 +518,16 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
         const cards = (s.blocks || []).filter((b) => b.visible !== false);
         const title = String(f.title || s.name || "Products");
         const grid = cards.length
-          ? cards.map((b) => `<article><div class="thumb"></div><b>${escapeCmsText(String(b.data?.title || "Product"))}</b><span>${escapeCmsText(String(b.data?.price || ""))}</span></article>`).join("")
+          ? cards.map((b) => `<article data-agentsam-resource="${escapeCmsText(b.id)}"><div class="thumb"></div><b>${escapeCmsText(String(b.data?.title || "Product"))}</b><span>${escapeCmsText(String(b.data?.price || ""))}</span></article>`).join("")
           : `<article><div class="thumb"></div><b>Product</b><span>$19.99</span></article>`.repeat(4);
-        return `<section data-cms-id="${sectionId}" class="products"><h2>${escapeCmsText(title)}</h2><div class="product-grid">${grid}</div></section>`;
+        return `<section data-cms-id="${sectionId}" data-agentsam-resource="${sectionId}" class="products"><h2>${escapeCmsText(title)}</h2><div class="product-grid">${grid}</div></section>`;
       }
       const title = String(f.title || f.heading || f.headline || f.quote || s.name || "");
       const description = String(f.description || f.body || f.subline || f.author_name || "");
       const label = String(f.section_label || s.type || "");
       const cta = String(f.button_label || f.cta_text || "");
       const email = f.email ? `<p><a href="mailto:${escapeCmsText(f.email)}" style="color:var(--brand-primary);">${escapeCmsText(f.email)}</a></p>` : "";
-      return `<section data-cms-id="${sectionId}" class="content s${i}" style="background:${safeCmsCssValue(s.color) || 'transparent'}"><small>${escapeCmsText(label)}</small><h2>${escapeCmsText(title)}</h2><p>${escapeCmsText(description)}</p>${email}${cta ? `<button>${escapeCmsText(cta)}</button>` : ""}</section>`;
+      return `<section data-cms-id="${sectionId}" data-agentsam-resource="${sectionId}" class="content s${i}" style="background:${safeCmsCssValue(s.color) || 'transparent'}"><small>${escapeCmsText(label)}</small><h2>${escapeCmsText(title)}</h2><p>${escapeCmsText(description)}</p>${email}${cta ? `<button>${escapeCmsText(cta)}</button>` : ""}</section>`;
     }).join("");
     const vars = Object.entries(theme)
       .filter(([key]) => /^--[a-z0-9-]+$/i.test(key))
@@ -556,7 +604,18 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
       });
   };
 
-  if (preview) return <div className="preview-mode"><iframe sandbox="allow-scripts" srcDoc={frameHtml}/><div className="preview-toolbar"><Button onClick={() => setPreview(false)}>Exit preview</Button><ViewportSwitcher viewport={viewport} setViewport={setViewport}/><Button icon="external" onClick={() => toast("Preview opened in a new tab", "info")}>Open</Button></div></div>;
+  if (preview) {
+    return (
+      <div className="preview-mode" data-agentsam-resource={`page:${page?.id || "preview"}`}>
+        <iframe sandbox={iframeSandbox} srcDoc={frameHtml} title="Page preview"/>
+        <div className="preview-toolbar" data-annotation-control="">
+          <Button onClick={() => setPreview(false)}>Exit preview</Button>
+          <ViewportSwitcher viewport={viewport} setViewport={setViewport}/>
+          <Button icon="external" onClick={() => toast("Preview opened in a new tab", "info")}>Open</Button>
+        </div>
+      </div>
+    );
+  }
 
 
   const applyTemplate = async (template: TemplateCard) => {
@@ -582,7 +641,7 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
         toast(`Started "${template.name}" as a draft page (baseline example)`);
         return;
       }
-      const result = await applyTemplateApi(template.id, { pageId: page?.id, projectSlug });
+      const result = await applyTemplateApi(template.id, { pageId: page?.id, projectSlug }) as any;
       if (result.mode === "page" && result.page?.id) {
         const created = mapCmsEditorPage(result.page);
         updatePages((items) => [...items, created as PageData]);
@@ -602,7 +661,8 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
         toast(`Added ${created.name || template.name}`);
         return;
       }
-      toast((result as any).error || "Template could not be applied", "error");
+      toast(result.error || "Template could not be applied", "error");
+
     } catch (error: any) {
       toast(error?.message || "Template could not be applied", "error");
     } finally {
@@ -709,62 +769,203 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
   }
 
 
-  return <main className="cms-shell">
-    <header className="topbar">
-      <div className="topbar-left">
+  return <main className={`cms-shell cms-shell--fnf${agentSamOpen ? " is-agentsam-open" : ""}${inspectorSheetOpen ? " is-inspector-open" : ""}`}>
+    <header className="fnf-topbar" data-annotation-control="">
+      <div className="fnf-topbar-left">
         <button
-          className="button ghost hub-exit"
+          className="fnf-topbar-ghost"
           onClick={() => {
             const target = basePath || "/cms";
-            if (onNavigate) {
-              onNavigate(target);
-            } else {
-              window.parent.postMessage({ type: "iam-studio-cms-navigate", path: target }, window.location.origin);
-            }
+            if (onNavigate) onNavigate(target);
+            else window.parent.postMessage({ type: "iam-studio-cms-navigate", path: target }, window.location.origin);
           }}
           title="Back to CMS overview"
-        ><Icon name="collapse" size={14}/> Overview</button>
-        <div className="site-trigger-wrap"><button className="site-trigger" onClick={() => setSiteSwitcher(v => !v)}><span className="site-avatar" style={{background:site.color}}>{site.initials}</span><span><b>{site.name}</b><small>{site.domain}</small></span><Icon name="down" size={13}/></button>{siteSwitcher && <SiteSwitcher sites={sites} active={site.id} choose={chooseSite} close={() => setSiteSwitcher(false)} newSite={() => { setSiteSwitcher(false); toast("Create sites from the CMS hub", "info"); }}/>}</div>
+        ><Icon name="collapse" size={14}/><span>Overview</span></button>
+        <div className="site-trigger-wrap">
+          <button className="site-trigger" onClick={() => setSiteSwitcher(v => !v)}>
+            <span className="site-avatar" style={{ background: site.color }}>{site.initials}</span>
+            <span><b>{site.name}</b><small>{site.domain}</small></span>
+            <Icon name="down" size={13}/>
+          </button>
+          {siteSwitcher && <SiteSwitcher sites={sites} active={site.id} choose={chooseSite} close={() => setSiteSwitcher(false)} newSite={() => { setSiteSwitcher(false); toast("Create sites from the CMS hub", "info"); }}/>}
+        </div>
       </div>
-      <div className="breadcrumb"><span>{site.name}</span><Icon name="chevron" size={11}/><b>{page.title}</b>{selected && <><Icon name="chevron" size={11}/><span>{selected.name}</span></>}</div>
-      <ViewportSwitcher viewport={viewport} setViewport={setViewport}/>
-      <div className="top-actions"><div className="collab"><small>CMS editor</small></div>{agent && <Button onClick={() => setModal("agentsam")}>AgentSam</Button>}<Button icon="undo" onClick={undo} disabled={!history.length} title="Undo ⌘Z"/><Button icon="redo" onClick={redo} disabled={!future.length} title="Redo ⌘⇧Z"/><Button icon="external" onClick={() => setPreview(true)}>Preview</Button><div className="publish-wrap"><Button icon="publish" kind="accent" onClick={() => setPublishMenu(v => !v)}>Publish <Icon name="down" size={11}/></Button>{publishMenu && <PublishMenu action={(m:string) => { if (m === "Schedule") { setModal("schedule"); } else { setSaving(true); publishIamPage(page.id).then(() => toast("Page published")).catch((error) => toast(error?.message || "Publish failed", "error")).finally(() => setSaving(false)); } setPublishMenu(false); }}/>}</div><button className="user-avatar" onClick={() => toast("Account settings are available from the dashboard", "info")} aria-label="Account"><Icon name="settings" size={14}/></button></div>
-      <div className="mobile-top"><Button icon="menu" onClick={() => setSidebarCollapsed(false)}/><b>{page.title}</b><Button kind="accent" onClick={() => setPublishMenu(true)}>Publish</Button></div>
+      <button className="fnf-search" type="button" onClick={() => setModal("palette")} aria-label="Search">
+        <Icon name="search" size={14}/>
+        <span>Search pages, sections…</span>
+        <kbd>⌘K</kbd>
+      </button>
+      <div className="fnf-topbar-actions">
+        <ViewportSwitcher viewport={viewport} setViewport={setViewport}/>
+        <button
+          type="button"
+          className={`fnf-topbar-btn${annotateSelecting ? " is-active" : ""}`}
+          data-annotation-control=""
+          onClick={() => setAnnotateSelecting((v) => !v)}
+          title="Annotate canvas"
+        >{annotateSelecting ? "Selecting…" : "Annotate"}</button>
+        <button type="button" className="fnf-topbar-icon" onClick={undo} disabled={!history.length} title="Undo ⌘Z"><Icon name="undo" size={14}/></button>
+        <button type="button" className="fnf-topbar-icon" onClick={redo} disabled={!future.length} title="Redo ⌘⇧Z"><Icon name="redo" size={14}/></button>
+        <button type="button" className="fnf-topbar-btn" onClick={() => setPreview(true)}>Preview</button>
+        <div className="publish-wrap">
+          <Button icon="publish" kind="accent" onClick={() => setPublishMenu(v => !v)}>Publish live <Icon name="down" size={11}/></Button>
+          {publishMenu && <PublishMenu action={(m: string) => { if (m === "Schedule") { setModal("schedule"); } else { setSaving(true); publishIamPage(page.id).then(() => toast("Page published")).catch((error) => toast(error?.message || "Publish failed", "error")).finally(() => setSaving(false)); } setPublishMenu(false); }}/>}
+        </div>
+        <button
+          type="button"
+          className={`fnf-topbar-icon${agentSamOpen ? " is-agentsam-active" : ""}`}
+          data-annotation-control=""
+          aria-label="AgentSam"
+          aria-expanded={agentSamOpen}
+          title="AgentSam Side Assistant"
+          onClick={() => setAgentSamOpen((v) => !v)}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
+        </button>
+      </div>
+      <div className="fnf-mobile-top" data-annotation-control="">
+        <button type="button" className="fnf-topbar-ghost" onClick={() => { setSidebarCollapsed(false); setRail("sections"); }} aria-label="Library"><Icon name="menu" size={16}/></button>
+        <b>{page.title}</b>
+        <div className="fnf-mobile-top-actions">
+          <button type="button" className={`fnf-topbar-btn${inspectorSheetOpen ? " is-active" : ""}`} onClick={() => setInspectorSheetOpen((v) => !v)}>{inspectorSheetOpen ? "Preview" : "Edit"}</button>
+          <button
+            type="button"
+            className={`fnf-topbar-icon${agentSamOpen ? " is-agentsam-active" : ""}`}
+            aria-label="AgentSam"
+            aria-expanded={agentSamOpen}
+            onClick={() => setAgentSamOpen((v) => !v)}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
     </header>
 
-    <div className="workspace">
-      <nav className="rail">{railItems.map((item, i) => <button key={item.id} className={rail === item.id ? "active" : ""} onClick={() => { setRail(item.id); setSidebarCollapsed(false); }} data-tip={`${item.label}  ⌘${i+1}`}><Icon name={item.icon}/></button>)}<button className="rail-collapse" onClick={() => setSidebarCollapsed(v => !v)} data-tip={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}><Icon name="collapse"/></button></nav>
-      <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`}><SidebarHeader rail={rail} search={search} setSearch={setSearch} action={() => rail === "pages" ? setModal("page") : rail === "sections" ? setModal("add-section") : rail === "blocks" ? addBlock() : rail === "media" ? setModal("upload") : toast("No create action is available for this panel", "info")}/><div className="sidebar-scroll">
-        {rail === "pages" && <PagesSidebar pages={filteredPages} active={page.id} choose={choosePage} create={() => setModal("page")} toast={toast}/>}
-        {rail === "sections" && <SectionsSidebar sections={filteredSections} selected={selectedId} choose={chooseSection} mutate={mutateSections} add={() => setModal("add-section")} toast={toast} onReorder={(ordered:Section[]) => reorderSections(page.id, ordered).catch((error) => toast(error?.message || "Reorder failed", "error"))} onVisibility={(section:Section, visible:boolean) => setSectionVisibility(section.id, visible).catch((error) => toast(error?.message || "Visibility update failed", "error"))} onRename={(section:Section, name:string) => renameSection(section.id, name).catch((error) => toast(error?.message || "Rename failed", "error"))}/>}
-        {rail === "blocks" && <BlocksSidebar section={selected} selected={selectedBlockId} choose={chooseBlock} add={addBlock} onVisibility={(block:BlockData, visible:boolean) => { mutateBlocks((items) => items.map((item) => item.id === block.id ? { ...item, visible } : item)); setCmsEditorBlockVisibility(block.id, visible).catch((error) => toast(error?.message || "Block visibility update failed", "error")); }}/>}
-        {rail === "templates" && <TemplatesSidebar items={templateCards} schemas={schemaCatalog} preview={(tpl: TemplateCard) => { setModal(`template:${tpl.id}`); }} apply={applyTemplate} addSection={(type: string) => addSection(type)}/>}
-        {rail === "media" && <MediaSidebar view={mediaView} setView={setMediaView} filter={mediaFilter} setFilter={setMediaFilter} items={mediaItems} upload={() => setModal("upload")} toast={toast}/>}
-        {rail === "crm" && <CrmSidebar contacts={contacts} search={search} select={setContactId} exportCsv={() => exportContactsCsv(contacts)}/>}
-        {rail === "settings" && <SettingsSidebar site={site} toast={toast}/>}
-      </div></aside>
+    <div className="fnf-workspace">
+      <nav className="rail fnf-rail" data-annotation-control="">
+        {railItems.map((item, i) => <button key={item.id} className={rail === item.id ? "active" : ""} onClick={() => { setRail(item.id); setSidebarCollapsed(false); }} data-tip={`${item.label}  ⌘${i + 1}`}><Icon name={item.icon}/></button>)}
+        <button className="rail-collapse" onClick={() => setSidebarCollapsed(v => !v)} data-tip={sidebarCollapsed ? "Expand library" : "Collapse library"}><Icon name="collapse"/></button>
+      </nav>
 
-      <section className="canvas-area">
-        <div className="canvas-ruler"><span>0</span><i/><span>{viewport === "phone" ? "375" : viewport === "tablet" ? "768" : "1440"} px</span><i/><span>{viewport === "phone" ? "375" : viewport === "tablet" ? "768" : "1440"}</span></div>
-        <div className="canvas-stage">
-          {bootstrapLoading && <div className="canvas-loading"><div className="skeleton-topbar"/><div className="skeleton-hero"/><div className="skeleton-block"/></div>}
-          {bootstrapError && !bootstrapLoading && <div className="canvas-error"><h3>Could not load site</h3><p>{bootstrapError}</p><Button kind="accent" onClick={() => setBootstrapNonce((value) => value + 1)}>Retry</Button></div>}
-          <div className="section-markers">{page.sections.map((s,i) => <button key={s.id} className={s.id===selectedId ? "active" : ""} onClick={() => { chooseSection(s.id); postCmsEditorPreviewMessage(iframeRef.current?.contentWindow, { type: CMS_EDITOR_PREVIEW_TYPES.SCROLL_TO, section_id: s.id }); }}><span>{i+1}</span><b>{s.name}</b></button>)}</div>
-          {responsive ? <div className="responsive-three">{(["phone","tablet","desktop"] as Viewport[]).map(v => <div key={v}><label><Icon name={v}/> {v}</label><iframe sandbox="allow-scripts" srcDoc={frameHtml}/></div>)}</div> : <div className={`device-frame ${viewport}`} style={{transform:`scale(${zoom === "50%" ? .5 : zoom === "75%" ? .75 : 1})`}}><div className="loading-line"/><iframe ref={iframeRef} sandbox="allow-scripts" title={`${page.title} preview`} srcDoc={frameHtml}/></div>}
+      <aside className={`sidebar fnf-library ${sidebarCollapsed ? "collapsed" : ""}`} data-annotation-control="">
+        <SidebarHeader rail={rail} search={search} setSearch={setSearch} action={() => rail === "pages" ? setModal("page") : rail === "sections" ? setModal("add-section") : rail === "blocks" ? addBlock() : rail === "media" ? setModal("upload") : toast("No create action is available for this panel", "info")}/>
+        <div className="sidebar-scroll">
+          {rail === "pages" && <PagesSidebar pages={filteredPages} active={page.id} choose={choosePage} create={() => setModal("page")} toast={toast}/>}
+          {rail === "sections" && <SectionsSidebar sections={filteredSections} selected={selectedId} choose={chooseSection} mutate={mutateSections} add={() => setModal("add-section")} toast={toast} onReorder={(ordered: Section[]) => reorderSections(page.id, ordered).catch((error) => toast(error?.message || "Reorder failed", "error"))} onVisibility={(section: Section, visible: boolean) => setSectionVisibility(section.id, visible).catch((error) => toast(error?.message || "Visibility update failed", "error"))} onRename={(section: Section, name: string) => renameSection(section.id, name).catch((error) => toast(error?.message || "Rename failed", "error"))}/>}
+          {rail === "blocks" && <BlocksSidebar section={selected} selected={selectedBlockId} choose={chooseBlock} add={addBlock} onVisibility={(block: BlockData, visible: boolean) => { mutateBlocks((items) => items.map((item) => item.id === block.id ? { ...item, visible } : item)); setCmsEditorBlockVisibility(block.id, visible).catch((error) => toast(error?.message || "Block visibility update failed", "error")); }}/>}
+          {rail === "templates" && <TemplatesSidebar items={templateCards} schemas={schemaCatalog} preview={(tpl: TemplateCard) => { setModal(`template:${tpl.id}`); }} apply={applyTemplate} addSection={(type: string) => addSection(type)}/>}
+          {rail === "media" && <MediaSidebar view={mediaView} setView={setMediaView} filter={mediaFilter} setFilter={setMediaFilter} items={mediaItems} upload={() => setModal("upload")} toast={toast}/>}
+          {rail === "crm" && <CrmSidebar contacts={contacts} search={search} select={setContactId} exportCsv={() => exportContactsCsv(contacts)}/>}
+          {rail === "settings" && <SettingsSidebar site={site} toast={toast}/>}
         </div>
-        <footer className="canvas-footer"><div><button className={`toggle ${responsive ? "on" : ""}`} onClick={() => setResponsive(v => !v)}><span/></button><span>Responsive preview</span></div><div className="canvas-metrics"><span>{pageWordCount} words</span><span>{dirty ? "Unsaved changes" : "Saved state"}</span></div><div className="zoom"><button onClick={() => setZoom("50%")} className={zoom==="50%"?"active":""}>50</button><button onClick={() => setZoom("75%")} className={zoom==="75%"?"active":""}>75</button><button onClick={() => setZoom("100%")} className={zoom==="100%"?"active":""}>100</button><button onClick={() => setZoom("Fit")} className={zoom==="Fit"?"active":""}>Fit</button></div></footer>
-        <button className="mobile-fab" onClick={() => setModal("add-section")}><Icon name="plus"/></button>
-      </section>
-
-      <aside className={`inspector ${inspectorCollapsed ? "collapsed" : ""}`}>
-        <div className="inspector-tabs">{(["content","style","page","theme","crm"] as InspectorTab[]).map(t => <button key={t} className={tab===t?"active":""} onClick={() => setTab(t)}>{t}</button>)}</div>
-        {selected && <div className="selected-head"><div><input value={selectedBlock ? selectedBlock.type : selected.name} onChange={e => selectedBlock ? undefined : mutateSections(items => items.map(s => s.id===selected.id?{...s,name:e.target.value}:s))} readOnly={!!selectedBlock}/><span>{selectedBlock ? `Block · ${selected.name}` : selected.type}</span></div><Button disabled={!dirty} onClick={() => { setDirty(false); toast("Local changes reverted", "info"); }}>Revert</Button><Button kind="accent" disabled={!dirty || saving} onClick={save}>{saving ? <span className="spinner"/> : "Save"}</Button></div>}
-        <div className="inspector-scroll">{tab === "content" && selectedBlock ? <BlockInspector block={selectedBlock} update={updateBlockField} toast={toast}/> : tab === "content" && selected && <ContentInspector section={selected} schemas={schemaCatalog.sections} update={updateField} toast={toast}/>} {tab === "style" && selected && <StyleInspector section={selected} update={updateCss}/>} {tab === "page" && <PageInspector page={page} site={site} updatePages={updatePages} history={() => setModal("history")} toast={toast}/>} {tab === "theme" && <ThemeInspector vars={theme} update={(k:string,v:string) => { const next={...theme,[k]:v}; setTheme(next); postCmsEditorPreviewMessage(iframeRef.current?.contentWindow, { type: CMS_EDITOR_PREVIEW_TYPES.THEME_VARS, vars: next }); setDirty(true); if(themeSaveTimerRef.current)clearTimeout(themeSaveTimerRef.current); themeSaveTimerRef.current=setTimeout(()=>saveThemeVars(projectSlug,next).then(()=>{setDirty(false);toast("Theme saved","info")}).catch((error)=>toast(error?.message||"Theme save failed","error")),500); }} toast={toast}/>} {tab === "crm" && <InspectorCrm contacts={contacts} viewAll={() => setRail("crm")} select={setContactId}/>}</div>
       </aside>
+
+      <div className="fnf-editor">
+        <aside className={`fnf-inspector ${inspectorCollapsed ? "collapsed" : ""}`} data-annotation-control="">
+          <div className="fnf-inspector-head">
+            <div>
+              <strong>{selectedBlock ? selectedBlock.type : selected?.name || "Section"}</strong>
+              <span className={`badge ${dirty ? "draft" : "active"}`}>{dirty ? "draft" : "saved"}</span>
+            </div>
+            <button type="button" className="fnf-topbar-icon" onClick={() => setInspectorCollapsed((v) => !v)} title="Collapse inspector"><Icon name="collapse" size={14}/></button>
+          </div>
+          {selected && (
+            <div className="selected-head">
+              <div>
+                <input
+                  value={selectedBlock ? selectedBlock.type : selected.name}
+                  onChange={(e) => selectedBlock ? undefined : mutateSections((items) => items.map((s) => s.id === selected.id ? { ...s, name: e.target.value } : s))}
+                  readOnly={!!selectedBlock}
+                />
+                <span>{selectedBlock ? `Block · ${selected.name}` : selected.type}</span>
+              </div>
+              <Button disabled={!dirty} onClick={() => { setDirty(false); toast("Local changes reverted", "info"); }}>Revert</Button>
+              <Button kind="accent" disabled={!dirty || saving} onClick={save}>{saving ? <span className="spinner"/> : "Save draft"}</Button>
+            </div>
+          )}
+          <div className="inspector-tabs">{(["content", "style", "page", "theme", "crm"] as InspectorTab[]).map((t) => <button key={t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>{t}</button>)}</div>
+          <div className="inspector-scroll">
+            {tab === "content" && selectedBlock ? <BlockInspector block={selectedBlock} update={updateBlockField} toast={toast}/> : null}
+            {tab === "content" && !selectedBlock && selected ? <ContentInspector section={selected} schemas={schemaCatalog.sections} update={updateField} toast={toast}/> : null}
+            {tab === "style" && selected ? <StyleInspector section={selected} update={updateCss}/> : null}
+            {tab === "page" ? <PageInspector page={page} site={site} updatePages={updatePages} history={() => setModal("history")} toast={toast}/> : null}
+            {tab === "theme" ? <ThemeInspector vars={theme} update={(k: string, v: string) => { const next = { ...theme, [k]: v }; setTheme(next); postCmsEditorPreviewMessage(iframeRef.current?.contentWindow, { type: CMS_EDITOR_PREVIEW_TYPES.THEME_VARS, vars: next }); setDirty(true); if (themeSaveTimerRef.current) clearTimeout(themeSaveTimerRef.current); themeSaveTimerRef.current = setTimeout(() => saveThemeVars(projectSlug, next).then(() => { setDirty(false); toast("Theme saved", "info"); }).catch((error) => toast(error?.message || "Theme save failed", "error")), 500); }} toast={toast}/> : null}
+            {tab === "crm" ? <InspectorCrm contacts={contacts} viewAll={() => setRail("crm")} select={setContactId}/> : null}
+            {!selected && tab === "content" ? <EmptyState icon="layers" title="Select a section" copy="Choose a section from the library or canvas markers to edit fields."/> : null}
+          </div>
+          <p className="fnf-live-note">{dirty ? "Unsaved changes" : "Live editing connected."}</p>
+        </aside>
+
+        <section className="canvas-area fnf-canvas" ref={canvasScopeRef} data-agentsam-resource={`page:${page.id}`} aria-label={`${page.title} canvas`}>
+          <div className="fnf-preview-bar" data-annotation-control="">
+            <span>Preview — {page.slug || page.title}</span>
+            <div className="fnf-preview-bar-actions">
+              <button type="button" className="fnf-topbar-btn" onClick={() => setPreview(true)}>Open in tab</button>
+            </div>
+          </div>
+          <div className="canvas-stage">
+            {bootstrapLoading && <div className="canvas-loading"><div className="skeleton-topbar"/><div className="skeleton-hero"/><div className="skeleton-block"/></div>}
+            {bootstrapError && !bootstrapLoading && <div className="canvas-error"><h3>Could not load site</h3><p>{bootstrapError}</p><Button kind="accent" onClick={() => setBootstrapNonce((value) => value + 1)}>Retry</Button></div>}
+            <div className="section-markers">
+              {page.sections.map((s, i) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  data-agentsam-resource={s.id}
+                  className={s.id === selectedId ? "active" : ""}
+                  onClick={() => {
+                    chooseSection(s.id);
+                    postCmsEditorPreviewMessage(iframeRef.current?.contentWindow, { type: CMS_EDITOR_PREVIEW_TYPES.SCROLL_TO, section_id: s.id });
+                  }}
+                >
+                  <span>{i + 1}</span><b>{s.name}</b>
+                </button>
+              ))}
+            </div>
+            {responsive
+              ? <div className="responsive-three">{(["phone", "tablet", "desktop"] as Viewport[]).map((v) => <div key={v}><label><Icon name={v}/> {v}</label><iframe sandbox={iframeSandbox} srcDoc={frameHtml}/></div>)}</div>
+              : (
+                <div className={`device-frame ${viewport}`} data-agentsam-resource={selected?.id || `page:${page.id}`} style={{ transform: `scale(${zoom === "50%" ? .5 : zoom === "75%" ? .75 : 1})` }}>
+                  <div className="loading-line"/>
+                  <iframe ref={iframeRef} sandbox={iframeSandbox} title={`${page.title} preview`} srcDoc={frameHtml}/>
+                </div>
+              )}
+          </div>
+          <footer className="canvas-footer" data-annotation-control="">
+            <div><button className={`toggle ${responsive ? "on" : ""}`} onClick={() => setResponsive((v) => !v)}><span/></button><span>Responsive preview</span></div>
+            <div className="canvas-metrics"><span>{pageWordCount} words</span><span>{dirty ? "Unsaved changes" : "Saved state"}</span></div>
+            <div className="zoom"><button onClick={() => setZoom("50%")} className={zoom === "50%" ? "active" : ""}>50</button><button onClick={() => setZoom("75%")} className={zoom === "75%" ? "active" : ""}>75</button><button onClick={() => setZoom("100%")} className={zoom === "100%" ? "active" : ""}>100</button><button onClick={() => setZoom("Fit")} className={zoom === "Fit" ? "active" : ""}>Fit</button></div>
+          </footer>
+          <button className="mobile-fab" data-annotation-control="" onClick={() => setModal("add-section")}><Icon name="plus"/></button>
+        </section>
+      </div>
+
+      <AgentSamDrawer
+        open={agentSamOpen}
+        onClose={() => setAgentSamOpen(false)}
+        adapter={agent?.adapter}
+        principal={agent?.principal}
+        projectId={site.id || projectSlug}
+        conversationId={agent?.conversationId || `cms:${site.id || projectSlug}`}
+        route={page.slug}
+        pageId={page.id}
+        sectionId={selected?.id || null}
+        blockId={selectedBlock?.id || null}
+        selectionLabel={selectedBlock ? String(selectedBlock.data?.text || selectedBlock.data?.title || selectedBlock.type) : selected?.name || null}
+        pendingPrompt={annotatePrompt}
+        onPendingPromptConsumed={() => setAnnotatePrompt(null)}
+      />
     </div>
 
-    <footer className="statusbar"><div><i/> Connected</div><span>{dirty ? "Unsaved changes" : saving ? "Saving…" : "Saved"}</span><span>{page.slug}</span><span>{page.sections.length} sections · {page.sections.reduce((total, section) => total + (section.blocks?.length || 0), 0)} blocks</span><button onClick={() => setModal("shortcuts")}>Shortcuts <kbd>⌘/</kbd></button></footer>
-    <nav className="mobile-tabs">{railItems.slice(0,5).map(i => <button key={i.id} className={rail===i.id?"active":""} onClick={() => setRail(i.id)}><Icon name={i.icon}/><span>{i.label}</span></button>)}</nav>
+    <MiniAgentSam
+      selecting={annotateSelecting}
+      onSelectingChange={setAnnotateSelecting}
+      scope={() => canvasScopeRef.current}
+      onSubmit={onAnnotateSubmit}
+    />
+
+    <footer className="statusbar"><div><i/> {annotateSelecting ? "Annotate mode" : agentSamOpen ? "AgentSam open" : "Connected"}</div><span>{dirty ? "Unsaved changes" : saving ? "Saving…" : "Saved"}</span><span>{page.slug}</span><span>{page.sections.length} sections · {page.sections.reduce((total, section) => total + (section.blocks?.length || 0), 0)} blocks</span><button onClick={() => setModal("shortcuts")}>Shortcuts <kbd>⌘/</kbd></button></footer>
+    <nav className="mobile-tabs">{railItems.slice(0, 5).map((i) => <button key={i.id} className={rail === i.id ? "active" : ""} onClick={() => setRail(i.id)}><Icon name={i.icon}/><span>{i.label}</span></button>)}</nav>
     <ToastStack toasts={toasts} dismiss={dismissToast}/>
 
     {modal === "add-section" && (initialPanel === "imports" ? <ImportSectionModal close={() => setModal(null)} add={addSection}/> : <AddSectionModal close={() => setModal(null)} add={addSection} schemas={schemaCatalog.sections}/>)}
@@ -772,8 +973,7 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
     {modal === "upload" && <UploadModal close={() => setModal(null)}/>}
     {modal === "schedule" && <ScheduleModal close={() => setModal(null)}/>}
     {modal === "shortcuts" && <ShortcutsModal close={() => setModal(null)}/>}
-    {modal === "agentsam" && agent && <Modal title="AgentSam · CMS" onClose={() => setModal(null)} wide><div className="cms-agent-modal"><CmsAgentSurface adapter={agent.adapter} principal={agent.principal} projectId={site.id || projectSlug} conversationId={agent.conversationId || `cms:${site.id || projectSlug}`} route={page.slug} pageId={page.id} sectionId={selected?.id || null} blockId={selectedBlock?.id || null} className="cms-agent-workbench"/></div></Modal>}
-    {modal === "palette" && <CommandPalette close={() => setModal(null)} pages={site.pages} sections={page.sections} action={(type:string,id?:string) => { setModal(null); if(type==="page"&&id)choosePage(id); else if(type==="section"&&id)chooseSection(id); else if(type==="publish")setPublishMenu(true); else if(type==="add")setModal("add-section"); else if(type==="media")setRail("media"); }}/>}
+    {modal === "palette" && <CommandPalette close={() => setModal(null)} pages={site.pages} sections={page.sections} action={(type: string, id?: string) => { setModal(null); if (type === "page" && id) choosePage(id); else if (type === "section" && id) chooseSection(id); else if (type === "publish") setPublishMenu(true); else if (type === "add") setModal("add-section"); else if (type === "media") setRail("media"); }}/>}
     {modal === "history" && <HistoryModal close={() => setModal(null)} restore={() => { setModal(null); toast("Revision restored", "info"); }}/>}
     {modal?.startsWith("template:") && <TemplatePreview template={templateCards.find((entry) => entry.id === modal.slice(9)) || { id: modal.slice(9), name: modal.slice(9) }} close={() => setModal(null)} apply={applyTemplate}/>}
     {contactId !== null && <ContactDrawer contact={contacts[contactId]} close={() => setContactId(null)} toast={toast}/>}
