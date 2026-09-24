@@ -1,6 +1,12 @@
 /**
- * Serve public marketing/docs pages from Worker ASSETS under /site/*.
- * Asset paths are absolute (/site/global/...) so the same HTML works at /, /home/, /learn/, etc.
+ * Serve public marketing/docs pages from the Worker static ASSETS binding
+ * (built files under apps/local-studio/.output/public/site/*).
+ *
+ * This is NOT the R2 WEBSITE_ASSETS bucket (agentsam-os-blueprint-content).
+ * R2 is only used by site-partials.js for optional header/footer injection.
+ *
+ * Asset paths in HTML are absolute (/site/global/...) so the same page works
+ * at /, /home/, /learn/, /packages/sdk/help/, etc.
  */
 const PUBLIC_SITE_HTML = Object.freeze({
   '/': 'site/home/index.html',

@@ -2,11 +2,19 @@
 /**
  * Sync public AgentSam site installables + mirrors from package truth.
  * Run on publish / before shipping static site:
- *   npm run site:sync
+ *   npm run site:sync          (repo root)
+ *   npm run site:sync          (apps/local-studio — same script)
+ *   npm run build              (local-studio — runs site:sync first)
  *
- * SSOT: root package.json (+ optional workspace package list)
- * Writes: apps/frontend/public/site/global/installables.json
- * Mirrors site tree into apps/local-studio/frontend/public/site/
+ * Pipeline (agentsam-sdk Worker ASSETS — not R2 WEBSITE_ASSETS):
+ *   1) apps/frontend/public/site  (SSOT HTML for home/help/learn/global)
+ *   2) site:sync mirrors → apps/local-studio/frontend/public/site
+ *   3) vite build (publicDir=frontend/public) → .output/public/site
+ *   4) copy-auth-portal.mjs re-copies site/ into .output/public/site
+ *   5) wrangler deploy uploads .output/public as Worker binding ASSETS
+ *
+ * R2 WEBSITE_ASSETS (agentsam-os-blueprint-content) is separate: optional
+ * header/footer partials via site-partials.js only.
  */
 import fs from 'node:fs';
 import path from 'node:path';
