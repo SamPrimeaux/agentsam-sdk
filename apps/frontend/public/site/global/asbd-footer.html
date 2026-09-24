@@ -1,0 +1,412 @@
+<style>
+  /* Requires the shared ASBD token layer (asbd-tokens.css). */
+  #asbd-footer {
+    font-family: var(--asbd-font-sans);
+    position: relative;
+    overflow: hidden;
+  }
+
+  #asbd-footer-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0;
+    transition: opacity 1.4s ease;
+  }
+  #asbd-footer-canvas.visible { opacity: 0.13; }
+
+  /* ── DARK ── */
+  #asbd-footer[data-asbd-theme="dark"] {
+    background: var(--asbd-color-footer-dark);
+    color: #fff;
+  }
+  #asbd-footer[data-asbd-theme="dark"] .asbd-footer-headline        { color: rgba(255,255,255,0.92); }
+  #asbd-footer[data-asbd-theme="dark"] .asbd-footer-contact a       { color: rgba(255,255,255,0.52); }
+  #asbd-footer[data-asbd-theme="dark"] .asbd-footer-contact a:hover { color: #fff; }
+  #asbd-footer[data-asbd-theme="dark"] .asbd-footer-col-label       { color: rgba(255,255,255,0.28); }
+  #asbd-footer[data-asbd-theme="dark"] .asbd-footer-col a           { color: rgba(255,255,255,0.6); }
+  #asbd-footer[data-asbd-theme="dark"] .asbd-footer-col a:hover     { color: #fff; }
+  #asbd-footer[data-asbd-theme="dark"] .asbd-footer-col a.active    { color: #fff; font-weight: 700; }
+  #asbd-footer[data-asbd-theme="dark"] .asbd-footer-bar             { border-top: 1px solid rgba(255,255,255,0.07); }
+  #asbd-footer[data-asbd-theme="dark"] .asbd-footer-copy            { color: rgba(255,255,255,0.28); }
+  #asbd-footer[data-asbd-theme="dark"] .asbd-footer-legal a         { color: rgba(255,255,255,0.42); }
+  #asbd-footer[data-asbd-theme="dark"] .asbd-footer-legal a:hover   { color: #fff; }
+  #asbd-footer[data-asbd-theme="dark"] .asbd-footer-dev-label       { color: rgba(255,255,255,0.28); }
+  #asbd-footer[data-asbd-theme="dark"] .asbd-footer-sig-dark        { display: none; }
+  #asbd-footer[data-asbd-theme="dark"] .asbd-footer-sig-light       { display: block; }
+  #asbd-footer[data-asbd-theme="dark"] .asbd-footer-logo-light      { opacity: 1; }
+  #asbd-footer[data-asbd-theme="dark"] .asbd-footer-logo-dark       { opacity: 0; }
+
+  /* ── LIGHT ── */
+  #asbd-footer[data-asbd-theme="light"] {
+    background: var(--asbd-color-footer-light);
+    color: var(--asbd-color-navy);
+  }
+  #asbd-footer[data-asbd-theme="light"] .asbd-footer-headline        { color: rgba(10,22,40,0.88); }
+  #asbd-footer[data-asbd-theme="light"] .asbd-footer-contact a       { color: rgba(10,22,40,0.48); }
+  #asbd-footer[data-asbd-theme="light"] .asbd-footer-contact a:hover { color: var(--asbd-color-navy); }
+  #asbd-footer[data-asbd-theme="light"] .asbd-footer-col-label       { color: rgba(10,22,40,0.28); }
+  #asbd-footer[data-asbd-theme="light"] .asbd-footer-col a           { color: rgba(10,22,40,0.58); }
+  #asbd-footer[data-asbd-theme="light"] .asbd-footer-col a:hover     { color: var(--asbd-color-navy); }
+  #asbd-footer[data-asbd-theme="light"] .asbd-footer-col a.active    { color: var(--asbd-color-blue); font-weight: 700; }
+  #asbd-footer[data-asbd-theme="light"] .asbd-footer-bar             { border-top: 1px solid rgba(10,22,40,0.08); }
+  #asbd-footer[data-asbd-theme="light"] .asbd-footer-copy            { color: rgba(10,22,40,0.28); }
+  #asbd-footer[data-asbd-theme="light"] .asbd-footer-legal a         { color: rgba(10,22,40,0.42); }
+  #asbd-footer[data-asbd-theme="light"] .asbd-footer-legal a:hover   { color: var(--asbd-color-navy); }
+  #asbd-footer[data-asbd-theme="light"] .asbd-footer-dev-label       { color: rgba(10,22,40,0.28); }
+  #asbd-footer[data-asbd-theme="light"] .asbd-footer-sig-light       { display: none; }
+  #asbd-footer[data-asbd-theme="light"] .asbd-footer-sig-dark        { display: block; }
+  #asbd-footer[data-asbd-theme="light"] .asbd-footer-logo-light      { opacity: 0; }
+  #asbd-footer[data-asbd-theme="light"] .asbd-footer-logo-dark       { opacity: 1; }
+
+  /* ── MAIN BODY ── */
+  .asbd-footer-body {
+    position: relative;
+    z-index: 1;
+    max-width: var(--asbd-layout-max);
+    margin: 0 auto;
+    padding: 96px 48px 80px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 80px;
+    align-items: start;
+  }
+
+  /* ── LEFT ── */
+  .asbd-footer-left {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    max-width: 440px;
+  }
+
+  .asbd-footer-logo-wrap {
+    display: inline-block;
+    width: 64px;
+    height: 64px;
+    position: relative;
+  }
+
+  .asbd-footer-logo-wrap img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .asbd-footer-headline {
+    font-size: clamp(36px, 5vw, 56px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+  }
+
+  .asbd-footer-contact {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .asbd-footer-contact a {
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  /* ── RIGHT ── */
+  .asbd-footer-right {
+    display: flex;
+    gap: 64px;
+    padding-top: 8px;
+  }
+
+  .asbd-footer-col {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 120px;
+  }
+
+  .asbd-footer-col-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .asbd-footer-col ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .asbd-footer-col a {
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  /* ── BOTTOM BAR ── */
+  .asbd-footer-bar {
+    position: relative;
+    z-index: 1;
+    max-width: var(--asbd-layout-max);
+    margin: 0 auto;
+    padding: 24px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+  }
+
+  .asbd-footer-bar-center {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .asbd-footer-copy { font-weight: 500; }
+
+  .asbd-footer-legal {
+    display: flex;
+    gap: 16px;
+  }
+
+  .asbd-footer-legal a {
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .asbd-footer-dev {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .asbd-footer-dev-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .asbd-footer-sig {
+    height: 18px;
+    width: auto;
+    display: block;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .asbd-footer-body {
+      grid-template-columns: 1fr;
+      gap: 56px;
+      padding: 64px 32px 56px;
+    }
+    .asbd-footer-bar {
+      padding: 20px 32px;
+      flex-direction: column;
+      gap: 16px;
+      align-items: flex-start;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .asbd-footer-right {
+      gap: 40px;
+      flex-wrap: wrap;
+    }
+    .asbd-footer-bar-center {
+      gap: 12px;
+    }
+  }
+</style>
+
+<footer id="asbd-footer" data-asbd-theme="dark">
+  <canvas id="asbd-footer-canvas" aria-hidden="true"></canvas>
+
+  <div class="asbd-footer-body">
+
+    <!-- LEFT -->
+    <div class="asbd-footer-left">
+      <a href="/" class="asbd-footer-logo-wrap" aria-label="AgentSam">
+        <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/dbb316af-9c97-4959-f09f-bf58b2783d00/avatar"
+             alt="" class="asbd-footer-logo-light" width="64" height="64" loading="lazy">
+        <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/11f6af46-0a3c-482a-abe8-83edc5a8a200/avatar"
+             alt="" class="asbd-footer-logo-dark"  width="64" height="64" loading="lazy">
+      </a>
+
+      <div class="asbd-footer-headline">Let's Talk</div>
+
+      <div class="asbd-footer-contact">
+        <a href="mailto:hey@inneranimalmedia.com">hey@inneranimalmedia.com</a>
+        <a href="tel:+13374509998">337-450-9998</a>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="asbd-footer-right">
+      <div class="asbd-footer-col">
+        <div class="asbd-footer-col-label">Company</div>
+        <ul>
+          <li><a href="/work"     data-asbd-nav="work">Work</a></li>
+          <li><a href="/about"    data-asbd-nav="about">About</a></li>
+          <li><a href="/services" data-asbd-nav="services">Services</a></li>
+          <li><a href="/contact"  data-asbd-nav="contact">Contact</a></li>
+        </ul>
+      </div>
+      <div class="asbd-footer-col">
+        <div class="asbd-footer-col-label">Products</div>
+        <ul>
+          <li><a href="/games"   data-asbd-nav="games">Games</a></li>
+          <li><a href="/pricing" data-asbd-nav="pricing">Pricing</a></li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM BAR -->
+  <div class="asbd-footer-bar">
+    <div class="asbd-footer-bar-center">
+      <span class="asbd-footer-copy">&copy; 2026 AgentSam</span>
+      <nav class="asbd-footer-legal" aria-label="Legal">
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="/sitemap">Sitemap</a>
+      </nav>
+    </div>
+
+    <div class="asbd-footer-dev">
+      <span class="asbd-footer-dev-label">Developed by</span>
+      <img src="https://assets.inneranimalmedia.com/svg/sam-signature-white.svg"
+           alt="Sam Primeaux" class="asbd-footer-sig asbd-footer-sig-light" height="18" loading="lazy">
+      <img src="https://assets.inneranimalmedia.com/svg/sam-signature-black.svg"
+           alt="Sam Primeaux" class="asbd-footer-sig asbd-footer-sig-dark"  height="18" loading="lazy">
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var seg = window.location.pathname === '/'
+    ? 'home'
+    : window.location.pathname.split('/').filter(Boolean)[0];
+  document.querySelectorAll('[data-asbd-nav]').forEach(function (a) {
+    if (a.dataset.asbdNav === seg) a.classList.add('active');
+  });
+
+  var footer = document.getElementById('asbd-footer');
+  var canvas = document.getElementById('asbd-footer-canvas');
+  if (!footer || !canvas) return;
+
+  function boot() {
+    if (window._asbdFooterBooted) return;
+    window._asbdFooterBooted = true;
+
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+    s.onload = function () {
+      var s2 = document.createElement('script');
+      s2.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js';
+      s2.onload = initThree;
+      document.head.appendChild(s2);
+    };
+    document.head.appendChild(s);
+  }
+
+  function initThree() {
+    var renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true, powerPreference: 'low-power' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    renderer.setSize(footer.clientWidth, footer.clientHeight);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
+
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(40, footer.clientWidth / footer.clientHeight, 0.1, 100);
+    camera.position.set(0, 0, 7.5);
+
+    var ambient = new THREE.AmbientLight(0xffffff, 1.2);
+    scene.add(ambient);
+
+    var blueLight = new THREE.DirectionalLight(0x167BFC, 2.5);
+    blueLight.position.set(-4, 3, 4);
+    scene.add(blueLight);
+
+    var warmLight = new THREE.DirectionalLight(0xffeedd, 1.2);
+    warmLight.position.set(4, -2, 2);
+    scene.add(warmLight);
+
+    var mesh = null;
+    var targetRotY = 0;
+    var targetRotX = 0;
+
+    var loader = new THREE.GLTFLoader();
+    loader.load('https://assets.inneranimalmedia.com/glb/inneranimalmediafooterglb.glb',
+      function (gltf) {
+        mesh = gltf.scene;
+        var box = new THREE.Box3().setFromObject(mesh);
+        var center = box.getCenter(new THREE.Vector3());
+        var size = box.getSize(new THREE.Vector3());
+        var maxDim = Math.max(size.x, size.y, size.z);
+        mesh.scale.setScalar(3.2 / maxDim);
+        mesh.position.sub(center.multiplyScalar(3.2 / maxDim));
+        scene.add(mesh);
+        canvas.classList.add('visible');
+      },
+      undefined,
+      function (err) {
+        canvas.style.display = 'none';
+      }
+    );
+
+    var isDark = footer.getAttribute('data-asbd-theme') !== 'light';
+    footer.addEventListener('mousemove', function (e) {
+      var rect = footer.getBoundingClientRect();
+      var x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      var y = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
+      targetRotY = x * 0.45;
+      targetRotX = -y * 0.25;
+    });
+
+    var running = true;
+    function animate() {
+      if (!running) return;
+      requestAnimationFrame(animate);
+      if (mesh) {
+        mesh.rotation.y += (targetRotY - mesh.rotation.y) * 0.05 + 0.003;
+        mesh.rotation.x += (targetRotX - mesh.rotation.x) * 0.05;
+      }
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    var ro = new ResizeObserver(function () {
+      if (!footer.clientWidth || !footer.clientHeight) return;
+      camera.aspect = footer.clientWidth / footer.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(footer.clientWidth, footer.clientHeight);
+    });
+    ro.observe(footer);
+  }
+
+  if ('IntersectionObserver' in window) {
+    var obs = new IntersectionObserver(function (e) {
+      if (e[0].isIntersecting) { boot(); obs.disconnect(); }
+    }, { rootMargin: '500px' });
+    obs.observe(footer);
+  } else {
+    boot();
+  }
+})();
+</script>
