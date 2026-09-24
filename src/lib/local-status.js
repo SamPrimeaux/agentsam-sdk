@@ -1,7 +1,16 @@
 import path from 'node:path';
 import { tryResolveGitContext } from '../../packages/agentsam-repository/src/git-context.js';
 import { inspectLocalSqlite } from '../local/sqlite.js';
-import { getCreatedWithVersion, getDefaultProfile, getDeployTarget, getLocalDatabasePath, getProjectName, getProjectPreset, getRepositoryId, tryReadProjectConfig } from './project-config.js';
+import {
+  getCreatedWithVersion,
+  getDefaultProfile,
+  getDeployTarget,
+  getLocalDatabasePath,
+  getProjectName,
+  getProjectPreset,
+  getRepositoryId,
+  tryReadProjectConfig,
+} from './project-config.js';
 import { findCliProjectRoot } from './cli-preferences.js';
 
 export function findAgentSamProjectRoot(startDir = process.cwd()) {
@@ -10,11 +19,17 @@ export function findAgentSamProjectRoot(startDir = process.cwd()) {
 
 async function probe(url) {
   try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(500) });
+    const response = await fetch(url, { signal: AbortSignal.timeout(1500) });
     return { online: response.ok, status: response.status, url };
   } catch {
     return { online: false, status: null, url };
   }
+}
+
+function resolveLiveHealthUrl(config) {
+  const fromDeploy = config?.deployment?.cloudflare?.health_url;
+  if (fromDeploy != null && String(fromDeploy).trim()) return String(fromDeploy).trim();
+  return null;
 }
 
 export async function collectLocalStatus(cwd = process.cwd()) {
@@ -29,10 +44,16 @@ export async function collectLocalStatus(cwd = process.cwd()) {
 
   const devPort = config?.dev_port ?? 8787;
   const ptyPort = config?.pty_port ?? 3099;
-  const [api, pty] = await Promise.all([
+  const liveUrl = resolveLiveHealthUrl(config);
+  const probes = [
     probe(`http://127.0.0.1:${devPort}/api/health`),
     probe(`http://127.0.0.1:${ptyPort}/health`),
-  ]);
+  ];
+  if (liveUrl) probes.push(probe(liveUrl));
+  const results = await Promise.all(probes);
+  const api = results[0];
+  const pty = results[1];
+  const live = liveUrl ? results[2] : null;
 
   return {
     schemaVersion: 'agentsam-local-status-v1',
@@ -53,12 +74,19 @@ export async function collectLocalStatus(cwd = process.cwd()) {
         }
       : null,
     db: {
-      ready: Boolean(db.exists && db.tables?.includes('agentsam_schema_migrations') && db.tables?.includes('agentsam_project_sessions')),
+      ready: Boolean(
+        db.exists &&
+          db.tables?.includes('agentsam_schema_migrations') &&
+          db.tables?.includes('agentsam_project_sessions'),
+      ),
       path: db.dbPath || path.join(root, '.agentsam/data/agentsam.sqlite'),
       tables: db.tables || [],
       sizeBytes: db.sizeBytes || 0,
     },
     api,
     pty,
+    live: liveUrl
+      ? live || { online: false, status: null, url: liveUrl }
+      : { online: false, status: null, url: null },
   };
 }

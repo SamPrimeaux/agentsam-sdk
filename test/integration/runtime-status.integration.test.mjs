@@ -112,7 +112,11 @@ test('status command supports machine-readable injected runtime status', async (
   let output = '';
   const result = await runStatus(['--json'], { collectRuntime: async () => expected, write(value) { output += value; } });
   assert.equal(result, expected);
-  assert.deepEqual(JSON.parse(output), expected);
+  const parsed = JSON.parse(output);
+  assert.equal(parsed.schema_version, expected.schema_version);
+  assert.equal(parsed.ready, expected.ready);
+  assert.ok(parsed.next?.actions?.length > 0);
+  assert.ok(parsed.next?.headline);
 });
 
 test('renderRuntimeStatus explicitly displays DB and other resource bindings', () => {

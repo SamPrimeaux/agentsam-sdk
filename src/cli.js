@@ -92,7 +92,7 @@ function printLegacyHelp() {
     agentsam deploy-receipt    Merkle deploy/checkpoint capture + promote/failure receipts (--help)
     agentsam recon             Bounded-worker task packets + finding-report validation (--help)
     agentsam security          Dependency scan, log triage, and verified repair (--help)
-    agentsam status [--json]   Live account + models + terminal + Worker/binding status
+    agentsam status [--json] [-i]   Honest awareness: account + models + terminal + live Worker
     agentsam db init|status    Manage the project-local SQLite database
     agentsam models            Verify configured providers and selectable hosted/local models
     agentsam providers         Configure, verify, and remove machine provider credentials

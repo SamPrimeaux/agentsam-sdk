@@ -10,7 +10,7 @@ export const SLASH_COMMANDS = [
   { cmd: '/standard', description: 'Return to Standard provider processing', lane: 'model' },
   { cmd: '/compact', description: 'Compact active provider context; status shows support, threshold, and receipt', lane: 'context' },
   { cmd: '/context', description: 'Show model context economics; add repo for Git bridge context', lane: 'context' },
-  { cmd: '/status', description: 'Local project, DB, Git, and PTY health', lane: 'local' },
+  { cmd: '/status', description: 'Honest project awareness: account, models, terminal, live deploy', lane: 'local' },
   { cmd: '/models', description: 'Probe providers and provider-verified known models', lane: 'model' },
   { cmd: '/providers', description: 'Configure and verify machine provider credentials', lane: 'model' },
   { cmd: '/login', description: 'Sign in to Inner Animal Media and save the machine-local Agent Sam session', lane: 'identity' },

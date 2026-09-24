@@ -1,4 +1,5 @@
 import pc from 'picocolors';
+import { buildStatusActionPlan, formatStatusNextSteps } from '../status/actions.js';
 
 const ANSI_RE = /\x1b\[[0-9;]*m/g;
 
@@ -51,16 +52,26 @@ export function renderLocalStatus(status) {
     ),
   );
   lines.push(row('sqlite', `${state(status.db.ready)} · ${status.db.tables.length} tables`, width));
-  lines.push(row('api', `${state(status.api.online)} · ${status.api.url}`, width));
+  const liveOk = status.live?.online === true;
+  const apiLine = liveOk
+    ? `${state(true, 'live')} · ${status.live.url}`
+    : `${state(status.api.online)} · ${status.api.url}`;
+  lines.push(row('api', apiLine, width));
   lines.push(row('pty', `${state(status.pty.online)} · ${status.pty.url.replace('/health', '')}`, width));
   lines.push(row('deploy', status.deployTarget || pc.dim('local only'), width));
   lines.push(`${pc.cyan('├')}${pc.cyan('─'.repeat(width - 2))}${pc.cyan('┤')}`);
 
   const actions = [];
+  if (liveOk) {
+    const liveApp = String(status.live?.url || '').replace(/\/(?:api\/)?health\/?$/i, '');
+    if (liveApp) actions.push(`open ${liveApp}`);
+    actions.push('agentsam cloudflare status');
+  }
   if (!status.db.ready) actions.push('agentsam db init');
-  if (!status.api.online) actions.push('npm run dev');
+  if (!liveOk && !status.api.online && status.deployTarget !== 'cloudflare') actions.push('npm run dev');
+  if (!liveOk && status.deployTarget === 'cloudflare') actions.push('agentsam cloudflare status');
   if (!status.pty.online) actions.push('npm run pty');
-  if (!actions.length) actions.push('local stack healthy');
+  if (!actions.length) actions.push('stack healthy');
   lines.push(row('next', pc.bold(actions.join(' · ')), width));
   lines.push(`${pc.cyan('╰')}${pc.cyan('─'.repeat(width - 2))}${pc.cyan('╯')}`);
   return lines.join('\n');
@@ -146,7 +157,14 @@ export function renderRuntimeStatus(status) {
       lines.push(`               ${pc.red(`✗ missing: ${cloudflare.bindings.missing.map((b) => b.name).join(', ')}`)}`);
     }
 
-    lines.push(`  health       ${cloudflare.health?.ok ? pc.green(`HTTP ${cloudflare.health.status}`) : pc.yellow(cloudflare.health?.error || 'not verified')}`);
+    const healthUrl = cloudflare.health?.url || '';
+    lines.push(
+      `  health       ${
+        cloudflare.health?.ok
+          ? pc.green(`HTTP ${cloudflare.health.status}${healthUrl ? ` · ${healthUrl}` : ''}`)
+          : pc.yellow(cloudflare.health?.error || 'not verified')
+      }`,
+    );
     if (cloudflare.error) lines.push(`  cloud error  ${pc.yellow(cloudflare.error)}`);
   } else {
     lines.push(`  deployment   ${pc.dim('not configured for this project')}`);
@@ -156,5 +174,8 @@ export function renderRuntimeStatus(status) {
   lines.push(`  git          ${status.local?.git ? `${status.local.git.branch || 'detached'} · ${status.local.git.dirty ? pc.yellow('dirty') : pc.green('clean')} · ${String(status.local.git.revision || '').slice(0, 8)}` : pc.dim('not a git repository')}`);
   lines.push(`  project      ${status.local?.root || ''}`);
   if (status.offline) lines.push(`  mode         ${pc.dim('offline snapshot; live identity/models/terminal/deployment not verified')}`);
+
+  const plan = buildStatusActionPlan(status);
+  lines.push(formatStatusNextSteps(plan));
   return lines.join('\n');
 }

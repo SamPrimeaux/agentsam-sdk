@@ -34,7 +34,7 @@ const HELP_TOPICS = Object.freeze([
     label: 'Runtime / terminal',
     summary: 'Local, remote, sandbox, and deployment controls.',
     rows: [
-      ['agentsam status', 'Project, Git, DB, API, and PTY status'],
+      ['agentsam status', 'Honest awareness (account, models, terminal, live deploy) · -i menu'],
       ['agentsam start-local', 'Start the local PTY service'],
       ['agentsam connections', 'Inspect available execution connections'],
       ['agentsam tunnel', 'List, inspect, and run real Cloudflare Tunnels through Wrangler'],
@@ -55,7 +55,7 @@ const HELP_TOPICS = Object.freeze([
       ['/context', 'Show live context economics'],
       ['/usage', 'Show token/cost/session receipt'],
       ['/settings', 'Change runtime, terminal, and model policy'],
-      ['/status', 'Show project/runtime health'],
+      ['/status', 'Honest project awareness + next-step tips'],
       ['/connections', 'Inspect live account, terminal, Worker, and Cloudflare connection evidence'],
       ['/tunnel', 'Choose an existing Cloudflare Tunnel and inspect or run it through Wrangler'],
       ['/help [topic]', 'Show in-session help'],
