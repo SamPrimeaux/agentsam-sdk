@@ -24,7 +24,7 @@ test('strict compiler recursively closes objects and makes omitted fields nullab
 
 test('all executable capability schemas compile for both providers, including actual knowledge.search arguments', () => {
   for (const descriptor of createCapabilityAdapter().toolDescriptors()) {
-    for (const provider of ['openai', 'gemini']) assert.ok(compileToolSchema({ provider, canonicalSchema: descriptor.input_schema, name: descriptor.name }).hash);
+    for (const provider of ['openai', 'gemini']) assert.ok(compileToolSchema({ provider, canonicalSchema: descriptor.input_schema, strict: descriptor.strict !== false, name: descriptor.name }).hash);
     if (descriptor.name === 'knowledge.search') assert.equal(descriptor.input_schema.properties.text.type, 'string');
   }
 });

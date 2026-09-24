@@ -4,10 +4,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {spawn} from 'node:child_process';
-import {localProjectRuntime} from '../src/lib/cad/project-cli.js';
+import {localProjectRuntime} from '../../src/lib/cad/project-cli.js';
 test('packaged app API shares CLI revisions, emits events and rejects stale writes',{skip:process.env.AGENTSAM_TEST_CAD_APP!=='1'},async t=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'cad-app-proof-')),port=31987;
- const app=new URL('../apps/cad-creator/backend/',import.meta.url);
+ const app=new URL('../../apps/cad-creator/backend/',import.meta.url);
  const child=spawn(process.execPath,['dist/server.mjs'],{cwd:app,env:{...process.env,NODE_ENV:'production',PORT:String(port),HOST:'127.0.0.1',AGENTSAM_CAD_PROJECT_ROOT:root},stdio:['ignore','pipe','pipe']});
  let log='';child.stdout.on('data',d=>log+=d);child.stderr.on('data',d=>log+=d);
  t.after(()=>{child.kill();fs.rmSync(root,{recursive:true,force:true});});
@@ -16,7 +16,7 @@ test('packaged app API shares CLI revisions, emits events and rejects stale writ
  for(let i=0;i<80;i++){try{const r=await fetch(base);if(r.ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,100));}
  assert.ok(ready,log);
  async function call(name,input){const res=await fetch(base+'/api/cad/project/tools/'+name,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(input)});return {status:res.status,body:await res.json()};}
- const project=JSON.parse(fs.readFileSync(new URL('./fixtures/cad/courtyard-house.json',import.meta.url),'utf8'));
+ const project=JSON.parse(fs.readFileSync(new URL('../fixtures/cad/courtyard-house.json',import.meta.url),'utf8'));
  const saved=await call('design_project_save',{project,expected_revision:0});assert.equal(saved.status,200);
  const runtime=localProjectRuntime(root);assert.equal((await runtime.execute('design_project_get',{project_id:project.id})).content_hash,saved.body.result.content_hash);
  const abort=new AbortController();t.after(()=>abort.abort());

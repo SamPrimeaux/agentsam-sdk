@@ -140,9 +140,9 @@ export function buildAgentToolSurface(capabilityAdapter, objective, options = {}
       name: alias,
       description: descriptor.description,
       parameters: ['openai', 'grok', 'gemini'].includes(options.schemaProvider)
-        ? compileToolSchema({ provider: options.schemaProvider, canonicalSchema: descriptor.input_schema, name: alias }).providerSchema
+        ? compileToolSchema({ provider: options.schemaProvider, canonicalSchema: descriptor.input_schema, strict: descriptor.strict !== false, name: alias }).providerSchema
         : descriptor.input_schema || { type: 'object', properties: {}, required: [], additionalProperties: false },
-      strict: true,
+      strict: descriptor.strict !== false,
     });
   });
   return Object.freeze({

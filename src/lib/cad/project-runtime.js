@@ -15,6 +15,7 @@ export function createProjectRuntime({store,artifactRoot,native={blenderBuild,bl
   for(const key of descriptor.input_schema.required)if(args[key]===undefined)throw new Error('argument_required:'+key);
   for(const key of ['revision','expected_revision'])if(args[key]!==undefined&&(!Number.isInteger(args[key])||args[key]<(key==='revision'?1:0)))throw new Error('invalid_'+key);
   if(args.project_id!==undefined&&!/^[A-Za-z0-9_-]{1,100}$/.test(args.project_id))throw new Error('invalid_project_id');
+  if(name==='design_project_validate'&&args.project===undefined&&args.project_id===undefined)throw new Error('argument_required:project_or_project_id');
   if(name==='design_project_validate')return validateProject(args.project??(await store.read(args.project_id,args.revision)).project);
   if(name==='design_project_get'){const row=await store.read(args.project_id,args.revision);if(args.expected_content_hash&&row.content_hash!==args.expected_content_hash)throw new Error('reopen_verification_failed');return row;}
   let saved;

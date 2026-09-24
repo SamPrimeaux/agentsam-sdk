@@ -86,6 +86,7 @@ function printLegacyHelp() {
     agentsam search "query"    Retrieve indexed code/text; --semantic enables embeddings
     agentsam repo snapshot     Git composition/churn; --save retains observations
     agentsam cad blender       Programmatic Blender inspect/build/render/export (--help)
+    agentsam cad project       Editable CAD project tools/workflows (--help)
     agentsam mini <name>       Create and preview a small local gadget (--help for options)
     agentsam merkle            File integrity, snapshots, comparisons, and interactive explorer (--help)
     agentsam deploy-receipt    Merkle deploy/checkpoint capture + promote/failure receipts (--help)

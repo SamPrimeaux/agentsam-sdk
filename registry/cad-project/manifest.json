@@ -1,5 +1,20 @@
 {
   "contract": "cad.project.v1",
+  "product": {
+    "slug": "agentsam-cad-creator",
+    "capability_keys": [
+      "design.read",
+      "design.write",
+      "design.export"
+    ],
+    "cli_commands": [
+      {
+        "id": "agentsam:cad:project",
+        "command": "agentsam cad project",
+        "description": "Editable CAD project operations and workflows"
+      }
+    ]
+  },
   "tools": [
     {
       "id": "ast_cad_v1_design_project_get",
@@ -35,9 +50,9 @@
       "handler_type": "terminal",
       "handler_key": "cad_project",
       "description": "Validate inch-based CAD project geometry and references",
-      "input_schema": "{\"type\":\"object\",\"properties\":{\"sdk_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"project_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"connection_id\":{\"type\":\"string\"},\"input\":{\"type\":\"object\",\"properties\":{\"project\":{\"type\":\"object\"},\"project_id\":{\"type\":\"string\",\"pattern\":\"^[A-Za-z0-9_-]{1,100}$\"},\"revision\":{\"type\":\"integer\",\"minimum\":1}},\"required\":[],\"additionalProperties\":false,\"anyOf\":[{\"required\":[\"project\"]},{\"required\":[\"project_id\"]}]}},\"required\":[\"sdk_root\",\"project_root\",\"input\"],\"additionalProperties\":false}",
+      "input_schema": "{\"type\":\"object\",\"properties\":{\"sdk_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"project_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"connection_id\":{\"type\":\"string\"},\"input\":{\"type\":\"object\",\"properties\":{\"project\":{\"type\":\"object\",\"additionalProperties\":true},\"project_id\":{\"type\":\"string\",\"pattern\":\"^[A-Za-z0-9_-]{1,100}$\"},\"revision\":{\"type\":\"integer\",\"minimum\":1}},\"required\":[],\"additionalProperties\":false}},\"required\":[\"sdk_root\",\"project_root\",\"input\"],\"additionalProperties\":false}",
       "output_schema": "{\"type\":\"object\"}",
-      "handler_config": "{\"operation\":\"design_project_validate\",\"execution_lane\":\"local\",\"contract\":\"cad.project.v1\",\"schema_sha256\":\"e85327f34b413cad1bbe55cc8d3a7f0b989b3cb0926bcc65733301afe6d504d7\"}",
+      "handler_config": "{\"operation\":\"design_project_validate\",\"execution_lane\":\"local\",\"contract\":\"cad.project.v1\",\"schema_sha256\":\"62057c988583784d4ea015339f65ee6c89a9b749d45f7568be958f2529223dc2\"}",
       "capability_key": "design.read",
       "domain": "design",
       "is_active": 0,
@@ -59,9 +74,9 @@
       "handler_type": "terminal",
       "handler_key": "cad_project",
       "description": "Apply an atomic typed edit with revision conflict detection",
-      "input_schema": "{\"type\":\"object\",\"properties\":{\"sdk_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"project_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"connection_id\":{\"type\":\"string\"},\"input\":{\"type\":\"object\",\"properties\":{\"project_id\":{\"type\":\"string\",\"pattern\":\"^[A-Za-z0-9_-]{1,100}$\"},\"expected_revision\":{\"type\":\"integer\",\"minimum\":0},\"operation\":{\"type\":\"object\",\"required\":[\"type\"]},\"message\":{\"type\":\"string\",\"maxLength\":2000}},\"required\":[\"project_id\",\"expected_revision\",\"operation\"],\"additionalProperties\":false}},\"required\":[\"sdk_root\",\"project_root\",\"input\"],\"additionalProperties\":false}",
+      "input_schema": "{\"type\":\"object\",\"properties\":{\"sdk_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"project_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"connection_id\":{\"type\":\"string\"},\"input\":{\"type\":\"object\",\"properties\":{\"project_id\":{\"type\":\"string\",\"pattern\":\"^[A-Za-z0-9_-]{1,100}$\"},\"expected_revision\":{\"type\":\"integer\",\"minimum\":0},\"operation\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\"}},\"required\":[\"type\"],\"additionalProperties\":true},\"message\":{\"type\":\"string\",\"maxLength\":2000}},\"required\":[\"project_id\",\"expected_revision\",\"operation\"],\"additionalProperties\":false}},\"required\":[\"sdk_root\",\"project_root\",\"input\"],\"additionalProperties\":false}",
       "output_schema": "{\"type\":\"object\"}",
-      "handler_config": "{\"operation\":\"design_apply_operation\",\"execution_lane\":\"local\",\"contract\":\"cad.project.v1\",\"schema_sha256\":\"985f5a94358043cdcbdce0b8e528e91d56933135d581f940b3a144d99f97becb\"}",
+      "handler_config": "{\"operation\":\"design_apply_operation\",\"execution_lane\":\"local\",\"contract\":\"cad.project.v1\",\"schema_sha256\":\"fbc2d3e2922bfb8ea274dcb16ad8860d575742ecc2caa7b6955bab5ec0e10ede\"}",
       "capability_key": "design.write",
       "domain": "design",
       "is_active": 0,
@@ -83,9 +98,9 @@
       "handler_type": "terminal",
       "handler_key": "cad_project",
       "description": "Save an immutable CAD project revision",
-      "input_schema": "{\"type\":\"object\",\"properties\":{\"sdk_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"project_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"connection_id\":{\"type\":\"string\"},\"input\":{\"type\":\"object\",\"properties\":{\"project\":{\"type\":\"object\"},\"expected_revision\":{\"type\":\"integer\",\"minimum\":0},\"message\":{\"type\":\"string\",\"maxLength\":2000}},\"required\":[\"project\",\"expected_revision\"],\"additionalProperties\":false}},\"required\":[\"sdk_root\",\"project_root\",\"input\"],\"additionalProperties\":false}",
+      "input_schema": "{\"type\":\"object\",\"properties\":{\"sdk_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"project_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"connection_id\":{\"type\":\"string\"},\"input\":{\"type\":\"object\",\"properties\":{\"project\":{\"type\":\"object\",\"additionalProperties\":true},\"expected_revision\":{\"type\":\"integer\",\"minimum\":0},\"message\":{\"type\":\"string\",\"maxLength\":2000}},\"required\":[\"project\",\"expected_revision\"],\"additionalProperties\":false}},\"required\":[\"sdk_root\",\"project_root\",\"input\"],\"additionalProperties\":false}",
       "output_schema": "{\"type\":\"object\"}",
-      "handler_config": "{\"operation\":\"design_project_save\",\"execution_lane\":\"local\",\"contract\":\"cad.project.v1\",\"schema_sha256\":\"e1a4d3ddc76f98b6cbcebe097a3bf5b7975a9efb8e21e9e9b504b831edea5e88\"}",
+      "handler_config": "{\"operation\":\"design_project_save\",\"execution_lane\":\"local\",\"contract\":\"cad.project.v1\",\"schema_sha256\":\"037207fc63bd15e70de43347802064dd057715302b6a25c71a7c7bf451e6f0a8\"}",
       "capability_key": "design.write",
       "domain": "design",
       "is_active": 0,
@@ -244,7 +259,7 @@
           "capability_key": "design.read",
           "pinned_tool_id": "ast_cad_v1_design_project_validate",
           "config_json": "{\"operation\":\"design_project_validate\",\"input_map_only\":true,\"input_map\":{\"sdk_root\":\"$.initial_input.sdk_root\",\"project_root\":\"$.initial_input.project_root\",\"input\":{\"project\":\"$.initial_input.project\"}}}",
-          "input_schema_json": "{\"type\":\"object\",\"properties\":{\"sdk_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"project_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"connection_id\":{\"type\":\"string\"},\"input\":{\"type\":\"object\",\"properties\":{\"project\":{\"type\":\"object\"},\"project_id\":{\"type\":\"string\",\"pattern\":\"^[A-Za-z0-9_-]{1,100}$\"},\"revision\":{\"type\":\"integer\",\"minimum\":1}},\"required\":[],\"additionalProperties\":false,\"anyOf\":[{\"required\":[\"project\"]},{\"required\":[\"project_id\"]}]}},\"required\":[\"sdk_root\",\"project_root\",\"input\"],\"additionalProperties\":false}",
+          "input_schema_json": "{\"type\":\"object\",\"properties\":{\"sdk_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"project_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"connection_id\":{\"type\":\"string\"},\"input\":{\"type\":\"object\",\"properties\":{\"project\":{\"type\":\"object\",\"additionalProperties\":true},\"project_id\":{\"type\":\"string\",\"pattern\":\"^[A-Za-z0-9_-]{1,100}$\"},\"revision\":{\"type\":\"integer\",\"minimum\":1}},\"required\":[],\"additionalProperties\":false}},\"required\":[\"sdk_root\",\"project_root\",\"input\"],\"additionalProperties\":false}",
           "output_schema_json": "{\"type\":\"object\"}",
           "retry_policy_json": "{\"max_attempts\":1}",
           "timeout_ms": 180000,
@@ -260,7 +275,7 @@
           "capability_key": "design.write",
           "pinned_tool_id": "ast_cad_v1_design_project_save",
           "config_json": "{\"operation\":\"design_project_save\",\"input_map_only\":true,\"input_map\":{\"sdk_root\":\"$.initial_input.sdk_root\",\"project_root\":\"$.initial_input.project_root\",\"input\":{\"project\":\"$.initial_input.project\",\"expected_revision\":0}}}",
-          "input_schema_json": "{\"type\":\"object\",\"properties\":{\"sdk_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"project_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"connection_id\":{\"type\":\"string\"},\"input\":{\"type\":\"object\",\"properties\":{\"project\":{\"type\":\"object\"},\"expected_revision\":{\"type\":\"integer\",\"minimum\":0},\"message\":{\"type\":\"string\",\"maxLength\":2000}},\"required\":[\"project\",\"expected_revision\"],\"additionalProperties\":false}},\"required\":[\"sdk_root\",\"project_root\",\"input\"],\"additionalProperties\":false}",
+          "input_schema_json": "{\"type\":\"object\",\"properties\":{\"sdk_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"project_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"connection_id\":{\"type\":\"string\"},\"input\":{\"type\":\"object\",\"properties\":{\"project\":{\"type\":\"object\",\"additionalProperties\":true},\"expected_revision\":{\"type\":\"integer\",\"minimum\":0},\"message\":{\"type\":\"string\",\"maxLength\":2000}},\"required\":[\"project\",\"expected_revision\"],\"additionalProperties\":false}},\"required\":[\"sdk_root\",\"project_root\",\"input\"],\"additionalProperties\":false}",
           "output_schema_json": "{\"type\":\"object\"}",
           "retry_policy_json": "{\"max_attempts\":1}",
           "timeout_ms": 180000,
@@ -439,7 +454,7 @@
           "capability_key": "design.write",
           "pinned_tool_id": "ast_cad_v1_design_apply_operation",
           "config_json": "{\"operation\":\"design_apply_operation\",\"input_map_only\":true,\"input_map\":{\"sdk_root\":\"$.initial_input.sdk_root\",\"project_root\":\"$.initial_input.project_root\",\"input\":{\"project_id\":\"$.initial_input.project_id\",\"expected_revision\":\"$.initial_input.expected_revision\",\"operation\":\"$.initial_input.operation\"}}}",
-          "input_schema_json": "{\"type\":\"object\",\"properties\":{\"sdk_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"project_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"connection_id\":{\"type\":\"string\"},\"input\":{\"type\":\"object\",\"properties\":{\"project_id\":{\"type\":\"string\",\"pattern\":\"^[A-Za-z0-9_-]{1,100}$\"},\"expected_revision\":{\"type\":\"integer\",\"minimum\":0},\"operation\":{\"type\":\"object\",\"required\":[\"type\"]},\"message\":{\"type\":\"string\",\"maxLength\":2000}},\"required\":[\"project_id\",\"expected_revision\",\"operation\"],\"additionalProperties\":false}},\"required\":[\"sdk_root\",\"project_root\",\"input\"],\"additionalProperties\":false}",
+          "input_schema_json": "{\"type\":\"object\",\"properties\":{\"sdk_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"project_root\":{\"type\":\"string\",\"pattern\":\"^/\"},\"connection_id\":{\"type\":\"string\"},\"input\":{\"type\":\"object\",\"properties\":{\"project_id\":{\"type\":\"string\",\"pattern\":\"^[A-Za-z0-9_-]{1,100}$\"},\"expected_revision\":{\"type\":\"integer\",\"minimum\":0},\"operation\":{\"type\":\"object\",\"properties\":{\"type\":{\"type\":\"string\"}},\"required\":[\"type\"],\"additionalProperties\":true},\"message\":{\"type\":\"string\",\"maxLength\":2000}},\"required\":[\"project_id\",\"expected_revision\",\"operation\"],\"additionalProperties\":false}},\"required\":[\"sdk_root\",\"project_root\",\"input\"],\"additionalProperties\":false}",
           "output_schema_json": "{\"type\":\"object\"}",
           "retry_policy_json": "{\"max_attempts\":1}",
           "timeout_ms": 180000,

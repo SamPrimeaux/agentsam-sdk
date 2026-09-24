@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {localProjectRuntime} from '../src/lib/cad/project-cli.js';
+import {localProjectRuntime} from '../../src/lib/cad/project-cli.js';
 const enabled=process.env.AGENTSAM_TEST_NATIVE_CAD==='1';
 test('courtyard real build inspect export render and restored revision rebuild',{skip:!enabled&&'Set AGENTSAM_TEST_NATIVE_CAD=1; enabled runs must find Blender'},async t=>{
  const root=process.env.AGENTSAM_CAD_TEST_OUTPUT||fs.mkdtempSync(path.join(os.tmpdir(),'cad-house-native-'));
  if(!process.env.AGENTSAM_CAD_TEST_OUTPUT)t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
- const p=JSON.parse(fs.readFileSync(new URL('./fixtures/cad/courtyard-house.json',import.meta.url),'utf8'));
+ const p=JSON.parse(fs.readFileSync(new URL('../fixtures/cad/courtyard-house.json',import.meta.url),'utf8'));
  p.id='courtyard-'+Date.now();
  const run=localProjectRuntime(root),saved=await run.execute('design_project_save',{project:p,expected_revision:0});
  const input={project_id:p.id,revision:saved.revision};

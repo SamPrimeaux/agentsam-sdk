@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {runProjectWorkflow} from '../src/lib/cad/project-workflows.js';
+import {runProjectWorkflow} from '../../src/lib/cad/project-workflows.js';
 test('workflow halts on invalid validation and records no claimed effects',async()=>{
  let calls=0;await assert.rejects(runProjectWorkflow({execute:async()=>{calls++;return {valid:false,errors:['bad wall']};}},'cad.house_baseline',{project:{}}),/project_invalid/);assert.equal(calls,1);
 });

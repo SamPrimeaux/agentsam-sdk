@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 const expected=JSON.parse(fs.readFileSync(new URL('../registry/cad-project/manifest.json',import.meta.url),'utf8'));
-const live=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+const livePath=process.argv[2];
+if(!livePath)throw new Error('usage: node scripts/cad-registry-verify.mjs <live-registry-export.json>');
+const live=JSON.parse(fs.readFileSync(livePath,'utf8'));
 const checks=[['tools',expected.tools],['workflows',expected.workflows.map(w=>w.row)],['nodes',expected.workflows.flatMap(w=>w.nodes)],['edges',expected.workflows.flatMap(w=>w.edges)]];
 let count=0;
 for(const [key,rows] of checks)for(const row of rows){

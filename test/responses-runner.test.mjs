@@ -6,6 +6,7 @@ import test from 'node:test';
 import { createCapabilityAdapter } from '../src/agent/capability-adapter.js';
 import { buildAgentToolSurface, capabilityFunctionName, resolveCapabilityFallback, runResponsesAgent } from '../src/agent/responses-runner.js';
 import { getModelRecord } from '../src/models/index.js';
+import { CAD_PROJECT_TOOLS } from '../src/lib/cad/project-runtime.js';
 
 function usage(input = 10_000, cumulative = input) {
   return {
@@ -83,14 +84,22 @@ test('runner accepts provider-verified models whose context window is unknown', 
 test('capability adapter hydrates packaged JSON schemas and tool surface exposes only selected executable schemas', () => {
   const adapter = createCapabilityAdapter();
   const descriptors = adapter.toolDescriptors();
-  assert.deepEqual(descriptors.map((row) => row.name).sort(), ['cloudflare.cpu.profile', 'cloudflare.wrangler.native', 'knowledge.search', 'repository.snapshot', 'terminal.exec']);
+  const expectedNames = [
+    'cloudflare.cpu.profile',
+    'cloudflare.wrangler.native',
+    'knowledge.search',
+    'repository.snapshot',
+    'terminal.exec',
+    ...CAD_PROJECT_TOOLS.map((tool) => tool.name),
+  ].sort();
+  assert.deepEqual(descriptors.map((row) => row.name).sort(), expectedNames);
   const repository = descriptors.find((row) => row.name === 'repository.snapshot');
   assert.equal(repository.input_schema.type, 'object');
   assert.ok(repository.input_schema.properties.cwd);
   const surface = buildAgentToolSurface(adapter, 'snapshot inspect repository');
   assert.ok(surface.tools.some((t) => t.name === capabilityFunctionName('repository.snapshot')));
   assert.equal(surface.tools[0].parameters.type, 'object');
-  assert.equal(surface.receipt.catalog_tools, 5);
+  assert.equal(surface.receipt.catalog_tools, descriptors.length);
 });
 
 test('runner owns cwd, executes selected tool, preserves call_id and returns provider-authoritative continuation', async t => {

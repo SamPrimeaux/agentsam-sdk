@@ -54,6 +54,7 @@ export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot =
         category: row.domain,
         risk: row.side_effects === 'none' || row.side_effects === 'network-read' ? 'read' : 'write',
         input_schema: loadSchema(row.input_schema),
+        strict: row.strict !== false,
         side_effects: row.side_effects,
         deterministic: row.deterministic,
         model_required: row.model_required,

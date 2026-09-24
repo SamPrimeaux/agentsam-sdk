@@ -530,3 +530,199 @@ npm package
   → complete Worker route port
   → Cloudflare deployment
 ```
+
+
+---
+
+## `cad.project.v1` — the first reusable AgentSam CAD capability pack
+
+`apps/cad-creator` is the reference product and proving ground for AgentSam CAD, but the reusable CAD machinery is SDK-owned. The product must not become a pile of app-local Blender, FreeCAD, OpenSCAD, BIM, or generative-provider code.
+
+The durable boundary is:
+
+```text
+CAD Creator / Local Studio / CLI / MCP / workflows
+                    │
+                    ▼
+          normalized AgentSam CAD tools
+                    │
+                    ▼
+               cad.project.v1
+                    │
+        ┌───────────┼───────────┐
+        │           │           │
+   project state  workflows   artifacts
+        │
+        ▼
+        engine / provider adapters
+        │
+        ├─ IfcOpenShell / BIM
+        ├─ build123d / BREP
+        ├─ CadQuery / alternate OCCT
+        ├─ FreeCADCmd / OpenCASCADE
+        ├─ OpenSCAD / deterministic CSG
+        ├─ Blender headless / scene + render
+        └─ optional GPU asset generators
+```
+
+**Rule:** AgentSam owns the operation contracts. Engines are replaceable implementations.
+
+Do not make provider-specific commands such as `ifcopenshell_create_wall` or `blender_render_scene` the canonical agent contract. Prefer stable operations such as `design_wall_create`, `design_solid_boolean`, `design_render_preview`, and `design_ifc_export`, then let capability routing select the execution engine.
+
+### Current `cad.project.v1` surface
+
+This release establishes the first reusable CAD capability pack with nine AgentSam tools:
+
+- `design_project_get`
+- `design_project_validate`
+- `design_apply_operation`
+- `design_project_save`
+- `design_project_restore`
+- `design_model_build`
+- `design_model_inspect`
+- `design_model_render`
+- `design_model_export`
+
+The package also defines two reusable workflows:
+
+- `cad.house_baseline`
+- `cad.edit_preview`
+
+and exposes the CLI surface:
+
+```text
+agentsam cad project ...
+```
+
+Project writes are revision-guarded. Builds and downstream artifacts are tied back to project revision/content evidence rather than treated as anonymous files.
+
+### Next capability packs
+
+Expand outward from `cad.project.v1`; do not bypass it with app-only integrations.
+
+#### BIM / architecture
+
+Target normalized operations such as:
+
+```text
+design.bim.project.create
+design.bim.wall.create
+design.bim.opening.create
+design.bim.door.create
+design.bim.window.create
+design.bim.space.create
+design.bim.roof.create
+design.bim.stair.create
+design.bim.validate
+design.ifc.import
+design.ifc.export
+```
+
+IfcOpenShell is the preferred initial headless BIM engine. Bonsai can serve as an optional Blender-side authoring and QA adapter, not as the canonical AgentSam contract.
+
+#### Precise BREP / solid modeling
+
+Target:
+
+```text
+design.solid.extrude
+design.solid.revolve
+design.solid.boolean
+design.solid.fillet
+design.solid.chamfer
+design.solid.shell
+design.solid.measure
+design.solid.validate
+```
+
+Prefer build123d as the primary headless Python/OCCT adapter. CadQuery and FreeCAD/OpenCASCADE can provide alternate or interoperability lanes without changing the public operation vocabulary.
+
+#### Parametric modeling
+
+Keep OpenSCAD behind normalized operations such as:
+
+```text
+design.parametric.compile
+design.parametric.measure
+design.parametric.interference_check
+design.parametric.export
+```
+
+The native OpenSCAD CLI/container lane is the production shape. Third-party OpenSCAD MCP projects are useful contract/reference material but are not required runtime dependencies.
+
+#### Mesh / render
+
+Blender remains a headless execution engine behind operations such as:
+
+```text
+design.mesh.inspect
+design.mesh.repair
+design.mesh.convert
+design.scene.build
+design.render.preview
+design.render.final
+```
+
+The app should not depend on a live GUI session for production operation.
+
+#### Layout / planning
+
+Constraint-to-layout systems should produce a normalized plan—rooms, adjacency, walls, openings, circulation and constraints—before geometry is built. External layout projects can inform or plug into that solver boundary; they should not become geometry SSOT.
+
+#### Generative assets
+
+Image/text-to-3D systems belong in optional GPU lanes for furniture, fixtures, props and other assets:
+
+```text
+design.asset.generate
+design.asset.reconstruct
+design.asset.texture
+design.asset.optimize
+```
+
+Generated assets are inputs to the project. They are not authoritative architectural geometry.
+
+### Engine contract
+
+New CAD engines should implement a common adapter shape rather than adding bespoke app routes:
+
+```js
+{
+  id: "ifcopenshell",
+  executionLanes: ["local", "container"],
+  capabilities: [
+    "design.bim.read",
+    "design.bim.write",
+    "design.ifc.import",
+    "design.ifc.export"
+  ],
+
+  discover(ctx),
+  doctor(ctx),
+  execute(operation, input, ctx),
+  inspect(artifact, ctx)
+}
+```
+
+Engine discovery must be explicit and fail closed. A missing engine should produce a capability/doctor receipt, not silently substitute a different provider unless the caller explicitly permits fallback.
+
+### Registry and company inventory
+
+Reusable CAD machinery must remain visible in the AgentSam registry:
+
+- `agentsam_products` owns the `agentsam-cad-creator` product and future packaged CAD modules.
+- `agentsam_tools` owns normalized callable operations.
+- `agentsam_capabilities` and tool-capability mappings describe what each tool can do.
+- `agentsam_workflows` owns reusable CAD workflows.
+- `agentsam_plugins`/engine inventory should represent installed or connectable execution engines.
+- `asset_relationships` links CAD Creator to its tools, workflows, command surface, repository, reusable packages, and engines.
+
+External engines such as IfcOpenShell, build123d, FreeCAD, OpenSCAD and Blender are dependencies/integrations, not InnerAnimalMedia products.
+
+### Development rule
+
+**No new CAD Creator engine or provider integration should merge unless its reusable operation contract and adapter boundary already have an AgentSam SDK home.**
+
+Use CAD Creator as the production/reference host that proves the abstraction. When an operation survives real app usage, tests, failure cases, discovery, auth/authority rules and deployment, keep that machinery reusable rather than copying it into another app.
+
+This is the same product-development pattern used elsewhere in AgentSam: the SDK owns normalized contracts and execution machinery; real applications prove them.
