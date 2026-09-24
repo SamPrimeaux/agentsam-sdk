@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en" data-asbd-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Learn — AgentSam</title>
+  <meta name="description" content="AgentSam learn hub: architecture field manual and package guides." />
+  <meta name="agentsam:page" content="learn" />
+  <meta name="agentsam:route" content="agentsam.inneranimalmedia.com/learn/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/site/global/asbd-tokens.css" />
+  <script src="/site/global/asbd-theme.js" defer></script>
+
+  <style>
+    body { margin:0; min-height:100vh; font-family:var(--asbd-font-sans); background:var(--asbd-surface); color:var(--asbd-text); }
+    .asbd-doc { max-width:var(--asbd-layout-max); margin:0 auto; padding:calc(var(--asbd-header-height)+32px) 32px 80px; }
+    .asbd-breadcrumb { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:13px; font-weight:600; color:var(--asbd-text-muted); margin-bottom:28px; }
+    .asbd-breadcrumb a { color:var(--asbd-text-muted); text-decoration:none; }
+    .asbd-breadcrumb a:hover { color:var(--asbd-color-blue); }
+    .asbd-breadcrumb [aria-current="page"] { color:var(--asbd-text); }
+    .asbd-doc-toolbar { display:flex; justify-content:flex-end; margin-bottom:18px; }
+    .asbd-theme-toggle { font:inherit; font-size:13px; font-weight:700; border-radius:10px; border:1px solid var(--asbd-border); background:var(--asbd-surface-elevated); color:var(--asbd-text); padding:8px 14px; cursor:pointer; }
+    h1 { font-size:clamp(2rem,4vw,2.75rem); letter-spacing:-0.03em; margin:0 0 12px; }
+    .lead { color:var(--asbd-text-muted); max-width:62ch; margin:0 0 28px; line-height:1.55; }
+    .learn-grid { display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
+    .learn-card { display:block; text-decoration:none; color:inherit; background:var(--asbd-surface-elevated); border:1px solid var(--asbd-border); border-radius:var(--asbd-radius); padding:22px; }
+    .learn-card:hover { border-color:rgba(22,123,252,0.45); }
+    .learn-card h2 { margin:0 0 8px; font-size:1.1rem; color:var(--asbd-color-blue); }
+    .learn-card p { margin:0; color:var(--asbd-text-muted); line-height:1.5; font-size:0.95rem; }
+    code { font-family:var(--asbd-font-mono); font-size:0.92em; }
+  </style>
+</head>
+<body data-asbd-theme="dark">
+  <div id="asbd-header-mount"></div>
+  <main class="asbd-doc">
+    <div class="asbd-doc-toolbar">
+      <button type="button" class="asbd-theme-toggle" id="asbdThemeToggle">Light theme</button>
+    </div>
+    <nav class="asbd-breadcrumb" aria-label="Breadcrumb">
+      <a href="/">Home</a><span aria-hidden="true">/</span>
+      <span aria-current="page">Learn</span>
+    </nav>
+    <h1>Learn AgentSam</h1>
+    <p class="lead">Public learn routes for <code>agentsam.inneranimalmedia.com/learn/</code> — manuals and package guides under the shared ASBD shell.</p>
+    <div class="learn-grid">
+      <a class="learn-card" href="./architecture-field-manual/">
+        <h2>Architecture Field Manual</h2>
+        <p>How to read mature repositories: packages, authority, RPC, persistence, CAD/scene data, and IDE/CLI systems.</p>
+      </a>
+      <a class="learn-card" href="/packages/sdk/help/">
+        <h2>SDK Help</h2>
+        <p>Copyable install commands for <code>@inneranimalmedia/agentsam-sdk</code>, synced on every publish.</p>
+      </a>
+      <a class="learn-card" href="/packages/sdk/setup-guide/">
+        <h2>SDK Setup Guide</h2>
+        <p>Minimum publishable doc pattern: install → login → inspect.</p>
+      </a>
+    </div>
+  </main>
+  <div id="asbd-footer-mount"></div>
+  <script>
+  (function () {
+    function inject(id, url) {
+      var slot = document.getElementById(id);
+      if (!slot) return Promise.resolve();
+      return fetch(url).then(function (r) { return r.text(); }).then(function (html) {
+        var wrap = document.createElement('div');
+        wrap.innerHTML = html.trim();
+        while (wrap.firstChild) slot.parentNode.insertBefore(wrap.firstChild, slot);
+        slot.remove();
+      }).catch(function () {});
+    }
+    Promise.all([
+      inject('asbd-header-mount', '/site/global/asbd-header.html'),
+      inject('asbd-footer-mount', '/site/global/asbd-footer.html')
+    ]).then(function () {
+      if (window.AsbdTheme) {
+        AsbdTheme.syncFromDocument();
+        AsbdTheme.bindToggle(document.getElementById('asbdThemeToggle'));
+      }
+    });
+  })();
+  </script>
+</body>
+</html>

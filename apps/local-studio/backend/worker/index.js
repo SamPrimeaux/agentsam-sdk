@@ -9,6 +9,7 @@ import {
 } from "../../../../packages/identity/src/server/worker-router.js";
 import { handleCmsWorkerRequest } from "./cms-service.js";
 import { serveCanonicalHomepage } from "./canonical-homepage.js";
+import { isPublicSitePath, servePublicSitePage } from "./public-site.js";
 import { loadConnectionsRegistry } from "./connections-registry.js";
 import { createLocalStudioPluginRuntime } from "./plugin-registry.js";
 
@@ -608,11 +609,21 @@ export default {
     const isConnectionsRegistry = url.pathname === "/api/connections";
     const isPluginToolExecute = url.pathname === "/api/plugins/tools/execute";
 
+    // Public marketing / docs pages (home, help, learn) from ASSETS /site/*
+    if (request.method === "GET" && isPublicSitePath(url.pathname)) {
+      const page = await servePublicSitePage(request, env, url.pathname);
+      if (page) return page;
+      // `/` keeps the edge-partial homepage fallback if assets are missing
+      if (url.pathname === "/" || url.pathname === "/index.html") {
+        return serveCanonicalHomepage(request, env);
+      }
+    }
+
     if (request.method === "GET" && Object.hasOwn(INSTALL_APP_TARGETS, url.pathname)) {
       return serveInstallScript(url.pathname);
     }
 
-    // Canonical public homepage with edge HTMLRewriter site partials
+    // Legacy canonical homepage path (assets missing for public-site router)
     if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
       return serveCanonicalHomepage(request, env);
     }

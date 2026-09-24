@@ -446,13 +446,110 @@ export function createCmsDbClient(db, rawProjectSlug) {
         .run();
 
       const sections = [
-        { id: 'sec_as_header', type: 'header', name: 'SiteHeader', sort: 10, data: { title: 'Agent Sam', nav_links: [{ label: 'Work', href: '/work' }, { label: 'About', href: '/about' }, { label: 'Services', href: '/services' }, { label: 'Contact', href: '/contact' }] } },
-        { id: 'sec_as_hero', type: 'hero', name: 'Hero', sort: 20, data: { headline: 'Developer SDK & Platform', subline: 'Sandboxes, CLI tools, and agent workflows for AI development', cta_text: 'Get Started', cta_href: '/agentsam' } },
-        { id: 'sec_as_projects', type: 'project_grid', name: 'ProjectGrid', sort: 30, data: { title: 'Featured Applications', limit: 6 } },
-        { id: 'sec_as_about', type: 'about', name: 'About', sort: 40, data: { title: 'Built for High-Velocity Teams', description: 'Autonomous coding, spatial CAD, and real-time evaluation.' } },
-        { id: 'sec_as_skills', type: 'skills', name: 'Skills', sort: 50, data: { title: 'Capabilities & Tooling' } },
-        { id: 'sec_as_contact', type: 'contact', name: 'Contact', sort: 60, data: { title: "Let's Build Together", email: 'hey@inneranimalmedia.com' } },
-        { id: 'sec_as_footer', type: 'footer', name: 'SiteFooter', sort: 70, data: { copyright: '© 2026 Inner Animal Media' } },
+        {
+          id: 'sec_as_header',
+          type: 'header',
+          name: 'SiteHeader',
+          sort: 10,
+          data: {
+            shell: 'asbd',
+            title: 'AgentSam',
+            cta_text: 'Open Workbench',
+            cta_href: '/auth/login?next=/agentsam',
+            nav_links: [
+              { label: 'Home', href: '/', key: 'home' },
+              { label: 'Work', href: '/work', key: 'work' },
+              { label: 'About', href: '/about', key: 'about' },
+              { label: 'Services', href: '/services', key: 'services' },
+              { label: 'Contact', href: '/contact', key: 'contact' },
+            ],
+            partial: 'apps/frontend/public/site/global/asbd-header.html',
+          },
+        },
+        {
+          id: 'sec_as_hero',
+          type: 'hero',
+          name: 'Hero',
+          sort: 20,
+          data: {
+            eyebrow: '@INNERANIMALMEDIA/AGENTSAM-SDK',
+            headline: 'Ship Agent Sam with a real SDK computer',
+            subline: 'npm i @inneranimalmedia/agentsam-sdk — ephemeral sandboxes, terminals, previews, and promote-only paths on Cloudflare.',
+            cta_primary_text: 'Install the SDK',
+            cta_primary_href: '#install',
+            cta_secondary_text: 'See sandbox sessions',
+            cta_secondary_href: '#state',
+            source_path: 'apps/frontend/public/site/home/index.html#hero',
+          },
+        },
+        {
+          id: 'sec_as_secure',
+          type: 'secure',
+          name: 'Secure',
+          sort: 30,
+          data: {
+            headline: 'Run untrusted code safely',
+            description: 'Explore packages and run commands without touching core infrastructure.',
+            source_path: 'apps/frontend/public/site/home/index.html#secure',
+          },
+        },
+        {
+          id: 'sec_as_scale',
+          type: 'scalable',
+          name: 'Scalable',
+          sort: 40,
+          data: {
+            headline: 'From npm install to an agent fleet',
+            description: 'One package, many agent workers — bring your own stack.',
+            source_path: 'apps/frontend/public/site/home/index.html#scale',
+          },
+        },
+        {
+          id: 'sec_as_state',
+          type: 'stateful',
+          name: 'Stateful',
+          sort: 50,
+          data: {
+            headline: 'Sessions the SDK can actually resume',
+            description: 'TTLs, snapshots, forks, and preview tunnels over the control plane.',
+            source_path: 'apps/frontend/public/site/home/index.html#state',
+          },
+        },
+        {
+          id: 'sec_as_observe',
+          type: 'observable',
+          name: 'Observable',
+          sort: 60,
+          data: {
+            headline: 'Observe every agent run before it ships',
+            description: 'Traces, approvals, cost controls, logs, and artifacts.',
+            source_path: 'apps/frontend/public/site/home/index.html#observe',
+          },
+        },
+        {
+          id: 'sec_as_cta',
+          type: 'operating_layer',
+          name: 'OperatingLayer',
+          sort: 70,
+          data: {
+            eyebrow: 'AGENTSAM OPERATING LAYER',
+            headline: 'Let the agent work hard without giving it your whole system.',
+            steps: ['Plan', 'Contain', 'Execute', 'Promote'],
+            source_path: 'apps/frontend/public/site/home/index.html#cta',
+          },
+        },
+        {
+          id: 'sec_as_footer',
+          type: 'footer',
+          name: 'SiteFooter',
+          sort: 80,
+          data: {
+            shell: 'asbd',
+            theme: 'dark',
+            copyright: '© 2026 AgentSam',
+            partial: 'apps/frontend/public/site/global/asbd-footer.html',
+          },
+        },
       ];
 
       for (const s of sections) {

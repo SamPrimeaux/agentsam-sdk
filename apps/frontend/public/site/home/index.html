@@ -1,38 +1,46 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-asbd-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Agent Sam — Cloud Contained Sandboxes</title>
 <meta name="description" content="npm i @inneranimalmedia/agentsam-sdk — sandboxes, tools, and promote-only paths for Agent Sam.">
+<meta name="agentsam:page" content="home">
+<meta name="agentsam:cms-editable" content="true">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/site/global/asbd-tokens.css">
+<script src="/site/global/asbd-theme.js"></script>
+<script src="/site/global/installables.js"></script>
 <style id="agentsam-page-css">
-/* Agent Sam landing — page styles (shared across sections) */
-main.agentsam-landing { padding-top: 76px; }
+/* Agent Sam landing — page styles (shared across sections). Shell = ASBD. */
+main.agentsam-landing { padding-top: var(--asbd-header-height, 76px); }
 
     :root {
       color-scheme: dark;
-      --bg: #030711;
-      --bg-2: #050b15;
+      --bg: var(--asbd-color-navy);
+      --bg-2: #07101f;
       --panel: rgba(9, 18, 31, 0.72);
       --panel-strong: rgba(12, 26, 44, 0.92);
       --panel-soft: rgba(15, 35, 58, 0.54);
-      --line: rgba(121, 199, 255, 0.17);
-      --line-strong: rgba(121, 199, 255, 0.36);
-      --text: #f1f7ff;
+      --line: rgba(22, 123, 252, 0.22);
+      --line-strong: rgba(22, 123, 252, 0.42);
+      --text: var(--asbd-color-white);
       --muted: rgba(229, 238, 248, 0.66);
       --soft: rgba(229, 238, 248, 0.42);
-      --blue: #7fc8ff;
-      --blue-2: #3aa8f8;
+      --blue: var(--asbd-color-blue);
+      --blue-2: var(--asbd-color-blue-hover);
       --cyan: #45e6ff;
       --green: #b8ff80;
       --purple: #b68cff;
       --warn: #ffc766;
       --danger: #ff7d92;
       --shadow: 0 32px 90px rgba(0, 0, 0, 0.58);
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: var(--asbd-font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+      --sans: var(--asbd-font-sans);
       --radius: 28px;
-      --max: 1180px;
+      --max: var(--asbd-layout-max);
     }
 
     * { box-sizing: border-box; }
@@ -927,13 +935,13 @@ main.agentsam-landing { padding-top: 76px; }
   
 </style>
 </head>
-<body data-footer-theme="dark" data-route="/agentsam">
+<body data-footer-theme="dark" data-asbd-theme="dark" data-route="/agentsam" data-cms-page="home">
 
-<!-- AGENTSAM:IAM_HEADER:START -->
-<!-- Injected at edge via HTMLRewriter from sites/{site}/partials/header.html -->
-<!-- AGENTSAM:IAM_HEADER:END -->
+<!-- AGENTSAM:ASBD_HEADER:START — CMS region: header / SiteHeader -->
+<div id="asbd-header-mount" data-cms-region="header" data-cms-section="header" data-section-type="header" data-section-key="header" aria-live="polite"></div>
+<!-- AGENTSAM:ASBD_HEADER:END -->
 
-<main id="top" class="iam-public-page agentsam-landing" data-route="/agentsam">
+<main id="top" class="asbd-public-page agentsam-landing" data-route="/agentsam" data-cms-region="body">
 <section class="hero" data-section-key="hero" data-cms-section="hero" data-section-type="hero" aria-labelledby="hero-title">
         <div class="hero-grid" aria-hidden="true"></div>
         <svg class="hero-lines" viewBox="0 0 1050 360" aria-hidden="true" preserveAspectRatio="none">
@@ -960,7 +968,7 @@ main.agentsam-landing { padding-top: 76px; }
           <h1 id="hero-title">Ship Agent Sam with a real SDK computer</h1>
           <p>npm i @inneranimalmedia/agentsam-sdk — then give agents ephemeral sandboxes, scoped tools, terminals, and promote-only paths back into your Cloudflare stack.</p>
           <div class="hero-actions">
-            <a class="btn btn-primary" href="#secure">Install the SDK</a>
+            <a class="btn btn-primary" href="/packages/sdk/help/">Install the SDK</a>
             <a class="btn" href="#observe">See sandbox sessions</a>
           </div>
         </div>
@@ -981,7 +989,7 @@ main.agentsam-landing { padding-top: 76px; }
             <span data-rail="observe">Observable</span>
           </div>
         </aside>
-<section class="section" id="secure" data-section-key="secure" data-cms-section="secure" data-section="secure" aria-labelledby="secure-title">
+<section class="section" id="secure" data-section-key="secure" data-cms-section="secure" data-section-type="secure" data-section="secure" aria-labelledby="secure-title">
           <div class="section-copy">
             <h2 id="secure-title">Run untrusted code safely</h2>
             <p class="section-lead">AgentSam can explore packages, run commands, inspect files, and execute generated code without touching your core app infrastructure.</p>
@@ -1029,7 +1037,7 @@ main.agentsam-landing { padding-top: 76px; }
             </article>
           </div>
         </section>
-<section class="section" id="scale" data-section-key="scale" data-cms-section="scale" data-section="scale" aria-labelledby="scale-title">
+<section class="section" id="scale" data-section-key="scale" data-cms-section="scale" data-section-type="scalable" data-section="scale" aria-labelledby="scale-title">
           <div class="section-copy">
             <h2 id="scale-title">From npm install to an agent fleet</h2>
             <p class="section-lead">The SDK is how products wire Agent Sam: import the client, attach tools, and open sandboxes for codegen, tests, browser research, and repo inspection without inventing a new agent runtime.</p>
@@ -1069,7 +1077,7 @@ main.agentsam-landing { padding-top: 76px; }
             </article>
           </div>
         </section>
-<section class="section" id="state" data-section-key="state" data-cms-section="state" data-section="state" aria-labelledby="state-title">
+<section class="section" id="state" data-section-key="state" data-cms-section="state" data-section-type="stateful" data-section="state" aria-labelledby="state-title">
           <div class="section-copy">
             <h2 id="state-title">Sessions the SDK can actually resume</h2>
             <p class="section-lead">Agent Sam sessions stream over the control plane the SDK talks to — keep state across turns, tunnel previews, then tear down when the job is done.</p>
@@ -1126,7 +1134,7 @@ v22.11.0
             </article>
           </div>
         </section>
-<section class="section" id="observe" data-section-key="observe" data-cms-section="observe" data-section="observe" aria-labelledby="observe-title">
+<section class="section" id="observe" data-section-key="observe" data-cms-section="observe" data-section-type="observable" data-section="observe" aria-labelledby="observe-title">
           <div class="section-copy">
             <h2 id="observe-title">Observe every agent run before it ships</h2>
             <p class="section-lead">AgentSam needs more than a terminal. It needs traces, approvals, cost controls, logs, artifacts, and a clear path from experiment to production.</p>
@@ -1219,9 +1227,37 @@ const sections = [...document.querySelectorAll('[data-section]')];
 
 </script>
 
-<!-- AGENTSAM:IAM_FOOTER:START -->
-<!-- Injected at edge via HTMLRewriter from sites/{site}/partials/footer.html -->
-<!-- AGENTSAM:IAM_FOOTER:END -->
+<!-- AGENTSAM:ASBD_FOOTER:START — CMS region: footer / SiteFooter -->
+<div id="asbd-footer-mount" data-cms-region="footer" data-cms-section="footer" data-section-type="footer" data-section-key="footer" aria-live="polite"></div>
+<!-- AGENTSAM:ASBD_FOOTER:END -->
+
+<script>
+(function mountAsbdShell() {
+  function inject(id, url) {
+    var slot = document.getElementById(id);
+    if (!slot) return Promise.resolve();
+    return fetch(url, { credentials: 'same-origin' })
+      .then(function (r) { if (!r.ok) throw new Error(url + ' ' + r.status); return r.text(); })
+      .then(function (html) {
+        var wrap = document.createElement('div');
+        wrap.innerHTML = html.trim();
+        var nodes = Array.prototype.slice.call(wrap.childNodes);
+        var parent = slot.parentNode;
+        nodes.forEach(function (node) { parent.insertBefore(node, slot); });
+        slot.remove();
+      })
+      .catch(function (err) {
+        slot.innerHTML = '<!-- ASBD shell failed: ' + String(err && err.message || err) + ' -->';
+      });
+  }
+  Promise.all([
+    inject('asbd-header-mount', '/site/global/asbd-header.html'),
+    inject('asbd-footer-mount', '/site/global/asbd-footer.html'),
+  ]).then(function () {
+    if (window.AsbdTheme) window.AsbdTheme.syncFromDocument();
+  });
+})();
+</script>
 
 </body>
 </html>

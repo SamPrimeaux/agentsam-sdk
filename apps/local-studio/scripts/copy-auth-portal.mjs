@@ -36,12 +36,19 @@ cpSync(
 );
 console.log("[copy-auth-portal] shared/company-branding.js -> .output/public/shared/company-branding.js");
 
-// Copy canonical site homepage to build assets so Worker env.ASSETS can serve it directly
-const siteSource = path.join(appRoot, "frontend/public/site/homepage.html");
+// Copy full public site tree into Worker assets (home/help/learn/global)
+const siteSourceDir = path.join(appRoot, "frontend/public/site");
 const siteDestDir = path.join(outPublic, "site");
-if (existsSync(siteSource)) {
+if (existsSync(siteSourceDir)) {
   mkdirSync(siteDestDir, { recursive: true });
-  cpSync(siteSource, path.join(siteDestDir, "homepage.html"));
-  console.log("[copy-auth-portal] site/homepage.html -> .output/public/site/homepage.html");
+  cpSync(siteSourceDir, siteDestDir, { recursive: true });
+  console.log("[copy-auth-portal] frontend/public/site -> .output/public/site");
+
+  // Keep legacy homepage.html as a full copy of home for older asset probes
+  const homeIndex = path.join(siteDestDir, "home/index.html");
+  if (existsSync(homeIndex)) {
+    cpSync(homeIndex, path.join(siteDestDir, "homepage.html"));
+    console.log("[copy-auth-portal] site/home/index.html -> site/homepage.html");
+  }
 }
 

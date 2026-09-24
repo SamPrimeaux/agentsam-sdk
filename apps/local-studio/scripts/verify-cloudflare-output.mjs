@@ -9,6 +9,7 @@ const configPath = path.join(backend, "wrangler.jsonc");
 const workerEntry = path.join(backend, "worker", "index.js");
 const serverEntry = path.join(root, ".output", "server", "index.mjs");
 const assetsDir = path.join(root, ".output", "public");
+const siteHome = path.join(assetsDir, "site", "home", "index.html");
 const siteHomepage = path.join(assetsDir, "site", "homepage.html");
 
 assert.ok(fs.existsSync(configPath), "backend/wrangler.jsonc is required");
@@ -16,7 +17,12 @@ assert.ok(fs.existsSync(workerEntry), "backend/worker/index.js is required");
 assert.ok(fs.existsSync(serverEntry), ".output/server/index.mjs is required; run npm run build");
 assert.ok(fs.statSync(serverEntry).isFile(), "Nitro server entry must be a file");
 assert.ok(fs.existsSync(assetsDir) && fs.statSync(assetsDir).isDirectory(), ".output/public is required");
+assert.ok(fs.existsSync(siteHome) && fs.statSync(siteHome).size > 20000, ".output/public/site/home/index.html is required (>20KB)");
 assert.ok(fs.existsSync(siteHomepage) && fs.statSync(siteHomepage).size > 20000, ".output/public/site/homepage.html is required (>20KB)");
+assert.ok(fs.existsSync(path.join(assetsDir, "site", "packages", "sdk", "help", "index.html")), "SDK help page asset required");
+assert.ok(fs.existsSync(path.join(assetsDir, "site", "learn", "index.html")), "Learn hub asset required");
+assert.ok(fs.existsSync(path.join(assetsDir, "site", "global", "installables.json")), "installables.json asset required");
+assert.match(fs.readFileSync(workerEntry, "utf8"), /public-site\.js/);
 const cadHtml = path.join(assetsDir, 'cad-creator', 'index.html');
 assert.ok(fs.existsSync(cadHtml), 'CAD frontend index must be staged into Worker assets');
 for (const match of fs.readFileSync(cadHtml, 'utf8').matchAll(/(?:src|href)="(\/cad-creator\/assets\/[^\"]+)"/g)) {

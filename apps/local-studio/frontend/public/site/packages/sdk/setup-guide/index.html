@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en" data-asbd-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SDK Setup Guide — AgentSam Packages</title>
+  <meta name="agentsam:page" content="packages.sdk.setup-guide" />
+  <meta name="agentsam:cms-editable" content="true" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/site/global/asbd-tokens.css" />
+  <script src="/site/global/asbd-theme.js" defer></script>
+  <script src="/site/global/installables.js" defer></script>
+  <style>
+    body { margin: 0; min-height: 100vh; font-family: var(--asbd-font-sans); background: var(--asbd-surface); color: var(--asbd-text); }
+    .asbd-doc { max-width: var(--asbd-layout-max); margin: 0 auto; padding: calc(var(--asbd-header-height) + 32px) 32px 80px; }
+    .asbd-breadcrumb { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; font-weight: 600; color: var(--asbd-text-muted); margin-bottom: 28px; }
+    .asbd-breadcrumb a { color: var(--asbd-text-muted); text-decoration: none; }
+    .asbd-breadcrumb a:hover { color: var(--asbd-color-blue); }
+    .asbd-breadcrumb [aria-current="page"] { color: var(--asbd-text); }
+    .asbd-doc h1 { font-size: clamp(2rem, 4vw, 2.75rem); letter-spacing: -0.03em; margin: 0 0 12px; }
+    .asbd-doc .lead { color: var(--asbd-text-muted); max-width: 62ch; margin: 0 0 28px; }
+    .asbd-doc ol { margin: 0; padding-left: 1.2rem; color: var(--asbd-text-muted); line-height: 1.7; }
+    .asbd-doc a { color: var(--asbd-color-blue); }
+    code { font-family: var(--asbd-font-mono); }
+    .asbd-doc-toolbar { display: flex; justify-content: flex-end; margin-bottom: 18px; }
+    .asbd-theme-toggle { font: inherit; font-size: 13px; font-weight: 700; border-radius: 10px; border: 1px solid var(--asbd-border); background: var(--asbd-surface-elevated); color: var(--asbd-text); padding: 8px 14px; cursor: pointer; }
+    .asbd-copy-row { display: flex; gap: 10px; align-items: stretch; margin: 10px 0 18px; }
+    .asbd-copy-row pre { flex: 1; margin: 0; padding: 14px 16px; border-radius: 10px; border: 1px solid var(--asbd-border); background: rgba(10,22,40,0.05); font-family: var(--asbd-font-mono); font-size: 0.9rem; overflow-x: auto; color: var(--asbd-text); }
+    html[data-asbd-theme="dark"] .asbd-copy-row pre { background: rgba(255,255,255,0.05); }
+    .asbd-copy-btn { flex: 0 0 auto; font: inherit; font-size: 12px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; border-radius: 10px; border: 1px solid var(--asbd-border); background: var(--asbd-color-blue); color: #fff; padding: 0 16px; cursor: pointer; min-width: 88px; }
+  </style>
+</head>
+<body data-asbd-theme="dark">
+  <div id="asbd-header-mount"></div>
+  <main class="asbd-doc" data-cms-region="body" data-section-type="doc">
+    <div class="asbd-doc-toolbar">
+      <button type="button" class="asbd-theme-toggle" id="asbdThemeToggle">Light theme</button>
+    </div>
+    <nav class="asbd-breadcrumb" aria-label="Breadcrumb">
+      <a href="/packages">Packages</a><span aria-hidden="true"> / </span>
+      <a href="/packages/sdk">SDK</a><span aria-hidden="true"> / </span>
+      <span aria-current="page">Setup guide</span>
+    </nav>
+    <h1>Setup guide</h1>
+    <p class="lead">Install the published SDK, verify the CLI, then inspect a repo before any model call. Commands stay synced via <code>npm run site:sync</code>.</p>
+    <ol>
+      <li>
+        Install
+        <div class="asbd-copy-row">
+          <pre id="asbdInstallCmd">npm i @inneranimalmedia/agentsam-sdk</pre>
+          <button type="button" class="asbd-copy-btn" data-copy-from="asbdInstallCmd">Copy</button>
+        </div>
+      </li>
+      <li>
+        Verify
+        <div class="asbd-copy-row">
+          <pre id="asbdCheckCmd">npx agentsam --version</pre>
+          <button type="button" class="asbd-copy-btn" data-copy-from="asbdCheckCmd">Copy</button>
+        </div>
+      </li>
+      <li>
+        Inspect
+        <div class="asbd-copy-row">
+          <pre id="asbdInspectCmd">npx agentsam inspect .</pre>
+          <button type="button" class="asbd-copy-btn" data-copy-from="asbdInspectCmd">Copy</button>
+        </div>
+      </li>
+      <li>Return to <a href="../help/">Help</a> or open <a href="/learn/">Learn</a></li>
+    </ol>
+  </main>
+  <div id="asbd-footer-mount"></div>
+  <script>
+  (function () {
+    function inject(id, url) {
+      var slot = document.getElementById(id);
+      if (!slot) return Promise.resolve();
+      return fetch(url).then(function (r) { return r.text(); }).then(function (html) {
+        var wrap = document.createElement('div');
+        wrap.innerHTML = html.trim();
+        while (wrap.firstChild) slot.parentNode.insertBefore(wrap.firstChild, slot);
+        slot.remove();
+      }).catch(function () {});
+    }
+    function hydrate() {
+      var data = window.AGENTSAM_INSTALLABLES;
+      if (!data || !data.copy_blocks) return;
+      var map = {
+        asbdInstallCmd: data.copy_blocks.install,
+        asbdCheckCmd: data.copy_blocks.check,
+        asbdInspectCmd: data.copy_blocks.inspect,
+      };
+      Object.keys(map).forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el && map[id]) el.textContent = map[id];
+      });
+    }
+    document.querySelectorAll('[data-copy-from]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var src = document.getElementById(btn.getAttribute('data-copy-from'));
+        if (!src || !navigator.clipboard) return;
+        navigator.clipboard.writeText(src.textContent.trim()).then(function () {
+          var prev = btn.textContent;
+          btn.textContent = 'Copied';
+          setTimeout(function () { btn.textContent = prev; }, 1200);
+        });
+      });
+    });
+    Promise.all([
+      inject('asbd-header-mount', '/site/global/asbd-header.html'),
+      inject('asbd-footer-mount', '/site/global/asbd-footer.html')
+    ]).then(function () {
+      hydrate();
+      if (window.AsbdTheme) {
+        AsbdTheme.syncFromDocument();
+        AsbdTheme.bindToggle(document.getElementById('asbdThemeToggle'));
+      }
+    });
+    window.addEventListener('DOMContentLoaded', hydrate);
+    setTimeout(hydrate, 0);
+  })();
+  </script>
+</body>
+</html>

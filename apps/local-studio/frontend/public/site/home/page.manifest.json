@@ -1,0 +1,31 @@
+{
+  "schema": "agentsam.page.manifest.v1",
+  "id": "page:agentsam-sdk.home",
+  "site": "agentsam-sdk",
+  "path": "/",
+  "title": "Agent Sam SDK",
+  "cms_editable": true,
+  "shell": {
+    "tokens": "../global/asbd-tokens.css",
+    "header": "../global/asbd-header.html",
+    "footer": "../global/asbd-footer.html",
+    "theme": "dark",
+    "namespace": "asbd"
+  },
+  "regions": {
+    "header": { "section_key": "header", "section_type": "header" },
+    "body": [
+      { "section_key": "hero", "section_type": "hero", "anchor": "#top" },
+      { "section_key": "secure", "section_type": "secure", "anchor": "#secure" },
+      { "section_key": "scale", "section_type": "scalable", "anchor": "#scale" },
+      { "section_key": "state", "section_type": "stateful", "anchor": "#state" },
+      { "section_key": "observe", "section_type": "observable", "anchor": "#observe" },
+      { "section_key": "cta", "section_type": "operating_layer", "anchor": null }
+    ],
+    "footer": { "section_key": "footer", "section_type": "footer" }
+  },
+  "publish": {
+    "public_url": "https://agentsam.inneranimalmedia.com/",
+    "source": "apps/frontend/public/site/home/index.html"
+  }
+}
