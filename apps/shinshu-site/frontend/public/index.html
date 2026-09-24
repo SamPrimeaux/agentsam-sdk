@@ -1,0 +1,2491 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shinshu Solutions - Opening Nagano to the World</title>
+    <meta name="description" content="Expert bilingual support for foreign real estate investors in Nagano, Japan">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap">
+    <script src="i18n.js"></script>
+    <script src="chatbot.js"></script>
+    <script src="themes.js"></script>
+    <link rel="stylesheet" href="theme-styles.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --orange-primary: #FF8C42;
+            --orange-dark: #E67635;
+            --orange-light: #FFB67A;
+            --cream: #FFF8F0;
+            --cream-dark: #F5E6D3;
+            --text-dark: #1A1A1A;
+            --text-gray: #4A4A4A;
+            --white: #FFFFFF;
+        }
+
+        body {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text-dark);
+            background: var(--cream);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        .heading {
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 248, 240, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 140, 66, 0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+        }
+
+        .logo-mountain {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--orange-primary), var(--orange-dark));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .logo-text h1 {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            letter-spacing: 1px;
+        }
+
+        .logo-text p {
+            font-size: 0.75rem;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2.5rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--text-dark);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            position: relative;
+            transition: color 0.3s ease;
+            cursor: pointer;
+        }
+
+        .nav-links a:hover {
+            color: var(--orange-primary);
+        }
+
+        .nav-links a.active::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--orange-primary);
+        }
+
+        .btn-primary {
+            background: var(--orange-primary);
+            color: white;
+            padding: 0.75rem 1.75rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .btn-primary:hover {
+            background: var(--orange-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 140, 66, 0.3);
+        }
+
+        /* Page Container */
+        .page {
+            display: none;
+            min-height: 100vh;
+            padding-top: 100px;
+            position: relative;
+        }
+
+        .page.active {
+            display: block;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 3rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 6rem 0 4rem;
+            position: relative;
+        }
+
+        .hero-content {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        .hero-text h1 {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 4rem;
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            color: var(--text-dark);
+        }
+
+        .hero-text .highlight {
+            color: var(--orange-primary);
+        }
+
+        .hero-text p {
+            font-size: 1.25rem;
+            color: var(--text-gray);
+            margin-bottom: 2rem;
+            line-height: 1.8;
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .stat {
+            text-align: center;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-number {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--orange-primary);
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-gray);
+            margin-top: 0.5rem;
+        }
+
+        .hero-visual {
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            background: linear-gradient(135deg, #FFE5D9 0%, #FFF8F0 100%);
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            background-image: url('https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=1200&q=80');
+            background-size: cover;
+            background-position: center;
+            background-blend-mode: overlay;
+        }
+
+        .hero-visual::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255, 229, 217, 0.7) 0%, rgba(255, 248, 240, 0.8) 100%);
+            z-index: 1;
+        }
+
+        .mountain-illustration {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Section Styles */
+        .section {
+            padding: 5rem 0;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .section-title {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+        }
+
+        .section-subtitle {
+            font-size: 1.1rem;
+            color: var(--text-gray);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Services Grid */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        /* Service Area Showcase */
+        .area-showcase {
+            margin-top: 4rem;
+            padding: 4rem 0;
+            background: linear-gradient(135deg, #FFF8F0 0%, #F5E6D3 100%);
+            border-radius: 24px;
+        }
+
+        .area-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .area-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+
+        .area-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(255, 140, 66, 0.2);
+        }
+
+        .area-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: linear-gradient(135deg, var(--orange-light), var(--orange-primary));
+        }
+
+        .area-content {
+            padding: 1.5rem;
+        }
+
+        .area-content h4 {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text-dark);
+        }
+
+        .area-content p {
+            color: var(--text-gray);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .service-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+
+        .service-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(255, 140, 66, 0.2);
+        }
+
+        .service-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--orange-light), var(--orange-primary));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .service-icon svg {
+            width: 32px;
+            height: 32px;
+            stroke: white;
+            fill: none;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+            stroke: currentColor;
+            fill: none;
+        }
+
+        .service-card h3 {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+        }
+
+        .service-card p {
+            color: var(--text-gray);
+            line-height: 1.7;
+        }
+
+        .service-features {
+            list-style: none;
+            margin-top: 1.5rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .service-features li {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .service-features li::before {
+            content: '✓';
+            color: var(--orange-primary);
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        /* About Section */
+        .about-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: start;
+        }
+
+        /* Profile Hero Section */
+        .profile-hero {
+            background: linear-gradient(135deg, #FFF8F0 0%, #F5E6D3 100%);
+            border-radius: 24px;
+            padding: 3rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        }
+
+        .profile-hero-content {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 3rem;
+            align-items: center;
+        }
+
+        .profile-image-container {
+            position: relative;
+        }
+
+        .profile-image {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 9/16;
+            object-fit: cover;
+            border-radius: 16px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+            border: 4px solid white;
+        }
+
+        .profile-badge {
+            position: absolute;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .profile-info {
+            padding: 1rem 0;
+        }
+
+        .social-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 140, 66, 0.4);
+        }
+
+        /* Portfolio Gallery */
+        .portfolio-section {
+            margin-top: 6rem;
+        }
+
+        .portfolio-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .portfolio-item {
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            aspect-ratio: 4/3;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .portfolio-item:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(255, 140, 66, 0.3);
+        }
+
+        .portfolio-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .portfolio-item:hover .portfolio-image {
+            transform: scale(1.1);
+        }
+
+        .portfolio-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+            padding: 2rem 1.5rem 1.5rem;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .portfolio-item:hover .portfolio-overlay {
+            transform: translateY(0);
+        }
+
+        .portfolio-caption {
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        @media (max-width: 768px) {
+            .profile-hero-content {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .profile-image-container {
+                max-width: 250px;
+                margin: 0 auto;
+            }
+
+            .portfolio-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .about-text p {
+            margin-bottom: 1.5rem;
+            line-height: 1.8;
+            color: var(--text-gray);
+        }
+
+        .credentials {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            border-left: 4px solid var(--orange-primary);
+            margin-bottom: 2rem;
+        }
+
+        .credentials h4 {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+        }
+
+        .credentials ul {
+            list-style: none;
+        }
+
+        .credentials li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--cream-dark);
+            display: flex;
+            align-items: start;
+            gap: 0.75rem;
+        }
+
+        .credentials li:last-child {
+            border-bottom: none;
+        }
+
+        .credentials li::before {
+            content: '✓';
+            color: var(--orange-primary);
+            font-weight: bold;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        /* Contact Section */
+        .contact-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+        }
+
+        .contact-info {
+            background: white;
+            padding: 3rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .contact-item {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--cream-dark);
+        }
+
+        .contact-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .contact-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--cream);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .contact-icon svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--orange-primary);
+        }
+
+        /* Language Switcher */
+        .language-switcher {
+            position: relative;
+            display: inline-block;
+        }
+
+        .language-btn {
+            background: transparent;
+            border: 2px solid var(--orange-primary);
+            color: var(--orange-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .language-btn:hover {
+            background: var(--orange-primary);
+            color: white;
+        }
+
+        .language-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 0.5rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            min-width: 150px;
+            display: none;
+            z-index: 1000;
+        }
+
+        .language-dropdown.open {
+            display: block;
+        }
+
+        .language-option {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .language-option:hover {
+            background: var(--cream);
+        }
+
+        .language-option.active {
+            background: var(--orange-primary);
+            color: white;
+        }
+
+        /* Chatbot Styles */
+        .chatbot-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+        }
+
+        .chatbot-toggle {
+            width: 60px;
+            height: 60px;
+            background: var(--orange-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(255, 140, 66, 0.4);
+            transition: transform 0.3s ease;
+        }
+
+        .chatbot-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        .chatbot-toggle svg {
+            width: 28px;
+            height: 28px;
+            stroke: white;
+        }
+
+        .chatbot-window {
+            position: absolute;
+            bottom: 80px;
+            right: 0;
+            width: 400px;
+            max-width: calc(100vw - 2rem);
+            height: 600px;
+            max-height: calc(100vh - 120px);
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chatbot-window.open {
+            display: flex;
+        }
+
+        .chatbot-header {
+            padding: 1.5rem;
+            background: var(--orange-primary);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chatbot-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 600;
+        }
+
+        .chatbot-title svg {
+            width: 24px;
+            height: 24px;
+            stroke: white;
+        }
+
+        .chatbot-close {
+            background: transparent;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        .chatbot-close svg {
+            width: 20px;
+            height: 20px;
+            stroke: white;
+        }
+
+        .chatbot-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .chatbot-message {
+            display: flex;
+            max-width: 80%;
+        }
+
+        .chatbot-message.user {
+            align-self: flex-end;
+        }
+
+        .chatbot-message.bot {
+            align-self: flex-start;
+        }
+
+        .message-content {
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            line-height: 1.5;
+        }
+
+        .chatbot-message.user .message-content {
+            background: var(--orange-primary);
+            color: white;
+        }
+
+        .chatbot-message.bot .message-content {
+            background: var(--cream);
+            color: var(--text-dark);
+        }
+
+        .chatbot-suggestions {
+            padding: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            border-top: 1px solid var(--cream-dark);
+        }
+
+        .suggestion-btn {
+            padding: 0.5rem 1rem;
+            background: var(--cream);
+            border: 1px solid var(--cream-dark);
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .suggestion-btn:hover {
+            background: var(--orange-primary);
+            color: white;
+            border-color: var(--orange-primary);
+        }
+
+        .chatbot-input-container {
+            padding: 1rem;
+            border-top: 1px solid var(--cream-dark);
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .chatbot-input {
+            flex: 1;
+            padding: 0.75rem;
+            border: 2px solid var(--cream-dark);
+            border-radius: 8px;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .chatbot-input:focus {
+            outline: none;
+            border-color: var(--orange-primary);
+        }
+
+        .chatbot-send {
+            padding: 0.75rem 1rem;
+            background: var(--orange-primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+
+        .chatbot-send svg {
+            width: 20px;
+            height: 20px;
+            stroke: white;
+        }
+
+        .typing-indicator {
+            display: inline-flex;
+            gap: 4px;
+            margin-right: 8px;
+        }
+
+        .typing-indicator span {
+            width: 6px;
+            height: 6px;
+            background: var(--text-gray);
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+
+            0%,
+            60%,
+            100% {
+                transform: translateY(0);
+            }
+
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .chatbot-window {
+                width: calc(100vw - 1rem);
+                height: calc(100vh - 100px);
+                bottom: 80px;
+                right: 0.5rem;
+            }
+        }
+
+        .contact-details h4 {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-dark);
+        }
+
+        .contact-details p {
+            color: var(--text-gray);
+        }
+
+        .contact-form {
+            background: white;
+            padding: 3rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--cream-dark);
+            border-radius: 8px;
+            font-family: 'Roboto', sans-serif;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--orange-primary);
+        }
+
+        .form-group textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        /* Dashboard */
+        .dashboard-header {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .dashboard-card h3 {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+        }
+
+        .dashboard-number {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--orange-primary);
+        }
+
+        .data-table {
+            width: 100%;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+        }
+
+        .data-table h3 {
+            padding: 1.5rem;
+            font-size: 1.5rem;
+            font-family: 'Roboto Mono', monospace;
+            background: var(--cream);
+        }
+
+        .data-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th {
+            background: var(--cream);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-dark);
+            border-bottom: 2px solid var(--cream-dark);
+        }
+
+        .data-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--cream-dark);
+        }
+
+        .data-table tr:hover {
+            background: var(--cream);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background: #E8F5E9;
+            color: #2E7D32;
+        }
+
+        .badge-warning {
+            background: #FFF3E0;
+            color: #E65100;
+        }
+
+        .badge-info {
+            background: #E3F2FD;
+            color: #1565C0;
+        }
+
+        .spinner {
+            border: 3px solid var(--cream-dark);
+            border-top: 3px solid var(--orange-primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .alert {
+            background: var(--cream);
+            padding: 2rem;
+            border-radius: 12px;
+            border-left: 4px solid var(--orange-primary);
+            margin: 2rem 0;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--text-dark);
+            color: white;
+            padding: 3rem 0 1.5rem;
+            margin-top: 5rem;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 3rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-brand h3 {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .footer-brand p {
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.7;
+        }
+
+        .footer-links h4 {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .footer-links ul {
+            list-style: none;
+        }
+
+        .footer-links li {
+            margin-bottom: 0.75rem;
+        }
+
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: color 0.3s ease;
+            cursor: pointer;
+        }
+
+        .footer-links a:hover {
+            color: var(--orange-primary);
+        }
+
+        .footer-bottom {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 1.5rem;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9rem;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .nav-container {
+                padding: 1rem 1.5rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .nav-links {
+                gap: 1rem;
+                font-size: 0.85rem;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .container {
+                padding: 0 1.5rem;
+            }
+
+            .hero-content,
+            .about-content,
+            .contact-content {
+                grid-template-columns: 1fr;
+            }
+
+            .hero-text h1 {
+                font-size: 2.5rem;
+            }
+
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-content {
+                grid-template-columns: 1fr;
+            }
+
+            .hero-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- SVG Icons Sprite -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+        <symbol id="icon-translation" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 8l6 6M11 8l6 6M2 12h20M12 2v20" />
+            <circle cx="12" cy="12" r="10" />
+        </symbol>
+        <symbol id="icon-handshake" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 12h8M8 8h8M8 16h8M4 4h16v16H4z" />
+            <path d="M12 4v16M4 12h16" />
+        </symbol>
+        <symbol id="icon-network" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3" />
+            <circle cx="6" cy="6" r="2" />
+            <circle cx="18" cy="6" r="2" />
+            <circle cx="6" cy="18" r="2" />
+            <circle cx="18" cy="18" r="2" />
+            <line x1="12" y1="9" x2="12" y2="15" />
+            <line x1="9" y1="12" x2="15" y2="12" />
+            <line x1="8" y1="8" x2="10" y2="10" />
+            <line x1="14" y1="8" x2="16" y2="10" />
+            <line x1="8" y1="16" x2="10" y2="14" />
+            <line x1="14" y1="16" x2="16" y2="14" />
+        </symbol>
+        <symbol id="icon-construction" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <path d="M9 9h6M9 15h6M12 3v18" />
+            <circle cx="7" cy="7" r="1" />
+            <circle cx="17" cy="7" r="1" />
+            <circle cx="7" cy="17" r="1" />
+            <circle cx="17" cy="17" r="1" />
+        </symbol>
+        <symbol id="icon-property" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <polyline points="9 22 9 12 15 12 15 22" />
+        </symbol>
+        <symbol id="icon-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" />
+            <circle cx="12" cy="12" r="6" />
+            <circle cx="12" cy="12" r="2" />
+            <line x1="12" y1="2" x2="12" y2="6" />
+            <line x1="12" y1="18" x2="12" y2="22" />
+            <line x1="2" y1="12" x2="6" y2="12" />
+            <line x1="18" y1="12" x2="22" y2="12" />
+        </symbol>
+        <symbol id="icon-mountain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 20l9-9 9 9H3z" />
+            <path d="M3 20h18M12 11v9" />
+            <path d="M6 17l3-3 3 3 3-3 3 3" />
+        </symbol>
+        <symbol id="icon-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </symbol>
+        <symbol id="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+        </symbol>
+        <symbol id="icon-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13" />
+            <polygon points="22 2 15 22 11 13 2 9 22 2" />
+        </symbol>
+        <symbol id="icon-language" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="2" y1="12" x2="22" y2="12" />
+            <line x1="12" y1="2" x2="15" y2="12" />
+            <line x1="12" y1="22" x2="9" y2="12" />
+        </symbol>
+        <symbol id="icon-email" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+            <polyline points="22,6 12,13 2,6" />
+        </symbol>
+        <symbol id="icon-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path
+                d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+        </symbol>
+        <symbol id="icon-location" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+            <circle cx="12" cy="10" r="3" />
+        </symbol>
+    </svg>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <div class="logo-section" onclick="navigateTo('home')">
+                <div class="logo-mountain">
+                    <svg class="icon">
+                        <use href="#icon-mountain"></use>
+                    </svg>
+                </div>
+                <div class="logo-text">
+                    <h1>SHINSHU SOLUTIONS</h1>
+                    <p data-i18n="nav.tagline">Opening Nagano to the World</p>
+                </div>
+            </div>
+            <div class="nav-links">
+                <a onclick="navigateTo('home')" class="nav-link active" data-page="home" data-i18n="nav.home">Home</a>
+                <a onclick="navigateTo('about')" class="nav-link" data-page="about" data-i18n="nav.about">About</a>
+                <a onclick="navigateTo('services')" class="nav-link" data-page="services"
+                    data-i18n="nav.services">Services</a>
+                <a onclick="navigateTo('contact')" class="nav-link" data-page="contact"
+                    data-i18n="nav.contact">Contact</a>
+                <a href="/gallery" class="nav-link" data-i18n="nav.gallery">Gallery</a>
+                <div class="language-switcher">
+                    <button class="language-btn" id="language-btn" onclick="window.toggleLanguageMenu()">
+                        <svg class="icon">
+                            <use href="#icon-language"></use>
+                        </svg>
+                        <span id="current-lang">EN</span>
+                    </button>
+                    <div class="language-dropdown" id="language-dropdown">
+                        <div class="language-option active" onclick="window.changeLanguage('en')">English</div>
+                        <div class="language-option" onclick="window.changeLanguage('ja')">日本語</div>
+                        <div class="language-option" onclick="window.changeLanguage('zh')">中文</div>
+                        <div class="language-option" onclick="window.changeLanguage('ko')">한국어</div>
+                    </div>
+                </div>
+                <button class="btn-primary" onclick="window.location.href='/dashboard'"
+                    data-i18n="nav.dashboard">Dashboard</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Home Page -->
+    <div id="home-page" class="page active">
+        <div class="container">
+            <div class="hero">
+                <div class="hero-content">
+                    <div class="hero-text">
+                        <h1 class="serif">
+                            <span data-i18n="hero.title.prefix">Navigating</span> <span class="highlight"
+                                data-i18n="hero.titleHighlight">Real Estate Investment</span> <span
+                                data-i18n="hero.title.suffix">in Japan</span>
+                        </h1>
+                        <p data-i18n="hero.subtitle">
+                            Expert bilingual support for foreign investors in Nagano's stunning Shinshu region.
+                            We bridge language and cultural gaps to help you successfully manage property investments
+                            in Japan's world-class ski resort areas.
+                        </p>
+                        <button class="btn-primary" onclick="navigateTo('contact')" data-i18n="hero.cta">Get in
+                            Touch</button>
+
+                        <div class="hero-stats">
+                            <div class="stat">
+                                <span class="stat-number serif">5+</span>
+                                <span class="stat-label" data-i18n="hero.stats.experience">Years Experience</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-number serif">N1</span>
+                                <span class="stat-label" data-i18n="hero.stats.certified">JLPT Certified</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-number serif">100%</span>
+                                <span class="stat-label" data-i18n="hero.stats.bilingual">Bilingual</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="hero-visual" id="hero-visual"
+                        style="background: linear-gradient(135deg, var(--orange-primary), var(--orange-dark));">
+                        <div class="mountain-illustration"
+                            style="display: flex; align-items: center; justify-content: center; flex-direction: column; text-align: center; padding: 2rem; color: white; text-shadow: 0 2px 10px rgba(0,0,0,0.5); position: relative; z-index: 2;">
+                            <svg style="width: 120px; height: 120px; margin-bottom: 1rem; stroke: white; fill: rgba(255,255,255,0.2);"
+                                viewBox="0 0 24 24">
+                                <use href="#icon-mountain"></use>
+                            </svg>
+                            <h3
+                                style="font-family: 'Roboto Mono', monospace; font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">
+                                Nagano Prefecture</h3>
+                            <p style="font-size: 1rem; opacity: 0.95;">Nozawa Onsen • Iiyama • Myoko • Karuizawa</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2 class="section-title serif" data-i18n="services.title">Why Shinshu Solutions?</h2>
+                    <p class="section-subtitle" data-i18n="services.subtitle">
+                        Your trusted local partner for real estate success in Nagano, Japan
+                    </p>
+                </div>
+
+                <div class="services-grid">
+                    <div class="service-card">
+                        <div class="service-icon">
+                            <svg>
+                                <use href="#icon-translation"></use>
+                            </svg>
+                        </div>
+                        <h3 class="serif" data-i18n="services.translation.title">Translation & Interpretation</h3>
+                        <p data-i18n="services.translation.desc">Professional Japanese-English translation for property
+                            discussions, contractor meetings, site visits, and documents.</p>
+                    </div>
+
+                    <div class="service-card">
+                        <div class="service-icon">
+                            <svg>
+                                <use href="#icon-handshake"></use>
+                            </svg>
+                        </div>
+                        <h3 class="serif" data-i18n="services.liaison.title">Client Liaison Services</h3>
+                        <p data-i18n="services.liaison.desc">Support for Japanese businesses handling foreign clients,
+                            ensuring smooth communication and expectation alignment.</p>
+                    </div>
+
+                    <div class="service-card">
+                        <div class="service-icon">
+                            <svg>
+                                <use href="#icon-network"></use>
+                            </svg>
+                        </div>
+                        <h3 class="serif" data-i18n="services.coordination.title">Introductions & Coordination</h3>
+                        <p data-i18n="services.coordination.desc">Connect with trusted local realtors and contractors.
+                            Complete coordination support throughout your project.</p>
+                    </div>
+
+                    <div class="service-card">
+                        <div class="service-icon">
+                            <svg>
+                                <use href="#icon-construction"></use>
+                            </svg>
+                        </div>
+                        <h3 class="serif" data-i18n="services.project.title">Project Support</h3>
+                        <p data-i18n="services.project.desc">Renovation and improvement project coordination, schedule
+                            tracking, budget management, and on-site check-ins.</p>
+                    </div>
+
+                    <div class="service-card">
+                        <div class="service-icon">
+                            <svg>
+                                <use href="#icon-property"></use>
+                            </svg>
+                        </div>
+                        <h3 class="serif" data-i18n="services.management.title">Property Management</h3>
+                        <p data-i18n="services.management.desc">Routine property checks, keyholding services, and repair
+                            coordination for absentee owners.</p>
+                    </div>
+
+                    <div class="service-card">
+                        <div class="service-icon">
+                            <svg>
+                                <use href="#icon-target"></use>
+                            </svg>
+                        </div>
+                        <h3 class="serif" data-i18n="services.cultural.title">Cultural Bridge</h3>
+                        <p data-i18n="services.cultural.desc">Navigate the cultural expectations that often lead to
+                            missed deadlines and budget overruns.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Page -->
+    <div id="about-page" class="page">
+        <div class="container">
+            <!-- Profile Hero Section -->
+            <div class="profile-hero" style="margin-bottom: 4rem;">
+                <div class="profile-hero-content">
+                    <div class="profile-image-container">
+                        <img src="" alt="Jake Waalk" class="profile-image" id="jake-profile-image" loading="eager"
+                            style="background: linear-gradient(135deg, var(--orange-light), var(--orange-primary)); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem;">
+                        <div id="profile-image-placeholder"
+                            style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: 600; z-index: 1; pointer-events: none;">
+                            Upload Profile Image</div>
+                        <div class="profile-badge">
+                            <svg style="width: 24px; height: 24px; stroke: white; fill: none;">
+                                <use href="#icon-mountain"></use>
+                            </svg>
+                            <span>Mt. Goryudake 2814m</span>
+                        </div>
+                    </div>
+                    <div class="profile-info">
+                        <h1 class="serif" style="font-size: 3rem; margin-bottom: 1rem; color: var(--text-dark);">Jake
+                            Waalk</h1>
+                        <p class="profile-tagline"
+                            style="font-size: 1.3rem; color: var(--orange-primary); font-weight: 600; margin-bottom: 1.5rem;">
+                            Your Local Expert in Nagano Prefecture
+                        </p>
+                        <p class="profile-bio"
+                            style="font-size: 1.1rem; line-height: 1.8; color: var(--text-gray); margin-bottom: 2rem;">
+                            Bilingual consultant specializing in real estate investment support for foreign investors.
+                            First non-Japanese Town Development Officer in Nagano Prefecture.
+                            Deeply connected to the local community with extensive experience bridging cultural and
+                            linguistic gaps.
+                        </p>
+                        <div class="profile-social" style="display: flex; gap: 1rem; align-items: center;">
+                            <a href="https://www.facebook.com/jake.waalk" target="_blank" rel="noopener noreferrer"
+                                class="social-link"
+                                style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; background: linear-gradient(135deg, var(--orange-light), var(--orange-primary)); color: white; border-radius: 8px; text-decoration: none; font-weight: 600; transition: transform 0.3s ease, box-shadow 0.3s ease;">
+                                <svg style="width: 20px; height: 20px; fill: white;" viewBox="0 0 24 24">
+                                    <path
+                                        d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                                </svg>
+                                <span>Connect on Facebook</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2 class="section-title serif" data-i18n="about.title">About Jake Waalk</h2>
+                    <p class="section-subtitle" data-i18n="about.subtitle">
+                        Your local expert with deep roots in Nagano
+                    </p>
+                </div>
+
+                <div class="about-content">
+                    <div class="about-text">
+                        <p data-i18n="about.intro1">
+                            Shinshu Solutions is a Nagano-based bilingual consulting service operated by Jake Waalk,
+                            specializing in supporting foreign real estate investors and Japanese construction firms.
+                            I help international clients navigate the practical realities of buying, renovating, and
+                            maintaining property in Japan.
+                        </p>
+                        <p data-i18n="about.intro2">
+                            My service area is centered on the world-class ski resort Nozawa Onsen, which was featured
+                            on the cover of Condé Nast Traveler as one of the world's top 9 ski resorts for the 2026
+                            season.
+                            I also work in the surrounding region including Iiyama, Shinano, Myoko, Karuizawa, and
+                            nearby resort areas.
+                        </p>
+                        <p data-i18n="about.intro3">
+                            I relocated to Nagano Prefecture after earning my Master's Degree in Anthropology in 2015.
+                            Since then, I have amassed wide-ranging professional experience in Nagano across both the
+                            public and private sectors. I worked as an English teacher on the JET Program, serving two
+                            years as President of Nagano AJET.
+                        </p>
+                        <p data-i18n="about.intro4">
+                            From 2020 to 2021, I was employed by Tomi City on ecotourism development at the Tomi Tourism
+                            Association, where I became the first non-Japanese Town Development Officer in Nagano
+                            Prefecture.
+                            More recently, I worked in the Japanese mushroom industry, handling marketing and
+                            international
+                            client management for a Nagano-based export firm.
+                        </p>
+                    </div>
+
+                    <div>
+                        <div class="credentials">
+                            <h4 class="serif" data-i18n="about.qualifications">Qualifications & Experience</h4>
+                            <ul data-i18n-list="about.qualifications">
+                                <li>JLPT N1 Certification (Highest Level of Japanese Fluency)</li>
+                                <li>5+ Years Technical Japanese-English Translation & Interpretation</li>
+                                <li>Master's Degree in Anthropology</li>
+                                <li>First Non-Japanese Town Development Officer in Nagano Prefecture</li>
+                                <li>President of Nagano AJET (2 Years)</li>
+                                <li>Deep Construction Industry Connections Through Family Ties</li>
+                                <li>Export Industry Experience in International Client Management</li>
+                            </ul>
+                        </div>
+
+                        <div class="credentials">
+                            <h4 class="serif" data-i18n="about.serviceAreas">Service Areas</h4>
+                            <ul data-i18n-list="about.serviceAreas">
+                                <li>Nozawa Onsen (Primary Focus)</li>
+                                <li>Iiyama</li>
+                                <li>Shinano</li>
+                                <li>Myoko</li>
+                                <li>Karuizawa</li>
+                                <li>Komoro Region</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Service Areas Showcase -->
+                <div class="area-showcase">
+                    <div class="section-header">
+                        <h2 class="section-title serif" data-i18n="about.serviceAreas">Service Areas</h2>
+                        <p class="section-subtitle">Beautiful regions we serve in Nagano Prefecture</p>
+                    </div>
+                    <div class="area-grid" id="area-showcase-grid">
+                        <!-- Area images will load from R2 assets -->
+                        <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-gray);">
+                            <p>Area showcase images will appear here once uploaded via the dashboard.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Portfolio Gallery Section -->
+                <div class="portfolio-section"
+                    style="margin-top: 6rem; padding-top: 4rem; border-top: 2px solid color-mix(in srgb, var(--orange-primary) 20%, transparent);">
+                    <div class="section-header">
+                        <h2 class="section-title serif">Mountain Photography & Adventures</h2>
+                        <p class="section-subtitle">Jake's journeys through Japan's most beautiful mountains -
+                            showcasing the regions we serve</p>
+                        <a href="/gallery"
+                            style="display: inline-block; margin-top: 1.5rem; padding: 0.75rem 2rem; background: linear-gradient(135deg, var(--orange-light), var(--orange-primary)); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: transform 0.3s ease, box-shadow 0.3s ease;"
+                            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(255, 140, 66, 0.4)'"
+                            onmouseout="this.style.transform=''; this.style.boxShadow=''">View Full Gallery →</a>
+                    </div>
+                    <div class="portfolio-grid" id="portfolio-gallery">
+                        <!-- Portfolio images will be loaded from R2 assets -->
+                        <div class="loading-placeholder"
+                            style="text-align: center; padding: 3rem; color: var(--text-gray);">
+                            Loading Jake's mountain photography...
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Services Page -->
+    <div id="services-page" class="page">
+        <div class="container">
+            <div class="section">
+                <div class="section-header">
+                    <h2 class="section-title serif" data-i18n="servicesPage.title">Our Services</h2>
+                    <p class="section-subtitle" data-i18n="servicesPage.subtitle">
+                        Comprehensive support for your real estate journey in Japan
+                    </p>
+                </div>
+
+                <div style="display: grid; gap: 3rem;">
+                    <div class="service-card" style="display: grid; grid-template-columns: 80px 1fr; gap: 2rem;">
+                        <div class="service-icon"
+                            style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--orange-light), var(--orange-primary)); border-radius: 12px;">
+                            <svg style="width: 40px; height: 40px; stroke: white; fill: none;">
+                                <use href="#icon-translation"></use>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="serif" style="font-size: 2rem;" data-i18n="servicesPage.translation.title">
+                                Translation & Interpretation</h3>
+                            <p style="margin-bottom: 1.5rem;" data-i18n="servicesPage.translation.desc">Professional
+                                Japanese-English translation and
+                                interpretation services for all aspects of your property investment.</p>
+                            <ul class="service-features" data-i18n-features="translation">
+                                <li>Property discussion translation</li>
+                                <li>Contractor meeting interpretation</li>
+                                <li>Site visit coordination</li>
+                                <li>Document translation</li>
+                                <li>Legal document review</li>
+                                <li>Contract negotiation support</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="service-card" style="display: grid; grid-template-columns: 80px 1fr; gap: 2rem;">
+                        <div class="service-icon"
+                            style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--orange-light), var(--orange-primary)); border-radius: 12px;">
+                            <svg style="width: 40px; height: 40px; stroke: white; fill: none;">
+                                <use href="#icon-handshake"></use>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="serif" style="font-size: 2rem;" data-i18n="servicesPage.liaison.title">Client
+                                Liaison for Japanese Businesses</h3>
+                            <p style="margin-bottom: 1.5rem;" data-i18n="servicesPage.liaison.desc">Support for Japanese
+                                companies handling foreign clients,
+                                ensuring smooth communication and cultural alignment.</p>
+                            <ul class="service-features" data-i18n-features="liaison">
+                                <li>Expectation alignment</li>
+                                <li>Communication flow management</li>
+                                <li>Cultural consultation</li>
+                                <li>Foreign client support</li>
+                                <li>Business practice guidance</li>
+                                <li>Ongoing relationship management</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="service-card" style="display: grid; grid-template-columns: 80px 1fr; gap: 2rem;">
+                        <div class="service-icon"
+                            style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--orange-light), var(--orange-primary)); border-radius: 12px;">
+                            <svg style="width: 40px; height: 40px; stroke: white; fill: none;">
+                                <use href="#icon-network"></use>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="serif" style="font-size: 2rem;" data-i18n="servicesPage.coordination.title">
+                                Introductions & Coordination</h3>
+                            <p style="margin-bottom: 1.5rem;" data-i18n="servicesPage.coordination.desc">Connect with
+                                trusted local professionals and ensure
+                                seamless project coordination.</p>
+                            <ul class="service-features" data-i18n-features="coordination">
+                                <li>Realtor introductions</li>
+                                <li>Contractor recommendations</li>
+                                <li>Local government liaison</li>
+                                <li>Service provider network</li>
+                                <li>Project coordination</li>
+                                <li>Stakeholder management</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="service-card" style="display: grid; grid-template-columns: 80px 1fr; gap: 2rem;">
+                        <div class="service-icon"
+                            style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--orange-light), var(--orange-primary)); border-radius: 12px;">
+                            <svg style="width: 40px; height: 40px; stroke: white; fill: none;">
+                                <use href="#icon-construction"></use>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="serif" style="font-size: 2rem;" data-i18n="servicesPage.project.title">Renovation
+                                / Project Support</h3>
+                            <p style="margin-bottom: 1.5rem;" data-i18n="servicesPage.project.desc">Comprehensive
+                                support for renovation and improvement
+                                projects from planning to completion.</p>
+                            <ul class="service-features" data-i18n-features="project">
+                                <li>Contractor coordination</li>
+                                <li>Schedule tracking</li>
+                                <li>Budget management</li>
+                                <li>On-site check-ins</li>
+                                <li>Issue resolution</li>
+                                <li>Quality assurance</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="service-card" style="display: grid; grid-template-columns: 80px 1fr; gap: 2rem;">
+                        <div class="service-icon"
+                            style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--orange-light), var(--orange-primary)); border-radius: 12px;">
+                            <svg style="width: 40px; height: 40px; stroke: white; fill: none;">
+                                <use href="#icon-property"></use>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="serif" style="font-size: 2rem;" data-i18n="servicesPage.management.title">
+                                Property Care & Management</h3>
+                            <p style="margin-bottom: 1.5rem;" data-i18n="servicesPage.management.desc">Reliable property
+                                management services for absentee owners.
+                            </p>
+                            <ul class="service-features" data-i18n-features="management">
+                                <li>Routine property checks</li>
+                                <li>Keyholding services</li>
+                                <li>Repair coordination</li>
+                                <li>Maintenance scheduling</li>
+                                <li>Emergency response</li>
+                                <li>Seasonal preparation</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact Page -->
+    <div id="contact-page" class="page">
+        <div class="container">
+            <div class="section">
+                <div class="section-header">
+                    <h2 class="section-title serif">Get in Touch</h2>
+                    <p class="section-subtitle">
+                        Ready to start your real estate journey in Nagano?
+                    </p>
+                </div>
+
+                <div class="contact-content">
+                    <div class="contact-info">
+                        <div class="contact-item">
+                            <div class="contact-icon">
+                                <svg>
+                                    <use href="#icon-email"></use>
+                                </svg>
+                            </div>
+                            <div class="contact-details">
+                                <h4>Email</h4>
+                                <p><a href="mailto:[email protected]">[email protected]</a></p>
+                            </div>
+                        </div>
+
+                        <div class="contact-item">
+                            <div class="contact-icon">
+                                <svg>
+                                    <use href="#icon-phone"></use>
+                                </svg>
+                            </div>
+                            <div class="contact-details">
+                                <h4>Phone</h4>
+                                <p>+81 070-7476-5362</p>
+                            </div>
+                        </div>
+
+                        <div class="contact-item">
+                            <div class="contact-icon">
+                                <svg>
+                                    <use href="#icon-location"></use>
+                                </svg>
+                            </div>
+                            <div class="contact-details">
+                                <h4>Location</h4>
+                                <p>Komoro, Nagano Prefecture, Japan</p>
+                                <p style="font-size: 0.9rem; margin-top: 0.25rem;">長野県小諸市</p>
+                            </div>
+                        </div>
+
+                        <div class="contact-item">
+                            <div class="contact-icon">
+                                <svg>
+                                    <use href="#icon-mountain"></use>
+                                </svg>
+                            </div>
+                            <div class="contact-details">
+                                <h4>Service Areas</h4>
+                                <p>Nozawa Onsen, Iiyama, Shinano, Myoko, Karuizawa</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="contact-form">
+                        <form id="contactForm" onsubmit="handleContactSubmit(event)">
+                            <div class="form-group">
+                                <label data-i18n="contact.name">Name</label>
+                                <input type="text" id="name" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label data-i18n="contact.email">Email</label>
+                                <input type="email" id="email" required data-i18n-placeholder="contact.emailPlaceholder"
+                                    placeholder="your.email@example.com">
+                            </div>
+
+                            <div class="form-group">
+                                <label data-i18n="contact.subject">Subject</label>
+                                <input type="text" id="subject" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label data-i18n="contact.message">Message</label>
+                                <textarea id="message" required></textarea>
+                            </div>
+
+                            <button type="submit" class="btn-primary" style="width: 100%;" data-i18n="contact.send">
+                                Send Message
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Page -->
+    <div id="dashboard-page" class="page">
+        <div class="container">
+            <div class="dashboard-header">
+                <h2 class="serif" style="font-size: 2.5rem; margin-bottom: 0.5rem;">
+                    Business Dashboard
+                </h2>
+                <p style="color: var(--text-gray);">
+                    Manage your clients, properties, and projects
+                </p>
+            </div>
+
+            <div id="dashboard-content">
+                <div class="dashboard-grid">
+                    <div class="dashboard-card">
+                        <h3>Total Clients</h3>
+                        <div class="dashboard-number" id="clientsCount">0</div>
+                    </div>
+                    <div class="dashboard-card">
+                        <h3>Properties</h3>
+                        <div class="dashboard-number" id="propertiesCount">0</div>
+                    </div>
+                    <div class="dashboard-card">
+                        <h3>Active Projects</h3>
+                        <div class="dashboard-number" id="projectsCount">0</div>
+                    </div>
+                </div>
+
+                <div class="data-table">
+                    <h3>Recent Clients</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Country</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clientsTable">
+                            <tr>
+                                <td colspan="4" style="text-align: center; padding: 2rem;">
+                                    <div class="spinner"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="data-table">
+                    <h3>Recent Projects</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Budget</th>
+                            </tr>
+                        </thead>
+                        <tbody id="projectsTable">
+                            <tr>
+                                <td colspan="4" style="text-align: center; padding: 2rem;">
+                                    <div class="spinner"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <h3 class="serif">Shinshu Solutions</h3>
+                    <p>
+                        Opening Nagano to the world. Expert bilingual support for foreign
+                        real estate investors in Japan's stunning Shinshu region.
+                    </p>
+                    <p style="margin-top: 1rem; font-size: 0.9rem;">
+                        通訳・翻訳・海外向けのマーケティング＆コンサルティング
+                    </p>
+                </div>
+
+                <div class="footer-links">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a onclick="navigateTo('home')">Home</a></li>
+                        <li><a onclick="navigateTo('about')">About</a></li>
+                        <li><a onclick="navigateTo('services')">Services</a></li>
+                        <li><a onclick="navigateTo('contact')">Contact</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-links">
+                    <h4>Contact</h4>
+                    <ul>
+                        <li><a href="mailto:[email protected]">[email protected]</a></li>
+                        <li>+81 070-7476-5362</li>
+                        <li>Komoro, Nagano Prefecture</li>
+                        <li>長野県小諸市</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>© 2024 Shinshu Solutions - All Rights Reserved</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // ===== CONFIGURATION =====
+        const API_CONFIG = {
+            apiUrl: 'https://shinshu-solutions.meauxbility.workers.dev'
+        };
+
+        // ===== LANGUAGE MANAGEMENT =====
+        window.toggleLanguageMenu = function () {
+            const dropdown = document.getElementById('language-dropdown');
+            if (dropdown) {
+                dropdown.classList.toggle('open');
+            }
+        };
+
+        window.changeLanguage = function (langCode) {
+            // Store language preference immediately
+            localStorage.setItem('shinshu_language', langCode);
+
+            // Update UI immediately
+            updateLanguageUI(langCode);
+
+            // Function to actually update content
+            const doUpdate = () => {
+                if (window.i18n && window.i18n.translations && window.i18n.translations[langCode]) {
+                    // Update current language
+                    window.i18n.currentLanguage = langCode;
+                    document.documentElement.lang = langCode;
+
+                    // Force immediate content update - call multiple times to ensure it works
+                    if (window.i18n.updatePageContent) {
+                        window.i18n.updatePageContent();
+                    }
+
+                    // Update chatbot
+                    if (window.shinshuChatbot) {
+                        window.shinshuChatbot.setLanguage(langCode);
+                    }
+                    return true;
+                }
+                return false;
+            };
+
+            // Try immediately
+            if (!doUpdate()) {
+                // Retry if i18n not loaded yet
+                let retries = 0;
+                const retryInterval = setInterval(() => {
+                    retries++;
+                    if (doUpdate()) {
+                        clearInterval(retryInterval);
+                    } else if (retries > 30) {
+                        clearInterval(retryInterval);
+                        alert('Language switching failed. Please refresh the page.');
+                    }
+                }, 100);
+            } else {
+                // Even if it worked, do additional updates to catch any missed elements
+                setTimeout(doUpdate, 50);
+                setTimeout(doUpdate, 150);
+                setTimeout(doUpdate, 300);
+            }
+
+            const dropdown = document.getElementById('language-dropdown');
+            if (dropdown) {
+                dropdown.classList.remove('open');
+            }
+        };
+
+        function updateLanguageUI(langCode) {
+            const langMap = { en: 'EN', ja: 'JA', zh: 'ZH', ko: 'KO' };
+            const currentLangEl = document.getElementById('current-lang');
+            if (currentLangEl) {
+                currentLangEl.textContent = langMap[langCode] || 'EN';
+            }
+
+            const options = document.querySelectorAll('.language-option');
+            options.forEach(opt => {
+                opt.classList.remove('active');
+                const onclick = opt.getAttribute('onclick') || '';
+                if (onclick.includes(`'${langCode}'`) || onclick.includes(`"${langCode}"`)) {
+                    opt.classList.add('active');
+                }
+            });
+        }
+
+        // Close language dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('language-dropdown');
+            const btn = document.getElementById('language-btn');
+            if (dropdown && btn && !dropdown.contains(e.target) && !btn.contains(e.target)) {
+                dropdown.classList.remove('open');
+            }
+        });
+
+        // ===== NAVIGATION =====
+        function navigateTo(pageName) {
+            // Hide all pages
+            const pages = document.querySelectorAll('.page');
+            pages.forEach(page => page.classList.remove('active'));
+
+            // Show selected page
+            const targetPage = document.getElementById(pageName + '-page');
+            if (targetPage) {
+                targetPage.classList.add('active');
+            }
+
+            // Load portfolio images when About page is shown
+            if (pageName === 'about') {
+                setTimeout(() => {
+                    if (typeof loadPortfolioImages === 'function') loadPortfolioImages();
+                    if (typeof loadProfileImage === 'function') loadProfileImage();
+                }, 100);
+            }
+
+            // Update nav links
+            const navLinks = document.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                if (link.getAttribute('data-page') === pageName) {
+                    link.classList.add('active');
+                } else {
+                    link.classList.remove('active');
+                }
+            });
+
+            // Load dashboard data if navigating to dashboard
+            if (pageName === 'dashboard') {
+                loadDashboardData();
+            }
+
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+
+        // ===== CONTACT FORM =====
+        function handleContactSubmit(event) {
+            event.preventDefault();
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const subject = document.getElementById('subject').value;
+            const message = document.getElementById('message').value;
+
+            alert(`Thank you for your message, ${name}! Jake will get back to you soon at ${email}.`);
+
+            // Reset form
+            document.getElementById('contactForm').reset();
+        }
+
+        // ===== DASHBOARD =====
+        function loadDashboardData() {
+            // Load data from API
+            loadClients();
+            loadProperties();
+            loadProjects();
+        }
+
+        async function loadClients() {
+            try {
+                const response = await fetch(`${API_CONFIG.apiUrl}/api/clients`);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const clients = data.data || [];
+
+                    document.getElementById('clientsCount').textContent = clients.length;
+
+                    const tableBody = document.getElementById('clientsTable');
+                    if (clients.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-gray);">No clients yet. Start by creating your first client!</td></tr>';
+                    } else {
+                        tableBody.innerHTML = clients.slice(0, 10).map(client => `
+                            <tr>
+                                <td>${client.name || 'N/A'}</td>
+                                <td>${client.email || 'N/A'}</td>
+                                <td>${client.country || 'N/A'}</td>
+                                <td><span class="badge badge-success">${client.status || 'active'}</span></td>
+                            </tr>
+                        `).join('');
+                    }
+                } else {
+                    throw new Error('Failed to load clients');
+                }
+            } catch (error) {
+                console.error('Error loading clients:', error);
+                document.getElementById('clientsCount').textContent = '—';
+                document.getElementById('clientsTable').innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-gray);">Failed to load clients. Check API connection.</td></tr>';
+            }
+        }
+
+        async function loadProperties() {
+            try {
+                const response = await fetch(`${API_CONFIG.apiUrl}/api/properties`);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const properties = data.data || [];
+                    document.getElementById('propertiesCount').textContent = properties.length;
+                } else {
+                    throw new Error('Failed to load properties');
+                }
+            } catch (error) {
+                console.error('Error loading properties:', error);
+                document.getElementById('propertiesCount').textContent = '—';
+            }
+        }
+
+        async function loadProjects() {
+            try {
+                const response = await fetch(`${API_CONFIG.apiUrl}/api/projects`);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const projects = data.data || [];
+                    const activeProjects = projects.filter(p => p.status === 'in_progress' || p.status === 'planning');
+
+                    document.getElementById('projectsCount').textContent = activeProjects.length;
+
+                    const tableBody = document.getElementById('projectsTable');
+                    if (projects.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-gray);">No projects yet. Start tracking your first project!</td></tr>';
+                    } else {
+                        tableBody.innerHTML = projects.slice(0, 10).map(project => {
+                            let badgeClass = 'badge-warning';
+                            if (project.status === 'completed') badgeClass = 'badge-success';
+                            if (project.status === 'in_progress') badgeClass = 'badge-info';
+
+                            return `
+                                <tr>
+                                    <td>${project.name || 'N/A'}</td>
+                                    <td>${project.project_type || 'N/A'}</td>
+                                    <td><span class="badge ${badgeClass}">${project.status || 'N/A'}</span></td>
+                                    <td>${project.budget ? '¥' + project.budget.toLocaleString() : 'N/A'}</td>
+                                </tr>
+                            `;
+                        }).join('');
+                    }
+                } else {
+                    throw new Error('Failed to load projects');
+                }
+            } catch (error) {
+                console.error('Error loading projects:', error);
+                document.getElementById('projectsCount').textContent = '—';
+                document.getElementById('projectsTable').innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-gray);">Failed to load projects. Check API connection.</td></tr>';
+            }
+        }
+
+        // ===== INITIALIZATION =====
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize theme system (for dashboard only)
+            if (window.initTheme) {
+                window.initTheme();
+            }
+
+            // Wait for i18n to load
+            const initI18n = () => {
+                if (window.i18n && window.i18n.translations && Object.keys(window.i18n.translations).length > 0) {
+                    const detectedLang = window.i18n.detectLanguage();
+                    window.i18n.currentLanguage = detectedLang;
+                    document.documentElement.lang = detectedLang;
+                    updateLanguageUI(detectedLang);
+
+                    // Initialize chatbot
+                    if (typeof ShinshuChatbot !== 'undefined') {
+                        window.shinshuChatbot = new ShinshuChatbot(API_CONFIG.apiUrl);
+                        window.shinshuChatbot.setLanguage(window.i18n.currentLanguage);
+                    }
+
+                    // Update page content after initialization - ensure DOM is ready
+                    // Use multiple attempts to ensure it works
+                    const updateContent = () => {
+                        if (window.i18n && window.i18n.updatePageContent) {
+                            window.i18n.updatePageContent();
+                        }
+                    };
+
+                    // Immediate update
+                    requestAnimationFrame(updateContent);
+                    // Delayed updates to catch any late-loading elements
+                    setTimeout(updateContent, 100);
+                    setTimeout(updateContent, 300);
+                    setTimeout(updateContent, 500);
+                } else {
+                    // Retry if i18n not loaded yet
+                    setTimeout(initI18n, 50);
+                }
+            };
+
+            initI18n();
+
+            // Load hero background image from R2
+            async function loadHeroImage() {
+                try {
+                    const API_URL = window.location.origin;
+                    const response = await fetch(`${API_URL}/api/assets?category=hero&type=image&limit=1`);
+                    const data = await response.json();
+
+                    if (data.success && data.data && data.data.length > 0 && data.data[0].r2_key) {
+                        const heroVisual = document.getElementById('hero-visual');
+                        if (heroVisual) {
+                            const imageUrl = `${API_URL}/api/assets/${data.data[0].id}/view`;
+                            heroVisual.style.backgroundImage = `url('${imageUrl}')`;
+                            heroVisual.style.backgroundSize = 'cover';
+                            heroVisual.style.backgroundPosition = 'center';
+                            heroVisual.style.backgroundRepeat = 'no-repeat';
+                        }
+                    } else {
+                        // Fallback: use japansnow.jpg if available
+                        const fallbackResponse = await fetch(`${API_URL}/api/assets?type=image`);
+                        const fallbackData = await fallbackResponse.json();
+                        if (fallbackData.success && fallbackData.data) {
+                            const snowImage = fallbackData.data.find(a => a.r2_key && a.r2_key.includes('japansnow'));
+                            if (snowImage) {
+                                const heroVisual = document.getElementById('hero-visual');
+                                if (heroVisual) {
+                                    const imageUrl = `${API_URL}/api/assets/${snowImage.id}/view`;
+                                    heroVisual.style.backgroundImage = `url('${imageUrl}')`;
+                                    heroVisual.style.backgroundSize = 'cover';
+                                    heroVisual.style.backgroundPosition = 'center';
+                                    heroVisual.style.backgroundRepeat = 'no-repeat';
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.log('Hero image not uploaded yet:', error);
+                }
+            }
+
+            // Load area showcase images
+            async function loadAreaShowcase() {
+                try {
+                    const API_URL = window.location.origin;
+                    // Try to load area-specific images
+                    const areas = ['nozawa-onsen', 'iiyama', 'myoko', 'karuizawa', 'shinano', 'komoro'];
+                    const areaGrid = document.getElementById('area-showcase-grid');
+                    if (!areaGrid) return;
+
+                    // For now, show message - images should be uploaded with area tags
+                    areaGrid.innerHTML = areas.map(area => {
+                        const areaName = area.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                        return `
+                        <div class="area-card">
+                            <div class="area-image" style="background: linear-gradient(135deg, var(--orange-light), var(--orange-primary)); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; min-height: 200px;">
+                                Upload Image
+                            </div>
+                            <div class="area-content">
+                                <h4>${areaName}</h4>
+                                <p>Upload images via dashboard Assets section with area tags to display here.</p>
+                            </div>
+                        </div>
+                    `;
+                    }).join('');
+                } catch (error) {
+                    console.log('Area showcase loading:', error);
+                }
+            }
+
+            // Load portfolio and profile images on initial load
+            if (typeof loadPortfolioImages === 'function') {
+                setTimeout(loadPortfolioImages, 500);
+            }
+            if (typeof loadProfileImage === 'function') {
+                setTimeout(loadProfileImage, 500);
+            }
+            setTimeout(loadHeroImage, 500);
+            setTimeout(loadAreaShowcase, 500);
+        });
+
+        // Load portfolio images from assets (R2 stored) - ONLY actual uploaded images
+        async function loadPortfolioImages() {
+            try {
+                const API_URL = window.location.origin;
+                // Load portfolio category images
+                const response = await fetch(`${API_URL}/api/assets?category=portfolio&type=image&limit=12`);
+                const data = await response.json();
+
+                if (data.success && data.data && data.data.length > 0) {
+                    const gallery = document.getElementById('portfolio-gallery');
+                    if (gallery) {
+                        const images = data.data.filter(asset => asset.r2_key); // Only show images actually in R2
+
+                        if (images.length > 0) {
+                            gallery.innerHTML = images.map(asset => {
+                                const imageUrl = `${API_URL}/api/assets/${asset.id}/view`;
+                                const title = asset.title || 'Mountain Photography';
+                                const metadata = typeof asset.metadata === 'string' ? JSON.parse(asset.metadata || '{}') : (asset.metadata || {});
+                                const location = metadata.location || '';
+
+                                return `
+                                    <div class="portfolio-item" onclick="window.location.href='/gallery'" style="cursor: pointer;">
+                                        <img src="${imageUrl}" 
+                                             alt="${asset.alt_text || title}" 
+                                             class="portfolio-image"
+                                             loading="lazy"
+                                             onerror="this.style.display='none'">
+                                        <div class="portfolio-overlay">
+                                            <p class="portfolio-caption">${title}</p>
+                                            ${location ? `<p style="font-size: 0.9rem; opacity: 0.9; margin-top: 0.25rem;">📍 ${location}</p>` : ''}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('');
+                        } else {
+                            gallery.innerHTML = '<div style="text-align: center; padding: 3rem; color: var(--text-gray); grid-column: 1/-1;"><p>Upload Jake\'s mountain photography via the dashboard to see images here.</p><p style="margin-top: 1rem;"><a href="/dashboard" style="color: var(--orange-primary); font-weight: 600;">Go to Dashboard →</a></p></div>';
+                        }
+                    }
+                } else {
+                    // Fallback: try loading all images if no portfolio category found
+                    const fallbackResponse = await fetch(`${API_URL}/api/assets?type=image&limit=12`);
+                    const fallbackData = await fallbackResponse.json();
+
+                    const gallery = document.getElementById('portfolio-gallery');
+                    if (gallery) {
+                        if (fallbackData.success && fallbackData.data && fallbackData.data.length > 0) {
+                            const images = fallbackData.data.filter(asset => asset.r2_key);
+                            if (images.length > 0) {
+                                gallery.innerHTML = images.map(asset => {
+                                    const imageUrl = `${API_URL}/api/assets/${asset.id}/view`;
+                                    const title = asset.title || 'Mountain Photography';
+                                    return `
+                                        <div class="portfolio-item" onclick="window.location.href='/gallery'" style="cursor: pointer;">
+                                            <img src="${imageUrl}" 
+                                                 alt="${asset.alt_text || title}" 
+                                                 class="portfolio-image"
+                                                 loading="lazy"
+                                                 onerror="this.style.display='none'">
+                                            <div class="portfolio-overlay">
+                                                <p class="portfolio-caption">${title}</p>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('');
+                            } else {
+                                gallery.innerHTML = '<div style="text-align: center; padding: 3rem; color: var(--text-gray); grid-column: 1/-1;"><p>No images uploaded yet. Upload Jake\'s photography via the dashboard Assets section.</p><p style="margin-top: 1rem;"><a href="/dashboard" style="color: var(--orange-primary); font-weight: 600;">Upload Images →</a></p></div>';
+                            }
+                        } else {
+                            gallery.innerHTML = '<div style="text-align: center; padding: 3rem; color: var(--text-gray); grid-column: 1/-1;"><p>No images uploaded yet. Upload Jake\'s photography via the dashboard Assets section.</p><p style="margin-top: 1rem;"><a href="/dashboard" style="color: var(--orange-primary); font-weight: 600;">Upload Images →</a></p></div>';
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading portfolio images:', error);
+                const gallery = document.getElementById('portfolio-gallery');
+                if (gallery) {
+                    gallery.innerHTML = '<div style="text-align: center; padding: 3rem; color: var(--text-gray); grid-column: 1/-1;"><p>Error loading images. Please try again or upload via dashboard.</p></div>';
+                }
+            }
+        }
+
+        // Load Jake's profile image - ONLY from R2, no placeholders
+        async function loadProfileImage() {
+            try {
+                const API_URL = window.location.origin;
+                const response = await fetch(`${API_URL}/api/assets?category=profile&type=image&limit=1`);
+                const data = await response.json();
+
+                if (data.success && data.data && data.data.length > 0 && data.data[0].r2_key) {
+                    const profileImg = document.getElementById('jake-profile-image');
+                    const placeholder = document.getElementById('profile-image-placeholder');
+                    if (profileImg) {
+                        profileImg.src = `${API_URL}/api/assets/${data.data[0].id}/view`;
+                        profileImg.onload = () => {
+                            if (placeholder) placeholder.style.display = 'none';
+                        };
+                    }
+                } else {
+                    // Hide placeholder if no image uploaded
+                    const placeholder = document.getElementById('profile-image-placeholder');
+                    if (placeholder) {
+                        placeholder.textContent = 'Upload via Dashboard';
+                        placeholder.style.fontSize = '0.9rem';
+                    }
+                }
+            } catch (error) {
+                console.log('Profile image not uploaded yet');
+            }
+        }
+
+
+        // Make functions globally available
+        window.toggleLanguageMenu = toggleLanguageMenu;
+        window.changeLanguage = changeLanguage;
+        window.loadPortfolioImages = loadPortfolioImages;
+        window.loadProfileImage = loadProfileImage;
+    </script>
+</body>
+
+</html>

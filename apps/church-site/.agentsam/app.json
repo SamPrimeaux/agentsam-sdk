@@ -1,0 +1,22 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "church-site",
+  "name": "New Iberia Church of Christ",
+  "kind": "theme-app",
+  "status": "scaffolded",
+  "package": "@inneranimalmedia/theme-church-site",
+  "gallery_path": "apps/theme-gallery-preview/themes/church-site",
+  "canonical_path": "apps/church-site",
+  "preview": {
+    "kind": "static",
+    "root": "frontend/public"
+  },
+  "features_proposed": [
+    "cms.media",
+    "cms.pages",
+    "deploy.receipt",
+    "forms.leads",
+    "theme.storefront.shell"
+  ],
+  "harvest_batch": "theme-harvest-20260924"
+}

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CMS – Anything Floors & More</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a1a;
+      min-height: 100vh;
+    }
+    .header {
+      background: #3a5a4d;
+      color: #fff;
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .header h1 { font-size: 1.25rem; font-weight: 600; }
+    .header a {
+      color: #b8d4c4;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .header a:hover { text-decoration: underline; }
+    .container { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      border: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      background: #3a5a4d;
+      color: #fff;
+      text-decoration: none;
+    }
+    .btn:hover { background: #2d473c; }
+    .btn.secondary { background: #e0e0e0; color: #333; }
+    .btn.secondary:hover { background: #d0d0d0; }
+    .btn.danger { background: #c62828; }
+    .btn.danger:hover { background: #a02020; }
+    .btn.small { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .upload-zone {
+      border: 2px dashed #3a5a4d;
+      border-radius: 8px;
+      padding: 2rem;
+      text-align: center;
+      background: #fafafa;
+      margin-bottom: 1.5rem;
+    }
+    .upload-zone input[type="file"] { display: none; }
+    .upload-zone label { cursor: pointer; color: #3a5a4d; font-weight: 500; }
+    .upload-zone.has-file { border-color: #2d473c; background: #e8f0ec; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      transition: box-shadow 0.2s;
+    }
+    .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .card .thumb {
+      aspect-ratio: 4/3;
+      background: #eee;
+      object-fit: cover;
+      width: 100%;
+      display: block;
+    }
+    .card .body { padding: 0.75rem; }
+    .card .name { font-size: 0.85rem; font-weight: 500; margin-bottom: 0.35rem; word-break: break-all; }
+    .card .meta { font-size: 0.75rem; color: #666; margin-bottom: 0.5rem; }
+    .card .actions { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      background: #e8f0ec;
+      color: #2d473c;
+      margin-bottom: 0.5rem;
+    }
+    .loading { text-align: center; padding: 2rem; color: #666; }
+    .error { background: #ffebee; color: #c62828; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; }
+    .empty { text-align: center; padding: 3rem; color: #666; }
+    .filter { display: flex; gap: 0.5rem; align-items: center; }
+    .filter label { font-size: 0.9rem; }
+    .filter select { padding: 0.35rem 0.5rem; border-radius: 4px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>Gallery &amp; CMS – Pick images for the homepage</h1>
+    <nav style="display:flex; gap:1rem; align-items:center;">
+      <a href="/dashboard/">← Dashboard</a>
+      <a href="/">View site</a>
+    </nav>
+  </header>
+  <main class="container">
+    <div class="toolbar">
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept="image/*" multiple>
+        <label for="fileInput">Drop images or click to upload (PNG, JPG, WebP)</label>
+      </div>
+      <div class="filter">
+        <label for="filter">Show:</label>
+        <select id="filter">
+          <option value="all">All images</option>
+          <option value="featured">Featured on public only</option>
+        </select>
+      </div>
+    </div>
+    <div id="message" class="error" style="display:none;"></div>
+    <div id="list" class="grid"></div>
+    <div id="loading" class="loading" style="display:none;">Loading…</div>
+    <div id="empty" class="empty" style="display:none;">No images in <code>cms/</code>. Upload some, then use “Show on public” to feature them on the homepage.</div>
+  </main>
+  <script>
+    // API same-origin: /api/cms/* on this host
+    const base = window.location.origin;
+
+    function showMsg(text, isError = true) {
+      const el = document.getElementById('message');
+      el.textContent = text;
+      el.style.display = 'block';
+      el.className = isError ? 'error' : 'error';
+      el.style.background = isError ? '#ffebee' : '#e8f5e9';
+      el.style.color = isError ? '#c62828' : '#2e7d32';
+      setTimeout(() => { el.style.display = 'none'; }, 5000);
+    }
+
+    async function api(method, path, body = null) {
+      const opts = { method, headers: {} };
+      if (body && (method === 'POST' || method === 'PATCH')) {
+        if (body instanceof FormData) opts.body = body;
+        else { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+      }
+      const r = await fetch(base + path, opts);
+      const data = r.ok ? (r.headers.get('content-type')?.includes('json') ? await r.json() : null) : null;
+      if (!r.ok) throw new Error(data?.error || data?.message || r.statusText);
+      return data;
+    }
+
+    async function loadList(featuredOnly = false) {
+      const listEl = document.getElementById('list');
+      const loadEl = document.getElementById('loading');
+      const emptyEl = document.getElementById('empty');
+      listEl.innerHTML = '';
+      loadEl.style.display = 'block';
+      emptyEl.style.display = 'none';
+      try {
+        const q = featuredOnly ? '?featured=1' : '';
+        const data = await api('GET', '/api/cms/media' + q);
+        loadEl.style.display = 'none';
+        const files = data?.files || [];
+        if (files.length === 0) {
+          emptyEl.style.display = 'block';
+          return;
+        }
+        files.forEach(f => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          const thumbUrl = base + '/api/cms/serve?key=' + encodeURIComponent(f.key);
+          card.innerHTML = `
+            <img class="thumb" src="${thumbUrl}" alt="" loading="lazy">
+            <div class="body">
+              ${f.featured ? '<span class="badge">On public</span>' : ''}
+              <div class="name">${escapeHtml(f.title || f.name)}</div>
+              <div class="meta">${formatSize(f.size)}</div>
+              <div class="actions">
+                ${!f.featured && f.key ? `<button type="button" class="btn small" data-action="feature" data-key="${escapeHtml(f.key)}">Show on public</button>` : ''}
+                ${f.featured && f.id ? `<button type="button" class="btn small secondary" data-action="unfeature" data-id="${f.id}">Hide from public</button>` : ''}
+                ${f.id ? `<button type="button" class="btn small secondary" data-action="order" data-id="${f.id}">Order</button>` : ''}
+                <button type="button" class="btn small danger" data-action="delete" data-key="${escapeHtml(f.key)}">Delete</button>
+              </div>
+            </div>
+          `;
+          listEl.appendChild(card);
+        });
+        listEl.querySelectorAll('[data-action]').forEach(btn => {
+          btn.addEventListener('click', () => handleAction(btn.dataset.action, btn.dataset.key, btn.dataset.id));
+        });
+      } catch (e) {
+        loadEl.style.display = 'none';
+        showMsg(e.message || 'Failed to load list');
+      }
+    }
+
+    function escapeHtml(s) {
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+    function formatSize(n) {
+      if (n == null) return '';
+      if (n < 1024) return n + ' B';
+      if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+      return (n / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    async function handleAction(action, key, id) {
+      try {
+        if (action === 'feature' && key) {
+          await api('POST', '/api/cms/media', { r2_key: key, featured: 1 });
+          showMsg('Added to public gallery', false);
+        } else if (action === 'unfeature' && id) {
+          await api('PATCH', '/api/cms/media/' + id, { featured: 0 });
+          showMsg('Removed from public gallery', false);
+        } else if (action === 'order' && id) {
+          const order = prompt('Display order (number):', '0');
+          if (order != null) await api('PATCH', '/api/cms/media/' + id, { display_order: parseInt(order, 10) || 0 });
+          showMsg('Order updated', false);
+        } else if (action === 'delete' && key) {
+          if (!confirm('Delete this image from storage?')) return;
+          await api('DELETE', '/api/cms/media?key=' + encodeURIComponent(key));
+          showMsg('Deleted', false);
+        }
+        loadList(document.getElementById('filter').value === 'featured');
+      } catch (e) {
+        showMsg(e.message || 'Action failed');
+      }
+    }
+
+    const fileInput = document.getElementById('fileInput');
+    const uploadZone = document.getElementById('uploadZone');
+    uploadZone.addEventListener('click', () => fileInput.click());
+    uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('has-file'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('has-file'));
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('has-file');
+      if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files);
+    });
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length) uploadFiles(fileInput.files);
+      fileInput.value = '';
+    });
+
+    async function uploadFiles(files) {
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) continue;
+        try {
+          const fd = new FormData();
+          fd.append('file', file);
+          await api('POST', '/api/cms/upload', fd);
+        } catch (e) {
+          showMsg(file.name + ': ' + (e.message || 'Upload failed'));
+        }
+      }
+      showMsg('Upload(s) finished. Refreshing list.', false);
+      loadList(document.getElementById('filter').value === 'featured');
+    }
+
+    document.getElementById('filter').addEventListener('change', () => {
+      loadList(document.getElementById('filter').value === 'featured');
+    });
+
+    loadList(false);
+  </script>
+</body>
+</html>

@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model City Missions | New Iberia Church of Christ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/unified-header.css">
+    <link rel="stylesheet" href="/unified-footer.css">
+    <script src="/unified-header.js" defer></script>
+
+    <style>
+        :root {
+            /* Light Glass Theme Variables */
+            --bg-primary: #fdfbf7;
+            --bg-glass-light: rgba(255, 255, 255, 0.85);
+            --bg-glass-dark: rgba(37, 99, 235, 0.1);
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-glass: rgba(226, 232, 240, 0.5);
+            --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.08);
+            --blue-primary: #2563eb;
+            --blue-gradient: linear-gradient(135deg, rgba(37, 99, 235, 0.9), rgba(59, 130, 246, 0.85));
+            --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --container-max: 1400px;
+            --section-padding: clamp(3rem, 8vw, 6rem);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-body);
+            color: var(--text-primary);
+            background: var(--bg-primary);
+            line-height: 1.6;
+            font-size: clamp(16px, 1.5vw, 18px);
+            overflow-x: hidden;
+        }
+
+
+        /* ===== HERO WITH IMAGE ===== */
+        .hero-with-image {
+            margin-top: var(--header-height, 120px);
+            width: 100%;
+            position: relative;
+        }
+
+        .hero-image-wrapper {
+            width: 100%;
+            height: min(50vh, 500px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-full-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .hero-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+            padding: clamp(3rem, 6vw, 5rem) clamp(2rem, 4vw, 3rem);
+            text-align: center;
+        }
+
+        .hero-title {
+            font-size: clamp(36px, 5vw, 64px);
+            font-weight: 700;
+            color: white;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .hero-subtitle {
+            font-size: clamp(20px, 2.5vw, 28px);
+            color: rgba(255, 255, 255, 0.95);
+            font-weight: 400;
+            line-height: 1.5;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* ===== SPLIT LAYOUT ===== */
+        .split-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: clamp(2rem, 4vw, 4rem);
+            align-items: center;
+            margin-bottom: clamp(3rem, 6vw, 5rem);
+        }
+
+        .split-layout.reverse {
+            direction: rtl;
+        }
+
+        .split-layout.reverse>* {
+            direction: ltr;
+        }
+
+        .split-image {
+            width: 100%;
+            height: clamp(300px, 40vw, 500px);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow-glass);
+        }
+
+        .split-image-content {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .split-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        /* ===== PAGE CONTENT ===== */
+        .page-section {
+            padding: var(--section-padding) clamp(2rem, 4vw, 3rem);
+            max-width: var(--container-max);
+            margin: 0 auto;
+        }
+
+        .content-block {
+            background: var(--bg-glass-light);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            padding: clamp(2.5rem, 5vw, 4rem);
+            margin-bottom: 3rem;
+            box-shadow: var(--shadow-glass);
+        }
+
+        .content-intro {
+            font-size: clamp(18px, 2vw, 22px);
+            color: var(--text-secondary);
+            line-height: 1.8;
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: clamp(24px, 3vw, 32px);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+        }
+
+        .section-text {
+            font-size: clamp(16px, 1.5vw, 18px);
+            color: var(--text-secondary);
+            line-height: 1.8;
+            margin-bottom: 2rem;
+        }
+
+        .quote-block {
+            background: var(--bg-glass-dark);
+            border-left: 4px solid var(--blue-primary);
+            padding: clamp(2rem, 4vw, 3rem);
+            margin: 3rem 0;
+            border-radius: 12px;
+            font-style: italic;
+        }
+
+        .quote-text {
+            font-size: clamp(18px, 2vw, 22px);
+            color: var(--text-primary);
+            line-height: 1.7;
+            margin-bottom: 1rem;
+        }
+
+        .quote-author {
+            font-size: clamp(16px, 1.3vw, 18px);
+            color: var(--text-secondary);
+            font-style: normal;
+            font-weight: 600;
+        }
+
+        /* ===== GALLERY ===== */
+        .gallery-section {
+            padding: var(--section-padding) clamp(2rem, 4vw, 3rem);
+            max-width: var(--container-max);
+            margin: 0 auto;
+        }
+
+        .gallery-title {
+            font-size: clamp(28px, 3vw, 40px);
+            font-weight: 700;
+            color: var(--text-primary);
+            text-align: center;
+            margin-bottom: clamp(3rem, 6vw, 4rem);
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+            gap: clamp(1.5rem, 3vw, 2rem);
+        }
+
+        .gallery-item {
+            background: var(--bg-glass-light);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow-glass);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .gallery-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+        }
+
+        .gallery-image {
+            width: 100%;
+            height: clamp(250px, 35vw, 350px);
+            object-fit: cover;
+            display: block;
+        }
+
+        .gallery-caption {
+            padding: clamp(1rem, 2vw, 1.5rem);
+            color: var(--text-secondary);
+            font-size: clamp(14px, 1.2vw, 16px);
+            line-height: 1.6;
+        }
+
+        /* ===== CTA SECTION ===== */
+        .cta-section {
+            padding: var(--section-padding) clamp(2rem, 4vw, 3rem);
+            max-width: var(--container-max);
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .cta-headline {
+            font-size: clamp(28px, 3vw, 40px);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .cta-description {
+            font-size: clamp(16px, 1.5vw, 18px);
+            color: var(--text-secondary);
+            margin-bottom: clamp(2rem, 4vw, 3rem);
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-row {
+            display: flex;
+            gap: clamp(1rem, 2vw, 1.5rem);
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-cta {
+            min-height: 48px;
+            padding: 14px clamp(24px, 3vw, 32px);
+            background: var(--blue-gradient);
+            backdrop-filter: blur(10px);
+            border: 1px solid transparent;
+            border-radius: 12px;
+            color: white;
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: clamp(15px, 1.2vw, 16px);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-cta:hover {
+            background: linear-gradient(135deg, rgba(30, 64, 175, 0.95), rgba(37, 99, 235, 0.9));
+            color: white;
+            border-color: transparent;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(37, 99, 235, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .hero-image-wrapper {
+                height: min(50vh, 500px);
+            }
+
+            .hero-overlay {
+                padding: 2rem 1.5rem;
+            }
+
+            .split-layout,
+            .split-layout.reverse {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .split-image {
+                height: clamp(250px, 50vw, 400px);
+                order: 1;
+            }
+
+            .split-content {
+                order: 2;
+            }
+
+            .gallery-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (min-width: 2560px) {
+            .gallery-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Unified Header injected by JS -->
+
+    <!-- ===== HERO SECTION WITH IMAGE ===== -->
+    <section class="hero-with-image">
+        <div class="hero-image-wrapper">
+            <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/01a6ef14-a6e3-4587-6db8-e37e870ef500/public"
+                alt="Model City Missions volunteers serving New Iberia" class="hero-full-image" loading="eager">
+            <div class="hero-overlay">
+                <h1 class="hero-title">Model City Missions</h1>
+                <p class="hero-subtitle">Serving New Iberia with hands-on love — one home at a time.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== SUMMARY WITH IMAGE ===== -->
+    <section class="page-section">
+        <div class="split-layout">
+            <div class="split-image">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/01a6ef14-a6e3-4587-6db8-e37e870ef500/public"
+                    alt="Volunteers working together" class="split-image-content" loading="lazy">
+            </div>
+            <div class="split-content">
+                <h2 class="section-title">Faith Lived, Not Just Spoken</h2>
+                <p class="section-text">
+                    We believe the church exists to make disciples and serve our community. We believe faith isn't just
+                    something we believe — it's something we live. That's why Model City Missions exists: to show up for
+                    our neighbors with hands-on love.
+                </p>
+                <p class="section-text" style="margin-top: 1.5rem;">
+                    Since 2017, volunteers from New Iberia and across the country have come together each year to paint,
+                    renovate, and restore local homes — completely free — for families in our community. This is faith
+                    in action: serving alongside our friends and neighbors, making New Iberia a better place to live.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== WHAT IT IS WITH IMAGE ===== -->
+    <section class="page-section">
+        <div class="split-layout reverse">
+            <div class="split-image">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/01a6ef14-a6e3-4587-6db8-e37e870ef500/public"
+                    alt="Painting homes with purpose" class="split-image-content" loading="lazy">
+            </div>
+            <div class="split-content">
+                <h2 class="section-title">What It Is</h2>
+                <p class="section-text">
+                    We believe in living the love of Christ publicly. Model City Missions is a community outreach effort
+                    focused on home improvement and neighborhood restoration. Volunteers work side-by-side to paint,
+                    repair, and renew homes for local residents at no cost — because loving your neighbor means showing
+                    up for them.
+                </p>
+                <p class="section-text" style="margin-top: 1.5rem;">
+                    This is how we live out what we believe: that God transforms lives through service, that the Holy
+                    Spirit empowers us to help others, and that the church is called to be the hands and feet of Jesus
+                    in our community.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== QUOTE BLOCK ===== -->
+    <section class="page-section">
+        <div class="quote-block" style="position: relative; overflow: hidden;">
+            <div style="display: flex; align-items: flex-start; gap: 1.5rem;">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/52f54b2e-0eb8-4a87-7342-7d44ce66f900/public"
+                    alt="Kenny Wright, Minister"
+                    style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 3px solid var(--blue-primary); box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
+                    loading="lazy">
+                <div style="flex: 1;">
+                    <p class="quote-text">
+                        "Rather than just come to church and talk about it, we do anything we can to be in our community
+                        —
+                        serving alongside our friends and neighbors and making New Iberia a better place to live."
+                    </p>
+                    <p class="quote-author">— Kenny Wright, Minister</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== YOUTH IMPACT WITH IMAGE ===== -->
+    <section class="page-section">
+        <div class="split-layout">
+            <div class="split-image">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/01a6ef14-a6e3-4587-6db8-e37e870ef500/public"
+                    alt="Youth volunteers serving" class="split-image-content" loading="lazy">
+            </div>
+            <div class="split-content">
+                <h2 class="section-title">The Next Generation Leading</h2>
+                <p class="section-text">
+                    We believe God transforms us into His image as revealed in Jesus Christ. Transformation begins at
+                    salvation, is sustained by grace, and grows as our lives are increasingly aligned with God's will.
+                    We see that transformation happening in the next generation.
+                </p>
+                <p class="section-text" style="margin-top: 1.5rem;">
+                    Every summer, around 50 youth volunteers join the mission — including groups from New Iberia and out
+                    of state (Texas, Oregon, Oklahoma and more). They give up vacation time to serve in Louisiana heat —
+                    proving the next generation is ready to live out their faith with humility and courage. This is what
+                    it looks like when young people understand that following Jesus means serving others.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== GALLERY SECTION ===== -->
+    <section class="gallery-section">
+        <h2 class="gallery-title">Our Mission in Action</h2>
+        <div class="gallery-grid">
+            <div class="gallery-item">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/01a6ef14-a6e3-4587-6db8-e37e870ef500/public"
+                    alt="Volunteers serving New Iberia" class="gallery-image" loading="lazy">
+                <p class="gallery-caption">Volunteers serving New Iberia</p>
+            </div>
+
+            <div class="gallery-item">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/01a6ef14-a6e3-4587-6db8-e37e870ef500/public"
+                    alt="A mission that brings generations together" class="gallery-image" loading="lazy">
+                <p class="gallery-caption">A mission that brings generations together</p>
+            </div>
+
+            <div class="gallery-item">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/01a6ef14-a6e3-4587-6db8-e37e870ef500/public"
+                    alt="Hands-on care for neighbors" class="gallery-image" loading="lazy">
+                <p class="gallery-caption">Hands-on care for neighbors</p>
+            </div>
+
+            <div class="gallery-item">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/01a6ef14-a6e3-4587-6db8-e37e870ef500/public"
+                    alt="Grateful for our faithful volunteers" class="gallery-image" loading="lazy">
+                <p class="gallery-caption">Grateful for our faithful volunteers</p>
+            </div>
+
+            <div class="gallery-item">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/01a6ef14-a6e3-4587-6db8-e37e870ef500/public"
+                    alt="Youth groups from across the country join the mission" class="gallery-image" loading="lazy">
+                <p class="gallery-caption">Youth groups from across the country join the mission</p>
+            </div>
+
+            <div class="gallery-item">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/01a6ef14-a6e3-4587-6db8-e37e870ef500/public"
+                    alt="Working together to restore homes" class="gallery-image" loading="lazy">
+                <p class="gallery-caption">Working together to restore homes</p>
+            </div>
+
+            <div class="gallery-item">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/01a6ef14-a6e3-4587-6db8-e37e870ef500/public"
+                    alt="Painting homes with purpose" class="gallery-image" loading="lazy">
+                <p class="gallery-caption">Painting homes with purpose</p>
+            </div>
+
+            <div class="gallery-item">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/01a6ef14-a6e3-4587-6db8-e37e870ef500/public"
+                    alt="One brushstroke at a time" class="gallery-image" loading="lazy">
+                <p class="gallery-caption">One brushstroke at a time</p>
+            </div>
+
+            <div class="gallery-item">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/01a6ef14-a6e3-4587-6db8-e37e870ef500/public"
+                    alt="Restoring homes at no cost" class="gallery-image" loading="lazy">
+                <p class="gallery-caption">Restoring homes at no cost</p>
+            </div>
+
+            <div class="gallery-item">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/01a6ef14-a6e3-4587-6db8-e37e870ef500/public"
+                    alt="Model City Missions in action" class="gallery-image" loading="lazy">
+                <p class="gallery-caption">Serving our community with love</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== VOLUNTEER CTA SECTION ===== -->
+    <section class="cta-section">
+        <h2 class="cta-headline">Want to be part of it?</h2>
+        <p class="cta-description">
+            Serve with Model City Missions and help restore homes, encourage families, and strengthen our community.
+        </p>
+        <div class="cta-row">
+            <a href="#" class="btn-cta" onclick="openModal('question'); return false;">Join the Mission</a>
+            <a href="#" class="btn-cta" onclick="openModal('question'); return false;">Volunteer This Summer</a>
+            <a href="#" class="btn-cta" onclick="openModal('question'); return false;">Partner / Sponsor Supplies</a>
+            <a href="#" class="btn-cta" onclick="openModal('question'); return false;">Submit a Need (Home
+                Nomination)</a>
+        </div>
+    </section>
+
+    <footer id="unified-footer"></footer>
+    <script src="/unified-footer.js"></script>
+    <script>
+        function openChatbot() {
+            if (window.openModal) {
+                window.openModal('question');
+            }
+        }
+
+        function openModal(type) {
+            if (window.openModal) {
+                window.openModal(type);
+            }
+        }
+    </script>
+</body>
+
+</html>

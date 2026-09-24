@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rooted - Women's Gathering | New Iberia Church of Christ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="/unified-header.css">
+    <link rel="stylesheet" href="/unified-footer.css">
+    <script src="/unified-header.js" defer></script>
+
+    <style>
+        :root {
+            /* Light Glass Theme Variables */
+            --bg-primary: #fdfbf7;
+            --bg-glass-light: rgba(255, 255, 255, 0.85);
+            --bg-glass-dark: rgba(37, 99, 235, 0.1);
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-glass: rgba(226, 232, 240, 0.5);
+            --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.08);
+            --blue-primary: #2563eb;
+            --blue-gradient: linear-gradient(135deg, rgba(37, 99, 235, 0.9), rgba(59, 130, 246, 0.85));
+            --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --container-max: 1400px;
+            --section-padding: clamp(3rem, 8vw, 6rem);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-body);
+            color: var(--text-primary);
+            background: var(--bg-primary);
+            line-height: 1.6;
+            font-size: clamp(16px, 1.5vw, 18px);
+            overflow-x: hidden;
+        }
+
+
+
+        /* ===== HERO WITH IMAGE ===== */
+        .hero-with-image {
+            margin-top: var(--header-height, 120px);
+            width: 100%;
+            position: relative;
+        }
+
+        .hero-image-wrapper {
+            width: 100%;
+            height: auto;
+            min-height: clamp(300px, 60vh, 700px);
+            position: relative;
+            overflow: hidden;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hero-full-image {
+            width: 100%;
+            height: 100%;
+            max-height: clamp(300px, 60vh, 700px);
+            object-fit: contain;
+            /* Not cropped, not stretched */
+            display: block;
+        }
+
+        .hero-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+            padding: clamp(3rem, 6vw, 5rem) clamp(2rem, 4vw, 3rem);
+            text-align: center;
+        }
+
+        .hero-title {
+            font-size: clamp(36px, 5vw, 64px);
+            font-weight: 700;
+            color: white;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .hero-subtitle {
+            font-size: clamp(20px, 2.5vw, 28px);
+            color: rgba(255, 255, 255, 0.95);
+            font-weight: 400;
+            line-height: 1.5;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* ===== SPLIT LAYOUT ===== */
+        .split-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: clamp(2rem, 4vw, 4rem);
+            align-items: center;
+            margin-bottom: clamp(3rem, 6vw, 5rem);
+        }
+
+        .split-layout.reverse {
+            direction: rtl;
+        }
+
+        .split-layout.reverse>* {
+            direction: ltr;
+        }
+
+        .split-image {
+            width: 100%;
+            height: clamp(300px, 40vw, 500px);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow-glass);
+        }
+
+        .split-image-content {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .split-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        /* ===== PAGE CONTENT ===== */
+        .page-section {
+            padding: var(--section-padding) clamp(2rem, 4vw, 3rem);
+            max-width: var(--container-max);
+            margin: 0 auto;
+        }
+
+        .content-block {
+            background: var(--bg-glass-light);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            padding: clamp(2.5rem, 5vw, 4rem);
+            margin-bottom: 3rem;
+            box-shadow: var(--shadow-glass);
+        }
+
+        .content-intro {
+            font-size: clamp(18px, 2vw, 22px);
+            color: var(--text-secondary);
+            line-height: 1.8;
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: clamp(24px, 3vw, 32px);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+        }
+
+        .section-text {
+            font-size: clamp(16px, 1.5vw, 18px);
+            color: var(--text-secondary);
+            line-height: 1.8;
+            margin-bottom: 2rem;
+        }
+
+        .quote-block {
+            background: var(--bg-glass-dark);
+            border-left: 4px solid var(--blue-primary);
+            padding: clamp(2rem, 4vw, 3rem);
+            margin: 3rem 0;
+            border-radius: 12px;
+            font-style: italic;
+        }
+
+        .quote-text {
+            font-size: clamp(18px, 2vw, 22px);
+            color: var(--text-primary);
+            line-height: 1.7;
+            margin-bottom: 1rem;
+        }
+
+        .quote-author {
+            font-size: clamp(16px, 1.3vw, 18px);
+            color: var(--text-secondary);
+            font-style: normal;
+            font-weight: 600;
+        }
+
+        /* ===== GALLERY ===== */
+        .gallery-section {
+            padding: var(--section-padding) clamp(2rem, 4vw, 3rem);
+            max-width: var(--container-max);
+            margin: 0 auto;
+        }
+
+        .gallery-title {
+            font-size: clamp(28px, 3vw, 40px);
+            font-weight: 700;
+            color: var(--text-primary);
+            text-align: center;
+            margin-bottom: clamp(3rem, 6vw, 4rem);
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+            gap: clamp(1.5rem, 3vw, 2rem);
+        }
+
+        .gallery-item {
+            background: var(--bg-glass-light);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow-glass);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .gallery-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+        }
+
+        .gallery-image {
+            width: 100%;
+            height: clamp(250px, 35vw, 350px);
+            object-fit: cover;
+            display: block;
+        }
+
+        .gallery-caption {
+            padding: clamp(1rem, 2vw, 1.5rem);
+            color: var(--text-secondary);
+            font-size: clamp(14px, 1.2vw, 16px);
+            line-height: 1.6;
+        }
+
+        /* ===== CTA SECTION ===== */
+        .cta-section {
+            padding: var(--section-padding) clamp(2rem, 4vw, 3rem);
+            max-width: var(--container-max);
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .cta-headline {
+            font-size: clamp(28px, 3vw, 40px);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .cta-description {
+            font-size: clamp(16px, 1.5vw, 18px);
+            color: var(--text-secondary);
+            margin-bottom: clamp(2rem, 4vw, 3rem);
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-row {
+            display: flex;
+            gap: clamp(1rem, 2vw, 1.5rem);
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-cta {
+            min-height: 48px;
+            padding: 14px clamp(24px, 3vw, 32px);
+            background: var(--blue-gradient);
+            backdrop-filter: blur(10px);
+            border: 1px solid transparent;
+            border-radius: 12px;
+            color: white;
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: clamp(15px, 1.2vw, 16px);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-cta:hover {
+            background: linear-gradient(135deg, rgba(30, 64, 175, 0.95), rgba(37, 99, 235, 0.9));
+            color: white;
+            border-color: transparent;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(37, 99, 235, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .hero-image-wrapper {
+                height: auto;
+                min-height: 40vh;
+            }
+
+            .hero-overlay {
+                padding: 2rem 1.5rem;
+            }
+
+            .split-layout,
+            .split-layout.reverse {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .split-image {
+                height: clamp(250px, 50vw, 400px);
+                order: 1;
+            }
+
+            .split-content {
+                order: 2;
+            }
+
+            .gallery-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (min-width: 2560px) {
+            .gallery-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Unified Header injected by JS -->
+
+    <!-- ===== HERO SECTION WITH IMAGE ===== -->
+    <section class="hero-with-image">
+        <div class="hero-image-wrapper">
+            <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/fe18e68c-64eb-47e2-d2a3-8fd5bfc99500/public"
+                alt="Rooted women's gathering" class="hero-full-image" loading="eager">
+            <div class="hero-overlay">
+                <h1 class="hero-title">Rooted</h1>
+                <p class="hero-subtitle">A welcoming space for women to gather, grow, and build lasting connection.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== EVENT DETAILS BLOCK ===== -->
+    <section class="page-section">
+        <div class="content-block">
+            <div style="background: var(--bg-glass-dark); padding: 2rem; border-radius: 12px; margin-bottom: 2rem;">
+                <h3
+                    style="font-size: clamp(20px, 2.5vw, 24px); font-weight: 600; color: var(--text-primary); margin-bottom: 1.5rem;">
+                    Event Details</h3>
+                <p style="font-size: clamp(16px, 1.5vw, 18px); color: var(--text-secondary); margin-bottom: 0.75rem;">
+                    <strong style="color: var(--text-primary);">When:</strong> First Tuesday of every month
+                </p>
+                <p style="font-size: clamp(16px, 1.5vw, 18px); color: var(--text-secondary); margin-bottom: 0.75rem;">
+                    <strong style="color: var(--text-primary);">Time:</strong> 6:00 PM
+                </p>
+                <p style="font-size: clamp(16px, 1.5vw, 18px); color: var(--text-secondary); margin-bottom: 0.75rem;">
+                    <strong style="color: var(--text-primary);">Who:</strong> Women of all ages
+                </p>
+                <p style="font-size: clamp(16px, 1.5vw, 18px); color: var(--text-secondary);"><strong
+                        style="color: var(--text-primary);">What:</strong> Community + encouragement + shared life +
+                    free food</p>
+            </div>
+            <p class="section-text">
+                Rooted is a women's gathering centered on meaningful relationships and multigenerational community. On
+                the first Tuesday of every month, women come together to connect, share life, and grow deeper in Christ
+                — through real conversation, encouragement, and friendship.
+            </p>
+            <p class="section-text" style="margin-top: 1.5rem;">
+                Rooted is for women who want community that feels real — not forced. Whether you're new to the area,
+                looking for deeper relationships, or simply needing a place to belong, Rooted is for you. Come as you
+                are. Bring a friend. Become rooted in Christ.
+            </p>
+        </div>
+    </section>
+
+    <!-- ===== WHY WOMEN LOVE ROOTED ===== -->
+    <section class="page-section">
+        <div class="content-block">
+            <h2 class="section-title">Why Women Love Rooted</h2>
+            <ul style="list-style: none; padding: 0; margin: 1.5rem 0;">
+                <li
+                    style="padding: 1rem 0; border-bottom: 1px solid var(--border-glass); font-size: clamp(16px, 1.5vw, 18px); color: var(--text-secondary);">
+                    <strong style="color: var(--text-primary);">Engaging, real-life conversations</strong> — Share life,
+                    not just surface talk
+                </li>
+                <li
+                    style="padding: 1rem 0; border-bottom: 1px solid var(--border-glass); font-size: clamp(16px, 1.5vw, 18px); color: var(--text-secondary);">
+                    <strong style="color: var(--text-primary);">Meaningful connections</strong> — With women of all
+                    generations
+                </li>
+                <li
+                    style="padding: 1rem 0; border-bottom: 1px solid var(--border-glass); font-size: clamp(16px, 1.5vw, 18px); color: var(--text-secondary);">
+                    <strong style="color: var(--text-primary);">Free food</strong> — Because community is better with
+                    snacks
+                </li>
+                <li
+                    style="padding: 1rem 0; border-bottom: 1px solid var(--border-glass); font-size: clamp(16px, 1.5vw, 18px); color: var(--text-secondary);">
+                    <strong style="color: var(--text-primary);">Encouragement, laughter, and support</strong> — A safe
+                    place to be real
+                </li>
+                <li style="padding: 1rem 0; font-size: clamp(16px, 1.5vw, 18px); color: var(--text-secondary);">
+                    <strong style="color: var(--text-primary);">A welcoming place to belong</strong> — No matter where
+                    you are in your journey
+                </li>
+            </ul>
+            <p class="section-text"
+                style="margin-top: 2rem; font-size: clamp(18px, 2vw, 22px); font-weight: 500; color: var(--text-primary);">
+                We believe spiritual growth happens best in community. Women of all generations growing deeper in Christ
+                together.
+            </p>
+        </div>
+    </section>
+
+    <!-- ===== CTA SECTION ===== -->
+    <section class="cta-section">
+        <h2 class="cta-headline">We'd love to see you this month</h2>
+        <p class="cta-description">
+            Bring a friend and come get rooted.
+        </p>
+        <div class="cta-row">
+            <a href="#" class="btn-cta" onclick="openModal('question'); return false;">I'm Coming</a>
+            <a href="#" class="btn-cta" onclick="openModal('question'); return false;">Ask a Question</a>
+        </div>
+    </section>
+
+
+
+
+
+
+
+    <footer id="unified-footer"></footer>
+    <script src="/unified-footer.js"></script>
+    <script>
+        function openChatbot() {
+            if (window.openModal) {
+                window.openModal('question');
+            }
+        }
+
+        function openModal(type) {
+            if (window.openModal) {
+                window.openModal(type);
+            }
+        }
+    </script>
+</body>
+
+</html>

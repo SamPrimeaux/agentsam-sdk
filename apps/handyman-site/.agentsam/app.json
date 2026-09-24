@@ -1,0 +1,18 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "handyman-site",
+  "name": "Primeaux Handyman Services",
+  "kind": "theme-app",
+  "status": "scaffolded",
+  "package": "@inneranimalmedia/theme-handyman-site",
+  "gallery_path": "apps/theme-gallery-preview/themes/handyman-site",
+  "canonical_path": "apps/handyman-site",
+  "preview": {
+    "kind": "static",
+    "root": "frontend/public"
+  },
+  "features_proposed": [
+    "theme.storefront.shell"
+  ],
+  "harvest_batch": "theme-harvest-20260924"
+}

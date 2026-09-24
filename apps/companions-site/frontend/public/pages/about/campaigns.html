@@ -1,0 +1,28 @@
+<style>
+[data-cpas-section="campaigns"]{background:#ede8df}
+[data-cpas-section="campaigns"] .about-camp-featured{display:grid;grid-template-columns:1fr 1.4fr;gap:2rem;align-items:center;margin-top:1.5rem;background:var(--light-card);border:1px solid var(--light-border);border-radius:20px;overflow:hidden;box-shadow:0 4px 32px rgba(0,0,0,0.08)}
+[data-cpas-section="campaigns"] .about-camp-featured img{width:100%;height:100%;min-height:280px;object-fit:cover;display:block}
+[data-cpas-section="campaigns"] .about-camp-body{padding:2rem 2rem 2rem 0}
+[data-cpas-section="campaigns"] .about-camp-heading{font-family:var(--font-display);font-size:clamp(1.4rem,2.2vw,1.9rem);font-weight:700;color:var(--light-text);line-height:1.15;margin:0.4rem 0 0.85rem}
+[data-cpas-section="campaigns"] .about-camp-meta{font-size:13px;color:var(--light-muted);margin-bottom:1rem}
+@media(max-width:768px){[data-cpas-section="campaigns"] .about-camp-featured{grid-template-columns:1fr}[data-cpas-section="campaigns"] .about-camp-body{padding:1.5rem}}
+</style>
+<section class="section s-light" data-cpas-section="campaigns" data-section-key="campaigns">
+  <div class="container">
+    <div class="ey-purple">Featured Campaigns</div>
+    <div class="about-camp-featured">
+      <img src="https://assets.companionsofcaddo.org/media/animals/goinhomejustadopted.webp" alt="$10,000 lifesaving goal" loading="lazy" />
+      <div class="about-camp-body">
+        <h2 class="about-camp-heading">$10,000 lifesaving goal</h2>
+        <p class="about-camp-meta">$465 raised by 7 donors. Every gift fuels medical support, transport, and second chances.</p>
+        <p class="story-body">Every gift fuels medical support, transport, and second chances for dogs at Caddo Parish Animal Services.</p>
+        <div class="progress-bar" style="margin:1rem 0 0.35rem"><div class="progress-fill" style="width:5%"></div></div>
+        <p class="progress-label">$465 of $10,000 · 5%</p>
+        <a class="story-cta" href="/donate" style="margin-top:1.25rem">
+          Give now
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Iberia Church of Christ | Home</title>
+    <meta name="description"
+        content="A Christ-centered community in New Iberia, Louisiana. We exist to make disciples and serve our community. Come as you are — you're welcome here.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="icon" type="image/webp"
+        href="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/5ce76f40-dfaf-4c97-429b-09e939449b00/small">
+    <link rel="stylesheet" href="/unified-header.css">
+    <link rel="stylesheet" href="/unified-footer.css">
+    <script src="/unified-header.js" defer></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-blue: #2563eb;
+            --primary-glow: rgba(37, 99, 235, 0.15);
+            --text-dark: #0F172A;
+            --text-gray: #64748B;
+            --text-light: #94A3B8;
+            --bg-primary: #FDFBF7;
+            --bg-light: #FFFFFF;
+            --glass-bg: rgba(255, 255, 255, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.3);
+            --warm-accent: #FFF4ED;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            line-height: 1.6;
+            color: var(--text-dark);
+            background: var(--bg-primary);
+            overflow-x: hidden;
+        }
+
+
+        /* ===== HERO SECTION ===== */
+        .hero {
+            position: relative;
+            min-height: 90vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.03) 0%, rgba(255, 255, 255, 0) 100%);
+        }
+
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            opacity: 0.03;
+            background: radial-gradient(circle at 30% 50%, var(--primary-blue) 0%, transparent 50%);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 8rem 2rem 6rem;
+            text-align: center;
+        }
+
+        .hero-image {
+            width: 100%;
+            max-width: 900px;
+            height: auto;
+            margin: 0 auto 3rem;
+            border-radius: 24px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+            border: 1px solid var(--glass-border);
+            object-fit: cover;
+            aspect-ratio: 16 / 9;
+        }
+
+        .hero-title {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 800;
+            color: var(--text-dark);
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1.125rem, 2.5vw, 1.5rem);
+            color: var(--text-gray);
+            line-height: 1.7;
+            max-width: 700px;
+            margin: 0 auto 2.5rem;
+        }
+
+        .hero-cta-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 4rem;
+        }
+
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem 2rem;
+            background: var(--primary-blue);
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1.0625rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.25);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(37, 99, 235, 0.35);
+            background: #1e40af;
+        }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem 2rem;
+            background: white;
+            color: var(--primary-blue);
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1.0625rem;
+            border: 2px solid var(--primary-blue);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary-blue);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .hero-info {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            flex-wrap: wrap;
+            padding: 2rem;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .info-item {
+            text-align: center;
+        }
+
+        .info-label {
+            font-size: 0.875rem;
+            color: var(--text-light);
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .info-value {
+            font-size: 1.125rem;
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+
+        /* ===== WELCOME SECTION ===== */
+        .welcome-section {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 6rem 2rem;
+            text-align: center;
+        }
+
+        .section-eyebrow {
+            font-size: 0.875rem;
+            color: var(--primary-blue);
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 800;
+            color: var(--text-dark);
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-description {
+            font-size: clamp(1.0625rem, 2vw, 1.25rem);
+            color: var(--text-gray);
+            line-height: 1.8;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* ===== MISSION SPOTLIGHT ===== */
+        .mission-spotlight {
+            background: linear-gradient(135deg, var(--warm-accent) 0%, white 100%);
+            padding: 6rem 2rem;
+            margin: 4rem 0;
+        }
+
+        .spotlight-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        .spotlight-image {
+            width: 100%;
+            height: 500px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        .spotlight-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .spotlight-content h2 {
+            font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .spotlight-content p {
+            font-size: 1.125rem;
+            color: var(--text-gray);
+            line-height: 1.8;
+            margin-bottom: 1.5rem;
+        }
+
+        .quote-block {
+            background: white;
+            padding: 1.5rem;
+            border-left: 4px solid var(--primary-blue);
+            border-radius: 0 12px 12px 0;
+            margin: 2rem 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+        }
+
+        .quote-text {
+            font-style: italic;
+            color: var(--text-dark);
+            font-size: 1.0625rem;
+            line-height: 1.7;
+            margin-bottom: 0.75rem;
+        }
+
+        .quote-author {
+            font-size: 0.9375rem;
+            color: var(--primary-blue);
+            font-weight: 600;
+        }
+
+        /* ===== COMMUNITY GROUPS ===== */
+        .groups-section {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 6rem 2rem;
+        }
+
+        .groups-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .group-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .group-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+        }
+
+        .group-image {
+            width: 100%;
+            height: 280px;
+            object-fit: cover;
+        }
+
+        .group-content {
+            padding: 2rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .group-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 1rem;
+        }
+
+        .group-description {
+            color: var(--text-gray);
+            line-height: 1.7;
+            margin-bottom: 1.5rem;
+            flex: 1;
+        }
+
+        .group-cta {
+            align-self: flex-start;
+        }
+
+        /* ===== BELIEFS SECTION ===== */
+        .beliefs-section {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(37, 99, 235, 0.02) 100%);
+            padding: 6rem 2rem;
+            margin: 4rem 0;
+            position: relative;
+        }
+
+        .beliefs-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-blue), transparent);
+        }
+
+        .beliefs-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .beliefs-intro {
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto 4rem;
+        }
+
+        .beliefs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+        }
+
+        .belief-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .belief-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--primary-blue);
+            border-radius: 16px 16px 0 0;
+        }
+
+        .belief-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(37, 99, 235, 0.15);
+        }
+
+        .belief-title {
+            font-size: 1.375rem;
+            font-weight: 700;
+            color: var(--primary-blue);
+            margin-bottom: 1rem;
+        }
+
+        .belief-text {
+            color: var(--text-gray);
+            line-height: 1.8;
+            margin-bottom: 1.5rem;
+        }
+
+        .belief-refs {
+            font-size: 0.875rem;
+            color: var(--text-light);
+            font-style: italic;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        /* ===== STREAM REMINDER ===== */
+        .latest-message {
+            background: #fff;
+            padding: 6rem 2rem;
+        }
+
+        .message-card {
+            background: #0f172a;
+            color: white;
+            border-radius: 32px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .message-content {
+            padding: 4rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .message-preview {
+            position: relative;
+            background: #1e293b;
+            min-height: 400px;
+        }
+
+        .message-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.8;
+        }
+
+        .badge {
+            background: var(--primary-blue);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1.5rem;
+            display: inline-block;
+            width: fit-content;
+        }
+
+        @media (max-width: 1024px) {
+            .message-card {
+                grid-template-columns: 1fr;
+            }
+
+            .message-preview {
+                min-height: 300px;
+            }
+
+            .message-content {
+                padding: 3rem 2rem;
+            }
+        }
+
+
+        /* ===== CHAT BUTTON ===== */
+        .chat-btn {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: var(--primary-blue);
+            border: none;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 900;
+        }
+
+        .chat-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 28px rgba(37, 99, 235, 0.5);
+        }
+
+        .chat-icon {
+            width: 28px;
+            height: 28px;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1024px) {
+
+            .spotlight-container {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .spotlight-image {
+                height: 400px;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .header-content {
+                padding: 0.5rem 1.25rem;
+            }
+
+
+            .hero {
+                min-height: auto;
+                padding-top: 100px;
+            }
+
+            .hero-content {
+                padding: 4rem 1.5rem 3rem;
+            }
+
+            .hero-info {
+                gap: 1.5rem;
+                padding: 1.5rem;
+            }
+
+            .hero-cta-group {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .btn-primary,
+            .btn-secondary {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .welcome-section,
+            .groups-section,
+            .beliefs-section {
+                padding: 4rem 1.5rem;
+            }
+
+            .mission-spotlight {
+                padding: 4rem 1.5rem;
+            }
+
+            .spotlight-image {
+                height: 300px;
+            }
+
+            .groups-grid,
+            .beliefs-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+
+            .mobile-sidenav {
+                width: 80%;
+            }
+
+            .chat-btn {
+                width: 56px;
+                height: 56px;
+                bottom: 1rem;
+                right: 1rem;
+            }
+
+            .chat-icon {
+                width: 24px;
+                height: 24px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Unified Header will be injected here by JS -->
+
+    <!-- ===== HERO SECTION ===== -->
+    <section class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-content">
+            <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/01a6ef14-a6e3-4587-6db8-e37e870ef500/public"
+                alt="New Iberia Church of Christ Mission Group" class="hero-image" loading="eager">
+
+            <h1 class="hero-title">Welcome Home</h1>
+            <p class="hero-subtitle">
+                A Christ-centered community in New Iberia where faith is lived, not just spoken.
+                We exist to make disciples and serve our neighbors. Come as you are — you're welcome here.
+            </p>
+
+            <div class="hero-cta-group">
+                <a href="/connect" class="btn-primary">Get Connected</a>
+                <a href="/about-us" class="btn-secondary">Learn More</a>
+            </div>
+
+            <div class="hero-info">
+                <div class="info-item">
+                    <div class="info-label">Sunday Service</div>
+                    <div class="info-value">10:00 AM</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Bible Class</div>
+                    <div class="info-value">9:30 AM</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Kids Service</div>
+                    <div class="info-value">9:00 AM</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Location</div>
+                    <div class="info-value">667 Charles St</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== WELCOME MESSAGE ===== -->
+    <section class="welcome-section">
+        <span class="section-eyebrow">Our Mission</span>
+        <h2 class="section-title">Faith Lived, Not Just Spoken</h2>
+        <p class="section-description">
+            We believe God created us for relationship with Him, and through Jesus Christ we are offered
+            forgiveness, transformation, and new life. The church exists to make disciples and serve our community—not
+            just to talk about faith, but to live it out together in meaningful, tangible ways.
+        </p>
+    </section>
+
+    <!-- ===== MISSION SPOTLIGHT ===== -->
+    <section class="mission-spotlight">
+        <div class="spotlight-container">
+            <div class="spotlight-image">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/52f54b2e-0eb8-4a87-7342-7d44ce66f900/public"
+                    alt="New Iberia Church of Christ Leadership" class="spotlight-img" loading="lazy">
+            </div>
+            <div class="spotlight-content">
+                <h2>Serving Our Community Through Model City Missions</h2>
+                <p>
+                    We believe the gospel is lived out through action. Model City Missions exists to show up for
+                    our neighbors with hands-on love, meeting practical needs and building genuine relationships
+                    throughout New Iberia.
+                </p>
+                <div class="quote-block">
+                    <p class="quote-text">
+                        "Rather than just come to church and talk about it, we do anything we can to be in our
+                        community—serving alongside our friends and neighbors and making New Iberia a better place to
+                        live."
+                    </p>
+                    <p class="quote-author">— Kenny Wright, Minister</p>
+                </div>
+                <a href="/mission" class="btn-primary">Join the Mission</a>
+            </div>
+        </div>
+
+        <!-- Mission Gallery -->
+        <div style="max-width: 1200px; margin: 3rem auto 0; padding: 0 2rem;">
+            <div
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 2rem;">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/01a6ef14-a6e3-4587-6db8-e37e870ef500/public"
+                    alt="Model City Missions volunteers"
+                    style="width: 100%; height: 200px; object-fit: cover; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);"
+                    loading="lazy">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/01a6ef14-a6e3-4587-6db8-e37e870ef500/public"
+                    alt="Helping hands serving the community"
+                    style="width: 100%; height: 200px; object-fit: cover; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);"
+                    loading="lazy">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/01a6ef14-a6e3-4587-6db8-e37e870ef500/public"
+                    alt="Painting homes with purpose"
+                    style="width: 100%; height: 200px; object-fit: cover; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);"
+                    loading="lazy">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/01a6ef14-a6e3-4587-6db8-e37e870ef500/public"
+                    alt="Working hard to restore homes"
+                    style="width: 100%; height: 200px; object-fit: cover; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);"
+                    loading="lazy">
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== COMMUNITY GROUPS ===== -->
+    <section class="groups-section">
+        <div style="text-align: center; margin-bottom: 3rem;">
+            <span class="section-eyebrow">Community Groups</span>
+            <h2 class="section-title">Grow Together</h2>
+            <p class="section-description">
+                We believe spiritual growth happens best in community. Join a group where you can connect,
+                be known, and grow deeper in your faith alongside others.
+            </p>
+        </div>
+
+        <div class="groups-grid">
+            <div class="group-card">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/89603531-700d-448d-2103-b63d4d363b00/medium"
+                    alt="Fight Club men's ministry gathering" class="group-image" loading="lazy">
+                <div class="group-content">
+                    <h3 class="group-title">Fight Club</h3>
+                    <p class="group-description">
+                        Every man is fighting something—providing, recovery, marriage, fatherhood, faith, purpose.
+                        Fight Club is where men gather to support each other, grow stronger, and stay rooted in Christ.
+                        Because no man was meant to fight alone.
+                    </p>
+                    <a href="/mensgroup" class="btn-primary group-cta">Join Fight Club</a>
+                </div>
+            </div>
+
+            <div class="group-card">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/fe18e68c-64eb-47e2-d2a3-8fd5bfc99500/public"
+                    alt="Rooted women's gathering" class="group-image" loading="lazy">
+                <div class="group-content">
+                    <h3 class="group-title">Rooted</h3>
+                    <p class="group-description">
+                        A women's gathering centered on meaningful relationships and multigenerational community.
+                        On the first Tuesday of every month, women come together to connect, share life, and grow
+                        deeper in Christ together.
+                    </p>
+                    <a href="/womansgroup" class="btn-primary group-cta">Connect with Rooted</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Groups Gallery -->
+        <div
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 3rem;">
+            <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/89603531-700d-448d-2103-b63d4d363b00/public"
+                alt="Fight Club gathering"
+                style="width: 100%; height: 250px; object-fit: cover; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);"
+                loading="lazy">
+            <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/89603531-700d-448d-2103-b63d4d363b00/public"
+                alt="Fight Club ministry"
+                style="width: 100%; height: 250px; object-fit: cover; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);"
+                loading="lazy">
+            <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/89603531-700d-448d-2103-b63d4d363b00/public"
+                alt="Fight Club leadership"
+                style="width: 100%; height: 250px; object-fit: cover; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);"
+                loading="lazy">
+        </div>
+    </section>
+
+    <!-- ===== BELIEFS SECTION ===== -->
+    <section class="beliefs-section">
+        <div class="beliefs-container">
+            <div class="beliefs-intro">
+                <span class="section-eyebrow">What We Believe</span>
+                <h2 class="section-title">Rooted in Scripture</h2>
+                <p class="section-description">
+                    We believe the Bible is God's inspired Word and the final authority for faith and life.
+                    Here are the core truths that guide our community and shape how we live.
+                </p>
+            </div>
+
+            <div class="beliefs-grid">
+                <div class="belief-card">
+                    <h3 class="belief-title">God</h3>
+                    <p class="belief-text">
+                        We believe in one true God who eternally exists in three Persons: Father, Son, and Holy Spirit.
+                        Each is fully God, equal in nature, united as one. God created the world and sustains all He has
+                        made.
+                    </p>
+                    <p class="belief-refs">Genesis 1:26, John 1:1, Romans 8, Ephesians 1:13–14</p>
+                </div>
+
+                <div class="belief-card">
+                    <h3 class="belief-title">Jesus Christ</h3>
+                    <p class="belief-text">
+                        We believe Jesus Christ is fully God who became human to save us. His life shows us how to live,
+                        His death redeems us, and His resurrection guarantees our new life. He alone is the Savior of
+                        the world.
+                    </p>
+                    <p class="belief-refs">1 Corinthians 15:1–8, Romans 10:9, John 3:16</p>
+                </div>
+
+                <div class="belief-card">
+                    <h3 class="belief-title">The Holy Spirit</h3>
+                    <p class="belief-text">
+                        The Holy Spirit convicts people of their need for Christ and personally indwells believers to
+                        empower faithful living. His presence is the seal that we belong to God.
+                    </p>
+                    <p class="belief-refs">John 16:8–11, 1 John 4:13, Galatians 5:16–26</p>
+                </div>
+
+                <div class="belief-card">
+                    <h3 class="belief-title">The Bible</h3>
+                    <p class="belief-text">
+                        The sixty-six books of the Bible are inspired by God and are the final authority for
+                        understanding
+                        God, salvation, and life. Scripture is our guide for faith and daily living.
+                    </p>
+                    <p class="belief-refs">2 Timothy 3:16, 2 Peter 1:19–21</p>
+                </div>
+
+                <div class="belief-card">
+                    <h3 class="belief-title">Salvation</h3>
+                    <p class="belief-text">
+                        All people have sinned and sin separates us from God. Salvation is possible only through God's
+                        grace,
+                        received through faith in Jesus. It's a free gift expressed through confession, repentance, and
+                        baptism.
+                    </p>
+                    <p class="belief-refs">Romans 3:23, 6:23, Ephesians 2:8–9, Acts 2:38</p>
+                </div>
+
+                <div class="belief-card">
+                    <h3 class="belief-title">The Church</h3>
+                    <p class="belief-text">
+                        The church is the community of believers saved by Christ. We are the body of Christ, empowered
+                        by
+                        the Spirit to reach the lost, disciple the saved, and make disciples of all nations.
+                    </p>
+                    <p class="belief-refs">Matthew 28:16–20, John 17:20–26, Ephesians 4:1–16</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== STREAM REMINDER ===== -->
+    <section class="latest-message">
+        <div class="container">
+            <div class="message-card">
+                <div class="message-content">
+                    <span class="badge">Digital Sanctuary</span>
+                    <h2 style="font-size: 2.5rem; margin-bottom: 1.5rem;">Worship With Us, Anywhere</h2>
+                    <p style="color: rgba(255, 255, 255, 0.85); margin-bottom: 2.5rem; line-height: 1.8;">Experience
+                        worship beyond our walls. Whether you're traveling, at home, or exploring faith for the first
+                        time, join us online every Sunday at 10:00 AM. Subscribe for professional reminders and receive
+                        the direct live link so you never miss a moment of community.</p>
+
+                    <div id="liveStatus" style="margin-bottom: 1.5rem; display: none;">
+                        <span
+                            style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(239, 68, 68, 0.2); color: #f87171; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; font-size: 0.875rem;">
+                            <span
+                                style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; animate: pulse 2s infinite;"></span>
+                            LIVE NOW
+                        </span>
+                        <a href="https://customer-8y3087qnrzz7ql2e.cloudflarestream.com/0e065e5be945d38ff31aae0464527808/manifest/video.m3u8"
+                            class="btn-primary"
+                            style="margin-left: 1rem; padding: 0.5rem 1rem; font-size: 0.875rem;">Join Stream</a>
+                    </div>
+
+                    <form id="subscribeForm" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <input type="email" id="subscriberEmail" placeholder="Enter your email" required
+                            style="flex: 1; min-width: 250px; padding: 1rem 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: white; font-family: inherit; transition: all 0.3s ease;">
+                        <button type="submit" class="btn-primary"
+                            style="padding: 1rem 2rem; border-radius: 12px; font-weight: 700; border: none; cursor: pointer;">Send
+                            Me Reminders</button>
+                    </form>
+                    <div id="subscribeStatus" style="margin-top: 1.5rem; font-size: 0.875rem;"></div>
+                </div>
+                <div class="message-preview">
+                    <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/01a6ef14-a6e3-4587-6db8-e37e870ef500/public"
+                        alt="Join our community online" class="message-image" loading="lazy">
+                    <div
+                        style="position: absolute; inset: 0; background: linear-gradient(to right, #0f172a 0%, transparent 50%);">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        document.getElementById('subscribeForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('subscriberEmail').value;
+            const status = document.getElementById('subscribeStatus');
+            status.textContent = 'Processing request...';
+            status.style.color = 'rgba(255,255,255,0.5)';
+
+            try {
+                const res = await fetch('/api/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                if (res.ok) {
+                    status.textContent = 'Successfully subscribed! You will receive reminders for our next stream.';
+                    status.style.color = '#10b981';
+                    document.getElementById('subscriberEmail').value = '';
+                } else {
+                    status.textContent = 'Subscription error. Please check your email and try again.';
+                    status.style.color = '#ef4444';
+                }
+            } catch (err) {
+                status.textContent = 'Connection failed. Please check your internet.';
+                status.style.color = '#ef4444';
+            }
+        };
+    </script>
+
+    <!-- ===== FOOTER ===== -->
+    <footer id="unified-footer"></footer>
+
+    <!-- ===== CHAT BUTTON ===== -->
+    <button class="chat-btn" aria-label="Chat with us" title="Chat with our team">
+        <svg class="chat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+    </button>
+
+    <script>
+        // Header scroll effect
+        // This script is now for the unified header, but the elements it targets
+        // will be dynamically loaded. It might need adjustment or removal if the
+        // unified header handles its own scroll effects.
+        const header = document.getElementById('mainHeader');
+
+        function handleScroll() {
+            if (header && window.scrollY > 50) {
+                header.classList.add('scrolled');
+            } else if (header) {
+                header.classList.remove('scrolled');
+            }
+        }
+
+        window.addEventListener('scroll', handleScroll);
+
+        // Mobile menu
+        // These elements will be part of the unified header and its script.
+        // This local script block might need to be removed or adapted.
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const mobileSidenav = document.getElementById('mobileSidenav');
+        const mobileOverlay = document.getElementById('mobileOverlay');
+        const closeBtn = document.getElementById('closeBtn');
+
+        function openMobileNav() {
+            if (hamburgerBtn) hamburgerBtn.classList.add('active');
+            if (mobileSidenav) mobileSidenav.classList.add('active');
+            if (mobileOverlay) mobileOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMobileNav() {
+            if (hamburgerBtn) hamburgerBtn.classList.remove('active');
+            if (mobileSidenav) mobileSidenav.classList.remove('active');
+            if (mobileOverlay) mobileOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        if (hamburgerBtn) hamburgerBtn.addEventListener('click', openMobileNav);
+        if (closeBtn) closeBtn.addEventListener('click', closeMobileNav);
+        if (mobileOverlay) mobileOverlay.addEventListener('click', closeMobileNav);
+
+        document.querySelectorAll('.sidenav-link').forEach(link => {
+            link.addEventListener('click', closeMobileNav);
+        });
+
+        // Active state management
+        function setActiveNavLink() {
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('.nav-link, .sidenav-link');
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                const linkPath = link.getAttribute('href');
+                if (linkPath === currentPath || (currentPath === '/' && linkPath === '/')) {
+                    link.classList.add('active');
+                }
+            });
+        }
+
+        setActiveNavLink();
+
+        // Close mobile nav on resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768 && mobileSidenav.classList.contains('active')) {
+                closeMobileNav();
+            }
+        });
+    </script>
+    <script src="/unified-footer.js"></script>
+</body>
+
+</html>

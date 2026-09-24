@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - Shinshu Solutions</title>
+    <link rel="stylesheet" href="/shared/styles.css">
+</head>
+<body>
+    <div id="nav-container"></div>
+
+    <!-- About Page -->
+    <div id="about-page" class="page active">
+        <div class="container">
+            <div class="section">
+                <div class="section-header">
+                    <h2 class="section-title serif">About Jake Waalk</h2>
+                    <p class="section-subtitle">
+                        Your local expert with deep roots in Nagano
+                    </p>
+                </div>
+
+                <div class="about-content">
+                    <div class="about-text">
+                        <p>
+                            Shinshu Solutions is a Nagano-based bilingual consulting service operated by Jake Waalk, 
+                            specializing in supporting foreign real estate investors and Japanese construction firms. 
+                            I help international clients navigate the practical realities of buying, renovating, and 
+                            maintaining property in Japan.
+                        </p>
+                        <p>
+                            My service area is centered on the world-class ski resort Nozawa Onsen, which was featured 
+                            on the cover of Condé Nast Traveler as one of the world's top 9 ski resorts for the 2026 season. 
+                            I also work in the surrounding region including Iiyama, Shinano, Myoko, Karuizawa, and nearby resort areas.
+                        </p>
+                        <p>
+                            I relocated to Nagano Prefecture after earning my Master's Degree in Anthropology in 2015. 
+                            Since then, I have amassed wide-ranging professional experience in Nagano across both the 
+                            public and private sectors. I worked as an English teacher on the JET Program, serving two 
+                            years as President of Nagano AJET.
+                        </p>
+                        <p>
+                            From 2020 to 2021, I was employed by Tomi City on ecotourism development at the Tomi Tourism 
+                            Association, where I became the first non-Japanese Town Development Officer in Nagano Prefecture. 
+                            More recently, I worked in the Japanese mushroom industry, handling marketing and international 
+                            client management for a Nagano-based export firm.
+                        </p>
+                    </div>
+
+                    <div>
+                        <div class="credentials">
+                            <h4 class="serif">Qualifications & Experience</h4>
+                            <ul>
+                                <li>JLPT N1 Certification (Highest Level of Japanese Fluency)</li>
+                                <li>5+ Years Technical Japanese-English Translation & Interpretation</li>
+                                <li>Master's Degree in Anthropology</li>
+                                <li>First Non-Japanese Town Development Officer in Nagano Prefecture</li>
+                                <li>President of Nagano AJET (2 Years)</li>
+                                <li>Deep Construction Industry Connections Through Family Ties</li>
+                                <li>Export Industry Experience in International Client Management</li>
+                            </ul>
+                        </div>
+
+                        <div class="credentials">
+                            <h4 class="serif">Service Areas</h4>
+                            <ul>
+                                <li>Nozawa Onsen (Primary Focus)</li>
+                                <li>Iiyama</li>
+                                <li>Shinano</li>
+                                <li>Myoko</li>
+                                <li>Karuizawa</li>
+                                <li>Komoro Region</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="footer-container"></div>
+
+    <script src="/shared/layout.js"></script>
+    <script>
+        async function loadComponents() {
+            const navContainer = document.getElementById('nav-container');
+            const footerContainer = document.getElementById('footer-container');
+            
+            try {
+                const [navRes, footerRes] = await Promise.all([
+                    fetch('/shared/nav.html'),
+                    fetch('/shared/footer.html')
+                ]);
+                
+                if (navRes.ok) navContainer.innerHTML = await navRes.text();
+                if (footerRes.ok) footerContainer.innerHTML = await footerRes.text();
+            } catch (error) {
+                console.error('Error loading components:', error);
+            }
+        }
+        
+        loadComponents();
+    </script>
+</body>
+</html>

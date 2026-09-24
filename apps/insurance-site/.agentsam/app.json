@@ -1,0 +1,18 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "insurance-site",
+  "name": "Chrystal Clear Insurance",
+  "kind": "theme-app",
+  "status": "scaffolded",
+  "package": "@inneranimalmedia/theme-insurance-site",
+  "gallery_path": "apps/theme-gallery-preview/themes/insurance-site",
+  "canonical_path": "apps/insurance-site",
+  "preview": {
+    "kind": "static",
+    "root": "frontend/public"
+  },
+  "features_proposed": [
+    "theme.storefront.shell"
+  ],
+  "harvest_batch": "theme-harvest-20260924"
+}

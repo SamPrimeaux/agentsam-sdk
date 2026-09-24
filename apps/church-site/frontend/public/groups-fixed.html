@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groups | New Iberia Church of Christ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-primary: #fdfbf7;
+            --bg-glass-light: rgba(255, 255, 255, 0.85);
+            --bg-glass-dark: rgba(37, 99, 235, 0.1);
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-glass: rgba(226, 232, 240, 0.5);
+            --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.08);
+            --blue-primary: #2563eb;
+            --blue-gradient: linear-gradient(135deg, rgba(37, 99, 235, 0.9), rgba(59, 130, 246, 0.85));
+            --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --container-max: 1400px;
+            --section-padding: clamp(3rem, 8vw, 6rem);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-body);
+            color: var(--text-primary);
+            background: var(--bg-primary);
+            line-height: 1.6;
+            font-size: clamp(16px, 1.5vw, 18px);
+            overflow-x: hidden;
+        }
+
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            background: var(--bg-glass-light);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-bottom: 1px solid var(--border-glass);
+            box-shadow: var(--shadow-glass);
+            z-index: 1000;
+            height: 80px;
+        }
+
+        .header-container {
+            max-width: var(--container-max);
+            margin: 0 auto;
+            padding: 0 clamp(1.5rem, 4vw, 3rem);
+            height: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-link {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+        }
+
+        .logo-container {
+            width: min(70vw, 200px);
+            max-width: 200px;
+            height: auto;
+        }
+
+        .logo-img {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            display: block;
+        }
+
+        .nav-desktop {
+            display: flex;
+            gap: clamp(1rem, 2vw, 2rem);
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: clamp(15px, 1.2vw, 16px);
+            padding: 0.5rem 0;
+            transition: color 0.2s;
+            position: relative;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: var(--blue-primary);
+        }
+
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--blue-primary);
+        }
+
+        .mobile-toggle {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .mobile-toggle span {
+            width: 24px;
+            height: 2px;
+            background: var(--text-primary);
+            border-radius: 2px;
+        }
+
+        .mobile-menu {
+            position: fixed;
+            top: 80px;
+            left: 0;
+            right: 0;
+            background: var(--bg-glass-light);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-glass);
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .mobile-menu.active {
+            max-height: 500px;
+        }
+
+        .mobile-menu ul {
+            list-style: none;
+            padding: 1.5rem clamp(1.5rem, 4vw, 3rem);
+        }
+
+        .mobile-menu a {
+            display: block;
+            padding: 1rem 0;
+            color: var(--text-primary);
+            text-decoration: none;
+            border-bottom: 1px solid var(--border-glass);
+        }
+
+        .hero-fullbleed {
+            width: 100vw;
+            height: clamp(400px, 60vh, 700px);
+            margin-top: 80px;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(59, 130, 246, 0.05));
+        }
+
+        .hero-fullbleed img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            display: block;
+        }
+
+        .page-section {
+            padding: var(--section-padding) clamp(2rem, 4vw, 3rem);
+            max-width: var(--container-max);
+            margin: 0 auto;
+        }
+
+        .page-title {
+            font-size: clamp(36px, 4vw, 56px);
+            font-weight: 700;
+            color: var(--text-primary);
+            text-align: center;
+            margin-bottom: clamp(2rem, 4vw, 3rem);
+        }
+
+        .content-intro {
+            font-size: clamp(18px, 2vw, 22px);
+            color: var(--text-secondary);
+            line-height: 1.8;
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto clamp(4rem, 8vw, 6rem);
+        }
+
+        .groups-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr));
+            gap: clamp(3rem, 5vw, 4rem);
+            margin-top: clamp(3rem, 6vw, 4rem);
+        }
+
+        .group-card {
+            background: var(--bg-glass-light);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-glass);
+            border-radius: 20px;
+            padding: 0;
+            box-shadow: var(--shadow-glass);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .group-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--blue-gradient);
+        }
+
+        .group-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 48px rgba(37, 99, 235, 0.15);
+        }
+
+        .group-image-container {
+            width: 100%;
+            height: 350px;
+            position: relative;
+            overflow: hidden;
+            background: #f3f4f6;
+        }
+
+        .group-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            display: block;
+        }
+
+        .group-content {
+            padding: clamp(2rem, 4vw, 3rem);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .group-schedule {
+            background: var(--bg-glass-dark);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-top: 0.5rem;
+        }
+
+        .group-schedule p {
+            color: var(--text-secondary);
+            font-size: clamp(14px, 1.2vw, 15px);
+            line-height: 1.8;
+            margin-bottom: 0.5rem;
+        }
+
+        .group-schedule strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .group-title {
+            font-size: clamp(24px, 2.5vw, 32px);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .group-summary {
+            color: var(--text-secondary);
+            font-size: clamp(16px, 1.3vw, 18px);
+            line-height: 1.7;
+            flex-grow: 1;
+        }
+
+        .content-block {
+            background: var(--bg-glass-light);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-glass);
+            border-radius: 20px;
+            padding: clamp(2.5rem, 5vw, 4rem);
+            box-shadow: var(--shadow-glass);
+        }
+
+        .community-highlights {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+            gap: clamp(2rem, 4vw, 3rem);
+            margin: clamp(4rem, 8vw, 6rem) 0;
+        }
+
+        .highlight-card {
+            background: var(--bg-glass-light);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            padding: clamp(2rem, 3vw, 2.5rem);
+            text-align: center;
+            box-shadow: var(--shadow-glass);
+            transition: transform 0.3s ease;
+        }
+
+        .highlight-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .highlight-icon {
+            width: 64px;
+            height: 64px;
+            background: var(--bg-glass-dark);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+        }
+
+        .highlight-icon svg {
+            width: 32px;
+            height: 32px;
+            stroke: var(--blue-primary);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .highlight-title {
+            font-size: clamp(18px, 2vw, 20px);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .highlight-text {
+            font-size: clamp(14px, 1.2vw, 16px);
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+            gap: clamp(1.5rem, 3vw, 2.5rem);
+            margin-top: clamp(2rem, 4vw, 3rem);
+        }
+
+        .gallery-item {
+            background: var(--bg-glass-light);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow-glass);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .gallery-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 36px rgba(37, 99, 235, 0.12);
+        }
+
+        .gallery-image {
+            width: 100%;
+            height: 280px;
+            object-fit: cover;
+            object-position: center;
+            display: block;
+            background: #f3f4f6;
+        }
+
+        .gallery-caption {
+            padding: 1.25rem;
+            font-size: clamp(14px, 1.2vw, 15px);
+            color: var(--text-secondary);
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        .btn-cta {
+            min-height: 48px;
+            padding: 14px 32px;
+            background: var(--blue-gradient);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: clamp(15px, 1.2vw, 16px);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            align-self: flex-start;
+        }
+
+        .btn-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.4);
+        }
+
+        .cta-row {
+            display: flex;
+            gap: clamp(1rem, 2vw, 1.5rem);
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: clamp(4rem, 8vw, 6rem) auto 0;
+            padding: 0 clamp(2rem, 4vw, 3rem);
+            max-width: var(--container-max);
+        }
+
+        footer {
+            background: var(--bg-glass-light);
+            border-top: 1px solid var(--border-glass);
+            padding: var(--section-padding) 2rem 2rem;
+            margin-top: var(--section-padding);
+        }
+
+        .footer-container {
+            max-width: var(--container-max);
+            margin: 0 auto;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 3rem;
+            margin-bottom: 3rem;
+        }
+
+        .footer-logo-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .footer-logo {
+            width: min(180px, 100%);
+            height: auto;
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-logo-text {
+            font-size: clamp(16px, 1.3vw, 18px);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-top: 0.5rem;
+        }
+
+        .footer-section h3 {
+            font-size: clamp(18px, 1.5vw, 20px);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .footer-section p,
+        .footer-section a {
+            color: var(--text-secondary);
+            font-size: clamp(14px, 1.2vw, 16px);
+            line-height: 1.8;
+            text-decoration: none;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-section a:hover {
+            color: var(--blue-primary);
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-glass);
+            color: var(--text-secondary);
+            font-size: clamp(13px, 1vw, 14px);
+        }
+
+        .footer-bottom a {
+            color: var(--blue-primary);
+            text-decoration: none;
+        }
+
+        .chatbot-button {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 999;
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: var(--blue-primary);
+            border: none;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chatbot-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 28px rgba(37, 99, 235, 0.5);
+            background: #1e40af;
+        }
+
+        .chatbot-icon {
+            width: 28px;
+            height: 28px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal {
+            background: var(--bg-glass-light);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            padding: 2.5rem;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: clamp(20px, 2vw, 24px);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+        }
+
+        .modal-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-glass);
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-family: var(--font-body);
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab-btn.active {
+            color: var(--blue-primary);
+            border-bottom-color: var(--blue-primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .form-input,
+        .form-textarea {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 1px solid var(--border-glass);
+            border-radius: 8px;
+            background: var(--bg-glass-light);
+            font-family: var(--font-body);
+            color: var(--text-primary);
+        }
+
+        .form-input:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--blue-primary);
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .form-submit {
+            width: 100%;
+            padding: 14px;
+            background: var(--blue-gradient);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-family: var(--font-body);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .nav-desktop {
+                display: none;
+            }
+
+            .mobile-toggle {
+                display: flex;
+            }
+
+            .hero-fullbleed {
+                height: clamp(300px, 50vh, 500px);
+            }
+
+            .group-image-container {
+                height: 280px;
+            }
+
+            .gallery-image {
+                height: 220px;
+            }
+
+            .chatbot-button {
+                bottom: 1rem;
+                right: 1rem;
+                width: 56px;
+                height: 56px;
+            }
+        }
+
+        @media (min-width: 2560px) {
+            .hero-fullbleed {
+                height: min(70vh, 900px);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="header-container">
+            <a href="/" class="logo-link">
+                <picture class="logo-container">
+                    <source
+                        srcset="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/5ce76f40-dfaf-4c97-429b-09e939449b00/small"
+                        type="image/webp">
+                    <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/5ce76f40-dfaf-4c97-429b-09e939449b00/small"
+                        alt="New Iberia Church of Christ Logo" class="logo-img" loading="eager">
+                </picture>
+            </a>
+
+            <nav class="nav-desktop">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/about-us" class="nav-link">About</a>
+                <a href="/get-connected" class="nav-link">Connect</a>
+                <a href="/groups" class="nav-link active">Groups</a>
+                <a href="/mission" class="nav-link">Mission</a>
+            </nav>
+
+            <button class="mobile-toggle" id="mobileToggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+
+        <nav class="mobile-menu" id="mobileMenu">
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/about-us">About</a></li>
+                <li><a href="/get-connected">Connect</a></li>
+                <li><a href="/groups">Groups</a></li>
+                <li><a href="/mission">Mission</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="hero-fullbleed">
+        <picture>
+            <source
+                srcset="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/d1cf25bb-04d1-4ea2-a14b-75109497c800/public"
+                media="(max-width: 768px)" type="image/webp">
+            <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/d1cf25bb-04d1-4ea2-a14b-75109497c800/public"
+                alt="New Iberia Church of Christ - Groups" loading="eager">
+        </picture>
+    </div>
+
+    <section class="page-section">
+        <h1 class="page-title">Groups</h1>
+        <p class="content-intro">
+            Healthy growth happens in community. Whether you're looking for deeper friendships, encouragement, or
+            spiritual growth, there's a place for you here.
+        </p>
+
+        <div class="content-block" style="margin: clamp(3rem, 6vw, 5rem) auto; text-align: center; max-width: 900px;">
+            <h2
+                style="font-size: clamp(24px, 3vw, 32px); font-weight: 700; color: var(--text-primary); margin-bottom: 1.5rem;">
+                Why We Gather</h2>
+            <p
+                style="font-size: clamp(16px, 1.5vw, 18px); color: var(--text-secondary); line-height: 1.8; margin-bottom: 1.5rem;">
+                We believe spiritual growth happens best in community. We believe God transforms us through the Holy
+                Spirit, and that transformation happens when we gather together — sharing life, encouraging one another,
+                and growing deeper in Christ.
+            </p>
+            <p style="font-size: clamp(16px, 1.5vw, 18px); color: var(--text-secondary); line-height: 1.8;">
+                The church is the family of God — the community of believers saved by the blood of Christ. We believe
+                the Holy Spirit gives believers spiritual gifts to be used to help others. When we gather, we're not
+                just attending a meeting — we're building the body of Christ, one relationship at a time.
+            </p>
+        </div>
+
+        <div class="groups-grid">
+            <div class="group-card">
+                <div class="group-image-container">
+                    <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/89603531-700d-448d-2103-b63d4d363b00/public"
+                        alt="Fight Club men's ministry" class="group-image" loading="lazy">
+                </div>
+                <div class="group-content">
+                    <h2 class="group-title">Fight Club</h2>
+                    <p class="group-summary">
+                        We believe God transforms us through community. Every man is fighting something — providing,
+                        recovery, marriage, fatherhood, faith, purpose. Fight Club is where men gather to support each
+                        other, grow stronger, and stay rooted in Christ.
+                    </p>
+                    <p class="group-summary" style="margin-top: 1rem;">
+                        We gather because the fight within us is too great to face in silence. We gather because when we
+                        open up, we realize we're not alone. We gather because when one brother falls, another helps him
+                        rise. Because no man was meant to fight alone.
+                    </p>
+                    <div class="group-schedule">
+                        <p><strong>When:</strong> Second Monday of each month</p>
+                        <p><strong>Time:</strong> 6:00 PM – 8:00 PM</p>
+                        <p><strong>Who:</strong> Men of all ages</p>
+                        <p><strong>What:</strong> Brotherhood + Bible study + real conversations</p>
+                    </div>
+                    <a href="/mensgroup" class="btn-cta">Join Fight Club →</a>
+                </div>
+            </div>
+
+            <div class="group-card">
+                <div class="group-image-container">
+                    <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/fe18e68c-64eb-47e2-d2a3-8fd5bfc99500/public"
+                        alt="Rooted women's gathering" class="group-image" loading="lazy">
+                </div>
+                <div class="group-content">
+                    <h2 class="group-title">Rooted</h2>
+                    <p class="group-summary">
+                        We believe spiritual growth happens best in community. Rooted is a women's gathering centered on
+                        meaningful relationships and multigenerational community. On the first Tuesday of every month,
+                        women come together to connect, share life, and grow deeper in Christ together.
+                    </p>
+                    <p class="group-summary" style="margin-top: 1rem;">
+                        Rooted is for women who want community that feels real — not forced. Whether you're new to the
+                        area, looking for deeper relationships, or simply needing a place to belong, Rooted is for you.
+                        Come as you are. Bring a friend. Become rooted in Christ.
+                    </p>
+                    <div class="group-schedule">
+                        <p><strong>When:</strong> First Tuesday of every month</p>
+                        <p><strong>Time:</strong> 6:00 PM</p>
+                        <p><strong>Who:</strong> Women of all ages</p>
+                        <p><strong>What:</strong> Community + encouragement + shared life + free food</p>
+                    </div>
+                    <a href="/womansgroup" class="btn-cta">Join Rooted →</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="cta-row">
+            <a href="/mensgroup" class="btn-cta">Join Fight Club</a>
+            <a href="/womansgroup" class="btn-cta">Join Rooted</a>
+            <a href="#" class="btn-cta" onclick="openModal('question'); return false;">Ask a Question</a>
+        </div>
+    </section>
+
+    <section class="page-section">
+        <h2
+            style="font-size: clamp(28px, 3vw, 40px); font-weight: 700; color: var(--text-primary); text-align: center; margin-bottom: clamp(2rem, 4vw, 3rem);">
+            What You'll Find Here</h2>
+        <div class="community-highlights">
+            <div class="highlight-card">
+                <div class="highlight-icon">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                </div>
+                <h3 class="highlight-title">Real Relationships</h3>
+                <p class="highlight-text">Authentic connections with people who care about your journey. No masks, no
+                    pretense — just real people growing together.</p>
+            </div>
+            <div class="highlight-card">
+                <div class="highlight-icon">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                        <line x1="10" y1="10" x2="16" y2="10"></line>
+                        <line x1="10" y1="14" x2="16" y2="14"></line>
+                    </svg>
+                </div>
+                <h3 class="highlight-title">Bible-Centered Growth</h3>
+                <p class="highlight-text">We believe the Bible is God's inspired Word. Our groups study Scripture
+                    together, applying God's truth to everyday life.</p>
+            </div>
+            <div class="highlight-card">
+                <div class="highlight-icon">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                </div>
+                <h3 class="highlight-title">Support & Encouragement</h3>
+                <p class="highlight-text">Life's challenges are easier when you're not alone. Find prayer,
+                    encouragement, and practical support from people who understand.</p>
+            </div>
+            <div class="highlight-card">
+                <div class="highlight-icon">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                </div>
+                <h3 class="highlight-title">A Place to Belong</h3>
+                <p class="highlight-text">Whether you're new to the area or new to faith, you'll find a welcoming
+                    community where you can be yourself and grow at your own pace.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="page-section">
+        <h2
+            style="font-size: clamp(28px, 3vw, 40px); font-weight: 700; color: var(--text-primary); text-align: center; margin-bottom: clamp(2rem, 4vw, 3rem);">
+            Our Groups in Action</h2>
+        <div class="gallery-grid">
+            <div class="gallery-item">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/89603531-700d-448d-2103-b63d4d363b00/public"
+                    alt="Fight Club men's group gathering" class="gallery-image" loading="lazy">
+                <p class="gallery-caption">Fight Club — Men gathering for brotherhood and growth</p>
+            </div>
+            <div class="gallery-item">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/89603531-700d-448d-2103-b63d4d363b00/public"
+                    alt="Fight Club ministry" class="gallery-image" loading="lazy">
+                <p class="gallery-caption">Brotherhood in action</p>
+            </div>
+            <div class="gallery-item">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/fe18e68c-64eb-47e2-d2a3-8fd5bfc99500/public"
+                    alt="Rooted women's gathering" class="gallery-image" loading="lazy">
+                <p class="gallery-caption">Rooted — Women connecting across generations</p>
+            </div>
+            <div class="gallery-item">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/89603531-700d-448d-2103-b63d4d363b00/public"
+                    alt="Fight Club leadership" class="gallery-image" loading="lazy">
+                <p class="gallery-caption">Real conversations, real support</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="page-section">
+        <div class="content-block" style="text-align: center; background: var(--bg-glass-dark);">
+            <p
+                style="font-size: clamp(18px, 2vw, 22px); color: var(--text-primary); font-style: italic; line-height: 1.8; margin-bottom: 1rem;">
+                "We believe the church is the community of believers saved by the blood of Christ. We believe the Holy
+                Spirit empowers believers to live faithfully and gives spiritual gifts to be used to help others."
+            </p>
+            <p style="font-size: clamp(14px, 1.2vw, 16px); color: var(--text-secondary);">
+                — Ephesians 4:1-16, 1 Corinthians 12:7-11
+            </p>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-container">
+            <div class="footer-grid">
+                <div class="footer-section footer-logo-section">
+                    <a href="/" style="display: inline-block;">
+                        <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/5ce76f40-dfaf-4c97-429b-09e939449b00/small"
+                            alt="New Iberia Church of Christ Logo" class="footer-logo" loading="lazy">
+                    </a>
+                    <p class="footer-logo-text">New Iberia Church of Christ</p>
+                    <p
+                        style="font-size: clamp(14px, 1.2vw, 16px); color: var(--text-secondary); line-height: 1.8; margin-top: 0.5rem;">
+                        667 Charles St<br>New Iberia, LA 70560</p>
+                    <p
+                        style="font-size: clamp(14px, 1.2vw, 16px); color: var(--text-secondary); line-height: 1.8; margin-top: 1rem;">
+                        Sunday Service: 10:00 AM<br>Adult Bible Class: 9:30 AM</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <a href="/about-us">About Us</a>
+                    <a href="/get-connected">Get Connected</a>
+                    <a href="/community">Community</a>
+                    <a href="/groups">Groups</a>
+                    <a href="/beliefs">Beliefs</a>
+                </div>
+                <div class="footer-section">
+                    <h3>Connect</h3>
+                    <a href="/contribute">Give Online</a>
+                    <a href="#" onclick="openModal('prayer'); return false;">Prayer Request</a>
+                    <a href="#" onclick="openModal('question'); return false;">Ask a Question</a>
+                    <a href="#" onclick="openContactModal(); return false;">Contact Us</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2026 New Iberia Church of Christ • <a href="/dashboard">Dashboard Login</a></p>
+            </div>
+        </div>
+    </footer>
+
+    <button class="chatbot-button" onclick="openChatbot()" aria-label="Open Chat" title="Chat with Us">
+        <svg class="chatbot-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            <line x1="8" y1="10" x2="16" y2="10"></line>
+            <line x1="8" y1="14" x2="14" y2="14"></line>
+        </svg>
+    </button>
+
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Prayer Request</h2>
+                <button class="modal-close" onclick="closeModal()" aria-label="Close">×</button>
+            </div>
+            <div class="modal-tabs">
+                <button class="tab-btn active" onclick="switchTab('prayer')">Prayer</button>
+                <button class="tab-btn" onclick="switchTab('question')">Question</button>
+                <button class="tab-btn" onclick="switchTab('comment')">Comment</button>
+            </div>
+            <form id="modalForm" onsubmit="handleSubmit(event)">
+                <div class="tab-content active" id="tabPrayer">
+                    <div class="form-group">
+                        <label class="form-label" for="name">Your Name</label>
+                        <input type="text" id="name" name="name" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="email">Email</label>
+                        <input type="email" id="email" name="email" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="request">Prayer Request</label>
+                        <textarea id="request" name="message" class="form-textarea" required></textarea>
+                    </div>
+                </div>
+                <div class="tab-content" id="tabQuestion">
+                    <div class="form-group">
+                        <label class="form-label" for="qname">Your Name</label>
+                        <input type="text" id="qname" name="name" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="qemail">Email</label>
+                        <input type="email" id="qemail" name="email" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="question">Your Question</label>
+                        <textarea id="question" name="message" class="form-textarea" required></textarea>
+                    </div>
+                </div>
+                <div class="tab-content" id="tabComment">
+                    <div class="form-group">
+                        <label class="form-label" for="cname">Your Name</label>
+                        <input type="text" id="cname" name="name" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="cemail">Email</label>
+                        <input type="email" id="cemail" name="email" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="comment">Your Comment</label>
+                        <textarea id="comment" name="message" class="form-textarea" required></textarea>
+                    </div>
+                </div>
+                <button type="submit" class="form-submit">Submit</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const mobileToggle = document.getElementById('mobileToggle');
+        const mobileMenu = document.getElementById('mobileMenu');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modalTitle = document.getElementById('modalTitle');
+
+        mobileToggle.addEventListener('click', () => {
+            mobileToggle.classList.toggle('active');
+            mobileMenu.classList.toggle('active');
+        });
+
+        document.querySelectorAll('.mobile-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileToggle.classList.remove('active');
+                mobileMenu.classList.remove('active');
+            });
+        });
+
+        function openChatbot() {
+            openModal('question');
+        }
+
+        function openModal(type) {
+            const titles = {
+                prayer: 'Prayer Request',
+                question: 'Ask a Question',
+                comment: 'Leave a Comment'
+            };
+            modalTitle.textContent = titles[type] || 'Contact Us';
+            switchTab(type);
+            modalOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(event) {
+            if (!event || event.target === modalOverlay || event.target.classList.contains('modal-close')) {
+                modalOverlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        }
+
+        function switchTab(type) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById('tab' + type.charAt(0).toUpperCase() + type.slice(1)).classList.add('active');
+        }
+
+        async function handleSubmit(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const data = Object.fromEntries(formData);
+            const activeTab = document.querySelector('.tab-content.active').id;
+            const type = activeTab.replace('tab', '').toLowerCase();
+            const subject = type === 'prayer' ? 'Prayer Request' : type === 'question' ? 'Question' : 'Comment';
+
+            const submitButton = event.target.querySelector('.form-submit');
+            const originalText = submitButton.textContent;
+            submitButton.textContent = 'Sending...';
+            submitButton.disabled = true;
+
+            try {
+                const response = await fetch('/api/contact', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        type: type,
+                        name: data.name,
+                        email: data.email,
+                        message: data.message,
+                        subject: subject
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert(`Thank you! Your ${subject.toLowerCase()} has been sent. We'll get back to you soon.`);
+                    event.target.reset();
+                    closeModal();
+                } else {
+                    throw new Error(result.error || 'Failed to send message');
+                }
+            } catch (error) {
+                console.error('Form submission error:', error);
+                const body = `${subject} from ${data.name} (${data.email}):\n\n${data.message}`;
+                const mailtoLink = `mailto:connect@newiberiachurchofchrist.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                window.location.href = mailtoLink;
+                alert(`Sending via email...`);
+                closeModal();
+            } finally {
+                submitButton.textContent = originalText;
+                submitButton.disabled = false;
+            }
+        }
+
+        function openContactModal() {
+            const email = 'connect@newiberiachurchofchrist.com';
+            const phone = '337-364-2662';
+            const address = '667 Charles St, New Iberia, LA 70560';
+            const itSupport = 'development@newiberiachurchofchrist.com';
+
+            const contactInfo = `
+Contact New Iberia Church of Christ
+
+ General Contact: ${email}
+ Phone: ${phone}
+ Address: ${address}
+
+ IT/Technical Support (Staff Only):
+   ${itSupport}
+            `.trim();
+
+            alert(contactInfo);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modalOverlay.classList.contains('active')) {
+                closeModal();
+            }
+        });
+    </script>
+
+</body>
+
+</html>

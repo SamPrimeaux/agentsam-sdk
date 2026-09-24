@@ -38,8 +38,12 @@
   },
   "installable": true,
   "_internal": {
-    "normalization": "pending",
-    "source": "/Users/samprimeaux/Projects/client-demos/chrystal-clear-insurance/chrystal-clear-insurance/dist"
+    "normalization": "scaffolded",
+    "source": "/Users/samprimeaux/Projects/client-demos/chrystal-clear-insurance/chrystal-clear-insurance/dist",
+    "harvest_batch": "theme-harvest-20260924",
+    "harvest_path": "work/theme-harvest/insurance-site",
+    "app_path": "apps/insurance-site",
+    "source_hash": "1e171081f5a06d7568554aedcc6a17fd17f102b4109e9b543895fca3879606c2"
   },
   "package": "@inneranimalmedia/theme-insurance-site"
 }

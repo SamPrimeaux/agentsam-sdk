@@ -1,0 +1,2255 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Anything Floors and More | Floor Planning & Project Management</title>
+    <meta name="description"
+        content="Professional floor planning, CAD tools, and project management for Anything Floors and More.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Greens - Darker and Lighter Variations */
+            --primary-green: #3a5a4d;
+            --primary-green-dark: #2d4639;
+            --primary-green-darker: #1f3128;
+            --primary-green-light: #4a6b5d;
+            --secondary-green: #4a7462;
+            --light-green: #5a8472;
+            --accent-green: #6a9482;
+            --pale-green: #7a9282;
+            --mint-green: #8fa292;
+
+            /* Sand/Tan Tones for Outlines & Separators */
+            --sand-light: #e8ddd4;
+            --sand: #d4c5a9;
+            --sand-medium: #c4b59a;
+            --tan: #b8a68a;
+            --tan-dark: #a8967a;
+
+            /* Neutrals */
+            --cream: #f5f3ef;
+            --warm-gray: #4a4a4a;
+            --warm-gray-dark: #2d2d2d;
+            --light-gray: #e8e8e8;
+            --gold: #c9a961;
+            --white: #ffffff;
+            --off-white: #fafafa;
+            --dark: #1a1a1a;
+
+            /* Panel Backgrounds */
+            --panel-bg: rgba(255, 255, 255, 0.95);
+            --panel-bg-dark: rgba(45, 70, 57, 0.95);
+            --surface-bg: rgba(255, 255, 255, 0.85);
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(to bottom,
+                    var(--white) 0%,
+                    #fcfcfc 15%,
+                    #f9faf9 30%,
+                    #f6f8f6 50%,
+                    #f3f6f4 70%,
+                    #f0f4f2 85%,
+                    var(--cream) 100%);
+            color: var(--warm-gray);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            font-family: 'Space Grotesk', sans-serif;
+            color: var(--dark);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        /* Main Layout - No Top Navbar */
+        .dashboard-container {
+            display: flex;
+            height: 100vh;
+            padding-top: 0;
+        }
+
+        /* Hamburger Menu Button */
+        .hamburger-menu {
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1000;
+            width: 48px;
+            height: 48px;
+            background: rgba(45, 70, 57, 0.95);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 2px solid var(--sand-medium);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 12px rgba(31, 49, 40, 0.3);
+        }
+
+        .hamburger-menu:hover {
+            background: rgba(45, 70, 57, 1);
+            box-shadow: 0 6px 16px rgba(31, 49, 40, 0.4);
+            transform: scale(1.05);
+        }
+
+        .hamburger-menu.open {
+            background: rgba(45, 70, 57, 1);
+        }
+
+        /* Hamburger Icon - Morphs into X */
+        .hamburger-icon {
+            width: 24px;
+            height: 24px;
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .hamburger-icon span {
+            display: block;
+            position: absolute;
+            height: 3px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 2px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            left: 0;
+        }
+
+        .hamburger-icon span:nth-child(1) {
+            top: 0;
+        }
+
+        .hamburger-icon span:nth-child(2) {
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .hamburger-icon span:nth-child(3) {
+            bottom: 0;
+        }
+
+        /* X State */
+        .hamburger-menu.open .hamburger-icon span:nth-child(1) {
+            top: 50%;
+            transform: translateY(-50%) rotate(45deg);
+        }
+
+        .hamburger-menu.open .hamburger-icon span:nth-child(2) {
+            opacity: 0;
+            transform: translateY(-50%) scale(0);
+        }
+
+        .hamburger-menu.open .hamburger-icon span:nth-child(3) {
+            bottom: 50%;
+            transform: translateY(50%) rotate(-45deg);
+        }
+
+        /* Sidebar - Mobile-Friendly Glassmorphic Navigation */
+        .sidebar {
+            width: 280px;
+            background: rgba(45, 70, 57, 0.95);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            border-right: 2px solid var(--sand-medium);
+            display: flex;
+            flex-direction: column;
+            padding: 1rem 0;
+            gap: 0.5rem;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            z-index: 999;
+            box-shadow: 4px 0 20px rgba(31, 49, 40, 0.3);
+        }
+
+        /* Sidebar Logo */
+        .sidebar-logo {
+            padding: 1rem 1.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid rgba(212, 197, 169, 0.2);
+        }
+
+        .sidebar-logo img {
+            height: 60px;
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.4)) drop-shadow(0 0 12px rgba(255, 255, 255, 0.3));
+        }
+
+        /* Mobile: Sidebar Hidden by Default */
+        @media (max-width: 1024px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100vh;
+                transform: translateX(-100%);
+                z-index: 998;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            /* Overlay when sidebar is open */
+            .sidebar-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                backdrop-filter: blur(4px);
+                z-index: 997;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.3s ease;
+            }
+
+            .sidebar-overlay.active {
+                opacity: 1;
+                pointer-events: all;
+            }
+        }
+
+        /* Desktop: Sidebar Always Visible */
+        @media (min-width: 1025px) {
+            .sidebar {
+                position: relative;
+                transform: translateX(0);
+            }
+
+            .hamburger-menu {
+                display: none;
+            }
+
+            .sidebar-overlay {
+                display: none;
+            }
+        }
+
+        /* Sidebar Navigation Items */
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem 0;
+        }
+
+        .sidebar-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.875rem 1.5rem;
+            color: rgba(255, 255, 255, 0.85);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            cursor: pointer;
+        }
+
+        .sidebar-nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--white);
+            border-left-color: var(--sand-medium);
+        }
+
+        .sidebar-nav-item.active {
+            background: rgba(255, 255, 255, 0.15);
+            color: var(--white);
+            border-left-color: var(--sand);
+            font-weight: 600;
+        }
+
+        .sidebar-nav-item svg {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        /* Sidebar Footer (User Menu) */
+        .sidebar-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid rgba(212, 197, 169, 0.2);
+        }
+
+        .user-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .user-menu-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--white);
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-green), var(--secondary-green));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-weight: 700;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            height: 70px;
+            min-height: 70px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            border-bottom: 2px solid var(--sand);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1rem;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 1024px) {
+            .toolbar {
+                height: auto;
+                min-height: 60px;
+                padding: 0.75rem 1rem;
+            }
+
+            .toolbar>div {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+        }
+
+        /* Panel Toggle Buttons */
+        .panel-toggle {
+            display: none;
+            position: fixed;
+            z-index: 300;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: var(--primary-green-dark);
+            border: 1px solid var(--sand-medium);
+            color: var(--white);
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .panel-toggle:hover {
+            background: var(--primary-green);
+            transform: scale(1.05);
+        }
+
+        .panel-toggle.left {
+            left: 1rem;
+            top: 80px;
+        }
+
+        .panel-toggle.right {
+            right: 1rem;
+            top: 80px;
+        }
+
+        @media (max-width: 1024px) {
+            .panel-toggle {
+                display: flex;
+            }
+        }
+
+        .tool-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: rgba(58, 90, 77, 0.08);
+            padding: 0.75rem;
+            border-radius: 12px;
+            border: 1px solid var(--sand-light);
+        }
+
+        .tool-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            border: 1px solid transparent;
+            background: transparent;
+            color: var(--warm-gray-dark);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .tool-btn:hover {
+            background: rgba(58, 90, 77, 0.12);
+            color: var(--primary-green-dark);
+            border-color: var(--sand);
+        }
+
+        .tool-btn.active {
+            background: rgba(58, 90, 77, 0.2);
+            color: var(--primary-green-dark);
+            border-color: var(--sand-medium);
+        }
+
+        .ai-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            background: rgba(58, 90, 77, 0.12);
+            border: 1px solid var(--sand-medium);
+            border-radius: 12px;
+            color: var(--primary-green-dark);
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .ai-btn:hover {
+            background: rgba(58, 90, 77, 0.25);
+            border-color: var(--primary-green);
+            color: var(--primary-green-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(58, 90, 77, 0.2);
+        }
+
+        /* Main Workspace */
+        .workspace {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Left Panel - Collapsible */
+        .left-panel {
+            width: 300px;
+            min-width: 250px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            border-right: 2px solid var(--sand);
+            display: flex;
+            flex-direction: column;
+            transition: width 0.3s ease, transform 0.3s ease;
+        }
+
+        .left-panel.collapsed {
+            width: 0;
+            min-width: 0;
+            overflow: hidden;
+            border-right: none;
+        }
+
+        @media (max-width: 1024px) {
+            .left-panel {
+                position: fixed;
+                left: 0;
+                top: 70px;
+                height: calc(100vh - 70px);
+                z-index: 150;
+                transform: translateX(-100%);
+                box-shadow: 4px 0 20px rgba(0, 0, 0, 0.2);
+            }
+
+            .left-panel.open {
+                transform: translateX(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .left-panel {
+                width: 100%;
+                max-width: 320px;
+            }
+        }
+
+        .panel-tabs {
+            display: flex;
+            border-bottom: 2px solid var(--sand);
+            background: rgba(58, 90, 77, 0.03);
+        }
+
+        .panel-tab {
+            flex: 1;
+            padding: 1rem;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--warm-gray-dark);
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .panel-tab:hover {
+            background: rgba(58, 90, 77, 0.05);
+            color: var(--primary-green-dark);
+        }
+
+        .panel-tab.active {
+            color: var(--primary-green-dark);
+            border-bottom-color: var(--primary-green);
+            background: rgba(58, 90, 77, 0.08);
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        .project-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem;
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(58, 90, 77, 0.05);
+            border: 1px solid var(--sand-light);
+        }
+
+        @media (max-width: 768px) {
+            .project-item {
+                padding: 0.75rem;
+                gap: 0.5rem;
+            }
+        }
+
+        .project-item:hover {
+            background: rgba(58, 90, 77, 0.12);
+            border-color: var(--sand-medium);
+            transform: translateX(4px);
+        }
+
+        .project-item.selected {
+            background: rgba(58, 90, 77, 0.18);
+            border-color: var(--primary-green);
+            border-width: 2px;
+            box-shadow: 0 4px 12px rgba(58, 90, 77, 0.15);
+        }
+
+        /* Viewport */
+        .viewport {
+            flex: 1;
+            background: var(--cream);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .viewport-grid {
+            background-image:
+                linear-gradient(rgba(58, 90, 77, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(58, 90, 77, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            width: 100%;
+            height: 100%;
+        }
+
+        .viewport-controls {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            z-index: 10;
+        }
+
+        .control-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(58, 90, 77, 0.1);
+            color: var(--warm-gray);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(58, 90, 77, 0.1);
+            color: var(--primary-green);
+        }
+
+        /* AI Prompt Bar */
+        .ai-prompt-bar {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 900px;
+            z-index: 10;
+        }
+
+        .ai-prompt-container {
+            background: var(--panel-bg);
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(58, 90, 77, 0.2);
+            border-radius: 16px;
+            padding: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            box-shadow: 0 8px 32px rgba(58, 90, 77, 0.15);
+            transition: all 0.3s ease;
+        }
+
+        .ai-prompt-container:hover {
+            border-color: var(--primary-green);
+            box-shadow: 0 12px 40px rgba(58, 90, 77, 0.2);
+        }
+
+        .ai-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary-green), var(--secondary-green));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            flex-shrink: 0;
+        }
+
+        .ai-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--dark);
+            font-size: 1rem;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .ai-input::placeholder {
+            color: var(--warm-gray);
+        }
+
+        .ai-send-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--primary-green);
+            border: none;
+            color: var(--white);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .ai-send-btn:hover {
+            background: var(--primary-green-light);
+            transform: scale(1.05);
+        }
+
+        /* Right Panel - Collapsible */
+        .right-panel {
+            width: 360px;
+            min-width: 280px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            border-left: 2px solid var(--sand);
+            overflow-y: auto;
+            transition: width 0.3s ease, transform 0.3s ease;
+        }
+
+        .right-panel.collapsed {
+            width: 0;
+            min-width: 0;
+            overflow: hidden;
+            border-left: none;
+        }
+
+        @media (max-width: 1024px) {
+            .right-panel {
+                position: fixed;
+                right: 0;
+                top: 70px;
+                height: calc(100vh - 70px);
+                z-index: 150;
+                transform: translateX(100%);
+                box-shadow: -4px 0 20px rgba(0, 0, 0, 0.2);
+            }
+
+            .right-panel.open {
+                transform: translateX(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .right-panel {
+                width: 100%;
+                max-width: 100%;
+            }
+        }
+
+        .property-section {
+            padding: 1.25rem;
+            border-bottom: 2px solid var(--sand-light);
+        }
+
+        @media (max-width: 768px) {
+            .property-section {
+                padding: 1rem;
+            }
+        }
+
+        .property-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--warm-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1.25rem;
+        }
+
+        .property-group {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .property-group {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+        }
+
+        .property-input {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: rgba(58, 90, 77, 0.05);
+            border: 1px solid rgba(58, 90, 77, 0.1);
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .property-input:hover {
+            border-color: var(--primary-green);
+        }
+
+        .property-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--primary-green);
+        }
+
+        .property-value {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--dark);
+            font-size: 0.9rem;
+            font-family: 'Space Grotesk', monospace;
+            width: 100%;
+        }
+
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed rgba(58, 90, 77, 0.3);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary-green);
+            background: rgba(58, 90, 77, 0.05);
+        }
+
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(58, 90, 77, 0.2);
+            border-radius: 3px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(58, 90, 77, 0.3);
+        }
+
+        /* Buttons */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-green-light) 100%);
+            color: var(--white);
+            border: none;
+            padding: 0.875rem 1.75rem;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(58, 90, 77, 0.25);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(58, 90, 77, 0.35);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--primary-green);
+            border: 1px solid rgba(58, 90, 77, 0.2);
+            padding: 0.875rem 1.75rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(58, 90, 77, 0.05);
+            border-color: var(--primary-green);
+        }
+
+        /* Floor Plan Canvas */
+        .floor-plan-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .floor-plan-room {
+            fill: rgba(58, 90, 77, 0.1);
+            stroke: var(--primary-green);
+            stroke-width: 2;
+            cursor: move;
+        }
+
+        .floor-plan-room:hover {
+            fill: rgba(58, 90, 77, 0.15);
+        }
+
+        .floor-plan-text {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            fill: var(--primary-green);
+            text-anchor: middle;
+        }
+
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {
+            .dashboard-container {
+                padding-top: 60px;
+            }
+
+            .nav-container {
+                padding: 0.75rem 1rem;
+            }
+
+            .nav-menu {
+                gap: 1rem;
+            }
+
+            .nav-link {
+                font-size: 0.85rem;
+                padding: 0.4rem 0.75rem;
+            }
+
+            .toolbar {
+                flex-direction: column;
+                height: auto;
+                padding: 0.75rem;
+            }
+
+            .tool-group {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .ai-btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .viewport-controls {
+                top: 1rem;
+                right: 1rem;
+            }
+
+            .control-btn {
+                width: 36px;
+                height: 36px;
+            }
+
+            .ai-prompt-bar {
+                width: calc(100% - 2rem);
+                left: 1rem;
+                transform: none;
+            }
+
+            .ai-prompt-container {
+                padding: 1rem;
+            }
+
+            .panel-tabs {
+                flex-wrap: wrap;
+            }
+
+            .panel-tab {
+                font-size: 0.8rem;
+                padding: 0.75rem 0.5rem;
+            }
+        }
+
+        /* Overlay for mobile panels */
+        .panel-overlay {
+            display: none;
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 140;
+            backdrop-filter: blur(4px);
+        }
+
+        .panel-overlay.active {
+            display: block;
+        }
+
+        @media (min-width: 1025px) {
+            .panel-overlay {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Hamburger Menu Button -->
+    <button class="hamburger-menu" id="hamburger-menu" onclick="toggleSidebar()" aria-label="Toggle Navigation">
+        <div class="hamburger-icon">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </button>
+
+    <!-- Sidebar Overlay (Mobile Only) -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <div class="dashboard-container">
+        <!-- Panel Overlay for Mobile -->
+        <div class="panel-overlay" id="panel-overlay" onclick="closeAllPanels()"></div>
+
+        <!-- Panel Toggle Buttons -->
+        <button class="panel-toggle left" id="left-panel-toggle" onclick="toggleLeftPanel()"
+            title="Toggle Projects Panel">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 12h18M3 6h18M3 18h18" />
+            </svg>
+        </button>
+        <button class="panel-toggle right" id="right-panel-toggle" onclick="toggleRightPanel()"
+            title="Toggle Properties Panel">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M9 9h6M9 15h6" />
+            </svg>
+        </button>
+
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-logo">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/7fb34d9c-fb11-4403-6a45-74ac90492e00/avatar"
+                    alt="Anything Floors and More Logo">
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/dashboard/" class="sidebar-nav-item active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7" />
+                        <rect x="14" y="3" width="7" height="7" />
+                        <rect x="14" y="14" width="7" height="7" />
+                        <rect x="3" y="14" width="7" height="7" />
+                    </svg>
+                    <span>Overview</span>
+                </a>
+                <a href="/dashboard/projects" class="sidebar-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                    </svg>
+                    <span>Projects</span>
+                </a>
+                <a href="/dashboard/content" class="sidebar-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <path d="M9 9h6M9 15h6" />
+                    </svg>
+                    <span>Content Library</span>
+                </a>
+                <a href="/cms/" class="sidebar-nav-item" title="Gallery &amp; public picks">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
+                        <rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+                    </svg>
+                    <span>Gallery / CMS</span>
+                </a>
+                <a href="/dashboard/streaming" class="sidebar-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                    <span>Streaming</span>
+                </a>
+                <a href="/dashboard/ai-tools" class="sidebar-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v4M6 6l-2 2M2 12h4M6 18l-2-2M12 22v-4M18 18l2-2M22 12h-4M18 6l2 2" />
+                        <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    <span>AI Tools</span>
+                </a>
+                <a href="/dashboard/integrations" class="sidebar-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                        <line x1="12" y1="22.08" x2="12" y2="12" />
+                    </svg>
+                    <span>Integrations</span>
+                </a>
+                <a href="/dashboard/settings" class="sidebar-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3" />
+                        <path
+                            d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24" />
+                    </svg>
+                    <span>Settings</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="/" class="sidebar-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="m12 19-7-7 7-7M19 12H5" />
+                    </svg>
+                    <span>Back to Home</span>
+                </a>
+                <div class="user-menu-item" onclick="toggleUserMenu()">
+                    <div class="user-avatar" id="user-avatar">U</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 0.9rem; font-weight: 600;">User</div>
+                        <div style="font-size: 0.75rem; opacity: 0.7;">user@example.com</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+            <!-- Toolbar -->
+            <div class="toolbar">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div class="tool-group">
+                        <button class="tool-btn active" data-tool="select">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M12.586 12.586 19 19" />
+                                <path
+                                    d="M3.688 3.037a.497.497 0 0 0-.651.651l6.5 15.999a.501.501 0 0 0 .947-.062l1.569-6.083a2 2 0 0 1 1.448-1.479l6.124-1.579a.5.5 0 0 0 .063-.947z" />
+                            </svg>
+                        </button>
+                        <button class="tool-btn" data-tool="move">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M12 2v20" />
+                                <path d="m15 19-3 3-3-3" />
+                                <path d="m19 9 3 3-3 3" />
+                                <path d="M2 12h20" />
+                            </svg>
+                        </button>
+                        <button class="tool-btn" data-tool="rotate">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path
+                                    d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div style="width: 1px; height: 32px; background: rgba(58, 90, 77, 0.2);"></div>
+
+                    <button class="ai-btn" onclick="openAIModal()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M12 2v4M6 6l-2 2M2 12h4M6 18l-2-2M12 22v-4M18 18l2-2M22 12h-4M18 6l2 2" />
+                            <circle cx="12" cy="12" r="3" />
+                        </svg>
+                        AI Generate Floor Plan
+                    </button>
+
+                    <div style="width: 1px; height: 32px; background: rgba(58, 90, 77, 0.2);"></div>
+
+                    <button class="tool-btn" onclick="addRoom()" title="Add Room">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                        </svg>
+                    </button>
+                    <button class="tool-btn" onclick="addWall()" title="Add Wall">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M3 12h18M3 6h18M3 18h18" />
+                        </svg>
+                    </button>
+                    <button class="tool-btn" onclick="addDoor()" title="Add Door">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14" />
+                            <path d="M2 6h20" />
+                            <path d="M14 12h.01" />
+                        </svg>
+                    </button>
+                    <button class="tool-btn" onclick="addWindow()" title="Add Window">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="2" y="4" width="20" height="16" rx="2" />
+                            <path
+                                d="M6 8h.01M6 12h.01M6 16h.01M10 8h.01M10 12h.01M10 16h.01M14 8h.01M14 12h.01M14 16h.01M18 8h.01M18 12h.01M18 16h.01" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="font-family: 'Space Grotesk', monospace; font-size: 0.8rem; color: var(--warm-gray);">
+                        Scale: <span id="scale-display">1:50</span>
+                    </div>
+                    <button class="btn-secondary" onclick="exportPlan()">Export PDF</button>
+                    <button class="btn-primary" onclick="saveProject()">Save Project</button>
+                </div>
+            </div>
+
+            <!-- Workspace -->
+            <div class="workspace">
+                <!-- Left Panel -->
+                <div class="left-panel" id="left-panel">
+                    <div class="panel-tabs">
+                        <button class="panel-tab active" data-tab="projects">Projects</button>
+                        <button class="panel-tab" data-tab="content">Content</button>
+                        <button class="panel-tab" data-tab="streaming">Streaming</button>
+                        <button class="panel-tab" data-tab="library">Library</button>
+                    </div>
+
+                    <div class="panel-content custom-scrollbar">
+                        <!-- Projects Tab -->
+                        <div id="projects-tab" class="tab-content">
+                            <div class="project-item selected" onclick="selectProject('project-1')">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" style="color: var(--primary-green);">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                                </svg>
+                                <div style="flex: 1;">
+                                    <div style="font-size: 0.9rem; font-weight: 600; color: var(--dark);">Main Floor
+                                        Plan</div>
+                                    <div style="font-size: 0.75rem; color: var(--warm-gray);">1,200 sq ft</div>
+                                </div>
+                            </div>
+                            <div class="project-item" onclick="selectProject('project-2')">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" style="color: var(--warm-gray);">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                                </svg>
+                                <div style="flex: 1;">
+                                    <div style="font-size: 0.9rem; font-weight: 600; color: var(--dark);">Kitchen
+                                        Renovation</div>
+                                    <div style="font-size: 0.75rem; color: var(--warm-gray);">450 sq ft</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Content Tab - R2 Upload & Management -->
+                        <div id="content-tab" class="tab-content" style="display: none;">
+                            <div style="margin-bottom: 1rem;">
+                                <h4
+                                    style="font-size: 0.95rem; font-weight: 700; color: var(--primary-green-dark); margin-bottom: 0.75rem;">
+                                    R2 Content Manager</h4>
+                                <div class="upload-area" id="r2-upload-area" ondrop="handleR2Drop(event)"
+                                    ondragover="handleR2DragOver(event)" ondragleave="handleR2DragLeave(event)"
+                                    onclick="document.getElementById('r2-file-upload').click()"
+                                    style="border: 2px dashed var(--sand-medium);">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" style="color: var(--primary-green-dark); margin: 0 auto 1rem;">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                        <polyline points="17 8 12 3 7 8" />
+                                        <line x1="12" y1="3" x2="12" y2="15" />
+                                    </svg>
+                                    <p
+                                        style="font-size: 0.9rem; color: var(--warm-gray-dark); margin-bottom: 0.5rem; font-weight: 600;">
+                                        Drag & Drop Files Here</p>
+                                    <p style="font-size: 0.75rem; color: var(--warm-gray);">Images, Videos, Documents -
+                                        All file types supported</p>
+                                    <input type="file" id="r2-file-upload" multiple style="display: none;"
+                                        onchange="handleR2FileUpload(event)">
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                                <button class="btn-secondary" onclick="createFolder()"
+                                    style="flex: 1; padding: 0.75rem; font-size: 0.85rem;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2"
+                                        style="display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
+                                        <path
+                                            d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                                    </svg>
+                                    New Folder
+                                </button>
+                                <button class="btn-secondary" onclick="refreshR2Files()"
+                                    style="padding: 0.75rem; font-size: 0.85rem;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" style="display: inline-block; vertical-align: middle;">
+                                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                                        <path d="M21 3v5h-5" />
+                                        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                                        <path d="M3 21v-5h5" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <div id="r2-file-list" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <!-- Files will be loaded here -->
+                            </div>
+
+                            <div id="r2-upload-progress" style="display: none; margin-top: 1rem;">
+                                <div style="font-size: 0.8rem; color: var(--warm-gray-dark); margin-bottom: 0.5rem;">
+                                    Uploading...</div>
+                                <div
+                                    style="width: 100%; height: 8px; background: rgba(58, 90, 77, 0.1); border-radius: 4px; overflow: hidden;">
+                                    <div id="r2-progress-bar"
+                                        style="height: 100%; background: linear-gradient(90deg, var(--primary-green), var(--secondary-green)); width: 0%; transition: width 0.3s ease;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Streaming Tab - YouTube & Multi-Platform -->
+                        <div id="streaming-tab" class="tab-content" style="display: none;">
+                            <div style="margin-bottom: 1.5rem;">
+                                <h4
+                                    style="font-size: 0.95rem; font-weight: 700; color: var(--primary-green-dark); margin-bottom: 0.75rem;">
+                                    Multi-Platform Streaming</h4>
+                                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                                    <button class="btn-primary" onclick="openYouTubeUpload()"
+                                        style="flex: 1; padding: 0.875rem; font-size: 0.85rem;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"
+                                            style="display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
+                                            <path
+                                                d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                                        </svg>
+                                        Upload to YouTube
+                                    </button>
+                                </div>
+
+                                <div
+                                    style="background: rgba(58, 90, 77, 0.05); padding: 1rem; border-radius: 12px; border: 1px solid var(--sand-light); margin-bottom: 1rem;">
+                                    <div
+                                        style="font-size: 0.85rem; color: var(--warm-gray-dark); margin-bottom: 0.75rem; font-weight: 600;">
+                                        Platform Status</div>
+                                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                        <div
+                                            style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: rgba(255, 255, 255, 0.5); border-radius: 8px;">
+                                            <span
+                                                style="font-size: 0.8rem; color: var(--warm-gray-dark);">YouTube</span>
+                                            <span id="youtube-status"
+                                                style="font-size: 0.75rem; color: var(--secondary-green); font-weight: 600;">Connected</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h4
+                                    style="font-size: 0.9rem; font-weight: 700; color: var(--primary-green-dark); margin-bottom: 0.75rem;">
+                                    Scheduled Posts</h4>
+                                <div id="scheduled-posts" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                    <div
+                                        style="padding: 1rem; background: rgba(58, 90, 77, 0.05); border-radius: 12px; border: 1px solid var(--sand-light);">
+                                        <div
+                                            style="font-size: 0.85rem; font-weight: 600; color: var(--dark); margin-bottom: 0.5rem;">
+                                            No scheduled posts</div>
+                                        <div style="font-size: 0.75rem; color: var(--warm-gray);">Upload videos to
+                                            schedule them</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Library Tab -->
+                        <div id="library-tab" class="tab-content" style="display: none;">
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
+                                <button
+                                    class="aspect-square bg-white border border-gray-200 rounded-lg hover:border-primary-green cursor-pointer flex items-center justify-center"
+                                    onclick="addFromLibrary('hardwood')"
+                                    style="aspect-ratio: 1; background: rgba(58, 90, 77, 0.05); border: 1px solid var(--sand-light); border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" style="color: var(--warm-gray-dark);">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                                    </svg>
+                                </button>
+                                <button
+                                    class="aspect-square bg-white border border-gray-200 rounded-lg hover:border-primary-green cursor-pointer flex items-center justify-center"
+                                    onclick="addFromLibrary('tile')"
+                                    style="aspect-ratio: 1; background: rgba(58, 90, 77, 0.05); border: 1px solid var(--sand-light); border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" style="color: var(--warm-gray-dark);">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Images Tab -->
+                        <div id="images-tab" class="tab-content" style="display: none;">
+                            <div class="upload-area" id="upload-area" ondrop="handleDrop(event)"
+                                ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" style="color: var(--primary-green); margin: 0 auto 1rem;">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="17 8 12 3 7 8" />
+                                    <line x1="12" y1="3" x2="12" y2="15" />
+                                </svg>
+                                <p style="font-size: 0.85rem; color: var(--warm-gray); margin-bottom: 0.5rem;">Drop
+                                    image here or click to upload</p>
+                                <p style="font-size: 0.75rem; color: var(--warm-gray);">Supports JPG, PNG, WebP</p>
+                                <input type="file" id="image-upload" accept="image/*" style="display: none;"
+                                    onchange="handleImageUpload(event)">
+                            </div>
+                            <div id="uploaded-images"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Viewport -->
+                <div class="viewport">
+                    <div class="viewport-grid">
+                        <svg id="floor-plan-canvas" class="floor-plan-canvas">
+                            <defs>
+                                <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+                                    <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(58, 90, 77, 0.1)"
+                                        stroke-width="1" />
+                                </pattern>
+                            </defs>
+                            <rect width="100%" height="100%" fill="url(#grid)" />
+
+                            <!-- Sample floor plan -->
+                            <rect x="150" y="150" width="400" height="300" class="floor-plan-room" rx="4" />
+                            <text x="350" y="300" class="floor-plan-text">Main Floor Plan</text>
+                            <text x="350" y="320"
+                                style="font-family: 'DM Sans', sans-serif; font-size: 14px; fill: var(--warm-gray); text-anchor: middle;">1,200
+                                sq ft</text>
+                        </svg>
+                    </div>
+
+                    <!-- Viewport Controls -->
+                    <div class="viewport-controls">
+                        <button class="control-btn" title="Zoom In">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="11" cy="11" r="8" />
+                                <path d="m21 21-4.35-4.35" />
+                                <path d="M11 8v6M8 11h6" />
+                            </svg>
+                        </button>
+                        <button class="control-btn" title="Zoom Out">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="11" cy="11" r="8" />
+                                <path d="m21 21-4.35-4.35" />
+                                <path d="M8 11h6" />
+                            </svg>
+                        </button>
+                        <button class="control-btn" title="Reset View">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                                <path d="M21 3v5h-5" />
+                                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                                <path d="M3 21v-5h5" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Panel -->
+                <div class="right-panel custom-scrollbar" id="right-panel">
+                    <div class="property-section">
+                        <div class="property-title">Project Info</div>
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <input type="text" placeholder="Project Name"
+                                style="padding: 0.875rem; border: 1px solid rgba(58, 90, 77, 0.2); border-radius: 10px; background: rgba(58, 90, 77, 0.05); font-size: 0.9rem; color: var(--dark);"
+                                value="Main Floor Plan">
+                            <textarea placeholder="Project Notes" rows="4"
+                                style="padding: 0.875rem; border: 1px solid rgba(58, 90, 77, 0.2); border-radius: 10px; background: rgba(58, 90, 77, 0.05); font-size: 0.9rem; color: var(--dark); resize: vertical;"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="property-section">
+                        <div class="property-title">Measurements</div>
+                        <div class="property-group">
+                            <div class="property-input">
+                                <span class="property-label" style="color: #dc2626;">Length</span>
+                                <input type="number" class="property-value" value="40" step="0.01" id="prop-length">
+                            </div>
+                            <div class="property-input">
+                                <span class="property-label" style="color: #16a34a;">Width</span>
+                                <input type="number" class="property-value" value="30" step="0.01" id="prop-width">
+                            </div>
+                            <div class="property-input">
+                                <span class="property-label" style="color: #2563eb;">Area</span>
+                                <input type="number" class="property-value" value="1200" step="0.01" id="prop-area"
+                                    readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="property-section">
+                        <div class="property-title">Flooring Material</div>
+                        <div
+                            style="background: rgba(58, 90, 77, 0.05); padding: 1.25rem; border-radius: 12px; border: 1px solid rgba(58, 90, 77, 0.1);">
+                            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem;">
+                                <div
+                                    style="width: 48px; height: 48px; border-radius: 10px; background: linear-gradient(135deg, #8b7355, #a0826d); border: 1px solid rgba(58, 90, 77, 0.2);">
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.95rem; font-weight: 600; color: var(--dark);">Hardwood Oak
+                                    </div>
+                                    <div style="font-size: 0.75rem; color: var(--warm-gray);">Premium Grade</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 0.8rem; color: var(--warm-gray);">Material</span>
+                                    <select
+                                        style="background: rgba(58, 90, 77, 0.05); border: 1px solid rgba(58, 90, 77, 0.2); border-radius: 8px; padding: 0.5rem 0.75rem; font-size: 0.85rem; color: var(--dark);">
+                                        <option>Hardwood</option>
+                                        <option>Tile</option>
+                                        <option>Vinyl</option>
+                                        <option>Laminate</option>
+                                    </select>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 0.8rem; color: var(--warm-gray);">Finish</span>
+                                    <select
+                                        style="background: rgba(58, 90, 77, 0.05); border: 1px solid rgba(58, 90, 77, 0.2); border-radius: 8px; padding: 0.5rem 0.75rem; font-size: 0.85rem; color: var(--dark);">
+                                        <option>Matte</option>
+                                        <option>Satin</option>
+                                        <option>Glossy</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="property-section">
+                        <div class="property-title">Export</div>
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <select
+                                style="width: 100%; background: rgba(58, 90, 77, 0.05); border: 1px solid rgba(58, 90, 77, 0.2); border-radius: 10px; padding: 0.875rem; font-size: 0.9rem; color: var(--dark);">
+                                <option>PDF Floor Plan</option>
+                                <option>CAD File (.dwg)</option>
+                                <option>Image (.png)</option>
+                                <option>Proposal Document</option>
+                            </select>
+                            <button class="btn-primary" onclick="exportPlan()" style="width: 100%;">Export
+                                Project</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Modal -->
+    <div id="ai-modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px); z-index: 2000; align-items: center; justify-content: center; padding: 2rem;">
+        <div
+            style="background: var(--white); border-radius: 20px; max-width: 800px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
+            <div
+                style="padding: 2rem; border-bottom: 1px solid rgba(58, 90, 77, 0.1); display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-size: 1.5rem; color: var(--primary-green); font-weight: 700;">AI Floor Plan Generator
+                </h3>
+                <button onclick="closeAIModal()"
+                    style="background: none; border: none; font-size: 2rem; color: var(--warm-gray); cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.3s ease;">&times;</button>
+            </div>
+            <div style="padding: 2rem;">
+                <div class="ai-prompt-container" style="position: relative; margin-bottom: 1.5rem;">
+                    <div class="ai-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M12 2v4M6 6l-2 2M2 12h4M6 18l-2-2M12 22v-4M18 18l2-2M22 12h-4M18 6l2 2" />
+                            <circle cx="12" cy="12" r="3" />
+                        </svg>
+                    </div>
+                    <input type="text" id="ai-prompt-input" class="ai-input"
+                        placeholder="Describe your floor plan idea or upload an image...">
+                    <button onclick="generateFromAI()" class="ai-send-btn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M5 12h14M12 5l7 7-7 7" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="upload-area" style="margin-bottom: 1.5rem;"
+                    onclick="document.getElementById('ai-image-upload').click()">
+                    <input type="file" id="ai-image-upload" accept="image/*" style="display: none;"
+                        onchange="handleAIImageUpload(event)">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        style="color: var(--primary-green); margin: 0 auto 1rem;">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <circle cx="9" cy="9" r="2" />
+                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                    </svg>
+                    <p style="font-size: 0.9rem; color: var(--warm-gray);">Upload reference image</p>
+                </div>
+
+                <div id="ai-preview" style="display: none; margin-bottom: 1.5rem;">
+                    <img id="ai-preview-img"
+                        style="width: 100%; border-radius: 12px; margin-bottom: 1rem; border: 1px solid rgba(58, 90, 77, 0.1);"
+                        alt="Preview">
+                </div>
+
+                <div id="ai-loading"
+                    style="display: none; text-align: center; padding: 2rem; color: var(--primary-green); font-weight: 600;">
+                    <div
+                        style="width: 40px; height: 40px; border: 3px solid rgba(58, 90, 77, 0.2); border-top-color: var(--primary-green); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem;">
+                    </div>
+                    <span>Generating floor plan...</span>
+                </div>
+
+                <div id="ai-results" style="display: none;">
+                    <h4 style="font-size: 1rem; color: var(--dark); margin-bottom: 1rem;">Generated Plans</h4>
+                    <div id="ai-results-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+
+    <script>
+        // Authentication check
+        (function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlToken = urlParams.get('token');
+
+            if (urlToken) {
+                localStorage.setItem('auth_token', urlToken);
+                document.cookie = `auth_token=${urlToken}; path=/; max-age=604800; SameSite=Lax`;
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            const token = localStorage.getItem('auth_token') || urlToken;
+
+            if (!token) {
+                window.location.href = '/?login=required';
+                return;
+            }
+
+            // Get user info
+            fetch('/api/auth/me', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        localStorage.removeItem('auth_token');
+                        document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+                        window.location.href = '/?login=expired';
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.user) {
+                        const avatar = document.getElementById('user-avatar');
+                        if (avatar && data.user.name) {
+                            avatar.textContent = data.user.name.charAt(0).toUpperCase();
+                        }
+                    }
+                })
+                .catch(() => { });
+        })();
+
+        // Dashboard Application
+        const dashboard = {
+            currentTool: 'select',
+            selectedProject: null,
+            projects: [],
+
+            init() {
+                this.setupTabs();
+                this.setupToolButtons();
+                this.setupSidebar();
+                this.loadProjects();
+            },
+
+            setupTabs() {
+                document.querySelectorAll('.panel-tab').forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        const tabName = tab.dataset.tab;
+                        document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+                        document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+                        tab.classList.add('active');
+                        const content = document.getElementById(`${tabName}-tab`);
+                        if (content) content.style.display = 'block';
+                    });
+                });
+            },
+
+            setupToolButtons() {
+                document.querySelectorAll('.tool-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        this.currentTool = btn.dataset.tool;
+                    });
+                });
+            },
+
+            setupSidebar() {
+                document.querySelectorAll('.sidebar-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        if (btn.dataset.tool) {
+                            document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+                            btn.classList.add('active');
+                            this.currentTool = btn.dataset.tool;
+                        }
+                    });
+                });
+            },
+
+            loadProjects() {
+                const token = localStorage.getItem('auth_token');
+                fetch('/api/cad/save', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.projects) {
+                            this.projects = data.projects;
+                        }
+                    })
+                    .catch(() => { });
+            }
+        };
+
+        // AI Functions
+        async function generateFromAI() {
+            const prompt = document.getElementById('ai-prompt-input').value;
+            const imageFile = document.getElementById('ai-image-upload').files[0];
+
+            if (!prompt && !imageFile) {
+                alert('Please enter a description or upload an image');
+                return;
+            }
+
+            document.getElementById('ai-loading').style.display = 'block';
+            document.getElementById('ai-results').style.display = 'none';
+
+            try {
+                const formData = new FormData();
+                if (imageFile) formData.append('image', imageFile);
+                formData.append('prompt', prompt || 'Generate a floor plan from this image');
+                formData.append('type', 'floor_plan');
+
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch('/api/ai/generate-plan', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    displayAIResults(data);
+                } else {
+                    throw new Error(data.error || 'Generation failed');
+                }
+            } catch (error) {
+                console.error('AI generation error:', error);
+                alert('AI generation failed. Please try again.');
+            } finally {
+                document.getElementById('ai-loading').style.display = 'none';
+            }
+        }
+
+        function displayAIResults(data) {
+            const resultsDiv = document.getElementById('ai-results-content');
+            resultsDiv.innerHTML = `
+                <div style="background: rgba(58, 90, 77, 0.05); padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem;">
+                    <h5 style="font-size: 0.95rem; font-weight: 600; color: var(--dark); margin-bottom: 0.75rem;">Generated Floor Plan</h5>
+                    <img src="${data.image_url || '/assets/placeholder-plan.png'}" alt="Generated plan" style="width: 100%; border-radius: 12px; margin-bottom: 1rem; border: 1px solid rgba(58, 90, 77, 0.1);">
+                    <div style="display: flex; gap: 0.75rem;">
+                        <button class="btn-primary" onclick="importPlan('${data.plan_id}')" style="flex: 1;">Import to Canvas</button>
+                        <button class="btn-secondary" onclick="downloadPlan('${data.plan_id}')">Download</button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('ai-results').style.display = 'block';
+        }
+
+        function handleAIImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('ai-preview-img').src = e.target.result;
+                    document.getElementById('ai-preview').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function openAIModal() {
+            document.getElementById('ai-modal').style.display = 'flex';
+        }
+
+        function closeAIModal() {
+            document.getElementById('ai-modal').style.display = 'none';
+        }
+
+        // Image Upload
+        document.getElementById('upload-area').addEventListener('click', () => {
+            document.getElementById('image-upload').click();
+        });
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) uploadImage(file);
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('dragover');
+            const file = event.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                uploadImage(file);
+            }
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.currentTarget.classList.add('dragover');
+        }
+
+        function handleDragLeave(event) {
+            event.currentTarget.classList.remove('dragover');
+        }
+
+        async function uploadImage(file) {
+            const formData = new FormData();
+            formData.append('image', file);
+
+            try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch('/api/cad/upload-image', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    addImageToLibrary(data.image_url, file.name);
+                } else {
+                    alert('Upload failed');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                alert('Upload failed');
+            }
+        }
+
+        function addImageToLibrary(url, name) {
+            const imagesDiv = document.getElementById('uploaded-images');
+            const imgDiv = document.createElement('div');
+            imgDiv.innerHTML = `
+                <div style="margin-bottom: 1rem; border-radius: 12px; overflow: hidden; border: 1px solid rgba(58, 90, 77, 0.1);">
+                    <img src="${url}" alt="${name}" style="width: 100%; cursor: pointer;" onclick="useImageAsReference('${url}')">
+                    <div style="padding: 0.75rem; font-size: 0.8rem; color: var(--warm-gray);">${name}</div>
+                </div>
+            `;
+            imagesDiv.appendChild(imgDiv);
+        }
+
+        function useImageAsReference(url) {
+            document.getElementById('ai-preview-img').src = url;
+            document.getElementById('ai-preview').style.display = 'block';
+            openAIModal();
+        }
+
+        // Utility Functions
+        function selectProject(id) {
+            document.querySelectorAll('.project-item').forEach(item => item.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+            dashboard.selectedProject = id;
+        }
+
+        function addRoom() { console.log('Add room'); }
+        function addWall() { console.log('Add wall'); }
+        function addDoor() { console.log('Add door'); }
+        function addWindow() { console.log('Add window'); }
+        function exportPlan() { alert('Exporting floor plan as PDF...'); }
+        function saveProject() {
+            const token = localStorage.getItem('auth_token');
+            const projectData = {
+                name: document.querySelector('input[placeholder="Project Name"]').value,
+                session_id: `project_${Date.now()}`
+            };
+
+            fetch('/api/cad/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(projectData)
+            })
+                .then(() => alert('Project saved successfully!'))
+                .catch(() => alert('Save failed'));
+        }
+        function importPlan(planId) {
+            alert(`Importing plan ${planId}...`);
+            closeAIModal();
+        }
+        function downloadPlan(planId) {
+            window.open(`/api/cad/download-plan/${planId}`, '_blank');
+        }
+        function addFromLibrary(type) {
+            alert(`Adding ${type} to scene...`);
+        }
+
+        // R2 Upload Functions
+        function handleR2Drop(event) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('dragover');
+            const files = Array.from(event.dataTransfer.files);
+            uploadR2Files(files);
+        }
+
+        function handleR2DragOver(event) {
+            event.preventDefault();
+            event.currentTarget.classList.add('dragover');
+        }
+
+        function handleR2DragLeave(event) {
+            event.currentTarget.classList.remove('dragover');
+        }
+
+        function handleR2FileUpload(event) {
+            const files = Array.from(event.target.files);
+            uploadR2Files(files);
+        }
+
+        async function uploadR2Files(files) {
+            const progressDiv = document.getElementById('r2-upload-progress');
+            const progressBar = document.getElementById('r2-progress-bar');
+            progressDiv.style.display = 'block';
+
+            const token = localStorage.getItem('auth_token');
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('path', `content/${file.name}`);
+
+                try {
+                    const response = await fetch('/api/r2/upload', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` },
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        addR2FileToList(data);
+                        progressBar.style.width = `${((i + 1) / files.length) * 100}%`;
+                    } else {
+                        console.error('Upload failed:', data.error);
+                    }
+                } catch (error) {
+                    console.error('Upload error:', error);
+                }
+            }
+
+            setTimeout(() => {
+                progressDiv.style.display = 'none';
+                progressBar.style.width = '0%';
+            }, 1000);
+
+            refreshR2Files();
+        }
+
+        function addR2FileToList(fileData) {
+            const fileList = document.getElementById('r2-file-list');
+            const fileDiv = document.createElement('div');
+            fileDiv.className = 'project-item';
+            fileDiv.innerHTML = `
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--primary-green-dark);">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                </svg>
+                <div style="flex: 1;">
+                    <div style="font-size: 0.85rem; font-weight: 600; color: var(--dark);">${fileData.name}</div>
+                    <div style="font-size: 0.75rem; color: var(--warm-gray);">${formatFileSize(fileData.size)}</div>
+                </div>
+                <button onclick="deleteR2File('${fileData.key}')" style="background: none; border: none; color: #dc2626; cursor: pointer; padding: 0.25rem;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                </button>
+            `;
+            fileList.appendChild(fileDiv);
+        }
+
+        async function refreshR2Files() {
+            const token = localStorage.getItem('auth_token');
+            try {
+                const response = await fetch('/api/r2/list', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+
+                if (response.ok && data.files) {
+                    const fileList = document.getElementById('r2-file-list');
+                    fileList.innerHTML = '';
+                    data.files.forEach(file => addR2FileToList(file));
+                }
+            } catch (error) {
+                console.error('Error loading files:', error);
+            }
+        }
+
+        async function deleteR2File(key) {
+            if (!confirm('Delete this file?')) return;
+
+            const token = localStorage.getItem('auth_token');
+            try {
+                const response = await fetch(`/api/r2/delete/${encodeURIComponent(key)}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    refreshR2Files();
+                } else {
+                    alert('Delete failed');
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+            }
+        }
+
+        function createFolder() {
+            const folderName = prompt('Folder name:');
+            if (folderName) {
+                // Create folder via API
+                console.log('Creating folder:', folderName);
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // YouTube/Streaming Functions
+        function openYouTubeUpload() {
+            // Open YouTube upload modal
+            alert('YouTube upload modal - Coming soon!');
+        }
+
+        // Sidebar Toggle Function (Hamburger Menu)
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const hamburger = document.getElementById('hamburger-menu');
+            const overlay = document.getElementById('sidebar-overlay');
+
+            sidebar.classList.toggle('open');
+            hamburger.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+
+        // Panel Toggle Functions
+        function toggleLeftPanel() {
+            const panel = document.getElementById('left-panel');
+            const overlay = document.getElementById('panel-overlay');
+            panel.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+
+        function toggleRightPanel() {
+            const panel = document.getElementById('right-panel');
+            const overlay = document.getElementById('panel-overlay');
+            panel.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+
+        function closeAllPanels() {
+            document.getElementById('left-panel').classList.remove('open');
+            document.getElementById('right-panel').classList.remove('open');
+            document.getElementById('panel-overlay').classList.remove('active');
+        }
+
+        function toggleUserMenu() {
+            // User menu dropdown functionality
+            console.log('User menu clicked');
+        }
+
+        // Close panels when clicking outside on mobile
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 1024) {
+                const leftPanel = document.getElementById('left-panel');
+                const rightPanel = document.getElementById('right-panel');
+                const overlay = document.getElementById('panel-overlay');
+
+                if (!leftPanel.contains(e.target) && !document.getElementById('left-panel-toggle').contains(e.target) && leftPanel.classList.contains('open')) {
+                    if (!rightPanel.contains(e.target) && !document.getElementById('right-panel-toggle').contains(e.target)) {
+                        closeAllPanels();
+                    }
+                }
+
+                if (!rightPanel.contains(e.target) && !document.getElementById('right-panel-toggle').contains(e.target) && rightPanel.classList.contains('open')) {
+                    if (!leftPanel.contains(e.target) && !document.getElementById('left-panel-toggle').contains(e.target)) {
+                        closeAllPanels();
+                    }
+                }
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Escape to close panels
+            if (e.key === 'Escape') {
+                closeAllPanels();
+            }
+            // 'P' to toggle left panel
+            if (e.key === 'p' && !e.ctrlKey && !e.metaKey) {
+                if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+                    toggleLeftPanel();
+                }
+            }
+            // 'O' to toggle right panel
+            if (e.key === 'o' && !e.ctrlKey && !e.metaKey) {
+                if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+                    toggleRightPanel();
+                }
+            }
+        });
+
+        // Handle OAuth Success and Token from URL
+        function handleOAuthRedirect() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            const oauthSuccess = urlParams.get('oauth_success');
+            const oauthError = urlParams.get('oauth_error');
+
+            // Store token if present
+            if (token) {
+                localStorage.setItem('auth_token', token);
+                document.cookie = `auth_token=${token}; path=/; max-age=604800; SameSite=Lax`;
+            }
+
+            // Show OAuth success message
+            if (oauthSuccess) {
+                const serviceName = oauthSuccess.charAt(0).toUpperCase() + oauthSuccess.slice(1);
+                showNotification(`Successfully connected to ${serviceName}!`, 'success');
+                // Clean URL
+                const cleanUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+            }
+
+            // Show OAuth error message
+            if (oauthError) {
+                showNotification(`OAuth connection failed: ${oauthError}`, 'error');
+                const cleanUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+            }
+
+            // Verify authentication
+            verifyAuth();
+        }
+
+        // Verify authentication status
+        async function verifyAuth() {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                window.location.href = '/?login=required';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    localStorage.removeItem('auth_token');
+                    window.location.href = '/?login=expired';
+                }
+            } catch (error) {
+                console.error('Auth verification error:', error);
+            }
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 80px;
+                right: 1rem;
+                padding: 1rem 1.5rem;
+                background: ${type === 'success' ? 'var(--primary-green)' : type === 'error' ? '#dc2626' : 'var(--warm-gray)'};
+                color: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Add CSS animations for notifications
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            handleOAuthRedirect();
+            dashboard.init();
+            refreshR2Files();
+
+            // Auto-close panels on mobile when switching tabs
+            document.querySelectorAll('.panel-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    if (window.innerWidth <= 1024) {
+                        setTimeout(() => closeAllPanels(), 300);
+                    }
+                });
+            });
+
+            // Close sidebar when clicking nav items on mobile
+            if (window.innerWidth <= 1024) {
+                document.querySelectorAll('.sidebar-nav-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        setTimeout(() => toggleSidebar(), 300);
+                    });
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>

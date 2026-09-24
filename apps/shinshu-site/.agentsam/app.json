@@ -1,0 +1,20 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "shinshu-site",
+  "name": "Shinshu Solutions",
+  "kind": "theme-app",
+  "status": "scaffolded",
+  "package": "@inneranimalmedia/theme-shinshu-site",
+  "gallery_path": "apps/theme-gallery-preview/themes/shinshu-site",
+  "canonical_path": "apps/shinshu-site",
+  "preview": {
+    "kind": "static",
+    "root": "frontend/public"
+  },
+  "features_proposed": [
+    "cms.pages",
+    "forms.leads",
+    "theme.storefront.shell"
+  ],
+  "harvest_batch": "theme-harvest-20260924"
+}

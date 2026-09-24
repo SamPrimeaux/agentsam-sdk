@@ -1,0 +1,20 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "companions-site",
+  "name": "Companions of Caddo",
+  "kind": "theme-app",
+  "status": "scaffolded",
+  "package": "@inneranimalmedia/theme-companions-site",
+  "gallery_path": "apps/theme-gallery-preview/themes/companions-site",
+  "canonical_path": "apps/companions-site",
+  "preview": {
+    "kind": "static",
+    "root": "frontend/public"
+  },
+  "features_proposed": [
+    "cms.media",
+    "cms.pages",
+    "theme.storefront.shell"
+  ],
+  "harvest_batch": "theme-harvest-20260924"
+}

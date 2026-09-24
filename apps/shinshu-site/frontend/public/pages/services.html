@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Services - Shinshu Solutions</title>
+    <link rel="stylesheet" href="/shared/styles.css">
+</head>
+<body>
+    <div id="nav-container"></div>
+
+    <!-- Services Page -->
+    <div id="services-page" class="page active">
+        <div class="container">
+            <div class="section">
+                <div class="section-header">
+                    <h2 class="section-title serif">Our Services</h2>
+                    <p class="section-subtitle">
+                        Comprehensive support for your real estate journey in Japan
+                    </p>
+                </div>
+
+                <div style="display: grid; gap: 3rem;">
+                    <div class="service-card" style="display: grid; grid-template-columns: 80px 1fr; gap: 2rem;">
+                        <div class="service-icon" style="width: 80px; height: 80px; font-size: 36px;">💬</div>
+                        <div>
+                            <h3 class="serif" style="font-size: 2rem;">Translation & Interpretation</h3>
+                            <p style="margin-bottom: 1.5rem;">Professional Japanese-English translation and interpretation services for all aspects of your property investment.</p>
+                            <ul class="service-features">
+                                <li>Property discussion translation</li>
+                                <li>Contractor meeting interpretation</li>
+                                <li>Site visit coordination</li>
+                                <li>Document translation</li>
+                                <li>Legal document review</li>
+                                <li>Contract negotiation support</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="service-card" style="display: grid; grid-template-columns: 80px 1fr; gap: 2rem;">
+                        <div class="service-icon" style="width: 80px; height: 80px; font-size: 36px;">🤝</div>
+                        <div>
+                            <h3 class="serif" style="font-size: 2rem;">Client Liaison for Japanese Businesses</h3>
+                            <p style="margin-bottom: 1.5rem;">Support for Japanese companies handling foreign clients, ensuring smooth communication and cultural alignment.</p>
+                            <ul class="service-features">
+                                <li>Expectation alignment</li>
+                                <li>Communication flow management</li>
+                                <li>Cultural consultation</li>
+                                <li>Foreign client support</li>
+                                <li>Business practice guidance</li>
+                                <li>Ongoing relationship management</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="service-card" style="display: grid; grid-template-columns: 80px 1fr; gap: 2rem;">
+                        <div class="service-icon" style="width: 80px; height: 80px; font-size: 36px;">🔗</div>
+                        <div>
+                            <h3 class="serif" style="font-size: 2rem;">Introductions & Coordination</h3>
+                            <p style="margin-bottom: 1.5rem;">Connect with trusted local professionals and ensure seamless project coordination.</p>
+                            <ul class="service-features">
+                                <li>Realtor introductions</li>
+                                <li>Contractor recommendations</li>
+                                <li>Local government liaison</li>
+                                <li>Service provider network</li>
+                                <li>Project coordination</li>
+                                <li>Stakeholder management</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="service-card" style="display: grid; grid-template-columns: 80px 1fr; gap: 2rem;">
+                        <div class="service-icon" style="width: 80px; height: 80px; font-size: 36px;">🏗️</div>
+                        <div>
+                            <h3 class="serif" style="font-size: 2rem;">Renovation / Project Support</h3>
+                            <p style="margin-bottom: 1.5rem;">Comprehensive support for renovation and improvement projects from planning to completion.</p>
+                            <ul class="service-features">
+                                <li>Contractor coordination</li>
+                                <li>Schedule tracking</li>
+                                <li>Budget management</li>
+                                <li>On-site check-ins</li>
+                                <li>Issue resolution</li>
+                                <li>Quality assurance</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="service-card" style="display: grid; grid-template-columns: 80px 1fr; gap: 2rem;">
+                        <div class="service-icon" style="width: 80px; height: 80px; font-size: 36px;">🏠</div>
+                        <div>
+                            <h3 class="serif" style="font-size: 2rem;">Property Care & Management</h3>
+                            <p style="margin-bottom: 1.5rem;">Reliable property management services for absentee owners.</p>
+                            <ul class="service-features">
+                                <li>Routine property checks</li>
+                                <li>Keyholding services</li>
+                                <li>Repair coordination</li>
+                                <li>Maintenance scheduling</li>
+                                <li>Emergency response</li>
+                                <li>Seasonal preparation</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="footer-container"></div>
+
+    <script src="/shared/layout.js"></script>
+    <script>
+        async function loadComponents() {
+            const navContainer = document.getElementById('nav-container');
+            const footerContainer = document.getElementById('footer-container');
+            
+            try {
+                const [navRes, footerRes] = await Promise.all([
+                    fetch('/shared/nav.html'),
+                    fetch('/shared/footer.html')
+                ]);
+                
+                if (navRes.ok) navContainer.innerHTML = await navRes.text();
+                if (footerRes.ok) footerContainer.innerHTML = await footerRes.text();
+            } catch (error) {
+                console.error('Error loading components:', error);
+            }
+        }
+        
+        loadComponents();
+    </script>
+</body>
+</html>

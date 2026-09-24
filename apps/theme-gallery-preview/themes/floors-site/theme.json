@@ -37,8 +37,12 @@
   },
   "installable": true,
   "_internal": {
-    "normalization": "pending",
-    "source": "/Volumes/Expansion/Anything Floors & More"
+    "normalization": "scaffolded",
+    "source": "/Volumes/Expansion/Anything Floors & More",
+    "harvest_batch": "theme-harvest-20260924",
+    "harvest_path": "work/theme-harvest/floors-site",
+    "app_path": "apps/floors-site",
+    "source_hash": "2244de43568a0bb08d7d3779971c1fc0c6c832c226a65c7bb4313e8ac039add8"
   },
   "package": "@inneranimalmedia/theme-floors-site"
 }

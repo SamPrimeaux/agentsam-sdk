@@ -1,0 +1,46 @@
+<style>
+[data-cpas-section="hero"]{isolation:isolate}
+[data-cpas-section="hero"] .hero-media-bg img{
+  object-fit:contain;
+  object-position:center top;
+  background:#1a0a1e;
+}
+@media(max-width:768px){
+  [data-cpas-section="hero"] .hero-media-bg{position:relative;height:clamp(320px,62vw,520px)}
+  [data-cpas-section="hero"] .hero-body{background:linear-gradient(180deg,#0b0f1a,#070b14)}
+}
+</style>
+<section class="hero-split" data-cpas-section="hero" data-section-key="hero">
+  <div class="hero-media-bg">
+    <img src="https://assets.companionsofcaddo.org/static/pages/about/theteam.webp" alt="Companions of CPAS volunteer team" loading="eager" fetchpriority="high" decoding="async" />
+    <div class="hero-scrim"></div>
+  </div>
+  <div class="hero-body">
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+          Caddo Parish • 100% Volunteer-Based
+        </div>
+        <h1 class="hero-heading">Giving Caddo dogs the second chance they might not get otherwise.</h1>
+        <p class="hero-sub">Companions of CPAS helps dogs at Caddo Parish Animal Services leave uncertainty behind through medical care, transport pathways, rescue partnerships, and community support.</p>
+        <div class="hero-actions">
+          <button class="hero-cta hero-cta-primary" type="button" data-action="contact">
+            <span class="hero-cta-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>
+            <span class="hero-cta-text">
+              <span class="hero-cta-label">Contact Us</span>
+              <span class="hero-cta-sub">Let's work together</span>
+            </span>
+          </button>
+          <button class="hero-cta hero-cta-ghost" type="button" data-action="donate">
+            <span class="hero-cta-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></span>
+            <span class="hero-cta-text">
+              <span class="hero-cta-label">Support Our Mission</span>
+              <span class="hero-cta-sub">Donate or give supplies</span>
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mountain Adventures - Jake Waalk's Hiking Journeys | Shinshu Solutions</title>
+    <meta name="description" content="Follow Jake Waalk's mountain hiking adventures across Nagano Prefecture and Japan. Stories from Mount Bandai, Japanese Alps, and other incredible summits.">
+    <meta name="keywords" content="Jake Waalk, mountain hiking, Nagano adventures, Mount Bandai, Japanese Alps hiking, mountain climbing Japan, adventure stories, Shinshu region hiking">
+    <meta name="author" content="Jake Waalk - Shinshu Solutions">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://shinshu-solutions.meauxbility.workers.dev/adventures">
+    <meta property="og:title" content="Mountain Adventures - Jake Waalk's Hiking Journeys">
+    <meta property="og:description" content="Follow Jake Waalk's mountain hiking adventures across Nagano Prefecture and Japan.">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://shinshu-solutions.meauxbility.workers.dev/adventures">
+    <meta property="twitter:title" content="Mountain Adventures - Jake Waalk">
+    <meta property="twitter:description" content="Follow Jake Waalk's mountain hiking adventures across Nagano Prefecture and Japan.">
+    
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Blog",
+      "name": "Jake Waalk Mountain Adventures",
+      "description": "Mountain hiking adventures and stories from Nagano Prefecture, Japan",
+      "author": {
+        "@type": "Person",
+        "name": "Jake Waalk",
+        "jobTitle": "Bilingual Real Estate Consultant",
+        "worksFor": {
+          "@type": "Organization",
+          "name": "Shinshu Solutions"
+        }
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Shinshu Solutions"
+      }
+    }
+    </script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="canonical" href="https://shinshu-solutions.meauxbility.workers.dev/adventures">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --orange-primary: #FF8C42;
+            --orange-dark: #E67635;
+            --orange-light: #FFB67A;
+            --cream: #FFF8F0;
+            --text-dark: #1A1A1A;
+            --text-gray: #666;
+        }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--cream);
+            color: var(--text-dark);
+            line-height: 1.7;
+        }
+        .header {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            padding: 1.5rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--orange-primary);
+            text-decoration: none;
+        }
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+        .nav-links a {
+            color: var(--text-dark);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        .nav-links a:hover {
+            color: var(--orange-primary);
+        }
+        .hero-section {
+            background: linear-gradient(135deg, var(--orange-primary), var(--orange-dark));
+            color: white;
+            padding: 5rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=1920&q=80') center/cover;
+            opacity: 0.2;
+            z-index: 1;
+        }
+        .hero-content {
+            max-width: 900px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+        .hero-content h1 {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+        .hero-content p {
+            font-size: 1.3rem;
+            opacity: 0.95;
+            margin-bottom: 1rem;
+        }
+        .hero-content .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.85;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+        .adventures-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 3rem;
+            margin-bottom: 4rem;
+        }
+        .adventure-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+        .adventure-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(255, 140, 66, 0.3);
+        }
+        .adventure-image {
+            width: 100%;
+            height: 280px;
+            object-fit: cover;
+            background: linear-gradient(135deg, var(--orange-light), var(--orange-primary));
+        }
+        .adventure-content {
+            padding: 2rem;
+        }
+        .adventure-meta {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: var(--text-gray);
+            flex-wrap: wrap;
+        }
+        .adventure-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .adventure-title {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+        }
+        .adventure-description {
+            color: var(--text-gray);
+            line-height: 1.8;
+            margin-bottom: 1.5rem;
+        }
+        .adventure-tags {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+        .tag {
+            background: rgba(255, 140, 66, 0.1);
+            color: var(--orange-dark);
+            padding: 0.4rem 1rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .adventure-stats {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
+        .stat {
+            display: flex;
+            flex-direction: column;
+        }
+        .stat-value {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--orange-primary);
+        }
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-gray);
+            margin-top: 0.25rem;
+        }
+        .loading {
+            text-align: center;
+            padding: 4rem;
+            color: var(--text-gray);
+        }
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-gray);
+        }
+        .empty-state h3 {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+        }
+        .section-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+        .section-header h2 {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+        }
+        .section-header p {
+            font-size: 1.1rem;
+            color: var(--text-gray);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        @media (max-width: 768px) {
+            .hero-content h1 {
+                font-size: 2.5rem;
+            }
+            .adventures-grid {
+                grid-template-columns: 1fr;
+            }
+            .nav-links {
+                gap: 1rem;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <nav class="nav-container">
+            <a href="/" class="logo">SHINSHU SOLUTIONS</a>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/#about-page">About</a>
+                <a href="/#services-page">Services</a>
+                <a href="/gallery">Gallery</a>
+                <a href="/adventures">Adventures</a>
+                <a href="/#contact-page">Contact</a>
+            </div>
+        </nav>
+    </header>
+
+    <section class="hero-section">
+        <div class="hero-content">
+            <h1>Mountain Adventures</h1>
+            <p>Exploring Japan's Most Beautiful Summits</p>
+            <p class="subtitle">Stories from the trails, peaks, and unforgettable moments in the mountains</p>
+        </div>
+    </section>
+
+    <div class="container">
+        <div class="section-header">
+            <h2>Hiking Journeys & Summit Stories</h2>
+            <p>Follow Jake's adventures across Nagano Prefecture and beyond, from challenging ascents to breathtaking views</p>
+        </div>
+
+        <div class="adventures-grid" id="adventures-grid">
+            <div class="loading">Loading adventures...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        let allAdventures = [];
+
+        async function loadAdventures() {
+            try {
+                // Load adventures from content API
+                const response = await fetch(`${API_URL}/api/content?content_type=adventure&is_published=1&limit=50`);
+                const data = await response.json();
+                
+                if (data.success && data.data && data.data.length > 0) {
+                    allAdventures = data.data;
+                    renderAdventures();
+                } else {
+                    // Fallback: Create sample adventures from available images
+                    const assetsResponse = await fetch(`${API_URL}/api/assets?category=portfolio&type=image&limit=20`);
+                    const assetsData = await assetsResponse.json();
+                    
+                    if (assetsData.success && assetsData.data && assetsData.data.length > 0) {
+                        allAdventures = assetsData.data.map((asset, index) => ({
+                            id: asset.id,
+                            title: asset.title || `Mountain Adventure ${index + 1}`,
+                            description: asset.description || 'An incredible hiking experience in the Japanese mountains',
+                            location: asset.location || 'Nagano Prefecture',
+                            elevation: asset.metadata?.elevation || 'Unknown',
+                            date: asset.created_at ? new Date(asset.created_at * 1000).toLocaleDateString() : 'Recent',
+                            image: asset.r2_key ? `${API_URL}/api/assets/${asset.id}/view` : (asset.url || ''),
+                            tags: asset.metadata?.tags || ['hiking', 'mountains'],
+                            difficulty: asset.metadata?.difficulty || 'Moderate'
+                        }));
+                    } else {
+                        // Sample adventures as placeholders
+                        allAdventures = [
+                            {
+                                id: 'adv-1',
+                                title: 'Mount Bandai Summit - 1816m',
+                                description: 'A challenging ascent to the summit of Mount Bandai in Bandai-Asahi National Park. The view from the top was absolutely spectacular, with panoramic vistas of the surrounding mountains and valleys.',
+                                location: 'Bandai-Asahi National Park, Fukushima',
+                                elevation: '1816m',
+                                date: '2024',
+                                image: 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800&q=80&fit=crop',
+                                tags: ['summit', 'challenging', 'national-park'],
+                                difficulty: 'Difficult'
+                            },
+                            {
+                                id: 'adv-2',
+                                title: 'Golden Hour in the Japanese Alps',
+                                description: 'Captured this stunning golden hour moment during a multi-day trek through the Japanese Alps. The light hitting the peaks created an unforgettable scene.',
+                                location: 'Japanese Alps, Nagano',
+                                elevation: '2500m+',
+                                date: '2024',
+                                image: 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800&q=80&fit=crop',
+                                tags: ['alps', 'sunset', 'trekking'],
+                                difficulty: 'Moderate'
+                            },
+                            {
+                                id: 'adv-3',
+                                title: 'Misty Mountain Trails',
+                                description: 'Navigating through thick mist on a high-altitude trail. The atmospheric conditions made for an otherworldly hiking experience, with visibility changing dramatically throughout the day.',
+                                location: 'Nagano Prefecture',
+                                elevation: '1800m',
+                                date: '2024',
+                                image: 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800&q=80&fit=crop',
+                                tags: ['mist', 'atmospheric', 'high-altitude'],
+                                difficulty: 'Moderate'
+                            },
+                            {
+                                id: 'adv-4',
+                                title: 'Winter Shrine Discovery',
+                                description: 'Stumbled upon this beautiful torii gate during a winter hike. The contrast of the vibrant red against the pristine snow was breathtaking.',
+                                location: 'Nagano Prefecture',
+                                elevation: '1200m',
+                                date: 'Winter 2024',
+                                image: 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800&q=80&fit=crop',
+                                tags: ['winter', 'cultural', 'shrine'],
+                                difficulty: 'Easy'
+                            }
+                        ];
+                    }
+                    renderAdventures();
+                }
+            } catch (error) {
+                console.error('Error loading adventures:', error);
+                document.getElementById('adventures-grid').innerHTML = 
+                    '<div class="empty-state"><h3>Adventures Loading</h3><p>Adventure stories will appear here. Upload content via the dashboard to get started.</p></div>';
+            }
+        }
+
+        function renderAdventures() {
+            const grid = document.getElementById('adventures-grid');
+
+            if (allAdventures.length === 0) {
+                grid.innerHTML = '<div class="empty-state"><h3>No adventures yet</h3><p>Check back soon for hiking stories and mountain adventures!</p></div>';
+                return;
+            }
+
+            grid.innerHTML = allAdventures.map(adv => {
+                const imageUrl = adv.image || 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800&q=80&fit=crop';
+                const tags = Array.isArray(adv.tags) ? adv.tags : (adv.tags ? adv.tags.split(',') : []);
+                
+                return `
+                    <article class="adventure-card" onclick="window.location.href='/gallery'">
+                        <img src="${imageUrl}" 
+                             alt="${adv.title || 'Mountain adventure'}" 
+                             class="adventure-image" 
+                             loading="lazy">
+                        <div class="adventure-content">
+                            <div class="adventure-meta">
+                                <span>📍 ${adv.location || 'Nagano Prefecture'}</span>
+                                ${adv.elevation ? `<span>⛰️ ${adv.elevation}</span>` : ''}
+                                ${adv.date ? `<span>📅 ${adv.date}</span>` : ''}
+                            </div>
+                            <h3 class="adventure-title">${adv.title || 'Mountain Adventure'}</h3>
+                            <p class="adventure-description">${adv.description || 'An incredible hiking experience in the Japanese mountains.'}</p>
+                            ${tags.length > 0 ? `
+                                <div class="adventure-tags">
+                                    ${tags.map(tag => `<span class="tag">${tag.trim()}</span>`).join('')}
+                                </div>
+                            ` : ''}
+                            ${adv.difficulty ? `
+                                <div class="adventure-stats">
+                                    <div class="stat">
+                                        <span class="stat-value">${adv.difficulty}</span>
+                                        <span class="stat-label">Difficulty</span>
+                                    </div>
+                                    ${adv.elevation ? `
+                                        <div class="stat">
+                                            <span class="stat-value">${adv.elevation}</span>
+                                            <span class="stat-label">Elevation</span>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </article>
+                `;
+            }).join('');
+        }
+
+        // Load adventures on page load
+        loadAdventures();
+    </script>
+</body>
+</html>

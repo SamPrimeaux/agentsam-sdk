@@ -39,8 +39,12 @@
   },
   "installable": true,
   "_internal": {
-    "normalization": "pending",
-    "source": "/Users/samprimeaux/Library/Mobile Documents/com~apple~CloudDocs/Projects/Cloudflare/NewIberiaChurchofChrist"
+    "normalization": "scaffolded",
+    "source": "/Users/samprimeaux/Library/Mobile Documents/com~apple~CloudDocs/Projects/Cloudflare/NewIberiaChurchofChrist",
+    "harvest_batch": "theme-harvest-20260924",
+    "harvest_path": "work/theme-harvest/church-site",
+    "app_path": "apps/church-site",
+    "source_hash": "0a8ae5de768f874ccdebe92a5e438ad8e4d51b4c5fdae9679c7e09268328fee6"
   },
   "package": "@inneranimalmedia/theme-church-site"
 }

@@ -1,0 +1,10 @@
+{
+  "harvest_batch": "theme-harvest-20260924",
+  "app_path": "apps/insurance-site",
+  "harvest_path": "work/theme-harvest/insurance-site",
+  "status": "scaffolded",
+  "source_hash": "1e171081f5a06d7568554aedcc6a17fd17f102b4109e9b543895fca3879606c2",
+  "capabilities": [
+    "theme.storefront.shell"
+  ]
+}

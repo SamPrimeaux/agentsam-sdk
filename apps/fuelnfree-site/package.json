@@ -1,0 +1,10 @@
+{
+  "name": "@inneranimalmedia/app-fuelnfree-site",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Scaffolded APP from theme harvest: Fuel & Free Time",
+  "type": "module",
+  "scripts": {
+    "preview": "python3 -m http.server 4177 --directory frontend/public"
+  }
+}

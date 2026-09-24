@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAD Tools | Anything Floors and More | Floor Planning & Design</title>
+    <meta name="description"
+        content="Professional floor planning and design tools. Upload images, generate CAD drawings, create proposals and project plans.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-green: #3a5a4d;
+            --primary-green-light: #4a6b5d;
+            --secondary-green: #4a7462;
+            --light-green: #5a8472;
+            --accent-green: #6a9482;
+            --cream: #f5f3ef;
+            --warm-gray: #4a4a4a;
+            --light-gray: #e8e8e8;
+            --gold: #c9a961;
+            --white: #ffffff;
+            --off-white: #fafafa;
+            --dark: #1a1a1a;
+            --panel-bg: rgba(255, 255, 255, 0.95);
+            --surface-bg: rgba(255, 255, 255, 0.85);
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(to bottom,
+                    var(--white) 0%,
+                    #fcfcfc 15%,
+                    #f9faf9 30%,
+                    #f6f8f6 50%,
+                    #f3f6f4 70%,
+                    #f0f4f2 85%,
+                    var(--cream) 100%);
+            color: var(--warm-gray);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            font-family: 'Space Grotesk', sans-serif;
+            color: var(--dark);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        /* Navigation - Glassmorphic */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            border-bottom: 1px solid rgba(58, 90, 77, 0.1);
+            z-index: 1000;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: scaleY(1);
+            transform-origin: top;
+        }
+
+        .navbar.scrolled {
+            background: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 4px 30px rgba(58, 90, 77, 0.12);
+            transform: scaleY(0.95);
+        }
+
+        .nav-container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: padding 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .navbar.scrolled .nav-container {
+            padding: 0.75rem 2rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .navbar.scrolled .logo {
+            transform: scale(0.95);
+        }
+
+        .logo img {
+            height: 50px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .nav-menu {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-link {
+            color: var(--warm-gray);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--primary-green);
+        }
+
+        /* Main Layout */
+        .cad-container {
+            display: flex;
+            height: 100vh;
+            padding-top: 70px;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 70px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(58, 90, 77, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem 0;
+            gap: 0.5rem;
+        }
+
+        .sidebar-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 10px;
+            border: none;
+            background: transparent;
+            color: var(--warm-gray);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-btn:hover {
+            background: rgba(58, 90, 77, 0.1);
+            color: var(--primary-green);
+        }
+
+        .sidebar-btn.active {
+            background: rgba(58, 90, 77, 0.15);
+            color: var(--primary-green);
+        }
+
+        /* Toolbar */
+        .toolbar {
+            height: 60px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(58, 90, 77, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+        }
+
+        .tool-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(58, 90, 77, 0.05);
+            padding: 0.5rem;
+            border-radius: 12px;
+            border: 1px solid rgba(58, 90, 77, 0.1);
+        }
+
+        .tool-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: var(--warm-gray);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .tool-btn:hover {
+            background: rgba(58, 90, 77, 0.1);
+            color: var(--primary-green);
+        }
+
+        .tool-btn.active {
+            background: rgba(58, 90, 77, 0.2);
+            color: var(--primary-green);
+        }
+
+        .ai-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1rem;
+            background: rgba(58, 90, 77, 0.1);
+            border: 1px solid rgba(58, 90, 77, 0.2);
+            border-radius: 10px;
+            color: var(--primary-green);
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .ai-btn:hover {
+            background: rgba(58, 90, 77, 0.2);
+            border-color: var(--primary-green);
+        }
+
+        /* Main Workspace */
+        .workspace {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Left Panel - Scene/Assets */
+        .left-panel {
+            width: 280px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(58, 90, 77, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-tabs {
+            display: flex;
+            border-bottom: 1px solid rgba(58, 90, 77, 0.1);
+        }
+
+        .panel-tab {
+            flex: 1;
+            padding: 1rem;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--warm-gray);
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .panel-tab.active {
+            color: var(--primary-green);
+            border-bottom-color: var(--primary-green);
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .scene-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .scene-item:hover {
+            background: rgba(58, 90, 77, 0.05);
+        }
+
+        .scene-item.selected {
+            background: rgba(58, 90, 77, 0.1);
+            border: 1px solid rgba(58, 90, 77, 0.2);
+        }
+
+        /* Viewport */
+        .viewport {
+            flex: 1;
+            background: var(--cream);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .viewport-grid {
+            background-image:
+                linear-gradient(rgba(58, 90, 77, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(58, 90, 77, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            width: 100%;
+            height: 100%;
+        }
+
+        .viewport-controls {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            z-index: 10;
+        }
+
+        .control-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(58, 90, 77, 0.1);
+            color: var(--warm-gray);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(58, 90, 77, 0.1);
+            color: var(--primary-green);
+        }
+
+        /* AI Prompt Bar */
+        .ai-prompt-bar {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 800px;
+            z-index: 10;
+        }
+
+        .ai-prompt-container {
+            background: var(--panel-bg);
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(58, 90, 77, 0.2);
+            border-radius: 16px;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            box-shadow: 0 8px 32px rgba(58, 90, 77, 0.15);
+            transition: all 0.3s ease;
+        }
+
+        .ai-prompt-container:hover {
+            border-color: var(--primary-green);
+            box-shadow: 0 12px 40px rgba(58, 90, 77, 0.2);
+        }
+
+        .ai-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary-green), var(--secondary-green));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            flex-shrink: 0;
+        }
+
+        .ai-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--dark);
+            font-size: 0.95rem;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .ai-input::placeholder {
+            color: var(--warm-gray);
+        }
+
+        .ai-send-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--primary-green);
+            border: none;
+            color: var(--white);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .ai-send-btn:hover {
+            background: var(--primary-green-light);
+            transform: scale(1.05);
+        }
+
+        /* Right Panel - Properties */
+        .right-panel {
+            width: 320px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid rgba(58, 90, 77, 0.1);
+            overflow-y: auto;
+        }
+
+        .property-section {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(58, 90, 77, 0.1);
+        }
+
+        .property-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--warm-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+        }
+
+        .property-group {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .property-input {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            padding: 0.5rem;
+            background: rgba(58, 90, 77, 0.05);
+            border: 1px solid rgba(58, 90, 77, 0.1);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .property-input:hover {
+            border-color: var(--primary-green);
+        }
+
+        .property-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--primary-green);
+        }
+
+        .property-value {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--dark);
+            font-size: 0.85rem;
+            font-family: 'Space Grotesk', monospace;
+            width: 100%;
+        }
+
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed rgba(58, 90, 77, 0.3);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary-green);
+            background: rgba(58, 90, 77, 0.05);
+        }
+
+        .upload-area.dragover {
+            border-color: var(--primary-green);
+            background: rgba(58, 90, 77, 0.1);
+        }
+
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(58, 90, 77, 0.2);
+            border-radius: 3px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(58, 90, 77, 0.3);
+        }
+
+        /* Loading State */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            color: var(--primary-green);
+            font-weight: 600;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(58, 90, 77, 0.2);
+            border-top-color: var(--primary-green);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Image Preview */
+        .image-preview {
+            width: 100%;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(58, 90, 77, 0.1);
+        }
+
+        /* Button Styles */
+        .btn-primary {
+            background: var(--primary-green);
+            color: var(--white);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-green-light);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(58, 90, 77, 0.25);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--primary-green);
+            border: 1px solid rgba(58, 90, 77, 0.2);
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(58, 90, 77, 0.05);
+            border-color: var(--primary-green);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/7fb34d9c-fb11-4403-6a45-74ac90492e00/avatar"
+                    alt="Anything Floors and More Logo">
+            </a>
+
+            <ul class="nav-menu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="/services" class="nav-link">Services</a></li>
+                <li><a href="/process" class="nav-link">Process</a></li>
+                <li><a href="/contact" class="nav-link">Contact</a></li>
+                <li><a href="/dashboard" class="nav-link">Dashboard</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="cad-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <a href="/dashboard" class="sidebar-btn" title="Back to Dashboard">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="m12 19-7-7 7-7M19 12H5" />
+                </svg>
+            </a>
+            <button class="sidebar-btn active" data-tool="select" title="Select">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12.586 12.586 19 19" />
+                    <path
+                        d="M3.688 3.037a.497.497 0 0 0-.651.651l6.5 15.999a.501.501 0 0 0 .947-.062l1.569-6.083a2 2 0 0 1 1.448-1.479l6.124-1.579a.5.5 0 0 0 .063-.947z" />
+                </svg>
+            </button>
+            <button class="sidebar-btn" data-tool="measure" title="Measure">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                    <circle cx="12" cy="10" r="3" />
+                </svg>
+            </button>
+            <button class="sidebar-btn" data-tool="draw" title="Draw">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+            </button>
+            <button class="sidebar-btn" data-tool="floor" title="Add Floor">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                </svg>
+            </button>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col">
+            <!-- Toolbar -->
+            <div class="toolbar">
+                <div class="flex items-center gap-4">
+                    <div class="tool-group">
+                        <button class="tool-btn active" data-tool="select">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M12.586 12.586 19 19" />
+                                <path
+                                    d="M3.688 3.037a.497.497 0 0 0-.651.651l6.5 15.999a.501.501 0 0 0 .947-.062l1.569-6.083a2 2 0 0 1 1.448-1.479l6.124-1.579a.5.5 0 0 0 .063-.947z" />
+                            </svg>
+                        </button>
+                        <button class="tool-btn" data-tool="move">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M12 2v20" />
+                                <path d="m15 19-3 3-3-3" />
+                                <path d="m19 9 3 3-3 3" />
+                                <path d="M2 12h20" />
+                            </svg>
+                        </button>
+                        <button class="tool-btn" data-tool="rotate">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path
+                                    d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div style="width: 1px; height: 24px; background: rgba(58, 90, 77, 0.2);"></div>
+
+                    <button class="ai-btn" onclick="openAIModal()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M12 2v4M6 6l-2 2M2 12h4M6 18l-2-2M12 22v-4M18 18l2-2M22 12h-4M18 6l2 2" />
+                            <circle cx="12" cy="12" r="3" />
+                        </svg>
+                        AI Generate
+                    </button>
+
+                    <div style="width: 1px; height: 24px; background: rgba(58, 90, 77, 0.2);"></div>
+
+                    <button class="tool-btn" onclick="addFloorPlan()" title="Add Floor Plan">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                        </svg>
+                    </button>
+                    <button class="tool-btn" onclick="addWall()" title="Add Wall">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M3 12h18M3 6h18M3 18h18" />
+                        </svg>
+                    </button>
+                    <button class="tool-btn" onclick="addDoor()" title="Add Door">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14" />
+                            <path d="M2 6h20" />
+                            <path d="M14 12h.01" />
+                        </svg>
+                    </button>
+                    <button class="tool-btn" onclick="addWindow()" title="Add Window">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="2" y="4" width="20" height="16" rx="2" />
+                            <path
+                                d="M6 8h.01M6 12h.01M6 16h.01M10 8h.01M10 12h.01M10 16h.01M14 8h.01M14 12h.01M14 16h.01M18 8h.01M18 12h.01M18 16h.01" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <div style="font-family: 'Space Grotesk', monospace; font-size: 0.75rem; color: var(--warm-gray);">
+                        <span>Scale: <span id="scale-display">1:50</span></span>
+                    </div>
+                    <button class="btn-secondary" onclick="exportPlan()">Export PDF</button>
+                    <button class="btn-primary" onclick="saveProject()">Save Project</button>
+                </div>
+            </div>
+
+            <!-- Workspace -->
+            <div class="workspace">
+                <!-- Left Panel -->
+                <div class="left-panel">
+                    <div class="panel-tabs">
+                        <button class="panel-tab active" data-tab="scene">Scene</button>
+                        <button class="panel-tab" data-tab="library">Library</button>
+                        <button class="panel-tab" data-tab="images">Images</button>
+                    </div>
+
+                    <div class="panel-content custom-scrollbar">
+                        <!-- Scene Tab -->
+                        <div id="scene-tab" class="tab-content">
+                            <div class="scene-item selected" onclick="selectItem('floor-plan-1')">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" style="color: var(--primary-green);">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                                </svg>
+                                <span style="font-size: 0.85rem;">Main Floor Plan</span>
+                            </div>
+                            <div class="scene-item" onclick="selectItem('wall-1')">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" style="color: var(--warm-gray);">
+                                    <path d="M3 12h18" />
+                                </svg>
+                                <span style="font-size: 0.85rem;">Wall 1</span>
+                            </div>
+                        </div>
+
+                        <!-- Library Tab -->
+                        <div id="library-tab" class="tab-content" style="display: none;">
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
+                                <button
+                                    class="aspect-square bg-white border border-gray-200 rounded-lg hover:border-primary-green cursor-pointer flex items-center justify-center"
+                                    onclick="addFromLibrary('flooring-hardwood')">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" style="color: var(--warm-gray);">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                                    </svg>
+                                </button>
+                                <button
+                                    class="aspect-square bg-white border border-gray-200 rounded-lg hover:border-primary-green cursor-pointer flex items-center justify-center"
+                                    onclick="addFromLibrary('flooring-tile')">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" style="color: var(--warm-gray);">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Images Tab -->
+                        <div id="images-tab" class="tab-content" style="display: none;">
+                            <div class="upload-area" id="upload-area" ondrop="handleDrop(event)"
+                                ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" style="color: var(--primary-green); margin: 0 auto 1rem;">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="17 8 12 3 7 8" />
+                                    <line x1="12" y1="3" x2="12" y2="15" />
+                                </svg>
+                                <p style="font-size: 0.85rem; color: var(--warm-gray); margin-bottom: 0.5rem;">Drop
+                                    image here or click to upload</p>
+                                <p style="font-size: 0.75rem; color: var(--warm-gray);">Supports JPG, PNG, WebP</p>
+                                <input type="file" id="image-upload" accept="image/*" style="display: none;"
+                                    onchange="handleImageUpload(event)">
+                            </div>
+                            <div id="uploaded-images"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Viewport -->
+                <div class="viewport">
+                    <div class="viewport-grid">
+                        <!-- Floor Plan Canvas -->
+                        <svg id="floor-plan-canvas" width="100%" height="100%"
+                            style="position: absolute; top: 0; left: 0;">
+                            <!-- Grid will be rendered here -->
+                            <defs>
+                                <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+                                    <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(58, 90, 77, 0.1)"
+                                        stroke-width="1" />
+                                </pattern>
+                            </defs>
+                            <rect width="100%" height="100%" fill="url(#grid)" />
+
+                            <!-- Sample floor plan -->
+                            <rect x="100" y="100" width="400" height="300" fill="rgba(58, 90, 77, 0.1)"
+                                stroke="var(--primary-green)" stroke-width="2" rx="4" />
+                            <text x="300" y="250" text-anchor="middle" fill="var(--primary-green)"
+                                font-family="Space Grotesk" font-size="16" font-weight="700">Main Floor Plan</text>
+                        </svg>
+                    </div>
+
+                    <!-- Viewport Controls -->
+                    <div class="viewport-controls">
+                        <button class="control-btn" title="Zoom In">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="11" cy="11" r="8" />
+                                <path d="m21 21-4.35-4.35" />
+                                <path d="M11 8v6M8 11h6" />
+                            </svg>
+                        </button>
+                        <button class="control-btn" title="Zoom Out">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="11" cy="11" r="8" />
+                                <path d="m21 21-4.35-4.35" />
+                                <path d="M8 11h6" />
+                            </svg>
+                        </button>
+                        <button class="control-btn" title="Reset View">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                                <path d="M21 3v5h-5" />
+                                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                                <path d="M3 21v-5h5" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Panel - Properties -->
+                <div class="right-panel custom-scrollbar">
+                    <div class="property-section">
+                        <div class="property-title">Transform</div>
+                        <div class="property-group">
+                            <div class="property-input">
+                                <span class="property-label" style="color: #dc2626;">X</span>
+                                <input type="number" class="property-value" value="0.00" step="0.01" id="prop-x">
+                            </div>
+                            <div class="property-input">
+                                <span class="property-label" style="color: #16a34a;">Y</span>
+                                <input type="number" class="property-value" value="0.00" step="0.01" id="prop-y">
+                            </div>
+                            <div class="property-input">
+                                <span class="property-label" style="color: #2563eb;">Z</span>
+                                <input type="number" class="property-value" value="0.00" step="0.01" id="prop-z">
+                            </div>
+                        </div>
+                        <div class="property-group">
+                            <div class="property-input">
+                                <span class="property-label">Rotation</span>
+                                <input type="number" class="property-value" value="0" step="1" id="prop-rotation">
+                            </div>
+                            <div class="property-input">
+                                <span class="property-label">Scale</span>
+                                <input type="number" class="property-value" value="100" step="1" id="prop-scale">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="property-section">
+                        <div class="property-title">Flooring Material</div>
+                        <div
+                            style="background: rgba(58, 90, 77, 0.05); padding: 1rem; border-radius: 12px; border: 1px solid rgba(58, 90, 77, 0.1);">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                                <div
+                                    style="width: 40px; height: 40px; border-radius: 8px; background: linear-gradient(135deg, #8b7355, #a0826d); border: 1px solid rgba(58, 90, 77, 0.2);">
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.85rem; font-weight: 600; color: var(--dark);">Hardwood Oak
+                                    </div>
+                                    <div style="font-size: 0.7rem; color: var(--warm-gray);">Premium Grade</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 0.75rem; color: var(--warm-gray);">Color</span>
+                                    <input type="color" value="#8b7355"
+                                        style="width: 60px; height: 24px; border-radius: 6px; border: 1px solid rgba(58, 90, 77, 0.2); cursor: pointer;">
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 0.75rem; color: var(--warm-gray);">Finish</span>
+                                    <select
+                                        style="background: rgba(58, 90, 77, 0.05); border: 1px solid rgba(58, 90, 77, 0.2); border-radius: 6px; padding: 0.25rem 0.5rem; font-size: 0.75rem; color: var(--dark);">
+                                        <option>Matte</option>
+                                        <option>Satin</option>
+                                        <option>Glossy</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="property-section">
+                        <div class="property-title">Project Info</div>
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <input type="text" placeholder="Project Name"
+                                style="padding: 0.75rem; border: 1px solid rgba(58, 90, 77, 0.2); border-radius: 8px; background: rgba(58, 90, 77, 0.05); font-size: 0.85rem; color: var(--dark);">
+                            <textarea placeholder="Project Notes" rows="4"
+                                style="padding: 0.75rem; border: 1px solid rgba(58, 90, 77, 0.2); border-radius: 8px; background: rgba(58, 90, 77, 0.05); font-size: 0.85rem; color: var(--dark); resize: vertical;"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Modal -->
+    <div id="ai-modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px); z-index: 2000; align-items: center; justify-content: center; padding: 2rem;">
+        <div
+            style="background: var(--white); border-radius: 20px; max-width: 700px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
+            <div
+                style="padding: 2rem; border-bottom: 1px solid rgba(58, 90, 77, 0.1); display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-size: 1.5rem; color: var(--primary-green); font-weight: 700;">AI Floor Plan Generator
+                </h3>
+                <button onclick="closeAIModal()"
+                    style="background: none; border: none; font-size: 2rem; color: var(--warm-gray); cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.3s ease;">
+                    &times;
+                </button>
+            </div>
+            <div style="padding: 2rem;">
+                <div class="ai-prompt-container" style="position: relative; margin-bottom: 1.5rem;">
+                    <div class="ai-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M12 2v4M6 6l-2 2M2 12h4M6 18l-2-2M12 22v-4M18 18l2-2M22 12h-4M18 6l2 2" />
+                            <circle cx="12" cy="12" r="3" />
+                        </svg>
+                    </div>
+                    <input type="text" id="ai-prompt-input" class="ai-input"
+                        placeholder="Describe your floor plan idea or upload an image...">
+                    <button onclick="generateFromAI()" class="ai-send-btn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M5 12h14M12 5l7 7-7 7" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="upload-area" style="margin-bottom: 1.5rem;"
+                    onclick="document.getElementById('ai-image-upload').click()">
+                    <input type="file" id="ai-image-upload" accept="image/*" style="display: none;"
+                        onchange="handleAIImageUpload(event)">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        style="color: var(--primary-green); margin: 0 auto 1rem;">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <circle cx="9" cy="9" r="2" />
+                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                    </svg>
+                    <p style="font-size: 0.9rem; color: var(--warm-gray);">Upload reference image</p>
+                </div>
+
+                <div id="ai-preview" style="display: none; margin-bottom: 1.5rem;">
+                    <img id="ai-preview-img" class="image-preview" alt="Preview">
+                </div>
+
+                <div id="ai-loading" style="display: none;" class="loading">
+                    <div class="spinner"></div>
+                    <span>Generating floor plan...</span>
+                </div>
+
+                <div id="ai-results" style="display: none;">
+                    <h4 style="font-size: 1rem; color: var(--dark); margin-bottom: 1rem;">Generated Plans</h4>
+                    <div id="ai-results-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // CAD Application
+        const cadApp = {
+            currentTool: 'select',
+            selectedItem: null,
+            scene: [],
+
+            init() {
+                this.setupTabs();
+                this.setupToolButtons();
+                this.setupSidebar();
+                this.loadProject();
+            },
+
+            setupTabs() {
+                document.querySelectorAll('.panel-tab').forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        const tabName = tab.dataset.tab;
+                        document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+                        document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+                        tab.classList.add('active');
+                        document.getElementById(`${tabName}-tab`).style.display = 'block';
+                    });
+                });
+            },
+
+            setupToolButtons() {
+                document.querySelectorAll('.tool-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        this.currentTool = btn.dataset.tool;
+                    });
+                });
+            },
+
+            setupSidebar() {
+                document.querySelectorAll('.sidebar-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        if (btn.dataset.tool) {
+                            document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+                            btn.classList.add('active');
+                            this.currentTool = btn.dataset.tool;
+                        }
+                    });
+                });
+            },
+
+            loadProject() {
+                // Load saved project from localStorage or API
+                const saved = localStorage.getItem('cad-project');
+                if (saved) {
+                    this.scene = JSON.parse(saved);
+                }
+            },
+
+            saveProject() {
+                const projectData = {
+                    name: document.querySelector('input[placeholder="Project Name"]')?.value || 'Untitled Project',
+                    scene: this.scene,
+                    timestamp: new Date().toISOString()
+                };
+
+                localStorage.setItem('cad-project', JSON.stringify(projectData));
+
+                // Save to API
+                fetch('/api/cad/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                    },
+                    body: JSON.stringify(projectData)
+                }).then(() => {
+                    alert('Project saved successfully!');
+                }).catch(err => {
+                    console.error('Save error:', err);
+                    alert('Saved locally. Sync failed.');
+                });
+            }
+        };
+
+        // AI Functions
+        async function generateFromAI() {
+            const prompt = document.getElementById('ai-prompt-input').value;
+            const imageFile = document.getElementById('ai-image-upload').files[0];
+
+            if (!prompt && !imageFile) {
+                alert('Please enter a description or upload an image');
+                return;
+            }
+
+            document.getElementById('ai-loading').style.display = 'flex';
+            document.getElementById('ai-results').style.display = 'none';
+
+            try {
+                const formData = new FormData();
+                if (imageFile) {
+                    formData.append('image', imageFile);
+                }
+                formData.append('prompt', prompt || 'Generate a floor plan from this image');
+                formData.append('type', 'floor_plan');
+
+                const response = await fetch('/api/ai/generate-plan', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    displayAIResults(data);
+                } else {
+                    throw new Error(data.error || 'Generation failed');
+                }
+            } catch (error) {
+                console.error('AI generation error:', error);
+                alert('AI generation failed. Please try again.');
+            } finally {
+                document.getElementById('ai-loading').style.display = 'none';
+            }
+        }
+
+        function displayAIResults(data) {
+            const resultsDiv = document.getElementById('ai-results-content');
+            resultsDiv.innerHTML = `
+                <div style="background: rgba(58, 90, 77, 0.05); padding: 1rem; border-radius: 12px; margin-bottom: 1rem;">
+                    <h5 style="font-size: 0.9rem; font-weight: 600; color: var(--dark); margin-bottom: 0.5rem;">Generated Floor Plan</h5>
+                    <img src="${data.image_url}" alt="Generated plan" class="image-preview" style="margin-bottom: 1rem;">
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn-primary" onclick="importPlan('${data.plan_id}')" style="flex: 1;">Import to Canvas</button>
+                        <button class="btn-secondary" onclick="downloadPlan('${data.plan_id}')">Download</button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('ai-results').style.display = 'block';
+        }
+
+        function handleAIImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('ai-preview-img').src = e.target.result;
+                    document.getElementById('ai-preview').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function openAIModal() {
+            document.getElementById('ai-modal').style.display = 'flex';
+        }
+
+        function closeAIModal() {
+            document.getElementById('ai-modal').style.display = 'none';
+        }
+
+        // Image Upload
+        document.getElementById('upload-area').addEventListener('click', () => {
+            document.getElementById('image-upload').click();
+        });
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                uploadImage(file);
+            }
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('dragover');
+            const file = event.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                uploadImage(file);
+            }
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.currentTarget.classList.add('dragover');
+        }
+
+        function handleDragLeave(event) {
+            event.currentTarget.classList.remove('dragover');
+        }
+
+        async function uploadImage(file) {
+            const formData = new FormData();
+            formData.append('image', file);
+
+            try {
+                const response = await fetch('/api/cad/upload-image', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    addImageToLibrary(data.image_url, file.name);
+                } else {
+                    alert('Upload failed');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                alert('Upload failed');
+            }
+        }
+
+        function addImageToLibrary(url, name) {
+            const imagesDiv = document.getElementById('uploaded-images');
+            const imgDiv = document.createElement('div');
+            imgDiv.innerHTML = `
+                <div style="margin-bottom: 1rem; border-radius: 8px; overflow: hidden; border: 1px solid rgba(58, 90, 77, 0.1);">
+                    <img src="${url}" alt="${name}" class="image-preview" style="margin: 0; cursor: pointer;" onclick="useImageAsReference('${url}')">
+                    <div style="padding: 0.5rem; font-size: 0.75rem; color: var(--warm-gray);">${name}</div>
+                </div>
+            `;
+            imagesDiv.appendChild(imgDiv);
+        }
+
+        function useImageAsReference(url) {
+            document.getElementById('ai-preview-img').src = url;
+            document.getElementById('ai-preview').style.display = 'block';
+            openAIModal();
+        }
+
+        // Utility Functions
+        function selectItem(id) {
+            document.querySelectorAll('.scene-item').forEach(item => item.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+            cadApp.selectedItem = id;
+        }
+
+        function addFloorPlan() {
+            alert('Floor plan tool activated');
+        }
+
+        function addWall() {
+            alert('Wall tool activated');
+        }
+
+        function addDoor() {
+            alert('Door tool activated');
+        }
+
+        function addWindow() {
+            alert('Window tool activated');
+        }
+
+        function exportPlan() {
+            alert('Exporting floor plan as PDF...');
+        }
+
+        function saveProject() {
+            cadApp.saveProject();
+        }
+
+        function importPlan(planId) {
+            alert(`Importing plan ${planId}...`);
+            closeAIModal();
+        }
+
+        function downloadPlan(planId) {
+            window.open(`/api/cad/download-plan/${planId}`, '_blank');
+        }
+
+        function addFromLibrary(type) {
+            alert(`Adding ${type} to scene...`);
+        }
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            const navbar = document.getElementById('navbar');
+            if (window.scrollY > 100) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            cadApp.init();
+        });
+    </script>
+</body>
+
+</html>

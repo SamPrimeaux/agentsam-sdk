@@ -1,0 +1,318 @@
+[
+  {
+    "slug": "church-site",
+    "name": "New Iberia Church of Christ",
+    "kind": "app",
+    "status": "scaffolded",
+    "repository_id": null,
+    "canonical_path": "apps/church-site",
+    "package_name": "@inneranimalmedia/theme-church-site",
+    "metadata": {
+      "origin": "machine_harvest",
+      "donor_name": "New Iberia Church of Christ",
+      "source_path": "/Users/samprimeaux/Library/Mobile Documents/com~apple~CloudDocs/Projects/Cloudflare/NewIberiaChurchofChrist",
+      "harvest_batch": "theme-harvest-20260924",
+      "normalization_state": "portable-preview",
+      "source_hash": "0a8ae5de768f874ccdebe92a5e438ad8e4d51b4c5fdae9679c7e09268328fee6",
+      "app_manifest": "apps/church-site/.agentsam/app.json",
+      "help_root": "apps/church-site/docs/",
+      "preview_kind": "static",
+      "package": "@inneranimalmedia/theme-church-site",
+      "gallery_path": "apps/theme-gallery-preview/themes/church-site",
+      "capabilities": [
+        "cms.media",
+        "cms.pages",
+        "deploy.receipt",
+        "forms.leads",
+        "theme.storefront.shell"
+      ]
+    },
+    "relationships": [
+      {
+        "relationship_type": "packaged_as",
+        "target_type": "sdk-package",
+        "target_slug": "theme-church-site"
+      },
+      {
+        "relationship_type": "depends_on",
+        "target_type": "capability",
+        "target_slug": "theme.storefront.shell"
+      },
+      {
+        "relationship_type": "sourced_from",
+        "target_type": "gallery-theme",
+        "target_slug": "church-site"
+      }
+    ],
+    "_note": "repository_id must be resolved against live code_repositories before D1 UPSERT"
+  },
+  {
+    "slug": "companions-site",
+    "name": "Companions of Caddo",
+    "kind": "app",
+    "status": "scaffolded",
+    "repository_id": null,
+    "canonical_path": "apps/companions-site",
+    "package_name": "@inneranimalmedia/theme-companions-site",
+    "metadata": {
+      "origin": "machine_harvest",
+      "donor_name": "Companions of Caddo",
+      "source_path": "/Users/samprimeaux/companionscpas/static",
+      "harvest_batch": "theme-harvest-20260924",
+      "normalization_state": "portable-preview",
+      "source_hash": "cdad95d1a674b05456a6166f9fc70d86dce106d4215395601164ec40ac161f7b",
+      "app_manifest": "apps/companions-site/.agentsam/app.json",
+      "help_root": "apps/companions-site/docs/",
+      "preview_kind": "static",
+      "package": "@inneranimalmedia/theme-companions-site",
+      "gallery_path": "apps/theme-gallery-preview/themes/companions-site",
+      "capabilities": [
+        "cms.media",
+        "cms.pages",
+        "theme.storefront.shell"
+      ]
+    },
+    "relationships": [
+      {
+        "relationship_type": "packaged_as",
+        "target_type": "sdk-package",
+        "target_slug": "theme-companions-site"
+      },
+      {
+        "relationship_type": "depends_on",
+        "target_type": "capability",
+        "target_slug": "theme.storefront.shell"
+      },
+      {
+        "relationship_type": "sourced_from",
+        "target_type": "gallery-theme",
+        "target_slug": "companions-site"
+      }
+    ],
+    "_note": "repository_id must be resolved against live code_repositories before D1 UPSERT"
+  },
+  {
+    "slug": "floors-site",
+    "name": "Anything Floors & More",
+    "kind": "app",
+    "status": "scaffolded",
+    "repository_id": null,
+    "canonical_path": "apps/floors-site",
+    "package_name": "@inneranimalmedia/theme-floors-site",
+    "metadata": {
+      "origin": "machine_harvest",
+      "donor_name": "Anything Floors & More",
+      "source_path": "/Volumes/Expansion/Anything Floors & More",
+      "harvest_batch": "theme-harvest-20260924",
+      "normalization_state": "portable-preview",
+      "source_hash": "2244de43568a0bb08d7d3779971c1fc0c6c832c226a65c7bb4313e8ac039add8",
+      "app_manifest": "apps/floors-site/.agentsam/app.json",
+      "help_root": "apps/floors-site/docs/",
+      "preview_kind": "static",
+      "package": "@inneranimalmedia/theme-floors-site",
+      "gallery_path": "apps/theme-gallery-preview/themes/floors-site",
+      "capabilities": [
+        "cms.media",
+        "cms.pages",
+        "deploy.receipt",
+        "forms.leads",
+        "theme.storefront.shell"
+      ]
+    },
+    "relationships": [
+      {
+        "relationship_type": "packaged_as",
+        "target_type": "sdk-package",
+        "target_slug": "theme-floors-site"
+      },
+      {
+        "relationship_type": "depends_on",
+        "target_type": "capability",
+        "target_slug": "theme.storefront.shell"
+      },
+      {
+        "relationship_type": "sourced_from",
+        "target_type": "gallery-theme",
+        "target_slug": "floors-site"
+      }
+    ],
+    "_note": "repository_id must be resolved against live code_repositories before D1 UPSERT"
+  },
+  {
+    "slug": "fuelnfree-site",
+    "name": "Fuel & Free Time",
+    "kind": "app",
+    "status": "scaffolded",
+    "repository_id": null,
+    "canonical_path": "apps/fuelnfree-site",
+    "package_name": "@inneranimalmedia/theme-fuelnfree-site",
+    "metadata": {
+      "origin": "machine_harvest",
+      "donor_name": "Fuel & Free Time",
+      "source_path": "/Users/samprimeaux/fuelnfreetime/legacy",
+      "harvest_batch": "theme-harvest-20260924",
+      "normalization_state": "portable-preview",
+      "source_hash": "5ea35182b99816b9cb137a15f6ce7c361bfa932010759d3ac5bf74b1083895cf",
+      "app_manifest": "apps/fuelnfree-site/.agentsam/app.json",
+      "help_root": "apps/fuelnfree-site/docs/",
+      "preview_kind": "static",
+      "package": "@inneranimalmedia/theme-fuelnfree-site",
+      "gallery_path": "apps/theme-gallery-preview/themes/fuelnfree-site",
+      "capabilities": [
+        "cms.media",
+        "cms.pages",
+        "forms.leads",
+        "theme.storefront.shell"
+      ]
+    },
+    "relationships": [
+      {
+        "relationship_type": "packaged_as",
+        "target_type": "sdk-package",
+        "target_slug": "theme-fuelnfree-site"
+      },
+      {
+        "relationship_type": "depends_on",
+        "target_type": "capability",
+        "target_slug": "theme.storefront.shell"
+      },
+      {
+        "relationship_type": "sourced_from",
+        "target_type": "gallery-theme",
+        "target_slug": "fuelnfree-site"
+      }
+    ],
+    "_note": "repository_id must be resolved against live code_repositories before D1 UPSERT"
+  },
+  {
+    "slug": "handyman-site",
+    "name": "Primeaux Handyman Services",
+    "kind": "app",
+    "status": "scaffolded",
+    "repository_id": null,
+    "canonical_path": "apps/handyman-site",
+    "package_name": "@inneranimalmedia/theme-handyman-site",
+    "metadata": {
+      "origin": "machine_harvest",
+      "donor_name": "Primeaux Handyman Services",
+      "source_path": "/Users/samprimeaux/worktrees/primeaux-handyman-services-agent/dist",
+      "harvest_batch": "theme-harvest-20260924",
+      "normalization_state": "portable-preview",
+      "source_hash": "36a5a147cd70c0523a50466fad113cc265ee22a571e98b2fd67fde15ee795ea4",
+      "app_manifest": "apps/handyman-site/.agentsam/app.json",
+      "help_root": "apps/handyman-site/docs/",
+      "preview_kind": "static",
+      "package": "@inneranimalmedia/theme-handyman-site",
+      "gallery_path": "apps/theme-gallery-preview/themes/handyman-site",
+      "capabilities": [
+        "theme.storefront.shell"
+      ]
+    },
+    "relationships": [
+      {
+        "relationship_type": "packaged_as",
+        "target_type": "sdk-package",
+        "target_slug": "theme-handyman-site"
+      },
+      {
+        "relationship_type": "depends_on",
+        "target_type": "capability",
+        "target_slug": "theme.storefront.shell"
+      },
+      {
+        "relationship_type": "sourced_from",
+        "target_type": "gallery-theme",
+        "target_slug": "handyman-site"
+      }
+    ],
+    "_note": "repository_id must be resolved against live code_repositories before D1 UPSERT"
+  },
+  {
+    "slug": "insurance-site",
+    "name": "Chrystal Clear Insurance",
+    "kind": "app",
+    "status": "scaffolded",
+    "repository_id": null,
+    "canonical_path": "apps/insurance-site",
+    "package_name": "@inneranimalmedia/theme-insurance-site",
+    "metadata": {
+      "origin": "machine_harvest",
+      "donor_name": "Chrystal Clear Insurance",
+      "source_path": "/Users/samprimeaux/Projects/client-demos/chrystal-clear-insurance/chrystal-clear-insurance/dist",
+      "harvest_batch": "theme-harvest-20260924",
+      "normalization_state": "portable-preview",
+      "source_hash": "1e171081f5a06d7568554aedcc6a17fd17f102b4109e9b543895fca3879606c2",
+      "app_manifest": "apps/insurance-site/.agentsam/app.json",
+      "help_root": "apps/insurance-site/docs/",
+      "preview_kind": "static",
+      "package": "@inneranimalmedia/theme-insurance-site",
+      "gallery_path": "apps/theme-gallery-preview/themes/insurance-site",
+      "capabilities": [
+        "theme.storefront.shell"
+      ]
+    },
+    "relationships": [
+      {
+        "relationship_type": "packaged_as",
+        "target_type": "sdk-package",
+        "target_slug": "theme-insurance-site"
+      },
+      {
+        "relationship_type": "depends_on",
+        "target_type": "capability",
+        "target_slug": "theme.storefront.shell"
+      },
+      {
+        "relationship_type": "sourced_from",
+        "target_type": "gallery-theme",
+        "target_slug": "insurance-site"
+      }
+    ],
+    "_note": "repository_id must be resolved against live code_repositories before D1 UPSERT"
+  },
+  {
+    "slug": "shinshu-site",
+    "name": "Shinshu Solutions",
+    "kind": "app",
+    "status": "scaffolded",
+    "repository_id": null,
+    "canonical_path": "apps/shinshu-site",
+    "package_name": "@inneranimalmedia/theme-shinshu-site",
+    "metadata": {
+      "origin": "machine_harvest",
+      "donor_name": "Shinshu Solutions",
+      "source_path": "/Users/samprimeaux/IAM-Library/01_Template_Candidates/MEAUXIDERANDOMBUILDS/06_shinshu_static_site_archive/source/shinshu-solutions/static",
+      "harvest_batch": "theme-harvest-20260924",
+      "normalization_state": "portable-preview",
+      "source_hash": "dbe669910cbee05028a7113c2e1f72d0d964f8898d48130f67c5955fbbbc978e",
+      "app_manifest": "apps/shinshu-site/.agentsam/app.json",
+      "help_root": "apps/shinshu-site/docs/",
+      "preview_kind": "static",
+      "package": "@inneranimalmedia/theme-shinshu-site",
+      "gallery_path": "apps/theme-gallery-preview/themes/shinshu-site",
+      "capabilities": [
+        "cms.pages",
+        "forms.leads",
+        "theme.storefront.shell"
+      ]
+    },
+    "relationships": [
+      {
+        "relationship_type": "packaged_as",
+        "target_type": "sdk-package",
+        "target_slug": "theme-shinshu-site"
+      },
+      {
+        "relationship_type": "depends_on",
+        "target_type": "capability",
+        "target_slug": "theme.storefront.shell"
+      },
+      {
+        "relationship_type": "sourced_from",
+        "target_type": "gallery-theme",
+        "target_slug": "shinshu-site"
+      }
+    ],
+    "_note": "repository_id must be resolved against live code_repositories before D1 UPSERT"
+  }
+]

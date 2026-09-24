@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Iberia Church of Christ | God With Us</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            /* Clean Blue Theme - Matching Church Logo */
+            --bg-color: #fdfbf7;
+            --text-color: #334155;
+            --text-muted: #64748b;
+            --panel-bg: rgba(255, 255, 255, 0.85);
+            --panel-border: rgba(226, 232, 240, 0.8);
+            --clay-shadow: 20px 20px 60px #e2e8f0, -20px -20px 60px #ffffff;
+
+            --primary: #2563eb;
+            --primary-gradient: linear-gradient(135deg, #2563eb, #1e40af);
+            --accent: #0ea5e9;
+            --nav-bg: rgba(253, 251, 247, 0.95);
+
+            --font-heading: 'Outfit', sans-serif;
+            --font-body: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        /* Base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-body);
+            color: var(--text-color);
+            background: var(--bg-color);
+            line-height: 1.7;
+            overflow-x: hidden;
+            transition: filter 0.3s ease;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 16px;
+            object-fit: cover;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            font-family: var(--font-heading);
+            color: var(--text-color);
+            line-height: 1.1;
+            letter-spacing: -0.01em;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+        }
+
+        h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        h3 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 32px;
+        }
+
+        .section {
+            padding: 6rem 0;
+            position: relative;
+        }
+
+        .text-center {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+            gap: 4rem;
+        }
+
+        .grid-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* Clay Components */
+        .clay-card {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--panel-border);
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: 8px 8px 24px rgba(74, 64, 54, 0.08), -8px -8px 24px #ffffff;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .clay-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 12px 12px 32px rgba(74, 64, 54, 0.12), -12px -12px 32px #ffffff;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+            font-family: var(--font-heading);
+            font-size: 1rem;
+            letter-spacing: 0.03em;
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.25);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(37, 99, 235, 0.35);
+        }
+
+        .btn-soft {
+            background: #e7e5e4;
+            color: var(--text-color);
+        }
+
+        .btn-soft:hover {
+            background: #d6d3d1;
+        }
+
+        /* Iconography */
+        .icon {
+            width: 24px;
+            height: 24px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        /* Header */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 88;
+            background: var(--nav-bg);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            height: 120px;
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-img {
+            width: 132px;
+            height: 132px;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: var(--primary);
+        }
+
+        .header-btn {
+            background: var(--primary);
+            color: white;
+            padding: 10px 24px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            border: none;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .header-btn:hover {
+            background: #1e40af;
+        }
+
+        /* Mobile Menu Toggle */
+        .mobile-toggle {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            z-index: 101;
+            position: relative;
+        }
+
+        .hamburger {
+            width: 28px;
+            height: 20px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .hamburger span {
+            width: 100%;
+            height: 3px;
+            background: var(--text-color);
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .mobile-toggle.active .hamburger span:nth-child(1) {
+            transform: rotate(45deg) translate(7px, 7px);
+        }
+
+        .mobile-toggle.active .hamburger span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .mobile-toggle.active .hamburger span:nth-child(3) {
+            transform: rotate(-45deg) translate(7px, -7px);
+        }
+
+        /* Clean Mobile Sidebar - Clay.global Quality */
+        .mobile-sidebar {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 280px;
+            max-width: 80vw;
+            height: 100vh;
+            background: var(--bg-color);
+            border-left: 1px solid var(--panel-border);
+            box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08);
+            z-index: 100;
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 130px 24px 32px;
+            overflow-y: auto;
+        }
+
+        .mobile-sidebar.active {
+            right: 0;
+        }
+
+        .mobile-sidebar .nav-link {
+            display: block;
+            padding: 14px 12px;
+            font-size: 1rem;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            transition: background 0.2s;
+        }
+
+        .mobile-sidebar .nav-link:hover {
+            background: rgba(0, 0, 0, 0.03);
+        }
+
+        .mobile-sidebar .header-btn {
+            width: 100%;
+            margin-top: 24px;
+            justify-content: center;
+        }
+
+        /* Simple Overlay */
+        .mobile-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 89;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .mobile-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        /* Blur only the main content when menu is open */
+        body.menu-open main,
+        body.menu-open footer {
+            filter: blur(4px);
+            transition: filter 0.3s ease;
+        }
+
+        /* Series Banner Style */
+        .series-title {
+            font-family: var(--font-heading);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3em;
+            border: 4px solid white;
+            padding: 1rem 3rem;
+            display: inline-block;
+            backdrop-filter: blur(4px);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(74, 64, 54, 0.5);
+            backdrop-filter: blur(8px);
+            z-index: 200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-card {
+            background: #fdfbf7;
+            padding: 2.5rem;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            position: relative;
+        }
+
+        /* Responsive */
+        @media(max-width: 1024px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .nav-menu {
+                display: none;
+            }
+
+            .mobile-toggle {
+                display: block;
+            }
+
+            .grid-2,
+            .grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Large Desktop (iMac and larger) */
+        @media(min-width: 1440px) {
+            .logo-img {
+                width: 168px;
+                height: 168px;
+            }
+
+            header {
+                height: 160px;
+            }
+        }
+
+        @media(max-width: 768px) {
+            .section {
+                padding: 4rem 0;
+            }
+
+            .container {
+                padding: 0 20px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            h2 {
+                font-size: 1.8rem;
+            }
+
+            .logo-img {
+                width: 84px;
+                height: 84px;
+            }
+
+            header {
+                height: 100px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Mobile Overlay -->
+    <div id="mobileOverlay" class="mobile-overlay" onclick="closeMobileMenu()"></div>
+
+    <!-- Modal -->
+    <div id="connectModal" class="modal-overlay">
+        <div class="modal-card">
+            <button onclick="toggleModal(false)"
+                style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:1.5rem; cursor:pointer; color: var(--text-color);">×</button>
+            <h2 class="text-center" style="margin-bottom:0.5rem;">Get Connected</h2>
+            <p class="text-center">How can we pray for you or help you?</p>
+            <form id="modalForm">
+                <input type="text" name="name" placeholder="Name"
+                    style="width:100%; padding:14px; border-radius:10px; border:1px solid #d6d3d1; margin-bottom:1rem; font-family:var(--font-body);">
+                <input type="email" name="email" placeholder="Email"
+                    style="width:100%; padding:14px; border-radius:10px; border:1px solid #d6d3d1; margin-bottom:1rem; font-family:var(--font-body);">
+                <select name="type"
+                    style="width:100%; padding:14px; border-radius:10px; border:1px solid #d6d3d1; margin-bottom:1rem; font-family:var(--font-body); background:white;">
+                    <option value="prayer">Prayer Request</option>
+                    <option value="baptism">Baptism</option>
+                    <option value="membership">Membership</option>
+                    <option value="questions">Questions</option>
+                </select>
+                <textarea name="message" rows="3" placeholder="Message (Optional)"
+                    style="width:100%; padding:14px; border-radius:10px; border:1px solid #d6d3d1; margin-bottom:1rem; font-family:var(--font-body);"></textarea>
+                <button type="submit" class="btn btn-primary" style="width:100%;">Send Request</button>
+            </form>
+            <div id="modalStatus" style="margin-top:1rem; text-align:center;"></div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="container nav-container">
+            <a href="/" onclick="route(event)" class="logo">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/9ce32655-5bcc-4981-e049-9d49916ce100/small"
+                    alt="New Iberia Church of Christ Logo" class="logo-img" loading="eager">
+            </a>
+
+            <nav class="nav-menu" id="navMenu">
+                <a href="/" onclick="route(event)" class="nav-link">Home</a>
+                <a href="/visit" onclick="route(event)" class="nav-link">Plan a Visit</a>
+                <a href="/media" onclick="route(event)" class="nav-link">Sermons</a>
+                <a href="/ministries" onclick="route(event)" class="nav-link">Ministries</a>
+                <a href="/prayer" onclick="route(event)" class="nav-link">Prayer</a>
+                <button onclick="toggleModal(true)" class="header-btn">Get Connected</button>
+            </nav>
+
+            <!-- Mobile Sidebar -->
+            <div class="mobile-sidebar" id="mobileSidebar">
+                <a href="/" onclick="route(event); closeMobileMenu();" class="nav-link">Home</a>
+                <a href="/visit" onclick="route(event); closeMobileMenu();" class="nav-link">Plan a Visit</a>
+                <a href="/media" onclick="route(event); closeMobileMenu();" class="nav-link">Sermons</a>
+                <a href="/ministries" onclick="route(event); closeMobileMenu();" class="nav-link">Ministries</a>
+                <a href="/prayer" onclick="route(event); closeMobileMenu();" class="nav-link">Prayer</a>
+                <button onclick="toggleModal(true); closeMobileMenu();" class="header-btn">Get Connected</button>
+            </div>
+
+            <button class="mobile-toggle" id="mobileToggle" onclick="toggleMobileMenu()">
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </button>
+        </div>
+    </header>
+
+    <main id="app" style="padding-top: 120px; min-height: 80vh;">
+        <!-- Hero Section (God With Us) -->
+        <section
+            style="height: 92vh; display: flex; align-items: center; justify-content: center; text-align: center; color: white; background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1579033461380-adb47c3eb938?auto=format&fit=crop&w=2500&q=80') center/cover; position: relative;">
+            <div style="position: relative; z-index: 10;">
+                <h1 class="series-title">GOD WITH US</h1>
+                <p style="margin-top: 2rem; color: rgba(255,255,255,0.9); font-size: 1.25rem;">A New Series on the
+                    Presence of God</p>
+                <div style="margin-top: 2.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                    <a href="/media" onclick="route(event)" class="btn" style="background: white; color: black;">Watch
+                        Latest</a>
+                    <a href="/visit" onclick="route(event)" class="btn"
+                        style="border: 2px solid white; color: white; background: transparent;">Plan Your Visit</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Model City Story -->
+        <section class="section">
+            <div class="container">
+                <div class="clay-card">
+                    <div class="grid-2" style="align-items: center;">
+                        <div>
+                            <h4
+                                style="color: var(--primary); letter-spacing: 0.1em; font-weight: 700; margin-bottom: 1rem;">
+                                COMMUNITY IMPACT</h4>
+                            <h2>Model City Mission: One Home at a Time</h2>
+                            <p
+                                style="font-style: italic; color: var(--text-color); font-size: 1.2rem; margin-bottom: 2rem;">
+                                "We do anything we can to be in our community... making New Iberia a better place to
+                                live."</p>
+                            <p>Since 2017, volunteers have been painting and renovating homes for local residents at no
+                                cost. Over 50 youth volunteers brave the heat each summer to serve their neighbors.</p>
+                            <button onclick="toggleModal(true)" class="btn btn-primary" style="margin-top: 1rem;">Get
+                                Involved</button>
+                        </div>
+                        <img src="https://images.unsplash.com/photo-1581578731117-104f2a8d23e9?auto=format&fit=crop&w=1000&q=80"
+                            style="height: 400px; width: 100%; box-shadow: var(--clay-shadow);">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quick Links -->
+        <section class="section" style="background: #f5f5f4;">
+            <div class="container text-center">
+                <div class="grid-3">
+                    <div class="clay-card" style="text-align: left;">
+                        <div
+                            style="background: #e0f2fe; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #0284c7; margin-bottom: 1.5rem;">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                        </div>
+                        <h3>Small Groups</h3>
+                        <p>Find community and grow in your faith together.</p>
+                        <a href="/groups" onclick="route(event)">Find a Group →</a>
+                    </div>
+                    <div class="clay-card" style="text-align: left;">
+                        <div
+                            style="background: #fef3c7; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #d97706; margin-bottom: 1.5rem;">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="16"></line>
+                                <line x1="8" y1="12" x2="16" y2="12"></line>
+                            </svg>
+                        </div>
+                        <h3>Prayer Requests</h3>
+                        <p>How can we pray for you? Our team is ready.</p>
+                        <a href="/prayer" onclick="route(event)">Submit Request →</a>
+                    </div>
+                    <div class="clay-card" style="text-align: left;">
+                        <div
+                            style="background: #dcfce7; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #16a34a; margin-bottom: 1.5rem;">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                            </svg>
+                        </div>
+                        <h3>Sermons</h3>
+                        <p>Catch up on recent messages and series.</p>
+                        <a href="/media" onclick="route(event)">Watch Now →</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer style="background:#f5f5f4; padding:6rem 0; margin-top:4rem; border-top:1px solid #e7e5e4;">
+        <div class="container">
+            <div class="grid-3">
+                <div>
+                    <h3>New Iberia Church</h3>
+                    <p>667 Charles St<br>New Iberia, LA 70560</p>
+                    <p>Sunday Services: 10:30 AM<br>Bible Class: 9:30 AM</p>
+                </div>
+                <div>
+                    <h3>Connect</h3>
+                    <a href="/groups" onclick="route(event)"
+                        style="display:block; margin-bottom:0.5rem; color:var(--text-muted);">Small Groups</a>
+                    <a href="/prayer" onclick="route(event)"
+                        style="display:block; margin-bottom:0.5rem; color:var(--text-muted);">Request Prayer</a>
+                    <a href="/give" onclick="route(event)"
+                        style="display:block; margin-bottom:0.5rem; color:var(--text-muted);">Give Online</a>
+                </div>
+                <div>
+                    <h3>Follow Us</h3>
+                    <div style="display:flex; gap:1rem;">
+                        <a href="https://facebook.com" target="_blank" style="color:var(--text-color);">Facebook</a>
+                        <a href="https://youtube.com" target="_blank" style="color:var(--text-color);">YouTube</a>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top:4rem; text-align:center; opacity:0.5; font-size:0.9rem;">
+                © 2026 New Iberia Church of Christ
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const API = '/api';
+
+        // Mobile Menu Functions
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('mobileSidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            const toggle = document.getElementById('mobileToggle');
+
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+            toggle.classList.toggle('active');
+            document.body.classList.toggle('menu-open');
+        }
+
+        function closeMobileMenu() {
+            const sidebar = document.getElementById('mobileSidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            const toggle = document.getElementById('mobileToggle');
+
+            sidebar.classList.remove('active');
+            overlay.classList.remove('active');
+            toggle.classList.remove('active');
+            document.body.classList.remove('menu-open');
+        }
+
+        const Views = {
+            home: () => `
+                <!-- Hero Section (God With Us) -->
+                <section style="height: 92vh; display: flex; align-items: center; justify-content: center; text-align: center; color: white; background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1579033461380-adb47c3eb938?auto=format&fit=crop&w=2500&q=80') center/cover; position: relative;">
+                    <div style="position: relative; z-index: 10;">
+                        <h1 class="series-title">GOD WITH US</h1>
+                        <p style="margin-top: 2rem; color: rgba(255,255,255,0.9); font-size: 1.25rem;">A New Series on the Presence of God</p>
+                        <div style="margin-top: 2.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                            <a href="/media" onclick="route(event)" class="btn" style="background: white; color: black;">Watch Latest</a>
+                            <a href="/visit" onclick="route(event)" class="btn" style="border: 2px solid white; color: white; background: transparent;">Plan Your Visit</a>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Model City Story -->
+                <section class="section">
+                    <div class="container">
+                        <div class="clay-card">
+                            <div class="grid-2" style="align-items: center;">
+                                <div>
+                                    <h4 style="color: var(--primary); letter-spacing: 0.1em; font-weight: 700; margin-bottom: 1rem;">COMMUNITY IMPACT</h4>
+                                    <h2>Model City Mission: One Home at a Time</h2>
+                                    <p style="font-style: italic; color: var(--text-color); font-size: 1.2rem; margin-bottom: 2rem;">"We do anything we can to be in our community... making New Iberia a better place to live."</p>
+                                    <p>Since 2017, volunteers have been painting and renovating homes for local residents at no cost. Over 50 youth volunteers brave the heat each summer to serve their neighbors.</p>
+                                    <button onclick="toggleModal(true)" class="btn btn-primary" style="margin-top: 1rem;">Get Involved</button>
+                                </div>
+                                <img src="https://images.unsplash.com/photo-1581578731117-104f2a8d23e9?auto=format&fit=crop&w=1000&q=80" style="height: 400px; width: 100%; box-shadow: var(--clay-shadow);">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Quick Links -->
+                <section class="section" style="background: #f5f5f4;">
+                    <div class="container text-center">
+                        <div class="grid-3">
+                            <div class="clay-card" style="text-align: left;">
+                                <div style="background: #e0f2fe; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #0284c7; margin-bottom: 1.5rem;">
+                                    <svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                </div>
+                                <h3>Small Groups</h3>
+                                <p>Find community and grow in your faith together.</p>
+                                <a href="/groups" onclick="route(event)">Find a Group →</a>
+                            </div>
+                            <div class="clay-card" style="text-align: left;">
+                                <div style="background: #fef3c7; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #d97706; margin-bottom: 1.5rem;">
+                                    <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                                </div>
+                                <h3>Prayer Requests</h3>
+                                <p>How can we pray for you? Our team is ready.</p>
+                                <a href="/prayer" onclick="route(event)">Submit Request →</a>
+                            </div>
+                            <div class="clay-card" style="text-align: left;">
+                                <div style="background: #dcfce7; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #16a34a; margin-bottom: 1.5rem;">
+                                    <svg class="icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                                </div>
+                                <h3>Sermons</h3>
+                                <p>Catch up on recent messages and series.</p>
+                                <a href="/media" onclick="route(event)">Watch Now →</a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            `,
+
+            visit: () => `
+                <div class="section">
+                    <div class="container">
+                        <div class="text-center" style="margin-bottom: 4rem;">
+                            <h1>Plan Your Visit</h1>
+                            <p>We'd love to see you this Sunday.</p>
+                        </div>
+                        <div class="grid-2">
+                            <div class="clay-card">
+                                <h3>Service Times</h3>
+                                <p style="font-size: 1.25rem; color: var(--text-color); font-weight: 600;">Sundays @ 10:30 AM</p>
+                                <p>Bible Class @ 9:30 AM</p>
+                                <hr style="margin: 2rem 0; border: 0; border-top: 1px solid #e7e5e4;">
+                                <h3>Location</h3>
+                                <p>667 Charles St<br>New Iberia, LA 70560</p>
+                                <!-- Google Maps Embed -->
+                                <div style="margin-top: 1rem; border-radius: 12px; overflow: hidden;">
+                                    <iframe 
+                                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3455.234!2d-91.8187!3d30.0035!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzDCsDAwJzEyLjYiTiA5McKwNDknMDcuMyJX!5e0!3m2!1sen!2sus!4v1234567890"
+                                        width="100%" 
+                                        height="300" 
+                                        style="border:0;" 
+                                        allowfullscreen="" 
+                                        loading="lazy">
+                                    </iframe>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="clay-card" style="margin-bottom: 2rem;">
+                                    <h3>What about my kids?</h3>
+                                    <p>We have a safe, clean, and fun nursery and Bible classes for all ages.</p>
+                                </div>
+                                <div class="clay-card">
+                                    <h3>What should I wear?</h3>
+                                    <p>Whatever makes you comfortable! You'll see everything from suits to jeans.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+
+            prayer: () => `
+                <div class="section">
+                    <div class="container" style="max-width: 800px;">
+                        <div class="text-center" style="margin-bottom: 3rem;">
+                            <h1>Prayer Requests</h1>
+                            <p>We believe in the power of prayer. Share your request below.</p>
+                        </div>
+                        <div class="clay-card">
+                            <form id="prayerPageForm">
+                                <label style="display:block; margin-bottom:0.5rem; font-weight:600;">Your Name (Optional)</label>
+                                <input type="text" name="name" class="form-control" style="width:100%; padding:14px; margin-bottom:1.5rem; border-radius:10px; border:1px solid #d6d3d1; font-family:var(--font-body);">
+                                
+                                <label style="display:block; margin-bottom:0.5rem; font-weight:600;">How can we pray?</label>
+                                <textarea name="content" rows="4" style="width:100%; padding:14px; margin-bottom:1.5rem; border-radius:10px; border:1px solid #d6d3d1; font-family:var(--font-body);" required></textarea>
+                                
+                                <label style="display:flex; align-items:center; margin-bottom:2rem;">
+                                    <input type="checkbox" name="is_private" style="margin-right:10px;"> Keep this confidential (Leadership only)
+                                </label>
+                                
+                                <button type="submit" class="btn btn-primary" style="width:100%;">Submit Prayer Request</button>
+                            </form>
+                            <div id="prayerPageStatus" style="margin-top:1rem; text-align:center;"></div>
+                        </div>
+                    </div>
+                </div>
+            `,
+
+            media: () => `
+                <div class="section">
+                    <div class="container">
+                        <h1>Sermon Archive</h1>
+                        <p style="margin-bottom: 3rem;">Messages from God's Word.</p>
+                        <div class="grid-gallery" id="sermon-gallery">Loading...</div>
+                    </div>
+                </div>
+            `,
+
+            ministries: () => `
+                <div class="section text-center">
+                    <div class="container">
+                        <h1>Ministries</h1>
+                        <p>Coming Soon</p>
+                    </div>
+                </div>
+            `,
+
+            beliefs: () => `
+                <div class="section">
+                    <div class="container">
+                        <div class="text-center" style="margin-bottom: 4rem;">
+                            <h1>What We Believe</h1>
+                            <p style="max-width: 700px; margin: 0 auto;">Our faith is rooted in Scripture and centered on Jesus Christ. These core beliefs guide our community and shape how we live.</p>
+                        </div>
+
+                        <div style="max-width: 900px; margin: 0 auto;">
+                            <!-- God -->
+                            <div class="clay-card" style="margin-bottom: 1.5rem;">
+                                <div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem;">
+                                    <div style="background: linear-gradient(135deg, #2563eb, #1e40af); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                        <svg class="icon" style="width: 32px; height: 32px; stroke: white;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+                                    </div>
+                                    <div>
+                                        <h2 style="margin: 0;">God</h2>
+                                        <p style="margin: 0.5rem 0 0 0; opacity: 0.8;">The Eternal Trinity</p>
+                                    </div>
+                                </div>
+                                <p>There is one true God, eternally existing in three Persons: God the Father, God the Son and God the Holy Spirit. These are equal and are one God. God created the world out of nothing and by his power he sustains all he has created.</p>
+                                <p style="margin-top: 1rem; font-style: italic; opacity: 0.7;">Genesis 1:26, John 1:1, Romans 8, Ephesians 1:13-14</p>
+                            </div>
+
+                            <!-- Jesus Christ -->
+                            <div class="clay-card" style="margin-bottom: 1.5rem;">
+                                <div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem;">
+                                    <div style="background: linear-gradient(135deg, #0ea5e9, #0284c7); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                        <svg class="icon" style="width: 32px; height: 32px; stroke: white;" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                    </div>
+                                    <div>
+                                        <h2 style="margin: 0;">Jesus Christ</h2>
+                                        <p style="margin: 0.5rem 0 0 0; opacity: 0.8;">Our Savior and King</p>
+                                    </div>
+                                </div>
+                                <p>We believe that Jesus Christ is God who became human to save us from our sins. We believe that Jesus' life shows us how to live, that His death redeems us from our sins, and that His resurrection guarantees our own resurrection to a new life. We believe that Christ now sits at the right hand of God as exalted King, and that He alone is the world's savior and king. We believe that Jesus is the only way to have a saving relationship with God.</p>
+                            </div>
+
+                            <!-- Holy Spirit -->
+                            <div class="clay-card" style="margin-bottom: 1.5rem;">
+                                <div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem;">
+                                    <div style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                        <svg class="icon" style="width: 32px; height: 32px; stroke: white;" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                                    </div>
+                                    <div>
+                                        <h2 style="margin: 0;">The Holy Spirit</h2>
+                                        <p style="margin: 0.5rem 0 0 0; opacity: 0.8;">Our Helper and Guide</p>
+                                    </div>
+                                </div>
+                                <p>The Holy Spirit is equal with the Father and the Son. He makes people aware of their need for Christ. He personally indwells and empowers the believer. His presence in our life is a seal and guarantee that we are God's children. The Holy Spirit gives believers spiritual gifts to be used to help others.</p>
+                                <p style="margin-top: 1rem; font-style: italic; opacity: 0.7;">John 16:8-11, 1 John 4:13, Galatians 5:16-26, 2 Corinthians 1:21-22, 1 Corinthians 12:7-11, Romans 12:4-8</p>
+                            </div>
+
+                            <!-- Bible -->
+                            <div class="clay-card" style="margin-bottom: 1.5rem;">
+                                <div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem;">
+                                    <div style="background: linear-gradient(135deg, #16a34a, #15803d); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                        <svg class="icon" style="width: 32px; height: 32px; stroke: white;" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                                    </div>
+                                    <div>
+                                        <h2 style="margin: 0;">The Bible</h2>
+                                        <p style="margin: 0.5rem 0 0 0; opacity: 0.8;">God's Word to Us</p>
+                                    </div>
+                                </div>
+                                <p>We believe that the sixty-six books of the Bible are inspired by God and therefore the final authority in our understanding of God and life. We believe that God expects us to be obedient to the Scriptures.</p>
+                                <p style="margin-top: 1rem; font-style: italic; opacity: 0.7;">2 Timothy 3:16, 2 Peter 1:19-21</p>
+                            </div>
+
+                            <!-- Salvation -->
+                            <div class="clay-card" style="margin-bottom: 1.5rem;">
+                                <div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem;">
+                                    <div style="background: linear-gradient(135deg, #f59e0b, #d97706); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                        <svg class="icon" style="width: 32px; height: 32px; stroke: white;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                                    </div>
+                                    <div>
+                                        <h2 style="margin: 0;">Salvation</h2>
+                                        <p style="margin: 0.5rem 0 0 0; opacity: 0.8;">God's Free Gift</p>
+                                    </div>
+                                </div>
+                                <p>We believe that all humans have sinned and that our sins separate us from God and bring God's judgment upon us. We believe that only God's grace can redeem us from being lost, and that salvation comes to us through faith in Jesus as both Savior and Lord. We believe God sent His Son, Jesus Christ, to restore us through His life, death upon the cross, burial and resurrection. Salvation is a free gift of God received through faith and expressed through confession, repentance, and baptism.</p>
+                                <p style="margin-top: 1rem; font-style: italic; opacity: 0.7;">1 Corinthians 15:1-8, Romans 1:16-17; 3:23; 6:23, Ephesians 2:8-9, Romans 10:9, John 3:16, Acts 2:38</p>
+                            </div>
+
+                            <!-- Baptism -->
+                            <div class="clay-card" style="margin-bottom: 1.5rem;">
+                                <div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem;">
+                                    <div style="background: linear-gradient(135deg, #06b6d4, #0891b2); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                        <svg class="icon" style="width: 32px; height: 32px; stroke: white;" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
+                                    </div>
+                                    <div>
+                                        <h2 style="margin: 0;">Baptism</h2>
+                                        <p style="margin: 0.5rem 0 0 0; opacity: 0.8;">Dying and Rising with Christ</p>
+                                    </div>
+                                </div>
+                                <p>We believe that water baptism by immersion serves as the point at which we die to our lost selves, are buried, and are raised to a resurrected life in Christ. We believe that in baptism sins are washed away through faith and because of grace. We believe that everyone who calls on the name of the Lord needs to be baptized into Christ Jesus.</p>
+                                <p style="margin-top: 1rem; font-style: italic; opacity: 0.7;">Acts 2:36-39, Matthew 3:13-17, Matthew 28:18-20, Romans 6:3-7, Galatians 3:26-27, 1 Peter 3:21</p>
+                            </div>
+
+                            <!-- The Church -->
+                            <div class="clay-card" style="margin-bottom: 1.5rem;">
+                                <div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem;">
+                                    <div style="background: linear-gradient(135deg, #ec4899, #db2777); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                        <svg class="icon" style="width: 32px; height: 32px; stroke: white;" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                    </div>
+                                    <div>
+                                        <h2 style="margin: 0;">The Church</h2>
+                                        <p style="margin: 0.5rem 0 0 0; opacity: 0.8;">The Body of Christ</p>
+                                    </div>
+                                </div>
+                                <p>We believe that the church comprises the community of believers who have been saved by the blood of Christ, and that the church is the bride of Christ, the body of Christ, the temple of the Spirit and the family of God. We believe that the core mission of the church is to make disciples of all nations. We believe that we are empowered by the Holy Spirit to continue the task of reaching the lost and discipling the saved, helping them become fully devoted followers of Christ.</p>
+                                <p style="margin-top: 1rem; font-style: italic; opacity: 0.7;">Matthew 28:16-20, John 17:20-26, Ephesians 4:1-16</p>
+                            </div>
+
+                            <!-- Second Coming -->
+                            <div class="clay-card">
+                                <div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem;">
+                                    <div style="background: linear-gradient(135deg, #6366f1, #4f46e5); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                        <svg class="icon" style="width: 32px; height: 32px; stroke: white;" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                                    </div>
+                                    <div>
+                                        <h2 style="margin: 0;">The Second Coming</h2>
+                                        <p style="margin: 0.5rem 0 0 0; opacity: 0.8;">Christ's Return</p>
+                                    </div>
+                                </div>
+                                <p>We believe that Jesus Christ will return and judge all people, the image of God will be completely restored within us, we will reign with Christ forever. We believe that those who have put their faith in Christ will be raised to eternal life, but those who have refused to believe in Him will be raised to eternal death. We believe in living prepared for Jesus' second coming.</p>
+                                <p style="margin-top: 1rem; font-style: italic; opacity: 0.7;">2 Thessalonians 1:8-10, 1 Thessalonians 4:13-18, 1 John 3:2</p>
+                            </div>
+                        </div>
+
+                        <div class="text-center" style="margin-top: 4rem;">
+                            <h3>Have Questions?</h3>
+                            <p>We'd love to talk with you about faith, the Bible, or anything else.</p>
+                            <button onclick="toggleModal(true)" class="btn btn-primary">Get Connected</button>
+                        </div>
+                    </div>
+                </div>
+            `
+        };
+
+        // Routing Logic
+        async function route(e) {
+            e = e || window.event;
+            e.preventDefault();
+            const href = e.target.closest('a').getAttribute('href');
+            window.history.pushState({}, "", href);
+            handleLocation();
+        }
+
+        async function handleLocation() {
+            const p = window.location.pathname;
+            const app = document.getElementById('app');
+
+            if (p === '/') app.innerHTML = Views.home();
+            else if (p === '/media') { app.innerHTML = Views.media(); loadGallery(); }
+            else if (p === '/prayer') { app.innerHTML = Views.prayer(); initPrayerForm(); }
+            else if (Views[p.substring(1)]) app.innerHTML = Views[p.substring(1)]();
+            else app.innerHTML = Views.home();
+
+            window.scrollTo(0, 0);
+            closeMobileMenu();
+        }
+
+        async function loadGallery() {
+            try {
+                const s = await fetch(API + '/sermons').then(r => r.json());
+                document.getElementById('sermon-gallery').innerHTML = s.map(i => `
+                    <div class="clay-card" style="padding:0; overflow:hidden;">
+                        <div style="height:180px; background:#e5e5e5;">
+                            <iframe src="${i.media_url}" style="width:100%; height:100%; border:0;" loading="lazy"></iframe>
+                        </div>
+                        <div style="padding:1.5rem;">
+                            <h4 style="margin-bottom:0.5rem;">${i.title}</h4>
+                            <p style="font-size:0.9rem; margin:0;">${i.preacher}</p>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                document.getElementById('sermon-gallery').innerHTML = '<p>Unable to load sermons at this time.</p>';
+            }
+        }
+
+        function initPrayerForm() {
+            document.getElementById('prayerPageForm').onsubmit = async (e) => {
+                e.preventDefault();
+                const btn = e.target.querySelector('button');
+                btn.disabled = true;
+                btn.textContent = 'Sending...';
+                try {
+                    await fetch(API + '/prayer', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(Object.fromEntries(new FormData(e.target)))
+                    });
+                    document.getElementById('prayerPageStatus').innerHTML = '<span style="color:green;">Prayer request received. We are praying for you.</span>';
+                    e.target.reset();
+                } catch (e) {
+                    document.getElementById('prayerPageStatus').innerHTML = '<span style="color:red;">Error. Try again.</span>';
+                }
+                btn.disabled = false;
+                btn.textContent = 'Submit Prayer Request';
+            };
+        }
+
+        // Modal Functions
+        window.toggleModal = (s) => {
+            document.getElementById('connectModal').style.display = s ? 'flex' : 'none';
+            if (s) closeMobileMenu();
+        };
+
+        // Modal Form Handler
+        document.getElementById('modalForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+            try {
+                await fetch(API + '/contact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(Object.fromEntries(new FormData(e.target)))
+                });
+                document.getElementById('modalStatus').innerHTML = '<span style="color:green;">Request sent! We\'ll be in touch soon.</span>';
+                setTimeout(() => toggleModal(false), 2000);
+                e.target.reset();
+            } catch (e) {
+                document.getElementById('modalStatus').innerHTML = '<span style="color:red;">Error. Try again.</span>';
+            }
+            btn.disabled = false;
+            btn.textContent = 'Send Request';
+        };
+
+        // Initialize
+        window.onpopstate = handleLocation;
+        handleLocation();
+        window.route = route;
+    </script>
+
+</body>
+
+</html>

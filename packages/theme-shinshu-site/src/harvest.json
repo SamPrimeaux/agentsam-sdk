@@ -1,0 +1,12 @@
+{
+  "harvest_batch": "theme-harvest-20260924",
+  "app_path": "apps/shinshu-site",
+  "harvest_path": "work/theme-harvest/shinshu-site",
+  "status": "scaffolded",
+  "source_hash": "dbe669910cbee05028a7113c2e1f72d0d964f8898d48130f67c5955fbbbc978e",
+  "capabilities": [
+    "cms.pages",
+    "forms.leads",
+    "theme.storefront.shell"
+  ]
+}

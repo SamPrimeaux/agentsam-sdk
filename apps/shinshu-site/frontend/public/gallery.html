@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mountain Photography Gallery - Jake Waalk | Shinshu Solutions</title>
+    <meta name="description"
+        content="Explore Jake Waalk's stunning mountain photography from Nagano Prefecture, Japan. Professional adventure photography showcasing Mount Bandai, Japanese Alps, and the beautiful landscapes of Shinshu region.">
+    <meta name="keywords"
+        content="Jake Waalk, mountain photography, Nagano Japan, Mount Bandai, Japanese Alps, adventure photography, Shinshu region, Bandai-Asahi National Park">
+    <meta name="author" content="Jake Waalk - Shinshu Solutions">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://shinshu-solutions.meauxbility.workers.dev/gallery">
+    <meta property="og:title" content="Mountain Photography Gallery - Jake Waalk | Shinshu Solutions">
+    <meta property="og:description"
+        content="Explore stunning mountain photography from Nagano Prefecture, Japan. Professional adventure photography showcasing Mount Bandai and the Japanese Alps.">
+    <meta property="og:image" content="https://shinshu-solutions.meauxbility.workers.dev/api/assets/portfolio/og-image">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://shinshu-solutions.meauxbility.workers.dev/gallery">
+    <meta property="twitter:title" content="Mountain Photography Gallery - Jake Waalk">
+    <meta property="twitter:description" content="Explore stunning mountain photography from Nagano Prefecture, Japan.">
+    <meta property="twitter:image"
+        content="https://shinshu-solutions.meauxbility.workers.dev/api/assets/portfolio/og-image">
+
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "ImageGallery",
+      "name": "Jake Waalk Mountain Photography",
+      "description": "Professional mountain photography from Nagano Prefecture, Japan",
+      "author": {
+        "@type": "Person",
+        "name": "Jake Waalk",
+        "jobTitle": "Bilingual Real Estate Consultant",
+        "worksFor": {
+          "@type": "Organization",
+          "name": "Shinshu Solutions"
+        }
+      },
+      "locationCreated": {
+        "@type": "Place",
+        "name": "Nagano Prefecture, Japan",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": "36.6514",
+          "longitude": "138.1811"
+        }
+      }
+    }
+    </script>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="canonical" href="https://shinshu-solutions.meauxbility.workers.dev/gallery">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --orange-primary: #FF8C42;
+            --orange-dark: #E67635;
+            --orange-light: #FFB67A;
+            --cream: #FFF8F0;
+            --text-dark: #1A1A1A;
+            --text-gray: #666;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--cream);
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        .header {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            padding: 1.5rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--orange-primary);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--text-dark);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--orange-primary);
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, var(--orange-primary), var(--orange-dark));
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+
+        .hero-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero-content h1 {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .hero-content p {
+            font-size: 1.2rem;
+            opacity: 0.95;
+            margin-bottom: 1rem;
+        }
+
+        .hero-content .subtitle {
+            font-size: 1rem;
+            opacity: 0.85;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+
+        .gallery-filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .filter-btn {
+            padding: 0.75rem 1.5rem;
+            border: 2px solid var(--orange-primary);
+            background: white;
+            color: var(--orange-primary);
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: var(--orange-primary);
+            color: white;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        .gallery-item {
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+            aspect-ratio: 4/3;
+        }
+
+        .gallery-item:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(255, 140, 66, 0.3);
+        }
+
+        .gallery-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .gallery-item:hover .gallery-image {
+            transform: scale(1.1);
+        }
+
+        .gallery-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
+            padding: 2rem 1.5rem 1.5rem;
+            color: white;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .gallery-item:hover .gallery-overlay {
+            transform: translateY(0);
+        }
+
+        .gallery-title {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .gallery-location {
+            font-size: 0.95rem;
+            opacity: 0.9;
+            margin-bottom: 0.25rem;
+        }
+
+        .gallery-description {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 0.5rem;
+        }
+
+        .lightbox {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .lightbox.active {
+            display: flex;
+        }
+
+        .lightbox-content {
+            max-width: 90vw;
+            max-height: 90vh;
+            position: relative;
+        }
+
+        .lightbox-image {
+            max-width: 100%;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        .lightbox-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+            color: white;
+            padding: 2rem;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s ease;
+        }
+
+        .lightbox-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 4rem;
+            color: var(--text-gray);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-gray);
+        }
+
+        .empty-state h3 {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+        }
+
+        @media (max-width: 768px) {
+            .hero-content h1 {
+                font-size: 2rem;
+            }
+
+            .gallery-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-links {
+                gap: 1rem;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <nav class="nav-container">
+            <a href="/" class="logo">SHINSHU SOLUTIONS</a>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/#about-page">About</a>
+                <a href="/#services-page">Services</a>
+                <a href="/#contact-page">Contact</a>
+            </div>
+        </nav>
+    </header>
+
+    <section class="hero-section">
+        <div class="hero-content">
+            <h1>Mountain Photography Gallery</h1>
+            <p>Exploring the Beautiful Landscapes of Nagano and Beyond</p>
+            <p class="subtitle">Professional adventure photography by Jake Waalk</p>
+        </div>
+    </section>
+
+    <div class="container">
+        <div class="gallery-filters" id="gallery-filters">
+            <button class="filter-btn active" data-filter="all">All Images</button>
+            <button class="filter-btn" data-filter="summit">Summits</button>
+            <button class="filter-btn" data-filter="landscape">Landscapes</button>
+            <button class="filter-btn" data-filter="hiking">Hiking Adventures</button>
+            <button class="filter-btn" data-filter="nagano">Nagano Region</button>
+        </div>
+
+        <div class="gallery-grid" id="gallery-grid">
+            <div class="loading">Loading gallery...</div>
+        </div>
+    </div>
+
+    <div class="lightbox" id="lightbox">
+        <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+        <div class="lightbox-content">
+            <img class="lightbox-image" id="lightbox-image" src="" alt="">
+            <div class="lightbox-info" id="lightbox-info"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        let allImages = [];
+        let currentFilter = 'all';
+
+        async function loadGallery() {
+            try {
+                // Load ALL images from assets
+                const response = await fetch(`${API_URL}/api/assets?type=image&limit=100`);
+                const data = await response.json();
+
+                if (data.success && data.data && data.data.length > 0) {
+                    // Filter to only images with r2_key (actually uploaded)
+                    allImages = data.data.filter(img => img.r2_key);
+                    if (allImages.length > 0) {
+                        renderGallery();
+                    } else {
+                        document.getElementById('gallery-grid').innerHTML =
+                            '<div class="empty-state"><h3>No Images Yet</h3><p>Upload Jake\'s mountain photography via the dashboard Assets section. Images will appear here automatically.</p><p style="margin-top: 1rem;"><a href="/dashboard" style="color: var(--orange-primary); font-weight: 600;">Go to Dashboard →</a></p></div>';
+                    }
+                } else {
+                    // Show message to upload images
+                    document.getElementById('gallery-grid').innerHTML =
+                        '<div class="empty-state"><h3>No Images Yet</h3><p>Upload Jake\'s mountain photography via the dashboard Assets section. Images will appear here automatically.</p><p style="margin-top: 1rem;"><a href="/dashboard" style="color: var(--orange-primary); font-weight: 600;">Go to Dashboard →</a></p></div>';
+                }
+            } catch (error) {
+                console.error('Error loading gallery:', error);
+                document.getElementById('gallery-grid').innerHTML =
+                    '<div class="empty-state"><h3>Gallery Loading</h3><p>Images will appear here once uploaded via the dashboard.</p><p style="margin-top: 1rem;"><a href="/dashboard" style="color: var(--orange-primary); font-weight: 600;">Upload Images →</a></p></div>';
+            }
+        }
+
+        function renderGallery() {
+            const grid = document.getElementById('gallery-grid');
+
+            // Filter images based on category, tags, or metadata
+            const filtered = currentFilter === 'all'
+                ? allImages
+                : allImages.filter(img => {
+                    const metadata = typeof img.metadata === 'string' ? JSON.parse(img.metadata || '{}') : (img.metadata || {});
+                    const category = img.category || metadata.category || '';
+                    const tags = Array.isArray(img.tags) ? img.tags : (img.tags ? img.tags.split(',') : []);
+                    const metadataTags = metadata.tags || [];
+                    const allTags = [...tags, ...metadataTags, category].map(t => t?.toLowerCase().trim()).filter(Boolean);
+
+                    return allTags.some(tag => tag.includes(currentFilter.toLowerCase()));
+                });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div class="empty-state"><h3>No images found</h3><p>Try a different filter or upload images via the dashboard.</p></div>';
+                return;
+            }
+
+            grid.innerHTML = filtered.map(img => {
+                // Use R2 stored images - NO placeholder URLs
+                const imageUrl = img.r2_key
+                    ? `${API_URL}/api/assets/${img.id}/view`
+                    : null;
+
+                // Skip if no actual image URL (don't show placeholders)
+                if (!imageUrl) return '';
+
+                const metadata = typeof img.metadata === 'string' ? JSON.parse(img.metadata || '{}') : (img.metadata || {});
+                const title = img.title || 'Mountain Photography';
+                const location = img.location || metadata.location || '';
+                const description = img.description || metadata.description || '';
+
+                return `
+                    <div class="gallery-item" onclick="openLightbox('${imageUrl}', ${JSON.stringify({ title, location, description, alt_text: img.alt_text || title }).replace(/"/g, '&quot;')})">
+                        <img src="${imageUrl}" 
+                             alt="${img.alt_text || title}" 
+                             class="gallery-image" 
+                             loading="lazy">
+                        <div class="gallery-overlay">
+                            <div class="gallery-title">${title}</div>
+                            ${location ? `<div class="gallery-location">📍 ${location}</div>` : ''}
+                            ${description ? `<div class="gallery-description">${description}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).filter(html => html !== '').join('');
+
+            if (filtered.length === 0 || grid.innerHTML.trim() === '') {
+                grid.innerHTML = '<div class="empty-state"><h3>No images available</h3><p>Upload Jake\'s photography via the dashboard Assets section.</p></div>';
+            }
+        }
+
+        function openLightbox(imageUrl, imageData) {
+            const lightbox = document.getElementById('lightbox');
+            const lightboxImage = document.getElementById('lightbox-image');
+            const lightboxInfo = document.getElementById('lightbox-info');
+
+            lightboxImage.src = imageUrl;
+            lightboxImage.alt = imageData.alt_text || imageData.title || 'Mountain photography';
+
+            lightboxInfo.innerHTML = `
+                <h3 style="font-family: 'Roboto Mono', monospace; font-size: 1.5rem; margin-bottom: 0.5rem;">${imageData.title || 'Untitled'}</h3>
+                ${imageData.location ? `<p style="margin-bottom: 0.5rem;">📍 ${imageData.location}</p>` : ''}
+                ${imageData.description ? `<p style="opacity: 0.9;">${imageData.description}</p>` : ''}
+            `;
+
+            lightbox.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Filter functionality
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                renderGallery();
+            });
+        });
+
+        // Close lightbox on outside click
+        document.getElementById('lightbox').addEventListener('click', (e) => {
+            if (e.target.id === 'lightbox') {
+                closeLightbox();
+            }
+        });
+
+        // Close on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeLightbox();
+            }
+        });
+
+        // Load gallery on page load
+        loadGallery();
+    </script>
+</body>
+
+</html>

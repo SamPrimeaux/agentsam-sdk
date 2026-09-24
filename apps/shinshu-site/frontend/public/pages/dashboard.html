@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Shinshu Solutions</title>
+    <link rel="stylesheet" href="/shared/styles.css">
+</head>
+<body>
+    <div id="nav-container"></div>
+
+    <!-- Dashboard Page -->
+    <div id="dashboard-page" class="page active">
+        <div class="container">
+            <div class="dashboard-header">
+                <h2 class="serif" style="font-size: 2.5rem; margin-bottom: 0.5rem;">
+                    Business Dashboard
+                </h2>
+                <p style="color: var(--text-gray);">
+                    Manage your clients, properties, and projects
+                </p>
+            </div>
+
+            <div id="dashboard-content" style="display: none;">
+                <div class="dashboard-grid">
+                    <div class="dashboard-card">
+                        <h3>Total Clients</h3>
+                        <div class="dashboard-number" id="clientsCount">0</div>
+                    </div>
+                    <div class="dashboard-card">
+                        <h3>Properties</h3>
+                        <div class="dashboard-number" id="propertiesCount">0</div>
+                    </div>
+                    <div class="dashboard-card">
+                        <h3>Active Projects</h3>
+                        <div class="dashboard-number" id="projectsCount">0</div>
+                    </div>
+                </div>
+
+                <div class="data-table">
+                    <h3>Recent Clients</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Country</th>
+                                <th>Phone</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clientsTable">
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 2rem;">
+                                    <div class="spinner"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="data-table">
+                    <h3>Recent Projects</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Budget</th>
+                                <th>Start Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="projectsTable">
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 2rem;">
+                                    <div class="spinner"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="footer-container"></div>
+
+    <script src="/shared/layout.js"></script>
+    <script>
+        async function loadComponents() {
+            const navContainer = document.getElementById('nav-container');
+            const footerContainer = document.getElementById('footer-container');
+            
+            try {
+                const [navRes, footerRes] = await Promise.all([
+                    fetch('/shared/nav.html'),
+                    fetch('/shared/footer.html')
+                ]);
+                
+                if (navRes.ok) navContainer.innerHTML = await navRes.text();
+                if (footerRes.ok) footerContainer.innerHTML = await footerRes.text();
+            } catch (error) {
+                console.error('Error loading components:', error);
+            }
+        }
+        
+        loadComponents();
+        
+        // Load dashboard data on page load
+        if (Navigation) {
+            Navigation.loadDashboardData();
+        }
+    </script>
+</body>
+</html>

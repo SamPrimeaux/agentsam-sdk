@@ -1,0 +1,13 @@
+{
+  "harvest_batch": "theme-harvest-20260924",
+  "app_path": "apps/fuelnfree-site",
+  "harvest_path": "work/theme-harvest/fuelnfree-site",
+  "status": "scaffolded",
+  "source_hash": "5ea35182b99816b9cb137a15f6ce7c361bfa932010759d3ac5bf74b1083895cf",
+  "capabilities": [
+    "cms.media",
+    "cms.pages",
+    "forms.leads",
+    "theme.storefront.shell"
+  ]
+}

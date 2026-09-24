@@ -1,0 +1,21 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "fuelnfree-site",
+  "name": "Fuel & Free Time",
+  "kind": "theme-app",
+  "status": "scaffolded",
+  "package": "@inneranimalmedia/theme-fuelnfree-site",
+  "gallery_path": "apps/theme-gallery-preview/themes/fuelnfree-site",
+  "canonical_path": "apps/fuelnfree-site",
+  "preview": {
+    "kind": "static",
+    "root": "frontend/public"
+  },
+  "features_proposed": [
+    "cms.media",
+    "cms.pages",
+    "forms.leads",
+    "theme.storefront.shell"
+  ],
+  "harvest_batch": "theme-harvest-20260924"
+}

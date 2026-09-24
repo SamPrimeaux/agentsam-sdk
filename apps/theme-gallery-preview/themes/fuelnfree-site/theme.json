@@ -36,8 +36,12 @@
   },
   "installable": true,
   "_internal": {
-    "normalization": "pending",
-    "source": "/Users/samprimeaux/fuelnfreetime/legacy"
+    "normalization": "scaffolded",
+    "source": "/Users/samprimeaux/fuelnfreetime/legacy",
+    "harvest_batch": "theme-harvest-20260924",
+    "harvest_path": "work/theme-harvest/fuelnfree-site",
+    "app_path": "apps/fuelnfree-site",
+    "source_hash": "5ea35182b99816b9cb137a15f6ce7c361bfa932010759d3ac5bf74b1083895cf"
   },
   "package": "@inneranimalmedia/theme-fuelnfree-site"
 }

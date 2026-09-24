@@ -1,0 +1,22 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "floors-site",
+  "name": "Anything Floors & More",
+  "kind": "theme-app",
+  "status": "scaffolded",
+  "package": "@inneranimalmedia/theme-floors-site",
+  "gallery_path": "apps/theme-gallery-preview/themes/floors-site",
+  "canonical_path": "apps/floors-site",
+  "preview": {
+    "kind": "static",
+    "root": "frontend/public"
+  },
+  "features_proposed": [
+    "cms.media",
+    "cms.pages",
+    "deploy.receipt",
+    "forms.leads",
+    "theme.storefront.shell"
+  ],
+  "harvest_batch": "theme-harvest-20260924"
+}

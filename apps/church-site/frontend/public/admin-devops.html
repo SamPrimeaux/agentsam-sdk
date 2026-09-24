@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Church Admin - DevOps Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #111827;
+            --bg-tertiary: #1f2937;
+            --border: #374151;
+            --text-primary: #f9fafb;
+            --text-secondary: #9ca3af;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .login-wrapper {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0a0e1a 0%, #1f2937 100%);
+        }
+
+        .login-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 3rem;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .login-header h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .dashboard {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            padding: 1.5rem 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 0 1.5rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .sidebar-header p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .nav-group {
+            padding: 1.5rem 0;
+        }
+
+        .nav-label {
+            padding: 0 1.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-item {
+            padding: 0.75rem 1.5rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent);
+            border-left: 3px solid var(--accent);
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            padding: 2rem;
+        }
+
+        .topbar {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem 1.75rem;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .topbar h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 0.875rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: all 0.2s;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .btn {
+            padding: 0.875rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .card-header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            border-radius: 12px;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: var(--bg-tertiary);
+        }
+
+        .upload-zone:hover {
+            border-color: var(--accent);
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .upload-zone h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-zone p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.25rem;
+            margin-top: 1.5rem;
+        }
+
+        .media-item {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .media-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+        }
+
+        .media-item img {
+            width: 100%;
+            height: 180px;
+            object-fit: contain;
+            background: var(--bg-tertiary);
+        }
+
+        .media-info {
+            padding: 1rem;
+        }
+
+        .media-name {
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .media-size {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .media-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: var(--bg-tertiary);
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        tr:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .upload-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.875rem;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            border: 1px solid var(--border);
+        }
+
+        .upload-item-name {
+            flex: 1;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .upload-item-status {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .upload-item.success {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: var(--success);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .gap-2 {
+            gap: 1rem;
+        }
+
+        .mt-2 {
+            margin-top: 1rem;
+        }
+
+        .profile-header-img {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--accent);
+        }
+
+        .profile-upload-preview {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--accent);
+            margin-bottom: 1rem;
+            background: var(--bg-tertiary);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loginScreen" class="login-wrapper">
+        <div class="login-box">
+            <div class="login-header">
+                <h1>Church Admin</h1>
+                <p>New Iberia Church of Christ</p>
+            </div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="username" required autofocus>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <div style="position: relative;">
+                        <input type="password" id="password" required>
+                        <button type="button" onclick="togglePassword()"
+                            style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-secondary);">
+                            <svg id="eyeIcon" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div id="loginStatus"></div>
+                <button type="submit" class="btn btn-primary" style="width:100%;">Sign In</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="dashboard" class="dashboard hidden">
+        <aside class="sidebar">
+            <div class="sidebar-header" style="display: flex; align-items: center; gap: 1rem;">
+                <img src="https://ui-avatars.com/api/?name=Church+Admin&background=random" id="currentUserImg"
+                    class="profile-header-img">
+                <div>
+                    <h2 id="currentUserName" style="font-size: 1rem;">Loading...</h2>
+                    <p id="currentUserRole" style="font-size: 0.8rem;">Church Admin</p>
+                </div>
+            </div>
+            <nav class="nav-group">
+                <div class="nav-label">Main</div>
+                <div class="nav-item active" onclick="showTab('overview')">
+                    <svg class="nav-icon" viewBox="0 0 24 24">
+                        <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
+                    </svg>
+                    <span>Overview</span>
+                </div>
+                <div class="nav-item" onclick="showTab('profile')">
+                    <svg class="nav-icon" viewBox="0 0 24 24">
+                        <path
+                            d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                    </svg>
+                    <span>My Profile</span>
+                </div>
+                <div class="nav-item" onclick="showTab('sermons')">
+                    <svg class="nav-icon" viewBox="0 0 24 24">
+                        <path
+                            d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
+                    </svg>
+                    <span>Sermons</span>
+                </div>
+                <div class="nav-item" onclick="showTab('media')">
+                    <svg class="nav-icon" viewBox="0 0 24 24">
+                        <path
+                            d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
+                    </svg>
+                    <span>Media Manager</span>
+                </div>
+                <div class="nav-item" onclick="showTab('streaming')">
+                    <svg class="nav-icon" viewBox="0 0 24 24">
+                        <path
+                            d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
+                    </svg>
+                    <span>Live Streaming</span>
+                </div>
+            </nav>
+            <nav class="nav-group">
+                <div class="nav-label">Content</div>
+                <div class="nav-item" onclick="showTab('prayer')">
+                    <svg class="nav-icon" viewBox="0 0 24 24">
+                        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+                    </svg>
+                    <span>Prayer Requests</span>
+                </div>
+                <div class="nav-item" onclick="showTab('emails')">
+                    <svg class="nav-icon" viewBox="0 0 24 24">
+                        <path
+                            d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
+                    </svg>
+                    <span>Email Campaigns</span>
+                </div>
+                <div class="nav-item" onclick="showTab('settings')">
+                    <svg class="nav-icon" viewBox="0 0 24 24">
+                        <path
+                            d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+                    </svg>
+                    <span>Settings</span>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="topbar">
+                <h1 id="pageTitle">Dashboard Overview</h1>
+                <button class="btn btn-danger btn-sm" onclick="logout()">Logout</button>
+            </div>
+
+            <div id="tab-overview" class="tab-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-sermons">0</div>
+                        <div class="stat-label">Total Sermons</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-prayers">0</div>
+                        <div class="stat-label">Prayer Requests</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-media">0</div>
+                        <div class="stat-label">Media Files</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Quick Actions</h2>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="btn btn-primary" onclick="showTab('sermons')">Add Sermon</button>
+                        <button class="btn btn-primary" onclick="showTab('media')">Upload Media</button>
+                        <button class="btn btn-success" onclick="showTab('streaming')">Start Stream</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-profile" class="tab-content hidden">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>My Profile</h2>
+                        <p>Update your personal information and photo</p>
+                    </div>
+                    <form id="profileForm">
+                        <div style="display: flex; gap: 2rem; align-items: flex-start;">
+                            <div style="text-align: center;">
+                                <img src="https://ui-avatars.com/api/?name=User&background=random" id="profilePreview"
+                                    class="profile-upload-preview">
+                                <button type="button" class="btn btn-sm btn-primary"
+                                    onclick="document.getElementById('profilePhotoInput').click()">Change Photo</button>
+                                <input type="file" id="profilePhotoInput" accept="image/*" style="display: none;"
+                                    onchange="handleProfilePhotoUpload(this)">
+                                <input type="hidden" id="profilePhotoUrl">
+                            </div>
+                            <div style="flex: 1;">
+                                <div class="form-group">
+                                    <label>Full Name</label>
+                                    <input type="text" id="profileName" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Email Address</label>
+                                    <input type="email" id="profileEmail" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Phone Number</label>
+                                    <input type="tel" id="profilePhone">
+                                </div>
+                                <div id="profileStatus"></div>
+                                <button type="submit" class="btn btn-primary">Save Profile</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Security</h2>
+                    </div>
+                    <form id="changePasswordForm">
+                        <div class="form-group">
+                            <label>Current Password</label>
+                            <input type="password" name="current_password" required>
+                        </div>
+                        <div class="form-group">
+                            <label>New Password</label>
+                            <input type="password" name="new_password" required>
+                        </div>
+                        <button type="submit" class="btn btn-warning">Change Password</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="tab-sermons" class="tab-content hidden">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 id="sermonFormTitle">Add New Sermon</h2>
+                    </div>
+                    <form id="sermonForm">
+                        <input type="hidden" id="sermonId">
+                        <div class="form-group">
+                            <label>Title</label>
+                            <input type="text" id="sermonTitle" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Speaker</label>
+                            <input type="text" id="sermonSpeaker" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Date</label>
+                            <input type="date" id="sermonDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Scripture Reference</label>
+                            <input type="text" id="sermonScripture">
+                        </div>
+                        <div class="form-group">
+                            <label>Video URL</label>
+                            <input type="url" id="sermonVideoUrl" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="sermonDescription"></textarea>
+                        </div>
+                        <div id="sermonStatus"></div>
+                        <div class="flex gap-2">
+                            <button type="submit" class="btn btn-primary" id="sermonSubmitBtn">Publish Sermon</button>
+                            <button type="button" class="btn btn-warning hidden" id="sermonCancelBtn"
+                                onclick="cancelEditSermon()">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h2>All Sermons</h2>
+                    </div>
+                    <div id="sermonsList">Loading...</div>
+                </div>
+            </div>
+
+            <div id="tab-media" class="tab-content hidden">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Upload Images</h2>
+                        <p>Auto-optimized to WebP format</p>
+                    </div>
+                    <div class="upload-zone" id="uploadZone">
+                        <h3>Drop images here or click to browse</h3>
+                        <p>Supports JPG, PNG, WebP - Images will be optimized automatically</p>
+                        <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
+                    </div>
+                    <div id="uploadProgress" class="hidden mt-2"></div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Media Library</h2>
+                    </div>
+                    <div class="media-grid" id="mediaGrid">Loading...</div>
+                </div>
+            </div>
+
+            <div id="tab-streaming" class="tab-content hidden">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Live Streaming</h2>
+                        <p>Create stream credentials for OBS</p>
+                    </div>
+                    <button class="btn btn-success" onclick="createStream()">Create New Stream</button>
+                    <div id="streamInfo" class="hidden mt-2">
+                        <div class="form-group">
+                            <label>RTMP URL</label>
+                            <input type="text" id="rtmpUrl" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Stream Key</label>
+                            <input type="text" id="streamKey" readonly>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-prayer" class="tab-content hidden">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Prayer Requests</h2>
+                    </div>
+                    <div id="prayerList">Loading...</div>
+                </div>
+            </div>
+
+            <div id="tab-emails" class="tab-content hidden">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Send Email Campaign</h2>
+                    </div>
+                    <form id="emailForm">
+                        <div class="form-group">
+                            <label>Subject</label>
+                            <input type="text" name="subject" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Message</label>
+                            <textarea name="message" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Send To</label>
+                            <input type="email" name="to" required>
+                        </div>
+                        <div id="emailStatus"></div>
+                        <button type="submit" class="btn btn-primary">Send Email</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="tab-settings" class="tab-content hidden">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Church Information</h2>
+                    </div>
+                    <form id="settingsForm">
+                        <div class="form-group">
+                            <label>Church Name</label>
+                            <input type="text" name="church_name" value="New Iberia Church of Christ">
+                        </div>
+                        <div class="form-group">
+                            <label>Address</label>
+                            <input type="text" name="address" value="667 Charles St, New Iberia, LA 70560">
+                        </div>
+                        <div class="form-group">
+                            <label>Service Time</label>
+                            <input type="text" name="service_time" value="Sundays @ 10:30 AM">
+                        </div>
+                        <div class="form-group">
+                            <label>Contact Email</label>
+                            <input type="email" name="contact_email">
+                        </div>
+                        <div id="settingsStatus"></div>
+                        <button type="submit" class="btn btn-primary">Save Settings</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://pub-c9e81b68c3a046699b9a51efe8bde103.r2.dev/admin-dashboard.js"></script>
+</body>
+
+</html>

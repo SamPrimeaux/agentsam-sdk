@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | New Iberia Church</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #fdfbf7;
+            --text: #334155;
+            --text-muted: #64748b;
+            --primary: #2563eb;
+            --primary-hover: #1e40af;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --warning: #f59e0b;
+            --border: #e2e8f0;
+            --panel: rgba(255, 255, 255, 0.9);
+            --font-heading: 'Outfit', sans-serif;
+            --font-body: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            background: white;
+            border-bottom: 2px solid var(--border);
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-family: var(--font-heading);
+            font-size: 1.75rem;
+            color: var(--text);
+        }
+
+        .logout-btn {
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--border);
+            overflow-x: auto;
+        }
+
+        .tab {
+            background: none;
+            border: none;
+            padding: 1rem 1.5rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .tab:hover {
+            color: var(--primary);
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card h2 {
+            font-family: var(--font-heading);
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--text);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 0.875rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: var(--font-body);
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .btn {
+            padding: 0.875rem 1.75rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: var(--font-heading);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th,
+        td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            font-weight: 600;
+            background: #f8fafc;
+            font-size: 1.05rem;
+        }
+
+        .status {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: #dcfce7;
+            color: var(--success);
+        }
+
+        .status.error {
+            background: #fee2e2;
+            color: var(--danger);
+        }
+
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-card {
+            background: white;
+            padding: 3rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .login-card h1 {
+            font-family: var(--font-heading);
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        /* Media Manager Styles */
+        .upload-zone {
+            border: 3px dashed var(--border);
+            border-radius: 12px;
+            padding: 3rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8fafc;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.dragover {
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
+
+        .upload-zone h3 {
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-zone p {
+            color: var(--text-muted);
+        }
+
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .media-item {
+            position: relative;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+        }
+
+        .media-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+
+        .media-item-info {
+            padding: 0.75rem;
+        }
+
+        .media-item-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .media-item-size {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .media-item-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.3s;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-card">
+            <h1>Admin Login</h1>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="username" required autofocus>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <div id="loginStatus"></div>
+                <button type="submit" class="btn btn-primary" style="width:100%;">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="adminDashboard" class="hidden">
+        <div class="header">
+            <h1>Church Admin Dashboard</h1>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="container">
+            <!-- Navigation Tabs -->
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('overview')">Overview</button>
+                <button class="tab" onclick="showTab('sermons')">Sermons</button>
+                <button class="tab" onclick="showTab('media')">Media Manager</button>
+                <button class="tab" onclick="showTab('streaming')">Live Streaming</button>
+                <button class="tab" onclick="showTab('prayer')">Prayer Requests</button>
+                <button class="tab" onclick="showTab('emails')">Email Campaigns</button>
+                <button class="tab" onclick="showTab('settings')">Settings</button>
+            </div>
+
+            <!-- Overview Tab -->
+            <div id="tab-overview" class="tab-content">
+                <div class="grid-2">
+                    <div class="stat-card">
+                        <h3 id="stat-sermons">0</h3>
+                        <p>Total Sermons</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="stat-prayers">0</h3>
+                        <p>Prayer Requests</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="stat-media">0</h3>
+                        <p>Media Files</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2>Quick Actions</h2>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="showTab('sermons')">Add Sermon</button>
+                        <button class="btn btn-primary" onclick="showTab('media')">Upload Media</button>
+                        <button class="btn btn-primary" onclick="showTab('streaming')">Start Stream</button>
+                        <button class="btn btn-primary" onclick="showTab('emails')">Send Email</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sermons Tab -->
+            <div id="tab-sermons" class="tab-content hidden">
+                <div class="card">
+                    <h2 id="sermonFormTitle">Add New Sermon</h2>
+                    <form id="sermonForm">
+                        <input type="hidden" id="sermonId" name="id">
+                        <div class="form-group">
+                            <label>Title</label>
+                            <input type="text" name="title" id="sermonTitle" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Speaker</label>
+                            <input type="text" name="speaker" id="sermonSpeaker" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Date</label>
+                            <input type="date" name="date" id="sermonDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Scripture Reference</label>
+                            <input type="text" name="scripture" id="sermonScripture" placeholder="e.g., John 3:16">
+                        </div>
+                        <div class="form-group">
+                            <label>Video URL (YouTube, Vimeo, or Cloudflare Stream)</label>
+                            <input type="url" name="video_url" id="sermonVideoUrl" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea name="description" id="sermonDescription"></textarea>
+                        </div>
+                        <div id="sermonStatus"></div>
+                        <div class="action-buttons">
+                            <button type="submit" class="btn btn-primary" id="sermonSubmitBtn">Publish Sermon</button>
+                            <button type="button" class="btn btn-warning hidden" id="sermonCancelBtn"
+                                onclick="cancelEditSermon()">Cancel Edit</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <h2>Recent Sermons</h2>
+                    <div id="sermonsList">Loading...</div>
+                </div>
+            </div>
+
+            <!-- Media Manager Tab -->
+            <div id="tab-media" class="tab-content hidden">
+                <div class="card">
+                    <h2>Upload Images</h2>
+                    <div class="upload-zone" id="uploadZone">
+                        <h3>📸 Drop images here or click to browse</h3>
+                        <p>Supports: JPG, PNG, WebP, GIF (Max 10MB each)</p>
+                        <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
+                    </div>
+                    <div id="uploadProgress" class="hidden">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                        </div>
+                        <p id="uploadStatus" style="margin-top: 0.5rem; text-align: center;"></p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Media Library</h2>
+                    <div id="mediaGrid" class="media-grid">Loading...</div>
+                </div>
+            </div>
+
+            <!-- Streaming Tab -->
+            <div id="tab-streaming" class="tab-content hidden">
+                <div class="card">
+                    <h2>Live Streaming</h2>
+                    <p style="margin-bottom: 1.5rem; color: var(--text-muted);">Use these credentials in OBS or your
+                        streaming software to go live.</p>
+
+                    <button class="btn btn-success" onclick="createStream()">Create New Stream</button>
+
+                    <div id="streamInfo" class="hidden" style="margin-top: 2rem;">
+                        <h3>Stream Credentials</h3>
+                        <div class="form-group">
+                            <label>RTMP URL</label>
+                            <input type="text" id="rtmpUrl" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Stream Key</label>
+                            <input type="text" id="streamKey" readonly>
+                        </div>
+                        <p style="color: var(--text-muted); font-size: 0.95rem;">Copy these into your streaming software
+                            (OBS, Streamlabs, etc.)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prayer Requests Tab -->
+            <div id="tab-prayer" class="tab-content hidden">
+                <div class="card">
+                    <h2>Prayer Requests</h2>
+                    <div id="prayerList">Loading...</div>
+                </div>
+            </div>
+
+            <!-- Email Campaigns Tab -->
+            <div id="tab-emails" class="tab-content hidden">
+                <div class="card">
+                    <h2>Send Email Campaign</h2>
+                    <form id="emailForm">
+                        <div class="form-group">
+                            <label>Subject</label>
+                            <input type="text" name="subject" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Message</label>
+                            <textarea name="message" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Send To</label>
+                            <input type="email" name="to" placeholder="email@example.com" required>
+                        </div>
+                        <div id="emailStatus"></div>
+                        <button type="submit" class="btn btn-primary">Send Email</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="tab-settings" class="tab-content hidden">
+                <div class="card">
+                    <h2>Church Information</h2>
+                    <form id="settingsForm">
+                        <div class="form-group">
+                            <label>Church Name</label>
+                            <input type="text" name="church_name" value="New Iberia Church of Christ">
+                        </div>
+                        <div class="form-group">
+                            <label>Address</label>
+                            <input type="text" name="address" value="667 Charles St, New Iberia, LA 70560">
+                        </div>
+                        <div class="form-group">
+                            <label>Service Time</label>
+                            <input type="text" name="service_time" value="Sundays @ 10:30 AM">
+                        </div>
+                        <div class="form-group">
+                            <label>Contact Email</label>
+                            <input type="email" name="contact_email">
+                        </div>
+                        <div id="settingsStatus"></div>
+                        <button type="submit" class="btn btn-primary">Save Settings</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = '/api';
+        let sessionToken = localStorage.getItem('adminToken');
+        let editingSermonId = null;
+
+        // Check if already logged in
+        if (sessionToken) {
+            showDashboard();
+        }
+
+        // Login
+        document.getElementById('loginForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const statusEl = document.getElementById('loginStatus');
+
+            try {
+                const res = await fetch(API + '/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    sessionToken = data.token;
+                    localStorage.setItem('adminToken', sessionToken);
+                    showDashboard();
+                } else {
+                    statusEl.innerHTML = '<div class="status error">Invalid credentials</div>';
+                }
+            } catch (err) {
+                statusEl.innerHTML = '<div class="status error">Login failed. Try again.</div>';
+            }
+        };
+
+        function showDashboard() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('adminDashboard').classList.remove('hidden');
+            loadStats();
+            loadSermons();
+            loadPrayers();
+            loadMedia();
+        }
+
+        function logout() {
+            localStorage.removeItem('adminToken');
+            sessionToken = null;
+            location.reload();
+        }
+
+        // Tab Navigation
+        function showTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tabName).classList.remove('hidden');
+
+            // Load data when switching to media tab
+            if (tabName === 'media') {
+                loadMedia();
+            }
+        }
+
+        // Load Stats
+        async function loadStats() {
+            try {
+                const sermons = await fetch(API + '/sermons').then(r => r.json());
+                const prayers = await fetch(API + '/admin/prayer', {
+                    headers: { 'Authorization': 'Bearer ' + sessionToken }
+                }).then(r => r.json());
+                const media = await fetch(API + '/admin/assets').then(r => r.json());
+
+                document.getElementById('stat-sermons').textContent = sermons.length;
+                document.getElementById('stat-prayers').textContent = prayers.length;
+                document.getElementById('stat-media').textContent = media.length;
+            } catch (err) {
+                console.error('Stats load error:', err);
+            }
+        }
+
+        // ===== SERMON CRUD =====
+
+        // Load Sermons
+        async function loadSermons() {
+            try {
+                const sermons = await fetch(API + '/sermons').then(r => r.json());
+                const html = sermons.length ? `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Speaker</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${sermons.map(s => `
+                                <tr>
+                                    <td>${s.title}</td>
+                                    <td>${s.preacher || s.speaker}</td>
+                                    <td>${s.date_preached || s.date}</td>
+                                    <td>
+                                        <button class="btn btn-warning btn-sm" onclick="editSermon('${s.id}')">Edit</button>
+                                        <button class="btn btn-danger btn-sm" onclick="deleteSermon('${s.id}')">Delete</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                ` : '<p>No sermons yet. Add your first one above!</p>';
+
+                document.getElementById('sermonsList').innerHTML = html;
+            } catch (err) {
+                document.getElementById('sermonsList').innerHTML = '<p>Unable to load sermons.</p>';
+            }
+        }
+
+        // Add/Update Sermon
+        document.getElementById('sermonForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            const statusEl = document.getElementById('sermonStatus');
+            const sermonId = document.getElementById('sermonId').value;
+
+            try {
+                const url = sermonId ? `${API}/admin/sermons/${sermonId}` : `${API}/admin/sermons`;
+                const method = sermonId ? 'PUT' : 'POST';
+
+                const res = await fetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + sessionToken
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) {
+                    statusEl.innerHTML = `<div class="status success">Sermon ${sermonId ? 'updated' : 'published'} successfully!</div>`;
+                    e.target.reset();
+                    cancelEditSermon();
+                    loadSermons();
+                    loadStats();
+                } else {
+                    statusEl.innerHTML = '<div class="status error">Failed to save sermon.</div>';
+                }
+            } catch (err) {
+                statusEl.innerHTML = '<div class="status error">Error: ' + err.message + '</div>';
+            }
+        };
+
+        // Edit Sermon
+        async function editSermon(id) {
+            try {
+                const sermons = await fetch(API + '/sermons').then(r => r.json());
+                const sermon = sermons.find(s => s.id === id);
+
+                if (sermon) {
+                    document.getElementById('sermonId').value = sermon.id;
+                    document.getElementById('sermonTitle').value = sermon.title;
+                    document.getElementById('sermonSpeaker').value = sermon.preacher || sermon.speaker;
+                    document.getElementById('sermonDate').value = sermon.date_preached || sermon.date;
+                    document.getElementById('sermonScripture').value = sermon.scripture_focus || '';
+                    document.getElementById('sermonVideoUrl').value = sermon.media_url || '';
+                    document.getElementById('sermonDescription').value = sermon.description || '';
+
+                    document.getElementById('sermonFormTitle').textContent = 'Edit Sermon';
+                    document.getElementById('sermonSubmitBtn').textContent = 'Update Sermon';
+                    document.getElementById('sermonCancelBtn').classList.remove('hidden');
+
+                    // Scroll to form
+                    document.getElementById('sermonForm').scrollIntoView({ behavior: 'smooth' });
+                }
+            } catch (err) {
+                alert('Failed to load sermon: ' + err.message);
+            }
+        }
+
+        // Cancel Edit
+        function cancelEditSermon() {
+            document.getElementById('sermonForm').reset();
+            document.getElementById('sermonId').value = '';
+            document.getElementById('sermonFormTitle').textContent = 'Add New Sermon';
+            document.getElementById('sermonSubmitBtn').textContent = 'Publish Sermon';
+            document.getElementById('sermonCancelBtn').classList.add('hidden');
+            document.getElementById('sermonStatus').innerHTML = '';
+        }
+
+        // Delete Sermon
+        async function deleteSermon(id) {
+            if (!confirm('Are you sure you want to delete this sermon?')) return;
+
+            try {
+                const res = await fetch(`${API}/admin/sermons/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + sessionToken }
+                });
+
+                if (res.ok) {
+                    loadSermons();
+                    loadStats();
+                } else {
+                    alert('Failed to delete sermon');
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        // ===== MEDIA MANAGER =====
+
+        // Setup upload zone
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+
+        uploadZone.onclick = () => fileInput.click();
+
+        uploadZone.ondragover = (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        };
+
+        uploadZone.ondragleave = () => {
+            uploadZone.classList.remove('dragover');
+        };
+
+        uploadZone.ondrop = (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        };
+
+        fileInput.onchange = (e) => {
+            handleFiles(e.target.files);
+        };
+
+        async function handleFiles(files) {
+            const progressEl = document.getElementById('uploadProgress');
+            const progressFill = document.getElementById('progressFill');
+            const statusEl = document.getElementById('uploadStatus');
+
+            progressEl.classList.remove('hidden');
+
+            let uploaded = 0;
+            const total = files.length;
+
+            for (let file of files) {
+                try {
+                    statusEl.textContent = `Uploading ${file.name}...`;
+
+                    const res = await fetch(`${API}/admin/upload?filename=images/${file.name}`, {
+                        method: 'PUT',
+                        headers: { 'Authorization': 'Bearer ' + sessionToken },
+                        body: file
+                    });
+
+                    if (res.ok) {
+                        uploaded++;
+                        const percent = (uploaded / total) * 100;
+                        progressFill.style.width = percent + '%';
+                    }
+                } catch (err) {
+                    console.error('Upload error:', err);
+                }
+            }
+
+            statusEl.textContent = `- Uploaded ${uploaded} of ${total} files`;
+            setTimeout(() => {
+                progressEl.classList.add('hidden');
+                progressFill.style.width = '0%';
+                loadMedia();
+                loadStats();
+            }, 2000);
+        }
+
+        // Load Media
+        async function loadMedia() {
+            try {
+                const files = await fetch(API + '/admin/assets').then(r => r.json());
+                const images = files.filter(f => f.key.match(/\.(jpg|jpeg|png|gif|webp)$/i));
+
+                const html = images.length ? images.map(img => `
+                    <div class="media-item">
+                        <img src="${img.url}" alt="${img.key}" loading="lazy">
+                        <div class="media-item-info">
+                            <div class="media-item-name">${img.key.split('/').pop()}</div>
+                            <div class="media-item-size">${formatBytes(img.size)}</div>
+                            <div class="media-item-actions">
+                                <button class="btn btn-primary btn-sm" onclick="copyUrl('${img.url}')">Copy URL</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteMedia('${img.key}')">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('') : '<p>No images yet. Upload some above!</p>';
+
+                document.getElementById('mediaGrid').innerHTML = html;
+            } catch (err) {
+                document.getElementById('mediaGrid').innerHTML = '<p>Unable to load media.</p>';
+            }
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function copyUrl(url) {
+            navigator.clipboard.writeText(url);
+            alert('- URL copied to clipboard!');
+        }
+
+        async function deleteMedia(key) {
+            if (!confirm('Delete this image?')) return;
+
+            try {
+                const res = await fetch(`${API}/admin/assets?filename=${encodeURIComponent(key)}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + sessionToken }
+                });
+
+                if (res.ok) {
+                    loadMedia();
+                    loadStats();
+                } else {
+                    alert('Failed to delete');
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        // ===== OTHER FUNCTIONS =====
+
+        // Create Stream
+        async function createStream() {
+            try {
+                const res = await fetch(API + '/admin/stream/create', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + sessionToken }
+                });
+
+                const data = await res.json();
+                document.getElementById('rtmpUrl').value = data.rtmp_url;
+                document.getElementById('streamKey').value = data.stream_key;
+                document.getElementById('streamInfo').classList.remove('hidden');
+            } catch (err) {
+                alert('Failed to create stream: ' + err.message);
+            }
+        }
+
+        // Load Prayer Requests
+        async function loadPrayers() {
+            try {
+                const prayers = await fetch(API + '/admin/prayer', {
+                    headers: { 'Authorization': 'Bearer ' + sessionToken }
+                }).then(r => r.json());
+
+                const html = prayers.length ? `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Request</th>
+                                <th>Date</th>
+                                <th>Private</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${prayers.map(p => `
+                                <tr>
+                                    <td>${p.author_name || 'Anonymous'}</td>
+                                    <td>${p.content}</td>
+                                    <td>${new Date(p.created_at * 1000).toLocaleDateString()}</td>
+                                    <td>${p.is_private ? 'Yes' : 'No'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                ` : '<p>No prayer requests yet.</p>';
+
+                document.getElementById('prayerList').innerHTML = html;
+            } catch (err) {
+                document.getElementById('prayerList').innerHTML = '<p>Unable to load prayer requests.</p>';
+            }
+        }
+
+        // Send Email
+        document.getElementById('emailForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            const statusEl = document.getElementById('emailStatus');
+
+            try {
+                const res = await fetch(API + '/admin/email/send', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + sessionToken
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) {
+                    statusEl.innerHTML = '<div class="status success">Email sent successfully!</div>';
+                    e.target.reset();
+                } else {
+                    statusEl.innerHTML = '<div class="status error">Failed to send email.</div>';
+                }
+            } catch (err) {
+                statusEl.innerHTML = '<div class="status error">Error: ' + err.message + '</div>';
+            }
+        };
+
+        // Save Settings
+        document.getElementById('settingsForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            const statusEl = document.getElementById('settingsStatus');
+
+            try {
+                const res = await fetch(API + '/admin/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + sessionToken
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) {
+                    statusEl.innerHTML = '<div class="status success">Settings saved!</div>';
+                } else {
+                    statusEl.innerHTML = '<div class="status error">Failed to save settings.</div>';
+                }
+            } catch (err) {
+                statusEl.innerHTML = '<div class="status error">Error: ' + err.message + '</div>';
+            }
+        };
+    </script>
+</body>
+
+</html>

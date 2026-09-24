@@ -37,8 +37,12 @@
   },
   "installable": true,
   "_internal": {
-    "normalization": "pending",
-    "source": "/Users/samprimeaux/companionscpas/static"
+    "normalization": "scaffolded",
+    "source": "/Users/samprimeaux/companionscpas/static",
+    "harvest_batch": "theme-harvest-20260924",
+    "harvest_path": "work/theme-harvest/companions-site",
+    "app_path": "apps/companions-site",
+    "source_hash": "cdad95d1a674b05456a6166f9fc70d86dce106d4215395601164ec40ac161f7b"
   },
   "package": "@inneranimalmedia/theme-companions-site"
 }

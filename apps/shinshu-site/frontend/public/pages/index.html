@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shinshu Solutions - Opening Nagano to the World</title>
+    <link rel="stylesheet" href="/shared/styles.css">
+</head>
+<body>
+    <div id="nav-container"></div>
+
+    <!-- Home Page -->
+    <div id="home-page" class="page active">
+        <div class="container">
+            <div class="hero">
+                <div class="hero-content">
+                    <div class="hero-text">
+                        <h1 class="serif">
+                            Navigating <span class="highlight">Real Estate Investment</span> in Japan
+                        </h1>
+                        <p>
+                            Expert bilingual support for foreign investors in Nagano's stunning Shinshu region. 
+                            We bridge language and cultural gaps to help you successfully manage property investments 
+                            in Japan's world-class ski resort areas.
+                        </p>
+                        <button class="btn-primary" onclick="Navigation.navigateTo('contact')">Get in Touch</button>
+                        
+                        <div class="hero-stats">
+                            <div class="stat">
+                                <span class="stat-number serif">5+</span>
+                                <span class="stat-label">Years Experience</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-number serif">N1</span>
+                                <span class="stat-label">JLPT Certified</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-number serif">100%</span>
+                                <span class="stat-label">Bilingual</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="hero-visual">
+                        <svg width="100%" height="100%" viewBox="0 0 600 400" style="display: block;">
+                            <defs>
+                                <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#FFE5D9;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#FFF8F0;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                            <rect width="600" height="400" fill="url(#skyGradient)"/>
+                            <path d="M0 300 L100 200 L200 250 L300 150 L400 220 L500 180 L600 240 L600 400 L0 400 Z" 
+                                  fill="#FF8C42" opacity="0.3"/>
+                            <path d="M0 320 L150 240 L300 280 L450 220 L600 280 L600 400 L0 400 Z" 
+                                  fill="#E67635" opacity="0.2"/>
+                            <circle cx="500" cy="80" r="40" fill="#FF8C42" opacity="0.5"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2 class="section-title serif">Why Shinshu Solutions?</h2>
+                    <p class="section-subtitle">
+                        Your trusted local partner for real estate success in Nagano, Japan
+                    </p>
+                </div>
+
+                <div class="services-grid">
+                    <div class="service-card">
+                        <div class="service-icon">💬</div>
+                        <h3 class="serif">Translation & Interpretation</h3>
+                        <p>Professional Japanese-English translation for property discussions, contractor meetings, site visits, and documents.</p>
+                    </div>
+
+                    <div class="service-card">
+                        <div class="service-icon">🤝</div>
+                        <h3 class="serif">Client Liaison Services</h3>
+                        <p>Support for Japanese businesses handling foreign clients, ensuring smooth communication and expectation alignment.</p>
+                    </div>
+
+                    <div class="service-card">
+                        <div class="service-icon">🔗</div>
+                        <h3 class="serif">Introductions & Coordination</h3>
+                        <p>Connect with trusted local realtors and contractors. Complete coordination support throughout your project.</p>
+                    </div>
+
+                    <div class="service-card">
+                        <div class="service-icon">🏗️</div>
+                        <h3 class="serif">Project Support</h3>
+                        <p>Renovation and improvement project coordination, schedule tracking, budget management, and on-site check-ins.</p>
+                    </div>
+
+                    <div class="service-card">
+                        <div class="service-icon">🏠</div>
+                        <h3 class="serif">Property Management</h3>
+                        <p>Routine property checks, keyholding services, and repair coordination for absentee owners.</p>
+                    </div>
+
+                    <div class="service-card">
+                        <div class="service-icon">🎯</div>
+                        <h3 class="serif">Cultural Bridge</h3>
+                        <p>Navigate the cultural expectations that often lead to missed deadlines and budget overruns.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="footer-container"></div>
+
+    <script src="/shared/layout.js"></script>
+    <script>
+        // Load shared components
+        async function loadComponents() {
+            const navContainer = document.getElementById('nav-container');
+            const footerContainer = document.getElementById('footer-container');
+            
+            try {
+                const [navRes, footerRes] = await Promise.all([
+                    fetch('/shared/nav.html'),
+                    fetch('/shared/footer.html')
+                ]);
+                
+                if (navRes.ok) {
+                    navContainer.innerHTML = await navRes.text();
+                }
+                
+                if (footerRes.ok) {
+                    footerContainer.innerHTML = await footerRes.text();
+                }
+            } catch (error) {
+                console.error('Error loading components:', error);
+            }
+        }
+        
+        loadComponents();
+    </script>
+</body>
+</html>

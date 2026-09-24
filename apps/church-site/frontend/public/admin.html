@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | New Iberia Church</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/webp"
+        href="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/9ce32655-5bcc-4981-e049-9d49916ce100/small">
+    <style>
+        :root {
+            --bg-primary: #f8fafc;
+            --sidebar-bg: #1e293b;
+            --sidebar-active: #334155;
+            --text-primary: #0f172a;
+            --text-muted: #64748b;
+            --blue-primary: #2563eb;
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(226, 232, 240, 0.8);
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: var(--sidebar-bg);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 2rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-logo {
+            width: 100px;
+            height: auto;
+            margin-bottom: 1rem;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 1.5rem 0;
+        }
+
+        .nav-item {
+            padding: 0.875rem 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-item.active {
+            color: white;
+            background: var(--sidebar-active);
+            border-left: 4px solid var(--blue-primary);
+        }
+
+        .sidebar-footer {
+            padding: 1.5rem 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            padding: 2.5rem;
+            width: calc(100% - 260px);
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .page-title h1 {
+            font-size: 1.875rem;
+            font-weight: 700;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background: var(--blue-primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        /* Cards & Grids */
+        .card {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 1.5rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* Forms & Buttons */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.625rem 0.875rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.875rem;
+        }
+
+        .btn {
+            padding: 0.625rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--blue-primary);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-muted);
+        }
+
+        .btn-ghost:hover {
+            background: #f1f5f9;
+            color: var(--text-primary);
+        }
+
+        /* Media */
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+
+        .media-card {
+            background: white;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .media-preview {
+            aspect-ratio: 1;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .media-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .media-info {
+            padding: 0.75rem;
+        }
+
+        .media-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.875rem;
+        }
+
+        th {
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        /* Utils */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Login */
+        .login-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-primary);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+            background: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--glass-border);
+        }
+
+        .login-card h2 {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loginScreen" class="login-overlay">
+        <div class="login-card">
+            <h2>Staff Login</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="username" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password" class="form-control" required>
+                </div>
+                <div id="loginStatus"
+                    style="margin: 1rem 0; color: var(--danger); font-size: 0.875rem; text-align: center;"></div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="adminDashboard" class="hidden" style="display: flex; width: 100%;">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/9ce32655-5bcc-4981-e049-9d49916ce100/small"
+                    alt="Logo" class="sidebar-logo">
+                <div style="font-weight: 700; font-size: 1.125rem;">Admin Panel</div>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-item active" onclick="switchTab('overview')">Overview</div>
+                <div class="nav-item" onclick="switchTab('media')">Media Library</div>
+                <div class="nav-item" onclick="switchTab('sermons')">Sermons</div>
+                <div class="nav-item" onclick="switchTab('streaming')">Live Streaming</div>
+                <div class="nav-item" onclick="switchTab('subscribers')">Subscribers</div>
+                <div class="nav-item" onclick="switchTab('prayers')">Prayer Requests</div>
+            </nav>
+            <div class="sidebar-footer">
+                <button onclick="logout()" class="btn btn-ghost" style="width: 100%;">Logout</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="top-bar">
+                <div class="page-title">
+                    <h1 id="tabTitle">Overview</h1>
+                </div>
+                <div class="user-profile">
+                    <span id="userFullName" style="font-weight: 500;">Staff</span>
+                    <div class="user-avatar" id="userInitial">S</div>
+                </div>
+            </div>
+
+            <section id="tab-overview" class="tab-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-label">Total Sermons</span>
+                        <span class="stat-value" id="stat-sermons">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Active Subscribers</span>
+                        <span class="stat-value" id="stat-subscribers">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Pending Prayers</span>
+                        <span class="stat-value" id="stat-prayers">0</span>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Recent Activity</h3>
+                    <p style="color: var(--text-muted); margin-top: 1rem;">Systems fully optimized and operational.</p>
+                </div>
+            </section>
+
+            <section id="tab-media" class="tab-content hidden">
+                <div class="card">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                        <h3>Media Assets</h3>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="file" id="fileUpload" style="display: none;"
+                                onchange="handleFileUpload(event)">
+                            <button class="btn btn-primary"
+                                onclick="document.getElementById('fileUpload').click()">Upload New</button>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                        <select id="mediaFilter" class="form-control" style="width: 200px;" onchange="loadMedia()">
+                            <option value="">All Areas</option>
+                            <option value="optimized/">Optimized</option>
+                            <option value="images/">Images</option>
+                            <option value="icons/">Icons</option>
+                            <option value="modelcitymissionimages/">Mission</option>
+                        </select>
+                        <input type="text" id="mediaSearch" class="form-control" placeholder="Search..."
+                            onkeyup="filterMedia()">
+                    </div>
+                    <div id="mediaGallery" class="media-grid"></div>
+                </div>
+            </section>
+
+            <section id="tab-sermons" class="tab-content hidden">
+                <div class="card">
+                    <h3>Sermon Management</h3>
+                    <form id="sermonForm"
+                        style="margin-top: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <input type="text" name="title" class="form-control" placeholder="Title" required>
+                        <input type="text" name="speaker" class="form-control" placeholder="Speaker" required>
+                        <input type="date" name="date" class="form-control" required>
+                        <input type="text" name="audio_url" class="form-control" placeholder="Audio Link">
+                        <button type="submit" class="btn btn-primary" style="grid-column: span 2;">Publish</button>
+                    </form>
+                    <div id="sermonsTable" style="margin-top: 2rem;"></div>
+                </div>
+            </section>
+
+            <section id="tab-streaming" class="tab-content hidden">
+                <div class="card">
+                    <h3>Live Streaming</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 2rem;">Generate stream keys for your secondary
+                        platforms.</p>
+                    <button class="btn btn-primary" onclick="createStream()">Generate Key</button>
+                    <div id="streamKeysInfo" style="margin-top: 2rem;"></div>
+                </div>
+            </section>
+
+            <section id="tab-subscribers" class="tab-content hidden">
+                <div class="card">
+                    <h3>System Subscriptions</h3>
+                    <div id="subscribersTable" style="margin-top: 1rem;"></div>
+                </div>
+            </section>
+
+            <section id="tab-prayers" class="tab-content hidden">
+                <div class="card">
+                    <h3>Prayer Requests</h3>
+                    <div id="prayersTable" style="margin-top: 1rem;"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const API = '/api';
+        let sessionToken = localStorage.getItem('adminToken');
+
+        if (sessionToken) showDashboard();
+
+        document.getElementById('loginForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const res = await fetch(API + '/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                sessionToken = data.token;
+                localStorage.setItem('adminToken', sessionToken);
+                localStorage.setItem('adminUser', JSON.stringify(data.user));
+                setUser(data.user);
+                showDashboard();
+            } else {
+                document.getElementById('loginStatus').textContent = 'Invalid login';
+            }
+        };
+
+        function setUser(user) {
+            document.getElementById('userFullName').textContent = user.full_name || user.username;
+            document.getElementById('userInitial').textContent = (user.full_name || user.username || 'A')[0].toUpperCase();
+        }
+
+        function showDashboard() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('adminDashboard').classList.remove('hidden');
+            const user = JSON.parse(localStorage.getItem('adminUser') || '{}');
+            if (user.username) setUser(user);
+            loadData();
+        }
+
+        function logout() {
+            localStorage.clear();
+            location.reload();
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+
+            const btn = Array.from(document.querySelectorAll('.nav-item')).find(i => i.textContent.toLowerCase().includes(tab.toLowerCase()));
+            if (btn) btn.classList.add('active');
+
+            const content = document.getElementById('tab-' + tab);
+            if (content) content.classList.remove('hidden');
+            document.getElementById('tabTitle').textContent = tab.charAt(0).toUpperCase() + tab.slice(1);
+            if (tab === 'media') loadMedia();
+            if (tab === 'subscribers') loadSubscribers();
+            if (tab === 'prayers') loadPrayers();
+            if (tab === 'sermons') loadSermons();
+        }
+
+        async function loadData() {
+            try {
+                const s = await fetch(API + '/sermons').then(r => r.json());
+                document.getElementById('stat-sermons').textContent = s.length;
+                const p = await fetch(API + '/admin/prayer', { headers: { 'Authorization': 'Bearer ' + sessionToken } }).then(r => r.json());
+                document.getElementById('stat-prayers').textContent = p.length;
+                const sub = await fetch(API + '/admin/subscribers', { headers: { 'Authorization': 'Bearer ' + sessionToken } }).then(r => r.json());
+                document.getElementById('stat-subscribers').textContent = sub.length;
+            } catch (e) { }
+        }
+
+        async function loadMedia() {
+            const gallery = document.getElementById('mediaGallery');
+            const prefix = document.getElementById('mediaFilter').value;
+            gallery.innerHTML = '<p>Loading assets...</p>';
+            const res = await fetch(API + '/admin/assets' + (prefix ? '?prefix=' + prefix : ''), { headers: { 'Authorization': 'Bearer ' + sessionToken } });
+            if (res.ok) {
+                const data = await res.json();
+                gallery.innerHTML = data.map(a => `
+                    <div class="media-card">
+                        <div class="media-preview"><img src="${a.url}"></div>
+                        <div class="media-info">
+                            <div class="media-name">${a.key.split('/').pop()}</div>
+                            <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem;">
+                                <button class="btn btn-ghost" style="padding: 4px;" onclick="copyUrl('${a.url}')">Link</button>
+                                ${!a.isOptimized ? `<button class="btn btn-primary" style="padding: 4px;" onclick="optimizeAsset('${a.key}')">Optimize</button>` : '<span style="color: var(--success); font-weight: 700; font-size: 10px;">Optimized</span>'}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        async function optimizeAsset(key) {
+            const res = await fetch(API + '/admin/media/optimize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sessionToken },
+                body: JSON.stringify({ key })
+            });
+            if (res.ok) { alert('Optimized successfully'); loadMedia(); }
+        }
+
+        async function createStream() {
+            const res = await fetch(API + '/admin/stream/create', { method: 'POST', headers: { 'Authorization': 'Bearer ' + sessionToken } });
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('streamKeysInfo').innerHTML = `<div class="card" style="background: #f1f5f9; font-family: monospace;">Key: ${data.stream_key}</div>`;
+            }
+        }
+
+        async function loadSubscribers() {
+            const table = document.getElementById('subscribersTable');
+            const res = await fetch(API + '/admin/subscribers', { headers: { 'Authorization': 'Bearer ' + sessionToken } });
+            if (res.ok) {
+                const data = await res.json();
+                table.innerHTML = `<table><thead><tr><th>Email</th><th>Date</th></tr></thead><tbody>${data.map(s => `<tr><td>${s.email}</td><td>${new Date(s.updated_at).toLocaleDateString()}</td></tr>`).join('')}</tbody></table>`;
+            }
+        }
+
+        async function loadPrayers() {
+            const table = document.getElementById('prayersTable');
+            const res = await fetch(API + '/admin/prayer', { headers: { 'Authorization': 'Bearer ' + sessionToken } });
+            if (res.ok) {
+                const data = await res.json();
+                table.innerHTML = `<table><thead><tr><th>Author</th><th>Request</th></tr></thead><tbody>${data.map(p => `<tr><td>${p.author_name}</td><td>${p.content}</td></tr>`).join('')}</tbody></table>`;
+            }
+        }
+
+        async function loadSermons() {
+            const table = document.getElementById('sermonsTable');
+            const res = await fetch(API + '/sermons');
+            if (res.ok) {
+                const data = await res.json();
+                table.innerHTML = `<table><thead><tr><th>Title</th><th>Speaker</th></tr></thead><tbody>${data.map(s => `<tr><td>${s.title}</td><td>${s.speaker}</td></tr>`).join('')}</tbody></table>`;
+            }
+        }
+
+        function copyUrl(u) { navigator.clipboard.writeText(u); alert('Copied'); }
+
+        async function handleFileUpload(e) {
+            const file = e.target.files[0];
+            const prefix = document.getElementById('mediaFilter').value || 'images/';
+            const fd = new FormData();
+            fd.append('file', file);
+            fd.append('filename', prefix + file.name);
+            const res = await fetch(API + '/admin/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + sessionToken }, body: fd });
+            if (res.ok) { alert('Uploaded'); loadMedia(); }
+        }
+    </script>
+</body>
+
+</html>

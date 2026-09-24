@@ -1,0 +1,14 @@
+{
+  "harvest_batch": "theme-harvest-20260924",
+  "app_path": "apps/floors-site",
+  "harvest_path": "work/theme-harvest/floors-site",
+  "status": "scaffolded",
+  "source_hash": "2244de43568a0bb08d7d3779971c1fc0c6c832c226a65c7bb4313e8ac039add8",
+  "capabilities": [
+    "cms.media",
+    "cms.pages",
+    "deploy.receipt",
+    "forms.leads",
+    "theme.storefront.shell"
+  ]
+}

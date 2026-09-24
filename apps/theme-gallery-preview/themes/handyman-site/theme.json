@@ -38,8 +38,12 @@
   },
   "installable": true,
   "_internal": {
-    "normalization": "pending",
-    "source": "/Users/samprimeaux/worktrees/primeaux-handyman-services-agent/dist"
+    "normalization": "scaffolded",
+    "source": "/Users/samprimeaux/worktrees/primeaux-handyman-services-agent/dist",
+    "harvest_batch": "theme-harvest-20260924",
+    "harvest_path": "work/theme-harvest/handyman-site",
+    "app_path": "apps/handyman-site",
+    "source_hash": "36a5a147cd70c0523a50466fad113cc265ee22a571e98b2fd67fde15ee795ea4"
   },
   "package": "@inneranimalmedia/theme-handyman-site"
 }

@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="New Iberia Church of Christ - A Bible-centered family of faith serving New Iberia with open hearts and open doors." />
+  <title>New Iberia Church of Christ - Welcome Home</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    /* ===== Reset & Base ===== */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #0f172a;
+      background: #f8fafc;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      font-size: clamp(16px, 1.5vw, 18px);
+    }
+    
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; border: none; background: none; cursor: pointer; }
+    img { max-width: 100%; height: auto; display: block; object-fit: contain; }
+
+    /* ===== CSS Variables ===== */
+    :root {
+      --max-width: 1400px;
+      --radius: 20px;
+      --radius-lg: 28px;
+      
+      /* Light Theme Glass (Homepage) */
+      --glass-bg: rgba(255, 255, 255, 0.75);
+      --glass-border: rgba(255, 255, 255, 0.40);
+      --glass-shadow: 0 16px 40px rgba(2, 6, 23, 0.12);
+      --text-primary: #0f172a;
+      --text-secondary: rgba(15, 23, 42, 0.70);
+      
+      /* Brand Colors */
+      --brand-blue: #2563eb;
+      --brand-blue-dark: #1e40af;
+      
+      /* CTA Buttons */
+      --cta-bg: rgba(37, 99, 235, 0.90);
+      --cta-border: rgba(255, 255, 255, 0.24);
+      --cta-shadow: 0 12px 28px rgba(37, 99, 235, 0.28);
+    }
+
+    /* Dark Theme Variables (for alternating pages) */
+    body[data-theme="dark"] {
+      background: #0a0e14;
+      color: #e5e7eb;
+      
+      --glass-bg: rgba(10, 12, 16, 0.65);
+      --glass-border: rgba(255, 255, 255, 0.15);
+      --glass-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+      --text-primary: #ffffff;
+      --text-secondary: rgba(255, 255, 255, 0.75);
+      --cta-bg: rgba(255, 255, 255, 0.12);
+      --cta-border: rgba(255, 255, 255, 0.20);
+    }
+
+    /* ===== Layout Container ===== */
+    .container {
+      width: min(var(--max-width), calc(100% - 2rem));
+      margin: 0 auto;
+    }
+
+    /* ===== Header (Glassmorphic, Shrinks on Scroll) ===== */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 1rem 0;
+      transition: padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+    }
+    
+    .site-header.is-scrolled {
+      padding: 0.5rem 0;
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+      
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--glass-shadow);
+      border-radius: 999px;
+      padding: 1rem 1.5rem;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .site-header.is-scrolled .header-inner {
+      padding: 0.75rem 1.25rem;
+    }
+
+    /* Logo */
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+    }
+    
+    .brand:hover {
+      transform: translateY(-1px);
+    }
+
+    .brand-logo {
+      width: clamp(50px, 8vw, 60px);
+      height: clamp(50px, 8vw, 60px);
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+    }
+    
+    .site-header.is-scrolled .brand-logo {
+      width: clamp(40px, 7vw, 50px);
+      height: clamp(40px, 7vw, 50px);
+    }
+
+    .brand-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    /* Desktop Navigation */
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      list-style: none;
+    }
+
+    .nav a {
+      font-weight: 600;
+      font-size: clamp(15px, 1.3vw, 17px);
+      color: var(--text-primary);
+      padding: 0.75rem 1.25rem;
+      border-radius: 999px;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .nav a:hover {
+      background: rgba(37, 99, 235, 0.10);
+      color: var(--brand-blue);
+    }
+    
+    body[data-theme="dark"] .nav a:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+    }
+
+    .nav a.active {
+      background: rgba(37, 99, 235, 0.12);
+      color: var(--brand-blue);
+    }
+    
+    body[data-theme="dark"] .nav a.active {
+      background: rgba(255, 255, 255, 0.14);
+      color: #ffffff;
+    }
+
+    /* Hamburger Menu Button */
+    .hamburger {
+      display: none;
+      width: 48px;
+      height: 48px;
+      min-width: 48px;
+      border-radius: 14px;
+      border: 1px solid var(--glass-border);
+      background: var(--glass-bg);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+      position: relative;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .hamburger:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 26px rgba(0, 0, 0, 0.16);
+    }
+
+    .hamburger span {
+      position: absolute;
+      width: 22px;
+      height: 2.5px;
+      background: var(--text-primary);
+      border-radius: 2px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .hamburger span:nth-child(1) { top: 17px; }
+    .hamburger span:nth-child(2) { top: 22.5px; }
+    .hamburger span:nth-child(3) { top: 28px; }
+
+    .hamburger[aria-expanded="true"] span:nth-child(1) {
+      top: 22.5px;
+      transform: rotate(45deg);
+    }
+
+    .hamburger[aria-expanded="true"] span:nth-child(2) {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+
+    .hamburger[aria-expanded="true"] span:nth-child(3) {
+      top: 22.5px;
+      transform: rotate(-45deg);
+    }
+
+    /* ===== Mobile Drawer (Glassmorphic Side Nav) ===== */
+    .drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      z-index: 98;
+    }
+
+    .drawer-backdrop.is-open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      height: 100%;
+      width: min(380px, 85vw);
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 99;
+
+      background: var(--glass-bg);
+      border-left: 1px solid var(--glass-border);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      box-shadow: -20px 0 60px rgba(0, 0, 0, 0.25);
+
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem;
+      gap: 1rem;
+      overflow-y: auto;
+    }
+
+    .drawer.is-open {
+      transform: translateX(0);
+    }
+
+    .drawer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--glass-border);
+      margin-bottom: 0.5rem;
+    }
+
+    .drawer-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .drawer-nav a {
+      padding: 1rem 1.25rem;
+      border-radius: 16px;
+      font-weight: 600;
+      font-size: clamp(16px, 1.4vw, 18px);
+      background: rgba(37, 99, 235, 0.08);
+      border: 1px solid rgba(37, 99, 235, 0.12);
+      transition: all 0.2s ease;
+      color: var(--text-primary);
+    }
+
+    .drawer-nav a:hover {
+      transform: translateX(4px);
+      background: rgba(37, 99, 235, 0.14);
+    }
+    
+    body[data-theme="dark"] .drawer-nav a {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+    
+    body[data-theme="dark"] .drawer-nav a:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    /* ===== Hero Section (Galaxy Sky) ===== */
+    .hero {
+      position: relative;
+      width: 100%;
+      min-height: min(85vh, 800px);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin: 1.25rem auto 0;
+      background: #0a0e14;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.24);
+    }
+
+    .hero-media {
+      position: absolute;
+      inset: -6%;
+      will-change: transform;
+      transform: translate3d(0, 0, 0) scale(1.05);
+    }
+
+    .hero picture,
+    .hero img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* Premium Overlay for Readability */
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      background: 
+        radial-gradient(1400px 900px at 50% 45%,
+          rgba(0, 0, 0, 0.12) 0%,
+          rgba(0, 0, 0, 0.45) 60%,
+          rgba(0, 0, 0, 0.70) 100%);
+    }
+
+    /* Hero Content with Logo Showcase */
+    .hero-content {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 1.5rem;
+      z-index: 2;
+      text-align: center;
+      gap: 2rem;
+    }
+
+    .hero-logo-showcase {
+      width: min(70vw, 400px);
+      max-width: 500px;
+      height: auto;
+      filter: drop-shadow(0 20px 60px rgba(0, 0, 0, 0.5));
+      animation: fadeInUp 0.8s ease-out;
+    }
+
+    .hero-logo-showcase img {
+      width: 100%;
+      height: auto;
+      object-fit: contain;
+    }
+
+    .hero-tagline {
+      color: rgba(255, 255, 255, 0.95);
+      font-size: clamp(18px, 2vw, 24px);
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      text-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      animation: fadeInUp 0.8s ease-out 0.2s both;
+      max-width: 50ch;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ===== Image Galleries (Scale, Don't Crop) ===== */
+    .image-gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+      gap: 1.5rem;
+      margin: 3rem 0;
+    }
+
+    .gallery-item {
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--glass-shadow);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .gallery-item:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
+    }
+
+    .gallery-item img {
+      width: 100%;
+      height: auto;
+      object-fit: contain;
+      display: block;
+    }
+
+    .gallery-caption {
+      padding: 1rem 1.25rem;
+      color: var(--text-secondary);
+      font-size: clamp(14px, 1.2vw, 16px);
+      line-height: 1.6;
+    }
+
+    /* ===== Section Styles ===== */
+    .section {
+      padding: clamp(4rem, 8vw, 6rem) 0;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 3.5rem;
+    }
+
+    .section h2 {
+      font-size: clamp(2rem, 3.5vw, 3rem);
+      color: var(--brand-blue);
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+    
+    body[data-theme="dark"] .section h2 {
+      color: #ffffff;
+    }
+
+    .section-lead {
+      font-size: clamp(1.1rem, 1.6vw, 1.3rem);
+      color: var(--text-secondary);
+      max-width: 70ch;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* Cards Grid */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+      gap: 2rem;
+      margin-top: 3rem;
+    }
+
+    .card {
+      padding: 2.5rem 2rem;
+      border-radius: var(--radius);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--glass-shadow);
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.16);
+    }
+
+    .card h3 {
+      font-size: clamp(1.4rem, 2vw, 1.75rem);
+      color: var(--brand-blue);
+      margin-bottom: 1rem;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    
+    body[data-theme="dark"] .card h3 {
+      color: #ffffff;
+    }
+
+    .card p {
+      color: var(--text-secondary);
+      line-height: 1.75;
+      font-size: clamp(15px, 1.3vw, 17px);
+    }
+
+    /* Belief Integration Blocks */
+    .belief-block {
+      background: rgba(37, 99, 235, 0.08);
+      border-left: 4px solid var(--brand-blue);
+      border-radius: var(--radius);
+      padding: 2rem;
+      margin: 2rem 0;
+    }
+    
+    body[data-theme="dark"] .belief-block {
+      background: rgba(255, 255, 255, 0.08);
+      border-left-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .belief-block p {
+      color: var(--text-primary);
+      font-size: clamp(16px, 1.4vw, 18px);
+      font-weight: 500;
+      line-height: 1.7;
+      font-style: italic;
+    }
+
+    /* ===== Footer ===== */
+    footer {
+      margin-top: 4rem;
+      padding: 4rem 0 2rem;
+      background: #0b1220;
+      color: rgba(255, 255, 255, 0.90);
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+      gap: 2.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .footer-section h4 {
+      font-size: clamp(18px, 1.6vw, 22px);
+      margin-bottom: 1.25rem;
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .footer-section p,
+    .footer-section a {
+      color: rgba(255, 255, 255, 0.78);
+      line-height: 1.8;
+      display: block;
+      font-size: clamp(15px, 1.3vw, 17px);
+      transition: color 0.2s ease;
+      margin-bottom: 0.75rem;
+    }
+
+    .footer-section a:hover {
+      color: var(--brand-blue);
+    }
+
+    .footer-bottom {
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      text-align: center;
+      color: rgba(255, 255, 255, 0.65);
+      font-size: clamp(13px, 1.2vw, 15px);
+    }
+
+    .footer-bottom a {
+      color: rgba(255, 255, 255, 0.85);
+      font-weight: 600;
+    }
+
+    .footer-bottom a:hover {
+      color: #ffffff;
+    }
+
+    /* ===== Responsive Design ===== */
+    @media (max-width: 960px) {
+      .nav {
+        display: none;
+      }
+
+      .hamburger {
+        display: inline-flex;
+      }
+
+      .hero {
+        border-radius: 22px;
+        min-height: min(75vh, 700px);
+      }
+
+      .hero-content {
+        gap: 1.5rem;
+        padding: 2rem 1.25rem;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .section {
+        padding: clamp(3rem, 6vw, 4rem) 0;
+      }
+
+      .image-gallery {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+    }
+
+    /* ===== Accessibility ===== */
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+      
+      .hero-media {
+        transform: none !important;
+      }
+      
+      html {
+        scroll-behavior: auto;
+      }
+    }
+
+    *:focus-visible {
+      outline: 3px solid var(--brand-blue);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+
+<body data-theme="light">
+
+  <!-- ===== Header ===== -->
+  <header class="site-header" id="siteHeader">
+    <div class="container">
+      <div class="header-inner">
+        
+        <!-- Logo -->
+        <a class="brand" href="/" aria-label="New Iberia Church of Christ Home">
+          <picture class="brand-logo">
+            <source 
+              srcset="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/5ce76f40-dfaf-4c97-429b-09e939449b00/thumbnail 150w,
+                      https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/5ce76f40-dfaf-4c97-429b-09e939449b00/avatar 200w,
+                      https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/5ce76f40-dfaf-4c97-429b-09e939449b00/small 400w"
+              sizes="(max-width: 768px) 50px, 60px"
+              type="image/webp">
+            <img 
+              src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/9ce32655-5bcc-4981-e049-9d49916ce100/small"
+              alt="New Iberia Church of Christ Logo"
+              loading="eager"
+              width="200"
+              height="200">
+          </picture>
+        </a>
+
+        <!-- Desktop Navigation -->
+        <nav class="nav" aria-label="Primary Navigation">
+          <a href="/" class="active">Home</a>
+          <a href="/about">About</a>
+          <a href="/community">Community</a>
+          <a href="/connect">Connect</a>
+        </nav>
+
+        <!-- Mobile Hamburger -->
+        <button 
+          class="hamburger" 
+          id="menuToggle" 
+          aria-label="Toggle menu" 
+          aria-expanded="false"
+          aria-controls="mobileDrawer"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== Mobile Drawer ===== -->
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+  
+  <aside class="drawer" id="mobileDrawer" aria-hidden="true">
+    <div class="drawer-header">
+      <a class="brand" href="/">
+        <picture class="brand-logo">
+          <source 
+            srcset="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/5ce76f40-dfaf-4c97-429b-09e939449b00/avatar 200w"
+            type="image/webp">
+          <img 
+            src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/9ce32655-5bcc-4981-e049-9d49916ce100/avatar"
+            alt="Logo"
+            width="200"
+            height="200">
+        </picture>
+      </a>
+      <button 
+        class="hamburger" 
+        id="menuClose" 
+        aria-label="Close menu"
+        aria-expanded="false"
+      >
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+
+    <nav class="drawer-nav" aria-label="Mobile Navigation">
+      <a href="/">Home</a>
+      <a href="/about">About</a>
+      <a href="/community">Community</a>
+      <a href="/connect">Connect</a>
+    </nav>
+  </aside>
+
+  <!-- ===== Main Content ===== -->
+  <main class="container">
+
+    <!-- Hero Section with Galaxy Sky -->
+    <section class="hero" id="homeHero" aria-label="Welcome">
+      <div class="hero-media" id="heroMedia">
+        <picture>
+          <source
+            type="image/webp"
+            srcset="
+              https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/d2105d18-a5a0-49db-b835-db66c7b89300/w=640,format=webp 640w,
+              https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/d2105d18-a5a0-49db-b835-db66c7b89300/w=960,format=webp 960w,
+              https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/d2105d18-a5a0-49db-b835-db66c7b89300/w=1280,format=webp 1280w,
+              https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/d2105d18-a5a0-49db-b835-db66c7b89300/w=1920,format=webp 1920w
+            "
+            sizes="100vw"
+          />
+          <img
+            src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/d2105d18-a5a0-49db-b835-db66c7b89300/w=1920,format=webp"
+            alt="Beautiful starry galaxy night sky"
+            width="1920"
+            height="1080"
+            loading="eager"
+            decoding="async"
+            fetchpriority="high"
+          />
+        </picture>
+      </div>
+
+      <div class="hero-content">
+        <picture class="hero-logo-showcase">
+          <source 
+            srcset="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/5ce76f40-dfaf-4c97-429b-09e939449b00/small 400w,
+                    https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/5ce76f40-dfaf-4c97-429b-09e939449b00/medium 800w,
+                    https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/5ce76f40-dfaf-4c97-429b-09e939449b00/large 1200w"
+            sizes="(max-width: 768px) 70vw, min(70vw, 500px)"
+            type="image/webp">
+          <img 
+            src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/9ce32655-5bcc-4981-e049-9d49916ce100/medium"
+            alt="New Iberia Church of Christ"
+            loading="eager"
+            width="800"
+            height="800">
+        </picture>
+        <p class="hero-tagline">A Bible-centered family of faith serving New Iberia with open hearts and open doors</p>
+      </div>
+    </section>
+
+    <!-- Welcome Section with Beliefs Integration -->
+    <section class="section">
+      <div class="section-header">
+        <h2>We're Glad You're Here</h2>
+        <p class="section-lead">
+          New Iberia Church of Christ is a close-knit community committed to following Jesus and helping others do the same. We believe the Bible is God's inspired Word and the authority for faith and life.
+        </p>
+      </div>
+
+      <div class="belief-block">
+        <p>"We exist to glorify God by following Jesus and helping others do the same. We are a Bible-centered church committed to truth, grace, and transformation."</p>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card">
+          <h3>Come As You Are</h3>
+          <p>
+            We're a welcoming community where everyone has a seat at the table. No matter where you are in your faith journey, you'll find genuine people, meaningful worship, and grace-filled teaching rooted in Scripture.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Grounded in Scripture</h3>
+          <p>
+            We believe the sixty-six books of the Bible are inspired by God and are the final authority for understanding God, salvation, and life. Everything we do flows from our commitment to know God through His Word.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Serving Together</h3>
+          <p>
+            Faith isn't just something we believe—it's something we live. Because we've been loved by Christ, we serve with joy. From Model City Missions to everyday acts of kindness, we serve our community with love.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Community Impact - Model City Missions -->
+    <section class="section">
+      <div class="section-header">
+        <h2>Model City Missions</h2>
+        <p class="section-lead">
+          Serving New Iberia with hands-on love — one home at a time. Since 2017, volunteers have painted, renovated, and restored local homes completely free for families in our community.
+        </p>
+      </div>
+
+      <div class="belief-block">
+        <p>"Rather than just come to church and talk about it, we do anything we can to be in our community — serving alongside our friends and neighbors and making New Iberia a better place to live." — Kenny Wright, Minister</p>
+      </div>
+
+      <div class="image-gallery">
+        <div class="gallery-item">
+          <img 
+            src="https://pub-c9e81b68c3a046699b9a51efe8bde103.r2.dev/modelcitymissionimages/modelcitymissionspic-volunteers.png" 
+            alt="Model City Missions volunteers serving the community"
+            loading="lazy">
+          <div class="gallery-caption">Volunteers serving New Iberia with hands-on love</div>
+        </div>
+        <div class="gallery-item">
+          <img 
+            src="https://pub-c9e81b68c3a046699b9a51efe8bde103.r2.dev/modelcitymissionimages/model-city-mission-grouppic1.JPG" 
+            alt="Model City Missions group working together"
+            loading="lazy">
+          <div class="gallery-caption">Church members and neighbors working side-by-side</div>
+        </div>
+        <div class="gallery-item">
+          <img 
+            src="https://pub-c9e81b68c3a046699b9a51efe8bde103.r2.dev/modelcitymissionimages/painting-modelcitymissions.png" 
+            alt="Volunteers painting homes"
+            loading="lazy">
+          <div class="gallery-caption">Restoring homes at no cost for local families</div>
+        </div>
+        <div class="gallery-item">
+          <img 
+            src="https://pub-c9e81b68c3a046699b9a51efe8bde103.r2.dev/modelcitymissionimages/modelcitymissionvolunteers-grouppic.png" 
+            alt="Youth volunteers in Model City Missions"
+            loading="lazy">
+          <div class="gallery-caption">Over 50 youth volunteers serve each summer</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Ministries Overview -->
+    <section class="section">
+      <div class="section-header">
+        <h2>Ministries & Groups</h2>
+        <p class="section-lead">
+          We believe spiritual growth happens best in community. Whether you're a man seeking brotherhood, a woman looking for meaningful connections, or someone wanting to serve, there's a place for you here.
+        </p>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card">
+          <h3>Fight Club (Men's Ministry)</h3>
+          <p>
+            Because no man was meant to fight alone. A men's gathering built on brotherhood, faith, and honesty. The Holy Spirit strengthens men to live with courage, purity, and purpose. Second Monday of each month at 6:00 PM.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Rooted (Women's Gathering)</h3>
+          <p>
+            A welcoming space for women to gather, grow, and build lasting connection. We believe spiritual growth happens best in community. Women of all generations growing deeper in Christ together. First Tuesday of every month at 6:00 PM.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Model City Missions</h3>
+          <p>
+            Our community outreach focused on home improvement and neighborhood restoration. Volunteers work side-by-side to paint, repair, and renew homes for local residents at no cost — because loving your neighbor means showing up for them.
+          </p>
+        </div>
+      </div>
+
+      <div class="image-gallery" style="margin-top: 3rem;">
+        <div class="gallery-item">
+          <img 
+            src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/89603531-700d-448d-2103-b63d4d363b00/medium" 
+            alt="Fight Club men's ministry"
+            loading="lazy">
+          <div class="gallery-caption">Fight Club — Men growing together in faith</div>
+        </div>
+        <div class="gallery-item">
+          <img 
+            src="https://pub-c9e81b68c3a046699b9a51efe8bde103.r2.dev/modelcitymissionimages/workinghard-modelcitymissions.png" 
+            alt="Model City Missions volunteers working"
+            loading="lazy">
+          <div class="gallery-caption">Serving our community with compassion and purpose</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- What We Believe (Integrated Throughout) -->
+    <section class="section">
+      <div class="section-header">
+        <h2>Our Core Beliefs</h2>
+        <p class="section-lead">
+          We believe the Bible is God's inspired Word and the authority for faith and life. We believe in one true God—Father, Son, and Holy Spirit. We believe Jesus Christ is Lord and Savior, and salvation is offered by grace through faith, expressed through confession, repentance, and baptism.
+        </p>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card">
+          <h3>God & Scripture</h3>
+          <p>
+            We believe there is one true God who eternally exists in three Persons: God the Father, God the Son, and God the Holy Spirit. We believe the sixty-six books of the Bible are inspired by God and are the final authority for understanding God and life.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Jesus Christ</h3>
+          <p>
+            We believe Jesus Christ is fully God who became human to save us from sin. His life shows us how to live, His death redeems us, and His resurrection guarantees our resurrection to new life. Jesus is the only way to have a saving relationship with God.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Transformation</h3>
+          <p>
+            We believe God not only saves us, but transforms us into His image as revealed in Jesus Christ. Transformation begins at salvation, is sustained by grace, and grows as our lives are increasingly aligned with God's will through the Holy Spirit.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Service Times -->
+    <section class="section">
+      <div class="section-header">
+        <h2>Join Us This Week</h2>
+        <p class="section-lead">
+          We gather together to worship, learn from Scripture, and grow in faith as a community. All are welcome.
+        </p>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card" style="background: linear-gradient(135deg, var(--brand-blue) 0%, var(--brand-blue-dark) 100%); color: white; border: none;">
+          <h3 style="color: white;">Sunday Morning</h3>
+          <p style="color: rgba(255, 255, 255, 0.95); font-size: clamp(16px, 1.4vw, 18px); line-height: 2;">
+            Bible Study: 9:00 AM<br>
+            Worship: 10:00 AM
+          </p>
+        </div>
+
+        <div class="card" style="background: linear-gradient(135deg, var(--brand-blue) 0%, var(--brand-blue-dark) 100%); color: white; border: none;">
+          <h3 style="color: white;">Sunday Evening</h3>
+          <p style="color: rgba(255, 255, 255, 0.95); font-size: clamp(16px, 1.4vw, 18px); line-height: 2;">
+            Worship: 6:00 PM
+          </p>
+        </div>
+
+        <div class="card" style="background: linear-gradient(135deg, var(--brand-blue) 0%, var(--brand-blue-dark) 100%); color: white; border: none;">
+          <h3 style="color: white;">Wednesday</h3>
+          <p style="color: rgba(255, 255, 255, 0.95); font-size: clamp(16px, 1.4vw, 18px); line-height: 2;">
+            Bible Study: 7:00 PM
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== Footer ===== -->
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        
+        <!-- About -->
+        <div class="footer-section">
+          <h4>New Iberia Church of Christ</h4>
+          <p>
+            A family of faith following Jesus and serving our community with love. We believe the Bible is God's inspired Word and the authority for faith and life.
+          </p>
+        </div>
+
+        <!-- Contact -->
+        <div class="footer-section">
+          <h4>Get In Touch</h4>
+          <p>667 Charles St<br>New Iberia, LA 70560</p>
+          <p>Phone: <a href="tel:337-364-2662">337-364-2662</a></p>
+          <p>
+            <a href="mailto:connect@newiberiachurchofchrist.com">connect@newiberiachurchofchrist.com</a><br>
+            <a href="mailto:kearn@newiberiachurchofchrist.com">kearn@newiberiachurchofchrist.com</a><br>
+            <a href="mailto:development@newiberiachurchofchrist.com">development@newiberiachurchofchrist.com</a>
+          </p>
+        </div>
+
+        <!-- Service Times -->
+        <div class="footer-section">
+          <h4>Service Times</h4>
+          <p>
+            <strong>Sunday Morning</strong><br>
+            Bible Study: 9:00 AM<br>
+            Worship: 10:00 AM
+          </p>
+          <p>
+            <strong>Sunday Evening</strong><br>
+            Worship: 6:00 PM
+          </p>
+          <p>
+            <strong>Wednesday</strong><br>
+            Bible Study: 7:00 PM
+          </p>
+        </div>
+
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; <span id="currentYear"></span> New Iberia Church of Christ. All rights reserved. • <a href="/dashboard">Dashboard Login</a></p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===== JavaScript ===== -->
+  <script>
+    // Current Year
+    document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+    // Header Shrink on Scroll
+    const header = document.getElementById('siteHeader');
+    let lastScrollY = 0;
+    let ticking = false;
+
+    function updateHeader() {
+      const scrollY = window.scrollY || window.pageYOffset;
+      
+      if (scrollY > 20) {
+        header.classList.add('is-scrolled');
+      } else {
+        header.classList.remove('is-scrolled');
+      }
+
+      lastScrollY = scrollY;
+      ticking = false;
+    }
+
+    window.addEventListener('scroll', () => {
+      if (!ticking) {
+        window.requestAnimationFrame(updateHeader);
+        ticking = true;
+      }
+    }, { passive: true });
+
+    // Mobile Menu Toggle
+    const menuToggle = document.getElementById('menuToggle');
+    const menuClose = document.getElementById('menuClose');
+    const drawer = document.getElementById('mobileDrawer');
+    const backdrop = document.getElementById('drawerBackdrop');
+
+    function openMenu() {
+      drawer.classList.add('is-open');
+      backdrop.classList.add('is-open');
+      drawer.setAttribute('aria-hidden', 'false');
+      menuToggle.setAttribute('aria-expanded', 'true');
+      menuClose.setAttribute('aria-expanded', 'true');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeMenu() {
+      drawer.classList.remove('is-open');
+      backdrop.classList.remove('is-open');
+      drawer.setAttribute('aria-hidden', 'true');
+      menuToggle.setAttribute('aria-expanded', 'false');
+      menuClose.setAttribute('aria-expanded', 'false');
+      document.body.style.overflow = '';
+    }
+
+    menuToggle.addEventListener('click', openMenu);
+    menuClose.addEventListener('click', closeMenu);
+    backdrop.addEventListener('click', closeMenu);
+
+    // Close on Escape key
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && drawer.classList.contains('is-open')) {
+        closeMenu();
+      }
+    });
+
+    // Hero Subtle Parallax (Respects reduced motion)
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const hero = document.getElementById('homeHero');
+    const heroMedia = document.getElementById('heroMedia');
+
+    if (!prefersReducedMotion && hero && heroMedia) {
+      let heroTicking = false;
+
+      function updateHeroParallax() {
+        const rect = hero.getBoundingClientRect();
+        const scrollProgress = Math.min(
+          Math.max((window.innerHeight - rect.top) / (window.innerHeight + rect.height), 0),
+          1
+        );
+
+        const translateY = (scrollProgress - 0.5) * 20;
+        heroMedia.style.transform = `translate3d(0, ${translateY}px, 0) scale(1.05)`;
+        
+        heroTicking = false;
+      }
+
+      window.addEventListener('scroll', () => {
+        if (!heroTicking) {
+          window.requestAnimationFrame(updateHeroParallax);
+          heroTicking = true;
+        }
+      }, { passive: true });
+
+      updateHeroParallax();
+    }
+  </script>
+
+</body>
+</html>

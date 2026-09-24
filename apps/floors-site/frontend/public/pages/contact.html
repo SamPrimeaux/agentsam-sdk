@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Us | Anything Floors and More | Lafayette, LA</title>
+    <meta name="description"
+        content="Get in touch with Anything Floors and More for your free flooring estimate. Serving Lafayette and the Acadiana region. Call (337) 552-3140.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-green: #3a5a4d;
+            --primary-green-light: #4a6b5d;
+            --secondary-green: #4a7462;
+            --light-green: #5a8472;
+            --accent-green: #6a9482;
+            --cream: #f5f3ef;
+            --warm-gray: #4a4a4a;
+            --light-gray: #e8e8e8;
+            --gold: #c9a961;
+            --white: #ffffff;
+            --off-white: #fafafa;
+            --dark: #1a1a1a;
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--warm-gray);
+            line-height: 1.6;
+            overflow-x: hidden;
+            background: linear-gradient(to bottom,
+                    var(--white) 0%,
+                    #fcfcfc 15%,
+                    #f9faf9 30%,
+                    #f6f8f6 50%,
+                    #f3f6f4 70%,
+                    #f0f4f2 85%,
+                    var(--cream) 100%);
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--dark);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        /* Navigation - Glassmorphic */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            border-bottom: 1px solid rgba(58, 90, 77, 0.1);
+            z-index: 1000;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: scaleY(1);
+            transform-origin: top;
+        }
+
+        .navbar.scrolled {
+            background: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 4px 30px rgba(58, 90, 77, 0.12);
+            transform: scaleY(0.95);
+            border-bottom: 1px solid rgba(58, 90, 77, 0.15);
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.25rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: padding 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .navbar.scrolled .nav-container {
+            padding: 1rem 2rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .navbar.scrolled .logo {
+            transform: scale(0.95);
+        }
+
+        .logo img {
+            height: 130px;
+            width: auto;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover img {
+            transform: scale(1.05);
+        }
+
+        .nav-menu {
+            display: flex;
+            align-items: center;
+            gap: 2.5rem;
+            list-style: none;
+        }
+
+        .nav-link {
+            color: var(--warm-gray);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            letter-spacing: -0.01em;
+            position: relative;
+            transition: color 0.3s ease;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--primary-green);
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: var(--primary-green);
+        }
+
+        .nav-link:hover::after,
+        .nav-link.active::after {
+            width: 100%;
+        }
+
+        .nav-cta {
+            background: var(--primary-green);
+            color: var(--white);
+            padding: 0.8rem 1.8rem;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-decoration: none;
+            letter-spacing: -0.01em;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .nav-cta:hover {
+            background: var(--primary-green-light);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(58, 90, 77, 0.25);
+        }
+
+        .mobile-toggle {
+            display: none;
+            flex-direction: column;
+            gap: 0.4rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.6rem;
+            z-index: 1001;
+        }
+
+        .hamburger {
+            width: 26px;
+            height: 2.5px;
+            background: var(--primary-green);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 2px;
+        }
+
+        /* Contact Section */
+        .contact-section {
+            margin-top: 80px;
+            padding: 6rem 2rem;
+            max-width: 1400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .contact-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .contact-header h1 {
+            font-size: clamp(2.5rem, 6vw, 4rem);
+            margin-bottom: 1rem;
+            color: var(--primary-green);
+        }
+
+        .contact-header p {
+            font-size: clamp(1.1rem, 2.5vw, 1.3rem);
+            color: var(--warm-gray);
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .contact-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            margin-bottom: 4rem;
+        }
+
+        .contact-info {
+            background: var(--white);
+            padding: 3rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(58, 90, 77, 0.08);
+        }
+
+        .contact-info h2 {
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            color: var(--primary-green);
+        }
+
+        .info-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .info-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary-green), var(--primary-green-light));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 1.5rem;
+        }
+
+        .info-content h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+        }
+
+        .info-content p,
+        .info-content a {
+            font-size: 1.05rem;
+            color: var(--warm-gray);
+            text-decoration: none;
+            display: block;
+        }
+
+        .info-content a:hover {
+            color: var(--primary-green);
+        }
+
+        .contact-image {
+            width: 100%;
+            height: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(58, 90, 77, 0.15);
+        }
+
+        .contact-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Form */
+        .contact-form {
+            background: var(--white);
+            padding: 3rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(58, 90, 77, 0.08);
+        }
+
+        .contact-form h2 {
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            color: var(--primary-green);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--dark);
+            font-weight: 700;
+            margin-bottom: 0.6rem;
+            font-size: 0.95rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid var(--light-gray);
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: 'DM Sans', sans-serif;
+            transition: all 0.3s ease;
+            background: var(--white);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary-green);
+            box-shadow: 0 0 0 4px rgba(58, 90, 77, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 150px;
+        }
+
+        .submit-button {
+            width: 100%;
+            background: var(--primary-green);
+            color: var(--white);
+            padding: 1.3rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .submit-button:hover {
+            background: var(--primary-green-light);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(58, 90, 77, 0.25);
+        }
+
+        /* Footer */
+        .footer {
+            background: linear-gradient(135deg,
+                    rgba(58, 90, 77, 0.95) 0%,
+                    rgba(74, 107, 93, 0.98) 100%);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+            padding: 4rem 2rem 2rem;
+        }
+
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 3rem;
+            margin-bottom: 3rem;
+        }
+
+        .footer-section h4 {
+            color: var(--white);
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            font-weight: 700;
+        }
+
+        .footer-section p {
+            line-height: 1.8;
+            margin-bottom: 0.5rem;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .footer-section a {
+            color: rgba(255, 255, 255, 0.85);
+            text-decoration: none;
+            line-height: 2;
+            display: block;
+            transition: color 0.3s ease;
+        }
+
+        .footer-section a:hover {
+            color: var(--gold);
+        }
+
+        .footer-bottom {
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            padding-top: 2rem;
+            text-align: center;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* Mobile */
+        @media (max-width: 968px) {
+            .nav-menu {
+                position: fixed;
+                top: 0;
+                left: -70%;
+                width: 70%;
+                height: 100vh;
+                background: rgba(58, 90, 77, 0.95);
+                backdrop-filter: blur(20px);
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 6rem 2.5rem 2rem;
+                gap: 1.5rem;
+                transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                z-index: 999;
+            }
+
+            .nav-menu.active {
+                left: 0;
+            }
+
+            .nav-link {
+                color: rgba(255, 255, 255, 0.9);
+                font-size: 1.1rem;
+            }
+
+            .mobile-toggle {
+                display: flex;
+            }
+
+            .contact-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .logo img {
+                height: 100px;
+            }
+
+            .contact-info,
+            .contact-form {
+                padding: 2rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">
+                <img src="/api/cms/serve?key=cms/logo.png"
+                    alt="Anything Floors and More Logo" class="logo-image"
+                    onerror="this.onerror=null;this.src='https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/7fb34d9c-fb11-4403-6a45-74ac90492e00/avatar';">
+            </a>
+
+            <button class="mobile-toggle" id="mobile-toggle" aria-label="Toggle navigation">
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+            </button>
+
+            <ul class="nav-menu" id="nav-menu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="/services" class="nav-link">Services</a></li>
+                <li><a href="/process" class="nav-link">Process</a></li>
+                <li><a href="/gallery" class="nav-link">Gallery</a></li>
+                <li><a href="/contact" class="nav-link active">Contact</a></li>
+                <li><a href="/contact" class="nav-cta">Get Estimate</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Contact Section -->
+    <section class="contact-section">
+        <div class="contact-header">
+            <h1>Get In Touch</h1>
+            <p>Ready to transform your space? Contact us today for a free consultation and estimate.</p>
+        </div>
+
+        <div class="contact-grid">
+            <div class="contact-info">
+                <h2>Contact Information</h2>
+
+                <div class="info-item">
+                    <div class="info-icon">📞</div>
+                    <div class="info-content">
+                        <h3>Phone</h3>
+                        <a href="tel:3375523140">(337) 552-3140</a>
+                    </div>
+                </div>
+
+                <div class="info-item">
+                    <div class="info-icon">✉️</div>
+                    <div class="info-content">
+                        <h3>Email</h3>
+                        <a href="mailto:info@anythingfloorsandmore.com">info@anythingfloorsandmore.com</a>
+                    </div>
+                </div>
+
+                <div class="info-item">
+                    <div class="info-icon">📍</div>
+                    <div class="info-content">
+                        <h3>Service Area</h3>
+                        <p>Lafayette, LA</p>
+                        <p>Acadiana Region</p>
+                    </div>
+                </div>
+
+                <div class="info-item">
+                    <div class="info-icon">🕒</div>
+                    <div class="info-content">
+                        <h3>Hours</h3>
+                        <p>Mon-Fri: 8AM - 6PM</p>
+                        <p>Saturday by Appointment</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="contact-image">
+                <img src="/api/cms/serve?key=cms/hero.jpg"
+                    alt="Contact Anything Floors and More"
+                    onerror="this.onerror=null;this.src='https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/f454d0c2-a810-489a-f8f4-d2bb16092700/medium';">
+            </div>
+        </div>
+
+        <div class="contact-form">
+            <h2>Request Your Free Estimate</h2>
+            <form id="contact-form">
+                <div class="form-group">
+                    <label for="name">Full Name *</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email Address *</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone">Phone Number *</label>
+                    <input type="tel" id="phone" name="phone" required>
+                </div>
+                <div class="form-group">
+                    <label for="floor-type">Floor Type</label>
+                    <select id="floor-type" name="floor-type">
+                        <option value="">Select a type...</option>
+                        <option value="hardwood">Hardwood</option>
+                        <option value="lvp">Luxury Vinyl Plank</option>
+                        <option value="tile">Tile</option>
+                        <option value="concrete">Concrete/Polished</option>
+                        <option value="renovation">Complete Renovation</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="message">Project Details</label>
+                    <textarea id="message" name="message" placeholder="Tell us about your project..."></textarea>
+                </div>
+                <button type="submit" class="submit-button">Get Free Estimate</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <!-- Unified Footer -->
+    <link rel="stylesheet" href="/shared/footer.css">
+    <script>
+        fetch('/shared/footer.html')
+            .then(response => response.text())
+            .then(html => {
+                document.body.insertAdjacentHTML('beforeend', html);
+            });
+    </script>
+
+    <script>
+        // Mobile navigation
+        const navbar = document.getElementById('navbar');
+        const mobileToggle = document.getElementById('mobile-toggle');
+        const navMenu = document.getElementById('nav-menu');
+
+        mobileToggle.addEventListener('click', () => {
+            navMenu.classList.toggle('active');
+            mobileToggle.classList.toggle('active');
+        });
+
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                navMenu.classList.remove('active');
+                mobileToggle.classList.remove('active');
+            });
+        });
+
+        // Navbar scroll effect with squish
+        let lastScroll = 0;
+        window.addEventListener('scroll', () => {
+            const currentScroll = window.scrollY;
+            if (currentScroll > 100) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+            lastScroll = currentScroll;
+        });
+
+        // Set active nav based on current page
+        const currentPath = window.location.pathname;
+        document.querySelectorAll('.nav-link').forEach(link => {
+            if (link.getAttribute('href') === currentPath) {
+                link.classList.add('active');
+            }
+        });
+
+        // Form submission
+        document.getElementById('contact-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const formData = {
+                name: this.querySelector('#name').value,
+                email: this.querySelector('#email').value,
+                phone: this.querySelector('#phone').value,
+                floorType: this.querySelector('#floor-type').value,
+                message: this.querySelector('#message').value
+            };
+
+            try {
+                const response = await fetch('/api/estimate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    alert('Thank you! We\'ll contact you within 24 hours.');
+                    this.reset();
+                } else {
+                    alert('There was an error submitting your request. Please call us at (337) 552-3140.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('There was an error submitting your request. Please call us at (337) 552-3140.');
+            }
+        });
+
+        // Phone formatting
+        const phoneInput = document.getElementById('phone');
+        phoneInput.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 10) value = value.slice(0, 10);
+
+            if (value.length >= 6) {
+                e.target.value = `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6)}`;
+            } else if (value.length >= 3) {
+                e.target.value = `(${value.slice(0, 3)}) ${value.slice(3)}`;
+            } else {
+                e.target.value = value;
+            }
+        });
+    </script>
+</body>
+
+</html>

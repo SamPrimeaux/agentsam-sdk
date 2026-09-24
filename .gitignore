@@ -29,3 +29,4 @@ apps/cad-creator/backend/runtime/
 !packages/**/.agentsam/
 !packages/**/.agentsam/**
 generated/
+work/

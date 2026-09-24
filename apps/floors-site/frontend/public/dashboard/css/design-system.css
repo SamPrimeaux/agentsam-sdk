@@ -1,0 +1,425 @@
+/**
+ * Design System - Google/iOS/Clay.global Quality
+ * Anything Floors and More Dashboard
+ */
+
+/* ============================================
+   FOUNDATION: Typography & Spacing
+   ============================================ */
+
+:root {
+    /* Typography Scale (8px baseline) */
+    --text-xs: 0.75rem;
+    /* 12px */
+    --text-sm: 0.875rem;
+    /* 14px */
+    --text-base: 1rem;
+    /* 16px */
+    --text-lg: 1.125rem;
+    /* 18px */
+    --text-xl: 1.25rem;
+    /* 20px */
+    --text-2xl: 1.5rem;
+    /* 24px */
+    --text-3xl: 1.875rem;
+    /* 30px */
+    --text-4xl: 2.25rem;
+    /* 36px */
+
+    /* Line Heights */
+    --leading-tight: 1.2;
+    --leading-normal: 1.5;
+    --leading-relaxed: 1.75;
+
+    /* Spacing Scale (8px increments) */
+    --space-1: 0.25rem;
+    /* 4px */
+    --space-2: 0.5rem;
+    /* 8px */
+    --space-3: 0.75rem;
+    /* 12px */
+    --space-4: 1rem;
+    /* 16px */
+    --space-5: 1.25rem;
+    /* 20px */
+    --space-6: 1.5rem;
+    /* 24px */
+    --space-8: 2rem;
+    /* 32px */
+    --space-10: 2.5rem;
+    /* 40px */
+    --space-12: 3rem;
+    /* 48px */
+    --space-16: 4rem;
+    /* 64px */
+
+    /* Timing Functions */
+    --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+    --ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
+
+    /* Durations */
+    --duration-fast: 150ms;
+    --duration-normal: 250ms;
+    --duration-slow: 350ms;
+
+    /* Elevation Shadows (Material Design) */
+    --elevation-0: none;
+    --elevation-1: 0 1px 3px rgba(31, 49, 40, 0.12), 0 1px 2px rgba(31, 49, 40, 0.24);
+    --elevation-2: 0 3px 6px rgba(31, 49, 40, 0.16), 0 3px 6px rgba(31, 49, 40, 0.23);
+    --elevation-4: 0 10px 20px rgba(31, 49, 40, 0.19), 0 6px 6px rgba(31, 49, 40, 0.23);
+    --elevation-8: 0 14px 28px rgba(31, 49, 40, 0.25), 0 10px 10px rgba(31, 49, 40, 0.22);
+    --elevation-16: 0 19px 38px rgba(31, 49, 40, 0.30), 0 15px 12px rgba(31, 49, 40, 0.22);
+
+    /* Semantic Color System */
+    --color-primary: #3a5a4d;
+    --color-primary-container: rgba(58, 90, 77, 0.12);
+    --color-on-primary: #ffffff;
+
+    --color-surface: #ffffff;
+    --color-surface-variant: #f5f3ef;
+    --color-on-surface: #1a1a1a;
+    --color-on-surface-variant: #4a4a4a;
+
+    --color-background: #fafafa;
+    --color-background-variant: #f5f3ef;
+
+    --color-outline: rgba(58, 90, 77, 0.12);
+    --color-outline-variant: rgba(58, 90, 77, 0.08);
+    --color-divider: rgba(58, 90, 77, 0.12);
+
+    --color-hover: rgba(58, 90, 77, 0.08);
+    --color-pressed: rgba(58, 90, 77, 0.16);
+    --color-focus: rgba(58, 90, 77, 0.24);
+    --color-selected: rgba(58, 90, 77, 0.12);
+    --color-disabled: rgba(58, 90, 77, 0.04);
+}
+
+/* Typography Classes */
+.heading-1 {
+    font-size: var(--text-4xl);
+    line-height: var(--leading-tight);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--color-on-surface);
+}
+
+.heading-2 {
+    font-size: var(--text-3xl);
+    line-height: var(--leading-tight);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--color-on-surface);
+}
+
+.heading-3 {
+    font-size: var(--text-2xl);
+    line-height: var(--leading-tight);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--color-on-surface);
+}
+
+.heading-4 {
+    font-size: var(--text-xl);
+    line-height: var(--leading-tight);
+    font-weight: 600;
+    color: var(--color-on-surface);
+}
+
+.body-lg {
+    font-size: var(--text-lg);
+    line-height: var(--leading-normal);
+    color: var(--color-on-surface);
+}
+
+.body {
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    color: var(--color-on-surface);
+}
+
+.body-sm {
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+    color: var(--color-on-surface-variant);
+}
+
+.caption {
+    font-size: var(--text-xs);
+    line-height: var(--leading-relaxed);
+    color: var(--color-on-surface-variant);
+}
+
+/* ============================================
+   ENHANCED LOGO SYSTEM
+   ============================================ */
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--space-2);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all var(--duration-normal) var(--ease-standard);
+}
+
+.logo-container:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.logo {
+    height: 56px;
+    width: auto;
+    object-fit: contain;
+    filter:
+        drop-shadow(0 2px 4px rgba(255, 255, 255, 0.4)) drop-shadow(0 4px 8px rgba(255, 255, 255, 0.3)) drop-shadow(0 0 12px rgba(255, 255, 255, 0.2));
+    transition: all var(--duration-normal) var(--ease-standard);
+}
+
+.logo:hover {
+    filter:
+        drop-shadow(0 4px 8px rgba(255, 255, 255, 0.5)) drop-shadow(0 8px 16px rgba(255, 255, 255, 0.4)) drop-shadow(0 0 20px rgba(255, 255, 255, 0.3));
+    transform: scale(1.03);
+}
+
+/* ============================================
+   BUTTON SYSTEM
+   ============================================ */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-6);
+    border-radius: var(--space-2);
+    font-weight: 600;
+    font-size: var(--text-sm);
+    letter-spacing: 0.01em;
+    border: none;
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-standard);
+    position: relative;
+    overflow: hidden;
+    font-family: 'DM Sans', sans-serif;
+}
+
+.btn-primary {
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    box-shadow: var(--elevation-1);
+}
+
+.btn-primary:hover {
+    background: #2d4639;
+    box-shadow: var(--elevation-2);
+    transform: translateY(-1px);
+}
+
+.btn-primary:active {
+    background: #1f3128;
+    box-shadow: var(--elevation-1);
+    transform: translateY(0);
+}
+
+.btn-primary:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+}
+
+.btn-primary:disabled {
+    background: var(--color-disabled);
+    color: var(--color-on-surface-variant);
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.btn-secondary {
+    background: var(--color-surface);
+    color: var(--color-primary);
+    border: 1px solid var(--color-outline);
+    box-shadow: var(--elevation-1);
+}
+
+.btn-secondary:hover {
+    background: var(--color-hover);
+    border-color: var(--color-primary);
+    box-shadow: var(--elevation-2);
+}
+
+/* ============================================
+   INPUT SYSTEM
+   ============================================ */
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.input-label {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-on-surface);
+    letter-spacing: 0.01em;
+}
+
+.input {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-surface);
+    border: 1px solid var(--color-outline);
+    border-radius: var(--space-2);
+    font-size: var(--text-base);
+    color: var(--color-on-surface);
+    transition: all var(--duration-fast) var(--ease-standard);
+    font-family: 'DM Sans', sans-serif;
+}
+
+.input:hover {
+    border-color: var(--color-outline-variant);
+}
+
+.input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-focus);
+    outline: none;
+}
+
+.input:disabled {
+    background: var(--color-disabled);
+    color: var(--color-on-surface-variant);
+    cursor: not-allowed;
+}
+
+/* ============================================
+   CARD SYSTEM
+   ============================================ */
+
+.card {
+    background: var(--color-surface);
+    border-radius: var(--space-3);
+    padding: var(--space-6);
+    box-shadow: var(--elevation-1);
+    border: 1px solid var(--color-outline-variant);
+    transition: all var(--duration-normal) var(--ease-standard);
+}
+
+.card-interactive {
+    cursor: pointer;
+}
+
+.card-interactive:hover {
+    box-shadow: var(--elevation-4);
+    transform: translateY(-2px);
+    border-color: var(--color-outline);
+}
+
+.card-interactive:active {
+    transform: translateY(0);
+    box-shadow: var(--elevation-2);
+}
+
+/* ============================================
+   LOADING STATES
+   ============================================ */
+
+.skeleton {
+    background: linear-gradient(90deg,
+            rgba(58, 90, 77, 0.06) 0%,
+            rgba(58, 90, 77, 0.12) 50%,
+            rgba(58, 90, 77, 0.06) 100%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+    border-radius: var(--space-2);
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* ============================================
+   UTILITIES
+   ============================================ */
+
+.transition-all {
+    transition: all var(--duration-normal) var(--ease-standard);
+}
+
+.hover-lift {
+    transition: transform var(--duration-normal) var(--ease-standard),
+        box-shadow var(--duration-normal) var(--ease-standard);
+}
+
+.hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--elevation-4);
+}
+
+.focus-ring:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--color-focus);
+}
+
+/* Spacing Utilities */
+.p-0 {
+    padding: 0;
+}
+
+.p-2 {
+    padding: var(--space-2);
+}
+
+.p-4 {
+    padding: var(--space-4);
+}
+
+.p-6 {
+    padding: var(--space-6);
+}
+
+.p-8 {
+    padding: var(--space-8);
+}
+
+.m-0 {
+    margin: 0;
+}
+
+.m-2 {
+    margin: var(--space-2);
+}
+
+.m-4 {
+    margin: var(--space-4);
+}
+
+.m-6 {
+    margin: var(--space-6);
+}
+
+.m-8 {
+    margin: var(--space-8);
+}
+
+.gap-2 {
+    gap: var(--space-2);
+}
+
+.gap-4 {
+    gap: var(--space-4);
+}
+
+.gap-6 {
+    gap: var(--space-6);
+}

@@ -1,0 +1,10 @@
+{
+  "name": "@inneranimalmedia/app-shinshu-site",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Scaffolded APP from theme harvest: Shinshu Solutions",
+  "type": "module",
+  "scripts": {
+    "preview": "python3 -m http.server 4177 --directory frontend/public"
+  }
+}
