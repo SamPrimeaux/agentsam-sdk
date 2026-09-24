@@ -6,3 +6,4 @@ export * from './ToolReceipt';
 export * from './ArtifactCard';
 export * from './ConnectedAgentPanel';
 export * from './GoalStatusStrip';
+export * from './MiniAgentSam';

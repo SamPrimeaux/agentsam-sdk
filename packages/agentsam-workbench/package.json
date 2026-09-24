@@ -8,6 +8,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./agent": "./src/agent/index.ts",
+    "./agent/mini-agentsam.css": "./src/agent/mini-agentsam.css",
     "./shell": "./src/shell/index.ts",
     "./browser": "./src/browser/index.ts",
     "./terminal": "./src/terminal/index.ts"

@@ -1,0 +1,12 @@
+[data-mini-agentsam] { --mini-surface: var(--nav-surface, #292929); --mini-text: var(--nav-text, #f5f5f5); --mini-muted: var(--nav-muted, #c2c2c2); --mini-border: var(--nav-border, #ffffff26); --mini-accent: var(--nav-accent, #a78bfa); font: 400 14px/1.5 var(--nav-font, system-ui); color: var(--mini-text); }
+[data-annotation-selecting] iframe { pointer-events: none; }
+[data-annotation-selecting] { cursor: crosshair; }
+.mini-agentsam-outline { position: fixed; pointer-events: none; z-index: 9998; border: 2px solid var(--mini-accent); border-radius: 6px; }
+.mini-agentsam-hint { position: fixed; z-index: 10000; top: 64px; left: 50%; transform: translateX(-50%); max-width: calc(100vw - 24px); border-radius: 24px; padding: 10px 16px; background: var(--mini-surface); color: var(--mini-text); box-shadow: 0 0 0 1px var(--mini-border); }
+.mini-agentsam-panel { position: fixed; z-index: 10000; width: 360px; max-width: calc(100vw - 24px); max-height: calc(100dvh - 80px); overflow-y: auto; pointer-events: auto; border-radius: 20px; padding: 12px; background: color-mix(in srgb, var(--mini-surface) 90%, transparent); color: var(--mini-text); backdrop-filter: blur(24px) saturate(110%); box-shadow: 0 0 0 1px var(--mini-border), 0 16px 48px #00000028; }
+.mini-agentsam-heading { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--mini-muted); }
+.mini-agentsam-heading span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mini-agentsam-heading button { font-size: 22px; min-width: 40px; min-height: 40px; }
+.mini-agentsam-panel textarea { width: 100%; resize: vertical; min-height: 64px; background: transparent; color: var(--mini-text); font: inherit; padding: 8px; }
+.mini-agentsam-panel textarea::placeholder { color: var(--mini-muted); }
+.mini-agentsam-panel p { font-size: 12px; margin: 8px; }
