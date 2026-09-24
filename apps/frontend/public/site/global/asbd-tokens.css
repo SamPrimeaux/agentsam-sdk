@@ -1,0 +1,15 @@
+/* AgentSam Blue Dark (ASBD) — shared shell tokens */
+:root {
+  --asbd-font-sans: 'Nunito', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  --asbd-color-navy: #0A1628;
+  --asbd-color-blue: #167BFC;
+  --asbd-color-blue-hover: #0D6DE8;
+  --asbd-color-white: #FFFFFF;
+
+  --asbd-color-footer-dark: #1A1F2E;
+  --asbd-color-footer-light: #F0F3F8;
+
+  --asbd-header-height: 76px;
+  --asbd-layout-max: 1280px;
+}
