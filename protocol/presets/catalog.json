@@ -12,14 +12,25 @@
     },
     "cms": {
       "id": "cms",
-      "version": 1,
+      "version": 2,
       "lane": "cms",
-      "description": "Content-oriented application starting from local CMS primitives with explicit auth/deploy opt-ins.",
-      "features": ["cms", "knowledge"],
-      "capabilities": ["scaffold.create", "repository.snapshot", "knowledge.index", "knowledge.search", "site.scrape", "deploy.receipt"],
-      "defaults": { "database": "sqlite", "assets": "local", "deploy": "local" }
-    },
-    "prototype": {
+      "description": "Content-oriented application with AgentSam CMS editor, stock heuristic-theme, and explicit auth/deploy opt-ins.",
+      "features": ["cms", "knowledge", "theme"],
+      "capabilities": ["scaffold.create", "repository.snapshot", "knowledge.index", "knowledge.search", "site.scrape", "deploy.receipt", "theme.storefront.shell"],
+      "defaults": {
+        "database": "sqlite",
+        "assets": "local",
+        "deploy": "local",
+        "theme": "heuristic-theme",
+        "composer": "agentsam.mini-composer"
+      },
+      "packages": {
+        "theme": "@inneranimalmedia/heuristic-theme",
+        "composer": "@inneranimalmedia/agentsam-workbench",
+        "analytics": "@inneranimalmedia/commerce-analytics"
+      },
+      "notes": "Fuel & Free Time hosts proving-ground copies; SDK packages are the publish targets."
+    },    "prototype": {
       "id": "prototype",
       "version": 1,
       "lane": "fullstack",
@@ -40,8 +51,9 @@
   },
   "addons": {
     "agent": { "id": "agent", "capabilities": ["scaffold.create"], "description": "AgentSam local runtime selection." },
-    "auth": { "id": "auth", "capabilities": ["identity.init"], "description": "Identity package selection; use `agentsam identity init` when a standalone auth app scaffold is required." },
-    "cms": { "id": "cms", "capabilities": ["site.scrape"], "description": "CMS/content feature selection." },
+    "auth": { "id": "auth", "capabilities": ["identity.init"], "description": "Identity selection (schema_version 2). Records provider_template; use `agentsam identity plan|init|schema` for protocol-driven setup." },
+    "cms": { "id": "cms", "capabilities": ["site.scrape"], "description": "CMS/content feature selection (stock theme: heuristic-theme)." },
+    "theme": { "id": "theme", "capabilities": ["theme.storefront.shell"], "description": "Stock storefront theme selection — default package @inneranimalmedia/heuristic-theme." },
     "knowledge": { "id": "knowledge", "capabilities": ["knowledge.index", "knowledge.search"], "description": "Portable repository indexing and retrieval." },
     "deploy-cloudflare": { "id": "deploy-cloudflare", "capabilities": ["deploy.receipt"], "description": "Select Cloudflare as the intended deploy target; provisioning remains explicit at deploy time." }
   }

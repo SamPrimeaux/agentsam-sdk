@@ -1,0 +1,35 @@
+{
+  "schema": "agentsam.feature.ui.v1",
+  "feature": "identity.oauth-login-portal",
+  "surface": "auth-portal",
+  "assets": [
+    "src/frontend/auth-portal/pages/login.html",
+    "src/frontend/auth-portal/pages/signup.html",
+    "src/frontend/auth-portal/pages/reset.html",
+    "src/frontend/auth-portal/shared/company-branding.js"
+  ],
+  "customizable": [
+    "logo",
+    "colors",
+    "support info",
+    "company branding"
+  ],
+  "customizable_fields": [
+    "company.name",
+    "company.logo_url",
+    "company.favicon_url",
+    "company.primary_color",
+    "company.auth_bg_color",
+    "company.support_email",
+    "company.website_url",
+    "company.tagline"
+  ],
+  "behavior": {
+    "implementation": "packages/identity",
+    "host_supplies": "brand/runtime config"
+  },
+  "ownership": {
+    "implementation": "packages/identity",
+    "branding": "host"
+  }
+}

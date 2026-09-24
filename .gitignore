@@ -23,3 +23,9 @@ agentsam-init-smoke/
 .agentsam/cad/
 .agentsam/cad-native-proof/
 apps/cad-creator/backend/runtime/
+/.agentsam/features.json
+
+# Allow package-local feature packets (identity, etc.)
+!packages/**/.agentsam/
+!packages/**/.agentsam/**
+generated/

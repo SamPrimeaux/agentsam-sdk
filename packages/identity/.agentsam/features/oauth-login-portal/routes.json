@@ -1,0 +1,74 @@
+{
+  "schema": "agentsam.feature.routes.v1",
+  "feature": "identity.oauth-login-portal",
+  "router": "src/server/worker-router.js",
+  "routes": [
+    {
+      "path": "/auth/login",
+      "kind": "page",
+      "access": "public",
+      "surface": "auth-portal"
+    },
+    {
+      "path": "/auth/signup",
+      "kind": "page",
+      "access": "public",
+      "surface": "auth-portal"
+    },
+    {
+      "path": "/auth/reset",
+      "kind": "page",
+      "access": "public",
+      "surface": "auth-portal"
+    },
+    {
+      "path": "/api/auth/login",
+      "method": "POST",
+      "kind": "api",
+      "access": "public"
+    },
+    {
+      "path": "/api/auth/signup",
+      "method": "POST",
+      "kind": "api",
+      "access": "public"
+    },
+    {
+      "path": "/api/oauth/google/start",
+      "kind": "api",
+      "access": "public",
+      "provider": "google"
+    },
+    {
+      "path": "/api/oauth/github/start",
+      "kind": "api",
+      "access": "public",
+      "provider": "github"
+    },
+    {
+      "path": "/api/oauth/iam/start",
+      "kind": "api",
+      "access": "public",
+      "provider": "inneranimalmedia",
+      "oauth_provider_key": "iam"
+    },
+    {
+      "path": "/api/oauth/cloudflare/start",
+      "kind": "api",
+      "access": "public",
+      "provider": "cloudflare"
+    },
+    {
+      "path": "/api/oauth/cloudflare/callback",
+      "kind": "api",
+      "access": "public",
+      "provider": "cloudflare"
+    }
+  ],
+  "sources": [
+    "src/frontend/auth-portal/README.md",
+    "src/oauth/README.md",
+    "src/oauth/redirect-paths.js",
+    "src/server/worker-router.js"
+  ]
+}

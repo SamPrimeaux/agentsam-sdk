@@ -110,7 +110,8 @@ function printLegacyHelp() {
     agentsam deploy            Graduate to Cloudflare / GCP when ready
     agentsam dockerize         Build/run app, knowledge, or CAD containers (--help)
     agentsam identity preview  Preview the reusable local auth portal (not production login)
-    agentsam identity init     Add reusable identity package surfaces
+    agentsam identity init     Scaffold identity app (+ optional --provider)
+    agentsam identity providers|plan|schema|resolve  Protocol-driven identity surfaces
     agentsam help
     agentsam --version
     agentsam --help
@@ -558,6 +559,7 @@ if (command === '--version' || command === '-v') {
   } catch (e) { reportCliError(e); process.exitCode = 1; }
 } else if (command === 'identity') {
   const sub = rest[0];
+  const identityProtocol = await import('./commands/identity-protocol.js');
   if (sub === 'preview') {
     try {
       await runIdentityPreview(rest.slice(1));
@@ -572,8 +574,36 @@ if (command === '--version' || command === '-v') {
       reportCliError(e);
       process.exit(1);
     }
+  } else if (sub === 'providers') {
+    try {
+      await identityProtocol.runIdentityProviders(rest.slice(1));
+    } catch (e) {
+      reportCliError(e);
+      process.exit(1);
+    }
+  } else if (sub === 'plan') {
+    try {
+      await identityProtocol.runIdentityPlan(rest.slice(1));
+    } catch (e) {
+      reportCliError(e);
+      process.exit(1);
+    }
+  } else if (sub === 'schema') {
+    try {
+      await identityProtocol.runIdentitySchema(rest.slice(1));
+    } catch (e) {
+      reportCliError(e);
+      process.exit(1);
+    }
+  } else if (sub === 'resolve') {
+    try {
+      await identityProtocol.runIdentityResolve(rest.slice(1));
+    } catch (e) {
+      reportCliError(e);
+      process.exit(1);
+    }
   } else {
-    console.error('\n  Usage:\n    agentsam identity preview [--open] [--port 8791]\n    agentsam identity init --name <project> [--brand "Name"]\n');
+    identityProtocol.printIdentityHelp();
     process.exit(1);
   }
 } else if (command === 'scaffold') {

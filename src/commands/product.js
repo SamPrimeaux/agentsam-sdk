@@ -126,6 +126,18 @@ export async function runCapabilities(argv = []) {
 
 function featureStatePath(cwd) { return path.join(cwd, '.agentsam', 'features.json'); }
 
+function parseAddArgs(argv = []) {
+  const opts = parseCommon(argv);
+  opts.provider = '';
+  opts.schemaProfile = '';
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === '--provider') opts.provider = argv[++i] || '';
+    else if (arg === '--schema' || arg === '--schema-profile') opts.schemaProfile = argv[++i] || '';
+  }
+  return opts;
+}
+
 export function applyPresetSelection(cwd, preset) {
   const filename = projectConfigPath(cwd);
   if (!fs.existsSync(filename)) throw new Error('not_agentsam_project');
@@ -136,31 +148,62 @@ export function applyPresetSelection(cwd, preset) {
 }
 
 export async function runAdd(argv = []) {
-  const opts = parseCommon(argv);
+  const opts = parseAddArgs(argv);
   const id = opts.positionals[0];
   if (!id || id === '--help') {
     const rows = listAddons();
-    console.log(`agentsam add <${rows.map(x => x.id).join('|')}> [--cwd PATH] [--json]`);
+    console.log(`agentsam add <${rows.map(x => x.id).join('|')}> [--cwd PATH] [--provider <id>] [--schema <profile>] [--json]`);
     return null;
   }
   const addon = getAddon(id);
   if (!addon) throw new Error(`unknown_addon:${id}`);
   const cwd = path.resolve(opts.cwd);
   if (!fs.existsSync(projectConfigPath(cwd))) throw new Error('not_agentsam_project');
-  fs.mkdirSync(path.dirname(featureStatePath(cwd)), { recursive: true });
-  let state = { schema_version: 1, features: {} };
-  if (fs.existsSync(featureStatePath(cwd))) state = JSON.parse(fs.readFileSync(featureStatePath(cwd), 'utf8'));
-  state.features ||= {};
-  state.features[addon.id] = { selected: true, capabilities: addon.capabilities, selected_at: new Date().toISOString() };
-  fs.writeFileSync(featureStatePath(cwd), `${JSON.stringify(state, null, 2)}\n`, 'utf8');
+
+  const { writeFeatureSelections } = await import('../lib/features-resolve.js');
+  let state = { schema_version: 2, features: {} };
+  if (fs.existsSync(featureStatePath(cwd))) {
+    state = JSON.parse(fs.readFileSync(featureStatePath(cwd), 'utf8'));
+    state.schema_version = 2;
+    state.features ||= {};
+  }
+
+  /** @type {Record<string, unknown>} */
+  const entry = {
+    selected: true,
+    capabilities: addon.capabilities,
+    selected_at: new Date().toISOString(),
+  };
+  if (addon.id === 'auth') {
+    const { normalizeProviderTemplateId } = await import('../lib/features-resolve.js');
+    entry.provider_template = normalizeProviderTemplateId(opts.provider) || 'inneranimalmedia';
+    if (opts.schemaProfile) entry.schema_profile = opts.schemaProfile;
+  }
+  state.features[addon.id] = entry;
+
+  const written = writeFeatureSelections(cwd, state);
   if (addon.id === 'deploy-cloudflare') {
     const config = readProjectConfig(cwd);
     setDeployTarget(config, 'cloudflare');
     writeProjectConfig(cwd, config);
   }
-  const result = { ok: true, feature: addon.id, capabilities: addon.capabilities, description: addon.description, state_file: '.agentsam/features.json' };
+  const result = {
+    ok: true,
+    feature: addon.id,
+    capabilities: addon.capabilities,
+    description: addon.description,
+    state_file: '.agentsam/features.json',
+    resolved_file: 'generated/.agentsam/features-resolved.json',
+    provider_template: entry.provider_template || null,
+    schema_profile: entry.schema_profile || null,
+    resources: written.snapshot?.features?.[addon.id]?.resources || null,
+  };
   if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-  else console.log(`\nAdded ${addon.id}\n  ${addon.description}\n  state: ${result.state_file}\n`);
+  else {
+    console.log(`\nAdded ${addon.id}\n  ${addon.description}\n  state: ${result.state_file}`);
+    if (entry.provider_template) console.log(`  provider: ${entry.provider_template}`);
+    console.log(`  resolved: ${result.resolved_file}\n`);
+  }
   return result;
 }
 

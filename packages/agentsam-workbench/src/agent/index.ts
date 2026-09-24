@@ -7,3 +7,4 @@ export * from './ArtifactCard';
 export * from './ConnectedAgentPanel';
 export * from './GoalStatusStrip';
 export * from './MiniAgentSam';
+export * from './ContextualComposer';

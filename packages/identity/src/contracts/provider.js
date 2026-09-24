@@ -1,9 +1,10 @@
-/** External identity provider contract. */
+/** External identity provider contract — registry order is intentional. */
 
 export const IdentityProviders = Object.freeze([
   'email',
   'google',
   'github',
   'gcp',
-  'iam',
+  'inneranimalmedia',
+  'cloudflare',
 ]);

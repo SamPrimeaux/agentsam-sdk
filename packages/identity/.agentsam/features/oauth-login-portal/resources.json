@@ -1,0 +1,47 @@
+{
+  "schema": "agentsam.feature.resources.v1",
+  "feature": "identity.oauth-login-portal",
+  "engine": "d1",
+  "migration_sources": [
+    "src/migrations/0001_identity_core.sql",
+    "src/migrations/0002_company.sql"
+  ],
+  "notes": "Migration files remain the schema authority. This JSON is an index/contract only.",
+  "tables": [
+    {
+      "name": "auth_users",
+      "purpose": "canonical user identity",
+      "source": "src/migrations/0001_identity_core.sql"
+    },
+    {
+      "name": "auth_sessions",
+      "purpose": "authenticated browser/session state",
+      "owner_column": "user_id",
+      "source": "src/migrations/0001_identity_core.sql"
+    },
+    {
+      "name": "account_identities",
+      "purpose": "external identity/provider mapping",
+      "owner_column": "account_id",
+      "source": "src/migrations/0001_identity_core.sql"
+    },
+    {
+      "name": "oauth_states",
+      "purpose": "short-lived OAuth/PKCE transaction state",
+      "sensitive": true,
+      "source": "src/migrations/0001_identity_core.sql"
+    },
+    {
+      "name": "password_reset_tokens",
+      "purpose": "password recovery token state",
+      "sensitive": true,
+      "owner_column": "user_id",
+      "source": "src/migrations/0001_identity_core.sql"
+    },
+    {
+      "name": "company",
+      "purpose": "auth portal/company branding",
+      "source": "src/migrations/0002_company.sql"
+    }
+  ]
+}

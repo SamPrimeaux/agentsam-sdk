@@ -1,0 +1,96 @@
+{
+  "schema": "agentsam.feature.provider-catalog.v1",
+  "feature": "identity.oauth-login-portal",
+  "default_provider": "inneranimalmedia",
+  "providers": [
+    {
+      "id": "inneranimalmedia",
+      "aliases": ["iam"],
+      "oauth_provider_key": "iam",
+      "kind": "oidc",
+      "status": "ready",
+      "title": "Inner Animal Media platform identity",
+      "implementation": "src/providers/iam",
+      "capabilities": [
+        "identity.oauth.authorize",
+        "identity.oauth.callback",
+        "identity.profile.resolve"
+      ],
+      "required_configuration": [
+        "IAM_CLIENT_ID",
+        "IAM_CLIENT_SECRET"
+      ],
+      "notes": "Protocol/selection id is inneranimalmedia. OAuth/DB provider key remains iam."
+    },
+    {
+      "id": "google",
+      "kind": "oauth",
+      "status": "ready",
+      "implementation": "src/providers/google",
+      "capabilities": [
+        "identity.oauth.authorize",
+        "identity.oauth.callback",
+        "identity.profile.resolve"
+      ],
+      "required_configuration": [
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET"
+      ]
+    },
+    {
+      "id": "github",
+      "kind": "oauth",
+      "status": "ready",
+      "implementation": "src/providers/github",
+      "capabilities": [
+        "identity.oauth.authorize",
+        "identity.oauth.callback",
+        "identity.profile.resolve"
+      ],
+      "required_configuration": [
+        "GITHUB_CLIENT_ID",
+        "GITHUB_CLIENT_SECRET"
+      ]
+    },
+    {
+      "id": "gcp",
+      "kind": "oauth",
+      "status": "scaffold",
+      "implementation": "src/providers/gcp",
+      "capabilities": [
+        "identity.oauth.authorize",
+        "identity.profile.resolve"
+      ],
+      "notes": "Contract + authorize URL only — exchange not implemented."
+    },
+    {
+      "id": "email",
+      "kind": "password",
+      "status": "scaffold",
+      "implementation": "src/providers/email",
+      "capabilities": [
+        "identity.profile.resolve"
+      ],
+      "notes": "Password verification not yet implemented by the portable provider."
+    },
+    {
+      "id": "cloudflare",
+      "kind": "oauth",
+      "status": "ready",
+      "registered": true,
+      "implementation": "src/providers/cloudflare",
+      "capabilities": [
+        "identity.oauth.authorize",
+        "identity.oauth.callback",
+        "identity.profile.resolve"
+      ],
+      "required_configuration": [
+        "CLOUDFLARE_OAUTH_CLIENT_ID"
+      ],
+      "optional_configuration": [
+        "CLOUDFLARE_OAUTH_CLIENT_SECRET"
+      ],
+      "notes": "Registered in identityProviders. Client secret optional for PKCE-only clients."
+    }
+  ]
+}

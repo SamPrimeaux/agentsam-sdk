@@ -32,6 +32,7 @@
     "./identity/providers/google": "./packages/identity/src/providers/google/index.js",
     "./identity/providers/github": "./packages/identity/src/providers/github/index.js",
     "./identity/providers/iam": "./packages/identity/src/providers/iam/index.js",
+    "./identity/providers/cloudflare": "./packages/identity/src/providers/cloudflare/index.js",
     "./identity/providers/gcp": "./packages/identity/src/providers/gcp/index.js",
     "./identity/providers/email": "./packages/identity/src/providers/email/index.js",
     "./identity/contracts/identity": "./packages/identity/src/contracts/identity.js",

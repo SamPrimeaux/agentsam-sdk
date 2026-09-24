@@ -1,0 +1,64 @@
+{
+  "schema": "agentsam.feature.v1",
+  "id": "identity.oauth-login-portal",
+  "name": "OAuth Login Portal",
+  "kind": "integration",
+  "status": "extracted",
+  "package": {
+    "name": "@inneranimalmedia/agentsam-sdk-identity",
+    "version": "2.6.2",
+    "directory": "packages/identity"
+  },
+  "provides": [
+    "identity.init",
+    "identity.login",
+    "identity.session",
+    "identity.oauth",
+    "identity.password-reset",
+    "identity.portal-ui"
+  ],
+  "runtime": [
+    "worker",
+    "browser"
+  ],
+  "contributes": {
+    "ui": [
+      "auth-portal"
+    ],
+    "migrations": [
+      "src/migrations/0001_identity_core.sql",
+      "src/migrations/0002_company.sql"
+    ]
+  },
+  "artifacts": [
+    {
+      "kind": "provider-catalog",
+      "path": "./providers.json"
+    },
+    {
+      "kind": "resources",
+      "path": "./resources.json"
+    },
+    {
+      "kind": "routes",
+      "path": "./routes.json"
+    },
+    {
+      "kind": "ui",
+      "path": "./ui.json"
+    }
+  ],
+  "activation": {
+    "steps": [
+      "validate_manifest",
+      "check_runtime",
+      "resolve_requires",
+      "plan_migrations",
+      "plan_routes",
+      "operator_approval",
+      "activate",
+      "verify",
+      "write_install_receipt"
+    ]
+  }
+}

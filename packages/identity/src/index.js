@@ -20,6 +20,7 @@ import {
   IamProvider,
   GcpProvider,
   EmailProvider,
+  CloudflareProvider,
 } from './providers/index.js';
 
 export {
@@ -38,6 +39,7 @@ export {
   IamProvider,
   GcpProvider,
   EmailProvider,
+  CloudflareProvider,
 };
 
 export * from './core/index.js';

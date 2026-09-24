@@ -3,18 +3,6 @@
   "updated": "2026-09-24",
   "features": [
     {
-      "id": "provider.resend",
-      "kind": "provider",
-      "proving_ground": "fuelnfreetime",
-      "manifest": "fuelnfreetime/features/provider-resend/agentsam.feature.json"
-    },
-    {
-      "id": "provider.completeful",
-      "kind": "provider",
-      "proving_ground": "fuelnfreetime",
-      "manifest": "fuelnfreetime/features/provider-completeful/agentsam.feature.json"
-    },
-    {
       "id": "admin.shell-nav",
       "kind": "ui",
       "proving_ground": "fuelnfreetime",
@@ -27,16 +15,10 @@
       "manifest": "fuelnfreetime/features/mini-agentsam-composer/agentsam.feature.json"
     },
     {
-      "id": "growth.campaigns",
-      "kind": "domain",
-      "proving_ground": "fuelnfreetime",
-      "manifest": "fuelnfreetime/features/growth-campaigns/agentsam.feature.json"
-    },
-    {
-      "id": "commerce.product-studio",
-      "kind": "domain",
-      "proving_ground": "fuelnfreetime",
-      "manifest": "fuelnfreetime/features/product-studio/agentsam.feature.json"
+      "id": "cms.hyperspace-runtime",
+      "kind": "ui",
+      "proving_ground": "inneranimalmedia",
+      "manifest": "inneranimalmedia/apps/client-cms-editor/.agentsam/features/hyperspace-runtime.feature.json"
     },
     {
       "id": "cms.template-library",
@@ -45,10 +27,39 @@
       "manifest": "inneranimalmedia/packages/cms-cloudflare-template-library/.agentsam/feature.json"
     },
     {
-      "id": "cms.hyperspace-runtime",
-      "kind": "ui",
-      "proving_ground": "inneranimalmedia",
-      "manifest": "inneranimalmedia/apps/client-cms-editor/.agentsam/features/hyperspace-runtime.feature.json"
+      "id": "commerce.product-studio",
+      "kind": "domain",
+      "proving_ground": "fuelnfreetime",
+      "manifest": "fuelnfreetime/features/product-studio/agentsam.feature.json",
+      "requires": [
+        "commerce.catalog"
+      ]
+    },
+    {
+      "id": "growth.campaigns",
+      "kind": "domain",
+      "proving_ground": "fuelnfreetime",
+      "manifest": "fuelnfreetime/features/growth-campaigns/agentsam.feature.json"
+    },
+    {
+      "id": "identity.oauth-login-portal",
+      "kind": "integration",
+      "proving_ground": "agentsam-sdk",
+      "manifest": "packages/identity/.agentsam/features/oauth-login-portal/agentsam.feature.json"
+    },
+    {
+      "id": "provider.completeful",
+      "kind": "provider",
+      "proving_ground": "fuelnfreetime",
+      "status": "extracted",
+      "package": "@inneranimalmedia/agentsam-provider-completeful",
+      "manifest": "fuelnfreetime/features/provider-completeful/agentsam.feature.json"
+    },
+    {
+      "id": "provider.resend",
+      "kind": "provider",
+      "proving_ground": "fuelnfreetime",
+      "manifest": "fuelnfreetime/features/provider-resend/agentsam.feature.json"
     }
   ]
 }

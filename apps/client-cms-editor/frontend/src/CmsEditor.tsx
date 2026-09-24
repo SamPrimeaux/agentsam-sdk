@@ -172,7 +172,7 @@ export default function CmsEditor({
   const selectedBlock = selected?.blocks?.find((block) => block.id === selectedBlockId) || null;
   const [rail, setRail] = useState<RailMode>(initialPanel === "theme" ? "sections" : initialPanel === "imports" ? "templates" : initialPanel);
   const [tab, setTab] = useState<InspectorTab>(initialPanel === "theme" ? "theme" : "content");
-  const [sidebarCollapsed, setSidebarCollapsed] = useStored("cms-sidebar-collapsed", false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useStored("cms-sidebar-collapsed", typeof window !== "undefined" ? window.innerWidth < 1200 : false);
   const [inspectorCollapsed, setInspectorCollapsed] = useStored("cms-inspector-collapsed", false);
   const [viewport, setViewport] = useStored<Viewport>("cms-viewport", "desktop");
   const [zoom, setZoom] = useState("Fit");
@@ -207,6 +207,15 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
   }>({ protocol_version: 1, sections: [], blocks: [] });
   const [mediaItems, setMediaItems] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
+
+  useEffect(() => {
+    const syncPanels = () => {
+      if (window.innerWidth < 1100) setSidebarCollapsed(true);
+    };
+    syncPanels();
+    window.addEventListener("resize", syncPanels);
+    return () => window.removeEventListener("resize", syncPanels);
+  }, [setSidebarCollapsed]);
   const [bootstrapLoading, setBootstrapLoading] = useState(true);
   const [bootstrapError, setBootstrapError] = useState<string | null>(null);
   const [bootstrapNonce, setBootstrapNonce] = useState(0);
@@ -431,17 +440,24 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
         const rawImg = typeof f.image === "string" ? f.image : (f.image && typeof f.image === "object" ? String((f.image as any).url || (f.image as any).src || "") : img || "");
         const imgUrl = safeCmsAssetUrl(rawImg);
         const cta = f.primaryCta && typeof f.primaryCta === "object" ? f.primaryCta as any : null;
-        const ctaLabel = cta ? String(cta.label || cta.text || "") : String(f.cta_text || f.hero_primary_cta || f.button_label || "");
+        const ctaLabel = cta ? String(cta.label || cta.text || "") : String(f.cta_text || f.cta_label || f.hero_primary_cta || f.button_label || "");
         const heading = String(f.headline || f.heading || f.hero_title || f.title || s.name || "Hero");
-        const body = String(f.subline || f.body || f.hero_body || f.description || "");
+        const body = String(f.subline || f.subhead || f.body || f.hero_body || f.description || "");
         const eyebrow = String(f.eyebrow || f.section_label || "");
-        return `<section data-cms-id="${sectionId}" class="hero" style="background-image:linear-gradient(90deg,rgba(7,7,10,.8),rgba(7,7,10,.15)),url('${imgUrl}')"><div><small>${escapeCmsText(eyebrow)}</small><h1>${escapeCmsText(heading)}</h1><p>${escapeCmsText(body)}</p>${ctaLabel ? `<button>${escapeCmsText(ctaLabel)}</button>` : ""}${f.hero_secondary_cta ? `<a>${escapeCmsText(f.hero_secondary_cta)} →</a>` : ""}</div></section>`;
+        const bg = safeCmsCssValue(f.bg_color || f.background || "") || "#0d0d12";
+        return `<section data-cms-id="${sectionId}" class="hero" style="background-color:${bg};background-image:linear-gradient(90deg,rgba(7,7,10,.8),rgba(7,7,10,.15))${imgUrl ? `,url('${imgUrl}')` : ''}"><div><small>${escapeCmsText(eyebrow)}</small><h1>${escapeCmsText(heading)}</h1><p>${escapeCmsText(body)}</p>${ctaLabel ? `<button>${escapeCmsText(ctaLabel)}</button>` : ""}${f.hero_secondary_cta ? `<a>${escapeCmsText(f.hero_secondary_cta)} →</a>` : ""}</div></section>`;
       }
       if (isFooter) {
         const links = Array.isArray(f.footer_links) ? f.footer_links : Array.isArray(f.links) ? f.links : [];
         const brand = f.brand_name || site?.name || "Agent Sam";
         const copyright = f.copyright || f.copyright_text || `© ${new Date().getFullYear()} ${brand}`;
-        return `<section data-cms-id="${sectionId}" class="footer"><b>${escapeCmsText(brand)}</b><p>${escapeCmsText(copyright)}</p><span>${links.map((x: any) => {
+        const blockCopy = (s.blocks || [])
+          .filter((b) => b.visible !== false)
+          .map((b) => escapeCmsText(String(b.data?.text || b.data?.title || b.type || "")))
+          .filter(Boolean)
+          .map((t) => `<p class="footer-block">${t}</p>`)
+          .join("");
+        return `<section data-cms-id="${sectionId}" class="footer"><b>${escapeCmsText(brand)}</b>${blockCopy}<p>${escapeCmsText(copyright)}</p><span>${links.map((x: any) => {
           if (x && typeof x === "object") {
             const lbl = escapeCmsText(x.label || x.title || x.text || x.name || "Link");
             const href = escapeCmsText(x.href || x.url || x.path || "#");
@@ -449,6 +465,14 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
           }
           return escapeCmsText(x);
         }).join(" · ")}</span></section>`;
+      }
+      if (typeLower.includes("product") || nameLower.includes("product")) {
+        const cards = (s.blocks || []).filter((b) => b.visible !== false);
+        const title = String(f.title || s.name || "Products");
+        const grid = cards.length
+          ? cards.map((b) => `<article><div class="thumb"></div><b>${escapeCmsText(String(b.data?.title || "Product"))}</b><span>${escapeCmsText(String(b.data?.price || ""))}</span></article>`).join("")
+          : `<article><div class="thumb"></div><b>Product</b><span>$19.99</span></article>`.repeat(4);
+        return `<section data-cms-id="${sectionId}" class="products"><h2>${escapeCmsText(title)}</h2><div class="product-grid">${grid}</div></section>`;
       }
       const title = String(f.title || f.heading || f.headline || f.quote || s.name || "");
       const description = String(f.description || f.body || f.subline || f.author_name || "");
@@ -462,7 +486,7 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
       .map(([key, value]) => `${key}:${safeCmsCssValue(value)}`)
       .filter((entry) => !entry.endsWith(':'))
       .join(";");
-    return `<!doctype html><html><head><meta charset="utf-8"><style>:root{${vars}}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:var(--font-body),Arial;background:#f5f2ea;color:#101014}section{position:relative;transition:.18s;cursor:default}.nav{height:68px;display:flex;align-items:center;padding:0 clamp(24px,6vw,84px);gap:30px;background:#0c0c10;color:white}.nav b{font-size:18px;margin-right:auto}.nav nav{display:flex;gap:22px;font-size:12px;color:#aaa}.nav nav a{color:#aaa;text-decoration:none;transition:color .15s}.nav nav a:hover{color:#fff}.nav button,.hero button,.content button{border:0;border-radius:999px;padding:11px 18px;background:var(--brand-primary);color:white;cursor:pointer}.hero{min-height:520px;background-size:cover;background-position:center;display:flex;align-items:end;padding:clamp(48px,9vw,100px);color:white;background-color:#0d0d12}.hero>div{max-width:760px}.hero small,.content small{text-transform:uppercase;letter-spacing:.18em;font-size:11px;font-weight:700;color:var(--brand-primary)}.hero h1{font-size:clamp(40px,6vw,84px);line-height:1.02;letter-spacing:-.045em;margin:16px 0}.hero p{font-size:18px;max-width:580px;line-height:1.6;color:#d8d8de}.hero a{margin-left:18px;font-size:13px;color:#fff}.content{min-height:300px;padding:clamp(48px,8vw,90px);display:flex;flex-direction:column;justify-content:center}.content h2{font-size:clamp(28px,4.5vw,56px);line-height:1.05;margin:16px 0;max-width:880px;letter-spacing:-.03em}.content p{max-width:660px;line-height:1.7;color:#444}.footer{min-height:180px;padding:50px clamp(24px,6vw,84px);background:#09090b;color:white;display:grid;gap:16px;align-content:center}.footer a{color:#aaa;text-decoration:none}.footer a:hover{color:#fff}.cms-highlight{outline:3px solid #4d8dff!important;outline-offset:-3px}.cms-highlight:after{content:attr(data-cms-name);position:absolute;top:5px;left:5px;background:#3b82f6;color:#fff;padding:4px 7px;border-radius:4px;font:11px Arial;z-index:10}</style></head><body>${content}<script>window.parent.postMessage({type:'cms:ready'},'*');document.querySelectorAll('[data-cms-id]').forEach(el=>{el.dataset.cmsName=el.querySelector('h1,h2,b')?.textContent || 'Section';el.addEventListener('click',e=>{e.stopPropagation();window.parent.postMessage({type:'cms:section-click',section_id:el.dataset.cmsId},'*')})});addEventListener('message',e=>{const m=e.data;document.querySelectorAll('[data-cms-id]').forEach(x=>x.classList.remove('cms-highlight'));if(m.type==='cms:highlight'){const x=document.querySelector('[data-cms-id="'+m.sectionId+'"]');x&&x.classList.add('cms-highlight')}if(m.type==='cms:scroll-to'){document.querySelector('[data-cms-id="'+m.sectionId+'"]')?.scrollIntoView({behavior:'smooth'})}if(m.type==='cms:theme-vars'){Object.entries(m.vars||{}).forEach(([k,v])=>document.documentElement.style.setProperty(k,v))}if(m.type==='cms:style'){const x=document.querySelector('[data-cms-id="'+m.sectionId+'"]');if(x)Object.assign(x.style,(m.css&&typeof m.css==='object')?m.css:{})}});addEventListener('scroll',()=>window.parent.postMessage({type:'cms:scroll',scrollY:scrollY},'*'))</script></body></html>`;
+    return `<!doctype html><html><head><meta charset="utf-8"><style>:root{${vars}}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:var(--font-body),Arial;background:#f5f2ea;color:#101014}section{position:relative;transition:.18s;cursor:default}.nav{height:68px;display:flex;align-items:center;padding:0 clamp(24px,6vw,84px);gap:30px;background:#0c0c10;color:white}.nav b{font-size:18px;margin-right:auto}.nav nav{display:flex;gap:22px;font-size:12px;color:#aaa}.nav nav a{color:#aaa;text-decoration:none;transition:color .15s}.nav nav a:hover{color:#fff}.nav button,.hero button,.content button{border:0;border-radius:999px;padding:11px 18px;background:var(--brand-primary);color:white;cursor:pointer}.hero{min-height:520px;background-size:cover;background-position:center;display:flex;align-items:end;padding:clamp(48px,9vw,100px);color:white;background-color:#0d0d12}.hero>div{max-width:760px}.hero small,.content small{text-transform:uppercase;letter-spacing:.18em;font-size:11px;font-weight:700;color:var(--brand-primary)}.hero h1{font-size:clamp(40px,6vw,84px);line-height:1.02;letter-spacing:-.045em;margin:16px 0}.hero p{font-size:18px;max-width:580px;line-height:1.6;color:#d8d8de}.hero a{margin-left:18px;font-size:13px;color:#fff}.content{min-height:300px;padding:clamp(48px,8vw,90px);display:flex;flex-direction:column;justify-content:center}.content h2{font-size:clamp(28px,4.5vw,56px);line-height:1.05;margin:16px 0;max-width:880px;letter-spacing:-.03em}.content p{max-width:660px;line-height:1.7;color:#444}.products{padding:clamp(48px,8vw,90px)}.products h2{font-size:clamp(28px,4vw,48px);margin:0 0 28px;letter-spacing:-.03em}.product-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.product-grid article{background:#fff;border:1px solid rgba(43,39,31,.1);border-radius:14px;padding:14px}.product-grid .thumb{height:140px;border-radius:10px;background:linear-gradient(135deg,#EFEBDD,#E8E2D2);margin-bottom:12px}.product-grid b{display:block;font-size:15px}.product-grid span{color:#73737f;font-size:13px}.footer{min-height:180px;padding:50px clamp(24px,6vw,84px);background:#09090b;color:white;display:grid;gap:16px;align-content:center}.footer-block{font-size:22px;font-weight:600;margin:0}.footer a{color:#aaa;text-decoration:none}.footer a:hover{color:#fff}.cms-highlight{outline:3px solid #4d8dff!important;outline-offset:-3px}.cms-highlight:after{content:attr(data-cms-name);position:absolute;top:5px;left:5px;background:#3b82f6;color:#fff;padding:4px 7px;border-radius:4px;font:11px Arial;z-index:10}</style></head><body>${content}<script>window.parent.postMessage({type:'cms:ready'},'*');document.querySelectorAll('[data-cms-id]').forEach(el=>{el.dataset.cmsName=el.querySelector('h1,h2,b')?.textContent || 'Section';el.addEventListener('click',e=>{e.stopPropagation();window.parent.postMessage({type:'cms:section-click',section_id:el.dataset.cmsId},'*')})});addEventListener('message',e=>{const m=e.data;document.querySelectorAll('[data-cms-id]').forEach(x=>x.classList.remove('cms-highlight'));if(m.type==='cms:highlight'){const x=document.querySelector('[data-cms-id="'+m.sectionId+'"]');x&&x.classList.add('cms-highlight')}if(m.type==='cms:scroll-to'){document.querySelector('[data-cms-id="'+m.sectionId+'"]')?.scrollIntoView({behavior:'smooth'})}if(m.type==='cms:theme-vars'){Object.entries(m.vars||{}).forEach(([k,v])=>document.documentElement.style.setProperty(k,v))}if(m.type==='cms:style'){const x=document.querySelector('[data-cms-id="'+m.sectionId+'"]');if(x)Object.assign(x.style,(m.css&&typeof m.css==='object')?m.css:{})}});addEventListener('scroll',()=>window.parent.postMessage({type:'cms:scroll',scrollY:scrollY},'*'))</script></body></html>`;
   }, [page, theme, site?.name]);
 
   const filteredPages = page && site ? site.pages.filter(p => p.title.toLowerCase().includes(search.toLowerCase())) : [];

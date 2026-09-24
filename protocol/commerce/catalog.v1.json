@@ -1,0 +1,50 @@
+{
+  "schema": "agentsam.commerce.catalog.v1",
+  "id": "commerce.catalog",
+  "title": "Commerce catalog contract",
+  "description": "Normalized catalog surface for Product Studio and host adapters. Provider-specific ids (e.g. completeful_product_id) stay in the provider adapter — UI and domain features consume catalog_* fields.",
+  "provides": [
+    "commerce.catalog.read",
+    "commerce.catalog.sync",
+    "commerce.catalog.browse"
+  ],
+  "product": {
+    "required": ["catalog_product_id", "name"],
+    "optional": [
+      "sku",
+      "product_type",
+      "print_type",
+      "material",
+      "available",
+      "pricing_currency",
+      "fulfillment_cost_free_cents",
+      "realistic_image_url",
+      "cover_image_url",
+      "main_icon_url",
+      "variant_count",
+      "print_location_count",
+      "mockup_count",
+      "provider",
+      "provider_product_id"
+    ]
+  },
+  "variant": {
+    "required": ["catalog_variant_id"],
+    "optional": [
+      "variant_title",
+      "name",
+      "cover_image_url",
+      "realistic_image_url",
+      "provider_variant_id"
+    ]
+  },
+  "adapters": {
+    "provider.completeful": {
+      "package": "@inneranimalmedia/agentsam-provider-completeful",
+      "maps": {
+        "provider_product_id": "completeful_product_id",
+        "provider_variant_id": "completeful_variant_id"
+      }
+    }
+  }
+}

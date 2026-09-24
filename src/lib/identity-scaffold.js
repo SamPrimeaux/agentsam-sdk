@@ -9,7 +9,7 @@ const MIGRATION_FILE = path.join(IDENTITY_PKG, 'src', 'migrations', '0001_identi
 const BRANDING_SCRIPT = path.join(IDENTITY_PKG, 'src', 'frontend', 'auth-portal', 'shared', 'company-branding.js');
 
 /**
- * @param {{ projectName: string, brandName?: string, logoUrl?: string, sdkVersion?: string }} config
+ * @param {{ projectName: string, brandName?: string, logoUrl?: string, sdkVersion?: string, provider?: string }} config
  * @returns {Record<string, string>}
  */
 export function buildIdentityAppScaffold(config) {
@@ -17,6 +17,7 @@ export function buildIdentityAppScaffold(config) {
   const brandName = config.brandName || projectName;
   const logoUrl = config.logoUrl || '/brand/logo.svg';
   const sdkVersion = config.sdkVersion || 'alpha';
+  const provider = config.provider || 'inneranimalmedia';
 
   const migrationSql = `${fs.readFileSync(MIGRATION_FILE, 'utf8')}\n${buildCompanySeedSql({ brandName, logoUrl })}\n`;
   const loginHtml = injectBrandingScript(applyBrandTokens(fs.readFileSync(path.join(AUTH_PAGES_DIR, 'login.html'), 'utf8'), {
@@ -94,6 +95,8 @@ migrations_dir = "migrations"
   files['README.md'] = `# ${brandName} — identity app
 
 Boring scaffold: **app/frontend** (auth UI) + **backend** (Worker API) + **migrations** (D1).
+
+Provider template: \`${provider}\` (see \`agentsam identity plan --provider ${provider}\`).
 
 ## Quick start
 
