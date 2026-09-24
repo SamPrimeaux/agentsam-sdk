@@ -609,11 +609,13 @@ export default {
     const isConnectionsRegistry = url.pathname === "/api/connections";
     const isPluginToolExecute = url.pathname === "/api/plugins/tools/execute";
 
-    // Public marketing/docs from Worker static ASSETS (.output/public/site/*) — not R2 WEBSITE_ASSETS
+    // Public marketing/docs: WEBSITE_ASSETS R2 SSOT (Worker ASSETS = bootstrap only)
     if (request.method === "GET" && isPublicSitePath(url.pathname)) {
-      const page = await servePublicSitePage(request, env, url.pathname);
+      const page = await servePublicSitePage(request, env, url.pathname, {
+        siteSlug: "agentsam-sdk",
+      });
       if (page) return page;
-      // `/` keeps the edge-partial homepage fallback if static assets are missing
+      // `/` keeps the edge-partial homepage fallback if R2 + static assets are missing
       if (url.pathname === "/" || url.pathname === "/index.html") {
         return serveCanonicalHomepage(request, env);
       }

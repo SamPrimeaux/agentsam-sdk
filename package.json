@@ -190,6 +190,7 @@
     "prepublishOnly": "npm run site:sync && npm run verify:release",
     "site:sync": "node scripts/sync-public-site.mjs",
     "site:learn": "node scripts/build-learn-site.mjs",
+    "site:publish": "node scripts/publish-website-assets.mjs",
     "security:check": "node src/security/cli.mjs scan",
     "security:repair": "node src/security/cli.mjs repair",
     "ui:preview": "node scripts/ui-preview.mjs",

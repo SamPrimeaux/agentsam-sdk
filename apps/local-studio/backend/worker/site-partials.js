@@ -1,21 +1,32 @@
 /**
  * Canonical Site Partials & Edge HTMLRewriter Injection Service.
  *
- * Injects shared site partials (header.html, footer.html) from the
- * WEBSITE_ASSETS R2 bucket (agentsam-os-blueprint-content) into page HTML at serve time.
- * Layout in R2:
+ * SSOT: WEBSITE_ASSETS R2 (logical role; binding name is alias-resolved).
+ * Layout:
  *   sites/${siteSlug}/partials/header.html
  *   sites/${siteSlug}/partials/footer.html
  *
- * This keeps header/footer as one shared object per site, edited once,
- * never duplicated across individual pages or CMS page tables.
+ * Header/footer are shared objects per site — not duplicated in D1 page rows.
+ * D1 stores editable field metadata; this R2 layer stores the HTML code sections.
  */
+import { resolveWebsiteAssets, websitePartialKey } from './bindings.js';
+
+function requireWebsiteAssets(env) {
+  const resolved = resolveWebsiteAssets(env);
+  if (!resolved) {
+    throw new Error(
+      'WEBSITE_ASSETS role unavailable — bind an R2 bucket as WEBSITE_ASSETS (or alias SITE_ASSETS/CMS_ASSETS/CONTENT)'
+    );
+  }
+  return resolved;
+}
 
 export async function fetchSitePartial(env, siteSlug, partialName) {
-  if (!env?.WEBSITE_ASSETS) return null;
+  const resolved = resolveWebsiteAssets(env);
+  if (!resolved) return null;
   try {
-    const key = `sites/${siteSlug}/partials/${partialName}.html`;
-    const obj = await env.WEBSITE_ASSETS.get(key);
+    const key = websitePartialKey(siteSlug, partialName);
+    const obj = await resolved.binding.get(key);
     if (!obj) return null;
     return await obj.text();
   } catch (err) {
@@ -25,9 +36,9 @@ export async function fetchSitePartial(env, siteSlug, partialName) {
 }
 
 export async function putSitePartial(env, siteSlug, partialName, content) {
-  if (!env?.WEBSITE_ASSETS) throw new Error('WEBSITE_ASSETS binding not available');
-  const key = `sites/${siteSlug}/partials/${partialName}.html`;
-  await env.WEBSITE_ASSETS.put(key, content, {
+  const { binding } = requireWebsiteAssets(env);
+  const key = websitePartialKey(siteSlug, partialName);
+  await binding.put(key, content, {
     httpMetadata: { contentType: 'text/html; charset=utf-8' },
   });
   return { ok: true, key };

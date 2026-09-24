@@ -252,21 +252,24 @@ export async function handleCmsWorkerRequest(request, env) {
       return json({ ok: true, theme });
     }
 
-    // ── ASSETS ──
+    // ── ASSETS (WEBSITE_ASSETS R2 code sections) ──
     if (url.pathname === '/api/cms/assets' && method === 'GET') {
-      // If R2 binding WEBSITE_ASSETS exists, list files
       let assets = [];
-      if (env.WEBSITE_ASSETS) {
+      const { resolveWebsiteAssets } = await import('./bindings.js');
+      const website = resolveWebsiteAssets(env);
+      if (website?.binding) {
         try {
           const prefix = `sites/${siteSlug}/`;
-          const listed = await env.WEBSITE_ASSETS.list({ prefix, limit: 100 });
+          const listed = await website.binding.list({ prefix, limit: 100 });
           assets = (listed.objects || []).map((obj) => ({
             id: obj.key,
             filename: obj.key.split('/').pop(),
             original_filename: obj.key.split('/').pop(),
             mime_type: obj.httpMetadata?.contentType || 'application/octet-stream',
             content_size_bytes: obj.size,
-            public_url: `https://agentsam.inneranimalmedia.com/assets/${obj.key}`,
+            public_url: `https://agentsam.inneranimalmedia.com/site/${obj.key.replace(`sites/${siteSlug}/public/`, '')}`,
+            binding: website.name,
+            role: website.role,
           }));
         } catch {}
       }
