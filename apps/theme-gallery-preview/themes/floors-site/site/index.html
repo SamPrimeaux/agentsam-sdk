@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anything Floors and More | Lafayette, LA | Premium Flooring & Renovation Services</title>
+    <meta name="description"
+        content="Expert flooring installation and renovation services in Lafayette, Louisiana. Hardwood, tile, vinyl, and complete home transformations by Dylan Hollier.">
+
+    <!-- Fonts - Bold, Clean, Legible (Cloudflare hosted) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Primary green from estimate section: linear-gradient(135deg, #2d4a3e 0%, #3d5a4e 100%) */
+            --primary-green: #3a5a4d;
+            --primary-green-light: #4a6b5d;
+            --secondary-green: #4a7462;
+            --light-green: #5a8472;
+            --accent-green: #6a9482;
+            --cream: #f5f3ef;
+            --warm-gray: #4a4a4a;
+            --light-gray: #e8e8e8;
+            --gold: #c9a961;
+            --white: #ffffff;
+            --off-white: #fafafa;
+            --dark: #1a1a1a;
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--warm-gray);
+            line-height: 1.6;
+            overflow-x: hidden;
+            background: linear-gradient(to bottom,
+                    var(--white) 0%,
+                    #fcfcfc 15%,
+                    #f9faf9 30%,
+                    #f6f8f6 50%,
+                    #f3f6f4 70%,
+                    #f0f4f2 85%,
+                    var(--cream) 100%);
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--dark);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        /* Navigation - Desktop Minimal */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(58, 90, 77, 0.08);
+            z-index: 1000;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .navbar.scrolled {
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 4px 30px rgba(58, 90, 77, 0.08);
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.25rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+        }
+
+        .logo img {
+            height: 100px;
+            width: auto;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover img {
+            transform: scale(1.05);
+        }
+
+        @media (max-width: 640px) {
+            .logo img {
+                height: 80px;
+            }
+        }
+
+        .nav-menu {
+            display: flex;
+            align-items: center;
+            gap: 2.5rem;
+            list-style: none;
+        }
+
+        .nav-link {
+            color: var(--warm-gray);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            letter-spacing: -0.01em;
+            position: relative;
+            transition: color 0.3s ease;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--primary-green);
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: var(--primary-green);
+        }
+
+        .nav-link:hover::after,
+        .nav-link.active::after {
+            width: 100%;
+        }
+
+        .nav-cta {
+            background: var(--primary-green);
+            color: var(--white);
+            padding: 0.8rem 1.8rem;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-decoration: none;
+            letter-spacing: -0.01em;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .nav-cta:hover {
+            background: var(--primary-green-light);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(58, 90, 77, 0.25);
+        }
+
+        .mobile-toggle {
+            display: none;
+            flex-direction: column;
+            gap: 0.4rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.6rem;
+            z-index: 1001;
+        }
+
+        .hamburger {
+            width: 26px;
+            height: 2.5px;
+            background: var(--primary-green);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 2px;
+        }
+
+        .mobile-toggle.active .hamburger:nth-child(1) {
+            transform: rotate(45deg) translate(6px, 6px);
+        }
+
+        .mobile-toggle.active .hamburger:nth-child(2) {
+            opacity: 0;
+            transform: translateX(-10px);
+        }
+
+        .mobile-toggle.active .hamburger:nth-child(3) {
+            transform: rotate(-45deg) translate(6px, -6px);
+        }
+
+        /* Hero Section */
+        .hero {
+            position: relative;
+            min-height: 95vh;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            margin-top: 80px;
+        }
+
+        .hero-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        .hero-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: brightness(1.05) contrast(1.1);
+        }
+
+        .hero-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg,
+                    rgba(58, 90, 77, 0.92) 0%,
+                    rgba(74, 107, 93, 0.85) 40%,
+                    rgba(0, 0, 0, 0.7) 100%);
+            z-index: 1;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            color: var(--white);
+        }
+
+        .hero h2 {
+            font-size: clamp(2.5rem, 7vw, 4.5rem);
+            color: var(--white);
+            margin-bottom: 1.5rem;
+            line-height: 1.1;
+            max-width: 900px;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1.1rem, 2.5vw, 1.6rem);
+            margin-bottom: 2rem;
+            color: rgba(255, 255, 255, 0.95);
+            font-weight: 500;
+            max-width: 700px;
+            letter-spacing: -0.01em;
+        }
+
+        .hero-description {
+            font-size: clamp(1rem, 2vw, 1.15rem);
+            margin-bottom: 2.5rem;
+            max-width: 650px;
+            line-height: 1.7;
+            color: rgba(255, 255, 255, 0.88);
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1.2rem;
+            margin-bottom: 3.5rem;
+            flex-wrap: wrap;
+        }
+
+        .primary-button {
+            background: var(--white);
+            color: var(--primary-green);
+            padding: 1.3rem 2.8rem;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1.05rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid transparent;
+            display: inline-block;
+            letter-spacing: -0.01em;
+            cursor: pointer;
+        }
+
+        .primary-button:hover {
+            background: var(--cream);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+        }
+
+        .secondary-button {
+            background: transparent;
+            color: var(--white);
+            padding: 1.3rem 2.8rem;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1.05rem;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-block;
+            letter-spacing: -0.01em;
+            backdrop-filter: blur(10px);
+        }
+
+        .secondary-button:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--white);
+            transform: translateY(-3px);
+        }
+
+        .trust-signals {
+            display: flex;
+            align-items: center;
+            gap: 3rem;
+            flex-wrap: wrap;
+        }
+
+        .trust-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .stars {
+            color: var(--gold);
+            font-size: 1.3rem;
+            letter-spacing: 3px;
+        }
+
+        .trust-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--white);
+            font-family: 'Space Grotesk', sans-serif;
+            letter-spacing: -0.02em;
+        }
+
+        .trust-text {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 500;
+            letter-spacing: 0.02em;
+        }
+
+        /* Services Section - Staggered Grid */
+        .services {
+            padding: 8rem 2rem;
+            background: transparent;
+        }
+
+        .section-header {
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto 5rem;
+        }
+
+        .section-header h2 {
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            margin-bottom: 1.2rem;
+            color: var(--primary-green);
+            font-weight: 700;
+            letter-spacing: -0.03em;
+        }
+
+        .section-subtitle {
+            font-size: clamp(1.1rem, 2.5vw, 1.3rem);
+            color: var(--warm-gray);
+            font-weight: 500;
+            letter-spacing: -0.01em;
+        }
+
+        .services-grid {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2.5rem;
+        }
+
+        .service-card:nth-child(even) {
+            margin-top: 3rem;
+        }
+
+        .service-card {
+            background: var(--white);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(58, 90, 77, 0.08);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(58, 90, 77, 0.06);
+        }
+
+        .service-card:hover {
+            transform: translateY(-12px);
+            box-shadow: 0 20px 50px rgba(58, 90, 77, 0.15);
+            border-color: rgba(58, 90, 77, 0.12);
+        }
+
+        .service-image {
+            position: relative;
+            width: 100%;
+            height: 280px;
+            overflow: hidden;
+        }
+
+        .service-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .service-card:hover .service-image img {
+            transform: scale(1.08);
+        }
+
+        .service-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, transparent 40%, rgba(58, 90, 77, 0.5));
+            opacity: 0.7;
+            transition: opacity 0.4s ease;
+        }
+
+        .service-card:hover .service-overlay {
+            opacity: 0.5;
+        }
+
+        .service-content {
+            padding: 2.2rem;
+        }
+
+        .service-content h3 {
+            font-size: 1.6rem;
+            margin-bottom: 1rem;
+            color: var(--primary-green);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .service-content p {
+            color: var(--warm-gray);
+            margin-bottom: 1.5rem;
+            line-height: 1.7;
+            font-size: 1rem;
+        }
+
+        .learn-more {
+            color: var(--primary-green);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            transition: gap 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            letter-spacing: -0.01em;
+        }
+
+        .learn-more:hover {
+            gap: 1.2rem;
+        }
+
+        /* Why Choose Us - Masonry Style */
+        .why-us {
+            padding: 8rem 2rem;
+            background: transparent;
+        }
+
+        .features-grid {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2.5rem;
+        }
+
+        .feature:nth-child(odd) {
+            margin-top: 2rem;
+        }
+
+        .feature {
+            text-align: center;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .feature:hover {
+            transform: translateY(-8px);
+        }
+
+        .feature-image {
+            width: 100%;
+            height: 260px;
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 1.8rem;
+            box-shadow: 0 8px 30px rgba(58, 90, 77, 0.1);
+            border: 1px solid rgba(58, 90, 77, 0.08);
+        }
+
+        .feature-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .feature:hover .feature-image img {
+            transform: scale(1.1);
+        }
+
+        .feature h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary-green);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .feature p {
+            color: var(--warm-gray);
+            line-height: 1.7;
+            font-size: 1rem;
+        }
+
+        /* Process Section - Asymmetric Grid */
+        .process {
+            padding: 8rem 2rem;
+            background: transparent;
+        }
+
+        .process-container {
+            max-width: 1300px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 3rem;
+        }
+
+        .process-step {
+            position: relative;
+            text-align: center;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .process-step:nth-child(2) {
+            margin-top: 2.5rem;
+        }
+
+        .process-step:hover {
+            transform: translateY(-10px);
+        }
+
+        .step-number {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, var(--gold), #d4a956);
+            color: var(--dark);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            font-weight: 700;
+            font-family: 'Space Grotesk', sans-serif;
+            box-shadow: 0 8px 25px rgba(201, 169, 97, 0.3);
+            z-index: 1;
+            letter-spacing: -0.02em;
+        }
+
+        .process-image {
+            width: 100%;
+            height: 260px;
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 30px rgba(58, 90, 77, 0.1);
+            border: 1px solid rgba(58, 90, 77, 0.08);
+        }
+
+        .process-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .process-step:hover .process-image img {
+            transform: scale(1.08);
+        }
+
+        .process-step h3 {
+            font-size: 1.6rem;
+            margin-bottom: 1rem;
+            color: var(--primary-green);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .process-step p {
+            color: var(--warm-gray);
+            line-height: 1.7;
+            font-size: 1rem;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            padding: 8rem 2rem;
+            background: linear-gradient(135deg,
+                    rgba(58, 90, 77, 0.03) 0%,
+                    rgba(74, 107, 93, 0.05) 50%,
+                    rgba(90, 132, 114, 0.08) 100%);
+            text-align: center;
+            color: var(--primary-green);
+        }
+
+        .cta-content h2 {
+            font-size: clamp(2.5rem, 6vw, 3.8rem);
+            color: var(--primary-green);
+            margin-bottom: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+        }
+
+        .cta-content p {
+            font-size: clamp(1.2rem, 3vw, 1.6rem);
+            margin-bottom: 3rem;
+            color: var(--warm-gray);
+        }
+
+        .cta-contact {
+            display: flex;
+            justify-content: center;
+            gap: 4rem;
+            flex-wrap: wrap;
+            margin-top: 3rem;
+        }
+
+        .contact-info {
+            font-size: clamp(1.3rem, 3vw, 1.7rem);
+            color: var(--primary-green);
+            text-decoration: none;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.01em;
+            transition: color 0.3s ease;
+        }
+
+        .contact-info:hover {
+            color: var(--gold);
+        }
+
+        .contact-label {
+            font-size: 0.95rem;
+            color: var(--warm-gray);
+            font-weight: 500;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-content {
+            background: var(--white);
+            border-radius: 20px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .modal-header {
+            padding: 2.5rem 2.5rem 1rem;
+            border-bottom: 1px solid rgba(58, 90, 77, 0.1);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: none;
+            border: none;
+            font-size: 2rem;
+            color: var(--warm-gray);
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+            background: rgba(58, 90, 77, 0.1);
+            color: var(--primary-green);
+        }
+
+        .modal-header h3 {
+            color: var(--primary-green);
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .modal-header p {
+            color: var(--warm-gray);
+            font-size: 1rem;
+        }
+
+        .modal-body {
+            padding: 2rem 2.5rem 2.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--dark);
+            font-weight: 700;
+            margin-bottom: 0.6rem;
+            font-size: 0.95rem;
+            letter-spacing: -0.01em;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid var(--light-gray);
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: 'DM Sans', sans-serif;
+            transition: all 0.3s ease;
+            background: var(--white);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary-green);
+            box-shadow: 0 0 0 4px rgba(58, 90, 77, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .submit-button {
+            width: 100%;
+            background: var(--primary-green);
+            color: var(--white);
+            padding: 1.3rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            letter-spacing: -0.01em;
+        }
+
+        .submit-button:hover {
+            background: var(--primary-green-light);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(58, 90, 77, 0.25);
+        }
+
+        /* Footer - Glassmorphic Green */
+        .footer {
+            background: linear-gradient(135deg,
+                    rgba(58, 90, 77, 0.95) 0%,
+                    rgba(74, 107, 93, 0.98) 100%);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+            padding: 4rem 2rem 2rem;
+        }
+
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 3rem;
+            margin-bottom: 3rem;
+        }
+
+        .footer-section h4 {
+            color: var(--white);
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+
+        .footer-section p {
+            line-height: 1.8;
+            margin-bottom: 0.5rem;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .footer-owner {
+            font-style: italic;
+            color: var(--gold);
+            font-weight: 500;
+        }
+
+        .footer-section a {
+            color: rgba(255, 255, 255, 0.85);
+            text-decoration: none;
+            line-height: 2;
+            display: block;
+            transition: color 0.3s ease;
+        }
+
+        .footer-section a:hover {
+            color: var(--gold);
+        }
+
+        .footer-bottom {
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            padding-top: 2rem;
+            text-align: center;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* Mobile Responsive - Glassmorphic Nav */
+        @media (max-width: 968px) {
+            .nav-menu {
+                position: fixed;
+                top: 0;
+                left: -70%;
+                width: 70%;
+                height: 100vh;
+                background: rgba(58, 90, 77, 0.95);
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 6rem 2.5rem 2rem;
+                gap: 1.5rem;
+                transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                box-shadow: 4px 0 40px rgba(0, 0, 0, 0.3);
+                z-index: 999;
+                border-right: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .nav-menu.active {
+                left: 0;
+            }
+
+            .nav-link {
+                color: rgba(255, 255, 255, 0.9);
+                font-size: 1.1rem;
+                font-weight: 600;
+                width: 100%;
+                padding: 0.5rem 0;
+            }
+
+            .nav-link::after {
+                background: var(--gold);
+            }
+
+            .nav-link:hover,
+            .nav-link.active {
+                color: var(--white);
+            }
+
+            .nav-cta {
+                width: 100%;
+                text-align: center;
+                background: var(--gold);
+                margin-top: 1rem;
+            }
+
+            .mobile-toggle {
+                display: flex;
+            }
+
+            .service-card:nth-child(even),
+            .feature:nth-child(odd),
+            .process-step:nth-child(2) {
+                margin-top: 0;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .hero-buttons {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .primary-button,
+            .secondary-button {
+                width: 100%;
+                text-align: center;
+            }
+
+            .services-grid,
+            .features-grid,
+            .process-container {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .cta-contact {
+                flex-direction: column;
+                gap: 2rem;
+            }
+
+            .modal-content {
+                margin: 1rem;
+            }
+
+            .modal-header,
+            .modal-body {
+                padding: 1.5rem;
+            }
+        }
+
+        /* Scroll animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">
+                <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/7fb34d9c-fb11-4403-6a45-74ac90492e00/avatar"
+                    alt="Anything Floors and More Logo" class="logo-image">
+            </a>
+
+            <button class="mobile-toggle" id="mobile-toggle" aria-label="Toggle navigation">
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+            </button>
+
+            <ul class="nav-menu" id="nav-menu">
+                <li><a href="/" class="nav-link active">Home</a></li>
+                <li><a href="./services" class="nav-link">Services</a></li>
+                <li><a href="./process" class="nav-link">Process</a></li>
+                <li><a href="./gallery" class="nav-link">Gallery</a></li>
+                <li><a href="./contact" class="nav-link">Contact</a></li>
+                <li><a href="./contact" class="nav-cta">Contact Us</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Contact Us Modal -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="modal-close" id="modal-close">&times;</button>
+                <h3>Contact Us</h3>
+                <p>Send us a message and we'll get back to you soon.</p>
+            </div>
+            <div class="modal-body">
+                <form id="contact-form">
+                    <div class="form-group">
+                        <label for="contact-name">Name</label>
+                        <input type="text" id="contact-name" name="name" required placeholder="Your name">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-email">Email</label>
+                        <input type="email" id="contact-email" name="email" required placeholder="your@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-phone">Phone</label>
+                        <input type="tel" id="contact-phone" name="phone" required placeholder="(337) 555-1234">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-message">Message</label>
+                        <textarea id="contact-message" name="message" required placeholder="How can we help?"></textarea>
+                    </div>
+                    <button type="submit" class="submit-button">Submit</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="hero-background">
+            <img src="https://images.unsplash.com/photo-1615971677499-5467cbab01c0?q=80&w=2000&auto=format&fit=crop"
+                alt="Professional flooring installation" class="hero-image">
+        </div>
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <h2>Flooring Done Right — From Quote to Final Walkthrough</h2>
+            <p class="hero-subtitle">Precision craftsmanship, transparent pricing, and modern flooring solutions for
+                Lafayette homes and businesses.</p>
+            <p class="hero-description">
+                Transform your space with expert installation of hardwood, tile, luxury vinyl, and complete renovation
+                services. Dylan Hollier and team bring over a decade of experience to every project.
+            </p>
+            <div class="hero-buttons">
+                <a href="#" class="primary-button" id="hero-cta">Get a Free Estimate</a>
+                <a href="tel:337-555-1234" class="secondary-button">Call (337) 555-1234</a>
+            </div>
+            <div class="trust-signals">
+                <div class="trust-item">
+                    <span class="stars">★★★★★</span>
+                    <span class="trust-text">5.0 Rating</span>
+                </div>
+                <div class="trust-item">
+                    <span class="trust-number">62+</span>
+                    <span class="trust-text">Google Reviews</span>
+                </div>
+                <div class="trust-item">
+                    <span class="trust-number">500+</span>
+                    <span class="trust-text">Projects Completed</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section class="services" id="services">
+        <div class="section-header">
+            <h2>Our Flooring Solutions</h2>
+            <p class="section-subtitle">Premium materials and expert installation for every project</p>
+        </div>
+        <div class="services-grid">
+            <div class="service-card">
+                <div class="service-image">
+                    <img src="https://images.unsplash.com/photo-1615876063052-5f1f6628b345?q=80&w=800&auto=format&fit=crop"
+                        alt="Hardwood flooring installation">
+                    <div class="service-overlay"></div>
+                </div>
+                <div class="service-content">
+                    <h3>Hardwood Flooring</h3>
+                    <p>Premium solid and engineered hardwood installation, refinishing, and restoration services with
+                        custom staining options.</p>
+                    <a href="#" class="learn-more open-modal-link">Get Estimate →</a>
+                </div>
+            </div>
+
+            <div class="service-card">
+                <div class="service-image">
+                    <img src="https://images.unsplash.com/photo-1581858726788-75bc0f1a4eae?q=80&w=800&auto=format&fit=crop"
+                        alt="Luxury vinyl plank flooring">
+                    <div class="service-overlay"></div>
+                </div>
+                <div class="service-content">
+                    <h3>Luxury Vinyl Plank</h3>
+                    <p>Waterproof, durable LVP with the look of real wood. Perfect for high-traffic areas and
+                        moisture-prone spaces.</p>
+                    <a href="#" class="learn-more open-modal-link">Get Estimate →</a>
+                </div>
+            </div>
+
+            <div class="service-card">
+                <div class="service-image">
+                    <img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?q=80&w=800&auto=format&fit=crop"
+                        alt="Tile flooring installation">
+                    <div class="service-overlay"></div>
+                </div>
+                <div class="service-content">
+                    <h3>Tile Installation</h3>
+                    <p>Ceramic, porcelain, and natural stone tile for kitchens, bathrooms, and elegant living spaces.
+                    </p>
+                    <a href="#" class="learn-more open-modal-link">Get Estimate →</a>
+                </div>
+            </div>
+
+            <div class="service-card">
+                <div class="service-image">
+                    <img src="https://images.unsplash.com/photo-1556912172-45b7abe8b7e1?q=80&w=800&auto=format&fit=crop"
+                        alt="Complete home renovation">
+                    <div class="service-overlay"></div>
+                </div>
+                <div class="service-content">
+                    <h3>Complete Renovations</h3>
+                    <p>Full-scale home transformations from concept to completion with expert project management
+                        included.</p>
+                    <a href="#" class="learn-more open-modal-link">Get Estimate →</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why Choose Us -->
+    <section class="why-us">
+        <div class="section-header">
+            <h2>Why Lafayette Chooses Us</h2>
+            <p class="section-subtitle">Local expertise, transparent pricing, guaranteed craftsmanship</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature">
+                <div class="feature-image">
+                    <img src="https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?q=80&w=600&auto=format&fit=crop"
+                        alt="Professional measurement and consultation">
+                </div>
+                <h3>Precise Measurement</h3>
+                <p>Professional site assessment and accurate measurements ensure perfect material ordering and zero
+                    waste on every project.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-image">
+                    <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=600&auto=format&fit=crop"
+                        alt="Customer consultation and planning">
+                </div>
+                <h3>Transparent Quotes</h3>
+                <p>Detailed quotes with no hidden fees. You'll know exactly what to expect from start to finish on your
+                    project.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-image">
+                    <img src="https://images.unsplash.com/photo-1581858726788-75bc0f1a4eae?q=80&w=600&auto=format&fit=crop"
+                        alt="Clean and professional job site">
+                </div>
+                <h3>Clean Job Sites</h3>
+                <p>We treat your home with respect. Daily cleanup and protection of your property throughout the entire
+                    project.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-image">
+                    <img src="https://images.unsplash.com/photo-1633974855743-f96ccbb62fc5?q=80&w=600&auto=format&fit=crop"
+                        alt="Quality guarantee and warranty">
+                </div>
+                <h3>Guaranteed Work</h3>
+                <p>All installations backed by our satisfaction guarantee and full manufacturer warranties for your
+                    peace of mind.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Process Section -->
+    <section class="process" id="process">
+        <div class="section-header">
+            <h2>Our Proven Process</h2>
+            <p class="section-subtitle">From consultation to final walkthrough, we make it seamless</p>
+        </div>
+        <div class="process-container">
+            <div class="process-step">
+                <div class="step-number">01</div>
+                <div class="process-image">
+                    <img src="https://images.unsplash.com/photo-1581858726788-75bc0f1a4eae?q=80&w=500&auto=format&fit=crop"
+                        alt="Initial consultation and measurement">
+                </div>
+                <h3>Consultation & Measure</h3>
+                <p>We visit your property for a detailed assessment, discuss your vision, and take precise measurements
+                    for accurate quotes.</p>
+            </div>
+            <div class="process-step">
+                <div class="step-number">02</div>
+                <div class="process-image">
+                    <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/5ca30a85-43cd-4d6b-c9ab-b4cbb0efed00/public"
+                        alt="Material selection and quote">
+                </div>
+                <h3>Quote & Select Materials</h3>
+                <p>Receive a detailed transparent quote and select from premium materials that perfectly fit your style
+                    and budget.</p>
+            </div>
+            <div class="process-step">
+                <div class="step-number">03</div>
+                <div class="process-image">
+                    <img src="https://images.unsplash.com/photo-1615876063052-5f1f6628b345?q=80&w=500&auto=format&fit=crop"
+                        alt="Professional installation">
+                </div>
+                <h3>Expert Installation</h3>
+                <p>Our skilled team completes the installation with precision craftsmanship, keeping you informed every
+                    step of the way.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section" id="contact">
+        <div class="cta-content">
+            <h2>Ready to Transform Your Space?</h2>
+            <p>Let's discuss your flooring project today</p>
+            <a href="#" class="primary-button open-modal-link"
+                style="background: var(--primary-green); color: var(--white);">Get Free Estimate</a>
+
+            <div class="cta-contact">
+                <div class="contact-item">
+                    <a href="tel:337-555-1234" class="contact-info">(337) 555-1234</a>
+                    <div class="contact-label">Call Now</div>
+                </div>
+                <div class="contact-item">
+                    <a href="mailto:sam@anythingfloorsandmore.com"
+                        class="contact-info">sam@anythingfloorsandmore.com</a>
+                    <div class="contact-label">Email Us</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer - Glassmorphic Green -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h4>Anything Floors and More</h4>
+                <p>Premium flooring and renovation services serving Lafayette and the Acadiana region.</p>
+                <p class="footer-owner">Owned and operated by Dylan Hollier</p>
+            </div>
+            <div class="footer-section">
+                <h4>Services</h4>
+                <a href="#services">Hardwood Flooring</a>
+                <a href="#services">Luxury Vinyl Plank</a>
+                <a href="#services">Tile Installation</a>
+                <a href="#services">Complete Renovations</a>
+                <a href="#services">Floor Refinishing</a>
+            </div>
+            <div class="footer-section">
+                <h4>Service Area</h4>
+                <p>Lafayette, LA</p>
+                <p>Acadiana Region</p>
+                <p>Mon-Fri: 8AM - 6PM</p>
+                <p>Saturday by Appointment</p>
+            </div>
+            <div class="footer-section">
+                <h4>Contact</h4>
+                <a href="tel:337-555-1234">(337) 555-1234</a>
+                <a href="mailto:sam@anythingfloorsandmore.com">sam@anythingfloorsandmore.com</a>
+                <a href="#" class="open-modal-link">Get Free Estimate</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2025 Anything Floors and More. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Modal functionality
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalClose = document.getElementById('modal-close');
+        const openModalButtons = document.querySelectorAll('#open-modal, #hero-cta, .open-modal-link');
+
+        openModalButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                modalOverlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            });
+        });
+
+        modalClose.addEventListener('click', () => {
+            modalOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        });
+
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) {
+                modalOverlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+
+        // Mobile navigation
+        const navbar = document.getElementById('navbar');
+        const mobileToggle = document.getElementById('mobile-toggle');
+        const navMenu = document.getElementById('nav-menu');
+
+        mobileToggle.addEventListener('click', () => {
+            navMenu.classList.toggle('active');
+            mobileToggle.classList.toggle('active');
+        });
+
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                navMenu.classList.remove('active');
+                mobileToggle.classList.remove('active');
+            });
+        });
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 100) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        // Nav links go to full pages (/services, /process, /gallery, /contact) — no smooth-scroll needed
+
+        // Contact form submission — sends to sam@anythingfloorsandmore.com
+        const contactForm = document.getElementById('contact-form');
+        const contactEmailTo = 'sam@anythingfloorsandmore.com';
+        const submitBtn = contactForm.querySelector('.submit-button');
+        document.getElementById('contact-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const name = document.getElementById('contact-name').value.trim();
+            const email = document.getElementById('contact-email').value.trim();
+            const phone = document.getElementById('contact-phone').value.trim();
+            const message = document.getElementById('contact-message').value.trim();
+
+            if (!name || !email || !message) {
+                alert('Please fill in Name, Email, and Message.');
+                return;
+            }
+
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending…';
+
+            try {
+                const res = await fetch('/api/contact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, phone, message, to: contactEmailTo })
+                });
+                const data = await res.json().catch(() => ({}));
+
+                if (!res.ok) {
+                    throw new Error(data.message || data.error || 'Send failed');
+                }
+                alert(data.message || "Message sent! We'll get back to you soon.");
+                modalOverlay.classList.remove('active');
+                document.body.style.overflow = '';
+                this.reset();
+            } catch (err) {
+                // Fallback: open mailto so the message still goes to sam@anythingfloorsandmore.com
+                const subject = encodeURIComponent('Anything Floors – Contact from ' + name);
+                const body = encodeURIComponent(
+                    'Name: ' + name + '\nEmail: ' + email + '\nPhone: ' + (phone || '—') + '\n\nMessage:\n' + message
+                );
+                window.location.href = 'mailto:' + contactEmailTo + '?subject=' + subject + '&body=' + body;
+                alert("Your email app will open. Send the message to reach us, or call (337) 555-1234.");
+                modalOverlay.classList.remove('active');
+                document.body.style.overflow = '';
+                this.reset();
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        });
+
+        // Phone formatting for contact form
+        const phoneInput = document.getElementById('contact-phone');
+        phoneInput.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 10) value = value.slice(0, 10);
+
+            if (value.length >= 6) {
+                e.target.value = `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6)}`;
+            } else if (value.length >= 3) {
+                e.target.value = `(${value.slice(0, 3)}) ${value.slice(3)}`;
+            } else {
+                e.target.value = value;
+            }
+        });
+
+        // Scroll animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-in');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.service-card, .feature, .process-step').forEach(el => {
+            observer.observe(el);
+        });
+    </script>
+</body>
+
+</html>

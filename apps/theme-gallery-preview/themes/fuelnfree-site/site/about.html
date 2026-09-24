@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - Fuel & Free Time</title>
+    
+    <!-- Premium Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --black: #0a0a0a;
+            --steel: #1a1a1a;
+            --asphalt: #2a2a2a;
+            --smoke: #8a8a8a;
+            --light-smoke: #b0b0b0;
+            --light-gray: #f0f0f0;
+            --off-white: #f8f8f8;
+            --white: #ffffff;
+            --fire-orange: #ff4500;
+            --racing-red: #dc143c;
+            --louisiana-gold: #FFD700;
+            --bronze: #CD7F32;
+            --bronze-light: #E5A558;
+            --bronze-dark: #9B5F1F;
+            
+            /* Typography */
+            --font-display: 'Bebas Neue', sans-serif;
+            --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'Space Mono', monospace;
+            
+            /* Spacing */
+            --space-xs: clamp(0.75rem, 2vw, 1rem);
+            --space-sm: clamp(1rem, 3vw, 1.5rem);
+            --space-md: clamp(2rem, 5vw, 3rem);
+            --space-lg: clamp(3rem, 7vw, 5rem);
+            --space-xl: clamp(4rem, 9vw, 7rem);
+            
+            /* Border Radius */
+            --radius: 12px;
+            
+            /* FNF Specific Variables */
+            --fnf-ease: cubic-bezier(.2,.8,.2,1);
+            --fnf-header: 80px;
+            --fnf-header-md: 70px;
+            --fnf-maxw: 1440px;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background-color: var(--black);
+            color: var(--white);
+            overflow-x: hidden;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* ===== HEADER STYLES ===== */
+        .fnf-shell {
+            --fnf-ease: cubic-bezier(.2,.8,.2,1);
+            --fnf-bronze: #CD7F32;
+            --fnf-bronze-light: #E5A558;
+            --fnf-bronze-dark: #9B5F1F;
+            --fnf-ink: #fff;
+            --fnf-muted: #c8cdd2;
+            --fnf-orange: #ff4500;
+            --fnf-bg0: #0a0a0a;
+            --fnf-bg1: #141414;
+            --fnf-bg2: #1f1f1f;
+            --fnf-header: 80px;
+            --fnf-header-md: 70px;
+            --fnf-maxw: 1440px;
+        }
+
+        .fnf-shell * {
+            box-sizing: border-box;
+        }
+
+        /* ---------- Header (dark everywhere) ---------- */
+        .fnf-header {
+            position: fixed;
+            inset: 0 0 auto 0;
+            height: var(--fnf-header);
+            z-index: 10000;
+            background: rgba(10,10,10,.86);
+            box-shadow: 0 1px 0 rgba(255,69,0,.06);
+            transition: transform .28s var(--fnf-ease), backdrop-filter .28s var(--fnf-ease), background-color .28s var(--fnf-ease);
+            will-change: transform;
+        }
+
+        @supports(backdrop-filter:blur(1px)) {
+            .fnf-header {
+                backdrop-filter: blur(8px);
+            }
+            .fnf-header.is-scrolling {
+                backdrop-filter: blur(14px);
+            }
+        }
+
+        .fnf-header.is-hidden {
+            transform: translateY(-100%);
+        }
+
+        .fnf-row {
+            max-width: var(--fnf-maxw);
+            margin: 0 auto;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 56px;
+        }
+
+        .fnf-logo {
+            height: 68px;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            position: relative;
+            transition: transform .25s var(--fnf-ease);
+        }
+
+        .fnf-logo img {
+            height: 100%;
+            width: auto;
+            display: block;
+            filter: brightness(.96);
+            transition: filter .25s var(--fnf-ease);
+        }
+
+        .fnf-logo::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: -6px;
+            transform: translateX(-50%) scaleX(0);
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--fnf-orange), transparent);
+            transition: transform .3s var(--fnf-ease);
+        }
+
+        .fnf-logo:hover {
+            transform: translateY(-1px);
+        }
+
+        .fnf-logo:hover img {
+            filter: brightness(1.1) drop-shadow(0 0 10px rgba(255,69,0,.4));
+        }
+
+        .fnf-logo:hover::after {
+            transform: translateX(-50%) scaleX(1);
+        }
+
+        /* Desktop nav (hover/underline everywhere, only current underlined) */
+        .fnf-nav {
+            list-style: none;
+            display: flex;
+            gap: 44px;
+        }
+
+        .fnf-nav a {
+            color: var(--fnf-muted);
+            text-decoration: none;
+            font-size: 15px;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            font-weight: 700;
+            position: relative;
+            outline: none;
+        }
+
+        .fnf-nav a::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -4px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--fnf-orange), var(--fnf-bronze-light));
+            transform: scaleX(0);
+            transition: transform .25s var(--fnf-ease);
+            transform-origin: center;
+        }
+
+        .fnf-nav a:hover,
+        .fnf-nav a.is-active,
+        .fnf-nav a:focus-visible {
+            color: var(--fnf-ink);
+        }
+
+        .fnf-nav a:hover::before,
+        .fnf-nav a.is-active::before,
+        .fnf-nav a:focus-visible::before {
+            transform: scaleX(1);
+        }
+
+        /* Burger + Mobile menu with matching underline */
+        .fnf-burger {
+            display: none;
+            background: none;
+            border: 0;
+            padding: 10px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        .fnf-burger span {
+            display: block;
+            width: 24px;
+            height: 2px;
+            background: var(--fnf-orange);
+            margin: 5px 0;
+            transition: transform .25s, opacity .25s;
+        }
+
+        .fnf-burger.is-open span:nth-child(1) {
+            transform: rotate(45deg) translate(5px, 6px);
+        }
+
+        .fnf-burger.is-open span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .fnf-burger.is-open span:nth-child(3) {
+            transform: rotate(-45deg) translate(6px, -6px);
+        }
+
+        .fnf-mobile {
+            position: fixed;
+            left: 0;
+            right: 0;
+            top: var(--fnf-header);
+            background: rgba(15,15,15,.98);
+            transform: translateY(-100%);
+            opacity: 0;
+            visibility: hidden;
+            transition: transform .28s var(--fnf-ease), opacity .28s;
+            z-index: 9999;
+            padding: 22px;
+            border-bottom: 1px solid rgba(255,69,0,.14);
+        }
+
+        .fnf-mobile.is-open {
+            transform: translateY(0);
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .fnf-mobile ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin: 0;
+        }
+
+        .fnf-mobile a {
+            color: var(--fnf-ink);
+            text-decoration: none;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            font-weight: 800;
+            position: relative;
+            outline: none;
+            padding: 8px 0;
+        }
+
+        .fnf-mobile a::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -2px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--fnf-orange), var(--fnf-bronze-light));
+            transform: scaleX(0);
+            transition: transform .25s var(--fnf-ease);
+            transform-origin: center;
+        }
+
+        .fnf-mobile a:focus-visible::before,
+        .fnf-mobile a:active::before,
+        .fnf-mobile a.is-active::before,
+        .fnf-mobile a.tap-anim::before {
+            transform: scaleX(1);
+        }
+
+        /* Spacer for non-home pages */
+        .fnf-spacer {
+            height: var(--fnf-header);
+            display: block;
+        }
+
+        /* ===== ABOUT PAGE STYLES ===== */
+        :root {
+            --steel: #2d2d2d;
+            --asphalt: #404040;
+            --smoke: #969696;
+            --light-gray: #f5f5f5;
+            --fire-orange: #ff4500;
+            --racing-red: #dc143c;
+            --diesel-green: #2d4a2b;
+            --coffee-brown: #3e2723;
+            --louisiana-gold: #FFD700;
+            --warm-gradient-1: #ff6b35;
+            --warm-gradient-2: #f77737;
+            
+            /* Typography */
+            --font-heading: 'Bebas Neue', sans-serif;
+            --font-subheading: 'Space Grotesk', sans-serif;
+            --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        /* Typography Base */
+        .about-page h1, 
+        .about-page h2, 
+        .about-page h3 {
+            font-family: var(--font-heading);
+            letter-spacing: 0.02em;
+        }
+
+        .about-page h4, 
+        .about-page h5, 
+        .about-page h6 {
+            font-family: var(--font-subheading);
+            font-weight: 600;
+        }
+
+        .about-page p {
+            font-family: var(--font-body);
+            font-weight: 400;
+            letter-spacing: -0.011em;
+        }
+
+        /* Hero Section */
+        .about-hero {
+            position: relative;
+            min-height: 70vh;
+            background: linear-gradient(135deg, var(--black) 0%, var(--steel) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .about-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://cdn.shopify.com/s/files/1/0666/4060/9411/files/fire_fuel_up_logo.png?v=1756480228') center/cover;
+            opacity: 0.3;
+            transform: translateZ(0);
+            will-change: transform;
+        }
+
+        .about-hero-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            max-width: 900px;
+            padding: 100px 20px 60px;
+        }
+
+        .hero-meta-info {
+            margin-bottom: 2.5rem;
+            opacity: 0;
+            animation: fadeInDown 1s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards;
+        }
+
+        .hero-meta-info p {
+            font-size: 12px;
+            font-family: var(--font-subheading);
+            font-weight: 500;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            margin: 8px 0;
+            opacity: 0.7;
+            transition: color 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .hero-meta-info p.color-animate {
+            background: linear-gradient(90deg, var(--smoke) 0%, var(--racing-red) 50%, var(--smoke) 100%);
+            background-size: 200% 100%;
+            background-position: 0% 0%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            transition: background-position 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .hero-meta-info .divider {
+            display: inline-block;
+            width: 40px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--fire-orange), transparent);
+            margin: 20px 0;
+            opacity: 0.6;
+        }
+
+        .about-hero-title {
+            font-size: clamp(56px, 7vw, 96px);
+            font-weight: 400;
+            color: var(--white);
+            margin-bottom: 24px;
+            text-transform: uppercase;
+            line-height: 0.9;
+            opacity: 0;
+            animation: fadeInUp 1s cubic-bezier(0.4, 0, 0.2, 1) 0.4s forwards;
+        }
+
+        .about-hero-subtitle {
+            font-size: 18px;
+            font-family: var(--font-body);
+            font-weight: 400;
+            color: var(--smoke);
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.7;
+            opacity: 0;
+            animation: fadeInUp 1s cubic-bezier(0.4, 0, 0.2, 1) 0.6s forwards;
+        }
+
+        /* Moment Section */
+        .moment-section {
+            padding: 120px 40px;
+            background: var(--white);
+        }
+
+        .moment-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .moment-title {
+            font-size: clamp(42px, 5vw, 64px);
+            font-weight: 400;
+            margin-bottom: 48px;
+            color: var(--black);
+            text-transform: uppercase;
+        }
+
+        .moment-story {
+            font-size: 17px;
+            line-height: 1.8;
+            color: var(--asphalt);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .moment-story strong {
+            color: var(--fire-orange);
+            font-weight: 600;
+            font-family: var(--font-subheading);
+        }
+
+        .moment-quote {
+            margin: 60px auto;
+            padding: 40px;
+            background: linear-gradient(135deg, var(--light-gray), rgba(255, 69, 0, 0.05));
+            border-left: 4px solid var(--fire-orange);
+            max-width: 700px;
+            position: relative;
+            opacity: 0;
+            transform: translateX(-30px);
+        }
+
+        .moment-quote.visible {
+            animation: slideInFromLeft 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        .moment-quote p {
+            font-size: 26px;
+            font-style: italic;
+            font-family: var(--font-subheading);
+            color: var(--steel);
+            margin: 0;
+            letter-spacing: -0.02em;
+        }
+
+        /* Video Section */
+        .video-section {
+            padding: 80px 40px;
+            background: linear-gradient(180deg, var(--white) 0%, var(--light-gray) 100%);
+        }
+
+        .video-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+            background: var(--black);
+        }
+
+        .video-container video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Collections Section */
+        .collections-section {
+            padding: 120px 40px;
+            background: var(--light-gray);
+        }
+
+        .collections-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .collections-header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .collections-header h2 {
+            font-size: clamp(42px, 5vw, 64px);
+            font-weight: 400;
+            margin-bottom: 20px;
+            color: var(--black);
+            text-transform: uppercase;
+        }
+
+        .collections-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
+        }
+
+        .collection-card {
+            background: var(--white);
+            overflow: hidden;
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            opacity: 0;
+            transform: translateY(40px);
+            text-decoration: none;
+            display: block;
+        }
+
+        .collection-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .collection-card:hover {
+            transform: translateY(-12px);
+            box-shadow: 0 24px 48px rgba(0,0,0,0.12);
+        }
+
+        .collection-image {
+            height: 280px;
+            background: var(--steel);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .collection-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .collection-card:hover .collection-image img {
+            transform: scale(1.08);
+        }
+
+        .collection-badge {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            background: var(--fire-orange);
+            color: var(--white);
+            padding: 10px 20px;
+            font-size: 11px;
+            font-family: var(--font-subheading);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+        }
+
+        .collection-content {
+            padding: 36px;
+        }
+
+        .collection-title {
+            font-size: 28px;
+            font-weight: 400;
+            margin-bottom: 12px;
+            color: var(--black);
+            text-transform: uppercase;
+        }
+
+        .collection-description {
+            color: var(--asphalt);
+            margin-bottom: 24px;
+            line-height: 1.7;
+            font-size: 15px;
+        }
+
+        .collection-link {
+            color: var(--fire-orange);
+            font-weight: 600;
+            font-family: var(--font-subheading);
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-size: 13px;
+            display: inline-block;
+        }
+
+        /* Against Section */
+        .against-section {
+            padding: 120px 40px;
+            background: linear-gradient(180deg, 
+                var(--light-gray) 0%, 
+                var(--steel) 30%, 
+                var(--steel) 70%, 
+                var(--asphalt) 100%);
+            color: var(--white);
+        }
+
+        .against-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .against-header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .against-header h2 {
+            font-size: clamp(42px, 5vw, 64px);
+            font-weight: 400;
+            color: var(--white);
+            text-transform: uppercase;
+        }
+
+        .against-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 60px;
+        }
+
+        .against-item {
+            text-align: center;
+        }
+
+        .against-icon {
+            font-size: 48px;
+            margin-bottom: 24px;
+            display: inline-block;
+            transform: rotate(-10deg);
+            opacity: 0.3;
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .against-title {
+            font-size: 22px;
+            font-family: var(--font-subheading);
+            font-weight: 600;
+            color: var(--fire-orange);
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            position: relative;
+            display: inline-block;
+            letter-spacing: 0.05em;
+        }
+
+        .against-title::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 0;
+            height: 3px;
+            background: var(--racing-red);
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(-50%);
+        }
+
+        .against-item:nth-child(1) .against-title::after,
+        .against-item:nth-child(3) .against-title::after {
+            left: -10%;
+        }
+
+        .against-item:nth-child(2) .against-title::after {
+            right: -10%;
+        }
+
+        .against-title.crossed::after {
+            width: 120%;
+        }
+
+        .against-description {
+            color: var(--smoke);
+            line-height: 1.7;
+            font-size: 15px;
+        }
+
+        /* Lafayette Section */
+        .lafayette-section {
+            padding: 120px 40px;
+            background: linear-gradient(180deg, 
+                var(--asphalt) 0%,
+                #5a4a3a 20%,
+                #8b6914 50%,
+                #b8860b 70%,
+                var(--louisiana-gold) 85%,
+                #f4e5c2 100%);
+            position: relative;
+        }
+
+        .lafayette-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .lafayette-badge {
+            display: inline-block;
+            color: var(--black);
+            padding: 12px 32px;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-bottom: 2rem;
+            font-size: 13px;
+            border: 2px solid var(--black);
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .lafayette-title {
+            font-size: clamp(42px, 5vw, 64px);
+            font-weight: 400;
+            color: var(--black);
+            margin-bottom: 36px;
+            text-transform: uppercase;
+        }
+
+        /* Story Section */
+        .full-story-section {
+            padding: 120px 40px;
+            background: linear-gradient(180deg,
+                #f4e5c2 0%,
+                var(--white) 20%,
+                var(--white) 100%);
+        }
+
+        .story-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: center;
+            margin-bottom: 100px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .story-section.reverse {
+            direction: rtl;
+        }
+
+        .story-section.reverse .story-content {
+            direction: ltr;
+        }
+
+        .story-image {
+            position: relative;
+            height: 450px;
+            background: var(--steel);
+            overflow: hidden;
+        }
+
+        .story-image.vertical {
+            height: 600px;
+        }
+
+        .story-image img,
+        .story-image video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Values Section */
+        .values-about-section {
+            padding: 120px 40px;
+            background: linear-gradient(180deg,
+                var(--white) 0%,
+                var(--light-gray) 30%,
+                #ffe8e0 70%,
+                #ffcfc0 100%);
+        }
+
+        .values-about-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 32px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .value-about-card {
+            background: rgba(255,255,255,0.8);
+            padding: 48px 32px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+        }
+
+        .value-about-card:hover {
+            border-color: var(--fire-orange);
+            transform: translateY(-12px);
+            box-shadow: 0 24px 48px rgba(0,0,0,0.1);
+            background: var(--white);
+        }
+
+        /* CTA Section */
+        .about-cta-section {
+            padding: 120px 40px;
+            background: linear-gradient(180deg,
+                #ffcfc0 0%,
+                var(--warm-gradient-1) 20%,
+                var(--fire-orange) 50%,
+                var(--racing-red) 100%);
+            text-align: center;
+        }
+
+        .about-cta-btn {
+            display: inline-block;
+            padding: 20px 48px;
+            background: var(--white);
+            color: var(--fire-orange);
+            text-decoration: none;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-size: 14px;
+            border-radius: 2px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            margin: 10px;
+        }
+
+        .about-cta-btn:hover {
+            background: var(--black);
+            color: var(--white);
+            transform: translateY(-3px);
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInFromLeft {
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .animate-on-scroll {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .animate-on-scroll.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ===== FOOTER STYLES ===== */
+        .fnf-footer {
+            background: linear-gradient(180deg, var(--steel) 0%, #1a1a1a 20%, var(--black) 100%);
+            padding: 80px 0 30px;
+            border-top: 1px solid rgba(255, 69, 0, 0.1);
+            position: relative;
+        }
+
+        /* Top accent line */
+        .fnf-footer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, 
+                transparent, 
+                var(--fire-orange) 20%, 
+                var(--racing-red) 50%,
+                var(--fire-orange) 80%, 
+                transparent);
+            opacity: 0.6;
+        }
+
+        .fnf-footer-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+
+        /* Main Footer Content */
+        .fnf-footer-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1.5fr;
+            gap: 60px;
+            margin-bottom: 60px;
+        }
+
+        /* Brand Column */
+        .fnf-footer-brand {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .fnf-footer-logo {
+            display: inline-block;
+            height: 60px;
+            width: auto;
+            transition: all 0.3s ease;
+        }
+
+        .fnf-footer-logo img {
+            height: 100%;
+            width: auto;
+            filter: brightness(0.9);
+            transition: filter 0.3s ease;
+        }
+
+        .fnf-footer-logo:hover img {
+            filter: brightness(1.1) drop-shadow(0 0 10px rgba(255, 69, 0, 0.5));
+        }
+
+        .fnf-footer-tagline {
+            font-size: 18px;
+            line-height: 1.6;
+            color: var(--smoke);
+            font-style: italic;
+            letter-spacing: 0.5px;
+        }
+
+        .fnf-footer-description {
+            font-size: 14px;
+            line-height: 1.8;
+            color: var(--smoke);
+            max-width: 400px;
+        }
+
+        /* Navigation Columns */
+        .fnf-footer-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .fnf-footer-nav h3 {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--fire-orange);
+            margin-bottom: 5px;
+            position: relative;
+            padding-bottom: 10px;
+        }
+
+        .fnf-footer-nav h3::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--fire-orange);
+            transition: width 0.6s ease;
+        }
+
+        .fnf-footer-nav h3.animate::after {
+            width: 100%;
+        }
+
+        /* Special styling for Connect section titles */
+        .fnf-footer-connect h3 {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, var(--bronze) 0%, var(--bronze-light) 50%, var(--bronze) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 5px;
+            position: relative;
+            padding-bottom: 10px;
+        }
+
+        .fnf-footer-connect h3::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--bronze), var(--bronze-light));
+            transition: width 0.6s ease;
+        }
+
+        .fnf-footer-connect h3.animate::after {
+            width: 100%;
+        }
+
+        .fnf-footer-nav ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .fnf-footer-nav a {
+            color: var(--smoke);
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+            display: inline-block;
+        }
+
+        .fnf-footer-nav a::before {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 1px;
+            background: var(--fire-orange);
+            transition: width 0.3s ease;
+        }
+
+        .fnf-footer-nav a:hover::before {
+            width: 100%;
+        }
+
+        .fnf-footer-nav a:hover {
+            color: var(--white);
+            transform: translateX(3px);
+        }
+
+        /* Social & Newsletter Column */
+        .fnf-footer-connect {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .fnf-social-links {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .fnf-social-link {
+            width: 40px;
+            height: 40px;
+            border: 1px solid rgba(255, 69, 0, 0.3);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: var(--smoke);
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .fnf-social-link:hover {
+            background: var(--fire-orange);
+            border-color: var(--fire-orange);
+            color: var(--white);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(255, 69, 0, 0.3);
+        }
+
+        /* Newsletter Signup */
+        .fft-newsletter-mini {
+            margin-top: 10px;
+        }
+
+        .fft-newsletter-form {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .fft-newsletter-input {
+            flex: 1;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            color: var(--white);
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .fft-newsletter-input::placeholder {
+            color: var(--smoke);
+        }
+
+        .fft-newsletter-input:focus {
+            outline: none;
+            border-color: var(--fire-orange);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .fft-newsletter-submit {
+            padding: 12px 20px;
+            background: var(--fire-orange);
+            color: var(--white);
+            border: none;
+            border-radius: 4px;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .fft-newsletter-submit:hover {
+            background: var(--racing-red);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 69, 0, 0.3);
+        }
+
+        /* Footer Bottom */
+        .fnf-footer-bottom {
+            padding-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .fnf-footer-copyright {
+            color: var(--smoke);
+            font-size: 14px;
+        }
+
+        .fnf-footer-legal {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .fnf-footer-legal a {
+            color: var(--smoke);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+
+        .fnf-footer-legal a:hover {
+            color: var(--white);
+        }
+
+        /* ===== RESPONSIVE DESIGN ===== */
+        @media (max-width: 1024px) {
+            .fnf-row {
+                padding: 0 24px;
+            }
+            .fnf-logo {
+                height: 62px;
+            }
+            .story-section {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+            .story-section.reverse {
+                direction: ltr;
+            }
+            .values-about-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .collections-grid {
+                grid-template-columns: 1fr;
+            }
+            .against-grid {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+            .fnf-footer-content {
+                grid-template-columns: 1fr 1fr;
+                gap: 40px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .fnf-shell {
+                --fnf-header: var(--fnf-header-md);
+            }
+            .fnf-burger {
+                display: block;
+            }
+            .fnf-nav {
+                display: none;
+            }
+            .fnf-logo {
+                height: 56px;
+            }
+            .about-hero-content {
+                padding: 80px 20px 40px;
+            }
+            .values-about-grid {
+                grid-template-columns: 1fr;
+            }
+            .fnf-footer {
+                padding: 60px 0 30px;
+            }
+            .fnf-footer-container {
+                padding: 0 24px;
+            }
+            .fnf-footer-content {
+                grid-template-columns: 1fr;
+                gap: 40px;
+                text-align: center;
+            }
+            .fnf-footer-nav h3.animate::after,
+            .fnf-footer-connect h3.animate::after {
+                left: 50%;
+                transform: translateX(-50%);
+                width: 100%;
+            }
+            .fnf-footer-nav ul {
+                align-items: center;
+            }
+            .fnf-social-links {
+                justify-content: center;
+            }
+            .fnf-footer-bottom {
+                flex-direction: column;
+                text-align: center;
+            }
+            .fnf-footer-legal {
+                flex-direction: column;
+                gap: 15px;
+            }
+            .fft-newsletter-form {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- FNF Header -->
+    <div class="fnf-shell" id="fnfApp">
+        <!-- Header -->
+        <header class="fnf-header" id="fnfHeader">
+            <div class="fnf-row">
+                <a class="fnf-logo" href="./" aria-label="Fuel & Free Time">
+                    <img src="https://cdn.shopify.com/s/files/1/0666/4060/9411/files/fandft-clear-background.png?v=1755572638" alt="Fuel & Free Time" width="256" height="68" />
+                </a>
+                <nav class="fnf-primary" aria-label="Primary">
+                    <ul class="fnf-nav">
+                        <li><a href="./">Home</a></li>
+                        <li><a href="./shop.html">Shop</a></li>
+                        <li><a href="./about.html" class="is-active">About</a></li>
+                        <li><a href="./community.html">Community</a></li>
+                    </ul>
+                </nav>
+                <button class="fnf-burger" id="fnfBurger" aria-label="Open menu" aria-controls="fnfMobile" aria-expanded="false">
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Mobile Menu -->
+        <nav class="fnf-mobile" id="fnfMobile" aria-label="Mobile">
+            <ul>
+                <li><a href="./">Home</a></li>
+                <li><a href="./shop.html">Shop</a></li>
+                <li><a href="./about.html" class="is-active">About</a></li>
+                <li><a href="./community.html">Community</a></li>
+            </ul>
+        </nav>
+
+        <!-- Spacer for non-home pages -->
+        <div class="fnf-spacer" id="fnfSpacer"></div>
+    </div>
+
+    <!-- ABOUT PAGE CONTENT -->
+    <div class="about-page">
+        <!-- Hero Section -->
+        <section class="about-hero">
+            <div class="about-hero-content">
+                <div class="hero-meta-info">
+                    <p class="meta-text-1">Est. 2025</p>
+                    <span class="divider"></span>
+                    <p class="meta-text-2">Made in Lafayette, Louisiana</p>
+                </div>
+                <h1 class="about-hero-title">Built in the Garage</h1>
+                <p class="about-hero-subtitle">
+                    Born from blood, sweat, and years of earning our freedom. This is more than a brand — it's a brotherhood.
+                </p>
+            </div>
+        </section>
+
+        <!-- Moment Section -->
+        <section class="moment-section">
+            <div class="moment-container animate-on-scroll">
+                <h2 class="moment-title">The Moment Everything Changed</h2>
+                <div class="moment-story">
+                    <p>
+                        <strong>3:47 AM. Highway 90. Just outside Lafayette.</strong>
+                    </p>
+                    <p>
+                        After pulling a 16-hour shift, watching the sun rise over the Atchafalaya Basin from the seat of my bike, 
+                        it hit me. I'd spent 20 years trading time for money, thinking someday I'd have enough to finally live. 
+                        But watching those old-timers at the truck stop — guys who'd "made it" but were too broken or too late to 
+                        enjoy it — I realized the real luxury wasn't in my bank account.
+                    </p>
+                    <div class="moment-quote">
+                        <p>"Time isn't money. Time is everything money can't buy back."</p>
+                    </div>
+                    <p>
+                        That morning, Fuel & Free Time was born. Not as a business plan, but as a middle finger to the lie that 
+                        we should wait until retirement to live. Every piece we make is a reminder: the goal isn't to get rich 
+                        enough to buy freedom. It's to be free enough to get rich in experiences.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Video Section -->
+        <section class="video-section">
+            <div class="video-container">
+                <video autoplay muted loop playsinline>
+                    <source src="https://cdn.shopify.com/videos/c/o/v/48add6d05f304c71afa980c281dc8641.mov" type="video/mp4">
+                </video>
+            </div>
+        </section>
+
+        <!-- Collections Section -->
+        <section class="collections-section">
+            <div class="collections-container">
+                <div class="collections-header animate-on-scroll">
+                    <h2>The Gear That Gets It</h2>
+                </div>
+                <div class="collections-grid">
+                    <a href="./shop.html" class="collection-card">
+                        <div class="collection-image">
+                            <div class="collection-badge">Core Collection</div>
+                            <img src="https://cdn.shopify.com/s/files/1/0666/4060/9411/files/50C9CEB5-3EA4-4A67-9CB3-9D25FFDA72BF.png?v=1756307782" alt="Fuel & Free Time Core Collection">
+                        </div>
+                        <div class="collection-content">
+                            <h3 class="collection-title">The Essentials</h3>
+                            <p class="collection-description">
+                                Daily drivers. The tees, hoodies, and gear that remind you why you grind — 
+                                so you don't have to forever.
+                            </p>
+                            <span class="collection-link">Explore Core →</span>
+                        </div>
+                    </a>
+                    <a href="./shop.html" class="collection-card">
+                        <div class="collection-image">
+                            <div class="collection-badge">High Octane</div>
+                            <img src="https://cdn.shopify.com/s/files/1/0666/4060/9411/files/Vette.png?v=1756480807" alt="High Octane Performance Collection">
+                        </div>
+                        <div class="collection-content">
+                            <h3 class="collection-title">High Octane</h3>
+                            <p class="collection-description">
+                                Performance gear for when you're burning rubber, not burning out. 
+                                Technical fabrics meet garage style.
+                            </p>
+                            <span class="collection-link">Shop Performance →</span>
+                        </div>
+                    </a>
+                    <a href="./shop.html" class="collection-card">
+                        <div class="collection-image">
+                            <div class="collection-badge">Limited Drops</div>
+                            <img src="https://cdn.shopify.com/s/files/1/0666/4060/9411/files/fuel_up.png?v=1756307946" alt="Masters Series Limited Edition">
+                        </div>
+                        <div class="collection-content">
+                            <h3 class="collection-title">Masters Series</h3>
+                            <p class="collection-description">
+                                Small batch. Big stories. Limited pieces honoring those who've mastered 
+                                the art of living on their terms.
+                            </p>
+                            <span class="collection-link">View Drops →</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Against Section -->
+        <section class="against-section">
+            <div class="against-container">
+                <div class="against-header animate-on-scroll">
+                    <h2>What We Stand Against</h2>
+                </div>
+                <div class="against-grid">
+                    <div class="against-item animate-on-scroll">
+                        <div class="against-icon">💼</div>
+                        <h3 class="against-title strike-title">The 40-Year Plan</h3>
+                        <p class="against-description">
+                            Waiting until 65 to start living. We believe life happens now, 
+                            not after four decades of postponement.
+                        </p>
+                    </div>
+                    <div class="against-item animate-on-scroll">
+                        <div class="against-icon">⏰</div>
+                        <h3 class="against-title strike-title">Time Poverty</h3>
+                        <p class="against-description">
+                            Being cash rich but time broke. What good is a garage full of toys 
+                            if you never have time to play?
+                        </p>
+                    </div>
+                    <div class="against-item animate-on-scroll">
+                        <div class="against-icon">🏢</div>
+                        <h3 class="against-title strike-title">Corporate Chains</h3>
+                        <p class="against-description">
+                            Golden handcuffs and corner offices that become expensive prisons. 
+                            Freedom isn't negotiable.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Lafayette Section -->
+        <section class="lafayette-section">
+            <div class="lafayette-container animate-on-scroll">
+                <div class="lafayette-badge">🔥 Louisiana Made 🔥</div>
+                <h2 class="lafayette-title">Crafted in Lafayette</h2>
+                <div class="lafayette-content">
+                    <p>
+                        Every piece is designed, cut, sewn, and shipped from Lafayette, Louisiana. 
+                        Not because it's trendy or marketable, but because this is where the culture lives.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Story Section -->
+        <section class="full-story-section">
+            <div class="full-story-header animate-on-scroll">
+                <h2 class="full-story-title" style="text-align: center;">The <span style="color: var(--fire-orange);">Full</span> Story</h2>
+            </div>
+            
+            <div class="story-section">
+                <div class="story-content">
+                    <p>
+                        Fuel & Free Time isn't backed by investors or focus groups. It started with grease under the 
+                        fingernails and a realization that hit harder than Louisiana summer heat.
+                    </p>
+                </div>
+                <div class="story-image">
+                    <img src="https://cdn.shopify.com/s/files/1/0666/4060/9411/files/50C9CEB5-3EA4-4A67-9CB3-9D25FFDA72BF.png?v=1756307782" alt="Fuel & Free Time Origins">
+                </div>
+            </div>
+
+            <div class="story-section reverse">
+                <div class="story-content">
+                    <p>
+                        Every thread is sewn with purpose in Lafayette — not to save costs, but to build something real 
+                        in a world of dropshipped dreams.
+                    </p>
+                </div>
+                <div class="story-image">
+                    <video autoplay muted loop playsinline>
+                        <source src="https://cdn.shopify.com/videos/c/o/v/f506d93491964936880ddb76df43e448.mov" type="video/mp4">
+                    </video>
+                </div>
+            </div>
+
+            <div class="story-section">
+                <div class="story-content">
+                    <p>
+                        From that first sunrise on Highway 90 to every late-night garage session since, we've stayed true 
+                        to one principle: time is the only real currency.
+                    </p>
+                </div>
+                <div class="story-image vertical">
+                    <img src="https://cdn.shopify.com/s/files/1/0666/4060/9411/files/high_octane.jpg?v=1756307558" alt="High Octane Lifestyle">
+                </div>
+            </div>
+        </section>
+
+        <!-- Values Section -->
+        <section class="values-about-section">
+            <div class="values-about-header animate-on-scroll">
+                <h2 style="text-align: center; font-size: clamp(42px, 5vw, 64px); text-transform: uppercase;">What Drives Us</h2>
+            </div>
+            <div class="values-about-grid">
+                <div class="value-about-card">
+                    <div style="font-size: 48px; margin-bottom: 24px;">⏱️</div>
+                    <h3 style="font-size: 17px; text-transform: uppercase; margin-bottom: 16px;">Time as Currency</h3>
+                    <p style="font-size: 14px; line-height: 1.7;">
+                        The only resource you can't earn back. We measure wealth in free hours, not dollar signs.
+                    </p>
+                </div>
+                <div class="value-about-card">
+                    <div style="font-size: 48px; margin-bottom: 24px;">⚡</div>
+                    <h3 style="font-size: 17px; text-transform: uppercase; margin-bottom: 16px;">Fuel Everything</h3>
+                    <p style="font-size: 14px; line-height: 1.7;">
+                        Gas, diesel, jet fuel, coffee — whatever powers your passion, we celebrate it.
+                    </p>
+                </div>
+                <div class="value-about-card">
+                    <div style="font-size: 48px; margin-bottom: 24px;">🤝</div>
+                    <h3 style="font-size: 17px; text-transform: uppercase; margin-bottom: 16px;">Cross-Gen Unity</h3>
+                    <p style="font-size: 14px; line-height: 1.7;">
+                        Old heads and young bucks united by shared values, not shared birthdays.
+                    </p>
+                </div>
+                <div class="value-about-card">
+                    <div style="font-size: 48px; margin-bottom: 24px;">🏁</div>
+                    <h3 style="font-size: 17px; text-transform: uppercase; margin-bottom: 16px;">Culture > Commerce</h3>
+                    <p style="font-size: 14px; line-height: 1.7;">
+                        Building a movement, not just moving product. Community first, sales second.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section class="about-cta-section">
+            <div class="about-cta-container animate-on-scroll">
+                <h2 style="font-size: clamp(42px, 5vw, 64px); color: white; text-transform: uppercase; margin-bottom: 24px;">Ready to Claim Your Time?</h2>
+                <p style="font-size: 18px; color: rgba(255,255,255,0.9); margin-bottom: 48px;">
+                    Join a growing tribe that measures success in sunsets, not spreadsheets.
+                </p>
+                <div>
+                    <a href="./shop.html" class="about-cta-btn">
+                        Shop the Collection
+                    </a>
+                    <a href="./community.html" class="about-cta-btn" style="background: transparent; border: 2px solid white; color: white;">
+                        Join the Movement
+                    </a>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="fnf-footer">
+        <div class="fnf-footer-container">
+            <div class="fnf-footer-content">
+                <!-- Brand Column -->
+                <div class="fnf-footer-brand">
+                    <a href="./" class="fnf-footer-logo">
+                        <img src="https://cdn.shopify.com/s/files/1/0666/4060/9411/files/fandft-clear-background.png?v=1755572638" 
+                             alt="Fuel & Free Time">
+                    </a>
+                    <p class="fnf-footer-tagline">"Time is the real flex."</p>
+                    <p class="fnf-footer-description">
+                        For those who've earned their freedom through hard work, service, and dedication. 
+                        This is more than apparel — it's a badge of the life you've built.
+                    </p>
+                </div>
+
+                <!-- Quick Links -->
+                <div class="fnf-footer-nav">
+                    <h3>Explore</h3>
+                    <ul>
+                        <li><a href="https://fuelnfreetime.com/pages/shop">Shop</a></li>
+                        <li><a href="https://fuelnfreetime.com/pages/community">Community</a></li>
+                        <li><a href="https://fuelnfreetime.com/pages/collab">Collaborate</a></li>
+                    </ul>
+                </div>
+
+                <!-- Support -->
+                <div class="fnf-footer-nav">
+                    <h3>Support</h3>
+                    <ul>
+                        <li><a href="https://fuelnfreetime.com/pages/contact">Contact</a></li>
+                        <li><a href="https://fuelnfreetime.com/pages/data-sharing-opt-out">Privacy Policy</a></li>
+                    </ul>
+                </div>
+
+                <!-- Connect -->
+                <div class="fnf-footer-connect">
+                    <div>
+                        <h3>Stay Connected</h3>
+                        <div class="fnf-social-links">
+                            <a href="#" class="fnf-social-link" aria-label="Instagram">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+                                </svg>
+                            </a>
+                            <a href="#" class="fnf-social-link" aria-label="Facebook">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+                                </svg>
+                            </a>
+                            <a href="#" class="fnf-social-link" aria-label="YouTube">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
+                                    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="fft-newsletter-mini">
+                        <h3>Get Updates</h3>
+                        <form class="fft-newsletter-form">
+                            <input type="email" class="fft-newsletter-input" placeholder="Your email">
+                            <button type="submit" class="fft-newsletter-submit">Join</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Bottom -->
+            <div class="fnf-footer-bottom">
+                <p class="fnf-footer-copyright">
+                    © 2025 Fuel & Free Time. All rights reserved.
+                </p>
+                <div class="fnf-footer-legal">
+                    <span style="color: var(--smoke); font-size: 14px;">Built for those who've earned it.</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        (function(){
+            const $ = (s, r=document)=>r.querySelector(s);
+            const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
+
+            const app = $('#fnfApp');
+            const header = $('#fnfHeader');
+            const burger = $('#fnfBurger');
+            const mobile = $('#fnfMobile');
+
+            // ACTIVE LINK: only current page underlined
+            const norm = (u)=>u.replace(/\/+$/,'') || '/';
+            function setActive(anchors){
+                anchors.forEach(a=>a.classList.remove('is-active'));
+                const here = norm(location.pathname);
+                let best = null, bestLen = -1;
+                anchors.forEach(a=>{
+                    const href = norm(a.getAttribute('href')||'/');
+                    if(href==='/' && here!=='/') return;
+                    if(href==='/' && here==='/'){ best=a; bestLen=1; return; }
+                    if(href!=='/' && here.startsWith(href) && href.length>bestLen){ best=a; bestLen=href.length; }
+                });
+                if(!best && here==='/'){ best = anchors.find(a=>norm(a.getAttribute('href')||'/')==='/'); }
+                if(best){ best.classList.add('is-active'); }
+            }
+            setActive($$('.fnf-nav a')); setActive($$('#fnfMobile a'));
+
+            // Header behavior: blur on scroll, hide on strong downward scroll
+            let lastY = window.scrollY;
+            const onScroll = ()=>{
+                const y = window.scrollY, down = y > lastY;
+                header.classList.toggle('is-scrolling', y>10);
+                header.classList.toggle('is-hidden', y>120 && down);
+                lastY = y;
+            };
+            window.addEventListener('scroll', onScroll, {passive:true}); onScroll();
+
+            // Mobile menu + underline tap animation
+            const closeMenu = ()=>{
+                burger.classList.remove('is-open');
+                mobile.classList.remove('is-open');
+                burger.setAttribute('aria-expanded','false');
+            };
+            burger.addEventListener('click', ()=>{
+                const open = !burger.classList.contains('is-open');
+                burger.classList.toggle('is-open', open);
+                mobile.classList.toggle('is-open', open);
+                burger.setAttribute('aria-expanded', String(open));
+            });
+            document.addEventListener('click', (e)=>{
+                if(!mobile.contains(e.target) && !burger.contains(e.target)) closeMenu();
+            });
+            document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
+
+            $$('#fnfMobile a').forEach(a=>{
+                a.addEventListener('click', ()=>{
+                    a.classList.add('tap-anim');
+                    setTimeout(()=>a.classList.remove('tap-anim'), 350);
+                    closeMenu();
+                });
+            });
+
+        })();
+
+        // ABOUT PAGE FUNCTIONALITY
+        document.addEventListener('DOMContentLoaded', function() {
+            // Scroll animations
+            const animateOnScroll = () => {
+                const elements = document.querySelectorAll('.animate-on-scroll');
+                
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('visible');
+                        }
+                    });
+                }, {
+                    threshold: 0.1
+                });
+                
+                elements.forEach(element => {
+                    observer.observe(element);
+                });
+            };
+
+            animateOnScroll();
+
+            // Collection cards animation
+            const cards = document.querySelectorAll('.collection-card');
+            const cardObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, {
+                threshold: 0.2
+            });
+            
+            cards.forEach(card => {
+                cardObserver.observe(card);
+            });
+
+            // Quote animation
+            const quote = document.querySelector('.moment-quote');
+            if (quote) {
+                const quoteObserver = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('visible');
+                        }
+                    });
+                }, {
+                    threshold: 0.5
+                });
+                quoteObserver.observe(quote);
+            }
+
+            // Strike through animation
+            const strikeTitles = document.querySelectorAll('.strike-title');
+            const strikeObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+                        entry.target.classList.add('crossed');
+                    }
+                });
+            }, {
+                threshold: 0.6
+            });
+            
+            strikeTitles.forEach(title => {
+                strikeObserver.observe(title);
+            });
+
+            // Hero text color animation
+            const metaText1 = document.querySelector('.meta-text-1');
+            const metaText2 = document.querySelector('.meta-text-2');
+            
+            window.addEventListener('scroll', () => {
+                const scrolled = window.pageYOffset;
+                const heroHeight = document.querySelector('.about-hero').offsetHeight;
+                const scrollPercent = Math.min(scrolled / (heroHeight * 0.5), 1);
+                
+                if (metaText1 && metaText2) {
+                    metaText1.classList.add('color-animate');
+                    metaText2.classList.add('color-animate');
+                    
+                    const bgPosition = scrollPercent * 100;
+                    metaText1.style.backgroundPosition = bgPosition + '% 0%';
+                    metaText2.style.backgroundPosition = bgPosition + '% 0%';
+                }
+            });
+        });
+
+        // Footer heading animations
+        (function() {
+            const footerHeadings = document.querySelectorAll('.fnf-footer-nav h3, .fnf-footer-connect h3');
+            
+            if (!footerHeadings.length) return;
+            
+            const observerOptions = {
+                threshold: 0.5,
+                rootMargin: '0px 0px -50px 0px'
+            };
+            
+            const headingObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('animate');
+                    }
+                });
+            }, observerOptions);
+            
+            footerHeadings.forEach(heading => {
+                headingObserver.observe(heading);
+            });
+        })();
+    </script>
+</body>
+</html>

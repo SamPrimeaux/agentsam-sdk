@@ -1,0 +1,42 @@
+{
+  "slug": "fuelnfree-site",
+  "appId": "fuelnfree-site",
+  "name": "Fuel & Free Time",
+  "eyebrow": "Retail / Ecommerce",
+  "category": "Commerce",
+  "industries": [
+    "Retail",
+    "Lifestyle"
+  ],
+  "tags": [
+    "shop",
+    "collections",
+    "brand"
+  ],
+  "description": "Real Fuel & Free Time legacy storefront pages \u2014 home, shop, about, and community.",
+  "features": [
+    "Commerce",
+    "CMS",
+    "Search",
+    "Cart"
+  ],
+  "pages": [
+    "Home",
+    "Shop",
+    "About",
+    "Community",
+    "Help"
+  ],
+  "preview": {
+    "kind": "live",
+    "card": "/themes/fuelnfree-site/demo/",
+    "desktop": "/themes/fuelnfree-site/demo/",
+    "mobile": "/themes/fuelnfree-site/demo/",
+    "demoUrl": "/themes/fuelnfree-site/demo/"
+  },
+  "installable": false,
+  "_internal": {
+    "normalization": "pending",
+    "source": "/Users/samprimeaux/fuelnfreetime/legacy"
+  }
+}

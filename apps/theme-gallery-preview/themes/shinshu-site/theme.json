@@ -1,0 +1,44 @@
+{
+  "slug": "shinshu-site",
+  "appId": "shinshu-site",
+  "name": "Shinshu Solutions",
+  "eyebrow": "Consultant / Leadership",
+  "category": "Professional",
+  "industries": [
+    "Consulting",
+    "Education"
+  ],
+  "tags": [
+    "bilingual",
+    "portfolio",
+    "cms"
+  ],
+  "description": "Real Shinshu Solutions static archive \u2014 services, gallery, and CMS-ready pages.",
+  "features": [
+    "CMS",
+    "Portfolio",
+    "Media",
+    "Forms"
+  ],
+  "pages": [
+    "Home",
+    "Services",
+    "About",
+    "Gallery",
+    "Adventures",
+    "Contact",
+    "Help"
+  ],
+  "preview": {
+    "kind": "live",
+    "card": "/themes/shinshu-site/demo/",
+    "desktop": "/themes/shinshu-site/demo/",
+    "mobile": "/themes/shinshu-site/demo/",
+    "demoUrl": "/themes/shinshu-site/demo/"
+  },
+  "installable": false,
+  "_internal": {
+    "normalization": "pending",
+    "source": "/Users/samprimeaux/IAM-Library/01_Template_Candidates/MEAUXIDERANDOMBUILDS/06_shinshu_static_site_archive/source/shinshu-solutions/static"
+  }
+}

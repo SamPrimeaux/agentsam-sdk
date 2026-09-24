@@ -1,0 +1,45 @@
+{
+  "slug": "church-site",
+  "appId": "church-site",
+  "name": "New Iberia Church of Christ",
+  "eyebrow": "Church / Community",
+  "category": "Community",
+  "industries": [
+    "Church",
+    "Nonprofit"
+  ],
+  "tags": [
+    "groups",
+    "giving",
+    "visit"
+  ],
+  "description": "Real New Iberia Church of Christ public pages \u2014 visit, groups, mission, and giving.",
+  "features": [
+    "CMS",
+    "Events",
+    "Giving",
+    "Media"
+  ],
+  "pages": [
+    "Home",
+    "Beliefs",
+    "Community",
+    "Mission",
+    "Groups",
+    "Donate",
+    "Connect",
+    "Help"
+  ],
+  "preview": {
+    "kind": "live",
+    "card": "/themes/church-site/demo/",
+    "desktop": "/themes/church-site/demo/",
+    "mobile": "/themes/church-site/demo/",
+    "demoUrl": "/themes/church-site/demo/"
+  },
+  "installable": false,
+  "_internal": {
+    "normalization": "pending",
+    "source": "/Users/samprimeaux/Library/Mobile Documents/com~apple~CloudDocs/Projects/Cloudflare/NewIberiaChurchofChrist"
+  }
+}

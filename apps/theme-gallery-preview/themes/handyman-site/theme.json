@@ -1,0 +1,44 @@
+{
+  "slug": "handyman-site",
+  "appId": "handyman-site",
+  "name": "Primeaux Handyman Services",
+  "eyebrow": "Home Services / Trades",
+  "category": "Services",
+  "industries": [
+    "Home Services",
+    "Trades"
+  ],
+  "tags": [
+    "estimates",
+    "pwa",
+    "local"
+  ],
+  "description": "Real Primeaux Handyman PWA build \u2014 mobile-first service site with estimates and project proof.",
+  "features": [
+    "CMS",
+    "PWA",
+    "Forms",
+    "Leads"
+  ],
+  "pages": [
+    "Home",
+    "Services",
+    "Projects",
+    "Service Areas",
+    "About",
+    "Contact",
+    "Help"
+  ],
+  "preview": {
+    "kind": "live",
+    "card": "/themes/handyman-site/demo/",
+    "desktop": "/themes/handyman-site/demo/",
+    "mobile": "/themes/handyman-site/demo/",
+    "demoUrl": "/themes/handyman-site/demo/"
+  },
+  "installable": false,
+  "_internal": {
+    "normalization": "pending",
+    "source": "/Users/samprimeaux/worktrees/primeaux-handyman-services-agent/dist"
+  }
+}

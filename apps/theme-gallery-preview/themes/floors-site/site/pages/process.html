@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Process | Anything Floors and More | Lafayette, LA</title>
+    <meta name="description"
+        content="Learn about our proven flooring installation process from consultation to final walkthrough. Transparent, professional service in Lafayette, Louisiana.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-green: #3a5a4d;
+            --primary-green-light: #4a6b5d;
+            --secondary-green: #4a7462;
+            --light-green: #5a8472;
+            --accent-green: #6a9482;
+            --cream: #f5f3ef;
+            --warm-gray: #4a4a4a;
+            --light-gray: #e8e8e8;
+            --gold: #c9a961;
+            --white: #ffffff;
+            --off-white: #fafafa;
+            --dark: #1a1a1a;
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--warm-gray);
+            line-height: 1.6;
+            overflow-x: hidden;
+            background: linear-gradient(to bottom,
+                    var(--white) 0%,
+                    #fcfcfc 15%,
+                    #f9faf9 30%,
+                    #f6f8f6 50%,
+                    #f3f6f4 70%,
+                    #f0f4f2 85%,
+                    var(--cream) 100%);
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--dark);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        /* Navigation - Glassmorphic */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            border-bottom: 1px solid rgba(58, 90, 77, 0.1);
+            z-index: 1000;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: scaleY(1);
+            transform-origin: top;
+        }
+
+        .navbar.scrolled {
+            background: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 4px 30px rgba(58, 90, 77, 0.12);
+            transform: scaleY(0.95);
+            border-bottom: 1px solid rgba(58, 90, 77, 0.15);
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.25rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: padding 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .navbar.scrolled .nav-container {
+            padding: 1rem 2rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .navbar.scrolled .logo {
+            transform: scale(0.95);
+        }
+
+        .logo img {
+            height: 130px;
+            width: auto;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover img {
+            transform: scale(1.05);
+        }
+
+        .nav-menu {
+            display: flex;
+            align-items: center;
+            gap: 2.5rem;
+            list-style: none;
+        }
+
+        .nav-link {
+            color: var(--warm-gray);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            letter-spacing: -0.01em;
+            position: relative;
+            transition: color 0.3s ease;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--primary-green);
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: var(--primary-green);
+        }
+
+        .nav-link:hover::after,
+        .nav-link.active::after {
+            width: 100%;
+        }
+
+        .nav-cta {
+            background: var(--primary-green);
+            color: var(--white);
+            padding: 0.8rem 1.8rem;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-decoration: none;
+            letter-spacing: -0.01em;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .nav-cta:hover {
+            background: var(--primary-green-light);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(58, 90, 77, 0.25);
+        }
+
+        .mobile-toggle {
+            display: none;
+            flex-direction: column;
+            gap: 0.4rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.6rem;
+            z-index: 1001;
+        }
+
+        .hamburger {
+            width: 26px;
+            height: 2.5px;
+            background: var(--primary-green);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 2px;
+        }
+
+        /* Page Header */
+        .page-header {
+            margin-top: 80px;
+            padding: 6rem 2rem 4rem;
+            text-align: center;
+            background: linear-gradient(135deg,
+                    rgba(58, 90, 77, 0.05) 0%,
+                    rgba(74, 107, 93, 0.08) 100%);
+        }
+
+        .page-header h1 {
+            font-size: clamp(2.5rem, 6vw, 4rem);
+            margin-bottom: 1rem;
+            color: var(--primary-green);
+        }
+
+        .page-header p {
+            font-size: clamp(1.1rem, 2.5vw, 1.3rem);
+            color: var(--warm-gray);
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        /* Process Steps */
+        .process-section {
+            padding: 6rem 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .process-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 3rem;
+            margin-bottom: 4rem;
+        }
+
+        .process-step {
+            position: relative;
+            background: var(--white);
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 4px 20px rgba(58, 90, 77, 0.08);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .process-step:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(58, 90, 77, 0.15);
+        }
+
+        .step-number {
+            position: absolute;
+            top: -30px;
+            left: 2.5rem;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--gold), #d4a956);
+            color: var(--dark);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            font-family: 'Space Grotesk', sans-serif;
+            box-shadow: 0 8px 25px rgba(201, 169, 97, 0.3);
+        }
+
+        .step-image {
+            width: 100%;
+            height: 250px;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .step-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .process-step:hover .step-image img {
+            transform: scale(1.08);
+        }
+
+        .step-content h3 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            color: var(--primary-green);
+        }
+
+        .step-content p {
+            font-size: 1.05rem;
+            line-height: 1.8;
+            color: var(--warm-gray);
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding: 4rem 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(to bottom, var(--primary-green), var(--gold));
+            transform: translateX(-50%);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 4rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .timeline-item:nth-child(odd) {
+            flex-direction: row;
+        }
+
+        .timeline-item:nth-child(even) {
+            flex-direction: row-reverse;
+        }
+
+        .timeline-content {
+            width: 45%;
+            background: var(--white);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(58, 90, 77, 0.08);
+        }
+
+        .timeline-content h4 {
+            color: var(--primary-green);
+            margin-bottom: 0.5rem;
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            background: var(--gold);
+            border: 4px solid var(--white);
+            border-radius: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 0 0 4px var(--primary-green);
+        }
+
+        /* Footer */
+        .footer {
+            background: linear-gradient(135deg,
+                    rgba(58, 90, 77, 0.95) 0%,
+                    rgba(74, 107, 93, 0.98) 100%);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+            padding: 4rem 2rem 2rem;
+        }
+
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 3rem;
+            margin-bottom: 3rem;
+        }
+
+        .footer-section h4 {
+            color: var(--white);
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            font-weight: 700;
+        }
+
+        .footer-section p {
+            line-height: 1.8;
+            margin-bottom: 0.5rem;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .footer-section a {
+            color: rgba(255, 255, 255, 0.85);
+            text-decoration: none;
+            line-height: 2;
+            display: block;
+            transition: color 0.3s ease;
+        }
+
+        .footer-section a:hover {
+            color: var(--gold);
+        }
+
+        .footer-bottom {
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            padding-top: 2rem;
+            text-align: center;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* Mobile */
+        @media (max-width: 968px) {
+            .nav-menu {
+                position: fixed;
+                top: 0;
+                left: -70%;
+                width: 70%;
+                height: 100vh;
+                background: rgba(58, 90, 77, 0.95);
+                backdrop-filter: blur(20px);
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 6rem 2.5rem 2rem;
+                gap: 1.5rem;
+                transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                z-index: 999;
+            }
+
+            .nav-menu.active {
+                left: 0;
+            }
+
+            .nav-link {
+                color: rgba(255, 255, 255, 0.9);
+                font-size: 1.1rem;
+            }
+
+            .mobile-toggle {
+                display: flex;
+            }
+
+            .process-steps {
+                grid-template-columns: 1fr;
+            }
+
+            .timeline::before {
+                left: 30px;
+            }
+
+            .timeline-item {
+                flex-direction: row !important;
+                padding-left: 4rem;
+            }
+
+            .timeline-content {
+                width: 100%;
+            }
+
+            .timeline-dot {
+                left: 30px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .logo img {
+                height: 100px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">
+                <img src="./api/cms/serve?key=cms/logo.png"
+                    alt="Anything Floors and More Logo" class="logo-image"
+                    onerror="this.onerror=null;this.src='https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/7fb34d9c-fb11-4403-6a45-74ac90492e00/avatar';">
+            </a>
+
+            <button class="mobile-toggle" id="mobile-toggle" aria-label="Toggle navigation">
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+            </button>
+
+            <ul class="nav-menu" id="nav-menu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="./services" class="nav-link">Services</a></li>
+                <li><a href="./process" class="nav-link active">Process</a></li>
+                <li><a href="./gallery" class="nav-link">Gallery</a></li>
+                <li><a href="./contact" class="nav-link">Contact</a></li>
+                <li><a href="./contact" class="nav-cta">Get Estimate</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <h1>Our Proven Process</h1>
+        <p>From consultation to final walkthrough, we make your flooring project seamless and stress-free</p>
+    </section>
+
+    <!-- Process Steps -->
+    <section class="process-section">
+        <div class="process-steps">
+            <div class="process-step">
+                <div class="step-number">01</div>
+                <div class="step-image">
+                    <img src="./api/cms/serve?key=cms/consult.jpg"
+                        alt="Initial consultation and measurement"
+                        onerror="this.onerror=null;this.src='https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/5ca30a85-43cd-4d6b-c9ab-b4cbb0efed00/public';">
+                </div>
+                <div class="step-content">
+                    <h3>Consultation & Measure</h3>
+                    <p>We visit your property for a detailed assessment, discuss your vision, and take precise
+                        measurements for accurate quotes. This ensures perfect material ordering and zero waste.</p>
+                </div>
+            </div>
+
+            <div class="process-step">
+                <div class="step-number">02</div>
+                <div class="step-image">
+                    <img src="./api/cms/serve?key=cms/select.jpg"
+                        alt="Material selection and quote"
+                        onerror="this.onerror=null;this.src='https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/f454d0c2-a810-489a-f8f4-d2bb16092700/medium';">
+                </div>
+                <div class="step-content">
+                    <h3>Quote & Select Materials</h3>
+                    <p>Receive a detailed transparent quote with no hidden fees. Select from premium materials that
+                        perfectly fit your style and budget. We'll guide you through every option.</p>
+                </div>
+            </div>
+
+            <div class="process-step">
+                <div class="step-number">03</div>
+                <div class="step-image">
+                    <img src="./api/cms/serve?key=cms/install.jpg"
+                        alt="Professional installation"
+                        onerror="this.onerror=null;this.src='https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/31dece35-9bcd-4b37-0ef1-1c3a4d999100/public';">
+                </div>
+                <div class="step-content">
+                    <h3>Expert Installation</h3>
+                    <p>Our skilled team completes the installation with precision craftsmanship, keeping you informed
+                        every step of the way. We treat your home with respect and maintain clean job sites.</p>
+                </div>
+            </div>
+
+            <div class="process-step">
+                <div class="step-number">04</div>
+                <div class="step-image">
+                    <img src="./api/cms/serve?key=cms/guarantee.jpg"
+                        alt="Final walkthrough and guarantee"
+                        onerror="this.onerror=null;this.src='https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/31dece35-9bcd-4b37-0ef1-1c3a4d999100/public';">
+                </div>
+                <div class="step-content">
+                    <h3>Final Walkthrough</h3>
+                    <p>We complete a thorough final walkthrough to ensure everything meets our high standards. All
+                        installations are backed by our satisfaction guarantee and full manufacturer warranties.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Unified Footer -->
+    <link rel="stylesheet" href="./shared/footer.css">
+    <script>
+        fetch('/shared/footer.html')
+            .then(response => response.text())
+            .then(html => {
+                document.body.insertAdjacentHTML('beforeend', html);
+            });
+    </script>
+
+    <script>
+        // Mobile navigation
+        const navbar = document.getElementById('navbar');
+        const mobileToggle = document.getElementById('mobile-toggle');
+        const navMenu = document.getElementById('nav-menu');
+
+        mobileToggle.addEventListener('click', () => {
+            navMenu.classList.toggle('active');
+            mobileToggle.classList.toggle('active');
+        });
+
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                navMenu.classList.remove('active');
+                mobileToggle.classList.remove('active');
+            });
+        });
+
+        // Navbar scroll effect with squish
+        let lastScroll = 0;
+        window.addEventListener('scroll', () => {
+            const currentScroll = window.scrollY;
+            if (currentScroll > 100) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+            lastScroll = currentScroll;
+        });
+
+        // Set active nav based on current page
+        const currentPath = window.location.pathname;
+        document.querySelectorAll('.nav-link').forEach(link => {
+            if (link.getAttribute('href') === currentPath) {
+                link.classList.add('active');
+            }
+        });
+    </script>
+</body>
+
+</html>

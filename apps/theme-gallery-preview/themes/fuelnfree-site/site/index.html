@@ -1,0 +1,2081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuel & Free Time - Time is the Ultimate Luxury</title>
+    
+    <!-- Premium Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --black: #0a0a0a;
+            --steel: #1a1a1a;
+            --asphalt: #2a2a2a;
+            --smoke: #8a8a8a;
+            --light-smoke: #b0b0b0;
+            --light-gray: #f0f0f0;
+            --off-white: #f8f8f8;
+            --white: #ffffff;
+            --fire-orange: #ff4500;
+            --racing-red: #dc143c;
+            --louisiana-gold: #FFD700;
+            --bronze: #CD7F32;
+            --bronze-light: #E5A558;
+            --bronze-dark: #9B5F1F;
+            
+            /* Typography */
+            --font-display: 'Bebas Neue', sans-serif;
+            --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'Space Mono', monospace;
+            
+            /* Spacing */
+            --space-xs: clamp(0.75rem, 2vw, 1rem);
+            --space-sm: clamp(1rem, 3vw, 1.5rem);
+            --space-md: clamp(2rem, 5vw, 3rem);
+            --space-lg: clamp(3rem, 7vw, 5rem);
+            --space-xl: clamp(4rem, 9vw, 7rem);
+            
+            /* Border Radius */
+            --radius: 12px;
+            
+            /* FNF Specific Variables */
+            --fnf-ease: cubic-bezier(.2,.8,.2,1);
+            --fnf-header: 80px;
+            --fnf-header-md: 70px;
+            --fnf-maxw: 1440px;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background-color: var(--black);
+            color: var(--white);
+            overflow-x: hidden;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* ===== HEADER STYLES ===== */
+        .fnf-shell {
+            --fnf-ease: cubic-bezier(.2,.8,.2,1);
+            --fnf-bronze: #CD7F32;
+            --fnf-bronze-light: #E5A558;
+            --fnf-bronze-dark: #9B5F1F;
+            --fnf-ink: #fff;
+            --fnf-muted: #c8cdd2;
+            --fnf-orange: #ff4500;
+            --fnf-bg0: #0a0a0a;
+            --fnf-bg1: #141414;
+            --fnf-bg2: #1f1f1f;
+            --fnf-header: 80px;
+            --fnf-header-md: 70px;
+            --fnf-maxw: 1440px;
+        }
+
+        .fnf-shell * {
+            box-sizing: border-box;
+        }
+
+        /* HERO gradient only (no global bleed) */
+        .fnf-shell .fnf-bg-grad {
+            background:
+                radial-gradient(ellipse at 72% 24%, rgba(255,69,0,.09) 0%, transparent 55%),
+                radial-gradient(ellipse at 30% 66%, rgba(229,165,88,.06) 0%, transparent 55%),
+                radial-gradient(ellipse at bottom, rgba(212,165,116,.04) 0%, transparent 65%),
+                linear-gradient(180deg, var(--fnf-bg0) 0%, var(--fnf-bg1) 55%, var(--fnf-bg2) 100%);
+        }
+
+        /* ---------- Header (dark everywhere) ---------- */
+        .fnf-header {
+            position: fixed;
+            inset: 0 0 auto 0;
+            height: var(--fnf-header);
+            z-index: 10000;
+            background: rgba(10,10,10,.86);
+            box-shadow: 0 1px 0 rgba(255,69,0,.06);
+            transition: transform .28s var(--fnf-ease), backdrop-filter .28s var(--fnf-ease), background-color .28s var(--fnf-ease);
+            will-change: transform;
+        }
+
+        @supports(backdrop-filter:blur(1px)) {
+            .fnf-header {
+                backdrop-filter: blur(8px);
+            }
+            .fnf-header.is-scrolling {
+                backdrop-filter: blur(14px);
+            }
+        }
+
+        .fnf-header.is-hidden {
+            transform: translateY(-100%);
+        }
+
+        .fnf-row {
+            max-width: var(--fnf-maxw);
+            margin: 0 auto;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 56px;
+        }
+
+        .fnf-logo {
+            height: 68px;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            position: relative;
+            transition: transform .25s var(--fnf-ease);
+        }
+
+        .fnf-logo img {
+            height: 100%;
+            width: auto;
+            display: block;
+            filter: brightness(.96);
+            transition: filter .25s var(--fnf-ease);
+        }
+
+        .fnf-logo::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: -6px;
+            transform: translateX(-50%) scaleX(0);
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--fnf-orange), transparent);
+            transition: transform .3s var(--fnf-ease);
+        }
+
+        .fnf-logo:hover {
+            transform: translateY(-1px);
+        }
+
+        .fnf-logo:hover img {
+            filter: brightness(1.1) drop-shadow(0 0 10px rgba(255,69,0,.4));
+        }
+
+        .fnf-logo:hover::after {
+            transform: translateX(-50%) scaleX(1);
+        }
+
+        /* Desktop nav (hover/underline everywhere, only current underlined) */
+        .fnf-nav {
+            list-style: none;
+            display: flex;
+            gap: 44px;
+        }
+
+        .fnf-nav a {
+            color: var(--fnf-muted);
+            text-decoration: none;
+            font-size: 15px;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            font-weight: 700;
+            position: relative;
+            outline: none;
+        }
+
+        .fnf-nav a::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -4px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--fnf-orange), var(--fnf-bronze-light));
+            transform: scaleX(0);
+            transition: transform .25s var(--fnf-ease);
+            transform-origin: center;
+        }
+
+        .fnf-nav a:hover,
+        .fnf-nav a.is-active,
+        .fnf-nav a:focus-visible {
+            color: var(--fnf-ink);
+        }
+
+        .fnf-nav a:hover::before,
+        .fnf-nav a.is-active::before,
+        .fnf-nav a:focus-visible::before {
+            transform: scaleX(1);
+        }
+
+        /* Burger + Mobile menu with matching underline */
+        .fnf-burger {
+            display: none;
+            background: none;
+            border: 0;
+            padding: 10px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        .fnf-burger span {
+            display: block;
+            width: 24px;
+            height: 2px;
+            background: var(--fnf-orange);
+            margin: 5px 0;
+            transition: transform .25s, opacity .25s;
+        }
+
+        .fnf-burger.is-open span:nth-child(1) {
+            transform: rotate(45deg) translate(5px, 6px);
+        }
+
+        .fnf-burger.is-open span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .fnf-burger.is-open span:nth-child(3) {
+            transform: rotate(-45deg) translate(6px, -6px);
+        }
+
+        .fnf-mobile {
+            position: fixed;
+            left: 0;
+            right: 0;
+            top: var(--fnf-header);
+            background: rgba(15,15,15,.98);
+            transform: translateY(-100%);
+            opacity: 0;
+            visibility: hidden;
+            transition: transform .28s var(--fnf-ease), opacity .28s;
+            z-index: 9999;
+            padding: 22px;
+            border-bottom: 1px solid rgba(255,69,0,.14);
+        }
+
+        .fnf-mobile.is-open {
+            transform: translateY(0);
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .fnf-mobile ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin: 0;
+        }
+
+        .fnf-mobile a {
+            color: var(--fnf-ink);
+            text-decoration: none;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            font-weight: 800;
+            position: relative;
+            outline: none;
+            padding: 8px 0;
+        }
+
+        .fnf-mobile a::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -2px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--fnf-orange), var(--fnf-bronze-light));
+            transform: scaleX(0);
+            transition: transform .25s var(--fnf-ease);
+            transform-origin: center;
+        }
+
+        .fnf-mobile a:focus-visible::before,
+        .fnf-mobile a:active::before,
+        .fnf-mobile a.is-active::before,
+        .fnf-mobile a.tap-anim::before {
+            transform: scaleX(1);
+        }
+
+        /* ===== HERO SECTION ===== */
+        .fnf-hero {
+            position: relative;
+            min-height: 460px;
+            height: 60dvh;
+            overflow: hidden;
+        }
+
+        .fnf-hero .wrap {
+            max-width: var(--fnf-maxw);
+            height: 100%;
+            margin: 0 auto;
+            padding: 0 56px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .fnf-left {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            position: relative;
+            z-index: 2;
+            align-items: center;
+            text-align: center;
+            justify-content: center;
+            margin-top: min(7vh, 84px);
+        }
+
+        .fnf-title {
+            font-size: clamp(38px, 5.6vw, 78px);
+            line-height: .94;
+            letter-spacing: -.02em;
+            text-transform: uppercase;
+            color: var(--fnf-ink);
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .fnf-title span:first-child {
+            display: block;
+            font-size: .46em;
+            color: #a7adb4;
+            letter-spacing: .16em;
+            margin-bottom: 4px;
+        }
+
+        .fnf-title strong {
+            background: linear-gradient(135deg, var(--fnf-orange) 0%, var(--fnf-bronze-light) 45%, var(--fnf-orange) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .fnf-copy {
+            max-width: 640px;
+            color: #b9c0c6;
+            font-size: 18px;
+            opacity: 0;
+            transform: translateY(16px);
+        }
+
+        .fnf-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            padding: 12px 26px;
+            border-radius: 999px;
+            background: var(--fnf-bronze);
+            color: #fff;
+            text-decoration: none;
+            font-weight: 900;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            border: 2px solid var(--fnf-bronze);
+            box-shadow: 0 10px 26px rgba(205,127,50,.22);
+            opacity: 0;
+            transform: translateY(12px);
+        }
+
+        .fnf-cta svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .fnf-cta:where(:hover, :focus-visible) {
+            background: var(--fnf-bronze-dark);
+            transform: translateY(8px);
+        }
+
+        /* GLB "statue" accent (consistent top-right) */
+        .fnf-glb {
+            position: absolute;
+            top: -8%;
+            right: -10%;
+            width: clamp(170px, 20vw, 280px);
+            height: clamp(170px, 20vw, 280px);
+            opacity: 0;
+            transform: translateY(18px) scale(.9);
+            z-index: 0;
+            pointer-events: none;
+            filter: drop-shadow(0 30px 60px rgba(0,0,0,.28));
+        }
+
+        .fnf-glb::before {
+            content: "";
+            position: absolute;
+            inset: -40% -40% -40% -40%;
+            background: radial-gradient(ellipse at 50% 50%, rgba(255,69,0,.05) 0%, transparent 60%);
+            filter: blur(90px);
+            opacity: .42;
+            pointer-events: none;
+        }
+
+        .fnf-glb model-viewer {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            --poster-color: transparent;
+            --progress-bar-color: rgba(255,69,0,.18);
+            --progress-bar-height: 1px;
+            --progress-mask: transparent;
+            display: block;
+            filter: brightness(.42) saturate(.6) contrast(1.2);
+        }
+
+        /* One-time entrance */
+        .fnf-shell.is-hero-visible .fnf-title {
+            animation: fnfUp .7s var(--fnf-ease) .05s forwards;
+        }
+
+        .fnf-shell.is-hero-visible .fnf-copy {
+            animation: fnfUp .7s var(--fnf-ease) .16s forwards;
+        }
+
+        .fnf-shell.is-hero-visible .fnf-cta {
+            animation: fnfUp .7s var(--fnf-ease) .28s forwards;
+        }
+
+        .fnf-shell.is-hero-visible .fnf-glb {
+            animation: fnfPop .9s var(--fnf-ease) .18s forwards;
+        }
+
+        .fnf-title strong {
+            position: relative;
+        }
+
+        .fnf-shell.is-hero-visible .fnf-title strong::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -6px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--fnf-orange), var(--fnf-bronze-light), transparent);
+            animation: fnfSweep .9s var(--fnf-ease) .32s both;
+        }
+
+        @keyframes fnfUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fnfPop {
+            50% {
+                opacity: .5;
+                transform: translateY(0) scale(1.02);
+            }
+            100% {
+                opacity: .35;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes fnfSweep {
+            0% {
+                transform: scaleX(0);
+            }
+            100% {
+                transform: scaleX(1);
+            }
+        }
+
+        /* Spacer for non-home pages */
+        .fnf-spacer {
+            height: var(--fnf-header);
+            display: none;
+        }
+
+        /* ===== MAIN CONTENT SECTIONS ===== */
+        
+        /* Manifesto Section */
+        .manifesto {
+            padding: var(--space-xl) var(--space-sm);
+            background: linear-gradient(180deg, 
+                #3a3a3a 0%,
+                #4a4a4a 20%,
+                #6a6a6a 50%,
+                #9a9a9a 80%,
+                var(--off-white) 100%);
+            position: relative;
+        }
+
+        .manifesto-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-lg);
+            align-items: center;
+        }
+
+        .manifesto-content {
+            opacity: 0;
+            transform: translateX(-40px);
+        }
+
+        .manifesto-content.visible {
+            animation: slideRight 0.8s ease forwards;
+        }
+
+        .manifesto-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(3rem, 7vw, 5.5rem);
+            line-height: 0.95;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+            margin-bottom: var(--space-sm);
+            color: var(--white);
+        }
+
+        .manifesto-title .highlight {
+            color: var(--fire-orange);
+            position: relative;
+        }
+
+        .manifesto-text {
+            font-size: clamp(1.125rem, 2vw, 1.25rem);
+            line-height: 1.7;
+            color: var(--light-smoke);
+            margin-bottom: var(--space-sm);
+        }
+
+        .manifesto-text strong {
+            color: var(--white);
+            font-weight: 700;
+        }
+
+        .manifesto-visual {
+            position: relative;
+            opacity: 0;
+            transform: translateX(40px);
+        }
+
+        .manifesto-visual.visible {
+            animation: slideLeft 0.8s ease forwards;
+        }
+
+        .manifesto-image-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 100%;
+            overflow: hidden;
+            border-radius: var(--radius);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .manifesto-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            filter: grayscale(100%);
+            transition: filter 0.6s ease, transform 0.6s ease;
+        }
+
+        .manifesto-visual:hover .manifesto-image {
+            filter: grayscale(0%);
+            transform: scale(1.05);
+        }
+
+        /* Collections Section */
+        .collections {
+            padding: var(--space-xl) var(--space-sm);
+            background: linear-gradient(180deg, 
+                var(--off-white) 0%,
+                var(--light-gray) 30%,
+                #e0e0e0 60%,
+                #d0d0d0 100%);
+        }
+
+        .collections-header {
+            text-align: center;
+            margin-bottom: var(--space-lg);
+        }
+
+        .collections-badge {
+            font-family: 'Space Mono', monospace;
+            font-size: clamp(0.875rem, 2vw, 1rem);
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--fire-orange);
+            margin-bottom: var(--space-xs);
+        }
+
+        .collections-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(3rem, 7vw, 4.5rem);
+            text-transform: uppercase;
+            margin-bottom: var(--space-xs);
+            color: var(--black);
+        }
+
+        .collections-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .collection-card {
+            position: relative;
+            aspect-ratio: 3/4;
+            background: var(--white);
+            overflow: hidden;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            opacity: 0;
+            transform: translateY(40px);
+            border-radius: var(--radius);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.4s ease;
+        }
+
+        .collection-card.visible {
+            animation: fadeUpStagger 0.6s ease forwards;
+        }
+
+        .collection-card:nth-child(2) {
+            animation-delay: 0.1s;
+        }
+
+        .collection-card:nth-child(3) {
+            animation-delay: 0.2s;
+        }
+
+        .collection-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+        }
+
+        .collection-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .collection-card:hover .collection-image {
+            transform: scale(1.1);
+        }
+
+        .collection-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: clamp(2rem, 4vw, 3rem) clamp(1.5rem, 3vw, 2rem);
+            background: linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0.7) 30%, transparent);
+            transform: translateY(10px);
+            transition: transform 0.4s ease;
+        }
+
+        .collection-card:hover .collection-overlay {
+            transform: translateY(0);
+        }
+
+        .collection-name {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(1.75rem, 4vw, 2.25rem);
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.05em;
+            color: var(--white);
+        }
+
+        .collection-description {
+            font-size: clamp(0.9rem, 2vw, 1rem);
+            color: var(--light-smoke);
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+
+        .collection-link {
+            font-family: 'Space Mono', monospace;
+            font-size: clamp(0.75rem, 1.5vw, 0.875rem);
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--fire-orange);
+        }
+
+        /* Values Section with Glass to Solid Animation */
+        .values {
+            padding: var(--space-xl) var(--space-sm);
+            background: linear-gradient(180deg, 
+                #d0d0d0 0%,
+                #a0a0a0 30%,
+                var(--asphalt) 60%,
+                var(--steel) 100%);
+        }
+
+        .values-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .values-header {
+            text-align: center;
+            margin-bottom: var(--space-lg);
+        }
+
+        .values-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(3rem, 7vw, 4.5rem);
+            text-transform: uppercase;
+            margin-bottom: var(--space-xs);
+            color: var(--white);
+        }
+
+        .values-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: clamp(1.5rem, 3vw, 2rem);
+        }
+
+        .value-card {
+            padding: clamp(2rem, 4vw, 3rem) clamp(1.5rem, 3vw, 2rem);
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+            border-radius: var(--radius);
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .value-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .value-card.solid {
+            background: rgba(255,255,255,0.12);
+            backdrop-filter: blur(0px);
+            border-color: var(--fire-orange);
+            box-shadow: 0 20px 40px rgba(255,69,0,0.15);
+        }
+
+        .value-card:hover {
+            transform: translateY(-10px);
+        }
+
+        .value-number {
+            font-family: 'Space Mono', monospace;
+            font-size: clamp(0.875rem, 2vw, 1rem);
+            color: var(--fire-orange);
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .value-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(1.75rem, 3.5vw, 2rem);
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+            letter-spacing: 0.05em;
+            color: var(--white);
+        }
+
+        .value-description {
+            font-size: clamp(1rem, 2vw, 1.125rem);
+            line-height: 1.6;
+            color: var(--light-smoke);
+        }
+
+        /* Community Section with Enhanced Animations */
+        .community {
+            padding: var(--space-xl) var(--space-sm);
+            background: linear-gradient(180deg, 
+                var(--steel) 0%,
+                var(--asphalt) 30%,
+                #4a4a4a 60%,
+                var(--light-gray) 100%);
+        }
+
+        .community-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .community-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(3rem, 7vw, 4.5rem);
+            text-transform: uppercase;
+            margin-bottom: var(--space-sm);
+            color: var(--white);
+        }
+
+        .community-subtitle {
+            font-size: clamp(1.125rem, 2.5vw, 1.375rem);
+            color: var(--light-smoke);
+            max-width: 600px;
+            margin: 0 auto var(--space-lg);
+            line-height: 1.5;
+        }
+
+        .community-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: clamp(1.5rem, 3vw, 2rem);
+            margin-bottom: var(--space-lg);
+        }
+
+        .community-feature {
+            padding: clamp(2rem, 3vw, 2.5rem);
+            background: rgba(255,255,255,0.08);
+            border-radius: var(--radius);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            transform: rotateY(-90deg) translateZ(100px);
+            transform-style: preserve-3d;
+            backface-visibility: hidden;
+        }
+
+        .community-feature.visible {
+            opacity: 1;
+            transform: rotateY(0) translateZ(0);
+        }
+
+        .community-feature:nth-child(1).visible {
+            animation: flipInUnique1 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        .community-feature:nth-child(2).visible {
+            animation: flipInUnique2 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.1s forwards;
+        }
+
+        .community-feature:nth-child(3).visible {
+            animation: flipInUnique3 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards;
+        }
+
+        .community-feature:nth-child(4).visible {
+            animation: flipInUnique4 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.3s forwards;
+        }
+
+        @keyframes flipInUnique1 {
+            from {
+                opacity: 0;
+                transform: perspective(1000px) rotateY(-90deg) translateX(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: perspective(1000px) rotateY(0) translateX(0);
+            }
+        }
+
+        @keyframes flipInUnique2 {
+            from {
+                opacity: 0;
+                transform: perspective(1000px) rotateX(90deg) translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: perspective(1000px) rotateX(0) translateY(0);
+            }
+        }
+
+        @keyframes flipInUnique3 {
+            from {
+                opacity: 0;
+                transform: perspective(1000px) rotateY(90deg) translateX(50px);
+            }
+            to {
+                opacity: 1;
+                transform: perspective(1000px) rotateY(0) translateX(0);
+            }
+        }
+
+        @keyframes flipInUnique4 {
+            from {
+                opacity: 0;
+                transform: perspective(1000px) rotateX(-90deg) translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: perspective(1000px) rotateX(0) translateY(0);
+            }
+        }
+
+        .community-feature:hover {
+            transform: translateY(-10px) scale(1.05);
+            background: rgba(255,255,255,0.12);
+            box-shadow: 0 20px 40px rgba(255,69,0,0.2);
+        }
+
+        .community-icon {
+            font-size: clamp(2.5rem, 5vw, 3rem);
+            margin-bottom: 1rem;
+        }
+
+        .community-feature-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(1.5rem, 3vw, 1.75rem);
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            color: var(--white);
+            letter-spacing: 0.05em;
+        }
+
+        .community-feature-text {
+            font-size: clamp(0.95rem, 2vw, 1.125rem);
+            color: var(--light-smoke);
+            line-height: 1.5;
+        }
+
+        /* Coming Soon Section with Clock Animation */
+        .coming-soon {
+            padding: var(--space-xl) var(--space-sm);
+            background: linear-gradient(180deg, 
+                var(--light-gray) 0%,
+                var(--white) 30%,
+                var(--off-white) 100%);
+            text-align: center;
+        }
+
+        .coming-soon-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .coming-soon-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(3rem, 7vw, 4.5rem);
+            text-transform: uppercase;
+            margin-bottom: var(--space-sm);
+            color: var(--black);
+            opacity: 0;
+            transform: scale(0.3) rotateX(90deg);
+        }
+
+        .coming-soon-title.visible {
+            animation: titleReveal 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        @keyframes titleReveal {
+            to {
+                opacity: 1;
+                transform: scale(1) rotateX(0);
+            }
+        }
+
+        .coming-soon-date {
+            font-family: 'Space Mono', monospace;
+            font-size: clamp(1.25rem, 3vw, 1.5rem);
+            color: var(--fire-orange);
+            margin-bottom: var(--space-md);
+            font-weight: 700;
+        }
+
+        .countdown {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: clamp(0.75rem, 2vw, 2rem);
+            margin-bottom: var(--space-lg);
+        }
+
+        .countdown-item {
+            text-align: center;
+            padding: clamp(1rem, 2.5vw, 1.5rem);
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        }
+
+        .countdown-number {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            color: var(--fire-orange);
+            display: block;
+        }
+
+        .countdown-label {
+            font-family: 'Space Mono', monospace;
+            font-size: clamp(0.75rem, 1.5vw, 0.875rem);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--asphalt);
+            font-weight: 700;
+        }
+
+        /* Newsletter Section */
+        .newsletter {
+            padding: var(--space-lg) var(--space-sm);
+            background: linear-gradient(180deg, 
+                var(--off-white) 0%,
+                var(--light-gray) 50%,
+                var(--asphalt) 100%);
+        }
+
+        .newsletter-container {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .newsletter-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(2.5rem, 6vw, 3rem);
+            text-transform: uppercase;
+            margin-bottom: var(--space-xs);
+            color: var(--black);
+        }
+
+        .newsletter-text {
+            color: var(--asphalt);
+            margin-bottom: var(--space-sm);
+            font-size: clamp(1rem, 2vw, 1.125rem);
+        }
+
+        .newsletter-form {
+            display: flex;
+            gap: 1rem;
+            flex-direction: column;
+        }
+
+        @media (min-width: 500px) {
+            .newsletter-form {
+                flex-direction: row;
+            }
+        }
+
+        .newsletter-input {
+            flex: 1;
+            padding: clamp(0.875rem, 2vw, 1rem) clamp(1rem, 2.5vw, 1.5rem);
+            background: var(--white);
+            border: 2px solid var(--light-gray);
+            border-radius: var(--radius);
+            color: var(--black);
+            font-family: var(--font-body);
+            font-size: clamp(0.875rem, 2vw, 1rem);
+            transition: all 0.3s ease;
+        }
+
+        .newsletter-input:focus {
+            outline: none;
+            border-color: var(--fire-orange);
+        }
+
+        .newsletter-input::placeholder {
+            color: var(--smoke);
+        }
+
+        .newsletter-button {
+            padding: clamp(0.875rem, 2vw, 1rem) clamp(1.5rem, 3vw, 2rem);
+            background: var(--fire-orange);
+            border: none;
+            border-radius: var(--radius);
+            color: var(--white);
+            font-family: 'Space Mono', monospace;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: clamp(0.875rem, 2vw, 1rem);
+        }
+
+        .newsletter-button:hover {
+            background: var(--racing-red);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(220,20,60,0.3);
+        }
+
+        /* ===== FOOTER STYLES ===== */
+        .fnf-footer {
+            background: linear-gradient(180deg, var(--steel) 0%, #1a1a1a 20%, var(--black) 100%);
+            padding: 80px 0 30px;
+            border-top: 1px solid rgba(255, 69, 0, 0.1);
+            position: relative;
+        }
+
+        /* Top accent line */
+        .fnf-footer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, 
+                transparent, 
+                var(--fire-orange) 20%, 
+                var(--racing-red) 50%,
+                var(--fire-orange) 80%, 
+                transparent);
+            opacity: 0.6;
+        }
+
+        .fnf-footer-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+
+        /* Main Footer Content */
+        .fnf-footer-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1.5fr;
+            gap: 60px;
+            margin-bottom: 60px;
+        }
+
+        /* Brand Column */
+        .fnf-footer-brand {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .fnf-footer-logo {
+            display: inline-block;
+            height: 60px;
+            width: auto;
+            transition: all 0.3s ease;
+        }
+
+        .fnf-footer-logo img {
+            height: 100%;
+            width: auto;
+            filter: brightness(0.9);
+            transition: filter 0.3s ease;
+        }
+
+        .fnf-footer-logo:hover img {
+            filter: brightness(1.1) drop-shadow(0 0 10px rgba(255, 69, 0, 0.5));
+        }
+
+        .fnf-footer-tagline {
+            font-size: 18px;
+            line-height: 1.6;
+            color: var(--smoke);
+            font-style: italic;
+            letter-spacing: 0.5px;
+        }
+
+        .fnf-footer-description {
+            font-size: 14px;
+            line-height: 1.8;
+            color: var(--smoke);
+            max-width: 400px;
+        }
+
+        /* Navigation Columns */
+        .fnf-footer-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .fnf-footer-nav h3 {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--fire-orange);
+            margin-bottom: 5px;
+            position: relative;
+            padding-bottom: 10px;
+        }
+
+        .fnf-footer-nav h3::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--fire-orange);
+            transition: width 0.6s ease;
+        }
+
+        .fnf-footer-nav h3.animate::after {
+            width: 100%;
+        }
+
+        /* Special styling for Connect section titles */
+        .fnf-footer-connect h3 {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, var(--bronze) 0%, var(--bronze-light) 50%, var(--bronze) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 5px;
+            position: relative;
+            padding-bottom: 10px;
+        }
+
+        .fnf-footer-connect h3::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--bronze), var(--bronze-light));
+            transition: width 0.6s ease;
+        }
+
+        .fnf-footer-connect h3.animate::after {
+            width: 100%;
+        }
+
+        .fnf-footer-nav ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .fnf-footer-nav a {
+            color: var(--smoke);
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+            display: inline-block;
+        }
+
+        .fnf-footer-nav a::before {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 1px;
+            background: var(--fire-orange);
+            transition: width 0.3s ease;
+        }
+
+        .fnf-footer-nav a:hover::before {
+            width: 100%;
+        }
+
+        .fnf-footer-nav a:hover {
+            color: var(--white);
+            transform: translateX(3px);
+        }
+
+        /* Social & Newsletter Column */
+        .fnf-footer-connect {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .fnf-social-links {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .fnf-social-link {
+            width: 40px;
+            height: 40px;
+            border: 1px solid rgba(255, 69, 0, 0.3);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: var(--smoke);
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .fnf-social-link:hover {
+            background: var(--fire-orange);
+            border-color: var(--fire-orange);
+            color: var(--white);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(255, 69, 0, 0.3);
+        }
+
+        /* Newsletter Signup */
+        .fnf-newsletter-mini {
+            margin-top: 10px;
+        }
+
+        .fnf-newsletter-form {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .fnf-newsletter-input {
+            flex: 1;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            color: var(--white);
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .fnf-newsletter-input::placeholder {
+            color: var(--smoke);
+        }
+
+        .fnf-newsletter-input:focus {
+            outline: none;
+            border-color: var(--fire-orange);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .fnf-newsletter-submit {
+            padding: 12px 20px;
+            background: var(--fire-orange);
+            color: var(--white);
+            border: none;
+            border-radius: 4px;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .fnf-newsletter-submit:hover {
+            background: var(--racing-red);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 69, 0, 0.3);
+        }
+
+        /* Footer Bottom */
+        .fnf-footer-bottom {
+            padding-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .fnf-footer-copyright {
+            color: var(--smoke);
+            font-size: 14px;
+        }
+
+        .fnf-footer-legal {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .fnf-footer-legal a {
+            color: var(--smoke);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+
+        .fnf-footer-legal a:hover {
+            color: var(--white);
+        }
+
+        /* ===== ANIMATIONS ===== */
+        @keyframes slideRight {
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideLeft {
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes fadeUpStagger {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== RESPONSIVE DESIGN ===== */
+        @media (max-width: 1024px) {
+            .fnf-row {
+                padding: 0 24px;
+            }
+            .fnf-logo {
+                height: 62px;
+            }
+            .manifesto-container {
+                grid-template-columns: 1fr;
+                gap: var(--space-md);
+            }
+            .manifesto-visual {
+                order: -1;
+                max-width: 500px;
+                margin: 0 auto;
+            }
+            .manifesto-content {
+                text-align: center;
+            }
+            .collections-grid {
+                grid-template-columns: 1fr;
+                max-width: 500px;
+                margin: 0 auto;
+            }
+            .values-grid {
+                grid-template-columns: 1fr;
+                max-width: 500px;
+                margin: 0 auto;
+            }
+            .community-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .fnf-footer-content {
+                grid-template-columns: 1fr 1fr;
+                gap: 40px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .fnf-shell {
+                --fnf-header: var(--fnf-header-md);
+            }
+            .fnf-burger {
+                display: block;
+            }
+            .fnf-nav {
+                display: none;
+            }
+            .fnf-logo {
+                height: 56px;
+            }
+            .fnf-hero {
+                height: 72dvh;
+                min-height: 540px;
+            }
+            .fnf-hero .wrap {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+            .fnf-left {
+                align-items: center;
+                margin-top: min(8vh, 96px);
+            }
+            .fnf-copy {
+                margin: 0 auto;
+            }
+            /* keep the GLB consistently top-right on mobile too */
+            .fnf-glb {
+                top: -10%;
+                right: -14%;
+                width: clamp(160px, 40vw, 260px);
+                height: clamp(160px, 40vw, 260px);
+            }
+            .community-grid {
+                grid-template-columns: 1fr;
+                max-width: 400px;
+                margin: 0 auto var(--space-lg);
+            }
+            .countdown {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .fnf-footer {
+                padding: 60px 0 30px;
+            }
+            .fnf-footer-container {
+                padding: 0 24px;
+            }
+            .fnf-footer-content {
+                grid-template-columns: 1fr;
+                gap: 40px;
+                text-align: center;
+            }
+            .fnf-footer-nav h3.animate::after,
+            .fnf-footer-connect h3.animate::after {
+                left: 50%;
+                transform: translateX(-50%);
+                width: 100%;
+            }
+            .fnf-footer-nav ul {
+                align-items: center;
+            }
+            .fnf-social-links {
+                justify-content: center;
+            }
+            .fnf-footer-bottom {
+                flex-direction: column;
+                text-align: center;
+            }
+            .fnf-footer-legal {
+                flex-direction: column;
+                gap: 15px;
+            }
+            .fnf-newsletter-form {
+                flex-direction: column;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .fnf-shell.is-hero-visible .fnf-title,
+            .fnf-shell.is-hero-visible .fnf-copy,
+            .fnf-shell.is-hero-visible .fnf-cta,
+            .fnf-shell.is-hero-visible .fnf-glb {
+                animation: none;
+                opacity: 1;
+                transform: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- FNF Header + Home Hero (scoped, v1.5.0) -->
+    <div class="fnf-shell" id="fnfApp">
+        <!-- Header -->
+        <header class="fnf-header" id="fnfHeader">
+            <div class="fnf-row">
+                <a class="fnf-logo" href="/" aria-label="Fuel & Free Time">
+                    <img src="https://cdn.shopify.com/s/files/1/0666/4060/9411/files/fandft-clear-background.png?v=1755572638" alt="Fuel & Free Time" width="256" height="68" />
+                </a>
+                <nav class="fnf-primary" aria-label="Primary">
+                    <ul class="fnf-nav">
+                        <li><a href="./">Home</a></li>
+                        <li><a href="./shop.html">Shop</a></li>
+                        <li><a href="./about.html">About</a></li>
+                        <li><a href="./community.html">Community</a></li>
+                    </ul>
+                </nav>
+                <button class="fnf-burger" id="fnfBurger" aria-label="Open menu" aria-controls="fnfMobile" aria-expanded="false">
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Mobile Menu -->
+        <nav class="fnf-mobile" id="fnfMobile" aria-label="Mobile">
+            <ul>
+                <li><a href="./">Home</a></li>
+                <li><a href="./shop.html">Shop</a></li>
+                <li><a href="./about.html">About</a></li>
+                <li><a href="./community.html">Community</a></li>
+            </ul>
+        </nav>
+
+        <!-- Home-only Hero -->
+        <section class="fnf-hero fnf-bg-grad" id="fnfHero">
+            <div class="wrap">
+                <div class="fnf-left">
+                    <h1 class="fnf-title">
+                        <span>TIME IS THE</span>
+                        <strong>REAL HORSEPOWER</strong>
+                    </h1>
+                    <p class="fnf-copy">For those who've earned their freedom — on two wheels, four wheels, water, or in the garage.</p>
+                    <a class="fnf-cta" href="./shop.html">
+                        <span>Explore More</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </a>
+                </div>
+
+                <!-- GLB "statue" accent (consistent top-right) -->
+                <div class="fnf-glb" aria-hidden="true">
+                    <model-viewer id="fnfMV"
+                        src="https://cdn.shopify.com/3d/models/a86e19579a1c90eb/Emblem_of_Elegance_0822010524_texture.glb"
+                        alt="" loading="lazy" reveal="manual"
+                        environment-image="neutral" shadow-intensity="0"
+                        interaction-prompt="none" camera-controls="false"
+                        disable-zoom disable-pan
+                        camera-orbit="0deg 75deg 110%" field-of-view="35deg">
+                    </model-viewer>
+                </div>
+            </div>
+        </section>
+
+        <!-- Spacer for non-home pages -->
+        <div class="fnf-spacer" id="fnfSpacer"></div>
+    </div>
+
+    <!-- Manifesto Section -->
+    <section class="manifesto">
+        <div class="manifesto-container">
+            <div class="manifesto-content">
+                <h2 class="manifesto-title">
+                    Some chase<br>
+                    <span class="highlight">horsepower.</span><br>
+                    We chase<br>
+                    <span class="highlight">hours.</span>
+                </h2>
+                <p class="manifesto-text">
+                    Fuel & Free Time isn't about how fast you go — it's about finally having the time to go at all.
+                </p>
+                <p class="manifesto-text">
+                    Born in a Lafayette garage, built for those who've earned their freedom. Whether you're a veteran who's done your time, a weekend warrior stealing moments, or a young gun working toward that first real ride.
+                </p>
+                <p class="manifesto-text">
+                    <strong>You get it. Time is everything money can't buy back.</strong>
+                </p>
+            </div>
+            <div class="manifesto-visual">
+                <div class="manifesto-image-container">
+                    <img src="https://cdn.shopify.com/s/files/1/0666/4060/9411/files/50C9CEB5-3EA4-4A67-9CB3-9D25FFDA72BF.png?v=1756307782" 
+                         alt="Fuel & Free Time Lifestyle" 
+                         class="manifesto-image"
+                         loading="lazy">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Collections Section -->
+    <section class="collections">
+        <div class="collections-header">
+            <div class="collections-badge">Limited Drops</div>
+            <h2 class="collections-title">Fuel Your Style</h2>
+        </div>
+        <div class="collections-grid">
+            <a href="https://fuelnfreetime.com/collections/high-octane-performance-gear" class="collection-card">
+                <img src="https://cdn.shopify.com/s/files/1/0666/4060/9411/files/high_octane.jpg?v=1756307558" 
+                     alt="High Octane Collection" 
+                     class="collection-image"
+                     loading="lazy">
+                <div class="collection-overlay">
+                    <h3 class="collection-name">High Octane</h3>
+                    <p class="collection-description">Performance gear for redline living</p>
+                    <span class="collection-link">Shop Collection →</span>
+                </div>
+            </a>
+            <a href="https://fuelnfreetime.com/collections/masters" class="collection-card">
+                <img src="https://cdn.shopify.com/s/files/1/0666/4060/9411/files/Masters.png?v=1756307485" 
+                     alt="Masters Collection" 
+                     class="collection-image"
+                     loading="lazy">
+                <div class="collection-overlay">
+                    <h3 class="collection-name">Masters</h3>
+                    <p class="collection-description">For those who've earned their stripes</p>
+                    <span class="collection-link">Shop Collection →</span>
+                </div>
+            </a>
+            <a href="https://fuelnfreetime.com/collections/essentials" class="collection-card">
+                <img src="https://cdn.shopify.com/s/files/1/0666/4060/9411/files/Gone_Fishing.png?v=1756307634" 
+                     alt="Essentials Collection" 
+                     class="collection-image"
+                     loading="lazy">
+                <div class="collection-overlay">
+                    <h3 class="collection-name">Essentials</h3>
+                    <p class="collection-description">Daily drivers for the daily grind</p>
+                    <span class="collection-link">Shop Collection →</span>
+                </div>
+            </a>
+        </div>
+    </section>
+
+    <!-- Values Section -->
+    <section class="values">
+        <div class="values-container">
+            <div class="values-header">
+                <h2 class="values-title">More Than Merch</h2>
+            </div>
+            <div class="values-grid">
+                <div class="value-card">
+                    <div class="value-number">01</div>
+                    <h3 class="value-title">Earned Not Given</h3>
+                    <p class="value-description">
+                        Every thread tells a story of hard work and dedication. This isn't fast fashion — it's a lifestyle earned through years of grinding.
+                    </p>
+                </div>
+                <div class="value-card">
+                    <div class="value-number">02</div>
+                    <h3 class="value-title">Built in Lafayette</h3>
+                    <p class="value-description">
+                        Proudly designed, cut, and sewn in Louisiana. Supporting local means building something real in a world of dropshipped dreams.
+                    </p>
+                </div>
+                <div class="value-card">
+                    <div class="value-number">03</div>
+                    <h3 class="value-title">Community First</h3>
+                    <p class="value-description">
+                        From garage nights to poker runs, we're building connections that matter. Real people, real stories, real freedom.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Community Section -->
+    <section class="community">
+        <div class="community-container">
+            <h2 class="community-title">Join the Movement</h2>
+            <p class="community-subtitle">
+                Where every mile has a story and every hour is earned
+            </p>
+            <div class="community-grid">
+                <div class="community-feature">
+                    <div class="community-icon">🏁</div>
+                    <h3 class="community-feature-title">Hunt Drops</h3>
+                    <p class="community-feature-text">Exclusive scavenger hunts for limited gear</p>
+                </div>
+                <div class="community-feature">
+                    <div class="community-icon">🔧</div>
+                    <h3 class="community-feature-title">Garage Nights</h3>
+                    <p class="community-feature-text">Monthly meetups in Lafayette and beyond</p>
+                </div>
+                <div class="community-feature">
+                    <div class="community-icon">⚡</div>
+                    <h3 class="community-feature-title">Fuel Stops</h3>
+                    <p class="community-feature-text">Pop-ups where stories meet the road</p>
+                </div>
+                <div class="community-feature">
+                    <div class="community-icon">🎯</div>
+                    <h3 class="community-feature-title">Early Access</h3>
+                    <p class="community-feature-text">First dibs on every limited release</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Coming Soon Section -->
+    <section class="coming-soon">
+        <div class="coming-soon-container">
+            <h2 class="coming-soon-title">The Clock is Ticking</h2>
+            <p class="coming-soon-date">First Drop • November 3rd, 2025</p>
+            <div class="countdown">
+                <div class="countdown-item">
+                    <span class="countdown-number" id="days">00</span>
+                    <span class="countdown-label">Days</span>
+                </div>
+                <div class="countdown-item">
+                    <span class="countdown-number" id="hours">00</span>
+                    <span class="countdown-label">Hours</span>
+                </div>
+                <div class="countdown-item">
+                    <span class="countdown-number" id="minutes">00</span>
+                    <span class="countdown-label">Minutes</span>
+                </div>
+                <div class="countdown-item">
+                    <span class="countdown-number" id="seconds">00</span>
+                    <span class="countdown-label">Seconds</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Newsletter Section -->
+    <section class="newsletter">
+        <div class="newsletter-container">
+            <h2 class="newsletter-title">Stay Fueled Up</h2>
+            <p class="newsletter-text">
+                Get first access to drops, event invites, and the stories that matter.
+            </p>
+            <form class="newsletter-form" onsubmit="handleNewsletterSubmit(event)">
+                <input type="email" class="newsletter-input" placeholder="Enter your email" required>
+                <button type="submit" class="newsletter-button">Join</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="fnf-footer">
+        <div class="fnf-footer-container">
+            <div class="fnf-footer-content">
+                <!-- Brand Column -->
+                <div class="fnf-footer-brand">
+                    <a href="./" class="fnf-footer-logo">
+                        <img src="https://cdn.shopify.com/s/files/1/0666/4060/9411/files/fandft-clear-background.png?v=1755572638" 
+                             alt="Fuel & Free Time">
+                    </a>
+                    <p class="fnf-footer-tagline">"Time is the real flex."</p>
+                    <p class="fnf-footer-description">
+                        For those who've earned their freedom through hard work, service, and dedication. 
+                        This is more than apparel — it's a badge of the life you've built.
+                    </p>
+                </div>
+
+                <!-- Quick Links -->
+                <div class="fnf-footer-nav">
+                    <h3>Explore</h3>
+                    <ul>
+                        <li><a href="https://fuelnfreetime.com/pages/shop">Shop</a></li>
+                        <li><a href="https://fuelnfreetime.com/pages/community">Community</a></li>
+                        <li><a href="https://fuelnfreetime.com/pages/collab">Collaborate</a></li>
+                    </ul>
+                </div>
+
+                <!-- Support -->
+                <div class="fnf-footer-nav">
+                    <h3>Support</h3>
+                    <ul>
+                        <li><a href="https://fuelnfreetime.com/pages/contact">Contact</a></li>
+                        <li><a href="https://fuelnfreetime.com/pages/data-sharing-opt-out">Privacy Policy</a></li>
+                    </ul>
+                </div>
+
+                <!-- Connect -->
+                <div class="fnf-footer-connect">
+                    <div>
+                        <h3>Stay Connected</h3>
+                        <div class="fnf-social-links">
+                            <a href="#" class="fnf-social-link" aria-label="Instagram">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+                                </svg>
+                            </a>
+                            <a href="#" class="fnf-social-link" aria-label="Facebook">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+                                </svg>
+                            </a>
+                            <a href="#" class="fnf-social-link" aria-label="YouTube">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
+                                    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="fnf-newsletter-mini">
+                        <h3>Get Updates</h3>
+                        <form class="fnf-newsletter-form">
+                            <input type="email" class="fnf-newsletter-input" placeholder="Your email">
+                            <button type="submit" class="fnf-newsletter-submit">Join</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Bottom -->
+            <div class="fnf-footer-bottom">
+                <p class="fnf-footer-copyright">
+                    © 2025 Fuel & Free Time. All rights reserved.
+                </p>
+                <div class="fnf-footer-legal">
+                    <span style="color: var(--smoke); font-size: 14px;">Built for those who've earned it.</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        (function(){
+            const $ = (s, r=document)=>r.querySelector(s);
+            const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
+
+            const app = $('#fnfApp');
+            const header = $('#fnfHeader');
+            const burger = $('#fnfBurger');
+            const mobile = $('#fnfMobile');
+            const hero = $('#fnfHero');
+            const spacer = $('#fnfSpacer');
+
+            // Robust home detection
+            const path = location.pathname.replace(/\/+$/,'') || '/';
+            const isHome = (path==='/' || path==='/index' || path==='/index.html');
+
+            // Home: show hero + load model-viewer only on Home
+            if(isHome){
+                hero.hidden = false;
+
+                // Defer model-viewer ESM until needed
+                const s = document.createElement('script');
+                s.type = 'module';
+                s.src = 'https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js';
+                document.head.appendChild(s);
+
+                // One-time entrance & reveal (prevents early GPU/texture work)
+                const io = new IntersectionObserver((entries)=>{
+                    if(entries[0]?.isIntersecting){
+                        app.classList.add('is-hero-visible');
+                        const mv = document.getElementById('fnfMV');
+                        // Show poster first, then reveal GLB once in view (smoother)
+                        if(mv && typeof mv.dismissPoster === 'function'){
+                            // small delay lets fonts/hero paint before GLB initializes
+                            setTimeout(()=>mv.dismissPoster(), 120);
+                        }
+                        io.disconnect();
+                    }
+                },{threshold:0.35});
+                io.observe(hero);
+            } else {
+                spacer.style.display = 'block';
+            }
+
+            // ACTIVE LINK: only current page underlined
+            const norm = (u)=>u.replace(/\/+$/,'') || '/';
+            function setActive(anchors){
+                anchors.forEach(a=>a.classList.remove('is-active'));
+                const here = norm(location.pathname);
+                let best = null, bestLen = -1;
+                anchors.forEach(a=>{
+                    const href = norm(a.getAttribute('href')||'/');
+                    if(href==='/' && here!=='/') return;
+                    if(href==='/' && here==='/'){ best=a; bestLen=1; return; }
+                    if(href!=='/' && here.startsWith(href) && href.length>bestLen){ best=a; bestLen=href.length; }
+                });
+                if(!best && here==='/'){ best = anchors.find(a=>norm(a.getAttribute('href')||'/')==='/'); }
+                if(best){ best.classList.add('is-active'); }
+            }
+            setActive($$('.fnf-nav a')); setActive($$('#fnfMobile a'));
+
+            // Header behavior: blur on scroll, hide on strong downward scroll
+            let lastY = window.scrollY;
+            const onScroll = ()=>{
+                const y = window.scrollY, down = y > lastY;
+                header.classList.toggle('is-scrolling', y>10);
+                header.classList.toggle('is-hidden', y>120 && down);
+                lastY = y;
+            };
+            window.addEventListener('scroll', onScroll, {passive:true}); onScroll();
+
+            // Mobile menu + underline tap animation
+            const closeMenu = ()=>{
+                burger.classList.remove('is-open');
+                mobile.classList.remove('is-open');
+                burger.setAttribute('aria-expanded','false');
+            };
+            burger.addEventListener('click', ()=>{
+                const open = !burger.classList.contains('is-open');
+                burger.classList.toggle('is-open', open);
+                mobile.classList.toggle('is-open', open);
+                burger.setAttribute('aria-expanded', String(open));
+            });
+            document.addEventListener('click', (e)=>{
+                if(!mobile.contains(e.target) && !burger.contains(e.target)) closeMenu();
+            });
+            document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
+
+            $$('#fnfMobile a').forEach(a=>{
+                a.addEventListener('click', ()=>{
+                    a.classList.add('tap-anim');
+                    setTimeout(()=>a.classList.remove('tap-anim'), 350);
+                    closeMenu();
+                });
+            });
+
+            // (Optional) save-data users: keep poster, skip heavy GLB init
+            const saveData = 'connection' in navigator && navigator.connection && navigator.connection.saveData;
+            if(saveData){ const mv = $('#fnfMV'); if(mv){ mv.setAttribute('reveal','interaction'); } }
+
+        })();
+
+        // Intersection Observer for scroll animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -10px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        // Observe elements
+        document.querySelectorAll('.manifesto-content, .manifesto-visual, .collection-card, .value-card, .community-feature, .coming-soon-title').forEach(el => {
+            observer.observe(el);
+        });
+
+        // Special observer for value cards glass to solid animation
+        const valueObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const ratio = entry.intersectionRatio;
+                    if (ratio > 0.5) {
+                        entry.target.classList.add('solid');
+                    }
+                }
+            });
+        }, {
+            threshold: [0, 0.25, 0.5, 0.75, 1]
+        });
+
+        document.querySelectorAll('.value-card').forEach(card => {
+            valueObserver.observe(card);
+        });
+
+        // Countdown Timer
+        function updateCountdown() {
+            const launchDate = new Date('November 3, 2025 00:00:00').getTime();
+            const now = new Date().getTime();
+            const distance = launchDate - now;
+
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            document.getElementById('days').textContent = String(days).padStart(2, '0');
+            document.getElementById('hours').textContent = String(hours).padStart(2, '0');
+            document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
+            document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
+        }
+
+        setInterval(updateCountdown, 1000);
+        updateCountdown();
+
+        // Newsletter form handler
+        function handleNewsletterSubmit(e) {
+            e.preventDefault();
+            alert('Thanks for joining! We\'ll keep you fueled up with updates.');
+            e.target.reset();
+        }
+
+        // Intersection Observer for footer heading animations
+        (function() {
+            const footerHeadings = document.querySelectorAll('.fnf-footer-nav h3, .fnf-footer-connect h3');
+            
+            if (!footerHeadings.length) return;
+            
+            const observerOptions = {
+                threshold: 0.5,
+                rootMargin: '0px 0px -50px 0px'
+            };
+            
+            const headingObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('animate');
+                    }
+                });
+            }, observerOptions);
+            
+            footerHeadings.forEach(heading => {
+                headingObserver.observe(heading);
+            });
+        })();
+    </script>
+</body>
+</html>

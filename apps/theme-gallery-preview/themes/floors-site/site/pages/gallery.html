@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Work | Gallery | Anything Floors and More | Lafayette, LA</title>
+    <meta name="description"
+        content="See our flooring and renovation projects. Gallery of work by Anything Floors and More in Lafayette and Acadiana.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary-green: #3a5a4d;
+            --primary-green-light: #4a6b5d;
+            --cream: #f5f3ef;
+            --warm-gray: #4a4a4a;
+            --white: #ffffff;
+            --dark: #1a1a1a;
+        }
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--warm-gray);
+            line-height: 1.6;
+            background: linear-gradient(to bottom, var(--white) 0%, #fcfcfc 30%, #f6f8f6 70%, var(--cream) 100%);
+        }
+        h1, h2 { font-family: 'Space Grotesk', sans-serif; color: var(--dark); font-weight: 700; }
+
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(58, 90, 77, 0.1);
+            z-index: 1000;
+        }
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo { display: flex; align-items: center; text-decoration: none; }
+        .logo img { height: 100px; width: auto; object-fit: contain; }
+        .nav-menu { display: flex; align-items: center; gap: 2rem; list-style: none; }
+        .nav-link {
+            color: var(--warm-gray);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .nav-link:hover, .nav-link.active { color: var(--primary-green); }
+        .nav-cta {
+            background: var(--primary-green);
+            color: var(--white);
+            padding: 0.7rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 700;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .nav-cta:hover { background: var(--primary-green-light); }
+        .mobile-toggle { display: none; flex-direction: column; gap: 0.35rem; background: none; border: none; cursor: pointer; padding: 0.5rem; }
+        .hamburger { width: 24px; height: 2.5px; background: var(--primary-green); border-radius: 2px; }
+
+        .page-header {
+            margin-top: 80px;
+            padding: 4rem 2rem 2rem;
+            text-align: center;
+        }
+        .page-header h1 { font-size: clamp(2rem, 5vw, 3.5rem); margin-bottom: 0.75rem; color: var(--primary-green); }
+        .page-header p { font-size: 1.1rem; color: var(--warm-gray); max-width: 600px; margin: 0 auto; }
+
+        .gallery-section {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem 4rem;
+        }
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        .gallery-item {
+            border-radius: 12px;
+            overflow: hidden;
+            aspect-ratio: 4/3;
+            background: #e8e8e8;
+            box-shadow: 0 4px 20px rgba(58, 90, 77, 0.08);
+        }
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .gallery-empty, .gallery-loading {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--warm-gray);
+            font-size: 1.05rem;
+        }
+        .gallery-empty code, .gallery-loading code { background: rgba(58, 90, 77, 0.1); padding: 0.2em 0.5em; border-radius: 4px; }
+
+        @media (max-width: 768px) {
+            .logo img { height: 80px; }
+            .nav-menu {
+                position: fixed;
+                top: 0;
+                left: -80%;
+                width: 80%;
+                height: 100vh;
+                background: rgba(58, 90, 77, 0.98);
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 5rem 2rem 2rem;
+                gap: 1rem;
+                transition: left 0.3s ease;
+                z-index: 999;
+            }
+            .nav-menu.active { left: 0; }
+            .nav-link { color: rgba(255,255,255,0.9); font-size: 1.1rem; }
+            .nav-link.active { color: var(--white); }
+            .nav-cta { background: var(--white); color: var(--primary-green); }
+            .mobile-toggle { display: flex; }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">
+                <img src="./api/cms/serve?key=cms/logo.png"
+                    alt="Anything Floors and More"
+                    onerror="this.onerror=null;this.src='https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/7fb34d9c-fb11-4403-6a45-74ac90492e00/avatar';">
+            </a>
+            <button class="mobile-toggle" id="mobile-toggle" aria-label="Menu">
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+                <span class="hamburger"></span>
+            </button>
+            <ul class="nav-menu" id="nav-menu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="./services" class="nav-link">Services</a></li>
+                <li><a href="./process" class="nav-link">Process</a></li>
+                <li><a href="./gallery" class="nav-link active">Gallery</a></li>
+                <li><a href="./contact" class="nav-link">Contact</a></li>
+                <li><a href="./contact" class="nav-cta">Get Estimate</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="page-header">
+        <h1>Our Work</h1>
+        <p>Photos from our projects. Images are loaded from your R2 bucket (<code>cms/</code>). Upload via the dashboard or R2 to add more.</p>
+    </section>
+
+    <section class="gallery-section">
+        <div class="gallery-grid" id="r2-gallery">
+            <p class="gallery-loading" id="gallery-loading">Loading gallery…</p>
+        </div>
+    </section>
+
+    <link rel="stylesheet" href="./shared/footer.css">
+    <script>
+        fetch('/shared/footer.html').then(function (r) { return r.text(); }).then(function (html) {
+            document.body.insertAdjacentHTML('beforeend', html);
+        });
+    </script>
+
+    <script>
+        (function () {
+            var container = document.getElementById('r2-gallery');
+            var loading = document.getElementById('gallery-loading');
+            if (!container) return;
+            fetch('/api/cms/media')
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (loading) loading.remove();
+                    if (!data.files || data.files.length === 0) {
+                        container.innerHTML = '<p class="gallery-empty">No images in your R2 gallery yet. Upload images to the <code>cms/</code> folder in your R2 bucket (or via your CMS) to see them here.</p>';
+                        return;
+                    }
+                    container.innerHTML = '';
+                    data.files.forEach(function (file) {
+                        var div = document.createElement('div');
+                        div.className = 'gallery-item';
+                        var img = document.createElement('img');
+                        img.src = file.url;
+                        img.alt = file.title || file.name || 'Project photo';
+                        img.loading = 'lazy';
+                        img.onerror = function () { this.parentElement.style.background = '#e0e0e0'; };
+                        div.appendChild(img);
+                        container.appendChild(div);
+                    });
+                })
+                .catch(function () {
+                    if (loading) loading.textContent = 'Could not load gallery. Upload images to R2 (cms/) to showcase your work.';
+                });
+        })();
+
+        var mobileToggle = document.getElementById('mobile-toggle');
+        var navMenu = document.getElementById('nav-menu');
+        if (mobileToggle && navMenu) {
+            mobileToggle.addEventListener('click', function () {
+                navMenu.classList.toggle('active');
+            });
+            document.querySelectorAll('.nav-link').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    navMenu.classList.remove('active');
+                });
+            });
+        }
+    </script>
+</body>
+
+</html>

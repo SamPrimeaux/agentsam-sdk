@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+.DS_Store
+themes/*/site/church-images/
+themes/*/site/church-images-optimized/

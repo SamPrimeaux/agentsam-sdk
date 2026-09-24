@@ -1,0 +1,43 @@
+{
+  "slug": "floors-site",
+  "appId": "floors-site",
+  "name": "Anything Floors & More",
+  "eyebrow": "Contractor / Construction",
+  "category": "Services",
+  "industries": [
+    "Contractor",
+    "Flooring"
+  ],
+  "tags": [
+    "gallery",
+    "estimates",
+    "projects"
+  ],
+  "description": "Real Anything Floors & More public site \u2014 services, gallery, process, and contact.",
+  "features": [
+    "CMS",
+    "Gallery",
+    "Forms",
+    "Auth"
+  ],
+  "pages": [
+    "Home",
+    "Services",
+    "Gallery",
+    "Process",
+    "Contact",
+    "Help"
+  ],
+  "preview": {
+    "kind": "live",
+    "card": "/themes/floors-site/demo/",
+    "desktop": "/themes/floors-site/demo/",
+    "mobile": "/themes/floors-site/demo/",
+    "demoUrl": "/themes/floors-site/demo/"
+  },
+  "installable": false,
+  "_internal": {
+    "normalization": "pending",
+    "source": "/Volumes/Expansion/Anything Floors & More"
+  }
+}

@@ -1,0 +1,310 @@
+{
+  "themes": [
+    {
+      "slug": "insurance-site",
+      "appId": "insurance-site",
+      "name": "Chrystal Clear Insurance",
+      "eyebrow": "Insurance / Professional Services",
+      "category": "Professional",
+      "industries": [
+        "Insurance",
+        "Professional Services"
+      ],
+      "tags": [
+        "quotes",
+        "trust",
+        "lead-forms"
+      ],
+      "description": "Real Chrystal Clear Insurance build \u2014 editorial insurance storefront with coverage storytelling and quote capture.",
+      "features": [
+        "CMS",
+        "Lead forms",
+        "Media",
+        "Email"
+      ],
+      "pages": [
+        "Home",
+        "Coverage",
+        "About",
+        "Claims",
+        "Resources",
+        "Contact",
+        "Help"
+      ],
+      "preview": {
+        "kind": "live",
+        "card": "/themes/insurance-site/demo/",
+        "desktop": "/themes/insurance-site/demo/",
+        "mobile": "/themes/insurance-site/demo/",
+        "demoUrl": "/themes/insurance-site/demo/"
+      },
+      "installable": false,
+      "_internal": {
+        "normalization": "pending",
+        "source": "/Users/samprimeaux/Projects/client-demos/chrystal-clear-insurance/chrystal-clear-insurance/dist"
+      }
+    },
+    {
+      "slug": "handyman-site",
+      "appId": "handyman-site",
+      "name": "Primeaux Handyman Services",
+      "eyebrow": "Home Services / Trades",
+      "category": "Services",
+      "industries": [
+        "Home Services",
+        "Trades"
+      ],
+      "tags": [
+        "estimates",
+        "pwa",
+        "local"
+      ],
+      "description": "Real Primeaux Handyman PWA build \u2014 mobile-first service site with estimates and project proof.",
+      "features": [
+        "CMS",
+        "PWA",
+        "Forms",
+        "Leads"
+      ],
+      "pages": [
+        "Home",
+        "Services",
+        "Projects",
+        "Service Areas",
+        "About",
+        "Contact",
+        "Help"
+      ],
+      "preview": {
+        "kind": "live",
+        "card": "/themes/handyman-site/demo/",
+        "desktop": "/themes/handyman-site/demo/",
+        "mobile": "/themes/handyman-site/demo/",
+        "demoUrl": "/themes/handyman-site/demo/"
+      },
+      "installable": false,
+      "_internal": {
+        "normalization": "pending",
+        "source": "/Users/samprimeaux/worktrees/primeaux-handyman-services-agent/dist"
+      }
+    },
+    {
+      "slug": "church-site",
+      "appId": "church-site",
+      "name": "New Iberia Church of Christ",
+      "eyebrow": "Church / Community",
+      "category": "Community",
+      "industries": [
+        "Church",
+        "Nonprofit"
+      ],
+      "tags": [
+        "groups",
+        "giving",
+        "visit"
+      ],
+      "description": "Real New Iberia Church of Christ public pages \u2014 visit, groups, mission, and giving.",
+      "features": [
+        "CMS",
+        "Events",
+        "Giving",
+        "Media"
+      ],
+      "pages": [
+        "Home",
+        "Beliefs",
+        "Community",
+        "Mission",
+        "Groups",
+        "Donate",
+        "Connect",
+        "Help"
+      ],
+      "preview": {
+        "kind": "live",
+        "card": "/themes/church-site/demo/",
+        "desktop": "/themes/church-site/demo/",
+        "mobile": "/themes/church-site/demo/",
+        "demoUrl": "/themes/church-site/demo/"
+      },
+      "installable": false,
+      "_internal": {
+        "normalization": "pending",
+        "source": "/Users/samprimeaux/Library/Mobile Documents/com~apple~CloudDocs/Projects/Cloudflare/NewIberiaChurchofChrist"
+      }
+    },
+    {
+      "slug": "companions-site",
+      "appId": "companions-site",
+      "name": "Companions of Caddo",
+      "eyebrow": "Nonprofit / Animal Rescue",
+      "category": "Community",
+      "industries": [
+        "Nonprofit",
+        "Animal Rescue"
+      ],
+      "tags": [
+        "donate",
+        "foster",
+        "campaigns"
+      ],
+      "description": "Real Companions of Caddo public static surface \u2014 mission, campaigns, and involvement paths.",
+      "features": [
+        "CMS",
+        "Donations",
+        "Campaigns",
+        "Email"
+      ],
+      "pages": [
+        "Home",
+        "About",
+        "Campaigns",
+        "Get Involved",
+        "Donate",
+        "Help"
+      ],
+      "preview": {
+        "kind": "live",
+        "card": "/themes/companions-site/demo/",
+        "desktop": "/themes/companions-site/demo/",
+        "mobile": "/themes/companions-site/demo/",
+        "demoUrl": "/themes/companions-site/demo/"
+      },
+      "installable": false,
+      "_internal": {
+        "normalization": "pending",
+        "source": "/Users/samprimeaux/companionscpas/static"
+      }
+    },
+    {
+      "slug": "floors-site",
+      "appId": "floors-site",
+      "name": "Anything Floors & More",
+      "eyebrow": "Contractor / Construction",
+      "category": "Services",
+      "industries": [
+        "Contractor",
+        "Flooring"
+      ],
+      "tags": [
+        "gallery",
+        "estimates",
+        "projects"
+      ],
+      "description": "Real Anything Floors & More public site \u2014 services, gallery, process, and contact.",
+      "features": [
+        "CMS",
+        "Gallery",
+        "Forms",
+        "Auth"
+      ],
+      "pages": [
+        "Home",
+        "Services",
+        "Gallery",
+        "Process",
+        "Contact",
+        "Help"
+      ],
+      "preview": {
+        "kind": "live",
+        "card": "/themes/floors-site/demo/",
+        "desktop": "/themes/floors-site/demo/",
+        "mobile": "/themes/floors-site/demo/",
+        "demoUrl": "/themes/floors-site/demo/"
+      },
+      "installable": false,
+      "_internal": {
+        "normalization": "pending",
+        "source": "/Volumes/Expansion/Anything Floors & More"
+      }
+    },
+    {
+      "slug": "shinshu-site",
+      "appId": "shinshu-site",
+      "name": "Shinshu Solutions",
+      "eyebrow": "Consultant / Leadership",
+      "category": "Professional",
+      "industries": [
+        "Consulting",
+        "Education"
+      ],
+      "tags": [
+        "bilingual",
+        "portfolio",
+        "cms"
+      ],
+      "description": "Real Shinshu Solutions static archive \u2014 services, gallery, and CMS-ready pages.",
+      "features": [
+        "CMS",
+        "Portfolio",
+        "Media",
+        "Forms"
+      ],
+      "pages": [
+        "Home",
+        "Services",
+        "About",
+        "Gallery",
+        "Adventures",
+        "Contact",
+        "Help"
+      ],
+      "preview": {
+        "kind": "live",
+        "card": "/themes/shinshu-site/demo/",
+        "desktop": "/themes/shinshu-site/demo/",
+        "mobile": "/themes/shinshu-site/demo/",
+        "demoUrl": "/themes/shinshu-site/demo/"
+      },
+      "installable": false,
+      "_internal": {
+        "normalization": "pending",
+        "source": "/Users/samprimeaux/IAM-Library/01_Template_Candidates/MEAUXIDERANDOMBUILDS/06_shinshu_static_site_archive/source/shinshu-solutions/static"
+      }
+    },
+    {
+      "slug": "fuelnfree-site",
+      "appId": "fuelnfree-site",
+      "name": "Fuel & Free Time",
+      "eyebrow": "Retail / Ecommerce",
+      "category": "Commerce",
+      "industries": [
+        "Retail",
+        "Lifestyle"
+      ],
+      "tags": [
+        "shop",
+        "collections",
+        "brand"
+      ],
+      "description": "Real Fuel & Free Time legacy storefront pages \u2014 home, shop, about, and community.",
+      "features": [
+        "Commerce",
+        "CMS",
+        "Search",
+        "Cart"
+      ],
+      "pages": [
+        "Home",
+        "Shop",
+        "About",
+        "Community",
+        "Help"
+      ],
+      "preview": {
+        "kind": "live",
+        "card": "/themes/fuelnfree-site/demo/",
+        "desktop": "/themes/fuelnfree-site/demo/",
+        "mobile": "/themes/fuelnfree-site/demo/",
+        "demoUrl": "/themes/fuelnfree-site/demo/"
+      },
+      "installable": false,
+      "_internal": {
+        "normalization": "pending",
+        "source": "/Users/samprimeaux/fuelnfreetime/legacy"
+      }
+    }
+  ],
+  "version": 1
+}

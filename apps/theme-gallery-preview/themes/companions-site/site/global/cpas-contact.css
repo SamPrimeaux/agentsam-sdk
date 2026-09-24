@@ -1,0 +1,405 @@
+/* ── CONTACT PAGE (/contact) ─────────────────────────────────── */
+
+.contact-hero {
+  padding: clamp(2rem, 5vw, 3.5rem) 0 clamp(2.5rem, 6vw, 4rem);
+}
+
+.contact-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  align-items: center;
+  gap: clamp(2rem, 5vw, 4rem);
+}
+
+.contact-hero-copy {
+  text-align: left;
+}
+
+.contact-hero-copy .eyebrow {
+  color: var(--tg-coc-magenta, var(--purple));
+}
+
+.contact-hero-copy h1 {
+  font-family: var(--font-display, "Playfair Display", Georgia, serif);
+  font-size: clamp(2rem, 4.5vw, 3.25rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--text-1);
+  margin-bottom: 1rem;
+  line-height: 1.08;
+}
+
+.contact-hero-copy p {
+  font-size: clamp(15px, 1.15vw, 17px);
+  color: var(--text-2);
+  max-width: 34rem;
+  line-height: 1.7;
+}
+
+.contact-social-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: clamp(1.5rem, 3vw, 2rem);
+}
+
+.contact-social-btn {
+  min-height: 48px;
+  padding: 0 1.35rem;
+  font-size: 14px;
+  gap: 0.55rem;
+}
+
+.contact-social-btn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.contact-hero-photo {
+  justify-self: end;
+  width: min(100%, 540px);
+}
+
+.contact-hero-frame {
+  border-radius: 28px;
+  background: var(--card-frame, rgba(255, 255, 255, 0.72));
+  padding: 12px;
+  box-shadow: var(--card-shadow, 0 24px 60px rgba(78, 26, 82, 0.12));
+  border: 1px solid rgba(142, 58, 125, 0.1);
+}
+
+.contact-hero-frame img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  object-position: center 32%;
+  border-radius: 18px;
+}
+
+.contact-body {
+  padding: clamp(3.5rem, 7vw, 6rem) 0;
+}
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: clamp(2rem, 5vw, 4.5rem);
+  align-items: start;
+}
+
+.contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.contact-info-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.35rem 1.5rem;
+}
+
+.contact-info-card h3 {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tg-coc-magenta, var(--purple));
+  margin-bottom: 0.85rem;
+}
+
+.contact-info-card p,
+.contact-info-card a {
+  font-size: 15px;
+  color: var(--text-2);
+  line-height: 1.65;
+  display: block;
+}
+
+.contact-info-card a {
+  color: var(--tg-coc-purple-deep, var(--purple));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.contact-info-card a:hover {
+  color: var(--tg-coc-magenta, var(--purple-mid));
+}
+
+.contact-info-card .contact-help-cta {
+  margin-top: 0.75rem;
+  text-decoration: none;
+}
+
+.contact-form-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: clamp(1.75rem, 4vw, 2.75rem);
+}
+
+.contact-form-wrap h2 {
+  font-family: var(--font-display, "Playfair Display", Georgia, serif);
+  font-size: clamp(1.35rem, 2.5vw, 1.85rem);
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 0.35rem;
+  letter-spacing: -0.02em;
+}
+
+.contact-form-wrap p.form-sub {
+  font-size: 14px;
+  color: var(--text-2);
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
+.cf-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.cf-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.cf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.cf-field label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.cf-field input,
+.cf-field select,
+.cf-field textarea {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid var(--border-md);
+  border-radius: 10px;
+  font-size: 15px;
+  font-family: var(--font-body);
+  color: var(--text-1);
+  background: var(--bg);
+  outline: none;
+  transition: border-color 150ms, box-shadow 150ms;
+  box-sizing: border-box;
+}
+
+.cf-field input:focus,
+.cf-field select:focus,
+.cf-field textarea:focus {
+  border-color: var(--tg-coc-purple, var(--purple));
+  box-shadow: 0 0 0 3px rgba(107, 33, 232, 0.12);
+}
+
+.cf-field textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.cf-submit {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 0.25rem;
+  font-size: 15px;
+}
+
+.cf-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cf-success {
+  display: none;
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.cf-success-icon {
+  font-size: 48px;
+  margin-bottom: 0.75rem;
+}
+
+.cf-success-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 0.5rem;
+}
+
+.cf-success-msg {
+  font-size: 14px;
+  color: var(--text-2);
+  line-height: 1.6;
+}
+
+/* ── CONTACT HERO FRAME — team photo variant ─── */
+.contact-hero-frame--team {
+  border-radius: 16px;
+  padding: 0;
+  background: transparent;
+  box-shadow: 0 8px 32px rgba(78, 26, 82, 0.10);
+  border: 1px solid rgba(142, 58, 125, 0.1);
+  overflow: hidden;
+}
+
+.contact-hero-frame--team img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: unset;
+  object-fit: contain;
+  object-position: center;
+  border-radius: 0;
+  max-height: 480px;
+}
+
+/* ── TEAM SECTION ─────────────────────────────── */
+.team-section {
+  padding: clamp(4rem, 8vw, 6.25rem) 0;
+  background: var(--bg-2);
+  border-top: 1px solid var(--border);
+}
+
+.team-header {
+  text-align: center;
+  margin-bottom: clamp(2.5rem, 5vw, 3.5rem);
+}
+
+.team-header h2 {
+  font-family: var(--font-display, "Playfair Display", Georgia, serif);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--text-1);
+  margin-bottom: 0.75rem;
+}
+
+.team-header p {
+  font-size: 16px;
+  color: var(--text-2);
+  max-width: 30rem;
+  margin: 0 auto;
+  line-height: 1.65;
+}
+
+/* Two-column layout: photo left, member list right */
+.team-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(2rem, 5vw, 4rem);
+  align-items: start;
+}
+
+.team-photo-col img.team-group-photo {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  object-fit: contain;
+  box-shadow: 0 8px 32px rgba(78, 26, 82, 0.10);
+  border: 1px solid rgba(142, 58, 125, 0.08);
+}
+
+.team-member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.team-member {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 1rem 1.35rem;
+  border-bottom: 1px solid var(--border);
+  gap: 1rem;
+}
+
+.team-member:last-child { border-bottom: none; }
+
+.team-member-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-1);
+  flex-shrink: 0;
+}
+
+.team-member-role {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--tg-coc-magenta, #9b2c8e);
+  text-align: right;
+}
+
+.team-note {
+  margin-top: 1.25rem;
+  font-size: 13px;
+  color: var(--text-3, var(--text-2));
+  line-height: 1.6;
+  font-style: italic;
+}
+
+@media (max-width: 900px) {
+  .contact-hero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .contact-hero-photo {
+    justify-self: stretch;
+    width: 100%;
+    order: -1;
+  }
+
+  .contact-hero-copy {
+    text-align: center;
+  }
+
+  .contact-hero-copy p {
+    margin-inline: auto;
+  }
+
+  .contact-social-actions {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 760px) {
+  .contact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cf-row {
+    grid-template-columns: 1fr;
+  }
+
+  .team-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .team-photo-col img.team-group-photo {
+    max-height: 320px;
+    object-fit: cover;
+    object-position: center top;
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "slug": "insurance-site",
+  "appId": "insurance-site",
+  "name": "Chrystal Clear Insurance",
+  "eyebrow": "Insurance / Professional Services",
+  "category": "Professional",
+  "industries": [
+    "Insurance",
+    "Professional Services"
+  ],
+  "tags": [
+    "quotes",
+    "trust",
+    "lead-forms"
+  ],
+  "description": "Real Chrystal Clear Insurance build \u2014 editorial insurance storefront with coverage storytelling and quote capture.",
+  "features": [
+    "CMS",
+    "Lead forms",
+    "Media",
+    "Email"
+  ],
+  "pages": [
+    "Home",
+    "Coverage",
+    "About",
+    "Claims",
+    "Resources",
+    "Contact",
+    "Help"
+  ],
+  "preview": {
+    "kind": "live",
+    "card": "/themes/insurance-site/demo/",
+    "desktop": "/themes/insurance-site/demo/",
+    "mobile": "/themes/insurance-site/demo/",
+    "demoUrl": "/themes/insurance-site/demo/"
+  },
+  "installable": false,
+  "_internal": {
+    "normalization": "pending",
+    "source": "/Users/samprimeaux/Projects/client-demos/chrystal-clear-insurance/chrystal-clear-insurance/dist"
+  }
+}

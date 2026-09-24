@@ -1,0 +1,43 @@
+{
+  "slug": "companions-site",
+  "appId": "companions-site",
+  "name": "Companions of Caddo",
+  "eyebrow": "Nonprofit / Animal Rescue",
+  "category": "Community",
+  "industries": [
+    "Nonprofit",
+    "Animal Rescue"
+  ],
+  "tags": [
+    "donate",
+    "foster",
+    "campaigns"
+  ],
+  "description": "Real Companions of Caddo public static surface \u2014 mission, campaigns, and involvement paths.",
+  "features": [
+    "CMS",
+    "Donations",
+    "Campaigns",
+    "Email"
+  ],
+  "pages": [
+    "Home",
+    "About",
+    "Campaigns",
+    "Get Involved",
+    "Donate",
+    "Help"
+  ],
+  "preview": {
+    "kind": "live",
+    "card": "/themes/companions-site/demo/",
+    "desktop": "/themes/companions-site/demo/",
+    "mobile": "/themes/companions-site/demo/",
+    "demoUrl": "/themes/companions-site/demo/"
+  },
+  "installable": false,
+  "_internal": {
+    "normalization": "pending",
+    "source": "/Users/samprimeaux/companionscpas/static"
+  }
+}
