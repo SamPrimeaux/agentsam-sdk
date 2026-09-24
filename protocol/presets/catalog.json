@@ -32,6 +32,7 @@
       "features": [
         "cms",
         "knowledge",
+        "brand",
         "theme"
       ],
       "capabilities": [
@@ -41,6 +42,8 @@
         "knowledge.search",
         "site.scrape",
         "deploy.receipt",
+        "brand.scan",
+        "brand.resolve",
         "theme.storefront.shell"
       ],
       "defaults": {
@@ -125,7 +128,15 @@
       "capabilities": [
         "theme.storefront.shell"
       ],
-      "description": "Stock storefront theme selection \u2014 default package @inneranimalmedia/heuristic-theme (theme.storefront.shell)."
+      "description": "Stock storefront theme selection — default package @inneranimalmedia/heuristic-theme (theme.storefront.shell). Theme is a projection of Brand, not brand authority."
+    },
+    "brand": {
+      "id": "brand",
+      "capabilities": [
+        "brand.scan",
+        "brand.resolve"
+      ],
+      "description": "Deterministic Brand Intelligence — evidence from repository.snapshot; Brand ≠ Theme."
     },
     "knowledge": {
       "id": "knowledge",

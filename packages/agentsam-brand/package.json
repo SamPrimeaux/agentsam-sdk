@@ -1,0 +1,22 @@
+{
+  "name": "@inneranimalmedia/agentsam-sdk-brand",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic Brand Intelligence for AgentSam — scan/resolve/contract evidence on shared repository.snapshot authority",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./scan": "./src/scan.js",
+    "./resolve": "./src/resolve.js",
+    "./contract": "./src/contract.js",
+    "./plan": "./src/plan.js",
+    "./goap-actions": "./src/goap-actions.js"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  }
+}

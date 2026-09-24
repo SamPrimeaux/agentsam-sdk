@@ -27,6 +27,8 @@
     "./agent": "./src/agent/index.js",
     "./presets": "./src/presets/index.js",
     "./preset-catalog": "./protocol/presets/catalog.json",
+    "./brand": "./packages/agentsam-brand/src/index.js",
+    "./progression": "./src/progression/index.js",
     "./identity": "./packages/identity/src/index.js",
     "./identity/providers": "./packages/identity/src/providers/index.js",
     "./identity/providers/google": "./packages/identity/src/providers/google/index.js",
@@ -140,6 +142,7 @@
   "workspaces": [
     "packages/agentsam-shell-kit",
     "packages/identity",
+    "packages/agentsam-brand",
     "packages/agentsam-contracts",
     "packages/agentsam-errors",
     "packages/agentsam-repository",
@@ -160,7 +163,8 @@
     "packages/theme-shinshu-site"
   ],
   "scripts": {
-    "test": "npm run test:standard && npm --prefix packages/identity test && npm run test:connectors && npm run test:providers",
+    "test": "npm run test:standard && npm --prefix packages/identity test && npm --prefix packages/agentsam-brand test && npm run test:connectors && npm run test:providers",
+    "test:brand": "npm --prefix packages/agentsam-brand test",
     "test:standard": "node test/smoke.mjs && npm run test:unit && npm run test:cli && npm run test:integration:mock && npm run test:terminal:mock",
     "test:unit": "node --test test/*.test.mjs",
     "test:cli": "node --test test/cli/*.test.mjs",

@@ -25,6 +25,7 @@ import { runStatus } from './commands/status.js';
 import { runInteractive } from './commands/interactive.js';
 import { runShell } from './commands/shell.js';
 import { runGoap } from './commands/goap.js';
+import { runBrand, runPlan } from './commands/brand.js';
 import { runDockerize } from './commands/dockerize.js';
 import { runMini } from './commands/mini.js';
 import { runMerkle } from './commands/merkle.js';
@@ -73,6 +74,8 @@ function printLegacyHelp() {
     agentsam plugins list|install|connect|status|remove [@agentsam-mcp]
     agentsam dev               Run this project's existing npm dev script
     agentsam inspect [--json]  Bounded repository index by default; use --view full for authority envelope
+    agentsam brand [scan|…]    Deterministic brand intelligence on repository.snapshot authority
+    agentsam plan brand        Composable brand normalization plan (--goap optional)
     agentsam deploy            Graduate an AgentSam project intentionally
 
   Capability discovery:
@@ -471,6 +474,20 @@ if (command === '--version' || command === '-v') {
       cwd: process.cwd(),
       json: rest.includes('--json'), args: rest.slice(1),
     });
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
+  }
+} else if (command === 'brand') {
+  try {
+    await runBrand(rest);
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
+  }
+} else if (command === 'plan') {
+  try {
+    await runPlan(rest);
   } catch (e) {
     reportCliError(e);
     process.exitCode = 1;
