@@ -25,7 +25,7 @@
     h1 { font-size:clamp(2rem,4vw,2.75rem); letter-spacing:-0.03em; margin:0 0 12px; }
     .lead { color:var(--asbd-text-muted); max-width:62ch; margin:0 0 28px; line-height:1.55; }
     .learn-grid { display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
-    .learn-card { display:block; text-decoration:none; color:inherit; background:var(--asbd-surface-elevated); border:1px solid var(--asbd-border); border-radius:var(--asbd-radius); padding:22px; }
+    .learn-card { display:block; text-decoration:none; color:inherit; background:var(--asbd-surface-elevated); border:1px solid var(--asbd-border); border-radius:var(--asbd-radius); padding:22px; transition:border-color .2s ease; }
     .learn-card:hover { border-color:rgba(22,123,252,0.45); }
     .learn-card h2 { margin:0 0 8px; font-size:1.1rem; color:var(--asbd-color-blue); }
     .learn-card p { margin:0; color:var(--asbd-text-muted); line-height:1.5; font-size:0.95rem; }
@@ -43,7 +43,7 @@
       <span aria-current="page">Learn</span>
     </nav>
     <h1>Learn AgentSam</h1>
-    <p class="lead">Public learn routes for <code>agentsam.inneranimalmedia.com/learn/</code> — manuals and package guides under the shared ASBD shell.</p>
+    <p class="lead">Field manuals and package guides for <code>agentsam.inneranimalmedia.com/learn/</code> — shared ASBD shell, CMS-editable body content under WEBSITE_ASSETS.</p>
     <div class="learn-grid">
       <a class="learn-card" href="./architecture-field-manual/">
         <h2>Architecture Field Manual</h2>
@@ -55,7 +55,7 @@
       </a>
       <a class="learn-card" href="/packages/sdk/setup-guide/">
         <h2>SDK Setup Guide</h2>
-        <p>Minimum publishable doc pattern: install → login → inspect.</p>
+        <p>Minimum publishable doc pattern: install → verify → inspect.</p>
       </a>
     </div>
   </main>

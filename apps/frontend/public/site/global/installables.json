@@ -1,6 +1,6 @@
 {
   "schema": "agentsam.installables.v1",
-  "generated_at": "2026-09-24T23:36:53.751Z",
+  "generated_at": "2026-09-24T23:52:45.714Z",
   "generator": "scripts/sync-public-site.mjs",
   "packages": [
     {

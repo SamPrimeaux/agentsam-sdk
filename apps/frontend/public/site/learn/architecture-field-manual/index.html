@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Architecture Field Manual — AgentSam Learn</title>
-  <meta name="description" content="Repository architecture field manual for AgentSam learn routes." />
+  <meta name="description" content="How to read, design and reason about mature software systems." />
   <meta name="agentsam:page" content="learn" />
   <meta name="agentsam:route" content="agentsam.inneranimalmedia.com/learn/" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -14,49 +14,211 @@
   <script src="/site/global/asbd-theme.js" defer></script>
 
   <style>
-    body { margin:0; min-height:100vh; font-family:var(--asbd-font-sans); background:var(--asbd-surface); color:var(--asbd-text); }
-    .learn-shell { display:grid; grid-template-columns:280px minmax(0,1fr); max-width:1500px; margin:0 auto; min-height:100vh; padding-top:var(--asbd-header-height); }
-    .learn-toc { position:sticky; top:var(--asbd-header-height); height:calc(100vh - var(--asbd-header-height)); overflow:auto; padding:28px 20px; background:var(--asbd-color-navy); color:rgba(255,255,255,0.88); border-right:1px solid rgba(255,255,255,0.08); }
-    .learn-toc .learn-manual-kicker { font-size:13px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:var(--asbd-color-blue); margin:0 0 16px; }
-    .learn-toc a { display:block; color:rgba(255,255,255,0.72); text-decoration:none; padding:6px 0; font-size:13px; font-weight:600; }
-    .learn-toc a:hover { color:#fff; }
-    .learn-main { padding:28px 32px 80px; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--asbd-font-sans);
+      background: var(--asbd-surface);
+      color: var(--asbd-text);
+    }
+    .learn-shell {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      max-width: 1500px;
+      margin: 0 auto;
+      min-height: 100vh;
+      padding-top: var(--asbd-header-height);
+    }
+    .learn-toc {
+      position: sticky;
+      top: var(--asbd-header-height);
+      height: calc(100vh - var(--asbd-header-height));
+      overflow: auto;
+      padding: 28px 20px 40px;
+      background: var(--asbd-color-navy);
+      color: rgba(255,255,255,0.88);
+      border-right: 1px solid rgba(255,255,255,0.08);
+    }
+    .learn-toc-brand {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 22px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .learn-toc-brand .kicker {
+      margin: 0;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--asbd-color-blue);
+    }
+    .learn-toc-brand h1 {
+      margin: 0;
+      font-size: 1.15rem;
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+    .learn-toc-brand .meta {
+      margin: 0;
+      font-size: 12px;
+      color: rgba(255,255,255,0.45);
+    }
+    .learn-toc a {
+      display: block;
+      color: rgba(255,255,255,0.68);
+      text-decoration: none;
+      padding: 8px 10px;
+      margin: 0 0 2px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+    .learn-toc a:hover {
+      color: #fff;
+      background: rgba(22,123,252,0.16);
+    }
+    .learn-main { padding: 28px 32px 80px; }
     .asbd-doc-toolbar { display:flex; justify-content:flex-end; gap:10px; margin-bottom:18px; }
-    .asbd-theme-toggle { font:inherit; font-size:13px; font-weight:700; border-radius:10px; border:1px solid var(--asbd-border); background:var(--asbd-surface-elevated); color:var(--asbd-text); padding:8px 14px; cursor:pointer; }
-    .asbd-breadcrumb { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:13px; font-weight:600; color:var(--asbd-text-muted); margin-bottom:22px; }
-    .asbd-breadcrumb a { color:var(--asbd-text-muted); text-decoration:none; }
-    .asbd-breadcrumb a:hover { color:var(--asbd-color-blue); }
-    .asbd-breadcrumb [aria-current="page"] { color:var(--asbd-text); }
-    .learn-page { max-width:980px; margin:0 auto 24px; background:var(--asbd-surface-elevated); padding:48px 52px; border:1px solid var(--asbd-border); border-radius:var(--asbd-radius); }
-    .learn-page h1 { color:var(--asbd-text); font-size:clamp(1.8rem,3vw,2.4rem); line-height:1.1; margin-top:0; }
-    .learn-page h2 { color:var(--asbd-color-blue); margin-top:32px; }
-    .learn-page h3 { color:var(--asbd-text); }
-    .learn-page p, .learn-page li { color:var(--asbd-text-muted); line-height:1.55; }
-    .learn-page code, .learn-page pre { font-family:var(--asbd-font-mono); }
-    .learn-page pre { background:rgba(10,22,40,0.06); padding:18px; border-left:4px solid var(--asbd-color-blue); overflow:auto; font-size:13px; }
-    html[data-asbd-theme="dark"] .learn-page pre { background:rgba(255,255,255,0.05); }
-    .learn-page .note { background:rgba(22,123,252,0.08); border-left:4px solid var(--asbd-color-blue); padding:15px 17px; margin:18px 0; font-style:italic; color:var(--asbd-text-muted); }
-    .learn-page table { width:100%; border-collapse:collapse; font-size:14px; margin:15px 0; }
-    .learn-page th, .learn-page td { border:1px solid var(--asbd-border); padding:9px; vertical-align:top; }
-    .learn-page th { background:rgba(22,123,252,0.12); text-align:left; color:var(--asbd-text); }
-    .learn-page .tag { font-size:12px; letter-spacing:.09em; text-transform:uppercase; color:var(--asbd-color-blue); font-weight:800; }
-    .learn-page a { color:var(--asbd-color-blue); }
-    @media (max-width:900px) {
-      .learn-shell { display:block; }
-      .learn-toc { position:relative; top:auto; height:auto; }
-      .learn-page { padding:28px 22px; }
+    .asbd-theme-toggle {
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 10px;
+      border: 1px solid var(--asbd-border);
+      background: var(--asbd-surface-elevated);
+      color: var(--asbd-text);
+      padding: 8px 14px;
+      cursor: pointer;
+    }
+    .asbd-breadcrumb {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--asbd-text-muted);
+      margin-bottom: 22px;
+    }
+    .asbd-breadcrumb a { color: var(--asbd-text-muted); text-decoration: none; }
+    .asbd-breadcrumb a:hover { color: var(--asbd-color-blue); }
+    .asbd-breadcrumb [aria-current="page"] { color: var(--asbd-text); }
+
+    .learn-page {
+      max-width: 980px;
+      margin: 0 auto 28px;
+      background: var(--asbd-surface-elevated);
+      padding: 48px 52px;
+      border: 1px solid var(--asbd-border);
+      border-radius: calc(var(--asbd-radius) + 4px);
+      box-shadow: 0 18px 40px rgba(10, 22, 40, 0.08);
+    }
+    .learn-page .tag {
+      display: inline-block;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--asbd-color-blue);
+      font-weight: 800;
+      margin-bottom: 14px;
+    }
+    .learn-page h1 {
+      color: var(--asbd-text);
+      font-size: clamp(1.85rem, 3vw, 2.45rem);
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin: 0 0 14px;
+    }
+    .learn-page h2 {
+      color: var(--asbd-color-blue);
+      margin-top: 32px;
+      letter-spacing: -0.02em;
+    }
+    .learn-page h3 { color: var(--asbd-text); }
+    .learn-page p,
+    .learn-page li {
+      color: var(--asbd-text-muted);
+      line-height: 1.6;
+    }
+    .learn-page strong { color: var(--asbd-text); }
+    .learn-page code,
+    .learn-page pre { font-family: var(--asbd-font-mono); }
+    .learn-page pre {
+      background: rgba(10, 22, 40, 0.04);
+      padding: 18px 20px;
+      border-left: 4px solid var(--asbd-color-blue);
+      border-radius: 0 10px 10px 0;
+      overflow: auto;
+      font-size: 13px;
+      color: var(--asbd-text);
+    }
+    html[data-asbd-theme="dark"] .learn-page pre {
+      background: rgba(255,255,255,0.04);
+    }
+    .learn-page .note {
+      background: rgba(22,123,252,0.08);
+      border-left: 4px solid var(--asbd-color-blue);
+      border-radius: 0 12px 12px 0;
+      padding: 15px 17px;
+      margin: 18px 0;
+      font-style: italic;
+      color: var(--asbd-text-muted);
+    }
+    .learn-page table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      margin: 15px 0;
+    }
+    .learn-page th,
+    .learn-page td {
+      border: 1px solid var(--asbd-border);
+      padding: 10px 12px;
+      vertical-align: top;
+    }
+    .learn-page th {
+      background: rgba(22,123,252,0.12);
+      text-align: left;
+      color: var(--asbd-text);
+      font-weight: 700;
+    }
+    .learn-page a { color: var(--asbd-color-blue); }
+    .learn-page ul { padding-left: 1.15rem; }
+
+    @media (max-width: 900px) {
+      .learn-shell { display: block; }
+      .learn-toc {
+        position: relative;
+        top: auto;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+      }
+      .learn-page { padding: 28px 22px; }
     }
     @media print {
-      #asbd-header, #asbd-footer, .learn-toc, .asbd-doc-toolbar { display:none !important; }
-      .learn-shell { display:block; padding-top:0; }
-      .learn-page { box-shadow:none; border:0; }
+      #asbd-header, #asbd-footer, .learn-toc, .asbd-doc-toolbar { display: none !important; }
+      .learn-shell { display: block; padding-top: 0; }
+      .learn-page { box-shadow: none; border: 0; break-after: page; }
     }
   </style>
 </head>
 <body data-asbd-theme="dark">
   <div id="asbd-header-mount"></div>
   <div class="learn-shell">
-    <aside class="learn-toc" aria-label="Manual sections"></aside>
+    <aside class="learn-toc" aria-label="Manual sections">
+      <div class="learn-toc-brand">
+        <p class="kicker">AgentSam Learn</p>
+        <h1>Architecture Field Manual</h1>
+        <p class="meta">Browser companion · Sep 2026</p>
+      </div>
+      
+    </aside>
     <div class="learn-main">
       <div class="asbd-doc-toolbar">
         <button type="button" class="asbd-theme-toggle" id="asbdThemeToggle">Light theme</button>
@@ -101,7 +263,7 @@ domain / core
               │
    filesystem / terminal / git / RPC
               │
-       structured receipt</pre><p>A PTY, terminal emulator, shell, transport, session manager and UI are distinct layers. LSP and DAP show how deliberately boring protocols can create rich tooling ecosystems.</p></section><section class="page learn-page" id="files"><div class="tag">File atlas</div><h1>Read unfamiliar extensions by lifecycle</h1><p>Ask: <strong>who writes it, who consumes it, can it be regenerated, and what contract does it encode?</strong></p><table><tr><th>File</th><th>Family</th><th>Interpretation</th></tr><tr><td><code>.ts / .tsx</code></td><td>TypeScript / TS+JSX</td><td>Web/server/CLI packages; .tsx usually contains JSX syntax.</td></tr><tr><td><code>.js / .mjs / .cjs</code></td><td>JavaScript module variants</td><td>ES module vs CommonJS boundaries; package.json `type` also matters.</td></tr><tr><td><code>.jsx</code></td><td>JavaScript + JSX</td><td>React-style UI source.</td></tr><tr><td><code>.rs</code></td><td>Rust</td><td>Crates, native runtimes, CLIs, WASM, systems code.</td></tr><tr><td><code>.go</code></td><td>Go</td><td>Services, CLIs, networking, generated protobuf stubs.</td></tr><tr><td><code>.swift</code></td><td>Swift</td><td>Apple-platform apps, services, packages, native tooling.</td></tr><tr><td><code>.m / .mm</code></td><td>Objective-C / Objective-C++</td><td>Apple-native bridges and older platform code.</td></tr><tr><td><code>.c</code></td><td>C</td><td>Portable low-level code and stable FFI surfaces.</td></tr><tr><td><code>.cc / .cpp / .cxx</code></td><td>C++</td><td>CAD kernels, engines, runtimes, high-performance native systems.</td></tr><tr><td><code>.h / .hpp / .hxx</code></td><td>Headers</td><td>Declarations, templates and public native interfaces.</td></tr><tr><td><code>.py</code></td><td>Python</td><td>Automation, ML, data tooling, SDKs, plugins.</td></tr><tr><td><code>.rb</code></td><td>Ruby</td><td>Automation/server ecosystems.</td></tr><tr><td><code>.kt / .kts</code></td><td>Kotlin / script</td><td>Android, JVM, Gradle Kotlin build scripts.</td></tr><tr><td><code>.java</code></td><td>Java</td><td>JVM services/Android/libraries.</td></tr><tr><td><code>.cs</code></td><td>C#</td><td>Unity, .NET services/tools, CAD connectors.</td></tr><tr><td><code>.lua</code></td><td>Lua</td><td>Embedded scripting; common in games and configurable runtimes.</td></tr><tr><td><code>.zig</code></td><td>Zig</td><td>Systems code, C interoperability, build tooling.</td></tr><tr><td><code>.ex / .exs</code></td><td>Elixir</td><td>Concurrent/network services; mix project scripts.</td></tr><tr><td><code>.erl / .hrl</code></td><td>Erlang</td><td>BEAM/OTP systems.</td></tr><tr><td><code>.scala</code></td><td>Scala</td><td>JVM functional/data systems.</td></tr><tr><td><code>.dart</code></td><td>Dart</td><td>Flutter applications and tooling.</td></tr><tr><td><code>.gd</code></td><td>GDScript</td><td>Godot game/application scripting.</td></tr><tr><td><code>.shader / .glsl / .vert / .frag</code></td><td>Shader sources</td><td>GPU programs; vertex/fragment stages and variants.</td></tr><tr><td><code>.metal</code></td><td>Metal Shading Language</td><td>Apple GPU shader source.</td></tr><tr><td><code>.hlsl</code></td><td>High-Level Shader Language</td><td>DirectX-style GPU shader source.</td></tr><tr><td><code>.wgsl</code></td><td>WebGPU Shading Language</td><td>WebGPU shader source.</td></tr><tr><td><code>.proto</code></td><td>Protobuf / gRPC IDL</td><td>messages, enums, services, field numbers.</td></tr><tr><td><code>.capnp</code></td><td>Cap’n Proto schema</td><td>RPC/data layout and generated bindings.</td></tr><tr><td><code>.graphql / .gql</code></td><td>GraphQL schema/query</td><td>types, operations, fragments.</td></tr><tr><td><code>.avsc</code></td><td>Avro schema</td><td>Data serialization / streaming ecosystems.</td></tr><tr><td><code>.fbs</code></td><td>FlatBuffers schema</td><td>Zero-copy-ish serialized data/codegen.</td></tr><tr><td><code>.thrift</code></td><td>Thrift IDL</td><td>Cross-language service/data contracts.</td></tr><tr><td><code>.wit</code></td><td>WASM component interface</td><td>Typed host/guest interfaces.</td></tr><tr><td><code>.jsonschema / schema.json</code></td><td>JSON Schema</td><td>Validation and config/data contracts.</td></tr><tr><td><code>openapi.yaml</code></td><td>OpenAPI contract</td><td>HTTP operations, request/response schemas.</td></tr><tr><td><code>.d.ts</code></td><td>TypeScript declarations</td><td>Public type shape without implementation.</td></tr><tr><td><code>.swiftinterface</code></td><td>Swift textual module interface</td><td>Stable-ish compiler-visible public API representation.</td></tr><tr><td><code>.def</code></td><td>Windows module definition</td><td>DLL exports/imports.</td></tr><tr><td><code>.idl</code></td><td>Generic interface definition language</td><td>COM or other RPC/interface systems depending on ecosystem.</td></tr><tr><td><code>.sql</code></td><td>SQL source</td><td>Migrations, queries, schema, seeds.</td></tr><tr><td><code>.sqlite / .db / .sqlite3</code></td><td>SQLite database</td><td>Binary embedded relational database.</td></tr><tr><td><code>.wal / .shm</code></td><td>SQLite write-ahead log/shared memory</td><td>Live database sidecar files; not source assets.</td></tr><tr><td><code>.csv / .tsv</code></td><td>Delimited tables</td><td>Simple interchange; weak types.</td></tr><tr><td><code>.json</code></td><td>Structured text</td><td>Config/data/API payloads; no comments in strict JSON.</td></tr><tr><td><code>.jsonc</code></td><td>JSON with comments</td><td>Config files such as modern Wrangler.</td></tr><tr><td><code>.jsonl / .ndjson</code></td><td>One JSON object per line</td><td>Streaming/log/data pipelines.</td></tr><tr><td><code>.yaml / .yml</code></td><td>Human-oriented structured data</td><td>CI, manifests, deployment and API contracts.</td></tr><tr><td><code>.toml</code></td><td>Config/package manifests</td><td>Rust Cargo, Python, tool configs.</td></tr><tr><td><code>.xml</code></td><td>Structured markup</td><td>Build files, interchange formats, legacy APIs.</td></tr><tr><td><code>.parquet</code></td><td>Columnar analytics</td><td>Efficient typed analytical datasets.</td></tr><tr><td><code>.arrow / .feather</code></td><td>Apache Arrow ecosystem</td><td>Columnar in-memory/interchange data.</td></tr><tr><td><code>.orc</code></td><td>Columnar data</td><td>Big-data analytics.</td></tr><tr><td><code>.duckdb</code></td><td>DuckDB database file</td><td>Embedded analytical database.</td></tr><tr><td><code>.pbf</code></td><td>Protocol Buffer binary</td><td>Serialized protobuf data; also used by OpenStreetMap PBF conventions.</td></tr><tr><td><code>.msgpack</code></td><td>MessagePack binary</td><td>Compact JSON-like binary serialization.</td></tr><tr><td><code>.cbor</code></td><td>CBOR binary</td><td>Compact typed binary data, common in protocols/embedded systems.</td></tr><tr><td><code>Info.plist</code></td><td>Property list</td><td>Bundle metadata, capabilities and application configuration.</td></tr><tr><td><code>.plist</code></td><td>Apple property list</td><td>XML/binary structured settings/data.</td></tr><tr><td><code>.entitlements</code></td><td>Code-signing entitlements</td><td>Capabilities such as keychain groups, sandbox permissions.</td></tr><tr><td><code>.xcassets</code></td><td>Asset catalog bundle</td><td>App icons, images, colors, symbol assets.</td></tr><tr><td><code>.storyboard</code></td><td>Interface Builder UI document</td><td>XML UI graph; common in UIKit-era apps.</td></tr><tr><td><code>.xib</code></td><td>Interface Builder UI file</td><td>Reusable UI view/window definition.</td></tr><tr><td><code>.strings</code></td><td>Localization strings</td><td>Localized key/value resources.</td></tr><tr><td><code>.stringsdict</code></td><td>Plural/localization rules</td><td>Structured localized variations.</td></tr><tr><td><code>.mobileprovision</code></td><td>Provisioning profile</td><td>Signing/device/team entitlement material.</td></tr><tr><td><code>.xcconfig</code></td><td>Xcode build configuration</td><td>Composable build setting files.</td></tr><tr><td><code>.swiftmodule</code></td><td>Compiled Swift module</td><td>Compiler artifact; platform/toolchain specific.</td></tr><tr><td><code>.ipa</code></td><td>iOS application archive</td><td>Packaged signed app payload.</td></tr><tr><td><code>.app</code></td><td>Application bundle</td><td>Directory bundle containing executable + resources.</td></tr><tr><td><code>.framework / .xcframework</code></td><td>Apple binary framework bundles</td><td>Libraries/resources for one or many platforms/architectures.</td></tr><tr><td><code>.onnx</code></td><td>Open Neural Network Exchange</td><td>Portable model graph/weights across runtimes.</td></tr><tr><td><code>.safetensors</code></td><td>Tensor weights</td><td>Safer/simple tensor storage common in ML ecosystems.</td></tr><tr><td><code>.gguf</code></td><td>Quantized LLM model container</td><td>Local inference ecosystems such as llama.cpp family.</td></tr><tr><td><code>.tflite</code></td><td>TensorFlow Lite model</td><td>Mobile/embedded inference.</td></tr><tr><td><code>.mlmodel / .mlpackage</code></td><td>Core ML model</td><td>Apple ML deployment formats.</td></tr></table><p>The DOCX edition contains the expanded CAD, native-binary, build-system, media, archive and package-format tables.</p></section><section class="page repos" id="repos"><div class="tag">Repository observatory</div><h1>Public codebases worth reading</h1><ul><li><a href="https://github.com/cloudflare/workers-sdk">Cloudflare workers-sdk</a> — Wrangler, Miniflare, C3, Vite integration; developer tooling monorepo.</li><li><a href="https://github.com/cloudflare/workerd">Cloudflare workerd</a> — Native Workers runtime; Cap’n Proto/native/runtime rabbit holes.</li><li><a href="https://github.com/microsoft/vscode">Microsoft VS Code</a> — Layered editor/workbench core and extension host.</li><li><a href="https://github.com/eclipse-theia/theia">Eclipse Theia</a> — Framework for custom browser/desktop IDEs.</li><li><a href="https://github.com/zed-industries/zed">Zed</a> — Rust workspace, native editor, collaboration and agent subsystems.</li><li><a href="https://github.com/openai/codex">OpenAI Codex</a> — Coding-agent CLI/runtime and app-server protocol surfaces.</li><li><a href="https://github.com/directus/directus">Directus</a> — Headless data platform and extension SDK.</li><li><a href="https://github.com/payloadcms/payload">Payload</a> — TypeScript/Next app framework + CMS monorepo.</li><li><a href="https://github.com/automerge/automerge">Automerge</a> — CRDT core in Rust, JS/WASM surface, binary/sync protocol.</li><li><a href="https://github.com/heroiclabs/nakama">Nakama</a> — Go realtime game backend and runtime extensions.</li><li><a href="https://github.com/colyseus/colyseus">Colyseus</a> — TypeScript multiplayer rooms and synchronized authoritative state.</li><li><a href="https://github.com/godotengine/godot">Godot</a> — C++ game engine with unusually educational root boundaries.</li><li><a href="https://github.com/bevyengine/bevy">Bevy</a> — Rust ECS engine and plugin architecture.</li><li><a href="https://github.com/FreeCAD/FreeCAD">FreeCAD</a> — Parametric CAD application and workbench ecosystem.</li><li><a href="https://github.com/openscad/openscad">OpenSCAD</a> — Programmatic geometry / CAD compiler mental model.</li><li><a href="https://github.com/PixarAnimationStudios/OpenUSD">OpenUSD</a> — Scene description, composition, C++ and asset system.</li><li><a href="https://github.com/specklesystems">Speckle</a> — AEC collaboration server/viewer/connectors/SDK ecosystem.</li><li><a href="https://github.com/swiftlang/swift-package-manager">Swift Package Manager</a> — Swift package/build graph and large modular Swift codebase.</li><li><a href="https://github.com/grpc/grpc">gRPC</a> — Cross-language RPC implementation; native build systems.</li><li><a href="https://github.com/grpc/grpc-go">gRPC Go</a> — Go RPC stack and protobuf/gRPC code generation.</li></ul><div class="note">Choose a question and compare two repositories. Do not wander through ten giant repos without a hypothesis.</div></section><section class="page learn-page" id="practice"><div class="tag">Engineering practice</div><h1>What mature teams optimize</h1><ul><li>Explicit ownership and small blast radius</li><li>Compatibility during rolling change</li><li>Structured observability and correlation IDs</li><li>Data migration discipline</li><li>Cancellation, deadlines, retries and idempotency</li><li>Least-privilege capabilities and trust boundaries</li><li>Tests aligned with architectural boundaries</li><li>Reproducible builds and generated artifacts</li><li>Deletion of old shims and duplicate authority</li></ul><pre>identity ≠ permission ≠ capability ≠ possession of every secret</pre></section></main></div></div>
+       structured receipt</pre><p>A PTY, terminal emulator, shell, transport, session manager and UI are distinct layers. LSP and DAP show how deliberately boring protocols can create rich tooling ecosystems.</p></section><section class="page learn-page" id="files"><div class="tag">File atlas</div><h1>Read unfamiliar extensions by lifecycle</h1><p>Ask: <strong>who writes it, who consumes it, can it be regenerated, and what contract does it encode?</strong></p><table><tr><th>File</th><th>Family</th><th>Interpretation</th></tr><tr><td><code>.ts / .tsx</code></td><td>TypeScript / TS+JSX</td><td>Web/server/CLI packages; .tsx usually contains JSX syntax.</td></tr><tr><td><code>.js / .mjs / .cjs</code></td><td>JavaScript module variants</td><td>ES module vs CommonJS boundaries; package.json `type` also matters.</td></tr><tr><td><code>.jsx</code></td><td>JavaScript + JSX</td><td>React-style UI source.</td></tr><tr><td><code>.rs</code></td><td>Rust</td><td>Crates, native runtimes, CLIs, WASM, systems code.</td></tr><tr><td><code>.go</code></td><td>Go</td><td>Services, CLIs, networking, generated protobuf stubs.</td></tr><tr><td><code>.swift</code></td><td>Swift</td><td>Apple-platform apps, services, packages, native tooling.</td></tr><tr><td><code>.m / .mm</code></td><td>Objective-C / Objective-C++</td><td>Apple-native bridges and older platform code.</td></tr><tr><td><code>.c</code></td><td>C</td><td>Portable low-level code and stable FFI surfaces.</td></tr><tr><td><code>.cc / .cpp / .cxx</code></td><td>C++</td><td>CAD kernels, engines, runtimes, high-performance native systems.</td></tr><tr><td><code>.h / .hpp / .hxx</code></td><td>Headers</td><td>Declarations, templates and public native interfaces.</td></tr><tr><td><code>.py</code></td><td>Python</td><td>Automation, ML, data tooling, SDKs, plugins.</td></tr><tr><td><code>.rb</code></td><td>Ruby</td><td>Automation/server ecosystems.</td></tr><tr><td><code>.kt / .kts</code></td><td>Kotlin / script</td><td>Android, JVM, Gradle Kotlin build scripts.</td></tr><tr><td><code>.java</code></td><td>Java</td><td>JVM services/Android/libraries.</td></tr><tr><td><code>.cs</code></td><td>C#</td><td>Unity, .NET services/tools, CAD connectors.</td></tr><tr><td><code>.lua</code></td><td>Lua</td><td>Embedded scripting; common in games and configurable runtimes.</td></tr><tr><td><code>.zig</code></td><td>Zig</td><td>Systems code, C interoperability, build tooling.</td></tr><tr><td><code>.ex / .exs</code></td><td>Elixir</td><td>Concurrent/network services; mix project scripts.</td></tr><tr><td><code>.erl / .hrl</code></td><td>Erlang</td><td>BEAM/OTP systems.</td></tr><tr><td><code>.scala</code></td><td>Scala</td><td>JVM functional/data systems.</td></tr><tr><td><code>.dart</code></td><td>Dart</td><td>Flutter applications and tooling.</td></tr><tr><td><code>.gd</code></td><td>GDScript</td><td>Godot game/application scripting.</td></tr><tr><td><code>.shader / .glsl / .vert / .frag</code></td><td>Shader sources</td><td>GPU programs; vertex/fragment stages and variants.</td></tr><tr><td><code>.metal</code></td><td>Metal Shading Language</td><td>Apple GPU shader source.</td></tr><tr><td><code>.hlsl</code></td><td>High-Level Shader Language</td><td>DirectX-style GPU shader source.</td></tr><tr><td><code>.wgsl</code></td><td>WebGPU Shading Language</td><td>WebGPU shader source.</td></tr><tr><td><code>.proto</code></td><td>Protobuf / gRPC IDL</td><td>messages, enums, services, field numbers.</td></tr><tr><td><code>.capnp</code></td><td>Cap’n Proto schema</td><td>RPC/data layout and generated bindings.</td></tr><tr><td><code>.graphql / .gql</code></td><td>GraphQL schema/query</td><td>types, operations, fragments.</td></tr><tr><td><code>.avsc</code></td><td>Avro schema</td><td>Data serialization / streaming ecosystems.</td></tr><tr><td><code>.fbs</code></td><td>FlatBuffers schema</td><td>Zero-copy-ish serialized data/codegen.</td></tr><tr><td><code>.thrift</code></td><td>Thrift IDL</td><td>Cross-language service/data contracts.</td></tr><tr><td><code>.wit</code></td><td>WASM component interface</td><td>Typed host/guest interfaces.</td></tr><tr><td><code>.jsonschema / schema.json</code></td><td>JSON Schema</td><td>Validation and config/data contracts.</td></tr><tr><td><code>openapi.yaml</code></td><td>OpenAPI contract</td><td>HTTP operations, request/response schemas.</td></tr><tr><td><code>.d.ts</code></td><td>TypeScript declarations</td><td>Public type shape without implementation.</td></tr><tr><td><code>.swiftinterface</code></td><td>Swift textual module interface</td><td>Stable-ish compiler-visible public API representation.</td></tr><tr><td><code>.def</code></td><td>Windows module definition</td><td>DLL exports/imports.</td></tr><tr><td><code>.idl</code></td><td>Generic interface definition language</td><td>COM or other RPC/interface systems depending on ecosystem.</td></tr><tr><td><code>.sql</code></td><td>SQL source</td><td>Migrations, queries, schema, seeds.</td></tr><tr><td><code>.sqlite / .db / .sqlite3</code></td><td>SQLite database</td><td>Binary embedded relational database.</td></tr><tr><td><code>.wal / .shm</code></td><td>SQLite write-ahead log/shared memory</td><td>Live database sidecar files; not source assets.</td></tr><tr><td><code>.csv / .tsv</code></td><td>Delimited tables</td><td>Simple interchange; weak types.</td></tr><tr><td><code>.json</code></td><td>Structured text</td><td>Config/data/API payloads; no comments in strict JSON.</td></tr><tr><td><code>.jsonc</code></td><td>JSON with comments</td><td>Config files such as modern Wrangler.</td></tr><tr><td><code>.jsonl / .ndjson</code></td><td>One JSON object per line</td><td>Streaming/log/data pipelines.</td></tr><tr><td><code>.yaml / .yml</code></td><td>Human-oriented structured data</td><td>CI, manifests, deployment and API contracts.</td></tr><tr><td><code>.toml</code></td><td>Config/package manifests</td><td>Rust Cargo, Python, tool configs.</td></tr><tr><td><code>.xml</code></td><td>Structured markup</td><td>Build files, interchange formats, legacy APIs.</td></tr><tr><td><code>.parquet</code></td><td>Columnar analytics</td><td>Efficient typed analytical datasets.</td></tr><tr><td><code>.arrow / .feather</code></td><td>Apache Arrow ecosystem</td><td>Columnar in-memory/interchange data.</td></tr><tr><td><code>.orc</code></td><td>Columnar data</td><td>Big-data analytics.</td></tr><tr><td><code>.duckdb</code></td><td>DuckDB database file</td><td>Embedded analytical database.</td></tr><tr><td><code>.pbf</code></td><td>Protocol Buffer binary</td><td>Serialized protobuf data; also used by OpenStreetMap PBF conventions.</td></tr><tr><td><code>.msgpack</code></td><td>MessagePack binary</td><td>Compact JSON-like binary serialization.</td></tr><tr><td><code>.cbor</code></td><td>CBOR binary</td><td>Compact typed binary data, common in protocols/embedded systems.</td></tr><tr><td><code>Info.plist</code></td><td>Property list</td><td>Bundle metadata, capabilities and application configuration.</td></tr><tr><td><code>.plist</code></td><td>Apple property list</td><td>XML/binary structured settings/data.</td></tr><tr><td><code>.entitlements</code></td><td>Code-signing entitlements</td><td>Capabilities such as keychain groups, sandbox permissions.</td></tr><tr><td><code>.xcassets</code></td><td>Asset catalog bundle</td><td>App icons, images, colors, symbol assets.</td></tr><tr><td><code>.storyboard</code></td><td>Interface Builder UI document</td><td>XML UI graph; common in UIKit-era apps.</td></tr><tr><td><code>.xib</code></td><td>Interface Builder UI file</td><td>Reusable UI view/window definition.</td></tr><tr><td><code>.strings</code></td><td>Localization strings</td><td>Localized key/value resources.</td></tr><tr><td><code>.stringsdict</code></td><td>Plural/localization rules</td><td>Structured localized variations.</td></tr><tr><td><code>.mobileprovision</code></td><td>Provisioning profile</td><td>Signing/device/team entitlement material.</td></tr><tr><td><code>.xcconfig</code></td><td>Xcode build configuration</td><td>Composable build setting files.</td></tr><tr><td><code>.swiftmodule</code></td><td>Compiled Swift module</td><td>Compiler artifact; platform/toolchain specific.</td></tr><tr><td><code>.ipa</code></td><td>iOS application archive</td><td>Packaged signed app payload.</td></tr><tr><td><code>.app</code></td><td>Application bundle</td><td>Directory bundle containing executable + resources.</td></tr><tr><td><code>.framework / .xcframework</code></td><td>Apple binary framework bundles</td><td>Libraries/resources for one or many platforms/architectures.</td></tr><tr><td><code>.onnx</code></td><td>Open Neural Network Exchange</td><td>Portable model graph/weights across runtimes.</td></tr><tr><td><code>.safetensors</code></td><td>Tensor weights</td><td>Safer/simple tensor storage common in ML ecosystems.</td></tr><tr><td><code>.gguf</code></td><td>Quantized LLM model container</td><td>Local inference ecosystems such as llama.cpp family.</td></tr><tr><td><code>.tflite</code></td><td>TensorFlow Lite model</td><td>Mobile/embedded inference.</td></tr><tr><td><code>.mlmodel / .mlpackage</code></td><td>Core ML model</td><td>Apple ML deployment formats.</td></tr></table><p>The DOCX edition contains the expanded CAD, native-binary, build-system, media, archive and package-format tables.</p></section><section class="page learn-page learn-page--repos" id="repos"><div class="tag">Repository observatory</div><h1>Public codebases worth reading</h1><ul><li><a href="https://github.com/cloudflare/workers-sdk">Cloudflare workers-sdk</a> — Wrangler, Miniflare, C3, Vite integration; developer tooling monorepo.</li><li><a href="https://github.com/cloudflare/workerd">Cloudflare workerd</a> — Native Workers runtime; Cap’n Proto/native/runtime rabbit holes.</li><li><a href="https://github.com/microsoft/vscode">Microsoft VS Code</a> — Layered editor/workbench core and extension host.</li><li><a href="https://github.com/eclipse-theia/theia">Eclipse Theia</a> — Framework for custom browser/desktop IDEs.</li><li><a href="https://github.com/zed-industries/zed">Zed</a> — Rust workspace, native editor, collaboration and agent subsystems.</li><li><a href="https://github.com/openai/codex">OpenAI Codex</a> — Coding-agent CLI/runtime and app-server protocol surfaces.</li><li><a href="https://github.com/directus/directus">Directus</a> — Headless data platform and extension SDK.</li><li><a href="https://github.com/payloadcms/payload">Payload</a> — TypeScript/Next app framework + CMS monorepo.</li><li><a href="https://github.com/automerge/automerge">Automerge</a> — CRDT core in Rust, JS/WASM surface, binary/sync protocol.</li><li><a href="https://github.com/heroiclabs/nakama">Nakama</a> — Go realtime game backend and runtime extensions.</li><li><a href="https://github.com/colyseus/colyseus">Colyseus</a> — TypeScript multiplayer rooms and synchronized authoritative state.</li><li><a href="https://github.com/godotengine/godot">Godot</a> — C++ game engine with unusually educational root boundaries.</li><li><a href="https://github.com/bevyengine/bevy">Bevy</a> — Rust ECS engine and plugin architecture.</li><li><a href="https://github.com/FreeCAD/FreeCAD">FreeCAD</a> — Parametric CAD application and workbench ecosystem.</li><li><a href="https://github.com/openscad/openscad">OpenSCAD</a> — Programmatic geometry / CAD compiler mental model.</li><li><a href="https://github.com/PixarAnimationStudios/OpenUSD">OpenUSD</a> — Scene description, composition, C++ and asset system.</li><li><a href="https://github.com/specklesystems">Speckle</a> — AEC collaboration server/viewer/connectors/SDK ecosystem.</li><li><a href="https://github.com/swiftlang/swift-package-manager">Swift Package Manager</a> — Swift package/build graph and large modular Swift codebase.</li><li><a href="https://github.com/grpc/grpc">gRPC</a> — Cross-language RPC implementation; native build systems.</li><li><a href="https://github.com/grpc/grpc-go">gRPC Go</a> — Go RPC stack and protobuf/gRPC code generation.</li></ul><div class="note">Choose a question and compare two repositories. Do not wander through ten giant repos without a hypothesis.</div></section><section class="page learn-page" id="practice"><div class="tag">Engineering practice</div><h1>What mature teams optimize</h1><ul><li>Explicit ownership and small blast radius</li><li>Compatibility during rolling change</li><li>Structured observability and correlation IDs</li><li>Data migration discipline</li><li>Cancellation, deadlines, retries and idempotency</li><li>Least-privilege capabilities and trust boundaries</li><li>Tests aligned with architectural boundaries</li><li>Reproducible builds and generated artifacts</li><li>Deletion of old shims and duplicate authority</li></ul><pre>identity ≠ permission ≠ capability ≠ possession of every secret</pre></section></main></div></div>
     </div>
   </div>
   <div id="asbd-footer-mount"></div>
