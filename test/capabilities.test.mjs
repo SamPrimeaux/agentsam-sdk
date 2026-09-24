@@ -109,7 +109,7 @@ test('product UX creates a preset project, adds a feature, and inspects before f
   assert.equal(config.schema_version, 2);
   assert.equal(config.project.name, 'demo');
   assert.equal(config.product.preset, 'cms');
-  assert.deepEqual(config.product.features, ['cms', 'knowledge']);
+  assert.deepEqual(config.product.features, ['cms', 'knowledge', 'theme']);
   assert.ok(config.product.capabilities.includes('repository.snapshot'));
   assert.match(config.repository.id, /^local:[0-9a-f-]{36}$/);
   assert.equal(config.defaults.runtime, 'local');
