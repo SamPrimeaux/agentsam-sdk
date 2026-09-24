@@ -1,0 +1,30 @@
+{
+  "name": "@inneranimalmedia/theme-fuelnfree-site",
+  "version": "0.1.0",
+  "description": "Real Fuel & Free Time legacy storefront pages \u2014 home, shop, about, and community.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "agentsam": {
+    "kind": "theme",
+    "slug": "fuelnfree-site",
+    "galleryPath": "apps/theme-gallery-preview/themes/fuelnfree-site",
+    "installable": true
+  }
+}

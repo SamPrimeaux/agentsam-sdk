@@ -1,0 +1,25 @@
+{
+  "name": "@inneranimalmedia/heuristic-theme",
+  "version": "0.1.0",
+  "description": "Stock AgentSam CMS storefront shell theme contract (heuristic-theme).",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./theme": "./src/theme.js"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT"
+}

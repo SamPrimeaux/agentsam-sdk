@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentsam.theme-refinery.reconciliation-receipt.v1",
+  "title": "ThemeRefineryReconciliationReceipt",
+  "type": "object",
+  "required": ["schema_version", "batch_id", "captured_at", "products", "repositories", "relationships", "evidence", "artifacts", "promotions", "failures"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "batch_id": { "type": "string" },
+    "captured_at": { "type": "string", "format": "date-time" },
+    "account_id": { "type": "string" },
+    "candidates": {
+      "type": "object",
+      "properties": {
+        "discovered": { "type": "integer" },
+        "from_company_map": { "type": "integer" },
+        "from_apps_table": { "type": "integer" },
+        "from_disk": { "type": "integer" },
+        "from_existing_products": { "type": "integer" }
+      }
+    },
+    "products": {
+      "type": "object",
+      "required": ["matched", "registered", "updated", "unchanged", "ambiguous"],
+      "properties": {
+        "matched": { "type": "integer" },
+        "registered": { "type": "integer" },
+        "updated": { "type": "integer" },
+        "unchanged": { "type": "integer" },
+        "ambiguous": { "type": "array", "items": { "type": "string" } },
+        "duplicates": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "repositories": {
+      "type": "object",
+      "properties": {
+        "resolved": { "type": "integer" },
+        "failures": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "relationships": {
+      "type": "object",
+      "properties": {
+        "added": { "type": "integer" },
+        "updated": { "type": "integer" },
+        "unchanged": { "type": "integer" }
+      }
+    },
+    "evidence": { "type": "object", "properties": { "snapshots_written": { "type": "integer" } } },
+    "artifacts": { "type": "object", "properties": { "registered": { "type": "integer" } } },
+    "quality_reports": { "type": "object", "properties": { "generated": { "type": "integer" } } },
+    "cms": {
+      "type": "object",
+      "properties": {
+        "themes_discovered": { "type": "integer" },
+        "component_templates_extracted": { "type": "integer" }
+      }
+    },
+    "capabilities_linked": {
+      "type": "object",
+      "properties": {
+        "tools": { "type": "integer" },
+        "workflows": { "type": "integer" },
+        "skills": { "type": "integer" },
+        "hooks": { "type": "integer" }
+      }
+    },
+    "promotions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["slug", "from", "to"],
+        "properties": {
+          "slug": { "type": "string" },
+          "from": { "type": "string" },
+          "to": { "type": "string" }
+        }
+      }
+    },
+    "failures": { "type": "array", "items": { "type": "string" } },
+    "skipped": { "type": "array", "items": { "type": "string" } }
+  }
+}

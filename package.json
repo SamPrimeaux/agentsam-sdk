@@ -80,7 +80,15 @@
     "./skills": "./src/skills/index.js",
     "./skills/catalog": "./skills/catalog.json",
     "./cad-project": "./src/lib/cad/project-cli.js",
-    "./providers/completeful": "./packages/providers/completeful/src/index.js"
+    "./providers/completeful": "./packages/providers/completeful/src/index.js",
+    "./theme/heuristic": "./packages/heuristic-theme/src/index.js",
+    "./theme/church-site": "./packages/theme-church-site/src/index.js",
+    "./theme/companions-site": "./packages/theme-companions-site/src/index.js",
+    "./theme/floors-site": "./packages/theme-floors-site/src/index.js",
+    "./theme/fuelnfree-site": "./packages/theme-fuelnfree-site/src/index.js",
+    "./theme/handyman-site": "./packages/theme-handyman-site/src/index.js",
+    "./theme/insurance-site": "./packages/theme-insurance-site/src/index.js",
+    "./theme/shinshu-site": "./packages/theme-shinshu-site/src/index.js"
   },
   "bin": {
     "agentsam": "bin/agentsam",
@@ -119,7 +127,15 @@
     "LICENSE",
     "DEVELOPMENT.md",
     "AGENTSAM.md",
-    "apps/cad-creator/shared/cad"
+    "apps/cad-creator/shared/cad",
+    "packages/heuristic-theme",
+    "packages/theme-church-site",
+    "packages/theme-companions-site",
+    "packages/theme-floors-site",
+    "packages/theme-fuelnfree-site",
+    "packages/theme-handyman-site",
+    "packages/theme-insurance-site",
+    "packages/theme-shinshu-site"
   ],
   "workspaces": [
     "packages/agentsam-shell-kit",
@@ -133,7 +149,15 @@
     "packages/agentsam-queue-control",
     "packages/agentsam-workbench",
     "packages/providers/completeful",
-    "packages/agentsam-desktop-shell"
+    "packages/agentsam-desktop-shell",
+    "packages/heuristic-theme",
+    "packages/theme-church-site",
+    "packages/theme-companions-site",
+    "packages/theme-floors-site",
+    "packages/theme-fuelnfree-site",
+    "packages/theme-handyman-site",
+    "packages/theme-insurance-site",
+    "packages/theme-shinshu-site"
   ],
   "scripts": {
     "test": "npm run test:standard && npm --prefix packages/identity test && npm run test:connectors && npm run test:providers",
@@ -170,7 +194,8 @@
     "errors:generate": "node scripts/generate-error-contracts.mjs",
     "errors:check": "node scripts/verify-error-contracts.mjs",
     "cad:registry:check": "node scripts/cad-registry.mjs --check",
-    "test:providers": "node --test packages/providers/completeful/test/*.test.mjs"
+    "test:providers": "node --test packages/providers/completeful/test/*.test.mjs",
+    "test:themes": "npm --prefix packages/heuristic-theme test && npm --prefix packages/theme-church-site test && npm --prefix packages/theme-companions-site test && npm --prefix packages/theme-floors-site test && npm --prefix packages/theme-fuelnfree-site test && npm --prefix packages/theme-handyman-site test && npm --prefix packages/theme-insurance-site test && npm --prefix packages/theme-shinshu-site test"
   },
   "engines": {
     "node": ">=22 <25",

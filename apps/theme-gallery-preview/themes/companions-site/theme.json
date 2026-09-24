@@ -35,9 +35,10 @@
     "mobile": "/themes/companions-site/demo/",
     "demoUrl": "/themes/companions-site/demo/"
   },
-  "installable": false,
+  "installable": true,
   "_internal": {
     "normalization": "pending",
     "source": "/Users/samprimeaux/companionscpas/static"
-  }
+  },
+  "package": "@inneranimalmedia/theme-companions-site"
 }

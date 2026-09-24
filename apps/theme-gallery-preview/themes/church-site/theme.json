@@ -37,9 +37,10 @@
     "mobile": "/themes/church-site/demo/",
     "demoUrl": "/themes/church-site/demo/"
   },
-  "installable": false,
+  "installable": true,
   "_internal": {
     "normalization": "pending",
     "source": "/Users/samprimeaux/Library/Mobile Documents/com~apple~CloudDocs/Projects/Cloudflare/NewIberiaChurchofChrist"
-  }
+  },
+  "package": "@inneranimalmedia/theme-church-site"
 }

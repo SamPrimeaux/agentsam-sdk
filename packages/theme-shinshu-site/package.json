@@ -1,0 +1,30 @@
+{
+  "name": "@inneranimalmedia/theme-shinshu-site",
+  "version": "0.1.0",
+  "description": "Real Shinshu Solutions static archive \u2014 services, gallery, and CMS-ready pages.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "agentsam": {
+    "kind": "theme",
+    "slug": "shinshu-site",
+    "galleryPath": "apps/theme-gallery-preview/themes/shinshu-site",
+    "installable": true
+  }
+}

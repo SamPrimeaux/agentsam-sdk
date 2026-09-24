@@ -36,9 +36,10 @@
     "mobile": "/themes/handyman-site/demo/",
     "demoUrl": "/themes/handyman-site/demo/"
   },
-  "installable": false,
+  "installable": true,
   "_internal": {
     "normalization": "pending",
     "source": "/Users/samprimeaux/worktrees/primeaux-handyman-services-agent/dist"
-  }
+  },
+  "package": "@inneranimalmedia/theme-handyman-site"
 }

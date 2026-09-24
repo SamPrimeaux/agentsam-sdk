@@ -35,9 +35,10 @@
     "mobile": "/themes/floors-site/demo/",
     "demoUrl": "/themes/floors-site/demo/"
   },
-  "installable": false,
+  "installable": true,
   "_internal": {
     "normalization": "pending",
     "source": "/Volumes/Expansion/Anything Floors & More"
-  }
+  },
+  "package": "@inneranimalmedia/theme-floors-site"
 }

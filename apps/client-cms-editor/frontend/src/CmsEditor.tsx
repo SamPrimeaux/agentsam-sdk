@@ -176,7 +176,7 @@ export default function CmsEditor({
   const [tab, setTab] = useState<InspectorTab>(initialPanel === "theme" ? "theme" : "content");
   const [sidebarCollapsed, setSidebarCollapsed] = useStored("cms-sidebar-collapsed", false);
   const [inspectorCollapsed, setInspectorCollapsed] = useStored("cms-inspector-collapsed", false);
-  const [agentSamOpen, setAgentSamOpen] = useStored("cms-agentsam-open", false);
+  const [agentSamOpen, setAgentSamOpen] = useStored("cms-agentsam-open-v2", false);
   const [inspectorSheetOpen, setInspectorSheetOpen] = useState(false);
   const [annotateSelecting, setAnnotateSelecting] = useState(false);
   const [annotatePrompt, setAnnotatePrompt] = useState<string | null>(null);
@@ -404,6 +404,7 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
     const section = page.sections.find((row) => row.id === resourceId || row.id === id);
     if (section) {
       chooseSection(section.id);
+      setInspectorSheetOpen(true);
       return;
     }
     for (const row of page.sections) {
@@ -411,6 +412,7 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
       if (block) {
         setSelectedId(row.id);
         chooseBlock(block.id);
+        setInspectorSheetOpen(true);
         postCmsEditorPreviewMessage(iframeRef.current?.contentWindow, { type: CMS_EDITOR_PREVIEW_TYPES.HIGHLIGHT, section_id: row.id });
         return;
       }
@@ -420,6 +422,7 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
   const onAnnotateSubmit = useCallback(async (prompt: string, annotation: AnnotationSelection) => {
     selectAnnotatedResource(annotation.id);
     setAgentSamOpen(true);
+    setInspectorSheetOpen(false);
     setAnnotatePrompt(prompt);
     toast(`Annotated “${annotation.label || annotation.tag}”`, "info");
     window.dispatchEvent(new CustomEvent("agentsam:cms-annotate", { detail: { prompt, annotation } }));
@@ -450,11 +453,13 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
     if (cmd && /^[1-7]$/.test(e.key)) { e.preventDefault(); setRail(railItems[Number(e.key)-1].id); }
     if (e.key === "Escape") {
       if (annotateSelecting) { setAnnotateSelecting(false); return; }
+      if (agentSamOpen) { setAgentSamOpen(false); return; }
+      if (inspectorSheetOpen) { setInspectorSheetOpen(false); return; }
       if (preview) setPreview(false);
       else if (modal) setModal(null);
       else { setSelectedId(""); postCmsEditorPreviewMessage(iframeRef.current?.contentWindow, { type: CMS_EDITOR_PREVIEW_TYPES.DESELECT }); }
     }
-  }; window.addEventListener("keydown", down); return () => window.removeEventListener("keydown", down); }, [annotateSelecting, modal, preview, save, undo, redo, setSidebarCollapsed, setInspectorCollapsed]);
+  }; window.addEventListener("keydown", down); return () => window.removeEventListener("keydown", down); }, [annotateSelecting, agentSamOpen, inspectorSheetOpen, modal, preview, save, undo, redo, setSidebarCollapsed, setInspectorCollapsed, setAgentSamOpen]);
 
   const frameHtml = useMemo(() => {
     if (!page) return "<!doctype html><html><body></body></html>";

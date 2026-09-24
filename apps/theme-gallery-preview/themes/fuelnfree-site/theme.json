@@ -34,9 +34,10 @@
     "mobile": "/themes/fuelnfree-site/demo/",
     "demoUrl": "/themes/fuelnfree-site/demo/"
   },
-  "installable": false,
+  "installable": true,
   "_internal": {
     "normalization": "pending",
     "source": "/Users/samprimeaux/fuelnfreetime/legacy"
-  }
+  },
+  "package": "@inneranimalmedia/theme-fuelnfree-site"
 }
