@@ -32,7 +32,7 @@ export async function runIdentityInit(argv = []) {
     process.exit(1);
   }
 
-  const { getIdentityProviderTemplate, writeFeatureSelections } = await import('../lib/features-resolve.js');
+  const { getIdentityProviderTemplate, writeFeatureSelections } = await import('../features/resolve.js');
   const provider = getIdentityProviderTemplate(opts.provider);
   if (!provider) {
     console.error(`\n  ✗ Unknown provider template: ${opts.provider}\n`);

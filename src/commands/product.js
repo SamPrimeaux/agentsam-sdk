@@ -160,7 +160,7 @@ export async function runAdd(argv = []) {
   const cwd = path.resolve(opts.cwd);
   if (!fs.existsSync(projectConfigPath(cwd))) throw new Error('not_agentsam_project');
 
-  const { writeFeatureSelections } = await import('../lib/features-resolve.js');
+  const { writeFeatureSelections } = await import('../features/resolve.js');
   let state = { schema_version: 2, features: {} };
   if (fs.existsSync(featureStatePath(cwd))) {
     state = JSON.parse(fs.readFileSync(featureStatePath(cwd), 'utf8'));
@@ -175,7 +175,7 @@ export async function runAdd(argv = []) {
     selected_at: new Date().toISOString(),
   };
   if (addon.id === 'auth') {
-    const { normalizeProviderTemplateId } = await import('../lib/features-resolve.js');
+    const { normalizeProviderTemplateId } = await import('../features/resolve.js');
     entry.provider_template = normalizeProviderTemplateId(opts.provider) || 'inneranimalmedia';
     if (opts.schemaProfile) entry.schema_profile = opts.schemaProfile;
   }

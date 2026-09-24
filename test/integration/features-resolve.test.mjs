@@ -16,9 +16,9 @@ import {
   resolveAuthFeature,
   writeFeatureSelections,
   writeFeaturesResolved,
-} from '../src/lib/features-resolve.js';
+} from '../../src/features/resolve.js';
 
-const SDK_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const SDK_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 test('oauth-login-portal feature packet loads with artifacts', () => {
   const feature = loadOAuthLoginPortalFeature();

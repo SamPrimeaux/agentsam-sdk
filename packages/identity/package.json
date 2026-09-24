@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-sdk-identity",
-  "version": "2.6.2",
+  "version": "2.6.3",
   "private": true,
   "type": "module",
   "description": "Identity module for @inneranimalmedia/agentsam-sdk (workspace \u2014 publish via root SDK)",

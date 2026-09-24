@@ -7,7 +7,7 @@ import {
   loadSchemaProfile,
   resolveAuthFeature,
   writeFeaturesResolved,
-} from '../lib/features-resolve.js';
+} from '../features/resolve.js';
 
 function parseArgs(argv = []) {
   const opts = {
