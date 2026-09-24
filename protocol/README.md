@@ -21,11 +21,23 @@ agentsam-sdk/
 ├── src/                       # Node SDK + local/deploy CLI
 ├── python/agentsam_sdk/       # Python portable tools and TUI
 ├── packages/                  # Optional focused packages/workspaces
+├── apps/                      # Runnable + mountable APP compositions
+│   └── */.agentsam/app.json   # App contract (standalone | embedded)
 ├── protocol/                  # Shared SDK contracts and ownership rules
+│   └── features/              # agentsam.feature.v1 schema + catalog
 ├── templates/                 # Scaffold templates
 ├── examples/                  # Runnable examples/pointers
 ├── docs/                      # Product and developer documentation
 └── test/ + python/tests/      # Node and Python verification
 ```
+
+### APP vs FEATURE
+
+| Unit | Manifest | Role |
+|------|----------|------|
+| APP | `.agentsam/app.json` | Runnable/mountable product composition |
+| FEATURE | `agentsam.feature.json` | Vertical capability (provider/UI/domain/composer) |
+
+`npm install` is inert. AgentSam activates features after validation → plan → operator approval → receipt.
 
 The root npm identity remains `@inneranimalmedia/agentsam-sdk`. Package boundaries can evolve, but portable code should have one canonical owner and host applications should depend on it rather than mirror it.

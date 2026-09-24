@@ -1,0 +1,17 @@
+{
+  "schema": "agentsam.feature.v1",
+  "id": "provider.resend",
+  "name": "Resend Email Provider",
+  "kind": "provider",
+  "status": "incubating",
+  "package": {
+    "name": "@inneranimalmedia/provider-resend",
+    "version": "0.0.0-incubating"
+  },
+  "provides": ["email.send", "email.webhook.receive"],
+  "runtime": ["worker", "node"],
+  "source": {
+    "proving_ground": "fuelnfreetime",
+    "notes": "See fuelnfreetime/features/provider-resend/agentsam.feature.json for full contribution map."
+  }
+}

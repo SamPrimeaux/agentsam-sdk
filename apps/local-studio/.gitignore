@@ -10,6 +10,9 @@ wrangler.toml
 screenshots/
 /tmp/
 !.env.cloudflare.example
-.agentsam/
+.agentsam/*
+!.agentsam/app.json
+!.agentsam/README.md
+!.agentsam/.gitignore
 .output/
 frontend/public/cad-creator/

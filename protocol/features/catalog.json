@@ -1,0 +1,54 @@
+{
+  "schema": "agentsam.feature.catalog.v1",
+  "updated": "2026-09-24",
+  "features": [
+    {
+      "id": "provider.resend",
+      "kind": "provider",
+      "proving_ground": "fuelnfreetime",
+      "manifest": "fuelnfreetime/features/provider-resend/agentsam.feature.json"
+    },
+    {
+      "id": "provider.completeful",
+      "kind": "provider",
+      "proving_ground": "fuelnfreetime",
+      "manifest": "fuelnfreetime/features/provider-completeful/agentsam.feature.json"
+    },
+    {
+      "id": "admin.shell-nav",
+      "kind": "ui",
+      "proving_ground": "fuelnfreetime",
+      "manifest": "fuelnfreetime/features/admin-shell-nav/agentsam.feature.json"
+    },
+    {
+      "id": "agentsam.mini-composer",
+      "kind": "composer",
+      "proving_ground": "fuelnfreetime",
+      "manifest": "fuelnfreetime/features/mini-agentsam-composer/agentsam.feature.json"
+    },
+    {
+      "id": "growth.campaigns",
+      "kind": "domain",
+      "proving_ground": "fuelnfreetime",
+      "manifest": "fuelnfreetime/features/growth-campaigns/agentsam.feature.json"
+    },
+    {
+      "id": "commerce.product-studio",
+      "kind": "domain",
+      "proving_ground": "fuelnfreetime",
+      "manifest": "fuelnfreetime/features/product-studio/agentsam.feature.json"
+    },
+    {
+      "id": "cms.template-library",
+      "kind": "theme",
+      "proving_ground": "inneranimalmedia",
+      "manifest": "inneranimalmedia/packages/cms-cloudflare-template-library/.agentsam/feature.json"
+    },
+    {
+      "id": "cms.hyperspace-runtime",
+      "kind": "ui",
+      "proving_ground": "inneranimalmedia",
+      "manifest": "inneranimalmedia/apps/client-cms-editor/.agentsam/features/hyperspace-runtime.feature.json"
+    }
+  ]
+}

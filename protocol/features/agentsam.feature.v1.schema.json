@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.dev/protocol/features/agentsam.feature.v1.schema.json",
+  "title": "AgentSam Feature Capsule",
+  "description": "Vertical product capability that a host APP can activate. npm install is inert; AgentSam activates after plan + approval. Not a full APP — use agentsam.app.v1 / .agentsam/app.json for runnable compositions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "kind", "package", "provides"],
+  "properties": {
+    "schema": {
+      "const": "agentsam.feature.v1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9._-]*$",
+      "description": "Stable feature id, e.g. provider.resend, admin.shell-nav"
+    },
+    "name": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["provider", "ui", "domain", "composer", "theme", "analytics", "integration"]
+    },
+    "package": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "directory": {
+          "type": "string",
+          "description": "Repo-relative path to implementation (may be pre-extraction)"
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["incubating", "extracted", "published"],
+      "default": "incubating"
+    },
+    "provides": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" },
+      "description": "Capability strings hosts can require, e.g. email.send"
+    },
+    "requires": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "optional": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "runtime": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["common", "browser", "node", "worker", "local-machine"]
+      },
+      "default": ["common"]
+    },
+    "contributes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ui": { "type": "array", "items": { "type": "string" } },
+        "routes": { "type": "array", "items": { "type": "string" } },
+        "tools": { "type": "array", "items": { "type": "string" } },
+        "hooks": { "type": "array", "items": { "type": "string" } },
+        "jobs": { "type": "array", "items": { "type": "string" } },
+        "migrations": { "type": "array", "items": { "type": "string" } },
+        "webhooks": { "type": "array", "items": { "type": "string" } },
+        "skills": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "secrets": {
+      "type": "object",
+      "properties": {
+        "server_only": { "type": "array", "items": { "type": "string" } },
+        "optional": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "host_bindings": {
+      "type": "object",
+      "description": "What the host must inject — never hardcode account/tenant IDs in the feature",
+      "properties": {
+        "required": { "type": "array", "items": { "type": "string" } },
+        "forbidden_in_feature": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Constants that must stay in the host adapter"
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "proving_ground": { "type": "string" },
+        "implementation_paths": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "notes": { "type": "string" }
+      }
+    },
+    "activation": {
+      "type": "object",
+      "description": "npm is inert; AgentSam runs this plan",
+      "properties": {
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "validate_manifest",
+              "check_runtime",
+              "resolve_requires",
+              "plan_migrations",
+              "plan_routes",
+              "plan_webhooks",
+              "operator_approval",
+              "activate",
+              "verify",
+              "write_install_receipt"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
