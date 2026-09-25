@@ -38,7 +38,7 @@ test('drawBox pads visible ANSI width', () => {
 test('buildGoProductRegistrySql upserts product + relationships without inventing tables', () => {
   const sql = buildGoProductRegistrySql({
     product: 'agentsam-go-worker',
-    status: 'wired',
+    status: 'deployed',
     url: 'https://agentsam-go-worker.example.workers.dev',
     commit: 'abc123',
     health: 'healthy',
