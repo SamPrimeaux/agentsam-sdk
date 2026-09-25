@@ -66,6 +66,20 @@
         "agentsam-cloudflare-workers/references/cpu-profiling.md"
       ],
       "user_invocable": true
+    },
+    {
+      "id": "agentsam-codebaseindex",
+      "aliases": [
+        "codebaseindex",
+        "codebase-index",
+        "ingest",
+        "sam.codebaseindex"
+      ],
+      "title": "AgentSam Codebaseindex",
+      "description": "Guided ingest for repos and dropped materials (archives, HTML, images, GLB) with allowlist, embedding, and storage preferences.",
+      "entry": "agentsam-codebaseindex/SKILL.md",
+      "references": [],
+      "user_invocable": true
     }
   ]
 }

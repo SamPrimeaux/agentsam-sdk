@@ -144,6 +144,9 @@ Operations declare `model: never | optional | required` so `$0` machinery is mac
 | `security.scan` | `agentsam security scan` | never |
 | `terminal.exec` | (runtime / tools) | never |
 | `cad.blender.inspect` | `agentsam cad blender inspect` | never |
+| `codebaseindex.ingest` | `agentsam codebaseindex` / `ingest` | optional |
+
+Pipeline alias for host escalation: `sam.codebaseindex.index.run`.
 
 Handlers reuse existing implementations. New work asks: **What module owns this operation?**
 

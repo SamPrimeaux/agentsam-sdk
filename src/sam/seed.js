@@ -4,6 +4,7 @@ import { brandScanOp } from './operations/brand-scan.js';
 import { securityScanOp } from './operations/security-scan.js';
 import { terminalExecOp } from './operations/terminal-exec.js';
 import { cadBlenderInspectOp } from './operations/cad-blender-inspect.js';
+import { codebaseindexIngestOp } from './operations/codebaseindex-ingest.js';
 
 export const SEED_OPERATIONS = [
   repositoryInspect,
@@ -11,6 +12,7 @@ export const SEED_OPERATIONS = [
   securityScanOp,
   terminalExecOp,
   cadBlenderInspectOp,
+  codebaseindexIngestOp,
 ];
 
 let seeded = false;

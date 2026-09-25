@@ -1,87 +1,19 @@
 import pc from 'picocolors';
 import { isCancel, select } from '@clack/prompts';
 import pkg from '../../../package.json' with { type: 'json' };
-
-const HELP_TOPICS = Object.freeze([
-  {
-    id: 'start',
-    label: 'Start / resume',
-    summary: 'Enter Agent Sam, resume work, inspect identity, and choose a model.',
-    rows: [
-      ['agentsam', 'Enter the interactive Agent Sam experience'],
-      ['agentsam resume [session]', 'Resume a saved Agent Sam session'],
-      ['agentsam whoami', 'Show authenticated account and credential status'],
-      ['agentsam models', 'Probe account-visible hosted/local models'],
-      ['agentsam providers', 'Configure and verify machine provider credentials'],
-      ['agentsam env init <provider>', 'Low-level provider profile compatibility command'],
-    ],
-  },
-  {
-    id: 'work',
-    label: 'Build / inspect',
-    summary: 'Repository intelligence and normal project work.',
-    rows: [
-      ['agentsam inspect', 'Bounded repository index / authority view'],
-      ['agentsam index', 'Incremental AST and optional embeddings'],
-      ['agentsam search "query"', 'Search indexed code/text'],
-      ['agentsam repo snapshot', 'Git composition/churn snapshot'],
-      ['agentsam security', 'Dependency and trust-boundary scan'],
-      ['agentsam merkle', 'Integrity snapshots and comparisons'],
-    ],
-  },
-  {
-    id: 'runtime',
-    label: 'Runtime / terminal',
-    summary: 'Local, remote, sandbox, and deployment controls.',
-    rows: [
-      ['agentsam status', 'Honest awareness (account, models, terminal, live deploy) · -i menu'],
-      ['agentsam start-local', 'Start the local PTY service'],
-      ['agentsam connections', 'Inspect available execution connections'],
-      ['agentsam tunnel', 'List, inspect, and run real Cloudflare Tunnels through Wrangler'],
-      ['agentsam mcp <add|status|doctor|list|remove>', 'Manage MCP connections, server catalogs, and client adapters'],
-      ['agentsam eval <context|live>', 'Deterministic context scoring or live agent evaluation telemetry'],
-      ['agentsam deploy', 'Graduate intentionally to cloud infrastructure'],
-      ['agentsam cloudflare', 'Wrangler and Cloudflare runtime diagnostics'],
-      ['agentsam go', 'Go runtime discovery, build, Cloudflare container deploy, D1 registry'],
-    ],
-  },
-  {
-    id: 'inside',
-    label: 'Inside Agent Sam',
-    summary: 'Commands available while the interactive session is running.',
-    rows: [
-      ['/', 'Open the keyboard command picker'],
-      ['/model', 'Choose model, reasoning, and processing tier'],
-      ['/providers', 'Configure and verify machine provider credentials'],
-      ['/context', 'Show live context economics'],
-      ['/usage', 'Show token/cost/session receipt'],
-      ['/settings', 'Change runtime, terminal, and model policy'],
-      ['/status', 'Honest project awareness + next-step tips'],
-      ['/connections', 'Inspect live account, terminal, Worker, and Cloudflare connection evidence'],
-      ['/tunnel', 'Choose an existing Cloudflare Tunnel and inspect or run it through Wrangler'],
-      ['/help [topic]', 'Show in-session help'],
-      ['/exit', 'Return to the host shell'],
-    ],
-  },
-  {
-    id: 'create',
-    label: 'Create / extend',
-    summary: 'Scaffold and add reusable capabilities.',
-    rows: [
-      ['agentsam create <name> --preset <preset>', 'Create a new AgentSam project'],
-      ['agentsam add <capability>', 'Add a supported capability'],
-      ['agentsam capabilities [id]', 'Inspect capability contracts'],
-      ['agentsam skills [id]', 'Inspect packaged skills'],
-      ['agentsam identity init', 'Add reusable identity surfaces'],
-      ['agentsam scaffold <cms|worker-api>', 'Generate a Cloudflare starter project'],
-      ['agentsam dockerize', 'Build supported container targets'],
-    ],
-  },
-]);
+import {
+  CLI_COMMAND_CATALOG,
+  CLI_HELP_TOPICS,
+  getCliCommand,
+  listCliCommands,
+  printAssistTip,
+} from '../../cli/command-catalog.js';
+import { SLASH_COMMANDS } from '../../lib/slash-commands.js';
 
 const TOPIC_ALIASES = new Map([
   ['models', 'start'], ['model', 'start'], ['provider', 'start'], ['providers', 'start'], ['resume', 'start'],
   ['repo', 'work'], ['repository', 'work'], ['inspect', 'work'], ['index', 'work'], ['security', 'work'],
+  ['ingest', 'work'], ['codebaseindex', 'work'], ['codebase-index', 'work'],
   ['terminal', 'runtime'], ['connections', 'runtime'], ['remote', 'runtime'], ['sandbox', 'runtime'], ['deploy', 'runtime'],
   ['mcp', 'runtime'], ['eval', 'runtime'],
   ['slash', 'inside'], ['commands', 'inside'], ['session', 'inside'], ['usage', 'inside'], ['context', 'inside'],
@@ -92,44 +24,66 @@ function clean(value) {
   return value == null ? '' : String(value).trim().toLowerCase();
 }
 
+function commandsForTopic(topicId) {
+  return listCliCommands({ topic: topicId }).map((entry) => {
+    const aliases = (entry.aliases || []).filter((a) => !a.startsWith('-')).slice(0, 2);
+    const name = aliases.length ? `agentsam ${entry.id}|${aliases.join('|')}` : `agentsam ${entry.id}`;
+    const tip = entry.skill ? ` · skill ${entry.skill}` : '';
+    return [name, `${entry.summary}${tip}`];
+  });
+}
+
 function padRows(rows) {
-  const width = Math.min(42, Math.max(...rows.map(([command]) => command.length), 0));
+  const width = Math.min(52, Math.max(...rows.map(([command]) => command.length), 0));
   return rows.map(([command, description]) => '    ' + pc.cyan(command.padEnd(width)) + '  ' + pc.dim(description));
 }
 
 export function resolveHelpTopic(value) {
   const query = clean(value);
   if (!query) return null;
-  const direct = HELP_TOPICS.find((topic) => topic.id === query || clean(topic.label) === query);
-  if (direct) return direct;
+  const direct = CLI_HELP_TOPICS.find((topic) => topic.id === query || clean(topic.label) === query);
+  if (direct) {
+    return { ...direct, rows: commandsForTopic(direct.id) };
+  }
   const alias = TOPIC_ALIASES.get(query);
-  if (alias) return HELP_TOPICS.find((topic) => topic.id === alias) || null;
-  return HELP_TOPICS.find((topic) =>
-    topic.rows.some(([command, description]) => clean(command).includes(query) || clean(description).includes(query))) || null;
+  if (alias) {
+    const topic = CLI_HELP_TOPICS.find((t) => t.id === alias);
+    return topic ? { ...topic, rows: commandsForTopic(topic.id) } : null;
+  }
+  const command = getCliCommand(query);
+  if (command) {
+    const topic = CLI_HELP_TOPICS.find((t) => t.id === command.topic);
+    return topic ? { ...topic, rows: commandsForTopic(topic.id) } : null;
+  }
+  return CLI_HELP_TOPICS.map((topic) => ({ ...topic, rows: commandsForTopic(topic.id) }))
+    .find((topic) => topic.rows.some(([cmd, description]) => clean(cmd).includes(query) || clean(description).includes(query))) || null;
 }
 
 export function renderHelpOverview(version, options = {}) {
+  const common = listCliCommands({ common: true });
   const lines = [
     '',
     '  ' + pc.bold('Agent Sam') + ' ' + pc.dim('v' + version),
-    '  ' + pc.dim('Type normally to work with Agent Sam. Use help only when you need the map.'),
+    '  ' + pc.dim('SAM = Systems Automation Machinery · help is generated from the command catalog.'),
     '',
     '  ' + pc.bold('Start'),
     '    ' + pc.cyan('agentsam') + '                         ' + pc.dim('enter the interactive experience'),
     '    ' + pc.cyan('agentsam resume') + '                  ' + pc.dim('continue saved work'),
-    '    ' + pc.cyan('agentsam help <topic>') + '            ' + pc.dim('focused help'),
+    '    ' + pc.cyan('agentsam help <topic>') + '            ' + pc.dim('focused help from catalog'),
+    '    ' + pc.cyan('agentsam skills <id>') + '             ' + pc.dim('load how-to skill instructions'),
     '',
     '  ' + pc.bold('Common'),
-    '    ' + pc.cyan('agentsam inspect') + '                 ' + pc.dim('understand this repository'),
-    '    ' + pc.cyan('agentsam models') + '                  ' + pc.dim('see account-visible models'),
-    '    ' + pc.cyan('agentsam status') + '                  ' + pc.dim('check project/runtime health'),
-    '    ' + pc.cyan('agentsam security') + '                ' + pc.dim('scan dependency + trust boundaries'),
-    '    ' + pc.cyan('agentsam deploy') + '                  ' + pc.dim('graduate intentionally'),
-    '',
-    '  ' + pc.dim('Inside Agent Sam: press / for the command picker. Ask the selected model for natural-language help at any time.'),
   ];
+  for (const entry of common) {
+    lines.push('    ' + pc.cyan(('agentsam ' + entry.id).padEnd(34)) + '  ' + pc.dim(entry.summary));
+  }
+  lines.push(
+    '',
+    '  ' + pc.dim('Every command prints: tip: use skill <id>  — machine baseline for in-CLI guidance.'),
+    '  ' + pc.dim('Inside Agent Sam: press / for the command picker.'),
+  );
   if (options.showTopics !== false) {
-    lines.push('', '  ' + pc.dim('Topics: ' + HELP_TOPICS.map((topic) => topic.id).join(' · ') + ' · all'));
+    lines.push('', '  ' + pc.dim('Topics: ' + CLI_HELP_TOPICS.map((topic) => topic.id).join(' · ') + ' · all · skills'));
   }
   lines.push('');
   return lines.join('\n');
@@ -137,21 +91,37 @@ export function renderHelpOverview(version, options = {}) {
 
 export function renderHelpTopic(topic, version) {
   if (!topic) return renderHelpOverview(version);
+  const skillHint = topic.rows?.[0]?.[1]?.includes('skill')
+    ? ''
+    : '';
   return [
     '',
     '  ' + pc.bold('Agent Sam') + ' ' + pc.dim('v' + version) + ' ' + pc.dim('·') + ' ' + pc.bold(topic.label),
     '  ' + pc.dim(topic.summary),
     '',
-    ...padRows(topic.rows),
+    ...padRows(topic.rows || []),
     '',
-    '  ' + pc.dim('Tip: run agentsam help for the map, or agentsam to return to the interactive experience.'),
+    '  ' + pc.dim('Tip: agentsam skills <id> loads how-to instructions for that command’s skill.'),
+    skillHint,
     '',
   ].join('\n');
 }
 
 export function renderAllHelp(version) {
   const lines = [renderHelpOverview(version, { showTopics: false })];
-  for (const topic of HELP_TOPICS) lines.push(renderHelpTopic(topic, version));
+  for (const topic of CLI_HELP_TOPICS) {
+    lines.push(renderHelpTopic({ ...topic, rows: commandsForTopic(topic.id) }, version));
+  }
+  lines.push(
+    '',
+    '  ' + pc.bold('Inside shell (slash)'),
+    ...padRows(SLASH_COMMANDS.slice(0, 16).map((row) => [row.cmd, row.description])),
+    '    ' + pc.dim(`… ${SLASH_COMMANDS.length} slash commands total · /help inside the shell`),
+    '',
+    '  ' + pc.bold('Catalog'),
+    '    ' + pc.dim(`${CLI_COMMAND_CATALOG.length} top-level commands · source: src/cli/command-catalog.js`),
+    '',
+  );
   return lines.join('');
 }
 
@@ -160,8 +130,24 @@ export async function runHelp(argv = [], options = {}) {
   const write = options.write || ((value) => process.stdout.write(value));
   const args = argv.filter((arg) => arg !== '--interactive');
 
+  printAssistTip('help', { write: (s) => process.stderr.write(s) });
+
   if (args.includes('--all') || args.some((arg) => clean(arg) === 'all')) {
     write(renderAllHelp(version));
+    return;
+  }
+
+  if (args.some((arg) => clean(arg) === 'skills' || clean(arg) === 'skill')) {
+    write([
+      '',
+      '  ' + pc.bold('Skills') + ' ' + pc.dim('· how-to instructions per surface'),
+      '    ' + pc.cyan('agentsam skills') + '                      ' + pc.dim('list portable skills'),
+      '    ' + pc.cyan('agentsam skills <id>') + '               ' + pc.dim('print skill instructions'),
+      '    ' + pc.cyan('agentsam skills <id> --references') + '  ' + pc.dim('include reference docs'),
+      '',
+      '  ' + pc.dim('Every CLI command tip points at a skill id — that is the machine baseline.'),
+      '',
+    ].join('\n'));
     return;
   }
 
@@ -184,18 +170,25 @@ export async function runHelp(argv = [], options = {}) {
   }
 
   const choice = await select({
-    message: 'Agent Sam help',
+    message: 'Agent Sam help (catalog-driven)',
     options: [
-      ...HELP_TOPICS.map((topic) => ({ value: topic.id, label: topic.label, hint: topic.summary })),
-      { value: 'all', label: 'All commands', hint: 'Print the complete deterministic help map' },
+      ...CLI_HELP_TOPICS.map((topic) => ({ value: topic.id, label: topic.label, hint: topic.summary })),
+      { value: 'skills', label: 'Skills', hint: 'How-to instructions loaded via agentsam skills' },
+      { value: 'all', label: 'All commands', hint: 'Print the complete catalog map' },
       { value: 'exit', label: 'Back', hint: 'Return without printing more help' },
     ],
   });
   if (isCancel(choice) || choice === 'exit') return;
   if (choice === 'all') write(renderAllHelp(version));
-  else write(renderHelpTopic(resolveHelpTopic(choice), version));
+  else if (choice === 'skills') {
+    write([
+      '',
+      '  Run ' + pc.cyan('agentsam skills') + ' to list, or ' + pc.cyan('agentsam skills agentsam-codebaseindex') + ' for ingest how-to.',
+      '',
+    ].join('\n'));
+  } else write(renderHelpTopic(resolveHelpTopic(choice), version));
 }
 
 export function listHelpTopics() {
-  return HELP_TOPICS.map((topic) => ({ id: topic.id, label: topic.label, summary: topic.summary }));
+  return CLI_HELP_TOPICS.map((topic) => ({ id: topic.id, label: topic.label, summary: topic.summary }));
 }

@@ -17,6 +17,13 @@ export {
   ensureSeedOperations,
   SEED_OPERATIONS,
 } from './sam/index.js';
+export {
+  CLI_COMMAND_CATALOG,
+  getCliCommand,
+  listCliCommands,
+  printAssistTip,
+  suggestCliCommands,
+} from './cli/command-catalog.js';
 export { routeIntent } from './lib/router.js';
 export { searchToolCards, toToolCard, hydrateToolSchemas } from './tools/index.js';
 export {

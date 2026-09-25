@@ -83,6 +83,23 @@
       "capabilities": ["blender.inspect"],
       "cli": { "command": [["cad", "blender", "inspect"]] },
       "status": "stable"
+    },
+    {
+      "id": "codebaseindex.ingest",
+      "module": "codebaseindex",
+      "action": "ingest",
+      "summary": "Ingest repository and/or dropped materials into the knowledge index.",
+      "execution": {
+        "lanes": ["local", "remote", "platform"],
+        "model": "optional",
+        "network": "optional",
+        "sideEffects": "local_write"
+      },
+      "risk": "write",
+      "capabilities": ["knowledge.index"],
+      "cli": { "command": [["codebaseindex"], ["ingest"]] },
+      "pipeline": "sam.codebaseindex.index.run",
+      "status": "stable"
     }
   ]
 }

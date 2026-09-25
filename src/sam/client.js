@@ -63,6 +63,9 @@ export class AgentSamClient {
         inspect: (input = {}, opts) => this.invoke('cad.blender.inspect', input, opts),
       },
     };
+    this.codebaseindex = {
+      ingest: (input = {}, opts) => this.invoke('codebaseindex.ingest', normalizeRootInput(input), opts),
+    };
   }
 
   /**

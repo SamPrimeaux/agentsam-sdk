@@ -50,6 +50,7 @@ import { resolveAccountAuth } from './lib/account-session.js';
 import { renderDiagnosticError } from './errors/index.js';
 import { renderHelpOverview, runHelp } from './ui/cli/help.js';
 import { hydrateSecureCredentials } from './security/local-vault.js';
+import { getCliCommand, printAssistTip, suggestCliCommands } from './cli/command-catalog.js';
 
 const VERSION = pkg.version;
 
@@ -87,6 +88,7 @@ function printLegacyHelp() {
     agentsam context [--json]  Git repo/revision + bridge configuration from any repo
     agentsam init              Configure knowledge in this repo; --name scaffolds a new project
     agentsam index             Plan/run incremental AST and optional embeddings (--help)
+    agentsam codebaseindex     Guided ingest: materials/allowlist/embeddings/storage (alias: ingest)
     agentsam search "query"    Retrieve indexed code/text; --semantic enables embeddings
     agentsam repo snapshot     Git composition/churn; --save retains observations
     agentsam cad blender       Programmatic Blender inspect/build/render/export (--help)
@@ -316,6 +318,11 @@ const command = process.argv[2];
 const rest = process.argv.slice(3);
 
 hydrateSecureCredentials(process.env);
+
+const catalogEntry = command && !command.startsWith('-') ? getCliCommand(command) : null;
+if (catalogEntry && command !== 'help') {
+  printAssistTip(catalogEntry);
+}
 
 if (command === '--version' || command === '-v') {
   console.log(VERSION);
@@ -570,6 +577,15 @@ if (command === '--version' || command === '-v') {
 } else if (command === 'autorag') {
   try { await (await import('./commands/autorag.js')).runAutoRag(rest); }
   catch (e) { reportCliError(e); process.exitCode = 1; }
+} else if (command === 'codebaseindex' || command === 'ingest' || command === 'codebase-index') {
+  try {
+    await (await import('./commands/codebaseindex.js')).runCodebaseindex(rest);
+  } catch (e) {
+    if (e?.code !== 'AGENTSAM_CODEBASEINDEX_CANCELLED') {
+      reportCliError(e);
+      process.exitCode = 1;
+    }
+  }
 } else if (['index', 'search', 'repo'].includes(command)) {
   try {
     const commands = await import('./commands/knowledge.js');
@@ -642,6 +658,15 @@ if (command === '--version' || command === '-v') {
   }
 } else {
   console.error(`\n  Unknown command: ${command}\n`);
+  const suggestions = suggestCliCommands(command);
+  if (suggestions.length) {
+    console.error('  Did you mean:');
+    for (const row of suggestions) {
+      console.error(`    agentsam ${row.id}  — ${row.summary}`);
+      if (row.skill) console.error(`      tip: use skill ${row.skill}`);
+    }
+    console.error('');
+  }
   printHelp();
   process.exit(1);
 }

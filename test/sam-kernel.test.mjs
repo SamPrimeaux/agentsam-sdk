@@ -28,10 +28,12 @@ describe('SAM kernel seed', () => {
       'security.scan',
       'terminal.exec',
       'cad.blender.inspect',
+      'codebaseindex.ingest',
     ]) {
       assert.ok(ids.includes(id), `missing ${id}`);
-      assert.equal(getSamOperation(id)?.execution.model, 'never');
     }
+    assert.equal(getSamOperation('repository.inspect')?.execution.model, 'never');
+    assert.equal(getSamOperation('codebaseindex.ingest')?.execution.model, 'optional');
   });
 
   it('defineSamOperation rejects incomplete defs', () => {
