@@ -35,6 +35,7 @@ export const SLASH_COMMANDS = [
   { cmd: '/logs', description: 'Show local Agent Sam execution events', lane: 'observability' },
   { cmd: '/deploy', description: 'Add a cloud adapter and deploy intentionally', lane: 'deploy' },
   { cmd: '/clear', description: 'Clear the terminal display', lane: 'terminal' },
+  { cmd: '/skills', description: 'List resolvable slash skill vocabulary', lane: 'agent' },
   { cmd: '/help', description: 'Show the factual implemented command catalog' },
   { cmd: '/exit', description: 'Exit Agent Sam shell and return to the host terminal' },
 ];

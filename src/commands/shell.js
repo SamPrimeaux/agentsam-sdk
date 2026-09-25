@@ -40,6 +40,11 @@ import { tryResolveGitContext } from '../../packages/agentsam-repository/src/git
 import { syncWorkspaceStateToD1, readWorkspaceStateFromD1 } from '../../packages/agentsam-repository/src/workspace-state.js';
 import { syncGitCommitsToD1 } from '../../packages/agentsam-repository/src/work-tracking.js';
 import { readGoapState, listGoapTickets, createGoapGoal, switchGoapGoal, closeGoapGoal, renderGoapStatus, renderGoapList, renderGoapGoal, renderGoapWhy, renderGoapPlan } from '../../packages/agentsam-repository/src/goap.js';
+import { SkillRegistry, SkillRuntime, SkillContentResolver } from '../skills/index.js';
+import {
+  presentAgentSamInteraction,
+  handleSkillInteractionChoice,
+} from './interaction-clack.js';
 
 function writeLine(write, value = '') { write(`${value}\n`); }
 
@@ -1026,8 +1031,44 @@ export async function dispatchShellLine(line, state = {}) {
           await runInteractiveModelTurn(line, state);
           break;
         }
+        {
+          // Explicit slash → portable skill registry (no D1 / R2 / subagents).
+          const skillRuntime = new SkillRuntime({
+            registry: new SkillRegistry({ home: state.home }),
+            contentResolver: new SkillContentResolver(),
+          });
+          const skillResult = await skillRuntime.invoke({ input: line });
+          if (skillResult.matched) {
+            const interactiveStatuses = new Set(['needs_input', 'needs_approval', 'blocked']);
+            if (
+              state.interactive &&
+              interactiveStatuses.has(skillResult.interaction?.status) &&
+              skillResult.interaction?.prompt
+            ) {
+              const choice = await presentAgentSamInteraction(skillResult.interaction, {
+                write,
+                interactive: state.interactive,
+              });
+              if (choice.action === 'create' || String(choice.value || '').startsWith('create')) {
+                await handleSkillInteractionChoice(choice, { write, home: state.home });
+              } else if (choice.action === 'list' || choice.value === 'list') {
+                await handleSkillInteractionChoice(choice, { write, home: state.home });
+              } else if (choice.action === 'install' || choice.value === 'install') {
+                await handleSkillInteractionChoice(choice, { write, home: state.home });
+              }
+            } else if (skillResult.interaction?.prompt?.message) {
+              for (const msgLine of String(skillResult.interaction.prompt.message).split('\n')) {
+                writeLine(write, `  ${msgLine}`);
+              }
+            } else if (skillResult.modelInstructions?.content) {
+              writeLine(write, `  skill ${skillResult.skill?.id} · ${skillResult.receipt?.checksum || 'resolved'}`);
+              writeLine(write, `  (turn instructions ready · ${skillResult.tools?.length || 0} tools declared)`);
+            }
+            break;
+          }
+        }
         writeLine(write, `  Unknown Agent Sam command: ${command}`);
-        writeLine(write, '  Type / or /help for available commands.');
+        writeLine(write, '  Type / or /help for available commands. Use /skills for installable slash skills.');
         return { handled: false, exit: false, cwd: state.cwd };
     }
   } catch (error) {

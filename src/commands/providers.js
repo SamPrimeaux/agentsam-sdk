@@ -164,8 +164,13 @@ export async function validateAndSaveProviderCredential(provider, secret, option
     };
   }
 
-  // Key is verified! Now persist securely to OS store + AES-256-GCM vault + env profile
-  setProviderCredential(id, cleanSecret, { ...options, accountId });
+  // Key is verified! Now persist securely to OS store + AES-256-GCM vault.
+  // Also write ~/.agentsam/env.d so `source load-agent-env.sh` works on boot.
+  setProviderCredential(id, cleanSecret, {
+    ...options,
+    accountId,
+    writeEnvProfile: options.writeEnvProfile !== false,
+  });
 
   return {
     attempted: true,
@@ -213,7 +218,11 @@ export async function promptAndConfigureProvider(provider, options = {}) {
   const spin = options.spinnerImpl ? options.spinnerImpl() : spinner();
   spin.start(`Verifying ${spec.label} API credential`);
 
-  const result = await validateAndSaveProviderCredential(id, String(secret), { ...options, accountId });
+  const result = await validateAndSaveProviderCredential(id, String(secret), {
+    ...options,
+    accountId,
+    writeEnvProfile: options.writeEnvProfile !== false,
+  });
 
   if (!result.ok) {
     spin.stop(`Verification failed: ${result.error || 'invalid key'} · Key was NOT saved`, 1);
@@ -255,10 +264,19 @@ async function runInteractiveProviders(options = {}) {
 }
 
 function parseArgs(argv = []) {
-  const out = { command: 'interactive', provider: '', json: false, verify: false, yes: false, fromEnv: '' };
+  const out = {
+    command: 'interactive',
+    provider: '',
+    json: false,
+    verify: false,
+    yes: false,
+    fromEnv: '',
+    fromStdin: false,
+    exportProfile: true,
+  };
   const args = [...argv];
   if (args[0] && !args[0].startsWith('-')) out.command = args.shift();
-  if (['add', 'set', 'remove', 'verify', 'status', 'export'].includes(out.command) && args[0] && !args[0].startsWith('-')) {
+  if (['add', 'set', 'remove', 'verify', 'status', 'export', 'roll'].includes(out.command) && args[0] && !args[0].startsWith('-')) {
     out.provider = normalizeProviderId(args.shift());
   }
   while (args.length) {
@@ -267,6 +285,9 @@ function parseArgs(argv = []) {
     else if (arg === '--verify') out.verify = true;
     else if (arg === '--yes' || arg === '-y') out.yes = true;
     else if (arg === '--from-env') out.fromEnv = clean(args.shift());
+    else if (arg === '--from-stdin') out.fromStdin = true;
+    else if (arg === '--no-export') out.exportProfile = false;
+    else if (arg === '--export') out.exportProfile = true;
     else if (arg === '--help' || arg === '-h') out.command = 'help';
     else throw new Error(`unknown providers option: ${arg}`);
   }
@@ -281,12 +302,16 @@ export async function runProviders(argv = [], options = {}) {
     write([
       'agentsam providers',
       'agentsam providers status [provider] [--verify] [--json]',
-      'agentsam providers add <provider> [--from-env NAME]',
+      'agentsam providers add <provider> [--from-env NAME|--from-stdin] [--no-export]',
+      'agentsam providers roll <provider> [--from-env NAME|--from-stdin]   replace + export env.d',
       'agentsam providers export <provider>',
       'agentsam providers verify [provider] [--json]',
       'agentsam providers remove <provider> [--yes]',
       '',
       `Providers: ${PROVIDER_ORDER.join(', ')}`,
+      '',
+      'Boot load: source ~/.agentsam/load-agent-env.sh <provider…>',
+      '           agentsam env boot-line',
       '',
     ].join('\n'));
     return;
@@ -338,24 +363,47 @@ export async function runProviders(argv = [], options = {}) {
     return results;
   }
 
-  if (parsed.command === 'add' || parsed.command === 'set') {
+  if (parsed.command === 'add' || parsed.command === 'set' || parsed.command === 'roll') {
     if (!parsed.provider) throw new Error('providers add requires a provider');
-    if (parsed.fromEnv) {
-      const value = clean((options.env || process.env)[parsed.fromEnv]);
-      if (!value) throw new Error(`environment credential missing: ${parsed.fromEnv}`);
-      const verified = await validateAndSaveProviderCredential(parsed.provider, value, options);
+    if (parsed.command === 'roll') {
+      removeProviderCredential(parsed.provider, options);
+    }
+    let secretValue = '';
+    if (parsed.fromStdin) {
+      const chunks = [];
+      for await (const chunk of options.stdin || process.stdin) chunks.push(chunk);
+      secretValue = Buffer.concat(chunks.map((c) => (Buffer.isBuffer(c) ? c : Buffer.from(c)))).toString('utf8').trim();
+      if (!secretValue) throw new Error('stdin credential missing');
+    } else if (parsed.fromEnv) {
+      secretValue = clean((options.env || process.env)[parsed.fromEnv]);
+      if (!secretValue) throw new Error(`environment credential missing: ${parsed.fromEnv}`);
+    }
+    if (secretValue) {
+      const verified = await validateAndSaveProviderCredential(parsed.provider, secretValue, {
+        ...options,
+        writeEnvProfile: parsed.exportProfile,
+      });
       if (!verified.ok) {
         throw new Error(`Provider verification failed: ${verified.error}. Credential was not saved.`);
       }
-      writeLine(write, `  ${parsed.provider} verified · ${verified.model_count || 0} models`);
+      writeLine(write, `  ${parsed.provider} verified · saved${parsed.exportProfile ? ' · env.d exported' : ''}`);
+      if (parsed.exportProfile) {
+        writeLine(write, `  source ~/.agentsam/load-agent-env.sh ${parsed.provider}`);
+      }
       return verified;
     }
     if (options.interactive === false || !(options.interactive ?? Boolean(process.stdin.isTTY && process.stdout.isTTY))) {
-      throw new Error('providers add requires an interactive terminal or --from-env NAME');
+      throw new Error('providers add requires an interactive terminal, --from-env NAME, or --from-stdin');
     }
-    const result = await promptAndConfigureProvider(parsed.provider, options);
+    const result = await promptAndConfigureProvider(parsed.provider, {
+      ...options,
+      writeEnvProfile: parsed.exportProfile,
+    });
     if (!result) return null;
     writeLine(write, result.ok ? `  ${parsed.provider} verified` : `  ${parsed.provider} verification failed: ${result.error}`);
+    if (result.ok && parsed.exportProfile) {
+      writeLine(write, `  source ~/.agentsam/load-agent-env.sh ${parsed.provider}`);
+    }
     return result;
   }
 

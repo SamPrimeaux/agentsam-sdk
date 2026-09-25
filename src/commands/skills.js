@@ -1,4 +1,4 @@
-import { getSkill, listSkills, loadSkill } from '../skills/index.js';
+import { getSkill, listSkills, loadSkill } from '../skills/catalog.js';
 
 function parse(argv = []) {
   const out = { id: '', json: false, references: false };

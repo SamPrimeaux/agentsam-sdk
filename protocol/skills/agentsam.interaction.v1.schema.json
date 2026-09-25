@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentsam.interaction.v1",
+  "title": "AgentSamInteraction",
+  "description": "Host-agnostic interaction contract for CLI (Clack), Local Studio, Tauri, and other AgentSam surfaces.",
+  "type": "object",
+  "required": ["status"],
+  "additionalProperties": false,
+  "properties": {
+    "status": {
+      "enum": ["ready", "needs_input", "needs_approval", "blocked", "complete"]
+    },
+    "prompt": {
+      "type": "object",
+      "required": ["kind", "message"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": ["info", "text", "select", "multiselect", "confirm", "error"]
+        },
+        "code": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["value", "label"],
+            "properties": {
+              "value": { "type": "string" },
+              "label": { "type": "string" },
+              "description": { "type": "string" }
+            }
+          }
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "label"],
+            "properties": {
+              "id": { "type": "string" },
+              "label": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
