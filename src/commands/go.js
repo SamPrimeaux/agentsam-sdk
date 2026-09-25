@@ -251,11 +251,24 @@ async function shipCloudflare({ discovery, productRoot, runtimeRoot, args, write
     productRoot,
     runtimeRoot,
     repositoryRoot: discovery.repository_root,
-    dryRun: args.dryRun,
+    dryRun: false,
   });
   note('✓ go test ./...');
   note('✓ go vet ./...');
-  note(build.build.binary ? `✓ Go binary · ${path.basename(build.build.binary)}` : '✓ Go build skipped (dry-run)');
+  note(`✓ Go binary · ${path.basename(build.build.binary)} · ${build.receipt.artifact.digest}`);
+  note('✓ native runtime boot/probe/shutdown');
+
+  let container = null;
+  if (!args.skipDeploy) {
+    if (!args.json) write('\n  Container\n');
+    container = await verifyGoContainer({
+      productRoot,
+      product: args.product,
+      expectedSourceCommit: build.receipt.source.commit,
+    });
+    note(`✓ linux/${container.architecture} · ${container.user}`);
+    note(`✓ container runtime probe · ${container.image_digest}`);
+  }
 
   if (!args.json) write('\n  Deploying\n');
   const deploy = await deployGoCloudflare({
