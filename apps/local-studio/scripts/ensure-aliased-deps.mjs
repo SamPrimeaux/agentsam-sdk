@@ -6,29 +6,67 @@
  * Cloudflare Builds only `npm ci`s apps/local-studio, so linked package deps land in
  * apps/local-studio/node_modules and are invisible to those source imports.
  *
- * Install each aliased package's runtime deps into its own node_modules before vite build.
+ * Prefer linking already-installed studio deps into packages/<name>/node_modules;
+ * fall back to a nested npm install. Fail loud if anything is still missing.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const studioRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const root = path.resolve(studioRoot, '../..');
 const packagesRoot = path.join(root, 'packages');
+const studioNodeModules = path.join(studioRoot, 'node_modules');
 
 /** Packages whose /src is aliased from apps/local-studio/vite.config.ts */
 const ALIASED = ['agentsam-nav', 'agentsam-workbench'];
 
-function needsInstall(pkgDir, deps) {
-  for (const name of Object.keys(deps || {})) {
-    // scoped packages: @radix-ui/react-dialog → node_modules/@radix-ui/react-dialog
-    const parts = name.startsWith('@') ? name.split('/') : [name];
-    const target = path.join(pkgDir, 'node_modules', ...parts, 'package.json');
-    if (!existsSync(target)) return true;
-  }
-  return false;
+function depTarget(pkgDir, name) {
+  const parts = name.startsWith('@') ? name.split('/') : [name];
+  return path.join(pkgDir, 'node_modules', ...parts);
 }
+
+function studioDepTarget(name) {
+  const parts = name.startsWith('@') ? name.split('/') : [name];
+  return path.join(studioNodeModules, ...parts);
+}
+
+function missingDeps(pkgDir, deps) {
+  return Object.keys(deps || {}).filter((name) => !existsSync(path.join(depTarget(pkgDir, name), 'package.json')));
+}
+
+function linkFromStudio(pkgDir, name) {
+  const source = studioDepTarget(name);
+  if (!existsSync(path.join(source, 'package.json'))) return false;
+  const target = depTarget(pkgDir, name);
+  mkdirSync(path.dirname(target), { recursive: true });
+  rmSync(target, { recursive: true, force: true });
+  try {
+    symlinkSync(source, target, 'dir');
+  } catch {
+    cpSync(source, target, { recursive: true, dereference: true });
+  }
+  return existsSync(path.join(target, 'package.json'));
+}
+
+function installNested(pkgDir) {
+  execFileSync(
+    'npm',
+    [
+      'install',
+      '--omit=dev',
+      '--no-package-lock',
+      '--no-audit',
+      '--no-fund',
+      '--ignore-scripts',
+      '--install-strategy=nested',
+    ],
+    { cwd: pkgDir, stdio: 'inherit', env: process.env },
+  );
+}
+
+let failed = false;
 
 for (const name of ALIASED) {
   const pkgDir = path.join(packagesRoot, name);
@@ -43,25 +81,34 @@ for (const name of ALIASED) {
     console.log(`[ensure-aliased-deps] ${name}: no runtime deps`);
     continue;
   }
-  if (!needsInstall(pkgDir, deps)) {
+
+  let missing = missingDeps(pkgDir, deps);
+  if (!missing.length) {
     console.log(`[ensure-aliased-deps] ${name}: node_modules ok`);
     continue;
   }
-  console.log(`[ensure-aliased-deps] Installing runtime deps for packages/${name}…`);
-  execFileSync(
-    'npm',
-    [
-      'install',
-      '--omit=dev',
-      '--no-package-lock',
-      '--no-audit',
-      '--no-fund',
-      '--ignore-scripts',
-      // Keep deps under packages/<name>/node_modules so Vite source aliases resolve on CF Builds
-      '--install-strategy=nested',
-    ],
-    { cwd: pkgDir, stdio: 'inherit', env: process.env }
-  );
+
+  console.log(`[ensure-aliased-deps] ${name}: missing ${missing.join(', ')}`);
+  const linked = [];
+  for (const dep of missing) {
+    if (linkFromStudio(pkgDir, dep)) linked.push(dep);
+  }
+  if (linked.length) console.log(`[ensure-aliased-deps] ${name}: linked from studio · ${linked.join(', ')}`);
+
+  missing = missingDeps(pkgDir, deps);
+  if (missing.length) {
+    console.log(`[ensure-aliased-deps] ${name}: npm install nested for ${missing.join(', ')}`);
+    installNested(pkgDir);
+  }
+
+  missing = missingDeps(pkgDir, deps);
+  if (missing.length) {
+    console.error(`[ensure-aliased-deps] ${name}: still missing after install: ${missing.join(', ')}`);
+    failed = true;
+  } else {
+    console.log(`[ensure-aliased-deps] ${name}: ready`);
+  }
 }
 
-console.log('[ensure-aliased-deps] done');
+console.log(`[ensure-aliased-deps] ${failed ? 'failed' : 'done'}`);
+if (failed) process.exit(1);

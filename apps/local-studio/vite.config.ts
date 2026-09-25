@@ -23,6 +23,29 @@ const workbenchSource = resolvePath(
 const navSource = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-nav/src", import.meta.url)),
 );
+const studioRoot = resolvePath(fileURLToPath(new URL(".", import.meta.url)));
+const studioNm = (...segments: string[]) => resolvePath(studioRoot, "node_modules", ...segments);
+
+/**
+ * When vite aliases packages to /src, Rolldown resolves bare imports from that
+ * package directory — not apps/local-studio/node_modules. Pin nav runtime deps
+ * to the studio install so Cloudflare Builds (npm ci local-studio only) works
+ * even if packages/agentsam-nav/node_modules is incomplete.
+ */
+const navRuntimeAliases = [
+  {
+    find: "@radix-ui/react-dropdown-menu",
+    replacement: studioNm("@radix-ui", "react-dropdown-menu"),
+  },
+  {
+    find: "@radix-ui/react-dialog",
+    replacement: studioNm("@radix-ui", "react-dialog"),
+  },
+  {
+    find: "lucide-react",
+    replacement: studioNm("lucide-react"),
+  },
+];
 const cmsBackendSource = resolvePath(
   fileURLToPath(new URL("../client-cms-editor/backend/src", import.meta.url)),
 );
@@ -180,6 +203,7 @@ export default defineConfig(({ command, isPreview }) => ({
     tsconfigPaths: true,
     preserveSymlinks: true,
     alias: [
+      ...navRuntimeAliases,
       {
         find: "@inneranimalmedia/agentsam-workbench",
         replacement: workbenchSource,
@@ -225,6 +249,29 @@ export default defineConfig(({ command, isPreview }) => ({
         replacement: resolvePath(cmsSharedSource, "agent-context.ts"),
       },
     ],
+  },
+  build: {
+    // Local Studio shell + nav + workbench legitimately exceeds the default 500 kB
+    // advisory; keep the warning from masking real failures while Rolldown splits vendors.
+    chunkSizeWarningLimit: 1200,
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: "vendor-radix",
+              test: /node_modules[\\/]@radix-ui[\\/]/,
+              priority: 20,
+            },
+            {
+              name: "vendor-lucide",
+              test: /node_modules[\\/]lucide-react[\\/]/,
+              priority: 15,
+            },
+          ],
+        },
+      },
+    },
   },
   ssr: {
     noExternal: [/^@radix-ui\//],
