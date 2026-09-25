@@ -115,14 +115,30 @@ test('writeFeatureSelections emits schema_version 2 and resolved snapshot', () =
   }
 });
 
-test('sdk project selections resolve against package packet', () => {
-  const { snapshot } = writeFeaturesResolved(SDK_ROOT);
-  assert.equal(snapshot.schema, 'agentsam.features.resolved.v1');
-  assert.equal(snapshot.features.auth.provider_template, 'inneranimalmedia');
-  assert.equal(snapshot.features.auth.feature.id, 'identity.oauth-login-portal');
-  assert.equal(snapshot.features.auth.resources.engine, 'd1');
-  assert.match(
-    formatResourcesSummary(snapshot.features.auth.resources),
-    /auth_users,auth_sessions,account_identities/,
-  );
+test('sdk-style project selections resolve against package packet without local machine state', () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-sdk-feature-select-'));
+  try {
+    const { snapshot } = writeFeaturesResolved(cwd, null, {
+      selections: {
+        schema_version: 2,
+        features: {
+          auth: {
+            selected: true,
+            capabilities: ['identity.init'],
+            provider_template: 'inneranimalmedia',
+          },
+        },
+      },
+    });
+    assert.equal(snapshot.schema, 'agentsam.features.resolved.v1');
+    assert.equal(snapshot.features.auth.provider_template, 'inneranimalmedia');
+    assert.equal(snapshot.features.auth.feature.id, 'identity.oauth-login-portal');
+    assert.equal(snapshot.features.auth.resources.engine, 'd1');
+    assert.match(
+      formatResourcesSummary(snapshot.features.auth.resources),
+      /auth_users,auth_sessions,account_identities/,
+    );
+  } finally {
+    fs.rmSync(cwd, { recursive: true, force: true });
+  }
 });

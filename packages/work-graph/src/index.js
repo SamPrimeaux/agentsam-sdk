@@ -20,7 +20,29 @@ export class WorkGraph {
 }
 
 export class WorkItem {
-  constructor({ id, title, type = 'task', status = 'planned', owner = null, start = null, end = null, dependencies = [], artifacts = [], evidence = [] } = {}) {
+  constructor({
+    id,
+    title,
+    type = 'task',
+    status = 'planned',
+    owner = null,
+    start = null,
+    end = null,
+    baselineStart = null,
+    baselineEnd = null,
+    progress = null,
+    parentId = null,
+    dependencies = [],
+    blockedReason = null,
+    estimateMinutes = null,
+    actualMinutes = null,
+    executionRef = null,
+    goapRef = null,
+    version = 1,
+    metadata = {},
+    artifacts = [],
+    evidence = [],
+  } = {}) {
     this.id = id ?? randomUUID();
     this.title = title;
     this.type = type;
@@ -28,7 +50,18 @@ export class WorkItem {
     this.owner = owner;
     this.start = start;
     this.end = end;
+    this.baselineStart = baselineStart;
+    this.baselineEnd = baselineEnd;
+    this.progress = progress;
+    this.parentId = parentId;
     this.dependencies = dependencies;
+    this.blockedReason = blockedReason;
+    this.estimateMinutes = estimateMinutes;
+    this.actualMinutes = actualMinutes;
+    this.executionRef = executionRef;
+    this.goapRef = goapRef;
+    this.version = version;
+    this.metadata = metadata;
     this.artifacts = artifacts;
     this.evidence = evidence;
   }

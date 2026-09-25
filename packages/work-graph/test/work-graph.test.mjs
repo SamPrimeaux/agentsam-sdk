@@ -7,11 +7,25 @@ import { createProjectsAdapter } from '../src/adapters/business/projects.js';
 import { createTimelineModel } from '../src/renderers/timeline.js';
 import { createGanttModel } from '../src/renderers/gantt-model.js';
 
-test('work graph projects one source of truth into timeline and Gantt views', () => {
+test('work graph projects one source of truth into timeline and rich Gantt views', () => {
   const actor = new Actor({ id: 'agent-1', name: 'Agent One' });
-  const item = new WorkItem({ id: 'task-1', title: 'Index repository', owner: actor.id });
-  item.start = '2026-09-18';
-  item.end = '2026-09-19';
+  const item = new WorkItem({
+    id: 'task-1',
+    title: 'Index repository',
+    owner: actor.id,
+    start: '2026-09-18',
+    end: '2026-09-19',
+    baselineStart: '2026-09-17',
+    baselineEnd: '2026-09-18',
+    progress: 0.5,
+    parentId: 'phase-index',
+    estimateMinutes: 120,
+    actualMinutes: 70,
+    dependencies: ['inventory'],
+    artifacts: [{ id: 'artifact-1' }],
+    evidence: ['receipt-1'],
+    metadata: { summary: 'Repository indexing' },
+  });
   const graph = new WorkGraph({ name: 'Release', actors: [actor] });
   graph.add(item);
   graph.events.push(new TimelineEvent({ type: 'deploy', at: '2026-09-19T12:00:00Z', workItemId: item.id }));
@@ -21,9 +35,15 @@ test('work graph projects one source of truth into timeline and Gantt views', ()
   assert.equal(timeline.title, 'Release');
   assert.equal(timeline.lanes[0].items[0], item);
   assert.deepEqual(timeline.events.map((event) => event.type), ['test', 'deploy']);
-  assert.deepEqual(createGanttModel(graph)[0], {
-    id: 'task-1', title: 'Index repository', status: 'planned', start: '2026-09-18', end: '2026-09-19',
-  });
+
+  const gantt = createGanttModel(graph)[0];
+  assert.equal(gantt.id, 'task-1');
+  assert.equal(gantt.owner.name, 'Agent One');
+  assert.equal(gantt.progress, 0.5);
+  assert.equal(gantt.parentId, 'phase-index');
+  assert.equal(gantt.artifactCount, 1);
+  assert.equal(gantt.evidenceCount, 1);
+  assert.deepEqual(gantt.dependencies, ['inventory']);
 });
 
 test('adapters map source records without fetching or mutating them', () => {

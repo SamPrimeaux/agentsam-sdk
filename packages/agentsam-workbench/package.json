@@ -12,7 +12,10 @@
     "./agent/contextual-composer.css": "./src/agent/contextual-composer.css",
     "./shell": "./src/shell/index.ts",
     "./browser": "./src/browser/index.ts",
-    "./terminal": "./src/terminal/index.ts"
+    "./terminal": "./src/terminal/index.ts",
+    "./projects": "./src/projects/index.ts",
+    "./timeline": "./src/timeline/index.ts",
+    "./project-control.css": "./src/project-control.css"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
