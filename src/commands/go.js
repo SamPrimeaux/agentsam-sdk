@@ -277,9 +277,11 @@ async function shipCloudflare({ discovery, productRoot, runtimeRoot, args, write
     dryRun: args.dryRun,
     skipDeploy: args.skipDeploy,
     skipRegistry: args.skipRegistry,
+    artifactDigest: build.receipt.artifact.digest,
+    containerDigest: container?.image_digest || null,
   });
-  if (deploy.deployed) note(`✓ ${args.product}`);
-  else if (args.dryRun) note('· dry-run · deploy skipped');
+  if (deploy.deployed) note(`✓ ${args.product} · ${deploy.deploymentId} · ${deploy.versionId}`);
+  else if (args.dryRun && deploy.dryRunValidated) note('✓ Wrangler dry-run validated Worker + Container config');
   else if (args.skipDeploy) note('· skip-deploy · local receipts only');
   else note('· deploy not completed');
 
