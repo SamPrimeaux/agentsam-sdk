@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { EmptyCredentials } from './EmptyCredentials.jsx';
-import { CredentialCard } from './CredentialCard.jsx';
-import { CredentialDialog } from './CredentialDialog.jsx';
+import { EmptyCredentials } from '../components/EmptyCredentials.jsx';
+import { CredentialCard } from '../components/CredentialCard.jsx';
+import { CredentialDialog } from '../components/CredentialDialog.jsx';
 
 /**
  * /settings/keys — BYOK provider credentials + AgentSam API keys.

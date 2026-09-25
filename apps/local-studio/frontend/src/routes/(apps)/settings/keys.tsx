@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createProviderRegistry } from "../../../../../packages/agentsam-vault/src/index.js";
-import { KeysPage } from "../../../../../packages/agentsam-key-manager/src/pages/KeysPage.jsx";
+import { createProviderRegistry } from "@inneranimalmedia/agentsam-vault";
+import { KeysPage } from "@inneranimalmedia/agentsam-key-manager/KeysPage";
 
 export const Route = createFileRoute("/(apps)/settings/keys")({
   component: KeysSettingsPage,

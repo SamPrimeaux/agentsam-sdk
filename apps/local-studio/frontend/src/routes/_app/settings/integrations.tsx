@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { IntegrationsPage } from "../../../../../packages/agentsam-key-manager/src/pages/IntegrationsPage.jsx";
+import { IntegrationsPage } from "@inneranimalmedia/agentsam-key-manager/IntegrationsPage";
 
 export const Route = createFileRoute("/_app/settings/integrations")({
   component: IntegrationsSettingsPage,

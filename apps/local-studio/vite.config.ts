@@ -23,6 +23,12 @@ const workbenchSource = resolvePath(
 const navSource = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-nav/src", import.meta.url)),
 );
+const vaultPackageRoot = resolvePath(
+  fileURLToPath(new URL("../../packages/agentsam-vault", import.meta.url)),
+);
+const keyManagerPackageRoot = resolvePath(
+  fileURLToPath(new URL("../../packages/agentsam-key-manager", import.meta.url)),
+);
 const studioRoot = resolvePath(fileURLToPath(new URL(".", import.meta.url)));
 const studioNm = (...segments: string[]) => resolvePath(studioRoot, "node_modules", ...segments);
 
@@ -211,6 +217,32 @@ export default defineConfig(({ command, isPreview }) => ({
       {
         find: "@inneranimalmedia/agentsam-nav",
         replacement: navSource,
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-vault$/,
+        replacement: resolvePath(vaultPackageRoot, "src/index.js"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-key-manager$/,
+        replacement: resolvePath(keyManagerPackageRoot, "src/index.js"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-key-manager\/KeysPage$/,
+        replacement: resolvePath(keyManagerPackageRoot, "src/pages/KeysPage.jsx"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-key-manager\/IntegrationsPage$/,
+        replacement: resolvePath(
+          keyManagerPackageRoot,
+          "src/pages/IntegrationsPage.jsx",
+        ),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-key-manager\/SensitiveInput$/,
+        replacement: resolvePath(
+          keyManagerPackageRoot,
+          "src/components/SensitiveInput.jsx",
+        ),
       },
       {
         find: /^@inneranimalmedia\/agentsam-cms-backend$/,
