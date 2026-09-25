@@ -1,6 +1,5 @@
 /**
  * SAM — Systems Automation Machinery
- * Kernel seed: operation definition, registry, invoke/describe/discover.
  * @see docs/architecture/SAM_KERNEL.md
  */
 
@@ -12,6 +11,7 @@ export const SAM_EXPANSION = 'Systems Automation Machinery';
 /** @typedef {'none'|'optional'|'required'} SamNetworkPolicy */
 /** @typedef {'none'|'local_write'|'remote_read'|'remote_write'|'deploy'|'billable'} SamSideEffects */
 /** @typedef {'read_only'|'write'|'privileged'} SamRisk */
+/** @typedef {'never'|'optional'|'required'} SamSpendPolicy */
 
 /**
  * @typedef {object} SamExecutionMeta
@@ -19,15 +19,20 @@ export const SAM_EXPANSION = 'Systems Automation Machinery';
  * @property {SamModelPolicy} model
  * @property {SamNetworkPolicy} network
  * @property {SamSideEffects} sideEffects
+ * @property {SamSpendPolicy} [embedding]
+ * @property {SamSpendPolicy} [provider_spend]
  */
 
 /**
+ * Rich product capability contract — not just catalog cards.
  * @typedef {object} SamOperationDef
  * @property {string} id
  * @property {number} version
  * @property {string} module
  * @property {string} action
  * @property {string} summary
+ * @property {string} [purpose]
+ * @property {string} [outcome]
  * @property {string} [description]
  * @property {SamExecutionMeta} execution
  * @property {{ account?: boolean, provider?: string[] }} [auth]
@@ -35,6 +40,11 @@ export const SAM_EXPANSION = 'Systems Automation Machinery';
  * @property {string} [input_schema]
  * @property {string} [output_schema]
  * @property {string[]} [capabilities]
+ * @property {string[]} [accepts]
+ * @property {string[]} [phases]
+ * @property {string[]} [artifacts]
+ * @property {{ id?: string, help?: boolean }|string|null} [skill]
+ * @property {{ available?: boolean, operation?: string }} [preview]
  * @property {{ command?: string[][] }} [cli]
  * @property {{ section?: string, examples?: string[] }} [docs]
  * @property {'stable'|'experimental'|'stub'|'deprecated'} [status]
@@ -67,12 +77,14 @@ export const SAM_EXPANSION = 'Systems Automation Machinery';
  * @typedef {object} SamResult
  * @property {'agentsam.result.v1'} schema
  * @property {string} operation
+ * @property {number} [operation_version]
  * @property {boolean} ok
  * @property {unknown} data
  * @property {SamReceipt} receipt
  * @property {unknown[]} [evidence]
  * @property {unknown[]} [artifacts]
- * @property {{ provider_calls: number, input_tokens?: number, output_tokens?: number, cost_usd?: number }} [usage]
+ * @property {{ provider_calls: number, model_calls?: number, embedding_calls?: number, cost_usd?: number }} [usage]
+ * @property {{ skill?: string|null }} [help]
  * @property {unknown[]} [warnings]
  * @property {unknown[]} [diagnostics]
  * @property {unknown} [error]

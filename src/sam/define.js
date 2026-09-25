@@ -25,9 +25,27 @@ export function defineSamOperation(def) {
     throw new TypeError(`defineSamOperation(${def.id}): summary is required`);
   }
 
+  const skill = typeof def.skill === 'string'
+    ? { id: def.skill, help: true }
+    : def.skill === null
+      ? null
+      : (def.skill || undefined);
+
   return {
     ...def,
     version: def.version ?? 1,
     status: def.status ?? 'stable',
+    purpose: def.purpose || def.description || def.summary,
+    outcome: def.outcome || undefined,
+    accepts: Array.isArray(def.accepts) ? [...def.accepts] : [],
+    phases: Array.isArray(def.phases) ? [...def.phases] : [],
+    artifacts: Array.isArray(def.artifacts) ? [...def.artifacts] : [],
+    skill,
+    execution: {
+      embedding: 'never',
+      provider_spend: def.execution.model === 'never' ? 'none' : 'possible',
+      ...def.execution,
+      lanes: [...def.execution.lanes],
+    },
   };
 }

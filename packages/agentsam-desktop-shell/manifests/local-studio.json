@@ -5,7 +5,19 @@
   "bundle_identifier": "com.inneranimalmedia.local-studio",
   "base_url": "https://agentsam.inneranimalmedia.com",
   "surface": "app",
-  "launch_path": "/",
+  "launch_path": "/agentsam",
+  "routes": {
+    "home": "/agentsam",
+    "login": "/auth/login",
+    "logout": "/api/auth/logout",
+    "next_after_login": "/agentsam"
+  },
+  "auth": {
+    "login_url": "/auth/login?next=/agentsam",
+    "session_check": "/api/auth/session",
+    "oauth_deep_link": "agentsamstudio://callback",
+    "notes": "Product surface is /agentsam. Identity is /auth/login. Public marketing / is never the desktop home."
+  },
   "deep_link_scheme": "agentsamstudio",
   "identity_provider": "inneranimalmedia",
   "icon_set": "icons/local-studio",

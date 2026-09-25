@@ -155,6 +155,7 @@ export class AgentSamClient {
         error: { code: 'sam_operation_not_found', message: `Unknown operation: ${operationId}` },
       };
     }
+    const skillId = typeof def.skill === 'string' ? def.skill : def.skill?.id || null;
     const info = {
       ok: true,
       id: def.id,
@@ -162,11 +163,18 @@ export class AgentSamClient {
       module: def.module,
       action: def.action,
       summary: def.summary,
+      purpose: def.purpose || def.description,
+      outcome: def.outcome || null,
       description: def.description,
       execution: { ...def.execution, lanes: [...def.execution.lanes] },
       auth: def.auth || {},
       risk: def.risk,
+      accepts: def.accepts || [],
+      phases: def.phases || [],
+      artifacts: def.artifacts || [],
       capabilities: def.capabilities || [],
+      skill: skillId,
+      preview: def.preview || null,
       cli: def.cli || {},
       docs: def.docs || {},
       status: def.status || 'stable',

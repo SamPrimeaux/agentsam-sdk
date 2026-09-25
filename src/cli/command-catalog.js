@@ -86,6 +86,8 @@ export function listCliCommands(options = {}) {
  */
 export function printAssistTip(entryOrId, options = {}) {
   if (options.quiet) return;
+  // Never contaminate machine JSON streams.
+  if (options.json || process.argv.includes('--json') || process.argv.includes('--format=json')) return;
   const entry = typeof entryOrId === 'string' ? getCliCommand(entryOrId) : entryOrId;
   if (!entry?.skill) return;
   const write = options.write || ((s) => process.stderr.write(s));

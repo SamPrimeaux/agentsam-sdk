@@ -13,6 +13,26 @@
       "enum": ["workspace", "app", "store", "portal", "brand"]
     },
     "launch_path": { "type": "string", "pattern": "^/.*" },
+    "routes": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "properties": {
+        "home": { "type": "string" },
+        "login": { "type": "string" },
+        "logout": { "type": "string" },
+        "next_after_login": { "type": "string" }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "login_url": { "type": "string" },
+        "session_check": { "type": "string" },
+        "oauth_deep_link": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    },
     "allowed_web_origins": {
       "type": "array",
       "items": { "type": "string", "format": "uri" }

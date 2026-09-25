@@ -23,6 +23,8 @@ import {
   parseEmbeddingChoice,
   suggestScopeWithLocalModel,
 } from '../lib/ingest/discover-models.js';
+import { buildInventory, formatInventoryTree } from '../lib/ingest/inventory.js';
+import { createCodebaseindexJobGraph, advanceJobGraph } from '../lib/ingest/job-graph.js';
 
 function pick(value, label = 'Cancelled') {
   if (isCancel(value)) {
@@ -39,14 +41,6 @@ function splitList(value) {
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
-}
-
-function listTopLevel(root) {
-  try {
-    return fs.readdirSync(root).filter((name) => !name.startsWith('.git'));
-  } catch {
-    return [];
-  }
 }
 
 function localSqlitePath(root) {
@@ -143,18 +137,29 @@ export async function runCodebaseindexIngest(input = {}, ctx = {}) {
   let exclude = Array.isArray(input.exclude) ? [...input.exclude] : [];
   /** @type {object|null} */
   let staged = null;
+  let jobGraph = createCodebaseindexJobGraph({
+    status: 'planned',
+    current: 'material.stage',
+  });
 
   if (materials.length) {
     staged = stageMaterials({ root, materials });
     include = [...new Set([...include.filter((x) => x !== '.'), ...staged.include])];
     if (!include.length) include = staged.include.length ? staged.include : ['.'];
+    jobGraph = advanceJobGraph(jobGraph, 'material.stage');
   }
+
+  const inventory = input.inventory || buildInventory({ root, materials: staged });
+  jobGraph = advanceJobGraph({ ...jobGraph, current: 'inventory.classify' }, 'inventory.classify');
 
   const embedding = input.embedding && typeof input.embedding === 'object'
     ? input.embedding
     : parseEmbeddingChoice(input.embeddingChoice || 'none');
 
   const storage = input.storage === 'postgres' ? 'postgres' : 'sqlite';
+  const vectors = input.vectors || (embedding.provider === 'none' ? 'none'
+    : storage === 'postgres' ? 'pgvector' : 'sqlite_exact');
+
   const config = loadOrBuildConfig(root, {
     include,
     exclude,
@@ -163,12 +168,17 @@ export async function runCodebaseindexIngest(input = {}, ctx = {}) {
     scopeName: input.scope || 'ingest',
     connectionEnv: input.connectionEnv,
   });
+  jobGraph = advanceJobGraph(jobGraph, 'scope.resolve');
+  jobGraph = advanceJobGraph(jobGraph, 'profile.resolve');
+  jobGraph = advanceJobGraph(jobGraph, 'lane.resolve');
 
   const embed = Boolean(input.embed) && embedding.provider !== 'none';
   const store = await openStore(root, config, false);
   try {
     if (input.planOnly) {
       const plan = await planIndex({ root, config, store, embed });
+      jobGraph = advanceJobGraph(jobGraph, 'plan.dry_run');
+      jobGraph.status = 'planned';
       return {
         pipeline: 'sam.codebaseindex.index.run',
         operation: 'codebaseindex.ingest',
@@ -176,6 +186,9 @@ export async function runCodebaseindexIngest(input = {}, ctx = {}) {
         root,
         config_path: CONFIG_PATH,
         staged,
+        inventory,
+        storage_lanes: { metadata: storage, vectors },
+        job_graph: jobGraph,
         plan: plan.receipt,
         embedding: config.embedding,
         storage: config.storage,
@@ -198,6 +211,12 @@ export async function runCodebaseindexIngest(input = {}, ctx = {}) {
       maxInputs: Number(input.maxInputs ?? 200),
       maxCharacters: Number(input.maxCharacters ?? 400000),
     });
+    jobGraph = advanceJobGraph(jobGraph, 'plan.dry_run');
+    jobGraph = advanceJobGraph(jobGraph, 'ast.parse');
+    jobGraph = advanceJobGraph(jobGraph, 'chunks.build');
+    if (embed) jobGraph = advanceJobGraph(jobGraph, 'embedding.generate');
+    jobGraph = advanceJobGraph(jobGraph, 'storage.write');
+    jobGraph = advanceJobGraph(jobGraph, 'generation.verify');
     return {
       pipeline: 'sam.codebaseindex.index.run',
       operation: 'codebaseindex.ingest',
@@ -205,6 +224,9 @@ export async function runCodebaseindexIngest(input = {}, ctx = {}) {
       root,
       config_path: CONFIG_PATH,
       staged,
+      inventory,
+      storage_lanes: { metadata: storage, vectors },
+      job_graph: jobGraph,
       index: result,
       embedding: config.embedding,
       storage: config.storage,
@@ -278,49 +300,71 @@ function parseArgv(argv = []) {
 }
 
 async function runWizard(root, opts) {
-  intro('AgentSam · codebaseindex ingest');
+  intro('AgentSam · codebaseindex (inventory-first)');
+
+  // ① Providers (informational — discovery only)
+  const discovered = await discoverIngestModelOptions();
+  const providerLines = [
+    discovered.ollama?.online
+      ? `ollama online · ${(discovered.ollama.models || []).map((m) => m.name).join(', ')}`
+      : 'ollama offline (optional local embed/assist)',
+    ...(discovered.inventory?.providers || [])
+      .filter((p) => p.configured)
+      .map((p) => `${p.id} credential configured`),
+  ];
+  note(providerLines.join('\n') || 'No remote credentials — AST/text-only remains valid.', '① Connection');
+
+  // ② Materials
   note(
     [
-      'Paste or drag-drop files into the next prompt:',
-      'archives (.zip .tar .tgz), site/build trees, HTML, images, GLB, or code.',
-      'Leave blank to index using the include/exclude you set next.',
+      'Paste or drag-drop archives, site builds, HTML, images, GLB, or folders.',
+      'Leave blank to inventory the repository only.',
     ].join('\n'),
-    'Materials',
+    '② Materials',
   );
-
   const paste = pick(await text({
-    message: 'Paths to ingest (paste/drop; blank = scope paths only)',
+    message: 'Paths to ingest (paste/drop; blank = repo inventory)',
     placeholder: '/path/to/build.tar.gz  ./dist  screenshot.png',
   }), 'Ingest cancelled');
+  const materials = [...new Set([...(opts.paths || []), ...parsePastedPaths(paste)])];
 
-  const pasted = parsePastedPaths(paste);
-  const materials = [...new Set([...(opts.paths || []), ...pasted])];
+  let staged = null;
+  if (materials.length) {
+    staged = stageMaterials({ root, materials });
+  }
 
-  const topLevel = listTopLevel(root);
-  note(
-    topLevel.length
-      ? `Top-level in ${root}:\n${topLevel.slice(0, 40).map((n) => `  ${n}`).join('\n')}${topLevel.length > 40 ? '\n  …' : ''}`
-      : `Repository: ${root}`,
-    'Workspace',
-  );
+  // ③ Inventory / file map BEFORE scope
+  const inventory = buildInventory({ root, materials: staged });
+  note(formatInventoryTree(inventory), '③ Inventory / file map');
+  const continueAfterInventory = pick(await confirm({
+    message: 'Continue to include/exclude using this inventory?',
+    initialValue: true,
+  }));
+  if (!continueAfterInventory) {
+    cancel('Stopped after inventory');
+    return { mode: 'inventory_only', inventory, staged, pipeline: 'sam.codebaseindex.index.run' };
+  }
 
-  const discovered = await discoverIngestModelOptions();
-  let include = opts.include ? splitList(opts.include) : [];
+  // ④ Scope
+  let include = opts.include ? splitList(opts.include) : [...(inventory.suggested.include || [])];
   let exclude = opts.exclude ? splitList(opts.exclude) : [];
 
   if (discovered.assistModels.length) {
     const assistChoice = pick(await select({
-      message: 'Allowlist / denylist',
-      initialValue: 'manual',
+      message: '④ Scope — how to set include/exclude?',
+      initialValue: 'from_inventory',
       options: [
-        { value: 'manual', label: 'Enter include/exclude myself', hint: 'recommended default' },
-        { value: 'assist', label: 'Suggest with local Ollama (optional)', hint: 'uses a chat model from ollama list' },
+        { value: 'from_inventory', label: 'Start from inventory suggestions', hint: 'you still edit' },
+        { value: 'manual', label: 'Enter include/exclude myself', hint: 'blank exclude = exclude nothing' },
+        { value: 'assist', label: 'Suggest with local Ollama (optional)', hint: 'advisory only' },
       ],
     }));
-
-    if (assistChoice === 'assist') {
+    if (assistChoice === 'manual') {
+      include = [];
+      exclude = [];
+    } else if (assistChoice === 'assist') {
       const modelPick = pick(await select({
-        message: 'Local model for scope suggestions',
+        message: 'Local chat model for scope suggestions',
         options: discovered.assistModels.map((row) => ({
           value: row.model,
           label: row.label,
@@ -331,114 +375,102 @@ async function runWizard(root, opts) {
         const suggestion = await suggestScopeWithLocalModel({
           root,
           model: modelPick,
-          topLevel,
+          topLevel: inventory.top_level,
         });
         note(
           [
-            suggestion.rationale || 'Local model suggestion',
+            suggestion.rationale || 'Local model suggestion (advisory)',
             `include: ${(suggestion.include || []).join(', ') || '(none)'}`,
             `exclude: ${(suggestion.exclude || []).join(', ') || '(none)'}`,
           ].join('\n'),
           `Suggested by ${modelPick}`,
         );
-        const accept = pick(await confirm({
-          message: 'Use these suggestions as the starting include/exclude?',
-          initialValue: true,
-        }));
-        if (accept) {
+        if (pick(await confirm({ message: 'Use as starting include/exclude?', initialValue: true }))) {
           include = suggestion.include;
           exclude = suggestion.exclude;
         }
       } catch (error) {
-        note(error?.message || String(error), 'Local assist unavailable — enter paths manually');
+        note(error?.message || String(error), 'Local assist unavailable');
       }
     }
   }
 
-  const includeRaw = pick(await text({
-    message: 'Include paths (comma-separated relative; blank = . when no materials)',
-    initialValue: include.join(',') || (materials.length ? '' : opts.include || ''),
-    placeholder: 'src,packages,docs',
-  }));
-  include = splitList(includeRaw);
+  include = splitList(pick(await text({
+    message: 'Include paths (comma-separated)',
+    initialValue: include.join(',') || (materials.length ? '' : '.'),
+    placeholder: 'src,packages,apps,docs',
+  })));
   if (!include.length && !materials.length) include = ['.'];
 
-  const excludeRaw = pick(await text({
-    message: 'Exclude paths (comma-separated relative; blank = exclude nothing)',
-    initialValue: exclude.join(',') || opts.exclude || '',
-    placeholder: 'node_modules,.git,dist  (only if you want them excluded)',
-  }));
-  exclude = splitList(excludeRaw);
+  exclude = splitList(pick(await text({
+    message: 'Exclude paths (blank = exclude nothing)',
+    initialValue: exclude.join(','),
+    placeholder: 'node_modules,.git,dist — only if you want them out',
+  })));
 
-  const storage = pick(await select({
-    message: 'Storage preference',
-    initialValue: opts.storage || 'sqlite',
-    options: [
-      { value: 'sqlite', label: 'SQLite (local)', hint: '.agentsam/knowledge/index.sqlite' },
-      { value: 'postgres', label: 'Postgres / pgvector', hint: 'requires AGENTSAM_DATABASE_URL' },
-    ],
-  }));
-
-  if (discovered.options.length <= 1) {
-    note(
-      [
-        'No embedding providers discovered from credentials or Ollama.',
-        'Configure keys via `agentsam providers` or start Ollama (`ollama list`).',
-        'Continuing with AST/text-only is always valid.',
-      ].join('\n'),
-      'Embeddings',
-    );
-  } else {
-    const sources = [
-      discovered.ollama?.online ? `ollama online (${(discovered.ollama.models || []).length} tags)` : 'ollama offline',
-      ...(discovered.inventory?.providers || [])
-        .filter((p) => p.configured)
-        .map((p) => `${p.id} credential`),
-    ].join(' · ');
-    note(`Discovered from your machine: ${sources || 'none'}`, 'Model discovery');
-  }
-
+  // ⑤ Embedding profile (discovered)
+  note(
+    discovered.options.length > 1
+      ? `Discovered embed options from credentials / ollama list (${discovered.options.length - 1} providers+local).`
+      : 'No embed providers discovered — AST/text-only is available.',
+    '⑤ Embedding profile',
+  );
   const embeddingChoice = pick(await select({
-    message: 'Embedding model (discovered for this machine)',
-    initialValue: opts.embedding && discovered.options.some((o) => o.value === opts.embedding)
-      ? opts.embedding
-      : 'none',
+    message: 'Embedding model',
+    initialValue: 'none',
     options: discovered.options.map((row) => ({
       value: row.value,
       label: row.label,
       hint: row.hint,
     })),
   }));
-
   const runEmbed = embeddingChoice !== 'none' && pick(await confirm({
     message: embeddingChoice.startsWith('ollama|')
-      ? 'Run local embedding pass with this Ollama model?'
-      : 'Run embedding pass with this provider model? (may cost tokens)',
-    initialValue: Boolean(opts.embed) || embeddingChoice.startsWith('ollama|'),
+      ? 'Run local embedding pass?'
+      : 'Run embedding pass (may cost provider tokens)?',
+    initialValue: embeddingChoice.startsWith('ollama|'),
   }));
 
-  const planOnly = pick(await select({
-    message: 'Execution',
-    initialValue: opts.plan ? 'plan' : 'run',
+  // ⑥ Storage lanes
+  const lane = pick(await select({
+    message: '⑥ Vector / data source lane',
+    initialValue: 'local',
     options: [
-      { value: 'plan', label: 'Plan only', hint: 'config + plan receipt' },
-      { value: 'run', label: 'Run ingest now', hint: 'writes knowledge store' },
+      { value: 'local', label: 'Local SQLite', hint: 'metadata + optional exact vectors · $0 cloud' },
+      { value: 'supabase', label: 'Supabase + node-api / Hyperdrive', hint: 'pgvector ANN · BYO edge template' },
+      { value: 'vectorize', label: 'Cloudflare Vectorize', hint: 'customer CF lane · not IAM host SSOT' },
+    ],
+  }));
+  const storage = lane === 'supabase' ? 'postgres' : 'sqlite';
+  if (lane === 'vectorize') {
+    note('Vectorize lane recorded for plan/receipt; full CF adapter wiring is a follow-up slice.', 'Lane note');
+  }
+  if (lane === 'supabase') {
+    note('Uses AGENTSAM_DATABASE_URL / Hyperdrive-style postgres. Owner IAM already has node-api.', 'Lane note');
+  }
+
+  // ⑦ Dry-run vs execute
+  const planOnly = pick(await select({
+    message: '⑦ Execution',
+    initialValue: opts.plan ? 'plan' : 'plan',
+    options: [
+      { value: 'plan', label: 'Dry-run / plan (writes config + plan receipt, no generation activate)', hint: 'recommended first' },
+      { value: 'run', label: 'Execute ingest now', hint: 'writes knowledge store' },
     ],
   })) === 'plan';
 
   const summary = [
     `root: ${root}`,
     `materials: ${materials.length || 'none'}`,
-    `include: ${include.length ? include.join(', ') : '(from materials)'}`,
-    `exclude: ${exclude.join(', ') || '(none — user left blank)'}`,
-    `storage: ${storage}`,
+    `inventory files: ${inventory.counts.files}`,
+    `include: ${include.join(', ') || '(from materials)'}`,
+    `exclude: ${exclude.join(', ') || '(none)'}`,
     `embedding: ${embeddingChoice}`,
-    `embed pass: ${runEmbed ? 'yes' : 'no'}`,
+    `lane: ${lane} (metadata=${storage})`,
     `mode: ${planOnly ? 'plan' : 'run'}`,
   ].join('\n');
   note(summary, 'Confirm');
-  const ok = pick(await confirm({ message: 'Proceed with codebaseindex.ingest?', initialValue: true }));
-  if (!ok) {
+  if (!pick(await confirm({ message: 'Proceed with codebaseindex.ingest?', initialValue: true }))) {
     cancel('Ingest aborted');
     return null;
   }
@@ -449,10 +481,19 @@ async function runWizard(root, opts) {
     include: include.length ? include : undefined,
     exclude,
     storage,
+    vectors: lane === 'vectorize' ? 'vectorize' : lane === 'supabase' ? 'pgvector' : (runEmbed ? 'sqlite_exact' : 'none'),
     embeddingChoice,
     embed: runEmbed,
     planOnly,
+    inventory,
   });
+
+  if (result?.job_graph) {
+    note(
+      result.job_graph.nodes.map((n) => `${n.status === 'done' ? '✓' : n.status === 'run' ? '→' : '·'} ${n.id}`).join('\n'),
+      'Job graph',
+    );
+  }
 
   outro(planOnly
     ? `Plan ready · pipeline ${result.pipeline}`
