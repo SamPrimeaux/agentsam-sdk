@@ -9,6 +9,7 @@ import {
   preflightToolchain,
   buildGoProduct,
   deployGoCloudflare,
+  verifyGoContainer,
   verifyGoProduct,
   readLatestStatus,
   runGoTests,
