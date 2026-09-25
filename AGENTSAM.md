@@ -2,7 +2,7 @@
 
 This file defines stable behavior for AgentSam agents using the portable SDK. It is not account state, project state, a run log, or a replacement for repository-specific `.agentsamrules`.
 
-**Naming:** AgentSam is the product. **SAM** means **Systems Automation Machinery** — the typed
+**Naming:** AgentSam is the product. **SAM** means **Systematic Autonomous Machinery** — the typed
 operation/execution spine (`sam.invoke`, modules, receipts). In docs and code, `sam` is the
 conventional client variable for that machinery, never a human identity. Prefer “SAM resolves…” /
 “AgentSam executes through SAM…” over anthropomorphic phrasing. Architecture SSOT:

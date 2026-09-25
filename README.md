@@ -5,7 +5,7 @@ security, identity, scaffolding, and delivery capabilities with optional AgentSa
 The interactive CLI can run the same bounded capabilities through an explicitly selected model while
 keeping model choice, reasoning effort, processing tier, credentials, approvals, context, and cost inspectable.
 
-**SAM** = **Systems Automation Machinery** — the execution spine under AgentSam (not a person).
+**SAM** = **Systematic Autonomous Machinery** — the execution spine under AgentSam (not a person).
 The conventional client variable is `sam`:
 
 ```js

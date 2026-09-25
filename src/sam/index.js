@@ -1,5 +1,5 @@
 /**
- * SAM — Systems Automation Machinery
+ * SAM — Systematic Autonomous Machinery
  *
  * AgentSam = product / SDK / CLI
  * SAM = execution architecture underneath AgentSam
@@ -20,3 +20,14 @@ export {
 export { buildSamResult, hashJson } from './result.js';
 export { AgentSamClient, createAgentSamClient } from './client.js';
 export { ensureSeedOperations, SEED_OPERATIONS, resetSeedFlagForTests } from './seed.js';
+export {
+  planAStar,
+  planGoap,
+  ASTAR_ENGINE,
+  GOAP_ENGINE,
+  stableStateKey,
+  cloneState,
+  applyEffects,
+  goalSatisfied,
+  preconditionsMet,
+} from './planning/index.js';

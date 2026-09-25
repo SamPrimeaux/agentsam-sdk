@@ -10,6 +10,7 @@ import {
   brandWorldFromPlan,
   brandGoalFromPlan,
 } from '../../packages/agentsam-brand/src/index.js';
+import { planGoap, GOAP_ENGINE } from '../sam/planning/goap.js';
 import { suggestNextActions } from '../progression/index.js';
 import { createRuntimeActivity } from '../ui/runtime-activity.js';
 
@@ -218,26 +219,23 @@ async function runBrandPlanInner({ scan, resolved, opts }) {
     const world = brandWorldFromPlan(plan);
     const goal = brandGoalFromPlan(plan);
     const actions = brandGoapActions();
-    const sequence = [];
-    const state = { ...world };
-    // greedy applicable actions by cost until goal satisfied or stuck
-    for (let guard = 0; guard < 20; guard += 1) {
-      const done = Object.entries(goal).every(([k, v]) => state[k] === v);
-      if (done) break;
-      const candidates = actions
-        .filter((a) => Object.entries(a.preconditions || {}).every(([k, v]) => state[k] === v))
-        .filter((a) => !sequence.includes(a.id))
-        .sort((a, b) => (a.cost || 1) - (b.cost || 1));
-      if (!candidates.length) break;
-      const next = candidates[0];
-      sequence.push(next.id);
-      Object.assign(state, next.effects || {});
-    }
+    const planned = planGoap({
+      initialState: world,
+      goal,
+      actions,
+      maxExpansions: 10_000,
+    });
     goap = {
-      ok: sequence.length > 0,
-      plan: sequence,
-      cost: sequence.reduce((n, id) => n + (actions.find((a) => a.id === id)?.cost || 0), 0),
-      engine: 'brand-goap-greedy',
+      ok: planned.ok,
+      plan: planned.plan,
+      cost: planned.total_cost ?? planned.cost,
+      engine: planned.engine || GOAP_ENGINE,
+      status: planned.status,
+      expanded_states: planned.expanded_states,
+      generated_states: planned.generated_states,
+      frontier_peak: planned.frontier_peak,
+      elapsed_ms: planned.elapsed_ms,
+      error: planned.error,
     };
   }
   const enriched = attachProgression('brand.plan', plan, opts.json);

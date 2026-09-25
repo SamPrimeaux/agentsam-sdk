@@ -19,7 +19,7 @@ function resolveRoot(input) {
 }
 
 /**
- * AgentSamClient — public facade over Systems Automation Machinery (SAM).
+ * AgentSamClient — public facade over Systematic Autonomous Machinery (SAM).
  *
  * `sam` is the conventional variable name for this client. It is machinery,
  * not a human identity.

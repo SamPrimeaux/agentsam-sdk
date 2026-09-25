@@ -1,10 +1,10 @@
 /**
- * SAM — Systems Automation Machinery
+ * SAM — Systematic Autonomous Machinery
  * @see docs/architecture/SAM_KERNEL.md
  */
 
 export const SAM_RESULT_SCHEMA = 'agentsam.result.v1';
-export const SAM_EXPANSION = 'Systems Automation Machinery';
+export const SAM_EXPANSION = 'Systematic Autonomous Machinery';
 
 /** @typedef {'local'|'remote'|'sandbox'|'platform'} SamLane */
 /** @typedef {'never'|'optional'|'required'} SamModelPolicy */

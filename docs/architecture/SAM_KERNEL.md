@@ -1,8 +1,8 @@
-# SAM Kernel — Systems Automation Machinery
+# SAM Kernel — Systematic Autonomous Machinery
 
 **Status:** LOCKED vocabulary + seed contracts (2026-09-25)  
 **Product:** AgentSam (`@inneranimalmedia/agentsam-sdk`)  
-**Machinery:** SAM = **Systems Automation Machinery**
+**Machinery:** SAM = **Systematic Autonomous Machinery**
 
 This document is the canonical architecture for how AgentSam exposes work. It does **not** replace `AGENTSAM.md` runtime agent law; it defines the developer-facing execution spine.
 
@@ -13,7 +13,7 @@ This document is the canonical architecture for how AgentSam exposes work. It do
 | Term | Meaning |
 |------|---------|
 | **AgentSam** | Product / SDK / CLI / platform |
-| **SAM** | **Systems Automation Machinery** — the execution architecture underneath AgentSam |
+| **SAM** | **Systematic Autonomous Machinery** — the execution architecture underneath AgentSam |
 | **`sam`** | Conventional client variable for that machinery — **not** a human identity or owner name |
 | **`sam.invoke()`** | Universal normalized execution doorway |
 

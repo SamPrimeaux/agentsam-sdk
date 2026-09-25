@@ -64,7 +64,7 @@ export function renderHelpOverview(version, options = {}) {
   const lines = [
     '',
     '  ' + pc.bold('Agent Sam') + ' ' + pc.dim('v' + version),
-    '  ' + pc.dim('SAM = Systems Automation Machinery · help is generated from the command catalog.'),
+    '  ' + pc.dim('SAM = Systematic Autonomous Machinery · help is generated from the command catalog.'),
     '',
     '  ' + pc.bold('Start'),
     '    ' + pc.cyan('agentsam') + '                         ' + pc.dim('enter the interactive experience'),

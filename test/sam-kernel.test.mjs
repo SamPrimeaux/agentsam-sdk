@@ -15,12 +15,12 @@ describe('SAM kernel seed', () => {
     ensureSeedOperations();
   });
 
-  it('names Systems Automation Machinery', () => {
-    assert.equal(SAM_EXPANSION, 'Systems Automation Machinery');
+  it('names Systematic Autonomous Machinery', () => {
+    assert.equal(SAM_EXPANSION, 'Systematic Autonomous Machinery');
     assert.equal(SAM_RESULT_SCHEMA, 'agentsam.result.v1');
   });
 
-  it('registers five seed operations', () => {
+  it('registers seed operations including planning', () => {
     const ids = listSamOperations().map((o) => o.id);
     for (const id of [
       'repository.inspect',
@@ -29,10 +29,13 @@ describe('SAM kernel seed', () => {
       'terminal.exec',
       'cad.blender.inspect',
       'codebaseindex.ingest',
+      'planning.astar',
+      'planning.goap',
     ]) {
       assert.ok(ids.includes(id), `missing ${id}`);
     }
     assert.equal(getSamOperation('repository.inspect')?.execution.model, 'never');
+    assert.equal(getSamOperation('planning.astar')?.execution.model, 'never');
     assert.equal(getSamOperation('codebaseindex.ingest')?.execution.model, 'optional');
   });
 

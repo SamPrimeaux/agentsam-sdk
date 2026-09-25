@@ -5,6 +5,8 @@ import { securityScanOp } from './operations/security-scan.js';
 import { terminalExecOp } from './operations/terminal-exec.js';
 import { cadBlenderInspectOp } from './operations/cad-blender-inspect.js';
 import { codebaseindexIngestOp } from './operations/codebaseindex-ingest.js';
+import { planningAstarOp } from './operations/planning-astar.js';
+import { planningGoapOp } from './operations/planning-goap.js';
 
 export const SEED_OPERATIONS = [
   repositoryInspect,
@@ -13,12 +15,14 @@ export const SEED_OPERATIONS = [
   terminalExecOp,
   cadBlenderInspectOp,
   codebaseindexIngestOp,
+  planningAstarOp,
+  planningGoapOp,
 ];
 
 let seeded = false;
 
 /**
- * Register the five seed SAM operations (idempotent).
+ * Register seed SAM operations (idempotent).
  * Handlers reuse existing capability implementations — no duplicate machinery.
  */
 export function ensureSeedOperations() {
