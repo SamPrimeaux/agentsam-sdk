@@ -42,7 +42,8 @@ export function runGoBuild(runtimeRoot, {
 } = {}) {
   const binDir = outDir || path.join(runtimeRoot, '..', '.agentsam', 'go-build');
   fs.mkdirSync(binDir, { recursive: true });
-  const out = path.join(binDir, 'agentsam-go-worker');
+  const suffix = (commit || 'dev').slice(0, 12) + '-' + process.pid + '-' + randomBytes(3).toString('hex');
+  const out = path.join(binDir, 'agentsam-go-worker-' + suffix);
   const res = spawn('go', [
     'build',
     '-trimpath',
