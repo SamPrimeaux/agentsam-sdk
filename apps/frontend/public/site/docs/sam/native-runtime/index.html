@@ -87,30 +87,32 @@
 </section>
 
 <section data-cms-section="modes" id="modes">
-  <h2>Three execution modes</h2>
-  <h3 id="local">Local native</h3>
-  <p>Run the Go process directly for local machine work. AgentSam verifies the built binary by booting it, probing the contract, and requiring clean shutdown.</p>
+  <h2>Different ownership modes, one shared contract</h2>
+  <h3 id="local">Local native development</h3>
+  <p>Maintainers can run the Go process directly. AgentSam verifies the built binary by booting it, probing the contract, matching source identity, and requiring clean shutdown.</p>
   <h3 id="cloudflare-dev">Cloudflare development</h3>
   <p>Wrangler runs the Worker edge adapter with the GO_RUNTIME Container binding. This mode is for development, not final production proof.</p>
-  <h3 id="production">Production</h3>
-  <p>The normal AgentSam deploy command builds and verifies the native binary and Linux container, deploys with Wrangler, resolves Cloudflare deployment identity, probes the live service, then updates the product registry.</p>
-  <div class="code"><button class="copy-code">Copy</button><pre>agentsam go --cloudflare agentsam-go-worker</pre></div>
+  <h3 id="production">Hosted service and advanced self-host</h3>
+  <p>Normal AgentSam users consume the official hosted service where appropriate; they do not deploy it just to use AgentSam. Advanced self-hosters install the separate Go service artifact and deploy only to an explicitly selected Cloudflare account. IAM product registration is a separate guarded maintainer path.</p>
+  <div class="code"><button class="copy-code">Copy</button><pre>agentsam go --cloudflare agentsam-go-worker --dry-run --account &lt;account-id&gt;</pre></div>
 </section>
 
 <section data-cms-section="proof" id="proof">
   <h2>What counts as shipped</h2>
-  <p>A source tree, Dockerfile, or deployment adapter is not deployment proof. A production receipt is accepted only after the externally reachable service reports healthy and the native health response identifies the intended source commit.</p>
+  <p>A source tree, Dockerfile, or deployment adapter is not deployment proof. A production receipt is accepted only after the externally reachable service reports healthy and both edge and native health identify the intended source identity.</p>
   <h3 id="evidence">Evidence captured</h3>
   <ul>
-    <li>source commit and Go version</li>
+    <li>Git or npm package source identity plus deterministic source digest</li>
     <li>native binary SHA-256 digest</li>
     <li>linux/amd64 nonroot container verification</li>
+    <li>explicit Cloudflare account identity</li>
     <li>Cloudflare deployment ID and Worker version ID</li>
     <li>deployed URL and timestamped endpoint probes</li>
-    <li>agentsam_products and asset_relationships registration</li>
+    <li>local AgentSam registry for self-host deployments</li>
+    <li>agentsam_products / asset_relationships only for guarded IAM official releases</li>
   </ul>
   <h3 id="next">What comes next</h3>
-  <p>The native runtime graduates next into workspace filesystem execution, file watching, Merkle updates, health/capability state, cancellable jobs, and PTY coordination. Go implements shared AgentSam contracts rather than inventing parallel schemas.</p>
+  <p>The shared native core graduates next into workspace filesystem execution, file watching, Merkle updates, health/capability state, cancellable jobs, and PTY coordination. agentsamd reuses that core as the user-machine runtime; the hosted Go Worker remains a separate service with a different ownership boundary.</p>
 </section>
         </article>
       </main>

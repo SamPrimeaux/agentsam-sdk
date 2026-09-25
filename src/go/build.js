@@ -121,7 +121,7 @@ export function runNativeRuntimeProbe(binary, {
   spawn = spawnSync,
 } = {}) {
   if (!binary || !fs.existsSync(binary)) return { ok: false, error: 'binary_missing', results: {} };
-  const res = spawn(process.execPath, [NATIVE_PROBE_RUNNER, binary, expectedSource, expectedCommit], {
+  const res = spawn(process.execPath, [NATIVE_PROBE_RUNNER, binary, expectedSource || '', expectedCommit || ''], {
     encoding: 'utf8',
     maxBuffer: 4 * 1024 * 1024,
   });

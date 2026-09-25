@@ -2,80 +2,143 @@
 
 ## Purpose
 
-AgentSam's Go runtime is the native machine-execution layer for Systematic Autonomous Machinery. It is not a second AgentSam product model and it is not a replacement for the TypeScript/protocol authority.
+Go is AgentSam's native deterministic machinery layer. It is reused by two different ownership surfaces:
 
-The current production topology is:
+- agentsam-go-worker — an independently deployed hosted/self-host service.
+- agentsamd — the user-machine runtime that products can share.
+
+Those are not the same product. They should reuse protocol-compatible native core code without sharing deployment authority.
+
+The TypeScript/protocol layer remains canonical contract authority.
+
+## Current hosted-service topology
 
     AgentSam / SAM
           |
           v
     canonical runtime protocol
           |
-      +---+------------------+
-      |                      |
-      v                      v
-    local native Go      Cloudflare Worker
-    process                  |
-                             v
-                        Go Container
+          v
+    Cloudflare Worker
+          |
+          v
+      Go Container
 
-The Worker owns edge routing. The container owns native Go execution.
+The Worker owns edge routing and deploy-time identity. The container owns native Go execution.
+
+Normal AgentSam users consume the official hosted service where appropriate. They do not need to deploy this Worker just to use AgentSam.
+
+## User-machine topology
+
+    Local Studio ──┐
+    CAD Creator ───┼──► agentsamd
+    Ecommerce ─────┘       |
+                           ├─ filesystem
+                           ├─ watcher
+                           ├─ Merkle
+                           ├─ jobs
+                           ├─ PTY/process
+                           └─ activity
+
+Products declare runtime capabilities. They do not each clone a complete daemon.
 
 ## Contract authority
 
-TypeScript/protocol remains canonical contract authority. Go implements those contracts.
+TypeScript/protocol remains canonical. Go implements shared contracts.
 
 Consequences:
 
-- no Go-only public ErrorEnvelope
-- no Go-only activity vocabulary
-- no Go-only planning semantics
-- no browser contract moves into Go
-- cross-language behavior is judged by shared fixtures, not approximate similarity
+- no Go-only public ErrorEnvelope,
+- no Go-only activity vocabulary,
+- no Go-only planning semantics,
+- no browser contract moves into Go,
+- shared behavior is judged by conformance fixtures.
 
-Rust/Tauri remains responsible for desktop bootstrap/native-shell concerns: folder selection, keychain, application lifecycle, deep links, updating, notifications, and launching/supervising the local daemon.
+Rust/Tauri remains responsible for desktop-shell concerns such as folder selection, keychain, application lifecycle, updater, deep links, and launching/supervising agentsamd.
 
-## Current capabilities
+## Current Go service capabilities
 
-The deployed native runtime currently owns:
+The deployed service currently owns:
 
-- health/build identity
-- runtime inventory
-- capability inventory
-- deterministic SHA-256
-- deterministic static inspection
-- canonical AgentSam ErrorEnvelope-compatible request failures
+- health/build identity,
+- runtime inventory,
+- capability inventory,
+- deterministic SHA-256,
+- deterministic static inspection,
+- canonical AgentSam ErrorEnvelope-compatible request failures.
 
-The production Worker exposes edge health separately so an operator can distinguish Worker-edge availability from native-container health.
+The Worker exposes edge health separately so operators can distinguish edge availability from native-container health.
 
 ## Source and build identity
 
-The canonical AgentSam build embeds the source commit and build timestamp into the Go binary with linker flags.
+Source identity must remain truthful across development and distribution.
 
-The build proof requires:
+Maintainer checkout:
 
-- go test ./...
-- go vet ./...
-- native binary build
-- SHA-256 binary digest
-- native process boot
-- health/runtime/capabilities/hash/inspect probes
-- canonical malformed-request ErrorEnvelope
-- graceful process shutdown
+    git:<commit-sha>
 
-The Docker build consumes the same generated source identity. The verification image must be linux/amd64 and nonroot.
+Published service artifact:
 
-The live deployment is not accepted merely because Wrangler returned success. External health must report the intended source commit.
+    npm:@inneranimalmedia/agentsam-go-worker@<version>
 
-## Cloudflare production lifecycle
+Fallback only when neither authority is available:
 
-The canonical command is:
+    tree:<deterministic-source-digest>
 
-    agentsam go --cloudflare agentsam-go-worker
+The build receipt also records the deterministic source-tree digest.
+
+The local/native build proof requires:
+
+- go test ./...,
+- go vet ./...,
+- native binary build,
+- SHA-256 binary digest,
+- native process boot,
+- source identity match,
+- health/runtime/capabilities/hash/inspect probes,
+- canonical malformed-request ErrorEnvelope,
+- graceful shutdown.
+
+The Linux verification container receives the same intended source identity and must be linux/amd64 and nonroot.
+
+The live deployment is not accepted merely because Wrangler returned success. External edge and native health must report the intended source identity.
+
+## Distribution boundary
+
+The Go service is packaged independently:
+
+    @inneranimalmedia/agentsam-go-worker
+
+The SDK does not assume its own npm tarball contains apps/agentsam-go-worker.
+
+Installed-package discovery resolves the service package through Node package resolution. User state belongs under the caller's .agentsam directory; the package under node_modules remains source-only.
+
+## Cloudflare account authority
+
+Before any self-host or official live deployment AgentSam asks Wrangler for identity:
+
+    wrangler whoami --json
+
+The deploy path fails closed when authentication is missing, when no account is available, or when multiple accounts exist without an explicit selection.
+
+The chosen account is observable and bound into the Wrangler process with CLOUDFLARE_ACCOUNT_ID.
+
+No distributed package contains an IAM production credential.
+
+## Self-host lifecycle
+
+Self-host is an advanced opt-in path:
+
+    agentsam go --cloudflare agentsam-go-worker \
+      --account <user-cloudflare-account-id> \
+      --yes
 
 The sequence is:
 
-    clean source
+    installed or development service source
+       |
+       v
+    source identity
        |
        v
     Go tests + vet
@@ -93,6 +156,9 @@ The sequence is:
     container boot/probes/shutdown
        |
        v
+    explicit USER Cloudflare account
+       |
+       v
     Wrangler deploy
        |
        v
@@ -105,17 +171,52 @@ The sequence is:
     deployment receipt
        |
        v
-    agentsam_products + asset_relationships
+    local AgentSam registry
 
-Dry run uses Wrangler deploy --dry-run and does not update the live product registry. Skip-deploy is explicit and cannot be considered production evidence.
+Self-host never mutates inneranimalmedia-business.
+
+## IAM official-release lifecycle
+
+IAM product registration is a separate authority:
+
+    AGENTSAM_IAM_OFFICIAL_RELEASE=1 \
+      agentsam go --cloudflare agentsam-go-worker \
+      --official-release \
+      --account <iam-account-id> \
+      --yes
+
+Requirements:
+
+- maintainer/development source,
+- explicit IAM release guard,
+- explicit IAM Cloudflare account,
+- healthy live probes,
+- deployment/version identity,
+- only then remote agentsam_products and asset_relationships projection.
+
+The IAM D1 adapter lives in official-registry.js specifically so generic self-host deployment does not import IAM registration as a default side effect.
+
+## Dry run
+
+Dry run is:
+
+    agentsam go --cloudflare agentsam-go-worker \
+      --dry-run \
+      --account <cloudflare-account-id>
+
+It still performs Go build/probes, Linux container build/probes, Wrangler identity/account resolution, and Wrangler deploy --dry-run.
+
+It does not create a live deployment and does not mutate IAM D1.
+
+Skip-deploy is a different explicit local-only mode and cannot be used as deployment proof.
 
 ## Errors and recovery
 
-Go preserves native evidence when a native failure exists, but public failures classify through AgentSam's canonical ErrorEnvelope. The Go runtime must not add competing public schemas such as GoErrorV1.
+Go preserves native evidence when present, but public failures classify through AgentSam's canonical ErrorEnvelope.
 
-Recovery remains centralized in AgentSam. ErrorEnvelope feeds the same planRecovery / agentsam.recovery.v1 semantics consumed by other runtimes. Go does not own an independent retry brain.
+Recovery remains centralized in AgentSam. ErrorEnvelope feeds planRecovery / agentsam.recovery.v1 semantics used by other runtimes. Go does not own an independent retry brain.
 
-Unsafe writes with unknown side effects must reconcile before retry. Provider/model fallback must follow the same semantic-compatibility rules as the rest of AgentSam.
+Unsafe writes with unknown side effects must reconcile before retry. Provider/model fallback follows shared semantic-compatibility rules.
 
 ## Activity
 
@@ -125,7 +226,7 @@ Near-term events include runtime.started, filesystem.read, filesystem.write, wat
 
 ## Graduation toward agentsamd
 
-The current server is deliberately reusable rather than Cloudflare-only. The runtime core should progressively own:
+The reusable native core should progressively own:
 
     runtime/
       workspace/
@@ -137,43 +238,45 @@ The current server is deliberately reusable rather than Cloudflare-only. The run
       runtimeinfo/
       health/
 
-Executables/adapters then reuse that core:
+Executables/adapters reuse that core:
 
     cmd/server
     cmd/agentsamd
 
-The same core is intended for Cloudflare Container, local daemon, and remote daemon execution. Do not fork implementations per target.
+The same core can support Cloudflare Container, local daemon, and remote daemon execution. Deployment/auth/ownership adapters remain target-specific.
 
 ## Conformance
 
-Where TypeScript and Go implement the same protocol, the same fixtures must validate both.
+Where TypeScript and Go implement the same protocol, use the same fixtures.
 
 First conformance targets:
 
-- runtime response shape
-- SHA-256 result
-- ErrorEnvelope classification for invalid input
-- path containment
-- version conflict semantics
+- runtime response shape,
+- SHA-256 result,
+- ErrorEnvelope classification for invalid input,
+- path containment,
+- version conflict semantics.
 
-Then, as native features land:
+Then:
 
-- file-watch events
-- Merkle roots/deltas
-- workspace filesystem behavior
-- cancellable job behavior
+- file-watch events,
+- Merkle roots/deltas,
+- workspace filesystem behavior,
+- cancellable job behavior.
 
 A language-specific reinterpretation of a canonical contract is a failure.
 
 ## Next native capabilities
 
-After the deployed seed remains boring and repeatable, graduate capabilities in this order:
+After the deployed service seed remains boring and repeatable, graduate capabilities in this order:
 
-1. workspace filesystem behind workspace-fs.v1
-2. native filesystem watcher
-3. SHA/Merkle branch updates
-4. runtime capability/health state
-5. cancellable durable jobs
-6. PTY coordination where it belongs
+1. workspace filesystem behind workspace-fs.v1,
+2. native filesystem watcher,
+3. SHA/Merkle branch updates,
+4. runtime capability/health state,
+5. cancellable durable jobs,
+6. PTY coordination where it belongs.
 
 A* remains TypeScript-canonical until real workload measurements justify a native planner.
+
+See AGENTSAM_DISTRIBUTION_OWNERSHIP.md for package, credential, registry, and telemetry ownership boundaries.

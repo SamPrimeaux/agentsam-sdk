@@ -22,11 +22,19 @@
   "deployment": {
     "adapter": "cloudflare",
     "mode": "worker-container",
-    "wrangler_config": "./wrangler.jsonc"
+    "wrangler_config": "./wrangler.jsonc",
+    "authority": "explicit-cloudflare-account"
   },
   "product": {
     "slug": "agentsam-go-worker",
     "kind": "service",
-    "registry": "agentsam_products"
+    "registry": "local-by-default",
+    "official_registry": "agentsam_products",
+    "official_registry_only": true
+  },
+  "distribution": {
+    "package": "@inneranimalmedia/agentsam-go-worker",
+    "normal_user": "official-hosted-service",
+    "self_host": "advanced-opt-in"
   }
 }

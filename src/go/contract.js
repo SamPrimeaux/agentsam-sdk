@@ -15,15 +15,23 @@ const PACKAGE_TEMPLATE = {
     worker: './worker/src/index.js',
   },
   capabilities: ['hash', 'inspect', 'runtime', 'capabilities'],
+  distribution: {
+    package: '@inneranimalmedia/agentsam-go-worker',
+    normal_user: 'official-hosted-service',
+    self_host: 'advanced-opt-in',
+  },
   deployment: {
     adapter: 'cloudflare',
     mode: 'worker-container',
     wrangler_config: './wrangler.jsonc',
+    authority: 'explicit-cloudflare-account',
   },
   product: {
     slug: DEFAULT_PRODUCT,
     kind: 'service',
-    registry: 'agentsam_products',
+    registry: 'local-by-default',
+    official_registry: 'agentsam_products',
+    official_registry_only: true,
   },
 };
 
@@ -110,9 +118,6 @@ export function preflightToolchain({ requireDocker = false, productRoot = null }
   } catch (e) {
     push('docker', false, e.message);
   }
-
-  const token = Boolean(process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN);
-  push('cloudflare_auth', token || Boolean(process.env.CLOUDFLARE_ACCOUNT_ID), token ? 'token_present' : 'account_or_token_missing');
 
   const failed = checks.filter((c) => {
     if (c.ok) return false;
