@@ -149,7 +149,7 @@ const receipt = {
   cloudflare_dry_run: null,
 };
 
-const accountId = String(process.env.AGENTSAM_GO_DRY_RUN_ACCOUNT || '').trim();
+const accountId = String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim();
 if (accountId) {
   const dryRunResult = run(cli, [
     'go',
