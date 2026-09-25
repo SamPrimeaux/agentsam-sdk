@@ -150,18 +150,15 @@ export function FilesStage({ tab }: { tab: SideTab }) {
     let cancelled = false;
     (async () => {
       const { RuntimeFilesystemAdapter } = await import("@/lib/work/workspace-fs");
-      const adapter = new RuntimeFilesystemAdapter(project.runtimeBaseUrl!);
-      const listed = await adapter.list(".");
-      // Prefer recursive listing when the runtime supports it.
-      const listedDeep = await fetch(
-        `${project.runtimeBaseUrl!.replace(/\/$/, "")}/v1/fs/list?path=.&recursive=1`,
-      )
-        .then((r) => r.json())
-        .catch(() => null);
-      const source = listedDeep && listedDeep.ok ? listedDeep : listed;
+      const adapter = new RuntimeFilesystemAdapter(
+        project.runtimeBaseUrl!,
+        project.runtimeCapability,
+      );
+      const listed = await adapter.list(".", true);
+      const source = listed;
       if (cancelled) return;
       if (!source.ok) {
-        setFsError(`${source.error || listed.error}. Run: agentsam start-local`);
+        setFsError(`${source.error}. Run: agentsam start-local`);
         return;
       }
       setFsError(null);
@@ -184,7 +181,7 @@ export function FilesStage({ tab }: { tab: SideTab }) {
     return () => {
       cancelled = true;
     };
-  }, [isFilesystem, project.id, project.runtimeBaseUrl, project.workspaceRoot]);
+  }, [isFilesystem, project.id, project.runtimeBaseUrl, project.runtimeCapability, project.workspaceRoot]);
 
   useEffect(() => {
     if (!isFilesystem || !selected || !project.runtimeBaseUrl) return;
@@ -192,7 +189,10 @@ export function FilesStage({ tab }: { tab: SideTab }) {
     let cancelled = false;
     (async () => {
       const { RuntimeFilesystemAdapter } = await import("@/lib/work/workspace-fs");
-      const adapter = new RuntimeFilesystemAdapter(project.runtimeBaseUrl!);
+      const adapter = new RuntimeFilesystemAdapter(
+        project.runtimeBaseUrl!,
+        project.runtimeCapability,
+      );
       const doc = await adapter.read(selected.path);
       if (cancelled) return;
       if (!doc.ok) {
@@ -212,7 +212,61 @@ export function FilesStage({ tab }: { tab: SideTab }) {
     return () => {
       cancelled = true;
     };
-  }, [isFilesystem, selected?.id, selected?.path, project.runtimeBaseUrl]);
+  }, [isFilesystem, selected?.id, selected?.path, project.runtimeBaseUrl, project.runtimeCapability]);
+
+  // External change detection: re-read version; never silent-overwrite on save.
+  useEffect(() => {
+    if (!isFilesystem || !selected || !project.runtimeBaseUrl || !project.runtimeCapability) return;
+    let cancelled = false;
+    const check = async () => {
+      const known = versions[selected.path];
+      if (!known) return;
+      const { RuntimeFilesystemAdapter } = await import("@/lib/work/workspace-fs");
+      const adapter = new RuntimeFilesystemAdapter(
+        project.runtimeBaseUrl!,
+        project.runtimeCapability,
+      );
+      const doc = await adapter.read(selected.path);
+      if (cancelled || !doc.ok) return;
+      if (doc.version !== known) {
+        if (saveState === "modified" || saveState === "saving") {
+          setSaveState("conflict");
+          setConflict("Disk changed while this buffer was dirty. Reload or overwrite intentionally.");
+        } else {
+          setVersions((v) => ({ ...v, [selected.path]: doc.version }));
+          upsertFile(project.id, {
+            ...selected,
+            content: doc.content,
+            updatedAt: doc.mtime || Date.now(),
+            origin: "editor",
+          });
+          setSaveState("saved");
+          setConflict(null);
+        }
+      }
+    };
+    const onFocus = () => {
+      void check();
+    };
+    window.addEventListener("focus", onFocus);
+    const timer = window.setInterval(() => {
+      void check();
+    }, 2500);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", onFocus);
+      window.clearInterval(timer);
+    };
+  }, [
+    isFilesystem,
+    selected?.path,
+    selected?.id,
+    versions,
+    saveState,
+    project.runtimeBaseUrl,
+    project.runtimeCapability,
+    project.id,
+  ]);
 
   const tree = useMemo(() => buildTree(project.files), [project.files]);
 
@@ -229,7 +283,10 @@ export function FilesStage({ tab }: { tab: SideTab }) {
     if (!project.runtimeBaseUrl) return;
     setSaveState("saving");
     const { RuntimeFilesystemAdapter } = await import("@/lib/work/workspace-fs");
-    const adapter = new RuntimeFilesystemAdapter(project.runtimeBaseUrl);
+    const adapter = new RuntimeFilesystemAdapter(
+      project.runtimeBaseUrl,
+      project.runtimeCapability,
+    );
     const expected = overwrite ? null : versions[file.path];
     const result = await adapter.write(file.path, value, expected, overwrite);
     if (!result.ok) {
@@ -350,7 +407,10 @@ export function FilesStage({ tab }: { tab: SideTab }) {
                     onClick={async () => {
                       if (!project.runtimeBaseUrl || !selected) return;
                       const { RuntimeFilesystemAdapter } = await import("@/lib/work/workspace-fs");
-                      const adapter = new RuntimeFilesystemAdapter(project.runtimeBaseUrl);
+                      const adapter = new RuntimeFilesystemAdapter(
+                        project.runtimeBaseUrl,
+                        project.runtimeCapability,
+                      );
                       const doc = await adapter.read(selected.path);
                       if (doc.ok) {
                         setVersions((v) => ({ ...v, [selected.path]: doc.version }));
@@ -401,7 +461,10 @@ export function FilesStage({ tab }: { tab: SideTab }) {
                   if (isFilesystem && project.runtimeBaseUrl) {
                     void (async () => {
                       const { RuntimeFilesystemAdapter } = await import("@/lib/work/workspace-fs");
-                      const adapter = new RuntimeFilesystemAdapter(project.runtimeBaseUrl!);
+                      const adapter = new RuntimeFilesystemAdapter(
+                        project.runtimeBaseUrl!,
+                        project.runtimeCapability,
+                      );
                       await adapter.remove(selected.path, versions[selected.path]);
                       deleteFile(project.id, selected.id);
                       setMobileList(true);
@@ -467,7 +530,10 @@ export function FilesStage({ tab }: { tab: SideTab }) {
               if (isFilesystem && project.runtimeBaseUrl) {
                 void (async () => {
                   const { RuntimeFilesystemAdapter } = await import("@/lib/work/workspace-fs");
-                  const adapter = new RuntimeFilesystemAdapter(project.runtimeBaseUrl!);
+                  const adapter = new RuntimeFilesystemAdapter(
+                    project.runtimeBaseUrl!,
+                    project.runtimeCapability,
+                  );
                   const created = await adapter.create(next, "");
                   if (!created.ok) {
                     setFsError(created.error);

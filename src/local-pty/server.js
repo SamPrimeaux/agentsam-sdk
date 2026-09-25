@@ -9,6 +9,15 @@ import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { createLocalFilesystem } from '../local-fs/index.js';
 import { resolveContainedPath } from '../local-fs/paths.js';
+import { getRepositoryFreshness } from '../local-fs/freshness.js';
+import {
+  mintWorkspaceCapability,
+  writeLocalRuntimeRecord,
+  extractCapability,
+  isAllowedStudioOrigin,
+  isLoopbackRemote,
+  WORKSPACE_CAPABILITY_HEADER,
+} from '../local-fs/capability.js';
 
 const DEFAULT_PORT = 3099;
 
@@ -39,15 +48,30 @@ function readJsonBody(req) {
   });
 }
 
-function sendJson(res, status, body) {
-  const payload = JSON.stringify(body);
-  res.writeHead(status, {
+/**
+ * @param {import('http').IncomingMessage} req
+ * @param {import('http').ServerResponse} res
+ * @param {number} status
+ * @param {object} body
+ * @param {{ allowOrigin?: string|null }} [opts]
+ */
+function sendJson(req, res, status, body, opts = {}) {
+  const origin = typeof req.headers.origin === 'string' ? req.headers.origin : '';
+  const allowOrigin = opts.allowOrigin !== undefined
+    ? opts.allowOrigin
+    : (isAllowedStudioOrigin(origin) ? (origin || null) : null);
+  /** @type {Record<string, string>} */
+  const headers = {
     'Content-Type': 'application/json; charset=utf-8',
-    'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-  });
-  res.end(payload);
+    'Access-Control-Allow-Headers': `Content-Type, Authorization, ${WORKSPACE_CAPABILITY_HEADER}`,
+  };
+  if (allowOrigin) {
+    headers['Access-Control-Allow-Origin'] = allowOrigin;
+    headers.Vary = 'Origin';
+  }
+  res.writeHead(status, headers);
+  res.end(JSON.stringify(body));
 }
 
 export function ensureNodePtySpawnHelperExecutable(options = {}) {
@@ -160,92 +184,157 @@ export function attachLocalPtySession({ ws, pty, shell, cwd, cols = 80, rows = 2
  */
 export async function startLocalPtyServer(opts = {}) {
   const pty = await loadPty(opts.pty);
-  const cwd = opts.cwd || process.cwd();
+  const cwd = path.resolve(opts.cwd || process.cwd());
   const requestedPort = opts.port === 0 ? 0 : parsePort(opts.port ?? process.env.PTY_PORT, DEFAULT_PORT);
   const host = opts.host || '127.0.0.1';
-  const shell = shellForPlatform();
+  if (host !== '127.0.0.1' && host !== 'localhost' && host !== '::1') {
+    throw new Error('local PTY/FS must bind loopback only (127.0.0.1)');
+  }
+  const shell = opts.shell || shellForPlatform();
   const filesystem = createLocalFilesystem(cwd);
+  // Capability minted after bind so port is known; provisional id first.
+  /** @type {ReturnType<typeof mintWorkspaceCapability>|null} */
+  let capability = null;
 
   const httpServer = http.createServer(async (req, res) => {
     const url = new URL(req.url || '/', `http://${host}`);
     const pathname = url.pathname;
+    const origin = typeof req.headers.origin === 'string' ? req.headers.origin : '';
 
     if (req.method === 'OPTIONS') {
+      if (!isAllowedStudioOrigin(origin)) {
+        res.writeHead(403);
+        res.end();
+        return;
+      }
       res.writeHead(204, {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': origin || 'http://127.0.0.1:8080',
         'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': `Content-Type, Authorization, ${WORKSPACE_CAPABILITY_HEADER}`,
+        Vary: 'Origin',
       });
       res.end();
       return;
     }
 
     if (pathname === '/health') {
-      sendJson(res, 200, {
+      sendJson(req, res, 200, {
         ok: true,
         service: 'agentsam-local-pty',
         cwd,
+        root: cwd,
         port: Number(httpServer.address()?.port || requestedPort),
         shell,
         filesystem: true,
         filesystem_engine: filesystem.engine,
+        workspace_id: capability?.workspace_id || null,
+        capability_required: true,
+        binding: host,
       });
       return;
+    }
+
+    // Bootstrap: loopback-only claim of the authorized workspace capability.
+    // Does NOT accept an arbitrary root — root is always the process-bound cwd.
+    if (pathname === '/v1/workspace/bootstrap' && req.method === 'GET') {
+      if (!isLoopbackRemote(req)) {
+        return sendJson(req, res, 403, {
+          ok: false,
+          error: 'loopback_required',
+          code: 'WORKSPACE_BOOTSTRAP_DENIED',
+        });
+      }
+      if (origin && !isAllowedStudioOrigin(origin)) {
+        return sendJson(req, res, 403, {
+          ok: false,
+          error: 'origin_not_allowed',
+          code: 'WORKSPACE_BOOTSTRAP_DENIED',
+        }, { allowOrigin: null });
+      }
+      const requestedRoot = url.searchParams.get('root');
+      if (requestedRoot) {
+        const resolved = path.resolve(requestedRoot);
+        if (resolved !== cwd) {
+          return sendJson(req, res, 403, {
+            ok: false,
+            error: 'root_not_authorized',
+            code: 'WORKSPACE_ROOT_MISMATCH',
+            message: 'Cannot claim an arbitrary path. Start the runtime from the desired workspace root.',
+            authorized_root: cwd,
+            requested_root: resolved,
+          });
+        }
+      }
+      return sendJson(req, res, 200, {
+        ok: true,
+        ...capability,
+        freshness: getRepositoryFreshness(cwd),
+      });
+    }
+
+    if (pathname === '/v1/freshness' && req.method === 'GET') {
+      const gate = requireCapability(req, res, capability);
+      if (!gate) return;
+      return sendJson(req, res, 200, getRepositoryFreshness(cwd));
     }
 
     if (pathname === '/v1/fs' || pathname === '/v1/fs/') {
-      sendJson(res, 200, {
+      const gate = requireCapability(req, res, capability);
+      if (!gate) return;
+      return sendJson(req, res, 200, {
         ok: true,
         root: filesystem.root,
+        workspace_id: capability.workspace_id,
         engine: filesystem.engine,
         endpoints: ['list', 'stat', 'read', 'write', 'create', 'rename', 'remove', 'mkdir'],
       });
-      return;
     }
 
     if (pathname.startsWith('/v1/fs/')) {
+      const gate = requireCapability(req, res, capability);
+      if (!gate) return;
       try {
         const action = pathname.slice('/v1/fs/'.length).replace(/\/$/, '');
         const qPath = url.searchParams.get('path') || '.';
         if (req.method === 'GET' && action === 'list') {
           const recursive = url.searchParams.get('recursive') === '1' || url.searchParams.get('recursive') === 'true';
-          return sendJson(res, 200, filesystem.list(qPath, { recursive, maxDepth: 5 }));
+          return sendJson(req, res, 200, filesystem.list(qPath, { recursive, maxDepth: 5 }));
         }
         if (req.method === 'GET' && action === 'stat') {
-          return sendJson(res, 200, filesystem.stat(qPath));
+          return sendJson(req, res, 200, filesystem.stat(qPath));
         }
         if (req.method === 'GET' && action === 'read') {
-          return sendJson(res, 200, filesystem.read(qPath));
+          return sendJson(req, res, 200, filesystem.read(qPath));
         }
         if (req.method === 'POST' || req.method === 'PUT' || req.method === 'DELETE') {
           const body = await readJsonBody(req);
           if (action === 'write') {
-            return sendJson(res, 200, filesystem.write(body.path || qPath, body.content ?? '', {
+            return sendJson(req, res, 200, filesystem.write(body.path || qPath, body.content ?? '', {
               expectedVersion: body.expectedVersion ?? body.expected_version,
               overwrite: Boolean(body.overwrite),
             }));
           }
           if (action === 'create') {
-            return sendJson(res, 200, filesystem.create(body.path || qPath, body.content ?? ''));
+            return sendJson(req, res, 200, filesystem.create(body.path || qPath, body.content ?? ''));
           }
           if (action === 'rename') {
-            return sendJson(res, 200, filesystem.rename(body.from || qPath, body.to, {
+            return sendJson(req, res, 200, filesystem.rename(body.from || qPath, body.to, {
               expectedVersion: body.expectedVersion ?? body.expected_version,
             }));
           }
           if (action === 'remove' || action === 'delete') {
-            return sendJson(res, 200, filesystem.remove(body.path || qPath, {
+            return sendJson(req, res, 200, filesystem.remove(body.path || qPath, {
               expectedVersion: body.expectedVersion ?? body.expected_version,
               recursive: Boolean(body.recursive),
             }));
           }
           if (action === 'mkdir') {
-            return sendJson(res, 200, filesystem.mkdir(body.path || qPath));
+            return sendJson(req, res, 200, filesystem.mkdir(body.path || qPath));
           }
         }
-        sendJson(res, 404, { ok: false, error: 'unknown_fs_action', action });
+        sendJson(req, res, 404, { ok: false, error: 'unknown_fs_action', action });
       } catch (err) {
-        sendJson(res, 400, {
+        sendJson(req, res, 400, {
           ok: false,
           error: err instanceof Error ? err.message : String(err),
           code: 'fs_request_failed',
@@ -262,18 +351,47 @@ export async function startLocalPtyServer(opts = {}) {
 
   wss.on('connection', (ws, req) => {
     const url = new URL(req.url || '/', `http://${host}`);
-    // Session cwd must stay inside the authorized filesystem root.
+    const cap = extractCapability(req, capability?.capability);
+    const qCap = url.searchParams.get('capability') || '';
+    const okCap = (capability && qCap && qCap === capability.capability) || cap.ok;
+    if (!okCap) {
+      ws.send(JSON.stringify({
+        type: 'error',
+        code: 'WORKSPACE_CAPABILITY_REQUIRED',
+        message: 'PTY attach requires workspace capability from /v1/workspace/bootstrap',
+      }));
+      ws.close();
+      return;
+    }
+
+    // Session cwd must stay inside the authorized filesystem root — never escape.
     let sessionCwd = cwd;
     const requestedCwd = url.searchParams.get('cwd')?.trim();
     if (requestedCwd) {
-      const rel = path.isAbsolute(requestedCwd)
-        ? path.relative(cwd, requestedCwd)
-        : requestedCwd;
-      const contained = resolveContainedPath(cwd, rel || '.');
-      if (contained.ok) sessionCwd = contained.abs;
+      const abs = path.isAbsolute(requestedCwd) ? path.resolve(requestedCwd) : path.resolve(cwd, requestedCwd);
+      if (abs !== cwd) {
+        const rel = path.relative(cwd, abs);
+        const contained = resolveContainedPath(cwd, rel || '.');
+        if (!contained.ok) {
+          ws.send(JSON.stringify({
+            type: 'error',
+            code: 'WORKSPACE_ROOT_MISMATCH',
+            message: 'PTY cwd must equal the authorized workspace root (or a contained path).',
+            authorized_root: cwd,
+            requested: abs,
+          }));
+          ws.close();
+          return;
+        }
+        sessionCwd = contained.abs;
+      } else {
+        sessionCwd = cwd;
+      }
     }
+
     const cols = parsePort(url.searchParams.get('cols'), 80);
     const rows = parsePort(url.searchParams.get('rows'), 24);
+    const sessionId = `pty_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 
     attachLocalPtySession({
       ws,
@@ -283,7 +401,17 @@ export async function startLocalPtyServer(opts = {}) {
       cols,
       rows,
       env: process.env,
+      sessionId,
     });
+
+    ws.send(JSON.stringify({
+      type: 'workspace_identity',
+      workspace_id: capability.workspace_id,
+      root: cwd,
+      session_cwd: sessionCwd,
+      session_id: sessionId,
+      runtimeBaseUrl: capability.runtimeBaseUrl,
+    }));
   });
 
   await new Promise((resolve) => {
@@ -291,15 +419,22 @@ export async function startLocalPtyServer(opts = {}) {
   });
   const boundPort = Number(httpServer.address()?.port || requestedPort);
 
+  capability = mintWorkspaceCapability({ root: cwd, port: boundPort, host });
+  const runtimeFile = writeLocalRuntimeRecord(capability);
+
   return {
     port: boundPort,
     host,
     cwd,
     shell,
     filesystem,
+    capability,
+    runtimeFile,
+    workspace_id: capability.workspace_id,
     url: `ws://${host}:${boundPort}`,
     healthUrl: `http://${host}:${boundPort}/health`,
     fsBaseUrl: `http://${host}:${boundPort}/v1/fs`,
+    bootstrapUrl: `http://${host}:${boundPort}/v1/workspace/bootstrap`,
     close: () =>
       new Promise((resolve, reject) => {
         wss.close(() => {
@@ -307,4 +442,30 @@ export async function startLocalPtyServer(opts = {}) {
         });
       }),
   };
+}
+
+/**
+ * @param {import('http').IncomingMessage} req
+ * @param {import('http').ServerResponse} res
+ * @param {ReturnType<typeof mintWorkspaceCapability>|null} capability
+ */
+function requireCapability(req, res, capability) {
+  if (!capability) {
+    sendJson(req, res, 503, { ok: false, error: 'capability_not_ready', code: 'WORKSPACE_CAPABILITY_REQUIRED' });
+    return false;
+  }
+  const gate = extractCapability(req, capability.capability);
+  if (!gate.ok) {
+    sendJson(req, res, 401, {
+      ok: false,
+      error: 'workspace_capability_required',
+      code: 'WORKSPACE_CAPABILITY_REQUIRED',
+      authorization: {
+        required: ['workspace.capability'],
+        bootstrap: '/v1/workspace/bootstrap',
+      },
+    });
+    return false;
+  }
+  return true;
 }

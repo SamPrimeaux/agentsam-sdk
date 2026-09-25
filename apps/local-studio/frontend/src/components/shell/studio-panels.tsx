@@ -237,10 +237,13 @@ export function ProjectsPanel() {
   const trails = useWorkStore((s) => s.trails);
   const activeProjectId = useWorkStore((s) => s.activeProjectId);
   const createProject = useWorkStore((s) => s.createProject);
+  const createFilesystemProject = useWorkStore((s) => s.createFilesystemProject);
   const renameProject = useWorkStore((s) => s.renameProject);
   const deleteProject = useWorkStore((s) => s.deleteProject);
   const setActiveProject = useWorkStore((s) => s.setActiveProject);
   const [newOpen, setNewOpen] = useState(false);
+  const [fsOpen, setFsOpen] = useState(false);
+  const [fsError, setFsError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [renaming, setRenaming] = useState<Project | null>(null);
 
@@ -285,7 +288,8 @@ export function ProjectsPanel() {
             >
               <span className="truncate text-sm">{item.name}</span>
               <span className="text-[11px] text-muted-foreground">
-                {item.files.length} files · {trails.filter((t) => t.projectId === item.id).length} chats
+                {item.kind === "filesystem" ? "Filesystem" : "Scratch"} · {item.files.length} files ·{" "}
+                {trails.filter((t) => t.projectId === item.id).length} chats
               </span>
             </button>
             <DropdownMenu>
@@ -327,7 +331,7 @@ export function ProjectsPanel() {
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
         <DialogContent>
           <DialogTitle>New project</DialogTitle>
-          <DialogDescription>A workspace with files, git, and ship targets.</DialogDescription>
+          <DialogDescription>Scratch (virtual) or filesystem (real host root via start-local).</DialogDescription>
           <form
             className="mt-4 flex flex-col gap-3"
             onSubmit={(e) => {
@@ -339,11 +343,64 @@ export function ProjectsPanel() {
             }}
           >
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" autoFocus />
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <Button type="button" variant="ghost" onClick={() => setNewOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit">Create</Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setNewOpen(false);
+                  setFsError(null);
+                  setFsOpen(true);
+                }}
+              >
+                Open filesystem…
+              </Button>
+              <Button type="submit">Create Scratch</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={fsOpen} onOpenChange={setFsOpen}>
+        <DialogContent>
+          <DialogTitle>Open filesystem workspace</DialogTitle>
+          <DialogDescription>
+            Requires <code className="text-xs">agentsam start-local</code> from the repo root. Studio will
+            bind to that authorized root only — arbitrary paths are rejected.
+          </DialogDescription>
+          <form
+            className="mt-4 flex flex-col gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setFsError(null);
+              void (async () => {
+                try {
+                  await createFilesystemProject({
+                    root: "",
+                    name: name || undefined,
+                  });
+                  setFsOpen(false);
+                  void navigate({ to: "/files" });
+                } catch (err) {
+                  setFsError(err instanceof Error ? err.message : String(err));
+                }
+              })();
+            }}
+          >
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Display name (optional)"
+            />
+            {fsError ? <p className="text-[12px] text-red-400">{fsError}</p> : null}
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={() => setFsOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Connect runtime</Button>
             </div>
           </form>
         </DialogContent>

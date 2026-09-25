@@ -153,7 +153,20 @@ export class ScratchWorkspaceAdapter implements WorkspaceAdapter {
 
 export class RuntimeFilesystemAdapter implements WorkspaceAdapter {
   kind: WorkspaceKind = "filesystem";
-  constructor(private baseUrl: string) {}
+  constructor(
+    private baseUrl: string,
+    private capability?: string | null,
+  ) {}
+
+  private headers(json = false): HeadersInit {
+    const h: Record<string, string> = {};
+    if (json) h["Content-Type"] = "application/json";
+    if (this.capability) {
+      h["Authorization"] = `Bearer ${this.capability}`;
+      h["x-agentsam-workspace-capability"] = this.capability;
+    }
+    return h;
+  }
 
   private url(action: string, filePath?: string) {
     const u = new URL(`${this.baseUrl.replace(/\/$/, "")}/v1/fs/${action}`);
@@ -162,14 +175,14 @@ export class RuntimeFilesystemAdapter implements WorkspaceAdapter {
   }
 
   private async getJson(action: string, filePath?: string) {
-    const res = await fetch(this.url(action, filePath));
+    const res = await fetch(this.url(action, filePath), { headers: this.headers() });
     return (await res.json()) as Record<string, unknown>;
   }
 
   private async postJson(action: string, body: Record<string, unknown>) {
     const res = await fetch(this.url(action), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: this.headers(true),
       body: JSON.stringify(body),
     });
     return (await res.json()) as Record<string, unknown>;
@@ -178,7 +191,7 @@ export class RuntimeFilesystemAdapter implements WorkspaceAdapter {
   async list(dir = ".", recursive = false) {
     const u = new URL(this.url("list", dir));
     if (recursive) u.searchParams.set("recursive", "1");
-    const res = await fetch(u.toString());
+    const res = await fetch(u.toString(), { headers: this.headers() });
     const data = (await res.json()) as Record<string, unknown>;
     if (!data.ok) return { ok: false as const, error: String(data.error || "list_failed"), code: String(data.code || "") };
     return { ok: true as const, entries: (data.entries as WorkspaceFileEntry[]) || [] };
@@ -261,12 +274,49 @@ export class RuntimeFilesystemAdapter implements WorkspaceAdapter {
 
 export async function probeLocalRuntime(baseUrl = "http://127.0.0.1:3099") {
   try {
-    const res = await fetch(`${baseUrl.replace(/\/$/, "")}/health`, { signal: AbortSignal.timeout(1500) });
+    const root = baseUrl.replace(/\/$/, "");
+    const res = await fetch(`${root}/health`, { signal: AbortSignal.timeout(1500) });
     if (!res.ok) return { ok: false as const, error: `http_${res.status}` };
-    const data = (await res.json()) as { ok?: boolean; filesystem?: boolean; cwd?: string };
+    const data = (await res.json()) as {
+      ok?: boolean;
+      filesystem?: boolean;
+      cwd?: string;
+      root?: string;
+      workspace_id?: string;
+      capability_required?: boolean;
+    };
     if (!data.ok) return { ok: false as const, error: "unhealthy" };
     if (!data.filesystem) return { ok: false as const, error: "filesystem_unavailable" };
-    return { ok: true as const, cwd: data.cwd || null, baseUrl: baseUrl.replace(/\/$/, "") };
+
+    let capability: string | null = null;
+    let workspace_id: string | null = data.workspace_id || null;
+    if (data.capability_required) {
+      const boot = await fetch(`${root}/v1/workspace/bootstrap`, { signal: AbortSignal.timeout(2000) });
+      const claim = (await boot.json()) as {
+        ok?: boolean;
+        capability?: string;
+        workspace_id?: string;
+        root?: string;
+        error?: string;
+        code?: string;
+      };
+      if (!boot.ok || !claim.ok || !claim.capability) {
+        return {
+          ok: false as const,
+          error: claim.code || claim.error || "bootstrap_failed",
+        };
+      }
+      capability = claim.capability;
+      workspace_id = claim.workspace_id || workspace_id;
+    }
+
+    return {
+      ok: true as const,
+      cwd: data.root || data.cwd || null,
+      baseUrl: root,
+      workspace_id,
+      capability,
+    };
   } catch (err) {
     return {
       ok: false as const,

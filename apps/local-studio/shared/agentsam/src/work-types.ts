@@ -63,6 +63,10 @@ export type Project = {
   workspaceRoot?: string | null;
   /** Local PTY/FS base URL (e.g. http://127.0.0.1:3099) */
   runtimeBaseUrl?: string | null;
+  /** Workspace id from local runtime bootstrap */
+  workspaceId?: string | null;
+  /** Short-lived FS/PTY capability — not AGENTSAM_API_KEY */
+  runtimeCapability?: string | null;
   files: Artifact[];
   dirs: string[];
   git: GitState;

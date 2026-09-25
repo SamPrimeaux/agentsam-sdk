@@ -1,0 +1,12 @@
+{
+  "schema": "agentsam.local-workspace-capability.v1",
+  "workspace_id": "ws_ee0dffd760e08cf4ecd8",
+  "capability": "awc_bcd74b8caac647501d17d09a79084a712f2294305f5ec962",
+  "root": "/Users/samprimeaux/agentsam-sdk",
+  "host": "127.0.0.1",
+  "port": 65221,
+  "runtimeBaseUrl": "http://127.0.0.1:65221",
+  "fsBaseUrl": "http://127.0.0.1:65221/v1/fs",
+  "expires_at": "2026-09-25T20:30:37.099Z",
+  "purpose": "local.filesystem+pty"
+}

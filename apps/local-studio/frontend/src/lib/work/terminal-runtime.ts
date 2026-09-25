@@ -345,34 +345,85 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
   const project0 = getProject();
   const useRealPty =
     project0.kind === "filesystem" &&
-    Boolean(project0.runtimeBaseUrl);
+    Boolean(project0.runtimeBaseUrl) &&
+    Boolean(project0.runtimeCapability);
+
+  if (project0.kind === "filesystem" && (!project0.runtimeBaseUrl || !project0.runtimeCapability)) {
+    term.writeln("Filesystem workspace requires a live local runtime + capability.");
+    term.writeln("Run `agentsam start-local` from the workspace root, then reopen this project.");
+    term.writeln("Virtual shell is disabled for filesystem projects (no silent fallback).");
+    return {
+      sessionId,
+      term,
+      fit,
+      run: async () => {
+        term.writeln("PTY unavailable — filesystem mode refuses virtual shell.");
+      },
+      host: null,
+      park,
+      observer: null,
+      refCount: 0,
+      getProject,
+    };
+  }
 
   if (useRealPty) {
     const base = String(project0.runtimeBaseUrl).replace(/\/$/, "");
     const wsUrl = base.replace(/^http/, "ws");
     const cwdParam = encodeURIComponent(project0.workspaceRoot || "");
+    const cap = encodeURIComponent(String(project0.runtimeCapability));
     let socket: WebSocket | null = null;
     try {
-      socket = new WebSocket(`${wsUrl}/?cwd=${cwdParam}&cols=80&rows=24`);
+      socket = new WebSocket(`${wsUrl}/?cwd=${cwdParam}&cols=80&rows=24&capability=${cap}`);
     } catch (err) {
       term.writeln(
-        `PTY attach failed: ${err instanceof Error ? err.message : String(err)}. Falling back to virtual shell.`,
+        `PTY attach failed: ${err instanceof Error ? err.message : String(err)}.`,
       );
-      term.writeln("Run `agentsam start-local` in the workspace root.");
+      term.writeln("Filesystem mode does not fall back to the Scratch virtual shell.");
+      return {
+        sessionId,
+        term,
+        fit,
+        run: async () => {
+          term.writeln("PTY unavailable — refuse virtual shell.");
+        },
+        host: null,
+        park,
+        observer: null,
+        refCount: 0,
+        getProject,
+      };
     }
 
     if (socket) {
       socket.binaryType = "arraybuffer";
+      let ptySessionId: string | null = null;
       socket.onopen = () => {
         term.writeln(`AgentSam PTY  ·  ${project0.workspaceRoot || cwdParam}`);
-        term.writeln("Real shell — Monaco and this terminal share the same host root.");
+        term.writeln(
+          `workspace ${project0.workspaceId || "?"}  ·  real shell — same host root as Monaco`,
+        );
       };
       socket.onmessage = (ev) => {
         if (typeof ev.data === "string") {
           if (ev.data.startsWith("{")) {
             try {
-              const msg = JSON.parse(ev.data) as { type?: string };
-              if (msg.type === "session_id") return;
+              const msg = JSON.parse(ev.data) as {
+                type?: string;
+                session_id?: string;
+                root?: string;
+                workspace_id?: string;
+                code?: string;
+                message?: string;
+              };
+              if (msg.type === "session_id" || msg.type === "workspace_identity") {
+                if (msg.session_id) ptySessionId = msg.session_id;
+                return;
+              }
+              if (msg.type === "error") {
+                term.writeln(`PTY error: ${msg.code || ""} ${msg.message || ""}`);
+                return;
+              }
             } catch {
               /* raw */
             }
@@ -408,23 +459,20 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
         refCount: 0,
         getProject,
       };
-      // Store socket cleanup on park via weak map is overkill; close with detach.
-      const prevCleanup = () => {
+      (runtime as TerminalRuntime & { _ptyCleanup?: () => void; _ptySessionId?: string | null })._ptyCleanup = () => {
         try {
           socket?.close();
         } catch {
           /* ignore */
         }
       };
-      (runtime as TerminalRuntime & { _ptyCleanup?: () => void })._ptyCleanup = prevCleanup;
+      (runtime as TerminalRuntime & { _ptySessionId?: string | null })._ptySessionId = ptySessionId;
       return runtime;
     }
   }
 
   term.writeln(
-    project0.kind === "filesystem"
-      ? "AgentSam CLI  ·  filesystem mode (virtual fallback)  ·  type help"
-      : "AgentSam CLI  ·  Scratch (virtual)  ·  type help",
+    "AgentSam CLI  ·  Scratch (virtual)  ·  type help",
   );
   prompt();
 

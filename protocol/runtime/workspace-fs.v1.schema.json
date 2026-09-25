@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.inneranimalmedia.com/protocol/runtime/workspace-fs.v1.schema.json",
+  "title": "AgentSamWorkspaceFilesystemContract",
+  "description": "Stable browser/WorkspaceAdapter contract. TypeScript local-fs implements today; Go agentsamd may replace the host without changing these operations.",
+  "type": "object",
+  "required": ["schema", "operations"],
+  "properties": {
+    "schema": { "const": "agentsam.workspace-fs.v1" },
+    "engine": {
+      "type": "string",
+      "description": "Implementation id, e.g. agentsam-local-fs-v1 or agentsamd-go-fs-v1"
+    },
+    "operations": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "list",
+          "read",
+          "stat",
+          "write",
+          "create",
+          "rename",
+          "remove",
+          "mkdir",
+          "change_events"
+        ]
+      }
+    },
+    "write": {
+      "type": "object",
+      "properties": {
+        "expectedVersion": {
+          "type": ["string", "null"],
+          "description": "Optimistic concurrency — conflict if disk hash differs"
+        },
+        "overwrite": { "type": "boolean" }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "properties": {
+        "binding": { "const": "loopback" },
+        "capability_header": { "const": "x-agentsam-workspace-capability" },
+        "root_claim": { "const": "server_bound_only" }
+      }
+    },
+    "events": {
+      "type": "object",
+      "properties": {
+        "name": { "const": "workspace.file.changed" },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string" },
+            "version": { "type": "string" },
+            "workspace_id": { "type": "string" }
+          }
+        }
+      }
+    },
+    "go_replacement": {
+      "type": "object",
+      "description": "Future agentsamd host implements the same HTTP/WS surface; WorkspaceAdapter and Studio contracts stay unchanged.",
+      "properties": {
+        "package": { "const": "apps/agentsam-go-worker" },
+        "status": { "enum": ["documented", "implemented"] }
+      }
+    }
+  }
+}

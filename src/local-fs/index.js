@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { resolveContainedPath } from './paths.js';
+import { markRepositoryStale } from './freshness.js';
 
 export const LOCAL_FS_ENGINE = 'agentsam-local-fs-v1';
 export const MAX_TEXT_BYTES = 2 * 1024 * 1024; // 2 MiB text default
@@ -227,6 +228,7 @@ export function createLocalFilesystem(root) {
       fs.renameSync(tmp, gate.abs);
       const version = hashBytes(buf);
       const st = fs.statSync(gate.abs);
+      markRepositoryStale(resolvedRoot, { paths: [gate.rel], reason: 'write' });
       return {
         ok: true,
         path: gate.rel,
@@ -292,6 +294,7 @@ export function createLocalFilesystem(root) {
     try {
       fs.mkdirSync(path.dirname(to.abs), { recursive: true });
       fs.renameSync(from.abs, to.abs);
+      markRepositoryStale(resolvedRoot, { paths: [from.rel, to.rel], reason: 'rename' });
       return { ok: true, from: from.rel, to: to.rel, engine: LOCAL_FS_ENGINE };
     } catch (err) {
       return {
@@ -331,6 +334,7 @@ export function createLocalFilesystem(root) {
       } else {
         fs.unlinkSync(gate.abs);
       }
+      markRepositoryStale(resolvedRoot, { paths: [gate.rel], reason: 'remove' });
       return { ok: true, path: gate.rel, engine: LOCAL_FS_ENGINE };
     } catch (err) {
       return {

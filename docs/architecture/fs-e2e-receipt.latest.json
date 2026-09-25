@@ -1,0 +1,42 @@
+{
+  "schema": "agentsam.fs-e2e-receipt.v1",
+  "complete": true,
+  "root": "/var/folders/4s/05_wctw12k33szskjcfrr1bc0000gn/T/agentsam-fs-e2e-SUSpQa",
+  "workspace_id": "ws_ce3df666a4cef739031b",
+  "runtimeBaseUrl": "http://127.0.0.1:65149",
+  "pty_session_id": "pty_mugpalql_x93808",
+  "monaco_path": "README.md",
+  "monaco_marker": "MONACO_MARK_1790325024020",
+  "git_diff_snippet": "\r\nThe default interactive shell is now zsh.\r\nTo update your account to use zsh, please run `chsh -s /bin/zsh`.\r\nFor more details, please visit https://support.apple.com/kb/HT208050.\r\n\u001b[?1034hbash-3.2$ git diff -- README.md; echo MONACO_MARK_DONE\r\n\u001b[?1h\u001b=\r\u001b[1mdiff --git a/README.md b/README.md\u001b[m\u001b[m\r\n\u001b[1mindex aa5699e..342a7bb 100644\u001b[m\u001b[m\r\n\u001b[1m--- a/README.md\u001b[m\u001b[m\r\n\u001b[1m+++ b/README.md\u001b[m\u001b[m\r\n\u001b[36m@@ -1 +1,3 @@\u001b[m\u001b[m\r\n # disposable\u001b[m\u001b[m\r\n\u001b[32m+\u001b[m\u001b[m\r\n\u001b[32m+\u001b[m\u001b[32m## MONACO_MARK_1790325024020\u001b[m\u001b[m\r\n\r\u001b[K\u001b[?1l\u001b>MONACO_MARK_DONE\r\nbash-3.2$ ",
+  "identity": {
+    "type": "workspace_identity",
+    "workspace_id": "ws_ce3df666a4cef739031b",
+    "root": "/var/folders/4s/05_wctw12k33szskjcfrr1bc0000gn/T/agentsam-fs-e2e-SUSpQa",
+    "session_cwd": "/var/folders/4s/05_wctw12k33szskjcfrr1bc0000gn/T/agentsam-fs-e2e-SUSpQa",
+    "session_id": "pty_mugpalql_x93808",
+    "runtimeBaseUrl": "http://127.0.0.1:65149"
+  },
+  "pty_path": "NOTES.md",
+  "pty_marker": "PTY_MARK_1790325024020",
+  "stale_conflict": {
+    "ok": false,
+    "error": "version_conflict",
+    "code": "version_conflict",
+    "expected": "sha256:2b92ea252be0fbc26f70317cdaa7b6411ea634b50d55338cd8c495e4dbf25d1d",
+    "actual": "sha256:95e5f36ba91fce6c51078ba4948aa068fa9e33e213504318dfeea0ea80ece986",
+    "path": "NOTES.md"
+  },
+  "external_version_before": "sha256:2b92ea252be0fbc26f70317cdaa7b6411ea634b50d55338cd8c495e4dbf25d1d",
+  "external_version_after": "sha256:95e5f36ba91fce6c51078ba4948aa068fa9e33e213504318dfeea0ea80ece986",
+  "authorization": {
+    "binding": "127.0.0.1",
+    "capability_required": true,
+    "cors": "studio-origin-allowlist",
+    "arbitrary_root_claim": "rejected"
+  },
+  "scratch_vs_filesystem": {
+    "filesystem": "real FS + real PTY",
+    "scratch": "virtual files + virtual shell",
+    "silent_fallback": false
+  }
+}

@@ -45,6 +45,9 @@ export async function runStartLocal(opts = {}) {
   console.log(`  ✓ PTY listening  ${server.url}`);
   console.log(`  ✓ Health         ${server.healthUrl}`);
   console.log(`  ✓ Project root   ${server.cwd}`);
+  console.log(`  ✓ Workspace      ${server.workspace_id}`);
+  console.log(`  ✓ Capability     ${server.capability.capability.slice(0, 12)}… (loopback bootstrap)`);
+  console.log(`  ✓ Runtime file   ${server.runtimeFile}`);
   console.log(`  ✓ Shell          ${server.shell}`);
   console.log(`
   Project services:
@@ -52,6 +55,7 @@ export async function runStartLocal(opts = {}) {
     npm run db:status    → inspect local SQLite
     npx agentsam          → enter Agent Sam
 
+  Studio: open a filesystem workspace rooted at this same directory.
   Press Ctrl+C to stop.
   `);
 

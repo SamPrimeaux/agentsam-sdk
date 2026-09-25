@@ -170,6 +170,8 @@ export function newProject(name = "Studio", description = "Default workspace"): 
     kind: "scratch",
     workspaceRoot: null,
     runtimeBaseUrl: null,
+    workspaceId: null,
+    runtimeCapability: null,
     files: seedFiles(name),
     dirs: ["src", ".github", ".github/workflows"],
     git: emptyGit(),
@@ -191,6 +193,8 @@ export function newFilesystemProject(opts: {
   name?: string;
   root: string;
   runtimeBaseUrl?: string;
+  workspaceId?: string | null;
+  runtimeCapability?: string | null;
 }): Project {
   const now = Date.now();
   const root = opts.root.trim();
@@ -204,6 +208,8 @@ export function newFilesystemProject(opts: {
     kind: "filesystem",
     workspaceRoot: root,
     runtimeBaseUrl: base,
+    workspaceId: opts.workspaceId ?? null,
+    runtimeCapability: opts.runtimeCapability ?? null,
     files: [],
     dirs: [],
     git: emptyGit(),

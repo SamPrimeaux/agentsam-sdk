@@ -570,10 +570,29 @@ export const useWorkStore = create<WorkState>()(
             `Local filesystem runtime unavailable (${probe.error}). Run: agentsam start-local`,
           );
         }
+        const authorizedRoot = probe.cwd;
+        if (!authorizedRoot) {
+          throw new Error("filesystem runtime did not report an authorized root");
+        }
+        const requested = root.trim();
+        if (requested) {
+          const norm = (p: string) => p.replace(/\\/g, "/").replace(/\/$/, "");
+          if (norm(requested) !== norm(authorizedRoot)) {
+            throw new Error(
+              `Workspace root mismatch. Runtime is bound to ${authorizedRoot}. ` +
+                `Start \`agentsam start-local\` from that directory (cannot claim arbitrary path ${requested}).`,
+            );
+          }
+        }
+        if (!probe.capability) {
+          throw new Error("filesystem runtime did not mint a workspace capability");
+        }
         const project = newFilesystemProject({
           name,
-          root: root.trim() || probe.cwd || "",
+          root: authorizedRoot,
           runtimeBaseUrl: probe.baseUrl,
+          workspaceId: probe.workspace_id,
+          runtimeCapability: probe.capability,
         });
         if (!project.workspaceRoot) {
           throw new Error("filesystem workspace requires an absolute root path");
