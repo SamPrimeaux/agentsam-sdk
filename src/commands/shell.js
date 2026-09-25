@@ -20,7 +20,7 @@ import { createInlineActivity } from '../ui/cli/activity.js';
 import { createCliRuntimePresenter } from '../ui/cli/runtime-events.js';
 import { renderCliFooter, renderDiffPreview, renderUsagePanel } from '../ui/cli/footer.js';
 import { diagnosticFromError, renderDiagnosticError } from '../errors/index.js';
-import { getModelRecord, mergeModelReference } from '../models/index.js';
+import { getModelRecord, mergeModelReference, listModelCatalog } from '../models/index.js';
 import { discoverProviderModels } from '../models/discovery.js';
 import { detectCliProject, findCliProjectRoot, readCliPreferences, updateCliPreferences } from '../lib/cli-preferences.js';
 import { buildContextEconomicsReport, renderContextEconomics } from './context-economics.js';

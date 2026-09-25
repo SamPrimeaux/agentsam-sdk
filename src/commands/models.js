@@ -1,7 +1,7 @@
 import pc from 'picocolors';
 import { isCancel, select } from '@clack/prompts';
 import { probeOllama, resolveOllamaConfig } from './ollama.js';
-import { listModelCatalog } from '../models/index.js';
+import { listModelCatalog } from '../models/catalog.js';
 import { discoverProviderModels } from '../models/discovery.js';
 import { resolveProviderCredential } from '../lib/provider-credentials.js';
 import { providerChoices, promptAndConfigureProvider } from './providers.js';

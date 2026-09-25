@@ -74,7 +74,13 @@
   // IAM_CLIENT_ID is a public OAuth client id and is added after this service's
   // dedicated registration is minted. Server-only values are Worker secrets:
   // IAM_CLIENT_SECRET, AGENTSAM_BRIDGE_KEY,
-  // XAI_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY.
+  // XAI_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY,
+  // CLOUDFLARE_OAUTH_CLIENT_ID (AgentSam Local Studio PKCE client — do not also put in vars).
+  //
+  // Cloudflare OAuth redirect URIs required on that client:
+  //   https://agentsam.inneranimalmedia.com/api/oauth/cloudflare/callback      (identity login)
+  //   https://agentsam.inneranimalmedia.com/api/connections/cloudflare/callback (MCP/account)
+  // See docs/architecture/LOCAL_STUDIO_CLOUDFLARE_OAUTH.md
   //
   // IAM_ORIGIN is deprecated compat-only (see resolveIamIssuer()); new
   // production config emits only IAM_OAUTH_ISSUER.

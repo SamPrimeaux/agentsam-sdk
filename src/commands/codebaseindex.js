@@ -23,6 +23,12 @@ import {
   parseEmbeddingChoice,
   suggestScopeWithLocalModel,
 } from '../lib/ingest/discover-models.js';
+import {
+  assessAiAccess,
+  formatAiAccessOnboarding,
+  LOCAL_STUDIO_LOGIN,
+  CF_OAUTH_LOGIN_START,
+} from '../lib/ai-access-onboarding.js';
 import { buildInventory, formatInventoryTree } from '../lib/ingest/inventory.js';
 import { createCodebaseindexJobGraph, advanceJobGraph, freezePlanJobGraph, formatJobGraphHuman } from '../lib/ingest/job-graph.js';
 
@@ -305,8 +311,9 @@ function parseArgv(argv = []) {
 async function runWizard(root, opts) {
   intro('AgentSam · codebaseindex (inventory-first)');
 
-  // ① Providers (informational — discovery only)
+  // ① Providers (informational — discovery only) + onboarding if empty
   const discovered = await discoverIngestModelOptions();
+  const access = assessAiAccess(discovered);
   const providerLines = [
     discovered.ollama?.online
       ? `ollama online · ${(discovered.ollama.models || []).map((m) => m.name).join(', ')}`
@@ -315,7 +322,78 @@ async function runWizard(root, opts) {
       .filter((p) => p.configured)
       .map((p) => `${p.id} credential configured`),
   ];
-  note(providerLines.join('\n') || 'No remote credentials — AST/text-only remains valid.', '① Connection');
+  if (!access.ready) {
+    note(
+      formatAiAccessOnboarding(access, { wantCloudAi: true }),
+      '① Connection · AI access needed for model options',
+    );
+    const setup = pick(await select({
+      message: 'How do you want to unlock AI models?',
+      initialValue: 'continue_ast',
+      options: [
+        {
+          value: 'continue_ast',
+          label: 'Continue with AST/text only ($0 · no models)',
+          hint: 'embeddings stay none',
+        },
+        {
+          value: 'providers',
+          label: 'I will add a provider API key',
+          hint: 'run: agentsam providers  (then rerun codebaseindex)',
+        },
+        {
+          value: 'ollama',
+          label: 'I will install Ollama locally',
+          hint: 'https://ollama.com/download',
+        },
+        {
+          value: 'studio_cf',
+          label: 'Sign in / approve Cloudflare for Local Studio',
+          hint: 'identity + Workers AI / MCP',
+        },
+      ],
+    }));
+    if (setup === 'providers') {
+      note('Run: agentsam providers\nThen: agentsam codebaseindex', 'Next');
+      outro('Paused — configure a provider key, then rerun.');
+      return { mode: 'needs_ai_access', reason: 'provider_key', pipeline: 'sam.codebaseindex.index.run' };
+    }
+    if (setup === 'ollama') {
+      note(
+        [
+          '1. Install: https://ollama.com/download',
+          '2. ollama pull mxbai-embed-large',
+          '3. ollama pull qwen2.5-coder',
+          '4. agentsam ollama status',
+          '5. agentsam codebaseindex',
+        ].join('\n'),
+        'Ollama setup',
+      );
+      outro('Paused — install local models, then rerun.');
+      return { mode: 'needs_ai_access', reason: 'ollama', pipeline: 'sam.codebaseindex.index.run' };
+    }
+    if (setup === 'studio_cf') {
+      note(
+        [
+          `Login portal:  ${LOCAL_STUDIO_LOGIN}`,
+          `CF sign-in:    ${CF_OAUTH_LOGIN_START}`,
+          '',
+          'After Cloudflare approves, return here and rerun:',
+          '  agentsam codebaseindex',
+          '',
+          'Dashboard OAuth client must include redirect:',
+          '  https://agentsam.inneranimalmedia.com/api/oauth/cloudflare/callback',
+          '(in addition to /api/connections/cloudflare/callback)',
+        ].join('\n'),
+        'Local Studio · Cloudflare OAuth',
+      );
+      outro('Paused — complete OAuth approval, then rerun.');
+      return { mode: 'needs_ai_access', reason: 'cloudflare_oauth', pipeline: 'sam.codebaseindex.index.run' };
+    }
+    note(providerLines.join('\n') || 'Continuing without remote/local models.', '① Connection');
+  } else {
+    note(providerLines.join('\n') || 'No remote credentials — AST/text-only remains valid.', '① Connection');
+  }
 
   // ② Materials
   note(
