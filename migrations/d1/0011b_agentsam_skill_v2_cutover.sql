@@ -1,0 +1,22 @@
+-- 0011b_agentsam_skill_v2_cutover.sql
+-- ORCHESTRATION NOTES (do not run this whole file via wrangler --file on large DBs —
+-- D1 import may D1_RESET_DO). Apply in steps:
+--
+--   1) RENAME (one statement each):
+--        ALTER TABLE agentsam_skill RENAME TO agentsam_skill_legacy;
+--        ALTER TABLE agentsam_skill_revision RENAME TO agentsam_skill_revision_legacy;
+--        ALTER TABLE agentsam_skill_invocation RENAME TO agentsam_skill_invocation_legacy;
+--   2) DDL:     --file migrations/d1/0011_agentsam_skill_v2.sql
+--   3) Backfill skills: --file migrations/d1/0011c_agentsam_skill_v2_backfill.sql
+--   4) Retrieval+revisions: --file migrations/d1/0011d_agentsam_skill_v2_retrieval_revisions.sql
+--   5) Verify counts: skill == legacy == metrics == retrieval; revisions match legacy.
+--   6) Keep *_legacy until verified. Drop only after a bake period.
+--
+-- Applied remotely on inneranimalmedia-business 2026-09-25 (88 skills).
+-- Notes:
+--   - No FK to agentsam_account (table absent); account_id aligns with accounts.au_* when present.
+--   - Partial unique idx_skill_published_slash included (published slash triggers globally unique).
+--   - Empty slash_trigger → /skill-{id-slug}; dual vectorize → /vectorize-lanes-dual.
+--   - Dropped columns preserved under metadata_json.legacy.
+
+SELECT 'see header comments — run cutover in steps' AS note;
