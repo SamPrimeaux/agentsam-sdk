@@ -15,7 +15,7 @@
   },
   "scripts": {
     "dev": "node scripts/with-app-env.mjs vite dev --host 0.0.0.0 --port 8080",
-    "build": "node ../../scripts/sync-public-site.mjs && node scripts/build-cad-frontend.mjs && NODE_ENV=production node scripts/with-app-env.mjs vite build && node scripts/copy-auth-portal.mjs && node scripts/build-cad-frontend.mjs --stage",
+    "build": "node ../../scripts/sync-public-site.mjs && node scripts/build-cad-frontend.mjs && node scripts/ensure-aliased-deps.mjs && NODE_ENV=production node scripts/with-app-env.mjs vite build && node scripts/copy-auth-portal.mjs && node scripts/build-cad-frontend.mjs --stage",
     "site:sync": "node ../../scripts/sync-public-site.mjs",
     "site:publish": "node ../../scripts/publish-website-assets.mjs",
     "build:dev": "node scripts/with-app-env.mjs vite build --mode development",
