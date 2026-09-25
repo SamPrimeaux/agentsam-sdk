@@ -165,9 +165,18 @@ export function applyIamOfficialGoProductRegistry({
     throw err;
   }
 
+  const officialStatus = status === 'deployed' ? 'production' : status;
+  const allowedStatuses = new Set(['prototype', 'scaffolded', 'wired', 'production', 'deprecated']);
+  if (!allowedStatuses.has(officialStatus)) {
+    const err = new Error('iam_registry_status_invalid');
+    err.code = 'iam_registry_status_invalid';
+    err.detail = { received: status, normalized: officialStatus };
+    throw err;
+  }
+
   const sql = buildGoProductRegistrySql({
     product,
-    status,
+    status: officialStatus,
     url,
     commit,
     health,
@@ -182,7 +191,7 @@ export function applyIamOfficialGoProductRegistry({
     slug: product,
     kind: 'service',
     name: product,
-    status,
+    status: officialStatus,
     repository_id: repositoryId,
     canonical_path: 'apps/agentsam-go-worker',
     package_name: '@inneranimalmedia/agentsam-go-worker',

@@ -71,3 +71,22 @@ test('IAM remote registry requires the explicit official-release guard', () => {
     else process.env.AGENTSAM_IAM_OFFICIAL_RELEASE = prior;
   }
 });
+
+test('IAM official registry normalizes deployed lifecycle status to D1 production', () => {
+  const prior = process.env.AGENTSAM_IAM_OFFICIAL_RELEASE;
+  process.env.AGENTSAM_IAM_OFFICIAL_RELEASE = '1';
+  try {
+    const result = applyIamOfficialGoProductRegistry({
+      productRoot: null,
+      officialRelease: true,
+      status: 'deployed',
+      dryRun: true,
+      skipRemote: true,
+    });
+    assert.match(result.sql, /'production'/);
+    assert.doesNotMatch(result.sql, /'deployed',\n  'AgentSam Go runtime/);
+  } finally {
+    if (prior == null) delete process.env.AGENTSAM_IAM_OFFICIAL_RELEASE;
+    else process.env.AGENTSAM_IAM_OFFICIAL_RELEASE = prior;
+  }
+});
