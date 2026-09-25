@@ -315,11 +315,19 @@ export async function discoverCloudflareModels(apiToken, accountId, fetchImpl = 
       .map((row) => {
         const id = clean(row?.name);
         const task = cloudflareTaskName(row?.task);
-        if (!id || task.toLowerCase() !== 'text generation') return null;
+        const taskLower = task.toLowerCase();
+        // Text Generation = chat/agent pool. Text Embeddings = Vectorize / Workers AI embed pool.
+        // Never drop embeddings here — chat allowlisting happens in inventory curation only.
+        if (!id || (taskLower !== 'text generation' && taskLower !== 'text embeddings')) return null;
+        const isEmbed = taskLower === 'text embeddings';
         return baseRecord('cloudflare', id, {
           label: id,
           source_url: url,
-          capabilities: { workers_ai: true },
+          capabilities: {
+            workers_ai: true,
+            embeddings: isEmbed,
+            agent_runtime: !isEmbed,
+          },
           metadata: {
             task,
             author: clean(row?.author) || null,

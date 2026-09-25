@@ -13,11 +13,12 @@
 3. **Per-command skill law** — every machine command declares `skill` or explicit exemption; human tip on stderr; `--json` stays clean (`help.skill` in envelope when graduated).
 4. **`--format pretty|json|jsonl`** — normalize machine output; keep `--json` alias.
 5. **Shared material resolver** — promote `src/lib/ingest/materials.js` for brand/cad/security; archive sandbox limits + tests.
-6. **Ollama dim probe SSOT** — retire `defaultDimensions()` regex as authority; fingerprint real vector length.
+6. **Embedding dims are per-provider profile fingerprints** — not Ollama SSOT. Ollama is an *optional* local offer only. When CF credentials are present, Workers AI **Text Embeddings** models must appear in the ingest pool (chat allowlist must not hide them) so Vectorize lanes work from the same account model pool. Prefer adapter/probe length when available; name heuristics are hints only.
 7. **Storage lanes object** — `metadata` vs `vectors` in knowledge config (local / supabase / vectorize presets).
 8. **`agentsam app options`** — discover `apps/*/`, theme packages, manifests (kill hardcoded init menus).
 9. **Graduate ops** — `brand.preview`, BrandPack export/import; keep scan read-only.
-10. **Tests from sprint §31** — catalog help, JSON tips absent, inventory-before-scope, profile mismatch, archive fixtures.
+10. **Skills + tools registry parity** — portable `skills/catalog.json` ↔ D1 `agentsam_skill`; filesystem/AST/DAG tools in `agentsam_tools` schema+seed so new users get the same inspection surface as the IAM host. No stale skills.
+11. **Tests from sprint §31** — catalog help, JSON tips absent, inventory-before-scope, profile mismatch, archive fixtures, CF embed discovery.
 
 ## B. Installed AgentSam Local Studio = apps/local-studio experience
 

@@ -248,7 +248,7 @@ function helpText() {
     '  Operation: codebaseindex.ingest',
     '',
     '  Embedding models are discovered from your configured provider credentials',
-    '  and live `ollama list` (local models are optional, never required).',
+    '  (OpenAI, Gemini, Cloudflare Workers AI for Vectorize). Ollama is optional.',
     '  Include/exclude paths are prompted — AgentSam does not invent a denylist.',
     '',
     '  agentsam codebaseindex              interactive wizard (clack)',
@@ -411,8 +411,8 @@ async function runWizard(root, opts) {
   // ⑤ Embedding profile (discovered)
   note(
     discovered.options.length > 1
-      ? `Discovered embed options from credentials / ollama list (${discovered.options.length - 1} providers+local).`
-      : 'No embed providers discovered — AST/text-only is available.',
+      ? `Discovered embed options from credentials (OpenAI/Gemini/Workers AI) + optional Ollama (${discovered.options.length - 1}).`
+      : 'No embed providers discovered — AST/text-only is available. Configure CF/OpenAI/Gemini to unlock Vectorize-ready models.',
     '⑤ Embedding profile',
   );
   const embeddingChoice = pick(await select({

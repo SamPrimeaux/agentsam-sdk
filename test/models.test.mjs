@@ -125,7 +125,7 @@ test('Gemini and xAI discovery keep per-key limits from provider metadata', asyn
 });
 
 
-test('Cloudflare discovery is scoped to the loaded account and surfaces text-generation models only', async t => {
+test('Cloudflare discovery is scoped to the loaded account and surfaces text-generation + embeddings', async t => {
   const seen = [];
   const home = tempHome(t);
   const status = await collectModelsStatus({
@@ -144,13 +144,18 @@ test('Cloudflare discovery is scoped to the loaded account and surfaces text-gen
   assert.equal(seen.length, 1);
   assert.match(seen[0].url, /accounts\/44444444444444444444444444444444\/ai\/models\/search$/);
   assert.equal(status.discovery.cloudflare.ok, true);
-  assert.equal(status.discovery.cloudflare.returnedModelCount, 1);
-  assert.deepEqual(status.providerModels.cloudflare.map((row) => row.provider_model_id), ['@cf/qwen/code']);
-  assert.equal(status.providerModels.cloudflare[0].availability_source, 'provider_api');
-  assert.equal(status.providerModels.cloudflare[0].context_window_source, 'unknown');
+  assert.equal(status.discovery.cloudflare.returnedModelCount, 2);
+  assert.deepEqual(
+    status.providerModels.cloudflare.map((row) => row.provider_model_id).sort(),
+    ['@cf/baai/embed', '@cf/qwen/code'],
+  );
+  const embed = status.providerModels.cloudflare.find((row) => row.provider_model_id === '@cf/baai/embed');
+  const qwen = status.providerModels.cloudflare.find((row) => row.provider_model_id === '@cf/qwen/code');
+  assert.equal(qwen.availability_source, 'provider_api');
+  assert.equal(qwen.context_window_source, 'unknown');
   const rendered = renderModelsStatus(status);
   assert.match(rendered, /@cf\/qwen\/code/);
-  assert.doesNotMatch(rendered, /@cf\/baai\/embed/);
+  assert.match(rendered, /@cf\/baai\/embed/);
   assert.doesNotMatch(rendered, /secret-cf/);
 });
 
@@ -255,12 +260,14 @@ test('Workers AI curated allowlist intersects live Cloudflare discovery', async 
         { name: '@cf/qwen/qwen2.5-coder-32b-instruct', task: { name: 'Text Generation' } },
         { name: '@cf/meta/llama-3.2-1b-instruct', task: { name: 'Text Generation' } },
         { name: '@cf/openai/gpt-oss-120b', task: { name: 'Text Generation' } },
+        { name: '@cf/baai/bge-base-en-v1.5', task: { name: 'Text Embeddings' } },
       ],
     }),
   });
+  // Chat allowlist applies to Text Generation; Text Embeddings always pass (Vectorize lane).
   assert.deepEqual(
     status.providerModels.cloudflare.map((row) => row.provider_model_id).sort(),
-    ['@cf/openai/gpt-oss-120b', '@cf/qwen/qwen2.5-coder-32b-instruct'],
+    ['@cf/baai/bge-base-en-v1.5', '@cf/openai/gpt-oss-120b', '@cf/qwen/qwen2.5-coder-32b-instruct'],
   );
   assert.equal(status.discovery.cloudflare.curation, 'agentsam_workers_ai_allowlist');
 });

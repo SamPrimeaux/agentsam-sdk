@@ -1,6 +1,13 @@
 /**
- * Discover embedding (and optional local assist) models from the user's
- * configured credentials + live Ollama inventory — not a hardcoded product menu.
+ * Discover embedding models from the user's configured credentials.
+ *
+ * Authority order for the picker:
+ *   1. Credential-scoped cloud providers (OpenAI, Gemini, Cloudflare Workers AI)
+ *   2. Optional local Ollama inventory (offer only — never required, never SSOT)
+ *   3. Always "none" (AST/text only)
+ *
+ * Dimensions are profile fingerprints for the chosen provider/model — not "Ollama truth."
+ * Regex/name heuristics are hints until a real embed/adapter reports length.
  */
 
 import { collectModelsStatus } from '../../commands/models.js';
@@ -12,12 +19,24 @@ function clean(value) {
   return value == null ? '' : String(value).trim();
 }
 
+/** Known Workers AI / Vectorize-friendly embed dims (hint until first embed probes). */
+const WORKERS_AI_EMBED_DIMS = Object.freeze({
+  '@cf/baai/bge-small-en-v1.5': 384,
+  '@cf/baai/bge-base-en-v1.5': 768,
+  '@cf/baai/bge-large-en-v1.5': 1024,
+  '@cf/baai/bge-m3': 1024,
+  '@cf/google/embeddinggemma-300m': 768,
+});
+
 function looksLikeEmbedModel(name) {
   const id = clean(name).toLowerCase();
   if (!id) return false;
   return /embed|bge-|e5-|gte-|minilm|mxbai-embed|nomic-embed|snowflake-arctic-embed/i.test(id);
 }
 
+/**
+ * Hint dimensions for a provider/model. Not authoritative — adapters may probe.
+ */
 function defaultDimensions(provider, model) {
   const id = clean(model).toLowerCase();
   if (provider === 'openai') {
@@ -26,7 +45,12 @@ function defaultDimensions(provider, model) {
     return 1536;
   }
   if (provider === 'gemini') {
-    if (id.includes('embedding')) return 768;
+    return 768;
+  }
+  if (provider === 'workers-ai' || provider === 'cloudflare') {
+    if (WORKERS_AI_EMBED_DIMS[clean(model)]) return WORKERS_AI_EMBED_DIMS[clean(model)];
+    if (id.includes('small')) return 384;
+    if (id.includes('large') || id.includes('bge-m3')) return 1024;
     return 768;
   }
   if (provider === 'ollama') {
@@ -82,7 +106,7 @@ export function parseEmbeddingChoice(value) {
 
 /**
  * Build embedding select options from live discovery.
- * Always offers "none" (AST/text only). Ollama entries appear only when online.
+ * Always offers "none" (AST/text only). Ollama entries appear only when online (optional).
  *
  * @param {object} [options]
  * @returns {Promise<{ options: object[], inventory: object, assistModels: object[] }>}
@@ -94,6 +118,8 @@ export async function discoverIngestModelOptions(options = {}) {
     home: options.home,
     discoverRemote: options.discoverRemote !== false,
     includeLocal: true,
+    // Keep CF embed models; chat allowlist must not hide Vectorize options.
+    curateWorkersAi: options.curateWorkersAi !== false,
     fetchImpl: options.fetchImpl,
     providerFetchImpl: options.providerFetchImpl,
   });
@@ -152,7 +178,27 @@ export async function discoverIngestModelOptions(options = {}) {
     }
   }
 
-  // Live Ollama inventory — offer embed-like models only for the embedding picker
+  // Cloudflare Workers AI embedding models — required for Vectorize / CF lanes.
+  // Uses live account discovery (Text Embeddings). Provider id = workers-ai (knowledge adapter).
+  for (const row of status.providerModels?.cloudflare || []) {
+    const caps = row.capabilities || {};
+    const id = row.provider_model_id || '';
+    const task = String(row.metadata?.task || '').toLowerCase();
+    const isEmbed = caps.embeddings === true || task === 'text embeddings' || looksLikeEmbedModel(id);
+    if (!isEmbed || !id) continue;
+    const dims = defaultDimensions('workers-ai', id);
+    push({
+      value: encodeEmbeddingChoice('workers-ai', id, dims),
+      label: `Workers AI · ${id}`,
+      hint: `cloudflare · vectorize-ready · ${dims}d`,
+      provider: 'workers-ai',
+      source: 'provider_api',
+      model: id,
+      dimensions: dims,
+    });
+  }
+
+  // Optional local Ollama — never required; only offered when online.
   /** @type {object[]} */
   const assistModels = [];
   if (status.local?.online) {
@@ -166,11 +212,13 @@ export async function discoverIngestModelOptions(options = {}) {
       const caps = Array.isArray(probe.capabilities) ? probe.capabilities : [];
       const isEmbed = looksLikeEmbedModel(name) || caps.includes('embedding') || caps.includes('embed');
       if (isEmbed) {
-        const dims = defaultDimensions('ollama', name);
+        // Prefer probed dim length when the adapter returns it; else name hint.
+        const probedDims = Number(probe.dimensions) || Number(probe.embedding_length) || 0;
+        const dims = probedDims > 0 ? probedDims : defaultDimensions('ollama', name);
         push({
           value: encodeEmbeddingChoice('ollama', name, dims),
           label: `Ollama · ${name}`,
-          hint: `local · free · ${dims}d`,
+          hint: `local optional · ${dims}d`,
           provider: 'ollama',
           source: 'ollama_tags',
           model: name,
@@ -245,4 +293,4 @@ export async function suggestScopeWithLocalModel(opts) {
   };
 }
 
-export { probeOllama, resolveOllamaConfig, looksLikeEmbedModel };
+export { probeOllama, resolveOllamaConfig, looksLikeEmbedModel, defaultDimensions, WORKERS_AI_EMBED_DIMS };

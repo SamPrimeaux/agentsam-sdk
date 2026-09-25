@@ -42,7 +42,15 @@ export function providerIdForService(serviceName) {
 
 export function filterWorkersAiCurated(models = [], options = {}) {
   if (options.curated === false) return [...models];
-  return models.filter((row) => CURATED.has(String(row?.provider_model_id || row?.model_id || '')));
+  // Chat/agent pool: curated allowlist. Embedding models always pass —
+  // Vectorize / Workers AI embed lanes must not be limited by the chat allowlist.
+  return models.filter((row) => {
+    const id = String(row?.provider_model_id || row?.model_id || '');
+    const caps = row?.capabilities || {};
+    const task = String(row?.metadata?.task || '').toLowerCase();
+    if (caps.embeddings === true || task === 'text embeddings' || /embed/i.test(id)) return true;
+    return CURATED.has(id);
+  });
 }
 
 /**
