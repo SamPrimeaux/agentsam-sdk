@@ -1,0 +1,23 @@
+<section id="terminals" data-cms-section="terminals">
+  <div class="section-label"><span>Cookbook 08</span><div class="line"></div></div>
+  <h2>Local vs remote terminal equivalence</h2>
+  <div class="cookbook">
+    <div class="cookbook-head"><div class="num">08</div><div class="cookbook-title"><b>Same job, two execution lanes</b><span>Verify environment equivalence before comparing results.</span></div><span class="badge">multi-lane</span></div>
+    <div class="cookbook-body">
+      <div class="code"><div class="code-head"><span>read-only probe</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>git rev-parse HEAD
+node --version
+npm --version
+git status --short
+find packages -maxdepth 1 -type d | wc -l
+npm run verify:boundaries</pre></div>
+      <table class="matrix"><tbody>
+        <tr><td>requested lane</td><td>resolved lane</td></tr>
+        <tr><td>host</td><td>cwd</td></tr>
+        <tr><td>git commit</td><td>exit code</td></tr>
+        <tr><td>duration</td><td>stdout digest</td></tr>
+      </tbody></table>
+      <div class="good"><strong>Good result:</strong> SAM detects drift before treating two runs as equivalent.</div>
+    </div>
+  </div>
+</section>

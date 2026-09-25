@@ -1,0 +1,12 @@
+<section id="gate" data-cms-section="gate">
+  <h2>Primitive 4: Gate</h2>
+  <p>A <strong>gate</strong> turns a structured assessment into permission to continue. Gates protect actions with consequences: production writes, secret rotation, package release, destructive database changes, or expensive long-running jobs.</p>
+  <div class="diagram"><pre>candidate action
+     │
+     ▼
+risk score ───────┐
+confidence ───────┤
+tests/status ─────┤──► gate policy ──► allow
+approval state ───┤                 └─► ask user
+reversibility ────┘                 └─► deny</pre></div>
+</section>

@@ -1,0 +1,28 @@
+<section id="intro" data-cms-section="intro">
+  <div class="eyebrow">Agent architecture</div>
+  <h1>Structured decisions with coding agents</h1>
+  <p class="lead">Coding agents are good at language, planning, tool use, and code generation. They should not have to improvise every small decision in prose. AgentSam pairs an LLM with a faster, typed decision layer for routing, scoring, confidence checks, utility selection, and policy gates.</p>
+  <div class="callout"><b>Core idea:</b> use the LLM for open-ended reasoning; use typed decision primitives when the answer must fit a known shape and directly control software behavior.</div>
+  <div class="diagram"><pre><span class="muted">user / repo / runtime / tool state</span>
+                  │
+                  ▼
+          <span class="accent">AgentSam context</span>
+                  │
+        ┌─────────┴─────────┐
+        │                   │
+        ▼                   ▼
+  LLM reasoning       typed decision
+  • explain           • choose
+  • plan              • score
+  • generate          • gate
+  • edit              • rank
+  • call tools        • confidence
+        │                   │
+        └─────────┬─────────┘
+                  ▼
+             action / tool
+                  │
+                  ▼
+      terminal · skill · model
+      retrieval · workflow · deploy</pre></div>
+</section>

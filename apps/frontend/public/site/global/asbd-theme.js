@@ -23,6 +23,12 @@
   function applyFooterOpposing(theme) {
     var footer = document.getElementById('asbd-footer');
     if (!footer) return;
+    // Violet docs skin: keep a matching dark purple footer (product ask).
+    var skin = document.documentElement.getAttribute('data-asbd-skin');
+    if (skin === 'violet') {
+      footer.setAttribute('data-asbd-theme', 'dark');
+      return;
+    }
     footer.setAttribute('data-asbd-theme', opposing(theme));
   }
 

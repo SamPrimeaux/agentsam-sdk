@@ -1,0 +1,22 @@
+<section id="retrieval" data-cms-section="retrieval">
+  <div class="section-label"><span>Cookbook 04</span><div class="line"></div></div>
+  <h2>Retrieval routing bake-off</h2>
+  <div class="cookbook">
+    <div class="cookbook-head"><div class="num">04</div><div class="cookbook-title"><b>Structural vs semantic retrieval</b><span>Learn which retrieval mode is actually useful for each class of question.</span></div><span class="badge live">runnable now</span></div>
+    <div class="cookbook-body">
+      <div class="code"><div class="code-head"><span>structural</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>agentsam index run --cwd .
+agentsam search "where openSideTab handles terminal" --cwd . --top-k 8</pre></div>
+      <div class="code"><div class="code-head"><span>semantic</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>agentsam index run --cwd . --embed --json
+agentsam search "code responsible for deciding where terminal work should execute" \
+  --cwd . --semantic --top-k 8 --token-budget 4000</pre></div>
+      <table class="matrix"><thead><tr><th>Question type</th><th>Expected best signal</th></tr></thead><tbody>
+        <tr><td>Exact symbol / import</td><td>AST / structural</td></tr>
+        <tr><td>Dependency / reachability</td><td>graph</td></tr>
+        <tr><td>Architectural concept</td><td>semantic</td></tr>
+        <tr><td>Historical decision</td><td>memory / work history</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+</section>

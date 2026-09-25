@@ -1,0 +1,12 @@
+<section id="score" data-cms-section="score">
+  <h2>Primitive 3: Score</h2>
+  <p>A <strong>score</strong> maps state onto a bounded rubric. The number is useful because AgentSam can compare options or apply thresholds without asking an LLM to emit JSON-shaped prose.</p>
+  <div class="code"><div class="code-head"><span>utility.ts</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre><span class="k">type</span> <span class="v">ActionScore</span> = {
+  <span class="v">action</span>: <span class="s">string</span>;
+  <span class="v">utility</span>: <span class="s">number</span>;      <span class="c">// 0..1</span>
+  <span class="v">risk</span>: <span class="s">number</span>;         <span class="c">// 0..1</span>
+  <span class="v">cost</span>: <span class="s">number</span>;         <span class="c">// 0..1</span>
+  <span class="v">reversibility</span>: <span class="s">number</span>; <span class="c">// 0..1</span>
+};</pre></div>
+</section>

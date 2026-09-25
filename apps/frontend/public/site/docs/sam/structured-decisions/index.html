@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en" data-asbd-theme="dark" data-asbd-skin="violet">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <title>Structured decisions with coding agents · AgentSam</title>
+  <meta name="description" content="AgentSam-native guide to typed decision primitives, confidence gates, utility scoring, routing, and planning inside coding-agent workflows." />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href="https://agentsam.inneranimalmedia.com/docs/sam/structured-decisions" />
+  <meta property="og:title" content="Structured decisions with coding agents · AgentSam" />
+  <meta property="og:description" content="AgentSam-native guide to typed decision primitives, confidence gates, utility scoring, routing, and planning inside coding-agent workflows." />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://agentsam.inneranimalmedia.com/docs/sam/structured-decisions" />
+  <meta name="agentsam:page" content="docs.sam.structured-decisions" />
+  <meta name="agentsam:cms-editable" content="true" />
+  <meta name="agentsam:route" content="agentsam.inneranimalmedia.com/docs/sam/structured-decisions" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/site/global/asbd-tokens.css" />
+  <link rel="stylesheet" href="/site/global/agentsam-docs-tokens.css" />
+  <link rel="stylesheet" href="/site/global/agentsam-docs-layout.css" />
+  <script src="/site/global/asbd-theme.js" defer></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Structured decisions with coding agents · AgentSam",
+  "description": "AgentSam-native guide to typed decision primitives, confidence gates, utility scoring, routing, and planning inside coding-agent workflows.",
+  "author": {
+    "@type": "Organization",
+    "name": "AgentSam"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "InnerAnimalMedia"
+  },
+  "mainEntityOfPage": "https://agentsam.inneranimalmedia.com/docs/sam/structured-decisions"
+}
+  </script>
+</head>
+<body data-asbd-theme="dark">
+  <div id="asbd-header-mount" data-cms-region="header"></div>
+
+  <div class="agentsam-docs">
+    <div class="agentsam-docs-layout">
+      <aside class="agentsam-docs-sidebar" data-cms-region="sidebar">
+        <div class="agentsam-docs-brand">
+          <div class="agentsam-docs-mark">A</div>
+          <div><b>AgentSam</b><span>SAM engineering guides</span></div>
+        </div>
+        <div class="agentsam-docs-search">
+          <input id="docs-search" type="search" placeholder="Search…" aria-label="Search this guide" />
+        </div>
+        <nav class="agentsam-docs-nav" id="docs-nav"><div class="group">Get started</div>
+<a href="#intro" class="active">Structured decisions</a>
+<a href="#not-an-llm">Not another chat model</a>
+<a href="#where-it-fits">Where it fits</a>
+<div class="group">Primitives</div>
+<a href="#state">State</a>
+<a href="#choice">Choice</a>
+<a href="#score">Score</a>
+<a href="#gate">Gate</a>
+<a href="#confidence">Confidence</a>
+<div class="group">Patterns</div>
+<a href="#intent-routing">Intent routing</a>
+<a href="#utility">Utility scoring</a>
+<a href="#goap">GOAP action selection</a>
+<a href="#retrieval">Retrieval routing</a>
+<a href="#terminal">Terminal lane selection</a>
+<a href="#approval">Approval gates</a>
+<div class="group">AgentSam use</div>
+<a href="#skills">Skill selection</a>
+<a href="#models">Model routing</a>
+<a href="#packages">Package/deploy gates</a>
+<a href="#rules">Design rules</a></nav>
+      </aside>
+
+      <main class="agentsam-docs-main">
+        <div class="agentsam-docs-topbar">
+          <div class="agentsam-docs-crumb"><span>Docs</span> <span aria-hidden="true">/</span> <span>SAM</span> <span aria-hidden="true">/</span> <strong>Structured decisions</strong></div>
+          <div class="agentsam-docs-spacer"></div>
+          <button type="button" class="agentsam-docs-action" id="docs-copy-page">Copy page</button>
+        </div>
+        <article class="agentsam-docs-article" id="docs-article" data-cms-region="body">
+<section id="intro" data-cms-section="intro">
+  <div class="eyebrow">Agent architecture</div>
+  <h1>Structured decisions with coding agents</h1>
+  <p class="lead">Coding agents are good at language, planning, tool use, and code generation. They should not have to improvise every small decision in prose. AgentSam pairs an LLM with a faster, typed decision layer for routing, scoring, confidence checks, utility selection, and policy gates.</p>
+  <div class="callout"><b>Core idea:</b> use the LLM for open-ended reasoning; use typed decision primitives when the answer must fit a known shape and directly control software behavior.</div>
+  <div class="diagram"><pre><span class="muted">user / repo / runtime / tool state</span>
+                  │
+                  ▼
+          <span class="accent">AgentSam context</span>
+                  │
+        ┌─────────┴─────────┐
+        │                   │
+        ▼                   ▼
+  LLM reasoning       typed decision
+  • explain           • choose
+  • plan              • score
+  • generate          • gate
+  • edit              • rank
+  • call tools        • confidence
+        │                   │
+        └─────────┬─────────┘
+                  ▼
+             action / tool
+                  │
+                  ▼
+      terminal · skill · model
+      retrieval · workflow · deploy</pre></div>
+</section>
+
+<section id="not-an-llm" data-cms-section="not-an-llm">
+  <h2>This is not another chat model</h2>
+  <p>The structured layer is not responsible for holding a conversation, writing a React component, explaining a bug, or generating a migration. Those remain LLM jobs.</p>
+  <p>Its job is narrower: receive a known <strong>state</strong>, evaluate a constrained question, and return a typed result that software can consume without parsing prose.</p>
+  <table class="table"><thead><tr><th>Problem</th><th>Use</th></tr></thead><tbody>
+    <tr><td>“Explain why this terminal session failed.”</td><td><span class="tag">LLM</span></td></tr>
+    <tr><td>“Which execution lane should handle this command?”</td><td><span class="tag">choice</span></td></tr>
+    <tr><td>“How risky is this deployment?”</td><td><span class="tag">score</span></td></tr>
+    <tr><td>“Is confidence high enough to act without asking?”</td><td><span class="tag">gate</span></td></tr>
+    <tr><td>“Rewrite this package boundary cleanly.”</td><td><span class="tag">LLM + tools</span></td></tr>
+  </tbody></table>
+</section>
+
+<section id="where-it-fits" data-cms-section="where-it-fits">
+  <h2>Where it fits in AgentSam</h2>
+  <p>AgentSam already has many places where the possible outputs are constrained. Those are ideal for typed decisions instead of open-ended generation.</p>
+  <div class="primitive-grid">
+    <div class="card"><div class="icon">/</div><h3>Skills</h3><p>Select a skill, slash route, or workflow from a known registry.</p></div>
+    <div class="card"><div class="icon">›_</div><h3>Terminal</h3><p>Choose local, remote, or sandbox execution from observed runtime state.</p></div>
+    <div class="card"><div class="icon">◇</div><h3>Retrieval</h3><p>Select memory, AST-RAG, docs, repository index, or no retrieval.</p></div>
+    <div class="card"><div class="icon">M</div><h3>Models</h3><p>Route between fast, reasoning, local, or provider-specific models.</p></div>
+    <div class="card"><div class="icon">↑</div><h3>Deploy</h3><p>Score readiness and enforce approval or verification gates.</p></div>
+    <div class="card"><div class="icon">↳</div><h3>Planning</h3><p>Rank candidate actions during GOAP or utility-based execution.</p></div>
+  </div>
+</section>
+
+<section id="state" data-cms-section="state">
+  <h2>Primitive 1: State</h2>
+  <p>A decision should be grounded in explicit machine-readable state, not hidden prompt assumptions. State can combine repo facts, runtime health, user intent, tool availability, cost budget, security constraints, and previous action results.</p>
+  <div class="code"><div class="code-head"><span>decision-state.ts</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre><span class="k">const</span> <span class="v">state</span> = {
+  <span class="v">intent</span>: <span class="s">"inspect_repository"</span>,
+  <span class="v">repo</span>: { <span class="v">dirty</span>: <span class="n">true</span>, <span class="v">tests</span>: <span class="s">"unknown"</span>, <span class="v">packageCount</span>: <span class="n">31</span> },
+  <span class="v">terminal</span>: { <span class="v">local</span>: <span class="s">"healthy"</span>, <span class="v">remote</span>: <span class="s">"healthy"</span>, <span class="v">sandbox</span>: <span class="s">"available"</span> },
+  <span class="v">policy</span>: { <span class="v">allowProductionWrite</span>: <span class="n">false</span> }
+};</pre></div>
+</section>
+
+<section id="choice" data-cms-section="choice">
+  <h2>Primitive 2: Choice</h2>
+  <p>A <strong>choice</strong> selects one item from a finite candidate set. Ideal when AgentSam already knows the legal options.</p>
+  <div class="code"><div class="code-head"><span>conceptual contract</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>{
+  <span class="v">question</span>: <span class="s">"Which execution lane should run this task?"</span>,
+  <span class="v">options</span>: [<span class="s">"local"</span>, <span class="s">"remote"</span>, <span class="s">"sandbox"</span>],
+  <span class="v">result</span>: <span class="s">"local"</span>,
+  <span class="v">confidence</span>: <span class="n">0.94</span>
+}</pre></div>
+  <p>Good AgentSam uses: tool selection, skill selection, retrieval lane, model class, workflow branch, terminal target, next GOAP action.</p>
+</section>
+
+<section id="score" data-cms-section="score">
+  <h2>Primitive 3: Score</h2>
+  <p>A <strong>score</strong> maps state onto a bounded rubric. The number is useful because AgentSam can compare options or apply thresholds without asking an LLM to emit JSON-shaped prose.</p>
+  <div class="code"><div class="code-head"><span>utility.ts</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre><span class="k">type</span> <span class="v">ActionScore</span> = {
+  <span class="v">action</span>: <span class="s">string</span>;
+  <span class="v">utility</span>: <span class="s">number</span>;      <span class="c">// 0..1</span>
+  <span class="v">risk</span>: <span class="s">number</span>;         <span class="c">// 0..1</span>
+  <span class="v">cost</span>: <span class="s">number</span>;         <span class="c">// 0..1</span>
+  <span class="v">reversibility</span>: <span class="s">number</span>; <span class="c">// 0..1</span>
+};</pre></div>
+</section>
+
+<section id="gate" data-cms-section="gate">
+  <h2>Primitive 4: Gate</h2>
+  <p>A <strong>gate</strong> turns a structured assessment into permission to continue. Gates protect actions with consequences: production writes, secret rotation, package release, destructive database changes, or expensive long-running jobs.</p>
+  <div class="diagram"><pre>candidate action
+     │
+     ▼
+risk score ───────┐
+confidence ───────┤
+tests/status ─────┤──► gate policy ──► allow
+approval state ───┤                 └─► ask user
+reversibility ────┘                 └─► deny</pre></div>
+</section>
+
+<section id="confidence" data-cms-section="confidence">
+  <h2>Primitive 5: Confidence</h2>
+  <p>Confidence is not a substitute for correctness. It is a routing signal. The important behavior is what AgentSam does when confidence is low.</p>
+  <table class="table"><thead><tr><th>Confidence</th><th>Agent behavior</th></tr></thead><tbody>
+    <tr><td>High</td><td>Proceed when policy allows; record the decision and evidence.</td></tr>
+    <tr><td>Medium</td><td>Gather one more piece of evidence, run a cheap check, or compare alternatives.</td></tr>
+    <tr><td>Low</td><td>Ask the user, defer, or route to a stronger reasoning model.</td></tr>
+  </tbody></table>
+</section>
+
+<section id="intent-routing" data-cms-section="intent-routing">
+  <h2>Pattern: Intent routing</h2>
+  <div class="pattern"><div class="pattern-head"><div class="num">01</div><div><h3>Route before generating</h3><p>Classify the task into a known execution family, then hand the task to the correct subsystem.</p></div></div>
+  <div class="flow">request → {code | research | terminal | database | deploy | design | document} → route</div></div>
+  <p>This keeps the expensive language model focused on the actual job instead of repeatedly rediscovering which AgentSam subsystem should own it.</p>
+</section>
+
+<section id="utility" data-cms-section="utility">
+  <h2>Pattern: Utility scoring</h2>
+  <p>Utility scoring lets multiple possible actions compete using explicit factors. This matches AgentSam’s machine-agent layer.</p>
+  <div class="code"><div class="code-head"><span>utility formula</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre><span class="v">utility</span> =
+  (<span class="v">goalProgress</span> * <span class="n">0.40</span>) +
+  (<span class="v">confidence</span>   * <span class="n">0.20</span>) +
+  (<span class="v">reversibility</span> * <span class="n">0.15</span>) +
+  (<span class="v">speed</span>        * <span class="n">0.15</span>) -
+  (<span class="v">risk</span>         * <span class="n">0.25</span>) -
+  (<span class="v">cost</span>         * <span class="n">0.10</span>);</pre></div>
+  <p>The exact weights should be policy/configuration, not hidden magic.</p>
+</section>
+
+<section id="goap" data-cms-section="goap">
+  <h2>Pattern: GOAP action selection</h2>
+  <p>GOAP produces candidate plans from preconditions and effects. A structured scoring layer can rank plans or actions without asking an LLM to improvise the entire control loop.</p>
+  <div class="diagram"><pre>goal: "package is release-ready"
+
+world state
+  tests = failing
+  changeset = missing
+  pack = unknown
+
+actions → run_tests · add_changeset · npm_pack · verify_install · release
+
+planner → valid plans → utility/confidence scoring → next action</pre></div>
+</section>
+
+<section id="retrieval" data-cms-section="retrieval">
+  <h2>Pattern: Retrieval routing</h2>
+  <p>Do not query every memory and index on every turn. Decide which corpus is appropriate first.</p>
+  <table class="table"><thead><tr><th>Question</th><th>Likely corpus</th></tr></thead><tbody>
+    <tr><td>“Where is this symbol defined?”</td><td>AST/code graph</td></tr>
+    <tr><td>“What did we decide last week?”</td><td>memory/work history</td></tr>
+    <tr><td>“What is the package contract?”</td><td>repository/docs</td></tr>
+    <tr><td>“What does Cloudflare currently support?”</td><td>fresh web/provider docs</td></tr>
+  </tbody></table>
+</section>
+
+<section id="terminal" data-cms-section="terminal">
+  <h2>Pattern: Terminal lane selection</h2>
+  <p>AgentSam has local, remote, and sandbox lanes. The agent should select the lane from task requirements and machine state instead of using a single hardcoded terminal.</p>
+  <div class="code"><div class="code-head"><span>lane decision</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>{
+  <span class="v">task</span>: <span class="s">"run repository tests"</span>,
+  <span class="v">requiresLocalFiles</span>: <span class="n">true</span>,
+  <span class="v">untrustedCode</span>: <span class="n">false</span>,
+  <span class="v">available</span>: { <span class="v">local</span>: <span class="n">true</span>, <span class="v">remote</span>: <span class="n">true</span>, <span class="v">sandbox</span>: <span class="n">true</span> },
+  <span class="v">choice</span>: <span class="s">"local"</span>
+}</pre></div>
+</section>
+
+<section id="approval" data-cms-section="approval">
+  <h2>Pattern: Approval gates</h2>
+  <p>Agent autonomy should increase with reversibility and confidence. It should decrease as risk, blast radius, or uncertainty rise.</p>
+  <div class="diagram"><pre>low risk + reversible + high confidence → act
+medium confidence / missing evidence → inspect / test / verify
+high consequence / irreversible → explicit approval</pre></div>
+</section>
+
+<section id="skills" data-cms-section="skills">
+  <h2>AgentSam application: skill selection</h2>
+  <p>Skills are a perfect finite-choice problem. Retrieval produces a candidate set from the skill registry; the decision layer selects or ranks candidates using task type, route keys, tags, publication state, previous success, and confidence.</p>
+  <div class="diagram"><pre>user intent → skill retrieval → rank / choose → invoke selected skill</pre></div>
+</section>
+
+<section id="models" data-cms-section="models">
+  <h2>AgentSam application: model routing</h2>
+  <p>Model selection should remain user-visible and fail closed, but a decision layer can recommend a class based on context size, reasoning need, latency target, provider availability, and cost.</p>
+  <table class="table"><thead><tr><th>Task shape</th><th>Suggested class</th></tr></thead><tbody>
+    <tr><td>Small edit, extraction, classification</td><td>fast</td></tr>
+    <tr><td>Normal coding and planning</td><td>standard</td></tr>
+    <tr><td>Large architectural reasoning</td><td>reasoning/heavy</td></tr>
+    <tr><td>Private/local or offline work</td><td>local model when capable</td></tr>
+  </tbody></table>
+</section>
+
+<section id="packages" data-cms-section="packages">
+  <h2>AgentSam application: package and deploy gates</h2>
+  <p>Release readiness can be a machine-readable state rather than an LLM opinion.</p>
+  <div class="code"><div class="code-head"><span>release state</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>{
+  <span class="v">manifestValid</span>: <span class="n">true</span>,
+  <span class="v">testsPassing</span>: <span class="n">true</span>,
+  <span class="v">packDryRun</span>: <span class="s">"pass"</span>,
+  <span class="v">standaloneImport</span>: <span class="s">"pass"</span>,
+  <span class="v">risk</span>: <span class="n">0.11</span>,
+  <span class="v">gate</span>: <span class="s">"ready_for_review"</span>
+}</pre></div>
+</section>
+
+<section id="rules" data-cms-section="rules">
+  <h2>Design rules</h2>
+  <ul>
+    <li><strong>Use typed decisions only when the output space is genuinely constrained.</strong></li>
+    <li><strong>Keep state explicit.</strong> Do not hide critical facts in giant prompts.</li>
+    <li><strong>Never turn confidence into permission by itself.</strong> Permission comes from policy.</li>
+    <li><strong>Prefer deterministic checks over learned judgment</strong> when a direct check exists.</li>
+    <li><strong>Use the LLM when the task is generative or explanatory.</strong></li>
+    <li><strong>Record decisions as receipts.</strong> Candidate set, chosen result, scores, policy, and evidence should be inspectable.</li>
+    <li><strong>Escalate uncertainty.</strong> Low confidence should trigger evidence gathering, a stronger model, or the user.</li>
+    <li><strong>Keep presentation separate from control.</strong> CLI, Studio, and mobile can show the same underlying decision differently.</li>
+  </ul>
+  <div class="callout"><b>The intended AgentSam shape:</b> an LLM-supercharged coding environment on top of Systematic Autonomous Machinery that understands state, tools, capabilities, costs, constraints, goals, and confidence.</div>
+  <div class="page-footer">AgentSam · structured decision systems · local-first where practical · explicit authority · observable execution</div>
+</section>
+        </article>
+      </main>
+
+      <aside class="agentsam-docs-toc" data-cms-region="toc">
+        <h4>On this page</h4>
+        <a href="#not-an-llm">Not another chat model</a>
+<a href="#where-it-fits">Where it fits</a>
+<a href="#state">State</a>
+<a href="#choice">Choice</a>
+<a href="#score">Score</a>
+<a href="#gate">Gate</a>
+<a href="#confidence">Confidence</a>
+<a href="#intent-routing">Intent routing</a>
+<a href="#utility">Utility scoring</a>
+<a href="#goap">GOAP</a>
+<a href="#terminal">Terminal lanes</a>
+<a href="#skills">Skill selection</a>
+<a href="#models">Model routing</a>
+<a href="#rules">Design rules</a>
+<div class="sep"></div>
+<div class="note">Public AgentSam guide. Shared ASBD header/footer · violet docs theme.</div>
+      </aside>
+    </div>
+  </div>
+
+  <div id="asbd-footer-mount" data-cms-region="footer"></div>
+
+  <script>
+  (function () {
+    function inject(id, url) {
+      var slot = document.getElementById(id);
+      if (!slot) return;
+      fetch(url, { credentials: 'same-origin' })
+        .then(function (r) { return r.text(); })
+        .then(function (html) {
+          slot.innerHTML = html;
+          slot.querySelectorAll('script').forEach(function (old) {
+            var s = document.createElement('script');
+            if (old.src) s.src = old.src;
+            else s.textContent = old.textContent;
+            old.replaceWith(s);
+          });
+        })
+        .catch(function () {});
+    }
+    inject('asbd-header-mount', '/site/global/asbd-header.html');
+    inject('asbd-footer-mount', '/site/global/asbd-footer.html');
+
+    var copy = document.getElementById('docs-copy-page');
+    if (copy) {
+      copy.addEventListener('click', async function () {
+        try {
+          await navigator.clipboard.writeText(document.getElementById('docs-article').innerText);
+          copy.textContent = 'Copied';
+          setTimeout(function () { copy.textContent = 'Copy page'; }, 1200);
+        } catch (_) {
+          copy.textContent = 'Copy unavailable';
+          setTimeout(function () { copy.textContent = 'Copy page'; }, 1400);
+        }
+      });
+    }
+
+    document.querySelectorAll('.copy-code').forEach(function (button) {
+      button.addEventListener('click', async function () {
+        var block = button.closest('.code').querySelector('pre');
+        try {
+          await navigator.clipboard.writeText(block.innerText);
+          var prior = button.textContent;
+          button.textContent = 'Copied';
+          setTimeout(function () { button.textContent = prior; }, 1000);
+        } catch (_) {
+          button.textContent = 'Unavailable';
+        }
+      });
+    });
+
+    var search = document.getElementById('docs-search');
+    var navLinks = Array.prototype.slice.call(document.querySelectorAll('#docs-nav a'));
+    if (search) {
+      search.addEventListener('input', function () {
+        var q = search.value.trim().toLowerCase();
+        navLinks.forEach(function (a) {
+          a.style.display = !q || a.textContent.toLowerCase().includes(q) ? 'flex' : 'none';
+        });
+      });
+    }
+
+    var sections = Array.prototype.slice.call(document.querySelectorAll('section[id]'));
+    var allLinks = Array.prototype.slice.call(document.querySelectorAll('a[href^="#"]'));
+    if ('IntersectionObserver' in window) {
+      var observer = new IntersectionObserver(function (entries) {
+        var visible = entries.filter(function (e) { return e.isIntersecting; })
+          .sort(function (a, b) { return b.intersectionRatio - a.intersectionRatio; })[0];
+        if (!visible) return;
+        allLinks.forEach(function (a) {
+          a.classList.toggle('active', a.getAttribute('href') === '#' + visible.target.id);
+        });
+      }, { rootMargin: '-18% 0px -68% 0px', threshold: [0, 0.08, 0.25] });
+      sections.forEach(function (section) { observer.observe(section); });
+    }
+  })();
+  </script>
+</body>
+</html>

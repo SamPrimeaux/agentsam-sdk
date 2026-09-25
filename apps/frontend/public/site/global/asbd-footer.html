@@ -260,6 +260,7 @@
         <div class="asbd-footer-col-label">Explore</div>
         <ul>
           <li><a href="/" data-asbd-nav="home">Home</a></li>
+          <li><a href="/docs/sam/" data-asbd-nav="docs">Docs</a></li>
           <li><a href="/learn/" data-asbd-nav="learn">Learn</a></li>
           <li><a href="/themes/" data-asbd-nav="themes">Themes</a></li>
           <li><a href="/packages/sdk/help/" data-asbd-nav="sdk">SDK</a></li>
@@ -268,7 +269,7 @@
       <div class="asbd-footer-col">
         <div class="asbd-footer-col-label">Products</div>
         <ul>
-          <li><a href="/learn/">Modules gallery</a></li>
+          <li><a href="/docs/sam/">SAM docs</a></li>
           <li><a href="/packages/sdk/setup-guide/">SDK Setup</a></li>
           <li><a href="/learn/architecture-field-manual/">Architecture</a></li>
           <li><a href="/auth/login?next=/agentsam">Workbench</a></li>
@@ -313,7 +314,11 @@
   if (!footer) return;
 
   // Opposing footer theme vs page theme (dark page → light footer, and vice versa)
-  if (window.AsbdTheme && typeof window.AsbdTheme.syncFromDocument === 'function') {
+  // Violet docs skin keeps a matching dark purple footer.
+  var skin = document.documentElement.getAttribute('data-asbd-skin');
+  if (skin === 'violet') {
+    footer.setAttribute('data-asbd-theme', 'dark');
+  } else if (window.AsbdTheme && typeof window.AsbdTheme.syncFromDocument === 'function') {
     window.AsbdTheme.syncFromDocument();
   } else {
     var pageTheme =
@@ -354,7 +359,10 @@
     var ambient = new THREE.AmbientLight(0xffffff, 1.2);
     scene.add(ambient);
 
-    var blueLight = new THREE.DirectionalLight(0x167BFC, 2.5);
+    var blueLight = new THREE.DirectionalLight(
+      document.documentElement.getAttribute('data-asbd-skin') === 'violet' ? 0x8b5cf6 : 0x167BFC,
+      2.5
+    );
     blueLight.position.set(-4, 3, 4);
     scene.add(blueLight);
 

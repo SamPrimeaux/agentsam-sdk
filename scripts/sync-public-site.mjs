@@ -93,6 +93,22 @@ try {
   console.warn('[site:sync] themes stage error:', err?.message || err);
 }
 
+// Rebuild /docs/sam/* from sectioned HTML + violet docs theme
+try {
+  const { spawnSync } = await import('node:child_process');
+  const samDocs = path.join(root, 'scripts/build-sam-docs.mjs');
+  if (fs.existsSync(samDocs)) {
+    const r = spawnSync(process.execPath, [samDocs], { cwd: root, encoding: 'utf8' });
+    if (r.status !== 0) {
+      console.warn('[site:sync] sam docs rebuild failed:', (r.stderr || r.stdout || '').trim());
+    } else {
+      console.log('[site:sync] sam docs rebuilt');
+    }
+  }
+} catch (err) {
+  console.warn('[site:sync] sam docs rebuild error:', err?.message || err);
+}
+
 // Refresh /learn/ from donor when present (Downloads or AGENTSAM_LEARN_SOURCE)
 try {
   const { spawnSync } = await import('node:child_process');

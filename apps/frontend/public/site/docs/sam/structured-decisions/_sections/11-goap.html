@@ -1,0 +1,14 @@
+<section id="goap" data-cms-section="goap">
+  <h2>Pattern: GOAP action selection</h2>
+  <p>GOAP produces candidate plans from preconditions and effects. A structured scoring layer can rank plans or actions without asking an LLM to improvise the entire control loop.</p>
+  <div class="diagram"><pre>goal: "package is release-ready"
+
+world state
+  tests = failing
+  changeset = missing
+  pack = unknown
+
+actions → run_tests · add_changeset · npm_pack · verify_install · release
+
+planner → valid plans → utility/confidence scoring → next action</pre></div>
+</section>

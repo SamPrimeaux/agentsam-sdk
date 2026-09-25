@@ -1,0 +1,11 @@
+<section id="state" data-cms-section="state">
+  <h2>Primitive 1: State</h2>
+  <p>A decision should be grounded in explicit machine-readable state, not hidden prompt assumptions. State can combine repo facts, runtime health, user intent, tool availability, cost budget, security constraints, and previous action results.</p>
+  <div class="code"><div class="code-head"><span>decision-state.ts</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre><span class="k">const</span> <span class="v">state</span> = {
+  <span class="v">intent</span>: <span class="s">"inspect_repository"</span>,
+  <span class="v">repo</span>: { <span class="v">dirty</span>: <span class="n">true</span>, <span class="v">tests</span>: <span class="s">"unknown"</span>, <span class="v">packageCount</span>: <span class="n">31</span> },
+  <span class="v">terminal</span>: { <span class="v">local</span>: <span class="s">"healthy"</span>, <span class="v">remote</span>: <span class="s">"healthy"</span>, <span class="v">sandbox</span>: <span class="s">"available"</span> },
+  <span class="v">policy</span>: { <span class="v">allowProductionWrite</span>: <span class="n">false</span> }
+};</pre></div>
+</section>

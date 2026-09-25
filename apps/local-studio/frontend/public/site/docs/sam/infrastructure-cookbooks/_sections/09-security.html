@@ -1,0 +1,14 @@
+<section id="security" data-cms-section="security">
+  <div class="section-label"><span>Cookbook 07</span><div class="line"></div></div>
+  <h2>Security + trust-boundary drill</h2>
+  <div class="cookbook">
+    <div class="cookbook-head"><div class="num">07</div><div class="cookbook-title"><b>More than dependency scanning</b><span>Test AST + Merkle evidence around client/server and secret-handling boundaries.</span></div><span class="badge live">runnable now</span></div>
+    <div class="cookbook-body">
+      <div class="code"><div class="code-head"><span>shell</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>agentsam security scan --path . --offline --json
+agentsam security scan --path . --json
+agentsam security repair --path . --json</pre></div>
+      <div class="good"><strong>Good result:</strong> SAM identifies a trust-boundary violation from structural evidence before it becomes a production bug.</div>
+    </div>
+  </div>
+</section>

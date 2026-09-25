@@ -28,10 +28,23 @@ const PUBLIC_SITE_HTML = Object.freeze({
   '/learn/architecture-field-manual/': 'learn/architecture-field-manual/index.html',
   '/themes': 'themes/index.html',
   '/themes/': 'themes/index.html',
+  '/docs': 'docs/sam/index.html',
+  '/docs/': 'docs/sam/index.html',
+  '/docs/sam': 'docs/sam/index.html',
+  '/docs/sam/': 'docs/sam/index.html',
+  '/docs/sam/structured-decisions': 'docs/sam/structured-decisions/index.html',
+  '/docs/sam/structured-decisions/': 'docs/sam/structured-decisions/index.html',
+  '/docs/sam/infrastructure-cookbooks': 'docs/sam/infrastructure-cookbooks/index.html',
+  '/docs/sam/infrastructure-cookbooks/': 'docs/sam/infrastructure-cookbooks/index.html',
 });
 
 export function isPublicSitePath(pathname) {
-  return Object.hasOwn(PUBLIC_SITE_HTML, pathname) || isThemesPath(pathname) || isSiteStaticPath(pathname);
+  return (
+    Object.hasOwn(PUBLIC_SITE_HTML, pathname) ||
+    isThemesPath(pathname) ||
+    isDocsPath(pathname) ||
+    isSiteStaticPath(pathname)
+  );
 }
 
 /** Theme gallery + live demo mounts under /themes/<slug>/… */
@@ -39,8 +52,21 @@ export function isThemesPath(pathname) {
   return pathname === '/themes' || pathname.startsWith('/themes/');
 }
 
+/** SAM / public docs under /docs/… */
+export function isDocsPath(pathname) {
+  return pathname === '/docs' || pathname.startsWith('/docs/');
+}
+
 function themesRelative(pathname) {
   if (pathname === '/themes' || pathname === '/themes/') return 'themes/index.html';
+  let rel = pathname.replace(/^\/+/, '');
+  if (rel.endsWith('/')) rel += 'index.html';
+  else if (!/\.[a-zA-Z0-9]+$/.test(rel)) rel += '/index.html';
+  return rel;
+}
+
+function docsRelative(pathname) {
+  if (pathname === '/docs' || pathname === '/docs/') return 'docs/sam/index.html';
   let rel = pathname.replace(/^\/+/, '');
   if (rel.endsWith('/')) rel += 'index.html';
   else if (!/\.[a-zA-Z0-9]+$/.test(rel)) rel += '/index.html';
@@ -137,6 +163,9 @@ export async function servePublicSitePage(
   let relative = PUBLIC_SITE_HTML[pathname];
   if (!relative && isThemesPath(pathname)) {
     relative = themesRelative(pathname);
+  }
+  if (!relative && isDocsPath(pathname)) {
+    relative = docsRelative(pathname);
   }
   if (!relative && isSiteStaticPath(pathname)) {
     relative = siteStaticRelative(pathname);

@@ -1,0 +1,15 @@
+<section id="rules" data-cms-section="rules">
+  <h2>Design rules</h2>
+  <ul>
+    <li><strong>Use typed decisions only when the output space is genuinely constrained.</strong></li>
+    <li><strong>Keep state explicit.</strong> Do not hide critical facts in giant prompts.</li>
+    <li><strong>Never turn confidence into permission by itself.</strong> Permission comes from policy.</li>
+    <li><strong>Prefer deterministic checks over learned judgment</strong> when a direct check exists.</li>
+    <li><strong>Use the LLM when the task is generative or explanatory.</strong></li>
+    <li><strong>Record decisions as receipts.</strong> Candidate set, chosen result, scores, policy, and evidence should be inspectable.</li>
+    <li><strong>Escalate uncertainty.</strong> Low confidence should trigger evidence gathering, a stronger model, or the user.</li>
+    <li><strong>Keep presentation separate from control.</strong> CLI, Studio, and mobile can show the same underlying decision differently.</li>
+  </ul>
+  <div class="callout"><b>The intended AgentSam shape:</b> an LLM-supercharged coding environment on top of Systematic Autonomous Machinery that understands state, tools, capabilities, costs, constraints, goals, and confidence.</div>
+  <div class="page-footer">AgentSam · structured decision systems · local-first where practical · explicit authority · observable execution</div>
+</section>

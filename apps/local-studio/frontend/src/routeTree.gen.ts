@@ -16,8 +16,8 @@ import { Route as appsBrowseRouteImport } from './routes/(apps)/browse'
 import { Route as appsCadRouteImport } from './routes/(apps)/cad'
 import { Route as appsCliRouteImport } from './routes/(apps)/cli'
 import { Route as appsCmsRouteImport } from './routes/(apps)/cms'
-import { Route as appsFilesRouteImport } from './routes/(apps)/files'
 import { Route as appsDatabaseRouteImport } from './routes/(apps)/database'
+import { Route as appsFilesRouteImport } from './routes/(apps)/files'
 import { Route as appsProjectsRouteImport } from './routes/(apps)/projects'
 import { Route as appsSettingsRouteImport } from './routes/(apps)/settings'
 import { Route as appsShipRouteImport } from './routes/(apps)/ship'
@@ -68,14 +68,14 @@ const appsCmsRoute = appsCmsRouteImport.update({
   path: '/cms',
   getParentRoute: () => rootRouteImport,
 } as any)
-const appsFilesRoute = appsFilesRouteImport.update({
-  id: '/(apps)/files',
-  path: '/files',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const appsDatabaseRoute = appsDatabaseRouteImport.update({
   id: '/(apps)/database',
   path: '/database',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const appsFilesRoute = appsFilesRouteImport.update({
+  id: '/(apps)/files',
+  path: '/files',
   getParentRoute: () => rootRouteImport,
 } as any)
 const appsProjectsRoute = appsProjectsRouteImport.update({
@@ -125,7 +125,7 @@ const appsSettingsKeysRoute = appsSettingsKeysRouteImport.update({
   getParentRoute: () => appsSettingsRoute,
 } as any)
 const appsSettingsThemesRoute = appsSettingsThemesRouteImport.update({
-  id: '/(apps)/settings/themes',
+  id: '/themes',
   path: '/themes',
   getParentRoute: () => appsSettingsRoute,
 } as any)
@@ -158,8 +158,8 @@ export interface FileRoutesByFullPath {
   '/cad': typeof appsCadRoute
   '/cli': typeof appsCliRoute
   '/cms': typeof appsCmsRoute
-  '/files': typeof appsFilesRoute
   '/database': typeof appsDatabaseRoute
+  '/files': typeof appsFilesRoute
   '/projects': typeof appsProjectsRoute
   '/settings': typeof appsSettingsRouteWithChildren
   '/ship': typeof appsShipRoute
@@ -183,8 +183,8 @@ export interface FileRoutesByTo {
   '/cad': typeof appsCadRoute
   '/cli': typeof appsCliRoute
   '/cms': typeof appsCmsRoute
-  '/files': typeof appsFilesRoute
   '/database': typeof appsDatabaseRoute
+  '/files': typeof appsFilesRoute
   '/projects': typeof appsProjectsRoute
   '/ship': typeof appsShipRoute
   '/api/chat': typeof ApiChatRoute
@@ -192,6 +192,7 @@ export interface FileRoutesByTo {
   '/api/github': typeof ApiGithubRoute
   '/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/settings/keys': typeof appsSettingsKeysRoute
+  '/settings/themes': typeof appsSettingsThemesRoute
   '/trails/$trailId': typeof appsTrailsTrailIdRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
   '/settings': typeof appsSettingsIndexRoute
@@ -207,8 +208,8 @@ export interface FileRoutesById {
   '/(apps)/cad': typeof appsCadRoute
   '/(apps)/cli': typeof appsCliRoute
   '/(apps)/cms': typeof appsCmsRoute
-  '/(apps)/files': typeof appsFilesRoute
   '/(apps)/database': typeof appsDatabaseRoute
+  '/(apps)/files': typeof appsFilesRoute
   '/(apps)/projects': typeof appsProjectsRoute
   '/(apps)/settings': typeof appsSettingsRouteWithChildren
   '/(apps)/ship': typeof appsShipRoute
@@ -234,8 +235,8 @@ export interface FileRouteTypes {
     | '/cad'
     | '/cli'
     | '/cms'
-    | '/files'
     | '/database'
+    | '/files'
     | '/projects'
     | '/settings'
     | '/ship'
@@ -259,8 +260,8 @@ export interface FileRouteTypes {
     | '/cad'
     | '/cli'
     | '/cms'
-    | '/files'
     | '/database'
+    | '/files'
     | '/projects'
     | '/ship'
     | '/api/chat'
@@ -268,6 +269,7 @@ export interface FileRouteTypes {
     | '/api/github'
     | '/settings/integrations'
     | '/settings/keys'
+    | '/settings/themes'
     | '/trails/$trailId'
     | '/api/llm/inventory'
     | '/settings'
@@ -282,8 +284,8 @@ export interface FileRouteTypes {
     | '/(apps)/cad'
     | '/(apps)/cli'
     | '/(apps)/cms'
-    | '/(apps)/files'
     | '/(apps)/database'
+    | '/(apps)/files'
     | '/(apps)/projects'
     | '/(apps)/settings'
     | '/(apps)/ship'
@@ -308,8 +310,8 @@ export interface RootRouteChildren {
   appsCadRoute: typeof appsCadRoute
   appsCliRoute: typeof appsCliRoute
   appsCmsRoute: typeof appsCmsRoute
-  appsFilesRoute: typeof appsFilesRoute
   appsDatabaseRoute: typeof appsDatabaseRoute
+  appsFilesRoute: typeof appsFilesRoute
   appsProjectsRoute: typeof appsProjectsRoute
   appsSettingsRoute: typeof appsSettingsRouteWithChildren
   appsShipRoute: typeof appsShipRoute
@@ -370,6 +372,13 @@ declare module '@tanstack/react-router' {
       path: '/cms'
       fullPath: '/cms'
       preLoaderRoute: typeof appsCmsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/database': {
+      id: '/(apps)/database'
+      path: '/database'
+      fullPath: '/database'
+      preLoaderRoute: typeof appsDatabaseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(apps)/files': {
@@ -442,6 +451,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appsSettingsKeysRouteImport
       parentRoute: typeof appsSettingsRoute
     }
+    '/(apps)/settings/themes': {
+      id: '/(apps)/settings/themes'
+      path: '/themes'
+      fullPath: '/settings/themes'
+      preLoaderRoute: typeof appsSettingsThemesRouteImport
+      parentRoute: typeof appsSettingsRoute
+    }
     '/(apps)/trails/': {
       id: '/(apps)/trails/'
       path: '/trails'
@@ -511,8 +527,8 @@ const rootRouteChildren: RootRouteChildren = {
   appsCadRoute: appsCadRoute,
   appsCliRoute: appsCliRoute,
   appsCmsRoute: appsCmsRoute,
-  appsFilesRoute: appsFilesRoute,
   appsDatabaseRoute: appsDatabaseRoute,
+  appsFilesRoute: appsFilesRoute,
   appsProjectsRoute: appsProjectsRoute,
   appsSettingsRoute: appsSettingsRouteWithChildren,
   appsShipRoute: appsShipRoute,

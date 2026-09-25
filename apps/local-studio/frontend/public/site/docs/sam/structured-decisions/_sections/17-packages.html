@@ -1,0 +1,13 @@
+<section id="packages" data-cms-section="packages">
+  <h2>AgentSam application: package and deploy gates</h2>
+  <p>Release readiness can be a machine-readable state rather than an LLM opinion.</p>
+  <div class="code"><div class="code-head"><span>release state</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>{
+  <span class="v">manifestValid</span>: <span class="n">true</span>,
+  <span class="v">testsPassing</span>: <span class="n">true</span>,
+  <span class="v">packDryRun</span>: <span class="s">"pass"</span>,
+  <span class="v">standaloneImport</span>: <span class="s">"pass"</span>,
+  <span class="v">risk</span>: <span class="n">0.11</span>,
+  <span class="v">gate</span>: <span class="s">"ready_for_review"</span>
+}</pre></div>
+</section>

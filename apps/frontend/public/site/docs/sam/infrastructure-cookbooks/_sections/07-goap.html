@@ -1,0 +1,15 @@
+<section id="goap" data-cms-section="goap">
+  <div class="section-label"><span>Cookbook 05</span><div class="line"></div></div>
+  <h2>GOAP planning proof</h2>
+  <div class="cookbook">
+    <div class="cookbook-head"><div class="num">05</div><div class="cookbook-title"><b>Deterministic plan behavior</b><span>Use the currently available brand planner as a live GOAP laboratory.</span></div><span class="badge live">runnable now</span></div>
+    <div class="cookbook-body">
+      <div class="code"><div class="code-head"><span>shell</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>agentsam brand scan --json
+agentsam brand resolve --json
+agentsam brand plan --goap --json</pre></div>
+      <p>Run from an isolated worktree, introduce one controlled inconsistency, and record initial state, candidate actions, selected plan, cost, preconditions, and expected effects.</p>
+      <div class="good"><strong>Good result:</strong> identical state produces the same plan; meaningfully different state produces a meaningfully different plan.</div>
+    </div>
+  </div>
+</section>

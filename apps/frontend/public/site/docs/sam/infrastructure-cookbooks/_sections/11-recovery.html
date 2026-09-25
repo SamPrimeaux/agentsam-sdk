@@ -1,0 +1,13 @@
+<section id="recovery" data-cms-section="recovery">
+  <div class="section-label"><span>Cookbook 09</span><div class="line"></div></div>
+  <h2>Failure-recovery drill</h2>
+  <div class="cookbook">
+    <div class="cookbook-head"><div class="num">09</div><div class="cookbook-title"><b>Test the repair loop</b><span>Force SAM to classify failure before proposing changes.</span></div><span class="badge">machine recovery</span></div>
+    <div class="cookbook-body">
+      <div class="flow"><pre>command failed → classify stage → extract native evidence
+→ identify affected subsystem → candidate remediations
+→ score / choose → safe attempt → verify</pre></div>
+      <div class="good"><strong>Good result:</strong> the system does not respond to one failing command with a broad speculative rewrite.</div>
+    </div>
+  </div>
+</section>

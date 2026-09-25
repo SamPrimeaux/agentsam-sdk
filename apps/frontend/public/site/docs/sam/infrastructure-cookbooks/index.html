@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en" data-asbd-theme="dark" data-asbd-skin="violet">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <title>SAM Infrastructure Cookbooks · AgentSam</title>
+  <meta name="description" content="Hands-on infrastructure cookbooks for testing AgentSam's Systematic Autonomous Machinery: Merkle, AST, retrieval, GOAP, security, terminals, and recovery." />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href="https://agentsam.inneranimalmedia.com/docs/sam/infrastructure-cookbooks" />
+  <meta property="og:title" content="SAM Infrastructure Cookbooks · AgentSam" />
+  <meta property="og:description" content="Hands-on infrastructure cookbooks for testing AgentSam's Systematic Autonomous Machinery: Merkle, AST, retrieval, GOAP, security, terminals, and recovery." />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://agentsam.inneranimalmedia.com/docs/sam/infrastructure-cookbooks" />
+  <meta name="agentsam:page" content="docs.sam.infrastructure-cookbooks" />
+  <meta name="agentsam:cms-editable" content="true" />
+  <meta name="agentsam:route" content="agentsam.inneranimalmedia.com/docs/sam/infrastructure-cookbooks" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/site/global/asbd-tokens.css" />
+  <link rel="stylesheet" href="/site/global/agentsam-docs-tokens.css" />
+  <link rel="stylesheet" href="/site/global/agentsam-docs-layout.css" />
+  <script src="/site/global/asbd-theme.js" defer></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "SAM Infrastructure Cookbooks · AgentSam",
+  "description": "Hands-on infrastructure cookbooks for testing AgentSam's Systematic Autonomous Machinery: Merkle, AST, retrieval, GOAP, security, terminals, and recovery.",
+  "author": {
+    "@type": "Organization",
+    "name": "AgentSam"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "InnerAnimalMedia"
+  },
+  "mainEntityOfPage": "https://agentsam.inneranimalmedia.com/docs/sam/infrastructure-cookbooks"
+}
+  </script>
+</head>
+<body data-asbd-theme="dark">
+  <div id="asbd-header-mount" data-cms-region="header"></div>
+
+  <div class="agentsam-docs">
+    <div class="agentsam-docs-layout">
+      <aside class="agentsam-docs-sidebar" data-cms-region="sidebar">
+        <div class="agentsam-docs-brand">
+          <div class="agentsam-docs-mark">A</div>
+          <div><b>AgentSam</b><span>SAM engineering guides</span></div>
+        </div>
+        <div class="agentsam-docs-search">
+          <input id="docs-search" type="search" placeholder="Search…" aria-label="Search this guide" />
+        </div>
+        <nav class="agentsam-docs-nav" id="docs-nav"><div class="group">Overview</div>
+<a href="#start" class="active">Start here</a>
+<a href="#principle">How to test SAM</a>
+<a href="#scorecard">Scorecard</a>
+<div class="group">Cookbooks</div>
+<a href="#baseline">Baseline perception</a>
+<a href="#merkle">Merkle delta</a>
+<a href="#blast-radius">AST blast radius</a>
+<a href="#retrieval">Retrieval routing</a>
+<a href="#goap">GOAP proof</a>
+<a href="#release">Release torture test</a>
+<a href="#security">Security boundary drill</a>
+<a href="#terminals">Terminal equivalence</a>
+<a href="#recovery">Failure recovery</a>
+<a href="#stress">Massive infra stress test</a>
+<div class="group">Operator</div>
+<a href="#agent-prompt">Agent instruction</a>
+<a href="#success">What good looks like</a></nav>
+      </aside>
+
+      <main class="agentsam-docs-main">
+        <div class="agentsam-docs-topbar">
+          <div class="agentsam-docs-crumb"><span>Docs</span> <span aria-hidden="true">/</span> <span>SAM</span> <span aria-hidden="true">/</span> <strong>Infrastructure cookbooks</strong></div>
+          <div class="agentsam-docs-spacer"></div>
+          <button type="button" class="agentsam-docs-action" id="docs-copy-page">Copy page</button>
+        </div>
+        <article class="agentsam-docs-article" id="docs-article" data-cms-region="body">
+<section id="start" data-cms-section="start">
+  <div class="eyebrow">Systematic Autonomous Machinery</div>
+  <h1>Infrastructure cookbooks</h1>
+  <p class="lead">Practical tests for proving that AgentSam's machine layer can understand large codebases, detect change, predict blast radius, choose the right evidence, recover from failures, and verify heavy infrastructure work without brute-force model exploration.</p>
+  <div class="hero-grid">
+    <div class="hero-card primary"><h3>Test outcomes, not commands</h3><p>Merkle, AST, GOAP, retrieval, terminal lanes, security scans, and verification scripts are implementation details. The benchmark is whether SAM reduces unnecessary exploration and produces smaller, safer, evidence-backed work.</p></div>
+    <div class="stats">
+      <div class="stat-card"><b>9</b><span>hands-on drills</span></div>
+      <div class="stat-card"><b>1</b><span>full infra stress test</span></div>
+      <div class="stat-card"><b>0</b><span>fake package CLI commands</span></div>
+      <div class="stat-card"><b>/why</b><span>desired explainability UX</span></div>
+    </div>
+  </div>
+  <div class="url-box"><span>Public URL</span><span>/docs/sam/infrastructure-cookbooks</span></div>
+</section>
+
+<section id="principle" data-cms-section="principle">
+  <h2>How to test SAM</h2>
+  <p>A powerful infrastructure primitive is only useful if it removes cognitive work from the operator. Every cookbook asks: <strong>did SAM find the smallest correct surface, act deliberately, and prove the result?</strong></p>
+  <div class="flow"><pre>human goal
+   │
+   ▼
+SAM perception
+   ├─ repository state
+   ├─ Merkle delta
+   ├─ AST / dependency graph
+   ├─ indexed retrieval
+   └─ runtime health
+   │
+   ▼
+plan / execute / verify
+   │
+   ▼
+receipt
+   ├─ predicted impact
+   ├─ actual impact
+   ├─ tests
+   ├─ evidence
+   └─ remaining uncertainty</pre></div>
+  <div class="callout"><b>Rule:</b> do not judge success by whether a command completed. Judge success by whether SAM changed the intended state and preserved unrelated authority.</div>
+</section>
+
+<section id="baseline" data-cms-section="baseline">
+  <div class="section-label"><span>Cookbook 01</span><div class="line"></div></div>
+  <h2>Establish a SAM baseline</h2>
+  <div class="cookbook">
+    <div class="cookbook-head"><div class="num">01</div><div class="cookbook-title"><b>Repository perception before edits</b><span>Create a reproducible view of the repo before a large task begins.</span></div><span class="badge live">runnable now</span></div>
+    <div class="cookbook-body">
+      <div class="code"><div class="code-head"><span>shell</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>git status --short
+git rev-parse HEAD
+
+agentsam inspect
+
+agentsam merkle snapshot . \
+  --semantic \
+  --out /tmp/sam-before.json
+
+agentsam index plan --cwd . --json
+agentsam index run --cwd . --json</pre></div>
+      <p>Then query only the surface relevant to the task:</p>
+      <div class="code"><div class="code-head"><span>shell</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>agentsam search "terminal enrollment authentication" \
+  --cwd . --top-k 8 --token-budget 4000</pre></div>
+      <div class="good"><strong>Good result:</strong> SAM identifies the authority files without requiring a model to crawl the entire repository.</div>
+    </div>
+  </div>
+</section>
+
+<section id="merkle" data-cms-section="merkle">
+  <div class="section-label"><span>Cookbook 02</span><div class="line"></div></div>
+  <h2>Prove Merkle saves work</h2>
+  <div class="cookbook">
+    <div class="cookbook-head"><div class="num">02</div><div class="cookbook-title"><b>Incremental intelligence test</b><span>Measure what can be invalidated versus reused after a bounded change.</span></div><span class="badge live">runnable now</span></div>
+    <div class="cookbook-body">
+      <div class="code"><div class="code-head"><span>before</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>agentsam merkle snapshot . --semantic --out /tmp/sam-before.json</pre></div>
+      <p>Make one bounded change, then capture the new state:</p>
+      <div class="code"><div class="code-head"><span>after</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>agentsam merkle snapshot . --semantic --out /tmp/sam-after.json
+agentsam merkle diff /tmp/sam-before.json /tmp/sam-after.json --json</pre></div>
+      <div class="good"><strong>Good result:</strong> SAM can say which subtrees changed, which analyses are invalid, and which previous work can be reused.</div>
+    </div>
+  </div>
+</section>
+
+<section id="blast-radius" data-cms-section="blast-radius">
+  <div class="section-label"><span>Cookbook 03</span><div class="line"></div></div>
+  <h2>AST blast-radius test</h2>
+  <div class="cookbook">
+    <div class="cookbook-head"><div class="num">03</div><div class="cookbook-title"><b>Predict impact before editing</b><span>Compare structural predictions to the actual changed surface.</span></div><span class="badge live">runnable now</span></div>
+    <div class="cookbook-body">
+      <ol class="steps">
+        <li>Pick a cross-cutting symbol or contract.</li>
+        <li>Index the codebase.</li>
+        <li>Ask SAM to identify likely callers, schema dependencies, tests, and runtime boundaries.</li>
+        <li>Make the change.</li>
+        <li>Compare predicted impact to the actual Merkle delta and test failures.</li>
+      </ol>
+      <div class="code"><div class="code-head"><span>shell</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>agentsam index run --cwd . --json
+agentsam search "terminal session account ownership verification" --cwd . --top-k 12</pre></div>
+      <div class="callout green"><b>Metric:</b> blast-radius recall = affected components found before editing ÷ affected components discovered overall.</div>
+    </div>
+  </div>
+</section>
+
+<section id="retrieval" data-cms-section="retrieval">
+  <div class="section-label"><span>Cookbook 04</span><div class="line"></div></div>
+  <h2>Retrieval routing bake-off</h2>
+  <div class="cookbook">
+    <div class="cookbook-head"><div class="num">04</div><div class="cookbook-title"><b>Structural vs semantic retrieval</b><span>Learn which retrieval mode is actually useful for each class of question.</span></div><span class="badge live">runnable now</span></div>
+    <div class="cookbook-body">
+      <div class="code"><div class="code-head"><span>structural</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>agentsam index run --cwd .
+agentsam search "where openSideTab handles terminal" --cwd . --top-k 8</pre></div>
+      <div class="code"><div class="code-head"><span>semantic</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>agentsam index run --cwd . --embed --json
+agentsam search "code responsible for deciding where terminal work should execute" \
+  --cwd . --semantic --top-k 8 --token-budget 4000</pre></div>
+      <table class="matrix"><thead><tr><th>Question type</th><th>Expected best signal</th></tr></thead><tbody>
+        <tr><td>Exact symbol / import</td><td>AST / structural</td></tr>
+        <tr><td>Dependency / reachability</td><td>graph</td></tr>
+        <tr><td>Architectural concept</td><td>semantic</td></tr>
+        <tr><td>Historical decision</td><td>memory / work history</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+</section>
+
+<section id="goap" data-cms-section="goap">
+  <div class="section-label"><span>Cookbook 05</span><div class="line"></div></div>
+  <h2>GOAP planning proof</h2>
+  <div class="cookbook">
+    <div class="cookbook-head"><div class="num">05</div><div class="cookbook-title"><b>Deterministic plan behavior</b><span>Use the currently available brand planner as a live GOAP laboratory.</span></div><span class="badge live">runnable now</span></div>
+    <div class="cookbook-body">
+      <div class="code"><div class="code-head"><span>shell</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>agentsam brand scan --json
+agentsam brand resolve --json
+agentsam brand plan --goap --json</pre></div>
+      <p>Run from an isolated worktree, introduce one controlled inconsistency, and record initial state, candidate actions, selected plan, cost, preconditions, and expected effects.</p>
+      <div class="good"><strong>Good result:</strong> identical state produces the same plan; meaningfully different state produces a meaningfully different plan.</div>
+    </div>
+  </div>
+</section>
+
+<section id="release" data-cms-section="release">
+  <div class="section-label"><span>Cookbook 06</span><div class="line"></div></div>
+  <h2>Package-release torture test</h2>
+  <div class="cookbook">
+    <div class="cookbook-head"><div class="num">06</div><div class="cookbook-title"><b>Break one thing at a time</b><span>Force SAM to isolate the smallest release-readiness failure.</span></div><span class="badge live">repo scripts</span></div>
+    <div class="cookbook-body">
+      <div class="callout yellow">The public CLI does not currently expose a finished <code>agentsam package</code> command. Use repository verification scripts for this drill.</div>
+      <div class="code"><div class="code-head"><span>verification</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>npm run verify:package
+npm run pack:check
+npm run test:workspaces
+npm run verify:boundaries
+npm run verify:release</pre></div>
+      <div class="good"><strong>Good result:</strong> SAM reports the exact failing gate and avoids inspecting unrelated subsystems.</div>
+    </div>
+  </div>
+</section>
+
+<section id="security" data-cms-section="security">
+  <div class="section-label"><span>Cookbook 07</span><div class="line"></div></div>
+  <h2>Security + trust-boundary drill</h2>
+  <div class="cookbook">
+    <div class="cookbook-head"><div class="num">07</div><div class="cookbook-title"><b>More than dependency scanning</b><span>Test AST + Merkle evidence around client/server and secret-handling boundaries.</span></div><span class="badge live">runnable now</span></div>
+    <div class="cookbook-body">
+      <div class="code"><div class="code-head"><span>shell</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>agentsam security scan --path . --offline --json
+agentsam security scan --path . --json
+agentsam security repair --path . --json</pre></div>
+      <div class="good"><strong>Good result:</strong> SAM identifies a trust-boundary violation from structural evidence before it becomes a production bug.</div>
+    </div>
+  </div>
+</section>
+
+<section id="terminals" data-cms-section="terminals">
+  <div class="section-label"><span>Cookbook 08</span><div class="line"></div></div>
+  <h2>Local vs remote terminal equivalence</h2>
+  <div class="cookbook">
+    <div class="cookbook-head"><div class="num">08</div><div class="cookbook-title"><b>Same job, two execution lanes</b><span>Verify environment equivalence before comparing results.</span></div><span class="badge">multi-lane</span></div>
+    <div class="cookbook-body">
+      <div class="code"><div class="code-head"><span>read-only probe</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>git rev-parse HEAD
+node --version
+npm --version
+git status --short
+find packages -maxdepth 1 -type d | wc -l
+npm run verify:boundaries</pre></div>
+      <table class="matrix"><tbody>
+        <tr><td>requested lane</td><td>resolved lane</td></tr>
+        <tr><td>host</td><td>cwd</td></tr>
+        <tr><td>git commit</td><td>exit code</td></tr>
+        <tr><td>duration</td><td>stdout digest</td></tr>
+      </tbody></table>
+      <div class="good"><strong>Good result:</strong> SAM detects drift before treating two runs as equivalent.</div>
+    </div>
+  </div>
+</section>
+
+<section id="recovery" data-cms-section="recovery">
+  <div class="section-label"><span>Cookbook 09</span><div class="line"></div></div>
+  <h2>Failure-recovery drill</h2>
+  <div class="cookbook">
+    <div class="cookbook-head"><div class="num">09</div><div class="cookbook-title"><b>Test the repair loop</b><span>Force SAM to classify failure before proposing changes.</span></div><span class="badge">machine recovery</span></div>
+    <div class="cookbook-body">
+      <div class="flow"><pre>command failed → classify stage → extract native evidence
+→ identify affected subsystem → candidate remediations
+→ score / choose → safe attempt → verify</pre></div>
+      <div class="good"><strong>Good result:</strong> the system does not respond to one failing command with a broad speculative rewrite.</div>
+    </div>
+  </div>
+</section>
+
+<section id="stress" data-cms-section="stress">
+  <div class="section-label"><span>Full-system test</span><div class="line"></div></div>
+  <h2>Massive infrastructure stress test</h2>
+  <p>Use this against a real cross-cutting infrastructure task: identity migration, terminal runtime changes, release systems, or schema authority moves.</p>
+  <div class="flow"><pre>before edit → inspect · merkle · index · retrieval · predicted blast radius
+implementation → smallest affected surface · preserve unrelated WIP
+verification → focused tests · boundary/security · second Merkle · compare
+SAM work receipt</pre></div>
+</section>
+
+<section id="agent-prompt" data-cms-section="agent-prompt">
+  <h2>Reusable coding-agent instruction</h2>
+  <p>Paste this into a capable coding agent when you want it to use AgentSam's machine tooling strategically.</p>
+  <div class="code"><div class="code-head"><span>operator prompt</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>Use AgentSam's machine tooling before broad model exploration.
+
+Goal:
+&lt;REAL INFRA TASK&gt;
+
+Before editing:
+1. Record git HEAD and working-tree state.
+2. Run `agentsam inspect`.
+3. Create a semantic Merkle snapshot outside the repository.
+4. Run `agentsam index plan --cwd . --json`.
+5. Run/update the structural index if necessary.
+6. Retrieve the smallest relevant code surface using `agentsam search`.
+7. Report current authority, predicted blast radius, relevant files,
+   expected tests/verifiers, and evidence gaps.
+8. Do not perform a broad repository crawl unless existing evidence is
+   insufficient. Explain why more exploration is needed.
+
+During implementation:
+- Prefer existing contracts and repository authority.
+- Do not silently create parallel abstractions.
+- Re-query structural evidence when crossing a predicted boundary.
+- Preserve unrelated working-tree changes.
+
+After implementation:
+1. Run the smallest affected tests first.
+2. Run applicable package/boundary/security verification.
+3. Create a second semantic Merkle snapshot and diff before vs after.
+4. Compare actual changes against predicted blast radius.
+5. Return a SAM work receipt (goal, baseline commit, evidence,
+   predicted vs actual surface, tests, verification, unexpected
+   findings, remaining uncertainty, recommended next action).
+
+Do not report success merely because code was written.
+Success requires evidence that the intended state changed and unrelated
+authority remained intact.</pre></div>
+</section>
+
+<section id="scorecard" data-cms-section="scorecard">
+  <h2>SAM benchmark scorecard</h2>
+  <div class="score-grid">
+    <div class="score-card"><b>Perception</b><p>Did SAM identify the correct surface before editing?</p></div>
+    <div class="score-card"><b>Precision</b><p>How much irrelevant code did it inspect?</p></div>
+    <div class="score-card"><b>Incrementality</b><p>Did it reuse prior evidence instead of repeating work?</p></div>
+    <div class="score-card"><b>Planning</b><p>Did it find a minimal valid path?</p></div>
+    <div class="score-card"><b>Execution</b><p>Did it choose the correct lane and tools?</p></div>
+    <div class="score-card"><b>Recovery</b><p>Did it narrow failure before changing code?</p></div>
+    <div class="score-card"><b>Verification</b><p>Did it prove the resulting state?</p></div>
+    <div class="score-card"><b>Scope control</b><p>Did actual changes match intended blast radius?</p></div>
+    <div class="score-card"><b>Cost</b><p>Tool calls, model calls, tokens, embeddings, and wall time.</p></div>
+    <div class="score-card"><b>Friction</b><p>How much SAM-specific vocabulary did the operator need?</p></div>
+  </div>
+  <div class="callout"><b>Product test:</b> a technically powerful primitive that still requires users to memorize twelve commands has not finished becoming a product.</div>
+</section>
+
+<section id="success" data-cms-section="success">
+  <h2>What good looks like</h2>
+  <p>The long-term interface should not force ordinary users to think in Merkle, AST, A*, GOAP, or retrieval modes.</p>
+  <div class="code"><div class="code-head"><span>desired AgentSam UX</span></div>
+<pre><span class="prompt">›</span> migrate terminal auth to the new account authority
+
+● Understanding current authority
+● Found 6 affected runtime surfaces
+● Planned 4-step migration
+● Implementing
+● Verifying
+<span class="success">✓ Complete</span>
+
+<span class="comment">/why</span></pre></div>
+  <div class="code"><div class="code-head"><span>/why</span></div>
+<pre>SAM
+
+Perception
+  Merkle delta
+  AST dependency graph
+  repository index
+
+Planning
+  GOAP
+  graph search
+  utility constraints
+
+Verification
+  focused tests
+  boundary checks
+  before/after receipt</pre></div>
+  <div class="page-footer">AgentSam · Systematic Autonomous Machinery · infrastructure cookbooks</div>
+</section>
+        </article>
+      </main>
+
+      <aside class="agentsam-docs-toc" data-cms-region="toc">
+        <h4>On this page</h4>
+        <a href="#start">Overview</a>
+<a href="#principle">How to test SAM</a>
+<a href="#baseline">Baseline perception</a>
+<a href="#merkle">Merkle delta</a>
+<a href="#blast-radius">AST blast radius</a>
+<a href="#retrieval">Retrieval routing</a>
+<a href="#goap">GOAP proof</a>
+<a href="#release">Release torture test</a>
+<a href="#security">Security drill</a>
+<a href="#terminals">Terminal equivalence</a>
+<a href="#recovery">Failure recovery</a>
+<a href="#stress">Infra stress test</a>
+<a href="#agent-prompt">Operator prompt</a>
+<a href="#scorecard">Scorecard</a>
+<a href="#success">What good looks like</a>
+<div class="sep"></div>
+<div class="note">Public AgentSam guide. Shared ASBD header/footer · violet docs theme.</div>
+      </aside>
+    </div>
+  </div>
+
+  <div id="asbd-footer-mount" data-cms-region="footer"></div>
+
+  <script>
+  (function () {
+    function inject(id, url) {
+      var slot = document.getElementById(id);
+      if (!slot) return;
+      fetch(url, { credentials: 'same-origin' })
+        .then(function (r) { return r.text(); })
+        .then(function (html) {
+          slot.innerHTML = html;
+          slot.querySelectorAll('script').forEach(function (old) {
+            var s = document.createElement('script');
+            if (old.src) s.src = old.src;
+            else s.textContent = old.textContent;
+            old.replaceWith(s);
+          });
+        })
+        .catch(function () {});
+    }
+    inject('asbd-header-mount', '/site/global/asbd-header.html');
+    inject('asbd-footer-mount', '/site/global/asbd-footer.html');
+
+    var copy = document.getElementById('docs-copy-page');
+    if (copy) {
+      copy.addEventListener('click', async function () {
+        try {
+          await navigator.clipboard.writeText(document.getElementById('docs-article').innerText);
+          copy.textContent = 'Copied';
+          setTimeout(function () { copy.textContent = 'Copy page'; }, 1200);
+        } catch (_) {
+          copy.textContent = 'Copy unavailable';
+          setTimeout(function () { copy.textContent = 'Copy page'; }, 1400);
+        }
+      });
+    }
+
+    document.querySelectorAll('.copy-code').forEach(function (button) {
+      button.addEventListener('click', async function () {
+        var block = button.closest('.code').querySelector('pre');
+        try {
+          await navigator.clipboard.writeText(block.innerText);
+          var prior = button.textContent;
+          button.textContent = 'Copied';
+          setTimeout(function () { button.textContent = prior; }, 1000);
+        } catch (_) {
+          button.textContent = 'Unavailable';
+        }
+      });
+    });
+
+    var search = document.getElementById('docs-search');
+    var navLinks = Array.prototype.slice.call(document.querySelectorAll('#docs-nav a'));
+    if (search) {
+      search.addEventListener('input', function () {
+        var q = search.value.trim().toLowerCase();
+        navLinks.forEach(function (a) {
+          a.style.display = !q || a.textContent.toLowerCase().includes(q) ? 'flex' : 'none';
+        });
+      });
+    }
+
+    var sections = Array.prototype.slice.call(document.querySelectorAll('section[id]'));
+    var allLinks = Array.prototype.slice.call(document.querySelectorAll('a[href^="#"]'));
+    if ('IntersectionObserver' in window) {
+      var observer = new IntersectionObserver(function (entries) {
+        var visible = entries.filter(function (e) { return e.isIntersecting; })
+          .sort(function (a, b) { return b.intersectionRatio - a.intersectionRatio; })[0];
+        if (!visible) return;
+        allLinks.forEach(function (a) {
+          a.classList.toggle('active', a.getAttribute('href') === '#' + visible.target.id);
+        });
+      }, { rootMargin: '-18% 0px -68% 0px', threshold: [0, 0.08, 0.25] });
+      sections.forEach(function (section) { observer.observe(section); });
+    }
+  })();
+  </script>
+</body>
+</html>

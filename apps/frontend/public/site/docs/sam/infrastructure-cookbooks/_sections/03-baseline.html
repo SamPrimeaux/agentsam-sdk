@@ -1,0 +1,26 @@
+<section id="baseline" data-cms-section="baseline">
+  <div class="section-label"><span>Cookbook 01</span><div class="line"></div></div>
+  <h2>Establish a SAM baseline</h2>
+  <div class="cookbook">
+    <div class="cookbook-head"><div class="num">01</div><div class="cookbook-title"><b>Repository perception before edits</b><span>Create a reproducible view of the repo before a large task begins.</span></div><span class="badge live">runnable now</span></div>
+    <div class="cookbook-body">
+      <div class="code"><div class="code-head"><span>shell</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>git status --short
+git rev-parse HEAD
+
+agentsam inspect
+
+agentsam merkle snapshot . \
+  --semantic \
+  --out /tmp/sam-before.json
+
+agentsam index plan --cwd . --json
+agentsam index run --cwd . --json</pre></div>
+      <p>Then query only the surface relevant to the task:</p>
+      <div class="code"><div class="code-head"><span>shell</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>agentsam search "terminal enrollment authentication" \
+  --cwd . --top-k 8 --token-budget 4000</pre></div>
+      <div class="good"><strong>Good result:</strong> SAM identifies the authority files without requiring a model to crawl the entire repository.</div>
+    </div>
+  </div>
+</section>

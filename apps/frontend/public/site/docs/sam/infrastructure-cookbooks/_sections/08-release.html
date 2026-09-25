@@ -1,0 +1,17 @@
+<section id="release" data-cms-section="release">
+  <div class="section-label"><span>Cookbook 06</span><div class="line"></div></div>
+  <h2>Package-release torture test</h2>
+  <div class="cookbook">
+    <div class="cookbook-head"><div class="num">06</div><div class="cookbook-title"><b>Break one thing at a time</b><span>Force SAM to isolate the smallest release-readiness failure.</span></div><span class="badge live">repo scripts</span></div>
+    <div class="cookbook-body">
+      <div class="callout yellow">The public CLI does not currently expose a finished <code>agentsam package</code> command. Use repository verification scripts for this drill.</div>
+      <div class="code"><div class="code-head"><span>verification</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>npm run verify:package
+npm run pack:check
+npm run test:workspaces
+npm run verify:boundaries
+npm run verify:release</pre></div>
+      <div class="good"><strong>Good result:</strong> SAM reports the exact failing gate and avoids inspecting unrelated subsystems.</div>
+    </div>
+  </div>
+</section>

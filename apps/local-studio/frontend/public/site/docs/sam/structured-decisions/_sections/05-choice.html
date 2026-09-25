@@ -1,0 +1,12 @@
+<section id="choice" data-cms-section="choice">
+  <h2>Primitive 2: Choice</h2>
+  <p>A <strong>choice</strong> selects one item from a finite candidate set. Ideal when AgentSam already knows the legal options.</p>
+  <div class="code"><div class="code-head"><span>conceptual contract</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>{
+  <span class="v">question</span>: <span class="s">"Which execution lane should run this task?"</span>,
+  <span class="v">options</span>: [<span class="s">"local"</span>, <span class="s">"remote"</span>, <span class="s">"sandbox"</span>],
+  <span class="v">result</span>: <span class="s">"local"</span>,
+  <span class="v">confidence</span>: <span class="n">0.94</span>
+}</pre></div>
+  <p>Good AgentSam uses: tool selection, skill selection, retrieval lane, model class, workflow branch, terminal target, next GOAP action.</p>
+</section>

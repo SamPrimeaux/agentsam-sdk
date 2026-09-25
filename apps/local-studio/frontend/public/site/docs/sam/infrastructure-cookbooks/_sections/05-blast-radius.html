@@ -1,0 +1,20 @@
+<section id="blast-radius" data-cms-section="blast-radius">
+  <div class="section-label"><span>Cookbook 03</span><div class="line"></div></div>
+  <h2>AST blast-radius test</h2>
+  <div class="cookbook">
+    <div class="cookbook-head"><div class="num">03</div><div class="cookbook-title"><b>Predict impact before editing</b><span>Compare structural predictions to the actual changed surface.</span></div><span class="badge live">runnable now</span></div>
+    <div class="cookbook-body">
+      <ol class="steps">
+        <li>Pick a cross-cutting symbol or contract.</li>
+        <li>Index the codebase.</li>
+        <li>Ask SAM to identify likely callers, schema dependencies, tests, and runtime boundaries.</li>
+        <li>Make the change.</li>
+        <li>Compare predicted impact to the actual Merkle delta and test failures.</li>
+      </ol>
+      <div class="code"><div class="code-head"><span>shell</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>agentsam index run --cwd . --json
+agentsam search "terminal session account ownership verification" --cwd . --top-k 12</pre></div>
+      <div class="callout green"><b>Metric:</b> blast-radius recall = affected components found before editing ÷ affected components discovered overall.</div>
+    </div>
+  </div>
+</section>

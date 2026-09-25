@@ -1,0 +1,12 @@
+<section id="terminal" data-cms-section="terminal">
+  <h2>Pattern: Terminal lane selection</h2>
+  <p>AgentSam has local, remote, and sandbox lanes. The agent should select the lane from task requirements and machine state instead of using a single hardcoded terminal.</p>
+  <div class="code"><div class="code-head"><span>lane decision</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>{
+  <span class="v">task</span>: <span class="s">"run repository tests"</span>,
+  <span class="v">requiresLocalFiles</span>: <span class="n">true</span>,
+  <span class="v">untrustedCode</span>: <span class="n">false</span>,
+  <span class="v">available</span>: { <span class="v">local</span>: <span class="n">true</span>, <span class="v">remote</span>: <span class="n">true</span>, <span class="v">sandbox</span>: <span class="n">true</span> },
+  <span class="v">choice</span>: <span class="s">"local"</span>
+}</pre></div>
+</section>

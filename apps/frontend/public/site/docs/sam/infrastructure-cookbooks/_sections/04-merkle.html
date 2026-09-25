@@ -1,0 +1,16 @@
+<section id="merkle" data-cms-section="merkle">
+  <div class="section-label"><span>Cookbook 02</span><div class="line"></div></div>
+  <h2>Prove Merkle saves work</h2>
+  <div class="cookbook">
+    <div class="cookbook-head"><div class="num">02</div><div class="cookbook-title"><b>Incremental intelligence test</b><span>Measure what can be invalidated versus reused after a bounded change.</span></div><span class="badge live">runnable now</span></div>
+    <div class="cookbook-body">
+      <div class="code"><div class="code-head"><span>before</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>agentsam merkle snapshot . --semantic --out /tmp/sam-before.json</pre></div>
+      <p>Make one bounded change, then capture the new state:</p>
+      <div class="code"><div class="code-head"><span>after</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>agentsam merkle snapshot . --semantic --out /tmp/sam-after.json
+agentsam merkle diff /tmp/sam-before.json /tmp/sam-after.json --json</pre></div>
+      <div class="good"><strong>Good result:</strong> SAM can say which subtrees changed, which analyses are invalid, and which previous work can be reused.</div>
+    </div>
+  </div>
+</section>

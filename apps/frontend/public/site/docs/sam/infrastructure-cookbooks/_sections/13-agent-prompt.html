@@ -1,0 +1,40 @@
+<section id="agent-prompt" data-cms-section="agent-prompt">
+  <h2>Reusable coding-agent instruction</h2>
+  <p>Paste this into a capable coding agent when you want it to use AgentSam's machine tooling strategically.</p>
+  <div class="code"><div class="code-head"><span>operator prompt</span><div class="grow"></div><button type="button" class="copy-code">Copy</button></div>
+<pre>Use AgentSam's machine tooling before broad model exploration.
+
+Goal:
+&lt;REAL INFRA TASK&gt;
+
+Before editing:
+1. Record git HEAD and working-tree state.
+2. Run `agentsam inspect`.
+3. Create a semantic Merkle snapshot outside the repository.
+4. Run `agentsam index plan --cwd . --json`.
+5. Run/update the structural index if necessary.
+6. Retrieve the smallest relevant code surface using `agentsam search`.
+7. Report current authority, predicted blast radius, relevant files,
+   expected tests/verifiers, and evidence gaps.
+8. Do not perform a broad repository crawl unless existing evidence is
+   insufficient. Explain why more exploration is needed.
+
+During implementation:
+- Prefer existing contracts and repository authority.
+- Do not silently create parallel abstractions.
+- Re-query structural evidence when crossing a predicted boundary.
+- Preserve unrelated working-tree changes.
+
+After implementation:
+1. Run the smallest affected tests first.
+2. Run applicable package/boundary/security verification.
+3. Create a second semantic Merkle snapshot and diff before vs after.
+4. Compare actual changes against predicted blast radius.
+5. Return a SAM work receipt (goal, baseline commit, evidence,
+   predicted vs actual surface, tests, verification, unexpected
+   findings, remaining uncertainty, recommended next action).
+
+Do not report success merely because code was written.
+Success requires evidence that the intended state changed and unrelated
+authority remained intact.</pre></div>
+</section>

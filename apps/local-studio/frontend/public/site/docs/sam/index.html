@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en" data-asbd-theme="dark" data-asbd-skin="violet">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SAM Docs · AgentSam</title>
+  <meta name="description" content="AgentSam Systematic Autonomous Machinery — public engineering guides." />
+  <link rel="canonical" href="https://agentsam.inneranimalmedia.com/docs/sam" />
+  <meta name="agentsam:page" content="docs.sam.hub" />
+  <link rel="stylesheet" href="/site/global/asbd-tokens.css" />
+  <link rel="stylesheet" href="/site/global/agentsam-docs-tokens.css" />
+  <link rel="stylesheet" href="/site/global/agentsam-docs-layout.css" />
+  <script src="/site/global/asbd-theme.js" defer></script>
+  <style>
+    .hub { max-width: 920px; margin: 0 auto; padding: calc(var(--asbd-header-height) + 48px) 28px 96px; }
+    .hub h1 { font-size: clamp(2.4rem, 5vw, 3.4rem); letter-spacing: -.05em; margin: 10px 0 14px; }
+    .hub .lead { color: var(--docs-muted); font-size: 1.15rem; max-width: 62ch; }
+    .hub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 36px; }
+    .hub-card {
+      display: block; padding: 22px; border-radius: 16px;
+      border: 1px solid var(--docs-border); background: linear-gradient(180deg, var(--docs-surface), #0d0d0f);
+      transition: border-color .15s ease, transform .15s ease;
+    }
+    .hub-card:hover { border-color: var(--docs-accent-line); transform: translateY(-1px); }
+    .hub-card b { display: block; font-size: 1.05rem; margin-bottom: 8px; }
+    .hub-card span { color: var(--docs-muted); font-size: 14px; line-height: 1.5; }
+    .hub-card .path { display: block; margin-top: 14px; font: 11px var(--docs-mono); color: var(--docs-accent-2); }
+    @media (max-width: 720px) { .hub-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body data-asbd-theme="dark">
+  <div id="asbd-header-mount" data-cms-region="header"></div>
+  <main class="agentsam-docs hub" data-cms-region="body">
+    <div class="eyebrow">Systematic Autonomous Machinery</div>
+    <h1>SAM docs</h1>
+    <p class="lead">Public guides for AgentSam’s machine layer — structured decisions, infrastructure cookbooks, and how the primitives become product behavior.</p>
+    <div class="hub-grid">
+      <a class="hub-card" href="/docs/sam/structured-decisions/">
+        <b>Structured decisions</b>
+        <span>Typed choose / score / gate / confidence primitives for coding-agent workflows.</span>
+        <span class="path">/docs/sam/structured-decisions</span>
+      </a>
+      <a class="hub-card" href="/docs/sam/infrastructure-cookbooks/">
+        <b>Infrastructure cookbooks</b>
+        <span>Hands-on drills for Merkle, AST, GOAP, retrieval, security, terminals, and release proof.</span>
+        <span class="path">/docs/sam/infrastructure-cookbooks</span>
+      </a>
+    </div>
+  </main>
+  <div id="asbd-footer-mount" data-cms-region="footer"></div>
+  <script>
+  (function () {
+    function inject(id, url) {
+      var slot = document.getElementById(id);
+      if (!slot) return;
+      fetch(url, { credentials: 'same-origin' })
+        .then(function (r) { return r.text(); })
+        .then(function (html) {
+          slot.innerHTML = html;
+          slot.querySelectorAll('script').forEach(function (old) {
+            var s = document.createElement('script');
+            if (old.src) s.src = old.src; else s.textContent = old.textContent;
+            old.replaceWith(s);
+          });
+        }).catch(function () {});
+    }
+    inject('asbd-header-mount', '/site/global/asbd-header.html');
+    inject('asbd-footer-mount', '/site/global/asbd-footer.html');
+  })();
+  </script>
+</body>
+</html>
