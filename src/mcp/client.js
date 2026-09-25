@@ -8,7 +8,7 @@ function clean(value) {
 export function buildHeaders(serverConfig = {}) {
   const headers = {
     'Accept': 'application/json, text/event-stream',
-    'User-Agent': 'AgentSam-SDK/2.6.2 (MCP Client)',
+    'User-Agent': 'AgentSam-SDK/2.6.3 (MCP Client)',
   };
   const token = clean(serverConfig.auth?.token);
   if (token) {
@@ -103,7 +103,7 @@ export async function listMcpTools(serverConfig = {}, options = {}) {
     const transport = new SSEClientTransport(new URL(url), {
       requestInit: { headers },
     });
-    const client = new Client({ name: 'agentsam-sdk', version: '2.6.2' }, { capabilities: {} });
+    const client = new Client({ name: 'agentsam-sdk', version: '2.6.3' }, { capabilities: {} });
     await client.connect(transport);
     const toolsResult = await client.listTools();
     await transport.close();

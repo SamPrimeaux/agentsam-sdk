@@ -3,6 +3,20 @@
 import pkg from '../package.json' with { type: 'json' };
 
 export { AgentSam } from './AgentSam.js';
+export {
+  SAM_RESULT_SCHEMA,
+  SAM_EXPANSION,
+  defineSamOperation,
+  registerSamOperation,
+  getSamOperation,
+  listSamOperations,
+  toSamOperationCard,
+  buildSamResult,
+  AgentSamClient,
+  createAgentSamClient,
+  ensureSeedOperations,
+  SEED_OPERATIONS,
+} from './sam/index.js';
 export { routeIntent } from './lib/router.js';
 export { searchToolCards, toToolCard, hydrateToolSchemas } from './tools/index.js';
 export {

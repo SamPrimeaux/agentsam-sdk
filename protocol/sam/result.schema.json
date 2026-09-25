@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.inneranimalmedia.com/protocol/sam/result.schema.json",
+  "title": "SamResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "operation", "ok", "data", "receipt"],
+  "properties": {
+    "schema": { "const": "agentsam.result.v1" },
+    "operation": { "type": "string" },
+    "ok": { "type": "boolean" },
+    "data": {},
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "operation", "started_at", "completed_at", "execution", "status"],
+      "properties": {
+        "id": { "type": "string" },
+        "operation": { "type": "string" },
+        "module": { "type": "string" },
+        "started_at": { "type": "string" },
+        "completed_at": { "type": "string" },
+        "execution": {
+          "type": "object",
+          "required": ["lane", "deterministic", "model_used"],
+          "properties": {
+            "lane": { "enum": ["local", "remote", "sandbox", "platform"] },
+            "deterministic": { "type": "boolean" },
+            "model_used": { "type": "boolean" }
+          }
+        },
+        "side_effects": { "type": "array", "items": { "type": "string" } },
+        "input_hash": { "type": ["string", "null"] },
+        "output_hash": { "type": ["string", "null"] },
+        "status": { "enum": ["completed", "failed", "cancelled"] }
+      }
+    },
+    "evidence": { "type": "array" },
+    "artifacts": { "type": "array" },
+    "usage": {
+      "type": "object",
+      "properties": {
+        "provider_calls": { "type": "integer", "minimum": 0 },
+        "input_tokens": { "type": "integer" },
+        "output_tokens": { "type": "integer" },
+        "cost_usd": { "type": "number" }
+      }
+    },
+    "warnings": { "type": "array" },
+    "diagnostics": { "type": "array" },
+    "error": {}
+  }
+}

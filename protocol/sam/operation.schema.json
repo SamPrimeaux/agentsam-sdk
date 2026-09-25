@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.inneranimalmedia.com/protocol/sam/operation.schema.json",
+  "title": "SamOperation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "version", "module", "action", "summary", "execution", "risk"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]+(\\.[a-z][a-z0-9_-]+)+$",
+      "description": "Canonical operation id, e.g. brand.scan"
+    },
+    "version": { "type": "integer", "minimum": 1 },
+    "module": { "type": "string", "minLength": 1 },
+    "action": { "type": "string", "minLength": 1 },
+    "summary": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lanes", "model", "network", "sideEffects"],
+      "properties": {
+        "lanes": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "enum": ["local", "remote", "sandbox", "platform"] }
+        },
+        "model": { "enum": ["never", "optional", "required"] },
+        "network": { "enum": ["none", "optional", "required"] },
+        "sideEffects": {
+          "enum": ["none", "local_write", "remote_read", "remote_write", "deploy", "billable"]
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "account": { "type": "boolean" },
+        "provider": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "risk": { "enum": ["read_only", "write", "privileged"] },
+    "input_schema": { "type": "string" },
+    "output_schema": { "type": "string" },
+    "capabilities": { "type": "array", "items": { "type": "string" } },
+    "cli": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "array",
+          "items": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "docs": {
+      "type": "object",
+      "properties": {
+        "section": { "type": "string" },
+        "examples": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "status": { "enum": ["stable", "experimental", "stub", "deprecated"] }
+  }
+}

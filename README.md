@@ -5,6 +5,21 @@ security, identity, scaffolding, and delivery capabilities with optional AgentSa
 The interactive CLI can run the same bounded capabilities through an explicitly selected model while
 keeping model choice, reasoning effort, processing tier, credentials, approvals, context, and cost inspectable.
 
+**SAM** = **Systems Automation Machinery** — the execution spine under AgentSam (not a person).
+The conventional client variable is `sam`:
+
+```js
+import { AgentSamClient } from '@inneranimalmedia/agentsam-sdk';
+
+const sam = new AgentSamClient();
+const repo = await sam.invoke('repository.inspect', { root: '.' });
+// or: await sam.repository.inspect({ root: '.' });
+console.log(repo.data.summary, repo.receipt.id);
+```
+
+See [SAM Kernel](docs/architecture/SAM_KERNEL.md) for `invoke` / `describe` / `discover`,
+operation IDs, and the universal `SamResult` envelope.
+
 **npm:** `@inneranimalmedia/agentsam-sdk` · **Source:** [GitHub](https://github.com/SamPrimeaux/agentsam-sdk)
 
 Node 22.5+ is required. Docker is optional for container commands. Python 3.10+ is required
@@ -25,7 +40,7 @@ an npm-bootstrap script; standalone SEA binaries are planned, not shipped yet):
 ```sh
 curl -fsSL https://agentsam.inneranimalmedia.com/install | bash
 # a specific version, channel, or bundled app launcher:
-curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --version 2.6.2
+curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --version 2.6.3
 curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --channel beta
 curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --app cad
 ```

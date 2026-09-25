@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "package": "@inneranimalmedia/agentsam-sdk",
+  "sam": "Systems Automation Machinery",
+  "note": "Seed registry — canonical operation IDs. CLI aliases are projections, not authority.",
+  "operations": [
+    {
+      "id": "repository.inspect",
+      "module": "repository",
+      "action": "inspect",
+      "summary": "Inspect repository structure and semantic evidence.",
+      "execution": {
+        "lanes": ["local", "remote", "sandbox"],
+        "model": "never",
+        "network": "none",
+        "sideEffects": "none"
+      },
+      "risk": "read_only",
+      "capabilities": ["repository.snapshot"],
+      "cli": { "command": [["inspect"]] },
+      "status": "stable"
+    },
+    {
+      "id": "brand.scan",
+      "module": "brand",
+      "action": "scan",
+      "summary": "Inspect repository material and derive brand evidence.",
+      "execution": {
+        "lanes": ["local", "remote", "sandbox"],
+        "model": "never",
+        "network": "none",
+        "sideEffects": "none"
+      },
+      "risk": "read_only",
+      "capabilities": ["brand.scan"],
+      "cli": { "command": [["brand", "scan"]] },
+      "status": "stable"
+    },
+    {
+      "id": "security.scan",
+      "module": "security",
+      "action": "scan",
+      "summary": "Scan project dependencies and trust boundary (SCA).",
+      "execution": {
+        "lanes": ["local", "remote", "sandbox"],
+        "model": "never",
+        "network": "optional",
+        "sideEffects": "none"
+      },
+      "risk": "read_only",
+      "capabilities": ["security.scan"],
+      "cli": { "command": [["security", "scan"], ["sca", "scan"]] },
+      "status": "stable"
+    },
+    {
+      "id": "terminal.exec",
+      "module": "terminal",
+      "action": "exec",
+      "summary": "Execute a bounded argv process inside the project root.",
+      "execution": {
+        "lanes": ["local", "sandbox"],
+        "model": "never",
+        "network": "optional",
+        "sideEffects": "local_write"
+      },
+      "risk": "write",
+      "capabilities": ["terminal.exec"],
+      "cli": { "command": [] },
+      "status": "stable"
+    },
+    {
+      "id": "cad.blender.inspect",
+      "module": "cad",
+      "action": "blender.inspect",
+      "summary": "Inspect an existing Blender source (.blend).",
+      "execution": {
+        "lanes": ["local", "remote", "sandbox"],
+        "model": "never",
+        "network": "none",
+        "sideEffects": "none"
+      },
+      "risk": "read_only",
+      "capabilities": ["blender.inspect"],
+      "cli": { "command": [["cad", "blender", "inspect"]] },
+      "status": "stable"
+    }
+  ]
+}
