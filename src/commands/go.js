@@ -146,6 +146,24 @@ function publicBuildReceipt(receipt) {
   return out;
 }
 
+function publicBuildResult(result, root) {
+  if (!result) return null;
+  const out = JSON.parse(JSON.stringify(result));
+
+  out.receipt = publicBuildReceipt(result.receipt);
+  out.receiptPath = portableStatusPath(result.receiptPath, root);
+
+  if (out.build?.binary) {
+    out.build.binary = portableStatusPath(result.build.binary, root);
+  }
+
+  if (out.probe && 'origin' in out.probe) {
+    delete out.probe.origin;
+  }
+
+  return out;
+}
+
 function writeHumanSteps(lines, write) {
   write('\n  Agent Sam · Go\n\n');
   for (const line of lines) write(`  ${line}\n`);
@@ -326,7 +344,15 @@ export async function runGo(argv = [], options = {}) {
       stateRoot,
       dryRun: args.dryRun,
     });
-    write(args.json ? `${JSON.stringify(result)}\n` : `✓ build receipt · ${result.receiptPath}\n`);
+    const publicResult = publicBuildResult(
+      result,
+      discovery.repository_root || args.cwd,
+    );
+    write(
+      args.json
+        ? `${JSON.stringify(publicResult)}\n`
+        : `✓ build receipt · ${publicResult.receiptPath}\n`,
+    );
     return result;
   }
 

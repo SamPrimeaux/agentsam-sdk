@@ -56,6 +56,32 @@ test('buildGoProduct emits build receipt after go test/vet/build', () => {
   assert.ok(fs.existsSync(result.receiptPath));
 });
 
+test('agentsam go build --json exposes only portable build paths', async () => {
+  const stateRoot = tempStateRoot();
+  const chunks = [];
+
+  const result = await runGo(
+    ['build', '--json'],
+    {
+      write: (value) => chunks.push(String(value)),
+      stateRoot,
+    },
+  );
+
+  assert.ok(path.isAbsolute(result.receiptPath), 'internal execution keeps absolute receipt path');
+  assert.ok(path.isAbsolute(result.build.binary), 'internal execution keeps absolute binary path');
+
+  const output = chunks.join('');
+  const parsed = JSON.parse(output);
+
+  assert.equal(path.isAbsolute(parsed.receiptPath), false);
+  assert.equal(path.isAbsolute(parsed.build.binary), false);
+  assert.equal(path.isAbsolute(parsed.receipt.runtime.module_root), false);
+  assert.equal(Object.hasOwn(parsed.probe || {}, 'origin'), false);
+  assert.equal(Object.hasOwn(parsed.receipt?.probe || {}, 'origin'), false);
+  assert.equal(output.includes(SDK_ROOT), false);
+});
+
 test('agentsam go --cloudflare agentsam-go-worker --skip-deploy is idempotent', async () => {
   const stateRoot = tempStateRoot();
   const chunks = [];
