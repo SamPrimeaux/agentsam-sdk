@@ -1,0 +1,10 @@
+<section id="modes">
+  <h2>Three execution modes</h2>
+  <h3 id="local">Local native</h3>
+  <p>Run the Go process directly for local machine work. AgentSam verifies the built binary by booting it, probing the contract, and requiring clean shutdown.</p>
+  <h3 id="cloudflare-dev">Cloudflare development</h3>
+  <p>Wrangler runs the Worker edge adapter with the GO_RUNTIME Container binding. This mode is for development, not final production proof.</p>
+  <h3 id="production">Production</h3>
+  <p>The normal AgentSam deploy command builds and verifies the native binary and Linux container, deploys with Wrangler, resolves Cloudflare deployment identity, probes the live service, then updates the product registry.</p>
+  <div class="code"><button class="copy-code">Copy</button><pre>agentsam go --cloudflare agentsam-go-worker</pre></div>
+</section>
