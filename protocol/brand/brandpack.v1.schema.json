@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.inneranimalmedia.com/protocol/brand/brandpack.v1.schema.json",
+  "title": "AgentSamBrandPack",
+  "type": "object",
+  "required": ["schema", "id"],
+  "properties": {
+    "schema": { "const": "agentsam.brandpack.v1" },
+    "id": { "type": "string" },
+    "label": { "type": "string" },
+    "source": {
+      "type": "object",
+      "properties": {
+        "repository_id": { "type": ["string", "null"] },
+        "snapshot_id": { "type": ["string", "null"] },
+        "materials": { "type": "array" }
+      }
+    },
+    "identity": { "type": "object" },
+    "tokens": {
+      "type": "object",
+      "properties": {
+        "palette": { "type": "object" },
+        "semantic": { "type": "object" },
+        "typography": { "type": "object" },
+        "spacing": { "type": "object" },
+        "geometry": { "type": "object" },
+        "effects": { "type": "object" }
+      }
+    },
+    "assets": { "type": "array" },
+    "components": { "type": "array" },
+    "sections": { "type": "array" },
+    "layouts": { "type": "array" },
+    "pages": { "type": "array" },
+    "theme_variants": { "type": "array" },
+    "content_refs": { "type": "array" },
+    "url_refs": { "type": "array" },
+    "evidence": { "type": "array" },
+    "conflicts": { "type": "array" },
+    "provenance": { "type": "array" }
+  }
+}
