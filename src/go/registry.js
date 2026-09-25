@@ -30,6 +30,10 @@ export function buildGoProductRegistrySql({
   url = null,
   commit = null,
   health = null,
+  workerDeploymentId = null,
+  workerVersionId = null,
+  artifactDigest = null,
+  containerDigest = null,
   description = 'AgentSam Go runtime (Worker edge + native Cloudflare Container)',
 } = {}) {
   const metadata = {
