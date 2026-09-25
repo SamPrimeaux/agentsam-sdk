@@ -7,8 +7,8 @@ import {
   resolveCliIconGlyph,
   createIconRenderer,
   ICON_ALIASES,
-} from '../protocol/ui/icon-registry.mjs';
-import iconSchema from '../protocol/ui/icon.v1.schema.json' with { type: 'json' };
+} from '../../protocol/ui/icon-registry.mjs';
+import iconSchema from '../../protocol/ui/icon.v1.schema.json' with { type: 'json' };
 
 describe('agentsam.icon.v1', () => {
   it('schema enum matches registry keys', () => {

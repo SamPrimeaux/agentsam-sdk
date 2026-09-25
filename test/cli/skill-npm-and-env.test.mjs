@@ -4,9 +4,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
-import { resolveNpmSkillPackage } from '../src/commands/skill.js';
-import { installSkillFromPath } from '../src/skills/index.js';
-import { runEnv } from '../src/commands/env.js';
+import { resolveNpmSkillPackage } from '../../src/commands/skill.js';
+import { installSkillFromPath } from '../../src/skills/index.js';
+import { runEnv } from '../../src/commands/env.js';
 
 function tmpHome() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-finish-'));

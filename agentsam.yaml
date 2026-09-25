@@ -46,7 +46,7 @@ runtime:
 packages:
   root_sdk:
     name: "@inneranimalmedia/agentsam-sdk"
-    version: "2.6.3"
+    version: "2.6.4"
     path: .
     private: false
     registry: npm
@@ -235,16 +235,16 @@ security_contract:
 
 release:
   root_sdk:
-    target_version: "2.6.3"
+    target_version: "2.6.4"
     state: candidate
     registry: npm
-    current_latest: "2.6.1"
+    current_latest: "2.6.3"
     current_alpha: "2.0.0-alpha.identity.12"
-    candidate_base_head: 2643c164b0a745d0772f1aa9808c03bbe3873c94
-    published_at_utc: "2026-09-12T21:14:57.827Z"
-    published_git_head: ae32fba0a761cb18c5f940957bdcd58e3cab6072
-    dist_integrity: "sha512-98xvyIXGcX6/S0nFUkB2+s4zPxF5WvN/eYBjt6s575uC/ux/xB9Y0dH+pw7ur5TMRkQj7JDR4XN5cSy6I2Hr+w=="
-    git_tag: v2.6.0
+    candidate_base_head: 2d7c8214809bf9a947f6151e9745d98695892f46
+    published_at_utc: "2026-09-25T01:08:01.582Z"
+    published_git_head: 9564560d715df507527631e1065fe4f496566414
+    dist_integrity: "sha512-jGQbLHwurW3zt0MkpDzsvuy9y+fqc9RQzDpUjtQC/LiCoZT7yThAuQQyL2KXj0oeKK15mVM+VOjdG0Xg4yL0oA=="
+    git_tag: v2.6.3
     verification_command: npm run verify:release
     publish_mode: manual
   identity:

@@ -8,7 +8,7 @@ import {
   listSamOperations,
   SAM_EXPANSION,
   SAM_RESULT_SCHEMA,
-} from '../src/sam/index.js';
+} from '../../src/sam/index.js';
 
 describe('SAM kernel seed', () => {
   before(() => {

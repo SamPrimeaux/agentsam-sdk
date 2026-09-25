@@ -5,9 +5,9 @@ import {
   formatAiAccessOnboarding,
   CF_OAUTH_REQUIRED_REDIRECTS,
   LOCAL_STUDIO_LOGIN,
-} from '../src/lib/ai-access-onboarding.js';
-import { listModelCatalog } from '../src/models/catalog.js';
-import { getModelRecord, mergeModelReference, listModelCatalog as listFromIndex } from '../src/models/index.js';
+} from '../../src/models/ai-access-onboarding.js';
+import { listModelCatalog } from '../../src/models/catalog.js';
+import { getModelRecord, mergeModelReference, listModelCatalog as listFromIndex } from '../../src/models/index.js';
 
 describe('listModelCatalog import surface', () => {
   it('is defined from catalog and models/index', () => {

@@ -3,10 +3,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { runEnv } from '../src/commands/env.js';
-import { ensureAgentEnvLoader, renderEnvShellExports, setProviderCredential } from '../src/lib/provider-credentials.js';
-import { runApiKey } from '../src/commands/api-key.js';
-import { collectWhoami } from '../src/commands/whoami.js';
+import { runEnv } from '../../src/commands/env.js';
+import { ensureAgentEnvLoader, renderEnvShellExports, setProviderCredential } from '../../src/lib/provider-credentials.js';
+import { runApiKey } from '../../src/commands/api-key.js';
+import { collectWhoami } from '../../src/commands/whoami.js';
 
 function tmpHome() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-env-api-'));
@@ -104,7 +104,7 @@ test('whoami surfaces tokenPermissions and authType from context', async () => {
 });
 
 test('repository does not normalize AGENTSAM_DEFAULT_APP', () => {
-  const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+  const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
   const hits = [];
   function walk(dir) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

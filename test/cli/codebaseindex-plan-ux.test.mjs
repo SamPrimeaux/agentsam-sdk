@@ -5,8 +5,8 @@ import {
   advanceJobGraph,
   freezePlanJobGraph,
   formatJobGraphHuman,
-} from '../src/lib/ingest/job-graph.js';
-import { classifyTopLevel } from '../src/lib/ingest/inventory.js';
+} from '../../src/indexing/ingest/job-graph.js';
+import { classifyTopLevel } from '../../src/indexing/ingest/inventory.js';
 
 describe('codebaseindex job graph plan freeze', () => {
   it('does not leave → run pointer after plan.dry_run', () => {

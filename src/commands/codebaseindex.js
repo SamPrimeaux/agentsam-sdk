@@ -14,23 +14,29 @@ import {
 } from '../knowledge/config.js';
 import { openSqliteStore } from '../knowledge/stores/sqlite.js';
 import { openPostgresStore } from '../knowledge/stores/postgres.js';
-import { planIndex, runIndex } from '../knowledge/engine.js';
+import { planIndex, retrieve, runIndex } from '../knowledge/engine.js';
 import { createProviderRegistry } from '../../packages/agentsam-knowledge/src/providers/index.js';
 import { ensureProjectManifest, getRepositoryId, portableRepositoryIdFromGit, tryReadProjectConfig } from '../lib/project-config.js';
-import { parsePastedPaths, stageMaterials } from '../lib/ingest/materials.js';
+import { parsePastedPaths, stageMaterials } from '../indexing/ingest/materials.js';
 import {
   discoverIngestModelOptions,
   parseEmbeddingChoice,
   suggestScopeWithLocalModel,
-} from '../lib/ingest/discover-models.js';
+} from '../indexing/ingest/discover-models.js';
 import {
   assessAiAccess,
   formatAiAccessOnboarding,
   LOCAL_STUDIO_LOGIN,
   CF_OAUTH_LOGIN_START,
-} from '../lib/ai-access-onboarding.js';
-import { buildInventory, formatInventoryTree } from '../lib/ingest/inventory.js';
-import { createCodebaseindexJobGraph, advanceJobGraph, freezePlanJobGraph, formatJobGraphHuman } from '../lib/ingest/job-graph.js';
+} from '../models/ai-access-onboarding.js';
+import { buildInventory, formatInventoryTree } from '../indexing/ingest/inventory.js';
+import {
+  createCodebaseindexJobGraph,
+  advanceJobGraph,
+  freezePlanJobGraph,
+  skipJobGraphNode,
+  formatJobGraphHuman,
+} from '../indexing/ingest/job-graph.js';
 
 function pick(value, label = 'Cancelled') {
   if (isCancel(value)) {
@@ -189,10 +195,10 @@ export async function runCodebaseindexIngest(input = {}, ctx = {}) {
         pipeline: 'sam.codebaseindex.index.run',
         operation: 'codebaseindex.ingest',
         mode: 'plan',
-        root,
+        root: '.',
         config_path: CONFIG_PATH,
         staged,
-        inventory,
+        inventory: { ...inventory, root: '.' },
         storage_lanes: { metadata: storage, vectors },
         job_graph: jobGraph,
         plan: plan.receipt,
@@ -220,20 +226,52 @@ export async function runCodebaseindexIngest(input = {}, ctx = {}) {
     jobGraph = advanceJobGraph(jobGraph, 'plan.dry_run');
     jobGraph = advanceJobGraph(jobGraph, 'ast.parse');
     jobGraph = advanceJobGraph(jobGraph, 'chunks.build');
-    if (embed) jobGraph = advanceJobGraph(jobGraph, 'embedding.generate');
+
+    if (embed) {
+      jobGraph = advanceJobGraph(jobGraph, 'embedding.generate');
+    } else {
+      jobGraph = skipJobGraphNode(
+        jobGraph,
+        'embedding.generate',
+        'embedding_disabled',
+      );
+    }
+
     jobGraph = advanceJobGraph(jobGraph, 'storage.write');
     jobGraph = advanceJobGraph(jobGraph, 'generation.verify');
+
+    const smokeQuery =
+      String(input.smokeQuery || config.scope.include?.[0] || 'source').trim()
+      || 'source';
+
+    const smoke = await retrieve({
+      store,
+      config,
+      text: smokeQuery,
+      semantic: false,
+      topK: 1,
+      tokenBudget: 512,
+      generationId: result.generation_id,
+    });
+
+    jobGraph = advanceJobGraph(jobGraph, 'search.smoke');
+
     return {
       pipeline: 'sam.codebaseindex.index.run',
       operation: 'codebaseindex.ingest',
       mode: 'run',
-      root,
+      root: '.',
       config_path: CONFIG_PATH,
       staged,
-      inventory,
+      inventory: { ...inventory, root: '.' },
       storage_lanes: { metadata: storage, vectors },
       job_graph: jobGraph,
       index: result,
+      search_smoke: {
+        query: smokeQuery,
+        generation_id: smoke.diagnostics?.generation_id || result.generation_id,
+        sources_included: smoke.receipt?.sources_included ?? smoke.hits?.length ?? 0,
+      },
       embedding: config.embedding,
       storage: config.storage,
       include: config.scope.include,
@@ -534,7 +572,7 @@ async function runWizard(root, opts) {
   // ⑦ Dry-run vs execute
   const planOnly = pick(await select({
     message: '⑦ Execution',
-    initialValue: opts.plan ? 'plan' : 'plan',
+    initialValue: opts.plan ? 'plan' : 'run',
     options: [
       { value: 'plan', label: 'Dry-run / plan (writes config + plan receipt, no generation activate)', hint: 'recommended first' },
       { value: 'run', label: 'Execute ingest now', hint: 'writes knowledge store' },

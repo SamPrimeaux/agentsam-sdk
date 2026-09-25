@@ -9,11 +9,12 @@ import {
   listCliCommands,
   printAssistTip,
   suggestCliCommands,
-} from '../src/cli/command-catalog.js';
-import { parsePastedPaths, classifyMaterial, stageMaterials } from '../src/lib/ingest/materials.js';
-import { ensureSeedOperations, getSamOperation, AgentSamClient } from '../src/sam/index.js';
-import { getSkill, loadSkill } from '../src/skills/index.js';
-import { resolveHelpTopic, renderHelpOverview } from '../src/ui/cli/help.js';
+} from '../../src/cli/command-catalog.js';
+import { parsePastedPaths, classifyMaterial, stageMaterials } from '../../src/indexing/ingest/materials.js';
+import { ensureSeedOperations, getSamOperation, AgentSamClient } from '../../src/sam/index.js';
+import { getSkill, loadSkill } from '../../src/skills/index.js';
+import { resolveHelpTopic, renderHelpOverview } from '../../src/ui/cli/help.js';
+import { runCodebaseindexIngest } from '../../src/commands/codebaseindex.js';
 
 describe('CLI command catalog assist', () => {
   it('maps ingest alias to codebaseindex with skill tip', () => {
@@ -105,6 +106,48 @@ describe('codebaseindex SAM primitive', () => {
     assert.equal(result.ok, true);
     assert.equal(result.data?.pipeline, 'sam.codebaseindex.index.run');
     assert.equal(result.data?.mode, 'plan');
+  });
+});
+
+describe('codebaseindex real execution', () => {
+  it('publishes, smoke-searches, completes the graph, and returns portable paths', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-codebaseindex-run-'));
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'src', 'demo.js'),
+      'export function hello() { return "hello AgentSam"; }\n',
+    );
+
+    const result = await runCodebaseindexIngest({
+      root,
+      include: ['src'],
+      exclude: [],
+      embeddingChoice: 'none',
+      embed: false,
+      planOnly: false,
+    });
+
+    assert.equal(result.mode, 'run');
+    assert.equal(result.root, '.');
+    assert.equal(result.inventory.root, '.');
+
+    assert.equal(result.index.published, true);
+    assert.equal(result.job_graph.status, 'completed');
+    assert.equal(result.job_graph.current, null);
+    assert.equal(
+      result.job_graph.nodes.find((node) => node.id === 'embedding.generate')?.status,
+      'skipped',
+    );
+    assert.equal(
+      result.job_graph.nodes.find((node) => node.id === 'search.smoke')?.status,
+      'done',
+    );
+
+    assert.equal(
+      result.search_smoke.generation_id,
+      result.index.generation_id,
+    );
+    assert.ok(result.search_smoke.sources_included >= 1);
   });
 });
 

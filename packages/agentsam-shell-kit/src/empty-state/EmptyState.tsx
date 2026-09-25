@@ -1,25 +1,38 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import './EmptyState.css';
 
-/**
- * @typedef {{ label: string, href?: string, onClick?: () => void, disabled?: boolean }} EmptyStateAction
- *
- * @typedef {{
- *   icon?: import('react').ReactNode,
- *   eyebrow?: string,
- *   title: string,
- *   description?: string,
- *   command?: string,
- *   copyLabel?: string,
- *   primaryAction?: EmptyStateAction,
- *   secondaryAction?: EmptyStateAction,
- *   tertiaryAction?: EmptyStateAction,
- *   status?: { label: string, tone?: 'neutral'|'success'|'warning'|'danger' },
- *   className?: string,
- * }} EmptyStateProps
- */
+export type EmptyStateAction = {
+  label: string;
+  href?: string;
+  onClick?: () => void;
+  disabled?: boolean;
+};
 
-function ActionButton({ action, variant }) {
+export type EmptyStateStatus = {
+  label: string;
+  tone?: 'neutral' | 'success' | 'warning' | 'danger';
+};
+
+export type EmptyStateProps = {
+  icon?: ReactNode;
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  command?: string;
+  copyLabel?: string;
+  primaryAction?: EmptyStateAction;
+  secondaryAction?: EmptyStateAction;
+  tertiaryAction?: EmptyStateAction;
+  status?: EmptyStateStatus;
+  className?: string;
+};
+
+type ActionButtonProps = {
+  action?: EmptyStateAction;
+  variant: 'primary' | 'secondary' | 'ghost';
+};
+
+function ActionButton({ action, variant }: ActionButtonProps) {
   if (!action) return null;
   const className = `asbd-empty__btn asbd-empty__btn--${variant}`;
   if (action.href) {
@@ -38,7 +51,6 @@ function ActionButton({ action, variant }) {
 
 /**
  * Sparse empty / install / connect grammar for Local Studio + installables.
- * @param {EmptyStateProps} props
  */
 export function EmptyState({
   icon,
@@ -52,7 +64,7 @@ export function EmptyState({
   tertiaryAction,
   status,
   className = '',
-}) {
+}: EmptyStateProps) {
   const [copied, setCopied] = useState(false);
 
   async function copyCommand() {
@@ -114,26 +126,47 @@ export function EmptyState({
   );
 }
 
+export type InstallableManifest = {
+  id?: string;
+  display_name?: string;
+  name?: string;
+  package?: string;
+  icon?: string;
+  install?: {
+    command?: string;
+    supported?: boolean;
+  };
+  preview?: {
+    supported?: boolean;
+    route?: string;
+  };
+  empty_state?: {
+    title?: string;
+    description?: string;
+    primary_label?: string;
+    secondary_label?: string;
+  };
+  docs?: {
+    route?: string;
+  };
+};
+
+export type InstallableEmptyStateProps = {
+  installable: InstallableManifest;
+  icon?: ReactNode;
+  onInstall?: () => void;
+  onPreview?: () => void;
+};
+
 /**
  * Manifest-driven installable empty state.
- * @param {{
- *   installable: {
- *     id?: string,
- *     display_name?: string,
- *     name?: string,
- *     package?: string,
- *     icon?: string,
- *     install?: { command?: string, supported?: boolean },
- *     preview?: { supported?: boolean, route?: string },
- *     empty_state?: { title?: string, description?: string, primary_label?: string, secondary_label?: string },
- *     docs?: { route?: string },
- *   },
- *   icon?: import('react').ReactNode,
- *   onInstall?: () => void,
- *   onPreview?: () => void,
- * }} props
  */
-export function InstallableEmptyState({ installable, icon, onInstall, onPreview }) {
+export function InstallableEmptyState({
+  installable,
+  icon,
+  onInstall,
+  onPreview,
+}: InstallableEmptyStateProps) {
   const name = installable?.display_name || installable?.name || installable?.id || 'Package';
   const pkg = installable?.package || '';
   const command =

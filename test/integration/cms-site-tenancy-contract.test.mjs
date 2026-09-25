@@ -143,13 +143,13 @@ test('homepage.html is decomposed into reusable site partials with relative link
   assert.ok(header.length > 500, 'header.html must contain full header content');
   assert.ok(footer.length > 500, 'footer.html must contain full footer content');
 
-  // Relative navigation links (R2 partial SSOT)
-  assert.match(header, /href="\/work"/);
-  assert.match(header, /href="\/about"/);
-  assert.match(header, /href="\/services"/);
-  assert.match(header, /href="\/contact"/);
+  // AgentSam public header navigation is relative and product-specific (R2 partial SSOT).
+  assert.match(header, /href="\/"/);
+  assert.match(header, /href="\/learn\/"/);
+  assert.match(header, /href="\/themes\/"/);
+  assert.match(header, /href="\/packages\/sdk\/help\/"/);
   assert.match(header, /href="\/auth\/login\?next=\/agentsam"/);
-  assert.doesNotMatch(header, /href="https:\/\/inneranimalmedia\.com\/(work|about|services|contact)"/);
+  assert.doesNotMatch(header, /href="https:\/\/inneranimalmedia\.com\/(learn|themes|packages\/sdk|agentsam)"/);
 
   assert.match(footer, /href="\/work"/);
   assert.match(footer, /href="\/about"/);

@@ -64,7 +64,10 @@ describe('cloudflare connector', () => {
     };
     const response = await handleCloudflareConnectionRequest(
       new Request('https://agentsam.example/api/connections/cloudflare/start?return_to=https://untrusted.example/after', {
-        headers: { authorization: 'Bearer fixture' },
+        headers: {
+          authorization: 'Bearer fixture',
+          accept: 'application/json',
+        },
       }),
       {
         DB,
@@ -80,6 +83,28 @@ describe('cloudflare connector', () => {
     const stateInsert = calls.find((call) => call.sql.includes('INSERT INTO agentsam_cloudflare_oauth_state'));
     assert.ok(stateInsert);
     assert.equal(stateInsert.args.at(-1), null);
+  });
+
+  it('redirects browser starts to Cloudflare authorization', async () => {
+    const oauthState = new Map();
+    const response = await handleCloudflareConnectionRequest(
+      new Request('https://agentsam.example/api/connections/cloudflare/start', {
+        headers: { authorization: 'Bearer fixture' },
+      }),
+      {
+        fixtureSessions: new Map([['fixture', 'user_123']]),
+        oauthState,
+        CLOUDFLARE_OAUTH_CLIENT_ID: 'real-client-id',
+      },
+    );
+
+    assert.equal(response.status, 302);
+    const location = new URL(response.headers.get('location'));
+    assert.equal(location.origin, 'https://dash.cloudflare.com');
+    assert.equal(location.pathname, '/oauth2/auth');
+    assert.equal(location.searchParams.get('client_id'), 'real-client-id');
+    assert.equal(location.searchParams.get('redirect_uri'), 'https://agentsam.example/api/connections/cloudflare/callback');
+    assert.equal(oauthState.size, 1);
   });
 
   it('consumes callback state and stores only encrypted OAuth tokens', async () => {

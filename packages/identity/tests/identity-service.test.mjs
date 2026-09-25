@@ -1,6 +1,28 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { IDENTITY_ROUTE_IDS } from '../src/contracts/route-ids.js';
+import {
+  createRouteRegistry,
+  defineRouteProjection,
+} from '../src/contracts/route-projection.js';
 import { createIdentityService } from '../src/server/identity-service.js';
+
+function createTestRouting() {
+  const app = { id: 'identity-test-app' };
+  const routeRegistry = createRouteRegistry([
+    defineRouteProjection({
+      appId: app.id,
+      routes: {
+        [IDENTITY_ROUTE_IDS.LOGIN]: '/auth/login',
+        [IDENTITY_ROUTE_IDS.RECOVERY]: '/auth/reset',
+        [IDENTITY_ROUTE_IDS.APP_AUTHENTICATED]: '/agentsam',
+        [IDENTITY_ROUTE_IDS.OAUTH_CALLBACK]: '/api/oauth/:provider/callback',
+        'app.mount./projects': { path: '/projects', auth: 'required' },
+      },
+    }),
+  ]);
+  return { app, routeRegistry };
+}
 
 function createMemoryAdapter() {
   const users = new Map();
@@ -66,10 +88,12 @@ function createMemoryAdapter() {
 }
 
 describe('identity service', () => {
-  it('owns its fallback and rejects external OAuth return targets', () => {
+  it('owns its projected fallback and rejects external OAuth return targets', () => {
+    const { app, routeRegistry } = createTestRouting();
     const identity = createIdentityService({
       adapter: createMemoryAdapter(),
-      defaultRedirect: '/agentsam',
+      app,
+      routeRegistry,
     });
 
     assert.equal(identity.resolvePostLoginPath('/projects?tab=recent'), '/projects?tab=recent');
@@ -77,12 +101,19 @@ describe('identity service', () => {
     assert.equal(identity.resolvePostLoginPath('//attacker.example/'), '/agentsam');
     assert.equal(identity.resolvePostLoginPath(null), '/agentsam');
 
-    const neutral = createIdentityService({ adapter: createMemoryAdapter() });
-    assert.equal(neutral.resolvePostLoginPath(null), '/');
+    assert.throws(
+      () => createIdentityService({ adapter: createMemoryAdapter() }),
+      (error) => error?.code === 'AUTH_APP_UNRESOLVED',
+    );
   });
 
   it('signup and login issue session', async () => {
-    const identity = createIdentityService({ adapter: createMemoryAdapter() });
+    const { app, routeRegistry } = createTestRouting();
+    const identity = createIdentityService({
+      adapter: createMemoryAdapter(),
+      app,
+      routeRegistry,
+    });
     const signup = await identity.signup({
       email: 'user@example.com',
       password: 'secret-pass',

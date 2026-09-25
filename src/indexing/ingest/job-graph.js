@@ -48,6 +48,7 @@ export function createCodebaseindexJobGraph(opts = {}) {
     created_at: now,
     updated_at: now,
     status: opts.status || 'planned',
+    current: nodes.find((node) => node.status === 'run')?.id || null,
     nodes,
     work_items: nodes.map((n) => ({
       id: n.id,
@@ -70,8 +71,10 @@ export function advanceJobGraph(graph, throughId) {
   let found = false;
   for (const node of next.nodes) {
     if (!found) {
-      node.status = 'done';
-      node.completed_at = next.updated_at;
+      if (node.status !== 'skipped') {
+        node.status = 'done';
+        node.completed_at = next.updated_at;
+      }
       if (node.id === throughId) found = true;
     } else if (node.status === 'pending') {
       node.status = 'run';
@@ -82,6 +85,7 @@ export function advanceJobGraph(graph, throughId) {
   syncWorkItems(next);
   const allDone = next.nodes.every((n) => n.status === 'done' || n.status === 'skipped');
   next.status = allDone ? 'completed' : 'running';
+  next.current = next.nodes.find((n) => n.status === 'run')?.id || null;
   return next;
 }
 
@@ -107,7 +111,35 @@ export function freezePlanJobGraph(graph, opts = {}) {
     node.status = 'planned';
     node.started_at = null;
   }
+  next.current = null;
   syncWorkItems(next);
+  return next;
+}
+
+/**
+ * Mark a graph node as intentionally skipped while preserving graph truth.
+ */
+export function skipJobGraphNode(graph, nodeId, reason = 'not_required') {
+  const next = structuredClone(graph);
+  next.updated_at = new Date().toISOString();
+
+  const node = next.nodes.find((candidate) => candidate.id === nodeId);
+  if (!node) throw new Error(`Unknown job graph node: ${nodeId}`);
+
+  node.status = 'skipped';
+  node.started_at = null;
+  node.completed_at = next.updated_at;
+  node.outputs = { ...(node.outputs || {}), skip_reason: reason };
+
+  syncWorkItems(next);
+
+  const allDone = next.nodes.every(
+    (candidate) => candidate.status === 'done' || candidate.status === 'skipped',
+  );
+
+  next.status = allDone ? 'completed' : 'running';
+  next.current = next.nodes.find((candidate) => candidate.status === 'run')?.id || null;
+
   return next;
 }
 

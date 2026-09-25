@@ -15,7 +15,7 @@ import {
   installSkillFromPath,
   aliasSkill,
   computeSkillContentMetrics,
-} from '../src/skills/index.js';
+} from '../../src/skills/index.js';
 
 function tmpHome() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-skill-'));

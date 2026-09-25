@@ -12,7 +12,7 @@
 
 import { collectModelsStatus } from '../../commands/models.js';
 import { resolveOllamaConfig, probeOllama, probeOllamaModel } from '../../commands/ollama.js';
-import { resolveProviderCredential } from '../provider-credentials.js';
+import { resolveProviderCredential } from '../../lib/provider-credentials.js';
 import { createProviderRegistry } from '../../../packages/agentsam-knowledge/src/providers/index.js';
 
 function clean(value) {

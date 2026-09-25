@@ -13,7 +13,8 @@ test('agentsam env init creates provider profile and reusable source loader', { 
   const env = { ...process.env, HOME: home };
   const result = spawnSync(process.execPath, ['src/cli.js', 'env', 'init', 'openai'], { cwd: repoRoot, env, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /source ~\/.agentsam\/load-agent-env\.sh openai/);
+  assert.match(result.stdout, /source ~\/.agentsam\/load-agent-env\.sh(?:\s|$)/);
+  assert.doesNotMatch(result.stdout, /source ~\/.agentsam\/load-agent-env\.sh openai/);
   assert.equal(fs.statSync(path.join(home, '.agentsam', 'env.d', 'openai.env')).mode & 0o777, 0o600);
   assert.equal(fs.statSync(path.join(home, '.agentsam', 'load-agent-env.sh')).mode & 0o777, 0o700);
 });

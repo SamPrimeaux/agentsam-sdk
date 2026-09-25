@@ -4,7 +4,7 @@ import {
   encodeEmbeddingChoice,
   parseEmbeddingChoice,
   looksLikeEmbedModel,
-} from '../src/lib/ingest/discover-models.js';
+} from '../../src/indexing/ingest/discover-models.js';
 
 describe('ingest model discovery helpers', () => {
   it('encodes/decodes embedding choices without breaking model ids that contain colons', () => {

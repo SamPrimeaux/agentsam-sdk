@@ -37,7 +37,11 @@ assert.equal(
 );
 const agentsamBin = readFileSync(join(root, pkg.bin.agentsam), 'utf8');
 assert.ok(agentsamBin.startsWith('#!/usr/bin/env node'), 'agentsam bin must be directly executable by Node');
-assert.match(agentsamBin, /import ['"]\.\.\/src\/cli\.js['"];/, 'agentsam bin wrapper must delegate to the canonical CLI entry');
+assert.match(
+  agentsamBin,
+  /(?:await\s+)?import\s*\(?(?:['"]\.\.\/src\/cli\.js['"])\)?;/,
+  'agentsam bin wrapper must delegate to the canonical CLI entry',
+);
 assert.ok(pkg.files?.includes('src'), 'published files must include src');
 assert.ok(pkg.files?.includes('packages/identity'), 'published files must include identity workspace');
 assert.ok(pkg.files?.includes('packages/agentsam-brand'), 'published files must include brand intelligence workspace');
