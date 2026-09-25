@@ -26,7 +26,7 @@ func main() {
 	}
 	target := os.Getenv("AGENTSAM_TARGET")
 	if target == "" {
-		target = "cloudflare"
+		target = "local"
 	}
 
 	mux := http.NewServeMux()
