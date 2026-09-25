@@ -1,0 +1,18 @@
+{
+  "name": "@inneranimalmedia/agentsam-go-worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AgentSam Go runtime edge Worker + native Cloudflare Container.",
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy -c wrangler.jsonc",
+    "dev": "wrangler dev -c wrangler.jsonc",
+    "test:go": "cd runtime && go test ./..."
+  },
+  "dependencies": {
+    "@cloudflare/containers": "^0.0.30"
+  },
+  "devDependencies": {
+    "wrangler": "^4.137.0"
+  }
+}

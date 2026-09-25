@@ -1,0 +1,28 @@
+{
+  "name": "agentsam-go-worker",
+  "main": "worker/src/index.js",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "containers": [
+    {
+      "class_name": "AgentSamGoRuntime",
+      "image": "./Dockerfile",
+      "max_instances": 3,
+      "instance_type": "basic"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "GO_RUNTIME",
+        "class_name": "AgentSamGoRuntime"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["AgentSamGoRuntime"]
+    }
+  ]
+}

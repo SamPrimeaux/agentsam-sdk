@@ -1,0 +1,32 @@
+{
+  "schema": "agentsam.package.v1",
+  "name": "agentsam-go-worker",
+  "type": "service",
+  "runtime": "go",
+  "version": "0.1.0",
+  "targets": [
+    "cloudflare-worker",
+    "cloudflare-container",
+    "local"
+  ],
+  "entrypoints": {
+    "server": "./runtime/cmd/server",
+    "worker": "./worker/src/index.js"
+  },
+  "capabilities": [
+    "hash",
+    "inspect",
+    "runtime",
+    "capabilities"
+  ],
+  "deployment": {
+    "adapter": "cloudflare",
+    "mode": "worker-container",
+    "wrangler_config": "./wrangler.jsonc"
+  },
+  "product": {
+    "slug": "agentsam-go-worker",
+    "kind": "service",
+    "registry": "agentsam_products"
+  }
+}

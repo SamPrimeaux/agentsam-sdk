@@ -42,6 +42,7 @@ const HELP_TOPICS = Object.freeze([
       ['agentsam eval <context|live>', 'Deterministic context scoring or live agent evaluation telemetry'],
       ['agentsam deploy', 'Graduate intentionally to cloud infrastructure'],
       ['agentsam cloudflare', 'Wrangler and Cloudflare runtime diagnostics'],
+      ['agentsam go', 'Go runtime discovery, build, Cloudflare container deploy, D1 registry'],
     ],
   },
   {

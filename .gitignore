@@ -22,6 +22,7 @@ agentsam-init-smoke/
 # Generated CAD project state and app runtime
 .agentsam/cad/
 .agentsam/cad-native-proof/
+apps/**/.agentsam/
 apps/cad-creator/backend/runtime/
 /.agentsam/features.json
 

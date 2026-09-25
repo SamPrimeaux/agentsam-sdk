@@ -37,6 +37,7 @@ import { runSkills } from './commands/skills.js';
 import { runEval } from './commands/eval.js';
 import { runMcp } from './commands/mcp.js';
 import { runCloudflare } from './commands/cloudflare.js';
+import { runGo } from './commands/go.js';
 import { runWhoami } from './commands/whoami.js';
 import { runResume } from './commands/resume.js';
 import { runLogin, runLogout } from './commands/account-auth.js';
@@ -106,6 +107,7 @@ function printLegacyHelp() {
     agentsam resume [session]  Resume a saved Agent Sam session; omit id for picker
     agentsam eval context      Offline context-strategy/economics fixtures (--help)
     agentsam cloudflare        Native Wrangler reads + Worker CPU profile analysis (--help)
+    agentsam go                Go runtime discovery/build/deploy (Cloudflare worker-container)
     agentsam start-local       Local PTY on ws://127.0.0.1:3099 (no tunnel, no Cloudflare)
     agentsam ollama            Opt-in local Ollama setup/status/model management
     agentsam shell             Interactive Agent Sam slash-command shell
@@ -429,6 +431,13 @@ if (command === '--version' || command === '-v') {
 } else if (command === 'cloudflare' || command === 'cf') {
   try {
     await runCloudflare(rest);
+  } catch (e) {
+    if (!e?.reported) reportCliError(e);
+    process.exitCode = 1;
+  }
+} else if (command === 'go') {
+  try {
+    await runGo(rest);
   } catch (e) {
     if (!e?.reported) reportCliError(e);
     process.exitCode = 1;

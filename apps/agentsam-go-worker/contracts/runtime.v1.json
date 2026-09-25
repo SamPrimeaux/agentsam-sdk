@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentsam.go-runtime.v1",
+  "title": "AgentSam Go Runtime Contract",
+  "type": "object",
+  "required": ["schema", "go_version", "arch", "os", "cpus", "capabilities"],
+  "properties": {
+    "schema": { "const": "agentsam.go-runtime.v1" },
+    "go_version": { "type": "string", "minLength": 1 },
+    "arch": { "type": "string", "minLength": 1 },
+    "os": { "type": "string", "minLength": 1 },
+    "cpus": { "type": "integer", "minimum": 1 },
+    "capabilities": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    }
+  },
+  "additionalProperties": true
+}

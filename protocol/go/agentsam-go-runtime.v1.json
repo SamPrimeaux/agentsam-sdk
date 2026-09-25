@@ -1,0 +1,17 @@
+{
+  "$id": "agentsam.go-runtime.v1",
+  "title": "AgentSam Go Runtime Protocol",
+  "description": "Canonical schema id for Go runtime inventory responses and build receipts.",
+  "schemas": {
+    "runtime": "agentsam.go-runtime.v1",
+    "build_receipt": "agentsam.go-build-receipt.v1",
+    "deployment_receipt": "agentsam.deployment-receipt.v1",
+    "inspect": "agentsam.go-inspect.v1"
+  },
+  "default_product": "agentsam-go-worker",
+  "deployment_modes": [
+    "cloudflare-container",
+    "local",
+    "cloudflare-wasm"
+  ]
+}
