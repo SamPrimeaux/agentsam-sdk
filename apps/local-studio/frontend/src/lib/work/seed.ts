@@ -164,9 +164,12 @@ export function newProject(name = "Studio", description = "Default workspace"): 
   return {
     id: uid(),
     name,
-    description,
+    description: description.includes("Scratch") ? description : `${description} · Scratch`,
     createdAt: now,
     updatedAt: now,
+    kind: "scratch",
+    workspaceRoot: null,
+    runtimeBaseUrl: null,
     files: seedFiles(name),
     dirs: ["src", ".github", ".github/workflows"],
     git: emptyGit(),
@@ -176,6 +179,35 @@ export function newProject(name = "Studio", description = "Default workspace"): 
       githubRepo: slugify(name),
       githubBranch: "main",
     },
+    cwd: "/",
+  };
+}
+
+/**
+ * Filesystem workspace — no seed file injection. Contents live on the host
+ * behind the local PTY/FS runtime (agentsam start-local).
+ */
+export function newFilesystemProject(opts: {
+  name?: string;
+  root: string;
+  runtimeBaseUrl?: string;
+}): Project {
+  const now = Date.now();
+  const root = opts.root.trim();
+  const base = (opts.runtimeBaseUrl || "http://127.0.0.1:3099").replace(/\/$/, "");
+  return {
+    id: uid(),
+    name: opts.name?.trim() || root.split(/[/\\]/).filter(Boolean).pop() || "Filesystem",
+    description: `Filesystem · ${root}`,
+    createdAt: now,
+    updatedAt: now,
+    kind: "filesystem",
+    workspaceRoot: root,
+    runtimeBaseUrl: base,
+    files: [],
+    dirs: [],
+    git: emptyGit(),
+    deploy: emptyDeploy(),
     cwd: "/",
   };
 }

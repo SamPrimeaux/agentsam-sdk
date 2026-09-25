@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { titleFromText, uid } from "@/lib/utils";
 import { extractArtifacts, mergeArtifacts } from "@/lib/work/files";
 import { DEFAULT_SELECTION, type StudioModelSelection } from "@/lib/work/models";
-import { newProject } from "@/lib/work/seed";
+import { newProject, newFilesystemProject } from "@/lib/work/seed";
 import { streamChat } from "@/lib/work/stream";
 import type {
   Artifact,
@@ -174,6 +174,7 @@ type WorkState = {
   setActiveProject: (id: string) => void;
   moveTrailToProject: (trailId: string, projectId: string) => void;
   createProject: (name?: string) => string;
+  createFilesystemProject: (opts: { root: string; name?: string; runtimeBaseUrl?: string }) => Promise<string>;
   createProjectForTrail: (trailId: string, name?: string) => string;
   renameProject: (id: string, name: string) => void;
   pinProject: (id: string) => void;
@@ -550,6 +551,33 @@ export const useWorkStore = create<WorkState>()(
       },
       createProject: (name) => {
         const project = newProject(name?.trim() || "Untitled");
+        const trail = newTrail({ projectId: project.id, title: project.name, pinned: false });
+        set((s) => ({
+          projects: [project, ...s.projects],
+          trails: [trail, ...s.trails],
+          activeProjectId: project.id,
+          activeTrailId: trail.id,
+          navView: "trails",
+        }));
+        return project.id;
+      },
+      createFilesystemProject: async ({ root, name, runtimeBaseUrl }) => {
+        const { probeLocalRuntime } = await import("@/lib/work/workspace-fs");
+        const base = (runtimeBaseUrl || "http://127.0.0.1:3099").replace(/\/$/, "");
+        const probe = await probeLocalRuntime(base);
+        if (!probe.ok) {
+          throw new Error(
+            `Local filesystem runtime unavailable (${probe.error}). Run: agentsam start-local`,
+          );
+        }
+        const project = newFilesystemProject({
+          name,
+          root: root.trim() || probe.cwd || "",
+          runtimeBaseUrl: probe.baseUrl,
+        });
+        if (!project.workspaceRoot) {
+          throw new Error("filesystem workspace requires an absolute root path");
+        }
         const trail = newTrail({ projectId: project.id, title: project.name, pinned: false });
         set((s) => ({
           projects: [project, ...s.projects],
@@ -1063,7 +1091,15 @@ export const useWorkStore = create<WorkState>()(
         };
       },
       partialize: (s) => ({
-        projects: s.projects,
+        projects: s.projects.map((p) =>
+          p.kind === "filesystem"
+            ? {
+                ...p,
+                // Never persist real repository bytes as localStorage authority.
+                files: [],
+              }
+            : p,
+        ),
         activeProjectId: s.activeProjectId,
         trails: s.trails,
         activeTrailId: s.activeTrailId,

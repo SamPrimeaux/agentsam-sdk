@@ -1,6 +1,8 @@
 /**
  * Shared AgentSam terminal runtime — one xterm session, multiple placements.
- * Transport remains the browser virtual shell until ExecOS/PTY attaches by session id.
+ *
+ * Scratch workspaces use the browser virtual shell.
+ * Filesystem workspaces attach to the local PTY (agentsam start-local) when available.
  */
 import { toast } from "sonner";
 import { downloadBytes, zipProject } from "@/lib/work/bundle";
@@ -340,7 +342,90 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
     }
   };
 
-  term.writeln("AgentSam CLI  ·  type help");
+  const project0 = getProject();
+  const useRealPty =
+    project0.kind === "filesystem" &&
+    Boolean(project0.runtimeBaseUrl);
+
+  if (useRealPty) {
+    const base = String(project0.runtimeBaseUrl).replace(/\/$/, "");
+    const wsUrl = base.replace(/^http/, "ws");
+    const cwdParam = encodeURIComponent(project0.workspaceRoot || "");
+    let socket: WebSocket | null = null;
+    try {
+      socket = new WebSocket(`${wsUrl}/?cwd=${cwdParam}&cols=80&rows=24`);
+    } catch (err) {
+      term.writeln(
+        `PTY attach failed: ${err instanceof Error ? err.message : String(err)}. Falling back to virtual shell.`,
+      );
+      term.writeln("Run `agentsam start-local` in the workspace root.");
+    }
+
+    if (socket) {
+      socket.binaryType = "arraybuffer";
+      socket.onopen = () => {
+        term.writeln(`AgentSam PTY  ·  ${project0.workspaceRoot || cwdParam}`);
+        term.writeln("Real shell — Monaco and this terminal share the same host root.");
+      };
+      socket.onmessage = (ev) => {
+        if (typeof ev.data === "string") {
+          if (ev.data.startsWith("{")) {
+            try {
+              const msg = JSON.parse(ev.data) as { type?: string };
+              if (msg.type === "session_id") return;
+            } catch {
+              /* raw */
+            }
+          }
+          term.write(ev.data);
+          return;
+        }
+        term.write(new TextDecoder().decode(ev.data as ArrayBuffer));
+      };
+      socket.onerror = () => {
+        term.writeln("PTY socket error — is `agentsam start-local` running?");
+      };
+      socket.onclose = () => {
+        term.writeln("\r\nPTY disconnected.");
+      };
+
+      term.onData((data) => {
+        if (socket && socket.readyState === WebSocket.OPEN) socket.send(data);
+      });
+
+      const runtime: TerminalRuntime = {
+        sessionId,
+        term,
+        fit,
+        run: async (line) => {
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(`${line}\r`);
+          }
+        },
+        host: null,
+        park,
+        observer: null,
+        refCount: 0,
+        getProject,
+      };
+      // Store socket cleanup on park via weak map is overkill; close with detach.
+      const prevCleanup = () => {
+        try {
+          socket?.close();
+        } catch {
+          /* ignore */
+        }
+      };
+      (runtime as TerminalRuntime & { _ptyCleanup?: () => void })._ptyCleanup = prevCleanup;
+      return runtime;
+    }
+  }
+
+  term.writeln(
+    project0.kind === "filesystem"
+      ? "AgentSam CLI  ·  filesystem mode (virtual fallback)  ·  type help"
+      : "AgentSam CLI  ·  Scratch (virtual)  ·  type help",
+  );
   prompt();
 
   const flushEnter = () => {

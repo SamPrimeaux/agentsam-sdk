@@ -57,12 +57,29 @@ export type Project = {
   description: string;
   createdAt: number;
   updatedAt: number;
+  /** scratch = browser virtual; filesystem = authorized host root via local runtime */
+  kind?: "scratch" | "filesystem";
+  /** Absolute host root when kind=filesystem (metadata only — contents are not authority) */
+  workspaceRoot?: string | null;
+  /** Local PTY/FS base URL (e.g. http://127.0.0.1:3099) */
+  runtimeBaseUrl?: string | null;
   files: Artifact[];
   dirs: string[];
   git: GitState;
   deploy: DeployTarget;
   cwd: string;
   pinned?: boolean;
+};
+
+/** Editor buffer metadata for filesystem documents (not stored as file authority). */
+export type WorkspaceFileDocumentMeta = {
+  path: string;
+  version: string;
+  mtime: number;
+  dirty?: boolean;
+  conflict?: boolean;
+  saving?: boolean;
+  readOnly?: boolean;
 };
 
 export type Trail = {

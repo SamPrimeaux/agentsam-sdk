@@ -1,2 +1,17 @@
 #!/usr/bin/env node
-import '../src/cli.js';
+/**
+ * AgentSam CLI entry.
+ * Suppress only the node:sqlite ExperimentalWarning — keep other warnings visible.
+ */
+process.on("warning", (warning) => {
+  if (
+    warning?.name === "ExperimentalWarning" &&
+    /SQLite is an experimental feature/i.test(String(warning.message || ""))
+  ) {
+    return;
+  }
+  // Mirror default Node warning printer for everything else.
+  console.error(warning.stack || `${warning.name}: ${warning.message}`);
+});
+
+await import("../src/cli.js");

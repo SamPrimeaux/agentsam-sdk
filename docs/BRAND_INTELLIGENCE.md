@@ -17,7 +17,7 @@
 | 11. TUI views | partial | activity panel during scan; full shell mockup not rebuilt |
 | 12. No-model experience | implemented | tests + CLI without model |
 | 13. Model-assisted | not applicable yet | brand.plan marked model_assisted_optional |
-| 14. GOAP integration | partial | `--goap` greedy sequencer + action catalog |
+| 14. GOAP integration | done | `--goap` uses `sam-goap-astar-v1` (A* over brand GOAP actions) |
 | 15. Receipts | partial | `receipt` + `next_actions` on scan/plan |
 | 16. Presets | implemented | cms → cms,knowledge,brand,theme |
 | 17. CLI commands | implemented | `brand`, `plan brand` |
