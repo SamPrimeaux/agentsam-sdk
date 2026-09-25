@@ -10,18 +10,15 @@ export function goStateDir(productRoot) {
 export function writeGoBuildReceipt(productRoot, receipt) {
   const dir = goStateDir(productRoot);
   const file = path.join(dir, 'latest.build-receipt.json');
-  fs.writeFileSync(file, `${JSON.stringify(receipt, null, 2)}\n`);
+  fs.writeFileSync(file, JSON.stringify(receipt, null, 2) + '\n');
   return file;
 }
 
 export function writeDeploymentReceipt(productRoot, receipt) {
   const dir = goStateDir(productRoot);
   const file = path.join(dir, 'latest.deployment-receipt.json');
-  const payload = {
-    schema: 'agentsam.deployment-receipt.v1',
-    ...receipt,
-  };
-  fs.writeFileSync(file, `${JSON.stringify(payload, null, 2)}\n`);
+  const payload = { schema: 'agentsam.deployment-receipt.v1', ...receipt };
+  fs.writeFileSync(file, JSON.stringify(payload, null, 2) + '\n');
   return file;
 }
 
@@ -35,7 +32,7 @@ export function writeProductRegistryLocal(productRoot, row) {
     row,
     written_at: new Date().toISOString(),
   };
-  fs.writeFileSync(file, `${JSON.stringify(payload, null, 2)}\n`);
+  fs.writeFileSync(file, JSON.stringify(payload, null, 2) + '\n');
   return file;
 }
 
@@ -51,13 +48,26 @@ export function readLatestStatus(productRoot) {
   };
 }
 
-export function buildProductRow({ product, repositoryId, commit, url, health }) {
+export function buildProductRow({
+  product,
+  repositoryId,
+  commit,
+  url,
+  health,
+  workerDeploymentId = null,
+  workerVersionId = null,
+  artifactDigest = null,
+  containerDigest = null,
+}) {
   return {
     slug: product,
     kind: 'service',
     name: product,
     status: health === 'healthy' ? 'deployed' : (health === 'pending' ? 'built' : 'degraded'),
     repository_id: repositoryId || null,
+    canonical_path: 'apps/agentsam-go-worker',
+    package_name: '@inneranimalmedia/agentsam-go-worker',
+    version: '0.1.0',
     metadata: {
       runtime: 'go',
       deployment: {
@@ -65,6 +75,10 @@ export function buildProductRow({ product, repositoryId, commit, url, health }) 
         mode: 'worker-container',
         url: url || null,
         health: health || null,
+        worker_deployment_id: workerDeploymentId,
+        worker_version_id: workerVersionId,
+        artifact_digest: artifactDigest,
+        container_image_digest: containerDigest,
       },
       source: { commit: commit || null },
       relationships: [

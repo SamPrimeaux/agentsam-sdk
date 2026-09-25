@@ -3,11 +3,15 @@ package health
 import (
 	"os"
 	"runtime"
-	"time"
 )
 
 const ServiceName = "agentsam-go-worker"
 const Version = "0.1.0"
+
+// BuildCommit and BuildTime are populated with -ldflags by AgentSam's canonical
+// build path. Environment variables remain an explicit runtime override.
+var BuildCommit string
+var BuildTime string
 
 type BuildInfo struct {
 	Commit  string `json:"commit,omitempty"`
@@ -34,8 +38,8 @@ func Snapshot(target string) Response {
 		Version: Version,
 		Target:  target,
 		Build: BuildInfo{
-			Commit:  envOr("AGENTSAM_BUILD_COMMIT", ""),
-			BuiltAt: envOr("AGENTSAM_BUILT_AT", time.Now().UTC().Format(time.RFC3339)),
+			Commit:  envOr("AGENTSAM_BUILD_COMMIT", BuildCommit),
+			BuiltAt: envOr("AGENTSAM_BUILT_AT", BuildTime),
 		},
 	}
 }

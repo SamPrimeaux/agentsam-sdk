@@ -7,6 +7,8 @@ import { applyGoProductRegistry } from './registry.js';
 import { gitEvidence } from '../knowledge/config.js';
 import { SDK_ROOT } from './discover.js';
 
+const EXPECTED_HASH = '2e60bba13dc2bc37d75dd2ce5deb25466f19cb2994e20889388948879875eae9';
+
 function resolveWranglerInvocation(productRoot) {
   const js = path.join(productRoot, 'node_modules', 'wrangler', 'bin', 'wrangler.js');
   if (fs.existsSync(js)) return { command: process.execPath, args: [js] };
@@ -15,75 +17,148 @@ function resolveWranglerInvocation(productRoot) {
   return { command: 'npx', args: ['--yes', 'wrangler'] };
 }
 
-/**
- * Cloudflare adapter for Go products.
- * Owns Wrangler invocation + live probes. Does not own the Go build itself.
- */
+function runWrangler(wrangler, args, { productRoot, spawn = spawnSync } = {}) {
+  const res = spawn(wrangler.command, wrangler.args.concat(args), {
+    cwd: productRoot,
+    encoding: 'utf8',
+    env: { ...process.env },
+    maxBuffer: 16 * 1024 * 1024,
+  });
+  return {
+    status: res.status,
+    stdout: res.stdout || '',
+    stderr: res.stderr || '',
+    output: ((res.stdout || '') + '\n' + (res.stderr || '')).trim(),
+  };
+}
+
+function parseJSON(text) {
+  try { return JSON.parse(String(text || '').trim()); } catch { return null; }
+}
+
+export function readLatestWranglerDeployment(productRoot, product, { spawn = spawnSync } = {}) {
+  const wrangler = resolveWranglerInvocation(productRoot);
+  const res = runWrangler(wrangler, ['deployments', 'list', '--name', product, '--json'], { productRoot, spawn });
+  if (res.status !== 0) {
+    return { ok: false, error: 'wrangler_deployments_list_failed', detail: res.output.slice(0, 2000) };
+  }
+  const rows = parseJSON(res.stdout);
+  if (!Array.isArray(rows) || !rows.length) {
+    return { ok: false, error: 'wrangler_deployment_identity_missing', detail: res.stdout.slice(0, 2000) };
+  }
+  rows.sort((a, b) => String(b.created_on || '').localeCompare(String(a.created_on || '')));
+  const latest = rows[0];
+  const version = Array.isArray(latest.versions)
+    ? [...latest.versions].sort((a, b) => Number(b.percentage || 0) - Number(a.percentage || 0))[0]
+    : null;
+  return {
+    ok: true,
+    deployment_id: latest.id || null,
+    version_id: version?.version_id || null,
+    created_on: latest.created_on || null,
+    source: latest.source || null,
+  };
+}
+
 export async function deployGoCloudflare({
   productRoot,
   product = 'agentsam-go-worker',
   dryRun = false,
   skipDeploy = false,
   skipRegistry = false,
+  artifactDigest = null,
+  containerDigest = null,
   spawn = spawnSync,
   fetchImpl = globalThis.fetch,
 } = {}) {
   const wranglerConfig = path.join(productRoot, 'wrangler.jsonc');
-  if (!fs.existsSync(wranglerConfig)) throw new Error(`wrangler_config_missing: ${wranglerConfig}`);
+  if (!fs.existsSync(wranglerConfig)) throw new Error('wrangler_config_missing: ' + wranglerConfig);
 
   const docker = spawn('docker', ['info'], { encoding: 'utf8' });
   const dockerOk = docker.status === 0;
-  if (!dockerOk && !dryRun && !skipDeploy) {
+  if (!dockerOk && !skipDeploy) {
     const err = new Error('docker_unavailable');
     err.detail = (docker.stderr || docker.stdout || '').trim().slice(0, 400);
-    err.hint = 'Cloudflare Containers require a local container engine for image build. Start Docker Desktop or pass --skip-deploy / --dry-run.';
+    err.hint = 'Cloudflare Containers require a local container engine for image build.';
     throw err;
   }
 
+  const git = gitEvidence(path.resolve(productRoot, '../..'));
   const wrangler = resolveWranglerInvocation(productRoot);
   let deployOutput = '';
-  let versionId = null;
   let deployed = false;
+  let dryRunValidated = false;
+  let identity = { ok: false, deployment_id: null, version_id: null, created_on: null };
 
-  if (dryRun || skipDeploy) {
-    deployOutput = dryRun ? 'dry_run' : 'skip_deploy';
-  } else {
-    const res = spawn(wrangler.command, wrangler.args.concat(['deploy', '-c', 'wrangler.jsonc']), {
-      cwd: productRoot,
-      encoding: 'utf8',
-      env: { ...process.env },
-    });
-    deployOutput = `${res.stdout || ''}\n${res.stderr || ''}`.trim();
+  if (skipDeploy) {
+    deployOutput = 'skip_deploy';
+  } else if (dryRun) {
+    const res = runWrangler(wrangler, ['deploy', '-c', 'wrangler.jsonc', '--dry-run'], { productRoot, spawn });
+    deployOutput = res.output;
     if (res.status !== 0) {
-      const err = new Error('wrangler_deploy_failed');
-      err.detail = deployOutput.slice(0, 2000);
+      const err = new Error('wrangler_dry_run_failed');
+      err.detail = deployOutput.slice(0, 3000);
       throw err;
     }
-    versionId = parseWranglerVersionId(deployOutput);
+    dryRunValidated = true;
+  } else {
+    const res = runWrangler(wrangler, ['deploy', '-c', 'wrangler.jsonc'], { productRoot, spawn });
+    deployOutput = res.output;
+    if (res.status !== 0) {
+      const err = new Error('wrangler_deploy_failed');
+      err.detail = deployOutput.slice(0, 3000);
+      throw err;
+    }
     deployed = true;
+    identity = readLatestWranglerDeployment(productRoot, product, { spawn });
+    if (!identity.ok) {
+      const err = new Error(identity.error || 'wrangler_deployment_identity_missing');
+      err.detail = identity.detail;
+      throw err;
+    }
   }
 
-  const url = extractWorkersDevUrl(deployOutput) || guessWorkersDevUrl(product);
-  const probes = url && !dryRun && !skipDeploy
-    ? await probeGoDeployment(url, { fetchImpl })
-    : { skipped: true, ok: Boolean(dryRun || skipDeploy), results: {} };
+  const outputVersionId = parseWranglerVersionId(deployOutput);
+  const versionId = identity.version_id || outputVersionId || null;
+  const deploymentId = identity.deployment_id || null;
+  const url = deployed ? (extractWorkersDevUrl(deployOutput) || guessWorkersDevUrl(product)) : null;
+  if (deployed && !url) {
+    const err = new Error('cloudflare_deployment_url_missing');
+    err.detail = deployOutput.slice(0, 3000);
+    throw err;
+  }
 
-  const git = gitEvidence(path.resolve(productRoot, '../..'));
-  const health = probes.skipped
-    ? 'pending'
-    : (probes.ok ? 'healthy' : (deployed ? 'degraded' : 'pending'));
+  const probes = deployed
+    ? await probeGoDeploymentWithRetry(url, {
+        fetchImpl,
+        expectedSourceCommit: git.commit,
+        expectedTarget: 'cloudflare',
+        edge: true,
+      })
+    : {
+        skipped: true,
+        ok: Boolean(skipDeploy || dryRunValidated),
+        results: {},
+        checks: {},
+        probed_at: null,
+      };
+
+  const health = probes.skipped ? 'pending' : (probes.ok ? 'healthy' : 'degraded');
   const receipt = {
     product,
     provider: 'cloudflare',
     kind: 'worker-container',
     url,
     health,
-    artifact_digest: null,
+    artifact_digest: artifactDigest,
+    container_image_digest: containerDigest,
+    worker_deployment_id: deploymentId,
     worker_version_id: versionId,
-    deployed_at: new Date().toISOString(),
+    deployed_at: deployed ? (identity.created_on || new Date().toISOString()) : null,
     source_commit: git.commit,
     probes,
     dry_run: Boolean(dryRun),
+    dry_run_validated: Boolean(dryRunValidated),
     skipped_deploy: Boolean(skipDeploy),
   };
 
@@ -94,10 +169,14 @@ export async function deployGoCloudflare({
     commit: git.commit,
     url,
     health,
+    workerDeploymentId: deploymentId,
+    workerVersionId: versionId,
+    artifactDigest,
+    containerDigest,
   });
   const productPath = writeProductRegistryLocal(productRoot, productRow);
 
-  const registryStatus = health === 'healthy' ? 'wired' : (deployed ? 'scaffolded' : 'prototype');
+  const registryStatus = health === 'healthy' ? 'deployed' : (deployed ? 'degraded' : 'built');
   const registry = applyGoProductRegistry({
     productRoot,
     product,
@@ -106,15 +185,21 @@ export async function deployGoCloudflare({
     url,
     commit: git.commit,
     health,
+    workerDeploymentId: deploymentId,
+    workerVersionId: versionId,
+    artifactDigest,
+    containerDigest,
     dryRun,
-    skipRemote: skipRegistry || skipDeploy,
+    skipRemote: skipRegistry || skipDeploy || dryRun || health !== 'healthy',
     spawn,
   });
 
   return {
     deployed,
+    dryRunValidated,
     url,
     versionId,
+    deploymentId,
     probes,
     receipt,
     receiptPath,
@@ -122,86 +207,119 @@ export async function deployGoCloudflare({
     productRow,
     registry,
     dockerOk,
+    deployOutput,
   };
 }
 
 export function extractWorkersDevUrl(output = '') {
-  const m = String(output).match(/https:\/\/[a-z0-9.-]+\.workers\.dev[^\s]*/i);
-  return m ? m[0].replace(/[).,]+$/, '') : null;
+  const match = String(output).match(/https:\/\/[a-z0-9.-]+\.workers\.dev[^\s]*/i);
+  return match ? match[0].replace(/[).,]+$/, '') : null;
 }
 
 export function guessWorkersDevUrl(product) {
   const account = process.env.CLOUDFLARE_ACCOUNT_SUBDOMAIN || process.env.CF_SUBDOMAIN || '';
-  if (!account) return null;
-  return `https://${product}.${account}.workers.dev`;
+  return account ? 'https://' + product + '.' + account + '.workers.dev' : null;
 }
 
-export async function probeGoDeployment(origin, { fetchImpl = globalThis.fetch } = {}) {
+export async function probeGoDeployment(origin, {
+  fetchImpl = globalThis.fetch,
+  expectedSourceCommit = null,
+  expectedTarget = null,
+  edge = true,
+} = {}) {
   const base = String(origin).replace(/\/+$/, '');
   const results = {};
+  const checks = {};
+  const probedAt = new Date().toISOString();
 
-  async function get(pathname) {
-    const url = `${base}${pathname}`;
+  async function request(key, pathname, init = {}) {
     try {
-      const res = await fetchImpl(url, { headers: { Accept: 'application/json' } });
+      const res = await fetchImpl(base + pathname, init);
       let body = null;
-      try { body = await res.json(); } catch { body = null; }
-      results[pathname] = { status: res.status, ok: res.status >= 200 && res.status < 300, body };
-      return { res, body };
+      try { body = await res.json(); } catch {}
+      results[key] = {
+        path: pathname,
+        status: res.status,
+        ok: res.status >= 200 && res.status < 300,
+        body,
+      };
+      return results[key];
     } catch (error) {
-      results[pathname] = { status: 0, ok: false, error: error.message };
-      return { res: null, body: null };
+      results[key] = { path: pathname, status: 0, ok: false, error: error.message };
+      return results[key];
     }
   }
 
-  async function post(pathname, payload) {
-    const url = `${base}${pathname}`;
-    try {
-      const res = await fetchImpl(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      let body = null;
-      try { body = await res.json(); } catch { body = null; }
-      results[pathname] = { status: res.status, ok: res.status >= 200 && res.status < 300, body };
-      return { res, body };
-    } catch (error) {
-      results[pathname] = { status: 0, ok: false, error: error.message };
-      return { res: null, body: null };
-    }
+  if (edge) {
+    await request('edge_root', '/', { headers: { Accept: 'application/json' } });
+    await request('edge_health', '/edge/health', { headers: { Accept: 'application/json' } });
   }
-
-  await get('/health');
-  await get('/v1/runtime');
-  const hash = await post('/v1/hash', { input: 'agentsam', algorithm: 'sha256' });
-  const inspect = await post('/v1/inspect', {
-    files: [{ path: 'demo.css', content: '.button { color: #2563eb; }' }],
+  await request('health', '/health', { headers: { Accept: 'application/json' } });
+  await request('runtime', '/v1/runtime', { headers: { Accept: 'application/json' } });
+  await request('capabilities', '/v1/capabilities', { headers: { Accept: 'application/json' } });
+  await request('hash', '/v1/hash', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ input: 'agentsam', algorithm: 'sha256' }),
   });
-  // Probe malformed separately so it does not overwrite the successful /v1/inspect result.
-  let malformed;
-  try {
-    const res = await fetchImpl(`${base}/v1/inspect`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ not_files: true }),
-    });
-    malformed = { res, body: null };
-    try { malformed.body = await res.json(); } catch { /* ignore */ }
-  } catch (error) {
-    malformed = { res: null, body: null, error: error.message };
+  await request('inspect', '/v1/inspect', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ files: [{ path: 'demo.css', content: '.button { color: #2563eb; }' }] }),
+  });
+  await request('malformed', '/v1/inspect', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ not_files: true }),
+  });
+
+  const health = results.health?.body;
+  const runtime = results.runtime?.body;
+  const caps = results.capabilities?.body;
+  const malformed = results.malformed?.body;
+
+  if (edge) {
+    checks.edge_root = results.edge_root?.status === 200 && results.edge_root?.body?.edge === 'worker';
+    checks.edge_health = results.edge_health?.status === 200 && results.edge_health?.body?.edge === 'worker';
   }
+  checks.health = results.health?.status === 200
+    && health?.ok === true
+    && health?.runtime === 'go'
+    && (!expectedTarget || health?.target === expectedTarget);
+  checks.source_commit = expectedSourceCommit ? health?.build?.commit === expectedSourceCommit : true;
+  checks.runtime = results.runtime?.status === 200
+    && runtime?.schema === 'agentsam.go-runtime.v1'
+    && runtime?.os === 'linux';
+  checks.capabilities = results.capabilities?.status === 200
+    && caps?.schema === 'agentsam.go-capabilities.v1'
+    && ['hash', 'inspect', 'runtime', 'capabilities'].every((name) => caps?.capabilities?.includes(name));
+  checks.hash = results.hash?.status === 200 && results.hash?.body?.hash === EXPECTED_HASH;
+  checks.inspect = results.inspect?.status === 200
+    && results.inspect?.body?.findings?.some((finding) => finding.kind === 'hardcoded_color' && finding.value === '#2563eb');
+  checks.error_envelope = results.malformed?.status === 400
+    && malformed?.ok === false
+    && malformed?.schema_version === 1
+    && malformed?.reason === 'input_invalid'
+    && malformed?.code === 'INVALID_ARGUMENT';
 
-  const hashOk = Boolean(hash.body?.hash && String(hash.body.hash).length === 64);
-  const inspectOk = Array.isArray(inspect.body?.findings)
-    && inspect.body.findings.some((f) => f.kind === 'hardcoded_color' && f.value === '#2563eb');
-  const malformedOk = Boolean(malformed.res && malformed.res.status >= 400);
+  results.deterministic_hash = { ok: checks.hash };
+  results.deterministic_inspect = { ok: checks.inspect };
+  results.malformed_rejected = { ok: checks.error_envelope };
+  const ok = Object.values(checks).every(Boolean);
+  return { origin: base, ok, checks, results, probed_at: probedAt };
+}
 
-  results['deterministic_hash'] = { ok: hashOk };
-  results['deterministic_inspect'] = { ok: inspectOk };
-  results['malformed_rejected'] = { ok: malformedOk };
-
-  const required = ['/health', '/v1/runtime', 'deterministic_hash', 'deterministic_inspect', 'malformed_rejected'];
-  const ok = required.every((key) => results[key]?.ok);
-  return { origin: base, ok, results };
+export async function probeGoDeploymentWithRetry(origin, {
+  attempts = 12,
+  delayMs = 2500,
+  ...options
+} = {}) {
+  let latest = null;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    latest = await probeGoDeployment(origin, options);
+    latest.attempt = attempt;
+    if (latest.ok) return latest;
+    if (attempt < attempts) await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  return latest || { origin, ok: false, checks: {}, results: {}, probed_at: new Date().toISOString() };
 }
