@@ -30,6 +30,8 @@
     "./sam/decision-receipt-schema": "./protocol/sam/decision-receipt.v1.schema.json",
     "./sam/outcome-schema": "./protocol/sam/outcome.v1.schema.json",
     "./sam/calibration-schema": "./protocol/sam/calibration.v1.schema.json",
+    "./sam/activity-schema": "./protocol/sam/activity.v1.schema.json",
+    "./errors/recovery-schema": "./protocol/errors/recovery.v1.schema.json",
     "./repository": "./src/repository/index.js",
     "./repository/contracts": "./packages/agentsam-repository/src/contracts.js",
     "./repository/identity-schema": "./protocol/repository/repository-identity.schema.json",

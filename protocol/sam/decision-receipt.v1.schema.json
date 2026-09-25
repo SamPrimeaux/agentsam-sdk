@@ -7,6 +7,10 @@
   "properties": {
     "schema": { "const": "agentsam.decision-receipt.v1" },
     "decision_id": { "type": "string" },
+    "run_id": { "type": ["string", "null"] },
+    "step_id": { "type": ["string", "null"] },
+    "action_id": { "type": ["string", "null"] },
+    "outcome_id": { "type": ["string", "null"] },
     "question_contract": {},
     "question_ids": { "type": "array", "items": { "type": "string" } },
     "question_versions": { "type": "object" },
@@ -15,6 +19,7 @@
     "state_hash": { "type": ["string", "null"] },
     "answers": { "type": "object" },
     "policy_result": { "type": ["object", "null"] },
+    "evidence": { "type": "array" },
     "action": {},
     "outcome": { "type": ["object", "null"] },
     "created_at": { "type": "string" },

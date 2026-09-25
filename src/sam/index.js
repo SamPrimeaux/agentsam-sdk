@@ -42,6 +42,7 @@ export {
   composeUtility,
   createDecisionReceipt,
   appendOutcome,
+  attachAction,
   QUESTION_REGISTRY,
   getRegisteredQuestion,
   brierScore,
@@ -53,3 +54,12 @@ export {
   DECISION_STATE_SCHEMA,
   DECISION_RECEIPT_SCHEMA,
 } from './decision/index.js';
+export {
+  createActivityEvent,
+  createActivityStore,
+  activityFromDecision,
+  ACTIVITY_SCHEMA,
+  ACTIVITY_PHASES,
+  ACTIVITY_EVENTS,
+  DECISION_ACTIVITY_LABELS,
+} from './activity/index.js';

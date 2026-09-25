@@ -6,10 +6,31 @@
   "required": ["schema", "success", "recorded_at"],
   "properties": {
     "schema": { "const": "agentsam.decision-outcome.v1" },
+    "outcome_id": { "type": "string" },
     "success": { "type": "boolean" },
+    "disposition": {
+      "enum": [
+        "accepted",
+        "rejected",
+        "overridden",
+        "corrected_to",
+        "retry_required",
+        "verification_failed",
+        "user_intervened",
+        "success",
+        "failure"
+      ]
+    },
     "human_corrected": { "type": "boolean" },
+    "corrected_to": {},
+    "user_override": { "type": "boolean" },
     "actual_class": {},
+    "duration_ms": { "type": ["number", "null"] },
+    "retries": { "type": ["integer", "null"] },
     "verification": { "type": "array" },
+    "label_strength": {
+      "enum": ["supervised", "explicit_accept", "weak_passive"]
+    },
     "recorded_at": { "type": "string" }
   }
 }

@@ -14,6 +14,7 @@ import { applyDecisionPolicy } from './policy.js';
 import { createDecisionReceipt } from './receipt.js';
 import { DECISION_EVALUATION_SCHEMA } from './types.js';
 import { getRegisteredQuestion } from './questions.js';
+import { activityFromDecision } from '../activity/index.js';
 
 /**
  * @param {object} opts
@@ -103,7 +104,27 @@ export async function evaluate(opts = {}) {
       evaluators: usedEvaluators,
       evaluator: usedEvaluators[0] || null,
       action: opts.action ?? null,
+      run_id: opts.run_id ?? null,
+      step_id: opts.step_id ?? null,
+      action_id: opts.action_id ?? null,
+      evidence: opts.evidence || [],
     });
+  }
+
+  // Optional live activity fan-out (Studio / CLI share the same events)
+  if (opts.activity && typeof opts.activity.emit === 'function' && evaluation.receipt) {
+    for (const [qid, answer] of Object.entries(answers)) {
+      opts.activity.emit(
+        activityFromDecision({
+          run_id: opts.run_id || opts.activity.run_id,
+          step_id: opts.step_id,
+          decision_id: evaluation.receipt.decision_id,
+          question_id: qid,
+          answer,
+          phase: opts.activity_phase || 'plan',
+        }),
+      );
+    }
   }
 
   return evaluation;

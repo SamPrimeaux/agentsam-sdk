@@ -539,6 +539,70 @@
       "type": "integer",
       "minimum": 1
     },
-    "details": {}
+    "details": {},
+    "failure_class": {
+      "type": "string",
+      "description": "Provider-independent failure dimension; prefer this over exploding ERROR_REASON"
+    },
+    "operation": {
+      "type": "object",
+      "properties": {
+        "kind": { "type": ["string", "null"] },
+        "action": { "type": ["string", "null"] },
+        "resource_type": { "type": ["string", "null"] },
+        "resource_id": { "type": ["string", "null"] },
+        "read_only": { "type": "boolean" },
+        "idempotent": { "type": "boolean" },
+        "side_effect_state": {
+          "enum": [
+            "none",
+            "not_started",
+            "confirmed_not_applied",
+            "confirmed_applied",
+            "partially_applied",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "retry": {
+      "type": "object",
+      "properties": {
+        "allowed": { "type": "boolean" },
+        "strategy": { "type": "string" },
+        "retry_after_ms": { "type": ["number", "null"] },
+        "max_attempts": { "type": ["integer", "null"] },
+        "requires_idempotency_key": { "type": "boolean" }
+      }
+    },
+    "fallback": {
+      "type": "object",
+      "properties": {
+        "allowed": { "type": "boolean" },
+        "strategy": { "type": ["string", "null"] },
+        "preserve_semantics": { "type": "boolean" },
+        "target": { "type": ["string", "null"] }
+      }
+    },
+    "notify": {
+      "type": "object",
+      "properties": {
+        "user": { "type": "string" },
+        "operator": { "type": "string" },
+        "agent": { "type": "string" }
+      }
+    },
+    "cause": {},
+    "status": {
+      "enum": ["success", "partial", "failure"]
+    },
+    "partial": {
+      "type": "object",
+      "properties": {
+        "completed": { "type": "number" },
+        "failed": { "type": "number" },
+        "failures": { "type": "array" }
+      }
+    }
   }
 }

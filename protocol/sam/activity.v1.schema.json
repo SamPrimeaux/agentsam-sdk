@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.inneranimalmedia.com/protocol/sam/activity.v1.schema.json",
+  "title": "AgentSamActivityEvent",
+  "type": "object",
+  "required": ["schema", "run_id", "seq", "timestamp", "phase", "event", "label"],
+  "properties": {
+    "schema": { "const": "agentsam.activity.v1" },
+    "run_id": { "type": "string" },
+    "seq": { "type": "integer", "minimum": 0 },
+    "timestamp": { "type": "string" },
+    "phase": {
+      "enum": ["boot", "observe", "context", "plan", "execute", "verify", "compact", "waiting", "recover", "complete"]
+    },
+    "event": {
+      "enum": [
+        "run.started",
+        "phase.changed",
+        "step.started",
+        "step.progress",
+        "step.completed",
+        "decision.made",
+        "tool.started",
+        "tool.completed",
+        "artifact.created",
+        "file.changed",
+        "approval.required",
+        "input.required",
+        "verification.completed",
+        "run.failed",
+        "run.completed"
+      ]
+    },
+    "step_id": { "type": ["string", "null"] },
+    "parent_id": { "type": ["string", "null"] },
+    "label": { "type": "string" },
+    "detail": { "type": ["string", "null"] },
+    "progress": {
+      "type": ["object", "null"],
+      "properties": {
+        "current": { "type": "number" },
+        "total": { "type": "number" }
+      }
+    },
+    "source": { "type": "object" },
+    "evidence": { "type": ["object", "null"] }
+  }
+}

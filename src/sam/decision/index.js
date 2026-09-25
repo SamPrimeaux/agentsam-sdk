@@ -30,7 +30,7 @@ export {
 } from './confidence.js';
 export { evaluate, evaluateDependentStages } from './evaluate.js';
 export { applyDecisionPolicy, composeUtility } from './policy.js';
-export { createDecisionReceipt, appendOutcome } from './receipt.js';
+export { createDecisionReceipt, appendOutcome, attachAction, OUTCOME_DISPOSITIONS } from './receipt.js';
 export {
   brierScore,
   logLoss,

@@ -5,6 +5,7 @@ export * from './normalize.js';
 export * from './redaction.js';
 export * from './fingerprint.js';
 export * from './retry.js';
+export * from './recovery.js';
 export * from './transport.js';
 export * from './render.js';
 export * from './adapters/index.js';

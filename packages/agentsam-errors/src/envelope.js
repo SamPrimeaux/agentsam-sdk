@@ -166,6 +166,59 @@ export function createErrorEnvelope(input = {}) {
   if (!Number.isInteger(envelope.http_status) || envelope.http_status < 100 || envelope.http_status > 599) envelope.http_status = null;
   if (!Number.isInteger(envelope.grpc_status) || envelope.grpc_status < 0 || envelope.grpc_status > 16) envelope.grpc_status = null;
   envelope.fingerprint = optional(input.fingerprint, 128) || fingerprintError(envelope);
+
+  // Optional recovery dimensions (v1-compatible extras — orthogonal to reason enum)
+  const failureClass = input.failure_class || null;
+  if (failureClass) envelope.failure_class = clean(failureClass);
+  if (input.operation && typeof input.operation === 'object') {
+    envelope.operation = Object.freeze({
+      kind: optional(input.operation.kind, 256),
+      action: optional(input.operation.action, 256),
+      resource_type: optional(input.operation.resource_type, 128),
+      resource_id: optional(input.operation.resource_id, 512),
+      read_only: input.operation.read_only === true,
+      idempotent: input.operation.idempotent === true,
+      side_effect_state: optional(input.operation.side_effect_state, 64) || 'unknown',
+    });
+  }
+  if (input.retry && typeof input.retry === 'object') {
+    envelope.retry = Object.freeze({
+      allowed: input.retry.allowed == null ? retryable : Boolean(input.retry.allowed),
+      strategy: optional(input.retry.strategy, 64) || (retryable ? 'exponential_backoff' : 'none'),
+      retry_after_ms: input.retry.retry_after_ms == null ? envelope.retry_after_ms : Math.max(0, Math.round(Number(input.retry.retry_after_ms) || 0)),
+      max_attempts: Number.isInteger(input.retry.max_attempts) ? input.retry.max_attempts : null,
+      requires_idempotency_key: input.retry.requires_idempotency_key === true,
+    });
+  }
+  if (input.fallback && typeof input.fallback === 'object') {
+    envelope.fallback = Object.freeze({
+      allowed: Boolean(input.fallback.allowed),
+      strategy: optional(input.fallback.strategy, 64),
+      preserve_semantics: input.fallback.preserve_semantics !== false,
+      target: optional(input.fallback.target, 256),
+    });
+  }
+  if (input.notify && typeof input.notify === 'object') {
+    envelope.notify = Object.freeze({
+      user: optional(input.notify.user, 64) || 'immediately',
+      operator: optional(input.notify.operator, 64) || 'never',
+      agent: optional(input.notify.agent, 64) || 'stop',
+    });
+  }
+  if (input.cause && typeof input.cause === 'object') {
+    envelope.cause = input.cause;
+  }
+  if (input.status === 'partial' || input.status === 'success' || input.status === 'failure') {
+    envelope.status = input.status;
+  }
+  if (input.completed != null || input.failed != null) {
+    envelope.partial = Object.freeze({
+      completed: Number(input.completed) || 0,
+      failed: Number(input.failed) || 0,
+      failures: Array.isArray(input.failures) ? input.failures : [],
+    });
+  }
+
   return deepFreeze(envelope);
 }
 
