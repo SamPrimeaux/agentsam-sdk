@@ -109,7 +109,12 @@ ON CONFLICT(slug) DO UPDATE SET
       target_type: 'cloudflare_worker',
       target_id: product,
       relationship_type: 'deployed_as',
-      metadata: { origin: 'agentsam.go.cloudflare', url: url || null },
+      metadata: {
+        origin: 'agentsam.go.cloudflare',
+        url: url || null,
+        worker_deployment_id: workerDeploymentId,
+        worker_version_id: workerVersionId,
+      },
     },
     {
       target_type: 'cli_command',
