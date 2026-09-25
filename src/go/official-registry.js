@@ -140,9 +140,10 @@ DO UPDATE SET metadata = excluded.metadata;`,
   return statements.join('\n');
 }
 
-export function applyGoProductRegistry({
+export function applyIamOfficialGoProductRegistry({
   productRoot,
   product = 'agentsam-go-worker',
+  officialRelease = false,
   cwd = SDK_ROOT,
   status = 'deployed',
   url = null,
@@ -157,6 +158,13 @@ export function applyGoProductRegistry({
   spawn = spawnSync,
   repositoryId = DEFAULT_REPOSITORY_ID,
 } = {}) {
+  if (!officialRelease || process.env.AGENTSAM_IAM_OFFICIAL_RELEASE !== '1') {
+    const err = new Error('iam_registry_official_release_required');
+    err.code = 'iam_registry_official_release_required';
+    err.hint = 'IAM D1 registration is restricted to the explicit official release path.';
+    throw err;
+  }
+
   const sql = buildGoProductRegistrySql({
     product,
     status,

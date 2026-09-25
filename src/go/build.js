@@ -6,22 +6,67 @@ import { fileURLToPath } from 'node:url';
 import { gitEvidence } from '../knowledge/config.js';
 import { writeGoBuildReceipt } from './receipts.js';
 
-const BUILD_COMMIT_FILE = '.agentsam-build-commit';
-const BUILD_TIME_FILE = '.agentsam-built-at';
 const NATIVE_PROBE_RUNNER = fileURLToPath(new URL('./native-probe-runner.mjs', import.meta.url));
 
-function ldflags(commit, builtAt) {
+function ldflags(commit, source, builtAt) {
   return [
     '-s',
     '-w',
     '-X github.com/inneranimalmedia/agentsam-go-worker/internal/health.BuildCommit=' + (commit || ''),
+    '-X github.com/inneranimalmedia/agentsam-go-worker/internal/health.BuildSource=' + (source || ''),
     '-X github.com/inneranimalmedia/agentsam-go-worker/internal/health.BuildTime=' + (builtAt || ''),
   ].join(' ');
 }
 
-export function writeBuildProvenance(runtimeRoot, { commit = '', builtAt = '' } = {}) {
-  fs.writeFileSync(path.join(runtimeRoot, BUILD_COMMIT_FILE), commit + '\n', 'utf8');
-  fs.writeFileSync(path.join(runtimeRoot, BUILD_TIME_FILE), builtAt + '\n', 'utf8');
+function readPackage(productRoot) {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(productRoot, 'package.json'), 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+export function sourceTreeDigest(runtimeRoot) {
+  const files = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name.startsWith('.agentsam-build') || entry.name === '.agentsam-built-at') continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name === 'go.mod' || entry.name.endsWith('.go')) files.push(full);
+    }
+  };
+  walk(runtimeRoot);
+  files.sort();
+  const hash = createHash('sha256');
+  for (const file of files) {
+    hash.update(path.relative(runtimeRoot, file));
+    hash.update('\0');
+    hash.update(fs.readFileSync(file));
+    hash.update('\0');
+  }
+  return 'sha256:' + hash.digest('hex');
+}
+
+export function resolveBuildSource({ productRoot, runtimeRoot, repositoryRoot } = {}) {
+  const git = gitEvidence(repositoryRoot || productRoot);
+  const pkg = readPackage(productRoot);
+  const treeDigest = sourceTreeDigest(runtimeRoot);
+  let identity = null;
+  if (git.commit) identity = 'git:' + git.commit;
+  else if (pkg?.name && pkg?.version) identity = 'npm:' + pkg.name + '@' + pkg.version;
+  else identity = 'tree:' + treeDigest;
+
+  return {
+    identity,
+    commit: git.commit || null,
+    branch: git.branch || null,
+    dirty: Boolean(git.dirty),
+    package_name: pkg?.name || null,
+    package_version: pkg?.version || null,
+    tree_digest: treeDigest,
+    repository_id: git.commit ? path.basename(repositoryRoot || productRoot) : null,
+  };
 }
 
 export function runGoTests(runtimeRoot, { spawn = spawnSync } = {}) {
@@ -37,18 +82,20 @@ export function runGoVet(runtimeRoot, { spawn = spawnSync } = {}) {
 export function runGoBuild(runtimeRoot, {
   outDir = null,
   commit = '',
+  source = '',
   builtAt = '',
   spawn = spawnSync,
 } = {}) {
   const binDir = outDir || path.join(runtimeRoot, '..', '.agentsam', 'go-build');
   fs.mkdirSync(binDir, { recursive: true });
-  const suffix = (commit || 'dev').slice(0, 12) + '-' + process.pid + '-' + randomBytes(3).toString('hex');
+  const identityHash = createHash('sha256').update(source || commit || 'dev').digest('hex').slice(0, 12);
+  const suffix = identityHash + '-' + process.pid + '-' + randomBytes(3).toString('hex');
   const out = path.join(binDir, 'agentsam-go-worker-' + suffix);
   const res = spawn('go', [
     'build',
     '-trimpath',
     '-ldflags',
-    ldflags(commit, builtAt),
+    ldflags(commit, source, builtAt),
     '-o',
     out,
     './cmd/server',
@@ -69,11 +116,12 @@ export function sha256File(file) {
 }
 
 export function runNativeRuntimeProbe(binary, {
+  expectedSource = '',
   expectedCommit = '',
   spawn = spawnSync,
 } = {}) {
   if (!binary || !fs.existsSync(binary)) return { ok: false, error: 'binary_missing', results: {} };
-  const res = spawn(process.execPath, [NATIVE_PROBE_RUNNER, binary, expectedCommit], {
+  const res = spawn(process.execPath, [NATIVE_PROBE_RUNNER, binary, expectedSource, expectedCommit], {
     encoding: 'utf8',
     maxBuffer: 4 * 1024 * 1024,
   });
@@ -90,21 +138,22 @@ export function runNativeRuntimeProbe(binary, {
 
 /**
  * Build + test + boot the discovered Go runtime and emit deployment-grade
- * source/artifact evidence.
+ * source/artifact evidence. Git is authoritative in a maintainer checkout;
+ * an immutable npm package name/version is authoritative in distribution mode.
  */
 export function buildGoProduct({
   productRoot,
   runtimeRoot,
   repositoryRoot,
+  stateRoot = productRoot,
   dryRun = false,
 } = {}) {
   if (!runtimeRoot || !fs.existsSync(path.join(runtimeRoot, 'go.mod'))) {
     throw new Error('go_runtime_missing');
   }
 
-  const git = gitEvidence(repositoryRoot || productRoot);
+  const source = resolveBuildSource({ productRoot, runtimeRoot, repositoryRoot });
   const builtAt = new Date().toISOString();
-  writeBuildProvenance(runtimeRoot, { commit: git.commit, builtAt });
 
   const tests = dryRun ? { ok: true, skipped: true } : runGoTests(runtimeRoot);
   if (!tests.ok) {
@@ -122,7 +171,12 @@ export function buildGoProduct({
 
   const build = dryRun
     ? { ok: true, skipped: true, binary: null }
-    : runGoBuild(runtimeRoot, { commit: git.commit, builtAt });
+    : runGoBuild(runtimeRoot, {
+        outDir: path.join(stateRoot, '.agentsam', 'go-build'),
+        commit: source.commit,
+        source: source.identity,
+        builtAt,
+      });
   if (!build.ok) {
     const err = new Error('go_build_failed');
     err.detail = build;
@@ -131,7 +185,10 @@ export function buildGoProduct({
 
   const probe = dryRun
     ? { ok: true, skipped: true, results: {} }
-    : runNativeRuntimeProbe(build.binary, { expectedCommit: git.commit });
+    : runNativeRuntimeProbe(build.binary, {
+        expectedSource: source.identity,
+        expectedCommit: source.commit,
+      });
   if (!probe.ok) {
     const err = new Error('go_runtime_probe_failed');
     err.detail = probe;
@@ -147,12 +204,7 @@ export function buildGoProduct({
     schema: 'agentsam.go-build-receipt.v1',
     product: path.basename(productRoot),
     runtime: { language: 'go', version: goVersion, module_root: runtimeRoot },
-    source: {
-      repository_id: path.basename(repositoryRoot || productRoot),
-      commit: git.commit,
-      branch: git.branch,
-      dirty: git.dirty,
-    },
+    source,
     artifact: {
       type: build.binary ? 'binary' : 'none',
       path: build.binary,
@@ -168,6 +220,6 @@ export function buildGoProduct({
     built_at: builtAt,
   };
 
-  const receiptPath = writeGoBuildReceipt(productRoot, receipt);
-  return { receipt, receiptPath, tests, vet, build, probe };
+  const receiptPath = writeGoBuildReceipt(stateRoot, receipt);
+  return { receipt, receiptPath, tests, vet, build, probe, source };
 }

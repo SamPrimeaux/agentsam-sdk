@@ -41,6 +41,8 @@ test('buildGoProduct emits build receipt after go test/vet/build', () => {
   assert.ok(result.build.binary);
   assert.match(result.receipt.artifact.digest, /^sha256:[a-f0-9]{64}$/);
   assert.equal(result.receipt.tests.runtime_probe, true);
+  assert.match(result.receipt.source.identity, /^git:[a-f0-9]{40}$/);
+  assert.equal(result.probe.checks.source_identity, true);
   assert.equal(result.probe.checks.source_commit, true);
   assert.equal(result.probe.checks.error_envelope, true);
   assert.equal(result.probe.checks.clean_shutdown, true);
@@ -54,6 +56,8 @@ test('agentsam go --cloudflare agentsam-go-worker --skip-deploy is idempotent', 
   assert.equal(first.ok, true);
   assert.equal(first.product, 'agentsam-go-worker');
   assert.equal(first.scaffold_changes_required, false);
+  assert.equal(first.mode, 'self_host');
+  assert.equal(first.deploy.registry.reason, 'self_host_registry_isolated');
 
   const chunks2 = [];
   const second = await runGo(['--cloudflare', 'agentsam-go-worker', '--skip-deploy', '--json'], {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderArchitectureExplorer, renderOperationInspector, drawBox } from '../../src/ui/wireframes.js';
-import { buildGoProductRegistrySql } from '../../src/go/registry.js';
+import { applyIamOfficialGoProductRegistry, buildGoProductRegistrySql } from '../../src/go/official-registry.js';
 
 test('architecture explorer is boxed reasoning scenery', () => {
   const view = renderArchitectureExplorer({
@@ -51,4 +51,23 @@ test('buildGoProductRegistrySql upserts product + relationships without inventin
   assert.match(sql, /deployed_as/);
   assert.doesNotMatch(sql, /CREATE TABLE/);
   assert.doesNotMatch(sql, /account_id/);
+});
+
+
+test('IAM remote registry requires the explicit official-release guard', () => {
+  const prior = process.env.AGENTSAM_IAM_OFFICIAL_RELEASE;
+  delete process.env.AGENTSAM_IAM_OFFICIAL_RELEASE;
+  try {
+    assert.throws(
+      () => applyIamOfficialGoProductRegistry({
+        productRoot: '/tmp/agentsam-test-state',
+        officialRelease: true,
+        skipRemote: true,
+      }),
+      /iam_registry_official_release_required/,
+    );
+  } finally {
+    if (prior == null) delete process.env.AGENTSAM_IAM_OFFICIAL_RELEASE;
+    else process.env.AGENTSAM_IAM_OFFICIAL_RELEASE = prior;
+  }
 });

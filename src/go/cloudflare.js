@@ -3,8 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseWranglerVersionId } from '../lib/deploy/health.js';
 import { writeDeploymentReceipt, writeProductRegistryLocal, buildProductRow } from './receipts.js';
-import { applyGoProductRegistry } from './registry.js';
-import { gitEvidence } from '../knowledge/config.js';
+import { applyIamOfficialGoProductRegistry } from './official-registry.js';
 import { SDK_ROOT } from './discover.js';
 
 const EXPECTED_HASH = '2e60bba13dc2bc37d75dd2ce5deb25466f19cb2994e20889388948879875eae9';
@@ -17,11 +16,17 @@ function resolveWranglerInvocation(productRoot) {
   return { command: 'npx', args: ['--yes', 'wrangler'] };
 }
 
-function runWrangler(wrangler, args, { productRoot, spawn = spawnSync } = {}) {
+function runWrangler(wrangler, args, {
+  productRoot,
+  spawn = spawnSync,
+  accountId = null,
+} = {}) {
+  const env = { ...process.env };
+  if (accountId) env.CLOUDFLARE_ACCOUNT_ID = accountId;
   const res = spawn(wrangler.command, wrangler.args.concat(args), {
     cwd: productRoot,
     encoding: 'utf8',
-    env: { ...process.env },
+    env,
     maxBuffer: 16 * 1024 * 1024,
   });
   return {
@@ -36,9 +41,93 @@ function parseJSON(text) {
   try { return JSON.parse(String(text || '').trim()); } catch { return null; }
 }
 
-export function readLatestWranglerDeployment(productRoot, product, { spawn = spawnSync } = {}) {
+function publicAccount(account) {
+  if (!account) return null;
+  return {
+    id: account.id || null,
+    name: account.name || null,
+    type: account.type || null,
+  };
+}
+
+export function resolveWranglerIdentity(productRoot, {
+  requestedAccountId = null,
+  spawn = spawnSync,
+} = {}) {
   const wrangler = resolveWranglerInvocation(productRoot);
-  const res = runWrangler(wrangler, ['deployments', 'list', '--name', product, '--json'], { productRoot, spawn });
+  const res = runWrangler(wrangler, ['whoami', '--json'], { productRoot, spawn });
+  const body = parseJSON(res.stdout);
+  if (res.status !== 0 || body?.loggedIn !== true) {
+    return {
+      ok: false,
+      authenticated: false,
+      error: 'cloudflare_not_authenticated',
+      detail: res.output.slice(0, 1200),
+      accounts: [],
+      account: null,
+    };
+  }
+
+  const accounts = Array.isArray(body.accounts)
+    ? body.accounts.map(publicAccount).filter((row) => row.id)
+    : [];
+  if (!accounts.length) {
+    return {
+      ok: false,
+      authenticated: true,
+      auth_type: body.authType || null,
+      error: 'cloudflare_account_missing',
+      accounts: [],
+      account: null,
+    };
+  }
+
+  let account = null;
+  if (requestedAccountId) {
+    account = accounts.find((row) => row.id === requestedAccountId) || null;
+    if (!account) {
+      return {
+        ok: false,
+        authenticated: true,
+        auth_type: body.authType || null,
+        error: 'cloudflare_account_not_available',
+        requested_account_id: requestedAccountId,
+        accounts,
+        account: null,
+      };
+    }
+  } else if (accounts.length === 1) {
+    account = accounts[0];
+  } else {
+    return {
+      ok: false,
+      authenticated: true,
+      auth_type: body.authType || null,
+      error: 'cloudflare_account_ambiguous',
+      accounts,
+      account: null,
+    };
+  }
+
+  return {
+    ok: true,
+    authenticated: true,
+    auth_type: body.authType || null,
+    accounts,
+    account,
+  };
+}
+
+export function readLatestWranglerDeployment(productRoot, product, {
+  spawn = spawnSync,
+  accountId = null,
+} = {}) {
+  const wrangler = resolveWranglerInvocation(productRoot);
+  const res = runWrangler(
+    wrangler,
+    ['deployments', 'list', '--name', product, '--json'],
+    { productRoot, spawn, accountId },
+  );
   if (res.status !== 0) {
     return { ok: false, error: 'wrangler_deployments_list_failed', detail: res.output.slice(0, 2000) };
   }
@@ -60,12 +149,41 @@ export function readLatestWranglerDeployment(productRoot, product, { spawn = spa
   };
 }
 
+function deploymentArgs({
+  dryRun = false,
+  source = null,
+  builtAt = null,
+} = {}) {
+  const args = ['deploy', '-c', 'wrangler.jsonc'];
+  if (source?.identity) args.push('--var', 'AGENTSAM_BUILD_SOURCE:' + source.identity);
+  if (source?.commit) args.push('--var', 'AGENTSAM_BUILD_COMMIT:' + source.commit);
+  if (builtAt) args.push('--var', 'AGENTSAM_BUILT_AT:' + builtAt);
+  if (dryRun) args.push('--dry-run');
+  return args;
+}
+
+/**
+ * Deploy to the explicitly resolved Wrangler/Cloudflare account.
+ *
+ * Default mode is third-party self-host:
+ *   - no IAM D1 mutation
+ *   - state/receipts stay in the caller's AgentSam state root
+ *
+ * IAM product registration requires BOTH officialRelease=true and
+ * AGENTSAM_IAM_OFFICIAL_RELEASE=1.
+ */
 export async function deployGoCloudflare({
   productRoot,
+  stateRoot = productRoot,
   product = 'agentsam-go-worker',
   dryRun = false,
   skipDeploy = false,
   skipRegistry = false,
+  officialRelease = false,
+  accountId = null,
+  cloudflareIdentity = null,
+  source = null,
+  builtAt = null,
   artifactDigest = null,
   containerDigest = null,
   spawn = spawnSync,
@@ -73,6 +191,25 @@ export async function deployGoCloudflare({
 } = {}) {
   const wranglerConfig = path.join(productRoot, 'wrangler.jsonc');
   if (!fs.existsSync(wranglerConfig)) throw new Error('wrangler_config_missing: ' + wranglerConfig);
+
+  let cfIdentity = cloudflareIdentity;
+  if (!skipDeploy) {
+    cfIdentity = cfIdentity || resolveWranglerIdentity(productRoot, {
+      requestedAccountId: accountId,
+      spawn,
+    });
+    if (!cfIdentity?.ok || !cfIdentity?.account?.id) {
+      const err = new Error(cfIdentity?.error || 'cloudflare_identity_unavailable');
+      err.code = cfIdentity?.error || 'cloudflare_identity_unavailable';
+      err.detail = cfIdentity || null;
+      err.hint = 'Authenticate Wrangler and select an explicit Cloudflare account before deploying.';
+      throw err;
+    }
+    if (accountId && cfIdentity.account.id !== accountId) {
+      throw new Error('cloudflare_account_resolution_mismatch');
+    }
+    accountId = cfIdentity.account.id;
+  }
 
   const docker = spawn('docker', ['info'], { encoding: 'utf8' });
   const dockerOk = docker.status === 0;
@@ -83,7 +220,6 @@ export async function deployGoCloudflare({
     throw err;
   }
 
-  const git = gitEvidence(path.resolve(productRoot, '../..'));
   const wrangler = resolveWranglerInvocation(productRoot);
   let deployOutput = '';
   let deployed = false;
@@ -93,7 +229,11 @@ export async function deployGoCloudflare({
   if (skipDeploy) {
     deployOutput = 'skip_deploy';
   } else if (dryRun) {
-    const res = runWrangler(wrangler, ['deploy', '-c', 'wrangler.jsonc', '--dry-run'], { productRoot, spawn });
+    const res = runWrangler(
+      wrangler,
+      deploymentArgs({ dryRun: true, source, builtAt }),
+      { productRoot, spawn, accountId },
+    );
     deployOutput = res.output;
     if (res.status !== 0) {
       const err = new Error('wrangler_dry_run_failed');
@@ -102,7 +242,11 @@ export async function deployGoCloudflare({
     }
     dryRunValidated = true;
   } else {
-    const res = runWrangler(wrangler, ['deploy', '-c', 'wrangler.jsonc'], { productRoot, spawn });
+    const res = runWrangler(
+      wrangler,
+      deploymentArgs({ source, builtAt }),
+      { productRoot, spawn, accountId },
+    );
     deployOutput = res.output;
     if (res.status !== 0) {
       const err = new Error('wrangler_deploy_failed');
@@ -110,7 +254,7 @@ export async function deployGoCloudflare({
       throw err;
     }
     deployed = true;
-    identity = readLatestWranglerDeployment(productRoot, product, { spawn });
+    identity = readLatestWranglerDeployment(productRoot, product, { spawn, accountId });
     if (!identity.ok) {
       const err = new Error(identity.error || 'wrangler_deployment_identity_missing');
       err.detail = identity.detail;
@@ -131,7 +275,8 @@ export async function deployGoCloudflare({
   const probes = deployed
     ? await probeGoDeploymentWithRetry(url, {
         fetchImpl,
-        expectedSourceCommit: git.commit,
+        expectedSource: source?.identity || null,
+        expectedSourceCommit: source?.commit || null,
         expectedTarget: 'cloudflare',
         edge: true,
       })
@@ -144,6 +289,7 @@ export async function deployGoCloudflare({
       };
 
   const health = probes.skipped ? 'pending' : (probes.ok ? 'healthy' : 'degraded');
+  const account = cfIdentity?.account || null;
   const receipt = {
     product,
     provider: 'cloudflare',
@@ -155,18 +301,37 @@ export async function deployGoCloudflare({
     worker_deployment_id: deploymentId,
     worker_version_id: versionId,
     deployed_at: deployed ? (identity.created_on || new Date().toISOString()) : null,
-    source_commit: git.commit,
+    source_identity: source?.identity || null,
+    source_commit: source?.commit || null,
+    source_package: source?.package_name || null,
+    source_package_version: source?.package_version || null,
+    cloudflare: account
+      ? {
+          account_id: account.id,
+          account_name: account.name,
+          auth_type: cfIdentity?.auth_type || null,
+        }
+      : null,
     probes,
     dry_run: Boolean(dryRun),
     dry_run_validated: Boolean(dryRunValidated),
     skipped_deploy: Boolean(skipDeploy),
+    official_release: Boolean(officialRelease),
+    registry_mode: officialRelease ? 'iam_official' : 'self_host_local',
   };
 
-  const receiptPath = writeDeploymentReceipt(productRoot, receipt);
+  const receiptPath = writeDeploymentReceipt(stateRoot, receipt);
+  const repositoryId = officialRelease ? 'github:samprimeaux/agentsam-sdk' : null;
   const productRow = buildProductRow({
     product,
-    repositoryId: 'github:samprimeaux/agentsam-sdk',
-    commit: git.commit,
+    repositoryId,
+    commit: source?.commit || null,
+    sourceIdentity: source?.identity || null,
+    packageName: source?.package_name || '@inneranimalmedia/agentsam-go-worker',
+    packageVersion: source?.package_version || '0.1.0',
+    cloudflareAccount: account
+      ? { id: account.id, name: account.name }
+      : null,
     url,
     health,
     workerDeploymentId: deploymentId,
@@ -174,25 +339,48 @@ export async function deployGoCloudflare({
     artifactDigest,
     containerDigest,
   });
-  const productPath = writeProductRegistryLocal(productRoot, productRow);
+  const productPath = writeProductRegistryLocal(stateRoot, productRow);
 
-  const registryStatus = health === 'healthy' ? 'deployed' : (deployed ? 'degraded' : 'built');
-  const registry = applyGoProductRegistry({
-    productRoot,
-    product,
-    cwd: SDK_ROOT,
-    status: registryStatus,
-    url,
-    commit: git.commit,
-    health,
-    workerDeploymentId: deploymentId,
-    workerVersionId: versionId,
-    artifactDigest,
-    containerDigest,
-    dryRun,
-    skipRemote: skipRegistry || skipDeploy || dryRun || health !== 'healthy',
-    spawn,
-  });
+  let registry = {
+    ok: true,
+    remote: false,
+    skipped: true,
+    reason: officialRelease ? 'official_release_not_eligible' : 'self_host_registry_isolated',
+  };
+
+  const officialEligible = officialRelease
+    && !skipRegistry
+    && !skipDeploy
+    && !dryRun
+    && health === 'healthy';
+
+  if (officialEligible) {
+    registry = applyIamOfficialGoProductRegistry({
+      productRoot: stateRoot,
+      product,
+      officialRelease: true,
+      cwd: SDK_ROOT,
+      status: 'deployed',
+      url,
+      commit: source?.commit || null,
+      health,
+      workerDeploymentId: deploymentId,
+      workerVersionId: versionId,
+      artifactDigest,
+      containerDigest,
+      dryRun: false,
+      skipRemote: false,
+      spawn,
+    });
+  } else if (officialRelease && skipRegistry) {
+    registry.reason = 'official_registry_explicitly_skipped';
+  } else if (officialRelease && dryRun) {
+    registry.reason = 'dry_run';
+  } else if (officialRelease && skipDeploy) {
+    registry.reason = 'skip_deploy';
+  } else if (officialRelease && health !== 'healthy') {
+    registry.reason = 'deployment_not_healthy';
+  }
 
   return {
     deployed,
@@ -207,6 +395,7 @@ export async function deployGoCloudflare({
     productRow,
     registry,
     dockerOk,
+    cloudflare: cfIdentity,
     deployOutput,
   };
 }
@@ -223,6 +412,7 @@ export function guessWorkersDevUrl(product) {
 
 export async function probeGoDeployment(origin, {
   fetchImpl = globalThis.fetch,
+  expectedSource = null,
   expectedSourceCommit = null,
   expectedTarget = null,
   edge = true,
@@ -281,11 +471,15 @@ export async function probeGoDeployment(origin, {
   if (edge) {
     checks.edge_root = results.edge_root?.status === 200 && results.edge_root?.body?.edge === 'worker';
     checks.edge_health = results.edge_health?.status === 200 && results.edge_health?.body?.edge === 'worker';
+    checks.edge_source = expectedSource
+      ? results.edge_root?.body?.source === expectedSource
+      : true;
   }
   checks.health = results.health?.status === 200
     && health?.ok === true
     && health?.runtime === 'go'
     && (!expectedTarget || health?.target === expectedTarget);
+  checks.source_identity = expectedSource ? health?.build?.source === expectedSource : true;
   checks.source_commit = expectedSourceCommit ? health?.build?.commit === expectedSourceCommit : true;
   checks.runtime = results.runtime?.status === 200
     && runtime?.schema === 'agentsam.go-runtime.v1'

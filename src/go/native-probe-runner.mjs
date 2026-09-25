@@ -2,7 +2,8 @@ import { spawn } from 'node:child_process';
 import net from 'node:net';
 
 const binary = process.argv[2];
-const expectedCommit = process.argv[3] || '';
+const expectedSource = process.argv[3] || '';
+const expectedCommit = process.argv[4] || '';
 const expectedHash = '2e60bba13dc2bc37d75dd2ce5deb25466f19cb2994e20889388948879875eae9';
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -75,7 +76,8 @@ const capabilities = results.capabilities?.body;
 const malformed = results.malformed?.body;
 const checks = {
   health: results.health?.status === 200 && health?.ok === true && health?.target === 'local',
-  source_commit: Boolean(expectedCommit) && health?.build?.commit === expectedCommit,
+  source_identity: Boolean(expectedSource) && health?.build?.source === expectedSource,
+  source_commit: expectedCommit ? health?.build?.commit === expectedCommit : true,
   runtime: results.runtime?.status === 200 && runtime?.schema === 'agentsam.go-runtime.v1',
   capabilities: results.capabilities?.status === 200
     && capabilities?.schema === 'agentsam.go-capabilities.v1'

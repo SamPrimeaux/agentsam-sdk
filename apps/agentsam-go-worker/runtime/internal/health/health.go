@@ -8,13 +8,16 @@ import (
 const ServiceName = "agentsam-go-worker"
 const Version = "0.1.0"
 
-// BuildCommit and BuildTime are populated with -ldflags by AgentSam's canonical
-// build path. Environment variables remain an explicit runtime override.
+// BuildCommit, BuildSource, and BuildTime are populated with -ldflags by
+// AgentSam's canonical build path. Environment variables remain explicit
+// runtime overrides for controlled environments.
 var BuildCommit string
+var BuildSource string
 var BuildTime string
 
 type BuildInfo struct {
 	Commit  string `json:"commit,omitempty"`
+	Source  string `json:"source,omitempty"`
 	BuiltAt string `json:"built_at,omitempty"`
 }
 
@@ -39,6 +42,7 @@ func Snapshot(target string) Response {
 		Target:  target,
 		Build: BuildInfo{
 			Commit:  envOr("AGENTSAM_BUILD_COMMIT", BuildCommit),
+			Source:  envOr("AGENTSAM_BUILD_SOURCE", BuildSource),
 			BuiltAt: envOr("AGENTSAM_BUILT_AT", BuildTime),
 		},
 	}

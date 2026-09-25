@@ -31,9 +31,7 @@
     "pack:check": "npm pack --dry-run --json"
   },
   "dependencies": {
-    "@cloudflare/containers": "^0.0.30"
-  },
-  "devDependencies": {
+    "@cloudflare/containers": "^0.0.30",
     "wrangler": "^4.137.0"
   }
 }

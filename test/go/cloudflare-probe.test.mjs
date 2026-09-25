@@ -7,6 +7,7 @@ import {
   extractWorkersDevUrl,
   probeGoDeployment,
   readLatestWranglerDeployment,
+  resolveWranglerIdentity,
 } from '../../src/go/cloudflare.js';
 import { buildProductRow } from '../../src/go/receipts.js';
 
@@ -21,8 +22,8 @@ test('extractWorkersDevUrl parses wrangler output', () => {
 
 test('probeGoDeployment requires edge, source identity, capabilities, deterministic functions and ErrorEnvelope', async () => {
   const responses = new Map([
-    ['/', { status: 200, body: { ok: true, edge: 'worker', runtime: 'go/native-container' } }],
-    ['/edge/health', { status: 200, body: { ok: true, edge: 'worker', runtime: 'go/native-container' } }],
+    ['/', { status: 200, body: { ok: true, edge: 'worker', runtime: 'go/native-container', source: 'git:abc123' } }],
+    ['/edge/health', { status: 200, body: { ok: true, edge: 'worker', runtime: 'go/native-container', source: 'git:abc123' } }],
     ['/health', {
       status: 200,
       body: {
@@ -30,7 +31,7 @@ test('probeGoDeployment requires edge, source identity, capabilities, determinis
         service: 'agentsam-go-worker',
         runtime: 'go',
         target: 'cloudflare',
-        build: { commit: 'abc123' },
+        build: { source: 'git:abc123', commit: 'abc123' },
       },
     }],
     ['/v1/runtime', {
@@ -73,12 +74,14 @@ test('probeGoDeployment requires edge, source identity, capabilities, determinis
 
   const result = await probeGoDeployment('https://example.workers.dev', {
     fetchImpl,
+    expectedSource: 'git:abc123',
     expectedSourceCommit: 'abc123',
     expectedTarget: 'cloudflare',
   });
   assert.equal(result.ok, true);
   assert.equal(result.checks.edge_root, true);
   assert.equal(result.checks.edge_health, true);
+  assert.equal(result.checks.source_identity, true);
   assert.equal(result.checks.source_commit, true);
   assert.equal(result.checks.capabilities, true);
   assert.equal(result.results.deterministic_hash.ok, true);
@@ -109,14 +112,56 @@ test('readLatestWranglerDeployment normalizes authoritative deployment/version i
   assert.equal(result.version_id, 'ver_new');
 });
 
-test('Cloudflare dry run invokes real Wrangler dry-run and does not claim a deployment', async () => {
+test('resolveWranglerIdentity fails closed when authentication is unavailable', () => {
+  const spawn = () => ({ status: 1, stdout: '', stderr: 'not logged in' });
+  const result = resolveWranglerIdentity(PRODUCT_ROOT, { spawn });
+  assert.equal(result.ok, false);
+  assert.equal(result.authenticated, false);
+  assert.equal(result.error, 'cloudflare_not_authenticated');
+});
+
+test('resolveWranglerIdentity requires an explicit account when multiple are available', () => {
+  const spawn = () => ({
+    status: 0,
+    stdout: JSON.stringify({
+      loggedIn: true,
+      authType: 'OAuth Token',
+      accounts: [
+        { id: 'acc_a', name: 'Account A', type: 'standard' },
+        { id: 'acc_b', name: 'Account B', type: 'standard' },
+      ],
+    }),
+    stderr: '',
+  });
+  const ambiguous = resolveWranglerIdentity(PRODUCT_ROOT, { spawn });
+  assert.equal(ambiguous.ok, false);
+  assert.equal(ambiguous.error, 'cloudflare_account_ambiguous');
+
+  const selected = resolveWranglerIdentity(PRODUCT_ROOT, {
+    spawn,
+    requestedAccountId: 'acc_b',
+  });
+  assert.equal(selected.ok, true);
+  assert.equal(selected.account.id, 'acc_b');
+});
+
+test('Cloudflare self-host dry run binds the resolved account and never mutates IAM D1', async () => {
   const calls = [];
-  const spawn = (command, args = []) => {
-    calls.push([command, ...args]);
+  const cloudflareIdentity = {
+    ok: true,
+    authenticated: true,
+    auth_type: 'OAuth Token',
+    account: { id: 'acc_user', name: 'User Cloudflare', type: 'standard' },
+    accounts: [{ id: 'acc_user', name: 'User Cloudflare', type: 'standard' }],
+  };
+  const spawn = (command, args = [], options = {}) => {
+    calls.push({ command, args, env: options.env || {} });
     if (command === 'docker' && args[0] === 'info') {
       return { status: 0, stdout: 'ok', stderr: '' };
     }
     if (args.includes('deploy') && args.includes('--dry-run')) {
+      assert.equal(options.env.CLOUDFLARE_ACCOUNT_ID, 'acc_user');
+      assert.ok(args.includes('AGENTSAM_BUILD_SOURCE:npm:@inneranimalmedia/agentsam-go-worker@0.1.0'));
       return { status: 0, stdout: 'Total Upload: 1 KiB', stderr: '' };
     }
     throw new Error('unexpected spawn: ' + [command, ...args].join(' '));
@@ -126,6 +171,15 @@ test('Cloudflare dry run invokes real Wrangler dry-run and does not claim a depl
     productRoot: PRODUCT_ROOT,
     product: 'agentsam-go-worker',
     dryRun: true,
+    accountId: 'acc_user',
+    cloudflareIdentity,
+    source: {
+      identity: 'npm:@inneranimalmedia/agentsam-go-worker@0.1.0',
+      commit: null,
+      package_name: '@inneranimalmedia/agentsam-go-worker',
+      package_version: '0.1.0',
+    },
+    builtAt: '2026-09-25T00:00:00.000Z',
     spawn,
   });
 
@@ -133,9 +187,13 @@ test('Cloudflare dry run invokes real Wrangler dry-run and does not claim a depl
   assert.equal(result.dryRunValidated, true);
   assert.equal(result.receipt.dry_run, true);
   assert.equal(result.receipt.skipped_deploy, false);
+  assert.equal(result.receipt.registry_mode, 'self_host_local');
+  assert.equal(result.receipt.cloudflare.account_id, 'acc_user');
   assert.equal(result.registry.remote, false);
-  assert.ok(calls.some((parts) => parts.includes('deploy') && parts.includes('--dry-run')));
+  assert.equal(result.registry.reason, 'self_host_registry_isolated');
+  assert.ok(calls.some((call) => call.args.includes('deploy') && call.args.includes('--dry-run')));
 });
+
 
 test('buildProductRow stays on agentsam_products projection with deployment identity', () => {
   const row = buildProductRow({

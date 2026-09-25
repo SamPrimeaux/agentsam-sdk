@@ -28,7 +28,7 @@ export function writeProductRegistryLocal(productRoot, row) {
   const payload = {
     schema: 'agentsam.product-local-registry.v1',
     registry: 'agentsam_products',
-    note: 'Local projection + optional remote D1 upsert into agentsam_products / asset_relationships.',
+    note: 'Local AgentSam projection. IAM D1 registration is a separate explicit official-release operation.',
     row,
     written_at: new Date().toISOString(),
   };
@@ -52,6 +52,10 @@ export function buildProductRow({
   product,
   repositoryId,
   commit,
+  sourceIdentity = null,
+  packageName = '@inneranimalmedia/agentsam-go-worker',
+  packageVersion = '0.1.0',
+  cloudflareAccount = null,
   url,
   health,
   workerDeploymentId = null,
@@ -66,8 +70,8 @@ export function buildProductRow({
     status: health === 'healthy' ? 'deployed' : (health === 'pending' ? 'built' : 'degraded'),
     repository_id: repositoryId || null,
     canonical_path: 'apps/agentsam-go-worker',
-    package_name: '@inneranimalmedia/agentsam-go-worker',
-    version: '0.1.0',
+    package_name: packageName,
+    version: packageVersion,
     metadata: {
       runtime: 'go',
       deployment: {
@@ -79,10 +83,18 @@ export function buildProductRow({
         worker_version_id: workerVersionId,
         artifact_digest: artifactDigest,
         container_image_digest: containerDigest,
+        cloudflare_account: cloudflareAccount,
       },
-      source: { commit: commit || null },
+      source: {
+        identity: sourceIdentity,
+        commit: commit || null,
+        package_name: packageName,
+        package_version: packageVersion,
+      },
       relationships: [
-        { type: 'source_repository', target: repositoryId || null },
+        repositoryId
+          ? { type: 'source_repository', target: repositoryId }
+          : { type: 'source_package', target: packageName },
         { type: 'runtime', target: 'go' },
         { type: 'edge', target: 'cloudflare-worker' },
       ],

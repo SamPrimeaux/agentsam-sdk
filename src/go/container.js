@@ -18,7 +18,9 @@ function runDocker(args, { productRoot, spawn = spawnSync } = {}) {
 export async function verifyGoContainer({
   productRoot,
   product = 'agentsam-go-worker',
+  expectedSource,
   expectedSourceCommit,
+  expectedBuiltAt = '',
   spawn = spawnSync,
   fetchImpl = globalThis.fetch,
 } = {}) {
@@ -46,6 +48,9 @@ export async function verifyGoContainer({
     'run', '-d', '--name', name,
     '-p', '127.0.0.1::8080',
     '-e', 'AGENTSAM_TARGET=container',
+    '-e', 'AGENTSAM_BUILD_SOURCE=' + (expectedSource || ''),
+    '-e', 'AGENTSAM_BUILD_COMMIT=' + (expectedSourceCommit || ''),
+    '-e', 'AGENTSAM_BUILT_AT=' + expectedBuiltAt,
     tag,
   ], { productRoot, spawn });
   if (start.status !== 0) {
@@ -73,6 +78,7 @@ export async function verifyGoContainer({
     const origin = 'http://127.0.0.1:' + port;
     const probe = await probeGoDeploymentWithRetry(origin, {
       fetchImpl,
+      expectedSource,
       expectedSourceCommit,
       expectedTarget: 'container',
       edge: false,
