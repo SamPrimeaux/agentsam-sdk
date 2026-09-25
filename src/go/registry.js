@@ -158,6 +158,10 @@ export function applyGoProductRegistry({
     url,
     commit,
     health,
+    workerDeploymentId,
+    workerVersionId,
+    artifactDigest,
+    containerDigest,
     repositoryId,
   });
 
