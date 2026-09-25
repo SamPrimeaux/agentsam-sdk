@@ -506,7 +506,7 @@ console.log(
     {
       ok: true,
       theme: ['agentsam-docs-tokens.css', 'agentsam-docs-layout.css'],
-      guides: [structured, cookbooks],
+      guides: [structured, cookbooks, nativeRuntime],
       hub: path.join(docsRoot, 'index.html'),
     },
     null,
