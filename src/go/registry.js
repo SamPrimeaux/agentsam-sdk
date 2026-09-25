@@ -22,7 +22,7 @@ function json(value) {
 
 export function buildGoProductRegistrySql({
   product = 'agentsam-go-worker',
-  status = 'wired',
+  status = 'deployed',
   version = '0.1.0',
   repositoryId = DEFAULT_REPOSITORY_ID,
   canonicalPath = 'apps/agentsam-go-worker',
