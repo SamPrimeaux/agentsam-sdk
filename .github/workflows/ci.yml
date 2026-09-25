@@ -24,11 +24,29 @@ jobs:
           node-version: '22'
           cache: npm
 
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/agentsam-go-worker/runtime/go.mod
+          cache: false
+
       - name: Install
         run: node src/security/cli.mjs run --json -- npm ci > "$RUNNER_TEMP/dependency-health.json"
 
       - name: Verify SDK
         run: npm run verify
+
+      - name: Install Go Worker dependencies
+        run: npm ci --prefix apps/agentsam-go-worker
+
+      - name: Verify Go runtime
+        run: npm --prefix apps/agentsam-go-worker run verify:go
+
+      - name: Verify Go linux/amd64 container
+        run: npm --prefix apps/agentsam-go-worker run verify:container
+
+      - name: Verify Cloudflare Worker + Container config
+        run: npm --prefix apps/agentsam-go-worker run verify:worker
 
       - name: Verify installed package in unrelated repositories
         run: npm run verify:knowledge-package
