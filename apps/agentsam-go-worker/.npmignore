@@ -1,0 +1,5 @@
+runtime/.agentsam-build-*
+runtime/.agentsam-built-*
+.agentsam/
+node_modules/
+.wrangler/

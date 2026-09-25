@@ -1,9 +1,25 @@
 {
   "name": "@inneranimalmedia/agentsam-go-worker",
   "version": "0.1.0",
-  "private": true,
-  "description": "AgentSam Go runtime edge Worker + native Cloudflare Container.",
+  "description": "Deployable AgentSam Go runtime service artifact for Cloudflare Worker + Container self-hosting and official IAM releases.",
+  "license": "MIT",
   "type": "module",
+  "files": [
+    "Dockerfile",
+    "README.md",
+    "agentsam.package.json",
+    "contracts",
+    "runtime/go.mod",
+    "runtime/**/*.go",
+    "worker",
+    "wrangler.jsonc"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "deploy": "wrangler deploy -c wrangler.jsonc",
     "dev": "wrangler dev -c wrangler.jsonc",
@@ -11,7 +27,8 @@
     "vet:go": "cd runtime && go vet ./...",
     "verify:go": "npm run test:go && npm run vet:go",
     "verify:container": "docker build --platform linux/amd64 -t agentsam-go-worker:verify .",
-    "verify:worker": "wrangler deploy -c wrangler.jsonc --dry-run"
+    "verify:worker": "wrangler deploy -c wrangler.jsonc --dry-run",
+    "pack:check": "npm pack --dry-run --json"
   },
   "dependencies": {
     "@cloudflare/containers": "^0.0.30"
