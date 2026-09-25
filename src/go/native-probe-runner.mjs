@@ -90,8 +90,7 @@ const checks = {
     && malformed?.code === 'INVALID_ARGUMENT',
 };
 
-child.kill('SIGTERM');
-const exit = await new Promise((resolve) => {
+const exitPromise = new Promise((resolve) => {
   const timer = setTimeout(() => {
     child.kill('SIGKILL');
     resolve({ code: child.exitCode, signal: 'SIGKILL', timeout: true });
@@ -101,6 +100,8 @@ const exit = await new Promise((resolve) => {
     resolve({ code, signal, timeout: false });
   });
 });
+child.kill('SIGTERM');
+const exit = await exitPromise;
 checks.clean_shutdown = exit.code === 0 && !exit.timeout;
 
 const ok = !error && Object.values(checks).every(Boolean);
