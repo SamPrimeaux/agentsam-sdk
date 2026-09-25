@@ -39,6 +39,11 @@ test('buildGoProduct emits build receipt after go test/vet/build', () => {
   assert.equal(result.tests.ok, true);
   assert.equal(result.vet.ok, true);
   assert.ok(result.build.binary);
+  assert.match(result.receipt.artifact.digest, /^sha256:[a-f0-9]{64}$/);
+  assert.equal(result.receipt.tests.runtime_probe, true);
+  assert.equal(result.probe.checks.source_commit, true);
+  assert.equal(result.probe.checks.error_envelope, true);
+  assert.equal(result.probe.checks.clean_shutdown, true);
   assert.ok(fs.existsSync(result.receiptPath));
 });
 
