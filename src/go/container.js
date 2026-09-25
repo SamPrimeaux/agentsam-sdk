@@ -88,6 +88,9 @@ export async function verifyGoContainer({
     const stop = runDocker(['stop', '-t', '5', containerId], { productRoot, spawn });
     stopped = stop.status === 0;
     if (!stopped) throw new Error('go_container_stop_failed');
+    const cleanup = runDocker(['container', 'rm', containerId], { productRoot, spawn });
+    cleaned = cleanup.status === 0;
+    if (!cleaned) throw new Error('go_container_cleanup_failed');
 
     return {
       ok: true,
