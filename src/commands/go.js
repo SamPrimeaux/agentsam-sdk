@@ -161,6 +161,33 @@ export async function runGo(argv = [], options = {}) {
 
   if (args.subcommand === 'status' || args.subcommand === 'products') {
     const latest = readLatestStatus(stateRoot);
+
+    const production = (
+      latest.deployment
+      && latest.deployment.dry_run !== true
+      && latest.deployment.deployed_at
+    )
+      ? {
+          provider: latest.deployment.provider || null,
+          target: 'cloudflare',
+          canonical_url: latest.deployment.url || null,
+          account_id: latest.deployment.cloudflare?.account_id || null,
+          deployment_id: latest.deployment.worker_deployment_id || null,
+          version_id: latest.deployment.worker_version_id || null,
+          container_image_digest: latest.deployment.container_image_digest || null,
+          deployed_at: latest.deployment.deployed_at || null,
+          health: latest.deployment.health || null,
+          probe: {
+            origin: latest.deployment.url || null,
+            status: latest.deployment.probes?.skipped
+              ? 'pending'
+              : latest.deployment.probes?.ok
+                ? 'passed'
+                : 'failed',
+          },
+        }
+      : null;
+
     const status = {
       ok: true,
       product: args.product,
@@ -171,9 +198,55 @@ export async function runGo(argv = [], options = {}) {
           : null,
         product_exists: discovery.product_exists,
       },
+      source: {
+        repository_id:
+          latest.product?.row?.repository_id
+          || latest.build?.source?.repository_id
+          || null,
+        commit:
+          latest.deployment?.source_commit
+          || latest.build?.source?.commit
+          || null,
+        identity:
+          latest.deployment?.source_identity
+          || latest.build?.source?.identity
+          || null,
+        package:
+          latest.deployment?.source_package
+          || latest.build?.source?.package_name
+          || null,
+        version:
+          latest.deployment?.source_package_version
+          || latest.build?.source?.package_version
+          || null,
+      },
+      verification: {
+        local_native_probe: {
+          target: 'local',
+          status: latest.build?.probe?.ok
+            ? 'passed'
+            : latest.build
+              ? 'failed'
+              : 'unknown',
+        },
+        container: {
+          target: 'linux/amd64',
+          status: latest.deployment?.container_image_digest
+            ? 'passed'
+            : 'unknown',
+        },
+      },
+      production,
       build: latest.build,
       deployment: latest.deployment,
-      registry: latest.product,
+      registry: latest.product
+        ? {
+            ...latest.product,
+            authority: latest.deployment?.official_release
+              ? 'inneranimalmedia'
+              : 'local',
+          }
+        : null,
     };
     if (args.json) write(`${JSON.stringify(status)}\n`);
     else {
@@ -261,12 +334,20 @@ async function shipCloudflare({ discovery, productRoot, stateRoot, runtimeRoot, 
       err.hint = 'Set AGENTSAM_IAM_OFFICIAL_RELEASE=1 only in the authorized IAM maintainer release flow.';
       throw err;
     }
+    if (
+      String(process.env.CI || '').toLowerCase() === 'true'
+      && process.env.AGENTSAM_ALLOW_CI_OFFICIAL_RELEASE !== '1'
+    ) {
+      const err = new Error('inneranimalmedia_official_release_ci_guard_missing');
+      err.hint = 'Official production deployment is disabled in CI unless AGENTSAM_ALLOW_CI_OFFICIAL_RELEASE=1 is explicitly set by a manual release workflow.';
+      throw err;
+    }
     if (discovery.runtime?.origin !== 'repository' && discovery.runtime?.origin !== 'sdk_development_tree') {
       const err = new Error('iam_official_release_requires_maintainer_source');
       err.hint = 'Official IAM releases must originate from the AgentSam SDK maintainer source tree.';
       throw err;
     }
-    note('✓ release mode · IAM official');
+    note('✓ release mode · InnerAnimalMedia official');
   } else {
     note('✓ release mode · self-host · IAM D1 isolated');
   }
@@ -436,7 +517,7 @@ async function shipCloudflare({ discovery, productRoot, stateRoot, runtimeRoot, 
 
   const payload = {
     ok: buildOk && containerOk && deploymentOk && registryOk,
-    mode: args.officialRelease ? 'iam_official_release' : 'self_host',
+    mode: args.officialRelease ? 'inneranimalmedia_official_release' : 'self_host',
     product: args.product,
     state_root: stateRoot,
     cloudflare: deploy.cloudflare,

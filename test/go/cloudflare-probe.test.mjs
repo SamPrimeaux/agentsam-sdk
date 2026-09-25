@@ -8,12 +8,21 @@ import {
   probeGoDeployment,
   readLatestWranglerDeployment,
   resolveWranglerIdentity,
+  resolveConfiguredDeploymentUrl,
 } from '../../src/go/cloudflare.js';
 import { buildProductRow } from '../../src/go/receipts.js';
 
 const SDK_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const PRODUCT_ROOT = path.join(SDK_ROOT, 'apps/agentsam-go-worker');
 const EXPECTED_HASH = '2e60bba13dc2bc37d75dd2ce5deb25466f19cb2994e20889388948879875eae9';
+
+
+test('configured custom domain is canonical Go deployment URL', () => {
+  assert.equal(
+    resolveConfiguredDeploymentUrl(PRODUCT_ROOT),
+    'https://runtime.inneranimalmedia.com',
+  );
+});
 
 test('extractWorkersDevUrl parses wrangler output', () => {
   const url = extractWorkersDevUrl('Published agentsam-go-worker\n  https://agentsam-go-worker.example.workers.dev\n');

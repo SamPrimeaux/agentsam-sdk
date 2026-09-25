@@ -50,6 +50,36 @@ function publicAccount(account) {
   };
 }
 
+export function resolveConfiguredDeploymentUrl(productRoot) {
+  const configPath = path.join(productRoot, 'wrangler.jsonc');
+  if (!fs.existsSync(configPath)) return null;
+
+  try {
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    const routes = Array.isArray(config.routes) ? config.routes : [];
+
+    const customDomain = routes.find((row) =>
+      row
+      && typeof row === 'object'
+      && row.custom_domain === true
+      && typeof row.pattern === 'string'
+      && row.pattern.trim()
+      && !row.pattern.includes('*')
+    );
+
+    if (!customDomain) return null;
+
+    const host = customDomain.pattern
+      .trim()
+      .replace(/^https?:\/\//i, '')
+      .replace(/\/.*$/, '');
+
+    return host ? `https://${host}` : null;
+  } catch {
+    return null;
+  }
+}
+
 export function resolveWranglerIdentity(productRoot, {
   requestedAccountId = null,
   spawn = spawnSync,
@@ -265,7 +295,57 @@ export async function deployGoCloudflare({
   const outputVersionId = parseWranglerVersionId(deployOutput);
   const versionId = identity.version_id || outputVersionId || null;
   const deploymentId = identity.deployment_id || null;
-  const url = deployed ? (extractWorkersDevUrl(deployOutput) || guessWorkersDevUrl(product)) : null;
+  const account = cfIdentity?.account || null;
+
+  // A successful remote deployment is durable evidence even if URL resolution
+  // or health verification fails afterward. Persist Cloudflare identity first.
+  if (deployed) {
+    writeDeploymentReceipt(stateRoot, {
+      product,
+      provider: 'cloudflare',
+      kind: 'worker-container',
+      url: null,
+      health: 'pending',
+      artifact_digest: artifactDigest,
+      container_image_digest: containerDigest,
+      worker_deployment_id: deploymentId,
+      worker_version_id: versionId,
+      deployed_at: identity.created_on || new Date().toISOString(),
+      source_identity: source?.identity || null,
+      source_commit: source?.commit || null,
+      source_package: source?.package_name || null,
+      source_package_version: source?.package_version || null,
+      cloudflare: account
+        ? {
+            account_id: account.id,
+            account_name: account.name,
+            auth_type: cfIdentity?.auth_type || null,
+          }
+        : null,
+      probes: {
+        skipped: true,
+        ok: true,
+        results: {},
+        checks: {},
+        probed_at: null,
+      },
+      dry_run: false,
+      dry_run_validated: false,
+      skipped_deploy: false,
+      official_release: Boolean(officialRelease),
+      registry_mode: officialRelease
+        ? 'inneranimalmedia_official'
+        : 'self_host_local',
+    });
+  }
+
+  const url = deployed
+    ? (
+        resolveConfiguredDeploymentUrl(productRoot)
+        || extractWorkersDevUrl(deployOutput)
+        || guessWorkersDevUrl(product)
+      )
+    : null;
   if (deployed && !url) {
     const err = new Error('cloudflare_deployment_url_missing');
     err.detail = deployOutput.slice(0, 3000);
@@ -289,7 +369,6 @@ export async function deployGoCloudflare({
       };
 
   const health = probes.skipped ? 'pending' : (probes.ok ? 'healthy' : 'degraded');
-  const account = cfIdentity?.account || null;
   const receipt = {
     product,
     provider: 'cloudflare',
@@ -317,7 +396,7 @@ export async function deployGoCloudflare({
     dry_run_validated: Boolean(dryRunValidated),
     skipped_deploy: Boolean(skipDeploy),
     official_release: Boolean(officialRelease),
-    registry_mode: officialRelease ? 'iam_official' : 'self_host_local',
+    registry_mode: officialRelease ? 'inneranimalmedia_official' : 'self_host_local',
   };
 
   const receiptPath = writeDeploymentReceipt(stateRoot, receipt);
