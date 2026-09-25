@@ -101,6 +101,7 @@
   "files": [
     "src",
     "packages/identity",
+    "packages/agentsam-brand",
     "packages/agentsam-contracts",
     "packages/agentsam-errors",
     "packages/agentsam-repository",

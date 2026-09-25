@@ -40,9 +40,11 @@ assert.ok(agentsamBin.startsWith('#!/usr/bin/env node'), 'agentsam bin must be d
 assert.match(agentsamBin, /import ['"]\.\.\/src\/cli\.js['"];/, 'agentsam bin wrapper must delegate to the canonical CLI entry');
 assert.ok(pkg.files?.includes('src'), 'published files must include src');
 assert.ok(pkg.files?.includes('packages/identity'), 'published files must include identity workspace');
+assert.ok(pkg.files?.includes('packages/agentsam-brand'), 'published files must include brand intelligence workspace');
 assert.ok(pkg.files?.includes('packages/agentsam-contracts'), 'published files must include framework-neutral contracts');
 assert.ok(pkg.files?.includes('packages/agentsam-errors'), 'published files must include canonical errors runtime');
 assert.equal(errors.private, true, 'errors runtime is distributed through the root SDK, not separately published');
+assert.equal(pkg.exports?.['./brand'], './packages/agentsam-brand/src/index.js', 'brand subpath must resolve to the brand workspace');
 assert.equal(pkg.exports?.['./errors'], './src/errors/index.js', 'errors subpath must resolve to the canonical facade');
 assert.equal(pkg.exports?.['./errors/schema'], './protocol/errors/error-envelope.schema.json', 'errors JSON Schema export must be stable');
 assert.equal(pkg.exports?.['./errors/catalog'], './protocol/errors/error-catalog.json', 'errors catalog export must be stable');
