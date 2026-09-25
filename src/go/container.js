@@ -56,6 +56,7 @@ export async function verifyGoContainer({
 
   const containerId = start.stdout.trim();
   let stopped = false;
+  let cleaned = false;
   try {
     let port = null;
     for (let attempt = 0; attempt < 30; attempt += 1) {
