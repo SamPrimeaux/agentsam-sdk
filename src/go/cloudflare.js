@@ -2,8 +2,14 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseWranglerVersionId } from '../lib/deploy/health.js';
-import { writeDeploymentReceipt, writeProductRegistryLocal, buildProductRow } from './receipts.js';
-import { applyIamOfficialGoProductRegistry } from './official-registry.js';
+import {
+  writeDeploymentReceipt,
+  writeDeploymentValidationReceipt,
+  writeProductRegistryLocal,
+  writeProductValidationLocal,
+  buildProductRow,
+} from './receipts.js';
+import { applyInnerAnimalMediaOfficialGoProductRegistry } from './official-registry.js';
 import { SDK_ROOT } from './discover.js';
 
 const EXPECTED_HASH = '2e60bba13dc2bc37d75dd2ce5deb25466f19cb2994e20889388948879875eae9';
@@ -196,11 +202,11 @@ function deploymentArgs({
  * Deploy to the explicitly resolved Wrangler/Cloudflare account.
  *
  * Default mode is third-party self-host:
- *   - no IAM D1 mutation
+ *   - no InnerAnimalMedia D1 mutation
  *   - state/receipts stay in the caller's AgentSam state root
  *
- * IAM product registration requires BOTH officialRelease=true and
- * AGENTSAM_IAM_OFFICIAL_RELEASE=1.
+ * InnerAnimalMedia product registration requires BOTH officialRelease=true and
+ * AGENTSAM_INNERANIMALMEDIA_OFFICIAL_RELEASE=1.
  */
 export async function deployGoCloudflare({
   productRoot,
@@ -399,7 +405,9 @@ export async function deployGoCloudflare({
     registry_mode: officialRelease ? 'inneranimalmedia_official' : 'self_host_local',
   };
 
-  const receiptPath = writeDeploymentReceipt(stateRoot, receipt);
+  const receiptPath = deployed
+    ? writeDeploymentReceipt(stateRoot, receipt)
+    : writeDeploymentValidationReceipt(stateRoot, receipt);
   const repositoryId = officialRelease ? 'github:samprimeaux/agentsam-sdk' : null;
   const productRow = buildProductRow({
     product,
@@ -418,7 +426,9 @@ export async function deployGoCloudflare({
     artifactDigest,
     containerDigest,
   });
-  const productPath = writeProductRegistryLocal(stateRoot, productRow);
+  const productPath = deployed
+    ? writeProductRegistryLocal(stateRoot, productRow)
+    : writeProductValidationLocal(stateRoot, productRow);
 
   let registry = {
     ok: true,
@@ -434,7 +444,7 @@ export async function deployGoCloudflare({
     && health === 'healthy';
 
   if (officialEligible) {
-    registry = applyIamOfficialGoProductRegistry({
+    registry = applyInnerAnimalMediaOfficialGoProductRegistry({
       productRoot: stateRoot,
       product,
       officialRelease: true,

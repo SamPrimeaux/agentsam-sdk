@@ -9,6 +9,11 @@ import { runGo } from '../../src/commands/go.js';
 
 const SDK_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
+
+function tempStateRoot() {
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-go-test-state-'));
+}
+
 test('discoverGoRuntime finds agentsam-go-worker without inventing a sibling', () => {
   const discovery = discoverGoRuntime(SDK_ROOT);
   assert.equal(discovery.go.ok, true);
@@ -30,10 +35,12 @@ test('ensureProductContract refuses missing product roots instead of scaffolding
 test('buildGoProduct emits build receipt after go test/vet/build', () => {
   const discovery = discoverGoRuntime(SDK_ROOT);
   const productRoot = resolveProductRoot(discovery);
+  const stateRoot = tempStateRoot();
   const result = buildGoProduct({
     productRoot,
     runtimeRoot: discovery.runtime.runtimeRoot,
     repositoryRoot: discovery.repository_root,
+    stateRoot,
   });
   assert.equal(result.receipt.schema, 'agentsam.go-build-receipt.v1');
   assert.equal(result.tests.ok, true);
@@ -50,9 +57,13 @@ test('buildGoProduct emits build receipt after go test/vet/build', () => {
 });
 
 test('agentsam go --cloudflare agentsam-go-worker --skip-deploy is idempotent', async () => {
+  const stateRoot = tempStateRoot();
   const chunks = [];
   const write = (v) => chunks.push(String(v));
-  const first = await runGo(['--cloudflare', 'agentsam-go-worker', '--skip-deploy', '--json'], { write });
+  const first = await runGo(
+    ['--cloudflare', 'agentsam-go-worker', '--skip-deploy', '--json'],
+    { write, stateRoot },
+  );
   assert.equal(first.ok, true);
   assert.equal(first.product, 'agentsam-go-worker');
   assert.equal(first.scaffold_changes_required, false);
@@ -60,9 +71,13 @@ test('agentsam go --cloudflare agentsam-go-worker --skip-deploy is idempotent', 
   assert.equal(first.deploy.registry.reason, 'self_host_registry_isolated');
 
   const chunks2 = [];
-  const second = await runGo(['--cloudflare', 'agentsam-go-worker', '--skip-deploy', '--json'], {
-    write: (v) => chunks2.push(String(v)),
-  });
+  const second = await runGo(
+    ['--cloudflare', 'agentsam-go-worker', '--skip-deploy', '--json'],
+    {
+      write: (v) => chunks2.push(String(v)),
+      stateRoot,
+    },
+  );
   assert.equal(second.ok, true);
   assert.equal(second.existing_product, true);
   assert.equal(second.scaffold_changes_required, false);
@@ -71,8 +86,15 @@ test('agentsam go --cloudflare agentsam-go-worker --skip-deploy is idempotent', 
 });
 
 test('agentsam go status --json reports discovery', async () => {
+  const stateRoot = tempStateRoot();
   const chunks = [];
-  const result = await runGo(['status', '--json'], { write: (v) => chunks.push(String(v)) });
+  const result = await runGo(
+    ['status', '--json'],
+    {
+      write: (v) => chunks.push(String(v)),
+      stateRoot,
+    },
+  );
   assert.equal(result.ok, true);
   assert.ok(result.discovery.go.ok);
   const parsed = JSON.parse(chunks.join(''));

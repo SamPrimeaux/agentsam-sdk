@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
 import { SDK_ROOT } from './discover.js';
 import { writeProductRegistryLocal } from './receipts.js';
+import { innerAnimalMediaOfficialReleaseEnabled } from './official-release.js';
 
 const DEFAULT_DB = 'inneranimalmedia-business';
 const DEFAULT_WRANGLER = 'apps/local-studio/backend/wrangler.jsonc';
@@ -140,7 +141,7 @@ DO UPDATE SET metadata = excluded.metadata;`,
   return statements.join('\n');
 }
 
-export function applyIamOfficialGoProductRegistry({
+export function applyInnerAnimalMediaOfficialGoProductRegistry({
   productRoot,
   product = 'agentsam-go-worker',
   officialRelease = false,
@@ -158,18 +159,20 @@ export function applyIamOfficialGoProductRegistry({
   spawn = spawnSync,
   repositoryId = DEFAULT_REPOSITORY_ID,
 } = {}) {
-  if (!officialRelease || process.env.AGENTSAM_IAM_OFFICIAL_RELEASE !== '1') {
-    const err = new Error('iam_registry_official_release_required');
-    err.code = 'iam_registry_official_release_required';
-    err.hint = 'IAM D1 registration is restricted to the explicit official release path.';
+  if (!officialRelease || !innerAnimalMediaOfficialReleaseEnabled()) {
+    const err = new Error('inneranimalmedia_registry_official_release_required');
+    err.code = 'inneranimalmedia_registry_official_release_required';
+    err.legacy_code = 'iam_registry_official_release_required';
+    err.hint = 'InnerAnimalMedia D1 registration is restricted to the explicit official release path.';
     throw err;
   }
 
   const officialStatus = status === 'deployed' ? 'production' : status;
   const allowedStatuses = new Set(['prototype', 'scaffolded', 'wired', 'production', 'deprecated']);
   if (!allowedStatuses.has(officialStatus)) {
-    const err = new Error('iam_registry_status_invalid');
-    err.code = 'iam_registry_status_invalid';
+    const err = new Error('inneranimalmedia_registry_status_invalid');
+    err.code = 'inneranimalmedia_registry_status_invalid';
+    err.legacy_code = 'iam_registry_status_invalid';
     err.detail = { received: status, normalized: officialStatus };
     throw err;
   }
@@ -268,3 +271,10 @@ export function applyIamOfficialGoProductRegistry({
     try { fs.unlinkSync(tmpFile); } catch { /* ignore */ }
   }
 }
+
+/**
+ * Backward-compatible SDK export. New code should use
+ * applyInnerAnimalMediaOfficialGoProductRegistry.
+ */
+export const applyIamOfficialGoProductRegistry =
+  applyInnerAnimalMediaOfficialGoProductRegistry;

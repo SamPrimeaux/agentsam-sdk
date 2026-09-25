@@ -14,12 +14,46 @@ const app = path.join(temp, 'newuser123');
 fs.mkdirSync(artifacts, { recursive: true });
 fs.mkdirSync(app, { recursive: true });
 
+const npmUserConfig = path.join(temp, 'npmrc');
+const npmGlobalConfig = path.join(temp, 'global-npmrc');
+const npmCache = path.join(temp, 'npm-cache');
+
+fs.writeFileSync(
+  npmUserConfig,
+  'registry=https://registry.npmjs.org/\nignore-scripts=true\n',
+);
+fs.writeFileSync(npmGlobalConfig, '');
+
+const CLEAN_NPM_ENV = { ...process.env };
+
+for (const key of Object.keys(CLEAN_NPM_ENV)) {
+  if (
+    /^npm_config_/i.test(key)
+    || /^(npm_token|node_auth_token)$/i.test(key)
+  ) {
+    delete CLEAN_NPM_ENV[key];
+  }
+}
+
+CLEAN_NPM_ENV.NPM_CONFIG_USERCONFIG = npmUserConfig;
+CLEAN_NPM_ENV.NPM_CONFIG_GLOBALCONFIG = npmGlobalConfig;
+CLEAN_NPM_ENV.NPM_CONFIG_CACHE = npmCache;
+
 function run(command, args, options = {}) {
-  const result = spawnSync(command, args, {
+  const spawnOptions = {
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
     ...options,
-  });
+  };
+
+  if (command === 'npm') {
+    spawnOptions.env = {
+      ...CLEAN_NPM_ENV,
+      ...(options.env || {}),
+    };
+  }
+
+  const result = spawnSync(command, args, spawnOptions);
   if (result.status !== 0) {
     const error = new Error('distribution_command_failed: ' + command + ' ' + args.join(' '));
     error.detail = {

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gitEvidence } from '../knowledge/config.js';
+import { tryResolveGitContext } from '../repository/index.js';
 import { writeGoBuildReceipt } from './receipts.js';
 
 const NATIVE_PROBE_RUNNER = fileURLToPath(new URL('./native-probe-runner.mjs', import.meta.url));
@@ -48,10 +49,30 @@ export function sourceTreeDigest(runtimeRoot) {
   return 'sha256:' + hash.digest('hex');
 }
 
+export function repositoryIdFromGitContext(context = null) {
+  if (!context?.repoFullName) return null;
+
+  const host = String(context.remoteHost || '').trim().toLowerCase();
+  const repoFullName = String(context.repoFullName).trim();
+
+  if (!repoFullName) return null;
+
+  // GitHub repository identity is canonical and case-insensitive.
+  if (host === 'github.com') {
+    return `github:${repoFullName.toLowerCase()}`;
+  }
+
+  // Preserve provider-qualified identity for non-GitHub remotes.
+  return host ? `${host}:${repoFullName}` : `git:${repoFullName}`;
+}
+
 export function resolveBuildSource({ productRoot, runtimeRoot, repositoryRoot } = {}) {
   const git = gitEvidence(repositoryRoot || productRoot);
   const pkg = readPackage(productRoot);
   const treeDigest = sourceTreeDigest(runtimeRoot);
+  const repositoryContext = tryResolveGitContext({
+    cwd: repositoryRoot || productRoot,
+  });
   let identity = null;
   if (git.commit) identity = 'git:' + git.commit;
   else if (pkg?.name && pkg?.version) identity = 'npm:' + pkg.name + '@' + pkg.version;
@@ -65,8 +86,46 @@ export function resolveBuildSource({ productRoot, runtimeRoot, repositoryRoot } 
     package_name: pkg?.name || null,
     package_version: pkg?.version || null,
     tree_digest: treeDigest,
-    repository_id: git.commit ? path.basename(repositoryRoot || productRoot) : null,
+    repository_id: git.commit ? repositoryIdFromGitContext(repositoryContext) : null,
   };
+}
+
+export function portableReceiptPath(value, {
+  repositoryRoot = null,
+  stateRoot = null,
+  productRoot = null,
+  packageName = null,
+} = {}) {
+  if (!value) return null;
+
+  const absolute = path.resolve(value);
+
+  const candidate = (root) => {
+    if (!root) return null;
+    const rel = path.relative(path.resolve(root), absolute);
+    if (!rel || rel === '.') return '.';
+    if (rel.startsWith('..' + path.sep) || rel === '..' || path.isAbsolute(rel)) {
+      return null;
+    }
+    return rel.split(path.sep).join('/');
+  };
+
+  const repoRelative = candidate(repositoryRoot);
+  if (repoRelative) return repoRelative;
+
+  const stateRelative = candidate(stateRoot);
+  if (stateRelative) return stateRelative;
+
+  const productRelative = candidate(productRoot);
+  if (productRelative) {
+    const prefix = packageName
+      ? `package:${packageName}`
+      : 'package';
+    return `${prefix}/${productRelative}`;
+  }
+
+  // Never put an arbitrary absolute user path into a portable receipt.
+  return path.basename(absolute);
 }
 
 export function runGoTests(runtimeRoot, { spawn = spawnSync } = {}) {
@@ -203,11 +262,25 @@ export function buildGoProduct({
   const receipt = {
     schema: 'agentsam.go-build-receipt.v1',
     product: path.basename(productRoot),
-    runtime: { language: 'go', version: goVersion, module_root: runtimeRoot },
+    runtime: {
+      language: 'go',
+      version: goVersion,
+      module_root: portableReceiptPath(runtimeRoot, {
+        repositoryRoot,
+        stateRoot,
+        productRoot,
+        packageName: source.package_name,
+      }),
+    },
     source,
     artifact: {
       type: build.binary ? 'binary' : 'none',
-      path: build.binary,
+      path: portableReceiptPath(build.binary, {
+        repositoryRoot,
+        stateRoot,
+        productRoot,
+        packageName: source.package_name,
+      }),
       digest: build.binary ? sha256File(build.binary) : null,
     },
     tests: {

@@ -16,10 +16,16 @@ if [[ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
   exit 1
 fi
 
-if [[ "${AGENTSAM_IAM_OFFICIAL_RELEASE:-}" != "1" ]]; then
-  echo "ERROR: AGENTSAM_IAM_OFFICIAL_RELEASE=1 is required"
+OFFICIAL_RELEASE_GUARD="${AGENTSAM_INNERANIMALMEDIA_OFFICIAL_RELEASE:-${AGENTSAM_IAM_OFFICIAL_RELEASE:-}}"
+
+if [[ "$OFFICIAL_RELEASE_GUARD" != "1" ]]; then
+  echo "ERROR: AGENTSAM_INNERANIMALMEDIA_OFFICIAL_RELEASE=1 is required"
   exit 1
 fi
+
+# Normalize the active process onto the canonical guard even when a legacy
+# caller supplied AGENTSAM_IAM_OFFICIAL_RELEASE.
+export AGENTSAM_INNERANIMALMEDIA_OFFICIAL_RELEASE=1
 
 if [[ "$(git branch --show-current)" != "main" ]]; then
   echo "ERROR: official Go release must run from main"

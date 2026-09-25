@@ -123,7 +123,7 @@ The deploy path fails closed when authentication is missing, when no account is 
 
 The chosen account is observable and bound into the Wrangler process with CLOUDFLARE_ACCOUNT_ID.
 
-No distributed package contains an IAM production credential.
+No distributed package contains an InnerAnimalMedia production credential.
 
 ## Self-host lifecycle
 
@@ -175,11 +175,11 @@ The sequence is:
 
 Self-host never mutates inneranimalmedia-business.
 
-## IAM official-release lifecycle
+## InnerAnimalMedia official-release lifecycle
 
-IAM product registration is a separate authority:
+InnerAnimalMedia product registration is a separate authority:
 
-    AGENTSAM_IAM_OFFICIAL_RELEASE=1 \
+    AGENTSAM_INNERANIMALMEDIA_OFFICIAL_RELEASE=1 \
       agentsam go --cloudflare agentsam-go-worker \
       --official-release \
       --account <iam-account-id> \
@@ -188,13 +188,13 @@ IAM product registration is a separate authority:
 Requirements:
 
 - maintainer/development source,
-- explicit IAM release guard,
-- explicit IAM Cloudflare account,
+- explicit InnerAnimalMedia release guard,
+- explicit InnerAnimalMedia Cloudflare account,
 - healthy live probes,
 - deployment/version identity,
 - only then remote agentsam_products and asset_relationships projection.
 
-The IAM D1 adapter lives in official-registry.js specifically so generic self-host deployment does not import IAM registration as a default side effect.
+The InnerAnimalMedia D1 adapter lives in official-registry.js specifically so generic self-host deployment does not import InnerAnimalMedia registration as a default side effect.
 
 ## Dry run
 
@@ -206,7 +206,7 @@ Dry run is:
 
 It still performs Go build/probes, Linux container build/probes, Wrangler identity/account resolution, and Wrangler deploy --dry-run.
 
-It does not create a live deployment and does not mutate IAM D1.
+It does not create a live deployment and does not mutate InnerAnimalMedia D1.
 
 Skip-deploy is a different explicit local-only mode and cannot be used as deployment proof.
 

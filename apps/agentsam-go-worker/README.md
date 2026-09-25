@@ -2,7 +2,7 @@
 
 AgentSam's hosted/native Go service runtime packaged as a Cloudflare Worker edge adapter plus a Linux Container.
 
-This is a SERVICE artifact, not the normal AgentSam user installation and not the customer machine daemon. Normal users install AgentSam and consume the official hosted service where appropriate; the local machine runtime is agentsamd. This package exists for the IAM release pipeline, contributors, and advanced self-hosters.
+This is a SERVICE artifact, not the normal AgentSam user installation and not the customer machine daemon. Normal users install AgentSam and consume the official hosted service where appropriate; the local machine runtime is agentsamd. This package exists for the InnerAnimalMedia release pipeline, contributors, and advanced self-hosters.
 
 The TypeScript/protocol layer remains contract authority. Go implements those contracts; it does not define a parallel AgentSam API.
 
@@ -15,7 +15,7 @@ Normal onboarding:
     npm install -g @inneranimalmedia/agentsam-sdk
     agentsam
 
-A normal user should not need to run a Cloudflare deployment command, possess IAM Cloudflare credentials, write IAM D1, or have an agentsam-sdk source checkout.
+A normal user should not need to run a Cloudflare deployment command, possess InnerAnimalMedia Cloudflare credentials, write InnerAnimalMedia D1, or have an agentsam-sdk source checkout.
 
 ### Advanced self-host
 
@@ -41,11 +41,13 @@ Live self-host:
 
 Without --yes, a live non-interactive deploy fails closed. In an interactive terminal AgentSam displays the resolved account and asks for confirmation.
 
-### IAM official release
+### InnerAnimalMedia official release
 
-The IAM production registry path is a separate maintainer-only authority:
+Legacy compatibility: `AGENTSAM_IAM_OFFICIAL_RELEASE=1` remains accepted as an alias, but new release automation must use `AGENTSAM_INNERANIMALMEDIA_OFFICIAL_RELEASE=1`.
 
-    AGENTSAM_IAM_OFFICIAL_RELEASE=1 \
+The InnerAnimalMedia production registry path is a separate maintainer-only authority:
+
+    AGENTSAM_INNERANIMALMEDIA_OFFICIAL_RELEASE=1 \
       agentsam go --cloudflare agentsam-go-worker \
       --official-release \
       --account <iam-cloudflare-account-id> \
@@ -88,7 +90,7 @@ The deploy path:
 5. binds the selected account with CLOUDFLARE_ACCOUNT_ID,
 6. records the selected account ID/name and auth type in the deployment receipt.
 
-No IAM production token or account credential is embedded in this npm package.
+No InnerAnimalMedia production token or account credential is embedded in this npm package.
 
 ## Current API
 
@@ -163,7 +165,7 @@ The proof chain is:
         ↓
     local registry
         ↓
-    IAM registry only when official-release guard is active
+    InnerAnimalMedia registry only when official-release guard is active
 
 The container verification requires linux/amd64, nonroot:nonroot, canonical ErrorEnvelope behavior, deterministic hash/inspect behavior, exact source identity, and clean shutdown/cleanup.
 
@@ -178,7 +180,7 @@ Dry-run still performs:
 - Wrangler identity/account resolution,
 - Wrangler's real deploy --dry-run.
 
-It performs no live Cloudflare deployment and no IAM D1 mutation. Its receipt records dry_run=true, dry_run_validated=true, and skipped_deploy=false.
+It performs no live Cloudflare deployment and no InnerAnimalMedia D1 mutation. Its receipt records dry_run=true, dry_run_validated=true, and skipped_deploy=false.
 
 --skip-deploy is explicitly local-only and records skipped_deploy=true; it is not deployment evidence.
 
@@ -203,7 +205,7 @@ A production receipt records at minimum:
 - Worker version ID,
 - deployed URL,
 - external probe results and timestamp,
-- self-host vs IAM official registry mode.
+- self-host vs InnerAnimalMedia official registry mode.
 
 ## Verify and rollback
 

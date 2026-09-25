@@ -1,0 +1,10 @@
+export const INNERANIMALMEDIA_OFFICIAL_RELEASE_ENV =
+  'AGENTSAM_INNERANIMALMEDIA_OFFICIAL_RELEASE';
+
+export const LEGACY_IAM_OFFICIAL_RELEASE_ENV =
+  'AGENTSAM_IAM_OFFICIAL_RELEASE';
+
+export function innerAnimalMediaOfficialReleaseEnabled(env = process.env) {
+  return env?.[INNERANIMALMEDIA_OFFICIAL_RELEASE_ENV] === '1'
+    || env?.[LEGACY_IAM_OFFICIAL_RELEASE_ENV] === '1';
+}

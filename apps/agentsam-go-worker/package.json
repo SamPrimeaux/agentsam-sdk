@@ -1,7 +1,7 @@
 {
   "name": "@inneranimalmedia/agentsam-go-worker",
   "version": "0.1.0",
-  "description": "Deployable AgentSam Go runtime service artifact for Cloudflare Worker + Container self-hosting and official IAM releases.",
+  "description": "Deployable AgentSam Go runtime service artifact for Cloudflare Worker + Container self-hosting and official InnerAnimalMedia releases.",
   "license": "MIT",
   "type": "module",
   "files": [
@@ -32,6 +32,6 @@
   },
   "dependencies": {
     "@cloudflare/containers": "^0.0.30",
-    "wrangler": "^4.137.0"
+    "wrangler": "4.140.0"
   }
 }

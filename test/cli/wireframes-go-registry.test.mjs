@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderArchitectureExplorer, renderOperationInspector, drawBox } from '../../src/ui/wireframes.js';
-import { applyIamOfficialGoProductRegistry, buildGoProductRegistrySql } from '../../src/go/official-registry.js';
+import { applyInnerAnimalMediaOfficialGoProductRegistry, buildGoProductRegistrySql } from '../../src/go/official-registry.js';
 
 test('architecture explorer is boxed reasoning scenery', () => {
   const view = renderArchitectureExplorer({
@@ -54,29 +54,42 @@ test('buildGoProductRegistrySql upserts product + relationships without inventin
 });
 
 
-test('IAM remote registry requires the explicit official-release guard', () => {
-  const prior = process.env.AGENTSAM_IAM_OFFICIAL_RELEASE;
+test('InnerAnimalMedia remote registry requires the explicit official-release guard', () => {
+  const preferred = process.env.AGENTSAM_INNERANIMALMEDIA_OFFICIAL_RELEASE;
+  const legacy = process.env.AGENTSAM_IAM_OFFICIAL_RELEASE;
+
+  delete process.env.AGENTSAM_INNERANIMALMEDIA_OFFICIAL_RELEASE;
   delete process.env.AGENTSAM_IAM_OFFICIAL_RELEASE;
+
   try {
     assert.throws(
-      () => applyIamOfficialGoProductRegistry({
+      () => applyInnerAnimalMediaOfficialGoProductRegistry({
         productRoot: '/tmp/agentsam-test-state',
         officialRelease: true,
         skipRemote: true,
       }),
-      /iam_registry_official_release_required/,
+      /inneranimalmedia_registry_official_release_required/,
     );
   } finally {
-    if (prior == null) delete process.env.AGENTSAM_IAM_OFFICIAL_RELEASE;
-    else process.env.AGENTSAM_IAM_OFFICIAL_RELEASE = prior;
+    if (preferred == null) {
+      delete process.env.AGENTSAM_INNERANIMALMEDIA_OFFICIAL_RELEASE;
+    } else {
+      process.env.AGENTSAM_INNERANIMALMEDIA_OFFICIAL_RELEASE = preferred;
+    }
+
+    if (legacy == null) {
+      delete process.env.AGENTSAM_IAM_OFFICIAL_RELEASE;
+    } else {
+      process.env.AGENTSAM_IAM_OFFICIAL_RELEASE = legacy;
+    }
   }
 });
 
-test('IAM official registry normalizes deployed lifecycle status to D1 production', () => {
-  const prior = process.env.AGENTSAM_IAM_OFFICIAL_RELEASE;
-  process.env.AGENTSAM_IAM_OFFICIAL_RELEASE = '1';
+test('InnerAnimalMedia official registry normalizes deployed lifecycle status to D1 production', () => {
+  const prior = process.env.AGENTSAM_INNERANIMALMEDIA_OFFICIAL_RELEASE;
+  process.env.AGENTSAM_INNERANIMALMEDIA_OFFICIAL_RELEASE = '1';
   try {
-    const result = applyIamOfficialGoProductRegistry({
+    const result = applyInnerAnimalMediaOfficialGoProductRegistry({
       productRoot: null,
       officialRelease: true,
       status: 'deployed',
@@ -86,7 +99,41 @@ test('IAM official registry normalizes deployed lifecycle status to D1 productio
     assert.match(result.sql, /'production'/);
     assert.doesNotMatch(result.sql, /'deployed',\n  'AgentSam Go runtime/);
   } finally {
-    if (prior == null) delete process.env.AGENTSAM_IAM_OFFICIAL_RELEASE;
-    else process.env.AGENTSAM_IAM_OFFICIAL_RELEASE = prior;
+    if (prior == null) delete process.env.AGENTSAM_INNERANIMALMEDIA_OFFICIAL_RELEASE;
+    else process.env.AGENTSAM_INNERANIMALMEDIA_OFFICIAL_RELEASE = prior;
+  }
+});
+
+
+test('legacy AGENTSAM_IAM_OFFICIAL_RELEASE guard remains backward compatible', () => {
+  const preferred = process.env.AGENTSAM_INNERANIMALMEDIA_OFFICIAL_RELEASE;
+  const legacy = process.env.AGENTSAM_IAM_OFFICIAL_RELEASE;
+
+  delete process.env.AGENTSAM_INNERANIMALMEDIA_OFFICIAL_RELEASE;
+  process.env.AGENTSAM_IAM_OFFICIAL_RELEASE = '1';
+
+  try {
+    const result = applyInnerAnimalMediaOfficialGoProductRegistry({
+      productRoot: null,
+      officialRelease: true,
+      status: 'deployed',
+      dryRun: true,
+      skipRemote: true,
+    });
+
+    assert.equal(result.ok, true);
+    assert.match(result.sql, /'production'/);
+  } finally {
+    if (preferred == null) {
+      delete process.env.AGENTSAM_INNERANIMALMEDIA_OFFICIAL_RELEASE;
+    } else {
+      process.env.AGENTSAM_INNERANIMALMEDIA_OFFICIAL_RELEASE = preferred;
+    }
+
+    if (legacy == null) {
+      delete process.env.AGENTSAM_IAM_OFFICIAL_RELEASE;
+    } else {
+      process.env.AGENTSAM_IAM_OFFICIAL_RELEASE = legacy;
+    }
   }
 });

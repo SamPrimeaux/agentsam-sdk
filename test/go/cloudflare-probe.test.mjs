@@ -154,7 +154,7 @@ test('resolveWranglerIdentity requires an explicit account when multiple are ava
   assert.equal(selected.account.id, 'acc_b');
 });
 
-test('Cloudflare self-host dry run binds the resolved account and never mutates IAM D1', async () => {
+test('Cloudflare self-host dry run binds the resolved account and never mutates InnerAnimalMedia D1', async () => {
   const calls = [];
   const cloudflareIdentity = {
     ok: true,
@@ -234,4 +234,84 @@ test('source identity produces a source-keyed Container instance', async () => {
   assert.equal(second, 'runtime:git:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
   assert.notEqual(first, second);
   assert.equal(runtimeInstanceKey('npm:@inneranimalmedia/agentsam-go-worker@0.1.0'), 'runtime:npm:@inneranimalmedia/agentsam-go-worker@0.1.0');
+});
+
+
+test('validation-only Cloudflare runs do not replace production receipts', async () => {
+  const fs = await import('node:fs');
+  const os = await import('node:os');
+
+  const stateRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'agentsam-go-receipt-isolation-'),
+  );
+
+  const goDir = path.join(stateRoot, '.agentsam', 'go');
+  fs.mkdirSync(goDir, { recursive: true });
+
+  const production = {
+    schema: 'agentsam.deployment-receipt.v1',
+    product: 'agentsam-go-worker',
+    provider: 'cloudflare',
+    url: 'https://runtime.inneranimalmedia.com',
+    health: 'healthy',
+    deployed_at: '2026-09-25T17:05:13.618296Z',
+    worker_deployment_id: 'dep_prod',
+    worker_version_id: 'ver_prod',
+    official_release: true,
+  };
+
+  fs.writeFileSync(
+    path.join(goDir, 'latest.deployment-receipt.json'),
+    JSON.stringify(production, null, 2) + '\n',
+  );
+
+  const cloudflareIdentity = {
+    ok: true,
+    authenticated: true,
+    auth_type: 'OAuth Token',
+    account: { id: 'acc_test', name: 'Test', type: 'standard' },
+    accounts: [{ id: 'acc_test', name: 'Test', type: 'standard' }],
+  };
+
+  const spawn = (command, args = []) => {
+    if (command === 'docker' && args[0] === 'info') {
+      return { status: 0, stdout: 'ok', stderr: '' };
+    }
+    if (args.includes('deploy') && args.includes('--dry-run')) {
+      return { status: 0, stdout: 'dry run', stderr: '' };
+    }
+    throw new Error('unexpected spawn: ' + [command, ...args].join(' '));
+  };
+
+  await deployGoCloudflare({
+    productRoot: PRODUCT_ROOT,
+    stateRoot,
+    product: 'agentsam-go-worker',
+    dryRun: true,
+    accountId: 'acc_test',
+    cloudflareIdentity,
+    source: {
+      identity: 'git:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      commit: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      package_name: '@inneranimalmedia/agentsam-go-worker',
+      package_version: '0.1.0',
+    },
+    artifactDigest: 'sha256:artifact',
+    containerDigest: 'sha256:container',
+    spawn,
+  });
+
+  const after = JSON.parse(
+    fs.readFileSync(
+      path.join(goDir, 'latest.deployment-receipt.json'),
+      'utf8',
+    ),
+  );
+
+  assert.deepEqual(after, production);
+  assert.ok(
+    fs.existsSync(
+      path.join(goDir, 'latest.deployment-validation-receipt.json'),
+    ),
+  );
 });

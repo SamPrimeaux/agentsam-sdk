@@ -234,7 +234,7 @@
     "pg": "8.16.3",
     "picocolors": "^1.1.1",
     "typescript": "5.9.3",
-    "wrangler": "4.137.0",
+    "wrangler": "4.140.0",
     "ws": "^8.18.0"
   },
   "publishConfig": {
@@ -265,7 +265,7 @@
     "protobufjs@7.6.6": true,
     "esbuild@0.28.1": true,
     "fsevents@2.3.3": true,
-    "workerd@1.20260921.1": true
+    "workerd@1.20260923.1": true
   },
   "devDependencies": {
     "@changesets/changelog-github": "^1.0.1",

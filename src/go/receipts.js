@@ -22,13 +22,38 @@ export function writeDeploymentReceipt(productRoot, receipt) {
   return file;
 }
 
+export function writeDeploymentValidationReceipt(productRoot, receipt) {
+  const dir = goStateDir(productRoot);
+  const file = path.join(dir, 'latest.deployment-validation-receipt.json');
+  const payload = {
+    schema: 'agentsam.deployment-validation-receipt.v1',
+    ...receipt,
+  };
+  fs.writeFileSync(file, JSON.stringify(payload, null, 2) + '\n');
+  return file;
+}
+
+export function writeProductValidationLocal(productRoot, row) {
+  const dir = goStateDir(productRoot);
+  const file = path.join(dir, 'product.validation-registry.json');
+  const payload = {
+    schema: 'agentsam.product-validation-registry.v1',
+    registry: 'agentsam_products',
+    authority: 'local_validation',
+    row,
+    written_at: new Date().toISOString(),
+  };
+  fs.writeFileSync(file, JSON.stringify(payload, null, 2) + '\n');
+  return file;
+}
+
 export function writeProductRegistryLocal(productRoot, row) {
   const dir = goStateDir(productRoot);
   const file = path.join(dir, 'product.registry.json');
   const payload = {
     schema: 'agentsam.product-local-registry.v1',
     registry: 'agentsam_products',
-    note: 'Local AgentSam projection. IAM D1 registration is a separate explicit official-release operation.',
+    note: 'Local AgentSam projection. InnerAnimalMedia D1 registration is a separate explicit official-release operation.',
     row,
     written_at: new Date().toISOString(),
   };
@@ -41,10 +66,16 @@ export function readLatestStatus(productRoot) {
   const buildPath = path.join(dir, 'latest.build-receipt.json');
   const deployPath = path.join(dir, 'latest.deployment-receipt.json');
   const productPath = path.join(dir, 'product.registry.json');
+  const validationPath = path.join(dir, 'latest.deployment-validation-receipt.json');
+  const validationProductPath = path.join(dir, 'product.validation-registry.json');
   return {
     build: fs.existsSync(buildPath) ? JSON.parse(fs.readFileSync(buildPath, 'utf8')) : null,
     deployment: fs.existsSync(deployPath) ? JSON.parse(fs.readFileSync(deployPath, 'utf8')) : null,
     product: fs.existsSync(productPath) ? JSON.parse(fs.readFileSync(productPath, 'utf8')) : null,
+    validation: fs.existsSync(validationPath) ? JSON.parse(fs.readFileSync(validationPath, 'utf8')) : null,
+    validation_product: fs.existsSync(validationProductPath)
+      ? JSON.parse(fs.readFileSync(validationProductPath, 'utf8'))
+      : null,
   };
 }
 
@@ -95,8 +126,18 @@ export function buildProductRow({
         repositoryId
           ? { type: 'source_repository', target: repositoryId }
           : { type: 'source_package', target: packageName },
-        { type: 'runtime', target: 'go' },
-        { type: 'edge', target: 'cloudflare-worker' },
+        {
+          type: 'runtime',
+          target: 'go',
+          target_type: 'runtime',
+          relationship_type: 'runs_on',
+        },
+        {
+          type: 'edge',
+          target: product,
+          target_type: 'cloudflare_worker',
+          relationship_type: 'deployed_as',
+        },
       ],
     },
   };

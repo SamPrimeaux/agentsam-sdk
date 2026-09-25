@@ -14,6 +14,7 @@ import {
   verifyGoContainer,
   verifyGoProduct,
   readLatestStatus,
+  innerAnimalMediaOfficialReleaseEnabled,
   runGoTests,
   runGoVet,
   runGoBuild,
@@ -100,19 +101,50 @@ const HELP = `Agent Sam · Go
   Live self-host:
     agentsam go --cloudflare agentsam-go-worker --account <account-id> --yes
 
-  IAM official release only:
-    AGENTSAM_IAM_OFFICIAL_RELEASE=1 agentsam go --cloudflare agentsam-go-worker --official-release --account <account-id> --yes
+  InnerAnimalMedia official release only:
+    AGENTSAM_INNERANIMALMEDIA_OFFICIAL_RELEASE=1 agentsam go --cloudflare agentsam-go-worker --official-release --account <account-id> --yes
 
   Flags:
     --account <id>       Explicit Cloudflare account target
     --yes, -y            Confirm a live non-interactive deployment
     --json               Machine-readable output
-    --dry-run            Build/probe + Wrangler dry-run; no live deploy or IAM registry write
+    --dry-run            Build/probe + Wrangler dry-run; no live deploy or InnerAnimalMedia registry write
     --skip-deploy        Build/test/receipt only
     --skip-registry      Official-release escape hatch; self-host is isolated by default
-    --official-release   IAM maintainer mode; guarded and never the self-host default
+    --official-release   InnerAnimalMedia maintainer mode; guarded and never the self-host default
     --cwd <path>         Caller project/repository root
 `;
+
+function portableStatusPath(value, root) {
+  if (!value) return null;
+  const absolute = path.resolve(value);
+  const base = root ? path.resolve(root) : null;
+
+  if (base) {
+    const rel = path.relative(base, absolute);
+    if (
+      rel
+      && rel !== '..'
+      && !rel.startsWith('..' + path.sep)
+      && !path.isAbsolute(rel)
+    ) {
+      return rel.split(path.sep).join('/');
+    }
+  }
+
+  return path.basename(absolute);
+}
+
+function publicBuildReceipt(receipt) {
+  if (!receipt) return null;
+  const out = JSON.parse(JSON.stringify(receipt));
+
+  if (out.probe && 'origin' in out.probe) {
+    delete out.probe.origin;
+  }
+
+  return out;
+}
 
 function writeHumanSteps(lines, write) {
   write('\n  Agent Sam · Go\n\n');
@@ -130,7 +162,9 @@ export async function runGo(argv = [], options = {}) {
 
   const discovery = discoverGoRuntime(args.cwd);
   const productRoot = resolveProductRoot(discovery, args.product);
-  const stateRoot = resolveGoStateRoot(discovery, args.cwd);
+  const stateRoot = options.stateRoot
+    ? path.resolve(options.stateRoot)
+    : resolveGoStateRoot(discovery, args.cwd);
   const runtimeRoot = discovery.runtime?.runtimeRoot || path.join(productRoot, 'runtime');
 
   if (args.subcommand === 'menu' && process.stdout.isTTY && !args.json) {
@@ -194,7 +228,17 @@ export async function runGo(argv = [], options = {}) {
       discovery: {
         go: discovery.go,
         runtime: discovery.runtime
-          ? { module: discovery.runtime.module, runtimeRoot: discovery.runtime.runtimeRoot, entry: discovery.runtime.entry }
+          ? {
+              module: discovery.runtime.module,
+              runtimeRoot: portableStatusPath(
+                discovery.runtime.runtimeRoot,
+                discovery.repository_root || args.cwd,
+              ),
+              entry: portableStatusPath(
+                discovery.runtime.entry,
+                discovery.repository_root || args.cwd,
+              ),
+            }
           : null,
         product_exists: discovery.product_exists,
       },
@@ -237,7 +281,7 @@ export async function runGo(argv = [], options = {}) {
         },
       },
       production,
-      build: latest.build,
+      build: publicBuildReceipt(latest.build),
       deployment: latest.deployment,
       registry: latest.product
         ? {
@@ -329,9 +373,11 @@ async function shipCloudflare({ discovery, productRoot, stateRoot, runtimeRoot, 
   if (!discovery.go?.ok) throw new Error('go_toolchain_missing');
 
   if (args.officialRelease) {
-    if (process.env.AGENTSAM_IAM_OFFICIAL_RELEASE !== '1') {
-      const err = new Error('iam_official_release_guard_missing');
-      err.hint = 'Set AGENTSAM_IAM_OFFICIAL_RELEASE=1 only in the authorized IAM maintainer release flow.';
+    if (!innerAnimalMediaOfficialReleaseEnabled()) {
+      const err = new Error('inneranimalmedia_official_release_guard_missing');
+      err.code = 'inneranimalmedia_official_release_guard_missing';
+      err.legacy_code = 'iam_official_release_guard_missing';
+      err.hint = 'Set AGENTSAM_INNERANIMALMEDIA_OFFICIAL_RELEASE=1 only in the authorized InnerAnimalMedia maintainer release flow.';
       throw err;
     }
     if (
@@ -343,13 +389,15 @@ async function shipCloudflare({ discovery, productRoot, stateRoot, runtimeRoot, 
       throw err;
     }
     if (discovery.runtime?.origin !== 'repository' && discovery.runtime?.origin !== 'sdk_development_tree') {
-      const err = new Error('iam_official_release_requires_maintainer_source');
-      err.hint = 'Official IAM releases must originate from the AgentSam SDK maintainer source tree.';
+      const err = new Error('inneranimalmedia_official_release_requires_maintainer_source');
+      err.code = 'inneranimalmedia_official_release_requires_maintainer_source';
+      err.legacy_code = 'iam_official_release_requires_maintainer_source';
+      err.hint = 'Official InnerAnimalMedia releases must originate from the AgentSam SDK maintainer source tree.';
       throw err;
     }
     note('✓ release mode · InnerAnimalMedia official');
   } else {
-    note('✓ release mode · self-host · IAM D1 isolated');
+    note('✓ release mode · self-host · InnerAnimalMedia D1 isolated');
   }
 
   let cfIdentity = null;
@@ -484,7 +532,15 @@ async function shipCloudflare({ discovery, productRoot, stateRoot, runtimeRoot, 
   if (!args.json) write('\n  Validation\n');
   if (deploy.probes?.results) {
     for (const [key, value] of Object.entries(deploy.probes.results)) {
-      note((value.ok ? '✓' : '✗') + ' ' + key);
+      // The raw malformed request is expected to return HTTP 400. Its
+      // correctness is represented by malformed_rejected/error_envelope.
+      if (key === 'malformed') continue;
+
+      const label = key === 'malformed_rejected'
+        ? 'malformed input rejected'
+        : key;
+
+      note((value.ok ? '✓' : '✗') + ' ' + label);
     }
   } else {
     note('· live probes skipped');
@@ -492,11 +548,11 @@ async function shipCloudflare({ discovery, productRoot, stateRoot, runtimeRoot, 
 
   if (!args.json) write('\n  Registry\n');
   if (deploy.registry?.remote) {
-    note('✓ IAM agentsam_products + asset_relationships · official release');
+    note('✓ InnerAnimalMedia agentsam_products + asset_relationships · official release');
   } else if (!args.officialRelease) {
-    note('✓ local AgentSam registry · IAM D1 isolated');
+    note('✓ local AgentSam registry · InnerAnimalMedia D1 isolated');
   } else {
-    note('· IAM registry · ' + (deploy.registry?.reason || 'not written'));
+    note('· InnerAnimalMedia registry · ' + (deploy.registry?.reason || 'not written'));
   }
   note('✓ deployment receipt');
 
@@ -567,7 +623,7 @@ async function runInteractiveMenu({ discovery, productRoot, stateRoot, runtimeRo
       package: args.product,
       owns: 'Go runtime + CF container edge',
       runtime: 'go/native + worker',
-      imported_by: 'CLI · deploy adapter · local registry · IAM official registry',
+      imported_by: 'CLI · deploy adapter · local registry · InnerAnimalMedia official registry',
       files: 'main.go · wrangler · Dockerfile',
     },
   })}\n\n`);

@@ -10,7 +10,7 @@ Keep these authorities distinct:
 - Products — things users independently install/open, such as Local Studio and CAD Creator.
 - Services — independently deployed backends such as agentsam-go-worker.
 - Machine runtime — one agentsamd installation per user machine where required.
-- IAM infrastructure — InnerAnimalMedia-owned Cloudflare, D1/R2, Workers, ExecOS, MCP, Tail, VMs.
+- InnerAnimalMedia infrastructure — InnerAnimalMedia-owned Cloudflare, D1/R2, Workers, ExecOS, MCP, Tail, VMs.
 - Customer/self-host infrastructure — resources owned by the customer's explicitly connected account.
 
 ## Normal user vs self-host vs official release
@@ -28,7 +28,7 @@ Keep these authorities distinct:
     agentsamd      official hosted
     user machine       services
 
-Normal users do not need service source trees or IAM infrastructure credentials.
+Normal users do not need service source trees or InnerAnimalMedia infrastructure credentials.
 
 ### Advanced self-host
 
@@ -48,15 +48,15 @@ Normal users do not need service source trees or IAM infrastructure credentials.
 
 A self-host operation never writes inneranimalmedia-business.
 
-### IAM official release
+### InnerAnimalMedia official release
 
     clean maintainer source
              │
              ▼
-      explicit IAM release guard
+      explicit InnerAnimalMedia release guard
              │
              ▼
-      explicit IAM CF account
+      explicit InnerAnimalMedia CF account
              │
              ▼
     official Worker/Container
@@ -74,7 +74,7 @@ The official registry path is not imported as the default meaning of deploy.
 
 Wrangler is the deploy authority. AgentSam uses wrangler whoami --json, requires an authenticated account, requires explicit selection when multiple accounts are available, binds the chosen account into the child process, and records only non-secret account metadata in receipts.
 
-Distributed packages never include IAM Cloudflare credentials.
+Distributed packages never include InnerAnimalMedia Cloudflare credentials.
 
 ## Repository/package boundary
 
@@ -159,7 +159,7 @@ Use separate authorities:
 
 - npm/registry data — aggregate package distribution.
 - AgentSam analytics ingestion service — validated activation/adoption/value events.
-- inneranimalmedia-tail — IAM runtime/Worker observability where Cloudflare Tail is the appropriate primitive.
+- inneranimalmedia-tail — InnerAnimalMedia runtime/Worker observability where Cloudflare Tail is the appropriate primitive.
 
 Do not make inneranimalmedia-tail the install counter. Treat it as a registered infrastructure primitive in SAM's topology and assign it runtime-observability responsibilities deliberately.
 
