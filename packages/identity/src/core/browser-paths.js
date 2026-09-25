@@ -1,4 +1,7 @@
-import { AUTH_LOGIN_PATH, AUTH_SIGNUP_PATH } from './constants.js';
+/**
+ * Same-origin relative path sanitizer — no product-path rewriting.
+ * Alias normalization (/login → identity.login projection) is a host concern.
+ */
 
 export function sanitizeBrowserNextPath(raw) {
   if (raw == null) return null;
@@ -13,10 +16,6 @@ export function sanitizeBrowserNextPath(raw) {
     pathname = s.slice(0, q);
     search = s.slice(q);
   }
-  const lower = pathname.toLowerCase();
-  if (lower === '/login' || lower === '/auth/signin') pathname = AUTH_LOGIN_PATH;
-  else if (lower === '/signup' || lower === '/auth/register') pathname = AUTH_SIGNUP_PATH;
-
   return pathname + search;
 }
 

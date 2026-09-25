@@ -99,16 +99,16 @@ test('createFinalizeInboundOAuth fails closed when identity plane fails for new 
   assert.deepEqual(result, { ok: false, error: 'provision_failed' });
 });
 
-test('createOAuthRedirectHelpers blocks integrations return path', () => {
-  const { safeDashboardLoginRedirectPath } = createOAuthRedirectHelpers({
+test('createOAuthRedirectHelpers rejects disallowed return paths', () => {
+  const { safeLoginRedirectPath } = createOAuthRedirectHelpers({
+    loginPath: '/auth/login',
     isAllowedLoginResumePath: (p) => p.startsWith('/mcp-oauth'),
   });
-  assert.equal(
-    safeDashboardLoginRedirectPath('https://inneranimalmedia.com', '/dashboard/settings/integrations'),
-    '/dashboard/agent',
+  assert.throws(
+    () => safeLoginRedirectPath('https://inneranimalmedia.com', '/dashboard/settings/integrations'),
   );
   assert.equal(
-    safeDashboardLoginRedirectPath('https://inneranimalmedia.com', '/mcp-oauth/resume'),
+    safeLoginRedirectPath('https://inneranimalmedia.com', '/mcp-oauth/resume'),
     '/mcp-oauth/resume',
   );
 });

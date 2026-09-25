@@ -9,7 +9,8 @@ import { getGithubAuthUrl, exchangeGithubCode } from '../providers/github/oauth.
 import { fetchGithubProfile } from '../providers/github/profile.js';
 import { getCloudflareAuthUrl, exchangeCloudflareCode } from '../providers/cloudflare/oauth.js';
 import { fetchCloudflareProfile } from '../providers/cloudflare/profile.js';
-import { AUTH_LOGIN_PATH } from '../core/constants.js';
+import { IDENTITY_ROUTE_IDS } from '../contracts/route-ids.js';
+import { IdentityRoutingError } from '../contracts/identity-store.js';
 import { resolveOAuthCredentialLane } from '../oauth/credentials.js';
 import { iamPlatformOAuthCallback, iamPlatformOAuthStart } from '../oauth/iam-platform.js';
 import { pkceChallenge, pkceVerifier, randomOAuthState } from '../oauth/pkce.js';
@@ -80,12 +81,22 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
   const method = request.method.toUpperCase();
 
   const adapter = createCloudflareD1Adapter(env.DB);
+  if (!options.identity && (!options.app?.id || !options.routeRegistry)) {
+    throw new IdentityRoutingError(
+      'AUTH_APP_UNRESOLVED',
+      'handleIdentityWorkerRequest requires options.app + options.routeRegistry',
+    );
+  }
   const identity = options.identity || createIdentityService({
     adapter,
-    // Local Studio product surface — OAuth without ?next= lands on Workbench.
-    defaultRedirect: options.defaultRedirect
-      || (url.hostname === 'agentsam.inneranimalmedia.com' ? '/agentsam' : '/'),
+    app: options.app,
+    routeRegistry: options.routeRegistry,
   });
+  const loginPath = () => identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN);
+  const signupPath = () => identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.SIGNUP)
+    || loginPath();
+  const resetPath = () => identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.RESET)
+    || loginPath();
   const passwordReset = buildPasswordResetService(env, adapter, options);
 
   // ── API: email auth ─────────────────────────────────────────────────────
@@ -203,7 +214,7 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
     if (!result.ok) {
       return jsonResponse({ error: result.error }, result.status || 400);
     }
-    return jsonResponse({ ok: true, redirect: `${AUTH_LOGIN_PATH}?reset=success` });
+    return jsonResponse({ ok: true, redirect: `${loginPath()}?reset=success` });
   }
 
   // ── OAuth ────────────────────────────────────────────────────────────────
@@ -244,7 +255,7 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
   if (path === '/api/oauth/google/callback' && method === 'GET') {
     const lane = resolveOAuthCredentialLane(env, 'google');
     if (!lane) {
-      return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=oauth_not_configured`, 302);
+      return Response.redirect(`${url.origin}${loginPath()}?error=oauth_not_configured`, 302);
     }
     if (lane.lane === 'iam_platform') {
       return iamPlatformOAuthCallback(request, env, adapter, identity);
@@ -254,7 +265,7 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
   if (path === '/api/oauth/github/callback' && method === 'GET') {
     const lane = resolveOAuthCredentialLane(env, 'github');
     if (!lane) {
-      return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=oauth_not_configured`, 302);
+      return Response.redirect(`${url.origin}${loginPath()}?error=oauth_not_configured`, 302);
     }
     if (lane.lane === 'iam_platform') {
       return iamPlatformOAuthCallback(request, env, adapter, identity);
@@ -264,37 +275,28 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
   if (path === '/api/oauth/cloudflare/callback' && method === 'GET') {
     const lane = resolveOAuthCredentialLane(env, 'cloudflare');
     if (!lane) {
-      return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=oauth_not_configured`, 302);
+      return Response.redirect(`${url.origin}${loginPath()}?error=oauth_not_configured`, 302);
     }
     return oauthCallback(request, env, identity, adapter, 'cloudflare', lane);
   }
 
-  // Auth HTML shells — use extensionless paths; assets serves foo.html at /foo.
-  const authPageMap = {
-    '/auth/login': '/auth/login',
-    '/auth/signup': '/auth/signup',
-    '/auth/reset': '/auth/reset',
-  };
+  // Auth HTML shells — identity pages only (Worker ASSETS binding, not R2).
+  const authPages = new Set([
+    loginPath(),
+    signupPath(),
+    resetPath(),
+  ]);
 
-  if (method === 'GET' && authPageMap[path]) {
+  if (method === 'GET' && authPages.has(path)) {
     if (env.ASSETS?.fetch) {
-      const assetUrl = new URL(authPageMap[path], url.origin);
+      const assetUrl = new URL(path, url.origin);
       return env.ASSETS.fetch(new Request(assetUrl, request));
     }
     return jsonResponse({ error: 'assets_binding_required', path }, 500);
   }
 
-  if (method === 'GET' && (path === '/dashboard' || path.startsWith('/dashboard/'))) {
-    const ctx = await identity.sessionFromRequest(request);
-    if (!ctx) {
-      const next = encodeURIComponent(path + url.search);
-      return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?next=${next}`, 302);
-    }
-    if (env.ASSETS?.fetch) {
-      const assetUrl = new URL('/dashboard/index.html', url.origin);
-      return env.ASSETS.fetch(new Request(assetUrl, request));
-    }
-  }
+  // Product SPA mounts (/agentsam, /admin, /cad, …) are owned by the host app
+  // registry — identity does not invent or gate those routes here.
 
   if (env.ASSETS?.fetch) {
     return env.ASSETS.fetch(request);
@@ -315,7 +317,13 @@ async function oauthStart(request, env, identity, adapter, provider, creds) {
     const redirectTo = identity.resolvePostLoginPath(
       url.searchParams.get('next') || url.searchParams.get('return_to'),
     );
-    await adapter.saveOAuthState({ state, provider, codeVerifier, redirectTo });
+    await adapter.saveOAuthState({
+      state,
+      provider,
+      codeVerifier,
+      redirectTo,
+      appId: identity.app?.id || null,
+    });
 
     const redirectUri = `${url.origin}/api/oauth/${provider}/callback`;
     let authUrl;
@@ -346,7 +354,8 @@ async function oauthStart(request, env, identity, adapter, provider, creds) {
     const message = String(error?.message || error || 'oauth_start_failed');
     console.error('oauth_start_failed', provider, message);
     // Prefer redirect to login with error over bare Worker 1101 for browsers.
-    const login = new URL('/auth/login', url.origin);
+    const lp = identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN);
+    const login = new URL(lp, url.origin);
     login.searchParams.set('error', 'oauth_start_failed');
     login.searchParams.set('provider', provider);
     login.searchParams.set('detail', message.slice(0, 120));
@@ -363,12 +372,12 @@ async function oauthCallback(request, env, identity, adapter, provider, creds) {
   const err = url.searchParams.get('error');
   if (err || !code || !state) {
     await adapter.logAuthEvent({ eventType: 'login', status: 'failed', provider, request, metadata: { reason: 'oauth_failed' } });
-    return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=oauth_failed`, 302);
+    return Response.redirect(`${url.origin}${loginPath()}?error=oauth_failed`, 302);
   }
   const saved = await adapter.consumeOAuthState(state);
   if (!saved || saved.provider !== provider) {
     await adapter.logAuthEvent({ eventType: 'login', status: 'failed', provider, request, metadata: { reason: 'state_mismatch' } });
-    return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=state_mismatch`, 302);
+    return Response.redirect(`${url.origin}${loginPath()}?error=state_mismatch`, 302);
   }
   const redirectUri = `${url.origin}/api/oauth/${provider}/callback`;
   let token;
@@ -382,7 +391,7 @@ async function oauthCallback(request, env, identity, adapter, provider, creds) {
       redirectUri,
     });
     if (!token?.access_token) {
-      return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=token_exchange_failed`, 302);
+      return Response.redirect(`${url.origin}${loginPath()}?error=token_exchange_failed`, 302);
     }
     profile = await fetchGoogleProfile(token.access_token);
   } else if (provider === 'cloudflare') {
@@ -394,7 +403,7 @@ async function oauthCallback(request, env, identity, adapter, provider, creds) {
       redirectUri,
     });
     if (!token?.access_token) {
-      return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=token_exchange_failed`, 302);
+      return Response.redirect(`${url.origin}${loginPath()}?error=token_exchange_failed`, 302);
     }
     profile = await fetchCloudflareProfile(token.access_token);
   } else {
@@ -406,12 +415,12 @@ async function oauthCallback(request, env, identity, adapter, provider, creds) {
       redirectUri,
     });
     if (!token?.access_token) {
-      return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=token_exchange_failed`, 302);
+      return Response.redirect(`${url.origin}${loginPath()}?error=token_exchange_failed`, 302);
     }
     profile = await fetchGithubProfile(token.access_token);
   }
   if (!profile) {
-    return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=userinfo_failed`, 302);
+    return Response.redirect(`${url.origin}${loginPath()}?error=userinfo_failed`, 302);
   }
 
   let normalized;
@@ -435,7 +444,7 @@ async function oauthCallback(request, env, identity, adapter, provider, creds) {
 
   const redirectTo = identity.resolvePostLoginPath(saved.redirect_to);
   const res = identity.buildLoginSuccessResponse(request, result.sessionId, redirectTo);
-  const globeUrl = `${url.origin}${AUTH_LOGIN_PATH}?globe_exit=1&next=${encodeURIComponent(redirectTo)}`;
+  const globeUrl = `${url.origin}${loginPath()}?globe_exit=1&next=${encodeURIComponent(redirectTo)}`;
   return new Response(null, {
     status: 302,
     headers: {

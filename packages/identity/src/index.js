@@ -44,6 +44,27 @@ export {
 
 export * from './core/index.js';
 export * from './core/constants.js';
+export {
+  IDENTITY_ROUTE_IDS,
+  REQUIRED_AUTH_ROUTE_IDS,
+  defineRouteProjection,
+  createRouteRegistry,
+  projectionFromAppManifest,
+} from './contracts/routes.js';
+export {
+  IDENTITY_STORE_SCHEMA_VERSION,
+  IDENTITY_PACKS,
+  IdentityRoutingError,
+  IdentitySchemaError,
+} from './contracts/identity-store.js';
+export {
+  resolvePostAuthDestination,
+  beginLoginRedirect,
+  resolveMountForPath,
+  mountRequiresAuth,
+  pathMatchesMount,
+} from './server/post-auth.js';
+export { verifyAppAuthContract, verifyAppPackage } from './app/verify-app.js';
 export { DEFAULT_COMPANY_ID, DEFAULT_COMPANY_SLUG, normalizeCompanyRow } from './contracts/company.js';
 export * from './contracts/auth-config.js';
 export { createPasswordResetService } from './recovery/password-reset.js';
@@ -52,6 +73,10 @@ export {
   registerFinalizeInboundOAuth,
 } from './oauth/callback.js';
 export { createCloudflareD1Adapter } from './adapters/cloudflare-d1/index.js';
+export {
+  createSqliteIdentityAdapter,
+  applySqliteIdentityMigrations,
+} from './adapters/sqlite/index.js';
 export { createIdentityService } from './server/identity-service.js';
 export { handleIdentityWorkerRequest } from './server/worker-router.js';
 

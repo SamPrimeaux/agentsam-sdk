@@ -1,4 +1,4 @@
-import { AUTH_LOGIN_PATH } from '../core/constants.js';
+import { IDENTITY_ROUTE_IDS } from '../contracts/route-ids.js';
 import {
   IAM_PLATFORM_CALLBACK_PATH,
   IAM_PLATFORM_STATE_PROVIDER,
@@ -38,6 +38,7 @@ export async function iamPlatformOAuthStart(request, env, adapter, identity) {
     provider: IAM_PLATFORM_STATE_PROVIDER,
     codeVerifier,
     redirectTo,
+    appId: identity?.app?.id || null,
   });
 
   const redirectUri = `${url.origin}${IAM_PLATFORM_CALLBACK_PATH}`;
@@ -67,15 +68,15 @@ export async function iamPlatformOAuthCallback(request, env, adapter, identity) 
   const err = url.searchParams.get('error');
 
   if (err || !code || !state) {
-    return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=oauth_failed`, 302);
+    return Response.redirect(`${url.origin}${identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN)}?error=oauth_failed`, 302);
   }
   if (!creds) {
-    return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=iam_oauth_not_configured`, 302);
+    return Response.redirect(`${url.origin}${identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN)}?error=iam_oauth_not_configured`, 302);
   }
 
   const saved = await adapter.consumeOAuthState(state);
   if (!saved || saved.provider !== IAM_PLATFORM_STATE_PROVIDER) {
-    return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=state_mismatch`, 302);
+    return Response.redirect(`${url.origin}${identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN)}?error=state_mismatch`, 302);
   }
 
   const redirectUri = `${url.origin}${IAM_PLATFORM_CALLBACK_PATH}`;
@@ -88,7 +89,7 @@ export async function iamPlatformOAuthCallback(request, env, adapter, identity) 
     redirectUri,
   });
   if (!token?.access_token) {
-    return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=token_exchange_failed`, 302);
+    return Response.redirect(`${url.origin}${identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN)}?error=token_exchange_failed`, 302);
   }
 
   const profile = await fetchIamProfile({
@@ -97,7 +98,7 @@ export async function iamPlatformOAuthCallback(request, env, adapter, identity) 
   });
   const normalized = profile ? normalizeIamIdentity(profile) : null;
   if (!normalized?.subject || !normalized?.email) {
-    return Response.redirect(`${url.origin}${AUTH_LOGIN_PATH}?error=userinfo_failed`, 302);
+    return Response.redirect(`${url.origin}${identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN)}?error=userinfo_failed`, 302);
   }
 
   const result = await identity.provisionOAuthUser({
@@ -109,7 +110,7 @@ export async function iamPlatformOAuthCallback(request, env, adapter, identity) 
 
   const redirectTo = identity.resolvePostLoginPath(saved.redirect_to);
   const res = identity.buildLoginSuccessResponse(request, result.sessionId, redirectTo);
-  const globeUrl = `${url.origin}${AUTH_LOGIN_PATH}?globe_exit=1&next=${encodeURIComponent(redirectTo)}`;
+  const globeUrl = `${url.origin}${identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN)}?globe_exit=1&next=${encodeURIComponent(redirectTo)}`;
   return new Response(null, {
     status: 302,
     headers: {

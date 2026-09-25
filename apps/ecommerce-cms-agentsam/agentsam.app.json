@@ -51,6 +51,40 @@
   },
   "notes": "Standalone local preview is buildable and runs through frontend/src with the mock AdminHost adapter. The rescued UI remains intentionally disconnected from production provider/backend writes, so product capabilities stay false until real backend adapters are wired and verified.",
   "bin": "bin/agentsam-ecommerce.mjs",
+  "install": {
+    "command": "npm install @inneranimalmedia/agentsam-sdk-ecommerce",
+    "selector": "ecommerce-cms-agentsam",
+    "paths": ["/install/ecommerce", "/install/ecommerce-cms-agentsam"]
+  },
+  "auth": {
+    "required": true,
+    "entry": {
+      "authenticated": "app.authenticated",
+      "login": "identity.login",
+      "failure": "identity.recovery"
+    },
+    "oauth": {
+      "startPattern": "/api/oauth/:provider/start",
+      "callbackPattern": "/api/oauth/:provider/callback"
+    }
+  },
+  "routes": {
+    "app.authenticated": { "path": "/admin/home", "auth": "required", "spa": true },
+    "app.home": { "path": "/admin/home" },
+    "identity.login": { "path": "/auth/login" },
+    "identity.recovery": { "path": "/auth/login" },
+    "identity.oauth.start": { "path": "/api/oauth/:provider/start" },
+    "identity.oauth.callback": { "path": "/api/oauth/:provider/callback" },
+    "entry": "/admin/home",
+    "mounts": [
+      {
+        "path": "/admin",
+        "auth": "required",
+        "spa": true,
+        "shell": "dist/index.html"
+      }
+    ]
+  },
   "preview": {
     "kind": "web",
     "entry": "/admin",

@@ -1,6 +1,9 @@
+import { SESSION_POLICY } from '../../core/constants.js';
+import { IdentitySchemaError } from '../../contracts/identity-store.js';
+import { IDENTITY_STORE_SCHEMA_VERSION } from '../../contracts/identity-store.js';
 import { newAccountIdentityId, newAuthUserId, newSessionId, newAuthEventId, nowUnix } from './ids.js';
-import { AUTH_SESSION_TTL_SECONDS } from '../../core/constants.js';
 import { DEFAULT_COMPANY_ID, DEFAULT_COMPANY_SLUG, normalizeCompanyRow } from '../../contracts/company.js';
+
 
 /**
  * @typedef {object} D1Database
@@ -24,22 +27,45 @@ export function createCloudflareD1Adapter(db, options = {}) {
   if (!db?.prepare) {
     throw new Error('cloudflare_d1_adapter_requires_db_binding');
   }
-  const sessionTtlSeconds = options.sessionTtlSeconds ?? AUTH_SESSION_TTL_SECONDS;
+  const sessionTtlSeconds = options.sessionTtlSeconds ?? SESSION_POLICY.browser.ttlSeconds;
 
   return Object.freeze({
+    schemaVersion: IDENTITY_STORE_SCHEMA_VERSION,
     sessionTtlSeconds,
+    backend: 'cloudflare-d1',
 
     /**
      * Append-only login/logout/failed-attempt audit trail (auth_event_log).
-     * Never throws -- an observability write must not break a real auth flow.
-     * ip/userAgent are hashed (SHA-256) before storage, matching the
-     * ip_hash/user_agent_hash column names -- raw values are never persisted.
+     * Never throws — an observability write must not break a real auth flow.
+     * status remains the event outcome only ('ok' | 'failed').
+     * Richer context (session, capabilities, activity, client) goes in metadata_json.
+     * ip/userAgent are hashed (SHA-256) — raw values are never persisted.
      */
-    async logAuthEvent({ userId, eventType, status = 'ok', provider, metadata, request }) {
+    async logAuthEvent({
+      userId,
+      accountId,
+      eventType,
+      status = 'ok',
+      provider,
+      session,
+      capabilities,
+      activity,
+      client,
+      metadata,
+      request,
+    }) {
       try {
         const ip = request?.headers?.get?.('cf-connecting-ip') || request?.headers?.get?.('x-forwarded-for') || '';
         const ua = request?.headers?.get?.('user-agent') || '';
         const [ipHash, uaHash] = await Promise.all([hashValue(ip), hashValue(ua)]);
+        const envelope = {
+          ...(metadata && typeof metadata === 'object' ? metadata : {}),
+          ...(accountId ? { accountId } : {}),
+          ...(session ? { session } : {}),
+          ...(capabilities ? { capabilities } : {}),
+          ...(activity ? { activity } : {}),
+          ...(client ? { client } : {}),
+        };
         await db.prepare(
           `INSERT INTO auth_event_log
            (id, user_id, event_type, status, provider, metadata_json, ip_hash, user_agent_hash)
@@ -50,12 +76,40 @@ export function createCloudflareD1Adapter(db, options = {}) {
           eventType,
           status,
           provider || null,
-          metadata ? JSON.stringify(metadata) : '{}',
+          JSON.stringify(envelope),
           ipHash,
           uaHash,
         ).run();
       } catch {
         // Never let audit logging break a real login/OAuth flow.
+      }
+    },
+
+    /**
+     * Account/session activity snapshot for auth receipts (not event outcome).
+     * @param {string} userId
+     */
+    async countAuthActivity(userId) {
+      if (!userId) {
+        return { loginCount: 0, activeSessionCount: 0, lastLoginAt: null };
+      }
+      try {
+        const logins = await db.prepare(
+          `SELECT COUNT(*) AS c, MAX(created_at) AS last_at
+           FROM auth_event_log
+           WHERE user_id = ? AND event_type = 'login' AND status = 'ok'`,
+        ).bind(userId).first();
+        const sessions = await db.prepare(
+          `SELECT COUNT(*) AS c FROM auth_sessions
+           WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ?`,
+        ).bind(userId, nowUnix()).first();
+        return {
+          loginCount: Number(logins?.c || 0),
+          activeSessionCount: Number(sessions?.c || 0),
+          lastLoginAt: logins?.last_at != null ? Number(logins.last_at) : null,
+        };
+      } catch {
+        return { loginCount: 0, activeSessionCount: 0, lastLoginAt: null };
       }
     },
 
@@ -173,27 +227,73 @@ export function createCloudflareD1Adapter(db, options = {}) {
       return { ok: true, reason };
     },
 
-    async saveOAuthState({ state, provider, codeVerifier, redirectTo, ttlSeconds = 600 }) {
-      // Dedicated table, deliberately NOT named `oauth_states` -- that name collides
-      // with unrelated Stripe Connect state tracking in customer apps that reuse
-      // their inneranimalmedia D1 instance (id/user_id/provider_id/redirect_uri/
-      // scope schema, no default on primary key). See AgentSamRemix incident,
-      // 2026-08-29: D1_ERROR: table oauth_states has no column named state.
+    async createOAuthTransaction({ state, provider, codeVerifier, returnTo, redirectTo, appId, ttlSeconds = 600 }) {
+      if (!appId) {
+        throw new IdentitySchemaError(
+          'OAUTH_TRANSACTION_APP_ID_REQUIRED',
+          'OAuth transactions must include app_id',
+        );
+      }
       const ts = nowUnix();
-      await db.prepare(
-        `INSERT INTO identity_oauth_states (state, provider, code_verifier, redirect_to, expires_at, created_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-      ).bind(state, provider, codeVerifier, redirectTo || null, ts + ttlSeconds, ts).run();
+      const expiresAt = ts + ttlSeconds;
+      try {
+        await db.prepare(
+          `INSERT INTO identity_oauth_states
+           (state, provider, code_verifier, redirect_to, app_id, expires_at, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        ).bind(state, provider, codeVerifier, returnTo ?? redirectTo ?? null, appId, expiresAt, ts).run();
+      } catch (err) {
+        throw new IdentitySchemaError(
+          'IDENTITY_SCHEMA_MIGRATION_REQUIRED',
+          'identity_oauth_states.app_id required — apply migration 0015 (no silent pre-app_id fallback)',
+          { cause: String(err?.message || err) },
+        );
+      }
     },
 
-    async consumeOAuthState(state) {
-      const row = await db.prepare(
-        `SELECT state, provider, code_verifier, redirect_to, expires_at FROM identity_oauth_states WHERE state = ? LIMIT 1`,
-      ).bind(state).first();
+    /** @deprecated Use createOAuthTransaction */
+    async saveOAuthState(input) {
+      return this.createOAuthTransaction(input);
+    },
+
+    async consumeOAuthTransaction(state) {
+      let row;
+      try {
+        row = await db.prepare(
+          `SELECT state, provider, code_verifier, redirect_to, app_id, expires_at, created_at
+           FROM identity_oauth_states WHERE state = ? LIMIT 1`,
+        ).bind(state).first();
+      } catch (err) {
+        throw new IdentitySchemaError(
+          'IDENTITY_SCHEMA_MIGRATION_REQUIRED',
+          'identity_oauth_states.app_id column missing — apply migration 0015',
+          { cause: String(err?.message || err) },
+        );
+      }
       if (!row) return null;
       await db.prepare(`DELETE FROM identity_oauth_states WHERE state = ?`).bind(state).run();
       if (row.expires_at <= nowUnix()) return null;
-      return row;
+      if (!row.app_id) {
+        throw new IdentitySchemaError(
+          'IDENTITY_SCHEMA_MIGRATION_REQUIRED',
+          'OAuth transaction missing app_id — refuse silent pre-app_id semantics',
+        );
+      }
+      return {
+        state: row.state,
+        provider: row.provider,
+        code_verifier: row.code_verifier,
+        redirect_to: row.redirect_to,
+        return_to: row.redirect_to,
+        app_id: row.app_id,
+        expires_at: row.expires_at,
+        created_at: row.created_at,
+      };
+    },
+
+    /** @deprecated Use consumeOAuthTransaction */
+    async consumeOAuthState(state) {
+      return this.consumeOAuthTransaction(state);
     },
 
     async getCompanyBySlug(slug = DEFAULT_COMPANY_SLUG) {

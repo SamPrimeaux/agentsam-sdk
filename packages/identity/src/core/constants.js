@@ -1,9 +1,14 @@
-/** SDK-portable session/auth path constants. */
+/**
+ * Cookie name + session policy re-exports.
+ * Route vocabulary → contracts/routes.js (identity endpoints only).
+ * Product homes / mounts → each app's agentsam.app.json (not this package).
+ */
+
+import { SESSION_POLICY } from './session-policy.js';
+
+export { SESSION_POLICY, clampAgentSessionTtl } from './session-policy.js';
+
 export const AUTH_COOKIE_NAME = 'session';
-export const AUTH_SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
-export const MIN_AGENT_SESSION_TTL_SECONDS = 60;
-export const MAX_AGENT_SESSION_TTL_SECONDS = 86400;
-export const DEFAULT_AGENT_SESSION_TTL_SECONDS = 900;
-export const AUTH_LOGIN_PATH = '/auth/login';
-export const AUTH_SIGNUP_PATH = '/auth/signup';
-export const DASHBOARD_AFTER_LOGIN_PATH = '/dashboard/cms';
+
+/** @deprecated Prefer SESSION_POLICY.browser.ttlSeconds */
+export const AUTH_SESSION_TTL_SECONDS = SESSION_POLICY.browser.ttlSeconds;

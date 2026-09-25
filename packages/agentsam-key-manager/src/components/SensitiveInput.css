@@ -1,0 +1,146 @@
+.as-sensitive {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+  color: inherit;
+  font-family: inherit;
+}
+
+.as-sensitive__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.as-sensitive__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: rgba(241, 245, 249, 0.9);
+}
+
+.as-sensitive__tooltip {
+  opacity: 0.55;
+  font-size: 0.75rem;
+  cursor: help;
+}
+
+.as-sensitive__required {
+  color: #f87171;
+}
+
+.as-sensitive__copy {
+  border: 0;
+  background: none;
+  color: #60a5fa;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.as-sensitive__copy:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.as-sensitive__control {
+  position: relative;
+}
+
+.as-sensitive__input {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(2, 6, 23, 0.55);
+  color: #f8fafc;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+}
+
+.as-sensitive__input:focus {
+  border-color: rgba(96, 165, 250, 0.7);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+}
+
+.as-sensitive--xs .as-sensitive__input {
+  padding: 0.35rem 2rem 0.35rem 0.55rem;
+  font-size: 0.7rem;
+}
+
+.as-sensitive--sm .as-sensitive__input {
+  padding: 0.45rem 2.1rem 0.45rem 0.65rem;
+  font-size: 0.75rem;
+}
+
+.as-sensitive--base .as-sensitive__input {
+  padding: 0.65rem 2.35rem 0.65rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.as-sensitive--lg .as-sensitive__input {
+  padding: 0.85rem 2.5rem 0.85rem 0.9rem;
+  font-size: 0.9375rem;
+}
+
+.as-sensitive--error .as-sensitive__input {
+  border-color: #ef4444;
+  color: #fecaca;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.35);
+}
+
+.as-sensitive--error .as-sensitive__input:focus {
+  border-color: #f87171;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.22);
+}
+
+.as-sensitive--disabled {
+  opacity: 0.45;
+}
+
+.as-sensitive--disabled .as-sensitive__input {
+  cursor: not-allowed;
+}
+
+.as-sensitive--readonly .as-sensitive__input {
+  background: rgba(15, 23, 42, 0.75);
+}
+
+.as-sensitive__reveal,
+.as-sensitive__eye {
+  position: absolute;
+  right: 0.55rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: none;
+  color: rgba(226, 232, 240, 0.55);
+  font-size: 0.7rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.as-sensitive__reveal:disabled {
+  cursor: not-allowed;
+}
+
+.as-sensitive__description {
+  margin: 0;
+  font-size: 0.75rem;
+  color: rgba(148, 163, 184, 0.9);
+  line-height: 1.4;
+}
+
+.as-sensitive__error {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #f87171;
+  line-height: 1.4;
+}

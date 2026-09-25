@@ -1,33 +1,48 @@
-import { AUTH_COOKIE_NAME, AUTH_SESSION_TTL_SECONDS } from '../core/constants.js';
+import { AUTH_COOKIE_NAME, SESSION_POLICY } from '../core/constants.js';
 import { hashPassword, verifyPassword } from '../core/password-crypto.js';
 import { jsonResponse } from '../core/http-json.js';
-import { sanitizeBrowserNextPath } from '../core/browser-paths.js';
+import { resolvePostAuthDestination } from './post-auth.js';
+import { IdentityRoutingError } from '../contracts/identity-store.js';
 import { newAuthUserId } from '../adapters/cloudflare-d1/ids.js';
 
 /**
- * @typedef {ReturnType<import('../adapters/cloudflare-d1/index.js').createCloudflareD1Adapter>} IdentityStorageAdapter
+ * @typedef {import('../contracts/identity-store.js').IdentityStore} IdentityStore
  */
 
 /**
  * Server-side identity orchestration (Worker / Node). No secrets in client bundle.
- * @param {{ adapter: IdentityStorageAdapter, cookieName?: string, defaultRedirect?: string }} config
+ * Hosts must supply `app` + `routeRegistry` — no platform "/" fallback.
+ *
+ * @param {{
+ *   adapter: IdentityStore,
+ *   cookieName?: string,
+ *   app: { id: string },
+ *   routeRegistry: ReturnType<import('../contracts/route-projection.js').createRouteRegistry>,
+ * }} config
  */
 export function createIdentityService(config) {
   const adapter = config.adapter;
   if (!adapter) throw new Error('identity_service_requires_adapter');
   const cookieName = config.cookieName || AUTH_COOKIE_NAME;
-  // Direct sign-in has no navigation intent to restore. Land at the site root;
-  // protected routes always provide their own validated `next` path.
-  const defaultRedirect = sanitizeBrowserNextPath(config.defaultRedirect) || '/';
+  const app = config.app || null;
+  const routeRegistry = config.routeRegistry || null;
+  if (!app?.id || !routeRegistry) {
+    throw new IdentityRoutingError(
+      'AUTH_APP_UNRESOLVED',
+      'createIdentityService requires app + routeRegistry (no platform fallback)',
+    );
+  }
+  routeRegistry.assertAuthCapable(app.id);
 
-  // OAuth state is durable and may outlive a deployment. Normalize both the
-  // incoming request value and a value read back from prior state so an old or
-  // malformed value can never become an open redirect.
   function resolvePostLoginPath(nextPath) {
-    return sanitizeBrowserNextPath(nextPath) || defaultRedirect;
+    return resolvePostAuthDestination({
+      transaction: { return_to: nextPath, app_id: app.id },
+      app,
+      routeRegistry,
+    });
   }
 
-  function sessionCookieHeader(sessionId, requestUrl, maxAge = AUTH_SESSION_TTL_SECONDS) {
+  function sessionCookieHeader(sessionId, requestUrl, maxAge = SESSION_POLICY.browser.ttlSeconds) {
     const secure = new URL(requestUrl).protocol === 'https:';
     const parts = [
       `${cookieName}=${sessionId}`,
@@ -48,7 +63,9 @@ export function createIdentityService(config) {
 
   return Object.freeze({
     cookieName,
-    defaultRedirect,
+    app,
+    routeRegistry,
+    defaultRedirect: resolvePostLoginPath(null),
 
     async signup({ email, password, displayName }) {
       const normalized = String(email || '').trim().toLowerCase();

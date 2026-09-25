@@ -35,10 +35,10 @@ if (secrets.some((secret) => secret?.name === "VAULT_MASTER_KEY")) {
   process.exit(0);
 }
 
-const vaultKey = randomBytes(32).toString("base64");
+const vaultKey = `v1.${randomBytes(32).toString("base64")}`;
 const created = runWrangler(["secret", "put", "VAULT_MASTER_KEY"], {
   input: `${vaultKey}\n`,
   stdio: ["pipe", "inherit", "inherit"],
 });
 if (created.status !== 0) process.exit(created.status || 1);
-process.stdout.write("AgentSam vault key provisioned for this Worker.\n");
+process.stdout.write("AgentSam vault key provisioned (v1.32-byte format).\n");

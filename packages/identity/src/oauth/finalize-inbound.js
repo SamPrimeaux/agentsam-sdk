@@ -51,7 +51,7 @@ export function createFinalizeInboundOAuth(ports) {
         ? String(input.supabaseUserId).trim()
         : null;
     const source = String(input?.source || `${provider}_oauth`).trim();
-    const pageContext = String(input?.pageContext || '/dashboard/agent').trim();
+    const pageContext = String(input?.pageContext || '/').trim();
 
     if (!ports.hasDatabase(env) || !oauthEmail || !provider || !providerUid) {
       return /** @type {InboundOAuthFailure} */ ({ ok: false, error: 'provision_failed' });

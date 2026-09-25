@@ -7,14 +7,46 @@ import {
   createIdentityService,
   createCloudflareD1Adapter,
 } from "../../../../packages/identity/src/server/worker-router.js";
+import {
+  IDENTITY_ROUTE_IDS,
+  projectionFromAppManifest,
+  createRouteRegistry,
+} from "../../../../packages/identity/src/contracts/routes.js";
+import { mountRequiresAuth } from "../../../../packages/identity/src/server/mount-policy.js";
+import { resolveIamIssuer } from "../../../../packages/identity/src/contracts/auth-config.js";
+import {
+  importVaultMasterKey,
+  encryptVaultSecret,
+  decryptVaultSecret,
+  last4 as vaultLast4,
+  createProviderRegistry,
+} from "../../../../packages/agentsam-vault/src/index.js";
 import { handleCmsWorkerRequest } from "./cms-service.js";
 import { serveCanonicalHomepage } from "./canonical-homepage.js";
 import { isPublicSitePath, servePublicSitePage } from "./public-site.js";
 import { loadConnectionsRegistry } from "./connections-registry.js";
 import { createLocalStudioPluginRuntime } from "./plugin-registry.js";
+import localStudioApp from "../../agentsam.app.json";
+import cadCreatorApp from "../../../cad-creator/agentsam.app.json";
+import clientCmsApp from "../../../client-cms-editor/agentsam.app.json";
+import ecommerceApp from "../../../ecommerce-cms-agentsam/agentsam.app.json";
+
+const APP = localStudioApp;
+const ROUTE_PROJECTION = projectionFromAppManifest(APP);
+const ROUTE_REGISTRY = createRouteRegistry([ROUTE_PROJECTION]);
+const PROVIDER_REGISTRY = createProviderRegistry();
+
+const LOGIN_PATH = ROUTE_REGISTRY.resolve(APP.id, IDENTITY_ROUTE_IDS.LOGIN);
+const SIGNUP_PATH = ROUTE_REGISTRY.resolve(APP.id, IDENTITY_ROUTE_IDS.SIGNUP);
+const RESET_PATH = ROUTE_REGISTRY.resolve(APP.id, IDENTITY_ROUTE_IDS.RESET);
 
 // Paths owned by the identity package (auth pages, auth API, OAuth, company branding).
-const IDENTITY_EXACT_PATHS = new Set(["/auth/login", "/auth/signup", "/auth/reset", "/api/company"]);
+const IDENTITY_EXACT_PATHS = new Set([
+  LOGIN_PATH,
+  SIGNUP_PATH,
+  RESET_PATH,
+  "/api/company",
+].filter(Boolean));
 function isIdentityPath(pathname) {
   return (
     IDENTITY_EXACT_PATHS.has(pathname) ||
@@ -23,29 +55,30 @@ function isIdentityPath(pathname) {
   );
 }
 
-// Studio app routes that require a signed-in session before the SPA shell loads.
-const PROTECTED_APP_PATHS = [
-  "/agentsam",
-  "/projects",
-  "/artifacts",
-  "/files",
-  "/browse",
-  "/cli",
-  "/ship",
-  "/cad",
-  "/cms",
-  "/settings",
-];
 function isProtectedAppPath(pathname) {
-  return PROTECTED_APP_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  return mountRequiresAuth(pathname, APP);
 }
 
-const INSTALL_APP_TARGETS = Object.freeze({
-  "/install": "",
-  "/install/cad": "cad-creator",
-  "/install/cms": "client-cms-editor",
-  "/install/studio": "local-studio",
-});
+/** Install paths derived from app manifests (not a hardcoded mini-registry). */
+function buildInstallTargets(manifests) {
+  const map = { "/install": "" };
+  for (const m of manifests) {
+    if (!m?.id) continue;
+    const selector = m.install?.selector || m.id;
+    const paths = Array.isArray(m.install?.paths) && m.install.paths.length
+      ? m.install.paths
+      : [`/install/${m.id}`];
+    for (const p of paths) map[p] = selector;
+  }
+  return Object.freeze(map);
+}
+
+const INSTALL_APP_TARGETS = buildInstallTargets([
+  localStudioApp,
+  cadCreatorApp,
+  clientCmsApp,
+  ecommerceApp,
+]);
 
 function serveInstallScript(pathname) {
   const appTarget = INSTALL_APP_TARGETS[pathname];
@@ -86,9 +119,6 @@ function serveInstallScript(pathname) {
  * /api/chat bound for Nitro gets its X-User-Id rewritten to the session user
  * so downstream vault BYOK resolution cannot be spoofed.
  */
-const enc = new TextEncoder();
-const dec = new TextDecoder();
-
 function json(data, status = 200, extra = {}) {
   return new Response(JSON.stringify(data), {
     status,
@@ -101,72 +131,17 @@ function json(data, status = 200, extra = {}) {
 }
 
 function last4(value) {
-  const v = String(value ?? "");
-  if (!v) return "";
-  return v.length <= 4 ? "••••" : v.slice(-4);
-}
-
-function b64ToBytes(b64) {
-  const bin = atob(b64);
-  const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-  return out;
-}
-
-function bytesToB64(bytes) {
-  let s = "";
-  for (const b of bytes) s += String.fromCharCode(b);
-  return btoa(s);
-}
-
-async function importVaultKey(env) {
-  const raw = env.VAULT_MASTER_KEY || env.VAULT_KEY;
-  if (!raw) throw new Error("VAULT_MASTER_KEY missing");
-  let keyBytes;
-  try {
-    keyBytes = b64ToBytes(raw);
-  } catch {
-    keyBytes = enc.encode(raw);
-  }
-  if (keyBytes.byteLength === 32) {
-    // ok
-  } else if (keyBytes.byteLength > 32) {
-    keyBytes = keyBytes.slice(0, 32);
-  } else {
-    const hash = await crypto.subtle.digest("SHA-256", keyBytes);
-    keyBytes = new Uint8Array(hash);
-  }
-  return crypto.subtle.importKey("raw", keyBytes, { name: "AES-GCM" }, false, [
-    "encrypt",
-    "decrypt",
-  ]);
+  return vaultLast4(value);
 }
 
 async function encryptSecret(env, plaintext, aad) {
-  const key = await importVaultKey(env);
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const cipher = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv, additionalData: enc.encode(aad) },
-    key,
-    enc.encode(plaintext),
-  );
-  const packed = new Uint8Array(iv.byteLength + cipher.byteLength);
-  packed.set(iv, 0);
-  packed.set(new Uint8Array(cipher), iv.byteLength);
-  return bytesToB64(packed);
+  const key = await importVaultMasterKey(env.VAULT_MASTER_KEY || env.VAULT_KEY);
+  return encryptVaultSecret(key, plaintext, aad);
 }
 
 async function decryptSecret(env, packedB64, aad) {
-  const key = await importVaultKey(env);
-  const packed = b64ToBytes(packedB64);
-  const iv = packed.slice(0, 12);
-  const data = packed.slice(12);
-  const plain = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv, additionalData: enc.encode(aad) },
-    key,
-    data,
-  );
-  return dec.decode(plain);
+  const key = await importVaultMasterKey(env.VAULT_MASTER_KEY || env.VAULT_KEY);
+  return decryptVaultSecret(key, packedB64, aad);
 }
 
 async function constantTimeSecretEqual(left, right) {
@@ -191,7 +166,7 @@ async function requireBridgeKey(request, env) {
 }
 
 async function probeInnerAnimalMediaOAuth(env) {
-  const issuer = String(env.IAM_OAUTH_ISSUER || "").trim().replace(/\/$/, "");
+  const issuer = resolveIamIssuer(env);
   const configured = Boolean(issuer && env.IAM_CLIENT_ID && env.IAM_CLIENT_SECRET);
   const checkedAt = Math.floor(Date.now() / 1000);
   if (!configured) return { configured: false, healthy: false, status: "unconfigured", checked_at: checkedAt };
@@ -240,7 +215,11 @@ async function resolveSessionUserId(request, env) {
   if (!request.headers.get("cookie")) return null;
   try {
     const adapter = createCloudflareD1Adapter(env.DB);
-    const identity = createIdentityService({ adapter, env });
+    const identity = createIdentityService({
+      adapter,
+      app: APP,
+      routeRegistry: ROUTE_REGISTRY,
+    });
     const ctx = await identity.sessionFromRequest(request);
     return ctx?.user?.id || null;
   } catch (err) {
@@ -265,11 +244,29 @@ function bindSessionUser(request, sessionUserId) {
   }
 }
 
-function cors(request) {
-  const origin = request.headers.get("origin") || "*";
+/**
+ * Vault ownership from validated session/app context — never client-supplied
+ * tenant_sam_* / ws_* defaults.
+ */
+function resolveVaultOwnership({ userId, appId }) {
+  const account = String(userId || "").trim();
+  if (!account) throw new Error("vault_owner_required");
+  return {
+    tenantId: `account:${account}`,
+    workspaceId: `app:${String(appId || APP.id || "local")}`,
+  };
+}
+
+/** Same-origin only for vault/credential surfaces (no reflective CORS). */
+function vaultCors(request) {
+  const origin = request.headers.get("origin");
+  if (!origin) return {};
+  const self = new URL(request.url).origin;
+  if (origin !== self) return {};
   return {
     "access-control-allow-origin": origin,
-    "access-control-allow-headers": "authorization, content-type, x-user-id",
+    "access-control-allow-credentials": "true",
+    "access-control-allow-headers": "authorization, content-type, x-user-id, x-bridge-key",
     "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",
     vary: "Origin",
   };
@@ -347,8 +344,7 @@ async function handleCreate(env, userId, body) {
   const value = String(body.value || body.secret || "").trim();
   const secretType = String(body.secret_type || "api_key").trim();
   const description = body.description ? String(body.description).slice(0, 500) : null;
-  const tenantId = String(body.tenant_id || "tenant_sam_primeaux").trim();
-  const workspaceId = body.workspace_id ? String(body.workspace_id) : "ws_inneranimalmedia";
+  const { tenantId, workspaceId } = resolveVaultOwnership({ userId, appId: APP.id });
 
   if (!service) return json({ ok: false, error: "service_name required" }, 400);
   if (!value || value.length < 8) return json({ ok: false, error: "value too short" }, 400);
@@ -497,15 +493,26 @@ async function handleUnwrap(env, userId, body) {
   });
 }
 
-const SERVICE_TO_PROVIDER = Object.freeze({
-  openai: 'openai',
-  anthropic: 'anthropic',
-  gemini: 'gemini',
-  xai: 'grok',
-  grok: 'grok',
-  cursor: 'cursor',
-  cloudflare: 'cloudflare',
-});
+const SERVICE_TO_PROVIDER = Object.freeze(
+  Object.fromEntries(
+    PROVIDER_REGISTRY.list()
+      .filter((p) => p.credential?.kind === "provider_api_key" || p.id === "cloudflare")
+      .flatMap((p) => {
+        const aliases = [p.id];
+        if (p.id === "xai") aliases.push("grok");
+        if (p.id === "gemini") aliases.push("google");
+        return aliases.map((alias) => [alias, p.id === "xai" ? "grok" : p.id]);
+      }),
+  ),
+);
+
+const INVENTORY_PROVIDER_IDS = Object.freeze([
+  ...new Set(
+    PROVIDER_REGISTRY.list()
+      .filter((p) => p.credential?.kind === "provider_api_key" || p.id === "cloudflare")
+      .map((p) => (p.id === "xai" ? "grok" : p.id)),
+  ),
+]);
 
 async function loadVaultCredentialsForUser(env, userId) {
   const { results } = await env.DB.prepare(
@@ -569,9 +576,7 @@ async function handleLlmInventory(env, userId, request) {
   // Live model discovery for Studio UI uses the Nitro/TanStack inventory route.
   // Cloudflare counts as configured when the Workers AI binding is present,
   // even with no API token — chat routes through env.AGENTSAM_WAI (platform).
-  const providers = [
-    'openai', 'anthropic', 'gemini', 'grok', 'cursor', 'cloudflare',
-  ].map((id) => {
+  const providers = INVENTORY_PROVIDER_IDS.map((id) => {
     const row = merged.get(id);
     const viaWorkersAI = id === 'cloudflare' && Boolean(env.AGENTSAM_WAI);
     return {
@@ -638,7 +643,10 @@ export default {
 
     // Identity package owns auth pages, auth API, OAuth, and company branding.
     if (isIdentityPath(url.pathname)) {
-      return handleIdentityWorkerRequest(request, env);
+      return handleIdentityWorkerRequest(request, env, {
+        app: APP,
+        routeRegistry: ROUTE_REGISTRY,
+      });
     }
 
     // Studio CMS API endpoints
@@ -646,14 +654,21 @@ export default {
       return handleCmsWorkerRequest(request, env);
     }
 
-    // Gate authenticated Studio app routes on a real session before the SPA shell loads.
+    // Gate authenticated Studio app routes from the app manifest mounts.
     if (request.method === "GET" && isProtectedAppPath(url.pathname)) {
       try {
-        const identity = createIdentityService({ adapter: createCloudflareD1Adapter(env.DB) });
+        const identity = createIdentityService({
+          adapter: createCloudflareD1Adapter(env.DB),
+          app: APP,
+          routeRegistry: ROUTE_REGISTRY,
+        });
         const ctx = await identity.sessionFromRequest(request);
         if (!ctx) {
           const next = encodeURIComponent(url.pathname + url.search);
-          return Response.redirect(`${url.origin}/auth/login?next=${next}`, 302);
+          return Response.redirect(
+            `${url.origin}${LOGIN_PATH}?next=${next}`,
+            302,
+          );
         }
       } catch (err) {
         console.error("session_gate_error", String(err));
@@ -751,7 +766,7 @@ export default {
       }
     }
 
-    const headers = cors(request);
+    const headers = isVault || isLlmInventory ? vaultCors(request) : {};
 
     if (isVault && request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers });
@@ -760,7 +775,18 @@ export default {
       return new Response(null, { status: 204, headers });
     }
 
+    // Public liveness only — no DB/vault/OAuth diagnostics.
     if (url.pathname === "/health") {
+      return json({ ok: true, app: env.WORKMODE_APP || APP.id || "agentsam-sdk" }, 200);
+    }
+
+    // Authenticated diagnostics (bridge or session).
+    if (url.pathname === "/api/health/diagnostics") {
+      const gate = await requireBridgeKey(request, env);
+      const sid = await sessionUser();
+      if (!gate.ok && !sid) {
+        return json({ ok: false, error: gate.error || "unauthorized" }, gate.status || 401);
+      }
       let d1 = false;
       try {
         await env.DB.prepare("SELECT 1 AS ok").first();
@@ -768,30 +794,35 @@ export default {
       } catch {
         d1 = false;
       }
+      let vaultKey = false;
+      let vaultKeyError = null;
+      try {
+        await importVaultMasterKey(env.VAULT_MASTER_KEY || env.VAULT_KEY);
+        vaultKey = true;
+      } catch (err) {
+        vaultKeyError = String(err?.message || err).slice(0, 120);
+      }
       const inneranimalmedia = await probeInnerAnimalMediaOAuth(env);
-      return json(
-        {
-          ok: true,
-          app: env.WORKMODE_APP || "agentsam-sdk",
-          d1,
-          database: env.D1_DATABASE_NAME || "inneranimalmedia-business",
-          vault_key: Boolean(env.VAULT_MASTER_KEY || env.VAULT_KEY),
-          service_auth: {
-            agentsam_bridge: Boolean(env.AGENTSAM_BRIDGE_KEY),
-          },
-          identity: {
-            inneranimalmedia: inneranimalmedia.healthy,
-            oauth: inneranimalmedia,
-          },
-          connections: {
-            cloudflare: {
-              configured: resolveCloudflareOAuthClient(env).productionReady,
-            },
+      return json({
+        ok: true,
+        app: env.WORKMODE_APP || APP.id || "agentsam-sdk",
+        d1,
+        database: env.D1_DATABASE_NAME || null,
+        vault_key: vaultKey,
+        vault_key_error: vaultKeyError,
+        service_auth: {
+          agentsam_bridge: Boolean(env.AGENTSAM_BRIDGE_KEY),
+        },
+        identity: {
+          inneranimalmedia: inneranimalmedia.healthy,
+          oauth: inneranimalmedia,
+        },
+        connections: {
+          cloudflare: {
+            configured: resolveCloudflareOAuthClient(env).productionReady,
           },
         },
-        200,
-        headers,
-      );
+      });
     }
 
     // GET /api/llm/inventory: desk API key OR a valid session authenticates.

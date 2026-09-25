@@ -11,11 +11,49 @@
     "ship",
     "cli-drawer"
   ],
+  "auth": {
+    "required": true,
+    "entry": {
+      "authenticated": "app.authenticated",
+      "login": "identity.login",
+      "failure": "identity.recovery"
+    },
+    "oauth": {
+      "startPattern": "/api/oauth/:provider/start",
+      "callbackPattern": "/api/oauth/:provider/callback"
+    }
+  },
+  "routes": {
+    "app.authenticated": { "path": "/agentsam", "auth": "required", "spa": true },
+    "app.home": { "path": "/agentsam" },
+    "identity.login": { "path": "/auth/login" },
+    "identity.signup": { "path": "/auth/signup" },
+    "identity.reset": { "path": "/auth/reset" },
+    "identity.recovery": { "path": "/auth/login" },
+    "identity.oauth.start": { "path": "/api/oauth/:provider/start" },
+    "identity.oauth.callback": { "path": "/api/oauth/:provider/callback" },
+    "entry": "/agentsam",
+    "mounts": [
+      { "path": "/agentsam", "auth": "required", "spa": true, "shell": "dist/index.html" },
+      { "path": "/projects", "auth": "required", "spa": true },
+      { "path": "/artifacts", "auth": "required", "spa": true },
+      { "path": "/files", "auth": "required", "spa": true },
+      { "path": "/browse", "auth": "required", "spa": true },
+      { "path": "/cli", "auth": "required", "spa": true },
+      { "path": "/ship", "auth": "required", "spa": true },
+      { "path": "/cad", "auth": "required", "spa": true },
+      { "path": "/cms", "auth": "required", "spa": true },
+      { "path": "/settings", "auth": "required", "spa": true }
+    ]
+  },
   "runtime": {
     "local_preview": "ready",
     "source_scaffold": "ready",
     "cloudflare": "ready",
-    "github": "source-ready"
+    "github": "source-ready",
+    "type": "spa",
+    "assetRoot": "dist",
+    "shell": "index.html"
   },
   "commands": {
     "preview": "agentsam-studio",
@@ -23,6 +61,11 @@
     "doctor": "agentsam-studio doctor"
   },
   "bin": "bin/agentsam-studio.mjs",
+  "install": {
+    "command": "npm install @inneranimalmedia/agentsam-local-studio",
+    "selector": "local-studio",
+    "paths": ["/install/studio", "/install/local-studio"]
+  },
   "secrets": {
     "server_only": [
       "XAI_API_KEY",

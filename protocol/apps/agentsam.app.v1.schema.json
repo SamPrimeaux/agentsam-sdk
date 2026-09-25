@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.inneranimalmedia.com/protocol/apps/agentsam.app.v1.schema.json",
+  "title": "agentsam.app.v1",
+  "description": "Installable AgentSam product app. Owns its routes/runtime; identity never hardcodes product URLs.",
+  "type": "object",
+  "required": ["schema", "id", "name"],
+  "properties": {
+    "schema": { "const": "agentsam.app.v1" },
+    "id": { "type": "string", "minLength": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "package": { "type": "string" },
+    "version": { "type": "string" },
+    "routes": {
+      "type": "object",
+      "properties": {
+        "entry": {
+          "type": "string",
+          "description": "Authenticated entry path after login when no return_to exists",
+          "pattern": "^/"
+        },
+        "mounts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path"],
+            "properties": {
+              "path": { "type": "string", "pattern": "^/" },
+              "auth": { "enum": ["required", "optional", "public"], "default": "public" },
+              "spa": { "type": "boolean" },
+              "shell": {
+                "type": "string",
+                "description": "Build artifact relative to assetRoot (must exist after build)"
+              }
+            }
+          }
+        }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "properties": {
+        "type": { "enum": ["spa", "ssr", "static"] },
+        "assetRoot": { "type": "string" },
+        "shell": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

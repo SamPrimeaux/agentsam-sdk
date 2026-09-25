@@ -24,5 +24,10 @@
     "scaffold": "agentsam-cms scaffold <directory>",
     "info": "agentsam-cms info"
   },
-  "bin": "bin/agentsam-cms.mjs"
+  "bin": "bin/agentsam-cms.mjs",
+  "install": {
+    "command": "npm install @inneranimalmedia/client-cms-editor",
+    "selector": "client-cms-editor",
+    "paths": ["/install/cms", "/install/client-cms-editor"]
+  }
 }

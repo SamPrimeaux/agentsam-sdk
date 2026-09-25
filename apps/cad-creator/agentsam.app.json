@@ -11,6 +11,35 @@
     "robotics",
     "render"
   ],
+  "auth": {
+    "required": true,
+    "entry": {
+      "authenticated": "app.authenticated",
+      "login": "identity.login",
+      "failure": "identity.recovery"
+    },
+    "oauth": {
+      "startPattern": "/api/oauth/:provider/start",
+      "callbackPattern": "/api/oauth/:provider/callback"
+    }
+  },
+  "routes": {
+    "app.authenticated": { "path": "/cad", "auth": "required", "spa": true },
+    "app.home": { "path": "/cad" },
+    "identity.login": { "path": "/auth/login" },
+    "identity.recovery": { "path": "/auth/login" },
+    "identity.oauth.start": { "path": "/api/oauth/:provider/start" },
+    "identity.oauth.callback": { "path": "/api/oauth/:provider/callback" },
+    "entry": "/cad",
+    "mounts": [
+      {
+        "path": "/cad",
+        "auth": "required",
+        "spa": true,
+        "shell": "dist/index.html"
+      }
+    ]
+  },
   "preview": {
     "kind": "web",
     "bridge": "agentsam.preview.v1",
@@ -34,5 +63,10 @@
       "GEMINI_API_KEY"
     ]
   },
-  "bin": "bin/agentsam-cad-creator.mjs"
+  "bin": "bin/agentsam-cad-creator.mjs",
+  "install": {
+    "command": "npm install @inneranimalmedia/agentsam-sdk-cad-creator",
+    "selector": "cad-creator",
+    "paths": ["/install/cad", "/install/cad-creator"]
+  }
 }
