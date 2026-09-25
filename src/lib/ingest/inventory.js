@@ -1,6 +1,8 @@
 /**
  * Inventory projection for codebaseindex — structured authority + compact ASCII view.
  * The ASCII tree is a projection, not the source of truth.
+ *
+ * Scope suggestions categorize paths; they never auto-apply exclusions.
  */
 
 import fs from 'node:fs';
@@ -17,10 +19,54 @@ const EXT_LANG = new Map([
 const IMAGE = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico']);
 const MODEL3D = new Set(['.glb', '.gltf', '.obj', '.fbx', '.stl']);
 const ARCHIVE = new Set(['.zip', '.tar', '.tgz', '.gz']);
-const SUGGEST_EXCLUDE_NAMES = new Set([
+
+/** Usually exclude — dependency / build caches (candidates only). */
+const CATEGORY_DEPENDENCIES = new Set([
   'node_modules', '.git', 'dist', 'build', '.next', 'coverage', '.turbo',
-  '.cache', 'out', 'target', '__pycache__', '.venv', 'venv',
+  '.cache', 'out', 'target', '__pycache__', '.venv', 'venv', '.wrangler',
 ]);
+
+/** Primary source candidates. */
+const CATEGORY_SOURCE = new Set([
+  'src', 'apps', 'packages', 'protocol', 'python', 'services', 'lib', 'server',
+  'worker', 'workers', 'runtime', 'cmd', 'internal', 'pkg',
+]);
+
+/** Documentation / examples. */
+const CATEGORY_DOCS = new Set([
+  'docs', 'examples', 'guides', 'handbook', 'README', 'changelog',
+]);
+
+/** Tooling / CI — review before including. */
+const CATEGORY_TOOLING = new Set([
+  'bin', 'scripts', 'tools', '.github', '.changeset', '.husky', '.vscode',
+  '.cursor', 'tags', 'test', 'tests', '__tests__', 'spec', 'e2e',
+]);
+
+/** Generated / historical — review before including. */
+const CATEGORY_GENERATED = new Set([
+  'generated', 'fixtures', 'snapshots', 'artifacts', 'public', 'static',
+  'site', 'sites', 'templates', 'level-1', 'focus-timer',
+]);
+
+/** AgentSam / config control plane — review. */
+const CATEGORY_CONFIG = new Set([
+  '.agentsam', 'migrations', 'registry', 'wrangler', 'deploy',
+]);
+
+const SUGGEST_EXCLUDE_NAMES = CATEGORY_DEPENDENCIES;
+
+function classifyTopLevel(name) {
+  if (CATEGORY_DEPENDENCIES.has(name)) return 'dependencies';
+  if (CATEGORY_SOURCE.has(name)) return 'source';
+  if (CATEGORY_DOCS.has(name)) return 'docs';
+  if (CATEGORY_GENERATED.has(name)) return 'generated';
+  if (CATEGORY_CONFIG.has(name)) return 'config';
+  if (CATEGORY_TOOLING.has(name)) return 'tooling';
+  if (/^(old|legacy|archive|backup|tmp|temp)/i.test(name)) return 'historical';
+  if (name.startsWith('.')) return 'config';
+  return 'unknown';
+}
 
 function walk(root, rel = '', acc = [], depth = 0) {
   if (depth > 6 || acc.length > 8000) return acc;
@@ -88,9 +134,41 @@ export function buildInventory(opts) {
   const archives = files.filter((f) => f.media === 'archive').length;
   const packageManifests = files.filter((f) => f.name === 'package.json').length;
 
-  const suggestedInclude = top.filter((n) => !SUGGEST_EXCLUDE_NAMES.has(n)).slice(0, 12);
+  /** @type {Record<string, string[]>} */
+  const categories = {
+    source: [],
+    docs: [],
+    config: [],
+    generated: [],
+    dependencies: [],
+    tooling: [],
+    historical: [],
+    unknown: [],
+  };
+  for (const name of top) {
+    categories[classifyTopLevel(name)].push(name);
+  }
+
+  const primaryInclude = [
+    ...categories.source,
+    ...categories.docs,
+  ];
+  const reviewInclude = [
+    ...categories.config,
+    ...categories.generated,
+    ...categories.tooling.filter((n) => n === 'test' || n === 'tests' || n === 'scripts'),
+  ];
+  const usuallyExclude = [
+    ...categories.dependencies,
+    ...categories.tooling.filter((n) => !reviewInclude.includes(n) && n !== 'scripts' && n !== 'test' && n !== 'tests'),
+    ...categories.historical,
+  ];
+
+  // Default starting include: primary source + docs (not "everything").
+  // Exclusions are candidates only — never auto-applied without user confirm.
+  const suggestedInclude = (primaryInclude.length ? primaryInclude : top.filter((n) => !CATEGORY_DEPENDENCIES.has(n))).slice(0, 24);
   if (!suggestedInclude.length) suggestedInclude.push('.');
-  const suggestedExclude = top.filter((n) => SUGGEST_EXCLUDE_NAMES.has(n));
+  const suggestedExclude = [...new Set(usuallyExclude)];
 
   /** @type {object} */
   const inventory = {
@@ -108,10 +186,12 @@ export function buildInventory(opts) {
     },
     languages,
     top_level: top,
+    categories,
     suggested: {
       include: suggestedInclude,
       exclude: suggestedExclude,
-      note: 'Suggestions are advisory — user confirmations are authoritative.',
+      review: reviewInclude,
+      note: 'Categories are machine inventory. Suggestions are advisory — no exclusions applied automatically. User confirmations are authoritative.',
     },
     materials: opts.materials || null,
     sample_paths: files.slice(0, 40).map((f) => f.path),
@@ -129,7 +209,10 @@ export function formatInventoryTree(inventory) {
   lines.push(`files ${inventory.counts.files} · dirs ${inventory.counts.directories} · LOC~${inventory.counts.loc_sampled}`);
   lines.push('');
   for (const name of inventory.top_level.slice(0, 24)) {
-    const mark = (inventory.suggested.exclude || []).includes(name) ? ' · suggested exclude' : '';
+    const cat = inventory.categories
+      ? Object.entries(inventory.categories).find(([, names]) => names.includes(name))?.[0]
+      : null;
+    const mark = cat ? ` · ${cat}` : '';
     lines.push(`├── ${name}/${mark}`);
   }
   if (inventory.top_level.length > 24) lines.push('└── …');
@@ -144,8 +227,17 @@ export function formatInventoryTree(inventory) {
   lines.push(`  ${inventory.counts.package_manifests} package.json`);
   lines.push(`  ${inventory.counts.images} images · ${inventory.counts.models3d} 3D · ${inventory.counts.archives} archives`);
   lines.push('');
-  lines.push('Suggested');
+  lines.push('Recommended scope candidates');
+  lines.push(`  Primary source     ${(inventory.categories?.source || []).join(', ') || '(none)'}`);
+  lines.push(`  Documentation      ${(inventory.categories?.docs || []).join(', ') || '(none)'}`);
+  lines.push(`  Review before incl ${(inventory.suggested?.review || []).join(', ') || '(none)'}`);
+  lines.push(`  Usually exclude    ${(inventory.suggested?.exclude || []).join(', ') || '(none)'}`);
+  lines.push('  (No exclusions applied automatically.)');
+  lines.push('');
+  lines.push('Starting suggestion (editable)');
   lines.push(`  include: ${(inventory.suggested.include || []).join(', ') || '(none)'}`);
   lines.push(`  exclude: ${(inventory.suggested.exclude || []).join(', ') || '(none)'}`);
   return lines.join('\n');
 }
+
+export { classifyTopLevel };

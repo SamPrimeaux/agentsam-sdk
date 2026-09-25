@@ -79,14 +79,71 @@ export function advanceJobGraph(graph, throughId) {
       break;
     }
   }
-  next.work_items = next.nodes.map((n) => ({
+  syncWorkItems(next);
+  const allDone = next.nodes.every((n) => n.status === 'done' || n.status === 'skipped');
+  next.status = allDone ? 'completed' : 'running';
+  return next;
+}
+
+/**
+ * After a successful dry-run: freeze remaining nodes as planned (not "run").
+ * Prevents `→ ast.parse` looking like the CLI is waiting for another command.
+ *
+ * @param {ReturnType<typeof createCodebaseindexJobGraph>} graph
+ * @param {{ skipEmbedding?: boolean }} [opts]
+ */
+export function freezePlanJobGraph(graph, opts = {}) {
+  const next = structuredClone(graph);
+  next.updated_at = new Date().toISOString();
+  next.status = 'planned';
+  for (const node of next.nodes) {
+    if (node.status === 'done') continue;
+    if (opts.skipEmbedding && node.id === 'embedding.generate') {
+      node.status = 'skipped';
+      node.completed_at = next.updated_at;
+      continue;
+    }
+    // Clear accidental "run" pointer from advanceJobGraph
+    node.status = 'planned';
+    node.started_at = null;
+  }
+  syncWorkItems(next);
+  return next;
+}
+
+/**
+ * Human projection of the job graph for CLI notes.
+ * @param {ReturnType<typeof createCodebaseindexJobGraph>} graph
+ * @param {{ planOnly?: boolean }} [opts]
+ */
+export function formatJobGraphHuman(graph, opts = {}) {
+  const lines = [];
+  const planned = [];
+  for (const n of graph.nodes || []) {
+    if (n.status === 'done') lines.push(`✓ ${n.id}`);
+    else if (n.status === 'skipped') lines.push(`⊘ ${n.id}   skipped`);
+    else if (opts.planOnly || n.status === 'planned' || graph.status === 'planned') {
+      planned.push(n.id);
+    } else if (n.status === 'run') lines.push(`→ ${n.id}`);
+    else lines.push(`· ${n.id}`);
+  }
+  if (planned.length) {
+    lines.push('');
+    lines.push('PLANNED FOR RUN');
+    for (const id of planned) lines.push(`○ ${id}`);
+  }
+  return lines.join('\n');
+}
+
+function syncWorkItems(graph) {
+  graph.work_items = graph.nodes.map((n) => ({
     id: n.id,
     title: n.id,
-    status: n.status === 'done' ? 'completed' : n.status === 'run' ? 'in_progress' : 'pending',
+    status: n.status === 'done' || n.status === 'skipped' ? 'completed'
+      : n.status === 'run' ? 'in_progress'
+        : n.status === 'planned' ? 'planned'
+          : 'pending',
     start: n.started_at,
     end: n.completed_at,
   }));
-  const allDone = next.nodes.every((n) => n.status === 'done');
-  next.status = allDone ? 'completed' : 'running';
-  return next;
 }

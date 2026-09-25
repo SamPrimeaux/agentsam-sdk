@@ -260,10 +260,12 @@ export async function suggestScopeWithLocalModel(opts) {
     'You help configure a repository knowledge allowlist/denylist for AgentSam codebaseindex.',
     'Return ONLY compact JSON: {"include":["..."],"exclude":["..."],"rationale":"..."}',
     'include/exclude must be relative path segments (no globs). Prefer source dirs; exclude deps/build caches.',
+    'Machine inventory already classified top-level paths — prefer refining those categories, do not invent unrelated roots.',
     `Repository root: ${opts.root}`,
+    opts.categories ? `Categories JSON: ${JSON.stringify(opts.categories)}` : '',
     'Top-level entries:',
     listing || '(empty)',
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 
   const response = await (opts.fetchImpl || fetch)(endpoint, {
     method: 'POST',

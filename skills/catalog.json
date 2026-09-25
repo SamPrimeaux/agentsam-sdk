@@ -76,7 +76,7 @@
         "sam.codebaseindex"
       ],
       "title": "AgentSam Codebaseindex",
-      "description": "Guided ingest for repos and dropped materials (archives, HTML, images, GLB) with allowlist, embedding, and storage preferences.",
+      "description": "Inventory-first codebase ingest. Pipeline IDs are not shell commands — use agentsam codebaseindex / codebaseindex.ingest.",
       "entry": "agentsam-codebaseindex/SKILL.md",
       "references": [],
       "user_invocable": true

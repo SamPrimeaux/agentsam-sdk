@@ -24,7 +24,7 @@ import {
   suggestScopeWithLocalModel,
 } from '../lib/ingest/discover-models.js';
 import { buildInventory, formatInventoryTree } from '../lib/ingest/inventory.js';
-import { createCodebaseindexJobGraph, advanceJobGraph } from '../lib/ingest/job-graph.js';
+import { createCodebaseindexJobGraph, advanceJobGraph, freezePlanJobGraph, formatJobGraphHuman } from '../lib/ingest/job-graph.js';
 
 function pick(value, label = 'Cancelled') {
   if (isCancel(value)) {
@@ -178,7 +178,7 @@ export async function runCodebaseindexIngest(input = {}, ctx = {}) {
     if (input.planOnly) {
       const plan = await planIndex({ root, config, store, embed });
       jobGraph = advanceJobGraph(jobGraph, 'plan.dry_run');
-      jobGraph.status = 'planned';
+      jobGraph = freezePlanJobGraph(jobGraph, { skipEmbedding: !embed });
       return {
         pipeline: 'sam.codebaseindex.index.run',
         operation: 'codebaseindex.ingest',
@@ -244,8 +244,11 @@ function helpText() {
     'Agent Sam · codebaseindex (ingest)',
     '',
     '  Guided SAM primitive for indexing a repo and/or dropped materials.',
-    '  Pipeline: sam.codebaseindex.index.run',
+    '  CLI: agentsam codebaseindex',
     '  Operation: codebaseindex.ingest',
+    '  Pipeline id (receipts/telemetry — NOT a shell command): sam.codebaseindex.index.run',
+    '',
+    '  After a dry-run plan, rerun and choose "Run ingest now" — do not type the pipeline id.',
     '',
     '  Embedding models are discovered from your configured provider credentials',
     '  (OpenAI, Gemini, Cloudflare Workers AI for Vectorize). Ollama is optional.',
@@ -345,18 +348,18 @@ async function runWizard(root, opts) {
     return { mode: 'inventory_only', inventory, staged, pipeline: 'sam.codebaseindex.index.run' };
   }
 
-  // ④ Scope
+  // Default scope from categorized inventory (not "include everything")
   let include = opts.include ? splitList(opts.include) : [...(inventory.suggested.include || [])];
-  let exclude = opts.exclude ? splitList(opts.exclude) : [];
+  let exclude = opts.exclude ? splitList(opts.exclude) : [...(inventory.suggested.exclude || [])];
 
   if (discovered.assistModels.length) {
     const assistChoice = pick(await select({
       message: '④ Scope — how to set include/exclude?',
       initialValue: 'from_inventory',
       options: [
-        { value: 'from_inventory', label: 'Start from inventory suggestions', hint: 'you still edit' },
+        { value: 'from_inventory', label: 'Start from inventory categories', hint: 'source+docs in · usually-exclude out · you still edit' },
         { value: 'manual', label: 'Enter include/exclude myself', hint: 'blank exclude = exclude nothing' },
-        { value: 'assist', label: 'Suggest with local Ollama (optional)', hint: 'advisory only' },
+        { value: 'assist', label: 'Suggest with local Ollama (optional)', hint: 'advisory only — inventory still owns categories' },
       ],
     }));
     if (assistChoice === 'manual') {
@@ -376,6 +379,7 @@ async function runWizard(root, opts) {
           root,
           model: modelPick,
           topLevel: inventory.top_level,
+          categories: inventory.categories,
         });
         note(
           [
@@ -490,14 +494,32 @@ async function runWizard(root, opts) {
 
   if (result?.job_graph) {
     note(
-      result.job_graph.nodes.map((n) => `${n.status === 'done' ? '✓' : n.status === 'run' ? '→' : '·'} ${n.id}`).join('\n'),
+      formatJobGraphHuman(result.job_graph, { planOnly }),
       'Job graph',
     );
   }
 
-  outro(planOnly
-    ? `Plan ready · pipeline ${result.pipeline}`
-    : `Ingest complete · pipeline ${result.pipeline}`);
+  if (planOnly) {
+    outro([
+      'Plan complete',
+      '',
+      'No index was written because you selected Dry-run / plan.',
+      '',
+      'Pipeline ID (not a shell command)',
+      `  ${result.pipeline}`,
+      '',
+      'Next',
+      '  agentsam codebaseindex',
+      '    → choose "Run ingest now"',
+      '',
+      'Script/API',
+      '  sam.invoke("codebaseindex.ingest", { ..., planOnly: false })',
+      '',
+      'tip: use skill agentsam-codebaseindex',
+    ].join('\n'));
+  } else {
+    outro(`Ingest complete · pipeline id ${result.pipeline} (not a shell command)`);
+  }
   return result;
 }
 
