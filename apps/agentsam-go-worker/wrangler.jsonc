@@ -2,7 +2,9 @@
   "name": "agentsam-go-worker",
   "main": "worker/src/index.js",
   "compatibility_date": "2026-09-01",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "containers": [
     {
       "class_name": "AgentSamGoRuntime",
@@ -22,7 +24,15 @@
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["AgentSamGoRuntime"]
+      "new_sqlite_classes": [
+        "AgentSamGoRuntime"
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "pattern": "runtime.inneranimalmedia.com",
+      "custom_domain": true
     }
   ]
 }
