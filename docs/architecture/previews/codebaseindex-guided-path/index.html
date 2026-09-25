@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Codebaseindex Guided Path — Preview</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f1ea;
+      --ink: #1a1c1e;
+      --muted: #5c6370;
+      --panel: #fffcf7;
+      --line: #d8d0c4;
+      --accent: #2f6f4e;
+      --accent-2: #b45309;
+      --bar: #3d7a5a;
+      --bar-done: #2f6f4e;
+      --bar-run: #c27803;
+      --bar-wait: #9aa3af;
+      --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+      --sans: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+      --display: "Fraunces", Georgia, serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 16px/1.5 var(--sans);
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #e8efe8 0%, transparent 55%),
+        radial-gradient(900px 500px at 100% 0%, #f3e6d4 0%, transparent 50%),
+        var(--bg);
+    }
+    main { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+    h1 {
+      font-family: var(--display);
+      font-weight: 550;
+      font-size: clamp(1.8rem, 3vw, 2.4rem);
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+    .sub { color: var(--muted); margin: 0 0 28px; max-width: 62ch; }
+    .pill {
+      display: inline-block;
+      font: 12px/1 var(--mono);
+      padding: 5px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      margin-right: 6px;
+      background: var(--panel);
+    }
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 20px 22px;
+      margin: 0 0 18px;
+    }
+    section h2 {
+      margin: 0 0 12px;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      font-weight: 650;
+    }
+    ol.steps {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+    }
+    ol.steps li {
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 10px 12px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+    }
+    ol.steps li.active {
+      border-color: var(--accent);
+      background: #eef6f1;
+    }
+    ol.steps .n {
+      font: 700 14px/36px var(--mono);
+      width: 36px; height: 36px;
+      text-align: center;
+      border-radius: 50%;
+      background: #e7ece7;
+      color: var(--accent);
+    }
+    ol.steps li.active .n { background: var(--accent); color: #fff; }
+    ol.steps strong { display: block; }
+    ol.steps span { color: var(--muted); font-size: 0.92rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    code { font-family: var(--mono); font-size: 0.84em; }
+    .lanes {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 800px) { .lanes { grid-template-columns: 1fr; } }
+    .lane {
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 14px;
+      min-height: 140px;
+    }
+    .lane h3 { margin: 0 0 6px; font-size: 1rem; }
+    .lane p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+    .lane.pick { outline: 2px solid var(--accent); background: #f3faf6; }
+    .gantt { display: grid; gap: 8px; margin-top: 8px; }
+    .gantt-row {
+      display: grid;
+      grid-template-columns: 140px 1fr 72px;
+      gap: 10px;
+      align-items: center;
+    }
+    .gantt-row .label { font: 12px/1.2 var(--mono); }
+    .track {
+      height: 18px;
+      background: #ece7df;
+      border-radius: 3px;
+      position: relative;
+      overflow: hidden;
+    }
+    .bar {
+      position: absolute;
+      top: 0; bottom: 0;
+      border-radius: 3px;
+      background: var(--bar-wait);
+    }
+    .bar.done { background: var(--bar-done); }
+    .bar.run { background: var(--bar-run); }
+    .bar.wait { background: var(--bar-wait); opacity: 0.55; }
+    .status { font: 11px/1 var(--mono); color: var(--muted); text-align: right; }
+    .cli {
+      font: 13px/1.55 var(--mono);
+      background: #1b1f24;
+      color: #d7e0ea;
+      padding: 14px 16px;
+      border-radius: 4px;
+      white-space: pre-wrap;
+    }
+    .cli .dim { color: #8b95a5; }
+    .cli .ok { color: #6dcea2; }
+    .cli .tip { color: #e0b35a; }
+    a.doc { color: var(--accent); }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    button {
+      font: 13px/1 var(--sans);
+      padding: 9px 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  </style>
+</head>
+<body>
+  <main>
+    <p>
+      <span class="pill">plan preview</span>
+      <span class="pill">sam.codebaseindex.index.run</span>
+      <span class="pill">codebaseindex.ingest</span>
+    </p>
+    <h1>Codebaseindex guided path</h1>
+    <p class="sub">
+      Inventory first, then scope, then vector lane. Owner IAM already runs Gemini@1536 → Supabase via node-api;
+      customers get the same harness as a template (local · Supabase+edge · CF Vectorize).
+      Spec:
+      <a class="doc" href="./CODEBASEINDEX_GUIDED_PATH.md">CODEBASEINDEX_GUIDED_PATH.md</a>
+    </p>
+
+    <section>
+      <h2>Wizard · one option at a time</h2>
+      <ol class="steps" id="steps"></ol>
+      <div class="actions">
+        <button type="button" id="prev">Back</button>
+        <button type="button" class="primary" id="next">Next step</button>
+        <button type="button" id="reset">Reset</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Vector lane choices</h2>
+      <div class="lanes">
+        <div class="lane" data-lane="local">
+          <h3>Local SQLite</h3>
+          <p>Ollama / paid embed on this machine. Free semantic search offline. Default for SDK.</p>
+        </div>
+        <div class="lane" data-lane="supabase">
+          <h3>Supabase + node-api</h3>
+          <p>BYO edge (IAM node-api template) → Hyperdrive/PG. Host SSOT pattern for Gemini@1536.</p>
+        </div>
+        <div class="lane" data-lane="vectorize">
+          <h3>CF Vectorize</h3>
+          <p>Valid customer lane via binding/index. Not IAM host code-index SSOT.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Job Gantt · work-graph projection</h2>
+      <p class="sub" style="margin-bottom:12px">Same stage ids the CLI should emit in <code>codebaseindex.job.graph.v1</code>.</p>
+      <div class="gantt" id="gantt"></div>
+    </section>
+
+    <section>
+      <h2>Supabase tables (host code index)</h2>
+      <table>
+        <thead><tr><th>Table</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td><code>agentsam.agentsam_codebase_chunks_gemini_embedding_2_1536</code></td><td>Chunk ANN</td></tr>
+          <tr><td><code>agentsam.agentsam_codebase_files_gemini_embedding_2_1536</code></td><td>File vectors</td></tr>
+          <tr><td><code>agentsam.agentsam_codebase_ast_symbols_gemini_embedding_2_1536</code></td><td>Symbol ANN</td></tr>
+          <tr><td><code>agentsam.agentsam_gemini_semantic_embeddings_1536</code></td><td>Unified semantic authority</td></tr>
+          <tr><td><code>agentsam.agentsam_documents_gemini_embedding_2_1536</code></td><td>Documents twin</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>CLI/TUI sketch</h2>
+      <div class="cli" id="cli"></div>
+    </section>
+  </main>
+  <script type="module">
+    const STEPS = [
+      { id: 'connect', title: 'Provider / connection', detail: 'Discover credentials + Ollama. Owner skips scaffold.' },
+      { id: 'inventory', title: 'Scan → file map', detail: 'repository.inspect / Merkle inventory before any exclude.' },
+      { id: 'scope', title: 'Include / exclude', detail: 'User-authored paths; optional local chat assist.' },
+      { id: 'embed', title: 'Model + dimensions', detail: 'Discovered only — e.g. mxbai-embed-large:latest @ 1024.' },
+      { id: 'lane', title: 'Vector data source', detail: 'local · supabase+node-api · cloudflare_vectorize' },
+      { id: 'plan', title: 'Dry-run / plan', detail: 'Work-graph receipt — not a silent jump to write.' },
+      { id: 'run', title: 'Confirm → run', detail: 'Progress events feed this Gantt + terminal.' },
+    ];
+
+    const GANTT = [
+      { id: 'connect', start: 0, end: 10, status: 'done' },
+      { id: 'inventory', start: 10, end: 28, status: 'done' },
+      { id: 'scope', start: 28, end: 40, status: 'done' },
+      { id: 'embed_profile', start: 40, end: 48, status: 'run' },
+      { id: 'lane', start: 48, end: 58, status: 'wait' },
+      { id: 'plan', start: 58, end: 70, status: 'wait' },
+      { id: 'index', start: 70, end: 92, status: 'wait' },
+      { id: 'activate', start: 92, end: 100, status: 'wait' },
+    ];
+
+    let step = 1;
+    let lane = 'local';
+
+    const stepsEl = document.getElementById('steps');
+    const ganttEl = document.getElementById('gantt');
+    const cliEl = document.getElementById('cli');
+
+    function renderSteps() {
+      stepsEl.innerHTML = STEPS.map((s, i) => `
+        <li class="${i === step ? 'active' : ''}">
+          <div class="n">${i + 1}</div>
+          <div><strong>${s.title}</strong><span>${s.detail}</span></div>
+        </li>`).join('');
+    }
+
+    function renderGantt() {
+      ganttEl.innerHTML = GANTT.map((row) => `
+        <div class="gantt-row">
+          <div class="label">${row.id}</div>
+          <div class="track"><div class="bar ${row.status}" style="left:${row.start}%;width:${row.end - row.start}%"></div></div>
+          <div class="status">${row.status}</div>
+        </div>`).join('');
+    }
+
+    function renderCli() {
+      const s = STEPS[step];
+      cliEl.innerHTML = [
+        `<span class="dim">agentsam codebaseindex</span>`,
+        `<span class="tip">tip: use skill agentsam-codebaseindex</span>`,
+        ``,
+        `<span class="ok">✓</span> step ${step + 1}/${STEPS.length} · ${s.id}`,
+        `  ${s.title}`,
+        `  lane preference: <span class="ok">${lane}</span>`,
+        ``,
+        step === 1 ? `  inventory: merkle_root=ab12… files=482 facets ready` : `  <span class="dim">(advance to see inventory framing)</span>`,
+        step >= 4 ? `  embed: discovered ollama|mxbai-embed-large:latest|1024` : '',
+        step >= 5 ? `  data source → ${lane === 'supabase' ? 'node-api → agentsam.agentsam_codebase_chunks_…' : lane}` : '',
+        step >= 6 ? `  plan receipt → codebaseindex.job.graph.v1` : '',
+      ].filter(Boolean).join('\n');
+    }
+
+    function renderLanes() {
+      document.querySelectorAll('.lane').forEach((el) => {
+        el.classList.toggle('pick', el.dataset.lane === lane);
+      });
+    }
+
+    function paint() {
+      renderSteps();
+      renderGantt();
+      renderCli();
+      renderLanes();
+    }
+
+    document.getElementById('next').onclick = () => { step = Math.min(STEPS.length - 1, step + 1); paint(); };
+    document.getElementById('prev').onclick = () => { step = Math.max(0, step - 1); paint(); };
+    document.getElementById('reset').onclick = () => { step = 0; lane = 'local'; paint(); };
+    document.querySelectorAll('.lane').forEach((el) => {
+      el.addEventListener('click', () => { lane = el.dataset.lane; paint(); });
+    });
+
+    paint();
+  </script>
+</body>
+</html>
