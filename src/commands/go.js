@@ -303,21 +303,31 @@ async function shipCloudflare({ discovery, productRoot, runtimeRoot, args, write
   else note('✓ asset relationships (local metadata)');
   note('✓ deployment receipt');
 
+  const buildOk = Boolean(
+    build.receipt.tests.go_test
+    && build.receipt.tests.go_vet
+    && build.receipt.tests.runtime_probe
+    && build.receipt.artifact.digest,
+  );
+  const containerOk = args.skipDeploy ? true : Boolean(container?.ok && container?.image_digest);
+  const deploymentOk = args.skipDeploy
+    ? true
+    : (args.dryRun ? Boolean(deploy.dryRunValidated) : Boolean(deploy.deployed && deploy.probes?.ok));
+  const registryOk = args.skipRegistry || args.dryRun || args.skipDeploy
+    ? true
+    : Boolean(deploy.registry?.remote);
   const payload = {
-    ok: Boolean(build && (args.dryRun || args.skipDeploy || deploy.probes?.ok || deploy.deployed)),
+    ok: buildOk && containerOk && deploymentOk && registryOk,
     product: args.product,
     existing_product: contract.existing,
     scaffold_changes_required: contract.created.length > 0,
     discovery,
     contract,
     build: build.receipt,
+    container,
     deploy,
     steps,
   };
-
-  // Idempotent success: second run with healthy prior deploy still ok even if live probe skipped.
-  if (args.dryRun || args.skipDeploy) payload.ok = true;
-  if (deploy.deployed && deploy.probes && !deploy.probes.skipped) payload.ok = deploy.probes.ok;
 
   if (args.json) write(`${JSON.stringify(payload)}\n`);
   else {
