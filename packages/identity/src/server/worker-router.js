@@ -80,7 +80,12 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
   const method = request.method.toUpperCase();
 
   const adapter = createCloudflareD1Adapter(env.DB);
-  const identity = options.identity || createIdentityService({ adapter });
+  const identity = options.identity || createIdentityService({
+    adapter,
+    // Local Studio product surface — OAuth without ?next= lands on Workbench.
+    defaultRedirect: options.defaultRedirect
+      || (url.hostname === 'agentsam.inneranimalmedia.com' ? '/agentsam' : '/'),
+  });
   const passwordReset = buildPasswordResetService(env, adapter, options);
 
   // ── API: email auth ─────────────────────────────────────────────────────
@@ -204,31 +209,36 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
   // ── OAuth ────────────────────────────────────────────────────────────────
   // Default: IAM_CLIENT_* (minted). Developer BYOK GOOGLE_*/GITHUB_* take the
   // matching /api/oauth/{provider}/start button when set.
-  if (path === '/api/oauth/iam/callback' && method === 'GET') {
-    return iamPlatformOAuthCallback(request, env, adapter, identity);
+  // Canonical platform id = inneranimalmedia (legacy /api/oauth/iam/* still accepted).
+  if (path === '/api/oauth/inneranimalmedia/callback' || path === '/api/oauth/iam/callback') {
+    if (method === 'GET') {
+      return iamPlatformOAuthCallback(request, env, adapter, identity);
+    }
   }
-  if (path === '/api/oauth/iam/start' && method === 'GET') {
-    const lane = resolveOAuthCredentialLane(env, 'iam');
-    if (!lane) return jsonResponse({ ok: false, error: 'iam_oauth_not_configured' }, 503);
-    return iamPlatformOAuthStart(request, env, adapter, identity);
+  if (path === '/api/oauth/inneranimalmedia/start' || path === '/api/oauth/iam/start') {
+    if (method === 'GET') {
+      const lane = resolveOAuthCredentialLane(env, 'inneranimalmedia');
+      if (!lane) return jsonResponse({ ok: false, error: 'inneranimalmedia_oauth_not_configured' }, 503);
+      return iamPlatformOAuthStart(request, env, adapter, identity);
+    }
   }
 
   if (path === '/api/oauth/google/start' && method === 'GET') {
     const lane = resolveOAuthCredentialLane(env, 'google');
     if (!lane) return jsonResponse({ ok: false, error: 'google_oauth_not_configured' }, 503);
     if (lane.lane === 'iam_platform') return iamPlatformOAuthStart(request, env, adapter, identity);
-    return oauthStart(request, env, adapter, 'google', lane);
+    return oauthStart(request, env, identity, adapter, 'google', lane);
   }
   if (path === '/api/oauth/github/start' && method === 'GET') {
     const lane = resolveOAuthCredentialLane(env, 'github');
     if (!lane) return jsonResponse({ ok: false, error: 'github_oauth_not_configured' }, 503);
     if (lane.lane === 'iam_platform') return iamPlatformOAuthStart(request, env, adapter, identity);
-    return oauthStart(request, env, adapter, 'github', lane);
+    return oauthStart(request, env, identity, adapter, 'github', lane);
   }
   if (path === '/api/oauth/cloudflare/start' && method === 'GET') {
     const lane = resolveOAuthCredentialLane(env, 'cloudflare');
     if (!lane) return jsonResponse({ ok: false, error: 'cloudflare_oauth_not_configured' }, 503);
-    return oauthStart(request, env, adapter, 'cloudflare', lane);
+    return oauthStart(request, env, identity, adapter, 'cloudflare', lane);
   }
 
   if (path === '/api/oauth/google/callback' && method === 'GET') {
@@ -293,44 +303,57 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
   return jsonResponse({ error: 'not_found', path }, 404);
 }
 
-async function oauthStart(request, env, adapter, provider, creds) {
+async function oauthStart(request, env, identity, adapter, provider, creds) {
   const url = new URL(request.url);
   if (!creds.clientId) {
     return jsonResponse({ ok: false, error: `${provider}_oauth_not_configured` }, 503);
   }
-  const state = randomOAuthState();
-  const codeVerifier = pkceVerifier();
-  const codeChallenge = await pkceChallenge(codeVerifier);
-  const redirectTo = identity.resolvePostLoginPath(
-    url.searchParams.get('next') || url.searchParams.get('return_to'),
-  );
-  await adapter.saveOAuthState({ state, provider, codeVerifier, redirectTo });
+  try {
+    const state = randomOAuthState();
+    const codeVerifier = pkceVerifier();
+    const codeChallenge = await pkceChallenge(codeVerifier);
+    const redirectTo = identity.resolvePostLoginPath(
+      url.searchParams.get('next') || url.searchParams.get('return_to'),
+    );
+    await adapter.saveOAuthState({ state, provider, codeVerifier, redirectTo });
 
-  const redirectUri = `${url.origin}/api/oauth/${provider}/callback`;
-  let authUrl;
-  if (provider === 'google') {
-    authUrl = getGoogleAuthUrl({
-      clientId: creds.clientId,
-      redirectUri,
-      state,
-      codeChallenge,
-    });
-  } else if (provider === 'cloudflare') {
-    authUrl = getCloudflareAuthUrl({
-      clientId: creds.clientId,
-      redirectUri,
-      state,
-      codeChallenge,
-    });
-  } else {
-    authUrl = getGithubAuthUrl({
-      clientId: creds.clientId,
-      redirectUri,
-      state,
-      codeChallenge,
-    });
+    const redirectUri = `${url.origin}/api/oauth/${provider}/callback`;
+    let authUrl;
+    if (provider === 'google') {
+      authUrl = getGoogleAuthUrl({
+        clientId: creds.clientId,
+        redirectUri,
+        state,
+        codeChallenge,
+      });
+    } else if (provider === 'cloudflare') {
+      authUrl = getCloudflareAuthUrl({
+        clientId: creds.clientId,
+        redirectUri,
+        state,
+        codeChallenge,
+      });
+    } else {
+      authUrl = getGithubAuthUrl({
+        clientId: creds.clientId,
+        redirectUri,
+        state,
+        codeChallenge,
+      });
+    }
+    return Response.redirect(authUrl, 302);
+  } catch (error) {
+    const message = String(error?.message || error || 'oauth_start_failed');
+    console.error('oauth_start_failed', provider, message);
+    // Prefer redirect to login with error over bare Worker 1101 for browsers.
+    const login = new URL('/auth/login', url.origin);
+    login.searchParams.set('error', 'oauth_start_failed');
+    login.searchParams.set('provider', provider);
+    login.searchParams.set('detail', message.slice(0, 120));
+    const next = url.searchParams.get('next') || url.searchParams.get('return_to');
+    if (next) login.searchParams.set('next', next);
+    return Response.redirect(login.toString(), 302);
   }
-  return Response.redirect(authUrl, 302);
 }
 
 async function oauthCallback(request, env, identity, adapter, provider, creds) {

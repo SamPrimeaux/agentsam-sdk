@@ -42,8 +42,10 @@ describe('oauth credentials', () => {
     const lane = resolveOAuthCredentialLane(env, 'google');
     assert.equal(lane?.lane, 'byok_google');
     assert.equal(lane?.clientId, 'google-byok');
-    // IAM start path still resolves IAM
+    // IAM / inneranimalmedia start path still resolves platform lane
     assert.equal(resolveOAuthCredentialLane(env, 'iam')?.lane, 'iam_platform');
+    assert.equal(resolveOAuthCredentialLane(env, 'inneranimalmedia')?.provider, 'inneranimalmedia');
+    assert.equal(resolveOAuthCredentialLane(env, 'inneranimalmedia')?.lane, 'iam_platform');
   });
 
   it('prefers IAM_OAUTH_ISSUER and exposes issuer as the canonical authority', () => {

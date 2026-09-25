@@ -14,6 +14,13 @@ const CHEVRON_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
 
 const FALLBACK_MCP_SERVERS = [
   {
+    slug: "agentsam-mcp",
+    display_name: "AgentSam MCP",
+    status: "needs_oauth",
+    connected: false,
+    oauth_start: "/api/connections/cloudflare/start",
+  },
+  {
     slug: "inneranimalmedia-mcp-server",
     display_name: "Inner Animal MCP",
     status: "needs_bridge",
@@ -694,6 +701,21 @@ function toggleToolMenu() {
   }
 }
 
+async function startCloudflareMcpOAuth() {
+  const response = await fetch("/api/connections/cloudflare/start", {
+    credentials: "same-origin",
+    headers: {
+      Accept: "application/json",
+      "X-Agentsam-Oauth": "json",
+    },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.authorize_url) {
+    throw new Error(data.message || data.error || "Could not start Cloudflare MCP OAuth");
+  }
+  window.location.assign(data.authorize_url);
+}
+
 function renderMcpList(servers) {
   const list = $("agentsam-mcp-list");
   if (!list) return;
@@ -709,6 +731,8 @@ function renderMcpList(servers) {
     let trailing = "";
     if (isActive) {
       trailing = `<span class="agentsam-page-mcp-check" aria-hidden="true">✓</span>`;
+    } else if ((s.slug === "agentsam-mcp" || s.oauth_start) && !s.connected) {
+      trailing = `<span class="agentsam-page-mcp-link">Connect</span>`;
     } else if (s.slug === "github" && !s.connected && connectUrls.fnf_github_oauth) {
       trailing = `<span class="agentsam-page-mcp-link">Connect</span>`;
     } else if (!s.connected && s.status === "needs_bridge") {
@@ -722,8 +746,18 @@ function renderMcpList(servers) {
       </span>
       ${trailing}
     `;
-    btn.addEventListener("click", (e) => {
+    btn.addEventListener("click", async (e) => {
       e.stopPropagation();
+      if ((s.slug === "agentsam-mcp" || s.oauth_start) && !s.connected && !isActive) {
+        try {
+          await startCloudflareMcpOAuth();
+        } catch (err) {
+          console.error(err);
+          window.alert(err?.message || "Cloudflare MCP connect failed");
+        }
+        closeToolMenu();
+        return;
+      }
       if (s.slug === "github" && !s.connected && connectUrls.fnf_github_oauth && !isActive) {
         window.location.href = connectUrls.fnf_github_oauth;
         closeToolMenu();
@@ -743,8 +777,8 @@ function applyPlatformData(data) {
 
   const incoming = data.mcp_servers && data.mcp_servers.length ? data.mcp_servers : FALLBACK_MCP_SERVERS;
   const bySlug = new Map(incoming.map((s) => [s.slug, s]));
-  mcpServers = ["inneranimalmedia-mcp-server", "github"]
-    .map((slug) => bySlug.get(slug))
+  mcpServers = ["agentsam-mcp", "inneranimalmedia-mcp-server", "github"]
+    .map((slug) => bySlug.get(slug) || FALLBACK_MCP_SERVERS.find((row) => row.slug === slug))
     .filter(Boolean);
 
   if (!mcpServers.length) mcpServers = [...FALLBACK_MCP_SERVERS];

@@ -220,6 +220,15 @@ export async function handleCloudflareConnectionRequest(request, env) {
       state,
       codeChallenge: challenge,
     });
+    // Browser navigation → 302 to Cloudflare. XHR/fetch (Integrations UI) → JSON.
+    const accept = String(request.headers.get('accept') || '');
+    const mode = String(request.headers.get('sec-fetch-mode') || '');
+    const wantsJson = accept.includes('application/json')
+      || mode === 'cors'
+      || request.headers.get('x-agentsam-oauth') === 'json';
+    if (!wantsJson) {
+      return Response.redirect(authorize, 302);
+    }
     return json({ ok: true, authorize_url: authorize, callback: CLOUDFLARE_CALLBACK_PATH });
   }
 

@@ -21,12 +21,18 @@ npx wrangler secret put IAM_CLIENT_SECRET
 
 These routes live in the **customer** worker (`handleIdentityWorkerRequest`):
 
-1. `/api/oauth/iam/start` → redirects to IAM AS (requires minted `IAM_CLIENT_*`)
-2. `/api/oauth/google/start` → BYOK Google if `GOOGLE_*` set, else IAM if minted, else 503
+1. `/api/oauth/inneranimalmedia/start` → redirects to IAM AS (requires minted `IAM_CLIENT_*`)
+   - Legacy alias: `/api/oauth/iam/start`
+2. `/api/oauth/google/start` → BYOK Google if `GOOGLE_*` set, else platform lane if minted, else 503
 3. `/api/oauth/github/start` → same for GitHub
-4. Callback: `/api/oauth/iam/callback` (IAM lane) or `/api/oauth/{google|github}/callback` (BYOK)
+4. Callback: `/api/oauth/inneranimalmedia/callback` (platform lane) or `/api/oauth/{google|github|cloudflare}/callback` (BYOK)
+   - Legacy alias: `/api/oauth/iam/callback`
 
-Register IAM redirect URI: `https://<customer-host>/api/oauth/iam/callback`
+Register platform redirect URI on the IAM client:
+
+`https://<customer-host>/api/oauth/inneranimalmedia/callback`
+
+(Keep the legacy `/api/oauth/iam/callback` registered during migration.)
 
 ## IAM authorization server endpoints (issuer)
 

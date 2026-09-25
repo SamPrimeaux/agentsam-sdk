@@ -16,7 +16,7 @@ describe('iam identity provider', () => {
       getIamAuthUrl({
         issuer: 'https://inneranimalmedia.com',
         clientId: 'iam_identity_test',
-        redirectUri: 'https://legendary.example/api/oauth/iam/callback',
+        redirectUri: 'https://legendary.example/api/oauth/inneranimalmedia/callback',
         state: 'st_test',
         codeChallenge: 'challenge',
         scope: IAM_DEFAULT_OIDC_SCOPE,

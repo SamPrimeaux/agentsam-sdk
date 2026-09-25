@@ -46,11 +46,20 @@
       "provider": "github"
     },
     {
-      "path": "/api/oauth/iam/start",
+      "path": "/api/oauth/inneranimalmedia/start",
       "kind": "api",
       "access": "public",
       "provider": "inneranimalmedia",
-      "oauth_provider_key": "iam"
+      "oauth_provider_key": "iam",
+      "aliases": ["/api/oauth/iam/start"]
+    },
+    {
+      "path": "/api/oauth/inneranimalmedia/callback",
+      "kind": "api",
+      "access": "public",
+      "provider": "inneranimalmedia",
+      "oauth_provider_key": "iam",
+      "aliases": ["/api/oauth/iam/callback"]
     },
     {
       "path": "/api/oauth/cloudflare/start",

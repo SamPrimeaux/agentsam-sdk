@@ -76,6 +76,10 @@ export function IntegrationsGrid() {
     try {
       const response = await fetch("/api/connections/cloudflare/start", {
         credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "X-Agentsam-Oauth": "json",
+        },
       });
       const data = (await response.json().catch(() => ({}))) as {
         authorize_url?: string;
