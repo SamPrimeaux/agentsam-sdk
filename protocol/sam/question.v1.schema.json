@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.inneranimalmedia.com/protocol/sam/question.v1.schema.json",
+  "title": "AgentSamDecisionQuestion",
+  "type": "object",
+  "required": ["id", "type"],
+  "properties": {
+    "schema": { "const": "agentsam.decision-question.v1" },
+    "id": { "type": "string", "minLength": 1 },
+    "type": { "enum": ["choose", "score", "check"] },
+    "version": { "type": "integer", "minimum": 1 },
+    "instructions": {
+      "description": "string | object | array | null",
+      "type": ["string", "object", "array", "null"]
+    },
+    "criteria": {
+      "description": "string | object | array | null",
+      "type": ["string", "object", "array", "null"]
+    },
+    "options": { "type": "array", "items": { "type": "string" } },
+    "levels": { "type": "array" },
+    "evaluator_hint": {
+      "enum": ["deterministic", "heuristic", "graph", "semantic", "calibrated-statistical", null]
+    }
+  }
+}

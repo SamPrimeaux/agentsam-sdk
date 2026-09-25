@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.inneranimalmedia.com/protocol/sam/decision-receipt.v1.schema.json",
+  "title": "AgentSamDecisionReceipt",
+  "type": "object",
+  "required": ["schema", "decision_id", "answers", "created_at"],
+  "properties": {
+    "schema": { "const": "agentsam.decision-receipt.v1" },
+    "decision_id": { "type": "string" },
+    "question_contract": {},
+    "question_ids": { "type": "array", "items": { "type": "string" } },
+    "question_versions": { "type": "object" },
+    "evaluator": { "type": ["object", "null"] },
+    "evaluators": { "type": "array" },
+    "state_hash": { "type": ["string", "null"] },
+    "answers": { "type": "object" },
+    "policy_result": { "type": ["object", "null"] },
+    "action": {},
+    "outcome": { "type": ["object", "null"] },
+    "created_at": { "type": "string" },
+    "updated_at": { "type": "string" },
+    "why": { "type": "object" }
+  }
+}

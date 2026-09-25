@@ -100,6 +100,54 @@
       "cli": { "command": [["codebaseindex"], ["ingest"]] },
       "pipeline": "sam.codebaseindex.index.run",
       "status": "stable"
+    },
+    {
+      "id": "planning.astar",
+      "module": "planning",
+      "action": "astar",
+      "summary": "Deterministic A* planner (f = g + h).",
+      "execution": {
+        "lanes": ["local", "remote", "sandbox"],
+        "model": "never",
+        "network": "none",
+        "sideEffects": "none"
+      },
+      "risk": "read_only",
+      "capabilities": ["planning.astar"],
+      "cli": { "command": [] },
+      "status": "stable"
+    },
+    {
+      "id": "planning.goap",
+      "module": "planning",
+      "action": "goap",
+      "summary": "GOAP adapter over A* with preconditions and effects.",
+      "execution": {
+        "lanes": ["local", "remote", "sandbox"],
+        "model": "never",
+        "network": "none",
+        "sideEffects": "none"
+      },
+      "risk": "read_only",
+      "capabilities": ["planning.goap", "planning.astar"],
+      "cli": { "command": [] },
+      "status": "stable"
+    },
+    {
+      "id": "decision.evaluate",
+      "module": "decision",
+      "action": "evaluate",
+      "summary": "Evaluate choose/score/check questions against a SAM decision state.",
+      "execution": {
+        "lanes": ["local", "remote", "sandbox"],
+        "model": "optional",
+        "network": "optional",
+        "sideEffects": "none"
+      },
+      "risk": "read_only",
+      "capabilities": ["decision.evaluate"],
+      "cli": { "command": [] },
+      "status": "stable"
     }
   ]
 }

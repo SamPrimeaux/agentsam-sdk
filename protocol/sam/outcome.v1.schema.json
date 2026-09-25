@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.inneranimalmedia.com/protocol/sam/outcome.v1.schema.json",
+  "title": "AgentSamDecisionOutcome",
+  "type": "object",
+  "required": ["schema", "success", "recorded_at"],
+  "properties": {
+    "schema": { "const": "agentsam.decision-outcome.v1" },
+    "success": { "type": "boolean" },
+    "human_corrected": { "type": "boolean" },
+    "actual_class": {},
+    "verification": { "type": "array" },
+    "recorded_at": { "type": "string" }
+  }
+}

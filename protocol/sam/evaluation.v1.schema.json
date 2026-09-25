@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.inneranimalmedia.com/protocol/sam/evaluation.v1.schema.json",
+  "title": "AgentSamDecisionEvaluation",
+  "type": "object",
+  "required": ["schema", "ok", "answers", "state_hash"],
+  "properties": {
+    "schema": { "const": "agentsam.decision-evaluation.v1" },
+    "ok": { "type": "boolean" },
+    "state_hash": { "type": "string" },
+    "answers": { "type": "object" },
+    "routing": { "type": "object" },
+    "policy_result": { "type": "object" },
+    "model_used": { "type": "boolean" },
+    "deterministic": { "type": "boolean" },
+    "question_versions": { "type": "object" },
+    "receipt": { "type": "object" }
+  }
+}

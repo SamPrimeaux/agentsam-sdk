@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.inneranimalmedia.com/protocol/sam/answer.v1.schema.json",
+  "title": "AgentSamDecisionAnswer",
+  "type": "object",
+  "required": ["type", "question_id", "value"],
+  "properties": {
+    "schema": { "const": "agentsam.decision-answer.v1" },
+    "type": { "enum": ["choose", "score", "check"] },
+    "question_id": { "type": "string" },
+    "value": {},
+    "scores": { "type": ["object", "null"] },
+    "levels": { "type": ["object", "null"] },
+    "support": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "confidence_estimate": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Distribution concentration — NOT P(correct) unless calibrated"
+    },
+    "probabilities": {
+      "type": ["object", "null"],
+      "description": "Only when evaluator has a defined probabilistic interpretation"
+    },
+    "calibrated_probability": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 1
+    },
+    "calibration_id": { "type": ["string", "null"] },
+    "evaluator": { "type": ["object", "null"] },
+    "evidence": { "type": "array" },
+    "warnings": { "type": "array", "items": { "type": "string" } }
+  }
+}

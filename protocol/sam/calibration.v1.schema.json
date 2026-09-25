@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.inneranimalmedia.com/protocol/sam/calibration.v1.schema.json",
+  "title": "AgentSamDecisionCalibration",
+  "type": "object",
+  "properties": {
+    "schema": { "const": "agentsam.decision-calibration.v1" },
+    "kind": { "enum": ["metrics", "dataset_export", "model_card"] },
+    "ece": { "type": "number" },
+    "reliability": { "type": "array" },
+    "brier": { "type": "number" },
+    "log_loss": { "type": "number" },
+    "calibration_id": { "type": "string" },
+    "training_window": {},
+    "sample_count": { "type": "integer" },
+    "validation_metrics": { "type": "object" },
+    "question_version": {},
+    "rows": { "type": "array" },
+    "note": { "type": "string" }
+  }
+}

@@ -66,6 +66,13 @@ export class AgentSamClient {
     this.codebaseindex = {
       ingest: (input = {}, opts) => this.invoke('codebaseindex.ingest', normalizeRootInput(input), opts),
     };
+    this.decision = {
+      evaluate: (input = {}, opts) => this.invoke('decision.evaluate', input, opts),
+    };
+    this.planning = {
+      astar: (input = {}, opts) => this.invoke('planning.astar', input, opts),
+      goap: (input = {}, opts) => this.invoke('planning.goap', input, opts),
+    };
   }
 
   /**

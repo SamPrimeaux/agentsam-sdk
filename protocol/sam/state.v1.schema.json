@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.inneranimalmedia.com/protocol/sam/state.v1.schema.json",
+  "title": "AgentSamDecisionState",
+  "type": "object",
+  "required": ["schema"],
+  "properties": {
+    "schema": { "const": "agentsam.decision-state.v1" },
+    "intent": {},
+    "goal": {},
+    "repository": { "type": ["object", "null"] },
+    "code": { "type": ["object", "null"] },
+    "runtime": { "type": ["object", "null"] },
+    "tools": {},
+    "skills": {},
+    "models": {},
+    "constraints": { "type": ["object", "null"] },
+    "evidence": { "type": "array" },
+    "history": {},
+    "metadata": { "type": "object" },
+    "facts": { "type": "object" }
+  }
+}

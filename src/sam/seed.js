@@ -7,6 +7,7 @@ import { cadBlenderInspectOp } from './operations/cad-blender-inspect.js';
 import { codebaseindexIngestOp } from './operations/codebaseindex-ingest.js';
 import { planningAstarOp } from './operations/planning-astar.js';
 import { planningGoapOp } from './operations/planning-goap.js';
+import { decisionEvaluateOp } from './operations/decision-evaluate.js';
 
 export const SEED_OPERATIONS = [
   repositoryInspect,
@@ -17,6 +18,7 @@ export const SEED_OPERATIONS = [
   codebaseindexIngestOp,
   planningAstarOp,
   planningGoapOp,
+  decisionEvaluateOp,
 ];
 
 let seeded = false;
