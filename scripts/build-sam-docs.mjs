@@ -308,6 +308,11 @@ function buildHub() {
         <span>Hands-on drills for Merkle, AST, GOAP, retrieval, security, terminals, and release proof.</span>
         <span class="path">/docs/sam/infrastructure-cookbooks</span>
       </a>
+      <a class="hub-card" href="/docs/sam/native-runtime/">
+        <b>Native Go runtime</b>
+        <span>Local, Cloudflare, deployment proof, and how the native runtime graduates toward agentsamd.</span>
+        <span class="path">/docs/sam/native-runtime</span>
+      </a>
     </div>
   </main>
   <div id="asbd-footer-mount" data-cms-region="footer"></div>
