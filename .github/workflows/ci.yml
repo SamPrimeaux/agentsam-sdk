@@ -48,6 +48,9 @@ jobs:
       - name: Verify Cloudflare Worker + Container config
         run: npm --prefix apps/agentsam-go-worker run verify:worker
 
+      - name: Verify Go service distribution isolation
+        run: npm run verify:go-distribution
+
       - name: Verify installed package in unrelated repositories
         run: npm run verify:knowledge-package
 

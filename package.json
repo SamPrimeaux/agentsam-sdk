@@ -218,7 +218,8 @@
     "cad:registry:check": "node scripts/cad-registry.mjs --check",
     "test:providers": "node --test packages/providers/completeful/test/*.test.mjs",
     "test:themes": "npm --prefix packages/heuristic-theme test && npm --prefix packages/theme-church-site test && npm --prefix packages/theme-companions-site test && npm --prefix packages/theme-floors-site test && npm --prefix packages/theme-fuelnfree-site test && npm --prefix packages/theme-handyman-site test && npm --prefix packages/theme-insurance-site test && npm --prefix packages/theme-shinshu-site test",
-    "theme:harvest": "python3 scripts/theme-refinery/harvest.py"
+    "theme:harvest": "python3 scripts/theme-refinery/harvest.py",
+    "verify:go-distribution": "node scripts/verify-go-distribution.mjs"
   },
   "engines": {
     "node": ">=22 <25",
