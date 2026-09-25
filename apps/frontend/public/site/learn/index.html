@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Learn — AgentSam</title>
-  <meta name="description" content="AgentSam learn hub: architecture field manual and package guides." />
+  <meta name="description" content="Interactive gallery of AgentSam offerings: themes, SDK, knowledge, CAD, sandboxes, and more." />
   <meta name="agentsam:page" content="learn" />
   <meta name="agentsam:route" content="agentsam.inneranimalmedia.com/learn/" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -12,29 +12,55 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/site/global/asbd-tokens.css" />
   <script src="/site/global/asbd-theme.js" defer></script>
-
   <style>
     body { margin:0; min-height:100vh; font-family:var(--asbd-font-sans); background:var(--asbd-surface); color:var(--asbd-text); }
-    .asbd-doc { max-width:var(--asbd-layout-max); margin:0 auto; padding:calc(var(--asbd-header-height)+32px) 32px 80px; }
-    .asbd-breadcrumb { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:13px; font-weight:600; color:var(--asbd-text-muted); margin-bottom:28px; }
+    .learn-wrap { max-width:var(--asbd-layout-max); margin:0 auto; padding:calc(var(--asbd-header-height)+28px) 32px 96px; }
+    .asbd-breadcrumb { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:13px; font-weight:600; color:var(--asbd-text-muted); margin-bottom:22px; }
     .asbd-breadcrumb a { color:var(--asbd-text-muted); text-decoration:none; }
     .asbd-breadcrumb a:hover { color:var(--asbd-color-blue); }
-    .asbd-breadcrumb [aria-current="page"] { color:var(--asbd-text); }
-    .asbd-doc-toolbar { display:flex; justify-content:flex-end; margin-bottom:18px; }
+    .asbd-doc-toolbar { display:flex; justify-content:flex-end; margin-bottom:12px; }
     .asbd-theme-toggle { font:inherit; font-size:13px; font-weight:700; border-radius:10px; border:1px solid var(--asbd-border); background:var(--asbd-surface-elevated); color:var(--asbd-text); padding:8px 14px; cursor:pointer; }
-    h1 { font-size:clamp(2rem,4vw,2.75rem); letter-spacing:-0.03em; margin:0 0 12px; }
-    .lead { color:var(--asbd-text-muted); max-width:62ch; margin:0 0 28px; line-height:1.55; }
-    .learn-grid { display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
-    .learn-card { display:block; text-decoration:none; color:inherit; background:var(--asbd-surface-elevated); border:1px solid var(--asbd-border); border-radius:var(--asbd-radius); padding:22px; transition:border-color .2s ease; }
-    .learn-card:hover { border-color:rgba(22,123,252,0.45); }
-    .learn-card h2 { margin:0 0 8px; font-size:1.1rem; color:var(--asbd-color-blue); }
-    .learn-card p { margin:0; color:var(--asbd-text-muted); line-height:1.5; font-size:0.95rem; }
-    code { font-family:var(--asbd-font-mono); font-size:0.92em; }
+    .kicker { font-size:11px; letter-spacing:.14em; text-transform:uppercase; font-weight:800; color:var(--asbd-color-blue); margin:0 0 10px; }
+    h1 { font-size:clamp(2.1rem,4.4vw,3rem); letter-spacing:-0.035em; margin:0 0 12px; line-height:1.05; }
+    .lead { color:var(--asbd-text-muted); max-width:62ch; margin:0 0 28px; line-height:1.55; font-size:1.05rem; }
+    .filters { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:28px; }
+    .filter { border:1px solid var(--asbd-border); background:transparent; color:var(--asbd-text-muted); border-radius:999px; padding:8px 14px; font:inherit; font-size:13px; font-weight:700; cursor:pointer; transition:border-color .15s,color .15s,background .15s; }
+    .filter:hover,.filter.active { color:var(--asbd-text); border-color:rgba(22,123,252,.55); background:rgba(22,123,252,.12); }
+    .learn-grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); }
+    .mod { display:flex; flex-direction:column; text-align:left; border:1px solid var(--asbd-border); background:var(--asbd-surface-elevated); border-radius:18px; padding:0; overflow:hidden; color:inherit; transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease; }
+    .mod:hover { transform:translateY(-2px); border-color:rgba(22,123,252,.4); box-shadow:0 18px 40px rgba(0,0,0,.22); }
+    .mod-preview { height:148px; background:linear-gradient(145deg,rgba(22,123,252,.18),rgba(10,22,40,.9)); position:relative; overflow:hidden; }
+    .mod-preview[data-tone="lime"] { background:linear-gradient(145deg,rgba(183,255,86,.2),rgba(10,22,40,.92)); }
+    .mod-preview[data-tone="cyan"] { background:linear-gradient(145deg,rgba(90,220,255,.2),rgba(10,22,40,.92)); }
+    .mod-preview[data-tone="amber"] { background:linear-gradient(145deg,rgba(255,190,90,.22),rgba(10,22,40,.92)); }
+    .mod-preview[data-tone="violet"] { background:linear-gradient(145deg,rgba(170,120,255,.22),rgba(10,22,40,.92)); }
+    .mod-preview-mark { position:absolute; left:18px; bottom:16px; font-size:13px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; opacity:.9; }
+    .mod-body { padding:18px 18px 16px; display:flex; flex-direction:column; gap:10px; flex:1; }
+    .mod-cat { font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--asbd-color-blue); }
+    .mod h2 { margin:0; font-size:1.15rem; letter-spacing:-.02em; }
+    .mod p { margin:0; color:var(--asbd-text-muted); line-height:1.5; font-size:.95rem; flex:1; }
+    .mod-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+    .mod-actions a,.mod-actions button { font:inherit; font-size:12px; font-weight:700; border-radius:10px; padding:9px 12px; border:1px solid var(--asbd-border); background:transparent; color:var(--asbd-text); text-decoration:none; cursor:pointer; }
+    .mod-actions a.primary,.mod-actions button.primary { background:var(--asbd-color-blue); border-color:var(--asbd-color-blue); color:#fff; }
+    .try-panel { display:none; margin-top:4px; padding:12px; border-radius:12px; background:rgba(0,0,0,.22); border:1px solid var(--asbd-border); }
+    .try-panel.open { display:block; }
+    .try-panel code,.try-panel pre { font-family:var(--asbd-font-mono); font-size:12px; }
+    .try-panel pre { margin:8px 0 0; white-space:pre-wrap; color:var(--asbd-text); }
+    .copy-note { font-size:11px; color:var(--asbd-text-muted); margin-top:6px; min-height:1em; }
+    .featured { grid-column:1 / -1; display:grid; grid-template-columns:1.2fr .8fr; gap:0; min-height:280px; }
+    .featured .mod-preview { height:auto; min-height:280px; }
+    .featured .mod-body { justify-content:center; padding:28px; }
+    @media (max-width:820px) {
+      .featured { grid-template-columns:1fr; }
+      .featured .mod-preview { min-height:160px; }
+      .learn-wrap { padding-left:20px; padding-right:20px; }
+    }
+    html[data-asbd-theme="light"] .try-panel { background:rgba(10,22,40,.04); }
   </style>
 </head>
 <body data-asbd-theme="dark">
   <div id="asbd-header-mount"></div>
-  <main class="asbd-doc">
+  <main class="learn-wrap">
     <div class="asbd-doc-toolbar">
       <button type="button" class="asbd-theme-toggle" id="asbdThemeToggle">Light theme</button>
     </div>
@@ -42,21 +68,167 @@
       <a href="/">Home</a><span aria-hidden="true">/</span>
       <span aria-current="page">Learn</span>
     </nav>
-    <h1>Learn AgentSam</h1>
-    <p class="lead">Field manuals and package guides for <code>agentsam.inneranimalmedia.com/learn/</code> — shared ASBD shell, CMS-editable body content under WEBSITE_ASSETS.</p>
-    <div class="learn-grid">
-      <a class="learn-card" href="./architecture-field-manual/">
-        <h2>Architecture Field Manual</h2>
-        <p>How to read mature repositories: packages, authority, RPC, persistence, CAD/scene data, and IDE/CLI systems.</p>
-      </a>
-      <a class="learn-card" href="/packages/sdk/help/">
-        <h2>SDK Help</h2>
-        <p>Copyable install commands for <code>@inneranimalmedia/agentsam-sdk</code>, synced on every publish.</p>
-      </a>
-      <a class="learn-card" href="/packages/sdk/setup-guide/">
-        <h2>SDK Setup Guide</h2>
-        <p>Minimum publishable doc pattern: install → verify → inspect.</p>
-      </a>
+    <p class="kicker">Interactive offerings gallery</p>
+    <h1>Learn by opening real modules.</h1>
+    <p class="lead">Demos, install paths, and field manuals for what AgentSam actually ships — themes you can click through, SDK commands you can copy, and sandboxes you can run.</p>
+
+    <div class="filters" id="learn-filters" role="toolbar" aria-label="Filter modules">
+      <button type="button" class="filter active" data-filter="all">All</button>
+      <button type="button" class="filter" data-filter="sites">Sites</button>
+      <button type="button" class="filter" data-filter="sdk">SDK / CLI</button>
+      <button type="button" class="filter" data-filter="knowledge">Knowledge</button>
+      <button type="button" class="filter" data-filter="cad">CAD</button>
+      <button type="button" class="filter" data-filter="cloud">Cloud</button>
+      <button type="button" class="filter" data-filter="runtime">Runtime</button>
+    </div>
+
+    <div class="learn-grid" id="learn-grid">
+      <article class="mod featured" data-cats="sites">
+        <div class="mod-preview" data-tone="lime"><span class="mod-preview-mark">Live mounts</span></div>
+        <div class="mod-body">
+          <div class="mod-cat">Sites</div>
+          <h2>Theme gallery</h2>
+          <p>Seven real historical builds on a Theme Store shelf. Preview desktop/mobile, open the live mount, or start a use-this-design plan — without fake one-click provisioning.</p>
+          <div class="mod-actions">
+            <a class="primary" href="/themes/">Open Themes</a>
+            <a href="/themes/insurance-site/">Sample: Insurance</a>
+            <button type="button" data-try="themes-try">Try install path</button>
+          </div>
+          <div class="try-panel" id="themes-try">
+            <div>Browse locally while developing:</div>
+            <pre>cd apps/theme-gallery-preview
+python3 scripts/stage_themes.py
+python3 app.py
+# http://127.0.0.1:8765/themes</pre>
+            <div class="copy-note" data-note></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="mod" data-cats="sdk">
+        <div class="mod-preview" data-tone="cyan"><span class="mod-preview-mark">npm</span></div>
+        <div class="mod-body">
+          <div class="mod-cat">SDK / CLI</div>
+          <h2>Install AgentSam</h2>
+          <p>Global CLI from the published package. Deterministic inspect, security, brand, merkle — with optional models later.</p>
+          <div class="mod-actions">
+            <a class="primary" href="/packages/sdk/help/">SDK Help</a>
+            <button type="button" class="primary" data-copy="npm install -g @inneranimalmedia/agentsam-sdk">Copy install</button>
+            <button type="button" data-try="sdk-try">Show commands</button>
+          </div>
+          <div class="try-panel" id="sdk-try">
+            <pre>npm install -g @inneranimalmedia/agentsam-sdk
+agentsam --version
+agentsam help
+agentsam inspect .
+agentsam status</pre>
+            <div class="copy-note" data-note></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="mod" data-cats="sdk knowledge">
+        <div class="mod-preview"><span class="mod-preview-mark">Index</span></div>
+        <div class="mod-body">
+          <div class="mod-cat">Knowledge</div>
+          <h2>Repository intelligence</h2>
+          <p>AST/text index, search, merkle snapshots, and security trust-boundary scans — machine work with $0 LLM required.</p>
+          <div class="mod-actions">
+            <a class="primary" href="/learn/architecture-field-manual/">Field manual</a>
+            <button type="button" data-try="know-try">Demo commands</button>
+          </div>
+          <div class="try-panel" id="know-try">
+            <pre>agentsam init . --yes
+agentsam index run
+agentsam search "HTMLRewriter"
+agentsam merkle snapshot
+agentsam security scan</pre>
+          </div>
+        </div>
+      </article>
+
+      <article class="mod" data-cats="cad">
+        <div class="mod-preview" data-tone="amber"><span class="mod-preview-mark">CAD</span></div>
+        <div class="mod-body">
+          <div class="mod-cat">CAD</div>
+          <h2>Blender / OpenSCAD lane</h2>
+          <p>Typed Blender recipes, inspect/export receipts, and optional Docker CAD service when host tools are missing.</p>
+          <div class="mod-actions">
+            <button type="button" class="primary" data-try="cad-try">Show CLI</button>
+            <a href="/packages/sdk/setup-guide/">Setup guide</a>
+          </div>
+          <div class="try-panel" id="cad-try">
+            <pre>agentsam cad blender status --json
+agentsam dockerize --type cad_service --name agentsam-cad</pre>
+          </div>
+        </div>
+      </article>
+
+      <article class="mod" data-cats="cloud">
+        <div class="mod-preview" data-tone="violet"><span class="mod-preview-mark">Workers</span></div>
+        <div class="mod-body">
+          <div class="mod-cat">Cloud</div>
+          <h2>Cloudflare + Go runtime</h2>
+          <p>Allowlisted Wrangler reads, tunnels, deploy receipts, and <code>agentsam go --cloudflare</code> Worker+Container ship lane.</p>
+          <div class="mod-actions">
+            <button type="button" class="primary" data-try="cloud-try">Show CLI</button>
+            <a href="/auth/login?next=/agentsam">Open Workbench</a>
+          </div>
+          <div class="try-panel" id="cloud-try">
+            <pre>agentsam cloudflare status --json
+agentsam go status --json
+agentsam go --cloudflare agentsam-go-worker --skip-deploy</pre>
+          </div>
+        </div>
+      </article>
+
+      <article class="mod" data-cats="runtime sdk">
+        <div class="mod-preview" data-tone="cyan"><span class="mod-preview-mark">PTY</span></div>
+        <div class="mod-body">
+          <div class="mod-cat">Runtime</div>
+          <h2>Local shell + sandboxes</h2>
+          <p>Interactive AgentSam shell, resumable sessions, and local PTY without Cloudflare or IAM required for the first mile.</p>
+          <div class="mod-actions">
+            <button type="button" class="primary" data-try="rt-try">Show CLI</button>
+            <a href="/packages/sdk/setup-guide/">Setup</a>
+          </div>
+          <div class="try-panel" id="rt-try">
+            <pre>agentsam
+agentsam start-local
+agentsam resume</pre>
+          </div>
+        </div>
+      </article>
+
+      <article class="mod" data-cats="sdk">
+        <div class="mod-preview" data-tone="lime"><span class="mod-preview-mark">Brand</span></div>
+        <div class="mod-body">
+          <div class="mod-cat">SDK / CLI</div>
+          <h2>Brand intelligence</h2>
+          <p>Deterministic scan → resolve → plan on the same repository snapshot authority. Optional GOAP sequencing.</p>
+          <div class="mod-actions">
+            <button type="button" class="primary" data-try="brand-try">Show CLI</button>
+          </div>
+          <div class="try-panel" id="brand-try">
+            <pre>agentsam brand scan --json
+agentsam brand resolve --json
+agentsam plan brand --goap</pre>
+          </div>
+        </div>
+      </article>
+
+      <article class="mod" data-cats="sdk">
+        <div class="mod-preview"><span class="mod-preview-mark">Docs</span></div>
+        <div class="mod-body">
+          <div class="mod-cat">SDK / CLI</div>
+          <h2>Architecture Field Manual</h2>
+          <p>How to read mature repositories: packages, authority, RPC, persistence, CAD/scene data, IDE/CLI systems.</p>
+          <div class="mod-actions">
+            <a class="primary" href="./architecture-field-manual/">Open manual</a>
+            <a href="/packages/sdk/setup-guide/">Setup guide</a>
+          </div>
+        </div>
+      </article>
     </div>
   </main>
   <div id="asbd-footer-mount"></div>
@@ -79,6 +251,36 @@
       if (window.AsbdTheme) {
         AsbdTheme.syncFromDocument();
         AsbdTheme.bindToggle(document.getElementById('asbdThemeToggle'));
+      }
+    });
+
+    var filters = document.getElementById('learn-filters');
+    var grid = document.getElementById('learn-grid');
+    filters.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-filter]');
+      if (!btn) return;
+      filters.querySelectorAll('.filter').forEach(function (b) { b.classList.toggle('active', b === btn); });
+      var f = btn.getAttribute('data-filter');
+      grid.querySelectorAll('.mod').forEach(function (card) {
+        var cats = (card.getAttribute('data-cats') || '').split(/\s+/);
+        card.style.display = (f === 'all' || cats.indexOf(f) >= 0) ? '' : 'none';
+      });
+    });
+
+    document.addEventListener('click', function (e) {
+      var tryBtn = e.target.closest('[data-try]');
+      if (tryBtn) {
+        var panel = document.getElementById(tryBtn.getAttribute('data-try'));
+        if (panel) panel.classList.toggle('open');
+        return;
+      }
+      var copyBtn = e.target.closest('[data-copy]');
+      if (copyBtn && navigator.clipboard) {
+        var text = copyBtn.getAttribute('data-copy');
+        navigator.clipboard.writeText(text).then(function () {
+          var note = copyBtn.closest('.mod-body') && copyBtn.closest('.mod-body').querySelector('[data-note]');
+          if (note) note.textContent = 'Copied.';
+        });
       }
     });
   })();

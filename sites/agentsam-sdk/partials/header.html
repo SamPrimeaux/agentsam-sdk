@@ -301,11 +301,10 @@
 
     <!-- CENTER: Desktop nav -->
     <nav class="iam-nav" aria-label="Main navigation">
-      <a href="/"         data-nav="home">Home</a>
-      <a href="/work"     data-nav="work">Work</a>
-      <a href="/about"    data-nav="about">About</a>
-      <a href="/services" data-nav="services">Services</a>
-      <a href="/contact"  data-nav="contact">Contact</a>
+      <a href="/"                   data-nav="home">Home</a>
+      <a href="/learn/"             data-nav="learn">Learn</a>
+      <a href="/themes/"            data-nav="themes">Themes</a>
+      <a href="/packages/sdk/help/" data-nav="sdk">SDK</a>
     </nav>
 
     <!-- RIGHT: Sign Up + Hamburger -->
@@ -326,11 +325,10 @@
 
 <!-- Glassmorphic sidenav -->
 <nav class="iam-sidenav" id="iamSidenav" aria-label="Mobile navigation" aria-hidden="true">
-  <a href="/"         data-nav="home">Home</a>
-  <a href="/work"     data-nav="work">Work</a>
-  <a href="/about"    data-nav="about">About</a>
-  <a href="/services" data-nav="services">Services</a>
-  <a href="/contact"  data-nav="contact">Contact</a>
+  <a href="/"                   data-nav="home">Home</a>
+  <a href="/learn/"             data-nav="learn">Learn</a>
+  <a href="/themes/"            data-nav="themes">Themes</a>
+  <a href="/packages/sdk/help/" data-nav="sdk">SDK</a>
   <a href="/auth/login?next=/agentsam" class="iam-sidenav-cta">Open Workbench</a>
 </nav>
 
@@ -351,9 +349,9 @@
   }
 
   // ── Active nav ──────────────────────────────────────────────
-  var seg = window.location.pathname === '/'
-    ? 'home'
-    : window.location.pathname.split('/').filter(Boolean)[0];
+  var path = window.location.pathname || '/';
+  var seg = path === '/' ? 'home' : path.split('/').filter(Boolean)[0];
+  if (path.indexOf('/packages/sdk') === 0) seg = 'sdk';
   document.querySelectorAll('[data-nav]').forEach(function (a) {
     if (a.dataset.nav === seg) a.classList.add('active');
   });

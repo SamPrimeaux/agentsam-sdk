@@ -26,10 +26,25 @@ const PUBLIC_SITE_HTML = Object.freeze({
   '/learn/': 'learn/index.html',
   '/learn/architecture-field-manual': 'learn/architecture-field-manual/index.html',
   '/learn/architecture-field-manual/': 'learn/architecture-field-manual/index.html',
+  '/themes': 'themes/index.html',
+  '/themes/': 'themes/index.html',
 });
 
 export function isPublicSitePath(pathname) {
-  return Object.hasOwn(PUBLIC_SITE_HTML, pathname) || isSiteStaticPath(pathname);
+  return Object.hasOwn(PUBLIC_SITE_HTML, pathname) || isThemesPath(pathname) || isSiteStaticPath(pathname);
+}
+
+/** Theme gallery + live demo mounts under /themes/<slug>/… */
+export function isThemesPath(pathname) {
+  return pathname === '/themes' || pathname.startsWith('/themes/');
+}
+
+function themesRelative(pathname) {
+  if (pathname === '/themes' || pathname === '/themes/') return 'themes/index.html';
+  let rel = pathname.replace(/^\/+/, '');
+  if (rel.endsWith('/')) rel += 'index.html';
+  else if (!/\.[a-zA-Z0-9]+$/.test(rel)) rel += '/index.html';
+  return rel;
 }
 
 /** Absolute /site/* URLs used by ASBD HTML (CSS/JS/partials). */
@@ -120,6 +135,9 @@ export async function servePublicSitePage(
   const workerAssets = resolveWorkerStaticAssets(env);
 
   let relative = PUBLIC_SITE_HTML[pathname];
+  if (!relative && isThemesPath(pathname)) {
+    relative = themesRelative(pathname);
+  }
   if (!relative && isSiteStaticPath(pathname)) {
     relative = siteStaticRelative(pathname);
   }

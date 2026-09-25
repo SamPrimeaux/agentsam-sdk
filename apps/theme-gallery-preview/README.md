@@ -12,6 +12,10 @@ python3 app.py
 
 Open http://127.0.0.1:8765/themes
 
+Production (after `npm run site:sync && npm run site:publish` + Worker deploy):
+
+https://agentsam.inneranimalmedia.com/themes
+
 ## Routes
 
 | Path | What |

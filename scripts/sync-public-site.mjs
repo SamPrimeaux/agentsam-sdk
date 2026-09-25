@@ -79,11 +79,25 @@ function copyDir(src, dest) {
   }
 }
 
+// Stage live theme gallery into public site (catalog + demo mounts)
+try {
+  const { spawnSync } = await import('node:child_process');
+  const stageThemes = path.join(root, 'scripts/stage-themes-to-site.mjs');
+  if (fs.existsSync(stageThemes)) {
+    const r = spawnSync(process.execPath, [stageThemes], { cwd: root, encoding: 'utf8' });
+    if (r.status !== 0) {
+      console.warn('[site:sync] themes stage skipped:', (r.stderr || r.stdout || '').trim());
+    }
+  }
+} catch (err) {
+  console.warn('[site:sync] themes stage error:', err?.message || err);
+}
+
 // Refresh /learn/ from donor when present (Downloads or AGENTSAM_LEARN_SOURCE)
 try {
   const { spawnSync } = await import('node:child_process');
   const learnBuild = path.join(root, 'scripts/build-learn-site.mjs');
-  if (fs.existsSync(learnBuild)) {
+  if (fs.existsSync(learnBuild) && process.env.AGENTSAM_LEARN_SOURCE) {
     const r = spawnSync(process.execPath, [learnBuild], { cwd: root, encoding: 'utf8' });
     if (r.status !== 0) {
       console.warn('[site:sync] learn rebuild skipped:', (r.stderr || r.stdout || '').trim());

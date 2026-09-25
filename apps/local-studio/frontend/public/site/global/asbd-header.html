@@ -335,12 +335,10 @@
 
     <!-- CENTER: Desktop nav -->
     <nav class="asbd-nav" aria-label="Main navigation">
-      <a href="/"         data-asbd-nav="home">Home</a>
-      <a href="/learn/"   data-asbd-nav="learn">Learn</a>
-      <a href="/work"     data-asbd-nav="work">Work</a>
-      <a href="/about"    data-asbd-nav="about">About</a>
-      <a href="/services" data-asbd-nav="services">Services</a>
-      <a href="/contact"  data-asbd-nav="contact">Contact</a>
+      <a href="/"                    data-asbd-nav="home">Home</a>
+      <a href="/learn/"              data-asbd-nav="learn">Learn</a>
+      <a href="/themes/"             data-asbd-nav="themes">Themes</a>
+      <a href="/packages/sdk/help/"  data-asbd-nav="sdk">SDK</a>
     </nav>
 
     <!-- RIGHT: Sign Up + Hamburger -->
@@ -361,13 +359,10 @@
 
 <!-- Glassmorphic sidenav -->
 <nav class="asbd-sidenav" id="asbdSidenav" aria-label="Mobile navigation" aria-hidden="true">
-  <a href="/"         data-asbd-nav="home">Home</a>
-  <a href="/learn/"   data-asbd-nav="learn">Learn</a>
-  <a href="/packages/sdk/help/" data-asbd-nav="packages">SDK Help</a>
-  <a href="/work"     data-asbd-nav="work">Work</a>
-  <a href="/about"    data-asbd-nav="about">About</a>
-  <a href="/services" data-asbd-nav="services">Services</a>
-  <a href="/contact"  data-asbd-nav="contact">Contact</a>
+  <a href="/"                   data-asbd-nav="home">Home</a>
+  <a href="/learn/"             data-asbd-nav="learn">Learn</a>
+  <a href="/themes/"            data-asbd-nav="themes">Themes</a>
+  <a href="/packages/sdk/help/" data-asbd-nav="sdk">SDK</a>
   <a href="/auth/login?next=/agentsam" class="asbd-sidenav-cta">Open Workbench</a>
 </nav>
 
@@ -404,9 +399,9 @@
   });
 
   // ── Active nav ──────────────────────────────────────────────
-  var seg = window.location.pathname === '/'
-    ? 'home'
-    : window.location.pathname.split('/').filter(Boolean)[0];
+  var path = window.location.pathname || '/';
+  var seg = path === '/' ? 'home' : path.split('/').filter(Boolean)[0];
+  if (path.indexOf('/packages/sdk') === 0) seg = 'sdk';
   document.querySelectorAll('[data-asbd-nav]').forEach(function (a) {
     if (a.dataset.asbdNav === seg) a.classList.add('active');
   });

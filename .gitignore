@@ -32,6 +32,10 @@ apps/cad-creator/backend/runtime/
 generated/
 work/
 
+# Generated theme gallery mounts (scripts/stage-themes-to-site.mjs via site:sync)
+apps/frontend/public/site/themes/
+apps/local-studio/frontend/public/site/themes/
+
 # Python bytecode
 __pycache__/
 *.py[cod]
