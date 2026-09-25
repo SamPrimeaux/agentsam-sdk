@@ -41,7 +41,7 @@ test('dispatch handles help, menu fallback, pwd, cd, and exit without falling th
   const state = { cwd: root, write: (text) => { output += text; }, interactive: false };
   let result = await dispatchShellLine('/help', state);
   assert.equal(result.handled, true);
-  assert.match(output, /Type normally to work with Agent Sam/);
+  assert.match(output, /SAM = Systematic Autonomous Machinery/);
   assert.match(output, /agentsam help <topic>/);
   output = '';
   await dispatchShellLine('/', state);
@@ -177,7 +177,7 @@ test('bare /context shows truthful economics without inventing active token usag
 test('CLI supports a deterministic one-shot slash command for regression tests', () => {
   const result = spawnSync(process.execPath, ['src/cli.js', 'shell', '--command', '/help'], { cwd: repoRoot, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /Type normally to work with Agent Sam/);
+  assert.match(result.stdout, /SAM = Systematic Autonomous Machinery/);
   assert.match(result.stdout, /agentsam help <topic>/);
   assert.match(result.stdout, /command picker/);
 });
@@ -212,12 +212,12 @@ test('dispatchShellLine accepts "agentsam <cmd>" and bare common verbs without s
 
   const r1 = await dispatchShellLine('agentsam help', state);
   assert.equal(r1.handled, true);
-  assert.match(output, /Type normally to work with Agent Sam/);
+  assert.match(output, /SAM = Systematic Autonomous Machinery/);
 
   output = '';
   const r2 = await dispatchShellLine('help', state);
   assert.equal(r2.handled, true);
-  assert.match(output, /Type normally to work with Agent Sam/);
+  assert.match(output, /SAM = Systematic Autonomous Machinery/);
 
   const r3 = await dispatchShellLine('exit', state);
   assert.equal(r3.exit, true);
