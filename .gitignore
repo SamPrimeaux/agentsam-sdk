@@ -40,3 +40,4 @@ apps/local-studio/frontend/public/site/themes/
 __pycache__/
 *.py[cod]
 *$py.class
+.agentsam/local-runtime.json
