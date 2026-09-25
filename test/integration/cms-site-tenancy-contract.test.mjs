@@ -132,6 +132,8 @@ test('Local Studio Worker dispatches /api/cms/* with strict tenant isolation', (
 test('homepage.html is decomposed into reusable site partials with relative links and edge injection markers', () => {
   assert.ok(fs.existsSync(at('sites', 'agentsam-sdk', 'partials', 'header.html')));
   assert.ok(fs.existsSync(at('sites', 'agentsam-sdk', 'partials', 'footer.html')));
+  assert.ok(fs.existsSync(at('apps', 'frontend', 'public', 'site', 'global', 'asbd-header.html')));
+  assert.ok(fs.existsSync(at('apps', 'frontend', 'public', 'site', 'global', 'asbd-footer.html')));
 
   const header = read('sites', 'agentsam-sdk', 'partials', 'header.html');
   const footer = read('sites', 'agentsam-sdk', 'partials', 'footer.html');
@@ -141,7 +143,7 @@ test('homepage.html is decomposed into reusable site partials with relative link
   assert.ok(header.length > 500, 'header.html must contain full header content');
   assert.ok(footer.length > 500, 'footer.html must contain full footer content');
 
-  // Relative navigation links
+  // Relative navigation links (R2 partial SSOT)
   assert.match(header, /href="\/work"/);
   assert.match(header, /href="\/about"/);
   assert.match(header, /href="\/services"/);
@@ -158,31 +160,40 @@ test('homepage.html is decomposed into reusable site partials with relative link
   assert.match(footer, /href="\/sitemap"/);
   assert.doesNotMatch(footer, /href="https:\/\/inneranimalmedia\.com\/(work|about|services|contact|privacy|terms|sitemap)"/);
 
-  // In homepage.html itself, header and footer are decomposed into edge-injected markers
-  assert.match(homepage, /<!-- Injected at edge via HTMLRewriter from sites\/\{site\}\/partials\/header\.html -->/);
-  assert.match(homepage, /<!-- Injected at edge via HTMLRewriter from sites\/\{site\}\/partials\/footer\.html -->/);
+  // Public homepage shell uses ASBD mounts + client inject of global partials
+  // (R2 sites/{site}/partials remain the publish/edge SSOT via publish-website-assets).
+  assert.match(homepage, /id="asbd-header-mount"/);
+  assert.match(homepage, /id="asbd-footer-mount"/);
+  assert.match(homepage, /inject\('asbd-header-mount',\s*'\/site\/global\/asbd-header\.html'\)/);
+  assert.match(homepage, /inject\('asbd-footer-mount',\s*'\/site\/global\/asbd-footer\.html'\)/);
   assert.doesNotMatch(homepage, /<nav class="iam-sidenav" id="iamSidenav"/, 'inline sidenav should be in partials');
 });
+
+function r2Stub(store = new Map()) {
+  return {
+    async get(key) {
+      if (!store.has(key)) return null;
+      return { text: async () => store.get(key) };
+    },
+    async put(key, content) {
+      store.set(key, typeof content === 'string' ? content : String(content));
+      return { key };
+    },
+    async head() {
+      return null;
+    },
+    async list() {
+      return { objects: [] };
+    },
+  };
+}
 
 test('site-partials service injects header and footer from R2 into HTML response', async () => {
   const store = new Map();
   store.set('sites/agentsam-sdk/partials/header.html', '<header id="injected-header">Header Content</header>');
   store.set('sites/agentsam-sdk/partials/footer.html', '<footer id="injected-footer">Footer Content</footer>');
 
-  const mockR2 = {
-    async get(key) {
-      if (!store.has(key)) return null;
-      return {
-        text: async () => store.get(key),
-      };
-    },
-    async put(key, content) {
-      store.set(key, content);
-      return { key };
-    },
-  };
-
-  const env = { WEBSITE_ASSETS: mockR2 };
+  const env = { WEBSITE_ASSETS: r2Stub(store) };
 
   // Fetch and put partials
   const fetchedHeader = await fetchSitePartial(env, 'agentsam-sdk', 'header');
@@ -216,15 +227,11 @@ test('site-partials service injects header and footer from R2 into HTML response
 test('Local Studio canonical homepage serves with edge HTMLRewriter partial injection and text/html', async () => {
   const { serveCanonicalHomepage } = await import('../../apps/local-studio/backend/worker/canonical-homepage.js');
 
-  const mockR2 = {
-    async get(key) {
-      if (key.includes('header')) return { text: async () => '<header id="live-header">SDK Header</header>' };
-      if (key.includes('footer')) return { text: async () => '<footer id="live-footer">SDK Footer</footer>' };
-      return null;
-    },
-  };
-
-  const env = { WEBSITE_ASSETS: mockR2 };
+  const store = new Map([
+    ['sites/agentsam-sdk/partials/header.html', '<header id="live-header">SDK Header</header>'],
+    ['sites/agentsam-sdk/partials/footer.html', '<footer id="live-footer">SDK Footer</footer>'],
+  ]);
+  const env = { WEBSITE_ASSETS: r2Stub(store) };
 
   const rootReq = new Request('https://agentsam.inneranimalmedia.com/', { method: 'GET' });
   const rootRes = await serveCanonicalHomepage(rootReq, env, 'agentsam-sdk');

@@ -37,12 +37,10 @@ export const SITE_CACHE_KV_ALIASES = Object.freeze([
 ]);
 
 function isR2Like(binding) {
-  return Boolean(
-    binding &&
-      typeof binding.get === 'function' &&
-      typeof binding.put === 'function' &&
-      (typeof binding.createMultipartUpload === 'function' || typeof binding.head === 'function')
-  );
+  // R2: get+put. KV also has get+put, but adds getWithMetadata — exclude those.
+  if (!binding || typeof binding.get !== 'function' || typeof binding.put !== 'function') return false;
+  if (typeof binding.getWithMetadata === 'function') return false;
+  return true;
 }
 
 function isD1Like(binding) {
