@@ -6,13 +6,13 @@ const finiteVector = (vector, dimensions) => {
   return vector;
 };
 
-function httpAdapter({ id, env, models, request, credentials = env }) {
+function httpAdapter({ id, env, models, request, credentials = env, allowAnyModel = false }) {
   return Object.freeze({
     id,
     capabilities: () => ({ id, operational: Boolean(credentials()), models, credentials: credentials() ? 'available' : 'missing' }),
     validate(profile) {
       if (clean(profile?.provider) !== id) throw new Error(`provider_profile_mismatch:${id}`);
-      if (!models.includes(clean(profile?.model))) throw new Error(`provider_model_unsupported:${id}:${profile?.model}`);
+      if (!allowAnyModel && !models.includes(clean(profile?.model))) throw new Error(`provider_model_unsupported:${id}:${profile?.model}`);
       if (!Number.isInteger(profile?.dimensions) || profile.dimensions < 1) throw new Error('provider_dimensions_required');
       if (!credentials()) throw new Error(`provider_credentials_unavailable:${id}`);
     },
@@ -70,13 +70,25 @@ export function createWorkersAiProvider({ binding } = {}) {
   });
 }
 
-export function createOllamaProvider({ endpoint = process.env.OLLAMA_HOST || 'http://127.0.0.1:11434', fetchImpl = globalThis.fetch } = {}) {
-  return httpAdapter({ id: 'ollama', env: 'OLLAMA_HOST', models: ['nomic-embed-text', 'mxbai-embed-large'], credentials: () => endpoint,
+export function createOllamaProvider({ endpoint = process.env.OLLAMA_HOST || 'http://127.0.0.1:11434', fetchImpl = globalThis.fetch, models } = {}) {
+  // Model allowlist is advisory only — live `ollama list` / tags are authoritative at selection time.
+  const known = Array.isArray(models) && models.length ? models : ['mxbai-embed-large', 'nomic-embed-text'];
+  return httpAdapter({
+    id: 'ollama',
+    env: 'OLLAMA_HOST',
+    models: known,
+    allowAnyModel: true,
+    credentials: () => endpoint,
     request: async (text, profile) => {
-      const response = await fetchImpl(new URL('/api/embed', endpoint), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: profile.model, input: text }) });
+      const response = await fetchImpl(new URL('/api/embed', endpoint), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ model: profile.model, input: text }),
+      });
       if (!response.ok) throw new Error(`provider_request_failed:ollama:${response.status}`);
       return finiteVector((await response.json()).embeddings?.[0], profile.dimensions);
-    } });
+    },
+  });
 }
 
 export function createProviderRegistry(options = {}) {

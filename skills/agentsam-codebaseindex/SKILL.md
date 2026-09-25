@@ -15,7 +15,25 @@ Systems Automation Machinery for turning repositories **and dropped materials** 
 
 Embeddings are optional. AST/text indexing is the `$0` default.
 
-## Quick start
+## Embedding models
+
+**Not a hardcoded menu.** Options come from:
+
+1. Provider credentials on this machine (`agentsam providers` / vault / env)
+2. Live OpenAI `/v1/models` embedding ids when an OpenAI key is configured
+3. Live `ollama list` / `/api/tags` when Ollama is online — embed-like tags
+   (e.g. `mxbai-embed-large`) appear in the embedding picker; chat tags
+   (e.g. `qwen2.5-coder`) are offered optionally for **allowlist suggestions only**
+
+AST/text-only (`none`) is always available and costs $0.
+
+## Include / exclude
+
+You set them. AgentSam does **not** invent a product denylist.
+
+Optional: if Ollama is online with a chat model, the wizard can ask that local
+model to *suggest* include/exclude from the top-level listing — you still confirm
+or edit the paths.
 
 ```sh
 agentsam codebaseindex
@@ -24,17 +42,18 @@ agentsam codebaseindex
 
 Guided (clack) steps:
 
-1. Paste/drop materials (or leave blank for repo-only)
-2. Allowlist include / exclude
-3. Storage: sqlite (local) or postgres
-4. Embedding model: none | gemini | openai | ollama
+1. Paste/drop materials (optional)
+2. Include / exclude — you type them; optional local Ollama chat assist
+3. Storage preference
+4. Embedding model — discovered from your credentials + `ollama list`
 5. Plan or run
 
 Non-interactive:
 
 ```sh
-agentsam ingest --paths ./dist,./site.tar.gz --include src,docs --embedding none --yes
-agentsam codebaseindex --embed --embedding gemini:gemini-embedding-2:768 --yes
+agentsam ingest --paths ./dist,./site.tar.gz --include src,docs --exclude node_modules,.git --embedding none --yes
+# --embedding uses discovered encoding: provider|model|dimensions
+# e.g. ollama|mxbai-embed-large:latest|1024
 ```
 
 SDK:

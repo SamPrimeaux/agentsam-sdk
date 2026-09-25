@@ -18,8 +18,11 @@ import { planIndex, runIndex } from '../knowledge/engine.js';
 import { createProviderRegistry } from '../../packages/agentsam-knowledge/src/providers/index.js';
 import { ensureProjectManifest, getRepositoryId, portableRepositoryIdFromGit, tryReadProjectConfig } from '../lib/project-config.js';
 import { parsePastedPaths, stageMaterials } from '../lib/ingest/materials.js';
-
-const DEFAULT_EXCLUDE = ['node_modules', '.git', 'dist', 'build', '.next', 'coverage', '.agentsam/data'];
+import {
+  discoverIngestModelOptions,
+  parseEmbeddingChoice,
+  suggestScopeWithLocalModel,
+} from '../lib/ingest/discover-models.js';
 
 function pick(value, label = 'Cancelled') {
   if (isCancel(value)) {
@@ -38,6 +41,14 @@ function splitList(value) {
     .filter(Boolean);
 }
 
+function listTopLevel(root) {
+  try {
+    return fs.readdirSync(root).filter((name) => !name.startsWith('.git'));
+  } catch {
+    return [];
+  }
+}
+
 function localSqlitePath(root) {
   return path.join(root, '.agentsam', 'knowledge', 'index.sqlite');
 }
@@ -47,31 +58,6 @@ async function openStore(root, config, readOnly = false) {
     return openSqliteStore(localSqlitePath(root), { readOnly });
   }
   return openPostgresStore(process.env[config.storage.connection_env]);
-}
-
-function embeddingChoices() {
-  return [
-    { value: 'none', label: 'None (AST/text only · $0 embeddings)', hint: 'model: never for embeddings' },
-    { value: 'gemini:gemini-embedding-2:768', label: 'Gemini Embedding 2 · 768d', hint: 'GEMINI_API_KEY' },
-    { value: 'gemini:gemini-embedding-2:1536', label: 'Gemini Embedding 2 · 1536d', hint: 'GEMINI_API_KEY' },
-    { value: 'openai:text-embedding-3-small:1536', label: 'OpenAI text-embedding-3-small', hint: 'OPENAI_API_KEY' },
-    { value: 'openai:text-embedding-3-large:3072', label: 'OpenAI text-embedding-3-large', hint: 'OPENAI_API_KEY' },
-    { value: 'ollama:nomic-embed-text:768', label: 'Ollama nomic-embed-text', hint: 'local · OLLAMA_HOST' },
-  ];
-}
-
-function parseEmbeddingChoice(value) {
-  if (!value || value === 'none') {
-    return { provider: 'none', model: 'none', revision: '1', dimensions: 0, parameters: {} };
-  }
-  const [provider, model, dims] = String(value).split(':');
-  return {
-    provider,
-    model,
-    revision: '1',
-    dimensions: Number(dims) || 768,
-    parameters: provider === 'gemini' ? { task: 'code retrieval' } : {},
-  };
 }
 
 function writeKnowledgeConfig(root, config) {
@@ -153,7 +139,8 @@ export async function runCodebaseindexIngest(input = {}, ctx = {}) {
     ? input.materials
     : parsePastedPaths(input.paste || input.paths || '');
   let include = Array.isArray(input.include) && input.include.length ? [...input.include] : ['.'];
-  let exclude = Array.isArray(input.exclude) ? [...input.exclude] : [...DEFAULT_EXCLUDE];
+  // Exclude is user-authored — never invent a product denylist.
+  let exclude = Array.isArray(input.exclude) ? [...input.exclude] : [];
   /** @type {object|null} */
   let staged = null;
 
@@ -165,7 +152,7 @@ export async function runCodebaseindexIngest(input = {}, ctx = {}) {
 
   const embedding = input.embedding && typeof input.embedding === 'object'
     ? input.embedding
-    : parseEmbeddingChoice(input.embeddingChoice || (input.embed ? 'gemini:gemini-embedding-2:768' : 'none'));
+    : parseEmbeddingChoice(input.embeddingChoice || 'none');
 
   const storage = input.storage === 'postgres' ? 'postgres' : 'sqlite';
   const config = loadOrBuildConfig(root, {
@@ -238,15 +225,18 @@ function helpText() {
     '  Pipeline: sam.codebaseindex.index.run',
     '  Operation: codebaseindex.ingest',
     '',
+    '  Embedding models are discovered from your configured provider credentials',
+    '  and live `ollama list` (local models are optional, never required).',
+    '  Include/exclude paths are prompted — AgentSam does not invent a denylist.',
+    '',
     '  agentsam codebaseindex              interactive wizard (clack)',
     '  agentsam ingest                     alias',
-    '  agentsam codebaseindex --paths …    non-interactive materials',
+    '  agentsam codebaseindex --paths …    materials',
+    '  agentsam codebaseindex --include src --exclude node_modules,.git',
     '  agentsam codebaseindex --plan       plan only',
-    '  agentsam codebaseindex --embed      enable embeddings (needs provider)',
+    '  agentsam codebaseindex --embed      enable embedding pass after you pick a model',
     '',
-    '  Paste or drag-drop paths when prompted: .zip .tar.gz .html .glb images, build tars, site folders.',
-    '',
-    `  tip: use skill agentsam-codebaseindex`,
+    '  tip: use skill agentsam-codebaseindex',
     '',
   ].join('\n');
 }
@@ -293,60 +283,146 @@ async function runWizard(root, opts) {
     [
       'Paste or drag-drop files into the next prompt:',
       'archives (.zip .tar .tgz), site/build trees, HTML, images, GLB, or code.',
-      'Leave blank to index the repository allowlist only.',
+      'Leave blank to index using the include/exclude you set next.',
     ].join('\n'),
     'Materials',
   );
 
   const paste = pick(await text({
-    message: 'Paths to ingest (paste/drop; blank = repo only)',
+    message: 'Paths to ingest (paste/drop; blank = scope paths only)',
     placeholder: '/path/to/build.tar.gz  ./dist  screenshot.png',
   }), 'Ingest cancelled');
 
   const pasted = parsePastedPaths(paste);
   const materials = [...new Set([...(opts.paths || []), ...pasted])];
 
-  const includeDefault = opts.include || (materials.length ? '' : '.');
+  const topLevel = listTopLevel(root);
+  note(
+    topLevel.length
+      ? `Top-level in ${root}:\n${topLevel.slice(0, 40).map((n) => `  ${n}`).join('\n')}${topLevel.length > 40 ? '\n  …' : ''}`
+      : `Repository: ${root}`,
+    'Workspace',
+  );
+
+  const discovered = await discoverIngestModelOptions();
+  let include = opts.include ? splitList(opts.include) : [];
+  let exclude = opts.exclude ? splitList(opts.exclude) : [];
+
+  if (discovered.assistModels.length) {
+    const assistChoice = pick(await select({
+      message: 'Allowlist / denylist',
+      initialValue: 'manual',
+      options: [
+        { value: 'manual', label: 'Enter include/exclude myself', hint: 'recommended default' },
+        { value: 'assist', label: 'Suggest with local Ollama (optional)', hint: 'uses a chat model from ollama list' },
+      ],
+    }));
+
+    if (assistChoice === 'assist') {
+      const modelPick = pick(await select({
+        message: 'Local model for scope suggestions',
+        options: discovered.assistModels.map((row) => ({
+          value: row.model,
+          label: row.label,
+          hint: row.hint,
+        })),
+      }));
+      try {
+        const suggestion = await suggestScopeWithLocalModel({
+          root,
+          model: modelPick,
+          topLevel,
+        });
+        note(
+          [
+            suggestion.rationale || 'Local model suggestion',
+            `include: ${(suggestion.include || []).join(', ') || '(none)'}`,
+            `exclude: ${(suggestion.exclude || []).join(', ') || '(none)'}`,
+          ].join('\n'),
+          `Suggested by ${modelPick}`,
+        );
+        const accept = pick(await confirm({
+          message: 'Use these suggestions as the starting include/exclude?',
+          initialValue: true,
+        }));
+        if (accept) {
+          include = suggestion.include;
+          exclude = suggestion.exclude;
+        }
+      } catch (error) {
+        note(error?.message || String(error), 'Local assist unavailable — enter paths manually');
+      }
+    }
+  }
+
   const includeRaw = pick(await text({
-    message: 'Allowlist include (comma-separated relative paths)',
-    initialValue: includeDefault || (materials.length ? '(from staged materials)' : '.'),
-    placeholder: 'src,docs,packages',
+    message: 'Include paths (comma-separated relative; blank = . when no materials)',
+    initialValue: include.join(',') || (materials.length ? '' : opts.include || ''),
+    placeholder: 'src,packages,docs',
   }));
-  let include = splitList(includeRaw === '(from staged materials)' ? '' : includeRaw);
+  include = splitList(includeRaw);
   if (!include.length && !materials.length) include = ['.'];
 
   const excludeRaw = pick(await text({
-    message: 'Exclude allowlist (comma-separated)',
-    initialValue: opts.exclude || DEFAULT_EXCLUDE.join(','),
+    message: 'Exclude paths (comma-separated relative; blank = exclude nothing)',
+    initialValue: exclude.join(',') || opts.exclude || '',
+    placeholder: 'node_modules,.git,dist  (only if you want them excluded)',
   }));
-  const exclude = splitList(excludeRaw);
+  exclude = splitList(excludeRaw);
 
   const storage = pick(await select({
     message: 'Storage preference',
     initialValue: opts.storage || 'sqlite',
     options: [
-      { value: 'sqlite', label: 'SQLite (local · default)', hint: '.agentsam/knowledge/index.sqlite' },
-      { value: 'postgres', label: 'Postgres / pgvector', hint: 'AGENTSAM_DATABASE_URL' },
+      { value: 'sqlite', label: 'SQLite (local)', hint: '.agentsam/knowledge/index.sqlite' },
+      { value: 'postgres', label: 'Postgres / pgvector', hint: 'requires AGENTSAM_DATABASE_URL' },
     ],
   }));
 
+  if (discovered.options.length <= 1) {
+    note(
+      [
+        'No embedding providers discovered from credentials or Ollama.',
+        'Configure keys via `agentsam providers` or start Ollama (`ollama list`).',
+        'Continuing with AST/text-only is always valid.',
+      ].join('\n'),
+      'Embeddings',
+    );
+  } else {
+    const sources = [
+      discovered.ollama?.online ? `ollama online (${(discovered.ollama.models || []).length} tags)` : 'ollama offline',
+      ...(discovered.inventory?.providers || [])
+        .filter((p) => p.configured)
+        .map((p) => `${p.id} credential`),
+    ].join(' · ');
+    note(`Discovered from your machine: ${sources || 'none'}`, 'Model discovery');
+  }
+
   const embeddingChoice = pick(await select({
-    message: 'Embedding model',
-    initialValue: opts.embedding || (opts.embed ? 'gemini:gemini-embedding-2:768' : 'none'),
-    options: embeddingChoices(),
+    message: 'Embedding model (discovered for this machine)',
+    initialValue: opts.embedding && discovered.options.some((o) => o.value === opts.embedding)
+      ? opts.embedding
+      : 'none',
+    options: discovered.options.map((row) => ({
+      value: row.value,
+      label: row.label,
+      hint: row.hint,
+    })),
   }));
 
   const runEmbed = embeddingChoice !== 'none' && pick(await confirm({
-    message: 'Run embedding pass on this ingest? (costs provider tokens)',
-    initialValue: Boolean(opts.embed),
+    message: embeddingChoice.startsWith('ollama|')
+      ? 'Run local embedding pass with this Ollama model?'
+      : 'Run embedding pass with this provider model? (may cost tokens)',
+    initialValue: Boolean(opts.embed) || embeddingChoice.startsWith('ollama|'),
   }));
 
   const planOnly = pick(await select({
     message: 'Execution',
     initialValue: opts.plan ? 'plan' : 'run',
     options: [
-      { value: 'plan', label: 'Plan only (read-only receipt)', hint: 'no writes beyond config' },
-      { value: 'run', label: 'Run ingest now', hint: 'writes local knowledge store' },
+      { value: 'plan', label: 'Plan only', hint: 'config + plan receipt' },
+      { value: 'run', label: 'Run ingest now', hint: 'writes knowledge store' },
     ],
   })) === 'plan';
 
@@ -354,7 +430,7 @@ async function runWizard(root, opts) {
     `root: ${root}`,
     `materials: ${materials.length || 'none'}`,
     `include: ${include.length ? include.join(', ') : '(from materials)'}`,
-    `exclude: ${exclude.join(', ') || 'none'}`,
+    `exclude: ${exclude.join(', ') || '(none — user left blank)'}`,
     `storage: ${storage}`,
     `embedding: ${embeddingChoice}`,
     `embed pass: ${runEmbed ? 'yes' : 'no'}`,
@@ -407,9 +483,9 @@ export async function runCodebaseindex(argv = []) {
       root,
       materials: opts.paths,
       include: opts.include ? splitList(opts.include) : undefined,
-      exclude: opts.exclude ? splitList(opts.exclude) : DEFAULT_EXCLUDE,
+      exclude: opts.exclude ? splitList(opts.exclude) : [],
       storage: opts.storage || 'sqlite',
-      embeddingChoice: opts.embedding || (opts.embed ? 'gemini:gemini-embedding-2:768' : 'none'),
+      embeddingChoice: opts.embedding || 'none',
       embed: opts.embed,
       planOnly: opts.plan,
     });
