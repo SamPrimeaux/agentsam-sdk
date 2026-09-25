@@ -175,7 +175,16 @@ export function applyGoProductRegistry({
     package_name: '@inneranimalmedia/agentsam-go-worker',
     metadata: {
       runtime: 'go',
-      deployment: { provider: 'cloudflare', mode: 'worker-container', url, health },
+      deployment: {
+        provider: 'cloudflare',
+        mode: 'worker-container',
+        url,
+        health,
+        worker_deployment_id: workerDeploymentId,
+        worker_version_id: workerVersionId,
+        artifact_digest: artifactDigest,
+        container_image_digest: containerDigest,
+      },
       source: { commit },
     },
   };
