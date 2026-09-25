@@ -25,6 +25,7 @@
     "kind": "theme",
     "slug": "companions-site",
     "galleryPath": "apps/theme-gallery-preview/themes/companions-site",
-    "installable": true
+    "installable": true,
+    "icon": "theme"
   }
 }

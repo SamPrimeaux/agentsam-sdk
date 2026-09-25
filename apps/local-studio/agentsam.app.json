@@ -43,7 +43,9 @@
       { "path": "/ship", "auth": "required", "spa": true },
       { "path": "/cad", "auth": "required", "spa": true },
       { "path": "/cms", "auth": "required", "spa": true },
-      { "path": "/settings", "auth": "required", "spa": true }
+      { "path": "/database", "auth": "required", "spa": true },
+      { "path": "/settings", "auth": "required", "spa": true },
+      { "path": "/settings/themes", "auth": "required", "spa": true }
     ]
   },
   "runtime": {

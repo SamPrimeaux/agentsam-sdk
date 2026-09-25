@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentsam.embedding-profile.v1",
+  "title": "AgentSamEmbeddingProfile",
+  "type": "object",
+  "required": ["schema", "id", "provider", "dimensions", "revision", "fingerprint"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "agentsam.embedding-profile.v1" },
+    "id": { "type": "string" },
+    "provider": { "type": "string" },
+    "model": { "type": ["string", "null"] },
+    "dimensions": { "type": "integer", "minimum": 1 },
+    "revision": { "type": "string" },
+    "parameters": { "type": "object" },
+    "fingerprint": { "type": "string" },
+    "experimental": { "type": "boolean" },
+    "locality": { "enum": ["local", "remote", "none"] }
+  }
+}

@@ -15,7 +15,9 @@ test('install.sh is a bash npm bootstrap with platform detection', () => {
   assert.match(source, /npm install --global/);
   assert.match(source, /Darwin-arm64/);
   assert.match(source, /--version/);
+  assert.match(source, /--app-id/);
   assert.match(source, /--app/);
+  assert.doesNotMatch(source, /APP_SELECTOR="\$\{AGENTSAM_DEFAULT_APP/);
   assert.match(source, /standalone_ready/);
   assert.match(source, /checksum_contract/);
 });
@@ -25,11 +27,12 @@ test('install.sh passes bash syntax validation', () => {
   assert.equal(result.status, 0, result.stderr);
 });
 
-test('install.sh maps --app aliases to executable launchers', () => {
+test('install.sh maps --app-id and legacy --app aliases to executable launchers', () => {
   const cases = [
     ['cad', 'cad-creator', 'agentsam-cad-creator'],
     ['cms', 'client-cms-editor', 'agentsam-cms'],
     ['studio', 'local-studio', 'agentsam-studio'],
+    ['database-editor', 'database-editor', 'agentsam-database-editor'],
   ];
 
   for (const [alias, appId, executable] of cases) {
@@ -57,7 +60,8 @@ test('install.sh maps --app aliases to executable launchers', () => {
     );
 
     try {
-      const result = spawnSync('bash', [installScript, '--app', alias, '--prefix', binDir], {
+      const flag = alias === 'database-editor' ? '--app-id' : '--app';
+      const result = spawnSync('bash', [installScript, flag, alias, '--prefix', binDir], {
         encoding: 'utf8',
         env: {
           ...process.env,
@@ -74,6 +78,7 @@ test('install.sh maps --app aliases to executable launchers', () => {
       assert.ok((fs.statSync(launcherPath).mode & 0o111) !== 0);
 
       const receipt = JSON.parse(fs.readFileSync(path.join(installRoot, 'install-receipt.json'), 'utf8'));
+      assert.equal(receipt.app_id, appId);
       assert.equal(receipt.app, appId);
     } finally {
       fs.rmSync(temp, { recursive: true, force: true });
@@ -81,13 +86,13 @@ test('install.sh maps --app aliases to executable launchers', () => {
   }
 });
 
-test('install.sh rejects unknown --app values before installation', () => {
-  const result = spawnSync('bash', [installScript, '--app', 'unknown'], { encoding: 'utf8' });
+test('install.sh rejects unknown --app-id values before installation', () => {
+  const result = spawnSync('bash', [installScript, '--app-id', 'unknown'], { encoding: 'utf8' });
   assert.equal(result.status, 2);
-  assert.match(result.stderr, /expected cad, cms, or studio/);
+  assert.match(result.stderr, /unknown app/);
 });
 
-test('Local Studio Worker serves standalone installer routes', () => {
+test('Local Studio Worker serves installer without AGENTSAM_DEFAULT_APP mutation', () => {
   const worker = fs.readFileSync(
     path.join(root, 'apps/local-studio/backend/worker/index.js'),
     'utf8',
@@ -98,9 +103,7 @@ test('Local Studio Worker serves standalone installer routes', () => {
   );
 
   assert.match(worker, /import installScript from "\.\.\/\.\.\/\.\.\/\.\.\/scripts\/install\.sh"/);
-  assert.match(worker, /"\/install\/cad": "cad-creator"/);
-  assert.match(worker, /"\/install\/cms": "client-cms-editor"/);
-  assert.match(worker, /"\/install\/studio": "local-studio"/);
+  assert.doesNotMatch(worker, /APP_SELECTOR="\\\$\{AGENTSAM_DEFAULT_APP/);
   assert.match(worker, /text\/x-shellscript/);
   assert.match(wrangler, /"type": "Text"/);
   assert.match(wrangler, /"\*\*\/\*\.sh"/);

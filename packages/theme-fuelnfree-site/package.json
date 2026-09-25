@@ -25,6 +25,7 @@
     "kind": "theme",
     "slug": "fuelnfree-site",
     "galleryPath": "apps/theme-gallery-preview/themes/fuelnfree-site",
-    "installable": true
+    "installable": true,
+    "icon": "theme"
   }
 }

@@ -26,6 +26,14 @@ const navSource = resolvePath(
 const vaultPackageRoot = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-vault", import.meta.url)),
 );
+const iconRegistrySource = resolvePath(
+  fileURLToPath(new URL("../../protocol/ui/icon-registry.mjs", import.meta.url)),
+);
+const databaseEditorManifest = resolvePath(
+  fileURLToPath(
+    new URL("../../packages/agentsam-database-editor/src/manifest.js", import.meta.url),
+  ),
+);
 const keyManagerPackageRoot = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-key-manager", import.meta.url)),
 );
@@ -210,6 +218,14 @@ export default defineConfig(({ command, isPreview }) => ({
     preserveSymlinks: true,
     alias: [
       ...navRuntimeAliases,
+      {
+        find: "@agentsam/icon-registry",
+        replacement: iconRegistrySource,
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-database-editor\/manifest$/,
+        replacement: databaseEditorManifest,
+      },
       {
         find: "@inneranimalmedia/agentsam-workbench",
         replacement: workbenchSource,

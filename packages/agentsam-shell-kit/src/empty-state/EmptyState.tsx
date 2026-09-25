@@ -122,8 +122,10 @@ export function EmptyState({
  *     display_name?: string,
  *     name?: string,
  *     package?: string,
- *     install?: { command?: string },
- *     preview?: { supported?: boolean },
+ *     icon?: string,
+ *     install?: { command?: string, supported?: boolean },
+ *     preview?: { supported?: boolean, route?: string },
+ *     empty_state?: { title?: string, description?: string, primary_label?: string, secondary_label?: string },
  *     docs?: { route?: string },
  *   },
  *   icon?: import('react').ReactNode,
@@ -137,20 +139,27 @@ export function InstallableEmptyState({ installable, icon, onInstall, onPreview 
   const command =
     installable?.install?.command || (pkg ? `npm install ${pkg}` : undefined);
   const docsHref = installable?.docs?.route;
+  const title = installable?.empty_state?.title || `${name} isn't installed`;
+  const description =
+    installable?.empty_state?.description ||
+    `Install the packaged ${name} workspace, then open it locally or launch a preview.`;
+  const primaryLabel = installable?.empty_state?.primary_label || 'Install';
+  const secondaryLabel = installable?.empty_state?.secondary_label || 'Preview';
+  const semanticIcon = installable?.icon || 'generic';
 
   return (
     <EmptyState
       icon={icon || <span style={{ fontSize: 28 }}>▢</span>}
-      eyebrow="AgentSam package"
-      title={`${name} isn't installed`}
-      description={`Install the packaged ${name} workspace, then open it locally or launch a preview.`}
+      eyebrow={`AgentSam package · ${semanticIcon}`}
+      title={title}
+      description={description}
       command={command}
       secondaryAction={
         installable?.preview?.supported !== false && onPreview
-          ? { label: 'Preview', onClick: onPreview }
+          ? { label: secondaryLabel, onClick: onPreview }
           : undefined
       }
-      primaryAction={onInstall ? { label: 'Install', onClick: onInstall } : undefined}
+      primaryAction={onInstall ? { label: primaryLabel, onClick: onInstall } : undefined}
       tertiaryAction={docsHref ? { label: 'View docs', href: docsHref } : undefined}
     />
   );

@@ -25,6 +25,7 @@
     "kind": "theme",
     "slug": "church-site",
     "galleryPath": "apps/theme-gallery-preview/themes/church-site",
-    "installable": true
+    "installable": true,
+    "icon": "theme"
   }
 }

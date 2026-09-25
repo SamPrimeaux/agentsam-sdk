@@ -5,6 +5,7 @@ const THEME = {
   "displayName": "New Iberia Church of Christ",
   "version": "0.1.0",
   "kind": "gallery-theme",
+  "icon": "theme",
   "package": "@inneranimalmedia/theme-church-site",
   "category": "Community",
   "industries": [

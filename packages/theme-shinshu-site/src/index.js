@@ -5,6 +5,7 @@ const THEME = {
   "displayName": "Shinshu Solutions",
   "version": "0.1.0",
   "kind": "gallery-theme",
+  "icon": "theme",
   "package": "@inneranimalmedia/theme-shinshu-site",
   "category": "Professional",
   "industries": [

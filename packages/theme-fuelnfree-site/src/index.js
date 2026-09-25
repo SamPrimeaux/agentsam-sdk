@@ -5,6 +5,7 @@ const THEME = {
   "displayName": "Fuel & Free Time",
   "version": "0.1.0",
   "kind": "gallery-theme",
+  "icon": "theme",
   "package": "@inneranimalmedia/theme-fuelnfree-site",
   "category": "Commerce",
   "industries": [

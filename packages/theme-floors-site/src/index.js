@@ -5,6 +5,7 @@ const THEME = {
   "displayName": "Anything Floors & More",
   "version": "0.1.0",
   "kind": "gallery-theme",
+  "icon": "theme",
   "package": "@inneranimalmedia/theme-floors-site",
   "category": "Services",
   "industries": [

@@ -1,10 +1,11 @@
-import { KeyRound, Plug } from "lucide-react";
+import { KeyRound, Palette, Plug } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
   { to: "/settings/integrations", label: "Integrations", icon: Plug },
   { to: "/settings/keys", label: "API keys", icon: KeyRound },
+  { to: "/settings/themes", label: "Themes", icon: Palette },
 ] as const;
 
 export function SettingsNav() {

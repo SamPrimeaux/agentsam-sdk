@@ -1,14 +1,27 @@
 import { useRouterState } from "@tanstack/react-router";
-import { Box, FileCode, FolderGit2, Globe, Layers, LayoutTemplate, MessageSquare, Settings, SquareTerminal, Upload } from "lucide-react";
+import {
+  Box,
+  Database,
+  FileCode,
+  FolderGit2,
+  Globe,
+  Layers,
+  LayoutTemplate,
+  MessageSquare,
+  Palette,
+  Settings,
+  SquareTerminal,
+  Upload,
+} from "lucide-react";
 import { Nav } from "@inneranimalmedia/agentsam-nav";
 import { StudioMark } from "@/components/mark";
-import { cn } from "@/lib/utils";
 import { useWorkStore } from "@/lib/work/store";
 
 const ITEMS = [
   { to: "/agentsam", label: "Studio", icon: MessageSquare, match: (p: string) => p === "/agentsam" || p.startsWith("/trails") },
   { to: "/cms", label: "CMS", icon: LayoutTemplate, match: (p: string) => p.startsWith("/cms") },
   { to: "/cad", label: "CAD", icon: Layers, match: (p: string) => p.startsWith("/cad") },
+  { to: "/database", label: "Database", icon: Database, match: (p: string) => p.startsWith("/database") },
   { to: "/projects", label: "Projects", icon: FolderGit2, match: (p: string) => p.startsWith("/projects") },
   { to: "/artifacts", label: "Artifacts", icon: Box, match: (p: string) => p.startsWith("/artifacts") },
   { to: "/files", label: "Files", icon: FileCode, match: (p: string) => p.startsWith("/files") },
@@ -57,9 +70,20 @@ export function NavRail() {
                   <Nav.MenuSub>
                     <li><Nav.MenuSubButton href="/settings/integrations" active={pathname === "/settings/integrations"}>Integrations</Nav.MenuSubButton></li>
                     <li><Nav.MenuSubButton href="/settings/keys" active={pathname === "/settings/keys"}>API keys</Nav.MenuSubButton></li>
+                    <li><Nav.MenuSubButton href="/settings/themes" active={pathname === "/settings/themes"}>Themes</Nav.MenuSubButton></li>
                   </Nav.MenuSub>
                 </Nav.CollapsibleContent>
               </Nav.Collapsible>
+            </Nav.MenuItem>
+            <Nav.MenuItem>
+              <Nav.MenuButton
+                icon={Palette}
+                active={pathname.startsWith("/settings/themes") || pathname.startsWith("/themes")}
+                itemId="themes"
+                onClick={() => window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: "/settings/themes" } }))}
+              >
+                Themes
+              </Nav.MenuButton>
             </Nav.MenuItem>
             <Nav.MenuItem><Nav.MenuButton icon={Upload} active={pathname.startsWith("/ship")} itemId="ship" onClick={() => window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: "/ship" } }))}>Ship</Nav.MenuButton></Nav.MenuItem>
           </Nav.Menu>

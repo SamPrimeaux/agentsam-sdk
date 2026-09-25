@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentsam.database-connection.v1",
+  "title": "AgentSamDatabaseConnection",
+  "type": "object",
+  "required": ["id", "engine", "provider", "connection"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "agentsam.database-connection.v1" },
+    "id": { "type": "string", "minLength": 1 },
+    "label": { "type": "string" },
+    "engine": { "enum": ["sqlite", "postgres", "mysql"] },
+    "provider": {
+      "enum": ["local", "cloudflare-d1", "supabase", "postgres", "mysql"]
+    },
+    "account_id": { "type": "string", "description": "Optional hosted owner. Never workspace_id." },
+    "connection": { "type": "object" },
+    "accelerator": {
+      "type": "object",
+      "required": ["driver", "configurationId"],
+      "properties": {
+        "driver": { "const": "hyperdrive" },
+        "configurationId": { "type": "string" },
+        "localConnectionStringRef": { "type": "string" }
+      }
+    },
+    "vectors": {
+      "type": "object",
+      "required": ["driver"],
+      "properties": {
+        "driver": {
+          "enum": ["none", "sqlite_exact", "sqlite_vector", "pgvector", "vectorize"]
+        },
+        "profileId": { "type": "string" },
+        "indexName": { "type": "string" },
+        "namespace": { "type": "string" }
+      }
+    },
+    "created_at": { "type": "string" }
+  }
+}

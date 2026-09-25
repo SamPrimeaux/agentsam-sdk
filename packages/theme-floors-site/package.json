@@ -25,6 +25,7 @@
     "kind": "theme",
     "slug": "floors-site",
     "galleryPath": "apps/theme-gallery-preview/themes/floors-site",
-    "installable": true
+    "installable": true,
+    "icon": "theme"
   }
 }

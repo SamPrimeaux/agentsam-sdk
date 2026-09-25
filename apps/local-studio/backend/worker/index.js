@@ -80,16 +80,12 @@ const INSTALL_APP_TARGETS = buildInstallTargets([
   ecommerceApp,
 ]);
 
-function serveInstallScript(pathname) {
-  const appTarget = INSTALL_APP_TARGETS[pathname];
-  const body = appTarget
-    ? installScript.replace(
-        'APP_SELECTOR="${AGENTSAM_DEFAULT_APP:-}"',
-        `APP_SELECTOR="\${AGENTSAM_DEFAULT_APP:-${appTarget}}"`,
-      )
-    : installScript;
-
-  return new Response(body, {
+/**
+ * One generic installer script. App selection is explicit via --app-id on the client.
+ * Path aliases (/install/studio, …) still serve the same script — no ambient default-app mutation.
+ */
+function serveInstallScript(_pathname) {
+  return new Response(installScript, {
     headers: {
       "content-type": "text/x-shellscript; charset=utf-8",
       "cache-control": "no-store",

@@ -70,6 +70,7 @@ const SIDE_TITLES: Record<SideKind, string> = {
   deploy: "Ship",
   app: "CAD Creator",
   goal: "Edit goal",
+  database: "Database",
 };
 
 function newSideTab(kind: SideKind, extra?: Partial<SideTab>): SideTab {

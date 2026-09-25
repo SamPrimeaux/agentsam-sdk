@@ -5,6 +5,7 @@ const THEME = {
   "displayName": "Primeaux Handyman Services",
   "version": "0.1.0",
   "kind": "gallery-theme",
+  "icon": "theme",
   "package": "@inneranimalmedia/theme-handyman-site",
   "category": "Services",
   "industries": [

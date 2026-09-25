@@ -52,6 +52,19 @@ export function AppShellFrame() {
   }, [navigate]);
 
   useEffect(() => {
+    function onOpenSideTab(event: Event) {
+      const detail = (event as CustomEvent<{ kind?: string; title?: string }>).detail;
+      const kind = detail?.kind;
+      if (!kind) return;
+      const { openSideTab, setSideOpen } = useWorkStore.getState();
+      openSideTab(kind as never, { ephemeral: false, title: detail.title });
+      setSideOpen(true);
+    }
+    window.addEventListener("agentsam:open-side-tab", onOpenSideTab);
+    return () => window.removeEventListener("agentsam:open-side-tab", onOpenSideTab);
+  }, []);
+
+  useEffect(() => {
     function onKey(event: KeyboardEvent) {
       const meta = event.metaKey || event.ctrlKey;
       if (meta && event.key.toLowerCase() === "n" && !event.shiftKey) {

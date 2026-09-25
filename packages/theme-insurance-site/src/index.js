@@ -5,6 +5,7 @@ const THEME = {
   "displayName": "Chrystal Clear Insurance",
   "version": "0.1.0",
   "kind": "gallery-theme",
+  "icon": "theme",
   "package": "@inneranimalmedia/theme-insurance-site",
   "category": "Professional",
   "industries": [

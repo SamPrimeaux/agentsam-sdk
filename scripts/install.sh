@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # AgentSam installer — npm bootstrap mode (standalone SEA artifacts come later).
 # Served from https://agentsam.inneranimalmedia.com/install
+# Product identity is always explicit: --app-id <id> (or legacy --app alias).
+# Never inject a silent default app into the installer body.
 set -euo pipefail
 
 PACKAGE="${AGENTSAM_PACKAGE:-@inneranimalmedia/agentsam-sdk}"
 CHANNEL="${AGENTSAM_CHANNEL:-latest}"
 VERSION=""
-APP_SELECTOR="${AGENTSAM_DEFAULT_APP:-}"
+APP_SELECTOR=""
 APP_BIN=""
 INSTALL_ROOT="${AGENTSAM_HOME:-$HOME/.agentsam}"
 BIN_DIR="${AGENTSAM_BIN_DIR:-$HOME/.local/bin}"
@@ -18,13 +20,15 @@ AgentSam installer
 
   curl -fsSL https://agentsam.inneranimalmedia.com/install | bash
   curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --version 2.6.2
+  curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --app-id database-editor
   curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --app studio
   curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --channel beta
 
 Flags:
   --version <ver>   Install a specific npm package version
   --channel <name>  latest|beta (npm dist-tag)
-  --app <id>        cad|cms|studio (install an app launcher alongside agentsam)
+  --app-id <id>     Stable app id (database-editor|local-studio|cad-creator|client-cms-editor|…)
+  --app <alias>     Legacy alias: cad|cms|studio (maps to --app-id)
   --prefix <dir>    Bin directory (default: ~/.local/bin)
   --help            Show this help
 EOF
@@ -44,8 +48,12 @@ select_app() {
       APP_SELECTOR="local-studio"
       APP_BIN="agentsam-studio"
       ;;
+    database|database-editor)
+      APP_SELECTOR="database-editor"
+      APP_BIN="agentsam-database-editor"
+      ;;
     *)
-      echo "unknown app: $1 (expected cad, cms, or studio)" >&2
+      echo "unknown app: $1 (expected cad, cms, studio, database-editor, or a known --app-id)" >&2
       exit 2
       ;;
   esac
@@ -58,15 +66,11 @@ require_value() {
   fi
 }
 
-if [ -n "$APP_SELECTOR" ]; then
-  select_app "$APP_SELECTOR"
-fi
-
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --version) require_value "$@"; VERSION="$2"; shift 2 ;;
     --channel) require_value "$@"; CHANNEL="$2"; shift 2 ;;
-    --app) require_value "$@"; select_app "$2"; shift 2 ;;
+    --app-id|--app) require_value "$@"; select_app "$2"; shift 2 ;;
     --prefix) require_value "$@"; BIN_DIR="$2"; shift 2 ;;
     --help|-h) usage; exit 0 ;;
     *) echo "unknown flag: $1" >&2; usage; exit 2 ;;
@@ -109,7 +113,7 @@ fi
 printf '  Node    %s\n' "$NODE_VERSION"
 printf '  mode    %s\n' "$MODE"
 if [ -n "$APP_SELECTOR" ]; then
-  printf '  app     %s\n' "$APP_SELECTOR"
+  printf '  app_id  %s\n' "$APP_SELECTOR"
 fi
 
 SPEC="$PACKAGE@$CHANNEL"
@@ -146,6 +150,7 @@ cat > "$INSTALL_ROOT/install-receipt.json" <<EOF
   "os": "$OS",
   "arch": "$ARCH",
   "node": "$NODE_VERSION",
+  "app_id": $(if [ -n "$APP_SELECTOR" ]; then printf '"%s"' "$APP_SELECTOR"; else printf 'null'; fi),
   "app": $(if [ -n "$APP_SELECTOR" ]; then printf '"%s"' "$APP_SELECTOR"; else printf 'null'; fi),
   "bin_dir": "$BIN_DIR",
   "standalone_ready": false,

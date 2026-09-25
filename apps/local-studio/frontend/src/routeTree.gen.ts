@@ -17,6 +17,7 @@ import { Route as appsCadRouteImport } from './routes/(apps)/cad'
 import { Route as appsCliRouteImport } from './routes/(apps)/cli'
 import { Route as appsCmsRouteImport } from './routes/(apps)/cms'
 import { Route as appsFilesRouteImport } from './routes/(apps)/files'
+import { Route as appsDatabaseRouteImport } from './routes/(apps)/database'
 import { Route as appsProjectsRouteImport } from './routes/(apps)/projects'
 import { Route as appsSettingsRouteImport } from './routes/(apps)/settings'
 import { Route as appsShipRouteImport } from './routes/(apps)/ship'
@@ -26,6 +27,7 @@ import { Route as ApiGithubRouteImport } from './routes/api/github'
 import { Route as appsSettingsIndexRouteImport } from './routes/(apps)/settings/index'
 import { Route as appsSettingsIntegrationsRouteImport } from './routes/(apps)/settings/integrations'
 import { Route as appsSettingsKeysRouteImport } from './routes/(apps)/settings/keys'
+import { Route as appsSettingsThemesRouteImport } from './routes/(apps)/settings/themes'
 import { Route as appsTrailsIndexRouteImport } from './routes/(apps)/trails/index'
 import { Route as appsTrailsTrailIdRouteImport } from './routes/(apps)/trails/$trailId'
 import { Route as ApiLlmInventoryRouteImport } from './routes/api/llm.inventory'
@@ -69,6 +71,11 @@ const appsCmsRoute = appsCmsRouteImport.update({
 const appsFilesRoute = appsFilesRouteImport.update({
   id: '/(apps)/files',
   path: '/files',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const appsDatabaseRoute = appsDatabaseRouteImport.update({
+  id: '/(apps)/database',
+  path: '/database',
   getParentRoute: () => rootRouteImport,
 } as any)
 const appsProjectsRoute = appsProjectsRouteImport.update({
@@ -117,6 +124,11 @@ const appsSettingsKeysRoute = appsSettingsKeysRouteImport.update({
   path: '/keys',
   getParentRoute: () => appsSettingsRoute,
 } as any)
+const appsSettingsThemesRoute = appsSettingsThemesRouteImport.update({
+  id: '/(apps)/settings/themes',
+  path: '/themes',
+  getParentRoute: () => appsSettingsRoute,
+} as any)
 const appsTrailsIndexRoute = appsTrailsIndexRouteImport.update({
   id: '/(apps)/trails/',
   path: '/trails/',
@@ -147,6 +159,7 @@ export interface FileRoutesByFullPath {
   '/cli': typeof appsCliRoute
   '/cms': typeof appsCmsRoute
   '/files': typeof appsFilesRoute
+  '/database': typeof appsDatabaseRoute
   '/projects': typeof appsProjectsRoute
   '/settings': typeof appsSettingsRouteWithChildren
   '/ship': typeof appsShipRoute
@@ -155,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/api/github': typeof ApiGithubRoute
   '/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/settings/keys': typeof appsSettingsKeysRoute
+  '/settings/themes': typeof appsSettingsThemesRoute
   '/trails/$trailId': typeof appsTrailsTrailIdRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
   '/settings/': typeof appsSettingsIndexRoute
@@ -170,6 +184,7 @@ export interface FileRoutesByTo {
   '/cli': typeof appsCliRoute
   '/cms': typeof appsCmsRoute
   '/files': typeof appsFilesRoute
+  '/database': typeof appsDatabaseRoute
   '/projects': typeof appsProjectsRoute
   '/ship': typeof appsShipRoute
   '/api/chat': typeof ApiChatRoute
@@ -193,6 +208,7 @@ export interface FileRoutesById {
   '/(apps)/cli': typeof appsCliRoute
   '/(apps)/cms': typeof appsCmsRoute
   '/(apps)/files': typeof appsFilesRoute
+  '/(apps)/database': typeof appsDatabaseRoute
   '/(apps)/projects': typeof appsProjectsRoute
   '/(apps)/settings': typeof appsSettingsRouteWithChildren
   '/(apps)/ship': typeof appsShipRoute
@@ -201,6 +217,7 @@ export interface FileRoutesById {
   '/api/github': typeof ApiGithubRoute
   '/(apps)/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/(apps)/settings/keys': typeof appsSettingsKeysRoute
+  '/(apps)/settings/themes': typeof appsSettingsThemesRoute
   '/(apps)/trails/$trailId': typeof appsTrailsTrailIdRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
   '/(apps)/settings/': typeof appsSettingsIndexRoute
@@ -218,6 +235,7 @@ export interface FileRouteTypes {
     | '/cli'
     | '/cms'
     | '/files'
+    | '/database'
     | '/projects'
     | '/settings'
     | '/ship'
@@ -226,6 +244,7 @@ export interface FileRouteTypes {
     | '/api/github'
     | '/settings/integrations'
     | '/settings/keys'
+    | '/settings/themes'
     | '/trails/$trailId'
     | '/api/llm/inventory'
     | '/settings/'
@@ -241,6 +260,7 @@ export interface FileRouteTypes {
     | '/cli'
     | '/cms'
     | '/files'
+    | '/database'
     | '/projects'
     | '/ship'
     | '/api/chat'
@@ -263,6 +283,7 @@ export interface FileRouteTypes {
     | '/(apps)/cli'
     | '/(apps)/cms'
     | '/(apps)/files'
+    | '/(apps)/database'
     | '/(apps)/projects'
     | '/(apps)/settings'
     | '/(apps)/ship'
@@ -271,6 +292,7 @@ export interface FileRouteTypes {
     | '/api/github'
     | '/(apps)/settings/integrations'
     | '/(apps)/settings/keys'
+    | '/(apps)/settings/themes'
     | '/(apps)/trails/$trailId'
     | '/api/llm/inventory'
     | '/(apps)/settings/'
@@ -287,6 +309,7 @@ export interface RootRouteChildren {
   appsCliRoute: typeof appsCliRoute
   appsCmsRoute: typeof appsCmsRoute
   appsFilesRoute: typeof appsFilesRoute
+  appsDatabaseRoute: typeof appsDatabaseRoute
   appsProjectsRoute: typeof appsProjectsRoute
   appsSettingsRoute: typeof appsSettingsRouteWithChildren
   appsShipRoute: typeof appsShipRoute
@@ -465,12 +488,14 @@ const appsAgentsamRouteWithChildren = appsAgentsamRoute._addFileChildren(
 interface appsSettingsRouteChildren {
   appsSettingsIntegrationsRoute: typeof appsSettingsIntegrationsRoute
   appsSettingsKeysRoute: typeof appsSettingsKeysRoute
+  appsSettingsThemesRoute: typeof appsSettingsThemesRoute
   appsSettingsIndexRoute: typeof appsSettingsIndexRoute
 }
 
 const appsSettingsRouteChildren: appsSettingsRouteChildren = {
   appsSettingsIntegrationsRoute: appsSettingsIntegrationsRoute,
   appsSettingsKeysRoute: appsSettingsKeysRoute,
+  appsSettingsThemesRoute: appsSettingsThemesRoute,
   appsSettingsIndexRoute: appsSettingsIndexRoute,
 }
 
@@ -487,6 +512,7 @@ const rootRouteChildren: RootRouteChildren = {
   appsCliRoute: appsCliRoute,
   appsCmsRoute: appsCmsRoute,
   appsFilesRoute: appsFilesRoute,
+  appsDatabaseRoute: appsDatabaseRoute,
   appsProjectsRoute: appsProjectsRoute,
   appsSettingsRoute: appsSettingsRouteWithChildren,
   appsShipRoute: appsShipRoute,

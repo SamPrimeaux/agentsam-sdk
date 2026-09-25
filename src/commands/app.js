@@ -9,38 +9,56 @@ function clean(value) {
   return value == null ? '' : String(value).trim();
 }
 
+function readManifest(manifestPath, fallbackId) {
+  try {
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    return {
+      id: manifest.id || fallbackId,
+      name: manifest.name || fallbackId,
+      dir: path.dirname(manifestPath),
+      manifestPath,
+      bin: manifest.bin || null,
+      commands: manifest.commands || {},
+      manifest,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function listAppManifests(root = REPO_ROOT) {
-  const appsRoot = path.join(root, 'apps');
-  if (!fs.existsSync(appsRoot)) return [];
-  return fs.readdirSync(appsRoot, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => {
-      const dir = path.join(appsRoot, entry.name);
-      const manifestPath = path.join(dir, 'agentsam.app.json');
-      if (!fs.existsSync(manifestPath)) return null;
-      try {
-        const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-        return {
-          id: manifest.id || entry.name,
-          name: manifest.name || entry.name,
-          dir,
-          manifestPath,
-          bin: manifest.bin || null,
-          commands: manifest.commands || {},
-          manifest,
-        };
-      } catch {
-        return null;
-      }
-    })
-    .filter(Boolean)
-    .sort((a, b) => a.id.localeCompare(b.id));
+  const out = [];
+  const seen = new Set();
+
+  function addFromDir(parent, entryName) {
+    const dir = path.join(parent, entryName);
+    const manifestPath = path.join(dir, 'agentsam.app.json');
+    if (!fs.existsSync(manifestPath)) return;
+    const row = readManifest(manifestPath, entryName);
+    if (!row || seen.has(row.id)) return;
+    seen.add(row.id);
+    out.push(row);
+  }
+
+  for (const parentName of ['apps', 'packages']) {
+    const parent = path.join(root, parentName);
+    if (!fs.existsSync(parent)) continue;
+    for (const entry of fs.readdirSync(parent, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      addFromDir(parent, entry.name);
+    }
+  }
+
+  return out.sort((a, b) => a.id.localeCompare(b.id));
 }
 
 function resolveApp(id, root = REPO_ROOT) {
   const apps = listAppManifests(root);
   const hit = apps.find((row) => row.id === id || path.basename(row.dir) === id);
-  if (!hit) throw new Error(`unknown AgentSam app: ${id}`);
+  if (!hit) {
+    const available = apps.map((a) => a.id).join(', ') || '(none)';
+    throw new Error(`unknown AgentSam app: ${id}. Available: ${available}`);
+  }
   return hit;
 }
 
@@ -63,6 +81,7 @@ export async function runApp(argv = [], options = {}) {
     write([
       'agentsam app list',
       'agentsam app info <id>',
+      'agentsam app install <id>',
       'agentsam app doctor <id>',
       'agentsam app preview <id>',
       'agentsam app scaffold <id> <dir>',
@@ -75,7 +94,7 @@ export async function runApp(argv = [], options = {}) {
     const apps = listAppManifests(options.root || REPO_ROOT);
     write('\n  AgentSam apps\n\n');
     for (const app of apps) {
-      write(`  • ${app.id.padEnd(20)} ${app.name}\n`);
+      write(`  • ${app.id.padEnd(24)} ${app.name}\n`);
     }
     write('\n');
     return apps;
@@ -87,6 +106,19 @@ export async function runApp(argv = [], options = {}) {
   if (command === 'info') {
     write(`${JSON.stringify(app.manifest, null, 2)}\n`);
     return app.manifest;
+  }
+  if (command === 'install') {
+    const curl =
+      app.manifest?.install?.curl ||
+      `curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --app-id ${app.id}`;
+    const npmCmd =
+      app.manifest?.install?.command ||
+      (app.manifest?.package ? `npm install ${app.manifest.package}` : null);
+    write(`\n  Install ${app.id}\n\n`);
+    if (npmCmd) write(`  ${npmCmd}\n`);
+    write(`  ${curl}\n\n`);
+    write('  app_id is stable product identity. Pass --app-id explicitly; no AGENTSAM_DEFAULT_APP.\n\n');
+    return { id: app.id, curl, command: npmCmd };
   }
   if (command === 'doctor' || command === 'preview') {
     runAppBin(app, [command, ...rest], options);
@@ -100,7 +132,7 @@ export async function runApp(argv = [], options = {}) {
 }
 
 export function appCommandHelp() {
-  return 'agentsam app list|info|doctor|preview|scaffold';
+  return 'agentsam app list|info|install|doctor|preview|scaffold';
 }
 
 export { clean };

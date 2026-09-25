@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, FileCode, Globe, Layers, Plus, Target, Upload, Users, X } from "lucide-react";
+import { Box, Database, FileCode, Globe, Layers, Plus, Target, Upload, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,6 +15,7 @@ import { FilesStage } from "@/components/workbench/files";
 import { ArtifactsStage } from "@/components/workbench/artifacts";
 import { DeployStage } from "@/components/workbench/deploy";
 import { AppPreviewStage } from "@/components/workbench/app-preview-stage";
+import { DatabaseStage } from "@/components/workbench/database-stage";
 import { cn } from "@/lib/utils";
 import { useActiveSideTab, useWorkStore } from "@/lib/work/store";
 import { StudioMark } from "@/components/mark";
@@ -26,6 +27,7 @@ function TabIcon({ kind }: { kind: string }) {
   if (kind === "deploy") return <Upload className="size-3.5" />;
   if (kind === "app") return <Layers className="size-3.5" />;
   if (kind === "goal") return <Target className="size-3.5" />;
+  if (kind === "database") return <Database className="size-3.5" />;
   return <FileCode className="size-3.5" />;
 }
 
@@ -106,6 +108,10 @@ export function SideStage() {
                 <Layers className="size-3.5" />
                 CAD Creator
               </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => openSideTab("database", { ephemeral: false })}>
+                <Database className="size-3.5" />
+                Database
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -128,6 +134,7 @@ export function SideStage() {
         {tab?.kind === "artifacts" ? <ArtifactsStage /> : null}
         {tab?.kind === "deploy" ? <DeployStage /> : null}
         {tab?.kind === "app" ? <AppPreviewStage tab={tab} /> : null}
+        {tab?.kind === "database" ? <DatabaseStage /> : null}
         {tab?.kind === "goal" ? <GoalEditor trailId={tab.parentTrailId ?? undefined} /> : null}
         {!tab ? (
           <div className="flex h-full flex-col items-center justify-center px-6 text-center">
