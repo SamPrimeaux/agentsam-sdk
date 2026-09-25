@@ -14,7 +14,7 @@ test('agentsam help is concise, topic-aware, and deterministic outside a TTY', (
   assert.equal(help.status, 0, help.stderr);
   assert.doesNotMatch(help.stderr, /Unknown command/);
   assert.match(help.stdout, /Agent Sam/);
-  assert.match(help.stdout, /Type normally to work with Agent Sam/);
+  assert.match(help.stdout, /SAM = Systematic Autonomous Machinery/);
   assert.match(help.stdout, /agentsam help <topic>/);
   assert.match(help.stdout, /press \/ for the command picker/i);
   assert.doesNotMatch(help.stdout, /Inspect options:/);
