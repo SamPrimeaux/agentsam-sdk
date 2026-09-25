@@ -7,7 +7,11 @@
   "scripts": {
     "deploy": "wrangler deploy -c wrangler.jsonc",
     "dev": "wrangler dev -c wrangler.jsonc",
-    "test:go": "cd runtime && go test ./..."
+    "test:go": "cd runtime && go test ./...",
+    "vet:go": "cd runtime && go vet ./...",
+    "verify:go": "npm run test:go && npm run vet:go",
+    "verify:container": "docker build --platform linux/amd64 -t agentsam-go-worker:verify .",
+    "verify:worker": "wrangler deploy -c wrangler.jsonc --dry-run"
   },
   "dependencies": {
     "@cloudflare/containers": "^0.0.30"
