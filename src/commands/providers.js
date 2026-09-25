@@ -164,12 +164,12 @@ export async function validateAndSaveProviderCredential(provider, secret, option
     };
   }
 
-  // Key is verified! Now persist securely to OS store + AES-256-GCM vault.
-  // Also write ~/.agentsam/env.d so `source load-agent-env.sh` works on boot.
+  // Key is verified. Persist securely to the OS store + AES-256-GCM vault.
+  // Plaintext shell profiles remain explicit opt-in only.
   setProviderCredential(id, cleanSecret, {
     ...options,
     accountId,
-    writeEnvProfile: options.writeEnvProfile !== false,
+    writeEnvProfile: options.writeEnvProfile === true,
   });
 
   return {
@@ -221,7 +221,7 @@ export async function promptAndConfigureProvider(provider, options = {}) {
   const result = await validateAndSaveProviderCredential(id, String(secret), {
     ...options,
     accountId,
-    writeEnvProfile: options.writeEnvProfile !== false,
+    writeEnvProfile: options.writeEnvProfile === true,
   });
 
   if (!result.ok) {
