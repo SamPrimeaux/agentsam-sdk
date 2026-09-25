@@ -468,6 +468,37 @@ const cookbooks = buildGuide({
   ],
 });
 
+const nativeRuntime = buildGuide({
+  slug: 'native-runtime',
+  title: 'AgentSam native Go runtime',
+  description: 'How AgentSam uses one Go runtime core across local native execution and Cloudflare Containers, with deployment-grade proof.',
+  pageId: 'docs.sam.native-runtime',
+  crumb: '<span>Docs</span> <span aria-hidden="true">/</span> <span>SAM</span> <span aria-hidden="true">/</span> <strong>Native runtime</strong>',
+  navGroups: [
+    {
+      label: 'Runtime',
+      items: [
+        { id: 'overview', label: 'Overview' },
+        { id: 'capabilities', label: 'Capabilities' },
+        { id: 'modes', label: 'Execution modes' },
+        { id: 'local', label: 'Local native' },
+        { id: 'cloudflare-dev', label: 'Cloudflare development' },
+        { id: 'production', label: 'Production deploy' },
+        { id: 'proof', label: 'Deployment proof' },
+        { id: 'evidence', label: 'Evidence' },
+        { id: 'next', label: 'Next capabilities' },
+      ],
+    },
+  ],
+  tocItems: [
+    { id: 'overview', label: 'Overview' },
+    { id: 'modes', label: 'Execution modes' },
+    { id: 'production', label: 'Production deploy' },
+    { id: 'proof', label: 'Deployment proof' },
+    { id: 'next', label: 'Next capabilities' },
+  ],
+});
+
 buildHub();
 
 console.log(
