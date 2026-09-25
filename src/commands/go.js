@@ -229,7 +229,7 @@ async function shipCloudflare({ discovery, productRoot, runtimeRoot, args, write
   if (!discovery.go?.ok) throw new Error('go_toolchain_missing');
 
   const preflight = preflightToolchain({
-    requireDocker: !(args.dryRun || args.skipDeploy),
+    requireDocker: !args.skipDeploy,
     productRoot,
   });
   for (const check of preflight.checks) {
