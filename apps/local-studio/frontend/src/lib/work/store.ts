@@ -645,12 +645,13 @@ export const useWorkStore = create<WorkState>()(
         get().upsertFile(id, file);
       },
       openSideTab: (kind, extra) => {
-        if (kind === "terminal") {
-          set({ terminalOpen: true });
-          return "terminal";
-        }
         const existing =
-          kind === "files" || kind === "artifacts" || kind === "deploy" || kind === "goal"
+          kind === "files" ||
+          kind === "artifacts" ||
+          kind === "deploy" ||
+          kind === "goal" ||
+          kind === "terminal" ||
+          kind === "database"
             ? get().sideTabs.find((t) => t.kind === kind)
             : undefined;
         if (existing) {
@@ -768,10 +769,15 @@ export const useWorkStore = create<WorkState>()(
         return trail.id;
       },
       enqueueCommand: (cmd) =>
-        set((s) => ({
-          pendingCommands: [...s.pendingCommands, cmd],
-          terminalOpen: true,
-        })),
+        set((s) => {
+          const active = s.sideTabs.find((t) => t.id === s.activeSideTabId);
+          const sideHasCli = s.sideOpen && active?.kind === "terminal";
+          return {
+            pendingCommands: [...s.pendingCommands, cmd],
+            // Prefer an existing side CLI tab; otherwise open the bottom drawer.
+            terminalOpen: sideHasCli ? s.terminalOpen : true,
+          };
+        }),
       consumeCommands: () => {
         const cmds = get().pendingCommands;
         if (cmds.length) set({ pendingCommands: [] });

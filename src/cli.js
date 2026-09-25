@@ -40,6 +40,7 @@ import { runMcp } from './commands/mcp.js';
 import { runCloudflare } from './commands/cloudflare.js';
 import { runGo } from './commands/go.js';
 import { runWhoami } from './commands/whoami.js';
+import { runApiKey } from './commands/api-key.js';
 import { runResume } from './commands/resume.js';
 import { runLogin, runLogout } from './commands/account-auth.js';
 import { runPlugins } from './commands/plugins.js';
@@ -468,6 +469,13 @@ if (command === '--version' || command === '-v') {
 } else if (command === 'whoami') {
   try {
     await runWhoami(rest);
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
+  }
+} else if (command === 'api-key' || command === 'apikey' || command === 'api-keys') {
+  try {
+    await runApiKey(rest);
   } catch (e) {
     reportCliError(e);
     process.exitCode = 1;

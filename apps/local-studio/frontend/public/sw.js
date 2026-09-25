@@ -1,6 +1,6 @@
 /* AgentSam Work — offline shell cache for CLI-on-the-go */
 const CACHE = "agentsam-work-shell-v1";
-const PRECACHE = ["/", "/trails", "/cli", "/projects", "/artifacts", "/files", "/ship", "/favicon.svg"];
+const PRECACHE = ["/", "/trails", "/agentsam", "/projects", "/artifacts", "/files", "/ship", "/favicon.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -41,7 +41,7 @@ self.addEventListener("fetch", (event) => {
         const cached = await caches.match(request);
         if (cached) return cached;
         if (request.mode === "navigate") {
-          const fallback = (await caches.match("/trails")) || (await caches.match("/")) || (await caches.match("/cli"));
+          const fallback = (await caches.match("/trails")) || (await caches.match("/agentsam")) || (await caches.match("/"));
           if (fallback) return fallback;
         }
         return new Response("Offline", { status: 503, statusText: "Offline" });

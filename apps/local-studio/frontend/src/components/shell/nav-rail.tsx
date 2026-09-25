@@ -31,8 +31,14 @@ const ITEMS = [
 export function NavRail() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const terminalOpen = useWorkStore((s) => s.terminalOpen);
+  const sideOpen = useWorkStore((s) => s.sideOpen);
+  const sideTabs = useWorkStore((s) => s.sideTabs);
+  const activeSideTabId = useWorkStore((s) => s.activeSideTabId);
   const toggleTerminal = useWorkStore((s) => s.toggleTerminal);
-  const cliActive = pathname.startsWith("/cli") || terminalOpen;
+  const openSideTab = useWorkStore((s) => s.openSideTab);
+  const sideCli =
+    sideOpen && sideTabs.some((t) => t.id === activeSideTabId && t.kind === "terminal");
+  const cliActive = terminalOpen || sideCli;
 
   return (
     <Nav>
@@ -54,7 +60,13 @@ export function NavRail() {
               </Nav.MenuItem>
             ))}
             <Nav.MenuItem>
-              <Nav.MenuButton icon={SquareTerminal} active={cliActive} itemId="cli" onClick={() => { if (!pathname.startsWith("/cli")) toggleTerminal(); }} onDoubleClick={() => window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: "/cli" } }))}>
+              <Nav.MenuButton
+                icon={SquareTerminal}
+                active={cliActive}
+                itemId="cli"
+                onClick={() => toggleTerminal()}
+                onDoubleClick={() => openSideTab("terminal", { ephemeral: false })}
+              >
                 CLI
               </Nav.MenuButton>
             </Nav.MenuItem>

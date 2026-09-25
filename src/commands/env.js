@@ -7,6 +7,7 @@ import {
   listProviderCredentialStatus,
   ensureAgentEnvLoader,
   agentEnvLoaderPath,
+  renderEnvShellExports,
 } from '../lib/provider-credentials.js';
 
 const PROVIDERS = Object.freeze([
@@ -85,11 +86,11 @@ function cloudflareGuidance(write) {
 function agentsamApiGuidance(write) {
   writeLine(write, '');
   writeLine(write, '  AGENTSAM_API_KEY (aak_*)');
-  writeLine(write, '  Mint/rotate on the host account credentials surface (hash-only in D1).');
-  writeLine(write, '  Then pipe into this machine (never commit the raw key):');
-  writeLine(write, '    printf \'%s\' "$AAK" | agentsam providers add inneranimalmedia --from-stdin');
-  writeLine(write, '  Boot load:');
-  writeLine(write, '    source ~/.agentsam/load-agent-env.sh inneranimalmedia');
+  writeLine(write, '  Preferred:');
+  writeLine(write, '    agentsam api-key create --name "$(hostname)" --store keychain --activate');
+  writeLine(write, '  Then:');
+  writeLine(write, '    source ~/.agentsam/load-agent-env.sh');
+  writeLine(write, '    agentsam whoami');
 }
 
 function cursorGuidance(write) {
@@ -97,7 +98,7 @@ function cursorGuidance(write) {
   writeLine(write, '  CURSOR_API_KEY roll');
   writeLine(write, '  1. Create a new key in Cursor dashboard');
   writeLine(write, '  2. printf \'%s\' "$NEW" | agentsam providers add cursor --from-stdin');
-  writeLine(write, '  3. source ~/.agentsam/load-agent-env.sh cursor');
+  writeLine(write, '  3. source ~/.agentsam/load-agent-env.sh');
   writeLine(write, '  4. If Local Studio Worker uses the secret: wrangler secret put CURSOR_API_KEY');
   writeLine(write, '  Optional: agentsam providers remove cursor --yes  (before add, to force replace)');
 }
@@ -106,36 +107,42 @@ export async function runEnv(argv = [], options = {}) {
   const write = options.write || ((text) => process.stdout.write(text));
   const [command = 'status', ...args] = argv;
   let accountId = '';
+  let profile = 'default';
   const positionals = [];
   for (let i = 0; i < args.length; i += 1) {
     if (args[i] === '--account-id') accountId = String(args[++i] || '').trim();
+    else if (args[i] === '--profile') profile = String(args[++i] || 'default').trim() || 'default';
     else if (String(args[i] || '').startsWith('-')) throw new Error(`unexpected env argument: ${args[i]}`);
     else positionals.push(args[i]);
   }
   const providerArg = positionals[0];
 
   if (command === '--help' || command === '-h' || command === 'help') {
+    writeLine(write, 'agentsam env shell [--profile default]   print export lines for eval (keychain/vault)');
     writeLine(write, 'agentsam env init <openai|anthropic|gemini|grok|cursor|cloudflare|inneranimalmedia> [--account-id <id>]');
     writeLine(write, 'agentsam env status [provider]');
-    writeLine(write, 'agentsam env export <provider>     write ~/.agentsam/env.d from vault');
-    writeLine(write, 'agentsam env boot-line [providers…]  print source line for shell profile');
+    writeLine(write, 'agentsam env export <provider>     write ~/.agentsam/env.d from vault (compat fallback)');
+    writeLine(write, 'agentsam env boot-line             print: source ~/.agentsam/load-agent-env.sh');
     return;
   }
 
-  if (command === 'boot-line') {
-    const wanted = positionals.map(normalizeEnvProvider).filter(Boolean);
-    const profiles =
-      wanted.length > 0
-        ? wanted
-        : listProviderCredentialStatus(options)
-            .filter((r) => r.configured)
-            .map((r) => r.provider);
+  if (command === 'shell') {
     ensureAgentEnvLoader(options);
-    const loader = agentEnvLoaderPath(options).replace(String(options.home || process.env.HOME || ''), '~');
-    const list = profiles.length ? profiles.join(' ') : 'openai cursor inneranimalmedia';
-    writeLine(write, `source ~/.agentsam/load-agent-env.sh ${list}`);
-    writeLine(write, `# loader: ${loader}`);
-    return { command: `source ~/.agentsam/load-agent-env.sh ${list}` };
+    const result = renderEnvShellExports({
+      ...options,
+      profile,
+      providers: positionals.map(normalizeEnvProvider).filter(Boolean),
+    });
+    write(result.script);
+    return result;
+  }
+
+  if (command === 'boot-line') {
+    ensureAgentEnvLoader(options);
+    writeLine(write, 'source ~/.agentsam/load-agent-env.sh');
+    writeLine(write, `# loader: ${agentEnvLoaderPath(options)}`);
+    writeLine(write, '# prefers: eval "$(agentsam env shell --profile default)"');
+    return { command: 'source ~/.agentsam/load-agent-env.sh' };
   }
 
   if (command === 'export') {
@@ -144,7 +151,8 @@ export async function runEnv(argv = [], options = {}) {
     const result = exportProviderEnvProfile(provider, options);
     writeLine(write, '');
     writeLine(write, `  Exported ${provider}: ${result.file}`);
-    writeLine(write, `  ${result.source_command}`);
+    writeLine(write, '  source ~/.agentsam/load-agent-env.sh');
+    writeLine(write, '  (compat: plaintext env.d is opt-in; prefer keychain + env shell)');
     writeLine(write, '');
     return result;
   }
@@ -168,8 +176,8 @@ export async function runEnv(argv = [], options = {}) {
     writeLine(write, `  profile  ${result.file}${result.created ? ' · created' : ' · existing'}`);
     writeLine(write, `  loader   ${result.loader}`);
     writeLine(write, '');
-    writeLine(write, '  Add the credential to the profile (or use providers add --from-stdin), then:');
-    writeLine(write, `    ${result.source_command}`);
+    writeLine(write, '  Prefer vault/keychain storage, then:');
+    writeLine(write, '    source ~/.agentsam/load-agent-env.sh');
     if (provider === 'cloudflare') {
       if (accountId) writeLine(write, `  account  detected/configured (${cloudflareAccounts?.source || 'explicit'})`);
       else if ((cloudflareAccounts?.accounts || []).length > 1) {
@@ -197,15 +205,13 @@ export async function runEnv(argv = [], options = {}) {
     for (const provider of providers) {
       const row = describeProviderCredential(provider, options);
       const extra = row.account_id ? ` · account ${row.account_id}` : '';
-      writeLine(
-        write,
-        `  ${provider.padEnd(16)} ${row.configured ? 'configured' : row.error ? `blocked (${row.error})` : 'not configured'}${extra}`,
-      );
+      const state = row.configured ? `available · ${row.source || 'runtime'}${extra}` : row.error || 'not configured';
+      writeLine(write, `  ${String(row.label || provider).padEnd(22)} ${state}`);
     }
     writeLine(write, '');
-    writeLine(write, '  Boot tip: agentsam env boot-line');
+    writeLine(write, '  Load: source ~/.agentsam/load-agent-env.sh');
     writeLine(write, '');
-    return;
+    return { providers: listProviderCredentialStatus(options) };
   }
 
   throw new Error(`unknown env command: ${command}`);

@@ -21,6 +21,56 @@
 .agentsam-shell [data-agent-composer]:focus-within { border-color: color-mix(in srgb, var(--nav-accent) 55%, var(--nav-border)); box-shadow: none; }
 .agentsam-shell [data-agent-composer] textarea { font: 400 16px/24px var(--nav-font); min-height: 48px; }
 .agentsam-shell [data-agent-composer] button { flex-shrink: 0; }
+
+/* Composer send/stop — semantic controls tied to --nav-accent */
+.agentsam-shell {
+  --composer-send-bg: var(--nav-accent);
+  --composer-send-fg: #ffffff;
+  --composer-send-disabled-bg: color-mix(in srgb, var(--nav-muted) 28%, var(--nav-surface));
+  --composer-send-disabled-fg: color-mix(in srgb, var(--nav-muted) 85%, var(--nav-text));
+  --composer-control-hover: color-mix(in srgb, var(--nav-accent) 88%, #000);
+}
+.agentsam-shell [data-composer-send] {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--composer-send-bg);
+  color: var(--composer-send-fg);
+  opacity: 1;
+  transition: background 120ms ease, transform 100ms ease, opacity 120ms ease;
+}
+.agentsam-shell [data-composer-send]:hover:not(:disabled) {
+  background: var(--composer-control-hover);
+}
+.agentsam-shell [data-composer-send]:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.agentsam-shell [data-composer-send]:disabled {
+  background: var(--composer-send-disabled-bg);
+  color: var(--composer-send-disabled-fg);
+  opacity: 1;
+  cursor: default;
+}
+.agentsam-shell [data-composer-send]:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--nav-accent) 70%, transparent);
+  outline-offset: 2px;
+}
+.agentsam-shell [data-composer-stop] {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--nav-selected);
+  color: var(--nav-text);
+  opacity: 1;
+}
+.agentsam-shell [data-composer-stop]:hover {
+  background: color-mix(in srgb, var(--nav-accent) 22%, var(--nav-selected));
+}
+.agentsam-shell [data-composer-stop]:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--nav-accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
 .agentsam-start-context { margin: 8px auto 0; width: 100%; max-width: 840px; display: flex; justify-content: flex-start; color: var(--nav-muted); font-size: 12px; }
 .agentsam-start-context .as-nav-title, .agentsam-start-context .as-nav-separator, .agentsam-start-context .as-nav-mode-label { display: none; }
 .agentsam-plugin-host { position: relative; width: 100%; max-width: 840px; margin: 0 auto; }

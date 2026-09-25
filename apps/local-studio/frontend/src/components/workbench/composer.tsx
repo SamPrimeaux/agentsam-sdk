@@ -79,7 +79,8 @@ export function Composer({
       type="button"
       size="icon-sm"
       aria-label="Send"
-      className="rounded-full"
+      data-composer-send=""
+      className="rounded-full border-0 shadow-none hover:bg-[var(--composer-control-hover)] disabled:opacity-100"
       disabled={!value.trim()}
       onClick={() => void send(targetId, targetKind)}
     >
@@ -93,7 +94,8 @@ export function Composer({
       size="icon-sm"
       variant="secondary"
       aria-label="Stop"
-      className="rounded-full"
+      data-composer-stop=""
+      className="rounded-full border-0 shadow-none disabled:opacity-100"
       onClick={() => stop(targetId)}
     >
       <Square className="size-3 fill-current" />

@@ -129,28 +129,17 @@ export function agentEnvLoaderPath(options = {}) {
 
 export function ensureAgentEnvLoader(options = {}) {
   const filename = agentEnvLoaderPath(options);
-  const supported = Object.keys(PROVIDER_CREDENTIALS).join('|');
-  const source = `# AgentSam provider environment loader. Source this file; do not execute it.
-if [ "$#" -eq 0 ]; then
-  echo "usage: source ~/.agentsam/load-agent-env.sh <profile> [profile ...]" >&2
-  return 2 2>/dev/null || exit 2
+  const source = `# AgentSam environment loader. Source this file; do not execute it.
+# Credentials resolve from the OS keychain / local vault via \`agentsam env shell\`.
+# Do not put plaintext secrets in this file.
+if command -v agentsam >/dev/null 2>&1; then
+  eval "$(agentsam env shell --profile default)"
+elif command -v agentsam-env >/dev/null 2>&1; then
+  eval "$(agentsam-env shell --profile default)"
+else
+  echo "agentsam CLI not found on PATH; cannot load AgentSam credentials" >&2
+  return 1 2>/dev/null || exit 1
 fi
-for _agentsam_profile in "$@"; do
-  case "$_agentsam_profile" in
-    grok) _agentsam_profile="xai" ;;
-    ${supported}) ;;
-    *) echo "unknown AgentSam provider profile: $_agentsam_profile" >&2; return 2 2>/dev/null || exit 2 ;;
-  esac
-  _agentsam_file="\${HOME}/.agentsam/env.d/\${_agentsam_profile}.env"
-  if [ ! -f "$_agentsam_file" ]; then
-    echo "AgentSam provider profile not found: $_agentsam_file" >&2
-    return 1 2>/dev/null || exit 1
-  fi
-  set -a
-  . "$_agentsam_file"
-  set +a
-done
-unset _agentsam_file _agentsam_profile
 `;
   atomicWrite(filename, source, 0o700);
   return filename;
@@ -358,4 +347,57 @@ export function describeProviderCredential(provider, options = {}) {
 
 export function listProviderCredentialStatus(options = {}) {
   return Object.freeze(Object.keys(PROVIDER_CREDENTIALS).map((provider) => describeProviderCredential(provider, options)));
+}
+
+/**
+ * Emit shell `export` lines for configured credentials from vault/keychain/env.
+ * Bootstrap-safe: does not require AGENTSAM_API_KEY already present to resolve it.
+ * Prefer vault/OS store over ambient env when `preferVault` is true (default for shell).
+ */
+export function renderEnvShellExports(options = {}) {
+  const profile = clean(options.profile || 'default').toLowerCase();
+  const wanted = Array.isArray(options.providers) && options.providers.length
+    ? options.providers.map(normalizeProviderId).filter(Boolean)
+    : profile === 'default'
+      ? Object.keys(PROVIDER_CREDENTIALS)
+      : profile.split(/[,\s]+/).map(normalizeProviderId).filter(Boolean);
+
+  const lines = ['# AgentSam env shell — evaluated by: eval "$(agentsam env shell)"'];
+  const emitted = [];
+
+  for (const provider of wanted) {
+    const spec = providerCredentialSpec(provider);
+    if (!spec) continue;
+
+    let resolved;
+    if (options.preferVault !== false) {
+      // Skip ambient process.env so a stale empty shell does not block keychain.
+      const vaultOnly = { ...options, env: { ...(options.env || {}), [spec.env]: undefined } };
+      if (spec.accountEnv) {
+        for (const name of spec.accountEnv) vaultOnly.env[name] = undefined;
+      }
+      resolved = resolveProviderCredential(spec.provider, vaultOnly);
+      if (!resolved.configured) {
+        resolved = resolveProviderCredential(spec.provider, options);
+      }
+    } else {
+      resolved = resolveProviderCredential(spec.provider, options);
+    }
+
+    if (!resolved.configured || !resolved.value) continue;
+    lines.push(`export ${spec.env}=${envLiteral(resolved.value)}`);
+    if (spec.provider === 'cloudflare' && resolved.account_id) {
+      lines.push(`export CLOUDFLARE_ACCOUNT_ID=${envLiteral(resolved.account_id)}`);
+    }
+    emitted.push(spec.provider);
+  }
+
+  if (!emitted.length) {
+    lines.push('# No AgentSam credentials configured. Run: agentsam api-key create --store keychain --activate');
+  }
+  return Object.freeze({
+    profile,
+    providers: emitted,
+    script: `${lines.join('\n')}\n`,
+  });
 }

@@ -69,14 +69,17 @@
     "paths": ["/install/studio", "/install/local-studio"]
   },
   "secrets": {
-    "server_only": [
-      "XAI_API_KEY",
+    "platform_server": [
+      "VAULT_MASTER_KEY",
+      "AGENTSAM_BRIDGE_KEY"
+    ],
+    "user_credentials": [
       "OPENAI_API_KEY",
       "GEMINI_API_KEY",
       "ANTHROPIC_API_KEY",
+      "XAI_API_KEY",
       "CURSOR_API_KEY",
-      "VAULT_MASTER_KEY",
-      "AGENTSAM_BRIDGE_KEY"
+      "AGENTSAM_API_KEY"
     ]
   }
 }

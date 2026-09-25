@@ -46,6 +46,7 @@ test('env boot-line prints source load-agent-env command', async () => {
     home,
     write: (t) => lines.push(t),
   });
-  assert.match(result.command, /source ~\/\.agentsam\/load-agent-env\.sh cursor inneranimalmedia/);
+  assert.equal(result.command, 'source ~/.agentsam/load-agent-env.sh');
   assert.ok(lines.join('').includes('load-agent-env.sh'));
+  assert.ok(lines.join('').includes('agentsam env shell'));
 });

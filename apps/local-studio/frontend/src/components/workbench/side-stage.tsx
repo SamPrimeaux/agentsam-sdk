@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, Database, FileCode, Globe, Layers, Plus, Target, Upload, Users, X } from "lucide-react";
+import { Box, Database, FileCode, Globe, Layers, Plus, SquareTerminal, Target, Upload, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,6 +16,7 @@ import { ArtifactsStage } from "@/components/workbench/artifacts";
 import { DeployStage } from "@/components/workbench/deploy";
 import { AppPreviewStage } from "@/components/workbench/app-preview-stage";
 import { DatabaseStage } from "@/components/workbench/database-stage";
+import { TerminalPane } from "@/components/workbench/terminal";
 import { cn } from "@/lib/utils";
 import { useActiveSideTab, useWorkStore } from "@/lib/work/store";
 import { StudioMark } from "@/components/mark";
@@ -28,6 +29,7 @@ function TabIcon({ kind }: { kind: string }) {
   if (kind === "app") return <Layers className="size-3.5" />;
   if (kind === "goal") return <Target className="size-3.5" />;
   if (kind === "database") return <Database className="size-3.5" />;
+  if (kind === "terminal") return <SquareTerminal className="size-3.5" />;
   return <FileCode className="size-3.5" />;
 }
 
@@ -112,6 +114,10 @@ export function SideStage() {
                 <Database className="size-3.5" />
                 Database
               </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => openSideTab("terminal", { ephemeral: false })}>
+                <SquareTerminal className="size-3.5" />
+                CLI
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -135,10 +141,11 @@ export function SideStage() {
         {tab?.kind === "deploy" ? <DeployStage /> : null}
         {tab?.kind === "app" ? <AppPreviewStage tab={tab} /> : null}
         {tab?.kind === "database" ? <DatabaseStage /> : null}
+        {tab?.kind === "terminal" ? <TerminalPane variant="side" /> : null}
         {tab?.kind === "goal" ? <GoalEditor trailId={tab.parentTrailId ?? undefined} /> : null}
         {!tab ? (
           <div className="flex h-full flex-col items-center justify-center px-6 text-center">
-            <p className="text-sm text-muted-foreground">Open a co-worker, browser, or files pane.</p>
+            <p className="text-sm text-muted-foreground">Open a co-worker, browser, files, or CLI pane.</p>
           </div>
         ) : null}
       </div>

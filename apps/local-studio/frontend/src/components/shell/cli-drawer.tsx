@@ -1,20 +1,21 @@
 import { useCallback, useEffect, useRef } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
-import { Maximize2, X } from "lucide-react";
+import { PanelRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TerminalPane } from "@/components/workbench/terminal";
 import { cn } from "@/lib/utils";
 import { useActiveProject, useWorkStore } from "@/lib/work/store";
+import { useTerminalHostPlacement } from "@/lib/work/terminal-host";
 
 export function CliDrawer() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const open = useWorkStore((s) => s.terminalOpen);
   const height = useWorkStore((s) => s.terminalHeight);
   const setTerminalOpen = useWorkStore((s) => s.setTerminalOpen);
   const setTerminalHeight = useWorkStore((s) => s.setTerminalHeight);
+  const openSideTab = useWorkStore((s) => s.openSideTab);
   const project = useActiveProject();
+  const host = useTerminalHostPlacement();
   const dragRef = useRef<{ startY: number; startH: number } | null>(null);
-  const onFullPage = pathname.startsWith("/cli");
+  const showPane = host === "drawer";
 
   const onPointerMove = useCallback(
     (event: PointerEvent) => {
@@ -35,7 +36,7 @@ export function CliDrawer() {
 
   useEffect(() => () => onPointerUp(), [onPointerUp]);
 
-  if (onFullPage || !open) return null;
+  if (!open || !showPane) return null;
 
   return (
     <>
@@ -73,10 +74,17 @@ export function CliDrawer() {
           </span>
           <span className="hidden truncate font-mono text-[11px] text-clay md:inline">{project.name}</span>
           <div className="ml-auto flex items-center gap-0.5">
-            <Button asChild size="icon-sm" variant="ghost" aria-label="Expand CLI">
-              <Link to="/cli">
-                <Maximize2 className="size-3.5" />
-              </Link>
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              aria-label="Open CLI in side panel"
+              onClick={() => {
+                openSideTab("terminal", { ephemeral: false });
+                setTerminalOpen(false);
+              }}
+            >
+              <PanelRight className="size-3.5" />
             </Button>
             <Button
               type="button"

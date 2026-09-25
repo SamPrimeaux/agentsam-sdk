@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { WifiOff } from "lucide-react";
-import { Link } from "@tanstack/react-router";
 import { useOnline } from "@/hooks/use-online";
 import { useWorkStore } from "@/lib/work/store";
 
@@ -8,6 +7,7 @@ export function OfflineBanner() {
   const [mounted, setMounted] = useState(false);
   const online = useOnline();
   const queued = useWorkStore((s) => s.offlineQueue.length);
+  const toggleTerminal = useWorkStore((s) => s.toggleTerminal);
 
   useEffect(() => {
     setMounted(true);
@@ -26,12 +26,13 @@ export function OfflineBanner() {
         Offline — chats stay on this device. CLI still works.
         {queued > 0 ? ` ${queued} message${queued === 1 ? "" : "s"} queued.` : null}
       </p>
-      <Link
-        to="/cli"
+      <button
+        type="button"
+        onClick={() => toggleTerminal()}
         className="shrink-0 rounded-md px-2 py-1.5 font-medium text-accent underline-offset-2 hover:underline"
       >
         Open CLI
-      </Link>
+      </button>
     </div>
   );
 }
