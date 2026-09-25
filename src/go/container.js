@@ -102,11 +102,13 @@ export async function verifyGoContainer({
       user: imageUser,
       container_id: containerId,
       clean_shutdown: true,
+      clean_cleanup: true,
       probe,
-      retained_stopped_container: true,
+      retained_stopped_container: false,
       build_output: build.output.slice(-2000),
     };
   } finally {
     if (!stopped) runDocker(['stop', '-t', '1', containerId], { productRoot, spawn });
+    if (!cleaned) runDocker(['container', 'rm', containerId], { productRoot, spawn });
   }
 }
