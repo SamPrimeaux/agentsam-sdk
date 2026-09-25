@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "tauri dev",
-    "build": "node scripts/build-brand.mjs && tauri build",
+    "build": "node scripts/build-brand.mjs local-studio && tauri build",
+    "build:brand": "node scripts/build-brand.mjs",
     "typecheck": "echo \"agentsam-desktop-shell: no TS surface yet\" && exit 0",
     "test": "echo \"agentsam-desktop-shell: scaffolding only, not buildable end-to-end yet\" && exit 0"
   },
