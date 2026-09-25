@@ -216,3 +216,13 @@ test('buildProductRow stays on agentsam_products projection with deployment iden
   assert.equal(row.metadata.deployment.worker_deployment_id, 'dep_1');
   assert.equal(row.metadata.deployment.worker_version_id, 'ver_1');
 });
+
+test('source identity produces a source-keyed Container instance', async () => {
+  const { runtimeInstanceKey } = await import('../../apps/agentsam-go-worker/worker/src/identity.js');
+  const first = runtimeInstanceKey('git:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+  const second = runtimeInstanceKey('git:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
+  assert.equal(first, 'runtime:git:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+  assert.equal(second, 'runtime:git:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
+  assert.notEqual(first, second);
+  assert.equal(runtimeInstanceKey('npm:@inneranimalmedia/agentsam-go-worker@0.1.0'), 'runtime:npm:@inneranimalmedia/agentsam-go-worker@0.1.0');
+});
