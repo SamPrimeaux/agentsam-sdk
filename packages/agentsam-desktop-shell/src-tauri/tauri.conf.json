@@ -13,7 +13,7 @@
         "title": "AgentSam Local Studio",
         "width": 1200,
         "height": 800,
-        "url": "https://agentsam.inneranimalmedia.com/agentsam"
+        "url": "index.html"
       }
     ],
     "trayIcon": {
