@@ -1,13 +1,25 @@
-import { Outlet } from "@tanstack/react-router";
-import { SettingsNav } from "./SettingsNav";
+import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { SettingsShell, type SettingsUnitId } from "@inneranimalmedia/agentsam-settings";
+import {
+  localStudioSettingsManifest,
+  normalizeSettingsUnit,
+} from "./localStudioSettingsManifest";
 
 export function SettingsLayout() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const navigate = useNavigate();
+  const segment = pathname.split("/").filter(Boolean)[1];
+  const activeUnit = normalizeSettingsUnit(segment);
+
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background md:flex-row">
-      <SettingsNav />
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <Outlet />
-      </div>
-    </div>
+    <SettingsShell
+      manifest={localStudioSettingsManifest}
+      activeUnit={activeUnit}
+      onNavigate={(unit: SettingsUnitId) => {
+        void navigate({ to: `/settings/${unit}` as never });
+      }}
+    >
+      <Outlet />
+    </SettingsShell>
   );
 }
