@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.inneranimalmedia.com/protocol/runtime/agentsam.runtime.v1.schema.json",
+  "title": "agentsam.runtime.v1",
+  "description": "AgentSam Runtime Registry + protocol. Physical D1 tables remain terminal_*; domain nouns are Runtime*. PTY is a capability. transport ≠ adapter.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "provider", "substrate", "lifecycle", "runtime_adapter", "capabilities"],
+  "properties": {
+    "schema": { "const": "agentsam.runtime.v1" },
+    "provider": {
+      "type": "string",
+      "enum": ["local", "google_cloud", "cloudflare", "aws", "azure", "fly", "custom"]
+    },
+    "substrate": {
+      "type": "string",
+      "enum": ["host", "vm", "container", "sandbox", "workstation", "microvm", "kubernetes"]
+    },
+    "provider_product": {
+      "type": ["string", "null"],
+      "description": "Optional product within provider/substrate (compute_engine, cloud_run, containers, sandbox, docker, …)"
+    },
+    "lifecycle": {
+      "type": "string",
+      "enum": ["persistent", "scale_to_zero", "ephemeral", "job"]
+    },
+    "runtime_adapter": {
+      "type": "string",
+      "enum": ["agentsamd", "execos_legacy", "cloudflare_sandbox", "docker_engine", "ssh", "provider_native"]
+    },
+    "protocol": { "const": "agentsam.runtime.v1" },
+    "architecture": { "type": "string", "enum": ["arm64", "x86_64", "unknown"] },
+    "os": { "type": "string", "enum": ["darwin", "linux", "windows", "macos", "unknown"] },
+    "status": {
+      "type": "string",
+      "enum": ["online", "ready", "sleeping", "starting", "offline", "error", "provisioning", "stopped", "failed", "deleting"]
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": { "type": "boolean" },
+      "properties": {
+        "exec": { "type": "boolean" },
+        "pty": { "type": "boolean" },
+        "filesystem": { "type": "boolean" },
+        "persistent_filesystem": { "type": "boolean" },
+        "process": { "type": "boolean" },
+        "git": { "type": "boolean" },
+        "docker": { "type": "boolean" },
+        "gpu": { "type": "boolean" },
+        "browser": { "type": "boolean" },
+        "gui": { "type": "boolean" },
+        "ports": { "type": "boolean" },
+        "snapshot": { "type": "boolean" }
+      }
+    },
+    "transport": {
+      "type": "string",
+      "enum": [
+        "direct_https",
+        "direct_wss",
+        "cloudflare_tunnel",
+        "vpc_service",
+        "vpc_network",
+        "service_binding",
+        "local_socket",
+        "provider_api",
+        "ssh"
+      ]
+    },
+    "auth_mode": {
+      "type": "string",
+      "enum": ["connection_token", "platform_bridge", "bridge_key", "service_binding"]
+    }
+  }
+}

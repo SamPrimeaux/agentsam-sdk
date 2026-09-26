@@ -103,6 +103,7 @@ function globStage(project: Project, args: string[]) {
 
 const HELP = `AgentSam CLI — virtual workspace over this project
 
+setup     first-time AgentSam tutorial (one prompt at a time)
 files     ls  cd  pwd  cat  tree  mkdir  touch  rm  mv  cp  open
 git       git init | status | add | commit | log | diff | remote | push
 github    gh repo create  ·  git push
@@ -113,10 +114,107 @@ tokens    export GITHUB_TOKEN=…  ·  export CLOUDFLARE_API_TOKEN=…
 Git and wrangler here operate on the in-browser workspace.
 Push/deploy use tokens from Ship, never stored on the server.`;
 
+/** In-memory first-login tutorial (agentsam-ide/onboarding). */
+type OnboardingSnap = {
+  stepIndex: number;
+  completedAt: string | null;
+  workspacePath: string | null;
+  stepsCompleted: string[];
+};
+
+const ONBOARDING_PROMPTS: { id: string; prompt: string }[] = [
+  {
+    id: "welcome",
+    prompt:
+      "Welcome to AgentSam Local Studio. Press Enter to set up (one step at a time).",
+  },
+  {
+    id: "confirm_account",
+    prompt:
+      "Confirm you are signed in with AgentSam (iam_agentsam_sdk_web). Type yes.",
+  },
+  {
+    id: "choose_workspace",
+    prompt: "Workspace path? Paste a path or Enter for ~/AgentSam.",
+  },
+  {
+    id: "install_agentsamd",
+    prompt: "Install runtime: agentsam runtime install --yes — then type done.",
+  },
+  {
+    id: "health_check",
+    prompt: "agentsamd healthy? Type ok (or retry).",
+  },
+  {
+    id: "language_packs",
+    prompt: "Language packs: skip / go / rust / python",
+  },
+  {
+    id: "connect_github_optional",
+    prompt: "Connect GitHub (repos, not identity)? skip / connect",
+  },
+  {
+    id: "ready",
+    prompt: "You are ready. Try ls or open a file. Setup complete — press Enter.",
+  },
+];
+
+let onboarding: OnboardingSnap | null = null;
+
+function runSetupStep(reply: string): string {
+  if (!onboarding || onboarding.completedAt) {
+    onboarding = {
+      stepIndex: 0,
+      completedAt: null,
+      workspacePath: null,
+      stepsCompleted: [],
+    };
+    return ONBOARDING_PROMPTS[0].prompt;
+  }
+  const step = ONBOARDING_PROMPTS[onboarding.stepIndex];
+  if (!step) {
+    onboarding.completedAt = new Date().toISOString();
+    return "Setup already complete. Type setup to run again.";
+  }
+  const raw = reply.trim().toLowerCase();
+  if (step.id === "welcome") {
+    /* any Enter advances */
+  } else if (step.id === "confirm_account" && raw !== "yes" && raw !== "y") {
+    return "Type yes when signed in with AgentSam.";
+  } else if (step.id === "choose_workspace") {
+    onboarding.workspacePath = reply.trim() || "~/AgentSam";
+  } else if (step.id === "install_agentsamd" && raw !== "done") {
+    return "After agentsam runtime install --yes, type done.";
+  } else if (step.id === "health_check") {
+    if (raw === "retry") return step.prompt;
+    if (raw !== "ok") return "Type ok when healthy, or retry.";
+  }
+
+  onboarding.stepsCompleted.push(step.id);
+  if (step.id === "ready") {
+    onboarding.completedAt = new Date().toISOString();
+    return "Setup complete. Type help anytime.";
+  }
+  onboarding.stepIndex += 1;
+  const next = ONBOARDING_PROMPTS[onboarding.stepIndex];
+  return next?.prompt ?? "Setup complete.";
+}
+
 export function runCommand(project: Project, raw: string): ShellResult {
   const line = raw.trim();
-  if (!line) return ok(project, "");
   if (line.startsWith("#")) return ok(project, "");
+
+  // Active tutorial: empty Enter or free-text advances the current step.
+  if (onboarding && !onboarding.completedAt) {
+    const tokensPeek = tokenize(line);
+    const cmdPeek = tokensPeek[0] ?? "";
+    const reserved = new Set(["setup", "agentsam", "help", "?", "clear", "cls"]);
+    if (!line || !reserved.has(cmdPeek)) {
+      return ok(project, runSetupStep(line));
+    }
+  }
+
+  if (!line) return ok(project, "");
 
   const tokens = tokenize(line);
   const cmd = tokens[0] ?? "";
@@ -124,6 +222,15 @@ export function runCommand(project: Project, raw: string): ShellResult {
   const cwd = project.cwd || "/";
 
   switch (cmd) {
+    case "setup":
+      onboarding = null;
+      return ok(project, runSetupStep(""));
+    case "agentsam":
+      if (args[0] === "setup" || args.length === 0) {
+        onboarding = null;
+        return ok(project, runSetupStep(""));
+      }
+      return fail(project, "agentsam: try `agentsam setup` or `help`");
     case "help":
     case "?":
       return ok(project, HELP);

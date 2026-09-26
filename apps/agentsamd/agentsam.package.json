@@ -1,0 +1,38 @@
+{
+  "schema": "agentsam.package.v1",
+  "name": "agentsamd",
+  "type": "daemon",
+  "runtime": "go",
+  "version": "0.1.0",
+  "targets": [
+    "darwin-arm64",
+    "darwin-amd64",
+    "linux-amd64",
+    "linux-arm64"
+  ],
+  "entrypoints": {
+    "daemon": "../agentsam-go-worker/runtime/cmd/agentsamd"
+  },
+  "capabilities": [
+    "health",
+    "runtime",
+    "capabilities",
+    "hash",
+    "inspect",
+    "enroll"
+  ],
+  "protocol": "agentsam.runtime.v1",
+  "runtime_adapter": "agentsamd",
+  "product": {
+    "slug": "agentsamd",
+    "kind": "daemon",
+    "distinct_from": "agentsam-go-worker",
+    "role": "local-machine-runtime"
+  },
+  "distribution": {
+    "install": "agentsam runtime install",
+    "setup": "agentsam setup runtime --profile my_computer --yes",
+    "launch_agent": "com.inneranimalmedia.agentsamd",
+    "bin_dir": "~/.agentsam/bin"
+  }
+}

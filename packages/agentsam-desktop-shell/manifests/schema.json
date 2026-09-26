@@ -42,11 +42,28 @@
     "icon_source_url": {
       "type": "string",
       "format": "uri",
-      "description": "Optional HTTPS URL to a PNG (prefer 1024×1024). Overrides icon_set when set; also overridable via AGENTSAM_ICON_URL at build time."
+      "description": "Optional HTTPS URL to a PNG (prefer 1024×1024). Overrides icon_set when set; also overridable via --icon-url / BRAND_ICON_URL / <APP_ID>_ICON_URL at build time."
     },
     "icon_mark_svg": {
       "type": "string",
       "description": "Relative path to Agent Sam mark SVG used as the editable brand source before rasterization."
+    },
+    "included_apps": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+      "description": "Optional sibling APP ids (agentsam.app.json) to bundle with this desktop host. Empty/omitted = host-only. Validated against the APP registry."
+    },
+    "version": {
+      "type": "string",
+      "description": "Desktop shell version; prefer syncing from @inneranimalmedia/agentsam-sdk."
+    },
+    "brand_family": {
+      "type": "string",
+      "description": "Master brand family id (e.g. agentsam). See docs/brand/AGENT_SAM_ICON_GRAMMAR.md."
+    },
+    "product_mark_variant": {
+      "type": "string",
+      "description": "Product cue on the master mark (e.g. local-studio-portal)."
     },
     "identity_provider": {
       "type": "string",

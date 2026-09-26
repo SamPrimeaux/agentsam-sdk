@@ -50,14 +50,15 @@ test('gcloud auth login --web is hosted identity', async () => {
   assert.match(out, /hosted_identity|\/api\/oauth\/google\/start/);
 });
 
-test('gcloud auth help mentions desktop default and --web/--sdk', async () => {
+test('gcloud auth help mentions studio broker default and --desktop/--web/--sdk', async () => {
   let out = '';
   await runGcloudAuth(['help'], {
     write: (s) => {
       out += s;
     },
   });
-  assert.match(out, /Desktop PKCE|loopback/i);
+  assert.match(out, /Studio Web OAuth broker|Worker holds/i);
+  assert.match(out, /--desktop/);
   assert.match(out, /--web/);
   assert.match(out, /--sdk/);
 });
@@ -94,4 +95,17 @@ test('resolveGoogleDesktopClientId fails loud when unset', () => {
     () => resolveGoogleDesktopClientId({}),
     (err) => err?.code === 'google_desktop_client_not_configured',
   );
+});
+
+test('resolveGoogleDesktopClientIdAsync uses public-config when env unset', async () => {
+  const { resolveGoogleDesktopClientIdAsync } = await import('../src/lib/google-desktop-oauth.js');
+  const id = await resolveGoogleDesktopClientIdAsync({}, {
+    publicConfigUrl: 'https://example.test/api/public-config',
+    fetchImpl: async () =>
+      new Response(JSON.stringify({
+        ok: true,
+        google_desktop_client_id: 'from-public-config.apps.googleusercontent.com',
+      }), { status: 200 }),
+  });
+  assert.equal(id, 'from-public-config.apps.googleusercontent.com');
 });

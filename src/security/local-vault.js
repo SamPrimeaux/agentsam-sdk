@@ -120,7 +120,9 @@ function osStoreWriteDarwin(provider, secret) {
   try {
     const res = spawnSync('/usr/bin/security', ['add-generic-password', '-a', `agentsam:${provider}`, '-s', 'agentsam', '-w', secret, '-U'], {
       stdio: 'ignore',
+      timeout: 12_000,
     });
+    if (res.error?.code === 'ETIMEDOUT' || res.signal === 'SIGTERM') return false;
     return res.status === 0;
   } catch { return false; }
 }

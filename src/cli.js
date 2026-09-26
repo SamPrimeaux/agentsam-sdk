@@ -52,6 +52,7 @@ import { runGoogleCloud } from './commands/google-cloud.js';
 import { runBilling } from './commands/billing.js';
 import { runUpdate } from './commands/update.js';
 import { runSetup } from './commands/setup.js';
+import { runRuntime } from './commands/runtime.js';
 import { applyPresetSelection, runAdd, runCapabilities, runDev, runInspect } from './commands/product.js';
 import { listPresets, resolvePreset } from './presets/index.js';
 import {
@@ -486,6 +487,14 @@ if (command === '--version' || command === '-v') {
 } else if (command === 'setup') {
   try {
     const code = await runSetup(rest);
+    if (code) process.exitCode = code;
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
+  }
+} else if (command === 'runtime' || command === 'agentsamd') {
+  try {
+    const code = await runRuntime(rest);
     if (code) process.exitCode = code;
   } catch (e) {
     reportCliError(e);

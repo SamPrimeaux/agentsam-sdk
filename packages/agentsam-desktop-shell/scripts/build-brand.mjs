@@ -1,19 +1,13 @@
 #!/usr/bin/env node
-// Reads one manifests/<brand>.json, validates it against manifests/schema.json
-// (manual checks -- no JSON-schema library dependency), and writes the
-// resolved src-tauri/tauri.conf.json for that brand. This is the ONLY
-// thing that should ever write tauri.conf.json -- nobody hand-edits it.
-//
+// Reads one manifests/<brand>.json and writes src-tauri/tauri.conf.json.
 // Usage:
-//   node scripts/build-brand.mjs <brand-name-or-path-to-manifest.json>
-//
-// Example:
-//   node scripts/build-brand.mjs meauxbility
-//   node scripts/build-brand.mjs ./manifests/meauxbility.json
+//   node scripts/build-brand.mjs <brand> [--icon-url <url>]
+//   build-brand <brand> --icon-url https://asr…/icon.png
 
 import { readFileSync, writeFileSync, existsSync, copyFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { parseArgs } from 'node:util';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -31,9 +25,17 @@ function loadJson(filePath) {
   }
 }
 
-// --- 1. resolve manifest path ---
-const arg = process.argv[2];
-if (!arg) fail('usage: node scripts/build-brand.mjs <brand-name-or-path>');
+const { values: flags, positionals } = parseArgs({
+  args: process.argv.slice(2),
+  options: {
+    'icon-url': { type: 'string' },
+  },
+  allowPositionals: true,
+  strict: false,
+});
+
+const arg = positionals[0];
+if (!arg) fail('usage: build-brand <brand-name-or-path> [--icon-url <url>]');
 
 const manifestPath =
   arg.endsWith('.json') || arg.includes('/')
@@ -114,13 +116,18 @@ if (existsSync(pubkeyPath)) {
 }
 
 // --- 4. resolve icon ---
-// Priority (logo can be supplied last via URL after ship):
-//   1. AGENTSAM_ICON_URL env
-//   2. manifest.icon_source_url
-//   3. manifest.icon_set/icon.png on disk
+// Precedence (no product-hardcoded env names):
+//   1. --icon-url
+//   2. <APP_ID>_ICON_URL (from manifest.app_id)
+//   3. BRAND_ICON_URL
+//   4. manifest.icon_source_url
+//   5. manifest.icon_set/icon.png on disk
 const srcTauriDir = path.join(ROOT, 'src-tauri');
 const iconsDir = path.join(srcTauriDir, 'icons');
 const targetIcon = path.join(iconsDir, 'icon.png');
+const namespacedEnvKey = `${String(manifest.app_id || 'app')
+  .toUpperCase()
+  .replace(/[^A-Z0-9]+/g, '_')}_ICON_URL`;
 
 async function resolveIcon() {
   async function fetchIconFromUrl(url, dest) {
@@ -132,7 +139,14 @@ async function resolveIcon() {
     writeFileSync(dest, buf);
   }
 
-  const iconUrl = String(process.env.AGENTSAM_ICON_URL || manifest.icon_source_url || '').trim();
+  const iconUrl = String(
+    flags['icon-url'] ||
+      process.env[namespacedEnvKey] ||
+      process.env.BRAND_ICON_URL ||
+      manifest.icon_source_url ||
+      '',
+  ).trim();
+
   if (iconUrl) {
     try {
       await fetchIconFromUrl(iconUrl, targetIcon);
@@ -157,7 +171,7 @@ async function resolveIcon() {
     }
   } else {
     console.warn(
-      '[build-brand] WARNING: no icon_set / icon_source_url — set AGENTSAM_ICON_URL later to inject the final logo.',
+      `[build-brand] WARNING: no icon source. Set --icon-url, ${namespacedEnvKey}, BRAND_ICON_URL, or manifest.icon_source_url.`,
     );
   }
 }
@@ -177,7 +191,10 @@ const UPDATES_DOMAIN = 'https://updates.agentsam.dev';
 const updaterEndpoint = `${UPDATES_DOMAIN}/updates/${manifest.app_id}/{{target}}/{{arch}}/{{current_version}}`;
 
 // --- 6. assemble tauri.conf.json ---
-const launchUrl = new URL(manifest.launch_path || '/', manifest.base_url).toString();
+const offlineShell = manifest.feature_flags?.offline_shell === true;
+const launchUrl = offlineShell
+  ? 'index.html'
+  : new URL(manifest.launch_path || '/', manifest.base_url).toString();
 
 const config = {
   $schema: 'https://schema.tauri.app/config/2',
@@ -223,6 +240,7 @@ const config = {
 const outPath = path.join(srcTauriDir, 'tauri.conf.json');
 writeFileSync(outPath, JSON.stringify(config, null, 2) + '\n');
 console.log(`[build-brand] wrote ${outPath}`);
+console.log(`[build-brand] window url: ${launchUrl}${offlineShell ? ' (offline_shell)' : ''}`);
 console.log(
   `[build-brand] done. Next: cd src-tauri && cargo check   (or: npm run build, once a real dist/ exists)`,
 );

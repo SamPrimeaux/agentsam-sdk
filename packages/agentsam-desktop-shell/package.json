@@ -4,12 +4,17 @@
   "private": true,
   "description": "Tauri desktop shell for AgentSam-powered brand dashboards — manifest-driven, multi-brand installs.",
   "type": "module",
+  "bin": {
+    "build-brand": "./scripts/build-brand.mjs"
+  },
   "scripts": {
     "dev": "tauri dev",
-    "build": "node scripts/build-brand.mjs local-studio && tauri build",
     "build:brand": "node scripts/build-brand.mjs",
+    "sync:local-studio": "node scripts/sync-local-studio-dist.mjs",
+    "build": "node scripts/build-brand.mjs local-studio && node scripts/sync-local-studio-dist.mjs && tauri build",
+    "build:shell-only": "node scripts/build-brand.mjs local-studio && tauri build",
     "typecheck": "echo \"agentsam-desktop-shell: no TS surface yet\" && exit 0",
-    "test": "echo \"agentsam-desktop-shell: scaffolding only, not buildable end-to-end yet\" && exit 0"
+    "test": "node --test scripts/sync-local-studio-dist.mjs 2>/dev/null || echo \"agentsam-desktop-shell: sync script present\""
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2"

@@ -10,6 +10,29 @@ Two different Google login paths. Do not conflate them.
 agentsam gcloud auth login
 ```
 
+**Desktop PKCE (`--desktop`):** loopback using `GOOGLE_DESKTOP_CLIENT_ID` (Console type
+**Desktop app**, no secret). Some Google Auth Platform Desktop clients still return
+`client_secret is missing` on token exchange even though Console shows Type=Desktop —
+that is a Google classification quirk, not something AgentSam can invent a secret for.
+
+**Default CLI path (recommended):** Studio Web OAuth broker — uses `GOOGLE_CLIENT_ID` +
+Worker `GOOGLE_CLIENT_SECRET`, then hands tokens to the CLI over loopback.
+
+Uses the **same** Authorized redirect URI as Studio login (no extra Console URI):
+
+```text
+https://agentsam.inneranimalmedia.com/api/oauth/google/callback
+```
+
+CLI broker states are prefixed `cli_` so the Worker can share that path with identity login.
+
+```bash
+agentsam gcloud auth login              # Studio Web broker (default)
+agentsam gcloud auth login --desktop    # native Desktop PKCE
+```
+
+### Hosted identity (`agentsam gcloud auth login --web`)
+
 Shows the live start URL and waits for **Enter** to open the system browser:
 
 ```text

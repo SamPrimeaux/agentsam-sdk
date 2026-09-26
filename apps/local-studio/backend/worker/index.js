@@ -24,6 +24,13 @@ import {
 import { handleCmsWorkerRequest } from "./cms-service.js";
 import { serveCanonicalHomepage } from "./canonical-homepage.js";
 import { isPublicSitePath, servePublicSitePage } from "./public-site.js";
+import { handlePublicConfigRequest } from "./public-config.js";
+import { handleGoogleDesktopExchangeRequest } from "./google-desktop-exchange.js";
+import {
+  handleGoogleCliCloudRequest,
+  isGoogleCliCloudCallbackRequest,
+  isGoogleCliCloudPath,
+} from "./google-cli-cloud.js";
 import { loadConnectionsRegistry } from "./connections-registry.js";
 import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js";
 import { createLocalStudioPluginRuntime } from "./plugin-registry.js";
@@ -660,6 +667,22 @@ export default {
 
     if (request.method === "GET" && Object.hasOwn(INSTALL_APP_TARGETS, url.pathname)) {
       return serveInstallScript(url.pathname);
+    }
+
+    // Stock public OAuth / issuer config (no secrets) — CLI resolves desktop client from here.
+    if (url.pathname === "/api/public-config") {
+      return handlePublicConfigRequest(request, env);
+    }
+
+    // CLI desktop PKCE token exchange broker (secrets stay on Worker).
+    if (url.pathname === "/api/oauth/google/desktop-exchange") {
+      return handleGoogleDesktopExchangeRequest(request, env);
+    }
+
+    // CLI Google Cloud via Studio Web client (reliable when Desktop PKCE is rejected).
+    // Callback shares /api/oauth/google/callback with identity when state is cli_*.
+    if (isGoogleCliCloudPath(url.pathname) || isGoogleCliCloudCallbackRequest(request)) {
+      return handleGoogleCliCloudRequest(request, env);
     }
 
     // Legacy canonical homepage path (assets missing for public-site router)
