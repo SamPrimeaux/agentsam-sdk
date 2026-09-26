@@ -23,15 +23,17 @@ export {
 } from './contracts/metrics-adapter.js';
 
 export { createSqliteAdapter } from './adapters/sqlite.js';
+export {
+  createD1Adapter,
+  createD1BindingAdapter,
+} from './adapters/d1.js';
+export {
+  createPostgresAdapter,
+  createHyperdriveAdapter,
+} from './adapters/postgres.js';
+export { createSupabaseAdapter } from './adapters/supabase.js';
+
+export { readD1Metrics } from './metrics/d1.js';
+export { readPostgresMetrics } from './metrics/postgres.js';
 
 export { DATABASE_EDITOR_APP } from './manifest.js';
-
-export function createD1Adapter(_opts) {
-  throw new Error('createD1Adapter: Phase 1.1 — use createSqliteAdapter for local first');
-}
-export function createPostgresAdapter(_opts) {
-  throw new Error('createPostgresAdapter: Phase 1.1');
-}
-export function createSupabaseAdapter(_opts) {
-  throw new Error('createSupabaseAdapter: Phase 1.1');
-}
