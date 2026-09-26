@@ -15,13 +15,13 @@ function database({ cloudflare = null, secrets = [] } = {}) {
           return this;
         },
         async first() {
-          return sql.includes("agentsam_cloudflare_connections") ? cloudflare : null;
+          if (sql.includes("user_oauth_tokens") && String(sql).toLowerCase().includes("cloudflare")) {
+            return cloudflare;
+          }
+          return null;
         },
         async all() {
           return sql.includes("user_secrets") ? { results: secrets } : { results: [] };
-        },
-        async run() {
-          return { success: true };
         },
         async run() {
           return { success: true };
@@ -37,14 +37,16 @@ describe("connections registry", () => {
       {
         DB: database({
           cloudflare: {
-            connection_id: "cfconn_1",
-            owner_id: "user_1",
-            cloudflare_account_id: "account_1",
+            id: "uot_1",
+            user_id: "user_1",
+            account_identifier: "account_1",
             scopes: "d1.read workers-scripts.write",
-            status: "connected",
+            is_active: 1,
+            revoked_at: null,
             created_at: 1,
             updated_at: 2,
             expires_at: 3,
+            metadata_json: JSON.stringify({ cloudflare_account_id: "account_1", status: "connected" }),
           },
           secrets: [
             {

@@ -1,11 +1,18 @@
 /**
- * Canonical Cloudflare connection writer → user_oauth_tokens.
+ * Canonical Cloudflare connection writer → user_oauth_tokens (SSOT).
  *
  * One row per (user_id, provider=cloudflare, account_identifier).
  * Scopes are merged as a union on every write so concurrent grants from
  * different Cloudflare OAuth clients cannot silently downgrade each other.
  * Provenance is the real OAuth client_id only — no invented app-name enum.
+ *
+ * Status / account / scopes (legacy agentsam_cloudflare_connections fields):
+ * - status            → is_active + revoked_at (connected | revoked | superseded)
+ * - cloudflare_account_id → account_identifier + metadata_json.cloudflare_account_id
+ * - scopes            → scopes / scope columns
  */
+
+import { sealToken, vaultConfigured } from './vault.js';
 
 const PROVIDER = 'cloudflare';
 
@@ -34,6 +41,10 @@ function parseMeta(raw) {
   }
 }
 
+function connectionAad(userId) {
+  return `cloudflare-connection:${userId}`;
+}
+
 /**
  * Resolve Cloudflare account id from token via /v4/accounts (best-effort).
  * @param {string} accessToken
@@ -59,8 +70,49 @@ export async function resolveCloudflareAccountId(accessToken, opts = {}) {
 }
 
 /**
+ * Mark other Cloudflare grants for this user inactive (single-connection model).
+ * Mirrors legacy agentsam_cloudflare_connections status='superseded'.
+ */
+async function supersedeOtherCloudflareRows(env, userId, keepAccountId, now) {
+  try {
+    await env.DB.prepare(
+      `UPDATE user_oauth_tokens
+       SET is_active = 0,
+           revoked_at = ?,
+           access_token = NULL,
+           refresh_token = NULL,
+           access_token_encrypted = NULL,
+           refresh_token_encrypted = NULL,
+           updated_at = ?,
+           metadata_json = json_set(
+             COALESCE(NULLIF(TRIM(metadata_json), ''), '{}'),
+             '$.status', 'superseded'
+           )
+       WHERE user_id = ?
+         AND LOWER(provider) = ?
+         AND account_identifier != ?
+         AND COALESCE(is_active, 1) = 1`,
+    ).bind(now, now, userId, PROVIDER, keepAccountId).run();
+  } catch {
+    // Older schemas may lack metadata_json / is_active — best-effort.
+    try {
+      await env.DB.prepare(
+        `UPDATE user_oauth_tokens
+         SET is_active = 0, revoked_at = ?, updated_at = ?,
+             access_token = NULL, refresh_token = NULL
+         WHERE user_id = ? AND LOWER(provider) = ? AND account_identifier != ?
+           AND COALESCE(is_active, 1) = 1`,
+      ).bind(now, now, userId, PROVIDER, keepAccountId).run();
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+/**
  * Upsert Cloudflare grant into user_oauth_tokens with scope union + client_id provenance.
- * Metadata merge failures are non-fatal; token write errors are returned.
+ * When VAULT_MASTER_KEY is set, stores connector-sealed ciphertext and clears plaintext
+ * (encrypted-only at rest for Cloudflare).
  *
  * @param {object} env
  * @param {object} input
@@ -101,7 +153,7 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
   try {
     existing = await env.DB.prepare(
       `SELECT scopes, scope, metadata_json, access_token, refresh_token,
-              access_token_encrypted, refresh_token_encrypted
+              access_token_encrypted, refresh_token_encrypted, created_at
        FROM user_oauth_tokens
        WHERE user_id = ? AND LOWER(provider) = ? AND account_identifier = ?
        LIMIT 1`,
@@ -122,20 +174,20 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
 
   let metadataJson = null;
   try {
-    // Provenance = real Cloudflare OAuth client_id only. No invented app-name enum.
     const next = {
       ...priorMeta,
-      cloudflare_account_id: accountId,
+      cloudflare_account_id: accountId.startsWith('cf_oauth_') ? null : accountId,
+      status: 'connected',
       last_connected_at: now,
     };
     if (clientId) next.connected_via_client_id = clientId;
     if (capabilitySet.length) next.granted_at_capability_set = capabilitySet;
-    // Drop any previously invented connected_via_app field if present.
     delete next.connected_via_app;
     metadataJson = JSON.stringify(next);
   } catch {
     metadataJson = JSON.stringify({
-      cloudflare_account_id: accountId,
+      cloudflare_account_id: accountId.startsWith('cf_oauth_') ? null : accountId,
+      status: 'connected',
       ...(clientId ? { connected_via_client_id: clientId } : {}),
     });
   }
@@ -143,17 +195,39 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
   const expiresAt = input.expiresAt != null ? Number(input.expiresAt) : null;
   const refreshToken = clean(input.refreshToken) || clean(existing?.refresh_token) || null;
 
+  let accessPlain = accessToken;
+  let refreshPlain = refreshToken;
+  let accessEnc = null;
+  let refreshEnc = null;
+  if (vaultConfigured(env)) {
+    try {
+      const aad = connectionAad(userId);
+      accessEnc = await sealToken(env, accessToken, aad);
+      refreshEnc = refreshToken ? await sealToken(env, refreshToken, aad) : null;
+      // Encrypted-only at rest when vault is available (matches IAM CF policy).
+      accessPlain = null;
+      refreshPlain = null;
+    } catch (err) {
+      return { ok: false, error: err?.code || 'vault_unavailable', detail: String(err?.message || err) };
+    }
+  }
+
+  await supersedeOtherCloudflareRows(env, userId, accountId, now);
+
   try {
     await env.DB.prepare(
       `INSERT INTO user_oauth_tokens (
          user_id, tenant_id, person_uuid, provider, account_identifier,
-         access_token, refresh_token, scope, scopes, expires_at,
+         access_token, refresh_token, access_token_encrypted, refresh_token_encrypted,
+         scope, scopes, expires_at,
          account_display, metadata_json, is_active, created_at, updated_at,
          revoked_at, refresh_failure_count
-       ) VALUES (?, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, NULL, 0)
+       ) VALUES (?, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, NULL, 0)
        ON CONFLICT(user_id, provider, account_identifier) DO UPDATE SET
          access_token = excluded.access_token,
          refresh_token = COALESCE(excluded.refresh_token, user_oauth_tokens.refresh_token),
+         access_token_encrypted = excluded.access_token_encrypted,
+         refresh_token_encrypted = COALESCE(excluded.refresh_token_encrypted, user_oauth_tokens.refresh_token_encrypted),
          scope = excluded.scope,
          scopes = excluded.scopes,
          expires_at = excluded.expires_at,
@@ -166,8 +240,10 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
       userId,
       PROVIDER,
       accountId,
-      accessToken,
-      refreshToken,
+      accessPlain,
+      refreshPlain,
+      accessEnc,
+      refreshEnc,
       scopesStr,
       scopesStr,
       expiresAt,
@@ -181,15 +257,18 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
       await env.DB.prepare(
         `INSERT OR REPLACE INTO user_oauth_tokens (
            user_id, tenant_id, person_uuid, provider, account_identifier,
-           access_token, refresh_token, scope, scopes, expires_at,
+           access_token, refresh_token, access_token_encrypted, refresh_token_encrypted,
+           scope, scopes, expires_at,
            account_display, metadata_json, is_active, created_at, updated_at
-         ) VALUES (?, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+         ) VALUES (?, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
       ).bind(
         userId,
         PROVIDER,
         accountId,
-        accessToken,
-        refreshToken,
+        accessPlain,
+        refreshPlain,
+        accessEnc,
+        refreshEnc,
         scopesStr,
         scopesStr,
         expiresAt,
@@ -208,9 +287,61 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
     accountId,
     scopes: mergedScopes,
     scope_union: true,
+    connectionId: accountId,
+    status: 'connected',
     provenance: {
       connected_via_client_id: clientId,
       granted_at_capability_set: capabilitySet,
     },
   };
+}
+
+/**
+ * Revoke Cloudflare grant(s) in user_oauth_tokens for an owner.
+ * @returns {{ ok: boolean, row?: object, error?: string }}
+ */
+export async function revokeCloudflareUserOauthTokens(env, ownerId) {
+  const userId = clean(ownerId);
+  if (!env?.DB?.prepare || !userId) return { ok: false, error: 'db_unavailable' };
+  const now = Math.floor(Date.now() / 1000);
+  let row = null;
+  try {
+    row = await env.DB.prepare(
+      `SELECT id, user_id, account_identifier, access_token, access_token_encrypted,
+              scopes, scope, expires_at, metadata_json
+       FROM user_oauth_tokens
+       WHERE user_id = ? AND LOWER(provider) = ?
+         AND COALESCE(is_active, 1) = 1
+         AND (revoked_at IS NULL OR revoked_at = 0)
+       ORDER BY updated_at DESC LIMIT 1`,
+    ).bind(userId, PROVIDER).first();
+  } catch (err) {
+    return { ok: false, error: 'user_oauth_tokens_unavailable', detail: String(err?.message || err) };
+  }
+  try {
+    await env.DB.prepare(
+      `UPDATE user_oauth_tokens
+       SET is_active = 0,
+           revoked_at = ?,
+           access_token = NULL,
+           refresh_token = NULL,
+           access_token_encrypted = NULL,
+           refresh_token_encrypted = NULL,
+           updated_at = ?,
+           metadata_json = json_set(
+             COALESCE(NULLIF(TRIM(metadata_json), ''), '{}'),
+             '$.status', 'revoked'
+           )
+       WHERE user_id = ? AND LOWER(provider) = ?
+         AND COALESCE(is_active, 1) = 1`,
+    ).bind(now, now, userId, PROVIDER).run();
+  } catch {
+    await env.DB.prepare(
+      `UPDATE user_oauth_tokens
+       SET is_active = 0, revoked_at = ?, updated_at = ?,
+           access_token = NULL, refresh_token = NULL
+       WHERE user_id = ? AND LOWER(provider) = ?`,
+    ).bind(now, now, userId, PROVIDER).run();
+  }
+  return { ok: true, row };
 }

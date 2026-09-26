@@ -2,10 +2,9 @@
  * Cloudflare credential resolution — OAuth connection OR API token.
  *
  * Authority law:
- * - OAuth (user_oauth_tokens, provider=cloudflare) is the Local Studio product path
+ * - OAuth (user_oauth_tokens, provider=cloudflare) is the Local Studio product path — SSOT
  * - CLOUDFLARE_API_TOKEN remains valid for CLI / CI / headless
  * - CLOUDFLARE_IMAGES_API_TOKEN is Images-family only — never a generic CF API fallback
- * - agentsam_cloudflare_connections is LEGACY dual-read only; do not expand it
  *
  * Never serialize bearerToken in status APIs or receipts.
  */
@@ -24,10 +23,72 @@ function scopesFromRow(row) {
   return [];
 }
 
+function accountIdFromRow(row) {
+  let accountId = clean(row?.account_identifier);
+  if (accountId.startsWith('cf_oauth_')) accountId = '';
+  if (!accountId && row?.metadata_json) {
+    try {
+      const meta = JSON.parse(row.metadata_json);
+      accountId = clean(meta.cloudflare_account_id || meta.account_id);
+    } catch {
+      /* ignore */
+    }
+  }
+  return accountId || null;
+}
+
 /**
- * Load Cloudflare credential from generic user_oauth_tokens (canonical).
- * Decrypt uses connector vault only when ciphertext matches connector packing.
- * Prefer plaintext/encrypted fields already resolved by host identity layer when injected.
+ * Map a user_oauth_tokens Cloudflare row → connection status record
+ * (replaces agentsam_cloudflare_connections shape for APIs / registry).
+ */
+export function mapCloudflareOauthRowToConnection(row, ownerId) {
+  if (!row) return null;
+  const active = Number(row.is_active ?? 1) === 1 && !(Number(row.revoked_at) > 0);
+  let metaStatus = null;
+  try {
+    metaStatus = row.metadata_json ? JSON.parse(row.metadata_json)?.status : null;
+  } catch {
+    metaStatus = null;
+  }
+  return {
+    connectionId: row.id != null ? String(row.id) : `uot_${ownerId}`,
+    ownerId,
+    cloudflareAccountId: accountIdFromRow(row),
+    scopes: scopesFromRow(row),
+    status: active ? 'connected' : (metaStatus === 'superseded' ? 'superseded' : 'revoked'),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    expiresAt: row.expires_at,
+  };
+}
+
+/**
+ * Load active Cloudflare connection metadata from user_oauth_tokens (no token decrypt).
+ */
+export async function loadCloudflareConnectionRecord(env, ownerId) {
+  if (!env?.DB || !ownerId) return null;
+  let row;
+  try {
+    row = await env.DB.prepare(`
+      SELECT id, user_id, provider, account_identifier, account_display, account_email,
+             scope, scopes, expires_at, metadata_json, is_active, revoked_at,
+             created_at, updated_at
+      FROM user_oauth_tokens
+      WHERE user_id = ? AND LOWER(provider) = 'cloudflare'
+        AND COALESCE(is_active, 1) = 1
+        AND (revoked_at IS NULL OR revoked_at = 0)
+      ORDER BY updated_at DESC
+      LIMIT 1
+    `).bind(ownerId).first();
+  } catch {
+    return null;
+  }
+  return mapCloudflareOauthRowToConnection(row, ownerId);
+}
+
+/**
+ * Load Cloudflare credential from user_oauth_tokens (SSOT).
+ * Decrypt order: plaintext → host decryptUserOauthToken → connector vault AAD.
  */
 export async function loadCloudflareFromUserOauthTokens(env, ownerId, options = {}) {
   if (!env?.DB || !ownerId) return null;
@@ -52,25 +113,26 @@ export async function loadCloudflareFromUserOauthTokens(env, ownerId, options = 
 
   let accessToken = clean(row.access_token);
   if (!accessToken && row.access_token_encrypted && options.decryptUserOauthToken) {
-    accessToken = clean(await options.decryptUserOauthToken(env, row.access_token_encrypted));
-  }
-  // Do not attempt connector-AAD decrypt against IAM vault ciphertext — formats differ.
-  if (!accessToken) return null;
-
-  let accountId = clean(row.account_identifier);
-  if (accountId.startsWith('cf_oauth_')) accountId = '';
-  if (!accountId && row.metadata_json) {
     try {
-      const meta = JSON.parse(row.metadata_json);
-      accountId = clean(meta.cloudflare_account_id || meta.account_id);
+      accessToken = clean(await options.decryptUserOauthToken(env, row.access_token_encrypted));
     } catch {
-      /* ignore */
+      /* host vault packing may differ — fall through to connector AAD */
     }
   }
+  if (!accessToken && row.access_token_encrypted && vaultConfigured(env)) {
+    try {
+      accessToken = clean(await decryptSecret(env, row.access_token_encrypted, `cloudflare-connection:${ownerId}`));
+    } catch {
+      /* IAM vault ciphertext is not connector-AAD — leave null */
+    }
+  }
+  if (!accessToken) return null;
+
+  const accountId = accountIdFromRow(row);
 
   return {
     bearerToken: accessToken,
-    accountId: accountId || null,
+    accountId,
     source: 'oauth_connection',
     connectionId: row.id != null ? String(row.id) : null,
     grantedScopes: scopesFromRow(row),
@@ -81,38 +143,10 @@ export async function loadCloudflareFromUserOauthTokens(env, ownerId, options = 
 }
 
 /**
- * LEGACY: agentsam_cloudflare_connections — dual-read recovery only.
- * Do not add columns or new writers. Canonical store is user_oauth_tokens.
+ * @deprecated Removed — user_oauth_tokens is SSOT. Kept as no-op for import compatibility.
  */
-export async function loadCloudflareFromLegacyConnections(env, ownerId, options = {}) {
-  if (!env?.DB || !ownerId) return null;
-  let row;
-  try {
-    row = await env.DB.prepare(`
-      SELECT connection_id, owner_id, cloudflare_account_id, scopes, status,
-             access_token_encrypted, refresh_token_encrypted, expires_at
-      FROM agentsam_cloudflare_connections
-      WHERE owner_id = ? AND status = 'connected'
-      ORDER BY updated_at DESC LIMIT 1
-    `).bind(ownerId).first();
-  } catch {
-    return null;
-  }
-  if (!row?.access_token_encrypted || row.owner_id !== ownerId) return null;
-  if (!vaultConfigured(env)) return null;
-  const aad = `cloudflare-connection:${ownerId}`;
-  const accessToken = await decryptSecret(env, row.access_token_encrypted, aad);
-  return {
-    bearerToken: accessToken,
-    accountId: row.cloudflare_account_id || null,
-    source: 'oauth_connection_legacy',
-    connectionId: row.connection_id,
-    grantedScopes: row.scopes ? String(row.scopes).split(' ').filter(Boolean) : [],
-    expiresAt: Number(row.expires_at || 0) || null,
-    accountLabel: row.cloudflare_account_id || null,
-    provider: 'cloudflare',
-    legacy: true,
-  };
+export async function loadCloudflareFromLegacyConnections() {
+  return null;
 }
 
 /**
@@ -121,7 +155,7 @@ export async function loadCloudflareFromLegacyConnections(env, ownerId, options 
  * @returns {Promise<{
  *   bearerToken: string|null,
  *   accountId: string|null,
- *   source: 'explicit'|'oauth_connection'|'oauth_connection_legacy'|'api_token'|'images_api_token'|'missing',
+ *   source: 'explicit'|'oauth_connection'|'api_token'|'images_api_token'|'missing',
  *   connectionId: string|null,
  *   grantedScopes: string[],
  *   expiresAt: number|null,
@@ -169,21 +203,13 @@ export async function resolveCloudflareCredential(opts = {}) {
   const wantOauth = authMode === 'auto' || authMode === 'oauth';
   const wantToken = authMode === 'auto' || authMode === 'token';
 
-  // 2. Connected OAuth (canonical user_oauth_tokens, then legacy table)
+  // 2. Connected OAuth — user_oauth_tokens only
   if (wantOauth && ownerId) {
     const canonical = await loadCloudflareFromUserOauthTokens(env, ownerId, { decryptUserOauthToken });
     if (canonical?.bearerToken) {
       return pack({
         ...canonical,
         accountId: canonical.accountId || accountFallback || null,
-        status: 'ready',
-      });
-    }
-    const legacy = await loadCloudflareFromLegacyConnections(env, ownerId, opts);
-    if (legacy?.bearerToken) {
-      return pack({
-        ...legacy,
-        accountId: legacy.accountId || accountFallback || null,
         status: 'ready',
       });
     }
@@ -243,6 +269,5 @@ export function credentialSafeMeta(cred) {
     status: cred.status,
     capability_id: cred.capabilityId || null,
     account_label: cred.accountLabel || null,
-    legacy: Boolean(cred.legacy),
   };
 }

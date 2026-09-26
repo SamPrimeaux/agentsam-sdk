@@ -8,8 +8,8 @@ The first reusable connection is `@agentsam-mcp`:
 
 - `provider_key`: `cloudflare`
 - OAuth authority: Cloudflare OAuth (`c0704bd7a7aab7216b362603e1985499`)
-- token storage: the consuming Worker’s `agentsam_cloudflare_connections`,
-  encrypted with that Worker’s `VAULT_MASTER_KEY`
+- token storage: the consuming Worker’s `user_oauth_tokens`
+  (`provider=cloudflare`), sealed with that Worker’s `VAULT_MASTER_KEY`
 - tool keys: `agentsam-mcp.docs`, `agentsam-mcp.search`, and
   `agentsam-mcp.execute`
 

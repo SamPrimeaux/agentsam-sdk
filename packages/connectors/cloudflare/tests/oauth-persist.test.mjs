@@ -29,15 +29,16 @@ describe('oauth-persist spine', () => {
                 },
                 async run() {
                   if (String(sql).includes('INSERT')) {
+                    // Plaintext path (no vault): access at [3], refresh [4], scopes [7], metadata [11]
                     const key = `${args[0]}|${args[2]}`;
                     const prior = rows.get(key);
                     rows.set(key, {
-                      scopes: args[5],
-                      scope: args[5],
-                      metadata_json: args[8],
+                      scopes: args[7],
+                      scope: args[7],
+                      metadata_json: args[11],
                       access_token: args[3],
                       refresh_token: args[4],
-                      created_at: prior?.created_at || args[9],
+                      created_at: prior?.created_at || args[12],
                     });
                   }
                   return { success: true };
@@ -58,6 +59,7 @@ describe('oauth-persist spine', () => {
       capabilitySet: ['cloudflare.d1'],
     });
     assert.equal(r1.ok, true);
+    assert.equal(r1.status, 'connected');
     assert.equal(r1.provenance.connected_via_client_id, 'c0704bd7a7aab7216b362603e1985499');
     assert.equal(r1.provenance.connected_via_app, undefined);
 

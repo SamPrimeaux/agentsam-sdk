@@ -8,6 +8,9 @@ import {
   requestedCloudflareScopes,
   assertConnectionOwner,
   upsertCloudflareUserOauthToken,
+  revokeCloudflareUserOauthTokens,
+  loadCloudflareConnectionRecord,
+  loadCloudflareFromUserOauthTokens,
 } from './index.js';
 import { resolveAuthenticatedOwner } from './owner.js';
 import { decryptSecret, sealToken, vaultConfigured } from './vault.js';
@@ -143,19 +146,7 @@ export function isCloudflareConnectionPath(pathname) {
 
 async function ensureTables(env) {
   if (!env?.DB?.prepare) return;
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS agentsam_cloudflare_connections (
-    connection_id TEXT PRIMARY KEY,
-    owner_id TEXT NOT NULL,
-    cloudflare_account_id TEXT,
-    scopes TEXT,
-    status TEXT,
-    access_token_encrypted TEXT,
-    refresh_token_encrypted TEXT,
-    created_at INTEGER,
-    updated_at INTEGER,
-    expires_at INTEGER
-  )`).run();
-  // Canonical multi-provider PKCE state (encrypted verifier). Replaces agentsam_cloudflare_oauth_state.
+  // PKCE state + resource inventory only. Connection credentials live in user_oauth_tokens (SSOT).
   await env.DB.prepare(`CREATE TABLE IF NOT EXISTS oauth_state_nonces (
     id TEXT PRIMARY KEY,
     tenant_id TEXT,
@@ -183,6 +174,71 @@ async function ensureTables(env) {
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`).run();
+  // Best-effort one-shot: copy legacy agentsam_cloudflare_connections → user_oauth_tokens.
+  await migrateLegacyCloudflareConnections(env);
+}
+
+let legacyMigrateAttempted = false;
+
+/**
+ * One-shot migrate of connected legacy rows into user_oauth_tokens, then supersede legacy.
+ * Safe no-op when the legacy table is absent or vault cannot decrypt.
+ */
+async function migrateLegacyCloudflareConnections(env) {
+  if (legacyMigrateAttempted || !env?.DB?.prepare) return;
+  legacyMigrateAttempted = true;
+  if (!vaultConfigured(env)) return;
+  let results = [];
+  try {
+    const out = await env.DB.prepare(`
+      SELECT connection_id, owner_id, cloudflare_account_id, scopes,
+             access_token_encrypted, refresh_token_encrypted, expires_at
+      FROM agentsam_cloudflare_connections
+      WHERE status = 'connected' AND access_token_encrypted IS NOT NULL
+    `).all();
+    results = out?.results || [];
+  } catch {
+    return;
+  }
+  for (const row of results) {
+    const ownerId = String(row.owner_id || '').trim();
+    if (!ownerId) continue;
+    try {
+      const existing = await loadCloudflareConnectionRecord(env, ownerId);
+      if (existing) {
+        await env.DB.prepare(`
+          UPDATE agentsam_cloudflare_connections
+          SET status = 'superseded', access_token_encrypted = NULL,
+              refresh_token_encrypted = NULL, updated_at = unixepoch()
+          WHERE connection_id = ?
+        `).bind(row.connection_id).run();
+        continue;
+      }
+      const aad = `cloudflare-connection:${ownerId}`;
+      const accessToken = await decryptSecret(env, row.access_token_encrypted, aad);
+      const refreshToken = row.refresh_token_encrypted
+        ? await decryptSecret(env, row.refresh_token_encrypted, aad)
+        : null;
+      const spine = await upsertCloudflareUserOauthToken(env, {
+        userId: ownerId,
+        accessToken,
+        refreshToken,
+        scopes: row.scopes || '',
+        accountId: row.cloudflare_account_id || null,
+        expiresAt: row.expires_at ? Number(row.expires_at) : null,
+      });
+      if (spine?.ok) {
+        await env.DB.prepare(`
+          UPDATE agentsam_cloudflare_connections
+          SET status = 'superseded', access_token_encrypted = NULL,
+              refresh_token_encrypted = NULL, updated_at = unixepoch()
+          WHERE connection_id = ?
+        `).bind(row.connection_id).run();
+      }
+    } catch (err) {
+      console.error('cloudflare_legacy_migrate_failed', String(err?.message || err));
+    }
+  }
 }
 
 /**
@@ -293,53 +349,9 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
   await ensureTables(env);
 
   if (url.pathname === '/api/connections/cloudflare' && request.method === 'GET') {
-    let connection = null;
-    if (env.DB) {
-      // Prefer canonical spine; fall back to legacy dual-read.
-      try {
-        const spine = await env.DB.prepare(
-          `SELECT id, user_id, account_identifier, scopes, scope, expires_at,
-                  metadata_json, updated_at, created_at, is_active
-           FROM user_oauth_tokens
-           WHERE user_id = ? AND LOWER(provider) = 'cloudflare'
-             AND COALESCE(is_active, 1) = 1
-             AND (revoked_at IS NULL OR revoked_at = 0)
-           ORDER BY updated_at DESC LIMIT 1`,
-        ).bind(ownerId).first();
-        if (spine) {
-          connection = {
-            connectionId: spine.id != null ? String(spine.id) : `uot_${ownerId}`,
-            ownerId,
-            cloudflareAccountId: spine.account_identifier || null,
-            scopes: String(spine.scopes || spine.scope || '').split(/[\s,]+/).filter(Boolean),
-            status: 'connected',
-            createdAt: spine.created_at,
-            updatedAt: spine.updated_at,
-            expiresAt: spine.expires_at,
-          };
-        }
-      } catch { /* table may be missing on fixtures */ }
-      if (!connection) {
-        const row = await env.DB.prepare(
-          `SELECT connection_id, owner_id, cloudflare_account_id, scopes, status, created_at, updated_at, expires_at
-           FROM agentsam_cloudflare_connections
-           WHERE owner_id = ? AND status = 'connected'
-           ORDER BY updated_at DESC LIMIT 1`,
-        ).bind(ownerId).first();
-        if (row) {
-          connection = {
-            connectionId: row.connection_id,
-            ownerId: row.owner_id,
-            cloudflareAccountId: row.cloudflare_account_id,
-            scopes: row.scopes ? String(row.scopes).split(' ') : [],
-            status: row.status,
-            createdAt: row.created_at,
-            updatedAt: row.updated_at,
-            expiresAt: row.expires_at,
-          };
-        }
-      }
-    }
+    const connection = env.DB
+      ? await loadCloudflareConnectionRecord(env, ownerId)
+      : null;
     return json({ ok: true, ...cloudflareConnectionSafeStatus(env, connection, ownerId) });
   }
 
@@ -455,11 +467,10 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
       return settingsRedirect(url, 'error', 'token_exchange_failed', stored.return_to || '');
     }
     const tokens = await tokenRes.json();
-    const connectionId = `cfconn_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
     const grantedScopeStr = tokens.scope || requestedCloudflareScopes({ capabilities: hostDefaultCapabilities }).join(' ');
     const capabilitySet = hostDefaultCapabilities.slice();
 
-    // Canonical spine: user_oauth_tokens (scope union + client_id provenance).
+    // SSOT: user_oauth_tokens only (scope union + client_id provenance + vault seal).
     let spine = null;
     try {
       spine = await upsertCloudflareUserOauthToken(env, {
@@ -476,69 +487,23 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
       });
       if (!spine?.ok) {
         console.error('cloudflare_user_oauth_tokens_upsert_failed', spine?.error || 'unknown');
+        return settingsRedirect(url, 'error', spine?.error || 'connection_persist_failed', stored.return_to || '');
       }
     } catch (err) {
       console.error('cloudflare_user_oauth_tokens_upsert_threw', String(err?.message || err));
+      return settingsRedirect(url, 'error', 'connection_persist_failed', stored.return_to || '');
     }
 
-    if (tokens.access_token && !vaultConfigured(env)) {
-      if (spine?.ok) {
-        return settingsRedirect(url, 'connected', '', stored.return_to || '');
-      }
-      return settingsRedirect(url, 'error', 'vault_unavailable', stored.return_to || '');
-    }
-    const aad = `cloudflare-connection:${ownerId}`;
-    let accessEnc = null;
-    let refreshEnc = null;
+    const connectionId = spine.connectionId || spine.accountId || `uot_${ownerId}`;
     try {
-      accessEnc = await sealToken(env, tokens.access_token, aad);
-      refreshEnc = await sealToken(env, tokens.refresh_token, aad);
+      await seedKnownCloudflareResources(
+        env,
+        ownerId,
+        connectionId,
+        spine.accountId || tokens.account_id || null,
+      );
     } catch (err) {
-      if (spine?.ok) {
-        return settingsRedirect(url, 'connected', '', stored.return_to || '');
-      }
-      return settingsRedirect(url, 'error', err.code || 'vault_unavailable', stored.return_to || '');
-    }
-    if (env.DB) {
-      try {
-        const removePrevious = env.DB.prepare(
-          `UPDATE agentsam_cloudflare_connections
-           SET status = 'superseded', access_token_encrypted = NULL,
-               refresh_token_encrypted = NULL, updated_at = unixepoch()
-           WHERE owner_id = ? AND status = 'connected'`,
-        ).bind(ownerId);
-        const insertConnection = env.DB.prepare(
-          `INSERT INTO agentsam_cloudflare_connections (
-             connection_id, owner_id, cloudflare_account_id, scopes, status,
-             access_token_encrypted, refresh_token_encrypted, created_at, updated_at, expires_at
-           ) VALUES (?, ?, ?, ?, 'connected', ?, ?, unixepoch(), unixepoch(), ?)`,
-        ).bind(
-          connectionId,
-          ownerId,
-          spine?.accountId || tokens.account_id || null,
-          (spine?.scopes || []).join(' ') || grantedScopeStr,
-          accessEnc,
-          refreshEnc,
-          tokens.expires_in ? Math.floor(Date.now() / 1000) + Number(tokens.expires_in) : null,
-        );
-        if (typeof env.DB.batch === 'function') {
-          await env.DB.batch([removePrevious, insertConnection]);
-        } else {
-          await removePrevious.run();
-          await insertConnection.run();
-        }
-        await seedKnownCloudflareResources(
-          env,
-          ownerId,
-          connectionId,
-          spine?.accountId || tokens.account_id || null,
-        );
-      } catch (err) {
-        console.error('cloudflare_legacy_connection_write_failed', String(err?.message || err));
-        if (!spine?.ok) {
-          return settingsRedirect(url, 'error', 'connection_persist_failed', stored.return_to || '');
-        }
-      }
+      console.error('cloudflare_resource_seed_failed', String(err?.message || err));
     }
     return settingsRedirect(url, 'connected', '', stored.return_to || '');
   }
@@ -546,35 +511,25 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
   if (url.pathname === '/api/connections/cloudflare/disconnect' && request.method === 'POST') {
     let providerRevoked = false;
     if (env.DB) {
-      const row = await env.DB.prepare(
-        `SELECT connection_id, owner_id, access_token_encrypted
-         FROM agentsam_cloudflare_connections
-         WHERE owner_id = ? AND status = 'connected'
-         ORDER BY updated_at DESC LIMIT 1`,
-      ).bind(ownerId).first();
-      if (row) {
-        assertConnectionOwner({ ownerId: row.owner_id, connectionId: row.connection_id }, ownerId);
-        if (row.access_token_encrypted) {
-          try {
-            const token = await decryptSecret(env, row.access_token_encrypted, `cloudflare-connection:${ownerId}`);
-            const revokeParams = new URLSearchParams({ token, client_id: String(env.CLOUDFLARE_OAUTH_CLIENT_ID) });
-            const revokeResponse = await fetch(CLOUDFLARE_OAUTH_REVOKE_URL, {
-              method: 'POST',
-              headers: { 'content-type': 'application/x-www-form-urlencoded' },
-              body: revokeParams,
-            });
-            providerRevoked = revokeResponse.ok;
-          } catch (error) {
-            console.error('cloudflare_token_revoke_failed', String(error?.message || error));
-          }
+      const cred = await loadCloudflareFromUserOauthTokens(env, ownerId);
+      if (cred?.bearerToken) {
+        assertConnectionOwner({ ownerId, connectionId: cred.connectionId }, ownerId);
+        try {
+          const revokeParams = new URLSearchParams({
+            token: cred.bearerToken,
+            client_id: String(env.CLOUDFLARE_OAUTH_CLIENT_ID),
+          });
+          const revokeResponse = await fetch(CLOUDFLARE_OAUTH_REVOKE_URL, {
+            method: 'POST',
+            headers: { 'content-type': 'application/x-www-form-urlencoded' },
+            body: revokeParams,
+          });
+          providerRevoked = revokeResponse.ok;
+        } catch (error) {
+          console.error('cloudflare_token_revoke_failed', String(error?.message || error));
         }
-        await env.DB.prepare(`
-          UPDATE agentsam_cloudflare_connections
-          SET status = 'revoked', access_token_encrypted = NULL,
-              refresh_token_encrypted = NULL, expires_at = unixepoch(), updated_at = unixepoch()
-          WHERE connection_id = ? AND owner_id = ?
-        `).bind(row.connection_id, ownerId).run();
       }
+      await revokeCloudflareUserOauthTokens(env, ownerId);
     }
     return json({ ok: true, status: 'not_configured', provider_revoked: providerRevoked });
   }

@@ -19,7 +19,7 @@ export const AGENTSAM_MCP_PLUGIN_MANIFEST = normalizePluginManifest({
     { capability_key: 'cloudflare.api.execute', domain: 'cloudflare', verb: 'execute', description: 'Execute a bounded Cloudflare API Code Mode program.', is_mutating: true },
   ],
   tool_lanes: ['typed', 'mcp', 'api', 'codemode'],
-  resource_scope: { owner: 'account', oauth_connection_table: 'agentsam_cloudflare_connections' },
+  resource_scope: { owner: 'account', oauth_connection_table: 'user_oauth_tokens' },
   config: {
     oauth_authority: 'cloudflare',
     oauth_client_id: 'c0704bd7a7aab7216b362603e1985499',

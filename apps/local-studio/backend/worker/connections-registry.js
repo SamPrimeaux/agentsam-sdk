@@ -1,4 +1,7 @@
-import { cloudflareConnectionSafeStatus } from "../../../../packages/connectors/cloudflare/src/index.js";
+import {
+  cloudflareConnectionSafeStatus,
+  loadCloudflareConnectionRecord,
+} from "../../../../packages/connectors/cloudflare/src/index.js";
 import { loadPluginRegistry, materializeCloudflarePlugin } from "./plugin-registry.js";
 
 export const BYOK_PROVIDER_DEFINITIONS = Object.freeze([
@@ -25,32 +28,9 @@ function canonicalByokProvider(serviceName) {
   return service === "grok" ? "xai" : service;
 }
 
-function toConnectionRecord(row) {
-  if (!row) return null;
-  return {
-    connectionId: row.connection_id,
-    ownerId: row.owner_id,
-    cloudflareAccountId: row.cloudflare_account_id,
-    scopes: row.scopes ? String(row.scopes).split(" ").filter(Boolean) : [],
-    status: row.status,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    expiresAt: row.expires_at,
-  };
-}
-
 export async function loadConnectionsRegistry(env, userId) {
   const [cloudflareRow, secretsResult] = await Promise.all([
-    env.DB.prepare(
-      `SELECT connection_id, owner_id, cloudflare_account_id, scopes, status,
-              created_at, updated_at, expires_at
-       FROM agentsam_cloudflare_connections
-       WHERE owner_id = ? AND status = 'connected'
-       ORDER BY updated_at DESC
-       LIMIT 1`,
-    )
-      .bind(userId)
-      .first(),
+    loadCloudflareConnectionRecord(env, userId),
     env.DB.prepare(
       `SELECT id, secret_name, service_name, description, metadata_json,
               last_used_at, usage_count, created_at, updated_at
@@ -65,7 +45,7 @@ export async function loadConnectionsRegistry(env, userId) {
 
   const cloudflare = cloudflareConnectionSafeStatus(
     env,
-    toConnectionRecord(cloudflareRow),
+    cloudflareRow,
     userId,
   );
   const oauthConnected = cloudflare.status === "connected";

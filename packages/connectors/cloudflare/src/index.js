@@ -28,6 +28,7 @@ export {
 
 export {
   upsertCloudflareUserOauthToken,
+  revokeCloudflareUserOauthTokens,
   resolveCloudflareAccountId,
   unionScopes,
 } from './oauth-persist.js';
@@ -45,6 +46,8 @@ export {
   credentialSafeMeta,
   loadCloudflareFromUserOauthTokens,
   loadCloudflareFromLegacyConnections,
+  loadCloudflareConnectionRecord,
+  mapCloudflareOauthRowToConnection,
 } from './credential.js';
 
 export * as workflows from './families/workflows.js';
@@ -345,10 +348,8 @@ export function assertConnectionOwner(connection, ownerId) {
 }
 
 /**
- * LEGACY dual-read wrapper.
+ * LEGACY dual-read wrapper — now SSOT-only via user_oauth_tokens.
  * Prefer resolveCloudflareCredential / createCloudflareApiClient.
- * Canonical store: user_oauth_tokens (provider=cloudflare).
- * agentsam_cloudflare_connections is recovery-only — do not expand.
  */
 export async function loadCloudflareAccessToken(env, ownerId, options = {}) {
   const { resolveCloudflareCredential } = await import('./credential.js');
