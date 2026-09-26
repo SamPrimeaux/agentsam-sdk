@@ -2,7 +2,7 @@
 
 **Date staged:** 2026-09-26  
 **Home:** agentsam-sdk `main`  
-**Start here:** [MACHINE_INTELLIGENCE.md](../MACHINE_INTELLIGENCE.md)
+**Start here:** [MACHINE_INTELLIGENCE.md](../MACHINE_INTELLIGENCE.md) · **Full TODO:** [TOMORROW-EXTENSIVE-TODO-2026-09-26.md](./TOMORROW-EXTENSIVE-TODO-2026-09-26.md)
 
 This file is the review index for the next work session. Plans that lived only under `.cursor/plans/` are now copied into `docs/plans/`.
 
