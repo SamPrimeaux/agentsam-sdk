@@ -1,5 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import {
+  cancel,
+  confirm,
+  intro,
+  isCancel,
+  note,
+  outro,
+  select,
+  text,
+} from '@clack/prompts';
 import { repositorySnapshot } from '../capabilities/index.js';
 import {
   brandScan,
@@ -9,13 +19,33 @@ import {
   brandGoapActions,
   brandWorldFromPlan,
   brandGoalFromPlan,
+  runBrandAssetCommand,
+  runBrandPromoteWizard,
 } from '../../packages/agentsam-brand/src/index.js';
 import { planGoap, GOAP_ENGINE } from '../sam/planning/goap.js';
 import { suggestNextActions } from '../progression/index.js';
 import { createRuntimeActivity } from '../ui/runtime-activity.js';
 
+const ASSET_ACTIONS = new Set([
+  'inspect',
+  'derive',
+  'assets',
+  'promote',
+  'publish',
+  'verify',
+  'presets',
+]);
+
 function parseArgs(argv = []) {
-  const out = { json: false, cwd: process.cwd(), dryRun: false, goap: false, write: false, positionals: [] };
+  const out = {
+    json: false,
+    cwd: process.cwd(),
+    dryRun: false,
+    goap: false,
+    write: false,
+    positionals: [],
+    passthrough: [...argv],
+  };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === '--json') out.json = true;
@@ -67,25 +97,38 @@ export async function runBrand(argv = []) {
   const action = sub || 'summary';
 
   if (action === 'help' || action === '--help') {
-    console.log(`usage: agentsam brand [summary|scan|resolve|inspect|plan|apply|verify] [options]
+    console.log(`usage: agentsam brand [summary|scan|resolve|inspect|plan|apply|assets|promote|publish|verify|derive|presets]
 
-  summary (default)   Short brand intelligence overview
-  scan                Deterministic evidence extraction (no model)
-  resolve             Cluster tokens into inferred roles
-  inspect [conflicts] Show conflicts / component families
-  plan [--goap]       Normalization plan (preserve → improve)
-  apply --dry-run     Mutation stub (writes require future approval)
-  verify              Stub verification gate
+Brand intelligence:
+  summary|scan|resolve|inspect|plan|apply
 
-Options:
-  --json --cwd <path> --snapshot-file <file> --write
+Brand assets (portable SDK — same as agentsam-brand):
+  agentsam brand promote                 interactive (TTY) or --manifest
+  agentsam brand plan --manifest ./x.json --json
+  agentsam brand promote --brand acme --asset logo --version v1 \\
+    --source ./master.png --derive png:1024 --derive webp:1024:q92 --dry-run --json
+  agentsam brand publish --brand acme --asset logo --version v1
+  agentsam brand verify  --brand acme --asset logo --version v1
+  agentsam brand presets
+
+No product-specific defaults. AgentSam icons are ordinary manifests under apps/local-studio/brand/.
 `);
+    return;
+  }
+
+  // Asset/promote surface → shared controller (also used by agentsam-brand bin)
+  if (ASSET_ACTIONS.has(action)) {
+    const code = await runBrandAssetCommand(argv, {
+      runWizard: runBrandPromoteWizard,
+      prompts: { intro, outro, cancel, isCancel, select, text, confirm, note },
+    });
+    if (typeof code === 'number' && code !== 0) process.exitCode = code;
     return;
   }
 
   if (action === 'apply') {
     if (!opts.dryRun) {
-      console.error('brand apply requires --dry-run until mutations are gated (side_effects: repository-write)');
+      console.error('brand apply requires --dry-run until mutations are gated');
       process.exitCode = 2;
       return;
     }
@@ -93,17 +136,6 @@ Options:
       capability: 'brand.apply',
       status: 'dry-run',
       message: 'No files changed. Approve a brand.plan then re-run apply when mutation executor ships.',
-    };
-    if (opts.json) console.log(JSON.stringify(out, null, 2));
-    else console.log(out.message);
-    return;
-  }
-
-  if (action === 'verify') {
-    const out = {
-      capability: 'brand.verify',
-      status: 'stub',
-      message: 'Verify will re-scan and diff against .agentsam/brand/contract.json',
     };
     if (opts.json) console.log(JSON.stringify(out, null, 2));
     else console.log(out.message);
@@ -123,11 +155,7 @@ Options:
     const snapshot = await loadSnapshot(opts);
 
     if (action === 'summary' || action === 'scan' || action === 'resolve' || action === 'inspect' || action === 'plan') {
-      const scan = await brandScan({
-        cwd: opts.cwd,
-        snapshot,
-        onEvent,
-      });
+      const scan = await brandScan({ cwd: opts.cwd, snapshot, onEvent });
 
       if (action === 'scan') {
         const enriched = attachProgression('brand.scan', scan, opts.json);
@@ -137,8 +165,6 @@ Options:
           console.log(`\nBrand scan complete · ${scan.repository.snapshot_id}`);
           console.log(`  colors     ${scan.tokens.colors.length}`);
           console.log(`  conflicts  ${scan.conflicts.length}`);
-          console.log(`  css files  ${scan.sources.css}`);
-          console.log(`  components ${scan.sources.components}`);
           console.log(`  hash       ${scan.content_hash}`);
         }
         return;
@@ -152,28 +178,21 @@ Options:
         else {
           console.log(`\nBrand resolve · ${Object.keys(resolved.resolved.colors).length} color roles`);
           console.log(`  ambiguities ${resolved.ambiguities.length}`);
-          for (const a of resolved.ambiguities.slice(0, 5)) {
-            console.log(`  ? ${a.question}`);
-          }
         }
         return;
       }
 
       if (action === 'inspect') {
+        // brand intelligence inspect (conflicts) — asset inspect is ASSET_ACTIONS
         const focus = rest[0] || 'conflicts';
         const payload = focus === 'components'
           ? { capability: 'brand.inspect', focus, components: scan.components, patterns: scan.patterns }
           : { capability: 'brand.inspect', focus, conflicts: scan.conflicts, colors: scan.tokens.colors.slice(0, 20) };
         if (opts.json) console.log(JSON.stringify(payload, null, 2));
-        else if (focus === 'components') {
-          console.log('\nComponent families');
-          for (const [k, v] of Object.entries(scan.components).slice(0, 20)) {
-            console.log(`  ${k} ×${v.count}`);
-          }
-        } else {
+        else {
           console.log(`\nConflicts (${scan.conflicts.length})`);
           for (const c of scan.conflicts.slice(0, 15)) {
-            console.log(`  ${c.values?.join(' ≈ ')} · d=${c.distance} · n=${c.occurrences}`);
+            console.log(`  ${c.values?.join(' ≈ ')} · d=${c.distance}`);
           }
         }
         return;
@@ -183,7 +202,6 @@ Options:
         return runBrandPlanInner({ scan, resolved, opts });
       }
 
-      // summary
       const contract = buildBrandContractDraft({ scan, resolved });
       const plan = brandPlan({ scan, resolved, contract });
       const { next_actions } = suggestNextActions({ capability: 'brand.scan', result: scan });
@@ -201,8 +219,6 @@ Options:
       else {
         console.log(`\nBrand · ${scan.repository.snapshot_id}`);
         console.log(`  ${plan.summary.colors} colors · ${plan.summary.near_duplicate_pairs} near-duplicates`);
-        console.log(`  ${plan.summary.button_families} button families · ${plan.summary.header_families} header/nav families`);
-        console.log(`  confidence colors=${resolved.confidence.colors} typography=${resolved.confidence.typography}`);
         printNext(next_actions);
       }
     }
@@ -231,11 +247,6 @@ async function runBrandPlanInner({ scan, resolved, opts }) {
       cost: planned.total_cost ?? planned.cost,
       engine: planned.engine || GOAP_ENGINE,
       status: planned.status,
-      expanded_states: planned.expanded_states,
-      generated_states: planned.generated_states,
-      frontier_peak: planned.frontier_peak,
-      elapsed_ms: planned.elapsed_ms,
-      error: planned.error,
     };
   }
   const enriched = attachProgression('brand.plan', plan, opts.json);
@@ -250,8 +261,6 @@ async function runBrandPlanInner({ scan, resolved, opts }) {
   else {
     console.log('\nBrand coherence plan');
     console.log(`  philosophy  ${plan.philosophy}`);
-    console.log(`  colors      ${plan.summary.colors} (${plan.summary.near_duplicate_pairs} near-dup pairs)`);
-    console.log('  steps');
     for (const [i, s] of plan.steps.entries()) {
       console.log(`    ${i + 1}. [${s.action}] ${s.title}`);
     }
@@ -263,16 +272,7 @@ export async function runPlan(argv = []) {
   const opts = parseArgs(argv);
   const [domain, ...rest] = opts.positionals;
   if (!domain || domain === 'help') {
-    console.log(`usage: agentsam plan <domain>
-
-Domains:
-  brand [--goap] [--json] [--write]
-  security   (use: agentsam security scan)
-  repository (use: agentsam inspect)
-  release    (use: agentsam status / package verify)
-
-Composable grammar: agentsam plan brand
-`);
+    console.log(`usage: agentsam plan <domain>\n\nDomains:\n  brand [--goap] [--json] [--write]\n`);
     return;
   }
   if (domain === 'brand') {

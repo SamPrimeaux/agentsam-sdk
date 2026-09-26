@@ -5,6 +5,8 @@
   "type": "module",
   "main": "./src/index.js",
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./capabilities": "./src/capabilities.js",
+    "./api-client": "./src/api-client.js"
   }
 }

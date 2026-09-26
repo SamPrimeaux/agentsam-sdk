@@ -36,6 +36,21 @@ const ROUTE_PROJECTION = projectionFromAppManifest(APP);
 const ROUTE_REGISTRY = createRouteRegistry([ROUTE_PROJECTION]);
 const PROVIDER_REGISTRY = createProviderRegistry();
 
+/** Host-owned CF connect defaults — not inside packages/connectors. */
+const LOCAL_STUDIO_CLOUDFLARE_CAPABILITIES = Object.freeze([
+  "cloudflare.workers",
+  "cloudflare.d1",
+  "cloudflare.r2",
+  "cloudflare.pages",
+  "cloudflare.images",
+  "cloudflare.stream",
+  "cloudflare.vectorize",
+  "cloudflare.hyperdrive",
+  "cloudflare.mcp_portals",
+  "cloudflare.agents",
+  "cloudflare.workflows",
+]);
+
 const LOGIN_PATH = ROUTE_REGISTRY.resolve(APP.id, IDENTITY_ROUTE_IDS.LOGIN);
 const SIGNUP_PATH = ROUTE_REGISTRY.resolve(APP.id, IDENTITY_ROUTE_IDS.SIGNUP);
 const RESET_PATH = ROUTE_REGISTRY.resolve(APP.id, IDENTITY_ROUTE_IDS.RESET);
@@ -634,7 +649,9 @@ export default {
     // The checked-in Worker owns vault + health + llm inventory. Everything else belongs
     // to the generated Nitro application handler.
     if (isCfConnection) {
-      return handleCloudflareConnectionRequest(request, env);
+      return handleCloudflareConnectionRequest(request, env, {
+        defaultCapabilities: LOCAL_STUDIO_CLOUDFLARE_CAPABILITIES,
+      });
     }
 
     // Identity package owns auth pages, auth API, OAuth, and company branding.

@@ -1,9 +1,9 @@
 /**
  * RFC 8252 native-app OAuth for AgentSam CLI.
  *
- * The CLI is a public client: authorization code + PKCE over a loopback
- * redirect. Browser OAuth sessions are machine-local and remain separate from
- * reusable AGENTSAM_API_KEY (aak_*) credentials.
+ * IAM credentials resolve from env only:
+ *   IAM_CLIENT_ID / IAM_CLIENT_SECRET / IAM_OAUTH_ISSUER
+ * No parallel "native" client_id constant — unset IAM_CLIENT_ID → not_configured.
  */
 import http from 'node:http';
 import { createHash, randomBytes } from 'node:crypto';
@@ -16,8 +16,7 @@ import {
   saveAccountSession,
 } from './account-session.js';
 
-export const AGENTSAM_NATIVE_OAUTH_CLIENT_ID = 'iam_cli_agentsam';
-export const AGENTSAM_NATIVE_OAUTH_SCOPE = 'openid profile email offline_access';
+export const AGENTSAM_OAUTH_SCOPE = 'openid profile email offline_access';
 export const AGENTSAM_OAUTH_CALLBACK_PATH = '/callback';
 
 function clean(value) { return value == null ? '' : String(value).trim(); }
@@ -37,6 +36,19 @@ function oauthErrorMessage(body, status) {
   return code || description || `OAuth token HTTP ${status}`;
 }
 
+/**
+ * Resolve IAM OAuth client_id. No hardcoded fallback.
+ * @returns {{ clientId: string } | { error: string }}
+ */
+export function resolveIamClientId(options = {}) {
+  const env = options.env || process.env;
+  const clientId = clean(options.clientId) || clean(env.IAM_CLIENT_ID);
+  if (!clientId) {
+    return { error: 'iam_oauth_not_configured', clientId: '' };
+  }
+  return { clientId, error: null };
+}
+
 export function createPkcePair(options = {}) {
   const verifier = randomUrlSafe(32, options.randomBytesImpl || randomBytes);
   const challenge = base64url(createHash('sha256').update(verifier, 'ascii').digest());
@@ -46,11 +58,17 @@ export function createPkcePair(options = {}) {
 export function buildNativeAuthorizationUrl(options = {}) {
   const env = options.env || process.env;
   const issuer = resolveIamIssuer(env, options.issuer || '');
-  const clientId = clean(options.clientId) || AGENTSAM_NATIVE_OAUTH_CLIENT_ID;
+  const resolved = resolveIamClientId(options);
+  if (resolved.error) {
+    const err = new Error(resolved.error);
+    err.code = resolved.error;
+    throw err;
+  }
+  const clientId = resolved.clientId;
   const redirectUri = clean(options.redirectUri);
   const state = clean(options.state);
   const codeChallenge = clean(options.codeChallenge);
-  const scope = clean(options.scope ?? AGENTSAM_NATIVE_OAUTH_SCOPE);
+  const scope = clean(options.scope ?? AGENTSAM_OAUTH_SCOPE);
   if (!redirectUri || !state || !codeChallenge) throw new Error('oauth_authorization_parameters_required');
 
   const url = new URL('/api/oauth/authorize', `${issuer}/`);
@@ -99,9 +117,15 @@ export async function exchangeAuthorizationCode(options = {}) {
   const codeVerifier = clean(options.codeVerifier);
   const redirectUri = clean(options.redirectUri);
   if (!code || !codeVerifier || !redirectUri) throw new Error('oauth_authorization_code_exchange_parameters_required');
+  const resolved = resolveIamClientId(options);
+  if (resolved.error) {
+    const err = new Error(resolved.error);
+    err.code = resolved.error;
+    throw err;
+  }
   return oauthTokenRequest({
     grant_type: 'authorization_code',
-    client_id: clean(options.clientId) || AGENTSAM_NATIVE_OAUTH_CLIENT_ID,
+    client_id: resolved.clientId,
     redirect_uri: redirectUri,
     code,
     code_verifier: codeVerifier,
@@ -111,17 +135,25 @@ export async function exchangeAuthorizationCode(options = {}) {
 export async function refreshAccountSession(options = {}) {
   const session = options.session || readAccountSession(options);
   if (!session?.refresh_token) throw new Error('browser_oauth_refresh_unavailable');
-  const clientId = clean(session.client_id) || clean(options.clientId) || AGENTSAM_NATIVE_OAUTH_CLIENT_ID;
+  const resolved = resolveIamClientId({
+    ...options,
+    clientId: clean(session.client_id) || clean(options.clientId),
+  });
+  if (resolved.error) {
+    const err = new Error(resolved.error);
+    err.code = resolved.error;
+    throw err;
+  }
   const refreshed = await oauthTokenRequest({
     grant_type: 'refresh_token',
-    client_id: clientId,
+    client_id: resolved.clientId,
     refresh_token: session.refresh_token,
   }, options);
 
   return saveAccountSession({
     ...refreshed,
     refresh_token: clean(refreshed.refresh_token) || session.refresh_token,
-    client_id: clientId,
+    client_id: resolved.clientId,
     user_id: session.user_id,
     account_id: session.account_id,
     email: session.email,
@@ -279,7 +311,50 @@ export async function createLoopbackCallbackListener(options = {}) {
 
 export async function authenticateViaBrowser(options = {}) {
   const env = options.env || process.env;
-  const clientId = clean(options.clientId) || AGENTSAM_NATIVE_OAUTH_CLIENT_ID;
+  const resolved = resolveIamClientId(options);
+  if (resolved.error) {
+    const err = new Error(
+      'IAM_CLIENT_ID is not configured. Set IAM_CLIENT_ID (and IAM_OAUTH_ISSUER) for AgentSam login.',
+    );
+    err.code = 'iam_oauth_not_configured';
+    throw err;
+  }
+  const clientId = resolved.clientId;
+  const loginProvider = clean(options.loginProvider || 'inneranimalmedia').toLowerCase();
+  const issuer = resolveIamIssuer(env, options.issuer || '');
+
+  // Optional identity providers require an explicit studio origin — no hardcoded domain.
+  if (loginProvider === 'google' || loginProvider === 'cloudflare') {
+    const studioOrigin = clean(env.AGENTSAM_STUDIO_ORIGIN);
+    if (!studioOrigin) {
+      const err = new Error(
+        'AGENTSAM_STUDIO_ORIGIN is not configured. Required for Google/Cloudflare identity login.',
+      );
+      err.code = 'studio_origin_not_configured';
+      throw err;
+    }
+    const startPath = loginProvider === 'google'
+      ? '/api/oauth/google/start'
+      : '/api/oauth/cloudflare/start';
+    const startUrl = new URL(startPath, `${studioOrigin.replace(/\/+$/, '')}/`);
+    startUrl.searchParams.set('next', '/agentsam');
+    const promptImpl = options.promptToOpenUrlImpl || promptToOpenUrl;
+    await promptImpl(startUrl.toString(), {
+      heading: loginProvider === 'google'
+        ? 'Sign in with Google:'
+        : 'Sign in with Cloudflare:',
+      prompt: 'Press ENTER to open identity sign-in in your browser.',
+      input: options.input,
+      output: options.output,
+      openImpl: options.openImpl,
+    });
+    if (options.output?.isTTY) {
+      options.output.write(
+        '\n  After the browser finishes, continuing with IAM CLI OAuth…\n',
+      );
+    }
+  }
+
   const state = randomUrlSafe(24, options.randomBytesImpl || randomBytes);
   const pkce = createPkcePair({ randomBytesImpl: options.randomBytesImpl });
   const listener = await createLoopbackCallbackListener({
@@ -302,10 +377,17 @@ export async function authenticateViaBrowser(options = {}) {
       scope: options.scope,
     });
 
+    // Gate through IAM /auth/login; authorize URL preserved in `next`.
+    const authorizePath = authorizationUrl.startsWith(issuer)
+      ? authorizationUrl.slice(issuer.length)
+      : authorizationUrl.replace(/^https?:\/\/[^/]+/, '');
+    const loginGateUrl = new URL('/auth/login', `${issuer}/`);
+    loginGateUrl.searchParams.set('next', authorizePath.startsWith('/') ? authorizePath : `/${authorizePath}`);
+
     const promptImpl = options.promptToOpenUrlImpl || promptToOpenUrl;
-    await promptImpl(authorizationUrl, {
-      heading: 'Authenticate your InnerAnimalMedia account at:',
-      prompt: 'Press ENTER to open InnerAnimalMedia sign-in in your browser.',
+    await promptImpl(loginGateUrl.toString(), {
+      heading: 'Authenticate your Inner Animal Media account at:',
+      prompt: 'Press ENTER to open Inner Animal Media sign-in in your browser.',
       input: options.input,
       output: options.output,
       openImpl: options.openImpl,

@@ -1,22 +1,54 @@
 {
   "name": "@inneranimalmedia/agentsam-sdk-brand",
   "version": "0.1.0",
-  "private": true,
+  "description": "Deterministic Brand Intelligence + portable brand-asset promotion SDK for AgentSam (inspect, derive, plan, promote, publish, verify).",
   "type": "module",
-  "description": "Deterministic Brand Intelligence for AgentSam — scan/resolve/contract evidence on shared repository.snapshot authority",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "dependencies": {
+    "sharp": "^0.34.5"
+  },
   "main": "./src/index.js",
+  "bin": {
+    "agentsam-brand": "./bin/agentsam-brand.mjs"
+  },
   "exports": {
     ".": "./src/index.js",
     "./scan": "./src/scan.js",
     "./resolve": "./src/resolve.js",
     "./contract": "./src/contract.js",
     "./plan": "./src/plan.js",
-    "./goap-actions": "./src/goap-actions.js"
+    "./goap-actions": "./src/goap-actions.js",
+    "./assets": "./src/index.js",
+    "./presets": "./src/presets/index.js",
+    "./cli": "./src/cli/controller.js",
+    "./package.json": "./package.json"
   },
+  "files": [
+    "bin",
+    "src",
+    "README.md"
+  ],
   "scripts": {
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "pack:dry": "npm pack --dry-run"
   },
-  "engines": {
-    "node": ">=22 <25"
-  }
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/agentsam-brand"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "keywords": [
+    "agentsam",
+    "brand",
+    "assets",
+    "promotion",
+    "r2",
+    "images"
+  ]
 }

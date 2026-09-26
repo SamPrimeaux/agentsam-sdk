@@ -1,0 +1,10 @@
+{
+  "id": "social-image",
+  "label": "Social media set",
+  "description": "OG/Twitter-oriented 1200×630 raster + web formats",
+  "derivatives": [
+    { "id": "png-1200x630", "role": "raster", "format": "png", "width": 1200, "height": 630 },
+    { "id": "webp-1200x630", "role": "web", "format": "webp", "width": 1200, "height": 630, "quality": 90 },
+    { "id": "avif-1200x630", "role": "web", "format": "avif", "width": 1200, "height": 630, "quality": 75 }
+  ]
+}

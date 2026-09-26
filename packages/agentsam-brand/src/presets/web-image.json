@@ -1,0 +1,10 @@
+{
+  "id": "web-image",
+  "label": "Standard web image set",
+  "description": "Primary PNG + WebP + AVIF at source dimensions proxy 1600",
+  "derivatives": [
+    { "id": "png-1600", "role": "raster", "format": "png", "width": 1600, "height": 1600 },
+    { "id": "webp-1600", "role": "web", "format": "webp", "width": 1600, "height": 1600, "quality": 90 },
+    { "id": "avif-1600", "role": "web", "format": "avif", "width": 1600, "height": 1600, "quality": 75 }
+  ]
+}

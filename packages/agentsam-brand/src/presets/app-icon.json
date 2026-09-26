@@ -1,0 +1,16 @@
+{
+  "id": "app-icon",
+  "label": "Standard app icon",
+  "description": "PNG size ladder 1024→16 plus optional WebP/AVIF @1024",
+  "derivatives": [
+    { "id": "png-1024", "role": "raster", "format": "png", "width": 1024, "height": 1024 },
+    { "id": "png-512", "role": "raster", "format": "png", "width": 512, "height": 512 },
+    { "id": "png-256", "role": "raster", "format": "png", "width": 256, "height": 256 },
+    { "id": "png-128", "role": "raster", "format": "png", "width": 128, "height": 128 },
+    { "id": "png-64", "role": "raster", "format": "png", "width": 64, "height": 64 },
+    { "id": "png-32", "role": "raster", "format": "png", "width": 32, "height": 32 },
+    { "id": "png-16", "role": "raster", "format": "png", "width": 16, "height": 16 },
+    { "id": "webp-1024", "role": "web", "format": "webp", "width": 1024, "height": 1024, "quality": 92 },
+    { "id": "avif-1024", "role": "web", "format": "avif", "width": 1024, "height": 1024, "quality": 78 }
+  ]
+}

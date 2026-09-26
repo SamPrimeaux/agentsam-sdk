@@ -52,16 +52,7 @@ describe('cloudflare connector', () => {
   });
 
   it('keeps connector return paths same-origin', async () => {
-    const calls = [];
-    const DB = {
-      prepare(sql) {
-        return {
-          args: [],
-          bind(...args) { this.args = args; return this; },
-          async run() { calls.push({ sql, args: this.args }); return { success: true }; },
-        };
-      },
-    };
+    const oauthState = new Map();
     const response = await handleCloudflareConnectionRequest(
       new Request('https://agentsam.example/api/connections/cloudflare/start?return_to=https://untrusted.example/after', {
         headers: {
@@ -70,19 +61,17 @@ describe('cloudflare connector', () => {
         },
       }),
       {
-        DB,
+        oauthState,
         fixtureSessions: new Map([['fixture', 'user_123']]),
         CLOUDFLARE_OAUTH_CLIENT_ID: 'real-client-id',
       },
     );
     assert.equal(response.status, 200);
-    assert.equal(
-      calls.some((call) => call.sql.includes('DELETE FROM agentsam_cloudflare_oauth_state WHERE created_at < unixepoch() - 600')),
-      true,
-    );
-    const stateInsert = calls.find((call) => call.sql.includes('INSERT INTO agentsam_cloudflare_oauth_state'));
-    assert.ok(stateInsert);
-    assert.equal(stateInsert.args.at(-1), null);
+    const body = await response.json();
+    assert.equal(body.ok, true);
+    assert.equal(oauthState.size, 1);
+    const stored = [...oauthState.values()][0];
+    assert.equal(stored.returnTo, '');
   });
 
   it('redirects browser starts to Cloudflare authorization', async () => {
@@ -108,9 +97,15 @@ describe('cloudflare connector', () => {
   });
 
   it('consumes callback state and stores only encrypted OAuth tokens', async () => {
-    const now = Math.floor(Date.now() / 1000);
     const calls = [];
-    const statements = [];
+    const oauthState = new Map([
+      ['state_123', {
+        ownerId: 'user_123',
+        verifier: 'verifier',
+        returnTo: '',
+        createdAt: Math.floor(Date.now() / 1000),
+      }],
+    ]);
     const DB = {
       prepare(sql) {
         const statement = {
@@ -121,9 +116,6 @@ describe('cloudflare connector', () => {
             return this;
           },
           async first() {
-            if (sql.includes('agentsam_cloudflare_oauth_state')) {
-              return { owner_id: 'user_123', code_verifier: 'verifier', created_at: now };
-            }
             return null;
           },
           async run() {
@@ -131,7 +123,6 @@ describe('cloudflare connector', () => {
             return { success: true };
           },
         };
-        statements.push(statement);
         return statement;
       },
       async batch(batchStatements) {
@@ -157,6 +148,7 @@ describe('cloudflare connector', () => {
         new Request('https://agentsam.example/api/connections/cloudflare/callback?code=code_123&state=state_123'),
         {
           DB,
+          oauthState,
           CLOUDFLARE_OAUTH_CLIENT_ID: 'real-client-id',
           CLOUDFLARE_OAUTH_CLIENT_SECRET: 'obsolete-secret-must-not-be-sent',
           VAULT_MASTER_KEY: '01234567890123456789012345678901',
@@ -167,7 +159,7 @@ describe('cloudflare connector', () => {
         response.headers.get('location'),
         'https://agentsam.example/settings/integrations?connection=cloudflare&result=connected',
       );
-      assert.equal(calls.some((call) => call.sql.includes('DELETE FROM agentsam_cloudflare_oauth_state')), true);
+      assert.equal(oauthState.has('state_123'), false);
       const insert = calls.find((call) => call.sql.includes('INSERT INTO agentsam_cloudflare_connections'));
       assert.ok(insert);
       assert.notEqual(insert.args[4], 'access-plaintext');

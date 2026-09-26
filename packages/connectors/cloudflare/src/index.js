@@ -10,33 +10,52 @@ export const CLOUDFLARE_FIXTURE_CLIENT_ID = 'sillynotreal';
 
 export const CLOUDFLARE_OAUTH_REVOKE_URL = 'https://dash.cloudflare.com/oauth2/revoke';
 
-/** Smallest useful scopes mapped to Cloudflare API token permission names. */
-export const CLOUDFLARE_CAPABILITY_SCOPES = Object.freeze({
-  workers_deploy: {
-    scopes: ['workers-scripts.write'],
-    why: 'Deploy Workers for the connected account (Workers Scripts Edit).',
-  },
-  d1_inspect: {
-    scopes: ['d1.read'],
-    why: 'Inspect D1 databases bound to the deployable.',
-  },
-  r2_inspect: {
-    scopes: ['workers-r2.read'],
-    why: 'Inspect R2 buckets bound to the deployable.',
-  },
-  worker_logs: {
-    scopes: ['workers-scripts.read'],
-    why: 'Read Worker script metadata/logs for postdeploy health.',
-  },
-});
+export {
+  CLOUDFLARE_BASELINE_SCOPES,
+  CLOUDFLARE_CAPABILITIES,
+  CLOUDFLARE_CAPABILITY_SCOPES,
+  listCloudflareCapabilities,
+  getCloudflareCapability,
+  scopesForCapabilities,
+  assessCapabilityAuthorization,
+  capabilityAuthorizationMatrix,
+  cloudflarePermissionRemediation,
+} from './capabilities.js';
 
-// Full scope catalog for the AgentSam Local Studio OAuth client (182 total,
-// pasted directly from the Cloudflare dashboard's own scope picker). This is
-// what gets requested at mint time -- one authorize covers everything the
-// client is provisioned for, rather than a hand-curated subset that has to
-// be edited in code every time a new capability is used. CLOUDFLARE_CAPABILITY_SCOPES
-// above stays as documentation of which specific scopes each feature
-// actually touches -- it no longer restricts what's requested.
+export {
+  upsertCloudflareUserOauthToken,
+  resolveCloudflareAccountId,
+  unionScopes,
+} from './oauth-persist.js';
+
+export {
+  CloudflareApiClient,
+  CloudflareApiError,
+  resolveCloudflareApiAuth,
+  createCloudflareApiClient,
+  receipt as cloudflareReceipt,
+} from './api-client.js';
+
+export {
+  resolveCloudflareCredential,
+  credentialSafeMeta,
+  loadCloudflareFromUserOauthTokens,
+  loadCloudflareFromLegacyConnections,
+} from './credential.js';
+
+export * as workflows from './families/workflows.js';
+export * as scanner from './families/scanner.js';
+export * as tags from './families/tags.js';
+export * as tagGateway from './families/tag-gateway.js';
+export * as brandProtection from './families/brand-protection.js';
+export * as keyless from './families/keyless.js';
+export * as tokenValidation from './families/token-validation.js';
+export * as pages from './families/pages.js';
+export * as snippets from './families/snippets.js';
+
+import { scopesForCapabilities as _scopesForCapabilities } from './capabilities.js';
+
+// Full scope catalog kept as REFERENCE ONLY — never request wholesale at mint.
 export const CLOUDFLARE_ALL_SCOPES = Object.freeze([
   'agent-memory.write',
   'browser-rendering.read',
@@ -222,9 +241,23 @@ export const CLOUDFLARE_ALL_SCOPES = Object.freeze([
   'offline_access'
 ]);
 
-export function requestedCloudflareScopes() {
-  return [...CLOUDFLARE_ALL_SCOPES];
+/**
+ * Scopes requested at OAuth mint / re-authorize.
+ * Default: baseline only. Pass `capabilities` to upgrade deliberately.
+ * Host apps supply their own default capability list — this package does not.
+ * Pass `{ all: true }` only for catalog dumps — never for live authorize URLs.
+ * @param {{ capabilities?: string[], all?: boolean }} [opts]
+ */
+export function requestedCloudflareScopes(opts = {}) {
+  if (opts && opts.all === true) return [...CLOUDFLARE_ALL_SCOPES];
+  const capabilities = Array.isArray(opts?.capabilities) ? opts.capabilities.filter(Boolean) : [];
+  return _scopesForCapabilities({
+    capabilities,
+    includeBaseline: true,
+    generallyAvailableOnly: true,
+  });
 }
+
 
 function clean(value) {
   return value == null ? '' : String(value).trim();
@@ -303,61 +336,29 @@ export function assertConnectionOwner(connection, ownerId) {
   return connection;
 }
 
+/**
+ * LEGACY dual-read wrapper.
+ * Prefer resolveCloudflareCredential / createCloudflareApiClient.
+ * Canonical store: user_oauth_tokens (provider=cloudflare).
+ * agentsam_cloudflare_connections is recovery-only — do not expand.
+ */
 export async function loadCloudflareAccessToken(env, ownerId, options = {}) {
-  if (!env?.DB || !ownerId) return null;
-  const row = await env.DB.prepare(`
-    SELECT connection_id, owner_id, cloudflare_account_id, scopes, status,
-           access_token_encrypted, refresh_token_encrypted, expires_at
-    FROM agentsam_cloudflare_connections
-    WHERE owner_id = ? AND status = 'connected'
-    ORDER BY updated_at DESC LIMIT 1
-  `).bind(ownerId).first();
-  if (!row?.access_token_encrypted || row.owner_id !== ownerId) return null;
-  const { decryptSecret, sealToken } = await import('./vault.js');
-  const aad = `cloudflare-connection:${ownerId}`;
-  let accessToken = await decryptSecret(env, row.access_token_encrypted, aad);
-  let refreshToken = row.refresh_token_encrypted
-    ? await decryptSecret(env, row.refresh_token_encrypted, aad)
-    : '';
-  let expiresAt = Number(row.expires_at || 0) || null;
-  let scopes = row.scopes ? String(row.scopes).split(' ').filter(Boolean) : [];
-  const now = Math.floor(Date.now() / 1000);
-  if (expiresAt && expiresAt <= now + 60) {
-    if (!refreshToken) throw new Error('cloudflare_refresh_token_missing');
-    const refreshParams = new URLSearchParams({
-      grant_type: 'refresh_token',
-      refresh_token: refreshToken,
-      client_id: String(env.CLOUDFLARE_OAUTH_CLIENT_ID || ''),
-    });
-    const refreshResponse = await (options.fetchImpl || fetch)(CLOUDFLARE_OAUTH_TOKEN_URL, {
-      method: 'POST',
-      headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      body: refreshParams,
-    });
-    if (!refreshResponse.ok) throw new Error(`cloudflare_token_refresh_failed:${refreshResponse.status}`);
-    const refreshed = await refreshResponse.json();
-    if (!refreshed?.access_token) throw new Error('cloudflare_token_refresh_missing_access_token');
-    accessToken = refreshed.access_token;
-    refreshToken = refreshed.refresh_token || refreshToken;
-    scopes = String(refreshed.scope || row.scopes || '').split(' ').filter(Boolean);
-    expiresAt = refreshed.expires_in ? now + Number(refreshed.expires_in) : null;
-    const [accessEncrypted, refreshEncrypted] = await Promise.all([
-      sealToken(env, accessToken, aad),
-      sealToken(env, refreshToken, aad),
-    ]);
-    await env.DB.prepare(`
-      UPDATE agentsam_cloudflare_connections
-      SET access_token_encrypted = ?, refresh_token_encrypted = ?, scopes = ?,
-          expires_at = ?, status = 'connected', updated_at = unixepoch()
-      WHERE connection_id = ? AND owner_id = ?
-    `).bind(accessEncrypted, refreshEncrypted, scopes.join(' '), expiresAt, row.connection_id, ownerId).run();
-  }
+  const { resolveCloudflareCredential } = await import('./credential.js');
+  const cred = await resolveCloudflareCredential({
+    env,
+    ownerId,
+    authMode: 'oauth',
+    decryptUserOauthToken: options.decryptUserOauthToken,
+    ...options,
+  });
+  if (!cred?.bearerToken) return null;
   return {
-    accessToken,
-    connectionId: row.connection_id,
-    accountId: row.cloudflare_account_id || null,
-    scopes,
-    expiresAt,
+    accessToken: cred.bearerToken,
+    connectionId: cred.connectionId,
+    accountId: cred.accountId,
+    scopes: cred.grantedScopes || [],
+    expiresAt: cred.expiresAt,
+    source: cred.source,
   };
 }
 

@@ -1,10 +1,9 @@
 const CLOUDFLARE_AUTH_URL = 'https://dash.cloudflare.com/oauth2/auth';
 const CLOUDFLARE_TOKEN_URL = 'https://dash.cloudflare.com/oauth2/token';
 
-// Identity-only login should not request the full resource-access scope set
-// used elsewhere for the Local Studio Cloudflare *connection* (deploy/d1/r2/etc).
-// account-settings.read is enough to resolve the account for userinfo.
-const CLOUDFLARE_LOGIN_SCOPE = 'account-settings.read offline_access';
+// Identity-only login: account identity + user details (email/name via /v4/user).
+// Do NOT request the resource-access scope set used by the Cloudflare *connection* flow.
+const CLOUDFLARE_LOGIN_SCOPE = 'account-settings.read user-details.read offline_access';
 
 /** @param {import('../../provider-contract.js').OAuthAuthorizeInput} input */
 export function getCloudflareAuthUrl({ clientId, redirectUri, state, codeChallenge, scope } = {}) {
