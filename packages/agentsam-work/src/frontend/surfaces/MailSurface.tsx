@@ -32,12 +32,12 @@ export function MailSurface({ messages }: { messages: WorkMailMessage[] }) {
           Compose
         </button>
         <div style={{ display: "grid", gap: 4, marginTop: 14 }}>
-          {[
+          {([
             ["inbox", "Inbox", Inbox],
             ["starred", "Starred", Star],
             ["sent", "Sent", Send],
             ["archived", "Archived", Archive],
-          ].map(([id, label, Icon]) => (
+          ] as const).map(([id, label, Icon]) => (
             <button
               key={String(id)}
               type="button"
