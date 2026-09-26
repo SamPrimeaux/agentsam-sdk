@@ -9,3 +9,4 @@ export * from "./surfaces/MailSurface";
 export * from "./surfaces/ArtifactsSurface";
 export * from "./surfaces/ProjectsSurface";
 export * from "./surfaces/ProjectDetailSurface";
+export * from "./surfaces/TicketDetailSurface";
