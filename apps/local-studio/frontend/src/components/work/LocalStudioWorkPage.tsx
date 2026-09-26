@@ -17,9 +17,11 @@ function useLocalStudioWorkHost() {
 export function LocalStudioWorkPage({
   surface,
   projectId,
+  ticketId,
 }: {
   surface: WorkSurfaceId;
   projectId?: string;
+  ticketId?: string;
 }) {
   const navigate = useNavigate();
   const host = useLocalStudioWorkHost();
