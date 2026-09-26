@@ -74,11 +74,18 @@ export function WorkProduct({
         />
       ) : null}
       {surface === "artifact-tickets" ? (
-        <TicketsSurface
-          tickets={snapshot.tickets}
-          analytics={snapshot.ticketAnalytics}
-          scope="platform"
-        />
+        ticketId ? (
+          <TicketDetailSurface
+            ticket={snapshot.tickets.find((ticket) => ticket.id === ticketId) ?? snapshot.tickets[0]}
+            onNavigate={onNavigate}
+          />
+        ) : (
+          <TicketsSurface
+            tickets={snapshot.tickets}
+            analytics={snapshot.ticketAnalytics}
+            scope="platform"
+          />
+        )
       ) : null}
       {surface === "mail" ? <MailSurface messages={snapshot.mail} /> : null}
       {surface === "artifacts" ? <ArtifactsSurface artifacts={snapshot.artifacts} /> : null}
