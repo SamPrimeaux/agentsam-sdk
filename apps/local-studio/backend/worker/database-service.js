@@ -480,8 +480,17 @@ function sqlKind(sql) {
     .replace(/^\s*(?:--[^\n]*\n|\/\*[\s\S]*?\*\/\s*)*/g, '')
     .trim();
   const first = normalized.split(/\s+/, 1)[0]?.toLowerCase() || '';
-  const read = ['select', 'pragma', 'with', 'explain', 'show'].includes(first);
-  const destructive = ['drop', 'truncate', 'alter', 'vacuum', 'reindex'].includes(first);
+  const mutationVerb =
+    /\b(insert|update|delete|replace|merge|upsert|create|alter|drop|truncate|vacuum|reindex|attach|detach|grant|revoke)\b/i.test(
+      normalized,
+    );
+  const destructive =
+    /\b(drop|truncate|alter|vacuum|reindex|attach|detach|grant|revoke)\b/i.test(
+      normalized,
+    );
+  const read =
+    !mutationVerb &&
+    ['select', 'pragma', 'with', 'explain', 'show'].includes(first);
   const mutating = !read;
   return { first, read, mutating, destructive };
 }
