@@ -1,10 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { LocalStudioWorkPage } from "@/components/work/LocalStudioWorkPage";
+import { Outlet, createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/(apps)/artifacts/tickets")({
-  component: ArtifactTicketsRoute,
+  component: ArtifactTicketsLayout,
 });
 
-function ArtifactTicketsRoute() {
-  return <LocalStudioWorkPage surface="artifact-tickets" />;
+function ArtifactTicketsLayout() {
+  return <Outlet />;
 }
