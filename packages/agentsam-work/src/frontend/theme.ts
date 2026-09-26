@@ -42,3 +42,30 @@ export function clearWorkThemeTokens(target?: HTMLElement) {
     root.style.removeProperty(cssVar);
   }
 }
+
+export function readStoredWorkThemeTokens(
+  storage?: Pick<Storage, "getItem">,
+): Partial<WorkThemeTokens> | null {
+  const source =
+    storage ?? (typeof window !== "undefined" ? window.localStorage : undefined);
+  if (!source) return null;
+
+  try {
+    const raw = source.getItem(WORK_THEME_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<WorkThemeTokens>;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function storeWorkThemeTokens(
+  tokens: Partial<WorkThemeTokens>,
+  storage?: Pick<Storage, "setItem">,
+) {
+  const target =
+    storage ?? (typeof window !== "undefined" ? window.localStorage : undefined);
+  target?.setItem(WORK_THEME_STORAGE_KEY, JSON.stringify(tokens));
+}
