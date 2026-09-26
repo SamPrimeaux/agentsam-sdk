@@ -10,6 +10,15 @@ Two different Google login paths. Do not conflate them.
 agentsam gcloud auth login
 ```
 
+**Desktop PKCE (default):** loopback `http://127.0.0.1:<port>/callback` using the public
+`GOOGLE_DESKTOP_CLIENT_ID`. Stock CLI resolves this from Local Studio
+`GET https://agentsam.inneranimalmedia.com/api/public-config` when the shell env is unset.
+Do **not** require `~/.agentsam/load-agent-env.sh` for stock users.
+
+Optional override: `export GOOGLE_DESKTOP_CLIENT_ID=…` in the local shell.
+
+### Hosted identity (`agentsam gcloud auth login --web`)
+
 Shows the live start URL and waits for **Enter** to open the system browser:
 
 ```text

@@ -95,3 +95,16 @@ test('resolveGoogleDesktopClientId fails loud when unset', () => {
     (err) => err?.code === 'google_desktop_client_not_configured',
   );
 });
+
+test('resolveGoogleDesktopClientIdAsync uses public-config when env unset', async () => {
+  const { resolveGoogleDesktopClientIdAsync } = await import('../src/lib/google-desktop-oauth.js');
+  const id = await resolveGoogleDesktopClientIdAsync({}, {
+    publicConfigUrl: 'https://example.test/api/public-config',
+    fetchImpl: async () =>
+      new Response(JSON.stringify({
+        ok: true,
+        google_desktop_client_id: 'from-public-config.apps.googleusercontent.com',
+      }), { status: 200 }),
+  });
+  assert.equal(id, 'from-public-config.apps.googleusercontent.com');
+});

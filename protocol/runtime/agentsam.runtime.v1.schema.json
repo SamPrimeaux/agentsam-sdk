@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.inneranimalmedia.com/protocol/runtime/agentsam.runtime.v1.schema.json",
+  "title": "agentsam.runtime.v1",
+  "description": "AgentSam machine/runtime protocol. agentsamd implements this; providers adapt to it. PTY is a capability, not the daemon.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "provider", "substrate", "lifecycle", "runtime", "capabilities"],
+  "properties": {
+    "schema": { "const": "agentsam.runtime.v1" },
+    "provider": {
+      "type": "string",
+      "enum": ["local", "cloudflare", "gcp", "aws", "azure", "fly", "custom"]
+    },
+    "substrate": {
+      "type": "string",
+      "enum": ["host", "vm", "container", "microvm", "sandbox", "workstation", "kubernetes"]
+    },
+    "lifecycle": {
+      "type": "string",
+      "enum": ["persistent", "scale_to_zero", "ephemeral", "job"]
+    },
+    "runtime": {
+      "type": "string",
+      "enum": ["agentsamd", "sandbox_api", "provider_native"]
+    },
+    "architecture": { "type": "string", "enum": ["arm64", "amd64", "unknown"] },
+    "os": { "type": "string", "enum": ["darwin", "linux", "windows", "unknown"] },
+    "status": {
+      "type": "string",
+      "enum": ["online", "sleeping", "starting", "offline", "error"]
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": { "type": "boolean" },
+      "properties": {
+        "exec": { "type": "boolean" },
+        "pty": { "type": "boolean" },
+        "filesystem": { "type": "boolean" },
+        "persistent_filesystem": { "type": "boolean" },
+        "process": { "type": "boolean" },
+        "git": { "type": "boolean" },
+        "docker": { "type": "boolean" },
+        "gpu": { "type": "boolean" },
+        "browser": { "type": "boolean" },
+        "gui": { "type": "boolean" },
+        "ports": { "type": "boolean" },
+        "snapshot": { "type": "boolean" }
+      }
+    },
+    "transport": {
+      "type": "string",
+      "enum": [
+        "direct",
+        "service_binding",
+        "tunnel",
+        "vpc_service",
+        "vpc_network",
+        "public_wss",
+        "provider_api",
+        "execos"
+      ]
+    }
+  }
+}

@@ -24,6 +24,7 @@ import {
 import { handleCmsWorkerRequest } from "./cms-service.js";
 import { serveCanonicalHomepage } from "./canonical-homepage.js";
 import { isPublicSitePath, servePublicSitePage } from "./public-site.js";
+import { handlePublicConfigRequest } from "./public-config.js";
 import { loadConnectionsRegistry } from "./connections-registry.js";
 import { createLocalStudioPluginRuntime } from "./plugin-registry.js";
 import {
@@ -658,6 +659,11 @@ export default {
 
     if (request.method === "GET" && Object.hasOwn(INSTALL_APP_TARGETS, url.pathname)) {
       return serveInstallScript(url.pathname);
+    }
+
+    // Stock public OAuth / issuer config (no secrets) — CLI resolves desktop client from here.
+    if (url.pathname === "/api/public-config") {
+      return handlePublicConfigRequest(request, env);
     }
 
     // Legacy canonical homepage path (assets missing for public-site router)

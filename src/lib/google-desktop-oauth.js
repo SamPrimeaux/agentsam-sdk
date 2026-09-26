@@ -39,17 +39,50 @@ function randomState(randomBytesImpl = randomBytes) {
   return base64url(randomBytesImpl(24));
 }
 
-/** Public Desktop client id — must come from GOOGLE_DESKTOP_CLIENT_ID (no DEFAULT_*). */
+/** Public Desktop client id — env first, then stock Studio public-config (not load-agent-env). */
 export function resolveGoogleDesktopClientId(env = process.env) {
   const id = clean(env.GOOGLE_DESKTOP_CLIENT_ID);
   if (!id) {
     const err = new Error(
-      'GOOGLE_DESKTOP_CLIENT_ID is not configured. Set it for agentsam gcloud auth login (desktop PKCE).',
+      'GOOGLE_DESKTOP_CLIENT_ID is not configured. Stock path: fetch from Local Studio GET /api/public-config (Worker vars). Do not rely on another user\'s ~/.agentsam/load-agent-env.sh. Tip: agentsam gcloud auth login --permissions',
     );
     err.code = 'google_desktop_client_not_configured';
     throw err;
   }
   return id;
+}
+
+/**
+ * Resolve desktop client id: env override, then Studio/public host public-config.
+ * @param {object} [env]
+ * @param {{ fetchImpl?: typeof fetch, publicConfigUrl?: string }} [opts]
+ */
+export async function resolveGoogleDesktopClientIdAsync(env = process.env, opts = {}) {
+  const fromEnv = clean(env.GOOGLE_DESKTOP_CLIENT_ID);
+  if (fromEnv) return fromEnv;
+
+  const fetchImpl = opts.fetchImpl || fetch;
+  const candidates = [];
+  if (clean(opts.publicConfigUrl)) candidates.push(clean(opts.publicConfigUrl));
+  const studioOrigin = clean(env.AGENTSAM_STUDIO_ORIGIN) || 'https://agentsam.inneranimalmedia.com';
+  candidates.push(new URL('/api/public-config', `${studioOrigin}/`).toString());
+
+  for (const url of candidates) {
+    try {
+      const res = await fetchImpl(url, {
+        headers: { accept: 'application/json' },
+        signal: typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(8000) : undefined,
+      });
+      if (!res.ok) continue;
+      const body = await res.json().catch(() => null);
+      const id = clean(body?.google_desktop_client_id);
+      if (id) return id;
+    } catch {
+      /* try next */
+    }
+  }
+
+  return resolveGoogleDesktopClientId(env);
 }
 
 export function buildGoogleDesktopAuthUrl({
@@ -116,7 +149,10 @@ export async function fetchGoogleUserInfo(accessToken, fetchImpl = fetch) {
 export async function runGoogleDesktopCloudLogin(options = {}) {
   const write = options.write || ((s) => process.stdout.write(s));
   const env = options.env || process.env;
-  const clientId = resolveGoogleDesktopClientId(env);
+  const clientId = await resolveGoogleDesktopClientIdAsync(env, {
+    fetchImpl: options.fetchImpl,
+    publicConfigUrl: options.publicConfigUrl,
+  });
   const scope = clean(options.scope) || GOOGLE_CLOUD_CONNECTION_SCOPES;
   const state = randomState(options.randomBytesImpl);
   const pkce = createPkcePair({ randomBytesImpl: options.randomBytesImpl });
