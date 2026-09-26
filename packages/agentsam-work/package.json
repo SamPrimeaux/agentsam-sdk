@@ -1,0 +1,21 @@
+{
+  "name": "@inneranimalmedia/agentsam-work",
+  "version": "0.1.0",
+  "type": "module",
+  "sideEffects": [
+    "./src/frontend/theme.css"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./contracts": "./src/contracts/index.ts",
+    "./frontend": "./src/frontend/index.ts",
+    "./client": "./src/client/index.ts",
+    "./fixtures": "./src/fixtures/index.ts",
+    "./theme.css": "./src/frontend/theme.css"
+  },
+  "peerDependencies": {
+    "lucide-react": "^0.510.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  }
+}
