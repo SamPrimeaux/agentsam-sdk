@@ -7,6 +7,7 @@ import {
   type SettingsUnitId,
 } from "@inneranimalmedia/agentsam-settings";
 import { localStudioSettingsManifest } from "./localStudioSettingsManifest";
+import { LiveKeysSettingsPage } from "./LiveKeysSettingsPage";
 
 function fixtureFromLocation(): SettingsFixtureName {
   if (typeof window === "undefined") return "populated";
@@ -24,6 +25,10 @@ export function LocalStudioSettingsPage({
   unitId: SettingsUnitId;
   requestedView?: string;
 }) {
+  if (unitId === "keys") {
+    return <LiveKeysSettingsPage />;
+  }
+
   const fixture = fixtureFromLocation();
   const host = useMemo(
     () => createFixtureSettingsHost(getSettingsFixture(fixture)),

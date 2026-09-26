@@ -17,8 +17,10 @@ import {
 } from "./studio-vault.ts";
 import type { VaultD1Binding } from "./studio-vault.ts";
 
-const MASTER_B64 = Buffer.from("0123456789abcdef0123456789abcdef").toString("base64");
-assert.equal(Buffer.from(MASTER_B64, "base64").length, 32);
+const MASTER_RAW_B64 = Buffer.from("0123456789abcdef0123456789abcdef").toString("base64");
+assert.equal(Buffer.from(MASTER_RAW_B64, "base64").length, 32);
+/** Same format the Worker / ensure-vault-secret.mjs require. */
+const MASTER_V1 = `v1.${MASTER_RAW_B64}`;
 
 function fakeDb(rows: unknown[]): VaultD1Binding {
   return {
@@ -59,18 +61,18 @@ describe("serviceToProvider", () => {
 describe("vault AES-256-GCM contract", () => {
   it("round-trips with matching AAD", async () => {
     const aad = vaultAad("au_1", "openai", "default");
-    const ciphertext = await encryptVaultSecret("sk-test-secret-value", aad, MASTER_B64);
-    assert.equal(await decryptVaultSecret(ciphertext, aad, MASTER_B64), "sk-test-secret-value");
+    const ciphertext = await encryptVaultSecret("sk-test-secret-value", aad, MASTER_V1);
+    assert.equal(await decryptVaultSecret(ciphertext, aad, MASTER_V1), "sk-test-secret-value");
   });
 
   it("rejects the wrong AAD", async () => {
     const ciphertext = await encryptVaultSecret(
       "sk-test-secret-value",
       vaultAad("au_1", "openai", "default"),
-      MASTER_B64,
+      MASTER_V1,
     );
     await assert.rejects(
-      decryptVaultSecret(ciphertext, vaultAad("au_2", "openai", "default"), MASTER_B64),
+      decryptVaultSecret(ciphertext, vaultAad("au_2", "openai", "default"), MASTER_V1),
     );
   });
 
@@ -78,7 +80,7 @@ describe("vault AES-256-GCM contract", () => {
     const ciphertext = await encryptVaultSecret(
       "sk-test-secret-value",
       vaultAad("au_1", "openai", "default"),
-      MASTER_B64,
+      MASTER_V1,
     );
     await assert.rejects(
       decryptVaultSecret(ciphertext, vaultAad("au_1", "openai", "default"), "wrong-passphrase"),
@@ -100,7 +102,7 @@ describe("loadVaultCredentialMap", () => {
       secret_value_encrypted: await encryptVaultSecret(
         value,
         vaultAad(accountId, service, name),
-        MASTER_B64,
+        MASTER_V1,
       ),
     });
     const rows = [
@@ -112,7 +114,7 @@ describe("loadVaultCredentialMap", () => {
     const map = await loadVaultCredentialMap({
       db: fakeDb(rows),
       accountId,
-      masterKey: MASTER_B64,
+      masterKey: MASTER_V1,
     });
     assert.equal(map.get("openai")?.value, "sk-user-first");
     assert.equal(map.get("openai")?.source, "user_vault");
@@ -126,7 +128,7 @@ describe("loadVaultCredentialMap", () => {
         { secret_name: "n", service_name: "openai", secret_value_encrypted: "!!!not-ciphertext!!!" },
       ]),
       accountId: "au_1",
-      masterKey: MASTER_B64,
+      masterKey: MASTER_V1,
     });
     assert.equal(map.size, 0);
   });
@@ -141,12 +143,12 @@ describe("loadVaultCredentialMap", () => {
           secret_value_encrypted: await encryptVaultSecret(
             "cf-token",
             vaultAad(accountId, "cloudflare", "default"),
-            MASTER_B64,
+            MASTER_V1,
           ),
         },
       ]),
       accountId,
-      masterKey: MASTER_B64,
+      masterKey: MASTER_V1,
       cloudflareAccountId: "ede6590ac0d2fb7daf155b35653457b2",
     });
     assert.equal(

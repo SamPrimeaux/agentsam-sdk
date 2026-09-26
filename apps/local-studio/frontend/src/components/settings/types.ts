@@ -39,7 +39,6 @@ export type VaultSecret = {
   type: string;
   service: string;
   description: string | null;
-  workspace_id: string | null;
   expires_at: number | null;
   last_used_at: number | null;
   usage_count: number;

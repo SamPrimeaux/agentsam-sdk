@@ -109,14 +109,24 @@ export function SettingsShell({
   activeUnit,
   onNavigate,
   children,
+  railStatus,
 }: {
   manifest: SettingsManifest;
   activeUnit: SettingsUnitId;
   onNavigate: (unit: SettingsUnitId) => void;
   children: ReactNode;
+  /** Sidebar footer — live vault when unset uses production copy. */
+  railStatus?: { title: string; detail: string };
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const status = railStatus ?? {
+    title: activeUnit === "keys" ? "Account vault" : "Local Studio",
+    detail:
+      activeUnit === "keys"
+        ? "Secrets encrypt to your account. No project scope."
+        : "Settings shell. Keys use the live vault.",
+  };
 
   const rail = (
     <div className="flex h-full min-h-0 flex-col">
@@ -172,11 +182,9 @@ export function SettingsShell({
           <div className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2.5">
             <div className="flex items-center gap-2 text-[11px] font-medium text-foreground">
               <CheckCircle2 className="size-3.5 text-emerald-400" />
-              Local preview
+              {status.title}
             </div>
-            <p className="mt-1 text-[10px] leading-4 text-muted-foreground">
-              Production-shaped fixtures. No migrations required.
-            </p>
+            <p className="mt-1 text-[10px] leading-4 text-muted-foreground">{status.detail}</p>
           </div>
         </div>
       )}

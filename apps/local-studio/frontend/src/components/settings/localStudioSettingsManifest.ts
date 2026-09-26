@@ -78,14 +78,9 @@ export const localStudioSettingsManifest = defineSettingsManifest({
     {
       id: "keys",
       label: "Keys & Secrets",
-      description: "AgentSam credentials, provider secrets, sessions and security audit evidence.",
+      description:
+        "Account-scoped BYOK for Studio chat, providers, and terminal. You name each secret — no project scope.",
       icon: "key",
-      views: [
-        { id: "credentials", label: "Credentials" },
-        { id: "secrets", label: "Personal Secrets" },
-        { id: "sessions", label: "Sessions" },
-        { id: "audit", label: "Audit" },
-      ],
     },
     {
       id: "usage",

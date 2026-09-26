@@ -1,13 +1,19 @@
 /**
  * Studio vault credential resolution (server-only).
  *
- * Session → accounts.id (au_*) → user_secrets.account_id → unwrap via VAULT_MASTER_KEY.
- * VAULT_MASTER_KEY is the Worker encryption key, not a personal BYOK secret.
+ * Session → accounts.id (au_*) → user_secrets.account_id → unwrap.
+ * Crypto SSOT: `@inneranimalmedia/agentsam-vault` (same module as the Worker).
+ *   VAULT_MASTER_KEY = `v1.<base64 of exactly 32 bytes>`
+ *   AAD              = `${accountId}:${serviceName}:${secretName}`
+ *   packed           = base64(iv || ciphertext||tag)
  * UI never receives decrypted values except ephemeral reveal after re-auth.
- *
- * Encrypt/decrypt parity: `apps/local-studio/backend/worker/index.js`
- * AAD `${accountId}:${serviceName}:${secretName}`, packed `base64(iv||ciphertext)`.
  */
+
+import {
+  importVaultMasterKey,
+  encryptVaultSecret as encryptWithVaultKey,
+  decryptVaultSecret as decryptWithVaultKey,
+} from "@inneranimalmedia/agentsam-vault/crypto";
 
 export type StudioCredentialSource = "user_vault" | "platform";
 
@@ -51,42 +57,6 @@ export function resolveStudioAccountId(request: Request): string {
   return (request.headers.get("x-user-id") || "").trim();
 }
 
-const textEncoder = new TextEncoder();
-const textDecoder = new TextDecoder();
-
-function b64ToBytes(b64: string): Uint8Array<ArrayBuffer> {
-  const bin = atob(b64);
-  const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i += 1) out[i] = bin.charCodeAt(i);
-  return out;
-}
-
-function bytesToB64(bytes: Uint8Array): string {
-  let s = "";
-  for (const b of bytes) s += String.fromCharCode(b);
-  return btoa(s);
-}
-
-async function importVaultKey(masterKeyMaterial: string): Promise<CryptoKey> {
-  const raw = String(masterKeyMaterial ?? "");
-  if (!raw) throw new Error("vault_master_key_missing");
-  let keyBytes: Uint8Array<ArrayBuffer>;
-  try {
-    keyBytes = b64ToBytes(raw);
-  } catch {
-    keyBytes = textEncoder.encode(raw);
-  }
-  if (keyBytes.byteLength > 32) {
-    keyBytes = keyBytes.slice(0, 32);
-  } else if (keyBytes.byteLength < 32) {
-    keyBytes = new Uint8Array(await crypto.subtle.digest("SHA-256", keyBytes));
-  }
-  return crypto.subtle.importKey("raw", keyBytes, { name: "AES-GCM" }, false, [
-    "encrypt",
-    "decrypt",
-  ]);
-}
-
 /** AAD binding ciphertext to its account owner. Must match the Worker exactly. */
 export function vaultAad(accountId: string, serviceName: string, secretName: string): string {
   return `${accountId}:${serviceName}:${secretName}`;
@@ -97,17 +67,8 @@ export async function encryptVaultSecret(
   aad: string,
   masterKeyMaterial: string,
 ): Promise<string> {
-  const key = await importVaultKey(masterKeyMaterial);
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const cipher = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv, additionalData: textEncoder.encode(aad) },
-    key,
-    textEncoder.encode(plaintext),
-  );
-  const packed = new Uint8Array(iv.byteLength + cipher.byteLength);
-  packed.set(iv, 0);
-  packed.set(new Uint8Array(cipher), iv.byteLength);
-  return bytesToB64(packed);
+  const key = await importVaultMasterKey(masterKeyMaterial);
+  return encryptWithVaultKey(key, plaintext, aad);
 }
 
 export async function decryptVaultSecret(
@@ -115,16 +76,8 @@ export async function decryptVaultSecret(
   aad: string,
   masterKeyMaterial: string,
 ): Promise<string> {
-  const key = await importVaultKey(masterKeyMaterial);
-  const packed = b64ToBytes(packedB64);
-  const iv = packed.slice(0, 12);
-  const data = packed.slice(12);
-  const plain = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv, additionalData: textEncoder.encode(aad) },
-    key,
-    data,
-  );
-  return textDecoder.decode(plain);
+  const key = await importVaultMasterKey(masterKeyMaterial);
+  return decryptWithVaultKey(key, packedB64, aad);
 }
 
 export interface VaultD1Binding {

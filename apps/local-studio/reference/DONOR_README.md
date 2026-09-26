@@ -245,8 +245,8 @@ Full design: [`docs/SECRETS_VAULT_PLAN.md`](./docs/SECRETS_VAULT_PLAN.md)
 ### Crypto contract (Worker)
 
 - Algorithm: **AES-256-GCM**
-- Key: `VAULT_MASTER_KEY` (Worker secret, 32 bytes raw or base64)
-- Stored blob: `base64(iv || ciphertext || tag)`
+- Key: `VAULT_MASTER_KEY` = `v1.<base64 of exactly 32 bytes>` (Worker secret; no truncate/hash)
+- Stored blob: `base64(iv || ciphertext || tag)` via AES-256-GCM
 - AAD: `${accountId}:${serviceName}:${secretName}` (binds ciphertext to owner)
 
 ### Connect UX (target)

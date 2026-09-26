@@ -1,22 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { KeyRound, Loader2, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { VaultSecret } from "./types";
 
-const SERVICE_LABELS: Record<string, string> = {
-  openai: "OpenAI",
-  anthropic: "Anthropic",
-  gemini: "Gemini",
-  google: "Gemini",
-  xai: "xAI / Grok",
-  grok: "xAI / Grok",
-  cursor: "Cursor",
-  cloudflare: "Cloudflare",
-  meshy: "Meshy",
-  resend: "Resend",
-  tavily: "Tavily",
-  github: "GitHub",
-  other: "Other",
+export type StudioMintedCredential = {
+  id: string;
+  name: string;
+  kind: "account" | "service";
+  env: string;
+  prefix: string;
+  status: string;
+  created_at_unix: number;
+  expires_at_unix: number | null;
+  last_used_at_unix: number | null;
+  secret_preview: string;
 };
 
 function formatDate(epoch: number | null | undefined) {
@@ -24,8 +20,8 @@ function formatDate(epoch: number | null | undefined) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(epoch * 1000));
 }
 
-export function ApiKeysTable({ refreshToken = 0 }: { refreshToken?: number }) {
-  const [secrets, setSecrets] = useState<VaultSecret[]>([]);
+export function CredentialsTable({ refreshToken = 0 }: { refreshToken?: number }) {
+  const [rows, setRows] = useState<StudioMintedCredential[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
@@ -35,15 +31,15 @@ export function ApiKeysTable({ refreshToken = 0 }: { refreshToken?: number }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/vault/secrets", { credentials: "same-origin" });
+      const response = await fetch("/api/vault/credentials", { credentials: "same-origin" });
       const data = (await response.json().catch(() => ({}))) as {
         error?: string;
-        secrets?: VaultSecret[];
+        credentials?: StudioMintedCredential[];
       };
-      if (!response.ok) throw new Error(data.error || `Could not load secrets (${response.status})`);
-      setSecrets(Array.isArray(data.secrets) ? data.secrets : []);
+      if (!response.ok) throw new Error(data.error || `Could not load credentials (${response.status})`);
+      setRows(Array.isArray(data.credentials) ? data.credentials : []);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not load secrets");
+      setError(caught instanceof Error ? caught.message : "Could not load credentials");
     } finally {
       setLoading(false);
     }
@@ -57,16 +53,16 @@ export function ApiKeysTable({ refreshToken = 0 }: { refreshToken?: number }) {
     setRevoking(id);
     setError(null);
     try {
-      const response = await fetch(`/api/vault/secrets/${encodeURIComponent(id)}`, {
+      const response = await fetch(`/api/vault/credentials/${encodeURIComponent(id)}`, {
         method: "DELETE",
         credentials: "same-origin",
       });
-      const data = (await response.json().catch(() => ({}))) as { error?: string };
-      if (!response.ok) throw new Error(data.error || "Could not revoke secret");
+      const data = (await response.json().catch(() => ({}))) as { error?: string; ok?: boolean };
+      if (!response.ok || data.ok === false) throw new Error(data.error || "Could not revoke");
       setConfirmId(null);
       await load();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not revoke secret");
+      setError(caught instanceof Error ? caught.message : "Could not revoke");
     } finally {
       setRevoking(null);
     }
@@ -74,8 +70,8 @@ export function ApiKeysTable({ refreshToken = 0 }: { refreshToken?: number }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-56 items-center justify-center rounded-2xl bg-card shadow-hairline">
-        <Loader2 className="size-5 animate-spin text-muted-foreground" aria-label="Loading secrets" />
+      <div className="flex min-h-40 items-center justify-center rounded-2xl bg-card shadow-hairline">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" aria-label="Loading credentials" />
       </div>
     );
   }
@@ -88,49 +84,47 @@ export function ApiKeysTable({ refreshToken = 0 }: { refreshToken?: number }) {
         </div>
       ) : null}
 
-      {secrets.length === 0 ? (
+      {rows.length === 0 ? (
         <div className="rounded-2xl bg-card p-8 text-center shadow-hairline">
           <span className="mx-auto flex size-11 items-center justify-center rounded-xl bg-muted text-accent shadow-hairline">
             <KeyRound className="size-5" aria-hidden="true" />
           </span>
-          <h2 className="mt-4 text-base font-medium text-foreground">No secrets yet</h2>
+          <h2 className="mt-4 text-base font-medium text-foreground">No AgentSam keys yet</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Add a provider key or token. Names are free-form; storage is account-scoped.
+            Mint an account API key (aak_*) or service bridge key (brk_*). Hash stored; plaintext once.
           </p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl bg-card shadow-hairline">
-          <div className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,0.9fr)_minmax(0,1fr)_9rem_8rem] gap-4 border-b border-border px-5 py-3 text-xs font-medium uppercase tracking-wider text-muted-foreground md:grid">
+          <div className="hidden grid-cols-[minmax(0,1.4fr)_7rem_minmax(0,1fr)_minmax(0,1fr)_9rem_8rem] gap-4 border-b border-border px-5 py-3 text-xs font-medium uppercase tracking-wider text-muted-foreground md:grid">
             <span>Name</span>
-            <span>Service</span>
+            <span>Type</span>
+            <span>Env</span>
             <span>Secret</span>
-            <span>Updated</span>
+            <span>Created</span>
             <span className="text-right">Action</span>
           </div>
           <ul className="divide-y divide-border">
-            {secrets.map((secret) => {
-              const confirming = confirmId === secret.id;
-              const service =
-                SERVICE_LABELS[String(secret.service || "").toLowerCase()] || secret.service || "—";
+            {rows.map((row) => {
+              const confirming = confirmId === row.id;
               return (
                 <li
-                  key={secret.id}
-                  className="grid gap-4 px-5 py-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,0.9fr)_minmax(0,1fr)_9rem_8rem] md:items-center"
+                  key={row.id}
+                  className="grid gap-4 px-5 py-4 md:grid-cols-[minmax(0,1.4fr)_7rem_minmax(0,1fr)_minmax(0,1fr)_9rem_8rem] md:items-center"
                 >
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-accent">
                       <ShieldCheck className="size-4" aria-hidden="true" />
                     </span>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-foreground">{secret.name}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground md:hidden">{service}</p>
+                      <p className="truncate text-sm font-medium text-foreground">{row.name}</p>
+                      <p className="mt-0.5 text-xs capitalize text-muted-foreground">{row.status}</p>
                     </div>
                   </div>
-                  <p className="hidden text-sm text-muted-foreground md:block">{service}</p>
-                  <p className="font-mono text-sm text-muted-foreground">
-                    {secret.last4 ? `•••• ${secret.last4}` : "Encrypted"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">{formatDate(secret.updated_at)}</p>
+                  <p className="text-sm capitalize text-muted-foreground">{row.kind}</p>
+                  <p className="font-mono text-xs text-muted-foreground">{row.env}</p>
+                  <p className="font-mono text-sm text-muted-foreground">{row.secret_preview || row.prefix}</p>
+                  <p className="text-sm text-muted-foreground">{formatDate(row.created_at_unix)}</p>
                   <div className="flex flex-wrap justify-start gap-1 md:justify-end">
                     {confirming ? (
                       <>
@@ -141,15 +135,21 @@ export function ApiKeysTable({ refreshToken = 0 }: { refreshToken?: number }) {
                           type="button"
                           variant="destructive"
                           size="sm"
-                          disabled={revoking === secret.id}
-                          onClick={() => void revoke(secret.id)}
+                          disabled={revoking === row.id}
+                          onClick={() => void revoke(row.id)}
                         >
-                          {revoking === secret.id ? <Loader2 className="size-3.5 animate-spin" /> : null}
+                          {revoking === row.id ? <Loader2 className="size-3.5 animate-spin" /> : null}
                           Confirm
                         </Button>
                       </>
                     ) : (
-                      <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmId(secret.id)}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={row.status === "revoked"}
+                        onClick={() => setConfirmId(row.id)}
+                      >
                         <Trash2 className="size-3.5" aria-hidden="true" />
                         Revoke
                       </Button>

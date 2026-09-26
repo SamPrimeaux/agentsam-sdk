@@ -17,6 +17,7 @@
     "typescript": "^5.7.0"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-contracts": "file:../../../../packages/agentsam-contracts"
+    "@inneranimalmedia/agentsam-contracts": "file:../../../../packages/agentsam-contracts",
+    "@inneranimalmedia/agentsam-vault": "file:../../../../packages/agentsam-vault"
   }
 }

@@ -26,6 +26,11 @@ import { serveCanonicalHomepage } from "./canonical-homepage.js";
 import { isPublicSitePath, servePublicSitePage } from "./public-site.js";
 import { loadConnectionsRegistry } from "./connections-registry.js";
 import { createLocalStudioPluginRuntime } from "./plugin-registry.js";
+import {
+  mintStudioCredential,
+  listStudioCredentials,
+  revokeStudioCredential,
+} from "./agentsam-credentials-mint.js";
 import localStudioApp from "../../agentsam.app.json";
 import cadCreatorApp from "../../../cad-creator/agentsam.app.json";
 import clientCmsApp from "../../../client-cms-editor/agentsam.app.json";
@@ -110,26 +115,28 @@ function serveInstallScript(_pathname) {
 }
 
 /**
- * AgentSam Workmode — vault Worker
- * AES-256-GCM secrets against D1 inneranimalmedia-business.
+ * Local Studio Worker — vault + credential mint (agentsam-sdk Worker `agentsam-sdk`).
+ *
+ * Crypto SSOT: `@inneranimalmedia/agentsam-vault` AES-256-GCM
+ *   VAULT_MASTER_KEY = `v1.<base64 of exactly 32 bytes>` (no truncate/hash fallbacks)
+ *   AAD              = `${accountId}:${serviceName}:${secretName}` (accountId = accounts.id au_*)
+ *   packed           = base64(iv || ciphertext||tag)
+ *
+ * Stores:
+ *   user_secrets              — account BYOK ciphertext
+ *   agentsam_api_credentials  — minted aak_* / brk_* (hash only; secret_once once)
  *
  * Routes:
- *   GET  /health
- *   GET  /api/vault/secrets          metadata for caller user
- *   POST /api/vault/secrets          encrypt + upsert (never returns plaintext)
- *   DELETE /api/vault/secrets/:id    soft-revoke
- *   GET  /api/llm/inventory          per-user vault (+ optional platform) model inventory
+ *   GET/POST/DELETE /api/vault/secrets
+ *   GET/POST/DELETE /api/vault/credentials
+ *   GET /api/llm/inventory
+ *   GET /health
  *
- * Service auth: Authorization: Bearer <AGENTSAM_BRIDGE_KEY> or X-Bridge-Key.
- *               X-User-Id identifies the service-requested account.
- *
- * Auth (session lane): requests carrying a valid identity session cookie are
- * authenticated without the service bridge for GET /api/llm/inventory, and the
- * session user is authoritative everywhere a user_id is needed — a
- * client-asserted X-User-Id never overrides the validated session. POST
- * /api/chat bound for Nitro gets its X-User-Id rewritten to the session user
- * so downstream vault BYOK resolution cannot be spoofed.
+ * Auth: session cookie (accounts.id) OR AGENTSAM_BRIDGE_KEY (+ X-User-Id for the account).
+ * Session always wins over a client-asserted X-User-Id.
  */
+const STUDIO_VAULT_ACTOR = "agentsam-local-studio";
+
 function json(data, status = 200, extra = {}) {
   return new Response(JSON.stringify(data), {
     status,
@@ -256,9 +263,9 @@ function bindSessionUser(request, sessionUserId) {
 }
 
 /**
- * Vault authority: session user id IS accounts.id (au_*).
- * Column name on user_secrets is account_id — never tenant/workspace.
- * VAULT_MASTER_KEY is the Worker encryption key, not a personal secret.
+ * Vault authority: session identity is accounts.id (au_*).
+ * user_secrets.account_id owns rows — never tenant/workspace.
+ * VAULT_MASTER_KEY is Worker AES-GCM material (`v1.<base64-32>`), not a personal key.
  */
 function resolveVaultAccountId(sessionUserId) {
   const accountId = String(sessionUserId || "").trim();
@@ -282,11 +289,10 @@ function vaultCors(request) {
 }
 
 async function audit(env, row) {
-  const accountId = String(row.account_id || row.user_id || "").trim();
+  const accountId = String(row.account_id || "").trim();
   if (!accountId || !row.secret_id) return;
   try {
-    // secret_audit_log.tenant_id is still NOT NULL — fill with account_id (au_*),
-    // never a fake "system" tenant. Authority column is account_id.
+    // tenant_id column is NOT NULL legacy — mirror account_id (au_*), never a fake tenant.
     await env.DB.prepare(
       `INSERT INTO secret_audit_log (
          id, secret_id, secret_source, tenant_id, account_id, user_id, event_type,
@@ -300,7 +306,7 @@ async function audit(env, row) {
         accountId,
         accountId,
         row.event_type,
-        row.triggered_by || "agentsam-workmode",
+        row.triggered_by || STUDIO_VAULT_ACTOR,
         row.previous_last4 || null,
         row.new_last4 || null,
         row.notes || null,
@@ -354,13 +360,14 @@ async function handleList(env, accountId) {
 
 async function handleCreate(env, accountId, body) {
   const rawService = String(body.service_name || body.service || "").trim().toLowerCase();
+  // Canonical service_name for AAD — aliases only, no silent remaps to unrelated ids.
   const service =
     rawService === "cloudflare_r2" || rawService === "cf"
       ? "cloudflare"
       : rawService === "google_ai" || rawService === "google"
-        ? "google"
+        ? "gemini"
         : rawService === "grok"
-          ? "other"
+          ? "xai"
           : rawService;
   const name = String(body.secret_name || body.name || service || "default").trim();
   const value = String(body.value || body.secret || "").trim();
@@ -374,7 +381,7 @@ async function handleCreate(env, accountId, body) {
   if (!service) return json({ ok: false, error: "service_name required" }, 400);
   if (!value || value.length < 8) return json({ ok: false, error: "value too short" }, 400);
 
-  // AAD binds ciphertext to account+service+name. accountId === au_* (same value formerly called user_id).
+  // AAD must match decrypt sites exactly: `${accountId}:${service_name}:${secret_name}`.
   const aad = `${accountId}:${service}:${name}`;
   const ciphertext = await encryptSecret(env, value, aad);
   const id = `usec_${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`;
@@ -408,7 +415,7 @@ async function handleCreate(env, accountId, body) {
       JSON.stringify({
         key_version: 1,
         aad_bound: true,
-        source: "agentsam-workmode",
+        source: STUDIO_VAULT_ACTOR,
         kind,
         last4: last4(value),
       }),
@@ -802,7 +809,7 @@ export default {
 
     // Public liveness only — no DB/vault/OAuth diagnostics.
     if (url.pathname === "/health") {
-      return json({ ok: true, app: env.WORKMODE_APP || APP.id || "agentsam-sdk" }, 200);
+      return json({ ok: true, app: APP.id, worker: "agentsam-sdk" }, 200);
     }
 
     // Authenticated diagnostics (bridge or session).
@@ -830,7 +837,8 @@ export default {
       const inneranimalmedia = await probeInnerAnimalMediaOAuth(env);
       return json({
         ok: true,
-        app: env.WORKMODE_APP || APP.id || "agentsam-sdk",
+        app: APP.id,
+        worker: "agentsam-sdk",
         d1,
         database: env.D1_DATABASE_NAME || null,
         vault_key: vaultKey,
@@ -850,29 +858,26 @@ export default {
       });
     }
 
-    // GET /api/llm/inventory: desk API key OR a valid session authenticates.
-    // The session user is authoritative; the client header is a fallback for
-    // API-key service callers.
+    // GET /api/llm/inventory: session or AGENTSAM_BRIDGE_KEY. Session account wins.
     if (isLlmInventory && request.method === "GET") {
       const gate = await requireBridgeKey(request, env);
       const sid = await sessionUser();
       if (!gate.ok && !sid) return json({ ok: false, error: gate.error }, gate.status, headers);
       const userId = sid || (request.headers.get("x-user-id") || "").trim();
       if (!userId || userId.length < 3) {
-        return json({ ok: false, error: "X-User-Id required" }, 400, headers);
+        return json({ ok: false, error: "account_id required (session or X-User-Id)" }, 400, headers);
       }
       try {
         const res = await handleLlmInventory(env, userId, request);
         Object.entries(headers).forEach(([k, v]) => res.headers.set(k, v));
         return res;
       } catch (err) {
-        console.error("workmode_error", String(err));
+        console.error("studio_vault_error", String(err));
         return json({ ok: false, error: "internal_error", detail: String(err).slice(0, 200) }, 500, headers);
       }
     }
 
-    // Vault routes stay desk-key-only (server callers); the user still
-    // resolves session-first so an authenticated operator needs no header.
+    // Vault + mint: session or bridge. Session account wins over X-User-Id.
     const sessionId = await sessionUser();
     const gate = await requireBridgeKey(request, env);
     if (!sessionId && !gate.ok) {
@@ -882,7 +887,7 @@ export default {
     const headerUser = (request.headers.get("x-user-id") || "").trim();
     const userId = sessionId || headerUser;
     if (!userId || userId.length < 3) {
-      return json({ ok: false, error: "X-User-Id required" }, 400, headers);
+      return json({ ok: false, error: "account_id required (session or X-User-Id)" }, 400, headers);
     }
 
     try {
@@ -897,6 +902,60 @@ export default {
         const res = await handleCreate(env, userId, body);
         Object.entries(headers).forEach(([k, v]) => res.headers.set(k, v));
         return res;
+      }
+
+      if (url.pathname === "/api/vault/credentials" && request.method === "GET") {
+        const credentials = await listStudioCredentials(env, userId);
+        return json({ ok: true, count: credentials.length, credentials }, 200, headers);
+      }
+
+      if (url.pathname === "/api/vault/credentials" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const kind =
+          String(body.kind || body.owner || "").trim().toLowerCase() === "service"
+            ? "service"
+            : "account";
+        let expiresAtUnix = null;
+        const exp = String(body.expiration || body.expires || "").trim().toLowerCase();
+        if (exp === "30d" || exp === "30 days") expiresAtUnix = Math.floor(Date.now() / 1000) + 30 * 86400;
+        else if (exp === "90d" || exp === "90 days") expiresAtUnix = Math.floor(Date.now() / 1000) + 90 * 86400;
+        else if (exp === "1y" || exp === "1 year") expiresAtUnix = Math.floor(Date.now() / 1000) + 365 * 86400;
+        const minted = await mintStudioCredential(env, {
+          accountId: userId,
+          kind,
+          name: body.name || body.label || "",
+          clientType: body.client_type || body.clientType,
+          expiresAtUnix,
+          mintedBy: STUDIO_VAULT_ACTOR,
+        });
+        return json(
+          {
+            ok: true,
+            credential: {
+              id: minted.id,
+              name: minted.name,
+              kind: minted.kind,
+              env: minted.env,
+              prefix: minted.prefix,
+              client_type: minted.client_type,
+              created_at_unix: minted.created_at_unix,
+              expires_at_unix: minted.expires_at_unix,
+            },
+            secret_once: minted.secret_once,
+            env: minted.env,
+          },
+          200,
+          headers,
+        );
+      }
+
+      const delCred = url.pathname.match(/^\/api\/vault\/credentials\/([^/]+)$/);
+      if (delCred && request.method === "DELETE") {
+        const result = await revokeStudioCredential(env, {
+          accountId: userId,
+          credentialId: decodeURIComponent(delCred[1]),
+        });
+        return json({ ok: result.ok, revoked_at_unix: result.revoked_at_unix }, result.ok ? 200 : 404, headers);
       }
 
       if (url.pathname === "/api/vault/unwrap" && request.method === "POST") {
@@ -915,7 +974,7 @@ export default {
 
       return json({ ok: false, error: "not_found" }, 404, headers);
     } catch (err) {
-      console.error("workmode_error", String(err));
+      console.error("studio_vault_error", String(err));
       return json({ ok: false, error: "internal_error", detail: String(err).slice(0, 200) }, 500, headers);
     }
   },

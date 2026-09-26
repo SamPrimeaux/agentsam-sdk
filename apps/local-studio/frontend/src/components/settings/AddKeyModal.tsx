@@ -4,13 +4,19 @@ import { Eye, EyeOff, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-const PROVIDERS = [
+/** service_name stored in user_secrets — drives vault AAD + Studio provider map. */
+const SERVICES = [
   { value: "openai", label: "OpenAI" },
   { value: "anthropic", label: "Anthropic" },
-  { value: "gemini", label: "Google Gemini" },
-  { value: "xai", label: "xAI" },
+  { value: "gemini", label: "Gemini" },
+  { value: "xai", label: "xAI / Grok" },
   { value: "cursor", label: "Cursor" },
-  { value: "cloudflare", label: "Cloudflare API token" },
+  { value: "cloudflare", label: "Cloudflare" },
+  { value: "meshy", label: "Meshy" },
+  { value: "resend", label: "Resend" },
+  { value: "tavily", label: "Tavily" },
+  { value: "github", label: "GitHub" },
+  { value: "other", label: "Other" },
 ] as const;
 
 export function AddKeyModal({
@@ -22,8 +28,8 @@ export function AddKeyModal({
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
 }) {
-  const [provider, setProvider] = useState<(typeof PROVIDERS)[number]["value"]>("openai");
-  const [name, setName] = useState("default");
+  const [service, setService] = useState<(typeof SERVICES)[number]["value"]>("openai");
+  const [name, setName] = useState("");
   const [value, setValue] = useState("");
   const [showValue, setShowValue] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -32,12 +38,19 @@ export function AddKeyModal({
   useEffect(() => {
     if (!open) return;
     setError(null);
+    setName("");
     setValue("");
     setShowValue(false);
+    setService("openai");
   }, [open]);
 
   async function save(event: React.FormEvent) {
     event.preventDefault();
+    const secretName = name.trim();
+    if (!secretName) {
+      setError("Name is required — pick any label you will recognize later.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -46,20 +59,20 @@ export function AddKeyModal({
         credentials: "same-origin",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          service_name: provider,
-          secret_name: name.trim() || "default",
+          service_name: service,
+          secret_name: secretName,
           secret_type: "api_key",
           value,
-          description: `${PROVIDERS.find((item) => item.value === provider)?.label || provider} API key`,
+          description: secretName,
         }),
       });
       const data = (await response.json().catch(() => ({}))) as { error?: string };
-      if (!response.ok) throw new Error(data.error || `Could not save key (${response.status})`);
+      if (!response.ok) throw new Error(data.error || `Could not save secret (${response.status})`);
       setValue("");
       onSaved();
       onOpenChange(false);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not save key");
+      setError(caught instanceof Error ? caught.message : "Could not save secret");
     } finally {
       setSaving(false);
     }
@@ -73,10 +86,11 @@ export function AddKeyModal({
           <div className="flex items-start justify-between gap-4">
             <div>
               <DialogPrimitive.Title className="text-lg font-medium tracking-tight text-foreground">
-                Add API key
+                Add secret
               </DialogPrimitive.Title>
               <DialogPrimitive.Description className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                The key is encrypted before storage and is never shown again.
+                Encrypted to your account. Name is yours — no project scope. Not shown again after
+                save.
               </DialogPrimitive.Description>
             </div>
             <DialogPrimitive.Close asChild>
@@ -88,34 +102,44 @@ export function AddKeyModal({
 
           <form className="mt-6 space-y-4" onSubmit={(event) => void save(event)}>
             <label className="block space-y-2 text-sm font-medium text-foreground">
-              <span>Provider</span>
+              <span>Name</span>
+              <Input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="e.g. Sam’s iMac · CLI, OpenAI prod, Terminal tunnel"
+                required
+                autoFocus
+                maxLength={120}
+              />
+            </label>
+
+            <label className="block space-y-2 text-sm font-medium text-foreground">
+              <span>Service</span>
               <select
-                value={provider}
-                onChange={(event) => setProvider(event.target.value as typeof provider)}
+                value={service}
+                onChange={(event) => setService(event.target.value as typeof service)}
                 className="h-11 w-full rounded-lg bg-muted px-3 text-sm text-foreground shadow-hairline focus-visible:outline-none"
               >
-                {PROVIDERS.map((item) => (
+                {SERVICES.map((item) => (
                   <option key={item.value} value={item.value}>
                     {item.label}
                   </option>
                 ))}
               </select>
+              <span className="block text-xs font-normal text-muted-foreground">
+                Which product this secret is for (chat providers, Cloudflare, terminal, etc.).
+              </span>
             </label>
 
             <label className="block space-y-2 text-sm font-medium text-foreground">
-              <span>Key name</span>
-              <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="default" />
-            </label>
-
-            <label className="block space-y-2 text-sm font-medium text-foreground">
-              <span>API key</span>
+              <span>Secret value</span>
               <div className="relative">
                 <Input
                   type={showValue ? "text" : "password"}
                   value={value}
                   onChange={(event) => setValue(event.target.value)}
                   autoComplete="off"
-                  placeholder="Paste your key"
+                  placeholder="Paste key or token"
                   className="h-11 pr-12 font-mono"
                   required
                   minLength={8}
@@ -124,7 +148,7 @@ export function AddKeyModal({
                   type="button"
                   className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted-foreground hover:text-foreground"
                   onClick={() => setShowValue((shown) => !shown)}
-                  aria-label={showValue ? "Hide API key" : "Show API key"}
+                  aria-label={showValue ? "Hide secret" : "Show secret"}
                 >
                   {showValue ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
@@ -139,11 +163,13 @@ export function AddKeyModal({
 
             <div className="flex flex-wrap justify-end gap-2 pt-2">
               <DialogPrimitive.Close asChild>
-                <Button type="button" variant="ghost">Cancel</Button>
+                <Button type="button" variant="ghost">
+                  Cancel
+                </Button>
               </DialogPrimitive.Close>
-              <Button type="submit" disabled={saving || value.trim().length < 8}>
+              <Button type="submit" disabled={saving || value.trim().length < 8 || !name.trim()}>
                 {saving ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
-                {saving ? "Encrypting…" : "Save key"}
+                {saving ? "Encrypting…" : "Save secret"}
               </Button>
             </div>
           </form>
