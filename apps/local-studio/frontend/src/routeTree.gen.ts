@@ -55,6 +55,11 @@ const appsArtifactsRoute = appsArtifactsRouteImport.update({
   path: '/artifacts',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsCollaborateRoute = appsCollaborateRouteImport.update({
+  id: '/(apps)/collaborate',
+  path: '/collaborate',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const appsBrowseRoute = appsBrowseRouteImport.update({
   id: '/(apps)/browse',
   path: '/browse',
