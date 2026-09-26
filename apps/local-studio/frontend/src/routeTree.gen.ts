@@ -195,25 +195,31 @@ const appsAgentsamAppsCadRoute = appsAgentsamAppsCadRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agentsam': typeof appsAgentsamRouteWithChildren
-  '/artifacts': typeof appsArtifactsRoute
+  '/artifacts': typeof appsArtifactsRouteWithChildren
   '/browse': typeof appsBrowseRoute
   '/cad': typeof appsCadRoute
   '/cli': typeof appsCliRoute
   '/cms': typeof appsCmsRoute
+  '/collaborate': typeof appsCollaborateRoute
   '/database': typeof appsDatabaseRoute
   '/files': typeof appsFilesRoute
-  '/projects': typeof appsProjectsRoute
+  '/mail': typeof appsMailRoute
+  '/projects': typeof appsProjectsRouteWithChildren
   '/settings': typeof appsSettingsRouteWithChildren
   '/ship': typeof appsShipRoute
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/artifacts/tickets': typeof appsArtifactsTicketsRoute
+  '/projects/$projectId': typeof appsProjectsProjectIdRoute
   '/settings/$unit': typeof appsSettingsUnitRoute
   '/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/settings/keys': typeof appsSettingsKeysRoute
   '/settings/themes': typeof appsSettingsThemesRoute
   '/trails/$trailId': typeof appsTrailsTrailIdRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
+  '/artifacts/': typeof appsArtifactsIndexRoute
+  '/projects/': typeof appsProjectsIndexRoute
   '/settings/': typeof appsSettingsIndexRoute
   '/trails/': typeof appsTrailsIndexRoute
   '/agentsam/apps/cad': typeof appsAgentsamAppsCadRoute
@@ -221,18 +227,22 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agentsam': typeof appsAgentsamRouteWithChildren
-  '/artifacts': typeof appsArtifactsRoute
+  '/artifacts': typeof appsArtifactsIndexRoute
   '/browse': typeof appsBrowseRoute
   '/cad': typeof appsCadRoute
   '/cli': typeof appsCliRoute
   '/cms': typeof appsCmsRoute
+  '/collaborate': typeof appsCollaborateRoute
   '/database': typeof appsDatabaseRoute
   '/files': typeof appsFilesRoute
-  '/projects': typeof appsProjectsRoute
+  '/mail': typeof appsMailRoute
+  '/projects': typeof appsProjectsIndexRoute
   '/ship': typeof appsShipRoute
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/artifacts/tickets': typeof appsArtifactsTicketsRoute
+  '/projects/$projectId': typeof appsProjectsProjectIdRoute
   '/settings/$unit': typeof appsSettingsUnitRoute
   '/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/settings/keys': typeof appsSettingsKeysRoute
@@ -247,19 +257,25 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/(apps)/agentsam': typeof appsAgentsamRouteWithChildren
-  '/(apps)/artifacts': typeof appsArtifactsRoute
+  '/(apps)/artifacts': typeof appsArtifactsRouteWithChildren
   '/(apps)/browse': typeof appsBrowseRoute
   '/(apps)/cad': typeof appsCadRoute
   '/(apps)/cli': typeof appsCliRoute
   '/(apps)/cms': typeof appsCmsRoute
+  '/(apps)/collaborate': typeof appsCollaborateRoute
   '/(apps)/database': typeof appsDatabaseRoute
   '/(apps)/files': typeof appsFilesRoute
-  '/(apps)/projects': typeof appsProjectsRoute
+  '/(apps)/mail': typeof appsMailRoute
+  '/(apps)/projects': typeof appsProjectsRouteWithChildren
   '/(apps)/settings': typeof appsSettingsRouteWithChildren
   '/(apps)/ship': typeof appsShipRoute
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/(apps)/artifacts/': typeof appsArtifactsIndexRoute
+  '/(apps)/artifacts/tickets': typeof appsArtifactsTicketsRoute
+  '/(apps)/projects/': typeof appsProjectsIndexRoute
+  '/(apps)/projects/$projectId': typeof appsProjectsProjectIdRoute
   '/(apps)/settings/$unit': typeof appsSettingsUnitRoute
   '/(apps)/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/(apps)/settings/keys': typeof appsSettingsKeysRoute
