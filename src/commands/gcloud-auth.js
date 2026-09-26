@@ -1,8 +1,8 @@
 /**
  * Agent Sam Google auth for CLI.
  *
- * Default: Desktop PKCE loopback (GOOGLE_DESKTOP_CLIENT_ID) for Google Cloud connection.
- * Optional: --web hosted Identity OAuth · --sdk native gcloud ADC.
+ * Default: Local Studio Web OAuth broker (GOOGLE_CLIENT_ID + Worker secret).
+ * Optional: --desktop native Desktop PKCE · --web identity login · --sdk gcloud ADC.
  */
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -14,6 +14,7 @@ import {
   googleCloudPermissionChecklist,
   runGoogleDesktopCloudLogin,
 } from '../lib/google-desktop-oauth.js';
+import { runGoogleStudioBrokeredCloudLogin } from '../lib/google-studio-brokered-oauth.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -84,10 +85,12 @@ function printBanner(write, title, detailLines = []) {
 
 function printAuthHelp(write) {
   printBanner(write, 'Agent Sam · Google auth', [
-    'Default: Desktop PKCE loopback — connects Google Cloud (auto-completes when browser returns).',
-    'Use --web for hosted Local Studio identity login, --sdk for native gcloud ADC.',
+    'Default: Local Studio Web OAuth broker (Worker holds GOOGLE_CLIENT_SECRET).',
+    'Use --desktop for native Desktop PKCE (no secret; requires a true Desktop client Google accepts).',
+    'Use --web for hosted identity login, --sdk for native gcloud ADC.',
   ]);
   writeLine(write, '  agentsam gcloud auth login');
+  writeLine(write, '  agentsam gcloud auth login --desktop');
   writeLine(write, '  agentsam gcloud auth login --web');
   writeLine(write, '  agentsam gcloud auth login --sdk');
   writeLine(write, '  agentsam gcloud auth login --permissions');
@@ -324,6 +327,7 @@ export async function runGcloudAuth(argv = [], options = {}) {
     }
     const useSdk = pass.includes('--sdk') || pass.includes('--gcloud-sdk');
     const useWeb = pass.includes('--web') || pass.includes('--hosted');
+    const useDesktop = pass.includes('--desktop') || pass.includes('--pkce');
     const noLaunch = pass.includes('--no-launch-browser');
     const cleanPass = pass.filter(
       (a) =>
@@ -331,6 +335,8 @@ export async function runGcloudAuth(argv = [], options = {}) {
         && a !== '--gcloud-sdk'
         && a !== '--web'
         && a !== '--hosted'
+        && a !== '--desktop'
+        && a !== '--pkce'
         && a !== '--no-launch-browser'
         && a !== '--permissions'
         && a !== '--scopes',
@@ -357,22 +363,41 @@ export async function runGcloudAuth(argv = [], options = {}) {
     }
 
     try {
-      await runGoogleDesktopCloudLogin({
-        write,
-        env,
-        json,
-        noLaunchBrowser: noLaunch,
-        home: options.home,
-        promptToOpenUrlImpl: options.promptToOpenUrlImpl,
-        openImpl: options.openImpl,
-        input: options.input,
-        output: options.output,
-        fetchImpl: options.fetchImpl,
-        createServerImpl: options.createServerImpl,
-        disableOsStore: options.disableOsStore,
-        storeCredential: options.storeCredential,
-        writeConnection: options.writeConnection,
-      });
+      if (useDesktop) {
+        await runGoogleDesktopCloudLogin({
+          write,
+          env,
+          json,
+          noLaunchBrowser: noLaunch,
+          home: options.home,
+          promptToOpenUrlImpl: options.promptToOpenUrlImpl,
+          openImpl: options.openImpl,
+          input: options.input,
+          output: options.output,
+          fetchImpl: options.fetchImpl,
+          createServerImpl: options.createServerImpl,
+          disableOsStore: options.disableOsStore,
+          storeCredential: options.storeCredential,
+          writeConnection: options.writeConnection,
+        });
+      } else {
+        await runGoogleStudioBrokeredCloudLogin({
+          write,
+          env,
+          json,
+          noLaunchBrowser: noLaunch,
+          home: options.home,
+          promptToOpenUrlImpl: options.promptToOpenUrlImpl,
+          openImpl: options.openImpl,
+          input: options.input,
+          output: options.output,
+          fetchImpl: options.fetchImpl,
+          createServerImpl: options.createServerImpl,
+          disableOsStore: options.disableOsStore,
+          storeCredential: options.storeCredential,
+          writeConnection: options.writeConnection,
+        });
+      }
       return 0;
     } catch (error) {
       writeLine(write, '');

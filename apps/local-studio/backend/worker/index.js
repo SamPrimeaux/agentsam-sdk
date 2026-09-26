@@ -26,6 +26,7 @@ import { serveCanonicalHomepage } from "./canonical-homepage.js";
 import { isPublicSitePath, servePublicSitePage } from "./public-site.js";
 import { handlePublicConfigRequest } from "./public-config.js";
 import { handleGoogleDesktopExchangeRequest } from "./google-desktop-exchange.js";
+import { handleGoogleCliCloudRequest, isGoogleCliCloudPath } from "./google-cli-cloud.js";
 import { loadConnectionsRegistry } from "./connections-registry.js";
 import { createLocalStudioPluginRuntime } from "./plugin-registry.js";
 import {
@@ -670,6 +671,11 @@ export default {
     // CLI desktop PKCE token exchange broker (secrets stay on Worker).
     if (url.pathname === "/api/oauth/google/desktop-exchange") {
       return handleGoogleDesktopExchangeRequest(request, env);
+    }
+
+    // CLI Google Cloud via Studio Web client (reliable when Desktop PKCE is rejected).
+    if (isGoogleCliCloudPath(url.pathname)) {
+      return handleGoogleCliCloudRequest(request, env);
     }
 
     // Legacy canonical homepage path (assets missing for public-site router)

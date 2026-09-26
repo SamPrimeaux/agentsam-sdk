@@ -252,6 +252,7 @@ export async function createLoopbackCallbackListener(options = {}) {
       const oauthError = clean(requestUrl.searchParams.get('error'));
       const oauthDescription = clean(requestUrl.searchParams.get('error_description'));
       const code = clean(requestUrl.searchParams.get('code'));
+      const pickup = clean(requestUrl.searchParams.get('pickup'));
 
       if (!returnedState || returnedState !== expectedState) {
         res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -265,6 +266,13 @@ export async function createLoopbackCallbackListener(options = {}) {
         settle(new Error(oauthDescription ? `${oauthError}: ${oauthDescription}` : oauthError));
         return;
       }
+      // Studio Web-brokered CLI cloud login returns pickup= instead of Google code=.
+      if (pickup) {
+        settle(null, { pickup, state: returnedState, mode: 'studio_pickup' });
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end('<!doctype html><html><body style="font-family:system-ui"><h1>Agent Sam</h1><p>Authentication complete. You can close this tab and return to your terminal.</p></body></html>');
+        return;
+      }
       if (!code) {
         // Ignore probe/prefetch hits with no code so a later real redirect can settle.
         res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -274,7 +282,7 @@ export async function createLoopbackCallbackListener(options = {}) {
 
       // Settle before writing the body so the CLI continues even if the client
       // disconnects mid-response (common with some browsers closing the tab).
-      settle(null, { code, state: returnedState });
+      settle(null, { code, state: returnedState, mode: 'google_code' });
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end('<!doctype html><html><body style="font-family:system-ui"><h1>Agent Sam</h1><p>Authentication complete. You can close this tab and return to your terminal.</p></body></html>');
     } catch (error) {

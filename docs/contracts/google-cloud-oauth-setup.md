@@ -10,24 +10,24 @@ Two different Google login paths. Do not conflate them.
 agentsam gcloud auth login
 ```
 
-**Desktop PKCE (default):** loopback `http://127.0.0.1:<port>/callback` using the public
-`GOOGLE_DESKTOP_CLIENT_ID`. Stock CLI resolves this from Local Studio
-`GET https://agentsam.inneranimalmedia.com/api/public-config` when the shell env is unset.
-Do **not** require `~/.agentsam/load-agent-env.sh` for stock users.
+**Desktop PKCE (`--desktop`):** loopback using `GOOGLE_DESKTOP_CLIENT_ID` (Console type
+**Desktop app**, no secret). Some Google Auth Platform Desktop clients still return
+`client_secret is missing` on token exchange even though Console shows Type=Desktop —
+that is a Google classification quirk, not something AgentSam can invent a secret for.
 
-**Google Console client type (important):**
+**Default CLI path (recommended):** Studio Web OAuth broker — uses `GOOGLE_CLIENT_ID` +
+Worker `GOOGLE_CLIENT_SECRET`, then hands tokens to the CLI over loopback.
 
-| Client | Console application type | Secret |
-|---|---|---|
-| `GOOGLE_DESKTOP_CLIENT_ID` | **Desktop app** | None (PKCE only). Do not create this as Web. |
-| `GOOGLE_CLIENT_ID` | **Web application** | `GOOGLE_CLIENT_SECRET` on the Worker only |
+Add this **Authorized redirect URI** on the Web client:
 
-If Desktop login fails with `client_secret is missing`, the desktop client id was created as a **Web** client. Fix by either:
+```text
+https://agentsam.inneranimalmedia.com/api/oauth/google/cli-cloud/callback
+```
 
-1. Create a new OAuth client → Application type **Desktop app** → set Worker var `GOOGLE_DESKTOP_CLIENT_ID` to that id, or
-2. Temporary: `wrangler secret put GOOGLE_DESKTOP_CLIENT_SECRET` with that Web client’s secret (CLI never sees it; Studio `/api/oauth/google/desktop-exchange` brokers the exchange).
-
-Optional override: `export GOOGLE_DESKTOP_CLIENT_ID=…` in the local shell.
+```bash
+agentsam gcloud auth login              # Studio Web broker (default)
+agentsam gcloud auth login --desktop    # native Desktop PKCE
+```
 
 ### Hosted identity (`agentsam gcloud auth login --web`)
 
