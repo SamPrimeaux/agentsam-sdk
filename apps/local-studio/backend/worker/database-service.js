@@ -220,47 +220,47 @@ async function getBoundD1Source(env, accountId) {
   const databaseId = clean(env.LOCAL_STUDIO_D1_DATABASE_ID);
   const databaseName = clean(env.LOCAL_STUDIO_D1_DATABASE_NAME) || 'AgentSam platform D1';
   if (!databaseId) return null;
+
+  let tableCount = 0;
+  let fileSize = 0;
+
   try {
-    const [tableRow, sizeRow] = await Promise.all([
-      env.DB.prepare(
-        "SELECT COUNT(*) AS count FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
-      ).first(),
-      env.DB.prepare("PRAGMA page_count").first(),
-    ]);
-    const pageSize = await env.DB.prepare("PRAGMA page_size").first().catch(() => null);
-    return {
-      id: 'binding-d1:primary',
-      provider: 'cloudflare-d1',
-      engine: 'sqlite',
-      label: databaseName,
-      database_name: databaseName,
-      database_id: databaseId,
-      account_id: clean(env.CLOUDFLARE_ACCOUNT_ID) || null,
-      file_size:
-        Number(sizeRow?.page_count || 0) * Number(pageSize?.page_size || 0),
-      num_tables: Number(tableRow?.count || 0),
-      writable: true,
-      metrics: true,
-      connection: 'worker_binding',
-    };
-  } catch (error) {
-    return {
-      id: 'binding-d1:primary',
-      provider: 'cloudflare-d1',
-      engine: 'sqlite',
-      label: databaseName,
-      database_name: databaseName,
-      database_id: databaseId,
-      account_id: clean(env.CLOUDFLARE_ACCOUNT_ID) || null,
-      file_size: 0,
-      num_tables: 0,
-      writable: false,
-      metrics: true,
-      connection: 'worker_binding',
-      status: 'degraded',
-      error: error?.message || String(error),
-    };
+    const tableRow = await env.DB.prepare(
+      "SELECT COUNT(*) AS count FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
+    ).first();
+    tableCount = Number(tableRow?.count || 0) || 0;
+  } catch {
+    tableCount = 0;
   }
+
+  // D1 does not guarantee every SQLite page pragma on every runtime. Size is
+  // observability-only: failure here must never hide an otherwise valid bound DB.
+  try {
+    const [pageCount, pageSize] = await Promise.all([
+      env.DB.prepare("PRAGMA page_count").first(),
+      env.DB.prepare("PRAGMA page_size").first(),
+    ]);
+    fileSize =
+      Number(pageCount?.page_count || 0) *
+      Number(pageSize?.page_size || 0);
+  } catch {
+    fileSize = 0;
+  }
+
+  return {
+    id: 'binding-d1:primary',
+    provider: 'cloudflare-d1',
+    engine: 'sqlite',
+    label: databaseName,
+    database_name: databaseName,
+    database_id: databaseId,
+    account_id: clean(env.CLOUDFLARE_ACCOUNT_ID) || null,
+    file_size: fileSize,
+    num_tables: tableCount,
+    writable: true,
+    metrics: true,
+    connection: 'worker_binding',
+  };
 }
 
 async function getHyperdriveSource(env, accountId) {
