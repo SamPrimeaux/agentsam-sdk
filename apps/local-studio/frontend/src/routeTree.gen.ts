@@ -332,6 +332,7 @@ export interface FileRouteTypes {
     | '/trails/$trailId'
     | '/api/llm/inventory'
     | '/artifacts/'
+    | '/artifacts/tickets/'
     | '/projects/'
     | '/settings/'
     | '/trails/'
