@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import {
   DatabaseEditorApp,
   createDatabaseStudioClient,
-} from "@inneranimalmedia/agentsam-database-editor/ui";
+} from "@inneranimalmedia/agentsam-database-editor/frontend";
 
 /** Workbench side-panel surface for the real Database Editor package. */
 export function DatabaseStage() {
