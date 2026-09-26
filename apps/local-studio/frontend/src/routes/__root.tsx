@@ -56,6 +56,6 @@ export const Route = createRootRoute({
 
 function ApplicationOutlet() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const isApp = /^\/(agentsam|trails|cms|cad|projects|artifacts|files|browse|cli|ship|settings)(\/|$)/.test(pathname);
+  const isApp = /^\/(agentsam|trails|cms|cad|database|projects|artifacts|files|browse|cli|ship|settings)(\/|$)/.test(pathname);
   return isApp ? <AgentSamShell /> : <Outlet />;
 }
