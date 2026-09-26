@@ -526,6 +526,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGithubRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(apps)/artifacts/': {
+      id: '/(apps)/artifacts/'
+      path: '/'
+      fullPath: '/artifacts/'
+      preLoaderRoute: typeof appsArtifactsIndexRouteImport
+      parentRoute: typeof appsArtifactsRoute
+    }
+    '/(apps)/artifacts/tickets': {
+      id: '/(apps)/artifacts/tickets'
+      path: '/tickets'
+      fullPath: '/artifacts/tickets'
+      preLoaderRoute: typeof appsArtifactsTicketsRouteImport
+      parentRoute: typeof appsArtifactsRoute
+    }
+    '/(apps)/projects/': {
+      id: '/(apps)/projects/'
+      path: '/'
+      fullPath: '/projects/'
+      preLoaderRoute: typeof appsProjectsIndexRouteImport
+      parentRoute: typeof appsProjectsRoute
+    }
+    '/(apps)/projects/$projectId': {
+      id: '/(apps)/projects/$projectId'
+      path: '/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof appsProjectsProjectIdRouteImport
+      parentRoute: typeof appsProjectsRoute
+    }
     '/(apps)/settings/': {
       id: '/(apps)/settings/'
       path: '/'
