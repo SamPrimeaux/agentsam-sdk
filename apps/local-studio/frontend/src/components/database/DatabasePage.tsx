@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import {
   DatabaseEditorApp,
   createDatabaseStudioClient,
-} from "@inneranimalmedia/agentsam-database-editor/ui";
+} from "@inneranimalmedia/agentsam-database-editor/frontend";
 
 /**
  * Local Studio host adapter for the portable Database Editor package.
