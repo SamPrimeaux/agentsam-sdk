@@ -68,3 +68,23 @@ export function buildLspHandshake(
     capabilities,
   };
 }
+
+export async function fetchLanguagePacks(listen = '127.0.0.1:18765'): Promise<Record<string, unknown>> {
+  const res = await fetch(`http://${listen}/v1/language/packs`, { signal: AbortSignal.timeout(3000) });
+  if (!res.ok) throw new Error(`language_packs_http_${res.status}`);
+  return res.json() as Promise<Record<string, unknown>>;
+}
+
+export async function installLanguagePack(
+  id: LanguageCapability,
+  listen = '127.0.0.1:18765',
+): Promise<Record<string, unknown>> {
+  const res = await fetch(`http://${listen}/v1/language/packs/install`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+    signal: AbortSignal.timeout(120_000),
+  });
+  if (!res.ok) throw new Error(`language_pack_install_http_${res.status}`);
+  return res.json() as Promise<Record<string, unknown>>;
+}

@@ -91,26 +91,27 @@ func main() {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
+		refreshLangPackStatus()
+		langMu.Lock()
+		caps := map[string]any{
+			"exec":       true,
+			"pty":        runtime.GOOS != "windows",
+			"filesystem": true,
+			"process":    true,
+			"hash":       true,
+			"inspect":    true,
+		}
+		for k, v := range langState {
+			caps[k] = v.Status
+		}
+		langMu.Unlock()
 		writeJSON(w, http.StatusOK, map[string]any{
-			"schema": "agentsam.runtime.v1",
-			"capabilities": map[string]any{
-				"exec":                true,
-				"pty":                 runtime.GOOS != "windows",
-				"filesystem":          true,
-				"process":             true,
-				"hash":                true,
-				"inspect":             true,
-				"language.typescript": "ready",
-				"language.javascript": "ready",
-				"language.json":       "ready",
-				"language.html":       "ready",
-				"language.css":        "ready",
-				"language.go":         "missing",
-				"language.rust":       "missing",
-				"language.python":     "missing",
-			},
+			"schema":       "agentsam.runtime.v1",
+			"capabilities": caps,
 		})
 	})
+	mux.HandleFunc("/v1/language/packs", handleLanguagePacks)
+	mux.HandleFunc("/v1/language/packs/install", handleLanguagePackInstall)
 
 	server := &http.Server{
 		Addr:              *listen,

@@ -343,12 +343,37 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
   };
 
   const project0 = getProject();
-  const useRealPty =
-    project0.kind === "filesystem" &&
-    Boolean(project0.runtimeBaseUrl) &&
-    Boolean(project0.runtimeCapability);
+  // Happy path: filesystem + live start-local PTY. Also auto-upgrade when
+  // agentsam start-local is already on :3099 even if the project was opened as scratch.
+  let runtimeBase = project0.runtimeBaseUrl;
+  let runtimeCap = project0.runtimeCapability;
+  if (!runtimeBase) {
+    try {
+      const probe = await fetch("http://127.0.0.1:3099/health", { signal: AbortSignal.timeout(800) });
+      if (probe.ok) {
+        runtimeBase = "http://127.0.0.1:3099";
+        runtimeCap = runtimeCap || "local";
+        term.writeln("Detected agentsam start-local on :3099 — using real PTY (not Scratch).");
+      }
+    } catch {
+      /* no local PTY server */
+    }
+  }
+  try {
+    const amd = await fetch("http://127.0.0.1:18765/health", { signal: AbortSignal.timeout(600) });
+    if (amd.ok) {
+      term.writeln("agentsamd healthy on :18765 · language packs: GET /v1/language/packs");
+    }
+  } catch {
+    /* daemon optional for virtual */
+  }
 
-  if (project0.kind === "filesystem" && (!project0.runtimeBaseUrl || !project0.runtimeCapability)) {
+  const useRealPty =
+    Boolean(runtimeBase) &&
+    Boolean(runtimeCap) &&
+    (project0.kind === "filesystem" || Boolean(runtimeBase));
+
+  if (project0.kind === "filesystem" && (!runtimeBase || !runtimeCap)) {
     term.writeln("Filesystem workspace requires a live local runtime + capability.");
     term.writeln("Run `agentsam start-local` from the workspace root, then reopen this project.");
     term.writeln("Virtual shell is disabled for filesystem projects (no silent fallback).");
@@ -367,11 +392,11 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
     };
   }
 
-  if (useRealPty) {
-    const base = String(project0.runtimeBaseUrl).replace(/\/$/, "");
+  if (useRealPty && runtimeBase) {
+    const base = String(runtimeBase).replace(/\/$/, "");
     const wsUrl = base.replace(/^http/, "ws");
     const cwdParam = encodeURIComponent(project0.workspaceRoot || "");
-    const cap = encodeURIComponent(String(project0.runtimeCapability));
+    const cap = encodeURIComponent(String(runtimeCap || "local"));
     let socket: WebSocket | null = null;
     try {
       socket = new WebSocket(`${wsUrl}/?cwd=${cwdParam}&cols=80&rows=24&capability=${cap}`);
@@ -379,20 +404,24 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
       term.writeln(
         `PTY attach failed: ${err instanceof Error ? err.message : String(err)}.`,
       );
-      term.writeln("Filesystem mode does not fall back to the Scratch virtual shell.");
-      return {
-        sessionId,
-        term,
-        fit,
-        run: async () => {
-          term.writeln("PTY unavailable — refuse virtual shell.");
-        },
-        host: null,
-        park,
-        observer: null,
-        refCount: 0,
-        getProject,
-      };
+      if (project0.kind === "filesystem") {
+        term.writeln("Filesystem mode does not fall back to the Scratch virtual shell.");
+        return {
+          sessionId,
+          term,
+          fit,
+          run: async () => {
+            term.writeln("PTY unavailable — refuse virtual shell.");
+          },
+          host: null,
+          park,
+          observer: null,
+          refCount: 0,
+          getProject,
+        };
+      }
+      term.writeln("Falling back to Scratch (virtual) shell.");
+      // continue to virtual shell below
     }
 
     if (socket) {

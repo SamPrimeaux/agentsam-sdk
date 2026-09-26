@@ -25,89 +25,71 @@
         flex-direction: column;
         padding: 48px 40px;
       }
-      h1 {
-        font-weight: 560;
-        font-size: 1.75rem;
-        letter-spacing: -0.02em;
-        margin: 0 0 8px;
-      }
-      p { color: var(--muted); margin: 0 0 24px; max-width: 36rem; line-height: 1.5; }
+      h1 { font-weight: 560; font-size: 1.75rem; letter-spacing: -0.02em; margin: 0 0 8px; }
+      p { color: var(--muted); margin: 0 0 24px; max-width: 40rem; line-height: 1.5; }
+      code { font-size: 0.85em; color: #c8c4bc; }
       .row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 28px; }
       button {
-        appearance: none;
-        border: 1px solid #2a2a32;
-        background: #141418;
-        color: var(--fg);
-        padding: 10px 16px;
-        border-radius: 8px;
-        font-size: 0.9rem;
-        cursor: pointer;
+        appearance: none; border: 1px solid #2a2a32; background: #141418;
+        color: var(--fg); padding: 10px 16px; border-radius: 8px; font-size: 0.9rem; cursor: pointer;
       }
       button.primary { border-color: var(--accent); background: #16182a; }
       button:hover { border-color: #4a4a58; }
       #status {
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        font-size: 0.8rem;
-        color: var(--muted);
-        white-space: pre-wrap;
-        border-top: 1px solid #222228;
-        padding-top: 20px;
-        max-width: 48rem;
+        font-size: 0.8rem; color: var(--muted); white-space: pre-wrap;
+        border-top: 1px solid #222228; padding-top: 20px; max-width: 48rem;
       }
-      .ok { color: var(--ok); }
-      .warn { color: var(--warn); }
+      .ok { color: var(--ok); } .warn { color: var(--warn); }
     </style>
   </head>
   <body>
     <h1>AgentSam Local Studio</h1>
     <p>
-      Offline shell — local machine first. Cloud sync is optional.
-      Sign in uses <code>iam_agentsam_sdk_web</code>. Continue locally without auth.
+      This window is the <strong>installed app</strong> — it must never replace itself with
+      <code>agentsam.inneranimalmedia.com</code>. Cloud is optional sync/auth only.
+      Full Chat/Work UI ships when <code>npm run sync:local-studio</code> copies
+      <code>apps/local-studio</code> into this <code>dist/</code>.
     </p>
     <div class="row">
-      <button type="button" class="primary" id="btn-local">Use Local Studio locally</button>
+      <button type="button" class="primary" id="btn-local">Continue locally</button>
       <button type="button" id="btn-signin">Sign in to AgentSam</button>
       <button type="button" id="btn-daemon">Start / check agentsamd</button>
-      <button type="button" id="btn-cloud">Open cloud Studio</button>
     </div>
     <div id="status">Booting…</div>
     <script>
       const statusEl = document.getElementById('status');
-      const log = (msg, cls) => {
-        statusEl.innerHTML = `<span class="${cls || ''}">${msg}</span>`;
-      };
+      const log = (msg, cls) => { statusEl.innerHTML = `<span class="${cls || ''}">${msg}</span>`; };
 
       async function invoke(cmd, args) {
-        if (!window.__TAURI__?.core?.invoke) {
-          throw new Error('tauri_invoke_unavailable');
-        }
+        if (!window.__TAURI__?.core?.invoke) throw new Error('tauri_invoke_unavailable');
         return window.__TAURI__.core.invoke(cmd, args || {});
       }
 
       async function boot() {
+        // If a real Local Studio build was synced, agentsam-desktop-dist.json is present
+        // and index.html is the Studio SPA — this thin page is only the fallback.
+        try {
+          const meta = await fetch('./agentsam-desktop-dist.json').then((r) => (r.ok ? r.json() : null));
+          if (meta?.product === 'local-studio') {
+            log('Bundled Local Studio build detected. Reload if SPA assets are present.', 'ok');
+          }
+        } catch (_) { /* thin fallback */ }
+
         try {
           const hs = await invoke('agentsamd_health', {});
           if (hs.ok) {
-            log(
-              `Local machine ready · agentsamd ${hs.daemon_version}\n` +
-                `protocols ui=${hs.ui_protocol} daemon=${hs.daemon_protocol}\n` +
-                `${hs.message}`,
-              'ok',
-            );
+            log(`Local machine ready · agentsamd ${hs.daemon_version}\n${hs.message}`, 'ok');
           } else {
             log(
-              `Offline · Cloud services may be unavailable\n` +
-                `agentsamd: ${hs.message} (${hs.listen})\n` +
-                `Click “Start / check agentsamd” or run: agentsam runtime install --yes`,
+              `Offline · agentsamd: ${hs.message} (${hs.listen})\n` +
+                `Run: agentsam runtime install --yes\n` +
+                `Windows users on v2.6.3: npm i -g @inneranimalmedia/agentsam-sdk@latest first`,
               'warn',
             );
           }
         } catch (err) {
-          log(
-            `Offline shell (browser preview or Tauri not ready)\n${String(err)}\n` +
-              `Use Local Studio locally without cloud auth.`,
-            'warn',
-          );
+          log(`Shell ready without Tauri invoke\n${String(err)}`, 'warn');
         }
       }
 
@@ -115,37 +97,21 @@
         log('Starting agentsamd…');
         try {
           const hs = await invoke('ensure_agentsamd', {});
-          log(
-            hs.ok
-              ? `agentsamd ready · ${hs.daemon_version} · ${hs.message}`
-              : `agentsamd failed · ${hs.message}`,
-            hs.ok ? 'ok' : 'warn',
-          );
-        } catch (err) {
-          log(String(err), 'warn');
-        }
+          log(hs.ok ? `agentsamd ready · ${hs.message}` : `failed · ${hs.message}`, hs.ok ? 'ok' : 'warn');
+        } catch (err) { log(String(err), 'warn'); }
       };
 
       document.getElementById('btn-signin').onclick = async () => {
         try {
           const r = await invoke('start_agentsam_pkce_login', {
-            req: {
-              issuer: 'https://inneranimalmedia.com',
-              client_id: 'iam_agentsam_sdk_web',
-            },
+            req: { issuer: 'https://inneranimalmedia.com', client_id: 'iam_agentsam_sdk_web' },
           });
           log(JSON.stringify(r, null, 2), r.ok ? 'ok' : 'warn');
-        } catch (err) {
-          log(String(err), 'warn');
-        }
+        } catch (err) { log(String(err), 'warn'); }
       };
 
       document.getElementById('btn-local').onclick = () => {
-        log('Local mode — filesystem / terminal / agentsamd when available. Auth optional.', 'ok');
-      };
-
-      document.getElementById('btn-cloud').onclick = () => {
-        location.href = 'https://agentsam.inneranimalmedia.com/agentsam';
+        log('Local mode — no navigation to hosted Studio. Auth optional.', 'ok');
       };
 
       boot();
