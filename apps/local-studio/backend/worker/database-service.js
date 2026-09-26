@@ -1,6 +1,7 @@
 import { Client } from 'pg';
 import {
   createD1Adapter,
+  createD1BindingAdapter,
   createHyperdriveAdapter,
   readD1Metrics,
   readPostgresMetrics,
@@ -255,6 +256,55 @@ async function withHyperdriveClient(env, fn) {
   }
 }
 
+async function getBoundD1Source(env, accountId) {
+  const owner = await resolveDeploymentOwnerAccount(env);
+  if (!owner || owner !== accountId || !env?.DB?.prepare) return null;
+  const databaseId = clean(env.LOCAL_STUDIO_D1_DATABASE_ID);
+  const databaseName = clean(env.LOCAL_STUDIO_D1_DATABASE_NAME) || 'AgentSam platform D1';
+  if (!databaseId) return null;
+  try {
+    const [tableRow, sizeRow] = await Promise.all([
+      env.DB.prepare(
+        "SELECT COUNT(*) AS count FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
+      ).first(),
+      env.DB.prepare("PRAGMA page_count").first(),
+    ]);
+    const pageSize = await env.DB.prepare("PRAGMA page_size").first().catch(() => null);
+    return {
+      id: 'binding-d1:primary',
+      provider: 'cloudflare-d1',
+      engine: 'sqlite',
+      label: databaseName,
+      database_name: databaseName,
+      database_id: databaseId,
+      account_id: clean(env.CLOUDFLARE_ACCOUNT_ID) || null,
+      file_size:
+        Number(sizeRow?.page_count || 0) * Number(pageSize?.page_size || 0),
+      num_tables: Number(tableRow?.count || 0),
+      writable: true,
+      metrics: true,
+      connection: 'worker_binding',
+    };
+  } catch (error) {
+    return {
+      id: 'binding-d1:primary',
+      provider: 'cloudflare-d1',
+      engine: 'sqlite',
+      label: databaseName,
+      database_name: databaseName,
+      database_id: databaseId,
+      account_id: clean(env.CLOUDFLARE_ACCOUNT_ID) || null,
+      file_size: 0,
+      num_tables: 0,
+      writable: false,
+      metrics: true,
+      connection: 'worker_binding',
+      status: 'degraded',
+      error: error?.message || String(error),
+    };
+  }
+}
+
 async function getHyperdriveSource(env, accountId) {
   const owner = await resolveDeploymentOwnerAccount(env);
   if (!owner || owner !== accountId || !env?.HYPERDRIVE?.connectionString) return null;
@@ -296,13 +346,18 @@ async function getHyperdriveSource(env, accountId) {
 }
 
 async function listSources(env, accountId) {
-  const [cloudflare, hyperdrive] = await Promise.all([
+  const [cloudflare, boundD1, hyperdrive] = await Promise.all([
     listCloudflareD1Sources(env, accountId),
+    getBoundD1Source(env, accountId),
     getHyperdriveSource(env, accountId),
   ]);
+  const oauthD1 = boundD1?.database_id
+    ? cloudflare.sources.filter((source) => source.database_id !== boundD1.database_id)
+    : cloudflare.sources;
   return {
     sources: [
-      ...cloudflare.sources,
+      ...(boundD1 ? [boundD1] : []),
+      ...oauthD1,
       ...(hyperdrive ? [hyperdrive] : []),
     ],
     connections: {
@@ -377,6 +432,22 @@ async function resolveSource(env, accountId, sourceId) {
 
 async function withResolvedSource(env, accountId, sourceId, fn) {
   const id = clean(sourceId);
+  if (id === 'binding-d1:primary') {
+    const source = await getBoundD1Source(env, accountId);
+    if (!source || source.status === 'degraded') {
+      throw new Error(source?.error || 'database_source_not_available');
+    }
+    return fn({
+      source,
+      adapter: createD1BindingAdapter({
+        db: env.DB,
+        id: source.id,
+        label: source.label,
+        writable: source.writable !== false,
+      }),
+      credential: await resolveCloudflareCredential(env, accountId),
+    });
+  }
   if (id === 'hyperdrive:primary') {
     const source = await getHyperdriveSource(env, accountId);
     if (!source || source.status === 'degraded') {
@@ -538,9 +609,40 @@ async function readMetrics(env, accountId, sourceId, range) {
   const requestedRange = Object.hasOwn(RANGE_SECONDS, range) ? range : '24h';
   return withResolvedSource(env, accountId, sourceId, async ({ source, adapter, credential, client }) => {
     if (source.provider === 'cloudflare-d1') {
+      const cfCredential = credential || await resolveCloudflareCredential(env, accountId);
+      const metricsAccountId =
+        source.account_id ||
+        (cfCredential ? await resolveCloudflareAccountId(cfCredential) : null);
+      if (!cfCredential?.token || !metricsAccountId || !source.database_id) {
+        return {
+          ok: true,
+          source,
+          range: requestedRange,
+          capacity: {
+            usedBytes: Number(source.file_size || 0),
+            usedLabel: null,
+            limitBytes: null,
+            limitLabel: null,
+            pctUsed: null,
+          },
+          kpis: {
+            queries: null,
+            readQueries: null,
+            writeQueries: null,
+            rowsRead: null,
+            rowsWritten: null,
+            tables: Number(source.num_tables || 0),
+            storage: Number(source.file_size || 0),
+          },
+          series: [],
+          health: await adapter.health(),
+          wired: false,
+          warning: 'Connect Cloudflare OAuth with the data pack for D1 GraphQL metrics.',
+        };
+      }
       const metrics = await readD1Metrics({
-        token: credential.token,
-        accountId: source.account_id,
+        token: cfCredential.token,
+        accountId: metricsAccountId,
         databaseId: source.database_id,
         range: requestedRange,
       });
