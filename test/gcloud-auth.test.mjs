@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  AGENTSAM_GOOGLE_OAUTH_START,
+  resolveGoogleOauthStartUrl,
   runAgentsamGoogleOauthLogin,
   runGcloudAuth,
 } from '../src/commands/gcloud-auth.js';
@@ -12,6 +12,12 @@ import {
   resolveGoogleDesktopClientId,
 } from '../src/lib/google-desktop-oauth.js';
 
+const TEST_ENV = {
+  IAM_OAUTH_ISSUER: 'https://inneranimalmedia.com',
+  GOOGLE_CLIENT_ID: '246811022042-d8q1rc1oki4uv9qiqjah8lvkffb91crp.apps.googleusercontent.com',
+  GOOGLE_DESKTOP_CLIENT_ID: '246811022042-cckq00b5seekpkv0in358jhu42n0b6u9.apps.googleusercontent.com',
+};
+
 test('hosted --web login emits start URL in --json', async () => {
   let out = '';
   const code = await runAgentsamGoogleOauthLogin({
@@ -20,11 +26,15 @@ test('hosted --web login emits start URL in --json', async () => {
     },
     json: true,
     nonInteractive: true,
+    env: TEST_ENV,
   });
   assert.equal(code, 0);
   const parsed = JSON.parse(out.slice(out.indexOf('{')));
   assert.equal(parsed.mode, 'hosted_identity');
-  assert.equal(parsed.start_url, AGENTSAM_GOOGLE_OAUTH_START);
+  assert.equal(
+    parsed.start_url,
+    resolveGoogleOauthStartUrl(TEST_ENV),
+  );
 });
 
 test('gcloud auth login --web is hosted identity', async () => {
@@ -34,9 +44,10 @@ test('gcloud auth login --web is hosted identity', async () => {
       out += s;
     },
     nonInteractive: true,
+    env: TEST_ENV,
   });
   assert.equal(code, 0);
-  assert.match(out, /hosted_identity|agentsam\.inneranimalmedia\.com\/api\/oauth\/google\/start/);
+  assert.match(out, /hosted_identity|\/api\/oauth\/google\/start/);
 });
 
 test('gcloud auth help mentions desktop default and --web/--sdk', async () => {
@@ -53,7 +64,7 @@ test('gcloud auth help mentions desktop default and --web/--sdk', async () => {
 
 test('desktop auth URL requests cloud-platform + offline', () => {
   const url = new URL(buildGoogleDesktopAuthUrl({
-    clientId: resolveGoogleDesktopClientId({}),
+    clientId: resolveGoogleDesktopClientId(TEST_ENV),
     redirectUri: 'http://127.0.0.1:12345/callback',
     state: 'abc',
     codeChallenge: 'challenge',
@@ -76,4 +87,11 @@ test('permissions checklist separates OAuth scopes from IAM roles', async () => 
   assert.match(out, /mcp\.toolUser|roles\/mcp/);
   const checklist = googleCloudPermissionChecklist();
   assert.ok(checklist.oauth_scopes_requested.includes('https://www.googleapis.com/auth/cloud-platform'));
+});
+
+test('resolveGoogleDesktopClientId fails loud when unset', () => {
+  assert.throws(
+    () => resolveGoogleDesktopClientId({}),
+    (err) => err?.code === 'google_desktop_client_not_configured',
+  );
 });

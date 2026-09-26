@@ -27,7 +27,7 @@ function installMigration(cwd) {
 function parse(argv) {
   const out = {
     action: argv[0] || 'list', key: '', cwd: process.cwd(), json: false,
-    origin: process.env.AGENTSAM_ORIGIN || process.env.AGENTSAM_API_ORIGIN || 'https://agentsam.inneranimalmedia.com',
+    origin: '',
     timeoutMs: 180_000, noOpen: false,
   };
   for (let i = 1; i < argv.length; i += 1) {
@@ -59,7 +59,12 @@ async function resolveCliBearer(opts) {
 }
 
 async function fetchConnector(opts, token, pathname, init = {}) {
-  const origin = String(opts.origin).replace(/\/$/, '');
+  const origin = String(opts.origin || '').replace(/\/$/, '');
+  if (!origin) {
+    throw new Error(
+      'origin_required: pass --origin https://<your-local-studio-host> (no AGENTSAM_ORIGIN / hardcoded host fallback).',
+    );
+  }
   const headers = new Headers(init.headers || {});
   headers.set('accept', 'application/json');
   headers.set('authorization', `Bearer ${token}`);

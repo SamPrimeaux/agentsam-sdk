@@ -28,10 +28,16 @@ describe('deploy health', () => {
 
   it('reads hostname from wrangler.jsonc', () => {
     const origin = resolveHealthOrigin({
-      env: {},
       wranglerConfigText: '{"routes":[{"pattern":"agentsam.inneranimalmedia.com","custom_domain":true}]}',
     });
     assert.equal(origin, 'https://agentsam.inneranimalmedia.com');
+  });
+
+  it('fails loud when wrangler routes pattern is missing', () => {
+    assert.throws(
+      () => resolveHealthOrigin({ wranglerConfigText: '{}' }),
+      (err) => err?.code === 'health_origin_required',
+    );
   });
 
   it('treats /health ok:true with connector unconfigured as healthy', async () => {
@@ -48,6 +54,28 @@ describe('deploy health', () => {
     assert.equal(health.ok, true);
     assert.equal(health.results['/health'].appOk, true);
     assert.equal(health.results['/health'].cloudflareConfigured, false);
+    assert.equal(health.results['/privacy'].ok, true);
+    assert.equal(health.results['/terms'].ok, true);
+  });
+
+  it('fails deploy health when /privacy or /terms are not HTTP 200', async () => {
+    const fetchImpl = async (url) => {
+      const path = String(url).replace(/^https?:\/\/[^/]+/, '');
+      if (path === '/health') {
+        return {
+          status: 200,
+          json: async () => ({ ok: true, connections: { cloudflare: { configured: true } } }),
+        };
+      }
+      if (path === '/privacy' || path === '/terms') {
+        return { status: 404, json: async () => ({}) };
+      }
+      return { status: 200, json: async () => ({}) };
+    };
+    const health = await probeDeployHealth('https://agentsam.inneranimalmedia.com', { fetchImpl });
+    assert.equal(health.ok, false);
+    assert.equal(health.results['/privacy'].ok, false);
+    assert.equal(health.results['/terms'].ok, false);
   });
 
   it('sends a browser-safe User-Agent so WAF does not 403 the probe', async () => {

@@ -9,6 +9,7 @@ import { promisify } from 'node:util';
 import readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import { promptToOpenUrl, openExternalUrl } from '../lib/open-url.js';
+import { resolveIamIssuer } from '../../packages/identity/src/contracts/auth-config.js';
 import {
   googleCloudPermissionChecklist,
   runGoogleDesktopCloudLogin,
@@ -16,8 +17,29 @@ import {
 
 const execFileAsync = promisify(execFile);
 
-export const AGENTSAM_GOOGLE_OAUTH_START =
-  'https://agentsam.inneranimalmedia.com/api/oauth/google/start';
+function clean(value) {
+  return value == null ? '' : String(value).trim();
+}
+
+/**
+ * Hosted Google identity start URL — IAM issuer + /api/oauth/google/start.
+ * Requires GOOGLE_CLIENT_ID (or GOOGLE_DESKTOP_CLIENT_ID) in env; server holds secrets.
+ * No AGENTSAM_GOOGLE_OAUTH_START / hardcoded product host.
+ */
+export function resolveGoogleOauthStartUrl(env = process.env, explicit = '') {
+  const fromExplicit = clean(explicit);
+  if (fromExplicit) return fromExplicit;
+  const googleId = clean(env.GOOGLE_CLIENT_ID) || clean(env.GOOGLE_DESKTOP_CLIENT_ID);
+  if (!googleId) {
+    const err = new Error(
+      'GOOGLE_CLIENT_ID (web) or GOOGLE_DESKTOP_CLIENT_ID (desktop) is not configured.',
+    );
+    err.code = 'google_oauth_not_configured';
+    throw err;
+  }
+  const issuer = resolveIamIssuer(env);
+  return new URL('/api/oauth/google/start', `${issuer}/`).toString();
+}
 
 function writeLine(write, value = '') {
   write(`${value}\n`);
@@ -75,7 +97,8 @@ function printAuthHelp(write) {
   writeLine(write, '  agentsam gcloud auth application-default login');
   writeLine(write, '');
   writeLine(write, `  Hosted identity URL ( --web )`);
-  writeLine(write, `    ${AGENTSAM_GOOGLE_OAUTH_START}`);
+  writeLine(write, `    \${IAM_OAUTH_ISSUER}/api/oauth/google/start`);
+  writeLine(write, `    requires GOOGLE_CLIENT_ID or GOOGLE_DESKTOP_CLIENT_ID`);
   writeLine(write, '');
 }
 
@@ -142,14 +165,12 @@ async function waitForEnter(message, { inputStream = input, outputStream = outpu
 }
 
 /**
- * Hosted AgentSam Google OAuth — Local Studio / browser identity only.
+ * Hosted Google OAuth identity — uses IAM_OAUTH_ISSUER + GOOGLE_CLIENT_ID lane.
  */
 export async function runAgentsamGoogleOauthLogin(options = {}) {
   const write = options.write || ((s) => process.stdout.write(s));
-  const startUrl =
-    clean(options.startUrl)
-    || clean(options.env?.AGENTSAM_GOOGLE_OAUTH_START)
-    || AGENTSAM_GOOGLE_OAUTH_START;
+  const env = options.env || process.env;
+  const startUrl = resolveGoogleOauthStartUrl(env, options.startUrl);
   const noLaunch = Boolean(options.noLaunchBrowser);
   const json = Boolean(options.json);
 
@@ -233,10 +254,6 @@ export async function runAgentsamGoogleOauthLogin(options = {}) {
   writeLine(write, '    agentsam gcloud auth login');
   writeLine(write, '');
   return 0;
-}
-
-function clean(value) {
-  return value == null ? '' : String(value).trim();
 }
 
 async function runSdkGcloudLogin({ write, env, pass = [], noLaunch = false }) {

@@ -4,11 +4,10 @@
  * Browser login sessions and reusable API credentials are intentionally
  * separate: login sessions are opaque, machine-local session state while
  * AGENTSAM_API_KEY is an explicit delegated account credential.
+ *
+ * No DEFAULT_* issuers or hardcoded product hosts. IAM_OAUTH_ISSUER,
+ * IAM_CLIENT_ID, and IAM_CLIENT_SECRET must be set by the caller.
  */
-
-export const DEFAULT_IAM_OAUTH_ISSUER = 'https://inneranimalmedia.com';
-/** @deprecated Use DEFAULT_IAM_OAUTH_ISSUER. */
-export const DEFAULT_IAM_ORIGIN = DEFAULT_IAM_OAUTH_ISSUER;
 
 export const AGENTSAM_AUTH_ENV = Object.freeze({
   iamIssuer: 'IAM_OAUTH_ISSUER',
@@ -55,11 +54,20 @@ function normalizeOrigin(value) {
   return clean(value).replace(/\/+$/, '');
 }
 
-/** Resolve canonical IAM issuer. IAM_OAUTH_ISSUER wins; IAM_ORIGIN is compatibility only. */
+/**
+ * Resolve canonical IAM issuer. IAM_OAUTH_ISSUER wins; IAM_ORIGIN is compatibility only.
+ * Fail loud when unset — no product-host default.
+ */
 export function resolveIamIssuer(env = {}, explicit = '') {
-  return normalizeOrigin(
-    explicit || env?.IAM_OAUTH_ISSUER || env?.IAM_ORIGIN || DEFAULT_IAM_OAUTH_ISSUER,
-  );
+  const resolved = normalizeOrigin(explicit || env?.IAM_OAUTH_ISSUER || env?.IAM_ORIGIN || '');
+  if (!resolved) {
+    const err = new Error(
+      'IAM_OAUTH_ISSUER is not configured. Set IAM_OAUTH_ISSUER (IAM_ORIGIN is compatibility only).',
+    );
+    err.code = 'iam_oauth_issuer_not_configured';
+    throw err;
+  }
+  return resolved;
 }
 
 /** @deprecated Use resolveIamIssuer. Same resolution order as issuer. */

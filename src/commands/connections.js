@@ -11,11 +11,15 @@ import {
 import { resolveIamIssuer } from '../../packages/identity/src/contracts/auth-config.js';
 import { collectRuntimeStatus } from './runtime-status.js';
 
-const PRODUCTION_CALLBACK = `https://agentsam.inneranimalmedia.com${CLOUDFLARE_CALLBACK_PATH}`;
-
 function doctor(env = process.env) {
   const iam = {
-    issuer: resolveIamIssuer(env),
+    issuer: (() => {
+      try {
+        return resolveIamIssuer(env);
+      } catch {
+        return null;
+      }
+    })(),
     clientId: Boolean(String(env.IAM_CLIENT_ID || '').trim()),
     serverSecret: Boolean(String(env.IAM_CLIENT_SECRET || '').trim()),
     originAlias: Boolean(String(env.IAM_ORIGIN || '').trim()),
@@ -29,7 +33,9 @@ function printSetup(env = process.env) {
   const client = resolveCloudflareOAuthClient(env);
   console.log('Cloudflare connector setup');
   console.log('');
-  console.log(`  callback: ${PRODUCTION_CALLBACK}`);
+  console.log(`  callback path: ${CLOUDFLARE_CALLBACK_PATH}`);
+  console.log('  Register full https://<local-studio-host>' + CLOUDFLARE_CALLBACK_PATH);
+  console.log('  on the Cloudflare OAuth client (CLOUDFLARE_OAUTH_CLIENT_ID).');
   console.log('  authorize: https://dash.cloudflare.com/oauth2/auth');
   console.log('  token:     https://dash.cloudflare.com/oauth2/token');
   console.log('  revoke:    https://dash.cloudflare.com/oauth2/revoke');
@@ -39,7 +45,7 @@ function printSetup(env = process.env) {
   if (client.fixture) {
     console.log('STOP: fixture credentials are loaded. OAuth start will return 503.');
   } else if (client.status === 'not_configured') {
-    console.log('status: not_configured — production may deploy; connector stays optional.');
+    console.log('status: not_configured — set CLOUDFLARE_OAUTH_CLIENT_ID on the Local Studio Worker.');
   } else {
     console.log(`status: ${client.status}`);
   }

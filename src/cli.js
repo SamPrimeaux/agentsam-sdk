@@ -119,7 +119,7 @@ function printLegacyHelp() {
     agentsam whoami [--json]   Authenticated account identity + safe credential status
     agentsam resume [session]  Resume a saved Agent Sam session; omit id for picker
     agentsam eval context      Offline context-strategy/economics fixtures (--help)
-    agentsam cloudflare        Native Wrangler reads + Worker CPU profile analysis (--help)
+    agentsam cloudflare        Capabilities: workflows, scanner, tags, tag-gateway, brand, keyless (+ Wrangler reads)
     agentsam go                Go runtime discovery/build/deploy (Cloudflare worker-container)
     agentsam start-local       Local PTY on ws://127.0.0.1:3099 (no tunnel, no Cloudflare)
     agentsam ollama            Opt-in local Ollama setup/status/model management

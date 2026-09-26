@@ -1,19 +1,18 @@
-import { DEFAULT_IAM_ORIGIN, resolveIamOrigin } from '../contracts/auth-config.js';
+import { resolveIamOrigin } from '../contracts/auth-config.js';
 
 /**
  * OAuth credential lanes for customer apps.
  *
- * Default (minted at install/build): IAM_CLIENT_ID + IAM_CLIENT_SECRET
+ * Required: IAM_CLIENT_ID + IAM_CLIENT_SECRET + IAM_OAUTH_ISSUER
  *   — ID may be a plaintext Wrangler var (public by OAuth design).
  *   — SECRET is wrangler secret put only (encryption is law, not luxury).
+ *   — ISSUER has no DEFAULT_* — unset means not configured.
  *
  * Developer BYOK: GOOGLE_CLIENT_* / GITHUB_CLIENT_* when set for that provider
  * take the /api/oauth/{provider}/start button; otherwise the button uses the
  * Inner Animal Media platform lane (`inneranimalmedia`).
  */
 
-/** @deprecated Use DEFAULT_IAM_ORIGIN from the auth configuration contract. */
-export const DEFAULT_IAM_OAUTH_ISSUER = DEFAULT_IAM_ORIGIN;
 export const IAM_PLATFORM_STATE_PROVIDER = 'iam_platform';
 /** Canonical platform OAuth callback (protocol id = inneranimalmedia). */
 export const IAM_PLATFORM_CALLBACK_PATH = '/api/oauth/inneranimalmedia/callback';
@@ -28,7 +27,12 @@ export function resolveIamPlatformCredentials(env) {
   const clientId = String(env?.IAM_CLIENT_ID || '').trim();
   const clientSecret = String(env?.IAM_CLIENT_SECRET || '').trim();
   if (!clientId || !clientSecret) return null;
-  const origin = resolveIamOrigin(env);
+  let origin;
+  try {
+    origin = resolveIamOrigin(env);
+  } catch {
+    return null;
+  }
   // `issuer` remains for one migration window so existing consumers do not break.
   return { clientId, clientSecret, origin, issuer: origin };
 }

@@ -1,5 +1,14 @@
-export const DEFAULT_HEALTH_ORIGIN = 'https://agentsam.inneranimalmedia.com';
 export const HEALTH_USER_AGENT = 'AgentSam-deploy-health/1';
+
+/** Paths that must return HTTP 200 after deploy (Google OAuth branding + public legal). */
+export const DEPLOY_REQUIRED_OK_PATHS = Object.freeze(['/privacy', '/terms']);
+
+export const DEFAULT_DEPLOY_HEALTH_PATHS = Object.freeze([
+  '/health',
+  '/',
+  '/privacy',
+  '/terms',
+]);
 
 export function parseWranglerVersionId(output = '') {
   const text = String(output || '');
@@ -8,19 +17,28 @@ export function parseWranglerVersionId(output = '') {
   return m ? m[1] : null;
 }
 
-export function resolveHealthOrigin({ env = process.env, wranglerConfigText = '' } = {}) {
-  const fromEnv = String(env.PRODUCT_HOST || env.AGENTSAM_HEALTH_ORIGIN || '').trim();
-  if (fromEnv) return fromEnv.replace(/\/+$/, '');
+/**
+ * Resolve deploy health origin from wrangler routes only.
+ * No PRODUCT_HOST / AGENTSAM_HEALTH_ORIGIN / hardcoded product-host fallback.
+ */
+export function resolveHealthOrigin({ wranglerConfigText = '' } = {}) {
   const m = String(wranglerConfigText || '').match(/"pattern"\s*:\s*"([^"]+)"/);
   if (m) {
     const host = m[1].trim();
     if (host.startsWith('http://') || host.startsWith('https://')) return host.replace(/\/+$/, '');
     return `https://${host.replace(/\/+$/, '')}`;
   }
-  return DEFAULT_HEALTH_ORIGIN;
+  const err = new Error(
+    'health_origin_required: wrangler routes[].pattern must be set (no PRODUCT_HOST / hardcoded host fallback).',
+  );
+  err.code = 'health_origin_required';
+  throw err;
 }
 
-export async function probeDeployHealth(origin, { fetchImpl = globalThis.fetch, paths = ['/health', '/'] } = {}) {
+export async function probeDeployHealth(
+  origin,
+  { fetchImpl = globalThis.fetch, paths = DEFAULT_DEPLOY_HEALTH_PATHS } = {},
+) {
   const results = {};
   for (const p of paths) {
     const url = `${String(origin).replace(/\/+$/, '')}${p}`;

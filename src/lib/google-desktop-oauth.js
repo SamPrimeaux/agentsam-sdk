@@ -11,10 +11,6 @@ import { promptToOpenUrl, openExternalUrl } from './open-url.js';
 import { setSecureProviderKey } from '../security/local-vault.js';
 import { writeGoogleCloudConnection } from './google-cloud-connection.js';
 
-/** Public Desktop client for Agent Sam Local Studio (AgentSam GCP Services). */
-export const DEFAULT_GOOGLE_DESKTOP_CLIENT_ID =
-  '246811022042-cckq00b5seekpkv0in358jhu42n0b6u9.apps.googleusercontent.com';
-
 /** Identity + Cloud Platform — what `agentsam gcloud auth login` requests by default. */
 export const GOOGLE_CLOUD_CONNECTION_SCOPES = [
   'openid',
@@ -43,12 +39,17 @@ function randomState(randomBytesImpl = randomBytes) {
   return base64url(randomBytesImpl(24));
 }
 
+/** Public Desktop client id — must come from GOOGLE_DESKTOP_CLIENT_ID (no DEFAULT_*). */
 export function resolveGoogleDesktopClientId(env = process.env) {
-  return (
-    clean(env.GOOGLE_DESKTOP_CLIENT_ID)
-    || clean(env.AGENTSAM_GOOGLE_DESKTOP_CLIENT_ID)
-    || DEFAULT_GOOGLE_DESKTOP_CLIENT_ID
-  );
+  const id = clean(env.GOOGLE_DESKTOP_CLIENT_ID);
+  if (!id) {
+    const err = new Error(
+      'GOOGLE_DESKTOP_CLIENT_ID is not configured. Set it for agentsam gcloud auth login (desktop PKCE).',
+    );
+    err.code = 'google_desktop_client_not_configured';
+    throw err;
+  }
+  return id;
 }
 
 export function buildGoogleDesktopAuthUrl({

@@ -28,9 +28,9 @@ export async function promptLoginProvider(options = {}) {
 
   writeLine(write, '');
   writeLine(write, '  How do you want to sign in?');
-  writeLine(write, '    [1] Inner Animal Media   (IAM_CLIENT_ID → /auth/login)');
-  writeLine(write, '    [2] Google OAuth         (requires AGENTSAM_STUDIO_ORIGIN)');
-  writeLine(write, '    [3] Cloudflare OAuth     (requires AGENTSAM_STUDIO_ORIGIN)');
+  writeLine(write, '    [1] Inner Animal Media   (IAM_CLIENT_ID + IAM_OAUTH_ISSUER)');
+  writeLine(write, '    [2] Google OAuth         (GOOGLE_CLIENT_ID or GOOGLE_DESKTOP_CLIENT_ID)');
+  writeLine(write, '    [3] Cloudflare OAuth     (CLOUDFLARE_OAUTH_CLIENT_ID)');
   writeLine(write, '');
 
   const rl = readline.createInterface({ input, output });

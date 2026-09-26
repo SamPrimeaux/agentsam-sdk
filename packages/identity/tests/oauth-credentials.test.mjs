@@ -7,10 +7,21 @@ import {
 } from '../src/oauth/credentials.js';
 
 describe('oauth credentials', () => {
-  it('requires IAM_CLIENT_ID and IAM_CLIENT_SECRET together', () => {
+  it('requires IAM_CLIENT_ID, IAM_CLIENT_SECRET, and IAM_OAUTH_ISSUER together', () => {
     assert.equal(resolveIamPlatformCredentials({ IAM_CLIENT_ID: 'x' }), null);
     assert.equal(
-      resolveIamPlatformCredentials({ IAM_CLIENT_ID: 'x', IAM_CLIENT_SECRET: 'y' })?.clientId,
+      resolveIamPlatformCredentials({
+        IAM_CLIENT_ID: 'x',
+        IAM_CLIENT_SECRET: 'y',
+      }),
+      null,
+    );
+    assert.equal(
+      resolveIamPlatformCredentials({
+        IAM_CLIENT_ID: 'x',
+        IAM_CLIENT_SECRET: 'y',
+        IAM_OAUTH_ISSUER: 'https://iam.example.test',
+      })?.clientId,
       'x',
     );
   });
@@ -26,6 +37,7 @@ describe('oauth credentials', () => {
     const env = {
       IAM_CLIENT_ID: 'iam_dcr_legendary',
       IAM_CLIENT_SECRET: 'secret',
+      IAM_OAUTH_ISSUER: 'https://iam.example.test',
     };
     const lane = resolveOAuthCredentialLane(env, 'google');
     assert.equal(lane?.lane, 'iam_platform');
@@ -36,6 +48,7 @@ describe('oauth credentials', () => {
     const env = {
       IAM_CLIENT_ID: 'iam_dcr_legendary',
       IAM_CLIENT_SECRET: 'secret',
+      IAM_OAUTH_ISSUER: 'https://iam.example.test',
       GOOGLE_CLIENT_ID: 'google-byok',
       GOOGLE_CLIENT_SECRET: 'gsecret',
     };
@@ -63,7 +76,7 @@ describe('oauth credentials', () => {
     const creds = resolveIamPlatformCredentials({
       IAM_CLIENT_ID: 'c',
       IAM_CLIENT_SECRET: 's',
-      IAM_OAUTH_ISSUER: 'https://staging.inneranimalmedia.com/',
+      IAM_ORIGIN: 'https://staging.inneranimalmedia.com/',
     });
     assert.equal(creds?.origin, 'https://staging.inneranimalmedia.com');
   });

@@ -314,7 +314,9 @@ export async function authenticateViaBrowser(options = {}) {
   const resolved = resolveIamClientId(options);
   if (resolved.error) {
     const err = new Error(
-      'IAM_CLIENT_ID is not configured. Set IAM_CLIENT_ID (and IAM_OAUTH_ISSUER) for AgentSam login.',
+      'IAM_CLIENT_ID is not configured in this shell (Worker secrets are not visible to the CLI). '
+      + 'For agentsam login export IAM_CLIENT_ID=iam_cli_agentsam and IAM_OAUTH_ISSUER=https://inneranimalmedia.com. '
+      + 'Local Studio Worker IAM_CLIENT_ID=iam_agentsam_sdk_web is a different OAuth client.',
     );
     err.code = 'iam_oauth_not_configured';
     throw err;
@@ -323,20 +325,32 @@ export async function authenticateViaBrowser(options = {}) {
   const loginProvider = clean(options.loginProvider || 'inneranimalmedia').toLowerCase();
   const issuer = resolveIamIssuer(env, options.issuer || '');
 
-  // Optional identity providers require an explicit studio origin — no hardcoded domain.
+  // Google / Cloudflare identity start on the IAM issuer host.
+  // Server-side secrets: GOOGLE_CLIENT_ID(+SECRET) or CLOUDFLARE_OAUTH_CLIENT_ID.
+  // No AGENTSAM_STUDIO_ORIGIN / hardcoded product host.
   if (loginProvider === 'google' || loginProvider === 'cloudflare') {
-    const studioOrigin = clean(env.AGENTSAM_STUDIO_ORIGIN);
-    if (!studioOrigin) {
-      const err = new Error(
-        'AGENTSAM_STUDIO_ORIGIN is not configured. Required for Google/Cloudflare identity login.',
-      );
-      err.code = 'studio_origin_not_configured';
-      throw err;
+    if (loginProvider === 'google') {
+      const googleId = clean(env.GOOGLE_CLIENT_ID) || clean(env.GOOGLE_DESKTOP_CLIENT_ID);
+      if (!googleId) {
+        const err = new Error(
+          'GOOGLE_CLIENT_ID (web) or GOOGLE_DESKTOP_CLIENT_ID (desktop) is not configured in this shell.',
+        );
+        err.code = 'google_oauth_not_configured';
+        throw err;
+      }
+    } else {
+      if (!clean(env.CLOUDFLARE_OAUTH_CLIENT_ID)) {
+        const err = new Error(
+          'CLOUDFLARE_OAUTH_CLIENT_ID is not configured in this shell.',
+        );
+        err.code = 'cloudflare_oauth_not_configured';
+        throw err;
+      }
     }
     const startPath = loginProvider === 'google'
       ? '/api/oauth/google/start'
       : '/api/oauth/cloudflare/start';
-    const startUrl = new URL(startPath, `${studioOrigin.replace(/\/+$/, '')}/`);
+    const startUrl = new URL(startPath, `${issuer}/`);
     startUrl.searchParams.set('next', '/agentsam');
     const promptImpl = options.promptToOpenUrlImpl || promptToOpenUrl;
     await promptImpl(startUrl.toString(), {
