@@ -68,6 +68,7 @@
     "zustand": "^5.0.0",
     "@inneranimalmedia/agentsam-local-shared": "0.0.0",
     "@inneranimalmedia/agentsam-contracts": "file:../../../packages/agentsam-contracts",
+    "@inneranimalmedia/agentsam-settings": "file:../../../packages/agentsam-settings",
     "@inneranimalmedia/agentsam-key-manager": "file:../../../packages/agentsam-key-manager",
     "@inneranimalmedia/agentsam-nav": "file:../../../packages/agentsam-nav",
     "@inneranimalmedia/agentsam-vault": "file:../../../packages/agentsam-vault",
