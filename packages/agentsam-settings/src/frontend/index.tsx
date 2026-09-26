@@ -773,36 +773,39 @@ function KeysView({ snapshot }: { snapshot: SettingsSnapshot }) {
 
 function ThemesView({ themes }: { themes: SettingsTheme[] }) {
   return (
-    <Section title="Theme gallery" description="Brand authority projected into reusable product themes.">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {themes.map((theme) => (
-          <article key={theme.id} className="overflow-hidden rounded-xl border border-border/70 bg-muted/10">
-            <div className="relative h-28 border-b border-border/70 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.09),transparent_45%),linear-gradient(135deg,rgba(255,255,255,0.02),rgba(255,255,255,0.06))]">
-              <div className="absolute inset-x-4 bottom-4 flex gap-1.5">
-                {theme.swatches.map((swatch) => (
-                  <span
-                    key={swatch}
-                    className="size-6 rounded-full border border-white/15 shadow-sm"
-                    style={{ backgroundColor: swatch }}
-                    title={swatch}
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="p-3.5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-[12px] font-medium">{theme.name}</div>
-                  <div className="mt-1 text-[10px] text-muted-foreground">{theme.category}</div>
+    <>
+      <AppearancePreferences />
+      <Section title="Theme gallery" description="Brand authority projected into reusable product themes.">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {themes.map((theme) => (
+            <article key={theme.id} className="overflow-hidden rounded-xl border border-border/70 bg-muted/10">
+              <div className="relative h-28 border-b border-border/70 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.09),transparent_45%),linear-gradient(135deg,rgba(255,255,255,0.02),rgba(255,255,255,0.06))]">
+                <div className="absolute inset-x-4 bottom-4 flex gap-1.5">
+                  {theme.swatches.map((swatch) => (
+                    <span
+                      key={swatch}
+                      className="size-6 rounded-full border border-white/15 shadow-sm"
+                      style={{ backgroundColor: swatch }}
+                      title={swatch}
+                    />
+                  ))}
                 </div>
-                {theme.active && <StatusPill status="healthy" label="Active" />}
               </div>
-              <code className="mt-3 block truncate text-[9px] text-muted-foreground">{theme.packageName}</code>
-            </div>
-          </article>
-        ))}
-      </div>
-    </Section>
+              <div className="p-3.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-[12px] font-medium">{theme.name}</div>
+                    <div className="mt-1 text-[10px] text-muted-foreground">{theme.category}</div>
+                  </div>
+                  {theme.active && <StatusPill status="healthy" label="Active" />}
+                </div>
+                <code className="mt-3 block truncate text-[9px] text-muted-foreground">{theme.packageName}</code>
+              </div>
+            </article>
+          ))}
+        </div>
+      </Section>
+    </>
   );
 }
 
@@ -906,6 +909,7 @@ function GeneralView({ snapshot }: { snapshot: SettingsSnapshot }) {
           <PreferenceRow label="Runtime" description="Current execution host." value={snapshot.general.runtime} />
         </div>
       </Section>
+      <AppearancePreferences />
       <Section title="Application" description="Local preferences stay compact and explicit.">
         <div className="rounded-lg border border-border/70 px-3">
           <PreferenceRow label="Update channel" description="Desktop and package update cadence." value={snapshot.general.updateChannel} />
@@ -914,6 +918,92 @@ function GeneralView({ snapshot }: { snapshot: SettingsSnapshot }) {
         </div>
       </Section>
     </>
+  );
+}
+
+const SHELL_APPEARANCE_KEY = "agentsam-shell-appearance-v1";
+const SHELL_ACCENTS = [
+  { id: "#8B5CF6", label: "Violet" },
+  { id: "#2563EB", label: "Blue" },
+  { id: "#0D9488", label: "Teal" },
+  { id: "#BE185D", label: "Rose" },
+] as const;
+
+function AppearancePreferences() {
+  const [theme, setTheme] = useState<"dark" | "light" | "system">("dark");
+  const [accent, setAccent] = useState(SHELL_ACCENTS[1].id);
+
+  useEffect(() => {
+    try {
+      const raw = JSON.parse(localStorage.getItem(SHELL_APPEARANCE_KEY) ?? "{}");
+      if (raw.theme === "dark" || raw.theme === "light" || raw.theme === "system") setTheme(raw.theme);
+      if (typeof raw.accent === "string" && /^#[0-9a-f]{6}$/i.test(raw.accent)) setAccent(raw.accent);
+    } catch {
+      /* defaults */
+    }
+  }, []);
+
+  function commit(nextTheme: typeof theme, nextAccent: string) {
+    setTheme(nextTheme);
+    setAccent(nextAccent);
+    localStorage.setItem(SHELL_APPEARANCE_KEY, JSON.stringify({ theme: nextTheme, accent: nextAccent }));
+    window.dispatchEvent(
+      new CustomEvent("agentsam:shell-appearance", { detail: { theme: nextTheme, accent: nextAccent } }),
+    );
+  }
+
+  return (
+    <Section
+      title="Appearance"
+      description="Shell theme and accent live here — not in the account overflow menu."
+    >
+      <div className="rounded-lg border border-border/70 px-3 py-3">
+        <div className="mb-3">
+          <div className="text-[11px] font-medium">Color mode</div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {(["dark", "light", "system"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => commit(mode, accent)}
+                className={cx(
+                  "h-8 rounded-md border px-3 text-[10px] font-medium capitalize",
+                  theme === mode
+                    ? "border-foreground/30 bg-muted text-foreground"
+                    : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                )}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div className="text-[11px] font-medium">Accent</div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {SHELL_ACCENTS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => commit(theme, option.id)}
+                className={cx(
+                  "inline-flex h-8 items-center gap-2 rounded-md border px-3 text-[10px] font-medium",
+                  accent === option.id
+                    ? "border-foreground/30 bg-muted text-foreground"
+                    : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                )}
+              >
+                <span className="size-3 rounded-full" style={{ background: option.id }} />
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="mt-3 text-[10px] text-muted-foreground">
+          Prefer product themes from the Themes unit for gallery projections. Accent here only tints shell chrome.
+        </p>
+      </div>
+    </Section>
   );
 }
 

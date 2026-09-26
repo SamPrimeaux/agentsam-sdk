@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, type NavMode, type NavTheme, type NavValue } from '@inneranimalmedia/agentsam-nav';
-import { BookOpen, Folder, Globe, Layers, Settings, SquareTerminal, SunMoon, Palette, Pin, Files, Copy, PanelRight } from 'lucide-react';
+import { BookOpen, Folder, Globe, KeyRound, Layers, Settings, Palette, Pin, Files, Copy, PanelRight } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CommandPalette } from '@/components/workbench/command-palette';
-import { SettingsDialog } from '@/components/workbench/settings-dialog';
 import { CliDrawer } from '@/components/shell/cli-drawer';
 import { OfflineBanner } from '@/components/shell/offline-banner';
 import { useWorkStore } from '@/lib/work/store';
@@ -16,6 +15,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import './shell.css';
 import { AnnotationHelper } from './AnnotationHelper';
 
+const APPEARANCE_KEY = 'agentsam-shell-appearance-v1';
 const accents = ['#8B5CF6', '#2563EB', '#0D9488', '#BE185D'];
 
 /** App adapter: routing, persistence and business state stay out of agentsam-nav. */
@@ -39,20 +39,21 @@ export function AgentSamShell() {
     const stop = useWorkStore.persist.onFinishHydration(() => useWorkStore.getState().setHydrated(true));
     if (useWorkStore.persist.hasHydrated()) useWorkStore.getState().setHydrated(true);
     try {
-      const settings = JSON.parse(localStorage.getItem('agentsam-shell-appearance-v1') ?? '{}');
+      const settings = JSON.parse(localStorage.getItem(APPEARANCE_KEY) ?? '{}');
       if (['dark', 'light', 'system'].includes(settings.theme)) setTheme(settings.theme);
       if (/^#[0-9a-f]{6}$/i.test(settings.accent ?? '')) setAccent(settings.accent);
     } catch { /* Appearance falls back to the supplied brand defaults. */ }
     return stop;
   }, []);
-  const appearance = (nextTheme: NavTheme, nextAccent: string) => {
-    setTheme(nextTheme); setAccent(nextAccent);
-    localStorage.setItem('agentsam-shell-appearance-v1', JSON.stringify({ theme: nextTheme, accent: nextAccent }));
-  };
   useEffect(() => {
     const onNavigate = (event: Event) => {
       const detail = (event as CustomEvent<{ to?: string; params?: Record<string, string> }>).detail;
       if (detail?.to) void navigate({ to: detail.to, params: detail.params } as never);
+    };
+    const onAppearance = (event: Event) => {
+      const detail = (event as CustomEvent<{ theme?: NavTheme; accent?: string }>).detail;
+      if (detail?.theme && ['dark', 'light', 'system'].includes(detail.theme)) setTheme(detail.theme);
+      if (detail?.accent && /^#[0-9a-f]{6}$/i.test(detail.accent)) setAccent(detail.accent);
     };
     const onKey = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey)) return;
@@ -60,10 +61,24 @@ export function AgentSamShell() {
       if (event.key.toLowerCase() === 'n' && !event.shiftKey) { event.preventDefault(); useWorkStore.getState().startTrail(); void navigate({ to: '/agentsam' }); }
     };
     const online = () => { void useWorkStore.getState().flushOfflineQueue(); };
-    window.addEventListener('agentsam:navigate', onNavigate); window.addEventListener('keydown', onKey); window.addEventListener('online', online);
+    window.addEventListener('agentsam:navigate', onNavigate);
+    window.addEventListener('agentsam:shell-appearance', onAppearance);
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('online', online);
     if (navigator.onLine) online();
-    return () => { window.removeEventListener('agentsam:navigate', onNavigate); window.removeEventListener('keydown', onKey); window.removeEventListener('online', online); };
+    return () => {
+      window.removeEventListener('agentsam:navigate', onNavigate);
+      window.removeEventListener('agentsam:shell-appearance', onAppearance);
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('online', online);
+    };
   }, [navigate]);
+  // Legacy settingsOpen callers → real Settings product routes (no jank dialog).
+  useEffect(() => {
+    if (!state.settingsOpen) return;
+    state.setSettingsOpen(false);
+    void navigate({ to: '/settings/general' as never });
+  }, [state.settingsOpen, state, navigate]);
 
   const value: NavValue = {
     brand, mode, onModeChange: setMode,
@@ -85,10 +100,9 @@ export function AgentSamShell() {
     onPinConversation: state.pinTrail, onRenameConversation: state.renameTrail,
     onShare: trail ? () => setSharing(true) : undefined,
     accountActions: [
-      { id: 'settings', label: 'Account & preferences', icon: <Settings />, onSelect: () => state.setSettingsOpen(true) },
-      { id: 'theme', label: theme === 'dark' ? 'Switch to light' : 'Switch to dark', icon: <SunMoon />, onSelect: () => appearance(theme === 'dark' ? 'light' : 'dark', accent) },
-      { id: 'system', label: 'Use system appearance', icon: <SunMoon />, onSelect: () => appearance('system', accent) },
-      ...accents.map((color, index) => ({ id: color, label: `${['Violet', 'Blue', 'Teal', 'Rose'][index]} accent${accent === color ? ' · selected' : ''}`, icon: <Palette />, onSelect: () => appearance(theme, color) })),
+      { id: 'settings', label: 'Account & preferences', icon: <Settings />, onSelect: () => go('/settings/general') },
+      { id: 'appearance', label: 'Themes & appearance', icon: <Palette />, onSelect: () => go('/settings/themes') },
+      { id: 'keys', label: 'Keys & secrets', icon: <KeyRound />, onSelect: () => go('/settings/keys') },
     ],
     projectActions: [
       { id: 'home', label: 'Project home', icon: <Folder />, onSelect: () => go('/projects') },
@@ -110,7 +124,7 @@ export function AgentSamShell() {
       <Nav.Sidenav /><div className="agentsam-main">
         {!isConversation ? <Nav.Topbar><Nav.TopbarLogo toggle /><span>{pathname.startsWith('/cad') ? 'CAD Creator' : pathname.startsWith('/cms') ? 'Sites' : pathname.startsWith('/artifacts') ? 'Library' : pathname.split('/')[1].replace(/^./, (letter) => letter.toUpperCase())}</span><Nav.TopbarSpacer /><Nav.AccountSwitcher /></Nav.Topbar> : null}
         <OfflineBanner /><main className="agentsam-route"><Outlet /></main>
-      </div><CliDrawer /><CommandPalette /><SettingsDialog />
+      </div><CliDrawer /><CommandPalette />
       <Dialog open={sharing} onOpenChange={setSharing}><DialogContent><DialogTitle>Share conversation</DialogTitle><DialogDescription>Copy this conversation as text to share it. This does not create a public link.</DialogDescription><button type="button" className="as-nav-button" onClick={() => { if (!trail) return; void navigator.clipboard.writeText(trail.messages.map((item) => `${item.role}\n${item.content}`).join('\n\n')).then(() => { toast('Conversation copied'); setSharing(false); }, () => toast('Could not copy conversation')); }}><Copy size={18} />Copy conversation</button></DialogContent></Dialog>
       <AnnotationHelper />
       <Toaster theme={theme === 'light' ? 'light' : 'dark'} position="bottom-center" />

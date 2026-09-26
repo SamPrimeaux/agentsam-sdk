@@ -3,7 +3,6 @@ import { Outlet, useNavigate } from "@tanstack/react-router";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CommandPalette } from "@/components/workbench/command-palette";
-import { SettingsDialog } from "@/components/workbench/settings-dialog";
 import { NavRail } from "@/components/shell/nav-rail";
 import { OfflineBanner } from "@/components/shell/offline-banner";
 import { CliDrawer } from "@/components/shell/cli-drawer";
@@ -85,6 +84,15 @@ export function AppShellFrame() {
     return () => window.removeEventListener("keydown", onKey);
   }, [navigate]);
 
+  // Legacy settingsOpen → real Settings product (no jank dialog).
+  const settingsOpen = useWorkStore((s) => s.settingsOpen);
+  const setSettingsOpen = useWorkStore((s) => s.setSettingsOpen);
+  useEffect(() => {
+    if (!settingsOpen) return;
+    setSettingsOpen(false);
+    void navigate({ to: "/settings/general" as never });
+  }, [settingsOpen, setSettingsOpen, navigate]);
+
   return (
     <TooltipProvider>
       <Nav.Provider defaultOpen mobileBreakpoint={768} peekable resizable>
@@ -101,7 +109,6 @@ export function AppShellFrame() {
           </div>
           <CliDrawer />
           <CommandPalette />
-          <SettingsDialog />
           <Toaster
             theme="dark"
             position="bottom-center"
