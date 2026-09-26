@@ -8,12 +8,17 @@
   "package": "@inneranimalmedia/agentsam-database-editor",
   "icon": "database",
   "entrypoints": {
-    "cli": "./bin/agentsam-database-editor.mjs"
+    "cli": "./bin/agentsam-database-editor.mjs",
+    "frontend": "./frontend",
+    "backend": "./backend"
   },
   "install": {
     "supported": true,
     "selector": "database-editor",
-    "paths": ["/install/database", "/install/database-editor"],
+    "paths": [
+      "/install/database",
+      "/install/database-editor"
+    ],
     "command": "agentsam app install database-editor",
     "curl": "curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --app-id database-editor"
   },
@@ -23,13 +28,16 @@
   },
   "routes": {
     "home": "/database",
-    "connections": "/database/connections",
-    "vectors": "/database/vectors"
+    "connections": "/database?view=connections",
+    "vectors": "/database/vectors",
+    "metrics": "/database?view=overview"
   },
   "capabilities": [
     "database.inspect",
     "database.query",
     "database.edit",
+    "database.metrics",
+    "database.connections",
     "vectors.inspect"
   ],
   "empty_state": {
@@ -38,5 +46,27 @@
     "primary_label": "Open local database",
     "secondary_label": "Connect database"
   },
-  "bin": "bin/agentsam-database-editor.mjs"
+  "bin": "bin/agentsam-database-editor.mjs",
+  "providers": {
+    "cloudflare-d1": {
+      "engine": "sqlite",
+      "auth": "oauth-or-binding",
+      "metrics": "cloudflare-graphql"
+    },
+    "supabase-postgres": {
+      "engine": "postgres",
+      "auth": "host-connection",
+      "metrics": "postgres"
+    },
+    "hyperdrive-postgres": {
+      "engine": "postgres",
+      "auth": "worker-binding",
+      "metrics": "postgres"
+    },
+    "local-sqlite": {
+      "engine": "sqlite",
+      "auth": "local-runtime",
+      "metrics": "local"
+    }
+  }
 }
