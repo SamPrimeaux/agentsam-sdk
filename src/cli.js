@@ -54,9 +54,15 @@ import { runUpdate } from './commands/update.js';
 import { runSetup } from './commands/setup.js';
 import { applyPresetSelection, runAdd, runCapabilities, runDev, runInspect } from './commands/product.js';
 import { listPresets, resolvePreset } from './presets/index.js';
+import {
+  guidanceForRunTarget,
+  listInitProjectTypeOptions,
+  parseProjectTypeChoice,
+  RUN_TARGET_OPTIONS,
+} from './lib/init-options.js';
+import { resolveAccountAuth } from './lib/account-session.js';
 import fs from 'node:fs';
 import { repositoryRoot } from './knowledge/config.js';
-import { resolveAccountAuth } from './lib/account-session.js';
 import { renderDiagnosticError } from './errors/index.js';
 import { renderHelpOverview, runHelp } from './ui/cli/help.js';
 import { hydrateSecureCredentials } from './security/local-vault.js';
@@ -119,7 +125,8 @@ function printLegacyHelp() {
     agentsam logout            Sign out locally; provider credentials stay untouched
     agentsam whoami [--json]   Authenticated account identity + safe credential status
     agentsam terminal identity [--json]   This machine's hostname, platform, arch, and model
-    agentsam terminal enroll [--instance <id>] [--endpoint <url>] [--json]
+    agentsam terminal enroll --instance <id> [--pair] [--json]
+                                          Mint connection_token; --pair runs ExecOS enroll (no bridge key)
     agentsam resume [session]  Resume a saved Agent Sam session; omit id for picker
     agentsam eval context      Offline context-strategy/economics fixtures (--help)
     agentsam cloudflare        Capabilities: workflows, scanner, tags, tag-gateway, brand, keyless (+ Wrangler reads)
@@ -252,6 +259,7 @@ async function runLocalInit(config) {
   ✓ SQLite       ${db.dbPath} (${db.tables.length} tables)
   ✓ Local API    Node · http://127.0.0.1:8787
   ✓ Agent Sam     interactive CLI ready
+  ✓ Run target   ${meta.runTarget}
 
   Next:`);
   console.log(`    cd ${meta.projectName}`);
@@ -259,10 +267,19 @@ async function runLocalInit(config) {
     console.log(`    ${step}`);
   }
 
-
-  console.log(`
-  Local means local: no Worker, tunnel, IAM login, or cloud database is required.
+  if (meta.runTarget === 'local') {
+    console.log(`
+  Local is ready on this host. Cloudflare OAuth, GCP OAuth, and Docker are available when you want them:
+    agentsam connections setup · agentsam google-cloud doctor · agentsam dockerize
   `);
+  } else {
+    console.log(`
+  Guided path for ${meta.runTarget}:`);
+    for (const step of guidanceForRunTarget(meta.runTarget, { projectName: meta.projectName })) {
+      console.log(`    ${step}`);
+    }
+    console.log('');
+  }
   return { dir, meta };
 }
 
@@ -285,38 +302,60 @@ async function initInteractive(partial = {}) {
     },
   }));
 
-  const laneKey = partial.lane || pick(await select({
-    message: 'Project type',
-    initialValue: 'fullstack',
-    options: [
-      { value: 'fullstack', label: 'Full Stack' },
-      { value: 'cms', label: 'CMS' },
-      { value: 'data', label: 'Data Solutions' },
-      { value: 'crm', label: 'Customer Management' },
-      { value: 'creative', label: 'Creative & Design' },
-    ],
+  const typeOptions = listInitProjectTypeOptions();
+  const typeChoice = partial.projectType || pick(await select({
+    message: 'What do you want to build?',
+    initialValue: typeOptions[0]?.value || 'preset:fullstack',
+    options: typeOptions.map((row) => ({
+      value: row.value,
+      label: row.label,
+      hint: row.hint,
+    })),
   }));
+  const parsed = parseProjectTypeChoice(typeChoice) || { kind: 'preset', id: 'fullstack' };
+
+  if (parsed.kind === 'scaffold') {
+    const { runScaffold } = await import('./lib/scaffold/index.js');
+    await runScaffold(parsed.id);
+    outro(`Scaffold ${parsed.id} ready`);
+    return;
+  }
+
+  if (parsed.kind === 'app') {
+    const targetDir = path.resolve(process.cwd(), projectName);
+    console.log(`\n  Scaffolding app ${parsed.id} → ${targetDir}\n`);
+    await runApp(['scaffold', parsed.id, targetDir]);
+    outro(`App ${parsed.id} scaffolded at ${projectName}`);
+    return;
+  }
+
+  const preset = resolvePreset(parsed.id);
+  const laneKey = preset.lane || preset.id;
 
   const runTarget = partial.runTarget || pick(await select({
-    message: 'Future deploy target',
+    message: 'Where will this run?',
     initialValue: 'local',
-    options: [
-      { value: 'local', label: 'Local only / decide later' },
-      { value: 'cloudflare', label: 'Cloudflare later' },
-      { value: 'gcp', label: 'GCP later' },
-    ],
+    options: RUN_TARGET_OPTIONS.map((row) => ({
+      value: row.value,
+      label: row.label,
+      hint: row.hint,
+    })),
   }));
 
   if (runTarget !== 'local') {
     const { detectContext, missingForInit } = await import('./lib/detect-context.js');
     const ctx = await detectContext();
-    if (missingForInit(ctx, resolveAccountAuth({ env: process.env }).value, { runTarget }).length) {
-      printContextSummary(ctx);
+    const missing = missingForInit(ctx, resolveAccountAuth({ env: process.env }).value, { runTarget });
+    printContextSummary(ctx);
+    if (missing.length) {
+      console.log(`  Missing for ${runTarget}: ${missing.join(', ')}`);
+      console.log('  Use the guided commands printed after scaffold — the tooling is already shipped.\n');
     }
   }
 
-  await runLocalInit({ projectName, lane: laneKey, runTarget, prompt: null });
-  outro(`Created ${projectName}`);
+  const created = await runLocalInit({ projectName, lane: laneKey, runTarget, prompt: null });
+  applyPresetSelection(created.dir, preset);
+  outro(`Created ${projectName} (${preset.id} · ${runTarget})`);
 }
 
 async function initFromArgs(argv) {
@@ -360,7 +399,7 @@ if (command === '--version' || command === '-v') {
   try {
     const opts = parseCreateArgs(rest);
     if (opts.help || !opts.projectName) {
-      console.log(`agentsam create <name> --preset <${listPresets().map((row) => row.id).join('|')}> [--target local|cloudflare|gcp]`);
+      console.log(`agentsam create <name> --preset <${listPresets().map((row) => row.id).join('|')}> [--target local|cloudflare|gcp|docker]`);
     } else {
       const preset = resolvePreset(opts.preset);
       const created = await runLocalInit({ projectName: opts.projectName, lane: preset.lane, runTarget: opts.runTarget, prompt: null });

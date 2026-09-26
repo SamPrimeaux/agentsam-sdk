@@ -1,6 +1,5 @@
 /**
- * Local-first scaffold — no IAM, no Cloudflare, no OAuth.
- * Prove the project locally; `agentsam deploy` adds cloud adapters only when requested.
+ * Local-first scaffold — prove locally, then graduate with real Cloudflare / GCP / Docker tooling.
  */
 
 import pkg from '../../package.json' with { type: 'json' };
@@ -40,9 +39,11 @@ const RUN_TARGETS = {
   '1': 'local',
   '2': 'cloudflare',
   '3': 'gcp',
+  '4': 'docker',
   local: 'local',
   cloudflare: 'cloudflare',
   gcp: 'gcp',
+  docker: 'docker',
 };
 
 export { LANE_KEYS, LANE_LABELS, RUN_TARGETS };
@@ -184,10 +185,13 @@ npm run ollama:status           # probe local Ollama + models
 
 The local SQLite database lives at \`.agentsam/data/agentsam.sqlite\` and is initialized from \`db/schema.sql\`.
 
-When you're intentionally ready to add cloud infrastructure:
+When you're ready to run on Cloudflare, GCP, or Docker (all supported end-to-end):
 
 \`\`\`bash
-npx agentsam deploy
+npx agentsam connections setup   # Cloudflare OAuth (Local Studio)
+npx agentsam google-cloud doctor # GCP OAuth / gcloud
+npx agentsam dockerize           # Containerize this project
+npx agentsam deploy              # Cloudflare Worker graduation
 \`\`\`
 `,
     },
@@ -416,7 +420,16 @@ No Worker or cloud account is required for local development.
 npm run deploy
 \`\`\`
 
-Selected future deploy target: **${runTarget}**. Cloud-specific adapters and credentials belong to deploy time, not local init.
+Selected run target: **${runTarget}**.
+
+| Target | Proven path |
+| --- | --- |
+| local | SQLite + local API on this host |
+| cloudflare | Local Studio CF OAuth · \`agentsam connections\` · \`agentsam deploy\` |
+| gcp | \`agentsam google-cloud\` OAuth / gcloud |
+| docker | \`agentsam dockerize\` compose/build/run |
+
+Cloud adapters and credentials are configured with those commands — not left as aspirational flags.
 `,
     },
   ];
@@ -432,6 +445,35 @@ export function buildLocalScaffoldMeta(body, sdkVersion = pkg.version) {
   const laneLabel = LANE_LABELS[laneKey] || 'Full Stack';
   const agent = AGENT_FOR_LANE[laneKey] || 'orchestrator';
   const runTarget = normalizeRunTarget(body.runTarget || body.run_target || 'local');
+  const nextByTarget = {
+    local: [
+      'npm install',
+      'npm run smoke',
+      'npm run status',
+      'npm run dev',
+      'npx agentsam',
+      'Optional: npm run pty · npm run ollama:setup',
+    ],
+    cloudflare: [
+      'npm install',
+      'npm run smoke',
+      'agentsam connections setup',
+      'agentsam cloudflare',
+      'npm run deploy',
+    ],
+    gcp: [
+      'npm install',
+      'npm run smoke',
+      'agentsam google-cloud doctor',
+      'agentsam google-cloud auth',
+      'agentsam compute',
+    ],
+    docker: [
+      'npm install',
+      'npx agentsam dockerize',
+      'docker compose up --build',
+    ],
+  };
 
   return {
     projectName,
@@ -440,16 +482,6 @@ export function buildLocalScaffoldMeta(body, sdkVersion = pkg.version) {
     agent,
     runTarget,
     files: buildLocalScaffoldFiles({ projectName, laneKey, laneLabel, agent, runTarget, sdkVersion }),
-    next_steps: [
-      'npm install',
-      'npm run smoke',
-      'npm run status',
-      'npm run dev',
-      'npx agentsam',
-      'npm run db:status',
-      'Optional free/local models: npm run ollama:setup',
-      'Optional: npm run pty',
-      'When ready for cloud: npm run deploy',
-    ],
+    next_steps: nextByTarget[runTarget] || nextByTarget.local,
   };
 }

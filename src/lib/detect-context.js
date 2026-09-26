@@ -337,8 +337,14 @@ export function printContextSummary(ctx) {
 /** @param {Awaited<ReturnType<typeof detectContext>>} ctx @param {string} [presetToken] @param {{ runTarget?: string }} [opts] */
 export function missingForInit(ctx, presetToken = '', opts = {}) {
   const runTarget = opts.runTarget || 'local';
-  if (runTarget === 'local') return [];
+  if (runTarget === 'local' || runTarget === 'docker') return [];
   const missing = [];
   if (!ctx.iam.ready) missing.push('iam');
+  if (runTarget === 'cloudflare' && ctx.cloudflare && ctx.cloudflare.ok === false) {
+    missing.push('cloudflare_oauth');
+  }
+  if (runTarget === 'gcp' && !ctx.gcp) {
+    missing.push('gcloud_or_vm');
+  }
   return missing;
 }

@@ -48,7 +48,7 @@ test('enroll posts canonical identity for the instance the caller named', async 
     }),
     postJson: async (_path, posted) => {
       body = posted;
-      return { instance_id: 'tinst_sams_imac', connection_id: 'conn_mac_local', enrollment_token_id: 'tenr_test' };
+      return { instance_id: 'tinst_sams_imac', connection_id: 'conn_mac_local', enrollment_token_id: 'tenr_test', enrollment_token: 'tok_test' };
     },
   });
   assert.equal(result.enrolled, true);
@@ -57,6 +57,27 @@ test('enroll posts canonical identity for the instance the caller named', async 
   assert.equal(body.arch, 'arm64');
   assert.equal(body.hw_model, 'Mac16,2');
   assert.equal(body.kind, 'local_device');
+});
+
+test('enroll --pair consumes the token via ExecOS enroll (connection_token, not bridge)', async () => {
+  let pairedToken = null;
+  const result = await runTerminal(['enroll', '--instance', 'tinst_sams_imac', '--pair', '--json'], {
+    write: () => {},
+    collectIdentity: async () => ({ hostname: 'box', platform: 'macos', arch: 'arm64', model: 'Mac16,2' }),
+    postJson: async () => ({
+      instance_id: 'tinst_sams_imac',
+      connection_id: 'conn_mac_local',
+      enrollment_token: 'tok_pair',
+      endpoint_url: 'https://localpty.inneranimalmedia.com',
+    }),
+    pairImpl: async (token) => {
+      pairedToken = token;
+      return { ok: true };
+    },
+  });
+  assert.equal(pairedToken, 'tok_pair');
+  assert.equal(result.paired, true);
+  assert.equal(result.auth_mode, 'connection_token');
 });
 
 test('normalizer matches the worker vocabulary', () => {
