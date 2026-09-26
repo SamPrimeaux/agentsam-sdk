@@ -134,7 +134,7 @@ export function FilesStage({ tab }: { tab: SideTab }) {
   const [creating, setCreating] = useState(false);
   const [path, setPath] = useState("src/untitled.ts");
   const [mobileList, setMobileList] = useState(!selected);
-  const [openDirs, setOpenDirs] = useState<Set<string>>(() => new Set(["src", "public", "functions", ".github"]));
+  const [openDirs, setOpenDirs] = useState<Set<string>>(() => new Set());
   const [mounted, setMounted] = useState(false);
   const [fsError, setFsError] = useState<string | null>(null);
   const [conflict, setConflict] = useState<string | null>(null);

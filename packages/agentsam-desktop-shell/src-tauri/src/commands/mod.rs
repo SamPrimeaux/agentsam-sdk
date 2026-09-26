@@ -1,3 +1,4 @@
+pub mod auth_pkce;
 pub mod deep_link;
 pub mod keychain;
 pub mod local_node;

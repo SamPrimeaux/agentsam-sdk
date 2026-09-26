@@ -4,7 +4,7 @@
 mod commands;
 mod tray;
 
-use commands::{deep_link, keychain, local_node, updater};
+use commands::{auth_pkce, deep_link, keychain, local_node, updater};
 
 fn main() {
     tauri::Builder::default()
@@ -22,6 +22,7 @@ fn main() {
             deep_link::handle_callback,
             updater::check_for_update,
             local_node::enroll_as_local_node,
+            auth_pkce::start_agentsam_pkce_login,
         ])
         .run(tauri::generate_context!())
         .expect("error while running agentsam desktop shell");

@@ -474,6 +474,9 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
   term.writeln(
     "AgentSam CLI  ·  Scratch (virtual)  ·  type help",
   );
+  term.writeln(
+    "First time? Type setup  — AgentSam guides you one prompt at a time.",
+  );
   prompt();
 
   const flushEnter = () => {
