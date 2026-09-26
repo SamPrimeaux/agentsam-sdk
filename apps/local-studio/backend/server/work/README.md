@@ -46,6 +46,7 @@ Product routes are flat:
 - `/mail`
 - `/artifacts`
 - `/artifacts/tickets`
+- `/artifacts/tickets/:ticketId`
 - `/projects`
 - `/projects/:projectId`
 
