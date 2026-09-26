@@ -125,6 +125,26 @@ const ApiGithubRoute = ApiGithubRouteImport.update({
   path: '/api/github',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsArtifactsIndexRoute = appsArtifactsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => appsArtifactsRoute,
+} as any)
+const appsArtifactsTicketsRoute = appsArtifactsTicketsRouteImport.update({
+  id: '/tickets',
+  path: '/tickets',
+  getParentRoute: () => appsArtifactsRoute,
+} as any)
+const appsProjectsIndexRoute = appsProjectsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => appsProjectsRoute,
+} as any)
+const appsProjectsProjectIdRoute = appsProjectsProjectIdRouteImport.update({
+  id: '/$projectId',
+  path: '/$projectId',
+  getParentRoute: () => appsProjectsRoute,
+} as any)
 const appsSettingsIndexRoute = appsSettingsIndexRouteImport.update({
   id: '/',
   path: '/',
