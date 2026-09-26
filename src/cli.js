@@ -492,7 +492,7 @@ if (command === '--version' || command === '-v') {
     reportCliError(e);
     process.exitCode = 1;
   }
-} else if (command === 'runtime') {
+} else if (command === 'runtime' || command === 'agentsamd') {
   try {
     const code = await runRuntime(rest);
     if (code) process.exitCode = code;

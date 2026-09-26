@@ -85,6 +85,20 @@ async function runSetupRuntime(argv = [], options = {}) {
     return 0;
   }
 
+  if (argv.includes('--list')) {
+    if (json) {
+      write(`${JSON.stringify(RUNTIME_PROFILES, null, 2)}\n`);
+    } else {
+      writeLine(write, '');
+      writeLine(write, '  Runtime profiles');
+      for (const p of RUNTIME_PROFILES) {
+        writeLine(write, `    ${p.id.padEnd(18)} ${p.label} — ${p.description}`);
+      }
+      writeLine(write, '');
+    }
+    return 0;
+  }
+
   const plan = await planRuntimeSetup({ home, profileId });
   const planPath = writeRuntimePlanReceipt(plan, home);
   write(renderRuntimePlan(plan));

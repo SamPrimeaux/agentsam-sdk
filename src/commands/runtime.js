@@ -1,23 +1,27 @@
 /**
- * agentsam runtime — install / manage the local agentsamd daemon.
- * Distinct from `agentsam go` (agentsam-go-worker SERVICE).
+ * agentsam runtime — local machine runtime (agentsamd) install / doctor / status.
+ * Distinct from agentsam go (cloud service agentsam-go-worker).
  */
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
+import os from 'node:os';
+import { spawn, execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
-import { spawnSync } from 'node:child_process';
 import {
+  discoverRuntimeFacts,
   ensureRuntimeStateDir,
+  runtimeStateDir,
   writeRuntimeInstallReceipt,
-  RUNTIME_PROFILES,
+  RUNTIME_SETUP_SCHEMA,
 } from '../lib/setup/runtime.js';
 import { RUNTIME_PROTOCOL_SCHEMA } from '../../packages/runtime-protocol/src/index.js';
 
-const HERE = path.dirname(fileURLToPath(import.meta.url));
-const SDK_ROOT = path.resolve(HERE, '../..');
-const GO_RUNTIME = path.join(SDK_ROOT, 'apps/agentsam-go-worker/runtime');
-const AGENTSMD_PKG = 'github.com/inneranimalmedia/agentsam-go-worker/cmd/agentsamd';
+const execFileAsync = promisify(execFile);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = path.resolve(__dirname, '../..');
+const GO_RUNTIME_ROOT = path.join(REPO_ROOT, 'apps/agentsam-go-worker/runtime');
+const AGENTSAMD_MAIN = path.join(GO_RUNTIME_ROOT, 'cmd/agentsamd');
 
 function writeLine(write, value = '') {
   write(`${value}\n`);
@@ -27,12 +31,15 @@ function printHelp(write) {
   writeLine(write, '');
   writeLine(write, '  Agent Sam · runtime (agentsamd)');
   writeLine(write, '');
-  writeLine(write, '  agentsam runtime install [--yes]   build + install agentsamd + LaunchAgent');
-  writeLine(write, '  agentsam runtime status            binary + LaunchAgent status');
-  writeLine(write, '  agentsam runtime uninstall         remove LaunchAgent (keeps binary)');
+  writeLine(write, '  agentsam runtime status [--json]');
+  writeLine(write, '  agentsam runtime doctor [--json]');
+  writeLine(write, '  agentsam runtime install [--yes]   build agentsamd + install LaunchAgent/bin');
+  writeLine(write, '  agentsam runtime start');
+  writeLine(write, '  agentsam runtime stop');
+  writeLine(write, '  agentsam runtime probe');
   writeLine(write, '');
-  writeLine(write, '  Distinct from: agentsam go (agentsam-go-worker SERVICE)');
-  writeLine(write, `  Protocol: ${RUNTIME_PROTOCOL_SCHEMA} · adapter: agentsamd`);
+  writeLine(write, '  Machine daemon ≠ agentsam-go-worker (Cloudflare service).');
+  writeLine(write, '  Setup planner: agentsam setup runtime');
   writeLine(write, '');
 }
 
@@ -44,182 +51,224 @@ function agentsamdPath(home = os.homedir()) {
   return path.join(binDir(home), process.platform === 'win32' ? 'agentsamd.exe' : 'agentsamd');
 }
 
-function launchAgentPlistPath(home = os.homedir()) {
-  return path.join(home, 'Library', 'LaunchAgents', 'com.inneranimalmedia.agentsamd.plist');
+function pidPath(home = os.homedir()) {
+  return path.join(runtimeStateDir(home), 'agentsamd.pid');
 }
 
-function which(cmd) {
-  const r = spawnSync(process.platform === 'win32' ? 'where' : 'which', [cmd], { encoding: 'utf8' });
-  if (r.status !== 0) return null;
-  return String(r.stdout || '').trim().split(/\r?\n/)[0] || null;
+function listenAddr() {
+  return process.env.AGENTSAMD_LISTEN || '127.0.0.1:18765';
 }
 
-function buildAgentsamd(dest, write) {
-  if (!which('go')) {
-    return { ok: false, error: 'go_not_found', hint: 'Install Go 1.22+ or download a release binary.' };
+async function buildAgentsamd(write) {
+  if (!fs.existsSync(path.join(AGENTSAMD_MAIN, 'main.go'))) {
+    throw new Error(`agentsamd source missing at ${AGENTSAMD_MAIN}`);
   }
-  if (!fs.existsSync(path.join(GO_RUNTIME, 'go.mod'))) {
-    return { ok: false, error: 'go_runtime_missing', path: GO_RUNTIME };
-  }
-  fs.mkdirSync(path.dirname(dest), { recursive: true });
-  writeLine(write, `  Building agentsamd → ${dest}`);
-  const r = spawnSync(
-    'go',
-    ['build', '-o', dest, './cmd/agentsamd'],
-    { cwd: GO_RUNTIME, encoding: 'utf8', env: { ...process.env, CGO_ENABLED: '0' } },
-  );
-  if (r.status !== 0) {
-    return { ok: false, error: 'go_build_failed', stderr: r.stderr || r.stdout };
-  }
-  try { fs.chmodSync(dest, 0o755); } catch { /* ignore */ }
-  return { ok: true, path: dest };
+  const out = agentsamdPath();
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  writeLine(write, `  Building agentsamd → ${out}`);
+  await execFileAsync('go', ['build', '-o', out, './cmd/agentsamd'], {
+    cwd: GO_RUNTIME_ROOT,
+    env: { ...process.env, CGO_ENABLED: '0' },
+    timeout: 120000,
+  });
+  try { fs.chmodSync(out, 0o755); } catch { /* ignore */ }
+  return out;
 }
 
-function writeLaunchAgent(home, binaryPath, write) {
-  if (process.platform !== 'darwin') {
-    return { ok: true, skipped: true, reason: 'not_darwin' };
-  }
-  const plistPath = launchAgentPlistPath(home);
-  fs.mkdirSync(path.dirname(plistPath), { recursive: true });
-  const logDir = path.join(home, '.agentsam', 'runtime', 'logs');
+function writeLaunchAgent(home, binary) {
+  if (process.platform !== 'darwin') return null;
+  const label = 'com.inneranimalmedia.agentsamd';
+  const plistDir = path.join(home, 'Library', 'LaunchAgents');
+  fs.mkdirSync(plistDir, { recursive: true });
+  const plist = path.join(plistDir, `${label}.plist`);
+  const logDir = path.join(runtimeStateDir(home), 'logs');
   fs.mkdirSync(logDir, { recursive: true });
-  const plist = `<?xml version="1.0" encoding="UTF-8"?>
+  const contents = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>Label</key>
-  <string>com.inneranimalmedia.agentsamd</string>
+  <key>Label</key><string>${label}</string>
   <key>ProgramArguments</key>
   <array>
-    <string>${binaryPath}</string>
-    <string>serve</string>
+    <string>${binary}</string>
+    <string>--listen</string>
+    <string>${listenAddr()}</string>
   </array>
-  <key>RunAtLoad</key>
-  <true/>
-  <key>KeepAlive</key>
-  <true/>
-  <key>WorkingDirectory</key>
-  <string>${path.join(home, '.agentsam')}</string>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>${path.join(logDir, 'agentsamd.stdout.log')}</string>
+  <key>StandardErrorPath</key><string>${path.join(logDir, 'agentsamd.stderr.log')}</string>
   <key>EnvironmentVariables</key>
   <dict>
-    <key>PORT</key>
-    <string>8788</string>
-    <key>AGENTSAM_TARGET</key>
-    <string>local</string>
-    <key>AGENTSAM_HOME</key>
-    <string>${path.join(home, '.agentsam')}</string>
+    <key>AGENTSAMD_ROLE</key><string>machine</string>
   </dict>
-  <key>StandardOutPath</key>
-  <string>${path.join(logDir, 'agentsamd.out.log')}</string>
-  <key>StandardErrorPath</key>
-  <string>${path.join(logDir, 'agentsamd.err.log')}</string>
 </dict>
 </plist>
 `;
-  fs.writeFileSync(plistPath, plist, 'utf8');
-  writeLine(write, `  LaunchAgent  ${plistPath}`);
-  spawnSync('launchctl', ['unload', plistPath], { encoding: 'utf8' });
-  const load = spawnSync('launchctl', ['load', plistPath], { encoding: 'utf8' });
-  return {
-    ok: load.status === 0,
-    path: plistPath,
-    stderr: load.stderr || null,
-  };
+  fs.writeFileSync(plist, contents);
+  return { label, plist };
+}
+
+async function probeAgentsamd() {
+  const addr = listenAddr();
+  const url = addr.startsWith('http') ? `${addr}/health` : `http://${addr}/health`;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+    const body = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, body, url };
+  } catch (err) {
+    return { ok: false, error: String(err?.message || err), url };
+  }
+}
+
+async function startAgentsamd(home, write) {
+  const bin = agentsamdPath(home);
+  if (!fs.existsSync(bin)) throw new Error('agentsamd_not_installed');
+  const child = spawn(bin, ['--listen', listenAddr()], {
+    detached: true,
+    stdio: 'ignore',
+    env: { ...process.env, AGENTSAMD_ROLE: 'machine' },
+  });
+  child.unref();
+  ensureRuntimeStateDir(home);
+  fs.writeFileSync(pidPath(home), String(child.pid));
+  writeLine(write, `  Started agentsamd pid ${child.pid} · ${listenAddr()}`);
+  await new Promise((r) => setTimeout(r, 400));
+  return probeAgentsamd();
+}
+
+function stopAgentsamd(home, write) {
+  const file = pidPath(home);
+  if (!fs.existsSync(file)) {
+    writeLine(write, '  No pid file — nothing to stop');
+    return { ok: true, stopped: false };
+  }
+  const pid = Number(fs.readFileSync(file, 'utf8').trim());
+  try {
+    if (Number.isFinite(pid) && pid > 0) process.kill(pid, 'SIGTERM');
+  } catch {
+    /* already dead */
+  }
+  try { fs.unlinkSync(file); } catch { /* ignore */ }
+  writeLine(write, `  Stopped agentsamd${pid ? ` pid ${pid}` : ''}`);
+  return { ok: true, stopped: true, pid };
 }
 
 export async function runRuntime(argv = [], options = {}) {
   const write = options.write || ((s) => process.stdout.write(s));
+  const env = options.env || process.env;
   const home = options.home || os.homedir();
   const json = argv.includes('--json');
   const yes = argv.includes('--yes') || argv.includes('-y');
   const args = argv.filter((a) => !['--json', '--yes', '-y', 'help', '--help', '-h'].includes(a));
-  const sub = args[0] || 'help';
+  const sub = args[0] || 'status';
 
-  if (argv.includes('help') || argv.includes('--help') || argv.includes('-h') || sub === 'help') {
+  if (argv.includes('help') || argv.includes('--help') || argv.includes('-h')) {
     printHelp(write);
     return 0;
   }
 
-  if (sub === 'status') {
-    const bin = agentsamdPath(home);
-    const installed = fs.existsSync(bin);
-    const plist = launchAgentPlistPath(home);
-    const launchAgent = process.platform === 'darwin' && fs.existsSync(plist);
-    const payload = {
+  if (sub === 'status' || sub === 'doctor') {
+    const facts = await discoverRuntimeFacts({ env, home });
+    const probe = await probeAgentsamd();
+    const out = {
+      schema: RUNTIME_SETUP_SCHEMA,
       protocol: RUNTIME_PROTOCOL_SCHEMA,
-      runtime_adapter: 'agentsamd',
-      binary: installed ? bin : null,
-      installed,
-      launch_agent: launchAgent ? plist : null,
-      profiles: RUNTIME_PROFILES.map((p) => p.id),
-      go_worker_distinct: true,
+      role: 'machine_daemon',
+      product: 'agentsamd',
+      distinct_from: 'agentsam-go-worker',
+      facts,
+      listen: listenAddr(),
+      probe,
     };
-    if (json) write(`${JSON.stringify(payload, null, 2)}\n`);
-    else {
+    if (json) {
+      write(`${JSON.stringify(out, null, 2)}\n`);
+    } else {
       writeLine(write, '');
-      writeLine(write, `  agentsamd  ${installed ? `✓ ${bin}` : '○ not installed'}`);
-      writeLine(write, `  LaunchAgent ${launchAgent ? `✓ ${plist}` : process.platform === 'darwin' ? '○ not loaded' : '— (non-Darwin)'}`);
+      writeLine(write, '  Agent Sam · runtime');
+      writeLine(write, `  Protocol   ${RUNTIME_PROTOCOL_SCHEMA}`);
+      writeLine(write, `  Binary     ${facts.agentsamd.installed ? facts.agentsamd.binary : '(not installed)'}`);
+      writeLine(write, `  Listen     ${listenAddr()}`);
+      writeLine(write, `  Health     ${probe.ok ? '✓' : '○'} ${probe.ok ? probe.url : (probe.error || 'unreachable')}`);
+      if (probe.ok && probe.body?.implementation) {
+        writeLine(write, `  Impl       ${probe.body.implementation}`);
+      }
+      writeLine(write, '');
+      writeLine(write, '  Next');
+      writeLine(write, '    agentsam setup runtime');
+      writeLine(write, '    agentsam runtime install');
       writeLine(write, '');
     }
-    return installed ? 0 : 1;
+    return probe.ok || facts.agentsamd.installed ? 0 : (sub === 'doctor' ? 2 : 0);
   }
 
-  if (sub === 'uninstall') {
-    if (process.platform === 'darwin') {
-      const plist = launchAgentPlistPath(home);
-      if (fs.existsSync(plist)) {
-        spawnSync('launchctl', ['unload', plist], { encoding: 'utf8' });
-        fs.unlinkSync(plist);
-        writeLine(write, `  Removed LaunchAgent ${plist}`);
-      }
-    }
-    writeLine(write, '  Binary retained — delete ~/.agentsam/bin/agentsamd manually if desired.');
+  if (sub === 'probe') {
+    const probe = await probeAgentsamd();
+    if (json) write(`${JSON.stringify(probe, null, 2)}\n`);
+    else writeLine(write, probe.ok ? `  ✓ ${probe.url}` : `  ✕ ${probe.error || probe.url}`);
+    return probe.ok ? 0 : 2;
+  }
+
+  if (sub === 'stop') {
+    const result = stopAgentsamd(home, write);
+    if (json) write(`${JSON.stringify(result, null, 2)}\n`);
     return 0;
+  }
+
+  if (sub === 'start') {
+    const probe = await startAgentsamd(home, write);
+    if (json) write(`${JSON.stringify(probe, null, 2)}\n`);
+    else writeLine(write, probe.ok ? '  ✓ agentsamd healthy' : `  ✕ probe failed: ${probe.error || probe.status}`);
+    return probe.ok ? 0 : 2;
   }
 
   if (sub === 'install') {
     if (!yes && process.stdin.isTTY) {
-      writeLine(write, '  Installing agentsamd (local machine daemon). Pass --yes to confirm.');
+      writeLine(write, '  Pass --yes to build and install agentsamd into ~/.agentsam/bin');
     }
-    ensureRuntimeStateDir(home);
-    const dest = agentsamdPath(home);
-    const built = buildAgentsamd(dest, write);
-    if (!built.ok) {
-      if (json) write(`${JSON.stringify(built, null, 2)}\n`);
-      else {
-        writeLine(write, `  ✕ ${built.error}`);
-        if (built.stderr) writeLine(write, built.stderr.slice(0, 800));
-        if (built.hint) writeLine(write, `  ${built.hint}`);
-      }
+    if (!yes && !process.stdin.isTTY) {
+      writeLine(write, '  Non-interactive: pass --yes');
+      return 1;
+    }
+    if (!yes) {
+      // still allow interactive confirm via --yes only for simplicity in v1
+      writeLine(write, '  Re-run: agentsam runtime install --yes');
+      return 1;
+    }
+    let binary;
+    try {
+      binary = await buildAgentsamd(write);
+    } catch (err) {
+      writeLine(write, `  ✕ build failed: ${err.message || err}`);
       return 2;
     }
-    const launch = writeLaunchAgent(home, dest, write);
+    const launch = writeLaunchAgent(home, binary);
+    if (launch) writeLine(write, `  LaunchAgent  ${launch.plist}`);
+    const probe = await startAgentsamd(home, write);
     const receiptPath = writeRuntimeInstallReceipt({
+      profile_id: 'my_computer',
       product: 'agentsamd',
-      runtime_adapter: 'agentsamd',
       protocol: RUNTIME_PROTOCOL_SCHEMA,
-      binary: dest,
-      platform: process.platform,
-      arch: process.arch,
-      launch_agent: launch.path || null,
-      distinct_from: 'agentsam-go-worker',
-      package: AGENTSMD_PKG,
+      runtime_adapter: 'agentsamd',
+      binary,
+      listen: listenAddr(),
+      launch_agent: launch,
+      probe,
+      host: {
+        platform: process.platform,
+        arch: process.arch,
+        hostname: os.hostname(),
+      },
     }, home);
-    const out = { ok: true, binary: dest, launch_agent: launch, receipt: receiptPath };
-    if (json) write(`${JSON.stringify(out, null, 2)}\n`);
-    else {
-      writeLine(write, `  ✓ agentsamd installed`);
-      writeLine(write, `  Receipt  ${receiptPath}`);
-      writeLine(write, '');
-      writeLine(write, '  Next');
-      writeLine(write, '    agentsam setup runtime --profile my_computer');
-      writeLine(write, '    agentsam terminal enroll --instance <id> --endpoint <url>');
-      writeLine(write, '    agentsamd enroll --token <token>');
-      writeLine(write, '');
+    writeLine(write, `  Receipt     ${receiptPath}`);
+    writeLine(write, probe.ok ? '  ✓ agentsamd installed and healthy' : '  ○ installed; start/probe manually');
+    if (json) {
+      write(`${JSON.stringify({ binary, launch, probe, receiptPath }, null, 2)}\n`);
     }
-    return 0;
+    return probe.ok ? 0 : 2;
   }
 
   printHelp(write);
+  writeLine(write, `  Unknown subcommand: ${sub}`);
   return 1;
 }
