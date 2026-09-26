@@ -10,6 +10,14 @@ import {
   executeSetupPlan,
 } from '../lib/setup/execute.js';
 import { listCapabilityRecipes } from '../lib/setup/recipes.js';
+import {
+  planRuntimeSetup,
+  renderRuntimePlan,
+  writeRuntimePlanReceipt,
+  writeRuntimeInstallReceipt,
+  RUNTIME_PROFILES,
+} from '../lib/setup/runtime.js';
+import { runRuntime } from './runtime.js';
 
 function writeLine(write, value = '') {
   write(`${value}\n`);
@@ -22,6 +30,8 @@ function printHelp(write) {
   writeLine(write, '  agentsam setup                      interactive discover + plan');
   writeLine(write, '  agentsam setup --yes                 approve plan non-interactively');
   writeLine(write, '  agentsam setup --dry-run             plan only');
+  writeLine(write, '  agentsam setup runtime               Discover → profiles → GOAP → receipts');
+  writeLine(write, '  agentsam setup runtime --profile my_computer --yes');
   writeLine(write, '  agentsam setup image.vectorize       specific capability');
   writeLine(write, '  agentsam setup google.cloud');
   writeLine(write, '  agentsam setup google.cloud --inventory');
@@ -48,6 +58,87 @@ async function confirmProceed(write, { yes = false } = {}) {
   }
 }
 
+async function runSetupRuntime(argv = [], options = {}) {
+  const write = options.write || ((s) => process.stdout.write(s));
+  const home = options.home;
+  const json = argv.includes('--json');
+  const yes = argv.includes('--yes') || argv.includes('-y');
+  const dryRun = argv.includes('--dry-run');
+  const profileIdx = argv.findIndex((a) => a === '--profile' || a === '-p');
+  const profileId =
+    profileIdx >= 0 && argv[profileIdx + 1]
+      ? argv[profileIdx + 1]
+      : argv.find((a) => a.startsWith('--profile='))?.slice('--profile='.length) || null;
+
+  if (argv.includes('help') || argv.includes('--help') || argv.includes('-h')) {
+    writeLine(write, '');
+    writeLine(write, '  agentsam setup runtime');
+    writeLine(write, '  Profiles:');
+    for (const p of RUNTIME_PROFILES) {
+      writeLine(write, `    ${p.id.padEnd(18)} ${p.label} — ${p.description}`);
+    }
+    writeLine(write, '');
+    writeLine(write, '  agentsam setup runtime --dry-run');
+    writeLine(write, '  agentsam setup runtime --profile my_computer --yes');
+    writeLine(write, '  Receipts under ~/.agentsam/runtime/');
+    writeLine(write, '');
+    return 0;
+  }
+
+  const plan = await planRuntimeSetup({ home, profileId });
+  const planPath = writeRuntimePlanReceipt(plan, home);
+  write(renderRuntimePlan(plan));
+
+  if (json && (dryRun || !yes)) {
+    write(JSON.stringify({ plan, plan_receipt: planPath, executed: false }, null, 2) + '\n');
+    return plan.recommended?.eligible ? 0 : 2;
+  }
+
+  if (dryRun || !yes) {
+    writeLine(write, `  Plan receipt  ${planPath}`);
+    if (!yes) {
+      writeLine(write, '  Pass --yes to install agentsamd (when profile needs it) and write install receipt.');
+    }
+    writeLine(write, '');
+    return 0;
+  }
+
+  const recommended = plan.recommended;
+  if (!recommended?.eligible) {
+    writeLine(write, '  ✕ No eligible profile — resolve missing tools/capabilities first.');
+    writeLine(write, '');
+    return 2;
+  }
+
+  let installResult = null;
+  if (recommended.target.runtime_adapter === 'agentsamd') {
+    const code = await runRuntime(['install', '--yes'], { write, home });
+    installResult = { code, adapter: 'agentsamd' };
+    if (code !== 0) return code;
+  }
+
+  const receiptPath = writeRuntimeInstallReceipt({
+    product: 'agentsam-setup-runtime',
+    profile_id: recommended.profile.id,
+    target: recommended.target,
+    goap: recommended.goap,
+    install: installResult,
+    plan_receipt: planPath,
+  }, home);
+
+  writeLine(write, `  ✓ Runtime setup receipt  ${receiptPath}`);
+  writeLine(write, '');
+  if (json) {
+    write(JSON.stringify({
+      plan,
+      plan_receipt: planPath,
+      install_receipt: receiptPath,
+      executed: true,
+    }, null, 2) + '\n');
+  }
+  return 0;
+}
+
 export async function runSetup(argv = [], options = {}) {
   const write = options.write || ((s) => process.stdout.write(s));
   const env = options.env || process.env;
@@ -56,12 +147,17 @@ export async function runSetup(argv = [], options = {}) {
   const dryRun = argv.includes('--dry-run');
   const inventory = argv.includes('--inventory');
   const args = argv.filter(
-    (a) => !['--json', '--yes', '-y', '--dry-run', '--inventory', '--list', 'help', '--help', '-h'].includes(a),
+    (a) => !['--json', '--yes', '-y', '--dry-run', '--inventory', '--list', 'help', '--help', '-h', '--profile', '-p'].includes(a)
+      && !String(a).startsWith('--profile='),
   );
 
   if (argv.includes('help') || argv.includes('--help') || argv.includes('-h')) {
     printHelp(write);
     return 0;
+  }
+
+  if (args[0] === 'runtime') {
+    return runSetupRuntime(argv.filter((a) => a !== 'runtime'), options);
   }
 
   if (argv.includes('--list')) {
