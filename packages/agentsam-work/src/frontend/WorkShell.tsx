@@ -167,7 +167,13 @@ function RightRail({
         type="button"
         title="Tickets"
         data-active={surface === "tickets" || surface === "artifact-tickets"}
-        onClick={() => onNavigate("/collaborate?seg=tickets")}
+        onClick={() =>
+          onNavigate(
+            surface === "artifacts" || surface === "artifact-tickets"
+              ? "/artifacts/tickets"
+              : "/collaborate?seg=tickets",
+          )
+        }
       >
         <CheckSquare size={18} />
       </button>
