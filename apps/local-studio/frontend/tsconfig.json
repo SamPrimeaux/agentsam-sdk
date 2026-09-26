@@ -56,6 +56,9 @@
       ],
       "@inneranimalmedia/agentsam-database-editor/manifest": [
         "../../../packages/agentsam-database-editor/src/manifest.js"
+      ],
+      "@inneranimalmedia/agentsam-database-editor/frontend": [
+        "../../../packages/agentsam-database-editor/frontend/index.ts"
       ]
     },
     "allowImportingTsExtensions": true,
