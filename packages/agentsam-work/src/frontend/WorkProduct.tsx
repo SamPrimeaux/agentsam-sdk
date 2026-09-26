@@ -75,10 +75,14 @@ export function WorkProduct({
       ) : null}
       {surface === "artifact-tickets" ? (
         ticketId ? (
-          <TicketDetailSurface
-            ticket={snapshot.tickets.find((ticket) => ticket.id === ticketId) ?? snapshot.tickets[0]}
-            onNavigate={onNavigate}
-          />
+          snapshot.tickets.find((ticket) => ticket.id === ticketId) ? (
+            <TicketDetailSurface
+              ticket={snapshot.tickets.find((ticket) => ticket.id === ticketId)!}
+              onNavigate={onNavigate}
+            />
+          ) : (
+            <div className="agentsam-work-empty">Ticket not found.</div>
+          )
         ) : (
           <TicketsSurface
             tickets={snapshot.tickets}
