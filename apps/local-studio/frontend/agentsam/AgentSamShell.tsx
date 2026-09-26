@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, type NavMode, type NavTheme, type NavValue } from '@inneranimalmedia/agentsam-nav';
-import { BookOpen, Folder, Globe, Layers, Settings, Pin, Files, Copy, PanelRight } from 'lucide-react';
+import { BookOpen, Database, Folder, Globe, Layers, Settings, Pin, Files, Copy, PanelRight } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CommandPalette } from '@/components/workbench/command-palette';
@@ -91,6 +91,7 @@ export function AgentSamShell() {
       { id: 'library', label: 'Library', icon: <BookOpen />, href: '/artifacts', active: pathname === '/artifacts' },
       { id: 'sites', label: 'Sites', icon: <Globe />, href: '/cms', active: pathname === '/cms' },
       { id: 'cad', label: 'CAD', icon: <Layers />, href: '/cad', active: pathname === '/cad' },
+      { id: 'database', label: 'Database', icon: <Database />, href: '/database', active: pathname === '/database' },
       { id: 'projects', label: 'Projects', icon: <Folder />, href: '/projects', active: pathname === '/projects' },
     ],
     onNavigate: go,
