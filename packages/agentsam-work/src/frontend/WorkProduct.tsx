@@ -56,7 +56,12 @@ export function WorkProduct({
     );
   }
 
-  const rightRail = surface === "calendar" || surface === "tickets" || surface === "mail";
+  const rightRail =
+    surface === "calendar" ||
+    surface === "tickets" ||
+    surface === "mail" ||
+    surface === "artifacts" ||
+    surface === "artifact-tickets";
 
   return (
     <WorkShell
