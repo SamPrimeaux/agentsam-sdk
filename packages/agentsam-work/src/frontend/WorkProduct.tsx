@@ -93,6 +93,9 @@ export function WorkProduct({
             tickets={snapshot.tickets}
             analytics={snapshot.ticketAnalytics}
             scope="platform"
+            onOpenTicket={(ticket) =>
+              onNavigate("/artifacts/tickets/" + encodeURIComponent(ticket.id))
+            }
           />
         )
       ) : null}
