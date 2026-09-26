@@ -15,6 +15,15 @@ import {
   writeRuntimeInstallReceipt,
   RUNTIME_SETUP_SCHEMA,
 } from '../lib/setup/runtime.js';
+import {
+  DARWIN_LAUNCH_LABEL,
+  writeLaunchAgent,
+  writeWindowsScheduledTask,
+  startWindowsScheduledTask,
+  stopWindowsScheduledTask,
+  bootstrapDarwinLaunchAgent,
+  unloadDarwinLaunchAgent,
+} from '../lib/setup/runtime-persist.js';
 import { RUNTIME_PROTOCOL_SCHEMA } from '../../packages/runtime-protocol/src/index.js';
 
 const execFileAsync = promisify(execFile);
@@ -33,11 +42,12 @@ function printHelp(write) {
   writeLine(write, '');
   writeLine(write, '  agentsam runtime status [--json]');
   writeLine(write, '  agentsam runtime doctor [--json]');
-  writeLine(write, '  agentsam runtime install [--yes]   build agentsamd + install LaunchAgent/bin');
+  writeLine(write, '  agentsam runtime install [--yes]   build agentsamd + install persistence/bin');
   writeLine(write, '  agentsam runtime start');
   writeLine(write, '  agentsam runtime stop');
   writeLine(write, '  agentsam runtime probe');
   writeLine(write, '');
+  writeLine(write, '  Persistence: LaunchAgent (Mac) · Scheduled Task (Windows) · spawn+pid (Linux).');
   writeLine(write, '  Machine daemon ≠ agentsam-go-worker (Cloudflare service).');
   writeLine(write, '  Setup planner: agentsam setup runtime');
   writeLine(write, '');
@@ -59,6 +69,10 @@ function listenAddr() {
   return process.env.AGENTSAMD_LISTEN || '127.0.0.1:18765';
 }
 
+function darwinPlistPath(home) {
+  return path.join(home, 'Library', 'LaunchAgents', `${DARWIN_LAUNCH_LABEL}.plist`);
+}
+
 async function buildAgentsamd(write) {
   if (!fs.existsSync(path.join(AGENTSAMD_MAIN, 'main.go'))) {
     throw new Error(`agentsamd source missing at ${AGENTSAMD_MAIN}`);
@@ -73,40 +87,6 @@ async function buildAgentsamd(write) {
   });
   try { fs.chmodSync(out, 0o755); } catch { /* ignore */ }
   return out;
-}
-
-function writeLaunchAgent(home, binary) {
-  if (process.platform !== 'darwin') return null;
-  const label = 'com.inneranimalmedia.agentsamd';
-  const plistDir = path.join(home, 'Library', 'LaunchAgents');
-  fs.mkdirSync(plistDir, { recursive: true });
-  const plist = path.join(plistDir, `${label}.plist`);
-  const logDir = path.join(runtimeStateDir(home), 'logs');
-  fs.mkdirSync(logDir, { recursive: true });
-  const contents = `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key><string>${label}</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>${binary}</string>
-    <string>--listen</string>
-    <string>${listenAddr()}</string>
-  </array>
-  <key>RunAtLoad</key><true/>
-  <key>KeepAlive</key><true/>
-  <key>StandardOutPath</key><string>${path.join(logDir, 'agentsamd.stdout.log')}</string>
-  <key>StandardErrorPath</key><string>${path.join(logDir, 'agentsamd.stderr.log')}</string>
-  <key>EnvironmentVariables</key>
-  <dict>
-    <key>AGENTSAMD_ROLE</key><string>machine</string>
-  </dict>
-</dict>
-</plist>
-`;
-  fs.writeFileSync(plist, contents);
-  return { label, plist };
 }
 
 async function probeAgentsamd() {
@@ -124,10 +104,35 @@ async function probeAgentsamd() {
 async function startAgentsamd(home, write) {
   const bin = agentsamdPath(home);
   if (!fs.existsSync(bin)) throw new Error('agentsamd_not_installed');
+
+  if (process.platform === 'win32') {
+    try {
+      await startWindowsScheduledTask();
+      writeLine(write, `  Started Scheduled Task · ${listenAddr()}`);
+      await new Promise((r) => setTimeout(r, 600));
+      return probeAgentsamd();
+    } catch (err) {
+      writeLine(write, `  ○ Scheduled Task start failed (${err.message || err}); falling back to spawn`);
+    }
+  }
+
+  if (process.platform === 'darwin') {
+    const plist = darwinPlistPath(home);
+    if (fs.existsSync(plist)) {
+      const boot = await bootstrapDarwinLaunchAgent(plist);
+      if (boot.ok) {
+        writeLine(write, `  Loaded LaunchAgent ${DARWIN_LAUNCH_LABEL}`);
+        await new Promise((r) => setTimeout(r, 400));
+        return probeAgentsamd();
+      }
+    }
+  }
+
   const child = spawn(bin, ['--listen', listenAddr()], {
     detached: true,
     stdio: 'ignore',
     env: { ...process.env, AGENTSAMD_ROLE: 'machine' },
+    windowsHide: true,
   });
   child.unref();
   ensureRuntimeStateDir(home);
@@ -137,10 +142,29 @@ async function startAgentsamd(home, write) {
   return probeAgentsamd();
 }
 
-function stopAgentsamd(home, write) {
+async function stopAgentsamd(home, write) {
+  if (process.platform === 'win32') {
+    try {
+      await stopWindowsScheduledTask();
+      writeLine(write, '  Ended Windows Scheduled Task');
+    } catch (err) {
+      writeLine(write, `  ○ Scheduled Task end: ${err.message || err}`);
+    }
+  }
+
+  if (process.platform === 'darwin') {
+    const plist = darwinPlistPath(home);
+    if (fs.existsSync(plist)) {
+      await unloadDarwinLaunchAgent(plist);
+      writeLine(write, `  Unloaded LaunchAgent ${DARWIN_LAUNCH_LABEL}`);
+    }
+  }
+
   const file = pidPath(home);
   if (!fs.existsSync(file)) {
-    writeLine(write, '  No pid file — nothing to stop');
+    if (process.platform !== 'win32' && process.platform !== 'darwin') {
+      writeLine(write, '  No pid file — nothing to stop');
+    }
     return { ok: true, stopped: false };
   }
   const pid = Number(fs.readFileSync(file, 'utf8').trim());
@@ -196,7 +220,7 @@ export async function runRuntime(argv = [], options = {}) {
       writeLine(write, '');
       writeLine(write, '  Next');
       writeLine(write, '    agentsam setup runtime');
-      writeLine(write, '    agentsam runtime install');
+      writeLine(write, '    agentsam runtime install --yes');
       writeLine(write, '');
     }
     return probe.ok || facts.agentsamd.installed ? 0 : (sub === 'doctor' ? 2 : 0);
@@ -210,7 +234,7 @@ export async function runRuntime(argv = [], options = {}) {
   }
 
   if (sub === 'stop') {
-    const result = stopAgentsamd(home, write);
+    const result = await stopAgentsamd(home, write);
     if (json) write(`${JSON.stringify(result, null, 2)}\n`);
     return 0;
   }
@@ -231,7 +255,6 @@ export async function runRuntime(argv = [], options = {}) {
       return 1;
     }
     if (!yes) {
-      // still allow interactive confirm via --yes only for simplicity in v1
       writeLine(write, '  Re-run: agentsam runtime install --yes');
       return 1;
     }
@@ -242,8 +265,22 @@ export async function runRuntime(argv = [], options = {}) {
       writeLine(write, `  ✕ build failed: ${err.message || err}`);
       return 2;
     }
-    const launch = writeLaunchAgent(home, binary);
-    if (launch) writeLine(write, `  LaunchAgent  ${launch.plist}`);
+
+    const listen = listenAddr();
+    let persistence = writeLaunchAgent(home, binary, listen);
+    if (persistence) {
+      writeLine(write, `  LaunchAgent  ${persistence.plist}`);
+      const boot = await bootstrapDarwinLaunchAgent(persistence.plist);
+      if (!boot.ok && boot.error) writeLine(write, `  ○ launchctl: ${boot.error}`);
+    } else if (process.platform === 'win32') {
+      persistence = await writeWindowsScheduledTask(home, binary, listen);
+      if (persistence?.xmlPath) writeLine(write, `  Task XML    ${persistence.xmlPath}`);
+      if (persistence?.registered) writeLine(write, `  Scheduled   ${persistence.taskName}`);
+      else if (persistence?.error) writeLine(write, `  ○ schtasks: ${persistence.error}`);
+    } else {
+      writeLine(write, '  Persistence  spawn+pid (Linux — no systemd unit in this cut)');
+    }
+
     const probe = await startAgentsamd(home, write);
     const receiptPath = writeRuntimeInstallReceipt({
       profile_id: 'my_computer',
@@ -251,8 +288,10 @@ export async function runRuntime(argv = [], options = {}) {
       protocol: RUNTIME_PROTOCOL_SCHEMA,
       runtime_adapter: 'agentsamd',
       binary,
-      listen: listenAddr(),
-      launch_agent: launch,
+      listen,
+      persistence,
+      launch_agent: persistence?.kind === 'launch_agent' ? persistence : null,
+      scheduled_task: persistence?.kind === 'scheduled_task' ? persistence : null,
       probe,
       host: {
         platform: process.platform,
@@ -263,7 +302,7 @@ export async function runRuntime(argv = [], options = {}) {
     writeLine(write, `  Receipt     ${receiptPath}`);
     writeLine(write, probe.ok ? '  ✓ agentsamd installed and healthy' : '  ○ installed; start/probe manually');
     if (json) {
-      write(`${JSON.stringify({ binary, launch, probe, receiptPath }, null, 2)}\n`);
+      write(`${JSON.stringify({ binary, persistence, probe, receiptPath }, null, 2)}\n`);
     }
     return probe.ok ? 0 : 2;
   }

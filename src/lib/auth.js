@@ -1,9 +1,10 @@
 /**
- * RFC 8252 native-app OAuth for AgentSam CLI.
+ * RFC 8252 native-app OAuth for AgentSam CLI + Local Studio.
  *
- * IAM credentials resolve from env only:
- *   IAM_CLIENT_ID / IAM_CLIENT_SECRET / IAM_OAUTH_ISSUER
- * No parallel "native" client_id constant — unset IAM_CLIENT_ID → not_configured.
+ * SSOT product client (Worker + CLI + desktop):
+ *   IAM_CLIENT_ID=iam_agentsam_sdk_web
+ *   IAM_CLIENT_SECRET / IAM_OAUTH_ISSUER
+ * Do not use iam_cli_agentsam — that id is legacy and not on production Workers.
  */
 import http from 'node:http';
 import { createHash, randomBytes } from 'node:crypto';
@@ -19,6 +20,8 @@ import {
 
 export const AGENTSAM_OAUTH_SCOPE = 'openid profile email offline_access';
 export const AGENTSAM_OAUTH_CALLBACK_PATH = '/callback';
+/** Production Local Studio / CLI product OAuth client (Worker var). */
+export const DEFAULT_AGENTSAM_IAM_CLIENT_ID = 'iam_agentsam_sdk_web';
 
 function clean(value) { return value == null ? '' : String(value).trim(); }
 function base64url(value) {
@@ -38,12 +41,15 @@ function oauthErrorMessage(body, status) {
 }
 
 /**
- * Resolve IAM OAuth client_id. No hardcoded fallback.
- * @returns {{ clientId: string } | { error: string }}
+ * Resolve IAM OAuth client_id for Studio + CLI.
+ * Prefers explicit / env; defaults to iam_agentsam_sdk_web (production Worker).
+ * @returns {{ clientId: string, error: null } | { clientId: string, error: string }}
  */
 export function resolveIamClientId(options = {}) {
   const env = options.env || process.env;
-  const clientId = clean(options.clientId) || clean(env.IAM_CLIENT_ID);
+  const clientId = clean(options.clientId)
+    || clean(env.IAM_CLIENT_ID)
+    || DEFAULT_AGENTSAM_IAM_CLIENT_ID;
   if (!clientId) {
     return { error: 'iam_oauth_not_configured', clientId: '' };
   }
@@ -92,6 +98,9 @@ async function oauthTokenRequest(params, options = {}) {
     const normalized = clean(value);
     if (normalized) body.set(key, normalized);
   }
+  // Confidential product client (iam_agentsam_sdk_web) expects secret when present in vault.
+  const secret = clean(options.clientSecret) || clean(env.IAM_CLIENT_SECRET);
+  if (secret && !body.has('client_secret')) body.set('client_secret', secret);
 
   const response = await fetchImpl(new URL('/api/oauth/token', `${issuer}/`).toString(), {
     method: 'POST',
@@ -332,10 +341,11 @@ export async function authenticateViaBrowser(options = {}) {
   const resolved = resolveIamClientId(options);
   if (resolved.error) {
     const err = new Error(
-      'IAM_CLIENT_ID is not in this shell. Worker runtime already has it '
-      + '(Local Studio Production: IAM_CLIENT_ID=iam_agentsam_sdk_web) — secrets are not visible to the CLI. '
+      'IAM OAuth is not configured. Local Studio Production uses '
+      + `IAM_CLIENT_ID=${DEFAULT_AGENTSAM_IAM_CLIENT_ID}. Export IAM_CLIENT_ID `
+      + '(+ IAM_CLIENT_SECRET + IAM_OAUTH_ISSUER) from your vault, or rely on the built-in default client id. '
       + 'Prefer: agentsam api-key create --store keychain --activate && source ~/.agentsam/load-agent-env.sh. '
-      + 'Browser login needs IAM_CLIENT_ID (+ IAM_OAUTH_ISSUER) exported in the shell from your vault — do not invent a client id.',
+      + 'Do not use iam_cli_agentsam — that client is not on production Workers.',
     );
     err.code = 'iam_oauth_not_configured';
     throw err;

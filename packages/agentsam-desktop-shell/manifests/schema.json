@@ -48,6 +48,14 @@
       "type": "string",
       "description": "Relative path to Agent Sam mark SVG used as the editable brand source before rasterization."
     },
+    "brand_family": {
+      "type": "string",
+      "description": "Master brand family id (e.g. agentsam). See docs/brand/AGENT_SAM_ICON_GRAMMAR.md."
+    },
+    "product_mark_variant": {
+      "type": "string",
+      "description": "Product cue on the master mark (e.g. local-studio-portal)."
+    },
     "identity_provider": {
       "type": "string",
       "enum": ["inneranimalmedia", "google", "github", "gcp", "email"]

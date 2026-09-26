@@ -15,11 +15,15 @@
   "auth": {
     "login_url": "/auth/login?next=/agentsam",
     "session_check": "/api/auth/session",
+    "oauth_client_id": "iam_agentsam_sdk_web",
+    "login_mode": "agentsam_pkce",
     "oauth_deep_link": "agentsamstudio://callback",
-    "notes": "Product surface is /agentsam. Identity is /auth/login. Public marketing / is never the desktop home."
+    "notes": "Product OAuth client IAM_CLIENT_ID=iam_agentsam_sdk_web (same as CLI). Identity is /auth/login. Public marketing / is never the desktop home."
   },
   "deep_link_scheme": "agentsamstudio",
   "identity_provider": "inneranimalmedia",
+  "brand_family": "agentsam",
+  "product_mark_variant": "local-studio-portal",
   "icon_set": "icons/local-studio",
   "icon_source_url": "",
   "icon_mark_svg": "icons/local-studio/AgentSam-Mark.svg",
@@ -30,6 +34,8 @@
   "feature_flags": {
     "tray": true,
     "auto_update": true,
-    "local_execution_node": true
+    "local_execution_node": true,
+    "offline_shell": false,
+    "agentsamd_sidecar": false
   }
 }
