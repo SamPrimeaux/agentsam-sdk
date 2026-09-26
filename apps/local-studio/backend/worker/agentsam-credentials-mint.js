@@ -150,8 +150,10 @@ export async function listStudioCredentials(env, accountId) {
   return (results || []).map((row) => {
     const kind = row.authority_type === "service" ? "service" : "account";
     let status = "active";
+    const expiresNum = row.expires_at_unix == null ? null : Number(row.expires_at_unix);
     if (row.revoked_at_unix) status = "revoked";
-    else if (row.expires_at_unix && row.expires_at_unix < now) status = "expired";
+    else if (expiresNum != null && expiresNum > 0 && expiresNum < now) status = "expired";
+    const created = Number(row.created_at_unix);
     return {
       id: row.id,
       account_id: row.account_id,
@@ -162,9 +164,10 @@ export async function listStudioCredentials(env, accountId) {
       prefix: row.prefix,
       client_type: row.client_type,
       status,
-      created_at_unix: row.created_at_unix,
-      expires_at_unix: row.expires_at_unix,
-      last_used_at_unix: row.last_used_at_unix,
+      created_at_unix: Number.isFinite(created) && created > 0 ? created : null,
+      expires_at_unix: expiresNum != null && Number.isFinite(expiresNum) && expiresNum > 0 ? expiresNum : null,
+      last_used_at_unix:
+        row.last_used_at_unix == null ? null : Number(row.last_used_at_unix) || null,
       secret_preview: row.prefix || "••••",
     };
   });
