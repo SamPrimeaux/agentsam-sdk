@@ -21,6 +21,7 @@ export function buildPublicConfig(env = {}, opts = {}) {
     iam_client_id: clean(env.IAM_CLIENT_ID) || null,
     google_client_id: clean(env.GOOGLE_CLIENT_ID) || null,
     google_desktop_client_id: clean(env.GOOGLE_DESKTOP_CLIENT_ID) || null,
+    google_desktop_exchange_path: '/api/oauth/google/desktop-exchange',
     runtime_protocol: 'agentsam.runtime.v1',
     bindings_declared: {
       DB: true,

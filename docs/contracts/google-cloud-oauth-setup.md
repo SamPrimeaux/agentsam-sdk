@@ -15,6 +15,18 @@ agentsam gcloud auth login
 `GET https://agentsam.inneranimalmedia.com/api/public-config` when the shell env is unset.
 Do **not** require `~/.agentsam/load-agent-env.sh` for stock users.
 
+**Google Console client type (important):**
+
+| Client | Console application type | Secret |
+|---|---|---|
+| `GOOGLE_DESKTOP_CLIENT_ID` | **Desktop app** | None (PKCE only). Do not create this as Web. |
+| `GOOGLE_CLIENT_ID` | **Web application** | `GOOGLE_CLIENT_SECRET` on the Worker only |
+
+If Desktop login fails with `client_secret is missing`, the desktop client id was created as a **Web** client. Fix by either:
+
+1. Create a new OAuth client → Application type **Desktop app** → set Worker var `GOOGLE_DESKTOP_CLIENT_ID` to that id, or
+2. Temporary: `wrangler secret put GOOGLE_DESKTOP_CLIENT_SECRET` with that Web client’s secret (CLI never sees it; Studio `/api/oauth/google/desktop-exchange` brokers the exchange).
+
 Optional override: `export GOOGLE_DESKTOP_CLIENT_ID=…` in the local shell.
 
 ### Hosted identity (`agentsam gcloud auth login --web`)

@@ -112,6 +112,9 @@ export async function exchangeGoogleDesktopCode({
   clientId,
   redirectUri,
   fetchImpl = fetch,
+  timeoutMs = 20_000,
+  studioOrigin = '',
+  allowStudioBroker = true,
 } = {}) {
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
@@ -121,22 +124,86 @@ export async function exchangeGoogleDesktopCode({
     redirect_uri: redirectUri || '',
   });
   // Desktop public clients: secret is optional / not a confidentiality boundary.
+  const signal = typeof AbortSignal?.timeout === 'function'
+    ? AbortSignal.timeout(Math.max(1, Number(timeoutMs) || 20_000))
+    : undefined;
   const res = await fetchImpl(GOOGLE_TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
+    signal,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.access_token) {
-    const err = data.error_description || data.error || `token_http_${res.status}`;
-    throw new Error(`google_token_exchange_failed: ${err}`);
+  if (res.ok && data.access_token) return data;
+
+  const detail = data.error_description || data.error || `token_http_${res.status}`;
+  const needsSecret = /client_secret/i.test(String(detail));
+
+  // Stock mitigation: never put a Google client secret in the CLI. If this client_id
+  // was created as a Web app in Google Console, ask Local Studio to exchange using
+  // Worker-held secrets (GOOGLE_DESKTOP_CLIENT_SECRET or matching web secret).
+  if (needsSecret && allowStudioBroker) {
+    const origin = clean(studioOrigin)
+      || clean(process.env.AGENTSAM_STUDIO_ORIGIN)
+      || 'https://agentsam.inneranimalmedia.com';
+    try {
+      const brokerRes = await fetchImpl(new URL('/api/oauth/google/desktop-exchange', `${origin}/`).toString(), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({
+          code,
+          code_verifier: codeVerifier,
+          redirect_uri: redirectUri,
+          client_id: clientId,
+        }),
+        signal,
+      });
+      const broker = await brokerRes.json().catch(() => ({}));
+      if (brokerRes.ok && broker.access_token) {
+        return {
+          access_token: broker.access_token,
+          refresh_token: broker.refresh_token || null,
+          token_type: broker.token_type || 'Bearer',
+          expires_in: broker.expires_in || null,
+          scope: broker.scope || null,
+          exchange_via: 'studio_broker',
+        };
+      }
+      const brokerDetail = broker.detail || broker.error || `broker_http_${brokerRes.status}`;
+      const err = new Error(
+        `google_token_exchange_failed: ${brokerDetail}. `
+        + 'Desktop clients must be type "Desktop app" in Google Console (no secret). '
+        + 'Or set Worker secret GOOGLE_DESKTOP_CLIENT_SECRET for a Web-typed client id. '
+        + 'Web app login uses GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET on the Worker only.',
+      );
+      err.code = 'google_token_exchange_failed';
+      err.remediation = broker.remediation || null;
+      throw err;
+    } catch (brokerErr) {
+      if (brokerErr?.code === 'google_token_exchange_failed') throw brokerErr;
+      // fall through to original error
+    }
   }
-  return data;
+
+  const err = new Error(
+    needsSecret
+      ? `google_token_exchange_failed: ${detail}. `
+        + 'This client_id is confidential (Web) in Google Console. '
+        + 'Create an OAuth client type Desktop app and set GOOGLE_DESKTOP_CLIENT_ID, '
+        + 'or put that Web client\'s secret on the Worker as GOOGLE_DESKTOP_CLIENT_SECRET.'
+      : `google_token_exchange_failed: ${detail}`,
+  );
+  err.code = 'google_token_exchange_failed';
+  throw err;
 }
 
-export async function fetchGoogleUserInfo(accessToken, fetchImpl = fetch) {
+export async function fetchGoogleUserInfo(accessToken, fetchImpl = fetch, timeoutMs = 15_000) {
+  const signal = typeof AbortSignal?.timeout === 'function'
+    ? AbortSignal.timeout(Math.max(1, Number(timeoutMs) || 15_000))
+    : undefined;
   const res = await fetchImpl(GOOGLE_USERINFO_URL, {
     headers: { Authorization: `Bearer ${accessToken}` },
+    signal,
   });
   if (!res.ok) return null;
   return res.json().catch(() => null);
@@ -213,6 +280,10 @@ export async function runGoogleDesktopCloudLogin(options = {}) {
 
     write('  Waiting for Google callback on loopback…\n');
     const callback = await listener.waitForCallback();
+    write('  ✓ Loopback callback received\n');
+    // Release the port before network/keychain work so the browser tab can close cleanly.
+    try { await listener.close(); } catch { /* ignore */ }
+    write('  Exchanging authorization code with Google…\n');
     const token = await exchangeGoogleDesktopCode({
       code: callback.code,
       codeVerifier: pkce.verifier,
@@ -221,6 +292,7 @@ export async function runGoogleDesktopCloudLogin(options = {}) {
       fetchImpl: options.fetchImpl,
     });
 
+    write('  Fetching Google account profile…\n');
     const profile = await fetchGoogleUserInfo(token.access_token, options.fetchImpl);
     const email = clean(profile?.email) || null;
     const expiresAt = token.expires_in
@@ -239,6 +311,7 @@ export async function runGoogleDesktopCloudLogin(options = {}) {
     });
 
     if (options.storeCredential !== false) {
+      write('  Storing credential (keychain / local vault)…\n');
       setSecureProviderKey('google-cloud', {
         value: credentialPayload,
         accountId: email,
@@ -268,7 +341,7 @@ export async function runGoogleDesktopCloudLogin(options = {}) {
       has_refresh_token: Boolean(token.refresh_token),
     };
   } finally {
-    await listener.close();
+    try { await listener.close(); } catch { /* already closed */ }
   }
 }
 

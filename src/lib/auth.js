@@ -234,6 +234,13 @@ export async function createLoopbackCallbackListener(options = {}) {
 
   const server = createServerImpl((req, res) => {
     try {
+      const method = String(req.method || 'GET').toUpperCase();
+      if (method !== 'GET' && method !== 'HEAD') {
+        res.writeHead(405, { 'Content-Type': 'text/plain; charset=utf-8', Allow: 'GET' });
+        res.end('Method not allowed');
+        return;
+      }
+
       const requestUrl = new URL(req.url || '/', `http://${host}`);
       if (requestUrl.pathname !== callbackPath) {
         res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -259,15 +266,17 @@ export async function createLoopbackCallbackListener(options = {}) {
         return;
       }
       if (!code) {
+        // Ignore probe/prefetch hits with no code so a later real redirect can settle.
         res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
         res.end('Authorization code missing. Return to the terminal and retry.');
-        settle(new Error('oauth_authorization_code_missing'));
         return;
       }
 
+      // Settle before writing the body so the CLI continues even if the client
+      // disconnects mid-response (common with some browsers closing the tab).
+      settle(null, { code, state: returnedState });
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end('<!doctype html><html><body style="font-family:system-ui"><h1>Agent Sam</h1><p>Authentication complete. You can close this tab and return to your terminal.</p></body></html>');
-      settle(null, { code, state: returnedState });
     } catch (error) {
       try {
         res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });

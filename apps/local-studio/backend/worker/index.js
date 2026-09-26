@@ -25,6 +25,7 @@ import { handleCmsWorkerRequest } from "./cms-service.js";
 import { serveCanonicalHomepage } from "./canonical-homepage.js";
 import { isPublicSitePath, servePublicSitePage } from "./public-site.js";
 import { handlePublicConfigRequest } from "./public-config.js";
+import { handleGoogleDesktopExchangeRequest } from "./google-desktop-exchange.js";
 import { loadConnectionsRegistry } from "./connections-registry.js";
 import { createLocalStudioPluginRuntime } from "./plugin-registry.js";
 import {
@@ -664,6 +665,11 @@ export default {
     // Stock public OAuth / issuer config (no secrets) — CLI resolves desktop client from here.
     if (url.pathname === "/api/public-config") {
       return handlePublicConfigRequest(request, env);
+    }
+
+    // CLI desktop PKCE token exchange broker (secrets stay on Worker).
+    if (url.pathname === "/api/oauth/google/desktop-exchange") {
+      return handleGoogleDesktopExchangeRequest(request, env);
     }
 
     // Legacy canonical homepage path (assets missing for public-site router)
