@@ -63,7 +63,7 @@
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.56.1",
     "vite": "^8.2.0",
-    "wrangler": "4.137.0"
+    "wrangler": "4.141.0"
   },
   "engines": {
     "node": ">=22 <25",
@@ -75,6 +75,6 @@
     "esbuild@0.28.1": true,
     "node-pty@1.1.0": true,
     "protobufjs@7.6.6": true,
-    "workerd@1.20260921.1": true
+    "workerd@1.20260925.1": true
   }
 }
