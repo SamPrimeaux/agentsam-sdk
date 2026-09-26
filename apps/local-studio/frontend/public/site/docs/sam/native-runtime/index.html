@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en" data-asbd-theme="dark" data-asbd-skin="violet">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <title>AgentSam native Go runtime</title>
+  <meta name="description" content="How AgentSam uses one Go runtime core across local native execution and Cloudflare Containers, with deployment-grade proof." />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href="https://agentsam.inneranimalmedia.com/docs/sam/native-runtime" />
+  <meta property="og:title" content="AgentSam native Go runtime" />
+  <meta property="og:description" content="How AgentSam uses one Go runtime core across local native execution and Cloudflare Containers, with deployment-grade proof." />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://agentsam.inneranimalmedia.com/docs/sam/native-runtime" />
+  <meta name="agentsam:page" content="docs.sam.native-runtime" />
+  <meta name="agentsam:cms-editable" content="true" />
+  <meta name="agentsam:route" content="agentsam.inneranimalmedia.com/docs/sam/native-runtime" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/site/global/asbd-tokens.css" />
+  <link rel="stylesheet" href="/site/global/agentsam-docs-tokens.css" />
+  <link rel="stylesheet" href="/site/global/agentsam-docs-layout.css" />
+  <script src="/site/global/asbd-theme.js" defer></script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "AgentSam native Go runtime",
+  "description": "How AgentSam uses one Go runtime core across local native execution and Cloudflare Containers, with deployment-grade proof.",
+  "author": {
+    "@type": "Organization",
+    "name": "AgentSam"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "InnerAnimalMedia"
+  },
+  "mainEntityOfPage": "https://agentsam.inneranimalmedia.com/docs/sam/native-runtime"
+}
+  </script>
+</head>
+<body data-asbd-theme="dark">
+  <div id="asbd-header-mount" data-cms-region="header"></div>
+
+  <div class="agentsam-docs">
+    <div class="agentsam-docs-layout">
+      <aside class="agentsam-docs-sidebar" data-cms-region="sidebar">
+        <div class="agentsam-docs-brand">
+          <div class="agentsam-docs-mark">A</div>
+          <div><b>AgentSam</b><span>SAM engineering guides</span></div>
+        </div>
+        <div class="agentsam-docs-search">
+          <input id="docs-search" type="search" placeholder="Search…" aria-label="Search this guide" />
+        </div>
+        <nav class="agentsam-docs-nav" id="docs-nav"><div class="group">Runtime</div>
+<a href="#overview" class="active">Overview</a>
+<a href="#capabilities">Capabilities</a>
+<a href="#modes">Execution modes</a>
+<a href="#local">Local native</a>
+<a href="#cloudflare-dev">Cloudflare development</a>
+<a href="#production">Production deploy</a>
+<a href="#proof">Deployment proof</a>
+<a href="#evidence">Evidence</a>
+<a href="#next">Next capabilities</a></nav>
+      </aside>
+
+      <main class="agentsam-docs-main">
+        <div class="agentsam-docs-topbar">
+          <div class="agentsam-docs-crumb"><span>Docs</span> <span aria-hidden="true">/</span> <span>SAM</span> <span aria-hidden="true">/</span> <strong>Native runtime</strong></div>
+          <div class="agentsam-docs-spacer"></div>
+          <button type="button" class="agentsam-docs-action" id="docs-copy-page">Copy page</button>
+        </div>
+        <article class="agentsam-docs-article" id="docs-article" data-cms-region="body">
+<section data-cms-section="overview" id="overview">
+  <div class="eyebrow">Native runtime</div>
+  <h1>Go where machine work benefits from Go.</h1>
+  <p class="lead">AgentSam's native Go runtime handles fast machine-level execution while the TypeScript/protocol layer remains the contract authority.</p>
+  <div class="callout"><b>Current production shape</b><br />Cloudflare Worker edge adapter → native Linux Go Container. The same runtime core is intended to power the local agentsamd daemon.</div>
+  <h2 id="capabilities">What it does today</h2>
+  <ul>
+    <li>Reports health, source identity, runtime information, and capabilities.</li>
+    <li>Computes deterministic SHA-256 hashes.</li>
+    <li>Runs deterministic static inspection.</li>
+    <li>Returns AgentSam ErrorEnvelope-compatible request failures.</li>
+  </ul>
+</section>
+
+<section data-cms-section="modes" id="modes">
+  <h2>Different ownership modes, one shared contract</h2>
+  <h3 id="local">Local native development</h3>
+  <p>Maintainers can run the Go process directly. AgentSam verifies the built binary by booting it, probing the contract, matching source identity, and requiring clean shutdown.</p>
+  <h3 id="cloudflare-dev">Cloudflare development</h3>
+  <p>Wrangler runs the Worker edge adapter with the GO_RUNTIME Container binding. This mode is for development, not final production proof.</p>
+  <h3 id="production">Hosted service and advanced self-host</h3>
+  <p>Normal AgentSam users consume the official hosted service where appropriate; they do not deploy it just to use AgentSam. Advanced self-hosters install the separate Go service artifact and deploy only to an explicitly selected Cloudflare account. IAM product registration is a separate guarded maintainer path.</p>
+  <div class="code"><button class="copy-code">Copy</button><pre>agentsam go --cloudflare agentsam-go-worker --dry-run --account &lt;account-id&gt;</pre></div>
+</section>
+
+<section data-cms-section="proof" id="proof">
+  <h2>What counts as shipped</h2>
+  <p>A source tree, Dockerfile, or deployment adapter is not deployment proof. A production receipt is accepted only after the externally reachable service reports healthy and both edge and native health identify the intended source identity.</p>
+  <h3 id="evidence">Evidence captured</h3>
+  <ul>
+    <li>Git or npm package source identity plus deterministic source digest</li>
+    <li>native binary SHA-256 digest</li>
+    <li>linux/amd64 nonroot container verification</li>
+    <li>explicit Cloudflare account identity</li>
+    <li>Cloudflare deployment ID and Worker version ID</li>
+    <li>deployed URL and timestamped endpoint probes</li>
+    <li>local AgentSam registry for self-host deployments</li>
+    <li>agentsam_products / asset_relationships only for guarded IAM official releases</li>
+  </ul>
+  <h3 id="next">What comes next</h3>
+  <p>The shared native core graduates next into workspace filesystem execution, file watching, Merkle updates, health/capability state, cancellable jobs, and PTY coordination. agentsamd reuses that core as the user-machine runtime; the hosted Go Worker remains a separate service with a different ownership boundary.</p>
+</section>
+        </article>
+      </main>
+
+      <aside class="agentsam-docs-toc" data-cms-region="toc">
+        <h4>On this page</h4>
+        <a href="#overview">Overview</a>
+<a href="#modes">Execution modes</a>
+<a href="#production">Production deploy</a>
+<a href="#proof">Deployment proof</a>
+<a href="#next">Next capabilities</a>
+<div class="sep"></div>
+<div class="note">Public AgentSam guide. Shared ASBD header/footer · violet docs theme.</div>
+      </aside>
+    </div>
+  </div>
+
+  <div id="asbd-footer-mount" data-cms-region="footer"></div>
+
+  <script>
+  (function () {
+    function inject(id, url) {
+      var slot = document.getElementById(id);
+      if (!slot) return;
+      fetch(url, { credentials: 'same-origin' })
+        .then(function (r) { return r.text(); })
+        .then(function (html) {
+          slot.innerHTML = html;
+          slot.querySelectorAll('script').forEach(function (old) {
+            var s = document.createElement('script');
+            if (old.src) s.src = old.src;
+            else s.textContent = old.textContent;
+            old.replaceWith(s);
+          });
+        })
+        .catch(function () {});
+    }
+    inject('asbd-header-mount', '/site/global/asbd-header.html');
+    inject('asbd-footer-mount', '/site/global/asbd-footer.html');
+
+    var copy = document.getElementById('docs-copy-page');
+    if (copy) {
+      copy.addEventListener('click', async function () {
+        try {
+          await navigator.clipboard.writeText(document.getElementById('docs-article').innerText);
+          copy.textContent = 'Copied';
+          setTimeout(function () { copy.textContent = 'Copy page'; }, 1200);
+        } catch (_) {
+          copy.textContent = 'Copy unavailable';
+          setTimeout(function () { copy.textContent = 'Copy page'; }, 1400);
+        }
+      });
+    }
+
+    document.querySelectorAll('.copy-code').forEach(function (button) {
+      button.addEventListener('click', async function () {
+        var block = button.closest('.code').querySelector('pre');
+        try {
+          await navigator.clipboard.writeText(block.innerText);
+          var prior = button.textContent;
+          button.textContent = 'Copied';
+          setTimeout(function () { button.textContent = prior; }, 1000);
+        } catch (_) {
+          button.textContent = 'Unavailable';
+        }
+      });
+    });
+
+    var search = document.getElementById('docs-search');
+    var navLinks = Array.prototype.slice.call(document.querySelectorAll('#docs-nav a'));
+    if (search) {
+      search.addEventListener('input', function () {
+        var q = search.value.trim().toLowerCase();
+        navLinks.forEach(function (a) {
+          a.style.display = !q || a.textContent.toLowerCase().includes(q) ? 'flex' : 'none';
+        });
+      });
+    }
+
+    var sections = Array.prototype.slice.call(document.querySelectorAll('section[id]'));
+    var allLinks = Array.prototype.slice.call(document.querySelectorAll('a[href^="#"]'));
+    if ('IntersectionObserver' in window) {
+      var observer = new IntersectionObserver(function (entries) {
+        var visible = entries.filter(function (e) { return e.isIntersecting; })
+          .sort(function (a, b) { return b.intersectionRatio - a.intersectionRatio; })[0];
+        if (!visible) return;
+        allLinks.forEach(function (a) {
+          a.classList.toggle('active', a.getAttribute('href') === '#' + visible.target.id);
+        });
+      }, { rootMargin: '-18% 0px -68% 0px', threshold: [0, 0.08, 0.25] });
+      sections.forEach(function (section) { observer.observe(section); });
+    }
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+<section id="modes">
+  <h2>Different ownership modes, one shared contract</h2>
+  <h3 id="local">Local native development</h3>
+  <p>Maintainers can run the Go process directly. AgentSam verifies the built binary by booting it, probing the contract, matching source identity, and requiring clean shutdown.</p>
+  <h3 id="cloudflare-dev">Cloudflare development</h3>
+  <p>Wrangler runs the Worker edge adapter with the GO_RUNTIME Container binding. This mode is for development, not final production proof.</p>
+  <h3 id="production">Hosted service and advanced self-host</h3>
+  <p>Normal AgentSam users consume the official hosted service where appropriate; they do not deploy it just to use AgentSam. Advanced self-hosters install the separate Go service artifact and deploy only to an explicitly selected Cloudflare account. IAM product registration is a separate guarded maintainer path.</p>
+  <div class="code"><button class="copy-code">Copy</button><pre>agentsam go --cloudflare agentsam-go-worker --dry-run --account &lt;account-id&gt;</pre></div>
+</section>
