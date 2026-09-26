@@ -80,7 +80,7 @@ export function NavRail() {
                 <Nav.CollapsibleTrigger render={<Nav.MenuButton icon={Settings} active={pathname.startsWith("/settings")}>Settings <Nav.MenuChevron /></Nav.MenuButton>} />
                 <Nav.CollapsibleContent>
                   <Nav.MenuSub>
-                    <li><Nav.MenuSubButton href="/settings/general" active={pathname === "/settings/general" || pathname === "/settings"}>General</Nav.MenuSubButton></li>
+                    <li><Nav.MenuSubButton href="/settings/general" active={pathname === "/settings/general" || pathname === "/settings"}>Account</Nav.MenuSubButton></li>
                     <li><Nav.MenuSubButton href="/settings/keys" active={pathname.startsWith("/settings/keys")}>Keys & secrets</Nav.MenuSubButton></li>
                     <li><Nav.MenuSubButton href="/settings/themes" active={pathname === "/settings/themes"}>Themes</Nav.MenuSubButton></li>
                     <li><Nav.MenuSubButton href="/settings/integrations" active={pathname === "/settings/integrations"}>Integrations</Nav.MenuSubButton></li>

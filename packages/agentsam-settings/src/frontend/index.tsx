@@ -515,9 +515,19 @@ function EmptyState({ title }: { title: string }) {
 }
 
 function ModelTable({ models }: { models: SettingsModel[] }) {
+  const columns = {
+    display: "grid",
+    gridTemplateColumns: "minmax(180px, 1.6fr) 1fr 0.8fr 0.8fr auto",
+    columnGap: "0.75rem",
+    alignItems: "center",
+  } as const;
+
   return (
     <div className="overflow-hidden rounded-lg border border-border/70">
-      <div className="hidden grid-cols-[minmax(180px,1.6fr)_1fr_0.8fr_0.8fr_auto] border-b border-border/70 bg-muted/20 px-3 py-2 text-[9px] font-medium uppercase tracking-[0.11em] text-muted-foreground sm:grid">
+      <div
+        className="hidden border-b border-border/70 bg-muted/20 px-3 py-2 text-[9px] font-medium uppercase tracking-[0.11em] text-muted-foreground sm:grid"
+        style={columns}
+      >
         <span>Model</span>
         <span>Provider</span>
         <span>Tier</span>
@@ -526,13 +536,12 @@ function ModelTable({ models }: { models: SettingsModel[] }) {
       </div>
       <div className="divide-y divide-border/60">
         {models.map((model) => (
-          <div
-            key={model.id}
-            className="grid gap-2 px-3 py-3 sm:grid-cols-[minmax(180px,1.6fr)_1fr_0.8fr_0.8fr_auto] sm:items-center"
-          >
+          <div key={model.id} className="px-3 py-3 sm:grid" style={columns}>
             <div>
               <div className="text-[12px] font-medium">{model.name}</div>
-              <div className="mt-0.5 text-[10px] text-muted-foreground sm:hidden">{model.provider} · {model.tier}</div>
+              <div className="mt-0.5 text-[10px] text-muted-foreground sm:hidden">
+                {model.provider} · {model.tier}
+              </div>
             </div>
             <div className="hidden text-[11px] text-muted-foreground sm:block">{model.provider}</div>
             <div className="hidden text-[11px] text-muted-foreground sm:block">{model.tier}</div>
@@ -558,6 +567,13 @@ function KeysView({ snapshot }: { snapshot: SettingsSnapshot }) {
       .toLowerCase()
       .includes(query.toLowerCase()),
   );
+
+  /** Inline template — do not rely on Tailwind scanning this package for arbitrary grid-cols. */
+  const KEYS_TABLE_GRID = {
+    display: "grid",
+    gridTemplateColumns: "1.4fr 0.8fr 1fr 1.15fr 0.9fr 0.8fr 0.9fr 0.9fr 0.7fr",
+    columnGap: "0.5rem",
+  } as const;
 
   return (
     <>
@@ -594,8 +610,11 @@ function KeysView({ snapshot }: { snapshot: SettingsSnapshot }) {
         </div>
 
         <div className="overflow-x-auto rounded-lg border border-border/70">
-          <div className="min-w-[980px]">
-            <div className="grid grid-cols-[1.4fr_0.8fr_1fr_1.15fr_0.9fr_0.8fr_0.9fr_0.9fr_0.7fr] border-b border-border/70 bg-muted/20 px-3 py-2 text-[9px] font-medium uppercase tracking-[0.09em] text-muted-foreground">
+          <div className="agentsam-settings-keys-table min-w-[980px]">
+            <div
+              className="agentsam-settings-keys-row agentsam-settings-keys-row--head border-b border-border/70 bg-muted/20 px-3 py-2 text-[9px] font-medium uppercase tracking-[0.09em] text-muted-foreground"
+              style={KEYS_TABLE_GRID}
+            >
               <span>Name</span>
               <span>Status</span>
               <span>Tracking ID</span>
@@ -610,7 +629,8 @@ function KeysView({ snapshot }: { snapshot: SettingsSnapshot }) {
               {filtered.map((credential) => (
                 <div
                   key={credential.id}
-                  className="grid grid-cols-[1.4fr_0.8fr_1fr_1.15fr_0.9fr_0.8fr_0.9fr_0.9fr_0.7fr] items-center px-3 py-3 text-[10px]"
+                  className="agentsam-settings-keys-row items-center px-3 py-3 text-[10px]"
+                  style={KEYS_TABLE_GRID}
                 >
                   <div className="min-w-0 pr-2">
                     <div className="truncate font-medium text-foreground">{credential.name}</div>

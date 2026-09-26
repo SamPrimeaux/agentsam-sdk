@@ -8,8 +8,8 @@ export const localStudioSettingsManifest = defineSettingsManifest({
   units: [
     {
       id: "general",
-      label: "General",
-      description: "Account, project, runtime and application preferences.",
+      label: "Account",
+      description: "Account, appearance, project, runtime and application preferences.",
       icon: "settings",
     },
     {

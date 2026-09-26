@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, type NavMode, type NavTheme, type NavValue } from '@inneranimalmedia/agentsam-nav';
-import { BookOpen, Folder, Globe, KeyRound, Layers, Settings, Palette, Pin, Files, Copy, PanelRight } from 'lucide-react';
+import { BookOpen, Folder, Globe, Layers, Settings, Pin, Files, Copy, PanelRight } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CommandPalette } from '@/components/workbench/command-palette';
@@ -100,9 +100,7 @@ export function AgentSamShell() {
     onPinConversation: state.pinTrail, onRenameConversation: state.renameTrail,
     onShare: trail ? () => setSharing(true) : undefined,
     accountActions: [
-      { id: 'settings', label: 'Account & preferences', icon: <Settings />, onSelect: () => go('/settings/general') },
-      { id: 'appearance', label: 'Themes & appearance', icon: <Palette />, onSelect: () => go('/settings/themes') },
-      { id: 'keys', label: 'Keys & secrets', icon: <KeyRound />, onSelect: () => go('/settings/keys') },
+      { id: 'settings', label: 'Account', icon: <Settings />, onSelect: () => go('/settings/general') },
     ],
     projectActions: [
       { id: 'home', label: 'Project home', icon: <Folder />, onSelect: () => go('/projects') },
