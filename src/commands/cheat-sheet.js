@@ -35,6 +35,7 @@ const GROUPS = Object.freeze([
       ['go', 'Go product discover/build/deploy'],
       ['dockerize', 'Supported containers'],
       ['compute', 'Google Cloud VM / IAM helpers'],
+      ['google-cloud', 'Projects · compute · IAM SAs · billing · doctor'],
     ],
   },
   {
@@ -44,6 +45,7 @@ const GROUPS = Object.freeze([
       ['providers', 'Configure / verify model + infra credentials'],
       ['models', 'Provider-verified model catalog'],
       ['cloudflare', 'Wrangler reads + Worker profiles'],
+      ['google-cloud', 'Customer GCP connection inventory'],
       ['credentials audit', 'Configured · verified · drift (names only)'],
       ['plugins', 'Install and manage plugins'],
     ],

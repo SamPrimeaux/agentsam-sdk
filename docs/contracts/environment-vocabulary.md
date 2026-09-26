@@ -36,6 +36,36 @@ User 123 connects Cloudflare / GitHub / GCP / models as Provider Connections
 
 ---
 
+## AgentSam keys vs Google Cloud service-account keys
+
+These are **parallel authority systems**. Do not rename Google `KEY_ORIGIN` fields in place.
+
+| Concept | Issuer | Lives in | Authenticates | Google `KEY_ORIGIN` analogy (AgentSam overlay only) |
+| --- | --- | --- | --- | --- |
+| `AGENTSAM_API_KEY` (`aak_*`) | Inner Animal Media / AgentSam | vault / keychain | Human/account on AgentSam platform | `USER_MANAGED` + `INNERANIMALMEDIA_PROVIDED` |
+| `AGENTSAM_BRIDGE_KEY` | Inner Animal Media (machine mint) | Worker secret / vault | Machine↔ExecOS/Worker to AgentSam APIs | `SYSTEM_MANAGED` + `INNERANIMALMEDIA_PROVIDED` |
+| Google user ADC / `gcloud auth` | Google user OAuth | gcloud / ADC | Human operating GCP | n/a (user session, not SA key) |
+| GCP SA `SYSTEM_MANAGED` key | Google | Google IAM | Google runtime for that SA | stays `GOOGLE_PROVIDED` |
+| GCP SA `USER_MANAGED` JSON key | Google (operator-downloaded) | whoever stored the JSON | That SA via private key file | stays `GOOGLE_PROVIDED` — prefer delete/rotate |
+
+**Product UI may show a unified inventory table** with an AgentSam overlay column (`agentsam_origin_label`).  
+**Google’s API metadata must remain truthful** (`GOOGLE_PROVIDED`). We never claim Google minted an InnerAnimalMedia key.
+
+How Local Studio Connections compose:
+
+```text
+Local Studio
+  ├── Identity login          → IAM_CLIENT_* + browser session
+  ├── Account API             → AGENTSAM_API_KEY
+  ├── This Mac / ExecOS       → AGENTSAM_BRIDGE_KEY (+ local device provider)
+  └── Google Cloud connection → user's Google OAuth + discovered projects/VMs/SAs/billing
+```
+
+`agentsam google-cloud iam service-accounts list` discovers **customer GCP** workload identities.  
+It does **not** mint `AGENTSAM_*` keys into Google IAM.
+
+---
+
 ## Classification legend
 
 | Class | Meaning |

@@ -47,6 +47,7 @@ import { runPlugins } from './commands/plugins.js';
 import { runCredentials } from './commands/credentials.js';
 import { runCheatSheet } from './commands/cheat-sheet.js';
 import { runCompute } from './commands/compute.js';
+import { runGoogleCloud } from './commands/google-cloud.js';
 import { runBilling } from './commands/billing.js';
 import { runUpdate } from './commands/update.js';
 import { applyPresetSelection, runAdd, runCapabilities, runDev, runInspect } from './commands/product.js';
@@ -440,6 +441,14 @@ if (command === '--version' || command === '-v') {
 } else if (command === 'compute') {
   try {
     const code = await runCompute(rest);
+    if (code) process.exitCode = code;
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
+  }
+} else if (command === 'google-cloud' || command === 'gcp' || command === 'gcloud') {
+  try {
+    const code = await runGoogleCloud(rest);
     if (code) process.exitCode = code;
   } catch (e) {
     reportCliError(e);
