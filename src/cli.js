@@ -50,6 +50,7 @@ import { runCompute } from './commands/compute.js';
 import { runGoogleCloud } from './commands/google-cloud.js';
 import { runBilling } from './commands/billing.js';
 import { runUpdate } from './commands/update.js';
+import { runSetup } from './commands/setup.js';
 import { applyPresetSelection, runAdd, runCapabilities, runDev, runInspect } from './commands/product.js';
 import { listPresets, resolvePreset } from './presets/index.js';
 import fs from 'node:fs';
@@ -89,6 +90,7 @@ function printLegacyHelp() {
     agentsam deploy            Graduate an AgentSam project intentionally
 
   Capability discovery:
+    agentsam setup             Discover → plan → approve → install (Homebrew-style)
     agentsam capabilities [capability-id] [--json]
     agentsam skill list|create|inspect|install|alias|remove|invoke
     agentsam skills [skill-id-or-alias] [--references] [--json]
@@ -434,6 +436,14 @@ if (command === '--version' || command === '-v') {
 } else if (command === 'cheat-sheet' || command === 'cheatsheet') {
   try {
     process.exitCode = runCheatSheet(rest, { version: VERSION }) || 0;
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
+  }
+} else if (command === 'setup') {
+  try {
+    const code = await runSetup(rest);
+    if (code) process.exitCode = code;
   } catch (e) {
     reportCliError(e);
     process.exitCode = 1;

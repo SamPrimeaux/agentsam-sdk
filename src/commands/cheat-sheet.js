@@ -45,6 +45,7 @@ const GROUPS = Object.freeze([
     id: 'providers',
     label: 'Providers',
     commands: [
+      ['setup', 'Discover → plan → approve → install (brew-style)'],
       ['providers', 'Configure / verify model + infra credentials'],
       ['models', 'Provider-verified model catalog'],
       ['cloudflare', 'Wrangler reads + Worker profiles'],

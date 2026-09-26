@@ -44,6 +44,10 @@
       "format": "uri",
       "description": "Optional HTTPS URL to a PNG (prefer 1024×1024). Overrides icon_set when set; also overridable via AGENTSAM_ICON_URL at build time."
     },
+    "icon_mark_svg": {
+      "type": "string",
+      "description": "Relative path to Agent Sam mark SVG used as the editable brand source before rasterization."
+    },
     "identity_provider": {
       "type": "string",
       "enum": ["inneranimalmedia", "google", "github", "gcp", "email"]
