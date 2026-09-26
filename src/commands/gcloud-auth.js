@@ -1,14 +1,18 @@
 /**
  * Agent Sam Google auth for CLI.
  *
- * Default: hosted AgentSam Google OAuth (Continue to Agent Sam).
- * Optional: --sdk wraps native `gcloud auth login` (Continue to Google Cloud SDK).
+ * Default: Desktop PKCE loopback (GOOGLE_DESKTOP_CLIENT_ID) for Google Cloud connection.
+ * Optional: --web hosted Identity OAuth · --sdk native gcloud ADC.
  */
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import { promptToOpenUrl, openExternalUrl } from '../lib/open-url.js';
+import {
+  googleCloudPermissionChecklist,
+  runGoogleDesktopCloudLogin,
+} from '../lib/google-desktop-oauth.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -58,18 +62,34 @@ function printBanner(write, title, detailLines = []) {
 
 function printAuthHelp(write) {
   printBanner(write, 'Agent Sam · Google auth', [
-    'Default login uses Agent Sam hosted Google OAuth (Continue to Agent Sam).',
-    'Use --sdk only when you need native Google Cloud SDK ADC on this machine.',
+    'Default: Desktop PKCE loopback — connects Google Cloud (auto-completes when browser returns).',
+    'Use --web for hosted Local Studio identity login, --sdk for native gcloud ADC.',
   ]);
   writeLine(write, '  agentsam gcloud auth login');
+  writeLine(write, '  agentsam gcloud auth login --web');
   writeLine(write, '  agentsam gcloud auth login --sdk');
+  writeLine(write, '  agentsam gcloud auth login --permissions');
   writeLine(write, '  agentsam gcloud auth login --no-launch-browser');
   writeLine(write, '  agentsam gcloud auth list');
   writeLine(write, '  agentsam gcloud auth revoke [--all]');
   writeLine(write, '  agentsam gcloud auth application-default login');
   writeLine(write, '');
-  writeLine(write, `  Hosted start URL`);
+  writeLine(write, `  Hosted identity URL ( --web )`);
   writeLine(write, `    ${AGENTSAM_GOOGLE_OAUTH_START}`);
+  writeLine(write, '');
+}
+
+function printPermissions(write) {
+  const checklist = googleCloudPermissionChecklist();
+  printBanner(write, 'Agent Sam · Google Cloud permissions', checklist.notes);
+  writeLine(write, '  OAuth scopes this CLI requests');
+  for (const s of checklist.oauth_scopes_requested) writeLine(write, `    • ${s}`);
+  writeLine(write, '');
+  writeLine(write, '  Google Auth Platform (Console)');
+  for (const row of checklist.oauth_consent_screen) writeLine(write, `    • ${row}`);
+  writeLine(write, '');
+  writeLine(write, '  GCP project IAM (on the project you operate)');
+  for (const row of checklist.project_iam_roles) writeLine(write, `    • ${row}`);
   writeLine(write, '');
 }
 
@@ -122,7 +142,7 @@ async function waitForEnter(message, { inputStream = input, outputStream = outpu
 }
 
 /**
- * Hosted AgentSam Google OAuth — branded Continue to Agent Sam.
+ * Hosted AgentSam Google OAuth — Local Studio / browser identity only.
  */
 export async function runAgentsamGoogleOauthLogin(options = {}) {
   const write = options.write || ((s) => process.stdout.write(s));
@@ -133,9 +153,9 @@ export async function runAgentsamGoogleOauthLogin(options = {}) {
   const noLaunch = Boolean(options.noLaunchBrowser);
   const json = Boolean(options.json);
 
-  printBanner(write, 'Agent Sam · Continue with Google', [
-    'This uses your Agent Sam OAuth app — not the Google Cloud SDK client.',
-    'After you finish in the browser, return here and press Enter.',
+  printBanner(write, 'Agent Sam · Continue with Google (web identity)', [
+    'Hosted Local Studio identity — openid/email/profile only (not Google Cloud scopes).',
+    'CLI cannot auto-detect browser completion on this path; prefer default Desktop login for Cloud.',
   ]);
 
   writeLine(write, '  Authorization URL');
@@ -145,15 +165,15 @@ export async function runAgentsamGoogleOauthLogin(options = {}) {
   if (json) {
     write(JSON.stringify({
       schema_version: 'agentsam-google-oauth-login-v1',
-      mode: 'hosted',
+      mode: 'hosted_identity',
       start_url: startUrl,
-      sdk_fallback: 'agentsam gcloud auth login --sdk',
+      scopes: ['openid', 'email', 'profile'],
+      note: 'Identity only. Use agentsam gcloud auth login (default) for Google Cloud scopes + auto callback.',
     }, null, 2) + '\n');
     return 0;
   }
 
-  writeLine(write, '  [enter] open browser and continue');
-  writeLine(write, '  [s]     use Google Cloud SDK login instead');
+  writeLine(write, '  [enter] open browser');
   writeLine(write, '  [c]     cancel');
   writeLine(write, '');
 
@@ -174,9 +194,8 @@ export async function runAgentsamGoogleOauthLogin(options = {}) {
   if (!options.choice) {
     const rl = readline.createInterface({ input, output });
     try {
-      const answer = String(await rl.question('  Choice [enter/s/c]: ')).trim().toLowerCase();
-      if (answer === 's' || answer === 'sdk') choice = 'sdk';
-      else if (answer === 'c' || answer === 'cancel' || answer === 'q') choice = 'cancel';
+      const answer = String(await rl.question('  Choice [enter/c]: ')).trim().toLowerCase();
+      if (answer === 'c' || answer === 'cancel' || answer === 'q') choice = 'cancel';
       else choice = 'enter';
     } finally {
       rl.close();
@@ -186,10 +205,6 @@ export async function runAgentsamGoogleOauthLogin(options = {}) {
   if (choice === 'cancel') {
     writeLine(write, '  Cancelled.');
     return 1;
-  }
-
-  if (choice === 'sdk') {
-    return runSdkGcloudLogin({ write, env: options.env, pass: [], noLaunch });
   }
 
   if (noLaunch) {
@@ -206,25 +221,16 @@ export async function runAgentsamGoogleOauthLogin(options = {}) {
     });
   }
 
-  if (options.skipCompletionPrompt) {
-    writeLine(write, '');
-    writeLine(write, '  ✓ Browser OAuth step complete (hosted Agent Sam Google).');
-  } else {
+  if (!options.skipCompletionPrompt) {
     await waitForEnter('After you finish in the browser, press ENTER to continue…', {
       inputStream: options.input || input,
       outputStream: options.output || output,
     });
-    writeLine(write, '');
-    writeLine(write, '  ✓ Browser OAuth step complete (hosted Agent Sam Google).');
   }
   writeLine(write, '');
-  writeLine(write, '  Next');
-  writeLine(write, '    agentsam google-cloud connection set --identity you@example.com --project PROJECT_ID');
-  writeLine(write, '    agentsam google-cloud doctor');
-  writeLine(write, '    agentsam whoami');
-  writeLine(write, '');
-  writeLine(write, '  Tip: for ADC / gcloud CLI identity on this Mac, run:');
-  writeLine(write, '    agentsam gcloud auth login --sdk');
+  writeLine(write, '  ✓ Hosted identity step acknowledged.');
+  writeLine(write, '  For Google Cloud scopes + automatic completion, run:');
+  writeLine(write, '    agentsam gcloud auth login');
   writeLine(write, '');
   return 0;
 }
@@ -294,34 +300,76 @@ export async function runGcloudAuth(argv = [], options = {}) {
 
   if (args[0] === 'login') {
     const pass = args.slice(1);
+    if (pass.includes('--permissions') || pass.includes('--scopes')) {
+      if (json) write(JSON.stringify(googleCloudPermissionChecklist(), null, 2) + '\n');
+      else printPermissions(write);
+      return 0;
+    }
     const useSdk = pass.includes('--sdk') || pass.includes('--gcloud-sdk');
+    const useWeb = pass.includes('--web') || pass.includes('--hosted');
     const noLaunch = pass.includes('--no-launch-browser');
     const cleanPass = pass.filter(
-      (a) => a !== '--sdk' && a !== '--gcloud-sdk' && a !== '--no-launch-browser',
+      (a) =>
+        a !== '--sdk'
+        && a !== '--gcloud-sdk'
+        && a !== '--web'
+        && a !== '--hosted'
+        && a !== '--no-launch-browser'
+        && a !== '--permissions'
+        && a !== '--scopes',
     );
 
     if (useSdk) {
       return runSdkGcloudLogin({ write, env, pass: cleanPass, noLaunch });
     }
+    if (useWeb) {
+      return runAgentsamGoogleOauthLogin({
+        write,
+        env,
+        json,
+        noLaunchBrowser: noLaunch,
+        nonInteractive: options.nonInteractive,
+        promptToOpenUrlImpl: options.promptToOpenUrlImpl,
+        openImpl: options.openImpl,
+        input: options.input,
+        output: options.output,
+        startUrl: options.startUrl,
+        choice: options.choice,
+        skipCompletionPrompt: options.skipCompletionPrompt,
+      });
+    }
 
-    return runAgentsamGoogleOauthLogin({
-      write,
-      env,
-      json,
-      noLaunchBrowser: noLaunch,
-      nonInteractive: options.nonInteractive,
-      promptToOpenUrlImpl: options.promptToOpenUrlImpl,
-      openImpl: options.openImpl,
-      input: options.input,
-      output: options.output,
-      startUrl: options.startUrl,
-    });
+    try {
+      await runGoogleDesktopCloudLogin({
+        write,
+        env,
+        json,
+        noLaunchBrowser: noLaunch,
+        home: options.home,
+        promptToOpenUrlImpl: options.promptToOpenUrlImpl,
+        openImpl: options.openImpl,
+        input: options.input,
+        output: options.output,
+        fetchImpl: options.fetchImpl,
+        createServerImpl: options.createServerImpl,
+        disableOsStore: options.disableOsStore,
+        storeCredential: options.storeCredential,
+        writeConnection: options.writeConnection,
+      });
+      return 0;
+    } catch (error) {
+      writeLine(write, '');
+      writeLine(write, `  ✕ ${error?.message || error}`);
+      writeLine(write, '  Tip: agentsam gcloud auth login --permissions');
+      writeLine(write, '');
+      return 1;
+    }
   }
 
   if (args[0] === 'application-default' && args[1] === 'login') {
     writeLine(write, '');
     writeLine(write, '  Agent Sam · application-default credentials');
-    writeLine(write, '  Used by libraries/ADC — separate from hosted Agent Sam Google OAuth.');
+    writeLine(write, '  Used by libraries/ADC — separate from Agent Sam Desktop Google OAuth.');
     writeLine(write, '');
     const result = await spawnGcloudInteractive(['auth', 'application-default', 'login', ...args.slice(2)], env);
     return result.ok ? 0 : result.code || 1;

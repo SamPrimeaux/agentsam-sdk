@@ -5,8 +5,14 @@ import {
   runAgentsamGoogleOauthLogin,
   runGcloudAuth,
 } from '../src/commands/gcloud-auth.js';
+import {
+  GOOGLE_CLOUD_CONNECTION_SCOPES,
+  buildGoogleDesktopAuthUrl,
+  googleCloudPermissionChecklist,
+  resolveGoogleDesktopClientId,
+} from '../src/lib/google-desktop-oauth.js';
 
-test('hosted google oauth login emits start URL in --json', async () => {
+test('hosted --web login emits start URL in --json', async () => {
   let out = '';
   const code = await runAgentsamGoogleOauthLogin({
     write: (s) => {
@@ -16,52 +22,58 @@ test('hosted google oauth login emits start URL in --json', async () => {
     nonInteractive: true,
   });
   assert.equal(code, 0);
-  const jsonLine = out.split('\n').find((line) => line.trim().startsWith('{'));
   const parsed = JSON.parse(out.slice(out.indexOf('{')));
-  assert.equal(parsed.mode, 'hosted');
+  assert.equal(parsed.mode, 'hosted_identity');
   assert.equal(parsed.start_url, AGENTSAM_GOOGLE_OAUTH_START);
-  assert.ok(jsonLine);
 });
 
-test('gcloud auth login defaults to hosted mode (not SDK) without --sdk', async () => {
+test('gcloud auth login --web is hosted identity', async () => {
   let out = '';
-  const code = await runGcloudAuth(['login', '--json'], {
+  const code = await runGcloudAuth(['login', '--web', '--json'], {
     write: (s) => {
       out += s;
     },
     nonInteractive: true,
   });
   assert.equal(code, 0);
-  assert.match(out, /agentsam\.inneranimalmedia\.com\/api\/oauth\/google\/start/);
-  assert.doesNotMatch(out, /Opening Google Cloud SDK OAuth/);
+  assert.match(out, /hosted_identity|agentsam\.inneranimalmedia\.com\/api\/oauth\/google\/start/);
 });
 
-test('gcloud auth help mentions hosted default and --sdk', async () => {
+test('gcloud auth help mentions desktop default and --web/--sdk', async () => {
   let out = '';
   await runGcloudAuth(['help'], {
     write: (s) => {
       out += s;
     },
   });
-  assert.match(out, /Continue to Agent Sam|hosted Google OAuth/i);
+  assert.match(out, /Desktop PKCE|loopback/i);
+  assert.match(out, /--web/);
   assert.match(out, /--sdk/);
 });
 
-test('prompt path opens browser when enter chosen', async () => {
-  let opened = null;
+test('desktop auth URL requests cloud-platform + offline', () => {
+  const url = new URL(buildGoogleDesktopAuthUrl({
+    clientId: resolveGoogleDesktopClientId({}),
+    redirectUri: 'http://127.0.0.1:12345/callback',
+    state: 'abc',
+    codeChallenge: 'challenge',
+  }));
+  assert.match(url.searchParams.get('scope') || '', /cloud-platform/);
+  assert.equal(url.searchParams.get('access_type'), 'offline');
+  assert.equal(url.searchParams.get('code_challenge_method'), 'S256');
+  assert.match(GOOGLE_CLOUD_CONNECTION_SCOPES, /openid/);
+});
+
+test('permissions checklist separates OAuth scopes from IAM roles', async () => {
   let out = '';
-  const code = await runAgentsamGoogleOauthLogin({
+  const code = await runGcloudAuth(['login', '--permissions'], {
     write: (s) => {
       out += s;
     },
-    choice: 'enter',
-    skipCompletionPrompt: true,
-    promptToOpenUrlImpl: async (url) => {
-      opened = url;
-      return { url, opened: true, interactive: true };
-    },
   });
   assert.equal(code, 0);
-  assert.equal(opened, AGENTSAM_GOOGLE_OAUTH_START);
-  assert.match(out, /Browser OAuth step complete/);
+  assert.match(out, /cloud-platform/);
+  assert.match(out, /mcp\.toolUser|roles\/mcp/);
+  const checklist = googleCloudPermissionChecklist();
+  assert.ok(checklist.oauth_scopes_requested.includes('https://www.googleapis.com/auth/cloud-platform'));
 });
