@@ -81,9 +81,14 @@ export async function mintStudioCredential(env, input = {}) {
   const prefix = `${secret.slice(0, 10)}…`;
   const id = idFor(idPrefix);
   const now = Math.floor(Date.now() / 1000);
-  const expiresAt = Number.isFinite(Number(input.expiresAtUnix))
-    ? Number(input.expiresAtUnix)
-    : null;
+  // null/undefined/0 = never expire — Number(null)===0 must not become expires_at_unix=0
+  const rawExp = input.expiresAtUnix;
+  const expiresAt =
+    rawExp == null || rawExp === ""
+      ? null
+      : Number.isFinite(Number(rawExp)) && Number(rawExp) > 0
+        ? Math.floor(Number(rawExp))
+        : null;
 
   await db
     .prepare(

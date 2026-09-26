@@ -15,9 +15,18 @@ export type StudioMintedCredential = {
   secret_preview: string;
 };
 
-function formatDate(epoch: number | null | undefined) {
-  if (!epoch) return "—";
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(epoch * 1000));
+function formatUnixDate(epoch: number | string | null | undefined) {
+  if (epoch == null || epoch === "") return "—";
+  const seconds = typeof epoch === "number" ? epoch : Number(epoch);
+  if (!Number.isFinite(seconds) || seconds <= 0) return "—";
+  const ms = seconds < 1e12 ? seconds * 1000 : seconds;
+  const date = new Date(ms);
+  if (Number.isNaN(date.getTime())) return "—";
+  try {
+    return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date);
+  } catch {
+    return "—";
+  }
 }
 
 export function CredentialsTable({ refreshToken = 0 }: { refreshToken?: number }) {
@@ -124,7 +133,7 @@ export function CredentialsTable({ refreshToken = 0 }: { refreshToken?: number }
                   <p className="text-sm capitalize text-muted-foreground">{row.kind}</p>
                   <p className="font-mono text-xs text-muted-foreground">{row.env}</p>
                   <p className="font-mono text-sm text-muted-foreground">{row.secret_preview || row.prefix}</p>
-                  <p className="text-sm text-muted-foreground">{formatDate(row.created_at_unix)}</p>
+                  <p className="text-sm text-muted-foreground">{formatUnixDate(row.created_at_unix)}</p>
                   <div className="flex flex-wrap justify-start gap-1 md:justify-end">
                     {confirming ? (
                       <>

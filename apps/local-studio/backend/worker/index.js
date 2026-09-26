@@ -821,8 +821,10 @@ export default {
       }
       let d1 = false;
       try {
-        await env.DB.prepare("SELECT 1 AS ok").first();
-        d1 = true;
+        if (env.DB && typeof env.DB.prepare === "function") {
+          await env.DB.prepare("SELECT 1 AS ok").first();
+          d1 = true;
+        }
       } catch {
         d1 = false;
       }
@@ -840,7 +842,9 @@ export default {
         app: APP.id,
         worker: "agentsam-sdk",
         d1,
-        database: env.D1_DATABASE_NAME || null,
+        /** Binding name on this Worker — not a separate env var. */
+        d1_binding: "DB",
+        database: "inneranimalmedia-business",
         vault_key: vaultKey,
         vault_key_error: vaultKeyError,
         service_auth: {

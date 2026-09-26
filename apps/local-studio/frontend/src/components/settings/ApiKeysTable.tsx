@@ -19,9 +19,18 @@ const SERVICE_LABELS: Record<string, string> = {
   other: "Other",
 };
 
-function formatDate(epoch: number | null | undefined) {
-  if (!epoch) return "—";
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(epoch * 1000));
+function formatUnixDate(epoch: number | string | null | undefined) {
+  if (epoch == null || epoch === "") return "—";
+  const seconds = typeof epoch === "number" ? epoch : Number(epoch);
+  if (!Number.isFinite(seconds) || seconds <= 0) return "—";
+  const ms = seconds < 1e12 ? seconds * 1000 : seconds;
+  const date = new Date(ms);
+  if (Number.isNaN(date.getTime())) return "—";
+  try {
+    return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date);
+  } catch {
+    return "—";
+  }
 }
 
 export function ApiKeysTable({ refreshToken = 0 }: { refreshToken?: number }) {
@@ -130,7 +139,7 @@ export function ApiKeysTable({ refreshToken = 0 }: { refreshToken?: number }) {
                   <p className="font-mono text-sm text-muted-foreground">
                     {secret.last4 ? `•••• ${secret.last4}` : "Encrypted"}
                   </p>
-                  <p className="text-sm text-muted-foreground">{formatDate(secret.updated_at)}</p>
+                  <p className="text-sm text-muted-foreground">{formatUnixDate(secret.updated_at)}</p>
                   <div className="flex flex-wrap justify-start gap-1 md:justify-end">
                     {confirming ? (
                       <>
