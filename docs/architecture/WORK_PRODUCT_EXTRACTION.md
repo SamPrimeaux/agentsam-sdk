@@ -63,6 +63,7 @@ host-specific CSS are not imported into the package.
 /mail
 /artifacts
 /artifacts/tickets
+/artifacts/tickets/:ticketId
 /projects
 /projects/:projectId
 ```
