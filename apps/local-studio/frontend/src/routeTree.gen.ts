@@ -632,6 +632,34 @@ const appsAgentsamRouteWithChildren = appsAgentsamRoute._addFileChildren(
   appsAgentsamRouteChildren,
 )
 
+interface appsArtifactsRouteChildren {
+  appsArtifactsIndexRoute: typeof appsArtifactsIndexRoute
+  appsArtifactsTicketsRoute: typeof appsArtifactsTicketsRoute
+}
+
+const appsArtifactsRouteChildren: appsArtifactsRouteChildren = {
+  appsArtifactsIndexRoute: appsArtifactsIndexRoute,
+  appsArtifactsTicketsRoute: appsArtifactsTicketsRoute,
+}
+
+const appsArtifactsRouteWithChildren = appsArtifactsRoute._addFileChildren(
+  appsArtifactsRouteChildren,
+)
+
+interface appsProjectsRouteChildren {
+  appsProjectsIndexRoute: typeof appsProjectsIndexRoute
+  appsProjectsProjectIdRoute: typeof appsProjectsProjectIdRoute
+}
+
+const appsProjectsRouteChildren: appsProjectsRouteChildren = {
+  appsProjectsIndexRoute: appsProjectsIndexRoute,
+  appsProjectsProjectIdRoute: appsProjectsProjectIdRoute,
+}
+
+const appsProjectsRouteWithChildren = appsProjectsRoute._addFileChildren(
+  appsProjectsRouteChildren,
+)
+
 interface appsSettingsRouteChildren {
   appsSettingsUnitRoute: typeof appsSettingsUnitRoute
   appsSettingsIntegrationsRoute: typeof appsSettingsIntegrationsRoute
