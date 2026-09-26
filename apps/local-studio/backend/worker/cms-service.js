@@ -29,8 +29,8 @@ function resolveSiteSlug(url, body = {}) {
     body?.project_slug ||
     body?.project_id?.replace(/^proj_/, '');
 
-  // Strict default: agentsam-sdk (never inneranimalmedia)
-  return (slug && slug.trim()) ? slug.trim() : 'agentsam-sdk';
+  const trimmed = slug && String(slug).trim() ? String(slug).trim() : '';
+  return trimmed || null;
 }
 
 export async function handleCmsWorkerRequest(request, env) {
@@ -59,6 +59,9 @@ export async function handleCmsWorkerRequest(request, env) {
   }
 
   const siteSlug = resolveSiteSlug(url, body);
+  if (!siteSlug) {
+    return json({ ok: false, error: 'site_slug_required', detail: 'Pass ?site= or project_slug — no hardcoded default site.' }, 400);
+  }
   const dbClient = createCmsDbClient(env.DB, siteSlug);
 
   try {
@@ -98,8 +101,8 @@ export async function handleCmsWorkerRequest(request, env) {
         } catch {}
       }
 
-      const tenantName = project?.name || (siteSlug === 'agentsam-sdk' ? 'Agent Sam SDK' : siteSlug);
-      const tenantDomain = project?.domain || (siteSlug === 'agentsam-sdk' ? 'agentsam.inneranimalmedia.com' : `${siteSlug}.inneranimalmedia.com`);
+      const tenantName = project?.name || siteSlug;
+      const tenantDomain = project?.domain || url.host;
 
       return json({
         ok: true,
@@ -267,7 +270,7 @@ export async function handleCmsWorkerRequest(request, env) {
             original_filename: obj.key.split('/').pop(),
             mime_type: obj.httpMetadata?.contentType || 'application/octet-stream',
             content_size_bytes: obj.size,
-            public_url: `https://agentsam.inneranimalmedia.com/site/${obj.key.replace(`sites/${siteSlug}/public/`, '')}`,
+            public_url: `${url.origin}/site/${obj.key.replace(`sites/${siteSlug}/public/`, '')}`,
             binding: website.name,
             role: website.role,
           }));
