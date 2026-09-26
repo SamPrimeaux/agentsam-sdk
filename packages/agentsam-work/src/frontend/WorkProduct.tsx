@@ -12,6 +12,7 @@ import { MailSurface } from "./surfaces/MailSurface";
 import { ArtifactsSurface } from "./surfaces/ArtifactsSurface";
 import { ProjectsSurface } from "./surfaces/ProjectsSurface";
 import { ProjectDetailSurface } from "./surfaces/ProjectDetailSurface";
+import { TicketDetailSurface } from "./surfaces/TicketDetailSurface";
 
 export function WorkProduct({
   host,
