@@ -3,6 +3,8 @@ import {
   type WorkThemeTokens,
 } from "../contracts/index";
 
+export const WORK_THEME_STORAGE_KEY = "agentsam.work.theme.tokens";
+
 export const GCP_WORK_THEME: WorkThemeTokens = Object.freeze({
   canvas: "#f8fbff",
   panel: "#ffffff",
