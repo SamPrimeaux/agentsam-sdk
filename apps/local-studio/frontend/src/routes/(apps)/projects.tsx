@@ -1,14 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ProjectsPanel } from "@/components/shell/studio-panels";
+import { Outlet, createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/(apps)/projects")({
-  component: ProjectsPage,
+  component: ProjectsLayout,
 });
 
-function ProjectsPage() {
-  return (
-    <div className="h-full min-h-0">
-      <ProjectsPanel />
-    </div>
-  );
+function ProjectsLayout() {
+  return <Outlet />;
 }
