@@ -30,7 +30,10 @@
     "IAM_OAUTH_ISSUER": "https://inneranimalmedia.com",
     "IAM_CLIENT_ID": "iam_agentsam_sdk_web",
     "GOOGLE_CLIENT_ID": "246811022042-d8q1rc1oki4uv9qiqjah8lvkffb91crp.apps.googleusercontent.com",
-    "GOOGLE_DESKTOP_CLIENT_ID": "246811022042-cckq00b5seekpkv0in358jhu42n0b6u9.apps.googleusercontent.com"
+    "GOOGLE_DESKTOP_CLIENT_ID": "246811022042-cckq00b5seekpkv0in358jhu42n0b6u9.apps.googleusercontent.com",
+    "CLOUDFLARE_ACCOUNT_ID": "ede6590ac0d2fb7daf155b35653457b2",
+    "LOCAL_STUDIO_D1_DATABASE_ID": "cf87b717-d4e2-4cf8-bab0-a81268e32d49",
+    "LOCAL_STUDIO_D1_DATABASE_NAME": "inneranimalmedia-business"
   },
   "d1_databases": [
     {
