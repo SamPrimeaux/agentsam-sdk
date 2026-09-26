@@ -477,6 +477,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appsFilesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(apps)/mail': {
+      id: '/(apps)/mail'
+      path: '/mail'
+      fullPath: '/mail'
+      preLoaderRoute: typeof appsMailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(apps)/projects': {
       id: '/(apps)/projects'
       path: '/projects'
