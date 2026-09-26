@@ -1,0 +1,19 @@
+{
+  "name": "@inneranimalmedia/agentsam-settings",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./contracts": "./src/contracts/index.ts",
+    "./frontend": "./src/frontend/index.tsx",
+    "./fixtures": "./src/fixtures/index.ts"
+  },
+  "peerDependencies": {
+    "lucide-react": "^0.510.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  }
+}
