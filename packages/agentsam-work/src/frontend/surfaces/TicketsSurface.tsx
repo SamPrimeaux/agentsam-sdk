@@ -153,6 +153,15 @@ export function TicketsSurface({
                     </p>
                   ) : null}
                 </div>
+                {onOpenTicket ? (
+                  <button
+                    type="button"
+                    className="agentsam-work-toolbar-button"
+                    onClick={() => onOpenTicket(ticket)}
+                  >
+                    Open
+                  </button>
+                ) : null}
               </div>
             </article>
           ))}
