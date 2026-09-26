@@ -137,6 +137,16 @@ const appsArtifactsTicketsRoute = appsArtifactsTicketsRouteImport.update({
   path: '/tickets',
   getParentRoute: () => appsArtifactsRoute,
 } as any)
+const appsArtifactsTicketsIndexRoute = appsArtifactsTicketsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => appsArtifactsTicketsRoute,
+} as any)
+const appsArtifactsTicketsTicketIdRoute = appsArtifactsTicketsTicketIdRouteImport.update({
+  id: '/$ticketId',
+  path: '/$ticketId',
+  getParentRoute: () => appsArtifactsTicketsRoute,
+} as any)
 const appsProjectsIndexRoute = appsProjectsIndexRouteImport.update({
   id: '/',
   path: '/',
