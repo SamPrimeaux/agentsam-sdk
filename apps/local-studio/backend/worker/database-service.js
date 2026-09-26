@@ -6,7 +6,7 @@ import {
   readD1Metrics,
   readPostgresMetrics,
 } from '../../../../packages/agentsam-database-editor/backend/index.js';
-import { decryptSecret as decryptCloudflareSecret } from '../../../../packages/connectors/cloudflare/src/vault.js';
+import { resolveCloudflareCredential as resolveCloudflareConnectorCredential } from '../../../../packages/connectors/cloudflare/src/credential.js';
 
 const RANGE_SECONDS = Object.freeze({
   '1h': 60 * 60,
@@ -75,63 +75,21 @@ async function resolveDeploymentOwnerAccount(env) {
 }
 
 async function resolveCloudflareCredential(env, accountId) {
-  if (!env?.DB?.prepare || !accountId) return null;
-
-  try {
-    const row = await env.DB.prepare(
-      `SELECT id, account_identifier, account_display, access_token, scopes, scope,
-              metadata_json, expires_at, updated_at
-         FROM user_oauth_tokens
-        WHERE user_id = ?
-          AND LOWER(provider) = 'cloudflare'
-          AND COALESCE(is_active, 1) = 1
-          AND (revoked_at IS NULL OR revoked_at = 0)
-        ORDER BY updated_at DESC
-        LIMIT 1`,
-    ).bind(accountId).first();
-
-    if (row?.access_token) {
-      const metadata = parseJson(row.metadata_json);
-      return {
-        token: String(row.access_token),
-        cloudflareAccountId:
-          clean(row.account_identifier) ||
-          clean(metadata.cloudflare_account_id) ||
-          null,
-        scopes: splitScopes(row.scopes || row.scope),
-        expiresAt: row.expires_at == null ? null : Number(row.expires_at) || null,
-        source: 'user_oauth_tokens',
-      };
-    }
-  } catch {
-    // Fall through to encrypted legacy connection.
-  }
-
-  try {
-    const row = await env.DB.prepare(
-      `SELECT connection_id, cloudflare_account_id, scopes, access_token_encrypted,
-              expires_at, updated_at
-         FROM agentsam_cloudflare_connections
-        WHERE owner_id = ? AND status = 'connected'
-        ORDER BY updated_at DESC
-        LIMIT 1`,
-    ).bind(accountId).first();
-    if (!row?.access_token_encrypted) return null;
-    const token = await decryptCloudflareSecret(
-      env,
-      row.access_token_encrypted,
-      `cloudflare-connection:${accountId}`,
-    );
-    return {
-      token,
-      cloudflareAccountId: clean(row.cloudflare_account_id) || null,
-      scopes: splitScopes(row.scopes),
-      expiresAt: row.expires_at == null ? null : Number(row.expires_at) || null,
-      source: 'agentsam_cloudflare_connections',
-    };
-  } catch {
-    return null;
-  }
+  const resolved = await resolveCloudflareConnectorCredential({
+    env,
+    ownerId: accountId,
+    authMode: 'oauth',
+    capabilityId: 'cloudflare.d1',
+  });
+  if (!resolved?.bearerToken) return null;
+  return {
+    token: resolved.bearerToken,
+    cloudflareAccountId: clean(resolved.accountId) || null,
+    scopes: Array.isArray(resolved.grantedScopes) ? resolved.grantedScopes : [],
+    expiresAt: resolved.expiresAt || null,
+    source: resolved.source || 'oauth_connection',
+    connectionId: resolved.connectionId || null,
+  };
 }
 
 async function cloudflareJson(url, token, init = {}) {
