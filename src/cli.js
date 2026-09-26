@@ -44,6 +44,11 @@ import { runApiKey } from './commands/api-key.js';
 import { runResume } from './commands/resume.js';
 import { runLogin, runLogout } from './commands/account-auth.js';
 import { runPlugins } from './commands/plugins.js';
+import { runCredentials } from './commands/credentials.js';
+import { runCheatSheet } from './commands/cheat-sheet.js';
+import { runCompute } from './commands/compute.js';
+import { runBilling } from './commands/billing.js';
+import { runUpdate } from './commands/update.js';
 import { applyPresetSelection, runAdd, runCapabilities, runDev, runInspect } from './commands/product.js';
 import { listPresets, resolvePreset } from './presets/index.js';
 import fs from 'node:fs';
@@ -416,6 +421,45 @@ if (command === '--version' || command === '-v') {
   } catch (e) {
     reportCliError(e);
     process.exit(1);
+  }
+} else if (command === 'credentials' || command === 'credential') {
+  try {
+    const code = await runCredentials(rest);
+    if (code) process.exitCode = code;
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
+  }
+} else if (command === 'cheat-sheet' || command === 'cheatsheet') {
+  try {
+    process.exitCode = runCheatSheet(rest, { version: VERSION }) || 0;
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
+  }
+} else if (command === 'compute') {
+  try {
+    const code = await runCompute(rest);
+    if (code) process.exitCode = code;
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
+  }
+} else if (command === 'billing' || command === 'costs') {
+  try {
+    const code = await runBilling(rest);
+    if (code) process.exitCode = code;
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
+  }
+} else if (command === 'update') {
+  try {
+    const code = await runUpdate(rest);
+    if (code) process.exitCode = code;
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
   }
 } else if (command === 'env') {
   try {

@@ -31,6 +31,9 @@ import { createLocalSession, saveLocalSession, localSessionElapsedMs, loadSessio
 import { runtimeDatabasePath } from '../local/runtime-store.js';
 import { grantExecutionApproval, isExecutionApproved, toolApprovalKey } from '../lib/execution-approvals.js';
 import { runWhoami } from './whoami.js';
+import { runCredentials } from './credentials.js';
+import { runCheatSheet } from './cheat-sheet.js';
+import pkg from '../../package.json' with { type: 'json' };
 import { runLogin, runLogout } from './account-auth.js';
 import { runHelp } from '../ui/cli/help.js';
 import { hydrateSecureCredentials } from '../security/local-vault.js';
@@ -789,12 +792,14 @@ export async function dispatchShellLine(line, state = {}) {
     const commonVerbs = [
       'help', 'exit', 'quit', 'clear', 'status', 'models', 'model',
       'whoami', 'cf', 'cloudflare', 'db', 'tunnel', 'connections',
-      'connect', 'usage', 'session', 'providers', 'settings', 'logs',
+      'connect', 'usage', 'session', 'providers', 'credentials', 'cheatsheet',
+      'settings', 'logs',
       'git', 'diff', 'pwd', 'cd', 'fast', 'flex', 'standard', 'reasoning',
     ];
     if (commonVerbs.includes(bare)) {
-      tokens[0] = `/${bare}`;
+      tokens[0] = bare === 'cheatsheet' ? '/cheat-sheet' : `/${bare}`;
     }
+    if (bare === 'cheat-sheet') tokens[0] = '/cheat-sheet';
   }
 
   const [command, ...args] = tokens;
@@ -865,6 +870,14 @@ export async function dispatchShellLine(line, state = {}) {
           if (process.stdin.isPaused()) process.stdin.resume();
           state.rl?.resume?.();
         }
+        break;
+      case '/credentials':
+      case '/credential':
+        await runCredentials(args.length ? args : ['audit'], { write, home: state.home });
+        break;
+      case '/cheat-sheet':
+      case '/cheatsheet':
+        runCheatSheet(args, { write, version: pkg.version });
         break;
       case '/login':
         await runLogin(args, { write, home: state.home });

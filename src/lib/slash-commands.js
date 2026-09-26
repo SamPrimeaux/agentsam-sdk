@@ -13,6 +13,8 @@ export const SLASH_COMMANDS = [
   { cmd: '/status', description: 'Honest project awareness: account, models, terminal, live deploy', lane: 'local' },
   { cmd: '/models', description: 'Probe providers and provider-verified known models', lane: 'model' },
   { cmd: '/providers', description: 'Configure and verify machine provider credentials', lane: 'model' },
+  { cmd: '/credentials', description: 'Audit credentials, drift, and remediation (never prints secrets)', lane: 'identity' },
+  { cmd: '/cheat-sheet', description: 'Organized Agent Sam command groups', lane: 'local' },
   { cmd: '/login', description: 'Sign in to Inner Animal Media and save the machine-local Agent Sam session', lane: 'identity' },
   { cmd: '/logout', description: 'Sign out locally without deleting provider credentials', lane: 'identity' },
   { cmd: '/whoami', description: 'Show authenticated account identity and safe credential status', lane: 'identity' },
