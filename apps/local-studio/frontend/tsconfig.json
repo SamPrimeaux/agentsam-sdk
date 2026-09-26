@@ -50,13 +50,24 @@
       ],
       "@inneranimalmedia/agentsam-settings/*": [
         "../../../packages/agentsam-settings/src/*"
+      ],
+      "@inneranimalmedia/agentsam-database-editor/ui": [
+        "../../../packages/agentsam-database-editor/src/ui/index.ts"
+      ],
+      "@inneranimalmedia/agentsam-database-editor/manifest": [
+        "../../../packages/agentsam-database-editor/src/manifest.js"
       ]
     },
     "allowImportingTsExtensions": true,
     "preserveSymlinks": true
   },
   "include": [
-    "src", "agentsam/**/*.tsx", "agentsam/**/*.ts"
+    "src",
+    "agentsam/**/*.tsx",
+    "agentsam/**/*.ts"
   ],
-  "exclude": ["src/routes/_app", "src/routes/_app.tsx"]
+  "exclude": [
+    "src/routes/_app",
+    "src/routes/_app.tsx"
+  ]
 }
