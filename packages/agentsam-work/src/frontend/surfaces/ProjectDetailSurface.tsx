@@ -138,11 +138,11 @@ export function ProjectDetailSurface({
           </button>
         </section>
 
-        {[
+        {([
           ["Brand assets", Folder],
           ["Cover", Folder],
           ["Memory", Folder],
-        ].map(([label, Icon]) => (
+        ] as const).map(([label, Icon]) => (
           <section key={String(label)} style={{ padding: 18, borderBottom: "1px solid var(--agentsam-work-border)", display: "flex", alignItems: "center", gap: 8 }}>
             <strong style={{ fontSize: 12 }}>{label}</strong>
             <ChevronDown size={13} />
