@@ -50,6 +50,19 @@ function activeNavId(surface: WorkSurfaceId): WorkNavId {
   return "artifacts";
 }
 
+function navHref(
+  item: Pick<WorkNavItem, "id" | "href">,
+  surface: WorkSurfaceId,
+) {
+  if (
+    item.id === "tickets" &&
+    (surface === "artifacts" || surface === "artifact-tickets")
+  ) {
+    return "/artifacts/tickets";
+  }
+  return item.href;
+}
+
 function shellTitle(surface: WorkSurfaceId) {
   switch (surface) {
     case "calendar":
