@@ -326,29 +326,6 @@ async function resolveSource(env, accountId, sourceId) {
   const id = clean(sourceId);
   if (!id) throw new Error('source_id_required');
 
-  if (id === 'hyperdrive:primary') {
-    const source = await getHyperdriveSource(env, accountId);
-    if (!source) throw new Error('database_source_not_available');
-    if (source.status === 'degraded') throw new Error(source.error || 'hyperdrive_unavailable');
-    const adapter = await withHyperdriveClient(env, async (client) => {
-      const query = (sql, params = []) => client.query(sql, params);
-      return {
-        source,
-        adapter: createHyperdriveAdapter({
-          id: source.id,
-          label: source.label,
-          query,
-          writable: source.writable !== false,
-        }),
-        client,
-        holdOpen: true,
-      };
-    });
-    // withHyperdriveClient cannot return a live client beyond its callback.
-    // Re-open in caller-specific helpers instead; this branch is never used directly.
-    return adapter;
-  }
-
   if (id.startsWith('cf-d1:')) {
     const databaseId = clean(id.slice('cf-d1:'.length));
     const credential = await resolveCloudflareCredential(env, accountId);
@@ -657,7 +634,7 @@ async function readTableRows(adapter, source, params) {
       }),
       adapter.query({ sql: `SELECT COUNT(*)::bigint AS count FROM ${qualified}` }),
     ]);
-    const total = Number(data.objects ? count.objects?.[0]?.count : 0) || 0;
+    const total = Number(count.objects?.[0]?.count || 0) || 0;
     return {
       rows: data.objects || [],
       columns,
