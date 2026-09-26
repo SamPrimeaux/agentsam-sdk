@@ -1,23 +1,36 @@
 # AgentSam Runtime Protocol
 
-> Branch work: `feat/runtime-protocol-agentsamd`. Canonical law: **agentsamd is the machine daemon; providers are adapters.**
-
-# AgentSam Runtime Protocol + stock multi-machine
+> Branch: `feat/runtime-protocol-agentsamd`. Law: **agentsamd is the machine daemon; providers are adapters.**
 
 ## Architectural law (non-negotiable)
 
 **agentsamd is the AgentSam machine/runtime daemon. Providers are adapters beneath it.**
 
-Do not implement “AgentSam-for-Docker,” “AgentSam-for-GCP,” or “AgentSam-for-CF-Containers” as separate slightly different products. One protocol; many substrates.
-
-Keep separate:
+Do not implement “AgentSam-for-Docker,” “AgentSam-for-GCP,” or “AgentSam-for-CF-Containers” as separate products. One protocol; many substrates.
 
 | Noun | Role |
 |---|---|
 | **agentsamd** | Lives with execution: exec, PTY, fs, processes, git, tools, capabilities, attach |
-| **agentsam-go-worker** | Cloud/control service: provision, provider APIs, discovery, health, register, job dispatch, CF integration — **not** “the computer” |
-| **Agent runtimes** (ADK / Vertex Agent Engine) | Agent-loop authority — **consumes** AgentSam compute; never a machine_instance |
-| **Local Studio Worker** | Self-sustaining app host: auth session, D1, `EXECOS`, `PTY_SERVICE`, runtime APIs for stock users |
+| **Native helper** (this sprint) | Privileged companion (Rust/Zig) under unprivileged Go: keychain, mounts, devices |
+| **EXECOS Worker** (`env.EXECOS` / `EXECOS_IAM`) | **Today’s** cloud→machine hop + enrollment consume + session/job/port-forward writes. Interim fabric until agentsamd is enrolled everywhere — **not** a second product brand |
+| **PTY_SERVICE** | Separate VPC/PTY health lane (metal), not the daemon |
+| **agentsam-go-worker** | Optional **hosted Go service** (hash/inspect/runtime HTTP on CF Containers). Reuses the same Go core as agentsamd. **Not** the Studio control plane and **not** a substitute for EXECOS or D1 |
+| **Agent runtimes** (ADK / Vertex Agent Engine) | Agent-loop authority — **consumes** AgentSam compute; never a machine instance |
+| **Local Studio Worker** | Stock app host: auth session, D1 SSOT, bindings (`EXECOS`, `PTY_SERVICE`), runtime APIs |
+
+### EXECOS vs agentsam-go-worker (do not conflate)
+
+```text
+Studio / IAM Worker
+  ├─ D1 SSOT (runtime_* after cutover)
+  ├─ env.EXECOS / EXECOS_IAM  →  ExecOS dispatcher  →  enrolled machine hop
+  └─ env.PTY_SERVICE          →  VPC PTY health
+
+agentsam-go-worker            →  separate hosted service artifact
+agentsamd (+ native helper)   →  the computer (user machine / VM / container image)
+```
+
+Control-plane verbs (enroll, health, job ledger, session ownership) already land through **Studio/IAM + EXECOS + D1**. Do not invent a parallel “go-worker is the terminal control plane” story. go-worker stays a service package that shares Go core with agentsamd.
 
 ---
 
@@ -25,14 +38,15 @@ Keep separate:
 
 ```text
 provider     local | cloudflare | gcp | aws | azure | fly | …
-substrate    host | vm | container | microvm | sandbox | workstation | kubernetes | managed_agent*
+substrate    host | vm | container | microvm | sandbox | workstation | kubernetes
 lifecycle    persistent | scale_to_zero | ephemeral | job
+runtime      agentsamd | sandbox_api | provider_native
 transport    direct | service_binding | tunnel | vpc_service | vpc_network | public_wss | provider_api
 ```
 
-\* `managed_agent` is **not** a machine class in the scheduler — it sits beside as agent_runtime.
-
 **PTY is a capability, not the daemon.** Runtimes report `pty: true|false` honestly.
+
+`managed_agent` is **not** a machine class — it sits beside as agent_runtime.
 
 ---
 
@@ -41,112 +55,73 @@ transport    direct | service_binding | tunnel | vpc_service | vpc_network | pub
 ```mermaid
 flowchart TB
   Users[CLI_Studio_Apps]
-  Worker[AgentSam_Cloud_Worker]
-  ExecOS[ExecOS_control_plane]
-  Sched[Scheduler_capabilities]
+  Studio[Local_Studio_Worker]
+  D1[(D1_runtime_SSOT)]
+  ExecOS[EXECOS_hop_interim]
   Daemon[agentsamd]
+  Helper[native_helper]
   Cont[agentsamd_in_container]
   Adapt[Provider_native_adapter]
+  GoSvc[agentsam_go_worker_optional]
 
-  Users --> Worker
-  Worker -->|"env.EXECOS"| ExecOS
-  ExecOS --> Sched
-  Sched --> Daemon
-  Sched --> Cont
-  Sched --> Adapt
+  Users --> Studio
+  Studio --> D1
+  Studio -->|"env.EXECOS"| ExecOS
+  ExecOS --> Daemon
+  ExecOS --> Cont
+  Studio --> Adapt
+  Daemon --> Helper
   Daemon --> Host[Mac_Linux_VM]
-  Cont --> Img[Docker_CF_Container_CloudRun]
+  Cont --> Img[Docker_CF_Container]
   Adapt --> Sand[CF_Sandbox_etc]
+  GoSvc -.->|"same Go core; not control plane"| Daemon
 ```
-
-Studio Production bindings stay first-class doors for the **stock app host** (`DB`, `EXECOS`, `PTY_SERVICE`, …) — not a substitute for per-account `runtime_instances` rows.
 
 ---
 
-## Schema evolution
+## Installation grades (this sprint)
 
-From:
-
-```text
-terminal_instances.kind ∈ { local_device, vm, sandbox }
-terminal_connections.transport ∈ { execos, container, … }
-```
-
-Toward:
-
-```text
-runtime_instances
-  account_id, provider, substrate, lifecycle, runtime∈{agentsamd,sandbox_api,provider_native}
-  architecture, os, status, capabilities_json (discovered)
-
-runtime_connections
-  instance_id, transport, endpoint_ref, credential_ref, health_status
-```
-
-**Instance identity ≠ transport.** Same GCP VM can move `public_wss` → `tunnel` → `vpc_service` without changing the instance row.
-
-Compat: keep reading legacy `terminal_*` during cutover; `target_lane` remains derived, never authority.
-
----
-
-## Installation grades
-
-| Grade | What | When |
+| Grade | What | Sprint |
 |---|---|---|
-| **Full daemon** | Go `agentsamd` binary | Mac/Linux/VM/Docker/CF Container/workstation |
-| **Embedded SDK** | TS/Python runtime lib | App embeds AgentSam |
-| **Provider adapter** | No daemon | CF Sandbox, Docker API, SSH, managed APIs |
-| **Native helper** (later) | Rust/Zig privileged helper | keychain, mounts, devices under unprivileged Go daemon |
+| **Full daemon** | Go `agentsamd` | Yes — MVP + enroll + LaunchAgent/systemd |
+| **Native helper** | Rust/Zig privileged helper | Yes — keychain / mounts / devices with daemon |
+| **Embedded SDK** | TS/Python runtime lib | Protocol client first; embed later in same epic if blocked |
+| **Provider adapter** | No daemon | CF Sandbox path |
 
-**Language priority:** Go canonical daemon → TypeScript protocol client/plugins → Python ML/CAD embed → Rust helper/hardened → others on demand.
+**Language priority:** Go canonical daemon → TypeScript protocol client → Rust/Zig native helper (this sprint) → Python ML/CAD embed.
 
 **Stock user123 path:**
 
 ```bash
-agentsam setup runtime          # goal profiles, not provider menus
-# or after plan approve:
+agentsam setup runtime
 agentsam machine install --enroll
 ```
 
-Writes only `connection_token` profile + LaunchAgent/systemd. Never platform `AGENTSAM_BRIDGE_KEY`. Never require Sam’s `~/.agentsam/load-agent-env.sh`.
+Writes only `connection_token` profile + LaunchAgent/systemd. Never platform `AGENTSAM_BRIDGE_KEY`. Never Sam’s `~/.agentsam/load-agent-env.sh`.
 
 Public OAuth client ids: Studio Worker vars → `/api/public-config` → CLI resolve.
+
+### Google consent branding note
+
+Consent chrome may show **inneranimalmedia.com** until Google brand-verifies the OAuth app name. Redirect host is still `agentsam.inneranimalmedia.com`. That is Google Auth Platform behavior (authorized domain fallback), not a second login product. Fix is Console branding verification — not routing CLI auth through IAM main for “stock.”
 
 ---
 
 ## Reference substrates (ship order)
 
-**First-class**
-
 | Class | Axes example | Runtime |
 |---|---|---|
-| Native host | `local` × `host` × `persistent` | agentsamd + launchd/systemd |
-| Local Docker | `local` × `container` × persistent\|ephemeral | agentsamd in image |
+| Native host | `local` × `host` × `persistent` | agentsamd + native helper + launchd/systemd |
+| Local Docker | `local` × `container` | agentsamd in image |
 | GCP VM | `gcp` × `vm` × `persistent` | agentsamd + systemd (+ tunnel/VPC) |
-| CF Container | `cloudflare` × `container` × often scale_to_zero | agentsamd image; DO = lifecycle adapter only |
-| CF Sandbox | `cloudflare` × `sandbox` × ephemeral | **sandbox_api adapter** (no forced daemon) |
-
-**Then:** Cloud Run, Workstation, Fly Machines, Fargate, Azure Container Apps.  
-**Later:** K8s fleets, GPU/batch.  
-**Beside (not machine):** Google ADK / Agent Runtime.
+| CF Container | `cloudflare` × `container` | agentsamd image; DO = lifecycle adapter only |
+| CF Sandbox | `cloudflare` × `sandbox` × ephemeral | **sandbox_api adapter** |
 
 ---
 
 ## `agentsam setup runtime` (GOAP + utility)
 
-Home: existing Discover → Plan → Approve — **not** `setup gcp|docker|cloudflare` as the primary UX.
-
-1. **Discover** (providers publish facts via `discover/doctor/listInstances/capabilities/estimate/plan/apply`)
-2. Ask **goal profiles** (five): My Computer | Isolated Local | Cloud Computer | On-demand | Safe Sandbox (+ Advanced existing infra)
-3. Ask only preference deltas that change the plan
-4. **Hard constraints** eliminate ineligible candidates (never soft-score past a missing required capability)
-5. **GOAP** builds install plans (actions: create_vm, install_agentsamd, configure_transport, enroll, health)
-6. **Utility** ranks eligible plans; human approves
-7. **Receipts:** `.agentsam/runtime/latest.plan.json` + `latest.install-receipt.json`
-
-Remember `runtime_preferences` per account; project requirements always win.
-
-Clean nouns:
+Discover → goal profiles → hard constraints → GOAP install plan → utility rank → approve → receipts.
 
 ```text
 agentsam setup runtime
@@ -168,7 +143,164 @@ ports.list|expose
 system.inspect
 ```
 
-Scheduler asks for **capabilities** (“terminal + git + docker + 8GB”), not “a GCP VM.”
+---
+
+## D1 hard cutover (no half measures)
+
+**Reject:** widening `transport CHECK` to add `agentsamd` while leaving `execos` baked into table names, job columns, and SDK APIs.
+
+**Accept:** one published rename of the spine to `runtime_*`, four-axis instances, transport without ExecOS as an identity, seed migrate the two live machines, update IAM + Studio + ExecOS consumers in the same ship.
+
+Live inventory (2026-09-26 remote `inneranimalmedia-business`):
+
+| Legacy table | Rows | Disposition |
+|---|---|---|
+| `terminal_instances` | 2 | **DROP** after migrate → `runtime_instances` |
+| `terminal_connections` | 2 | **DROP** after migrate → `runtime_connections` |
+| `terminal_connection_credentials` | 2 | **DROP** → `runtime_connection_credentials` |
+| `terminal_enrollment_tokens` | 10 | **DROP** → `runtime_enrollment_tokens` |
+| `terminal_sessions` | 0 | **DROP** → `runtime_sessions` |
+| `terminal_jobs` | 1283 | **DROP** → `runtime_jobs` (history optional archive first) |
+| `terminal_port_forwards` | 25 | **DROP** → `runtime_port_forwards` |
+| `cloud_provider_connections` | keep | Provider credential plane (GCP WIF/etc.) — not renamed |
+| `agentsam_cli_oauth_*` | keep | CLI OAuth broker pending/pickup — unrelated |
+
+### Target DDL (authoritative)
+
+```sql
+-- runtime_instances: one enrolled computer (axes, not overloaded kind)
+CREATE TABLE runtime_instances (
+  id TEXT PRIMARY KEY,                          -- keep tinst_* ids on seed migrate
+  account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  provider TEXT NOT NULL CHECK(provider IN (
+    'local','cloudflare','gcp','aws','azure','fly','custom'
+  )),
+  substrate TEXT NOT NULL CHECK(substrate IN (
+    'host','vm','container','microvm','sandbox','workstation','kubernetes'
+  )),
+  lifecycle TEXT NOT NULL DEFAULT 'persistent' CHECK(lifecycle IN (
+    'persistent','scale_to_zero','ephemeral','job'
+  )),
+  runtime TEXT NOT NULL DEFAULT 'agentsamd' CHECK(runtime IN (
+    'agentsamd','sandbox_api','provider_native'
+  )),
+  provider_connection_id TEXT REFERENCES cloud_provider_connections(id) ON DELETE SET NULL,
+  provider_resource_id TEXT,
+  provider_location TEXT,
+  hostname TEXT,
+  os TEXT CHECK(os IN ('linux','macos','windows') OR os IS NULL),
+  arch TEXT,
+  default_shell TEXT,
+  default_cwd TEXT,
+  capabilities_json TEXT NOT NULL DEFAULT '{}',  -- discovered, never inferred
+  status TEXT NOT NULL DEFAULT 'provisioning' CHECK(status IN (
+    'provisioning','ready','offline','stopped','failed','deleting'
+  )),
+  expires_at INTEGER,
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  last_seen_at INTEGER,
+  UNIQUE(account_id, id),
+  CHECK (provider <> 'gcp' OR provider_connection_id IS NOT NULL)
+);
+
+-- runtime_connections: how Studio reaches the instance (identity ≠ transport)
+CREATE TABLE runtime_connections (
+  id TEXT PRIMARY KEY,
+  account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  instance_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  transport TEXT NOT NULL CHECK(transport IN (
+    'direct','service_binding','tunnel','vpc_service','vpc_network',
+    'public_wss','provider_api'
+  )),
+  endpoint_url TEXT,
+  auth_mode TEXT NOT NULL CHECK(auth_mode IN (
+    'connection_token','platform_bridge','service_binding'
+  )),
+  credential_ref TEXT,
+  is_default INTEGER NOT NULL DEFAULT 0 CHECK(is_default IN (0,1)),
+  is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1)),
+  priority INTEGER NOT NULL DEFAULT 50,
+  health_status TEXT NOT NULL DEFAULT 'unknown' CHECK(health_status IN (
+    'unknown','healthy','degraded','unreachable'
+  )),
+  health_checked_at INTEGER,
+  health_error TEXT,
+  -- optional CF/tunnel metadata (nullable; not transport identity)
+  cloudflare_account_id TEXT,
+  cloudflare_tunnel_id TEXT,
+  dns_zone_id TEXT,
+  dns_record_id TEXT,
+  access_application_id TEXT,
+  access_service_token_id TEXT,
+  access_credential_ref TEXT,
+  route_hostname TEXT,
+  origin_service TEXT,
+  provider_metadata_json TEXT NOT NULL DEFAULT '{}',
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  UNIQUE(account_id, instance_id, id),
+  FOREIGN KEY(account_id, instance_id)
+    REFERENCES runtime_instances(account_id, id) ON DELETE CASCADE,
+  CHECK (transport <> 'direct' OR endpoint_url IS NOT NULL)
+);
+
+CREATE TABLE runtime_connection_credentials ( /* same shape as tcc_*; rename FKs */ );
+CREATE TABLE runtime_enrollment_tokens ( /* same shape; rename FKs */ );
+CREATE TABLE runtime_sessions ( /* PTY attach ledger; rename FKs */ );
+CREATE TABLE runtime_jobs (
+  /* same operational columns; rename execos_run_id → hop_run_id */
+);
+CREATE TABLE runtime_port_forwards ( /* rename FKs */ );
+
+CREATE TABLE runtime_preferences (
+  account_id TEXT PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+  profile_json TEXT NOT NULL DEFAULT '{}',
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+```
+
+### Seed map (preserve IDs)
+
+| Legacy | New axes |
+|---|---|
+| `tinst_sams_imac` local_device/local | `provider=local`, `substrate=host`, `lifecycle=persistent`, `runtime=agentsamd` (target; may stay hop=`service_binding` until daemon enrolled) |
+| `tinst_iam_tunnel` vm/google_cloud | `provider=gcp`, `substrate=vm`, `lifecycle=persistent`, `runtime=agentsamd` |
+| `conn_mac_local` transport=execos | `transport=direct` (or `public_wss`), endpoint kept |
+| `conn_gcp_iam_tunnel` transport=execos + platform_bridge | `transport=service_binding` or `direct` + `auth_mode=platform_bridge` |
+
+**Forbidden after cutover:** `transport='execos'` as a column value. ExecOS is an **implementation hop** behind `service_binding` / Studio binding — not a user-facing transport enum.
+
+### Ship sequence (same PR epic)
+
+1. Migration SQL in `inneranimalmedia/migrations/` (archive `terminal_jobs` → `_archive_terminal_jobs_20260926` if you want forensics, then DROP).
+2. Rewrite IAM `backend/agentsam/terminal/**` → `runtime/**` (or thin re-export for one release max — prefer hard rename in SDK published surface).
+3. ExecOS `IamExecutionEntrypoint` SQL table names.
+4. Studio CLI: `agentsam terminal *` → `agentsam runtime *` (alias one release then delete).
+5. Protocol package enums already omit `execos` as identity (remove from `RUNTIME_TRANSPORTS`).
+6. Deploy IAM + Studio + ExecOS together; no dual-write period longer than the cutover window.
+
+### Explicitly not “compat forever”
+
+- No dual `terminal_*` + `runtime_*` for months.
+- No `CHECK (... OR 'execos')` soft patch.
+- No documenting ExecOS as the stock machine for user123.
+
+---
+
+## Implementation order (this sprint)
+
+1. Protocol schema + shared types (**done**)
+2. Public-config + CLI Google broker (**done**)
+3. **D1 hard cutover** `terminal_*` → `runtime_*` (above)
+4. **agentsamd MVP** + enroll + LaunchAgent/systemd
+5. **Native helper** (keychain/mounts/devices) alongside daemon
+6. Studio control plane + machines UI on `runtime_*`
+7. **`agentsam setup runtime`** GOAP + utility + receipts
+8. Reference adapters (host, docker, gcp/vm, cf/container, cf/sandbox)
 
 ---
 
@@ -177,40 +309,18 @@ Scheduler asks for **capabilities** (“terminal + git + docker + 8GB”), not �
 - IAM-only terminal plane with Studio as dumb proxy
 - Stock dependence on operator `load-agent-env.sh`
 - Provider-branded duplicate daemons
-- Treating managed agent runtimes as `machine_instance`
-- Inferring capabilities from provider name instead of discovery
+- Treating managed agent runtimes as machine instances
+- Inferring capabilities from provider name
 - Soft-scoring past hard requirements
-
----
-
-## Implementation order
-
-1. **Protocol + capability schema** (docs + shared TS/Go types)
-2. **Public-config + CLI resolve** (unblocks gcloud desktop auth for stock)
-3. **Evolve existing `terminal_*` tables** (compat rename in API/docs first; widen CHECKs — do **not** invent parallel `runtime_*` until agentsamd needs columns these cannot hold)
-4. **Go agentsamd MVP** + enroll + LaunchAgent; interim wrap ExecOS if needed
-5. **Studio control plane** on existing bindings; Terminal machines UI
-6. **`agentsam setup runtime`** planner (five profiles + receipts)
-7. **Reference adapters** (host, docker, gcp/vm, cf/container, cf/sandbox)
-
-### D1 reuse note (live `inneranimalmedia-business`)
-
-Keep the spine: `terminal_instances` → `terminal_connections` → credentials / enrollment / sessions / jobs / port_forwards.
-
-Small additive migrations only when needed, e.g.:
-
-- Widen `terminal_connections.transport` beyond `('execos','container')` → add `agentsamd` (and treat `execos` as legacy alias)
-- Optionally add `runtime_kind` / substrate fields on `terminal_instances` without renaming tables
-- Soften instance CHECK that forces `vm`↔`google_cloud` only when multi-provider VMs land
-
-No greenfield `runtime_*` tables while row counts stay small and the FK graph already matches protocol axes.
+- Widening legacy CHECKs instead of renaming the spine
+- Casting `agentsam-go-worker` as the EXECOS/control-plane replacement
 
 ---
 
 ## Success criteria
 
-- User123: sign into Studio → `setup runtime` / machine install → enrolled agentsamd → attach — no Sam shell files, no `~/ExecOS` clone required.
-- Same protocol image/daemon works on Mac, GCP VM, Docker, CF Container; Sandbox uses adapter.
+- User123: Studio sign-in → `setup runtime` → enrolled **agentsamd** (+ native helper on host) → attach — no Sam shell files, no `~/ExecOS` clone required.
+- Same protocol image/daemon on Mac, GCP VM, Docker, CF Container; Sandbox uses adapter.
 - Transport can change without renaming the instance.
-- Preferences and plan receipts explain “why this backend” without LLM invention.
-- `agentsam-go-worker` remains a service; agentsamd remains the computer.
+- D1 speaks `runtime_*` only; `execos` is not a user-facing transport.
+- `agentsam-go-worker` remains an optional hosted service; **EXECOS** remains interim hop; **agentsamd** remains the computer.

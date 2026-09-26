@@ -46,7 +46,6 @@ export const RUNTIME_TRANSPORTS = Object.freeze([
   'vpc_network',
   'public_wss',
   'provider_api',
-  'execos',
 ]);
 
 /** Capability keys — discovered, never inferred from provider name alone. */

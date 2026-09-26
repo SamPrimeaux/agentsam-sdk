@@ -57,8 +57,7 @@
         "vpc_service",
         "vpc_network",
         "public_wss",
-        "provider_api",
-        "execos"
+        "provider_api"
       ]
     }
   }
