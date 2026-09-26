@@ -35,8 +35,9 @@ const GROUPS = Object.freeze([
       ['go', 'Go product discover/build/deploy'],
       ['dockerize', 'Supported containers'],
       ['compute', 'Google Cloud VM / IAM helpers'],
+      ['gcloud auth login', 'Agent Sam Google OAuth (Press Enter → browser)'],
+      ['gcloud auth login --sdk', 'Native Google Cloud SDK OAuth (optional)'],
       ['google-cloud', 'Projects · compute · IAM SAs · billing · doctor'],
-      ['gcloud auth login', 'Real Google Cloud SDK OAuth consent'],
     ],
   },
   {

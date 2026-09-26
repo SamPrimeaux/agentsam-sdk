@@ -2,12 +2,34 @@
 
 Two different Google login paths. Do not conflate them.
 
-## Path A — CLI operator auth (`agentsam gcloud auth login`)
+## Path A — CLI operator auth
 
-Wraps native **Google Cloud SDK** OAuth:
+### Default: Agent Sam hosted Google (`agentsam gcloud auth login`)
 
 ```bash
 agentsam gcloud auth login
+```
+
+Shows the live start URL and waits for **Enter** to open the system browser:
+
+```text
+https://agentsam.inneranimalmedia.com/api/oauth/google/start
+```
+
+Consent branding: **Continue to Agent Sam** (your `GOOGLE_CLIENT_ID`).
+
+| Piece | Value |
+| --- | --- |
+| Consent UI | Your OAuth app name (Agent Sam / Local Studio) |
+| OAuth client | Your Web client (`GOOGLE_CLIENT_ID` + Worker `GOOGLE_CLIENT_SECRET`) |
+| Redirect | `https://agentsam.inneranimalmedia.com/api/oauth/google/callback` |
+
+### Optional: Google Cloud SDK (`agentsam gcloud auth login --sdk`)
+
+Wraps native **Google Cloud SDK** OAuth when you need ADC / `gcloud` CLI identity on the machine:
+
+```bash
+agentsam gcloud auth login --sdk
 # same engine as:
 gcloud auth login
 ```
@@ -19,9 +41,7 @@ gcloud auth login
 | Redirect | `http://localhost:8085/` (Google-controlled — **not** AgentSam) |
 | Stores | gcloud user credentials / ADC on the machine |
 
-**You do not create a Client ID for this path.** Installing `gcloud` is enough.
-
-AgentSam cannot move that redirect to `agentsam.inneranimalmedia.com` without replacing gcloud’s client entirely. Google’s own CLI uses localhost; that is normal.
+**You do not create a Client ID for the `--sdk` path.** Installing `gcloud` is enough.
 
 ---
 

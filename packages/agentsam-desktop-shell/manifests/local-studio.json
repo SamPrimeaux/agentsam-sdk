@@ -21,6 +21,7 @@
   "deep_link_scheme": "agentsamstudio",
   "identity_provider": "inneranimalmedia",
   "icon_set": "icons/local-studio",
+  "icon_source_url": "",
   "theme": {
     "primary_color": "#0a0a0c",
     "accent_color": "#6366f1"

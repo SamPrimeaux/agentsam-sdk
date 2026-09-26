@@ -39,6 +39,11 @@
     },
     "deep_link_scheme": { "type": "string", "pattern": "^[a-z][a-z0-9]*$" },
     "icon_set": { "type": "string" },
+    "icon_source_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Optional HTTPS URL to a PNG (prefer 1024×1024). Overrides icon_set when set; also overridable via AGENTSAM_ICON_URL at build time."
+    },
     "identity_provider": {
       "type": "string",
       "enum": ["inneranimalmedia", "google", "github", "gcp", "email"]

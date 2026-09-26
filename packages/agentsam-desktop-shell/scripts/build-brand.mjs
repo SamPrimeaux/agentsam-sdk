@@ -11,7 +11,7 @@
 //   node scripts/build-brand.mjs meauxbility
 //   node scripts/build-brand.mjs ./manifests/meauxbility.json
 
-import { readFileSync, writeFileSync, existsSync, copyFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, copyFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -114,24 +114,55 @@ if (existsSync(pubkeyPath)) {
 }
 
 // --- 4. resolve icon ---
-// Falls back to the placeholder icon (loud, not silent) if the brand
-// hasn't supplied its own icon set yet.
+// Priority (logo can be supplied last via URL after ship):
+//   1. AGENTSAM_ICON_URL env
+//   2. manifest.icon_source_url
+//   3. manifest.icon_set/icon.png on disk
 const srcTauriDir = path.join(ROOT, 'src-tauri');
 const iconsDir = path.join(srcTauriDir, 'icons');
 const targetIcon = path.join(iconsDir, 'icon.png');
-if (manifest.icon_set) {
-  const brandIconPath = path.resolve(ROOT, manifest.icon_set, 'icon.png');
-  if (existsSync(brandIconPath)) {
-    copyFileSync(brandIconPath, targetIcon);
-    console.log(`[build-brand] icon copied from ${brandIconPath}`);
+
+async function resolveIcon() {
+  async function fetchIconFromUrl(url, dest) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`icon URL HTTP ${res.status}`);
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length < 64) throw new Error('icon URL returned empty/too-small body');
+    mkdirSync(iconsDir, { recursive: true });
+    writeFileSync(dest, buf);
+  }
+
+  const iconUrl = String(process.env.AGENTSAM_ICON_URL || manifest.icon_source_url || '').trim();
+  if (iconUrl) {
+    try {
+      await fetchIconFromUrl(iconUrl, targetIcon);
+      console.log(`[build-brand] icon downloaded from ${iconUrl}`);
+      return;
+    } catch (error) {
+      console.warn(
+        `[build-brand] WARNING: icon URL failed (${error.message}) — falling back to icon_set/placeholder.`,
+      );
+    }
+  }
+
+  if (manifest.icon_set) {
+    const brandIconPath = path.resolve(ROOT, manifest.icon_set, 'icon.png');
+    if (existsSync(brandIconPath)) {
+      copyFileSync(brandIconPath, targetIcon);
+      console.log(`[build-brand] icon copied from ${brandIconPath}`);
+    } else {
+      console.warn(
+        `[build-brand] WARNING: icon_set "${manifest.icon_set}" has no icon.png at ${brandIconPath} -- keeping existing placeholder icon.`,
+      );
+    }
   } else {
     console.warn(
-      `[build-brand] WARNING: icon_set "${manifest.icon_set}" has no icon.png at ${brandIconPath} -- keeping existing placeholder icon.`,
+      '[build-brand] WARNING: no icon_set / icon_source_url — set AGENTSAM_ICON_URL later to inject the final logo.',
     );
   }
-} else {
-  console.warn('[build-brand] WARNING: no icon_set in manifest -- keeping placeholder icon.');
 }
+
+await resolveIcon();
 
 // --- 5. build the updater endpoint ---
 // {{target}}/{{arch}}/{{current_version}} are Tauri's own runtime

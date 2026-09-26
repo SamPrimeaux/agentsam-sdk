@@ -36,6 +36,7 @@ function printHelp(write) {
   writeLine(write, '  Agent Sam · Google Cloud');
   writeLine(write, '');
   writeLine(write, '  agentsam gcloud auth login');
+  writeLine(write, '  agentsam gcloud auth login --sdk');
   writeLine(write, '  agentsam gcloud auth list');
   writeLine(write, '  agentsam google-cloud connection show');
   writeLine(write, '  agentsam google-cloud connection set --identity <email> --project <id> [--org <domain>]');
@@ -48,7 +49,9 @@ function printHelp(write) {
   writeLine(write, '  agentsam google-cloud doctor [--project <id>]');
   writeLine(write, '  agentsam google-cloud remediate -- <gcloud argv…>');
   writeLine(write, '');
-  writeLine(write, '  Alias: agentsam compute … · agentsam gcloud …');
+  writeLine(write, '  Alias: agentsam compute … · agentsam gcloud … · agentsam gcp …');
+  writeLine(write, '  Default auth: Agent Sam hosted Google OAuth (Continue to Agent Sam).');
+  writeLine(write, '  SDK auth:     agentsam gcloud auth login --sdk');
   writeLine(write, '  Auth setup: docs/contracts/google-cloud-oauth-setup.md');
   writeLine(write, '  Never prints private keys or access tokens.');
   writeLine(write, '');
