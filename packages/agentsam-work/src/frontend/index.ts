@@ -2,6 +2,7 @@ import "./theme.css";
 
 export * from "./WorkShell";
 export * from "./WorkProduct";
+export * from "./theme";
 export * from "./surfaces/CalendarSurface";
 export * from "./surfaces/TicketsSurface";
 export * from "./surfaces/MailSurface";
