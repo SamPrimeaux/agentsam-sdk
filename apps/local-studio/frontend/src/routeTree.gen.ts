@@ -428,6 +428,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appsArtifactsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(apps)/collaborate': {
+      id: '/(apps)/collaborate'
+      path: '/collaborate'
+      fullPath: '/collaborate'
+      preLoaderRoute: typeof appsCollaborateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(apps)/browse': {
       id: '/(apps)/browse'
       path: '/browse'
