@@ -18,11 +18,13 @@ that is a Google classification quirk, not something AgentSam can invent a secre
 **Default CLI path (recommended):** Studio Web OAuth broker — uses `GOOGLE_CLIENT_ID` +
 Worker `GOOGLE_CLIENT_SECRET`, then hands tokens to the CLI over loopback.
 
-Add this **Authorized redirect URI** on the Web client:
+Uses the **same** Authorized redirect URI as Studio login (no extra Console URI):
 
 ```text
-https://agentsam.inneranimalmedia.com/api/oauth/google/cli-cloud/callback
+https://agentsam.inneranimalmedia.com/api/oauth/google/callback
 ```
+
+CLI broker states are prefixed `cli_` so the Worker can share that path with identity login.
 
 ```bash
 agentsam gcloud auth login              # Studio Web broker (default)

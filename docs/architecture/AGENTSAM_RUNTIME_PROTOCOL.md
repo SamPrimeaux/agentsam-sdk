@@ -187,11 +187,23 @@ Scheduler asks for **capabilities** (“terminal + git + docker + 8GB”), not �
 
 1. **Protocol + capability schema** (docs + shared TS/Go types)
 2. **Public-config + CLI resolve** (unblocks gcloud desktop auth for stock)
-3. **Schema migrate** `runtime_*` with compat over `terminal_*`
+3. **Evolve existing `terminal_*` tables** (compat rename in API/docs first; widen CHECKs — do **not** invent parallel `runtime_*` until agentsamd needs columns these cannot hold)
 4. **Go agentsamd MVP** + enroll + LaunchAgent; interim wrap ExecOS if needed
 5. **Studio control plane** on existing bindings; Terminal machines UI
 6. **`agentsam setup runtime`** planner (five profiles + receipts)
 7. **Reference adapters** (host, docker, gcp/vm, cf/container, cf/sandbox)
+
+### D1 reuse note (live `inneranimalmedia-business`)
+
+Keep the spine: `terminal_instances` → `terminal_connections` → credentials / enrollment / sessions / jobs / port_forwards.
+
+Small additive migrations only when needed, e.g.:
+
+- Widen `terminal_connections.transport` beyond `('execos','container')` → add `agentsamd` (and treat `execos` as legacy alias)
+- Optionally add `runtime_kind` / substrate fields on `terminal_instances` without renaming tables
+- Soften instance CHECK that forces `vm`↔`google_cloud` only when multi-provider VMs land
+
+No greenfield `runtime_*` tables while row counts stay small and the FK graph already matches protocol axes.
 
 ---
 

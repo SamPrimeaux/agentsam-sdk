@@ -26,7 +26,11 @@ import { serveCanonicalHomepage } from "./canonical-homepage.js";
 import { isPublicSitePath, servePublicSitePage } from "./public-site.js";
 import { handlePublicConfigRequest } from "./public-config.js";
 import { handleGoogleDesktopExchangeRequest } from "./google-desktop-exchange.js";
-import { handleGoogleCliCloudRequest, isGoogleCliCloudPath } from "./google-cli-cloud.js";
+import {
+  handleGoogleCliCloudRequest,
+  isGoogleCliCloudCallbackRequest,
+  isGoogleCliCloudPath,
+} from "./google-cli-cloud.js";
 import { loadConnectionsRegistry } from "./connections-registry.js";
 import { createLocalStudioPluginRuntime } from "./plugin-registry.js";
 import {
@@ -674,7 +678,8 @@ export default {
     }
 
     // CLI Google Cloud via Studio Web client (reliable when Desktop PKCE is rejected).
-    if (isGoogleCliCloudPath(url.pathname)) {
+    // Callback shares /api/oauth/google/callback with identity when state is cli_*.
+    if (isGoogleCliCloudPath(url.pathname) || isGoogleCliCloudCallbackRequest(request)) {
       return handleGoogleCliCloudRequest(request, env);
     }
 

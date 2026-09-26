@@ -6,8 +6,9 @@
  * and issues no secret. Web client + Worker secret is the reliable stock path;
  * Desktop PKCE remains available via --desktop once Google classifies the client correctly.
  *
- * Web Console must allow redirect:
- *   https://agentsam.inneranimalmedia.com/api/oauth/google/cli-cloud/callback
+ * Web Console redirect (reuse Studio login URI — already authorized on Web client):
+ *   https://agentsam.inneranimalmedia.com/api/oauth/google/callback
+ * CLI states are prefixed `cli_` so this handler can share that path with identity login.
  */
 
 import { createHash, randomBytes } from 'node:crypto';
@@ -121,7 +122,8 @@ export async function handleGoogleCliCloudStart(request, env) {
   await env.DB.prepare(`DELETE FROM agentsam_cli_oauth_pending WHERE created_at < ?`)
     .bind(now - 900).run();
 
-  const redirectUri = `${url.origin}/api/oauth/google/cli-cloud/callback`;
+  // Must match Authorized redirect URIs on the Web client (same path as Studio login).
+  const redirectUri = `${url.origin}/api/oauth/google/callback`;
   const auth = new URL(GOOGLE_AUTH_URL);
   auth.searchParams.set('client_id', clientId);
   auth.searchParams.set('redirect_uri', redirectUri);
@@ -138,7 +140,8 @@ export async function handleGoogleCliCloudStart(request, env) {
 }
 
 /**
- * GET /api/oauth/google/cli-cloud/callback
+ * GET /api/oauth/google/callback (CLI broker when state starts with cli_)
+ * Also accepts legacy /api/oauth/google/cli-cloud/callback.
  */
 export async function handleGoogleCliCloudCallback(request, env) {
   const url = new URL(request.url);
@@ -171,7 +174,8 @@ export async function handleGoogleCliCloudCallback(request, env) {
     return htmlPage('Agent Sam', 'Invalid CLI loopback metadata. Return to the terminal and retry.');
   }
 
-  const redirectUri = `${url.origin}/api/oauth/google/cli-cloud/callback`;
+  // Must equal the redirect_uri used at /start (Studio Web client authorized URI).
+  const redirectUri = `${url.origin}/api/oauth/google/callback`;
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
     code,
@@ -272,10 +276,27 @@ export async function handleGoogleCliCloudPickup(request, env) {
   });
 }
 
+export function isGoogleCliCloudState(state) {
+  return String(state || '').startsWith('cli_');
+}
+
 export function isGoogleCliCloudPath(pathname) {
   return pathname === '/api/oauth/google/cli-cloud/start'
     || pathname === '/api/oauth/google/cli-cloud/callback'
     || pathname === '/api/oauth/google/cli-cloud/pickup';
+}
+
+/**
+ * True when this request is the CLI Web-broker callback on the shared Studio
+ * Google redirect URI (or the legacy cli-cloud callback path).
+ */
+export function isGoogleCliCloudCallbackRequest(request) {
+  const url = new URL(request.url);
+  if (url.pathname === '/api/oauth/google/cli-cloud/callback') return true;
+  if (url.pathname === '/api/oauth/google/callback' && isGoogleCliCloudState(url.searchParams.get('state'))) {
+    return true;
+  }
+  return false;
 }
 
 export async function handleGoogleCliCloudRequest(request, env) {
@@ -283,7 +304,7 @@ export async function handleGoogleCliCloudRequest(request, env) {
   if (url.pathname === '/api/oauth/google/cli-cloud/start') {
     return handleGoogleCliCloudStart(request, env);
   }
-  if (url.pathname === '/api/oauth/google/cli-cloud/callback') {
+  if (isGoogleCliCloudCallbackRequest(request)) {
     return handleGoogleCliCloudCallback(request, env);
   }
   if (url.pathname === '/api/oauth/google/cli-cloud/pickup') {
