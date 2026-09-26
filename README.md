@@ -126,6 +126,7 @@ read-only `repository.snapshot` composition primitive. See [Capabilities and pre
 | File integrity | `agentsam merkle`; `/merkle` | [Merkle](docs/MERKLE.md) |
 | Security, trust-boundary scan, and repair | `agentsam security`; `/security` | [Security](docs/SECURITY.md) |
 | Mini prototypes | `agentsam mini`; `/mini` | [Mini](docs/MINI.md) |
+| Machine Intelligence (MINI/APP/WORLD ladder) | world-state / maturity (in progress) | [Machine Intelligence](docs/MACHINE_INTELLIGENCE.md) · [Tomorrow briefing](docs/plans/TOMORROW-MACHINE-FIRST-BRIEFING.md) |
 | Recon bounded-worker packets | `agentsam recon pack\|validate` | [Recon](docs/RECON.md) |
 | Local containers | `agentsam dockerize`; `/dockerize` | [Dockerize](docs/DOCKERIZE.md) |
 | Background indexing service | Docker `knowledge_service`; `/knowledge-service-client` | [Knowledge service](docs/knowledge-service.md) |
