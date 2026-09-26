@@ -19,11 +19,13 @@ export function WorkProduct({
   surface,
   onNavigate,
   projectId,
+  ticketId,
 }: {
   host: WorkHost;
   surface: WorkSurfaceId;
   onNavigate: WorkNavigate;
   projectId?: string;
+  ticketId?: string;
 }) {
   const [snapshot, setSnapshot] = useState<WorkSnapshot | null>(null);
 
