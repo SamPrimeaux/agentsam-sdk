@@ -272,13 +272,15 @@ Persist `~/.agentsam/runtime/onboarding.json` (`completed_at`, `steps[]`). Re-ru
 
 ---
 
-## Delivery order when executing
+## Desktop bundle (agentsam-sdk only)
 
-1. Windows Scheduled Task + docs
-2. Brand grammar + icon pipeline
-3. Auth SSOT → `iam_agentsam_sdk_web` (IAM verify + SDK login + docs)
-4. Desktop PKCE / Keychain + offline shell + agentsamd sidecar
-5. **IDE packages** (monaco, filetree, terminal, lsp, onboarding) + Local Studio Work surface swap
-6. agentsamd LSP supervisor + CORE servers + pack installer
-7. First-login CLI tutorial step machine
-8. Commit/push agentsam-sdk + IAM; deploy; smoke: Files + CLI + LSP + onboarding
+`offline_shell` + `agentsamd_sidecar` are **true** on Local Studio. The installed `.app` must load the **built `apps/local-studio` frontend** copied into `packages/agentsam-desktop-shell/dist/` via `npm run sync:local-studio` — not a permanent thin placeholder, and not a live navigate-only wrapper to inneranimalmedia.com.
+
+inneranimalmedia remains the IAM/OAuth Worker host; Local Studio product + desktop + agentsamd live in **agentsam-sdk**.
+
+## Delivery order (remaining)
+
+1. Wire every desktop release through `sync:local-studio` (full app in `dist/`)
+2. Complete PKCE loopback in Tauri
+3. agentsamd PTY as default CLI + LSP language packs
+4. Commit/push agentsam-sdk only for product work; IAM only when OAuth verify/redirects change
