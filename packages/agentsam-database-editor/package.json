@@ -13,7 +13,7 @@
     "./adapters/d1": "./src/adapters/d1.js",
     "./adapters/postgres": "./src/adapters/postgres.js",
     "./adapters/supabase": "./src/adapters/supabase.js",
-    "./ui": "./src/ui/DatabaseEditorApp.tsx",
+    "./ui": "./src/ui/index.ts",
     "./ui/client": "./src/ui/client.ts",
     "./metrics/d1": "./src/metrics/d1.js",
     "./metrics/postgres": "./src/metrics/postgres.js"
