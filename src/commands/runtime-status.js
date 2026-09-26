@@ -7,33 +7,52 @@ import { collectLocalStatus } from '../lib/local-status.js';
 import { tryReadProjectConfig } from '../lib/project-config.js';
 
 function terminalConnection(row = {}) {
+  const lastSeen = row.last_seen_at ?? null;
+  const id = row.id || row.connection_id || null;
+  const compute = row.compute_provider || row.provider || null;
   return {
-    id: row.id || row.connection_id || null,
+    id,
+    connection_id: id,
     instance_id: row.instance_id || null,
     name: row.name || row.connection_name || null,
     kind: row.kind || row.target_type || null,
-    provider: row.provider || row.compute_provider || null,
+    provider: compute,
+    compute_provider: compute,
     transport: row.transport || null,
     transport_provider: row.transport_provider || null,
-    active: row.is_active === true || Number(row.is_active) === 1,
-    default: row.is_default === true || Number(row.is_default) === 1,
-    health: row.last_health_status || row.health_status || 'unknown',
-    last_seen_at: row.last_seen_at || null,
+    endpoint_url: row.endpoint_url || null,
+    route_hostname: row.route_hostname || null,
+    public_url: row.public_url || row.endpoint_url || null,
+    active: row.is_active === true || Number(row.is_active) === 1 || row.active === true,
+    default: row.is_default === true || Number(row.is_default) === 1 || row.default === true,
+    health: row.last_health_status || row.health_status || row.health || 'unknown',
+    last_seen_at: lastSeen,
+    last_seen_at_iso: row.last_seen_at_iso || (Number.isFinite(Number(lastSeen)) && Number(lastSeen) > 0
+      ? new Date((Number(lastSeen) > 1e12 ? Number(lastSeen) : Number(lastSeen) * 1000)).toISOString()
+      : null),
   };
 }
 
 function terminalInstance(row = {}) {
+  const lastSeen = row.last_seen_at ?? null;
+  const id = row.id || row.instance_id || null;
+  const compute = row.compute_provider || row.provider || null;
   return {
-    id: row.id || null,
+    id,
+    instance_id: id,
     name: row.name || null,
     kind: row.kind || null,
-    provider: row.provider || row.compute_provider || null,
+    provider: compute,
+    compute_provider: compute,
     status: row.status || null,
     platform: row.platform || null,
     arch: row.arch || null,
     active_connection_count: Number(row.active_connection_count || 0),
     default_connection_id: row.default_connection_id || null,
-    last_seen_at: row.last_seen_at || null,
+    last_seen_at: lastSeen,
+    last_seen_at_iso: row.last_seen_at_iso || (Number.isFinite(Number(lastSeen)) && Number(lastSeen) > 0
+      ? new Date((Number(lastSeen) > 1e12 ? Number(lastSeen) : Number(lastSeen) * 1000)).toISOString()
+      : null),
   };
 }
 

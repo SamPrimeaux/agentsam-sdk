@@ -8,35 +8,82 @@ import { listProviderCredentialStatus } from '../lib/provider-credentials.js';
 
 function writeLine(write, value = '') { write(`${value}\n`); }
 
+function epochToIso(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const ms = n > 1e12 ? n : n * 1000;
+  try {
+    return new Date(ms).toISOString();
+  } catch {
+    return null;
+  }
+}
+
 function safeTerminalContext(value = {}) {
   return {
     available: value?.available === true,
-    instances: (value?.instances || []).map((row) => ({
-      id: row?.id || null,
-      name: row?.name || null,
-      kind: row?.kind || null,
-      provider: row?.provider || null,
-      status: row?.status || null,
-      platform: row?.platform || null,
-      arch: row?.arch || null,
-      active_connection_count: Number(row?.active_connection_count || 0),
-      default_connection_id: row?.default_connection_id || null,
-      last_seen_at: row?.last_seen_at || null,
-    })),
-    connections: (value?.connections || []).map((row) => ({
-      id: row?.id || null,
-      instance_id: row?.instance_id || null,
-      name: row?.name || null,
-      kind: row?.kind || null,
-      provider: row?.provider || null,
-      transport: row?.transport || null,
-      transport_provider: row?.transport_provider || null,
-      is_active: row?.is_active === true,
-      is_default: row?.is_default === true,
-      health_status: row?.health_status || 'unknown',
-      last_seen_at: row?.last_seen_at || null,
-    })),
+    instances: (value?.instances || []).map((row) => {
+      const lastSeen = row?.last_seen_at ?? null;
+      const id = row?.id || row?.instance_id || null;
+      const compute = row?.compute_provider || row?.provider || null;
+      return {
+        id,
+        instance_id: id,
+        name: row?.name || null,
+        kind: row?.kind || null,
+        provider: compute,
+        compute_provider: compute,
+        status: row?.status || null,
+        platform: row?.platform || null,
+        arch: row?.arch || null,
+        active_connection_count: Number(row?.active_connection_count || 0),
+        default_connection_id: row?.default_connection_id || null,
+        last_seen_at: lastSeen,
+        last_seen_at_iso: row?.last_seen_at_iso || epochToIso(lastSeen),
+      };
+    }),
+    connections: (value?.connections || []).map((row) => {
+      const lastSeen = row?.last_seen_at ?? null;
+      const id = row?.id || row?.connection_id || null;
+      const compute = row?.compute_provider || row?.provider || null;
+      return {
+        id,
+        connection_id: id,
+        instance_id: row?.instance_id || null,
+        name: row?.name || null,
+        kind: row?.kind || null,
+        provider: compute,
+        compute_provider: compute,
+        transport: row?.transport || null,
+        transport_provider: row?.transport_provider || null,
+        endpoint_url: row?.endpoint_url || null,
+        route_hostname: row?.route_hostname || null,
+        public_url: row?.public_url || row?.endpoint_url || null,
+        is_active: row?.is_active === true,
+        is_default: row?.is_default === true,
+        health_status: row?.health_status || 'unknown',
+        last_seen_at: lastSeen,
+        last_seen_at_iso: row?.last_seen_at_iso || epochToIso(lastSeen),
+      };
+    }),
   };
+}
+
+function attachOwnerAccountId(credentials = [], ownerAccountId) {
+  const owner = ownerAccountId == null ? '' : String(ownerAccountId).trim();
+  if (!owner) return credentials;
+  return (credentials || []).map((row) => {
+    const next = {
+      ...row,
+      owner_account_id: owner,
+    };
+    if (row.provider === 'cloudflare' && row.account_id && row.account_id !== owner) {
+      next.cloudflare_account_id = row.account_id;
+    }
+    // Platform + all providers: account_id means AgentSam au_* for this user
+    next.account_id = owner;
+    return next;
+  });
 }
 
 function capabilityProbe(credentials = []) {
@@ -130,6 +177,8 @@ export async function collectWhoami(options = {}) {
         : authType === 'oauth_session'
           ? 'OAuth Session'
           : String(authType);
+    const ownerAccountId = context?.owner_account_id || context?.account_id || context?.user_id || null;
+    const email = context?.email || context?.user?.email || active.session?.email || null;
 
     return {
       ...base,
@@ -140,13 +189,15 @@ export async function collectWhoami(options = {}) {
       authType,
       authLabel,
       identity: {
-        user_id: context?.user_id || null,
-        account_id: context?.account_id || null,
-        email: context?.email || context?.user?.email || null,
+        user_id: context?.user_id || ownerAccountId || null,
+        account_id: ownerAccountId,
+        owner_account_id: ownerAccountId,
+        email,
       },
       account: {
-        id: context?.account_id || context?.user_id || null,
-        display_name: context?.email || context?.user?.email || context?.account_id || null,
+        id: ownerAccountId,
+        display_name: email || ownerAccountId || null,
+        email,
       },
       credential: context?.credential
         ? {
@@ -166,6 +217,7 @@ export async function collectWhoami(options = {}) {
       capabilities: capabilityProbe(credentials),
       active_auth: { ...base.active_auth, valid: true, error: null },
       api_key: active.kind === 'api_key' ? { ...base.api_key, valid: true, error: null } : base.api_key,
+      provider_credentials: attachOwnerAccountId(credentials, ownerAccountId),
       cloudflare_connected: context?.cloudflare?.ok === true,
       byok: context?.byok && typeof context.byok === 'object'
         ? Object.fromEntries(Object.entries(context.byok).map(([key, value]) => [key, { configured: value?.configured === true }]))

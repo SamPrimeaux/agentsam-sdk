@@ -32,8 +32,23 @@ test('whoami validates persisted IAM browser identity while never returning acco
         cloudflare: { ok: true }, byok: { openai: { configured: true, masked: 'secret' } },
         terminal: {
           available: true,
-          instances: [{ id: 'inst_1', name: 'Mac', metadata_json: 'secret' }],
-          connections: [{ id: 'conn_1', instance_id: 'inst_1', name: 'Tunnel', is_active: true, endpoint_url: 'wss://secret' }],
+          instances: [{
+            id: 'inst_1',
+            name: 'Mac',
+            provider: 'local',
+            last_seen_at: 1789716970,
+            metadata_json: 'secret',
+          }],
+          connections: [{
+            id: 'conn_1',
+            instance_id: 'inst_1',
+            name: 'Tunnel',
+            is_active: true,
+            is_default: true,
+            transport_provider: 'cloudflare_tunnel',
+            endpoint_url: 'wss://localpty.example.test/terminal',
+            last_seen_at: 1789716970,
+          }],
         },
       };
     },
@@ -43,9 +58,15 @@ test('whoami validates persisted IAM browser identity while never returning acco
   assert.equal(status.active_auth.source, 'agentsam_browser_oauth');
   assert.equal(status.active_auth.kind, 'browser_oauth');
   assert.equal(status.provider_credentials.find(row => row.provider === 'openai').configured, true);
+  assert.equal(status.provider_credentials.find(row => row.provider === 'openai').owner_account_id, 'acct_server');
+  assert.equal(status.provider_credentials.find(row => row.provider === 'openai').account_id, 'acct_server');
+  assert.equal(status.identity.email, 'dev@example.test');
   assert.equal(status.terminal.connections[0].id, 'conn_1');
+  assert.equal(status.terminal.connections[0].connection_id, 'conn_1');
+  assert.equal(status.terminal.connections[0].public_url, 'wss://localpty.example.test/terminal');
+  assert.match(status.terminal.connections[0].last_seen_at_iso || '', /^2026-/);
   const serialized = JSON.stringify(status);
-  assert.doesNotMatch(serialized, /browser_session_do_not_print|sk-never-print-this|masked|endpoint_url|metadata_json|wss:\/\/secret/);
+  assert.doesNotMatch(serialized, /browser_session_do_not_print|sk-never-print-this|masked|metadata_json/);
 });
 
 test('whoami sends the exact authority returned by the resolver to the default context loader', async t => {
