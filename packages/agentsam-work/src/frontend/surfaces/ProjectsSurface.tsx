@@ -53,13 +53,13 @@ export function ProjectsSurface({
       </div>
 
       <div style={{ display: "flex", gap: 8, marginTop: 18, flexWrap: "wrap" }}>
-        {[
+        {([
           ["mine", "My Projects"],
           ["recent", "Recent"],
           ["shared", "Shared"],
           ["archived", "Archived"],
           ["starred", "Starred"],
-        ].map(([id, label]) => (
+        ] as const).map(([id, label]) => (
           <button
             key={id}
             type="button"
