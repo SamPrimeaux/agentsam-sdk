@@ -1,17 +1,17 @@
 {
   "schema": "agentsam.installables.v1",
-  "generated_at": "2026-09-26T23:12:12.130Z",
+  "generated_at": "2026-09-26T23:44:23.372Z",
   "generator": "scripts/sync-public-site.mjs",
   "packages": [
     {
       "id": "agentsam-sdk",
       "name": "@inneranimalmedia/agentsam-sdk",
-      "version": "2.6.4",
+      "version": "2.6.5",
       "title": "AgentSam SDK",
       "description": "Portable AgentSam SDK and CLI kits for local scaffolding, repository intelligence, incremental indexing, identity adapters, and verified dependency maintenance.",
       "npm": "@inneranimalmedia/agentsam-sdk",
       "install": "npm i @inneranimalmedia/agentsam-sdk",
-      "install_exact": "npm i @inneranimalmedia/agentsam-sdk@2.6.4",
+      "install_exact": "npm i @inneranimalmedia/agentsam-sdk@2.6.5",
       "run": "npx agentsam",
       "docs": {
         "help": "/packages/sdk/help/",
@@ -63,7 +63,7 @@
   ],
   "copy_blocks": {
     "install": "npm i @inneranimalmedia/agentsam-sdk",
-    "install_exact": "npm i @inneranimalmedia/agentsam-sdk@2.6.4",
+    "install_exact": "npm i @inneranimalmedia/agentsam-sdk@2.6.5",
     "check": "npx agentsam --version",
     "inspect": "npx agentsam inspect .",
     "runtime_install": "npx agentsam runtime install --yes",

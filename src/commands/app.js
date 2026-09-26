@@ -220,6 +220,18 @@ function validateDesktopManifests(root, knownIds) {
     if (productish && !knownIds.has(appId)) {
       errors.push(`desktop ${name}: app_id "${appId}" does not resolve to a known APP manifest`);
     }
+    const included = Array.isArray(manifest.included_apps) ? manifest.included_apps : [];
+    for (const bundledId of included) {
+      if (!KEBAB.test(bundledId)) {
+        errors.push(`desktop ${name}: included_apps entry "${bundledId}" must be kebab-case`);
+        continue;
+      }
+      if (!knownIds.has(bundledId)) {
+        errors.push(
+          `desktop ${name}: included_apps entry "${bundledId}" does not resolve to a known APP manifest`,
+        );
+      }
+    }
   }
   return { errors, warnings };
 }

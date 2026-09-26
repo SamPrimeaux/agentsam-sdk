@@ -172,6 +172,9 @@ if (fs.existsSync(homeIndex)) {
 copyDir(siteRoot, studioSite);
 
 console.log(
+  `[site:sync] public site synced (marketing + CMS + SEO content) → ${path.relative(root, studioSite)}`,
+);
+console.log(
   JSON.stringify(
     {
       ok: true,

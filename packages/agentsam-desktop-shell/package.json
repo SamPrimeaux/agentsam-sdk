@@ -4,6 +4,9 @@
   "private": true,
   "description": "Tauri desktop shell for AgentSam-powered brand dashboards — manifest-driven, multi-brand installs.",
   "type": "module",
+  "bin": {
+    "build-brand": "./scripts/build-brand.mjs"
+  },
   "scripts": {
     "dev": "tauri dev",
     "build:brand": "node scripts/build-brand.mjs",

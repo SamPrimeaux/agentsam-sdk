@@ -356,6 +356,8 @@ export default defineConfig(({ command, isPreview }) => ({
     ...(command === "build" || isPreview
       ? [
           nitro({
+            // Pin Worker name — do not let Nitro derive samprimeaux-* from path/user.
+            name: "agentsam-sdk-apps-local-studio",
             preset: "cloudflare-module",
             // Auto-registers server/middleware/* (the PWA install page +
             // manifest + head-tag middleware). Nitro v3 defaults serverDir to
