@@ -37,6 +37,7 @@ const databaseEditorRoot = resolvePath(
 );
 const databaseEditorManifest = resolvePath(databaseEditorRoot, "src/manifest.js");
 const databaseEditorUi = resolvePath(databaseEditorRoot, "src/ui/index.ts");
+const databaseEditorFrontend = resolvePath(databaseEditorRoot, "frontend/index.ts");
 const keyManagerPackageRoot = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-key-manager", import.meta.url)),
 );
@@ -232,6 +233,10 @@ export default defineConfig(({ command, isPreview }) => ({
       {
         find: /^@inneranimalmedia\/agentsam-database-editor\/manifest$/,
         replacement: databaseEditorManifest,
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-database-editor\/frontend$/,
+        replacement: databaseEditorFrontend,
       },
       {
         find: /^@inneranimalmedia\/agentsam-database-editor\/ui$/,
