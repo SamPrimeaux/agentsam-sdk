@@ -1,4 +1,4 @@
-import { Camera, MoreHorizontal, Plus, Search, Star } from "lucide-react";
+import { Camera, MoreHorizontal, Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { WorkNavigate, WorkProject } from "../../contracts/index";
 
