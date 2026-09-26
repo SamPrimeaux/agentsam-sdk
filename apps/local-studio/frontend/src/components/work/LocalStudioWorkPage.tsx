@@ -28,6 +28,11 @@ export function LocalStudioWorkPage({
   const navigate = useNavigate();
   const host = useLocalStudioWorkHost();
 
+  useEffect(() => {
+    const stored = readStoredWorkThemeTokens();
+    if (stored) applyWorkThemeTokens(stored);
+  }, []);
+
   return (
     <div className="h-full min-h-0">
       <WorkProduct
