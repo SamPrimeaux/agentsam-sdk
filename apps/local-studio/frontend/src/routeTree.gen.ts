@@ -389,6 +389,8 @@ export interface FileRouteTypes {
     | '/api/github'
     | '/(apps)/artifacts/'
     | '/(apps)/artifacts/tickets'
+    | '/(apps)/artifacts/tickets/'
+    | '/(apps)/artifacts/tickets/$ticketId'
     | '/(apps)/projects/'
     | '/(apps)/projects/$projectId'
     | '/(apps)/settings/$unit'
