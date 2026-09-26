@@ -32,11 +32,11 @@ const vaultPackageRoot = resolvePath(
 const iconRegistrySource = resolvePath(
   fileURLToPath(new URL("../../protocol/ui/icon-registry.mjs", import.meta.url)),
 );
-const databaseEditorManifest = resolvePath(
-  fileURLToPath(
-    new URL("../../packages/agentsam-database-editor/src/manifest.js", import.meta.url),
-  ),
+const databaseEditorRoot = resolvePath(
+  fileURLToPath(new URL("../../packages/agentsam-database-editor", import.meta.url)),
 );
+const databaseEditorManifest = resolvePath(databaseEditorRoot, "src/manifest.js");
+const databaseEditorUi = resolvePath(databaseEditorRoot, "src/ui/index.ts");
 const keyManagerPackageRoot = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-key-manager", import.meta.url)),
 );
@@ -228,6 +228,10 @@ export default defineConfig(({ command, isPreview }) => ({
       {
         find: /^@inneranimalmedia\/agentsam-database-editor\/manifest$/,
         replacement: databaseEditorManifest,
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-database-editor\/ui$/,
+        replacement: databaseEditorUi,
       },
       {
         find: "@inneranimalmedia/agentsam-workbench",
