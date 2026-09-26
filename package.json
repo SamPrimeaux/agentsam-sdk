@@ -155,6 +155,7 @@
   ],
   "workspaces": [
     "packages/agentsam-shell-kit",
+    "packages/agentsam-settings",
     "packages/identity",
     "packages/agentsam-brand",
     "packages/agentsam-contracts",
