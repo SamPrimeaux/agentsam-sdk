@@ -107,7 +107,7 @@ function MiniNav({
           className="agentsam-work-mini-nav__item"
           data-active={item.id === current}
           onClick={() => {
-            onNavigate(item.href);
+            onNavigate(navHref(item, surface));
             onClose?.();
           }}
         >
