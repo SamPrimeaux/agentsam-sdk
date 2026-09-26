@@ -151,9 +151,20 @@ export async function collectWhoami(options = {}) {
     },
     browser_session: browserSession,
     provider_credentials: credentials,
+    // Always present so `jq '.terminal.instances[]'` never dies on auth failure.
+    terminal: safeTerminalContext({ available: false, instances: [], connections: [] }),
   };
 
-  if (!active.value) return base;
+  if (!active.value) {
+    if (/IAM_OAUTH_ISSUER/i.test(String(active.error || ''))) {
+      base.active_auth.next =
+        'source ~/.agentsam/load-agent-env.sh   # loads AGENTSAM_API_KEY + IAM_OAUTH_ISSUER';
+    } else if (!apiKey.value) {
+      base.active_auth.next =
+        'agentsam api-key create --store keychain --activate && eval "$(agentsam env shell --profile default)"';
+    }
+    return base;
+  }
 
   try {
     const loader = options.contextLoader || ((token) => getJson('/api/sdk/context', {
@@ -233,8 +244,16 @@ export async function collectWhoami(options = {}) {
       : rawMessage;
     return {
       ...base,
-      active_auth: { ...base.active_auth, valid: false, error: message },
+      active_auth: {
+        ...base.active_auth,
+        valid: false,
+        error: message,
+        next: /IAM_OAUTH_ISSUER/i.test(message)
+          ? 'source ~/.agentsam/load-agent-env.sh'
+          : 'agentsam login  # or agentsam whoami --json for detail',
+      },
       api_key: active.kind === 'api_key' ? { ...base.api_key, valid: false, error: message } : base.api_key,
+      terminal: safeTerminalContext({ available: false, instances: [], connections: [] }),
     };
   }
 }
@@ -262,6 +281,7 @@ export function renderWhoami(status) {
     lines.push(`  API key        ${status.api_key?.configured ? status.api_key?.valid === false ? 'invalid' : 'configured' : 'not configured'}`);
     lines.push(`  browser login  ${status.browser_session?.configured ? 'stored' : 'not configured'}`);
     if (status.active_auth?.error) lines.push(`  error          ${status.active_auth.error}`);
+    if (status.active_auth?.next) lines.push(`  next           ${status.active_auth.next}`);
     lines.push('');
     if (status.browser_session?.configured && status.active_auth?.error) {
       lines.push('  tip            A login session is saved locally, but the server rejected it on this');
@@ -269,6 +289,9 @@ export function renderWhoami(status) {
       lines.push('                 `agentsam whoami --json` for the full response.');
     } else if (!status.api_key?.configured) {
       lines.push('  tip            Run `agentsam login` then `agentsam api-key create --store keychain --activate`.');
+      lines.push('                 Then: source ~/.agentsam/load-agent-env.sh');
+    } else if (status.active_auth?.next) {
+      lines.push(`  tip            ${status.active_auth.next}`);
     }
   }
 
