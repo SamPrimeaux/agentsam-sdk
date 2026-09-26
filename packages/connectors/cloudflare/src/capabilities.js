@@ -236,11 +236,173 @@ export const CLOUDFLARE_CAPABILITIES = Object.freeze({
     id: 'cloudflare.tunnels',
     domain: 'web',
     label: 'Tunnel',
-    oauthScopes: ['zone.read'],
+    oauthScopes: ['argotunnel.read', 'argotunnel.write', 'zone.read'],
     permissionLabel: 'Account → Cloudflare Tunnel',
     availability: 'generally_available',
   },
+  'cloudflare.workers_ai': {
+    id: 'cloudflare.workers_ai',
+    domain: 'ai',
+    label: 'Workers AI',
+    oauthScopes: ['ai.read', 'ai.write'],
+    permissionLabel: 'Account → Workers AI → Edit',
+    availability: 'generally_available',
+  },
+  'cloudflare.ai_search': {
+    id: 'cloudflare.ai_search',
+    domain: 'ai',
+    label: 'AI Search',
+    oauthScopes: ['ai-search.read', 'ai-search.write', 'ai-search.run', 'ai-search.index'],
+    permissionLabel: 'Account → AI Search',
+    availability: 'generally_available',
+  },
+  'cloudflare.containers': {
+    id: 'cloudflare.containers',
+    domain: 'compute',
+    label: 'Workers Containers',
+    oauthScopes: ['containers.read', 'containers.write'],
+    permissionLabel: 'Account → Workers Containers',
+    availability: 'generally_available',
+  },
+  'cloudflare.secrets_store': {
+    id: 'cloudflare.secrets_store',
+    domain: 'security',
+    label: 'Secrets Store',
+    oauthScopes: ['secrets-store.read', 'secrets-store.write'],
+    permissionLabel: 'Account → Secrets Store',
+    availability: 'generally_available',
+  },
+  'cloudflare.browser_rendering': {
+    id: 'cloudflare.browser_rendering',
+    domain: 'compute',
+    label: 'Browser Rendering',
+    oauthScopes: ['browser-rendering.read', 'browser-rendering.write'],
+    permissionLabel: 'Account → Browser Rendering',
+    availability: 'generally_available',
+  },
+  'cloudflare.pipelines': {
+    id: 'cloudflare.pipelines',
+    domain: 'data',
+    label: 'Pipelines',
+    oauthScopes: ['pipelines.read', 'pipelines.write', 'pipelines.send'],
+    permissionLabel: 'Account → Pipelines',
+    availability: 'generally_available',
+  },
+  'cloudflare.kv': {
+    id: 'cloudflare.kv',
+    domain: 'data',
+    label: 'Workers KV',
+    oauthScopes: ['workers-kv-storage.read', 'workers-kv-storage.write'],
+    permissionLabel: 'Account → Workers KV Storage',
+    availability: 'generally_available',
+  },
 });
+
+/**
+ * Feature packs — authorize a product need without reading 300+ CF scopes.
+ * Each pack expands to CLOUDFLARE_CAPABILITIES ids → oauthScopes via scopesForCapabilities.
+ */
+export const CLOUDFLARE_FEATURE_PACKS = Object.freeze({
+  baseline: {
+    id: 'baseline',
+    label: 'Account baseline',
+    description: 'Who you are + memberships (always included)',
+    capabilities: [],
+  },
+  data: {
+    id: 'data',
+    label: 'Data plane',
+    description: 'D1, R2, KV, Hyperdrive, Vectorize, Pipelines',
+    capabilities: [
+      'cloudflare.d1',
+      'cloudflare.r2',
+      'cloudflare.kv',
+      'cloudflare.hyperdrive',
+      'cloudflare.vectorize',
+      'cloudflare.pipelines',
+    ],
+  },
+  compute: {
+    id: 'compute',
+    label: 'Compute',
+    description: 'Workers, Containers, Queues, Workflows, Agents, MCP',
+    capabilities: [
+      'cloudflare.workers',
+      'cloudflare.containers',
+      'cloudflare.queues',
+      'cloudflare.workflows',
+      'cloudflare.agents',
+      'cloudflare.mcp_portals',
+      'cloudflare.browser_rendering',
+    ],
+  },
+  ai: {
+    id: 'ai',
+    label: 'AI & Search',
+    description: 'Workers AI, AI Search',
+    capabilities: ['cloudflare.workers_ai', 'cloudflare.ai_search'],
+  },
+  web: {
+    id: 'web',
+    label: 'Web / zones',
+    description: 'Pages, Tunnels, DNS-adjacent zone ops',
+    capabilities: ['cloudflare.pages', 'cloudflare.tunnels', 'cloudflare.tag_gateway'],
+  },
+  media: {
+    id: 'media',
+    label: 'Media',
+    description: 'Images + Stream',
+    capabilities: ['cloudflare.images', 'cloudflare.stream'],
+  },
+  security: {
+    id: 'security',
+    label: 'Security',
+    description: 'Secrets Store, URL Scanner, Token Validation',
+    capabilities: [
+      'cloudflare.secrets_store',
+      'cloudflare.url_scanner',
+      'cloudflare.token_validation',
+    ],
+  },
+  agentsam: {
+    id: 'agentsam',
+    label: 'AgentSam Local Studio',
+    description: 'Data + compute + AI packs AgentSam needs day-to-day',
+    capabilities: [
+      'cloudflare.workers',
+      'cloudflare.d1',
+      'cloudflare.r2',
+      'cloudflare.kv',
+      'cloudflare.hyperdrive',
+      'cloudflare.vectorize',
+      'cloudflare.containers',
+      'cloudflare.workers_ai',
+      'cloudflare.ai_search',
+      'cloudflare.secrets_store',
+      'cloudflare.tunnels',
+      'cloudflare.browser_rendering',
+    ],
+  },
+});
+
+export function listCloudflareFeaturePacks() {
+  return Object.values(CLOUDFLARE_FEATURE_PACKS);
+}
+
+export function getCloudflareFeaturePack(id) {
+  return CLOUDFLARE_FEATURE_PACKS[String(id || '').trim().toLowerCase()] || null;
+}
+
+/** Expand pack ids and/or capability ids into OAuth scopes (baseline included). */
+export function scopesForFeaturePacks(packIds = [], extraCapabilityIds = []) {
+  const caps = new Set(extraCapabilityIds || []);
+  for (const raw of packIds || []) {
+    const pack = getCloudflareFeaturePack(raw);
+    if (!pack) continue;
+    for (const id of pack.capabilities) caps.add(id);
+  }
+  return scopesForCapabilities({ capabilities: [...caps], includeBaseline: true });
+}
 
 /** Legacy feature → scope map (kept for docs / workers_deploy callers). */
 export const CLOUDFLARE_CAPABILITY_SCOPES = Object.freeze({

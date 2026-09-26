@@ -3,8 +3,17 @@ import { resolveAccountAuthority } from '../lib/auth.js';
 import {
   describeAccountSession,
   resolveAccountApiKey,
+  readAccountSession,
+  saveAccountSession,
 } from '../lib/account-session.js';
 import { listProviderCredentialStatus } from '../lib/provider-credentials.js';
+import { projectWhoamiCapabilities } from '../lib/whoami-capabilities.js';
+import { collectLocalTerminalContext, mergeTerminalContexts } from '../lib/terminal-local.js';
+import {
+  LOCAL_STUDIO_APP_ID,
+  resolveLocalStudioHostOrigin,
+  resolvePlatformAccountIssuer,
+} from '../lib/app-authority.js';
 
 function writeLine(write, value = '') { write(`${value}\n`); }
 
@@ -88,24 +97,38 @@ function attachOwnerAccountId(credentials = [], ownerAccountId) {
   });
 }
 
-function capabilityProbe(credentials = []) {
-  const has = (provider) => credentials.some((row) => row.provider === provider && row.configured);
-  return {
-    repository: { available: true },
-    database: { available: true, drivers: ['sqlite'] },
-    vectors: { available: true, drivers: ['local_exact'] },
-    models: {
-      available: has('openai') || has('anthropic') || has('gemini') || has('xai') || has('cursor') || has('cloudflare'),
-      configuredProviders: ['openai', 'anthropic', 'gemini', 'xai', 'cursor', 'cloudflare'].filter((p) => has(p)).length,
-    },
-    deploy: { available: has('cloudflare') },
-  };
+function normalizeAuthKind(kind) {
+  const raw = String(kind || '').trim();
+  if (raw === 'api_key') return 'agentsam_api_key';
+  if (raw === 'browser_oauth' || raw === 'oauth_session') return 'agentsam_browser_oauth';
+  return raw || null;
+}
+
+function authLabelFor(kind, authType) {
+  const k = normalizeAuthKind(kind) || normalizeAuthKind(authType);
+  if (k === 'agentsam_api_key') return 'AgentSam API Key';
+  if (k === 'agentsam_browser_oauth') return 'AgentSam Browser OAuth';
+  if (k === 'agentsam_cf_browser_oauth') return 'Cloudflare Browser OAuth';
+  return k || String(authType || 'unknown');
+}
+
+function patchBrowserSessionEmail(email, options = {}) {
+  const cleanEmail = email == null ? '' : String(email).trim();
+  if (!cleanEmail) return;
+  try {
+    const session = readAccountSession(options);
+    if (!session?.access_token) return;
+    if (session.email === cleanEmail) return;
+    saveAccountSession({ ...session, email: cleanEmail }, options);
+  } catch {
+    /* best effort — do not fail whoami */
+  }
 }
 
 export async function collectWhoami(options = {}) {
   const env = options.env || process.env;
   const apiKey = resolveAccountApiKey({ env, explicit: options.token || '', home: options.home });
-  const browserSession = describeAccountSession({ env, home: options.home });
+  let browserSession = describeAccountSession({ env, home: options.home });
   const authorityLoader = options.authorityLoader || resolveAccountAuthority;
   const active = await authorityLoader({
     env,
@@ -118,9 +141,21 @@ export async function collectWhoami(options = {}) {
     signal: options.signal,
   });
   const credentials = listProviderCredentialStatus({ env, home: options.home });
+  const capabilities = options.capabilities
+    || await projectWhoamiCapabilities({
+      env,
+      home: options.home,
+      cwd: options.cwd,
+      discoverRemote: options.discoverRemote !== false,
+    });
+  const localTerminal = options.localTerminal
+    || await collectLocalTerminalContext({ env, home: options.home });
+  const platformIssuer = resolvePlatformAccountIssuer(env);
+  const localStudioHost = resolveLocalStudioHostOrigin({ root: options.root });
 
+  const activeKind = normalizeAuthKind(active.kind);
   const base = {
-    schema_version: 3,
+    schema_version: 4,
     ok: false,
     command_id: 'whoami',
     risk: 'read',
@@ -131,28 +166,45 @@ export async function collectWhoami(options = {}) {
     authType: null,
     authLabel: null,
     authority: 'inneranimalmedia',
+    namespaces: {
+      platform_issuer: platformIssuer,
+      app_id: LOCAL_STUDIO_APP_ID,
+      host_origin: localStudioHost,
+      note: 'PLATFORM issuer ≠ APP HOST — do not alias',
+    },
     identity: null,
     account: null,
     credential: null,
     tokenPermissions: [],
-    capabilities: capabilityProbe(credentials),
+    capabilities,
     active_auth: {
       configured: Boolean(active.value || active.error),
-      kind: active.kind || null,
+      kind: activeKind,
       source: active.source || null,
       valid: null,
       error: active.error || null,
     },
     api_key: {
       configured: Boolean(apiKey.value || apiKey.error),
+      kind: 'agentsam_api_key',
       source: apiKey.source || null,
       valid: apiKey.error ? false : null,
       error: apiKey.error || null,
     },
-    browser_session: browserSession,
+    browser_session: {
+      ...browserSession,
+      kind: browserSession.kind || (browserSession.configured ? 'agentsam_browser_oauth' : null),
+    },
+    cf_browser_oauth: {
+      kind: 'agentsam_cf_browser_oauth',
+      configured: false,
+      app_id: LOCAL_STUDIO_APP_ID,
+      host_origin: localStudioHost,
+      next: 'agentsam cloudflare login --pack agentsam',
+    },
     provider_credentials: credentials,
-    // Always present so `jq '.terminal.instances[]'` never dies on auth failure.
-    terminal: safeTerminalContext({ available: false, instances: [], connections: [] }),
+    // Local ExecOS profiles stay visible even when remote context fails.
+    terminal: safeTerminalContext(localTerminal),
   };
 
   if (!active.value) {
@@ -178,20 +230,25 @@ export async function collectWhoami(options = {}) {
       signal: options.signal,
     }));
     const context = await loader(active.value);
-    const authType = context?.auth_type || (active.kind === 'api_key' ? 'api_key' : 'oauth_session');
+    const authType = normalizeAuthKind(
+      context?.auth_type || (activeKind === 'agentsam_api_key' ? 'agentsam_api_key' : 'agentsam_browser_oauth'),
+    );
     const tokenPermissions = Array.isArray(context?.tokenPermissions)
       ? context.tokenPermissions
       : Array.isArray(context?.credential?.scopes)
         ? context.credential.scopes
         : [];
-    const authLabel =
-      authType === 'api_key'
-        ? 'AgentSam API Key'
-        : authType === 'oauth_session'
-          ? 'OAuth Session'
-          : String(authType);
     const ownerAccountId = context?.owner_account_id || context?.account_id || context?.user_id || null;
-    const email = context?.email || context?.user?.email || active.session?.email || null;
+    const email = context?.email || context?.user?.email || active.session?.email || browserSession.email || null;
+
+    if (email) {
+      patchBrowserSessionEmail(email, { env, home: options.home });
+      browserSession = describeAccountSession({ env, home: options.home });
+    }
+
+    const cfConnected = context?.cloudflare?.ok === true
+      || context?.cloudflare?.status === 'connected'
+      || Boolean(context?.cloudflare?.connection);
 
     return {
       ...base,
@@ -200,7 +257,7 @@ export async function collectWhoami(options = {}) {
       loggedIn: true,
       authenticated: true,
       authType,
-      authLabel,
+      authLabel: authLabelFor(activeKind, authType),
       identity: {
         user_id: context?.user_id || ownerAccountId || null,
         account_id: ownerAccountId,
@@ -223,19 +280,36 @@ export async function collectWhoami(options = {}) {
             expires_at: context.credential.expires_at || null,
             last_used_at: context.credential.last_used_at || null,
           }
-        : active.kind === 'api_key'
+        : activeKind === 'agentsam_api_key'
           ? { id: null, name: null, prefix: null, status: 'active' }
           : null,
       tokenPermissions,
-      capabilities: capabilityProbe(credentials),
-      active_auth: { ...base.active_auth, valid: true, error: null },
-      api_key: active.kind === 'api_key' ? { ...base.api_key, valid: true, error: null } : base.api_key,
+      capabilities,
+      active_auth: { ...base.active_auth, kind: activeKind, valid: true, error: null },
+      api_key: activeKind === 'agentsam_api_key'
+        ? { ...base.api_key, valid: true, error: null }
+        : base.api_key,
+      browser_session: {
+        ...browserSession,
+        kind: 'agentsam_browser_oauth',
+        email: email || browserSession.email || null,
+        user_id: browserSession.user_id || ownerAccountId || null,
+        account_id: browserSession.account_id || ownerAccountId || null,
+      },
+      cf_browser_oauth: {
+        kind: 'agentsam_cf_browser_oauth',
+        configured: cfConnected,
+        source: cfConnected ? 'user_oauth_tokens' : null,
+        next: cfConnected
+          ? 'agentsam cloudflare permissions --json'
+          : 'agentsam cloudflare login --pack agentsam',
+      },
       provider_credentials: attachOwnerAccountId(credentials, ownerAccountId),
-      cloudflare_connected: context?.cloudflare?.ok === true,
+      cloudflare_connected: cfConnected,
       byok: context?.byok && typeof context.byok === 'object'
         ? Object.fromEntries(Object.entries(context.byok).map(([key, value]) => [key, { configured: value?.configured === true }]))
         : {},
-      terminal: safeTerminalContext(context?.terminal),
+      terminal: safeTerminalContext(mergeTerminalContexts(context?.terminal, localTerminal)),
     };
   } catch (error) {
     const rawMessage = error?.message || String(error);
@@ -252,8 +326,8 @@ export async function collectWhoami(options = {}) {
           ? 'source ~/.agentsam/load-agent-env.sh'
           : 'agentsam login  # or agentsam whoami --json for detail',
       },
-      api_key: active.kind === 'api_key' ? { ...base.api_key, valid: false, error: message } : base.api_key,
-      terminal: safeTerminalContext({ available: false, instances: [], connections: [] }),
+      api_key: activeKind === 'agentsam_api_key' ? { ...base.api_key, valid: false, error: message } : base.api_key,
+      terminal: safeTerminalContext(localTerminal),
     };
   }
 }
@@ -305,9 +379,25 @@ export function renderWhoami(status) {
   lines.push('  Capabilities');
   const caps = status.capabilities || {};
   for (const [key, value] of Object.entries(caps)) {
+    if (key === 'edit' || key === 'tools' || key === 'cloudflare') continue;
     const available = value?.available === true ? 'yes' : 'no';
-    const extra = value?.configuredProviders != null ? ` · providers ${value.configuredProviders}` : '';
+    let extra = '';
+    if (Array.isArray(value?.configuredProviders)) {
+      extra = ` · providers ${value.configuredProviders.join(',') || 0}`;
+    } else if (value?.configuredProviders != null) {
+      extra = ` · providers ${value.configuredProviders}`;
+    } else if (Array.isArray(value?.drivers)) {
+      const ids = value.drivers.map((d) => (typeof d === 'string' ? d : d.id)).filter(Boolean);
+      if (ids.length) extra = ` · ${ids.join(', ')}`;
+    }
     lines.push(`  ${key.padEnd(14)} ${available}${extra}`);
+  }
+  if (status.capabilities?.edit) {
+    lines.push('');
+    lines.push('  Edit capabilities');
+    for (const [key, cmd] of Object.entries(status.capabilities.edit)) {
+      lines.push(`  ${key.padEnd(18)} ${cmd}`);
+    }
   }
   lines.push('');
   lines.push('  Provider credentials');
@@ -331,16 +421,17 @@ export function describeAuthShadow(status = {}) {
   const active = status.active_auth || {};
   const apiKey = status.api_key || {};
   if (!browser.configured) return null;
-  if (active.kind === 'browser_oauth') return null;
-  if (!(active.kind === 'api_key' || apiKey.configured)) return null;
+  if (active.kind === 'agentsam_browser_oauth' || active.kind === 'browser_oauth') return null;
+  if (!(active.kind === 'agentsam_api_key' || active.kind === 'api_key' || apiKey.configured)) return null;
 
   const lines = [
     '  Authority lanes',
     `  Current authoritative credential`,
-    `    AgentSam API Key · ${apiKey.source || active.source || 'environment'}`,
+    `    agentsam_api_key · ${apiKey.source || active.source || 'environment'}`,
     '',
-    '  OAuth session',
+    '  agentsam_browser_oauth',
     `    available${browser.expired ? ' · expired' : ''}${browser.refreshable ? ' · refreshable' : ''} but not currently authoritative`,
+    browser.email ? `    email ${browser.email}` : '    email (resolve via agentsam whoami after login)',
     '',
     '  Why?',
     '    AGENTSAM_API_KEY (or an explicit aak_* token) has higher precedence than browser OAuth.',
@@ -361,9 +452,9 @@ export function renderLoginResult(status = {}) {
   const shadow = describeAuthShadow(status);
   if (shadow) {
     lines.push('  Current authoritative credential');
-    lines.push(`    AgentSam API Key · ${status.api_key?.source || status.active_auth?.source || 'environment'}`);
+    lines.push(`    agentsam_api_key · ${status.api_key?.source || status.active_auth?.source || 'environment'}`);
     lines.push('');
-    lines.push('  OAuth session');
+    lines.push('  agentsam_browser_oauth');
     lines.push('    available but not currently authoritative');
     lines.push('');
     lines.push('  Why?');
@@ -373,9 +464,9 @@ export function renderLoginResult(status = {}) {
     lines.push('  [s]     use OAuth session  →  unset AGENTSAM_API_KEY && agentsam whoami');
     lines.push('  [d]     details            →  agentsam whoami --json');
     lines.push('');
-  } else if (status.active_auth?.kind === 'browser_oauth') {
+  } else if (status.active_auth?.kind === 'agentsam_browser_oauth' || status.active_auth?.kind === 'browser_oauth') {
     lines.push('  Current authoritative credential');
-    lines.push('    OAuth Session · agentsam_browser_oauth');
+    lines.push('    agentsam_browser_oauth');
     lines.push('');
     lines.push('  Next');
     lines.push('    agentsam api-key create --store keychain --activate');

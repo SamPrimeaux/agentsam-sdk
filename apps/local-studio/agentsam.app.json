@@ -40,9 +40,28 @@
     },
     "oauth": {
       "startPattern": "/api/oauth/:provider/start",
-      "callbackPattern": "/api/oauth/:provider/callback"
+      "callbackPattern": "/api/oauth/:provider/callback",
+      "connections": {
+        "cloudflare": {
+          "start": "/api/connections/cloudflare/start",
+          "callback": "/api/connections/cloudflare/callback"
+        }
+      }
     }
   },
+  "hosts": [
+    {
+      "host_id": "local-studio-public",
+      "origin": "https://agentsam.inneranimalmedia.com",
+      "role": "production",
+      "notes": "HOST namespace for this APP — Cloudflare/Google OAuth clients and connection authorize URLs. Not IAM_OAUTH_ISSUER (PLATFORM account API)."
+    },
+    {
+      "host_id": "local-studio-loopback",
+      "origin": "http://localhost:3000",
+      "role": "development"
+    }
+  ],
   "routes": {
     "app.authenticated": { "path": "/agentsam", "auth": "required", "spa": true },
     "app.home": { "path": "/agentsam" },

@@ -1,15 +1,14 @@
-import { resolveIamOrigin } from '../../packages/identity/src/contracts/auth-config.js';
 import { resolveAccountAuthority } from './auth.js';
+import { resolvePlatformAccountIssuer } from './app-authority.js';
 
 /**
  * IAM CORE client — SDK is a delivery mechanism; intelligence lives server-side.
  *
- * IAM_OAUTH_ISSUER is the canonical platform authority/API origin. IAM_ORIGIN,
- * IAM_CORE_URL and AGENTSAM_CORE_URL remain compatibility fallbacks.
+ * PLATFORM namespace: IAM_OAUTH_ISSUER (account API). Falls back to platform default
+ * via resolvePlatformAccountIssuer — never aliases Local Studio APP HOST.
  */
 export function coreBaseUrl(env = process.env) {
-  const explicit = env?.IAM_OAUTH_ISSUER || env?.IAM_ORIGIN || env?.IAM_CORE_URL || env?.AGENTSAM_CORE_URL || '';
-  return resolveIamOrigin(env, explicit);
+  return resolvePlatformAccountIssuer(env);
 }
 
 function authOptions(options) {

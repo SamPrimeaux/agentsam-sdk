@@ -5,8 +5,10 @@
  * separate: login sessions are opaque, machine-local session state while
  * AGENTSAM_API_KEY is an explicit delegated account credential.
  *
- * No DEFAULT_* issuers or hardcoded product hosts. IAM_OAUTH_ISSUER,
- * IAM_CLIENT_ID, and IAM_CLIENT_SECRET must be set by the caller.
+ * Namespaces (do not collapse):
+ *   PLATFORM issuer  → IAM_OAUTH_ISSUER (account API)
+ *   APP host         → agentsam.app.json hosts[] (e.g. local-studio)
+ * Never treat Local Studio host origin as an alias of IAM_OAUTH_ISSUER.
  */
 
 export const AGENTSAM_AUTH_ENV = Object.freeze({
@@ -18,6 +20,9 @@ export const AGENTSAM_AUTH_ENV = Object.freeze({
   bridgeKey: 'AGENTSAM_BRIDGE_KEY',
 });
 
+/** PLATFORM account-authority issuer — not an APP host. */
+export const PLATFORM_ACCOUNT_ISSUER = 'https://inneranimalmedia.com';
+
 export const AGENTSAM_AUTH_CONTRACT = Object.freeze({
   version: 2,
   authority: 'agentsam-sdk',
@@ -26,6 +31,7 @@ export const AGENTSAM_AUTH_CONTRACT = Object.freeze({
     origin: AGENTSAM_AUTH_ENV.iamOrigin,
     clientId: AGENTSAM_AUTH_ENV.iamClientId,
     clientSecret: AGENTSAM_AUTH_ENV.iamClientSecret,
+    defaultIssuer: PLATFORM_ACCOUNT_ISSUER,
   }),
   apiKey: Object.freeze({
     env: AGENTSAM_AUTH_ENV.apiKey,
@@ -55,19 +61,13 @@ function normalizeOrigin(value) {
 }
 
 /**
- * Resolve canonical IAM issuer. IAM_OAUTH_ISSUER wins; IAM_ORIGIN is compatibility only.
- * Fail loud when unset — no product-host default.
+ * Resolve PLATFORM account issuer.
+ * Order: explicit → IAM_OAUTH_ISSUER → IAM_ORIGIN → PLATFORM_ACCOUNT_ISSUER.
+ * Does not read APP host origins.
  */
 export function resolveIamIssuer(env = {}, explicit = '') {
-  const resolved = normalizeOrigin(explicit || env?.IAM_OAUTH_ISSUER || env?.IAM_ORIGIN || '');
-  if (!resolved) {
-    const err = new Error(
-      'IAM_OAUTH_ISSUER is not configured. Set IAM_OAUTH_ISSUER (IAM_ORIGIN is compatibility only).',
-    );
-    err.code = 'iam_oauth_issuer_not_configured';
-    throw err;
-  }
-  return resolved;
+  return normalizeOrigin(explicit || env?.IAM_OAUTH_ISSUER || env?.IAM_ORIGIN || '')
+    || PLATFORM_ACCOUNT_ISSUER;
 }
 
 /** @deprecated Use resolveIamIssuer. Same resolution order as issuer. */

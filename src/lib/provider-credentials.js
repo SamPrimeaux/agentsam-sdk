@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { PLATFORM_ACCOUNT_ISSUER } from '../../packages/identity/src/contracts/auth-config.js';
 import {
   getSecureProviderKey,
   setSecureProviderKey,
@@ -395,6 +396,13 @@ export function renderEnvShellExports(options = {}) {
   if (!emitted.length) {
     lines.push('# No AgentSam credentials configured. Run: agentsam api-key create --store keychain --activate');
   }
+
+  // PLATFORM namespace — always emit so whoami/core client work after `source load-agent-env.sh`.
+  // Not an APP host alias; Local Studio hosts live in agentsam.app.json hosts[].
+  const issuer = clean(options.env?.IAM_OAUTH_ISSUER || process.env.IAM_OAUTH_ISSUER)
+    || PLATFORM_ACCOUNT_ISSUER;
+  lines.push(`export IAM_OAUTH_ISSUER=${envLiteral(issuer)}`);
+
   return Object.freeze({
     profile,
     providers: emitted,

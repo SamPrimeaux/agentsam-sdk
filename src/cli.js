@@ -130,7 +130,7 @@ function printLegacyHelp() {
                                           (AGENTSAM_BRIDGE_KEY = your machine/Worker lane — user-owned)
     agentsam resume [session]  Resume a saved Agent Sam session; omit id for picker
     agentsam eval context      Offline context-strategy/economics fixtures (--help)
-    agentsam cloudflare        Capabilities: workflows, scanner, tags, tag-gateway, brand, keyless (+ Wrangler reads)
+    agentsam cloudflare        Capabilities + CF OAuth packs (agentsam cloudflare login --pack agentsam)
     agentsam go                Go runtime discovery/build/deploy (Cloudflare worker-container)
     agentsam start-local       Local PTY on ws://127.0.0.1:3099 (no tunnel, no Cloudflare)
     agentsam ollama            Opt-in local Ollama setup/status/model management

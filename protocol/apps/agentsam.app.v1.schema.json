@@ -101,6 +101,32 @@
     "preview": { "type": "object", "additionalProperties": true },
     "install": { "type": "object", "additionalProperties": true },
     "auth": { "type": "object", "additionalProperties": true },
+    "hosts": {
+      "type": "array",
+      "description": "HOST namespace — public origins this APP is served from. Separate from APP.id and from PLATFORM IAM_OAUTH_ISSUER.",
+      "items": {
+        "type": "object",
+        "required": ["host_id", "origin"],
+        "properties": {
+          "host_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
+            "description": "Canonical HOST.id for this origin"
+          },
+          "origin": {
+            "type": "string",
+            "format": "uri",
+            "description": "https://… origin (no path)"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["production", "development", "preview", "staging"]
+          },
+          "notes": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
     "secrets": { "type": "object", "additionalProperties": true }
   },
   "additionalProperties": true

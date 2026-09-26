@@ -14,9 +14,13 @@ export {
   CLOUDFLARE_BASELINE_SCOPES,
   CLOUDFLARE_CAPABILITIES,
   CLOUDFLARE_CAPABILITY_SCOPES,
+  CLOUDFLARE_FEATURE_PACKS,
   listCloudflareCapabilities,
+  listCloudflareFeaturePacks,
   getCloudflareCapability,
+  getCloudflareFeaturePack,
   scopesForCapabilities,
+  scopesForFeaturePacks,
   assessCapabilityAuthorization,
   capabilityAuthorizationMatrix,
   cloudflarePermissionRemediation,
@@ -53,7 +57,7 @@ export * as tokenValidation from './families/token-validation.js';
 export * as pages from './families/pages.js';
 export * as snippets from './families/snippets.js';
 
-import { scopesForCapabilities as _scopesForCapabilities } from './capabilities.js';
+import { scopesForCapabilities as _scopesForCapabilities, scopesForFeaturePacks as _scopesForFeaturePacks } from './capabilities.js';
 
 // Full scope catalog kept as REFERENCE ONLY — never request wholesale at mint.
 export const CLOUDFLARE_ALL_SCOPES = Object.freeze([
@@ -243,14 +247,18 @@ export const CLOUDFLARE_ALL_SCOPES = Object.freeze([
 
 /**
  * Scopes requested at OAuth mint / re-authorize.
- * Default: baseline only. Pass `capabilities` to upgrade deliberately.
+ * Default: baseline only. Pass `capabilities` and/or `packs` to upgrade deliberately.
  * Host apps supply their own default capability list — this package does not.
  * Pass `{ all: true }` only for catalog dumps — never for live authorize URLs.
- * @param {{ capabilities?: string[], all?: boolean }} [opts]
+ * @param {{ capabilities?: string[], packs?: string[], all?: boolean }} [opts]
  */
 export function requestedCloudflareScopes(opts = {}) {
   if (opts && opts.all === true) return [...CLOUDFLARE_ALL_SCOPES];
   const capabilities = Array.isArray(opts?.capabilities) ? opts.capabilities.filter(Boolean) : [];
+  const packs = Array.isArray(opts?.packs) ? opts.packs.filter(Boolean) : [];
+  if (packs.length) {
+    return _scopesForFeaturePacks(packs, capabilities);
+  }
   return _scopesForCapabilities({
     capabilities,
     includeBaseline: true,

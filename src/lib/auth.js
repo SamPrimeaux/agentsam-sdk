@@ -8,6 +8,7 @@
 import http from 'node:http';
 import { createHash, randomBytes } from 'node:crypto';
 import { resolveIamIssuer } from '../../packages/identity/src/contracts/auth-config.js';
+import { resolveLocalStudioHostOrigin } from './app-authority.js';
 import { promptToOpenUrl } from './open-url.js';
 import {
   isBrowserSessionExpired,
@@ -182,7 +183,7 @@ export async function resolveAccountAuthority(options = {}) {
       return {
         value: '',
         source: 'agentsam_browser_oauth',
-        kind: 'browser_oauth',
+        kind: 'agentsam_browser_oauth',
         session,
         error: 'browser_oauth_session_expired',
       };
@@ -194,7 +195,7 @@ export async function resolveAccountAuthority(options = {}) {
       return {
         value: '',
         source: 'agentsam_browser_oauth',
-        kind: 'browser_oauth',
+        kind: 'agentsam_browser_oauth',
         session,
         error: `browser_oauth_refresh_failed: ${error?.message || String(error)}`,
       };
@@ -204,7 +205,7 @@ export async function resolveAccountAuthority(options = {}) {
   return {
     value: session.access_token,
     source: 'agentsam_browser_oauth',
-    kind: 'browser_oauth',
+    kind: 'agentsam_browser_oauth',
     session,
     fallback_error: apiKey.error || null,
   };
@@ -316,18 +317,20 @@ export async function authenticateViaBrowser(options = {}) {
     const err = new Error(
       'IAM_CLIENT_ID is not configured in this shell (Worker secrets are not visible to the CLI). '
       + 'For agentsam login export IAM_CLIENT_ID=iam_cli_agentsam and IAM_OAUTH_ISSUER=https://inneranimalmedia.com. '
-      + 'Local Studio Worker IAM_CLIENT_ID=iam_agentsam_sdk_web is a different OAuth client.',
+      + 'Google/Cloudflare identity starts on local-studio APP HOST (agentsam.app.json hosts[]), not PLATFORM issuer.',
     );
     err.code = 'iam_oauth_not_configured';
     throw err;
   }
   const clientId = resolved.clientId;
   const loginProvider = clean(options.loginProvider || 'inneranimalmedia').toLowerCase();
+  // PLATFORM issuer for native IAM CLI OAuth (aak / authorize).
   const issuer = resolveIamIssuer(env, options.issuer || '');
+  // APP HOST for Google/Cloudflare identity — local-studio owns those OAuth clients.
+  const identityHost = resolveLocalStudioHostOrigin({ root: options.root });
 
-  // Google / Cloudflare identity start on the IAM issuer host.
-  // Server-side secrets: GOOGLE_CLIENT_ID(+SECRET) or CLOUDFLARE_OAUTH_CLIENT_ID.
-  // No AGENTSAM_STUDIO_ORIGIN / hardcoded product host.
+  // Google / Cloudflare identity start on the local-studio APP HOST
+  // (agentsam.app.json hosts[]), not on PLATFORM IAM_OAUTH_ISSUER.
   if (loginProvider === 'google' || loginProvider === 'cloudflare') {
     if (loginProvider === 'google') {
       const googleId = clean(env.GOOGLE_CLIENT_ID) || clean(env.GOOGLE_DESKTOP_CLIENT_ID);
@@ -350,13 +353,13 @@ export async function authenticateViaBrowser(options = {}) {
     const startPath = loginProvider === 'google'
       ? '/api/oauth/google/start'
       : '/api/oauth/cloudflare/start';
-    const startUrl = new URL(startPath, `${issuer}/`);
+    const startUrl = new URL(startPath, `${identityHost}/`);
     startUrl.searchParams.set('next', '/agentsam');
     const promptImpl = options.promptToOpenUrlImpl || promptToOpenUrl;
     await promptImpl(startUrl.toString(), {
       heading: loginProvider === 'google'
-        ? 'Sign in with Google:'
-        : 'Sign in with Cloudflare:',
+        ? 'Sign in with Google (local-studio HOST):'
+        : 'Sign in with Cloudflare (local-studio HOST):',
       prompt: 'Press ENTER to open identity sign-in in your browser.',
       input: options.input,
       output: options.output,

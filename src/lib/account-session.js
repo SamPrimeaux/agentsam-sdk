@@ -122,8 +122,15 @@ export function resolveAccountApiKey(options = {}) {
   const explicit = clean(options.explicit);
   const value = resolveApiKey(env, explicit);
   if (!value) return { value: '', source: null, kind: null };
-  if (!isApiKey(value)) return { value: '', source: explicit ? 'explicit' : 'environment', kind: 'api_key', error: 'invalid_api_key_prefix' };
-  return { value, source: explicit ? 'explicit' : 'environment', kind: 'api_key' };
+  if (!isApiKey(value)) {
+    return {
+      value: '',
+      source: explicit ? 'explicit' : 'environment',
+      kind: 'agentsam_api_key',
+      error: 'invalid_api_key_prefix',
+    };
+  }
+  return { value, source: explicit ? 'explicit' : 'environment', kind: 'agentsam_api_key' };
 }
 
 export function resolveBrowserSessionCredential(options = {}) {
@@ -133,7 +140,7 @@ export function resolveBrowserSessionCredential(options = {}) {
   return {
     value: expired ? '' : session.access_token,
     source: 'agentsam_browser_oauth',
-    kind: 'browser_oauth',
+    kind: 'agentsam_browser_oauth',
     session,
     expired,
     error: expired ? 'browser_oauth_session_expired' : null,
@@ -162,7 +169,7 @@ export function describeAccountSession(options = {}) {
   return {
     configured: Boolean(session?.access_token),
     source: session?.access_token ? 'agentsam_browser_oauth' : null,
-    kind: session?.access_token ? 'browser_oauth' : null,
+    kind: session?.access_token ? 'agentsam_browser_oauth' : null,
     refreshable: Boolean(session?.refresh_token),
     expires_at: session?.expires_at || null,
     expired: session ? isBrowserSessionExpired(session, options) : false,

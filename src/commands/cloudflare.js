@@ -6,9 +6,11 @@ import {
   CloudflareApiClient,
   CloudflareApiError,
   listCloudflareCapabilities,
+  listCloudflareFeaturePacks,
   assessCapabilityAuthorization,
   capabilityAuthorizationMatrix,
   scopesForCapabilities,
+  scopesForFeaturePacks,
   requestedCloudflareScopes,
   workflows,
   scanner,
@@ -21,6 +23,10 @@ import {
   snippets,
 } from '../../packages/connectors/cloudflare/src/index.js';
 import { AGENTSAM_TAG_VOCABULARY as TAG_VOCAB } from '../../packages/connectors/cloudflare/src/families/tags.js';
+import {
+  isCloudflareLoginFamily,
+  runCloudflareBrowserOAuthLogin,
+} from './cloudflare-login.js';
 
 function parse(argv = []) {
   const out = {
@@ -52,6 +58,7 @@ function parse(argv = []) {
     tag: '',
     status: '',
     help: false,
+    pack: '',
   };
 
   // Legacy: cloudflare run <id> / cloudflare cpu analyze
@@ -95,6 +102,7 @@ function parse(argv = []) {
     else if (arg === '--forward-original-ip') out.hideOriginalIp = false;
     else if (arg === '--no-setup-tag') out.setUpTag = false;
     else if (arg === '--capability') out.capability = argv[++i] || '';
+    else if (arg === '--pack' || arg === '--packs') out.pack = argv[++i] || '';
     else if (arg === '--resource') out.resource = argv[++i] || '';
     else if (arg === '--tag') out.tag = argv[++i] || '';
     else if (arg === '--status') out.status = argv[++i] || '';
@@ -112,6 +120,9 @@ const help = `Agent Sam · Cloudflare
 
 Account & access
   agentsam cloudflare status [--json]
+  agentsam cloudflare login --pack agentsam   # agentsam_cf_browser_oauth (ENTER to open)
+  agentsam cloudflare login --list-packs
+  agentsam cloudflare authorize --pack data   # alias of login
   agentsam cloudflare permissions [--capability ID] [--json]
   agentsam cloudflare capabilities [--json]
   agentsam cloudflare commands [--json]
@@ -138,8 +149,13 @@ Native (Wrangler reads)
   agentsam cloudflare run <whoami|…> [--json]
   agentsam cloudflare cpu analyze <profile.cpuprofile> [--json]
 
-Auth: CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID (Bearer). OAuth upgrades via
-  /api/connections/cloudflare/start?capabilities=cloudflare.url_scanner
+Auth lanes
+  agentsam_api_key / agentsam_browser_oauth  → Inner Animal Media identity
+  agentsam_cf_browser_oauth                  → Cloudflare API scopes via feature packs
+  CLOUDFLARE_API_TOKEN                       → optional direct token (still supported)
+
+Scope mitigation: never dump 300+ CF permissions — authorize by pack
+  (data | compute | ai | web | media | security | agentsam).
 `;
 
 function clientFromArgs(args, options = {}) {
@@ -188,10 +204,19 @@ async function dispatchFamily(args, options) {
   const id = args.id || args.rest[1] || args.rest[0] || '';
 
   if (family === 'permissions' || family === 'capabilities') {
-    if (family === 'capabilities' || action === 'list' || !args.capability) {
+    if (family === 'capabilities' || action === 'list' || (!args.capability && !args.pack)) {
       return {
         schema: 'agentsam.cloudflare.capabilities.v1',
         baseline_scopes: requestedCloudflareScopes(),
+        feature_packs: listCloudflareFeaturePacks().map((pack) => ({
+          id: pack.id,
+          label: pack.label,
+          description: pack.description,
+          capabilities: pack.capabilities,
+          scope_count: scopesForFeaturePacks([pack.id]).length,
+          authorize: `agentsam cloudflare login --pack ${pack.id}`,
+        })),
+        mitigation: 'Use feature packs for consent UX — never present the full Cloudflare scope catalog.',
         capabilities: listCloudflareCapabilities().map((c) => ({
           id: c.id,
           label: c.label,
@@ -204,10 +229,21 @@ async function dispatchFamily(args, options) {
         tag_vocabulary: TAG_VOCAB,
       };
     }
+    if (args.pack) {
+      const scopes = scopesForFeaturePacks(args.pack.split(','));
+      return {
+        pack: args.pack,
+        scopes_to_request: scopes,
+        scope_count: scopes.length,
+        authorize: `agentsam cloudflare login --pack ${args.pack}`,
+        authorize_url_hint: `/api/connections/cloudflare/start?packs=${encodeURIComponent(args.pack)}`,
+      };
+    }
     const assessment = assessCapabilityAuthorization(args.capability, []);
     return {
       ...assessment,
       scopes_to_request: scopesForCapabilities({ capabilities: [args.capability] }),
+      authorize: `agentsam cloudflare login --capability ${args.capability}`,
       authorize_url_hint: `/api/connections/cloudflare/start?capabilities=${encodeURIComponent(args.capability)}`,
     };
   }
@@ -353,6 +389,14 @@ async function dispatchFamily(args, options) {
 }
 
 export async function runCloudflare(argv = [], options = {}) {
+  const familyPeek = String(argv[0] || 'status').trim().toLowerCase();
+  if (isCloudflareLoginFamily(familyPeek)) {
+    const loginArgv = familyPeek === 'packs'
+      ? ['--list-packs', ...argv.slice(1)]
+      : argv.slice(1);
+    return runCloudflareBrowserOAuthLogin(loginArgv, options);
+  }
+
   const args = parse(argv);
   if (options.cwd && !argv.includes('--cwd')) args.cwd = path.resolve(options.cwd);
   const write = options.write || ((value) => process.stdout.write(value));
@@ -360,6 +404,7 @@ export async function runCloudflare(argv = [], options = {}) {
     write(help);
     return null;
   }
+
   try {
     let result;
 
@@ -377,7 +422,12 @@ export async function runCloudflare(argv = [], options = {}) {
             account_id: client.accountId || null,
           },
           capabilities: matrix,
-          note: 'OAuth scope matrix unknown for raw API tokens — use family status probes for live authorization.',
+          feature_packs: listCloudflareFeaturePacks().map((p) => ({
+            id: p.id,
+            label: p.label,
+            authorize: `agentsam cloudflare login --pack ${p.id}`,
+          })),
+          note: 'OAuth scope matrix unknown for raw API tokens — use family status probes for live authorization. Prefer agentsam_cf_browser_oauth packs for scoped consent.',
         };
         // Live probes for key families when account present
         if (client.accountId) {
@@ -402,7 +452,7 @@ export async function runCloudflare(argv = [], options = {}) {
         native: listWranglerNativeCommands(),
         families: WRANGLER_OPERATION_FAMILIES,
         semantic: [
-          'permissions', 'capabilities', 'workflows', 'scanner', 'tags',
+          'login', 'authorize', 'permissions', 'capabilities', 'workflows', 'scanner', 'tags',
           'tag-gateway', 'brand', 'keyless', 'token-validation', 'pages', 'snippets',
         ],
       };

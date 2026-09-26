@@ -335,13 +335,21 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
     }
     const redirectUri = `${url.origin}${CLOUDFLARE_CALLBACK_PATH}`;
     const capabilityParam = url.searchParams.get('capabilities') || url.searchParams.get('capability') || '';
+    const packsParam = url.searchParams.get('packs') || url.searchParams.get('pack') || '';
     const requested = capabilityParam
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
+    const requestedPacks = packsParam
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
     // Host-supplied defaults only — never a product-named constant inside this package.
     const capabilitySet = requested.length ? requested : hostDefaultCapabilities;
-    const scopes = requestedCloudflareScopes({ capabilities: capabilitySet });
+    const scopes = requestedCloudflareScopes({
+      capabilities: capabilitySet,
+      packs: requestedPacks,
+    });
     const authorize = buildAuthorizeUrl({
       clientId: String(env.CLOUDFLARE_OAUTH_CLIENT_ID),
       redirectUri,

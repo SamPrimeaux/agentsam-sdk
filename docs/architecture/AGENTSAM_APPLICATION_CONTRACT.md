@@ -47,6 +47,7 @@ services/
 | Namespace | Example | Role |
 |-----------|---------|------|
 | `APP.id` | `cad-creator` | Canonical product identity — immutable kebab-case |
+| `HOST.id` / origin | `local-studio-public` → `https://agentsam.inneranimalmedia.com` | Where this APP is served; OAuth clients bind here |
 | npm package | `@inneranimalmedia/agentsam-cad-creator` | Distribute/install code |
 | CLI command | `agentsam-cad-creator` / `agentsam cad` | Launch surface |
 | Cloudflare Worker | `agentsam-cad-creator` | Host deployment name |
@@ -55,6 +56,7 @@ services/
 | service | `cad-render-service` | Infrastructure |
 | `PRODUCT.id` | `cms` | Platform product registry |
 | `MOUNT.id` | `cms-studio` | Host mount slot |
+| PLATFORM issuer | `IAM_OAUTH_ISSUER` → `https://inneranimalmedia.com` | Account API / aak_* authority — **not** an APP host |
 
 Those names **may** differ. What must not happen:
 
@@ -62,7 +64,21 @@ Those names **may** differ. What must not happen:
 const APP = "agentsam-cad-creator"; // Worker name ≠ APP identity
 ```
 
+```js
+// Forbidden: collapsing HOST and PLATFORM into alias env vars
+const origin = env.AGENTSAM_STUDIO_ORIGIN || env.AGENTSAM_LOCAL_STUDIO_ORIGIN || env.IAM_OAUTH_ISSUER;
+```
+
 Relate namespaces explicitly:
+
+```json
+{
+  "id": "local-studio",
+  "hosts": [
+    { "host_id": "local-studio-public", "origin": "https://agentsam.inneranimalmedia.com", "role": "production" }
+  ]
+}
+```
 
 ```json
 {
