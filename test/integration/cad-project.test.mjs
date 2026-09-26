@@ -58,6 +58,8 @@ test('CAD registry projects the app into tools workflows and CLI graph relations
  assert.equal(manifest.tools.length,9);
  assert.equal(manifest.workflows.length,2);
  assert.match(migration,/WHERE slug='cad-creator'/);
+ assert.match(migration,/WHERE slug='agentsam-cad-creator'/);
+ assert.match(migration,/legacy_slug','agentsam-cad-creator/);
  assert.equal((migration.match(/'exposes_tool'/g)||[]).length,9);
  assert.equal((migration.match(/'provides_workflow'/g)||[]).length,2);
  assert.equal((migration.match(/'exposes_command'/g)||[]).length,1);
