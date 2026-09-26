@@ -1,32 +1,8 @@
 {
-  "schema": "agentsam.app.v1",
-  "id": "client-cms-editor",
-  "name": "AgentSam CMS Editor",
-  "package": "@inneranimalmedia/client-cms-editor",
-  "version": "0.1.0",
-  "surfaces": [
-    "store",
-    "theme-editor",
-    "cms-editor",
-    "templates",
-    "media-library",
-    "agentsam"
-  ],
-  "runtime": {
-    "local_preview": "ready",
-    "source_scaffold": "ready",
-    "cloudflare": "ready",
-    "github": "source-ready"
-  },
-  "commands": {
-    "preview": "agentsam-cms",
-    "doctor": "agentsam-cms doctor",
-    "scaffold": "agentsam-cms scaffold <directory>",
-    "info": "agentsam-cms info"
-  },
-  "bin": "bin/agentsam-cms.mjs",
-  "modes": [
-    "standalone",
-    "embedded"
-  ]
+  "schema": "agentsam.host-install.v1",
+  "app_id": "client-cms-editor",
+  "config": {},
+  "mounts": [],
+  "features": [],
+  "notes": "Installation state for this checkout. Product definition lives in ../agentsam.app.json."
 }

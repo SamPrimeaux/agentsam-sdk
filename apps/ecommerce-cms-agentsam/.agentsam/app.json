@@ -1,65 +1,10 @@
 {
-  "schema": "agentsam.app.v1",
-  "id": "ecommerce-cms-agentsam",
-  "name": "AgentSam Ecommerce + CMS",
-  "package": "@inneranimalmedia/agentsam-sdk-ecommerce",
-  "version": "0.1.0",
-  "surfaces": [
-    "admin",
-    "commerce",
-    "cms",
-    "content-studio",
-    "growth",
-    "analytics",
-    "email",
-    "integrations",
-    "agentsam"
-  ],
-  "capabilities": {
-    "products": false,
-    "orders": false,
-    "inventory": false,
-    "cms": false,
-    "media": false,
-    "campaigns": false,
-    "mail": false,
-    "providers": false,
-    "agent_workbench": false
+  "schema": "agentsam.host-install.v1",
+  "app_id": "ecommerce-cms-agentsam",
+  "config": {
+    "modes": ["standalone", "embedded"]
   },
-  "providers": {
-    "planned": [
-      "completeful",
-      "stripe",
-      "resend",
-      "openai",
-      "cloudflare",
-      "github",
-      "inneranimalmedia"
-    ]
-  },
-  "runtime": {
-    "local_preview": "ready",
-    "source_scaffold": "ready",
-    "cloudflare": "not-started",
-    "github": "source-ready"
-  },
-  "commands": {
-    "preview": "agentsam-ecommerce",
-    "info": "agentsam-ecommerce info",
-    "doctor": "agentsam-ecommerce doctor",
-    "scaffold": "agentsam-ecommerce scaffold <directory>"
-  },
-  "notes": "Standalone local preview is buildable and runs through frontend/src with the mock AdminHost adapter. The rescued UI remains intentionally disconnected from production provider/backend writes, so product capabilities stay false until real backend adapters are wired and verified.",
-  "bin": "bin/agentsam-ecommerce.mjs",
-  "preview": {
-    "kind": "web",
-    "entry": "/admin",
-    "host": "vite",
-    "port": 4174,
-    "adapter": "mock"
-  },
-  "modes": [
-    "standalone",
-    "embedded"
-  ]
+  "mounts": [],
+  "features": [],
+  "notes": "Installation state for this checkout. Product definition: ../agentsam.app.json."
 }

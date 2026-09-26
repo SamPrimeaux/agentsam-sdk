@@ -2,8 +2,28 @@
   "schema": "agentsam.app.v1",
   "id": "local-studio",
   "name": "AgentSam Local Studio",
+  "kind": "app",
   "package": "@inneranimalmedia/agentsam-local-studio",
   "version": "0.0.0",
+  "entrypoints": {
+    "frontend": "./frontend",
+    "backend": "./backend",
+    "cli": "./bin/agentsam-studio.mjs"
+  },
+  "capabilities": [
+    "host",
+    "workbench",
+    "auth",
+    "vault",
+    "ship",
+    "compose.apps"
+  ],
+  "provides": [
+    "host.mount",
+    "workspace.shell",
+    "preview",
+    "agent.tools"
+  ],
   "surfaces": [
     "workbench",
     "auth-portal",

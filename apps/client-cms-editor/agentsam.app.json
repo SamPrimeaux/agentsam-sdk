@@ -1,9 +1,28 @@
 {
   "schema": "agentsam.app.v1",
   "id": "client-cms-editor",
+  "product_id": "cms",
   "name": "AgentSam CMS Editor",
+  "kind": "app",
   "package": "@inneranimalmedia/client-cms-editor",
   "version": "0.1.0",
+  "entrypoints": {
+    "frontend": "./frontend",
+    "backend": "./backend",
+    "cli": "./bin/agentsam-cms.mjs"
+  },
+  "capabilities": [
+    "cms",
+    "media",
+    "templates",
+    "admin_content"
+  ],
+  "provides": [
+    "cms.editor",
+    "cms.templates",
+    "cms.media.library",
+    "workspace.panel"
+  ],
   "surfaces": [
     "store",
     "theme-editor",
@@ -16,7 +35,9 @@
     "local_preview": "ready",
     "source_scaffold": "ready",
     "cloudflare": "ready",
-    "github": "source-ready"
+    "github": "source-ready",
+    "browser": true,
+    "local": true
   },
   "commands": {
     "preview": "agentsam-cms",

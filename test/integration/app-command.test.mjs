@@ -14,6 +14,29 @@ test('lists agentsam.app.json manifests for product apps', () => {
   assert.ok(ids.includes('ecommerce-cms-agentsam'));
 });
 
+test('agentsam app validate passes for all product apps', async () => {
+  const { validateApps } = await import('../../src/commands/app.js');
+  const report = validateApps();
+  assert.equal(report.ok, true, report.errors.join('\n'));
+  assert.ok(report.apps.length >= 4);
+});
+
+test('CAD and CMS workers load APP identity from agentsam.app.json', () => {
+  const cad = fs.readFileSync(path.resolve('apps/cad-creator/backend/worker/index.js'), 'utf8');
+  const cms = fs.readFileSync(path.resolve('apps/client-cms-editor/backend/worker/index.js'), 'utf8');
+  assert.match(cad, /import appManifest from ['"]\.\.\/\.\.\/agentsam\.app\.json['"]/);
+  assert.match(cms, /import appManifest from ['"]\.\.\/\.\.\/agentsam\.app\.json['"]/);
+  assert.doesNotMatch(cad, /const\s+APP\s*=\s*["']/);
+  assert.doesNotMatch(cms, /const\s+APP\s*=\s*["']/);
+});
+
+test('desktop CMS shell app_id resolves to client-cms-editor', () => {
+  const manifest = JSON.parse(
+    fs.readFileSync(path.resolve('packages/agentsam-desktop-shell/manifests/cms-editor.json'), 'utf8'),
+  );
+  assert.equal(manifest.app_id, 'client-cms-editor');
+});
+
 
 test('Ecommerce CMS app bin exposes truthful runnable doctor state', () => {
   const bin = path.resolve('apps/ecommerce-cms-agentsam/bin/agentsam-ecommerce.mjs');

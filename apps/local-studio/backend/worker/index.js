@@ -135,7 +135,7 @@ function serveInstallScript(_pathname) {
  * Auth: session cookie (accounts.id) OR AGENTSAM_BRIDGE_KEY (+ X-User-Id for the account).
  * Session always wins over a client-asserted X-User-Id.
  */
-const STUDIO_VAULT_ACTOR = "agentsam-local-studio";
+const STUDIO_VAULT_ACTOR = APP.id;
 
 function json(data, status = 200, extra = {}) {
   return new Response(JSON.stringify(data), {

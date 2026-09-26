@@ -2,8 +2,26 @@
   "schema": "agentsam.app.v1",
   "id": "cad-creator",
   "name": "AgentSam CAD Creator",
+  "kind": "app",
   "package": "@inneranimalmedia/agentsam-sdk-cad-creator",
   "version": "0.1.0",
+  "entrypoints": {
+    "frontend": "./frontend",
+    "backend": "./backend",
+    "cli": "./bin/agentsam-cad-creator.mjs"
+  },
+  "capabilities": [
+    "cad",
+    "files",
+    "projects",
+    "models",
+    "robotics"
+  ],
+  "provides": [
+    "workspace.panel",
+    "preview",
+    "agent.tools"
+  ],
   "surfaces": [
     "plan",
     "model",

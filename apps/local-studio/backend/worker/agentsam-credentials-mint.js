@@ -4,7 +4,10 @@
  * Local Studio Worker only — no IAM package imports.
  */
 
-const STUDIO_VAULT_ACTOR = "agentsam-local-studio";
+import appManifest from '../../agentsam.app.json';
+
+const APP = Object.freeze(appManifest);
+const STUDIO_VAULT_ACTOR = APP.id;
 
 function trim(value) {
   return value == null ? "" : String(value).trim();

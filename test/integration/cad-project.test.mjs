@@ -51,12 +51,13 @@ test('agent and runtime share executable CAD handlers',async t=>{
 test('CAD registry projects the app into tools workflows and CLI graph relationships',()=>{
  const manifest=JSON.parse(fs.readFileSync(new URL('../../registry/cad-project/manifest.json',import.meta.url),'utf8'));
  const migration=fs.readFileSync(new URL('../../registry/cad-project/migration.sql',import.meta.url),'utf8');
- assert.equal(manifest.product.slug,'agentsam-cad-creator');
+ assert.equal(manifest.product.app_id,'cad-creator');
+ assert.equal(manifest.product.slug,'cad-creator');
  assert.deepEqual(manifest.product.capability_keys,['design.read','design.write','design.export']);
  assert.equal(manifest.product.cli_commands[0].id,'agentsam:cad:project');
  assert.equal(manifest.tools.length,9);
  assert.equal(manifest.workflows.length,2);
- assert.match(migration,/WHERE slug='agentsam-cad-creator'/);
+ assert.match(migration,/WHERE slug='cad-creator'/);
  assert.equal((migration.match(/'exposes_tool'/g)||[]).length,9);
  assert.equal((migration.match(/'provides_workflow'/g)||[]).length,2);
  assert.equal((migration.match(/'exposes_command'/g)||[]).length,1);

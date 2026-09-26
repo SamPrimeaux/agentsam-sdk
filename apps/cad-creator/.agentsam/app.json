@@ -1,42 +1,12 @@
 {
-  "schema": "agentsam.app.v1",
-  "id": "cad-creator",
-  "name": "AgentSam CAD Creator",
-  "package": "@inneranimalmedia/agentsam-sdk-cad-creator",
-  "version": "0.1.0",
-  "surfaces": [
-    "plan",
-    "model",
-    "parametric",
-    "robotics",
-    "render"
+  "schema": "agentsam.host-install.v1",
+  "app_id": "cad-creator",
+  "config": {
+    "modes": ["standalone", "embedded"]
+  },
+  "mounts": [
+    { "id": "cad", "path": "/cad" }
   ],
-  "preview": {
-    "kind": "web",
-    "bridge": "agentsam.preview.v1",
-    "entry": "/",
-    "dashboard_route": "/agentsam/apps/cad"
-  },
-  "runtime": {
-    "local_preview": "ready",
-    "source_scaffold": "ready",
-    "cloudflare": "scaffold",
-    "github": "source-ready"
-  },
-  "commands": {
-    "preview": "agentsam-cad-creator",
-    "doctor": "agentsam-cad-creator doctor",
-    "scaffold": "agentsam-cad-creator scaffold <directory>",
-    "info": "agentsam-cad-creator info"
-  },
-  "secrets": {
-    "server_only": [
-      "GEMINI_API_KEY"
-    ]
-  },
-  "bin": "bin/agentsam-cad-creator.mjs",
-  "modes": [
-    "standalone",
-    "embedded"
-  ]
+  "features": [],
+  "notes": "Installation state for this checkout. Product definition: ../agentsam.app.json."
 }

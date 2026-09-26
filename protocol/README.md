@@ -20,10 +20,12 @@ Platform repositories may consume the SDK, provide host adapters, or incubate pr
 agentsam-sdk/
 ├── src/                       # Node SDK + local/deploy CLI
 ├── python/agentsam_sdk/       # Python portable tools and TUI
-├── packages/                  # Optional focused packages/workspaces
-├── apps/                      # Runnable + mountable APP compositions
-│   └── */.agentsam/app.json   # App contract (standalone | embedded)
+├── packages/                  # Reusable PACKAGE / SERVICE / THEME code
+├── apps/                      # Portable product APPs (when agentsam.app.json exists)
+│   └── */agentsam.app.json    # Canonical APP product definition (APP.id)
+│   └── */.agentsam/app.json   # Host/install state (app_id → APP.id)
 ├── protocol/                  # Shared SDK contracts and ownership rules
+│   ├── apps/                  # agentsam.app.v1 + host-install schemas
 │   └── features/              # agentsam.feature.v1 schema + catalog
 ├── templates/                 # Scaffold templates
 ├── examples/                  # Runnable examples/pointers
@@ -31,12 +33,18 @@ agentsam-sdk/
 └── test/ + python/tests/      # Node and Python verification
 ```
 
-### APP vs FEATURE
+### Artifact taxonomy
 
-| Unit | Manifest | Role |
+| Type | Manifest | Role |
 |------|----------|------|
-| APP | `.agentsam/app.json` | Runnable/mountable product composition |
-| FEATURE | `agentsam.feature.json` | Vertical capability (provider/UI/domain/composer) |
+| **APP** | `agentsam.app.json` | Portable installable product — sole `APP.id` authority |
+| **PACKAGE** | `agentsam.package.json` / package metadata | Reusable code/capability |
+| **SERVICE** | `agentsam.package.json` (`type: "service"`) | Runtime infrastructure |
+| **HOST install** | `.agentsam/app.json` | Installation/mount state; references `app_id` |
+| **THEME** | theme package / theme-site scaffold | Appearance/content kit — not an APP |
+| **FEATURE** | `agentsam.feature.json` | Vertical capability (provider/UI/domain) |
+
+SSOT: [`docs/architecture/AGENTSAM_APPLICATION_CONTRACT.md`](../docs/architecture/AGENTSAM_APPLICATION_CONTRACT.md) · `agentsam app validate`
 
 `npm install` is inert. AgentSam activates features after validation → plan → operator approval → receipt.
 

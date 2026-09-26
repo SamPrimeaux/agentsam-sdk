@@ -1,7 +1,8 @@
 {
   "contract": "cad.project.v1",
   "product": {
-    "slug": "agentsam-cad-creator",
+    "app_id": "cad-creator",
+    "slug": "cad-creator",
     "capability_keys": [
       "design.read",
       "design.write",

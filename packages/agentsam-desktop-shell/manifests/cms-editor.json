@@ -1,6 +1,6 @@
 {
   "$schema": "./schema.json",
-  "app_id": "cms-editor",
+  "app_id": "client-cms-editor",
   "app_name": "AgentSam CMS Editor",
   "bundle_identifier": "com.inneranimalmedia.cms-editor",
   "base_url": "https://agentsam.inneranimalmedia.com",

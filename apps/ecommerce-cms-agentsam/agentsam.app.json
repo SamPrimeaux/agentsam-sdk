@@ -2,8 +2,14 @@
   "schema": "agentsam.app.v1",
   "id": "ecommerce-cms-agentsam",
   "name": "AgentSam Ecommerce + CMS",
+  "kind": "app",
   "package": "@inneranimalmedia/agentsam-sdk-ecommerce",
   "version": "0.1.0",
+  "entrypoints": {
+    "frontend": "./frontend",
+    "backend": "./backend",
+    "cli": "./bin/agentsam-ecommerce.mjs"
+  },
   "surfaces": [
     "admin",
     "commerce",

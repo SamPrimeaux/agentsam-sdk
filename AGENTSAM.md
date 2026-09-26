@@ -76,6 +76,17 @@ conventional client variable for that machinery, never a human identity. Prefer 
 See [Storage architecture](docs/architecture/STORAGE.md) for enforcement and
 the current compatibility boundary.
 
+## Application contract (APP identity)
+
+Portable product apps follow [`docs/architecture/AGENTSAM_APPLICATION_CONTRACT.md`](docs/architecture/AGENTSAM_APPLICATION_CONTRACT.md).
+
+- **APP** = installable product (`agentsam.app.json`, immutable kebab-case `APP.id`).
+- **Not** an APP merely because it is under `apps/`, deployable, or an npm package.
+- Runtime identity: `import APP from "./agentsam.app.json"` — never `const APP = "agentsam-…"`.
+- `.agentsam/app.json` is host/install state (`app_id`), not a second product definition.
+- Package, Worker, route, desktop, and service names are separate namespaces with explicit pointers.
+- Gate: `agentsam app validate` / `npm run guard:apps`.
+
 ## Model and run policy
 
 - Model, reasoning effort, service tier, budget, and permissions are runtime configuration, not hidden prompt instructions.

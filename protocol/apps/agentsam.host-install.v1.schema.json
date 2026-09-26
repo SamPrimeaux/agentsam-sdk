@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.inneranimalmedia.com/protocol/apps/agentsam.host-install.v1.schema.json",
+  "title": "agentsam.host-install.v1",
+  "description": "Host/installation state for an AgentSam APP. Lives under .agentsam/app.json. References APP.id; must not redefine product identity (enforced by agentsam app validate).",
+  "type": "object",
+  "required": ["schema", "app_id"],
+  "properties": {
+    "schema": { "const": "agentsam.host-install.v1" },
+    "app_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
+      "description": "Must resolve to a known agentsam.app.json id"
+    },
+    "config": { "type": "object", "additionalProperties": true },
+    "mounts": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "type": "string" },
+          {
+            "type": "object",
+            "additionalProperties": true
+          }
+        ]
+      }
+    },
+    "features": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Feature ids enabled for this installation"
+    },
+    "notes": { "type": "string" }
+  },
+  "additionalProperties": true
+}

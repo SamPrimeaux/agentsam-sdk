@@ -2,9 +2,14 @@
   "schema": "agentsam.app.v1",
   "id": "database-editor",
   "name": "AgentSam Database Editor",
+  "kind": "app",
+  "directory_id_exception": true,
   "display_name": "Database Editor",
   "package": "@inneranimalmedia/agentsam-database-editor",
   "icon": "database",
+  "entrypoints": {
+    "cli": "./bin/agentsam-database-editor.mjs"
+  },
   "install": {
     "supported": true,
     "selector": "database-editor",

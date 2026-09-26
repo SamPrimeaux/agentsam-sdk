@@ -43,7 +43,8 @@ const workflows=CAD_PROJECT_WORKFLOWS.map(w=>{
  output_schema_json:'{"type":"object"}',metadata_json:json({contract:'cad.project.v1',goap:{requires:w.requires,provides:w.provides,effects_require_completed_execution:true},activation:{local:'verified',hosted:'pending'}})},nodes,edges};
 });
 const product={
- slug:'agentsam-cad-creator',
+ app_id:'cad-creator',
+ slug:'cad-creator',
  capability_keys:['design.read','design.write','design.export'],
  cli_commands:[{id:'agentsam:cad:project',command:'agentsam cad project',description:'Editable CAD project operations and workflows'}]
 };
