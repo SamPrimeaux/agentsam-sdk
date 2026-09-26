@@ -9,10 +9,12 @@ export function TicketsSurface({
   tickets,
   analytics,
   scope = "all",
+  onOpenTicket,
 }: {
   tickets: WorkTicket[];
   analytics: { completionRate: number; avgCycleDays: number; oldestActiveDays: number };
   scope?: "all" | "platform" | "collaborate";
+  onOpenTicket?: (ticket: WorkTicket) => void;
 }) {
   const [mode, setMode] = useState<"queue" | "board">("queue");
   const visible = useMemo(
