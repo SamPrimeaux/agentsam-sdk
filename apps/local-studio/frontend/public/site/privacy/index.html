@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en" data-asbd-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Privacy Policy — Agent Sam</title>
+  <meta name="description" content="Privacy Policy for Agent Sam (agentsam.inneranimalmedia.com) — how we collect, use, and protect information." />
+  <meta name="agentsam:page" content="privacy" />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href="https://agentsam.inneranimalmedia.com/privacy" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/site/global/asbd-tokens.css" />
+  <script src="/site/global/asbd-theme.js" defer></script>
+  <style>
+    body { margin:0; min-height:100vh; font-family:var(--asbd-font-sans); background:var(--asbd-surface); color:var(--asbd-text); }
+    .wrap { max-width:720px; margin:0 auto; padding:calc(var(--asbd-header-height,76px) + 28px) 32px 96px; }
+    .asbd-breadcrumb { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:13px; font-weight:600; color:var(--asbd-text-muted); margin-bottom:22px; }
+    .asbd-breadcrumb a { color:var(--asbd-text-muted); text-decoration:none; }
+    .asbd-breadcrumb a:hover { color:var(--asbd-color-blue); }
+    .kicker { font-size:11px; letter-spacing:.14em; text-transform:uppercase; font-weight:800; color:var(--asbd-color-blue); margin:0 0 10px; }
+    h1 { font-size:clamp(1.9rem,3.6vw,2.6rem); letter-spacing:-0.03em; margin:0 0 12px; line-height:1.1; }
+    .updated { color:var(--asbd-text-muted); font-size:14px; margin:0 0 28px; }
+    h2 { font-size:1.15rem; margin:28px 0 10px; letter-spacing:-0.02em; }
+    p, li { color:var(--asbd-text-muted); line-height:1.65; font-size:1rem; }
+    p { margin:0 0 14px; }
+    ul { margin:0 0 14px; padding-left:1.2em; }
+    a { color:var(--asbd-color-blue); }
+    .asbd-doc-toolbar { display:flex; justify-content:flex-end; margin-bottom:12px; }
+    .asbd-theme-toggle { font:inherit; font-size:13px; font-weight:700; border-radius:10px; border:1px solid var(--asbd-border); background:var(--asbd-surface-elevated); color:var(--asbd-text); padding:8px 14px; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div id="asbd-header-mount"></div>
+  <main class="wrap">
+    <div class="asbd-doc-toolbar">
+      <button type="button" class="asbd-theme-toggle" id="asbdThemeToggle" aria-label="Toggle theme">Theme</button>
+    </div>
+    <nav class="asbd-breadcrumb" aria-label="Breadcrumb">
+      <a href="/">Agent Sam</a>
+      <span aria-hidden="true">/</span>
+      <span>Privacy</span>
+    </nav>
+    <p class="kicker">Legal</p>
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated: September 25, 2026 · Applies to Agent Sam at agentsam.inneranimalmedia.com and Agent Sam Local Studio.</p>
+
+    <h2>Who we are</h2>
+    <p>Agent Sam is operated by Inner Animal Media (Inner Animals LLC). This policy covers the Agent Sam product surfaces — the hosted Local Studio / website, CLI, and related OAuth login — not unrelated Inner Animal Media properties unless linked here.</p>
+
+    <h2>What we collect</h2>
+    <ul>
+      <li><strong>Account identity</strong> — when you Sign in with Google we receive OpenID identity claims (subject, email, profile name) needed to create or attach an Agent Sam account. We do not request Google Cloud scopes on website login.</li>
+      <li><strong>Session &amp; security</strong> — cookies or tokens required to keep you signed in, CSRF/state for OAuth, and basic request logs (IP, user agent, timestamps) for abuse prevention.</li>
+      <li><strong>Product usage</strong> — workspace, connection, and capability metadata you create inside Agent Sam (for example linked Cloudflare or Google Cloud connections you explicitly authorize).</li>
+      <li><strong>Support</strong> — content you send us when you contact support.</li>
+    </ul>
+
+    <h2>Google &amp; third-party connections</h2>
+    <p>Website login uses Google OAuth with <code>openid email profile</code> only. Separate “Connect Google Cloud” or Desktop PKCE flows may request Google Cloud scopes when you deliberately connect a cloud provider; those grants are accounted for in that connection, not in Sign in with Google.</p>
+    <p>Cloudflare, AI providers, and other integrations only receive credentials or data you authorize for that connection.</p>
+
+    <h2>How we use information</h2>
+    <ul>
+      <li>Authenticate you and operate Agent Sam accounts and workspaces</li>
+      <li>Provide sandboxes, tools, and connected-cloud capabilities you enable</li>
+      <li>Secure the service, prevent abuse, and meet legal obligations</li>
+      <li>Improve product reliability (aggregated / operational metrics)</li>
+    </ul>
+
+    <h2>Sharing</h2>
+    <p>We do not sell personal information. We share data with subprocessors only as needed to run the service (for example Cloudflare infrastructure, email delivery) under appropriate agreements, or when required by law.</p>
+
+    <h2>Retention</h2>
+    <p>Account and connection data is retained while your account is active and for a reasonable period afterward for security and legal compliance. You may request deletion of your Agent Sam account data by contacting us.</p>
+
+    <h2>Your choices</h2>
+    <ul>
+      <li>Disconnect third-party providers from Agent Sam settings when available</li>
+      <li>Revoke Google access in your Google Account permissions</li>
+      <li>Request access, correction, or deletion of account data</li>
+    </ul>
+
+    <h2>Contact</h2>
+    <p>Privacy questions: <a href="mailto:sam@inneranimalmedia.com">sam@inneranimalmedia.com</a>. Related terms: <a href="/terms">Terms of Service</a>.</p>
+  </main>
+  <div id="asbd-footer-mount"></div>
+  <script>
+    (function () {
+      function inject(id, url) {
+        return fetch(url).then(function (r) { return r.text(); }).then(function (html) {
+          var el = document.getElementById(id);
+          if (el) el.innerHTML = html;
+        }).catch(function () {});
+      }
+      Promise.all([
+        inject('asbd-header-mount', '/site/global/asbd-header.html'),
+        inject('asbd-footer-mount', '/site/global/asbd-footer.html'),
+      ]).then(function () {
+        if (window.AsbdTheme) {
+          AsbdTheme.syncFromDocument();
+          AsbdTheme.bindToggle(document.getElementById('asbdThemeToggle'));
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

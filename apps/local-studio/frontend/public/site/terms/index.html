@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en" data-asbd-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Terms of Service — Agent Sam</title>
+  <meta name="description" content="Terms of Service for Agent Sam (agentsam.inneranimalmedia.com) and Agent Sam Local Studio." />
+  <meta name="agentsam:page" content="terms" />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href="https://agentsam.inneranimalmedia.com/terms" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/site/global/asbd-tokens.css" />
+  <script src="/site/global/asbd-theme.js" defer></script>
+  <style>
+    body { margin:0; min-height:100vh; font-family:var(--asbd-font-sans); background:var(--asbd-surface); color:var(--asbd-text); }
+    .wrap { max-width:720px; margin:0 auto; padding:calc(var(--asbd-header-height,76px) + 28px) 32px 96px; }
+    .asbd-breadcrumb { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:13px; font-weight:600; color:var(--asbd-text-muted); margin-bottom:22px; }
+    .asbd-breadcrumb a { color:var(--asbd-text-muted); text-decoration:none; }
+    .asbd-breadcrumb a:hover { color:var(--asbd-color-blue); }
+    .kicker { font-size:11px; letter-spacing:.14em; text-transform:uppercase; font-weight:800; color:var(--asbd-color-blue); margin:0 0 10px; }
+    h1 { font-size:clamp(1.9rem,3.6vw,2.6rem); letter-spacing:-0.03em; margin:0 0 12px; line-height:1.1; }
+    .updated { color:var(--asbd-text-muted); font-size:14px; margin:0 0 28px; }
+    h2 { font-size:1.15rem; margin:28px 0 10px; letter-spacing:-0.02em; }
+    p, li { color:var(--asbd-text-muted); line-height:1.65; font-size:1rem; }
+    p { margin:0 0 14px; }
+    ul { margin:0 0 14px; padding-left:1.2em; }
+    a { color:var(--asbd-color-blue); }
+    .asbd-doc-toolbar { display:flex; justify-content:flex-end; margin-bottom:12px; }
+    .asbd-theme-toggle { font:inherit; font-size:13px; font-weight:700; border-radius:10px; border:1px solid var(--asbd-border); background:var(--asbd-surface-elevated); color:var(--asbd-text); padding:8px 14px; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div id="asbd-header-mount"></div>
+  <main class="wrap">
+    <div class="asbd-doc-toolbar">
+      <button type="button" class="asbd-theme-toggle" id="asbdThemeToggle" aria-label="Toggle theme">Theme</button>
+    </div>
+    <nav class="asbd-breadcrumb" aria-label="Breadcrumb">
+      <a href="/">Agent Sam</a>
+      <span aria-hidden="true">/</span>
+      <span>Terms</span>
+    </nav>
+    <p class="kicker">Legal</p>
+    <h1>Terms of Service</h1>
+    <p class="updated">Last updated: September 25, 2026 · Agent Sam at agentsam.inneranimalmedia.com and Agent Sam Local Studio.</p>
+
+    <h2>Agreement</h2>
+    <p>By accessing or using Agent Sam (the website, Local Studio, CLI, and related APIs), you agree to these Terms. If you use Agent Sam on behalf of an organization, you represent that you have authority to bind that organization.</p>
+
+    <h2>The service</h2>
+    <p>Agent Sam provides developer tooling: authentication, sandboxes, connectors, and workflow automation. Features may change. Beta or preview capabilities are offered as-is and may be modified or withdrawn.</p>
+
+    <h2>Accounts &amp; access</h2>
+    <ul>
+      <li>You are responsible for credentials and OAuth grants associated with your account.</li>
+      <li>Sign in with Google on the website is for Agent Sam identity only (<code>openid email profile</code>).</li>
+      <li>Connecting Google Cloud, Cloudflare, or other providers is optional and governed by those providers’ terms plus any scopes you approve.</li>
+      <li>You must not abuse the service, attempt unauthorized access, or use Agent Sam to violate law or third-party rights.</li>
+    </ul>
+
+    <h2>Your content &amp; cloud resources</h2>
+    <p>You retain ownership of content and cloud resources you bring to Agent Sam. You grant us a limited license to process that material solely to operate the features you use. You are responsible for permissions and costs on third-party clouds you connect.</p>
+
+    <h2>Acceptable use</h2>
+    <p>No malware distribution, scraping that harms the service, bypassing security controls, or using Agent Sam to infringe intellectual property or privacy rights.</p>
+
+    <h2>Disclaimer</h2>
+    <p>Agent Sam is provided “as is” without warranties of any kind, to the fullest extent permitted by law. We do not warrant uninterrupted or error-free operation.</p>
+
+    <h2>Limitation of liability</h2>
+    <p>To the fullest extent permitted by law, Inner Animals LLC and its affiliates are not liable for indirect, incidental, special, consequential, or punitive damages, or for lost profits, data, or cloud spend arising from your use of Agent Sam.</p>
+
+    <h2>Changes</h2>
+    <p>We may update these Terms. Material changes will be reflected on this page with an updated date. Continued use after changes constitutes acceptance.</p>
+
+    <h2>Contact</h2>
+    <p>Questions: <a href="mailto:sam@inneranimalmedia.com">sam@inneranimalmedia.com</a>. Privacy details: <a href="/privacy">Privacy Policy</a>.</p>
+  </main>
+  <div id="asbd-footer-mount"></div>
+  <script>
+    (function () {
+      function inject(id, url) {
+        return fetch(url).then(function (r) { return r.text(); }).then(function (html) {
+          var el = document.getElementById(id);
+          if (el) el.innerHTML = html;
+        }).catch(function () {});
+      }
+      Promise.all([
+        inject('asbd-header-mount', '/site/global/asbd-header.html'),
+        inject('asbd-footer-mount', '/site/global/asbd-footer.html'),
+      ]).then(function () {
+        if (window.AsbdTheme) {
+          AsbdTheme.syncFromDocument();
+          AsbdTheme.bindToggle(document.getElementById('asbdThemeToggle'));
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
