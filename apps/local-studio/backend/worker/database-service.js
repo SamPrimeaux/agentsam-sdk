@@ -5,7 +5,7 @@ import {
   createHyperdriveAdapter,
   readD1Metrics,
   readPostgresMetrics,
-} from '../../../../packages/agentsam-database-editor/src/index.js';
+} from '../../../../packages/agentsam-database-editor/backend/index.js';
 import { decryptSecret as decryptCloudflareSecret } from '../../../../packages/connectors/cloudflare/src/vault.js';
 
 const RANGE_SECONDS = Object.freeze({
