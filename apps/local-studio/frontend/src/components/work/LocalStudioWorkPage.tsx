@@ -2,8 +2,10 @@ import { useEffect, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   WorkProduct,
+  applyWorkThemeTokens,
   createFixtureWorkHost,
   populatedWorkFixture,
+  readStoredWorkThemeTokens,
   type WorkSurfaceId,
 } from "@inneranimalmedia/agentsam-work";
 
