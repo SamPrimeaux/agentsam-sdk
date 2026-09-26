@@ -16,7 +16,10 @@
     "./ui": "./src/ui/index.ts",
     "./ui/client": "./src/ui/client.ts",
     "./metrics/d1": "./src/metrics/d1.js",
-    "./metrics/postgres": "./src/metrics/postgres.js"
+    "./metrics/postgres": "./src/metrics/postgres.js",
+    "./frontend": "./frontend/index.ts",
+    "./backend": "./backend/index.js",
+    "./backend/sqlite": "./backend/sqlite.js"
   },
   "engines": {
     "node": ">=22"
