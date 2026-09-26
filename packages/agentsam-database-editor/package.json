@@ -12,9 +12,22 @@
     "./adapters/sqlite": "./src/adapters/sqlite.js",
     "./adapters/d1": "./src/adapters/d1.js",
     "./adapters/postgres": "./src/adapters/postgres.js",
-    "./adapters/supabase": "./src/adapters/supabase.js"
+    "./adapters/supabase": "./src/adapters/supabase.js",
+    "./ui": "./src/ui/DatabaseEditorApp.tsx",
+    "./ui/client": "./src/ui/client.ts",
+    "./metrics/d1": "./src/metrics/d1.js",
+    "./metrics/postgres": "./src/metrics/postgres.js"
   },
   "engines": {
     "node": ">=22"
+  },
+  "sideEffects": [
+    "./src/ui/database-editor.css"
+  ],
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18",
+    "lucide-react": ">=0.400.0",
+    "recharts": ">=2.0.0"
   }
 }
