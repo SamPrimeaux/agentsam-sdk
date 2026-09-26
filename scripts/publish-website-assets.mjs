@@ -55,6 +55,7 @@ function putObject(key, filePath) {
     filePath,
     '--content-type',
     contentType(filePath),
+    '--remote',
     '-c',
     wranglerConfig,
   ];

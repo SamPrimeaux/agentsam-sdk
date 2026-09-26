@@ -10,6 +10,23 @@
   --asbd-color-blue-hover: #0D6DE8;
   --asbd-color-white: #FFFFFF;
 
+  /* ── ASFB — AgentSam Frost Blue (primary glass CTA pack) ──
+     Source: Design Studio “Ask Agent Sam” (#9CB5BC).
+     Use .asbd-cta-asfb / .asbd-header-cta for Open Workbench + promo CTAs. */
+  --asfb: #9CB5BC;
+  --asfb-bright: #B8D0D6;
+  --asfb-deep: #6A8A92;
+  --asfb-rgb: 156, 181, 188;
+  --asfb-on: #FFFFFF;
+  --asfb-glass-hi: rgba(255, 255, 255, 0.32);
+  --asfb-glass-lo: rgba(255, 255, 255, 0.10);
+  --asfb-border: rgba(255, 255, 255, 0.55);
+  --asfb-glow: rgba(156, 181, 188, 0.45);
+  --asfb-height: 48px;
+  --asfb-radius: 12px;
+  --asfb-font-size: 16px;
+  --asfb-font-weight: 700;
+
   --asbd-color-footer-dark: #1A1F2E;
   --asbd-color-footer-light: #F0F3F8;
 
@@ -22,6 +39,11 @@
   --asbd-header-height: 76px;
   --asbd-layout-max: 1280px;
   --asbd-radius: 12px;
+
+  /* Default promo hero wallpaper (Design Studio CAD explode — override per page) */
+  --asbd-promo-wallpaper: url("https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/cb28eb31-cdf8-4e80-7969-1952d96d9600/public");
+  --asbd-promo-wallpaper-hero: url("https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/cb28eb31-cdf8-4e80-7969-1952d96d9600/hero");
+  --asbd-promo-min-height: clamp(420px, 58vh, 680px);
 }
 
 [data-asbd-theme="light"] {
@@ -33,4 +55,6 @@
   --asbd-border: rgba(10, 22, 40, 0.10);
   --asbd-color-footer-dark: #0A1628;
   --asbd-color-footer-light: #EEF2F7;
+  --asfb-on: #0A1628;
+  --asfb-border: rgba(10, 22, 40, 0.22);
 }

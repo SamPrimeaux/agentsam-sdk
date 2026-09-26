@@ -1,0 +1,164 @@
+/**
+ * ASBD Promo Hero — repurposable public brand hero (Learn, CAD creator, marketing).
+ *
+ * Edit points (HTML data-* + CSS vars):
+ *   --asbd-promo-wallpaper / --asbd-promo-wallpaper-hero  wallpaper URLs
+ *   [data-asbd-promo-eyebrow]  overline text
+ *   [data-asbd-promo-title]    stacked headline (use <br> + .asbd-promo-hero__dot)
+ *   [data-asbd-promo-sub]      supporting sentence
+ *   [data-asbd-promo-primary]  primary CTA (ASFB)
+ *   [data-asbd-promo-secondary] secondary CTA (ghost)
+ *   [data-asbd-promo-workflow] optional step strip
+ *
+ * Markup skeleton lives on /learn/ and can be copied into CAD/creator pages.
+ */
+.asbd-promo-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  isolation: isolate;
+  overflow: visible;
+  width: 100%;
+  min-height: var(--asbd-promo-min-height, clamp(420px, 58vh, 680px));
+  margin: 0 0 36px;
+  padding: clamp(36px, 5vw, 64px) clamp(20px, 4vw, 48px) clamp(28px, 3.5vw, 40px);
+  border: 0;
+  border-radius: 0;
+  background: #06080c;
+  color: #fff;
+}
+
+.asbd-promo-hero__wallpaper {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.asbd-promo-hero__wallpaper picture,
+.asbd-promo-hero__wallpaper-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  object-fit: cover;
+  object-position: 50% 42%;
+}
+
+.asbd-promo-hero__scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      105deg,
+      rgba(6, 8, 12, 0.9) 0%,
+      rgba(6, 8, 12, 0.68) 28%,
+      rgba(6, 8, 12, 0.28) 58%,
+      rgba(6, 8, 12, 0.18) 100%
+    ),
+    linear-gradient(to top, rgba(6, 8, 12, 0.72) 0%, rgba(6, 8, 12, 0.2) 42%, transparent 70%);
+  pointer-events: none;
+}
+
+.asbd-promo-hero__copy {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  max-width: min(560px, 100%);
+}
+
+.asbd-promo-hero__eyebrow {
+  margin: 0 0 14px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--asfb, #9CB5BC);
+}
+
+.asbd-promo-hero__title {
+  margin: 0;
+  font-size: clamp(42px, 5.4vw, 72px);
+  line-height: 0.94;
+  letter-spacing: -0.075em;
+  font-weight: 860;
+  color: #fff;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.35);
+}
+
+.asbd-promo-hero__dot {
+  color: var(--asfb, #9CB5BC);
+}
+
+.asbd-promo-hero__sub {
+  margin: 18px 0 0;
+  max-width: 42ch;
+  color: color-mix(in srgb, #e8eaf0 78%, transparent);
+  font-size: clamp(14px, 1.5vw, 16px);
+  line-height: 1.5;
+}
+
+.asbd-promo-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.asbd-promo-hero__workflow {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px 22px;
+  margin: 28px 0 0;
+  padding: 0;
+}
+
+.asbd-promo-hero__workflow-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 56px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: color-mix(in srgb, #e8eaf0 82%, transparent);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 140ms ease, transform 140ms ease;
+}
+
+.asbd-promo-hero__workflow-step:hover {
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+.asbd-promo-hero__workflow-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--asfb, #9CB5BC) 28%, transparent);
+  background: color-mix(in srgb, var(--asfb, #9CB5BC) 10%, transparent);
+  color: var(--asfb, #9CB5BC);
+}
+
+@media (max-width: 640px) {
+  .asbd-promo-hero {
+    min-height: clamp(380px, 70vh, 560px);
+    padding-bottom: 24px;
+  }
+  .asbd-promo-hero__workflow {
+    gap: 14px 16px;
+  }
+}

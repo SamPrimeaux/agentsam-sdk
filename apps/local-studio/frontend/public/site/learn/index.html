@@ -11,37 +11,36 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/site/global/asbd-tokens.css" />
+  <link rel="stylesheet" href="/site/global/asbd-cta-asfb.css" />
+  <link rel="stylesheet" href="/site/global/asbd-promo-hero.css" />
   <script src="/site/global/asbd-theme.js" defer></script>
   <style>
     body { margin:0; min-height:100vh; font-family:var(--asbd-font-sans); background:var(--asbd-surface); color:var(--asbd-text); }
-    .learn-wrap { max-width:var(--asbd-layout-max); margin:0 auto; padding:calc(var(--asbd-header-height)+28px) 32px 96px; }
+    .learn-wrap { max-width:var(--asbd-layout-max); margin:0 auto; padding:28px 32px 96px; }
     .asbd-breadcrumb { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:13px; font-weight:600; color:var(--asbd-text-muted); margin-bottom:22px; }
     .asbd-breadcrumb a { color:var(--asbd-text-muted); text-decoration:none; }
-    .asbd-breadcrumb a:hover { color:var(--asbd-color-blue); }
+    .asbd-breadcrumb a:hover { color:var(--asfb, var(--asbd-color-blue)); }
     .asbd-doc-toolbar { display:flex; justify-content:flex-end; margin-bottom:12px; }
     .asbd-theme-toggle { font:inherit; font-size:13px; font-weight:700; border-radius:10px; border:1px solid var(--asbd-border); background:var(--asbd-surface-elevated); color:var(--asbd-text); padding:8px 14px; cursor:pointer; }
-    .kicker { font-size:11px; letter-spacing:.14em; text-transform:uppercase; font-weight:800; color:var(--asbd-color-blue); margin:0 0 10px; }
-    h1 { font-size:clamp(2.1rem,4.4vw,3rem); letter-spacing:-0.035em; margin:0 0 12px; line-height:1.05; }
-    .lead { color:var(--asbd-text-muted); max-width:62ch; margin:0 0 28px; line-height:1.55; font-size:1.05rem; }
     .filters { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:28px; }
     .filter { border:1px solid var(--asbd-border); background:transparent; color:var(--asbd-text-muted); border-radius:999px; padding:8px 14px; font:inherit; font-size:13px; font-weight:700; cursor:pointer; transition:border-color .15s,color .15s,background .15s; }
-    .filter:hover,.filter.active { color:var(--asbd-text); border-color:rgba(22,123,252,.55); background:rgba(22,123,252,.12); }
+    .filter:hover,.filter.active { color:var(--asbd-text); border-color:color-mix(in srgb, var(--asfb, #9CB5BC) 55%, transparent); background:color-mix(in srgb, var(--asfb, #9CB5BC) 14%, transparent); }
     .learn-grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); }
     .mod { display:flex; flex-direction:column; text-align:left; border:1px solid var(--asbd-border); background:var(--asbd-surface-elevated); border-radius:18px; padding:0; overflow:hidden; color:inherit; transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease; }
-    .mod:hover { transform:translateY(-2px); border-color:rgba(22,123,252,.4); box-shadow:0 18px 40px rgba(0,0,0,.22); }
-    .mod-preview { height:148px; background:linear-gradient(145deg,rgba(22,123,252,.18),rgba(10,22,40,.9)); position:relative; overflow:hidden; }
+    .mod:hover { transform:translateY(-2px); border-color:color-mix(in srgb, var(--asfb, #9CB5BC) 45%, transparent); box-shadow:0 18px 40px rgba(0,0,0,.22); }
+    .mod-preview { height:148px; background:linear-gradient(145deg,rgba(156,181,188,.18),rgba(10,22,40,.9)); position:relative; overflow:hidden; }
     .mod-preview[data-tone="lime"] { background:linear-gradient(145deg,rgba(183,255,86,.2),rgba(10,22,40,.92)); }
     .mod-preview[data-tone="cyan"] { background:linear-gradient(145deg,rgba(90,220,255,.2),rgba(10,22,40,.92)); }
     .mod-preview[data-tone="amber"] { background:linear-gradient(145deg,rgba(255,190,90,.22),rgba(10,22,40,.92)); }
     .mod-preview[data-tone="violet"] { background:linear-gradient(145deg,rgba(170,120,255,.22),rgba(10,22,40,.92)); }
     .mod-preview-mark { position:absolute; left:18px; bottom:16px; font-size:13px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; opacity:.9; }
     .mod-body { padding:18px 18px 16px; display:flex; flex-direction:column; gap:10px; flex:1; }
-    .mod-cat { font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--asbd-color-blue); }
+    .mod-cat { font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--asfb, var(--asbd-color-blue)); }
     .mod h2 { margin:0; font-size:1.15rem; letter-spacing:-.02em; }
     .mod p { margin:0; color:var(--asbd-text-muted); line-height:1.5; font-size:.95rem; flex:1; }
     .mod-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
     .mod-actions a,.mod-actions button { font:inherit; font-size:12px; font-weight:700; border-radius:10px; padding:9px 12px; border:1px solid var(--asbd-border); background:transparent; color:var(--asbd-text); text-decoration:none; cursor:pointer; }
-    .mod-actions a.primary,.mod-actions button.primary { background:var(--asbd-color-blue); border-color:var(--asbd-color-blue); color:#fff; }
+    .mod-actions a.primary,.mod-actions button.primary { background:color-mix(in srgb, var(--asfb, #9CB5BC) 72%, #167BFC); border-color:transparent; color:#fff; }
     .try-panel { display:none; margin-top:4px; padding:12px; border-radius:12px; background:rgba(0,0,0,.22); border:1px solid var(--asbd-border); }
     .try-panel.open { display:block; }
     .try-panel code,.try-panel pre { font-family:var(--asbd-font-mono); font-size:12px; }
@@ -56,10 +55,78 @@
       .learn-wrap { padding-left:20px; padding-right:20px; }
     }
     html[data-asbd-theme="light"] .try-panel { background:rgba(10,22,40,.04); }
+    /* Full-bleed hero sits under sticky header */
+    .asbd-promo-hero { margin-top: var(--asbd-header-height); }
   </style>
 </head>
 <body data-asbd-theme="dark">
   <div id="asbd-header-mount"></div>
+
+  <!-- ASBD Promo Hero — edit copy / wallpaper via data-* + --asbd-promo-* tokens -->
+  <section
+    class="asbd-promo-hero"
+    data-asbd-promo="learn"
+    aria-labelledby="learn-promo-title"
+  >
+    <div class="asbd-promo-hero__wallpaper" aria-hidden="true">
+      <picture>
+        <source media="(min-width: 1100px)" srcset="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/cb28eb31-cdf8-4e80-7969-1952d96d9600/hero">
+        <source media="(min-width: 640px)" srcset="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/cb28eb31-cdf8-4e80-7969-1952d96d9600/public">
+        <img
+          class="asbd-promo-hero__wallpaper-img"
+          sizes="100vw"
+          alt=""
+          loading="eager"
+          decoding="async"
+          fetchpriority="high"
+          srcset="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/cb28eb31-cdf8-4e80-7969-1952d96d9600/small 640w, https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/cb28eb31-cdf8-4e80-7969-1952d96d9600/public 1280w, https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/cb28eb31-cdf8-4e80-7969-1952d96d9600/hero 1920w"
+          src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/cb28eb31-cdf8-4e80-7969-1952d96d9600/public"
+        >
+      </picture>
+      <div class="asbd-promo-hero__scrim"></div>
+    </div>
+    <div class="asbd-promo-hero__copy">
+      <p class="asbd-promo-hero__eyebrow" data-asbd-promo-eyebrow>Interactive offerings gallery</p>
+      <h1 id="learn-promo-title" class="asbd-promo-hero__title" data-asbd-promo-title>
+        Design<span class="asbd-promo-hero__dot">.</span><br>
+        Create<span class="asbd-promo-hero__dot">.</span><br>
+        Ship<span class="asbd-promo-hero__dot">.</span>
+      </h1>
+      <p class="asbd-promo-hero__sub" data-asbd-promo-sub>
+        Demos, install paths, and field manuals for what AgentSam actually ships — themes you can click through, SDK commands you can copy, and sandboxes you can run.
+      </p>
+      <div class="asbd-promo-hero__actions">
+        <a
+          class="asbd-cta-asfb"
+          data-asbd-promo-primary
+          href="/auth/login?next=/agentsam"
+        >Open Workbench</a>
+        <a
+          class="asbd-cta-asfb asbd-cta-asfb--ghost"
+          data-asbd-promo-secondary
+          href="#learn-filters"
+        >Browse modules</a>
+      </div>
+    </div>
+    <nav class="asbd-promo-hero__workflow" data-asbd-promo-workflow aria-label="Learn paths">
+      <a class="asbd-promo-hero__workflow-step" href="#learn-filters" data-filter-jump="sites">
+        <span class="asbd-promo-hero__workflow-icon" aria-hidden="true">◆</span><span>Themes</span>
+      </a>
+      <a class="asbd-promo-hero__workflow-step" href="#learn-filters" data-filter-jump="sdk">
+        <span class="asbd-promo-hero__workflow-icon" aria-hidden="true">{ }</span><span>SDK</span>
+      </a>
+      <a class="asbd-promo-hero__workflow-step" href="#learn-filters" data-filter-jump="knowledge">
+        <span class="asbd-promo-hero__workflow-icon" aria-hidden="true">◎</span><span>Knowledge</span>
+      </a>
+      <a class="asbd-promo-hero__workflow-step" href="#learn-filters" data-filter-jump="cad">
+        <span class="asbd-promo-hero__workflow-icon" aria-hidden="true">◇</span><span>CAD</span>
+      </a>
+      <a class="asbd-promo-hero__workflow-step" href="#learn-filters" data-filter-jump="cloud">
+        <span class="asbd-promo-hero__workflow-icon" aria-hidden="true">☁</span><span>Cloud</span>
+      </a>
+    </nav>
+  </section>
+
   <main class="learn-wrap">
     <div class="asbd-doc-toolbar">
       <button type="button" class="asbd-theme-toggle" id="asbdThemeToggle">Light theme</button>
@@ -68,9 +135,6 @@
       <a href="/">Home</a><span aria-hidden="true">/</span>
       <span aria-current="page">Learn</span>
     </nav>
-    <p class="kicker">Interactive offerings gallery</p>
-    <h1>Learn by opening real modules.</h1>
-    <p class="lead">Demos, install paths, and field manuals for what AgentSam actually ships — themes you can click through, SDK commands you can copy, and sandboxes you can run.</p>
 
     <div class="filters" id="learn-filters" role="toolbar" aria-label="Filter modules">
       <button type="button" class="filter active" data-filter="all">All</button>
@@ -172,7 +236,7 @@ agentsam dockerize --type cad_service --name agentsam-cad</pre>
           <p>Allowlisted Wrangler reads, tunnels, deploy receipts, and <code>agentsam go --cloudflare</code> Worker+Container ship lane.</p>
           <div class="mod-actions">
             <button type="button" class="primary" data-try="cloud-try">Show CLI</button>
-            <a href="/auth/login?next=/agentsam">Open Workbench</a>
+            <a class="asbd-cta-asfb asbd-cta-asfb--sm" href="/auth/login?next=/agentsam">Open Workbench</a>
           </div>
           <div class="try-panel" id="cloud-try">
             <pre>agentsam cloudflare status --json
@@ -264,6 +328,14 @@ agentsam plan brand --goap</pre>
       grid.querySelectorAll('.mod').forEach(function (card) {
         var cats = (card.getAttribute('data-cats') || '').split(/\s+/);
         card.style.display = (f === 'all' || cats.indexOf(f) >= 0) ? '' : 'none';
+      });
+    });
+
+    document.querySelectorAll('[data-filter-jump]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var f = el.getAttribute('data-filter-jump');
+        var btn = filters && filters.querySelector('[data-filter="' + f + '"]');
+        if (btn) btn.click();
       });
     });
 
