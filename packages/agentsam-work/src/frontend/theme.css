@@ -36,6 +36,7 @@
 }
 
 .agentsam-work-shell {
+  position: relative;
   display: grid;
   grid-template-columns: 250px minmax(0, 1fr);
   height: 100%;
