@@ -90,6 +90,11 @@ const appsFilesRoute = appsFilesRouteImport.update({
   path: '/files',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsMailRoute = appsMailRouteImport.update({
+  id: '/(apps)/mail',
+  path: '/mail',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const appsProjectsRoute = appsProjectsRouteImport.update({
   id: '/(apps)/projects',
   path: '/projects',
