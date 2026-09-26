@@ -23,6 +23,10 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;');
 }
 
+function resolveLoginPath(identity) {
+  return identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN) || '/auth/login';
+}
+
 function resolveKv(env) {
   return env?.SESSION_CACHE || env?.KV || null;
 }
@@ -367,17 +371,18 @@ async function oauthStart(request, env, identity, adapter, provider, creds) {
 
 async function oauthCallback(request, env, identity, adapter, provider, creds) {
   const url = new URL(request.url);
+  const login = resolveLoginPath(identity);
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
   const err = url.searchParams.get('error');
   if (err || !code || !state) {
     await adapter.logAuthEvent({ eventType: 'login', status: 'failed', provider, request, metadata: { reason: 'oauth_failed' } });
-    return Response.redirect(`${url.origin}${loginPath()}?error=oauth_failed`, 302);
+    return Response.redirect(`${url.origin}${login}?error=oauth_failed`, 302);
   }
   const saved = await adapter.consumeOAuthState(state);
   if (!saved || saved.provider !== provider) {
     await adapter.logAuthEvent({ eventType: 'login', status: 'failed', provider, request, metadata: { reason: 'state_mismatch' } });
-    return Response.redirect(`${url.origin}${loginPath()}?error=state_mismatch`, 302);
+    return Response.redirect(`${url.origin}${login}?error=state_mismatch`, 302);
   }
   const redirectUri = `${url.origin}/api/oauth/${provider}/callback`;
   let token;
@@ -391,7 +396,7 @@ async function oauthCallback(request, env, identity, adapter, provider, creds) {
       redirectUri,
     });
     if (!token?.access_token) {
-      return Response.redirect(`${url.origin}${loginPath()}?error=token_exchange_failed`, 302);
+      return Response.redirect(`${url.origin}${login}?error=token_exchange_failed`, 302);
     }
     profile = await fetchGoogleProfile(token.access_token);
   } else if (provider === 'cloudflare') {
@@ -403,7 +408,7 @@ async function oauthCallback(request, env, identity, adapter, provider, creds) {
       redirectUri,
     });
     if (!token?.access_token) {
-      return Response.redirect(`${url.origin}${loginPath()}?error=token_exchange_failed`, 302);
+      return Response.redirect(`${url.origin}${login}?error=token_exchange_failed`, 302);
     }
     profile = await fetchCloudflareProfile(token.access_token);
   } else {
@@ -415,12 +420,12 @@ async function oauthCallback(request, env, identity, adapter, provider, creds) {
       redirectUri,
     });
     if (!token?.access_token) {
-      return Response.redirect(`${url.origin}${loginPath()}?error=token_exchange_failed`, 302);
+      return Response.redirect(`${url.origin}${login}?error=token_exchange_failed`, 302);
     }
     profile = await fetchGithubProfile(token.access_token);
   }
   if (!profile) {
-    return Response.redirect(`${url.origin}${loginPath()}?error=userinfo_failed`, 302);
+    return Response.redirect(`${url.origin}${login}?error=userinfo_failed`, 302);
   }
 
   let normalized;
@@ -444,7 +449,7 @@ async function oauthCallback(request, env, identity, adapter, provider, creds) {
 
   const redirectTo = identity.resolvePostLoginPath(saved.redirect_to);
   const res = identity.buildLoginSuccessResponse(request, result.sessionId, redirectTo);
-  const globeUrl = `${url.origin}${loginPath()}?globe_exit=1&next=${encodeURIComponent(redirectTo)}`;
+  const globeUrl = `${url.origin}${login}?globe_exit=1&next=${encodeURIComponent(redirectTo)}`;
   return new Response(null, {
     status: 302,
     headers: {
