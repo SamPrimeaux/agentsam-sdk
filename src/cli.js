@@ -40,6 +40,7 @@ import { runMcp } from './commands/mcp.js';
 import { runCloudflare } from './commands/cloudflare.js';
 import { runGo } from './commands/go.js';
 import { runWhoami } from './commands/whoami.js';
+import { runTerminal } from './commands/terminal.js';
 import { runApiKey } from './commands/api-key.js';
 import { runResume } from './commands/resume.js';
 import { runLogin, runLogout } from './commands/account-auth.js';
@@ -117,6 +118,8 @@ function printLegacyHelp() {
     agentsam login             Sign in to Inner Animal Media and persist a secure machine-local session
     agentsam logout            Sign out locally; provider credentials stay untouched
     agentsam whoami [--json]   Authenticated account identity + safe credential status
+    agentsam terminal identity [--json]   This machine's hostname, platform, arch, and model
+    agentsam terminal enroll [--instance <id>] [--endpoint <url>] [--json]
     agentsam resume [session]  Resume a saved Agent Sam session; omit id for picker
     agentsam eval context      Offline context-strategy/economics fixtures (--help)
     agentsam cloudflare        Capabilities: workflows, scanner, tags, tag-gateway, brand, keyless (+ Wrangler reads)
@@ -532,6 +535,14 @@ if (command === '--version' || command === '-v') {
 } else if (command === 'whoami') {
   try {
     await runWhoami(rest);
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
+  }
+} else if (command === 'terminal') {
+  try {
+    const result = await runTerminal(rest);
+    if (result?.ok === false) process.exitCode = 1;
   } catch (e) {
     reportCliError(e);
     process.exitCode = 1;
