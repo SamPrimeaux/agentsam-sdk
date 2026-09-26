@@ -1,7 +1,9 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { createRequire } from 'node:module';
 
 const execFileAsync = promisify(execFile);
+const require = createRequire(import.meta.url);
 
 async function which(bin) {
   try {
@@ -22,43 +24,113 @@ async function versionOf(bin, args) {
 }
 
 /** @type {import('./contract.js').InstallableCapability} */
-export const imageVectorizeCapability = {
-  id: 'image.vectorize',
-  displayName: 'Vector image tooling',
-  description: 'ImageMagick + Potrace (+ optional SVGO) for optimize/vectorize workflows',
+export const imageRasterTransformCapability = {
+  id: 'image.raster.transform',
+  displayName: 'Raster image transforms',
+  description: 'Resize/convert PNG/JPEG/WebP/AVIF via Sharp (preferred) or ImageMagick (optional)',
   risk: 'low',
-  requiresApproval: true,
-  capabilityProvided: ['image.optimize', 'image.vectorize'],
-  supportedPlatforms: ['darwin', 'linux'],
-  dependencies: ['imagemagick', 'potrace'],
-  mutations: ['installs Homebrew packages only — no shell profile edits'],
+  requiresApproval: false,
+  capabilityProvided: ['image.raster.transform', 'image.raster.inspect'],
+  supportedPlatforms: ['darwin', 'linux', 'win32'],
+  dependencies: ['sharp'],
+  mutations: ['may npm-install sharp in the AgentSam package; optional ImageMagick via OS package manager'],
   installPlans: {
     darwin: {
-      provider: 'homebrew',
-      packages: ['imagemagick', 'potrace'],
-      notes: ['Optional: npm i -g svgo for SVG multipass optimize'],
+      provider: 'npm',
+      packages: ['sharp'],
+      notes: [
+        'Sharp is the portable default (declared dependency of @inneranimalmedia/agentsam-sdk-brand).',
+        'Optional enrichment: Homebrew imagemagick for ICNS / exotic formats.',
+      ],
     },
     linux: {
-      provider: 'apt',
-      packages: ['imagemagick', 'potrace'],
-      notes: ['Or: brew install imagemagick potrace if Linuxbrew is available'],
+      provider: 'npm',
+      packages: ['sharp'],
+      notes: ['Optional: apt/dnf/pacman imagemagick for extended tooling'],
+    },
+    win32: {
+      provider: 'npm',
+      packages: ['sharp'],
+      notes: ['Optional: winget install ImageMagick.ImageMagick'],
     },
   },
   async detect() {
+    let sharpOk = false;
+    try {
+      require.resolve('sharp');
+      sharpOk = true;
+    } catch {
+      sharpOk = false;
+    }
     const magick = (await which('magick')) || (await which('convert'));
-    const potrace = await which('potrace');
-    const ok = Boolean(magick && potrace);
+    const ok = sharpOk || Boolean(magick);
     return {
       ok,
-      detail: ok ? 'ImageMagick + Potrace available' : 'missing imagemagick and/or potrace',
-      version: magick ? await versionOf(magick, ['--version']) : null,
+      detail: sharpOk
+        ? 'Sharp available'
+        : magick
+          ? 'ImageMagick available (Sharp preferred)'
+          : 'missing Sharp and ImageMagick',
+      version: sharpOk ? 'sharp' : magick ? await versionOf(magick, ['--version']) : null,
+      backends: { sharp: sharpOk, imagemagick: Boolean(magick) },
     };
   },
   async verify() {
     return this.detect();
   },
   uninstallHint() {
-    return 'brew uninstall imagemagick potrace';
+    return 'Remove optional ImageMagick via your package manager; Sharp uninstalls with the npm package.';
+  },
+};
+
+/** @type {import('./contract.js').InstallableCapability} */
+export const imageVectorizeCapability = {
+  id: 'image.vectorize',
+  displayName: 'Vector image tooling',
+  description: 'Potrace (+ optional ImageMagick/SVGO) for raster→SVG workflows',
+  risk: 'low',
+  requiresApproval: true,
+  capabilityProvided: ['image.vectorize', 'image.optimize'],
+  supportedPlatforms: ['darwin', 'linux', 'win32'],
+  dependencies: ['potrace'],
+  mutations: ['installs OS packages via detected package manager — no shell profile edits'],
+  installPlans: {
+    darwin: {
+      provider: 'homebrew',
+      packages: ['potrace'],
+      notes: ['Optional: brew install imagemagick; npm i -g svgo'],
+    },
+    linux: {
+      provider: 'apt',
+      packages: ['potrace'],
+      notes: [
+        'Debian/Ubuntu: apt',
+        'Fedora: dnf install potrace',
+        'Arch: pacman -S potrace',
+      ],
+    },
+    win32: {
+      provider: 'winget',
+      packages: [],
+      notes: ['Install Potrace from https://potrace.sourceforge.net/ or chocolatey if available'],
+    },
+  },
+  async detect() {
+    const potrace = await which('potrace');
+    const magick = (await which('magick')) || (await which('convert'));
+    const ok = Boolean(potrace);
+    return {
+      ok,
+      detail: ok ? 'Potrace available' : 'missing potrace',
+      version: potrace ? await versionOf(potrace, ['-v']) : null,
+      backends: { potrace: Boolean(potrace), imagemagick: Boolean(magick) },
+    };
+  },
+  async verify() {
+    return this.detect();
+  },
+  uninstallHint() {
+    return 'Remove potrace with your platform package manager (brew/apt/dnf/winget) — AgentSam will not invent a command.';
   },
 };
 
@@ -145,6 +217,7 @@ export const cloudflareWranglerCapability = {
 };
 
 export const CAPABILITY_RECIPES = Object.freeze({
+  [imageRasterTransformCapability.id]: imageRasterTransformCapability,
   [imageVectorizeCapability.id]: imageVectorizeCapability,
   [googleCloudCapability.id]: googleCloudCapability,
   [cloudflareWranglerCapability.id]: cloudflareWranglerCapability,

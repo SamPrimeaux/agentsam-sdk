@@ -860,8 +860,20 @@ export const useWorkStore = create<WorkState>()(
       },
       send: async (targetId, targetKind, text, context) => {
         const state = get();
+        const pendingBag =
+          typeof window !== "undefined"
+            ? (window as unknown as { __agentsamComposerAttachments?: { targetId?: string; attachments?: unknown[] } })
+                .__agentsamComposerAttachments
+            : undefined;
+        const pendingAttachments =
+          pendingBag?.targetId === targetId && Array.isArray(pendingBag.attachments)
+            ? pendingBag.attachments
+            : [];
+        if (typeof window !== "undefined" && pendingBag?.targetId === targetId) {
+          delete (window as unknown as { __agentsamComposerAttachments?: unknown }).__agentsamComposerAttachments;
+        }
         const draft = (text ?? state.drafts[targetId] ?? "").trim();
-        if (!draft) return;
+        if (!draft && !pendingAttachments.length) return;
         if (targetKind === "trail" && !state.goals[targetId]) {
           const project = state.projects.find((item) => item.id === state.activeProjectId);
           get().setGoal(targetId, draft, project ? "Working in " + project.name : "Working in this workspace");

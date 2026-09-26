@@ -30,6 +30,10 @@ export function Composer({
   const openSideTab = useWorkStore((s) => s.openSideTab);
   const [now, setNow] = useState(Date.now());
 
+  const [pendingAttachments, setPendingAttachments] = useState<
+    Array<{ id: string; name: string; mimeType: string; size: number; previewUrl?: string; kind: string }>
+  >([]);
+
   useEffect(() => {
     if (!goal || goal.status !== "active") return;
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
@@ -38,14 +42,36 @@ export function Composer({
 
   async function onFiles(files: FileList | null) {
     if (!files?.length) return;
-    const chunks: string[] = [];
-    for (const file of Array.from(files).slice(0, 4)) {
-      if (file.size > 200_000) continue;
-      const text = await file.text();
-      chunks.push(`Attached \`${file.name}\`:\n\`\`\`${file.name}\n${text.slice(0, 8000)}\n\`\`\``);
+    const next: typeof pendingAttachments = [];
+    for (const file of Array.from(files).slice(0, 10)) {
+      if (file.size > 20 * 1024 * 1024) continue;
+      const id = `att_${crypto.randomUUID().slice(0, 12)}`;
+      const kind = file.type.startsWith("image/") ? "image" : file.type.startsWith("text/") ? "text" : "binary";
+      const previewUrl = kind === "image" ? URL.createObjectURL(file) : undefined;
+      next.push({
+        id,
+        name: file.name,
+        mimeType: file.type || "application/octet-stream",
+        size: file.size,
+        previewUrl,
+        kind,
+      });
+      // Stash File on window map for send path (no base64 in draft)
+      const bag = ((window as unknown as { __agentsamPendingFiles?: Map<string, File> }).__agentsamPendingFiles ||= new Map());
+      bag.set(id, file);
     }
-    if (!chunks.length) return;
-    setDraft(targetId, [value, ...chunks].filter(Boolean).join("\n\n"));
+    if (!next.length) return;
+    setPendingAttachments((prev) => [...prev, ...next].slice(0, 10));
+  }
+
+  function removeAttachment(id: string) {
+    setPendingAttachments((prev) => {
+      const hit = prev.find((a) => a.id === id);
+      if (hit?.previewUrl) URL.revokeObjectURL(hit.previewUrl);
+      return prev.filter((a) => a.id !== id);
+    });
+    const bag = (window as unknown as { __agentsamPendingFiles?: Map<string, File> }).__agentsamPendingFiles;
+    bag?.delete(id);
   }
 
   const attachControl = (
@@ -81,8 +107,28 @@ export function Composer({
       aria-label="Send"
       data-composer-send=""
       className="rounded-full border-0 shadow-none hover:bg-[var(--composer-control-hover)] disabled:opacity-100"
-      disabled={!value.trim()}
-      onClick={() => void send(targetId, targetKind)}
+      disabled={!value.trim() && pendingAttachments.length === 0}
+      onClick={() => {
+        // Attachment refs travel with the turn — never paste base64 into the draft.
+        const bag = (window as unknown as { __agentsamComposerAttachments?: Record<string, unknown> });
+        bag.__agentsamComposerAttachments = {
+          targetId,
+          attachments: pendingAttachments.map(({ id, name, mimeType, size, kind }) => ({
+            id,
+            name,
+            mimeType,
+            size,
+            kind,
+            lifetime: "ephemeral",
+            source: { type: "blob", blobId: id },
+          })),
+        };
+        void send(targetId, targetKind);
+        for (const a of pendingAttachments) {
+          if (a.previewUrl) URL.revokeObjectURL(a.previewUrl);
+        }
+        setPendingAttachments([]);
+      }}
     >
       <ArrowUp className="size-4" />
     </Button>
@@ -104,6 +150,33 @@ export function Composer({
 
   return (
     <div className="px-3 pb-[max(1rem,env(safe-area-inset-bottom))] md:px-4 md:pb-4">
+      {pendingAttachments.length ? (
+        <div className="mx-auto mb-2 flex w-full max-w-3xl flex-wrap gap-2">
+          {pendingAttachments.map((a) => (
+            <div
+              key={a.id}
+              className="flex items-center gap-2 rounded-xl border border-border/60 bg-card/80 px-2 py-1.5 text-xs shadow-hairline"
+            >
+              {a.previewUrl ? (
+                <img src={a.previewUrl} alt="" className="size-9 rounded-md object-cover" />
+              ) : (
+                <span className="flex size-9 items-center justify-center rounded-md bg-muted font-semibold">
+                  {a.kind === "image" ? "IMG" : "FILE"}
+                </span>
+              )}
+              <div className="min-w-0">
+                <div className="truncate font-medium text-foreground">{a.name}</div>
+                <div className="text-muted-foreground">
+                  {a.mimeType} · {(a.size / 1024).toFixed(a.size >= 10240 ? 0 : 1)} KB
+                </div>
+              </div>
+              <Button type="button" size="icon-sm" variant="ghost" className="size-6" aria-label={`Remove ${a.name}`} onClick={() => removeAttachment(a.id)}>
+                <Trash2 className="size-3" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      ) : null}
       {goal ? (
         <GoalStatusStrip
           className="mx-auto mb-2 w-full max-w-3xl rounded-xl bg-card/70 px-3 py-2 text-foreground shadow-hairline backdrop-blur"
