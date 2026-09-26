@@ -34,7 +34,7 @@ export const CLI_COMMAND_CATALOG = Object.freeze([
   { id: 'tunnel', summary: 'Cloudflare Tunnel via Wrangler', topic: 'runtime', skill: 'agentsam-cloudflare-workers' },
   { id: 'connections', aliases: ['connection'], summary: 'Inspect execution connections', topic: 'runtime', skill: 'agentsam-cloudflare-workers' },
   { id: 'compute', summary: 'Alias for google-cloud compute/iam helpers', topic: 'runtime', skill: 'agentsam-app-fundamentals' },
-  { id: 'google-cloud', aliases: ['gcp', 'gcloud'], summary: 'Google Cloud projects, compute, IAM SAs, billing, doctor', topic: 'runtime', skill: 'agentsam-app-fundamentals', common: true },
+  { id: 'google-cloud', aliases: ['gcp', 'gcloud'], summary: 'Google Cloud auth, projects, compute, IAM SAs, billing, doctor', topic: 'runtime', skill: 'agentsam-app-fundamentals', common: true },
   { id: 'billing', aliases: ['costs'], summary: 'Billing account relationships (not --billing-project)', topic: 'runtime', skill: 'agentsam-app-fundamentals' },
   { id: 'update', summary: 'Component update preview (gcloud-like)', topic: 'runtime', skill: 'agentsam-app-fundamentals' },
   { id: 'deploy', summary: 'Graduate intentionally to cloud', topic: 'runtime', skill: 'agentsam-progression-guard', common: true },

@@ -16,6 +16,7 @@ import {
   renderRemediationCard,
   recommendedCommand,
 } from '../lib/provider-command-remediation.js';
+import { runGcloudAuth } from './gcloud-auth.js';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
@@ -29,6 +30,8 @@ function printHelp(write) {
   writeLine(write, '');
   writeLine(write, '  Agent Sam · Google Cloud');
   writeLine(write, '');
+  writeLine(write, '  agentsam gcloud auth login');
+  writeLine(write, '  agentsam gcloud auth list');
   writeLine(write, '  agentsam google-cloud projects list');
   writeLine(write, '  agentsam google-cloud compute instances list [--project <id>]');
   writeLine(write, '  agentsam google-cloud iam service-accounts list [--project <id>]');
@@ -38,7 +41,8 @@ function printHelp(write) {
   writeLine(write, '  agentsam google-cloud doctor [--project <id>]');
   writeLine(write, '  agentsam google-cloud remediate -- <gcloud argv…>');
   writeLine(write, '');
-  writeLine(write, '  Alias: agentsam compute …');
+  writeLine(write, '  Alias: agentsam compute … · agentsam gcloud …');
+  writeLine(write, '  Auth setup: docs/contracts/google-cloud-oauth-setup.md');
   writeLine(write, '  Never prints private keys or access tokens.');
   writeLine(write, '');
 }
@@ -76,7 +80,9 @@ export function normalizeGoogleCloudArgv(argv = []) {
   const args = [...argv];
   // agentsam compute iam service-accounts list → iam service-accounts list
   // agentsam compute instances list → compute instances list
-  if (args[0] === 'iam' || args[0] === 'remediate' || args[0] === 'doctor') return args;
+  // agentsam gcloud auth login → auth login (via google-cloud / gcloud alias)
+  if (args[0] === 'iam' || args[0] === 'remediate' || args[0] === 'doctor' || args[0] === 'auth') return args;
+  if (args[0] === 'gcloud' && args[1] === 'auth') return args.slice(1);
   if (args[0] === 'instances') return ['compute', ...args];
   return args;
 }
@@ -90,6 +96,10 @@ export async function runGoogleCloud(argv = [], options = {}) {
   if (!args.length || args[0] === 'help' || args[0] === '--help' || args[0] === '-h') {
     printHelp(write);
     return 0;
+  }
+
+  if (args[0] === 'auth') {
+    return runGcloudAuth(args.slice(1), { write, env, json });
   }
 
   if (args[0] === 'remediate') {

@@ -9,6 +9,8 @@ import {
 test('normalizeGoogleCloudArgv maps compute instances into google-cloud compute', () => {
   assert.deepEqual(normalizeGoogleCloudArgv(['instances', 'list']), ['compute', 'instances', 'list']);
   assert.deepEqual(normalizeGoogleCloudArgv(['iam', 'service-accounts', 'list']), ['iam', 'service-accounts', 'list']);
+  assert.deepEqual(normalizeGoogleCloudArgv(['auth', 'login']), ['auth', 'login']);
+  assert.deepEqual(normalizeGoogleCloudArgv(['gcloud', 'auth', 'login']), ['auth', 'login']);
 });
 
 test('service account table render never invents INNERANIMALMEDIA as Google keyOrigin', () => {

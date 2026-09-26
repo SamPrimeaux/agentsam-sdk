@@ -64,6 +64,8 @@ Local Studio
 `agentsam google-cloud iam service-accounts list` discovers **customer GCP** workload identities.  
 It does **not** mint `AGENTSAM_*` keys into Google IAM.
 
+See also: [`docs/contracts/google-cloud-oauth-setup.md`](./google-cloud-oauth-setup.md) for Path A (`agentsam gcloud auth login`) vs Path B (hosted `agentsam.inneranimalmedia.com` Google OAuth).
+
 ---
 
 ## Classification legend

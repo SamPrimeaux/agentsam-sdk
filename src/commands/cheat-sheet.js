@@ -36,6 +36,7 @@ const GROUPS = Object.freeze([
       ['dockerize', 'Supported containers'],
       ['compute', 'Google Cloud VM / IAM helpers'],
       ['google-cloud', 'Projects · compute · IAM SAs · billing · doctor'],
+      ['gcloud auth login', 'Real Google Cloud SDK OAuth consent'],
     ],
   },
   {
@@ -46,6 +47,7 @@ const GROUPS = Object.freeze([
       ['models', 'Provider-verified model catalog'],
       ['cloudflare', 'Wrangler reads + Worker profiles'],
       ['google-cloud', 'Customer GCP connection inventory'],
+      ['gcloud auth login', 'Operator Google login (localhost redirect — normal)'],
       ['credentials audit', 'Configured · verified · drift (names only)'],
       ['plugins', 'Install and manage plugins'],
     ],
