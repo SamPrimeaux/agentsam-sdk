@@ -254,7 +254,8 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
-  '/artifacts/tickets': typeof appsArtifactsTicketsRoute
+  '/artifacts/tickets': typeof appsArtifactsTicketsIndexRoute
+  '/artifacts/tickets/$ticketId': typeof appsArtifactsTicketsTicketIdRoute
   '/projects/$projectId': typeof appsProjectsProjectIdRoute
   '/settings/$unit': typeof appsSettingsUnitRoute
   '/settings/integrations': typeof appsSettingsIntegrationsRoute
