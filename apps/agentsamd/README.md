@@ -9,24 +9,22 @@ This is **not** `agentsam-go-worker` (hosted SERVICE). The binary reuses the go-
 ```bash
 agentsam setup runtime --profile my_computer --yes
 # or
-agentsam runtime install
+agentsam runtime install --yes
 ```
 
-Binary lands in `~/.agentsam/bin/agentsamd`. On Darwin, a LaunchAgent `com.inneranimalmedia.agentsamd` is enrolled.
-
-## Enroll
-
-```bash
-agentsam terminal enroll --instance <id> --endpoint https://…   # mint token (API key)
-agentsamd enroll --token <enrollment_token>
-```
-
-New connections default to `runtime_adapter=agentsamd` on the IAM control plane.
+Binary lands in `~/.agentsam/bin/agentsamd`. On Darwin, a LaunchAgent `com.inneranimalmedia.agentsamd` is written.
 
 ## Run
 
 ```bash
-agentsamd                 # :8788
-agentsamd version
-curl -s localhost:8788/health
+agentsamd --listen 127.0.0.1:18765
+agentsam runtime status
+curl -s http://127.0.0.1:18765/health
+curl -s http://127.0.0.1:18765/v1/runtime
 ```
+
+Default listen: `127.0.0.1:18765` (override with `--listen` or `AGENTSAMD_LISTEN`).
+
+## Enroll (next)
+
+Studio/IAM mint via `agentsam terminal enroll`; daemon consume of enrollment tokens is the next cut after health/runtime MVP.
