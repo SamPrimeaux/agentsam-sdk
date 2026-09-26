@@ -2,6 +2,8 @@
 
 The `agentsam-sdk` package owns the portable public configuration contract. Consuming applications implement storage, authorization, and host routes against this contract instead of defining competing environment names.
 
+Full env naming / alias / storage law: [`docs/contracts/environment-vocabulary.md`](./contracts/environment-vocabulary.md).
+
 ## Canonical variables
 
 | Variable | Meaning |
