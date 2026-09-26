@@ -4,6 +4,10 @@
  */
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import {
+  diagnoseGoogleCloudAccountMismatch,
+  readGoogleCloudConnection,
+} from './google-cloud-connection.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -70,13 +74,13 @@ function classifySa(email, displayName = '') {
 function dispositionHint(bucket, roles, keys, attached) {
   const userKeys = (keys || []).filter((k) => String(k.key_type || k.keyType).toUpperCase() === 'USER_MANAGED');
   if (bucket === 'agentsam') {
-    if (userKeys.length) return 'KEEP · ROTATE user-managed keys';
+    if (userKeys.length) return 'KEEP · HOLD USER_MANAGED until local JSON provenance mapped';
     return 'KEEP';
   }
   if (bucket === 'compute_default' && attached.length) return 'KEEP · active VM attachment';
   if (bucket === 'provider_service') return 'KEEP · inspect if product still uses provider';
   if (bucket === 'billing') {
-    if (userKeys.length) return 'KEEP · ROTATE user-managed key';
+    if (userKeys.length) return 'KEEP · migrate/ROTATE USER key after provenance (BQ billing export)';
     return 'KEEP if billing export used';
   }
   if (bucket === 'historical') {
@@ -234,7 +238,7 @@ export async function inspectGoogleCloudServiceAccount(options = {}) {
 export async function collectGoogleCloudDoctor(options = {}) {
   const env = options.env || process.env;
   const projectId = await resolveActiveProject(env, options.projectId);
-  const auth = await runGcloudJson(['auth', 'list', '--filter=status:ACTIVE', '--format=json'], env, 15000);
+  const auth = await runGcloudJson(['auth', 'list', '--format=json'], env, 15000);
   const billing = projectId
     ? await runGcloudJson(['billing', 'projects', 'describe', projectId, '--format=json'], env, 20000)
     : { ok: false, data: null, stderr: 'no_project' };
@@ -242,12 +246,30 @@ export async function collectGoogleCloudDoctor(options = {}) {
     ? await collectGoogleCloudServiceAccountInventory({ env, projectId })
     : { ok: false, accounts: [] };
 
-  const activeAccounts = Array.isArray(auth.data) ? auth.data : [];
+  const allAccounts = Array.isArray(auth.data) ? auth.data : [];
+  const activeAccounts = allAccounts.filter((row) => String(row.status || '').toUpperCase() === 'ACTIVE');
+  const activeAccount = clean(activeAccounts[0]?.account) || null;
+  const preferred = readGoogleCloudConnection({ env, home: options.home });
+  const connectionDiagnosis = diagnoseGoogleCloudAccountMismatch({
+    preferred,
+    activeAccount,
+    activeProject: projectId,
+    accounts: allAccounts.map((row) => ({ account: row.account, status: row.status })),
+  });
+
   const issues = [];
   if (!activeAccounts.length) issues.push({ code: 'no_active_gcloud_auth', severity: 'high' });
   if (!projectId) issues.push({ code: 'no_active_project', severity: 'high' });
   if (billing.ok === false && projectId) {
     issues.push({ code: 'billing_describe_failed', severity: 'medium', detail: billing.stderr });
+  }
+  if (!connectionDiagnosis.ok) {
+    issues.push({
+      code: connectionDiagnosis.kind,
+      severity: 'high',
+      note: connectionDiagnosis.message,
+      remediation: connectionDiagnosis.remediation || null,
+    });
   }
   const userManaged = (inventory.accounts || []).flatMap((sa) =>
     (sa.keys || [])
@@ -259,7 +281,7 @@ export async function collectGoogleCloudDoctor(options = {}) {
       code: 'user_managed_sa_keys_present',
       severity: 'medium',
       count: userManaged.length,
-      note: 'Prefer ADC/workload identity; rotate long-lived USER_MANAGED keys.',
+      note: 'Prefer ADC/workload identity; rotate long-lived USER_MANAGED keys after provenance.',
     });
   }
 
@@ -268,8 +290,10 @@ export async function collectGoogleCloudDoctor(options = {}) {
     ok: issues.every((i) => i.severity !== 'high'),
     project_id: projectId || null,
     auth_active: activeAccounts.length > 0,
-    // Do not include account email addresses in names-only callers; include count only by default.
-    auth_account_count: activeAccounts.length,
+    auth_account_count: allAccounts.length,
+    active_account: activeAccount,
+    connection: preferred,
+    connection_diagnosis: connectionDiagnosis,
     billing: billing.ok
       ? {
           enabled: Boolean(billing.data?.billingEnabled),
@@ -284,6 +308,7 @@ export async function collectGoogleCloudDoctor(options = {}) {
       agentsam_bridge_key: 'Machine↔AgentSam Worker/ExecOS trust — not a Google SYSTEM_MANAGED key',
       google_user_oauth: 'Human gcloud / ADC session used to discover this inventory',
       google_sa: 'Workload identity inside the customer GCP project',
+      google_connection: 'AgentSam-persisted identity+project preference (not ambient gcloud active)',
     },
   };
 }

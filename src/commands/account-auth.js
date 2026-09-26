@@ -1,6 +1,6 @@
 import { authenticateViaBrowser } from '../lib/auth.js';
 import { clearAccountSession, readAccountSession, saveAccountSession } from '../lib/account-session.js';
-import { collectWhoami, renderWhoami } from './whoami.js';
+import { collectWhoami, renderLoginResult, renderWhoami } from './whoami.js';
 
 function writeLine(write, value = '') { write(`${value}\n`); }
 
@@ -15,10 +15,20 @@ export async function runLogin(argv = [], options = {}) {
   // authenticateViaBrowser persists by default. Keep injected transports/test flows equivalent.
   if (!readAccountSession({ home: options.home })) saveAccountSession(session, { home: options.home });
   const status = await collectWhoami({ home: options.home, env: options.env || process.env, contextLoader: options.contextLoader });
-  if (argv.includes('--json')) writeLine(write, JSON.stringify(status, null, 2));
-  else {
-    writeLine(write, '');
-    writeLine(write, '  Agent Sam login complete.');
+  if (argv.includes('--json')) {
+    writeLine(write, JSON.stringify({
+      ...status,
+      login: {
+        browser_oauth_saved: true,
+        authoritative: status.active_auth?.kind || null,
+        oauth_authoritative: status.active_auth?.kind === 'browser_oauth',
+        api_key_shadows_oauth:
+          Boolean(status.browser_session?.configured)
+          && status.active_auth?.kind === 'api_key',
+      },
+    }, null, 2));
+  } else {
+    write(renderLoginResult(status));
     write(renderWhoami(status));
   }
   return status;

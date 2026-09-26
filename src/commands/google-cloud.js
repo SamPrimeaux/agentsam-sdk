@@ -12,6 +12,11 @@ import {
   runGcloudJson,
 } from '../lib/google-cloud-inventory.js';
 import {
+  readGoogleCloudConnection,
+  renderGoogleCloudConnection,
+  writeGoogleCloudConnection,
+} from '../lib/google-cloud-connection.js';
+import {
   remediateProviderFailure,
   renderRemediationCard,
   recommendedCommand,
@@ -32,6 +37,8 @@ function printHelp(write) {
   writeLine(write, '');
   writeLine(write, '  agentsam gcloud auth login');
   writeLine(write, '  agentsam gcloud auth list');
+  writeLine(write, '  agentsam google-cloud connection show');
+  writeLine(write, '  agentsam google-cloud connection set --identity <email> --project <id> [--org <domain>]');
   writeLine(write, '  agentsam google-cloud projects list');
   writeLine(write, '  agentsam google-cloud compute instances list [--project <id>]');
   writeLine(write, '  agentsam google-cloud iam service-accounts list [--project <id>]');
@@ -45,6 +52,15 @@ function printHelp(write) {
   writeLine(write, '  Auth setup: docs/contracts/google-cloud-oauth-setup.md');
   writeLine(write, '  Never prints private keys or access tokens.');
   writeLine(write, '');
+}
+
+function parseFlag(argv, name) {
+  const long = `--${name}`;
+  for (let i = 0; i < argv.length; i += 1) {
+    if (argv[i] === long) return argv[i + 1] || '';
+    if (argv[i]?.startsWith(`${long}=`)) return argv[i].slice(long.length + 1);
+  }
+  return '';
 }
 
 function parseProject(argv) {
@@ -81,7 +97,15 @@ export function normalizeGoogleCloudArgv(argv = []) {
   // agentsam compute iam service-accounts list → iam service-accounts list
   // agentsam compute instances list → compute instances list
   // agentsam gcloud auth login → auth login (via google-cloud / gcloud alias)
-  if (args[0] === 'iam' || args[0] === 'remediate' || args[0] === 'doctor' || args[0] === 'auth') return args;
+  if (
+    args[0] === 'iam'
+    || args[0] === 'remediate'
+    || args[0] === 'doctor'
+    || args[0] === 'auth'
+    || args[0] === 'connection'
+  ) {
+    return args;
+  }
   if (args[0] === 'gcloud' && args[1] === 'auth') return args.slice(1);
   if (args[0] === 'instances') return ['compute', ...args];
   return args;
@@ -102,6 +126,48 @@ export async function runGoogleCloud(argv = [], options = {}) {
     return runGcloudAuth(args.slice(1), { write, env, json });
   }
 
+  if (args[0] === 'connection') {
+    const sub = args[1] || 'show';
+    if (sub === 'show' || sub === 'get') {
+      const connection = readGoogleCloudConnection({ env, home: options.home });
+      if (json) write(JSON.stringify(connection || { schema_version: 'agentsam-google-cloud-connection-v1', identity: null }, null, 2) + '\n');
+      else write(renderGoogleCloudConnection(connection));
+      return 0;
+    }
+    if (sub === 'set') {
+      const identity = parseFlag(args, 'identity') || parseFlag(args, 'account');
+      const project = parseFlag(args, 'project') || parseProject(args);
+      const organization = parseFlag(args, 'org') || parseFlag(args, 'organization');
+      const billing = parseFlag(args, 'billing') || parseFlag(args, 'billing-account');
+      if (!identity && !project) {
+        writeLine(write, '  ✕ Pass --identity and/or --project');
+        writeLine(write, '    agentsam google-cloud connection set --identity meauxbility@gmail.com --project gen-lang-client-0684066529');
+        return 1;
+      }
+      const saved = writeGoogleCloudConnection(
+        {
+          identity: identity || undefined,
+          project: project || undefined,
+          organization: organization || undefined,
+          billing_account: billing || undefined,
+          ...(project && identity
+            ? { always_use_for_projects: { [project]: identity } }
+            : {}),
+        },
+        { env, home: options.home },
+      );
+      if (json) write(JSON.stringify(saved, null, 2) + '\n');
+      else {
+        writeLine(write, '');
+        writeLine(write, '  ✓ Google Cloud connection saved');
+        write(renderGoogleCloudConnection(saved));
+      }
+      return 0;
+    }
+    writeLine(write, '  ✕ Unknown connection subcommand. Use show|set');
+    return 1;
+  }
+
   if (args[0] === 'remediate') {
     const rest = args.slice(1);
     if (rest[0] === '--') rest.shift();
@@ -116,24 +182,40 @@ export async function runGoogleCloud(argv = [], options = {}) {
   }
 
   if (args[0] === 'doctor') {
-    const doctor = await collectGoogleCloudDoctor({ env, projectId: parseProject(args) });
+    const doctor = await collectGoogleCloudDoctor({ env, projectId: parseProject(args), home: options.home });
     if (json) write(JSON.stringify(doctor, null, 2) + '\n');
     else {
       writeLine(write, '');
       writeLine(write, '  Agent Sam · Google Cloud · doctor');
       writeLine(write, '');
       writeLine(write, `  project          ${doctor.project_id || '(unset)'}`);
+      writeLine(write, `  active account   ${doctor.active_account || '(none)'}`);
       writeLine(write, `  auth             ${doctor.auth_active ? 'active' : 'missing'}`);
       writeLine(write, `  billing enabled  ${doctor.billing.enabled == null ? 'unknown' : doctor.billing.enabled}`);
       writeLine(write, `  billing account  ${doctor.billing.account_name || doctor.billing.error || '—'}`);
       writeLine(write, `  service accounts ${doctor.service_accounts}`);
       writeLine(write, `  user-managed keys ${doctor.user_managed_keys}`);
       writeLine(write, '');
+      writeLine(write, '  Connection preference');
+      writeLine(write, `    identity        ${doctor.connection?.identity || '(unset)'}`);
+      writeLine(write, `    project         ${doctor.connection?.project || '(unset)'}`);
+      writeLine(write, `    diagnosis       ${doctor.connection_diagnosis?.kind || '—'}`);
+      if (doctor.connection_diagnosis?.message) {
+        writeLine(write, `    note            ${doctor.connection_diagnosis.message}`);
+      }
+      if (doctor.connection_diagnosis?.remediation?.actions?.length) {
+        writeLine(write, '    actions');
+        for (const action of doctor.connection_diagnosis.remediation.actions) {
+          writeLine(write, `      → ${action.title}${action.command ? `  (${action.command})` : ''}`);
+        }
+      }
+      writeLine(write, '');
       writeLine(write, '  Credential lanes');
       writeLine(write, `    AGENTSAM_API_KEY     ${doctor.credential_lanes.agentsam_api_key}`);
       writeLine(write, `    AGENTSAM_BRIDGE_KEY  ${doctor.credential_lanes.agentsam_bridge_key}`);
       writeLine(write, `    Google user OAuth    ${doctor.credential_lanes.google_user_oauth}`);
       writeLine(write, `    Google SA workload   ${doctor.credential_lanes.google_sa}`);
+      writeLine(write, `    Google connection    ${doctor.credential_lanes.google_connection}`);
       writeLine(write, '');
       if (doctor.issues.length) {
         writeLine(write, '  Issues');

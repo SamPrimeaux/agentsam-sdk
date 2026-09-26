@@ -217,6 +217,13 @@ export function renderWhoami(status) {
       lines.push('  tip            Run `agentsam login` then `agentsam api-key create --store keychain --activate`.');
     }
   }
+
+  const shadow = describeAuthShadow(status);
+  if (shadow) {
+    lines.push('');
+    lines.push(...shadow);
+  }
+
   lines.push('');
   lines.push('  Capabilities');
   const caps = status.capabilities || {};
@@ -236,6 +243,72 @@ export function renderWhoami(status) {
   lines.push('');
   lines.push('  Secret values are never printed by whoami.');
   lines.push('');
+  return lines.join('\n');
+}
+
+/**
+ * When browser OAuth exists but API key won authority — explain, don't imply login failed.
+ */
+export function describeAuthShadow(status = {}) {
+  const browser = status.browser_session || {};
+  const active = status.active_auth || {};
+  const apiKey = status.api_key || {};
+  if (!browser.configured) return null;
+  if (active.kind === 'browser_oauth') return null;
+  if (!(active.kind === 'api_key' || apiKey.configured)) return null;
+
+  const lines = [
+    '  Authority lanes',
+    `  Current authoritative credential`,
+    `    AgentSam API Key · ${apiKey.source || active.source || 'environment'}`,
+    '',
+    '  OAuth session',
+    `    available${browser.expired ? ' · expired' : ''}${browser.refreshable ? ' · refreshable' : ''} but not currently authoritative`,
+    '',
+    '  Why?',
+    '    AGENTSAM_API_KEY (or an explicit aak_* token) has higher precedence than browser OAuth.',
+    '',
+    '  Options',
+    '    keep API key   (default — no action)',
+    '    prefer session unset AGENTSAM_API_KEY && agentsam whoami',
+    '    details        agentsam whoami --json',
+  ];
+  return lines;
+}
+
+/**
+ * Post-login human summary — never claim OAuth is authoritative when API key still wins.
+ */
+export function renderLoginResult(status = {}) {
+  const lines = ['', '  ✓ Browser OAuth login saved', ''];
+  const shadow = describeAuthShadow(status);
+  if (shadow) {
+    lines.push('  Current authoritative credential');
+    lines.push(`    AgentSam API Key · ${status.api_key?.source || status.active_auth?.source || 'environment'}`);
+    lines.push('');
+    lines.push('  OAuth session');
+    lines.push('    available but not currently authoritative');
+    lines.push('');
+    lines.push('  Why?');
+    lines.push('    AGENTSAM_API_KEY has higher precedence.');
+    lines.push('');
+    lines.push('  [enter] keep API key');
+    lines.push('  [s]     use OAuth session  →  unset AGENTSAM_API_KEY && agentsam whoami');
+    lines.push('  [d]     details            →  agentsam whoami --json');
+    lines.push('');
+  } else if (status.active_auth?.kind === 'browser_oauth') {
+    lines.push('  Current authoritative credential');
+    lines.push('    OAuth Session · agentsam_browser_oauth');
+    lines.push('');
+    lines.push('  Next');
+    lines.push('    agentsam api-key create --store keychain --activate');
+    lines.push('    agentsam whoami');
+    lines.push('');
+  } else {
+    lines.push('  Current authoritative credential');
+    lines.push(`    ${status.authLabel || status.active_auth?.kind || 'unknown'} · ${status.active_auth?.source || 'runtime'}`);
+    lines.push('');
+  }
   return lines.join('\n');
 }
 

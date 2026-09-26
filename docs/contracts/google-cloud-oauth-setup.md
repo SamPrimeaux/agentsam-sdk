@@ -27,25 +27,32 @@ AgentSam cannot move that redirect to `agentsam.inneranimalmedia.com` without re
 
 ## Path B — AgentSam-hosted Google connection (web / Local Studio)
 
-For **Identity login** and **provider Connections** in Local Studio, use an OAuth client **you** own, with HTTPS redirects on AgentSam hosts.
+For **Identity login** and **provider Connections** in Local Studio / AgentSam web, use an OAuth client **you** own, with HTTPS redirects on the **AgentSam** host.
 
-### Recommended redirect URIs
-
-Register **both** (production + studio):
+### Primary redirect (AgentSam)
 
 ```text
-https://inneranimalmedia.com/api/oauth/google/callback
 https://agentsam.inneranimalmedia.com/api/oauth/google/callback
 ```
 
-Authorize / start (examples):
+Start / authorize:
 
 ```text
-https://inneranimalmedia.com/api/oauth/google/start
 https://agentsam.inneranimalmedia.com/api/oauth/google/start
 ```
 
-Loopback (`http://127.0.0.1:<port>/callback`) remains correct for **native AgentSam CLI** login to InnerAnimalMedia (`iam_cli_agentsam`) — same RFC 8252 pattern as gcloud. Hosted HTTPS redirects are for browser apps and Local Studio, not a requirement to “make CLI real.”
+### Secondary (InnerAnimalMedia dashboard only)
+
+`https://inneranimalmedia.com/api/oauth/google/callback` is the **IAM worker/app** Google login — not AgentSam Local Studio. Register it only if the dashboard product still needs Google Connect there. Do **not** point AgentSam Connections at the IAM callback.
+
+| Product surface | Callback |
+| --- | --- |
+| AgentSam / Local Studio | `https://agentsam.inneranimalmedia.com/api/oauth/google/callback` |
+| InnerAnimalMedia dashboard | `https://inneranimalmedia.com/api/oauth/google/callback` |
+| AgentSam CLI (`agentsam login`) | Loopback `http://127.0.0.1:<port>/callback` (RFC 8252) |
+| `agentsam gcloud auth login` | Google SDK `http://localhost:8085/` (Path A) |
+
+Loopback remains correct for **native AgentSam CLI** login to InnerAnimalMedia (`iam_cli_agentsam`) — same RFC 8252 pattern as gcloud. Hosted HTTPS redirects are for browser apps and Local Studio.
 
 ---
 
@@ -85,10 +92,10 @@ APIs & Services → Credentials → Create credentials → **OAuth client ID**:
 - Name: `Agent Sam Local Studio / Identity`
 - Authorized JavaScript origins (if needed):
   - `https://agentsam.inneranimalmedia.com`
-  - `https://inneranimalmedia.com`
-- Authorized redirect URIs:
-  - `https://inneranimalmedia.com/api/oauth/google/callback`
-  - `https://agentsam.inneranimalmedia.com/api/oauth/google/callback`
+  - `https://inneranimalmedia.com` (only if IAM dashboard shares the client)
+- Authorized redirect URIs (AgentSam-first):
+  - `https://agentsam.inneranimalmedia.com/api/oauth/google/callback` ← **required for AgentSam**
+  - `https://inneranimalmedia.com/api/oauth/google/callback` ← optional IAM dashboard only
 
 Copy:
 
@@ -140,6 +147,7 @@ See also: `docs/contracts/environment-vocabulary.md` and `~/.agentsam/audits/GCP
 | --- | --- |
 | `gcloud auth login` / `agentsam gcloud auth login` | Google’s `localhost` (immutable without custom client + custom token broker) |
 | `agentsam login` (InnerAnimalMedia account) | Loopback `127.0.0.1` for CLI; authorize already on `inneranimalmedia.com` |
-| Local Studio / web Google connect | **`agentsam.inneranimalmedia.com` or `inneranimalmedia.com` HTTPS callbacks** ← this is where you register Client ID/secret |
+| AgentSam / Local Studio Google connect | **`https://agentsam.inneranimalmedia.com/api/oauth/google/callback`** |
+| IAM dashboard Google connect | `https://inneranimalmedia.com/api/oauth/google/callback` (separate product) |
 
 Building a fully custom “AgentSam Google Cloud SDK” that uses only `agentsam.inneranimalmedia.com` redirects (no gcloud client) is a larger Connections product — token relay, refresh, and API wrappers — tracked separately from wrapping `gcloud auth login`.
