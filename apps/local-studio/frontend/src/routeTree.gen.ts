@@ -296,20 +296,26 @@ export interface FileRouteTypes {
     | '/cad'
     | '/cli'
     | '/cms'
+    | '/collaborate'
     | '/database'
     | '/files'
+    | '/mail'
     | '/projects'
     | '/settings'
     | '/ship'
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/artifacts/tickets'
+    | '/projects/$projectId'
     | '/settings/$unit'
     | '/settings/integrations'
     | '/settings/keys'
     | '/settings/themes'
     | '/trails/$trailId'
     | '/api/llm/inventory'
+    | '/artifacts/'
+    | '/projects/'
     | '/settings/'
     | '/trails/'
     | '/agentsam/apps/cad'
@@ -322,13 +328,17 @@ export interface FileRouteTypes {
     | '/cad'
     | '/cli'
     | '/cms'
+    | '/collaborate'
     | '/database'
     | '/files'
+    | '/mail'
     | '/projects'
     | '/ship'
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/artifacts/tickets'
+    | '/projects/$projectId'
     | '/settings/$unit'
     | '/settings/integrations'
     | '/settings/keys'
@@ -347,14 +357,20 @@ export interface FileRouteTypes {
     | '/(apps)/cad'
     | '/(apps)/cli'
     | '/(apps)/cms'
+    | '/(apps)/collaborate'
     | '/(apps)/database'
     | '/(apps)/files'
+    | '/(apps)/mail'
     | '/(apps)/projects'
     | '/(apps)/settings'
     | '/(apps)/ship'
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/(apps)/artifacts/'
+    | '/(apps)/artifacts/tickets'
+    | '/(apps)/projects/'
+    | '/(apps)/projects/$projectId'
     | '/(apps)/settings/$unit'
     | '/(apps)/settings/integrations'
     | '/(apps)/settings/keys'
@@ -369,14 +385,16 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   appsAgentsamRoute: typeof appsAgentsamRouteWithChildren
-  appsArtifactsRoute: typeof appsArtifactsRoute
+  appsArtifactsRoute: typeof appsArtifactsRouteWithChildren
   appsBrowseRoute: typeof appsBrowseRoute
   appsCadRoute: typeof appsCadRoute
   appsCliRoute: typeof appsCliRoute
   appsCmsRoute: typeof appsCmsRoute
+  appsCollaborateRoute: typeof appsCollaborateRoute
   appsDatabaseRoute: typeof appsDatabaseRoute
   appsFilesRoute: typeof appsFilesRoute
-  appsProjectsRoute: typeof appsProjectsRoute
+  appsMailRoute: typeof appsMailRoute
+  appsProjectsRoute: typeof appsProjectsRouteWithChildren
   appsSettingsRoute: typeof appsSettingsRouteWithChildren
   appsShipRoute: typeof appsShipRoute
   ApiChatRoute: typeof ApiChatRoute
