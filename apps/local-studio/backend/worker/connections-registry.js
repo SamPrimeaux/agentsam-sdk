@@ -55,7 +55,7 @@ export async function loadConnectionsRegistry(env, userId) {
       `SELECT id, secret_name, service_name, description, metadata_json,
               last_used_at, usage_count, created_at, updated_at
        FROM user_secrets
-       WHERE user_id = ? AND is_active = 1
+       WHERE account_id = ? AND is_active = 1
        ORDER BY updated_at DESC
        LIMIT 100`,
     )

@@ -8,10 +8,10 @@ import {
 } from "@inneranimalmedia/agentsam-local-shared/studio-inventory";
 import {
   mergeStudioCredentials,
-  resolveStudioUserId,
+  resolveStudioAccountId,
   shouldUseWorkersAI,
   studioServerBindings,
-  vaultCredentialsForUser,
+  vaultCredentialsForAccount,
 } from "@inneranimalmedia/agentsam-local-shared/studio-vault";
 
 const Body = z.object({
@@ -193,17 +193,15 @@ export const Route = createFileRoute("/api/chat")({
           return Response.json({ error: "Invalid request." }, { status: 400 });
         }
 
-        const provider = parsed.provider.trim().toLowerCase();
-        const providerId = provider === "xai" ? "grok" : provider;
+        const providerId = parsed.provider.trim().toLowerCase();
         const modelId = parsed.model_id.trim();
 
-        // Session -> user_id -> vault BYOK -> platform fallback. In production
-        // the Worker edge binds X-User-Id to the validated session before
-        // Nitro runs; vault rows are unwrapped server-side (AES-256-GCM, same
-        // contract as backend/worker/index.js) and never leave the server.
+        // Session → accounts.id (au_*) → user_secrets.account_id → unwrap.
         const bindings = studioServerBindings(ctx);
-        const userId = resolveStudioUserId(request);
-        const vault = userId ? await vaultCredentialsForUser(bindings, userId) : new Map();
+        const accountId = resolveStudioAccountId(request);
+        const vault = accountId
+          ? await vaultCredentialsForAccount(bindings, accountId)
+          : new Map();
         const credentials = mergeStudioCredentials(vault, platformCredentials(bindings.env));
 
         const viaWorkersAI = shouldUseWorkersAI(providerId, bindings.workersAI);
@@ -288,14 +286,13 @@ export const Route = createFileRoute("/api/chat")({
         // payload on the same plain-text contract as the streamed lanes.
         if (providerId === "cloudflare") {
           try {
-            const accountId =
-              credential?.account_id ||
+            const cfAccountId =
+              credential?.cloudflare_account_id ||
               bindings.env.CLOUDFLARE_ACCOUNT_ID ||
-              bindings.env.ACCOUNT_ID ||
               "";
             const text = viaWorkersAI
               ? await runWorkersAIText(bindings.workersAI, modelId, messages)
-              : await runCloudflareRestText(apiKey, accountId, modelId, messages);
+              : await runCloudflareRestText(apiKey, cfAccountId, modelId, messages);
             return new Response(text, { headers: plainHeaders });
           } catch (err) {
             const message = err instanceof Error ? err.message : String(err);

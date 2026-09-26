@@ -43,11 +43,11 @@ Key columns already present:
 - Keep plaintext `access_token` / `refresh_token` columns **null** for new rows
 - Track `refresh_failure_count`, `revoked_at`, `is_active`
 
-### `env_secrets` — Worker / platform registry
+### `env_secrets` — not a user vault
 
-- `key_type`: `workers_secret` | `encrypted_d1` | `public_config`
-- `encrypted_value` + `iv` when `encrypted_d1`
-- Use for app-level config, not end-user BYOK
+- `key_type`: `workers_secret` (inventory mirror of Wrangler secrets) | `public_config` (non-secret labels)
+- `encrypted_d1` — **retired**; platform API keys live in Worker env, not D1 ciphertext
+- Do not store end-user BYOK here — that is `user_secrets` only
 
 ### `secret_audit_log`
 

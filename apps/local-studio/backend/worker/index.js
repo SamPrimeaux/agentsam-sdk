@@ -146,12 +146,12 @@ function last4(value) {
 }
 
 async function encryptSecret(env, plaintext, aad) {
-  const key = await importVaultMasterKey(env.VAULT_MASTER_KEY || env.VAULT_KEY);
+  const key = await importVaultMasterKey(env.VAULT_MASTER_KEY);
   return encryptVaultSecret(key, plaintext, aad);
 }
 
 async function decryptSecret(env, packedB64, aad) {
-  const key = await importVaultMasterKey(env.VAULT_MASTER_KEY || env.VAULT_KEY);
+  const key = await importVaultMasterKey(env.VAULT_MASTER_KEY);
   return decryptVaultSecret(key, packedB64, aad);
 }
 
@@ -256,16 +256,14 @@ function bindSessionUser(request, sessionUserId) {
 }
 
 /**
- * Vault ownership from validated session/app context — never client-supplied
- * tenant_sam_* / ws_* defaults.
+ * Vault authority: session user id IS accounts.id (au_*).
+ * Column name on user_secrets is account_id — never tenant/workspace.
+ * VAULT_MASTER_KEY is the Worker encryption key, not a personal secret.
  */
-function resolveVaultOwnership({ userId, appId }) {
-  const account = String(userId || "").trim();
-  if (!account) throw new Error("vault_owner_required");
-  return {
-    tenantId: `account:${account}`,
-    workspaceId: `app:${String(appId || APP.id || "local")}`,
-  };
+function resolveVaultAccountId(sessionUserId) {
+  const accountId = String(sessionUserId || "").trim();
+  if (!accountId) throw new Error("vault_owner_required");
+  return accountId;
 }
 
 /** Same-origin only for vault/credential surfaces (no reflective CORS). */
@@ -284,18 +282,23 @@ function vaultCors(request) {
 }
 
 async function audit(env, row) {
+  const accountId = String(row.account_id || row.user_id || "").trim();
+  if (!accountId || !row.secret_id) return;
   try {
+    // secret_audit_log.tenant_id is still NOT NULL — fill with account_id (au_*),
+    // never a fake "system" tenant. Authority column is account_id.
     await env.DB.prepare(
       `INSERT INTO secret_audit_log (
-         id, secret_id, secret_source, tenant_id, user_id, event_type,
+         id, secret_id, secret_source, tenant_id, account_id, user_id, event_type,
          triggered_by, previous_last4, new_last4, notes, created_at
-       ) VALUES (?, ?, 'user_secrets', ?, ?, ?, ?, ?, ?, ?, unixepoch())`,
+       ) VALUES (?, ?, 'user_secrets', ?, ?, ?, ?, ?, ?, ?, ?, unixepoch())`,
     )
       .bind(
         `saudit_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`,
         row.secret_id,
-        row.tenant_id || "system",
-        row.user_id || null,
+        accountId,
+        accountId,
+        accountId,
         row.event_type,
         row.triggered_by || "agentsam-workmode",
         row.previous_last4 || null,
@@ -308,17 +311,17 @@ async function audit(env, row) {
   }
 }
 
-async function handleList(env, userId) {
+async function handleList(env, accountId) {
   const { results } = await env.DB.prepare(
-    `SELECT id, secret_name, secret_type, service_name, description, is_active,
-            expires_at, last_used_at, usage_count, workspace_id, created_at, updated_at,
+    `SELECT id, secret_name, secret_type, kind, service_name, description, is_active,
+            expires_at, last_used_at, usage_count, created_at, updated_at,
             metadata_json
      FROM user_secrets
-     WHERE user_id = ? AND is_active = 1
+     WHERE account_id = ? AND is_active = 1
      ORDER BY updated_at DESC
      LIMIT 100`,
   )
-    .bind(userId)
+    .bind(accountId)
     .all();
 
   return json({
@@ -335,9 +338,9 @@ async function handleList(env, userId) {
         id: r.id,
         name: r.secret_name,
         type: r.secret_type,
+        kind: r.kind || "provider_key",
         service: r.service_name,
         description: r.description,
-        workspace_id: r.workspace_id,
         expires_at: r.expires_at,
         last_used_at: r.last_used_at,
         usage_count: r.usage_count,
@@ -349,30 +352,43 @@ async function handleList(env, userId) {
   });
 }
 
-async function handleCreate(env, userId, body) {
-  const service = String(body.service_name || body.service || "").trim().toLowerCase();
+async function handleCreate(env, accountId, body) {
+  const rawService = String(body.service_name || body.service || "").trim().toLowerCase();
+  const service =
+    rawService === "cloudflare_r2" || rawService === "cf"
+      ? "cloudflare"
+      : rawService === "google_ai" || rawService === "google"
+        ? "google"
+        : rawService === "grok"
+          ? "other"
+          : rawService;
   const name = String(body.secret_name || body.name || service || "default").trim();
   const value = String(body.value || body.secret || "").trim();
   const secretType = String(body.secret_type || "api_key").trim();
   const description = body.description ? String(body.description).slice(0, 500) : null;
-  const { tenantId, workspaceId } = resolveVaultOwnership({ userId, appId: APP.id });
+  const kind =
+    String(body.kind || "").trim() === "credential_bundle" || secretType === "credential"
+      ? "credential_bundle"
+      : "provider_key";
 
   if (!service) return json({ ok: false, error: "service_name required" }, 400);
   if (!value || value.length < 8) return json({ ok: false, error: "value too short" }, 400);
 
-  const aad = `${userId}:${service}:${name}`;
+  // AAD binds ciphertext to account+service+name. accountId === au_* (same value formerly called user_id).
+  const aad = `${accountId}:${service}:${name}`;
   const ciphertext = await encryptSecret(env, value, aad);
   const id = `usec_${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`;
   const now = Math.floor(Date.now() / 1000);
 
   await env.DB.prepare(
     `INSERT INTO user_secrets (
-       id, user_id, tenant_id, secret_name, secret_value_encrypted, secret_type,
-       description, service_name, is_active, workspace_id, created_at, updated_at, metadata_json
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
-     ON CONFLICT(user_id, secret_name, service_name) DO UPDATE SET
+       id, account_id, secret_name, secret_value_encrypted, secret_type, kind,
+       description, service_name, is_active, created_at, updated_at, metadata_json
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
+     ON CONFLICT(account_id, secret_name, service_name) DO UPDATE SET
        secret_value_encrypted = excluded.secret_value_encrypted,
        secret_type = excluded.secret_type,
+       kind = excluded.kind,
        description = excluded.description,
        is_active = 1,
        updated_at = excluded.updated_at,
@@ -380,35 +396,34 @@ async function handleCreate(env, userId, body) {
   )
     .bind(
       id,
-      userId,
-      tenantId,
+      accountId,
       name,
       ciphertext,
-      secretType,
+      secretType === "credential" ? "credential" : secretType,
+      kind,
       description,
       service,
-      workspaceId,
       now,
       now,
       JSON.stringify({
         key_version: 1,
         aad_bound: true,
         source: "agentsam-workmode",
+        kind,
         last4: last4(value),
       }),
     )
     .run();
 
   const row = await env.DB.prepare(
-    `SELECT id FROM user_secrets WHERE user_id = ? AND secret_name = ? AND service_name = ?`,
+    `SELECT id FROM user_secrets WHERE account_id = ? AND secret_name = ? AND service_name = ?`,
   )
-    .bind(userId, name, service)
+    .bind(accountId, name, service)
     .first();
 
   await audit(env, {
     secret_id: row?.id || id,
-    tenant_id: tenantId,
-    user_id: userId,
+    account_id: accountId,
     event_type: "created",
     new_last4: last4(value),
     notes: `service=${service}`,
@@ -423,24 +438,23 @@ async function handleCreate(env, userId, body) {
   });
 }
 
-async function handleDelete(env, userId, secretId) {
+async function handleDelete(env, accountId, secretId) {
   const existing = await env.DB.prepare(
-    `SELECT id, tenant_id FROM user_secrets WHERE id = ? AND user_id = ?`,
+    `SELECT id FROM user_secrets WHERE id = ? AND account_id = ?`,
   )
-    .bind(secretId, userId)
+    .bind(secretId, accountId)
     .first();
   if (!existing) return json({ ok: false, error: "not found" }, 404);
 
   await env.DB.prepare(
-    `UPDATE user_secrets SET is_active = 0, updated_at = unixepoch() WHERE id = ? AND user_id = ?`,
+    `UPDATE user_secrets SET is_active = 0, updated_at = unixepoch() WHERE id = ? AND account_id = ?`,
   )
-    .bind(secretId, userId)
+    .bind(secretId, accountId)
     .run();
 
   await audit(env, {
     secret_id: secretId,
-    tenant_id: existing.tenant_id,
-    user_id: userId,
+    account_id: accountId,
     event_type: "revoked",
     notes: "soft-revoke",
   });
@@ -449,28 +463,27 @@ async function handleDelete(env, userId, secretId) {
 }
 
 /** Internal decrypt-for-use — never expose via public docs as a browser API. */
-async function handleUnwrap(env, userId, body) {
+async function handleUnwrap(env, accountId, body) {
   const secretId = String(body.id || body.secret_id || "").trim();
   if (!secretId) return json({ ok: false, error: "id required" }, 400);
 
   const row = await env.DB.prepare(
-    `SELECT id, secret_name, service_name, secret_value_encrypted, tenant_id, is_active
-     FROM user_secrets WHERE id = ? AND user_id = ?`,
+    `SELECT id, secret_name, service_name, secret_value_encrypted, is_active
+     FROM user_secrets WHERE id = ? AND account_id = ?`,
   )
-    .bind(secretId, userId)
+    .bind(secretId, accountId)
     .first();
 
   if (!row || !row.is_active) return json({ ok: false, error: "not found" }, 404);
 
-  const aad = `${userId}:${row.service_name}:${row.secret_name}`;
+  const aad = `${accountId}:${row.service_name}:${row.secret_name}`;
   let plaintext;
   try {
     plaintext = await decryptSecret(env, row.secret_value_encrypted, aad);
   } catch (err) {
     await audit(env, {
       secret_id: secretId,
-      tenant_id: row.tenant_id,
-      user_id: userId,
+      account_id: accountId,
       event_type: "failed_decrypt",
       notes: String(err).slice(0, 200),
     });
@@ -479,15 +492,14 @@ async function handleUnwrap(env, userId, body) {
 
   await env.DB.prepare(
     `UPDATE user_secrets SET last_used_at = unixepoch(), usage_count = COALESCE(usage_count,0) + 1
-     WHERE id = ?`,
+     WHERE id = ? AND account_id = ?`,
   )
-    .bind(secretId)
+    .bind(secretId, accountId)
     .run();
 
   await audit(env, {
     secret_id: secretId,
-    tenant_id: row.tenant_id,
-    user_id: userId,
+    account_id: accountId,
     event_type: "decrypted_for_use",
     new_last4: last4(plaintext),
     notes: "unwrap",
@@ -525,27 +537,27 @@ const INVENTORY_PROVIDER_IDS = Object.freeze([
   ),
 ]);
 
-async function loadVaultCredentialsForUser(env, userId) {
+async function loadVaultCredentialsForAccount(env, accountId) {
   const { results } = await env.DB.prepare(
     `SELECT id, secret_name, service_name, secret_value_encrypted
      FROM user_secrets
-     WHERE user_id = ? AND is_active = 1
+     WHERE account_id = ? AND is_active = 1
      ORDER BY updated_at DESC
      LIMIT 100`,
   )
-    .bind(userId)
+    .bind(accountId)
     .all();
 
   const byProvider = new Map();
   for (const row of results || []) {
     const providerId = SERVICE_TO_PROVIDER[String(row.service_name || '').toLowerCase()];
     if (!providerId || byProvider.has(providerId)) continue;
-    const aad = `${userId}:${row.service_name}:${row.secret_name}`;
+    const aad = `${accountId}:${row.service_name}:${row.secret_name}`;
     try {
       const value = await decryptSecret(env, row.secret_value_encrypted, aad);
       const entry = { value, source: 'user_vault' };
       if (providerId === 'cloudflare') {
-        entry.account_id = env.CLOUDFLARE_ACCOUNT_ID || env.ACCOUNT_ID || null;
+        entry.cloudflare_account_id = env.CLOUDFLARE_ACCOUNT_ID || null;
       }
       byProvider.set(providerId, entry);
     } catch (err) {
@@ -568,14 +580,14 @@ function platformCredentials(env) {
   put('grok', env.XAI_API_KEY);
   put('cursor', env.CURSOR_API_KEY);
   put('cloudflare', env.CLOUDFLARE_API_TOKEN, {
-    account_id: env.CLOUDFLARE_ACCOUNT_ID || env.ACCOUNT_ID || null,
+    cloudflare_account_id: env.CLOUDFLARE_ACCOUNT_ID || null,
   });
   return map;
 }
 
 async function handleLlmInventory(env, userId, request) {
   const includePlatform = new URL(request.url).searchParams.get('include_platform') !== '0';
-  const vault = await loadVaultCredentialsForUser(env, userId);
+  const vault = await loadVaultCredentialsForAccount(env, userId);
   const platform = includePlatform ? platformCredentials(env) : new Map();
   const merged = new Map();
   for (const [id, row] of vault.entries()) merged.set(id, row);
@@ -810,7 +822,7 @@ export default {
       let vaultKey = false;
       let vaultKeyError = null;
       try {
-        await importVaultMasterKey(env.VAULT_MASTER_KEY || env.VAULT_KEY);
+        await importVaultMasterKey(env.VAULT_MASTER_KEY);
         vaultKey = true;
       } catch (err) {
         vaultKeyError = String(err?.message || err).slice(0, 120);

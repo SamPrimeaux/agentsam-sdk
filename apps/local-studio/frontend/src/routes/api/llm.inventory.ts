@@ -6,9 +6,9 @@ import {
 import {
   assertInventoryResponseSafe,
   mergeStudioCredentials,
-  resolveStudioUserId,
+  resolveStudioAccountId,
   studioServerBindings,
-  vaultCredentialsForUser,
+  vaultCredentialsForAccount,
 } from "@inneranimalmedia/agentsam-local-shared/studio-vault";
 
 export const Route = createFileRoute("/api/llm/inventory")({
@@ -16,29 +16,21 @@ export const Route = createFileRoute("/api/llm/inventory")({
     handlers: {
       GET: async (ctx) => {
         const request = (ctx as { request: Request }).request;
-        // Session -> user_id: in production the Worker edge validates the
-        // session cookie and binds it to X-User-Id before Nitro runs; in local
-        // dev this carries the Studio client's user id. Either way the value
-        // only scopes server-side vault lookups — it is echoed back as an id,
-        // never alongside secret material.
-        const userId = resolveStudioUserId(request);
-        if (!userId) {
+        const accountId = resolveStudioAccountId(request);
+        if (!accountId) {
           return Response.json(
-            { ok: false, error: "unauthorized", detail: "X-User-Id required for Studio inventory" },
+            { ok: false, error: "unauthorized", detail: "account session required for Studio inventory" },
             { status: 401 },
           );
         }
 
         try {
           const bindings = studioServerBindings(ctx);
-          // Vault BYOK first (D1 user_secrets, unwrapped server-side), desk /
-          // platform Worker secret as fallback. Missing bindings in local dev
-          // simply yield an empty vault map — same behavior as before.
-          const vault = await vaultCredentialsForUser(bindings, userId);
+          const vault = await vaultCredentialsForAccount(bindings, accountId);
           const inventory = await buildStudioInventory(
             mergeStudioCredentials(vault, platformCredentials(bindings.env)),
           );
-          const payload = { ok: true, user_id: userId, ...inventory };
+          const payload = { ok: true, account_id: accountId, ...inventory };
           try {
             assertInventoryResponseSafe(payload);
           } catch {

@@ -109,7 +109,9 @@ async function discover(provider: string, apiKey: string, accountId?: string | n
       return { attempted: true, ok: true, models, error: null };
     }
     if (provider === "cloudflare") {
-      if (!accountId) return { attempted: true, ok: false, models: [], error: "ACCOUNT_ID required" };
+      if (!accountId) {
+        return { attempted: true, ok: false, models: [], error: "CLOUDFLARE_ACCOUNT_ID required" };
+      }
       const body = await fetchJson(
         `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/models/search`,
         { headers: { authorization: `Bearer ${apiKey}` } },
@@ -139,7 +141,7 @@ export function platformCredentials(env: NodeJS.ProcessEnv) {
   put("grok", env.XAI_API_KEY);
   put("cursor", env.CURSOR_API_KEY);
   put("cloudflare", env.CLOUDFLARE_API_TOKEN, {
-    account_id: env.CLOUDFLARE_ACCOUNT_ID || env.ACCOUNT_ID || null,
+    cloudflare_account_id: env.CLOUDFLARE_ACCOUNT_ID || null,
   });
   return map;
 }
@@ -158,7 +160,7 @@ export async function buildStudioInventory(credentials: Map<string, StudioCreden
       credentialError: null,
     });
     const result = cred?.value
-      ? await discover(meta.id, cred.value, cred.account_id)
+      ? await discover(meta.id, cred.value, cred.cloudflare_account_id)
       : { attempted: false, ok: false, models: [], error: null };
     discovery[meta.id] = {
       attempted: result.attempted,

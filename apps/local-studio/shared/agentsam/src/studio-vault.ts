@@ -1,21 +1,12 @@
 /**
  * Studio vault credential resolution (server-only).
  *
- * Session -> user_id -> vault BYOK -> platform fallback for Local Studio.
+ * Session → accounts.id (au_*) → user_secrets.account_id → unwrap via VAULT_MASTER_KEY.
+ * VAULT_MASTER_KEY is the Worker encryption key, not a personal BYOK secret.
+ * UI never receives decrypted values except ephemeral reveal after re-auth.
  *
- * The canonical encrypt/decrypt implementation lives in
- * `apps/local-studio/backend/worker/index.js` (AES-256-GCM, Web Crypto,
- * AAD `${userId}:${serviceName}:${secretName}`, stored `base64(iv||ciphertext)`).
- * This module mirrors that contract so Nitro/TanStack Studio routes can unwrap
- * a caller's `user_secrets` rows from D1 `inneranimalmedia-business` without
- * importing the Worker entry or root `src/`.
- *
- * Safety invariants (enforced by construction, not prose):
- * - No filesystem reads (never `~/.agentsam`), no Durable Objects, no second database.
- * - Helpers return credential *values* only to server callers; pair with
- *   `assertInventoryResponseSafe` before serializing anything for the browser.
- * - Per-row decrypt failures are skipped, never thrown to the client, and never
- *   logged with secret material.
+ * Encrypt/decrypt parity: `apps/local-studio/backend/worker/index.js`
+ * AAD `${accountId}:${serviceName}:${secretName}`, packed `base64(iv||ciphertext)`.
  */
 
 export type StudioCredentialSource = "user_vault" | "platform";
@@ -23,22 +14,28 @@ export type StudioCredentialSource = "user_vault" | "platform";
 export interface StudioCredential {
   value: string;
   source: StudioCredentialSource;
-  account_id?: string | null;
-  /** True when chat should run through the Workers AI binding instead of a token. */
-  viaWorkersAI?: boolean;
+  /** Cloudflare account id (CLOUDFLARE_ACCOUNT_ID) when provider is cloudflare — not au_*. */
+  cloudflare_account_id?: string | null;
 }
 
 export type StudioEnv = Record<string, string | undefined>;
 
-/** D1 `user_secrets.service_name` -> Studio provider id. Mirrors the Worker map. */
+/**
+ * D1 user_secrets.service_name → Studio provider id.
+ * Service-name aliases (xai→grok, google→gemini) are intentional D1 values, not env fallbacks.
+ */
 export const SERVICE_TO_PROVIDER: Readonly<Record<string, string>> = Object.freeze({
   openai: "openai",
   anthropic: "anthropic",
   gemini: "gemini",
+  google: "gemini",
   xai: "grok",
   grok: "grok",
   cursor: "cursor",
   cloudflare: "cloudflare",
+  meshy: "meshy",
+  resend: "resend",
+  tavily: "tavily",
 });
 
 export function serviceToProvider(serviceName: unknown): string | null {
@@ -47,14 +44,10 @@ export function serviceToProvider(serviceName: unknown): string | null {
 }
 
 /**
- * Identity asserted for a Studio API request.
- *
- * The Worker edge (`backend/worker/index.js`) validates the session cookie via
- * the identity package and binds it to this header before Nitro runs, so by the
- * time a Studio route reads it the value is session-backed in production. In
- * local dev (no Worker in front) it carries the Studio client's user id.
+ * Session identity = accounts.id (au_*).
+ * Header name X-User-Id is legacy; value is account_id.
  */
-export function resolveStudioUserId(request: Request): string {
+export function resolveStudioAccountId(request: Request): string {
   return (request.headers.get("x-user-id") || "").trim();
 }
 
@@ -94,12 +87,11 @@ async function importVaultKey(masterKeyMaterial: string): Promise<CryptoKey> {
   ]);
 }
 
-/** AAD binding a ciphertext row to its owner. Must match the Worker exactly. */
-export function vaultAad(userId: string, serviceName: string, secretName: string): string {
-  return `${userId}:${serviceName}:${secretName}`;
+/** AAD binding ciphertext to its account owner. Must match the Worker exactly. */
+export function vaultAad(accountId: string, serviceName: string, secretName: string): string {
+  return `${accountId}:${serviceName}:${secretName}`;
 }
 
-/** Server-side encryption (parity with the Worker; used by tests and writers). */
 export async function encryptVaultSecret(
   plaintext: string,
   aad: string,
@@ -118,7 +110,6 @@ export async function encryptVaultSecret(
   return bytesToB64(packed);
 }
 
-/** Unwrap one vault row. Throws on wrong key/AAD/tamper — callers skip the row. */
 export async function decryptVaultSecret(
   packedB64: string,
   aad: string,
@@ -136,7 +127,6 @@ export async function decryptVaultSecret(
   return textDecoder.decode(plain);
 }
 
-/** Minimal structural D1 surface — no wrangler import, no second database. */
 export interface VaultD1Binding {
   prepare(sql: string): {
     bind(...args: unknown[]): {
@@ -154,7 +144,7 @@ export interface VaultSecretRow {
 
 export const VAULT_SECRETS_QUERY = `SELECT id, secret_name, service_name, secret_value_encrypted
      FROM user_secrets
-     WHERE user_id = ? AND is_active = 1
+     WHERE account_id = ? AND is_active = 1
      ORDER BY updated_at DESC
      LIMIT 100`;
 
@@ -163,24 +153,27 @@ function clean(value: unknown): string {
 }
 
 /**
- * Load and unwrap every vault credential for a user. First row wins per
- * provider. Rows that fail to decrypt are skipped (stale key version, tamper).
- * Never throws for row-level failures; throws only when the query itself fails.
+ * Load and unwrap vault credentials for one account (au_*).
+ * First row wins per provider. Decrypt failures are skipped.
  */
 export async function loadVaultCredentialMap(options: {
   db: VaultD1Binding;
-  userId: string;
+  accountId: string;
   masterKey: string;
-  accountId?: string | null;
+  /** CLOUDFLARE_ACCOUNT_ID only — never a generic ACCOUNT_ID, never au_*. */
+  cloudflareAccountId?: string | null;
   rows?: VaultSecretRow[];
 }): Promise<Map<string, StudioCredential>> {
-  const { db, userId, masterKey, accountId } = options;
+  const accountId = clean(options.accountId);
+  if (!accountId) return new Map();
+  const { db, masterKey } = options;
+  const cfAccountId = clean(options.cloudflareAccountId) || null;
   const rows =
     options.rows ??
     (
       (await db
         .prepare(VAULT_SECRETS_QUERY)
-        .bind(userId)
+        .bind(accountId)
         .all<VaultSecretRow>()) as { results?: VaultSecretRow[] }
     ).results ??
     [];
@@ -190,12 +183,14 @@ export async function loadVaultCredentialMap(options: {
     if (!providerId || byProvider.has(providerId)) continue;
     const ciphertext = clean(row.secret_value_encrypted);
     if (!ciphertext) continue;
-    const aad = vaultAad(userId, String(row.service_name), String(row.secret_name));
+    const aad = vaultAad(accountId, String(row.service_name), String(row.secret_name));
     try {
       const value = await decryptVaultSecret(ciphertext, aad, masterKey);
       if (!value.trim()) continue;
       const entry: StudioCredential = { value, source: "user_vault" };
-      if (providerId === "cloudflare") entry.account_id = accountId ?? null;
+      if (providerId === "cloudflare" && cfAccountId) {
+        entry.cloudflare_account_id = cfAccountId;
+      }
       byProvider.set(providerId, entry);
     } catch {
       continue;
@@ -204,11 +199,10 @@ export async function loadVaultCredentialMap(options: {
   return byProvider;
 }
 
-/** Single-provider platform (desk secret) lookup. Mirrors the Worker lane. */
+/** Platform desk secrets from Worker env (not BYOK). One env name per provider — no dual keys. */
 export function platformCredentialFor(
   provider: string,
   env: StudioEnv,
-  accountId?: string | null,
 ): StudioCredential | null {
   const id = clean(provider).toLowerCase();
   const pick = (value: string | undefined, extra: Partial<StudioCredential> = {}) => {
@@ -218,17 +212,20 @@ export function platformCredentialFor(
   if (id === "openai") return pick(env.OPENAI_API_KEY);
   if (id === "anthropic") return pick(env.ANTHROPIC_API_KEY);
   if (id === "gemini") return pick(env.GEMINI_API_KEY);
-  if (id === "grok" || id === "xai") return pick(env.XAI_API_KEY);
+  if (id === "grok") return pick(env.XAI_API_KEY);
   if (id === "cursor") return pick(env.CURSOR_API_KEY);
+  if (id === "meshy") return pick(env.MESHYAI_API_KEY);
+  if (id === "resend") return pick(env.RESEND_API_KEY);
+  if (id === "tavily") return pick(env.TAVILY_API_KEY);
   if (id === "cloudflare") {
     return pick(env.CLOUDFLARE_API_TOKEN, {
-      account_id: accountId ?? env.CLOUDFLARE_ACCOUNT_ID ?? env.ACCOUNT_ID ?? null,
+      cloudflare_account_id: clean(env.CLOUDFLARE_ACCOUNT_ID) || null,
     });
   }
   return null;
 }
 
-/** Vault-first merge: user BYOK wins, platform fills the gaps. */
+/** Vault-first merge: account BYOK wins, platform fills gaps. */
 export function mergeStudioCredentials(
   vault: Map<string, StudioCredential>,
   platform: Map<string, StudioCredential>,
@@ -241,7 +238,6 @@ export function mergeStudioCredentials(
   return merged;
 }
 
-/** Credential plane label from provenance. Mirrors the Worker computation. */
 export function credentialPlaneFor(credentials: Map<string, { source?: string }>): string {
   let vault = 0;
   let platform = 0;
@@ -253,18 +249,10 @@ export function credentialPlaneFor(credentials: Map<string, { source?: string }>
   return "platform";
 }
 
-/**
- * Cloudflare chat must run through the Workers AI binding (`env.AGENTSAM_WAI`)
- * when it is present — never through a pasted token when the binding exists.
- */
 export function shouldUseWorkersAI(provider: string, workersAIBinding: unknown): boolean {
   return clean(provider).toLowerCase() === "cloudflare" && Boolean(workersAIBinding);
 }
 
-/**
- * Boundary guard: refuse to serialize inventory payloads that embed credential
- * material. Throws when a `value` field or an `sk-…` secret pattern is present.
- */
 export function assertInventoryResponseSafe(payload: unknown): void {
   const text = JSON.stringify(payload);
   if (/"value"\s*:/.test(text) || /sk-[a-zA-Z0-9]{10,}/.test(text)) {
@@ -273,11 +261,8 @@ export function assertInventoryResponseSafe(payload: unknown): void {
 }
 
 export interface StudioServerBindings {
-  /** String vars/secrets: `process.env` plus any runtime env the host exposes. */
   env: StudioEnv;
-  /** D1 `inneranimalmedia-business` when the server runtime exposes it. */
   db: VaultD1Binding | null;
-  /** Workers AI binding (`env.AGENTSAM_WAI`) when the runtime exposes it. */
   workersAI: unknown;
 }
 
@@ -285,20 +270,14 @@ function readProcessEnv(): StudioEnv {
   try {
     if (typeof process !== "undefined" && process.env) return { ...process.env };
   } catch {
-    /* non-node runtimes */
+    /* non-node */
   }
   return {};
 }
 
 /**
- * Best-effort server bindings for Studio Nitro/TanStack routes.
- *
- * Local dev resolves string vars from `process.env`. In the production Worker
- * the same route runs behind `backend/worker/index.js`, which owns session
- * validation and credential provenance; object bindings (D1, Workers AI) are
- * picked up here when the server runtime surfaces them on the handler context.
- * Missing bindings simply deactivate the vault lane — platform fallback always
- * applies. Never throws.
+ * Server bindings for Studio Nitro/TanStack routes.
+ * Missing D1 / VAULT_MASTER_KEY simply means no vault lane.
  */
 export function studioServerBindings(handlerArg: unknown): StudioServerBindings {
   const env = readProcessEnv();
@@ -321,7 +300,7 @@ export function studioServerBindings(handlerArg: unknown): StudioServerBindings 
       }
     }
   } catch {
-    /* probe-only: fall back to process.env */
+    /* process.env only */
   }
   let db: VaultD1Binding | null = null;
   let workersAI: unknown = null;
@@ -337,20 +316,23 @@ export function studioServerBindings(handlerArg: unknown): StudioServerBindings 
 }
 
 /**
- * Vault-first credentials for one Studio user. Returns an empty map (platform
- * fallback downstream) when D1 or the vault master key is unreachable — e.g.
- * local dev with no Worker bindings. Never throws, never logs secret material.
+ * Vault credentials for one account (au_*).
+ * Empty map when D1 or VAULT_MASTER_KEY is missing — never throws.
  */
-export async function vaultCredentialsForUser(
+export async function vaultCredentialsForAccount(
   bindings: StudioServerBindings,
-  userId: string,
+  accountId: string,
 ): Promise<Map<string, StudioCredential>> {
   try {
-    const masterKey = bindings.env.VAULT_MASTER_KEY || bindings.env.VAULT_KEY || "";
-    if (!bindings.db || !masterKey || !userId) return new Map();
-    const accountId =
-      bindings.env.CLOUDFLARE_ACCOUNT_ID || bindings.env.ACCOUNT_ID || null;
-    return await loadVaultCredentialMap({ db: bindings.db, userId, masterKey, accountId });
+    const masterKey = clean(bindings.env.VAULT_MASTER_KEY);
+    const owner = clean(accountId);
+    if (!bindings.db || !masterKey || !owner) return new Map();
+    return await loadVaultCredentialMap({
+      db: bindings.db,
+      accountId: owner,
+      masterKey,
+      cloudflareAccountId: clean(bindings.env.CLOUDFLARE_ACCOUNT_ID) || null,
+    });
   } catch {
     return new Map();
   }

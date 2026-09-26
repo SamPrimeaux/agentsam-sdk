@@ -138,7 +138,7 @@ npx wrangler d1 execute inneranimalmedia-business --remote \
 openssl rand -base64 32 | npx wrangler secret put VAULT_MASTER_KEY
 
 # optional aliases used by platform workers
-npx wrangler secret put VAULT_KEY          # same value if you keep one master
+npx wrangler secret put VAULT_MASTER_KEY  # Worker AES-256-GCM master key (not a personal BYOK)
 npx wrangler secret put BETTER_AUTH_SECRET
 npx wrangler secret put XAI_API_KEY        # server-only model calls
 ```
@@ -223,18 +223,21 @@ Full design: [`docs/SECRETS_VAULT_PLAN.md`](./docs/SECRETS_VAULT_PLAN.md)
 ### Non-negotiables
 
 1. **Never** store GitHub / Cloudflare / model API keys in `localStorage`, client state, or chat logs.
-2. **One vault lane:** ciphertext in D1 (`user_secrets`, `user_oauth_tokens`, `env_secrets`); plaintext only in Worker memory at use-time.
+2. **One crypto contract** (AES-256-GCM + `VAULT_MASTER_KEY`): plaintext only in Worker memory at use-time. Two live ciphertext tables — not three vault products:
+   - `user_secrets` — account BYOK / pasted API keys
+   - `user_oauth_tokens` — OAuth access/refresh tokens (Connect)
+   - `env_secrets` — **not** a vault lane (inventory / `public_config` leftovers; platform keys live in Worker env)
 3. **OAuth preferred** for GitHub + Cloudflare; paste-token is fallback that still goes through the vault encrypt path.
-4. **Decrypt only server-side** for the authenticated `user_id` / `tenant_id` / `workspace_id` that owns the row.
+4. **Decrypt only server-side** for the authenticated `account_id` (`au_*`) that owns the row.
 5. **Audit every read/write/rotate** via `secret_audit_log` (last4 only in logs).
 
 ### Existing tables (reuse — do not invent parallel vaults)
 
 | Table | Role |
 | --- | --- |
-| `user_secrets` | BYOK API keys (`secret_value_encrypted`, `service_name`, `vault_secret_id`) |
-| `user_oauth_tokens` | Provider tokens (`access_token_encrypted` / `refresh_token_encrypted` + vault ids) |
-| `env_secrets` | Worker/env registry (`encrypted_d1` vs `workers_secret`) |
+| `user_secrets` | BYOK API keys (`secret_value_encrypted`, `service_name`, `account_id`) |
+| `user_oauth_tokens` | Provider OAuth tokens (`access_token_encrypted` / `refresh_token_encrypted`) |
+| `env_secrets` | Not BYOK — `workers_secret` inventory mirror + `public_config`; `encrypted_d1` retired |
 | `secret_audit_log` | Rotate / use / revoke events |
 | `agentsam_user_ui_preferences` | Theme / accent / density JSON (non-secret) |
 | `oauth_providers` | Platform OAuth client config (`client_secret_encrypted`) |
@@ -243,8 +246,8 @@ Full design: [`docs/SECRETS_VAULT_PLAN.md`](./docs/SECRETS_VAULT_PLAN.md)
 
 - Algorithm: **AES-256-GCM**
 - Key: `VAULT_MASTER_KEY` (Worker secret, 32 bytes raw or base64)
-- Stored blob: `base64(iv || ciphertext || tag)` or separate `iv` column where the table already has one (`env_secrets.iv`)
-- AAD (optional but recommended): `user_id:service_name:secret_name` to bind ciphertext to owner
+- Stored blob: `base64(iv || ciphertext || tag)`
+- AAD: `${accountId}:${serviceName}:${secretName}` (binds ciphertext to owner)
 
 ### Connect UX (target)
 

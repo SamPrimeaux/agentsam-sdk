@@ -100,7 +100,7 @@ Worker secrets (vault + app)
 openssl rand -base64 32 | npx wrangler secret put VAULT_MASTER_KEY
 
 # optional aliases used by platform workers
-npx wrangler secret put VAULT_KEY          # same value if you keep one master
+npx wrangler secret put VAULT_MASTER_KEY  # Worker AES-256-GCM master key (not a personal BYOK)
 npx wrangler secret put BETTER_AUTH_SECRET
 npx wrangler secret put XAI_API_KEY        # server-only model calls
 Deploy this Worker (vault API — live)

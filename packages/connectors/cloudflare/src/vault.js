@@ -19,11 +19,11 @@ function bytesToB64(bytes) {
 }
 
 export function vaultConfigured(env = {}) {
-  return Boolean(env.VAULT_MASTER_KEY || env.VAULT_KEY);
+  return Boolean(env.VAULT_MASTER_KEY);
 }
 
 async function importVaultKey(env) {
-  const raw = env.VAULT_MASTER_KEY || env.VAULT_KEY;
+  const raw = env.VAULT_MASTER_KEY;
   if (!raw) throw new Error('VAULT_MASTER_KEY missing');
   let keyBytes;
   try {
