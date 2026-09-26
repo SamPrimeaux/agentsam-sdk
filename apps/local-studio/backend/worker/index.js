@@ -25,6 +25,7 @@ import { handleCmsWorkerRequest } from "./cms-service.js";
 import { serveCanonicalHomepage } from "./canonical-homepage.js";
 import { isPublicSitePath, servePublicSitePage } from "./public-site.js";
 import { loadConnectionsRegistry } from "./connections-registry.js";
+import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js";
 import { createLocalStudioPluginRuntime } from "./plugin-registry.js";
 import {
   mintStudioCredential,
@@ -642,6 +643,7 @@ export default {
     const isLlmInventory = url.pathname === "/api/llm/inventory";
     const isCfConnection = isCloudflareConnectionPath(url.pathname);
     const isConnectionsRegistry = url.pathname === "/api/connections";
+    const isDatabaseApi = isDatabaseRequest(url.pathname);
     const isPluginToolExecute = url.pathname === "/api/plugins/tools/execute";
 
     // Public marketing/docs: WEBSITE_ASSETS R2 SSOT (Worker ASSETS = bootstrap only)
@@ -717,6 +719,12 @@ export default {
     async function sessionUser() {
       if (sessionUserId === undefined) sessionUserId = await resolveSessionUserId(request, env);
       return sessionUserId;
+    }
+
+    if (isDatabaseApi) {
+      const userId = await sessionUser();
+      if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
+      return handleDatabaseRequest(request, env, userId);
     }
 
     if (isConnectionsRegistry) {
