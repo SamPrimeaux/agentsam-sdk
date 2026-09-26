@@ -6,6 +6,17 @@
 @source "../../../../packages/agentsam-settings/src/**/*.{ts,tsx}";
 @source "../../../../packages/agentsam-nav/src/**/*.{ts,tsx,js,jsx}";
 
+/*
+ * Keys table columns — do not rely on Tailwind scanning agentsam-settings for
+ * arbitrary grid-cols. Inline styles are primary; this is the CSS fallback.
+ */
+.agentsam-settings-keys-row {
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr 1fr 1.15fr 0.9fr 0.8fr 0.9fr 0.9fr 0.7fr;
+  column-gap: 0.5rem;
+  align-items: center;
+}
+
 @theme {
   --font-sans: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-display: "Instrument Serif", "Iowan Old Style", Georgia, serif;

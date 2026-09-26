@@ -23,6 +23,9 @@ const workbenchSource = resolvePath(
 const navSource = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-nav/src", import.meta.url)),
 );
+const settingsSource = resolvePath(
+  fileURLToPath(new URL("../../packages/agentsam-settings/src", import.meta.url)),
+);
 const vaultPackageRoot = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-vault", import.meta.url)),
 );
@@ -233,6 +236,22 @@ export default defineConfig(({ command, isPreview }) => ({
       {
         find: "@inneranimalmedia/agentsam-nav",
         replacement: navSource,
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-settings$/,
+        replacement: resolvePath(settingsSource, "index.ts"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-settings\/contracts$/,
+        replacement: resolvePath(settingsSource, "contracts/index.ts"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-settings\/frontend$/,
+        replacement: resolvePath(settingsSource, "frontend/index.tsx"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-settings\/fixtures$/,
+        replacement: resolvePath(settingsSource, "fixtures/index.ts"),
       },
       {
         find: /^@inneranimalmedia\/agentsam-vault$/,

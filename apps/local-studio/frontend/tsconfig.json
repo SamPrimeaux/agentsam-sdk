@@ -44,6 +44,12 @@
       ],
       "@inneranimalmedia/agentsam-nav": [
         "../../../packages/agentsam-nav/src/index.ts"
+      ],
+      "@inneranimalmedia/agentsam-settings": [
+        "../../../packages/agentsam-settings/src/index.ts"
+      ],
+      "@inneranimalmedia/agentsam-settings/*": [
+        "../../../packages/agentsam-settings/src/*"
       ]
     },
     "allowImportingTsExtensions": true,

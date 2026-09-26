@@ -20,7 +20,7 @@ const packagesRoot = path.join(root, 'packages');
 const studioNodeModules = path.join(studioRoot, 'node_modules');
 
 /** Packages whose /src is aliased from apps/local-studio/vite.config.ts */
-const ALIASED = ['agentsam-nav', 'agentsam-workbench'];
+const ALIASED = ['agentsam-nav', 'agentsam-workbench', 'agentsam-settings'];
 
 function depTarget(pkgDir, name) {
   const parts = name.startsWith('@') ? name.split('/') : [name];
