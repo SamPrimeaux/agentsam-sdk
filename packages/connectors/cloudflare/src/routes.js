@@ -371,8 +371,10 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
       .split(',')
       .map((s) => s.trim().toLowerCase())
       .filter(Boolean);
-    // Host-supplied defaults only — never a product-named constant inside this package.
-    const capabilitySet = requested.length ? requested : hostDefaultCapabilities;
+    // Explicit packs win alone. Host defaults only when neither packs nor capabilities were requested.
+    const capabilitySet = requested.length
+      ? requested
+      : (requestedPacks.length ? [] : hostDefaultCapabilities);
     const scopes = requestedCloudflareScopes({
       capabilities: capabilitySet,
       packs: requestedPacks,
