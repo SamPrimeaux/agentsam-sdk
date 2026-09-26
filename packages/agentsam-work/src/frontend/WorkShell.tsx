@@ -7,7 +7,6 @@ import {
   Folder,
   FolderKanban,
   HardDrive,
-  Inbox,
   Lightbulb,
   Mail,
   Menu,
