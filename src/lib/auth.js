@@ -315,9 +315,10 @@ export async function authenticateViaBrowser(options = {}) {
   const resolved = resolveIamClientId(options);
   if (resolved.error) {
     const err = new Error(
-      'IAM_CLIENT_ID is not configured in this shell (Worker secrets are not visible to the CLI). '
-      + 'For agentsam login export IAM_CLIENT_ID=iam_cli_agentsam and IAM_OAUTH_ISSUER=https://inneranimalmedia.com. '
-      + 'Google/Cloudflare identity starts on local-studio APP HOST (agentsam.app.json hosts[]), not PLATFORM issuer.',
+      'IAM_CLIENT_ID is not in this shell. Worker runtime already has it '
+      + '(Local Studio Production: IAM_CLIENT_ID=iam_agentsam_sdk_web) — secrets are not visible to the CLI. '
+      + 'Prefer: agentsam api-key create --store keychain --activate && source ~/.agentsam/load-agent-env.sh. '
+      + 'Browser login needs IAM_CLIENT_ID (+ IAM_OAUTH_ISSUER) exported in the shell from your vault — do not invent a client id.',
     );
     err.code = 'iam_oauth_not_configured';
     throw err;

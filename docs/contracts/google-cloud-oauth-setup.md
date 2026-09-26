@@ -72,7 +72,10 @@ https://agentsam.inneranimalmedia.com/api/oauth/google/start
 | AgentSam CLI (`agentsam login`) | Loopback `http://127.0.0.1:<port>/callback` (RFC 8252) |
 | `agentsam gcloud auth login` | Google SDK `http://localhost:8085/` (Path A) |
 
-Loopback remains correct for **native AgentSam CLI** login to InnerAnimalMedia (`iam_cli_agentsam`) — same RFC 8252 pattern as gcloud. Hosted HTTPS redirects are for browser apps and Local Studio.
+Loopback remains correct for **native AgentSam CLI** login when the shell
+has the same OAuth client the Worker uses (`IAM_CLIENT_ID=iam_agentsam_sdk_web`
+on Local Studio Production) — RFC 8252 PKCE. Do not invent alternate client ids.
+Hosted HTTPS redirects are for browser apps and Local Studio.
 
 ---
 

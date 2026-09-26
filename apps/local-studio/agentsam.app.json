@@ -110,7 +110,11 @@
   "secrets": {
     "platform_server": [
       "VAULT_MASTER_KEY",
-      "AGENTSAM_BRIDGE_KEY"
+      "AGENTSAM_BRIDGE_KEY",
+      "IAM_CLIENT_ID",
+      "IAM_CLIENT_SECRET",
+      "IAM_OAUTH_ISSUER",
+      "CLOUDFLARE_OAUTH_CLIENT_ID"
     ],
     "user_credentials": [
       "OPENAI_API_KEY",
