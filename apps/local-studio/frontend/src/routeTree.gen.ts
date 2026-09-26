@@ -232,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/trails/$trailId': typeof appsTrailsTrailIdRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
   '/artifacts/': typeof appsArtifactsIndexRoute
+  '/artifacts/tickets/': typeof appsArtifactsTicketsIndexRoute
   '/projects/': typeof appsProjectsIndexRoute
   '/settings/': typeof appsSettingsIndexRoute
   '/trails/': typeof appsTrailsIndexRoute
