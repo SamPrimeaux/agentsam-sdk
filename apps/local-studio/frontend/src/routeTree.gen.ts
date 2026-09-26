@@ -25,6 +25,7 @@ import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiCloudflareRouteImport } from './routes/api/cloudflare'
 import { Route as ApiGithubRouteImport } from './routes/api/github'
 import { Route as appsSettingsIndexRouteImport } from './routes/(apps)/settings/index'
+import { Route as appsSettingsUnitRouteImport } from './routes/(apps)/settings/$unit'
 import { Route as appsSettingsIntegrationsRouteImport } from './routes/(apps)/settings/integrations'
 import { Route as appsSettingsKeysRouteImport } from './routes/(apps)/settings/keys'
 import { Route as appsSettingsThemesRouteImport } from './routes/(apps)/settings/themes'
@@ -113,6 +114,11 @@ const appsSettingsIndexRoute = appsSettingsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => appsSettingsRoute,
 } as any)
+const appsSettingsUnitRoute = appsSettingsUnitRouteImport.update({
+  id: '/$unit',
+  path: '/$unit',
+  getParentRoute: () => appsSettingsRoute,
+} as any)
 const appsSettingsIntegrationsRoute =
   appsSettingsIntegrationsRouteImport.update({
     id: '/integrations',
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/settings/$unit': typeof appsSettingsUnitRoute
   '/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/settings/keys': typeof appsSettingsKeysRoute
   '/settings/themes': typeof appsSettingsThemesRoute
@@ -190,6 +197,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/settings/$unit': typeof appsSettingsUnitRoute
   '/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/settings/keys': typeof appsSettingsKeysRoute
   '/settings/themes': typeof appsSettingsThemesRoute
@@ -216,6 +224,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/(apps)/settings/$unit': typeof appsSettingsUnitRoute
   '/(apps)/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/(apps)/settings/keys': typeof appsSettingsKeysRoute
   '/(apps)/settings/themes': typeof appsSettingsThemesRoute
@@ -243,6 +252,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/settings/$unit'
     | '/settings/integrations'
     | '/settings/keys'
     | '/settings/themes'
@@ -267,6 +277,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/settings/$unit'
     | '/settings/integrations'
     | '/settings/keys'
     | '/settings/themes'
@@ -292,6 +303,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/(apps)/settings/$unit'
     | '/(apps)/settings/integrations'
     | '/(apps)/settings/keys'
     | '/(apps)/settings/themes'
@@ -437,6 +449,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appsSettingsIndexRouteImport
       parentRoute: typeof appsSettingsRoute
     }
+    '/(apps)/settings/$unit': {
+      id: '/(apps)/settings/$unit'
+      path: '/$unit'
+      fullPath: '/settings/$unit'
+      preLoaderRoute: typeof appsSettingsUnitRouteImport
+      parentRoute: typeof appsSettingsRoute
+    }
     '/(apps)/settings/integrations': {
       id: '/(apps)/settings/integrations'
       path: '/integrations'
@@ -502,6 +521,7 @@ const appsAgentsamRouteWithChildren = appsAgentsamRoute._addFileChildren(
 )
 
 interface appsSettingsRouteChildren {
+  appsSettingsUnitRoute: typeof appsSettingsUnitRoute
   appsSettingsIntegrationsRoute: typeof appsSettingsIntegrationsRoute
   appsSettingsKeysRoute: typeof appsSettingsKeysRoute
   appsSettingsThemesRoute: typeof appsSettingsThemesRoute
@@ -509,6 +529,7 @@ interface appsSettingsRouteChildren {
 }
 
 const appsSettingsRouteChildren: appsSettingsRouteChildren = {
+  appsSettingsUnitRoute: appsSettingsUnitRoute,
   appsSettingsIntegrationsRoute: appsSettingsIntegrationsRoute,
   appsSettingsKeysRoute: appsSettingsKeysRoute,
   appsSettingsThemesRoute: appsSettingsThemesRoute,
