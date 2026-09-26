@@ -252,7 +252,7 @@ export function WorkShell({
             type="button"
             key={item.id}
             data-active={current === item.id}
-            onClick={() => onNavigate(item.href)}
+            onClick={() => onNavigate(navHref(item, surface))}
           >
             <item.icon size={17} />
             {item.label}
