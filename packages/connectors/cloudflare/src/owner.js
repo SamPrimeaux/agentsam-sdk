@@ -1,13 +1,10 @@
 /**
  * Cloudflare connection ownership is derived from the REAL AgentSam identity
  * session (packages/identity — the same `session` cookie set by
- * /api/auth/login and every OAuth login callback). This previously
- * hand-rolled its own cookie name (`agentsam_session`) and session table
- * names (`agentsam_sessions`/`sessions`/`identity_sessions`) that never
- * matched the actual identity system (cookie name `session`, sessions
- * resolved via identity.sessionFromRequest against the real adapter) — so
- * this connector could never actually authenticate anyone. Fixed to call
- * the real identity service instead of guessing at its storage shape.
+ * /api/auth/login and every OAuth login callback).
+ *
+ * Host MUST pass `app` + `routeRegistry` (APP contract). createIdentityService
+ * is fail-closed without them (AUTH_APP_UNRESOLVED).
  *
  * Browser-submitted account_id / user_id / owner_id / X-User-Id are never authority.
  */
@@ -37,7 +34,14 @@ export function rejectUntrustedOwnerHints(request, url, body = {}) {
   return { ignoredXUserId: Boolean(headerUser) };
 }
 
-export async function resolveAuthenticatedOwner(request, env, url, body) {
+/**
+ * @param {Request} request
+ * @param {object} env
+ * @param {URL} url
+ * @param {object} body
+ * @param {{ app?: { id: string }, routeRegistry?: object }} [options]
+ */
+export async function resolveAuthenticatedOwner(request, env, url, body, options = {}) {
   rejectUntrustedOwnerHints(request, url, body);
   // Test/portable adapters may expose an in-memory session map. Keep this
   // compatibility lane deliberately opt-in; production authority is D1.
@@ -52,16 +56,42 @@ export async function resolveAuthenticatedOwner(request, env, url, body) {
     err.code = 'unauthenticated';
     throw err;
   }
+
+  const app = options.app || null;
+  const routeRegistry = options.routeRegistry || null;
+  if (!app?.id || !routeRegistry) {
+    const err = new Error('AUTH_APP_UNRESOLVED');
+    err.code = 'AUTH_APP_UNRESOLVED';
+    err.message = 'Cloudflare connection owner resolution requires host app + routeRegistry';
+    throw err;
+  }
+
   const adapter = createCloudflareD1Adapter(env.DB);
-  const identity = createIdentityService({ adapter, env });
+  const identity = createIdentityService({ adapter, env, app, routeRegistry });
   const ctx = await identity.sessionFromRequest(request);
   if (ctx?.user?.id) return String(ctx.user.id);
 
-  // Native CLI OAuth returns a bearer access token rather than a browser
-  // cookie. Resolve that token through IAM userinfo, then map the verified
-  // IAM subject to the local auth user. No caller-supplied owner id is used.
+  // Native CLI OAuth / platform access token — resolve via IAM userinfo, then
+  // map verified IAM subject to the local auth user. No caller-supplied owner.
   const bearer = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   if (bearer) {
+    // Reusable aak_* account API keys are verified by hash in D1 (same table as whoami).
+    if (bearer.startsWith('aak_')) {
+      try {
+        const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(bearer));
+        const hash = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+        const row = await env.DB.prepare(
+          `SELECT account_id FROM agentsam_api_credentials
+            WHERE credential_hash = ?
+              AND revoked_at_unix IS NULL
+              AND (expires_at_unix IS NULL OR expires_at_unix > ?)
+            LIMIT 1`,
+        ).bind(hash, Math.floor(Date.now() / 1000)).first();
+        if (row?.account_id) return String(row.account_id);
+      } catch {
+        /* fall through to IAM profile */
+      }
+    }
     const profile = await fetchIamProfile({
       issuer: resolveIamIssuer(env),
       accessToken: bearer,

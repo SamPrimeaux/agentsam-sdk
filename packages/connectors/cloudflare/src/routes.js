@@ -216,8 +216,14 @@ async function seedKnownCloudflareResources(env, ownerId, connectionId, cloudfla
 /**
  * @param {Request} request
  * @param {object} env
- * @param {{ defaultCapabilities?: string[] }} [options]
+ * @param {{
+ *   defaultCapabilities?: string[],
+ *   app?: { id: string },
+ *   routeRegistry?: object,
+ *   loginPath?: string,
+ * }} [options]
  *   Host app supplies default capability ids when the request omits ?capabilities=.
+ *   Host MUST supply app + routeRegistry for session owner resolution (APP contract).
  *   The connector package itself has no product-specific default set.
  */
 export async function handleCloudflareConnectionRequest(request, env, options = {}) {
@@ -236,12 +242,33 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
   }
 
   const isCallback = url.pathname === CLOUDFLARE_CALLBACK_PATH && request.method === 'GET';
+  const isStart = url.pathname === '/api/connections/cloudflare/start' && request.method === 'GET';
   let ownerId = '';
   try {
-    ownerId = await resolveAuthenticatedOwner(request, env, url, body);
+    ownerId = await resolveAuthenticatedOwner(request, env, url, body, {
+      app: options.app,
+      routeRegistry: options.routeRegistry,
+    });
   } catch (err) {
     if (!isCallback || err.code === 'untrusted_owner_hint') {
       const code = err.code || 'unauthenticated';
+      // Browser GET /start without a session → Local Studio login, then return here.
+      if (isStart && (code === 'unauthenticated' || code === 'AUTH_APP_UNRESOLVED')) {
+        if (code === 'AUTH_APP_UNRESOLVED' && (!options.app?.id || !options.routeRegistry)) {
+          return json({
+            ok: false,
+            error: 'AUTH_APP_UNRESOLVED',
+            message: 'Host must pass app + routeRegistry into Cloudflare connection handler',
+          }, 500);
+        }
+        const loginPath = String(options.loginPath || '/auth/login').startsWith('/')
+          ? String(options.loginPath || '/auth/login')
+          : `/${options.loginPath}`;
+        const next = `${url.pathname}${url.search}`;
+        const login = new URL(loginPath, url.origin);
+        login.searchParams.set('next', next);
+        return redirect(login.toString());
+      }
       return json({ ok: false, error: code }, code === 'untrusted_owner_hint' ? 400 : 401);
     }
   }

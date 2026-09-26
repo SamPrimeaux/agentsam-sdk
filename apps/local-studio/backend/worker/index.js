@@ -670,6 +670,9 @@ export default {
     if (isCfConnection) {
       return handleCloudflareConnectionRequest(request, env, {
         defaultCapabilities: LOCAL_STUDIO_CLOUDFLARE_CAPABILITIES,
+        app: APP,
+        routeRegistry: ROUTE_REGISTRY,
+        loginPath: LOGIN_PATH,
       });
     }
 
