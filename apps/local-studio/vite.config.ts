@@ -62,6 +62,10 @@ const navRuntimeAliases = [
     find: "lucide-react",
     replacement: studioNm("lucide-react"),
   },
+  {
+    find: "recharts",
+    replacement: studioNm("recharts"),
+  },
 ];
 const cmsBackendSource = resolvePath(
   fileURLToPath(new URL("../client-cms-editor/backend/src", import.meta.url)),
