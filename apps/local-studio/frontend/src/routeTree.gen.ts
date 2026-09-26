@@ -287,7 +287,9 @@ export interface FileRoutesById {
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
   '/(apps)/artifacts/': typeof appsArtifactsIndexRoute
-  '/(apps)/artifacts/tickets': typeof appsArtifactsTicketsRoute
+  '/(apps)/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
+  '/(apps)/artifacts/tickets/': typeof appsArtifactsTicketsIndexRoute
+  '/(apps)/artifacts/tickets/$ticketId': typeof appsArtifactsTicketsTicketIdRoute
   '/(apps)/projects/': typeof appsProjectsIndexRoute
   '/(apps)/projects/$projectId': typeof appsProjectsProjectIdRoute
   '/(apps)/settings/$unit': typeof appsSettingsUnitRoute
