@@ -186,7 +186,6 @@
     "packages/theme-handyman-site",
     "packages/theme-insurance-site",
     "packages/theme-shinshu-site",
-    "examples/local-studio-demo",
     "packages/theme-scenes"
   ],
   "scripts": {
