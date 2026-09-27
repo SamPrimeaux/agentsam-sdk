@@ -1,7 +1,7 @@
 {
   "name": "@inneranimalmedia/agentsam-content",
   "version": "0.1.0",
-  "description": "Portable content asset system: contracts, providers, processors, intelligence, and runtime for AgentSam Content Studio.",
+  "description": "Portable content/library peer domain over Asset Core: lifecycle, usage, providers, intelligence, and createContentRuntime(). BrandPack remains peer brand authority.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts/index.d.ts",
+      "default": "./dist/contracts/index.js"
     },
     "./core": {
       "types": "./dist/core/index.d.ts",
@@ -35,6 +39,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run"
+  },
+  "dependencies": {
+    "@inneranimalmedia/agentsam-assets-core": "*"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

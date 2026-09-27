@@ -1,16 +1,21 @@
 /**
  * @inneranimalmedia/agentsam-content
  *
- * The reusable content asset system underneath CMSs, ecommerce,
- * Brand Studio, Local Studio, generated content, 3D and future apps.
+ * Peer domain over shared Asset Core (`@inneranimalmedia/agentsam-assets-core`).
+ * BrandPack owns brand-scoped assets; Content owns library/lifecycle/usage.
+ * Providers own representations only. Hosts inject capabilities + knowledge.
  *
  * Layers:
- *   core          — provider-independent contracts (ContentAsset, events, lifecycle)
- *   providers     — cloudflare-images / cloudflare-stream / r2 / google-drive / local / cms
- *   processors    — deterministic byte probes (image / video / model-3d / document)
- *   intelligence  — machine pass first, semantic enrichment second, RAG last
- *   runtime       — createContentRuntime(): store, events, jobs, permissions, assistant
+ *   contracts     — BrandResolver, KnowledgeAdapter, LocalContentHost, capabilities
+ *   core          — ContentAsset library state (references Asset Core ids)
+ *   providers     — legacy adapters (capability-split contracts preferred)
+ *   processors    — deterministic byte probes
+ *   intelligence  — machine pass first; knowledge via host adapter
+ *   runtime       — createContentRuntime() + runtime.capabilities()
+ *
+ * SSOT: docs/content-studio/REVISION_GATE_2026-09-27.md
  */
+export * from "./contracts/index.js";
 export * from "./core/index.js";
 export * from "./providers/index.js";
 export * from "./processors/index.js";
