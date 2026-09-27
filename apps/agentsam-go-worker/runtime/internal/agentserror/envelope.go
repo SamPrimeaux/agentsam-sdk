@@ -57,6 +57,7 @@ type policy struct {
 var policies = map[string]policy{
 	"input_invalid":         {code: "INVALID_ARGUMENT", severity: "blocking_user_fixable", owner: "user", remediation: "change_input", grpc: 3},
 	"unsupported_operation": {code: "UNIMPLEMENTED", severity: "blocking_user_fixable", owner: "user", remediation: "change_configuration", grpc: 12},
+	"auth_required":         {code: "UNAUTHENTICATED", severity: "blocking_user_fixable", owner: "user", remediation: "change_configuration", grpc: 16},
 	"unknown":               {code: "UNKNOWN", severity: "blocking_internal", owner: "unknown", remediation: "inspect_platform", grpc: 2},
 }
 

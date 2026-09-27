@@ -9,20 +9,38 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
+	"github.com/inneranimalmedia/agentsam-go-worker/internal/execapi"
 	"github.com/inneranimalmedia/agentsam-go-worker/internal/health"
+	"github.com/inneranimalmedia/agentsam-go-worker/internal/localauth"
 	"github.com/inneranimalmedia/agentsam-go-worker/internal/runtimeinfo"
 )
 
 // agentsamd — AgentSam machine/runtime daemon (local host).
 // Distinct from agentsam-go-worker (Cloudflare SERVICE).
-// Speaks agentsam.runtime.v1 for identity/health/capabilities (MVP).
+// Speaks agentsam.runtime.v1 for identity/health/capabilities/exec/pty.
+
+const tokenHeader = "X-Agentsamd-Token"
 
 func main() {
 	listen := flag.String("listen", envOr("AGENTSAMD_LISTEN", "127.0.0.1:18765"), "HTTP listen address")
 	flag.Parse()
+
+	tokenStore, err := localauth.LoadOrCreate()
+	if err != nil {
+		log.Fatalf("agentsamd: pairing token init failed: %v", err)
+	}
+	log.Printf("agentsamd: pairing token ready at %s (first-run clients must present it once)", tokenStore.Path())
+
+	checkHeaderAuth := func(r *http.Request) bool {
+		return tokenStore.Verify(r.Header.Get(tokenHeader))
+	}
+	checkQueryAuth := func(token string) bool {
+		return tokenStore.Verify(token)
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -113,9 +131,15 @@ func main() {
 	mux.HandleFunc("/v1/language/packs", handleLanguagePacks)
 	mux.HandleFunc("/v1/language/packs/install", handleLanguagePackInstall)
 
+	// Real exec/pty surfaces. Both require the local pairing token.
+	mux.HandleFunc("/v1/exec", execapi.ExecHandler(checkHeaderAuth))
+	mux.HandleFunc("/v1/pty", execapi.PTYHandler(checkQueryAuth))
+
+	handler := corsMiddleware(mux)
+
 	server := &http.Server{
 		Addr:              *listen,
-		Handler:           mux,
+		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -131,6 +155,29 @@ func main() {
 	<-stop
 	_ = server.Close()
 	fmt.Fprintln(os.Stderr, "agentsamd stopped")
+}
+
+// corsMiddleware allows any HTTPS/HTTP origin to *read* responses — the
+// pairing token, not Origin, is the actual security boundary (agentsamd is
+// bound to 127.0.0.1 only; the threat model is a malicious page in another
+// tab, and Origin allowlisting is trivially spoofable/unhelpful there
+// compared to a token that page can't read).
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		if origin != "" {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Vary", "Origin")
+			w.Header().Set("Access-Control-Allow-Headers", strings.Join([]string{tokenHeader, "Content-Type"}, ", "))
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+			w.Header().Set("Access-Control-Max-Age", "600")
+		}
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func envOr(key, fallback string) string {
