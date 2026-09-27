@@ -328,8 +328,9 @@ async function listSources(env, accountId) {
           }
         : { status: 'not_available' },
       local_sqlite: {
-        status: 'requires_local_runtime',
-        message: 'Local SQLite is exposed only by an attached AgentSam local runtime; no browser fake connection is created.',
+        status: 'attachable',
+        message:
+          'Attach AgentSam Local Studio / local runtime to open `.agentsam/data/agentsam.sqlite` (same DB as `agentsam db`). Never invented in the hosted browser.',
       },
     },
   };

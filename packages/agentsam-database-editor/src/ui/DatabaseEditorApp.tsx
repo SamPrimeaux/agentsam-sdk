@@ -40,11 +40,21 @@ import "./database-editor.css";
 type View = "overview" | "data" | "sql" | "schema";
 type EditMode = "insert" | "edit";
 
+import type { LocalDatabaseHost, ProviderCapability } from "./local-host";
+import {
+  DATABASE_PROVIDER_THEMES,
+  cssVarsForTheme,
+  themeIdForProviderFamily,
+} from "./provider-theme";
+
 export type DatabaseEditorAppProps = {
   client?: DatabaseStudioClient;
   initialSourceId?: string;
   compact?: boolean;
   onOpenConnections?: () => void;
+  /** Machine-local SQLite host (Local Studio / Tauri / agentsamd). */
+  localHost?: LocalDatabaseHost;
+  onAskAgentSam?: (context: Record<string, unknown>) => void;
 };
 
 function providerFamily(source?: DatabaseSource | null) {
@@ -267,6 +277,8 @@ export function DatabaseEditorApp({
   initialSourceId,
   compact = false,
   onOpenConnections,
+  localHost,
+  onAskAgentSam,
 }: DatabaseEditorAppProps) {
   const client = useMemo(() => providedClient || createDatabaseStudioClient(), [providedClient]);
   const [catalog, setCatalog] = useState<DatabaseSourcesResponse | null>(null);
@@ -288,11 +300,20 @@ export function DatabaseEditorApp({
   const [busyMutation, setBusyMutation] = useState(false);
   const [editMode, setEditMode] = useState<EditMode | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [localCapability, setLocalCapability] = useState<ProviderCapability>("attachable");
+  const [attachOpen, setAttachOpen] = useState(false);
+  const [lastSourceByFamily, setLastSourceByFamily] = useState<Record<string, string>>({});
 
   const source = useMemo(
     () => catalog?.sources.find((item) => item.id === sourceId) || null,
     [catalog, sourceId],
   );
+
+  const family = providerFamily(source);
+  const themeVars = useMemo(() => {
+    const theme = DATABASE_PROVIDER_THEMES[themeIdForProviderFamily(family === "none" ? "local" : family)];
+    return cssVarsForTheme(theme);
+  }, [family]);
 
   const loadSources = useCallback(async () => {
     setLoading(true);
@@ -300,6 +321,19 @@ export function DatabaseEditorApp({
     try {
       const next = await client.listSources();
       setCatalog(next);
+      if (localHost) {
+        try {
+          const status = await localHost.status();
+          setLocalCapability(status === "unavailable" ? "unavailable" : status === "available" ? "available" : "attachable");
+        } catch {
+          setLocalCapability("attachable");
+        }
+      } else {
+        const localConn = next.connections?.local_sqlite?.status;
+        if (localConn === "connected") setLocalCapability("available");
+        else if (next.sources.some((s) => providerFamily(s) === "local")) setLocalCapability("available");
+        else setLocalCapability("attachable");
+      }
       setSourceId((current) => {
         if (current && next.sources.some((item) => item.id === current)) return current;
         if (initialSourceId && next.sources.some((item) => item.id === initialSourceId)) return initialSourceId;
@@ -310,11 +344,44 @@ export function DatabaseEditorApp({
     } finally {
       setLoading(false);
     }
-  }, [client, initialSourceId]);
+  }, [client, initialSourceId, localHost]);
 
   useEffect(() => {
     void loadSources();
   }, [loadSources]);
+
+  useEffect(() => {
+    if (source) {
+      const fam = providerFamily(source);
+      setLastSourceByFamily((prev) => (prev[fam] === source.id ? prev : { ...prev, [fam]: source.id }));
+    }
+  }, [source]);
+
+  const attachAgentsamLocal = useCallback(async () => {
+    if (!localHost) {
+      setError("Local runtime host is not wired in this shell.");
+      return;
+    }
+    try {
+      setBusyMutation(true);
+      const refs = await localHost.list();
+      const agentsam = refs.find((r) => r.kind === "agentsam") || {
+        id: "local-sqlite:agentsam",
+        label: "AgentSam local database",
+        ref: "agentsam",
+        kind: "agentsam" as const,
+      };
+      const opened = await localHost.open(agentsam);
+      setAttachOpen(false);
+      await loadSources();
+      setSourceId(opened.sourceId);
+      setView("data");
+    } catch (caught) {
+      setError(errorText(caught));
+    } finally {
+      setBusyMutation(false);
+    }
+  }, [loadSources, localHost]);
 
   const loadMetrics = useCallback(async () => {
     if (!sourceId) return;
@@ -388,11 +455,58 @@ export function DatabaseEditorApp({
   const families = useMemo(() => {
     const map = new Map<string, DatabaseSource[]>();
     for (const item of catalog?.sources || []) {
-      const family = providerFamily(item);
-      map.set(family, [...(map.get(family) || []), item]);
+      const familyName = providerFamily(item);
+      map.set(familyName, [...(map.get(familyName) || []), item]);
     }
     return map;
   }, [catalog]);
+
+  const cloudflareCapability: ProviderCapability = families.get("cloudflare")?.length
+    ? "available"
+    : catalog?.connections?.cloudflare?.status === "connected"
+      ? "attachable"
+      : "attachable";
+  const supabaseCapability: ProviderCapability = families.get("supabase")?.length ? "available" : "attachable";
+
+  const selectProviderFamily = useCallback(
+    (target: "cloudflare" | "supabase" | "local") => {
+      const items = families.get(target) || [];
+      if (items.length) {
+        const preferred = lastSourceByFamily[target];
+        const match = items.find((item) => item.id === preferred) || items[0];
+        setSourceId(match.id);
+        return;
+      }
+      if (target === "local") {
+        setAttachOpen(true);
+        return;
+      }
+      if (target === "cloudflare") {
+        window.location.href =
+          catalog?.connections?.cloudflare?.connect_url ||
+          "/api/connections/cloudflare/start?packs=data&return_to=/database";
+        return;
+      }
+      onOpenConnections?.();
+    },
+    [catalog, families, lastSourceByFamily, onOpenConnections],
+  );
+
+  const exploreData = useCallback(async () => {
+    setView("data");
+    let nextTables = tables;
+    if (!nextTables.length && sourceId) {
+      try {
+        const listed = await client.listTables(sourceId);
+        nextTables = listed.tables || [];
+        setTables(nextTables);
+      } catch (caught) {
+        setError(errorText(caught));
+        return;
+      }
+    }
+    if (!selectedTable && nextTables[0]) setSelectedTable(nextTables[0]);
+  }, [client, selectedTable, sourceId, tables]);
 
   const filteredTables = useMemo(() => {
     const needle = tableSearch.trim().toLowerCase();
@@ -538,14 +652,13 @@ export function DatabaseEditorApp({
 
   if (!catalog?.sources.length) {
     return (
-      <div className="db-editor db-empty">
+      <div className="db-editor db-empty" style={themeVars as React.CSSProperties}>
         <Database size={28} />
         <div className="db-eyebrow">AGENTSAM DATABASE</div>
         <h1>No authorized database resources yet</h1>
         <p>
-          Connect Cloudflare to discover D1 databases. Supabase/Postgres appears when this Local
-          Studio deployment has an authorized Hyperdrive source. Local SQLite appears only through
-          a real attached local runtime.
+          Connect your Cloudflare account (data pack) to discover D1 and Hyperdrive. Local SQLite
+          attaches through AgentSam Local Studio / local runtime — never invented in the hosted browser.
         </p>
         <div className="db-empty-actions">
           <a
@@ -554,11 +667,39 @@ export function DatabaseEditorApp({
           >
             Connect Cloudflare
           </a>
+          <button className="db-button secondary" type="button" onClick={() => setAttachOpen(true)}>
+            Attach Local SQLite
+          </button>
           <button className="db-button secondary" type="button" onClick={onOpenConnections}>
             Connections
           </button>
         </div>
         {localConnection?.message ? <small>{localConnection.message}</small> : null}
+        {attachOpen ? (
+          <div className="db-modal-backdrop" role="dialog" aria-modal="true">
+            <div className="db-modal">
+              <header className="db-modal-header">
+                <div>
+                  <div className="db-eyebrow">LOCAL SQLITE</div>
+                  <strong>Attach local database</strong>
+                </div>
+                <button type="button" className="db-icon-button" onClick={() => setAttachOpen(false)} aria-label="Close">
+                  <X size={16} />
+                </button>
+              </header>
+              <footer className="db-modal-actions">
+                <button
+                  type="button"
+                  className="db-button primary"
+                  disabled={busyMutation || !localHost}
+                  onClick={() => void attachAgentsamLocal()}
+                >
+                  Open AgentSam local database
+                </button>
+              </footer>
+            </div>
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -568,31 +709,43 @@ export function DatabaseEditorApp({
       className="db-editor"
       data-provider={providerFamily(source)}
       data-compact={compact || undefined}
+      style={themeVars as React.CSSProperties}
     >
       <header className="db-toolbar">
         <div className="db-provider-tabs" aria-label="Database providers">
           <button
             type="button"
             data-active={providerFamily(source) === "cloudflare" || undefined}
-            disabled={!families.get("cloudflare")?.length}
-            onClick={() => setSourceId(families.get("cloudflare")?.[0]?.id || sourceId)}
+            data-capability={cloudflareCapability}
+            onClick={() => selectProviderFamily("cloudflare")}
+            title={
+              cloudflareCapability === "available"
+                ? "Cloudflare D1"
+                : "Connect Cloudflare (data pack) to discover D1"
+            }
           >
             <Cloud size={13} /> Cloudflare
           </button>
           <button
             type="button"
             data-active={providerFamily(source) === "supabase" || undefined}
-            disabled={!families.get("supabase")?.length}
-            onClick={() => setSourceId(families.get("supabase")?.[0]?.id || sourceId)}
+            data-capability={supabaseCapability}
+            onClick={() => selectProviderFamily("supabase")}
+            title={
+              supabaseCapability === "available"
+                ? "Postgres via Hyperdrive"
+                : "Configure Hyperdrive / Postgres connection"
+            }
           >
             <ServerCog size={13} /> Supabase
           </button>
           <button
             type="button"
             data-active={providerFamily(source) === "local" || undefined}
-            disabled={!families.get("local")?.length}
-            onClick={() => setSourceId(families.get("local")?.[0]?.id || sourceId)}
-            title={localConnection?.message || "Local SQLite"}
+            data-capability={localCapability}
+            disabled={localCapability === "unavailable"}
+            onClick={() => selectProviderFamily("local")}
+            title={localConnection?.message || "Local SQLite (AgentSam runtime)"}
           >
             <Database size={13} /> Local
           </button>
@@ -630,10 +783,36 @@ export function DatabaseEditorApp({
           <RefreshCw className={loadingMain ? "spin" : ""} size={15} />
         </button>
 
+        {onAskAgentSam ? (
+          <button
+            className="db-button secondary"
+            type="button"
+            onClick={() =>
+              onAskAgentSam({
+                provider: source?.provider,
+                sourceId: source?.id,
+                sourceLabel: source?.label,
+                engine: source?.engine,
+                selectedTable: selectedTable ? tableKey(selectedTable) : null,
+                view,
+                sqlDraft: sql,
+                currentError: error,
+                writable: Boolean(source?.writable),
+                range,
+              })
+            }
+          >
+            Ask AgentSam
+          </button>
+        ) : null}
+
         <button
           className="db-button primary db-explore"
           type="button"
-          onClick={() => setView(view === "overview" ? "data" : "overview")}
+          onClick={() => {
+            if (view === "overview") void exploreData();
+            else setView("overview");
+          }}
         >
           <Table2 size={14} />
           {view === "overview" ? "Explore Data" : "Overview"}
@@ -960,6 +1139,43 @@ export function DatabaseEditorApp({
           onClose={() => setEditMode(null)}
           onSave={saveRow}
         />
+      ) : null}
+
+      {attachOpen ? (
+        <div className="db-modal-backdrop" role="dialog" aria-modal="true">
+          <div className="db-modal">
+            <header className="db-modal-header">
+              <div>
+                <div className="db-eyebrow">LOCAL SQLITE</div>
+                <strong>Attach local database</strong>
+              </div>
+              <button type="button" className="db-icon-button" onClick={() => setAttachOpen(false)} aria-label="Close">
+                <X size={16} />
+              </button>
+            </header>
+            <div className="db-modal-fields">
+              <p style={{ margin: 0, color: "var(--db-muted)", fontSize: 13, lineHeight: 1.5 }}>
+                Local SQLite is machine-runtime only. This opens your project{" "}
+                <code>.agentsam/data/agentsam.sqlite</code> (same DB as <code>agentsam db</code>).
+                Hosted browsers without Local Studio show an attach CTA — never a fake source.
+              </p>
+            </div>
+            <footer className="db-modal-actions">
+              <button type="button" className="db-button secondary" onClick={() => setAttachOpen(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="db-button primary"
+                disabled={busyMutation || !localHost}
+                onClick={() => void attachAgentsamLocal()}
+              >
+                {busyMutation ? <Loader2 className="spin" size={14} /> : null}
+                Open AgentSam local database
+              </button>
+            </footer>
+          </div>
+        </div>
       ) : null}
     </div>
   );

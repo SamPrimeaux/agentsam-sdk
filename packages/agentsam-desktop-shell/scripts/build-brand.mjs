@@ -179,6 +179,19 @@ async function resolveIcon() {
 
 await resolveIcon();
 
+// Track whether icon.png was freshly written so we always regenerate the
+// Tauri bundle set (icns/32/128/ico). Skipping regen after a URL download leaves
+// a stale/corrupt icns and macOS bundling fails with `No matching IconType`.
+let forceIconRegen = false;
+const iconUrlUsed = String(
+  flags['icon-url'] ||
+    process.env[namespacedEnvKey] ||
+    process.env.BRAND_ICON_URL ||
+    manifest.icon_source_url ||
+    '',
+).trim();
+if (iconUrlUsed && existsSync(targetIcon)) forceIconRegen = true;
+
 // Tauri macOS bundler needs icns + sized PNGs — a lone 1024 PNG → "No matching IconType".
 const BUNDLE_ICONS = [
   'icons/32x32.png',
@@ -188,15 +201,17 @@ const BUNDLE_ICONS = [
   'icons/icon.ico',
 ];
 
-function generateIconSet() {
+function generateIconSet({ force = false } = {}) {
   if (!existsSync(targetIcon)) {
     console.warn('[build-brand] WARNING: no icons/icon.png — skipping icon set generation');
     return;
   }
   const icns = path.join(iconsDir, 'icon.icns');
   const needsRegen =
+    force ||
     !existsSync(icns) ||
     !existsSync(path.join(iconsDir, '32x32.png')) ||
+    !existsSync(path.join(iconsDir, 'icon.ico')) ||
     statSync(targetIcon).mtimeMs > statSync(icns).mtimeMs;
   if (!needsRegen) {
     console.log('[build-brand] icon set up to date (icns/png/ico present)');
@@ -218,9 +233,15 @@ function generateIconSet() {
   }
   // Restore tray/app PNG to a known good raster (tauri icon rewrites icon.png smaller).
   if (existsSync(master)) copyFileSync(master, targetIcon);
+  // Verify expected bundle icons exist.
+  for (const rel of BUNDLE_ICONS) {
+    const p = path.join(srcTauriDir, rel);
+    if (!existsSync(p)) fail(`missing bundle icon after generation: ${rel}`);
+  }
+  console.log('[build-brand] icon set ready:', BUNDLE_ICONS.join(', '));
 }
 
-generateIconSet();
+generateIconSet({ force: forceIconRegen });
 
 // --- 5. build the updater endpoint ---
 // {{target}}/{{arch}}/{{current_version}} are Tauri's own runtime
@@ -259,7 +280,7 @@ const config = {
         url: launchUrl,
       },
     ],
-    trayIcon: manifest.feature_flags?.tray === false ? undefined : { iconPath: 'icons/icon.png' },
+    trayIcon: manifest.feature_flags?.tray === false ? undefined : { iconPath: 'icons/32x32.png' },
   },
   bundle: {
     active: true,

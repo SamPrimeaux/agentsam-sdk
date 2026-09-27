@@ -9,6 +9,9 @@
   --db-grid: rgba(255,255,255,.055);
   --db-accent: #a695ff;
   --db-accent-2: #7464d8;
+  --db-danger: #ef4444;
+  --db-chart: var(--db-accent);
+  --db-toolbar: #0d0d0d;
   display: flex;
   min-height: 0;
   height: 100%;
@@ -17,13 +20,38 @@
   color: var(--db-text);
   font-family: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
 }
+.db-editor[data-provider="cloudflare"] {
+  --db-bg: #f4f5f7;
+  --db-panel: #ffffff;
+  --db-panel-2: #ffffff;
+  --db-border: rgba(70, 80, 100, 0.14);
+  --db-text: #1d1f24;
+  --db-muted: #5b6170;
+  --db-grid: rgba(70, 80, 100, 0.08);
+  --db-accent: #8b5cf6;
+  --db-accent-2: #6d28d9;
+  --db-danger: #dc2626;
+  --db-chart: #8b5cf6;
+  --db-toolbar: #eceef3;
+}
 .db-editor[data-provider="supabase"] {
+  --db-bg: #0c0f0e;
+  --db-panel: #141918;
+  --db-panel-2: #1a211f;
   --db-accent: #27c67b;
   --db-accent-2: #118f59;
+  --db-chart: #27c67b;
+  --db-toolbar: #101412;
 }
 .db-editor[data-provider="local"] {
+  --db-bg: #101218;
+  --db-panel: #171b24;
+  --db-panel-2: #1d2330;
   --db-accent: #6da4ff;
   --db-accent-2: #3b6fbe;
+  --db-border: rgba(140,170,220,.14);
+  --db-chart: #6da4ff;
+  --db-toolbar: #0d1016;
 }
 .db-loading,
 .db-empty {
@@ -36,7 +64,7 @@
 .db-empty h1 { margin: 0; font-size: 22px; font-weight: 600; }
 .db-empty p { max-width: 680px; margin: 0; color: var(--db-muted); line-height: 1.6; }
 .db-empty small { max-width: 640px; color: var(--db-muted); }
-.db-empty-actions { display: flex; gap: 8px; margin-top: 4px; }
+.db-empty-actions { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
 
 .db-toolbar {
   display: flex;
@@ -45,7 +73,7 @@
   min-height: 54px;
   padding: 8px 10px;
   border-bottom: 1px solid var(--db-border);
-  background: #0d0d0d;
+  background: var(--db-toolbar);
 }
 .db-provider-tabs,
 .db-range-tabs {
@@ -79,6 +107,9 @@
 .db-range-tabs button[data-active] {
   background: color-mix(in srgb, var(--db-accent) 18%, transparent);
   color: var(--db-text);
+}
+.db-provider-tabs button[data-capability="attachable"]:not([data-active]) {
+  opacity: 0.92;
 }
 .db-provider-tabs button:disabled,
 .db-range-tabs button:disabled,
