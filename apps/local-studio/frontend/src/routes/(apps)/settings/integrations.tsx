@@ -1,13 +1,35 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { IntegrationsPage } from "@inneranimalmedia/agentsam-key-manager/IntegrationsPage";
+import {
+  IntegrationsPage,
+  type IntegrationConnection,
+} from "@inneranimalmedia/agentsam-key-manager/IntegrationsPage";
+
+interface ApiConnectionRecord {
+  id?: string;
+  provider?: string;
+  kind?: string;
+  label?: string;
+  display_name?: string;
+  status?: string;
+  connected?: boolean;
+  granted_scopes?: string[];
+  scopes?: string[];
+  account_name?: string;
+  accountName?: string;
+  connection?: {
+    connectionId?: string;
+    scopes?: string[];
+    cloudflareAccountId?: string;
+  };
+}
 
 export const Route = createFileRoute("/(apps)/settings/integrations")({
   component: IntegrationsSettingsPage,
 });
 
 function IntegrationsSettingsPage() {
-  const [connections, setConnections] = useState([]);
+  const [connections, setConnections] = useState<IntegrationConnection[]>([]);
 
   useEffect(() => {
     let cancelled = false;
