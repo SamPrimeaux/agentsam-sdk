@@ -16,7 +16,40 @@ function parseCommon(argv = []) {
   return out;
 }
 
+export function printInspectHelp() {
+  console.log(`
+  agentsam inspect — deterministic repository world state
+
+  agentsam inspect [path]                    Inspect a repository or directory
+  agentsam inspect [path] --json             Machine-readable bounded index
+  agentsam inspect [path] --full --json      Full snapshot authority
+  agentsam inspect [path] --view files       File evidence view
+  agentsam inspect [path] --match <text>     Filter files by path/symbol/import metadata
+  agentsam inspect [path] --save-snapshot <file>
+                                               Save the content-addressed snapshot
+
+  --cwd <path>            Explicit root (legacy/automation form; positional path is preferred)
+  --view <index|files|full>
+  --index                 Bounded repository index (default)
+  --full                  Full repository snapshot
+  --limit <1-500>         File result limit
+  --facet-limit <1-200>   Facet result limit
+  --churn-days <days>     Git churn window (default: 30)
+  --system/--package/--category/--layer/--kind/--language/--role
+  --execution-domain/--tag/--path/--symbol/--import/--match <value>
+                          Deterministic metadata filters
+  --snapshot-file <file>  Project a previously saved snapshot instead of scanning
+  --save-snapshot <file>  Save the newly scanned snapshot
+  --pretty                Pretty JSON when --json is used
+
+  No model, embeddings, network, provider spend, deploy, or mutation is required.
+  Output includes content hashes, Merkle identity, file metadata, AST-derived symbols/imports,
+  packages, systems, facets, revision evidence, and trust-boundary analysis when available.
+`);
+}
+
 export async function runInspect(argv = []) {
+  if (argv.includes('--help') || argv.includes('-h')) { printInspectHelp(); return; }
   const opts = parseCommon(argv);
   let churnDays = 30;
   let view = 'index';
@@ -27,6 +60,7 @@ export async function runInspect(argv = []) {
   let snapshotFile = '';
   let saveSnapshot = '';
   const filters = {};
+  let positionalRoot = '';
   const addFilter = (field, value) => {
     const clean = String(value || '').trim();
     if (!clean) throw new Error(`inspect_${field}_value_required`);
@@ -50,8 +84,10 @@ export async function runInspect(argv = []) {
     else if (arg === '--save-snapshot') saveSnapshot = String(opts.positionals[++i] || '').trim();
     else if (filterFlags.has(arg)) addFilter(filterFlags.get(arg), opts.positionals[++i]);
     else if (arg === 'repository') continue;
+    else if (!arg.startsWith('-') && !positionalRoot) positionalRoot = arg;
     else throw new Error(`unknown inspect option: ${arg}`);
   }
+  if (positionalRoot) opts.cwd = path.resolve(opts.cwd, positionalRoot);
   if (!['full', 'index', 'files'].includes(view)) throw new Error(`invalid inspect view: ${view}`);
   if (!Number.isInteger(limit) || limit < 1 || limit > 500) throw new Error('inspect limit must be an integer from 1..500');
   if (!Number.isInteger(facetLimit) || facetLimit < 1 || facetLimit > 200) throw new Error('inspect facet limit must be an integer from 1..200');

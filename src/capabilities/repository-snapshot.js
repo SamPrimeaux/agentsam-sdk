@@ -4,7 +4,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { resolveGitContext } from '../../packages/agentsam-repository/src/git-context.js';
+import { tryResolveGitContext } from '../../packages/agentsam-repository/src/git-context.js';
 import { getRepositoryId, tryReadProjectConfig } from '../lib/project-config.js';
 import { buildMerkleTree } from '../../packages/agentsam-repository/src/merkle/index.js';
 import { gitIgnoredPaths } from '../../packages/agentsam-repository/src/merkle/git-ignore.js';
@@ -111,7 +111,23 @@ export async function repositorySnapshot({ cwd = process.cwd(), churnDays = 30 }
   if (!Number.isInteger(churnDays) || churnDays < 1 || churnDays > 3650) {
     throw new RangeError('churnDays must be an integer from 1..3650');
   }
-  const git = resolveGitContext({ cwd });
+  const requestedRoot = path.resolve(cwd);
+  if (!fs.existsSync(requestedRoot) || !fs.statSync(requestedRoot).isDirectory()) {
+    throw new Error(`repository_root_not_found:${requestedRoot}`);
+  }
+  const resolvedGit = tryResolveGitContext({ cwd: requestedRoot });
+  const git = resolvedGit || {
+    root: requestedRoot,
+    remoteUrl: '',
+    remoteHost: null,
+    repoFullName: null,
+    owner: null,
+    repo: null,
+    revisionSha: null,
+    branch: null,
+    detached: false,
+    dirty: null,
+  };
   const root = git.root;
   const ignored = await gitIgnoredPaths(root);
   const projectConfig = tryReadProjectConfig(root);
@@ -137,6 +153,7 @@ export async function repositorySnapshot({ cwd = process.cwd(), churnDays = 30 }
     repository: {
       repository_id: repositoryId,
       identity_source: projectRepositoryId ? 'project-config' : knowledge.repository_id ? 'knowledge-config' : portableRepositoryId ? 'git-remote' : 'unresolved',
+      source_kind: resolvedGit ? 'git' : 'filesystem',
       provider,
       full_name: git.repoFullName,
       remote_url: git.remoteUrl || null,

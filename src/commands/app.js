@@ -107,6 +107,75 @@ function walkFiles(dir, out = []) {
   return out;
 }
 
+function walkPackageJsonFiles(dir, out = []) {
+  if (!fs.existsSync(dir)) return out;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (['node_modules', 'dist', '.output', 'target', '.git'].includes(entry.name)) continue;
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) walkPackageJsonFiles(full, out);
+    else if (entry.name === 'package.json') out.push(full);
+  }
+  return out;
+}
+
+function npmDistributionWarnings(app) {
+  const warnings = [];
+  const installCommand = clean(app.manifest?.install?.command);
+  const declaresNpmInstall = /^npm\s+(?:i|install)\b/.test(installCommand);
+  if (!declaresNpmInstall) return warnings;
+
+  const rootPackagePath = path.join(app.dir, 'package.json');
+  if (!fs.existsSync(rootPackagePath)) {
+    return [`${app.id}: distribution: install.command advertises npm but package.json is missing`];
+  }
+
+  let rootPackage;
+  try {
+    rootPackage = readJson(rootPackagePath);
+  } catch (error) {
+    return [`${app.id}: distribution: package.json is invalid JSON: ${error.message}`];
+  }
+
+  if (app.manifest.package && rootPackage.name !== app.manifest.package) {
+    warnings.push(`${app.id}: distribution: manifest package ${app.manifest.package} does not match package.json name ${rootPackage.name || '(missing)'}`);
+  }
+  if (rootPackage.private === true) {
+    warnings.push(`${app.id}: distribution: package.json private=true but install.command advertises npm installation`);
+  }
+
+  const expectedBin = clean(app.manifest.bin || app.manifest?.entrypoints?.cli);
+  const packageBins = typeof rootPackage.bin === 'string'
+    ? [rootPackage.bin]
+    : Object.values(rootPackage.bin || {}).map(clean).filter(Boolean);
+  if (expectedBin && !packageBins.includes(expectedBin)) {
+    warnings.push(`${app.id}: distribution: package.json does not expose manifest CLI bin ${expectedBin}`);
+  }
+  if (!Array.isArray(rootPackage.files) || rootPackage.files.length === 0) {
+    warnings.push(`${app.id}: distribution: package.json has no explicit files allowlist`);
+  }
+
+  const escaping = [];
+  for (const packageFile of walkPackageJsonFiles(app.dir)) {
+    let nested;
+    try { nested = readJson(packageFile); } catch { continue; }
+    for (const group of ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies']) {
+      for (const [name, spec] of Object.entries(nested[group] || {})) {
+        if (typeof spec !== 'string' || !spec.startsWith('file:')) continue;
+        const target = path.resolve(path.dirname(packageFile), spec.slice(5));
+        const insideApp = target === app.dir || target.startsWith(`${app.dir}${path.sep}`);
+        if (!insideApp) {
+          escaping.push(`${path.relative(app.dir, packageFile)}:${group}:${name}=${spec}`);
+        }
+      }
+    }
+  }
+  if (escaping.length) {
+    warnings.push(`${app.id}: distribution: ${escaping.length} repo-local file: dependencies escape the app package (${escaping.join(', ')})`);
+  }
+
+  return warnings;
+}
+
 function validateOneApp(app, knownIds, root) {
   const errors = [];
   const warnings = [];
@@ -145,6 +214,8 @@ function validateOneApp(app, knownIds, root) {
   if (!m.entrypoints && !m.bin) {
     warnings.push(`${app.id}: neither entrypoints nor bin declared`);
   }
+
+  warnings.push(...npmDistributionWarnings(app));
 
   const hostPath = path.join(app.dir, '.agentsam', 'app.json');
   if (fs.existsSync(hostPath)) {
