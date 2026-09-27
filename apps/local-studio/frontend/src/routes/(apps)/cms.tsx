@@ -92,7 +92,7 @@ function CmsPage() {
         onSiteChange={(slug) => {
           navigate({
             to: "/cms",
-            search: (prev) => ({ ...prev, site: slug }),
+            search: { ...search, site: slug },
           });
         }}
         onNavigate={(path) => {
