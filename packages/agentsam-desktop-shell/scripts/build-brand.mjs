@@ -4,10 +4,11 @@
 //   node scripts/build-brand.mjs <brand> [--icon-url <url>]
 //   build-brand <brand> --icon-url https://asr…/icon.png
 
-import { readFileSync, writeFileSync, existsSync, copyFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, copyFileSync, mkdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
+import { spawnSync } from 'node:child_process';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -178,6 +179,49 @@ async function resolveIcon() {
 
 await resolveIcon();
 
+// Tauri macOS bundler needs icns + sized PNGs — a lone 1024 PNG → "No matching IconType".
+const BUNDLE_ICONS = [
+  'icons/32x32.png',
+  'icons/128x128.png',
+  'icons/128x128@2x.png',
+  'icons/icon.icns',
+  'icons/icon.ico',
+];
+
+function generateIconSet() {
+  if (!existsSync(targetIcon)) {
+    console.warn('[build-brand] WARNING: no icons/icon.png — skipping icon set generation');
+    return;
+  }
+  const icns = path.join(iconsDir, 'icon.icns');
+  const needsRegen =
+    !existsSync(icns) ||
+    !existsSync(path.join(iconsDir, '32x32.png')) ||
+    statSync(targetIcon).mtimeMs > statSync(icns).mtimeMs;
+  if (!needsRegen) {
+    console.log('[build-brand] icon set up to date (icns/png/ico present)');
+    return;
+  }
+  // Prefer a stable master so tauri icon doesn't overwrite the 1024 source mid-run.
+  const master = path.join(iconsDir, 'icon-1024-master.png');
+  if (!existsSync(master) || statSync(targetIcon).mtimeMs >= statSync(master).mtimeMs) {
+    copyFileSync(targetIcon, master);
+  }
+  console.log('[build-brand] generating Tauri icon set from', master);
+  const r = spawnSync(
+    'npx',
+    ['tauri', 'icon', master, '--output', iconsDir],
+    { cwd: ROOT, stdio: 'inherit', shell: process.platform === 'win32' },
+  );
+  if (r.status !== 0) {
+    fail(`tauri icon failed (exit ${r.status}) — macOS bundle needs icon.icns`);
+  }
+  // Restore tray/app PNG to a known good raster (tauri icon rewrites icon.png smaller).
+  if (existsSync(master)) copyFileSync(master, targetIcon);
+}
+
+generateIconSet();
+
 // --- 5. build the updater endpoint ---
 // {{target}}/{{arch}}/{{current_version}} are Tauri's own runtime
 // placeholders, substituted by the updater plugin itself. app_id is
@@ -218,7 +262,7 @@ const config = {
   },
   bundle: {
     active: true,
-    icon: ['icons/icon.png'],
+    icon: BUNDLE_ICONS,
   },
   plugins: {
     'deep-link': {

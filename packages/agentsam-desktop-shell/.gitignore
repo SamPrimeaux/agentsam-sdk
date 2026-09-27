@@ -4,3 +4,7 @@ node_modules/
 dist/
 src-tauri/target/
 src-tauri/gen/
+
+# Tauri icon generators (desktop uses icns/ico/png only)
+src-tauri/icons/ios/
+src-tauri/icons/android/
