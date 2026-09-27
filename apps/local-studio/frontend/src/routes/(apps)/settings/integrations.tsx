@@ -21,15 +21,29 @@ function IntegrationsSettingsPage() {
           : Array.isArray(data.items)
             ? data.items
             : [];
+        // IntegrationsPage is OAuth-only — BYOK keys belong on Keys & Secrets.
+        const oauthOnly = list.filter((c) => c?.kind === "oauth" || c?.provider === "cloudflare");
         setConnections(
-          list.map((c) => ({
-            id: c.id || c.provider,
-            provider: c.provider || c.id,
-            label: c.label || c.provider || "Connection",
-            status: c.status || (c.connected ? "active" : "invalid"),
-            granted_scopes: c.granted_scopes || c.scopes || [],
-            account_name: c.account_name || c.accountName || undefined,
-          })),
+          oauthOnly.map((c) => {
+            const raw = String(c.status || "").toLowerCase();
+            const connected = raw === "connected" || raw === "active" || c.connected === true;
+            return {
+              id: c.id || c.connection?.connectionId || c.provider,
+              provider: c.provider || c.id,
+              label: c.label || c.display_name || c.provider || "Connection",
+              status: connected ? "connected" : raw || "not_configured",
+              granted_scopes:
+                c.granted_scopes ||
+                c.scopes ||
+                c.connection?.scopes ||
+                [],
+              account_name:
+                c.account_name ||
+                c.accountName ||
+                c.connection?.cloudflareAccountId ||
+                undefined,
+            };
+          }),
         );
       } catch {
         /* empty until connected */

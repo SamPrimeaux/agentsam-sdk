@@ -307,7 +307,7 @@ export async function revokeCloudflareUserOauthTokens(env, ownerId) {
   let row = null;
   try {
     row = await env.DB.prepare(
-      `SELECT id, user_id, account_identifier, access_token, access_token_encrypted,
+      `SELECT user_id, account_identifier, access_token, access_token_encrypted,
               scopes, scope, expires_at, metadata_json
        FROM user_oauth_tokens
        WHERE user_id = ? AND LOWER(provider) = ?

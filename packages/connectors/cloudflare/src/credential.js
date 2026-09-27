@@ -50,8 +50,10 @@ export function mapCloudflareOauthRowToConnection(row, ownerId) {
   } catch {
     metaStatus = null;
   }
+  // user_oauth_tokens PK is (user_id, provider, account_identifier) — no `id` column.
+  const accountKey = clean(row.account_identifier) || `cf_oauth_${ownerId}`;
   return {
-    connectionId: row.id != null ? String(row.id) : `uot_${ownerId}`,
+    connectionId: accountKey,
     ownerId,
     cloudflareAccountId: accountIdFromRow(row),
     scopes: scopesFromRow(row),
@@ -70,7 +72,7 @@ export async function loadCloudflareConnectionRecord(env, ownerId) {
   let row;
   try {
     row = await env.DB.prepare(`
-      SELECT id, user_id, provider, account_identifier, account_display, account_email,
+      SELECT user_id, provider, account_identifier, account_display, account_email,
              scope, scopes, expires_at, metadata_json, is_active, revoked_at,
              created_at, updated_at
       FROM user_oauth_tokens
@@ -80,7 +82,8 @@ export async function loadCloudflareConnectionRecord(env, ownerId) {
       ORDER BY updated_at DESC
       LIMIT 1
     `).bind(ownerId).first();
-  } catch {
+  } catch (err) {
+    console.error('loadCloudflareConnectionRecord_failed', String(err?.message || err));
     return null;
   }
   return mapCloudflareOauthRowToConnection(row, ownerId);
@@ -95,7 +98,7 @@ export async function loadCloudflareFromUserOauthTokens(env, ownerId, options = 
   let row;
   try {
     row = await env.DB.prepare(`
-      SELECT id, user_id, provider, account_identifier, account_display, account_email,
+      SELECT user_id, provider, account_identifier, account_display, account_email,
              access_token, refresh_token, access_token_encrypted, refresh_token_encrypted,
              scope, scopes, expires_at, metadata_json, is_active
       FROM user_oauth_tokens
@@ -105,8 +108,9 @@ export async function loadCloudflareFromUserOauthTokens(env, ownerId, options = 
       ORDER BY updated_at DESC
       LIMIT 1
     `).bind(ownerId).first();
-  } catch {
+  } catch (err) {
     // Table may not exist on SDK-only D1 fixtures
+    console.error('loadCloudflareFromUserOauthTokens_failed', String(err?.message || err));
     return null;
   }
   if (!row) return null;
