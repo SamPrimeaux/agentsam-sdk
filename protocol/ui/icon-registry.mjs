@@ -116,6 +116,7 @@ export const ICON_CATALOG = Object.freeze({
   logs: { category: 'observability', label: 'Logs' },
 });
 
+/** @type {Readonly<Record<string, string>>} */
 export const CLI_ICON_GLYPHS = Object.freeze({
   generic: '●',
   inspect: '◇',
