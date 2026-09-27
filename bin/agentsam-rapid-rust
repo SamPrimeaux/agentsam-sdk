@@ -1,0 +1,36 @@
+#!/usr/bin/env node
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(here, '..');
+const args = process.argv.slice(2);
+const candidates = [
+  process.env.AGENTSAM_RAPID_RUST_BIN,
+  path.join(os.homedir(), '.agentsam', 'bin', 'agentsam-rapid-rust-native'),
+  path.join(root, 'packages', 'agentsam-rapid-rust', 'target', 'release', 'agentsam-rapid-rust'),
+].filter(Boolean);
+
+for (const candidate of candidates) {
+  if (fs.existsSync(candidate)) {
+    const result = spawnSync(candidate, args, { stdio: 'inherit' });
+    process.exit(result.status ?? 1);
+  }
+}
+
+const manifest = path.join(root, 'packages', 'agentsam-rapid-rust', 'Cargo.toml');
+if (!fs.existsSync(manifest)) {
+  console.error('AgentSam Rapid Rust source is missing from this installation.');
+  process.exit(2);
+}
+const cargo = spawnSync('cargo', ['--version'], { stdio: 'ignore' });
+if (cargo.status !== 0) {
+  console.error('Rust/Cargo is required. Install Rust, then run: agentsam rust doctor');
+  process.exit(2);
+}
+console.error('AgentSam Rapid Rust native binary is not installed; compiling local CLI source…');
+const result = spawnSync('cargo', ['run', '--quiet', '--manifest-path', manifest, '--', ...args], { stdio: 'inherit' });
+process.exit(result.status ?? 1);

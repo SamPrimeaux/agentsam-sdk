@@ -1,0 +1,12 @@
+[package]
+name = "{{PROJECT_NAME}}-worker"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+shared_core = { package = "{{PROJECT_NAME}}-core", path = "../core" }
+worker = "{{WORKER_VERSION}}"
+serde_json = "1.0"

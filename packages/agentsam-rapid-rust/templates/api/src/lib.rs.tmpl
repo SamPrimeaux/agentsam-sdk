@@ -1,0 +1,17 @@
+use serde_json::json;
+use worker::*;
+
+#[event(fetch)]
+pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
+    Router::new()
+        .get("/", |_req, _ctx| Response::ok("AgentSam Rust/Wasm Worker"))
+        .get("/health", |_req, _ctx| {
+            Response::from_json(&json!({
+                "status": "ok",
+                "runtime": "cloudflare-workers-rust-wasm",
+                "project": "{{PROJECT_NAME}}"
+            }))
+        })
+        .run(req, env)
+        .await
+}

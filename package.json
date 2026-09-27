@@ -112,7 +112,9 @@
     "agentsam": "bin/agentsam",
     "agentsam-sdk": "bin/agentsam",
     "agentsam-scaffold": "bin/scaffold.mjs",
-    "agentsam-auth-portal": "packages/identity/scripts/preview-auth-portal.mjs"
+    "agentsam-auth-portal": "packages/identity/scripts/preview-auth-portal.mjs",
+    "agentsam-rapid-rust": "bin/agentsam-rapid-rust",
+    "agentsam-rust": "bin/agentsam-rapid-rust"
   },
   "files": [
     "src",
@@ -155,7 +157,9 @@
     "packages/theme-handyman-site",
     "packages/theme-insurance-site",
     "packages/theme-shinshu-site",
-    "packages/theme-scenes"
+    "packages/theme-scenes",
+    "packages/agentsam-rapid-rust",
+    "scripts/build_rapid_rust_cli.py"
   ],
   "workspaces": [
     "packages/agentsam-shell-kit",

@@ -1,0 +1,32 @@
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
+use worker::*;
+
+type HmacSha256 = Hmac<Sha256>;
+
+#[event(fetch)]
+pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
+    Router::new()
+        .post_async("/verify-signature", |mut req, ctx| async move {
+            let secret = ctx.secret("API_SECRET")?.to_string();
+            let provided = match req.headers().get("X-Signature")? {
+                Some(value) => value,
+                None => return Response::error("missing X-Signature", 401),
+            };
+            let provided = match hex::decode(provided.trim()) {
+                Ok(value) => value,
+                Err(_) => return Response::error("invalid signature encoding", 400),
+            };
+            let payload = req.bytes().await?;
+            let mut mac = HmacSha256::new_from_slice(secret.as_bytes())
+                .map_err(|_| Error::RustError("invalid HMAC key".into()))?;
+            mac.update(&payload);
+            if mac.verify_slice(&provided).is_ok() {
+                Response::ok("signature valid")
+            } else {
+                Response::error("invalid signature", 403)
+            }
+        })
+        .run(req, env)
+        .await
+}

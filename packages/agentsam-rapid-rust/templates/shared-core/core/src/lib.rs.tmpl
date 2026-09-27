@@ -1,0 +1,23 @@
+/// Pure Rust domain logic: no Cloudflare, browser, or Tauri dependency.
+pub fn normalize_resource_key(input: &str) -> String {
+    input
+        .trim()
+        .to_ascii_lowercase()
+        .chars()
+        .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '-' })
+        .collect::<String>()
+        .split('-')
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>()
+        .join("-")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalizes_keys_deterministically() {
+        assert_eq!(normalize_resource_key("  Hello / World  "), "hello-world");
+    }
+}

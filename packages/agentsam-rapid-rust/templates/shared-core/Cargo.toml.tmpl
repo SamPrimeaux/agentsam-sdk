@@ -1,0 +1,9 @@
+[workspace]
+members = ["core", "worker"]
+resolver = "2"
+
+[profile.release]
+lto = true
+strip = "debuginfo"
+codegen-units = 1
+opt-level = "s"

@@ -39,6 +39,7 @@ import { runEval } from './commands/eval.js';
 import { runMcp } from './commands/mcp.js';
 import { runCloudflare } from './commands/cloudflare.js';
 import { runGo } from './commands/go.js';
+import { runRust } from './commands/rust.js';
 import { runWhoami } from './commands/whoami.js';
 import { runTerminal } from './commands/terminal.js';
 import { runApiKey } from './commands/api-key.js';
@@ -133,6 +134,7 @@ function printLegacyHelp() {
     agentsam eval context      Offline context-strategy/economics fixtures (--help)
     agentsam cloudflare        Capabilities + CF OAuth packs (agentsam cloudflare login --pack agentsam)
     agentsam go                Go runtime discovery/build/deploy (Cloudflare worker-container)
+    agentsam rust              Rust/Wasm scaffold/doctor/check/build/dev/deploy (explicit deploy)
     agentsam start-local       Local PTY on ws://127.0.0.1:3099 (no tunnel, no Cloudflare)
     agentsam ollama            Opt-in local Ollama setup/status/model management
     agentsam shell             Interactive Agent Sam slash-command shell
@@ -566,6 +568,13 @@ if (command === '--version' || command === '-v') {
   } catch (e) {
     if (!e?.reported) reportCliError(e);
     process.exitCode = 1;
+  }
+} else if (command === 'rust' || command === 'wasm' || command === 'rapid-rust') {
+  try {
+    await runRust(rest);
+  } catch (e) {
+    if (!e?.reported) reportCliError(e);
+    process.exitCode = Number(e?.exitCode || 1);
   }
 } else if (command === 'login') {
   try {

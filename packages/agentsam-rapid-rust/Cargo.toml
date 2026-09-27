@@ -1,0 +1,18 @@
+[package]
+name = "agentsam-rapid-rust"
+version = "0.1.0"
+edition = "2021"
+description = "AgentSam native scaffolder and lifecycle CLI for Cloudflare Rust/Wasm Workers"
+license = "MIT"
+
+[[bin]]
+name = "agentsam-rapid-rust"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+serde_json = "1.0"
+
+[dev-dependencies]
+tempfile = "3.23"

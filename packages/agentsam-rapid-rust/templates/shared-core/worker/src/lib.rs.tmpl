@@ -1,0 +1,16 @@
+use serde_json::json;
+use worker::*;
+
+#[event(fetch)]
+pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
+    Router::new()
+        .get("/normalize/:value", |_req, ctx| {
+            let value = ctx.param("value").map(String::as_str).unwrap_or("");
+            Response::from_json(&json!({
+                "input": value,
+                "normalized": shared_core::normalize_resource_key(value)
+            }))
+        })
+        .run(req, env)
+        .await
+}

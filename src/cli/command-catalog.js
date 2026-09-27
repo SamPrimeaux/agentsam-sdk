@@ -42,6 +42,7 @@ export const CLI_COMMAND_CATALOG = Object.freeze([
   { id: 'deploy-receipt', summary: 'Merkle deploy/checkpoint receipts', topic: 'runtime', skill: 'agentsam-progression-guard' },
   { id: 'cloudflare', aliases: ['cf'], summary: 'Wrangler reads + Worker CPU profiles', topic: 'runtime', skill: 'agentsam-cloudflare-workers' },
   { id: 'go', summary: 'Go product discover/build/deploy', topic: 'runtime', skill: 'agentsam-cloudflare-workers' },
+  { id: 'rust', aliases: ['wasm', 'rapid-rust'], summary: 'Rust/Wasm scaffold, doctor, check, build, dev, explicit deploy', topic: 'runtime', skill: 'agentsam-cloudflare-workers' },
   { id: 'mcp', summary: 'MCP server catalog and client adapters', topic: 'runtime', skill: 'agentsam-cloudflare-workers' },
   { id: 'eval', summary: 'Context fixtures and live eval telemetry', topic: 'runtime', skill: 'agentsam-app-fundamentals' },
   { id: 'index', summary: 'Plan/run incremental AST (+ optional embeddings)', topic: 'work', skill: 'agentsam-codebaseindex', operation: 'codebaseindex.ingest' },

@@ -1,0 +1,22 @@
+# {{PROJECT_NAME}}
+
+AgentSam Rapid Rust template: `{{TEMPLATE}}`.
+
+## Local first
+
+```bash
+npm install
+agentsam rust doctor --bootstrap
+agentsam rust check
+agentsam rust build
+agentsam rust dev
+```
+
+## Explicit cloud graduation
+
+```bash
+agentsam rust deploy --dry-run
+agentsam rust deploy --yes
+```
+
+No scaffold/build/check command deploys this Worker.
