@@ -184,7 +184,9 @@ async function browserList(ref: string): Promise<LocalContentEntry[]> {
   }
   const entry = browserHandles.get(ref);
   if (!entry || entry.kind !== "directory") return [];
-  const dir = entry.handle as FileSystemDirectoryHandle;
+  const dir = entry.handle as FileSystemDirectoryHandle & {
+    entries(): AsyncIterableIterator<[string, FileSystemHandle]>;
+  };
   const out: LocalContentEntry[] = [];
   for await (const [name, handle] of dir.entries()) {
     const childRef = mintBrowserRef(handle.kind === "directory" ? "directory" : "file");
