@@ -277,5 +277,9 @@
     "grpc-tools": "^1.13.1",
     "wrangler": "4.141.0"
   },
+  "overrides": {
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.3"
+  },
   "packageManager": "npm@10.9.2"
 }

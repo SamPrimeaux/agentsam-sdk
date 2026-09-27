@@ -95,10 +95,12 @@ export async function runLogin(argv = [], options = {}) {
         browser_oauth_saved: true,
         provider,
         authoritative: status.active_auth?.kind || null,
-        oauth_authoritative: status.active_auth?.kind === 'browser_oauth',
+        oauth_authoritative:
+          status.active_auth?.kind === 'agentsam_browser_oauth'
+          || status.active_auth?.kind === 'browser_oauth',
         api_key_shadows_oauth:
           Boolean(status.browser_session?.configured)
-          && status.active_auth?.kind === 'api_key',
+          && (status.active_auth?.kind === 'agentsam_api_key' || status.active_auth?.kind === 'api_key'),
       },
     }, null, 2));
   } else {

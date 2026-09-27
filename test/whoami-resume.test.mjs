@@ -56,7 +56,7 @@ test('whoami validates persisted IAM browser identity while never returning acco
   assert.equal(status.authenticated, true);
   assert.equal(status.identity.account_id, 'acct_server');
   assert.equal(status.active_auth.source, 'agentsam_browser_oauth');
-  assert.equal(status.active_auth.kind, 'browser_oauth');
+  assert.equal(status.active_auth.kind, 'agentsam_browser_oauth');
   assert.equal(status.provider_credentials.find(row => row.provider === 'openai').configured, true);
   assert.equal(status.provider_credentials.find(row => row.provider === 'openai').owner_account_id, 'acct_server');
   assert.equal(status.provider_credentials.find(row => row.provider === 'openai').account_id, 'acct_server');
@@ -107,7 +107,7 @@ test('whoami uses a valid browser session when a stale environment API key is in
     },
   });
   assert.equal(status.authenticated, true);
-  assert.equal(status.active_auth.kind, 'browser_oauth');
+  assert.equal(status.active_auth.kind, 'agentsam_browser_oauth');
   assert.equal(status.api_key.valid, false);
   assert.equal(status.api_key.error, 'invalid_api_key_prefix');
 });
@@ -136,7 +136,7 @@ test('whoami refreshes an expired browser session before validating IAM context'
   });
   assert.equal(refreshed, 1);
   assert.equal(status.authenticated, true);
-  assert.equal(status.active_auth.kind, 'browser_oauth');
+  assert.equal(status.active_auth.kind, 'agentsam_browser_oauth');
 });
 
 test('resume restores saved cwd and session through the canonical shell runtime', async t => {

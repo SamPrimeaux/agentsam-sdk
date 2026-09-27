@@ -5,11 +5,21 @@
   "type": "module",
   "description": "AgentSam credential vault core — contracts, AES-GCM crypto, provider registry, resolver. UI lives in agentsam-key-manager.",
   "main": "./src/index.js",
+  "types": "./src/index.d.ts",
   "exports": {
-    ".": "./src/index.js",
-    "./contracts": "./src/contracts/credential.js",
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./contracts": {
+      "types": "./src/contracts/credential.d.ts",
+      "default": "./src/contracts/credential.js"
+    },
     "./providers": "./src/providers/registry.js",
-    "./crypto": "./src/crypto/aes-gcm.js",
+    "./crypto": {
+      "types": "./src/crypto/aes-gcm.d.ts",
+      "default": "./src/crypto/aes-gcm.js"
+    },
     "./resolver": "./src/runtime/resolver.js"
   },
   "scripts": {

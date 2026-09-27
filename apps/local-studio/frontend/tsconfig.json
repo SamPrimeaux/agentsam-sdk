@@ -59,6 +59,12 @@
       ],
       "@inneranimalmedia/agentsam-database-editor/frontend": [
         "../../../packages/agentsam-database-editor/frontend/index.ts"
+      ],
+      "lucide-react": [
+        "../node_modules/lucide-react"
+      ],
+      "recharts": [
+        "../node_modules/recharts"
       ]
     },
     "allowImportingTsExtensions": true,

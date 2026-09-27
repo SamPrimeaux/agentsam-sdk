@@ -38,7 +38,7 @@ test('opaque browser login persists in machine-local storage and resolves indepe
   assert.equal(loaded.access_token, 'browser_session_machine_test');
   const browser = resolveBrowserSessionCredential({ env: {}, home });
   assert.equal(browser.source, 'agentsam_browser_oauth');
-  assert.equal(browser.kind, 'browser_oauth');
+  assert.equal(browser.kind, 'agentsam_browser_oauth');
   assert.equal(browser.value, 'browser_session_machine_test');
   assert.equal(resolveAccountApiKey({ env: {}, home }).value, '');
   assert.equal(resolveAccountAuth({ env: {}, home }).value, 'browser_session_machine_test');
@@ -70,7 +70,7 @@ test('invalid environment API key cannot shadow a valid browser login', t => {
   saveAccountSession({ access_token: 'browser_session_machine_test' }, { home });
   const resolved = resolveAccountAuth({ env: { AGENTSAM_API_KEY: 'not-an-aak' }, home });
   assert.equal(resolved.value, 'browser_session_machine_test');
-  assert.equal(resolved.kind, 'browser_oauth');
+  assert.equal(resolved.kind, 'agentsam_browser_oauth');
   assert.equal(resolved.fallback_error, 'invalid_api_key_prefix');
 });
 
@@ -79,7 +79,7 @@ test('async IAM authority also falls back from invalid environment key to browse
   saveAccountSession({ access_token: 'browser_session_machine_test' }, { home });
   const resolved = await resolveAccountAuthority({ env: { AGENTSAM_API_KEY: 'not-an-aak' }, home });
   assert.equal(resolved.value, 'browser_session_machine_test');
-  assert.equal(resolved.kind, 'browser_oauth');
+  assert.equal(resolved.kind, 'agentsam_browser_oauth');
   assert.equal(resolved.fallback_error, 'invalid_api_key_prefix');
 });
 
