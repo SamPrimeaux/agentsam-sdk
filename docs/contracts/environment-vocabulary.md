@@ -21,19 +21,33 @@ Provider API keys (`OPENAI_*`, `CLOUDFLARE_API_TOKEN`, …) are a **fourth** lan
 ### Customer mental model
 
 ```text
-User 123 signs in (browser OAuth via IAM_CLIENT_* against IAM_OAUTH_ISSUER)
+User 123 is accredited by Inner Animal Media (company/platform Identity)
      ↓
-User 123 gets an AGENTSAM_API_KEY for their account (CLI / API / Local Studio)
+On User 123's machine:
+  source ~/.agentsam/load-agent-env.sh
+    → eval "$(agentsam env shell --profile default)"
+    → loads THEIR AGENTSAM_API_KEY + IAM_CLIENT_ID + IAM_OAUTH_ISSUER
+       from THEIR keychain/vault (never another user's home)
      ↓
 User 123 runs `agentsam terminal enroll … --pair`
      → AGENTSAM_BRIDGE_KEY written for ONE terminal_connection
+       into ~/.execos/profiles/<instance_id>.env on THAT machine
      ↓
 User 123 connects Cloudflare / GitHub / GCP / models as Provider Connections
 ```
 
 `AGENTSAM_API_KEY` = “what can *this account* do on AgentSam.”  
 `AGENTSAM_BRIDGE_KEY` = “what can *this enrolled machine connection* prove to ExecOS/IAM” (one `terminal_connection`; `IAM_CONNECTION_KEY` retired).  
-`IAM_CLIENT_*` = “stock OAuth client so the product can encrypt/protect login using our Identity provisioning.”
+`IAM_CLIENT_ID` + `IAM_OAUTH_ISSUER` = platform Identity wiring so User 123’s CLI/app can talk to our issuer (plus `IAM_CLIENT_SECRET` only on server/workers).
+
+#### `load-agent-env.sh` vs `env.d/inneranimalmedia.env`
+
+| Path | Role |
+| --- | --- |
+| `source ~/.agentsam/load-agent-env.sh` | **Canonical customer path.** Resolves `--profile default` from that user’s keychain/vault. This is where account accreditation belongs. |
+| `~/.agentsam/env.d/inneranimalmedia.env` | **Per-machine compat file** written by `agentsam env init/export` under **that user’s** `$HOME`. Not a shared template of anyone else’s secrets. User 123 never receives Sam’s `env.d` file — they get their own after *their* `api-key create` / `env init`. |
+
+Do not copy another operator’s `~/.agentsam/env.d/*.env` between machines. Mint or export on the destination account.
 
 ---
 
@@ -122,12 +136,14 @@ See also: [`docs/contracts/google-cloud-oauth-setup.md`](./google-cloud-oauth-se
 
 | Credential | Expected storage |
 | --- | --- |
-| `AGENTSAM_API_KEY` | macOS Keychain / vault via `agentsam api-key create --store keychain --activate` |
+| `AGENTSAM_API_KEY` | That user’s macOS Keychain / vault via `agentsam api-key create --store keychain --activate`; loaded by `source ~/.agentsam/load-agent-env.sh` |
+| `IAM_CLIENT_ID` / `IAM_OAUTH_ISSUER` | Same account profile (`--profile default` / InnerAnimalMedia provider) — platform accreditation, not shared across users |
+| `AGENTSAM_BRIDGE_KEY` | That machine’s `~/.execos/profiles/<instance_id>.env` via `agentsam terminal enroll … --pair` |
 | Provider API keys | Encrypted vault + OS keychain (`agentsam providers` / `agentsam env`) |
 | OAuth client secrets | Wrangler secrets / vault — never frontend bundles |
 | `gcloud` user session | gcloud ADC (outside AgentSam until GCP Connection ships) |
 | `gh` | macOS keyring (`gh auth`) |
-| Compat plaintext | `~/.agentsam/env.d/*.env` only via `agentsam env export` — opt-in fallback |
+| Compat plaintext | `~/.agentsam/env.d/*.env` only via `agentsam env export` — opt-in per-user fallback under **their** home |
 
 ### macOS Keychain prompt
 
