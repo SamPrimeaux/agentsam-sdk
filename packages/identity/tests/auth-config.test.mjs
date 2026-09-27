@@ -24,11 +24,8 @@ describe('auth configuration contract', () => {
     assert.equal(resolveIamOrigin({ IAM_ORIGIN: 'https://legacy.example.test/' }), 'https://legacy.example.test');
   });
 
-  it('fails loud when neither IAM_OAUTH_ISSUER nor IAM_ORIGIN exists', () => {
-    assert.throws(
-      () => resolveIamOrigin({}),
-      (err) => err?.code === 'iam_oauth_issuer_not_configured',
-    );
+  it('falls back to the canonical platform account issuer when env is unset', () => {
+    assert.equal(resolveIamOrigin({}), PLATFORM_ACCOUNT_ISSUER);
   });
 
   it('resolves only AGENTSAM_API_KEY for delegated account API auth', () => {
