@@ -235,9 +235,8 @@ export async function collectWhoami(options = {}) {
       signal: options.signal,
     }));
     const context = await loader(active.value);
-    const authType = normalizeAuthKind(
-      context?.auth_type || (activeKind === 'agentsam_api_key' ? 'agentsam_api_key' : 'agentsam_browser_oauth'),
-    );
+    const authType = String(context?.auth_type || '').trim()
+      || (activeKind === 'agentsam_api_key' ? 'api_key' : 'browser_oauth');
     const tokenPermissions = Array.isArray(context?.tokenPermissions)
       ? context.tokenPermissions
       : Array.isArray(context?.credential?.scopes)
