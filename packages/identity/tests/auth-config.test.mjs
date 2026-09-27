@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   AGENTSAM_AUTH_CONTRACT,
+  PLATFORM_ACCOUNT_ISSUER,
   buildApiAuthorizationHeaders,
   resolveApiKey,
   resolveBridgeKey,
