@@ -40,6 +40,8 @@ const ASSET_ACTIONS = new Set([
   'build',
   'templates',
   'roles',
+  'optimize',
+  'processors',
 ]);
 
 function parseArgs(argv = []) {
@@ -103,7 +105,7 @@ export async function runBrand(argv = []) {
   const action = sub || 'summary';
 
   if (action === 'help' || action === '--help') {
-    console.log(`usage: agentsam brand [summary|scan|resolve|inspect|plan|apply|assets|promote|ingest|build|pack|preview|publish|verify|derive|presets|templates|roles]
+    console.log(`usage: agentsam brand [summary|scan|resolve|inspect|plan|apply|assets|promote|ingest|build|pack|preview|publish|verify|derive|optimize|processors|presets|templates|roles]
 
 Brand intelligence:
   summary|scan|resolve|inspect|plan|apply
@@ -112,6 +114,8 @@ Brand compiler (v2 — brand.pack.json is source of truth):
   agentsam brand ingest ./exports --brand acme --template product-saas
   agentsam brand build --from .agentsam/brand/packs/acme
   agentsam brand preview --from .agentsam/brand/dist/acme
+  agentsam brand optimize ./hero.png --role hero.landscape --target web
+  agentsam brand processors
   agentsam brand templates
   agentsam brand roles
 
@@ -120,6 +124,7 @@ Legacy single-asset (still valid):
   agentsam brand promote --brand acme --asset logo --source - --preset logo
   agentsam brand presets
 
+Encoders (sharp / squoosh binary / native / CF) are processors — never the CLI contract.
 ZIP / studio / production publish are compiled representations of brand.pack.json.
 `);
     return;

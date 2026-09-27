@@ -158,13 +158,33 @@ export function normalizeAssetNode(row = {}) {
       platform: [],
     },
     derivatives: Array.isArray(row.derivatives) ? row.derivatives : [],
+    // Content / CMS graph context (machine identity ≠ delivery filename)
+    semantic: row.semantic || {
+      subject: [],
+      page: null,
+      section: null,
+      locale: null,
+      intent: null,
+    },
+    naming: row.naming || {
+      slug: null,
+      strategy: 'semantic',
+      aliases: [],
+    },
     usage: row.usage || null,
-    seo: row.seo || null,
+    seo: row.seo || {
+      alt: null,
+      title: null,
+      caption: null,
+    },
     focalPoint: row.focalPoint || null,
     safeArea: row.safeArea || null,
     artDirection: row.artDirection || null,
     licensing: row.licensing || null, // critical for fonts
+    delivery: row.delivery || null,
+    providerMetadata: row.providerMetadata || {},
     provenance: row.provenance || null,
+    validation: row.validation || null,
   };
 }
 

@@ -35,7 +35,31 @@ export {
   discoverDerivativeCapabilities,
   formatBytesKb,
   hasMagick,
+  hasSharp,
+  hasSquooshBinary,
 } from './core/derivatives.js';
+export {
+  discoverProcessors,
+  listProcessors,
+  getProcessor,
+  resolveProcessor,
+  encodeWithScheduler,
+  optimizeWithScheduler,
+  PROCESSOR_CAPABILITIES,
+  REJECTED_PROCESSORS,
+  planProcessorOrder,
+} from './core/processors/index.js';
+export {
+  optimizeBrandAsset,
+  optimizePolicyForRole,
+} from './core/optimize.js';
+export {
+  slugifySegment,
+  buildSemanticSlug,
+  buildDerivativeFilename,
+  validateDeliveryName,
+  applySemanticNaming,
+} from './core/naming.js';
 export {
   planBrandAssetPromotion,
   normalizePromotionSpec,
@@ -170,6 +194,7 @@ export const BRAND_CAPABILITY_META = Object.freeze({
   'brand.plan': { id: 'brand.plan', deterministic: true, model_required: false, side_effects: 'none' },
   'brand.inspect': { id: 'brand.inspect', deterministic: true, model_required: false, side_effects: 'none' },
   'brand.derive': { id: 'brand.derive', deterministic: true, model_required: false, side_effects: 'filesystem' },
+  'brand.optimize': { id: 'brand.optimize', deterministic: true, model_required: false, side_effects: 'filesystem' },
   'brand.ingest': { id: 'brand.ingest', deterministic: true, model_required: false, side_effects: 'filesystem' },
   'brand.build': { id: 'brand.build', deterministic: true, model_required: false, side_effects: 'filesystem' },
   'brand.pack': { id: 'brand.pack', deterministic: true, model_required: false, side_effects: 'filesystem' },

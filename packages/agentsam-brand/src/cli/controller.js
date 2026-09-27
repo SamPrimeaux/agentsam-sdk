@@ -18,6 +18,8 @@ import { MemoryStorageAdapter } from '../adapters/memory.js';
 import { FilesystemStorageAdapter } from '../adapters/filesystem.js';
 import { CloudflareImagesDeliveryAdapter } from '../adapters/cloudflare-images.js';
 import { BrandAssetError } from '../core/errors.js';
+import { optimizeBrandAsset } from '../core/optimize.js';
+import { discoverProcessors } from '../core/processors/index.js';
 
 function loadJson(file) {
   return JSON.parse(fs.readFileSync(path.resolve(file), 'utf8'));
@@ -56,6 +58,9 @@ export function parseBrandCliArgs(argv = []) {
     description: '',
     template: '',
     noZip: false,
+    role: '',
+    target: 'web',
+    processor: '',
     positionals: [],
   };
   for (let i = 0; i < argv.length; i += 1) {
@@ -92,6 +97,9 @@ export function parseBrandCliArgs(argv = []) {
     else if (a === '--description') out.description = argv[++i] || '';
     else if (a === '--template') out.template = argv[++i] || '';
     else if (a === '--no-zip') out.noZip = true;
+    else if (a === '--role') out.role = argv[++i] || '';
+    else if (a === '--target') out.target = argv[++i] || 'web';
+    else if (a === '--processor') out.processor = argv[++i] || '';
     else out.positionals.push(a);
   }
   return out;
@@ -175,24 +183,22 @@ export async function runBrandAssetCommand(argv = [], options = {}) {
   const [action = 'help', ...rest] = opts.positionals;
 
   if (action === 'help' || action === '--help' || action === '-h') {
-    write(`usage: brand-assets <inspect|derive|ingest|build|pack|preview|plan|promote|publish|verify|assets|presets|templates|roles> [options]
+    write(`usage: brand-assets <inspect|derive|optimize|processors|ingest|build|pack|preview|plan|promote|publish|verify|assets|presets|templates|roles> [options]
 
 Brand compiler (v2 — brand.pack.json is source of truth):
   ingest <path|zip|tar|folder>   Classify assets → brand.pack.json
   build --from <pack>            Compile dist + studio + optional zip export
   preview --from <dist|zip>      Localhost gallery / studio
+  optimize <file>                Role-aware encode (processor adapter — not Squoosh CLI)
+  processors                     List sharp / squoosh-binary / native / cloudflare
   templates                      List uniform brand templates
   roles                          List asset roles
 
-Legacy / focused:
-  pack                           Single-asset zip (still valid)
-  promote / publish / verify
-  presets                        Derivative presets
-
 Examples:
+  agentsam brand optimize ./hero.png --role hero.landscape --target web
+  agentsam brand optimize ./logo.png --role logo.primary --processor sharp
   agentsam brand ingest ./exports --brand acme --template product-saas
   agentsam brand build --from .agentsam/brand/packs/acme --out ./dist/acme
-  agentsam brand pack --brand acme --asset app-icon --source ./m.png --preset app-icon -o ./acme.zip
 `);
     return 0;
   }
@@ -211,6 +217,37 @@ Examples:
     if (action === 'roles') {
       writeResult(write, opts, { roles: listAssetRoles() });
       return 0;
+    }
+
+    if (action === 'processors') {
+      writeResult(write, opts, discoverProcessors());
+      return 0;
+    }
+
+    if (action === 'optimize') {
+      let file = rest[0] || opts.source;
+      if (file === '-' || opts.source === '-' || opts.dropDir) {
+        const resolved = await resolveSourceForSpec({ ...opts, source: file === '-' ? '-' : opts.source });
+        file = resolved.source;
+      }
+      if (!file) {
+        write('optimize requires a source path (or --source - / --drop-dir)\n');
+        return 2;
+      }
+      const result = await optimizeBrandAsset({
+        sourcePath: path.resolve(opts.cwd, file),
+        role: opts.role || opts.asset || 'asset.generic',
+        target: opts.target || 'web',
+        brandId: opts.brand || '',
+        outDir: opts.out || path.join(opts.cwd, '.agentsam', 'brand', 'work', 'optimize'),
+        processor: opts.processor || undefined,
+        dryRun: opts.dryRun,
+        semantic: {
+          subject: opts.title ? [opts.title] : [],
+        },
+      });
+      writeResult(write, opts, result);
+      return result.ok ? 0 : 1;
     }
 
     if (action === 'ingest') {

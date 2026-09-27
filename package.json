@@ -103,7 +103,8 @@
     "./theme/fuelnfree-site": "./packages/theme-fuelnfree-site/src/index.js",
     "./theme/handyman-site": "./packages/theme-handyman-site/src/index.js",
     "./theme/insurance-site": "./packages/theme-insurance-site/src/index.js",
-    "./theme/shinshu-site": "./packages/theme-shinshu-site/src/index.js"
+    "./theme/shinshu-site": "./packages/theme-shinshu-site/src/index.js",
+    "./theme-scenes": "./packages/theme-scenes/src/index.js"
   },
   "bin": {
     "agentsam": "bin/agentsam",
@@ -151,7 +152,8 @@
     "packages/theme-fuelnfree-site",
     "packages/theme-handyman-site",
     "packages/theme-insurance-site",
-    "packages/theme-shinshu-site"
+    "packages/theme-shinshu-site",
+    "packages/theme-scenes"
   ],
   "workspaces": [
     "packages/agentsam-shell-kit",
@@ -175,7 +177,8 @@
     "packages/theme-fuelnfree-site",
     "packages/theme-handyman-site",
     "packages/theme-insurance-site",
-    "packages/theme-shinshu-site"
+    "packages/theme-shinshu-site",
+    "packages/theme-scenes"
   ],
   "scripts": {
     "test": "npm run test:standard && npm --prefix packages/identity test && npm --prefix packages/agentsam-brand test && npm run test:connectors && npm run test:providers",
@@ -220,7 +223,8 @@
     "app:validate": "node bin/agentsam app validate --all",
     "guard:apps": "npm run app:validate",
     "test:providers": "node --test packages/providers/completeful/test/*.test.mjs",
-    "test:themes": "npm --prefix packages/heuristic-theme test && npm --prefix packages/theme-church-site test && npm --prefix packages/theme-companions-site test && npm --prefix packages/theme-floors-site test && npm --prefix packages/theme-fuelnfree-site test && npm --prefix packages/theme-handyman-site test && npm --prefix packages/theme-insurance-site test && npm --prefix packages/theme-shinshu-site test",
+    "test:themes": "npm --prefix packages/heuristic-theme test && npm --prefix packages/theme-church-site test && npm --prefix packages/theme-companions-site test && npm --prefix packages/theme-floors-site test && npm --prefix packages/theme-fuelnfree-site test && npm --prefix packages/theme-handyman-site test && npm --prefix packages/theme-insurance-site test && npm --prefix packages/theme-shinshu-site test && npm --prefix packages/theme-scenes test",
+    "test:theme-scenes": "npm --prefix packages/theme-scenes test",
     "theme:harvest": "python3 scripts/theme-refinery/harvest.py",
     "verify:go-distribution": "node scripts/verify-go-distribution.mjs"
   },
