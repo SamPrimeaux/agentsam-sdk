@@ -46,13 +46,14 @@
   <body>
     <h1>AgentSam Local Studio</h1>
     <p>
-      Offline shell for <strong>agentsamd</strong>, sign-in, and local tooling.
-      The Cloudflare Studio UI still needs the network for now (Nitro SSR is not a static SPA) —
-      use <em>Open Studio UI</em> for the full workbench until the desktop client build ships.
+      Offline shell for <strong>agentsamd</strong>, desktop Google / Cloudflare sign-in, and local tooling.
+      Desktop identity uses <code>GOOGLE_DESKTOP_CLIENT_ID</code> and Studio-hosted
+      <code>CLOUDFLARE_OAUTH_CLIENT_ID</code> (offline) — never IAM web login at inneranimalmedia.com.
     </p>
     <div class="row">
       <button type="button" class="primary" id="btn-cloud">Open Studio UI</button>
-      <button type="button" id="btn-signin">Sign in to AgentSam</button>
+      <button type="button" id="btn-google">Sign in with Google Desktop</button>
+      <button type="button" id="btn-cf">Connect Cloudflare (offline)</button>
       <button type="button" id="btn-daemon">Start / check agentsamd</button>
       <button type="button" id="btn-local">Stay on this shell</button>
     </div>
@@ -61,6 +62,7 @@
       const statusEl = document.getElementById('status');
       const log = (msg, cls) => { statusEl.innerHTML = `<span class="${cls || ''}">${msg}</span>`; };
       const STUDIO_UI = 'https://agentsam.inneranimalmedia.com/agentsam';
+      const STUDIO_ORIGIN = 'https://agentsam.inneranimalmedia.com';
 
       async function invoke(cmd, args) {
         if (!window.__TAURI__?.core?.invoke) throw new Error('tauri_invoke_unavailable');
@@ -100,17 +102,28 @@
         } catch (err) { log(String(err), 'warn'); }
       };
 
-      document.getElementById('btn-signin').onclick = async () => {
+      document.getElementById('btn-google').onclick = async () => {
         try {
-          const r = await invoke('start_agentsam_pkce_login', {
-            req: { issuer: 'https://inneranimalmedia.com', client_id: 'iam_agentsam_sdk_web' },
+          log('Opening Google Desktop PKCE (GOOGLE_DESKTOP_CLIENT_ID)…');
+          const r = await invoke('start_google_desktop_login', {
+            req: { studio_origin: STUDIO_ORIGIN },
+          });
+          log(JSON.stringify(r, null, 2), r.ok ? 'ok' : 'warn');
+        } catch (err) { log(String(err), 'warn'); }
+      };
+
+      document.getElementById('btn-cf').onclick = async () => {
+        try {
+          log('Opening Studio Cloudflare OAuth (CLOUDFLARE_OAUTH_CLIENT_ID · offline)…');
+          const r = await invoke('start_cloudflare_oauth_login', {
+            req: { studio_origin: STUDIO_ORIGIN },
           });
           log(JSON.stringify(r, null, 2), r.ok ? 'ok' : 'warn');
         } catch (err) { log(String(err), 'warn'); }
       };
 
       document.getElementById('btn-local').onclick = () => {
-        log('Staying on the offline shell — agentsamd / PKCE only. Use Open Studio UI for Chat/Work.', 'ok');
+        log('Staying on the offline shell — agentsamd / desktop OAuth only. Use Open Studio UI for Chat/Work.', 'ok');
       };
 
       document.getElementById('btn-cloud').onclick = () => {

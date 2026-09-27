@@ -9,6 +9,7 @@ describe('public-config', () => {
       IAM_CLIENT_ID: 'iam_agentsam_sdk_web',
       GOOGLE_CLIENT_ID: 'web-client.apps.googleusercontent.com',
       GOOGLE_DESKTOP_CLIENT_ID: 'desktop-client.apps.googleusercontent.com',
+      CLOUDFLARE_OAUTH_CLIENT_ID: 'cf-oauth-public-client-id',
       GOOGLE_CLIENT_SECRET: 'must-not-appear',
       AGENTSAM_BRIDGE_KEY: 'must-not-appear',
     }, { origin: 'https://agentsam.inneranimalmedia.com' });
@@ -16,6 +17,8 @@ describe('public-config', () => {
     assert.equal(cfg.schema, 'agentsam.public-config.v1');
     assert.equal(cfg.google_desktop_client_id, 'desktop-client.apps.googleusercontent.com');
     assert.equal(cfg.google_client_id, 'web-client.apps.googleusercontent.com');
+    assert.equal(cfg.cloudflare_oauth_client_id, 'cf-oauth-public-client-id');
+    assert.equal(cfg.cloudflare_oauth_start_path, '/api/oauth/cloudflare/start');
     assert.equal(cfg.runtime_protocol, 'agentsam.runtime.v1');
     const blob = JSON.stringify(cfg);
     assert.equal(blob.includes('must-not-appear'), false);

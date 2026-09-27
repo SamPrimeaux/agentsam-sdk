@@ -25,6 +25,8 @@ fn main() {
             updater::check_for_update,
             local_node::enroll_as_local_node,
             auth_pkce::start_agentsam_pkce_login,
+            auth_pkce::start_google_desktop_login,
+            auth_pkce::start_cloudflare_oauth_login,
             agentsamd::ensure_agentsamd,
             agentsamd::agentsamd_health,
             local_sqlite::local_sqlite_bridge,

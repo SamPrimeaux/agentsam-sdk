@@ -1,6 +1,9 @@
-//! AgentSam product OAuth — authorization code + PKCE + RFC 8252 loopback.
-//! Client: IAM_CLIENT_ID=iam_agentsam_sdk_web (same as CLI / Local Studio Worker).
-//! Providers (Google/GitHub) stay on IAM; this module only speaks AgentSam.
+//! Desktop sign-in — Google Desktop PKCE + Cloudflare OAuth (Studio-hosted).
+//!
+//! NEVER gate through https://inneranimalmedia.com/auth/login with
+//! iam_agentsam_sdk_web. Desktop identity uses:
+//!   - GOOGLE_DESKTOP_CLIENT_ID (public Desktop client, PKCE + loopback)
+//!   - CLOUDFLARE_OAUTH_CLIENT_ID (Worker secret / public-config; offline_access via Studio)
 
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use keyring::Entry;
@@ -14,32 +17,34 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
+const DEFAULT_STUDIO_ORIGIN: &str = "https://agentsam.inneranimalmedia.com";
+const DEFAULT_GOOGLE_DESKTOP_CLIENT_ID: &str =
+  "246811022042-cckq00b5seekpkv0in358jhu42n0b6u9.apps.googleusercontent.com";
+const GOOGLE_AUTH_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
+const GOOGLE_SCOPES: &str = "openid email profile https://www.googleapis.com/auth/cloud-platform";
+const KEYCHAIN_ACCOUNT_REFRESH: &str = "oauth_refresh_token";
+const KEYCHAIN_ACCOUNT_ACCESS: &str = "oauth_access_token";
+const KEYCHAIN_PROVIDER: &str = "oauth_provider";
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PkceLoginRequest {
-  /// Issuer origin, e.g. https://inneranimalmedia.com
-  pub issuer: String,
-  /// Defaults to iam_agentsam_sdk_web when empty.
-  pub client_id: Option<String>,
-  /// Confidential exchange — from vault / Worker; never hardcode in source.
-  pub client_secret: Option<String>,
-  /// Keychain app id namespace (default local-studio).
+pub struct DesktopLoginRequest {
+  /// Local Studio origin (public-config + exchange). Defaults to agentsam.inneranimalmedia.com.
+  pub studio_origin: Option<String>,
+  /// Override GOOGLE_DESKTOP_CLIENT_ID (else public-config / stock Desktop client).
+  pub google_desktop_client_id: Option<String>,
   pub app_id: Option<String>,
-  /// OAuth scope string.
   pub scope: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PkceLoginResult {
+pub struct DesktopLoginResult {
   pub ok: bool,
+  pub provider: String,
   pub access_token_present: bool,
   pub refresh_stored: bool,
   pub client_id: String,
   pub message: String,
 }
-
-pub const DEFAULT_STUDIO_CLIENT_ID: &str = "iam_agentsam_sdk_web";
-const KEYCHAIN_ACCOUNT_REFRESH: &str = "oauth_refresh_token";
-const KEYCHAIN_ACCOUNT_ACCESS: &str = "oauth_access_token";
 
 fn random_url_safe(nbytes: usize) -> String {
   let mut buf = vec![0u8; nbytes];
@@ -82,10 +87,7 @@ fn parse_query(query: &str) -> std::collections::HashMap<String, String> {
   let mut map = std::collections::HashMap::new();
   for pair in query.split('&') {
     if let Some((k, v)) = pair.split_once('=') {
-      map.insert(
-        urlencoding_decode(k),
-        urlencoding_decode(v),
-      );
+      map.insert(urlencoding_decode(k), urlencoding_decode(v));
     }
   }
   map
@@ -120,53 +122,58 @@ fn urlencoding_decode(s: &str) -> String {
   out
 }
 
-/// Bind 127.0.0.1:0, open system browser to IAM authorize (via /auth/login gate),
-/// exchange code+PKCE, store refresh in Keychain.
-#[tauri::command]
-pub async fn start_agentsam_pkce_login(req: PkceLoginRequest) -> Result<PkceLoginResult, String> {
-  let client_id = req
-    .client_id
-    .filter(|s| !s.trim().is_empty())
-    .unwrap_or_else(|| DEFAULT_STUDIO_CLIENT_ID.to_string());
-  let issuer = req.issuer.trim().trim_end_matches('/').to_string();
-  if issuer.is_empty() {
-    return Err("issuer_required".into());
+fn urlencoding_encode(s: &str) -> String {
+  let mut out = String::new();
+  for b in s.bytes() {
+    match b {
+      b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => out.push(b as char),
+      _ => out.push_str(&format!("%{b:02X}")),
+    }
   }
-  let app_id = req
-    .app_id
-    .filter(|s| !s.trim().is_empty())
-    .unwrap_or_else(|| "local-studio".into());
-  let scope = req
-    .scope
-    .filter(|s| !s.trim().is_empty())
-    .unwrap_or_else(|| "openid profile email offline_access".into());
-  let client_secret = req.client_secret.filter(|s| !s.trim().is_empty());
+  out
+}
 
-  let state = random_url_safe(24);
-  let verifier = random_url_safe(32);
-  let challenge = pkce_challenge(&verifier);
+fn studio_origin(req: &DesktopLoginRequest) -> String {
+  req
+    .studio_origin
+    .as_ref()
+    .map(|s| s.trim().trim_end_matches('/').to_string())
+    .filter(|s| !s.is_empty())
+    .unwrap_or_else(|| DEFAULT_STUDIO_ORIGIN.to_string())
+}
 
-  let listener = TcpListener::bind("127.0.0.1:0").map_err(|e| format!("loopback_bind_failed: {e}"))?;
-  let port = listener.local_addr().map_err(|e| e.to_string())?.port();
-  let redirect_uri = format!("http://127.0.0.1:{port}/callback");
+async fn resolve_google_desktop_client_id(req: &DesktopLoginRequest) -> String {
+  if let Some(id) = req
+    .google_desktop_client_id
+    .as_ref()
+    .map(|s| s.trim().to_string())
+    .filter(|s| !s.is_empty())
+  {
+    return id;
+  }
+  let origin = studio_origin(req);
+  let url = format!("{origin}/api/public-config");
+  let client = reqwest::Client::new();
+  if let Ok(res) = client.get(&url).header("Accept", "application/json").send().await {
+    if let Ok(body) = res.json::<serde_json::Value>().await {
+      if let Some(id) = body
+        .get("google_desktop_client_id")
+        .and_then(|v| v.as_str())
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+      {
+        return id.to_string();
+      }
+    }
+  }
+  DEFAULT_GOOGLE_DESKTOP_CLIENT_ID.to_string()
+}
 
-  let authorize = format!(
-    "{issuer}/api/oauth/authorize?response_type=code&client_id={client_id}&redirect_uri={redirect}&code_challenge={challenge}&code_challenge_method=S256&state={state}&scope={scope}",
-    redirect = urlencoding_encode(&redirect_uri),
-    scope = urlencoding_encode(&scope),
-  );
-  // Gate through IAM login page; preserve authorize in next.
-  let login_gate = format!(
-    "{issuer}/auth/login?next={next}",
-    next = urlencoding_encode(
-      authorize
-        .strip_prefix(&issuer)
-        .unwrap_or(authorize.as_str()),
-    ),
-  );
-
-  let (tx, rx) = mpsc::channel::<Result<(String, String), String>>();
-  let expected_state = state.clone();
+fn accept_loopback_code(
+  listener: TcpListener,
+  expected_state: String,
+) -> Result<String, String> {
+  let (tx, rx) = mpsc::channel::<Result<String, String>>();
   thread::spawn(move || {
     match listener.accept() {
       Ok((mut stream, _)) => {
@@ -175,14 +182,17 @@ pub async fn start_agentsam_pkce_login(req: PkceLoginRequest) -> Result<PkceLogi
         let n = stream.read(&mut buf).unwrap_or(0);
         let req_str = String::from_utf8_lossy(&buf[..n]);
         let first = req_str.lines().next().unwrap_or("");
-        // GET /callback?code=...&state=... HTTP/1.1
         let path = first.split_whitespace().nth(1).unwrap_or("");
         let query = path.split('?').nth(1).unwrap_or("");
         let params = parse_query(query);
         let body = if params.get("error").is_some() {
           format!(
             "<html><body><h1>Sign-in failed</h1><p>{}</p></body></html>",
-            params.get("error_description").or_else(|| params.get("error")).cloned().unwrap_or_default()
+            params
+              .get("error_description")
+              .or_else(|| params.get("error"))
+              .cloned()
+              .unwrap_or_default()
           )
         } else {
           "<html><body><h1>AgentSam</h1><p>Signed in. You can close this window.</p></body></html>"
@@ -208,49 +218,96 @@ pub async fn start_agentsam_pkce_login(req: PkceLoginRequest) -> Result<PkceLogi
           let _ = tx.send(Err("missing_code".into()));
           return;
         }
-        let _ = tx.send(Ok((code, got_state)));
+        let _ = tx.send(Ok(code));
       }
       Err(e) => {
         let _ = tx.send(Err(format!("loopback_accept_failed: {e}")));
       }
     }
   });
-
-  open_system_browser(&login_gate)?;
-
-  let (code, _) = rx
-    .recv_timeout(Duration::from_secs(180))
+  rx.recv_timeout(Duration::from_secs(180))
     .map_err(|_| "oauth_callback_timeout".to_string())?
-    ?;
+}
 
-  let mut form = vec![
-    ("grant_type", "authorization_code".to_string()),
-    ("client_id", client_id.clone()),
-    ("redirect_uri", redirect_uri),
-    ("code", code),
-    ("code_verifier", verifier),
-  ];
-  if let Some(secret) = client_secret {
-    form.push(("client_secret", secret));
+fn store_tokens(app_id: &str, provider: &str, access: &str, refresh: &str) -> Result<bool, String> {
+  let mut refresh_stored = false;
+  if !refresh.is_empty() {
+    let entry = Entry::new(&format!("agentsam-desktop-{app_id}"), KEYCHAIN_ACCOUNT_REFRESH)
+      .map_err(|e| e.to_string())?;
+    entry.set_password(refresh).map_err(|e| e.to_string())?;
+    refresh_stored = true;
   }
+  let access_entry = Entry::new(&format!("agentsam-desktop-{app_id}"), KEYCHAIN_ACCOUNT_ACCESS)
+    .map_err(|e| e.to_string())?;
+  access_entry
+    .set_password(access)
+    .map_err(|e| e.to_string())?;
+  let provider_entry = Entry::new(&format!("agentsam-desktop-{app_id}"), KEYCHAIN_PROVIDER)
+    .map_err(|e| e.to_string())?;
+  provider_entry
+    .set_password(provider)
+    .map_err(|e| e.to_string())?;
+  Ok(refresh_stored)
+}
+
+/// Google Desktop OAuth (PKCE + loopback). Uses GOOGLE_DESKTOP_CLIENT_ID.
+/// Token exchange prefers Local Studio `/api/oauth/google/desktop-exchange`.
+#[tauri::command]
+pub async fn start_google_desktop_login(req: DesktopLoginRequest) -> Result<DesktopLoginResult, String> {
+  let client_id = resolve_google_desktop_client_id(&req).await;
+  let origin = studio_origin(&req);
+  let app_id = req
+    .app_id
+    .filter(|s| !s.trim().is_empty())
+    .unwrap_or_else(|| "local-studio".into());
+  let scope = req
+    .scope
+    .filter(|s| !s.trim().is_empty())
+    .unwrap_or_else(|| GOOGLE_SCOPES.into());
+
+  let state = random_url_safe(24);
+  let verifier = random_url_safe(32);
+  let challenge = pkce_challenge(&verifier);
+
+  let listener = TcpListener::bind("127.0.0.1:0").map_err(|e| format!("loopback_bind_failed: {e}"))?;
+  let port = listener.local_addr().map_err(|e| e.to_string())?.port();
+  let redirect_uri = format!("http://127.0.0.1:{port}/callback");
+
+  let auth = format!(
+    "{GOOGLE_AUTH_URL}?client_id={client_id}&redirect_uri={redirect}&response_type=code&scope={scope}&state={state}&code_challenge={challenge}&code_challenge_method=S256&access_type=offline&prompt=consent&include_granted_scopes=true",
+    redirect = urlencoding_encode(&redirect_uri),
+    scope = urlencoding_encode(&scope),
+  );
+
+  open_system_browser(&auth)?;
+  let code = accept_loopback_code(listener, state)?;
 
   let client = reqwest::Client::new();
-  let token_url = format!("{issuer}/api/oauth/token");
+  let exchange_url = format!("{origin}/api/oauth/google/desktop-exchange");
+  let exchange_body = serde_json::json!({
+    "code": code,
+    "code_verifier": verifier,
+    "client_id": client_id,
+    "redirect_uri": redirect_uri,
+  });
   let res = client
-    .post(&token_url)
+    .post(&exchange_url)
     .header("Accept", "application/json")
-    .form(&form)
+    .header("Content-Type", "application/json")
+    .json(&exchange_body)
     .send()
     .await
-    .map_err(|e| format!("token_exchange_failed: {e}"))?;
+    .map_err(|e| format!("desktop_exchange_failed: {e}"))?;
   let status = res.status();
   let body: serde_json::Value = res.json().await.map_err(|e| format!("token_json_failed: {e}"))?;
   if !status.is_success() {
     return Err(format!(
-      "token_http_{}: {}",
+      "desktop_exchange_http_{}: {}",
       status.as_u16(),
-      body.get("error_description")
+      body
+        .get("error_description")
         .or_else(|| body.get("error"))
+        .or_else(|| body.get("message"))
         .and_then(|v| v.as_str())
         .unwrap_or("unknown")
     ));
@@ -266,41 +323,42 @@ pub async fn start_agentsam_pkce_login(req: PkceLoginRequest) -> Result<PkceLogi
     .and_then(|v| v.as_str())
     .unwrap_or("")
     .to_string();
-
   if access.is_empty() {
     return Err("oauth_token_response_missing_access_token".into());
   }
 
-  let mut refresh_stored = false;
-  if !refresh.is_empty() {
-    let entry = Entry::new(&format!("agentsam-desktop-{app_id}"), KEYCHAIN_ACCOUNT_REFRESH)
-      .map_err(|e| e.to_string())?;
-    entry.set_password(&refresh).map_err(|e| e.to_string())?;
-    refresh_stored = true;
-  }
-  // Access token in keychain briefly is ok for desktop; prefer memory in UI layer.
-  let access_entry = Entry::new(&format!("agentsam-desktop-{app_id}"), KEYCHAIN_ACCOUNT_ACCESS)
-    .map_err(|e| e.to_string())?;
-  access_entry
-    .set_password(&access)
-    .map_err(|e| e.to_string())?;
-
-  Ok(PkceLoginResult {
+  let refresh_stored = store_tokens(&app_id, "google_desktop", &access, &refresh)?;
+  Ok(DesktopLoginResult {
     ok: true,
+    provider: "google_desktop".into(),
     access_token_present: true,
     refresh_stored,
     client_id,
-    message: "signed_in_agentsam".into(),
+    message: "signed_in_google_desktop".into(),
   })
 }
 
-fn urlencoding_encode(s: &str) -> String {
-  let mut out = String::new();
-  for b in s.bytes() {
-    match b {
-      b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => out.push(b as char),
-      _ => out.push_str(&format!("%{b:02X}")),
-    }
-  }
-  out
+/// Open Local Studio Cloudflare OAuth (CLOUDFLARE_OAUTH_CLIENT_ID + offline_access on Worker).
+/// Does not use IAM web login at inneranimalmedia.com.
+#[tauri::command]
+pub async fn start_cloudflare_oauth_login(req: DesktopLoginRequest) -> Result<DesktopLoginResult, String> {
+  let origin = studio_origin(&req);
+  // Identity login with offline_access is hosted on the Studio Worker, which holds
+  // CLOUDFLARE_OAUTH_CLIENT_ID. Desktop opens the start URL; tokens land in Studio session.
+  let start = format!("{origin}/api/oauth/cloudflare/start?next=/agentsam");
+  open_system_browser(&start)?;
+  Ok(DesktopLoginResult {
+    ok: true,
+    provider: "cloudflare_oauth".into(),
+    access_token_present: false,
+    refresh_stored: false,
+    client_id: "CLOUDFLARE_OAUTH_CLIENT_ID".into(),
+    message: "opened_studio_cloudflare_oauth_offline".into(),
+  })
+}
+
+/// Backward-compatible command name — routes to Google Desktop (never IAM web gate).
+#[tauri::command]
+pub async fn start_agentsam_pkce_login(req: DesktopLoginRequest) -> Result<DesktopLoginResult, String> {
+  start_google_desktop_login(req).await
 }

@@ -22,6 +22,8 @@ export function buildPublicConfig(env = {}, opts = {}) {
     google_client_id: clean(env.GOOGLE_CLIENT_ID) || null,
     google_desktop_client_id: clean(env.GOOGLE_DESKTOP_CLIENT_ID) || null,
     google_desktop_exchange_path: '/api/oauth/google/desktop-exchange',
+    cloudflare_oauth_client_id: clean(env.CLOUDFLARE_OAUTH_CLIENT_ID) || null,
+    cloudflare_oauth_start_path: '/api/oauth/cloudflare/start',
     runtime_protocol: 'agentsam.runtime.v1',
     bindings_declared: {
       DB: true,

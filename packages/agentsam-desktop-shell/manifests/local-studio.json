@@ -13,15 +13,16 @@
     "next_after_login": "/agentsam"
   },
   "auth": {
-    "login_url": "/auth/login?next=/agentsam",
+    "login_url": "/api/oauth/cloudflare/start?next=/agentsam",
     "session_check": "/api/auth/session",
-    "oauth_client_id": "iam_agentsam_sdk_web",
-    "login_mode": "agentsam_pkce",
+    "oauth_client_id": "GOOGLE_DESKTOP_CLIENT_ID",
+    "cloudflare_oauth_client_id": "CLOUDFLARE_OAUTH_CLIENT_ID",
+    "login_mode": "google_desktop_pkce",
     "oauth_deep_link": "agentsamstudio://callback",
-    "notes": "Product OAuth client IAM_CLIENT_ID=iam_agentsam_sdk_web (same as CLI). Identity is /auth/login. Public marketing / is never the desktop home."
+    "notes": "Desktop: GOOGLE_DESKTOP_CLIENT_ID (PKCE loopback) + Studio CLOUDFLARE_OAUTH_CLIENT_ID (offline). Never inneranimalmedia.com/auth/login with iam_agentsam_sdk_web."
   },
   "deep_link_scheme": "agentsamstudio",
-  "identity_provider": "inneranimalmedia",
+  "identity_provider": "google_desktop_and_cloudflare",
   "brand_family": "agentsam",
   "product_mark_variant": "local-studio-portal",
   "version": "2.6.5",

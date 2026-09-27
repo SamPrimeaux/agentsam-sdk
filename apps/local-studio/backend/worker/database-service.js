@@ -216,10 +216,8 @@ async function withHyperdriveClient(env, fn) {
 
 async function getBoundD1Source(env, accountId) {
   const owner = await resolveDeploymentOwnerAccount(env);
+  // Bound D1 is the SSOT — never read LOCAL_STUDIO_D1_DATABASE_* env duplicates.
   if (!owner || owner !== accountId || !env?.DB?.prepare) return null;
-  const databaseId = clean(env.LOCAL_STUDIO_D1_DATABASE_ID);
-  const databaseName = clean(env.LOCAL_STUDIO_D1_DATABASE_NAME) || 'AgentSam platform D1';
-  if (!databaseId) return null;
 
   let tableCount = 0;
   let fileSize = 0;
@@ -251,9 +249,10 @@ async function getBoundD1Source(env, accountId) {
     id: 'binding-d1:primary',
     provider: 'cloudflare-d1',
     engine: 'sqlite',
-    label: databaseName,
-    database_name: databaseName,
-    database_id: databaseId,
+    label: 'AgentSam platform D1 (env.DB)',
+    database_name: 'DB',
+    // Opaque binding ref — real UUID lives only in wrangler d1_databases binding.
+    database_id: 'binding:DB',
     account_id: clean(env.CLOUDFLARE_ACCOUNT_ID) || null,
     file_size: fileSize,
     num_tables: tableCount,
