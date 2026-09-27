@@ -40,7 +40,27 @@
       "provider": "google"
     },
     {
+      "path": "/api/oauth/google/callback",
+      "kind": "api",
+      "access": "public",
+      "provider": "google"
+    },
+    {
+      "path": "/api/oauth/google/desktop-exchange",
+      "method": "POST",
+      "kind": "api",
+      "access": "public",
+      "provider": "google_desktop",
+      "notes": "CLI/desktop PKCE broker — loopback redirect_uri only"
+    },
+    {
       "path": "/api/oauth/github/start",
+      "kind": "api",
+      "access": "public",
+      "provider": "github"
+    },
+    {
+      "path": "/api/oauth/github/callback",
       "kind": "api",
       "access": "public",
       "provider": "github"

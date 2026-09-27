@@ -11,7 +11,7 @@ Worker-side identity: providers, OAuth finalize, sessions, adapters.
 | `oauth/callback.js` | `src/core/auth/oauth-finalize.js` → `finalizeInboundOAuth` | **bulletproof path** |
 | `oauth/authorize.js` | `src/api/auth.js` OAuth start handlers | PKCE + state — next sprint |
 | `core/session-service.js` | `src/core/auth.js` | cookie, `createLoginSession`, revoke |
-| `core/account-linking.js` | `ensureIdentityPlaneBeforeSession`, `ensureAppUser` | account_identities |
+| `core/account-linking.js` | `ensureIdentityPlaneBeforeSession`, `ensureAppUser` | **accounts** SSOT + account_identities (IdP link) |
 | `adapters/inneranimalmedia/*` | D1 writes in auth side-effects | tenant/workspace stays adapter-only |
 
 ## Rule

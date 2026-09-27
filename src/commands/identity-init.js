@@ -28,7 +28,7 @@ function parseArgs(argv) {
 export async function runIdentityInit(argv = []) {
   const opts = parseArgs(argv);
   if (!opts.projectName) {
-    console.error('\n  Usage: agentsam identity init --name <project> [--brand "App Name"] [--logo-url /logo.svg] [--provider inneranimalmedia|google|github|gcp|email|cloudflare]\n');
+    console.error('\n  Usage: agentsam identity init --name <project> [--brand "App Name"] [--logo-url /logo.svg] [--provider inneranimalmedia|google|google_desktop|github|gcp|email|cloudflare]\n');
     process.exit(1);
   }
 
@@ -72,7 +72,7 @@ export async function runIdentityInit(argv = []) {
   ───────────────────────────
   Path:     ${targetDir}
   Provider: ${provider.id} (${provider.kind})
-  Schema:   d1 · auth_users, auth_sessions, account_identities, … (see agentsam identity schema)
+  Schema:   d1 · accounts (SSOT), auth_users, auth_sessions, account_identities (IdP link), … (see agentsam identity schema)
   Layout:   app/frontend · backend/src · migrations/
 
   Next:

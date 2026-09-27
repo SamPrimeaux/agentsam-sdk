@@ -133,6 +133,11 @@ export function createCloudflareD1Adapter(db, options = {}) {
       const id = newAuthUserId();
       const ts = nowUnix();
       const normalizedEmail = String(email || '').trim().toLowerCase();
+      // accounts = SSOT; auth_users = login principal (1:1 id in portable scaffold).
+      await db.prepare(
+        `INSERT INTO accounts (id, email, display_name, status, created_at, updated_at)
+         VALUES (?, ?, ?, 'active', ?, ?)`,
+      ).bind(id, normalizedEmail, displayName || null, ts, ts).run();
       await db.prepare(
         `INSERT INTO auth_users (id, email, display_name, password_hash, salt, status, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, 'active', ?, ?)`,
@@ -145,24 +150,48 @@ export function createCloudflareD1Adapter(db, options = {}) {
       await db.prepare(
         `UPDATE auth_users SET password_hash = ?, salt = ?, updated_at = ? WHERE id = ?`,
       ).bind(passwordHash, salt, ts, userId).run();
+      await db.prepare(
+        `UPDATE accounts SET updated_at = ? WHERE id = ?`,
+      ).bind(ts, userId).run().catch(() => {});
     },
 
     async findUserByProvider(provider, providerSubject) {
       const row = await db.prepare(
         `SELECT u.id, u.email, u.display_name, u.password_hash, u.salt, u.status, u.created_at, u.updated_at
          FROM account_identities ai
-         JOIN auth_users u ON u.id = ai.account_id
+         JOIN accounts a ON a.id = ai.account_id
+         JOIN auth_users u ON u.id = a.id
          WHERE ai.provider = ? AND ai.provider_subject = ?
+           AND COALESCE(a.status, 'active') = 'active'
          LIMIT 1`,
       ).bind(provider, providerSubject).first();
       return row || null;
     },
 
     async upsertProviderIdentity({ accountId, provider, providerSubject, email }) {
+      // Ensure SSOT account row exists (OAuth may create identity before password user).
+      const ts = nowUnix();
+      const account = await db.prepare(
+        `SELECT id FROM accounts WHERE id = ? LIMIT 1`,
+      ).bind(accountId).first();
+      if (!account?.id) {
+        const authUser = await this.findUserById(accountId);
+        if (!authUser) throw new Error('account_ssot_missing');
+        await db.prepare(
+          `INSERT INTO accounts (id, email, display_name, status, created_at, updated_at)
+           VALUES (?, ?, ?, 'active', ?, ?)`,
+        ).bind(
+          accountId,
+          authUser.email,
+          authUser.display_name || null,
+          authUser.created_at || ts,
+          ts,
+        ).run();
+      }
+
       const existing = await db.prepare(
         `SELECT id FROM account_identities WHERE provider = ? AND provider_subject = ? LIMIT 1`,
       ).bind(provider, providerSubject).first();
-      const ts = nowUnix();
       if (existing?.id) {
         await db.prepare(
           `UPDATE account_identities SET account_id = ?, email = ?, updated_at = ? WHERE id = ?`,

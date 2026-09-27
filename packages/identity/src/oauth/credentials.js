@@ -8,9 +8,11 @@ import { resolveIamOrigin } from '../contracts/auth-config.js';
  *   — SECRET is wrangler secret put only (encryption is law, not luxury).
  *   — ISSUER has no DEFAULT_* — unset means not configured.
  *
- * Developer BYOK: GOOGLE_CLIENT_* / GITHUB_CLIENT_* when set for that provider
- * take the /api/oauth/{provider}/start button; otherwise the button uses the
- * Inner Animal Media platform lane (`inneranimalmedia`).
+ * Developer BYOK:
+ *   GOOGLE_CLIENT_* / GITHUB_CLIENT_* — browser OAuth start buttons
+ *   GOOGLE_DESKTOP_CLIENT_ID — CLI/desktop PKCE (+ optional DESKTOP secret)
+ *   CLOUDFLARE_OAUTH_CLIENT_ID — Cloudflare sign-in (secret optional for PKCE)
+ * When unset, Google/GitHub buttons fall back to the IAM platform lane.
  */
 
 export const IAM_PLATFORM_STATE_PROVIDER = 'iam_platform';
@@ -50,9 +52,9 @@ export function requireIamPlatformCredentials(env) {
 
 /**
  * @param {Record<string, unknown> | null | undefined} env
- * @param {'google' | 'github' | 'cloudflare' | 'inneranimalmedia' | 'iam'} provider
+ * @param {'google' | 'google_desktop' | 'github' | 'cloudflare' | 'inneranimalmedia' | 'iam'} provider
  * @returns {{
- *   lane: 'iam_platform' | 'byok_google' | 'byok_github' | 'byok_cloudflare',
+ *   lane: 'iam_platform' | 'byok_google' | 'byok_google_desktop' | 'byok_github' | 'byok_cloudflare',
  *   clientId: string,
  *   clientSecret: string,
  *   origin?: string,
@@ -61,7 +63,7 @@ export function requireIamPlatformCredentials(env) {
  * } | null}
  */
 export function resolveOAuthCredentialLane(env, provider) {
-  const key = String(provider || '').trim().toLowerCase();
+  const key = String(provider || '').trim().toLowerCase().replace(/-/g, '_');
 
   // Protocol/selection id is inneranimalmedia; `iam` remains a legacy alias.
   if (key === 'inneranimalmedia' || key === 'iam') {
@@ -83,6 +85,20 @@ export function resolveOAuthCredentialLane(env, provider) {
     if (clientId && clientSecret) {
       return { lane: 'byok_google', clientId, clientSecret, provider: 'google' };
     }
+  }
+
+  if (key === 'google_desktop') {
+    const clientId = String(env?.GOOGLE_DESKTOP_CLIENT_ID || '').trim();
+    const clientSecret = String(env?.GOOGLE_DESKTOP_CLIENT_SECRET || '').trim();
+    if (clientId) {
+      return {
+        lane: 'byok_google_desktop',
+        clientId,
+        clientSecret,
+        provider: 'google_desktop',
+      };
+    }
+    return null;
   }
 
   if (key === 'github') {

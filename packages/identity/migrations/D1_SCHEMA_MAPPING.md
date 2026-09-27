@@ -5,8 +5,9 @@ The D1 adapter maps existing hosted table names without requiring a big-bang ren
 
 | Portable (SQLite) | Hosted D1 (current) | Notes |
 |---|---|---|
-| `identity_users` | `auth_users` | Same columns |
-| `identity_external_accounts` | `account_identities` | `user_id` ↔ `account_id` |
+| `identity_users` / account plane | **`accounts`** | **Account SSOT** — row of record |
+| login principal | `auth_users` | 1:1 with `accounts.id` in portable scaffold |
+| `identity_external_accounts` | `account_identities` | IdP linkage only (`account_id` → `accounts.id`) — never the account SSOT |
 | `identity_sessions` | `auth_sessions` | Same columns |
 | `identity_auth_events` | `auth_event_log` | Same columns |
 | `identity_oauth_transactions` | `identity_oauth_states` → migrate to `identity_oauth_transactions` | Requires `app_id NOT NULL`; no silent pre-app_id fallback |

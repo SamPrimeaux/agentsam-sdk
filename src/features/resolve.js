@@ -38,6 +38,7 @@ export function normalizeProviderTemplateId(id) {
   const key = String(id || '').trim().toLowerCase();
   if (!key) return '';
   if (key === 'iam') return 'inneranimalmedia';
+  if (key === 'google-desktop') return 'google_desktop';
   return key;
 }
 

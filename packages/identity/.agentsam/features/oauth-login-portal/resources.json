@@ -4,13 +4,19 @@
   "engine": "d1",
   "migration_sources": [
     "src/migrations/0001_identity_core.sql",
-    "src/migrations/0002_company.sql"
+    "src/migrations/0002_company.sql",
+    "src/migrations/0003_accounts_ssot.sql"
   ],
-  "notes": "Migration files remain the schema authority. This JSON is an index/contract only.",
+  "notes": "Migration files remain the schema authority. accounts is the account SSOT; account_identities is IdP linkage only.",
   "tables": [
     {
+      "name": "accounts",
+      "purpose": "account SSOT (row of record)",
+      "source": "src/migrations/0001_identity_core.sql"
+    },
+    {
       "name": "auth_users",
-      "purpose": "canonical user identity",
+      "purpose": "login principal (1:1 with accounts.id in portable scaffold)",
       "source": "src/migrations/0001_identity_core.sql"
     },
     {
@@ -21,7 +27,7 @@
     },
     {
       "name": "account_identities",
-      "purpose": "external identity/provider mapping",
+      "purpose": "IdP linkage only (provider + subject → accounts.id) — not the account SSOT",
       "owner_column": "account_id",
       "source": "src/migrations/0001_identity_core.sql"
     },

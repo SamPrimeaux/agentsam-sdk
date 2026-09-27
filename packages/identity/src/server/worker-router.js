@@ -12,6 +12,7 @@ import { fetchCloudflareProfile } from '../providers/cloudflare/profile.js';
 import { IDENTITY_ROUTE_IDS } from '../contracts/route-ids.js';
 import { IdentityRoutingError } from '../contracts/identity-store.js';
 import { resolveOAuthCredentialLane } from '../oauth/credentials.js';
+import { handleGoogleDesktopExchangeRequest } from '../oauth/google-desktop-exchange.js';
 import { iamPlatformOAuthCallback, iamPlatformOAuthStart } from '../oauth/iam-platform.js';
 import { pkceChallenge, pkceVerifier, randomOAuthState } from '../oauth/pkce.js';
 
@@ -222,9 +223,13 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
   }
 
   // ── OAuth ────────────────────────────────────────────────────────────────
-  // Default: IAM_CLIENT_* (minted). Developer BYOK GOOGLE_*/GITHUB_* take the
-  // matching /api/oauth/{provider}/start button when set.
+  // Default: IAM_CLIENT_* (minted). Developer BYOK GOOGLE_*/GITHUB_*/CLOUDFLARE_*
+  // take the matching /api/oauth/{provider}/start button when set.
+  // Desktop PKCE: GOOGLE_DESKTOP_CLIENT_ID → POST /api/oauth/google/desktop-exchange.
   // Canonical platform id = inneranimalmedia (legacy /api/oauth/iam/* still accepted).
+  if (path === '/api/oauth/google/desktop-exchange') {
+    return handleGoogleDesktopExchangeRequest(request, env);
+  }
   if (path === '/api/oauth/inneranimalmedia/callback' || path === '/api/oauth/iam/callback') {
     if (method === 'GET') {
       return iamPlatformOAuthCallback(request, env, adapter, identity);

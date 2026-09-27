@@ -18,6 +18,14 @@ export const AGENTSAM_AUTH_ENV = Object.freeze({
   iamClientSecret: 'IAM_CLIENT_SECRET',
   apiKey: 'AGENTSAM_API_KEY',
   bridgeKey: 'AGENTSAM_BRIDGE_KEY',
+  googleClientId: 'GOOGLE_CLIENT_ID',
+  googleClientSecret: 'GOOGLE_CLIENT_SECRET',
+  googleDesktopClientId: 'GOOGLE_DESKTOP_CLIENT_ID',
+  googleDesktopClientSecret: 'GOOGLE_DESKTOP_CLIENT_SECRET',
+  githubClientId: 'GITHUB_CLIENT_ID',
+  githubClientSecret: 'GITHUB_CLIENT_SECRET',
+  cloudflareOauthClientId: 'CLOUDFLARE_OAUTH_CLIENT_ID',
+  cloudflareOauthClientSecret: 'CLOUDFLARE_OAUTH_CLIENT_SECRET',
 });
 
 /** PLATFORM account-authority issuer — not an APP host. */

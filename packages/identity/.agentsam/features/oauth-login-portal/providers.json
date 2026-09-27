@@ -35,7 +35,27 @@
       "required_configuration": [
         "GOOGLE_CLIENT_ID",
         "GOOGLE_CLIENT_SECRET"
-      ]
+      ],
+      "notes": "Web browser OAuth (confidential client). For Desktop/CLI PKCE use google_desktop."
+    },
+    {
+      "id": "google_desktop",
+      "aliases": ["google-desktop"],
+      "kind": "oauth",
+      "status": "ready",
+      "implementation": "src/providers/google",
+      "capabilities": [
+        "identity.oauth.authorize",
+        "identity.oauth.desktop_exchange",
+        "identity.profile.resolve"
+      ],
+      "required_configuration": [
+        "GOOGLE_DESKTOP_CLIENT_ID"
+      ],
+      "optional_configuration": [
+        "GOOGLE_DESKTOP_CLIENT_SECRET"
+      ],
+      "notes": "Desktop/public PKCE client (Console type Desktop app — no secret). Worker brokers POST /api/oauth/google/desktop-exchange for loopback redirects. Optional GOOGLE_DESKTOP_CLIENT_SECRET only if the client id was mis-typed as Web."
     },
     {
       "id": "github",
@@ -90,7 +110,7 @@
       "optional_configuration": [
         "CLOUDFLARE_OAUTH_CLIENT_SECRET"
       ],
-      "notes": "Registered in identityProviders. Client secret optional for PKCE-only clients."
+      "notes": "Cloudflare sign-in (same Worker secrets as the Cloudflare resource connector). Client secret optional for PKCE-only clients (Token Authentication Method = None)."
     }
   ]
 }

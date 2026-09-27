@@ -26,7 +26,8 @@ The CLI can now scaffold the reusable identity app surfaces directly with `agent
 - `POST /api/auth/login`
 - `POST /api/auth/signup` — create account (email/password); portal form must call this, not login
 - `GET /api/company` — public branding SSOT (loaded by `shared/company-branding.js`)
-- OAuth: `/api/oauth/google/start`, `/api/oauth/github/start`
+- OAuth: `/api/oauth/google/start`, `/api/oauth/github/start`, `/api/oauth/cloudflare/start`
+- Desktop PKCE broker: `POST /api/oauth/google/desktop-exchange` (`GOOGLE_DESKTOP_CLIENT_ID`)
 - GCP: per-client when demanded — scaffold only until requested
 
 Sensitive finalize stays server-side (`oauth/callback` → Identity Service).

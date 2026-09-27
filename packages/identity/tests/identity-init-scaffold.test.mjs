@@ -16,7 +16,10 @@ describe('identity init scaffold', () => {
     assert.ok(files['app/frontend/auth/signup.html'].includes('/api/auth/signup'));
     assert.ok(files['backend/src/index.js'].includes('handleIdentityWorkerRequest'));
     assert.ok(files['migrations/0001_identity_core.sql'].includes('CREATE TABLE IF NOT EXISTS company'));
+    assert.ok(files['migrations/0001_identity_core.sql'].includes('CREATE TABLE IF NOT EXISTS accounts'));
     assert.ok(files['migrations/0001_identity_core.sql'].includes('INSERT OR IGNORE INTO company'));
+    assert.ok(files['.env.example'].includes('GOOGLE_DESKTOP_CLIENT_ID'));
+    assert.ok(files['.env.example'].includes('CLOUDFLARE_OAUTH_CLIENT_ID'));
     assert.ok(files['app/frontend/shared/company-branding.js'].includes('/api/company'));
 
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'identity-init-'));

@@ -72,6 +72,15 @@ export {
   finalizeInboundOAuth,
   registerFinalizeInboundOAuth,
 } from './oauth/callback.js';
+export {
+  resolveOAuthCredentialLane,
+  resolveIamPlatformCredentials,
+  requireIamPlatformCredentials,
+} from './oauth/credentials.js';
+export {
+  handleGoogleDesktopExchangeRequest,
+  resolveGoogleExchangeSecret,
+} from './oauth/google-desktop-exchange.js';
 export { createCloudflareD1Adapter } from './adapters/cloudflare-d1/index.js';
 export {
   createSqliteIdentityAdapter,

@@ -1,5 +1,20 @@
 -- AgentSam Identity — customer D1 core (portable, boring, growable)
 -- Timestamps: INTEGER unixepoch seconds (AGENTS.md §2)
+--
+-- SSOT: `accounts` is the account row of record.
+-- `auth_users` is the login principal (1:1 with accounts.id in this portable scaffold).
+-- `account_identities` is IdP linkage only (provider + subject → accounts.id) — never the account SSOT.
+
+CREATE TABLE IF NOT EXISTS accounts (
+  id TEXT PRIMARY KEY NOT NULL,
+  email TEXT NOT NULL COLLATE NOCASE,
+  display_name TEXT,
+  status TEXT NOT NULL DEFAULT 'active',
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_email ON accounts(email);
 
 CREATE TABLE IF NOT EXISTS auth_users (
   id TEXT PRIMARY KEY NOT NULL,
@@ -9,7 +24,8 @@ CREATE TABLE IF NOT EXISTS auth_users (
   salt TEXT,
   status TEXT NOT NULL DEFAULT 'active',
   created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
+  updated_at INTEGER NOT NULL,
+  FOREIGN KEY (id) REFERENCES accounts(id)
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_auth_users_email ON auth_users(email);
@@ -31,6 +47,7 @@ CREATE TABLE IF NOT EXISTS auth_sessions (
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_user_expires
   ON auth_sessions(user_id, expires_at);
 
+-- IdP linkage only — points at accounts (SSOT), not a substitute for accounts.
 CREATE TABLE IF NOT EXISTS account_identities (
   id TEXT PRIMARY KEY NOT NULL,
   account_id TEXT NOT NULL,
@@ -39,7 +56,7 @@ CREATE TABLE IF NOT EXISTS account_identities (
   email TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
-  FOREIGN KEY (account_id) REFERENCES auth_users(id)
+  FOREIGN KEY (account_id) REFERENCES accounts(id)
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_account_identities_provider_subject

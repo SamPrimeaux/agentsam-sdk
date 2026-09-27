@@ -78,11 +78,20 @@ migrations_dir = "migrations"
 # IAM_CLIENT_SECRET=      # wrangler secret put only
 # IAM_ORIGIN=https://inneranimalmedia.com
 
-# Developer BYOK — takes /api/oauth/{google|github}/start when set
+# Web browser OAuth (BYOK) — takes /api/oauth/{google|github}/start when set
 # GOOGLE_CLIENT_ID=
 # GOOGLE_CLIENT_SECRET=
 # GITHUB_CLIENT_ID=
 # GITHUB_CLIENT_SECRET=
+
+# Google Desktop / CLI PKCE — Console type "Desktop app" (no secret required)
+# GOOGLE_DESKTOP_CLIENT_ID=
+# GOOGLE_DESKTOP_CLIENT_SECRET=   # optional; only if client was mis-typed as Web
+# Broker: POST /api/oauth/google/desktop-exchange (loopback redirect only)
+
+# Cloudflare sign-in — same secrets as the CF resource connector
+# CLOUDFLARE_OAUTH_CLIENT_ID=
+# CLOUDFLARE_OAUTH_CLIENT_SECRET= # optional for PKCE-only clients
 `;
 
   files['.gitignore'] = `node_modules/
@@ -98,6 +107,8 @@ Boring scaffold: **app/frontend** (auth UI) + **backend** (Worker API) + **migra
 
 Provider template: \`${provider}\` (see \`agentsam identity plan --provider ${provider}\`).
 
+**Account SSOT:** \`accounts\` (row of record). \`account_identities\` is IdP linkage only.
+
 ## Quick start
 
 \`\`\`bash
@@ -109,7 +120,15 @@ npm run dev
 # open http://localhost:8787/auth/login
 \`\`\`
 
-OAuth: minted \`IAM_CLIENT_ID\` + \`IAM_CLIENT_SECRET\` (default). Developer BYOK: \`GOOGLE_*\` / \`GITHUB_*\` when set.
+### OAuth options (pick what you need)
+
+| Lane | Env | Routes |
+|------|-----|--------|
+| IAM platform (default) | \`IAM_CLIENT_ID\` + \`IAM_CLIENT_SECRET\` | \`/api/oauth/inneranimalmedia/*\` |
+| Google web | \`GOOGLE_CLIENT_ID\` + \`GOOGLE_CLIENT_SECRET\` | \`/api/oauth/google/start\` |
+| Google desktop/CLI | \`GOOGLE_DESKTOP_CLIENT_ID\` | \`POST /api/oauth/google/desktop-exchange\` |
+| GitHub | \`GITHUB_CLIENT_*\` | \`/api/oauth/github/start\` |
+| Cloudflare | \`CLOUDFLARE_OAUTH_CLIENT_ID\` (+ optional secret) | \`/api/oauth/cloudflare/start\` |
 
 ## Layout
 

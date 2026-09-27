@@ -20,7 +20,7 @@ identity.login(request);   // alpha: throws until Identity Service adapter is wi
 identity.session.fromRequest(request);  // alpha: throws until adapter is wired
 ```
 
-**Alpha scope:** contracts, D1 adapter, Worker router, `agentsam identity init` scaffold (`app/frontend` + `backend` + migrations), and `agentsam identity preview`. Default OAuth: minted `IAM_CLIENT_ID` + `IAM_CLIENT_SECRET`. Developer Google/GitHub BYOK still supported when those env pairs are set.
+**Alpha scope:** contracts, D1 adapter, Worker router, `agentsam identity init` scaffold (`app/frontend` + `backend` + migrations), and `agentsam identity preview`. Default OAuth: minted `IAM_CLIENT_ID` + `IAM_CLIENT_SECRET`. BYOK options: Google web, Google Desktop (`GOOGLE_DESKTOP_CLIENT_ID`), GitHub, Cloudflare (`CLOUDFLARE_OAUTH_CLIENT_*`). **Account SSOT:** `accounts` (not `account_identities` — that table is IdP linkage only).
 
 ## Layout
 

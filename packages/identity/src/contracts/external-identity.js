@@ -1,6 +1,6 @@
 /**
  * Portable external identity shape — storage-agnostic.
- * Adapters map this into application-specific account_identities rows.
+ * Adapters map this into account_identities rows that point at accounts (SSOT).
  */
 
 /** @typedef {import('../provider-contract.js').NormalizedExternalIdentity} NormalizedExternalIdentity */
