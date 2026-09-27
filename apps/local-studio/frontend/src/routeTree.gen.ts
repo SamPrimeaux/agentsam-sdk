@@ -16,16 +16,21 @@ import { Route as appsBrowseRouteImport } from './routes/(apps)/browse'
 import { Route as appsCadRouteImport } from './routes/(apps)/cad'
 import { Route as appsCliRouteImport } from './routes/(apps)/cli'
 import { Route as appsCmsRouteImport } from './routes/(apps)/cms'
+import { Route as appsCollaborateRouteImport } from './routes/(apps)/collaborate'
 import { Route as appsContentRouteImport } from './routes/(apps)/content'
 import { Route as appsDatabaseRouteImport } from './routes/(apps)/database'
 import { Route as appsFilesRouteImport } from './routes/(apps)/files'
+import { Route as appsMailRouteImport } from './routes/(apps)/mail'
 import { Route as appsProjectsRouteImport } from './routes/(apps)/projects'
 import { Route as appsSettingsRouteImport } from './routes/(apps)/settings'
 import { Route as appsShipRouteImport } from './routes/(apps)/ship'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiCloudflareRouteImport } from './routes/api/cloudflare'
 import { Route as ApiGithubRouteImport } from './routes/api/github'
-import { Route as ApiContentLocalBridgeRouteImport } from './routes/api/content.local.bridge'
+import { Route as appsArtifactsIndexRouteImport } from './routes/(apps)/artifacts/index'
+import { Route as appsArtifactsTicketsRouteImport } from './routes/(apps)/artifacts/tickets'
+import { Route as appsProjectsIndexRouteImport } from './routes/(apps)/projects/index'
+import { Route as appsProjectsProjectIdRouteImport } from './routes/(apps)/projects/$projectId'
 import { Route as appsSettingsIndexRouteImport } from './routes/(apps)/settings/index'
 import { Route as appsSettingsUnitRouteImport } from './routes/(apps)/settings/$unit'
 import { Route as appsSettingsIntegrationsRouteImport } from './routes/(apps)/settings/integrations'
@@ -35,6 +40,8 @@ import { Route as appsTrailsIndexRouteImport } from './routes/(apps)/trails/inde
 import { Route as appsTrailsTrailIdRouteImport } from './routes/(apps)/trails/$trailId'
 import { Route as ApiLlmInventoryRouteImport } from './routes/api/llm.inventory'
 import { Route as appsAgentsamAppsCadRouteImport } from './routes/(apps)/agentsam.apps.cad'
+import { Route as appsArtifactsTicketsIndexRouteImport } from './routes/(apps)/artifacts/tickets/index'
+import { Route as appsArtifactsTicketsTicketIdRouteImport } from './routes/(apps)/artifacts/tickets/$ticketId'
 import { Route as ApiContentLocalBridgeRouteImport } from './routes/api/content.local.bridge'
 import { Route as ApiDatabaseLocalBridgeRouteImport } from './routes/api/database.local.bridge'
 
@@ -73,6 +80,11 @@ const appsCmsRoute = appsCmsRouteImport.update({
   path: '/cms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsCollaborateRoute = appsCollaborateRouteImport.update({
+  id: '/(apps)/collaborate',
+  path: '/collaborate',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const appsContentRoute = appsContentRouteImport.update({
   id: '/(apps)/content',
   path: '/content',
@@ -86,6 +98,11 @@ const appsDatabaseRoute = appsDatabaseRouteImport.update({
 const appsFilesRoute = appsFilesRouteImport.update({
   id: '/(apps)/files',
   path: '/files',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const appsMailRoute = appsMailRouteImport.update({
+  id: '/(apps)/mail',
+  path: '/mail',
   getParentRoute: () => rootRouteImport,
 } as any)
 const appsProjectsRoute = appsProjectsRouteImport.update({
@@ -118,10 +135,25 @@ const ApiGithubRoute = ApiGithubRouteImport.update({
   path: '/api/github',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiContentLocalBridgeRoute = ApiContentLocalBridgeRouteImport.update({
-  id: '/api/content/local/bridge',
-  path: '/api/content/local/bridge',
-  getParentRoute: () => rootRouteImport,
+const appsArtifactsIndexRoute = appsArtifactsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => appsArtifactsRoute,
+} as any)
+const appsArtifactsTicketsRoute = appsArtifactsTicketsRouteImport.update({
+  id: '/tickets',
+  path: '/tickets',
+  getParentRoute: () => appsArtifactsRoute,
+} as any)
+const appsProjectsIndexRoute = appsProjectsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => appsProjectsRoute,
+} as any)
+const appsProjectsProjectIdRoute = appsProjectsProjectIdRouteImport.update({
+  id: '/$projectId',
+  path: '/$projectId',
+  getParentRoute: () => appsProjectsRoute,
 } as any)
 const appsSettingsIndexRoute = appsSettingsIndexRouteImport.update({
   id: '/',
@@ -169,6 +201,18 @@ const appsAgentsamAppsCadRoute = appsAgentsamAppsCadRouteImport.update({
   path: '/apps/cad',
   getParentRoute: () => appsAgentsamRoute,
 } as any)
+const appsArtifactsTicketsIndexRoute =
+  appsArtifactsTicketsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => appsArtifactsTicketsRoute,
+  } as any)
+const appsArtifactsTicketsTicketIdRoute =
+  appsArtifactsTicketsTicketIdRouteImport.update({
+    id: '/$ticketId',
+    path: '/$ticketId',
+    getParentRoute: () => appsArtifactsTicketsRoute,
+  } as any)
 const ApiContentLocalBridgeRoute = ApiContentLocalBridgeRouteImport.update({
   id: '/api/content/local/bridge',
   path: '/api/content/local/bridge',
@@ -183,92 +227,110 @@ const ApiDatabaseLocalBridgeRoute = ApiDatabaseLocalBridgeRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agentsam': typeof appsAgentsamRouteWithChildren
-  '/artifacts': typeof appsArtifactsRoute
+  '/artifacts': typeof appsArtifactsRouteWithChildren
   '/browse': typeof appsBrowseRoute
   '/cad': typeof appsCadRoute
   '/cli': typeof appsCliRoute
   '/cms': typeof appsCmsRoute
+  '/collaborate': typeof appsCollaborateRoute
   '/content': typeof appsContentRoute
   '/database': typeof appsDatabaseRoute
   '/files': typeof appsFilesRoute
-  '/projects': typeof appsProjectsRoute
+  '/mail': typeof appsMailRoute
+  '/projects': typeof appsProjectsRouteWithChildren
   '/settings': typeof appsSettingsRouteWithChildren
   '/ship': typeof appsShipRoute
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
-  '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
+  '/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
+  '/projects/$projectId': typeof appsProjectsProjectIdRoute
   '/settings/$unit': typeof appsSettingsUnitRoute
   '/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/settings/keys': typeof appsSettingsKeysRoute
   '/settings/themes': typeof appsSettingsThemesRoute
   '/trails/$trailId': typeof appsTrailsTrailIdRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
+  '/artifacts/': typeof appsArtifactsIndexRoute
+  '/projects/': typeof appsProjectsIndexRoute
   '/settings/': typeof appsSettingsIndexRoute
   '/trails/': typeof appsTrailsIndexRoute
   '/agentsam/apps/cad': typeof appsAgentsamAppsCadRoute
+  '/artifacts/tickets/$ticketId': typeof appsArtifactsTicketsTicketIdRoute
   '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
   '/api/database/local/bridge': typeof ApiDatabaseLocalBridgeRoute
+  '/artifacts/tickets/': typeof appsArtifactsTicketsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agentsam': typeof appsAgentsamRouteWithChildren
-  '/artifacts': typeof appsArtifactsRoute
   '/browse': typeof appsBrowseRoute
   '/cad': typeof appsCadRoute
   '/cli': typeof appsCliRoute
   '/cms': typeof appsCmsRoute
+  '/collaborate': typeof appsCollaborateRoute
   '/content': typeof appsContentRoute
   '/database': typeof appsDatabaseRoute
   '/files': typeof appsFilesRoute
-  '/projects': typeof appsProjectsRoute
+  '/mail': typeof appsMailRoute
   '/ship': typeof appsShipRoute
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
-  '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
+  '/projects/$projectId': typeof appsProjectsProjectIdRoute
   '/settings/$unit': typeof appsSettingsUnitRoute
   '/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/settings/keys': typeof appsSettingsKeysRoute
   '/settings/themes': typeof appsSettingsThemesRoute
   '/trails/$trailId': typeof appsTrailsTrailIdRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
+  '/artifacts': typeof appsArtifactsIndexRoute
+  '/projects': typeof appsProjectsIndexRoute
   '/settings': typeof appsSettingsIndexRoute
   '/trails': typeof appsTrailsIndexRoute
   '/agentsam/apps/cad': typeof appsAgentsamAppsCadRoute
+  '/artifacts/tickets/$ticketId': typeof appsArtifactsTicketsTicketIdRoute
   '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
   '/api/database/local/bridge': typeof ApiDatabaseLocalBridgeRoute
+  '/artifacts/tickets': typeof appsArtifactsTicketsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/(apps)/agentsam': typeof appsAgentsamRouteWithChildren
-  '/(apps)/artifacts': typeof appsArtifactsRoute
+  '/(apps)/artifacts': typeof appsArtifactsRouteWithChildren
   '/(apps)/browse': typeof appsBrowseRoute
   '/(apps)/cad': typeof appsCadRoute
   '/(apps)/cli': typeof appsCliRoute
   '/(apps)/cms': typeof appsCmsRoute
+  '/(apps)/collaborate': typeof appsCollaborateRoute
   '/(apps)/content': typeof appsContentRoute
   '/(apps)/database': typeof appsDatabaseRoute
   '/(apps)/files': typeof appsFilesRoute
-  '/(apps)/projects': typeof appsProjectsRoute
+  '/(apps)/mail': typeof appsMailRoute
+  '/(apps)/projects': typeof appsProjectsRouteWithChildren
   '/(apps)/settings': typeof appsSettingsRouteWithChildren
   '/(apps)/ship': typeof appsShipRoute
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
-  '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
+  '/(apps)/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
+  '/(apps)/projects/$projectId': typeof appsProjectsProjectIdRoute
   '/(apps)/settings/$unit': typeof appsSettingsUnitRoute
   '/(apps)/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/(apps)/settings/keys': typeof appsSettingsKeysRoute
   '/(apps)/settings/themes': typeof appsSettingsThemesRoute
   '/(apps)/trails/$trailId': typeof appsTrailsTrailIdRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
+  '/(apps)/artifacts/': typeof appsArtifactsIndexRoute
+  '/(apps)/projects/': typeof appsProjectsIndexRoute
   '/(apps)/settings/': typeof appsSettingsIndexRoute
   '/(apps)/trails/': typeof appsTrailsIndexRoute
   '/(apps)/agentsam/apps/cad': typeof appsAgentsamAppsCadRoute
+  '/(apps)/artifacts/tickets/$ticketId': typeof appsArtifactsTicketsTicketIdRoute
   '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
   '/api/database/local/bridge': typeof ApiDatabaseLocalBridgeRoute
+  '/(apps)/artifacts/tickets/': typeof appsArtifactsTicketsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -280,56 +342,67 @@ export interface FileRouteTypes {
     | '/cad'
     | '/cli'
     | '/cms'
+    | '/collaborate'
     | '/content'
     | '/database'
     | '/files'
+    | '/mail'
     | '/projects'
     | '/settings'
     | '/ship'
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
-    | '/api/content/local/bridge'
+    | '/artifacts/tickets'
+    | '/projects/$projectId'
     | '/settings/$unit'
     | '/settings/integrations'
     | '/settings/keys'
     | '/settings/themes'
     | '/trails/$trailId'
     | '/api/llm/inventory'
+    | '/artifacts/'
+    | '/projects/'
     | '/settings/'
     | '/trails/'
     | '/agentsam/apps/cad'
+    | '/artifacts/tickets/$ticketId'
     | '/api/content/local/bridge'
     | '/api/database/local/bridge'
+    | '/artifacts/tickets/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/agentsam'
-    | '/artifacts'
     | '/browse'
     | '/cad'
     | '/cli'
     | '/cms'
+    | '/collaborate'
     | '/content'
     | '/database'
     | '/files'
-    | '/projects'
+    | '/mail'
     | '/ship'
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
-    | '/api/content/local/bridge'
+    | '/projects/$projectId'
     | '/settings/$unit'
     | '/settings/integrations'
     | '/settings/keys'
     | '/settings/themes'
     | '/trails/$trailId'
     | '/api/llm/inventory'
+    | '/artifacts'
+    | '/projects'
     | '/settings'
     | '/trails'
     | '/agentsam/apps/cad'
+    | '/artifacts/tickets/$ticketId'
     | '/api/content/local/bridge'
     | '/api/database/local/bridge'
+    | '/artifacts/tickets'
   id:
     | '__root__'
     | '/'
@@ -339,47 +412,55 @@ export interface FileRouteTypes {
     | '/(apps)/cad'
     | '/(apps)/cli'
     | '/(apps)/cms'
+    | '/(apps)/collaborate'
     | '/(apps)/content'
     | '/(apps)/database'
     | '/(apps)/files'
+    | '/(apps)/mail'
     | '/(apps)/projects'
     | '/(apps)/settings'
     | '/(apps)/ship'
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
-    | '/api/content/local/bridge'
+    | '/(apps)/artifacts/tickets'
+    | '/(apps)/projects/$projectId'
     | '/(apps)/settings/$unit'
     | '/(apps)/settings/integrations'
     | '/(apps)/settings/keys'
     | '/(apps)/settings/themes'
     | '/(apps)/trails/$trailId'
     | '/api/llm/inventory'
+    | '/(apps)/artifacts/'
+    | '/(apps)/projects/'
     | '/(apps)/settings/'
     | '/(apps)/trails/'
     | '/(apps)/agentsam/apps/cad'
+    | '/(apps)/artifacts/tickets/$ticketId'
     | '/api/content/local/bridge'
     | '/api/database/local/bridge'
+    | '/(apps)/artifacts/tickets/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   appsAgentsamRoute: typeof appsAgentsamRouteWithChildren
-  appsArtifactsRoute: typeof appsArtifactsRoute
+  appsArtifactsRoute: typeof appsArtifactsRouteWithChildren
   appsBrowseRoute: typeof appsBrowseRoute
   appsCadRoute: typeof appsCadRoute
   appsCliRoute: typeof appsCliRoute
   appsCmsRoute: typeof appsCmsRoute
+  appsCollaborateRoute: typeof appsCollaborateRoute
   appsContentRoute: typeof appsContentRoute
   appsDatabaseRoute: typeof appsDatabaseRoute
   appsFilesRoute: typeof appsFilesRoute
-  appsProjectsRoute: typeof appsProjectsRoute
+  appsMailRoute: typeof appsMailRoute
+  appsProjectsRoute: typeof appsProjectsRouteWithChildren
   appsSettingsRoute: typeof appsSettingsRouteWithChildren
   appsShipRoute: typeof appsShipRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiCloudflareRoute: typeof ApiCloudflareRoute
   ApiGithubRoute: typeof ApiGithubRoute
-  ApiContentLocalBridgeRoute: typeof ApiContentLocalBridgeRoute
   appsTrailsTrailIdRoute: typeof appsTrailsTrailIdRoute
   ApiLlmInventoryRoute: typeof ApiLlmInventoryRoute
   appsTrailsIndexRoute: typeof appsTrailsIndexRoute
@@ -438,6 +519,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appsCmsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(apps)/collaborate': {
+      id: '/(apps)/collaborate'
+      path: '/collaborate'
+      fullPath: '/collaborate'
+      preLoaderRoute: typeof appsCollaborateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(apps)/content': {
       id: '/(apps)/content'
       path: '/content'
@@ -457,6 +545,13 @@ declare module '@tanstack/react-router' {
       path: '/files'
       fullPath: '/files'
       preLoaderRoute: typeof appsFilesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/mail': {
+      id: '/(apps)/mail'
+      path: '/mail'
+      fullPath: '/mail'
+      preLoaderRoute: typeof appsMailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(apps)/projects': {
@@ -501,12 +596,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGithubRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/content/local/bridge': {
-      id: '/api/content/local/bridge'
-      path: '/api/content/local/bridge'
-      fullPath: '/api/content/local/bridge'
-      preLoaderRoute: typeof ApiContentLocalBridgeRouteImport
-      parentRoute: typeof rootRouteImport
+    '/(apps)/artifacts/': {
+      id: '/(apps)/artifacts/'
+      path: '/'
+      fullPath: '/artifacts/'
+      preLoaderRoute: typeof appsArtifactsIndexRouteImport
+      parentRoute: typeof appsArtifactsRoute
+    }
+    '/(apps)/artifacts/tickets': {
+      id: '/(apps)/artifacts/tickets'
+      path: '/tickets'
+      fullPath: '/artifacts/tickets'
+      preLoaderRoute: typeof appsArtifactsTicketsRouteImport
+      parentRoute: typeof appsArtifactsRoute
+    }
+    '/(apps)/projects/': {
+      id: '/(apps)/projects/'
+      path: '/'
+      fullPath: '/projects/'
+      preLoaderRoute: typeof appsProjectsIndexRouteImport
+      parentRoute: typeof appsProjectsRoute
+    }
+    '/(apps)/projects/$projectId': {
+      id: '/(apps)/projects/$projectId'
+      path: '/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof appsProjectsProjectIdRouteImport
+      parentRoute: typeof appsProjectsRoute
     }
     '/(apps)/settings/': {
       id: '/(apps)/settings/'
@@ -571,6 +687,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appsAgentsamAppsCadRouteImport
       parentRoute: typeof appsAgentsamRoute
     }
+    '/(apps)/artifacts/tickets/': {
+      id: '/(apps)/artifacts/tickets/'
+      path: '/'
+      fullPath: '/artifacts/tickets/'
+      preLoaderRoute: typeof appsArtifactsTicketsIndexRouteImport
+      parentRoute: typeof appsArtifactsTicketsRoute
+    }
+    '/(apps)/artifacts/tickets/$ticketId': {
+      id: '/(apps)/artifacts/tickets/$ticketId'
+      path: '/$ticketId'
+      fullPath: '/artifacts/tickets/$ticketId'
+      preLoaderRoute: typeof appsArtifactsTicketsTicketIdRouteImport
+      parentRoute: typeof appsArtifactsTicketsRoute
+    }
     '/api/content/local/bridge': {
       id: '/api/content/local/bridge'
       path: '/api/content/local/bridge'
@@ -600,6 +730,47 @@ const appsAgentsamRouteWithChildren = appsAgentsamRoute._addFileChildren(
   appsAgentsamRouteChildren,
 )
 
+interface appsArtifactsTicketsRouteChildren {
+  appsArtifactsTicketsTicketIdRoute: typeof appsArtifactsTicketsTicketIdRoute
+  appsArtifactsTicketsIndexRoute: typeof appsArtifactsTicketsIndexRoute
+}
+
+const appsArtifactsTicketsRouteChildren: appsArtifactsTicketsRouteChildren = {
+  appsArtifactsTicketsTicketIdRoute: appsArtifactsTicketsTicketIdRoute,
+  appsArtifactsTicketsIndexRoute: appsArtifactsTicketsIndexRoute,
+}
+
+const appsArtifactsTicketsRouteWithChildren =
+  appsArtifactsTicketsRoute._addFileChildren(appsArtifactsTicketsRouteChildren)
+
+interface appsArtifactsRouteChildren {
+  appsArtifactsTicketsRoute: typeof appsArtifactsTicketsRouteWithChildren
+  appsArtifactsIndexRoute: typeof appsArtifactsIndexRoute
+}
+
+const appsArtifactsRouteChildren: appsArtifactsRouteChildren = {
+  appsArtifactsTicketsRoute: appsArtifactsTicketsRouteWithChildren,
+  appsArtifactsIndexRoute: appsArtifactsIndexRoute,
+}
+
+const appsArtifactsRouteWithChildren = appsArtifactsRoute._addFileChildren(
+  appsArtifactsRouteChildren,
+)
+
+interface appsProjectsRouteChildren {
+  appsProjectsProjectIdRoute: typeof appsProjectsProjectIdRoute
+  appsProjectsIndexRoute: typeof appsProjectsIndexRoute
+}
+
+const appsProjectsRouteChildren: appsProjectsRouteChildren = {
+  appsProjectsProjectIdRoute: appsProjectsProjectIdRoute,
+  appsProjectsIndexRoute: appsProjectsIndexRoute,
+}
+
+const appsProjectsRouteWithChildren = appsProjectsRoute._addFileChildren(
+  appsProjectsRouteChildren,
+)
+
 interface appsSettingsRouteChildren {
   appsSettingsUnitRoute: typeof appsSettingsUnitRoute
   appsSettingsIntegrationsRoute: typeof appsSettingsIntegrationsRoute
@@ -623,21 +794,22 @@ const appsSettingsRouteWithChildren = appsSettingsRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   appsAgentsamRoute: appsAgentsamRouteWithChildren,
-  appsArtifactsRoute: appsArtifactsRoute,
+  appsArtifactsRoute: appsArtifactsRouteWithChildren,
   appsBrowseRoute: appsBrowseRoute,
   appsCadRoute: appsCadRoute,
   appsCliRoute: appsCliRoute,
   appsCmsRoute: appsCmsRoute,
+  appsCollaborateRoute: appsCollaborateRoute,
   appsContentRoute: appsContentRoute,
   appsDatabaseRoute: appsDatabaseRoute,
   appsFilesRoute: appsFilesRoute,
-  appsProjectsRoute: appsProjectsRoute,
+  appsMailRoute: appsMailRoute,
+  appsProjectsRoute: appsProjectsRouteWithChildren,
   appsSettingsRoute: appsSettingsRouteWithChildren,
   appsShipRoute: appsShipRoute,
   ApiChatRoute: ApiChatRoute,
   ApiCloudflareRoute: ApiCloudflareRoute,
   ApiGithubRoute: ApiGithubRoute,
-  ApiContentLocalBridgeRoute: ApiContentLocalBridgeRoute,
   appsTrailsTrailIdRoute: appsTrailsTrailIdRoute,
   ApiLlmInventoryRoute: ApiLlmInventoryRoute,
   appsTrailsIndexRoute: appsTrailsIndexRoute,

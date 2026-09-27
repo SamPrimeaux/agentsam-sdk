@@ -1,6 +1,7 @@
 import { useRouterState } from "@tanstack/react-router";
 import {
   Box,
+  CalendarDays,
   Database,
   FileCode,
   FolderGit2,
@@ -24,6 +25,7 @@ const ITEMS = [
   { to: "/content", label: "Content", icon: Images, match: (p: string) => p.startsWith("/content") },
   { to: "/cad", label: "CAD", icon: Layers, match: (p: string) => p.startsWith("/cad") },
   { to: "/database", label: "Database", icon: Database, match: (p: string) => p.startsWith("/database") },
+  { to: "/collaborate", label: "Work", icon: CalendarDays, match: (p: string) => p.startsWith("/collaborate") || p.startsWith("/mail") },
   { to: "/projects", label: "Projects", icon: FolderGit2, match: (p: string) => p.startsWith("/projects") },
   { to: "/artifacts", label: "Artifacts", icon: Box, match: (p: string) => p.startsWith("/artifacts") },
   { to: "/files", label: "Files", icon: FileCode, match: (p: string) => p.startsWith("/files") },

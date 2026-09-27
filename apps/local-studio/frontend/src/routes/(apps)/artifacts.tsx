@@ -1,14 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ArtifactsStage } from "@/components/workbench/artifacts";
+import { Outlet, createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/(apps)/artifacts")({
-  component: ArtifactsPage,
+  component: ArtifactsLayout,
 });
 
-function ArtifactsPage() {
-  return (
-    <div className="h-full min-h-0">
-      <ArtifactsStage />
-    </div>
-  );
+function ArtifactsLayout() {
+  return <Outlet />;
 }
