@@ -16,6 +16,7 @@ import { Route as appsBrowseRouteImport } from './routes/(apps)/browse'
 import { Route as appsCadRouteImport } from './routes/(apps)/cad'
 import { Route as appsCliRouteImport } from './routes/(apps)/cli'
 import { Route as appsCmsRouteImport } from './routes/(apps)/cms'
+import { Route as appsContentRouteImport } from './routes/(apps)/content'
 import { Route as appsDatabaseRouteImport } from './routes/(apps)/database'
 import { Route as appsFilesRouteImport } from './routes/(apps)/files'
 import { Route as appsProjectsRouteImport } from './routes/(apps)/projects'
@@ -24,6 +25,7 @@ import { Route as appsShipRouteImport } from './routes/(apps)/ship'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiCloudflareRouteImport } from './routes/api/cloudflare'
 import { Route as ApiGithubRouteImport } from './routes/api/github'
+import { Route as ApiContentLocalBridgeRouteImport } from './routes/api/content.local.bridge'
 import { Route as appsSettingsIndexRouteImport } from './routes/(apps)/settings/index'
 import { Route as appsSettingsUnitRouteImport } from './routes/(apps)/settings/$unit'
 import { Route as appsSettingsIntegrationsRouteImport } from './routes/(apps)/settings/integrations'
@@ -69,6 +71,11 @@ const appsCmsRoute = appsCmsRouteImport.update({
   path: '/cms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsContentRoute = appsContentRouteImport.update({
+  id: '/(apps)/content',
+  path: '/content',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const appsDatabaseRoute = appsDatabaseRouteImport.update({
   id: '/(apps)/database',
   path: '/database',
@@ -107,6 +114,11 @@ const ApiCloudflareRoute = ApiCloudflareRouteImport.update({
 const ApiGithubRoute = ApiGithubRouteImport.update({
   id: '/api/github',
   path: '/api/github',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiContentLocalBridgeRoute = ApiContentLocalBridgeRouteImport.update({
+  id: '/api/content/local/bridge',
+  path: '/api/content/local/bridge',
   getParentRoute: () => rootRouteImport,
 } as any)
 const appsSettingsIndexRoute = appsSettingsIndexRouteImport.update({
@@ -164,6 +176,7 @@ export interface FileRoutesByFullPath {
   '/cad': typeof appsCadRoute
   '/cli': typeof appsCliRoute
   '/cms': typeof appsCmsRoute
+  '/content': typeof appsContentRoute
   '/database': typeof appsDatabaseRoute
   '/files': typeof appsFilesRoute
   '/projects': typeof appsProjectsRoute
@@ -172,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
   '/settings/$unit': typeof appsSettingsUnitRoute
   '/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/settings/keys': typeof appsSettingsKeysRoute
@@ -190,6 +204,7 @@ export interface FileRoutesByTo {
   '/cad': typeof appsCadRoute
   '/cli': typeof appsCliRoute
   '/cms': typeof appsCmsRoute
+  '/content': typeof appsContentRoute
   '/database': typeof appsDatabaseRoute
   '/files': typeof appsFilesRoute
   '/projects': typeof appsProjectsRoute
@@ -197,6 +212,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
   '/settings/$unit': typeof appsSettingsUnitRoute
   '/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/settings/keys': typeof appsSettingsKeysRoute
@@ -216,6 +232,7 @@ export interface FileRoutesById {
   '/(apps)/cad': typeof appsCadRoute
   '/(apps)/cli': typeof appsCliRoute
   '/(apps)/cms': typeof appsCmsRoute
+  '/(apps)/content': typeof appsContentRoute
   '/(apps)/database': typeof appsDatabaseRoute
   '/(apps)/files': typeof appsFilesRoute
   '/(apps)/projects': typeof appsProjectsRoute
@@ -224,6 +241,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
   '/(apps)/settings/$unit': typeof appsSettingsUnitRoute
   '/(apps)/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/(apps)/settings/keys': typeof appsSettingsKeysRoute
@@ -244,6 +262,7 @@ export interface FileRouteTypes {
     | '/cad'
     | '/cli'
     | '/cms'
+    | '/content'
     | '/database'
     | '/files'
     | '/projects'
@@ -252,6 +271,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/api/content/local/bridge'
     | '/settings/$unit'
     | '/settings/integrations'
     | '/settings/keys'
@@ -270,6 +290,7 @@ export interface FileRouteTypes {
     | '/cad'
     | '/cli'
     | '/cms'
+    | '/content'
     | '/database'
     | '/files'
     | '/projects'
@@ -277,6 +298,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/api/content/local/bridge'
     | '/settings/$unit'
     | '/settings/integrations'
     | '/settings/keys'
@@ -295,6 +317,7 @@ export interface FileRouteTypes {
     | '/(apps)/cad'
     | '/(apps)/cli'
     | '/(apps)/cms'
+    | '/(apps)/content'
     | '/(apps)/database'
     | '/(apps)/files'
     | '/(apps)/projects'
@@ -303,6 +326,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/api/content/local/bridge'
     | '/(apps)/settings/$unit'
     | '/(apps)/settings/integrations'
     | '/(apps)/settings/keys'
@@ -322,6 +346,7 @@ export interface RootRouteChildren {
   appsCadRoute: typeof appsCadRoute
   appsCliRoute: typeof appsCliRoute
   appsCmsRoute: typeof appsCmsRoute
+  appsContentRoute: typeof appsContentRoute
   appsDatabaseRoute: typeof appsDatabaseRoute
   appsFilesRoute: typeof appsFilesRoute
   appsProjectsRoute: typeof appsProjectsRoute
@@ -330,6 +355,7 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute
   ApiCloudflareRoute: typeof ApiCloudflareRoute
   ApiGithubRoute: typeof ApiGithubRoute
+  ApiContentLocalBridgeRoute: typeof ApiContentLocalBridgeRoute
   appsTrailsTrailIdRoute: typeof appsTrailsTrailIdRoute
   ApiLlmInventoryRoute: typeof ApiLlmInventoryRoute
   appsTrailsIndexRoute: typeof appsTrailsIndexRoute
@@ -386,6 +412,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appsCmsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(apps)/content': {
+      id: '/(apps)/content'
+      path: '/content'
+      fullPath: '/content'
+      preLoaderRoute: typeof appsContentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(apps)/database': {
       id: '/(apps)/database'
       path: '/database'
@@ -440,6 +473,13 @@ declare module '@tanstack/react-router' {
       path: '/api/github'
       fullPath: '/api/github'
       preLoaderRoute: typeof ApiGithubRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/content/local/bridge': {
+      id: '/api/content/local/bridge'
+      path: '/api/content/local/bridge'
+      fullPath: '/api/content/local/bridge'
+      preLoaderRoute: typeof ApiContentLocalBridgeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(apps)/settings/': {
@@ -548,6 +588,7 @@ const rootRouteChildren: RootRouteChildren = {
   appsCadRoute: appsCadRoute,
   appsCliRoute: appsCliRoute,
   appsCmsRoute: appsCmsRoute,
+  appsContentRoute: appsContentRoute,
   appsDatabaseRoute: appsDatabaseRoute,
   appsFilesRoute: appsFilesRoute,
   appsProjectsRoute: appsProjectsRoute,
@@ -556,6 +597,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   ApiCloudflareRoute: ApiCloudflareRoute,
   ApiGithubRoute: ApiGithubRoute,
+  ApiContentLocalBridgeRoute: ApiContentLocalBridgeRoute,
   appsTrailsTrailIdRoute: appsTrailsTrailIdRoute,
   ApiLlmInventoryRoute: ApiLlmInventoryRoute,
   appsTrailsIndexRoute: appsTrailsIndexRoute,

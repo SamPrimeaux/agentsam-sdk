@@ -32,9 +32,20 @@ Each host supplies a `ContentRuntime` via `createContentRuntime({...})`:
 - Embed real customer BrandPack fixtures in generic packages.
 - Run IAM `deploy:full` from this SDK repo for content-studio work.
 
+## Local Studio mount (wired)
+
+- Route: `/content` → `ContentStudioPage` mounts `<ContentStudio runtime={…} />`
+- Runtime factory: `apps/local-studio/frontend/src/lib/content/createLocalStudioContentRuntime.ts`
+- `LocalContentHost`: Tauri `local_content_bridge` + Node `/api/content/local/bridge` via
+  `createAgentsamdLocalHostSeam` + real FS bridge (not memory-only)
+- Brand: `ContentBrandResolver` projections (fictional demos; production via BrandPack host)
+- Knowledge / BrandSimilarity: noop adapters (no Vectorize hardcode)
+- agentsamd: probed via Tauri `ensure_agentsamd` / health; FS ops via Node bridge until
+  agentsamd ships native `/v1/fs`
+
 ## Remaining for true 3-host E2E (Path B)
 
-- Wire Local Studio Tauri bridge → `createAttachableLocalHost` / agentsamd seam
+- agentsamd native `/v1/fs` + watch (today: Node bridge + capability probe)
 - IAM dashboard route + OAuth-scoped providers
 - F&F admin mount with customer account scope
 - Harvest Go pipeline → SiteGraph / TokenGraph → package-readiness ScoreCards
