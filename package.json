@@ -166,6 +166,8 @@
     "packages/work-graph",
     "packages/agentsam-queue-control",
     "packages/agentsam-workbench",
+    "packages/agentsam-content",
+    "packages/agentsam-content-studio",
     "packages/providers/completeful",
     "packages/agentsam-desktop-shell",
     "packages/heuristic-theme",
@@ -175,11 +177,14 @@
     "packages/theme-fuelnfree-site",
     "packages/theme-handyman-site",
     "packages/theme-insurance-site",
-    "packages/theme-shinshu-site"
+    "packages/theme-shinshu-site",
+    "examples/local-studio-demo"
   ],
   "scripts": {
     "test": "npm run test:standard && npm --prefix packages/identity test && npm --prefix packages/agentsam-brand test && npm run test:connectors && npm run test:providers",
     "test:brand": "npm --prefix packages/agentsam-brand test",
+    "test:content": "npm run build -w @inneranimalmedia/agentsam-content && npm run test -w @inneranimalmedia/agentsam-content && npm run build -w @inneranimalmedia/agentsam-content-studio && npm run test -w @inneranimalmedia/agentsam-content-studio",
+    "build:content": "npm run build -w @inneranimalmedia/agentsam-content && npm run build -w @inneranimalmedia/agentsam-content-studio",
     "test:standard": "node test/smoke.mjs && npm run test:unit && npm run test:cli && npm run test:integration:mock && npm run test:terminal:mock",
     "test:unit": "node --test test/*.test.mjs",
     "test:cli": "node --test test/cli/*.test.mjs",

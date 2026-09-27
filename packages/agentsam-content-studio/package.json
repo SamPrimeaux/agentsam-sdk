@@ -1,0 +1,34 @@
+{
+  "name": "@inneranimalmedia/agentsam-content-studio",
+  "version": "0.1.0",
+  "description": "Canonical React UI for AgentSam Content Studio: library, inspectors, assistant rail. Host apps provide a ContentRuntime; the UI never knows their names.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@inneranimalmedia/agentsam-content": "*"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.3",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.0"
+  },
+  "license": "UNLICENSED"
+}
