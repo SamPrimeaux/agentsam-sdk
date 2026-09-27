@@ -9,7 +9,10 @@
     ".": "./src/index.js",
     "./SensitiveInput": "./src/components/SensitiveInput.jsx",
     "./KeysPage": "./src/pages/KeysPage.jsx",
-    "./IntegrationsPage": "./src/pages/IntegrationsPage.jsx"
+    "./IntegrationsPage": {
+      "types": "./src/pages/IntegrationsPage.d.ts",
+      "default": "./src/pages/IntegrationsPage.jsx"
+    }
   },
   "peerDependencies": {
     "react": ">=18"
