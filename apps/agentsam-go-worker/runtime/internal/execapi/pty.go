@@ -153,6 +153,15 @@ func PTYHandler(checkAuth PTYAuthChecker) http.HandlerFunc {
 								Rows: uint16(ctl.Rows),
 							})
 						}
+						continue
+					}
+					// Not a recognized control message: browsers send plain
+					// keystrokes as text frames (WebSocket.send(string)), so
+					// treat anything that isn't valid {"type":"resize",...}
+					// as raw stdin, same as a binary frame.
+					if _, werr := ptmx.Write(data); werr != nil {
+						closeDone()
+						return
 					}
 				}
 			}
