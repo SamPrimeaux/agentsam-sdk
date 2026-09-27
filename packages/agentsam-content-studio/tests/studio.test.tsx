@@ -31,13 +31,13 @@ function makeAsset(partial: Partial<ContentAsset> = {}): ContentAsset {
     source: { type: "upload" },
     providerRefs: [{ provider: "local", ref: "loc_1", role: "original" }],
     filename: "IMG_5933.PNG",
-    semanticAlias: "fft-emblem-garage",
+    semanticAlias: "nw-emblem-garage",
     bytes: 480_000,
     width: 1600,
     height: 900,
     tags: ["logo", "garage"],
     variants: [{ name: "public", format: "avif", bytes: 140_000, width: 1280, approved: true }],
-    usage: [{ app: "fuel-free-time", surface: "home.hero", live: true }],
+    usage: [{ app: "northwind-garage", surface: "home.hero", live: true }],
     provenance: { history: [{ at: new Date().toISOString(), action: "uploaded" }] },
     createdBy: { type: "human", ref: "tester" },
     createdAt: new Date().toISOString(),
@@ -53,12 +53,14 @@ function withRuntime(node: React.ReactNode) {
 }
 
 describe("content studio UI", () => {
-  it("renders the studio shell with system views", () => {
+  it("renders the studio shell with system views and capability chrome", () => {
     const html = renderToStaticMarkup(<ContentStudio runtime={makeRuntime()} />);
     expect(html).toContain("All");
     expect(html).toContain("Generated");
     expect(html).toContain("Needs review");
     expect(html).toContain("AgentSam");
+    // SSR may not await capabilities(); strip mounts with placeholder labels.
+    expect(html).toContain("runtime-capabilities");
   });
 
   it("renders image inspector sections", () => {
@@ -89,7 +91,7 @@ describe("content studio UI", () => {
 
   it("renders usage graph", () => {
     const html = withRuntime(<UsageInspector asset={makeAsset()} />);
-    expect(html).toContain("fuel-free-time");
+    expect(html).toContain("northwind-garage");
     expect(html).toContain("home.hero");
   });
 

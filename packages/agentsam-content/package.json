@@ -41,7 +41,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-assets-core": "*"
+    "@inneranimalmedia/agentsam-assets-core": "*",
+    "@inneranimalmedia/agentsam-scoring": "*",
+    "@inneranimalmedia/agentsam-cloudflare-images": "*"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

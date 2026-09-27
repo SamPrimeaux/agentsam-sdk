@@ -5,8 +5,9 @@ import {
   proposeTags,
   proposeSemanticAlias,
   findDuplicateGroups,
-  matchBrand,
+  inferBrandAssociation,
   ragDocumentText,
+  type BrandCandidate,
   type ContentRuntime,
   type AssistantHandler,
 } from "@inneranimalmedia/agentsam-content";
@@ -24,9 +25,10 @@ function svgDataUri(label: string, from: string, to: string, emoji: string): str
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-const BRAND_PACKS = [
-  { brandId: "fuel-free-time", name: "Fuel & Free Time", keywords: ["garage", "car", "fuel", "emblem"] },
-  { brandId: "inneranimalmedia", name: "InnerAnimalMedia", keywords: ["animal", "studio", "media"] },
+/** Fictional demo candidates only — never real customer BrandPack fixtures. */
+const BRAND_CANDIDATES: BrandCandidate[] = [
+  { brandId: "northwind-garage", name: "Northwind Garage", keywords: ["garage", "car", "fuel", "emblem"] },
+  { brandId: "cedar-studio", name: "Cedar Studio", keywords: ["animal", "studio", "media"] },
 ];
 
 /** Deterministic demo assistant: machine facts first, no LLM required. */
@@ -53,10 +55,10 @@ const demoAssistant: AssistantHandler = {
       case "tag":
         return `Proposed tags: ${proposeTags(a).join(", ") || "none — already well tagged"}`;
       case "identify-brand": {
-        const match = matchBrand(a, BRAND_PACKS);
+        const match = await inferBrandAssociation(a, BRAND_CANDIDATES);
         return match
-          ? `${match.brandId} (confidence ${(match.confidence * 100).toFixed(0)}%, matched on: ${match.matchedOn.join(", ")})`
-          : "No brand match from current metadata.";
+          ? `${match.brandId} (score ${match.scoreCard.score.toFixed(0)}, confidence ${(match.confidence * 100).toFixed(0)}%, ${match.explanation})`
+          : "No brand association proposal from current metadata.";
       }
       case "where-used":
         return ctx.deleteSafety.totalReferences === 0
@@ -85,8 +87,8 @@ let ctxRuntime: ContentRuntime | null = null;
 export async function buildDemoRuntime(): Promise<ContentRuntime> {
   const local = localFiles();
 
-  // ── This is the whole host adapter. Fuel & Free Time or IAM would
-  //    differ only in providers/routes/permissions, never in UI code.
+  // Host adapter only — customer hosts differ in providers/routes/permissions,
+  // never in shared Content Studio UI code.
   const runtime = createContentRuntime({
     identity: { type: "human", ref: "demo-user" },
     account: { id: "acct_local_studio", label: "Local Studio" },
@@ -102,14 +104,14 @@ export async function buildDemoRuntime(): Promise<ContentRuntime> {
   };
 
   // 1. Live brand hero, optimized, in use on two surfaces
-  const hero = img("fft-hero.svg", "Garage hero", "#1c2b4a", "#5b8cff", "🏁");
+  const hero = img("nw-hero.svg", "Garage hero", "#1c2b4a", "#5b8cff", "🏁");
   const heroAsset = await runtime.createAsset({
     origin: "upload",
     source: { type: "upload" },
     kind: "image",
     filename: "IMG_5933.PNG",
     title: "Garage workbench hero",
-    brandId: "fuel-free-time",
+    brandId: "northwind-garage",
     role: "hero",
     mime: "image/png",
     bytes: 4_800_000,
@@ -132,8 +134,8 @@ export async function buildDemoRuntime(): Promise<ContentRuntime> {
   await runtime.transition(heroAsset.id, "review");
   await runtime.transition(heroAsset.id, "approved");
   await runtime.transition(heroAsset.id, "live");
-  await runtime.attachUsage(heroAsset.id, { app: "fuel-free-time", surface: "home.hero", live: true, kind: "page" });
-  await runtime.attachUsage(heroAsset.id, { app: "inneranimalmedia", surface: "case-study.fuel-free-time", live: true, kind: "page" });
+  await runtime.attachUsage(heroAsset.id, { app: "northwind-garage", surface: "home.hero", live: true, kind: "page" });
+  await runtime.attachUsage(heroAsset.id, { app: "cedar-studio", surface: "case-study.northwind-garage", live: true, kind: "page" });
 
   // 2. Generated draft logo with full generation provenance, rated down
   const logo = img("hourglass-logo.svg", "Hourglass mark", "#2a2118", "#f5b83d", "⏳");
@@ -142,7 +144,7 @@ export async function buildDemoRuntime(): Promise<ContentRuntime> {
     source: { type: "generation", ref: "job_gen_014" },
     kind: "image",
     title: "Black hourglass logo concept",
-    brandId: "fuel-free-time",
+    brandId: "northwind-garage",
     role: "logo",
     mime: "image/png",
     bytes: 890_000,
@@ -164,7 +166,7 @@ export async function buildDemoRuntime(): Promise<ContentRuntime> {
   const imp = img("legacy-banner.svg", "Legacy banner", "#3d1f2a", "#f0565f", "🗂");
   const impAsset = await runtime.createAsset({
     origin: "cms-import",
-    source: { type: "site-crawl", ref: "https://old-customer-site.com", batch: "import_0137" },
+    source: { type: "site-crawl", ref: "https://old-customer-site.example", batch: "import_0137" },
     kind: "image",
     filename: "1B88C55D-AEAC-47F2-banner.jpg",
     mime: "image/jpeg",
@@ -182,7 +184,7 @@ export async function buildDemoRuntime(): Promise<ContentRuntime> {
     source: { type: "upload" },
     kind: "video",
     title: "About page launch teaser",
-    brandId: "fuel-free-time",
+    brandId: "northwind-garage",
     filename: "teaser-final-v3.mp4",
     mime: "video/mp4",
     bytes: 48_000_000,
@@ -192,7 +194,7 @@ export async function buildDemoRuntime(): Promise<ContentRuntime> {
     tags: ["teaser", "about"],
     providerRefs: [
       { provider: "cloudflare-stream", ref: "stream_uid_demo01", role: "delivery" },
-      { provider: "r2", ref: "brands/fuel-free-time/masters/teaser-final-v3.mp4", role: "master", bytes: 48_000_000 },
+      { provider: "r2", ref: "brands/northwind-garage/masters/teaser-final-v3.mp4", role: "master", bytes: 48_000_000 },
     ],
     ext: {
       streamStatus: "ready",
@@ -206,22 +208,22 @@ export async function buildDemoRuntime(): Promise<ContentRuntime> {
   await runtime.addVariant(vidAsset.id, { name: "poster", url: vid.url, width: 640 });
   await runtime.transition(vidAsset.id, "approved");
   await runtime.transition(vidAsset.id, "live");
-  await runtime.attachUsage(vidAsset.id, { app: "fuel-free-time", surface: "about.story", live: true, kind: "page" });
+  await runtime.attachUsage(vidAsset.id, { app: "northwind-garage", surface: "about.story", live: true, kind: "page" });
 
-  // 5. GLB emblem — the Fuel & Free Time 3D inspector donor
-  const glbPoster = img("emblem-3d-poster.svg", "FFT emblem GLB", "#241a33", "#9b6cff", "🧊");
+  // 5. GLB emblem — portable 3D inspector donor pattern (fictional brand)
+  const glbPoster = img("emblem-3d-poster.svg", "NW emblem GLB", "#241a33", "#9b6cff", "🧊");
   const glbAsset = await runtime.createAsset({
     origin: "product",
     source: { type: "upload" },
     kind: "model",
-    title: "FFT emblem 3D",
-    brandId: "fuel-free-time",
+    title: "Northwind emblem 3D",
+    brandId: "northwind-garage",
     filename: "emblem.glb",
     mime: "model/gltf-binary",
     bytes: 3_200_000,
     tags: ["emblem", "product"],
     providerRefs: [
-      { provider: "r2", ref: "brands/fuel-free-time/masters/emblem.glb", role: "master" },
+      { provider: "r2", ref: "brands/northwind-garage/masters/emblem.glb", role: "master" },
       { ...glbPoster.ref, url: glbPoster.url },
     ],
     ext: {
@@ -238,7 +240,7 @@ export async function buildDemoRuntime(): Promise<ContentRuntime> {
   await runtime.addVariant(glbAsset.id, { name: "poster", url: glbPoster.url, width: 640 });
   await runtime.transition(glbAsset.id, "approved");
   await runtime.transition(glbAsset.id, "live");
-  await runtime.attachUsage(glbAsset.id, { app: "fuel-free-time", surface: "product.fft-emblem", live: true, kind: "product" });
+  await runtime.attachUsage(glbAsset.id, { app: "northwind-garage", surface: "product.nw-emblem", live: true, kind: "product" });
 
   // 6. Unused, untagged upload — recommendation fodder
   const stray = img("untitled-stray.svg", "Untitled upload", "#222", "#555", "❔");
