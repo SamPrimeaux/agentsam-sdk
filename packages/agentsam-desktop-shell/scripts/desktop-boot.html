@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AgentSam Local Studio</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0a0a0c;
+        --fg: #e8e6e3;
+        --muted: #8a8580;
+        --accent: #6b7cff;
+        --ok: #5d9b6e;
+        --warn: #c4a35a;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+        background: radial-gradient(1200px 600px at 20% -10%, #1a1a28 0%, var(--bg) 55%);
+        color: var(--fg);
+        display: flex;
+        flex-direction: column;
+        padding: 48px 40px;
+      }
+      h1 { font-weight: 560; font-size: 1.75rem; letter-spacing: -0.02em; margin: 0 0 8px; }
+      p { color: var(--muted); margin: 0 0 24px; max-width: 42rem; line-height: 1.5; }
+      code { font-size: 0.85em; color: #c8c4bc; }
+      .row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 28px; }
+      button {
+        appearance: none; border: 1px solid #2a2a32; background: #141418;
+        color: var(--fg); padding: 10px 16px; border-radius: 8px; font-size: 0.9rem; cursor: pointer;
+      }
+      button.primary { border-color: var(--accent); background: #16182a; }
+      button:hover { border-color: #4a4a58; }
+      #status {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.8rem; color: var(--muted); white-space: pre-wrap;
+        border-top: 1px solid #222228; padding-top: 20px; max-width: 48rem;
+      }
+      .ok { color: var(--ok); } .warn { color: var(--warn); }
+    </style>
+  </head>
+  <body>
+    <h1>AgentSam Local Studio</h1>
+    <p>
+      Offline shell for <strong>agentsamd</strong>, sign-in, and local tooling.
+      The Cloudflare Studio UI still needs the network for now (Nitro SSR is not a static SPA) —
+      use <em>Open Studio UI</em> for the full workbench until the desktop client build ships.
+    </p>
+    <div class="row">
+      <button type="button" class="primary" id="btn-cloud">Open Studio UI</button>
+      <button type="button" id="btn-signin">Sign in to AgentSam</button>
+      <button type="button" id="btn-daemon">Start / check agentsamd</button>
+      <button type="button" id="btn-local">Stay on this shell</button>
+    </div>
+    <div id="status">Booting…</div>
+    <script>
+      const statusEl = document.getElementById('status');
+      const log = (msg, cls) => { statusEl.innerHTML = `<span class="${cls || ''}">${msg}</span>`; };
+      const STUDIO_UI = 'https://agentsam.inneranimalmedia.com/agentsam';
+
+      async function invoke(cmd, args) {
+        if (!window.__TAURI__?.core?.invoke) throw new Error('tauri_invoke_unavailable');
+        return window.__TAURI__.core.invoke(cmd, args || {});
+      }
+
+      async function boot() {
+        try {
+          const meta = await fetch('./agentsam-desktop-dist.json').then((r) => (r.ok ? r.json() : null));
+          if (meta?.sdk_version) {
+            log(`Desktop shell ready · SDK ${meta.sdk_version}\nChecking agentsamd…`, 'ok');
+          }
+        } catch (_) { /* ignore */ }
+
+        try {
+          const hs = await invoke('agentsamd_health', {});
+          if (hs.ok) {
+            log(`Local machine ready · agentsamd ${hs.daemon_version}\n${hs.message}\nClick Open Studio UI for the workbench.`, 'ok');
+          } else {
+            log(
+              `Offline · agentsamd: ${hs.message} (${hs.listen})\n` +
+                `Run: agentsam runtime install --yes\n` +
+                `Then Open Studio UI for the workbench.`,
+              'warn',
+            );
+          }
+        } catch (err) {
+          log(`Shell ready\n${String(err)}\nOpen Studio UI still works if you are online.`, 'warn');
+        }
+      }
+
+      document.getElementById('btn-daemon').onclick = async () => {
+        log('Starting agentsamd…');
+        try {
+          const hs = await invoke('ensure_agentsamd', {});
+          log(hs.ok ? `agentsamd ready · ${hs.message}` : `failed · ${hs.message}`, hs.ok ? 'ok' : 'warn');
+        } catch (err) { log(String(err), 'warn'); }
+      };
+
+      document.getElementById('btn-signin').onclick = async () => {
+        try {
+          const r = await invoke('start_agentsam_pkce_login', {
+            req: { issuer: 'https://inneranimalmedia.com', client_id: 'iam_agentsam_sdk_web' },
+          });
+          log(JSON.stringify(r, null, 2), r.ok ? 'ok' : 'warn');
+        } catch (err) { log(String(err), 'warn'); }
+      };
+
+      document.getElementById('btn-local').onclick = () => {
+        log('Staying on the offline shell — agentsamd / PKCE only. Use Open Studio UI for Chat/Work.', 'ok');
+      };
+
+      document.getElementById('btn-cloud').onclick = () => {
+        location.href = STUDIO_UI;
+      };
+
+      boot();
+    </script>
+  </body>
+</html>
