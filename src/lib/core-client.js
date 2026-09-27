@@ -48,7 +48,7 @@ async function authorizedFetch(url, init, options = {}) {
   const baseHeaders = init.headers || {};
   let resolved = await authorizedHeaders(baseHeaders, options);
   let response = await (options.fetchImpl || fetch)(url, { ...init, headers: resolved.headers });
-  if (response.status === 401 && resolved.authority?.kind === 'browser_oauth' && options.forceRefresh !== true) {
+  if (response.status === 401 && ['browser_oauth', 'agentsam_browser_oauth'].includes(resolved.authority?.kind) && options.forceRefresh !== true) {
     resolved = await authorizedHeaders(baseHeaders, { ...options, forceRefresh: true });
     response = await (options.fetchImpl || fetch)(url, { ...init, headers: resolved.headers });
   }
