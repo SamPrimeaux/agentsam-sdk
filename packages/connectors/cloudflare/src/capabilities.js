@@ -367,7 +367,7 @@ export const CLOUDFLARE_FEATURE_PACKS = Object.freeze({
   agentsam: {
     id: 'agentsam',
     label: 'AgentSam Local Studio',
-    description: 'Data + compute + AI packs AgentSam needs day-to-day',
+    description: 'Data + compute + AI + MCP portals AgentSam needs day-to-day',
     capabilities: [
       'cloudflare.workers',
       'cloudflare.d1',
@@ -381,6 +381,66 @@ export const CLOUDFLARE_FEATURE_PACKS = Object.freeze({
       'cloudflare.secrets_store',
       'cloudflare.tunnels',
       'cloudflare.browser_rendering',
+      'cloudflare.mcp_portals',
+      'cloudflare.agents',
+      'cloudflare.queues',
+    ],
+  },
+  dns: {
+    id: 'dns',
+    label: 'DNS & Zones',
+    description: 'DNS + zone settings (granular — not full account)',
+    capabilities: [],
+    oauthScopes: [
+      'dns.read',
+      'dns.write',
+      'zone.read',
+      'zone-settings.read',
+      'zone-settings.write',
+      'zone-dns-settings.read',
+      'account-dns-settings.read',
+    ],
+  },
+  analytics: {
+    id: 'analytics',
+    label: 'Analytics & Logs',
+    description: 'Account analytics, logs, radar',
+    capabilities: [],
+    oauthScopes: [
+      'account-analytics.read',
+      'analytics.read',
+      'account-logs.read',
+      'logs.read',
+      'radar.read',
+      'workers-observability.read',
+    ],
+  },
+  zero_trust: {
+    id: 'zero_trust',
+    label: 'Cloudflare One / Zero Trust',
+    description: 'Access + Teams + Tunnel connectors (request only when needed)',
+    capabilities: ['cloudflare.tunnels'],
+    oauthScopes: [
+      'access.read',
+      'access.write',
+      'teams.read',
+      'teams.write',
+      'teams-connectors.read',
+      'teams-connector-cloudflared.read',
+      'argotunnel.read',
+      'argotunnel.write',
+    ],
+  },
+  app_security: {
+    id: 'app_security',
+    label: 'App Security',
+    description: 'WAF, bot management, URL scanner',
+    capabilities: ['cloudflare.url_scanner'],
+    oauthScopes: [
+      'zone-waf.read',
+      'zone-waf.write',
+      'bot-management.read',
+      'account-waf.read',
     ],
   },
 });
@@ -396,12 +456,15 @@ export function getCloudflareFeaturePack(id) {
 /** Expand pack ids and/or capability ids into OAuth scopes (baseline included). */
 export function scopesForFeaturePacks(packIds = [], extraCapabilityIds = []) {
   const caps = new Set(extraCapabilityIds || []);
+  const directScopes = new Set();
   for (const raw of packIds || []) {
     const pack = getCloudflareFeaturePack(raw);
     if (!pack) continue;
-    for (const id of pack.capabilities) caps.add(id);
+    for (const id of pack.capabilities || []) caps.add(id);
+    for (const s of pack.oauthScopes || []) directScopes.add(s);
   }
-  return scopesForCapabilities({ capabilities: [...caps], includeBaseline: true });
+  const fromCaps = scopesForCapabilities({ capabilities: [...caps], includeBaseline: true });
+  return [...new Set([...fromCaps, ...directScopes])];
 }
 
 /** Legacy feature → scope map (kept for docs / workers_deploy callers). */

@@ -1,11 +1,17 @@
 /**
- * Agent Sam local PTY + filesystem — localhost WebSocket shell + /v1/fs HTTP.
- * No tunnel, no IAM. Compatible with iam-pty wire format (raw bytes + JSON resize/slash).
+ * Agent Sam local PTY + filesystem — Studio workspace plane (loopback only).
+ *
+ * This is NOT ExecOS enroll (`AGENTSAM_BRIDGE_KEY` / terminal_connections).
+ * Studio binds a workspace capability on 127.0.0.1 and speaks the portable
+ * PTY wire format (raw bytes + JSON resize/slash) plus /v1/fs HTTP.
+ *
+ * Remote / paired terminals use ExecOS + control-plane enroll separately.
  */
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 import { WebSocketServer } from 'ws';
 import { createLocalFilesystem } from '../local-fs/index.js';
 import { resolveContainedPath } from '../local-fs/paths.js';
@@ -19,7 +25,17 @@ import {
   WORKSPACE_CAPABILITY_HEADER,
 } from '../local-fs/capability.js';
 
+const require = createRequire(import.meta.url);
+const SDK_VERSION = (() => {
+  try {
+    return require('../../package.json').version || '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+})();
+
 const DEFAULT_PORT = 3099;
+const SERVICE_ID = 'agentsam.local.runtime';
 
 function parsePort(value, fallback) {
   const n = Number.parseInt(String(value || ''), 10);
@@ -28,7 +44,7 @@ function parsePort(value, fallback) {
 
 function shellForPlatform() {
   if (process.platform === 'win32') return process.env.COMSPEC || 'powershell.exe';
-  return process.env.SHELL || '/bin/zsh';
+  return process.env.AGENTSAM_SHELL || process.env.SHELL || '/bin/zsh';
 }
 
 function readJsonBody(req) {
@@ -134,7 +150,13 @@ export function attachLocalPtySession({ ws, pty, shell, cwd, cols = 80, rows = 2
     cols,
     rows,
     cwd,
-    env: { ...env, TERM: 'xterm-256color', AGENTSAM_LOCAL_PTY: '1' },
+    env: {
+      ...env,
+      TERM: 'xterm-256color',
+      AGENTSAM_LOCAL_PTY: '1',
+      AGENTSAM_PLANE: 'local',
+      AGENTSAM_WORKSPACE_ROOT: cwd,
+    },
   });
   const id = sessionId || `local_${Date.now().toString(36)}`;
   const openState = ws.OPEN ?? 1;
@@ -220,7 +242,10 @@ export async function startLocalPtyServer(opts = {}) {
     if (pathname === '/health') {
       sendJson(req, res, 200, {
         ok: true,
-        service: 'agentsam-local-pty',
+        service: SERVICE_ID,
+        service_legacy: 'agentsam-local-pty',
+        version: SDK_VERSION,
+        plane: 'local',
         cwd,
         root: cwd,
         port: Number(httpServer.address()?.port || requestedPort),
@@ -230,6 +255,10 @@ export async function startLocalPtyServer(opts = {}) {
         workspace_id: capability?.workspace_id || null,
         capability_required: true,
         binding: host,
+        tunnel: false,
+        execos: false,
+        terminal_scope: 'terminal:exec:local',
+        note: 'Studio workspace plane — ExecOS enroll uses AGENTSAM_BRIDGE_KEY separately',
       });
       return;
     }

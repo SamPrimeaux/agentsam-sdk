@@ -37,7 +37,17 @@ export {
   pingMcpServer,
   listMcpTools,
   callMcpTool,
+  withMcpClient,
+  buildHeaders,
 } from './client.js';
+
+export {
+  CLOUDFLARE_MCP_SERVER_BUNDLES,
+  listCloudflareMcpBundles,
+  getCloudflareMcpBundle,
+  scopesForCloudflareMcpBundle,
+  cloudflareBundlesAsServerCatalog,
+} from './cloudflare-bundles.js';
 
 export {
   recordToolReceipt,

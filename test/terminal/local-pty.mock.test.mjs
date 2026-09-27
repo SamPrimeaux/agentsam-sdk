@@ -139,7 +139,9 @@ test('local PTY server health check uses an ephemeral local port and no ExecOS t
     assert.equal(health.status, 200);
     const body = await health.json();
     assert.equal(body.ok, true);
-    assert.equal(body.service, 'agentsam-local-pty');
+    assert.equal(body.service, 'agentsam.local.runtime');
+    assert.equal(body.plane, 'local');
+    assert.equal(body.service_legacy, 'agentsam-local-pty');
     assert.equal(body.port, server.port);
     assert.equal(server.port > 0, true);
   } finally {

@@ -32,8 +32,8 @@ export async function runStartLocal(opts = {}) {
   const port = opts.port ?? config?.pty_port ?? 3099;
 
   console.log(`
-  Agent Sam — local PTY
-  No Cloudflare · no tunnel · no IAM login
+  Agent Sam — local Studio plane (PTY + FS)
+  Loopback only · no tunnel · not ExecOS enroll
   `);
   if (!config) {
     console.log(`  ⚠ No .agentsam/config.json found; using current repository/directory as the PTY root.`);

@@ -1,140 +1,63 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { cloudflareBundlesAsServerCatalog, getCloudflareMcpBundle } from './cloudflare-bundles.js';
 
 export const MCP_AUTHORITY_SCHEMA = 'agentsam.mcp.authority.v1';
 export const SERVER_CATALOG_CACHE_SCHEMA = 'agentsam.mcp.server-catalog.v1';
 export const DEFAULT_SERVER_CATALOG_URL = 'https://mcp.inneranimalmedia.com/api/mcp/servers';
 
 /**
- * Seed MCP server catalog snapshot derived directly from D1 table:
- * `agentsam_mcp_servers`.
- *
- * Captures live server authority, authentication requirements, and live health metrics
- * for offline and instantaneous CLI resolution.
+ * Seed MCP *server* catalog.
+ * Cloudflare portal rows come from cloudflare-bundles.js (not client-adapters).
+ * Health metrics are unknown until probed — do not fabricate latency.
  */
-export const SEED_MCP_SERVER_CATALOG = Object.freeze([
+const IAM_SEED_SERVERS = Object.freeze([
   {
     name: 'inneranimalmedia',
     display_name: 'InnerAnimalMedia Main MCP',
     url: 'https://mcp.inneranimalmedia.com/mcp',
     authUrl: 'https://mcp.inneranimalmedia.com/auth/connect',
     auth_type: 'bearer',
-    protocol: 'sse',
+    protocol: 'streamable_http',
     defaultClients: ['cursor', 'claude'],
-    health_status: 'healthy',
-    avg_latency_ms: 443,
-    error_rate: 0,
-    description: 'Inner Animal Media canonical MCP server (~218 tools, D1 telemetry)',
+    health_status: 'unknown',
+    avg_latency_ms: null,
+    error_rate: null,
+    description: 'Inner Animal Media canonical MCP server',
+    provider: 'inneranimalmedia',
   },
   {
     name: 'agent_sam_bridge',
     display_name: 'Agent Sam Bridge MCP',
     url: 'https://mcp.inneranimalmedia.com/mcp',
     auth_type: 'bearer',
-    protocol: 'sse',
+    protocol: 'streamable_http',
     defaultClients: ['cursor'],
-    health_status: 'healthy',
-    avg_latency_ms: 432,
-    error_rate: 0,
-    description: 'Agent Sam Bridge MCP',
-  },
-  {
-    name: 'cloudflare-api',
-    display_name: 'Cloudflare API',
-    url: 'https://mcp.cloudflare.com/mcp',
-    auth_type: 'bearer',
-    protocol: 'sse',
-    defaultClients: ['cursor'],
-    health_status: 'degraded',
-    avg_latency_ms: 9,
-    error_rate: 0,
-    description: 'Cloudflare API (Codex registered)',
-  },
-  {
-    name: 'cloudflare-docs',
-    display_name: 'Cloudflare Docs',
-    url: 'https://docs.mcp.cloudflare.com/mcp',
-    auth_type: 'none',
-    protocol: 'sse',
-    defaultClients: ['cursor'],
-    health_status: 'degraded',
-    avg_latency_ms: 10,
-    error_rate: 0,
-    description: 'Cloudflare documentation reference tools',
-  },
-  {
-    name: 'cloudflare-bindings',
-    display_name: 'Cloudflare Bindings',
-    url: 'https://bindings.mcp.cloudflare.com/mcp',
-    auth_type: 'user_oauth_cloudflare',
-    protocol: 'sse',
-    defaultClients: ['cursor'],
-    health_status: 'degraded',
-    avg_latency_ms: 8,
-    error_rate: 0,
-    description: 'Cloudflare Workers storage, AI, and compute bindings',
-  },
-  {
-    name: 'cloudflare-builds',
-    display_name: 'Cloudflare Builds',
-    url: 'https://builds.mcp.cloudflare.com/mcp',
-    auth_type: 'bearer',
-    protocol: 'sse',
-    defaultClients: ['cursor'],
-    health_status: 'degraded',
-    avg_latency_ms: 6,
-    error_rate: 0,
-    description: 'Cloudflare Workers Builds and CI/CD operations',
-  },
-  {
-    name: 'cloudflare-observability',
-    display_name: 'Cloudflare Observability',
-    url: 'https://observability.mcp.cloudflare.com/mcp',
-    auth_type: 'bearer',
-    protocol: 'sse',
-    defaultClients: ['cursor'],
-    health_status: 'degraded',
-    avg_latency_ms: 10,
-    error_rate: 0,
-    description: 'Cloudflare logs and analytics tools',
+    health_status: 'unknown',
+    avg_latency_ms: null,
+    error_rate: null,
+    description: 'Agent Sam Bridge MCP (same IAM endpoint; bridge-scoped tools)',
+    provider: 'inneranimalmedia',
   },
   {
     name: 'github-official',
     display_name: 'GitHub (official)',
     url: 'https://api.githubcopilot.com/mcp/',
     auth_type: 'user_oauth_github',
-    protocol: 'sse',
-    defaultClients: ['cursor'],
-    health_status: 'degraded',
-    avg_latency_ms: 338,
-    error_rate: 0,
-    description: 'Official GitHub Copilot MCP server',
-  },
-  {
-    name: 'gmail-official',
-    display_name: 'Gmail (official Google MCP)',
-    url: 'https://gmailmcp.googleapis.com/mcp/v1',
-    auth_type: 'user_oauth_gmail',
-    protocol: 'sse',
-    defaultClients: ['cursor'],
-    health_status: 'degraded',
-    avg_latency_ms: 662,
-    error_rate: 0,
-    description: 'Official Google Gmail MCP server',
-  },
-  {
-    name: 'cf_builds',
-    display_name: 'Cloudflare Builds System',
-    url: 'internal',
-    auth_type: 'bearer',
-    protocol: 'sse',
+    protocol: 'streamable_http',
     defaultClients: ['cursor'],
     health_status: 'unknown',
     avg_latency_ms: null,
-    error_rate: 0,
-    description: 'Cloudflare internal builds system',
+    error_rate: null,
+    description: 'Official GitHub Copilot MCP server',
+    provider: 'github',
   },
+]);
+
+export const SEED_MCP_SERVER_CATALOG = Object.freeze([
+  ...IAM_SEED_SERVERS,
+  ...cloudflareBundlesAsServerCatalog(),
 ]);
 
 /**
@@ -220,7 +143,7 @@ export async function fetchMcpServerCatalog(options = {}) {
     return cached.servers;
   }
 
-  return SEED_MCP_SERVER_CATALOG;
+  return [...SEED_MCP_SERVER_CATALOG];
 }
 
 export function listKnownServers(options = {}) {
@@ -228,12 +151,34 @@ export function listKnownServers(options = {}) {
   if (cached?.servers?.length) {
     return cached.servers;
   }
-  return SEED_MCP_SERVER_CATALOG;
+  return [...SEED_MCP_SERVER_CATALOG];
 }
 
 export function resolveServerPreset(name, options = {}) {
   const cleanName = clean(name).toLowerCase();
   if (!cleanName) return null;
+
+  const bundle = getCloudflareMcpBundle(cleanName);
+  if (bundle) {
+    return {
+      name: bundle.name,
+      display_name: bundle.display_name,
+      url: bundle.url,
+      authUrl: null,
+      auth_type: bundle.auth_type,
+      protocol: bundle.protocol,
+      defaultClients: ['cursor'],
+      health_status: 'unknown',
+      avg_latency_ms: null,
+      error_rate: null,
+      description: bundle.description,
+      feature_packs: bundle.feature_packs,
+      capability_ids: bundle.capability_ids,
+      portal_manage_scopes: bundle.portal_manage_scopes,
+      provider: 'cloudflare',
+      kind: 'mcp_portal_bundle',
+    };
+  }
 
   const catalog = listKnownServers(options);
   const found = catalog.find((s) => (s.name || s.server_key || '').toLowerCase() === cleanName);
@@ -244,12 +189,17 @@ export function resolveServerPreset(name, options = {}) {
       url: found.url,
       authUrl: found.authUrl || (found.name === 'inneranimalmedia' ? 'https://mcp.inneranimalmedia.com/auth/connect' : null),
       auth_type: found.auth_type || 'bearer',
-      protocol: found.protocol || 'sse',
+      protocol: found.protocol || 'streamable_http',
       defaultClients: found.defaultClients || ['cursor'],
       health_status: found.health_status || 'unknown',
       avg_latency_ms: found.avg_latency_ms ?? null,
-      error_rate: found.error_rate ?? 0,
+      error_rate: found.error_rate ?? null,
       description: found.description || found.display_name || '',
+      feature_packs: found.feature_packs || [],
+      capability_ids: found.capability_ids || [],
+      portal_manage_scopes: found.portal_manage_scopes || [],
+      provider: found.provider || null,
+      kind: found.kind || null,
     };
   }
 
@@ -300,7 +250,7 @@ export function writeMcpServer(name, serverConfig, options = {}) {
     schema_version: MCP_AUTHORITY_SCHEMA,
     name: clean(name).toLowerCase(),
     url: clean(serverConfig.url),
-    protocol: clean(serverConfig.protocol) || 'sse',
+    protocol: clean(serverConfig.protocol) || 'streamable_http',
     auth: serverConfig.auth || null,
     clients: Array.isArray(serverConfig.clients) ? [...new Set(serverConfig.clients.map(clean).filter(Boolean))] : ['cursor'],
     metadata: serverConfig.metadata || {},

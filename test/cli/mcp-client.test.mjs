@@ -58,7 +58,7 @@ test('MCP authority store manages servers under ~/.agentsam/mcp with safe permis
   assert.equal(readMcpServer('inneranimalmedia', { home }), null);
 });
 
-test('MCP external client registry recognizes chatgpt, claude, cursor and respects is_active', async () => {
+test('MCP external client registry recognizes chatgpt, claude, cursor — not CF portals', async () => {
   const home = tempHome();
 
   // Baseline seed / cached client list
@@ -68,9 +68,11 @@ test('MCP external client registry recognizes chatgpt, claude, cursor and respec
   assert.ok(keys.includes('cursor'), 'Cursor is recognized in the external client registry');
   assert.ok(keys.includes('claude'), 'Claude is recognized in the external client registry');
   assert.ok(keys.includes('agentsam'), 'AgentSam is recognized in the external client registry');
+  assert.equal(keys.some((k) => k.startsWith('cf_')), false, 'CF MCP portals are servers, not clients');
 
   assert.equal(isClientRegistered('chatgpt', { home }), true);
   assert.equal(isClientRegistered('cursor', { home }), true);
+  assert.equal(isClientRegistered('cf_bindings_mcp', { home }), false);
   assert.equal(isClientRegistered('nonexistent_client_xyz', { home }), false);
 
   // Cache path is created upon writing
@@ -154,23 +156,25 @@ test('MCP client adapters materialize Cursor, Claude, and ChatGPT configurations
   assert.equal(fs.existsSync(chatgptConfigPath), false);
 });
 
-test('MCP server catalog resolves real registered servers with live health metrics', () => {
+test('MCP server catalog resolves CF portal bundles + IAM without fabricated health', () => {
   const home = tempHome();
   const catalog = listKnownServers({ home });
   assert.ok(catalog.length >= 8);
 
-  // Cloudflare API server from D1
   const cfApi = resolveServerPreset('cloudflare-api', { home });
   assert.ok(cfApi);
   assert.equal(cfApi.url, 'https://mcp.cloudflare.com/mcp');
-  assert.equal(cfApi.health_status, 'degraded');
-  assert.equal(cfApi.avg_latency_ms, 9);
+  assert.equal(cfApi.provider, 'cloudflare');
+  assert.equal(cfApi.kind, 'mcp_portal_bundle');
+  assert.ok(cfApi.portal_manage_scopes.includes('mcp-portals.read'));
 
-  // InnerAnimalMedia Main MCP from D1
+  const bindings = resolveServerPreset('cloudflare-bindings', { home });
+  assert.ok(bindings);
+  assert.ok(bindings.feature_packs.includes('data'));
+
   const iam = resolveServerPreset('inneranimalmedia', { home });
   assert.ok(iam);
-  assert.equal(iam.health_status, 'healthy');
-  assert.equal(iam.avg_latency_ms, 443);
+  assert.equal(iam.url, 'https://mcp.inneranimalmedia.com/mcp');
 });
 
 test('MCP telemetry logs tool receipts and computes accurate summaries', () => {
@@ -230,11 +234,17 @@ test('agentsam mcp CLI handles add, list, status, doctor, and remove end-to-end'
   assert.equal(statusRes.name, 'inneranimalmedia');
   assert.equal(statusRes.hasAuth, true);
 
-  // Doctor includes catalog health data
+  // Doctor includes catalog / CF pack metadata
   const doctorRes = await runMcp(['doctor', 'inneranimalmedia', '--json'], { home, write });
   assert.equal(doctorRes.name, 'inneranimalmedia');
   assert.equal(doctorRes.authConfigured, true);
-  assert.equal(doctorRes.catalogHealth?.health_status, 'healthy');
+  assert.equal(doctorRes.catalog?.auth_type, 'bearer');
+
+  // Cloudflare bundle scopes are pack-scoped (includes mcp-portals.*)
+  const scopeRes = await runMcp(['scopes', 'cloudflare-bindings', '--json'], { home, write });
+  assert.ok(scopeRes.oauth_scopes.includes('mcp-portals.read'));
+  assert.ok(scopeRes.oauth_scopes.includes('mcp-portals.write'));
+  assert.ok(scopeRes.oauth_scopes.includes('d1.read'));
 
   // Remove
   const removeRes = await runMcp(['remove', 'inneranimalmedia', '--client', 'all', '--json'], { home, write });

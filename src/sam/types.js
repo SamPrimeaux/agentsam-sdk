@@ -6,12 +6,33 @@
 export const SAM_RESULT_SCHEMA = 'agentsam.result.v1';
 export const SAM_EXPANSION = 'Systematic Autonomous Machinery';
 
-/** @typedef {'local'|'remote'|'sandbox'|'platform'} SamLane */
+/** @typedef {'local'|'remote'|'sandbox'|'platform'|'mcp'} SamLane */
 /** @typedef {'never'|'optional'|'required'} SamModelPolicy */
 /** @typedef {'none'|'optional'|'required'} SamNetworkPolicy */
-/** @typedef {'none'|'local_write'|'remote_read'|'remote_write'|'deploy'|'billable'} SamSideEffects */
+/** @typedef {'none'|'local_write'|'remote_read'|'remote_write'|'deploy'|'billable'|'oauth'} SamSideEffects */
 /** @typedef {'read_only'|'write'|'privileged'} SamRisk */
 /** @typedef {'never'|'optional'|'required'} SamSpendPolicy */
+
+/**
+ * Provider capability / OAuth pack reference (Cloudflare, GitHub, …).
+ * Prefer pack- or capability-scoped consent — never wholesale scope catalogs.
+ * @typedef {object} SamCapabilityRef
+ * @property {string} id
+ * @property {string} [provider]
+ * @property {string[]} [oauth_scopes]
+ * @property {string[]} [feature_packs]
+ */
+
+/**
+ * MCP projection for an operation (server tool surface).
+ * @typedef {object} SamMcpProjection
+ * @property {string} [server_name]
+ * @property {string} [server_url]
+ * @property {string} [tool_name]
+ * @property {string[]} [required_scopes]
+ * @property {string[]} [feature_packs]
+ * @property {'streamable_http'|'sse'|'stdio'} [protocol]
+ */
 
 /**
  * @typedef {object} SamExecutionMeta
@@ -36,6 +57,8 @@ export const SAM_EXPANSION = 'Systematic Autonomous Machinery';
  * @property {string} [description]
  * @property {SamExecutionMeta} execution
  * @property {{ account?: boolean, provider?: string[] }} [auth]
+ * @property {SamCapabilityRef[]} [capability_refs]
+ * @property {SamMcpProjection} [mcp]
  * @property {SamRisk} risk
  * @property {string} [input_schema]
  * @property {string} [output_schema]
@@ -57,6 +80,7 @@ export const SAM_EXPANSION = 'Systematic Autonomous Machinery';
  * @property {Record<string, unknown>} [execution]
  * @property {string} [cwd]
  * @property {Record<string, string|undefined>} [env]
+ * @property {{ mcp?: SamMcpProjection, capability_refs?: SamCapabilityRef[] }} [projection]
  */
 
 /**
@@ -71,6 +95,7 @@ export const SAM_EXPANSION = 'Systematic Autonomous Machinery';
  * @property {string|null} [input_hash]
  * @property {string|null} [output_hash]
  * @property {'completed'|'failed'|'cancelled'} status
+ * @property {SamMcpProjection} [mcp]
  */
 
 /**

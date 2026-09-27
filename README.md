@@ -76,19 +76,24 @@ Without a global install, use `npx @inneranimalmedia/agentsam-sdk create my-agen
 
 ## MCP setup
 
-Cloudflare's API MCP server uses `https://mcp.cloudflare.com/mcp`. Add that URL
-to the agent client you use, then complete its Cloudflare OAuth flow. For Codex:
+Register MCP servers into `~/.agentsam/mcp/` and sync IDE adapters:
 
 ```sh
-codex mcp add cloudflare-api --url https://mcp.cloudflare.com/mcp
-codex mcp login cloudflare-api
+agentsam mcp add inneranimalmedia --client cursor
+agentsam mcp add cloudflare-api --client cursor
+agentsam mcp list --bundles          # Cloudflare portal bundles + pack scopes
+agentsam mcp scopes cloudflare-bindings
+agentsam mcp doctor cloudflare-api
 ```
 
-`agentsam mcp add cloudflare-api --url https://mcp.cloudflare.com/mcp` is not
-currently an AgentSam CLI command. The repo's `.agentsam/config.json` is a
-portable project manifest, not an MCP client configuration; it cannot register
-this server for every agent tool on clone. Keep OAuth tokens in each client's
-credential store rather than committing them to the repository.
+Cloudflare MCP portals (bindings, builds, browser, …) are **server bundles**, not
+OAuth clients. AgentSam Cloudflare OAuth stays pack-scoped (`agentsam` pack includes
+`mcp-portals.read` / `mcp-portals.write`). Never request the full ~315-scope catalog
+at connect time — upgrade with `agentsam cloudflare permissions authorize --packs …`.
+
+Portal-hosted OAuth (Cloudflare’s own consent on `*.mcp.cloudflare.com`) is separate
+from AgentSam’s CF connection token. Keep tokens in each client’s credential store;
+do not commit them.
 
 ## Index an existing repository
 

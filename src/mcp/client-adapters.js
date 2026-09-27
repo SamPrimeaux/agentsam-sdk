@@ -1,5 +1,9 @@
+/**
+ * MCP *client* adapters — hosts that consume MCP servers (Cursor, Claude, …).
+ *
+ * Cloudflare MCP portals are servers, not clients. See cloudflare-bundles.js.
+ */
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { getMcpDir, homeDirectory } from './authority.js';
 
@@ -7,11 +11,8 @@ export const DEFAULT_CLIENT_REGISTRY_URL = 'https://mcp.inneranimalmedia.com/api
 export const CLIENT_REGISTRY_CACHE_SCHEMA = 'agentsam.mcp.client-registry.v1';
 
 /**
- * Seed external MCP client registry snapshot derived directly from D1 table:
- * `agentsam_mcp_oauth_external_client_registry`.
- *
- * This acts as the baseline cache for offline or pre-fetch execution,
- * respecting `is_active` and `sort_order`.
+ * Seed for OAuth/external *client* registry only (who connects TO an MCP server).
+ * Do not put Cloudflare portal hostnames here — those belong in the server catalog.
  */
 export const SEED_EXTERNAL_CLIENT_REGISTRY = Object.freeze([
   {
@@ -33,105 +34,6 @@ export const SEED_EXTERNAL_CLIENT_REGISTRY = Object.freeze([
     notes: 'OpenAI ChatGPT connector_platform_oauth + per-connector redirect',
   },
   {
-    client_key: 'cf_docs_mcp',
-    display_name: 'Cloudflare Docs',
-    oauth_client_id: 'iam_mcp_inneranimalmedia',
-    redirect_host_patterns: ['docs.mcp.cloudflare.com'],
-    sort_order: 10,
-    is_active: 1,
-    notes: 'https://docs.mcp.cloudflare.com/mcp — CF docs reference',
-  },
-  {
-    client_key: 'cf_bindings_mcp',
-    display_name: 'Cloudflare Workers Bindings',
-    oauth_client_id: 'iam_mcp_inneranimalmedia',
-    redirect_host_patterns: ['bindings.mcp.cloudflare.com'],
-    sort_order: 11,
-    is_active: 1,
-    notes: 'https://bindings.mcp.cloudflare.com/mcp — Workers storage, AI, compute',
-  },
-  {
-    client_key: 'cf_builds_mcp',
-    display_name: 'Cloudflare Workers Builds',
-    oauth_client_id: 'iam_mcp_inneranimalmedia',
-    redirect_host_patterns: ['builds.mcp.cloudflare.com'],
-    sort_order: 12,
-    is_active: 1,
-    notes: 'https://builds.mcp.cloudflare.com/mcp — CI/CD insights',
-  },
-  {
-    client_key: 'cf_observability_mcp',
-    display_name: 'Cloudflare Observability',
-    oauth_client_id: 'iam_mcp_inneranimalmedia',
-    redirect_host_patterns: ['observability.mcp.cloudflare.com'],
-    sort_order: 13,
-    is_active: 1,
-    notes: 'https://observability.mcp.cloudflare.com/mcp — logs and analytics',
-  },
-  {
-    client_key: 'cf_browser_mcp',
-    display_name: 'Cloudflare Browser Rendering',
-    oauth_client_id: 'iam_mcp_inneranimalmedia',
-    redirect_host_patterns: ['browser.mcp.cloudflare.com'],
-    sort_order: 14,
-    is_active: 1,
-    notes: 'https://browser.mcp.cloudflare.com/mcp — fetch pages, markdown, screenshots',
-  },
-  {
-    client_key: 'cf_logs_mcp',
-    display_name: 'Cloudflare Logpush',
-    oauth_client_id: 'iam_mcp_inneranimalmedia',
-    redirect_host_patterns: ['logs.mcp.cloudflare.com'],
-    sort_order: 15,
-    is_active: 1,
-    notes: 'https://logs.mcp.cloudflare.com/mcp — Logpush job health',
-  },
-  {
-    client_key: 'cf_ai_gateway_mcp',
-    display_name: 'Cloudflare AI Gateway',
-    oauth_client_id: 'iam_mcp_inneranimalmedia',
-    redirect_host_patterns: ['ai-gateway.mcp.cloudflare.com'],
-    sort_order: 16,
-    is_active: 1,
-    notes: 'https://ai-gateway.mcp.cloudflare.com/mcp — AI request logs',
-  },
-  {
-    client_key: 'cf_audit_logs_mcp',
-    display_name: 'Cloudflare Audit Logs',
-    oauth_client_id: 'iam_mcp_inneranimalmedia',
-    redirect_host_patterns: ['auditlogs.mcp.cloudflare.com'],
-    sort_order: 17,
-    is_active: 1,
-    notes: 'https://auditlogs.mcp.cloudflare.com/mcp — audit log reports',
-  },
-  {
-    client_key: 'cf_dns_analytics_mcp',
-    display_name: 'Cloudflare DNS Analytics',
-    oauth_client_id: 'iam_mcp_inneranimalmedia',
-    redirect_host_patterns: ['dns-analytics.mcp.cloudflare.com'],
-    sort_order: 18,
-    is_active: 1,
-    notes: 'https://dns-analytics.mcp.cloudflare.com/mcp — DNS performance',
-  },
-  {
-    client_key: 'cf_graphql_mcp',
-    display_name: 'Cloudflare GraphQL',
-    oauth_client_id: 'iam_mcp_inneranimalmedia',
-    redirect_host_patterns: ['graphql.mcp.cloudflare.com'],
-    sort_order: 19,
-    is_active: 1,
-    notes: 'https://graphql.mcp.cloudflare.com/mcp — analytics via GraphQL',
-  },
-  {
-    client_key: 'cf_codemode_mcp',
-    display_name: 'Cloudflare Code Mode',
-    oauth_client_id: 'iam_mcp_inneranimalmedia',
-    redirect_host_patterns: ['mcp.cloudflare.com'],
-    sort_order: 20,
-    is_active: 1,
-    notes: 'https://mcp.cloudflare.com/mcp — full CF API in 2 tools, ~1000 tokens',
-  },
-  {
     client_key: 'claude',
     display_name: 'Claude.ai',
     oauth_client_id: 'iam_mcp_inneranimalmedia',
@@ -141,28 +43,17 @@ export const SEED_EXTERNAL_CLIENT_REGISTRY = Object.freeze([
     notes: 'Anthropic Claude.ai MCP auth_callback',
   },
   {
-    client_key: 'cf_containers_mcp',
-    display_name: 'Cloudflare Container Sandbox',
-    oauth_client_id: 'iam_mcp_inneranimalmedia',
-    redirect_host_patterns: ['containers.mcp.cloudflare.com'],
-    sort_order: 21,
-    is_active: 1,
-    notes: 'https://containers.mcp.cloudflare.com/mcp — ephemeral ~10min sandboxed containers',
-  },
-  {
     client_key: 'cursor',
     display_name: 'Cursor',
     oauth_client_id: 'iam_mcp_inneranimalmedia',
     redirect_host_patterns: ['mcp.inneranimalmedia.com', 'cursor.com', 'www.cursor.com'],
     sort_order: 30,
     is_active: 1,
-    notes: 'Cursor desktop (cursor://, localhost:8787) + Cursor Agents',
+    notes: 'Cursor desktop (cursor://, localhost) + Cursor Agents',
   },
 ]);
 
-/**
- * Dynamic list of all recognized active client keys.
- */
+/** Active client keys from seed (IDE hosts only). */
 export const SUPPORTED_CLIENTS = Object.freeze(
   SEED_EXTERNAL_CLIENT_REGISTRY.filter((c) => Number(c.is_active) !== 0).map((c) => c.client_key),
 );
@@ -222,8 +113,14 @@ export async function fetchExternalClientRegistry(options = {}) {
     if (res.ok) {
       const body = await res.json();
       if (body?.ok && Array.isArray(body.clients)) {
-        writeCachedClientRegistry(body.clients, options);
-        return body.clients.filter((c) => Number(c.is_active) !== 0);
+        // Never treat MCP portal hostnames as clients even if a stale API row says so.
+        const clients = body.clients.filter((c) => {
+          if (Number(c.is_active) === 0) return false;
+          const key = String(c.client_key || '').toLowerCase();
+          return !key.startsWith('cf_') && !key.includes('mcp.cloudflare');
+        });
+        writeCachedClientRegistry(clients, options);
+        return clients;
       }
     }
   } catch {
@@ -241,7 +138,10 @@ export async function fetchExternalClientRegistry(options = {}) {
 export function listRegisteredClients(options = {}) {
   const cached = loadCachedClientRegistry(options);
   if (cached?.clients?.length) {
-    return cached.clients;
+    return cached.clients.filter((c) => {
+      const key = String(c.client_key || '').toLowerCase();
+      return !key.startsWith('cf_');
+    });
   }
   return SEED_EXTERNAL_CLIENT_REGISTRY.filter((c) => Number(c.is_active) !== 0);
 }
@@ -276,12 +176,10 @@ export function getClientConfigPath(clientName, options = {}) {
     return path.join(getMcpDir(options), 'clients', 'chatgpt-connector.json');
   }
 
-  // AgentSam apps/ family and standalone binary adapter
   if (client === 'agentsam') {
     return path.join(home, '.agentsam', 'mcp.json');
   }
 
-  // Any other active client in registry: adapter configuration JSON
   if (isClientRegistered(client, options)) {
     return path.join(getMcpDir(options), 'clients', `${client}.json`);
   }
@@ -293,29 +191,25 @@ export function detectInstalledClients(options = {}) {
   const detected = [];
   const home = homeDirectory(options);
 
-  // Check Cursor
   const cursorDir = path.join(home, '.cursor');
-  if (fs.existsSync(cursorDir)) {
-    detected.push('cursor');
+  if (fs.existsSync(cursorDir)) detected.push('cursor');
+
+  try {
+    const claudeConfig = getClientConfigPath('claude', options);
+    if (fs.existsSync(path.dirname(claudeConfig))) detected.push('claude');
+  } catch {
+    // ignore
   }
 
-  // Check Claude
-  const claudeConfig = getClientConfigPath('claude', options);
-  if (fs.existsSync(path.dirname(claudeConfig))) {
-    detected.push('claude');
+  try {
+    const chatgptConfig = getClientConfigPath('chatgpt', options);
+    if (fs.existsSync(chatgptConfig)) detected.push('chatgpt');
+  } catch {
+    // ignore
   }
 
-  // Check ChatGPT
-  const chatgptConfig = getClientConfigPath('chatgpt', options);
-  if (fs.existsSync(chatgptConfig)) {
-    detected.push('chatgpt');
-  }
-
-  // Check AgentSam family adapter target (~/.agentsam)
   const agentsamDir = path.join(home, '.agentsam');
-  if (fs.existsSync(agentsamDir)) {
-    detected.push('agentsam');
-  }
+  if (fs.existsSync(agentsamDir)) detected.push('agentsam');
 
   return detected;
 }
@@ -338,13 +232,12 @@ export function syncServerToClient(clientName, serverName, serverConfig, options
   const configPath = getClientConfigPath(clientName, options);
   const client = clean(clientName).toLowerCase();
 
-  // ChatGPT connector payload export
   if (client === 'chatgpt') {
     const chatgptPayload = {
       schema: 'agentsam.mcp.client-adapter.chatgpt.v1',
       name: serverName,
       server_url: serverConfig.url,
-      protocol: serverConfig.protocol || 'sse',
+      protocol: serverConfig.protocol || 'streamable_http',
       auth: serverConfig.auth || { type: 'none' },
       description: serverConfig.metadata?.description || `MCP Server connection for ${serverName}`,
       instructions: 'Use in ChatGPT Custom GPTs or ChatGPT Developer Mode Action Connectors.',
@@ -354,7 +247,6 @@ export function syncServerToClient(clientName, serverName, serverConfig, options
     return { client, configPath, synced: true };
   }
 
-  // Default Cursor / Claude mcpServers schema
   const existing = readJsonSafe(configPath) || { mcpServers: {} };
   if (!existing.mcpServers || typeof existing.mcpServers !== 'object') {
     existing.mcpServers = {};
@@ -362,10 +254,10 @@ export function syncServerToClient(clientName, serverName, serverConfig, options
 
   const headers = {};
   if (serverConfig.auth?.token) {
-    headers['Authorization'] = `Bearer ${serverConfig.auth.token}`;
+    headers.Authorization = `Bearer ${serverConfig.auth.token}`;
   }
   if (client === 'cursor') {
-    headers['Accept'] = 'application/json, text/event-stream';
+    headers.Accept = 'application/json, text/event-stream';
   }
 
   existing.mcpServers[serverName] = {

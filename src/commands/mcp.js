@@ -1,8 +1,9 @@
 import {
   deleteMcpServer,
   detectInstalledClients,
+  getCloudflareMcpBundle,
   inspectClientAdapter,
-  isClientRegistered,
+  listCloudflareMcpBundles,
   listKnownServers,
   listMcpServers,
   listMcpTools,
@@ -11,6 +12,7 @@ import {
   readMcpServer,
   removeServerFromClient,
   resolveServerPreset,
+  scopesForCloudflareMcpBundle,
   syncServerToClient,
   writeMcpServer,
 } from '../mcp/index.js';
@@ -32,14 +34,18 @@ export function parseMcpArgs(argv = []) {
   let token = '';
   let json = false;
   let catalog = false;
+  let bundles = false;
+  let pack = '';
 
   for (let i = 1; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--client') client = argv[++i] || '';
     else if (arg === '--url') url = argv[++i] || '';
     else if (arg === '--token') token = argv[++i] || '';
+    else if (arg === '--pack') pack = argv[++i] || '';
     else if (arg === '--json') json = true;
     else if (arg === '--catalog' || arg === '--all') catalog = true;
+    else if (arg === '--bundles' || arg === '--cloudflare') bundles = true;
     else if (arg === '--help' || arg === '-h') help = true;
   }
 
@@ -49,8 +55,10 @@ export function parseMcpArgs(argv = []) {
     client: client.toLowerCase(),
     url,
     token,
+    pack: pack.toLowerCase(),
     json,
     catalog,
+    bundles,
     help,
   };
 }
@@ -58,17 +66,23 @@ export function parseMcpArgs(argv = []) {
 function renderHelp(options = {}) {
   const clients = listRegisteredClients(options);
   const servers = listKnownServers(options);
+  const cfBundles = listCloudflareMcpBundles();
 
   const presetRows = servers.map((s) => {
-    const key = (s.name || s.server_key || '').padEnd(24);
-    const desc = s.description || s.display_name || s.health_status || '';
-    return `    ${key} ${s.url} (${desc})`;
+    const key = (s.name || s.server_key || '').padEnd(28);
+    const desc = s.description || s.display_name || '';
+    return `    ${key} ${s.url}`;
   }).join('\n');
 
   const clientRows = clients.map((c) => {
     const key = c.client_key.padEnd(24);
-    const note = c.notes || c.display_name;
-    return `    ${key} ${c.display_name} (${note})`;
+    return `    ${key} ${c.display_name}`;
+  }).join('\n');
+
+  const bundleRows = cfBundles.map((b) => {
+    const key = b.name.padEnd(28);
+    const packs = (b.feature_packs || []).join(',') || '—';
+    return `    ${key} packs=[${packs}]  manage=${(b.portal_manage_scopes || []).join(',')}`;
   }).join('\n');
 
   return `
@@ -76,13 +90,22 @@ function renderHelp(options = {}) {
 
   Usage:
     agentsam mcp add <name> [--client <client>|all] [--url <url>] [--token <token>]
-    agentsam mcp list [--catalog|--all] [--json]
+    agentsam mcp list [--catalog|--bundles] [--json]
     agentsam mcp status [<name>] [--json]
     agentsam mcp doctor [<name>] [--json]
     agentsam mcp remove <name> [--client <client>|all]
+    agentsam mcp scopes <cloudflare-bundle> [--json]
 
-  Known server presets:
+  Notes:
+    • Client adapters = IDE hosts (cursor, claude, chatgpt, agentsam) — not CF portals.
+    • Cloudflare MCP portals are server bundles; OAuth stays pack-scoped (never all ~315 scopes).
+    • CF-connected AgentSam users need mcp-portals.read/write to manage portals (agentsam pack).
+
+  Known server catalog:
 ${presetRows}
+
+  Cloudflare MCP bundles (granular packs):
+${bundleRows}
 
   Recognized client adapters:
 ${clientRows}
@@ -101,18 +124,38 @@ export async function runMcp(argv = [], options = {}) {
   const { subcommand, target } = args;
 
   if (subcommand === 'list') {
+    if (args.bundles) {
+      const bundles = listCloudflareMcpBundles().map((b) => ({
+        ...b,
+        suggested_oauth_scopes: scopesForCloudflareMcpBundle(b.name),
+      }));
+      if (args.json) {
+        write(JSON.stringify({ bundles }, null, 2) + '\n');
+        return bundles;
+      }
+      write('\n  Cloudflare MCP portal bundles\n\n');
+      for (const b of bundles) {
+        write(`  • ${b.name} — ${b.display_name}\n`);
+        write(`      url:     ${b.url}\n`);
+        write(`      packs:   ${(b.feature_packs || []).join(', ') || '(portal OAuth only)'}\n`);
+        write(`      manage:  ${(b.portal_manage_scopes || []).join(', ')}\n`);
+        write(`      scopes:  ${b.suggested_oauth_scopes.slice(0, 8).join(' ')}${b.suggested_oauth_scopes.length > 8 ? ' …' : ''}\n\n`);
+      }
+      return bundles;
+    }
+
     if (args.catalog) {
       const catalog = listKnownServers(options);
       if (args.json) {
         write(JSON.stringify({ catalog }, null, 2) + '\n');
         return catalog;
       }
-      write('\n  Known MCP Server Catalog (Registry: agentsam_mcp_servers)\n\n');
+      write('\n  Known MCP Server Catalog\n\n');
       for (const s of catalog) {
         write(`  • ${s.name || s.server_key} (${s.display_name || s.name})\n`);
         write(`      url:       ${s.url}\n`);
         write(`      auth_type: ${s.auth_type || 'none'}\n`);
-        write(`      health:    ${s.health_status || 'unknown'}${s.avg_latency_ms != null ? ` · ${s.avg_latency_ms}ms` : ''}\n\n`);
+        write(`      protocol:  ${s.protocol || 'streamable_http'}\n\n`);
       }
       return catalog;
     }
@@ -124,6 +167,7 @@ export async function runMcp(argv = [], options = {}) {
     }
     if (servers.length === 0) {
       write('  No MCP servers configured yet. Add one with: agentsam mcp add inneranimalmedia\n');
+      write('  Cloudflare portals: agentsam mcp list --bundles\n');
       return servers;
     }
     write('\n  Configured MCP Servers (Authority: ~/.agentsam/mcp/)\n\n');
@@ -137,13 +181,49 @@ export async function runMcp(argv = [], options = {}) {
     return servers;
   }
 
+  if (subcommand === 'scopes') {
+    const name = target;
+    if (!name) throw new Error('mcp_bundle_name_required');
+    const bundle = getCloudflareMcpBundle(name);
+    if (!bundle) {
+      throw new Error(`unknown_cloudflare_mcp_bundle:${name}`);
+    }
+    const scopes = scopesForCloudflareMcpBundle(name);
+    const payload = {
+      bundle: bundle.name,
+      url: bundle.url,
+      feature_packs: bundle.feature_packs,
+      capability_ids: bundle.capability_ids,
+      portal_manage_scopes: bundle.portal_manage_scopes,
+      oauth_scopes: scopes,
+      authorize_hint: `agentsam cloudflare permissions authorize --packs ${(bundle.feature_packs || ['agentsam']).join(',')}`,
+      note: 'Never request CLOUDFLARE_ALL_SCOPES (~315) at once — upgrade by pack.',
+    };
+    if (args.json) {
+      write(JSON.stringify(payload, null, 2) + '\n');
+      return payload;
+    }
+    write(`\n  OAuth scopes for MCP bundle: ${name}\n`);
+    write(`      URL:    ${bundle.url}\n`);
+    write(`      Packs:  ${(bundle.feature_packs || []).join(', ') || '(none)'}\n`);
+    write(`      Manage: ${(bundle.portal_manage_scopes || []).join(', ')}\n`);
+    write(`      Scopes (${scopes.length}):\n`);
+    for (const s of scopes) write(`        • ${s}\n`);
+    write(`\n  ${payload.authorize_hint}\n\n`);
+    return payload;
+  }
+
   if (subcommand === 'add') {
-    const name = target || 'inneranimalmedia';
+    const name = target;
+    if (!name) {
+      throw new Error('mcp_server_name_required: agentsam mcp add <name> [--url <url>]');
+    }
+
     const preset = resolveServerPreset(name, options);
     const url = args.url || preset?.url;
 
     if (!url) {
-      throw new Error(`missing_url: specify --url for custom MCP server "${name}"`);
+      throw new Error(`missing_url: specify --url for custom MCP server "${name}" (or use a catalog name from: agentsam mcp list --catalog)`);
     }
 
     let requestedClients = ['cursor'];
@@ -158,30 +238,58 @@ export async function runMcp(argv = [], options = {}) {
       requestedClients = preset.defaultClients;
     }
 
+    const cfBundle = getCloudflareMcpBundle(name);
+    const packHint = args.pack || (cfBundle?.feature_packs || [])[0] || '';
+
     const serverConfig = {
       name,
       url,
-      protocol: preset?.protocol || 'sse',
-      auth: args.token ? { type: preset?.auth_type || 'bearer', token: args.token } : null,
+      protocol: preset?.protocol || 'streamable_http',
+      auth: args.token
+        ? { type: preset?.auth_type === 'none' ? 'bearer' : (preset?.auth_type || 'bearer'), token: args.token }
+        : null,
       clients: requestedClients,
-      metadata: preset ? { preset: name, description: preset.description, health_status: preset.health_status } : {},
+      metadata: {
+        ...(preset
+          ? {
+              preset: name,
+              description: preset.description,
+              provider: preset.provider || null,
+              kind: preset.kind || null,
+              feature_packs: preset.feature_packs || [],
+              capability_ids: preset.capability_ids || [],
+              portal_manage_scopes: preset.portal_manage_scopes || [],
+            }
+          : {}),
+        pack_hint: packHint || null,
+      },
     };
 
-    // Store in AgentSam authority
     const written = writeMcpServer(name, serverConfig, options);
 
-    // Materialize client adapters
     const syncedAdapters = [];
     for (const c of requestedClients) {
       const res = syncServerToClient(c, name, serverConfig, options);
       syncedAdapters.push(res);
     }
 
-    // Ping to verify connectivity
     const ping = await pingMcpServer(serverConfig, options);
+    const scopePreview = cfBundle ? scopesForCloudflareMcpBundle(name) : null;
 
     if (args.json) {
-      const payload = { ok: true, server: written, syncedAdapters, ping };
+      const payload = {
+        ok: true,
+        server: written,
+        syncedAdapters,
+        ping,
+        cloudflare_bundle: cfBundle
+          ? {
+              feature_packs: cfBundle.feature_packs,
+              portal_manage_scopes: cfBundle.portal_manage_scopes,
+              suggested_oauth_scopes: scopePreview,
+            }
+          : null,
+      };
       write(JSON.stringify(payload, null, 2) + '\n');
       return payload;
     }
@@ -189,16 +297,23 @@ export async function runMcp(argv = [], options = {}) {
     write(`\n  ✓ Configured MCP server: ${name}\n`);
     write(`      Authority:   ~/.agentsam/mcp/${name}.json\n`);
     write(`      URL:         ${url}\n`);
+    write(`      Protocol:    ${serverConfig.protocol}\n`);
     for (const a of syncedAdapters) {
       write(`      Adapter:     ${a.client} -> ${a.configPath}\n`);
     }
     if (ping.ok) {
-      write(`      Ping:        ✓ Connected (${ping.latencyMs}ms)\n`);
+      write(`      Ping:        ✓ Connected (${ping.latencyMs}ms${ping.transport ? `, ${ping.transport}` : ''})\n`);
     } else {
       write(`      Ping:        ⚠ Warning (${ping.error || 'unreachable'})\n`);
     }
+    if (cfBundle) {
+      write(`      CF packs:    ${(cfBundle.feature_packs || []).join(', ') || '(portal-hosted OAuth)'}\n`);
+      write(`      Portal:      ${(cfBundle.portal_manage_scopes || []).join(', ')}\n`);
+      write(`      Upgrade:     agentsam mcp scopes ${name}\n`);
+      write(`                  (CF-connected users: ensure agentsam pack includes mcp-portals.*)\n`);
+    }
     write('\n');
-    return { server: written, syncedAdapters, ping };
+    return { ok: true, server: written, syncedAdapters, ping };
   }
 
   if (subcommand === 'status') {
@@ -221,9 +336,11 @@ export async function runMcp(argv = [], options = {}) {
     const report = {
       name,
       url: server.url,
+      protocol: server.protocol,
       ping,
       clients: clientStatuses,
       hasAuth: Boolean(server.auth?.token),
+      metadata: server.metadata || {},
     };
 
     if (args.json) {
@@ -261,21 +378,34 @@ export async function runMcp(argv = [], options = {}) {
     const toolsProbe = ping.ok ? await listMcpTools(server, options) : { count: 0, tools: [] };
 
     const detectedClients = detectInstalledClients(options);
+    const cfBundle = getCloudflareMcpBundle(name);
     const diagnostics = {
       name,
       authorityPath: `~/.agentsam/mcp/${name}.json`,
       url: server.url,
       connectivity: ping.ok ? 'pass' : 'fail',
       latencyMs: ping.latencyMs,
+      transport: ping.transport || null,
       authConfigured: Boolean(server.auth?.token),
       discoveredTools: toolsProbe.count,
       clients: clientStatuses,
       detectedHostClients: detectedClients,
-      catalogHealth: preset ? {
-        health_status: preset.health_status,
-        avg_latency_ms: preset.avg_latency_ms,
-        error_rate: preset.error_rate,
-      } : null,
+      catalog: preset
+        ? {
+            auth_type: preset.auth_type,
+            protocol: preset.protocol,
+            provider: preset.provider,
+            feature_packs: preset.feature_packs || [],
+            portal_manage_scopes: preset.portal_manage_scopes || [],
+          }
+        : null,
+      cloudflare_oauth_hint: cfBundle
+        ? {
+            packs: cfBundle.feature_packs,
+            scopes: scopesForCloudflareMcpBundle(name),
+            note: 'Authorize packs via agentsam cloudflare permissions — not the full scope catalog.',
+          }
+        : null,
     };
 
     if (args.json) {
@@ -286,14 +416,16 @@ export async function runMcp(argv = [], options = {}) {
     write(`\n  AgentSam MCP Doctor · ${name}\n\n`);
     write(`  [1] Authority state:   ✓ Valid (~/.agentsam/mcp/${name}.json)\n`);
     write(`  [2] Endpoint ping:     ${ping.ok ? `✓ Reachable (${ping.latencyMs}ms)` : `✗ Unreachable (${ping.error})`}\n`);
-    if (preset?.health_status) {
-      write(`  [3] Live health data:  ${preset.health_status} (avg latency: ${preset.avg_latency_ms ?? 0}ms, error rate: ${preset.error_rate ?? 0}%)\n`);
-    }
+    write(`  [3] Catalog:           ${preset ? `${preset.auth_type} / ${preset.protocol}` : 'custom'}\n`);
     write(`  [4] Auth credential:   ${diagnostics.authConfigured ? '✓ Token configured' : '○ Unauthenticated / public'}\n`);
     write(`  [5] Tool discovery:    ${toolsProbe.count > 0 ? `✓ Found ${toolsProbe.count} tools` : '○ 0 tools discovered'}\n`);
     write(`  [6] Client adapters:\n`);
     for (const c of clientStatuses) {
       write(`        • ${c.client}: ${c.configured ? '✓ Synced' : '✗ Desynced'} (${c.path})\n`);
+    }
+    if (cfBundle) {
+      write(`  [7] CF portal packs:   ${(cfBundle.feature_packs || []).join(', ') || '—'}\n`);
+      write(`      Portal manage:     ${(cfBundle.portal_manage_scopes || []).join(', ')}\n`);
     }
     write('\n');
     return diagnostics;
