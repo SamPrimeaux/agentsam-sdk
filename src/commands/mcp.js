@@ -17,6 +17,8 @@ import {
   syncServerToClient,
   writeMcpServer,
 } from '../mcp/index.js';
+import { createMcpServerProject } from '../lib/scaffold/mcp-server.js';
+import { listMcpServerPresets } from '../lib/scaffold/templates/mcp-server/presets.js';
 
 function clean(value) {
   return value == null ? '' : String(value).trim();
@@ -37,6 +39,13 @@ export function parseMcpArgs(argv = []) {
   let catalog = false;
   let bundles = false;
   let pack = '';
+  let preset = '';
+  let output = '';
+  let issuer = '';
+  let audience = '';
+  let displayName = '';
+  let authMode = '';
+  let force = false;
 
   for (let i = 1; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -44,6 +53,14 @@ export function parseMcpArgs(argv = []) {
     else if (arg === '--url') url = argv[++i] || '';
     else if (arg === '--token') token = argv[++i] || '';
     else if (arg === '--pack') pack = argv[++i] || '';
+    else if (arg === '--preset') preset = argv[++i] || '';
+    else if (arg === '--output' || arg === '--out') output = argv[++i] || '';
+    else if (arg === '--issuer') issuer = argv[++i] || '';
+    else if (arg === '--audience') audience = argv[++i] || '';
+    else if (arg === '--display-name') displayName = argv[++i] || '';
+    else if (arg === '--public') authMode = 'public';
+    else if (arg === '--oauth') authMode = 'oauth';
+    else if (arg === '--force') force = true;
     else if (arg === '--json') json = true;
     else if (arg === '--catalog' || arg === '--all') catalog = true;
     else if (arg === '--bundles' || arg === '--cloudflare') bundles = true;
@@ -57,6 +74,13 @@ export function parseMcpArgs(argv = []) {
     url,
     token,
     pack: pack.toLowerCase(),
+    preset: preset.toLowerCase(),
+    output,
+    issuer,
+    audience,
+    displayName,
+    authMode,
+    force,
     json,
     catalog,
     bundles,
@@ -68,6 +92,9 @@ function renderHelp(options = {}) {
   const clients = listRegisteredClients(options);
   const cfBundles = listCloudflareMcpBundles();
   const offerable = listOfferableMcpServerConnections();
+  const templateRows = listMcpServerPresets().map((preset) =>
+    `    ${preset.key.padEnd(18)} ${preset.display_name}`
+  ).join('\n');
 
   const presetRows = offerable.map((s) => {
     const key = (s.connection_key || '').padEnd(28);
@@ -86,9 +113,10 @@ function renderHelp(options = {}) {
   }).join('\n');
 
   return `
-  AgentSam · MCP Client Management
+  AgentSam · MCP Factory + Client Management
 
   Usage:
+    agentsam mcp create <name> [--preset <preset>] [--output <dir>] [--issuer <url>] [--audience <url>] [--oauth|--public] [--force]
     agentsam mcp add <name> [--client <client>|all] [--url <url>] [--token <token>]
     agentsam mcp list [--catalog|--bundles] [--json]
     agentsam mcp status [<name>] [--json]
@@ -101,6 +129,9 @@ function renderHelp(options = {}) {
     • Offerable MCP server connections include every CF portal hostname (see below).
     • CF OAuth: pick packs (agentsam, developer_platform, zero_trust, …) or pack \`all\` (~315 scopes).
     • mcp-portals.read/write come with the agentsam pack for CF-connected portal management.
+
+  MCP server templates:
+${templateRows}
 
   Offerable MCP server connections:
 ${presetRows}
@@ -123,6 +154,35 @@ export async function runMcp(argv = [], options = {}) {
   }
 
   const { subcommand, target } = args;
+
+  if (subcommand === 'create') {
+    if (!target) throw new Error('mcp_project_name_required');
+    const preset = args.preset || 'heuristics';
+    const result = await createMcpServerProject({
+      projectName: target,
+      preset,
+      output: args.output || target,
+      issuer: args.issuer || undefined,
+      audience: args.audience || undefined,
+      displayName: args.displayName || undefined,
+      authMode: args.authMode || undefined,
+      force: args.force,
+    }, {
+      cwd: options.cwd || process.cwd(),
+    });
+
+    if (args.json) {
+      write(JSON.stringify(result, null, 2) + '\n');
+      return result;
+    }
+
+    write(`\n  ✓ Generated MCP server: ${result.display_name}\n`);
+    write(`      preset:    ${result.preset}\n`);
+    write(`      output:    ${result.output_dir}\n`);
+    write(`      manifest:  ${result.manifest_path}\n`);
+    write(`      endpoint:  ${result.transport} ${result.endpoint_path}\n\n`);
+    return result;
+  }
 
   if (subcommand === 'list') {
     if (args.bundles) {

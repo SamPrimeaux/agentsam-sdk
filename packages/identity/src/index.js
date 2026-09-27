@@ -66,6 +66,13 @@ export {
 } from './server/post-auth.js';
 export { verifyAppAuthContract, verifyAppPackage } from './app/verify-app.js';
 export { DEFAULT_COMPANY_ID, DEFAULT_COMPANY_SLUG, normalizeCompanyRow } from './contracts/company.js';
+export {
+  buildOAuthConsentView,
+  normalizeOAuthConsentCompany,
+  normalizeOAuthConsentResource,
+  normalizeOAuthConsentClient,
+  normalizeOAuthConsentScope,
+} from './oauth/consent-view.js';
 export * from './contracts/auth-config.js';
 export { createPasswordResetService } from './recovery/password-reset.js';
 export {

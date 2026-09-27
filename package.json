@@ -104,7 +104,8 @@
     "./theme/fuelnfree-site": "./packages/theme-fuelnfree-site/src/index.js",
     "./theme/handyman-site": "./packages/theme-handyman-site/src/index.js",
     "./theme/insurance-site": "./packages/theme-insurance-site/src/index.js",
-    "./theme/shinshu-site": "./packages/theme-shinshu-site/src/index.js"
+    "./theme/shinshu-site": "./packages/theme-shinshu-site/src/index.js",
+    "./identity/oauth/consent-view": "./packages/identity/src/oauth/consent-view.js"
   },
   "bin": {
     "agentsam": "bin/agentsam",

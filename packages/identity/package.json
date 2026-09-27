@@ -3,7 +3,7 @@
   "version": "2.6.4",
   "private": true,
   "type": "module",
-  "description": "Identity module for @inneranimalmedia/agentsam-sdk (workspace — publish via root SDK)",
+  "description": "Identity module for @inneranimalmedia/agentsam-sdk (workspace \u2014 publish via root SDK)",
   "agentsam": {
     "system": "identity",
     "kind": "library",
@@ -29,7 +29,8 @@
     "./contracts/auth-config": "./src/contracts/auth-config.js",
     "./oauth/callback": "./src/oauth/callback.js",
     "./frontend/auth-portal/*": "./src/frontend/auth-portal/*",
-    "./providers/cloudflare": "./src/providers/cloudflare/index.js"
+    "./providers/cloudflare": "./src/providers/cloudflare/index.js",
+    "./oauth/consent-view": "./src/oauth/consent-view.js"
   },
   "scripts": {
     "test": "node --test tests/*.test.mjs",

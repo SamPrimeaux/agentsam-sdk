@@ -11,6 +11,7 @@
 import { intro, outro, select, cancel, isCancel, note } from '@clack/prompts';
 import { runCmsWizard } from './wizards/cms.js';
 import { runWorkerApiWizard } from './wizards/worker-api.js';
+import { runMcpServerWizard } from './wizards/mcp-server.js';
 import pc from 'picocolors';
 
 const SCAFFOLDS = {
@@ -23,6 +24,11 @@ const SCAFFOLDS = {
     label: 'Worker API',
     description: 'Bare Cloudflare Worker with typed route handlers and D1 binding',
     run: runWorkerApiWizard,
+  },
+  'mcp-server': {
+    label: 'MCP Server',
+    description: 'Cloudflare Worker MCP server with OAuth resource metadata and portable identity branding',
+    run: runMcpServerWizard,
   },
 };
 

@@ -23,7 +23,10 @@ export async function applySqliteIdentityMigrations(db, opts = {}) {
     '001_identity_core.sql',
     '002_identity_oauth_client.sql',
   ];
-  if (opts.includeOAuthServer) files.push('003_identity_oauth_server.sql');
+  if (opts.includeOAuthServer) {
+    files.push('003_identity_oauth_server.sql');
+    files.push('004_identity_oauth_consent_catalog.sql');
+  }
 
   for (const file of files) {
     const sql = fs.readFileSync(path.join(SQLITE_MIGRATIONS_DIR, file), 'utf8');
