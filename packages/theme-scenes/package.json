@@ -1,0 +1,53 @@
+{
+  "name": "@inneranimalmedia/theme-scenes",
+  "version": "0.1.0",
+  "description": "Reusable scene / shell / block vocabulary for branded website experiences. BrandPack owns look; theme-scenes owns composition.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./contracts": "./src/contracts/index.js",
+    "./scenes": "./src/scenes/index.js",
+    "./shell": "./src/shell/index.js",
+    "./blocks": "./src/blocks/index.js",
+    "./visuals": "./src/visuals/index.js",
+    "./demos": "./src/demos/index.js",
+    "./themes": "./src/themes/index.js",
+    "./presets": "./src/presets/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/theme-scenes"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "keywords": [
+    "agentsam",
+    "theme",
+    "scenes",
+    "sections",
+    "brand",
+    "cms"
+  ],
+  "agentsam": {
+    "kind": "theme-runtime",
+    "slug": "theme-scenes",
+    "depends_on": [
+      "@inneranimalmedia/agentsam-sdk-brand"
+    ]
+  }
+}

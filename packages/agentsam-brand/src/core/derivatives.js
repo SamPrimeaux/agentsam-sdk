@@ -1,50 +1,50 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
-import { createRequire } from 'node:module';
 import { canResizeFormat } from './capabilities.js';
 import { BrandAssetError, assert } from './errors.js';
 import { inspectBrandAsset } from './inspect.js';
+import {
+  discoverProcessors,
+  resolveProcessor,
+  hasMagick,
+} from './processors/index.js';
 
-const require = createRequire(import.meta.url);
-
-function tryLoadSharp() {
-  try {
-    return require('sharp');
-  } catch {
-    return null;
-  }
-}
-
-export function hasMagick() {
-  const r = spawnSync('magick', ['-version'], { encoding: 'utf8' });
-  return r.status === 0;
-}
+export { hasMagick };
+export { hasSquooshBinary } from './processors/index.js';
 
 export function hasSharp() {
-  return Boolean(tryLoadSharp());
+  return discoverProcessors().available.includes('sharp');
 }
 
 /**
- * Portable capability discovery — no OS package-manager commands.
- * Remediation belongs in agentsam setup / recipes.js.
+ * Portable capability discovery — processors are adapters, not the product.
  */
 export function discoverDerivativeCapabilities() {
-  const sharp = hasSharp();
-  const magick = hasMagick();
+  const discovery = discoverProcessors();
   return {
-    backends: {
-      sharp: { available: sharp, capability_id: 'image.raster.transform' },
-      imagemagick: { available: magick, capability_id: 'image.raster.transform' },
-      potrace: { available: Boolean(spawnSync('potrace', ['-v'], { encoding: 'utf8' }).status === 0 || spawnSync('potrace', ['-v'], { encoding: 'utf8' }).status === 1), capability_id: 'image.vectorize' },
-    },
-    preferred_backend: sharp ? 'sharp' : magick ? 'imagemagick' : null,
+    backends: Object.fromEntries(
+      discovery.processors.map((p) => [
+        p.id,
+        {
+          available: p.available,
+          capability_id: p.id === 'cloudflare'
+            ? 'image.edge.transform'
+            : p.id === 'squoosh'
+              ? 'image.codec.squoosh-binary'
+              : 'image.raster.transform',
+        },
+      ]),
+    ),
+    preferred_backend: discovery.preferred,
+    rejected: discovery.rejected,
     formats: {
-      png: sharp || magick || true,
-      jpeg: sharp || magick,
-      webp: sharp || magick,
-      avif: sharp || magick,
-      icns: magick,
+      png: discovery.available.some((id) => ['sharp', 'squoosh', 'native'].includes(id)),
+      jpeg: discovery.available.some((id) => ['sharp', 'squoosh', 'native'].includes(id)),
+      webp: discovery.available.some((id) => ['sharp', 'squoosh', 'native'].includes(id)),
+      avif: discovery.available.some((id) => ['sharp', 'squoosh', 'native'].includes(id)),
+      jxl: discovery.available.includes('squoosh'),
+      wp2: discovery.available.includes('squoosh'),
+      icns: discovery.available.includes('native'),
     },
   };
 }
@@ -56,52 +56,24 @@ function blockedCapability({ id, format, capabilityId = 'image.raster.transform'
     status: 'blocked',
     reason: 'capability_missing',
     capability_id: capabilityId,
-    acceptable_backends: capabilityId === 'image.vectorize' ? ['potrace'] : ['sharp', 'imagemagick'],
+    acceptable_backends: capabilityId === 'image.vectorize'
+      ? ['potrace']
+      : ['sharp', 'squoosh', 'native'],
   };
 }
 
-async function deriveWithSharp(sharp, sourcePath, dest, { format, width, height, quality }) {
-  let pipeline = sharp(sourcePath, { failOn: 'none' }).rotate();
-  if (width && height) {
-    pipeline = pipeline.resize(width, height, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } });
-  }
-  if (format === 'png') pipeline = pipeline.png();
-  else if (format === 'jpeg' || format === 'jpg') pipeline = pipeline.jpeg({ quality: quality ?? 90 });
-  else if (format === 'webp') pipeline = pipeline.webp({ quality: quality ?? 90 });
-  else if (format === 'avif') pipeline = pipeline.avif({ quality: quality ?? 80 });
-  else throw new BrandAssetError('unsupported_format', `Sharp cannot write ${format}`);
-  await pipeline.toFile(dest);
-}
-
-function deriveWithMagick(sourcePath, dest, { format, width, height, quality }) {
-  const args = [path.resolve(sourcePath)];
-  if (width && height) args.push('-resize', `${width}x${height}`);
-  args.push('-background', 'none');
-  if (format === 'png') args.push('-define', 'png:color-type=6');
-  if ((format === 'webp' || format === 'avif' || format === 'jpeg') && quality != null) {
-    args.push('-quality', String(quality));
-  } else if (format === 'webp') args.push('-quality', '90');
-  else if (format === 'avif') args.push('-quality', '80');
-  args.push(dest);
-  const r = spawnSync('magick', args, { encoding: 'utf8' });
-  if (r.status !== 0) {
-    throw new BrandAssetError('derive_failed', r.stderr || r.stdout || 'magick failed');
-  }
-}
-
 /**
- * Expand derivative declarations into concrete files.
- * Prefer Sharp (declared dependency); ImageMagick is optional enrichment.
+ * Expand derivative declarations into concrete files via processor scheduler.
  */
 export async function deriveBrandAssets({
   sourcePath,
   outDir,
   derivatives = [],
   asset = 'asset',
+  processor: forceProcessor,
 } = {}) {
   assert(sourcePath && fs.existsSync(sourcePath), 'source_missing', `Source missing: ${sourcePath}`);
   const caps = discoverDerivativeCapabilities();
-  const sharp = tryLoadSharp();
   fs.mkdirSync(outDir, { recursive: true });
 
   const artifacts = [];
@@ -113,13 +85,13 @@ export async function deriveBrandAssets({
     const ext = format === 'jpeg' ? 'jpg' : format;
     const dest = path.join(outDir, d.filename || `${asset}-${width || 'x'}.${ext}`);
 
-    if (format === 'icns' && !caps.backends.imagemagick.available) {
+    if (format === 'icns' && !caps.backends.native?.available) {
       artifacts.push({
         ...blockedCapability({ id, format }),
         role: d.role || 'native',
         status: 'blocked',
         capability_id: 'image.native.macos-icon',
-        acceptable_backends: ['imagemagick', 'platform-adapter'],
+        acceptable_backends: ['native', 'platform-adapter'],
       });
       continue;
     }
@@ -137,41 +109,87 @@ export async function deriveBrandAssets({
     }
 
     try {
-      if (sharp && format !== 'icns') {
-        await deriveWithSharp(sharp, sourcePath, dest, {
-          format,
-          width,
-          height,
-          quality: d.quality,
+      let encodeInput = sourcePath;
+      let tmpResize = null;
+
+      if ((width || height) && format !== 'icns') {
+        const proc = await resolveProcessor(
+          { format, preserve_alpha: true },
+          { force: forceProcessor },
+        );
+        tmpResize = path.join(outDir, `.resize-${id}.png`);
+        if (typeof proc.resize === 'function') {
+          await proc.resize(sourcePath, { width, height, outPath: tmpResize });
+          encodeInput = tmpResize;
+        }
+      }
+
+      const proc = await resolveProcessor(
+        { format: format === 'icns' ? 'icns' : format },
+        { force: format === 'icns' ? 'native' : forceProcessor },
+      );
+
+      if (format === 'icns') {
+        await proc.encode(encodeInput, { format: 'png', outPath: dest.replace(/\.icns$/i, '.png') });
+        // ICNS still needs magick-specific path — mark generated png ladder for now
+        const inspected = inspectBrandAsset(dest.replace(/\.icns$/i, '.png'));
+        artifacts.push({
+          id,
+          role: d.role || 'native',
+          format: 'png',
+          status: 'generated',
+          backend: proc.id,
+          path: inspected.path,
+          width: inspected.width,
+          height: inspected.height,
+          bytes: inspected.bytes,
+          content_type: inspected.content_type,
+          sha256: inspected.sha256,
+          note: 'icns container requires platform adapter; png ladder emitted',
         });
-      } else if (caps.backends.imagemagick.available) {
-        deriveWithMagick(sourcePath, dest, { format, width, height, quality: d.quality });
-      } else if (format === 'png' && !width && !height) {
-        fs.copyFileSync(sourcePath, dest);
       } else {
+        const result = await proc.encode(encodeInput, {
+          format,
+          quality: d.quality,
+          outPath: dest,
+        });
+        artifacts.push({
+          id,
+          role: d.role || 'raster',
+          format,
+          status: 'generated',
+          backend: result.processor,
+          path: result.path,
+          width: result.width,
+          height: result.height,
+          bytes: result.bytes,
+          content_type: result.content_type,
+          sha256: result.sha256,
+          quality: d.quality ?? null,
+          receipt: {
+            processor: result.processor,
+            version: result.processor_version || null,
+            options: result.options,
+          },
+        });
+      }
+
+      if (tmpResize) {
+        try {
+          fs.unlinkSync(tmpResize);
+        } catch {
+          /* ignore */
+        }
+      }
+    } catch (err) {
+      if (err?.code === 'processor_unavailable' || err?.code === 'processor_rejected') {
         artifacts.push({
           ...blockedCapability({ id, format }),
           role: d.role || 'raster',
+          message: err.message,
         });
         continue;
       }
-
-      const inspected = inspectBrandAsset(dest, { role: d.role || 'raster' });
-      artifacts.push({
-        id,
-        role: d.role || 'raster',
-        format,
-        status: 'generated',
-        backend: sharp && format !== 'icns' ? 'sharp' : 'imagemagick',
-        path: dest,
-        width: inspected.width,
-        height: inspected.height,
-        bytes: inspected.bytes,
-        content_type: inspected.content_type,
-        sha256: inspected.sha256,
-        quality: d.quality ?? null,
-      });
-    } catch (err) {
       artifacts.push({
         id,
         role: d.role || 'raster',
