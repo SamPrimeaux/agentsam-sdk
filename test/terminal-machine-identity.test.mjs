@@ -59,7 +59,7 @@ test('enroll posts canonical identity for the instance the caller named', async 
   assert.equal(body.kind, 'local_device');
 });
 
-test('enroll --pair consumes the token via ExecOS enroll (connection_token, not bridge)', async () => {
+test('enroll --pair consumes the token via ExecOS enroll (writes AGENTSAM_BRIDGE_KEY)', async () => {
   let pairedToken = null;
   const result = await runTerminal(['enroll', '--instance', 'tinst_sams_imac', '--pair', '--json'], {
     write: () => {},

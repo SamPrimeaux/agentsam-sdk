@@ -54,7 +54,7 @@ function listExecosProfiles(options = {}) {
       kind: 'local_device',
       provider: 'execos',
       compute_provider: 'execos',
-      status: clean(env.IAM_CONNECTION_KEY) ? 'paired' : 'profile',
+      status: clean(env.AGENTSAM_BRIDGE_KEY) || clean(env.IAM_CONNECTION_KEY) ? 'paired' : 'profile',
       hostname: null,
       platform: process.platform === 'darwin' ? 'macos' : process.platform,
       arch: process.arch === 'arm64' ? 'arm64' : process.arch,

@@ -1,15 +1,13 @@
 /**
  * Device identity + ExecOS pairing.
  *
- * Three AgentSam lanes (see docs/contracts/environment-vocabulary.md):
- *   AGENTSAM_API_KEY   — account / human (CLI, whoami, mint enrollment)
- *   AGENTSAM_BRIDGE_KEY — machine / worker (user123's Mac, VM, or Worker ↔ platform)
- *   IAM_CONNECTION_KEY — ExecOS connection-scoped secret for one terminal_connection
+ * Two AgentSam lanes (see docs/contracts/environment-vocabulary.md):
+ *   AGENTSAM_API_KEY    — account / human (CLI, whoami, mint enrollment)
+ *   AGENTSAM_BRIDGE_KEY — one ExecOS terminal_connection (enroll --pair writes it)
  *
- * local_device PTY daemons enroll with connection_token → IAM_CONNECTION_KEY.
- * That is not a substitute for AGENTSAM_API_KEY (account) or AGENTSAM_BRIDGE_KEY
- * (user-owned machine bridge for Workers/services). Bridge keys are minted per
- * account (brk_*) — not "platform-only."
+ * local_device PTY daemons enroll with connection_token → AGENTSAM_BRIDGE_KEY
+ * in ~/.execos/profiles/<instance_id>.env. IAM_CONNECTION_KEY is retired
+ * (dual-read only during migration).
  */
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
@@ -78,8 +76,7 @@ export async function runTerminal(argv = [], options = {}) {
       '',
       'Lanes:',
       '  AGENTSAM_API_KEY      account (CLI / whoami / mint enrollment) — required for this command',
-      '  AGENTSAM_BRIDGE_KEY   your machine/Worker bridge (user-owned; mint via Local Studio)',
-      '  IAM_CONNECTION_KEY    ExecOS connection_token for one terminal_connection (--pair writes it)',
+      '  AGENTSAM_BRIDGE_KEY   one terminal_connection secret (written by --pair into ExecOS profile)',
     ].join('\n'));
     return { ok: false, error: 'terminal_usage' };
   }
@@ -94,7 +91,7 @@ export async function runTerminal(argv = [], options = {}) {
       write('');
       write('Pass --instance <id> to stamp/re-pair an existing device, or --endpoint <url> for a new local_device.');
       write('Requires AGENTSAM_API_KEY in the shell (source ~/.agentsam/load-agent-env.sh).');
-      write('Add --pair to mint a connection_token and run ExecOS enroll (writes IAM_CONNECTION_KEY).');
+      write('Add --pair to mint a connection_token and run ExecOS enroll (writes AGENTSAM_BRIDGE_KEY).');
     }
     return { ok: true, enrolled: false, ...payload };
   }
@@ -157,11 +154,10 @@ export async function runTerminal(argv = [], options = {}) {
     write(`instance:   ${out.instance_id || 'unknown'}`);
     write(`connection: ${out.connection_id || 'unknown'}`);
     printIdentity(identity, write);
-    write('auth_mode:  connection_token → IAM_CONNECTION_KEY (ExecOS daemon)');
+    write('auth_mode:  connection_token → AGENTSAM_BRIDGE_KEY (one terminal_connection)');
     write('account:    AGENTSAM_API_KEY (CLI / whoami — keep loaded in the shell)');
-    write('machine:    AGENTSAM_BRIDGE_KEY (your Worker/Mac bridge — mint in Local Studio; not platform-only)');
     if (pair) {
-      write(paired?.ok ? '✓ ExecOS paired — IAM_CONNECTION_KEY written to private profile' : '✗ ExecOS pair failed');
+      write(paired?.ok ? '✓ ExecOS paired — AGENTSAM_BRIDGE_KEY written to private profile' : '✗ ExecOS pair failed');
     } else if (result?.enrollment_token) {
       write('Finish on that machine: node ~/ExecOS/bin/enroll.mjs --token <token> --force');
     }

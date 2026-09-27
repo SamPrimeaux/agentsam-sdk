@@ -14,12 +14,20 @@
 Browser GET on connections **start** → 302 to Cloudflare.  
 `fetch` + `Accept: application/json` → `{ authorize_url }`.
 
-## D1
+## D1 tables (Cloudflare connect / approve)
 
-- `identity_oauth_states` — identity PKCE (migration `0013_identity_oauth_states.sql`)
-- `agentsam_cloudflare_oauth_state` — MCP connector PKCE
+| Table | Role |
+|---|---|
+| `oauth_state_nonces` | Short-lived PKCE state for connector `/api/connections/cloudflare/*` |
+| `identity_oauth_states` | Short-lived PKCE for identity “Sign in with Cloudflare” |
+| `user_oauth_tokens` | **SSOT** durable grant: sealed access/refresh, scopes, `account_identifier` (= CF account id), `is_active` |
+| `agentsam_cloudflare_connections` | **Legacy** — migrated/superseded into `user_oauth_tokens`; do not write new rows |
+| `agentsam_cloudflare_oauth_state` | Legacy MCP connector PKCE (prefer `oauth_state_nonces`) |
 
-## IAM AS redirect (required)
+Vault seals token material; D1 never stores raw refresh/access plaintext in the durable grant row when vault is configured.
+
+Resource discovery (their D1/R2/Workers) uses the sealed token from `user_oauth_tokens` — never the platform `env.DB` binding.
+
 
 Register on client `iam_agentsam_sdk_web`:
 

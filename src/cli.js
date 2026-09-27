@@ -127,8 +127,8 @@ function printLegacyHelp() {
     agentsam whoami [--json]   Authenticated account identity + safe credential status
     agentsam terminal identity [--json]   This machine's hostname, platform, arch, and model
     agentsam terminal enroll --instance <id> [--pair] [--json]
-                                          Needs AGENTSAM_API_KEY; --pair writes ExecOS IAM_CONNECTION_KEY
-                                          (AGENTSAM_BRIDGE_KEY = your machine/Worker lane — user-owned)
+                                          Needs AGENTSAM_API_KEY; --pair writes AGENTSAM_BRIDGE_KEY
+                                          (one terminal_connection in ~/.execos/profiles/)
     agentsam resume [session]  Resume a saved Agent Sam session; omit id for picker
     agentsam eval context      Offline context-strategy/economics fixtures (--help)
     agentsam cloudflare        Capabilities + CF OAuth packs (agentsam cloudflare login --pack agentsam)

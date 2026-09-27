@@ -25,13 +25,14 @@ User 123 signs in (browser OAuth via IAM_CLIENT_* against IAM_OAUTH_ISSUER)
      ↓
 User 123 gets an AGENTSAM_API_KEY for their account (CLI / API / Local Studio)
      ↓
-User 123's machine or Worker holds AGENTSAM_BRIDGE_KEY for machine↔platform calls
+User 123 runs `agentsam terminal enroll … --pair`
+     → AGENTSAM_BRIDGE_KEY written for ONE terminal_connection
      ↓
 User 123 connects Cloudflare / GitHub / GCP / models as Provider Connections
 ```
 
 `AGENTSAM_API_KEY` = “what can *this account* do on AgentSam.”  
-`AGENTSAM_BRIDGE_KEY` = “what can *this machine/worker* invoke without pretending to be the user.”  
+`AGENTSAM_BRIDGE_KEY` = “what can *this enrolled machine connection* prove to ExecOS/IAM” (one `terminal_connection`; `IAM_CONNECTION_KEY` retired).  
 `IAM_CLIENT_*` = “stock OAuth client so the product can encrypt/protect login using our Identity provisioning.”
 
 ---
