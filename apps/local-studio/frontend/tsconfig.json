@@ -24,6 +24,9 @@
       "@/*": [
         "./src/*"
       ],
+      "@agentsam/icon-registry": [
+        "../../../protocol/ui/icon-registry.mjs"
+      ],
       "@inneranimalmedia/agentsam-cms-frontend": [
         "../../client-cms-editor/frontend/src/index.ts"
       ],
