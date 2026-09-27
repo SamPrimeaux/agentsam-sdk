@@ -60,6 +60,21 @@
       "@inneranimalmedia/agentsam-database-editor/frontend": [
         "../../../packages/agentsam-database-editor/frontend/index.ts"
       ],
+      "@inneranimalmedia/agentsam-content": [
+        "../../../packages/agentsam-content/src/index.ts"
+      ],
+      "@inneranimalmedia/agentsam-content-studio": [
+        "../../../packages/agentsam-content-studio/src/index.ts"
+      ],
+      "@inneranimalmedia/agentsam-scoring": [
+        "../../../packages/agentsam-scoring/src/index.ts"
+      ],
+      "@inneranimalmedia/agentsam-assets-core": [
+        "../../../packages/agentsam-assets-core/src/index.ts"
+      ],
+      "@inneranimalmedia/agentsam-cloudflare-images": [
+        "../../../packages/agentsam-cloudflare-images/src/index.ts"
+      ],
       "lucide-react": [
         "../node_modules/lucide-react"
       ],

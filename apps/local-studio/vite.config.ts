@@ -38,6 +38,21 @@ const databaseEditorRoot = resolvePath(
 const databaseEditorManifest = resolvePath(databaseEditorRoot, "src/manifest.js");
 const databaseEditorUi = resolvePath(databaseEditorRoot, "src/ui/index.ts");
 const databaseEditorFrontend = resolvePath(databaseEditorRoot, "frontend/index.ts");
+const contentPackageRoot = resolvePath(
+  fileURLToPath(new URL("../../packages/agentsam-content", import.meta.url)),
+);
+const contentStudioPackageRoot = resolvePath(
+  fileURLToPath(new URL("../../packages/agentsam-content-studio", import.meta.url)),
+);
+const scoringPackageRoot = resolvePath(
+  fileURLToPath(new URL("../../packages/agentsam-scoring", import.meta.url)),
+);
+const assetsCorePackageRoot = resolvePath(
+  fileURLToPath(new URL("../../packages/agentsam-assets-core", import.meta.url)),
+);
+const cfImagesPackageRoot = resolvePath(
+  fileURLToPath(new URL("../../packages/agentsam-cloudflare-images", import.meta.url)),
+);
 const keyManagerPackageRoot = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-key-manager", import.meta.url)),
 );
@@ -241,6 +256,26 @@ export default defineConfig(({ command, isPreview }) => ({
       {
         find: /^@inneranimalmedia\/agentsam-database-editor\/ui$/,
         replacement: databaseEditorUi,
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-content$/,
+        replacement: resolvePath(contentPackageRoot, "src/index.ts"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-content-studio$/,
+        replacement: resolvePath(contentStudioPackageRoot, "src/index.ts"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-scoring$/,
+        replacement: resolvePath(scoringPackageRoot, "src/index.ts"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-assets-core$/,
+        replacement: resolvePath(assetsCorePackageRoot, "src/index.ts"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-cloudflare-images$/,
+        replacement: resolvePath(cfImagesPackageRoot, "src/index.ts"),
       },
       {
         find: "@inneranimalmedia/agentsam-workbench",

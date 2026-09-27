@@ -75,7 +75,12 @@
     "@inneranimalmedia/agentsam-workbench": "file:../../../packages/agentsam-workbench",
     "@inneranimalmedia/agentsam-cms-frontend": "file:../../client-cms-editor/frontend",
     "@inneranimalmedia/agentsam-cms-backend": "file:../../client-cms-editor/backend",
-    "@inneranimalmedia/agentsam-cms-shared": "file:../../client-cms-editor/shared/cms"
+    "@inneranimalmedia/agentsam-cms-shared": "file:../../client-cms-editor/shared/cms",
+    "@inneranimalmedia/agentsam-content": "file:../../../packages/agentsam-content",
+    "@inneranimalmedia/agentsam-content-studio": "file:../../../packages/agentsam-content-studio",
+    "@inneranimalmedia/agentsam-scoring": "file:../../../packages/agentsam-scoring",
+    "@inneranimalmedia/agentsam-assets-core": "file:../../../packages/agentsam-assets-core",
+    "@inneranimalmedia/agentsam-cloudflare-images": "file:../../../packages/agentsam-cloudflare-images"
   },
   "devDependencies": {
     "@types/node": "^22.16.5",

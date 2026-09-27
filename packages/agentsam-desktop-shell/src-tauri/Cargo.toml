@@ -23,6 +23,7 @@ sha2 = "0.10"
 base64 = "0.22"
 rand = "0.8"
 serde_urlencoded = "0.7"
+rfd = "0.15"
 
 [[bin]]
 name = "agentsam-desktop-shell"
