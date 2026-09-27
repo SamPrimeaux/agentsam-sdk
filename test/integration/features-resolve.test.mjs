@@ -44,6 +44,7 @@ test('auth feature resolves real D1 resources, not a pretend iam-d1 profile', ()
   assert.deepEqual(resolved.resources.migration_sources, [
     'src/migrations/0001_identity_core.sql',
     'src/migrations/0002_company.sql',
+    'src/migrations/0003_accounts_ssot.sql',
   ]);
   const names = resolved.resources.tables.map((t) => t.name);
   assert.deepEqual(names, [
@@ -82,6 +83,7 @@ test('resources.json indexes D1 tables without owning DDL', () => {
   assert.deepEqual(resources.migration_sources, [
     'src/migrations/0001_identity_core.sql',
     'src/migrations/0002_company.sql',
+    'src/migrations/0003_accounts_ssot.sql',
   ]);
   const names = resources.tables.map((t) => t.name);
   assert.ok(names.includes('auth_users'));
