@@ -8,22 +8,21 @@ import {
 } from '../src/oauth/credentials.js';
 
 describe('oauth credentials', () => {
-  it('requires IAM_CLIENT_ID, IAM_CLIENT_SECRET, and IAM_OAUTH_ISSUER together', () => {
+  it('requires IAM client credentials and defaults the issuer to the platform authority', () => {
     assert.equal(resolveIamPlatformCredentials({ IAM_CLIENT_ID: 'x' }), null);
-    assert.equal(
-      resolveIamPlatformCredentials({
-        IAM_CLIENT_ID: 'x',
-        IAM_CLIENT_SECRET: 'y',
-      }),
-      null,
-    );
+    const defaults = resolveIamPlatformCredentials({
+      IAM_CLIENT_ID: 'x',
+      IAM_CLIENT_SECRET: 'y',
+    });
+    assert.equal(defaults?.clientId, 'x');
+    assert.equal(defaults?.issuer, PLATFORM_ACCOUNT_ISSUER);
     assert.equal(
       resolveIamPlatformCredentials({
         IAM_CLIENT_ID: 'x',
         IAM_CLIENT_SECRET: 'y',
         IAM_OAUTH_ISSUER: 'https://iam.example.test',
-      })?.clientId,
-      'x',
+      })?.issuer,
+      'https://iam.example.test',
     );
   });
 
