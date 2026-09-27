@@ -148,4 +148,27 @@ describe("normalize commit 1 contracts", () => {
     expect(noopKnowledgeAdapter.capabilities().index).toBe(false);
     expect(hybridKnowledgeAdapter([noopKnowledgeAdapter]).capabilities().search).toBe(false);
   });
+
+  it("provides memory + attachable LocalContentHost stubs", async () => {
+    const { createMemoryLocalHost, createAttachableLocalHost } = await import("../src/local/index.js");
+    const mem = createMemoryLocalHost({
+      files: [
+        {
+          ref: "mem_1" as import("../src/contracts/local-host.js").LocalFileRef,
+          name: "hero.png",
+          mime: "image/png",
+          bytes: new Uint8Array([1, 2, 3]),
+        },
+      ],
+    });
+    expect((await mem.status()).availability).toBe("available");
+    expect((await mem.list("" as never)).map((e) => e.name)).toEqual(["hero.png"]);
+
+    const attachable = createAttachableLocalHost({ label: "test-seam" });
+    expect((await attachable.status()).availability).toBe("attachable");
+    attachable.attach(mem);
+    expect((await attachable.status()).availability).toBe("available");
+    attachable.detach();
+    await expect(attachable.list("" as never)).rejects.toThrow(/not_attached/);
+  });
 });

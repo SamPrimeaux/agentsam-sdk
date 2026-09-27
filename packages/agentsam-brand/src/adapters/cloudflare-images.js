@@ -1,6 +1,10 @@
 /**
  * Cloudflare Images delivery adapter.
  *
+ * Prefer shared transport `@inneranimalmedia/agentsam-cloudflare-images` for
+ * credentials, delivery URLs, and HTTP. This Brand adapter retains BrandPack
+ * publish policy (canonical PNG) and will thin-wrap the shared package next.
+ *
  * HARD RULE: An asset is "on Cloudflare Images" ONLY when POST
  * /accounts/{account_id}/images/v1 returns success + non-empty result.id.
  *

@@ -21,3 +21,4 @@ export * from "./providers/index.js";
 export * from "./processors/index.js";
 export * from "./intelligence/index.js";
 export * from "./runtime/index.js";
+export * from "./local/index.js";

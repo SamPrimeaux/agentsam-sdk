@@ -4,6 +4,7 @@ import type {
   ContentAsset,
   ContentQuery,
   ContentRuntime,
+  ContentRuntimeCapabilities,
   ListPage,
 } from "@inneranimalmedia/agentsam-content";
 
@@ -24,6 +25,29 @@ export function useContentRuntime(): ContentRuntime {
     throw new Error("useContentRuntime must be used inside <ContentStudio runtime={...}>");
   }
   return runtime;
+}
+
+/** Snapshot of host capabilities — UI must derive chrome from this, never hardcode providers. */
+export function useRuntimeCapabilities() {
+  const runtime = useContentRuntime();
+  const [caps, setCaps] = useState<ContentRuntimeCapabilities | null>(null);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    return runtime.events.on("*", () => setTick((t) => t + 1));
+  }, [runtime]);
+
+  useEffect(() => {
+    let alive = true;
+    runtime.capabilities().then((c) => {
+      if (alive) setCaps(c);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [runtime, tick]);
+
+  return caps;
 }
 
 /** Reactive library query: refetches on content events. */
