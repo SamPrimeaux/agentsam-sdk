@@ -17,6 +17,32 @@ import type { Project, ShellEffect } from "@inneranimalmedia/agentsam-local-shar
 import type { Terminal } from "@xterm/xterm";
 import type { FitAddon } from "@xterm/addon-fit";
 
+const AGENTSAMD_TOKEN_KEY = "agentsamd_pairing_token";
+
+function getStoredAgentsamdToken(): string | null {
+  try {
+    return localStorage.getItem(AGENTSAMD_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function promptForAgentsamdToken(): string | null {
+  try {
+    const token = window.prompt(
+      "agentsamd detected on this machine. Paste its pairing token (printed when it started, or in ~/.agentsam/agentsamd.token) to attach a real shell:",
+    );
+    const trimmed = token?.trim();
+    if (trimmed) {
+      localStorage.setItem(AGENTSAMD_TOKEN_KEY, trimmed);
+      return trimmed;
+    }
+  } catch {
+    /* prompt unavailable or user declined */
+  }
+  return null;
+}
+
 async function postJson(url: string, body: unknown) {
   const res = await fetch(url, {
     method: "POST",
@@ -359,13 +385,24 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
       /* no local PTY server */
     }
   }
-  try {
-    const amd = await fetch("http://127.0.0.1:18765/health", { signal: AbortSignal.timeout(600) });
-    if (amd.ok) {
-      term.writeln("agentsamd healthy on :18765 · language packs: GET /v1/language/packs");
+  let usingAgentsamd = false;
+  if (!runtimeBase) {
+    try {
+      const amd = await fetch("http://127.0.0.1:18765/health", { signal: AbortSignal.timeout(600) });
+      if (amd.ok) {
+        const token = getStoredAgentsamdToken() ?? promptForAgentsamdToken();
+        if (token) {
+          runtimeBase = "http://127.0.0.1:18765";
+          runtimeCap = runtimeCap || "local";
+          usingAgentsamd = true;
+          term.writeln("Detected agentsamd on :18765 — using real PTY (not Scratch).");
+        } else {
+          term.writeln("agentsamd detected but not paired — pairing token needed for a real shell.");
+        }
+      }
+    } catch {
+      /* daemon optional for virtual */
     }
-  } catch {
-    /* daemon optional for virtual */
   }
 
   const useRealPty =
@@ -399,7 +436,12 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
     const cap = encodeURIComponent(String(runtimeCap || "local"));
     let socket: WebSocket | null = null;
     try {
-      socket = new WebSocket(`${wsUrl}/?cwd=${cwdParam}&cols=80&rows=24&capability=${cap}`);
+      if (usingAgentsamd) {
+        const token = encodeURIComponent(getStoredAgentsamdToken() || "");
+        socket = new WebSocket(`${wsUrl}/v1/pty?token=${token}&cwd=${cwdParam}`);
+      } else {
+        socket = new WebSocket(`${wsUrl}/?cwd=${cwdParam}&cols=80&rows=24&capability=${cap}`);
+      }
     } catch (err) {
       term.writeln(
         `PTY attach failed: ${err instanceof Error ? err.message : String(err)}.`,
@@ -432,6 +474,9 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
         term.writeln(
           `workspace ${project0.workspaceId || "?"}  ·  real shell — same host root as Monaco`,
         );
+        if (usingAgentsamd && socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: "resize", cols: term.cols, rows: term.rows }));
+        }
       };
       socket.onmessage = (ev) => {
         if (typeof ev.data === "string") {
@@ -444,6 +489,7 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
                 workspace_id?: string;
                 code?: string;
                 message?: string;
+                exit_code?: number;
               };
               if (msg.type === "session_id" || msg.type === "workspace_identity") {
                 if (msg.session_id) ptySessionId = msg.session_id;
@@ -451,6 +497,10 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
               }
               if (msg.type === "error") {
                 term.writeln(`PTY error: ${msg.code || ""} ${msg.message || ""}`);
+                return;
+              }
+              if (msg.type === "exit") {
+                term.writeln(`\r\nshell exited (code ${msg.exit_code ?? "?"})`);
                 return;
               }
             } catch {
