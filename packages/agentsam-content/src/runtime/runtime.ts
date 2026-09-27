@@ -17,7 +17,7 @@ import { evaluateDeleteSafety, usageKey } from "../core/usage.js";
 import type { ContentVariant } from "../core/variant.js";
 import { classifyKind } from "../intelligence/classify.js";
 import type { RagSink, SemanticEnricher } from "../intelligence/index.js";
-import { ragDocumentText } from "../intelligence/index.js";
+import { ragDocumentText, resolveKnowledgeAdapter } from "../intelligence/index.js";
 import { applyMachineFacts, runMachinePass } from "../intelligence/machine-pass.js";
 import { proposeSemanticAlias } from "../intelligence/semantic-name.js";
 import type { AssistantHandler, ContentAssistantContext } from "./assistant.js";
@@ -33,21 +33,50 @@ import type { ContentStore, ListPage } from "./store.js";
 import { InMemoryContentStore } from "./store.js";
 import type { ContentProvider, DeliveryOptions } from "../providers/types.js";
 import { createProviderRegistry, ProviderRegistry } from "../providers/registry.js";
+import type { ContentAccount, ContentActor } from "../contracts/account.js";
+import { actorRefFromContentActor, assertAccountScoped } from "../contracts/account.js";
+import type { ContentBrandResolver } from "../contracts/brand-resolver.js";
+import { noopBrandResolver } from "../contracts/brand-resolver.js";
+import type {
+  AdapterRegistrySnapshot,
+  CapabilityDescriptor,
+  ContentDeliveryAdapter,
+  ContentSourceAdapter,
+  ContentStorageAdapter,
+  ContentVideoDeliveryAdapter,
+} from "../contracts/capabilities.js";
+import type { ContentKnowledgeAdapter } from "../contracts/knowledge.js";
+import type { LocalContentHost } from "../contracts/local-host.js";
+import { unavailableLocalHost } from "../contracts/local-host.js";
+import type { ContentRuntimeCapabilities } from "../contracts/runtime-capabilities.js";
 
 export interface ContentRuntimeConfig {
-  /** Current actor identity (host-authenticated). */
-  identity: ActorRef;
-  /** Account scope for every asset, event and RAG document. */
-  account: { id: string; label?: string };
-  providers: ContentProvider[];
+  /**
+   * Preferred: fully resolved host actor (account + auth user).
+   * Legacy hosts may pass `identity` alone during migration.
+   */
+  actor?: ContentActor;
+  /** Host-authenticated actor. Required unless `actor` is provided. */
+  identity?: ActorRef;
+  /** Account scope for every asset, event and knowledge document. */
+  account: ContentAccount;
+  /** Legacy monolithic providers — still registered; prefer capability adapters. */
+  providers?: ContentProvider[];
+  sources?: ContentSourceAdapter[];
+  storage?: ContentStorageAdapter[];
+  delivery?: ContentDeliveryAdapter[];
+  video?: ContentVideoDeliveryAdapter[];
+  brandResolver?: ContentBrandResolver;
+  knowledge?: ContentKnowledgeAdapter;
+  localHost?: LocalContentHost;
   store?: ContentStore;
   events?: ContentEventBus;
   jobs?: JobQueue;
   routes?: RouteMap;
   permissions?: PermissionPolicy;
   collections?: ContentCollection[];
-  /** Optional AI boundaries — the runtime works fully without them. */
   enricher?: SemanticEnricher;
+  /** @deprecated Prefer `knowledge: ContentKnowledgeAdapter`. */
   rag?: RagSink;
   assistant?: AssistantHandler;
   theme?: Record<string, string>;
@@ -95,10 +124,21 @@ export type EditableFields = Partial<
   >
 >;
 
+function resolveIdentity(config: ContentRuntimeConfig): ActorRef {
+  if (config.actor) return actorRefFromContentActor(config.actor);
+  if (config.identity) return config.identity;
+  throw new Error("createContentRuntime requires actor or identity");
+}
+
 export interface ContentRuntime {
   readonly accountId: string;
   readonly identity: ActorRef;
+  readonly actor?: ContentActor;
   readonly providers: ProviderRegistry;
+  readonly adapters: AdapterRegistrySnapshot;
+  readonly brandResolver: ContentBrandResolver;
+  readonly knowledge: ContentKnowledgeAdapter;
+  readonly localHost: LocalContentHost;
   readonly events: ContentEventBus;
   readonly jobs: JobQueue;
   readonly routes: RouteMap;
@@ -107,6 +147,8 @@ export interface ContentRuntime {
   readonly theme: Record<string, string>;
 
   can(permission: ContentPermission): boolean;
+  /** UI/agents must derive tabs and actions from this — never hardcode providers. */
+  capabilities(): Promise<ContentRuntimeCapabilities>;
 
   createAsset(input: CreateAssetInput, actor?: ActorRef): Promise<ContentAsset>;
   getAsset(id: string): Promise<ContentAsset | null>;
@@ -144,9 +186,24 @@ export function createContentRuntime(config: ContentRuntimeConfig): ContentRunti
   const jobs = config.jobs ?? new InMemoryJobQueue();
   const routes = config.routes ?? defaultRoutes();
   const permissions = config.permissions ?? allowAll;
-  const registry = createProviderRegistry(config.providers);
+  const registry = createProviderRegistry(config.providers ?? []);
   const collections = [...SYSTEM_COLLECTIONS, ...(config.collections ?? [])];
   const accountId = config.account.id;
+  if (!accountId) throw new Error("createContentRuntime requires account.id");
+  if (config.actor && config.actor.accountId !== accountId) {
+    throw new Error("actor.accountId must match account.id");
+  }
+
+  const identity = resolveIdentity(config);
+  const brandResolver = config.brandResolver ?? noopBrandResolver;
+  const knowledge = resolveKnowledgeAdapter({ knowledge: config.knowledge, rag: config.rag });
+  const localHost = config.localHost ?? unavailableLocalHost;
+  const adapters: AdapterRegistrySnapshot = {
+    sources: config.sources ?? [],
+    storage: config.storage ?? [],
+    delivery: config.delivery ?? [],
+    video: config.video ?? [],
+  };
 
   const now = () => new Date().toISOString();
 
@@ -162,6 +219,7 @@ export function createContentRuntime(config: ContentRuntimeConfig): ContentRunti
   ) => events.emit(eventForAsset(type, asset, actor, data));
 
   const save = async (asset: ContentAsset): Promise<ContentAsset> => {
+    assertAccountScoped(accountId, asset.accountId);
     const next = { ...asset, updatedAt: now() };
     await store.put(next);
     return next;
@@ -170,13 +228,19 @@ export function createContentRuntime(config: ContentRuntimeConfig): ContentRunti
   const mustGet = async (id: string): Promise<ContentAsset> => {
     const asset = await store.get(id);
     if (!asset) throw new Error(`Unknown asset: ${id}`);
+    assertAccountScoped(accountId, asset.accountId);
     return asset;
   };
 
   const runtime: ContentRuntime = {
     accountId,
-    identity: config.identity,
+    identity,
+    actor: config.actor,
     providers: registry,
+    adapters,
+    brandResolver,
+    knowledge,
+    localHost,
     events,
     jobs,
     routes,
@@ -185,10 +249,90 @@ export function createContentRuntime(config: ContentRuntimeConfig): ContentRunti
     theme: config.theme ?? {},
 
     can(permission) {
-      return permissions.can(config.identity, permission);
+      return permissions.can(identity, permission);
     },
 
-    async createAsset(input, actor = config.identity) {
+    async capabilities() {
+      const localStatus = await localHost.status();
+      const capabilityList: CapabilityDescriptor[] = [];
+
+      for (const p of registry.all()) {
+        for (const cap of p.capabilities) {
+          capabilityList.push({
+            id: `legacy.${String(p.name)}.${cap}` as CapabilityDescriptor["id"],
+            provider: String(p.name),
+            label: `${p.name}:${cap}`,
+            status: "available",
+          });
+        }
+      }
+      for (const group of [adapters.sources, adapters.storage, adapters.delivery, adapters.video]) {
+        for (const adapter of group) {
+          for (const id of adapter.capabilities) {
+            capabilityList.push({ id, provider: adapter.id, status: "available" });
+          }
+        }
+      }
+      if (localStatus.availability !== "unavailable") {
+        capabilityList.push({
+          id: "local.browse",
+          provider: "local-host",
+          status: localStatus.availability,
+        });
+        if (localStatus.watchSupported) {
+          capabilityList.push({
+            id: "local.watch",
+            provider: "local-host",
+            status: localStatus.availability,
+          });
+        }
+        if (localStatus.processSupported) {
+          capabilityList.push({
+            id: "local.process",
+            provider: "local-host",
+            status: localStatus.availability,
+          });
+        }
+      }
+      const kc = knowledge.capabilities();
+      if (kc.index) {
+        capabilityList.push({ id: "knowledge.index", provider: "knowledge", status: "available" });
+      }
+      if (kc.search) {
+        capabilityList.push({ id: "knowledge.search", provider: "knowledge", status: "available" });
+      }
+
+      return {
+        accountId,
+        providers: [
+          ...registry.all().map((p) => ({
+            id: String(p.name),
+            capabilities: p.capabilities.map(
+              (c) => `legacy.${c}` as CapabilityDescriptor["id"],
+            ),
+            kinds: p.kinds,
+            legacy: true,
+          })),
+          ...adapters.sources.map((s) => ({ id: s.id, capabilities: s.capabilities })),
+          ...adapters.storage.map((s) => ({ id: s.id, capabilities: s.capabilities })),
+          ...adapters.delivery.map((d) => ({ id: d.id, capabilities: d.capabilities })),
+          ...adapters.video.map((v) => ({ id: v.id, capabilities: v.capabilities })),
+        ],
+        capabilities: capabilityList,
+        brand: {
+          resolver: Boolean(config.brandResolver) && config.brandResolver !== noopBrandResolver,
+        },
+        knowledge: kc,
+        local: {
+          availability: localStatus.availability,
+          watchSupported: Boolean(localStatus.watchSupported),
+          processSupported: Boolean(localStatus.processSupported),
+        },
+        permissions: { allowAll: permissions === allowAll },
+      };
+    },
+
+    async createAsset(input, actor = identity) {
       require(input.origin === "generated" ? "content.generate" : "content.upload", actor);
       const kind =
         input.kind ?? classifyKind({ mime: input.mime, filename: input.filename }) ?? "document";
@@ -268,7 +412,12 @@ export function createContentRuntime(config: ContentRuntimeConfig): ContentRunti
       return asset;
     },
 
-    getAsset: (id) => store.get(id),
+    getAsset: async (id) => {
+      const asset = await store.get(id);
+      if (!asset) return null;
+      assertAccountScoped(accountId, asset.accountId);
+      return asset;
+    },
 
     listAssets: (query) => store.list(query),
 
@@ -278,7 +427,7 @@ export function createContentRuntime(config: ContentRuntimeConfig): ContentRunti
       return store.list({ ...collection.query, ...extra });
     },
 
-    async editAsset(id, fields, actor = config.identity) {
+    async editAsset(id, fields, actor = identity) {
       require("content.edit", actor);
       const before = await mustGet(id);
       const changes = diffFields(before as unknown as Record<string, unknown>, fields);
@@ -292,7 +441,7 @@ export function createContentRuntime(config: ContentRuntimeConfig): ContentRunti
       return next;
     },
 
-    async transition(id, to, actor = config.identity) {
+    async transition(id, to, actor = identity) {
       require(to === "live" || to === "approved" ? "content.publish" : "content.review", actor);
       const before = await mustGet(id);
       assertTransition(before.state, to);
@@ -312,7 +461,7 @@ export function createContentRuntime(config: ContentRuntimeConfig): ContentRunti
       return next;
     },
 
-    async rate(id, rating, actor = config.identity) {
+    async rate(id, rating, actor = identity) {
       require("content.review", actor);
       const before = await mustGet(id);
       let next: ContentAsset = {
@@ -325,7 +474,7 @@ export function createContentRuntime(config: ContentRuntimeConfig): ContentRunti
       return next;
     },
 
-    async addVariant(id, variant, actor = config.identity) {
+    async addVariant(id, variant, actor = identity) {
       require("content.edit", actor);
       const before = await mustGet(id);
       const variants = [...before.variants.filter((v) => v.name !== variant.name), { ...variant, createdAt: variant.createdAt ?? now() }];
@@ -335,14 +484,14 @@ export function createContentRuntime(config: ContentRuntimeConfig): ContentRunti
       return next;
     },
 
-    async addProviderRef(id, ref, actor = config.identity) {
+    async addProviderRef(id, ref, actor = identity) {
       require("content.edit", actor);
       const before = await mustGet(id);
       const providerRefs = [...before.providerRefs.filter((r) => !(r.provider === ref.provider && r.ref === ref.ref)), ref];
       return save({ ...before, providerRefs });
     },
 
-    async attachUsage(id, usage, actor = config.identity) {
+    async attachUsage(id, usage, actor = identity) {
       require("content.edit", actor);
       const before = await mustGet(id);
       const key = usageKey(usage);
@@ -355,7 +504,7 @@ export function createContentRuntime(config: ContentRuntimeConfig): ContentRunti
       return next;
     },
 
-    async detachUsage(id, app, surface, actor = config.identity) {
+    async detachUsage(id, app, surface, actor = identity) {
       require("content.edit", actor);
       const before = await mustGet(id);
       const key = usageKey({ app, surface });
@@ -374,7 +523,7 @@ export function createContentRuntime(config: ContentRuntimeConfig): ContentRunti
       return evaluateDeleteSafety(asset.usage);
     },
 
-    async deleteAsset(id, opts = {}, actor = config.identity) {
+    async deleteAsset(id, opts = {}, actor = identity) {
       require("content.delete", actor);
       const asset = await mustGet(id);
       const safety = evaluateDeleteSafety(asset.usage);
@@ -385,7 +534,7 @@ export function createContentRuntime(config: ContentRuntimeConfig): ContentRunti
       emit("content.asset.deleted", asset, actor, { forced: !!opts.force });
     },
 
-    async applySemanticAlias(id, alias, actor = config.identity) {
+    async applySemanticAlias(id, alias, actor = identity) {
       require("content.edit", actor);
       const asset = await mustGet(id);
       const semanticAlias = alias ?? proposeSemanticAlias(asset);
@@ -408,11 +557,18 @@ export function createContentRuntime(config: ContentRuntimeConfig): ContentRunti
     },
 
     async indexForRag(id) {
-      if (!config.rag) throw new Error("No RAG sink configured");
+      const kc = knowledge.capabilities();
+      if (!kc.index) throw new Error("No knowledge adapter with index capability configured");
       const asset = await mustGet(id);
-      const { documentId, index } = await config.rag.index({
-        accountId,
+      const receipt = await knowledge.index({
         assetId: id,
+        accountId,
+        brandId: asset.brandId,
+        kind: asset.kind,
+        semanticName: asset.semanticAlias,
+        altText: asset.alt,
+        tags: asset.tags,
+        machineFacts: asset.intelligence?.machine as Record<string, unknown> | undefined,
         text: ragDocumentText(asset),
         metadata: {
           kind: asset.kind,
@@ -424,7 +580,10 @@ export function createContentRuntime(config: ContentRuntimeConfig): ContentRunti
       });
       return save({
         ...asset,
-        intelligence: { ...asset.intelligence, rag: { indexedAt: now(), documentId, index } },
+        intelligence: {
+          ...asset.intelligence,
+          rag: { indexedAt: receipt.indexedAt, documentId: receipt.documentId, index: receipt.index },
+        },
       });
     },
 

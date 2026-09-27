@@ -22,9 +22,8 @@ export interface SemanticEnricher {
 }
 
 /**
- * RAG sink boundary: receives the normalized semantic record +
- * approved textual context + usage graph, account scoped. Hosts
- * back this with Vectorize/AutoRAG.
+ * @deprecated Prefer ContentKnowledgeAdapter from ../contracts/knowledge.js.
+ * Kept as a thin indexing sink for migration; never the SSOT for meaning.
  */
 export interface RagSink {
   index(document: {
@@ -33,6 +32,59 @@ export interface RagSink {
     text: string;
     metadata: Record<string, unknown>;
   }): Promise<{ documentId: string; index: string }>;
+}
+
+export {
+  type ContentKnowledgeAdapter,
+  type ContentKnowledgeDocument,
+  type ContentKnowledgeQuery,
+  type ContentKnowledgeResult,
+  type ContentKnowledgeCapabilities,
+  type IndexReceipt,
+  noopKnowledgeAdapter,
+  hybridKnowledgeAdapter,
+} from "../contracts/knowledge.js";
+
+import type { ContentKnowledgeAdapter } from "../contracts/knowledge.js";
+import { noopKnowledgeAdapter } from "../contracts/knowledge.js";
+
+/** Adapt legacy RagSink into the neutral knowledge contract. */
+export function knowledgeFromRagSink(rag: RagSink): ContentKnowledgeAdapter {
+  return {
+    capabilities: () => ({
+      index: true,
+      remove: false,
+      search: false,
+      enrich: false,
+      backends: ["legacy-rag-sink"],
+    }),
+    async index(document) {
+      const result = await rag.index({
+        accountId: document.accountId,
+        assetId: document.assetId,
+        text: document.text,
+        metadata: document.metadata,
+      });
+      return {
+        documentId: result.documentId,
+        index: result.index,
+        indexedAt: new Date().toISOString(),
+      };
+    },
+    async remove() {},
+    async search() {
+      return [];
+    },
+  };
+}
+
+export function resolveKnowledgeAdapter(opts: {
+  knowledge?: ContentKnowledgeAdapter;
+  rag?: RagSink;
+}): ContentKnowledgeAdapter {
+  if (opts.knowledge) return opts.knowledge;
+  if (opts.rag) return knowledgeFromRagSink(opts.rag);
+  return noopKnowledgeAdapter;
 }
 
 /** Build the textual RAG document for an asset (facts-first, no binary). */

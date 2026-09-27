@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.inneranimalmedia.com/protocol/assets/asset-record.v1.schema.json",
+  "title": "AgentSamAssetRecord",
+  "description": "Shared Asset Core — canonical ast_* identity. BrandPack and Content are peer domains over this record. Providers hold representations only.",
+  "type": "object",
+  "required": ["schema", "id", "accountId", "kind", "representations", "provenance", "createdAt", "updatedAt"],
+  "properties": {
+    "schema": { "const": "agentsam.asset-record.v1" },
+    "id": {
+      "type": "string",
+      "pattern": "^ast_"
+    },
+    "accountId": { "type": "string", "minLength": 1 },
+    "kind": {
+      "type": "string",
+      "enum": ["image", "video", "model", "font", "document", "audio"]
+    },
+    "originalName": { "type": "string" },
+    "mime": { "type": "string" },
+    "bytes": { "type": "integer", "minimum": 0 },
+    "hashes": {
+      "type": "object",
+      "properties": {
+        "sha256": { "type": "string" },
+        "perceptual": { "type": "string" }
+      }
+    },
+    "machineFacts": { "type": "object" },
+    "representations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["provider", "ref", "role"],
+        "properties": {
+          "provider": { "type": "string" },
+          "ref": { "type": "string" },
+          "role": {
+            "type": "string",
+            "enum": ["original", "master", "derivative", "preview", "poster", "backup", "delivery", "source"]
+          },
+          "scope": { "type": "string" },
+          "bytes": { "type": "integer" },
+          "mime": { "type": "string" },
+          "url": { "type": "string" },
+          "verified": { "type": "boolean" },
+          "receipt": { "type": "object" }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["history"],
+      "properties": {
+        "history": { "type": "array" },
+        "generation": { "type": "object" },
+        "import": { "type": "object" },
+        "derivedFrom": { "type": "string" }
+      }
+    },
+    "createdAt": { "type": "string" },
+    "updatedAt": { "type": "string" }
+  }
+}

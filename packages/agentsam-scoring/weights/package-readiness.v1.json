@@ -1,0 +1,24 @@
+{
+  "id": "package-readiness",
+  "version": "v1",
+  "weightsVersion": "package-readiness.v1",
+  "algorithm": "weighted-sum-minus-penalties.v1",
+  "description": "Harvest productization readiness for Theme/Template/Section/Component candidates. Not a grand similarity_score.",
+  "components": {
+    "recurrence": { "weight": 0.22, "label": "Recurrence across sites/builds" },
+    "structural": { "weight": 0.18, "label": "Structural coherence" },
+    "portability": { "weight": 0.16, "label": "Portability across hosts" },
+    "token-coverage": { "weight": 0.14, "label": "Token coverage / semantic families" },
+    "responsive": { "weight": 0.1, "label": "Responsive behavior" },
+    "stability": { "weight": 0.08, "label": "Stability across revisions" },
+    "framework-independence": { "weight": 0.07, "label": "Framework independence" },
+    "testability": { "weight": 0.05, "label": "Testability / fixtureability" }
+  },
+  "penalties": {
+    "owner-specific-literals": 20,
+    "hardcoded-routes": 15,
+    "secret-or-credential-refs": 40,
+    "host-coupling": 25,
+    "silent-canonical-promotion": 30
+  }
+}

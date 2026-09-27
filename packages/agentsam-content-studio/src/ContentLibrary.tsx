@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ContentAsset } from "@inneranimalmedia/agentsam-content";
-import { useContentRuntime, useLibrary } from "./context.js";
+import { useContentRuntime, useLibrary, useRuntimeCapabilities } from "./context.js";
 import { fmtBytes, fmtDuration, stateColor, styles, tokens } from "./theme.js";
 
 export interface ContentLibraryProps {
@@ -23,9 +23,13 @@ const KIND_ICON: Record<string, string> = {
  * Library grid. The grid path is manifest → viewport thumbnails →
  * preview derivative → original only on demand: cards render poster/
  * thumbnail URLs only, never source media and never live players.
+ *
+ * Provider / intelligence chrome comes from runtime.capabilities() —
+ * never hardcoded R2|Images|Drive|Vectorize tabs.
  */
 export function ContentLibrary(props: ContentLibraryProps) {
   const runtime = useContentRuntime();
+  const caps = useRuntimeCapabilities();
   const [view, setView] = useState(props.initialView ?? "all");
   const [search, setSearch] = useState("");
   const query = useMemo(
@@ -33,6 +37,19 @@ export function ContentLibrary(props: ContentLibraryProps) {
     [search, props.pageSize],
   );
   const { assets, total, loading } = useLibrary(view, query);
+
+  const providerLabels = caps?.providers.map((p) => p.id).join(" · ") || "providers…";
+  const localLabel =
+    caps?.local.availability === "available"
+      ? "local ready"
+      : caps?.local.availability === "attachable"
+        ? "local attachable"
+        : "local unavailable";
+  const knowledgeLabel = caps?.knowledge.backends?.length
+    ? caps.knowledge.backends.join(", ")
+    : caps?.knowledge.search
+      ? "knowledge on"
+      : "knowledge off";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, minHeight: 0 }}>
@@ -68,6 +85,24 @@ export function ContentLibrary(props: ContentLibraryProps) {
         <span style={{ color: tokens.textDim, fontSize: 12 }}>
           {loading ? "Loading…" : `${total} asset${total === 1 ? "" : "s"}`}
         </span>
+      </div>
+
+      <div
+        data-testid="runtime-capabilities"
+        style={{
+          display: "flex",
+          gap: 12,
+          flexWrap: "wrap",
+          padding: "6px 16px",
+          borderBottom: `1px solid ${tokens.border}`,
+          color: tokens.textDim,
+          fontSize: 11,
+        }}
+      >
+        <span>providers: {providerLabels}</span>
+        <span>{localLabel}</span>
+        <span>{knowledgeLabel}</span>
+        {caps?.brand.resolver ? <span>brand resolver on</span> : <span>brand resolver off</span>}
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>

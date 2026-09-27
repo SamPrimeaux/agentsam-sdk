@@ -15,6 +15,7 @@ export { UsageInspector } from "./inspectors/UsageInspector.js";
 export {
   ContentRuntimeProvider,
   useContentRuntime,
+  useRuntimeCapabilities,
   useLibrary,
   useAsset,
   useVirtualWindow,
