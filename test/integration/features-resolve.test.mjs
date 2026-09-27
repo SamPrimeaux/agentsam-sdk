@@ -48,6 +48,7 @@ test('auth feature resolves real D1 resources, not a pretend iam-d1 profile', ()
   ]);
   const names = resolved.resources.tables.map((t) => t.name);
   assert.deepEqual(names, [
+    'accounts',
     'auth_users',
     'auth_sessions',
     'account_identities',
