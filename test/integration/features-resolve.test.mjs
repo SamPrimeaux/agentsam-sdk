@@ -56,7 +56,7 @@ test('auth feature resolves real D1 resources, not a pretend iam-d1 profile', ()
     'password_reset_tokens',
     'company',
   ]);
-  assert.match(formatResourcesSummary(resolved.resources), /tables=auth_users,/);
+  assert.match(formatResourcesSummary(resolved.resources), /tables=accounts,auth_users,/);
   assert.doesNotMatch(formatResourcesSummary(resolved.resources), /iam-d1/);
 });
 
