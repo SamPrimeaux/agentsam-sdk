@@ -1,0 +1,20 @@
+{
+  "id": "brand-affinity",
+  "version": "v1",
+  "weightsVersion": "brand-affinity.v1",
+  "algorithm": "weighted-sum.v1",
+  "description": "Brand association proposal score from independent signal families. Not BrandPack authority.",
+  "components": {
+    "known-asset": { "weight": 0.3, "label": "Known asset / duplicate of brand-scoped asset" },
+    "logo-mark": { "weight": 0.2, "label": "Logo / mark similarity" },
+    "names-domains-metadata": { "weight": 0.15, "label": "Names, domains, metadata keywords" },
+    "palette": { "weight": 0.1, "label": "Palette affinity" },
+    "typography": { "weight": 0.1, "label": "Typography affinity" },
+    "imagery-style": { "weight": 0.1, "label": "Imagery style affinity" },
+    "contextual-usage": { "weight": 0.05, "label": "Contextual usage / placement" }
+  },
+  "penalties": {
+    "conflicting-explicit-brand": 25,
+    "customer-literal-leak": 40
+  }
+}
