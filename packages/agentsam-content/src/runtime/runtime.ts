@@ -50,6 +50,40 @@ import type { LocalContentHost } from "../contracts/local-host.js";
 import { unavailableLocalHost } from "../contracts/local-host.js";
 import type { ContentRuntimeCapabilities } from "../contracts/runtime-capabilities.js";
 
+/** Host-injected image optimize — web uses Nitro/sharp; desktop uses Tauri/agentsamd. Never import sharp in browser UI. */
+export interface ImageOptimizeInput {
+  bytes: Uint8Array;
+  filename: string;
+  mime?: string;
+  format?: string;
+}
+
+export interface ImageOptimizeResult {
+  /** Opaque local/provider ref for the derivative bytes. */
+  ref: string;
+  format: string;
+  bytes: number;
+  width?: number;
+  height?: number;
+  processor?: string;
+  /** True when host skipped (non-image, etc.). */
+  skipped?: boolean;
+}
+
+export type ImageOptimizer = (input: ImageOptimizeInput) => Promise<ImageOptimizeResult>;
+
+export interface ImportAssetInput {
+  file?: File;
+  bytes?: Uint8Array;
+  filename: string;
+  mime?: string;
+  brandId?: string;
+  projectId?: string;
+  /** Default true for images when an ImageOptimizer is configured. */
+  optimize?: boolean | { format?: string };
+  origin?: ContentOrigin;
+}
+
 export interface ContentRuntimeConfig {
   /**
    * Preferred: fully resolved host actor (account + auth user).
@@ -69,6 +103,8 @@ export interface ContentRuntimeConfig {
   brandResolver?: ContentBrandResolver;
   knowledge?: ContentKnowledgeAdapter;
   localHost?: LocalContentHost;
+  /** Host-specific image optimize. Required for importAsset({ optimize: true }) on images. */
+  imageOptimizer?: ImageOptimizer;
   store?: ContentStore;
   events?: ContentEventBus;
   jobs?: JobQueue;
@@ -151,6 +187,17 @@ export interface ContentRuntime {
   capabilities(): Promise<ContentRuntimeCapabilities>;
 
   createAsset(input: CreateAssetInput, actor?: ActorRef): Promise<ContentAsset>;
+  /**
+   * Create asset from bytes/File and optionally run host image optimize + public variant.
+   * Orchestration lives here so UI hosts (Local Studio, web, FnF) do not duplicate pipelines.
+   */
+  importAsset(input: ImportAssetInput, actor?: ActorRef): Promise<ContentAsset>;
+  /** Run host optimize for an existing asset (images). Emits processing events via variants. */
+  optimizeAsset(
+    id: string,
+    opts?: { format?: string; bytes?: Uint8Array; filename?: string; mime?: string },
+    actor?: ActorRef,
+  ): Promise<ContentAsset>;
   getAsset(id: string): Promise<ContentAsset | null>;
   listAssets(query?: ContentQuery): Promise<ListPage>;
   listView(collectionId: string, extra?: Partial<ContentQuery>): Promise<ListPage>;
@@ -410,6 +457,99 @@ export function createContentRuntime(config: ContentRuntimeConfig): ContentRunti
         });
       }
       return asset;
+    },
+
+    async importAsset(input, actor = identity) {
+      let rawBytes = input.bytes;
+      let filename = input.filename;
+      let mime = input.mime;
+      let byteLen = rawBytes?.byteLength;
+      if (input.file) {
+        rawBytes = rawBytes ?? new Uint8Array(await input.file.arrayBuffer());
+        filename = filename || input.file.name;
+        mime = mime || input.file.type || undefined;
+        byteLen = rawBytes.byteLength;
+      }
+      if (!rawBytes || !filename) {
+        throw new Error("importAsset_requires_file_or_bytes");
+      }
+
+      const asset = await runtime.createAsset(
+        {
+          origin: input.origin ?? "upload",
+          source: { type: "upload", importedAt: now() },
+          filename,
+          mime,
+          bytes: byteLen,
+          brandId: input.brandId,
+          projectId: input.projectId,
+          rawBytes,
+        },
+        actor,
+      );
+
+      const wantOptimize =
+        input.optimize === false
+          ? false
+          : Boolean(config.imageOptimizer) &&
+            Boolean(mime?.startsWith("image/") || /\.(png|jpe?g|gif|webp)$/i.test(filename));
+      if (!wantOptimize) return asset;
+
+      const format =
+        typeof input.optimize === "object" && input.optimize?.format
+          ? input.optimize.format
+          : undefined;
+      try {
+        return await runtime.optimizeAsset(
+          asset.id,
+          { format, bytes: rawBytes, filename, mime },
+          actor,
+        );
+      } catch (err) {
+        emit("content.asset.edited", asset, actor, {
+          optimizeFailed: true,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        return asset;
+      }
+    },
+
+    async optimizeAsset(id, opts = {}, actor = identity) {
+      require("content.edit", actor);
+      const asset = await mustGet(id);
+      if (!config.imageOptimizer) {
+        throw new Error("image_optimizer_not_configured");
+      }
+      const mime = opts.mime ?? asset.mime;
+      if (mime && !mime.startsWith("image/")) {
+        return asset;
+      }
+      let bytes = opts.bytes;
+      if (!bytes) {
+        throw new Error("optimizeAsset_requires_bytes");
+      }
+      const filename = opts.filename ?? asset.filename ?? `${asset.id}.bin`;
+      const result = await config.imageOptimizer({
+        bytes,
+        filename,
+        mime,
+        format: opts.format,
+      });
+      if (result.skipped) return asset;
+      return runtime.addVariant(
+        id,
+        {
+          name: "public",
+          providerRef: { provider: "local", ref: result.ref, role: "derivative" },
+          format: result.format,
+          bytes: result.bytes,
+          width: result.width,
+          height: result.height,
+          approved: true,
+          createdAt: now(),
+        },
+        actor,
+      );
     },
 
     getAsset: async (id) => {

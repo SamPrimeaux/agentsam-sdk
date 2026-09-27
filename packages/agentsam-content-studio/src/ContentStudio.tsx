@@ -13,8 +13,11 @@ export interface ContentStudioProps {
   runtime: ContentRuntime;
   initialView?: string;
   showAssistant?: boolean;
+  /** Sites → Media site/project scope. */
+  projectId?: string;
+  brandId?: string;
   renderModelViewport?: (vp: ModelViewportProps) => ReactNode;
-  /** Passed to MediaDropzone — hosts hook server-side optimization here. */
+  /** Optional post-import hook. Prefer runtime.importAsset for optimize. */
   onAssetCreated?: (asset: ContentAsset, file: File) => void | Promise<void>;
 }
 
@@ -43,6 +46,8 @@ function StudioShell(props: ContentStudioProps) {
         initialView={props.initialView}
         selectedId={selectedId}
         onSelect={(a: ContentAsset) => setSelectedId(a.id)}
+        projectId={props.projectId}
+        brandId={props.brandId}
         onAssetCreated={props.onAssetCreated}
       />
 

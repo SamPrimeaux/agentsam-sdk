@@ -40,6 +40,10 @@ isProject: false
 
 # Local Studio Graduation + Windows Runtime
 
+> **Non-negotiable contract (2026-09-27):**  
+> [`LOCAL-STUDIO-REAL-APP-CONTRACT-ADDENDUM-2026-09-27.md`](./LOCAL-STUDIO-REAL-APP-CONTRACT-ADDENDUM-2026-09-27.md)  
+> Real bundled client (no product-critical redirect to hosted Studio); shared UI + RuntimeHost; Tauri vs agentsamd split; mock ≠ done; Content Studio / Media acceptance (Sites → Media, desktop optimize not Nitro-universal). **This addendum wins** over scaffold / “Open Studio UI = cloud” shortcuts in this plan or boot copy.
+
 ## Preconditions (already done)
 
 - IAM runtime registry restore is live: commit `109410f19` on `main`, Worker healthy, D1 `runtime_adapter=execos_legacy` — no further restore work ([Restore IAM runtime registry](09fb7f86-daa8-401e-b546-69734a8cbbfc)).

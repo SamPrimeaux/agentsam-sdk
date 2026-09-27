@@ -21,6 +21,7 @@ import {
   type ContentRuntimeConfig,
 } from "@inneranimalmedia/agentsam-content";
 import { createLocalStudioLocalContentHost } from "./localContentHost";
+import { createLocalStudioImageOptimizer } from "./imageOptimize";
 
 /** No-op similarity — Local Studio does not hardcode Vectorize. */
 export const noopBrandSimilarity: BrandSimilarityAdapter = {
@@ -140,6 +141,8 @@ export interface LocalStudioContentRuntimeOptions {
    * Fictional fixtures belong in tests/examples — never silent production seed.
    */
   brandProjections?: BrandCandidate[];
+  /** Site/project scope for Sites → Media assets. */
+  projectId?: string;
   /** Optional override for tests. */
   config?: Partial<ContentRuntimeConfig>;
 }
@@ -162,6 +165,7 @@ export function createLocalStudioContentRuntime(
   const projections = opts.brandProjections ?? [];
   const local = localFiles();
   const localHost = createLocalStudioLocalContentHost();
+  const imageOptimizer = createLocalStudioImageOptimizer();
 
   return createContentRuntime({
     identity: { type: "human", ref: actorRef },
@@ -173,6 +177,7 @@ export function createLocalStudioContentRuntime(
     brandResolver: createProjectionBrandResolver(projections),
     knowledge: noopKnowledgeAdapter,
     localHost,
+    imageOptimizer,
     assistant: buildAssistant(projections),
     ...opts.config,
   });

@@ -5,9 +5,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * Server-only image optimize bridge. sharp/libvips are Node-only —
- * MediaDropzone (browser) never imports agentsam-sdk-brand directly.
- * Called from ContentStudioPage's onAssetCreated hook after upload.
+ * Web/Nitro-only image optimize bridge. sharp/libvips are Node-only.
+ * MediaDropzone never imports agentsam-sdk-brand.
+ *
+ * Wired only via ContentRuntime ImageOptimizer for the **web** host
+ * (`createWebImageOptimizer`). Desktop Local Studio uses Tauri
+ * `local_content_bridge` op `optimize_image` — never this route.
  */
 export const Route = createFileRoute("/api/content/optimize")({
   server: {

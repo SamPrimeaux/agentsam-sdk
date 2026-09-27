@@ -9,6 +9,8 @@ export interface ContentLibraryProps {
   selectedId?: string | null;
   initialView?: string;
   pageSize?: number;
+  projectId?: string;
+  brandId?: string;
   onAssetCreated?: (asset: ContentAsset, file: File) => void | Promise<void>;
 }
 
@@ -107,7 +109,11 @@ export function ContentLibrary(props: ContentLibraryProps) {
         {caps?.brand.resolver ? <span>brand resolver on</span> : <span>brand resolver off</span>}
       </div>
 
-      <MediaDropzone onAssetCreated={props.onAssetCreated} />
+      <MediaDropzone
+        onAssetCreated={props.onAssetCreated}
+        projectId={props.projectId}
+        brandId={props.brandId}
+      />
 
       <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>

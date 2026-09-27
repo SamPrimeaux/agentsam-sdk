@@ -509,6 +509,50 @@ async function main() {
     });
   }
 
+  // Dev/browser bridge only — desktop .app uses Rust Tauri optimize_image.
+  if (op === "optimize_image") {
+    const mime = String(req.mime || "");
+    if (mime && !mime.startsWith("image/")) {
+      return ok({ skipped: true });
+    }
+    const filename = String(req.filename || "image.bin").replace(/[/\\]/g, "_");
+    const encoding = String(req.encoding || "base64");
+    if (encoding !== "base64") throw new Error("encoding_must_be_base64");
+    const buf = Buffer.from(String(req.data || ""), "base64");
+    if (!buf.byteLength) throw new Error("empty_bytes");
+    const outDir = path.join(libraryAbs, "optimized");
+    fs.mkdirSync(outDir, { recursive: true });
+    const stem = path.basename(filename, path.extname(filename));
+    const outFormat = String(req.format || "webp").toLowerCase();
+    const outAbs = path.join(outDir, `${stem}-${Date.now()}.${outFormat}`);
+    try {
+      const brand = await import("@inneranimalmedia/agentsam-sdk-brand");
+      const result = await brand.optimizeWithScheduler(buf, {
+        format: outFormat,
+        outPath: outAbs,
+      });
+      const ref = path.relative(root, result.path);
+      return ok({
+        ref,
+        format: result.format,
+        bytes: result.bytes,
+        width: result.width,
+        height: result.height,
+        processor: result.processor,
+      });
+    } catch (err) {
+      // Fallback: write original as derivative when sharp unavailable.
+      fs.writeFileSync(outAbs, buf);
+      return ok({
+        ref: path.relative(root, outAbs),
+        format: outFormat,
+        bytes: buf.byteLength,
+        processor: "copy-fallback",
+        warning: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
   throw new Error(`unknown_op:${op || "missing"}`);
 }
 

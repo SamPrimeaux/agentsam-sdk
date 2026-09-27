@@ -6,6 +6,8 @@ import { tokens } from "./theme.js";
 export interface MediaDropzoneProps {
   accept?: string[];
   brandId?: string;
+  projectId?: string;
+  /** Prefer runtime.importAsset; kept for hosts that need a side-effect hook after import. */
   onAssetCreated?: (asset: ContentAsset, file: File) => void | Promise<void>;
 }
 
@@ -38,21 +40,18 @@ export function MediaDropzone(props: MediaDropzoneProps) {
           const setStatus = (status: UploadItem["status"], error?: string) =>
             setItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, status, error } : it)));
           try {
-            const rawBytes = new Uint8Array(await file.arrayBuffer());
             setStatus("creating");
-            const asset = await runtime.createAsset({
-              origin: "upload",
-              source: { type: "upload", importedAt: new Date().toISOString() },
+            const isImage = file.type.startsWith("image/") || /\.(png|jpe?g|gif|webp)$/i.test(file.name);
+            if (isImage) setStatus("optimizing");
+            const asset = await runtime.importAsset({
+              file,
               filename: file.name,
               mime: file.type || undefined,
-              bytes: file.size,
               brandId: props.brandId,
-              rawBytes,
+              projectId: props.projectId,
+              optimize: isImage,
             });
-            if (props.onAssetCreated) {
-              setStatus("optimizing");
-              await props.onAssetCreated(asset, file);
-            }
+            await props.onAssetCreated?.(asset, file);
             setStatus("done");
           } catch (error) {
             setStatus("error", error instanceof Error ? error.message : String(error));
@@ -63,7 +62,7 @@ export function MediaDropzone(props: MediaDropzoneProps) {
         setItems((prev) => prev.filter((it) => it.status !== "done"));
       }, 2500);
     },
-    [runtime, props.brandId, props.onAssetCreated],
+    [runtime, props.brandId, props.projectId, props.onAssetCreated],
   );
 
   return (

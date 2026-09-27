@@ -638,6 +638,155 @@ fn op_import_bytes(app: &AppHandle, state: &LocalContentState, req: &Value) -> R
   }))
 }
 
+/// Desktop image optimize — no Nitro, no hosted Studio.
+/// macOS: `sips` → JPEG (max edge 2048). Elsewhere: try `magick`, else copy as derivative.
+fn op_optimize_image(app: &AppHandle, state: &LocalContentState, req: &Value) -> Result<Value, String> {
+  let filename = req
+    .get("filename")
+    .and_then(|v| v.as_str())
+    .unwrap_or("image.bin")
+    .replace(['/', '\\'], "_");
+  let mime = req.get("mime").and_then(|v| v.as_str()).unwrap_or("");
+  if !mime.is_empty() && !mime.starts_with("image/") {
+    return Ok(json!({ "ok": true, "skipped": true }));
+  }
+  let encoding = req
+    .get("encoding")
+    .and_then(|v| v.as_str())
+    .unwrap_or("base64");
+  if encoding != "base64" {
+    return Err("encoding_must_be_base64".into());
+  }
+  let data = req
+    .get("data")
+    .and_then(|v| v.as_str())
+    .ok_or_else(|| "data_required".to_string())?;
+  let buf = B64
+    .decode(data.as_bytes())
+    .map_err(|e| format!("base64:{e}"))?;
+  if buf.is_empty() {
+    return Err("empty_bytes".into());
+  }
+  if buf.len() as u64 > MAX_READ_BYTES {
+    return Err("file_too_large".into());
+  }
+
+  let opt_dir = library_dir(app)?.join("optimized");
+  fs::create_dir_all(&opt_dir).map_err(|e| format!("mkdir_optimized:{e}"))?;
+
+  let stem = Path::new(&filename)
+    .file_stem()
+    .map(|s| s.to_string_lossy().to_string())
+    .unwrap_or_else(|| "image".into());
+  let stamp = std::time::SystemTime::now()
+    .duration_since(std::time::UNIX_EPOCH)
+    .map(|d| d.as_millis())
+    .unwrap_or(0);
+
+  let src_ext = Path::new(&filename)
+    .extension()
+    .map(|s| format!(".{}", s.to_string_lossy()))
+    .unwrap_or_else(|| ".bin".into());
+  let src_path = opt_dir.join(format!("src-{stem}-{stamp}{src_ext}"));
+  fs::write(&src_path, &buf).map_err(|e| format!("write_src:{e}"))?;
+
+  let out_name = format!("{stem}-{stamp}.jpg");
+  let out_path = unique_dest(&opt_dir, &out_name)?;
+  let mut processor = "sips";
+
+  #[cfg(target_os = "macos")]
+  {
+    let status = Command::new("sips")
+      .args([
+        "-s",
+        "format",
+        "jpeg",
+        "-Z",
+        "2048",
+        &src_path.to_string_lossy(),
+        "--out",
+        &out_path.to_string_lossy(),
+      ])
+      .status()
+      .map_err(|e| format!("sips:{e}"))?;
+    if !status.success() {
+      fs::copy(&src_path, &out_path).map_err(|e| format!("copy_fallback:{e}"))?;
+      processor = "copy-fallback";
+    }
+  }
+
+  #[cfg(not(target_os = "macos"))]
+  {
+    processor = "magick";
+    let magick = Command::new("magick")
+      .args([
+        &src_path.to_string_lossy().to_string(),
+        "-resize",
+        "2048x2048>",
+        "-quality",
+        "82",
+        &out_path.to_string_lossy().to_string(),
+      ])
+      .status();
+    match magick {
+      Ok(st) if st.success() => {}
+      _ => {
+        let convert = Command::new("convert")
+          .args([
+            &src_path.to_string_lossy().to_string(),
+            "-resize",
+            "2048x2048>",
+            "-quality",
+            "82",
+            &out_path.to_string_lossy().to_string(),
+          ])
+          .status();
+        if convert.map(|s| s.success()).unwrap_or(false) {
+          processor = "imagemagick";
+        } else {
+          fs::copy(&src_path, &out_path).map_err(|e| format!("copy_fallback:{e}"))?;
+          processor = "copy-fallback";
+        }
+      }
+    }
+  }
+
+  let _ = fs::remove_file(&src_path);
+  let meta = fs::metadata(&out_path).map_err(|e| format!("stat_out:{e}"))?;
+  let entry = insert_grant(state, GrantKind::File, out_path, false)?;
+
+  let mut width: Option<u64> = None;
+  let mut height: Option<u64> = None;
+  #[cfg(target_os = "macos")]
+  {
+    if let Ok(out) = Command::new("sips")
+      .args(["-g", "pixelWidth", "-g", "pixelHeight", &entry.abs_path.to_string_lossy()])
+      .output()
+    {
+      let text = String::from_utf8_lossy(&out.stdout);
+      for line in text.lines() {
+        if let Some(v) = line.strip_prefix("  pixelWidth: ") {
+          width = v.trim().parse().ok();
+        }
+        if let Some(v) = line.strip_prefix("  pixelHeight: ") {
+          height = v.trim().parse().ok();
+        }
+      }
+    }
+  }
+
+  Ok(json!({
+    "ok": true,
+    "ref": entry.id,
+    "format": "jpeg",
+    "bytes": meta.len(),
+    "width": width,
+    "height": height,
+    "processor": processor,
+    "name": entry.name,
+  }))
+}
+
 fn dispatch(app: &AppHandle, state: &LocalContentState, req: &Value) -> Result<Value, String> {
   let op = req
     .get("op")
@@ -658,6 +807,7 @@ fn dispatch(app: &AppHandle, state: &LocalContentState, req: &Value) -> Result<V
     "reveal" => op_reveal(state, req),
     "import_to_library" => op_import_to_library(app, state, req),
     "import_bytes" => op_import_bytes(app, state, req),
+    "optimize_image" => op_optimize_image(app, state, req),
     "pick_probe" => Ok(json!({
       "ok": true,
       "pickSupported": true,

@@ -1,16 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { ContentStudio } from "@inneranimalmedia/agentsam-content-studio";
-import type { ContentAsset, ContentRuntime } from "@inneranimalmedia/agentsam-content";
+import type { ContentRuntime } from "@inneranimalmedia/agentsam-content";
 import { createLocalStudioContentRuntime } from "@/lib/content/createLocalStudioContentRuntime";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { RedirectToSignIn } from "@/lib/auth/gates";
 
+export interface ContentStudioPageProps {
+  /** Sites → Media: scope assets to this site/project slug. */
+  projectId?: string;
+  brandId?: string;
+  /** Optional header label override (e.g. site name). */
+  title?: string;
+}
+
 /**
- * Local Studio gallery entry — mounts portable Content Studio on a real host runtime.
- * Account/actor come from AuthProvider session; fail closed when unavailable.
- * Brand projections stay empty until the host injects BrandPack authority.
+ * Local Studio Content Studio mount — Sites → Media and /content.
+ * Optimize runs via ContentRuntime.importAsset + host ImageOptimizer
+ * (desktop: Tauri bridge; web: /api/content/optimize). Never call Nitro from desktop UI.
  */
-export function ContentStudioPage() {
+export function ContentStudioPage(props: ContentStudioPageProps = {}) {
   const { user, isPending } = useCurrentUserState();
 
   if (isPending) {
@@ -25,12 +33,15 @@ export function ContentStudioPage() {
     return <RedirectToSignIn />;
   }
 
-  return <ContentStudioPageMounted user={user} />;
+  return <ContentStudioPageMounted user={user} {...props} />;
 }
 
 function ContentStudioPageMounted({
   user,
-}: {
+  projectId,
+  brandId,
+  title,
+}: ContentStudioPageProps & {
   user: {
     id: string;
     displayName: string | null;
@@ -43,10 +54,10 @@ function ContentStudioPageMounted({
         accountId: user.id,
         actorRef: user.id,
         accountLabel: user.displayName ?? user.primaryEmail ?? user.id,
-        // Empty until Path B BrandPack projection — never DEMO fixtures.
         brandProjections: [],
+        projectId,
       }),
-    [user.id, user.displayName, user.primaryEmail],
+    [user.id, user.displayName, user.primaryEmail, projectId],
   );
 
   const [capsLabel, setCapsLabel] = useState("loading capabilities…");
@@ -84,56 +95,42 @@ function ContentStudioPageMounted({
     };
   }, [runtime]);
 
+  const heading = title
+    ? title
+    : projectId
+      ? `Media · ${projectId}`
+      : "Content Studio";
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <header className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2 text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">Content Studio</span>
+        <span className="font-medium text-foreground">{heading}</span>
         <span className="truncate pl-4">
           {user.id} · {capsLabel} · {localLabel}
         </span>
       </header>
       <div className="min-h-0 flex-1">
-        <ContentStudioShell runtime={runtime} />
+        <ContentStudioShell runtime={runtime} projectId={projectId} brandId={brandId} />
       </div>
     </div>
   );
 }
 
-async function bytesToBase64(bytes: Uint8Array): Promise<string> {
-  let s = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    s += String.fromCharCode(...bytes.subarray(i, i + chunk));
-  }
-  return btoa(s);
-}
-
-function ContentStudioShell({ runtime }: { runtime: ContentRuntime }) {
-  async function handleAssetCreated(asset: ContentAsset, file: File) {
-    if (!file.type.startsWith("image/")) return;
-    try {
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      const dataBase64 = await bytesToBase64(bytes);
-      const res = await fetch("/api/content/optimize", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ filename: file.name, mime: file.type, dataBase64 }),
-      });
-      const body = await res.json().catch(() => ({ ok: false }));
-      if (!body.ok || body.skipped) return;
-      await runtime.addVariant(asset.id, {
-        name: "public",
-        providerRef: { provider: "local", ref: body.ref, role: "derivative" },
-        format: body.format,
-        bytes: body.bytes,
-        width: body.width,
-        height: body.height,
-        createdAt: new Date().toISOString(),
-      });
-    } catch {
-      // Best-effort — upload already succeeded; optimize failure is non-fatal.
-    }
-  }
-
-  return <ContentStudio runtime={runtime} showAssistant onAssetCreated={handleAssetCreated} />;
+function ContentStudioShell({
+  runtime,
+  projectId,
+  brandId,
+}: {
+  runtime: ContentRuntime;
+  projectId?: string;
+  brandId?: string;
+}) {
+  return (
+    <ContentStudio
+      runtime={runtime}
+      showAssistant
+      projectId={projectId}
+      brandId={brandId}
+    />
+  );
 }
