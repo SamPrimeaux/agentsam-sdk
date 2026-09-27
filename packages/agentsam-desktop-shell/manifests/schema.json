@@ -48,6 +48,77 @@
       "type": "string",
       "description": "Relative path to Agent Sam mark SVG used as the editable brand source before rasterization."
     },
+    "app_icon": {
+      "type": "object",
+      "description": "Platform app-icon composition contract: SVG mark + named surfaces + per-platform profiles → masters → tauri icon. Prefer over raw icon_source_url.",
+      "properties": {
+        "mark": {
+          "type": "string",
+          "description": "Relative path to the authoritative vector mark (preferred over delivery-variant rasters)."
+        },
+        "mark_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Canonical remote vector (R2 app-icon role). Not Cloudflare Images avatar/hero/public variants."
+        },
+        "fallback_master": {
+          "type": "string",
+          "format": "uri",
+          "description": "1024 raster reference/fallback when SVG composition is unavailable."
+        },
+        "surfaces": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "base": { "type": "string" },
+              "raised": { "type": "string" },
+              "mark_fill": { "type": "string" }
+            },
+            "required": ["base"]
+          }
+        },
+        "profiles": {
+          "type": "object",
+          "properties": {
+            "macos": {
+              "type": "object",
+              "properties": {
+                "surface": { "type": "string" },
+                "optical_scale": { "type": "number", "minimum": 0.5, "maximum": 0.92 },
+                "size": { "type": "integer" }
+              }
+            },
+            "ios": {
+              "type": "object",
+              "properties": {
+                "surface": { "type": "string" },
+                "optical_scale": { "type": "number", "minimum": 0.5, "maximum": 0.92 },
+                "system_mask": { "type": "boolean" },
+                "size": { "type": "integer" }
+              }
+            },
+            "windows": {
+              "type": "object",
+              "properties": {
+                "surface": { "type": "string" },
+                "optical_scale": { "type": "number", "minimum": 0.5, "maximum": 0.92 },
+                "size": { "type": "integer" }
+              }
+            },
+            "tray": {
+              "type": "object",
+              "properties": {
+                "mark_only": { "type": "boolean" },
+                "mark_fill": { "type": "string" },
+                "surface": { "type": "string" },
+                "size": { "type": "integer" }
+              }
+            }
+          }
+        }
+      }
+    },
     "included_apps": {
       "type": "array",
       "items": { "type": "string", "pattern": "^[a-z0-9-]+$" },

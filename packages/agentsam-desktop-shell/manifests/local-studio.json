@@ -28,6 +28,40 @@
   "icon_set": "icons/local-studio",
   "icon_source_url": "https://asr.inneranimalmedia.com/brands/agentsam/app-icon/v1/raster/AgentSam-Icon-1024.png",
   "icon_mark_svg": "icons/local-studio/AgentSam-Mark.svg",
+  "app_icon": {
+    "mark": "icons/local-studio/AgentSam-Mark.svg",
+    "mark_url": "https://asr.inneranimalmedia.com/brands/agentsam/app-icon/v1/vector/AgentSam-Mark.svg",
+    "fallback_master": "https://asr.inneranimalmedia.com/brands/agentsam/app-icon/v1/raster/AgentSam-Icon-1024.png",
+    "surfaces": {
+      "agentsam.graphite": {
+        "base": "#12141a",
+        "raised": "#1a1d26",
+        "mark_fill": "#e8eaef"
+      }
+    },
+    "profiles": {
+      "macos": {
+        "surface": "agentsam.graphite",
+        "optical_scale": 0.74,
+        "size": 1024
+      },
+      "ios": {
+        "surface": "agentsam.graphite",
+        "optical_scale": 0.78,
+        "system_mask": true,
+        "size": 1024
+      },
+      "windows": {
+        "surface": "agentsam.graphite",
+        "optical_scale": 0.76,
+        "size": 1024
+      },
+      "tray": {
+        "mark_only": true,
+        "size": 128
+      }
+    }
+  },
   "included_apps": [],
   "theme": {
     "primary_color": "#0a0a0c",

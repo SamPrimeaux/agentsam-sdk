@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { spawnSync } from 'node:child_process';
+import { composePlatformAppIcons } from './compose-app-icon.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -117,12 +118,11 @@ if (existsSync(pubkeyPath)) {
 }
 
 // --- 4. resolve icon ---
-// Precedence (no product-hardcoded env names):
-//   1. --icon-url
-//   2. <APP_ID>_ICON_URL (from manifest.app_id)
-//   3. BRAND_ICON_URL
-//   4. manifest.icon_source_url
-//   5. manifest.icon_set/icon.png on disk
+// Precedence:
+//   1. manifest.app_icon (SVG mark + surface profiles → platform masters)
+//   2. --icon-url / <APP_ID>_ICON_URL / BRAND_ICON_URL / icon_source_url (fallback raster)
+//   3. manifest.icon_set/icon.png on disk
+// Never use Cloudflare Images avatar/hero/public delivery variants as masters.
 const srcTauriDir = path.join(ROOT, 'src-tauri');
 const iconsDir = path.join(srcTauriDir, 'icons');
 const targetIcon = path.join(iconsDir, 'icon.png');
@@ -130,20 +130,50 @@ const namespacedEnvKey = `${String(manifest.app_id || 'app')
   .toUpperCase()
   .replace(/[^A-Z0-9]+/g, '_')}_ICON_URL`;
 
+async function fetchIconFromUrl(url, dest) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`icon URL HTTP ${res.status}`);
+  const buf = Buffer.from(await res.arrayBuffer());
+  if (buf.length < 64) throw new Error('icon URL returned empty/too-small body');
+  mkdirSync(iconsDir, { recursive: true });
+  writeFileSync(dest, buf);
+}
+
 async function resolveIcon() {
-  async function fetchIconFromUrl(url, dest) {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`icon URL HTTP ${res.status}`);
-    const buf = Buffer.from(await res.arrayBuffer());
-    if (buf.length < 64) throw new Error('icon URL returned empty/too-small body');
-    mkdirSync(iconsDir, { recursive: true });
-    writeFileSync(dest, buf);
+  mkdirSync(iconsDir, { recursive: true });
+
+  if (manifest.app_icon && (manifest.app_icon.mark || manifest.icon_mark_svg)) {
+    try {
+      const composed = await composePlatformAppIcons({
+        manifest,
+        shellRoot: ROOT,
+        iconsDir,
+        targetIcon,
+      });
+      if (composed.composed) {
+        console.log(
+          `[build-brand] app_icon composed from SVG mark → ${composed.masters.macos || targetIcon}`,
+        );
+        console.log(
+          `[build-brand] icon previews: ${path.join(iconsDir, 'composed', 'preview')} (1024…32)`,
+        );
+        return { forceRegen: true, source: 'app_icon_compose', composed };
+      }
+      console.warn(
+        `[build-brand] WARNING: app_icon compose skipped (${composed.reason}) — falling back.`,
+      );
+    } catch (error) {
+      console.warn(
+        `[build-brand] WARNING: app_icon compose failed (${error.message}) — falling back to raster.`,
+      );
+    }
   }
 
   const iconUrl = String(
     flags['icon-url'] ||
       process.env[namespacedEnvKey] ||
       process.env.BRAND_ICON_URL ||
+      manifest.app_icon?.fallback_master ||
       manifest.icon_source_url ||
       '',
   ).trim();
@@ -151,8 +181,8 @@ async function resolveIcon() {
   if (iconUrl) {
     try {
       await fetchIconFromUrl(iconUrl, targetIcon);
-      console.log(`[build-brand] icon downloaded from ${iconUrl}`);
-      return;
+      console.log(`[build-brand] icon downloaded from ${iconUrl} (fallback raster)`);
+      return { forceRegen: true, source: 'fallback_url' };
     } catch (error) {
       console.warn(
         `[build-brand] WARNING: icon URL failed (${error.message}) — falling back to icon_set/placeholder.`,
@@ -165,32 +195,24 @@ async function resolveIcon() {
     if (existsSync(brandIconPath)) {
       copyFileSync(brandIconPath, targetIcon);
       console.log(`[build-brand] icon copied from ${brandIconPath}`);
-    } else {
-      console.warn(
-        `[build-brand] WARNING: icon_set "${manifest.icon_set}" has no icon.png at ${brandIconPath} -- keeping existing placeholder icon.`,
-      );
+      return { forceRegen: true, source: 'icon_set' };
     }
+    console.warn(
+      `[build-brand] WARNING: icon_set "${manifest.icon_set}" has no icon.png at ${brandIconPath} -- keeping existing placeholder icon.`,
+    );
   } else {
     console.warn(
-      `[build-brand] WARNING: no icon source. Set --icon-url, ${namespacedEnvKey}, BRAND_ICON_URL, or manifest.icon_source_url.`,
+      `[build-brand] WARNING: no icon source. Set app_icon, --icon-url, ${namespacedEnvKey}, BRAND_ICON_URL, or manifest.icon_source_url.`,
     );
   }
+  return { forceRegen: false, source: 'none' };
 }
 
-await resolveIcon();
-
-// Track whether icon.png was freshly written so we always regenerate the
-// Tauri bundle set (icns/32/128/ico). Skipping regen after a URL download leaves
-// a stale/corrupt icns and macOS bundling fails with `No matching IconType`.
-let forceIconRegen = false;
-const iconUrlUsed = String(
-  flags['icon-url'] ||
-    process.env[namespacedEnvKey] ||
-    process.env.BRAND_ICON_URL ||
-    manifest.icon_source_url ||
-    '',
-).trim();
-if (iconUrlUsed && existsSync(targetIcon)) forceIconRegen = true;
+const iconResolve = await resolveIcon();
+const forceIconRegen = Boolean(iconResolve.forceRegen);
+const trayIconPath = existsSync(path.join(iconsDir, 'tray-32.png'))
+  ? 'icons/tray-32.png'
+  : 'icons/32x32.png';
 
 // Tauri macOS bundler needs icns + sized PNGs — a lone 1024 PNG → "No matching IconType".
 const BUNDLE_ICONS = [
@@ -280,7 +302,7 @@ const config = {
         url: launchUrl,
       },
     ],
-    trayIcon: manifest.feature_flags?.tray === false ? undefined : { iconPath: 'icons/32x32.png' },
+    trayIcon: manifest.feature_flags?.tray === false ? undefined : { iconPath: trayIconPath },
   },
   bundle: {
     active: true,
