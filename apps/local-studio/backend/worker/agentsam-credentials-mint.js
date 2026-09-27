@@ -43,6 +43,10 @@ const DEFAULT_SCOPES = Object.freeze([
   "vectors:read",
   "models:invoke",
   "agentsam:context",
+  "terminal:exec:local",
+  "terminal:exec:remote",
+  "terminal:exec:sandbox",
+  "terminal:enroll",
 ]);
 
 /**

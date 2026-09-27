@@ -10,6 +10,7 @@ import {
   listCloudflareFeaturePacks,
   scopesForFeaturePacks,
 } from '../../packages/connectors/cloudflare/src/index.js';
+import { projectTerminalCapability } from './terminal-scopes.js';
 
 function clean(value) {
   return value == null ? '' : String(value).trim();
@@ -56,12 +57,13 @@ function detectHyperdriveHints(cwd = process.cwd()) {
 }
 
 /**
- * @param {{ env?: NodeJS.ProcessEnv, home?: string, cwd?: string, discoverRemote?: boolean }} [options]
+ * @param {{ env?: NodeJS.ProcessEnv, home?: string, cwd?: string, discoverRemote?: boolean, tokenPermissions?: string[] }} [options]
  */
 export async function projectWhoamiCapabilities(options = {}) {
   const env = options.env || process.env;
   const cwd = options.cwd || process.cwd();
   const discoverRemote = options.discoverRemote !== false;
+  const tokenPermissions = Array.isArray(options.tokenPermissions) ? options.tokenPermissions : [];
 
   const providerStatus = listProviderCredentialStatus({ env, home: options.home });
   const configuredProviders = providerStatus.filter((row) => row.configured);
@@ -167,6 +169,7 @@ export async function projectWhoamiCapabilities(options = {}) {
     database,
     vectors,
     models,
+    terminal: projectTerminalCapability(tokenPermissions),
     deploy: { available: hasCfToken || Boolean(clean(env.CLOUDFLARE_ACCOUNT_ID)) },
     cloudflare,
     tools,
@@ -175,6 +178,7 @@ export async function projectWhoamiCapabilities(options = {}) {
       models: 'agentsam models',
       cloudflare_packs: 'agentsam cloudflare login --pack <data|compute|ai|agentsam>',
       capabilities: 'agentsam capabilities',
+      api_keys: 'agentsam api-key create --store keychain --activate',
     },
   };
 }

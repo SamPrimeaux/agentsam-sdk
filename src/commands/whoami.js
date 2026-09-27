@@ -141,19 +141,14 @@ export async function collectWhoami(options = {}) {
     signal: options.signal,
   });
   const credentials = listProviderCredentialStatus({ env, home: options.home });
-  const capabilities = options.capabilities
-    || await projectWhoamiCapabilities({
-      env,
-      home: options.home,
-      cwd: options.cwd,
-      discoverRemote: options.discoverRemote !== false,
-    });
   const localTerminal = options.localTerminal
     || await collectLocalTerminalContext({ env, home: options.home });
   const platformIssuer = resolvePlatformAccountIssuer(env);
   const localStudioHost = resolveLocalStudioHostOrigin({ root: options.root });
 
   const activeKind = normalizeAuthKind(active.kind);
+  // Project capabilities after we know tokenPermissions (below) when possible.
+  let capabilities = options.capabilities || null;
   const base = {
     schema_version: 4,
     ok: false,
@@ -208,6 +203,16 @@ export async function collectWhoami(options = {}) {
   };
 
   if (!active.value) {
+    if (!capabilities) {
+      capabilities = await projectWhoamiCapabilities({
+        env,
+        home: options.home,
+        cwd: options.cwd,
+        discoverRemote: options.discoverRemote !== false,
+        tokenPermissions: [],
+      });
+      base.capabilities = capabilities;
+    }
     if (/IAM_OAUTH_ISSUER/i.test(String(active.error || ''))) {
       base.active_auth.next =
         'source ~/.agentsam/load-agent-env.sh   # loads AGENTSAM_API_KEY + IAM_OAUTH_ISSUER';
@@ -238,6 +243,18 @@ export async function collectWhoami(options = {}) {
       : Array.isArray(context?.credential?.scopes)
         ? context.credential.scopes
         : [];
+    if (!capabilities) {
+      capabilities = await projectWhoamiCapabilities({
+        env,
+        home: options.home,
+        cwd: options.cwd,
+        discoverRemote: options.discoverRemote !== false,
+        tokenPermissions,
+      });
+    } else if (capabilities.terminal == null) {
+      const { projectTerminalCapability } = await import('../lib/terminal-scopes.js');
+      capabilities = { ...capabilities, terminal: projectTerminalCapability(tokenPermissions) };
+    }
     const ownerAccountId = context?.owner_account_id || context?.account_id || context?.user_id || null;
     const email = context?.email || context?.user?.email || active.session?.email || browserSession.email || null;
 
@@ -382,7 +399,12 @@ export function renderWhoami(status) {
     if (key === 'edit' || key === 'tools' || key === 'cloudflare') continue;
     const available = value?.available === true ? 'yes' : 'no';
     let extra = '';
-    if (Array.isArray(value?.configuredProviders)) {
+    if (key === 'terminal' && value?.lanes) {
+      const lanes = Object.entries(value.lanes)
+        .filter(([, on]) => on)
+        .map(([lane]) => lane);
+      extra = lanes.length ? ` · ${lanes.join(', ')}` : ' · (no terminal:* on this key)';
+    } else if (Array.isArray(value?.configuredProviders)) {
       extra = ` · providers ${value.configuredProviders.join(',') || 0}`;
     } else if (value?.configuredProviders != null) {
       extra = ` · providers ${value.configuredProviders}`;
