@@ -1,0 +1,20 @@
+{
+  "name": "echo_python",
+  "description": "Echo adapter written in Python (stdio-json contract). stdlib only.",
+  "protocol": "stdio-json",
+  "command": [
+    "python3",
+    "adapter.py"
+  ],
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "text": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "text"
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "echo_http",
+  "description": "Echo adapter reached over local HTTP instead of stdio-json. Start with: python3 server.py, then agentsamd proxies calls to it.",
+  "protocol": "http",
+  "url": "http://127.0.0.1:8901/call",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "text": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "text"
+    ]
+  }
+}

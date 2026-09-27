@@ -1,0 +1,21 @@
+{
+  "name": "echo_rust",
+  "description": "Echo adapter written in Rust (stdio-json contract). First run compiles via cargo.",
+  "protocol": "stdio-json",
+  "command": [
+    "cargo",
+    "run",
+    "--quiet"
+  ],
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "text": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "text"
+    ]
+  }
+}

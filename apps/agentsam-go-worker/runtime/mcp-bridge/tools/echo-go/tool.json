@@ -1,0 +1,21 @@
+{
+  "name": "echo_go",
+  "description": "Echo adapter written in Go (stdio-json contract).",
+  "protocol": "stdio-json",
+  "command": [
+    "go",
+    "run",
+    "adapter.go"
+  ],
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "text": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "text"
+    ]
+  }
+}

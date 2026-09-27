@@ -1,0 +1,22 @@
+{
+  "name": "echo_ts",
+  "description": "Echo adapter written in TypeScript (stdio-json contract). Run via tsx, no build step needed.",
+  "protocol": "stdio-json",
+  "command": [
+    "npx",
+    "--yes",
+    "tsx",
+    "adapter.ts"
+  ],
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "text": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "text"
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "echo_node",
+  "description": "Echo adapter written in Node.js (stdio-json contract). No deps.",
+  "protocol": "stdio-json",
+  "command": [
+    "node",
+    "adapter.js"
+  ],
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "text": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "text"
+    ]
+  }
+}
