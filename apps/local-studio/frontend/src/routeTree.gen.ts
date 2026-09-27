@@ -38,12 +38,12 @@ import { Route as appsSettingsKeysRouteImport } from './routes/(apps)/settings/k
 import { Route as appsSettingsThemesRouteImport } from './routes/(apps)/settings/themes'
 import { Route as appsTrailsIndexRouteImport } from './routes/(apps)/trails/index'
 import { Route as appsTrailsTrailIdRouteImport } from './routes/(apps)/trails/$trailId'
+import { Route as ApiContentOptimizeRouteImport } from './routes/api/content.optimize'
 import { Route as ApiLlmInventoryRouteImport } from './routes/api/llm.inventory'
 import { Route as appsAgentsamAppsCadRouteImport } from './routes/(apps)/agentsam.apps.cad'
 import { Route as appsArtifactsTicketsIndexRouteImport } from './routes/(apps)/artifacts/tickets/index'
 import { Route as appsArtifactsTicketsTicketIdRouteImport } from './routes/(apps)/artifacts/tickets/$ticketId'
 import { Route as ApiContentLocalBridgeRouteImport } from './routes/api/content.local.bridge'
-import { Route as ApiContentOptimizeRouteImport } from './routes/api/content.optimize'
 import { Route as ApiDatabaseLocalBridgeRouteImport } from './routes/api/database.local.bridge'
 
 const IndexRoute = IndexRouteImport.update({
@@ -192,6 +192,11 @@ const appsTrailsTrailIdRoute = appsTrailsTrailIdRouteImport.update({
   path: '/trails/$trailId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiContentOptimizeRoute = ApiContentOptimizeRouteImport.update({
+  id: '/api/content/optimize',
+  path: '/api/content/optimize',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiLlmInventoryRoute = ApiLlmInventoryRouteImport.update({
   id: '/api/llm/inventory',
   path: '/api/llm/inventory',
@@ -217,11 +222,6 @@ const appsArtifactsTicketsTicketIdRoute =
 const ApiContentLocalBridgeRoute = ApiContentLocalBridgeRouteImport.update({
   id: '/api/content/local/bridge',
   path: '/api/content/local/bridge',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiContentOptimizeRoute = ApiContentOptimizeRouteImport.update({
-  id: '/api/content/optimize',
-  path: '/api/content/optimize',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiDatabaseLocalBridgeRoute = ApiDatabaseLocalBridgeRouteImport.update({
@@ -256,6 +256,7 @@ export interface FileRoutesByFullPath {
   '/settings/keys': typeof appsSettingsKeysRoute
   '/settings/themes': typeof appsSettingsThemesRoute
   '/trails/$trailId': typeof appsTrailsTrailIdRoute
+  '/api/content/optimize': typeof ApiContentOptimizeRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
   '/artifacts/': typeof appsArtifactsIndexRoute
   '/projects/': typeof appsProjectsIndexRoute
@@ -264,7 +265,6 @@ export interface FileRoutesByFullPath {
   '/agentsam/apps/cad': typeof appsAgentsamAppsCadRoute
   '/artifacts/tickets/$ticketId': typeof appsArtifactsTicketsTicketIdRoute
   '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
-  '/api/content/optimize': typeof ApiContentOptimizeRoute
   '/api/database/local/bridge': typeof ApiDatabaseLocalBridgeRoute
   '/artifacts/tickets/': typeof appsArtifactsTicketsIndexRoute
 }
@@ -290,6 +290,7 @@ export interface FileRoutesByTo {
   '/settings/keys': typeof appsSettingsKeysRoute
   '/settings/themes': typeof appsSettingsThemesRoute
   '/trails/$trailId': typeof appsTrailsTrailIdRoute
+  '/api/content/optimize': typeof ApiContentOptimizeRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
   '/artifacts': typeof appsArtifactsIndexRoute
   '/projects': typeof appsProjectsIndexRoute
@@ -298,7 +299,6 @@ export interface FileRoutesByTo {
   '/agentsam/apps/cad': typeof appsAgentsamAppsCadRoute
   '/artifacts/tickets/$ticketId': typeof appsArtifactsTicketsTicketIdRoute
   '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
-  '/api/content/optimize': typeof ApiContentOptimizeRoute
   '/api/database/local/bridge': typeof ApiDatabaseLocalBridgeRoute
   '/artifacts/tickets': typeof appsArtifactsTicketsIndexRoute
 }
@@ -329,6 +329,7 @@ export interface FileRoutesById {
   '/(apps)/settings/keys': typeof appsSettingsKeysRoute
   '/(apps)/settings/themes': typeof appsSettingsThemesRoute
   '/(apps)/trails/$trailId': typeof appsTrailsTrailIdRoute
+  '/api/content/optimize': typeof ApiContentOptimizeRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
   '/(apps)/artifacts/': typeof appsArtifactsIndexRoute
   '/(apps)/projects/': typeof appsProjectsIndexRoute
@@ -337,7 +338,6 @@ export interface FileRoutesById {
   '/(apps)/agentsam/apps/cad': typeof appsAgentsamAppsCadRoute
   '/(apps)/artifacts/tickets/$ticketId': typeof appsArtifactsTicketsTicketIdRoute
   '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
-  '/api/content/optimize': typeof ApiContentOptimizeRoute
   '/api/database/local/bridge': typeof ApiDatabaseLocalBridgeRoute
   '/(apps)/artifacts/tickets/': typeof appsArtifactsTicketsIndexRoute
 }
@@ -369,6 +369,7 @@ export interface FileRouteTypes {
     | '/settings/keys'
     | '/settings/themes'
     | '/trails/$trailId'
+    | '/api/content/optimize'
     | '/api/llm/inventory'
     | '/artifacts/'
     | '/projects/'
@@ -402,6 +403,7 @@ export interface FileRouteTypes {
     | '/settings/keys'
     | '/settings/themes'
     | '/trails/$trailId'
+    | '/api/content/optimize'
     | '/api/llm/inventory'
     | '/artifacts'
     | '/projects'
@@ -439,6 +441,7 @@ export interface FileRouteTypes {
     | '/(apps)/settings/keys'
     | '/(apps)/settings/themes'
     | '/(apps)/trails/$trailId'
+    | '/api/content/optimize'
     | '/api/llm/inventory'
     | '/(apps)/artifacts/'
     | '/(apps)/projects/'
@@ -471,10 +474,10 @@ export interface RootRouteChildren {
   ApiCloudflareRoute: typeof ApiCloudflareRoute
   ApiGithubRoute: typeof ApiGithubRoute
   appsTrailsTrailIdRoute: typeof appsTrailsTrailIdRoute
+  ApiContentOptimizeRoute: typeof ApiContentOptimizeRoute
   ApiLlmInventoryRoute: typeof ApiLlmInventoryRoute
   appsTrailsIndexRoute: typeof appsTrailsIndexRoute
   ApiContentLocalBridgeRoute: typeof ApiContentLocalBridgeRoute
-  ApiContentOptimizeRoute: typeof ApiContentOptimizeRoute
   ApiDatabaseLocalBridgeRoute: typeof ApiDatabaseLocalBridgeRoute
 }
 
@@ -683,6 +686,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appsTrailsTrailIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/content/optimize': {
+      id: '/api/content/optimize'
+      path: '/api/content/optimize'
+      fullPath: '/api/content/optimize'
+      preLoaderRoute: typeof ApiContentOptimizeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/llm/inventory': {
       id: '/api/llm/inventory'
       path: '/api/llm/inventory'
@@ -716,13 +726,6 @@ declare module '@tanstack/react-router' {
       path: '/api/content/local/bridge'
       fullPath: '/api/content/local/bridge'
       preLoaderRoute: typeof ApiContentLocalBridgeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/content/optimize': {
-      id: '/api/content/optimize'
-      path: '/api/content/optimize'
-      fullPath: '/api/content/optimize'
-      preLoaderRoute: typeof ApiContentOptimizeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/database/local/bridge': {
@@ -828,10 +831,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCloudflareRoute: ApiCloudflareRoute,
   ApiGithubRoute: ApiGithubRoute,
   appsTrailsTrailIdRoute: appsTrailsTrailIdRoute,
+  ApiContentOptimizeRoute: ApiContentOptimizeRoute,
   ApiLlmInventoryRoute: ApiLlmInventoryRoute,
   appsTrailsIndexRoute: appsTrailsIndexRoute,
   ApiContentLocalBridgeRoute: ApiContentLocalBridgeRoute,
-  ApiContentOptimizeRoute: ApiContentOptimizeRoute,
   ApiDatabaseLocalBridgeRoute: ApiDatabaseLocalBridgeRoute,
 }
 export const routeTree = rootRouteImport
