@@ -54,7 +54,7 @@ function CmsPage() {
           onSelectSite={(slug) => {
             navigate({
               to: "/cms",
-              search: (prev) => ({ ...prev, site: slug, panel: undefined, page: undefined }),
+              search: { ...search, site: slug, panel: undefined, page: undefined },
             });
           }}
           onNavigate={(path) => {
