@@ -2,12 +2,14 @@ import { useMemo, useState } from "react";
 import type { ContentAsset } from "@inneranimalmedia/agentsam-content";
 import { useContentRuntime, useLibrary, useRuntimeCapabilities } from "./context.js";
 import { fmtBytes, fmtDuration, stateColor, styles, tokens } from "./theme.js";
+import { MediaDropzone } from "./MediaDropzone.js";
 
 export interface ContentLibraryProps {
   onSelect?: (asset: ContentAsset) => void;
   selectedId?: string | null;
   initialView?: string;
   pageSize?: number;
+  onAssetCreated?: (asset: ContentAsset, file: File) => void | Promise<void>;
 }
 
 const KIND_ICON: Record<string, string> = {
@@ -104,6 +106,8 @@ export function ContentLibrary(props: ContentLibraryProps) {
         <span>{knowledgeLabel}</span>
         {caps?.brand.resolver ? <span>brand resolver on</span> : <span>brand resolver off</span>}
       </div>
+
+      <MediaDropzone onAssetCreated={props.onAssetCreated} />
 
       <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>

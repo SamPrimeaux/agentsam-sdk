@@ -81,7 +81,8 @@
     "@inneranimalmedia/agentsam-content-studio": "file:../../../packages/agentsam-content-studio",
     "@inneranimalmedia/agentsam-scoring": "file:../../../packages/agentsam-scoring",
     "@inneranimalmedia/agentsam-assets-core": "file:../../../packages/agentsam-assets-core",
-    "@inneranimalmedia/agentsam-cloudflare-images": "file:../../../packages/agentsam-cloudflare-images"
+    "@inneranimalmedia/agentsam-cloudflare-images": "file:../../../packages/agentsam-cloudflare-images",
+    "@inneranimalmedia/agentsam-sdk-brand": "file:../../../packages/agentsam-brand"
   },
   "devDependencies": {
     "@types/node": "^22.16.5",

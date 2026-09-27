@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ContentStudio } from "@inneranimalmedia/agentsam-content-studio";
-import type { ContentRuntime } from "@inneranimalmedia/agentsam-content";
+import type { ContentAsset, ContentRuntime } from "@inneranimalmedia/agentsam-content";
 import { createLocalStudioContentRuntime } from "@/lib/content/createLocalStudioContentRuntime";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { RedirectToSignIn } from "@/lib/auth/gates";
@@ -99,6 +99,41 @@ function ContentStudioPageMounted({
   );
 }
 
+async function bytesToBase64(bytes: Uint8Array): Promise<string> {
+  let s = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    s += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(s);
+}
+
 function ContentStudioShell({ runtime }: { runtime: ContentRuntime }) {
-  return <ContentStudio runtime={runtime} showAssistant />;
+  async function handleAssetCreated(asset: ContentAsset, file: File) {
+    if (!file.type.startsWith("image/")) return;
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const dataBase64 = await bytesToBase64(bytes);
+      const res = await fetch("/api/content/optimize", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ filename: file.name, mime: file.type, dataBase64 }),
+      });
+      const body = await res.json().catch(() => ({ ok: false }));
+      if (!body.ok || body.skipped) return;
+      await runtime.addVariant(asset.id, {
+        name: "public",
+        providerRef: { provider: "local", ref: body.ref, role: "derivative" },
+        format: body.format,
+        bytes: body.bytes,
+        width: body.width,
+        height: body.height,
+        createdAt: new Date().toISOString(),
+      });
+    } catch {
+      // Best-effort — upload already succeeded; optimize failure is non-fatal.
+    }
+  }
+
+  return <ContentStudio runtime={runtime} showAssistant onAssetCreated={handleAssetCreated} />;
 }

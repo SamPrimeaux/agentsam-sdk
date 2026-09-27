@@ -14,6 +14,8 @@ export interface ContentStudioProps {
   initialView?: string;
   showAssistant?: boolean;
   renderModelViewport?: (vp: ModelViewportProps) => ReactNode;
+  /** Passed to MediaDropzone — hosts hook server-side optimization here. */
+  onAssetCreated?: (asset: ContentAsset, file: File) => void | Promise<void>;
 }
 
 /**
@@ -41,6 +43,7 @@ function StudioShell(props: ContentStudioProps) {
         initialView={props.initialView}
         selectedId={selectedId}
         onSelect={(a: ContentAsset) => setSelectedId(a.id)}
+        onAssetCreated={props.onAssetCreated}
       />
 
       {selected && (
