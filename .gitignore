@@ -51,3 +51,6 @@ examples/*/.vite/
 apps/agentsam-go-worker/runtime/.agentsam-build-*
 apps/agentsam-go-worker/runtime/.agentsam-built-*
 apps/agentsam-go-worker/runtime/.agentsam-build-source
+
+# Local content host grant registry (opaque handle persistence)
+.agentsam/content-grants.json

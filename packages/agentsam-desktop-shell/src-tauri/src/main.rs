@@ -11,6 +11,7 @@ fn main() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(agentsamd::AgentsamdState::default())
+        .manage(local_content::LocalContentState::default())
         .setup(|app| {
             tray::setup_tray(app)?;
             deep_link::register_scheme(app)?;

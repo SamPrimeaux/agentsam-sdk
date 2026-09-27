@@ -3,7 +3,7 @@
  *
  * Brand meaning stays in BrandPack / ContentBrandResolver projections.
  * Knowledge + BrandSimilarity are noop unless the host injects adapters.
- * Never hardcodes Vectorize. Demo brands are fictional only.
+ * Never hardcodes Vectorize. Production never seeds fictional demo brands.
  */
 import {
   createContentRuntime,
@@ -22,20 +22,6 @@ import {
 } from "@inneranimalmedia/agentsam-content";
 import { createLocalStudioLocalContentHost } from "./localContentHost";
 
-/** Fictional demo projections only — never real customer BrandPack fixtures. */
-export const DEMO_BRAND_PROJECTIONS: BrandCandidate[] = [
-  {
-    brandId: "northwind-garage",
-    name: "Northwind Garage",
-    keywords: ["garage", "car", "fuel", "emblem", "workbench"],
-  },
-  {
-    brandId: "cedar-studio",
-    name: "Cedar Studio",
-    keywords: ["studio", "media", "animal", "creative"],
-  },
-];
-
 /** No-op similarity — Local Studio does not hardcode Vectorize. */
 export const noopBrandSimilarity: BrandSimilarityAdapter = {
   async rank() {
@@ -43,8 +29,12 @@ export const noopBrandSimilarity: BrandSimilarityAdapter = {
   },
 };
 
+/**
+ * Projection resolver from host-supplied BrandPack candidates.
+ * Empty projections → noop list/match (fail closed on brand identity).
+ */
 export function createProjectionBrandResolver(
-  projections: BrandCandidate[] = DEMO_BRAND_PROJECTIONS,
+  projections: BrandCandidate[] = [],
 ): ContentBrandResolver {
   const byId = new Map(projections.map((p) => [p.brandId, p]));
   return {
@@ -68,6 +58,7 @@ export function createProjectionBrandResolver(
           evidence: ["explicit-association"],
         };
       }
+      if (!projections.length) return null;
       const hay = [
         asset.title,
         asset.filename,
@@ -139,10 +130,15 @@ function buildAssistant(projections: BrandCandidate[]): AssistantHandler {
 }
 
 export interface LocalStudioContentRuntimeOptions {
-  accountId?: string;
+  /** Required — resolve from AuthProvider/session. No production default. */
+  accountId: string;
+  /** Required — resolve from AuthProvider/session. No production default. */
+  actorRef: string;
   accountLabel?: string;
-  actorRef?: string;
-  /** Production hosts pass BrandPack projections; demos use fictional defaults. */
+  /**
+   * Host BrandPack projections only. Defaults to empty (noop).
+   * Fictional fixtures belong in tests/examples — never silent production seed.
+   */
   brandProjections?: BrandCandidate[];
   /** Optional override for tests. */
   config?: Partial<ContentRuntimeConfig>;
@@ -150,21 +146,28 @@ export interface LocalStudioContentRuntimeOptions {
 
 /**
  * Construct the account-scoped ContentRuntime Local Studio mounts into Content Studio.
+ * Throws when account/actor identity is missing (fail closed).
  * CF Images uses shared `@inneranimalmedia/agentsam-cloudflare-images` via content
  * provider adapters when the host injects credentials — not hardcoded here.
  */
 export function createLocalStudioContentRuntime(
-  opts: LocalStudioContentRuntimeOptions = {},
+  opts: LocalStudioContentRuntimeOptions,
 ): ContentRuntime {
-  const projections = opts.brandProjections ?? DEMO_BRAND_PROJECTIONS;
+  const accountId = String(opts.accountId || "").trim();
+  const actorRef = String(opts.actorRef || "").trim();
+  if (!accountId || !actorRef) {
+    throw new Error("content_runtime_identity_required");
+  }
+
+  const projections = opts.brandProjections ?? [];
   const local = localFiles();
   const localHost = createLocalStudioLocalContentHost();
 
   return createContentRuntime({
-    identity: { type: "human", ref: opts.actorRef ?? "local-studio-user" },
+    identity: { type: "human", ref: actorRef },
     account: {
-      id: opts.accountId ?? "acct_local_studio",
-      label: opts.accountLabel ?? "Local Studio",
+      id: accountId,
+      label: opts.accountLabel ?? accountId,
     },
     providers: [local],
     brandResolver: createProjectionBrandResolver(projections),

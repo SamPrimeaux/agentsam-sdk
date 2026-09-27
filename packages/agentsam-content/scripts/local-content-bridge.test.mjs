@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 /**
- * Smoke: local-content-bridge status + import + list + read roundtrip.
+ * Smoke: local-content-bridge status + import + list + read + grant roundtrip.
  */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
@@ -36,6 +37,8 @@ test("local-content-bridge status is available", () => {
   assert.equal(status.availability, "available");
   assert.ok(status.machineId);
   assert.equal(status.watchSupported, false);
+  assert.equal(status.nativeFs, false);
+  assert.equal(status.browserDevBridge, true);
 });
 
 test("local-content-bridge import/list/read roundtrip", () => {
@@ -66,4 +69,38 @@ test("local-content-bridge import/list/read roundtrip", () => {
   // cleanup
   const abs = path.join(repoRoot, imported.ref);
   if (fs.existsSync(abs)) fs.unlinkSync(abs);
+});
+
+test("local-content-bridge grant_directory browse in place without copy", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "agentsam-grant-"));
+  const sample = path.join(tmp, "sample.txt");
+  fs.writeFileSync(sample, "grant-browse");
+
+  const granted = run({
+    op: "grant_directory",
+    cwd: repoRoot,
+    abs_path: tmp,
+  });
+  assert.ok(String(granted.ref).startsWith("localdir_"));
+  assert.equal(granted.copied, false);
+
+  const listed = run({ op: "list", cwd: repoRoot, ref: granted.ref });
+  assert.ok(Array.isArray(listed.entries));
+  const hit = listed.entries.find((e) => e.name === "sample.txt");
+  assert.ok(hit, "expected sample.txt under granted dir");
+  assert.ok(String(hit.ref).startsWith("localref_"));
+
+  const read = run({ op: "read", cwd: repoRoot, ref: hit.ref });
+  assert.equal(Buffer.from(read.data, "base64").toString("utf8"), "grant-browse");
+
+  // Original still in place (not copied into library yet)
+  assert.equal(fs.readFileSync(sample, "utf8"), "grant-browse");
+
+  const imported = run({ op: "import_to_library", cwd: repoRoot, ref: hit.ref });
+  assert.equal(imported.copied, true);
+  assert.ok(imported.ref);
+
+  const abs = path.join(repoRoot, imported.ref);
+  if (fs.existsSync(abs)) fs.unlinkSync(abs);
+  fs.rmSync(tmp, { recursive: true, force: true });
 });

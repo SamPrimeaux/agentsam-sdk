@@ -1,17 +1,20 @@
 #!/usr/bin/env node
 /**
- * Local-runtime content FS bridge for Local Studio → LocalContentHost.
+ * Local-runtime content FS bridge for Local Studio browser/dev → LocalContentHost.
  * Reads one JSON request from stdin, writes one JSON response to stdout.
- * Never used from Workers / browsers — Node + contained FS only.
+ * Never used from Workers / packaged .app — desktop uses native Rust Tauri FS.
  *
  * Ops: status | list | stat | read | materialize | reveal | pick_probe
+ *      | import_bytes | import_to_library | grant_directory | grant_file
  *
- * Paths stay machine-local; responses expose opaque relative refs only.
+ * Opaque refs: localref_* / localdir_* map to granted absolute paths in
+ * `.agentsam/content-grants.json`. Legacy relative paths under project root
+ * remain supported for tests. Absolute paths never returned to remote/model contexts.
  */
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { createLocalFilesystem } from "../../../src/local-fs/index.js";
 import { resolveContainedPath } from "../../../src/local-fs/paths.js";
@@ -107,10 +110,107 @@ function probeAgentsamd(listen = AGENTSAMD_LISTEN) {
   }
 }
 
-/**
- * Opaque ref = relative path under authorized root (never absolute to remote).
- * Frontend maps these as LocalFileRef strings.
- */
+function mintId(kind) {
+  return `${kind === "directory" ? "localdir" : "localref"}_${randomBytes(8).toString("hex")}`;
+}
+
+function grantsFile(root) {
+  return path.join(root, ".agentsam", "content-grants.json");
+}
+
+function loadGrants(root) {
+  const file = grantsFile(root);
+  if (!fs.existsSync(file)) return { roots: [], entries: {} };
+  try {
+    const raw = JSON.parse(fs.readFileSync(file, "utf8"));
+    return {
+      roots: Array.isArray(raw.roots) ? raw.roots : [],
+      entries: raw.entries && typeof raw.entries === "object" ? raw.entries : {},
+    };
+  } catch {
+    return { roots: [], entries: {} };
+  }
+}
+
+function saveGrants(root, grants) {
+  const dir = path.join(root, ".agentsam");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(grantsFile(root), JSON.stringify(grants, null, 2));
+}
+
+function registerGrant(root, absPath, kind, { isRoot = false } = {}) {
+  const abs = path.resolve(absPath);
+  if (kind === "directory" && !fs.statSync(abs).isDirectory()) {
+    throw new Error("not_a_directory");
+  }
+  if (kind === "file" && !fs.statSync(abs).isFile()) {
+    throw new Error("not_a_file");
+  }
+  const grants = loadGrants(root);
+  const id = mintId(kind);
+  const name = path.basename(abs);
+  const entry = { id, kind, abs_path: abs, name, is_root: Boolean(isRoot) };
+  grants.entries[id] = entry;
+  if (isRoot && kind === "directory") {
+    grants.roots = grants.roots.filter((r) => r.abs_path !== abs);
+    grants.roots.push({ id, name, abs_path: abs });
+  }
+  saveGrants(root, grants);
+  return entry;
+}
+
+function resolveOpaque(root, refId) {
+  const grants = loadGrants(root);
+  const entry = grants.entries[refId];
+  if (entry?.abs_path && fs.existsSync(entry.abs_path)) return entry;
+  const rootHit = grants.roots.find((r) => r.id === refId);
+  if (rootHit?.abs_path && fs.existsSync(rootHit.abs_path)) {
+    return {
+      id: rootHit.id,
+      kind: "directory",
+      abs_path: rootHit.abs_path,
+      name: rootHit.name,
+      is_root: true,
+    };
+  }
+  return null;
+}
+
+function isUnderGranted(root, absPath) {
+  const grants = loadGrants(root);
+  const abs = path.resolve(absPath);
+  for (const r of grants.roots) {
+    const base = path.resolve(r.abs_path);
+    if (abs === base || abs.startsWith(base + path.sep)) return true;
+  }
+  for (const e of Object.values(grants.entries)) {
+    if (path.resolve(e.abs_path) === abs) return true;
+  }
+  return false;
+}
+
+function toEntryFromAbs(abs, kind) {
+  const name = path.basename(abs);
+  const mime = kind === "file" ? guessMime(name) : undefined;
+  let bytes;
+  let mtime;
+  try {
+    const st = fs.statSync(abs);
+    bytes = st.isFile() ? st.size : undefined;
+    mtime = st.mtime?.toISOString?.();
+  } catch {
+    /* ignore */
+  }
+  return {
+    name,
+    kind: kind === "directory" ? "directory" : "file",
+    mime,
+    bytes,
+    mtime,
+    contentKind: kind === "file" ? contentKind(mime, name) : undefined,
+  };
+}
+
 function toEntry(item) {
   const name = path.basename(item.path);
   const mime = item.kind === "file" ? guessMime(name) : undefined;
@@ -144,9 +244,14 @@ async function main() {
       root,
       library: libraryAbs,
       machineId: `host_${os.hostname().replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 48)}`,
-      label: agentsamd.ok ? "Local Studio · agentsamd + FS" : "Local Studio · FS bridge",
+      label: agentsamd.ok
+        ? "Local Studio · browser/dev FS bridge + agentsamd"
+        : "Local Studio · browser/dev FS bridge",
       watchSupported: false,
       processSupported: Boolean(agentsamd.ok),
+      nativeFs: false,
+      requiresNode: true,
+      browserDevBridge: true,
       agentsamd: {
         ok: agentsamd.ok,
         listen: AGENTSAMD_LISTEN,
@@ -155,9 +260,76 @@ async function main() {
     });
   }
 
+  if (op === "grant_directory") {
+    const abs = String(req.abs_path || req.path || "").trim();
+    if (!abs) throw new Error("abs_path_required");
+    if (!path.isAbsolute(abs)) throw new Error("abs_path_must_be_absolute");
+    const entry = registerGrant(root, abs, "directory", { isRoot: true });
+    return ok({
+      ref: entry.id,
+      name: entry.name,
+      kind: "directory",
+      copied: false,
+    });
+  }
+
+  if (op === "grant_file") {
+    const abs = String(req.abs_path || req.path || "").trim();
+    if (!abs) throw new Error("abs_path_required");
+    if (!path.isAbsolute(abs)) throw new Error("abs_path_must_be_absolute");
+    const entry = registerGrant(root, abs, "file", { isRoot: false });
+    return ok({
+      ref: entry.id,
+      name: entry.name,
+      kind: "file",
+      copied: false,
+    });
+  }
+
   if (op === "list") {
-    const rel = String(req.path || req.ref || ".agentsam/" + libraryRel);
-    const listed = fsApi.list(rel, { recursive: Boolean(req.recursive), maxDepth: 4 });
+    const key = String(req.path || req.ref || "");
+    // Empty / "." → granted roots (not a fake fixed library path).
+    if (!key || key === ".") {
+      const grants = loadGrants(root);
+      const entries = grants.roots.map((r) => ({
+        ref: r.id,
+        ...toEntryFromAbs(r.abs_path, "directory"),
+      }));
+      if (fs.existsSync(libraryAbs)) {
+        entries.push({
+          ref: `.agentsam/${libraryRel}`,
+          name: libraryRel,
+          kind: "directory",
+        });
+      }
+      return ok({ entries, path: "grants" });
+    }
+
+    const opaque = resolveOpaque(root, key);
+    if (opaque) {
+      const names = fs.readdirSync(opaque.abs_path);
+      const entries = [];
+      for (const name of names) {
+        if (name === "." || name === "..") continue;
+        const childAbs = path.join(opaque.abs_path, name);
+        let st;
+        try {
+          st = fs.statSync(childAbs);
+        } catch {
+          continue;
+        }
+        const kind = st.isDirectory() ? "directory" : st.isFile() ? "file" : null;
+        if (!kind) continue;
+        const child = registerGrant(root, childAbs, kind, { isRoot: false });
+        entries.push({
+          ref: child.id,
+          ...toEntryFromAbs(childAbs, kind),
+        });
+      }
+      return ok({ entries, path: opaque.id });
+    }
+
+    const listed = fsApi.list(key, { recursive: Boolean(req.recursive), maxDepth: 4 });
     if (!listed.ok) throw new Error(listed.error || listed.code || "list_failed");
     return ok({
       entries: (listed.entries || [])
@@ -168,9 +340,16 @@ async function main() {
   }
 
   if (op === "stat") {
-    const rel = String(req.ref || req.path || "");
-    if (!rel) throw new Error("ref_required");
-    const st = fsApi.stat(rel);
+    const key = String(req.ref || req.path || "");
+    if (!key) throw new Error("ref_required");
+    const opaque = resolveOpaque(root, key);
+    if (opaque) {
+      return ok({
+        ref: opaque.id,
+        ...toEntryFromAbs(opaque.abs_path, opaque.kind),
+      });
+    }
+    const st = fsApi.stat(key);
     if (!st.ok) throw new Error(st.error || st.code || "stat_failed");
     const name = path.basename(st.path);
     const mime = st.kind === "file" ? guessMime(name) : undefined;
@@ -185,18 +364,29 @@ async function main() {
   }
 
   if (op === "read") {
-    const rel = String(req.ref || req.path || "");
-    if (!rel) throw new Error("ref_required");
-    const gate = resolveContainedPath(root, rel);
-    if (!gate.ok) throw new Error(gate.error || gate.code || "path_escape");
-    const st = fs.statSync(gate.abs);
+    const key = String(req.ref || req.path || "");
+    if (!key) throw new Error("ref_required");
+    const opaque = resolveOpaque(root, key);
+    let abs;
+    let relHint;
+    if (opaque) {
+      if (opaque.kind === "directory") throw new Error("is_directory");
+      abs = opaque.abs_path;
+      relHint = opaque.id;
+    } else {
+      const gate = resolveContainedPath(root, key);
+      if (!gate.ok) throw new Error(gate.error || gate.code || "path_escape");
+      abs = gate.abs;
+      relHint = gate.rel;
+    }
+    const st = fs.statSync(abs);
     if (st.isDirectory()) throw new Error("is_directory");
     const maxBytes = Math.min(Number(req.maxBytes) || MAX_READ_BYTES, MAX_READ_BYTES);
     if (st.size > maxBytes) throw new Error(`file_too_large:${st.size}>${maxBytes}`);
-    const buf = fs.readFileSync(gate.abs);
-    const name = path.basename(gate.rel);
+    const buf = fs.readFileSync(abs);
+    const name = path.basename(abs);
     return ok({
-      ref: gate.rel,
+      ref: relHint,
       mime: guessMime(name),
       bytes: buf.byteLength,
       encoding: "base64",
@@ -205,9 +395,20 @@ async function main() {
   }
 
   if (op === "materialize") {
-    const rel = String(req.ref || req.path || "");
-    if (!rel) throw new Error("ref_required");
-    const gate = resolveContainedPath(root, rel);
+    const key = String(req.ref || req.path || "");
+    if (!key) throw new Error("ref_required");
+    const opaque = resolveOpaque(root, key);
+    if (opaque) {
+      if (opaque.kind === "directory") throw new Error("is_directory");
+      const st = fs.statSync(opaque.abs_path);
+      return ok({
+        ref: opaque.id,
+        mime: guessMime(opaque.name),
+        bytes: st.size,
+        pathHint: opaque.id,
+      });
+    }
+    const gate = resolveContainedPath(root, key);
     if (!gate.ok) throw new Error(gate.error || gate.code || "path_escape");
     const st = fs.statSync(gate.abs);
     if (st.isDirectory()) throw new Error("is_directory");
@@ -216,30 +417,40 @@ async function main() {
       ref: gate.rel,
       mime: guessMime(name),
       bytes: st.size,
-      // Relative hint only — never absolute path for remote models.
       pathHint: gate.rel,
     });
   }
 
   if (op === "reveal") {
-    const rel = String(req.ref || req.path || "");
-    if (!rel) throw new Error("ref_required");
-    const gate = resolveContainedPath(root, rel);
-    if (!gate.ok) throw new Error(gate.error || gate.code || "path_escape");
-    if (process.platform === "darwin") {
-      spawnSync("open", ["-R", gate.abs], { stdio: "ignore" });
-    } else if (process.platform === "win32") {
-      spawnSync("explorer", ["/select,", gate.abs], { stdio: "ignore" });
+    const key = String(req.ref || req.path || "");
+    if (!key) throw new Error("ref_required");
+    const opaque = resolveOpaque(root, key);
+    let abs;
+    let revealed;
+    if (opaque) {
+      abs = opaque.abs_path;
+      revealed = opaque.id;
     } else {
-      spawnSync("xdg-open", [path.dirname(gate.abs)], { stdio: "ignore" });
+      const gate = resolveContainedPath(root, key);
+      if (!gate.ok) throw new Error(gate.error || gate.code || "path_escape");
+      abs = gate.abs;
+      revealed = gate.rel;
     }
-    return ok({ revealed: gate.rel });
+    if (process.platform === "darwin") {
+      spawnSync("open", ["-R", abs], { stdio: "ignore" });
+    } else if (process.platform === "win32") {
+      spawnSync("explorer", ["/select,", abs], { stdio: "ignore" });
+    } else {
+      spawnSync("xdg-open", [path.dirname(abs)], { stdio: "ignore" });
+    }
+    return ok({ revealed });
   }
 
   if (op === "pick_probe") {
     return ok({
       pickSupported: true,
-      note: "Host UI uses native file picker; bridge stores under .agentsam/content-library",
+      nativePicker: false,
+      note: "Browser/dev bridge — desktop uses native Rust picker; grant_directory for explicit roots",
       library: path.relative(root, libraryAbs) || ".agentsam/content-library",
     });
   }
@@ -263,6 +474,38 @@ async function main() {
       mime,
       bytes: buf.byteLength,
       contentKind: contentKind(mime, name),
+      browserImport: Boolean(req.browserImport),
+      copied: true,
+    });
+  }
+
+  if (op === "import_to_library") {
+    const key = String(req.ref || "");
+    if (!key) throw new Error("ref_required");
+    const opaque = resolveOpaque(root, key);
+    if (!opaque) throw new Error("unknown_ref");
+    if (opaque.kind !== "file") throw new Error("import_requires_file");
+    if (!isUnderGranted(root, opaque.abs_path) && !opaque.abs_path) {
+      throw new Error("path_not_in_granted_root");
+    }
+    const destName = opaque.name.replace(/[/\\]/g, "_");
+    let destAbs = path.join(libraryAbs, destName);
+    if (fs.existsSync(destAbs)) {
+      const ext = path.extname(destName);
+      const stem = path.basename(destName, ext);
+      destAbs = path.join(libraryAbs, `${stem}-${Date.now()}${ext}`);
+    }
+    fs.copyFileSync(opaque.abs_path, destAbs);
+    const destRel = path.relative(root, destAbs);
+    const mime = guessMime(path.basename(destAbs));
+    return ok({
+      ref: destRel,
+      assetId: destRel,
+      name: path.basename(destAbs),
+      mime,
+      bytes: fs.statSync(destAbs).size,
+      contentKind: contentKind(mime, destAbs),
+      copied: true,
     });
   }
 
