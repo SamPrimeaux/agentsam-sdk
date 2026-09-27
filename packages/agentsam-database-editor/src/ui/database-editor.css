@@ -44,14 +44,14 @@
   --db-toolbar: #101412;
 }
 .db-editor[data-provider="local"] {
-  --db-bg: #101218;
-  --db-panel: #171b24;
-  --db-panel-2: #1d2330;
-  --db-accent: #6da4ff;
-  --db-accent-2: #3b6fbe;
-  --db-border: rgba(140,170,220,.14);
-  --db-chart: #6da4ff;
-  --db-toolbar: #0d1016;
+  --db-bg: #12141a;
+  --db-panel: #1a1d26;
+  --db-panel-2: #222632;
+  --db-accent: #8ab4f8;
+  --db-accent-2: #6b8fc4;
+  --db-border: rgba(160,168,184,.14);
+  --db-chart: #8ab4f8;
+  --db-toolbar: #0e1016;
 }
 .db-loading,
 .db-empty {

@@ -20,6 +20,7 @@ import { TerminalPane } from "@/components/workbench/terminal";
 import { cn } from "@/lib/utils";
 import { useActiveSideTab, useWorkStore } from "@/lib/work/store";
 import { StudioMark } from "@/components/mark";
+import { consumePendingDatabaseAssistantContext } from "@/lib/database/assistantContext";
 
 function TabIcon({ kind }: { kind: string }) {
   if (kind === "chat") return <Users className="size-3.5" />;
@@ -186,11 +187,57 @@ export function SideStage() {
   );
 }
 
+function formatDatabaseAssistantContext(ctx: Record<string, unknown>): string {
+  const lines = [
+    "Database assistant context (selected surface only — do not invent other tenants or dump the whole DB):",
+    `Provider: ${ctx.provider ?? "unknown"}`,
+    `Source: ${ctx.sourceLabel ?? ctx.sourceId ?? "unknown"}`,
+    `Engine: ${ctx.engine ?? "unknown"}`,
+    `Table: ${ctx.selectedTable ?? "(none selected)"}`,
+    `View: ${ctx.view ?? "unknown"}`,
+    `Writable: ${ctx.writable ? "yes" : "no"}`,
+    `Range: ${ctx.range ?? "n/a"}`,
+    `Current error: ${ctx.currentError || "none"}`,
+  ];
+  if (typeof ctx.sqlDraft === "string" && ctx.sqlDraft.trim()) {
+    lines.push(`SQL draft:\n${String(ctx.sqlDraft).slice(0, 2000)}`);
+  }
+  lines.push(
+    "",
+    "Help with this database context: explain schema/errors, draft SQL, or propose safe mutations. Never execute writes yourself — only propose.",
+  );
+  return lines.join("\n");
+}
+
 function CoworkerChat({ tabId }: { tabId: string }) {
   const tab = useWorkStore((s) => s.sideTabs.find((t) => t.id === tabId));
   const keepSideChat = useWorkStore((s) => s.keepSideChat);
+  const setDraft = useWorkStore((s) => s.setDraft);
   const trails = useWorkStore((s) => s.trails);
   const streaming = useWorkStore((s) => s.streamingIds.includes(tabId));
+  const [databaseContext, setDatabaseContext] = useState<Record<string, unknown> | null>(null);
+
+  useEffect(() => {
+    const apply = (detail: Record<string, unknown>) => {
+      setDatabaseContext(detail);
+      const existing = useWorkStore.getState().drafts[tabId] || "";
+      if (!existing.trim()) {
+        setDraft(tabId, formatDatabaseAssistantContext(detail));
+      }
+    };
+
+    const pending = consumePendingDatabaseAssistantContext();
+    if (pending) apply(pending);
+
+    const onContext = (event: Event) => {
+      const detail = (event as CustomEvent<Record<string, unknown>>).detail;
+      if (!detail || typeof detail !== "object") return;
+      apply(detail);
+    };
+    window.addEventListener("agentsam:database-assistant-context", onContext);
+    return () => window.removeEventListener("agentsam:database-assistant-context", onContext);
+  }, [setDraft, tabId]);
+
   if (!tab) return null;
   const parent = trails.find((t) => t.id === tab.parentTrailId);
   const empty = tab.messages.length === 0;
@@ -219,19 +266,46 @@ function CoworkerChat({ tabId }: { tabId: string }) {
           Lead context: <span className="text-foreground">{parent.title}</span>
         </div>
       ) : null}
+      {databaseContext ? (
+        <div className="mx-3 mt-3 rounded-xl border border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          Database:{" "}
+          <span className="text-foreground">
+            {String(databaseContext.sourceLabel || databaseContext.sourceId || "source")}
+          </span>
+          {databaseContext.selectedTable ? (
+            <>
+              {" · "}
+              <span className="text-foreground">{String(databaseContext.selectedTable)}</span>
+            </>
+          ) : null}
+          {databaseContext.currentError ? (
+            <>
+              {" · "}
+              <span className="text-destructive">error present</span>
+            </>
+          ) : null}
+        </div>
+      ) : null}
       {empty ? (
         <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
           <StudioMark className="mb-3 size-10" />
-          <h2 className="text-base font-medium">Co-worker</h2>
+          <h2 className="text-base font-medium">
+            {databaseContext ? "Database co-worker" : "Co-worker"}
+          </h2>
           <p className="mt-1 max-w-sm text-sm text-muted-foreground text-pretty">
-            Spin up a specialist beside the lead agent — research, draft files, review — without derailing the main
-            chat. Brief handoffs land back in the lead thread.
+            {databaseContext
+              ? "Selected database context is loaded below. Brief AgentSam to explain schema, draft SQL, or reason about the current error — writes still require confirmation in the editor."
+              : "Spin up a specialist beside the lead agent — research, draft files, review — without derailing the main chat. Brief handoffs land back in the lead thread."}
           </p>
         </div>
       ) : (
         <MessageList messages={tab.messages} trailId={parent?.id} streaming={streaming} />
       )}
-      <Composer targetId={tab.id} targetKind="side" placeholder="Brief the co-worker" />
+      <Composer
+        targetId={tab.id}
+        targetKind="side"
+        placeholder={databaseContext ? "Ask about this database…" : "Brief the co-worker"}
+      />
     </div>
   );
 }

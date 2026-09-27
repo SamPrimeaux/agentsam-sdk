@@ -31,7 +31,9 @@ import {
 function parse(argv = []) {
   const out = {
     family: argv[0] || 'status',
-    action: argv[1] || '',
+    // Never seed action from argv[1] — flags like `--json` would become the action
+    // and `agentsam cloudflare status --json` would fall through to the help menu.
+    action: '',
     rest: [],
     cwd: process.cwd(),
     json: false,
@@ -63,8 +65,9 @@ function parse(argv = []) {
 
   // Legacy: cloudflare run <id> / cloudflare cpu analyze
   if (out.family === 'run' || out.family === 'cpu') {
-    out.action = argv[1] || '';
-    let i = 2;
+    const maybeAction = argv[1] || '';
+    out.action = maybeAction.startsWith('-') ? '' : maybeAction;
+    let i = out.action ? 2 : 1;
     for (; i < argv.length; i += 1) {
       const arg = argv[i];
       if (arg === '--json') out.json = true;
@@ -78,7 +81,8 @@ function parse(argv = []) {
       else if (arg === '--page') out.page = Number(argv[++i] || 1);
       else if (arg === '--file') out.file = argv[++i] || '';
       else if (arg === '--help' || arg === '-h') out.help = true;
-      else if (out.family === 'cpu' && out.action === 'analyze' && !out.file) out.file = arg;
+      else if (!out.action && !arg.startsWith('-')) out.action = arg;
+      else if (out.family === 'cpu' && out.action === 'analyze' && !out.file && !arg.startsWith('-')) out.file = arg;
       else out.rest.push(arg);
     }
     return out;

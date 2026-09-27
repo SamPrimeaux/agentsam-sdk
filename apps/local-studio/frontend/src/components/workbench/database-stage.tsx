@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { DatabaseEditorApp } from "@inneranimalmedia/agentsam-database-editor/frontend";
 import { createLocalStudioDatabaseClient } from "@/lib/database/createLocalStudioDatabaseClient";
+import { publishDatabaseAssistantContext } from "@/lib/database/assistantContext";
 import { useWorkStore } from "@/lib/work/store";
 
 /** Workbench side-panel surface for the real Database Editor package. */
@@ -27,9 +28,7 @@ export function DatabaseStage() {
           title: "Database · Co-worker",
           ephemeral: false,
         });
-        window.dispatchEvent(
-          new CustomEvent("agentsam:database-assistant-context", { detail: ctx }),
-        );
+        publishDatabaseAssistantContext(ctx);
       }}
     />
   );

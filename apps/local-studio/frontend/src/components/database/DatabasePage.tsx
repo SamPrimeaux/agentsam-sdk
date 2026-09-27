@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { DatabaseEditorApp } from "@inneranimalmedia/agentsam-database-editor/frontend";
 import { createLocalStudioDatabaseClient } from "@/lib/database/createLocalStudioDatabaseClient";
+import { publishDatabaseAssistantContext } from "@/lib/database/assistantContext";
 import { useWorkStore } from "@/lib/work/store";
 
 /**
@@ -31,11 +32,7 @@ export function DatabasePage() {
           title: "Database · Co-worker",
           ephemeral: false,
         });
-        // Context is attached via a custom event so CoworkerChat can pick it up
-        // without inventing a second assistant backend.
-        window.dispatchEvent(
-          new CustomEvent("agentsam:database-assistant-context", { detail: ctx }),
-        );
+        publishDatabaseAssistantContext(ctx);
       }}
     />
   );
