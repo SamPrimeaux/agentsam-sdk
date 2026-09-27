@@ -1,0 +1,12 @@
+{
+  "id": "hero",
+  "label": "Hero imagery",
+  "description": "Desktop 1920×1080 master + selective responsive widths (CF Images for the rest)",
+  "role": "hero.landscape",
+  "semantic": true,
+  "derivatives": [
+    { "id": "master-1920", "role": "master", "format": "png", "width": 1920, "height": 1080 },
+    { "id": "w960", "role": "responsive", "format": "webp", "width": 960, "height": 540, "quality": 85 },
+    { "id": "w1600", "role": "responsive", "format": "webp", "width": 1600, "height": 900, "quality": 85 }
+  ]
+}

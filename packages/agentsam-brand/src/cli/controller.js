@@ -7,6 +7,13 @@ import { deriveBrandAssets } from '../core/derivatives.js';
 import { listBrandAssetReceipts, formatPublishReceipt } from '../core/receipts.js';
 import { getDerivativePreset, listDerivativePresets } from '../presets/index.js';
 import { normalizePromotionSpec, parseDeriveFlag } from '../core/plan.js';
+import { resolveSourceInput } from '../core/ingest.js';
+import { buildBrandPack } from '../core/pack.js';
+import { previewBrandPack } from '../core/preview.js';
+import { ingestBrandSources, loadBrandPack } from '../core/v2/ingest-graph.js';
+import { buildBrandPackFromGraph } from '../core/v2/compile.js';
+import { listBrandTemplates, createPackFromTemplate } from '../core/v2/templates.js';
+import { listAssetRoles } from '../core/v2/roles.js';
 import { MemoryStorageAdapter } from '../adapters/memory.js';
 import { FilesystemStorageAdapter } from '../adapters/filesystem.js';
 import { CloudflareImagesDeliveryAdapter } from '../adapters/cloudflare-images.js';
@@ -39,6 +46,16 @@ export function parseBrandCliArgs(argv = []) {
     images: false,
     preset: '',
     derive: [],
+    out: '',
+    from: '',
+    dropDir: '',
+    watch: false,
+    noOpen: false,
+    alt: '',
+    title: '',
+    description: '',
+    template: '',
+    noZip: false,
     positionals: [],
   };
   for (let i = 0; i < argv.length; i += 1) {
@@ -65,9 +82,36 @@ export function parseBrandCliArgs(argv = []) {
     else if (a === '--images' || a === '--cloudflare-images') out.images = true;
     else if (a === '--preset') out.preset = argv[++i] || '';
     else if (a === '--derive') out.derive.push(argv[++i] || '');
+    else if (a === '--out' || a === '-o') out.out = argv[++i] || '';
+    else if (a === '--from') out.from = argv[++i] || '';
+    else if (a === '--drop-dir') out.dropDir = argv[++i] || '';
+    else if (a === '--watch') out.watch = true;
+    else if (a === '--no-open') out.noOpen = true;
+    else if (a === '--alt') out.alt = argv[++i] || '';
+    else if (a === '--title') out.title = argv[++i] || '';
+    else if (a === '--description') out.description = argv[++i] || '';
+    else if (a === '--template') out.template = argv[++i] || '';
+    else if (a === '--no-zip') out.noZip = true;
     else out.positionals.push(a);
   }
   return out;
+}
+
+async function resolveSourceForSpec(opts) {
+  if (!opts.source && !opts.dropDir) return opts;
+  const ingested = await resolveSourceInput({
+    source: opts.source,
+    dropDir: opts.dropDir,
+    watch: opts.watch,
+    workDir: path.join(opts.cwd, '.agentsam', 'brand', 'work', 'stdin'),
+    cwd: opts.cwd,
+  });
+  if (!ingested) return opts;
+  return {
+    ...opts,
+    source: ingested.path,
+    mark: opts.mark || ingested.markPath || '',
+  };
 }
 
 function buildSpecFromArgs(opts) {
@@ -104,6 +148,11 @@ function buildSpecFromArgs(opts) {
     storageBinding: opts.storageBinding || undefined,
     bucket: opts.bucket || undefined,
     delivery: opts.images ? { provider: 'cloudflare-images' } : undefined,
+    seo: {
+      alt_text: opts.alt || null,
+      title: opts.title || null,
+      description: opts.description || null,
+    },
   });
 }
 
@@ -126,24 +175,24 @@ export async function runBrandAssetCommand(argv = [], options = {}) {
   const [action = 'help', ...rest] = opts.positionals;
 
   if (action === 'help' || action === '--help' || action === '-h') {
-    write(`usage: brand-assets <inspect|derive|plan|promote|publish|verify|assets|presets> [options]
+    write(`usage: brand-assets <inspect|derive|ingest|build|pack|preview|plan|promote|publish|verify|assets|presets|templates|roles> [options]
 
-  inspect <path>              Inspect one local asset
-  derive <path>               Generate derivatives (requires --derive or --preset)
-  plan [--manifest FILE]      Plan promotion (offline OK)
-  promote [--manifest FILE]   Plan (+ derive) and write receipt; --yes to publish
-  publish --brand --asset     Publish from receipt via storage adapter
-  verify  --brand --asset     Verify storage against receipt
-  assets                      List local receipts
-  presets                     List derivative presets (data, not product identity)
+Brand compiler (v2 — brand.pack.json is source of truth):
+  ingest <path|zip|tar|folder>   Classify assets → brand.pack.json
+  build --from <pack>            Compile dist + studio + optional zip export
+  preview --from <dist|zip>      Localhost gallery / studio
+  templates                      List uniform brand templates
+  roles                          List asset roles
 
-Scripted:
-  brand-assets plan --brand acme --asset app-icon --version v1 \\
-    --source ./master.png --derive png:1024 --derive webp:1024:q92 --json
+Legacy / focused:
+  pack                           Single-asset zip (still valid)
+  promote / publish / verify
+  presets                        Derivative presets
 
-  brand-assets promote --manifest ./brand-assets.json --dry-run --json
-
-Interactive promote when TTY and required flags missing (no product defaults).
+Examples:
+  agentsam brand ingest ./exports --brand acme --template product-saas
+  agentsam brand build --from .agentsam/brand/packs/acme --out ./dist/acme
+  agentsam brand pack --brand acme --asset app-icon --source ./m.png --preset app-icon -o ./acme.zip
 `);
     return 0;
   }
@@ -151,6 +200,61 @@ Interactive promote when TTY and required flags missing (no product defaults).
   try {
     if (action === 'presets') {
       writeResult(write, opts, { presets: listDerivativePresets() });
+      return 0;
+    }
+
+    if (action === 'templates') {
+      writeResult(write, opts, { templates: listBrandTemplates() });
+      return 0;
+    }
+
+    if (action === 'roles') {
+      writeResult(write, opts, { roles: listAssetRoles() });
+      return 0;
+    }
+
+    if (action === 'ingest') {
+      const input = rest[0] || opts.source || opts.dropDir;
+      if (!input) {
+        write('ingest requires a path, archive, or folder\n');
+        return 2;
+      }
+      let pack = null;
+      if (opts.template && opts.brand) {
+        pack = createPackFromTemplate(opts.template, { brandId: opts.brand });
+      }
+      const result = await ingestBrandSources(input, {
+        cwd: opts.cwd,
+        brandId: opts.brand || undefined,
+        brandName: opts.title || undefined,
+        pack,
+        template: opts.template || undefined,
+      });
+      if (opts.template) {
+        const { applyBrandTemplate } = await import('../core/v2/templates.js');
+        result.pack = applyBrandTemplate(result.pack, opts.template);
+        const { saveBrandPack } = await import('../core/v2/ingest-graph.js');
+        saveBrandPack(result.pack, path.dirname(result.pack_path));
+      }
+      writeResult(write, opts, result);
+      return 0;
+    }
+
+    if (action === 'build') {
+      const from = opts.from || rest[0];
+      if (!from && !opts.brand) {
+        write('build requires --from <brand.pack.json|dir> (or ingest first)\n');
+        return 2;
+      }
+      const result = await buildBrandPackFromGraph({
+        from: from || path.join(opts.cwd, '.agentsam', 'brand', 'packs', opts.brand),
+        cwd: opts.cwd,
+        outDir: opts.out || undefined,
+        template: opts.template || undefined,
+        zip: !opts.noZip,
+        zipPath: opts.out && String(opts.out).endsWith('.zip') ? opts.out : undefined,
+      });
+      writeResult(write, opts, result);
       return 0;
     }
 
@@ -173,16 +277,20 @@ Interactive promote when TTY and required flags missing (no product defaults).
     }
 
     if (action === 'derive') {
-      const file = rest[0] || opts.source;
+      let file = rest[0] || opts.source;
+      if (file === '-' || opts.source === '-' || opts.dropDir) {
+        const resolved = await resolveSourceForSpec({ ...opts, source: file === '-' ? '-' : opts.source });
+        file = resolved.source;
+      }
       if (!file) {
-        write('derive requires a source path\n');
+        write('derive requires a source path (or --source - / --drop-dir)\n');
         return 2;
       }
       const derivatives = opts.derive.length
         ? opts.derive.map(parseDeriveFlag)
         : (getDerivativePreset(opts.preset || 'app-icon')?.derivatives || []);
       const outDir = path.join(opts.cwd, '.agentsam', 'brand', 'work', 'derive');
-      const result = deriveBrandAssets({
+      const result = await deriveBrandAssets({
         sourcePath: file,
         outDir,
         derivatives,
@@ -192,12 +300,61 @@ Interactive promote when TTY and required flags missing (no product defaults).
       return 0;
     }
 
+    if (action === 'pack') {
+      const resolved = await resolveSourceForSpec(opts);
+      if (!resolved.brand || !resolved.asset || (!resolved.source && !resolved.mark)) {
+        write('pack requires --brand, --asset, and --source (path, -, or --drop-dir)\n');
+        return 2;
+      }
+      const zipPath = resolved.out
+        || path.join(
+          resolved.cwd,
+          '.agentsam',
+          'brand',
+          'packs',
+          `${resolved.brand}-${resolved.asset}-${resolved.version}.zip`,
+        );
+      const result = await buildBrandPack({
+        brand: resolved.brand,
+        asset: resolved.asset,
+        version: resolved.version,
+        sourcePath: resolved.source,
+        markPath: resolved.mark || null,
+        preset: resolved.preset || 'app-icon',
+        zipPath,
+        altText: resolved.alt,
+        title: resolved.title,
+        description: resolved.description,
+        cwd: resolved.cwd,
+      });
+      writeResult(write, opts, result);
+      return 0;
+    }
+
+    if (action === 'preview') {
+      const from = opts.from || rest[0];
+      if (!from) {
+        write('preview requires --from <pack-dir|zip>\n');
+        return 2;
+      }
+      const result = await previewBrandPack({
+        from,
+        cwd: opts.cwd,
+        open: !opts.noOpen,
+        waitForEnter: !opts.json && process.stdin.isTTY,
+        write,
+      });
+      if (opts.json) writeResult(write, opts, result);
+      return 0;
+    }
+
     if (action === 'plan' || action === 'promote') {
       const wantsInteractive =
         opts.interactive === true
         || (opts.interactive !== false
           && !opts.manifest
           && !opts.source
+          && !opts.dropDir
           && !opts.brand
           && process.stdin.isTTY
           && process.stdout.isTTY
@@ -218,35 +375,36 @@ Interactive promote when TTY and required flags missing (no product defaults).
           deliveryAdapter: wizard.deliveryAdapter,
           derive: true,
         });
-        writeResult(write, opts, { ...result, inventory: wizard.inventory });
+        writeResult(write, opts, { ...result, inventory: wizard.inventory, pack: wizard.pack || null });
         return 0;
       }
 
-      if (!opts.manifest && (!opts.brand || !opts.asset || !opts.source)) {
-        write('Missing --brand, --asset, and --source (or --manifest). Use a TTY for interactive mode.\n');
+      const resolved = await resolveSourceForSpec(opts);
+      if (!resolved.manifest && (!resolved.brand || !resolved.asset || !resolved.source)) {
+        write('Missing --brand, --asset, and --source (or --manifest / --drop-dir). Use a TTY for interactive mode.\n');
         return 2;
       }
 
-      const spec = buildSpecFromArgs(opts);
+      const spec = buildSpecFromArgs(resolved);
       if (action === 'plan') {
         const plan = await planBrandAssetPromotion(spec, {
-          deliveryAdapter: opts.images ? new CloudflareImagesDeliveryAdapter() : null,
+          deliveryAdapter: resolved.images ? new CloudflareImagesDeliveryAdapter() : null,
         });
         writeResult(write, opts, plan);
         return 0;
       }
 
       const result = await promoteBrandAssets(spec, {
-        cwd: opts.cwd,
-        dryRun: opts.dryRun,
-        yes: opts.yes,
-        publish: opts.yes,
+        cwd: resolved.cwd,
+        dryRun: resolved.dryRun,
+        yes: resolved.yes,
+        publish: resolved.yes,
         derive: true,
-        storageAdapter: opts.bucket || opts.storageBinding
+        storageAdapter: resolved.bucket || resolved.storageBinding
           ? undefined
           : new MemoryStorageAdapter(),
-        deliveryAdapter: opts.images ? new CloudflareImagesDeliveryAdapter() : null,
-        force: opts.force,
+        deliveryAdapter: resolved.images ? new CloudflareImagesDeliveryAdapter() : null,
+        force: resolved.force,
       });
       writeResult(write, opts, result);
       return 0;
@@ -268,7 +426,6 @@ Interactive promote when TTY and required flags missing (no product defaults).
         dryRun: opts.dryRun,
         force: opts.force,
         storageAdapter: storage,
-        // Only attach Images adapter when explicitly requested
         deliveryAdapter: opts.images ? new CloudflareImagesDeliveryAdapter() : null,
       });
       writeResult(write, opts, result);

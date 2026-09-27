@@ -68,9 +68,82 @@ export {
   cloudflareImagesDeliveryBase,
   mayUploadToCloudflareImages,
   CLOUDFLARE_IMAGES_PLATFORM_INPUT_TYPES,
+  CANONICAL_PNG_DELIVERY_POLICY_TYPES,
   AGENTSAM_IMAGES_DELIVERY_POLICY_TYPES,
 } from './adapters/cloudflare-images.js';
 export { D1BrandRegistryAdapter } from './adapters/d1-registry.js';
+
+export {
+  FORMAT_CAPABILITIES,
+  FORMAT_FAMILIES,
+  formatCapabilities,
+  canResizeFormat,
+  familyCapabilities,
+  INGEST_EXTENSIONS,
+} from './core/capabilities.js';
+export {
+  sniffImageBuffer,
+  readStdinImage,
+  scanDropFolder,
+  waitForDrop,
+  resolveSourceInput,
+  expandHome,
+  isImagePath,
+} from './core/ingest.js';
+export {
+  buildBrandPack,
+  buildGalleryHtml,
+  writeZipArchive,
+} from './core/pack.js';
+export {
+  previewBrandPack,
+  resolvePackRoot,
+} from './core/preview.js';
+
+// BrandPack v2 — brand.pack.json is source of truth
+export {
+  BRAND_PACK_SCHEMA,
+  BRAND_PACK_SCHEMA_URL,
+  BRAND_PACK_FILENAME,
+  createEmptyBrandPack,
+  normalizeBrandPack,
+  normalizeAssetNode,
+  touchProvenance,
+  findAssetsByRole,
+} from './core/v2/schema.js';
+export {
+  ASSET_ROLES,
+  ROLE_CANVAS,
+  listAssetRoles,
+  getAssetRole,
+  classifyAssetRole,
+} from './core/v2/roles.js';
+export {
+  RESPONSIVE_WIDTH_LADDER,
+  planSemanticDerivatives,
+  materializedToSharpDerivatives,
+  pickResponsiveWidths,
+  defaultLogoUsage,
+} from './core/v2/derivatives-semantic.js';
+export {
+  ingestBrandSources,
+  extractArchive,
+  extractFromCode,
+  loadBrandPack,
+  saveBrandPack,
+  isArchivePath,
+  isIngestiblePath,
+} from './core/v2/ingest-graph.js';
+export {
+  buildBrandPackFromGraph,
+} from './core/v2/compile.js';
+export {
+  BRAND_TEMPLATES,
+  listBrandTemplates,
+  getBrandTemplate,
+  applyBrandTemplate,
+  createPackFromTemplate,
+} from './core/v2/templates.js';
 
 // Presets (format strategies — never product/customer identity)
 export {
@@ -97,6 +170,10 @@ export const BRAND_CAPABILITY_META = Object.freeze({
   'brand.plan': { id: 'brand.plan', deterministic: true, model_required: false, side_effects: 'none' },
   'brand.inspect': { id: 'brand.inspect', deterministic: true, model_required: false, side_effects: 'none' },
   'brand.derive': { id: 'brand.derive', deterministic: true, model_required: false, side_effects: 'filesystem' },
+  'brand.ingest': { id: 'brand.ingest', deterministic: true, model_required: false, side_effects: 'filesystem' },
+  'brand.build': { id: 'brand.build', deterministic: true, model_required: false, side_effects: 'filesystem' },
+  'brand.pack': { id: 'brand.pack', deterministic: true, model_required: false, side_effects: 'filesystem' },
+  'brand.preview': { id: 'brand.preview', deterministic: true, model_required: false, side_effects: 'localhost' },
   'brand.promote': { id: 'brand.promote', deterministic: true, model_required: false, side_effects: 'storage-optional' },
   'brand.publish': { id: 'brand.publish', deterministic: true, model_required: false, side_effects: 'storage-adapter' },
   'brand.verify': { id: 'brand.verify', deterministic: true, model_required: false, side_effects: 'none' },

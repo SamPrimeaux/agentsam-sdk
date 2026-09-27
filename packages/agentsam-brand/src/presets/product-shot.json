@@ -1,0 +1,11 @@
+{
+  "id": "product-shot",
+  "label": "Product / UI screenshot",
+  "description": "Preserve raw PNG; optional thumb + marketing widths",
+  "role": "product.raw",
+  "semantic": true,
+  "derivatives": [
+    { "id": "thumb-640", "role": "thumb", "format": "png", "width": 640, "height": 640 },
+    { "id": "card-960", "role": "card", "format": "webp", "width": 960, "height": 960, "quality": 90 }
+  ]
+}

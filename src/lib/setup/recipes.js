@@ -41,6 +41,9 @@ export const imageRasterTransformCapability = {
       notes: [
         'Sharp is the portable default (declared dependency of @inneranimalmedia/agentsam-sdk-brand).',
         'Optional enrichment: Homebrew imagemagick for ICNS / exotic formats.',
+        'Brand packs: agentsam brand promote → pack → preview → optional publish',
+        '  agentsam brand pack --brand acme --asset app-icon --source ./master.png --preset app-icon --out ./acme.zip',
+        '  agentsam brand preview --from ./acme.zip',
       ],
     },
     linux: {

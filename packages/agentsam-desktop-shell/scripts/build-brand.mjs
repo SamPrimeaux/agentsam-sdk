@@ -249,6 +249,7 @@ const config = {
     frontendDist: '../dist',
   },
   app: {
+    withGlobalTauri: true,
     windows: [
       {
         label: 'main',

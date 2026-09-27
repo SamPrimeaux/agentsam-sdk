@@ -4,20 +4,16 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import os from 'node:os';
 import { inspectBrandAsset, isExcludedIntermediate } from '../core/inspect.js';
 import { formatBytesKb } from '../core/derivatives.js';
 import { getDerivativePreset, listDerivativePresets } from '../presets/index.js';
+import { expandHome, scanDropFolder, waitForDrop, resolveSourceInput } from '../core/ingest.js';
+import { buildBrandPack } from '../core/pack.js';
+import { previewBrandPack } from '../core/preview.js';
 import { MemoryStorageAdapter } from '../adapters/memory.js';
 import { FilesystemStorageAdapter } from '../adapters/filesystem.js';
+import { CloudflareR2StorageAdapter } from '../adapters/cloudflare-r2.js';
 import { CloudflareImagesDeliveryAdapter } from '../adapters/cloudflare-images.js';
-
-function expandHome(p) {
-  const s = String(p || '').trim().replace(/^['"]|['"]$/g, '');
-  if (!s) return s;
-  if (s.startsWith('~/')) return path.join(os.homedir(), s.slice(2));
-  return path.resolve(s);
-}
 
 async function downloadUrl(url, destPath, fetchImpl = globalThis.fetch) {
   const res = await fetchImpl(url);
@@ -26,6 +22,12 @@ async function downloadUrl(url, destPath, fetchImpl = globalThis.fetch) {
   fs.mkdirSync(path.dirname(destPath), { recursive: true });
   fs.writeFileSync(destPath, buf);
   return destPath;
+}
+
+function r2Configured(env = process.env) {
+  return Boolean(String(env.CLOUDFLARE_ACCOUNT_ID || '').trim()
+    && (String(env.CLOUDFLARE_API_TOKEN || '').trim()
+      || String(env.R2_ACCESS_KEY_ID || '').trim()));
 }
 
 export async function runBrandPromoteWizard(options = {}) {
@@ -51,7 +53,8 @@ export async function runBrandPromoteWizard(options = {}) {
     options: [
       { value: 'path', label: 'Local file path', hint: 'drag-drop works' },
       { value: 'url', label: 'URL / link' },
-      { value: 'drop', label: 'Drop-in folder' },
+      { value: 'drop', label: 'Drop-in folder', hint: '.agentsam/brand/inbox' },
+      { value: 'stdin', label: 'Stdin bytes', hint: 'pipe image → agentsam brand promote --source -' },
     ],
   });
   if (cancelled(sourceKind)) return { cancelled: true, stage: 'source' };
@@ -98,21 +101,53 @@ export async function runBrandPromoteWizard(options = {}) {
     const inspected = inspectBrandAsset(dest);
     if (inspected.content_type === 'image/svg+xml') markPath = dest;
     else sourcePath = dest;
+  } else if (sourceKind === 'stdin') {
+    p.note?.(
+      'Stdin mode works best scripted:\n  cat master.png | agentsam brand promote --brand acme --asset logo --source - --preset logo',
+      'Stdin',
+    );
+    if (!process.stdin.isTTY) {
+      const ingested = await resolveSourceInput({ source: '-', workDir, cwd });
+      sourcePath = ingested.path;
+    } else {
+      p.cancel?.('No piped stdin — re-run with a pipe or pick another source.');
+      return { cancelled: true, stage: 'source' };
+    }
   } else {
+    const defaultDrop = path.join(cwd, '.agentsam', 'brand', 'inbox');
+    fs.mkdirSync(defaultDrop, { recursive: true });
     const answer = await p.text({
-      message: 'Folder to scan',
-      placeholder: './exports',
-      validate: (v) => (expandHome(v) && fs.existsSync(expandHome(v)) ? undefined : 'Folder not found'),
+      message: 'Drop folder',
+      initialValue: defaultDrop,
+      placeholder: '.agentsam/brand/inbox',
+      validate: (v) => {
+        const abs = expandHome(v);
+        if (!abs) return 'Folder required';
+        try {
+          fs.mkdirSync(abs, { recursive: true });
+          return undefined;
+        } catch {
+          return 'Cannot create folder';
+        }
+      },
     });
     if (cancelled(answer)) return { cancelled: true, stage: 'source' };
     const dir = expandHome(answer);
-    const files = fs.readdirSync(dir)
-      .map((n) => path.join(dir, n))
-      .filter((f) => fs.statSync(f).isFile() && !isExcludedIntermediate(f));
-    const pngs = files.filter((f) => f.toLowerCase().endsWith('.png')).sort((a, b) => fs.statSync(b).size - fs.statSync(a).size);
-    const svgs = files.filter((f) => f.toLowerCase().endsWith('.svg'));
-    sourcePath = pngs[0] || null;
-    markPath = svgs.find((f) => /\.min\.svg$/i.test(f)) || svgs[0] || null;
+    const wait = await p.confirm({
+      message: 'Wait for a file to appear (watch)?',
+      initialValue: false,
+    });
+    if (cancelled(wait)) return { cancelled: true, stage: 'source' };
+
+    let scan;
+    try {
+      scan = wait ? await waitForDrop({ dir, timeoutMs: 120_000 }) : scanDropFolder(dir);
+    } catch (err) {
+      p.cancel?.(err?.message || 'Drop folder empty');
+      return { cancelled: true, stage: 'source' };
+    }
+    sourcePath = scan.sourcePath || null;
+    markPath = scan.markPath || null;
     if (!sourcePath && !markPath) {
       p.cancel?.('No usable PNG/SVG found.');
       return { cancelled: true, stage: 'source' };
@@ -127,11 +162,16 @@ export async function runBrandPromoteWizard(options = {}) {
     );
   }
 
-  // 2. Identity
+  // 2. Identity — never seed agentsam / product paths
   const brand = await p.text({
-    message: 'Brand id',
+    message: 'Brand id (slug — never an account id)',
     placeholder: 'acme',
-    validate: (v) => (/^[a-z0-9][a-z0-9._-]*$/i.test(String(v || '').trim()) ? undefined : 'Invalid id'),
+    validate: (v) => {
+      const s = String(v || '').trim().toLowerCase();
+      if (!/^[a-z0-9][a-z0-9._-]*$/i.test(s)) return 'Invalid id';
+      if (s === 'agentsam' || s === 'agent-sam') return 'Use your customer brand slug — not a product name';
+      return undefined;
+    },
   });
   if (cancelled(brand)) return { cancelled: true, stage: 'identity' };
 
@@ -140,6 +180,8 @@ export async function runBrandPromoteWizard(options = {}) {
     options: [
       { value: 'app-icon', label: 'App icon' },
       { value: 'logo', label: 'Logo' },
+      { value: 'favicon', label: 'Favicon' },
+      { value: 'og-image', label: 'OG / social image' },
       { value: 'mark', label: 'Mark' },
       { value: 'photography', label: 'Photography' },
       { value: 'illustration', label: 'Illustration' },
@@ -171,8 +213,34 @@ export async function runBrandPromoteWizard(options = {}) {
     version: String(version).trim().toLowerCase(),
   };
 
+  // SEO (once per asset) — mirrored into pack manifest + CF Images metadata
+  const altText = await p.text({
+    message: 'Alt text (SEO / a11y)',
+    placeholder: `${identity.brand} ${identity.asset}`,
+  });
+  if (cancelled(altText)) return { cancelled: true, stage: 'seo' };
+  const seoTitle = await p.text({
+    message: 'Title (optional)',
+    placeholder: '',
+  });
+  if (cancelled(seoTitle)) return { cancelled: true, stage: 'seo' };
+  const seoDescription = await p.text({
+    message: 'Description (optional)',
+    placeholder: '',
+  });
+  if (cancelled(seoDescription)) return { cancelled: true, stage: 'seo' };
+
+  const seo = {
+    alt_text: String(altText || '').trim() || null,
+    title: String(seoTitle || '').trim() || null,
+    description: String(seoDescription || '').trim() || null,
+  };
+
   // 3. Derivatives — declarative presets only
   const presets = listDerivativePresets();
+  const defaultPreset = ['app-icon', 'logo', 'favicon', 'og-image'].includes(identity.asset)
+    ? identity.asset
+    : 'none';
   const variantChoice = await p.select({
     message: 'Derivative strategy',
     options: [
@@ -184,22 +252,34 @@ export async function runBrandPromoteWizard(options = {}) {
       })),
       { value: 'custom', label: 'Custom (enter --derive style later via manifest)' },
     ],
+    initialValue: defaultPreset === 'none' ? 'none' : defaultPreset,
   });
   if (cancelled(variantChoice)) return { cancelled: true, stage: 'derivatives' };
 
   let derivatives = [];
+  let presetId = null;
   if (variantChoice !== 'none' && variantChoice !== 'custom') {
+    presetId = variantChoice;
     derivatives = getDerivativePreset(variantChoice)?.derivatives || [];
   }
 
   // 4. Destinations — storage vs delivery are separate layers
+  const storageOptions = [
+    { value: 'local', label: 'Local filesystem', hint: '.agentsam/brand-store' },
+    { value: 'memory', label: 'In-memory (plan / test)' },
+    { value: 'plan_only', label: 'Plan + receipt only', hint: 'no storage write' },
+  ];
+  if (r2Configured()) {
+    storageOptions.unshift({
+      value: 'r2',
+      label: 'Cloudflare R2',
+      hint: 'wrangler r2 object put (slug-keyed)',
+    });
+  }
+
   const destChoice = await p.select({
     message: 'Storage destination',
-    options: [
-      { value: 'local', label: 'Local filesystem', hint: '.agentsam/brand-store' },
-      { value: 'memory', label: 'In-memory (plan / test)' },
-      { value: 'plan_only', label: 'Plan + receipt only', hint: 'no storage write' },
-    ],
+    options: storageOptions,
   });
   if (cancelled(destChoice)) return { cancelled: true, stage: 'destinations' };
 
@@ -214,6 +294,18 @@ export async function runBrandPromoteWizard(options = {}) {
   } else if (destChoice === 'memory') {
     storageAdapter = new MemoryStorageAdapter();
     storageDest = { provider: 'memory' };
+  } else if (destChoice === 'r2') {
+    const bucket = await p.text({
+      message: 'R2 bucket name',
+      placeholder: 'agentsam-assets',
+      validate: (v) => (String(v || '').trim() ? undefined : 'Bucket required'),
+    });
+    if (cancelled(bucket)) return { cancelled: true, stage: 'destinations' };
+    storageAdapter = new CloudflareR2StorageAdapter({
+      bucket: String(bucket).trim(),
+      cwd,
+    });
+    storageDest = { provider: 'cloudflare-r2', bucket: String(bucket).trim() };
   } else {
     storageDest = { provider: 'plan_only' };
   }
@@ -235,6 +327,7 @@ export async function runBrandPromoteWizard(options = {}) {
         `  Delivery base  ${verify.config?.delivery_base || '—'}`,
         `  Authentication ● API token (${verify.config?.token_env || 'unknown'})`,
         `  Permission     ${verify.config?.permission || caps.required_permission}`,
+        `  Policy         ${caps.policy || 'canonical_png'}`,
         verify.authorized
           ? '  Credential    verified against Cloudflare ✓'
           : `  Credential    ${verify.error || 'not verified'}`,
@@ -254,6 +347,7 @@ export async function runBrandPromoteWizard(options = {}) {
           provider: 'cloudflare-images',
           account_id: verify.config.account_id,
           account_hash: verify.config.account_hash || null,
+          metadata: { ...seo },
         };
       }
     } else {
@@ -296,6 +390,7 @@ export async function runBrandPromoteWizard(options = {}) {
       `Derivatives: ${derivatives.length}`,
       `Storage: ${storageDest.provider}`,
       `Delivery: ${deliveryDest ? deliveryDest.provider : '— not requested'}`,
+      `SEO alt: ${seo.alt_text || '—'}`,
     ].join('\n'),
     'Layout',
   );
@@ -331,14 +426,71 @@ export async function runBrandPromoteWizard(options = {}) {
     'Inventory',
   );
 
-  // 7. Approve
+  // 6b. Pack + preview (local zip + gallery — before cloud publish)
+  let packResult = null;
+  const wantPack = await p.confirm({
+    message: 'Write zip brand pack?',
+    initialValue: true,
+  });
+  if (cancelled(wantPack)) return { cancelled: true, stage: 'pack' };
+
+  if (wantPack) {
+    const zipPath = path.join(
+      cwd,
+      '.agentsam',
+      'brand',
+      'packs',
+      `${identity.brand}-${identity.asset}-${identity.version}.zip`,
+    );
+    packResult = await buildBrandPack({
+      brand: identity.brand,
+      asset: identity.asset,
+      version: identity.version,
+      sourcePath,
+      markPath,
+      preset: presetId || 'app-icon',
+      derivatives,
+      zipPath,
+      altText: seo.alt_text,
+      title: seo.title,
+      description: seo.description,
+      cwd,
+    });
+    p.note?.(
+      [`Pack: ${packResult.root}`, packResult.zip ? `Zip: ${packResult.zip}` : null].filter(Boolean).join('\n'),
+      'Brand pack',
+    );
+
+    const wantPreview = await p.confirm({
+      message: 'Open localhost preview gallery?',
+      initialValue: true,
+    });
+    if (cancelled(wantPreview)) return { cancelled: true, stage: 'preview' };
+    if (wantPreview) {
+      await previewBrandPack({
+        from: packResult.root,
+        cwd,
+        open: true,
+        waitForEnter: true,
+        write: (s) => process.stdout.write(s),
+      });
+    }
+  }
+
+  // 7. Approve cloud promote
   const publish = await p.confirm({
-    message: planOnly ? 'Write local receipt only?' : 'Proceed with promote?',
+    message: planOnly ? 'Write local receipt only?' : 'Proceed with promote / publish?',
     initialValue: false,
   });
   if (cancelled(publish) || !publish) {
-    p.cancel?.('Nothing published.');
-    return { cancelled: true, stage: 'approve', identity, inventory };
+    p.cancel?.('Nothing published to storage/delivery.');
+    return {
+      cancelled: true,
+      stage: 'approve',
+      identity,
+      inventory,
+      pack: packResult,
+    };
   }
 
   p.outro?.('Running promote…');
@@ -353,6 +505,8 @@ export async function runBrandPromoteWizard(options = {}) {
     inventory,
     planOnly,
     publish: !planOnly,
+    pack: packResult,
+    seo,
     storageAdapter,
     deliveryAdapter: useDelivery ? deliveryAdapter : null,
     spec: {
@@ -361,6 +515,7 @@ export async function runBrandPromoteWizard(options = {}) {
       version: identity.version,
       inputs,
       derivatives,
+      seo,
       destinations: {
         storage: storageDest,
         delivery: deliveryDest,

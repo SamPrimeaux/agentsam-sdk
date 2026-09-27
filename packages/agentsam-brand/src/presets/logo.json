@@ -1,0 +1,12 @@
+{
+  "id": "logo",
+  "label": "Logo (semantic)",
+  "description": "Raster fallbacks 256/512/1024 — SVG master preferred; delivery variants are derivable not all materialized",
+  "role": "logo.primary",
+  "semantic": true,
+  "derivatives": [
+    { "id": "raster-256", "role": "raster-fallback", "format": "png", "width": 256, "height": 256 },
+    { "id": "raster-512", "role": "raster-fallback", "format": "png", "width": 512, "height": 512 },
+    { "id": "raster-1024", "role": "raster-fallback", "format": "png", "width": 1024, "height": 1024 }
+  ]
+}

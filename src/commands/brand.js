@@ -34,6 +34,12 @@ const ASSET_ACTIONS = new Set([
   'publish',
   'verify',
   'presets',
+  'pack',
+  'preview',
+  'ingest',
+  'build',
+  'templates',
+  'roles',
 ]);
 
 function parseArgs(argv = []) {
@@ -97,21 +103,24 @@ export async function runBrand(argv = []) {
   const action = sub || 'summary';
 
   if (action === 'help' || action === '--help') {
-    console.log(`usage: agentsam brand [summary|scan|resolve|inspect|plan|apply|assets|promote|publish|verify|derive|presets]
+    console.log(`usage: agentsam brand [summary|scan|resolve|inspect|plan|apply|assets|promote|ingest|build|pack|preview|publish|verify|derive|presets|templates|roles]
 
 Brand intelligence:
   summary|scan|resolve|inspect|plan|apply
 
-Brand assets (portable SDK — same as agentsam-brand):
-  agentsam brand promote                 interactive (TTY) or --manifest
-  agentsam brand plan --manifest ./x.json --json
-  agentsam brand promote --brand acme --asset logo --version v1 \\
-    --source ./master.png --derive png:1024 --derive webp:1024:q92 --dry-run --json
-  agentsam brand publish --brand acme --asset logo --version v1
-  agentsam brand verify  --brand acme --asset logo --version v1
+Brand compiler (v2 — brand.pack.json is source of truth):
+  agentsam brand ingest ./exports --brand acme --template product-saas
+  agentsam brand build --from .agentsam/brand/packs/acme
+  agentsam brand preview --from .agentsam/brand/dist/acme
+  agentsam brand templates
+  agentsam brand roles
+
+Legacy single-asset (still valid):
+  agentsam brand pack --brand acme --asset app-icon --source ./master.png --preset app-icon --out ./acme.zip
+  agentsam brand promote --brand acme --asset logo --source - --preset logo
   agentsam brand presets
 
-No product-specific defaults. AgentSam icons are ordinary manifests under apps/local-studio/brand/.
+ZIP / studio / production publish are compiled representations of brand.pack.json.
 `);
     return;
   }

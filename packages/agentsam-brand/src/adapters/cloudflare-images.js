@@ -25,11 +25,14 @@ export const CLOUDFLARE_IMAGES_PLATFORM_INPUT_TYPES = Object.freeze([
 ]);
 
 /**
- * AgentSam publishing policy (not a Cloudflare limitation):
+ * Canonical PNG publishing policy (not a Cloudflare limitation):
  * prefer a canonical PNG as the Images delivery source so CF can negotiate
  * WebP/AVIF output. Explicit WebP/AVIF/SVG archives stay in storage (R2).
  */
-export const AGENTSAM_IMAGES_DELIVERY_POLICY_TYPES = Object.freeze(['image/png']);
+export const CANONICAL_PNG_DELIVERY_POLICY_TYPES = Object.freeze(['image/png']);
+
+/** @deprecated Use CANONICAL_PNG_DELIVERY_POLICY_TYPES */
+export const AGENTSAM_IMAGES_DELIVERY_POLICY_TYPES = CANONICAL_PNG_DELIVERY_POLICY_TYPES;
 
 export function resolveCloudflareImagesCredentials(env = process.env) {
   const accountId = String(env.CLOUDFLARE_ACCOUNT_ID || '').trim();
@@ -96,10 +99,10 @@ export class CloudflareImagesDeliveryAdapter {
     apiToken,
     env = process.env,
     /**
-     * AgentSam policy default: PNG-only delivery source.
+     * Default: canonical PNG-only delivery source.
      * Pass CLOUDFLARE_IMAGES_PLATFORM_INPUT_TYPES to allow full CF input set.
      */
-    acceptedContentTypes = [...AGENTSAM_IMAGES_DELIVERY_POLICY_TYPES],
+    acceptedContentTypes = [...CANONICAL_PNG_DELIVERY_POLICY_TYPES],
     fetchImpl = globalThis.fetch,
   } = {}) {
     const resolved = resolveCloudflareImagesCredentials(env);
@@ -111,7 +114,7 @@ export class CloudflareImagesDeliveryAdapter {
       ? 'constructor'
       : resolved.tokenEnv;
     this.acceptedContentTypes = new Set(acceptedContentTypes);
-    this.policy = 'agentsam.canonical_png';
+    this.policy = 'canonical_png';
     this.fetchImpl = fetchImpl;
   }
 
@@ -141,7 +144,9 @@ export class CloudflareImagesDeliveryAdapter {
       required_permission: 'Account → Images → Write',
       api_path: '/accounts/{account_id}/images/v1',
       // Policy vs platform — do not conflate
-      agentsam_delivery_policy_types: [...AGENTSAM_IMAGES_DELIVERY_POLICY_TYPES],
+      delivery_policy_types: [...CANONICAL_PNG_DELIVERY_POLICY_TYPES],
+      /** @deprecated alias */
+      agentsam_delivery_policy_types: [...CANONICAL_PNG_DELIVERY_POLICY_TYPES],
       cloudflare_platform_input_types: [...CLOUDFLARE_IMAGES_PLATFORM_INPUT_TYPES],
       accepted_content_types: [...this.acceptedContentTypes],
       policy: this.policy,
@@ -246,9 +251,9 @@ export class CloudflareImagesDeliveryAdapter {
         ok: true,
         provider: this.provider,
         status: 'skipped',
-        reason: 'agentsam_delivery_policy',
+        reason: 'canonical_png_delivery_policy',
         content_type: mime,
-        note: 'AgentSam prefers canonical PNG for Images; other formats remain storage-only. Cloudflare itself accepts broader inputs.',
+        note: 'Canonical PNG policy: prefer PNG as Images delivery source; other formats remain storage-only. Cloudflare itself accepts broader inputs.',
       };
     }
 
@@ -308,16 +313,43 @@ export class CloudflareImagesDeliveryAdapter {
     }
 
     const imageId = body?.result?.id ? String(body.result.id).trim() : '';
+    const errCode = body?.errors?.[0]?.code;
+    const errMsg = body?.errors?.[0]?.message || '';
+    // Idempotent: CF Images 5409 Resource already exists — treat as skip, not fatal
+    if (errCode === 5409 || /already exists/i.test(errMsg)) {
+      const existingId = String(metadata?.id || metadata?.image_id || fileName || '').trim();
+      return {
+        ok: true,
+        provider: this.provider,
+        status: 'exists',
+        reason: 'resource_already_exists',
+        http_status: res.status,
+        error_code: 5409,
+        provider_receipt: existingId
+          ? {
+            account_id: this.accountId,
+            account_hash: this.accountHash || null,
+            delivery_base: this.deliveryBase,
+            image_id: existingId,
+            provider_asset_id: existingId,
+            variants: [],
+            note: 'Image id already present in Cloudflare Images; upload skipped',
+          }
+          : null,
+        note: 'Cloudflare Images id already exists (5409). Pass --force with a new --version or delete the remote id.',
+      };
+    }
     if (!res.ok || body?.success === false || !imageId) {
       return {
         ok: false,
         provider: this.provider,
         status: 'failed',
         error:
-          body?.errors?.[0]?.message
+          errMsg
           || (!imageId && res.ok ? 'cloudflare_images_missing_result_id' : `cf_images_upload_failed:${res.status}`),
         reason: !imageId && res.ok ? 'missing_result_id' : 'api_error',
         http_status: res.status,
+        error_code: errCode ?? null,
       };
     }
 
@@ -406,11 +438,12 @@ export function isCloudflareImagesPublished(delivery) {
 }
 
 /**
- * AgentSam delivery-source policy (canonical PNG).
+ * Canonical PNG delivery-source policy.
  * Not a Cloudflare API limitation — CF accepts broader inputs.
+ * policy: 'canonical_png' | 'agentsam' (alias) | 'platform'
  */
-export function mayUploadToCloudflareImages(contentType, { policy = 'agentsam' } = {}) {
+export function mayUploadToCloudflareImages(contentType, { policy = 'canonical_png' } = {}) {
   const mime = String(contentType || '').toLowerCase();
   if (policy === 'platform') return CLOUDFLARE_IMAGES_PLATFORM_INPUT_TYPES.includes(mime);
-  return AGENTSAM_IMAGES_DELIVERY_POLICY_TYPES.includes(mime);
+  return CANONICAL_PNG_DELIVERY_POLICY_TYPES.includes(mime);
 }

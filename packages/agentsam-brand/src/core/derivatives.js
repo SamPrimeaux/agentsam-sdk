@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { canResizeFormat } from './capabilities.js';
 import { BrandAssetError, assert } from './errors.js';
 import { inspectBrandAsset } from './inspect.js';
 
@@ -119,6 +120,18 @@ export async function deriveBrandAssets({
         status: 'blocked',
         capability_id: 'image.native.macos-icon',
         acceptable_backends: ['imagemagick', 'platform-adapter'],
+      });
+      continue;
+    }
+
+    if ((width || height) && !canResizeFormat(format)) {
+      artifacts.push({
+        id,
+        format,
+        role: d.role || 'raster',
+        status: 'skipped',
+        reason: 'format_no_resize_ladder',
+        note: `${format} does not support resize ladders (see FORMAT_CAPABILITIES)`,
       });
       continue;
     }

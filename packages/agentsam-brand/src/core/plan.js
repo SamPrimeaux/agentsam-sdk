@@ -52,6 +52,11 @@ export function normalizePromotionSpec(input = {}) {
     inputs,
     derivatives,
     destinations,
+    seo: input.seo || {
+      alt_text: input.alt_text || input.alt || null,
+      title: input.title || null,
+      description: input.description || null,
+    },
   };
 }
 

@@ -1,0 +1,8 @@
+{
+  "id": "model",
+  "label": "3D model package",
+  "description": "GLB master preserved; poster/preview are optional materialized derivatives",
+  "role": "model.product",
+  "semantic": true,
+  "derivatives": []
+}

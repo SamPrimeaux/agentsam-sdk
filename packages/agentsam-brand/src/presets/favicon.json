@@ -1,0 +1,17 @@
+{
+  "id": "favicon",
+  "label": "Favicon + PWA platform set",
+  "description": "SVG/ICO + 16/32/48, apple-touch 180, PWA 192/512 + maskable (safe padding)",
+  "role": "favicon",
+  "semantic": true,
+  "derivatives": [
+    { "id": "favicon-16", "role": "platform", "format": "png", "width": 16, "height": 16 },
+    { "id": "favicon-32", "role": "platform", "format": "png", "width": 32, "height": 32 },
+    { "id": "favicon-48", "role": "platform", "format": "png", "width": 48, "height": 48 },
+    { "id": "apple-touch-icon", "role": "platform", "format": "png", "width": 180, "height": 180 },
+    { "id": "pwa-192", "role": "platform", "format": "png", "width": 192, "height": 192 },
+    { "id": "pwa-512", "role": "platform", "format": "png", "width": 512, "height": 512 },
+    { "id": "pwa-maskable-192", "role": "maskable", "format": "png", "width": 192, "height": 192 },
+    { "id": "pwa-maskable-512", "role": "maskable", "format": "png", "width": 512, "height": 512 }
+  ]
+}

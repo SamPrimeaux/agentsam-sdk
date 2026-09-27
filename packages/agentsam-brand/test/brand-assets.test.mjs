@@ -47,15 +47,17 @@ test('SVG gate rejects scripts and data rasters; accepts clean mark', () => {
   assert.equal(validateSvgMark('<svg><image href="data:image/png;base64,xx"/></svg>').ok, false);
 });
 
-test('intermediates and AgentSam CF Images delivery policy', () => {
+test('intermediates and canonical PNG CF Images delivery policy', () => {
   assert.equal(isExcludedIntermediate('/tmp/Mark-trace-92.pbm'), true);
   assert.equal(isExcludedIntermediate('/tmp/Mark-92.min.svg'), false);
-  // AgentSam policy: canonical PNG only — not a Cloudflare limitation
+  // Canonical PNG policy — not a Cloudflare limitation
   assert.equal(mayUploadToCloudflareImages('image/png'), true);
   assert.equal(mayUploadToCloudflareImages('image/avif'), false);
   assert.equal(mayUploadToCloudflareImages('image/svg+xml'), false);
   assert.equal(mayUploadToCloudflareImages('image/avif', { policy: 'platform' }), true);
   assert.equal(mayUploadToCloudflareImages('image/webp', { policy: 'platform' }), true);
+  assert.equal(mayUploadToCloudflareImages('image/png', { policy: 'canonical_png' }), true);
+  assert.equal(mayUploadToCloudflareImages('image/png', { policy: 'agentsam' }), true);
 });
 
 test('credential resolution prefers CLOUDFLARE_IMAGES_API_TOKEN; token is opaque', () => {
