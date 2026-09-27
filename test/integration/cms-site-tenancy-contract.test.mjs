@@ -124,8 +124,9 @@ test('Local Studio Worker dispatches /api/cms/* with strict tenant isolation', (
   assert.match(workerContent, /handleCmsWorkerRequest/);
 
   const cmsService = read('apps', 'local-studio', 'backend', 'worker', 'cms-service.js');
-  // Default fallback must be agentsam-sdk, never inneranimalmedia
-  assert.match(cmsService, /'agentsam-sdk'/);
+  // Worker requests must name their tenant explicitly; the UI may choose its own default.
+  assert.match(cmsService, /site_slug_required/);
+  assert.doesNotMatch(cmsService, /['"]agentsam-sdk['"]/);
   assert.match(cmsService, /createCmsDbClient\(env\.DB,\s*siteSlug\)/);
 });
 
