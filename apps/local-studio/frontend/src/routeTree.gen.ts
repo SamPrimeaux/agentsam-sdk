@@ -25,6 +25,7 @@ import { Route as appsShipRouteImport } from './routes/(apps)/ship'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiCloudflareRouteImport } from './routes/api/cloudflare'
 import { Route as ApiGithubRouteImport } from './routes/api/github'
+import { Route as ApiContentLocalBridgeRouteImport } from './routes/api/content.local.bridge'
 import { Route as appsSettingsIndexRouteImport } from './routes/(apps)/settings/index'
 import { Route as appsSettingsUnitRouteImport } from './routes/(apps)/settings/$unit'
 import { Route as appsSettingsIntegrationsRouteImport } from './routes/(apps)/settings/integrations'
@@ -117,6 +118,11 @@ const ApiGithubRoute = ApiGithubRouteImport.update({
   path: '/api/github',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiContentLocalBridgeRoute = ApiContentLocalBridgeRouteImport.update({
+  id: '/api/content/local/bridge',
+  path: '/api/content/local/bridge',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const appsSettingsIndexRoute = appsSettingsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -191,6 +197,7 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
   '/settings/$unit': typeof appsSettingsUnitRoute
   '/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/settings/keys': typeof appsSettingsKeysRoute
@@ -219,6 +226,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
   '/settings/$unit': typeof appsSettingsUnitRoute
   '/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/settings/keys': typeof appsSettingsKeysRoute
@@ -249,6 +257,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
   '/(apps)/settings/$unit': typeof appsSettingsUnitRoute
   '/(apps)/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/(apps)/settings/keys': typeof appsSettingsKeysRoute
@@ -280,6 +289,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/api/content/local/bridge'
     | '/settings/$unit'
     | '/settings/integrations'
     | '/settings/keys'
@@ -308,6 +318,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/api/content/local/bridge'
     | '/settings/$unit'
     | '/settings/integrations'
     | '/settings/keys'
@@ -337,6 +348,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/api/content/local/bridge'
     | '/(apps)/settings/$unit'
     | '/(apps)/settings/integrations'
     | '/(apps)/settings/keys'
@@ -367,6 +379,7 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute
   ApiCloudflareRoute: typeof ApiCloudflareRoute
   ApiGithubRoute: typeof ApiGithubRoute
+  ApiContentLocalBridgeRoute: typeof ApiContentLocalBridgeRoute
   appsTrailsTrailIdRoute: typeof appsTrailsTrailIdRoute
   ApiLlmInventoryRoute: typeof ApiLlmInventoryRoute
   appsTrailsIndexRoute: typeof appsTrailsIndexRoute
@@ -486,6 +499,13 @@ declare module '@tanstack/react-router' {
       path: '/api/github'
       fullPath: '/api/github'
       preLoaderRoute: typeof ApiGithubRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/content/local/bridge': {
+      id: '/api/content/local/bridge'
+      path: '/api/content/local/bridge'
+      fullPath: '/api/content/local/bridge'
+      preLoaderRoute: typeof ApiContentLocalBridgeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(apps)/settings/': {
@@ -617,6 +637,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   ApiCloudflareRoute: ApiCloudflareRoute,
   ApiGithubRoute: ApiGithubRoute,
+  ApiContentLocalBridgeRoute: ApiContentLocalBridgeRoute,
   appsTrailsTrailIdRoute: appsTrailsTrailIdRoute,
   ApiLlmInventoryRoute: ApiLlmInventoryRoute,
   appsTrailsIndexRoute: appsTrailsIndexRoute,
