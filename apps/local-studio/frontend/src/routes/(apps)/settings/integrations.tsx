@@ -53,9 +53,9 @@ function IntegrationsSettingsPage() {
             const raw = String(c.status || "").toLowerCase();
             const connected = raw === "connected" || raw === "active" || c.connected === true;
             return {
-              id: c.id || c.connection?.connectionId || c.provider,
-              provider: c.provider || c.id,
-              label: c.label || c.display_name || c.provider || "Connection",
+              id: String(c.id || c.connection?.connectionId || c.provider || "unknown"),
+              provider: String(c.provider || c.id || "unknown"),
+              label: String(c.label || c.display_name || c.provider || "Connection"),
               status: connected ? "connected" : raw || "not_configured",
               granted_scopes:
                 c.granted_scopes ||
