@@ -36,9 +36,12 @@ function IntegrationsSettingsPage() {
     (async () => {
       try {
         const res = await fetch("/api/connections", { credentials: "same-origin" });
-        const data = await res.json().catch(() => ({}));
+        const data = (await res.json().catch(() => ({}))) as {
+          connections?: ApiConnectionRecord[];
+          items?: ApiConnectionRecord[];
+        };
         if (!res.ok || cancelled) return;
-        const list = Array.isArray(data.connections)
+        const list: ApiConnectionRecord[] = Array.isArray(data.connections)
           ? data.connections
           : Array.isArray(data.items)
             ? data.items
