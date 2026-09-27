@@ -959,7 +959,7 @@ const SHELL_ACCENTS = [
 
 function AppearancePreferences() {
   const [theme, setTheme] = useState<"dark" | "light" | "system">("dark");
-  const [accent, setAccent] = useState(SHELL_ACCENTS[1].id);
+  const [accent, setAccent] = useState<string>(SHELL_ACCENTS[1].id);
 
   useEffect(() => {
     try {
