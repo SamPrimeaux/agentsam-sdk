@@ -10,6 +10,17 @@ function slug(value) {
   return normalized;
 }
 
+// Deterministic seed helpers for generated migrations. SQL literals only --
+// no JS-generated timestamps (SQL unixepoch() is authoritative), no free
+// text passed through unescaped.
+function sqlString(value) {
+  return `'${String(value).replaceAll("'", "''")}'`;
+}
+function sqlStringOrNull(value) {
+  const v = value == null ? '' : String(value).trim();
+  return v ? sqlString(v) : 'NULL';
+}
+
 function buildManifest(config) {
   return {
     schema_version: 'agentsam.mcp.v1',
@@ -223,10 +234,21 @@ CREATE TABLE IF NOT EXISTS company (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_company_slug ON company(slug);
+
+INSERT OR IGNORE INTO company (
+  id, slug, name, website_url, created_at, updated_at
+) VALUES (
+  ${sqlString(`co_${config.companySlug}`)},
+  ${sqlString(config.companySlug)},
+  ${sqlString(config.displayName)},
+  ${sqlStringOrNull(config.homepageUrl)},
+  unixepoch(),
+  unixepoch()
+);
 `;
 }
 
-function consentCatalogMigration() {
+function consentCatalogMigration(config) {
   return `-- OAuth resource/scope semantics. Issuer branding remains in company.
 CREATE TABLE IF NOT EXISTS identity_oauth_resources (
   id TEXT PRIMARY KEY NOT NULL,
@@ -264,6 +286,37 @@ CREATE TABLE IF NOT EXISTS identity_oauth_resource_scopes (
   FOREIGN KEY (resource_id) REFERENCES identity_oauth_resources(id) ON DELETE CASCADE,
   FOREIGN KEY (scope) REFERENCES identity_oauth_scopes(scope) ON DELETE CASCADE
 );
+
+INSERT OR IGNORE INTO identity_oauth_resources (
+  id, audience, display_name, homepage_url, created_at, updated_at
+) VALUES (
+  ${sqlString(`res_${config.projectName}`)},
+  ${sqlString(config.audience)},
+  ${sqlString(config.displayName)},
+  ${sqlStringOrNull(config.homepageUrl)},
+  unixepoch(),
+  unixepoch()
+);
+${(config.scopes || []).map((s) => `
+INSERT OR IGNORE INTO identity_oauth_scopes (
+  scope, label, description, category, sensitivity, created_at, updated_at
+) VALUES (
+  ${sqlString(s.scope)},
+  ${sqlString(s.label)},
+  ${sqlString(s.description)},
+  ${sqlString(s.category)},
+  ${sqlString(s.sensitivity)},
+  unixepoch(),
+  unixepoch()
+);
+
+INSERT OR IGNORE INTO identity_oauth_resource_scopes (
+  resource_id, scope
+) VALUES (
+  ${sqlString(`res_${config.projectName}`)},
+  ${sqlString(s.scope)}
+);
+`).join('')}
 `;
 }
 
@@ -325,7 +378,7 @@ export function mcpServerTemplates(input = {}) {
     'src/index.js': workerSource(manifest),
     'src/oauth.js': oauthSource(),
     'migrations/001_identity_company.sql': companyMigration(config),
-    'migrations/002_oauth_consent_catalog.sql': consentCatalogMigration(),
+    'migrations/002_oauth_consent_catalog.sql': consentCatalogMigration(config),
 
     'README.md': `# ${config.displayName}
 
