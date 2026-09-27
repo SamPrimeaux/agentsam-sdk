@@ -15,8 +15,13 @@ export {
   CLOUDFLARE_CAPABILITIES,
   CLOUDFLARE_CAPABILITY_SCOPES,
   CLOUDFLARE_FEATURE_PACKS,
+  CLOUDFLARE_PERMISSION_CATEGORY_LABELS,
+  CLOUDFLARE_PERMISSION_PRODUCTS,
   listCloudflareCapabilities,
   listCloudflareFeaturePacks,
+  listCloudflarePermissionProducts,
+  listCloudflarePermissionOptionsByCategory,
+  assertPermissionCatalogCoversAllScopes,
   getCloudflareCapability,
   getCloudflareFeaturePack,
   scopesForCapabilities,
@@ -63,7 +68,7 @@ export * as snippets from './families/snippets.js';
 import { scopesForCapabilities as _scopesForCapabilities, scopesForFeaturePacks as _scopesForFeaturePacks } from './capabilities.js';
 import { CLOUDFLARE_ALL_SCOPES as _CLOUDFLARE_ALL_SCOPES, isKnownCloudflareScope } from './scope-catalog.js';
 
-// Full scope catalog kept as REFERENCE ONLY — never request wholesale at mint.
+// Full Local Studio scope catalog — offerable via packs/products; pack `all` opts in wholesale.
 export const CLOUDFLARE_ALL_SCOPES = _CLOUDFLARE_ALL_SCOPES;
 export { isKnownCloudflareScope };
 
@@ -71,13 +76,16 @@ export { isKnownCloudflareScope };
  * Scopes requested at OAuth mint / re-authorize.
  * Default: baseline only. Pass `capabilities` and/or `packs` to upgrade deliberately.
  * Host apps supply their own default capability list — this package does not.
- * Pass `{ all: true }` only for catalog dumps — never for live authorize URLs.
+ * Pass `{ all: true }` or pack `all` when the user explicitly wants every offerable scope.
  * @param {{ capabilities?: string[], packs?: string[], all?: boolean }} [opts]
  */
 export function requestedCloudflareScopes(opts = {}) {
   if (opts && opts.all === true) return [...CLOUDFLARE_ALL_SCOPES];
   const capabilities = Array.isArray(opts?.capabilities) ? opts.capabilities.filter(Boolean) : [];
   const packs = Array.isArray(opts?.packs) ? opts.packs.filter(Boolean) : [];
+  if (packs.map((p) => String(p).toLowerCase()).includes('all')) {
+    return [...CLOUDFLARE_ALL_SCOPES];
+  }
   if (packs.length) {
     return _scopesForFeaturePacks(packs, capabilities);
   }

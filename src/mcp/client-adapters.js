@@ -1,14 +1,46 @@
 /**
  * MCP *client* adapters — hosts that consume MCP servers (Cursor, Claude, …).
  *
- * Cloudflare MCP portals are servers, not clients. See cloudflare-bundles.js.
+ * Cloudflare MCP portal hostnames are offerable *server* connections
+ * (see SEED_OFFERABLE_MCP_SERVER_CONNECTIONS / cloudflare-bundles.js) — not
+ * OAuth client registry rows.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { getMcpDir, homeDirectory } from './authority.js';
+import { listCloudflareMcpBundles } from './cloudflare-bundles.js';
 
 export const DEFAULT_CLIENT_REGISTRY_URL = 'https://mcp.inneranimalmedia.com/api/mcp/clients';
 export const CLIENT_REGISTRY_CACHE_SCHEMA = 'agentsam.mcp.client-registry.v1';
+
+/**
+ * Offerable MCP server connections (including every CF portal hostname).
+ * These are what `agentsam mcp add` / Studio connection pickers should list.
+ */
+export const SEED_OFFERABLE_MCP_SERVER_CONNECTIONS = Object.freeze([
+  {
+    connection_key: 'inneranimalmedia',
+    display_name: 'Inner Animal Media MCP',
+    url: 'https://mcp.inneranimalmedia.com/mcp',
+    kind: 'mcp_server',
+    provider: 'inneranimalmedia',
+  },
+  ...listCloudflareMcpBundles().map((b) => ({
+    connection_key: b.name,
+    display_name: b.display_name,
+    url: b.url,
+    kind: 'mcp_server',
+    provider: 'cloudflare',
+    host: new URL(b.url).hostname,
+    feature_packs: b.feature_packs,
+    portal_manage_scopes: b.portal_manage_scopes,
+    notes: b.description,
+  })),
+]);
+
+export function listOfferableMcpServerConnections() {
+  return [...SEED_OFFERABLE_MCP_SERVER_CONNECTIONS];
+}
 
 /**
  * Seed for OAuth/external *client* registry only (who connects TO an MCP server).

@@ -208,6 +208,7 @@ test('agentsam mcp CLI handles add, list, status, doctor, and remove end-to-end'
   const helpText = logs.join('\n');
   assert.ok(helpText.includes('chatgpt'), 'Help text displays ChatGPT as a recognized client');
   assert.ok(helpText.includes('cloudflare-api'), 'Help text displays cloudflare-api preset');
+  assert.ok(helpText.includes('bindings.mcp.cloudflare.com') || helpText.includes('cloudflare-bindings'), 'CF portal hostnames remain offerable');
   logs.length = 0;
 
   // Add inneranimalmedia preset for chatgpt client

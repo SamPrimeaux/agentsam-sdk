@@ -1,11 +1,23 @@
 /**
  * Cloudflare capability manifests — permission-scoped, eligibility-aware.
  *
- * Law: do NOT request the full ~182-scope catalog at mint time.
- * Request baseline + upgrade when a capability needs more access.
+ * Offerable surface = full Local Studio scope catalog (~315), organized into
+ * permission products + feature packs (see permission-options.js).
  *
- * CLOUDFLARE_ALL_SCOPES remains a reference catalog only.
+ * Default mint: baseline (+ host-selected packs). Explicit pack `all` or
+ * `{ all: true }` requests the full catalog when the user chooses it.
  */
+
+import { CLOUDFLARE_ALL_SCOPES } from './scope-catalog.js';
+import {
+  CLOUDFLARE_PERMISSION_CATEGORY_LABELS,
+  CLOUDFLARE_PERMISSION_PRODUCTS,
+  listCloudflarePermissionProducts,
+  listCloudflarePermissionOptionsByCategory,
+  permissionProductsAsCapabilities,
+  permissionCategoryFeaturePacks,
+  assertPermissionCatalogCoversAllScopes,
+} from './permission-options.js';
 
 /** Minimum scopes for a useful connected Cloudflare account. */
 export const CLOUDFLARE_BASELINE_SCOPES = Object.freeze([
@@ -29,7 +41,7 @@ export const CLOUDFLARE_BASELINE_SCOPES = Object.freeze([
  */
 
 /** @type {Record<string, CloudflareCapability>} */
-export const CLOUDFLARE_CAPABILITIES = Object.freeze({
+const CLOUDFLARE_CAPABILITIES_CURATED = {
   'cloudflare.workers': {
     id: 'cloudflare.workers',
     domain: 'compute',
@@ -296,13 +308,19 @@ export const CLOUDFLARE_CAPABILITIES = Object.freeze({
     permissionLabel: 'Account → Workers KV Storage',
     availability: 'generally_available',
   },
+};
+
+/** Curated product capabilities + every Local Studio scope as offerable `cloudflare.perm.*`. */
+export const CLOUDFLARE_CAPABILITIES = Object.freeze({
+  ...CLOUDFLARE_CAPABILITIES_CURATED,
+  ...permissionProductsAsCapabilities(),
 });
 
 /**
- * Feature packs — authorize a product need without reading 300+ CF scopes.
- * Each pack expands to CLOUDFLARE_CAPABILITIES ids → oauthScopes via scopesForCapabilities.
+ * Feature packs — curated shortcuts + Studio category packs covering all ~315 scopes.
+ * Pack `all` = explicit full-catalog opt-in.
  */
-export const CLOUDFLARE_FEATURE_PACKS = Object.freeze({
+const CLOUDFLARE_FEATURE_PACKS_CURATED = {
   baseline: {
     id: 'baseline',
     label: 'Account baseline',
@@ -336,27 +354,15 @@ export const CLOUDFLARE_FEATURE_PACKS = Object.freeze({
       'cloudflare.browser_rendering',
     ],
   },
-  ai: {
-    id: 'ai',
-    label: 'AI & Search',
-    description: 'Workers AI, AI Search',
-    capabilities: ['cloudflare.workers_ai', 'cloudflare.ai_search'],
-  },
   web: {
     id: 'web',
     label: 'Web / zones',
     description: 'Pages, Tunnels, DNS-adjacent zone ops',
     capabilities: ['cloudflare.pages', 'cloudflare.tunnels', 'cloudflare.tag_gateway'],
   },
-  media: {
-    id: 'media',
-    label: 'Media',
-    description: 'Images + Stream',
-    capabilities: ['cloudflare.images', 'cloudflare.stream'],
-  },
   security: {
     id: 'security',
-    label: 'Security',
+    label: 'Security (curated)',
     description: 'Secrets Store, URL Scanner, Token Validation',
     capabilities: [
       'cloudflare.secrets_store',
@@ -386,78 +392,40 @@ export const CLOUDFLARE_FEATURE_PACKS = Object.freeze({
       'cloudflare.queues',
     ],
   },
-  dns: {
-    id: 'dns',
-    label: 'DNS & Zones',
-    description: 'DNS + zone settings (granular — not full account)',
-    capabilities: [],
-    oauthScopes: [
-      'dns.read',
-      'dns.write',
-      'zone.read',
-      'zone-settings.read',
-      'zone-settings.write',
-      'zone-dns-settings.read',
-      'account-dns-settings.read',
-    ],
-  },
-  analytics: {
-    id: 'analytics',
-    label: 'Analytics & Logs',
-    description: 'Account analytics, logs, radar',
-    capabilities: [],
-    oauthScopes: [
-      'account-analytics.read',
-      'analytics.read',
-      'account-logs.read',
-      'logs.read',
-      'radar.read',
-      'workers-observability.read',
-    ],
-  },
-  zero_trust: {
-    id: 'zero_trust',
-    label: 'Cloudflare One / Zero Trust',
-    description: 'Access + Teams + Tunnel connectors (request only when needed)',
-    capabilities: ['cloudflare.tunnels'],
-    oauthScopes: [
-      'access.read',
-      'access.write',
-      'teams.read',
-      'teams.write',
-      'teams-connectors.read',
-      'teams-connector-cloudflared.read',
-      'argotunnel.read',
-      'argotunnel.write',
-    ],
-  },
-  app_security: {
-    id: 'app_security',
-    label: 'App Security',
-    description: 'WAF, bot management, URL scanner',
-    capabilities: ['cloudflare.url_scanner'],
-    oauthScopes: [
-      'zone-waf.read',
-      'zone-waf.write',
-      'bot-management.read',
-      'account-waf.read',
-    ],
-  },
+};
+
+export const CLOUDFLARE_FEATURE_PACKS = Object.freeze({
+  ...CLOUDFLARE_FEATURE_PACKS_CURATED,
+  ...permissionCategoryFeaturePacks(),
 });
+
+export {
+  CLOUDFLARE_PERMISSION_CATEGORY_LABELS,
+  CLOUDFLARE_PERMISSION_PRODUCTS,
+  listCloudflarePermissionProducts,
+  listCloudflarePermissionOptionsByCategory,
+  assertPermissionCatalogCoversAllScopes,
+};
 
 export function listCloudflareFeaturePacks() {
   return Object.values(CLOUDFLARE_FEATURE_PACKS);
 }
 
 export function getCloudflareFeaturePack(id) {
-  return CLOUDFLARE_FEATURE_PACKS[String(id || '').trim().toLowerCase()] || null;
+  const key = String(id || '').trim().toLowerCase();
+  if (key === 'dns') return CLOUDFLARE_FEATURE_PACKS.dns_zones || null;
+  return CLOUDFLARE_FEATURE_PACKS[key] || null;
 }
 
 /** Expand pack ids and/or capability ids into OAuth scopes (baseline included). */
 export function scopesForFeaturePacks(packIds = [], extraCapabilityIds = []) {
+  const keys = (packIds || []).map((p) => String(p || '').trim().toLowerCase()).filter(Boolean);
+  if (keys.includes('all')) {
+    return [...CLOUDFLARE_ALL_SCOPES];
+  }
   const caps = new Set(extraCapabilityIds || []);
   const directScopes = new Set();
-  for (const raw of packIds || []) {
+  for (const raw of keys) {
     const pack = getCloudflareFeaturePack(raw);
     if (!pack) continue;
     for (const id of pack.capabilities || []) caps.add(id);

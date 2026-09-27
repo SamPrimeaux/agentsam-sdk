@@ -19,7 +19,11 @@
     "capabilities",
     "hash",
     "inspect",
-    "enroll"
+    "enroll",
+    "terminal.exec.local",
+    "mcp.client",
+    "cloudflare.oauth",
+    "cloudflare.mcp_portals"
   ],
   "protocol": "agentsam.runtime.v1",
   "runtime_adapter": "agentsamd",
@@ -28,6 +32,43 @@
     "kind": "daemon",
     "distinct_from": "agentsam-go-worker",
     "role": "local-machine-runtime"
+  },
+  "cloudflare": {
+    "oauth_default_packs": ["agentsam"],
+    "oauth_offerable_packs": [
+      "baseline",
+      "agentsam",
+      "data",
+      "compute",
+      "web",
+      "security",
+      "developer_platform",
+      "ai",
+      "dns_zones",
+      "app_security",
+      "rules",
+      "zero_trust",
+      "analytics",
+      "network",
+      "media",
+      "email",
+      "cache",
+      "account",
+      "other",
+      "all"
+    ],
+    "scope_catalog": "packages/connectors/cloudflare/src/scope-catalog.js",
+    "permission_options": "packages/connectors/cloudflare/src/permission-options.js",
+    "mcp_portals": {
+      "manage_scopes": ["mcp-portals.read", "mcp-portals.write"],
+      "bundles": "src/mcp/cloudflare-bundles.js",
+      "connections": "src/mcp/client-adapters.js#SEED_OFFERABLE_MCP_SERVER_CONNECTIONS"
+    }
+  },
+  "mcp": {
+    "authority": "~/.agentsam/mcp/",
+    "clients": ["cursor", "claude", "chatgpt", "agentsam"],
+    "offerable_server_connections": true
   },
   "distribution": {
     "install": "agentsam runtime install",

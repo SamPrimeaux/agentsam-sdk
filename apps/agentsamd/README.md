@@ -35,6 +35,17 @@ Default listen: `127.0.0.1:18765` (override with `--listen` or `AGENTSAMD_LISTEN
 
 Product OAuth client: **`IAM_CLIENT_ID=iam_agentsam_sdk_web`** (same as Local Studio Production Worker). See `docs/plans/LOCAL-STUDIO-GRADUATION-2026-09-26.md`.
 
+## Cloudflare + MCP
+
+`agentsam.package.json` declares offerable CF OAuth packs (including pack `all` for the full ~315 Local Studio scopes) and MCP portal connections (`mcp-portals.read` / `mcp-portals.write` via the `agentsam` pack).
+
+```bash
+agentsam mcp list --bundles
+agentsam cloudflare permissions authorize --packs agentsam
+# explicit full catalog (user opt-in):
+agentsam cloudflare permissions authorize --packs all
+```
+
 ## Enroll (next)
 
 Studio/IAM mint via `agentsam terminal enroll`; daemon consume of enrollment tokens is the next cut after health/runtime MVP.

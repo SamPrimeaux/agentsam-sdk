@@ -22,6 +22,8 @@ export {
   DEFAULT_CLIENT_REGISTRY_URL,
   CLIENT_REGISTRY_CACHE_SCHEMA,
   SEED_EXTERNAL_CLIENT_REGISTRY,
+  SEED_OFFERABLE_MCP_SERVER_CONNECTIONS,
+  listOfferableMcpServerConnections,
   fetchExternalClientRegistry,
   listRegisteredClients,
   isClientRegistered,

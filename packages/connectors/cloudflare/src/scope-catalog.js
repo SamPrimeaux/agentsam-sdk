@@ -1,10 +1,12 @@
 /**
- * Cloudflare OAuth scope catalog (reference only).
+ * Cloudflare OAuth scope catalog — every Local Studio picker scope (~315).
  *
- * Law: never request this wholesale at mint time.
- * Authorize baseline + feature packs / capabilities as needed.
+ * These ARE offerable permissions. Organize via feature packs / permission
+ * products (`permission-options.js`). Default mint stays least-privilege
+ * (baseline + selected packs). Users may explicitly opt into the full set with
+ * pack \`all\` or \`requestedCloudflareScopes({ all: true })\`.
  *
- * Source: AgentSam Local Studio Cloudflare OAuth scope picker (~315 scopes).
+ * Source: AgentSam Local Studio Cloudflare OAuth scope picker.
  */
 
 export const CLOUDFLARE_ALL_SCOPES = Object.freeze([

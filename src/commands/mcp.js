@@ -7,6 +7,7 @@ import {
   listKnownServers,
   listMcpServers,
   listMcpTools,
+  listOfferableMcpServerConnections,
   listRegisteredClients,
   pingMcpServer,
   readMcpServer,
@@ -65,12 +66,11 @@ export function parseMcpArgs(argv = []) {
 
 function renderHelp(options = {}) {
   const clients = listRegisteredClients(options);
-  const servers = listKnownServers(options);
   const cfBundles = listCloudflareMcpBundles();
+  const offerable = listOfferableMcpServerConnections();
 
-  const presetRows = servers.map((s) => {
-    const key = (s.name || s.server_key || '').padEnd(28);
-    const desc = s.description || s.display_name || '';
+  const presetRows = offerable.map((s) => {
+    const key = (s.connection_key || '').padEnd(28);
     return `    ${key} ${s.url}`;
   }).join('\n');
 
@@ -97,11 +97,12 @@ function renderHelp(options = {}) {
     agentsam mcp scopes <cloudflare-bundle> [--json]
 
   Notes:
-    • Client adapters = IDE hosts (cursor, claude, chatgpt, agentsam) — not CF portals.
-    • Cloudflare MCP portals are server bundles; OAuth stays pack-scoped (never all ~315 scopes).
-    • CF-connected AgentSam users need mcp-portals.read/write to manage portals (agentsam pack).
+    • Client adapters = IDE hosts (cursor, claude, chatgpt, agentsam).
+    • Offerable MCP server connections include every CF portal hostname (see below).
+    • CF OAuth: pick packs (agentsam, developer_platform, zero_trust, …) or pack \`all\` (~315 scopes).
+    • mcp-portals.read/write come with the agentsam pack for CF-connected portal management.
 
-  Known server catalog:
+  Offerable MCP server connections:
 ${presetRows}
 
   Cloudflare MCP bundles (granular packs):

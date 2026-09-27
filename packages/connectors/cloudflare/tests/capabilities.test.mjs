@@ -24,7 +24,24 @@ describe('cloudflare capability-scoped auth', () => {
     assert.ok(scopes.length >= CLOUDFLARE_BASELINE_SCOPES.length);
     assert.deepEqual(scopes.sort(), [...CLOUDFLARE_BASELINE_SCOPES].sort());
     assert.ok(!scopes.includes('url-scanner.write'));
-    assert.equal(CLOUDFLARE_ALL_SCOPES.length > 100, true);
+    assert.equal(CLOUDFLARE_ALL_SCOPES.length, 315);
+  });
+
+  it('offers every Local Studio scope via permission products + pack all', async () => {
+    const {
+      assertPermissionCatalogCoversAllScopes,
+      listCloudflarePermissionProducts,
+      scopesForFeaturePacks,
+      requestedCloudflareScopes: req,
+    } = await import('../src/index.js');
+    const cover = assertPermissionCatalogCoversAllScopes();
+    assert.equal(cover.ok, true);
+    assert.equal(cover.scopes, 315);
+    assert.ok(listCloudflarePermissionProducts().length >= 150);
+    const allPack = scopesForFeaturePacks(['all']);
+    assert.equal(allPack.length, 315);
+    assert.equal(req({ packs: ['all'] }).length, 315);
+    assert.equal(req({ all: true }).length, 315);
   });
 
   it('upgrades scopes only for requested capabilities', () => {
