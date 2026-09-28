@@ -57,6 +57,7 @@ import { runRuntime } from './commands/runtime.js';
 import { applyPresetSelection, runAdd, runCapabilities, runDev, runInspect } from './commands/product.js';
 import { listPresets, resolvePreset } from './presets/index.js';
 import {
+  getInstallableProductChoice,
   guidanceForRunTarget,
   listInitProjectTypeOptions,
   parseProjectTypeChoice,
@@ -323,6 +324,29 @@ async function initInteractive(partial = {}) {
     await runScaffold(parsed.id);
     outro(`Scaffold ${parsed.id} ready`);
     return;
+  }
+
+  if (parsed.kind === 'product') {
+    const product = getInstallableProductChoice(parsed.id);
+    if (!product?.action) throw new Error(`installable product action unavailable: ${parsed.id}`);
+    if (product.action.kind === 'app') {
+      const targetDir = path.resolve(process.cwd(), projectName);
+      await runApp(['scaffold', product.action.id, targetDir]);
+      outro(`Product ${parsed.id} scaffolded at ${projectName}`);
+      return;
+    }
+    if (product.action.kind === 'scaffold') {
+      const { runScaffold } = await import('./lib/scaffold/index.js');
+      await runScaffold(product.action.id);
+      outro(`Product ${parsed.id} scaffold ready`);
+      return;
+    }
+    if (product.action.kind === 'rust-template') {
+      await runRust(['new', projectName, '--template', product.action.template || 'shared-core']);
+      outro(`Product ${parsed.id} scaffolded at ${projectName}`);
+      return;
+    }
+    throw new Error(`unsupported installable product action: ${product.action.kind}`);
   }
 
   if (parsed.kind === 'app') {

@@ -1,8 +1,14 @@
 /**
  * Init / create pickers — real presets, scaffolds, and apps (not aspirational lanes).
  */
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { listPresets } from '../presets/index.js';
 import { listAppManifests } from '../commands/app.js';
+
+const SDK_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const INSTALLABLE_PRODUCT_CACHE = path.join('registry', 'cms-rust-machine-20260928', 'installable-products.json');
 
 export const SCAFFOLD_WIZARDS = Object.freeze([
   {
@@ -33,6 +39,11 @@ export const RUN_TARGET_OPTIONS = Object.freeze([
     hint: 'OAuth via Local Studio / agentsam connections — Workers, D1, R2',
   },
   {
+    value: 'tauri',
+    label: 'Local Studio desktop',
+    hint: 'Bundled Tauri app + local SQLite; offline-capable product runtime',
+  },
+  {
     value: 'gcp',
     label: 'Google Cloud',
     hint: 'agentsam google-cloud OAuth / gcloud — VMs, Cloud Run, Workstations',
@@ -51,6 +62,26 @@ function appReady(manifest = {}) {
     || runtime.local_preview === 'ready'
     || runtime.cloudflare === 'ready'
   );
+}
+
+export function listInstallableProductCache(root = SDK_ROOT) {
+  const file = path.join(root || SDK_ROOT, INSTALLABLE_PRODUCT_CACHE);
+  try {
+    const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+    return Array.isArray(parsed?.products) ? parsed.products : [];
+  } catch {
+    return [];
+  }
+}
+
+function actionChoice(action = {}) {
+  if (action.kind === 'app' && action.id) return `app:${action.id}`;
+  if (action.kind === 'scaffold' && action.id) return `scaffold:${action.id}`;
+  return null;
+}
+
+export function getInstallableProductChoice(id, root = SDK_ROOT) {
+  return listInstallableProductCache(root).find((row) => row.slug === id) || null;
 }
 
 export function listInitProjectTypeOptions(root) {
@@ -82,7 +113,26 @@ export function listInitProjectTypeOptions(root) {
       };
     });
 
-  return [...presets, ...SCAFFOLD_WIZARDS, ...apps];
+  const represented = new Set([
+    ...SCAFFOLD_WIZARDS.map((row) => row.value),
+    ...apps.map((row) => row.value),
+  ]);
+  const products = listInstallableProductCache(root || SDK_ROOT)
+    .filter((row) => row?.slug && row?.action)
+    .filter((row) => {
+      const action = actionChoice(row.action);
+      return !action || !represented.has(action);
+    })
+    .map((row) => ({
+      value: `product:${row.slug}`,
+      kind: 'product',
+      productId: row.slug,
+      label: row.label || row.slug,
+      hint: row.hint || `${row.kind || 'product'} · ${row.status || 'unknown'}`,
+      action: row.action,
+    }));
+
+  return [...presets, ...SCAFFOLD_WIZARDS, ...products, ...apps];
 }
 
 export function parseProjectTypeChoice(value) {
@@ -95,6 +145,9 @@ export function parseProjectTypeChoice(value) {
   }
   if (raw.startsWith('app:')) {
     return { kind: 'app', id: raw.slice('app:'.length) };
+  }
+  if (raw.startsWith('product:')) {
+    return { kind: 'product', id: raw.slice('product:'.length) };
   }
   // Back-compat for --lane fullstack|cms|…
   if (raw) return { kind: 'preset', id: raw };
@@ -109,6 +162,13 @@ export function guidanceForRunTarget(runTarget, { projectName } = {}) {
       'agentsam connections setup          # Cloudflare OAuth callback + Local Studio connector',
       'agentsam cloudflare                 # Workers / bindings capabilities',
       `cd ${name} && npm run deploy        # Graduate this project to a Worker when ready`,
+    ];
+  }
+  if (runTarget === 'tauri') {
+    return [
+      'agentsam app doctor local-studio     # Verify the bundled desktop product contract',
+      `cd ${name} && npm install           # Install the scaffolded app workspace`,
+      'Open AgentSam Local Studio.app       # Desktop authority uses local SQLite when the adapter supports it',
     ];
   }
   if (runTarget === 'gcp') {

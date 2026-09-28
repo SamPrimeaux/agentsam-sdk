@@ -16,8 +16,8 @@ import pc from 'picocolors';
 
 const SCAFFOLDS = {
   cms: {
-    label: 'CMS Site',
-    description: 'Cloudflare Worker + D1 + R2 with nav, pages, and reusable templates',
+    label: 'CMS',
+    description: 'Choose a Cloudflare CMS site or the reusable CMS Editor app',
     run: runCmsWizard,
   },
   'worker-api': {

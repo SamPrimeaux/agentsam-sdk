@@ -15,16 +15,21 @@ test('init project types include presets, CF scaffolds, and ready apps', () => {
   assert.ok(values.includes('preset:cms'));
   assert.ok(values.includes('scaffold:cms'));
   assert.ok(values.includes('scaffold:worker-api'));
+  assert.ok(values.includes('product:agentsam-rapid-rust'));
+  assert.ok(values.includes('app:client-cms-editor'));
   assert.ok(values.some((value) => value.startsWith('app:')));
   assert.equal(parseProjectTypeChoice('scaffold:cms').kind, 'scaffold');
   assert.equal(parseProjectTypeChoice('app:local-studio').id, 'local-studio');
+  assert.equal(parseProjectTypeChoice('product:agentsam-rapid-rust').kind, 'product');
 });
 
 test('run targets are operational paths, not aspirational later flags', () => {
   const values = RUN_TARGET_OPTIONS.map((row) => row.value);
-  assert.deepEqual(values, ['local', 'cloudflare', 'gcp', 'docker']);
+  assert.deepEqual(values, ['local', 'cloudflare', 'tauri', 'gcp', 'docker']);
   assert.match(RUN_TARGET_OPTIONS.find((row) => row.value === 'cloudflare').hint, /OAuth/);
+  assert.match(RUN_TARGET_OPTIONS.find((row) => row.value === 'tauri').hint, /SQLite/);
   assert.match(guidanceForRunTarget('cloudflare').join('\n'), /connections setup/);
+  assert.match(guidanceForRunTarget('tauri', { projectName: 'demo' }).join('\n'), /Local Studio/);
   assert.match(guidanceForRunTarget('gcp').join('\n'), /google-cloud/);
   assert.match(guidanceForRunTarget('docker').join('\n'), /dockerize/);
 });

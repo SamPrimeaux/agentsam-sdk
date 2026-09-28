@@ -47,8 +47,11 @@
   },
   "bin": "bin/agentsam-cms.mjs",
   "install": {
-    "command": "npm install @inneranimalmedia/client-cms-editor",
+    "command": "agentsam app scaffold client-cms-editor",
     "selector": "client-cms-editor",
-    "paths": ["/install/cms", "/install/client-cms-editor"]
+    "paths": [
+      "/install/cms",
+      "/install/client-cms-editor"
+    ]
   }
 }

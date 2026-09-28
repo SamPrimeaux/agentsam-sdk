@@ -9,6 +9,7 @@
  *   - wrangler.toml ready to deploy
  */
 
+import path from 'node:path';
 import {
   text,
   select,
@@ -23,8 +24,100 @@ import pc from 'picocolors';
 import { writeFileTree } from '../writer.js';
 import { cmsTemplates } from '../templates/cms/index.js';
 import { resolveCloudflareAccountId } from '../resolve-cloudflare-account.js';
+import { runApp } from '../../../commands/app.js';
+
+async function runCmsEditorWizard() {
+  note(
+    'Scaffold the reusable client-cms-editor app. SQLite and D1 are authorities; localStorage is cache-only.',
+    'CMS Editor app',
+  );
+
+  const projectName = await text({
+    message: 'Editor project name?',
+    placeholder: 'my-cms-editor',
+    validate(val) {
+      if (!val || val.trim().length === 0) return 'Required.';
+      if (!/^[a-z0-9-]+$/.test(val.trim())) return 'Lowercase letters, numbers, and hyphens only.';
+    },
+  });
+  if (isCancel(projectName)) { cancel('Cancelled.'); process.exit(0); }
+
+  const persistence = await select({
+    message: 'Primary persistence?',
+    options: [
+      {
+        value: 'sqlite',
+        label: 'SQLite — local authority',
+        hint: 'Desktop/offline authority; Local Studio/Tauri adapter target',
+      },
+      {
+        value: 'd1',
+        label: 'Cloudflare D1 — cloud authority',
+        hint: 'Existing /api/cms/* + D1 host path',
+      },
+      {
+        value: 'localStorage',
+        label: 'Browser localStorage — cache only',
+        hint: 'Draft/offline cache; never authoritative publish state',
+      },
+    ],
+  });
+  if (isCancel(persistence)) { cancel('Cancelled.'); process.exit(0); }
+
+  const targetDir = path.resolve(process.cwd(), projectName.trim());
+  const s = spinner();
+  s.start('Scaffolding CMS Editor...');
+  await runApp([
+    'scaffold',
+    'client-cms-editor',
+    targetDir,
+    '--persistence',
+    persistence,
+  ]);
+  s.stop(pc.green(`CMS Editor scaffolded at ${targetDir}`));
+
+  const next = persistence === 'sqlite'
+    ? [
+        `cd ${projectName}`,
+        'npm install',
+        'npm run dev',
+        'Open in Local Studio.app when the Tauri CMS adapter is enabled.',
+      ]
+    : persistence === 'd1'
+      ? [
+          `cd ${projectName}`,
+          'npm install',
+          'agentsam connections setup',
+          'npm run dev',
+        ]
+      : [
+          `cd ${projectName}`,
+          'npm install',
+          'npm run dev',
+          'Configure SQLite or D1 before publish; localStorage remains cache-only.',
+        ];
+  note(next.join('\n'), 'Next steps');
+}
 
 export async function runCmsWizard() {
+  const mode = await select({
+    message: 'What kind of CMS do you want to scaffold?',
+    options: [
+      {
+        value: 'site',
+        label: 'CMS Site',
+        hint: 'Cloudflare Worker + D1 + R2 with nav, pages, and reusable templates',
+      },
+      {
+        value: 'editor',
+        label: 'CMS Editor app',
+        hint: 'Full reusable client-cms-editor source with explicit persistence',
+      },
+    ],
+  });
+  if (isCancel(mode)) { cancel('Cancelled.'); process.exit(0); }
+  if (mode === 'editor') return runCmsEditorWizard();
+
   note('A Cloudflare Worker + D1 + R2 CMS site with reusable page templates.', 'CMS Site');
 
   // ── Step 1: Project name ──────────────────────────────────────────────────

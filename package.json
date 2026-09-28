@@ -159,7 +159,10 @@
     "packages/theme-shinshu-site",
     "packages/theme-scenes",
     "packages/agentsam-rapid-rust",
-    "scripts/build_rapid_rust_cli.py"
+    "scripts/build_rapid_rust_cli.py",
+    "registry/cms-rust-machine-20260928",
+    "apps/client-cms-editor",
+    "packages/agentsam-workbench"
   ],
   "workspaces": [
     "packages/agentsam-shell-kit",

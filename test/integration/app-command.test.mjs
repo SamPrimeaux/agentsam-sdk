@@ -21,14 +21,11 @@ test('agentsam app validate passes for all product apps', async () => {
   assert.ok(report.apps.length >= 4);
 });
 
-test('CMS app validation surfaces npm distribution blockers without failing structural validation', async () => {
+test('CMS app scaffold source is included in the SDK distribution contract', async () => {
   const { validateApps } = await import('../../src/commands/app.js');
   const report = validateApps({ appId: 'client-cms-editor' });
   assert.equal(report.ok, true, report.errors.join('\n'));
-  assert.ok(report.warnings.some((warning) => warning.includes('distribution: package.json private=true')));
-  assert.ok(report.warnings.some((warning) => warning.includes('does not expose manifest CLI bin')));
-  assert.ok(report.warnings.some((warning) => warning.includes('no explicit files allowlist')));
-  assert.ok(report.warnings.some((warning) => warning.includes('repo-local file: dependencies escape the app package')));
+  assert.deepEqual(report.warnings, []);
 });
 
 test('CAD and CMS workers load APP identity from agentsam.app.json', () => {
