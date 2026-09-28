@@ -32,6 +32,6 @@ describe('inventory path categories', () => {
     assert.equal(classifyTopLevel('node_modules'), 'dependencies');
     assert.equal(classifyTopLevel('dist'), 'dependencies');
     assert.equal(classifyTopLevel('generated'), 'generated');
-    assert.equal(classifyTopLevel('.agentsam'), 'config');
+    assert.equal(classifyTopLevel('.agentsam'), 'operational');
   });
 });
