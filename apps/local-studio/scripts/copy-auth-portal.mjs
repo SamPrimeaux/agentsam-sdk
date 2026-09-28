@@ -9,7 +9,9 @@ import path from "node:path";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(here, "..");
 const portalRoot = path.resolve(appRoot, "../../packages/identity/src/frontend/auth-portal");
-const outPublic = path.resolve(appRoot, ".output/public");
+const outArg = process.argv.find((arg) => arg.startsWith("--out="))?.slice("--out=".length);
+const desktopMode = process.argv.includes("--desktop");
+const outPublic = path.resolve(appRoot, outArg || ".output/public");
 
 if (!existsSync(outPublic)) {
   console.error(`[copy-auth-portal] build output missing at ${outPublic} — run vite build first.`);
@@ -30,16 +32,24 @@ for (const [src, dest] of pages) {
   console.log(`[copy-auth-portal] ${src} -> .output/public/${dest}`);
 }
 
-cpSync(
-  path.join(portalRoot, "shared/company-branding.js"),
-  path.join(outPublic, "shared/company-branding.js"),
-);
-console.log("[copy-auth-portal] shared/company-branding.js -> .output/public/shared/company-branding.js");
+for (const shared of ["company-branding.js", "desktop-identity-bridge.js"]) {
+  cpSync(
+    path.join(portalRoot, "shared", shared),
+    path.join(outPublic, "shared", shared),
+  );
+  console.log(`[copy-auth-portal] shared/${shared} -> ${path.relative(appRoot, outPublic)}/shared/${shared}`);
+}
+
+const markSource = path.resolve(appRoot, "../../packages/agentsam-desktop-shell/icons/local-studio/AgentSam-Mark.svg");
+if (existsSync(markSource)) {
+  cpSync(markSource, path.join(outPublic, "shared/agentsam-mark.svg"));
+  console.log(`[copy-auth-portal] AgentSam mark -> ${path.relative(appRoot, outPublic)}/shared/agentsam-mark.svg`);
+}
 
 // Copy full public site tree into Worker assets (home/help/learn/global)
 const siteSourceDir = path.join(appRoot, "frontend/public/site");
 const siteDestDir = path.join(outPublic, "site");
-if (existsSync(siteSourceDir)) {
+if (!desktopMode && existsSync(siteSourceDir)) {
   mkdirSync(siteDestDir, { recursive: true });
   cpSync(siteSourceDir, siteDestDir, { recursive: true });
   console.log("[copy-auth-portal] frontend/public/site -> .output/public/site");

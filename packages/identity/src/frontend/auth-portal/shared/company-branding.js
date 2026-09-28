@@ -1,6 +1,6 @@
 /**
  * Auth portal branding from D1 `company` via GET /api/company.
- * Static HTML keeps IAM defaults as fallback when API is unavailable.
+ * Static HTML keeps portable AgentSam defaults as fallback when host branding is unavailable.
  */
 (function () {
   var SUBTITLE_PREFIX = {

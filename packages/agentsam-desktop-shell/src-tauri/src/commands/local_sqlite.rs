@@ -94,14 +94,29 @@ pub async fn local_sqlite_bridge(app: AppHandle, request_json: String) -> Result
   }
   let body = serde_json::to_string(&payload).map_err(|e| e.to_string())?;
 
-  let node = [
-    PathBuf::from("/opt/homebrew/bin/node"),
-    PathBuf::from("/usr/local/bin/node"),
-    PathBuf::from("/usr/bin/node"),
-  ]
-  .into_iter()
-  .find(|path| path.is_file())
-  .unwrap_or_else(|| PathBuf::from("node"));
+  let node = if let Ok(path) = std::env::var("AGENTSAM_NODE_BINARY") {
+    let candidate = PathBuf::from(path);
+    if candidate.is_file() { candidate } else { PathBuf::from("node") }
+  } else if let Ok(exe) = std::env::current_exe() {
+    let candidate = exe
+      .parent()
+      .map(|dir| dir.join(if cfg!(windows) { "node.exe" } else { "node" }))
+      .unwrap_or_else(|| PathBuf::from("node"));
+    if candidate.is_file() {
+      candidate
+    } else {
+      [
+        PathBuf::from("/opt/homebrew/bin/node"),
+        PathBuf::from("/usr/local/bin/node"),
+        PathBuf::from("/usr/bin/node"),
+      ]
+      .into_iter()
+      .find(|path| path.is_file())
+      .unwrap_or_else(|| PathBuf::from("node"))
+    }
+  } else {
+    PathBuf::from("node")
+  };
 
   let mut command = Command::new(node);
   command

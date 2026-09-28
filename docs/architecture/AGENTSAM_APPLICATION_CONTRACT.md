@@ -47,7 +47,7 @@ services/
 | Namespace | Example | Role |
 |-----------|---------|------|
 | `APP.id` | `cad-creator` | Canonical product identity — immutable kebab-case |
-| `HOST.id` / origin | `local-studio-public` → `https://agentsam.inneranimalmedia.com` | Where this APP is served; OAuth clients bind here |
+| `HOST.id` / origin | host-install projection | Where this APP instance is served; belongs to installation state, not portable APP identity |
 | npm package | `@inneranimalmedia/agentsam-cad-creator` | Distribute/install code |
 | CLI command | `agentsam-cad-creator` / `agentsam cad` | Launch surface |
 | Cloudflare Worker | `agentsam-cad-creator` | Host deployment name |
@@ -56,7 +56,9 @@ services/
 | service | `cad-render-service` | Infrastructure |
 | `PRODUCT.id` | `cms` | Platform product registry |
 | `MOUNT.id` | `cms-studio` | Host mount slot |
-| PLATFORM issuer | `IAM_OAUTH_ISSUER` → `https://inneranimalmedia.com` | Account API / aak_* authority — **not** an APP host |
+| remote identity/account issuer | optional host/provider adapter configuration | External account authority for an installation — **not** intrinsic APP identity |
+
+Portable APP law: an installable APP must not hardcode a donor/company hostname, remote issuer, tenant, confidential OAuth client, or customer deployment as a prerequisite for its local product experience. Those facts belong to `agentsam.host-install.v1` state or an explicitly installed provider/identity adapter.
 
 Those names **may** differ. What must not happen:
 
@@ -73,10 +75,14 @@ Relate namespaces explicitly:
 
 ```json
 {
-  "id": "local-studio",
-  "hosts": [
-    { "host_id": "local-studio-public", "origin": "https://agentsam.inneranimalmedia.com", "role": "production" }
-  ]
+  "schema": "agentsam.host-install.v1",
+  "app_id": "local-studio",
+  "config": {
+    "hosts": [
+      { "host_id": "studio-public", "origin": "https://studio.example.com", "role": "production" }
+    ],
+    "identity": { "portable_default": "local" }
+  }
 }
 ```
 

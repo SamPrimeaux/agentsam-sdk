@@ -140,35 +140,35 @@ AgentSam's own `.agentsam/data/agentsam.sqlite` is application state, not a clai
 
 User-owned SQLite is first-class: create/open arbitrary databases, attach/detach, CRUD, scoped SQL, duplicate/backup, rename/delete with confirmation, and offline operation.
 
-## Identity
+## Identity and storage authority
 
-Identity must feel integrated, not like a developer bootstrap screen. Unsigned-in users can continue local work.
-
-Provider lanes remain distinct:
+Local Studio ships the AgentSam identity **UI and client contract** inside the app. The official connected AgentSam distribution does not create a second canonical account database on the device.
 
 ```text
-Google
-→ native desktop client
-→ PKCE + browser authorization
-→ loopback callback
-→ Keychain
-
-Cloudflare
-→ provider authorization in browser
-→ confidential Worker completes provider flow
-→ short-lived PKCE-bound desktop handoff
-→ AgentSam desktop session in Keychain
-
-InnerAnimalMedia / IAM
-→ branded IAM authority in browser
-→ confidential Worker owns client secret
-→ short-lived PKCE-bound desktop handoff
-→ AgentSam desktop session in Keychain
+packaged AgentSam auth UI
+        ↓
+identity_bridge
+        ↓
+configured identity service / Worker
+        ↓
+main account database
 ```
 
-Browser authorization is expected. Browser **session dependence** is not.
+The installed app receives a native bearer session from the same identity service and keeps that credential in the platform secure store. The main database remains authoritative for account, user, session, grant, billing, membership, provider-connection, and other shared/cloud state.
 
-Desktop acceptance test: authenticate, close the browser, quit Local Studio, clear hosted Studio cookies, reopen Local Studio, and confirm account/provider state restores from Keychain or renewable desktop refresh state. No confidential client secret belongs in the packaged app.
+Device-local SQLite has a different authority:
+
+```text
+main DB        = account/shared/cloud truth
+local SQLite   = device/workspace/cache/offline-outbox/runtime truth
+secure store   = secret/credential truth
+```
+
+Do not dual-write canonical server records into SQLite. A local cached server record must be explicitly cache/sync state and disposable. Offline mutations to server-owned resources use an idempotent outbox and are committed through the Worker when connectivity returns.
+
+The portable identity package still supports an explicit standalone SQLite identity adapter for independent/offline products. That is a deployment choice, not the default authority of the official connected AgentSam download.
+
+Platform secure storage is a contract, not a macOS assumption: macOS uses Keychain; Windows uses Credential Manager; Linux uses the platform secret service; iOS and Android use their native secure-storage adapters.
 
 ## External desktop escape hatches
 
@@ -252,7 +252,7 @@ Infrastructure earns its value by making visible work reliable.
 4. **Progressive discovery** — advanced controls appear when useful.
 5. **One coherent product** — browser, files, editor, terminal, database, CMS, CAD, Work, and AgentSam share interaction language.
 6. **No permanent noise** — closed panels disappear.
-7. **Native desktop behavior** — tabs, split panes, file dialogs, Keychain, external-open actions, local processes.
+7. **Native platform behavior** — tabs/splits where appropriate, native file dialogs, OS secure storage, external-open actions, and platform-appropriate local capabilities.
 8. **Capability truth** — UI affordances derive from real runtime/provider capability.
 9. **Smoothness is functional** — animation reduces friction.
 10. **AgentSam remains contextual** — intelligence supports the work instead of competing with it.

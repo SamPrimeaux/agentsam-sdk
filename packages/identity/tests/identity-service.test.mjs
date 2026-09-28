@@ -128,6 +128,22 @@ describe('identity service', () => {
     });
     assert.equal(login.ok, true);
 
+    const nativeRequest = new Request('https://example.test/api/auth/login', {
+      headers: { 'X-AgentSam-Native-Client': '1' },
+    });
+    assert.equal(identity.isNativeSessionRequest(nativeRequest), true);
+    const nativeResponse = identity.buildNativeLoginSuccessResponse(login, '/agentsam');
+    const nativeBody = await nativeResponse.json();
+    assert.equal(nativeBody.ok, true);
+    assert.equal(nativeBody.session_id, login.sessionId);
+    assert.equal(nativeBody.user.email, 'user@example.com');
+    assert.equal(nativeResponse.headers.get('set-cookie'), null);
+
+    const bearerCtx = await identity.sessionFromRequest(new Request('https://example.test/api/auth/me', {
+      headers: { Authorization: `Bearer ${login.sessionId}` },
+    }));
+    assert.equal(bearerCtx?.user?.email, 'user@example.com');
+
     const bad = await identity.loginWithPassword({
       email: 'user@example.com',
       password: 'wrong',

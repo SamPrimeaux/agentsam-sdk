@@ -17,7 +17,7 @@ export function buildIdentityAppScaffold(config) {
   const brandName = config.brandName || projectName;
   const logoUrl = config.logoUrl || '/brand/logo.svg';
   const sdkVersion = config.sdkVersion || 'alpha';
-  const provider = config.provider || 'inneranimalmedia';
+  const provider = config.provider || 'email';
 
   const migrationSql = `${fs.readFileSync(MIGRATION_FILE, 'utf8')}\n${buildCompanySeedSql({ brandName, logoUrl })}\n`;
   const loginHtml = injectBrandingScript(applyBrandTokens(fs.readFileSync(path.join(AUTH_PAGES_DIR, 'login.html'), 'utf8'), {
@@ -204,9 +204,8 @@ export default {
 function applyBrandTokens(html, { brandName, logoUrl }) {
   return html
     .replace(/Inner Animal Media/g, brandName)
-    .replace(/Sign in \| Inner Animal Media/g, `Sign in | ${brandName}`)
-    .replace(/Sign up \| Inner Animal Media/g, `Sign up | ${brandName}`)
-    .replace(/Reset password \| Inner Animal Media/g, `Reset password | ${brandName}`)
+    .replace(/AgentSam/g, brandName)
+    .replace(/src="\/shared\/agentsam-mark\.svg"/g, `src="${logoUrl}"`)
     .replace(/src="\/brand\/[^"]*"/g, `src="${logoUrl}"`)
     .replace(/href="\/brand\/[^"]*"/g, `href="${logoUrl}"`);
 }

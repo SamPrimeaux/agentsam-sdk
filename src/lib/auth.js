@@ -1,15 +1,12 @@
 /**
- * RFC 8252 native-app OAuth for AgentSam CLI + Local Studio.
+ * RFC 8252 native-app OAuth for AgentSam CLI.
  *
- * SSOT product client (Worker + CLI + desktop):
- *   IAM_CLIENT_ID=iam_agentsam_sdk_web
- *   IAM_CLIENT_SECRET / IAM_OAUTH_ISSUER
- * Do not use iam_cli_agentsam — that id is legacy and not on production Workers.
+ * The CLI is a public PKCE client of canonical IAM. It does not reuse the
+ * confidential hosted-web client or ship an IAM client secret.
  */
 import http from 'node:http';
 import { createHash, randomBytes } from 'node:crypto';
 import { resolveIamIssuer } from '../../packages/identity/src/contracts/auth-config.js';
-import { resolveLocalStudioHostOrigin } from './app-authority.js';
 import { promptToOpenUrl } from './open-url.js';
 import {
   isBrowserSessionExpired,
@@ -20,8 +17,8 @@ import {
 
 export const AGENTSAM_OAUTH_SCOPE = 'openid profile email offline_access';
 export const AGENTSAM_OAUTH_CALLBACK_PATH = '/callback';
-/** Production Local Studio / CLI product OAuth client (Worker var). */
-export const DEFAULT_AGENTSAM_IAM_CLIENT_ID = 'iam_agentsam_sdk_web';
+/** First-party public OAuth client used by the AgentSam CLI. */
+export const DEFAULT_AGENTSAM_IAM_CLIENT_ID = 'iam_cli_agentsam';
 
 function clean(value) { return value == null ? '' : String(value).trim(); }
 function base64url(value) {
@@ -41,14 +38,14 @@ function oauthErrorMessage(body, status) {
 }
 
 /**
- * Resolve IAM OAuth client_id for Studio + CLI.
- * Prefers explicit / env; defaults to iam_agentsam_sdk_web (production Worker).
+ * Resolve the public native IAM OAuth client for the CLI.
+ * IAM_CLIENT_ID belongs to hosted/confidential app surfaces and is intentionally ignored.
  * @returns {{ clientId: string, error: null } | { clientId: string, error: string }}
  */
 export function resolveIamClientId(options = {}) {
   const env = options.env || process.env;
   const clientId = clean(options.clientId)
-    || clean(env.IAM_CLIENT_ID)
+    || clean(env.AGENTSAM_NATIVE_OAUTH_CLIENT_ID)
     || DEFAULT_AGENTSAM_IAM_CLIENT_ID;
   if (!clientId) {
     return { error: 'iam_oauth_not_configured', clientId: '' };
@@ -98,10 +95,6 @@ async function oauthTokenRequest(params, options = {}) {
     const normalized = clean(value);
     if (normalized) body.set(key, normalized);
   }
-  // Confidential product client (iam_agentsam_sdk_web) expects secret when present in vault.
-  const secret = clean(options.clientSecret) || clean(env.IAM_CLIENT_SECRET);
-  if (secret && !body.has('client_secret')) body.set('client_secret', secret);
-
   const response = await fetchImpl(new URL('/api/oauth/token', `${issuer}/`).toString(), {
     method: 'POST',
     headers: {
@@ -341,64 +334,17 @@ export async function authenticateViaBrowser(options = {}) {
   const resolved = resolveIamClientId(options);
   if (resolved.error) {
     const err = new Error(
-      'IAM OAuth is not configured. Local Studio Production uses '
-      + `IAM_CLIENT_ID=${DEFAULT_AGENTSAM_IAM_CLIENT_ID}. Export IAM_CLIENT_ID `
-      + '(+ IAM_CLIENT_SECRET + IAM_OAUTH_ISSUER) from your vault, or rely on the built-in default client id. '
-      + 'Prefer: agentsam api-key create --store keychain --activate && source ~/.agentsam/load-agent-env.sh. '
-      + 'Do not use iam_cli_agentsam — that client is not on production Workers.',
+      'IAM OAuth is not configured. AgentSam CLI uses the public PKCE client '
+      + `${DEFAULT_AGENTSAM_IAM_CLIENT_ID}. Set AGENTSAM_NATIVE_OAUTH_CLIENT_ID only to override that registered native client. `
+      + 'Do not use IAM_CLIENT_ID/IAM_CLIENT_SECRET for CLI authentication.',
     );
     err.code = 'iam_oauth_not_configured';
     throw err;
   }
   const clientId = resolved.clientId;
-  const loginProvider = clean(options.loginProvider || 'inneranimalmedia').toLowerCase();
-  // PLATFORM issuer for native IAM CLI OAuth (aak / authorize).
+  // Native login always enters through the canonical IAM portal. Google or other
+  // login methods may be offered by IAM itself; provider grants are not CLI sessions.
   const issuer = resolveIamIssuer(env, options.issuer || '');
-  // APP HOST for Google/Cloudflare identity — local-studio owns those OAuth clients.
-  const identityHost = resolveLocalStudioHostOrigin({ root: options.root });
-
-  // Google / Cloudflare identity start on the local-studio APP HOST
-  // (agentsam.app.json hosts[]), not on PLATFORM IAM_OAUTH_ISSUER.
-  if (loginProvider === 'google' || loginProvider === 'cloudflare') {
-    if (loginProvider === 'google') {
-      const googleId = clean(env.GOOGLE_CLIENT_ID) || clean(env.GOOGLE_DESKTOP_CLIENT_ID);
-      if (!googleId) {
-        const err = new Error(
-          'GOOGLE_CLIENT_ID (web) or GOOGLE_DESKTOP_CLIENT_ID (desktop) is not configured in this shell.',
-        );
-        err.code = 'google_oauth_not_configured';
-        throw err;
-      }
-    } else {
-      if (!clean(env.CLOUDFLARE_OAUTH_CLIENT_ID)) {
-        const err = new Error(
-          'CLOUDFLARE_OAUTH_CLIENT_ID is not configured in this shell.',
-        );
-        err.code = 'cloudflare_oauth_not_configured';
-        throw err;
-      }
-    }
-    const startPath = loginProvider === 'google'
-      ? '/api/oauth/google/start'
-      : '/api/oauth/cloudflare/start';
-    const startUrl = new URL(startPath, `${identityHost}/`);
-    startUrl.searchParams.set('next', '/agentsam');
-    const promptImpl = options.promptToOpenUrlImpl || promptToOpenUrl;
-    await promptImpl(startUrl.toString(), {
-      heading: loginProvider === 'google'
-        ? 'Sign in with Google (local-studio HOST):'
-        : 'Sign in with Cloudflare (local-studio HOST):',
-      prompt: 'Press ENTER to open identity sign-in in your browser.',
-      input: options.input,
-      output: options.output,
-      openImpl: options.openImpl,
-    });
-    if (options.output?.isTTY) {
-      options.output.write(
-        '\n  After the browser finishes, continuing with IAM CLI OAuth…\n',
-      );
-    }
-  }
 
   const state = randomUrlSafe(24, options.randomBytesImpl || randomBytes);
   const pkce = createPkcePair({ randomBytesImpl: options.randomBytesImpl });

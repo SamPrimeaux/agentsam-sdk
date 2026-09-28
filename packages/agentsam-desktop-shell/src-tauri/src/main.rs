@@ -4,7 +4,7 @@
 mod commands;
 mod tray;
 
-use commands::{agentsamd, auth_pkce, deep_link, keychain, local_content, local_node, local_sqlite, native_capabilities, updater};
+use commands::{agentsamd, deep_link, keychain, local_content, local_identity, local_node, local_sqlite, native_capabilities, updater};
 
 fn main() {
     tauri::Builder::default()
@@ -21,18 +21,18 @@ fn main() {
             keychain::get_token,
             keychain::set_token,
             keychain::delete_token,
+            keychain::secure_store_get,
+            keychain::secure_store_set,
+            keychain::secure_store_delete,
             deep_link::handle_callback,
             updater::check_for_update,
             local_node::enroll_as_local_node,
-            auth_pkce::start_agentsam_pkce_login,
-            auth_pkce::start_google_desktop_login,
-            auth_pkce::start_cloudflare_oauth_login,
-            auth_pkce::start_iam_oauth_login,
-            auth_pkce::desktop_auth_status,
             agentsamd::ensure_agentsamd,
             agentsamd::agentsamd_health,
             agentsamd::agentsamd_pairing_token,
             local_sqlite::local_sqlite_bridge,
+            local_identity::local_identity_bridge,
+            local_identity::identity_bridge,
             local_sqlite::local_sqlite_pick_database,
             local_sqlite::local_sqlite_pick_directory,
             local_content::local_content_bridge,

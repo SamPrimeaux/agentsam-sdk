@@ -6,6 +6,8 @@
 
 This document is the law for env naming across AgentSam CLI, Local Studio, Identity, and Vault. It exists so sessions stop inventing tribal aliases.
 
+**Portable Local Studio rule:** the packaged UI is portable, while storage authority is installation policy. Official connected AgentSam builds use the configured identity service/main DB for account truth, local SQLite for device state, and the OS secure store for credentials. `IAM_*` variables are optional remote-adapter/deployment configuration and must never turn a company host into intrinsic APP identity. Explicit standalone products may choose the SQLite identity adapter.
+
 ---
 
 ## Three lanes (do not flatten)
@@ -14,7 +16,7 @@ This document is the law for env naming across AgentSam CLI, Local Studio, Ident
 | --- | --- | --- | --- |
 | **Account / platform** | `AGENTSAM_API_KEY` | The human (or delegated account) using AgentSam | CLI, SDK, Local Studio user work |
 | **Machine / bridge** | `AGENTSAM_BRIDGE_KEY` | A worker, VM, ExecOS front-door, or CI host talking to AgentSam infrastructure | Workers, iam-tunnel agents, CAD/build services |
-| **OAuth app (Identity)** | `IAM_CLIENT_ID`, `IAM_CLIENT_SECRET`, `IAM_OAUTH_ISSUER` (+ compat `IAM_ORIGIN`) | The *application* as an OAuth client of InnerAnimalMedia Identity | Customer Worker / Local Studio login portal |
+| **OAuth app (Identity)** | `IAM_CLIENT_ID`, `IAM_CLIENT_SECRET`, `IAM_OAUTH_ISSUER` (+ compat `IAM_ORIGIN`) | An installation as a client of an explicitly configured remote identity authority | Hosted/customer Worker or other remote-identity adapter; **not required by portable Local Studio desktop** |
 
 Provider API keys (`OPENAI_*`, `CLOUDFLARE_API_TOKEN`, …) are a **fourth** lane: external vendor credentials managed by vault/Connections — never aliases of the three lanes above.
 

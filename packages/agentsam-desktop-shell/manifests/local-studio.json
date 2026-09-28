@@ -3,7 +3,7 @@
   "app_id": "local-studio",
   "app_name": "AgentSam Local Studio",
   "bundle_identifier": "com.inneranimalmedia.local-studio",
-  "base_url": "https://agentsam.inneranimalmedia.com",
+  "base_url": "app://local-studio",
   "surface": "app",
   "launch_path": "/agentsam",
   "routes": {
@@ -13,26 +13,23 @@
     "next_after_login": "/agentsam"
   },
   "auth": {
-    "login_url": "/api/oauth/cloudflare/start?next=/agentsam",
-    "session_check": "/api/auth/session",
-    "oauth_client_id": "GOOGLE_DESKTOP_CLIENT_ID",
-    "cloudflare_oauth_client_id": "CLOUDFLARE_OAUTH_CLIENT_ID",
-    "login_mode": "google_desktop_pkce",
-    "oauth_deep_link": "agentsamstudio://callback",
-    "notes": "Desktop: GOOGLE_DESKTOP_CLIENT_ID (PKCE loopback) + Studio CLOUDFLARE_OAUTH_CLIENT_ID (offline). Never inneranimalmedia.com/auth/login with iam_agentsam_sdk_web."
+    "authority": "service",
+    "ui": "bundled-auth-portal",
+    "service_origin": "install-config",
+    "native_session": "bearer",
+    "session_store": "os_secure_store",
+    "standalone_adapter": "sqlite",
+    "notes": "Official connected builds use the configured identity service/main DB. SQLite identity is explicit standalone mode only."
   },
   "deep_link_scheme": "agentsamstudio",
-  "identity_provider": "google_desktop_and_cloudflare",
+  "identity_provider": "portable",
   "brand_family": "agentsam",
   "product_mark_variant": "local-studio-portal",
   "version": "2.6.5",
   "icon_set": "icons/local-studio",
-  "icon_source_url": "https://asr.inneranimalmedia.com/brands/agentsam/app-icon/v1/raster/AgentSam-Icon-1024.png",
   "icon_mark_svg": "icons/local-studio/AgentSam-Mark.svg",
   "app_icon": {
     "mark": "icons/local-studio/AgentSam-Mark.svg",
-    "mark_url": "https://asr.inneranimalmedia.com/brands/agentsam/app-icon/v1/vector/AgentSam-Mark.svg",
-    "fallback_master": "https://asr.inneranimalmedia.com/brands/agentsam/app-icon/v1/raster/AgentSam-Icon-1024.png",
     "surfaces": {
       "agentsam.graphite": {
         "base": "#12141a",
@@ -60,6 +57,17 @@
       "tray": {
         "mark_only": true,
         "size": 128
+      },
+      "android": {
+        "surface": "agentsam.graphite",
+        "optical_scale": 0.78,
+        "adaptive_icon": true,
+        "size": 1024
+      },
+      "linux": {
+        "surface": "agentsam.graphite",
+        "optical_scale": 0.76,
+        "size": 1024
       }
     }
   },
@@ -77,5 +85,55 @@
     "offline_shell": false,
     "desktop_spa": true,
     "agentsamd_sidecar": true
+  },
+  "local_state": {
+    "adapter": "sqlite",
+    "authority": "device",
+    "roles": [
+      "workspace_state",
+      "cache",
+      "offline_outbox",
+      "runtime_state"
+    ]
+  },
+  "platform_profiles": {
+    "desktop": {
+      "targets": [
+        "macos",
+        "windows",
+        "linux"
+      ],
+      "native_runtime": "agentsamd",
+      "js_bridge_runtime": "bundled-node",
+      "terminal_shells": {
+        "macos": [
+          "zsh",
+          "bash",
+          "sh"
+        ],
+        "windows": [
+          "pwsh",
+          "powershell",
+          "cmd"
+        ],
+        "linux": [
+          "bash",
+          "zsh",
+          "sh"
+        ]
+      },
+      "secure_store": "os_secure_store"
+    },
+    "mobile": {
+      "targets": [
+        "ios",
+        "android"
+      ],
+      "native_runtime": "mobile_adapter",
+      "js_bridge_runtime": "none",
+      "terminal_shells": [],
+      "secure_store": "mobile_secure_store",
+      "notes": "Mobile must not depend on executable sidecars; it consumes the same identity/service and local-state contracts through native mobile adapters."
+    }
   }
 }

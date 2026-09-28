@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync } from 'node:fs';
+import { chmodSync, copyFileSync, existsSync, mkdirSync, realpathSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -68,3 +68,33 @@ const r = spawnSync(
 );
 if (r.status !== 0) process.exit(r.status || 1);
 console.log('[prepare-sidecars] ready: ' + output);
+
+
+// The JS bridges are part of the packaged desktop product. Bundle a Node
+// runtime for the TARGET platform so customers do not need Node installed.
+// Native-host builds can reuse process.execPath; cross-target builds must
+// provide AGENTSAM_NODE_SIDECAR pointing at a target-compatible Node binary.
+const nodeHostTriples = {
+  'darwin:arm64': 'aarch64-apple-darwin',
+  'darwin:x64': 'x86_64-apple-darwin',
+  'win32:arm64': 'aarch64-pc-windows-msvc',
+  'win32:x64': 'x86_64-pc-windows-msvc',
+  'linux:arm64': 'aarch64-unknown-linux-gnu',
+  'linux:x64': 'x86_64-unknown-linux-gnu',
+};
+const currentNodeTarget = nodeHostTriples[process.platform + ':' + process.arch] || null;
+let nodeSource = process.env.AGENTSAM_NODE_SIDECAR
+  ? path.resolve(process.env.AGENTSAM_NODE_SIDECAR)
+  : null;
+if (!nodeSource) {
+  if (currentNodeTarget !== target) {
+    fail('cross-target desktop build requires AGENTSAM_NODE_SIDECAR for ' + target
+      + ' (current Node target is ' + (currentNodeTarget || 'unknown') + ')');
+  }
+  nodeSource = realpathSync(process.execPath);
+}
+if (!existsSync(nodeSource)) fail('Node sidecar not found: ' + nodeSource);
+const nodeOutput = path.join(OUT_DIR, 'node-' + target + ext);
+copyFileSync(nodeSource, nodeOutput);
+if (goos !== 'windows') chmodSync(nodeOutput, 0o755);
+console.log('[prepare-sidecars] bundled node runtime: ' + nodeOutput);

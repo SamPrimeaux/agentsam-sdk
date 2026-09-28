@@ -30,7 +30,30 @@
         "login_url": { "type": "string" },
         "session_check": { "type": "string" },
         "oauth_deep_link": { "type": "string" },
+        "authority": { "type": "string", "enum": ["service", "standalone"] },
+        "ui": { "type": "string" },
+        "service_origin": { "type": "string" },
+        "native_session": { "type": "string", "enum": ["bearer", "cookie"] },
+        "session_store": { "type": "string" },
+        "standalone_adapter": { "type": "string", "enum": ["sqlite"] },
         "notes": { "type": "string" }
+      }
+    },
+    "local_state": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "adapter": { "type": "string", "enum": ["sqlite"] },
+        "authority": { "type": "string", "enum": ["device"] },
+        "roles": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "platform_profiles": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "desktop": { "type": "object", "additionalProperties": true },
+        "mobile": { "type": "object", "additionalProperties": true }
       }
     },
     "allowed_web_origins": {
@@ -138,7 +161,7 @@
     },
     "identity_provider": {
       "type": "string",
-      "enum": ["inneranimalmedia", "google", "github", "gcp", "email", "google_desktop_and_cloudflare"]
+      "enum": ["portable", "inneranimalmedia", "google", "github", "gcp", "email", "google_desktop_and_cloudflare"]
     },
     "theme": {
       "type": "object",

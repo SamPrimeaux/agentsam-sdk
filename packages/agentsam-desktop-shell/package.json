@@ -8,7 +8,7 @@
     "build-brand": "./scripts/build-brand.mjs"
   },
   "scripts": {
-    "dev": "tauri dev",
+    "dev": "npm --prefix ../../apps/local-studio run build:desktop && node scripts/build-brand.mjs local-studio && node scripts/sync-local-studio-dist.mjs && tauri dev",
     "build:brand": "node scripts/build-brand.mjs",
     "sync:local-studio": "node scripts/sync-local-studio-dist.mjs",
     "build": "npm --prefix ../../apps/local-studio run build:desktop && node scripts/build-brand.mjs local-studio && node scripts/sync-local-studio-dist.mjs && tauri build",

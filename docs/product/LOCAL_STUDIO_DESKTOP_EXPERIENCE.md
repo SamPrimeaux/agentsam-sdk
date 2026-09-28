@@ -4,6 +4,7 @@
 **App:** `local-studio`  
 **Desktop shell:** `packages/agentsam-desktop-shell`  
 **Canonical UI:** `apps/local-studio`
+**Identity package:** `packages/identity`
 
 The downloadable Local Studio app must look like Local Studio because it **is** Local Studio.
 
@@ -16,132 +17,123 @@ AgentSam Local Studio.app
         ↓
 Tauri window
         ↓
-bundled apps/local-studio desktop build
+bundled apps/local-studio desktop SPA
         ↓
 real AgentSam shell / workspace
 ```
 
-Not a production default:
+Not acceptable as a shipped default:
 
 ```text
-AgentSam Local Studio.app
-        ↓
-thin bootstrap/status page
-        ↓
-"Open Studio UI"
-        ↓
-hosted site
+bootstrap/status shell
+→ "Open Studio UI"
+→ hosted website
 ```
 
-A bootstrap/status page may exist for development or recovery. It is not the normal shipped entrypoint.
+The packager must fail closed if the real desktop SPA is missing. It must never silently substitute a recovery page into a release artifact.
 
-## Bundle ownership
+Native capability startup (`agentsamd`, filesystem bridges, database bridges) happens in the background and must not cover the work surface with a diagnostic boot screen.
 
-`packages/agentsam-desktop-shell` owns native-shell responsibilities: Tauri, deep links, Keychain, updater, filesystem/process bridges, and sidecars.
+## Packaged identity UI, shared account authority
 
-The visible product is `apps/local-studio`.
+Local Studio packages the real AgentSam login/signup/reset UI inside the application. Displaying that UI does not require redirecting to a website.
 
-The build should fail rather than silently ship an old placeholder when the real Local Studio desktop distribution is missing.
+For the official connected AgentSam distribution, authentication writes to the configured identity service and main database:
 
-## First useful frame
+```text
+Local Studio / future mobile app
+        ↓
+bundled auth portal
+        ↓
+identity_bridge
+        ↓
+Worker identity API
+        ↓
+main account database
+```
 
-The app should immediately present real Local Studio product chrome: project/recent-work continuity, the active work surface, optional contextual panes, and real editor/browser/files/database/terminal surfaces.
+The Worker creates/resolves the canonical user and `auth_sessions` row. Native clients request the same session as a bearer credential rather than relying on a browser cookie. The credential is stored in the platform secure store and `/api/auth/me` validates it against the main database.
 
-Infrastructure status must not replace the work surface.
+There is no desktop-only account table and no duplicate canonical user/session authority.
 
-## Authentication UX
+## Three storage authorities
 
-Authentication is an action **inside** Local Studio, not the app's boot screen. Unsigned-in users can continue local work.
+```text
+MAIN SERVICE / DB
+  accounts, users, auth sessions, OAuth grants, provider connections,
+  billing, memberships, shared/project/cloud records
 
-The branded identity surface may offer Google, Cloudflare, and InnerAnimalMedia/IAM. OAuth protocol jargon belongs in diagnostics, not the primary sign-in interface.
+LOCAL SQLITE
+  installation/device metadata, workspace state, local projects, caches,
+  runtime/job state, sync cursors, offline outbox, user-opened SQLite DBs
 
-### Google
+OS SECURE STORE
+  account session credential, device credentials, encryption keys,
+  machine-private provider secrets where policy allows
+```
 
-Public desktop OAuth client → PKCE → system browser → loopback callback → renewable credential in Keychain.
+SQLite must not become a shadow copy of the main account database. Cached remote records are explicitly non-authoritative and disposable. Offline server-owned mutations are queued with idempotency keys and committed through the Worker.
 
-### Cloudflare
+The portable identity package may use its SQLite identity adapter only when an installation explicitly selects standalone mode.
 
-Provider authorization may use the browser, but a hosted browser session is not desktop authentication.
+## Platform contract
 
-Worker authorization → short-lived single-use PKCE-bound desktop handoff → Tauri exchange → AgentSam desktop session in Keychain.
+The product contract is broader than macOS:
 
-Provider grants may remain server-side in the existing vault model.
+- **macOS:** Tauri desktop, `agentsamd`, bundled JS bridge runtime, Keychain, POSIX shells.
+- **Windows:** Tauri desktop, `agentsamd`, bundled JS bridge runtime, Credential Manager, `pwsh` → Windows PowerShell → `cmd.exe`.
+- **Linux:** Tauri desktop, `agentsamd`, bundled JS bridge runtime, platform secret service, POSIX shells.
+- **iOS:** same UI/service/storage contracts through mobile-native adapters; no executable Node/`agentsamd` sidecar assumption.
+- **Android:** same UI/service/storage contracts through mobile-native adapters; no executable Node/`agentsamd` sidecar assumption.
 
-### IAM / InnerAnimalMedia
+Desktop sidecars are an implementation of local-machine capabilities, not part of the cross-platform protocol. Mobile can connect to remote/local AgentSam runtimes where appropriate while keeping account identity and device state contracts unchanged.
 
-The IAM confidential client secret remains server-side. Tauri never embeds `IAM_CLIENT_SECRET`.
+## Provider OAuth
 
-Worker IAM authorization → short-lived single-use PKCE-bound desktop handoff → Tauri exchange → renewable AgentSam desktop session in Keychain.
+Provider grants are separate from the AgentSam account session. Google, Cloudflare, GitHub, GCP, and later providers use their own consent/connection lanes. A system browser may be required for a provider's OAuth consent, but the AgentSam login UI itself remains packaged in the app.
 
-## Desktop handoff security
-
-Handoff material must be cryptographically random, hashed at rest, short-lived, single-use, atomically redeemed, client/state/PKCE-bound, exchanged over HTTPS, and invalid after redemption, expiry, or cancellation.
-
-Provider tokens and refresh credentials never belong in the deep-link URL.
+Provider tokens never belong in callback URLs beyond the minimum standard authorization material, and confidential client secrets never belong in downloadable clients.
 
 ## Session restoration
 
-Desktop account state restores from Keychain, not browser cookies.
-
 ```text
-Keychain access token valid?
-  yes → authenticated
-
-no / expired
-  ↓
-renewable refresh credential available?
-  yes → refresh/rotate through Worker → update Keychain
-  no  → signed out
+secure store has AgentSam session credential?
+  no  → signed-out cloud/account state; local work remains available
+  yes → /api/auth/me with Bearer credential
+           valid   → canonical account restored from main DB
+           invalid → clear stale credential / signed out
 ```
 
-Browser cookies may support browser UX but are not desktop session authority.
-
-## Decisive acceptance test
-
-For every desktop auth lane claiming persistence:
-
-1. Launch Local Studio.
-2. Authenticate in the system browser.
-3. Return to Local Studio.
-4. Confirm desktop authenticated state.
-5. Close the browser.
-6. Quit Local Studio.
-7. Clear hosted Studio browser cookies.
-8. Reopen Local Studio.
-9. Confirm account/provider state restores from Keychain or renewable desktop refresh state.
-10. Confirm no browser re-login is required merely because cookies were removed.
-11. Confirm local files, SQLite, PTY, agentsamd, and local projects still work when signed out.
-12. Confirm no confidential OAuth client secret exists in the packaged app.
-
-A flow is not complete merely because the hosted browser became signed in.
+Browser cookies are not required for desktop/mobile session restoration.
 
 ## Failure behavior
 
-If account refresh fails, Local Studio degrades to signed-out cloud/account state while preserving local work.
+If a provider, remote account service, or network connection fails, Local Studio remains usable locally.
 
-Ordinary local workflows must not be replaced by a full-screen auth blocker.
+Ordinary local workflows must never be replaced by a full-screen authentication or infrastructure error.
 
 ## Release acceptance
 
-Before shipping:
+Before shipping a desktop artifact:
 
-- build the Local Studio desktop frontend;
-- sync it into the desktop shell distribution;
-- verify Tauri loads bundled `index.html`;
-- verify placeholder boot copy is absent from the shipped distribution;
-- build the Tauri bundle;
-- run identity/desktop handoff tests;
-- run TypeScript and Rust checks;
-- verify deep-link registration;
-- verify Worker desktop exchange/session/refresh routes;
-- apply required D1 migration(s);
-- deploy the matching Worker version;
-- perform the restart/cookie acceptance test on an installed build.
-
-Code, Worker, migration, and installed app are one release unit for desktop authentication.
+- build the Local Studio desktop SPA;
+- copy the packaged auth portal into that SPA;
+- verify the auth portal is AgentSam/host branded rather than donor branded;
+- sync the SPA into the Tauri desktop shell;
+- fail the build if the real SPA is missing or hydrate-only;
+- verify the old `Open Studio UI` / `Stay on this shell` copy is absent;
+- verify native startup work is non-blocking;
+- run the full identity package tests;
+- run Local Studio auth/type/build gates;
+- run Rust checks;
+- verify the packaged identity runtime/migrations are present;
+- build and mount the disk image;
+- launch the app copied from the disk image;
+- verify local signup/login/session restoration without a hosted redirect;
+- verify local files, SQLite, PTY, and `agentsamd` still work signed out.
 
 ## Product rule
 
-Tauri is the native relationship to the operating system. It is not a substitute UI.
+> **The downloadable Local Studio app is self-contained AgentSam product software.**
 
-OAuth may use the system browser, but identity belongs to the desktop only after the desktop securely persists its own renewable session.
+Company deployments, customer hosts, and external identity providers are adapters around that product. They are not its intrinsic authority.

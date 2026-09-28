@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { authClient, authEnabled } from "./client";
+import { invokeIdentity, isPackagedDesktop, secureStoreGet } from "@/lib/desktop/tauri";
 
 /** Normalized user shape used across the app, auth on or off. */
 export type AppUser = {
@@ -24,6 +26,90 @@ export const DEV_USER: AppUser = {
   profileImageUrl: null,
   isDevFallback: true,
 };
+
+type DesktopIdentityMessage = {
+  type?: string;
+  authenticated?: boolean;
+  user?: {
+    id?: string;
+    email?: string;
+    display_name?: string | null;
+    displayName?: string | null;
+  } | null;
+};
+
+function normalizeDesktopUser(user: DesktopIdentityMessage["user"]): AppUser | null {
+  if (!user?.id) return null;
+  return {
+    id: user.id,
+    displayName: user.displayName ?? user.display_name ?? null,
+    primaryEmail: user.email ?? null,
+    profileImageUrl: null,
+    isDevFallback: false,
+  };
+}
+
+function useDesktopCurrentUserState(): CurrentUserState {
+  const [state, setState] = useState<CurrentUserState>({
+    user: null,
+    isPending: true,
+  });
+
+  useEffect(() => {
+    const invoke = getTauriInvoke();
+    if (!invoke) {
+      setState({ user: DEV_USER, isPending: false });
+      return;
+    }
+
+    let active = true;
+
+    async function restore() {
+      try {
+        const sessionId = await secureStoreGet("identity_session");
+
+        if (!sessionId) {
+          if (active) setState({ user: DEV_USER, isPending: false });
+          return;
+        }
+
+        const status = (await invokeIdentity({
+          op: "status",
+          session_id: sessionId,
+        })) as DesktopIdentityMessage;
+        const user = normalizeDesktopUser(status.user);
+        if (active) {
+          setState({
+            user: status.authenticated && user ? user : DEV_USER,
+            isPending: false,
+          });
+        }
+      } catch {
+        if (active) setState({ user: DEV_USER, isPending: false });
+      }
+    }
+
+    function onMessage(event: MessageEvent) {
+      const message = event.data as DesktopIdentityMessage | undefined;
+      if (message?.type !== "agentsam:desktop-identity") return;
+      const user = normalizeDesktopUser(message.user);
+      setState({
+        user: message.authenticated && user ? user : DEV_USER,
+        isPending: false,
+      });
+    }
+
+    void restore();
+    window.addEventListener("message", onMessage);
+    return () => {
+      active = false;
+      window.removeEventListener("message", onMessage);
+    };
+  }, []);
+
+  return state;
+}
+
 
 /** `useCurrentUserState()` result: the user plus the session-loading flag. */
 export type CurrentUserState = {
@@ -55,6 +141,10 @@ export type CurrentUserState = {
  * call keeps a stable hook order across every render of a given component.
  */
 export function useCurrentUserState(): CurrentUserState {
+  if (isPackagedDesktop()) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- packaged-desktop mode is constant for the app lifetime
+    return useDesktopCurrentUserState();
+  }
   if (!authEnabled) return { user: DEV_USER, isPending: false };
   // eslint-disable-next-line react-hooks/rules-of-hooks -- authEnabled is constant for the app's lifetime
   const { data, isPending } = authClient.useSession();

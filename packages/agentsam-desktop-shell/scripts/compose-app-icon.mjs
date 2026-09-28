@@ -307,6 +307,44 @@ export async function composePlatformAppIcons(opts) {
     result.previews.push(...(await writePreviewLadder(sharp, winBuf, previewDir, 'windows')));
   }
 
+  // --- Android (adaptive-icon source master; no baked launcher mask) ---
+  if (profiles.android) {
+    const android = profiles.android;
+    const androidSurface = resolveSurface(manifest, android.surface || defaultSurfaceId);
+    const androidBuf = await composeSurfaceMaster(sharp, {
+      size: Number(android.size || 1024) || 1024,
+      surface: androidSurface,
+      markPath,
+      opticalScale: android.optical_scale ?? 0.78,
+    });
+    const androidMaster = path.join(outDir, 'android-1024.png');
+    writeFileSync(androidMaster, androidBuf);
+    result.masters.android = androidMaster;
+    result.previews.push(...(await writePreviewLadder(sharp, androidBuf, previewDir, 'android')));
+    if (android.adaptive_icon) {
+      writeFileSync(
+        path.join(outDir, 'android-NOTE.txt'),
+        'Android master is adaptive-icon source artwork. Launcher masks belong to the Android build system.\n',
+      );
+    }
+  }
+
+  // --- Linux desktop ---
+  if (profiles.linux) {
+    const linux = profiles.linux;
+    const linuxSurface = resolveSurface(manifest, linux.surface || defaultSurfaceId);
+    const linuxBuf = await composeSurfaceMaster(sharp, {
+      size: Number(linux.size || 1024) || 1024,
+      surface: linuxSurface,
+      markPath,
+      opticalScale: linux.optical_scale ?? 0.76,
+    });
+    const linuxMaster = path.join(outDir, 'linux-1024.png');
+    writeFileSync(linuxMaster, linuxBuf);
+    result.masters.linux = linuxMaster;
+    result.previews.push(...(await writePreviewLadder(sharp, linuxBuf, previewDir, 'linux')));
+  }
+
   // --- Tray (mark-only; never shrink full app icon) ---
   if (profiles.tray) {
     const tray = profiles.tray;

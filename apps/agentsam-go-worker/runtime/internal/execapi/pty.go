@@ -49,11 +49,6 @@ func PTYHandler(checkAuth PTYAuthChecker) http.HandlerFunc {
 			http.Error(w, "missing or invalid pairing token", http.StatusUnauthorized)
 			return
 		}
-		if runtime.GOOS == "windows" {
-			http.Error(w, "pty not supported on this platform yet", http.StatusNotImplemented)
-			return
-		}
-
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			log.Printf("pty: websocket upgrade failed: %v", err)
@@ -61,12 +56,16 @@ func PTYHandler(checkAuth PTYAuthChecker) http.HandlerFunc {
 		}
 		defer conn.Close()
 
+		cwd := strings.TrimSpace(r.URL.Query().Get("cwd"))
+		if runtime.GOOS == "windows" {
+			runWindowsShellStream(conn, cwd)
+			return
+		}
+
 		shell := strings.TrimSpace(os.Getenv("SHELL"))
 		if shell == "" {
 			shell = "/bin/bash"
 		}
-		cwd := strings.TrimSpace(r.URL.Query().Get("cwd"))
-
 		cmd := exec.Command(shell)
 		if cwd != "" {
 			cmd.Dir = cwd
@@ -181,4 +180,134 @@ func mustJSON(v any) []byte {
 		return []byte(`{"type":"error","message":"internal json error"}`)
 	}
 	return b
+}
+
+func windowsShellCommand() (*exec.Cmd, string) {
+	if shell := strings.TrimSpace(os.Getenv("AGENTSAM_WINDOWS_SHELL")); shell != "" {
+		return exec.Command(shell, "-NoLogo", "-NoProfile"), shell
+	}
+	if path, err := exec.LookPath("pwsh.exe"); err == nil {
+		return exec.Command(path, "-NoLogo", "-NoProfile"), "pwsh"
+	}
+	if path, err := exec.LookPath("powershell.exe"); err == nil {
+		return exec.Command(path, "-NoLogo", "-NoProfile"), "powershell"
+	}
+	if path := strings.TrimSpace(os.Getenv("ComSpec")); path != "" {
+		return exec.Command(path), "cmd"
+	}
+	return exec.Command("cmd.exe"), "cmd"
+}
+
+// runWindowsShellStream provides the same websocket terminal protocol on
+// Windows without pretending a Unix PTY exists. It prefers PowerShell 7,
+// falls back to Windows PowerShell, then cmd.exe. A future ConPTY adapter can
+// replace the process transport without changing the browser/runtime contract.
+func runWindowsShellStream(conn *websocket.Conn, cwd string) {
+	cmd, shellName := windowsShellCommand()
+	if cwd != "" {
+		cmd.Dir = cwd
+	}
+	cmd.Env = os.Environ()
+
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		_ = conn.WriteMessage(websocket.TextMessage, mustJSON(map[string]any{"type": "error", "message": "failed to open shell stdin: " + err.Error()}))
+		return
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		_ = conn.WriteMessage(websocket.TextMessage, mustJSON(map[string]any{"type": "error", "message": "failed to open shell stdout: " + err.Error()}))
+		return
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		_ = conn.WriteMessage(websocket.TextMessage, mustJSON(map[string]any{"type": "error", "message": "failed to open shell stderr: " + err.Error()}))
+		return
+	}
+	if err := cmd.Start(); err != nil {
+		_ = conn.WriteMessage(websocket.TextMessage, mustJSON(map[string]any{"type": "error", "message": "failed to start Windows shell: " + err.Error()}))
+		return
+	}
+
+	var writeMu sync.Mutex
+	done := make(chan struct{})
+	var once sync.Once
+	closeDone := func() { once.Do(func() { close(done) }) }
+
+	_ = conn.WriteMessage(websocket.TextMessage, mustJSON(map[string]any{
+		"type": "shell", "shell": shellName, "pty": false,
+	}))
+
+	copyOutput := func(reader io.Reader) {
+		buf := make([]byte, 8192)
+		for {
+			n, readErr := reader.Read(buf)
+			if n > 0 {
+				writeMu.Lock()
+				writeErr := conn.WriteMessage(websocket.BinaryMessage, buf[:n])
+				writeMu.Unlock()
+				if writeErr != nil {
+					closeDone()
+					return
+				}
+			}
+			if readErr != nil {
+				if readErr != io.EOF {
+					log.Printf("windows shell: read error: %v", readErr)
+				}
+				return
+			}
+		}
+	}
+	go copyOutput(stdout)
+	go copyOutput(stderr)
+
+	go func() {
+		for {
+			msgType, data, readErr := conn.ReadMessage()
+			if readErr != nil {
+				closeDone()
+				return
+			}
+			if msgType == websocket.TextMessage {
+				var ctl controlMessage
+				if json.Unmarshal(data, &ctl) == nil && ctl.Type == "resize" {
+					// Pipe transport has no terminal-size primitive. ConPTY can
+					// consume the same control message when that adapter lands.
+					continue
+				}
+			}
+			if msgType == websocket.TextMessage || msgType == websocket.BinaryMessage {
+				if _, writeErr := stdin.Write(data); writeErr != nil {
+					closeDone()
+					return
+				}
+			}
+		}
+	}()
+
+	go func() {
+		waitErr := cmd.Wait()
+		exitCode := 0
+		if waitErr != nil {
+			if exitErr, ok := waitErr.(*exec.ExitError); ok {
+				exitCode = exitErr.ExitCode()
+			} else {
+				exitCode = -1
+			}
+		}
+		writeMu.Lock()
+		_ = conn.WriteMessage(websocket.TextMessage, mustJSON(map[string]any{"type": "exit", "exit_code": exitCode}))
+		writeMu.Unlock()
+		closeDone()
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(24 * time.Hour):
+	}
+	_ = stdin.Close()
+	if cmd.Process != nil {
+		_ = cmd.Process.Kill()
+	}
 }

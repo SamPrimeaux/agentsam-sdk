@@ -31,8 +31,19 @@
       "icons/icon.ico"
     ],
     "externalBin": [
-      "binaries/agentsamd"
-    ]
+      "binaries/agentsamd",
+      "binaries/node"
+    ],
+    "resources": {
+      "generated/identity-runtime.json": "runtime/identity/runtime.json",
+      "../../../apps/local-studio/agentsam.app.json": "runtime/identity/app.json",
+      "../../agentsam-database-editor/scripts/local-sqlite-bridge.mjs": "runtime/database/scripts/local-sqlite-bridge.mjs",
+      "../../agentsam-database-editor/src/adapters/sqlite.js": "runtime/database/src/adapters/sqlite.js",
+      "../../../migrations/runtime": "runtime/migrations",
+      "../../identity/scripts/local-identity-bridge.mjs": "runtime/identity/scripts/local-identity-bridge.mjs",
+      "../../identity/src": "runtime/identity/src",
+      "../../identity/migrations/sqlite": "runtime/identity/migrations/sqlite"
+    }
   },
   "plugins": {
     "deep-link": {

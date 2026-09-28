@@ -159,6 +159,28 @@ export function createIdentityService(config) {
       return { ok: true, authUserId: user.id, sessionId: session.id, session };
     },
 
+    isNativeSessionRequest(request) {
+      const marker = String(request?.headers?.get?.('X-AgentSam-Native-Client') || '').toLowerCase();
+      return marker === '1' || marker === 'true' || marker === 'native';
+    },
+
+    buildNativeLoginSuccessResponse(result, nextPath) {
+      const redirect = resolvePostLoginPath(nextPath);
+      return jsonResponse({
+        ok: true,
+        redirect,
+        session_id: result.sessionId,
+        expires_at: result.session?.expires_at ?? null,
+        user: result.user
+          ? {
+              id: result.user.id,
+              email: result.user.email,
+              displayName: result.user.display_name ?? null,
+            }
+          : null,
+      });
+    },
+
     buildLoginSuccessResponse(request, sessionId, nextPath) {
       const redirect = resolvePostLoginPath(nextPath);
       return jsonResponse(

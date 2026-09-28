@@ -28,7 +28,11 @@ export const AGENTSAM_AUTH_ENV = Object.freeze({
   cloudflareOauthClientSecret: 'CLOUDFLARE_OAUTH_CLIENT_SECRET',
 });
 
-/** PLATFORM account-authority issuer — not an APP host. */
+/**
+ * Hosted AgentSam platform compatibility issuer — not an APP host and never a
+ * portable Local Studio default. Portable apps use packages/identity locally
+ * unless an installation explicitly selects a remote IAM adapter.
+ */
 export const PLATFORM_ACCOUNT_ISSUER = 'https://inneranimalmedia.com';
 
 export const AGENTSAM_AUTH_CONTRACT = Object.freeze({

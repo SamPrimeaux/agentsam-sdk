@@ -13,7 +13,7 @@ describe('auth portal preview server', () => {
     }
   });
 
-  it('serves IAM auth paths and login HTML', async () => {
+  it('serves portable auth paths and login HTML', async () => {
     const started = await createAuthPortalPreviewServer({ port: 0, host: '127.0.0.1' });
     server = started.server;
     baseUrl = started.baseUrl;
@@ -21,7 +21,7 @@ describe('auth portal preview server', () => {
     const loginRes = await fetch(`${baseUrl}/auth/login`);
     assert.equal(loginRes.status, 200);
     const loginHtml = await loginRes.text();
-    assert.match(loginHtml, /Sign in \| Inner Animal Media/);
+    assert.match(loginHtml, /Sign in \| AgentSam/);
 
     const signupRes = await fetch(`${baseUrl}/auth/signup`);
     assert.equal(signupRes.status, 200);
@@ -34,7 +34,7 @@ describe('auth portal preview server', () => {
     const companyRes = await fetch(`${baseUrl}/api/company`);
     const companyJson = await companyRes.json();
     assert.equal(companyJson.ok, true);
-    assert.equal(companyJson.company.supportEmail, 'hey@inneranimalmedia.com');
+    assert.equal(companyJson.company.supportEmail, 'support@agentsam.dev');
 
     const apiRes = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST',

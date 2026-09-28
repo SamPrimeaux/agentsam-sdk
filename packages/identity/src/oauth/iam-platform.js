@@ -12,7 +12,6 @@ import {
 } from '../providers/iam/oauth.js';
 import { fetchIamProfile } from '../providers/iam/profile.js';
 import { normalizeIamIdentity } from '../providers/iam/mapper.js';
-import { finishDesktopOAuth, saveDesktopOAuthIntent } from './desktop-handoff.js';
 
 /**
  * Redirect browser to IAM /api/oauth/identity/authorize (PKCE).
@@ -41,7 +40,6 @@ export async function iamPlatformOAuthStart(request, env, adapter, identity) {
     redirectTo,
     appId: identity?.app?.id || null,
   });
-  await saveDesktopOAuthIntent(adapter, state, url);
 
   const redirectUri = `${url.origin}${IAM_PLATFORM_CALLBACK_PATH}`;
   const authUrl = getIamAuthUrl({
@@ -109,14 +107,6 @@ export async function iamPlatformOAuthCallback(request, env, adapter, identity) 
     email: normalized.email,
     displayName: normalized.name || normalized.email.split('@')[0] || 'User',
   });
-
-  const desktopResponse = await finishDesktopOAuth({
-    adapter,
-    oauthState: state,
-    sessionId: result.sessionId,
-    provider: 'inneranimalmedia',
-  });
-  if (desktopResponse) return desktopResponse;
 
   const redirectTo = identity.resolvePostLoginPath(saved.redirect_to);
   const res = identity.buildLoginSuccessResponse(request, result.sessionId, redirectTo);

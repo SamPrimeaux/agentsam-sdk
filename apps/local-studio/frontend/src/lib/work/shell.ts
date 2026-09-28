@@ -225,12 +225,15 @@ export function runCommand(project: Project, raw: string): ShellResult {
     case "setup":
       onboarding = null;
       return ok(project, runSetupStep(""));
-    case "agentsam":
+    case "agentsam": {
       if (args[0] === "setup" || args.length === 0) {
         onboarding = null;
         return ok(project, runSetupStep(""));
       }
-      return fail(project, "agentsam: try `agentsam setup` or `help`");
+      const prompt = args.slice(args[0] === "vibe" ? 1 : 0).join(" ").trim();
+      if (!prompt) return fail(project, "agentsam: try `agentsam setup` or describe what to build");
+      return ok(project, "sending to AgentSam…", { type: "vibe", prompt });
+    }
     case "help":
     case "?":
       return ok(project, HELP);
@@ -377,9 +380,8 @@ export function runCommand(project: Project, raw: string): ShellResult {
       }
       return fail(project, `export: unknown token ${key}`);
     }
-    case "vibe":
-    case "agentsam": {
-      const prompt = (cmd === "agentsam" ? args.slice(args[0] === "vibe" ? 1 : 0).join(" ") : args.join(" ")).trim();
+    case "vibe": {
+      const prompt = args.join(" ").trim();
       if (!prompt) return fail(project, "vibe: describe what to build");
       return ok(project, "sending to AgentSam…", { type: "vibe", prompt });
     }

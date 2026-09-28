@@ -2,13 +2,34 @@
   "schema": "agentsam.host-install.v1",
   "app_id": "local-studio",
   "config": {
-    "modes": ["standalone", "embedded"],
-    "role": "host"
+    "modes": [
+      "standalone",
+      "embedded"
+    ],
+    "role": "host",
+    "identity": {
+      "account_authority": "service",
+      "local_state": "sqlite",
+      "secrets": "os_secure_store",
+      "standalone_identity": "explicit_only"
+    }
   },
   "mounts": [
-    { "id": "cad-creator", "app_id": "cad-creator", "path": "/cad" },
-    { "id": "cms-studio", "app_id": "client-cms-editor", "path": "/cms" },
-    { "id": "database-editor", "app_id": "database-editor", "path": "/database" }
+    {
+      "id": "cad-creator",
+      "app_id": "cad-creator",
+      "path": "/cad"
+    },
+    {
+      "id": "cms-studio",
+      "app_id": "client-cms-editor",
+      "path": "/cms"
+    },
+    {
+      "id": "database-editor",
+      "app_id": "database-editor",
+      "path": "/database"
+    }
   ],
   "features": [],
   "notes": "Host installation state. Mounted apps reference APP.id; product definitions live in each app's agentsam.app.json."

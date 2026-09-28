@@ -3,9 +3,9 @@
  * Copy Local Studio production assets into packages/agentsam-desktop-shell/dist
  * for the offline .app.
  *
- * The normal path is the dedicated Local Studio desktop SPA. The old boot page
- * is retained only as a catastrophic recovery surface when no desktop build is
- * available.
+ * The dedicated Local Studio desktop SPA is mandatory. Production packaging
+ * fails closed when it is missing; the old recovery/bootstrap shell is never
+ * substituted into a release artifact.
  */
 import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
@@ -15,7 +15,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SHELL_ROOT = path.resolve(__dirname, '..');
 const REPO_ROOT = path.resolve(SHELL_ROOT, '../..');
 const DEST = path.join(SHELL_ROOT, 'dist');
-const BOOT_TEMPLATE = path.join(__dirname, 'desktop-boot.html');
 
 const argSource = process.argv.find((a) => a.startsWith('--source='))?.slice('--source='.length);
 const sourceIdx = process.argv.indexOf('--source');
@@ -57,11 +56,6 @@ if (!source) {
   process.exit(1);
 }
 
-if (!existsSync(BOOT_TEMPLATE)) {
-  console.error(`[sync-local-studio-dist] missing boot template: ${BOOT_TEMPLATE}`);
-  process.exit(1);
-}
-
 rmSync(DEST, { recursive: true, force: true });
 mkdirSync(DEST, { recursive: true });
 cpSync(source, DEST, { recursive: true });
@@ -79,11 +73,11 @@ const isHydrateOnly = indexJs ? clientIsSsrHydrateOnly(indexJs) : false;
 const sourceHasDesktopEntry = existsSync(path.join(source, 'index.html')) && !isHydrateOnly;
 
 if (!sourceHasDesktopEntry) {
-  writeFileSync(path.join(DEST, 'index.html'), readFileSync(BOOT_TEMPLATE));
-  console.warn('[sync-local-studio-dist] desktop SPA missing; wrote recovery surface as index.html');
-} else {
-  console.log('[sync-local-studio-dist] bundled Local Studio desktop SPA is the normal index.html');
+  console.error('[sync-local-studio-dist] ERROR: Local Studio desktop SPA is missing or hydrate-only.');
+  console.error('[sync-local-studio-dist] Refusing to package a fallback/bootstrap shell.');
+  process.exit(1);
 }
+console.log('[sync-local-studio-dist] bundled Local Studio desktop SPA is the normal index.html');
 
 const pkgPath = path.join(REPO_ROOT, 'package.json');
 const sdkVersion = existsSync(pkgPath)
@@ -96,10 +90,8 @@ const meta = {
   source,
   sdk_version: sdkVersion,
   synced_at: new Date().toISOString(),
-  client_mode: sourceHasDesktopEntry ? 'desktop_spa' : 'recovery_surface',
-  note: sourceHasDesktopEntry
-    ? 'Bundled Local Studio is the first frame and works without a hosted redirect.'
-    : 'Recovery surface only: rebuild apps/local-studio desktop bundle.',
+  client_mode: 'desktop_spa',
+  note: 'Bundled Local Studio is the first frame and works without a hosted redirect.',
 };
 writeFileSync(path.join(DEST, 'agentsam-desktop-dist.json'), `${JSON.stringify(meta, null, 2)}\n`);
 

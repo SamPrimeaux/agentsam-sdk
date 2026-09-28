@@ -56,7 +56,7 @@ const REQUIRED = [
   'deep_link_scheme',
   'identity_provider',
 ];
-const VALID_IDENTITY_PROVIDERS = ['inneranimalmedia', 'google', 'github', 'gcp', 'email', 'google_desktop_and_cloudflare'];
+const VALID_IDENTITY_PROVIDERS = ['portable', 'inneranimalmedia', 'google', 'github', 'gcp', 'email', 'google_desktop_and_cloudflare'];
 
 for (const field of REQUIRED) {
   if (!manifest[field]) fail(`manifest missing required field: ${field}`);
@@ -283,7 +283,54 @@ const desktopSpa = manifest.feature_flags?.desktop_spa === true;
 const launchUrl = offlineShell || desktopSpa
   ? 'index.html'
   : new URL(manifest.launch_path || '/', manifest.base_url).toString();
-const agentsamdSidecar = manifest.feature_flags?.agentsamd_sidecar === true;
+const rawPlatform = String(process.env.TAURI_ENV_PLATFORM || '').toLowerCase();
+const targetFamily = String(
+  process.env.AGENTSAM_TARGET_FAMILY
+    || (rawPlatform === 'ios' || rawPlatform === 'android' ? 'mobile' : 'desktop'),
+).toLowerCase();
+if (!['desktop', 'mobile'].includes(targetFamily)) {
+  fail('AGENTSAM_TARGET_FAMILY must be desktop or mobile, got: ' + targetFamily);
+}
+
+const agentsamdSidecar = targetFamily === 'desktop'
+  && manifest.feature_flags?.agentsamd_sidecar === true;
+
+const identityAuthority = String(
+  process.env.AGENTSAM_IDENTITY_AUTHORITY || manifest.auth?.authority || 'service',
+).toLowerCase();
+const configuredServiceOrigin = String(
+  process.env.AGENTSAM_IDENTITY_SERVICE_ORIGIN
+    || (manifest.auth?.service_origin && manifest.auth.service_origin !== 'install-config'
+      ? manifest.auth.service_origin
+      : ''),
+).trim().replace(/\/$/, '');
+
+if (!['service', 'standalone'].includes(identityAuthority)) {
+  fail('identity authority must be service or standalone, got: ' + identityAuthority);
+}
+if (identityAuthority === 'service' && configuredServiceOrigin) {
+  try {
+    const parsed = new URL(configuredServiceOrigin);
+    if (!['https:', 'http:'].includes(parsed.protocol)) throw new Error('unsupported protocol');
+  } catch {
+    fail('AGENTSAM_IDENTITY_SERVICE_ORIGIN is not a valid HTTP(S) origin: ' + configuredServiceOrigin);
+  }
+}
+
+const generatedDir = path.join(ROOT, 'src-tauri', 'generated');
+mkdirSync(generatedDir, { recursive: true });
+const identityRuntimeConfig = {
+  schema: 'agentsam.identity-runtime.v1',
+  authority: identityAuthority,
+  service_origin: configuredServiceOrigin || null,
+  native_session: manifest.auth?.native_session || 'bearer',
+  local_state: manifest.local_state || { adapter: 'sqlite', authority: 'device' },
+  target_family: targetFamily,
+};
+writeFileSync(
+  path.join(generatedDir, 'identity-runtime.json'),
+  JSON.stringify(identityRuntimeConfig, null, 2) + '\n',
+);
 
 if (agentsamdSidecar) {
   const prep = spawnSync(process.execPath, [path.join(__dirname, 'prepare-sidecars.mjs')], {
@@ -313,20 +360,30 @@ const config = {
         url: launchUrl,
       },
     ],
-    trayIcon: manifest.feature_flags?.tray === false ? undefined : { iconPath: trayIconPath },
+    trayIcon: targetFamily === 'desktop' && manifest.feature_flags?.tray !== false ? { iconPath: trayIconPath } : undefined,
   },
   bundle: {
     active: true,
     icon: BUNDLE_ICONS,
-    ...(agentsamdSidecar ? { externalBin: ['binaries/agentsamd'] } : {}),
+    ...(agentsamdSidecar ? { externalBin: ['binaries/agentsamd', 'binaries/node'] } : {}),
     ...(desktopSpa
       ? {
           resources: {
-            '../../agentsam-database-editor/scripts/local-sqlite-bridge.mjs':
-              'runtime/database/scripts/local-sqlite-bridge.mjs',
-            '../../agentsam-database-editor/src/adapters/sqlite.js':
-              'runtime/database/src/adapters/sqlite.js',
-            '../../../migrations/runtime': 'runtime/migrations',
+            'generated/identity-runtime.json': 'runtime/identity/runtime.json',
+            '../../../apps/local-studio/agentsam.app.json': 'runtime/identity/app.json',
+            ...(targetFamily === 'desktop'
+              ? {
+                  '../../agentsam-database-editor/scripts/local-sqlite-bridge.mjs':
+                    'runtime/database/scripts/local-sqlite-bridge.mjs',
+                  '../../agentsam-database-editor/src/adapters/sqlite.js':
+                    'runtime/database/src/adapters/sqlite.js',
+                  '../../../migrations/runtime': 'runtime/migrations',
+                  '../../identity/scripts/local-identity-bridge.mjs':
+                    'runtime/identity/scripts/local-identity-bridge.mjs',
+                  '../../identity/src': 'runtime/identity/src',
+                  '../../identity/migrations/sqlite': 'runtime/identity/migrations/sqlite',
+                }
+              : {}),
           },
         }
       : {}),
@@ -337,7 +394,7 @@ const config = {
         schemes: [manifest.deep_link_scheme],
       },
     },
-    ...(pubkey && manifest.feature_flags?.auto_update !== false
+    ...(targetFamily === 'desktop' && pubkey && manifest.feature_flags?.auto_update !== false
       ? {
           updater: {
             pubkey,
@@ -351,6 +408,7 @@ const config = {
 const outPath = path.join(srcTauriDir, 'tauri.conf.json');
 writeFileSync(outPath, JSON.stringify(config, null, 2) + '\n');
 console.log(`[build-brand] wrote ${outPath}`);
+console.log('[build-brand] target family: ' + targetFamily + '; identity authority: ' + identityAuthority + (configuredServiceOrigin ? ' @ ' + configuredServiceOrigin : ''));
 console.log(`[build-brand] window url: ${launchUrl}${desktopSpa ? ' (desktop_spa)' : offlineShell ? ' (recovery_shell)' : ''}`);
 console.log(
   `[build-brand] done. Next: cd src-tauri && cargo check   (or: npm run build, once a real dist/ exists)`,

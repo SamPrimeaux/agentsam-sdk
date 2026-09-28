@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Local static preview for IAM auth portal HTML (1:1 paths: /auth/login, /auth/signup, /auth/reset).
+ * Local static preview for the portable AgentSam auth portal HTML (1:1 paths: /auth/login, /auth/signup, /auth/reset).
  * API routes are stubbed so forms and globe-exit transitions work without a Worker.
  */
 import http from 'node:http';
@@ -119,14 +119,14 @@ function hubHtml(baseUrl) {
 const PREVIEW_COMPANY = {
   id: 'co_default',
   slug: 'default',
-  name: 'Inner Animal Media',
-  legalName: 'Inner Animals LLC',
-  logoUrl: 'https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/527ab85a-01bb-4125-57bb-694fe8be8700/public',
-  faviconUrl: 'https://inneranimalmedia.com/favicon.ico',
+  name: 'AgentSam',
+  legalName: 'AgentSam',
+  logoUrl: '/shared/agentsam-mark.svg',
+  faviconUrl: null,
   primaryColor: '#007AFF',
   authBgColor: '#050508',
-  supportEmail: 'hey@inneranimalmedia.com',
-  websiteUrl: 'https://inneranimalmedia.com',
+  supportEmail: 'support@agentsam.dev',
+  websiteUrl: 'https://agentsam.dev',
   tagline: 'Instant Access',
   meta: {
     privacyUrl: '/privacy',
