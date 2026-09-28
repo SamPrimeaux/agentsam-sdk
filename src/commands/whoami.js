@@ -10,8 +10,7 @@ import { listProviderCredentialStatus } from '../lib/provider-credentials.js';
 import { projectWhoamiCapabilities } from '../lib/whoami-capabilities.js';
 import { collectLocalTerminalContext, mergeTerminalContexts } from '../lib/terminal-local.js';
 import {
-  LOCAL_STUDIO_APP_ID,
-  resolveLocalStudioHostOrigin,
+  resolveCurrentAppContext,
   resolvePlatformAccountIssuer,
 } from '../lib/app-authority.js';
 
@@ -144,7 +143,10 @@ export async function collectWhoami(options = {}) {
   const localTerminal = options.localTerminal
     || await collectLocalTerminalContext({ env, home: options.home });
   const platformIssuer = resolvePlatformAccountIssuer(env);
-  const localStudioHost = resolveLocalStudioHostOrigin({ root: options.root });
+  const appContext = resolveCurrentAppContext({
+    root: options.root,
+    cwd: options.cwd || process.cwd(),
+  });
 
   const activeKind = normalizeAuthKind(active.kind);
   // Project capabilities after we know tokenPermissions (below) when possible.
@@ -163,8 +165,9 @@ export async function collectWhoami(options = {}) {
     authority: 'inneranimalmedia',
     namespaces: {
       platform_issuer: platformIssuer,
-      app_id: LOCAL_STUDIO_APP_ID,
-      host_origin: localStudioHost,
+      app_id: appContext.app_id,
+      host_origin: appContext.host_origin,
+      app_context_source: appContext.source,
       note: 'PLATFORM issuer ≠ APP HOST — do not alias',
     },
     identity: null,
@@ -193,8 +196,7 @@ export async function collectWhoami(options = {}) {
     cf_browser_oauth: {
       kind: 'agentsam_cf_browser_oauth',
       configured: false,
-      app_id: LOCAL_STUDIO_APP_ID,
-      host_origin: localStudioHost,
+      source: null,
       next: 'agentsam cloudflare login --pack agentsam',
     },
     provider_credentials: credentials,

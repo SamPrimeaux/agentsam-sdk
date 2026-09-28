@@ -5,3 +5,5 @@
 
 export * from "./crypto/aes-gcm.js";
 export * from "./contracts/credential.js";
+
+export * from "./crypto/oauth-envelope.js";

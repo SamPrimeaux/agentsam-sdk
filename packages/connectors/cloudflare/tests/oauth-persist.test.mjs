@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  resolveCloudflareAccountId,
   unionScopes,
   upsertCloudflareUserOauthToken,
 } from '../src/oauth-persist.js';
@@ -13,11 +14,41 @@ describe('oauth-persist spine', () => {
     );
   });
 
+  it('requires explicit selection when Cloudflare exposes multiple accounts', async () => {
+    const result = await resolveCloudflareAccountId('token', {
+      fetchImpl: async () => ({
+        ok: true,
+        async json() {
+          return {
+            result: [
+              { id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', name: 'A' },
+              { id: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', name: 'B' },
+            ],
+          };
+        },
+      }),
+    });
+    assert.equal(result?.error, 'cloudflare_account_selection_required');
+    assert.equal(result?.accounts?.length, 2);
+  });
+
+  it('rejects provider labels and synthetic values as account identifiers', async () => {
+    const result = await upsertCloudflareUserOauthToken(
+      { DB: { prepare() { throw new Error('should not query'); } } },
+      { userId: 'au_1', accessToken: 'token', accountId: 'Cloudflare' },
+    );
+    assert.equal(result.ok, false);
+    assert.equal(result.error, 'cloudflare_account_identifier_required');
+  });
+
   it('upserts with client_id provenance and scope union (no connected_via_app)', async () => {
     const rows = new Map();
+    const sqlSeen = [];
     const env = {
+      VAULT_MASTER_KEY: 'test-vault-material',
       DB: {
         prepare(sql) {
+          sqlSeen.push(String(sql));
           return {
             bind(...args) {
               return {
@@ -29,7 +60,7 @@ describe('oauth-persist spine', () => {
                 },
                 async run() {
                   if (String(sql).includes('INSERT')) {
-                    // Plaintext path (no vault): access at [3], refresh [4], scopes [7], metadata [11]
+                    // Encrypted-only path: plaintext [3]/[4] are null; ciphertext [5]/[6].
                     const key = `${args[0]}|${args[2]}`;
                     const prior = rows.get(key);
                     rows.set(key, {
@@ -87,5 +118,8 @@ describe('oauth-persist spine', () => {
     assert.equal(r2.ok, true);
     assert.ok(r2.scopes.includes('d1.read'));
     assert.ok(r2.scopes.includes('workers-scripts.write'));
+    const upsertSql = sqlSeen.find((sql) => sql.includes('ON CONFLICT(user_id, provider, account_identifier)'));
+    assert.match(upsertSql || '', /last_refresh_error_code = NULL/);
+    assert.match(upsertSql || '', /refresh_failure_count = 0/);
   });
 });

@@ -12,7 +12,7 @@
  * - scopes            → scopes / scope columns
  */
 
-import { sealToken, vaultConfigured } from './vault.js';
+import { oauthAad, sealOauthToken } from '../../../agentsam-vault/src/crypto/oauth-envelope.js';
 
 const PROVIDER = 'cloudflare';
 
@@ -41,8 +41,8 @@ function parseMeta(raw) {
   }
 }
 
-function connectionAad(userId) {
-  return `cloudflare-connection:${userId}`;
+function vaultMaterial(env) {
+  return clean(env?.VAULT_MASTER_KEY || env?.VAULT_KEY);
 }
 
 /**
@@ -55,15 +55,27 @@ export async function resolveCloudflareAccountId(accessToken, opts = {}) {
   if (!token) return null;
   const fetchImpl = opts.fetchImpl || fetch;
   try {
-    const res = await fetchImpl('https://api.cloudflare.com/client/v4/accounts?per_page=1', {
+    const res = await fetchImpl('https://api.cloudflare.com/client/v4/accounts?per_page=50', {
       headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
     });
     if (!res.ok) return null;
     const body = await res.json().catch(() => null);
-    const account = body?.result?.[0];
-    const id = clean(account?.id);
-    if (!/^[a-f0-9]{32}$/i.test(id)) return null;
-    return { id, name: clean(account?.name) || null };
+    const accounts = (Array.isArray(body?.result) ? body.result : [])
+      .map((account) => ({
+        id: clean(account?.id),
+        name: clean(account?.name) || null,
+      }))
+      .filter((account) => /^[a-f0-9]{32}$/i.test(account.id));
+    if (accounts.length === 1) return accounts[0];
+    if (accounts.length > 1) {
+      return {
+        id: null,
+        name: null,
+        error: 'cloudflare_account_selection_required',
+        accounts,
+      };
+    }
+    return null;
   } catch {
     return null;
   }
@@ -73,41 +85,6 @@ export async function resolveCloudflareAccountId(accessToken, opts = {}) {
  * Mark other Cloudflare grants for this user inactive (single-connection model).
  * Mirrors legacy agentsam_cloudflare_connections status='superseded'.
  */
-async function supersedeOtherCloudflareRows(env, userId, keepAccountId, now) {
-  try {
-    await env.DB.prepare(
-      `UPDATE user_oauth_tokens
-       SET is_active = 0,
-           revoked_at = ?,
-           access_token = NULL,
-           refresh_token = NULL,
-           access_token_encrypted = NULL,
-           refresh_token_encrypted = NULL,
-           updated_at = ?,
-           metadata_json = json_set(
-             COALESCE(NULLIF(TRIM(metadata_json), ''), '{}'),
-             '$.status', 'superseded'
-           )
-       WHERE user_id = ?
-         AND LOWER(provider) = ?
-         AND account_identifier != ?
-         AND COALESCE(is_active, 1) = 1`,
-    ).bind(now, now, userId, PROVIDER, keepAccountId).run();
-  } catch {
-    // Older schemas may lack metadata_json / is_active — best-effort.
-    try {
-      await env.DB.prepare(
-        `UPDATE user_oauth_tokens
-         SET is_active = 0, revoked_at = ?, updated_at = ?,
-             access_token = NULL, refresh_token = NULL
-         WHERE user_id = ? AND LOWER(provider) = ? AND account_identifier != ?
-           AND COALESCE(is_active, 1) = 1`,
-      ).bind(now, now, userId, PROVIDER, keepAccountId).run();
-    } catch {
-      /* ignore */
-    }
-  }
-}
 
 /**
  * Upsert Cloudflare grant into user_oauth_tokens with scope union + client_id provenance.
@@ -143,9 +120,17 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
     if (resolved?.id) {
       accountId = resolved.id;
       accountDisplay = accountDisplay || resolved.name || null;
+    } else if (resolved?.error) {
+      return {
+        ok: false,
+        error: resolved.error,
+        accounts: Array.isArray(resolved.accounts) ? resolved.accounts : [],
+      };
     }
   }
-  if (!accountId) accountId = `cf_oauth_${userId}`;
+  if (!/^[a-f0-9]{32}$/i.test(accountId)) {
+    return { ok: false, error: 'cloudflare_account_identifier_required' };
+  }
 
   const now = Math.floor(Date.now() / 1000);
   const incomingScopes = splitScopes(input.scopes);
@@ -176,7 +161,7 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
   try {
     const next = {
       ...priorMeta,
-      cloudflare_account_id: accountId.startsWith('cf_oauth_') ? null : accountId,
+      cloudflare_account_id: accountId,
       status: 'connected',
       last_connected_at: now,
     };
@@ -186,7 +171,7 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
     metadataJson = JSON.stringify(next);
   } catch {
     metadataJson = JSON.stringify({
-      cloudflare_account_id: accountId.startsWith('cf_oauth_') ? null : accountId,
+      cloudflare_account_id: accountId,
       status: 'connected',
       ...(clientId ? { connected_via_client_id: clientId } : {}),
     });
@@ -195,24 +180,25 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
   const expiresAt = input.expiresAt != null ? Number(input.expiresAt) : null;
   const refreshToken = clean(input.refreshToken) || clean(existing?.refresh_token) || null;
 
-  let accessPlain = accessToken;
-  let refreshPlain = refreshToken;
+  const material = vaultMaterial(env);
+  if (!material) return { ok: false, error: 'vault_required' };
+
   let accessEnc = null;
   let refreshEnc = null;
-  if (vaultConfigured(env)) {
-    try {
-      const aad = connectionAad(userId);
-      accessEnc = await sealToken(env, accessToken, aad);
-      refreshEnc = refreshToken ? await sealToken(env, refreshToken, aad) : null;
-      // Encrypted-only at rest when vault is available (matches IAM CF policy).
-      accessPlain = null;
-      refreshPlain = null;
-    } catch (err) {
-      return { ok: false, error: err?.code || 'vault_unavailable', detail: String(err?.message || err) };
-    }
+  try {
+    const aad = oauthAad(PROVIDER, userId, accountId);
+    accessEnc = await sealOauthToken(material, accessToken, aad);
+    refreshEnc = refreshToken ? await sealOauthToken(material, refreshToken, aad) : null;
+  } catch (err) {
+    return { ok: false, error: err?.code || 'vault_unavailable', detail: String(err?.message || err) };
   }
 
-  await supersedeOtherCloudflareRows(env, userId, accountId, now);
+  // user_oauth_tokens never stores plaintext provider tokens.
+  const accessPlain = null;
+  const refreshPlain = null;
+
+  // Keep other Cloudflare account rows active. The composite PK already
+  // supports one row per (user, provider, account_identifier).
 
   try {
     await env.DB.prepare(
@@ -235,6 +221,9 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
          metadata_json = excluded.metadata_json,
          is_active = 1,
          revoked_at = NULL,
+         last_refresh_error_code = NULL,
+         refresh_failure_count = 0,
+         last_refresh_at = NULL,
          updated_at = excluded.updated_at`,
     ).bind(
       userId,

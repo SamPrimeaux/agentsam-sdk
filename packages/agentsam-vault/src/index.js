@@ -17,3 +17,11 @@ export {
 } from './crypto/aes-gcm.js';
 export { createCredentialResolver } from './runtime/resolver.js';
 
+
+export {
+  oauthAad,
+  oauthKeyId,
+  sealOauthToken,
+  unsealOauthToken,
+  sealLegacyIamOauthToken,
+} from './crypto/oauth-envelope.js';

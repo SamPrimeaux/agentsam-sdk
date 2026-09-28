@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "AgentSam credential vault core — contracts, AES-GCM crypto, provider registry, resolver. UI lives in agentsam-key-manager.",
+  "description": "AgentSam credential vault core \u2014 contracts, AES-GCM crypto, provider registry, resolver. UI lives in agentsam-key-manager.",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
   "exports": {
@@ -20,7 +20,8 @@
       "types": "./src/crypto/aes-gcm.d.ts",
       "default": "./src/crypto/aes-gcm.js"
     },
-    "./resolver": "./src/runtime/resolver.js"
+    "./resolver": "./src/runtime/resolver.js",
+    "./oauth": "./src/crypto/oauth-envelope.js"
   },
   "scripts": {
     "test": "node --test tests/*.test.mjs"

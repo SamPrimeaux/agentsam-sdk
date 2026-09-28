@@ -10,6 +10,7 @@
  */
 
 import { decryptSecret, vaultConfigured } from './vault.js';
+import { oauthAad, sealOauthToken, unsealOauthToken } from '../../../agentsam-vault/src/crypto/oauth-envelope.js';
 import { getCloudflareCapability } from './capabilities.js';
 
 function clean(value) {
@@ -24,17 +25,22 @@ function scopesFromRow(row) {
 }
 
 function accountIdFromRow(row) {
-  let accountId = clean(row?.account_identifier);
-  if (accountId.startsWith('cf_oauth_')) accountId = '';
-  if (!accountId && row?.metadata_json) {
+  const stored = clean(row?.account_identifier);
+  if (/^[a-f0-9]{32}$/i.test(stored)) return stored;
+  if (row?.metadata_json) {
     try {
       const meta = JSON.parse(row.metadata_json);
-      accountId = clean(meta.cloudflare_account_id || meta.account_id);
+      const fromMeta = clean(meta.cloudflare_account_id || meta.account_id);
+      if (/^[a-f0-9]{32}$/i.test(fromMeta)) return fromMeta;
     } catch {
       /* ignore */
     }
   }
-  return accountId || null;
+  return null;
+}
+
+function oauthVaultMaterial(env) {
+  return clean(env?.VAULT_MASTER_KEY || env?.VAULT_KEY);
 }
 
 /**
@@ -115,24 +121,59 @@ export async function loadCloudflareFromUserOauthTokens(env, ownerId, options = 
   }
   if (!row) return null;
 
+  const accountId = accountIdFromRow(row);
   let accessToken = clean(row.access_token);
+  const material = oauthVaultMaterial(env);
+
+  if (!accessToken && row.access_token_encrypted && material && accountId) {
+    try {
+      accessToken = clean(await unsealOauthToken(
+        material,
+        row.access_token_encrypted,
+        oauthAad('cloudflare', ownerId, accountId),
+      ));
+    } catch {
+      /* fall through to legacy host/connector formats */
+    }
+  }
+
   if (!accessToken && row.access_token_encrypted && options.decryptUserOauthToken) {
     try {
       accessToken = clean(await options.decryptUserOauthToken(env, row.access_token_encrypted));
     } catch {
-      /* host vault packing may differ — fall through to connector AAD */
+      /* host legacy vault packing may differ — fall through */
     }
   }
-  if (!accessToken && row.access_token_encrypted && vaultConfigured(env)) {
-    try {
-      accessToken = clean(await decryptSecret(env, row.access_token_encrypted, `cloudflare-connection:${ownerId}`));
-    } catch {
-      /* IAM vault ciphertext is not connector-AAD — leave null */
-    }
-  }
-  if (!accessToken) return null;
 
-  const accountId = accountIdFromRow(row);
+  // Migration path for the pre-v2 Local Studio connector format:
+  // raw AES key + AAD cloudflare-connection:<owner>. If we can open it, re-seal
+  // both tokens immediately into the portable OAuth envelope.
+  if (!accessToken && row.access_token_encrypted && vaultConfigured(env) && material && accountId) {
+    try {
+      const legacyAad = `cloudflare-connection:${ownerId}`;
+      accessToken = clean(await decryptSecret(env, row.access_token_encrypted, legacyAad));
+      if (accessToken) {
+        const aad = oauthAad('cloudflare', ownerId, accountId);
+        const accessEnc = await sealOauthToken(material, accessToken, aad);
+        let refreshEnc = row.refresh_token_encrypted || null;
+        if (row.refresh_token_encrypted) {
+          const refreshToken = clean(await decryptSecret(env, row.refresh_token_encrypted, legacyAad));
+          refreshEnc = refreshToken ? await sealOauthToken(material, refreshToken, aad) : null;
+        }
+        await env.DB.prepare(`
+          UPDATE user_oauth_tokens
+          SET access_token_encrypted = ?, refresh_token_encrypted = ?,
+              last_refresh_error_code = NULL, refresh_failure_count = 0,
+              is_active = 1, revoked_at = NULL, updated_at = unixepoch()
+          WHERE user_id = ? AND LOWER(provider) = 'cloudflare' AND account_identifier = ?
+        `).bind(accessEnc, refreshEnc, ownerId, accountId).run();
+      }
+    } catch {
+      /* unreadable legacy connector ciphertext — leave null */
+    }
+  }
+
+  if (!accessToken) return null;
 
   return {
     bearerToken: accessToken,
