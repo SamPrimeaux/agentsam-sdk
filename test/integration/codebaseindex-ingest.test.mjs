@@ -15,6 +15,7 @@ import { ensureSeedOperations, getSamOperation, AgentSamClient } from '../../src
 import { getSkill, loadSkill } from '../../src/skills/index.js';
 import { resolveHelpTopic, renderHelpOverview } from '../../src/ui/cli/help.js';
 import { runCodebaseindexIngest } from '../../src/commands/codebaseindex.js';
+import { buildInventory } from '../../src/indexing/ingest/inventory.js';
 
 describe('CLI command catalog assist', () => {
   it('maps ingest alias to codebaseindex with skill tip', () => {
@@ -162,5 +163,52 @@ describe('catalog-driven help', () => {
     const text = renderHelpOverview('2.6.3');
     assert.match(text, /tip: use skill/);
     assert.match(text, /command catalog/i);
+  });
+});
+
+describe('Cargo workspace inventory', () => {
+  it('treats workspace members as source and keeps generated/operational state out of the starting scope', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-cargo-workspace-'));
+    try {
+      fs.writeFileSync(path.join(root, 'Cargo.toml'), `[workspace]
+members = [
+  "core",
+  "worker",
+]
+resolver = "2"
+`);
+      for (const crate of ['core', 'worker']) {
+        fs.mkdirSync(path.join(root, crate, 'src'), { recursive: true });
+        fs.writeFileSync(path.join(root, crate, 'Cargo.toml'), `[package]
+name = "${crate}"
+version = "0.1.0"
+edition = "2024"
+`);
+        fs.writeFileSync(path.join(root, crate, 'src', 'lib.rs'), `pub fn ${crate}_value() -> u32 { 1 }
+`);
+      }
+      fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
+      fs.writeFileSync(path.join(root, 'docs', 'README.md'), '# docs\n');
+      fs.mkdirSync(path.join(root, 'target'), { recursive: true });
+      fs.writeFileSync(path.join(root, 'target', 'build.txt'), 'generated\n');
+      fs.mkdirSync(path.join(root, '.agentsam', 'machine'), { recursive: true });
+      fs.writeFileSync(path.join(root, '.agentsam', 'machine', 'state.sqlite'), '');
+
+      const inventory = buildInventory({ root });
+      assert.deepEqual(inventory.cargo_workspace_roots, ['core', 'worker']);
+      assert.ok(inventory.categories.source.includes('core'));
+      assert.ok(inventory.categories.source.includes('worker'));
+      assert.ok(inventory.categories.docs.includes('docs'));
+      assert.ok(inventory.categories.dependencies.includes('target'));
+      assert.ok(inventory.categories.operational.includes('.agentsam'));
+
+      assert.ok(inventory.suggested.include.includes('core'));
+      assert.ok(inventory.suggested.include.includes('worker'));
+      assert.ok(inventory.suggested.include.includes('docs'));
+      assert.ok(inventory.suggested.exclude.includes('target'));
+      assert.ok(inventory.suggested.exclude.includes('.agentsam'));
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 });

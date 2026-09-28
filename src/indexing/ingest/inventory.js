@@ -7,14 +7,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-
-const EXT_LANG = new Map([
-  ['.js', 'JavaScript'], ['.mjs', 'JavaScript'], ['.cjs', 'JavaScript'],
-  ['.ts', 'TypeScript'], ['.tsx', 'TypeScript'], ['.jsx', 'JavaScript'],
-  ['.py', 'Python'], ['.go', 'Go'], ['.rs', 'Rust'], ['.md', 'Markdown'],
-  ['.json', 'JSON'], ['.css', 'CSS'], ['.html', 'HTML'], ['.htm', 'HTML'],
-  ['.yml', 'YAML'], ['.yaml', 'YAML'], ['.sql', 'SQL'], ['.sh', 'Shell'],
-]);
+import { sourceLanguageForExtension } from '../../../packages/agentsam-repository/src/source-types.js';
 
 const IMAGE = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico']);
 const MODEL3D = new Set(['.glb', '.gltf', '.obj', '.fbx', '.stl']);
@@ -51,16 +44,88 @@ const CATEGORY_GENERATED = new Set([
 
 /** AgentSam / config control plane — review. */
 const CATEGORY_CONFIG = new Set([
-  '.agentsam', 'migrations', 'registry', 'wrangler', 'deploy',
+  'migrations', 'registry', 'wrangler', 'deploy',
 ]);
+
+const CATEGORY_OPERATIONAL = new Set(['.agentsam']);
 
 const SUGGEST_EXCLUDE_NAMES = CATEGORY_DEPENDENCIES;
 
-function classifyTopLevel(name) {
+function cargoWorkspaceSourceRoots(root) {
+  const manifest = path.join(root, 'Cargo.toml');
+  let text;
+  try { text = fs.readFileSync(manifest, 'utf8'); } catch { return []; }
+
+  let inWorkspace = false;
+  let collectingMembers = false;
+  let membersText = '';
+
+  for (const rawLine of text.split(String.fromCharCode(10))) {
+    const line = rawLine.trim();
+    if (line.startsWith('[') && line.endsWith(']')) {
+      inWorkspace = line === '[workspace]';
+      collectingMembers = false;
+      continue;
+    }
+    if (!inWorkspace) continue;
+
+    if (!collectingMembers && line.startsWith('members')) {
+      const equals = line.indexOf('=');
+      if (equals < 0) continue;
+      membersText = line.slice(equals + 1).trim();
+      collectingMembers = !membersText.includes(']');
+    } else if (collectingMembers) {
+      membersText += ' ' + line;
+      collectingMembers = !line.includes(']');
+    }
+
+    if (membersText && !collectingMembers) break;
+  }
+
+  const open = membersText.indexOf('[');
+  const close = membersText.lastIndexOf(']');
+  if (open < 0 || close <= open) return [];
+
+  const members = [];
+  const body = membersText.slice(open + 1, close);
+  let quote = '';
+  let value = '';
+  for (const char of body) {
+    if (!quote && (char === '"' || char === "'")) {
+      quote = char;
+      value = '';
+      continue;
+    }
+    if (quote && char === quote) {
+      members.push(value);
+      quote = '';
+      value = '';
+      continue;
+    }
+    if (quote) value += char;
+  }
+
+  const roots = [];
+  for (let member of members) {
+    member = member.trim();
+    if (member.startsWith('./')) member = member.slice(2);
+    if (!member || member === '.') continue;
+    let rootName = member.split('/')[0];
+    const wildcardPositions = ['?', '*', '[', '{']
+      .map((token) => rootName.indexOf(token))
+      .filter((index) => index >= 0);
+    if (wildcardPositions.length) rootName = rootName.slice(0, Math.min(...wildcardPositions));
+    if (rootName && fs.existsSync(path.join(root, rootName))) roots.push(rootName);
+  }
+  return [...new Set(roots)].sort();
+}
+
+function classifyTopLevel(name, sourceRoots = []) {
   if (CATEGORY_DEPENDENCIES.has(name)) return 'dependencies';
-  if (CATEGORY_SOURCE.has(name)) return 'source';
+  if (sourceRoots.includes(name) || CATEGORY_SOURCE.has(name)) return 'source';
   if (CATEGORY_DOCS.has(name)) return 'docs';
   if (CATEGORY_GENERATED.has(name)) return 'generated';
+  if (CATEGORY_OPERATIONAL.has(name)) return 'operational';
   if (CATEGORY_CONFIG.has(name)) return 'config';
   if (CATEGORY_TOOLING.has(name)) return 'tooling';
   if (/^(old|legacy|archive|backup|tmp|temp)/i.test(name)) return 'historical';
@@ -91,7 +156,7 @@ function walk(root, rel = '', acc = [], depth = 0) {
         name: ent.name,
         ext,
         bytes,
-        language: EXT_LANG.get(ext) || null,
+        language: sourceLanguageForExtension(ext),
         media: IMAGE.has(ext) ? 'image' : MODEL3D.has(ext) ? 'model3d' : ARCHIVE.has(ext) ? 'archive' : null,
       });
     }
@@ -121,6 +186,7 @@ export function buildInventory(opts) {
   const files = entries.filter((e) => e.kind === 'file');
   const dirs = entries.filter((e) => e.kind === 'directory');
   const top = dirs.filter((d) => !d.path.includes('/')).map((d) => d.name);
+  const cargoWorkspaceRoots = cargoWorkspaceSourceRoots(root);
   const languages = {};
   let locTotal = 0;
   for (const f of files.slice(0, opts.maxFiles || 4000)) {
@@ -141,12 +207,13 @@ export function buildInventory(opts) {
     config: [],
     generated: [],
     dependencies: [],
+    operational: [],
     tooling: [],
     historical: [],
     unknown: [],
   };
   for (const name of top) {
-    categories[classifyTopLevel(name)].push(name);
+    categories[classifyTopLevel(name, cargoWorkspaceRoots)].push(name);
   }
 
   const primaryInclude = [
@@ -160,6 +227,7 @@ export function buildInventory(opts) {
   ];
   const usuallyExclude = [
     ...categories.dependencies,
+    ...categories.operational,
     ...categories.tooling.filter((n) => !reviewInclude.includes(n) && n !== 'scripts' && n !== 'test' && n !== 'tests'),
     ...categories.historical,
   ];
@@ -185,6 +253,7 @@ export function buildInventory(opts) {
       package_manifests: packageManifests,
     },
     languages,
+    cargo_workspace_roots: cargoWorkspaceRoots,
     top_level: top,
     categories,
     suggested: {

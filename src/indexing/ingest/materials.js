@@ -7,17 +7,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
+import { isCodeSourceExtension, isDocumentSourceExtension } from '../../../packages/agentsam-repository/src/source-types.js';
 
 const ARCHIVE_EXT = new Set(['.zip', '.tar', '.tgz', '.gz', '.tar.gz', '.tbz2', '.tar.bz2']);
 const IMAGE_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico', '.bmp', '.avif']);
 const MODEL_3D_EXT = new Set(['.glb', '.gltf', '.obj', '.fbx', '.stl', '.usdz']);
-const DOC_EXT = new Set(['.html', '.htm', '.md', '.txt', '.css', '.scss', '.json', '.xml', '.csv']);
-const CODE_EXT = new Set([
-  '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.py', '.go', '.rs', '.java', '.kt',
-  '.swift', '.c', '.h', '.cpp', '.cc', '.cs', '.rb', '.php', '.sql', '.sh', '.bash',
-  '.zsh', '.yaml', '.yml', '.toml', '.vue', '.svelte',
-]);
-
 function clean(value) {
   return value == null ? '' : String(value).trim();
 }
@@ -62,8 +56,8 @@ export function classifyMaterial(filePath) {
   else if (ARCHIVE_EXT.has(ext) || resolved.toLowerCase().endsWith('.tar.gz')) kind = 'archive';
   else if (IMAGE_EXT.has(ext)) kind = 'image';
   else if (MODEL_3D_EXT.has(ext)) kind = 'model3d';
-  else if (DOC_EXT.has(ext)) kind = 'document';
-  else if (CODE_EXT.has(ext)) kind = 'code';
+  else if (isDocumentSourceExtension(ext)) kind = 'document';
+  else if (isCodeSourceExtension(ext)) kind = 'code';
   else if (stat?.isFile()) kind = 'file';
   return {
     path: resolved,
