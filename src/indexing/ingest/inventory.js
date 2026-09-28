@@ -12,10 +12,21 @@ import {
   sourceLanguageForExtension,
   sourceTypeForExtension,
 } from '../../../packages/agentsam-repository/src/source-types.js';
+import {
+  finalizeStyleEvidence,
+  inspectStyleEvidenceFile,
+  mergeStyleEvidence,
+} from './style-evidence.js';
 
 const IMAGE = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico']);
 const MODEL3D = new Set(['.glb', '.gltf', '.obj', '.fbx', '.stl']);
 const ARCHIVE = new Set(['.zip', '.tar', '.tgz', '.gz']);
+
+const ROOT_SECRET = /^(\.env(\..+)?|\.dev\.vars(\..+)?|.+\.(pem|key|p12|pfx))$/i;
+const ROOT_TEMPLATE = /\.(example|sample|template)$/i;
+const ROOT_LOCKFILE = /^(package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lockb?|Cargo\.lock|poetry\.lock|uv\.lock)$/;
+const ROOT_MANIFEST = /^(package\.json|Cargo\.toml|go\.mod|pyproject\.toml|requirements[\w.-]*\.txt|wrangler(?:\.[\w-]+)?\.(toml|jsonc?)|tsconfig[\w.-]*\.json|.+\.config\.[cm]?[jt]s)$/i;
+const ROOT_DOCS = /^(README|CHANGELOG|CONTRIBUTING|SECURITY|AGENTS|AGENTSAM|CLAUDE|LICENSE)(\..+)?$/i;
 
 /** Usually exclude — dependency / build caches (candidates only). */
 const CATEGORY_DEPENDENCIES = new Set([
@@ -153,24 +164,52 @@ function isGitIgnored(root, relPath) {
   }
 }
 
-function classifyByEvidence(root, name, entries) {
-  if (isGitIgnored(root, name)) return name.startsWith('.') ? 'operational' : 'generated';
-
+function directoryEvidence(entries, name) {
   const prefix = `${name}/`;
-  let code = 0;
-  let docs = 0;
-  let media = 0;
+  const evidence = { code: 0, docs: 0, data: 0, media: 0 };
   for (const entry of entries) {
     if (entry.kind !== 'file' || !entry.path.startsWith(prefix)) continue;
     const sourceType = sourceTypeForExtension(entry.ext);
-    if (sourceType?.kind === 'code') code += 1;
-    else if (sourceType?.id === 'markdown' || sourceType?.id === 'text') docs += 1;
-    else if (entry.media === 'image' || entry.media === 'model3d') media += 1;
+    if (sourceType?.kind === 'code') evidence.code += 1;
+    else if (sourceType?.id === 'markdown' || sourceType?.id === 'text') evidence.docs += 1;
+    else if (sourceType?.kind === 'document') evidence.data += 1;
+    else if (entry.media === 'image' || entry.media === 'model3d') evidence.media += 1;
   }
-  if (code) return 'source';
-  if (docs) return 'docs';
-  if (media) return 'assets';
-  return null;
+  return evidence;
+}
+
+function classifyByEvidence(root, name, entries) {
+  if (isGitIgnored(root, name)) return name.startsWith('.') ? 'operational' : 'generated';
+  const evidence = directoryEvidence(entries, name);
+  const ranked = [
+    ['source', evidence.code],
+    ['docs', evidence.docs],
+    ['data', evidence.data],
+    ['assets', evidence.media],
+  ].sort((a, b) => b[1] - a[1]);
+  return ranked[0][1] > 0 ? ranked[0][0] : null;
+}
+
+function classifyRootFile(entry) {
+  const name = entry.name;
+  if (ROOT_SECRET.test(name) && !ROOT_TEMPLATE.test(name)) return 'secret';
+  if (ROOT_LOCKFILE.test(name)) return 'lockfile';
+  if (ROOT_MANIFEST.test(name)) return 'manifest';
+  if (ROOT_DOCS.test(name)) return 'docs';
+  return sourceTypeForExtension(entry.ext)?.kind === 'code' ? 'source' : 'config';
+}
+
+function isGitTrackedPath(root, relPath) {
+  try {
+    const output = execFileSync('git', ['ls-files', '-z', '--', relPath], {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    return Boolean(output);
+  } catch {
+    return false;
+  }
 }
 
 function walk(root, rel = '', acc = [], depth = 0) {
@@ -228,14 +267,41 @@ export function buildInventory(opts) {
   const files = entries.filter((e) => e.kind === 'file');
   const dirs = entries.filter((e) => e.kind === 'directory');
   const top = dirs.filter((d) => !d.path.includes('/')).map((d) => d.name);
+  const rootEntries = files.filter((f) => !f.path.includes('/'));
   const cargoWorkspaceRoots = cargoWorkspaceSourceRoots(root);
   const languages = {};
+  const topLevelDetails = {};
+  let styleEvidence = null;
   let locTotal = 0;
+  for (const name of top) {
+    topLevelDetails[name] = {
+      files: 0,
+      loc: 0,
+      dominant_language: null,
+      language_loc: {},
+      evidence: directoryEvidence(entries, name),
+    };
+  }
   for (const f of files.slice(0, opts.maxFiles || 4000)) {
+    const topName = f.path.includes('/') ? f.path.split('/')[0] : null;
+    if (topName && topLevelDetails[topName]) topLevelDetails[topName].files += 1;
+
+    const style = inspectStyleEvidenceFile(root, f.path);
+    if (style) styleEvidence = mergeStyleEvidence(styleEvidence, style);
+
     if (!f.language) continue;
     const loc = countLoc(root, f.path);
     languages[f.language] = (languages[f.language] || 0) + loc;
     locTotal += loc;
+    if (topName && topLevelDetails[topName]) {
+      const detail = topLevelDetails[topName];
+      detail.loc += loc;
+      detail.language_loc[f.language] = (detail.language_loc[f.language] || 0) + loc;
+    }
+  }
+  for (const detail of Object.values(topLevelDetails)) {
+    const ranked = Object.entries(detail.language_loc).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    detail.dominant_language = ranked[0]?.[0] || null;
   }
   const images = files.filter((f) => f.media === 'image').length;
   const models3d = files.filter((f) => f.media === 'model3d').length;
@@ -246,6 +312,7 @@ export function buildInventory(opts) {
   const categories = {
     source: [],
     docs: [],
+    data: [],
     assets: [],
     config: [],
     generated: [],
@@ -256,22 +323,48 @@ export function buildInventory(opts) {
     unknown: [],
   };
   for (const name of top) {
-    let category = classifyTopLevel(name, cargoWorkspaceRoots);
-    const fellThrough = category === 'unknown'
-      || (category === 'config' && name.startsWith('.') && !CATEGORY_CONFIG.has(name));
-    if (fellThrough) category = classifyByEvidence(root, name, entries) || category;
+    let category;
+    if (isGitIgnored(root, name)) {
+      category = name.startsWith('.') ? 'operational' : 'generated';
+    } else {
+      category = classifyTopLevel(name, cargoWorkspaceRoots);
+      if (category === 'unknown') category = classifyByEvidence(root, name, entries) || category;
+    }
     categories[category].push(name);
   }
+
+  const rootFiles = {
+    manifest: [],
+    docs: [],
+    source: [],
+    config: [],
+    lockfile: [],
+    secret: [],
+  };
+  for (const entry of rootEntries) rootFiles[classifyRootFile(entry)].push(entry.path);
+  for (const values of Object.values(rootFiles)) values.sort();
+
+  const topLanguages = Object.entries(languages)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 2)
+    .map(([language]) => language);
+  const promotedTooling = categories.tooling.filter((name) => {
+    const detail = topLevelDetails[name];
+    return isGitTrackedPath(root, name)
+      && topLanguages.some((language) => (detail?.language_loc?.[language] || 0) > 0);
+  });
 
   const primaryInclude = [
     ...categories.source,
     ...categories.docs,
+    ...promotedTooling,
   ];
   const reviewInclude = [
+    ...categories.data,
     ...categories.assets,
     ...categories.config,
     ...categories.generated,
-    ...categories.tooling.filter((n) => n === 'test' || n === 'tests' || n === 'scripts'),
+    ...categories.tooling.filter((n) => !promotedTooling.includes(n)),
   ];
   const usuallyExclude = [
     ...categories.dependencies,
@@ -285,6 +378,11 @@ export function buildInventory(opts) {
   const suggestedInclude = (primaryInclude.length ? primaryInclude : top.filter((n) => !CATEGORY_DEPENDENCIES.has(n))).slice(0, 24);
   if (!suggestedInclude.length) suggestedInclude.push('.');
   const suggestedExclude = [...new Set(usuallyExclude)];
+  const suggestedIncludeFiles = [
+    ...rootFiles.manifest,
+    ...rootFiles.docs,
+    ...rootFiles.source,
+  ];
 
   /** @type {object} */
   const inventory = {
@@ -301,11 +399,15 @@ export function buildInventory(opts) {
       package_manifests: packageManifests,
     },
     languages,
+    style_evidence: finalizeStyleEvidence(styleEvidence),
     cargo_workspace_roots: cargoWorkspaceRoots,
     top_level: top,
+    top_level_details: topLevelDetails,
     categories,
+    root_files: rootFiles,
     suggested: {
       include: suggestedInclude,
+      include_files: suggestedIncludeFiles,
       exclude: suggestedExclude,
       review: reviewInclude,
       note: 'Categories are machine inventory. Suggestions are advisory — no exclusions applied automatically. User confirmations are authoritative.',
@@ -329,8 +431,12 @@ export function formatInventoryTree(inventory) {
     const cat = inventory.categories
       ? Object.entries(inventory.categories).find(([, names]) => names.includes(name))?.[0]
       : null;
+    const detail = inventory.top_level_details?.[name];
     const mark = cat ? ` · ${cat}` : '';
-    lines.push(`├── ${name}/${mark}`);
+    const evidence = detail
+      ? ` · ${detail.files} files · LOC~${detail.loc}${detail.dominant_language ? ` · ${detail.dominant_language}` : ''}`
+      : '';
+    lines.push(`├── ${name}/${mark}${evidence}`);
   }
   if (inventory.top_level.length > 24) lines.push('└── …');
   lines.push('');
@@ -343,6 +449,17 @@ export function formatInventoryTree(inventory) {
   lines.push('Detected');
   lines.push(`  ${inventory.counts.package_manifests} package.json`);
   lines.push(`  ${inventory.counts.images} images · ${inventory.counts.models3d} 3D · ${inventory.counts.archives} archives`);
+  const style = inventory.style_evidence;
+  if (style?.theme_candidate) {
+    const presets = Object.keys(style.theme_presets || {});
+    const namespaces = (style.namespaces || []).filter((row) => row.candidate).slice(0, 5);
+    lines.push(`  theme evidence  presets=${presets.join(', ') || '(none)'} namespaces=${namespaces.map((row) => row.prefix).join(', ') || '(none)'}`);
+  }
+  lines.push('');
+  lines.push('Root files');
+  for (const [kind, names] of Object.entries(inventory.root_files || {})) {
+    if (names.length) lines.push(`  ${kind.padEnd(10)} ${names.join(', ')}`);
+  }
   lines.push('');
   lines.push('Recommended scope candidates');
   lines.push(`  Primary source     ${(inventory.categories?.source || []).join(', ') || '(none)'}`);
@@ -352,8 +469,9 @@ export function formatInventoryTree(inventory) {
   lines.push('  (No exclusions applied automatically.)');
   lines.push('');
   lines.push('Starting suggestion (editable)');
-  lines.push(`  include: ${(inventory.suggested.include || []).join(', ') || '(none)'}`);
-  lines.push(`  exclude: ${(inventory.suggested.exclude || []).join(', ') || '(none)'}`);
+  lines.push(`  include dirs:  ${(inventory.suggested.include || []).join(', ') || '(none)'}`);
+  lines.push(`  include files: ${(inventory.suggested.include_files || []).join(', ') || '(none)'}`);
+  lines.push(`  exclude:       ${(inventory.suggested.exclude || []).join(', ') || '(none)'}`);
   return lines.join('\n');
 }
 

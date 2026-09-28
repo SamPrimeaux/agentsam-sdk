@@ -465,7 +465,12 @@ async function runWizard(root, opts) {
   }
 
   // Default scope from categorized inventory (not "include everything")
-  let include = opts.include ? splitList(opts.include) : [...(inventory.suggested.include || [])];
+  let include = opts.include
+    ? splitList(opts.include)
+    : [...new Set([
+      ...(inventory.suggested.include || []),
+      ...(inventory.suggested.include_files || []),
+    ])];
   let exclude = opts.exclude ? splitList(opts.exclude) : [...(inventory.suggested.exclude || [])];
 
   if (discovered.assistModels.length) {
