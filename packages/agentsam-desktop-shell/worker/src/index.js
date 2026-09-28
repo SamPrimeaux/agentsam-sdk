@@ -43,6 +43,69 @@ function isNewer(candidate, current) {
   return false;
 }
 
+
+function safeSegment(value) {
+  const decoded = decodeURIComponent(String(value || ''));
+  if (!decoded || !/^[A-Za-z0-9._ -]+$/.test(decoded) || decoded.includes('..')) return null;
+  return decoded;
+}
+
+function downloadContentType(filename, fallback = '') {
+  if (fallback) return fallback;
+  const lower = filename.toLowerCase();
+  if (lower.endsWith('.dmg')) return 'application/x-apple-diskimage';
+  if (lower.endsWith('.msi')) return 'application/x-msi';
+  if (lower.endsWith('.exe')) return 'application/vnd.microsoft.portable-executable';
+  if (lower.endsWith('.appimage')) return 'application/octet-stream';
+  if (lower.endsWith('.deb')) return 'application/vnd.debian.binary-package';
+  if (lower.endsWith('.apk')) return 'application/vnd.android.package-archive';
+  if (lower.endsWith('.ipa')) return 'application/octet-stream';
+  if (lower.endsWith('.zip')) return 'application/zip';
+  return 'application/octet-stream';
+}
+
+async function handleDownload(request, env, parts) {
+  if (!env.RELEASES) return jsonResponse({ error: 'release_bucket_unavailable' }, 503);
+  if (!['GET', 'HEAD'].includes(request.method)) {
+    return jsonResponse({ error: 'method_not_allowed' }, 405);
+  }
+  // /downloads/:channel/:app_id/:target/:arch/:version/:filename
+  if (parts.length !== 7) return jsonResponse({ error: 'not_found' }, 404);
+  const [, rawChannel, rawAppId, rawTarget, rawArch, rawVersion, rawFilename] = parts;
+  const channel = safeSegment(rawChannel);
+  const appId = safeSegment(rawAppId);
+  const target = safeSegment(rawTarget);
+  const arch = safeSegment(rawArch);
+  const version = safeSegment(rawVersion);
+  const filename = safeSegment(rawFilename);
+  if (!channel || !appId || !target || !arch || !version || !filename) {
+    return jsonResponse({ error: 'invalid_download_path' }, 400);
+  }
+  if (!['test', 'release'].includes(channel)) {
+    return jsonResponse({ error: 'invalid_channel' }, 400);
+  }
+
+  const key = `native/${channel}/${appId}/${target}/${arch}/${version}/${filename}`;
+  const object = await env.RELEASES.get(key);
+  if (!object) return jsonResponse({ error: 'artifact_not_found' }, 404);
+
+  const headers = new Headers();
+  if (typeof object.writeHttpMetadata === 'function') object.writeHttpMetadata(headers);
+  headers.set('content-type', downloadContentType(filename, headers.get('content-type') || ''));
+  headers.set('content-disposition', `attachment; filename="${filename.replace(/"/g, '')}"`);
+  headers.set('x-agentsam-release-channel', channel);
+  headers.set('x-agentsam-artifact-key', key);
+  headers.set('x-robots-tag', 'noindex, nofollow');
+  if (object.httpEtag) headers.set('etag', object.httpEtag);
+  if (object.size != null) headers.set('content-length', String(object.size));
+  headers.set(
+    'cache-control',
+    channel === 'release' ? 'public, max-age=31536000, immutable' : 'public, max-age=300',
+  );
+
+  return new Response(request.method === 'HEAD' ? null : object.body, { status: 200, headers });
+}
+
 async function handleCheck(env, appId, target, arch, currentVersion) {
   if (!env.DB) return jsonResponse({ error: 'db_unavailable' }, 503);
 
@@ -108,6 +171,10 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const parts = url.pathname.split('/').filter(Boolean);
+    if (parts[0] === 'downloads') {
+      return handleDownload(request, env, parts);
+    }
+
     // expects: updates, :app_id, ...rest
     if (parts[0] !== 'updates' || !parts[1]) {
       return jsonResponse({ error: 'not_found' }, 404);
