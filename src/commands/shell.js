@@ -601,7 +601,7 @@ async function runInteractiveModelTurn(prompt, state) {
   const provider = createProviderAdapter({
     modelRecord: model,
     credential,
-    endpoint: model.provider === 'ollama' ? process.env.OLLAMA_BASE_URL : undefined,
+    endpoint: model.provider === 'ollama' ? (process.env.AGENTSAM_OLLAMA_ENDPOINT || process.env.OLLAMA_BASE_URL || process.env.OLLAMA_HOST) : undefined,
     fetchImpl: state.providerFetchImpl,
   });
   const capabilityAdapter = createCapabilityAdapter();

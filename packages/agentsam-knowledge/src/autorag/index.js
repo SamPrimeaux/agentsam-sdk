@@ -13,7 +13,7 @@ function findScopes(root) {
 }
 export async function discoverAutoRag({ root = process.cwd(), env = process.env, companyAdapter = null, fetchImpl } = {}) {
   const isGit = Boolean(git(root, ['rev-parse', '--is-inside-work-tree']));
-  const providerRegistry = createProviderRegistry({ gemini: { apiKey: env.GEMINI_API_KEY, fetchImpl }, openai: { apiKey: env.OPENAI_API_KEY, fetchImpl }, ollama: { endpoint: env.OLLAMA_HOST || 'http://127.0.0.1:11434', fetchImpl } });
+  const providerRegistry = createProviderRegistry({ gemini: { apiKey: env.GEMINI_API_KEY, fetchImpl }, openai: { apiKey: env.OPENAI_API_KEY, fetchImpl }, ollama: { env, fetchImpl } });
   const providers = await providerRegistry.capabilities();
   const docker = git(root, ['--version']) && (() => { try { return Boolean(execFileSync('docker', ['--version'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })); } catch { return false; } })();
   const repositoryId = git(root, ['config', '--get', 'remote.origin.url']) || `local:${path.basename(root)}`;
