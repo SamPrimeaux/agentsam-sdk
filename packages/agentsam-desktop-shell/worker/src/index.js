@@ -109,16 +109,23 @@ async function handleDownload(request, env, parts) {
 async function handleCheck(env, appId, target, arch, currentVersion) {
   if (!env.DB) return jsonResponse({ error: 'db_unavailable' }, 503);
 
-  const row = await env.DB.prepare(
-    `SELECT version, url, signature, notes, pub_date
-       FROM desktop_shell_releases
-      WHERE app_id = ? AND target = ? AND arch = ?
-      ORDER BY created_at DESC
-      LIMIT 1`,
-  )
-    .bind(appId, target, arch)
-    .first()
-    .catch(() => null);
+  let row;
+  try {
+    row = await env.DB.prepare(
+      `SELECT version, url, signature, notes, pub_date
+         FROM desktop_shell_releases
+        WHERE app_id = ? AND target = ? AND arch = ?
+        ORDER BY created_at DESC
+        LIMIT 1`,
+    )
+      .bind(appId, target, arch)
+      .first();
+  } catch (error) {
+    return jsonResponse({
+      error: 'release_registry_unavailable',
+      message: error instanceof Error ? error.message : String(error),
+    }, 503);
+  }
 
   if (!row) return new Response(null, { status: 204 });
   if (!isNewer(row.version, currentVersion)) {
@@ -157,12 +164,19 @@ async function handlePublish(request, env, appId) {
   const now = Math.floor(Date.now() / 1000);
   const pubDate = new Date().toISOString();
 
-  await env.DB.prepare(
-    `INSERT INTO desktop_shell_releases (id, app_id, target, arch, version, url, signature, notes, pub_date, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  )
-    .bind(id, appId, target, arch, version, url, signature, notes || null, pubDate, now)
-    .run();
+  try {
+    await env.DB.prepare(
+      `INSERT INTO desktop_shell_releases (id, app_id, target, arch, version, url, signature, notes, pub_date, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+      .bind(id, appId, target, arch, version, url, signature, notes || null, pubDate, now)
+      .run();
+  } catch (error) {
+    return jsonResponse({
+      error: 'release_registry_unavailable',
+      message: error instanceof Error ? error.message : String(error),
+    }, 503);
+  }
 
   return jsonResponse({ ok: true, id, app_id: appId, target, arch, version, pub_date: pubDate });
 }

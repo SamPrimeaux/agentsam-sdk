@@ -46,3 +46,26 @@ test('download path rejects traversal and unknown channels', async () => {
   );
   assert.ok([400, 404].includes(traversal.status));
 });
+
+
+test('updater check fails closed when release registry is unavailable', async () => {
+  const response = await worker.fetch(
+    new Request('https://updates.example/updates/local-studio/macos/aarch64/2.6.4'),
+    {
+      DB: {
+        prepare() {
+          return {
+            bind() {
+              return {
+                async first() { throw new Error('no such table: desktop_shell_releases'); },
+              };
+            },
+          };
+        },
+      },
+    },
+  );
+  assert.equal(response.status, 503);
+  const body = await response.json();
+  assert.equal(body.error, 'release_registry_unavailable');
+});
