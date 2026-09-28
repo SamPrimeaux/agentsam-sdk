@@ -35,6 +35,7 @@ import { Route as appsSettingsIndexRouteImport } from './routes/(apps)/settings/
 import { Route as appsSettingsUnitRouteImport } from './routes/(apps)/settings/$unit'
 import { Route as appsSettingsIntegrationsRouteImport } from './routes/(apps)/settings/integrations'
 import { Route as appsSettingsKeysRouteImport } from './routes/(apps)/settings/keys'
+import { Route as appsSettingsRuntimeRouteImport } from './routes/(apps)/settings/runtime'
 import { Route as appsSettingsThemesRouteImport } from './routes/(apps)/settings/themes'
 import { Route as appsTrailsIndexRouteImport } from './routes/(apps)/trails/index'
 import { Route as appsTrailsTrailIdRouteImport } from './routes/(apps)/trails/$trailId'
@@ -177,6 +178,11 @@ const appsSettingsKeysRoute = appsSettingsKeysRouteImport.update({
   path: '/keys',
   getParentRoute: () => appsSettingsRoute,
 } as any)
+const appsSettingsRuntimeRoute = appsSettingsRuntimeRouteImport.update({
+  id: '/runtime',
+  path: '/runtime',
+  getParentRoute: () => appsSettingsRoute,
+} as any)
 const appsSettingsThemesRoute = appsSettingsThemesRouteImport.update({
   id: '/themes',
   path: '/themes',
@@ -254,6 +260,7 @@ export interface FileRoutesByFullPath {
   '/settings/$unit': typeof appsSettingsUnitRoute
   '/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/settings/keys': typeof appsSettingsKeysRoute
+  '/settings/runtime': typeof appsSettingsRuntimeRoute
   '/settings/themes': typeof appsSettingsThemesRoute
   '/trails/$trailId': typeof appsTrailsTrailIdRoute
   '/api/content/optimize': typeof ApiContentOptimizeRoute
@@ -288,6 +295,7 @@ export interface FileRoutesByTo {
   '/settings/$unit': typeof appsSettingsUnitRoute
   '/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/settings/keys': typeof appsSettingsKeysRoute
+  '/settings/runtime': typeof appsSettingsRuntimeRoute
   '/settings/themes': typeof appsSettingsThemesRoute
   '/trails/$trailId': typeof appsTrailsTrailIdRoute
   '/api/content/optimize': typeof ApiContentOptimizeRoute
@@ -327,6 +335,7 @@ export interface FileRoutesById {
   '/(apps)/settings/$unit': typeof appsSettingsUnitRoute
   '/(apps)/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/(apps)/settings/keys': typeof appsSettingsKeysRoute
+  '/(apps)/settings/runtime': typeof appsSettingsRuntimeRoute
   '/(apps)/settings/themes': typeof appsSettingsThemesRoute
   '/(apps)/trails/$trailId': typeof appsTrailsTrailIdRoute
   '/api/content/optimize': typeof ApiContentOptimizeRoute
@@ -367,6 +376,7 @@ export interface FileRouteTypes {
     | '/settings/$unit'
     | '/settings/integrations'
     | '/settings/keys'
+    | '/settings/runtime'
     | '/settings/themes'
     | '/trails/$trailId'
     | '/api/content/optimize'
@@ -401,6 +411,7 @@ export interface FileRouteTypes {
     | '/settings/$unit'
     | '/settings/integrations'
     | '/settings/keys'
+    | '/settings/runtime'
     | '/settings/themes'
     | '/trails/$trailId'
     | '/api/content/optimize'
@@ -439,6 +450,7 @@ export interface FileRouteTypes {
     | '/(apps)/settings/$unit'
     | '/(apps)/settings/integrations'
     | '/(apps)/settings/keys'
+    | '/(apps)/settings/runtime'
     | '/(apps)/settings/themes'
     | '/(apps)/trails/$trailId'
     | '/api/content/optimize'
@@ -665,6 +677,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appsSettingsKeysRouteImport
       parentRoute: typeof appsSettingsRoute
     }
+    '/(apps)/settings/runtime': {
+      id: '/(apps)/settings/runtime'
+      path: '/runtime'
+      fullPath: '/settings/runtime'
+      preLoaderRoute: typeof appsSettingsRuntimeRouteImport
+      parentRoute: typeof appsSettingsRoute
+    }
     '/(apps)/settings/themes': {
       id: '/(apps)/settings/themes'
       path: '/themes'
@@ -795,6 +814,7 @@ interface appsSettingsRouteChildren {
   appsSettingsUnitRoute: typeof appsSettingsUnitRoute
   appsSettingsIntegrationsRoute: typeof appsSettingsIntegrationsRoute
   appsSettingsKeysRoute: typeof appsSettingsKeysRoute
+  appsSettingsRuntimeRoute: typeof appsSettingsRuntimeRoute
   appsSettingsThemesRoute: typeof appsSettingsThemesRoute
   appsSettingsIndexRoute: typeof appsSettingsIndexRoute
 }
@@ -803,6 +823,7 @@ const appsSettingsRouteChildren: appsSettingsRouteChildren = {
   appsSettingsUnitRoute: appsSettingsUnitRoute,
   appsSettingsIntegrationsRoute: appsSettingsIntegrationsRoute,
   appsSettingsKeysRoute: appsSettingsKeysRoute,
+  appsSettingsRuntimeRoute: appsSettingsRuntimeRoute,
   appsSettingsThemesRoute: appsSettingsThemesRoute,
   appsSettingsIndexRoute: appsSettingsIndexRoute,
 }

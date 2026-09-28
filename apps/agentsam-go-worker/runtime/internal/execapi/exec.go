@@ -7,12 +7,12 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"os"
 	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/inneranimalmedia/agentsam-go-worker/internal/agentserror"
+	"github.com/inneranimalmedia/agentsam-go-worker/internal/hostpath"
 )
 
 const (
@@ -101,16 +101,12 @@ func ExecHandler(checkAuth AuthChecker) http.HandlerFunc {
 		ctx, cancel := context.WithTimeout(r.Context(), timeout)
 		defer cancel()
 
-		cmd := exec.CommandContext(ctx, req.Command, req.Args...)
+		bin := hostpath.ResolveCommand(req.Command)
+		cmd := exec.CommandContext(ctx, bin, req.Args...)
 		if req.Cwd != "" {
 			cmd.Dir = req.Cwd
 		}
-		if len(req.Env) > 0 {
-			cmd.Env = append(cmd.Env, os.Environ()...)
-			for k, v := range req.Env {
-				cmd.Env = append(cmd.Env, k+"="+v)
-			}
-		}
+		cmd.Env = hostpath.MergeEnv(req.Env)
 
 		stdout := &capBuffer{limit: maxCapturedBytes}
 		stderr := &capBuffer{limit: maxCapturedBytes}

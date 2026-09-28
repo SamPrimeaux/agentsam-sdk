@@ -64,6 +64,12 @@ export const localStudioSettingsManifest = defineSettingsManifest({
       icon: "network",
     },
     {
+      id: "runtime",
+      label: "Machines & Runtimes",
+      description: "Local, Docker, GCP, and Cloudflare runtime capability and connection state.",
+      icon: "runtime",
+    },
+    {
       id: "themes",
       label: "Themes",
       description: "Browse installed visual projections and the active product theme.",

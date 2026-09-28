@@ -13,11 +13,12 @@ import (
 // Language pack registry — CORE is always ready; optional packs download/install once.
 
 type langPack struct {
-	ID          string   `json:"id"`
-	Status      string   `json:"status"` // ready | missing | installing | error
-	ServerBinary string  `json:"server_binary,omitempty"`
-	InstallHint string   `json:"install_hint,omitempty"`
-	Commands    []string `json:"commands,omitempty"`
+	ID           string   `json:"id"`
+	Status       string   `json:"status"` // ready | missing | installing | error
+	ServerBinary string   `json:"server_binary,omitempty"`
+	ResolvedPath string   `json:"resolved_path,omitempty"`
+	InstallHint  string   `json:"install_hint,omitempty"`
+	Commands     []string `json:"commands,omitempty"`
 }
 
 var (
@@ -53,10 +54,12 @@ func refreshLangPackStatus() {
 		if p.ServerBinary == "" {
 			continue
 		}
-		if _, err := exec.LookPath(p.ServerBinary); err == nil {
+		if path, err := lookHostBinary(p.ServerBinary); err == nil {
 			p.Status = "ready"
+			p.ResolvedPath = path
 		} else if p.Status != "installing" {
 			p.Status = "missing"
+			p.ResolvedPath = ""
 		}
 	}
 }
@@ -112,8 +115,12 @@ func handleLanguagePackInstall(w http.ResponseWriter, r *http.Request) {
 	pack.Status = "installing"
 	langMu.Unlock()
 
-	cmd := exec.Command(cmds[0], cmds[1:]...)
-	cmd.Env = os.Environ()
+	bin, lookErr := lookHostBinary(cmds[0])
+	if lookErr != nil {
+		bin = cmds[0]
+	}
+	cmd := exec.Command(bin, cmds[1:]...)
+	cmd.Env = enrichEnviron()
 	out, err := cmd.CombinedOutput()
 	langMu.Lock()
 	defer langMu.Unlock()
@@ -125,10 +132,12 @@ func handleLanguagePackInstall(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	if _, lookErr := exec.LookPath(pack.ServerBinary); lookErr == nil {
+	if path, lookErr := lookHostBinary(pack.ServerBinary); lookErr == nil {
 		pack.Status = "ready"
+		pack.ResolvedPath = path
 	} else {
 		pack.Status = "missing"
+		pack.ResolvedPath = ""
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"ok": pack.Status == "ready", "id": body.ID, "status": pack.Status,

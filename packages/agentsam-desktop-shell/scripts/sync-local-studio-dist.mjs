@@ -3,10 +3,9 @@
  * Copy Local Studio production assets into packages/agentsam-desktop-shell/dist
  * for the offline .app.
  *
- * IMPORTANT: Nitro/TanStack Start's client bundle uses hydrateRoot(document, …).
- * That is SSR hydration — NOT a static SPA. Loading it from a synthetic #root
- * shell produces a blank white window. Until a true desktop SPA client exists,
- * always ship the desktop boot page as index.html (auth/assets still synced).
+ * The normal path is the dedicated Local Studio desktop SPA. The old boot page
+ * is retained only as a catastrophic recovery surface when no desktop build is
+ * available.
  */
 import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
@@ -41,6 +40,7 @@ function clientIsSsrHydrateOnly(jsPath) {
 const candidates = [
   argSource,
   sourceFromFlag,
+  path.join(REPO_ROOT, 'apps/local-studio/desktop-dist'),
   path.join(REPO_ROOT, 'apps/local-studio/.output/public'),
   path.join(REPO_ROOT, 'apps/local-studio/dist'),
   path.join(REPO_ROOT, 'apps/local-studio/frontend/dist'),
@@ -75,17 +75,14 @@ function pickAsset(prefix, ext) {
 }
 
 const indexJs = pickAsset('index-', '.js');
-const isHydrateOnly = indexJs ? clientIsSsrHydrateOnly(indexJs) : true;
+const isHydrateOnly = indexJs ? clientIsSsrHydrateOnly(indexJs) : false;
+const sourceHasDesktopEntry = existsSync(path.join(source, 'index.html')) && !isHydrateOnly;
 
-// Always prefer the desktop boot page when the client is Start/SSR hydrate-only.
-// Overwriting with a fake SPA shell is what caused the blank white window.
-writeFileSync(path.join(DEST, 'index.html'), readFileSync(BOOT_TEMPLATE));
-if (isHydrateOnly) {
-  console.log(
-    '[sync-local-studio-dist] wrote desktop-boot.html as index.html (Nitro client is hydrateRoot/document — not a SPA)',
-  );
+if (!sourceHasDesktopEntry) {
+  writeFileSync(path.join(DEST, 'index.html'), readFileSync(BOOT_TEMPLATE));
+  console.warn('[sync-local-studio-dist] desktop SPA missing; wrote recovery surface as index.html');
 } else {
-  console.log('[sync-local-studio-dist] wrote desktop-boot.html as index.html (SPA client not yet wired)');
+  console.log('[sync-local-studio-dist] bundled Local Studio desktop SPA is the normal index.html');
 }
 
 const pkgPath = path.join(REPO_ROOT, 'package.json');
@@ -99,8 +96,10 @@ const meta = {
   source,
   sdk_version: sdkVersion,
   synced_at: new Date().toISOString(),
-  client_mode: isHydrateOnly ? 'ssr_hydrate_only' : 'spa_candidate',
-  note: 'index.html is the offline boot shell. Full Studio UI via Open Studio UI (cloud) until a desktop SPA client ships.',
+  client_mode: sourceHasDesktopEntry ? 'desktop_spa' : 'recovery_surface',
+  note: sourceHasDesktopEntry
+    ? 'Bundled Local Studio is the first frame and works without a hosted redirect.'
+    : 'Recovery surface only: rebuild apps/local-studio desktop bundle.',
 };
 writeFileSync(path.join(DEST, 'agentsam-desktop-dist.json'), `${JSON.stringify(meta, null, 2)}\n`);
 

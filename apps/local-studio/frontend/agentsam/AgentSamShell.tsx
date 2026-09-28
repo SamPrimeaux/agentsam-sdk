@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, type NavMode, type NavTheme, type NavValue } from '@inneranimalmedia/agentsam-nav';
-import { BookOpen, Database, Folder, Globe, Layers, Settings, Pin, Files, Copy, PanelRight } from 'lucide-react';
+import { BookOpen, Database, Folder, Globe, Layers, Settings, Pin, Files, Copy, PanelRight, LogIn } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CommandPalette } from '@/components/workbench/command-palette';
@@ -14,6 +14,9 @@ import { brand } from './brand';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import './shell.css';
 import { AnnotationHelper } from './AnnotationHelper';
+import { DesktopIdentityPortal } from '@/components/desktop/DesktopIdentityPortal';
+import { DesktopStartupOverlay } from '@/components/desktop/DesktopStartupOverlay';
+import { isPackagedDesktop } from '@/lib/desktop/tauri';
 
 const APPEARANCE_KEY = 'agentsam-shell-appearance-v1';
 const accents = ['#8B5CF6', '#2563EB', '#0D9488', '#BE185D'];
@@ -28,6 +31,7 @@ export function AgentSamShell() {
   const [theme, setTheme] = useState<NavTheme>('dark');
   const [accent, setAccent] = useState(accents[0]);
   const [sharing, setSharing] = useState(false);
+  const [identityOpen, setIdentityOpen] = useState(false);
   const trail = state.trails.find((item) => item.id === state.activeTrailId);
   const project = state.projects.find((item) => item.id === trail?.projectId);
   const isConversation = pathname === '/agentsam' || pathname.startsWith('/trails');
@@ -101,6 +105,7 @@ export function AgentSamShell() {
     onPinConversation: state.pinTrail, onRenameConversation: state.renameTrail,
     onShare: trail ? () => setSharing(true) : undefined,
     accountActions: [
+      ...(isPackagedDesktop() ? [{ id: 'sign-in', label: 'Sign in to AgentSam', icon: <LogIn />, onSelect: () => setIdentityOpen(true) }] : []),
       { id: 'settings', label: 'Account', icon: <Settings />, onSelect: () => go('/settings/general') },
     ],
     projectActions: [
@@ -125,6 +130,8 @@ export function AgentSamShell() {
         <OfflineBanner /><main className="agentsam-route"><Outlet /></main>
       </div><CliDrawer /><CommandPalette />
       <Dialog open={sharing} onOpenChange={setSharing}><DialogContent><DialogTitle>Share conversation</DialogTitle><DialogDescription>Copy this conversation as text to share it. This does not create a public link.</DialogDescription><button type="button" className="as-nav-button" onClick={() => { if (!trail) return; void navigator.clipboard.writeText(trail.messages.map((item) => `${item.role}\n${item.content}`).join('\n\n')).then(() => { toast('Conversation copied'); setSharing(false); }, () => toast('Could not copy conversation')); }}><Copy size={18} />Copy conversation</button></DialogContent></Dialog>
+      <DesktopIdentityPortal open={identityOpen} onOpenChange={setIdentityOpen} />
+      <DesktopStartupOverlay />
       <AnnotationHelper />
       <Toaster theme={theme === 'light' ? 'light' : 'dark'} position="bottom-center" />
     </Nav.Scope>

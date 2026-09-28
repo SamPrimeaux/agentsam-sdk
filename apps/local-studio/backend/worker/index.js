@@ -232,13 +232,13 @@ async function probeInnerAnimalMediaOAuth(env) {
 
 /**
  * Resolve the validated session user via the identity package (D1
- * auth_sessions). Returns null when there is no session cookie, no DB
- * binding, or the session is missing/expired/revoked. Skips the D1 lookup
- * entirely when the request carries no Cookie header (service callers).
+ * auth_sessions). Browser requests use the cookie; installed desktop requests
+ * use the Keychain-backed Bearer session. Returns null when neither credential
+ * is present or the session is missing/expired/revoked.
  */
 async function resolveSessionUserId(request, env) {
   if (!env.DB) return null;
-  if (!request.headers.get("cookie")) return null;
+  if (!request.headers.get("cookie") && !request.headers.get("authorization")) return null;
   try {
     const adapter = createCloudflareD1Adapter(env.DB);
     const identity = createIdentityService({

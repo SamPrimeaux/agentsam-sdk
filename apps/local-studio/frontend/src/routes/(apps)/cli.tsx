@@ -1,17 +1,18 @@
-import { createFileRoute, Navigate } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { useWorkStore } from "@/lib/work/store";
+import { createFileRoute } from "@tanstack/react-router";
+import { TerminalPane } from "@/components/workbench/terminal";
 
 /**
- * /cli is retired as a product destination. Redirect into the shared CLI drawer.
+ * Full-page placement for the same underlying terminal session used by the
+ * drawer and side panel.
  */
 export const Route = createFileRoute("/(apps)/cli")({
-  component: CliRedirect,
+  component: TerminalWorkspacePage,
 });
 
-function CliRedirect() {
-  useEffect(() => {
-    useWorkStore.getState().setTerminalOpen(true);
-  }, []);
-  return <Navigate to="/agentsam" replace />;
+export function TerminalWorkspacePage() {
+  return (
+    <div className="h-full min-h-0 bg-background">
+      <TerminalPane variant="page" />
+    </div>
+  );
 }

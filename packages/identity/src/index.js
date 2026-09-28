@@ -95,6 +95,16 @@ export {
 } from './adapters/sqlite/index.js';
 export { createIdentityService } from './server/identity-service.js';
 export { handleIdentityWorkerRequest } from './server/worker-router.js';
+export {
+  DESKTOP_CLIENT_ID,
+  DESKTOP_REDIRECT_URI,
+  finishDesktopOAuth,
+  handleDesktopExchangeRequest,
+  handleDesktopRefreshRequest,
+  handleDesktopSessionRequest,
+  readDesktopOAuthIntent,
+  saveDesktopOAuthIntent,
+} from './oauth/desktop-handoff.js';
 
 /**
  * @typedef {Object} IdentityClientConfig
