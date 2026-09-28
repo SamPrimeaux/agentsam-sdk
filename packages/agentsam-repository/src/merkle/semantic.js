@@ -3,16 +3,9 @@ import path from 'node:path';
 import ts from 'typescript';
 import { comparePaths, fileHasher } from './hash.js';
 import { FILEMETA_FORMAT, FILEMETA_VERSION, metadataRoot } from './filemeta.js';
+import { isAstSourceExtension, sourceLanguageIdForExtension } from '../source-types.js';
 const MAX_AST_BYTES = 2 * 1024 * 1024;
 
-const LANGUAGE_BY_EXTENSION = Object.freeze({
-  '.c': 'c', '.cc': 'cpp', '.cpp': 'cpp', '.cxx': 'cpp', '.css': 'css', '.go': 'go',
-  '.h': 'c', '.hpp': 'cpp', '.html': 'html', '.java': 'java', '.js': 'javascript',
-  '.jsx': 'javascript', '.json': 'json', '.md': 'markdown', '.mjs': 'javascript',
-  '.cjs': 'javascript', '.py': 'python', '.rs': 'rust', '.scss': 'scss', '.sql': 'sql',
-  '.ts': 'typescript', '.tsx': 'typescript', '.yaml': 'yaml', '.yml': 'yaml',
-});
-const AST_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx']);
 const ASSET_EXTENSIONS = new Set([
   '.avif', '.eot', '.gif', '.ico', '.jpeg', '.jpg', '.mp3', '.mp4', '.ogg', '.otf', '.pdf',
   '.png', '.svg', '.ttf', '.wav', '.webm', '.webp', '.woff', '.woff2',
@@ -305,7 +298,7 @@ export async function buildSemanticMetadata(rootPath, tree) {
     const pkg = nearestPackage(contentEntry.path, packages);
     const localPath = pkg?.root && contentEntry.path.startsWith(pkg.root + '/') ? contentEntry.path.slice(pkg.root.length + 1) : contentEntry.path;
     const ext = extensionOf(contentEntry.path);
-    const language = LANGUAGE_BY_EXTENSION[ext] || null;
+    const language = sourceLanguageIdForExtension(ext);
     const layer = inferLayer(contentEntry.path, pkg?.root || '');
     const kind = contentEntry.type === 'symlink' ? 'symlink' : inferKind(contentEntry.path, language);
     const structuralSystem = (contentEntry.path.startsWith('packages/') || contentEntry.path.startsWith('apps/')) ? contentEntry.path.split('/')[1] : null;
@@ -314,7 +307,7 @@ export async function buildSemanticMetadata(rootPath, tree) {
     const tags = new Set([...(Array.isArray(pkg?.agentsam?.tags) ? pkg.agentsam.tags : []), ...(explicit.tags || [])].filter((tag) => typeof tag === 'string' && tag));
     let mode = contentEntry.mode;
     let sourceBuffer = null;
-    if (contentEntry.type === 'file' && AST_EXTENSIONS.has(ext) && contentEntry.size <= MAX_AST_BYTES) {
+    if (contentEntry.type === 'file' && isAstSourceExtension(ext) && contentEntry.size <= MAX_AST_BYTES) {
       const verified = await readVerifiedFile(rootPath, contentEntry);
       if (mode != null && verified.mode !== mode) throw new Error(`File mode changed while building semantic metadata: ${contentEntry.path}`);
       mode = verified.mode;

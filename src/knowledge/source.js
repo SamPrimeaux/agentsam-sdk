@@ -3,10 +3,10 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import ts from 'typescript';
 import { fileHasher } from '../../packages/agentsam-repository/src/merkle/hash.js';
+import { isKnowledgeSourcePath } from '../../packages/agentsam-repository/src/source-types.js';
 import { fingerprint } from './config.js';
 
 export const PARSER = `typescript:${ts.version}:agentsam-1`;
-const EXTENSIONS = /\.(?:[cm]?[jt]sx?|md|mdx|sql|json)$/i;
 const OMIT = /(^|\/)(?:\.git|\.agentsam|node_modules|dist|build|coverage|vendor|\.next|\.wrangler|\.venv|__pycache__)(\/|$)|(^|\/)(?:\.env[^/]*|\.dev\.vars[^/]*|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|[^/]*\.(?:min\.js|map))$/i;
 const under = (file, scope) => scope === '.' || file === scope || file.startsWith(scope + '/');
 export function inventory(root, scope) {
@@ -24,7 +24,7 @@ export function inventory(root, scope) {
     };
     walk();
   }
-  return [...new Set(files)].filter(file => EXTENSIONS.test(file) && !OMIT.test(file) && scope.include.some(s => under(file, s)) && !scope.exclude.some(s => under(file, s))).sort();
+  return [...new Set(files)].filter(file => isKnowledgeSourcePath(file) && !OMIT.test(file) && scope.include.some(s => under(file, s)) && !scope.exclude.some(s => under(file, s))).sort();
 }
 export function readSource(root, file) {
   // Refuse all symlink components, including tracked links into another repository.

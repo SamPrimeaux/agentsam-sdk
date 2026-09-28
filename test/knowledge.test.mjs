@@ -6,7 +6,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { defaultConfig, initRepository, readConfig, scopeKey, embeddingProfileId, openSqliteStore, runIndex, planIndex, retrieve, createGeminiEmbedder, KnowledgeClient } from '../src/knowledge/index.js';
-import { parseSource } from '../src/knowledge/source.js';
+import { inventory, parseSource } from '../src/knowledge/source.js';
 
 const cli = fileURLToPath(new URL('../src/cli.js', import.meta.url));
 const write = (root, name, content) => { fs.mkdirSync(path.dirname(path.join(root, name)), { recursive: true }); fs.writeFileSync(path.join(root, name), content); };
@@ -32,6 +32,40 @@ test('AST parser observes real syntax, spans and unresolved edges; text is label
   assert.equal(parsed.chunks.map(c => c.content).join(''), code.trimEnd());
   assert.equal(parseSource('schema.sql', 'select 1;').parser, 'text:1');
   assert.throws(() => parseSource('bad.ts', 'export function {'), /bad.ts/);
+});
+
+test('Rust sources survive knowledge inventory and persist in the active SQLite generation', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-knowledge-rust-'));
+  execFileSync('git', ['init', '-q'], { cwd: root });
+  write(root, 'core/src/lib.rs', 'pub fn core_value() -> u32 { 7 }\n');
+  write(root, 'worker/src/lib.rs', 'pub fn worker_value() -> u32 { 8 }\n');
+  write(root, 'docs/MACHINE-PIPELINE.md', '# Machine pipeline\n');
+  write(root, 'target/generated.rs', 'pub fn generated() {}\n');
+
+  const config = defaultConfig({ include: ['core', 'worker', 'docs'], exclude: ['target'] });
+  const store = await openSqliteStore(path.join(root, '.agentsam/knowledge/index.sqlite'));
+  t.after(async () => {
+    await store.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  const files = inventory(root, config.scope);
+  assert.ok(files.includes('core/src/lib.rs'));
+  assert.ok(files.includes('worker/src/lib.rs'));
+  assert.ok(files.includes('docs/MACHINE-PIPELINE.md'));
+  assert.equal(files.includes('target/generated.rs'), false);
+
+  const result = await runIndex({ root, config, store, embed: false });
+  assert.equal(result.published, true);
+  assert.ok(result.changes.added.includes('core/src/lib.rs'));
+  assert.ok(result.changes.added.includes('worker/src/lib.rs'));
+
+  const generation = await store.getGeneration(scopeKey(config), result.generation_id);
+  const persisted = generation.files.map(file => file.path);
+  assert.ok(persisted.includes('core/src/lib.rs'));
+  assert.ok(persisted.includes('worker/src/lib.rs'));
+  assert.ok(persisted.includes('docs/MACHINE-PIPELINE.md'));
+  assert.equal(generation.files.find(file => file.path === 'core/src/lib.rs')?.parser, 'text:1');
 });
 
 test('incremental indexing reuses unchanged functions, moves and deletions; old knowledge remains retrievable', async t => {
