@@ -13,6 +13,7 @@ agentsam-init-smoke/
 .agentsam/data/
 .agentsam/tui-venv/
 .agentsam/knowledge/
+.agentsam/ingest/
 .agentsam/cache/
 .agentsam/merkle/
 .agentsam/merkle.json
