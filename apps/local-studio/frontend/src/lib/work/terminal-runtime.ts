@@ -27,6 +27,35 @@ function getStoredAgentsamdToken(): string | null {
   }
 }
 
+type TauriInvoke = (command: string, args?: Record<string, unknown>) => Promise<unknown>;
+
+function getTauriInvoke(): TauriInvoke | null {
+  if (typeof window === "undefined") return null;
+  const tauri = (window as Window & {
+    __TAURI__?: { core?: { invoke?: TauriInvoke } };
+  }).__TAURI__;
+  return tauri?.core?.invoke || null;
+}
+
+async function ensureDesktopAgentsamdToken(): Promise<string | null> {
+  const invoke = getTauriInvoke();
+  if (!invoke) return null;
+  try {
+    const handshake = (await invoke("ensure_agentsamd", {})) as { ok?: boolean };
+    if (!handshake?.ok) return null;
+    const token = String(await invoke("agentsamd_pairing_token", {})).trim();
+    if (!/^[a-f0-9]{64}$/i.test(token)) return null;
+    try {
+      localStorage.setItem(AGENTSAMD_TOKEN_KEY, token);
+    } catch {
+      /* runtime token still works for this session */
+    }
+    return token;
+  } catch {
+    return null;
+  }
+}
+
 function promptForAgentsamdToken(): string | null {
   try {
     const token = window.prompt(
@@ -386,11 +415,12 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
     }
   }
   let usingAgentsamd = false;
+  const desktopAgentsamdToken = !runtimeBase ? await ensureDesktopAgentsamdToken() : null;
   if (!runtimeBase) {
     try {
       const amd = await fetch("http://127.0.0.1:18765/health", { signal: AbortSignal.timeout(600) });
       if (amd.ok) {
-        const token = getStoredAgentsamdToken() ?? promptForAgentsamdToken();
+        const token = desktopAgentsamdToken ?? getStoredAgentsamdToken() ?? promptForAgentsamdToken();
         if (token) {
           runtimeBase = "http://127.0.0.1:18765";
           runtimeCap = runtimeCap || "local";

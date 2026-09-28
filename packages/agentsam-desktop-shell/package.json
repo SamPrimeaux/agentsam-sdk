@@ -14,7 +14,8 @@
     "build": "node scripts/build-brand.mjs local-studio && node scripts/sync-local-studio-dist.mjs && tauri build",
     "build:shell-only": "node scripts/build-brand.mjs local-studio && tauri build",
     "typecheck": "echo \"agentsam-desktop-shell: no TS surface yet\" && exit 0",
-    "test": "node --test scripts/sync-local-studio-dist.mjs 2>/dev/null || echo \"agentsam-desktop-shell: sync script present\""
+    "test": "node --test scripts/sync-local-studio-dist.mjs 2>/dev/null || echo \"agentsam-desktop-shell: sync script present\"",
+    "prepare:sidecars": "node scripts/prepare-sidecars.mjs"
   },
   "dependencies": {
     "sharp": "^0.34.5"

@@ -21,11 +21,8 @@ function resolveCadInitialUrl(overrideUrl?: string): string {
   if (typeof window !== "undefined") {
     const envUrl = (import.meta as any).env?.VITE_CAD_CREATOR_URL;
     if (envUrl) return envUrl;
-    if (window.location.hostname.includes("inneranimalmedia.com")) {
-      return "https://cad.inneranimalmedia.com?presentation=embedded";
-    }
   }
-  return "http://localhost:3000?presentation=embedded";
+  return "/cad-creator/index.html?presentation=embedded";
 }
 
 function CadStudioPage() {

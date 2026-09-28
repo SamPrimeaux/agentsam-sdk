@@ -56,7 +56,7 @@ const REQUIRED = [
   'deep_link_scheme',
   'identity_provider',
 ];
-const VALID_IDENTITY_PROVIDERS = ['inneranimalmedia', 'google', 'github', 'gcp', 'email'];
+const VALID_IDENTITY_PROVIDERS = ['inneranimalmedia', 'google', 'github', 'gcp', 'email', 'google_desktop_and_cloudflare'];
 
 for (const field of REQUIRED) {
   if (!manifest[field]) fail(`manifest missing required field: ${field}`);
@@ -282,6 +282,16 @@ const offlineShell = manifest.feature_flags?.offline_shell === true;
 const launchUrl = offlineShell
   ? 'index.html'
   : new URL(manifest.launch_path || '/', manifest.base_url).toString();
+const agentsamdSidecar = manifest.feature_flags?.agentsamd_sidecar === true;
+
+if (agentsamdSidecar) {
+  const prep = spawnSync(process.execPath, [path.join(__dirname, 'prepare-sidecars.mjs')], {
+    cwd: ROOT,
+    stdio: 'inherit',
+    env: process.env,
+  });
+  if (prep.status !== 0) fail(`agentsamd sidecar build failed (exit ${prep.status})`);
+}
 
 const config = {
   $schema: 'https://schema.tauri.app/config/2',
@@ -307,6 +317,7 @@ const config = {
   bundle: {
     active: true,
     icon: BUNDLE_ICONS,
+    ...(agentsamdSidecar ? { externalBin: ['binaries/agentsamd'] } : {}),
   },
   plugins: {
     'deep-link': {

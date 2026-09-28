@@ -138,7 +138,7 @@
     },
     "identity_provider": {
       "type": "string",
-      "enum": ["inneranimalmedia", "google", "github", "gcp", "email"]
+      "enum": ["inneranimalmedia", "google", "github", "gcp", "email", "google_desktop_and_cloudflare"]
     },
     "theme": {
       "type": "object",

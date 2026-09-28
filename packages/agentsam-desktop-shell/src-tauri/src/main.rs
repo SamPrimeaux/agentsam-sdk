@@ -4,7 +4,7 @@
 mod commands;
 mod tray;
 
-use commands::{agentsamd, auth_pkce, deep_link, keychain, local_content, local_node, local_sqlite, updater};
+use commands::{agentsamd, auth_pkce, deep_link, keychain, local_content, local_node, local_sqlite, native_capabilities, updater};
 
 fn main() {
     tauri::Builder::default()
@@ -29,8 +29,10 @@ fn main() {
             auth_pkce::start_cloudflare_oauth_login,
             agentsamd::ensure_agentsamd,
             agentsamd::agentsamd_health,
+            agentsamd::agentsamd_pairing_token,
             local_sqlite::local_sqlite_bridge,
             local_content::local_content_bridge,
+            native_capabilities::native_capabilities,
         ])
         .run(tauri::generate_context!())
         .expect("error while running agentsam desktop shell");

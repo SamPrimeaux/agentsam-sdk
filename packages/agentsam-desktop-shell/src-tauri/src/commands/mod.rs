@@ -6,3 +6,4 @@ pub mod local_content;
 pub mod local_node;
 pub mod local_sqlite;
 pub mod updater;
+pub mod native_capabilities;

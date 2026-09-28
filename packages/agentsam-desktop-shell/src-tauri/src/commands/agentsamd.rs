@@ -1,6 +1,7 @@
 //! Supervise bundled/local agentsamd: probe → spawn → protocol handshake.
 
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::time::Duration;
@@ -56,6 +57,32 @@ async fn probe_health(listen: &str) -> Option<serde_json::Value> {
   res.json().await.ok()
 }
 
+fn bundled_agentsamd_candidates() -> Vec<PathBuf> {
+  let mut out = Vec::new();
+  let name = if cfg!(windows) { "agentsamd.exe" } else { "agentsamd" };
+  if let Ok(current) = std::env::current_exe() {
+    if let Some(dir) = current.parent() {
+      out.push(dir.join(name));
+      if let Some(contents) = dir.parent() {
+        out.push(contents.join("Resources").join(name));
+      }
+    }
+  }
+  out
+}
+
+fn resolve_agentsamd_binary(explicit: Option<String>) -> (PathBuf, &'static str) {
+  if let Some(value) = explicit.filter(|s| !s.trim().is_empty()) {
+    return (PathBuf::from(value), "explicit");
+  }
+  for candidate in bundled_agentsamd_candidates() {
+    if candidate.is_file() {
+      return (candidate, "bundled");
+    }
+  }
+  (PathBuf::from("agentsamd"), "path")
+}
+
 /// Probe agentsamd; if down, spawn `binary` (or PATH `agentsamd`) then handshake.
 #[tauri::command]
 pub async fn ensure_agentsamd(
@@ -97,9 +124,7 @@ pub async fn ensure_agentsamd(
     });
   }
 
-  let bin = binary
-    .filter(|s| !s.trim().is_empty())
-    .unwrap_or_else(|| "agentsamd".into());
+  let (bin, bin_source) = resolve_agentsamd_binary(binary);
 
   {
     let mut guard = state.child.lock().map_err(|e| e.to_string())?;
@@ -131,7 +156,7 @@ pub async fn ensure_agentsamd(
       daemon_version: version,
       listen,
       capabilities: serde_json::json!({}),
-      message: "agentsamd_spawned".into(),
+      message: format!("agentsamd_spawned_{bin_source}"),
     });
   }
 
@@ -144,6 +169,41 @@ pub async fn ensure_agentsamd(
     capabilities: serde_json::json!({}),
     message: "agentsamd_unreachable_after_spawn".into(),
   })
+}
+
+
+fn agentsam_home() -> Option<PathBuf> {
+  if let Ok(value) = std::env::var("AGENTSAM_HOME") {
+    let trimmed = value.trim();
+    if !trimmed.is_empty() {
+      return Some(PathBuf::from(trimmed));
+    }
+  }
+  std::env::var("HOME")
+    .ok()
+    .filter(|v| !v.trim().is_empty())
+    .map(PathBuf::from)
+    .or_else(|| {
+      std::env::var("USERPROFILE")
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+        .map(PathBuf::from)
+    })
+    .map(|home| home.join(".agentsam"))
+}
+
+#[tauri::command]
+pub fn agentsamd_pairing_token() -> Result<String, String> {
+  let home = agentsam_home().ok_or_else(|| "agentsamd_home_unavailable".to_string())?;
+  let path = home.join("agentsamd.token");
+  let token = std::fs::read_to_string(&path)
+    .map_err(|e| format!("agentsamd_token_read_failed:{}:{e}", path.display()))?;
+  let token = token.trim().to_string();
+  let valid = token.len() == 64 && token.chars().all(|c| c.is_ascii_hexdigit());
+  if !valid {
+    return Err("agentsamd_token_invalid".into());
+  }
+  Ok(token)
 }
 
 #[tauri::command]
