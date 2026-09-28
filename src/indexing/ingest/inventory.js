@@ -7,7 +7,11 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { sourceLanguageForExtension } from '../../../packages/agentsam-repository/src/source-types.js';
+import { execFileSync } from 'node:child_process';
+import {
+  sourceLanguageForExtension,
+  sourceTypeForExtension,
+} from '../../../packages/agentsam-repository/src/source-types.js';
 
 const IMAGE = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico']);
 const MODEL3D = new Set(['.glb', '.gltf', '.obj', '.fbx', '.stl']);
@@ -30,6 +34,9 @@ const CATEGORY_DOCS = new Set([
   'docs', 'examples', 'guides', 'handbook', 'README', 'changelog',
 ]);
 
+/** Static/public assets — review before including as searchable source. */
+const CATEGORY_ASSETS = new Set(['public', 'static']);
+
 /** Tooling / CI — review before including. */
 const CATEGORY_TOOLING = new Set([
   'bin', 'scripts', 'tools', '.github', '.changeset', '.husky', '.vscode',
@@ -38,7 +45,7 @@ const CATEGORY_TOOLING = new Set([
 
 /** Generated / historical — review before including. */
 const CATEGORY_GENERATED = new Set([
-  'generated', 'fixtures', 'snapshots', 'artifacts', 'public', 'static',
+  'generated', 'fixtures', 'snapshots', 'artifacts',
   'site', 'sites', 'templates', 'level-1', 'focus-timer',
 ]);
 
@@ -124,6 +131,7 @@ function classifyTopLevel(name, sourceRoots = []) {
   if (CATEGORY_DEPENDENCIES.has(name)) return 'dependencies';
   if (sourceRoots.includes(name) || CATEGORY_SOURCE.has(name)) return 'source';
   if (CATEGORY_DOCS.has(name)) return 'docs';
+  if (CATEGORY_ASSETS.has(name)) return 'assets';
   if (CATEGORY_GENERATED.has(name)) return 'generated';
   if (CATEGORY_OPERATIONAL.has(name)) return 'operational';
   if (CATEGORY_CONFIG.has(name)) return 'config';
@@ -131,6 +139,38 @@ function classifyTopLevel(name, sourceRoots = []) {
   if (/^(old|legacy|archive|backup|tmp|temp)/i.test(name)) return 'historical';
   if (name.startsWith('.')) return 'config';
   return 'unknown';
+}
+
+function isGitIgnored(root, relPath) {
+  try {
+    execFileSync('git', ['check-ignore', '-q', '--', relPath], {
+      cwd: root,
+      stdio: 'ignore',
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function classifyByEvidence(root, name, entries) {
+  if (isGitIgnored(root, name)) return name.startsWith('.') ? 'operational' : 'generated';
+
+  const prefix = `${name}/`;
+  let code = 0;
+  let docs = 0;
+  let media = 0;
+  for (const entry of entries) {
+    if (entry.kind !== 'file' || !entry.path.startsWith(prefix)) continue;
+    const sourceType = sourceTypeForExtension(entry.ext);
+    if (sourceType?.kind === 'code') code += 1;
+    else if (sourceType?.id === 'markdown' || sourceType?.id === 'text') docs += 1;
+    else if (entry.media === 'image' || entry.media === 'model3d') media += 1;
+  }
+  if (code) return 'source';
+  if (docs) return 'docs';
+  if (media) return 'assets';
+  return null;
 }
 
 function walk(root, rel = '', acc = [], depth = 0) {
@@ -145,7 +185,9 @@ function walk(root, rel = '', acc = [], depth = 0) {
     const full = path.join(root, child);
     if (ent.isDirectory()) {
       acc.push({ path: child, kind: 'directory', name: ent.name });
-      if (!SUGGEST_EXCLUDE_NAMES.has(ent.name)) walk(root, child, acc, depth + 1);
+      if (SUGGEST_EXCLUDE_NAMES.has(ent.name)) continue;
+      if (depth === 0 && isGitIgnored(root, child)) continue;
+      walk(root, child, acc, depth + 1);
     } else if (ent.isFile()) {
       let bytes = 0;
       try { bytes = fs.statSync(full).size; } catch { /* ignore */ }
@@ -204,6 +246,7 @@ export function buildInventory(opts) {
   const categories = {
     source: [],
     docs: [],
+    assets: [],
     config: [],
     generated: [],
     dependencies: [],
@@ -213,7 +256,11 @@ export function buildInventory(opts) {
     unknown: [],
   };
   for (const name of top) {
-    categories[classifyTopLevel(name, cargoWorkspaceRoots)].push(name);
+    let category = classifyTopLevel(name, cargoWorkspaceRoots);
+    const fellThrough = category === 'unknown'
+      || (category === 'config' && name.startsWith('.') && !CATEGORY_CONFIG.has(name));
+    if (fellThrough) category = classifyByEvidence(root, name, entries) || category;
+    categories[category].push(name);
   }
 
   const primaryInclude = [
@@ -221,6 +268,7 @@ export function buildInventory(opts) {
     ...categories.docs,
   ];
   const reviewInclude = [
+    ...categories.assets,
     ...categories.config,
     ...categories.generated,
     ...categories.tooling.filter((n) => n === 'test' || n === 'tests' || n === 'scripts'),
