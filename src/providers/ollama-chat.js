@@ -1,5 +1,6 @@
 import { createAgentEvent, createUsageSnapshot } from '../telemetry/index.js';
 import { diagnosticFromError } from '../errors/index.js';
+import { resolveOllamaEndpoint } from '../../packages/agentsam-knowledge/src/providers/ollama-endpoint.js';
 
 function clean(value) { return value == null ? '' : String(value).trim(); }
 function integer(value) { const n = Number(value ?? 0); return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0; }
@@ -28,7 +29,7 @@ function callsFromMessage(message = {}) {
 
 export function createOllamaChatAdapter(options = {}) {
   const fetchImpl = options.fetchImpl || fetch;
-  const endpoint = clean(options.endpoint || process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434').replace(/\/$/, '');
+  const endpoint = resolveOllamaEndpoint({ endpoint: options.endpoint, env: options.env || process.env });
 
   async function send(messages, params = {}) {
     const record = params.modelRecord || options.modelRecord;

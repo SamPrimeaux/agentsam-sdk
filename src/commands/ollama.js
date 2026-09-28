@@ -2,9 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { readProjectConfig, setLocalModelCapability, writeProjectConfig } from '../lib/project-config.js';
+import { OLLAMA_DEFAULT_ENDPOINT, resolveOllamaEndpoint } from '../../packages/agentsam-knowledge/src/providers/ollama-endpoint.js';
 
 export const OLLAMA_DEFAULTS = Object.freeze({
-  baseUrl: 'http://127.0.0.1:11434',
+  baseUrl: OLLAMA_DEFAULT_ENDPOINT,
   model: 'qwen2.5-coder',
   embedModel: 'mxbai-embed-large',
 });
@@ -50,7 +51,7 @@ export function parseOllamaArgs(argv = []) {
 
 export function resolveOllamaConfig(opts = {}, env = process.env) {
   return {
-    baseUrl: clean(opts.baseUrl || env.OLLAMA_BASE_URL || OLLAMA_DEFAULTS.baseUrl).replace(/\/+$/, ''),
+    baseUrl: resolveOllamaEndpoint({ endpoint: opts.baseUrl, env }),
     model: clean(opts.model || env.OLLAMA_MODEL || OLLAMA_DEFAULTS.model),
     embedModel: clean(opts.embedModel || env.OLLAMA_EMBED_MODEL || OLLAMA_DEFAULTS.embedModel),
   };

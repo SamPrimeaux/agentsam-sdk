@@ -24,6 +24,28 @@ test('Ollama defaults are local-only and match the SDK local-dev contract', () =
   assert.deepEqual(resolveOllamaConfig({}, {}), OLLAMA_DEFAULTS);
 });
 
+test('Ollama endpoints normalize host-only values and honor AgentSam precedence', () => {
+  assert.equal(resolveOllamaConfig({}, { OLLAMA_HOST: '0.0.0.0:11434' }).baseUrl, 'http://127.0.0.1:11434');
+  assert.equal(resolveOllamaConfig({}, { OLLAMA_HOST: '127.0.0.1:11434' }).baseUrl, 'http://127.0.0.1:11434');
+  assert.equal(resolveOllamaConfig({}, { OLLAMA_HOST: 'localhost:11434' }).baseUrl, 'http://localhost:11434');
+  assert.equal(resolveOllamaConfig({}, { OLLAMA_HOST: 'http://localhost:11434' }).baseUrl, 'http://localhost:11434');
+
+  assert.equal(resolveOllamaConfig({}, {
+    AGENTSAM_OLLAMA_ENDPOINT: '127.0.0.1:2244',
+    OLLAMA_BASE_URL: 'localhost:3344',
+    OLLAMA_HOST: '0.0.0.0:4444',
+  }).baseUrl, 'http://127.0.0.1:2244');
+
+  assert.equal(resolveOllamaConfig({}, {
+    OLLAMA_BASE_URL: 'localhost:3344',
+    OLLAMA_HOST: '0.0.0.0:4444',
+  }).baseUrl, 'http://localhost:3344');
+
+  assert.equal(resolveOllamaConfig({}, {
+    OLLAMA_HOST: '0.0.0.0:4444',
+  }).baseUrl, 'http://127.0.0.1:4444');
+});
+
 test('Ollama setup args require explicit install/pull/start opt-ins', () => {
   assert.deepEqual(parseOllamaArgs(['setup']), {
     command: 'setup',

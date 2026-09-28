@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createFixtureProvider, createProviderRegistry, createBackendRegistry, recommendAutoRag, safeAutoRagConfig, selectIntentRoute, routeCompanyQuestion } from '../src/index.js';
+import { createFixtureProvider, createOllamaProvider, createProviderRegistry, createBackendRegistry, recommendAutoRag, safeAutoRagConfig, selectIntentRoute, routeCompanyQuestion } from '../src/index.js';
 
 test('provider registry is explicit, deterministic, and fails closed', async () => {
   const registry = createProviderRegistry({ fixture: { dimensions: 3 }, gemini: { apiKey: null }, openai: { apiKey: null } });
@@ -10,6 +10,27 @@ test('provider registry is explicit, deterministic, and fails closed', async () 
   assert.equal((await fixture.embedQuery('hello', profile)).length, 3);
   assert.throws(() => registry.get('not-a-provider'), /provider_unsupported/);
   assert.equal((await registry.capabilities()).find(item => item.id === 'gemini').operational, false);
+});
+
+test('Ollama provider normalizes bind hosts before issuing embed requests', async () => {
+  let seenUrl = null;
+  const provider = createOllamaProvider({
+    endpoint: '0.0.0.0:11434',
+    fetchImpl: async (url) => {
+      seenUrl = String(url);
+      return new Response(JSON.stringify({ embeddings: [[1, 2, 3]] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    },
+  });
+  const vector = await provider.embedQuery('hello', {
+    provider: 'ollama',
+    model: 'mxbai-embed-large',
+    dimensions: 3,
+  });
+  assert.deepEqual(vector, [1, 2, 3]);
+  assert.equal(seenUrl, 'http://127.0.0.1:11434/api/embed');
 });
 
 test('backend registry requires explicit resources and dimensions', () => {

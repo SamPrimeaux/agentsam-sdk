@@ -1,3 +1,4 @@
+import { resolveOllamaEndpoint } from './ollama-endpoint.js';
 const clean = value => String(value || '').trim();
 const finiteVector = (vector, dimensions) => {
   if (!Array.isArray(vector) || vector.length !== dimensions || vector.some(value => typeof value !== 'number' || !Number.isFinite(value))) {
@@ -70,17 +71,18 @@ export function createWorkersAiProvider({ binding } = {}) {
   });
 }
 
-export function createOllamaProvider({ endpoint = process.env.OLLAMA_HOST || 'http://127.0.0.1:11434', fetchImpl = globalThis.fetch, models } = {}) {
+export function createOllamaProvider({ endpoint, env = process.env, fetchImpl = globalThis.fetch, models } = {}) {
   // Model allowlist is advisory only — live `ollama list` / tags are authoritative at selection time.
+  const resolvedEndpoint = resolveOllamaEndpoint({ endpoint, env });
   const known = Array.isArray(models) && models.length ? models : ['mxbai-embed-large', 'nomic-embed-text'];
   return httpAdapter({
     id: 'ollama',
-    env: 'OLLAMA_HOST',
+    env: 'AGENTSAM_OLLAMA_ENDPOINT',
     models: known,
     allowAnyModel: true,
-    credentials: () => endpoint,
+    credentials: () => resolvedEndpoint,
     request: async (text, profile) => {
-      const response = await fetchImpl(new URL('/api/embed', endpoint), {
+      const response = await fetchImpl(new URL('/api/embed', resolvedEndpoint + '/'), {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ model: profile.model, input: text }),
