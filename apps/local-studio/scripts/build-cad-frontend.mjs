@@ -16,6 +16,14 @@ if (process.argv.includes('--stage')) {
  * Cloudflare Workers Builds installs only apps/local-studio (build root).
  * CAD is a sibling package with its own lockfile — install it before vite build.
  */
+function childNpmEnv() {
+  const env = { ...process.env };
+  for (const key of Object.keys(env)) {
+    if (key.toLowerCase() === 'npm_config_allow_scripts') delete env[key];
+  }
+  return env;
+}
+
 function ensureCadInstalled() {
   const vitePkg = `${cad}/node_modules/vite/package.json`;
   const tailwindPkg = `${cad}/node_modules/@tailwindcss/vite/package.json`;
@@ -27,7 +35,7 @@ function ensureCadInstalled() {
     throw new Error(`[cad-frontend] missing ${cad}/package-lock.json`);
   }
   console.log('[cad-frontend] Installing CAD workspaces (npm ci)…');
-  execFileSync('npm', ['ci'], { cwd: cad, stdio: 'inherit', env: process.env });
+  execFileSync('npm', ['ci'], { cwd: cad, stdio: 'inherit', env: childNpmEnv() });
 }
 
 ensureCadInstalled();
