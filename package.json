@@ -290,7 +290,7 @@
     "@electric-sql/pglite": "0.5.8",
     "@electric-sql/pglite-pgvector": "0.0.9",
     "grpc-tools": "^1.13.1",
-    "wrangler": "4.141.0"
+    "wrangler": "4.142.0"
   },
   "overrides": {
     "@types/react": "19.2.18",
