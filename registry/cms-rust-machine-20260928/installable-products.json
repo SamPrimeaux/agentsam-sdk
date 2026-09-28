@@ -1,0 +1,31 @@
+{
+  "schema": "agentsam.installable-products.v1",
+  "source": "inneranimalmedia-business.agentsam_products",
+  "refreshed_at": "2026-09-28",
+  "products": [
+    {
+      "slug": "cms",
+      "kind": "product",
+      "status": "wired",
+      "label": "CMS",
+      "hint": "Guided CMS site or full CMS Editor app",
+      "action": { "kind": "scaffold", "id": "cms" }
+    },
+    {
+      "slug": "client-cms-editor",
+      "kind": "app",
+      "status": "scaffolded",
+      "label": "AgentSam CMS Editor",
+      "hint": "Reusable full CMS editor app",
+      "action": { "kind": "app", "id": "client-cms-editor" }
+    },
+    {
+      "slug": "agentsam-rapid-rust",
+      "kind": "sdk-package",
+      "status": "prototype",
+      "label": "Rust/Wasm Worker",
+      "hint": "Scaffold the shared-core Rust/Wasm Worker template",
+      "action": { "kind": "rust-template", "template": "shared-core" }
+    }
+  ]
+}

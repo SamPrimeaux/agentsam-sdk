@@ -1,0 +1,22 @@
+{
+  "schema": "agentsam.registry.migration.v1",
+  "id": "cms-rust-machine-20260928",
+  "database": "inneranimalmedia-business",
+  "database_id": "cf87b717-d4e2-4cf8-bab0-a81268e32d49",
+  "products": [
+    "cms",
+    "client-cms-editor",
+    "theme-inneranimals-site",
+    "asrust",
+    "agentsam-machine",
+    "agentsam-rapid-rust"
+  ],
+  "legacy_aliases": {
+    "iam-client-cms-editor": "client-cms-editor"
+  },
+  "policy": {
+    "npm_publish": false,
+    "cms_live_swap": false,
+    "oauth_reconnect": false
+  }
+}

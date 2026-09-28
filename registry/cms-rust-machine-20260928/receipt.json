@@ -1,0 +1,21 @@
+{
+  "schema": "agentsam.registry.receipt.v1",
+  "database": "inneranimalmedia-business",
+  "applied_at": "2026-09-28",
+  "validated": true,
+  "products": {
+    "cms": "wired",
+    "client-cms-editor": "scaffolded",
+    "theme-inneranimals-site": "prototype",
+    "asrust": "wired",
+    "agentsam-machine": "prototype",
+    "agentsam-rapid-rust": "prototype"
+  },
+  "relationships": [
+    ["cms", "packaged_as", "client-cms-editor"],
+    ["iam-client-cms-editor", "aliased_as", "client-cms-editor"],
+    ["theme-inneranimals-site", "depends_on", "cms"],
+    ["agentsam-rapid-rust", "exposes_command", "agentsam:rust"],
+    ["agentsam-rapid-rust", "exposes_command", "agentsam:wasm"]
+  ]
+}
