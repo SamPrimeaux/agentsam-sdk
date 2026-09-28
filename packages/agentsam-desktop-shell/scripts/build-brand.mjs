@@ -279,7 +279,8 @@ const updaterEndpoint = `${UPDATES_DOMAIN}/updates/${manifest.app_id}/{{target}}
 
 // --- 6. assemble tauri.conf.json ---
 const offlineShell = manifest.feature_flags?.offline_shell === true;
-const launchUrl = offlineShell
+const desktopSpa = manifest.feature_flags?.desktop_spa === true;
+const launchUrl = offlineShell || desktopSpa
   ? 'index.html'
   : new URL(manifest.launch_path || '/', manifest.base_url).toString();
 const agentsamdSidecar = manifest.feature_flags?.agentsamd_sidecar === true;
@@ -318,6 +319,17 @@ const config = {
     active: true,
     icon: BUNDLE_ICONS,
     ...(agentsamdSidecar ? { externalBin: ['binaries/agentsamd'] } : {}),
+    ...(desktopSpa
+      ? {
+          resources: {
+            '../../agentsam-database-editor/scripts/local-sqlite-bridge.mjs':
+              'runtime/database/scripts/local-sqlite-bridge.mjs',
+            '../../agentsam-database-editor/src/adapters/sqlite.js':
+              'runtime/database/src/adapters/sqlite.js',
+            '../../../migrations/runtime': 'runtime/migrations',
+          },
+        }
+      : {}),
   },
   plugins: {
     'deep-link': {
@@ -339,7 +351,7 @@ const config = {
 const outPath = path.join(srcTauriDir, 'tauri.conf.json');
 writeFileSync(outPath, JSON.stringify(config, null, 2) + '\n');
 console.log(`[build-brand] wrote ${outPath}`);
-console.log(`[build-brand] window url: ${launchUrl}${offlineShell ? ' (offline_shell)' : ''}`);
+console.log(`[build-brand] window url: ${launchUrl}${desktopSpa ? ' (desktop_spa)' : offlineShell ? ' (recovery_shell)' : ''}`);
 console.log(
   `[build-brand] done. Next: cd src-tauri && cargo check   (or: npm run build, once a real dist/ exists)`,
 );

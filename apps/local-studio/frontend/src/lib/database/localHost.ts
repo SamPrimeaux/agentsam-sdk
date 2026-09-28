@@ -2,6 +2,7 @@
  * Local Studio host: detect Tauri / local Node bridge and expose LocalDatabaseHost.
  */
 import type {
+  CreateLocalDatabaseOptions,
   LocalDatabaseHost,
   LocalDatabaseRef,
   LocalRuntimeStatus,
@@ -68,18 +69,53 @@ export function createLocalStudioLocalHost(): LocalDatabaseHost {
       }
     },
 
+    async pick(): Promise<LocalDatabaseRef | null> {
+      const invoke = window.__TAURI__?.core?.invoke;
+      if (!isTauri() || !invoke) return null;
+      return (await invoke("local_sqlite_pick_database")) as LocalDatabaseRef | null;
+    },
+
     async open(ref: LocalDatabaseRef) {
       if (ref.kind === "agentsam" || ref.ref === "agentsam" || ref.id === "local-sqlite:agentsam") {
         const body = await invokeBridge({ op: "open_agentsam", cwd: "." });
         return { sourceId: String(body.sourceId || "local-sqlite:agentsam") };
       }
       const body = await invokeBridge({
-        op: "open_agentsam",
+        op: "open_database",
         cwd: ".",
-        path: ref.ref,
+        ref: ref.ref,
         source_id: ref.id,
       });
       return { sourceId: String(body.sourceId || ref.id) };
+    },
+
+    async create(options: CreateLocalDatabaseOptions) {
+      const body = await invokeBridge({
+        op: "create_database",
+        cwd: ".",
+        name: options.name,
+        directory_ref: options.directoryRef,
+        preset: options.preset,
+      });
+      return {
+        sourceId: String(body.sourceId || "local-sqlite:created"),
+        ref: body.ref as LocalDatabaseRef,
+      };
+    },
+
+    async pickDirectory(): Promise<string | null> {
+      const invoke = window.__TAURI__?.core?.invoke;
+      if (!isTauri() || !invoke) return null;
+      return (await invoke("local_sqlite_pick_directory")) as string | null;
+    },
+
+    async detach(ref: LocalDatabaseRef): Promise<void> {
+      await invokeBridge({
+        op: "detach_database",
+        cwd: ".",
+        ref: ref.ref,
+        source_id: ref.id,
+      });
     },
   };
 }

@@ -12,7 +12,8 @@ import { readSecrets, writeSecrets } from "@/lib/work/secrets";
 import { navigateApp } from "@/lib/work/navigate";
 import { slugify } from "@/lib/work/seed";
 import { useWorkStore } from "@/lib/work/store";
-import { LOCAL_TERMINAL_SESSION_ID } from "@/lib/work/terminal-host";
+import { getTauriInvoke } from "@/lib/desktop/tauri";
+import { activeTerminalSession, useTerminalSessionStore } from "@/lib/work/terminal-sessions";
 import type { Project, ShellEffect } from "@inneranimalmedia/agentsam-local-shared";
 import type { Terminal } from "@xterm/xterm";
 import type { FitAddon } from "@xterm/addon-fit";
@@ -27,16 +28,6 @@ function getStoredAgentsamdToken(): string | null {
   }
 }
 
-type TauriInvoke = (command: string, args?: Record<string, unknown>) => Promise<unknown>;
-
-function getTauriInvoke(): TauriInvoke | null {
-  if (typeof window === "undefined") return null;
-  const tauri = (window as Window & {
-    __TAURI__?: { core?: { invoke?: TauriInvoke } };
-  }).__TAURI__;
-  return tauri?.core?.invoke || null;
-}
-
 async function ensureDesktopAgentsamdToken(): Promise<string | null> {
   const invoke = getTauriInvoke();
   if (!invoke) return null;
@@ -45,11 +36,6 @@ async function ensureDesktopAgentsamdToken(): Promise<string | null> {
     if (!handshake?.ok) return null;
     const token = String(await invoke("agentsamd_pairing_token", {})).trim();
     if (!/^[a-f0-9]{64}$/i.test(token)) return null;
-    try {
-      localStorage.setItem(AGENTSAMD_TOKEN_KEY, token);
-    } catch {
-      /* runtime token still works for this session */
-    }
     return token;
   } catch {
     return null;
@@ -152,15 +138,17 @@ type TerminalRuntime = {
   observer: ResizeObserver | null;
   refCount: number;
   getProject: ProjectGetter;
+  resize?: () => void;
 };
 
 const runtimes = new Map<string, TerminalRuntime>();
 const bootstraps = new Map<string, Promise<TerminalRuntime>>();
 
 async function createRuntime(sessionId: string, getProject: ProjectGetter): Promise<TerminalRuntime> {
-  const [{ Terminal }, { FitAddon }] = await Promise.all([
+  const [{ Terminal }, { FitAddon }, { WebLinksAddon }] = await Promise.all([
     import("@xterm/xterm"),
     import("@xterm/addon-fit"),
+    import("@xterm/addon-web-links"),
   ]);
   await import("@xterm/xterm/css/xterm.css");
 
@@ -192,6 +180,19 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
   });
   const fit = new FitAddon();
   term.loadAddon(fit);
+  term.loadAddon(new WebLinksAddon());
+  term.attachCustomKeyEventHandler((event) => {
+    if (event.type !== "keydown" || !event.metaKey) return true;
+    if (event.key.toLowerCase() === "c" && term.hasSelection()) {
+      void navigator.clipboard.writeText(term.getSelection());
+      return false;
+    }
+    if (event.key.toLowerCase() === "v") {
+      void navigator.clipboard.readText().then((text) => term.paste(text));
+      return false;
+    }
+    return true;
+  });
 
   const mount = document.createElement("div");
   mount.className = "terminal-runtime-root h-full w-full";
@@ -416,12 +417,19 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
   }
   let usingAgentsamd = false;
   const desktopAgentsamdToken = !runtimeBase ? await ensureDesktopAgentsamdToken() : null;
+  let agentsamdToken: string | null = desktopAgentsamdToken;
+  if (desktopAgentsamdToken && !runtimeBase) {
+    runtimeBase = "http://127.0.0.1:18765";
+    runtimeCap = runtimeCap || "local";
+    usingAgentsamd = true;
+  }
   if (!runtimeBase) {
     try {
       const amd = await fetch("http://127.0.0.1:18765/health", { signal: AbortSignal.timeout(600) });
       if (amd.ok) {
         const token = desktopAgentsamdToken ?? getStoredAgentsamdToken() ?? promptForAgentsamdToken();
         if (token) {
+          agentsamdToken = token;
           runtimeBase = "http://127.0.0.1:18765";
           runtimeCap = runtimeCap || "local";
           usingAgentsamd = true;
@@ -467,7 +475,7 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
     let socket: WebSocket | null = null;
     try {
       if (usingAgentsamd) {
-        const token = encodeURIComponent(getStoredAgentsamdToken() || "");
+        const token = encodeURIComponent(agentsamdToken || "");
         socket = new WebSocket(`${wsUrl}/v1/pty?token=${token}&cwd=${cwdParam}`);
       } else {
         socket = new WebSocket(`${wsUrl}/?cwd=${cwdParam}&cols=80&rows=24&capability=${cap}`);
@@ -500,6 +508,12 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
       socket.binaryType = "arraybuffer";
       let ptySessionId: string | null = null;
       socket.onopen = () => {
+        useTerminalSessionStore.getState().patchSession(sessionId, {
+          state: "connected",
+          cwd: project0.workspaceRoot || undefined,
+          shell: "zsh",
+          error: undefined,
+        });
         term.writeln(`AgentSam PTY  ·  ${project0.workspaceRoot || cwdParam}`);
         term.writeln(
           `workspace ${project0.workspaceId || "?"}  ·  real shell — same host root as Monaco`,
@@ -526,10 +540,15 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
                 return;
               }
               if (msg.type === "error") {
+                useTerminalSessionStore.getState().patchSession(sessionId, {
+                  state: "error",
+                  error: msg.message || msg.code || "PTY error",
+                });
                 term.writeln(`PTY error: ${msg.code || ""} ${msg.message || ""}`);
                 return;
               }
               if (msg.type === "exit") {
+                useTerminalSessionStore.getState().patchSession(sessionId, { state: "exited" });
                 term.writeln(`\r\nshell exited (code ${msg.exit_code ?? "?"})`);
                 return;
               }
@@ -543,9 +562,11 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
         term.write(new TextDecoder().decode(ev.data as ArrayBuffer));
       };
       socket.onerror = () => {
+        useTerminalSessionStore.getState().patchSession(sessionId, { state: "error", error: "PTY socket error" });
         term.writeln("PTY socket error — is `agentsam start-local` running?");
       };
       socket.onclose = () => {
+        useTerminalSessionStore.getState().patchSession(sessionId, { state: "disconnected" });
         term.writeln("\r\nPTY disconnected.");
       };
 
@@ -567,6 +588,11 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
         observer: null,
         refCount: 0,
         getProject,
+        resize: () => {
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ type: "resize", cols: term.cols, rows: term.rows }));
+          }
+        },
       };
       (runtime as TerminalRuntime & { _ptyCleanup?: () => void; _ptySessionId?: string | null })._ptyCleanup = () => {
         try {
@@ -581,8 +607,9 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
   }
 
   term.writeln(
-    "AgentSam CLI  ·  Scratch (virtual)  ·  type help",
+    "Runtime unavailable — Scratch mode (degraded)  ·  type help",
   );
+  useTerminalSessionStore.getState().patchSession(sessionId, { state: "degraded", runtimeLabel: "Scratch fallback" });
   term.writeln(
     "First time? Type setup  — AgentSam guides you one prompt at a time.",
   );
@@ -702,7 +729,7 @@ async function ensureRuntime(sessionId: string, getProject: ProjectGetter): Prom
 export async function attachSharedTerminal(
   host: HTMLElement,
   getProject: ProjectGetter,
-  sessionId = LOCAL_TERMINAL_SESSION_ID,
+  sessionId = activeTerminalSession().id,
 ): Promise<{ run: (line: string) => Promise<void>; term: Terminal }> {
   const runtime = await ensureRuntime(sessionId, getProject);
   runtime.refCount += 1;
@@ -717,6 +744,7 @@ export async function attachSharedTerminal(
     runtime.observer = new ResizeObserver(() => {
       try {
         runtime.fit.fit();
+        runtime.resize?.();
       } catch {
         /* ignore */
       }
@@ -726,6 +754,7 @@ export async function attachSharedTerminal(
 
   try {
     runtime.fit.fit();
+    runtime.resize?.();
   } catch {
     /* ignore */
   }
@@ -733,7 +762,7 @@ export async function attachSharedTerminal(
   return { run: runtime.run, term: runtime.term };
 }
 
-export function detachSharedTerminal(host: HTMLElement, sessionId = LOCAL_TERMINAL_SESSION_ID) {
+export function detachSharedTerminal(host: HTMLElement, sessionId = activeTerminalSession().id) {
   const runtime = runtimes.get(sessionId);
   if (!runtime) return;
   runtime.refCount = Math.max(0, runtime.refCount - 1);
@@ -745,6 +774,6 @@ export function detachSharedTerminal(host: HTMLElement, sessionId = LOCAL_TERMIN
   runtime.host = null;
 }
 
-export function getSharedTerminalRun(sessionId = LOCAL_TERMINAL_SESSION_ID) {
+export function getSharedTerminalRun(sessionId = activeTerminalSession().id) {
   return runtimes.get(sessionId)?.run ?? null;
 }

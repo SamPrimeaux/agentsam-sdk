@@ -74,7 +74,8 @@
     "tray": true,
     "auto_update": true,
     "local_execution_node": true,
-    "offline_shell": true,
+    "offline_shell": false,
+    "desktop_spa": true,
     "agentsamd_sidecar": true
   }
 }

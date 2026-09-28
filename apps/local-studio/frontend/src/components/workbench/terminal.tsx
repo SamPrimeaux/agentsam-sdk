@@ -1,17 +1,24 @@
 import { useEffect, useRef } from "react";
-import { X } from "lucide-react";
+import { Copy, Plus, RotateCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useActiveProject, useWorkStore } from "@/lib/work/store";
-import { LOCAL_TERMINAL_SESSION_ID } from "@/lib/work/terminal-host";
 import { attachSharedTerminal, detachSharedTerminal, getSharedTerminalRun } from "@/lib/work/terminal-runtime";
+import { useTerminalSessionStore } from "@/lib/work/terminal-sessions";
 
 export function TerminalPane({
   variant = "dock",
-  sessionId = LOCAL_TERMINAL_SESSION_ID,
+  sessionId,
 }: {
   variant?: "dock" | "page" | "side";
   sessionId?: string;
 }) {
+  const activeSessionId = useTerminalSessionStore((s) => s.activeSessionId);
+  const sessions = useTerminalSessionStore((s) => s.sessions);
+  const createSession = useTerminalSessionStore((s) => s.createSession);
+  const closeSession = useTerminalSessionStore((s) => s.closeSession);
+  const duplicateSession = useTerminalSessionStore((s) => s.duplicateSession);
+  const setActiveSession = useTerminalSessionStore((s) => s.setActiveSession);
+  const resolvedSessionId = sessionId || activeSessionId;
   const hostRef = useRef<HTMLDivElement>(null);
   const project = useActiveProject();
   const projectRef = useRef(project);
@@ -23,30 +30,64 @@ export function TerminalPane({
     if (!host) return;
     let cancelled = false;
 
-    void attachSharedTerminal(host, () => projectRef.current, sessionId).then(() => {
-      if (cancelled) detachSharedTerminal(host, sessionId);
+    void attachSharedTerminal(host, () => projectRef.current, resolvedSessionId).then(() => {
+      if (cancelled) detachSharedTerminal(host, resolvedSessionId);
     });
 
     return () => {
       cancelled = true;
-      detachSharedTerminal(host, sessionId);
+      detachSharedTerminal(host, resolvedSessionId);
     };
-  }, [sessionId]);
+  }, [resolvedSessionId]);
 
   useEffect(() => {
     if (!pending.length) return;
     const cmds = useWorkStore.getState().consumeCommands();
-    const run = getSharedTerminalRun(sessionId);
+    const run = getSharedTerminalRun(resolvedSessionId);
     if (!run) return;
     void (async () => {
       for (const cmd of cmds) {
         await run(cmd);
       }
     })();
-  }, [pending, sessionId]);
+  }, [pending, resolvedSessionId]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background" data-terminal-session={sessionId}>
+    <div className="flex h-full min-h-0 flex-col bg-background" data-terminal-session={resolvedSessionId}>
+      <div className="flex h-9 shrink-0 items-center gap-1 overflow-x-auto border-b border-border px-1">
+        {sessions.map((session) => (
+          <button
+            type="button"
+            key={session.id}
+            className="group flex h-7 shrink-0 items-center gap-2 rounded-md px-2 font-mono text-xs text-muted-foreground data-[active=true]:bg-muted data-[active=true]:text-foreground"
+            data-active={session.id === resolvedSessionId}
+            onClick={() => setActiveSession(session.id)}
+            title={`${session.runtimeLabel || session.lane}${session.cwd ? ` · ${session.cwd}` : ""}`}
+          >
+            <span className="size-1.5 rounded-full bg-muted-foreground data-[state=connected]:bg-primary" data-state={session.state} />
+            <span>{session.title}</span>
+            <span
+              role="button"
+              tabIndex={0}
+              className="opacity-0 transition-opacity group-hover:opacity-100"
+              aria-label={`Close ${session.title}`}
+              onClick={(event) => { event.stopPropagation(); closeSession(session.id); }}
+              onKeyDown={(event) => { if (event.key === "Enter") closeSession(session.id); }}
+            >
+              <X className="size-3" />
+            </span>
+          </button>
+        ))}
+        <Button type="button" size="icon-sm" variant="ghost" className="size-7 shrink-0" aria-label="New terminal" onClick={() => createSession({ cwd: project.workspaceRoot || undefined })}>
+          <Plus className="size-3.5" />
+        </Button>
+        <Button type="button" size="icon-sm" variant="ghost" className="size-7 shrink-0" aria-label="Duplicate terminal cwd" onClick={() => duplicateSession(resolvedSessionId)}>
+          <Copy className="size-3.5" />
+        </Button>
+        <Button type="button" size="icon-sm" variant="ghost" className="size-7 shrink-0" aria-label="Reconnect terminal" onClick={() => window.location.reload()}>
+          <RotateCw className="size-3.5" />
+        </Button>
+      </div>
       {variant === "dock" ? (
         <div className="flex h-8 shrink-0 items-center gap-2 border-t border-border px-2">
           <span className="px-1 font-mono text-[11px] tracking-wide text-muted-foreground uppercase">CLI</span>

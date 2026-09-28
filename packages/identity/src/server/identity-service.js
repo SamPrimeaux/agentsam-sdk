@@ -61,6 +61,11 @@ export function createIdentityService(config) {
     return match ? decodeURIComponent(match[1]) : null;
   }
 
+  function parseBearerSessionId(authorization) {
+    const match = String(authorization || '').match(/^Bearer\s+([^\s]+)$/i);
+    return match ? match[1] : null;
+  }
+
   return Object.freeze({
     cookieName,
     app,
@@ -108,7 +113,8 @@ export function createIdentityService(config) {
     },
 
     async sessionFromRequest(request) {
-      const sessionId = parseSessionId(request.headers.get('Cookie'));
+      const sessionId = parseBearerSessionId(request.headers.get('Authorization'))
+        || parseSessionId(request.headers.get('Cookie'));
       if (!sessionId) return null;
       const session = await adapter.getSession(sessionId);
       if (!session) return null;
@@ -118,7 +124,8 @@ export function createIdentityService(config) {
     },
 
     async logout(request) {
-      const sessionId = parseSessionId(request.headers.get('Cookie'));
+      const sessionId = parseBearerSessionId(request.headers.get('Authorization'))
+        || parseSessionId(request.headers.get('Cookie'));
       if (sessionId) await adapter.revokeSession(sessionId);
       return { ok: true };
     },

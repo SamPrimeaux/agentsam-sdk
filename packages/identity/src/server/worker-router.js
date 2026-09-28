@@ -15,6 +15,13 @@ import { resolveOAuthCredentialLane } from '../oauth/credentials.js';
 import { handleGoogleDesktopExchangeRequest } from '../oauth/google-desktop-exchange.js';
 import { iamPlatformOAuthCallback, iamPlatformOAuthStart } from '../oauth/iam-platform.js';
 import { pkceChallenge, pkceVerifier, randomOAuthState } from '../oauth/pkce.js';
+import {
+  finishDesktopOAuth,
+  handleDesktopExchangeRequest,
+  handleDesktopRefreshRequest,
+  handleDesktopSessionRequest,
+  saveDesktopOAuthIntent,
+} from '../oauth/desktop-handoff.js';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -230,6 +237,15 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
   if (path === '/api/oauth/google/desktop-exchange') {
     return handleGoogleDesktopExchangeRequest(request, env);
   }
+  if (path === '/api/oauth/desktop/exchange') {
+    return handleDesktopExchangeRequest(request, adapter);
+  }
+  if (path === '/api/oauth/desktop/refresh') {
+    return handleDesktopRefreshRequest(request, adapter);
+  }
+  if (path === '/api/oauth/desktop/session') {
+    return handleDesktopSessionRequest(request, identity);
+  }
   if (path === '/api/oauth/inneranimalmedia/callback' || path === '/api/oauth/iam/callback') {
     if (method === 'GET') {
       return iamPlatformOAuthCallback(request, env, adapter, identity);
@@ -333,6 +349,7 @@ async function oauthStart(request, env, identity, adapter, provider, creds) {
       redirectTo,
       appId: identity.app?.id || null,
     });
+    await saveDesktopOAuthIntent(adapter, state, url);
 
     const redirectUri = `${url.origin}/api/oauth/${provider}/callback`;
     let authUrl;
@@ -456,6 +473,14 @@ async function oauthCallback(request, env, identity, adapter, provider, creds) {
     await adapter.logAuthEvent({
       userId: result.authUserId, eventType: 'login', status: 'ok', provider, request,
     });
+
+    const desktopResponse = await finishDesktopOAuth({
+      adapter,
+      oauthState: state,
+      sessionId: result.sessionId,
+      provider,
+    });
+    if (desktopResponse) return desktopResponse;
 
     const redirectTo = identity.resolvePostLoginPath(saved.redirect_to);
     const res = identity.buildLoginSuccessResponse(request, result.sessionId, redirectTo);

@@ -11,10 +11,13 @@
 use tauri::{App, AppHandle, Emitter};
 use tauri_plugin_deep_link::DeepLinkExt;
 
+use super::auth_pkce;
+
 pub fn register_scheme(app: &App) -> tauri::Result<()> {
     let handle = app.handle().clone();
     app.deep_link().on_open_url(move |event| {
         for url in event.urls() {
+            auth_pkce::handle_desktop_oauth_callback(url.as_str());
             let _ = handle.emit("agentsam://deep-link", url.to_string());
         }
     });
@@ -25,5 +28,6 @@ pub fn register_scheme(app: &App) -> tauri::Result<()> {
 // dev/testing without needing a real OS-level deep link event.
 #[tauri::command]
 pub fn handle_callback(app: AppHandle, url: String) -> Result<(), String> {
+    auth_pkce::handle_desktop_oauth_callback(&url);
     app.emit("agentsam://deep-link", url).map_err(|e| e.to_string())
 }

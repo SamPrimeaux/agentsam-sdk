@@ -2,16 +2,25 @@
 //! Opaque path handling stays in the Node runtime; the webview only sees JSON.
 
 use serde_json::Value;
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use tauri::{AppHandle, Manager};
 
-fn find_bridge_script() -> Result<PathBuf, String> {
+fn find_bridge_script(app: &AppHandle) -> Result<PathBuf, String> {
   // Prefer env override for packaged apps.
   if let Ok(p) = std::env::var("AGENTSAM_SQLITE_BRIDGE") {
     let path = PathBuf::from(p);
     if path.is_file() {
       return Ok(path);
+    }
+  }
+
+  if let Ok(resources) = app.path().resource_dir() {
+    let packaged = resources.join("runtime/database/scripts/local-sqlite-bridge.mjs");
+    if packaged.is_file() {
+      return Ok(packaged);
     }
   }
 
@@ -68,8 +77,8 @@ fn find_project_cwd() -> PathBuf {
 }
 
 #[tauri::command]
-pub async fn local_sqlite_bridge(request_json: String) -> Result<String, String> {
-  let script = find_bridge_script()?;
+pub async fn local_sqlite_bridge(app: AppHandle, request_json: String) -> Result<String, String> {
+  let script = find_bridge_script(&app)?;
   let cwd = find_project_cwd();
 
   // Ensure cwd is present in the request for the Node bridge.
@@ -85,12 +94,29 @@ pub async fn local_sqlite_bridge(request_json: String) -> Result<String, String>
   }
   let body = serde_json::to_string(&payload).map_err(|e| e.to_string())?;
 
-  let mut child = Command::new("node")
+  let node = [
+    PathBuf::from("/opt/homebrew/bin/node"),
+    PathBuf::from("/usr/local/bin/node"),
+    PathBuf::from("/usr/bin/node"),
+  ]
+  .into_iter()
+  .find(|path| path.is_file())
+  .unwrap_or_else(|| PathBuf::from("node"));
+
+  let mut command = Command::new(node);
+  command
     .arg(&script)
     .current_dir(&cwd)
     .stdin(Stdio::piped())
     .stdout(Stdio::piped())
-    .stderr(Stdio::piped())
+    .stderr(Stdio::piped());
+  if let Ok(resources) = app.path().resource_dir() {
+    let migrations = resources.join("runtime/migrations");
+    if migrations.is_dir() {
+      command.env("AGENTSAM_RUNTIME_MIGRATIONS", migrations);
+    }
+  }
+  let mut child = command
     .spawn()
     .map_err(|e| format!("node_spawn_failed:{e}"))?;
 
@@ -124,6 +150,34 @@ pub async fn local_sqlite_bridge(request_json: String) -> Result<String, String>
   }
 
   Ok(stdout)
+}
+
+fn opaque_ref(path: &Path) -> String {
+  format!("ldbref:{}", URL_SAFE_NO_PAD.encode(path.to_string_lossy().as_bytes()))
+}
+
+#[tauri::command]
+pub async fn local_sqlite_pick_database() -> Result<Option<Value>, String> {
+  let picked = rfd::FileDialog::new()
+    .set_title("Open SQLite Database")
+    .add_filter("SQLite", &["sqlite", "sqlite3", "db"])
+    .pick_file();
+  Ok(picked.map(|path| serde_json::json!({
+    "id": format!("local-sqlite:picked:{}", URL_SAFE_NO_PAD.encode(path.to_string_lossy().as_bytes())),
+    "label": path.file_name().and_then(|name| name.to_str()).unwrap_or("SQLite database"),
+    "ref": opaque_ref(&path),
+    "pathHint": path.to_string_lossy(),
+    "kind": "file",
+    "writable": true,
+  })))
+}
+
+#[tauri::command]
+pub async fn local_sqlite_pick_directory() -> Result<Option<String>, String> {
+  Ok(rfd::FileDialog::new()
+    .set_title("Choose Database Folder")
+    .pick_folder()
+    .map(|path| opaque_ref(&path)))
 }
 
 #[allow(dead_code)]

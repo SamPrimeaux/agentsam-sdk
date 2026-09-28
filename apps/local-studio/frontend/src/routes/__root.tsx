@@ -38,21 +38,38 @@ export const Route = createRootRoute({
       },
     ],
   }),
-  component: () => (
+  component: RootDocument,
+});
+
+function RootDocument() {
+  const content = (
+    <>
+      <PreviewHostBridge />
+      <AuthProvider>
+        <ApplicationOutlet />
+      </AuthProvider>
+    </>
+  );
+  const desktop =
+    typeof window !== "undefined" &&
+    Boolean((window as Window & { __AGENTSAM_DESKTOP__?: boolean }).__AGENTSAM_DESKTOP__);
+
+  // The packaged desktop build is a real client-only SPA mounted into #root.
+  // The hosted TanStack Start build still owns the document and hydrates it.
+  if (desktop) return content;
+
+  return (
     <html lang="en" className="dark antialiased" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
       <body className="bg-background font-sans text-foreground">
-        <PreviewHostBridge />
-        <AuthProvider>
-          <ApplicationOutlet />
-        </AuthProvider>
+        {content}
         <Scripts />
       </body>
     </html>
-  ),
-});
+  );
+}
 
 function ApplicationOutlet() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });

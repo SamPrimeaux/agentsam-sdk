@@ -1,9 +1,9 @@
-//! Desktop sign-in — Google Desktop PKCE + Cloudflare OAuth (Studio-hosted).
+//! Desktop sign-in — Google Desktop PKCE, Cloudflare OAuth, and IAM platform OAuth.
 //!
-//! NEVER gate through https://inneranimalmedia.com/auth/login with
-//! iam_agentsam_sdk_web. Desktop identity uses:
+//! The packaged portal presents each provider explicitly. Desktop identity uses:
 //!   - GOOGLE_DESKTOP_CLIENT_ID (public Desktop client, PKCE + loopback)
 //!   - CLOUDFLARE_OAUTH_CLIENT_ID (Worker secret / public-config; offline_access via Studio)
+//!   - IAM_CLIENT_ID (Studio Worker starts the InnerAnimalMedia platform flow)
 
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use keyring::Entry;
@@ -13,7 +13,8 @@ use sha2::{Digest, Sha256};
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::process::Command;
-use std::sync::mpsc;
+use std::collections::HashMap;
+use std::sync::{mpsc, Mutex, OnceLock};
 use std::thread;
 use std::time::Duration;
 
@@ -25,6 +26,12 @@ const GOOGLE_SCOPES: &str = "openid email profile https://www.googleapis.com/aut
 const KEYCHAIN_ACCOUNT_REFRESH: &str = "oauth_refresh_token";
 const KEYCHAIN_ACCOUNT_ACCESS: &str = "oauth_access_token";
 const KEYCHAIN_PROVIDER: &str = "oauth_provider";
+const DESKTOP_CLIENT_ID: &str = "local-studio";
+const DESKTOP_REDIRECT_URI: &str = "agentsamstudio://callback";
+const DESKTOP_CALLBACK_TIMEOUT: Duration = Duration::from_secs(300);
+
+type DesktopCallbackSender = mpsc::Sender<Result<HashMap<String, String>, String>>;
+static DESKTOP_CALLBACKS: OnceLock<Mutex<HashMap<String, DesktopCallbackSender>>> = OnceLock::new();
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DesktopLoginRequest {
@@ -44,6 +51,23 @@ pub struct DesktopLoginResult {
   pub refresh_stored: bool,
   pub client_id: String,
   pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DesktopAuthStatus {
+  pub authenticated: bool,
+  pub provider: Option<String>,
+  pub access_token_present: bool,
+  pub refresh_stored: bool,
+  pub message: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct DesktopTokenResponse {
+  access_token: Option<String>,
+  refresh_token: Option<String>,
+  provider: Option<String>,
+  error: Option<String>,
 }
 
 fn random_url_safe(nbytes: usize) -> String {
@@ -83,6 +107,29 @@ fn open_system_browser(url: &str) -> Result<(), String> {
   Ok(())
 }
 
+fn desktop_callbacks() -> &'static Mutex<HashMap<String, DesktopCallbackSender>> {
+  DESKTOP_CALLBACKS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn register_desktop_callback(
+  state: &str,
+) -> Result<mpsc::Receiver<Result<HashMap<String, String>, String>>, String> {
+  let (tx, rx) = mpsc::channel();
+  let mut pending = desktop_callbacks()
+    .lock()
+    .map_err(|_| "desktop_callback_lock_poisoned".to_string())?;
+  if pending.insert(state.to_string(), tx).is_some() {
+    return Err("desktop_callback_state_collision".into());
+  }
+  Ok(rx)
+}
+
+fn remove_desktop_callback(state: &str) {
+  if let Ok(mut pending) = desktop_callbacks().lock() {
+    pending.remove(state);
+  }
+}
+
 fn parse_query(query: &str) -> std::collections::HashMap<String, String> {
   let mut map = std::collections::HashMap::new();
   for pair in query.split('&') {
@@ -91,6 +138,36 @@ fn parse_query(query: &str) -> std::collections::HashMap<String, String> {
     }
   }
   map
+}
+
+/// Called by the deep-link plugin when the OS opens agentsamstudio://callback.
+/// Returns true only when the URL matched a currently pending desktop OAuth flow.
+pub fn handle_desktop_oauth_callback(url: &str) -> bool {
+  if !url.starts_with(DESKTOP_REDIRECT_URI) {
+    return false;
+  }
+  let query = url.split_once('?').map(|(_, query)| query).unwrap_or("");
+  let params = parse_query(query);
+  let state = params.get("state").cloned().unwrap_or_default();
+  if state.is_empty() {
+    return false;
+  }
+  let sender = desktop_callbacks()
+    .lock()
+    .ok()
+    .and_then(|mut pending| pending.remove(&state));
+  let Some(sender) = sender else {
+    return false;
+  };
+  let result = if let Some(error) = params.get("error") {
+    Err(format!("oauth_error:{error}"))
+  } else if params.get("code").map(String::as_str).unwrap_or("").is_empty() {
+    Err("missing_code".into())
+  } else {
+    Ok(params)
+  };
+  let _ = sender.send(result);
+  true
 }
 
 fn urlencoding_decode(s: &str) -> String {
@@ -338,27 +415,214 @@ pub async fn start_google_desktop_login(req: DesktopLoginRequest) -> Result<Desk
   })
 }
 
-/// Open Local Studio Cloudflare OAuth (CLOUDFLARE_OAUTH_CLIENT_ID + offline_access on Worker).
-/// Does not use IAM web login at inneranimalmedia.com.
-#[tauri::command]
-pub async fn start_cloudflare_oauth_login(req: DesktopLoginRequest) -> Result<DesktopLoginResult, String> {
+async fn start_hosted_desktop_login(
+  req: DesktopLoginRequest,
+  provider_path: &str,
+  provider_name: &str,
+  client_id_label: &str,
+) -> Result<DesktopLoginResult, String> {
   let origin = studio_origin(&req);
-  // Identity login with offline_access is hosted on the Studio Worker, which holds
-  // CLOUDFLARE_OAUTH_CLIENT_ID. Desktop opens the start URL; tokens land in Studio session.
-  let start = format!("{origin}/api/oauth/cloudflare/start?next=/agentsam");
-  open_system_browser(&start)?;
+  let app_id = req
+    .app_id
+    .filter(|value| !value.trim().is_empty())
+    .unwrap_or_else(|| "local-studio".into());
+  let state = random_url_safe(24);
+  let verifier = random_url_safe(48);
+  let challenge = pkce_challenge(&verifier);
+  let receiver = register_desktop_callback(&state)?;
+  let start = format!(
+    "{origin}/api/oauth/{provider_path}/start?desktop=1&desktop_state={state}&desktop_code_challenge={challenge}&desktop_client_id={client_id}&desktop_redirect_uri={redirect}&next=/agentsam",
+    client_id = urlencoding_encode(DESKTOP_CLIENT_ID),
+    redirect = urlencoding_encode(DESKTOP_REDIRECT_URI),
+  );
+  if let Err(error) = open_system_browser(&start) {
+    remove_desktop_callback(&state);
+    return Err(error);
+  }
+  let callback = receiver.recv_timeout(DESKTOP_CALLBACK_TIMEOUT).map_err(|_| {
+    remove_desktop_callback(&state);
+    "oauth_callback_timeout".to_string()
+  })??;
+  if callback.get("state").map(String::as_str) != Some(state.as_str()) {
+    return Err("state_mismatch".into());
+  }
+  let code = callback.get("code").cloned().unwrap_or_default();
+  let exchange_url = format!("{origin}/api/oauth/desktop/exchange");
+  let response = reqwest::Client::new()
+    .post(exchange_url)
+    .header("Accept", "application/json")
+    .json(&serde_json::json!({
+      "code": code,
+      "state": state,
+      "code_verifier": verifier,
+      "client_id": DESKTOP_CLIENT_ID,
+      "redirect_uri": DESKTOP_REDIRECT_URI,
+    }))
+    .send()
+    .await
+    .map_err(|error| format!("desktop_exchange_failed:{error}"))?;
+  let status = response.status();
+  let body: DesktopTokenResponse = response
+    .json()
+    .await
+    .map_err(|error| format!("desktop_exchange_json_failed:{error}"))?;
+  if !status.is_success() {
+    return Err(body.error.unwrap_or_else(|| format!("desktop_exchange_http_{}", status.as_u16())));
+  }
+  let access = body.access_token.unwrap_or_default();
+  let refresh = body.refresh_token.unwrap_or_default();
+  if access.is_empty() || refresh.is_empty() {
+    return Err("desktop_exchange_missing_credentials".into());
+  }
+  let stored_provider = body.provider.unwrap_or_else(|| provider_name.to_string());
+  let refresh_stored = store_tokens(&app_id, &stored_provider, &access, &refresh)?;
   Ok(DesktopLoginResult {
     ok: true,
-    provider: "cloudflare_oauth".into(),
-    access_token_present: false,
-    refresh_stored: false,
-    client_id: "CLOUDFLARE_OAUTH_CLIENT_ID".into(),
-    message: "opened_studio_cloudflare_oauth_offline".into(),
+    provider: stored_provider,
+    access_token_present: true,
+    refresh_stored,
+    client_id: client_id_label.into(),
+    message: "signed_in_desktop_handoff".into(),
   })
+}
+
+/// Cloudflare provider authorization is completed by the Worker, then handed
+/// to this public desktop client through a one-time PKCE-bound code.
+#[tauri::command]
+pub async fn start_cloudflare_oauth_login(req: DesktopLoginRequest) -> Result<DesktopLoginResult, String> {
+  start_hosted_desktop_login(
+    req,
+    "cloudflare",
+    "cloudflare",
+    "CLOUDFLARE_OAUTH_CLIENT_ID",
+  ).await
+}
+
+/// Open the Local Studio IAM-platform flow. The Studio Worker owns
+/// IAM_CLIENT_ID/IAM_CLIENT_SECRET; the packaged app never embeds the secret.
+/// A short-lived code returns through agentsamstudio://callback and is exchanged
+/// for a renewable AgentSam desktop session.
+#[tauri::command]
+pub async fn start_iam_oauth_login(req: DesktopLoginRequest) -> Result<DesktopLoginResult, String> {
+  start_hosted_desktop_login(
+    req,
+    "inneranimalmedia",
+    "inneranimalmedia",
+    "IAM_CLIENT_ID",
+  ).await
 }
 
 /// Backward-compatible command name — routes to Google Desktop (never IAM web gate).
 #[tauri::command]
 pub async fn start_agentsam_pkce_login(req: DesktopLoginRequest) -> Result<DesktopLoginResult, String> {
   start_google_desktop_login(req).await
+}
+
+fn keychain_token(app_id: &str, account: &str) -> Result<Option<String>, String> {
+  let entry = Entry::new(&format!("agentsam-desktop-{app_id}"), account)
+    .map_err(|error| error.to_string())?;
+  match entry.get_password() {
+    Ok(value) => Ok(Some(value)),
+    Err(keyring::Error::NoEntry) => Ok(None),
+    Err(error) => Err(error.to_string()),
+  }
+}
+
+async fn validate_desktop_session(origin: &str, access: &str) -> Result<bool, String> {
+  let response = reqwest::Client::new()
+    .get(format!("{origin}/api/oauth/desktop/session"))
+    .bearer_auth(access)
+    .header("Accept", "application/json")
+    .send()
+    .await
+    .map_err(|error| format!("desktop_session_check_failed:{error}"))?;
+  Ok(response.status().is_success())
+}
+
+/// Restore desktop account state from Keychain. Hosted desktop refresh tokens
+/// rotate on use; browser cookies are never consulted.
+#[tauri::command]
+pub async fn desktop_auth_status(req: DesktopLoginRequest) -> Result<DesktopAuthStatus, String> {
+  let origin = studio_origin(&req);
+  let app_id = req
+    .app_id
+    .filter(|value| !value.trim().is_empty())
+    .unwrap_or_else(|| "local-studio".into());
+  let access = keychain_token(&app_id, KEYCHAIN_ACCOUNT_ACCESS)?.unwrap_or_default();
+  let refresh = keychain_token(&app_id, KEYCHAIN_ACCOUNT_REFRESH)?.unwrap_or_default();
+  let provider = keychain_token(&app_id, KEYCHAIN_PROVIDER)?;
+  if access.is_empty() {
+    return Ok(DesktopAuthStatus {
+      authenticated: false,
+      provider,
+      access_token_present: false,
+      refresh_stored: !refresh.is_empty(),
+      message: "signed_out".into(),
+    });
+  }
+  if provider.as_deref() == Some("google_desktop") {
+    return Ok(DesktopAuthStatus {
+      authenticated: true,
+      provider,
+      access_token_present: true,
+      refresh_stored: !refresh.is_empty(),
+      message: "restored_google_desktop_keychain".into(),
+    });
+  }
+  if validate_desktop_session(&origin, &access).await.unwrap_or(false) {
+    return Ok(DesktopAuthStatus {
+      authenticated: true,
+      provider,
+      access_token_present: true,
+      refresh_stored: !refresh.is_empty(),
+      message: "restored_desktop_session".into(),
+    });
+  }
+  if refresh.is_empty() {
+    return Ok(DesktopAuthStatus {
+      authenticated: false,
+      provider,
+      access_token_present: true,
+      refresh_stored: false,
+      message: "desktop_session_expired".into(),
+    });
+  }
+  let response = reqwest::Client::new()
+    .post(format!("{origin}/api/oauth/desktop/refresh"))
+    .header("Accept", "application/json")
+    .json(&serde_json::json!({
+      "refresh_token": refresh,
+      "client_id": DESKTOP_CLIENT_ID,
+    }))
+    .send()
+    .await
+    .map_err(|error| format!("desktop_refresh_failed:{error}"))?;
+  let status = response.status();
+  let body: DesktopTokenResponse = response
+    .json()
+    .await
+    .map_err(|error| format!("desktop_refresh_json_failed:{error}"))?;
+  if !status.is_success() {
+    return Ok(DesktopAuthStatus {
+      authenticated: false,
+      provider,
+      access_token_present: true,
+      refresh_stored: true,
+      message: body.error.unwrap_or_else(|| "desktop_refresh_rejected".into()),
+    });
+  }
+  let next_access = body.access_token.unwrap_or_default();
+  let next_refresh = body.refresh_token.unwrap_or_default();
+  let next_provider = body.provider.or(provider).unwrap_or_else(|| "desktop".into());
+  if next_access.is_empty() || next_refresh.is_empty() {
+    return Err("desktop_refresh_missing_credentials".into());
+  }
+  store_tokens(&app_id, &next_provider, &next_access, &next_refresh)?;
+  Ok(DesktopAuthStatus {
+    authenticated: true,
+    provider: Some(next_provider),
+    access_token_present: true,
+    refresh_stored: true,
+    message: "refreshed_desktop_session".into(),
+  })
 }

@@ -16,6 +16,7 @@ export {
 export type {
   LocalDatabaseHost,
   LocalDatabaseRef,
+  CreateLocalDatabaseOptions,
   LocalRuntimeStatus,
   ProviderCapability,
   ProviderFamily,

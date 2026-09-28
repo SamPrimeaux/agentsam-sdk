@@ -1,11 +1,8 @@
 import { useActiveSideTab, useWorkStore } from "@/lib/work/store";
 
-/** Shared local terminal session id until ExecOS/PTY transport attaches. */
-export const LOCAL_TERMINAL_SESSION_ID = "local-default";
-
 /**
- * Only one TerminalPane mounts at a time so drawer and side panel share one
- * xterm session (reattach via terminal-runtime, not a second shell).
+ * Only one placement mounts the active session at a time. Moving a session
+ * reattaches its existing xterm/PTY runtime instead of creating a duplicate.
  */
 export type TerminalHostPlacement = "drawer" | "side" | null;
 
