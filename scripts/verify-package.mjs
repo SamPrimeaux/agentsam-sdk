@@ -44,7 +44,15 @@ assert.match(
 );
 assert.ok(pkg.files?.includes('src'), 'published files must include src');
 assert.ok(pkg.files?.includes('packages/identity'), 'published files must include identity workspace');
-assert.ok(pkg.files?.includes('packages/agentsam-brand'), 'published files must include brand intelligence workspace');
+assert.ok(pkg.files?.includes('packages/runtime-protocol/src'), 'published files must include runtime protocol source');
+assert.ok(pkg.files?.includes('packages/agentsam-vault/src'), 'published files must include vault runtime source');
+assert.ok(pkg.files?.includes('packages/agentsam-brand/package.json'), 'published files must include brand package metadata');
+assert.ok(pkg.files?.includes('packages/agentsam-brand/src'), 'published files must include brand intelligence source');
+assert.ok(pkg.files?.includes('packages/agentsam-workbench/package.json'), 'published files must include workbench package metadata');
+assert.ok(pkg.files?.includes('packages/agentsam-workbench/src'), 'published files must include workbench source');
+assert.ok(!pkg.files?.includes('packages/agentsam-brand'), 'root package must not publish the entire brand workspace');
+assert.ok(!pkg.files?.includes('packages/agentsam-workbench'), 'root package must not publish the entire workbench workspace');
+assert.ok(!pkg.files?.includes('apps/client-cms-editor'), 'root package must not publish the entire CMS editor workspace');
 assert.ok(pkg.files?.includes('packages/agentsam-contracts'), 'published files must include framework-neutral contracts');
 assert.ok(pkg.files?.includes('packages/agentsam-errors'), 'published files must include canonical errors runtime');
 assert.equal(errors.private, true, 'errors runtime is distributed through the root SDK, not separately published');

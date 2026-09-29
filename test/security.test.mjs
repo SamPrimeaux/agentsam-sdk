@@ -166,6 +166,29 @@ test('repair retains failed candidates and never labels failed verification as f
   assert.equal(g('status','--porcelain'),'');
   assert.match(result.reason,/command failed/);
 });
+test('exact release candidate tarball may be scanned without weakening normal local dependency rejection', t => {
+  const f = fixture(t);
+  f.pkg.dependencies['@inneranimalmedia/agentsam-sdk'] = 'file:./candidate.tgz';
+  f.lock.packages[''].dependencies = { ...f.pkg.dependencies };
+  f.lock.packages['node_modules/@inneranimalmedia/agentsam-sdk'] = {
+    name: '@inneranimalmedia/agentsam-sdk',
+    version: '2.6.5',
+    resolved: 'file:./candidate.tgz',
+  };
+  f.write();
+  const strict = collectNpmDependencies(f.root);
+  assert.ok(strict.issues.some(issue => issue.includes('node_modules/@inneranimalmedia/agentsam-sdk')));
+  const candidate = collectNpmDependencies(f.root, {
+    releaseCandidate: {
+      name: '@inneranimalmedia/agentsam-sdk',
+      version: '2.6.5',
+      location: 'node_modules/@inneranimalmedia/agentsam-sdk',
+    },
+  });
+  assert.equal(candidate.issues.some(issue => issue.includes('node_modules/@inneranimalmedia/agentsam-sdk')), false);
+  assert.ok(candidate.dependencies.some(dep => dep.name === '@inneranimalmedia/agentsam-sdk' && dep.version === '2.6.5'));
+});
+
 test('workspace stale locks and external links are incomplete', async t => {
   const f=fixture(t);
   f.lock.packages['node_modules/external']={link:true,resolved:'../elsewhere'};

@@ -18,7 +18,7 @@ test('Local Studio context resolves from nearest agentsam.app.json', () => {
     cwd: path.join(ROOT, 'apps/local-studio/frontend'),
   });
   assert.equal(context.app_id, 'local-studio');
-  assert.equal(context.host_origin, 'https://agentsam.inneranimalmedia.com');
+  assert.equal(context.host_origin, null);
   assert.match(context.source || '', /apps\/local-studio\/agentsam\.app\.json$/);
 });
 
