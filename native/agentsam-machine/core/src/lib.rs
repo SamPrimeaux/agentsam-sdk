@@ -1,6 +1,7 @@
 //! AgentSam machine perception core — deterministic inspect receipts.
 //! No Cloudflare, browser, Tauri, or network dependency.
 
+mod assets;
 mod enrich;
 mod source_types;
 
@@ -673,6 +674,18 @@ mod tests {
             .artifacts
             .iter()
             .any(|a| a.get("kind") == Some(&serde_json::json!("route_manifest"))));
+        assert!(receipt
+            .artifacts
+            .iter()
+            .any(|a| a.get("kind") == Some(&serde_json::json!("asset_manifest"))));
+        assert!(receipt.edges.iter().any(|e| {
+            e.get("type") == Some(&serde_json::json!("asset_reference"))
+                && e
+                    .pointer("/evidence/literal")
+                    .and_then(|v| v.as_str())
+                    .is_some_and(|s| s.starts_with("https://"))
+        }));
+        assert!(!receipt.provenance.network_used);
 
         let beliefs = receipt
             .facts

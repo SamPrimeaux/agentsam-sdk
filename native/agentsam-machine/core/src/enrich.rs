@@ -1,4 +1,5 @@
 //! Deterministic enrichment: findings, edges, artifacts from classified facts.
+use crate::assets::enrich_assets;
 use crate::{FileFact, MachineReceipt};
 use serde_json::json;
 use std::collections::{BTreeMap, BTreeSet};
@@ -44,6 +45,10 @@ pub fn enrich_receipt(root: &Path, receipt: &mut MachineReceipt) {
         enrich_static_site(root, receipt, &html_paths, &svg_paths, theme_json.as_deref());
     }
 
+    // Asset perception: local + remote URLs, evidence-bearing edges, asset_manifest.
+    // Always read-only / network-free (see receipt.provenance.network_used).
+    enrich_assets(root, receipt);
+
     // Derived inventory artifact always
     receipt.artifacts.push(json!({
         "kind": "inventory_summary",
@@ -68,7 +73,6 @@ fn enrich_static_site(
 ) {
     let mut routes: BTreeSet<String> = BTreeSet::new();
     let mut nav_pairs: BTreeSet<(String, String, String)> = BTreeSet::new();
-    let mut asset_refs: BTreeSet<(String, String)> = BTreeSet::new();
     let mut shared_nav_labels: BTreeMap<String, usize> = BTreeMap::new();
     let mut css_var_hits = 0usize;
     let mut header_hits = 0usize;
@@ -95,8 +99,7 @@ fn enrich_static_site(
                 continue;
             }
             if looks_like_asset(&href) {
-                let target = normalize_ref(rel, &href);
-                asset_refs.insert((rel.clone(), target));
+                // Asset edges come from assets::enrich_assets (keeps remote URLs + evidence).
                 continue;
             }
             if let Some(route) = href_to_route(&href) {
@@ -109,37 +112,15 @@ fn enrich_static_site(
                     "to": format!("route:{route}"),
                     "type": "navigation_link",
                     "label": label,
+                    "evidence": {
+                        "file": rel,
+                        "attribute": "href",
+                        "literal": href,
+                        "fact_ids": [format!("file:{rel}")],
+                    }
                 }));
             }
         }
-
-        for src in extract_attr(&text, "src") {
-            if looks_like_asset(&src) {
-                let target = normalize_ref(rel, &src);
-                asset_refs.insert((rel.clone(), target.clone()));
-                receipt.edges.push(json!({
-                    "from": format!("file:{rel}"),
-                    "to": format!("file:{target}"),
-                    "type": "asset_reference",
-                }));
-            }
-        }
-    }
-
-    for (from, to) in &asset_refs {
-        // Already pushed for src; ensure href-based assets are edged too
-        if receipt.edges.iter().any(|e| {
-            e.get("from") == Some(&json!(format!("file:{from}")))
-                && e.get("to") == Some(&json!(format!("file:{to}")))
-                && e.get("type") == Some(&json!("asset_reference"))
-        }) {
-            continue;
-        }
-        receipt.edges.push(json!({
-            "from": format!("file:{from}"),
-            "to": format!("file:{to}"),
-            "type": "asset_reference",
-        }));
     }
 
     if let Some(theme) = theme_json {
@@ -159,6 +140,7 @@ fn enrich_static_site(
                 format!("html_pages:{}", html_paths.len()),
                 format!("svg_assets:{}", svg_paths.len()),
             ],
+            "fact_ids": [format!("file:{theme}")],
         }));
     }
 
@@ -210,7 +192,6 @@ fn enrich_static_site(
             "svg_assets": svg_paths,
             "theme_manifest": theme_json,
             "navigation_edge_count": nav_pairs.len(),
-            "asset_reference_count": asset_refs.len(),
         }
     }));
 
@@ -285,35 +266,9 @@ fn looks_like_asset(href: &str) -> bool {
         .any(|ext| lower.contains(ext))
 }
 
-fn normalize_ref(from_rel: &str, href: &str) -> String {
-    let clean = href.split(['?', '#']).next().unwrap_or(href).trim();
-    if clean.starts_with('/') {
-        return clean.trim_start_matches('/').to_string();
-    }
-    let parent = Path::new(from_rel).parent().unwrap_or_else(|| Path::new(""));
-    parent
-        .join(clean)
-        .components()
-        .fold(std::path::PathBuf::new(), |mut acc, c| {
-            use std::path::Component;
-            match c {
-                Component::ParentDir => {
-                    acc.pop();
-                }
-                Component::Normal(s) => acc.push(s),
-                Component::CurDir => {}
-                _ => {}
-            }
-            acc
-        })
-        .to_string_lossy()
-        .replace('\\', "/")
-}
-
 fn extract_anchors(html: &str) -> Vec<(String, String)> {
     let mut out = Vec::new();
-    let lower = html;
-    let mut search = lower;
+    let mut search = html;
     while let Some(idx) = search.find("<a ") {
         let slice = &search[idx..];
         let end = slice.find('>').unwrap_or(slice.len());
@@ -329,20 +284,6 @@ fn extract_anchors(html: &str) -> Vec<(String, String)> {
             out.push((href, label));
         }
         search = &slice[1..];
-    }
-    out
-}
-
-fn extract_attr(html: &str, name: &str) -> Vec<String> {
-    let mut out = Vec::new();
-    let needle = format!("{name}=");
-    let mut search = html;
-    while let Some(idx) = search.to_ascii_lowercase().find(&needle) {
-        let slice = &search[idx + needle.len()..];
-        if let Some(v) = quoted_value(slice) {
-            out.push(v);
-        }
-        search = &search[idx + 1..];
     }
     out
 }

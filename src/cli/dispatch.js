@@ -10,6 +10,7 @@ const HANDLERS = {
   codebaseindex: async () => (await import('../commands/codebaseindex.js')).runCodebaseindex,
   ingest: async () => (await import('../commands/codebaseindex.js')).runCodebaseindex,
   'codebase-index': async () => (await import('../commands/codebaseindex.js')).runCodebaseindex,
+  machine: async () => (await import('../commands/machine.js')).runMachine,
   skill: async () => (await import('../commands/skill.js')).runSkill,
   skills: async () => (await import('../commands/skills.js')).runSkills,
 };

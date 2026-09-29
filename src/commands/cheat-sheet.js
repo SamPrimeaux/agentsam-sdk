@@ -19,6 +19,7 @@ const GROUPS = Object.freeze([
     label: 'Repository',
     commands: [
       ['inspect', 'Bounded repository authority view'],
+      ['machine', 'Deterministic local perception + asset discovery'],
       ['recon', 'Bounded-worker finding packets'],
       ['codebaseindex', 'AST ingest + optional embeddings'],
       ['merkle', 'Integrity snapshots'],

@@ -33,6 +33,7 @@ import { runDeployReceipt } from './commands/deploy-receipt.js';
 import { runSecurity } from './commands/security.js';
 import { runRecon } from './commands/recon.js';
 import { runCad } from './commands/cad.js';
+import { runMachine } from './commands/machine.js';
 import { runSkills } from './commands/skills.js';
 import { runSkill } from './commands/skill.js';
 import { runEval } from './commands/eval.js';
@@ -95,6 +96,7 @@ function printLegacyHelp() {
     agentsam plugins list|install|connect|status|remove [@agentsam-mcp]
     agentsam dev               Run this project's existing npm dev script
     agentsam inspect [--json]  Bounded repository index by default; use --view full for authority envelope
+    agentsam machine inspect   Native deterministic perception + asset discovery (--json)
     agentsam brand [scan|…]    Deterministic brand intelligence on repository.snapshot authority
     agentsam plan brand        Composable brand normalization plan (--goap optional)
     agentsam deploy            Graduate an AgentSam project intentionally
@@ -450,6 +452,14 @@ if (command === '--version' || command === '-v') {
 } else if (command === 'inspect') {
   try { await runInspect(rest); }
   catch (e) { reportCliError(e); process.exitCode = 1; }
+} else if (command === 'machine') {
+  try {
+    const code = await runMachine(rest);
+    if (typeof code === 'number' && code !== 0) process.exitCode = code;
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = e?.exitCode || 1;
+  }
 } else if (command === 'capabilities') {
   try { await runCapabilities(rest); }
   catch (e) { reportCliError(e); process.exitCode = 1; }

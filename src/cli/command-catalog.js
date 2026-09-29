@@ -13,6 +13,7 @@ export const CLI_COMMAND_CATALOG = Object.freeze([
   { id: 'plugins', summary: 'Install and manage AgentSam plugins', topic: 'create', skill: 'agentsam-app-fundamentals' },
   { id: 'dev', summary: 'Run this project’s npm dev script', topic: 'work', skill: 'agentsam-app-fundamentals' },
   { id: 'inspect', summary: 'Bounded repository inspect / authority view', topic: 'work', skill: 'agentsam-app-fundamentals', operation: 'repository.inspect', common: true },
+  { id: 'machine', summary: 'Deterministic local machine perception (inspect / asset discovery)', topic: 'work', skill: 'agentsam-app-fundamentals', operation: 'machine.inspect', common: true },
   { id: 'capabilities', summary: 'Inspect capability contracts', topic: 'create', skill: 'agentsam-app-fundamentals' },
   { id: 'setup', summary: 'Discover → plan → approve → install capabilities (Homebrew-style)', topic: 'start', skill: 'agentsam-app-fundamentals', common: true },
   { id: 'skills', aliases: ['skill'], summary: 'List or load portable skill instructions', topic: 'create', skill: 'agentsam-app-fundamentals', common: true },
