@@ -43,10 +43,10 @@ pub fn enrich_receipt(root: &Path, receipt: &mut MachineReceipt) {
         "id": "finding:inventory_summary",
         "kind": "inventory_summary",
         "schema": "agentsam.machine.finding.v1",
-        "certainty": "observed",
+        "basis": "observed",
         "evidence": {
             "fact_ids": all_fact_ids.iter().take(64).cloned().collect::<Vec<_>>(),
-            "fact_id_count": all_fact_ids.len(),
+            "fact_count": all_fact_ids.len(),
             "stats_files": receipt.stats.files,
             "stats_bytes": receipt.stats.bytes,
         },
@@ -58,7 +58,7 @@ pub fn enrich_receipt(root: &Path, receipt: &mut MachineReceipt) {
         "skipped_noise_files": receipt.stats.skipped_noise_files,
     }));
 
-    emit_composition_capabilities(
+    emit_composition_observations(
         receipt,
         &html_paths,
         &liquid_paths,
@@ -93,8 +93,9 @@ pub fn enrich_receipt(root: &Path, receipt: &mut MachineReceipt) {
     }));
 }
 
-/// Emit composable capability evidence — never a single exclusive project bucket.
-fn emit_composition_capabilities(
+/// Emit literal composition observations — never premature capability labels,
+/// never a single exclusive project bucket.
+fn emit_composition_observations(
     receipt: &mut MachineReceipt,
     html_paths: &[String],
     liquid_paths: &[String],
@@ -111,49 +112,88 @@ fn emit_composition_capabilities(
             .take(32)
             .map(|p| format!("file:{p}"))
             .collect();
-        let cap = json!({
-            "present": true,
-            "certainty": "observed",
+        let obs = json!({
+            "basis": "observed",
             "evidence": {
                 "fact_ids": fact_ids,
-                "html_documents": html_paths.len(),
+                "fact_count": html_paths.len(),
+                "count": html_paths.len(),
             }
         });
-        composition.insert("static_html".into(), cap.clone());
+        composition.insert("html_documents".into(), obs.clone());
         receipt.findings.push(json!({
-            "id": "finding:capability.static_html",
-            "kind": "composition_capability",
-            "capability": "static_html",
+            "id": "finding:observation.html_documents",
+            "kind": "composition_observation",
+            "observation": "html_documents",
             "schema": "agentsam.machine.finding.v1",
-            "certainty": "observed",
-            "evidence": cap["evidence"],
+            "basis": "observed",
+            "evidence": obs["evidence"],
         }));
     }
 
-    if package_json.is_some() || !ts_paths.is_empty() {
+    if !ts_paths.is_empty() {
         let fact_ids: Vec<String> = ts_paths
             .iter()
             .take(24)
             .map(|p| format!("file:{p}"))
-            .chain(package_json.map(|p| format!("file:{p}")))
             .collect();
-        let cap = json!({
-            "present": true,
-            "certainty": "observed",
+        let obs = json!({
+            "basis": "observed",
             "evidence": {
                 "fact_ids": fact_ids,
-                "package_json": package_json,
-                "typescript_javascript_files": ts_paths.len(),
+                "fact_count": ts_paths.len(),
+                "count": ts_paths.len(),
             }
         });
-        composition.insert("typescript_runtime".into(), cap.clone());
+        composition.insert("javascript_typescript_source".into(), obs.clone());
         receipt.findings.push(json!({
-            "id": "finding:capability.typescript_runtime",
-            "kind": "composition_capability",
-            "capability": "typescript_runtime",
+            "id": "finding:observation.javascript_typescript_source",
+            "kind": "composition_observation",
+            "observation": "javascript_typescript_source",
             "schema": "agentsam.machine.finding.v1",
-            "certainty": "observed",
-            "evidence": cap["evidence"],
+            "basis": "observed",
+            "evidence": obs["evidence"],
+        }));
+    }
+
+    if let Some(pkg) = package_json {
+        let obs = json!({
+            "basis": "observed",
+            "evidence": {
+                "fact_ids": [format!("file:{pkg}")],
+                "fact_count": 1,
+                "path": pkg,
+            }
+        });
+        composition.insert("package_manifest".into(), obs.clone());
+        receipt.findings.push(json!({
+            "id": "finding:observation.package_manifest",
+            "kind": "composition_observation",
+            "observation": "package_manifest",
+            "schema": "agentsam.machine.finding.v1",
+            "basis": "observed",
+            "evidence": obs["evidence"],
+        }));
+    }
+
+    if let Some(theme) = theme_json {
+        let obs = json!({
+            "basis": "observed",
+            "evidence": {
+                "fact_ids": [format!("file:{theme}")],
+                "fact_count": 1,
+                "path": theme,
+                "note": "Manifest file observed; theme_system is not implied without usage/config edges.",
+            }
+        });
+        composition.insert("theme_manifest".into(), obs.clone());
+        receipt.findings.push(json!({
+            "id": "finding:observation.theme_manifest",
+            "kind": "composition_observation",
+            "observation": "theme_manifest",
+            "schema": "agentsam.machine.finding.v1",
+            "basis": "observed",
+            "evidence": obs["evidence"],
         }));
     }
 
@@ -172,17 +212,17 @@ fn emit_composition_capabilities(
                 .take(48)
                 .map(|p| format!("file:{p}"))
                 .collect();
-            let cap = json!({
-                "present": true,
-                "certainty": "derived",
+            let derived = json!({
+                "basis": "derived",
                 "derivation": {
                     "method": "deterministic_rules",
-                    "rule_id": "capability.structured_templates.v1",
-                    "matched_signals": matched,
-                    "evidence_count": fact_ids.len(),
+                    "rule_id": "structured_template_collections.v1",
+                    "matched_signals": matched.clone(),
+                    "signal_count": matched.len(),
                 },
                 "evidence": {
-                    "fact_ids": fact_ids,
+                    "fact_ids": fact_ids.clone(),
+                    "fact_count": fact_ids.len(),
                     "templateLanguage": "liquid",
                     "conventions": {
                         "templatesDir": profile.templates_dirs.first(),
@@ -196,52 +236,32 @@ fn emit_composition_capabilities(
                     "layout_files": profile.layout_files,
                 }
             });
-            composition.insert("structured_templates".into(), cap.clone());
+            // Derived claim from observed Liquid collections — not a vendor/platform identity.
+            composition.insert("structured_template_collections".into(), derived.clone());
             receipt.findings.push(json!({
-                "id": "finding:capability.structured_templates",
-                "kind": "composition_capability",
-                "capability": "structured_templates",
+                "id": "finding:derived.structured_template_collections",
+                "kind": "composition_derived",
+                "claim": "structured_template_collections",
                 "schema": "agentsam.machine.finding.v1",
-                "certainty": "derived",
-                "derivation": cap["derivation"],
-                "evidence": cap["evidence"],
+                "basis": "derived",
+                "derivation": derived["derivation"],
+                "evidence": derived["evidence"],
             }));
         }
     }
 
-    if let Some(theme) = theme_json {
-        let cap = json!({
-            "present": true,
-            "certainty": "observed",
-            "evidence": {
-                "fact_ids": [format!("file:{theme}")],
-                "theme_manifest": theme,
-                "note": "Manifest coexistence only — not proven to apply to every page.",
-            }
-        });
-        composition.insert("theme_system".into(), cap.clone());
-        receipt.findings.push(json!({
-            "id": "finding:capability.theme_system",
-            "kind": "composition_capability",
-            "capability": "theme_system",
-            "schema": "agentsam.machine.finding.v1",
-            "certainty": "observed",
-            "evidence": cap["evidence"],
-        }));
-    }
-
-    // Summary finding: composable capabilities present — not a single project type.
     if !composition.is_empty() {
+        let signals: Vec<String> = composition.keys().cloned().collect();
         receipt.findings.push(json!({
             "id": "finding:composition",
             "kind": "composition",
             "schema": "agentsam.machine.finding.v1",
-            "certainty": "derived",
+            "basis": "derived",
             "derivation": {
                 "method": "deterministic_rules",
                 "rule_id": "composition.aggregate.v1",
-                "matched_signals": composition.keys().cloned().collect::<Vec<_>>(),
-                "evidence_count": composition.len(),
+                "matched_signals": signals.clone(),
+                "signal_count": signals.len(),
             },
             "composition": composition,
         }));
@@ -319,7 +339,7 @@ fn enrich_html_documents(
             "id": "finding:theme_manifest_candidate",
             "kind": "theme_manifest_candidate",
             "schema": "agentsam.machine.finding.v1",
-            "certainty": "observed",
+            "basis": "observed",
             "evidence": {
                 "fact_ids": [format!("file:{theme}")],
                 "theme_manifest": theme,
@@ -342,7 +362,7 @@ fn enrich_html_documents(
         "kind": "frontend_evidence",
         "schema": "agentsam.machine.finding.v1",
         "observations": {
-            "certainty": "observed",
+            "basis": "observed",
             "html_documents": html_paths.len(),
             "header_tags": header_hits,
             "footer_tags": footer_hits,
@@ -353,12 +373,18 @@ fn enrich_html_documents(
             "navigation_edge_count": nav_pairs.len(),
         },
         "derived": {
-            "certainty": "derived",
+            "basis": "derived",
             "derivation": {
                 "method": "deterministic_rules",
                 "rule_id": "frontend_evidence.route_and_nav_candidates.v1",
                 "matched_signals": ["filename_route_stem", "repeated_anchor_labels"],
-                "evidence_count": route_candidates.len() + shared_nav_candidates.len(),
+                "signal_count": 2,
+            },
+            "evidence": {
+                "fact_count": html_paths.len(),
+                "edge_count": nav_pairs.len(),
+                "route_candidate_count": route_candidates.len(),
+                "shared_navigation_candidate_count": shared_nav_candidates.len(),
             },
             "route_candidates": route_candidates.iter().cloned().collect::<Vec<_>>(),
             "shared_navigation_candidates": shared_nav_candidates,
@@ -372,7 +398,7 @@ fn enrich_html_documents(
             "kind": "asset_family",
             "type": "svg_icons",
             "schema": "agentsam.machine.finding.v1",
-            "certainty": "observed",
+            "basis": "observed",
             "count": svg_paths.len(),
             "paths": svg_paths,
             "evidence": { "fact_ids": svg_ids }

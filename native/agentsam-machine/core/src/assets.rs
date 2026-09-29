@@ -197,7 +197,7 @@ pub fn enrich_assets(root: &Path, receipt: &mut MachineReceipt) {
         "id": "finding:asset_discovery",
         "kind": "asset_discovery",
         "schema": "agentsam.machine.finding.v1",
-        "certainty": "observed",
+        "basis": "observed",
         "evidence": {
             "fact_ids": evidence_fact_ids,
             "asset_hits": hits.len(),

@@ -883,12 +883,12 @@ mod tests {
             .findings
             .iter()
             .any(|f| f.get("kind") == Some(&serde_json::json!("theme_manifest_candidate"))
-                || f.get("capability") == Some(&serde_json::json!("theme_system"))));
+                || f.get("observation") == Some(&serde_json::json!("theme_manifest"))));
         assert!(receipt
             .findings
             .iter()
             .any(|f| f.get("kind") == Some(&serde_json::json!("composition"))
-                || f.get("capability") == Some(&serde_json::json!("static_html"))));
+                || f.get("observation") == Some(&serde_json::json!("html_documents"))));
         assert!(!receipt.edges.iter().any(|e| {
             e.get("type") == Some(&serde_json::json!("theme_applies_to"))
         }));

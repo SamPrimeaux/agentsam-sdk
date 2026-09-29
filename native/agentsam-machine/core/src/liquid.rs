@@ -169,25 +169,24 @@ pub fn enrich_liquid_structure(root: &Path, receipt: &mut MachineReceipt) {
     {
         let fact_ids: Vec<String> = evidence_fact_ids.into_iter().collect();
         let matched = profile.matched_signals();
-        let evidence_count = fact_ids.len()
-            + template_section_edges
-            + snippet_edges
-            + stylesheet_edges
-            + asset_edges;
+        let edge_count =
+            template_section_edges + snippet_edges + stylesheet_edges + asset_edges;
         receipt.findings.push(json!({
             "id": "finding:structured_template_theme",
             "kind": "theme_structure",
             "type": "structured_template_theme",
             "schema": "agentsam.machine.finding.v1",
-            "certainty": "derived",
+            "basis": "derived",
             "derivation": {
                 "method": "deterministic_rules",
                 "rule_id": "structured_template_theme.v1",
-                "matched_signals": matched,
-                "evidence_count": evidence_count,
+                "matched_signals": matched.clone(),
+                "signal_count": matched.len(),
             },
             "evidence": {
-                "fact_ids": fact_ids,
+                "fact_ids": fact_ids.clone(),
+                "fact_count": fact_ids.len(),
+                "edge_count": edge_count,
                 "templateLanguage": "liquid",
                 "conventions": profile.conventions_json(),
                 "template_files": profile.template_files,
