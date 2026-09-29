@@ -1,7 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import CmsEditor from './CmsEditor';
-import studioCss from './styles/studio.css?raw';
 
 export type ClientCmsEditorBoot = {
   projectSlug: string;
@@ -9,20 +8,16 @@ export type ClientCmsEditorBoot = {
   panel?: 'pages' | 'sections' | 'templates' | 'imports' | 'theme';
 };
 
-function injectStudioCss() {
-  if (document.querySelector('style[data-client-cms-editor]')) return;
-  const style = document.createElement('style');
-  style.dataset.clientCmsEditor = 'true';
-  style.textContent = String(studioCss || '');
-  document.head.appendChild(style);
-}
-
+/**
+ * Imperative mount helper for hosts.
+ * Import styles separately:
+ *   import '@inneranimalmedia/client-cms-editor/styles/studio.css'
+ */
 export function mountClientCmsEditor(
   mountEl: HTMLElement,
   boot: ClientCmsEditorBoot,
   onSiteChange?: (slug: string) => void,
 ) {
-  injectStudioCss();
   const panelRaw = boot.panel || 'pages';
   const panel =
     panelRaw === 'sections' ||

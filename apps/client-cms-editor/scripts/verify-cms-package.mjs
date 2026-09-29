@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * CMS package integrity / portability gate.
- * Fails closed until @inneranimalmedia/client-cms-editor is a real standalone artifact.
+ * Normal CMS package verification.
+ * May run while private:true. Validates everything except publishability.
+ * Use verify:cms-release when flipping private:false and proving a fresh consumer.
  */
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
@@ -16,45 +17,100 @@ const frontendPkg = readJson('frontend/package.json');
 const backendPkg = readJson('backend/package.json');
 const sharedPkg = readJson('shared/cms/package.json');
 const parity = readJson('acceptance/cms-parity.v1.json');
+const adapterSrc = readFileSync(join(packageRoot, 'shared/cms/src/adapter.ts'), 'utf8');
 
 const errors = [];
 const warnings = [];
-
-function fail(msg) {
-  errors.push(msg);
-}
-function warn(msg) {
-  warnings.push(msg);
-}
+const fail = (msg) => errors.push(msg);
+const warn = (msg) => warnings.push(msg);
 
 assert.equal(rootPkg.name, '@inneranimalmedia/client-cms-editor');
 assert.equal(parity.schema, 'agentsam.cms.parity.v1');
 assert.ok(existsSync(join(packageRoot, 'acceptance/cms-parity.v1.json')));
 assert.ok(existsSync(join(packageRoot, 'reference/harvest/HARVEST_RECEIPT.json')));
-assert.ok(existsSync(join(packageRoot, 'reference/harvest/plans/CMS-EDITOR-HARVEST.md')));
 assert.ok(existsSync(join(packageRoot, 'shared/cms/src/adapter.ts')));
+assert.ok(existsSync(join(packageRoot, 'shared/cms/src/host.ts')));
 
-if (!String(rootPkg.version || '').includes('alpha') && rootPkg.private !== false) {
+if (!String(rootPkg.version || '').includes('alpha')) {
   warn('version is not an alpha prerelease yet');
 }
 
 if (rootPkg.private === true) {
-  fail('package is still private:true — remove only when verify:cms-package + pack:check pass and alpha is ready');
+  warn('package is private:true (expected until verify:cms-release is green)');
 }
 
 if (!rootPkg.files || !Array.isArray(rootPkg.files) || rootPkg.files.length === 0) {
   fail('root package.json missing explicit "files" for publish');
 }
 
+if ((rootPkg.files || []).some((f) => String(f).includes('reference/harvest') || f === 'reference')) {
+  fail('reference/harvest must not be in package.json files[] (repo evidence only)');
+}
+
 if (!rootPkg.exports || typeof rootPkg.exports !== 'object') {
-  fail('root package.json missing "exports" map for consumers');
+  fail('root package.json missing "exports" map');
+}
+
+// Consumer-safe exports must not point at raw .ts sources for public contract
+for (const [key, target] of Object.entries(rootPkg.exports)) {
+  if (key === './package.json' || key === './acceptance') continue;
+  const importPath =
+    typeof target === 'string'
+      ? target
+      : target?.import || target?.default || target?.types || '';
+  if (typeof importPath === 'string' && importPath.endsWith('.ts')) {
+    fail(`export ${key} points at TypeScript source (${importPath}); publishable exports must be built dist JS`);
+  }
+  if (typeof importPath === 'string' && importPath.includes('/src/')) {
+    fail(`export ${key} points at src/ (${importPath}); use dist/`);
+  }
+}
+
+const REQUIRED_ADAPTER = [
+  'deletePage',
+  'deleteSection',
+  'deleteBlock',
+  'getPage',
+  'listSections',
+  'getSection',
+  'listBlocks',
+  'getBlock',
+  'createBlock',
+  'updateBlock',
+  'getRevision',
+  'restoreRevision',
+  'previewDraft',
+  'getPublishedRevision',
+  'listAssets',
+  'getAsset',
+  'uploadAsset',
+  'updateAsset',
+  'deleteAsset',
+];
+for (const name of REQUIRED_ADAPTER) {
+  if (!adapterSrc.includes(name)) {
+    fail(`CmsEditorAdapter missing required capability ${name}`);
+  }
+}
+if (/createBlock\?\(/.test(adapterSrc) || /updateBlock\?\(/.test(adapterSrc) || /listAssets\?\(/.test(adapterSrc)) {
+  fail('CmsEditorAdapter must not mark createBlock/updateBlock/listAssets as optional');
+}
+
+const versions = [rootPkg.version, frontendPkg.version, backendPkg.version, sharedPkg.version];
+if (new Set(versions).size !== 1) {
+  fail(
+    `workspace versions must match root (${rootPkg.version}); got frontend=${frontendPkg.version} backend=${backendPkg.version} shared=${sharedPkg.version}`,
+  );
 }
 
 for (const [section, pkg, label] of [
   ['dependencies', frontendPkg, 'frontend'],
   ['devDependencies', frontendPkg, 'frontend'],
   ['dependencies', sharedPkg, 'shared'],
+  ['devDependencies', sharedPkg, 'shared'],
   ['dependencies', backendPkg, 'backend'],
+  ['dependencies', rootPkg, 'root'],
+  ['devDependencies', rootPkg, 'root'],
 ]) {
   const deps = pkg[section] || {};
   for (const [name, version] of Object.entries(deps)) {
@@ -64,6 +120,17 @@ for (const [section, pkg, label] of [
     if (typeof version === 'string' && version.startsWith('workspace:')) {
       fail(`${label} ${section} has unpublished workspace: dependency ${name}=${version}`);
     }
+  }
+}
+
+// Nested packages must not be separately publishable products
+for (const [label, pkg] of [
+  ['frontend', frontendPkg],
+  ['backend', backendPkg],
+  ['shared', sharedPkg],
+]) {
+  if (pkg.private !== true) {
+    fail(`${label} nested package must remain private:true (bundled into root product only)`);
   }
 }
 
@@ -85,8 +152,6 @@ const SKIP_SCAN = new Set([
   'reference',
   'acceptance',
 ]);
-
-// Docs may describe anti-goals in prose; product/runtime code must not embed authorities.
 const DOC_ALLOWLIST = new Set(['AGENTS.md', 'ALPHA.md', 'README.md']);
 
 function walk(dir, out = []) {
@@ -100,23 +165,25 @@ function walk(dir, out = []) {
   return out;
 }
 
-const sourceFiles = walk(packageRoot);
-for (const file of sourceFiles) {
+for (const file of walk(packageRoot)) {
   const rel = relative(packageRoot, file);
   if (rel.startsWith('scripts/verify-')) continue;
   if (DOC_ALLOWLIST.has(rel)) continue;
   const text = readFileSync(file, 'utf8');
   for (const rule of FORBIDDEN) {
-    if (rule.re.test(text)) {
-      fail(`${rel}: contains forbidden ${rule.label}`);
-    }
+    if (rule.re.test(text)) fail(`${rel}: contains forbidden ${rule.label}`);
+  }
+  if (/\bfrom\s+['"]@inneranimalmedia\/agentsam-contracts['"]/.test(text)) {
+    fail(`${rel}: imports agentsam-contracts — use CMS host bridges instead`);
+  }
+  if (/\bfrom\s+['"]@inneranimalmedia\/agentsam-workbench/.test(text)) {
+    fail(`${rel}: imports agentsam-workbench — AgentSam must be an optional host slot`);
   }
   if (/\bfrom\s+['"]\.\.\/\.\.\/.*packages\//.test(text) || /from ['"]\.\.\/\.\.\/\.\.\/packages\//.test(text)) {
     fail(`${rel}: monorepo relative import into packages/`);
   }
 }
 
-// Nested node_modules must never ship
 function findNestedNodeModules(dir, acc = []) {
   for (const name of readdirSync(dir)) {
     if (name === 'node_modules' && dir !== packageRoot) {
@@ -134,20 +201,22 @@ function findNestedNodeModules(dir, acc = []) {
   return acc;
 }
 const nested = findNestedNodeModules(packageRoot);
-if (nested.length) {
-  fail(`nested node_modules present: ${nested.slice(0, 10).join(', ')}`);
-}
+if (nested.length) fail(`nested node_modules present: ${nested.slice(0, 10).join(', ')}`);
 
-// Scaffold must not offer localStorage as authority
 const bin = readFileSync(join(packageRoot, 'bin/agentsam-cms.mjs'), 'utf8');
 if (/PERSISTENCE\s*=\s*new Set\(\[[^\]]*localStorage/.test(bin)) {
   fail('bin/agentsam-cms.mjs still offers localStorage as a persistence authority choice');
 }
 
-if (warnings.length) {
-  for (const w of warnings) console.warn(`warn: ${w}`);
+// Dist must exist after build for package verification of export targets
+const distRequired = ['dist/index.js', 'dist/index.d.ts', 'dist/adapter.js', 'dist/styles/studio.css'];
+for (const rel of distRequired) {
+  if (!existsSync(join(packageRoot, rel))) {
+    fail(`missing built artifact ${rel} — run npm run build before verify:cms-package`);
+  }
 }
 
+if (warnings.length) for (const w of warnings) console.warn(`warn: ${w}`);
 if (errors.length) {
   console.error(`verify-cms-package FAILED (${errors.length})`);
   for (const e of errors) console.error(`- ${e}`);
@@ -155,5 +224,5 @@ if (errors.length) {
 }
 
 console.log(
-  `verify-cms-package OK ${rootPkg.name}@${rootPkg.version} · parity=${parity.schema} · harvest reference present`,
+  `verify-cms-package OK ${rootPkg.name}@${rootPkg.version} · private=${Boolean(rootPkg.private)} · dist ready · no file: deps`,
 );

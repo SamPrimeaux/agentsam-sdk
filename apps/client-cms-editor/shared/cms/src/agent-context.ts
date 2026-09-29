@@ -1,7 +1,7 @@
-import type { AgentContext, AgentContextProvider, AgentPrincipal } from '@inneranimalmedia/agentsam-contracts';
+import type { CmsAgentContext, CmsAgentContextProvider, CmsHostPrincipal } from './host';
 
 export type CmsAgentContextInput = {
-  principal: AgentPrincipal;
+  principal: CmsHostPrincipal;
   projectId: string;
   route?: string;
   pageId?: string | null;
@@ -10,7 +10,7 @@ export type CmsAgentContextInput = {
   publicationRevision?: number | null;
 };
 
-export function createCmsAgentContext(input: CmsAgentContextInput): AgentContext {
+export function createCmsAgentContext(input: CmsAgentContextInput): CmsAgentContext {
   return {
     surface: 'cms',
     accountId: input.principal.accountId,
@@ -26,7 +26,9 @@ export function createCmsAgentContext(input: CmsAgentContextInput): AgentContext
   };
 }
 
-export function createCmsAgentContextProvider(getInput: () => CmsAgentContextInput | Promise<CmsAgentContextInput>): AgentContextProvider {
+export function createCmsAgentContextProvider(
+  getInput: () => CmsAgentContextInput | Promise<CmsAgentContextInput>,
+): CmsAgentContextProvider {
   return {
     async getContext() {
       return createCmsAgentContext(await getInput());

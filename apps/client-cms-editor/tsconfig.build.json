@@ -1,0 +1,61 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist",
+    "rootDir": ".",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowJs": true,
+    "checkJs": false,
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "@inneranimalmedia/agentsam-cms-shared": [
+        "shared/cms/src/index.ts"
+      ],
+      "@inneranimalmedia/agentsam-cms-shared/*": [
+        "shared/cms/src/*"
+      ],
+      "@inneranimalmedia/agentsam-cms-backend": [
+        "backend/src/index.ts"
+      ],
+      "@inneranimalmedia/agentsam-cms-backend/api": [
+        "backend/src/api/client.ts"
+      ],
+      "@inneranimalmedia/agentsam-cms-backend/model": [
+        "backend/src/model.ts"
+      ],
+      "@inneranimalmedia/agentsam-cms-backend/preview": [
+        "backend/src/preview/bridge.ts"
+      ],
+      "@inneranimalmedia/agentsam-cms-backend/routing": [
+        "backend/src/routing/index.js"
+      ]
+    },
+    "allowImportingTsExtensions": true
+  },
+  "include": [
+    "frontend/src/index.ts",
+    "frontend/src/**/*.ts",
+    "frontend/src/**/*.tsx",
+    "shared/cms/src/**/*.ts",
+    "backend/src/**/*.ts",
+    "backend/src/**/*.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "frontend/dist"
+  ]
+}

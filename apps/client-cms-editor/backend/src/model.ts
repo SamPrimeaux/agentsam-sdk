@@ -1,4 +1,4 @@
-import type { CmsEditorBlock, CmsEditorPage, CmsEditorSection, CmsEditorSelection, CmsEditorSite } from '@inneranimalmedia/agentsam-cms-shared';
+import type { CmsEditorBlock, CmsEditorPage, CmsEditorSection, CmsEditorSelection, CmsEditorSite } from '../../shared/cms/src/index';
 
 type Json = Record<string, any>;
 

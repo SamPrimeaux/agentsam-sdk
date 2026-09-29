@@ -47,17 +47,22 @@ Local Studio + InnerAnimalMedia consume packed artifact
 ## Gates (run from `apps/client-cms-editor`)
 
 ```bash
-npm run verify:cms-package
-npm run pack:check
-npm run typecheck
+npm ci
 npm run build
+npm run verify:cms-package   # green while private:true once boundary is correct
+npm run pack:check
 ```
 
-Publish (only when gates are green and `private` is removed):
+Release proof (requires flipping `private: false` first — do not publish until green):
 
 ```bash
+# edit package.json private → false
+npm run verify:cms-release
 npm publish --tag alpha --access public
 ```
+
+`verify:cms-package` must **not** fail merely because `private:true`.
+`verify:cms-release` **must** fail while `private:true`.
 
 ## M1 loop (must pass before “CMS works”)
 

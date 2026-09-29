@@ -2,7 +2,7 @@
   "name": "@inneranimalmedia/client-cms-editor",
   "version": "0.1.0-alpha.0",
   "private": true,
-  "description": "Portable AgentSam CMS editor product (Pages/Sections/Blocks/Media). Installable npm artifact — not a monorepo-only UI.",
+  "description": "Portable AgentSam CMS editor product (Pages/Sections/Blocks/Media). Single npm artifact — frontend/backend/shared are internal boundaries.",
   "type": "module",
   "license": "UNLICENSED",
   "workspaces": [
@@ -13,19 +13,43 @@
   "bin": {
     "agentsam-cms": "./bin/agentsam-cms.mjs"
   },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./frontend/src/index.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
     "./package.json": "./package.json",
     "./acceptance": "./acceptance/cms-parity.v1.json",
-    "./adapter": "./shared/cms/src/adapter.ts",
-    "./shared": "./shared/cms/src/index.ts",
-    "./shared/publication": "./shared/cms/src/publication.ts",
-    "./shared/bindings": "./shared/cms/src/cloudflare-bindings.ts",
-    "./backend": "./backend/src/index.ts",
-    "./backend/api": "./backend/src/api/client.ts",
-    "./backend/model": "./backend/src/model.ts",
-    "./backend/preview": "./backend/src/preview/bridge.ts",
-    "./styles/studio.css": "./frontend/src/styles/studio.css"
+    "./adapter": {
+      "types": "./dist/adapter.d.ts",
+      "import": "./dist/adapter.js"
+    },
+    "./shared": {
+      "types": "./dist/shared/index.d.ts",
+      "import": "./dist/shared/index.js"
+    },
+    "./backend": {
+      "types": "./dist/backend/index.d.ts",
+      "import": "./dist/backend/index.js"
+    },
+    "./backend/api": {
+      "types": "./dist/backend/api.d.ts",
+      "import": "./dist/backend/api.js"
+    },
+    "./backend/model": {
+      "types": "./dist/backend/model.d.ts",
+      "import": "./dist/backend/model.js"
+    },
+    "./backend/preview": {
+      "types": "./dist/backend/preview.d.ts",
+      "import": "./dist/backend/preview.js"
+    },
+    "./backend/routing": {
+      "import": "./dist/backend/routing.js"
+    },
+    "./styles/studio.css": "./dist/styles/studio.css"
   },
   "files": [
     "ALPHA.md",
@@ -35,33 +59,22 @@
     "agentsam.app.json",
     "acceptance",
     "bin",
-    "frontend/index.html",
-    "frontend/package.json",
-    "frontend/src",
-    "frontend/tsconfig.json",
-    "frontend/vite.config.ts",
-    "backend/package.json",
-    "backend/src",
-    "backend/worker",
-    "backend/tsconfig.json",
-    "backend/wrangler.jsonc",
-    "backend/README.md",
-    "shared",
-    "scripts",
-    "reference/harvest"
+    "dist"
   ],
   "scripts": {
     "dev": "npm run dev -w @inneranimalmedia/agentsam-cms-frontend",
-    "build": "npm run build -w @inneranimalmedia/agentsam-cms-frontend",
+    "build": "tsup",
+    "build:app": "npm run build -w @inneranimalmedia/agentsam-cms-frontend",
     "preview": "npm run preview -w @inneranimalmedia/agentsam-cms-frontend",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "clean": "rm -rf frontend/dist coverage",
-    "cf:dry-run": "npm run build && wrangler deploy -c backend/wrangler.jsonc --dry-run",
+    "clean": "rm -rf dist frontend/dist coverage",
+    "cf:dry-run": "npm run build:app && wrangler deploy -c backend/wrangler.jsonc --dry-run",
     "verify:cms-package": "node scripts/verify-cms-package.mjs",
     "pack:check": "node scripts/verify-cms-pack.mjs",
+    "verify:cms-release": "node scripts/verify-cms-release.mjs",
     "verify:cms": "npm run verify:cms-package && npm run pack:check",
-    "prepublishOnly": "npm run verify:cms && npm run typecheck"
+    "prepublishOnly": "npm run build && npm run verify:cms-release"
   },
   "publishConfig": {
     "access": "public",
@@ -71,15 +84,13 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
-  "peerDependenciesMeta": {
-    "@inneranimalmedia/agentsam-workbench": {
-      "optional": true
-    },
-    "@inneranimalmedia/agentsam-contracts": {
-      "optional": true
-    }
-  },
   "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3",
     "wrangler": "4.142.0"
   },
   "engines": {

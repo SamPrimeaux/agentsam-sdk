@@ -9,7 +9,12 @@
     "noEmit": true,
     "isolatedModules": true,
     "allowJs": true,
-    "checkJs": false
+    "checkJs": false,
+    "baseUrl": ".",
+    "paths": {
+      "@inneranimalmedia/agentsam-cms-shared": ["../shared/cms/src/index.ts"],
+      "@inneranimalmedia/agentsam-cms-shared/*": ["../shared/cms/src/*"]
+    }
   },
   "include": ["src"]
 }

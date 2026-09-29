@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { AgentPrincipal, AgentWorkbenchAdapter } from "@inneranimalmedia/agentsam-contracts";
-import { MiniAgentSam, type AnnotationSelection } from "@inneranimalmedia/agentsam-workbench/agent";
-import "@inneranimalmedia/agentsam-workbench/agent/mini-agentsam.css";
+import { createCmsAgentContextProvider } from "@inneranimalmedia/agentsam-cms-shared";
 import { AgentSamDrawer } from "./AgentSamDrawer";
+import type { CmsAgentHost, CmsAnnotationSelection } from "./lib/agent-host";
 import { escapeCmsText, safeCmsAssetUrl, safeCmsCssValue, sanitizeCmsRichText } from "./lib/content-safety";
 import {
   createCmsEditorBlock,
@@ -124,11 +123,8 @@ function ToastStack({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: number
   return <div className="toast-stack">{toasts.slice(-3).map(t => <div className={`toast ${t.type}`} key={t.id}><span className="toast-icon"><Icon name={t.type === "success" ? "check" : t.type === "warning" ? "warning" : t.type === "error" ? "close" : "info"}/></span><span>{t.message}</span>{t.action && <button>{t.action}</button>}<button className="toast-x" onClick={() => dismiss(t.id)}><Icon name="close" size={12}/></button>{t.type !== "error" && <i/>}</div>)}</div>;
 }
 
-export type CmsEditorAgentConfig = {
-  adapter: AgentWorkbenchAdapter;
-  principal: AgentPrincipal;
-  conversationId?: string;
-};
+/** @deprecated Prefer `agentHost` — kept as alias for migration. */
+export type CmsEditorAgentConfig = CmsAgentHost;
 
 export type CmsEditorProps = {
   projectSlug?: string;
@@ -136,7 +132,10 @@ export type CmsEditorProps = {
   initialPanel?: "pages" | "sections" | "templates" | "imports" | "theme";
   siteCatalog?: Array<{ slug: string; name?: string; domain?: string | null }>;
   onSiteChange?: (slug: string) => void;
-  agent?: CmsEditorAgentConfig;
+  /** Optional AgentSam / workbench host. Core editor boots with none attached. */
+  agentHost?: CmsAgentHost;
+  /** @deprecated Use agentHost */
+  agent?: CmsAgentHost;
   basePath?: string;
   onNavigate?: (path: string) => void;
 };
@@ -159,10 +158,12 @@ export default function CmsEditor({
   initialPanel = "sections",
   siteCatalog = [],
   onSiteChange,
+  agentHost,
   agent,
   basePath = "/cms",
   onNavigate,
 }: CmsEditorProps) {
+  const host = agentHost || agent;
   const [sites, setSites] = useState<Site[]>(initialSites);
   const [siteId, setSiteId] = useStored("cms-active-site", projectSlug);
   const site = sites.find((s) => s.id === siteId) || sites.find((s) => s.pages?.length) || sites[0] || null;
@@ -419,14 +420,27 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
     }
   }, [page, chooseBlock]);
 
-  const onAnnotateSubmit = useCallback(async (prompt: string, annotation: AnnotationSelection) => {
-    selectAnnotatedResource(annotation.id);
+  const onAnnotateSubmit = useCallback(async (prompt: string, annotation: CmsAnnotationSelection) => {
+    selectAnnotatedResource(String(annotation.id || ""));
     setAgentSamOpen(true);
     setInspectorSheetOpen(false);
     setAnnotatePrompt(prompt);
-    toast(`Annotated “${annotation.label || annotation.tag}”`, "info");
+    toast(`Annotated “${annotation.label || "selection"}”`, "info");
     window.dispatchEvent(new CustomEvent("agentsam:cms-annotate", { detail: { prompt, annotation } }));
   }, [selectAnnotatedResource, setAgentSamOpen, toast]);
+
+  const agentContextProvider = useMemo(() => createCmsAgentContextProvider(() => ({
+    principal: host?.principal || {
+      accountId: "local",
+      authUserId: "local",
+      displayName: "Local",
+    },
+    projectId: site?.id || projectSlug || "site",
+    route: page?.slug,
+    pageId: page?.id || null,
+    sectionId: selected?.id || null,
+    blockId: selectedBlock?.id || null,
+  })), [host?.principal, site?.id, projectSlug, page?.slug, page?.id, selected?.id, selectedBlock?.id]);
   const choosePage = (id: string) => { if (dirty && !window.confirm("You have unsaved changes. Discard and continue?")) return; const p = site.pages.find(x => x.id === id); if (!p) return; setPageId(id); setSelectedId(p.sections[0]?.id || ""); setSelectedBlockId(""); setDirty(false); setTab("content"); toast(`Opened ${p.title}`, "info"); };
   const chooseSite = (id: string) => { const s = sites.find(x => x.id === id); if (!s) return; setSiteSwitcher(false); if (onSiteChange) { onSiteChange(id); toast(`Opening ${s.name}`, "info"); return; } setSiteId(id); if (s.pages[0]) { setPageId(s.pages[0].id); setSelectedId(s.pages[0].sections[0]?.id || ""); setSelectedBlockId(""); } toast(`Switched to ${s.name}`, "info"); };
 
@@ -948,10 +962,8 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
       <AgentSamDrawer
         open={agentSamOpen}
         onClose={() => setAgentSamOpen(false)}
-        adapter={agent?.adapter}
-        principal={agent?.principal}
         projectId={site.id || projectSlug}
-        conversationId={agent?.conversationId || `cms:${site.id || projectSlug}`}
+        conversationId={host?.conversationId || `cms:${site.id || projectSlug}`}
         route={page.slug}
         pageId={page.id}
         sectionId={selected?.id || null}
@@ -959,17 +971,34 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
         selectionLabel={selectedBlock ? String(selectedBlock.data?.text || selectedBlock.data?.title || selectedBlock.type) : selected?.name || null}
         pendingPrompt={annotatePrompt}
         onPendingPromptConsumed={() => setAnnotatePrompt(null)}
-      />
+      >
+        {host?.renderDrawer?.({
+          open: agentSamOpen,
+          onClose: () => setAgentSamOpen(false),
+          projectId: site.id || projectSlug,
+          conversationId: host?.conversationId || `cms:${site.id || projectSlug}`,
+          contextProvider: agentContextProvider,
+          route: page.slug,
+          pageId: page.id,
+          sectionId: selected?.id || null,
+          blockId: selectedBlock?.id || null,
+          selectionLabel: selectedBlock ? String(selectedBlock.data?.text || selectedBlock.data?.title || selectedBlock.type) : selected?.name || null,
+          pendingPrompt: annotatePrompt,
+          onPendingPromptConsumed: () => setAnnotatePrompt(null),
+        })}
+      </AgentSamDrawer>
     </div>
 
-    <MiniAgentSam
-      selecting={annotateSelecting}
-      onSelectingChange={setAnnotateSelecting}
-      scope={() => canvasScopeRef.current}
-      onSubmit={onAnnotateSubmit}
-    />
+    {host?.renderMini?.({
+      projectId: site.id || projectSlug,
+      conversationId: host?.conversationId || `cms:${site.id || projectSlug}`,
+      contextProvider: agentContextProvider,
+      annotateSelecting,
+      onAnnotateToggle: () => setAnnotateSelecting((v) => !v),
+      onAnnotateSubmit,
+    })}
 
-    <footer className="statusbar"><div><i/> {annotateSelecting ? "Annotate mode" : agentSamOpen ? "AgentSam open" : "Connected"}</div><span>{dirty ? "Unsaved changes" : saving ? "Saving…" : "Saved"}</span><span>{page.slug}</span><span>{page.sections.length} sections · {page.sections.reduce((total, section) => total + (section.blocks?.length || 0), 0)} blocks</span><button onClick={() => setModal("shortcuts")}>Shortcuts <kbd>⌘/</kbd></button></footer>
+    <footer className="statusbar"><div><i/> {annotateSelecting ? "Annotate mode" : agentSamOpen ? "AgentSam open" : host ? "Host ready" : "Local"}</div><span>{dirty ? "Unsaved changes" : saving ? "Saving…" : "Saved"}</span><span>{page.slug}</span><span>{page.sections.length} sections · {page.sections.reduce((total, section) => total + (section.blocks?.length || 0), 0)} blocks</span><button onClick={() => setModal("shortcuts")}>Shortcuts <kbd>⌘/</kbd></button></footer>
     <nav className="mobile-tabs">{railItems.slice(0, 5).map((i) => <button key={i.id} className={rail === i.id ? "active" : ""} onClick={() => setRail(i.id)}><Icon name={i.icon}/><span>{i.label}</span></button>)}</nav>
     <ToastStack toasts={toasts} dismiss={dismissToast}/>
 

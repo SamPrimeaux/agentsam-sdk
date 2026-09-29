@@ -1,5 +1,5 @@
 import { mapCmsEditorBlock, mapCmsEditorBootstrap, mapCmsEditorPage, mapCmsEditorSection } from '../model';
-import type { CmsEditorBlock, CmsEditorPage, CmsEditorSection } from '@inneranimalmedia/agentsam-cms-shared';
+import type { CmsEditorBlock, CmsEditorPage, CmsEditorSection } from '../../../shared/cms/src/index';
 import { buildDemoCmsBootstrap } from '../demo-bootstrap';
 
 type Json = Record<string, any>;
