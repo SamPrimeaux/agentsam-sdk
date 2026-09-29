@@ -17,14 +17,44 @@ import { GROK_PROVIDERS } from "./providers";
  * leaves the bearer token in place, and `onRequest` keeps re-attaching it, so
  * the visitor stays signed in.
  */
-export const authClient = createAuthClient({
-  plugins: [genericOAuthClient()],
-  fetchOptions: {
-    onRequest(ctx) {
-      const token = getBearerToken();
-      if (token) ctx.headers.set("Authorization", `Bearer ${token}`);
-      return ctx;
-    },
+type BrowserAuthClient = ReturnType<typeof createAuthClient>;
+
+function isHostedBrowserAuthSurface(): boolean {
+  if (typeof window === "undefined") return true;
+  return window.location.protocol === "http:" || window.location.protocol === "https:";
+}
+
+let browserAuthClient: BrowserAuthClient | null = null;
+
+function getBrowserAuthClient(): BrowserAuthClient {
+  if (!isHostedBrowserAuthSurface()) {
+    throw new Error("browser_auth_unavailable_on_native_surface");
+  }
+  if (!browserAuthClient) {
+    browserAuthClient = createAuthClient({
+      plugins: [genericOAuthClient()],
+      fetchOptions: {
+        onRequest(ctx) {
+          const token = getBearerToken();
+          if (token) ctx.headers.set("Authorization", `Bearer ${token}`);
+          return ctx;
+        },
+      },
+    });
+  }
+  return browserAuthClient;
+}
+
+/**
+ * Lazy hosted-browser auth client. Importing this module on a native custom
+ * scheme must never initialize Better Auth; installed apps use the native
+ * identity bridge and OS secure store instead.
+ */
+export const authClient = new Proxy({} as BrowserAuthClient, {
+  get(_target, property) {
+    const client = getBrowserAuthClient();
+    const value = Reflect.get(client as object, property);
+    return typeof value === "function" ? value.bind(client) : value;
   },
 });
 
@@ -35,7 +65,8 @@ export const authClient = createAuthClient({
  * with the key removed, sign-in is real in preview (baked preview client) and
  * when deployed (injected per-app client).
  */
-export const authEnabled = import.meta.env.VITE_AUTH_ENABLED !== "false";
+export const authEnabled =
+  import.meta.env.VITE_AUTH_ENABLED !== "false" && isHostedBrowserAuthSurface();
 
 /** The upstream providers to render sign-in buttons for. */
 export { GROK_PROVIDERS };
