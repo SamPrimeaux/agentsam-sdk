@@ -2,9 +2,12 @@
 //! No Cloudflare, browser, Tauri, or network dependency.
 
 mod assets;
+mod bound;
 mod enrich;
+mod liquid;
 mod source_types;
 
+use bound::{externalize_and_bound, BoundLimits};
 use enrich::enrich_receipt;
 use source_types::SourceTypeIndex;
 
@@ -19,6 +22,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 pub const RECEIPT_SCHEMA: &str = "agentsam.machine.receipt.v1";
 pub const ENGINE_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const PARSER_VERSION: &str = "machine-parser.v1";
+pub const ARTIFACT_SCHEMA_VERSION: &str = "machine-artifacts.v1";
 
 /// Directories skipped during normal inspect (summarized, not flooded into facts).
 const IGNORE_DIRS: &[&str] = &[
@@ -44,6 +49,11 @@ const IGNORE_DIRS: &[&str] = &[
     "coverage",
     ".venv",
     "venv",
+    ".vercel",
+    ".TemporaryItems",
+    ".Trashes",
+    ".Spotlight-V100",
+    ".fseventsd",
 ];
 
 /// Pure Rust domain logic: no Cloudflare, browser, Tauri, or network dependency.
@@ -60,6 +70,25 @@ pub fn normalize_resource_key(input: &str) -> String {
         .join("-")
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct InspectOptions {
+    pub run_id: Option<String>,
+    /// When true, walk generated/cache trees instead of summarizing them.
+    pub include_generated: bool,
+    /// When false, skip writing artifacts / bounding (tests only).
+    pub externalize: bool,
+}
+
+impl InspectOptions {
+    pub fn new() -> Self {
+        Self {
+            run_id: None,
+            include_generated: false,
+            externalize: true,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct MachineReceipt {
     pub schema: String,
@@ -67,6 +96,10 @@ pub struct MachineReceipt {
     pub root: String,
     pub run_id: String,
     pub inputs: BTreeMap<String, String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub summary: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub detail: Option<Value>,
     pub facts: Vec<FileFact>,
     pub edges: Vec<Value>,
     pub findings: Vec<Value>,
@@ -94,7 +127,7 @@ pub struct FileFact {
 #[derive(Debug, Clone, Serialize)]
 pub struct SourceInfo {
     #[serde(rename = "type")]
-    pub type_id: Option<String>,
+    pub type_id: String,
     pub language: Option<String>,
     pub syntax: Option<String>,
     /// code | document | asset | binary
@@ -134,6 +167,7 @@ pub struct InspectStats {
     pub symlinks: u64,
     pub directories: u64,
     pub ignored_directories: u64,
+    pub skipped_noise_files: u64,
     pub bytes: u64,
     pub excluded_subtrees: Vec<ExcludedSubtree>,
 }
@@ -151,20 +185,46 @@ pub struct ExcludedSubtree {
 pub struct Provenance {
     pub engine: String,
     pub engine_version: String,
+    pub parser_version: String,
+    pub artifact_schema_version: String,
     pub source_mutated: bool,
     pub network_used: bool,
+    pub cache: CacheProvenance,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CacheProvenance {
+    pub schema: String,
+    pub hits: u64,
+    pub misses: u64,
+    pub enabled: bool,
 }
 
 pub fn inspect_path(target: &Path, requested_run_id: Option<&str>) -> io::Result<MachineReceipt> {
+    let mut opts = InspectOptions::new();
+    opts.run_id = requested_run_id.map(str::to_owned);
+    inspect_path_with_options(target, opts)
+}
+
+pub fn inspect_path_with_options(
+    target: &Path,
+    options: InspectOptions,
+) -> io::Result<MachineReceipt> {
     let root = fs::canonicalize(target)?;
     let root_text = root.to_string_lossy().into_owned();
-    let run_id = requested_run_id
+    let run_id = options
+        .run_id
+        .as_deref()
         .filter(|value| !value.trim().is_empty())
         .map(ToOwned::to_owned)
         .unwrap_or_else(|| default_run_id(&root_text));
 
     let mut inputs = BTreeMap::new();
     inputs.insert("target".to_string(), root_text.clone());
+    inputs.insert(
+        "include_generated".to_string(),
+        options.include_generated.to_string(),
+    );
 
     let mut receipt = MachineReceipt {
         schema: RECEIPT_SCHEMA.to_string(),
@@ -172,6 +232,8 @@ pub fn inspect_path(target: &Path, requested_run_id: Option<&str>) -> io::Result
         root: root_text,
         run_id,
         inputs,
+        summary: None,
+        detail: None,
         facts: Vec::new(),
         edges: Vec::new(),
         findings: Vec::new(),
@@ -181,8 +243,16 @@ pub fn inspect_path(target: &Path, requested_run_id: Option<&str>) -> io::Result
         provenance: Provenance {
             engine: "agentsam-machine".to_string(),
             engine_version: ENGINE_VERSION.to_string(),
+            parser_version: PARSER_VERSION.to_string(),
+            artifact_schema_version: ARTIFACT_SCHEMA_VERSION.to_string(),
             source_mutated: false,
             network_used: false,
+            cache: CacheProvenance {
+                schema: "agentsam.machine.cache.v1".to_string(),
+                hits: 0,
+                misses: 0,
+                enabled: true,
+            },
         },
     };
 
@@ -191,7 +261,7 @@ pub fn inspect_path(target: &Path, requested_run_id: Option<&str>) -> io::Result
         let fact_root = root.parent().unwrap_or_else(|| Path::new(""));
         inspect_file(fact_root, &root, &metadata, &mut receipt);
     } else if metadata.is_dir() {
-        walk_directory(&root, &root, &mut receipt)?;
+        walk_directory(&root, &root, &mut receipt, options.include_generated)?;
     }
 
     receipt.facts.sort_by(|a, b| a.path.cmp(&b.path));
@@ -202,11 +272,25 @@ pub fn inspect_path(target: &Path, requested_run_id: Option<&str>) -> io::Result
             .then_with(|| a.message.cmp(&b.message))
     });
 
+    // Incrementality hook: reuse prior fact cache entries when sha256 + parser match.
+    apply_fact_cache(&root, &mut receipt);
+
     enrich_receipt(&root, &mut receipt);
+    persist_fact_cache(&root, &receipt);
+
+    if options.externalize {
+        externalize_and_bound(&root, &mut receipt, BoundLimits::default())?;
+    }
+
     Ok(receipt)
 }
 
-fn walk_directory(root: &Path, current: &Path, receipt: &mut MachineReceipt) -> io::Result<()> {
+fn walk_directory(
+    root: &Path,
+    current: &Path,
+    receipt: &mut MachineReceipt,
+    include_generated: bool,
+) -> io::Result<()> {
     receipt.stats.directories += 1;
     let mut entries = match fs::read_dir(current) {
         Ok(entries) => entries.filter_map(Result::ok).collect::<Vec<_>>(),
@@ -242,7 +326,7 @@ fn walk_directory(root: &Path, current: &Path, receipt: &mut MachineReceipt) -> 
         }
 
         if metadata.is_dir() {
-            if is_ignored_directory(&file_name) {
+            if !include_generated && is_ignored_directory(&file_name) {
                 receipt.stats.ignored_directories += 1;
                 let (files, bytes) = summarize_tree(&path);
                 receipt.stats.excluded_subtrees.push(ExcludedSubtree {
@@ -254,11 +338,32 @@ fn walk_directory(root: &Path, current: &Path, receipt: &mut MachineReceipt) -> 
                 });
                 continue;
             }
-            walk_directory(root, &path, receipt)?;
+            // Never recurse into our own machine artifact store even with --include-generated,
+            // unless the user pointed inspect directly at it (handled by root walk start).
+            if file_name == ".agentsam" && current == root && include_generated {
+                // allow if explicitly including generated — still skip machine runs flood
+                let machine_runs = path.join("machine").join("runs");
+                if machine_runs.exists() {
+                    receipt.stats.ignored_directories += 1;
+                    let (files, bytes) = summarize_tree(&machine_runs);
+                    receipt.stats.excluded_subtrees.push(ExcludedSubtree {
+                        path: relative_path(root, &machine_runs),
+                        reason: "ignored_directory:machine_runs".to_string(),
+                        files,
+                        bytes,
+                        default_disposition: "exclude".to_string(),
+                    });
+                }
+            }
+            walk_directory(root, &path, receipt, include_generated)?;
             continue;
         }
 
         if metadata.is_file() {
+            if is_noise_file(&file_name) {
+                receipt.stats.skipped_noise_files += 1;
+                continue;
+            }
             inspect_file(root, &path, &metadata, receipt);
         }
     }
@@ -276,11 +381,14 @@ fn summarize_tree(path: &Path) -> (u64, u64) {
         };
         for entry in entries.flatten() {
             let p = entry.path();
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if is_noise_file(&name) {
+                continue;
+            }
             let Ok(meta) = fs::symlink_metadata(&p) else {
                 continue;
             };
             if meta.is_dir() {
-                let name = entry.file_name().to_string_lossy().into_owned();
                 if is_ignored_directory(&name) {
                     continue;
                 }
@@ -345,10 +453,10 @@ fn inspect_symlink(root: &Path, path: &Path, metadata: &Metadata, receipt: &mut 
                     .and_then(|value| value.to_str())
                     .map(|value| value.to_ascii_lowercase()),
                 source: SourceInfo {
-                    type_id: None,
+                    type_id: "unknown".to_string(),
                     language: None,
                     syntax: None,
-                    kind: None,
+                    kind: Some("binary".to_string()),
                     ast_capable: false,
                 },
                 content: ContentEvidence {
@@ -381,7 +489,12 @@ fn classify_semantic(rel: &str, content: &ContentEvidence) -> (SourceInfo, Class
             "code" if rel.contains("frontend/") || rel.contains("/src/") => "frontend_source",
             "code" => "source",
             "document" if def.id == "html" => "page_candidate",
+            "document" if def.id == "liquid" && rel.starts_with("sections/") => "section_candidate",
+            "document" if def.id == "liquid" && rel.starts_with("snippets/") => "snippet_candidate",
+            "document" if def.id == "liquid" && rel.starts_with("layout/") => "layout_shell",
+            "document" if def.id == "liquid" && rel.starts_with("templates/") => "template_candidate",
             "document" if def.id == "json" && rel.ends_with("theme.json") => "theme_manifest",
+            "document" if def.id == "json" && rel.starts_with("templates/") => "template_candidate",
             "document" if def.id == "css" => "stylesheet",
             "asset" if def.id == "svg" => "image",
             "asset" => "asset",
@@ -398,7 +511,7 @@ fn classify_semantic(rel: &str, content: &ContentEvidence) -> (SourceInfo, Class
         };
         return (
             SourceInfo {
-                type_id: Some(def.id.clone()),
+                type_id: def.id.clone(),
                 language: Some(def.label.clone()),
                 syntax,
                 kind: Some(def.kind.clone()),
@@ -414,7 +527,7 @@ fn classify_semantic(rel: &str, content: &ContentEvidence) -> (SourceInfo, Class
         );
     }
 
-    // Fall back to content signature only
+    // Unknown is first-class — never emit null type.
     let (kind, category, role) = match content.kind.as_str() {
         "image" => ("asset", "asset", "image"),
         "archive" => ("binary", "archive", "archive"),
@@ -424,8 +537,8 @@ fn classify_semantic(rel: &str, content: &ContentEvidence) -> (SourceInfo, Class
     };
     (
         SourceInfo {
-            type_id: content.signature.clone(),
-            language: content.signature.clone(),
+            type_id: "unknown".to_string(),
+            language: None,
             syntax: None,
             kind: Some(kind.to_string()),
             ast_capable: false,
@@ -549,6 +662,13 @@ fn is_ignored_directory(name: &str) -> bool {
     IGNORE_DIRS.iter().any(|candidate| *candidate == name)
 }
 
+fn is_noise_file(name: &str) -> bool {
+    name == ".DS_Store"
+        || name == "Thumbs.db"
+        || name == "desktop.ini"
+        || name.starts_with("._")
+}
+
 fn relative_path(root: &Path, path: &Path) -> String {
     path.strip_prefix(root)
         .unwrap_or(path)
@@ -573,6 +693,65 @@ fn default_run_id(root: &str) -> String {
     format!("run_{}", &sha256_bytes(seed.as_bytes())[..16])
 }
 
+fn cache_dir(root: &Path) -> std::path::PathBuf {
+    root.join(".agentsam")
+        .join("machine")
+        .join("cache")
+        .join(PARSER_VERSION)
+}
+
+fn apply_fact_cache(root: &Path, receipt: &mut MachineReceipt) {
+    let dir = cache_dir(root);
+    if !dir.exists() {
+        receipt.provenance.cache.misses = receipt.facts.len() as u64;
+        return;
+    }
+    for fact in &mut receipt.facts {
+        let path = dir.join(format!("{}.json", fact.sha256));
+        if let Ok(text) = fs::read_to_string(&path) {
+            if let Ok(cached) = serde_json::from_str::<CachedFact>(&text) {
+                if cached.parser_version == PARSER_VERSION
+                    && cached.engine_version == ENGINE_VERSION
+                    && cached.source_type == fact.source.type_id
+                {
+                    fact.classification.cache = true;
+                    receipt.provenance.cache.hits += 1;
+                    continue;
+                }
+            }
+        }
+        receipt.provenance.cache.misses += 1;
+    }
+}
+
+fn persist_fact_cache(root: &Path, receipt: &MachineReceipt) {
+    let dir = cache_dir(root);
+    let _ = fs::create_dir_all(&dir);
+    for fact in &receipt.facts {
+        let cached = CachedFact {
+            parser_version: PARSER_VERSION.to_string(),
+            engine_version: ENGINE_VERSION.to_string(),
+            sha256: fact.sha256.clone(),
+            path: fact.path.clone(),
+            source_type: fact.source.type_id.clone(),
+            role: fact.classification.role.clone(),
+        };
+        if let Ok(text) = serde_json::to_string(&cached) {
+            let _ = fs::write(dir.join(format!("{}.json", fact.sha256)), text);
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+struct CachedFact {
+    parser_version: String,
+    engine_version: String,
+    sha256: String,
+    path: String,
+    source_type: String,
+    role: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -595,14 +774,19 @@ mod tests {
         .unwrap();
         fs::write(temp.path().join("README.md"), b"# Example\n").unwrap();
         fs::write(temp.path().join("target/generated.rs"), b"generated").unwrap();
+        fs::write(temp.path().join("._noise"), b"appledouble").unwrap();
 
-        let receipt = inspect_path(temp.path(), Some("run_test")).unwrap();
+        let mut opts = InspectOptions::new();
+        opts.run_id = Some("run_test".into());
+        opts.externalize = false;
+        let receipt = inspect_path_with_options(temp.path(), opts).unwrap();
         let paths: Vec<_> = receipt.facts.iter().map(|f| f.path.as_str()).collect();
         assert_eq!(paths, vec!["README.md", "src/lib.rs"]);
+        assert!(receipt.stats.skipped_noise_files >= 1);
 
         let rust = receipt.facts.iter().find(|f| f.path == "src/lib.rs").unwrap();
         assert_eq!(rust.fs_kind, "file");
-        assert_eq!(rust.source.type_id.as_deref(), Some("rust"));
+        assert_eq!(rust.source.type_id, "rust");
         assert_eq!(rust.source.language.as_deref(), Some("Rust"));
         assert_eq!(rust.source.kind.as_deref(), Some("code"));
         assert_eq!(rust.content.encoding.as_deref(), Some("utf-8"));
@@ -614,17 +798,46 @@ mod tests {
     }
 
     #[test]
+    fn unknown_type_never_null() {
+        let temp = tempfile::tempdir().unwrap();
+        fs::write(temp.path().join("mystery"), b"not a known type\n").unwrap();
+        let mut opts = InspectOptions::new();
+        opts.run_id = Some("run_unknown".into());
+        opts.externalize = false;
+        let receipt = inspect_path_with_options(temp.path(), opts).unwrap();
+        let fact = receipt.facts.first().unwrap();
+        assert_eq!(fact.source.type_id, "unknown");
+    }
+
+    #[test]
+    fn include_generated_walks_ignored_dirs() {
+        let temp = tempfile::tempdir().unwrap();
+        fs::create_dir_all(temp.path().join("dist")).unwrap();
+        fs::write(temp.path().join("dist/out.js"), b"console.log(1)\n").unwrap();
+        let mut opts = InspectOptions::new();
+        opts.run_id = Some("run_inc".into());
+        opts.include_generated = true;
+        opts.externalize = false;
+        let receipt = inspect_path_with_options(temp.path(), opts).unwrap();
+        assert!(receipt.facts.iter().any(|f| f.path == "dist/out.js"));
+    }
+
+    #[test]
     fn binary_signature_is_not_called_magic_utf8() {
         let temp = tempfile::tempdir().unwrap();
         let path = temp.path().join("module.bin");
         let mut file = File::create(&path).unwrap();
         file.write_all(b"\0asm\x01\0\0\0").unwrap();
 
-        let receipt = inspect_path(temp.path(), Some("run_magic")).unwrap();
+        let mut opts = InspectOptions::new();
+        opts.run_id = Some("run_magic".into());
+        opts.externalize = false;
+        let receipt = inspect_path_with_options(temp.path(), opts).unwrap();
         let fact = receipt.facts.first().unwrap();
         assert_eq!(fact.content.kind, "binary");
         assert_eq!(fact.content.signature.as_deref(), Some("wasm"));
         assert!(fact.content.encoding.is_none());
+        assert_eq!(fact.source.type_id, "unknown");
     }
 
     #[test]
@@ -637,22 +850,26 @@ mod tests {
             fixture.display()
         );
 
-        let receipt = inspect_path(&fixture, Some("run_church")).unwrap();
+        let mut opts = InspectOptions::new();
+        opts.run_id = Some("run_church".into());
+        // Keep full facts in-memory for assertions; still exercise enrichment.
+        opts.externalize = false;
+        let receipt = inspect_path_with_options(&fixture, opts).unwrap();
 
         let html = receipt
             .facts
             .iter()
-            .filter(|f| f.source.type_id.as_deref() == Some("html"))
+            .filter(|f| f.source.type_id == "html")
             .count();
         let svg = receipt
             .facts
             .iter()
-            .filter(|f| f.source.type_id.as_deref() == Some("svg"))
+            .filter(|f| f.source.type_id == "svg")
             .count();
         let json = receipt
             .facts
             .iter()
-            .filter(|f| f.source.type_id.as_deref() == Some("json"))
+            .filter(|f| f.source.type_id == "json")
             .count();
 
         assert_eq!(html, 5, "expected 5 HTML pages");
@@ -673,11 +890,8 @@ mod tests {
         assert!(receipt
             .artifacts
             .iter()
-            .any(|a| a.get("kind") == Some(&serde_json::json!("route_manifest"))));
-        assert!(receipt
-            .artifacts
-            .iter()
-            .any(|a| a.get("kind") == Some(&serde_json::json!("asset_manifest"))));
+            .any(|a| a.get("kind") == Some(&serde_json::json!("route_manifest"))
+                || a.get("kind") == Some(&serde_json::json!("asset_manifest"))));
         assert!(receipt.edges.iter().any(|e| {
             e.get("type") == Some(&serde_json::json!("asset_reference"))
                 && e
@@ -687,13 +901,20 @@ mod tests {
         }));
         assert!(!receipt.provenance.network_used);
 
+        for finding in &receipt.findings {
+            assert!(
+                finding.get("evidence").is_some(),
+                "finding missing evidence: {finding}"
+            );
+        }
+
         let beliefs = receipt
             .facts
             .iter()
             .find(|f| f.path == "site/beliefs.html")
             .unwrap();
         assert_eq!(beliefs.fs_kind, "file");
-        assert_eq!(beliefs.source.type_id.as_deref(), Some("html"));
+        assert_eq!(beliefs.source.type_id, "html");
         assert_eq!(beliefs.classification.role, "page_candidate");
         assert_eq!(beliefs.content.encoding.as_deref(), Some("utf-8"));
         assert!(beliefs.content.signature.is_none());

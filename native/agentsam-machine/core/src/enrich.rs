@@ -1,5 +1,6 @@
 //! Deterministic enrichment: findings, edges, artifacts from classified facts.
 use crate::assets::enrich_assets;
+use crate::liquid::enrich_liquid_structure;
 use crate::{FileFact, MachineReceipt};
 use serde_json::json;
 use std::collections::{BTreeMap, BTreeSet};
@@ -11,45 +12,70 @@ pub fn enrich_receipt(root: &Path, receipt: &mut MachineReceipt) {
     let mut by_kind: BTreeMap<String, usize> = BTreeMap::new();
     let mut html_paths: Vec<String> = Vec::new();
     let mut svg_paths: Vec<String> = Vec::new();
+    let mut liquid_paths: Vec<String> = Vec::new();
+    let mut ts_paths: Vec<String> = Vec::new();
     let mut theme_json: Option<String> = None;
+    let mut package_json: Option<String> = None;
+    let mut all_fact_ids: Vec<String> = Vec::new();
 
     for fact in &receipt.facts {
-        if let Some(ref id) = fact.source.type_id {
-            *by_source.entry(id.clone()).or_default() += 1;
-        }
+        all_fact_ids.push(fact.id.clone());
+        *by_source.entry(fact.source.type_id.clone()).or_default() += 1;
         if let Some(ref kind) = fact.source.kind {
             *by_kind.entry(kind.clone()).or_default() += 1;
         }
-        match fact.source.type_id.as_deref() {
-            Some("html") => html_paths.push(fact.path.clone()),
-            Some("svg") => svg_paths.push(fact.path.clone()),
-            Some("json") if fact.path.ends_with("theme.json") || fact.path == "theme.json" => {
+        match fact.source.type_id.as_str() {
+            "html" => html_paths.push(fact.path.clone()),
+            "svg" => svg_paths.push(fact.path.clone()),
+            "liquid" => liquid_paths.push(fact.path.clone()),
+            "typescript" | "javascript" => ts_paths.push(fact.path.clone()),
+            "json" if fact.path.ends_with("theme.json") || fact.path == "theme.json" => {
                 theme_json = Some(fact.path.clone());
+            }
+            "json" if fact.path == "package.json" || fact.path.ends_with("/package.json") => {
+                package_json = Some(fact.path.clone());
             }
             _ => {}
         }
     }
 
-    // Language / inventory summary finding
     receipt.findings.push(json!({
+        "id": "finding:inventory_summary",
         "kind": "inventory_summary",
         "schema": "agentsam.machine.finding.v1",
+        "heuristic": false,
+        "evidence": {
+            "fact_ids": all_fact_ids.iter().take(64).cloned().collect::<Vec<_>>(),
+            "fact_id_count": all_fact_ids.len(),
+            "stats_files": receipt.stats.files,
+            "stats_bytes": receipt.stats.bytes,
+        },
         "source_type_counts": by_source,
         "source_kind_counts": by_kind,
         "file_count": receipt.stats.files,
         "bytes": receipt.stats.bytes,
         "excluded_subtrees": receipt.stats.excluded_subtrees,
+        "skipped_noise_files": receipt.stats.skipped_noise_files,
     }));
+
+    classify_project(
+        receipt,
+        &html_paths,
+        &liquid_paths,
+        &ts_paths,
+        theme_json.as_deref(),
+        package_json.as_deref(),
+        &by_source,
+    );
 
     if !html_paths.is_empty() {
         enrich_static_site(root, receipt, &html_paths, &svg_paths, theme_json.as_deref());
     }
 
-    // Asset perception: local + remote URLs, evidence-bearing edges, asset_manifest.
-    // Always read-only / network-free (see receipt.provenance.network_used).
+    enrich_liquid_structure(root, receipt);
     enrich_assets(root, receipt);
+    enrich_ts_imports(root, receipt, &ts_paths);
 
-    // Derived inventory artifact always
     receipt.artifacts.push(json!({
         "kind": "inventory_summary",
         "schema": "agentsam.machine.inventory.v1",
@@ -59,7 +85,131 @@ pub fn enrich_receipt(root: &Path, receipt: &mut MachineReceipt) {
             "files": receipt.stats.files,
             "bytes": receipt.stats.bytes,
             "ignored_directories": receipt.stats.ignored_directories,
+            "skipped_noise_files": receipt.stats.skipped_noise_files,
             "excluded_subtrees": receipt.stats.excluded_subtrees,
+        }
+    }));
+}
+
+fn classify_project(
+    receipt: &mut MachineReceipt,
+    html_paths: &[String],
+    liquid_paths: &[String],
+    ts_paths: &[String],
+    theme_json: Option<&str>,
+    package_json: Option<&str>,
+    by_source: &BTreeMap<String, usize>,
+) {
+    let liquid_count = *by_source.get("liquid").unwrap_or(&0);
+    let html_count = html_paths.len();
+    let ts_count = ts_paths.len();
+
+    // Structured Liquid template theme — only when conventions are *detected*, not assumed missing.
+    if liquid_count >= 5 {
+        let profile = crate::liquid::detect_template_structure(receipt, liquid_paths);
+        let has_composition = profile.section_files > 0
+            && (profile.template_files > 0 || profile.layout_files > 0);
+        if has_composition {
+            let fact_ids: Vec<String> = profile.evidence_paths.iter().cloned().take(48).collect();
+            receipt.findings.push(json!({
+                "id": "finding:project_structured_template_theme",
+                "kind": "project",
+                "type": "structured_template_theme",
+                "schema": "agentsam.machine.finding.v1",
+                "heuristic": true,
+                "confidence": profile.confidence(),
+                "evidence": {
+                    "fact_ids": fact_ids.iter().map(|p| format!("file:{p}")).collect::<Vec<_>>(),
+                    "templateLanguage": "liquid",
+                    "conventions": {
+                        "templatesDir": profile.templates_dirs.first(),
+                        "sectionsDir": profile.sections_dirs.first(),
+                        "snippetsDir": profile.snippets_dirs.first(),
+                        "layoutDir": profile.layout_dirs.first(),
+                    },
+                    "template_files": profile.template_files,
+                    "section_files": profile.section_files,
+                    "snippet_files": profile.snippet_files,
+                    "layout_files": profile.layout_files,
+                }
+            }));
+            return;
+        }
+    }
+
+    let shared_html_shell = html_count >= 3
+        && (theme_json.is_some()
+            || html_paths.iter().any(|p| {
+                p.ends_with("/index.html")
+                    || p.ends_with("index.html")
+                    || p.contains("/site/")
+                    || p.contains("/public/")
+            }));
+
+    // Strong static website: enough HTML pages + site/public layout, and not dominated by TS app code.
+    if shared_html_shell && html_count >= 3 && ts_count < html_count.saturating_mul(3) {
+        let fact_ids: Vec<String> = html_paths
+            .iter()
+            .take(32)
+            .map(|p| format!("file:{p}"))
+            .chain(theme_json.map(|p| format!("file:{p}")))
+            .collect();
+        receipt.findings.push(json!({
+            "id": "finding:project_static_website",
+            "kind": "project",
+            "type": "static_website",
+            "schema": "agentsam.machine.finding.v1",
+            "heuristic": true,
+            "confidence": if theme_json.is_some() { 0.95 } else { 0.85 },
+            "html_pages": html_count,
+            "evidence": {
+                "fact_ids": fact_ids,
+                "theme_manifest": theme_json,
+                "reason": ">=3 HTML pages with site/public/index layout; not TS-dominated",
+            }
+        }));
+        return;
+    }
+
+    if package_json.is_some() && ts_count >= 5 {
+        let fact_ids: Vec<String> = ts_paths
+            .iter()
+            .take(24)
+            .map(|p| format!("file:{p}"))
+            .chain(package_json.map(|p| format!("file:{p}")))
+            .collect();
+        receipt.findings.push(json!({
+            "id": "finding:project_typescript_app",
+            "kind": "project",
+            "type": "typescript_app",
+            "schema": "agentsam.machine.finding.v1",
+            "heuristic": true,
+            "confidence": 0.88,
+            "evidence": {
+                "fact_ids": fact_ids,
+                "package_json": package_json,
+                "typescript_javascript_files": ts_count,
+                "html_files": html_count,
+            }
+        }));
+        return;
+    }
+
+    // Weak / unknown project — do not force static_website.
+    let sample: Vec<String> = receipt.facts.iter().take(16).map(|f| f.id.clone()).collect();
+    receipt.findings.push(json!({
+        "id": "finding:project_unclassified",
+        "kind": "project",
+        "type": "unclassified",
+        "schema": "agentsam.machine.finding.v1",
+        "heuristic": true,
+        "confidence": 0.4,
+        "evidence": {
+            "fact_ids": sample,
+            "html_files": html_count,
+            "liquid_files": liquid_paths.len(),
+            "typescript_javascript_files": ts_count,
+            "reason": "Insufficient strong project signals",
         }
     }));
 }
@@ -77,6 +227,7 @@ fn enrich_static_site(
     let mut css_var_hits = 0usize;
     let mut header_hits = 0usize;
     let mut footer_hits = 0usize;
+    let mut nav_edge_ids: Vec<String> = Vec::new();
 
     for rel in html_paths {
         routes.insert(route_from_html_path(rel));
@@ -99,7 +250,6 @@ fn enrich_static_site(
                 continue;
             }
             if looks_like_asset(&href) {
-                // Asset edges come from assets::enrich_assets (keeps remote URLs + evidence).
                 continue;
             }
             if let Some(route) = href_to_route(&href) {
@@ -107,7 +257,10 @@ fn enrich_static_site(
                 if !label.is_empty() {
                     *shared_nav_labels.entry(label.clone()).or_default() += 1;
                 }
+                let edge_id = format!("edge:navigation_link:file:{rel}:{route}");
+                nav_edge_ids.push(edge_id.clone());
                 receipt.edges.push(json!({
+                    "id": edge_id,
                     "from": format!("file:{rel}"),
                     "to": format!("route:{route}"),
                     "type": "navigation_link",
@@ -126,20 +279,28 @@ fn enrich_static_site(
     if let Some(theme) = theme_json {
         for rel in html_paths {
             receipt.edges.push(json!({
+                "id": format!("edge:theme_applies_to:file:{theme}:file:{rel}"),
                 "from": format!("file:{theme}"),
                 "to": format!("file:{rel}"),
                 "type": "theme_applies_to",
+                "evidence": {
+                    "file": theme,
+                    "fact_ids": [format!("file:{theme}"), format!("file:{rel}")],
+                }
             }));
         }
         receipt.findings.push(json!({
+            "id": "finding:theme_candidate",
             "kind": "theme_candidate",
             "schema": "agentsam.machine.finding.v1",
+            "heuristic": true,
             "confidence": 0.95,
-            "evidence": [
-                format!("theme_manifest:{theme}"),
-                format!("html_pages:{}", html_paths.len()),
-                format!("svg_assets:{}", svg_paths.len()),
-            ],
+            "evidence": {
+                "fact_ids": [format!("file:{theme}")],
+                "theme_manifest": theme,
+                "html_pages": html_paths.len(),
+                "svg_assets": svg_paths.len(),
+            },
             "fact_ids": [format!("file:{theme}")],
         }));
     }
@@ -150,30 +311,36 @@ fn enrich_static_site(
         .map(|(label, _)| label)
         .collect();
 
+    let html_fact_ids: Vec<String> = html_paths.iter().map(|p| format!("file:{p}")).collect();
     receipt.findings.push(json!({
-        "kind": "project",
-        "type": "static_website",
-        "confidence": if theme_json.is_some() { 0.99 } else { 0.9 },
-        "html_pages": html_paths.len(),
-        "routes": routes.len(),
-    }));
-
-    receipt.findings.push(json!({
+        "id": "finding:frontend",
         "kind": "frontend",
+        "schema": "agentsam.machine.finding.v1",
+        "heuristic": false,
         "pages": html_paths.len(),
         "routes": routes.iter().cloned().collect::<Vec<_>>(),
         "shared_navigation_labels": shared_nav,
         "header_pages": header_hits,
         "footer_pages": footer_hits,
         "css_custom_property_pages": css_var_hits,
+        "evidence": {
+            "fact_ids": html_fact_ids,
+            "edge_ids": nav_edge_ids.iter().take(32).cloned().collect::<Vec<_>>(),
+            "navigation_edge_count": nav_pairs.len(),
+        }
     }));
 
     if !svg_paths.is_empty() {
+        let svg_ids: Vec<String> = svg_paths.iter().map(|p| format!("file:{p}")).collect();
         receipt.findings.push(json!({
+            "id": "finding:asset_family_svg",
             "kind": "asset_family",
             "type": "svg_icons",
+            "schema": "agentsam.machine.finding.v1",
+            "heuristic": false,
             "count": svg_paths.len(),
             "paths": svg_paths,
+            "evidence": { "fact_ids": svg_ids }
         }));
     }
 
@@ -218,6 +385,96 @@ fn enrich_static_site(
             }
         }));
     }
+}
+
+/// Deterministic relative import edges for TS/JS (string-literal imports only).
+fn enrich_ts_imports(root: &Path, receipt: &mut MachineReceipt, ts_paths: &[String]) {
+    let known: BTreeSet<String> = receipt.facts.iter().map(|f| f.path.clone()).collect();
+    for rel in ts_paths {
+        let abs = root.join(rel);
+        let Ok(text) = fs::read_to_string(&abs) else {
+            continue;
+        };
+        for spec in extract_import_specifiers(&text) {
+            if !(spec.starts_with("./") || spec.starts_with("../")) {
+                continue;
+            }
+            if let Some(resolved) = resolve_relative_import(rel, &spec, &known) {
+                receipt.edges.push(json!({
+                    "id": format!("edge:imports:file:{rel}:file:{resolved}"),
+                    "from": format!("file:{rel}"),
+                    "to": format!("file:{resolved}"),
+                    "type": "imports",
+                    "evidence": {
+                        "file": rel,
+                        "literal": spec,
+                        "fact_ids": [format!("file:{rel}"), format!("file:{resolved}")],
+                    }
+                }));
+            }
+        }
+    }
+}
+
+fn extract_import_specifiers(text: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    for line in text.lines() {
+        let trimmed = line.trim();
+        if let Some(rest) = trimmed.strip_prefix("import ") {
+            if let Some(spec) = quoted_from_from(rest).or_else(|| first_quoted_anywhere(rest)) {
+                out.push(spec);
+            }
+        } else if trimmed.starts_with("export ") && trimmed.contains(" from ") {
+            if let Some(spec) = quoted_from_from(trimmed) {
+                out.push(spec);
+            }
+        } else if let Some(rest) = trimmed.strip_prefix("require(") {
+            if let Some(spec) = first_quoted_anywhere(rest) {
+                out.push(spec);
+            }
+        }
+    }
+    out
+}
+
+fn quoted_from_from(s: &str) -> Option<String> {
+    let idx = s.find(" from ")?;
+    first_quoted_anywhere(&s[idx + 6..])
+}
+
+fn first_quoted_anywhere(s: &str) -> Option<String> {
+    let bytes = s.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        let b = bytes[i];
+        if b == b'\'' || b == b'"' {
+            let q = b as char;
+            let rest = &s[i + 1..];
+            let end = rest.find(q)?;
+            return Some(rest[..end].to_string());
+        }
+        i += 1;
+    }
+    None
+}
+
+fn resolve_relative_import(from: &str, spec: &str, known: &BTreeSet<String>) -> Option<String> {
+    let from_dir = Path::new(from).parent().unwrap_or_else(|| Path::new(""));
+    let joined = from_dir.join(spec);
+    let norm = joined.to_string_lossy().replace('\\', "/");
+    let candidates = [
+        norm.clone(),
+        format!("{norm}.ts"),
+        format!("{norm}.tsx"),
+        format!("{norm}.js"),
+        format!("{norm}.jsx"),
+        format!("{norm}.mts"),
+        format!("{norm}.cts"),
+        format!("{norm}/index.ts"),
+        format!("{norm}/index.tsx"),
+        format!("{norm}/index.js"),
+    ];
+    candidates.into_iter().find(|c| known.contains(c))
 }
 
 fn route_from_html_path(rel: &str) -> String {

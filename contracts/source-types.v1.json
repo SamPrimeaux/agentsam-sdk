@@ -5,25 +5,41 @@
       "id": "javascript",
       "label": "JavaScript",
       "kind": "code",
-      "extensions": [".js", ".mjs", ".cjs", ".jsx"],
+      "extensions": [
+        ".js",
+        ".mjs",
+        ".cjs",
+        ".jsx"
+      ],
       "knowledge": true,
       "ast": true,
-      "syntax_by_extension": { ".jsx": "jsx" }
+      "syntax_by_extension": {
+        ".jsx": "jsx"
+      }
     },
     {
       "id": "typescript",
       "label": "TypeScript",
       "kind": "code",
-      "extensions": [".ts", ".tsx", ".mts", ".cts"],
+      "extensions": [
+        ".ts",
+        ".tsx",
+        ".mts",
+        ".cts"
+      ],
       "knowledge": true,
       "ast": true,
-      "syntax_by_extension": { ".tsx": "tsx" }
+      "syntax_by_extension": {
+        ".tsx": "tsx"
+      }
     },
     {
       "id": "rust",
       "label": "Rust",
       "kind": "code",
-      "extensions": [".rs"],
+      "extensions": [
+        ".rs"
+      ],
       "knowledge": true,
       "ast": false
     },
@@ -31,7 +47,9 @@
       "id": "python",
       "label": "Python",
       "kind": "code",
-      "extensions": [".py"],
+      "extensions": [
+        ".py"
+      ],
       "knowledge": true,
       "ast": false
     },
@@ -39,7 +57,9 @@
       "id": "go",
       "label": "Go",
       "kind": "code",
-      "extensions": [".go"],
+      "extensions": [
+        ".go"
+      ],
       "knowledge": true,
       "ast": false
     },
@@ -47,7 +67,9 @@
       "id": "java",
       "label": "Java",
       "kind": "code",
-      "extensions": [".java"],
+      "extensions": [
+        ".java"
+      ],
       "knowledge": false,
       "ast": false
     },
@@ -55,7 +77,11 @@
       "id": "shell",
       "label": "Shell",
       "kind": "code",
-      "extensions": [".sh", ".bash", ".zsh"],
+      "extensions": [
+        ".sh",
+        ".bash",
+        ".zsh"
+      ],
       "knowledge": false,
       "ast": false
     },
@@ -63,7 +89,10 @@
       "id": "yaml",
       "label": "YAML",
       "kind": "code",
-      "extensions": [".yaml", ".yml"],
+      "extensions": [
+        ".yaml",
+        ".yml"
+      ],
       "knowledge": false,
       "ast": false
     },
@@ -71,7 +100,9 @@
       "id": "toml",
       "label": "TOML",
       "kind": "code",
-      "extensions": [".toml"],
+      "extensions": [
+        ".toml"
+      ],
       "knowledge": false,
       "ast": false
     },
@@ -79,7 +110,9 @@
       "id": "vue",
       "label": "Vue",
       "kind": "code",
-      "extensions": [".vue"],
+      "extensions": [
+        ".vue"
+      ],
       "knowledge": false,
       "ast": false
     },
@@ -87,7 +120,9 @@
       "id": "svelte",
       "label": "Svelte",
       "kind": "code",
-      "extensions": [".svelte"],
+      "extensions": [
+        ".svelte"
+      ],
       "knowledge": false,
       "ast": false
     },
@@ -95,7 +130,10 @@
       "id": "markdown",
       "label": "Markdown",
       "kind": "document",
-      "extensions": [".md", ".mdx"],
+      "extensions": [
+        ".md",
+        ".mdx"
+      ],
       "knowledge": true,
       "ast": false
     },
@@ -103,7 +141,9 @@
       "id": "json",
       "label": "JSON",
       "kind": "document",
-      "extensions": [".json"],
+      "extensions": [
+        ".json"
+      ],
       "knowledge": true,
       "ast": false
     },
@@ -111,7 +151,9 @@
       "id": "jsonc",
       "label": "JSONC",
       "kind": "document",
-      "extensions": [".jsonc"],
+      "extensions": [
+        ".jsonc"
+      ],
       "knowledge": true,
       "ast": false
     },
@@ -119,7 +161,10 @@
       "id": "html",
       "label": "HTML",
       "kind": "document",
-      "extensions": [".html", ".htm"],
+      "extensions": [
+        ".html",
+        ".htm"
+      ],
       "knowledge": true,
       "ast": false,
       "frontend": true
@@ -128,7 +173,11 @@
       "id": "css",
       "label": "CSS",
       "kind": "document",
-      "extensions": [".css", ".scss", ".sass"],
+      "extensions": [
+        ".css",
+        ".scss",
+        ".sass"
+      ],
       "knowledge": true,
       "ast": false,
       "frontend": true
@@ -137,7 +186,9 @@
       "id": "svg",
       "label": "SVG",
       "kind": "asset",
-      "extensions": [".svg"],
+      "extensions": [
+        ".svg"
+      ],
       "knowledge": false,
       "ast": false
     },
@@ -145,7 +196,9 @@
       "id": "png",
       "label": "PNG",
       "kind": "asset",
-      "extensions": [".png"],
+      "extensions": [
+        ".png"
+      ],
       "knowledge": false,
       "ast": false
     },
@@ -153,7 +206,10 @@
       "id": "jpeg",
       "label": "JPEG",
       "kind": "asset",
-      "extensions": [".jpg", ".jpeg"],
+      "extensions": [
+        ".jpg",
+        ".jpeg"
+      ],
       "knowledge": false,
       "ast": false
     },
@@ -161,7 +217,9 @@
       "id": "webp",
       "label": "WebP",
       "kind": "asset",
-      "extensions": [".webp"],
+      "extensions": [
+        ".webp"
+      ],
       "knowledge": false,
       "ast": false
     },
@@ -169,7 +227,9 @@
       "id": "gif",
       "label": "GIF",
       "kind": "asset",
-      "extensions": [".gif"],
+      "extensions": [
+        ".gif"
+      ],
       "knowledge": false,
       "ast": false
     },
@@ -177,7 +237,9 @@
       "id": "text",
       "label": "Text",
       "kind": "document",
-      "extensions": [".txt"],
+      "extensions": [
+        ".txt"
+      ],
       "knowledge": true,
       "ast": false
     },
@@ -185,7 +247,9 @@
       "id": "xml",
       "label": "XML",
       "kind": "document",
-      "extensions": [".xml"],
+      "extensions": [
+        ".xml"
+      ],
       "knowledge": false,
       "ast": false
     },
@@ -193,7 +257,9 @@
       "id": "csv",
       "label": "CSV",
       "kind": "document",
-      "extensions": [".csv"],
+      "extensions": [
+        ".csv"
+      ],
       "knowledge": true,
       "ast": false
     },
@@ -201,7 +267,9 @@
       "id": "sql",
       "label": "SQL",
       "kind": "code",
-      "extensions": [".sql"],
+      "extensions": [
+        ".sql"
+      ],
       "knowledge": true,
       "ast": false
     },
@@ -209,7 +277,75 @@
       "id": "wasm",
       "label": "WebAssembly",
       "kind": "binary",
-      "extensions": [".wasm"],
+      "extensions": [
+        ".wasm"
+      ],
+      "knowledge": false,
+      "ast": false
+    },
+    {
+      "id": "liquid",
+      "label": "Liquid",
+      "kind": "document",
+      "extensions": [
+        ".liquid"
+      ],
+      "knowledge": true,
+      "ast": false,
+      "frontend": true
+    },
+    {
+      "id": "woff",
+      "label": "WOFF Font",
+      "kind": "asset",
+      "extensions": [
+        ".woff",
+        ".woff2"
+      ],
+      "knowledge": false,
+      "ast": false
+    },
+    {
+      "id": "ttf",
+      "label": "TrueType Font",
+      "kind": "asset",
+      "extensions": [
+        ".ttf",
+        ".otf"
+      ],
+      "knowledge": false,
+      "ast": false
+    },
+    {
+      "id": "mp4",
+      "label": "MP4 Video",
+      "kind": "asset",
+      "extensions": [
+        ".mp4",
+        ".webm",
+        ".mov"
+      ],
+      "knowledge": false,
+      "ast": false
+    },
+    {
+      "id": "ico",
+      "label": "Icon",
+      "kind": "asset",
+      "extensions": [
+        ".ico"
+      ],
+      "knowledge": false,
+      "ast": false
+    },
+    {
+      "id": "glb",
+      "label": "glTF Binary",
+      "kind": "asset",
+      "extensions": [
+        ".glb",
+        ".gltf"
+      ],
       "knowledge": false,
       "ast": false
     }

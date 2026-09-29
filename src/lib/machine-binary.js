@@ -68,15 +68,16 @@ export function resolveMachineBinary(env = process.env) {
 export function spawnMachine(resolution, machineArgv, options = {}) {
   const env = options.env || process.env;
   const stdio = options.stdio || 'inherit';
+  const maxBuffer = options.maxBuffer || 32 * 1024 * 1024;
 
   if (resolution.kind === 'binary') {
-    return spawnSync(resolution.path, machineArgv, { stdio, env, encoding: 'utf8' });
+    return spawnSync(resolution.path, machineArgv, { stdio, env, encoding: 'utf8', maxBuffer });
   }
   if (resolution.kind === 'cargo') {
     return spawnSync(
       'cargo',
       ['run', '--quiet', '--manifest-path', resolution.manifest, '--bin', 'agentsam-machine', '--', ...machineArgv],
-      { stdio, env, encoding: 'utf8' },
+      { stdio, env, encoding: 'utf8', maxBuffer },
     );
   }
   const err = new Error(

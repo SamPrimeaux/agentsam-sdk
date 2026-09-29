@@ -14,12 +14,14 @@ function usage() {
   return `agentsam machine — deterministic local perception (native engine)
 
 Usage:
-  agentsam machine inspect <path> [--json] [--run-id <id>]
+  agentsam machine inspect <path> [--json] [--run-id <id>] [--include-generated]
   agentsam machine doctor [--json]
   agentsam machine --help
 
 Notes:
   Default inspect is read-only and network-free.
+  Large detail is externalized under <target>/.agentsam/machine/runs/<run_id>/.
+  Generated/cache trees are summarized unless --include-generated is set.
   Remote fetch/probe, optimization, storage, and reference rewriting are separate explicit actions.
   Set AGENTSAM_MACHINE_BIN to force a specific agentsam-machine binary.`;
 }
@@ -28,6 +30,7 @@ function parseArgs(argv = []) {
   const out = {
     help: false,
     json: false,
+    includeGenerated: false,
     runId: null,
     subcommand: null,
     target: null,
@@ -37,6 +40,7 @@ function parseArgs(argv = []) {
     const arg = argv[i];
     if (arg === '--help' || arg === '-h') out.help = true;
     else if (arg === '--json') out.json = true;
+    else if (arg === '--include-generated') out.includeGenerated = true;
     else if (arg === '--run-id') {
       const value = argv[++i];
       if (value == null || value.startsWith('--')) {
@@ -97,10 +101,13 @@ export async function runMachine(argv = []) {
     const abs = path.resolve(target);
     const machineArgv = ['inspect', abs];
     if (args.runId) machineArgv.push('--run-id', args.runId);
+    if (args.includeGenerated) machineArgv.push('--include-generated');
     if (args.json) machineArgv.push('--json');
 
     const result = spawnMachine(resolution, machineArgv, {
       stdio: args.json ? ['ignore', 'pipe', 'pipe'] : 'inherit',
+      // Large donors still emit bounded compact JSON; raise buffer for safety.
+      maxBuffer: 32 * 1024 * 1024,
     });
 
     if (result.error) throw result.error;
@@ -112,7 +119,6 @@ export async function runMachine(argv = []) {
         err.exitCode = result.status;
         throw err;
       }
-      // Native CLI pretty-prints JSON; re-emit compact for machine consumers when possible.
       try {
         const parsed = JSON.parse(stdout);
         console.log(JSON.stringify(parsed));

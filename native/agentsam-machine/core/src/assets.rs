@@ -23,27 +23,24 @@ pub fn enrich_assets(root: &Path, receipt: &mut MachineReceipt) {
     let html_paths: Vec<String> = receipt
         .facts
         .iter()
-        .filter(|f| f.source.type_id.as_deref() == Some("html"))
+        .filter(|f| f.source.type_id == "html")
         .map(|f| f.path.clone())
         .collect();
     let css_paths: Vec<String> = receipt
         .facts
         .iter()
         .filter(|f| {
-            matches!(
-                f.source.type_id.as_deref(),
-                Some("css") | Some("scss") | Some("less")
-            ) || f
-                .extension
-                .as_deref()
-                .is_some_and(|e| matches!(e, "css" | "scss" | "less"))
+            matches!(f.source.type_id.as_str(), "css")
+                || f.extension
+                    .as_deref()
+                    .is_some_and(|e| matches!(e, "css" | "scss" | "less" | "sass"))
         })
         .map(|f| f.path.clone())
         .collect();
     let svg_paths: Vec<String> = receipt
         .facts
         .iter()
-        .filter(|f| f.source.type_id.as_deref() == Some("svg"))
+        .filter(|f| f.source.type_id == "svg")
         .map(|f| f.path.clone())
         .collect();
     let code_paths: Vec<String> = receipt
@@ -51,12 +48,8 @@ pub fn enrich_assets(root: &Path, receipt: &mut MachineReceipt) {
         .iter()
         .filter(|f| {
             matches!(
-                f.source.type_id.as_deref(),
-                Some("javascript")
-                    | Some("typescript")
-                    | Some("jsx")
-                    | Some("tsx")
-                    | Some("json")
+                f.source.type_id.as_str(),
+                "javascript" | "typescript" | "json" | "liquid"
             )
         })
         .map(|f| f.path.clone())
@@ -193,16 +186,26 @@ pub fn enrich_assets(root: &Path, receipt: &mut MachineReceipt) {
         .max()
         .unwrap_or(0);
 
+    let evidence_fact_ids: Vec<String> = hits
+        .iter()
+        .map(|h| format!("file:{}", h.from_file))
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .take(64)
+        .collect();
     receipt.findings.push(json!({
+        "id": "finding:asset_discovery",
         "kind": "asset_discovery",
         "schema": "agentsam.machine.finding.v1",
+        "heuristic": false,
         "confidence": 1.0,
-        "evidence": [
-            format!("asset_hits:{}", hits.len()),
-            format!("unique_assets:{}", by_id.len()),
-            format!("remote:{}", remote),
-            format!("local:{}", local),
-        ],
+        "evidence": {
+            "fact_ids": evidence_fact_ids,
+            "asset_hits": hits.len(),
+            "unique_assets": by_id.len(),
+            "remote": remote,
+            "local": local,
+        },
         "summary": {
             "total": by_id.len(),
             "remote": remote,
@@ -691,7 +694,7 @@ fn quoted_value(slice: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::inspect_path;
+    use crate::{inspect_path_with_options, InspectOptions};
     use std::fs;
 
     #[test]
@@ -714,7 +717,10 @@ mod tests {
         fs::create_dir_all(temp.path().join("images")).unwrap();
         fs::write(temp.path().join("images/local-hero.png"), b"\x89PNG").unwrap();
 
-        let receipt = inspect_path(temp.path(), Some("run_assets")).unwrap();
+        let mut opts = InspectOptions::new();
+        opts.run_id = Some("run_assets".into());
+        opts.externalize = false;
+        let receipt = inspect_path_with_options(temp.path(), opts).unwrap();
         assert!(!receipt.provenance.network_used);
         assert!(!receipt.provenance.source_mutated);
 
