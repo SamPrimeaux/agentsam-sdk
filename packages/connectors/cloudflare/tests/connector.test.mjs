@@ -137,7 +137,7 @@ describe('cloudflare connector', () => {
       return new Response(JSON.stringify({
         access_token: 'access-plaintext',
         refresh_token: 'refresh-plaintext',
-        account_id: 'account_123',
+        account_id: 'abc123abc123abc123abc123abc123ab',
         scope: 'd1.read workers-scripts.write',
         expires_in: 3600,
       }), { status: 200, headers: { 'content-type': 'application/json' } });

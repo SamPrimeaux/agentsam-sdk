@@ -4,7 +4,7 @@ import { triageLog, resolveLogFindings } from './logs.js';
 import { scanTrustBoundary } from './trust-boundary.js';
 
 export async function scanProjectSecurity(options = {}) {
-  const inventory = collectNpmDependencies(options.projectRoot);
+  const inventory = collectNpmDependencies(options.projectRoot, { releaseCandidate: options.releaseCandidate });
   const results = options.offline
     ? inventory.dependencies.map(d => ({ ...d, checked: false, advisories: [] }))
     : await queryOsv(inventory.dependencies, options);
