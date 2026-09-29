@@ -60,6 +60,19 @@ export const heuristicStarterPack: CmsStarterPack = {
       metaDescription: 'Stock starter CMS workspace.',
       sections: [
         {
+          name: 'Global header',
+          type: 'header',
+          zone: 'HEADER',
+          fields: {
+            brand: 'Heuristic',
+            nav: [
+              { label: 'Home', href: '/' },
+              { label: 'About', href: '/about' },
+              { label: 'Contact', href: '/contact' },
+            ],
+          },
+        },
+        {
           name: 'Editorial hero',
           type: 'hero',
           zone: 'BODY',
@@ -107,9 +120,86 @@ export const heuristicStarterPack: CmsStarterPack = {
         },
       ],
     },
+    {
+      title: 'About',
+      slug: '/about',
+      type: 'Interior',
+      metaTitle: 'About · Heuristic',
+      metaDescription: 'About this Heuristic starter site.',
+      sections: [
+        {
+          name: 'Global header',
+          type: 'header',
+          zone: 'HEADER',
+          fields: {
+            brand: 'Heuristic',
+            nav: [
+              { label: 'Home', href: '/' },
+              { label: 'About', href: '/about' },
+              { label: 'Contact', href: '/contact' },
+            ],
+          },
+        },
+        {
+          name: 'About body',
+          type: 'hero',
+          zone: 'BODY',
+          fields: {
+            headline: 'About',
+            subline: 'A multi-page local starter — edit this page in the CMS.',
+            eyebrow: 'Heuristic',
+          },
+        },
+        {
+          name: 'Footer',
+          type: 'footer',
+          zone: 'FOOTER',
+          fields: { zone: 'FOOTER', bg_color: '#F3F0E8' },
+        },
+      ],
+    },
+    {
+      title: 'Contact',
+      slug: '/contact',
+      type: 'Interior',
+      metaTitle: 'Contact · Heuristic',
+      metaDescription: 'Contact page for the Heuristic starter.',
+      sections: [
+        {
+          name: 'Global header',
+          type: 'header',
+          zone: 'HEADER',
+          fields: {
+            brand: 'Heuristic',
+            nav: [
+              { label: 'Home', href: '/' },
+              { label: 'About', href: '/about' },
+              { label: 'Contact', href: '/contact' },
+            ],
+          },
+        },
+        {
+          name: 'Contact body',
+          type: 'hero',
+          zone: 'BODY',
+          fields: {
+            headline: 'Contact',
+            subline: 'Reach us — this route is a real published CMS page.',
+            eyebrow: 'Heuristic',
+          },
+        },
+        {
+          name: 'Footer',
+          type: 'footer',
+          zone: 'FOOTER',
+          fields: { zone: 'FOOTER', bg_color: '#F3F0E8' },
+        },
+      ],
+    },
   ],
 };
 
 export function listBuiltinStarterPacks(): CmsStarterPack[] {
+  // Blank is a separate module; re-export composition happens in frontend index / CLI.
   return [heuristicStarterPack];
 }

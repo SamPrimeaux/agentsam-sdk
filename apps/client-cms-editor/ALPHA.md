@@ -53,17 +53,28 @@ npm ci
 npm run build
 npm run verify:cms
 # = verify:cms-package
-# + verify:cms-adapter-smoke   (memory)
-# + verify:cms-sqlite-smoke    (durable reopen proof — required)
-# + verify:cms-browser-smoke   (fresh tarball root must not pull node:sqlite)
-# + pack:check
+# + verify:cms-adapter-smoke
+# + verify:cms-sqlite-smoke
+# + verify:cms-theme-import   (real donor theme → SQLite → multipage localhost)
+# + verify:cms-browser-smoke
+# + pack:check               (incl. agentsam-cms bin survives pack)
 ```
 
-Release proof (requires flipping `private: false` first — do not publish until green):
+## Product contract (alpha)
+
+Reusable dual-sided website + CMS — not “editor only”:
+
+1. Heuristic + Blank + Import Theme are first-run paths
+2. Public multipage routes + `/cms` share the same local CmsEditorAdapter authority
+3. Import = intake → ThemePack/CmsStarterPack → `installStarterPack` (no provider-specific install APIs)
+4. Auth boundary (`CmsAuthHost`) is provider-neutral; local-dev principal is explicit
+5. `agentsam-cms` bin must survive npm pack / fresh install (`npx agentsam-cms --help`)
+6. Public renderer ownership: `local/public-renderer.ts` + `local/dev-server.ts` (export `./local`)
+
+Release proof (requires `private: false`):
 
 ```bash
-# edit package.json private → false
-npm run verify:cms-release   # includes sqlite + browser smokes before pack/consumer proof
+npm run verify:cms-release
 npm publish --tag alpha --access public
 ```
 

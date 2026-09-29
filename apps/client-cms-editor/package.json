@@ -2,7 +2,7 @@
   "name": "@inneranimalmedia/client-cms-editor",
   "version": "0.1.0-alpha.0",
   "private": false,
-  "description": "Portable AgentSam CMS editor product (Pages/Sections/Blocks/Media). Single npm artifact — frontend/backend/shared are internal boundaries.",
+  "description": "Reusable full-stack website + CMS kit with multi-page public sites, a protected authoring dashboard, local SQLite, starter/theme import, and pluggable auth, storage, and deployment adapters.",
   "type": "module",
   "license": "UNLICENSED",
   "workspaces": [
@@ -11,7 +11,7 @@
     "shared/*"
   ],
   "bin": {
-    "agentsam-cms": "./bin/agentsam-cms.mjs"
+    "agentsam-cms": "bin/agentsam-cms.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -29,6 +29,14 @@
     "./sqlite-adapter": {
       "types": "./dist/sqlite-adapter.d.ts",
       "import": "./dist/sqlite-adapter.js"
+    },
+    "./import": {
+      "types": "./dist/import/index.d.ts",
+      "import": "./dist/import/index.js"
+    },
+    "./local": {
+      "types": "./dist/local/index.d.ts",
+      "import": "./dist/local/index.js"
     },
     "./shared": {
       "types": "./dist/shared/index.d.ts",
@@ -78,9 +86,10 @@
     "verify:cms-adapter-smoke": "node scripts/verify-cms-adapter-smoke.mjs",
     "verify:cms-sqlite-smoke": "node scripts/verify-cms-sqlite-smoke.mjs",
     "verify:cms-browser-smoke": "node scripts/verify-cms-browser-smoke.mjs",
+    "verify:cms-theme-import": "node scripts/verify-cms-theme-import.mjs",
     "pack:check": "node scripts/verify-cms-pack.mjs",
     "verify:cms-release": "node scripts/verify-cms-release.mjs",
-    "verify:cms": "npm run verify:cms-package && npm run verify:cms-adapter-smoke && npm run verify:cms-sqlite-smoke && npm run verify:cms-browser-smoke && npm run pack:check",
+    "verify:cms": "npm run verify:cms-package && npm run verify:cms-adapter-smoke && npm run verify:cms-sqlite-smoke && npm run verify:cms-theme-import && npm run verify:cms-browser-smoke && npm run pack:check",
     "prepublishOnly": "npm run build && npm run verify:cms-release"
   },
   "publishConfig": {
@@ -92,6 +101,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@types/node": "^26.6.3",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "esbuild": "^0.25.12",

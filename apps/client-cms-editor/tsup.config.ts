@@ -171,6 +171,8 @@ async function emitDeclarations() {
   // --- root index types: frontend modules + starter pack (no tsc dump paths) ---
   copyDtsTree(join(dtsTmp, 'frontend/src'), join(root, 'dist'));
   copyDtsTree(join(dtsTmp, 'starter-packs'), join(root, 'dist/starter-packs'));
+  copyDtsTree(join(dtsTmp, 'import'), join(root, 'dist/import'));
+  copyDtsTree(join(dtsTmp, 'local'), join(root, 'dist/local'));
 
   const indexSrc = join(dtsTmp, 'frontend/src/index.d.ts');
   if (!existsSync(indexSrc)) {
@@ -232,6 +234,8 @@ export default defineConfig([
   {
     entry: {
       'sqlite-adapter': 'adapters/sqlite.ts',
+      'import/index': 'import/index.ts',
+      'local/index': 'local/index.ts',
     },
     format: ['esm'],
     dts: false,
@@ -242,7 +246,7 @@ export default defineConfig([
     target: 'node20',
     platform: 'node',
     outDir: 'dist',
-    external: ['node:sqlite'],
+    external: ['node:sqlite', 'node:http', 'node:fs', 'node:path', 'node:os', 'node:crypto', 'node:child_process', 'node:url', 'node:module'],
     esbuildOptions(options) {
       options.alias = sharedEsbuild.alias;
     },

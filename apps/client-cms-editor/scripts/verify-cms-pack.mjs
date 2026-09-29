@@ -44,12 +44,15 @@ if (harvest.length) {
 
 const required = [
   'package.json',
+  'bin/agentsam-cms.js',
   'dist/index.js',
   'dist/index.d.ts',
   'dist/adapter.js',
   'dist/adapter.d.ts',
   'dist/sqlite-adapter.js',
   'dist/sqlite-adapter.d.ts',
+  'dist/import/index.js',
+  'dist/local/index.js',
   'dist/styles/studio.css',
   'acceptance/cms-parity.v1.json',
 ];
@@ -60,6 +63,13 @@ for (const hint of required) {
   }
 }
 
+// Bin must remain installable (npm previously warned about invalid bin entries).
+const binPath = paths.find((p) => p === 'bin/agentsam-cms.js');
+if (!binPath) {
+  console.error('pack:check failed: agentsam-cms bin entry file missing from tarball');
+  process.exit(1);
+}
+
 const forbidden = paths.filter(
   (path) =>
     path === 'dist/adapters/sqlite.d.ts' ||
@@ -67,6 +77,7 @@ const forbidden = paths.filter(
     path.startsWith('dist/shared/cms/') ||
     path.startsWith('dist/backend/src/') ||
     path.startsWith('dist/fixtures/') ||
+    path.startsWith('fixtures/') ||
     path.startsWith('.dts-tmp/'),
 );
 if (forbidden.length) {
@@ -76,5 +87,5 @@ if (forbidden.length) {
 }
 
 console.log(
-  `pack:check OK ${pack.name}@${pack.version} · ${pack.files.length} files · no nested node_modules · no harvest · clean dist surface`,
+  `pack:check OK ${pack.name}@${pack.version} · ${pack.files.length} files · bin=agentsam-cms.js · clean dist surface`,
 );

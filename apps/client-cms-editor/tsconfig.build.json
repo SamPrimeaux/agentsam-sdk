@@ -6,6 +6,7 @@
       "DOM",
       "DOM.Iterable"
     ],
+    "types": ["node"],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
@@ -55,7 +56,9 @@
     "starter-packs/**/*.ts",
     "shared/cms/src/**/*.ts",
     "backend/src/**/*.ts",
-    "backend/src/**/*.js"
+    "backend/src/**/*.js",
+    "import/**/*.ts",
+    "local/**/*.ts"
   ],
   "exclude": [
     "node_modules",

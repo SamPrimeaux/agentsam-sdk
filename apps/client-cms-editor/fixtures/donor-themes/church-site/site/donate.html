@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donate | New Iberia Church of Christ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/webp"
+        href="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/5ce76f40-dfaf-4c97-429b-09e939449b00/small">
+    <link rel="stylesheet" href="./unified-header.css">
+    <link rel="stylesheet" href="./unified-footer.css">
+    <script src="./unified-header.js" defer></script>
+    <style>
+        :root {
+            /* Light Glass Theme Variables */
+            --bg-primary: #fdfbf7;
+            --bg-glass-light: rgba(255, 255, 255, 0.85);
+            --bg-glass-dark: rgba(37, 99, 235, 0.1);
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-glass: rgba(226, 232, 240, 0.5);
+            --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.08);
+            --blue-primary: #2563eb;
+            --blue-gradient: linear-gradient(135deg, rgba(37, 99, 235, 0.9), rgba(59, 130, 246, 0.85));
+            --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --container-max: 1400px;
+            --section-padding: clamp(3rem, 8vw, 6rem);
+            --header-height: 120px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-body);
+            color: var(--text-primary);
+            background: var(--bg-primary);
+            line-height: 1.6;
+            font-size: 18px;
+            margin-top: var(--header-height);
+        }
+
+        .page-section {
+            padding: var(--section-padding) 2rem;
+            max-width: var(--container-max);
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 2rem;
+        }
+
+        p {
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-cta {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: var(--blue-gradient);
+            color: white;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: transform 0.2s;
+        }
+
+        .btn-cta:hover {
+            transform: translateY(-2px);
+        }
+
+        .content-block {
+            background: var(--bg-glass-light);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            padding: clamp(2.5rem, 5vw, 4rem);
+            margin-bottom: 3rem;
+            box-shadow: var(--shadow-glass);
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Unified Header injected by JS -->
+
+    <div class="page-section">
+        <div class="content-block">
+            <h1>Donate</h1>
+            <p>Support the work of New Iberia Church of Christ.</p>
+            <p>Your generosity helps us continue our mission to serve the community and make disciples.</p>
+            <br>
+            <a href="https://tithe.ly/give_new/www/#/tithely/give-one-time/123456" class="btn-cta" target="_blank"
+                rel="noopener noreferrer">Give Online</a>
+        </div>
+    </div>
+
+    <!-- Unified Footer -->
+    <footer id="unified-footer"></footer>
+
+    <script src="./unified-footer.js"></script>
+</body>
+
+</html>

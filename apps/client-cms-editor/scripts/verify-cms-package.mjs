@@ -282,14 +282,28 @@ const distRequired = [
   'dist/adapter.d.ts',
   'dist/sqlite-adapter.js',
   'dist/sqlite-adapter.d.ts',
+  'dist/import/index.js',
+  'dist/local/index.js',
   'dist/shared/index.js',
   'dist/shared/index.d.ts',
   'dist/styles/studio.css',
+  'bin/agentsam-cms.js',
 ];
 for (const rel of distRequired) {
   if (!existsSync(join(packageRoot, rel))) {
     fail(`missing built artifact ${rel} — run npm run build before verify:cms-package`);
   }
+}
+
+if (!existsSync(join(packageRoot, 'starter-packs/blank/index.ts'))) {
+  fail('missing starter-packs/blank — Blank first-run starter required');
+}
+if (!existsSync(join(packageRoot, 'fixtures/donor-themes/church-site/site/index.html'))) {
+  fail('missing fixtures/donor-themes/church-site — real import donor fixture required for alpha');
+}
+
+if (rootPkg.bin?.['agentsam-cms'] !== 'bin/agentsam-cms.js') {
+  fail('package.json bin.agentsam-cms must be "bin/agentsam-cms.js" (npm-publish safe)');
 }
 
 const distForbidden = [
@@ -333,6 +347,15 @@ const allowedBare = new Set([
   'node:module',
   'node:child_process',
   'node:crypto',
+  'node:http',
+  'fs',
+  'path',
+  'os',
+  'url',
+  'module',
+  'child_process',
+  'crypto',
+  'http',
 ]);
 
 function walkDistJs(dir, out = []) {

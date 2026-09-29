@@ -1,70 +1,92 @@
-# AgentSam Client CMS Editor
+# AgentSam Client CMS
 
-Portable CMS authoring product published as `@inneranimalmedia/client-cms-editor`.
+Reusable, white-label **website + CMS application kit** published as `@inneranimalmedia/client-cms-editor`.
+
+A developer can scaffold a customer website, run it completely locally, browse the public pages and CMS, customize or import a theme, edit and publish through real local persistence, then connect identity/cloud/deployment providers without replacing the CMS or content model.
 
 **Authority order:** donor behavior → this npm package → adapters under the UX → registry receipts last.  
 See [`ALPHA.md`](./ALPHA.md) and [`acceptance/cms-parity.v1.json`](./acceptance/cms-parity.v1.json).
 
-This directory is a self-contained npm workspace root inside the SDK repository and is intentionally **not** part of the SDK root workspace graph. Local Studio must eventually consume the **packed/published** artifact — not vite-alias into `shared/cms/src`.
-
 ```text
-apps/client-cms-editor/
-├─ package.json              product package (alpha → latest)
-├─ acceptance/               donor parity / M1 acceptance matrix
-├─ frontend/                 CMS authoring UI
-├─ backend/                  portable adapter/bridge (not IAM-specific architecture)
-├─ adapters/                 Node runtime adapters (e.g. sqlite — not frontend)
-├─ shared/cms/               types + CmsEditorAdapter contract
-├─ reference/harvest/        copied harvest evidence (read-only)
-└─ scripts/                  verify:cms-package · pack:check
+scaffold
+  ↓
+customer project
+  ├── public multi-page site (header / pages / footer)
+  └── protected CMS (pages · sections · blocks · media · theme · draft/preview/publish)
+        ↓
+same CmsEditorAdapter authority
 ```
 
-## Product boundary
+## First-run (local before cloud)
 
-CMS Studio is the authenticated authoring/control product. It is **not** the public website runtime.
+```bash
+npx agentsam-cms create my-site --starter heuristic   # or blank | import --theme ./old-theme.zip
+cd my-site
+npx agentsam-cms dev
+```
+
+Then browse:
+
+| URL | Surface |
+|-----|---------|
+| `http://localhost:4317/` | Published public home |
+| `http://localhost:4317/about` | Published interior page |
+| `http://localhost:4317/cms` | Protected CMS (local-dev principal by default) |
+
+No GitHub / Cloudflare / Supabase account is required to inspect or use the local product.
+
+### Starters
+
+| Starter | Meaning |
+|---------|---------|
+| **Heuristic** | Built-in multipage starter pack |
+| **Blank** | Empty durable site shell |
+| **Import existing theme** | Directory or `.zip` → safe intake → ThemePack → `installStarterPack` |
+
+Imported themes are normalized into the **same** `CmsStarterPack` contract Heuristic uses. The editor never parses ZIP/Liquid itself — import/refinery tooling does.
+
+## Architecture
 
 ```text
-CMS Studio (this package)
-  ├─ pages / sections / blocks / themes / assets
-  ├─ optional AgentSam via host-supplied workbench adapter
-  ├─ preview draft
-  └─ explicit publish
-       ↓
-CmsEditorAdapter (sqlite | d1+r2 | http | custom)
-       ↓
-publication snapshot / public runtime
+CmsEditor / public renderer
+        ↓
+CmsEditorAdapter
+
+LOCAL     →  ./sqlite-adapter  (Node / node:sqlite)
+CLOUD     →  D1 + R2 adapter
+OTHER     →  HTTP / custom
 ```
+
+- Browser CMS UI does **not** import `node:sqlite`.
+- `./sqlite-adapter`, `./import`, and `./local` are Node/local-runtime surfaces.
+- Root package `engines` stay cross-runtime (`node >= 20`); only `./sqlite-adapter` documents the `node:sqlite` requirement.
+
+## Auth boundary
+
+`/cms` is protected through a portable `CmsAuthHost` contract. Local scaffolds use an explicit local-development principal. Consumers wire OAuth/OIDC/GitHub App/their identity service without rebuilding route protection.
 
 ## Persistence
 
 | Adapter | Role |
 |---------|------|
-| SQLite | desktop/offline authority via **`@inneranimalmedia/client-cms-editor/sqlite-adapter`** (Node-only; requires `node:sqlite`, not part of the browser bundle) |
+| SQLite | desktop/offline authority via `./sqlite-adapter` |
 | D1 + R2 | cloud authority from **proven** OAuth resources |
 | HTTP / custom | consumer backend |
 | localStorage | UI chrome cache only — never scaffolded as authority |
 
-### `@inneranimalmedia/client-cms-editor/sqlite-adapter`
-
-Node-only subpath. Import `SqliteCmsAdapter` from this export for file-backed local CMS authority — **not** from the root `./` bundle (browser/React).
-
-- Requires Node.js with built-in **`node:sqlite`** (Node 22+ at time of writing). This requirement applies **only** to `./sqlite-adapter` — the root package `engines` stay `node >= 20` so browser/edge consumers are not blocked.
-- The rest of the package (editor UI, `./adapter` contract, `./shared`) remains environment-agnostic; only this subpath carries the Node runtime requirement.
-
-## Shared AgentSam rule
-
-CMS must not invent its own chat/browser/terminal/auth stack. When AgentSam is present, the host supplies workbench adapter + principal + explicit CMS context. Core editor UX must still run without AgentSam.
-
-## Development
+## Development / gates
 
 ```bash
 cd apps/client-cms-editor
 npm ci
 npm run build
-npm run verify:cms            # package + memory smoke + sqlite durability + browser isolation + pack
-npm run typecheck
-npm test
-npm run dev
+npm run verify:cms
+# package + memory + sqlite durability + theme import + browser isolation + pack/bin
 ```
 
-Standalone mount requires explicit site context. Prefer injecting a `CmsEditorAdapter` rather than relying on hardcoded `/api/cms/*` host routes.
+Release (`private:false` required):
+
+```bash
+npm run verify:cms-release
+npm publish --tag alpha --access public
+```

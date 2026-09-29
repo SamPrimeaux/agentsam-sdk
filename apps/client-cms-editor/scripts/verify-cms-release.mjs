@@ -63,6 +63,7 @@ run(npm, ['run', 'build'], { cwd: packageRoot, stdio: 'inherit' });
 run(npm, ['run', 'verify:cms-package'], { cwd: packageRoot, stdio: 'inherit' });
 run(npm, ['run', 'verify:cms-adapter-smoke'], { cwd: packageRoot, stdio: 'inherit' });
 run(npm, ['run', 'verify:cms-sqlite-smoke'], { cwd: packageRoot, stdio: 'inherit' });
+run(npm, ['run', 'verify:cms-theme-import'], { cwd: packageRoot, stdio: 'inherit' });
 run(npm, ['run', 'verify:cms-browser-smoke'], { cwd: packageRoot, stdio: 'inherit' });
 run(npm, ['run', 'pack:check'], { cwd: packageRoot, stdio: 'inherit' });
 
@@ -182,6 +183,17 @@ try {
   for (const needle of ['useDemoBootstrap', 'demoOk', 'buildDemoCmsBootstrap', '_demo: true', 'demo.localhost']) {
     assert.equal(indexJs.includes(needle), false, `installed dist contains fake machinery: ${needle}`);
   }
+
+  // Prove CLI bin survives packed install
+  const binJs = join(installedRoot, 'bin/agentsam-cms.js');
+  assert.ok(existsSync(binJs), 'installed agentsam-cms bin missing');
+  const help = spawnSync(process.execPath, [binJs, '--help'], {
+    cwd: consumer,
+    encoding: 'utf8',
+    env: consumerNpmEnv(),
+  });
+  assert.equal(help.status, 0, `agentsam-cms --help failed: ${help.stderr || help.stdout}`);
+  assert.ok(/create|import-theme|dev/i.test(help.stdout), 'agentsam-cms help missing create/import/dev');
 
   console.log(
     `verify-cms-release OK ${installed.name}@${installed.version} · exports=${Object.keys(exportsMap).length} · fresh consumer ${consumer}`,
