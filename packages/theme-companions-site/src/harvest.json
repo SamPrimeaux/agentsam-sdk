@@ -2,11 +2,13 @@
   "harvest_batch": "theme-harvest-20260924",
   "app_path": "apps/companions-site",
   "harvest_path": "work/theme-harvest/companions-site",
-  "status": "scaffolded",
+  "status": "needs_normalization",
   "source_hash": "cdad95d1a674b05456a6166f9fc70d86dce106d4215395601164ec40ac161f7b",
   "capabilities": [
     "cms.media",
     "cms.pages",
     "theme.storefront.shell"
-  ]
+  ],
+  "lineage": "coc",
+  "family": "nonprofit-campaign"
 }

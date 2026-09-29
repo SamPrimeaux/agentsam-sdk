@@ -25,7 +25,10 @@
     "kind": "theme",
     "slug": "handyman-site",
     "galleryPath": "apps/theme-gallery-preview/themes/handyman-site",
-    "installable": true,
-    "icon": "theme"
+    "installable": false,
+    "icon": "theme",
+    "lineage": "phs",
+    "family": "trade-services",
+    "normalization": "needs_normalization"
   }
 }

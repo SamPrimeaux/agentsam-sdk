@@ -2,7 +2,7 @@
   "harvest_batch": "theme-harvest-20260924",
   "app_path": "apps/church-site",
   "harvest_path": "work/theme-harvest/church-site",
-  "status": "scaffolded",
+  "status": "needs_normalization",
   "source_hash": "0a8ae5de768f874ccdebe92a5e438ad8e4d51b4c5fdae9679c7e09268328fee6",
   "capabilities": [
     "cms.media",
@@ -10,5 +10,7 @@
     "deploy.receipt",
     "forms.leads",
     "theme.storefront.shell"
-  ]
+  ],
+  "lineage": "nic",
+  "family": "community-faith"
 }

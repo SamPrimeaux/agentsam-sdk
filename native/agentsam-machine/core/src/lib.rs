@@ -122,6 +122,14 @@ pub struct FileFact {
     pub source: SourceInfo,
     pub content: ContentEvidence,
     pub classification: Classification,
+    /// Execution provenance for this fact (not file-content classification).
+    pub analysis: FileAnalysis,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct FileAnalysis {
+    /// True when Machine reused a prior analysis cache entry for this SHA.
+    pub cache_hit: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -150,7 +158,6 @@ pub struct Classification {
     pub category: String,
     pub role: String,
     pub generated: bool,
-    pub cache: bool,
     pub include_by_default: bool,
 }
 
@@ -424,6 +431,7 @@ fn inspect_file(root: &Path, path: &Path, metadata: &Metadata, receipt: &mut Mac
                 source,
                 content,
                 classification,
+                analysis: FileAnalysis { cache_hit: false },
             });
         }
         Err(error) => receipt.errors.push(MachineError {
@@ -468,9 +476,9 @@ fn inspect_symlink(root: &Path, path: &Path, metadata: &Metadata, receipt: &mut 
                     category: "link".to_string(),
                     role: "symlink".to_string(),
                     generated: false,
-                    cache: false,
                     include_by_default: false,
                 },
+                analysis: FileAnalysis { cache_hit: false },
             });
         }
         Err(error) => receipt.errors.push(MachineError {
@@ -521,7 +529,6 @@ fn classify_semantic(rel: &str, content: &ContentEvidence) -> (SourceInfo, Class
                 category: category.to_string(),
                 role: role.to_string(),
                 generated: false,
-                cache: false,
                 include_by_default: true,
             },
         );
@@ -547,7 +554,6 @@ fn classify_semantic(rel: &str, content: &ContentEvidence) -> (SourceInfo, Class
             category: category.to_string(),
             role: role.to_string(),
             generated: false,
-            cache: false,
             include_by_default: kind != "binary",
         },
     )
@@ -714,7 +720,7 @@ fn apply_fact_cache(root: &Path, receipt: &mut MachineReceipt) {
                     && cached.engine_version == ENGINE_VERSION
                     && cached.source_type == fact.source.type_id
                 {
-                    fact.classification.cache = true;
+                    fact.analysis.cache_hit = true;
                     receipt.provenance.cache.hits += 1;
                     continue;
                 }
@@ -924,7 +930,10 @@ mod tests {
         assert_eq!(beliefs.fs_kind, "file");
         assert_eq!(beliefs.source.type_id, "html");
         assert_eq!(beliefs.classification.role, "page_candidate");
+        assert!(!beliefs.classification.generated);
         assert_eq!(beliefs.content.encoding.as_deref(), Some("utf-8"));
         assert!(beliefs.content.signature.is_none());
+        // analysis.cache_hit is execution provenance, not "this file is cache content"
+        assert!(!beliefs.analysis.cache_hit || receipt.provenance.cache.hits > 0);
     }
 }

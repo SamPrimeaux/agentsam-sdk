@@ -25,7 +25,10 @@
     "kind": "theme",
     "slug": "insurance-site",
     "galleryPath": "apps/theme-gallery-preview/themes/insurance-site",
-    "installable": true,
-    "icon": "theme"
+    "installable": false,
+    "icon": "theme",
+    "lineage": "cci",
+    "family": "professional-leadgen",
+    "normalization": "needs_normalization"
   }
 }

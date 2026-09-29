@@ -2,10 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createTheme, createProductRow } from '../src/index.js';
 
-test('shinshu-site theme package exports installable contract', () => {
+test('shinshu-site theme package exports harvested (not installable) contract', () => {
   const theme = createTheme();
   assert.equal(theme.slug, "shinshu-site");
-  assert.equal(theme.installable, true);
+  assert.equal(theme.installable, false);
+  assert.equal(theme.lineage, "shin");
+  assert.equal(theme.family, "consulting-portfolio");
   assert.equal(theme.package, "@inneranimalmedia/theme-shinshu-site");
   assert.ok(Array.isArray(theme.pages));
 });

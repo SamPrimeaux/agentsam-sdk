@@ -11,7 +11,27 @@
     "harvest_batch": { "type": "string" },
     "normalization_state": {
       "type": "string",
-      "enum": ["fingerprinted", "portable", "portable-preview", "normalized", "wired", "promoted"]
+      "enum": [
+        "fingerprinted",
+        "harvested",
+        "needs_normalization",
+        "scaffolded",
+        "portable",
+        "portable-preview",
+        "normalized",
+        "remastered",
+        "package_ready",
+        "wired",
+        "promoted"
+      ]
+    },
+    "lineage": {
+      "type": "string",
+      "description": "Short remaster codename (fnf, afm, phs, …). Not the customer/donor product name."
+    },
+    "family": {
+      "type": "string",
+      "description": "Generic reusable family (editorial-commerce, service-gallery, …)."
     },
     "source_hash": { "type": "string" },
     "app_manifest": { "type": "string" },

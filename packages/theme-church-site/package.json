@@ -25,7 +25,10 @@
     "kind": "theme",
     "slug": "church-site",
     "galleryPath": "apps/theme-gallery-preview/themes/church-site",
-    "installable": true,
-    "icon": "theme"
+    "installable": false,
+    "icon": "theme",
+    "lineage": "nic",
+    "family": "community-faith",
+    "normalization": "needs_normalization"
   }
 }

@@ -25,7 +25,10 @@
     "kind": "theme",
     "slug": "shinshu-site",
     "galleryPath": "apps/theme-gallery-preview/themes/shinshu-site",
-    "installable": true,
-    "icon": "theme"
+    "installable": false,
+    "icon": "theme",
+    "lineage": "shin",
+    "family": "consulting-portfolio",
+    "normalization": "needs_normalization"
   }
 }

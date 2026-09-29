@@ -25,7 +25,10 @@
     "kind": "theme",
     "slug": "floors-site",
     "galleryPath": "apps/theme-gallery-preview/themes/floors-site",
-    "installable": true,
-    "icon": "theme"
+    "installable": false,
+    "icon": "theme",
+    "lineage": "afm",
+    "family": "service-gallery",
+    "normalization": "needs_normalization"
   }
 }

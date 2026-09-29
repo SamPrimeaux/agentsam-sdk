@@ -1,7 +1,9 @@
-/** Deterministic installable theme contract for AgentSam gallery/CMS. */
+/** Harvested donor-derived theme wrapper — not installable until remaster gates pass. */
 const THEME = {
   "id": "theme.companions-site",
   "slug": "companions-site",
+  "lineage": "coc",
+  "family": "nonprofit-campaign",
   "displayName": "Companions of Caddo",
   "version": "0.1.0",
   "kind": "gallery-theme",
@@ -39,7 +41,7 @@ const THEME = {
     "mobile": "/themes/companions-site/demo/",
     "demoUrl": "/themes/companions-site/demo/"
   },
-  "installable": true,
+  "installable": false,
   "galleryPath": "apps/theme-gallery-preview/themes/companions-site",
   "capabilityHints": [
     "theme.storefront.shell"
@@ -68,7 +70,9 @@ export function createProductRow({ accountId = null, repositoryId = null, status
     package_name: theme.package,
     metadata: {
       origin: "gallery_mount",
-      normalization_state: status === "production" ? "promoted" : "portable-preview",
+      normalization_state: status === "production" ? "promoted" : "needs_normalization",
+      lineage: theme.lineage,
+      family: theme.family,
       package: theme.package,
       gallery_path: theme.galleryPath,
       preview_kind: theme.preview?.kind || "static",

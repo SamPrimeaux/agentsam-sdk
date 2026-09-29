@@ -25,7 +25,10 @@
     "kind": "theme",
     "slug": "companions-site",
     "galleryPath": "apps/theme-gallery-preview/themes/companions-site",
-    "installable": true,
-    "icon": "theme"
+    "installable": false,
+    "icon": "theme",
+    "lineage": "coc",
+    "family": "nonprofit-campaign",
+    "normalization": "needs_normalization"
   }
 }
