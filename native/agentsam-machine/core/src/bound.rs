@@ -256,7 +256,7 @@ fn select_high_value_edges(edges: &[Value], limit: usize) -> Vec<Value> {
     }
     let priority = |t: &str| -> i32 {
         match t {
-            "template_contains_section" | "layout_contains_section" | "section_uses_snippet" | "theme_applies_to"
+            "template_contains_section" | "layout_contains_section" | "section_uses_snippet"
             | "document_uses_stylesheet" | "loads_stylesheet" | "imports" | "source_references_asset" => 100,
             "navigation_link" => 60,
             "asset_reference" => 40,

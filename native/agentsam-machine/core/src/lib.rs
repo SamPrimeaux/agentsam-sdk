@@ -882,11 +882,16 @@ mod tests {
         assert!(receipt
             .findings
             .iter()
-            .any(|f| f.get("kind") == Some(&serde_json::json!("theme_candidate"))));
+            .any(|f| f.get("kind") == Some(&serde_json::json!("theme_manifest_candidate"))
+                || f.get("capability") == Some(&serde_json::json!("theme_system"))));
         assert!(receipt
             .findings
             .iter()
-            .any(|f| f.get("type") == Some(&serde_json::json!("static_website"))));
+            .any(|f| f.get("kind") == Some(&serde_json::json!("composition"))
+                || f.get("capability") == Some(&serde_json::json!("static_html"))));
+        assert!(!receipt.edges.iter().any(|e| {
+            e.get("type") == Some(&serde_json::json!("theme_applies_to"))
+        }));
         assert!(receipt
             .artifacts
             .iter()
@@ -902,9 +907,12 @@ mod tests {
         assert!(!receipt.provenance.network_used);
 
         for finding in &receipt.findings {
+            let has_support = finding.get("evidence").is_some()
+                || finding.get("observations").is_some()
+                || finding.get("composition").is_some();
             assert!(
-                finding.get("evidence").is_some(),
-                "finding missing evidence: {finding}"
+                has_support,
+                "finding missing evidence/observations/composition: {finding}"
             );
         }
 
