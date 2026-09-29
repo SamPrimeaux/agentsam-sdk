@@ -35,6 +35,17 @@ export type CmsEditorPage = {
   metaDescription: string;
 };
 
+export type CmsEditorSiteTheme = {
+  cssVars: Record<string, string>;
+};
+
+export type CmsEditorSiteSchemas = {
+  protocol_version: number;
+  sections: unknown[];
+  blocks: unknown[];
+  fields?: unknown[];
+};
+
 export type CmsEditorSite = {
   id: string;
   name: string;
@@ -43,7 +54,28 @@ export type CmsEditorSite = {
   edited: string;
   color: string;
   pages: CmsEditorPage[];
+  /** Site-level theme authority (starter pack + editor). */
+  theme?: CmsEditorSiteTheme;
+  /** Site-level schema registry (starter pack + editor). */
+  schemas?: CmsEditorSiteSchemas;
 };
+
+/** Site metadata without hydrated page trees (aggregate reads use loadSite). */
+export type CmsSiteRecord = Omit<CmsEditorSite, 'pages'>;
+
+export type CmsSiteCreateInput = {
+  id?: string;
+  name: string;
+  domain?: string;
+  initials?: string;
+  color?: string;
+  theme?: CmsEditorSiteTheme;
+  schemas?: CmsEditorSiteSchemas;
+};
+
+export type CmsSiteUpdatePatch = Partial<
+  Pick<CmsEditorSite, 'name' | 'initials' | 'domain' | 'edited' | 'color' | 'theme' | 'schemas'>
+>;
 
 export type CmsEditorSelection = {
   kind: CmsEditorTargetKind;

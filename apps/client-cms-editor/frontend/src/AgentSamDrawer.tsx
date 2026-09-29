@@ -1,14 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { AgentPrincipal, AgentWorkbenchAdapter } from '@inneranimalmedia/agentsam-contracts';
-import { ConnectedAgentPanel } from '@inneranimalmedia/agentsam-workbench/agent';
-import { createCmsAgentContextProvider } from '@inneranimalmedia/agentsam-cms-shared';
+import { useEffect, useRef, useState } from 'react';
 import './styles/agentsam-drawer.css';
 
 export type AgentSamDrawerProps = {
   open: boolean;
   onClose: () => void;
-  adapter?: AgentWorkbenchAdapter | null;
-  principal?: AgentPrincipal | null;
   projectId: string;
   conversationId: string;
   route?: string;
@@ -18,40 +13,22 @@ export type AgentSamDrawerProps = {
   selectionLabel?: string | null;
   pendingPrompt?: string | null;
   onPendingPromptConsumed?: () => void;
+  /** Host-provided live AgentSam panel; when omitted, demo shell is shown. */
+  children?: React.ReactNode;
 };
 
 /**
- * FnF-style AgentSam Side Assistant — docked slide-in chat.
- * Ports fuelnfreetime admin agentsam drawer UX into the CMS editor shell.
+ * CMS side-assistant chrome. Live AgentSam UI is injected by the host via children.
+ * Core package never imports agentsam-workbench.
  */
 export function AgentSamDrawer({
   open,
   onClose,
-  adapter,
-  principal,
-  projectId,
-  conversationId,
-  route,
-  pageId,
-  sectionId,
-  blockId,
   selectionLabel,
   pendingPrompt,
   onPendingPromptConsumed,
+  children,
 }: AgentSamDrawerProps) {
-  const contextProvider = useMemo(() => createCmsAgentContextProvider(() => ({
-    principal: principal || {
-      accountId: 'demo',
-      authUserId: 'demo',
-      displayName: 'Demo',
-    },
-    projectId,
-    route,
-    pageId,
-    sectionId,
-    blockId,
-  })), [principal, projectId, route, pageId, sectionId, blockId]);
-
   const status = selectionLabel
     ? `Editing “${selectionLabel}”`
     : 'Context-aware admin chat';
@@ -84,16 +61,7 @@ export function AgentSamDrawer({
           </button>
         </header>
 
-        {adapter ? (
-          <ConnectedAgentPanel
-            className="agentsam-connected"
-            adapter={adapter}
-            contextProvider={contextProvider}
-            conversationId={conversationId}
-            header={null}
-            empty={<div className="agentsam-empty">Ask about this page, sections, or publish flow. I’ll use the current CMS selection.</div>}
-          />
-        ) : (
+        {children || (
           <DemoDrawerChat
             selectionLabel={selectionLabel}
             pendingPrompt={pendingPrompt}
@@ -117,7 +85,7 @@ function DemoDrawerChat({
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; text: string }[]>([
     {
       role: 'assistant',
-      text: 'Ask about this page, store operations, customers, content, or repository work. I’ll route the request using the current CMS context.',
+      text: 'Ask about this page or content. Bind a host AgentSam panel to run live tools — this shell is chrome only.',
     },
   ]);
   const [value, setValue] = useState('');
@@ -147,7 +115,7 @@ function DemoDrawerChat({
       ...prev,
       {
         role: 'assistant',
-        text: `Got it${scope}. In demo mode this drawer mirrors the FnF Side Assistant — bind an AgentSam adapter to run live tools.`,
+        text: `Got it${scope}. No AgentSam host is attached — provide CmsAgentHost.renderDrawer from the consumer to enable live tools.`,
       },
     ]);
     setBusy(false);

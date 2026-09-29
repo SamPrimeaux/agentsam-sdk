@@ -1,72 +1,92 @@
-# AgentSam Client CMS Editor
+# AgentSam Client CMS
 
-Authoring/control application for AgentSam CMS. This directory is a self-contained npm workspace root inside the SDK repository and is intentionally **not** part of the SDK root workspace graph.
+Reusable, white-label **website + CMS application kit** published as `@inneranimalmedia/client-cms-editor`.
 
-It was imported from `SamPrimeaux/inneranimalmedia` at the exact revision recorded in `IMPORT_PROVENANCE.json`. The donor browser editor is preserved, then normalized into explicit frontend/backend/shared package boundaries.
+A developer can scaffold a customer website, run it completely locally, browse the public pages and CMS, customize or import a theme, edit and publish through real local persistence, then connect identity/cloud/deployment providers without replacing the CMS or content model.
 
-```text
-apps/client-cms-editor/
-├─ package.json
-├─ package-lock.json
-├─ frontend/                 CMS authoring UI + shared AgentSam workbench adapter
-│  ├─ package.json
-│  └─ src/
-├─ backend/                  host-neutral CMS API/routing/preview client bridge
-│  ├─ package.json
-│  └─ src/
-├─ shared/
-│  └─ cms/                   pure CMS editor/publication/binding/context contracts
-│     ├─ package.json
-│     └─ src/
-└─ reference/                immutable donor docs/lock/config for comparison only
-```
-
-## Product boundary
-
-CMS Studio is the authenticated authoring/control product. It is **not** the public website runtime.
+**Authority order:** donor behavior → this npm package → adapters under the UX → registry receipts last.  
+See [`ALPHA.md`](./ALPHA.md) and [`acceptance/cms-parity.v1.json`](./acceptance/cms-parity.v1.json).
 
 ```text
-CMS Studio
-  ├─ pages / sections / themes / assets
-  ├─ AgentSam through @inneranimalmedia/agentsam-workbench
-  ├─ preview
-  └─ publish
-       ↓
-publication snapshot
-  ├─ D1 metadata
-  └─ WEBSITE_ASSETS (R2 content/media/theme artifacts)
-       ↓
-small public CMS runtime
-       ↓
-<public-host>/*
+scaffold
+  ↓
+customer project
+  ├── public multi-page site (header / pages / footer)
+  └── protected CMS (pages · sections · blocks · media · theme · draft/preview/publish)
+        ↓
+same CmsEditorAdapter authority
 ```
 
-The visitor-facing runtime should ship its normal frontend JavaScript through the normal static deployment bundle. R2 is for CMS-managed content/media and generated artifacts, not a replacement for the application bundle.
-
-## Shared AgentSam rule
-
-CMS must not invent its own chat/browser/terminal/auth stack. `frontend/src/CmsAgentSurface.tsx` is a thin CMS adapter around `@inneranimalmedia/agentsam-workbench`; the host supplies an `AgentWorkbenchAdapter`, authenticated `AgentPrincipal`, and explicit CMS context. No fake AgentSam endpoint is provided by this app.
-
-Identity remains outside the workbench. IAM establishes `accountId` / `authUserId`, application authorization resolves CMS access, and only then may optional browser/container execution be created.
-
-## Cloud binding contract
-
-`shared/cms/src/cloudflare-bindings.ts` defines the capability-driven names. `DB` and `WEBSITE_ASSETS` are the CMS cloud baseline. `SESSION_CACHE` is cache-only and cannot be identity/session authority. `MY_CONTAINER` and `MYBROWSER` are optional execution capabilities and cannot establish identity.
-
-## Canonical CMS backend
-
-This app's `backend/` is currently the portable API/routing/preview bridge that talks to `/api/cms/*`. The full canonical CMS domain still lives in the Inner Animal Media platform under `src/core/agentsam/cms/` at the donor revision. Do not copy that 166-file domain into this app and create a second authority. Its next extraction target is a product-neutral `packages/agentsam-cms/` family.
-
-## Development
-
-From this directory:
+## First-run (local before cloud)
 
 ```bash
-npm ci
-npm run typecheck
-npm test
-npm run build
-npm run dev
+npx agentsam-cms create my-site --starter heuristic   # or blank | import --theme ./old-theme.zip
+cd my-site
+npx agentsam-cms dev
 ```
 
-Standalone dev requires explicit site context, for example `/?site=my-site`. In a real authenticated host, mount `CmsEditor` with the resolved site/project identity.
+Then browse:
+
+| URL | Surface |
+|-----|---------|
+| `http://localhost:4317/` | Published public home |
+| `http://localhost:4317/about` | Published interior page |
+| `http://localhost:4317/cms` | Protected CMS (local-dev principal by default) |
+
+No GitHub / Cloudflare / Supabase account is required to inspect or use the local product.
+
+### Starters
+
+| Starter | Meaning |
+|---------|---------|
+| **Heuristic** | Built-in multipage starter pack |
+| **Blank** | Empty durable site shell |
+| **Import existing theme** | Directory or `.zip` → safe intake → ThemePack → `installStarterPack` |
+
+Imported themes are normalized into the **same** `CmsStarterPack` contract Heuristic uses. The editor never parses ZIP/Liquid itself — import/refinery tooling does.
+
+## Architecture
+
+```text
+CmsEditor / public renderer
+        ↓
+CmsEditorAdapter
+
+LOCAL     →  ./sqlite-adapter  (Node / node:sqlite)
+CLOUD     →  D1 + R2 adapter
+OTHER     →  HTTP / custom
+```
+
+- Browser CMS UI does **not** import `node:sqlite`.
+- `./sqlite-adapter`, `./import`, and `./local` are Node/local-runtime surfaces.
+- Root package `engines` stay cross-runtime (`node >= 20`); only `./sqlite-adapter` documents the `node:sqlite` requirement.
+
+## Auth boundary
+
+`/cms` is protected through a portable `CmsAuthHost` contract. Local scaffolds use an explicit local-development principal. Consumers wire OAuth/OIDC/GitHub App/their identity service without rebuilding route protection.
+
+## Persistence
+
+| Adapter | Role |
+|---------|------|
+| SQLite | desktop/offline authority via `./sqlite-adapter` |
+| D1 + R2 | cloud authority from **proven** OAuth resources |
+| HTTP / custom | consumer backend |
+| localStorage | UI chrome cache only — never scaffolded as authority |
+
+## Development / gates
+
+```bash
+cd apps/client-cms-editor
+npm ci
+npm run build
+npm run verify:cms
+# package + memory + sqlite durability + theme import + browser isolation + pack/bin
+```
+
+Release (`private:false` required):
+
+```bash
+npm run verify:cms-release
+npm publish --tag alpha --access public
+```

@@ -1,0 +1,10 @@
+f0547d7 2026-07-22 Restore storefront scrolling and add content implementation plan
+4fa6aab 2026-07-22 Merge pull request #1 from SamPrimeaux/dependabot/npm_and_yarn/npm_and_yarn-601a66c84a
+47ed506 2026-07-21 Build Inner Animals storefront and VPC adoption scaffold
+f76586b 2026-07-21 fix(wrangler): main entry is dist/server/index.js not worker/index.ts (vinext compiled output)
+65685cb 2026-07-21 fix(wrangler): correct assets.directory to dist/client (vinext build output)
+2f2f907 2026-07-21 chore: add deploy:prod script for inneranimals production Worker
+36a7d5d 2026-07-21 chore: add wrangler.production.toml for inneranimals Worker (inneranimals.com)
+04968e3 2026-07-22 Bump the npm_and_yarn group across 1 directory with 4 updates
+b63cba7 2026-07-21 Build professional visual CMS editor
+c0f9923 2026-07-21 Initialize studio CMS editor

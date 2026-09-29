@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Connected | New Iberia Church of Christ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./unified-header.css">
+    <link rel="stylesheet" href="./unified-footer.css">
+    <script src="./unified-header.js" defer></script>
+
+    <style>
+        :root {
+            /* Light Glass Theme Variables */
+            --bg-primary: #fdfbf7;
+            --bg-glass-light: rgba(255, 255, 255, 0.85);
+            --bg-glass-dark: rgba(37, 99, 235, 0.1);
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-glass: rgba(226, 232, 240, 0.5);
+            --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.08);
+            --blue-primary: #2563eb;
+            --blue-gradient: linear-gradient(135deg, rgba(37, 99, 235, 0.9), rgba(59, 130, 246, 0.85));
+            --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --container-max: 1400px;
+            --section-padding: clamp(3rem, 8vw, 6rem);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-body);
+            color: var(--text-primary);
+            background: var(--bg-primary);
+            line-height: 1.6;
+            font-size: clamp(16px, 1.5vw, 18px);
+            overflow-x: hidden;
+        }
+
+
+
+        /* ===== PAGE HERO ===== */
+        .page-hero {
+            padding-top: calc(var(--header-height, 100px) + clamp(4rem, 8vw, 6rem));
+            padding-bottom: clamp(4rem, 8vw, 6rem);
+            text-align: center;
+            max-width: var(--container-max);
+            margin: 0 auto;
+            padding-left: clamp(2rem, 4vw, 3rem);
+            padding-right: clamp(2rem, 4vw, 3rem);
+        }
+
+        .page-title {
+            font-size: clamp(36px, 5vw, 64px);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+        }
+
+        .page-intro {
+            font-size: clamp(18px, 2vw, 22px);
+            color: var(--text-secondary);
+            line-height: 1.8;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* ===== PAGE CONTENT ===== */
+        .page-section {
+            padding: var(--section-padding) clamp(2rem, 4vw, 3rem);
+            max-width: var(--container-max);
+            margin: 0 auto;
+        }
+
+        .pathways-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+            gap: clamp(2rem, 4vw, 3rem);
+            margin-top: clamp(3rem, 6vw, 4rem);
+        }
+
+        .pathway-card {
+            background: var(--bg-glass-light);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-glass);
+            border-radius: 20px;
+            padding: clamp(2.5rem, 4vw, 3.5rem);
+            box-shadow: var(--shadow-glass);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pathway-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--blue-gradient);
+        }
+
+        .pathway-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 48px rgba(37, 99, 235, 0.15);
+        }
+
+        .pathway-icon {
+            width: 64px;
+            height: 64px;
+            background: var(--bg-glass-dark);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pathway-icon svg {
+            width: 32px;
+            height: 32px;
+            stroke: var(--blue-primary);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .pathway-title {
+            font-size: clamp(24px, 2.5vw, 32px);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .pathway-description {
+            color: var(--text-secondary);
+            font-size: clamp(16px, 1.4vw, 18px);
+            line-height: 1.7;
+            flex-grow: 1;
+        }
+
+        .btn-cta {
+            min-height: 48px;
+            padding: 14px clamp(24px, 3vw, 32px);
+            background: var(--blue-gradient);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: clamp(15px, 1.2vw, 16px);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            align-self: flex-start;
+        }
+
+        .btn-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.4);
+        }
+
+        .cta-row {
+            display: flex;
+            gap: clamp(1rem, 2vw, 1.5rem);
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: clamp(4rem, 8vw, 6rem) auto 0;
+            padding: 0 clamp(2rem, 4vw, 3rem);
+            max-width: var(--container-max);
+        }
+
+        .info-block {
+            background: var(--bg-glass-light);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-glass);
+            border-radius: 20px;
+            padding: clamp(2.5rem, 4vw, 3.5rem);
+            margin: clamp(3rem, 6vw, 5rem) auto;
+            box-shadow: var(--shadow-glass);
+            max-width: 900px;
+        }
+
+        .info-block h3 {
+            font-size: clamp(24px, 3vw, 32px);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+        }
+
+        .info-block p {
+            color: var(--text-secondary);
+            font-size: clamp(16px, 1.5vw, 18px);
+            line-height: 1.8;
+            margin-bottom: 1.5rem;
+        }
+
+
+
+        @media (max-width: 768px) {}
+    </style>
+</head>
+
+<body>
+    <!-- Unified Header injected by JS -->
+
+    <!-- ===== PAGE HERO ===== -->
+    <section class="page-hero">
+        <h1 class="page-title">Get Connected</h1>
+        <p class="page-intro">
+            Church is more than attending a service — it's belonging to a family. We make it easy to take your next
+            step, meet people, and get involved at your comfort level.
+        </p>
+        <p class="page-intro" style="margin-top: 1.5rem; font-size: clamp(16px, 1.8vw, 18px);">
+            We believe God created us for relationship with Him and with each other. We believe the church is the family
+            of God — the community of believers saved by the blood of Christ. Whether you're new to the area or new to
+            faith, there's a place for you here.
+        </p>
+    </section>
+
+    <!-- ===== CONNECTION PATHWAYS ===== -->
+    <section class="page-section">
+        <div class="pathways-grid">
+            <!-- Visit a Gathering -->
+            <div class="pathway-card">
+                <div class="pathway-icon">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                </div>
+                <h2 class="pathway-title">Visit a Gathering</h2>
+                <p class="pathway-description">
+                    We believe in welcoming, respectful environments where everyone belongs. Come as you are. No
+                    pressure. Whether you've been in church for years or you're just starting to explore faith, you're
+                    welcome here.
+                </p>
+                <div style="margin-top: 1rem; padding: 1.5rem; background: var(--bg-glass-dark); border-radius: 12px;">
+                    <p
+                        style="font-size: clamp(14px, 1.2vw, 15px); color: var(--text-secondary); margin-bottom: 0.5rem;">
+                        <strong style="color: var(--text-primary);">Sunday Service:</strong> 10:00 AM
+                    </p>
+                    <p
+                        style="font-size: clamp(14px, 1.2vw, 15px); color: var(--text-secondary); margin-bottom: 0.5rem;">
+                        <strong style="color: var(--text-primary);">Adult Bible Class:</strong> 9:30 AM
+                    </p>
+                    <p style="font-size: clamp(14px, 1.2vw, 15px); color: var(--text-secondary);"><strong
+                            style="color: var(--text-primary);">Kids Service:</strong> 9:00 AM</p>
+                </div>
+                <a href="#" class="btn-cta" onclick="openModal('question'); return false;">Plan Your Visit</a>
+            </div>
+
+            <!-- Join a Group -->
+            <div class="pathway-card">
+                <div class="pathway-icon">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                </div>
+                <h2 class="pathway-title">Join a Group</h2>
+                <p class="pathway-description">
+                    We believe spiritual growth happens best in community. We believe God transforms us through the Holy
+                    Spirit, and that transformation happens when we gather together. Men's and women's gatherings are
+                    open to all ages.
+                </p>
+                <p class="pathway-description" style="margin-top: 1rem;">
+                    <strong>Fight Club</strong> (Men) — Second Monday of each month at 6:00 PM<br>
+                    <strong>Rooted</strong> (Women) — First Tuesday of each month at 6:00 PM
+                </p>
+                <a href="./groups" class="btn-cta">Explore Groups</a>
+            </div>
+
+            <!-- Serve With Us -->
+            <div class="pathway-card">
+                <div class="pathway-icon">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        <line x1="12" y1="12" x2="12" y2="20"></line>
+                        <line x1="8" y1="16" x2="16" y2="16"></line>
+                    </svg>
+                </div>
+                <h2 class="pathway-title">Serve With Us</h2>
+                <p class="pathway-description">
+                    We believe the Holy Spirit gives believers spiritual gifts to be used to help others. We believe the
+                    church exists to make disciples and serve our community. Outreach is one of the ways we live out our
+                    faith — showing up for our neighbors with hands-on love.
+                </p>
+                <a href="./mission" class="btn-cta">Volunteer / Serve</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== BOTTOM CTA SECTION ===== -->
+    <section class="page-section">
+        <div class="cta-row">
+            <a href="./groups" class="btn-cta">Explore Groups</a>
+            <a href="./mission" class="btn-cta">Volunteer / Serve</a>
+            <a href="#" class="btn-cta" onclick="openModal('prayer'); return false;">Submit Prayer Request</a>
+        </div>
+    </section>
+
+    <!-- ===== FOOTER ===== -->
+    <footer id="unified-footer"></footer>
+
+
+
+    <!-- ===== MODAL SYSTEM ===== -->
+    <script src="./unified-footer.js"></script>
+</body>
+
+</html>

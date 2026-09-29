@@ -30,7 +30,7 @@
 .cms-agent-workbench [data-agent-composer]>div{display:flex;align-items:center;gap:6px;margin-top:6px}
 .cms-agent-workbench [data-agent-composer] button,.cms-agent-workbench [data-agent-composer] select{min-height:29px;border:1px solid var(--border-2);border-radius:6px;background:var(--surface-1);color:var(--text-2);padding:0 9px;font-size:9px}
 
-/* FnF theme-editor shell — rail | library | inspector+canvas | AgentSam dock */
+/* Theme-editor shell — rail | library | inspector+canvas | agent dock */
 .cms-shell--fnf{grid-template-rows:48px minmax(0,1fr) 24px;background:#f4f4f5}
 .fnf-topbar{grid-row:1;height:48px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 12px;background:#1f1f1f;color:#e8e8e8;position:relative;z-index:40;border-bottom:1px solid #2a2a2a}
 .fnf-topbar-left{display:flex;align-items:center;gap:8px;min-width:0;flex:none}
@@ -104,3 +104,55 @@
   .statusbar{display:none}
   .mobile-tabs{display:grid}
 }
+
+/* Product shell — adapter-driven CmsEditor (not donor prototype chrome) */
+.cms-shell--product,.cms-shell--loading,.cms-shell--error{display:flex;flex-direction:column;min-height:100vh;background:var(--shell-bg);color:var(--text-1)}
+.cms-shell--loading,.cms-shell--error{align-items:center;justify-content:center;gap:12px;padding:32px;text-align:center}
+.cms-shell--error h1{margin:0;font-size:22px;letter-spacing:-.02em}
+.cms-shell--error p,.cms-shell--loading p{margin:0;max-width:420px;color:var(--text-2);line-height:1.55}
+.cms-shell--error code{font-family:var(--font-mono);font-size:11px;background:var(--surface-2);padding:2px 6px;border-radius:4px}
+.cms-ephemeral-banner{background:var(--warning-muted);color:#7a5a12;padding:8px 14px;font-size:12px;border-bottom:1px solid rgba(245,158,11,.35);text-align:center}
+.cms-topbar{height:48px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 14px;background:var(--topbar-bg);border-bottom:1px solid var(--topbar-border)}
+.cms-topbar>div:first-child{display:flex;flex-direction:column;min-width:0}
+.cms-topbar strong{font-size:13px}
+.cms-topbar span{font-size:10px;color:var(--text-3)}
+.cms-topbar-actions{display:flex;align-items:center;gap:6px}
+.cms-topbar-actions button{min-height:30px;border:1px solid var(--border-2);border-radius:6px;background:var(--surface-1);padding:0 10px;cursor:pointer;font-size:11px}
+.cms-topbar-actions button:hover{background:var(--surface-2)}
+.cms-topbar-actions .badge{font-size:10px;text-transform:uppercase;letter-spacing:.04em;border-radius:999px;padding:4px 8px;font-weight:700}
+.cms-topbar-actions .badge.draft{background:var(--warning-muted);color:#7a5a12}
+.cms-topbar-actions .badge.saved{background:var(--success-muted);color:#0a7a3e}
+.cms-workspace{flex:1;min-height:0;display:grid;grid-template-columns:52px 220px minmax(0,1fr) 300px}
+.cms-rail{background:var(--rail-bg);border-right:1px solid var(--border-3);display:flex;flex-direction:column;align-items:stretch;padding:6px;gap:4px}
+.cms-rail button{border:0;background:transparent;color:var(--text-3);padding:10px 6px;border-radius:8px;cursor:pointer;text-transform:capitalize;font-size:10px}
+.cms-rail button:hover,.cms-rail button.active{background:var(--rail-active);color:var(--accent)}
+.cms-sidebar,.cms-inspector{background:var(--sidebar-bg);overflow:auto;padding:10px}
+.cms-sidebar{border-right:1px solid var(--sidebar-border)}
+.cms-inspector{border-left:1px solid var(--panel-border)}
+.cms-sidebar ul,.cms-inspector ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.cms-sidebar li button{width:100%;border:0;background:transparent;text-align:left;padding:8px 10px;border-radius:6px;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.cms-sidebar li button:hover,.cms-sidebar li button.active{background:var(--accent-muted)}
+.cms-sidebar small,.cms-inspector p{color:var(--text-3);font-size:10px}
+.cms-inspector h2{margin:0 0 4px;font-size:14px}
+.cms-inspector label{display:flex;flex-direction:column;gap:4px;margin:10px 0;font-size:11px}
+.cms-inspector input{border:1px solid var(--border-2);border-radius:5px;padding:8px;background:#fff}
+.cms-error{color:var(--danger);font-size:11px}
+.cms-canvas-wrap{min-width:0;min-height:0;display:flex;flex-direction:column;background:var(--canvas-bg);background-image:radial-gradient(var(--canvas-dot-color) 1px,transparent 1px);background-size:16px 16px}
+.cms-viewport-switch{display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--border-3);background:rgba(255,255,255,.7)}
+.cms-viewport-switch button{border:1px solid var(--border-2);background:#fff;border-radius:5px;padding:4px 10px;font-size:10px;text-transform:capitalize;cursor:pointer}
+.cms-viewport-switch button.active{background:var(--accent-muted);border-color:var(--accent-border);color:var(--accent)}
+.cms-canvas{flex:1;overflow:auto;padding:16px;max-width:100%}
+.cms-canvas--phone{max-width:420px;margin:0 auto}
+.cms-canvas--tablet{max-width:780px;margin:0 auto}
+.cms-canvas-meta{display:flex;gap:10px;align-items:baseline;margin-bottom:12px}
+.cms-canvas-meta em{margin-left:auto;font-size:10px;color:var(--text-3);font-style:normal}
+.cms-canvas-sections{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.cms-canvas-sections>li{background:#fff;border:1px solid var(--border-2);border-radius:8px;overflow:hidden}
+.cms-canvas-sections button{width:100%;border:0;background:transparent;text-align:left;padding:12px 14px;cursor:pointer;display:flex;gap:8px;align-items:center}
+.cms-canvas-sections button.is-selected{background:var(--accent-muted)}
+.cms-canvas-sections small{color:var(--text-3);font-size:10px}
+.cms-canvas-sections em{margin-left:auto;font-size:9px;color:var(--warning);font-style:normal}
+.cms-canvas-sections dl{margin:0;padding:0 14px 12px;display:grid;grid-template-columns:120px 1fr;gap:6px 10px;font-size:11px}
+.cms-canvas-sections dt{color:var(--text-3)}
+.cms-canvas-empty{padding:40px;text-align:center;color:var(--text-3)}
+.cms-settings{display:flex;flex-direction:column;gap:8px;font-size:12px;color:var(--text-2)}

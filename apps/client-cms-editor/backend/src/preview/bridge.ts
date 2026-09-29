@@ -1,5 +1,5 @@
 import { selectCmsEditorTarget } from '../model';
-import type { CmsEditorSelection } from '@inneranimalmedia/agentsam-cms-shared';
+import type { CmsEditorSelection } from '../../../shared/cms/src/index';
 
 export const CMS_EDITOR_PREVIEW_TYPES = {
   READY: 'cms:ready', SELECT: 'cms:select', SECTION_CLICK: 'cms:section-click', HIGHLIGHT: 'cms:highlight',

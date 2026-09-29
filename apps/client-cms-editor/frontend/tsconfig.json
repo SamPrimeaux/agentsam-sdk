@@ -17,7 +17,18 @@
     "types": [
       "vite/client"
     ],
-    "preserveSymlinks": true
+    "preserveSymlinks": true,
+    "baseUrl": ".",
+    "paths": {
+      "@inneranimalmedia/agentsam-cms-shared": ["../shared/cms/src/index.ts"],
+      "@inneranimalmedia/agentsam-cms-shared/*": ["../shared/cms/src/*"],
+      "@inneranimalmedia/agentsam-cms-backend/api": ["../backend/src/api/client.ts"],
+      "@inneranimalmedia/agentsam-cms-backend/model": ["../backend/src/model.ts"],
+      "@inneranimalmedia/agentsam-cms-backend/preview": ["../backend/src/preview/bridge.ts"],
+      "@inneranimalmedia/agentsam-cms-backend/routing": ["../backend/src/routing/index.js"],
+      "@inneranimalmedia/agentsam-cms-backend": ["../backend/src/index.ts"],
+      "@inneranimalmedia/agentsam-cms-backend/*": ["../backend/src/*"]
+    }
   },
   "include": [
     "src"

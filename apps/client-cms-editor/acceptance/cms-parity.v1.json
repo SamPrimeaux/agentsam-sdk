@@ -1,0 +1,285 @@
+{
+  "schema": "agentsam.cms.parity.v1",
+  "package": "@inneranimalmedia/client-cms-editor",
+  "authority": "donor_behavior",
+  "donors": {
+    "primary": {
+      "repository": "SamPrimeaux/studio-cms-editor",
+      "editor": "app/studio/page.tsx",
+      "styles": "app/globals.css",
+      "role": "behavioral_acceptance_authority",
+      "local_checkout_hint": "studio-cms-editor sibling checkout (read-only)"
+    },
+    "harvest": {
+      "path": "reference/harvest",
+      "receipt": "reference/harvest/HARVEST_RECEIPT.json",
+      "plans": "reference/harvest/plans/CMS-EDITOR-HARVEST.md"
+    }
+  },
+  "content_model": {
+    "donor": "Site \u2192 PageData \u2192 Section \u2192 fields/css",
+    "target": "Site \u2192 Page \u2192 Section \u2192 Block \u2192 Fields \u2192 DraftRevision \u2192 PublicationRevision"
+  },
+  "anti_goals": [
+    "fake contacts / emails / analytics / collaboration users",
+    "fake save delays / upload progress / publish success",
+    "hardcoded Connected states presented as live",
+    "hardcoded page metrics presented as measured",
+    "localStorage as persistence authority",
+    "demo customer/site names as generic defaults",
+    "deployment hardcoding (inneranimalmedia.com, fixed D1 UUID/account, env.DB as product resource)",
+    "monorepo-only path imports in published artifact",
+    "registry/D1 product rows as product authority before the npm artifact exists",
+    "diluting donor UX into a thinner generic shell without parity justification"
+  ],
+  "m1_loop": {
+    "id": "draft_reload_preview_publish",
+    "required": true,
+    "steps": [
+      "open site",
+      "see real page tree",
+      "open page",
+      "canvas renders draft",
+      "select section in tree",
+      "canvas highlights",
+      "click canvas section",
+      "tree/inspector select",
+      "edit field",
+      "dirty state",
+      "Save Draft",
+      "reload",
+      "value persists",
+      "preview draft",
+      "published version unchanged",
+      "Publish",
+      "published revision changes"
+    ],
+    "status": "failing"
+  },
+  "capabilities": {
+    "surfaces": {
+      "pages": {
+        "donor": true,
+        "status": "partial",
+        "notes": "UI present; persistence not proven standalone"
+      },
+      "sections": {
+        "donor": true,
+        "status": "partial",
+        "notes": "UI + API client; needs adapter-backed save/reload"
+      },
+      "blocks": {
+        "donor": true,
+        "status": "partial",
+        "notes": "Block model present; inspector incomplete vs donor"
+      },
+      "templates": {
+        "donor": true,
+        "status": "partial"
+      },
+      "media": {
+        "donor": true,
+        "status": "partial",
+        "notes": "Library UX exists; uploads not authoritative"
+      },
+      "crm": {
+        "donor": true,
+        "status": "reference_only",
+        "notes": "Visual reference only \u2014 never seed fake contacts"
+      },
+      "settings": {
+        "donor": true,
+        "status": "partial"
+      }
+    },
+    "canvas": {
+      "sectionSelectionHighlight": {
+        "donor": true,
+        "status": "partial"
+      },
+      "iframeSelectionBridge": {
+        "donor": true,
+        "status": "partial"
+      },
+      "scrollToSection": {
+        "donor": true,
+        "status": "unknown"
+      },
+      "responsivePreview": {
+        "donor": true,
+        "status": "partial"
+      },
+      "deviceViewports": {
+        "donor": true,
+        "status": "partial"
+      },
+      "zoomControls": {
+        "donor": true,
+        "status": "unknown"
+      }
+    },
+    "inspector": {
+      "structuredFields": {
+        "donor": true,
+        "status": "partial"
+      },
+      "booleans": {
+        "donor": true,
+        "status": "partial"
+      },
+      "arraysLists": {
+        "donor": true,
+        "status": "partial"
+      },
+      "colors": {
+        "donor": true,
+        "status": "partial"
+      },
+      "mediaRefs": {
+        "donor": true,
+        "status": "partial"
+      },
+      "opacityRanges": {
+        "donor": true,
+        "status": "partial"
+      },
+      "jsonFields": {
+        "donor": true,
+        "status": "partial"
+      },
+      "urls": {
+        "donor": true,
+        "status": "partial"
+      },
+      "dates": {
+        "donor": true,
+        "status": "partial"
+      },
+      "richText": {
+        "donor": true,
+        "status": "partial"
+      },
+      "numbers": {
+        "donor": true,
+        "status": "partial"
+      },
+      "spacingLayout": {
+        "donor": true,
+        "status": "partial"
+      },
+      "themeVariables": {
+        "donor": true,
+        "status": "partial"
+      },
+      "seoMeta": {
+        "donor": true,
+        "status": "partial"
+      }
+    },
+    "workflow": {
+      "dirtyState": {
+        "donor": true,
+        "status": "present"
+      },
+      "undoRedo": {
+        "donor": true,
+        "status": "partial"
+      },
+      "keyboardShortcuts": {
+        "donor": true,
+        "status": "partial"
+      },
+      "commandPalette": {
+        "donor": true,
+        "status": "present"
+      },
+      "createPageWizard": {
+        "donor": true,
+        "status": "partial"
+      },
+      "addSectionModal": {
+        "donor": true,
+        "status": "partial"
+      },
+      "templatePreviewApply": {
+        "donor": true,
+        "status": "partial"
+      },
+      "uploadQueue": {
+        "donor": true,
+        "status": "partial"
+      },
+      "historyRestore": {
+        "donor": true,
+        "status": "partial"
+      },
+      "draftPersistence": {
+        "donor": true,
+        "status": "failing",
+        "notes": "Must use CmsEditorAdapter; not demo/localStorage authority"
+      },
+      "explicitPublish": {
+        "donor": true,
+        "status": "partial",
+        "notes": "UI calls publish API; not proven via packed artifact + adapter"
+      },
+      "revisionHistory": {
+        "donor": true,
+        "status": "failing"
+      },
+      "schedulePublish": {
+        "donor": true,
+        "status": "not_connected",
+        "notes": "Keep UI honest \u2014 do not fake schedule success"
+      }
+    },
+    "package": {
+      "standaloneInstall": {
+        "status": "failing",
+        "notes": "private:true until anti-fake + export smoke green; then flip for release"
+      },
+      "publicNpmAlpha": {
+        "status": "failing",
+        "notes": "package does not exist on npm yet"
+      },
+      "freshConsumerSmoke": {
+        "status": "failing"
+      },
+      "noMonorepoImports": {
+        "status": "failing"
+      },
+      "noDeploymentHardcoding": {
+        "status": "failing"
+      },
+      "adapterContract": {
+        "status": "in_progress"
+      }
+    }
+  },
+  "release_staircase": [
+    "DONOR_PARITY_INVENTORY",
+    "PACKAGE_BOUNDARY",
+    "ANTI_FAKE_RUNTIME",
+    "0.1.0-alpha.0_PUBLIC_NPM",
+    "clean_install_proof",
+    "Pages_parity",
+    "Sections_parity",
+    "Blocks_Inspector_parity",
+    "Media_parity",
+    "Draft_Preview_Publish_parity",
+    "Cloud_D1_R2_adapter_proof",
+    "SQLite_adapter_proof",
+    "Embedding_host_A_consumes_package",
+    "Embedding_host_B_consumes_package",
+    "0.1.0_stable_latest"
+  ],
+  "status_values": [
+    "present",
+    "partial",
+    "failing",
+    "unknown",
+    "not_connected",
+    "reference_only",
+    "in_progress"
+  ]
+}

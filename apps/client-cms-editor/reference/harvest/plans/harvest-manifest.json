@@ -1,0 +1,97 @@
+{
+  "schema": "studio-cms-editor.harvest.v1",
+  "source": {
+    "repository": "SamPrimeaux/studio-cms-editor",
+    "reference_commit": "f0547d7"
+  },
+  "lanes": {
+    "cms_editor_donor": {
+      "decision": "keep_and_adapt",
+      "files": [
+        "app/studio/page.tsx",
+        "app/globals.css"
+      ],
+      "notes": "Preserve interaction/layout source verbatim. Replace simulated persistence/publication during implementation."
+    },
+    "chatgpt_identity_reference": {
+      "decision": "keep_and_package",
+      "files": [
+        "app/chatgpt-auth.ts"
+      ],
+      "notes": "Reference for optional OpenAI/ChatGPT identity provider/hosted adapter. Do not make CMS depend on transport headers."
+    },
+    "theme_layout_donor": {
+      "decision": "keep_and_normalize_later",
+      "files": [
+        "app/page.tsx",
+        "app/components/Storefront.tsx",
+        "app/storefront-data.ts",
+        "app/storefront.css",
+        "app/layout.tsx",
+        "app/shop/page.tsx",
+        "app/collections/[slug]/page.tsx",
+        "app/product/[slug]/page.tsx",
+        "app/journal/page.tsx",
+        "app/journal/[slug]/page.tsx",
+        "app/story/page.tsx",
+        "public/favicon.svg"
+      ],
+      "notes": "Candidate input for theme-inneranimals-site. Preserve routes/components/data/styles before normalizing into sections/blocks."
+    },
+    "content_plan_reference": {
+      "decision": "keep_as_provenance",
+      "files": [
+        "plans/INNERANIMALS-CONTENT-001.md"
+      ],
+      "notes": "Implementation intent and historical content plan; not reusable runtime authority."
+    },
+    "runtime_reference": {
+      "decision": "reference_only",
+      "files": [
+        ".openai/hosting.json",
+        "package.json",
+        "vite.config.ts",
+        "next.config.ts",
+        "worker/index.ts",
+        "worker/vpc.ts",
+        "wrangler.production.toml",
+        "docs/workers-vpc.md",
+        "drizzle.config.ts",
+        "db/index.ts",
+        "db/schema.ts",
+        "README.md"
+      ],
+      "notes": "Useful provenance/runtime context. Never auto-adopt deployment bindings or commands."
+    }
+  },
+  "exclude_patterns": [
+    ".git/**",
+    "node_modules/**",
+    "dist/**",
+    ".next/**",
+    ".wrangler/**",
+    ".vinext/**",
+    "*.log",
+    ".DS_Store"
+  ],
+  "junk_or_review_signals": [
+    "localStorage",
+    "setTimeout",
+    "2 others editing",
+    "Connected",
+    "uploaded",
+    "publishing",
+    "fake",
+    "demo",
+    "mock",
+    "wrangler deploy",
+    "deploy:prod"
+  ],
+  "target_suggestions": {
+    "cms": "apps/client-cms-editor or future packages/agentsam-cms family",
+    "theme": "packages/theme-inneranimals-site",
+    "theme_gallery": "apps/theme-gallery-preview/themes/inneranimals-site",
+    "identity": "packages/identity/src/providers/openai",
+    "sdk_staging": "apps/_incoming/studio-cms-editor-harvest"
+  }
+}

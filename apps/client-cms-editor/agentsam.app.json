@@ -2,28 +2,37 @@
   "schema": "agentsam.app.v1",
   "id": "client-cms-editor",
   "product_id": "cms",
-  "name": "AgentSam CMS Editor",
+  "name": "AgentSam Website + CMS Kit",
   "kind": "app",
   "package": "@inneranimalmedia/client-cms-editor",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.0",
+  "description": "Reusable white-label website + CMS kit: multipage public site, protected authoring dashboard, local SQLite, Heuristic/Blank/Import Theme starters, pluggable auth and deployment adapters.",
   "entrypoints": {
     "frontend": "./frontend",
     "backend": "./backend",
-    "cli": "./bin/agentsam-cms.mjs"
+    "cli": "./bin/agentsam-cms.js",
+    "public_renderer": "./local/public-renderer.ts",
+    "import_refinery": "./import/index.ts"
   },
   "capabilities": [
     "cms",
     "media",
     "templates",
-    "admin_content"
+    "admin_content",
+    "theme_import",
+    "local_storefront",
+    "auth_boundary"
   ],
   "provides": [
     "cms.editor",
+    "cms.public_renderer",
     "cms.templates",
     "cms.media.library",
+    "cms.theme_import",
     "workspace.panel"
   ],
   "surfaces": [
+    "public-site",
     "store",
     "theme-editor",
     "cms-editor",
@@ -31,23 +40,31 @@
     "media-library",
     "agentsam"
   ],
+  "starters": [
+    "heuristic",
+    "blank",
+    "import-existing-theme"
+  ],
   "runtime": {
     "local_preview": "ready",
     "source_scaffold": "ready",
-    "cloudflare": "ready",
+    "local_sqlite": "ready",
+    "theme_import": "ready",
+    "cloudflare": "adapter-ready",
     "github": "source-ready",
     "browser": true,
     "local": true
   },
   "commands": {
-    "preview": "agentsam-cms",
+    "create": "agentsam-cms create <directory> --starter heuristic|blank|import",
+    "dev": "agentsam-cms dev",
+    "import_theme": "agentsam-cms import-theme <source> --out <dir>",
     "doctor": "agentsam-cms doctor",
-    "scaffold": "agentsam-cms scaffold <directory>",
     "info": "agentsam-cms info"
   },
-  "bin": "bin/agentsam-cms.mjs",
+  "bin": "bin/agentsam-cms.js",
   "install": {
-    "command": "agentsam app scaffold client-cms-editor",
+    "command": "agentsam-cms create",
     "selector": "client-cms-editor",
     "paths": [
       "/install/cms",
