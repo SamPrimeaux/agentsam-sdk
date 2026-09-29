@@ -1,8 +1,10 @@
 //! Deterministic enrichment: findings, edges, artifacts from classified facts.
 use crate::assets::enrich_assets;
+use crate::frontend::enrich_frontend_source_candidates;
 use crate::liquid::enrich_liquid_structure;
 use crate::{FileFact, MachineReceipt};
-use serde_json::json;
+use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
@@ -77,6 +79,7 @@ pub fn enrich_receipt(root: &Path, receipt: &mut MachineReceipt) {
     // Transitional: line-oriented import literals only. Do not expand into regex.
     // Target: TS/JS/JSX/TSX → AST → ImportDeclaration/ExportDeclaration → edges.
     enrich_ts_imports_transitional(root, receipt, &ts_paths);
+    enrich_frontend_source_candidates(root, receipt);
 
     receipt.artifacts.push(json!({
         "kind": "inventory_summary",
@@ -91,6 +94,8 @@ pub fn enrich_receipt(root: &Path, receipt: &mut MachineReceipt) {
             "excluded_subtrees": receipt.stats.excluded_subtrees,
         }
     }));
+
+    finalize_edge_ids(receipt);
 }
 
 /// Emit literal composition observations — never premature capability labels,
@@ -313,7 +318,10 @@ fn enrich_html_documents(
                 if !label.is_empty() {
                     *shared_nav_labels.entry(label.clone()).or_default() += 1;
                 }
-                let edge_id = format!("edge:navigation_link:file:{rel}:{route}");
+                let edge_id = format!(
+                    "edge:navigation_link:file:{rel}:{route}:{}",
+                    short_hash(&format!("{href}\0{label}"))
+                );
                 nav_edge_ids.push(edge_id.clone());
                 // Edge is proven by literal href → route candidate mapping.
                 receipt.edges.push(json!({
@@ -645,6 +653,51 @@ fn strip_tags(input: &str) -> String {
         }
     }
     out
+}
+
+fn short_hash(s: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(s.as_bytes());
+    format!("{:x}", hasher.finalize())[..12].to_string()
+}
+
+/// Every graph edge must have a non-null, globally unique `id`.
+fn finalize_edge_ids(receipt: &mut MachineReceipt) {
+    let mut seen: BTreeSet<String> = BTreeSet::new();
+    for (idx, edge) in receipt.edges.iter_mut().enumerate() {
+        let literal = edge
+            .pointer("/evidence/literal")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let Some(obj) = edge.as_object_mut() else {
+            continue;
+        };
+        let base = obj
+            .get("id")
+            .and_then(|v| v.as_str())
+            .filter(|s| !s.is_empty())
+            .map(str::to_owned)
+            .unwrap_or_else(|| {
+                let etype = obj
+                    .get("type")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("edge");
+                let from = obj.get("from").and_then(|v| v.as_str()).unwrap_or("");
+                let to = obj.get("to").and_then(|v| v.as_str()).unwrap_or("");
+                format!(
+                    "edge:{etype}:{from}:{to}:{}",
+                    short_hash(&format!("{idx}\0{literal}"))
+                )
+            });
+        let mut unique = base.clone();
+        let mut n = 2u32;
+        while !seen.insert(unique.clone()) {
+            unique = format!("{base}#{n}");
+            n += 1;
+        }
+        obj.insert("id".into(), Value::String(unique));
+    }
 }
 
 #[allow(dead_code)]

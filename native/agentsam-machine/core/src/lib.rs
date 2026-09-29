@@ -4,6 +4,7 @@
 mod assets;
 mod bound;
 mod enrich;
+mod frontend;
 mod liquid;
 mod source_types;
 
@@ -17,7 +18,7 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fs::{self, File, Metadata};
 use std::io::{self, Read};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub const RECEIPT_SCHEMA: &str = "agentsam.machine.receipt.v1";
@@ -217,8 +218,28 @@ pub fn inspect_path_with_options(
     target: &Path,
     options: InspectOptions,
 ) -> io::Result<MachineReceipt> {
-    let root = fs::canonicalize(target)?;
-    let root_text = root.to_string_lossy().into_owned();
+    let inspection_target = fs::canonicalize(target)?;
+    let metadata = fs::symlink_metadata(&inspection_target)?;
+
+    // Single-file inspect: perception walks the file, but cache/artifacts live under
+    // the containing directory (never `<file>/.agentsam/...`).
+    let content_root: PathBuf = if metadata.is_file() {
+        let parent = inspection_target
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "cannot determine parent directory for file inspect target",
+                )
+            })?;
+        fs::canonicalize(parent)?
+    } else {
+        inspection_target.clone()
+    };
+
+    let root_text = inspection_target.to_string_lossy().into_owned();
+    let content_root_text = content_root.to_string_lossy().into_owned();
     let run_id = options
         .run_id
         .as_deref()
@@ -228,6 +249,7 @@ pub fn inspect_path_with_options(
 
     let mut inputs = BTreeMap::new();
     inputs.insert("target".to_string(), root_text.clone());
+    inputs.insert("content_root".to_string(), content_root_text.clone());
     inputs.insert(
         "include_generated".to_string(),
         options.include_generated.to_string(),
@@ -263,12 +285,15 @@ pub fn inspect_path_with_options(
         },
     };
 
-    let metadata = fs::symlink_metadata(&root)?;
     if metadata.is_file() {
-        let fact_root = root.parent().unwrap_or_else(|| Path::new(""));
-        inspect_file(fact_root, &root, &metadata, &mut receipt);
+        inspect_file(&content_root, &inspection_target, &metadata, &mut receipt);
     } else if metadata.is_dir() {
-        walk_directory(&root, &root, &mut receipt, options.include_generated)?;
+        walk_directory(
+            &content_root,
+            &content_root,
+            &mut receipt,
+            options.include_generated,
+        )?;
     }
 
     receipt.facts.sort_by(|a, b| a.path.cmp(&b.path));
@@ -280,13 +305,13 @@ pub fn inspect_path_with_options(
     });
 
     // Incrementality hook: reuse prior fact cache entries when sha256 + parser match.
-    apply_fact_cache(&root, &mut receipt);
+    apply_fact_cache(&content_root, &mut receipt);
 
-    enrich_receipt(&root, &mut receipt);
-    persist_fact_cache(&root, &receipt);
+    enrich_receipt(&content_root, &mut receipt);
+    persist_fact_cache(&content_root, &receipt);
 
     if options.externalize {
-        externalize_and_bound(&root, &mut receipt, BoundLimits::default())?;
+        externalize_and_bound(&content_root, &mut receipt, BoundLimits::default())?;
     }
 
     Ok(receipt)
@@ -935,5 +960,127 @@ mod tests {
         assert!(beliefs.content.signature.is_none());
         // analysis.cache_hit is execution provenance, not "this file is cache content"
         assert!(!beliefs.analysis.cache_hit || receipt.provenance.cache.hits > 0);
+
+        assert_graph_edge_ids_unique(&receipt.edges);
+    }
+
+    #[test]
+    fn single_file_inspect_externalizes_under_parent_not_file() {
+        let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join(
+            "../../../apps/client-cms-editor/fixtures/frontend-perception/page.tsx",
+        );
+        assert!(fixture.exists(), "missing fixture {}", fixture.display());
+
+        let mut opts = InspectOptions::new();
+        opts.run_id = Some("run_single_file".into());
+        opts.externalize = true;
+        let receipt = inspect_path_with_options(&fixture, opts).unwrap();
+
+        assert_eq!(receipt.stats.files, 1);
+        assert!(receipt.facts.iter().any(|f| f.path.ends_with("page.tsx")));
+        assert!(
+            receipt
+                .inputs
+                .get("content_root")
+                .is_some_and(|r| Path::new(r).is_dir()),
+            "content_root must be a directory"
+        );
+        let artifact_dir = receipt
+            .detail
+            .as_ref()
+            .and_then(|d| d.get("artifact_dir"))
+            .and_then(|v| v.as_str())
+            .expect("artifact_dir");
+        assert!(
+            artifact_dir.contains("/.agentsam/machine/runs/"),
+            "unexpected artifact_dir: {artifact_dir}"
+        );
+        assert!(
+            !artifact_dir.contains("page.tsx/.agentsam"),
+            "must not nest .agentsam under the file path: {artifact_dir}"
+        );
+        assert!(Path::new(artifact_dir).is_dir());
+    }
+
+    #[test]
+    fn frontend_perception_page_tsx_emits_generic_candidates() {
+        let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join(
+            "../../../apps/client-cms-editor/fixtures/frontend-perception/page.tsx",
+        );
+        let mut opts = InspectOptions::new();
+        opts.run_id = Some("run_frontend_perception".into());
+        opts.externalize = false;
+        let receipt = inspect_path_with_options(&fixture, opts).unwrap();
+
+        let finding = receipt
+            .findings
+            .iter()
+            .find(|f| f.get("kind") == Some(&serde_json::json!("frontend_source_candidates")))
+            .expect("frontend_source_candidates finding");
+        let candidates = finding.get("candidates").expect("candidates");
+        let routes = candidates
+            .get("route_candidate")
+            .and_then(|v| v.as_array())
+            .expect("route_candidate");
+        assert!(
+            routes.iter().any(|r| r.as_str() == Some("/")),
+            "expected slug / in routes: {routes:?}"
+        );
+        assert!(routes.iter().any(|r| r.as_str() == Some("/work")));
+
+        let shells = candidates
+            .get("shell_candidate")
+            .and_then(|v| v.as_array())
+            .expect("shell_candidate");
+        for zone in ["HEADER", "BODY", "FOOTER"] {
+            assert!(
+                shells.iter().any(|s| s.as_str() == Some(zone)),
+                "missing shell zone {zone}"
+            );
+        }
+
+        let sections = candidates
+            .get("section_candidate")
+            .and_then(|v| v.as_array())
+            .expect("section_candidate");
+        assert!(
+            sections.iter().any(|s| {
+                s.get("type").and_then(|t| t.as_str()) == Some("Hero")
+                    && s.get("zone").and_then(|z| z.as_str()) == Some("BODY")
+            }),
+            "expected Hero BODY section candidate: {sections:?}"
+        );
+
+        let tokens = candidates
+            .get("design_token_evidence")
+            .and_then(|v| v.as_array())
+            .expect("design_token_evidence");
+        assert!(tokens.iter().any(|t| {
+            t.as_str()
+                .is_some_and(|s| s.starts_with("--") || s.starts_with('#'))
+        }));
+
+        // Must stay generic — no CMS identity productization in Machine.
+        let blob = serde_json::to_string(&receipt.findings).unwrap();
+        assert!(!blob.contains("hero.cinematic"));
+        assert!(!blob.contains("navigation.minimal"));
+
+        assert_graph_edge_ids_unique(&receipt.edges);
+    }
+
+    fn assert_graph_edge_ids_unique(edges: &[Value]) {
+        use std::collections::BTreeSet;
+        let mut seen = BTreeSet::new();
+        for edge in edges {
+            let id = edge
+                .get("id")
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| panic!("edge missing non-empty id: {edge}"));
+            assert!(
+                seen.insert(id.to_string()),
+                "duplicate edge id: {id}"
+            );
+        }
     }
 }

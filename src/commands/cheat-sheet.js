@@ -1,6 +1,7 @@
 /**
  * Canonical Agent Sam cheat-sheet — gcloud-like command groups.
  * Old top-level commands remain as compatibility aliases.
+ * Every row shows a copy-pasteable `agentsam …` invocation.
  */
 
 const GROUPS = Object.freeze([
@@ -20,8 +21,12 @@ const GROUPS = Object.freeze([
     commands: [
       ['inspect', 'Bounded repository authority view'],
       ['machine', 'Deterministic local perception + asset discovery'],
+      ['machine inspect', 'Inspect a path (file or directory)'],
       ['recon', 'Bounded-worker finding packets'],
       ['codebaseindex', 'AST ingest + optional embeddings'],
+      ['index', 'Project inventory + knowledge index commands'],
+      ['index status', 'Show knowledge index freshness'],
+      ['search', 'Retrieve from the local knowledge index'],
       ['merkle', 'Integrity snapshots'],
       ['security', 'Dependency + trust-boundary scan'],
     ],
@@ -104,16 +109,30 @@ const GROUPS = Object.freeze([
       ['update', 'Component update preview (gcloud-like)'],
       ['billing', 'Billing account relationships (not --billing-project)'],
       ['cheat-sheet', 'This page'],
-      ['version', 'agentsam --version'],
+      ['version', 'Print CLI version'],
     ],
   },
 ]);
+
+/** Expand "a / b" rows into copy-pasteable `agentsam …` invocations. */
+export function agentsamInvocations(cmd) {
+  const raw = String(cmd || '').trim();
+  if (!raw) return [];
+  if (raw.includes(' / ')) {
+    return raw.split(' / ').map((part) => `agentsam ${part.trim()}`);
+  }
+  return [`agentsam ${raw}`];
+}
 
 export function listCheatSheetGroups() {
   return GROUPS.map((group) => ({
     id: group.id,
     label: group.label,
-    commands: group.commands.map(([cmd, summary]) => ({ cmd, summary })),
+    commands: group.commands.map(([cmd, summary]) => ({
+      cmd,
+      summary,
+      invocations: agentsamInvocations(cmd),
+    })),
   }));
 }
 
@@ -121,13 +140,18 @@ export function renderCheatSheet(version) {
   const lines = [
     '',
     `  Agent Sam cheat-sheet${version ? ` · v${version}` : ''}`,
-    '  Organized hierarchy · old top-level commands remain compatibility aliases.',
+    '  Organized hierarchy · each row shows a runnable `agentsam …` command.',
     '',
   ];
   for (const group of GROUPS) {
     lines.push(`  ${group.label}`);
     for (const [cmd, summary] of group.commands) {
-      lines.push(`    ${String(cmd).padEnd(42)}  ${summary}`);
+      const invocations = agentsamInvocations(cmd);
+      const primary = invocations[0] || `agentsam ${cmd}`;
+      lines.push(`    ${primary.padEnd(52)}  ${summary}`);
+      for (const extra of invocations.slice(1)) {
+        lines.push(`    ${extra.padEnd(52)}  (same group)`);
+      }
     }
     lines.push('');
   }

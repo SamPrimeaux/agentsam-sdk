@@ -147,6 +147,11 @@ pub fn enrich_assets(root: &Path, receipt: &mut MachineReceipt) {
                 .unwrap_or("asset");
 
             receipt.edges.push(json!({
+                "id": format!(
+                    "edge:asset_reference:file:{file}:{}:{}",
+                    short_hash(&asset.resolved),
+                    short_hash(&format!("{attribute}\0{literal}"))
+                ),
                 "from": format!("file:{file}"),
                 "to": format!("asset:{}", asset.resolved),
                 "type": "asset_reference",
@@ -461,6 +466,12 @@ fn asset_id(resolved: &str) -> String {
     hasher.update(resolved.as_bytes());
     let digest = hasher.finalize();
     format!("asset_{}", hex_prefix(&digest, 12))
+}
+
+fn short_hash(s: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(s.as_bytes());
+    format!("{:x}", hasher.finalize())[..12].to_string()
 }
 
 fn hex_prefix(bytes: &[u8], n: usize) -> String {
