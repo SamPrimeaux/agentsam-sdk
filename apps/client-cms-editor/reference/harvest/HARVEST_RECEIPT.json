@@ -1,0 +1,201 @@
+{
+  "schema": "studio-cms-editor.harvest-receipt.v1",
+  "created_at": "2026-09-27T22:47:42.525529+00:00",
+  "source": {
+    "repository": "https://github.com/SamPrimeaux/studio-cms-editor",
+    "branch": "harvest/studio-cms-extraction-kit-20260927",
+    "commit": "2cefa5d9c05f2c3344973403d4a60f4b13320881",
+    "dirty_status": [
+      "M package-lock.json"
+    ]
+  },
+  "output": "/Users/samprimeaux/studio-cms-editor-harvest-export",
+  "lanes": {
+    "cms_editor_donor": [
+      {
+        "path": "app/studio/page.tsx",
+        "status": "copied",
+        "bytes": 75767,
+        "sha256": "85149c5432693c3a03a67f0fc186f1de4548918240661fb9f31a96932feadae2"
+      },
+      {
+        "path": "app/globals.css",
+        "status": "copied",
+        "bytes": 53300,
+        "sha256": "e5899adbcdc989ac1f0d09660aa411120179ffac32647d370b616ea59b9ef07d"
+      }
+    ],
+    "chatgpt_identity_reference": [
+      {
+        "path": "app/chatgpt-auth.ts",
+        "status": "copied",
+        "bytes": 2404,
+        "sha256": "17a965f8948b21510cdf8ecbd70c5fdf58100e10970463f6a8fd2cc4795f8044"
+      }
+    ],
+    "theme_layout_donor": [
+      {
+        "path": "app/page.tsx",
+        "status": "copied",
+        "bytes": 111,
+        "sha256": "183499a04e710c1c8c735979dae7c2ea9c691c33c41ba1cb494d84c0eb1ce1b4"
+      },
+      {
+        "path": "app/components/Storefront.tsx",
+        "status": "copied",
+        "bytes": 9626,
+        "sha256": "87fcdb7007ec3fff5f2bfcbd8f46dfc6d31715b287070932ea418d93c5c8b218"
+      },
+      {
+        "path": "app/storefront-data.ts",
+        "status": "copied",
+        "bytes": 2714,
+        "sha256": "c420e7c3d745140802433183656aec439c585d2d62a9d76c14b14acfdc9b9036"
+      },
+      {
+        "path": "app/storefront.css",
+        "status": "copied",
+        "bytes": 13135,
+        "sha256": "1f6be0aa2845ddea45dbf4f3b41598a731315e971f8b86dfadd8487f60947901"
+      },
+      {
+        "path": "app/layout.tsx",
+        "status": "copied",
+        "bytes": 933,
+        "sha256": "b2123825ba67702367fc30b1fa909e38b0b32f11ae1e6c59082f255c7aaad73c"
+      },
+      {
+        "path": "app/shop/page.tsx",
+        "status": "copied",
+        "bytes": 106,
+        "sha256": "e2db5cdb8e92e9efdf2680501870ab9a20fd3283b3301da54c7b4664f0aa2317"
+      },
+      {
+        "path": "app/collections/[slug]/page.tsx",
+        "status": "copied",
+        "bytes": 1044,
+        "sha256": "dd0906dd747e4d30b6631ddfafba7e0c00866378b0c93a850183c81509818a78"
+      },
+      {
+        "path": "app/product/[slug]/page.tsx",
+        "status": "copied",
+        "bytes": 372,
+        "sha256": "cc574253a9ebada8c32f90b090ebfa2e4a01306d3ebfa9f1aaf98358c4926d38"
+      },
+      {
+        "path": "app/journal/page.tsx",
+        "status": "copied",
+        "bytes": 112,
+        "sha256": "7c6aca788d1eb5bdbbf1dfbf3cd485578f098938a421ceb66fa240f3589c654b"
+      },
+      {
+        "path": "app/journal/[slug]/page.tsx",
+        "status": "copied",
+        "bytes": 955,
+        "sha256": "b83473ce4420b54fc1cdd80f685135d4a1aa31821e22e9ec0924689f0430612f"
+      },
+      {
+        "path": "app/story/page.tsx",
+        "status": "copied",
+        "bytes": 108,
+        "sha256": "2ab17ab34b76191531049c83dc27b77db3e170c50b00dc3bcf582159d7ae2e82"
+      },
+      {
+        "path": "public/favicon.svg",
+        "status": "copied",
+        "bytes": 712,
+        "sha256": "e6d2e59b7b5bbb0342e0fb496dfc262decbfe4426bbb7b047aec8d467d1dc6f7"
+      }
+    ],
+    "content_plan_reference": [
+      {
+        "path": "plans/INNERANIMALS-CONTENT-001.md",
+        "status": "copied",
+        "bytes": 7320,
+        "sha256": "742fe1c21fcbece86ddd9663cc03b4e50e903001ddbb9e34ff706abeb085e4a0"
+      }
+    ],
+    "runtime_reference": [
+      {
+        "path": ".openai/hosting.json",
+        "status": "copied",
+        "bytes": 91,
+        "sha256": "4a2eb4f36976de086c24d2892f0cfdc48c58a85b39fa1f8569821f77f22ac508"
+      },
+      {
+        "path": "package.json",
+        "status": "copied",
+        "bytes": 1470,
+        "sha256": "d897171760d696c0947d43a987825a83f4648c18a12acd6a78da115ec37d14f4"
+      },
+      {
+        "path": "vite.config.ts",
+        "status": "copied",
+        "bytes": 1807,
+        "sha256": "43e5f02f727ca043f08ebf34789f330580a7a0cb90f426c92f4a454d066988fc"
+      },
+      {
+        "path": "next.config.ts",
+        "status": "copied",
+        "bytes": 133,
+        "sha256": "614bce25b089c3f19b1e17a6346c74b858034040154c6621e7d35303004767cc"
+      },
+      {
+        "path": "worker/index.ts",
+        "status": "copied",
+        "bytes": 1839,
+        "sha256": "781e66096fac222fbb58c4f46b096b7e6df729684e213176b00752a371857892"
+      },
+      {
+        "path": "worker/vpc.ts",
+        "status": "copied",
+        "bytes": 934,
+        "sha256": "5833a3fe8bf666d71fd5bfe31137256dd15da1faf99dc60cac1e3561a26bde76"
+      },
+      {
+        "path": "wrangler.production.toml",
+        "status": "copied",
+        "bytes": 2454,
+        "sha256": "8def7d9669d6f2ebc9a50baacb236000c8b7049f9dee3559f0cb9c86a83e28ad"
+      },
+      {
+        "path": "docs/workers-vpc.md",
+        "status": "copied",
+        "bytes": 2777,
+        "sha256": "d0003e81577f34c00d322abff54c6638c141026796fb34f10adda2d3bb3563c0"
+      },
+      {
+        "path": "drizzle.config.ts",
+        "status": "copied",
+        "bytes": 148,
+        "sha256": "af081f7384aaeb0082cf422e29f139d137ca2f6a57c69b2c37b9fb1f8479867b"
+      },
+      {
+        "path": "db/index.ts",
+        "status": "copied",
+        "bytes": 423,
+        "sha256": "dc7610b00b918e0ffff1360a63626f16655ced3064b2eaf96095a4101fb14bcd"
+      },
+      {
+        "path": "db/schema.ts",
+        "status": "copied",
+        "bytes": 169,
+        "sha256": "13ddacbf0be50e054d450a6c642b7fdc1aa943fd6b99084711e07e58b600390d"
+      },
+      {
+        "path": "README.md",
+        "status": "copied",
+        "bytes": 5436,
+        "sha256": "70ef40d45f8c381c87651db8828a2b085bfe3522eebccef2e074fc93a68716d9"
+      }
+    ]
+  },
+  "side_effects": {
+    "network_deploy": false,
+    "site_sync": false,
+    "cms_publish": false,
+    "asset_upload": false,
+    "database_write": false,
+    "active_sdk_package_write": false
+  }
+}

@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sdkRoot = path.resolve(packageRoot, '../..');
 const manifestPath = path.join(packageRoot, 'agentsam.app.json');
-const PERSISTENCE = new Set(['sqlite', 'd1', 'localStorage']);
+const PERSISTENCE = new Set(['sqlite', 'd1']);
 
 function usage() {
   console.log(`
@@ -16,7 +16,7 @@ AgentSam CMS Editor
   agentsam-cms [preview]
   agentsam-cms info
   agentsam-cms doctor
-  agentsam-cms scaffold <directory> [--persistence sqlite|d1|localStorage]
+  agentsam-cms scaffold <directory> [--persistence sqlite|d1]
 
 preview
   Run the app preview script when present.
@@ -30,8 +30,8 @@ doctor
 scaffold
   Copy editable source into a new directory.
   sqlite       local authority for desktop/offline use
-  d1           cloud authority through the CMS API
-  localStorage browser draft cache only; never authoritative
+  d1           cloud authority through a CmsEditorAdapter (proven cloud resources only)
+  localStorage is never a persistence choice — UI chrome cache only
 `.trim());
 }
 
@@ -59,7 +59,7 @@ function parseScaffoldArgs(args) {
     }
   }
   if (!PERSISTENCE.has(persistence)) {
-    throw new Error(`unsupported persistence "${persistence}"; choose sqlite, d1, or localStorage`);
+    throw new Error(`unsupported persistence "${persistence}"; choose sqlite or d1 (localStorage is cache-only, not authority)`);
   }
   return { target, persistence };
 }
@@ -132,17 +132,10 @@ function runtimeConfig(persistence) {
       authority: 'd1',
       cache: 'localStorage',
       cache_only: false,
+      note: 'D1 authority must come from a proven OAuth/connection resource via CmsEditorAdapter — never an invented Worker binding product source.',
     };
   }
-  return {
-    schema: 'agentsam.cms.runtime.v1',
-    app_id: 'client-cms-editor',
-    run_target: 'browser',
-    authority: null,
-    cache: 'localStorage',
-    cache_only: true,
-    note: 'localStorage is a draft/offline cache only; configure SQLite or D1 before authoritative publish.',
-  };
+  throw new Error(`unsupported persistence "${persistence}"`);
 }
 
 function scaffold(targetArg, { persistence = 'sqlite' } = {}) {
@@ -190,7 +183,7 @@ function scaffold(targetArg, { persistence = 'sqlite' } = {}) {
   );
 
   console.log(`✓ scaffolded CMS editor into ${targetRoot}`);
-  console.log(`  persistence: ${persistence}${persistence === 'localStorage' ? ' (cache only)' : ''}`);
+  console.log(`  persistence authority: ${persistence} (localStorage remains cache-only)`);
 }
 
 function preview(args) {

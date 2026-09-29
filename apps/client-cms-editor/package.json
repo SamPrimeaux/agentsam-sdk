@@ -1,12 +1,54 @@
 {
   "name": "@inneranimalmedia/client-cms-editor",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.0",
   "private": true,
+  "description": "Portable AgentSam CMS editor product (Pages/Sections/Blocks/Media). Installable npm artifact — not a monorepo-only UI.",
   "type": "module",
+  "license": "UNLICENSED",
   "workspaces": [
     "frontend",
     "backend",
     "shared/*"
+  ],
+  "bin": {
+    "agentsam-cms": "./bin/agentsam-cms.mjs"
+  },
+  "exports": {
+    ".": "./frontend/src/index.ts",
+    "./package.json": "./package.json",
+    "./acceptance": "./acceptance/cms-parity.v1.json",
+    "./adapter": "./shared/cms/src/adapter.ts",
+    "./shared": "./shared/cms/src/index.ts",
+    "./shared/publication": "./shared/cms/src/publication.ts",
+    "./shared/bindings": "./shared/cms/src/cloudflare-bindings.ts",
+    "./backend": "./backend/src/index.ts",
+    "./backend/api": "./backend/src/api/client.ts",
+    "./backend/model": "./backend/src/model.ts",
+    "./backend/preview": "./backend/src/preview/bridge.ts",
+    "./styles/studio.css": "./frontend/src/styles/studio.css"
+  },
+  "files": [
+    "ALPHA.md",
+    "AGENTS.md",
+    "README.md",
+    "IMPORT_PROVENANCE.json",
+    "agentsam.app.json",
+    "acceptance",
+    "bin",
+    "frontend/index.html",
+    "frontend/package.json",
+    "frontend/src",
+    "frontend/tsconfig.json",
+    "frontend/vite.config.ts",
+    "backend/package.json",
+    "backend/src",
+    "backend/worker",
+    "backend/tsconfig.json",
+    "backend/wrangler.jsonc",
+    "backend/README.md",
+    "shared",
+    "scripts",
+    "reference/harvest"
   ],
   "scripts": {
     "dev": "npm run dev -w @inneranimalmedia/agentsam-cms-frontend",
@@ -15,9 +57,32 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "clean": "rm -rf frontend/dist coverage",
-    "cf:dry-run": "npm run build && wrangler deploy -c backend/wrangler.jsonc --dry-run"
+    "cf:dry-run": "npm run build && wrangler deploy -c backend/wrangler.jsonc --dry-run",
+    "verify:cms-package": "node scripts/verify-cms-package.mjs",
+    "pack:check": "node scripts/verify-cms-pack.mjs",
+    "verify:cms": "npm run verify:cms-package && npm run pack:check",
+    "prepublishOnly": "npm run verify:cms && npm run typecheck"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "alpha"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@inneranimalmedia/agentsam-workbench": {
+      "optional": true
+    },
+    "@inneranimalmedia/agentsam-contracts": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "wrangler": "4.142.0"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

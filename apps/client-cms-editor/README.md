@@ -1,24 +1,21 @@
 # AgentSam Client CMS Editor
 
-Authoring/control application for AgentSam CMS. This directory is a self-contained npm workspace root inside the SDK repository and is intentionally **not** part of the SDK root workspace graph.
+Portable CMS authoring product published as `@inneranimalmedia/client-cms-editor`.
 
-It was imported from `SamPrimeaux/inneranimalmedia` at the exact revision recorded in `IMPORT_PROVENANCE.json`. The donor browser editor is preserved, then normalized into explicit frontend/backend/shared package boundaries.
+**Authority order:** donor behavior → this npm package → adapters under the UX → registry receipts last.  
+See [`ALPHA.md`](./ALPHA.md) and [`acceptance/cms-parity.v1.json`](./acceptance/cms-parity.v1.json).
+
+This directory is a self-contained npm workspace root inside the SDK repository and is intentionally **not** part of the SDK root workspace graph. Local Studio must eventually consume the **packed/published** artifact — not vite-alias into `shared/cms/src`.
 
 ```text
 apps/client-cms-editor/
-├─ package.json
-├─ package-lock.json
-├─ frontend/                 CMS authoring UI + shared AgentSam workbench adapter
-│  ├─ package.json
-│  └─ src/
-├─ backend/                  host-neutral CMS API/routing/preview client bridge
-│  ├─ package.json
-│  └─ src/
-├─ shared/
-│  └─ cms/                   pure CMS editor/publication/binding/context contracts
-│     ├─ package.json
-│     └─ src/
-└─ reference/                immutable donor docs/lock/config for comparison only
+├─ package.json              product package (alpha → latest)
+├─ acceptance/               donor parity / M1 acceptance matrix
+├─ frontend/                 CMS authoring UI
+├─ backend/                  portable adapter/bridge (not IAM-specific architecture)
+├─ shared/cms/               types + CmsEditorAdapter contract
+├─ reference/harvest/        copied harvest evidence (read-only)
+└─ scripts/                  verify:cms-package · pack:check
 ```
 
 ## Product boundary
@@ -26,47 +23,40 @@ apps/client-cms-editor/
 CMS Studio is the authenticated authoring/control product. It is **not** the public website runtime.
 
 ```text
-CMS Studio
-  ├─ pages / sections / themes / assets
-  ├─ AgentSam through @inneranimalmedia/agentsam-workbench
-  ├─ preview
-  └─ publish
+CMS Studio (this package)
+  ├─ pages / sections / blocks / themes / assets
+  ├─ optional AgentSam via host-supplied workbench adapter
+  ├─ preview draft
+  └─ explicit publish
        ↓
-publication snapshot
-  ├─ D1 metadata
-  └─ WEBSITE_ASSETS (R2 content/media/theme artifacts)
+CmsEditorAdapter (sqlite | d1+r2 | http | custom)
        ↓
-small public CMS runtime
-       ↓
-<public-host>/*
+publication snapshot / public runtime
 ```
 
-The visitor-facing runtime should ship its normal frontend JavaScript through the normal static deployment bundle. R2 is for CMS-managed content/media and generated artifacts, not a replacement for the application bundle.
+## Persistence
+
+| Adapter | Role |
+|---------|------|
+| SQLite | desktop/offline authority |
+| D1 + R2 | cloud authority from **proven** OAuth resources |
+| HTTP / custom | consumer backend |
+| localStorage | UI chrome cache only — never scaffolded as authority |
 
 ## Shared AgentSam rule
 
-CMS must not invent its own chat/browser/terminal/auth stack. `frontend/src/CmsAgentSurface.tsx` is a thin CMS adapter around `@inneranimalmedia/agentsam-workbench`; the host supplies an `AgentWorkbenchAdapter`, authenticated `AgentPrincipal`, and explicit CMS context. No fake AgentSam endpoint is provided by this app.
-
-Identity remains outside the workbench. IAM establishes `accountId` / `authUserId`, application authorization resolves CMS access, and only then may optional browser/container execution be created.
-
-## Cloud binding contract
-
-`shared/cms/src/cloudflare-bindings.ts` defines the capability-driven names. `DB` and `WEBSITE_ASSETS` are the CMS cloud baseline. `SESSION_CACHE` is cache-only and cannot be identity/session authority. `MY_CONTAINER` and `MYBROWSER` are optional execution capabilities and cannot establish identity.
-
-## Canonical CMS backend
-
-This app's `backend/` is currently the portable API/routing/preview bridge that talks to `/api/cms/*`. The full canonical CMS domain still lives in the Inner Animal Media platform under `src/core/agentsam/cms/` at the donor revision. Do not copy that 166-file domain into this app and create a second authority. Its next extraction target is a product-neutral `packages/agentsam-cms/` family.
+CMS must not invent its own chat/browser/terminal/auth stack. When AgentSam is present, the host supplies workbench adapter + principal + explicit CMS context. Core editor UX must still run without AgentSam.
 
 ## Development
 
-From this directory:
-
 ```bash
+cd apps/client-cms-editor
 npm ci
+npm run verify:cms-package   # currently fails until package is publishable
 npm run typecheck
 npm test
 npm run build
 npm run dev
 ```
 
-Standalone dev requires explicit site context, for example `/?site=my-site`. In a real authenticated host, mount `CmsEditor` with the resolved site/project identity.
+Standalone mount requires explicit site context. Prefer injecting a `CmsEditorAdapter` rather than relying on hardcoded `/api/cms/*` host routes.
