@@ -182,6 +182,26 @@ for (const file of walk(packageRoot)) {
   if (/\bfrom\s+['"]\.\.\/\.\.\/.*packages\//.test(text) || /from ['"]\.\.\/\.\.\/\.\.\/packages\//.test(text)) {
     fail(`${rel}: monorepo relative import into packages/`);
   }
+  // Architecture law: frontend must not import backend implementation sources.
+  // Donor prototype under editor/legacy/ is exempt until deleted after contracts land.
+  if (
+    rel.startsWith('frontend/') &&
+    !rel.includes('/editor/legacy/') &&
+    /from\s+['"][^'"]*\/backend\/src\//.test(text)
+  ) {
+    fail(`${rel}: frontend must not import ../../backend/src — use CmsEditorAdapter / host`);
+  }
+  if (rel === 'backend/src/api/client.ts') {
+    if (/useDemoBootstrap|buildDemoCmsBootstrap|buildHeuristicTheme/.test(text)) {
+      fail('backend/src/api/client.ts must not wire demo/heuristic bootstrap into API flow');
+    }
+    if (/Promise\.resolve\(\{\}\)/.test(text)) {
+      fail('backend/src/api/client.ts must not fabricate empty write success');
+    }
+  }
+  if (rel === 'backend/src/demo-bootstrap.ts' && !/throw new Error/.test(text)) {
+    fail('demo-bootstrap.ts must throw — not manufacture bootstrap payloads');
+  }
 }
 
 function findNestedNodeModules(dir, acc = []) {

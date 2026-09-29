@@ -68,3 +68,14 @@ export type CmsAgentMiniSlotProps = {
     annotation: CmsAnnotationSelection,
   ) => void | Promise<void>;
 };
+
+/**
+ * Host/deployment capabilities. InnerAnimalMedia, Local Studio, Fuel, etc.
+ * implement these — never hardcode deployment navigation inside the package.
+ */
+export type CmsEditorHost = {
+  principal?: CmsHostPrincipal | null;
+  navigate?: (path: string) => void;
+  openExternal?: (url: string) => void;
+  labelEphemeralSandbox?: (message: string) => void;
+};

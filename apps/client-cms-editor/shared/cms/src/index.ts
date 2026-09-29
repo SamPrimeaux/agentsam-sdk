@@ -5,3 +5,4 @@ export * from './agent-context';
 export * from './host';
 export * from './routes';
 export * from './adapter';
+export * from './map';

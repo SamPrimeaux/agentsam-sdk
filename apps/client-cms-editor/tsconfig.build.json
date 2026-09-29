@@ -49,6 +49,7 @@
     "frontend/src/index.ts",
     "frontend/src/**/*.ts",
     "frontend/src/**/*.tsx",
+    "fixtures/**/*.ts",
     "shared/cms/src/**/*.ts",
     "backend/src/**/*.ts",
     "backend/src/**/*.js"
@@ -56,6 +57,7 @@
   "exclude": [
     "node_modules",
     "dist",
-    "frontend/dist"
+    "frontend/dist",
+    "frontend/src/editor/legacy/**"
   ]
 }

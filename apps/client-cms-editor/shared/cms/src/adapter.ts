@@ -22,6 +22,8 @@ import type {
 } from './editor-types';
 import type { CmsPublicationSnapshot } from './publication';
 
+export type { CmsPublicationSnapshot } from './publication';
+
 export type CmsRevision = {
   id: string;
   pageId: string;
