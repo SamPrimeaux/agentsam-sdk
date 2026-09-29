@@ -183,7 +183,7 @@ fn emit_composition_observations(
                 "fact_ids": [format!("file:{theme}")],
                 "fact_count": 1,
                 "path": theme,
-                "note": "Manifest file observed; theme_system is not implied without usage/config edges.",
+                "note": "Manifest file observed; application/usage relationships are not implied by presence alone.",
             }
         });
         composition.insert("theme_manifest".into(), obs.clone());
