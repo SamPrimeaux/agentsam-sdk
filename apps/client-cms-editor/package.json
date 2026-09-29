@@ -1,7 +1,7 @@
 {
   "name": "@inneranimalmedia/client-cms-editor",
   "version": "0.1.0-alpha.0",
-  "private": true,
+  "private": false,
   "description": "Portable AgentSam CMS editor product (Pages/Sections/Blocks/Media). Single npm artifact — frontend/backend/shared are internal boundaries.",
   "type": "module",
   "license": "UNLICENSED",

@@ -118,9 +118,23 @@ try {
 
   const lock = readJson(join(consumer, 'package-lock.json'));
   const lockText = JSON.stringify(lock);
-  if (lockText.includes('"file:../') || lockText.includes('agentsam-sdk/packages')) {
-    throw new Error('fresh consumer lock still references monorepo paths');
+  const installedLockEntry =
+    lock.packages?.['node_modules/@inneranimalmedia/client-cms-editor'] ||
+    lock.dependencies?.['@inneranimalmedia/client-cms-editor'];
+  const resolved = String(installedLockEntry?.resolved || '');
+  if (
+    lockText.includes('agentsam-sdk/packages') ||
+    /agentsam-sdk\/apps\/client-cms-editor(?!.*\.tgz)/.test(lockText) ||
+    (resolved.startsWith('file:') && !resolved.includes('.tgz'))
+  ) {
+    throw new Error(
+      `fresh consumer lock still references monorepo paths (resolved=${resolved || 'missing'})`,
+    );
   }
+  assert.ok(
+    resolved.includes('.tgz') || resolved.includes(`@inneranimalmedia/client-cms-editor`),
+    `fresh consumer must resolve packed tarball, got ${resolved}`,
+  );
 
   assert.ok(
     existsSync(join(installedRoot, 'dist/index.js')),
