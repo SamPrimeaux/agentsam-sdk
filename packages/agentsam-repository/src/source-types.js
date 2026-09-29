@@ -1,3 +1,11 @@
+/**
+ * Source-type helpers for AgentSam repository intelligence.
+ *
+ * SSOT taxonomy (extensions / kind / ast / knowledge):
+ *   contracts/source-types.v1.json
+ * Rust machine inspect loads the same contract. Keep this JS table aligned when
+ * adding languages until a shared loader is wired for both runtimes.
+ */
 import path from 'node:path';
 
 const DEFINITIONS = [

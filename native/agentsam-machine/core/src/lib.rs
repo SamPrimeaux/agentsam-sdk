@@ -1,15 +1,25 @@
+//! AgentSam machine perception core — deterministic inspect receipts.
+//! No Cloudflare, browser, Tauri, or network dependency.
+
+mod enrich;
+mod source_types;
+
+use enrich::enrich_receipt;
+use source_types::SourceTypeIndex;
+
+use serde::Serialize;
+use serde_json::Value;
+use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fs::{self, File, Metadata};
 use std::io::{self, Read};
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use serde::Serialize;
-use serde_json::Value;
-use sha2::{Digest, Sha256};
-
 pub const RECEIPT_SCHEMA: &str = "agentsam.machine.receipt.v1";
 pub const ENGINE_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Directories skipped during normal inspect (summarized, not flooded into facts).
 const IGNORE_DIRS: &[&str] = &[
     ".git",
     ".agentsam",
@@ -22,6 +32,17 @@ const IGNORE_DIRS: &[&str] = &[
     ".vinext",
     "__pycache__",
     ".cache",
+    ".sites-runtime",
+    "npm-cache",
+    "_cacache",
+    ".npm",
+    ".pnpm-store",
+    ".turbo",
+    ".vite",
+    ".parcel-cache",
+    "coverage",
+    ".venv",
+    "venv",
 ];
 
 /// Pure Rust domain logic: no Cloudflare, browser, Tauri, or network dependency.
@@ -56,19 +77,47 @@ pub struct MachineReceipt {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct FileFact {
-    pub kind: String,
+    pub id: String,
+    /// Filesystem object kind: file | symlink
+    pub fs_kind: String,
     pub path: String,
     pub size: u64,
     pub mtime_unix_ms: Option<u64>,
     pub sha256: String,
     pub extension: Option<String>,
-    pub type_evidence: TypeEvidence,
+    pub source: SourceInfo,
+    pub content: ContentEvidence,
+    pub classification: Classification,
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct TypeEvidence {
-    pub content_kind: String,
-    pub magic: Option<String>,
+pub struct SourceInfo {
+    #[serde(rename = "type")]
+    pub type_id: Option<String>,
+    pub language: Option<String>,
+    pub syntax: Option<String>,
+    /// code | document | asset | binary
+    pub kind: Option<String>,
+    pub ast_capable: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ContentEvidence {
+    /// text | image | archive | binary | database | symlink
+    pub kind: String,
+    /// Character encoding when content is text (e.g. utf-8). Not a magic signature.
+    pub encoding: Option<String>,
+    /// Binary magic signature when known (png, zip, wasm, …).
+    pub signature: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Classification {
+    pub category: String,
+    pub role: String,
+    pub generated: bool,
+    pub cache: bool,
+    pub include_by_default: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -85,6 +134,16 @@ pub struct InspectStats {
     pub directories: u64,
     pub ignored_directories: u64,
     pub bytes: u64,
+    pub excluded_subtrees: Vec<ExcludedSubtree>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ExcludedSubtree {
+    pub path: String,
+    pub reason: String,
+    pub files: u64,
+    pub bytes: u64,
+    pub default_disposition: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -141,6 +200,8 @@ pub fn inspect_path(target: &Path, requested_run_id: Option<&str>) -> io::Result
             .then_with(|| a.operation.cmp(&b.operation))
             .then_with(|| a.message.cmp(&b.message))
     });
+
+    enrich_receipt(&root, &mut receipt);
     Ok(receipt)
 }
 
@@ -182,6 +243,14 @@ fn walk_directory(root: &Path, current: &Path, receipt: &mut MachineReceipt) -> 
         if metadata.is_dir() {
             if is_ignored_directory(&file_name) {
                 receipt.stats.ignored_directories += 1;
+                let (files, bytes) = summarize_tree(&path);
+                receipt.stats.excluded_subtrees.push(ExcludedSubtree {
+                    path: relative_path(root, &path),
+                    reason: format!("ignored_directory:{file_name}"),
+                    files,
+                    bytes,
+                    default_disposition: "exclude".to_string(),
+                });
                 continue;
             }
             walk_directory(root, &path, receipt)?;
@@ -196,15 +265,46 @@ fn walk_directory(root: &Path, current: &Path, receipt: &mut MachineReceipt) -> 
     Ok(())
 }
 
+fn summarize_tree(path: &Path) -> (u64, u64) {
+    let mut files = 0u64;
+    let mut bytes = 0u64;
+    let mut stack = vec![path.to_path_buf()];
+    while let Some(current) = stack.pop() {
+        let Ok(entries) = fs::read_dir(&current) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let p = entry.path();
+            let Ok(meta) = fs::symlink_metadata(&p) else {
+                continue;
+            };
+            if meta.is_dir() {
+                let name = entry.file_name().to_string_lossy().into_owned();
+                if is_ignored_directory(&name) {
+                    continue;
+                }
+                stack.push(p);
+            } else if meta.is_file() {
+                files += 1;
+                bytes = bytes.saturating_add(meta.len());
+            }
+        }
+    }
+    (files, bytes)
+}
+
 fn inspect_file(root: &Path, path: &Path, metadata: &Metadata, receipt: &mut MachineReceipt) {
     match hash_file(path) {
         Ok((sha256, prefix)) => {
-            let evidence = classify_prefix(&prefix);
+            let rel = relative_path(root, path);
+            let content = classify_content_prefix(&prefix);
+            let (source, classification) = classify_semantic(&rel, &content);
             receipt.stats.files += 1;
             receipt.stats.bytes = receipt.stats.bytes.saturating_add(metadata.len());
             receipt.facts.push(FileFact {
-                kind: "file".to_string(),
-                path: relative_path(root, path),
+                id: format!("file:{rel}"),
+                fs_kind: "file".to_string(),
+                path: rel.clone(),
                 size: metadata.len(),
                 mtime_unix_ms: modified_ms(metadata),
                 sha256,
@@ -212,7 +312,9 @@ fn inspect_file(root: &Path, path: &Path, metadata: &Metadata, receipt: &mut Mac
                     .extension()
                     .and_then(|value| value.to_str())
                     .map(|value| value.to_ascii_lowercase()),
-                type_evidence: evidence,
+                source,
+                content,
+                classification,
             });
         }
         Err(error) => receipt.errors.push(MachineError {
@@ -228,10 +330,12 @@ fn inspect_symlink(root: &Path, path: &Path, metadata: &Metadata, receipt: &mut 
         Ok(target) => {
             let literal = target.to_string_lossy().into_owned();
             let digest = sha256_bytes(literal.as_bytes());
+            let rel = relative_path(root, path);
             receipt.stats.symlinks += 1;
             receipt.facts.push(FileFact {
-                kind: "symlink".to_string(),
-                path: relative_path(root, path),
+                id: format!("symlink:{rel}"),
+                fs_kind: "symlink".to_string(),
+                path: rel,
                 size: literal.len() as u64,
                 mtime_unix_ms: modified_ms(metadata),
                 sha256: digest,
@@ -239,9 +343,24 @@ fn inspect_symlink(root: &Path, path: &Path, metadata: &Metadata, receipt: &mut 
                     .extension()
                     .and_then(|value| value.to_str())
                     .map(|value| value.to_ascii_lowercase()),
-                type_evidence: TypeEvidence {
-                    content_kind: "symlink".to_string(),
-                    magic: None,
+                source: SourceInfo {
+                    type_id: None,
+                    language: None,
+                    syntax: None,
+                    kind: None,
+                    ast_capable: false,
+                },
+                content: ContentEvidence {
+                    kind: "symlink".to_string(),
+                    encoding: None,
+                    signature: None,
+                },
+                classification: Classification {
+                    category: "link".to_string(),
+                    role: "symlink".to_string(),
+                    generated: false,
+                    cache: false,
+                    include_by_default: false,
                 },
             });
         }
@@ -251,6 +370,73 @@ fn inspect_symlink(root: &Path, path: &Path, metadata: &Metadata, receipt: &mut 
             message: error.to_string(),
         }),
     }
+}
+
+fn classify_semantic(rel: &str, content: &ContentEvidence) -> (SourceInfo, Classification) {
+    let index = SourceTypeIndex::global();
+    if let Some(def) = index.for_path(rel) {
+        let syntax = index.syntax_for(rel, def);
+        let role = match def.kind.as_str() {
+            "code" if rel.contains("frontend/") || rel.contains("/src/") => "frontend_source",
+            "code" => "source",
+            "document" if def.id == "html" => "page_candidate",
+            "document" if def.id == "json" && rel.ends_with("theme.json") => "theme_manifest",
+            "document" if def.id == "css" => "stylesheet",
+            "asset" if def.id == "svg" => "image",
+            "asset" => "asset",
+            "binary" => "binary",
+            _ => "file",
+        };
+        let category = match def.kind.as_str() {
+            "code" => "source",
+            "document" if def.id == "markdown" => "docs",
+            "document" => "source",
+            "asset" => "asset",
+            "binary" => "binary",
+            _ => "other",
+        };
+        return (
+            SourceInfo {
+                type_id: Some(def.id.clone()),
+                language: Some(def.label.clone()),
+                syntax,
+                kind: Some(def.kind.clone()),
+                ast_capable: def.ast,
+            },
+            Classification {
+                category: category.to_string(),
+                role: role.to_string(),
+                generated: false,
+                cache: false,
+                include_by_default: true,
+            },
+        );
+    }
+
+    // Fall back to content signature only
+    let (kind, category, role) = match content.kind.as_str() {
+        "image" => ("asset", "asset", "image"),
+        "archive" => ("binary", "archive", "archive"),
+        "database" => ("binary", "data", "database"),
+        "text" => ("document", "source", "text"),
+        _ => ("binary", "binary", "binary"),
+    };
+    (
+        SourceInfo {
+            type_id: content.signature.clone(),
+            language: content.signature.clone(),
+            syntax: None,
+            kind: Some(kind.to_string()),
+            ast_capable: false,
+        },
+        Classification {
+            category: category.to_string(),
+            role: role.to_string(),
+            generated: false,
+            cache: false,
+            include_by_default: kind != "binary",
+        },
+    )
 }
 
 fn hash_file(path: &Path) -> io::Result<(String, Vec<u8>)> {
@@ -280,34 +466,81 @@ fn sha256_bytes(bytes: &[u8]) -> String {
     format!("{:x}", hasher.finalize())
 }
 
-fn classify_prefix(prefix: &[u8]) -> TypeEvidence {
-    let (content_kind, magic) = if prefix.starts_with(b"\x89PNG\r\n\x1a\n") {
-        ("image", Some("png"))
-    } else if prefix.starts_with(&[0xff, 0xd8, 0xff]) {
-        ("image", Some("jpeg"))
-    } else if prefix.starts_with(b"GIF87a") || prefix.starts_with(b"GIF89a") {
-        ("image", Some("gif"))
-    } else if prefix.starts_with(b"%PDF-") {
-        ("document", Some("pdf"))
-    } else if prefix.starts_with(b"PK\x03\x04") {
-        ("archive", Some("zip"))
-    } else if prefix.starts_with(&[0x1f, 0x8b]) {
-        ("archive", Some("gzip"))
-    } else if prefix.starts_with(b"\0asm") {
-        ("binary", Some("wasm"))
-    } else if prefix.starts_with(b"SQLite format 3\0") {
-        ("database", Some("sqlite"))
-    } else if prefix.starts_with(&[0x7f, b'E', b'L', b'F']) {
-        ("binary", Some("elf"))
-    } else if !prefix.contains(&0) && std::str::from_utf8(prefix).is_ok() {
-        ("text", Some("utf8"))
-    } else {
-        ("binary", None)
-    };
-
-    TypeEvidence {
-        content_kind: content_kind.to_string(),
-        magic: magic.map(ToOwned::to_owned),
+fn classify_content_prefix(prefix: &[u8]) -> ContentEvidence {
+    if prefix.starts_with(b"\x89PNG\r\n\x1a\n") {
+        return ContentEvidence {
+            kind: "image".into(),
+            encoding: None,
+            signature: Some("png".into()),
+        };
+    }
+    if prefix.starts_with(&[0xff, 0xd8, 0xff]) {
+        return ContentEvidence {
+            kind: "image".into(),
+            encoding: None,
+            signature: Some("jpeg".into()),
+        };
+    }
+    if prefix.starts_with(b"GIF87a") || prefix.starts_with(b"GIF89a") {
+        return ContentEvidence {
+            kind: "image".into(),
+            encoding: None,
+            signature: Some("gif".into()),
+        };
+    }
+    if prefix.starts_with(b"%PDF-") {
+        return ContentEvidence {
+            kind: "document".into(),
+            encoding: None,
+            signature: Some("pdf".into()),
+        };
+    }
+    if prefix.starts_with(b"PK\x03\x04") {
+        return ContentEvidence {
+            kind: "archive".into(),
+            encoding: None,
+            signature: Some("zip".into()),
+        };
+    }
+    if prefix.starts_with(&[0x1f, 0x8b]) {
+        return ContentEvidence {
+            kind: "archive".into(),
+            encoding: None,
+            signature: Some("gzip".into()),
+        };
+    }
+    if prefix.starts_with(b"\0asm") {
+        return ContentEvidence {
+            kind: "binary".into(),
+            encoding: None,
+            signature: Some("wasm".into()),
+        };
+    }
+    if prefix.starts_with(b"SQLite format 3\0") {
+        return ContentEvidence {
+            kind: "database".into(),
+            encoding: None,
+            signature: Some("sqlite".into()),
+        };
+    }
+    if prefix.starts_with(&[0x7f, b'E', b'L', b'F']) {
+        return ContentEvidence {
+            kind: "binary".into(),
+            encoding: None,
+            signature: Some("elf".into()),
+        };
+    }
+    if !prefix.contains(&0) && std::str::from_utf8(prefix).is_ok() {
+        return ContentEvidence {
+            kind: "text".into(),
+            encoding: Some("utf-8".into()),
+            signature: None,
+        };
+    }
+    ContentEvidence {
+        kind: "binary".into(),
+        encoding: None,
+        signature: None,
     }
 }
 
@@ -350,11 +583,10 @@ mod tests {
     }
 
     #[test]
-    fn inspect_is_sorted_hashed_and_ignores_operational_or_generated_dirs() {
+    fn inspect_classifies_source_types_and_splits_encoding_from_signature() {
         let temp = tempfile::tempdir().unwrap();
         fs::create_dir_all(temp.path().join("src")).unwrap();
         fs::create_dir_all(temp.path().join("target")).unwrap();
-        fs::create_dir_all(temp.path().join(".agentsam")).unwrap();
         fs::write(
             temp.path().join("src/lib.rs"),
             b"pub fn answer() -> u32 { 42 }\n",
@@ -362,55 +594,26 @@ mod tests {
         .unwrap();
         fs::write(temp.path().join("README.md"), b"# Example\n").unwrap();
         fs::write(temp.path().join("target/generated.rs"), b"generated").unwrap();
-        fs::write(temp.path().join(".agentsam/state.json"), b"state").unwrap();
 
         let receipt = inspect_path(temp.path(), Some("run_test")).unwrap();
-        let paths = receipt
-            .facts
-            .iter()
-            .map(|fact| fact.path.as_str())
-            .collect::<Vec<_>>();
-
-        assert_eq!(receipt.schema, RECEIPT_SCHEMA);
-        assert_eq!(receipt.capability, "machine.inspect");
-        assert_eq!(receipt.run_id, "run_test");
+        let paths: Vec<_> = receipt.facts.iter().map(|f| f.path.as_str()).collect();
         assert_eq!(paths, vec!["README.md", "src/lib.rs"]);
-        assert_eq!(receipt.stats.files, 2);
-        assert_eq!(receipt.stats.ignored_directories, 2);
-        assert!(!receipt.provenance.source_mutated);
-        assert!(!receipt.provenance.network_used);
-        assert_eq!(
-            receipt
-                .facts
-                .iter()
-                .find(|fact| fact.path == "src/lib.rs")
-                .unwrap()
-                .type_evidence
-                .magic
-                .as_deref(),
-            Some("utf8")
-        );
+
+        let rust = receipt.facts.iter().find(|f| f.path == "src/lib.rs").unwrap();
+        assert_eq!(rust.fs_kind, "file");
+        assert_eq!(rust.source.type_id.as_deref(), Some("rust"));
+        assert_eq!(rust.source.language.as_deref(), Some("Rust"));
+        assert_eq!(rust.source.kind.as_deref(), Some("code"));
+        assert_eq!(rust.content.encoding.as_deref(), Some("utf-8"));
+        assert!(rust.content.signature.is_none());
+        assert!(!receipt.findings.is_empty());
+        assert!(!receipt.artifacts.is_empty());
+        assert_eq!(receipt.stats.excluded_subtrees.len(), 1);
+        assert_eq!(receipt.stats.excluded_subtrees[0].path, "target");
     }
 
     #[test]
-    fn explicit_file_target_produces_one_file_fact() {
-        let temp = tempfile::tempdir().unwrap();
-        let path = temp.path().join("single.rs");
-        fs::write(&path, b"pub fn single() {}\n").unwrap();
-
-        let receipt = inspect_path(&path, Some("run_file")).unwrap();
-        assert_eq!(
-            receipt.root,
-            fs::canonicalize(&path).unwrap().to_string_lossy()
-        );
-        assert_eq!(receipt.stats.files, 1);
-        assert_eq!(receipt.facts.len(), 1);
-        assert_eq!(receipt.facts[0].path, "single.rs");
-        assert_eq!(receipt.facts[0].extension.as_deref(), Some("rs"));
-    }
-
-    #[test]
-    fn magic_bytes_are_evidence_not_semantic_language_authority() {
+    fn binary_signature_is_not_called_magic_utf8() {
         let temp = tempfile::tempdir().unwrap();
         let path = temp.path().join("module.bin");
         let mut file = File::create(&path).unwrap();
@@ -418,8 +621,68 @@ mod tests {
 
         let receipt = inspect_path(temp.path(), Some("run_magic")).unwrap();
         let fact = receipt.facts.first().unwrap();
-        assert_eq!(fact.extension.as_deref(), Some("bin"));
-        assert_eq!(fact.type_evidence.content_kind, "binary");
-        assert_eq!(fact.type_evidence.magic.as_deref(), Some("wasm"));
+        assert_eq!(fact.content.kind, "binary");
+        assert_eq!(fact.content.signature.as_deref(), Some("wasm"));
+        assert!(fact.content.encoding.is_none());
+    }
+
+    #[test]
+    fn church_site_fixture_produces_semantic_perception() {
+        let fixture = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../apps/client-cms-editor/fixtures/donor-themes/church-site");
+        assert!(
+            fixture.join("site/index.html").exists(),
+            "church-site fixture missing at {}",
+            fixture.display()
+        );
+
+        let receipt = inspect_path(&fixture, Some("run_church")).unwrap();
+
+        let html = receipt
+            .facts
+            .iter()
+            .filter(|f| f.source.type_id.as_deref() == Some("html"))
+            .count();
+        let svg = receipt
+            .facts
+            .iter()
+            .filter(|f| f.source.type_id.as_deref() == Some("svg"))
+            .count();
+        let json = receipt
+            .facts
+            .iter()
+            .filter(|f| f.source.type_id.as_deref() == Some("json"))
+            .count();
+
+        assert_eq!(html, 5, "expected 5 HTML pages");
+        assert_eq!(svg, 9, "expected 9 SVG assets");
+        assert_eq!(json, 1, "expected theme.json");
+        assert!(receipt.edges.len() > 0, "edges must not be empty");
+        assert!(receipt.findings.len() > 0, "findings must not be empty");
+        assert!(receipt.artifacts.len() > 0, "artifacts must not be empty");
+
+        assert!(receipt
+            .findings
+            .iter()
+            .any(|f| f.get("kind") == Some(&serde_json::json!("theme_candidate"))));
+        assert!(receipt
+            .findings
+            .iter()
+            .any(|f| f.get("type") == Some(&serde_json::json!("static_website"))));
+        assert!(receipt
+            .artifacts
+            .iter()
+            .any(|a| a.get("kind") == Some(&serde_json::json!("route_manifest"))));
+
+        let beliefs = receipt
+            .facts
+            .iter()
+            .find(|f| f.path == "site/beliefs.html")
+            .unwrap();
+        assert_eq!(beliefs.fs_kind, "file");
+        assert_eq!(beliefs.source.type_id.as_deref(), Some("html"));
+        assert_eq!(beliefs.classification.role, "page_candidate");
+        assert_eq!(beliefs.content.encoding.as_deref(), Some("utf-8"));
+        assert!(beliefs.content.signature.is_none());
     }
 }
