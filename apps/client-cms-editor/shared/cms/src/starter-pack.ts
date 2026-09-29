@@ -33,12 +33,21 @@ export type CmsStarterPageSeed = {
   sections: CmsStarterSectionSeed[];
 };
 
+export type CmsStarterSiteSeed = {
+  name?: string;
+  domain?: string;
+  initials?: string;
+  color?: string;
+};
+
 export type CmsStarterPack = {
   id: string;
   name: string;
   version: number;
   description?: string;
   provenance: CmsStarterPackProvenance;
+  /** Initial site shell when installing into an empty adapter (no public domain invented). */
+  site?: CmsStarterSiteSeed;
   theme: {
     cssVars: Record<string, string>;
   };
@@ -68,6 +77,18 @@ export type InstallStarterPackResult = {
  * Install a starter pack into a real CmsEditorAdapter (durable path).
  * Uses adapter CRUD + saveDraft — never fabricates success outside the adapter.
  */
+function siteInitials(name: string) {
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0])
+      .join('')
+      .toUpperCase() || 'CMS'
+  );
+}
+
 export async function installStarterPack(
   adapter: CmsEditorAdapter,
   pack: CmsStarterPack,
@@ -76,8 +97,26 @@ export async function installStarterPack(
   const siteId = String(options?.siteId || pack.id).trim();
   if (!siteId) throw new Error('starter_pack_site_id_required');
 
-  // Ensure the adapter can resolve the site shell before creating pages.
-  await adapter.loadSite(siteId);
+  const sites = await adapter.listSites();
+  const siteExists = sites.some((site) => site.id === siteId);
+  if (!siteExists) {
+    const siteName = pack.site?.name?.trim() || pack.name;
+    await adapter.createSite({
+      id: siteId,
+      name: siteName,
+      domain: pack.site?.domain ?? '',
+      initials: pack.site?.initials ?? siteInitials(siteName),
+      color: pack.site?.color ?? pack.theme.cssVars['--brand-primary'] ?? '#1e6a6f',
+      theme: pack.theme,
+      schemas: pack.schemas,
+    });
+  } else {
+    await adapter.updateSite(siteId, {
+      theme: pack.theme,
+      schemas: pack.schemas,
+      name: pack.site?.name?.trim() || undefined,
+    });
+  }
 
   const pageIds: string[] = [];
   for (const pageSeed of pack.pages) {

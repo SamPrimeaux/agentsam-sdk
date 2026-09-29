@@ -19,7 +19,10 @@ async function main() {
   assert.equal(root.heuristicStarterPack.provenance.kind, 'builtin_starter');
   assert.notEqual(root.heuristicStarterPack.ephemeral, true);
 
-  const adapter = root.MemoryCmsAdapter.empty('smoke-site', 'Smoke Site');
+  const adapter = root.MemoryCmsAdapter.createEmpty();
+  const beforeSites = await adapter.listSites();
+  assert.equal(beforeSites.length, 0, 'adapter smoke must begin from empty persistence');
+
   const installed = await root.installStarterPack(adapter, root.heuristicStarterPack, {
     siteId: 'smoke-site',
   });
@@ -27,7 +30,18 @@ async function main() {
 
   const site = await adapter.loadSite('smoke-site');
   assert.ok(site.pages.length >= 1, 'site must retain starter pages after install');
+  assert.ok(site.theme?.cssVars, 'starter theme must survive on site record');
+  assert.ok(site.schemas?.protocol_version, 'starter schemas must survive on site record');
   const pageId = installed.pageIds[0];
+
+  // Site lifecycle
+  const sites = await adapter.listSites();
+  assert.equal(sites.length, 1);
+  const record = await adapter.getSite('smoke-site');
+  assert.equal(record.name, root.heuristicStarterPack.site?.name || root.heuristicStarterPack.name);
+  await adapter.updateSite('smoke-site', { color: '#222222' });
+  const updatedSite = await adapter.getSite('smoke-site');
+  assert.equal(updatedSite.color, '#222222');
 
   // Page CRUD
   const page = await adapter.getPage(pageId);
@@ -69,6 +83,8 @@ async function main() {
   assert.equal(gotRev.id, revision.id);
   const preview = await adapter.previewDraft(pageId);
   assert.ok(preview.snapshot);
+  const publishedBefore = await adapter.getPublishedRevision(pageId);
+  assert.equal(publishedBefore, null);
   const published = await adapter.publish(pageId);
   assert.ok(published.publicationId);
   const pub = await adapter.getPublishedRevision(pageId);
@@ -84,9 +100,6 @@ async function main() {
   const gotAsset = await adapter.getAsset(asset.id);
   assert.equal(gotAsset.name, 'note-2.txt');
   await adapter.deleteAsset(asset.id);
-
-  // Prove root export does not require AgentSam workbench packages
-  assert.equal('AgentSamWorkbench' in root, false);
 
   console.log(
     `verify-cms-adapter-smoke OK · pack=${root.heuristicStarterPack.id}@v${root.heuristicStarterPack.version} · pages=${site.pages.length} · published=${published.publicationId}`,

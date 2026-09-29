@@ -26,6 +26,10 @@
       "types": "./dist/adapter.d.ts",
       "import": "./dist/adapter.js"
     },
+    "./sqlite-adapter": {
+      "types": "./dist/sqlite-adapter.d.ts",
+      "import": "./dist/sqlite-adapter.js"
+    },
     "./shared": {
       "types": "./dist/shared/index.d.ts",
       "import": "./dist/shared/index.js"
@@ -72,6 +76,7 @@
     "cf:dry-run": "npm run build:app && wrangler deploy -c backend/wrangler.jsonc --dry-run",
     "verify:cms-package": "node scripts/verify-cms-package.mjs",
     "verify:cms-adapter-smoke": "node scripts/verify-cms-adapter-smoke.mjs",
+    "verify:cms-sqlite-smoke": "node scripts/verify-cms-sqlite-smoke.mjs",
     "pack:check": "node scripts/verify-cms-pack.mjs",
     "verify:cms-release": "node scripts/verify-cms-release.mjs",
     "verify:cms": "npm run verify:cms-package && npm run verify:cms-adapter-smoke && npm run pack:check",

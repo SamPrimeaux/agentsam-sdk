@@ -13,6 +13,7 @@ apps/client-cms-editor/
 ├─ acceptance/               donor parity / M1 acceptance matrix
 ├─ frontend/                 CMS authoring UI
 ├─ backend/                  portable adapter/bridge (not IAM-specific architecture)
+├─ adapters/                 Node runtime adapters (e.g. sqlite — not frontend)
 ├─ shared/cms/               types + CmsEditorAdapter contract
 ├─ reference/harvest/        copied harvest evidence (read-only)
 └─ scripts/                  verify:cms-package · pack:check
@@ -38,10 +39,17 @@ publication snapshot / public runtime
 
 | Adapter | Role |
 |---------|------|
-| SQLite | desktop/offline authority |
+| SQLite | desktop/offline authority via **`@inneranimalmedia/client-cms-editor/sqlite-adapter`** (Node-only; requires `node:sqlite`, not part of the browser bundle) |
 | D1 + R2 | cloud authority from **proven** OAuth resources |
 | HTTP / custom | consumer backend |
 | localStorage | UI chrome cache only — never scaffolded as authority |
+
+### `@inneranimalmedia/client-cms-editor/sqlite-adapter`
+
+Node-only subpath. Import `SqliteCmsAdapter` from this export for file-backed local CMS authority — **not** from the root `./` bundle (browser/React).
+
+- Requires Node.js with built-in **`node:sqlite`** (Node 22+ at time of writing).
+- The rest of the package (editor UI, `./adapter` contract, `./shared`) remains environment-agnostic; only this subpath carries the Node runtime requirement.
 
 ## Shared AgentSam rule
 

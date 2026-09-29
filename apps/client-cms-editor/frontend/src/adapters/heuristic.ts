@@ -11,7 +11,7 @@ import {
  * Prefer installStarterPack(sqliteOrHttpAdapter, heuristicStarterPack) for durable first-run.
  */
 export async function previewHeuristicStarter(siteId = HEURISTIC_STARTER_PACK_ID) {
-  const adapter = MemoryCmsAdapter.empty(siteId, heuristicStarterPack.name);
+  const adapter = MemoryCmsAdapter.createEmpty();
   const installed = await installStarterPack(adapter, heuristicStarterPack, { siteId });
   return {
     adapter,

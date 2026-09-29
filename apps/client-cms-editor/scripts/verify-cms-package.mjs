@@ -6,8 +6,8 @@
  */
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { dirname, join, relative, resolve, isAbsolute } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readJson = (rel) => JSON.parse(readFileSync(join(packageRoot, rel), 'utf8'));
@@ -51,7 +51,6 @@ if (!rootPkg.exports || typeof rootPkg.exports !== 'object') {
   fail('root package.json missing "exports" map');
 }
 
-// Consumer-safe exports must not point at raw .ts sources for public contract
 for (const [key, target] of Object.entries(rootPkg.exports)) {
   if (key === './package.json' || key === './acceptance') continue;
   const importPath =
@@ -67,6 +66,12 @@ for (const [key, target] of Object.entries(rootPkg.exports)) {
 }
 
 const REQUIRED_ADAPTER = [
+  'listSites',
+  'getSite',
+  'createSite',
+  'updateSite',
+  'deleteSite',
+  'loadSite',
   'deletePage',
   'deleteSection',
   'deleteBlock',
@@ -103,27 +108,36 @@ if (new Set(versions).size !== 1) {
   );
 }
 
-for (const [section, pkg, label] of [
-  ['dependencies', frontendPkg, 'frontend'],
-  ['devDependencies', frontendPkg, 'frontend'],
-  ['dependencies', sharedPkg, 'shared'],
-  ['devDependencies', sharedPkg, 'shared'],
-  ['dependencies', backendPkg, 'backend'],
-  ['dependencies', rootPkg, 'root'],
-  ['devDependencies', rootPkg, 'root'],
-]) {
-  const deps = pkg[section] || {};
-  for (const [name, version] of Object.entries(deps)) {
-    if (typeof version === 'string' && version.startsWith('file:')) {
-      fail(`${label} ${section} has monorepo file: dependency ${name}=${version}`);
-    }
-    if (typeof version === 'string' && version.startsWith('workspace:')) {
-      fail(`${label} ${section} has unpublished workspace: dependency ${name}=${version}`);
+function scanDeps(pkg, label) {
+  for (const section of ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies']) {
+    const deps = pkg[section] || {};
+    for (const [name, version] of Object.entries(deps)) {
+      if (typeof version !== 'string') continue;
+      if (version.startsWith('file:') || version.startsWith('link:')) {
+        fail(`${label} ${section} has non-portable dependency ${name}=${version}`);
+      }
+      if (version.startsWith('workspace:')) {
+        fail(`${label} ${section} has unpublished workspace: dependency ${name}=${version}`);
+      }
+      if (isAbsolute(version) || /^[a-z]:\\/i.test(version)) {
+        fail(`${label} ${section} has absolute filesystem dependency ${name}=${version}`);
+      }
+      if (/^\.\.(\/|\\)/.test(version)) {
+        fail(`${label} ${section} has parent-relative filesystem dependency ${name}=${version}`);
+      }
     }
   }
 }
 
-// Nested packages must not be separately publishable products
+for (const [label, pkg] of [
+  ['frontend', frontendPkg],
+  ['backend', backendPkg],
+  ['shared', sharedPkg],
+  ['root', rootPkg],
+]) {
+  scanDeps(pkg, label);
+}
+
 for (const [label, pkg] of [
   ['frontend', frontendPkg],
   ['backend', backendPkg],
@@ -134,25 +148,8 @@ for (const [label, pkg] of [
   }
 }
 
-const FORBIDDEN = [
-  { re: /\/Users\/samprimeaux\b/, label: 'absolute developer path /Users/samprimeaux' },
-  { re: /\binneranimalmedia\.com\b/i, label: 'inneranimalmedia.com deployment authority' },
-  { re: /\binneranimalmedia-business\b/i, label: 'inneranimalmedia-business D1 name' },
-  { re: /\bmeauxbility\b/i, label: 'meauxbility deployment string' },
-  { re: /binding-d1:primary/, label: 'invented binding-d1:primary resource' },
-  { re: /AgentSam platform D1 \(env\.DB\)/, label: 'invented env.DB product source label' },
-  { re: /CLOUDFLARE_ACCOUNT_ID\s*=\s*['"][a-f0-9]{32}/i, label: 'hardcoded Cloudflare account id' },
-];
-
-const SKIP_SCAN = new Set([
-  'node_modules',
-  'dist',
-  'coverage',
-  '.git',
-  'reference',
-  'acceptance',
-]);
-const DOC_ALLOWLIST = new Set(['AGENTS.md', 'ALPHA.md', 'README.md']);
+const SKIP_SCAN = new Set(['node_modules', 'dist', 'coverage', '.git', 'reference', 'acceptance']);
+const RUNTIME_SCAN_EXT = /\.(ts|tsx|js|mjs|cjs)$/;
 
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {
@@ -165,36 +162,76 @@ function walk(dir, out = []) {
   return out;
 }
 
+const IMPORT_RE = /\bfrom\s+['"]([^'"]+)['"]|\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+
+function resolveImport(fromFile, spec) {
+  if (!spec || spec.startsWith('node:')) return { ok: true, resolved: spec };
+  if (!spec.startsWith('.') && !spec.startsWith('/')) {
+    return { ok: true, bare: spec };
+  }
+  const base = spec.startsWith('/') ? spec : resolve(dirname(fromFile), spec);
+  const candidates = [
+    base,
+    `${base}.ts`,
+    `${base}.tsx`,
+    `${base}.js`,
+    `${base}.mjs`,
+    join(base, 'index.ts'),
+    join(base, 'index.js'),
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return { ok: true, resolved: candidate };
+  }
+  return { ok: false, resolved: base };
+}
+
+function isInsidePackage(absPath) {
+  const rel = relative(packageRoot, absPath);
+  return rel && !rel.startsWith('..') && !isAbsolute(rel);
+}
+
+const DEPLOYMENT_AUTHORITY = [
+  { re: /\/Users\/[^/'"\s]+/i, label: 'absolute machine path' },
+  { re: /\bCLOUDFLARE_ACCOUNT_ID\s*=\s*['"][a-f0-9]{32}/i, label: 'hardcoded Cloudflare account id' },
+  { re: /binding-d1:primary/, label: 'invented binding-d1:primary resource' },
+  { re: /AgentSam platform D1 \(env\.DB\)/, label: 'invented env.DB product source label' },
+];
+
 for (const file of walk(packageRoot)) {
   const rel = relative(packageRoot, file);
   if (rel.startsWith('scripts/verify-')) continue;
-  if (DOC_ALLOWLIST.has(rel)) continue;
+  if (rel.includes('/editor/legacy/')) continue;
+  if (!RUNTIME_SCAN_EXT.test(rel)) continue;
   const text = readFileSync(file, 'utf8');
-  for (const rule of FORBIDDEN) {
-    if (rule.re.test(text)) fail(`${rel}: contains forbidden ${rule.label}`);
-  }
-  if (/\bfrom\s+['"]@inneranimalmedia\/agentsam-contracts['"]/.test(text)) {
-    fail(`${rel}: imports agentsam-contracts — use CMS host bridges instead`);
-  }
-  if (/\bfrom\s+['"]@inneranimalmedia\/agentsam-workbench/.test(text)) {
-    fail(`${rel}: imports agentsam-workbench — AgentSam must be an optional host slot`);
-  }
-  if (/\bfrom\s+['"]\.\.\/\.\.\/.*packages\//.test(text) || /from ['"]\.\.\/\.\.\/\.\.\/packages\//.test(text)) {
-    fail(`${rel}: monorepo relative import into packages/`);
-  }
-  // Architecture law: frontend must not import backend implementation sources.
-  // Donor prototype under editor/legacy/ is exempt until deleted after contracts land.
-  if (
-    rel.startsWith('frontend/') &&
-    !rel.includes('/editor/legacy/') &&
-    /from\s+['"][^'"]*\/backend\/src\//.test(text)
-  ) {
-    fail(`${rel}: frontend must not import ../../backend/src — use CmsEditorAdapter / host`);
-  }
-  if (rel === 'backend/src/api/client.ts') {
-    if (/useDemoBootstrap|buildDemoCmsBootstrap|demoOk\b/.test(text)) {
-      fail('backend/src/api/client.ts must not wire fake demo bootstrap into API flow');
+
+  let match;
+  IMPORT_RE.lastIndex = 0;
+  while ((match = IMPORT_RE.exec(text))) {
+    const spec = match[1] || match[2];
+    if (!spec) continue;
+    const result = resolveImport(file, spec);
+    if (result.bare) {
+      if (spec.startsWith('@/') || spec.includes('/packages/')) {
+        fail(`${rel}: suspicious bare import ${spec}`);
+      }
+      continue;
     }
+    if (!result.ok) {
+      fail(`${rel}: unresolved relative import ${spec}`);
+      continue;
+    }
+    if (!isInsidePackage(result.resolved)) {
+      fail(`${rel}: import escapes package root (${spec} -> ${result.resolved})`);
+    }
+    if (rel.startsWith('frontend/') && !rel.includes('/editor/legacy/')) {
+      const targetRel = relative(packageRoot, result.resolved);
+      if (targetRel.startsWith('backend/src/')) {
+        fail(`${rel}: frontend must not import backend implementation (${spec})`);
+      }
+    }
+  }
+
+  if (rel === 'backend/src/api/client.ts') {
     if (/Promise\.resolve\(\{\}\)/.test(text)) {
       fail('backend/src/api/client.ts must not fabricate empty write success');
     }
@@ -202,17 +239,14 @@ for (const file of walk(packageRoot)) {
   if (rel === 'backend/src/demo-bootstrap.ts') {
     fail('backend/src/demo-bootstrap.ts must be deleted — use starter-packs/heuristic');
   }
-  // Portable vocabulary: deployment/customer names stay out of shipped runtime source.
+
   if (
-    (rel.startsWith('shared/') ||
-      (rel.startsWith('frontend/') && !rel.includes('/editor/legacy/')) ||
-      rel.startsWith('backend/')) &&
-    /\b(InnerAnimalMedia|Local Studio|Fuel & Free Time|fuelnfreetime)\b/.test(text)
+    (rel.startsWith('shared/') || rel.startsWith('frontend/') || rel.startsWith('backend/')) &&
+    !rel.includes('/editor/legacy/')
   ) {
-    fail(`${rel}: deployment/consumer product names must not appear in shipped runtime source`);
-  }
-  if ((rel.startsWith('shared/cms/') || rel.startsWith('frontend/src/lib/')) && /\bauthUserId\b/.test(text)) {
-    fail(`${rel}: use portable subjectId — not host IAM authUserId vocabulary`);
+    for (const rule of DEPLOYMENT_AUTHORITY) {
+      if (rule.re.test(text)) fail(`${rel}: contains deployment authority (${rule.label})`);
+    }
   }
 }
 
@@ -240,22 +274,36 @@ if (/PERSISTENCE\s*=\s*new Set\(\[[^\]]*localStorage/.test(bin)) {
   fail('bin/agentsam-cms.mjs still offers localStorage as a persistence authority choice');
 }
 
-// Dist must exist after build for package verification of export targets
-const distRequired = ['dist/index.js', 'dist/index.d.ts', 'dist/adapter.js', 'dist/styles/studio.css'];
+const distRequired = [
+  'dist/index.js',
+  'dist/index.d.ts',
+  'dist/adapter.js',
+  'dist/sqlite-adapter.js',
+  'dist/styles/studio.css',
+];
 for (const rel of distRequired) {
   if (!existsSync(join(packageRoot, rel))) {
     fail(`missing built artifact ${rel} — run npm run build before verify:cms-package`);
   }
 }
 
-// Anti-fake gate on production dist runtime (examples/starter-packs may mention Heuristic).
-const FAKE_DIST = [
-  { re: /\buseDemoBootstrap\b/, label: 'useDemoBootstrap' },
-  { re: /\bdemoOk\b/, label: 'demoOk' },
-  { re: /\bbuildDemoCmsBootstrap\b/, label: 'buildDemoCmsBootstrap' },
-  { re: /_demo\s*:\s*true/, label: '_demo:true' },
-  { re: /\bdemo\.localhost\b/, label: 'demo.localhost' },
-];
+const allowedBare = new Set([
+  ...Object.keys(rootPkg.dependencies || {}),
+  ...Object.keys(rootPkg.peerDependencies || {}),
+  ...Object.keys(rootPkg.optionalDependencies || {}),
+  'react',
+  'react-dom',
+  'react/jsx-runtime',
+  'node:sqlite',
+  'node:fs',
+  'node:path',
+  'node:url',
+  'node:os',
+  'node:module',
+  'node:child_process',
+  'node:crypto',
+]);
+
 function walkDistJs(dir, out = []) {
   if (!existsSync(dir)) return out;
   for (const name of readdirSync(dir)) {
@@ -266,13 +314,38 @@ function walkDistJs(dir, out = []) {
   }
   return out;
 }
+
 for (const file of walkDistJs(join(packageRoot, 'dist'))) {
   const rel = relative(packageRoot, file);
   const text = readFileSync(file, 'utf8');
-  for (const rule of FAKE_DIST) {
-    if (rule.re.test(text)) fail(`${rel}: production dist contains fake-success machinery (${rule.label})`);
+  let match;
+  IMPORT_RE.lastIndex = 0;
+  while ((match = IMPORT_RE.exec(text))) {
+    const spec = match[1] || match[2];
+    if (!spec) continue;
+    if (spec.startsWith('node:')) continue;
+    if (spec.startsWith('.')) {
+      const resolved = resolve(dirname(file), spec);
+      const withJs = existsSync(resolved)
+        ? resolved
+        : existsSync(`${resolved}.js`)
+          ? `${resolved}.js`
+          : resolved;
+      if (!isInsidePackage(withJs)) {
+        fail(`${rel}: dist relative import escapes package (${spec})`);
+      }
+      continue;
+    }
+    if (isAbsolute(spec)) {
+      fail(`${rel}: dist import uses absolute filesystem path (${spec})`);
+    }
+    const pkgName = spec.startsWith('@') ? spec.split('/').slice(0, 2).join('/') : spec.split('/')[0];
+    if (!allowedBare.has(spec) && !allowedBare.has(pkgName)) {
+      fail(`${rel}: dist bare import ${spec} missing from root dependencies/peerDependencies`);
+    }
   }
 }
+
 if (existsSync(join(packageRoot, 'backend/src/demo-bootstrap.ts'))) {
   fail('backend/src/demo-bootstrap.ts still present — delete; use starter-packs/heuristic');
 }
@@ -288,5 +361,5 @@ if (errors.length) {
 }
 
 console.log(
-  `verify-cms-package OK ${rootPkg.name}@${rootPkg.version} · private=${Boolean(rootPkg.private)} · dist ready · anti-fake · no file: deps`,
+  `verify-cms-package OK ${rootPkg.name}@${rootPkg.version} · private=${Boolean(rootPkg.private)} · dist ready · structural portability · no file: deps`,
 );

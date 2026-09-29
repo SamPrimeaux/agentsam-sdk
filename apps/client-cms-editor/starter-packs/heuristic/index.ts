@@ -17,6 +17,10 @@ export const heuristicStarterPack: CmsStarterPack = {
     packId: HEURISTIC_STARTER_PACK_ID,
     packVersion: 1,
   },
+  site: {
+    name: 'Heuristic',
+    domain: '',
+  },
   theme: {
     cssVars: {
       '--brand-primary': '#1e6a6f',

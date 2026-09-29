@@ -19,6 +19,9 @@ import type {
   CmsEditorPage,
   CmsEditorSection,
   CmsEditorSite,
+  CmsSiteCreateInput,
+  CmsSiteRecord,
+  CmsSiteUpdatePatch,
 } from './editor-types';
 import type { CmsPublicationSnapshot } from './publication';
 
@@ -67,7 +70,13 @@ export class CmsCapabilityError extends Error {
  * Optional methods must not be used as a way to dilute CRUD.
  */
 export type CmsEditorAdapter = {
-  // Site
+  // Site lifecycle
+  listSites(): Promise<CmsSiteRecord[]>;
+  getSite(siteId: string): Promise<CmsSiteRecord>;
+  createSite(input: CmsSiteCreateInput): Promise<CmsSiteRecord>;
+  updateSite(siteId: string, patch: CmsSiteUpdatePatch): Promise<CmsSiteRecord>;
+  deleteSite(siteId: string): Promise<void>;
+  /** Hydrated aggregate (site metadata + page tree). */
   loadSite(siteId: string): Promise<CmsEditorSite>;
 
   // Pages
@@ -137,6 +146,11 @@ export type CmsEditorAdapter = {
 
 /** Capability ids used when reporting honest unsupported operations. */
 export const CMS_ADAPTER_CAPABILITIES = Object.freeze([
+  'listSites',
+  'getSite',
+  'createSite',
+  'updateSite',
+  'deleteSite',
   'loadSite',
   'listPages',
   'getPage',
