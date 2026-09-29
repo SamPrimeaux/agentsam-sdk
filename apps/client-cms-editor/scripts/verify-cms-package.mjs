@@ -200,6 +200,7 @@ const DEPLOYMENT_AUTHORITY = [
 for (const file of walk(packageRoot)) {
   const rel = relative(packageRoot, file);
   if (rel.startsWith('scripts/verify-')) continue;
+  if (rel === 'tsup.config.ts') continue;
   if (rel.includes('/editor/legacy/')) continue;
   if (!RUNTIME_SCAN_EXT.test(rel)) continue;
   const text = readFileSync(file, 'utf8');
@@ -278,13 +279,43 @@ const distRequired = [
   'dist/index.js',
   'dist/index.d.ts',
   'dist/adapter.js',
+  'dist/adapter.d.ts',
   'dist/sqlite-adapter.js',
+  'dist/sqlite-adapter.d.ts',
+  'dist/shared/index.js',
+  'dist/shared/index.d.ts',
   'dist/styles/studio.css',
 ];
 for (const rel of distRequired) {
   if (!existsSync(join(packageRoot, rel))) {
     fail(`missing built artifact ${rel} — run npm run build before verify:cms-package`);
   }
+}
+
+const distForbidden = [
+  'dist/adapters/sqlite.d.ts',
+  'dist/frontend',
+  'dist/shared/cms',
+  'dist/backend/src',
+  'dist/fixtures',
+  '.dts-tmp',
+];
+for (const rel of distForbidden) {
+  if (existsSync(join(packageRoot, rel))) {
+    fail(`internal/compiler-dump path must not remain in publish surface: ${rel}`);
+  }
+}
+
+// Root/browser product must not pull node:sqlite; only the Node subpath may.
+for (const rel of ['dist/index.js', 'dist/adapter.js', 'dist/shared/index.js']) {
+  const text = readFileSync(join(packageRoot, rel), 'utf8');
+  if (text.includes('node:sqlite') || text.includes('DatabaseSync')) {
+    fail(`${rel} must not reference node:sqlite / DatabaseSync (use ./sqlite-adapter)`);
+  }
+}
+const sqliteJs = readFileSync(join(packageRoot, 'dist/sqlite-adapter.js'), 'utf8');
+if (!sqliteJs.includes('node:sqlite')) {
+  fail('dist/sqlite-adapter.js must import node:sqlite (Node-only subpath)');
 }
 
 const allowedBare = new Set([

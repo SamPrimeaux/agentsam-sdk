@@ -17,7 +17,6 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { createRequire } from 'node:module';
 
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const sdkRoot = join(packageRoot, '../..');
@@ -36,6 +35,14 @@ function run(cmd, args, opts = {}) {
   return result;
 }
 
+/** Fresh-consumer npm must not inherit this package's allow-scripts .npmrc via npm_config_*. */
+function consumerNpmEnv() {
+  const env = { ...process.env, npm_config_ignore_scripts: 'true' };
+  delete env.npm_config_allow_scripts;
+  delete env.npm_config_allowScripts;
+  return env;
+}
+
 function resolveExportTarget(pkgDir, exportValue) {
   if (typeof exportValue === 'string') return join(pkgDir, exportValue);
   const pathLike = exportValue?.import || exportValue?.default || exportValue?.types;
@@ -51,10 +58,12 @@ if (rootPkg.private === true) {
   process.exit(1);
 }
 
-// Build + normal package gate + adapter smoke first
+// Build + normal package gate + memory + durable SQLite + browser isolation before pack proof
 run(npm, ['run', 'build'], { cwd: packageRoot, stdio: 'inherit' });
 run(npm, ['run', 'verify:cms-package'], { cwd: packageRoot, stdio: 'inherit' });
 run(npm, ['run', 'verify:cms-adapter-smoke'], { cwd: packageRoot, stdio: 'inherit' });
+run(npm, ['run', 'verify:cms-sqlite-smoke'], { cwd: packageRoot, stdio: 'inherit' });
+run(npm, ['run', 'verify:cms-browser-smoke'], { cwd: packageRoot, stdio: 'inherit' });
 run(npm, ['run', 'pack:check'], { cwd: packageRoot, stdio: 'inherit' });
 
 const pack = run(npm, ['pack', '--json'], { cwd: packageRoot });
@@ -88,11 +97,17 @@ try {
       2,
     )}\n`,
   );
+  writeFileSync(join(consumer, '.npmrc'), 'ignore-scripts=true\n');
 
-  run(npm, ['install', '--ignore-scripts'], { cwd: consumer, stdio: 'inherit' });
-  run(npm, ['install', `file:${consumerTarball}`, '--ignore-scripts'], {
+  run(npm, ['install'], {
     cwd: consumer,
     stdio: 'inherit',
+    env: consumerNpmEnv(),
+  });
+  run(npm, ['install', `file:${consumerTarball}`], {
+    cwd: consumer,
+    stdio: 'inherit',
+    env: consumerNpmEnv(),
   });
 
   const installedRoot = join(consumer, 'node_modules/@inneranimalmedia/client-cms-editor');
@@ -107,9 +122,10 @@ try {
     throw new Error('fresh consumer lock still references monorepo paths');
   }
 
-  const require = createRequire(join(consumer, 'package.json'));
-  const resolved = require.resolve('@inneranimalmedia/client-cms-editor');
-  assert.ok(resolved.includes('node_modules/@inneranimalmedia/client-cms-editor'));
+  assert.ok(
+    existsSync(join(installedRoot, 'dist/index.js')),
+    'installed package missing dist/index.js',
+  );
 
   // Derive EVERY declared public export from the installed package.json
   const exportsMap = installed.exports || {};

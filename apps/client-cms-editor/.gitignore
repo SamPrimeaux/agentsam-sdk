@@ -1,6 +1,7 @@
 node_modules/
 frontend/dist/
 backend/dist/
+.dts-tmp/
 coverage/
 .env
 .env.*

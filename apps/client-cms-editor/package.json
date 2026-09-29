@@ -77,9 +77,10 @@
     "verify:cms-package": "node scripts/verify-cms-package.mjs",
     "verify:cms-adapter-smoke": "node scripts/verify-cms-adapter-smoke.mjs",
     "verify:cms-sqlite-smoke": "node scripts/verify-cms-sqlite-smoke.mjs",
+    "verify:cms-browser-smoke": "node scripts/verify-cms-browser-smoke.mjs",
     "pack:check": "node scripts/verify-cms-pack.mjs",
     "verify:cms-release": "node scripts/verify-cms-release.mjs",
-    "verify:cms": "npm run verify:cms-package && npm run verify:cms-adapter-smoke && npm run pack:check",
+    "verify:cms": "npm run verify:cms-package && npm run verify:cms-adapter-smoke && npm run verify:cms-sqlite-smoke && npm run verify:cms-browser-smoke && npm run pack:check",
     "prepublishOnly": "npm run build && npm run verify:cms-release"
   },
   "publishConfig": {
@@ -93,6 +94,7 @@
   "devDependencies": {
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "esbuild": "^0.25.12",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "tsup": "^8.5.0",

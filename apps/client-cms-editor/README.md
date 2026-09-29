@@ -48,7 +48,7 @@ publication snapshot / public runtime
 
 Node-only subpath. Import `SqliteCmsAdapter` from this export for file-backed local CMS authority — **not** from the root `./` bundle (browser/React).
 
-- Requires Node.js with built-in **`node:sqlite`** (Node 22+ at time of writing).
+- Requires Node.js with built-in **`node:sqlite`** (Node 22+ at time of writing). This requirement applies **only** to `./sqlite-adapter` — the root package `engines` stay `node >= 20` so browser/edge consumers are not blocked.
 - The rest of the package (editor UI, `./adapter` contract, `./shared`) remains environment-agnostic; only this subpath carries the Node runtime requirement.
 
 ## Shared AgentSam rule
@@ -60,10 +60,10 @@ CMS must not invent its own chat/browser/terminal/auth stack. When AgentSam is p
 ```bash
 cd apps/client-cms-editor
 npm ci
-npm run verify:cms-package   # currently fails until package is publishable
+npm run build
+npm run verify:cms            # package + memory smoke + sqlite durability + browser isolation + pack
 npm run typecheck
 npm test
-npm run build
 npm run dev
 ```
 

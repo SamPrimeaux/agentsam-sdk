@@ -42,7 +42,17 @@ if (harvest.length) {
   process.exit(1);
 }
 
-const required = ['package.json', 'dist/index.js', 'dist/adapter.js', 'dist/styles/studio.css', 'acceptance/cms-parity.v1.json'];
+const required = [
+  'package.json',
+  'dist/index.js',
+  'dist/index.d.ts',
+  'dist/adapter.js',
+  'dist/adapter.d.ts',
+  'dist/sqlite-adapter.js',
+  'dist/sqlite-adapter.d.ts',
+  'dist/styles/studio.css',
+  'acceptance/cms-parity.v1.json',
+];
 for (const hint of required) {
   if (!paths.some((p) => p === hint || p.startsWith(`${hint}/`))) {
     console.error(`pack:check failed: expected packed path ${hint}`);
@@ -50,6 +60,21 @@ for (const hint of required) {
   }
 }
 
+const forbidden = paths.filter(
+  (path) =>
+    path === 'dist/adapters/sqlite.d.ts' ||
+    path.startsWith('dist/frontend/') ||
+    path.startsWith('dist/shared/cms/') ||
+    path.startsWith('dist/backend/src/') ||
+    path.startsWith('dist/fixtures/') ||
+    path.startsWith('.dts-tmp/'),
+);
+if (forbidden.length) {
+  console.error('pack:check failed: compiler-dump / internal declaration paths must not ship');
+  for (const path of forbidden.slice(0, 40)) console.error(`- ${path}`);
+  process.exit(1);
+}
+
 console.log(
-  `pack:check OK ${pack.name}@${pack.version} · ${pack.files.length} files · no nested node_modules · no harvest`,
+  `pack:check OK ${pack.name}@${pack.version} · ${pack.files.length} files · no nested node_modules · no harvest · clean dist surface`,
 );

@@ -51,20 +51,25 @@ Embedding hosts consume packed artifact
 ```bash
 npm ci
 npm run build
-npm run verify:cms-package   # green while private:true once boundary is correct
-npm run pack:check
+npm run verify:cms
+# = verify:cms-package
+# + verify:cms-adapter-smoke   (memory)
+# + verify:cms-sqlite-smoke    (durable reopen proof — required)
+# + verify:cms-browser-smoke   (fresh tarball root must not pull node:sqlite)
+# + pack:check
 ```
 
 Release proof (requires flipping `private: false` first — do not publish until green):
 
 ```bash
 # edit package.json private → false
-npm run verify:cms-release
+npm run verify:cms-release   # includes sqlite + browser smokes before pack/consumer proof
 npm publish --tag alpha --access public
 ```
 
 `verify:cms-package` must **not** fail merely because `private:true`.
 `verify:cms-release` **must** fail while `private:true`.
+Do **not** raise package-wide `engines` for `node:sqlite` — that requirement is documented on `./sqlite-adapter` only.
 
 Do **not** flip `private:false` while dist still contains automatic fake-success machinery.
 
