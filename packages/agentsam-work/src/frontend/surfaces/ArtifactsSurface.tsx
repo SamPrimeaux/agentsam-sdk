@@ -63,6 +63,14 @@ export function ArtifactsSurface({ artifacts }: { artifacts: WorkArtifact[] }) {
               gap: 12,
             }}
           >
+            {!visible.length ? (
+              <div className="agentsam-work-empty" style={{ gridColumn: "1 / -1", padding: "28px 12px" }}>
+                <strong style={{ display: "block", fontSize: 14 }}>No artifacts yet</strong>
+                <p style={{ margin: "8px 0 0", color: "var(--agentsam-work-muted)", fontSize: 12, lineHeight: 1.55 }}>
+                  Account-owned files from R2 and connected sources will appear here. This view is not backed by sample fixture content.
+                </p>
+              </div>
+            ) : null}
             {visible.map((artifact) => {
               const Icon = iconFor(artifact.kind);
               return (

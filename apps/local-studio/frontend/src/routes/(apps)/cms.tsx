@@ -1,5 +1,10 @@
+import { useMemo } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { CmsEditor, CmsHubPage } from "@inneranimalmedia/agentsam-cms-frontend";
+import {
+  CmsEditor,
+  CmsHubPage,
+  createHttpCmsAdapter,
+} from "@inneranimalmedia/agentsam-cms-frontend";
 import "@inneranimalmedia/agentsam-cms-frontend/styles/studio.css";
 import { ContentStudioPage } from "@/components/content/ContentStudioPage";
 import {
@@ -30,6 +35,7 @@ export const Route = createFileRoute("/(apps)/cms")({
   component: CmsPage,
 });
 
+/** Hosted site catalog — real public properties, not fixture gallery cards. */
 const SITE_CATALOG = [
   { slug: "agentsam-sdk", name: "Agent Sam SDK", domain: "agentsam.inneranimalmedia.com", hub_priority: 100 },
   { slug: "inneranimalmedia", name: "Inner Animal Media", domain: "inneranimalmedia.com", hub_priority: 90 },
@@ -43,6 +49,19 @@ function CmsPage() {
 
   const siteSlug = (search.site || search.project_slug || search.project || "agentsam-sdk").trim();
   const siteName = SITE_CATALOG.find((s) => s.slug === siteSlug)?.name ?? siteSlug;
+
+  const adapter = useMemo(
+    () =>
+      createHttpCmsAdapter({
+        sites: SITE_CATALOG.map((s) => ({
+          id: s.slug,
+          slug: s.slug,
+          name: s.name,
+          domain: s.domain,
+        })),
+      }),
+    [],
+  );
 
   const isEditorView = Boolean(
     search.page ||
@@ -117,44 +136,50 @@ function CmsPage() {
     );
   }
 
-  const editorPanel =
-    (["pages", "sections", "templates", "imports", "theme"] as const).find(
-      (p) => p === search.panel,
-    ) || "sections";
-
   return (
-    <div className="size-full overflow-hidden">
-      <CmsEditor
-        projectSlug={siteSlug}
-        initialPageId={search.page || null}
-        initialPanel={editorPanel}
-        siteCatalog={SITE_CATALOG}
-        basePath="/cms"
-        onSiteChange={(slug) => {
-          navigate({
-            to: "/cms",
-            search: { ...search, site: slug },
-          });
-        }}
-        onNavigate={(path) => {
-          if (path === "/cms" || path === "/cms?panel=hub") {
-            goHub();
-          } else if (path.startsWith("/cms")) {
-            const parsed = parseCmsNavigatePath(path, siteSlug);
-            navigate({
-              to: "/cms",
-              search: {
-                site: parsed.site,
-                panel: parsed.panel,
-                page: parsed.page,
-                view: parsed.view,
-              },
-            });
-          } else {
-            navigate({ to: path });
-          }
-        }}
-      />
+    <div className="size-full overflow-hidden" data-cms-adapter="http">
+      <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-2 text-sm">
+        <button
+          type="button"
+          className="text-muted-foreground hover:text-foreground"
+          onClick={() => goHub()}
+        >
+          ← Sites
+        </button>
+        <span className="text-muted-foreground">/</span>
+        <span className="font-medium">{siteName}</span>
+        <span className="text-muted-foreground">/</span>
+        <span>Editor</span>
+      </div>
+      <div className="min-h-0 flex-1 overflow-hidden" style={{ height: "calc(100% - 41px)" }}>
+        <CmsEditor
+          adapter={adapter}
+          siteId={siteSlug}
+          initialPageId={search.page || null}
+          host={{
+            navigate: (path: string) => {
+              if (path === "/cms" || path === "/cms?panel=hub") {
+                goHub();
+                return;
+              }
+              if (path.startsWith("/cms")) {
+                const parsed = parseCmsNavigatePath(path, siteSlug);
+                void navigate({
+                  to: "/cms",
+                  search: {
+                    site: parsed.site,
+                    panel: parsed.panel,
+                    page: parsed.page,
+                    view: parsed.view,
+                  },
+                });
+                return;
+              }
+              void navigate({ to: path as never });
+            },
+          }}
+        />
+      </div>
     </div>
   );
 }

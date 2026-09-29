@@ -3,17 +3,35 @@ import { useNavigate } from "@tanstack/react-router";
 import {
   WorkProduct,
   applyWorkThemeTokens,
+  createHttpWorkHost,
   createFixtureWorkHost,
   populatedWorkFixture,
   readStoredWorkThemeTokens,
   type WorkSurfaceId,
 } from "@inneranimalmedia/agentsam-work";
+import "@inneranimalmedia/agentsam-work/theme.css";
+
+/**
+ * Production / hosted default: HTTP WorkHost → GET /api/work/snapshot.
+ * Fixture host only when explicitly requested (?fixture=populated|demo) or
+ * VITE_WORK_FIXTURE=1 for Storybook/local preview — never the production default.
+ */
+function resolveWorkHostMode(): "http" | "fixture" {
+  if (typeof window === "undefined") return "http";
+  const params = new URLSearchParams(window.location.search);
+  const fixture = params.get("fixture");
+  if (fixture === "populated" || fixture === "demo") return "fixture";
+  if (import.meta.env?.VITE_WORK_FIXTURE === "1") return "fixture";
+  return "http";
+}
 
 function useLocalStudioWorkHost() {
-  return useMemo(
-    () => createFixtureWorkHost(populatedWorkFixture),
-    [],
-  );
+  return useMemo(() => {
+    if (resolveWorkHostMode() === "fixture") {
+      return createFixtureWorkHost(populatedWorkFixture);
+    }
+    return createHttpWorkHost("");
+  }, []);
 }
 
 export function LocalStudioWorkPage({
@@ -34,7 +52,7 @@ export function LocalStudioWorkPage({
   }, []);
 
   return (
-    <div className="h-full min-h-0">
+    <div className="h-full min-h-0" data-work-host={resolveWorkHostMode()}>
       <WorkProduct
         host={host}
         surface={surface}
