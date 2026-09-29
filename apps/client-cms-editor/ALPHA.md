@@ -5,8 +5,8 @@
 1. **Donor behavior** (`studio-cms-editor` + harvest plans) is acceptance authority.
 2. **`@inneranimalmedia/client-cms-editor` npm artifact** is product authority.
 3. Adapters (SQLite / D1+R2 / HTTP) sit **under** the UX.
-4. Registry / `agentsam_products` rows are **receipts after** the artifact exists.
-5. Local Studio / InnerAnimalMedia are **consumers** of the packed package.
+4. Registry / product catalog rows are **receipts after** the artifact exists.
+5. Embedding applications are **consumers** of the packed package.
 
 Do not: registry-first, Rust/asrust/machine dilution, localStorage-as-backend, or “npm publish out of scope.”
 
@@ -19,7 +19,7 @@ Read-only donors (outside the package; do not modify):
 
 - `studio-cms-editor` checkout on this machine
 - `studio-cms-editor-harvest-export`
-- AgentSam harvest folder `studio-cms-editor-20260929`
+- harvest folder `studio-cms-editor-20260929`
 - in-tree copy: `apps/client-cms-editor/reference/harvest/`
 
 ## Release staircase
@@ -27,9 +27,11 @@ Read-only donors (outside the package; do not modify):
 ```text
 DONOR PARITY INVENTORY          ← acceptance/cms-parity.v1.json
         ↓
-PACKAGE BOUNDARY                ← exports/files, no file: deps, no private
+PACKAGE BOUNDARY                ← exports/files, no file: deps, private ok
         ↓
-0.1.0-alpha.0 PUBLIC NPM
+ANTI-FAKE RUNTIME               ← no automatic demo write short-circuit
+        ↓
+0.1.0-alpha.0 PUBLIC NPM        ← private:false → verify:cms-release → publish
         ↓
 clean-install proof
         ↓
@@ -39,7 +41,7 @@ Draft / Preview / Publish (M1 loop)
         ↓
 Cloud adapter + SQLite adapter proofs
         ↓
-Local Studio + InnerAnimalMedia consume packed artifact
+Embedding hosts consume packed artifact
         ↓
 0.1.0 latest
 ```
@@ -63,6 +65,14 @@ npm publish --tag alpha --access public
 
 `verify:cms-package` must **not** fail merely because `private:true`.
 `verify:cms-release` **must** fail while `private:true`.
+
+Do **not** flip `private:false` while dist still contains automatic fake-success machinery.
+
+## Stock starter
+
+Heuristic (`starter-packs/heuristic`) is the shipped recommended starter pack.
+Install via `installStarterPack(adapter, heuristicStarterPack)` into a real adapter.
+Temporary in-memory preview is an adapter choice — the pack itself is not ephemeral.
 
 ## M1 loop (must pass before “CMS works”)
 

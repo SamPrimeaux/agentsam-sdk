@@ -16,7 +16,7 @@ export type CmsEditorUiState = {
   saving: boolean;
   publishing: boolean;
   error: string | null;
-  ephemeralNotice: string | null;
+  temporaryAdapterNotice: string | null;
 };
 
 export type CmsEditorController = {
@@ -46,7 +46,7 @@ export type UseCmsEditorControllerArgs = {
   host?: CmsEditorHost;
   siteId: string;
   initialPageId?: string | null;
-  ephemeral?: boolean;
+  temporaryAdapter?: boolean;
 };
 
 export function useCmsEditorController({
@@ -54,7 +54,7 @@ export function useCmsEditorController({
   host,
   siteId,
   initialPageId = null,
-  ephemeral = false,
+  temporaryAdapter = false,
 }: UseCmsEditorControllerArgs): CmsEditorController {
   const [site, setSite] = useState<CmsEditorSite | null>(null);
   const [pageId, setPageId] = useState<string | null>(initialPageId);
@@ -69,8 +69,8 @@ export function useCmsEditorController({
     saving: false,
     publishing: false,
     error: null,
-    ephemeralNotice: ephemeral
-      ? 'Demo sandbox · changes are temporary until a durable adapter (SQLite/D1) is attached.'
+    temporaryAdapterNotice: temporaryAdapter
+      ? 'Temporary adapter · changes are not durable until a SQLite/D1/HTTP adapter is attached. Starter pack content is real product content.'
       : null,
   });
 

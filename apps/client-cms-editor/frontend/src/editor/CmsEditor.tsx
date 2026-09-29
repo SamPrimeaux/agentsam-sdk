@@ -10,12 +10,12 @@ import '../styles/studio.css';
 export type CmsEditorProps = {
   adapter: CmsEditorAdapter;
   host?: CmsEditorHost;
-  /** Optional AgentSam host slots (render props). */
+  /** Optional agent host slots (render props). */
   agentHost?: CmsAgentHost;
   siteId: string;
   initialPageId?: string | null;
-  /** True when using MemoryCmsAdapter / explicit example sandbox. */
-  ephemeral?: boolean;
+  /** True when the attached adapter is temporary (e.g. in-memory preview). Pack content is not temporary. */
+  temporaryAdapter?: boolean;
 };
 
 function EditorShell() {
@@ -45,9 +45,9 @@ function EditorShell() {
 
   return (
     <main className="cms-shell cms-shell--product" data-cms-authority="adapter">
-      {ui.ephemeralNotice ? (
+      {ui.temporaryAdapterNotice ? (
         <div className="cms-ephemeral-banner" role="status">
-          {ui.ephemeralNotice}
+          {ui.temporaryAdapterNotice}
         </div>
       ) : null}
       <header className="cms-topbar">
@@ -190,14 +190,14 @@ export default function CmsEditor({
   host,
   siteId,
   initialPageId = null,
-  ephemeral = false,
+  temporaryAdapter = false,
 }: CmsEditorProps) {
   const editor = useCmsEditorController({
     adapter,
     host,
     siteId,
     initialPageId,
-    ephemeral,
+    temporaryAdapter,
   });
 
   return (

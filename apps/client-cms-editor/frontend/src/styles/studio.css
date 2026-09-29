@@ -30,7 +30,7 @@
 .cms-agent-workbench [data-agent-composer]>div{display:flex;align-items:center;gap:6px;margin-top:6px}
 .cms-agent-workbench [data-agent-composer] button,.cms-agent-workbench [data-agent-composer] select{min-height:29px;border:1px solid var(--border-2);border-radius:6px;background:var(--surface-1);color:var(--text-2);padding:0 9px;font-size:9px}
 
-/* FnF theme-editor shell — rail | library | inspector+canvas | AgentSam dock */
+/* Theme-editor shell — rail | library | inspector+canvas | agent dock */
 .cms-shell--fnf{grid-template-rows:48px minmax(0,1fr) 24px;background:#f4f4f5}
 .fnf-topbar{grid-row:1;height:48px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 12px;background:#1f1f1f;color:#e8e8e8;position:relative;z-index:40;border-bottom:1px solid #2a2a2a}
 .fnf-topbar-left{display:flex;align-items:center;gap:8px;min-width:0;flex:none}

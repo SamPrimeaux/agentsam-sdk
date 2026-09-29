@@ -6,14 +6,14 @@ export type CmsAgentSurfaceProps = {
   className?: string;
   children?: ReactNode;
   /**
-   * Host-provided AgentSam / contextual composer surface.
-   * Core CMS never imports agentsam-workbench; attach via CmsAgentHost in the consumer.
+   * Host-provided agent / contextual composer surface.
+   * Core CMS never imports a workbench package; attach via CmsAgentHost in the consumer.
    */
   hostSurface?: ReactNode;
 };
 
 /**
- * Optional AgentSam surface slot. Without a host surface, renders a clear empty state.
+ * Optional agent surface slot. Without a host surface, renders a clear empty state.
  */
 export function CmsAgentSurface({
   className,
@@ -27,8 +27,8 @@ export function CmsAgentSurface({
     <div className={className} data-cms-agent-empty="">
       {children || (
         <p>
-          No AgentSam host attached. Pass a host surface from the consumer (Local Studio /
-          InnerAnimalMedia) — the CMS package does not bundle AgentSam workbench.
+          No agent host attached. Pass a host surface from the embedding application —
+          this package does not bundle an agent workbench.
         </p>
       )}
     </div>

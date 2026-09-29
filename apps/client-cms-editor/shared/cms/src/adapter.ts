@@ -6,7 +6,7 @@
  *   - SQLite (desktop / offline authority)
  *   - Cloudflare D1 + R2 (cloud authority via OAuth-proven resources)
  *   - custom HTTP backend
- *   - InnerAnimalMedia platform (one consumer implementation)
+ *   - embedding application backends (one consumer implementation each)
  *
  * localStorage is never an adapter. It may cache UI chrome only.
  *

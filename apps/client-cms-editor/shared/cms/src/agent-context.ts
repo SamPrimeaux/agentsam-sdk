@@ -14,7 +14,7 @@ export function createCmsAgentContext(input: CmsAgentContextInput): CmsAgentCont
   return {
     surface: 'cms',
     accountId: input.principal.accountId,
-    authUserId: input.principal.authUserId,
+    subjectId: input.principal.subjectId,
     projectId: input.projectId,
     metadata: {
       route: input.route ?? null,

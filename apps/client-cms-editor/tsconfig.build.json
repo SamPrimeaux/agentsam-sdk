@@ -49,7 +49,7 @@
     "frontend/src/index.ts",
     "frontend/src/**/*.ts",
     "frontend/src/**/*.tsx",
-    "fixtures/**/*.ts",
+    "starter-packs/**/*.ts",
     "shared/cms/src/**/*.ts",
     "backend/src/**/*.ts",
     "backend/src/**/*.js"

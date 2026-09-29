@@ -21,11 +21,13 @@ function cloneSite(site: CmsEditorSite): CmsEditorSite {
 }
 
 /**
- * Explicit in-memory adapter for sandboxes/tests.
- * Must be seeded intentionally. UI must label it ephemeral — never pretend to be durable.
+ * Explicit in-memory adapter for sandboxes/tests/preview.
+ * Temporary adapter authority — never pretend to be durable SQLite/D1/HTTP persistence.
+ * Starter packs installed into this adapter are still real packs; only the store is temporary.
  */
 export class MemoryCmsAdapter implements CmsEditorAdapter {
-  readonly ephemeral = true;
+  /** True when this adapter is not durable across reloads/processes. */
+  readonly temporary = true;
   private site: CmsEditorSite;
   private revisions = new Map<string, CmsRevision[]>();
   private published = new Map<string, CmsPublicationSnapshot>();
@@ -37,6 +39,24 @@ export class MemoryCmsAdapter implements CmsEditorAdapter {
 
   static fromSite(site: CmsEditorSite) {
     return new MemoryCmsAdapter(site);
+  }
+
+  static empty(siteId: string, name = 'Untitled') {
+    return new MemoryCmsAdapter({
+      id: siteId,
+      name,
+      initials: name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0])
+        .join('')
+        .toUpperCase() || 'CMS',
+      domain: '',
+      edited: 'just now',
+      color: '#1e6a6f',
+      pages: [],
+    });
   }
 
   private pageOrThrow(pageId: string) {

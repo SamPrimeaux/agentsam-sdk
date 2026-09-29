@@ -71,9 +71,10 @@
     "clean": "rm -rf dist frontend/dist coverage",
     "cf:dry-run": "npm run build:app && wrangler deploy -c backend/wrangler.jsonc --dry-run",
     "verify:cms-package": "node scripts/verify-cms-package.mjs",
+    "verify:cms-adapter-smoke": "node scripts/verify-cms-adapter-smoke.mjs",
     "pack:check": "node scripts/verify-cms-pack.mjs",
     "verify:cms-release": "node scripts/verify-cms-release.mjs",
-    "verify:cms": "npm run verify:cms-package && npm run pack:check",
+    "verify:cms": "npm run verify:cms-package && npm run verify:cms-adapter-smoke && npm run pack:check",
     "prepublishOnly": "npm run build && npm run verify:cms-release"
   },
   "publishConfig": {

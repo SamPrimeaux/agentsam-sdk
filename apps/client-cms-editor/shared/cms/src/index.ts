@@ -6,3 +6,4 @@ export * from './host';
 export * from './routes';
 export * from './adapter';
 export * from './map';
+export * from './starter-pack';

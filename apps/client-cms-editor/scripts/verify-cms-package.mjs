@@ -192,15 +192,27 @@ for (const file of walk(packageRoot)) {
     fail(`${rel}: frontend must not import ../../backend/src — use CmsEditorAdapter / host`);
   }
   if (rel === 'backend/src/api/client.ts') {
-    if (/useDemoBootstrap|buildDemoCmsBootstrap|buildHeuristicTheme/.test(text)) {
-      fail('backend/src/api/client.ts must not wire demo/heuristic bootstrap into API flow');
+    if (/useDemoBootstrap|buildDemoCmsBootstrap|demoOk\b/.test(text)) {
+      fail('backend/src/api/client.ts must not wire fake demo bootstrap into API flow');
     }
     if (/Promise\.resolve\(\{\}\)/.test(text)) {
       fail('backend/src/api/client.ts must not fabricate empty write success');
     }
   }
-  if (rel === 'backend/src/demo-bootstrap.ts' && !/throw new Error/.test(text)) {
-    fail('demo-bootstrap.ts must throw — not manufacture bootstrap payloads');
+  if (rel === 'backend/src/demo-bootstrap.ts') {
+    fail('backend/src/demo-bootstrap.ts must be deleted — use starter-packs/heuristic');
+  }
+  // Portable vocabulary: deployment/customer names stay out of shipped runtime source.
+  if (
+    (rel.startsWith('shared/') ||
+      (rel.startsWith('frontend/') && !rel.includes('/editor/legacy/')) ||
+      rel.startsWith('backend/')) &&
+    /\b(InnerAnimalMedia|Local Studio|Fuel & Free Time|fuelnfreetime)\b/.test(text)
+  ) {
+    fail(`${rel}: deployment/consumer product names must not appear in shipped runtime source`);
+  }
+  if ((rel.startsWith('shared/cms/') || rel.startsWith('frontend/src/lib/')) && /\bauthUserId\b/.test(text)) {
+    fail(`${rel}: use portable subjectId — not host IAM authUserId vocabulary`);
   }
 }
 
@@ -236,6 +248,38 @@ for (const rel of distRequired) {
   }
 }
 
+// Anti-fake gate on production dist runtime (examples/starter-packs may mention Heuristic).
+const FAKE_DIST = [
+  { re: /\buseDemoBootstrap\b/, label: 'useDemoBootstrap' },
+  { re: /\bdemoOk\b/, label: 'demoOk' },
+  { re: /\bbuildDemoCmsBootstrap\b/, label: 'buildDemoCmsBootstrap' },
+  { re: /_demo\s*:\s*true/, label: '_demo:true' },
+  { re: /\bdemo\.localhost\b/, label: 'demo.localhost' },
+];
+function walkDistJs(dir, out = []) {
+  if (!existsSync(dir)) return out;
+  for (const name of readdirSync(dir)) {
+    const full = join(dir, name);
+    const st = statSync(full);
+    if (st.isDirectory()) walkDistJs(full, out);
+    else if (name.endsWith('.js') && !name.endsWith('.map.js')) out.push(full);
+  }
+  return out;
+}
+for (const file of walkDistJs(join(packageRoot, 'dist'))) {
+  const rel = relative(packageRoot, file);
+  const text = readFileSync(file, 'utf8');
+  for (const rule of FAKE_DIST) {
+    if (rule.re.test(text)) fail(`${rel}: production dist contains fake-success machinery (${rule.label})`);
+  }
+}
+if (existsSync(join(packageRoot, 'backend/src/demo-bootstrap.ts'))) {
+  fail('backend/src/demo-bootstrap.ts still present — delete; use starter-packs/heuristic');
+}
+if (!existsSync(join(packageRoot, 'starter-packs/heuristic/index.ts'))) {
+  fail('missing starter-packs/heuristic — stock starter pack required');
+}
+
 if (warnings.length) for (const w of warnings) console.warn(`warn: ${w}`);
 if (errors.length) {
   console.error(`verify-cms-package FAILED (${errors.length})`);
@@ -244,5 +288,5 @@ if (errors.length) {
 }
 
 console.log(
-  `verify-cms-package OK ${rootPkg.name}@${rootPkg.version} · private=${Boolean(rootPkg.private)} · dist ready · no file: deps`,
+  `verify-cms-package OK ${rootPkg.name}@${rootPkg.version} · private=${Boolean(rootPkg.private)} · dist ready · anti-fake · no file: deps`,
 );

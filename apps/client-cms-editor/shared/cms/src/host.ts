@@ -1,16 +1,17 @@
 /**
- * CMS-owned host integration surfaces (no React, no AgentSam package imports).
- *
- * Hosts adapt their AgentSam/workbench implementations into these slots.
- * CMS does not fork AgentSam message/run/tool types.
+ * Optional capabilities supplied by the embedding host.
+ * The CMS remains independent of host navigation,
+ * identity authority, runtime, and deployment topology.
  */
 
 /** Minimal authenticated identity the CMS needs for context metadata. */
 export type CmsHostPrincipal = {
-  accountId: string;
-  authUserId: string;
+  /** Host-stable subject identifier (consumer maps its own user id here). */
+  subjectId: string;
+  accountId?: string;
   displayName?: string;
   email?: string;
+  metadata?: Record<string, unknown>;
 };
 
 export type CmsAgentSurfaceKind = 'cms' | string;
@@ -19,7 +20,7 @@ export type CmsAgentSurfaceKind = 'cms' | string;
 export type CmsAgentContext = {
   surface: CmsAgentSurfaceKind;
   accountId?: string;
-  authUserId?: string;
+  subjectId?: string;
   projectId?: string;
   metadata?: {
     route?: string | null;
@@ -70,12 +71,12 @@ export type CmsAgentMiniSlotProps = {
 };
 
 /**
- * Host/deployment capabilities. InnerAnimalMedia, Local Studio, Fuel, etc.
- * implement these — never hardcode deployment navigation inside the package.
+ * Host/deployment capabilities supplied by the embedding application.
+ * Consumers implement these — the CMS package does not hardcode navigation or identity.
  */
 export type CmsEditorHost = {
   principal?: CmsHostPrincipal | null;
   navigate?: (path: string) => void;
   openExternal?: (url: string) => void;
-  labelEphemeralSandbox?: (message: string) => void;
+  labelTemporaryAdapter?: (message: string) => void;
 };
