@@ -43,7 +43,7 @@ pub fn enrich_receipt(root: &Path, receipt: &mut MachineReceipt) {
         "id": "finding:inventory_summary",
         "kind": "inventory_summary",
         "schema": "agentsam.machine.finding.v1",
-        "heuristic": false,
+        "certainty": "observed",
         "evidence": {
             "fact_ids": all_fact_ids.iter().take(64).cloned().collect::<Vec<_>>(),
             "fact_id_count": all_fact_ids.len(),
@@ -111,13 +111,24 @@ fn classify_project(
             && (profile.template_files > 0 || profile.layout_files > 0);
         if has_composition {
             let fact_ids: Vec<String> = profile.evidence_paths.iter().cloned().take(48).collect();
+            let matched = profile.matched_signals();
+            let evidence_count = fact_ids.len()
+                + profile.template_files
+                + profile.section_files
+                + profile.snippet_files
+                + profile.layout_files;
             receipt.findings.push(json!({
                 "id": "finding:project_structured_template_theme",
                 "kind": "project",
                 "type": "structured_template_theme",
                 "schema": "agentsam.machine.finding.v1",
-                "heuristic": true,
-                "confidence": profile.confidence(),
+                "certainty": "derived",
+                "derivation": {
+                    "method": "deterministic_rules",
+                    "rule_id": "project.structured_template_theme.v1",
+                    "matched_signals": matched,
+                    "evidence_count": evidence_count,
+                },
                 "evidence": {
                     "fact_ids": fact_ids.iter().map(|p| format!("file:{p}")).collect::<Vec<_>>(),
                     "templateLanguage": "liquid",
@@ -159,8 +170,18 @@ fn classify_project(
             "kind": "project",
             "type": "static_website",
             "schema": "agentsam.machine.finding.v1",
-            "heuristic": true,
-            "confidence": if theme_json.is_some() { 0.95 } else { 0.85 },
+            "certainty": "derived",
+            "derivation": {
+                "method": "deterministic_rules",
+                "rule_id": "project.static_website.v1",
+                "matched_signals": {
+                    "html_pages_ge_3": html_count >= 3,
+                    "site_or_public_or_index_layout": true,
+                    "theme_manifest_present": theme_json.is_some(),
+                    "not_typescript_dominated": ts_count < html_count.saturating_mul(3),
+                },
+                "evidence_count": fact_ids.len(),
+            },
             "html_pages": html_count,
             "evidence": {
                 "fact_ids": fact_ids,
@@ -183,8 +204,16 @@ fn classify_project(
             "kind": "project",
             "type": "typescript_app",
             "schema": "agentsam.machine.finding.v1",
-            "heuristic": true,
-            "confidence": 0.88,
+            "certainty": "derived",
+            "derivation": {
+                "method": "deterministic_rules",
+                "rule_id": "project.typescript_app.v1",
+                "matched_signals": {
+                    "package_json_present": true,
+                    "typescript_javascript_files_ge_5": ts_count >= 5,
+                },
+                "evidence_count": fact_ids.len(),
+            },
             "evidence": {
                 "fact_ids": fact_ids,
                 "package_json": package_json,
@@ -202,8 +231,14 @@ fn classify_project(
         "kind": "project",
         "type": "unclassified",
         "schema": "agentsam.machine.finding.v1",
-        "heuristic": true,
-        "confidence": 0.4,
+        "certainty": "derived",
+        "derivation": {
+            "method": "deterministic_rules",
+            "rule_id": "project.unclassified.v1",
+            "matched_signals": [],
+            "evidence_count": sample.len(),
+            "note": "No strong project composition rule matched; not a probability estimate.",
+        },
         "evidence": {
             "fact_ids": sample,
             "html_files": html_count,
@@ -293,8 +328,13 @@ fn enrich_static_site(
             "id": "finding:theme_candidate",
             "kind": "theme_candidate",
             "schema": "agentsam.machine.finding.v1",
-            "heuristic": true,
-            "confidence": 0.95,
+            "certainty": "derived",
+            "derivation": {
+                "method": "deterministic_rules",
+                "rule_id": "theme_candidate.v1",
+                "matched_signals": ["theme_manifest", "html_pages"],
+                "evidence_count": 1 + html_paths.len() + svg_paths.len(),
+            },
             "evidence": {
                 "fact_ids": [format!("file:{theme}")],
                 "theme_manifest": theme,
@@ -316,7 +356,7 @@ fn enrich_static_site(
         "id": "finding:frontend",
         "kind": "frontend",
         "schema": "agentsam.machine.finding.v1",
-        "heuristic": false,
+        "certainty": "observed",
         "pages": html_paths.len(),
         "routes": routes.iter().cloned().collect::<Vec<_>>(),
         "shared_navigation_labels": shared_nav,
@@ -337,7 +377,7 @@ fn enrich_static_site(
             "kind": "asset_family",
             "type": "svg_icons",
             "schema": "agentsam.machine.finding.v1",
-            "heuristic": false,
+            "certainty": "observed",
             "count": svg_paths.len(),
             "paths": svg_paths,
             "evidence": { "fact_ids": svg_ids }

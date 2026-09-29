@@ -168,13 +168,24 @@ pub fn enrich_liquid_structure(root: &Path, receipt: &mut MachineReceipt) {
         || snippet_edges > 0
     {
         let fact_ids: Vec<String> = evidence_fact_ids.into_iter().collect();
+        let matched = profile.matched_signals();
+        let evidence_count = fact_ids.len()
+            + template_section_edges
+            + snippet_edges
+            + stylesheet_edges
+            + asset_edges;
         receipt.findings.push(json!({
             "id": "finding:structured_template_theme",
             "kind": "theme_structure",
             "type": "structured_template_theme",
             "schema": "agentsam.machine.finding.v1",
-            "heuristic": true,
-            "confidence": profile.confidence(),
+            "certainty": "derived",
+            "derivation": {
+                "method": "deterministic_rules",
+                "rule_id": "structured_template_theme.v1",
+                "matched_signals": matched,
+                "evidence_count": evidence_count,
+            },
             "evidence": {
                 "fact_ids": fact_ids,
                 "templateLanguage": "liquid",
@@ -224,24 +235,23 @@ impl TemplateStructureProfile {
         json!(map)
     }
 
-    pub fn confidence(&self) -> f64 {
-        let _ = &self.template_language;
-        let dirs = [
-            !self.templates_dirs.is_empty(),
-            !self.sections_dirs.is_empty(),
-            !self.snippets_dirs.is_empty(),
-            !self.layout_dirs.is_empty(),
-        ]
-        .iter()
-        .filter(|&&b| b)
-        .count();
-        match dirs {
-            0 => 0.5,
-            1 => 0.7,
-            2 => 0.82,
-            3 => 0.9,
-            _ => 0.94,
+    /// Observed convention signals — not a probability score.
+    pub fn matched_signals(&self) -> Vec<&'static str> {
+        let mut signals = Vec::new();
+        if !self.templates_dirs.is_empty() {
+            signals.push("template_collection");
         }
+        if !self.sections_dirs.is_empty() {
+            signals.push("section_collection");
+        }
+        if !self.snippets_dirs.is_empty() {
+            signals.push("snippet_collection");
+        }
+        if !self.layout_dirs.is_empty() {
+            signals.push("layout_collection");
+        }
+        let _ = &self.template_language;
+        signals
     }
 }
 
