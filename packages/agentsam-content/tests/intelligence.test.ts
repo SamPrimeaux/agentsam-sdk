@@ -6,6 +6,7 @@ import { proposeSemanticAlias, slugify, deliveryFilename } from "../src/intellig
 import { recommend } from "../src/intelligence/recommendations.js";
 import { ragDocumentText } from "../src/intelligence/index.js";
 import { seoReport } from "../src/intelligence/seo.js";
+import { sha256Hex } from "../src/intelligence/machine-pass.js";
 
 function asset(partial: Partial<ContentAsset>): ContentAsset {
   return {
@@ -33,6 +34,16 @@ const FICTIONAL_CANDIDATES: BrandCandidate[] = [
 ];
 
 describe("intelligence", () => {
+  it("matches SHA-256 protocol vectors without Node crypto", () => {
+    const encoder = new TextEncoder();
+    expect(sha256Hex(encoder.encode(""))).toBe(
+      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    );
+    expect(sha256Hex(encoder.encode("abc"))).toBe(
+      "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+    );
+  });
+
   it("slugifies + proposes semantic aliases", () => {
     expect(slugify("AgentSam Workbench Review — Mobile!")).toBe(
       "agentsam-workbench-review-mobile",

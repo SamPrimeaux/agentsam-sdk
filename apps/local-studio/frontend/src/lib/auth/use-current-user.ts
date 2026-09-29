@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { authClient, authEnabled } from "./client";
-import { invokeIdentity, isPackagedDesktop, secureStoreGet } from "@/lib/desktop/tauri";
+import { getTauriInvoke, invokeIdentity, isPackagedDesktop, secureStoreGet } from "@/lib/desktop/tauri";
 
 /** Normalized user shape used across the app, auth on or off. */
 export type AppUser = {

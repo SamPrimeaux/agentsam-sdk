@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-local-studio",
-  "version": "2.6.5",
+  "version": "2.6.6",
   "private": true,
   "sideEffects": false,
   "type": "module",
@@ -38,7 +38,9 @@
     "cf:deploy": "npm run build && npm run cf:verify-output && npm run cf:ensure-vault && bash scripts/with-cloudflare-env.sh wrangler deploy -c backend/wrangler.jsonc",
     "cf:tail": "wrangler tail agentsam-sdk -c backend/wrangler.jsonc",
     "cf:env": "bash scripts/with-cloudflare-env.sh",
-    "verify:npm10-lock": "node scripts/verify-npm10-lock.mjs"
+    "verify:npm10-lock": "node scripts/verify-npm10-lock.mjs",
+    "smoke:desktop": "node scripts/smoke-desktop-spa.mjs",
+    "verify:desktop": "npm run build:desktop && npm run smoke:desktop"
   },
   "dependencies": {
     "@cloudflare/codemode": "^0.5.2",

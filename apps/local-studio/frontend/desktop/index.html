@@ -8,6 +8,20 @@
   </head>
   <body class="bg-background font-sans text-foreground">
     <div id="root"></div>
+    <script>
+      window.__AGENTSAM_DESKTOP_BOOT_GUARD__ = window.setTimeout(() => {
+        const root = document.getElementById("root");
+        if (!root || root.childElementCount > 0 || root.textContent?.trim()) return;
+        document.documentElement.style.background = "#070708";
+        document.body.style.margin = "0";
+        document.body.style.background = "#070708";
+        document.body.style.color = "#f4f4f5";
+        root.innerHTML =
+          '<main style="min-height:100vh;display:grid;place-items:center;padding:32px;font:14px/1.5 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:#070708;color:#f4f4f5">' +
+          '<section style="max-width:520px"><strong style="font-size:18px">Local Studio could not start.</strong>' +
+          '<p style="color:#a1a1aa">The desktop UI failed before the workspace mounted. Error code: <code>desktop_boot_failed</code>.</p></section></main>';
+      }, 3500);
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
