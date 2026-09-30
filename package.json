@@ -106,7 +106,14 @@
     "./theme/insurance-site": "./packages/theme-insurance-site/src/index.js",
     "./theme/shinshu-site": "./packages/theme-shinshu-site/src/index.js",
     "./identity/oauth/consent-view": "./packages/identity/src/oauth/consent-view.js",
-    "./theme-scenes": "./packages/theme-scenes/src/index.js"
+    "./theme-scenes": "./packages/theme-scenes/src/index.js",
+    "./theme/cypress": "./packages/theme-church-site/src/index.js",
+    "./theme/violet": "./packages/theme-companions-site/src/index.js",
+    "./theme/grove": "./packages/theme-floors-site/src/index.js",
+    "./theme/ember": "./packages/theme-fuelnfree-site/src/index.js",
+    "./theme/forge": "./packages/theme-handyman-site/src/index.js",
+    "./theme/harbor": "./packages/theme-insurance-site/src/index.js",
+    "./theme/summit": "./packages/theme-shinshu-site/src/index.js"
   },
   "bin": {
     "agentsam": "bin/agentsam",
@@ -222,7 +229,8 @@
     "packages/theme-handyman-site",
     "packages/theme-insurance-site",
     "packages/theme-shinshu-site",
-    "packages/theme-scenes"
+    "packages/theme-scenes",
+    "packages/agentsam-database-editor"
   ],
   "scripts": {
     "test": "npm run test:standard && npm --prefix packages/identity test && npm --prefix packages/agentsam-brand test && npm run test:connectors && npm run test:providers",
@@ -274,7 +282,8 @@
     "theme:harvest": "python3 scripts/theme-refinery/harvest.py",
     "verify:go-distribution": "node scripts/verify-go-distribution.mjs",
     "prove:product": "node scripts/prove-agentsam-product.mjs",
-    "security:release": "node scripts/verify-release-security.mjs"
+    "security:release": "node scripts/verify-release-security.mjs",
+    "verify:database-honesty": "node --test test/database-hosted-honesty.test.mjs"
   },
   "engines": {
     "node": ">=22 <25",

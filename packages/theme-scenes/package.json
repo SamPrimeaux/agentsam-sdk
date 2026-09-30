@@ -18,6 +18,7 @@
     "./demos": "./src/demos/index.js",
     "./themes": "./src/themes/index.js",
     "./presets": "./src/presets/index.js",
+    "./registry": "./src/registry.js",
     "./package.json": "./package.json"
   },
   "files": [

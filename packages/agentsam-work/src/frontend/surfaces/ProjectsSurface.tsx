@@ -12,10 +12,18 @@ export function ProjectsSurface({
   const [tab, setTab] = useState<"mine" | "recent" | "shared" | "archived" | "starred">("mine");
   const [query, setQuery] = useState("");
 
-  const visible = useMemo(
-    () => projects.filter((project) => project.name.toLowerCase().includes(query.toLowerCase())),
-    [projects, query],
-  );
+  const visible = useMemo(() => {
+    const q = query.toLowerCase();
+    return projects.filter((project) => {
+      if (q && !project.name.toLowerCase().includes(q)) return false;
+      if (tab === "archived") return project.status === "complete";
+      if (tab === "starred" || tab === "shared" || tab === "recent") {
+        // Filters not backed by account metadata yet — do not invent membership.
+        return false;
+      }
+      return true;
+    });
+  }, [projects, query, tab]);
 
   return (
     <div style={{ maxWidth: 1080, margin: "0 auto", padding: "28px 24px 72px" }}>
@@ -44,9 +52,10 @@ export function ProjectsSurface({
         <button
           type="button"
           className="agentsam-work-toolbar-button"
-          data-primary="true"
-          style={{ width: 38, height: 38, padding: 0, borderRadius: "50%" }}
-          aria-label="New project"
+          disabled
+          title="Create project is not available on hosted yet"
+          aria-label="New project unavailable"
+          style={{ width: 38, height: 38, padding: 0, borderRadius: "50%", opacity: 0.45 }}
         >
           <Plus size={18} />
         </button>
@@ -54,18 +63,20 @@ export function ProjectsSurface({
 
       <div style={{ display: "flex", gap: 8, marginTop: 18, flexWrap: "wrap" }}>
         {([
-          ["mine", "My Projects"],
-          ["recent", "Recent"],
-          ["shared", "Shared"],
-          ["archived", "Archived"],
-          ["starred", "Starred"],
-        ] as const).map(([id, label]) => (
+          ["mine", "My Projects", true],
+          ["recent", "Recent", false],
+          ["shared", "Shared", false],
+          ["archived", "Archived", true],
+          ["starred", "Starred", false],
+        ] as const).map(([id, label, enabled]) => (
           <button
             key={id}
             type="button"
             className="agentsam-work-toolbar-button"
             data-primary={tab === id}
-            onClick={() => setTab(id as typeof tab)}
+            disabled={!enabled}
+            title={enabled ? undefined : "Not wired yet"}
+            onClick={() => enabled && setTab(id as typeof tab)}
           >
             {label}
           </button>
@@ -80,6 +91,18 @@ export function ProjectsSurface({
           gap: 14,
         }}
       >
+        {!visible.length ? (
+          <div className="agentsam-work-empty" style={{ gridColumn: "1 / -1", padding: "36px 12px" }}>
+            <strong style={{ display: "block", fontSize: 16 }}>
+              {tab === "mine" ? "No projects yet" : `No ${tab} projects`}
+            </strong>
+            <p style={{ margin: "8px 0 0", color: "var(--agentsam-work-muted)", fontSize: 13, lineHeight: 1.55 }}>
+              {tab === "mine"
+                ? "Real account and CMS site projects from /api/work/snapshot appear here. Sample gallery cards are never shown in production."
+                : "This filter has no matching account-owned records."}
+            </p>
+          </div>
+        ) : null}
         {visible.map((project) => (
           <article
             key={project.id}
@@ -97,20 +120,14 @@ export function ProjectsSurface({
                 height: 145,
                 display: "grid",
                 placeItems: "center",
-                background:
-                  project.coverImageUrl === "fixture:companions"
-                    ? "linear-gradient(135deg, #fff, #f9f9f9)"
-                    : "color-mix(in srgb, var(--agentsam-work-panel-subtle) 85%, " + project.accent + " 15%)",
+                background: project.coverImageUrl
+                  ? `center / cover no-repeat url(${JSON.stringify(project.coverImageUrl)})`
+                  : "color-mix(in srgb, var(--agentsam-work-panel-subtle) 85%, " + project.accent + " 15%)",
               }}
             >
-              {project.coverImageUrl === "fixture:companions" ? (
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 54, fontWeight: 700, letterSpacing: "-.08em" }}>CPAS</div>
-                  <div style={{ fontSize: 10, letterSpacing: ".25em" }}>COMPANIONS</div>
-                </div>
-              ) : (
+              {!project.coverImageUrl ? (
                 <Camera size={20} color="var(--agentsam-work-muted)" />
-              )}
+              ) : null}
               <button
                 type="button"
                 style={{

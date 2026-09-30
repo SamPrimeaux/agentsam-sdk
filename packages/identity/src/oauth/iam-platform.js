@@ -5,6 +5,7 @@ import {
   resolveIamPlatformCredentials,
 } from './credentials.js';
 import { pkceChallenge, pkceVerifier, randomOAuthState } from './pkce.js';
+import { finishOAuthLogin, parseNativeStart, sessionTypeForTransaction } from './native-handoff.js';
 import {
   exchangeIamCode,
   getIamAuthUrl,
@@ -33,12 +34,23 @@ export async function iamPlatformOAuthStart(request, env, adapter, identity) {
     url.searchParams.get('next') || url.searchParams.get('return_to'),
   ) || '/';
 
+  const nativeStart = parseNativeStart(url, env);
+  if (nativeStart.error) {
+    return Response.json({ ok: false, error: nativeStart.error }, { status: 400 });
+  }
   await adapter.saveOAuthState({
     state,
     provider: IAM_PLATFORM_STATE_PROVIDER,
     codeVerifier,
     redirectTo,
     appId: identity?.app?.id || null,
+    ...(nativeStart.native
+      ? {
+          clientType: nativeStart.clientType,
+          nativeChallenge: nativeStart.nativeChallenge,
+          nativeRedirect: nativeStart.nativeRedirect,
+        }
+      : {}),
   });
 
   const redirectUri = `${url.origin}${IAM_PLATFORM_CALLBACK_PATH}`;
@@ -106,17 +118,17 @@ export async function iamPlatformOAuthCallback(request, env, adapter, identity) 
     providerSubject: normalized.subject,
     email: normalized.email,
     displayName: normalized.name || normalized.email.split('@')[0] || 'User',
+    sessionType: sessionTypeForTransaction(saved),
   });
 
-  const redirectTo = identity.resolvePostLoginPath(saved.redirect_to);
-  const res = identity.buildLoginSuccessResponse(request, result.sessionId, redirectTo);
-  const globeUrl = `${url.origin}${identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN)}?globe_exit=1&next=${encodeURIComponent(redirectTo)}`;
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: globeUrl,
-      'Set-Cookie': res.headers.get('Set-Cookie') || '',
-    },
+  return finishOAuthLogin({
+    request,
+    env,
+    identity,
+    adapter,
+    saved,
+    result,
+    loginPath: identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN),
   });
 }
 

@@ -16,8 +16,8 @@
   min-height: 0;
   height: 100%;
   flex-direction: column;
-  background: var(--color-background, #090909);
-  color: var(--color-foreground, #f4f2ee);
+  background: var(--db-bg);
+  color: var(--db-text);
   font-family: var(--font-sans, "Instrument Sans", ui-sans-serif, system-ui, sans-serif);
 }
 .db-editor[data-provider="cloudflare"] {
@@ -200,8 +200,6 @@
 .db-alert button { width: 28px; height: 28px; background: transparent; }
 
 .db-overview {
-  background: var(--db-bg);
-  color: var(--db-text);
   min-height: 0;
   flex: 1;
   overflow: auto;
@@ -259,8 +257,6 @@
 .db-provider-health strong { display: block; margin-top: 6px; font-size: 12px; }
 
 .db-workspace {
-  background: var(--db-bg);
-  color: var(--db-text);
   min-height: 0;
   flex: 1;
   display: grid;
@@ -271,7 +267,7 @@
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--db-border);
-  background: var(--db-toolbar);
+  background: #0d0d0d;
 }
 .db-table-search { padding: 9px; border-bottom: 1px solid var(--db-border); }
 .db-table-search input,
@@ -374,7 +370,7 @@
   position: sticky;
   top: 0;
   z-index: 2;
-  background: var(--db-panel-2);
+  background: #111;
   color: var(--db-muted);
 }
 .db-data-grid tbody tr { cursor: pointer; }
@@ -400,7 +396,7 @@
   border: 0;
   border-bottom: 1px solid var(--db-border);
   outline: 0;
-  background: var(--db-panel);
+  background: #0b0b0b;
   color: var(--db-text);
   padding: 14px;
   font: 12px/1.55 var(--font-mono, "IBM Plex Mono", ui-monospace, monospace);
@@ -425,7 +421,7 @@
   margin: 6px 0 0;
   border: 1px solid var(--db-border);
   border-radius: 8px;
-  background: var(--db-panel);
+  background: #0b0b0b;
   padding: 10px;
   color: #d9d7d1;
   font: 10.5px/1.5 var(--font-mono, "IBM Plex Mono", ui-monospace, monospace);
@@ -449,7 +445,7 @@
   flex-direction: column;
   border: 1px solid var(--db-border);
   border-radius: 14px;
-  background: var(--db-panel-2);
+  background: #111;
   box-shadow: 0 24px 80px rgba(0,0,0,.55);
 }
 .db-modal-header {

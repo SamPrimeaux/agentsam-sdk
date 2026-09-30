@@ -25,7 +25,6 @@ import {
 } from "recharts";
 import {
   createDatabaseStudioClient,
-  type DatabaseCapabilityId,
   type DatabaseColumnInfo,
   type DatabaseMetricsResponse,
   type DatabaseQueryResponse,
@@ -53,7 +52,6 @@ export type DatabaseEditorAppProps = {
   initialSourceId?: string;
   compact?: boolean;
   onOpenConnections?: () => void;
-  onAuthenticate?: () => void;
   /** Machine-local SQLite host (Local Studio / Tauri / agentsamd). */
   localHost?: LocalDatabaseHost;
   onAskAgentSam?: (context: Record<string, unknown>) => void;
@@ -75,20 +73,8 @@ function providerLabel(source?: DatabaseSource | null) {
   return source?.provider || "Database";
 }
 
-function sourceSupports(source: DatabaseSource | null | undefined, capability: DatabaseCapabilityId) {
-  if (!source || source.status === "degraded") return false;
-  const explicit = source.capabilities?.[capability];
-  if (typeof explicit === "boolean") return explicit;
-  if (capability === "metrics") return Boolean(source.metrics);
-  if (capability === "insert" || capability === "update" || capability === "delete") {
-    return Boolean(source.writable);
-  }
-  if (capability === "read_rows" || capability === "query" || capability === "schema") return true;
-  return false;
-}
-
 function formatCompact(value?: number | null) {
-  if (value == null) return "—";
+  if (value == null || Number.isNaN(Number(value))) return "—";
   const n = Number(value);
   if (Math.abs(n) >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
   if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -98,7 +84,7 @@ function formatCompact(value?: number | null) {
 }
 
 function formatBytes(value?: number | null) {
-  if (value == null) return "—";
+  if (value == null || Number.isNaN(Number(value))) return "—";
   const bytes = Number(value);
   if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
   if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
@@ -160,6 +146,11 @@ function MetricChart({
   first: string;
   second?: string;
 }) {
+  const hasSeries = data.some((point) => {
+    const a = point[first];
+    const b = second ? point[second] : null;
+    return (a != null && !Number.isNaN(Number(a))) || (b != null && !Number.isNaN(Number(b)));
+  });
   return (
     <section className="db-chart-card">
       <header className="db-chart-title">
@@ -167,7 +158,7 @@ function MetricChart({
         <span>{title}</span>
       </header>
       <div className="db-chart-body">
-        {data.length ? (
+        {hasSeries ? (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 16, right: 18, bottom: 4, left: 0 }}>
               <CartesianGrid stroke="var(--db-grid)" vertical={false} />
@@ -293,7 +284,6 @@ export function DatabaseEditorApp({
   initialSourceId,
   compact = false,
   onOpenConnections,
-  onAuthenticate,
   localHost,
   onAskAgentSam,
 }: DatabaseEditorAppProps) {
@@ -317,7 +307,6 @@ export function DatabaseEditorApp({
   const [busyMutation, setBusyMutation] = useState(false);
   const [editMode, setEditMode] = useState<EditMode | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [sourceLoadStatus, setSourceLoadStatus] = useState<number | null>(null);
   const [localCapability, setLocalCapability] = useState<ProviderCapability>("attachable");
   const [attachOpen, setAttachOpen] = useState(false);
   const [lastSourceByFamily, setLastSourceByFamily] = useState<Record<string, string>>({});
@@ -328,15 +317,6 @@ export function DatabaseEditorApp({
   );
 
   const family = providerFamily(source);
-  const canReadRows = sourceSupports(source, "read_rows");
-  const canQuery = sourceSupports(source, "query");
-  const canSchema = sourceSupports(source, "schema");
-  const canInsert = sourceSupports(source, "insert");
-  const canUpdate = sourceSupports(source, "update");
-  const canDelete = sourceSupports(source, "delete");
-  const canMetrics = sourceSupports(source, "metrics");
-  const hasAnyWrite = canInsert || canUpdate || canDelete;
-  const hasFullCrud = canInsert && canUpdate && canDelete;
   const themeVars = useMemo(() => {
     const theme = DATABASE_PROVIDER_THEMES[themeIdForProviderFamily(family === "none" ? "local" : family)];
     return cssVarsForTheme(theme);
@@ -345,11 +325,9 @@ export function DatabaseEditorApp({
   const loadSources = useCallback(async () => {
     setLoading(true);
     setError(null);
-    setSourceLoadStatus(null);
     try {
       const next = await client.listSources();
       setCatalog(next);
-      setSourceLoadStatus(200);
       if (localHost) {
         try {
           const status = await localHost.status();
@@ -369,15 +347,6 @@ export function DatabaseEditorApp({
         return next.sources[0]?.id || "";
       });
     } catch (caught) {
-      const status =
-        typeof caught === "object" &&
-        caught !== null &&
-        "status" in caught &&
-        typeof (caught as { status?: unknown }).status === "number"
-          ? Number((caught as { status: number }).status)
-          : null;
-      setCatalog(null);
-      setSourceLoadStatus(status);
       setError(errorText(caught));
     } finally {
       setLoading(false);
@@ -422,17 +391,14 @@ export function DatabaseEditorApp({
   }, [loadSources, localHost]);
 
   const loadMetrics = useCallback(async () => {
-    if (!sourceId || !canMetrics) {
-      setMetrics(null);
-      return;
-    }
+    if (!sourceId) return;
     try {
       const next = await client.metrics(sourceId, range);
       setMetrics(next);
     } catch (caught) {
       setError(errorText(caught));
     }
-  }, [canMetrics, client, range, sourceId]);
+  }, [client, range, sourceId]);
 
   const loadTables = useCallback(async () => {
     if (!sourceId) return;
@@ -463,8 +429,8 @@ export function DatabaseEditorApp({
   }, [sourceId, loadMetrics, loadTables]);
 
   useEffect(() => {
-    if (sourceId && canMetrics) void loadMetrics();
-  }, [canMetrics, range, sourceId, loadMetrics]);
+    if (sourceId) void loadMetrics();
+  }, [range, sourceId, loadMetrics]);
 
   const loadTable = useCallback(
     async (table = selectedTable, requestedPage = page) => {
@@ -472,16 +438,13 @@ export function DatabaseEditorApp({
       setLoadingMain(true);
       setError(null);
       try {
-        if (!canSchema && !canReadRows) return;
         const [schemaPayload, rowsPayload] = await Promise.all([
-          canSchema ? client.schema(sourceId, table) : Promise.resolve(null),
-          canReadRows
-            ? client.rows(sourceId, table, { page: requestedPage, limit: compact ? 25 : 50 })
-            : Promise.resolve(null),
+          client.schema(sourceId, table),
+          client.rows(sourceId, table, { page: requestedPage, limit: compact ? 25 : 50 }),
         ]);
-        setSchema(schemaPayload?.schema || null);
+        setSchema(schemaPayload.schema);
         setRows(rowsPayload);
-        if (rowsPayload) setPage(rowsPayload.page);
+        setPage(rowsPayload.page);
         setSelectedRow(null);
       } catch (caught) {
         setError(errorText(caught));
@@ -489,12 +452,12 @@ export function DatabaseEditorApp({
         setLoadingMain(false);
       }
     },
-    [canReadRows, canSchema, client, compact, page, selectedTable, sourceId],
+    [client, compact, page, selectedTable, sourceId],
   );
 
   useEffect(() => {
-    if (selectedTable && (canReadRows || canSchema)) void loadTable(selectedTable, 1);
-  }, [canReadRows, canSchema, selectedTable, sourceId]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (selectedTable) void loadTable(selectedTable, 1);
+  }, [selectedTable, sourceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const families = useMemo(() => {
     const map = new Map<string, DatabaseSource[]>();
@@ -526,7 +489,9 @@ export function DatabaseEditorApp({
         return;
       }
       if (target === "cloudflare") {
-        onOpenConnections?.();
+        window.location.href =
+          catalog?.connections?.cloudflare?.connect_url ||
+          "/api/connections/cloudflare/start?packs=data&return_to=/database";
         return;
       }
       onOpenConnections?.();
@@ -558,15 +523,20 @@ export function DatabaseEditorApp({
 
   const chartData = useMemo(
     () =>
-      (metrics?.series || []).map((point) => ({
-        ...point,
-        label: labelForTime(point.t),
-        queries: point.queries == null ? null : Number(point.queries),
-        readQueries: point.readQueries == null ? null : Number(point.readQueries),
-        writeQueries: point.writeQueries == null ? null : Number(point.writeQueries),
-        rowsRead: point.rowsRead == null ? null : Number(point.rowsRead),
-        rowsWritten: point.rowsWritten == null ? null : Number(point.rowsWritten),
-      })),
+      (metrics?.series || []).map((point) => {
+        const numOrNull = (value: number | null | undefined) =>
+          value == null || Number.isNaN(Number(value)) ? null : Number(value);
+        return {
+          ...point,
+          label: labelForTime(point.t),
+          // Preserve null/gaps — never coerce unavailable metrics into fake zeros.
+          queries: numOrNull(point.queries),
+          readQueries: numOrNull(point.readQueries),
+          writeQueries: numOrNull(point.writeQueries),
+          rowsRead: numOrNull(point.rowsRead),
+          rowsWritten: numOrNull(point.rowsWritten),
+        };
+      }),
     [metrics],
   );
 
@@ -692,62 +662,28 @@ export function DatabaseEditorApp({
   const cloudflareConnection = catalog?.connections?.cloudflare;
   const localConnection = catalog?.connections?.local_sqlite;
 
-  if (!catalog && error) {
-    const unauthorized = sourceLoadStatus === 401;
-    return (
-      <div className="db-editor db-empty" style={themeVars as React.CSSProperties}>
-        <Database size={28} />
-        <div className="db-eyebrow">AGENTSAM DATABASE</div>
-        <h1>{unauthorized ? "Sign in to load database resources" : "Database sources could not be loaded"}</h1>
-        <p>
-          {unauthorized
-            ? "Local Studio needs an authenticated user session before it can resolve that user's separate Cloudflare, Supabase, or other provider connections."
-            : error}
-        </p>
-        <div className="db-empty-actions">
-          {unauthorized && onAuthenticate ? (
-            <button className="db-button primary" type="button" onClick={onAuthenticate}>
-              Sign in
-            </button>
-          ) : null}
-          <button className="db-button secondary" type="button" onClick={() => void loadSources()}>
-            Retry
-          </button>
-          {onOpenConnections ? (
-            <button className="db-button secondary" type="button" onClick={onOpenConnections}>
-              Connections
-            </button>
-          ) : null}
-        </div>
-        <small>Provider authorization remains separate from the Local Studio user session.</small>
-      </div>
-    );
-  }
-
   if (!catalog?.sources.length) {
     return (
       <div className="db-editor db-empty" style={themeVars as React.CSSProperties}>
         <Database size={28} />
         <div className="db-eyebrow">AGENTSAM DATABASE</div>
-        <h1>
-          {cloudflareConnection?.status === "connected"
-            ? "Connected provider returned no database resources"
-            : "No authorized database resources yet"}
-        </h1>
+        <h1>No authorized database resources yet</h1>
         <p>
-          {cloudflareConnection?.status === "connected"
-            ? "Cloudflare is connected for this Local Studio user, but no D1 resources were returned. Review the connection scopes/account and retry discovery."
-            : "Connect a database provider to discover remote resources, or attach Local SQLite through the native/local runtime."}
+          Connect your Cloudflare account (data pack) to discover D1 and Hyperdrive. Local SQLite
+          attaches through AgentSam Local Studio / local runtime — never invented in the hosted browser.
         </p>
         <div className="db-empty-actions">
-          <button className="db-button primary" type="button" onClick={onOpenConnections}>
-            {cloudflareConnection?.status === "connected" ? "Review Cloudflare connection" : "Connect provider"}
-          </button>
+          <a
+            className="db-button primary"
+            href={cloudflareConnection?.connect_url || "/api/connections/cloudflare/start?packs=data&return_to=/database"}
+          >
+            Connect Cloudflare
+          </a>
           <button className="db-button secondary" type="button" onClick={() => setAttachOpen(true)}>
             Attach Local SQLite
           </button>
-          <button className="db-button secondary" type="button" onClick={() => void loadSources()}>
-            Retry discovery
+          <button className="db-button secondary" type="button" onClick={onOpenConnections}>
+            Connections
           </button>
         </div>
         {localConnection?.message ? <small>{localConnection.message}</small> : null}
@@ -873,8 +809,7 @@ export function DatabaseEditorApp({
                 view,
                 sqlDraft: sql,
                 currentError: error,
-                writable: hasAnyWrite,
-                capabilities: source?.capabilities || null,
+                writable: Boolean(source?.writable),
                 range,
               })
             }
@@ -902,7 +837,7 @@ export function DatabaseEditorApp({
           <span className="db-chip">{source.database_id ? `${source.database_id.slice(0, 8)}…` : source.engine}</span>
           <span>· {providerLabel(source)}</span>
           {metrics?.health?.latencyMs != null ? <span>· {metrics.health.latencyMs}ms</span> : null}
-          <span className={hasAnyWrite ? "db-write-status write" : "db-write-status"}>{hasFullCrud ? "CRUD" : hasAnyWrite ? "write enabled" : "read only"}</span>
+          <span className={source.writable ? "db-write-status write" : "db-write-status"}>{source.writable ? "CRUD" : "read only"}</span>
         </div>
       ) : null}
 
@@ -942,6 +877,28 @@ export function DatabaseEditorApp({
             ) : null}
           </div>
 
+          {metrics && metrics.wired === false ? (
+            <div className="db-alert" role="status" data-metrics-wired="false">
+              <span>
+                {metrics.warning ||
+                  "Provider metrics are unavailable for this source. Null KPIs are not zeros."}
+              </span>
+            </div>
+          ) : null}
+          {metrics?.warning && metrics.wired !== false ? (
+            <div className="db-alert" role="status" data-metrics-warning="true">
+              <span>{metrics.warning}</span>
+            </div>
+          ) : null}
+          {source?.source_kind === "deployment_binding" ? (
+            <div className="db-alert" role="note" data-source-kind="deployment_binding">
+              <span>
+                Deployment binding ({source.owner_scope || "deployment"}) — not from your Cloudflare
+                OAuth catalog. Platform resources stay owner-gated.
+              </span>
+            </div>
+          ) : null}
+
           <MetricChart title="Total queries" data={chartData} first="queries" />
           <div className="db-chart-grid">
             <MetricChart title="Read / write queries" data={chartData} first="readQueries" second="writeQueries" />
@@ -959,7 +916,7 @@ export function DatabaseEditorApp({
             </div>
             <div>
               <div className="db-eyebrow">WRITE ACCESS</div>
-              <strong>{hasFullCrud ? "CRUD" : hasAnyWrite ? "Partial write" : "Read only"}</strong>
+              <strong>{source?.writable ? "Enabled" : "Read only"}</strong>
             </div>
             <div>
               <div className="db-eyebrow">METRIC SOURCE</div>
@@ -1010,13 +967,7 @@ export function DatabaseEditorApp({
                   key={item}
                   type="button"
                   data-active={view === item || undefined}
-                  disabled={
-                    item === "sql"
-                      ? !canQuery
-                      : item === "schema"
-                        ? !selectedTable || !canSchema
-                        : !selectedTable || !canReadRows
-                  }
+                  disabled={item !== "sql" && !selectedTable}
                   onClick={() => setView(item)}
                 >
                   {item}
@@ -1025,13 +976,13 @@ export function DatabaseEditorApp({
               <span className="db-tab-spacer" />
               {view === "data" && selectedTable ? (
                 <>
-                  <button type="button" onClick={() => setEditMode("insert")} disabled={!canInsert}>
+                  <button type="button" onClick={() => setEditMode("insert")} disabled={!source?.writable}>
                     <Plus size={13} /> Add row
                   </button>
                   <button
                     type="button"
                     onClick={() => setEditMode("edit")}
-                    disabled={!canUpdate || !selectedRow || !pk}
+                    disabled={!source?.writable || !selectedRow || !pk}
                   >
                     Edit row
                   </button>
@@ -1039,7 +990,7 @@ export function DatabaseEditorApp({
                     type="button"
                     className="danger"
                     onClick={() => void deleteRow()}
-                    disabled={!canDelete || !selectedRow || !pk || busyMutation}
+                    disabled={!source?.writable || !selectedRow || !pk || busyMutation}
                   >
                     <Trash2 size={13} /> Delete
                   </button>
@@ -1057,7 +1008,7 @@ export function DatabaseEditorApp({
                 />
                 <div className="db-sql-actions">
                   <span>
-                    {hasAnyWrite
+                    {source?.writable
                       ? "Writes require confirmation. Destructive schema changes require a second confirmation."
                       : "Read-only source."}
                   </span>

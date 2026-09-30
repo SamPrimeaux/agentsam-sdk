@@ -28,6 +28,11 @@ export type DatabaseSource = {
   connection?: string;
   status?: string;
   error?: string;
+  /** oauth_resource | deployment_binding | saved_connection | local_runtime */
+  source_kind?: string;
+  /** user | account | deployment */
+  owner_scope?: string;
+  capabilities?: string[];
 };
 
 export type DatabaseConnectionStatus = {
@@ -38,6 +43,10 @@ export type DatabaseConnectionStatus = {
   account_id?: string;
   error?: string;
   message?: string;
+  warning?: string;
+  catalog_status?: string;
+  source_kind?: string;
+  owner_scope?: string;
   latency_ms?: number | null;
 };
 
@@ -89,6 +98,8 @@ export type DatabaseMetricsResponse = {
     latencyMs?: number | null;
     hyperdrive?: string;
   };
+  wired?: boolean;
+  warning?: string;
   error?: string;
 };
 

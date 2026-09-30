@@ -1,4 +1,5 @@
 import { SESSION_POLICY } from '../../core/constants.js';
+import { NATIVE_HANDOFF_TTL_SECONDS, SESSION_TYPES } from '../../core/session-policy.js';
 import { IdentitySchemaError } from '../../contracts/identity-store.js';
 import { IDENTITY_STORE_SCHEMA_VERSION } from '../../contracts/identity-store.js';
 import { newAccountIdentityId, newAuthUserId, newSessionId, newAuthEventId, nowUnix } from './ids.js';
@@ -206,27 +207,26 @@ export function createCloudflareD1Adapter(db, options = {}) {
       return id;
     },
 
-    async createSession({ userId, email, provider, providerSubject, displayName }) {
+    async createSession({ userId, email, provider, providerSubject, displayName, type }) {
       const id = newSessionId();
       const ts = nowUnix();
-      const expiresAt = ts + sessionTtlSeconds;
+      const desktop = type === SESSION_TYPES.DESKTOP;
+      const expiresAt = ts + (desktop ? SESSION_POLICY.desktop.ttlSeconds : sessionTtlSeconds);
+      // Browser inserts stay column-identical to before (auth_sessions.type defaults
+      // to 'browser'), so this is safe on databases that predate the type column.
+      const columns = ['id', 'user_id', 'email', 'provider', 'provider_subject', 'display_name', 'expires_at', 'created_at', 'last_active_at'];
+      const values = [id, userId, email || null, provider || 'email', providerSubject || null, displayName || null, expiresAt, ts, ts];
+      if (desktop) {
+        columns.push('type');
+        values.push(SESSION_TYPES.DESKTOP);
+      }
       await db.prepare(
-        `INSERT INTO auth_sessions
-         (id, user_id, email, provider, provider_subject, display_name, expires_at, created_at, last_active_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).bind(
-        id,
-        userId,
-        email || null,
-        provider || 'email',
-        providerSubject || null,
-        displayName || null,
-        expiresAt,
-        ts,
-        ts,
-      ).run();
+        `INSERT INTO auth_sessions (${columns.join(', ')})
+         VALUES (${columns.map(() => '?').join(', ')})`,
+      ).bind(...values).run();
       return {
         id,
+        type: desktop ? SESSION_TYPES.DESKTOP : SESSION_TYPES.BROWSER,
         user_id: userId,
         email,
         provider: provider || 'email',
@@ -256,7 +256,7 @@ export function createCloudflareD1Adapter(db, options = {}) {
       return { ok: true, reason };
     },
 
-    async createOAuthTransaction({ state, provider, codeVerifier, returnTo, redirectTo, appId, ttlSeconds = 600 }) {
+    async createOAuthTransaction({ state, provider, codeVerifier, returnTo, redirectTo, appId, ttlSeconds = 600, clientType, nativeChallenge, nativeRedirect }) {
       if (!appId) {
         throw new IdentitySchemaError(
           'OAUTH_TRANSACTION_APP_ID_REQUIRED',
@@ -266,11 +266,18 @@ export function createCloudflareD1Adapter(db, options = {}) {
       const ts = nowUnix();
       const expiresAt = ts + ttlSeconds;
       try {
+        const columns = ['state', 'provider', 'code_verifier', 'redirect_to', 'app_id', 'expires_at', 'created_at'];
+        const values = [state, provider, codeVerifier, returnTo ?? redirectTo ?? null, appId, expiresAt, ts];
+        // Native columns (migration 0017) are written only for native transactions,
+        // so browser OAuth is unaffected until/unless 0017 is applied.
+        if (clientType === SESSION_TYPES.DESKTOP) {
+          columns.push('client_type', 'native_challenge', 'native_redirect');
+          values.push(clientType, nativeChallenge ?? null, nativeRedirect ?? null);
+        }
         await db.prepare(
-          `INSERT INTO identity_oauth_states
-           (state, provider, code_verifier, redirect_to, app_id, expires_at, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        ).bind(state, provider, codeVerifier, returnTo ?? redirectTo ?? null, appId, expiresAt, ts).run();
+          `INSERT INTO identity_oauth_states (${columns.join(', ')})
+           VALUES (${columns.map(() => '?').join(', ')})`,
+        ).bind(...values).run();
       } catch (err) {
         throw new IdentitySchemaError(
           'IDENTITY_SCHEMA_MIGRATION_REQUIRED',
@@ -289,8 +296,7 @@ export function createCloudflareD1Adapter(db, options = {}) {
       let row;
       try {
         row = await db.prepare(
-          `SELECT state, provider, code_verifier, redirect_to, app_id, expires_at, created_at
-           FROM identity_oauth_states WHERE state = ? LIMIT 1`,
+          `SELECT * FROM identity_oauth_states WHERE state = ? LIMIT 1`,
         ).bind(state).first();
       } catch (err) {
         throw new IdentitySchemaError(
@@ -315,6 +321,9 @@ export function createCloudflareD1Adapter(db, options = {}) {
         redirect_to: row.redirect_to,
         return_to: row.redirect_to,
         app_id: row.app_id,
+        client_type: row.client_type ?? null,
+        native_challenge: row.native_challenge ?? null,
+        native_redirect: row.native_redirect ?? null,
         expires_at: row.expires_at,
         created_at: row.created_at,
       };
@@ -323,6 +332,26 @@ export function createCloudflareD1Adapter(db, options = {}) {
     /** @deprecated Use consumeOAuthTransaction */
     async consumeOAuthState(state) {
       return this.consumeOAuthTransaction(state);
+    },
+
+    /** Single-use desktop session pickup (migration 0017). Only the code's sha256 is stored. */
+    async createNativeHandoff({ handoffHash, sessionId, challenge, ttlSeconds = NATIVE_HANDOFF_TTL_SECONDS }) {
+      const ts = nowUnix();
+      await db.prepare(
+        `INSERT INTO identity_native_handoffs (handoff_hash, session_id, challenge, expires_at, created_at)
+         VALUES (?, ?, ?, ?, ?)`,
+      ).bind(handoffHash, sessionId, challenge, ts + ttlSeconds, ts).run();
+    },
+
+    /** Atomically claim an unexpired, unconsumed handoff; null if none. */
+    async consumeNativeHandoff(handoffHash) {
+      const ts = nowUnix();
+      const row = await db.prepare(
+        `UPDATE identity_native_handoffs SET consumed_at = ?
+         WHERE handoff_hash = ? AND consumed_at IS NULL AND expires_at > ?
+         RETURNING session_id, challenge`,
+      ).bind(ts, handoffHash, ts).first();
+      return row || null;
     },
 
     async getCompanyBySlug(slug = DEFAULT_COMPANY_SLUG) {

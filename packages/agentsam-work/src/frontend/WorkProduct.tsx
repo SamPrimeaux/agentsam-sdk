@@ -14,6 +14,36 @@ import { ProjectsSurface } from "./surfaces/ProjectsSurface";
 import { ProjectDetailSurface } from "./surfaces/ProjectDetailSurface";
 import { TicketDetailSurface } from "./surfaces/TicketDetailSurface";
 
+const EMPTY_LIVE_SNAPSHOT: WorkSnapshot = {
+  fixtureName: "live",
+  nav: [
+    { id: "calendar", label: "Calendar", href: "/collaborate", group: "work" },
+    { id: "tickets", label: "Tickets", href: "/collaborate?seg=tickets", group: "work" },
+    { id: "mail", label: "Mail", href: "/mail", group: "work" },
+    { id: "projects", label: "Projects", href: "/projects", group: "work" },
+    { id: "artifacts", label: "My artifacts", href: "/artifacts", group: "files" },
+    { id: "r2", label: "R2 Storage", href: "/artifacts?source=r2", group: "files" },
+    { id: "google-drive", label: "Google Drive", href: "/artifacts?source=google-drive", group: "files" },
+    { id: "shared-drives", label: "Shared drives", href: "/artifacts?source=shared-drives", group: "files" },
+    { id: "local-folder", label: "Local folder", href: "/artifacts?source=local", group: "files" },
+    { id: "shared-with-me", label: "Shared with me", href: "/artifacts?view=shared", group: "files" },
+    { id: "recent", label: "Recent", href: "/artifacts?view=recent", group: "files" },
+    { id: "starred", label: "Starred", href: "/artifacts?view=starred", group: "files" },
+    { id: "trash", label: "Trash", href: "/artifacts?view=trash", group: "files" },
+  ],
+  tickets: [],
+  artifacts: [],
+  projects: [],
+  mail: [],
+  calendar: [],
+  currentProjectId: "",
+  ticketAnalytics: {
+    completionRate: 0,
+    avgCycleDays: 0,
+    oldestActiveDays: 0,
+  },
+};
+
 export function WorkProduct({
   host,
   surface,
@@ -28,12 +58,25 @@ export function WorkProduct({
   ticketId?: string;
 }) {
   const [snapshot, setSnapshot] = useState<WorkSnapshot | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    host.snapshot().then((next) => {
-      if (!cancelled) setSnapshot(next);
-    });
+    setLoadError(null);
+    host
+      .snapshot()
+      .then((next) => {
+        if (cancelled) return;
+        setSnapshot(next);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        const message =
+          err instanceof Error ? err.message : typeof err === "string" ? err : "unavailable";
+        setLoadError(message);
+        // Honest empty live shell — never fall back to populatedWorkFixture.
+        setSnapshot({ ...EMPTY_LIVE_SNAPSHOT });
+      });
     return () => {
       cancelled = true;
     };
@@ -63,6 +106,13 @@ export function WorkProduct({
     surface === "artifacts" ||
     surface === "artifact-tickets";
 
+  const authHint =
+    loadError === "unauthorized"
+      ? "Sign in to load account-owned projects and artifacts from /api/work/snapshot."
+      : loadError
+        ? `Work snapshot unavailable (${loadError}). Showing an empty live shell — not sample fixture data.`
+        : null;
+
   return (
     <WorkShell
       nav={snapshot.nav}
@@ -70,6 +120,15 @@ export function WorkProduct({
       onNavigate={onNavigate}
       rightRail={rightRail}
     >
+      {authHint ? (
+        <div
+          className="agentsam-work-empty"
+          style={{ margin: "12px 16px 0", padding: "12px 14px", textAlign: "left" }}
+          data-work-load-error={loadError || undefined}
+        >
+          <strong style={{ display: "block", fontSize: 13 }}>{authHint}</strong>
+        </div>
+      ) : null}
       {surface === "calendar" ? <CalendarSurface events={snapshot.calendar} /> : null}
       {surface === "tickets" ? (
         <TicketsSurface

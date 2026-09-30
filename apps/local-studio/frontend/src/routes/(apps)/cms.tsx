@@ -4,15 +4,9 @@ import {
   CmsEditor,
   CmsHubPage,
   createHttpCmsAdapter,
-  type CmsHttpRequest,
 } from "@inneranimalmedia/agentsam-cms-frontend";
 import "@inneranimalmedia/agentsam-cms-frontend/styles/studio.css";
 import { ContentStudioPage } from "@/components/content/ContentStudioPage";
-import {
-  invokeStudioService,
-  isPackagedDesktop,
-  resolveDesktopStudioAccountId,
-} from "@/lib/desktop/tauri";
 import {
   parseCmsNavigatePath,
   type CmsPanel,
@@ -41,6 +35,7 @@ export const Route = createFileRoute("/(apps)/cms")({
   component: CmsPage,
 });
 
+/** Hosted site catalog — real public properties, not fixture gallery cards. */
 const SITE_CATALOG = [
   { slug: "agentsam-sdk", name: "Agent Sam SDK", domain: "agentsam.inneranimalmedia.com", hub_priority: 100 },
   { slug: "inneranimalmedia", name: "Inner Animal Media", domain: "inneranimalmedia.com", hub_priority: 90 },
@@ -48,55 +43,24 @@ const SITE_CATALOG = [
   { slug: "meauxbility", name: "Meauxbility", domain: "meauxbility.org", hub_priority: 70 },
 ];
 
-async function desktopCmsTransport(request: CmsHttpRequest): Promise<unknown> {
-  const accountId = await resolveDesktopStudioAccountId();
-  const response = await invokeStudioService({
-    operation: "cms",
-    account_id: accountId,
-    method: request.method || "GET",
-    path: request.path,
-    body: request.body,
-  });
-
-  let payload: unknown = null;
-  try {
-    payload = response.body ? JSON.parse(response.body) : null;
-  } catch {
-    payload = response.body;
-  }
-  if (!response.ok) {
-    const detail = payload && typeof payload === "object"
-      ? (payload as { message?: unknown; error?: unknown })
-      : null;
-    const message = String(
-      detail?.message || detail?.error || "CMS request failed (" + response.status + ")",
-    );
-    throw Object.assign(new Error(message), { status: response.status, payload });
-  }
-  return payload;
-}
-
-function editorRailForPanel(panel?: CmsPanel) {
-  if (panel === "pages") return "pages" as const;
-  if (panel === "online-store" || panel === "theme" || panel === "theme-editor") {
-    return "settings" as const;
-  }
-  return "sections" as const;
-}
-
 function CmsPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
 
   const siteSlug = (search.site || search.project_slug || search.project || "agentsam-sdk").trim();
   const siteName = SITE_CATALOG.find((s) => s.slug === siteSlug)?.name ?? siteSlug;
-  const cmsAdapter = useMemo(
+
+  const adapter = useMemo(
     () =>
       createHttpCmsAdapter({
-        siteId: siteSlug,
-        transport: isPackagedDesktop() ? desktopCmsTransport : undefined,
+        sites: SITE_CATALOG.map((s) => ({
+          id: s.slug,
+          slug: s.slug,
+          name: s.name,
+          domain: s.domain,
+        })),
       }),
-    [siteSlug],
+    [],
   );
 
   const isEditorView = Boolean(
@@ -172,38 +136,50 @@ function CmsPage() {
     );
   }
 
-  const initialRail = editorRailForPanel(search.panel);
-
-  const handleCmsHostNavigate = (path: string) => {
-    if (path === "/cms" || path === "/cms?panel=hub") {
-      goHub();
-      return;
-    }
-    if (path.startsWith("/cms")) {
-      const parsed = parseCmsNavigatePath(path, siteSlug);
-      navigate({
-        to: "/cms",
-        search: {
-          site: parsed.site,
-          panel: parsed.panel,
-          page: parsed.page,
-          view: parsed.view,
-        },
-      });
-      return;
-    }
-    navigate({ to: path });
-  };
-
   return (
-    <div className="size-full overflow-hidden">
-      <CmsEditor
-        adapter={cmsAdapter}
-        siteId={siteSlug}
-        initialPageId={search.page || null}
-        initialRail={initialRail}
-        host={{ navigate: handleCmsHostNavigate }}
-      />
+    <div className="size-full overflow-hidden" data-cms-adapter="http">
+      <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-2 text-sm">
+        <button
+          type="button"
+          className="text-muted-foreground hover:text-foreground"
+          onClick={() => goHub()}
+        >
+          ← Sites
+        </button>
+        <span className="text-muted-foreground">/</span>
+        <span className="font-medium">{siteName}</span>
+        <span className="text-muted-foreground">/</span>
+        <span>Editor</span>
+      </div>
+      <div className="min-h-0 flex-1 overflow-hidden" style={{ height: "calc(100% - 41px)" }}>
+        <CmsEditor
+          adapter={adapter}
+          siteId={siteSlug}
+          initialPageId={search.page || null}
+          host={{
+            navigate: (path: string) => {
+              if (path === "/cms" || path === "/cms?panel=hub") {
+                goHub();
+                return;
+              }
+              if (path.startsWith("/cms")) {
+                const parsed = parseCmsNavigatePath(path, siteSlug);
+                void navigate({
+                  to: "/cms",
+                  search: {
+                    site: parsed.site,
+                    panel: parsed.panel,
+                    page: parsed.page,
+                    view: parsed.view,
+                  },
+                });
+                return;
+              }
+              void navigate({ to: path as never });
+            },
+          }}
+        />
+      </div>
     </div>
   );
 }
