@@ -1,5 +1,5 @@
 {
-  "name": "@inneranimalmedia/theme-shinshu-site",
+  "name": "@inneranimalmedia/theme-summit",
   "version": "0.1.0",
   "description": "Real Shinshu Solutions static archive \u2014 services, gallery, and CMS-ready pages.",
   "type": "module",
@@ -29,6 +29,8 @@
     "icon": "theme",
     "lineage": "shin",
     "family": "consulting-portfolio",
-    "normalization": "needs_normalization"
+    "normalization": "canonical_id_assigned",
+    "canonicalId": "summit",
+    "legacyPackageName": "@inneranimalmedia/theme-shinshu-site"
   }
 }

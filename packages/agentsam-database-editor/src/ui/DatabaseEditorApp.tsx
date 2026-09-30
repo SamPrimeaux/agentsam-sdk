@@ -146,6 +146,11 @@ function MetricChart({
   first: string;
   second?: string;
 }) {
+  const hasSeries = data.some((point) => {
+    const a = point[first];
+    const b = second ? point[second] : null;
+    return (a != null && !Number.isNaN(Number(a))) || (b != null && !Number.isNaN(Number(b)));
+  });
   return (
     <section className="db-chart-card">
       <header className="db-chart-title">
@@ -153,7 +158,7 @@ function MetricChart({
         <span>{title}</span>
       </header>
       <div className="db-chart-body">
-        {data.length ? (
+        {hasSeries ? (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 16, right: 18, bottom: 4, left: 0 }}>
               <CartesianGrid stroke="var(--db-grid)" vertical={false} />
@@ -518,15 +523,20 @@ export function DatabaseEditorApp({
 
   const chartData = useMemo(
     () =>
-      (metrics?.series || []).map((point) => ({
-        ...point,
-        label: labelForTime(point.t),
-        queries: Number(point.queries || 0),
-        readQueries: Number(point.readQueries || 0),
-        writeQueries: Number(point.writeQueries || 0),
-        rowsRead: Number(point.rowsRead || 0),
-        rowsWritten: Number(point.rowsWritten || 0),
-      })),
+      (metrics?.series || []).map((point) => {
+        const numOrNull = (value: number | null | undefined) =>
+          value == null || Number.isNaN(Number(value)) ? null : Number(value);
+        return {
+          ...point,
+          label: labelForTime(point.t),
+          // Preserve null/gaps — never coerce unavailable metrics into fake zeros.
+          queries: numOrNull(point.queries),
+          readQueries: numOrNull(point.readQueries),
+          writeQueries: numOrNull(point.writeQueries),
+          rowsRead: numOrNull(point.rowsRead),
+          rowsWritten: numOrNull(point.rowsWritten),
+        };
+      }),
     [metrics],
   );
 
@@ -866,6 +876,28 @@ export function DatabaseEditorApp({
               />
             ) : null}
           </div>
+
+          {metrics && metrics.wired === false ? (
+            <div className="db-alert" role="status" data-metrics-wired="false">
+              <span>
+                {metrics.warning ||
+                  "Provider metrics are unavailable for this source. Null KPIs are not zeros."}
+              </span>
+            </div>
+          ) : null}
+          {metrics?.warning && metrics.wired !== false ? (
+            <div className="db-alert" role="status" data-metrics-warning="true">
+              <span>{metrics.warning}</span>
+            </div>
+          ) : null}
+          {source?.source_kind === "deployment_binding" ? (
+            <div className="db-alert" role="note" data-source-kind="deployment_binding">
+              <span>
+                Deployment binding ({source.owner_scope || "deployment"}) — not from your Cloudflare
+                OAuth catalog. Platform resources stay owner-gated.
+              </span>
+            </div>
+          ) : null}
 
           <MetricChart title="Total queries" data={chartData} first="queries" />
           <div className="db-chart-grid">

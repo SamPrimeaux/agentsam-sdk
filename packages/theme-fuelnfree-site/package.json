@@ -1,5 +1,5 @@
 {
-  "name": "@inneranimalmedia/theme-fuelnfree-site",
+  "name": "@inneranimalmedia/theme-ember",
   "version": "0.1.0",
   "description": "Real Fuel & Free Time legacy storefront pages \u2014 home, shop, about, and community.",
   "type": "module",
@@ -29,6 +29,8 @@
     "icon": "theme",
     "lineage": "fnf",
     "family": "editorial-commerce",
-    "normalization": "needs_normalization"
+    "normalization": "canonical_id_assigned",
+    "canonicalId": "ember",
+    "legacyPackageName": "@inneranimalmedia/theme-fuelnfree-site"
   }
 }

@@ -1,19 +1,18 @@
 /**
- * Theme package registry — normalize names WITHOUT renaming/moving built CSS.
+ * Theme package registry — neutral product identity + donor aliases.
  *
- * Storage model (do not flatten or delete packages):
- *   packages/theme-<site>-site     → installable public-site BrandPack + page CSS
- *   packages/theme-scenes          → reusable scene/shell/block composition vocabulary
- *   packages/heuristic-theme       → stock CMS storefront shell contract
- *   packages/agentsam-docs-theme   → docs skin tokens (Instrument/violet docs)
- *   apps/theme-gallery-preview     → gallery demos only (not production authority)
+ * Storage model (do not flatten or delete built CSS mounts):
+ *   packages/theme-*-site          → package folders (path may keep donor slug)
+ *   packages/theme-scenes          → composition vocabulary
+ *   packages/heuristic-theme       → stock CMS shell
+ *   packages/agentsam-docs-theme   → docs skin
+ *   apps/theme-gallery-preview     → gallery demos only
  *
- * Host shell typography lives in apps/local-studio/frontend/src/styles.css
- * (--font-sans / --font-display / --font-mono). Product packages MUST consume
- * those tokens instead of shipping an unrelated global font (e.g. Inter).
+ * Canonical public ids are neutral (cypress/violet/…). Donor names stay private
+ * provenance via aliases[]. Gallery/static URLs can keep old mounts.
  *
- * Canonical ids are kebab-case and stable. Package names keep the existing
- * @inneranimalmedia/theme-* npm ids so already-built styles continue to resolve.
+ * Host typography: apps/local-studio/frontend/src/styles.css
+ * (--font-sans / --font-display / --font-mono).
  */
 
 /** @typedef {'site-theme'|'scenes'|'storefront-shell'|'docs-skin'|'gallery-preview'} ThemePackageKind */
@@ -22,85 +21,101 @@
  * @typedef {object} ThemePackageEntry
  * @property {string} id
  * @property {string} packageName
+ * @property {string} [packageNameLegacy]
  * @property {string} path
  * @property {ThemePackageKind} kind
  * @property {string} label
  * @property {string} [siteSlug]
+ * @property {string} [donor]
  * @property {string[]} [aliases]
  */
 
 /** @type {readonly ThemePackageEntry[]} */
 export const THEME_PACKAGE_REGISTRY = Object.freeze([
   {
-    id: "church-site",
-    packageName: "@inneranimalmedia/theme-church-site",
+    id: "cypress",
+    packageName: "@inneranimalmedia/theme-cypress",
+    packageNameLegacy: "@inneranimalmedia/theme-church-site",
     path: "packages/theme-church-site",
     kind: "site-theme",
-    label: "New Iberia Church of Christ",
+    label: "Cypress",
     siteSlug: "church-site",
-    aliases: ["theme-church", "church"],
+    donor: "new-iberia-church",
+    aliases: ["church-site", "theme-church", "church", "theme-church-site", "nic"],
   },
   {
-    id: "companions-site",
-    packageName: "@inneranimalmedia/theme-companions-site",
+    id: "violet",
+    packageName: "@inneranimalmedia/theme-violet",
+    packageNameLegacy: "@inneranimalmedia/theme-companions-site",
     path: "packages/theme-companions-site",
     kind: "site-theme",
-    label: "Companions of Caddo",
+    label: "Violet",
     siteSlug: "companions-site",
-    aliases: ["theme-companions", "companions", "companions-of-caddo"],
+    donor: "companions-of-caddo",
+    aliases: ["companions-site", "theme-companions", "companions", "companions-of-caddo", "theme-companions-site", "coc"],
   },
   {
-    id: "floors-site",
-    packageName: "@inneranimalmedia/theme-floors-site",
+    id: "grove",
+    packageName: "@inneranimalmedia/theme-grove",
+    packageNameLegacy: "@inneranimalmedia/theme-floors-site",
     path: "packages/theme-floors-site",
     kind: "site-theme",
-    label: "Anything Floors & More",
+    label: "Grove",
     siteSlug: "floors-site",
-    aliases: ["theme-floors", "floors", "anything-floors"],
+    donor: "anything-floors",
+    aliases: ["floors-site", "theme-floors", "floors", "anything-floors", "theme-floors-site", "afm"],
   },
   {
-    id: "fuelnfree-site",
-    packageName: "@inneranimalmedia/theme-fuelnfree-site",
+    id: "ember",
+    packageName: "@inneranimalmedia/theme-ember",
+    packageNameLegacy: "@inneranimalmedia/theme-fuelnfree-site",
     path: "packages/theme-fuelnfree-site",
     kind: "site-theme",
-    label: "Fuel & Free Time",
+    label: "Ember",
     siteSlug: "fuelnfree-site",
-    aliases: ["theme-fuelnfree", "fuelnfreetime", "fuel-n-free"],
+    donor: "fuelnfreetime",
+    aliases: ["fuelnfree-site", "theme-fuelnfree", "fuelnfreetime", "fuel-n-free", "theme-fuelnfree-site", "fnf"],
   },
   {
-    id: "handyman-site",
-    packageName: "@inneranimalmedia/theme-handyman-site",
+    id: "forge",
+    packageName: "@inneranimalmedia/theme-forge",
+    packageNameLegacy: "@inneranimalmedia/theme-handyman-site",
     path: "packages/theme-handyman-site",
     kind: "site-theme",
-    label: "Primeaux Handyman",
+    label: "Forge",
     siteSlug: "handyman-site",
-    aliases: ["theme-handyman", "handyman"],
+    donor: "primeaux-handyman",
+    aliases: ["handyman-site", "theme-handyman", "handyman", "theme-handyman-site", "phs"],
   },
   {
-    id: "insurance-site",
-    packageName: "@inneranimalmedia/theme-insurance-site",
+    id: "harbor",
+    packageName: "@inneranimalmedia/theme-harbor",
+    packageNameLegacy: "@inneranimalmedia/theme-insurance-site",
     path: "packages/theme-insurance-site",
     kind: "site-theme",
-    label: "Chrystal Clear Insurance",
+    label: "Harbor",
     siteSlug: "insurance-site",
-    aliases: ["theme-insurance", "insurance"],
+    donor: "chrystal-clear-insurance",
+    aliases: ["insurance-site", "theme-insurance", "insurance", "theme-insurance-site", "cci"],
   },
   {
-    id: "shinshu-site",
-    packageName: "@inneranimalmedia/theme-shinshu-site",
+    id: "summit",
+    packageName: "@inneranimalmedia/theme-summit",
+    packageNameLegacy: "@inneranimalmedia/theme-shinshu-site",
     path: "packages/theme-shinshu-site",
     kind: "site-theme",
-    label: "Shinshu Solutions",
+    label: "Summit",
     siteSlug: "shinshu-site",
-    aliases: ["theme-shinshu", "shinshu"],
+    donor: "shinshu-solutions",
+    aliases: ["shinshu-site", "theme-shinshu", "shinshu", "theme-shinshu-site", "shin"],
   },
   {
-    id: "scenes",
+    id: "theme-scenes",
     packageName: "@inneranimalmedia/theme-scenes",
     path: "packages/theme-scenes",
     kind: "scenes",
-    label: "Theme Scenes (composition vocabulary)",
-    aliases: ["theme-scenes", "scenes"],
+    label: "Theme Scenes",
+    aliases: ["scenes", "composition"],
   },
   {
     id: "heuristic",
@@ -108,7 +123,7 @@ export const THEME_PACKAGE_REGISTRY = Object.freeze([
     path: "packages/heuristic-theme",
     kind: "storefront-shell",
     label: "Heuristic storefront shell",
-    aliases: ["heuristic-theme", "storefront-shell"],
+    aliases: ["heuristic-theme", "storefront"],
   },
   {
     id: "docs",
@@ -116,7 +131,7 @@ export const THEME_PACKAGE_REGISTRY = Object.freeze([
     path: "packages/agentsam-docs-theme",
     kind: "docs-skin",
     label: "AgentSam docs skin",
-    aliases: ["docs-theme", "agentsam-docs"],
+    aliases: ["agentsam-docs-theme", "docs-theme"],
   },
 ]);
 
@@ -125,16 +140,22 @@ export const THEME_PACKAGE_REGISTRY = Object.freeze([
  * @returns {ThemePackageEntry | null}
  */
 export function resolveThemePackage(query) {
-  const q = String(query || "")
-    .trim()
-    .toLowerCase()
-    .replace(/^@inneranimalmedia\//, "");
-  if (!q) return null;
+  const needle = String(query || "").trim().toLowerCase();
+  if (!needle) return null;
   for (const entry of THEME_PACKAGE_REGISTRY) {
-    if (entry.id === q) return entry;
-    if (entry.packageName.replace(/^@inneranimalmedia\//, "") === q) return entry;
-    if (entry.siteSlug === q) return entry;
-    if ((entry.aliases || []).some((alias) => alias.toLowerCase() === q)) return entry;
+    const names = [
+      entry.id,
+      entry.packageName,
+      entry.packageNameLegacy,
+      entry.path,
+      entry.siteSlug,
+      entry.donor,
+      ...(entry.aliases || []),
+    ]
+      .filter(Boolean)
+      .map((v) => String(v).toLowerCase());
+    if (names.includes(needle)) return entry;
+    if (names.some((n) => n.endsWith("/" + needle) || n.endsWith(needle))) return entry;
   }
   return null;
 }
@@ -144,7 +165,6 @@ export function resolveThemePackage(query) {
  * @returns {ThemePackageEntry[]}
  */
 export function listThemePackages(kind) {
-  return THEME_PACKAGE_REGISTRY.filter((entry) => (kind ? entry.kind === kind : true)).map((entry) => ({
-    ...entry,
-  }));
+  if (!kind) return [...THEME_PACKAGE_REGISTRY];
+  return THEME_PACKAGE_REGISTRY.filter((entry) => entry.kind === kind);
 }

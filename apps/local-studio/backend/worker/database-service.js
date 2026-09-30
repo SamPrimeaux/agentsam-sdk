@@ -55,6 +55,34 @@ async function sha256Hex(value) {
     .join('');
 }
 
+
+const OAUTH_D1_CAPABILITIES = Object.freeze([
+  'schema', 'read', 'query', 'insert', 'update', 'delete', 'metrics',
+]);
+const DEPLOYMENT_D1_CAPABILITIES = Object.freeze([
+  'schema', 'read', 'query', 'insert', 'update', 'delete',
+]);
+const DEPLOYMENT_PG_CAPABILITIES = Object.freeze([
+  'schema', 'read', 'query', 'insert', 'update', 'delete', 'metrics',
+]);
+
+function isOpaqueBindingDatabaseId(databaseId) {
+  const id = clean(databaseId);
+  if (!id) return true;
+  if (id.startsWith('binding:')) return true;
+  // Real Cloudflare D1 UUIDs are 36-char dashed hex.
+  return !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
+function withSourceProvenance(source, provenance) {
+  return {
+    ...source,
+    source_kind: provenance.source_kind,
+    owner_scope: provenance.owner_scope,
+    capabilities: provenance.capabilities,
+  };
+}
+
 async function resolveDeploymentOwnerAccount(env) {
   const token = clean(env?.AGENTSAM_API_KEY);
   if (!token || !env?.DB?.prepare) return null;
@@ -161,7 +189,7 @@ async function listCloudflareD1Sources(env, accountId) {
     return {
       sources: rows.map((row) => {
         const databaseId = clean(row.uuid || row.id);
-        return {
+        return withSourceProvenance({
           id: `cf-d1:${databaseId}`,
           provider: 'cloudflare-d1',
           engine: 'sqlite',
@@ -174,7 +202,13 @@ async function listCloudflareD1Sources(env, accountId) {
           writable,
           metrics: true,
           connection: 'oauth',
-        };
+        }, {
+          source_kind: 'oauth_resource',
+          owner_scope: 'account',
+          capabilities: writable
+            ? OAUTH_D1_CAPABILITIES
+            : OAUTH_D1_CAPABILITIES.filter((c) => !['insert', 'update', 'delete'].includes(c)),
+        });
       }),
       connection: {
         provider: 'cloudflare',
@@ -245,7 +279,9 @@ async function getBoundD1Source(env, accountId) {
     fileSize = 0;
   }
 
-  return {
+  // Deployment-owned Worker binding — only for explicitly authorized deployment owner.
+  // Never treat env.DB as a generic user's Cloudflare catalog entry.
+  return withSourceProvenance({
     id: 'binding-d1:primary',
     provider: 'cloudflare-d1',
     engine: 'sqlite',
@@ -257,9 +293,13 @@ async function getBoundD1Source(env, accountId) {
     file_size: fileSize,
     num_tables: tableCount,
     writable: true,
-    metrics: true,
+    metrics: false,
     connection: 'worker_binding',
-  };
+  }, {
+    source_kind: 'deployment_binding',
+    owner_scope: 'deployment',
+    capabilities: DEPLOYMENT_D1_CAPABILITIES,
+  });
 }
 
 async function getHyperdriveSource(env, accountId) {
@@ -273,19 +313,23 @@ async function getHyperdriveSource(env, accountId) {
               pg_database_size(current_database())::bigint AS size_bytes`,
     );
     const row = result.rows?.[0] || {};
-    return {
+    return withSourceProvenance({
       id: 'hyperdrive:primary',
       provider: 'supabase-postgres',
       engine: 'postgres',
       accelerator: 'hyperdrive',
-      label: clean(row.database_name) || 'Supabase Postgres',
+      label: clean(row.database_name) || 'Supabase Postgres (Hyperdrive)',
       database_name: clean(row.database_name) || 'postgres',
       file_size: Number(row.size_bytes || 0) || 0,
       writable: true,
       metrics: true,
       connection: 'deployment_hyperdrive',
       latency_ms: Date.now() - started,
-    };
+    }, {
+      source_kind: 'deployment_binding',
+      owner_scope: 'deployment',
+      capabilities: DEPLOYMENT_PG_CAPABILITIES,
+    });
   }).catch((error) => ({
     id: 'hyperdrive:primary',
     provider: 'supabase-postgres',
@@ -303,31 +347,44 @@ async function getHyperdriveSource(env, accountId) {
 }
 
 async function listSources(env, accountId) {
+  // Product path: user's Cloudflare OAuth → their account D1s.
+  // Deployment bindings (env.DB / Hyperdrive) are separate and owner-gated.
   const [cloudflare, boundD1, hyperdrive] = await Promise.all([
     listCloudflareD1Sources(env, accountId),
     getBoundD1Source(env, accountId),
     getHyperdriveSource(env, accountId),
   ]);
-  const oauthD1 = boundD1?.database_id
-    ? cloudflare.sources.filter((source) => source.database_id !== boundD1.database_id)
-    : cloudflare.sources;
+  const oauthD1 = cloudflare.sources || [];
+  const deploymentSources = [
+    ...(boundD1 ? [boundD1] : []),
+    ...(hyperdrive ? [hyperdrive] : []),
+  ];
+  const cfConnection = { ...cloudflare.connection };
+  if (cfConnection.status === 'connected' && oauthD1.length === 0) {
+    cfConnection.catalog_status = 'empty';
+    cfConnection.warning =
+      'Cloudflare OAuth is connected, but no D1 databases were enumerated for this account. This is a connector/catalog gap — do not invent platform D1 rows.';
+  }
   return {
     sources: [
-      ...(boundD1 ? [boundD1] : []),
       ...oauthD1,
-      ...(hyperdrive ? [hyperdrive] : []),
+      ...deploymentSources,
     ],
     connections: {
-      cloudflare: cloudflare.connection,
+      cloudflare: cfConnection,
       hyperdrive: hyperdrive
         ? {
             status: hyperdrive.status === 'degraded' ? 'degraded' : 'connected',
             source_id: hyperdrive.id,
+            source_kind: 'deployment_binding',
+            owner_scope: 'deployment',
             latency_ms: hyperdrive.latency_ms ?? null,
           }
-        : { status: 'not_available' },
+        : { status: 'not_available', source_kind: 'deployment_binding', owner_scope: 'deployment' },
       local_sqlite: {
         status: 'attachable',
+        source_kind: 'local_runtime',
+        owner_scope: 'user',
         message:
           'Attach AgentSam Local Studio / local runtime to open `.agentsam/data/agentsam.sqlite` (same DB as `agentsam db`). Never invented in the hosted browser.',
       },
@@ -580,7 +637,10 @@ async function readMetrics(env, accountId, sourceId, range) {
       const metricsAccountId =
         source.account_id ||
         (cfCredential ? await resolveCloudflareAccountId(cfCredential) : null);
-      if (!cfCredential?.token || !metricsAccountId || !source.database_id) {
+      const opaqueBinding = isOpaqueBindingDatabaseId(source.database_id)
+        || source.source_kind === 'deployment_binding'
+        || source.connection === 'worker_binding';
+      if (!cfCredential?.token || !metricsAccountId || opaqueBinding) {
         return {
           ok: true,
           source,
@@ -604,7 +664,9 @@ async function readMetrics(env, accountId, sourceId, range) {
           series: [],
           health: await adapter.health(),
           wired: false,
-          warning: 'Connect Cloudflare OAuth with the data pack for D1 GraphQL metrics.',
+          warning: opaqueBinding
+            ? 'Provider analytics unavailable for deployment-bound D1 (opaque binding:DB). Schema/rows still work via the Worker binding.'
+            : 'Connect Cloudflare OAuth with the data pack for D1 GraphQL metrics.',
         };
       }
       const metrics = await readD1Metrics({
