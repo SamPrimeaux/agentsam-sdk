@@ -6,8 +6,21 @@
  * Product routing does not live here.
  */
 
+/** auth_sessions.type values written by this package. */
+export const SESSION_TYPES = Object.freeze({
+  BROWSER: 'browser',
+  DESKTOP: 'desktop',
+});
+
+/** Lifetime of the one-time code a native OAuth callback hands to the app. */
+export const NATIVE_HANDOFF_TTL_SECONDS = 120;
+
 export const SESSION_POLICY = Object.freeze({
   browser: Object.freeze({
+    ttlSeconds: 30 * 24 * 60 * 60,
+  }),
+  /** Native app bearer session (OS keychain) — minted via the native OAuth handoff. */
+  desktop: Object.freeze({
     ttlSeconds: 30 * 24 * 60 * 60,
   }),
   /** Temporary execution authority — not the user's Local Studio login. */

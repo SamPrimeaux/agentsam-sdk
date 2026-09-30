@@ -130,7 +130,7 @@ export function createIdentityService(config) {
       return { ok: true };
     },
 
-    async provisionOAuthUser({ provider, providerSubject, email, displayName }) {
+    async provisionOAuthUser({ provider, providerSubject, email, displayName, sessionType }) {
       let user = await adapter.findUserByProvider(provider, providerSubject);
       if (!user && email) {
         user = await adapter.findUserByEmail(email);
@@ -155,6 +155,7 @@ export function createIdentityService(config) {
         displayName: displayName || user.display_name,
         provider,
         providerSubject,
+        type: sessionType,
       });
       return { ok: true, authUserId: user.id, sessionId: session.id, session };
     },
