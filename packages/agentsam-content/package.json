@@ -35,7 +35,9 @@
       "default": "./dist/runtime/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run"
@@ -48,7 +50,7 @@
   "devDependencies": {
     "@types/node": "^22.10.0",
     "typescript": "^5.9.3",
-    "vitest": "^2.1.0"
+    "vitest": "^4.1.11"
   },
   "license": "UNLICENSED"
 }

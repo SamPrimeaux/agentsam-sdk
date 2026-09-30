@@ -285,7 +285,7 @@
     "verify:go-distribution": "node scripts/verify-go-distribution.mjs",
     "prove:product": "node scripts/prove-agentsam-product.mjs",
     "security:release": "node scripts/verify-release-security.mjs",
-    "verify:database-honesty": "node --test test/database-hosted-honesty.test.mjs"
+    "verify:database-honesty": "node --test test/integration/database-hosted-honesty.test.mjs"
   },
   "engines": {
     "node": ">=22 <25",
@@ -330,7 +330,12 @@
     "protobufjs@7.6.6": true,
     "esbuild@0.28.1": true,
     "fsevents@2.3.3": true,
-    "workerd@1.20260925.1": true
+    "workerd@1.20260925.1": true,
+    "esbuild@0.28.2": true,
+    "workerd@1.20260930.2": true,
+    "sharp@0.34.5": true,
+    "sharp@0.35.4": true,
+    "sharp@0.35.5": true
   },
   "devDependencies": {
     "@changesets/changelog-github": "^1.0.1",
@@ -342,7 +347,8 @@
   },
   "overrides": {
     "@types/react": "19.2.18",
-    "@types/react-dom": "19.2.3"
+    "@types/react-dom": "19.2.3",
+    "esbuild": "0.28.1"
   },
   "packageManager": "npm@10.9.2"
 }

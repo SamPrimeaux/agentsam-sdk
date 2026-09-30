@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import { scanProjectSecurity, reportExitCode, repairProject, formatSecurityReport } from '../security/index.js';
 import { runProcess } from '../security/process.js';
 import { diagnosticFromError, renderDiagnosticError } from '../errors/index.js';
 
@@ -19,6 +18,13 @@ const help = [
   'Exit: 0 clean/verified, 1 unresolved findings or command failure, 2 incomplete/error.',
   ''
 ].join('\n');
+
+async function loadSecurityModules() {
+  // Deferred until after any pre-install child command (e.g. npm ci) so the
+  // Merkle/TypeScript trust-boundary stack is not required before dependencies exist.
+  return import('../security/index.js');
+}
+
 export async function runSecurity(argv) {
   const ownArgs = argv.slice(0, argv.indexOf('--') < 0 ? argv.length : argv.indexOf('--'));
   if (ownArgs.includes('--help') || ownArgs.includes('-h') || !argv.length) { process.stdout.write(help); return; }
@@ -52,13 +58,23 @@ export async function runSecurity(argv) {
     const abort = () => controller.abort();
     process.once('SIGINT', abort); process.once('SIGTERM', abort);
     let report;
+    let reportExitCode;
+    let formatSecurityReport;
     try {
       if (command === 'run') {
         const result = await runProcess(childArgs[0], childArgs.slice(1), { cwd: options.projectRoot || process.cwd(), signal: options.signal });
-        report = await scanProjectSecurity({ ...options, log: result.stdout + '\n' + result.stderr });
+        const security = await loadSecurityModules();
+        reportExitCode = security.reportExitCode;
+        formatSecurityReport = security.formatSecurityReport;
+        report = await security.scanProjectSecurity({ ...options, log: result.stdout + '\n' + result.stderr });
         report.command_exit_code = result.code;
         if (result.code) { report.ok = false; report.status = 'command-failed'; }
-      } else report = command === 'repair' ? await repairProject(options) : await scanProjectSecurity(options);
+      } else {
+        const security = await loadSecurityModules();
+        reportExitCode = security.reportExitCode;
+        formatSecurityReport = security.formatSecurityReport;
+        report = command === 'repair' ? await security.repairProject(options) : await security.scanProjectSecurity(options);
+      }
     } finally {
       process.removeListener('SIGINT', abort); process.removeListener('SIGTERM', abort);
     }

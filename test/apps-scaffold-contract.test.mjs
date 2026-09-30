@@ -91,7 +91,8 @@ test('client-cms-editor app manifest points to authoritative package name', () =
   assert.equal(manifest.package, pkg.name);
   assert.equal(manifest.runtime.local_preview, 'ready');
   assert.equal(manifest.runtime.source_scaffold, 'ready');
-  assert.equal(manifest.runtime.cloudflare, 'ready');
+  // Cloudflare path is adapter-ready until a graduated CF deploy receipt exists.
+  assert.equal(manifest.runtime.cloudflare, 'adapter-ready');
 });
 
 test('CAD creator keeps the robotics runtime lazy and the perception key server-side', () => {

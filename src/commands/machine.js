@@ -8,7 +8,7 @@
  */
 
 import path from 'node:path';
-import { resolveMachineBinary, spawnMachine } from '../lib/machine-binary.js';
+import { resolveMachineBinary, spawnMachine } from './machine-binary.js';
 
 function usage() {
   return `agentsam machine — deterministic local perception (native engine)
