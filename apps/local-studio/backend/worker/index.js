@@ -33,6 +33,7 @@ import {
 } from "./google-cli-cloud.js";
 import { loadConnectionsRegistry } from "./connections-registry.js";
 import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js";
+import { handleWorkRequest, isWorkRequest } from "./work-service.js";
 import { createLocalStudioPluginRuntime } from "./plugin-registry.js";
 import {
   mintStudioCredential,
@@ -651,6 +652,7 @@ export default {
     const isCfConnection = isCloudflareConnectionPath(url.pathname);
     const isConnectionsRegistry = url.pathname === "/api/connections";
     const isDatabaseApi = isDatabaseRequest(url.pathname);
+    const isWorkApi = isWorkRequest(url.pathname);
     const isPluginToolExecute = url.pathname === "/api/plugins/tools/execute";
 
     // Public marketing/docs: WEBSITE_ASSETS R2 SSOT (Worker ASSETS = bootstrap only)
@@ -748,6 +750,12 @@ export default {
       const userId = await sessionUser();
       if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
       return handleDatabaseRequest(request, env, userId);
+    }
+
+    if (isWorkApi) {
+      const userId = await sessionUser();
+      if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
+      return handleWorkRequest(request, env, userId);
     }
 
     if (isConnectionsRegistry) {

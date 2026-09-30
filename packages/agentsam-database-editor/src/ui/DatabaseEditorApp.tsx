@@ -74,7 +74,8 @@ function providerLabel(source?: DatabaseSource | null) {
 }
 
 function formatCompact(value?: number | null) {
-  const n = Number(value || 0);
+  if (value == null || Number.isNaN(Number(value))) return "—";
+  const n = Number(value);
   if (Math.abs(n) >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
   if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (Math.abs(n) >= 10_000) return `${Math.round(n / 1000)}k`;
@@ -83,7 +84,8 @@ function formatCompact(value?: number | null) {
 }
 
 function formatBytes(value?: number | null) {
-  const bytes = Number(value || 0);
+  if (value == null || Number.isNaN(Number(value))) return "—";
+  const bytes = Number(value);
   if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
   if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
   if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
