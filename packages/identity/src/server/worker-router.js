@@ -12,7 +12,11 @@ import { fetchCloudflareProfile } from '../providers/cloudflare/profile.js';
 import { IDENTITY_ROUTE_IDS } from '../contracts/route-ids.js';
 import { IdentityRoutingError } from '../contracts/identity-store.js';
 import { resolveOAuthCredentialLane } from '../oauth/credentials.js';
-import { handleGoogleDesktopExchangeRequest } from '../oauth/google-desktop-exchange.js';
+import {
+  GOOGLE_DESKTOP_LOGIN_EXCHANGE_PATH,
+  handleGoogleDesktopExchangeRequest,
+  handleGoogleDesktopLoginExchangeRequest,
+} from '../oauth/google-desktop-exchange.js';
 import { iamPlatformOAuthCallback, iamPlatformOAuthStart } from '../oauth/iam-platform.js';
 import { pkceChallenge, pkceVerifier, randomOAuthState } from '../oauth/pkce.js';
 import {
@@ -242,6 +246,9 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
   // Canonical platform id = inneranimalmedia (legacy /api/oauth/iam/* still accepted).
   if (path === '/api/oauth/google/desktop-exchange') {
     return handleGoogleDesktopExchangeRequest(request, env);
+  }
+  if (path === GOOGLE_DESKTOP_LOGIN_EXCHANGE_PATH) {
+    return handleGoogleDesktopLoginExchangeRequest(request, env, { adapter, identity });
   }
   if (path === NATIVE_EXCHANGE_PATH) {
     return handleNativeExchangeRequest(request, { adapter, identity });

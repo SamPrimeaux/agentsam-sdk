@@ -1,34 +1,34 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, ExternalLink, Loader2, LogOut, ShieldCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { invokeIdentity, secureStoreGet } from "@/lib/desktop/tauri";
+import {
+  beginNativeLogin,
+  listenForNativeIdentityCallbacks,
+  logoutNativeSession,
+  restoreNativeSession,
+  type NativeIdentityProvider,
+  type NativeIdentityStatus,
+} from "@/lib/desktop/native-auth";
 
-type LocalIdentityStatus = {
-  ok?: boolean;
-  authenticated?: boolean;
-  user?: {
-    id?: string;
-    email?: string;
-    display_name?: string | null;
-    displayName?: string | null;
-  } | null;
-  error?: string;
-};
+const PROVIDERS: Array<{ id: NativeIdentityProvider; label: string }> = [
+  { id: "google", label: "Continue with Google" },
+  { id: "github", label: "Continue with GitHub" },
+  { id: "cloudflare", label: "Continue with Cloudflare" },
+];
 
-const SESSION_ACCOUNT = "identity_session";
-
-async function readLocalIdentityStatus(): Promise<LocalIdentityStatus> {
-  const sessionId = await secureStoreGet(SESSION_ACCOUNT);
-  if (!sessionId) return { ok: true, authenticated: false, user: null };
-  return (await invokeIdentity({
-    op: "status",
-    session_id: sessionId,
-  })) as LocalIdentityStatus;
+function userLabel(status: NativeIdentityStatus | null): string {
+  return (
+    status?.user?.displayName ||
+    status?.user?.display_name ||
+    status?.user?.email ||
+    "AgentSam account"
+  );
 }
 
 export function DesktopIdentityPortal({
@@ -38,89 +38,180 @@ export function DesktopIdentityPortal({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const [status, setStatus] = useState<LocalIdentityStatus | null>(null);
+  const [status, setStatus] = useState<NativeIdentityStatus | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    let unlisten: (() => void) | undefined;
+
+    void listenForNativeIdentityCallbacks(
+      (nextStatus) => {
+        if (!active) return;
+        setStatus(nextStatus);
+        setBusy(null);
+        setMessage("Signed in. Your desktop session is stored in the system secure credential store.");
+        window.setTimeout(() => onOpenChange(false), 650);
+      },
+      (error) => {
+        if (!active) return;
+        setBusy(null);
+        setMessage(error.message);
+      },
+    )
+      .then((dispose) => {
+        if (!active) dispose();
+        else unlisten = dispose;
+      })
+      .catch(() => {
+        // Hosted/browser surfaces do not expose Tauri events.
+      });
+
+    return () => {
+      active = false;
+      unlisten?.();
+    };
+  }, [onOpenChange]);
 
   useEffect(() => {
     if (!open) return;
     let active = true;
-    void readLocalIdentityStatus()
+    setMessage(null);
+    void restoreNativeSession()
       .then((value) => {
         if (active) setStatus(value);
       })
       .catch((error) => {
-        if (active) setMessage(error instanceof Error ? error.message : String(error));
+        if (active) {
+          setStatus({ ok: false, authenticated: false, user: null });
+          setMessage(error instanceof Error ? error.message : String(error));
+        }
       });
     return () => {
       active = false;
     };
   }, [open]);
 
-  useEffect(() => {
-    if (!open) return;
-
-    function onMessage(event: MessageEvent) {
-      const data = event.data as
-        | {
-            type?: string;
-            authenticated?: boolean;
-            user?: LocalIdentityStatus["user"];
-            provider?: string;
-          }
-        | undefined;
-      if (!data?.type) return;
-
-      if (data.type === "agentsam:desktop-identity" && data.authenticated) {
-        setStatus({ ok: true, authenticated: true, user: data.user || null });
-        setMessage("Signed in. Your account session is stored in the system secure credential store.");
-        window.setTimeout(() => onOpenChange(false), 500);
-        return;
+  async function startLogin(provider: NativeIdentityProvider) {
+    setBusy(provider);
+    setMessage("Opening your default browser. Return here after sign-in completes.");
+    try {
+      const result = await beginNativeLogin(provider);
+      if (result) {
+        setStatus(result);
+        setBusy(null);
+        setMessage("Signed in. Your desktop session is stored in the system secure credential store.");
+        window.setTimeout(() => onOpenChange(false), 650);
       }
-
-      if (data.type === "agentsam:desktop-provider-request") {
-        const label = data.provider
-          ? `${data.provider.charAt(0).toUpperCase()}${data.provider.slice(1)}`
-          : "Provider";
-        setMessage(
-          `${label} is an optional provider connection. Provider authorization is separate from your AgentSam account session and will use its provider-specific connection flow.`,
-        );
-      }
+    } catch (error) {
+      setBusy(null);
+      setMessage(error instanceof Error ? error.message : String(error));
     }
+  }
 
-    window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
-  }, [open, onOpenChange]);
+  async function signOut() {
+    setBusy("logout");
+    setMessage(null);
+    try {
+      await logoutNativeSession();
+      setStatus({ ok: true, authenticated: false, user: null });
+      setMessage("Signed out and removed the desktop session from the secure credential store.");
+    } catch (error) {
+      setStatus({ ok: true, authenticated: false, user: null });
+      setMessage(
+        `Local credentials were cleared, but session revocation reported: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    } finally {
+      setBusy(null);
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="h-[min(90vh,860px)] w-[min(94vw,1080px)] max-w-none overflow-hidden border-border bg-[#050508] p-0 text-foreground">
-        <DialogTitle className="sr-only">AgentSam identity</DialogTitle>
-        <DialogDescription className="sr-only">
-          Portable Local Studio identity powered by the packaged AgentSam identity system.
-        </DialogDescription>
+      <DialogContent className="w-[min(94vw,520px)] max-w-none overflow-hidden border-border bg-background p-0 text-foreground">
+        <div className="border-b border-border px-6 py-5">
+          <DialogTitle className="text-base font-semibold">AgentSam account</DialogTitle>
+          <DialogDescription className="mt-1 text-sm text-muted-foreground">
+            Local Studio opens the system browser for account authentication. Cloudflare resource
+            access remains a separate provider connection.
+          </DialogDescription>
+        </div>
 
-        {status?.authenticated ? (
-          <div className="absolute right-4 top-4 z-20 flex items-center gap-2 rounded-full border border-emerald-500/30 bg-black/60 px-3 py-1.5 text-xs text-emerald-300 backdrop-blur">
-            <CheckCircle2 className="size-3.5" />
-            {status.user?.displayName || status.user?.display_name || status.user?.email || "Account session"}
-          </div>
-        ) : null}
+        <div className="space-y-4 px-6 py-6">
+          {status?.authenticated ? (
+            <div className="rounded-xl border border-border bg-card p-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 rounded-full border border-border bg-background p-2">
+                  <CheckCircle2 className="size-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium">{userLabel(status)}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    Restored from the OS secure credential store and verified against the identity
+                    service.
+                  </div>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                className="mt-4 w-full justify-center"
+                disabled={busy !== null}
+                onClick={() => void signOut()}
+              >
+                {busy === "logout" ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <LogOut className="size-4" />
+                )}
+                Sign out
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-4">
+                <ShieldCheck className="mt-0.5 size-4 shrink-0" />
+                <div>
+                  <div className="text-sm font-medium">Signed out</div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    The OAuth handoff is single-use and PKCE-bound. Session identifiers never travel
+                    in the deep-link URL.
+                  </div>
+                </div>
+              </div>
 
-        <iframe
-          title="AgentSam sign in"
-          src="/auth/login.html?desktop=1&next=/agentsam"
-          className="h-full w-full border-0 bg-[#050508]"
-          allow="clipboard-read; clipboard-write"
-        />
+              <div className="grid gap-2">
+                {PROVIDERS.map((provider) => (
+                  <Button
+                    key={provider.id}
+                    variant="outline"
+                    className="w-full justify-between"
+                    disabled={busy !== null}
+                    onClick={() => void startLogin(provider.id)}
+                  >
+                    <span>{provider.label}</span>
+                    {busy === provider.id ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <ExternalLink className="size-4" />
+                    )}
+                  </Button>
+                ))}
+              </div>
+            </>
+          )}
 
-        {message ? (
-          <div
-            className="absolute bottom-4 left-1/2 z-20 max-w-[min(90%,720px)] -translate-x-1/2 rounded-lg border border-white/10 bg-black/80 px-4 py-2 text-center text-xs text-white/75 shadow-xl backdrop-blur"
-            role="status"
-          >
-            {message}
-          </div>
-        ) : null}
+          {message ? (
+            <div
+              className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground"
+              role="status"
+            >
+              {message}
+            </div>
+          ) : null}
+        </div>
       </DialogContent>
     </Dialog>
   );

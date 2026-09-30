@@ -225,6 +225,19 @@ async fn service_studio_bridge(
     .map_err(|e| format!("studio_service_response_encode_failed:{e}"))
 }
 
+fn identity_service_route(op: &str) -> Result<(Method, &'static str, bool), String> {
+    match op {
+        "login" => Ok((Method::POST, "/api/auth/login", true)),
+        "signup" => Ok((Method::POST, "/api/auth/signup", true)),
+        "status" => Ok((Method::GET, "/api/auth/me", false)),
+        "logout" => Ok((Method::POST, "/api/auth/logout", false)),
+        "reset_request" => Ok((Method::POST, "/api/auth/password-reset/request", false)),
+        "reset_confirm" => Ok((Method::POST, "/api/auth/password-reset/confirm", false)),
+        "native_exchange" => Ok((Method::POST, "/api/oauth/native/exchange", false)),
+        _ => Err("unsupported_identity_operation".into()),
+    }
+}
+
 async fn service_identity_bridge(
     config: &IdentityRuntimeConfig,
     request_json: &str,
@@ -248,15 +261,7 @@ async fn service_identity_bridge(
         .map(str::to_string)
         .filter(|value| !value.is_empty());
 
-    let (method, path, native_session) = match op.as_str() {
-        "login" => (Method::POST, "/api/auth/login", true),
-        "signup" => (Method::POST, "/api/auth/signup", true),
-        "status" => (Method::GET, "/api/auth/me", false),
-        "logout" => (Method::POST, "/api/auth/logout", false),
-        "reset_request" => (Method::POST, "/api/auth/password-reset/request", false),
-        "reset_confirm" => (Method::POST, "/api/auth/password-reset/confirm", false),
-        _ => return Err("unsupported_identity_operation".into()),
-    };
+    let (method, path, native_session) = identity_service_route(op.as_str())?;
 
     if let Value::Object(ref mut map) = request {
         map.remove("op");
@@ -451,5 +456,28 @@ pub async fn local_identity_bridge(app: AppHandle, request_json: String) -> Resu
         let _ = app;
         let _ = request_json;
         Err("standalone_identity_requires_mobile_native_adapter".into())
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn native_exchange_uses_canonical_identity_handoff_route() {
+        let (method, path, native_session) =
+            identity_service_route("native_exchange").expect("native exchange route");
+        assert_eq!(method, Method::POST);
+        assert_eq!(path, "/api/oauth/native/exchange");
+        assert!(!native_session);
+    }
+
+    #[test]
+    fn unknown_identity_operation_fails_closed() {
+        assert_eq!(
+            identity_service_route("desktop_magic").unwrap_err(),
+            "unsupported_identity_operation"
+        );
     }
 }

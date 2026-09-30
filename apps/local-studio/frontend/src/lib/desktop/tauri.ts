@@ -110,3 +110,68 @@ export async function openExternalUrl(url: string): Promise<void> {
   }
   await invoke("open_external_url", { url });
 }
+
+type TauriEventEnvelope<T> = { payload: T };
+type TauriEventListen = <T>(
+  eventName: string,
+  handler: (event: TauriEventEnvelope<T>) => void,
+) => Promise<() => void>;
+
+export async function getCurrentDeepLinks(): Promise<string[]> {
+  if (typeof window === "undefined") return [];
+  const tauri = (window as Window & {
+    __TAURI__?: {
+      deepLink?: {
+        getCurrent?: () => Promise<string[] | null>;
+        onOpenUrl?: (handler: (urls: string[]) => void) => Promise<() => void>;
+      };
+      event?: { listen?: TauriEventListen };
+    };
+  }).__TAURI__;
+  const direct = tauri?.deepLink?.getCurrent;
+  const current = direct
+    ? await direct()
+    : await getTauriInvoke()?.("plugin:deep-link|get_current", {});
+  if (!Array.isArray(current)) return [];
+  return current.filter((value): value is string => typeof value === "string");
+}
+
+export async function listenDeepLinks(handler: (url: string) => void): Promise<() => void> {
+  if (typeof window === "undefined") throw new Error("tauri_deep_link_unavailable");
+  const tauri = (window as Window & {
+    __TAURI__?: {
+      deepLink?: {
+        getCurrent?: () => Promise<string[] | null>;
+        onOpenUrl?: (handler: (urls: string[]) => void) => Promise<() => void>;
+      };
+      event?: { listen?: TauriEventListen };
+    };
+  }).__TAURI__;
+  const direct = tauri?.deepLink?.onOpenUrl;
+  if (direct) {
+    return direct((urls) => {
+      for (const url of urls) {
+        if (typeof url === "string") handler(url);
+      }
+    });
+  }
+  return listenTauriEvent<string>("agentsam://deep-link", (payload) => {
+    if (typeof payload === "string") handler(payload);
+  });
+}
+
+export async function listenTauriEvent<T>(
+  eventName: string,
+  handler: (payload: T) => void,
+): Promise<() => void> {
+  if (typeof window === "undefined") throw new Error("tauri_event_unavailable");
+  const listen = (
+    window as Window & {
+      __TAURI__?: {
+        event?: { listen?: TauriEventListen };
+      };
+    }
+  ).__TAURI__?.event?.listen;
+  if (!listen) throw new Error("tauri_event_unavailable");
+  return listen<T>(eventName, (event) => handler(event.payload));
+}
