@@ -295,7 +295,7 @@ DONE     0c PROJECT AUTHORITY / TOOL INTEGRITY (#83 @ a6dee86d)
 DONE     0d CI TRUST / DEPENDENCY CLOSURE (#85 @ 821d0d3e)   ← GHA green
   │
   ▼
-1 IDENTITY PORTABILITY                  ← NEXT
+1 IDENTITY PORTABILITY                  ← OPEN (lane-1-identity-portability)
   │
   ▼
 2 DESKTOP TRANSPORT / PACKAGING
@@ -318,7 +318,7 @@ Lane **0d** made install/verify gates enforceable from a clean checkout; do not 
 |---|---|---|
 | **0c** Project authority — **DONE** | Describe **this** repo’s architecture from evidence | #83 / `a6dee86d`: customer fixture + FNF regression + packed-npm proof green |
 | **0d** CI trust / dependency closure — **DONE** | Make the repo's own gates executable and meaningful from a clean checkout | #85 / `821d0d3e`: clean Install + complete lock graph + `npm run verify` + GHA green |
-| **1** Identity portable contract | SQLite + portable D1 + IAM compat | Migrations/adapters consumable **outside** monorepo |
+| **1** Identity portable contract — **OPEN** | SQLite + portable D1 + IAM compat | Migrations/adapters consumable **outside** monorepo |
 | **2** Desktop transport | Authenticated `/api` bridge + packaging | Desktop uses session transport — not Sam’s D1 credentials |
 | **3** Database Studio | Bound vs OAuth vs local; user-scoped | Empty state guides **user123** — never platform owner fallback |
 | **4** Settings host | Real host, not fixtures | Settings remains published capability; no permanent repo-local `file:` |
@@ -486,6 +486,56 @@ Local Studio same-machine path: Tauri → loopback → `agentsamd`. No VPC, Tunn
 
 ---
 
+## 10d. Lane 1 — Identity portability — **OPEN**
+
+Branch: `lane-1-identity-portability` from clean main `a5d58c0a347eaee4be2ca2fd1717acb0ae304643`.
+
+**Product law:** IdentityStore behavior + schema-pack ownership are product authority. SQLite, D1, and IAM are adapters. Do not make Cloudflare/IAM table names the portable contract. Do not create a second Desktop OAuth authority. Do not rename/rebuild production IAM schema merely to match portable names.
+
+### Done when (acceptance — before merge)
+
+- [ ] Formal `agentsam.identity` pack manifest exists (`packages/identity/schema/agentsam.identity/manifest.json`)
+- [ ] Generic `agentsam.schema-pack.v1` JSON Schema lives under `protocol/database/` (not Identity-owned)
+- [ ] Portable SQL has one SSOT: `packages/identity/migrations/sqlite/`
+- [ ] Clean SQLite uses portable `identity_*` schema
+- [ ] Clean portable D1 uses the same portable `identity_*` schema
+- [ ] IAM compat maps the same IdentityStore behavior onto existing hosted schema
+- [ ] `createCloudflareD1Adapter` remains a stable IAM-compat alias
+- [ ] Company / native / provider-connection behavior is contracted (not adapter-only magic)
+- [ ] Password recovery stays storage-agnostic (`createPasswordResetService` + injected store) — proven against all three adapters; **no** mandatory `identity_password_reset_tokens` in core
+- [ ] Generic customer D1 scaffold emits portable pack SQL (not IAM-shaped `accounts`/`oauth_states` masquerading as portable)
+- [ ] Required root package exports exist (sqlite / portable-d1 / iam-compat / cloudflare-d1 / identity-store)
+- [ ] Fresh install path: `001 → 002 → 005` (+ optional oauth-server) → `schema_version=2`
+- [ ] Upgrade path: existing `schema_version=1` → apply `005` → `schema_version=2` with prior rows still usable
+- [ ] npm-packed external user123 proof passes (no monorepo escape / operator bleed)
+- [ ] Existing IAM + Local Studio OAuth regression passes
+- [ ] `npm run verify` passes
+- [ ] GitHub Actions on final PR HEAD is green
+- [ ] This lifecycle section records exact CI evidence, then Lane 1 → **DONE**
+
+Do **not** start Lane 2 before the above is complete.
+
+### LANE 2 WORKBENCH LAW (record only — do not implement in Lane 1)
+
+- Installed Tauri auto-starts/attaches `agentsamd`
+- No normal raw pairing-token prompt
+- Cmd+J opens real bottom workbench: Problems | Output | Terminal | Ports | Debug
+- Terminal means real PTY on selected execution host
+- Scratch/virtual shell can exist only as explicit Demo/Tutorial
+- Trails are work/chat sessions, not Worker observability
+- Worker logs come from real observability/tail authority
+
+### LANE 3 DATABASE STUDIO LAW (record only — do not implement in Lane 1)
+
+- Database Studio is GUI over the same future DataSourceRegistry, schema-pack, doctor and inspect machinery as `agentsam db`
+- SQLite is one source, not universal database authority
+- Production rows are evidence, never shippable seed material
+- `.sqlite` is binary and must never be treated as a text document
+- No platform-owner datastore fallback
+- Do **not** build DataSourceRegistry in Lane 1 — `agentsam.schema-pack.v1` is enough for Identity
+
+---
+
 ## 11. Definition of “graduated”
 
 A product may claim `source_scaffold = ready` / graduate / appear as a first-class installable only when a current receipt says:
@@ -511,7 +561,8 @@ Until then: develop in `apps/`, but **do not** advertise extract/install readine
 
 - [apps/README.md](../apps/README.md) — product app ownership boundary  
 - Branch closure trail (IAM): `inneranimalmedia/docs/platform/BRANCH_DISPOSITION_20260930.md`  
-- Work plan: Cursor `identity_portability_status` — **Lane 1 Identity next** after Lane 0d merges  
-- Lane 0c project authority merged in #83 at `a6dee86d`; preserve its customer-repo/runtime discovery contract in every later lane  
+- Work plan: Cursor `identity_portability_status` — **Lane 1 Identity OPEN** on `lane-1-identity-portability`
+- Lane 0c project authority merged in #83 at `a6dee86d`; preserve its customer-repo/runtime discovery contract in every later lane
 - Lane 0d closes clean-checkout CI trust; do not reopen ExecOS/terminal implementation during Identity
 - Runtime protocol note: ExecOS remains supported working machinery; `execos_legacy` is a compatibility identifier, not an approved retirement decision
+- Schema-pack protocol: `protocol/database/agentsam.schema-pack.v1.schema.json` (generic); Identity owns `packages/identity/schema/agentsam.identity/manifest.json` only

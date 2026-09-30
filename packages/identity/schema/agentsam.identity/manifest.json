@@ -1,0 +1,101 @@
+{
+  "$schema": "../../../protocol/database/agentsam.schema-pack.v1.schema.json",
+  "schema": "agentsam.schema-pack.v1",
+  "id": "agentsam.identity",
+  "version": "2.0.0",
+  "pack_family": "agentsam.identity",
+  "components": [
+    "identity.core",
+    "identity.oauth-client",
+    "identity.oauth-server"
+  ],
+  "component_dependencies": {
+    "identity.core": [],
+    "identity.oauth-client": ["identity.core"],
+    "identity.oauth-server": ["identity.core"]
+  },
+  "adapters": [
+    "sqlite",
+    "portable-d1",
+    "iam-compat"
+  ],
+  "sql": {
+    "portable_dir": "migrations/sqlite",
+    "files": {
+      "identity.core": [
+        "001_identity_core.sql",
+        "005_identity_company_native.sql"
+      ],
+      "identity.oauth-client": [
+        "002_identity_oauth_client.sql"
+      ],
+      "identity.oauth-server": [
+        "003_identity_oauth_server.sql",
+        "004_identity_oauth_consent_catalog.sql"
+      ]
+    },
+    "apply_order_fresh": [
+      "001_identity_core.sql",
+      "002_identity_oauth_client.sql",
+      "005_identity_company_native.sql"
+    ],
+    "apply_order_upgrade_v1_to_v2": [
+      "005_identity_company_native.sql"
+    ],
+    "optional_after_core": [
+      "003_identity_oauth_server.sql",
+      "004_identity_oauth_consent_catalog.sql"
+    ]
+  },
+  "tables": {
+    "identity.core": [
+      "identity_schema_meta",
+      "identity_users",
+      "identity_external_accounts",
+      "identity_sessions",
+      "identity_auth_events",
+      "identity_app_registry",
+      "identity_route_registry",
+      "identity_companies",
+      "identity_native_handoffs"
+    ],
+    "identity.oauth-client": [
+      "identity_oauth_transactions",
+      "identity_provider_connections"
+    ],
+    "identity.oauth-server": [
+      "identity_oauth_clients",
+      "identity_oauth_authorization_codes",
+      "identity_oauth_access_tokens",
+      "identity_oauth_refresh_tokens",
+      "identity_oauth_resources",
+      "identity_oauth_scopes",
+      "identity_oauth_resource_scopes"
+    ]
+  },
+  "table_patterns": ["identity_*"],
+  "seed_policy": "none",
+  "compatibility": {
+    "iam-compat": {
+      "owns_portable_schema": false,
+      "maps_onto": [
+        "accounts",
+        "auth_users",
+        "account_identities",
+        "auth_sessions",
+        "auth_event_log",
+        "identity_oauth_states",
+        "identity_native_handoffs",
+        "company"
+      ],
+      "stable_alias": "createCloudflareD1Adapter"
+    }
+  },
+  "recovery": {
+    "authority": "createPasswordResetService",
+    "storage": "injected {get,put,delete} — not IdentityStore / not identity.core SQL",
+    "optional_future_pack": "identity.recovery"
+  },
+  "owner": "@inneranimalmedia/agentsam-sdk/identity",
+  "notes": "Pack family for portable IdentityStore. Component IDs remain the contract units. Portable SQL SSOT is migrations/sqlite/. IAM production tables are NOT this pack — use the iam-compat adapter against hosted schema. Secrets are credential_ref / vault references, never raw tokens in rows. Password recovery stays storage-agnostic."
+}

@@ -1,7 +1,12 @@
 /**
  * Portable IdentityStore contract.
- * Adapters (SQLite, D1, Postgres) implement this — the identity service never
- * imports Cloudflare/D1 APIs directly for product logic.
+ * Adapters (SQLite, portable D1, IAM-compat) implement this — the identity service
+ * never imports Cloudflare/D1 APIs directly for product logic.
+ *
+ * Company / native handoff / provider-connection behavior belong on this contract
+ * (not undocumented adapter-only magic). Password recovery remains a separate
+ * storage-agnostic service (createPasswordResetService + injected {get,put,delete});
+ * adapters supply user lookup / password update hooks, not a mandatory SQL reset table.
  */
 
 /**
@@ -24,6 +29,7 @@
  * @property {string|null} [provider]
  * @property {string|null} [provider_subject]
  * @property {string|null} [display_name]
+ * @property {'browser'|'desktop'} [type]
  * @property {number} expires_at
  * @property {number|null} [revoked_at]
  * @property {number} created_at
@@ -37,6 +43,9 @@
  * @property {string} code_verifier
  * @property {string|null} [return_to]
  * @property {string} app_id
+ * @property {'desktop'|string|null} [client_type]
+ * @property {string|null} [native_challenge]
+ * @property {string|null} [native_redirect]
  * @property {number} expires_at
  * @property {number} created_at
  * @property {number|null} [consumed_at]
@@ -58,6 +67,37 @@
  */
 
 /**
+ * @typedef {object} CompanyProfile
+ * @property {string} id
+ * @property {string} slug
+ * @property {string} name
+ * @property {string|null} [legalName]
+ * @property {string|null} [logoUrl]
+ * @property {string|null} [faviconUrl]
+ * @property {string|null} [primaryColor]
+ * @property {string|null} [authBgColor]
+ * @property {string|null} [supportEmail]
+ * @property {string|null} [websiteUrl]
+ * @property {string|null} [tagline]
+ * @property {object} [meta]
+ * @property {number} [createdAt]
+ * @property {number} [updatedAt]
+ */
+
+/**
+ * @typedef {object} ProviderConnection
+ * @property {string} id
+ * @property {string} user_id
+ * @property {string} provider
+ * @property {string[]} granted_scopes
+ * @property {string} credential_ref
+ * @property {number|null} [expires_at]
+ * @property {boolean} [refreshable]
+ * @property {number} created_at
+ * @property {number} updated_at
+ */
+
+/**
  * @typedef {object} IdentityStore
  * @property {number} schemaVersion
  * @property {(email: string) => Promise<IdentityUser|null>} findUserByEmail
@@ -69,18 +109,29 @@
  * @property {(input: { userId: string, email?: string|null, provider?: string, providerSubject?: string|null, displayName?: string|null, type?: 'browser'|'desktop' }) => Promise<IdentitySession>} createSession
  * @property {(sessionId: string) => Promise<IdentitySession|null>} getSession
  * @property {(sessionId: string, reason?: string) => Promise<{ ok: true, reason: string }>} revokeSession
- * @property {(input: { state: string, provider: string, codeVerifier: string, returnTo?: string|null, appId: string, ttlSeconds?: number }) => Promise<void>} createOAuthTransaction
+ * @property {(input: { state: string, provider: string, codeVerifier: string, returnTo?: string|null, appId: string, ttlSeconds?: number, clientType?: string, nativeChallenge?: string, nativeRedirect?: string }) => Promise<void>} createOAuthTransaction
  * @property {(state: string) => Promise<OAuthTransaction|null>} consumeOAuthTransaction
  * @property {(input: AuthEventInput) => Promise<void>} logAuthEvent
  * @property {(userId: string) => Promise<{ loginCount: number, activeSessionCount: number, lastLoginAt: number|null }>} [countAuthActivity]
+ * @property {(input: { handoffHash: string, sessionId: string, challenge: string, ttlSeconds?: number }) => Promise<void>} createNativeHandoff
+ * @property {(handoffHash: string) => Promise<{ session_id: string, challenge: string }|null>} consumeNativeHandoff
+ * @property {(slug?: string) => Promise<CompanyProfile|null>} getCompanyBySlug
+ * @property {(hostname: string|null|undefined) => Promise<CompanyProfile|null>} getCompanyByHost
+ * @property {() => Promise<CompanyProfile|null>} getDefaultCompany
+ * @property {(input: object) => Promise<CompanyProfile|null>} upsertCompany
+ * @property {(input: { userId: string, provider: string, credentialRef: string, grantedScopes?: string[], expiresAt?: number|null, refreshable?: boolean }) => Promise<string>} upsertProviderConnection
+ * @property {(userId: string, provider: string) => Promise<ProviderConnection|null>} getProviderConnection
  */
 
-export const IDENTITY_STORE_SCHEMA_VERSION = 1;
+/** Portable pack schema_version after 005_identity_company_native. */
+export const IDENTITY_STORE_SCHEMA_VERSION = 2;
 
 export const IDENTITY_PACKS = Object.freeze({
   CORE: 'identity.core',
   OAUTH_CLIENT: 'identity.oauth-client',
   OAUTH_SERVER: 'identity.oauth-server',
+  /** Optional future — not part of portable core. Recovery stays KV/injected today. */
+  RECOVERY: 'identity.recovery',
 });
 
 /**
