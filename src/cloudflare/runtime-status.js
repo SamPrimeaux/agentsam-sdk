@@ -37,7 +37,7 @@ function parseJsonc(source) {
 }
 
 export function parseWranglerToml(source = '') {
-  const result = { vars: {}, d1_databases: [], r2_buckets: [], hyperdrive: [], kv_namespaces: [], services: [] };
+  const result = { vars: {}, d1_databases: [], r2_buckets: [], hyperdrive: [], kv_namespaces: [], services: [], vectorize: [] };
   const lines = source.split(/\r?\n/);
   let currentSection = '';
   let currentBlock = null;
@@ -55,6 +55,7 @@ export function parseWranglerToml(source = '') {
       else if (currentSection === 'hyperdrive') result.hyperdrive.push(currentBlock);
       else if (currentSection === 'kv_namespaces') result.kv_namespaces.push(currentBlock);
       else if (currentSection === 'services') result.services.push(currentBlock);
+      else if (currentSection === 'vectorize') result.vectorize.push(currentBlock);
       continue;
     }
 

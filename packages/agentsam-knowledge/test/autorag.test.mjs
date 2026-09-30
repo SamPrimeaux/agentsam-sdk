@@ -1,6 +1,24 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import test from 'node:test';
-import { createFixtureProvider, createOllamaProvider, createProviderRegistry, createBackendRegistry, recommendAutoRag, safeAutoRagConfig, selectIntentRoute, routeCompanyQuestion } from '../src/index.js';
+import { createFixtureProvider, createOllamaProvider, createProviderRegistry, createBackendRegistry, discoverAutoRag, recommendAutoRag, safeAutoRagConfig, selectIntentRoute, routeCompanyQuestion } from '../src/index.js';
+
+
+test('discovery canonicalizes GitHub repository identity and reports SDK repository intelligence', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-autorag-discovery-'));
+  try {
+    execFileSync('git', ['init'], { cwd: root, stdio: 'ignore' });
+    execFileSync('git', ['remote', 'add', 'origin', 'git@github.com:Example/Widget.git'], { cwd: root });
+    const discovery = await discoverAutoRag({ root, env: {} });
+    assert.equal(discovery.repository.identity, 'github:example/widget');
+    assert.equal(discovery.capabilities.repository_intelligence, true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test('provider registry is explicit, deterministic, and fails closed', async () => {
   const registry = createProviderRegistry({ fixture: { dimensions: 3 }, gemini: { apiKey: null }, openai: { apiKey: null } });
