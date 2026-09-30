@@ -3,6 +3,10 @@ export type { DatabaseEditorAppProps } from "../src/ui/DatabaseEditorApp";
 export { createDatabaseStudioClient } from "../src/ui/client";
 export type {
   DatabaseStudioClient,
+  DatabaseHttpFetch,
+  DatabaseStudioClientOptions,
+  DatabaseCapabilityId,
+  DatabaseSourceCapabilities,
   DatabaseSource,
   DatabaseMetricsResponse,
   DatabaseTableInfo,

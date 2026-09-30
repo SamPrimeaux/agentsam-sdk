@@ -11,6 +11,7 @@ import {
 import { shortLabel, type StudioInventoryModel, type StudioModelSelection } from "@/lib/work/models";
 import { useWorkStore } from "@/lib/work/store";
 import { cn } from "@/lib/utils";
+import { invokeStudioService, isPackagedDesktop, resolveDesktopStudioAccountId } from "@/lib/desktop/tauri";
 
 type InventoryPayload = {
   ok?: boolean;
@@ -46,16 +47,31 @@ export function ModelSelect({ compact = false }: { compact?: boolean }) {
         const userId =
           (typeof window !== "undefined" && window.localStorage.getItem("agentsam-user-id")) ||
           "studio-local";
-        const res = await fetch("/api/llm/inventory", {
-          headers: { "X-User-Id": userId },
-        });
-        const body = (await res.json()) as InventoryPayload;
-        if (cancelled) return;
-        if (!res.ok || body.ok === false) {
-          setError(body.error || `inventory_${res.status}`);
-          setInventory({ availableModels: [], providers: [] });
-          return;
+        let body: InventoryPayload;
+        if (isPackagedDesktop()) {
+          const accountId = await resolveDesktopStudioAccountId();
+          const bridged = await invokeStudioService({
+            operation: "inventory",
+            account_id: accountId,
+          });
+          try {
+            body = JSON.parse(bridged.body || "{}") as InventoryPayload;
+          } catch {
+            throw new Error("inventory_invalid_response_" + bridged.status);
+          }
+          if (!bridged.ok || body.ok === false) {
+            throw new Error(body.error || "inventory_http_" + bridged.status);
+          }
+        } else {
+          const res = await fetch("/api/llm/inventory", {
+            headers: { "X-User-Id": userId },
+          });
+          body = (await res.json()) as InventoryPayload;
+          if (!res.ok || body.ok === false) {
+            throw new Error(body.error || "inventory_http_" + res.status);
+          }
         }
+        if (cancelled) return;
         setInventory(body);
         const models = body.availableModels || [];
         if (models.length && (!selection?.provider || !selection?.model_id)) {
@@ -63,7 +79,7 @@ export function ModelSelect({ compact = false }: { compact?: boolean }) {
           setModelSelection({ provider: first.provider, model_id: first.model_id });
         }
       } catch (err) {
-        if (!cancelled) setError(String(err));
+        if (!cancelled) setError("Models are unavailable right now. Check your provider connection in Settings.");
       } finally {
         if (!cancelled) setLoading(false);
       }

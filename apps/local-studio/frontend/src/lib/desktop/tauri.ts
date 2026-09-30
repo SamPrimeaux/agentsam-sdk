@@ -59,3 +59,54 @@ export async function invokeIdentity(payload: Record<string, unknown>): Promise<
   })) as string;
   return JSON.parse(raw) as Record<string, unknown>;
 }
+
+
+export type StudioServiceOperation = "inventory" | "chat" | "cms" | "database" | "connections";
+
+export type StudioServiceResponse = {
+  ok: boolean;
+  status: number;
+  content_type: string;
+  body: string;
+};
+
+export async function invokeStudioService(payload: {
+  operation: StudioServiceOperation;
+  account_id?: string | null;
+  body?: unknown;
+  path?: string;
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+}): Promise<StudioServiceResponse> {
+  const invoke = getTauriInvoke();
+  if (!invoke) throw new Error("studio_service_bridge_unavailable");
+  const sessionId = isPackagedDesktop() ? await secureStoreGet("identity_session") : null;
+  const raw = (await invoke("studio_service_bridge", {
+    requestJson: JSON.stringify({ ...payload, session_id: sessionId || undefined }),
+  })) as string;
+  return JSON.parse(raw) as StudioServiceResponse;
+}
+
+export async function resolveDesktopStudioAccountId(): Promise<string> {
+  if (!isPackagedDesktop()) return "studio-local";
+  try {
+    const sessionId = await secureStoreGet("identity_session");
+    if (!sessionId) return "studio-local";
+    const status = await invokeIdentity({ op: "status", session_id: sessionId });
+    const user = status.user as { id?: unknown } | null | undefined;
+    const id = typeof user?.id === "string" ? user.id.trim() : "";
+    return id || "studio-local";
+  } catch {
+    return "studio-local";
+  }
+}
+
+
+export async function openExternalUrl(url: string): Promise<void> {
+  if (!/^https?:\/\//i.test(url)) throw new Error("external_url_scheme_not_allowed");
+  const invoke = getTauriInvoke();
+  if (!invoke) {
+    window.location.assign(url);
+    return;
+  }
+  await invoke("open_external_url", { url });
+}

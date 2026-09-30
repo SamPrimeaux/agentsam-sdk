@@ -1,14 +1,14 @@
 :root {
-  --agentsam-work-canvas: #f8fbff;
-  --agentsam-work-panel: #ffffff;
-  --agentsam-work-panel-subtle: #f0f5fb;
-  --agentsam-work-text: #202124;
-  --agentsam-work-muted: #5f6368;
-  --agentsam-work-border: #d7dee8;
-  --agentsam-work-accent: #1a73e8;
-  --agentsam-work-accent-soft: #e8f0fe;
-  --agentsam-work-nav-active: #d2e3fc;
-  --agentsam-work-danger: #d93025;
+  --agentsam-work-canvas: var(--color-background, #f8fbff);
+  --agentsam-work-panel: var(--color-card, #ffffff);
+  --agentsam-work-panel-subtle: var(--color-muted, #f0f5fb);
+  --agentsam-work-text: var(--color-foreground, #202124);
+  --agentsam-work-muted: var(--color-muted-foreground, #5f6368);
+  --agentsam-work-border: var(--color-border, #d7dee8);
+  --agentsam-work-accent: var(--color-accent, #1a73e8);
+  --agentsam-work-accent-soft: color-mix(in srgb, var(--agentsam-work-accent) 16%, transparent);
+  --agentsam-work-nav-active: color-mix(in srgb, var(--agentsam-work-accent) 22%, var(--agentsam-work-panel));
+  --agentsam-work-danger: var(--color-destructive, #d93025);
   --agentsam-work-success: #188038;
   --agentsam-work-warning: #f9ab00;
   --agentsam-work-radius: 16px;

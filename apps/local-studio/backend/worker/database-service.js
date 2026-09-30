@@ -45,6 +45,33 @@ function splitScopes(value) {
   return clean(value).split(/[\s,]+/).filter(Boolean);
 }
 
+function databaseCapabilities({ writable = false, metrics = false, available = true } = {}) {
+  if (!available) {
+    return {
+      read_rows: false,
+      query: false,
+      schema: false,
+      insert: false,
+      update: false,
+      delete: false,
+      metrics: false,
+      export: false,
+      transactions: false,
+    };
+  }
+  return {
+    read_rows: true,
+    query: true,
+    schema: true,
+    insert: Boolean(writable),
+    update: Boolean(writable),
+    delete: Boolean(writable),
+    metrics: Boolean(metrics),
+    export: false,
+    transactions: false,
+  };
+}
+
 async function sha256Hex(value) {
   const bytes = await crypto.subtle.digest(
     'SHA-256',
@@ -173,6 +200,7 @@ async function listCloudflareD1Sources(env, accountId) {
           num_tables: Number(row.num_tables || 0) || 0,
           writable,
           metrics: true,
+          capabilities: databaseCapabilities({ writable, metrics: true }),
           connection: 'oauth',
         };
       }),
@@ -257,7 +285,8 @@ async function getBoundD1Source(env, accountId) {
     file_size: fileSize,
     num_tables: tableCount,
     writable: true,
-    metrics: true,
+    metrics: false,
+    capabilities: databaseCapabilities({ writable: true, metrics: false }),
     connection: 'worker_binding',
   };
 }
@@ -283,6 +312,7 @@ async function getHyperdriveSource(env, accountId) {
       file_size: Number(row.size_bytes || 0) || 0,
       writable: true,
       metrics: true,
+      capabilities: databaseCapabilities({ writable: true, metrics: true }),
       connection: 'deployment_hyperdrive',
       latency_ms: Date.now() - started,
     };
@@ -295,7 +325,8 @@ async function getHyperdriveSource(env, accountId) {
     database_name: 'postgres',
     file_size: 0,
     writable: false,
-    metrics: true,
+    metrics: false,
+    capabilities: databaseCapabilities({ available: false }),
     connection: 'deployment_hyperdrive',
     status: 'degraded',
     error: error?.message || String(error),
@@ -369,6 +400,7 @@ async function resolveSource(env, accountId, sourceId) {
       num_tables: Number(row.num_tables || 0) || 0,
       writable,
       metrics: true,
+      capabilities: databaseCapabilities({ writable, metrics: true }),
       connection: 'oauth',
     };
     return {

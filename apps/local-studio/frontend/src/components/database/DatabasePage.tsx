@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { DatabaseEditorApp } from "@inneranimalmedia/agentsam-database-editor/frontend";
 import { createLocalStudioDatabaseClient } from "@/lib/database/createLocalStudioDatabaseClient";
 import { publishDatabaseAssistantContext } from "@/lib/database/assistantContext";
@@ -14,7 +13,6 @@ import { useWorkStore } from "@/lib/work/store";
  * owner-gated on the Worker (deployment owner only).
  */
 export function DatabasePage() {
-  const navigate = useNavigate();
   const client = useMemo(() => createLocalStudioDatabaseClient("/api/database"), []);
   const openSideTab = useWorkStore((s) => s.openSideTab);
   const setSideOpen = useWorkStore((s) => s.setSideOpen);
@@ -24,7 +22,12 @@ export function DatabasePage() {
       client={client}
       localHost={client.localHost}
       onOpenConnections={() => {
-        void navigate({ to: "/settings/integrations" as never });
+        window.dispatchEvent(
+          new CustomEvent("agentsam:navigate", { detail: { to: "/settings/integrations" } }),
+        );
+      }}
+      onAuthenticate={() => {
+        window.dispatchEvent(new CustomEvent("agentsam:identity-open"));
       }}
       onAskAgentSam={(ctx) => {
         setSideOpen(true);

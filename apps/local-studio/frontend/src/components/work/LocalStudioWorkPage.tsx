@@ -2,10 +2,9 @@ import { useEffect, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   WorkProduct,
-  applyWorkThemeTokens,
+  clearWorkThemeTokens,
   createFixtureWorkHost,
   populatedWorkFixture,
-  readStoredWorkThemeTokens,
   type WorkSurfaceId,
 } from "@inneranimalmedia/agentsam-work";
 
@@ -29,8 +28,7 @@ export function LocalStudioWorkPage({
   const host = useLocalStudioWorkHost();
 
   useEffect(() => {
-    const stored = readStoredWorkThemeTokens();
-    if (stored) applyWorkThemeTokens(stored);
+    clearWorkThemeTokens();
   }, []);
 
   return (

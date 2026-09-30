@@ -6,6 +6,7 @@ export { CmsAgentSurface, type CmsAgentSurfaceProps } from './CmsAgentSurface';
 export { AgentSamDrawer, type AgentSamDrawerProps } from './AgentSamDrawer';
 export type { CmsAgentHost, CmsAnnotationSelection, CmsHostPrincipal } from './lib/agent-host';
 export { MemoryCmsAdapter } from './adapters/memory';
+export { HttpCmsAdapter, createHttpCmsAdapter, type CmsHttpRequest, type CmsHttpTransport } from './adapters/http';
 export { previewHeuristicStarter, createHeuristicThemeMemoryAdapter } from './adapters/heuristic';
 export { useCmsEditorController } from './editor/useCmsEditorController';
 export { useCmsEditor } from './editor/CmsEditorProvider';

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, useNavigate } from "@tanstack/react-router";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,8 +10,9 @@ import { registerOfflineShell } from "@/lib/offline/register-sw";
 import { useOnline } from "@/hooks/use-online";
 import { cn } from "@/lib/utils";
 import { useWorkStore } from "@/lib/work/store";
-import { applyTheme, readTheme } from "@/lib/work/theme";
+import { applyShellAppearance, applyTheme, readTheme, type ShellAppearancePreference } from "@/lib/work/theme";
 import { Nav } from "@inneranimalmedia/agentsam-nav";
+import { readShellAppearancePreference } from "@inneranimalmedia/agentsam-settings";
 
 /**
  * Canonical Local Studio dashboard/workbench shell.
@@ -24,6 +25,7 @@ export function AppShellFrame() {
   const navigate = useNavigate();
   const online = useOnline();
   const flushOfflineQueue = useWorkStore((s) => s.flushOfflineQueue);
+  const [shellMode, setShellMode] = useState<"dark" | "light">("dark");
 
   useEffect(() => {
     void useWorkStore.persist.rehydrate();
@@ -31,9 +33,40 @@ export function AppShellFrame() {
       useWorkStore.getState().setHydrated(true);
     });
     if (useWorkStore.persist.hasHydrated()) useWorkStore.getState().setHydrated(true);
-    applyTheme(readTheme());
+
+    let current = readShellAppearancePreference();
+    const applyCurrent = (preference: ShellAppearancePreference | null) => {
+      if (preference) {
+        setShellMode(applyShellAppearance(preference));
+        return;
+      }
+      const storedTheme = readTheme();
+      applyTheme(storedTheme);
+      setShellMode(storedTheme.monacoBase === "vs" ? "light" : "dark");
+    };
+    applyCurrent(current);
+
+    const onAppearance = (event: Event) => {
+      const detail = (event as CustomEvent<ShellAppearancePreference>).detail;
+      if (!detail) return;
+      current = detail;
+      applyCurrent(detail);
+    };
+    const media =
+      typeof window.matchMedia === "function"
+        ? window.matchMedia("(prefers-color-scheme: light)")
+        : null;
+    const onSystemChange = () => {
+      if (current?.theme === "system") applyCurrent(current);
+    };
+    window.addEventListener("agentsam:shell-appearance", onAppearance);
+    media?.addEventListener("change", onSystemChange);
     registerOfflineShell();
-    return unsub;
+    return () => {
+      unsub();
+      window.removeEventListener("agentsam:shell-appearance", onAppearance);
+      media?.removeEventListener("change", onSystemChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -110,7 +143,7 @@ export function AppShellFrame() {
           <CliDrawer />
           <CommandPalette />
           <Toaster
-            theme="dark"
+            theme={shellMode}
             position="bottom-center"
             toastOptions={{
               className: cn("border-border bg-card text-foreground"),

@@ -4,7 +4,7 @@
 mod commands;
 mod tray;
 
-use commands::{agentsamd, deep_link, keychain, local_content, local_identity, local_node, local_sqlite, native_capabilities, updater};
+use commands::{agentsamd, deep_link, keychain, local_content, local_identity, local_node, local_sqlite, native_capabilities, system, updater};
 
 fn main() {
     tauri::Builder::default()
@@ -33,10 +33,12 @@ fn main() {
             local_sqlite::local_sqlite_bridge,
             local_identity::local_identity_bridge,
             local_identity::identity_bridge,
+            local_identity::studio_service_bridge,
             local_sqlite::local_sqlite_pick_database,
             local_sqlite::local_sqlite_pick_directory,
             local_content::local_content_bridge,
             native_capabilities::native_capabilities,
+            system::open_external_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running agentsam desktop shell");

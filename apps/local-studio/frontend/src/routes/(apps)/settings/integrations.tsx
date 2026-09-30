@@ -1,96 +1,159 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   IntegrationsPage,
   type IntegrationConnection,
 } from "@inneranimalmedia/agentsam-key-manager/IntegrationsPage";
-
-interface ApiConnectionRecord {
-  id?: string;
-  provider?: string;
-  kind?: string;
-  label?: string;
-  display_name?: string;
-  status?: string;
-  connected?: boolean;
-  granted_scopes?: string[];
-  scopes?: string[];
-  account_name?: string;
-  accountName?: string;
-  connection?: {
-    connectionId?: string;
-    scopes?: string[];
-    cloudflareAccountId?: string;
-  };
-}
+import {
+  LocalStudioConnectionError,
+  disconnectLocalStudioProvider,
+  listLocalStudioConnections,
+  startLocalStudioProviderConnection,
+  type LocalStudioConnectionRecord,
+} from "@/lib/connections/client";
 
 export const Route = createFileRoute("/(apps)/settings/integrations")({
   component: IntegrationsSettingsPage,
 });
 
+function normalizeConnection(record: LocalStudioConnectionRecord): IntegrationConnection {
+  const raw = String(record.status || "").toLowerCase();
+  const connected = raw === "connected" || raw === "active" || record.connected === true;
+  return {
+    id: String(record.id || record.connection?.connectionId || record.provider || "unknown"),
+    provider: String(record.provider || record.id || "unknown"),
+    label: String(record.label || record.display_name || record.provider || "Connection"),
+    status: connected ? "connected" : raw || "not_configured",
+    granted_scopes:
+      record.granted_scopes ||
+      record.scopes ||
+      record.connection?.scopes ||
+      [],
+    account_name:
+      record.account_name ||
+      record.accountName ||
+      record.connection?.cloudflareAccountId ||
+      undefined,
+  };
+}
+
 function IntegrationsSettingsPage() {
   const [connections, setConnections] = useState<IntegrationConnection[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/connections", { credentials: "same-origin" });
-        const data = (await res.json().catch(() => ({}))) as {
-          connections?: ApiConnectionRecord[];
-          items?: ApiConnectionRecord[];
-        };
-        if (!res.ok || cancelled) return;
-        const list: ApiConnectionRecord[] = Array.isArray(data.connections)
-          ? data.connections
-          : Array.isArray(data.items)
-            ? data.items
-            : [];
-        // IntegrationsPage is OAuth-only — BYOK keys belong on Keys & Secrets.
-        const oauthOnly = list.filter((c) => c?.kind === "oauth" || c?.provider === "cloudflare");
-        setConnections(
-          oauthOnly.map((c) => {
-            const raw = String(c.status || "").toLowerCase();
-            const connected = raw === "connected" || raw === "active" || c.connected === true;
-            return {
-              id: String(c.id || c.connection?.connectionId || c.provider || "unknown"),
-              provider: String(c.provider || c.id || "unknown"),
-              label: String(c.label || c.display_name || c.provider || "Connection"),
-              status: connected ? "connected" : raw || "not_configured",
-              granted_scopes:
-                c.granted_scopes ||
-                c.scopes ||
-                c.connection?.scopes ||
-                [],
-              account_name:
-                c.account_name ||
-                c.accountName ||
-                c.connection?.cloudflareAccountId ||
-                undefined,
-            };
-          }),
-        );
-      } catch {
-        /* empty until connected */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    setErrorStatus(null);
+    try {
+      const data = await listLocalStudioConnections();
+      const list = Array.isArray(data.connections)
+        ? data.connections
+        : Array.isArray(data.items)
+          ? data.items
+          : [];
+
+      // This surface is resource OAuth only. BYOK credentials remain in Keys & Secrets.
+      setConnections(
+        list
+          .filter((record) => record?.kind === "oauth" || record?.provider === "cloudflare")
+          .map(normalizeConnection),
+      );
+    } catch (caught) {
+      const status =
+        caught instanceof LocalStudioConnectionError ? caught.status : null;
+      setConnections([]);
+      setErrorStatus(status);
+      setError(caught instanceof Error ? caught.message : String(caught || "Connection request failed"));
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  if (loading) {
+    return (
+      <div className="mx-auto w-full max-w-3xl p-4 text-sm text-muted-foreground sm:p-6 lg:p-8">
+        Loading integrations…
+      </div>
+    );
+  }
+
+  if (errorStatus === 401) {
+    return (
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 text-foreground sm:p-6 lg:p-8">
+        <div>
+          <h1 className="m-0 text-xl font-semibold">Integrations</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Sign in to Local Studio before viewing or changing provider connections.
+          </p>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-5">
+          <p className="m-0 text-sm text-muted-foreground">
+            Your Local Studio user session identifies whose provider grants may be loaded. Provider authorization stays separate.
+          </p>
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground"
+              onClick={() => window.dispatchEvent(new CustomEvent("agentsam:identity-open"))}
+            >
+              Sign in
+            </button>
+            <button
+              type="button"
+              className="rounded-md border border-border px-3 py-2 text-sm"
+              onClick={() => void load()}
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="mx-auto w-full max-w-3xl p-4 sm:p-6 lg:p-8 text-foreground">
+    <div className="mx-auto w-full max-w-3xl p-4 text-foreground sm:p-6 lg:p-8">
+      {error ? (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">
+          <span>{error}</span>
+          <button type="button" className="underline" onClick={() => void load()}>
+            Retry
+          </button>
+        </div>
+      ) : null}
+
       <IntegrationsPage
         connections={connections}
         onConnect={(provider) => {
-          window.location.href = `/api/connections/${encodeURIComponent(provider)}/start`;
+          void startLocalStudioProviderConnection(provider, {
+            returnTo: "/settings/integrations",
+          }).catch((caught) => {
+            if (caught instanceof LocalStudioConnectionError && caught.status === 401) {
+              window.dispatchEvent(new CustomEvent("agentsam:identity-open"));
+              return;
+            }
+            setError(caught instanceof Error ? caught.message : String(caught));
+          });
         }}
         onDisconnect={(id) => {
-          void fetch(`/api/connections/${encodeURIComponent(id)}/disconnect`, {
-            method: "POST",
-            credentials: "same-origin",
-          }).then(() => window.location.reload());
+          const provider =
+            connections.find((connection) => connection.id === id)?.provider || id;
+          void disconnectLocalStudioProvider(provider)
+            .then(() => load())
+            .catch((caught) => {
+              if (caught instanceof LocalStudioConnectionError && caught.status === 401) {
+                window.dispatchEvent(new CustomEvent("agentsam:identity-open"));
+                return;
+              }
+              setError(caught instanceof Error ? caught.message : String(caught));
+            });
         }}
       />
     </div>

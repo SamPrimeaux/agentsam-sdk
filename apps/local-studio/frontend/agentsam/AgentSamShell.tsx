@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, type NavMode, type NavTheme, type NavValue } from '@inneranimalmedia/agentsam-nav';
 import { BookOpen, Database, Folder, Globe, Layers, Settings, Pin, Files, Copy, PanelRight, LogIn } from 'lucide-react';
@@ -17,8 +17,9 @@ import { AnnotationHelper } from './AnnotationHelper';
 import { DesktopIdentityPortal } from '@/components/desktop/DesktopIdentityPortal';
 import { DesktopStartupOverlay } from '@/components/desktop/DesktopStartupOverlay';
 import { isPackagedDesktop } from '@/lib/desktop/tauri';
+import { readShellAppearancePreference } from '@inneranimalmedia/agentsam-settings';
+import { applyShellAppearance, applyTheme, readTheme, type ShellAppearancePreference } from '@/lib/work/theme';
 
-const APPEARANCE_KEY = 'agentsam-shell-appearance-v1';
 const accents = ['#8B5CF6', '#2563EB', '#0D9488', '#BE185D'];
 
 /** App adapter: routing, persistence and business state stay out of agentsam-nav. */
@@ -30,35 +31,82 @@ export function AgentSamShell() {
   const [mode, setMode] = useState<NavMode>('work');
   const [theme, setTheme] = useState<NavTheme>('dark');
   const [accent, setAccent] = useState(accents[0]);
+  const appearanceRef = useRef<ShellAppearancePreference | null>(null);
   const [sharing, setSharing] = useState(false);
   const [identityOpen, setIdentityOpen] = useState(false);
   const trail = state.trails.find((item) => item.id === state.activeTrailId);
   const project = state.projects.find((item) => item.id === trail?.projectId);
   const isConversation = pathname === '/agentsam' || pathname.startsWith('/trails');
-  const go = (to: string) => { void navigate({ to } as never); };
+  const go = (to: string) => {
+    if (isPackagedDesktop()) {
+      const normalized = to.startsWith('/') ? to : '/' + to;
+      const nextHash = '#' + normalized;
+      if (window.location.hash !== nextHash) window.location.hash = nextHash;
+      return;
+    }
+    void navigate({ to } as never);
+  };
 
   useEffect(() => {
     void useWorkStore.persist.rehydrate();
     registerOfflineShell();
     const stop = useWorkStore.persist.onFinishHydration(() => useWorkStore.getState().setHydrated(true));
     if (useWorkStore.persist.hasHydrated()) useWorkStore.getState().setHydrated(true);
-    try {
-      const settings = JSON.parse(localStorage.getItem(APPEARANCE_KEY) ?? '{}');
-      if (['dark', 'light', 'system'].includes(settings.theme)) setTheme(settings.theme);
-      if (/^#[0-9a-f]{6}$/i.test(settings.accent ?? '')) setAccent(settings.accent);
-    } catch { /* Appearance falls back to the supplied brand defaults. */ }
     return stop;
+  }, []);
+
+  useEffect(() => {
+    const applyPreference = (preference: ShellAppearancePreference | null) => {
+      appearanceRef.current = preference;
+      if (preference) {
+        const resolved = applyShellAppearance(preference);
+        setTheme(resolved);
+        setAccent(preference.accent);
+        return;
+      }
+      const storedTheme = readTheme();
+      applyTheme(storedTheme);
+      setTheme(storedTheme.monacoBase === 'vs' ? 'light' : 'dark');
+      setAccent(storedTheme.tokens.accent);
+    };
+
+    applyPreference(readShellAppearancePreference());
+
+    const onAppearance = (event: Event) => {
+      const detail = (event as CustomEvent<Partial<ShellAppearancePreference>>).detail;
+      if (!detail) return;
+      if (detail.theme !== 'dark' && detail.theme !== 'light' && detail.theme !== 'system') return;
+      if (typeof detail.accent !== 'string' || !/^#[0-9a-f]{6}$/i.test(detail.accent)) return;
+      applyPreference({ theme: detail.theme, accent: detail.accent });
+    };
+    const media =
+      typeof window.matchMedia === 'function'
+        ? window.matchMedia('(prefers-color-scheme: light)')
+        : null;
+    const onSystemChange = () => {
+      if (appearanceRef.current?.theme === 'system') applyPreference(appearanceRef.current);
+    };
+
+    window.addEventListener('agentsam:shell-appearance', onAppearance);
+    media?.addEventListener('change', onSystemChange);
+    return () => {
+      window.removeEventListener('agentsam:shell-appearance', onAppearance);
+      media?.removeEventListener('change', onSystemChange);
+    };
   }, []);
   useEffect(() => {
     const onNavigate = (event: Event) => {
       const detail = (event as CustomEvent<{ to?: string; params?: Record<string, string> }>).detail;
-      if (detail?.to) void navigate({ to: detail.to, params: detail.params } as never);
+      if (!detail?.to) return;
+      if (isPackagedDesktop() && !detail.params) {
+        const normalized = detail.to.startsWith('/') ? detail.to : '/' + detail.to;
+        const nextHash = '#' + normalized;
+        if (window.location.hash !== nextHash) window.location.hash = nextHash;
+        return;
+      }
+      void navigate({ to: detail.to, params: detail.params } as never);
     };
-    const onAppearance = (event: Event) => {
-      const detail = (event as CustomEvent<{ theme?: NavTheme; accent?: string }>).detail;
-      if (detail?.theme && ['dark', 'light', 'system'].includes(detail.theme)) setTheme(detail.theme);
-      if (detail?.accent && /^#[0-9a-f]{6}$/i.test(detail.accent)) setAccent(detail.accent);
-    };
+    const onIdentityOpen = () => setIdentityOpen(true);
     const onKey = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey)) return;
       if (event.key === '`') { event.preventDefault(); useWorkStore.getState().toggleTerminal(); }
@@ -66,13 +114,13 @@ export function AgentSamShell() {
     };
     const online = () => { void useWorkStore.getState().flushOfflineQueue(); };
     window.addEventListener('agentsam:navigate', onNavigate);
-    window.addEventListener('agentsam:shell-appearance', onAppearance);
+    window.addEventListener('agentsam:identity-open', onIdentityOpen);
     window.addEventListener('keydown', onKey);
     window.addEventListener('online', online);
     if (navigator.onLine) online();
     return () => {
       window.removeEventListener('agentsam:navigate', onNavigate);
-      window.removeEventListener('agentsam:shell-appearance', onAppearance);
+      window.removeEventListener('agentsam:identity-open', onIdentityOpen);
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('online', online);
     };
