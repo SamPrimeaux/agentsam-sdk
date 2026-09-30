@@ -10,6 +10,30 @@ if (!existsSync(indexPath)) {
   process.exit(2);
 }
 
+const assetsDir = join(root, "assets");
+const cssText = readdirSync(assetsDir)
+  .filter((name) => name.endsWith(".css"))
+  .map((name) => readFileSync(join(assetsDir, name), "utf8"))
+  .join("\n");
+const requiredUtilitySelectors = [
+  ".w-72",
+  ".max-h-80",
+  ".max-w-36",
+  ".min-w-44",
+  ".bg-popover",
+  ".text-popover-foreground",
+  ".text-xs",
+  ".z-50",
+];
+const missingUtilitySelectors = requiredUtilitySelectors.filter((selector) => !cssText.includes(selector));
+if (missingUtilitySelectors.length) {
+  console.error(
+    "[desktop-smoke] packaged CSS is missing workbench utilities:",
+    missingUtilitySelectors.join(", "),
+  );
+  process.exit(2);
+}
+
 function browserCandidates() {
   const candidates = [process.env.CHROME_BIN].filter(Boolean);
   if (process.platform === "darwin") {
