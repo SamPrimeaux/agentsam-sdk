@@ -21,7 +21,21 @@ import {
   GcpProvider,
   EmailProvider,
   CloudflareProvider,
+  ChatGptProvider,
 } from './providers/index.js';
+import {
+  STOCK_SIGN_IN_OPTIONS,
+  CMS_STOCK_SIGN_IN_IDS,
+  listStockSignInOptions,
+  getStockSignInOption,
+} from './contracts/sign-in-options.js';
+import {
+  createChatGptCmsAuthHost,
+  normalizeChatGptIdentity,
+  readChatGptUserFromHeaders,
+  chatGPTSignInPath,
+  chatGPTSignOutPath,
+} from './providers/chatgpt/index.js';
 
 export {
   IdentityContractVersion,
@@ -40,6 +54,16 @@ export {
   GcpProvider,
   EmailProvider,
   CloudflareProvider,
+  ChatGptProvider,
+  STOCK_SIGN_IN_OPTIONS,
+  CMS_STOCK_SIGN_IN_IDS,
+  listStockSignInOptions,
+  getStockSignInOption,
+  createChatGptCmsAuthHost,
+  normalizeChatGptIdentity,
+  readChatGptUserFromHeaders,
+  chatGPTSignInPath,
+  chatGPTSignOutPath,
 };
 
 export * from './core/index.js';

@@ -1,0 +1,28 @@
+{
+  "harvest_batch": "studio-cms-editor-harvest-20260927",
+  "source_repository": "SamPrimeaux/studio-cms-editor",
+  "source_lane": "theme_layout_donor",
+  "source_paths": [
+    "app/components/Storefront.tsx",
+    "app/storefront-data.ts",
+    "app/storefront.css",
+    "app/page.tsx",
+    "app/shop/page.tsx",
+    "app/collections/[slug]/page.tsx",
+    "app/product/[slug]/page.tsx",
+    "app/journal/page.tsx",
+    "app/journal/[slug]/page.tsx",
+    "app/story/page.tsx",
+    "public/favicon.svg"
+  ],
+  "status": "normalized_stock",
+  "canonical_id": "iasf",
+  "package": "@inneranimalmedia/theme-iasf",
+  "lineage": "iasf",
+  "family": "editorial-commerce",
+  "capabilities": [
+    "theme.storefront.shell",
+    "cms.pages",
+    "commerce.catalog"
+  ]
+}

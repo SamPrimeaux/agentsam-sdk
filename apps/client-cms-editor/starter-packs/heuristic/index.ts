@@ -200,6 +200,6 @@ export const heuristicStarterPack: CmsStarterPack = {
 };
 
 export function listBuiltinStarterPacks(): CmsStarterPack[] {
-  // Blank is a separate module; re-export composition happens in frontend index / CLI.
+  // Blank / IASF are separate modules; CLI and root exports compose the full catalog.
   return [heuristicStarterPack];
 }

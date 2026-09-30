@@ -24,7 +24,17 @@ export type { ThemePack, ThemePackManifest, ThemePackProvenance } from './theme-
 export type { SourceIntake } from './ingest';
 export {
   createLocalDevAuthHost,
+  createChatGptCmsAuthHost,
+  createOAuthChallengeCmsAuthHost,
+  createStockCmsAuthHost,
+  listCmsStockSignInOptions,
   isCmsProtectedPath,
   LOCAL_DEV_PRINCIPAL,
+  CMS_STOCK_SIGN_IN_OPTIONS,
 } from './auth-host';
-export type { CmsAuthHost, CmsAuthDecision, CmsPrincipal } from './auth-host';
+export type {
+  CmsAuthHost,
+  CmsAuthDecision,
+  CmsPrincipal,
+  CmsStockSignInId,
+} from './auth-host';

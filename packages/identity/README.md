@@ -20,14 +20,14 @@ identity.login(request);   // alpha: throws until Identity Service adapter is wi
 identity.session.fromRequest(request);  // alpha: throws until adapter is wired
 ```
 
-**Alpha scope:** contracts, D1 adapter, Worker router, `agentsam identity init` scaffold (`app/frontend` + `backend` + migrations), and `agentsam identity preview`. Default OAuth: minted `IAM_CLIENT_ID` + `IAM_CLIENT_SECRET`. BYOK options: Google web, Google Desktop (`GOOGLE_DESKTOP_CLIENT_ID`), GitHub, Cloudflare (`CLOUDFLARE_OAUTH_CLIENT_*`). **Account SSOT:** `accounts` (not `account_identities` — that table is IdP linkage only).
+**Alpha scope:** contracts, D1 adapter, Worker router, `agentsam identity init` scaffold (`app/frontend` + `backend` + migrations), and `agentsam identity preview`. Default OAuth: minted `IAM_CLIENT_ID` + `IAM_CLIENT_SECRET`. BYOK options: Google web, Google Desktop (`GOOGLE_DESKTOP_CLIENT_ID`), GitHub, Cloudflare (`CLOUDFLARE_OAUTH_CLIENT_*`). **Stock CMS sign-in picker:** Cloudflare · Google · Inner Animal Media · ChatGPT (`hosted_headers` via Apps SDK). **Account SSOT:** `accounts` (not `account_identities` — that table is IdP linkage only).
 
 ## Layout
 
 ```
 src/
   core/           identity · sessions · accounts · recovery
-  providers/      google · github · gcp · email
+  providers/      google · github · gcp · email · iam · cloudflare · chatgpt
   oauth/          authorize/callback (extract from IAM — next sprint)
   adapters/       inneranimalmedia · cloudflare-d1
   contracts/

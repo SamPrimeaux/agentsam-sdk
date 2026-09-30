@@ -121,6 +121,17 @@ export function resolveOAuthCredentialLane(env, provider) {
     return null;
   }
 
+  if (key === 'chatgpt' || key === 'openai' || key === 'chatgpt_hosted') {
+    // Hosted Apps SDK identity — no OAuth client secret. Selection is always
+    // available; runtime proof comes from oai-authenticated-* request headers.
+    return {
+      lane: 'hosted_chatgpt',
+      clientId: String(env?.CHATGPT_APP_ID || env?.OPENAI_APP_ID || 'chatgpt-hosted').trim(),
+      clientSecret: '',
+      provider: 'chatgpt',
+    };
+  }
+
   // Provider selection is fail-closed. A Google or GitHub button must never
   // silently become InnerAnimalMedia/IAM. IAM remains an explicit provider.
   return null;

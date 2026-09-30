@@ -113,6 +113,24 @@
         "CLOUDFLARE_OAUTH_CLIENT_SECRET"
       ],
       "notes": "Cloudflare sign-in (same Worker secrets as the Cloudflare resource connector). Client secret optional for PKCE-only clients (Token Authentication Method = None)."
+    },
+    {
+      "id": "chatgpt",
+      "aliases": [
+        "openai",
+        "chatgpt-hosted"
+      ],
+      "kind": "hosted_headers",
+      "status": "ready",
+      "registered": true,
+      "implementation": "src/providers/chatgpt",
+      "capabilities": [
+        "identity.hosted.headers",
+        "identity.profile.resolve",
+        "cms.auth_host"
+      ],
+      "required_configuration": [],
+      "notes": "ChatGPT / OpenAI Apps SDK hosted identity. Reads oai-authenticated-* request headers and normalizes to NormalizedExternalIdentity (provider=chatgpt). Not classic OAuth client credentials — use createChatGptCmsAuthHost for /cms protection."
     }
   ]
 }

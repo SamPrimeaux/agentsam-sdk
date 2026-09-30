@@ -41,6 +41,7 @@ No GitHub / Cloudflare / Supabase account is required to inspect or use the loca
 |---------|---------|
 | **Heuristic** | Built-in multipage starter pack |
 | **Blank** | Empty durable site shell |
+| **IASF** | Stock Inner Animal Storefront (`--starter iasf`) |
 | **Import existing theme** | Directory or `.zip` → safe intake → ThemePack → `installStarterPack` |
 
 Imported themes are normalized into the **same** `CmsStarterPack` contract Heuristic uses. The editor never parses ZIP/Liquid itself — import/refinery tooling does.
@@ -63,7 +64,14 @@ OTHER     →  HTTP / custom
 
 ## Auth boundary
 
-`/cms` is protected through a portable `CmsAuthHost` contract. Local scaffolds use an explicit local-development principal. Consumers wire OAuth/OIDC/GitHub App/their identity service without rebuilding route protection.
+`/cms` is protected through a portable `CmsAuthHost` contract. Local scaffolds use an explicit local-development principal. Stock sign-in options for OAuth / CMS prebuild:
+
+- **Cloudflare** — `createStockCmsAuthHost('cloudflare')`
+- **Google** — `createStockCmsAuthHost('google')`
+- **Inner Animal Media** — `createStockCmsAuthHost('inneranimalmedia')`
+- **ChatGPT** — `createStockCmsAuthHost('chatgpt')` (Apps SDK hosted headers)
+
+Consumers wire OAuth/OIDC/their identity service without rebuilding route protection.
 
 ## Persistence
 

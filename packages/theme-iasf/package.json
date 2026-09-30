@@ -1,0 +1,46 @@
+{
+  "name": "@inneranimalmedia/theme-iasf",
+  "version": "0.1.0",
+  "description": "IASF — stock Inner Animal Storefront theme pack (normalized from studio-cms-editor harvest).",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./content": "./src/content.js",
+    "./tokens": "./src/tokens.js",
+    "./styles/storefront.css": "./src/styles/storefront.css",
+    "./favicon.svg": "./src/favicon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "agentsam": {
+    "kind": "theme",
+    "slug": "iasf",
+    "canonicalId": "iasf",
+    "installable": true,
+    "stock": true,
+    "icon": "theme",
+    "lineage": "iasf",
+    "family": "editorial-commerce",
+    "normalization": "promoted_stock",
+    "donor": "studio-cms-editor/theme_layout_donor",
+    "aliases": [
+      "inneranimals-site",
+      "theme-inneranimals-site",
+      "inner-animals-storefront"
+    ]
+  }
+}

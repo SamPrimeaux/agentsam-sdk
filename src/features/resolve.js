@@ -39,6 +39,7 @@ export function normalizeProviderTemplateId(id) {
   if (!key) return '';
   if (key === 'iam') return 'inneranimalmedia';
   if (key === 'google-desktop') return 'google_desktop';
+  if (key === 'openai' || key === 'chatgpt-hosted' || key === 'chatgpt_hosted') return 'chatgpt';
   return key;
 }
 

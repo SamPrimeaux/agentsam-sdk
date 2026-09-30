@@ -12,7 +12,7 @@ const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 const sdkRoot = path.resolve(packageRoot, '../..');
 const manifestPath = path.join(packageRoot, 'agentsam.app.json');
 const PERSISTENCE = new Set(['sqlite', 'd1']);
-const STARTERS = new Set(['heuristic', 'blank', 'import']);
+const STARTERS = new Set(['heuristic', 'blank', 'iasf', 'import']);
 
 function usage() {
   console.log(`
@@ -21,7 +21,7 @@ AgentSam website + CMS kit
   agentsam-cms --help
   agentsam-cms info
   agentsam-cms doctor
-  agentsam-cms create <directory> --starter heuristic|blank|import [--theme <path>] [--persistence sqlite|d1]
+  agentsam-cms create <directory> --starter heuristic|blank|iasf|import [--theme <path>] [--persistence sqlite|d1]
   agentsam-cms import-theme <sourceDirOrZip> --out <theme-pack-dir>
   agentsam-cms dev [--db <sqlitePath>] [--site <siteId>] [--port 4317]
   agentsam-cms scaffold <directory> [--persistence sqlite|d1]   (legacy alias of create --starter heuristic)
@@ -93,7 +93,7 @@ async function createCmd(args) {
   const target = parsed._[0];
   if (!target) throw new Error('create requires a target directory');
   const starter = String(parsed.starter || 'heuristic');
-  if (!STARTERS.has(starter)) throw new Error(`unsupported starter "${starter}"; choose heuristic|blank|import`);
+  if (!STARTERS.has(starter)) throw new Error(`unsupported starter "${starter}"; choose heuristic|blank|iasf|import`);
   const persistence = String(parsed.persistence || 'sqlite');
   if (!PERSISTENCE.has(persistence)) {
     throw new Error(`unsupported persistence "${persistence}"; choose sqlite or d1`);
@@ -155,6 +155,9 @@ async function createCmd(args) {
       pack = rootMod.heuristicStarterPack;
     } else if (starter === 'blank') {
       pack = rootMod.blankStarterPack;
+    } else if (starter === 'iasf') {
+      pack = rootMod.iasfStarterPack;
+      if (!pack) throw new Error('iasfStarterPack export missing — rebuild client-cms-editor');
     } else {
       const { importThemeFromSource } = await loadDist('dist/import/index.js');
       const themeOut = path.join(targetRoot, 'starter', 'imported-theme-pack');
