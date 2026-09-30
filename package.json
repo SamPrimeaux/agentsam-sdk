@@ -242,7 +242,7 @@
     "test:standard": "node test/smoke.mjs && npm run test:unit && npm run test:cli && npm run test:integration:mock && npm run test:terminal:mock",
     "test:unit": "node --test test/*.test.mjs",
     "test:cli": "node --test test/cli/*.test.mjs",
-    "test:integration:mock": "node --test test/integration/*.test.mjs",
+    "test:integration:mock": "npm run ensure:cms-dist && node --test test/integration/*.test.mjs",
     "test:terminal:mock": "node --test test/terminal/*.test.mjs",
     "test:live:terminal": "node --test test/live/*.live.test.mjs",
     "test:identity": "npm --prefix packages/identity test",
@@ -285,7 +285,8 @@
     "verify:go-distribution": "node scripts/verify-go-distribution.mjs",
     "prove:product": "node scripts/prove-agentsam-product.mjs",
     "security:release": "node scripts/verify-release-security.mjs",
-    "verify:database-honesty": "node --test test/integration/database-hosted-honesty.test.mjs"
+    "verify:database-honesty": "node --test test/integration/database-hosted-honesty.test.mjs",
+    "ensure:cms-dist": "node scripts/ensure-cms-dist.mjs"
   },
   "engines": {
     "node": ">=22 <25",
