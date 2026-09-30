@@ -46,6 +46,16 @@ if (existsSync(markSource)) {
   console.log(`[copy-auth-portal] AgentSam mark -> ${path.relative(appRoot, outPublic)}/shared/agentsam-mark.svg`);
 }
 
+// Same composed master the downloadable .app uses (Finder / dock). Branding SSOT for auth logo.
+const appIconSource = path.resolve(
+  appRoot,
+  "../../packages/agentsam-desktop-shell/src-tauri/icons/composed/macos-1024.png",
+);
+if (existsSync(appIconSource)) {
+  cpSync(appIconSource, path.join(outPublic, "shared/app-icon.png"));
+  console.log(`[copy-auth-portal] app icon (composed macos) -> ${path.relative(appRoot, outPublic)}/shared/app-icon.png`);
+}
+
 // Copy full public site tree into Worker assets (home/help/learn/global)
 const siteSourceDir = path.join(appRoot, "frontend/public/site");
 const siteDestDir = path.join(outPublic, "site");

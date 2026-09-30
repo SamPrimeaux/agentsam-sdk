@@ -202,10 +202,15 @@ export default {
 }
 
 function applyBrandTokens(html, { brandName, logoUrl }) {
+  // Package HTML ships neutral portable defaults; scaffold stamps the app brand.
   return html
     .replace(/Inner Animal Media/g, brandName)
     .replace(/AgentSam/g, brandName)
+    .replace(/<h1 data-company-tagline>Welcome<\/h1>/g, `<h1 data-company-tagline>${brandName}</h1>`)
+    .replace(/<span data-company-name>App<\/span>/g, `<span data-company-name>${brandName}</span>`)
+    .replace(/alt="Sign in"/g, `alt="${brandName}"`)
     .replace(/src="\/shared\/agentsam-mark\.svg"/g, `src="${logoUrl}"`)
+    .replace(/src="\/shared\/app-icon\.png"/g, `src="${logoUrl}"`)
     .replace(/src="\/brand\/[^"]*"/g, `src="${logoUrl}"`)
     .replace(/href="\/brand\/[^"]*"/g, `href="${logoUrl}"`);
 }

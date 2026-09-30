@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Eye, EyeOff, Loader2, X } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -19,6 +19,10 @@ const SERVICES = [
   { value: "other", label: "Other" },
 ] as const;
 
+/**
+ * Slide-in drawer to add a provider BYOK secret (account vault).
+ * Pattern aligned with IntegrationDrawer — not a centered modal.
+ */
 export function AddKeyModal({
   open,
   onOpenChange,
@@ -78,90 +82,107 @@ export function AddKeyModal({
     }
   }
 
+  const selectedLabel = SERVICES.find((item) => item.value === service)?.label || "Provider";
+
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-ink/70 data-[state=closed]:opacity-0 data-[state=open]:opacity-100 motion-safe:transition-opacity motion-safe:duration-150" />
-        <DialogPrimitive.Content className="fixed top-1/2 left-1/2 z-50 w-[min(30rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-card p-5 shadow-hairline">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <DialogPrimitive.Title className="text-lg font-medium tracking-tight text-foreground">
-                Add secret
-              </DialogPrimitive.Title>
-              <DialogPrimitive.Description className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                Encrypted to your account. Name is yours — no project scope. Not shown again after
-                save.
-              </DialogPrimitive.Description>
+        <DialogPrimitive.Content className="fixed inset-x-0 bottom-0 z-50 flex max-h-[92vh] w-full flex-col rounded-t-2xl bg-card shadow-hairline data-[state=closed]:translate-y-full data-[state=open]:translate-y-0 motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-out sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:w-[min(28rem,100vw)] sm:rounded-none sm:border-l sm:border-border sm:data-[state=closed]:translate-x-full sm:data-[state=closed]:translate-y-0 sm:data-[state=open]:translate-x-0">
+          <header className="flex shrink-0 items-start justify-between gap-4 border-b border-border p-5">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-muted text-accent shadow-hairline">
+                <KeyRound className="size-5" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <DialogPrimitive.Title className="text-lg font-medium tracking-tight text-foreground">
+                  Add API key
+                </DialogPrimitive.Title>
+                <DialogPrimitive.Description className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Encrypted to your account. Plaintext is never shown again after save.
+                </DialogPrimitive.Description>
+              </div>
             </div>
             <DialogPrimitive.Close asChild>
               <Button type="button" variant="ghost" size="icon" aria-label="Close">
                 <X className="size-4" aria-hidden="true" />
               </Button>
             </DialogPrimitive.Close>
-          </div>
+          </header>
 
-          <form className="mt-6 space-y-4" onSubmit={(event) => void save(event)}>
-            <label className="block space-y-2 text-sm font-medium text-foreground">
-              <span>Name</span>
-              <Input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="e.g. Sam’s iMac · CLI, OpenAI prod, Terminal tunnel"
-                required
-                autoFocus
-                maxLength={120}
-              />
-            </label>
-
-            <label className="block space-y-2 text-sm font-medium text-foreground">
-              <span>Service</span>
-              <select
-                value={service}
-                onChange={(event) => setService(event.target.value as typeof service)}
-                className="h-11 w-full rounded-lg bg-muted px-3 text-sm text-foreground shadow-hairline focus-visible:outline-none"
-              >
-                {SERVICES.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-              <span className="block text-xs font-normal text-muted-foreground">
-                Which product this secret is for (chat providers, Cloudflare, terminal, etc.).
-              </span>
-            </label>
-
-            <label className="block space-y-2 text-sm font-medium text-foreground">
-              <span>Secret value</span>
-              <div className="relative">
-                <Input
-                  type={showValue ? "text" : "password"}
-                  value={value}
-                  onChange={(event) => setValue(event.target.value)}
-                  autoComplete="off"
-                  placeholder="Paste key or token"
-                  className="h-11 pr-12 font-mono"
-                  required
-                  minLength={8}
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted-foreground hover:text-foreground"
-                  onClick={() => setShowValue((shown) => !shown)}
-                  aria-label={showValue ? "Hide secret" : "Show secret"}
+          <form
+            className="flex min-h-0 flex-1 flex-col"
+            onSubmit={(event) => void save(event)}
+          >
+            <div className="flex-1 space-y-5 overflow-y-auto p-5">
+              <label className="block space-y-2 text-sm font-medium text-foreground">
+                <span>Provider</span>
+                <select
+                  value={service}
+                  onChange={(event) => setService(event.target.value as typeof service)}
+                  className="h-11 w-full rounded-lg bg-muted px-3 text-sm text-foreground shadow-hairline focus-visible:outline-none"
                 >
-                  {showValue ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
-              </div>
-            </label>
+                  {SERVICES.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-            {error ? (
-              <p role="alert" className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {error}
-              </p>
-            ) : null}
+              <label className="block space-y-2 text-sm font-medium text-foreground">
+                <span>Label</span>
+                <Input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder={`${selectedLabel} production key`}
+                  required
+                  autoFocus
+                  maxLength={120}
+                />
+                <span className="block text-xs font-normal text-muted-foreground">
+                  Any name you will recognize later — not shown to other accounts.
+                </span>
+              </label>
 
-            <div className="flex flex-wrap justify-end gap-2 pt-2">
+              <label className="block space-y-2 text-sm font-medium text-foreground">
+                <span>API key</span>
+                <div className="relative">
+                  <Input
+                    type={showValue ? "text" : "password"}
+                    value={value}
+                    onChange={(event) => setValue(event.target.value)}
+                    autoComplete="off"
+                    placeholder="Paste key or token"
+                    className="h-11 pr-12 font-mono"
+                    required
+                    minLength={8}
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowValue((shown) => !shown)}
+                    aria-label={showValue ? "Hide secret" : "Show secret"}
+                  >
+                    {showValue ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
+                <span className="block text-xs font-normal text-muted-foreground">
+                  This key will not be shown again after you save it.
+                </span>
+              </label>
+
+              {error ? (
+                <p
+                  role="alert"
+                  className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                >
+                  {error}
+                </p>
+              ) : null}
+            </div>
+
+            <footer className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-border p-5">
               <DialogPrimitive.Close asChild>
                 <Button type="button" variant="ghost">
                   Cancel
@@ -169,9 +190,9 @@ export function AddKeyModal({
               </DialogPrimitive.Close>
               <Button type="submit" disabled={saving || value.trim().length < 8 || !name.trim()}>
                 {saving ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
-                {saving ? "Encrypting…" : "Save secret"}
+                {saving ? "Encrypting…" : "Save"}
               </Button>
-            </div>
+            </footer>
           </form>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>

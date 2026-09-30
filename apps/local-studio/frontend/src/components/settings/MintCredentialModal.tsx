@@ -193,7 +193,7 @@ export function MintCredentialModal({
                 <Input
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  placeholder={kind === "service" ? "Local Studio prod" : "Sam’s iMac · CLI"}
+                  placeholder={kind === "service" ? "Local Studio prod" : "Dev machine · CLI"}
                   required
                   maxLength={120}
                   autoFocus

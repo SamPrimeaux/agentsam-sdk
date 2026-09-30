@@ -89,7 +89,8 @@ function buildPasswordResetService(env, adapter, options = {}) {
  * Worker fetch handler for identity API + auth page routing.
  * @param {Request} request
  * @param {{ DB: import('../adapters/cloudflare-d1/index.js').D1Database, ASSETS?: { fetch: (req: Request) => Promise<Response> }, [key: string]: unknown }} env
- * @param {{ identity?: ReturnType<typeof createIdentityService>, brandName?: string }} [options]
+ * @param {{ identity?: ReturnType<typeof createIdentityService>, brandName?: string, companySlug?: string }} [options]
+ *   companySlug — host-app portal branding key into D1 `company.slug` (never product-hardcoded here).
  */
 export async function handleIdentityWorkerRequest(request, env, options = {}) {
   const url = new URL(request.url);
@@ -176,8 +177,21 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
   }
 
   if (path === '/api/company' && method === 'GET') {
-    const slug = url.searchParams.get('slug') || undefined;
-    const company = slug ? await adapter.getCompanyBySlug(slug) : await adapter.getDefaultCompany();
+    // Portable: ?slug= → options.companySlug → env override → host match in company.meta.hosts → default
+    const slug = String(
+      url.searchParams.get('slug')
+        || options.companySlug
+        || env.IDENTITY_COMPANY_SLUG
+        || '',
+    ).trim() || undefined;
+    let company = null;
+    if (slug) {
+      company = await adapter.getCompanyBySlug(slug);
+    }
+    if (!company && typeof adapter.getCompanyByHost === 'function') {
+      company = await adapter.getCompanyByHost(url.hostname || request.headers.get('host'));
+    }
+    if (!company) company = await adapter.getDefaultCompany();
     if (!company) return jsonResponse({ ok: false, error: 'company_not_found' }, 404);
     return jsonResponse({ ok: true, company });
   }

@@ -733,7 +733,7 @@ function KeysView({ snapshot }: { snapshot: SettingsSnapshot }) {
             <label className="block">
               <span className="mb-1.5 block text-[11px] font-medium">Name</span>
               <input
-                defaultValue={owner === "you" ? "Sams-iMac · CLI" : "Local Studio prod"}
+                defaultValue={owner === "you" ? "Dev machine · CLI" : "Local Studio prod"}
                 className="h-9 w-full rounded-md border border-border bg-muted/25 px-3 text-[11px] outline-none focus:border-foreground/30"
               />
             </label>
@@ -741,7 +741,7 @@ function KeysView({ snapshot }: { snapshot: SettingsSnapshot }) {
             <label className="block">
               <span className="mb-1.5 block text-[11px] font-medium">Project</span>
               <select className="h-9 w-full rounded-md border border-border bg-muted/25 px-3 text-[11px] outline-none">
-                <option>agentsam-sdk</option>
+                <option>demo-app</option>
                 <option>Account-wide</option>
               </select>
             </label>
@@ -1251,7 +1251,7 @@ function KeysSubView({ view, snapshot }: { view: string; snapshot: SettingsSnaps
       <Section title="Sessions & security" description="Active product sessions and security evidence live beside credential management, not inside the credential table.">
         <div className="rounded-lg border border-border/70 px-3">
           <PreferenceRow label="Local Studio · browser" description="Current authenticated web session." value="Active now" />
-          <PreferenceRow label="Sams-iMac · CLI" description="Native CLI authorization." value="18 min ago" />
+          <PreferenceRow label="Dev machine · CLI" description="Native CLI authorization." value="18 min ago" />
           <PreferenceRow label="Revoke other sessions" description="Keep the current session and invalidate the rest." value="Review" />
         </div>
       </Section>
@@ -1262,7 +1262,7 @@ function KeysSubView({ view, snapshot }: { view: string; snapshot: SettingsSnaps
     <Section title="Security audit" description="Credential events should be attributable without logging plaintext values.">
       <div className="divide-y divide-border/60 rounded-lg border border-border/70">
         {[
-          ["API key used", "Sams-iMac · CLI", "2 min ago"],
+          ["API key used", "Dev machine · CLI", "2 min ago"],
           ["Provider secret updated", "OpenAI · default", "Yesterday"],
           ["Service credential rotated", "Local Studio prod", "Sep 24"],
         ].map(([action, target, time]) => (
