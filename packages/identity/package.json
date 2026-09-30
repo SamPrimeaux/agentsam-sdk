@@ -27,12 +27,17 @@
     "./contracts/provider": "./src/contracts/provider.js",
     "./contracts/external-identity": "./src/contracts/external-identity.js",
     "./contracts/auth-config": "./src/contracts/auth-config.js",
+    "./contracts/identity-store": "./src/contracts/identity-store.js",
     "./oauth/callback": "./src/oauth/callback.js",
     "./frontend/auth-portal/*": "./src/frontend/auth-portal/*",
     "./providers/cloudflare": "./src/providers/cloudflare/index.js",
     "./providers/chatgpt": "./src/providers/chatgpt/index.js",
     "./contracts/sign-in-options": "./src/contracts/sign-in-options.js",
-    "./oauth/consent-view": "./src/oauth/consent-view.js"
+    "./oauth/consent-view": "./src/oauth/consent-view.js",
+    "./adapters/sqlite": "./src/adapters/sqlite/index.js",
+    "./adapters/portable-d1": "./src/adapters/portable-d1/index.js",
+    "./adapters/iam-compat": "./src/adapters/iam-compat/index.js",
+    "./adapters/cloudflare-d1": "./src/adapters/cloudflare-d1/index.js"
   },
   "scripts": {
     "test": "node --test tests/*.test.mjs",

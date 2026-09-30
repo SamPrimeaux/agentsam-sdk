@@ -5,8 +5,14 @@ import { fileURLToPath } from 'node:url';
 const SDK_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const IDENTITY_PKG = path.join(SDK_ROOT, 'packages', 'identity');
 const AUTH_PAGES_DIR = path.join(IDENTITY_PKG, 'src', 'frontend', 'auth-portal', 'pages');
-const MIGRATION_FILE = path.join(IDENTITY_PKG, 'src', 'migrations', '0001_identity_core.sql');
+const PORTABLE_SQL_DIR = path.join(IDENTITY_PKG, 'migrations', 'sqlite');
 const BRANDING_SCRIPT = path.join(IDENTITY_PKG, 'src', 'frontend', 'auth-portal', 'shared', 'company-branding.js');
+
+const PORTABLE_SCAFFOLD_FILES = [
+  '001_identity_core.sql',
+  '002_identity_oauth_client.sql',
+  '005_identity_company_native.sql',
+];
 
 /**
  * @param {{ projectName: string, brandName?: string, logoUrl?: string, sdkVersion?: string, provider?: string }} config
@@ -19,7 +25,10 @@ export function buildIdentityAppScaffold(config) {
   const sdkVersion = config.sdkVersion || 'alpha';
   const provider = config.provider || 'email';
 
-  const migrationSql = `${fs.readFileSync(MIGRATION_FILE, 'utf8')}\n${buildCompanySeedSql({ brandName, logoUrl })}\n`;
+  const portableSql = PORTABLE_SCAFFOLD_FILES
+    .map((file) => fs.readFileSync(path.join(PORTABLE_SQL_DIR, file), 'utf8'))
+    .join('\n\n');
+  const migrationSql = `${portableSql}\n${buildCompanySeedSql({ brandName, logoUrl })}\n`;
   const loginHtml = injectBrandingScript(applyBrandTokens(fs.readFileSync(path.join(AUTH_PAGES_DIR, 'login.html'), 'utf8'), {
     brandName,
     logoUrl,
@@ -43,8 +52,8 @@ export function buildIdentityAppScaffold(config) {
     scripts: {
       dev: 'wrangler dev',
       deploy: 'wrangler deploy',
-      'db:migrate:local': `wrangler d1 execute ${projectName} --local --file=migrations/0001_identity_core.sql`,
-      'db:migrate': `wrangler d1 execute ${projectName} --remote --file=migrations/0001_identity_core.sql`,
+      'db:migrate:local': `wrangler d1 execute ${projectName} --local --file=migrations/0001_identity_portable.sql`,
+      'db:migrate': `wrangler d1 execute ${projectName} --remote --file=migrations/0001_identity_portable.sql`,
       preview: 'npx agentsam identity preview --open',
     },
     dependencies: {
@@ -61,6 +70,9 @@ export function buildIdentityAppScaffold(config) {
 main = "backend/src/index.js"
 compatibility_date = "2024-06-01"
 
+[vars]
+IDENTITY_ADAPTER_PROFILE = "portable"
+
 [assets]
 directory = "app/frontend"
 binding = "ASSETS"
@@ -76,7 +88,7 @@ migrations_dir = "migrations"
   files['.env.example'] = `# Minted at install/build — secrets via wrangler secret put (never commit)
 # IAM_CLIENT_ID=          # plaintext var (public by OAuth design)
 # IAM_CLIENT_SECRET=      # wrangler secret put only
-# IAM_ORIGIN=https://inneranimalmedia.com
+# IAM_ORIGIN=
 
 # Web browser OAuth (BYOK) — takes /api/oauth/{google|github}/start when set
 # GOOGLE_CLIENT_ID=
@@ -103,11 +115,12 @@ migrations_dir = "migrations"
 
   files['README.md'] = `# ${brandName} — identity app
 
-Boring scaffold: **app/frontend** (auth UI) + **backend** (Worker API) + **migrations** (D1).
+Boring scaffold: **app/frontend** (auth UI) + **backend** (Worker API) + **migrations** (portable \`identity_*\` D1).
 
 Provider template: \`${provider}\` (see \`agentsam identity plan --provider ${provider}\`).
 
-**Account SSOT:** \`accounts\` (row of record). \`account_identities\` is IdP linkage only.
+**Schema:** portable \`agentsam.identity\` pack (\`identity_users\`, \`identity_sessions\`, \`identity_companies\`, …).
+Not the hosted IAM \`accounts\` / \`auth_users\` / \`company\` shape.
 
 ## Quick start
 
@@ -135,13 +148,13 @@ npm run dev
 \`\`\`
 app/frontend/     Auth portal HTML + dashboard stub
 backend/src/      Cloudflare Worker (identity routes)
-migrations/       D1 schema (+ default \`company\` row)
+migrations/       Portable identity_* schema (+ default identity_companies row)
 
 Branding: \`GET /api/company\` (public). Update with \`PATCH /api/company\` when signed in.
 \`\`\`
 `;
 
-  files['migrations/0001_identity_core.sql'] = migrationSql;
+  files['migrations/0001_identity_portable.sql'] = migrationSql;
 
   files['app/frontend/auth/login.html'] = loginHtml;
   files['app/frontend/auth/signup.html'] = signupHtml;
@@ -190,10 +203,31 @@ Branding: \`GET /api/company\` (public). Update with \`PATCH /api/company\` when
 `;
 
   files['backend/src/index.js'] = `import { handleIdentityWorkerRequest } from '@inneranimalmedia/agentsam-sdk/identity/server/worker-router';
+import { IDENTITY_ROUTE_IDS } from '@inneranimalmedia/agentsam-sdk/identity';
+import { createRouteRegistry, defineRouteProjection } from '@inneranimalmedia/agentsam-sdk/identity';
+
+const app = { id: '${projectName}' };
+const routeRegistry = createRouteRegistry([
+  defineRouteProjection({
+    appId: app.id,
+    routes: {
+      [IDENTITY_ROUTE_IDS.LOGIN]: '/auth/login',
+      [IDENTITY_ROUTE_IDS.SIGNUP]: '/auth/signup',
+      [IDENTITY_ROUTE_IDS.RESET]: '/auth/reset',
+      [IDENTITY_ROUTE_IDS.RECOVERY]: '/auth/reset',
+      [IDENTITY_ROUTE_IDS.APP_AUTHENTICATED]: '/dashboard/',
+      [IDENTITY_ROUTE_IDS.OAUTH_CALLBACK]: '/api/oauth/:provider/callback',
+    },
+  }),
+]);
 
 export default {
   async fetch(request, env, ctx) {
-    return handleIdentityWorkerRequest(request, env);
+    return handleIdentityWorkerRequest(request, env, {
+      app,
+      routeRegistry,
+      identityProfile: 'portable',
+    });
   },
 };
 `;
@@ -226,9 +260,9 @@ function sqlLiteral(value) {
 
 function buildCompanySeedSql({ brandName, logoUrl }) {
   const ts = Math.floor(Date.now() / 1000);
-  return `-- Default company row (branding SSOT for portal + dashboard)
-INSERT OR IGNORE INTO company (
-  id, slug, name, logo_url, auth_bg_color, primary_color, created_at, updated_at
+  return `-- Default company row (branding SSOT for portal + dashboard) — portable identity_companies
+INSERT OR IGNORE INTO identity_companies (
+  id, slug, name, logo_url, auth_bg_color, primary_color, support_email, created_at, updated_at
 ) VALUES (
   'co_default',
   'default',
@@ -236,6 +270,7 @@ INSERT OR IGNORE INTO company (
   ${sqlLiteral(logoUrl)},
   '#050508',
   '#007AFF',
+  ${sqlLiteral('support@example.test')},
   ${ts},
   ${ts}
 );`;

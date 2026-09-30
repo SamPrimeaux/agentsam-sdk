@@ -1,4 +1,5 @@
-import { createCloudflareD1Adapter } from '../adapters/cloudflare-d1/index.js';
+import { createCloudflareD1Adapter, createIamCompatIdentityAdapter } from '../adapters/iam-compat/index.js';
+import { createPortableD1IdentityAdapter } from '../adapters/portable-d1/index.js';
 import { createIdentityService } from './identity-service.js';
 import { jsonResponse } from '../core/http-json.js';
 import { hashPassword } from '../core/password-crypto.js';
@@ -26,6 +27,17 @@ import {
   parseNativeStart,
   sessionTypeForTransaction,
 } from '../oauth/native-handoff.js';
+
+function resolveIdentityAdapter(env, options = {}) {
+  if (options.adapter) return options.adapter;
+  const profile = String(options.identityProfile || env?.IDENTITY_ADAPTER_PROFILE || 'iam-compat')
+    .trim()
+    .toLowerCase();
+  if (profile === 'portable' || profile === 'portable-d1') {
+    return createPortableD1IdentityAdapter(env.DB);
+  }
+  return createIamCompatIdentityAdapter(env.DB);
+}
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -62,7 +74,12 @@ function buildPasswordResetService(env, adapter, options = {}) {
       }
       const company = await adapter.getDefaultCompany().catch(() => null);
       const brand = company?.name || 'Your App';
-      const fromEmail = company?.supportEmail || 'hey@inneranimalmedia.com';
+      const fromEmail = company?.supportEmail;
+      if (!fromEmail) {
+        const err = new Error('email_not_configured');
+        err.code = 'email_not_configured';
+        throw err;
+      }
       const html = `<p>Hi ${escapeHtml(name)},</p><p>Your ${escapeHtml(brand)} verification code is:</p><p style="font-size:22px;font-weight:700;letter-spacing:4px;">${escapeHtml(code)}</p><p>Enter this on the reset page. Expires in 15 minutes.</p>`;
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -97,7 +114,7 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
   const path = url.pathname;
   const method = request.method.toUpperCase();
 
-  const adapter = createCloudflareD1Adapter(env.DB);
+  const adapter = resolveIdentityAdapter(env, options);
   if (!options.identity && (!options.app?.id || !options.routeRegistry)) {
     throw new IdentityRoutingError(
       'AUTH_APP_UNRESOLVED',
@@ -519,4 +536,4 @@ async function oauthCallback(request, env, identity, adapter, provider, creds) {
   }
 }
 
-export { createIdentityService, createCloudflareD1Adapter };
+export { createIdentityService, createCloudflareD1Adapter, createIamCompatIdentityAdapter, createPortableD1IdentityAdapter };

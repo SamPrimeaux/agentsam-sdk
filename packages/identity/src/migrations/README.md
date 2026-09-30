@@ -1,31 +1,31 @@
-# Identity D1 migrations
+# Identity migrations under `src/migrations/` — IAM-compat scaffold / history
 
-Customer-scoped identity tables for `@inneranimalmedia/agentsam-sdk` identity apps.
+**This tree is NOT the portable customer D1 authority.**
 
-## Apply
+| Path | Authority |
+|---|---|
+| `packages/identity/migrations/sqlite/` | **Portable** `identity_*` SQL SSOT (`agentsam.identity` pack) |
+| `packages/identity/src/migrations/` | **IAM-shaped** scaffold / history (accounts, auth_users, company, …) |
 
-```bash
-# local
-wrangler d1 execute <database_name> --local --file=migrations/0001_identity_core.sql
+## When to use which
 
-# remote
-wrangler d1 execute <database_name> --remote --file=migrations/0001_identity_core.sql
-```
+| Audience | Adapter | Schema |
+|---|---|---|
+| New customer clean D1 / local SQLite | `createSqliteIdentityAdapter` / `createPortableD1IdentityAdapter` | Portable pack via `applyPortableIdentityMigrations` |
+| Existing InnerAnimalMedia / Local Studio hosted DB | `createIamCompatIdentityAdapter` (`createCloudflareD1Adapter` alias) | Live IAM tables — do not rename for portability |
 
-`agentsam identity init` copies this migration into the customer project automatically.
-
-Existing scaffolds missing `accounts`: also apply `0003_accounts_ssot.sql`.
-
-## Tables
+## IAM-shaped tables in this directory
 
 | Table | Purpose |
 |-------|---------|
-| `accounts` | **Account SSOT** — row of record (`au_*` ids shared with auth_users in portable scaffold) |
-| `auth_users` | Login principal (password hash, 1:1 with accounts.id) |
-| `auth_sessions` | Browser sessions |
-| `account_identities` | IdP linkage only (provider + subject → accounts.id) — **not** the account SSOT |
-| `oauth_states` | PKCE/state for OAuth start |
-| `password_reset_tokens` | Reset flow (grow when wired) |
-| `company` | Branding SSOT — name, logo, colors, support info (`GET /api/company`) |
+| `accounts` | Account SSOT on hosted IAM |
+| `auth_users` | Login principal |
+| `auth_sessions` | Browser/desktop sessions |
+| `account_identities` | IdP linkage |
+| `oauth_states` | Historical PKCE/state (note: missing `app_id` vs portable invariant) |
+| `password_reset_tokens` | Historical SQL reset tokens — runtime recovery uses KV/`createPasswordResetService` |
+| `company` | Hosted branding table |
 
-IAM production tables remain the reference; this schema is **portable and boring** for customer Workers.
+New generic scaffolds must be generated from the **portable** `agentsam.identity` pack, not by copying this tree as “portable D1.”
+
+Preserve these files for IAM-compat fixtures and historical feature resources. Do not delete until Lane 1 parity is proven and call sites no longer need them.

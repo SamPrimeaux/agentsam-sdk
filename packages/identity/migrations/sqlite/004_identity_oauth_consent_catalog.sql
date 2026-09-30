@@ -1,5 +1,5 @@
 -- identity.oauth-server consent catalog.
--- Issuer branding remains owned by the portable company table.
+-- Issuer branding remains owned by portable identity_companies (identity.core).
 
 INSERT OR IGNORE INTO identity_schema_meta (key, value)
 VALUES ('pack_oauth_consent_catalog', '1');
