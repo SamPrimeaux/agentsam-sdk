@@ -245,16 +245,53 @@ Declare and prove the relationship so `apps/church-site` and `packages/theme-chu
 
 ---
 
-## 10. How today’s lanes stay true to this
+## 10. Work sequencing (standing)
 
-Identity / Desktop / Database / Settings work **must not** deepen monorepo-only `file:` coupling or lie in manifests.
+```text
+DONE     Branch closure + Identity branding (#81 @ c6a1519c+)
+DONE     PRODUCT_LIFECYCLE.md SSOT
+  │
+  ▼
+0c PROJECT AUTHORITY / TOOL INTEGRITY   ← NEXT (short integrity pass)
+  │
+  ├── AutoRAG / knowledge respects current repo evidence
+  ├── Wrangler resource discovery (ai, vectorize, D1, R2, …)
+  ├── cloudflare_vectorize = real backend (Worker bind + OAuth API transports)
+  ├── code scopes include apps/ (not only packages+src)
+  ├── Machine Unicode fix; machine inspect every agentsam.app.json
+  └── packed-npm proof (not monorepo-only)
+  │
+  ▼
+1 IDENTITY PORTABILITY
+  │
+  ▼
+2 DESKTOP TRANSPORT / PACKAGING
+  │
+  ▼
+3 DATABASE STUDIO (user-scoped resources)
+  │
+  ▼
+4 SETTINGS HOST
+  │
+  ▼
+PREBUILD GRADUATION
+Local Studio / CMS / Ecommerce / CAD
+```
+
+Identity / Desktop / Database / Settings work **must not** deepen monorepo-only `file:` coupling or lie in manifests.  
+Lane **0c must stay short** — integrity over machinery we already built, not a new product.
 
 | Lane | Focus | Graduation constraint |
 |---|---|---|
-| **1** Identity portable contract | SQLite + portable D1 + IAM compat | Migrations/adapters ship as package capabilities consumable **outside** monorepo |
-| **2** Desktop transport | Authenticated `/api` bridge + packaging | Desktop `.app` uses published/session transport — not Sam’s D1 credentials |
-| **3** Database Studio | Bound vs OAuth vs local; user-scoped | Empty state guides **user123** to their Cloudflare — never platform owner fallback |
-| **4** Settings host | Real host, not fixtures | Settings package remains published capability; Local Studio must not need repo-local `file:` forever |
+| **0c** Project authority | Describe **this** repo’s architecture from evidence | Customer fixture + FNF regression; packed-npm proof |
+| **1** Identity portable contract | SQLite + portable D1 + IAM compat | Migrations/adapters consumable **outside** monorepo |
+| **2** Desktop transport | Authenticated `/api` bridge + packaging | Desktop uses session transport — not Sam’s D1 credentials |
+| **3** Database Studio | Bound vs OAuth vs local; user-scoped | Empty state guides **user123** — never platform owner fallback |
+| **4** Settings host | Real host, not fixtures | Settings remains published capability; no permanent repo-local `file:` |
+
+**Standing truth Lane 0c must make true:**
+
+> Running AgentSam in an unrelated customer repository describes and uses **that** repository’s actual architecture, not assumptions inherited from the AgentSam SDK monorepo.
 
 **Resale test (standing):**
 
@@ -266,6 +303,101 @@ git clone / npm install SDK
 ```
 
 …must become boringly reliable. CAD already shows it is possible.
+
+---
+
+## 10b. Lane 0c — Project authority + machinery integrity
+
+Merkle / repository discovery is **not** the rewrite target (FNF: ~900 files, ~46.6 MB, ~0.66s, correct Git root/revision).  
+Failure is **after** discovery: AutoRAG / status / scopes treat the customer project like a blank SDK clone.
+
+### Authority stack → PROJECT CONTEXT RECEIPT
+
+```text
+CURRENT REPOSITORY
+│
+├── Git root / revision                 ← Merkle already correct
+├── nearest .agentsam/app.json
+├── agentsam.app.json
+├── wrangler.toml / wrangler.jsonc
+├── .agentsam/knowledge.json            ← AgentSam policy (optional)
+├── existing knowledge / generation evidence
+└── authenticated provider capabilities
+          │
+          ▼
+  PROJECT CONTEXT RECEIPT
+          │
+          ├── observed              (bindings, indexes, apps present)
+          ├── explicitly selected   (knowledge policy choices)
+          ├── locally executable    (runs in this CLI/Desktop process)
+          ├── remotely executable   (Worker / hosted binding)
+          └── missing / conflicting (drift between policy and wrangler)
+```
+
+Truthful example shape (FNF-class):
+
+```json
+{
+  "vectorize": {
+    "configured": true,
+    "binding": "FNF_VECTORIZE",
+    "index": "fnf-agentsam-bge-m3-1024",
+    "source": "wrangler.toml"
+  },
+  "workers_ai": {
+    "configured": true,
+    "binding": "AGENTSAM_WAI",
+    "local_execution": false,
+    "worker_execution": true
+  },
+  "autorag": {
+    "policy_configured": false,
+    "suggested_backend": "cloudflare_vectorize"
+  }
+}
+```
+
+Do **not** collapse “no `.agentsam/knowledge.json`” into “this project has no AI/vector resources.”  
+Offer adoption of **observed** wrangler resources instead.
+
+### `knowledge.json` vs wrangler
+
+| File | Owns |
+|---|---|
+| `.agentsam/knowledge.json` | **WHAT** AgentSam wants (scope includes, embedding model, backend **binding** name) |
+| `wrangler.toml` / `wrangler.jsonc` | **WHAT RESOURCE** that binding maps to (`index_name`, account, …) |
+
+Do not repeat `index_name` in ten places. If both specify it, **doctor detects drift**.
+
+### `cloudflare_vectorize` = one backend, two transports
+
+| Transport | How |
+|---|---|
+| Cloudflare Worker | `env.<BINDING>.query` / `.upsert` |
+| Local CLI / Desktop | User Cloudflare OAuth → Vectorize HTTP API |
+
+Same logical backend id. Matches the Desktop service-vs-OAuth split used elsewhere.
+
+### Gaps Lane 0c closes (verified)
+
+| Current behavior | Why wrong |
+|---|---|
+| `repository_intelligence` requires root `packages/agentsam-repository` | Customer repos must not vendor SDK internals to own CLI capability |
+| AutoRAG only reads `.agentsam/knowledge.json` | Ignores wrangler / manifest / binding evidence |
+| Default code scope = `packages` + `src` | Omits real product under `apps/` (FNF) |
+| `cloudflare_vectorize` advertised `supported: true` while adapter incomplete | Label ≠ backend |
+| codebaseindex: Vectorize “recorded… follow-up slice” | Not a completed backend |
+| Workers AI `operational:false` despite Worker binding | Must separate local vs worker execution |
+| Machine panics on Local Studio `\u{a0}` | Every `agentsam.app.json` must survive `machine inspect` |
+
+### Acceptance tests (Lane 0c done when all green)
+
+1. **Customer fixture** with `apps/my-product/`, wrangler `[ai]` + `[[vectorize]]`, `.agentsam/app.json` → correct resource discovery (no FNF-specific code in SDK).  
+2. **`agentsam autorag setup`** in that fixture proposes the **existing** Vectorize binding — not unrelated OpenAI/Gemini/local defaults.  
+3. **`agentsam machine inspect`** passes on **every** `agentsam.app.json` product (incl. Local Studio + arbitrary valid Unicode).  
+4. **Entire suite from packed npm SDK**, not the monorepo checkout.
+
+**Regression target:** fuelnfreetime (D1, R2, Workers AI, Vectorize, app manifest, local SQLite, Merkle, mounted Ecommerce prebuild) — understood without FNF forks in the SDK.
 
 ---
 
@@ -294,4 +426,5 @@ Until then: develop in `apps/`, but **do not** advertise extract/install readine
 
 - [apps/README.md](../apps/README.md) — product app ownership boundary  
 - Branch closure trail (IAM): `inneranimalmedia/docs/platform/BRANCH_DISPOSITION_20260930.md`  
-- Identity / Desktop / Database sequencing: Cursor plan `identity_portability_status` (Lanes 1–4)
+- Work plan: Cursor `identity_portability_status` — **Lane 0c next**, then Identity → Desktop → Database → Settings → prebuild graduation  
+- Tip note: Identity branding merged at `c6a1519c` (#81); lifecycle SSOT landed after on `main`
