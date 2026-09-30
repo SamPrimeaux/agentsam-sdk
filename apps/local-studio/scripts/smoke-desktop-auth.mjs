@@ -43,8 +43,9 @@ requireSource(source.auth.includes('op: "native_exchange"'), "native_exchange_cl
 requireSource(source.auth.includes("identity_native_oauth_pending"), "pkce_pending_secure_store_missing");
 requireSource(source.auth.includes("openExternalUrl"), "system_browser_open_missing");
 requireSource(source.auth.includes("listenDeepLinks"), "frontend_deep_link_listener_missing");
-requireSource(source.tauri.includes("deepLink?.onOpenUrl"), "tauri_direct_deep_link_listener_missing");
-requireSource(source.tauri.includes("plugin:deep-link|get_current"), "cold_start_deep_link_read_missing");
+requireSource(source.tauri.includes('invoke("take_pending_deep_links"'), "native_deep_link_drain_missing");
+requireSource(source.deepLink.includes("DeepLinkState"), "native_deep_link_state_missing");
+requireSource(source.deepLink.includes("take_pending_deep_links"), "native_deep_link_command_missing");
 requireSource(source.auth.includes('provider === "google"'), "google_desktop_branch_missing");
 requireSource(source.auth.includes("google_desktop_identity_login"), "google_desktop_command_missing");
 requireSource(source.auth.includes("google_desktop_native_flow_required"), "google_web_native_fail_closed_missing");

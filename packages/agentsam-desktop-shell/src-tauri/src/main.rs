@@ -12,6 +12,7 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(agentsamd::AgentsamdState::default())
         .manage(local_content::LocalContentState::default())
+        .manage(deep_link::DeepLinkState::default())
         .setup(|app| {
             tray::setup_tray(app)?;
             deep_link::register_scheme(app)?;
@@ -25,6 +26,7 @@ fn main() {
             keychain::secure_store_set,
             keychain::secure_store_delete,
             deep_link::handle_callback,
+            deep_link::take_pending_deep_links,
             updater::check_for_update,
             local_node::enroll_as_local_node,
             agentsamd::ensure_agentsamd,
