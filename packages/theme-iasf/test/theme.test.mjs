@@ -19,11 +19,14 @@ test('iasf is an installable stock theme', () => {
   assert.ok(theme.pages.includes('Shop'));
 });
 
-test('iasf product row marks promoted stock', () => {
-  const row = createProductRow({ accountId: 'acct_demo' });
+test('iasf product row matches live agentsam_products columns', () => {
+  const row = createProductRow({ repositoryId: 'repo_demo' });
   assert.equal(row.slug, 'iasf');
+  assert.equal(row.kind, 'theme');
+  assert.equal(row.status, 'wired');
   assert.equal(row.metadata.normalization_state, 'promoted_stock');
   assert.equal(row.metadata.stock, true);
+  assert.equal(row.account_id, undefined);
 });
 
 test('iasf starter seed has multipage commerce routes', () => {

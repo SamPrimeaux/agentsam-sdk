@@ -65,18 +65,22 @@ export function readStorefrontCss() {
 
 /**
  * agentsam_products UPSERT payload (caller resolves repository_id).
+ * Matches live D1 columns on inneranimalmedia-business.agentsam_products
+ * (no account_id column — put provenance in metadata).
  */
-export function createProductRow({ accountId = null, repositoryId = null, status = 'production' } = {}) {
+export function createProductRow({ repositoryId = null, status = 'wired' } = {}) {
   const theme = createTheme();
   return {
-    account_id: accountId,
     slug: theme.slug,
     name: theme.displayName,
-    kind: 'app',
+    kind: 'theme',
     status,
+    description: theme.description,
     repository_id: repositoryId,
     canonical_path: 'packages/theme-iasf',
     package_name: theme.package,
+    version: theme.version,
+    tags: theme.tags || [],
     metadata: {
       origin: 'stock_theme',
       normalization_state: 'promoted_stock',
@@ -87,12 +91,10 @@ export function createProductRow({ accountId = null, repositoryId = null, status
       capabilities: theme.capabilityHints || [],
       donor_name: 'Inner Animals storefront',
       stock: true,
+      installable: true,
       aliases: ['inneranimals-site', 'theme-inneranimals-site'],
+      cms_starter: 'iasf',
     },
-    relationships: [
-      { relationship_type: 'packaged_as', target_type: 'sdk-package', target_slug: 'theme-iasf' },
-      { relationship_type: 'depends_on', target_type: 'capability', target_slug: 'theme.storefront.shell' },
-    ],
   };
 }
 
