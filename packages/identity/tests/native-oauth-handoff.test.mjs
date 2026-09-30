@@ -186,3 +186,107 @@ test('browser Cloudflare login is unchanged: browser session, cookie, globe redi
   assert.equal(db.log.filter((s) => /INSERT INTO auth_sessions/.test(s)).every((s) => !/\btype\b/.test(s)), true);
   assert.equal(db.sqlite.prepare('SELECT COUNT(*) c FROM identity_native_handoffs').get().c, 0);
 });
+
+// ── Provider-agnostic proof ────────────────────────────────────────────────
+// The native handoff is transport only. Every lane Local Studio can expose must
+// complete identically: desktop session, deep-link handoff, PKCE exchange, and
+// no provider-grant (user_oauth_tokens) writes. IAM is one optional lane, never required.
+const EMAIL = 'sam@example.test';
+const LANES = [
+  {
+    name: 'cloudflare (identity sign-in)',
+    start: '/api/oauth/cloudflare/start', callback: '/api/oauth/cloudflare/callback', sessionProvider: 'cloudflare',
+    env: { CLOUDFLARE_OAUTH_CLIENT_ID: 'cf-client', CLOUDFLARE_OAUTH_CLIENT_SECRET: 'cf-secret' },
+  },
+  {
+    name: 'google (BYOK)',
+    start: '/api/oauth/google/start', callback: '/api/oauth/google/callback', sessionProvider: 'google',
+    env: { GOOGLE_CLIENT_ID: 'g-client', GOOGLE_CLIENT_SECRET: 'g-secret' },
+  },
+  {
+    name: 'github (BYOK)',
+    start: '/api/oauth/github/start', callback: '/api/oauth/github/callback', sessionProvider: 'github',
+    env: { GITHUB_CLIENT_ID: 'gh-client', GITHUB_CLIENT_SECRET: 'gh-secret' },
+  },
+  {
+    name: 'inneranimalmedia (optional IAM platform lane)',
+    start: '/api/oauth/inneranimalmedia/start', callback: '/api/oauth/inneranimalmedia/callback', sessionProvider: 'iam',
+    env: { IAM_CLIENT_ID: 'iam-client', IAM_CLIENT_SECRET: 'iam-secret', IAM_OAUTH_ISSUER: 'https://iam.test' },
+  },
+];
+
+async function withAllProviderStubs(fn) {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const u = String(input?.url || input);
+    if (u.includes('/oauth2/token')) return Response.json({ access_token: 'cf_access' });
+    if (u.includes('/oauth2/userinfo')) return Response.json({ sub: 'cf-user-1' });
+    if (u.includes('/client/v4/user')) return Response.json({ result: { email: EMAIL, first_name: 'Sam' } });
+    if (u.includes('oauth2.googleapis.com')) return Response.json({ access_token: 'g_access' });
+    if (u.includes('openidconnect.googleapis.com')) return Response.json({ sub: 'g-1', email: EMAIL, name: 'Sam' });
+    if (u.includes('github.com/login/oauth')) return Response.json({ access_token: 'gh_access' });
+    if (u.includes('api.github.com/user/emails')) return Response.json([{ email: EMAIL, primary: true, verified: true }]);
+    if (u.includes('api.github.com/user')) return Response.json({ id: 42, login: 'sam', name: 'Sam' });
+    if (u.startsWith('https://iam.test') && /token/.test(u)) return Response.json({ ok: true, access_token: 'iam_access' });
+    if (u.startsWith('https://iam.test')) return Response.json({ sub: 'iam-1', email: EMAIL, email_verified: true, name: 'Sam' });
+    throw new Error(`unexpected_fetch:${u}`);
+  };
+  try { return await fn(); } finally { globalThis.fetch = realFetch; }
+}
+
+for (const lane of LANES) {
+  test(`[${lane.name}] native login: desktop session → handoff → PKCE exchange, no grant writes`, async () => {
+    const db = createTestD1();
+    const env = { DB: db, ...lane.env };
+    const verifier = pkceVerifier();
+
+    const startUrl = new URL(`https://studio.test${lane.start}`);
+    startUrl.searchParams.set('client', 'native');
+    startUrl.searchParams.set('native_challenge', await pkceChallenge(verifier));
+    startUrl.searchParams.set('native_redirect', REDIRECT);
+    const start = await handleIdentityWorkerRequest(new Request(startUrl), env, options);
+    assert.equal(start.status, 302);
+    const state = new URL(start.headers.get('location')).searchParams.get('state');
+    assert.equal(db.sqlite.prepare('SELECT client_type FROM identity_oauth_states WHERE state = ?').get(state).client_type, 'desktop');
+
+    const cb = await withAllProviderStubs(() => handleIdentityWorkerRequest(
+      new Request(`https://studio.test${lane.callback}?code=abc&state=${state}`), env, options,
+    ));
+    assert.equal(cb.status, 302);
+    assert.equal(cb.headers.get('set-cookie'), null, 'no browser cookie on native login');
+    const location = new URL(cb.headers.get('location'));
+    assert.equal(`${location.protocol}//${location.host}${location.pathname}`, REDIRECT);
+    const handoff = location.searchParams.get('handoff');
+    assert.ok(handoff);
+
+    const session = db.sqlite.prepare('SELECT * FROM auth_sessions').get();
+    assert.equal(session.type, 'desktop');
+    assert.equal(session.provider, lane.sessionProvider);
+    assert.ok(!location.toString().includes(session.id));
+    assert.equal(db.log.some((s) => /user_oauth_tokens/i.test(s)), false, 'sign-in never writes provider grants');
+
+    const exchange = () => handleIdentityWorkerRequest(new Request('https://studio.test/api/oauth/native/exchange', {
+      method: 'POST', body: JSON.stringify({ handoff, code_verifier: verifier }),
+    }), env, options);
+    const ok = await exchange();
+    assert.equal(ok.status, 200);
+    const payload = await ok.json();
+    assert.equal(payload.session_id, session.id);
+    assert.equal(payload.user.email, EMAIL);
+    assert.ok(payload.expires_at > 0);
+    assert.equal((await exchange()).status, 400, 'single-use');
+  });
+}
+
+test('IAM is optional: Cloudflare native sign-in works with no IAM config, and the IAM lane reports not-configured', async () => {
+  const db = createTestD1();
+  const env = { DB: db, ...LANES[0].env }; // no IAM_* at all
+  const iamStart = await handleIdentityWorkerRequest(
+    new Request('https://studio.test/api/oauth/inneranimalmedia/start'), env, options,
+  );
+  assert.equal(iamStart.status, 503);
+  assert.equal((await iamStart.json()).error, 'inneranimalmedia_oauth_not_configured');
+
+  const cfStart = await nativeStart(env, { challenge: await pkceChallenge(pkceVerifier()) });
+  assert.equal(cfStart.status, 302);
+});
