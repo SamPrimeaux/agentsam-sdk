@@ -959,18 +959,39 @@ const SHELL_ACCENTS = [
   { id: "#BE185D", label: "Rose" },
 ] as const;
 
+
+export type ShellAppearancePreference = {
+  theme: "dark" | "light" | "system";
+  accent: string;
+};
+
+export function readShellAppearancePreference(
+  storage?: Pick<Storage, "getItem">,
+): ShellAppearancePreference | null {
+  const source =
+    storage ?? (typeof window !== "undefined" ? window.localStorage : undefined);
+  if (!source) return null;
+  try {
+    const value = source.getItem(SHELL_APPEARANCE_KEY);
+    if (!value) return null;
+    const raw = JSON.parse(value) as Partial<ShellAppearancePreference>;
+    if (raw.theme !== "dark" && raw.theme !== "light" && raw.theme !== "system") return null;
+    if (typeof raw.accent !== "string" || !/^#[0-9a-f]{6}$/i.test(raw.accent)) return null;
+    return { theme: raw.theme, accent: raw.accent };
+  } catch {
+    return null;
+  }
+}
+
 function AppearancePreferences() {
   const [theme, setTheme] = useState<"dark" | "light" | "system">("dark");
   const [accent, setAccent] = useState<string>(SHELL_ACCENTS[1].id);
 
   useEffect(() => {
-    try {
-      const raw = JSON.parse(localStorage.getItem(SHELL_APPEARANCE_KEY) ?? "{}");
-      if (raw.theme === "dark" || raw.theme === "light" || raw.theme === "system") setTheme(raw.theme);
-      if (typeof raw.accent === "string" && /^#[0-9a-f]{6}$/i.test(raw.accent)) setAccent(raw.accent);
-    } catch {
-      /* defaults */
-    }
+    const saved = readShellAppearancePreference();
+    if (!saved) return;
+    setTheme(saved.theme);
+    setAccent(saved.accent);
   }, []);
 
   function commit(nextTheme: typeof theme, nextAccent: string) {

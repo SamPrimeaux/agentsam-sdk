@@ -1,13 +1,13 @@
 /* AgentSam CMS shell — mobile-first, warm command center + editor chrome */
 .iam-cms-shell {
-  --cms-bg: #f9f7f2;
-  --cms-panel: #ffffff;
-  --cms-border: #e8e4dc;
-  --cms-text: #1a1a1a;
-  --cms-muted: #6b6560;
-  --cms-teal: #0d9488;
-  --cms-teal-soft: rgba(13, 148, 136, 0.12);
-  --cms-shadow: 0 1px 0 rgba(26, 26, 26, 0.04), 0 12px 40px rgba(26, 26, 26, 0.06);
+  --cms-bg: var(--color-background, #f9f7f2);
+  --cms-panel: var(--color-card, #ffffff);
+  --cms-border: var(--color-border, #e8e4dc);
+  --cms-text: var(--color-foreground, #1a1a1a);
+  --cms-muted: var(--color-muted-foreground, #6b6560);
+  --cms-teal: var(--color-accent, #0d9488);
+  --cms-teal-soft: color-mix(in srgb, var(--cms-teal) 14%, transparent);
+  --cms-shadow: 0 1px 0 color-mix(in srgb, var(--cms-text) 5%, transparent), 0 12px 40px color-mix(in srgb, var(--cms-text) 7%, transparent);
   display: flex;
   flex-direction: column;
   flex: 1;

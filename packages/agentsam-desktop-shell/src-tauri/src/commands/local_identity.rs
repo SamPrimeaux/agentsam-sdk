@@ -1,5 +1,5 @@
 use reqwest::Method;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
@@ -68,6 +68,176 @@ fn validate_service_origin(origin: &str) -> Result<(), String> {
     Ok(())
 }
 
+
+#[derive(Debug, Deserialize)]
+struct StudioServiceBridgeRequest {
+    operation: String,
+    #[serde(default)]
+    account_id: Option<String>,
+    #[serde(default)]
+    body: Option<Value>,
+    #[serde(default)]
+    path: Option<String>,
+    #[serde(default)]
+    method: Option<String>,
+    #[serde(default)]
+    session_id: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct StudioServiceBridgeResponse {
+    ok: bool,
+    status: u16,
+    content_type: String,
+    body: String,
+}
+
+fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method, String), String> {
+    match request.operation.trim() {
+        "inventory" => Ok((Method::GET, "/api/llm/inventory".to_string())),
+        "chat" => Ok((Method::POST, "/api/chat".to_string())),
+        "connections" => {
+            let path = request.path.as_deref().unwrap_or("").trim();
+            if !(path == "/api/connections" || path.starts_with("/api/connections/"))
+                || path.contains("://")
+                || path.contains('\\')
+                || path.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10)
+            {
+                return Err("studio_service_connections_path_invalid".into());
+            }
+            let method = match request.method.as_deref().unwrap_or("GET").to_ascii_uppercase().as_str() {
+                "GET" => Method::GET,
+                "POST" => Method::POST,
+                "DELETE" => Method::DELETE,
+                _ => return Err("studio_service_connections_method_invalid".into()),
+            };
+            Ok((method, path.to_string()))
+        }
+        "database" => {
+            let path = request.path.as_deref().unwrap_or("").trim();
+            if !path.starts_with("/api/database/")
+                || path.contains("://")
+                || path.contains('\\')
+                || path.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10)
+            {
+                return Err("studio_service_database_path_invalid".into());
+            }
+            let method = match request.method.as_deref().unwrap_or("GET").to_ascii_uppercase().as_str() {
+                "GET" => Method::GET,
+                "POST" => Method::POST,
+                "PATCH" => Method::PATCH,
+                "DELETE" => Method::DELETE,
+                _ => return Err("studio_service_database_method_invalid".into()),
+            };
+            Ok((method, path.to_string()))
+        }
+        "cms" => {
+            let path = request.path.as_deref().unwrap_or("").trim();
+            if !path.starts_with("/api/cms/")
+                || path.contains("://")
+                || path.contains('\\')
+                || path.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10)
+            {
+                return Err("studio_service_cms_path_invalid".into());
+            }
+            let method = match request.method.as_deref().unwrap_or("GET").to_ascii_uppercase().as_str() {
+                "GET" => Method::GET,
+                "POST" => Method::POST,
+                "PUT" => Method::PUT,
+                "PATCH" => Method::PATCH,
+                "DELETE" => Method::DELETE,
+                _ => return Err("studio_service_cms_method_invalid".into()),
+            };
+            Ok((method, path.to_string()))
+        }
+        _ => Err("unsupported_studio_service_operation".into()),
+    }
+}
+
+async fn service_studio_bridge(
+    config: &IdentityRuntimeConfig,
+    request_json: &str,
+) -> Result<String, String> {
+    let origin = config
+        .service_origin
+        .as_deref()
+        .ok_or_else(|| "identity_service_not_configured".to_string())?;
+    validate_service_origin(origin)?;
+
+    let request: StudioServiceBridgeRequest = serde_json::from_str(request_json)
+        .map_err(|e| format!("studio_service_request_invalid:{e}"))?;
+    let (method, path) = studio_service_route(&request)?;
+    let url = format!("{origin}{path}");
+    let mut builder = reqwest::Client::new()
+        .request(method.clone(), url)
+        .header("accept", "application/json")
+        .header("X-AgentSam-Native-Client", "1");
+
+    if request.operation.trim() == "connections"
+        && request.path.as_deref().unwrap_or("").split('?').next().unwrap_or("").ends_with("/start")
+    {
+        builder = builder.header("X-Agentsam-Oauth", "json");
+    }
+
+    if let Some(account_id) = request.account_id {
+        let account_id = account_id.trim();
+        if !account_id.is_empty() {
+            if account_id.len() > 256 || account_id.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10) {
+                return Err("studio_service_account_id_invalid".into());
+            }
+            builder = builder.header("X-User-Id", account_id);
+        }
+    }
+
+    if let Some(session_id) = request.session_id.as_deref() {
+        let session_id = session_id.trim();
+        if !session_id.is_empty() {
+            if session_id.len() > 2048 || session_id.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10) {
+                return Err("studio_service_session_invalid".into());
+            }
+            builder = builder.bearer_auth(session_id);
+        }
+    }
+
+    if method != Method::GET {
+        builder = builder.json(&request.body.unwrap_or_else(|| json!({})));
+    }
+
+    let response = builder
+        .send()
+        .await
+        .map_err(|e| format!("studio_service_request_failed:{e}"))?;
+    let status = response.status();
+    let content_type = response
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("")
+        .to_string();
+    let body = response.text().await.unwrap_or_default();
+
+    serde_json::to_string(&StudioServiceBridgeResponse {
+        ok: status.is_success(),
+        status: status.as_u16(),
+        content_type,
+        body,
+    })
+    .map_err(|e| format!("studio_service_response_encode_failed:{e}"))
+}
+
+fn identity_service_route(op: &str) -> Result<(Method, &'static str, bool), String> {
+    match op {
+        "login" => Ok((Method::POST, "/api/auth/login", true)),
+        "signup" => Ok((Method::POST, "/api/auth/signup", true)),
+        "status" => Ok((Method::GET, "/api/auth/me", false)),
+        "logout" => Ok((Method::POST, "/api/auth/logout", false)),
+        "reset_request" => Ok((Method::POST, "/api/auth/password-reset/request", false)),
+        "reset_confirm" => Ok((Method::POST, "/api/auth/password-reset/confirm", false)),
+        "native_exchange" => Ok((Method::POST, "/api/oauth/native/exchange", false)),
+        _ => Err("unsupported_identity_operation".into()),
+    }
+}
+
 async fn service_identity_bridge(
     config: &IdentityRuntimeConfig,
     request_json: &str,
@@ -91,15 +261,7 @@ async fn service_identity_bridge(
         .map(str::to_string)
         .filter(|value| !value.is_empty());
 
-    let (method, path, native_session) = match op.as_str() {
-        "login" => (Method::POST, "/api/auth/login", true),
-        "signup" => (Method::POST, "/api/auth/signup", true),
-        "status" => (Method::GET, "/api/auth/me", false),
-        "logout" => (Method::POST, "/api/auth/logout", false),
-        "reset_request" => (Method::POST, "/api/auth/password-reset/request", false),
-        "reset_confirm" => (Method::POST, "/api/auth/password-reset/confirm", false),
-        _ => return Err("unsupported_identity_operation".into()),
-    };
+    let (method, path, native_session) = identity_service_route(op.as_str())?;
 
     if let Value::Object(ref mut map) = request {
         map.remove("op");
@@ -256,6 +418,15 @@ async fn run_local_identity(app: AppHandle, request_json: String) -> Result<Stri
 }
 
 #[tauri::command]
+pub async fn studio_service_bridge(app: AppHandle, request_json: String) -> Result<String, String> {
+    let config = load_runtime_config(&app)?;
+    if config.authority != "service" {
+        return Err("studio_service_requires_connected_authority".into());
+    }
+    service_studio_bridge(&config, &request_json).await
+}
+
+#[tauri::command]
 pub async fn identity_bridge(app: AppHandle, request_json: String) -> Result<String, String> {
     let config = load_runtime_config(&app)?;
     match config.authority.as_str() {
@@ -285,5 +456,28 @@ pub async fn local_identity_bridge(app: AppHandle, request_json: String) -> Resu
         let _ = app;
         let _ = request_json;
         Err("standalone_identity_requires_mobile_native_adapter".into())
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn native_exchange_uses_canonical_identity_handoff_route() {
+        let (method, path, native_session) =
+            identity_service_route("native_exchange").expect("native exchange route");
+        assert_eq!(method, Method::POST);
+        assert_eq!(path, "/api/oauth/native/exchange");
+        assert!(!native_session);
+    }
+
+    #[test]
+    fn unknown_identity_operation_fails_closed() {
+        assert_eq!(
+            identity_service_route("desktop_magic").unwrap_err(),
+            "unsupported_identity_operation"
+        );
     }
 }

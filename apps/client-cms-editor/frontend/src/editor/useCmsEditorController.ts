@@ -46,6 +46,7 @@ export type UseCmsEditorControllerArgs = {
   host?: CmsEditorHost;
   siteId: string;
   initialPageId?: string | null;
+  initialRail?: CmsEditorUiState['rail'];
   temporaryAdapter?: boolean;
 };
 
@@ -54,6 +55,7 @@ export function useCmsEditorController({
   host,
   siteId,
   initialPageId = null,
+  initialRail = 'sections',
   temporaryAdapter = false,
 }: UseCmsEditorControllerArgs): CmsEditorController {
   const [site, setSite] = useState<CmsEditorSite | null>(null);
@@ -63,7 +65,7 @@ export function useCmsEditorController({
   const [published, setPublished] = useState<CmsPublicationSnapshot | null>(null);
   const [lastDraft, setLastDraft] = useState<CmsRevision | null>(null);
   const [ui, setUi] = useState<CmsEditorUiState>({
-    rail: 'sections',
+    rail: initialRail,
     viewport: 'desktop',
     dirty: false,
     saving: false,

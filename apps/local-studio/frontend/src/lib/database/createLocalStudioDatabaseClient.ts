@@ -1,10 +1,58 @@
 import {
   createDatabaseStudioClient,
+  type DatabaseHttpFetch,
   type DatabaseSource,
   type DatabaseStudioClient,
   type DatabaseTableInfo,
 } from "@inneranimalmedia/agentsam-database-editor/frontend";
 import { createLocalStudioLocalHost, localBridgeDispatch } from "./localHost";
+import { invokeStudioService, isPackagedDesktop, resolveDesktopStudioAccountId } from "@/lib/desktop/tauri";
+
+const desktopDatabaseFetch: DatabaseHttpFetch = async (input, init) => {
+  const rawUrl = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+  const parsed = new URL(rawUrl, "https://local.studio.invalid");
+  const path = parsed.pathname + parsed.search;
+  const method = String(init?.method || "GET").toUpperCase() as "GET" | "POST" | "PATCH" | "DELETE";
+  let body: unknown = undefined;
+  if (typeof init?.body === "string" && init.body) {
+    try {
+      body = JSON.parse(init.body);
+    } catch {
+      body = init.body;
+    }
+  }
+  const accountId = await resolveDesktopStudioAccountId();
+  const bridged = await invokeStudioService({
+    operation: "database",
+    account_id: accountId,
+    method,
+    path,
+    body,
+  });
+  return new Response(bridged.body, {
+    status: bridged.status,
+    headers: { "content-type": bridged.content_type || "application/json" },
+  });
+};
+
+const LOCAL_DATABASE_CAPABILITIES = {
+  read_rows: true,
+  query: true,
+  schema: true,
+  insert: true,
+  update: true,
+  delete: true,
+  metrics: false,
+  export: false,
+  transactions: false,
+} as const;
+
+function withLocalCapabilities(source: DatabaseSource): DatabaseSource {
+  return {
+    ...source,
+    capabilities: { ...LOCAL_DATABASE_CAPABILITIES, ...(source.capabilities || {}) },
+  };
+}
 
 function isLocalSourceId(sourceId: string) {
   return String(sourceId || "").startsWith("local-sqlite:");
@@ -17,7 +65,9 @@ function isLocalSourceId(sourceId: string) {
 export function createLocalStudioDatabaseClient(
   baseUrl = "/api/database",
 ): DatabaseStudioClient & { localHost: ReturnType<typeof createLocalStudioLocalHost> } {
-  const remote = createDatabaseStudioClient(baseUrl);
+  const remote = createDatabaseStudioClient(baseUrl, {
+    fetch: isPackagedDesktop() ? desktopDatabaseFetch : undefined,
+  });
   const localHost = createLocalStudioLocalHost();
 
   return {
@@ -40,7 +90,7 @@ export function createLocalStudioDatabaseClient(
             if (ref.kind === "agentsam" || ref.id === "local-sqlite:agentsam") {
               const opened = await localBridgeDispatch({ op: "open_agentsam", cwd: "." });
               if (opened.source && typeof opened.source === "object") {
-                localSources.push(opened.source as DatabaseSource);
+                localSources.push(withLocalCapabilities(opened.source as DatabaseSource));
               } else {
                 localSources.push({
                   id: "local-sqlite:agentsam",
@@ -49,6 +99,7 @@ export function createLocalStudioDatabaseClient(
                   label: ref.label || "AgentSam local database",
                   writable: true,
                   metrics: false,
+                  capabilities: LOCAL_DATABASE_CAPABILITIES,
                   connection: "local_runtime",
                 });
               }
@@ -91,6 +142,7 @@ export function createLocalStudioDatabaseClient(
         label: "AgentSam local database",
         writable: true,
         metrics: false,
+        capabilities: LOCAL_DATABASE_CAPABILITIES,
       }) as DatabaseSource;
       const tableCount = Array.isArray(tables.tables) ? tables.tables.length : 0;
       return {
@@ -148,6 +200,7 @@ export function createLocalStudioDatabaseClient(
           label: "AgentSam local database",
           writable: true,
           metrics: false,
+          capabilities: LOCAL_DATABASE_CAPABILITIES,
         },
         schema: body.schema as never,
       };
@@ -173,6 +226,7 @@ export function createLocalStudioDatabaseClient(
           label: "AgentSam local database",
           writable: true,
           metrics: false,
+          capabilities: LOCAL_DATABASE_CAPABILITIES,
         },
         rows: (body.rows || []) as Record<string, unknown>[],
         columns: (body.columns || []) as never[],

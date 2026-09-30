@@ -175,6 +175,35 @@ export function applyTheme(theme: StoredTheme) {
   }
   root.dataset.themePreset = theme.preset;
   root.dataset.monacoBase = theme.monacoBase;
+  root.dataset.theme = theme.monacoBase === "vs" ? "light" : "dark";
+}
+
+export type ShellAppearancePreference = {
+  theme: "dark" | "light" | "system";
+  accent: string;
+};
+
+export function applyShellAppearance(preference: ShellAppearancePreference): "dark" | "light" {
+  const systemLight =
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-color-scheme: light)").matches;
+  const resolved =
+    preference.theme === "system" ? (systemLight ? "light" : "dark") : preference.theme;
+  const preset: ThemePresetId = resolved === "light" ? "bone-paper" : "studio-dark";
+  const theme: StoredTheme = {
+    preset,
+    tokens: { ...THEME_PRESETS[preset].tokens },
+    monacoBase: resolved === "light" ? "vs" : "vs-dark",
+  };
+  if (/^#[0-9a-f]{6}$/i.test(preference.accent)) {
+    theme.tokens.accent = preference.accent;
+    theme.tokens.ring = preference.accent;
+    theme.tokens.stone = preference.accent;
+  }
+  writeTheme(theme);
+  applyTheme(theme);
+  return resolved;
 }
 
 export function hexNoHash(hex: string) {

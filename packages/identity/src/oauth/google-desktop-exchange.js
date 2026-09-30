@@ -1,3 +1,6 @@
+import { fetchGoogleProfile } from '../providers/google/profile.js';
+import { SESSION_TYPES } from '../core/session-policy.js';
+
 /**
  * Server-side Google token exchange for CLI / desktop PKCE.
  *
@@ -168,6 +171,115 @@ export async function handleGoogleDesktopExchangeRequest(request, env, opts = {}
     token_type: result.data.token_type || 'Bearer',
     expires_in: result.data.expires_in || null,
     scope: result.data.scope || null,
+    exchange_mode: resolved.mode,
+  });
+}
+
+
+export const GOOGLE_DESKTOP_LOGIN_EXCHANGE_PATH = '/api/oauth/google/desktop-login-exchange';
+
+/**
+ * Google Desktop OAuth for Local Studio account identity.
+ * The installed app performs the PKCE + loopback authorization request using
+ * GOOGLE_DESKTOP_CLIENT_ID. This Worker exchanges the code, reads the Google
+ * profile, and mints the normal AgentSam desktop session. Google provider
+ * tokens are intentionally not returned to or stored by the desktop app.
+ */
+export async function handleGoogleDesktopLoginExchangeRequest(request, env, opts = {}) {
+  if (request.method !== 'POST') {
+    return json({ ok: false, error: 'method_not_allowed' }, 405);
+  }
+  const identity = opts.identity;
+  const adapter = opts.adapter;
+  if (!identity || !adapter) {
+    return json({ ok: false, error: 'identity_service_unavailable' }, 503);
+  }
+
+  let payload = {};
+  try {
+    payload = await request.json();
+  } catch {
+    return json({ ok: false, error: 'invalid_json' }, 400);
+  }
+
+  const code = clean(payload.code);
+  const codeVerifier = clean(payload.code_verifier || payload.codeVerifier);
+  const redirectUri = clean(payload.redirect_uri || payload.redirectUri);
+  const clientId = clean(payload.client_id || payload.clientId);
+  if (!code || !codeVerifier || !redirectUri || !clientId) {
+    return json({
+      ok: false,
+      error: 'code_code_verifier_redirect_uri_client_id_required',
+    }, 400);
+  }
+  if (!isLoopbackRedirect(redirectUri)) {
+    return json({ ok: false, error: 'redirect_uri_must_be_loopback' }, 400);
+  }
+
+  const desktopId = clean(env?.GOOGLE_DESKTOP_CLIENT_ID);
+  if (!desktopId || clientId !== desktopId) {
+    return json({ ok: false, error: 'google_desktop_client_id_required' }, 403);
+  }
+
+  const resolved = resolveGoogleExchangeSecret(env, clientId);
+  if (!resolved.mode.startsWith('desktop_')) {
+    return json({ ok: false, error: 'google_desktop_client_id_required' }, 403);
+  }
+
+  const result = await exchangeGoogleAuthorizationCode({
+    code,
+    codeVerifier,
+    clientId,
+    redirectUri,
+    clientSecret: resolved.clientSecret,
+    fetchImpl: opts.fetchImpl || fetch,
+  });
+  const detail = String(result.data?.error_description || result.data?.error || '');
+  if (!result.ok) {
+    return json({
+      ok: false,
+      error: 'google_token_exchange_failed',
+      detail: detail || ('http_' + result.status),
+    }, 502);
+  }
+
+  const profile = opts.fetchProfile
+    ? await opts.fetchProfile(result.data.access_token)
+    : await fetchGoogleProfile(result.data.access_token);
+  if (!profile?.sub) {
+    return json({ ok: false, error: 'google_userinfo_failed' }, 502);
+  }
+
+  const provisioned = await identity.provisionOAuthUser({
+    provider: 'google',
+    providerSubject: String(profile.sub),
+    email: profile.email || null,
+    displayName: profile.name || profile.email || null,
+    sessionType: SESSION_TYPES.DESKTOP,
+  });
+  const user = await adapter.findUserById(provisioned.authUserId);
+  await adapter.logAuthEvent?.({
+    userId: provisioned.authUserId,
+    eventType: 'login',
+    status: 'ok',
+    provider: 'google',
+    request,
+    metadata: {
+      session_type: SESSION_TYPES.DESKTOP,
+      oauth_client_type: 'desktop',
+    },
+  });
+
+  return json({
+    ok: true,
+    authenticated: true,
+    session_id: provisioned.sessionId,
+    expires_at: provisioned.session?.expires_at ?? null,
+    user: user ? {
+      id: user.id,
+      email: user.email ?? null,
+      displayName: user.display_name ?? profile.name ?? null,
+    } : null,
     exchange_mode: resolved.mode,
   });
 }

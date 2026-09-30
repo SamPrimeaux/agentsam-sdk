@@ -1,4 +1,5 @@
 import type { AgentMessage as ChatMessage } from "@inneranimalmedia/agentsam-contracts";
+import { invokeStudioService, isPackagedDesktop, resolveDesktopStudioAccountId } from "@/lib/desktop/tauri";
 
 export async function streamChat(opts: {
   messages: Pick<ChatMessage, "role" | "content">[];
@@ -18,6 +19,37 @@ export async function streamChat(opts: {
   const userId =
     (typeof window !== "undefined" && window.localStorage.getItem("agentsam-user-id")) ||
     "studio-local";
+  const requestBody = {
+    messages: opts.messages.map((m) => ({ role: m.role, content: m.content })),
+    mode: opts.mode,
+    provider: opts.provider,
+    model_id: opts.model_id,
+    parentTitle: opts.parentTitle ?? undefined,
+    parentExcerpt: opts.parentExcerpt ?? undefined,
+    workspace: opts.workspace,
+  };
+
+  if (isPackagedDesktop()) {
+    if (opts.signal.aborted) throw new DOMException("Aborted", "AbortError");
+    const accountId = await resolveDesktopStudioAccountId();
+    const bridged = await invokeStudioService({
+      operation: "chat",
+      account_id: accountId,
+      body: requestBody,
+    });
+    if (!bridged.ok) {
+      let message = "Studio model error " + bridged.status;
+      try {
+        const body = JSON.parse(bridged.body) as { error?: string; detail?: string };
+        message = body.detail || body.error || message;
+      } catch {
+        /* preserve bounded fallback */
+      }
+      throw new Error(message);
+    }
+    if (bridged.body) opts.onDelta(bridged.body);
+    return bridged.body;
+  }
 
   const res = await fetch("/api/chat", {
     method: "POST",
@@ -25,15 +57,7 @@ export async function streamChat(opts: {
       "Content-Type": "application/json",
       "X-User-Id": userId,
     },
-    body: JSON.stringify({
-      messages: opts.messages.map((m) => ({ role: m.role, content: m.content })),
-      mode: opts.mode,
-      provider: opts.provider,
-      model_id: opts.model_id,
-      parentTitle: opts.parentTitle ?? undefined,
-      parentExcerpt: opts.parentExcerpt ?? undefined,
-      workspace: opts.workspace,
-    }),
+    body: JSON.stringify(requestBody),
     signal: opts.signal,
   });
 

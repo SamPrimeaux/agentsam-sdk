@@ -1,3 +1,16 @@
+export type DatabaseCapabilityId =
+  | "read_rows"
+  | "query"
+  | "schema"
+  | "insert"
+  | "update"
+  | "delete"
+  | "metrics"
+  | "export"
+  | "transactions";
+
+export type DatabaseSourceCapabilities = Partial<Record<DatabaseCapabilityId, boolean>>;
+
 export type DatabaseSource = {
   id: string;
   provider: "cloudflare-d1" | "supabase-postgres" | "postgres" | "local-sqlite" | string;
@@ -10,6 +23,7 @@ export type DatabaseSource = {
   num_tables?: number;
   writable: boolean;
   metrics: boolean;
+  capabilities?: DatabaseSourceCapabilities;
   accelerator?: string;
   connection?: string;
   status?: string;
@@ -148,6 +162,13 @@ export type DatabaseQueryResponse = {
 
 export type DatabaseStudioClient = ReturnType<typeof createDatabaseStudioClient>;
 
+export type DatabaseHttpFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
+export type DatabaseStudioClientOptions = {
+  fetch?: DatabaseHttpFetch;
+};
+
+
 async function readJson<T>(response: Response): Promise<T> {
   const body = (await response.json().catch(() => ({}))) as T & { error?: string };
   if (!response.ok) {
@@ -158,10 +179,14 @@ async function readJson<T>(response: Response): Promise<T> {
   return body;
 }
 
-export function createDatabaseStudioClient(baseUrl = "/api/database") {
+export function createDatabaseStudioClient(
+  baseUrl = "/api/database",
+  options: DatabaseStudioClientOptions = {},
+) {
   const base = baseUrl.replace(/\/$/, "");
+  const requestFetch = options.fetch || fetch;
   const fetchJson = async <T>(path: string, init?: RequestInit) => {
-    const response = await fetch(`${base}${path}`, {
+    const response = await requestFetch(`${base}${path}`, {
       credentials: "same-origin",
       ...init,
       headers: {

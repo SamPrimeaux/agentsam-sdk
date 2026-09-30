@@ -14,6 +14,7 @@ export type CmsEditorProps = {
   agentHost?: CmsAgentHost;
   siteId: string;
   initialPageId?: string | null;
+  initialRail?: 'pages' | 'sections' | 'blocks' | 'settings';
   /** True when the attached adapter is temporary (e.g. in-memory preview). Pack content is not temporary. */
   temporaryAdapter?: boolean;
 };
@@ -190,6 +191,7 @@ export default function CmsEditor({
   host,
   siteId,
   initialPageId = null,
+  initialRail = 'sections',
   temporaryAdapter = false,
 }: CmsEditorProps) {
   const editor = useCmsEditorController({
@@ -197,6 +199,7 @@ export default function CmsEditor({
     host,
     siteId,
     initialPageId,
+    initialRail,
     temporaryAdapter,
   });
 

@@ -22,6 +22,9 @@ export function DatabaseStage() {
           }),
         );
       }}
+      onAuthenticate={() => {
+        window.dispatchEvent(new CustomEvent("agentsam:identity-open"));
+      }}
       onAskAgentSam={(ctx) => {
         setSideOpen(true);
         openSideTab("chat", {
