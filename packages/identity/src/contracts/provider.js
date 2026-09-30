@@ -8,4 +8,5 @@ export const IdentityProviders = Object.freeze([
   'gcp',
   'inneranimalmedia',
   'cloudflare',
+  'chatgpt',
 ]);

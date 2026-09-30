@@ -33,15 +33,15 @@ describe('oauth credentials', () => {
     );
   });
 
-  it('defaults Google/GitHub buttons to IAM when minted', () => {
+  it('never silently maps Google/GitHub buttons onto IAM', () => {
     const env = {
       IAM_CLIENT_ID: 'iam_dcr_legendary',
       IAM_CLIENT_SECRET: 'secret',
       IAM_OAUTH_ISSUER: 'https://iam.example.test',
     };
-    const lane = resolveOAuthCredentialLane(env, 'google');
-    assert.equal(lane?.lane, 'iam_platform');
-    assert.equal(lane?.clientId, 'iam_dcr_legendary');
+    assert.equal(resolveOAuthCredentialLane(env, 'google'), null);
+    assert.equal(resolveOAuthCredentialLane(env, 'github'), null);
+    assert.equal(resolveOAuthCredentialLane(env, 'inneranimalmedia')?.lane, 'iam_platform');
   });
 
   it('developer BYOK Google takes the Google button when set', () => {

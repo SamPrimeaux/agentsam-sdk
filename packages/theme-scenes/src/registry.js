@@ -110,6 +110,23 @@ export const THEME_PACKAGE_REGISTRY = Object.freeze([
     aliases: ["shinshu-site", "theme-shinshu", "shinshu", "theme-shinshu-site", "shin"],
   },
   {
+    id: "iasf",
+    packageName: "@inneranimalmedia/theme-iasf",
+    path: "packages/theme-iasf",
+    kind: "site-theme",
+    label: "IASF Storefront",
+    siteSlug: "iasf",
+    donor: "inner-animals-storefront",
+    aliases: [
+      "theme-iasf",
+      "inneranimals-site",
+      "theme-inneranimals-site",
+      "inner-animals",
+      "inneranimals",
+      "iasf-storefront",
+    ],
+  },
+  {
     id: "theme-scenes",
     packageName: "@inneranimalmedia/theme-scenes",
     path: "packages/theme-scenes",

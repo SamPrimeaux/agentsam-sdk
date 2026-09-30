@@ -10,8 +10,15 @@ function DialogTrigger(props: React.ComponentProps<typeof DialogPrimitive.Trigge
   return <DialogPrimitive.Trigger {...props} />;
 }
 
-function DialogPortal(props: React.ComponentProps<typeof DialogPrimitive.Portal>) {
-  return <DialogPrimitive.Portal container={typeof document === 'undefined' ? undefined : document.querySelector<HTMLElement>('.agentsam-shell')} {...props} />;
+function DialogPortal({
+  portalToBody = false,
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Portal> & { portalToBody?: boolean }) {
+  const container =
+    portalToBody || typeof document === "undefined"
+      ? undefined
+      : document.querySelector<HTMLElement>(".agentsam-shell") || undefined;
+  return <DialogPrimitive.Portal container={container} {...props} />;
 }
 
 function DialogOverlay({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
@@ -26,10 +33,11 @@ function DialogOverlay({ className, ...props }: React.ComponentProps<typeof Dial
 function DialogContent({
   className,
   children,
+  portalToBody = false,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Content>) {
+}: React.ComponentProps<typeof DialogPrimitive.Content> & { portalToBody?: boolean }) {
   return (
-    <DialogPortal>
+    <DialogPortal portalToBody={portalToBody}>
       <DialogOverlay />
       <DialogPrimitive.Content
         className={cn(

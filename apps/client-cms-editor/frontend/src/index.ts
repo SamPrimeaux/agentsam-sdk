@@ -16,6 +16,7 @@ export {
   HEURISTIC_STARTER_PACK_ID,
 } from '../../starter-packs/heuristic';
 export { blankStarterPack, BLANK_STARTER_PACK_ID } from '../../starter-packs/blank';
+export { iasfStarterPack, IASF_STARTER_PACK_ID, listIasfStarterPacks } from '../../starter-packs/iasf';
 export { installStarterPack } from '../../shared/cms/src/starter-pack';
 export type { CmsStarterPack } from '../../shared/cms/src/starter-pack';
 export * from './surfaces/index';

@@ -5,6 +5,7 @@ import { GcpProvider } from './gcp/index.js';
 import { EmailProvider } from './email/index.js';
 import { IamProvider } from './iam/index.js';
 import { CloudflareProvider } from './cloudflare/index.js';
+import { ChatGptProvider } from './chatgpt/index.js';
 
 /**
  * Active identity provider registry.
@@ -20,12 +21,16 @@ export const identityProviders = Object.freeze({
   inneranimalmedia: IamProvider,
   iam: IamProvider,
   cloudflare: CloudflareProvider,
+  chatgpt: ChatGptProvider,
 });
 
 /** @param {string} id */
 export function getIdentityProvider(id) {
   const key = String(id || '').trim().toLowerCase();
   if (key === 'iam') return identityProviders.inneranimalmedia || identityProviders.iam || null;
+  if (key === 'openai' || key === 'chatgpt-hosted' || key === 'chatgpt_hosted') {
+    return identityProviders.chatgpt || null;
+  }
   return identityProviders[key] || null;
 }
 
@@ -40,4 +45,5 @@ export {
   EmailProvider,
   IamProvider,
   CloudflareProvider,
+  ChatGptProvider,
 };

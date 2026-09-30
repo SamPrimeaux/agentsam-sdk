@@ -109,7 +109,7 @@
     "react-dom": "^19.2.0",
     "tsup": "^8.5.0",
     "typescript": "^5.9.3",
-    "wrangler": "4.142.0"
+    "wrangler": "4.145.0"
   },
   "engines": {
     "node": ">=20"

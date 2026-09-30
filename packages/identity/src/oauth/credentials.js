@@ -89,12 +89,11 @@ export function resolveOAuthCredentialLane(env, provider) {
 
   if (key === 'google_desktop') {
     const clientId = String(env?.GOOGLE_DESKTOP_CLIENT_ID || '').trim();
-    const clientSecret = String(env?.GOOGLE_DESKTOP_CLIENT_SECRET || '').trim();
     if (clientId) {
       return {
         lane: 'byok_google_desktop',
         clientId,
-        clientSecret,
+        clientSecret: '',
         provider: 'google_desktop',
       };
     }
@@ -122,18 +121,18 @@ export function resolveOAuthCredentialLane(env, provider) {
     return null;
   }
 
-  // Default: Google/GitHub buttons route through IAM platform when minted.
-  const iam = resolveIamPlatformCredentials(env);
-  if (iam) {
+  if (key === 'chatgpt' || key === 'openai' || key === 'chatgpt_hosted') {
+    // Hosted Apps SDK identity — no OAuth client secret. Selection is always
+    // available; runtime proof comes from oai-authenticated-* request headers.
     return {
-      lane: 'iam_platform',
-      clientId: iam.clientId,
-      clientSecret: iam.clientSecret,
-      origin: iam.origin,
-      issuer: iam.issuer,
-      provider: 'inneranimalmedia',
+      lane: 'hosted_chatgpt',
+      clientId: String(env?.CHATGPT_APP_ID || env?.OPENAI_APP_ID || 'chatgpt-hosted').trim(),
+      clientSecret: '',
+      provider: 'chatgpt',
     };
   }
 
+  // Provider selection is fail-closed. A Google or GitHub button must never
+  // silently become InnerAnimalMedia/IAM. IAM remains an explicit provider.
   return null;
 }

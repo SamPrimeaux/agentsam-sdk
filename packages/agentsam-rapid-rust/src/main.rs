@@ -8,7 +8,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 const WORKER_VERSION: &str = "0.8.7";
 const WORKER_BUILD_VERSION: &str = "0.8.7";
-const WRANGLER_VERSION: &str = "4.141.0";
+const WRANGLER_VERSION: &str = "4.145.0";
 const COMPATIBILITY_DATE: &str = "2026-09-27";
 
 #[derive(Parser, Debug)]

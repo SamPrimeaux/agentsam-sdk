@@ -30,6 +30,8 @@
     "./oauth/callback": "./src/oauth/callback.js",
     "./frontend/auth-portal/*": "./src/frontend/auth-portal/*",
     "./providers/cloudflare": "./src/providers/cloudflare/index.js",
+    "./providers/chatgpt": "./src/providers/chatgpt/index.js",
+    "./contracts/sign-in-options": "./src/contracts/sign-in-options.js",
     "./oauth/consent-view": "./src/oauth/consent-view.js"
   },
   "scripts": {

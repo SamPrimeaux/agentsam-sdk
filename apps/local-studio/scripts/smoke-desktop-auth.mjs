@@ -31,6 +31,10 @@ const source = {
   config: read(join(repoRoot, "packages/agentsam-desktop-shell/src-tauri/tauri.conf.json")),
 };
 
+const googleAccountWorker = source.googleDesktopWorker.slice(
+  source.googleDesktopWorker.indexOf("export const GOOGLE_DESKTOP_LOGIN_EXCHANGE_PATH"),
+);
+
 const failures = [];
 function requireSource(condition, reason) {
   if (!condition) failures.push(reason);
@@ -43,16 +47,31 @@ requireSource(source.auth.includes('op: "native_exchange"'), "native_exchange_cl
 requireSource(source.auth.includes("identity_native_oauth_pending"), "pkce_pending_secure_store_missing");
 requireSource(source.auth.includes("openExternalUrl"), "system_browser_open_missing");
 requireSource(source.auth.includes("listenDeepLinks"), "frontend_deep_link_listener_missing");
-requireSource(source.tauri.includes("deepLink?.onOpenUrl"), "tauri_direct_deep_link_listener_missing");
-requireSource(source.tauri.includes("plugin:deep-link|get_current"), "cold_start_deep_link_read_missing");
+requireSource(source.tauri.includes('invoke("take_pending_deep_links"'), "native_deep_link_drain_missing");
+requireSource(source.deepLink.includes("DeepLinkState"), "native_deep_link_state_missing");
+requireSource(source.deepLink.includes("take_pending_deep_links"), "native_deep_link_command_missing");
 requireSource(source.auth.includes('provider === "google"'), "google_desktop_branch_missing");
 requireSource(source.auth.includes("google_desktop_identity_login"), "google_desktop_command_missing");
 requireSource(source.auth.includes("google_desktop_native_flow_required"), "google_web_native_fail_closed_missing");
 requireSource(source.googleDesktopRust.includes("google_desktop_client_id"), "google_desktop_public_config_missing");
 requireSource(source.googleDesktopRust.includes("openid email profile"), "google_desktop_identity_scopes_missing");
+requireSource(source.googleDesktopRust.includes("https://oauth2.googleapis.com/token"), "google_desktop_token_endpoint_missing");
+requireSource(source.googleDesktopRust.includes("google_token_exchange_form"), "google_desktop_native_token_exchange_missing");
+const googleTokenForm = source.googleDesktopRust.slice(
+  source.googleDesktopRust.indexOf("fn google_token_exchange_form"),
+  source.googleDesktopRust.indexOf("fn validated_origin"),
+);
+requireSource(!googleTokenForm.includes("client_secret"), "google_desktop_secret_reference_present");
+requireSource(source.portal.includes("Continue with Google"), "google_provider_removed");
+requireSource(source.portal.includes("Continue with GitHub"), "github_provider_removed");
+requireSource(source.portal.includes("Continue with Cloudflare"), "cloudflare_provider_removed");
+requireSource(source.portal.includes("portalToBody"), "desktop_account_dialog_body_portal_missing");
 requireSource(source.googleDesktopRust.includes("/api/oauth/google/desktop-login-exchange"), "google_desktop_identity_exchange_missing");
 requireSource(source.googleDesktopWorker.includes("GOOGLE_DESKTOP_CLIENT_ID"), "google_desktop_worker_client_gate_missing");
 requireSource(source.googleDesktopWorker.includes("sessionType: SESSION_TYPES.DESKTOP"), "google_desktop_session_type_missing");
+requireSource(googleAccountWorker.includes("desktop_public_pkce_native_exchange"), "google_desktop_native_session_handoff_missing");
+requireSource(!googleAccountWorker.includes("GOOGLE_DESKTOP_CLIENT_SECRET"), "google_desktop_account_secret_gate_present");
+requireSource(!googleAccountWorker.includes("code_verifier"), "google_desktop_worker_pkce_exchange_present");
 requireSource(source.rust.includes('"/api/oauth/native/exchange"'), "native_exchange_rust_route_missing");
 requireSource(source.deepLink.includes('"agentsam://deep-link"'), "rust_deep_link_emit_missing");
 requireSource(source.config.includes('"agentsamstudio"'), "deep_link_registration_missing");

@@ -5,7 +5,9 @@
   "providers": [
     {
       "id": "inneranimalmedia",
-      "aliases": ["iam"],
+      "aliases": [
+        "iam"
+      ],
       "oauth_provider_key": "iam",
       "kind": "oidc",
       "status": "ready",
@@ -40,7 +42,9 @@
     },
     {
       "id": "google_desktop",
-      "aliases": ["google-desktop"],
+      "aliases": [
+        "google-desktop"
+      ],
       "kind": "oauth",
       "status": "ready",
       "implementation": "src/providers/google",
@@ -52,10 +56,8 @@
       "required_configuration": [
         "GOOGLE_DESKTOP_CLIENT_ID"
       ],
-      "optional_configuration": [
-        "GOOGLE_DESKTOP_CLIENT_SECRET"
-      ],
-      "notes": "Desktop/public PKCE client (Console type Desktop app — no secret). Worker brokers POST /api/oauth/google/desktop-exchange for loopback redirects. Optional GOOGLE_DESKTOP_CLIENT_SECRET only if the client id was mis-typed as Web."
+      "optional_configuration": [],
+      "notes": "Desktop/public PKCE client (Console type Desktop app). Uses system browser + loopback redirect and no embedded client secret."
     },
     {
       "id": "github",
@@ -81,7 +83,7 @@
         "identity.oauth.authorize",
         "identity.profile.resolve"
       ],
-      "notes": "Contract + authorize URL only — exchange not implemented."
+      "notes": "Contract + authorize URL only \u2014 exchange not implemented."
     },
     {
       "id": "email",
@@ -111,6 +113,24 @@
         "CLOUDFLARE_OAUTH_CLIENT_SECRET"
       ],
       "notes": "Cloudflare sign-in (same Worker secrets as the Cloudflare resource connector). Client secret optional for PKCE-only clients (Token Authentication Method = None)."
+    },
+    {
+      "id": "chatgpt",
+      "aliases": [
+        "openai",
+        "chatgpt-hosted"
+      ],
+      "kind": "hosted_headers",
+      "status": "ready",
+      "registered": true,
+      "implementation": "src/providers/chatgpt",
+      "capabilities": [
+        "identity.hosted.headers",
+        "identity.profile.resolve",
+        "cms.auth_host"
+      ],
+      "required_configuration": [],
+      "notes": "ChatGPT / OpenAI Apps SDK hosted identity. Reads oai-authenticated-* request headers and normalizes to NormalizedExternalIdentity (provider=chatgpt). Not classic OAuth client credentials — use createChatGptCmsAuthHost for /cms protection."
     }
   ]
 }

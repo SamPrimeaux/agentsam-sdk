@@ -131,12 +131,15 @@ export function DesktopIdentityPortal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[min(94vw,520px)] max-w-none overflow-hidden border-border bg-background p-0 text-foreground">
+      <DialogContent
+        portalToBody
+        className="w-[min(92vw,460px)] max-w-none overflow-hidden border border-border bg-card p-0 text-card-foreground shadow-2xl"
+      >
         <div className="border-b border-border px-6 py-5">
           <DialogTitle className="text-base font-semibold">AgentSam account</DialogTitle>
-          <DialogDescription className="mt-1 text-sm text-muted-foreground">
-            Local Studio opens the system browser for account authentication. Cloudflare resource
-            access remains a separate provider connection.
+          <DialogDescription className="mt-1 text-sm leading-5 text-muted-foreground">
+            Sign in through your system browser. Provider authorization such as Cloudflare resource
+            access remains a separate grant from your AgentSam account session.
           </DialogDescription>
         </div>
 

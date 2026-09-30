@@ -4,10 +4,9 @@ import { SESSION_TYPES } from '../core/session-policy.js';
 /**
  * Server-side Google token exchange for CLI / desktop PKCE.
  *
- * Desktop/"installed" OAuth clients must be type Desktop in Google Console (no secret).
- * If the configured desktop client_id was created as a Web client, Google demands a secret.
- * Secrets never leave the Worker: GOOGLE_DESKTOP_CLIENT_SECRET (optional) or GOOGLE_CLIENT_SECRET
- * when client_id matches the web client.
+ * Desktop/"installed" OAuth clients are public PKCE clients and never use an
+ * AgentSam desktop client-secret configuration. The hosted web client remains
+ * confidential and uses GOOGLE_CLIENT_SECRET.
  */
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -43,12 +42,8 @@ export function resolveGoogleExchangeSecret(env, clientId) {
   const id = clean(clientId);
   const desktopId = clean(env?.GOOGLE_DESKTOP_CLIENT_ID);
   const webId = clean(env?.GOOGLE_CLIENT_ID);
-  const desktopSecret = clean(env?.GOOGLE_DESKTOP_CLIENT_SECRET);
   const webSecret = clean(env?.GOOGLE_CLIENT_SECRET);
 
-  if (id && desktopId && id === desktopId && desktopSecret) {
-    return { clientId: id, clientSecret: desktopSecret, mode: 'desktop_with_optional_secret' };
-  }
   if (id && webId && id === webId && webSecret) {
     return { clientId: id, clientSecret: webSecret, mode: 'web_confidential' };
   }
@@ -138,24 +133,6 @@ export async function handleGoogleDesktopExchangeRequest(request, env, opts = {}
   });
 
   const detail = String(result.data?.error_description || result.data?.error || '');
-  if (
-    !result.ok
-    && /client_secret/i.test(detail)
-    && resolved.mode === 'desktop_public_pkce'
-    && !resolved.clientSecret
-  ) {
-    return json({
-      ok: false,
-      error: 'desktop_client_requires_secret',
-      detail,
-      remediation: [
-        'In Google Cloud Console create OAuth client type Desktop app (no secret) and set GOOGLE_DESKTOP_CLIENT_ID to that client id.',
-        'Or if this client id is a Web app, put its secret on the Worker: wrangler secret put GOOGLE_DESKTOP_CLIENT_SECRET',
-        'Web browser login continues to use GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET.',
-      ],
-    }, 502);
-  }
-
   if (!result.ok) {
     return json({
       ok: false,
@@ -177,13 +154,53 @@ export async function handleGoogleDesktopExchangeRequest(request, env, opts = {}
 
 
 export const GOOGLE_DESKTOP_LOGIN_EXCHANGE_PATH = '/api/oauth/google/desktop-login-exchange';
+const GOOGLE_ID_TOKEN_INFO_URL = 'https://oauth2.googleapis.com/tokeninfo';
+
+async function verifyGoogleDesktopIdToken(idToken, clientId, fetchImpl = fetch) {
+  const url = new URL(GOOGLE_ID_TOKEN_INFO_URL);
+  url.searchParams.set('id_token', clean(idToken));
+  const response = await fetchImpl(url, {
+    headers: { Accept: 'application/json' },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    return {
+      ok: false,
+      error: 'google_id_token_invalid',
+      detail: clean(data.error_description || data.error),
+    };
+  }
+
+  const audience = clean(data.aud);
+  const issuer = clean(data.iss);
+  const expiresAt = Number(data.exp || 0);
+  const emailVerified = data.email_verified === true || String(data.email_verified) === 'true';
+
+  if (audience !== clean(clientId)) {
+    return { ok: false, error: 'google_id_token_audience_mismatch' };
+  }
+  if (!['accounts.google.com', 'https://accounts.google.com'].includes(issuer)) {
+    return { ok: false, error: 'google_id_token_issuer_invalid' };
+  }
+  if (!Number.isFinite(expiresAt) || expiresAt <= Math.floor(Date.now() / 1000)) {
+    return { ok: false, error: 'google_id_token_expired' };
+  }
+  if (!emailVerified) {
+    return { ok: false, error: 'google_email_not_verified' };
+  }
+
+  return { ok: true, data };
+}
 
 /**
- * Google Desktop OAuth for Local Studio account identity.
- * The installed app performs the PKCE + loopback authorization request using
- * GOOGLE_DESKTOP_CLIENT_ID. This Worker exchanges the code, reads the Google
- * profile, and mints the normal AgentSam desktop session. Google provider
- * tokens are intentionally not returned to or stored by the desktop app.
+ * Google Desktop account identity handoff.
+ *
+ * The installed app is the public OAuth client. It performs Google
+ * Authorization Code + PKCE + loopback and exchanges the authorization code
+ * directly with Google. This endpoint never receives the PKCE verifier and
+ * never needs a desktop client secret; it validates the transient Google ID
+ * token against GOOGLE_DESKTOP_CLIENT_ID, resolves the profile, and mints the
+ * normal AgentSam desktop session.
  */
 export async function handleGoogleDesktopLoginExchangeRequest(request, env, opts = {}) {
   if (request.method !== 'POST') {
@@ -202,18 +219,14 @@ export async function handleGoogleDesktopLoginExchangeRequest(request, env, opts
     return json({ ok: false, error: 'invalid_json' }, 400);
   }
 
-  const code = clean(payload.code);
-  const codeVerifier = clean(payload.code_verifier || payload.codeVerifier);
-  const redirectUri = clean(payload.redirect_uri || payload.redirectUri);
+  const accessToken = clean(payload.access_token || payload.accessToken);
+  const idToken = clean(payload.id_token || payload.idToken);
   const clientId = clean(payload.client_id || payload.clientId);
-  if (!code || !codeVerifier || !redirectUri || !clientId) {
+  if (!accessToken || !idToken || !clientId) {
     return json({
       ok: false,
-      error: 'code_code_verifier_redirect_uri_client_id_required',
+      error: 'access_token_id_token_client_id_required',
     }, 400);
-  }
-  if (!isLoopbackRedirect(redirectUri)) {
-    return json({ ok: false, error: 'redirect_uri_must_be_loopback' }, 400);
   }
 
   const desktopId = clean(env?.GOOGLE_DESKTOP_CLIENT_ID);
@@ -221,40 +234,41 @@ export async function handleGoogleDesktopLoginExchangeRequest(request, env, opts
     return json({ ok: false, error: 'google_desktop_client_id_required' }, 403);
   }
 
-  const resolved = resolveGoogleExchangeSecret(env, clientId);
-  if (!resolved.mode.startsWith('desktop_')) {
-    return json({ ok: false, error: 'google_desktop_client_id_required' }, 403);
-  }
-
-  const result = await exchangeGoogleAuthorizationCode({
-    code,
-    codeVerifier,
+  const verified = await verifyGoogleDesktopIdToken(
+    idToken,
     clientId,
-    redirectUri,
-    clientSecret: resolved.clientSecret,
-    fetchImpl: opts.fetchImpl || fetch,
-  });
-  const detail = String(result.data?.error_description || result.data?.error || '');
-  if (!result.ok) {
+    opts.fetchImpl || fetch,
+  );
+  if (!verified.ok) {
     return json({
       ok: false,
-      error: 'google_token_exchange_failed',
-      detail: detail || ('http_' + result.status),
-    }, 502);
+      error: verified.error,
+      detail: verified.detail || null,
+    }, 401);
   }
 
   const profile = opts.fetchProfile
-    ? await opts.fetchProfile(result.data.access_token)
-    : await fetchGoogleProfile(result.data.access_token);
+    ? await opts.fetchProfile(accessToken)
+    : await fetchGoogleProfile(accessToken);
   if (!profile?.sub) {
     return json({ ok: false, error: 'google_userinfo_failed' }, 502);
+  }
+  if (clean(verified.data.sub) && clean(verified.data.sub) !== clean(profile.sub)) {
+    return json({ ok: false, error: 'google_subject_mismatch' }, 401);
+  }
+  if (
+    clean(verified.data.email) &&
+    clean(profile.email) &&
+    clean(verified.data.email).toLowerCase() !== clean(profile.email).toLowerCase()
+  ) {
+    return json({ ok: false, error: 'google_email_mismatch' }, 401);
   }
 
   const provisioned = await identity.provisionOAuthUser({
     provider: 'google',
     providerSubject: String(profile.sub),
-    email: profile.email || null,
-    displayName: profile.name || profile.email || null,
+    email: profile.email || verified.data.email || null,
+    displayName: profile.name || profile.email || verified.data.email || null,
     sessionType: SESSION_TYPES.DESKTOP,
   });
   const user = await adapter.findUserById(provisioned.authUserId);
@@ -266,7 +280,7 @@ export async function handleGoogleDesktopLoginExchangeRequest(request, env, opts
     request,
     metadata: {
       session_type: SESSION_TYPES.DESKTOP,
-      oauth_client_type: 'desktop',
+      oauth_client_type: 'desktop_public_pkce',
     },
   });
 
@@ -280,6 +294,6 @@ export async function handleGoogleDesktopLoginExchangeRequest(request, env, opts
       email: user.email ?? null,
       displayName: user.display_name ?? profile.name ?? null,
     } : null,
-    exchange_mode: resolved.mode,
+    exchange_mode: 'desktop_public_pkce_native_exchange',
   });
 }

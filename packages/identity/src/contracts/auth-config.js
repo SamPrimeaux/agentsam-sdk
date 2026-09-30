@@ -21,7 +21,6 @@ export const AGENTSAM_AUTH_ENV = Object.freeze({
   googleClientId: 'GOOGLE_CLIENT_ID',
   googleClientSecret: 'GOOGLE_CLIENT_SECRET',
   googleDesktopClientId: 'GOOGLE_DESKTOP_CLIENT_ID',
-  googleDesktopClientSecret: 'GOOGLE_DESKTOP_CLIENT_SECRET',
   githubClientId: 'GITHUB_CLIENT_ID',
   githubClientSecret: 'GITHUB_CLIENT_SECRET',
   cloudflareOauthClientId: 'CLOUDFLARE_OAUTH_CLIENT_ID',
