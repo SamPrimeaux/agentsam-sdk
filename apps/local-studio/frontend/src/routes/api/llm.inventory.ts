@@ -1,11 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  buildStudioInventory,
-  platformCredentials,
-} from "@inneranimalmedia/agentsam-local-shared/studio-inventory";
+import { buildStudioInventory } from "@inneranimalmedia/agentsam-local-shared/studio-inventory";
 import {
   assertInventoryResponseSafe,
-  mergeStudioCredentials,
   resolveStudioAccountId,
   studioServerBindings,
   vaultCredentialsForAccount,
@@ -27,9 +23,9 @@ export const Route = createFileRoute("/api/llm/inventory")({
         try {
           const bindings = studioServerBindings(ctx);
           const vault = await vaultCredentialsForAccount(bindings, accountId);
-          const inventory = await buildStudioInventory(
-            mergeStudioCredentials(vault, platformCredentials(bindings.env)),
-          );
+          // User-facing inventory is scoped to this account's own vault.
+          // Platform/Worker secrets must never silently widen another user's model list.
+          const inventory = await buildStudioInventory(vault);
           const payload = { ok: true, account_id: accountId, ...inventory };
           try {
             assertInventoryResponseSafe(payload);

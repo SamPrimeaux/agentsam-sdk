@@ -101,11 +101,23 @@ function baseRecord(provider, id, values = {}) {
 function openAIModelCapabilities(id) {
   const fallback = fallbackRecord('openai', id);
   if (fallback?.capabilities) return {};
-  if (/^text-embedding-/i.test(id)) return { agent_runtime: false, embeddings: true };
-  if (/^(?:gpt-image|chatgpt-image|gpt-audio|gpt-realtime|sora|tts|whisper|omni-moderation)/i.test(id)) {
+
+  const normalized = clean(id);
+  if (/^text-embedding-/i.test(normalized)) {
+    return { agent_runtime: false, embeddings: true };
+  }
+
+  // Purpose-specific model families/suffixes must win before broad GPT-family
+  // matching. A model being named `gpt-*` does not make it an interactive
+  // Responses model (for example gpt-4o-mini-transcribe-*).
+  if (
+    /^(?:gpt-image|chatgpt-image|gpt-audio|gpt-realtime|sora|tts|whisper|omni-moderation)/i.test(normalized)
+    || /(?:^|[-_.])(?:audio|realtime|transcribe|transcription|speech|tts|image|video|embedding|moderation)(?:[-_.]|$)/i.test(normalized)
+  ) {
     return { agent_runtime: false };
   }
-  if (/^(?:gpt-(?:4o|4\.1|5|6)|o[1-9])/i.test(id)) {
+
+  if (/^(?:gpt-(?:4o|4\.1|5|6)|o[1-9])/i.test(normalized)) {
     return { agent_runtime: true, responses: true };
   }
   return { agent_runtime: false };

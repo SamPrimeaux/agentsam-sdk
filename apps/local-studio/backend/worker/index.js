@@ -602,7 +602,7 @@ function platformCredentials(env) {
 }
 
 async function handleLlmInventory(env, userId, request) {
-  const includePlatform = new URL(request.url).searchParams.get('include_platform') !== '0';
+  const includePlatform = new URL(request.url).searchParams.get('include_platform') === '1';
   const vault = await loadVaultCredentialsForAccount(env, userId);
   const platform = includePlatform ? platformCredentials(env) : new Map();
   const merged = new Map();

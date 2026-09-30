@@ -11,13 +11,14 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --experimental-strip-types --test src/studio-vault.test.ts"
+    "test": "node --experimental-strip-types --test src/*.test.ts"
   },
   "devDependencies": {
     "typescript": "^5.7.0"
   },
   "dependencies": {
     "@inneranimalmedia/agentsam-contracts": "file:../../../../packages/agentsam-contracts",
-    "@inneranimalmedia/agentsam-vault": "file:../../../../packages/agentsam-vault"
+    "@inneranimalmedia/agentsam-vault": "file:../../../../packages/agentsam-vault",
+    "@inneranimalmedia/agentsam-sdk": "file:../../../.."
   }
 }
