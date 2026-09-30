@@ -292,10 +292,10 @@ Declare and prove the relationship so `apps/church-site` and `packages/theme-chu
 DONE     Branch closure + Identity branding (#81 @ c6a1519c+)
 DONE     PRODUCT_LIFECYCLE.md SSOT
 DONE     0c PROJECT AUTHORITY / TOOL INTEGRITY (#83 @ a6dee86d)
-DONE     0d CI TRUST / DEPENDENCY CLOSURE (this PR)
+OPEN     0d CI TRUST / DEPENDENCY CLOSURE (#85)   ← CURRENT (not closed until GHA green)
   │
   ▼
-1 IDENTITY PORTABILITY                  ← NEXT
+1 IDENTITY PORTABILITY                  ← NEXT after 0d merges
   │
   ▼
 2 DESKTOP TRANSPORT / PACKAGING
@@ -312,12 +312,12 @@ Local Studio / CMS / Ecommerce / CAD
 ```
 
 Identity / Desktop / Database / Settings work **must not** deepen monorepo-only `file:` coupling or lie in manifests.  
-Lane **0d** made install/verify gates enforceable from a clean checkout; do not reopen dependency-graph or bootstrap debt in later lanes.
+Do **not** start Lane 1 while Lane 0d GitHub Actions is red; clean-runner truth is the point of 0d.
 
 | Lane | Focus | Graduation constraint |
 |---|---|---|
 | **0c** Project authority — **DONE** | Describe **this** repo’s architecture from evidence | #83 / `a6dee86d`: customer fixture + FNF regression + packed-npm proof green |
-| **0d** CI trust / dependency closure — **DONE** | Make the repo's own gates executable and meaningful from a clean checkout | clean Install + complete lock graph + `npm run verify` + remaining CI jobs |
+| **0d** CI trust / dependency closure — **OPEN** | Make the repo's own gates executable and meaningful from a clean checkout | clean Install + complete lock graph + `npm run verify` + remaining CI jobs + **GHA green on #85** |
 | **1** Identity portable contract | SQLite + portable D1 + IAM compat | Migrations/adapters consumable **outside** monorepo |
 | **2** Desktop transport | Authenticated `/api` bridge + packaging | Desktop uses session transport — not Sam’s D1 credentials |
 | **3** Database Studio | Bound vs OAuth vs local; user-scoped | Empty state guides **user123** — never platform owner fallback |
@@ -460,14 +460,29 @@ Proven on the Lane 0d branch:
 
 ### Done when
 
-1. Fresh checkout / no `node_modules` can execute the CI Install step successfully. **PASS**
-2. Dependency-health receipt is complete and has no unexplained lock-graph gaps. **PASS**
-3. `npm run verify` is green from that install. **PASS**
-4. Remaining app/runtime jobs in `.github/workflows/ci.yml` run rather than being skipped behind Install/Verify failure. **PASS** (Go Cloudflare dry-run optional branch only when `CLOUDFLARE_ACCOUNT_ID` is set)
-5. GitHub Actions is green on the Lane 0d PR.
-6. No product behavior, provider support, or portability contract is weakened merely to satisfy CI. **PASS**
+1. Fresh checkout / no `node_modules` can execute the CI Install step successfully. **OPEN**
+2. Dependency-health receipt is complete and has no unexplained lock-graph gaps. **OPEN** (must not mask child `npm ci` failure with post-install import errors)
+3. `npm run verify` is green from that install. **OPEN**
+4. Remaining app/runtime jobs in `.github/workflows/ci.yml` run rather than being skipped behind Install/Verify failure. **OPEN** (Go Cloudflare dry-run optional branch only when `CLOUDFLARE_ACCOUNT_ID` is set)
+5. GitHub Actions is green on the Lane 0d PR. **OPEN** — required; local green alone does not close 0d
+6. No product behavior, provider support, or portability contract is weakened merely to satisfy CI. **OPEN**
+
+`security run` control law (0d): child command executes with bootstrap-safe imports only; on nonzero child exit, emit `command-failed` receipt and **do not** import the Merkle/TypeScript security stack.
 
 Only then proceed to Lane 1 Identity portability.
+
+### Standing runtime law (record only — do not implement in 0d / Lane 1)
+
+`agentsam.runtime.v1` is the stable contract. Language is an implementation detail behind capabilities.
+
+| Concern | Rule |
+|---|---|
+| INSTANCE | Which machine (Mac / VM / sandbox) |
+| ADAPTER | What executes (`agentsamd` / ExecOS / `cloudflare_sandbox` / future) |
+| TRANSPORT | How reached (localhost / CF Tunnel / VPC / service binding) |
+| AUTH | Why this caller may use it |
+
+Local Studio same-machine path: Tauri → loopback → `agentsamd`. No VPC, Tunnel, Worker, or Durable Object required for local PTY. Remote reachability is optional per enrolled `terminal_connection` (machine-scoped transport, never one tunnel per PTY). PTY/session/process lifetime belongs on the execution host — do not make a Durable Object the PTY authority. ExecOS remains supported; do not delete or replace it in these lanes.
 
 ---
 

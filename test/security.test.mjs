@@ -250,3 +250,17 @@ test('browser env and server-runtime imports are derived from syntax rather than
   assert.ok(kinds.has('browser-public-secret-name'));
   assert.ok(kinds.has('browser-private-env-access'));
 });
+
+test('security run never loads heavy scan stack when child command fails', async t => {
+  const f = fixture(t);
+  const result = spawnSync(process.execPath, [cli, 'run', '--path', f.root, '--json', '--', process.execPath, '-e', 'console.error("install boom"); process.exit(17)'], { encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.status, 'command-failed');
+  assert.equal(report.ok, false);
+  assert.equal(report.command_exit_code, 17);
+  assert.match(report.stderr || report.log || '', /install boom/);
+  assert.equal(report.error, undefined);
+  assert.ok(!JSON.stringify(report).includes('ERR_MODULE_NOT_FOUND'));
+  assert.ok(!JSON.stringify(report).includes('typescript'));
+});
