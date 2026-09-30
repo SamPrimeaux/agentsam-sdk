@@ -1,11 +1,52 @@
 # AgentSam product lifecycle — infra at a glance
 
 **Status:** standing engineering law (2026-09-30)  
-**Repo tip when audited:** `c6a1519c` (agentsam-sdk `main`)  
+**Repo tip when audited:** `c27355e3` (agentsam-sdk `main`)  
 **Companion:** [apps/README.md](../apps/README.md) (product app ownership boundary)
 
 This document is the glanceable SSOT for **implement → prove → extract → rebrand → repack → install**.  
 Do not invent a new product architecture. Close the graduation loop around the machinery that already exists.
+
+The global agent/runtime law is [`AGENTSAM.md`](../AGENTSAM.md). This lifecycle document applies that law to product authoring, extraction, resale, and graduation.
+
+---
+
+## 0. AgentSam system model + global product conduct
+
+AgentSam is two cooperating layers, not a choice between “old agents” and “LLMs”:
+
+```text
+OLD-SCHOOL / DETERMINISTIC AGENTSAM (SAM)
+  discover → classify → validate → route → execute → verify → receipt
+                  │
+                  ▼
+LLM AGENTSAM
+  interpret → reason across valid options → compose/transform → explain
+                  │
+                  ▼
+              trusted action
+```
+
+**SAM establishes machine truth. LLMs augment judgment and language.**
+
+The deterministic layer owns repository/project discovery, Git/Merkle evidence, manifests, AST/indexes, capability doctors, providers/runtime bindings, schemas/migrations, typed operations, authorization constraints, execution, and verification receipts. The LLM layer consumes that evidence to understand intent, resolve ambiguity, plan, compose, transform, and explain. It must not replace deterministic discovery with guesses or turn hidden reasoning/transcripts into system authority.
+
+### Global repurposability contract
+
+Every product/capability/pipeline promoted through this SDK must satisfy these rules:
+
+1. **Build once; repurpose by data/config/brand.** Customer differences belong in manifests, company/brand rows, themes, provider grants, schemas/data, and content rather than bespoke source forks.
+2. **Zero operator bleed.** A clean install for user123 must not inherit developer usernames, device names, absolute paths, domains, account/database IDs, repositories, credentials, or another customer's content/resources.
+3. **One authority per concern.** Extend the existing Identity, Database, Settings, theme, registry, runtime, and connector authorities instead of creating parallel “temporary” implementations.
+4. **Support means implemented now.** A provider/backend/datastore/runtime marked supported must have a working contract + adapter + verification path. Placeholder/follow-up implementations are not production support.
+5. **Customer evidence beats SDK assumptions.** In an unrelated repository, AgentSam describes and uses that repository's actual manifests, Wrangler bindings, selected providers, storage, and runtime capabilities.
+6. **Principal-scoped resources only.** Missing authorization never falls back to platform-owner infrastructure or metrics.
+7. **Portable from the artifact.** Advertised commands/products must work from the actual packed/published artifact outside this monorepo; repo-local `file:` escapes do not count.
+8. **Machine-provable readiness.** “Ready,” “healthy,” “graduated,” and “supported” are receipt-backed states, not copy. Failure must be explicit and capability-specific.
+9. **Deterministic first where reliable.** Do not spend model context/tokens to rediscover facts Git, Merkle, AST, schemas, manifests, or capability probes can answer exactly.
+10. **LLM augmentation stays valuable.** Use models where they materially help interpretation, planning, transformation, or explanation; feed them compact verified evidence and keep execution/authorization in trusted machinery.
+
+These are release/architecture requirements, not style preferences. Cursor/Codex/Claude-compatible instruction shims must ultimately defer to `AGENTSAM.md`.
 
 ---
 
