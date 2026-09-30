@@ -2,7 +2,20 @@
 @import "tw-animate-css";
 @import "@inneranimalmedia/agentsam-nav/theme.css";
 
-/* Scan reusable Settings package — arbitrary grid utilities live there. */
+/*
+ * Desktop builds use frontend/desktop as the Vite root, while the actual app
+ * routes/components live in sibling frontend/src and frontend/agentsam trees.
+ * Tailwind v4 will otherwise only emit utilities it happens to discover from
+ * the desktop root or imported packages, which leaves shared workbench UI only
+ * partially styled in the packaged app (for example the model dropdown loses
+ * its width, max-height, popover background, typography and z-index classes).
+ * Keep the desktop scan contract explicit so dev, hosted and packaged builds
+ * all compile the same utility set.
+ */
+@source "./**/*.{ts,tsx,js,jsx}";
+@source "../agentsam/**/*.{ts,tsx,js,jsx}";
+@source "../desktop/**/*.{ts,tsx,js,jsx}";
+@source "../../../../packages/agentsam-workbench/src/**/*.{ts,tsx,js,jsx}";
 @source "../../../../packages/agentsam-settings/src/**/*.{ts,tsx}";
 @source "../../../../packages/agentsam-nav/src/**/*.{ts,tsx,js,jsx}";
 

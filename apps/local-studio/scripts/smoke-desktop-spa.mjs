@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { createReadStream, existsSync, statSync } from "node:fs";
+import { createReadStream, existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { extname, join, resolve } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 
@@ -7,6 +7,30 @@ const root = resolve(import.meta.dirname, "..", "desktop-dist");
 const indexPath = join(root, "index.html");
 if (!existsSync(indexPath)) {
   console.error("[desktop-smoke] desktop-dist missing; run build:desktop first");
+  process.exit(2);
+}
+
+const assetsDir = join(root, "assets");
+const cssText = readdirSync(assetsDir)
+  .filter((name) => name.endsWith(".css"))
+  .map((name) => readFileSync(join(assetsDir, name), "utf8"))
+  .join("\n");
+const requiredUtilitySelectors = [
+  ".w-72",
+  ".max-h-80",
+  ".max-w-36",
+  ".min-w-44",
+  ".bg-popover",
+  ".text-popover-foreground",
+  ".text-xs",
+  ".z-50",
+];
+const missingUtilitySelectors = requiredUtilitySelectors.filter((selector) => !cssText.includes(selector));
+if (missingUtilitySelectors.length) {
+  console.error(
+    "[desktop-smoke] packaged CSS is missing workbench utilities:",
+    missingUtilitySelectors.join(", "),
+  );
   process.exit(2);
 }
 
