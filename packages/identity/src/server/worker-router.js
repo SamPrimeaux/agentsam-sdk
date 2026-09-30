@@ -15,6 +15,13 @@ import { resolveOAuthCredentialLane } from '../oauth/credentials.js';
 import { handleGoogleDesktopExchangeRequest } from '../oauth/google-desktop-exchange.js';
 import { iamPlatformOAuthCallback, iamPlatformOAuthStart } from '../oauth/iam-platform.js';
 import { pkceChallenge, pkceVerifier, randomOAuthState } from '../oauth/pkce.js';
+import {
+  NATIVE_EXCHANGE_PATH,
+  finishOAuthLogin,
+  handleNativeExchangeRequest,
+  parseNativeStart,
+  sessionTypeForTransaction,
+} from '../oauth/native-handoff.js';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -236,6 +243,9 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
   if (path === '/api/oauth/google/desktop-exchange') {
     return handleGoogleDesktopExchangeRequest(request, env);
   }
+  if (path === NATIVE_EXCHANGE_PATH) {
+    return handleNativeExchangeRequest(request, { adapter, identity });
+  }
   if (path === '/api/oauth/inneranimalmedia/callback' || path === '/api/oauth/iam/callback') {
     if (method === 'GET') {
       return iamPlatformOAuthCallback(request, env, adapter, identity);
@@ -332,12 +342,23 @@ async function oauthStart(request, env, identity, adapter, provider, creds) {
     const redirectTo = identity.resolvePostLoginPath(
       url.searchParams.get('next') || url.searchParams.get('return_to'),
     );
+    const nativeStart = parseNativeStart(url, env);
+    if (nativeStart.error) {
+      return jsonResponse({ ok: false, error: nativeStart.error }, 400);
+    }
     await adapter.saveOAuthState({
       state,
       provider,
       codeVerifier,
       redirectTo,
       appId: identity.app?.id || null,
+      ...(nativeStart.native
+        ? {
+            clientType: nativeStart.clientType,
+            nativeChallenge: nativeStart.nativeChallenge,
+            nativeRedirect: nativeStart.nativeRedirect,
+          }
+        : {}),
     });
 
     const redirectUri = `${url.origin}/api/oauth/${provider}/callback`;
@@ -458,21 +479,14 @@ async function oauthCallback(request, env, identity, adapter, provider, creds) {
       providerSubject: normalized.subject,
       email: normalized.email,
       displayName: normalized.name,
+      sessionType: sessionTypeForTransaction(saved),
     });
     await adapter.logAuthEvent({
       userId: result.authUserId, eventType: 'login', status: 'ok', provider, request,
+      metadata: { session_type: sessionTypeForTransaction(saved) },
     });
 
-    const redirectTo = identity.resolvePostLoginPath(saved.redirect_to);
-    const res = identity.buildLoginSuccessResponse(request, result.sessionId, redirectTo);
-    const globeUrl = `${url.origin}${login}?globe_exit=1&next=${encodeURIComponent(redirectTo)}`;
-    return new Response(null, {
-      status: 302,
-      headers: {
-        Location: globeUrl,
-        'Set-Cookie': res.headers.get('Set-Cookie') || '',
-      },
-    });
+    return finishOAuthLogin({ request, env, identity, adapter, saved, result, loginPath: login });
   } catch (error) {
     const message = String(error?.message || error || 'oauth_callback_failed');
     console.error('oauth_callback_failed', provider, message);
