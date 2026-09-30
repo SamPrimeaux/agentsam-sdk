@@ -6,6 +6,12 @@ import { createBackendRegistry } from '../backends/index.js';
 
 const clean = value => String(value || '').trim();
 const unique = values => [...new Set(values.filter(Boolean))];
+function portableRepositoryIdentity(remote, root) {
+  const value = clean(remote);
+  const github = value.match(/^(?:git@github\.com:|https?:\/\/github\.com\/)([^/]+)\/([^/]+?)(?:\.git)?$/i);
+  if (github) return 'github:' + github[1].toLowerCase() + '/' + github[2].toLowerCase();
+  return value || 'local:' + path.basename(root);
+}
 function git(root, args) { try { return execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || null; } catch { return null; } }
 function findScopes(root) {
   const candidates = ['packages', 'src', 'services', 'apps', 'docs', 'README.md', 'schema', 'migrations'];
@@ -16,15 +22,16 @@ export async function discoverAutoRag({ root = process.cwd(), env = process.env,
   const providerRegistry = createProviderRegistry({ gemini: { apiKey: env.GEMINI_API_KEY, fetchImpl }, openai: { apiKey: env.OPENAI_API_KEY, fetchImpl }, ollama: { env, fetchImpl } });
   const providers = await providerRegistry.capabilities();
   const docker = git(root, ['--version']) && (() => { try { return Boolean(execFileSync('docker', ['--version'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })); } catch { return false; } })();
-  const repositoryId = git(root, ['config', '--get', 'remote.origin.url']) || `local:${path.basename(root)}`;
+  const repositoryId = portableRepositoryIdentity(git(root, ['config', '--get', 'remote.origin.url']), root);
   return Object.freeze({
     repository: { root, name: path.basename(root), identity: repositoryId, branch: git(root, ['branch', '--show-current']), revision: git(root, ['rev-parse', 'HEAD']), git: isGit, merkle: fs.existsSync(path.join(root, '.agentsam', 'merkle.json')), semantic_merkle: fs.existsSync(path.join(root, '.agentsam', 'merkle.json')) },
     scopes: findScopes(root),
-    capabilities: { sqlite: true, git: isGit, merkle: isGit, structural_indexing: true, local_knowledge_engine: true, repository_intelligence: fs.existsSync(path.join(root, 'packages', 'agentsam-repository')), docker, providers, backends: createBackendRegistry().capabilities(), company_graph: Boolean(companyAdapter?.discover) ? await companyAdapter.discover() : { available: false } },
+    capabilities: { sqlite: true, git: isGit, merkle: isGit, structural_indexing: true, local_knowledge_engine: true, repository_intelligence: true, docker, providers, backends: createBackendRegistry().capabilities(), company_graph: Boolean(companyAdapter?.discover) ? await companyAdapter.discover() : { available: false } },
   });
 }
 export function recommendAutoRag({ discovery, purpose = 'code', include, provider = 'none', backend = 'local_exact', semantic = false } = {}) {
-  const scopes = include?.length ? unique(include) : purpose === 'code' ? discovery.scopes.filter(scope => ['packages', 'src'].includes(scope)).slice(0, 2) : discovery.scopes.filter(scope => /^(docs|README\.md|schema|migrations)$/.test(scope)).slice(0, 3);
+  const codeRoots = ['apps', 'src', 'packages', 'services'];
+  const scopes = include?.length ? unique(include) : purpose === 'code' ? codeRoots.filter(scope => discovery.scopes.includes(scope)).slice(0, 3) : discovery.scopes.filter(scope => /^(docs|README\.md|schema|migrations)$/.test(scope)).slice(0, 3);
   return Object.freeze({ purpose, repositories: [discovery.repository.identity], scope: scopes.length ? scopes : ['.'], evidence: purpose === 'code' ? ['git', 'merkle', 'semantic-metadata', 'ast', 'lexical'] : ['git', 'merkle', 'lexical'], embedding: semantic ? provider : 'none', control_plane: 'local_sqlite', backend, probe: { max_files: 25, max_chunks: 100, max_semantic_queries: 1, paid_embeddings: false }, company_registration: 'disabled' });
 }
 export function safeAutoRagConfig({ existing = {}, recommendation, repositoryId, projectKey } = {}) {

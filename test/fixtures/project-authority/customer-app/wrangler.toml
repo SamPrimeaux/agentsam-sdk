@@ -1,0 +1,17 @@
+name = "customer-product-worker"
+
+[ai]
+binding = "MY_AI"
+
+[[vectorize]]
+binding = "MY_VECTORS"
+index_name = "customer-code-index"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "customer-db"
+database_id = "00000000-0000-0000-0000-000000000001"
+
+[[r2_buckets]]
+binding = "CONTENT"
+bucket_name = "customer-assets"

@@ -1,0 +1,5 @@
+{
+  "schema": "agentsam.app-install.v1",
+  "app_id": "my-product",
+  "mount": "apps/my-product"
+}

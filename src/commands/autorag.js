@@ -2,10 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { createInterface } from 'node:readline/promises';
-import { repositoryRoot, readConfig, validateConfig, CONFIG_PATH } from '../knowledge/config.js';
+import { repositoryRoot, readConfig, validateConfig, defaultConfig, scopeKey, CONFIG_PATH } from '../knowledge/config.js';
 import { openSqliteStore } from '../knowledge/stores/sqlite.js';
 import { openPostgresStore } from '../knowledge/stores/postgres.js';
 import { planIndex, runIndex, retrieve } from '../knowledge/engine.js';
+import { discoverKnowledgeRuntime } from '../knowledge/runtime-discovery.js';
+import { getRepositoryId, portableRepositoryIdFromGit, tryReadProjectConfig } from '../lib/project-config.js';
 import { discoverAutoRag, recommendAutoRag, safeAutoRagConfig, runAutoRagProbe, createProviderRegistry, createBackendRegistry } from '../../packages/agentsam-knowledge/src/index.js';
 
 const show = value => console.log(JSON.stringify(value, null, 2));
@@ -16,6 +18,12 @@ const parse = argv => parseArgs({ args: argv, allowPositionals: true, options: {
   kind: { type: 'string' }, scope: { type: 'string' }, provider: { type: 'string' }, backend: { type: 'string' }, model: { type: 'string' }, dimensions: { type: 'string' }, semantic: { type: 'boolean' }, 'allow-paid': { type: 'boolean' }, query: { type: 'string' },
 } });
 function readExisting(root) { try { return readConfig(root); } catch (error) { if (error.code === 'ENOENT') return null; throw error; } }
+function generationConfig(root, existing) {
+  if (existing) return existing;
+  const project = tryReadProjectConfig(root);
+  const repositoryId = getRepositoryId(project) || portableRepositoryIdFromGit(root);
+  return repositoryId ? defaultConfig({ repositoryId }) : null;
+}
 function writeConfig(root, config) {
   const filename = path.join(root, CONFIG_PATH); fs.mkdirSync(path.dirname(filename), { recursive: true, mode: 0o700 });
   const safe = JSON.stringify(validateConfig(config), null, 2) + '\n';
@@ -28,10 +36,20 @@ function adapterFor(config) {
   return { validate: profile => adapter.validate(profile), async embed(text, profile, context) { return context?.kind === 'query' ? adapter.embedQuery(text, profile, context) : (await adapter.embedDocuments([text], profile, context))[0]; } };
 }
 async function storeFor(root, config, readOnly = false) { return config.storage.driver === 'sqlite' ? openSqliteStore(localPath(root), { readOnly }) : openPostgresStore(process.env[config.storage.connection_env]); }
-function defaults(discovery, opts, existing) {
+function defaults(discovery, opts, existing, runtime) {
   const purpose = opts.kind || existing?.scope?.name || 'code';
-  const recommendation = recommendAutoRag({ discovery, purpose, include: opts.scope ? split(opts.scope) : existing?.scope?.include, provider: opts.provider || 'none', backend: opts.backend || existing?.lane?.backend || 'local_exact', semantic: Boolean(opts.semantic) });
+  const declaredVectorize = (runtime?.cloudflare?.vectorize || []).filter(row => row.binding && row.index);
+  const adoptVectorize = !opts.backend && !existing?.lane?.backend && declaredVectorize.length === 1;
+  const backend = opts.backend || existing?.lane?.backend || (adoptVectorize ? 'cloudflare_vectorize' : 'local_exact');
+  const recommendation = recommendAutoRag({ discovery, purpose, include: opts.scope ? split(opts.scope) : existing?.scope?.include, provider: opts.provider || 'none', backend, semantic: Boolean(opts.semantic) });
   const config = safeAutoRagConfig({ existing: existing || {}, recommendation, repositoryId: existing?.repository_id || discovery.repository.identity, projectKey: existing?.project_key || discovery.repository.identity });
+  if (adoptVectorize) {
+    const resource = declaredVectorize[0];
+    config.lane.id = `${purpose}-cloudflare-vectorize`;
+    config.lane.backend = 'cloudflare_vectorize';
+    config.lane.binding = resource.binding;
+    config.lane.index = resource.index;
+  }
   if (opts.provider) {
     const models = { fixture: 'deterministic', gemini: 'gemini-embedding-2', openai: 'text-embedding-3-small', 'workers-ai': '@cf/baai/bge-base-en-v1.5', ollama: 'nomic-embed-text' };
     config.embedding = opts.provider === 'none' ? { provider: 'none', model: 'none', revision: '1', dimensions: 0, parameters: {} } : { provider: opts.provider, model: opts.model || models[opts.provider] || '', revision: '1', dimensions: Number(opts.dimensions || (opts.provider === 'fixture' ? 3 : 768)), parameters: { task: 'code retrieval' } };
@@ -43,7 +61,7 @@ async function interactiveOptions(discovery, opts) {
   const prompt = createInterface({ input: process.stdin, output: process.stdout });
   try {
     const kind = opts.kind || await prompt.question('What kind of knowledge? code, documents, schema, media, memory, mixed [code]: ') || 'code';
-    const suggested = kind === 'code' ? discovery.scopes.filter(scope => ['packages', 'src'].includes(scope)).join(',') : discovery.scopes.filter(scope => /docs|README|schema|migrations/.test(scope)).join(',');
+    const suggested = recommendAutoRag({ discovery, purpose: kind }).scope.join(',');
     const scope = opts.scope || await prompt.question(`Sources (literal paths, comma separated) [${suggested || '.'}]: `) || suggested || '.';
     const semantic = opts.semantic || (await prompt.question('Enable semantic embeddings for this setup? [no]: ')).toLowerCase() === 'yes';
     const provider = opts.provider || (semantic ? await prompt.question('Provider: fixture, gemini, openai, workers-ai, ollama [fixture]: ') || 'fixture' : 'none');
@@ -55,18 +73,54 @@ export async function runAutoRag(argv) {
   if (opts.help || !['setup', 'status', 'doctor', 'lanes', 'configure', 'probe', 'providers', 'backends', 'scope'].includes(command)) {
     console.log('agentsam autorag setup|status|doctor|lanes|configure|probe|providers|backends|scope [--cwd PATH] [--yes] [--kind code|documents|schema|media|memory|mixed] [--scope a,b] [--provider none|fixture|gemini|openai|workers-ai|ollama] [--backend local_exact|postgres_pgvector|supabase_pgvector|cloudflare_vectorize] [--semantic]'); return;
   }
-  const root = repositoryRoot(opts.cwd); const discovery = await discoverAutoRag({ root }); const existing = readExisting(root);
-  if (command === 'providers') return show(await createProviderRegistry().capabilities());
-  if (command === 'backends') return show(createBackendRegistry().capabilities());
-  if (command === 'status') return show({ discovery, config: existing || null, generation: existing ? await (async () => { const store = await storeFor(root, existing, true); try { return await store?.active((await import('../knowledge/config.js')).scopeKey(existing)); } finally { await store?.close(); } })() : null });
-  if (command === 'doctor') {
-    const checks = [{ check: 'knowledge_config', ok: Boolean(existing), detail: existing ? CONFIG_PATH : 'Run agentsam autorag setup.' }, { check: 'local_sqlite', ok: true }, { check: 'git_merkle', ok: discovery.capabilities.git }];
-    if (existing?.embedding?.provider !== 'none') { try { adapterFor(existing).validate(existing.embedding); checks.push({ check: `provider:${existing.embedding.provider}`, ok: true }); } catch (error) { checks.push({ check: `provider:${existing.embedding.provider}`, ok: false, detail: error.message }); } }
-    return show({ ok: checks.every(check => check.ok), checks });
+  const root = repositoryRoot(opts.cwd); const discovery = await discoverAutoRag({ root }); const existing = readExisting(root); const runtime = discoverKnowledgeRuntime(root, { knowledgeConfig: existing });
+  if (command === 'providers') {
+    const providers = await createProviderRegistry().capabilities();
+    const workersAi = runtime.resources.workers_ai;
+    return show(providers.map(item => item.id === 'workers-ai'
+      ? { ...item, runtime_configured: workersAi.configured, runtime_binding: workersAi.binding, locally_executable: workersAi.locally_executable, remotely_executable: workersAi.remotely_executable, credential_state: workersAi.credential_state }
+      : item));
   }
-  if (command === 'lanes') return show(existing ? [existing.lane || { id: 'legacy-local', backend: existing.storage.driver === 'sqlite' ? 'local_exact' : 'postgres_pgvector' }] : []);
+  if (command === 'backends') {
+    const backends = createBackendRegistry().capabilities();
+    const vectorize = runtime.resources.vectorize;
+    return show(backends.map(item => item.id === 'cloudflare_vectorize'
+      ? { ...item, declared_resources: vectorize, locally_executable: vectorize.some(row => row.locally_executable), remotely_executable: vectorize.some(row => row.remotely_executable), conflicts: runtime.conflicts }
+      : item));
+  }
+  if (command === 'status') {
+    const generationProfile = runtime.local_index.exists ? generationConfig(root, existing) : null;
+    const generation = generationProfile ? await (async () => {
+      const store = await storeFor(root, generationProfile, true);
+      try { return await store?.active(scopeKey(generationProfile)); }
+      finally { await store?.close(); }
+    })() : null;
+    return show({ discovery, config: existing || null, project_context: runtime, runtime, generation });
+  }
+  if (command === 'doctor') {
+    const hasRuntimeLane = runtime.lanes.some(lane => lane.configured);
+    const checks = [
+      { check: 'knowledge_authority', ok: Boolean(existing) || hasRuntimeLane, detail: existing ? CONFIG_PATH : hasRuntimeLane ? 'Detected repository knowledge runtime.' : 'No local config or declared runtime lane found.' },
+      { check: 'local_sqlite', ok: runtime.local_index.exists, blocking: false, detail: runtime.local_index.exists ? runtime.local_index.path : 'Not indexed yet; run agentsam index run or agentsam autorag probe.' },
+      { check: 'git_merkle', ok: discovery.repository.merkle, blocking: false, detail: discovery.repository.merkle ? '.agentsam/merkle.json' : 'No Merkle snapshot yet; run agentsam merkle root . --json when snapshot evidence is needed.' },
+    ];
+    if (existing?.embedding && existing.embedding.provider !== 'none') {
+      try { adapterFor(existing).validate(existing.embedding); checks.push({ check: 'provider:' + existing.embedding.provider, ok: true }); }
+      catch (error) { checks.push({ check: 'provider:' + existing.embedding.provider, ok: false, detail: error.message }); }
+    }
+    if (runtime.resources.vectorize.length) checks.push({ check: 'cloudflare_vectorize', ok: runtime.conflicts.length === 0 && runtime.resources.vectorize.every(row => row.configured && (row.locally_executable || row.remotely_executable)), detail: runtime.resources.vectorize });
+    if (runtime.resources.workers_ai.observed) checks.push({ check: 'workers_ai_runtime', ok: runtime.resources.workers_ai.remotely_executable || runtime.resources.workers_ai.locally_executable, detail: runtime.resources.workers_ai });
+    if (runtime.conflicts.length) checks.push({ check: 'project_context_conflicts', ok: false, detail: runtime.conflicts });
+    return show({ ok: checks.filter(check => check.blocking !== false).every(check => check.ok), checks, project_context: runtime, runtime });
+  }
+  if (command === 'lanes') {
+    const configured = existing ? [existing.lane || { id: 'legacy-local', backend: existing.storage.driver === 'sqlite' ? 'local_exact' : 'postgres_pgvector', source: CONFIG_PATH }] : [];
+    const laneKey = lane => [lane.backend, lane.binding || '', lane.index || ''].join(':');
+    const seen = new Set(configured.map(laneKey));
+    return show([...configured, ...runtime.lanes.filter(lane => !seen.has(laneKey(lane)))]);
+  }
   if (command === 'setup' || command === 'configure' || command === 'scope') {
-    const selected = opts.yes ? opts : await interactiveOptions(discovery, opts); const { recommendation, config } = defaults(discovery, selected, existing);
+    const selected = opts.yes ? opts : await interactiveOptions(discovery, opts); const { recommendation, config } = defaults(discovery, selected, existing, runtime);
     writeConfig(root, config); return show({ action: command, config: CONFIG_PATH, recommendation, config, next: ['agentsam autorag probe', 'agentsam index plan', 'agentsam index run', 'agentsam search "symbol or phrase"'] });
   }
   if (!existing) throw new Error('AutoRAG is not configured. Run agentsam autorag setup first.');

@@ -150,6 +150,47 @@ describe('codebaseindex real execution', () => {
     );
     assert.ok(result.search_smoke.sources_included >= 1);
   });
+  it('executes a declared Vectorize lane through the Worker binding before publish', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-codebaseindex-vectorize-'));
+    fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src', 'demo.js'), 'export const vectorized = true;\n');
+    fs.writeFileSync(path.join(root, 'wrangler.toml'), [
+      'name = \"customer-worker\"',
+      '[[vectorize]]',
+      'binding = \"MY_VECTORS\"',
+      'index_name = \"customer-code-index\"',
+      '',
+    ].join('\n'));
+    const upserts = [];
+    const workerBinding = {
+      async upsert(records) { upserts.push(records); return { mutationId: 'fixture' }; },
+      async query() { return { matches: [] }; },
+      async getByIds(ids) { return ids.map(id => ({ id })); },
+      async deleteByIds() { return { mutationId: 'fixture-delete' }; },
+    };
+
+    const result = await runCodebaseindexIngest({
+      root,
+      include: ['src'],
+      exclude: [],
+      embeddingChoice: 'fixture|deterministic|3',
+      embed: true,
+      vectors: 'vectorize',
+      workerBinding,
+      planOnly: false,
+    });
+
+    assert.equal(result.index.published, true);
+    assert.equal(result.index.vector_upsert?.transport, 'worker_binding');
+    assert.equal(result.storage_lanes.vectors, 'vectorize');
+    assert.equal(upserts.length, 1);
+    assert.ok(upserts[0].length >= 1);
+    assert.equal(upserts[0][0].values.length, 3);
+    const config = JSON.parse(fs.readFileSync(path.join(root, '.agentsam', 'knowledge.json'), 'utf8'));
+    assert.equal(config.lane.backend, 'cloudflare_vectorize');
+    assert.equal(config.lane.binding, 'MY_VECTORS');
+    assert.equal(config.lane.index, 'customer-code-index');
+  });
 });
 
 describe('catalog-driven help', () => {

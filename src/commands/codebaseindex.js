@@ -16,6 +16,8 @@ import { openSqliteStore } from '../knowledge/stores/sqlite.js';
 import { openPostgresStore } from '../knowledge/stores/postgres.js';
 import { planIndex, retrieve, runIndex } from '../knowledge/engine.js';
 import { createProviderRegistry } from '../../packages/agentsam-knowledge/src/providers/index.js';
+import { createBackendRegistry } from '../../packages/agentsam-knowledge/src/backends/index.js';
+import { discoverProjectContext } from '../knowledge/runtime-discovery.js';
 import { ensureProjectManifest, getRepositoryId, portableRepositoryIdFromGit, tryReadProjectConfig } from '../lib/project-config.js';
 import { parsePastedPaths, stageMaterials } from '../indexing/ingest/materials.js';
 import {
@@ -74,6 +76,21 @@ function writeKnowledgeConfig(root, config) {
   return validated;
 }
 
+function resolveVectorLane(root, vectors, input = {}) {
+  if (vectors !== 'vectorize') return null;
+  const explicitBinding = String(input.vectorBinding || input.binding || '').trim();
+  const explicitIndex = String(input.vectorIndex || input.index || '').trim();
+  if (explicitBinding || explicitIndex) {
+    if (!explicitBinding || !explicitIndex) throw new Error('Vectorize requires both vectorBinding and vectorIndex when either is supplied.');
+    return { backend: 'cloudflare_vectorize', binding: explicitBinding, index: explicitIndex };
+  }
+  const context = discoverProjectContext(root);
+  const resources = context.resources.vectorize.filter(row => row.configured);
+  if (resources.length === 1) return { backend: 'cloudflare_vectorize', binding: resources[0].binding, index: resources[0].index };
+  if (!resources.length) throw new Error('No Cloudflare Vectorize binding is declared by this project. Configure Wrangler or pass vectorBinding/vectorIndex explicitly.');
+  throw new Error('Multiple Cloudflare Vectorize bindings are declared. Select vectorBinding/vectorIndex explicitly.');
+}
+
 function loadOrBuildConfig(root, preferences) {
   const project = tryReadProjectConfig(root) || ensureProjectManifest(root, {});
   const repositoryId = getRepositoryId(project) || portableRepositoryIdFromGit(root) || preferences.repositoryId;
@@ -103,7 +120,14 @@ function loadOrBuildConfig(root, preferences) {
     storage: preferences.storage === 'postgres'
       ? { driver: 'postgres', connection_env: preferences.connectionEnv || 'AGENTSAM_DATABASE_URL' }
       : { driver: 'sqlite' },
-    lane: {
+    lane: preferences.vectorLane ? {
+      id: `${preferences.scopeName || 'default'}-cloudflare-vectorize`,
+      backend: 'cloudflare_vectorize',
+      resource: null,
+      binding: preferences.vectorLane.binding,
+      index: preferences.vectorLane.index,
+      metric: 'cosine',
+    } : {
       id: `${preferences.scopeName || 'default'}-ingest`,
       backend: preferences.storage === 'postgres' ? 'postgres_pgvector' : 'local_exact',
       resource: null,
@@ -172,11 +196,13 @@ export async function runCodebaseindexIngest(input = {}, ctx = {}) {
   const vectors = input.vectors || (embedding.provider === 'none' ? 'none'
     : storage === 'postgres' ? 'pgvector' : 'sqlite_exact');
 
+  const vectorLane = resolveVectorLane(root, vectors, input);
   const config = loadOrBuildConfig(root, {
     include,
     exclude,
     embedding,
     storage,
+    vectorLane,
     scopeName: input.scope || 'ingest',
     connectionEnv: input.connectionEnv,
   });
@@ -185,6 +211,9 @@ export async function runCodebaseindexIngest(input = {}, ctx = {}) {
   jobGraph = advanceJobGraph(jobGraph, 'lane.resolve');
 
   const embed = Boolean(input.embed) && embedding.provider !== 'none';
+  if (vectors === 'vectorize' && !embed && !input.planOnly) {
+    throw new Error('Cloudflare Vectorize execution requires an embedding provider and embed=true. Use planOnly to inspect the lane without writing vectors.');
+  }
   const store = await openStore(root, config, false);
   try {
     if (input.planOnly) {
@@ -214,12 +243,26 @@ export async function runCodebaseindexIngest(input = {}, ctx = {}) {
       validate: (...args) => (adapter ??= providerAdapter(config.embedding)).validate(...args),
       embed: (...args) => (adapter ??= providerAdapter(config.embedding)).embed(...args),
     };
+    const vectorBackend = config.lane?.backend === 'cloudflare_vectorize'
+      ? createBackendRegistry().get('cloudflare_vectorize')
+      : null;
+    const vectorContext = {
+      ...(ctx.cloudflare || {}),
+      ...(input.vectorContext || {}),
+      env: input.env || ctx.env || process.env,
+      ownerId: input.ownerId || ctx.ownerId || ctx.owner_id || '',
+      accountId: input.accountId || ctx.accountId || '',
+      workerBinding: input.workerBinding || ctx.workerBinding,
+      apiClient: input.apiClient || ctx.apiClient,
+    };
     const result = await runIndex({
       root,
       config,
       store,
       embed,
       embedder,
+      vectorBackend,
+      vectorContext,
       maxInputs: Number(input.maxInputs ?? 200),
       maxCharacters: Number(input.maxCharacters ?? 400000),
     });
@@ -568,7 +611,7 @@ async function runWizard(root, opts) {
   }));
   const storage = lane === 'supabase' ? 'postgres' : 'sqlite';
   if (lane === 'vectorize') {
-    note('Vectorize lane recorded for plan/receipt; full CF adapter wiring is a follow-up slice.', 'Lane note');
+    note('Uses this project’s declared Vectorize binding via Worker runtime or the current user’s authorized Cloudflare API transport.', 'Lane note');
   }
   if (lane === 'supabase') {
     note('Uses AGENTSAM_DATABASE_URL / Hyperdrive-style postgres. Owner IAM already has node-api.', 'Lane note');

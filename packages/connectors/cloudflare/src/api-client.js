@@ -135,15 +135,16 @@ export class CloudflareApiClient {
     }
 
     const headers = {
-      Authorization: `Bearer ${this.apiToken}`,
       Accept: 'application/json',
+      ...(opts.headers || {}),
+      Authorization: `Bearer ${this.apiToken}`,
     };
     let body;
     if (opts.body != null && method !== 'GET' && method !== 'HEAD') {
       if (opts.body instanceof FormData || typeof opts.body === 'string' || Buffer.isBuffer(opts.body)) {
         body = opts.body;
       } else {
-        headers['Content-Type'] = 'application/json';
+        if (!headers['Content-Type'] && !headers['content-type']) headers['Content-Type'] = 'application/json';
         body = JSON.stringify(opts.body);
       }
     }

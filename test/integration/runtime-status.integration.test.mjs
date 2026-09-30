@@ -14,6 +14,20 @@ import { renderRuntimeStatus } from '../../src/ui/ansi.js';
 
 const root = path.resolve(new URL('../..', import.meta.url).pathname);
 
+test('Wrangler TOML parser preserves Vectorize declarations', () => {
+  const parsed = parseWranglerToml([
+    'name = "demo"',
+    '[ai]',
+    'binding = "AGENTSAM_WAI"',
+    '',
+    '[[vectorize]]',
+    'binding = "SEARCH_INDEX"',
+    'index_name = "demo-search-1024"',
+  ].join('\n'));
+  assert.deepEqual(parsed.vectorize, [{ binding: 'SEARCH_INDEX', index_name: 'demo-search-1024' }]);
+  assert.equal(parsed.ai.binding, 'AGENTSAM_WAI');
+});
+
 test('checked-in Cloudflare deployment contract resolves the real Worker and portable bindings', () => {
   const contract = readCloudflareDeploymentContract(root, readProjectConfig(root));
   assert.equal(contract.worker_name, 'agentsam-sdk');

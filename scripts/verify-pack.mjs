@@ -31,6 +31,20 @@ if (nestedNodeModules.length) {
   process.exit(1);
 }
 
+const packedPaths = new Set((pack.files || []).map((entry) => entry.path));
+const requiredPortableMachineFiles = [
+  'native/agentsam-machine/Cargo.toml',
+  'native/agentsam-machine/cli/src/main.rs',
+  'native/agentsam-machine/core/src/frontend.rs',
+  'contracts/source-types.v1.json',
+];
+const missingPortableMachineFiles = requiredPortableMachineFiles.filter((path) => !packedPaths.has(path));
+if (missingPortableMachineFiles.length) {
+  console.error('pack-check failed: portable agentsam machine runtime would be incomplete');
+  for (const path of missingPortableMachineFiles) console.error(`- ${path}`);
+  process.exit(1);
+}
+
 console.log(
   `pack-check OK ${pack.name}@${pack.version} · ${pack.files.length} files · no nested node_modules`
 );
