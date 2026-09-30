@@ -64,6 +64,7 @@ export * as keyless from './families/keyless.js';
 export * as tokenValidation from './families/token-validation.js';
 export * as pages from './families/pages.js';
 export * as snippets from './families/snippets.js';
+export * as vectorize from './families/vectorize.js';
 
 import { scopesForCapabilities as _scopesForCapabilities, scopesForFeaturePacks as _scopesForFeaturePacks } from './capabilities.js';
 import { CLOUDFLARE_ALL_SCOPES as _CLOUDFLARE_ALL_SCOPES, isKnownCloudflareScope } from './scope-catalog.js';

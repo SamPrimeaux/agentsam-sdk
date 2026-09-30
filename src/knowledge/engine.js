@@ -59,7 +59,7 @@ export async function planIndex({ root, config: input, store, embed = false, lim
       limits: Number.isFinite(maxFiles) || Number.isFinite(maxChunks) ? { max_files: maxFiles, max_chunks: maxChunks } : null } };
 }
 
-export async function runIndex({ root, config, store, embedder, embed = false, maxInputs = 100, maxCharacters = 200000, limits = null }) {
+export async function runIndex({ root, config, store, embedder, embed = false, vectorBackend = null, vectorContext = {}, maxInputs = 100, maxCharacters = 200000, limits = null }) {
   if (!store) throw new Error('A writable knowledge store is required.');
   if (!Number.isInteger(maxInputs) || maxInputs < 0 || !Number.isInteger(maxCharacters) || maxCharacters < 0) throw new Error('Embedding budgets must be nonnegative integers.');
   const plan = await planIndex({ root, config, store, embed, limits });
@@ -76,6 +76,25 @@ export async function runIndex({ root, config, store, embedder, embed = false, m
     // Completed work remains reusable even if a later request or publication fails.
     await store.cachePut(key, vector);
   }
+  let vectorUpsert = null;
+  if (embed && plan.config.lane?.backend === 'cloudflare_vectorize') {
+    if (!vectorBackend?.upsert) throw new Error('cloudflare_vectorize_backend_required');
+    const records = [];
+    for (const chunk of plan.chunks) {
+      const vector = validateVector(await store.cacheGet(chunk.embedding_key), plan.config.embedding.dimensions);
+      records.push({
+        id: chunk.id,
+        vector,
+        metadata: { path: chunk.path, ordinal: chunk.ordinal, content_hash: chunk.content_hash },
+      });
+    }
+    vectorUpsert = await vectorBackend.upsert(records, {
+      ...vectorContext,
+      binding: plan.config.lane.binding,
+      index: plan.config.lane.index,
+      profile: { ...plan.config.lane, dimensions: plan.config.embedding.dimensions },
+    });
+  }
   // A generation describes one coherent source snapshot. Never publish after a mid-run edit.
   const check = [];
   const checkFiles = inventory(root, plan.config.scope).slice(0, limits?.maxFiles == null ? Infinity : limits.maxFiles);
@@ -85,7 +104,7 @@ export async function runIndex({ root, config, store, embedder, embed = false, m
     source_hash: receipt.source_hash, config_hash: receipt.config_hash, config: plan.config, profile_id: receipt.profile_id,
     git: gitEvidence(root), files: plan.files, chunks: plan.chunks, symbols: plan.symbols, edges: plan.edges, receipt };
   await store.publish(generation, plan.previous?.id || null);
-  return { ...receipt, generation_id: generation.id, published: true };
+  return { ...receipt, generation_id: generation.id, published: true, vector_upsert: vectorUpsert };
 }
 
 export async function retrieve({ store, config: input, text, semantic = false, embedder, topK = 8, tokenBudget = 6000, generationId, resultPolicy: requestedResultPolicy }) {

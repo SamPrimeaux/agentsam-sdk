@@ -14,10 +14,7 @@ pub fn enrich_frontend_source_candidates(root: &Path, receipt: &mut MachineRecei
     let ts_paths: Vec<String> = receipt
         .facts
         .iter()
-        .filter(|f| matches!(
-            f.source.type_id.as_str(),
-            "typescript" | "javascript"
-        ))
+        .filter(|f| matches!(f.source.type_id.as_str(), "typescript" | "javascript"))
         .map(|f| f.path.clone())
         .collect();
     if ts_paths.is_empty() {
@@ -195,7 +192,10 @@ fn app_router_route_from_path(rel: &str) -> Option<String> {
             continue; // parallel routes
         }
         if seg.starts_with('[') && seg.ends_with(']') {
-            parts.push(format!(":{}", seg.trim_matches(|c| c == '[' || c == ']' || c == '.')));
+            parts.push(format!(
+                ":{}",
+                seg.trim_matches(|c| c == '[' || c == ']' || c == '.')
+            ));
             continue;
         }
         parts.push(seg.to_string());
@@ -232,13 +232,21 @@ fn extract_slug_literals(text: &str) -> Vec<String> {
     out
 }
 
+fn floor_char_boundary(text: &str, index: usize) -> usize {
+    let mut boundary = index.min(text.len());
+    while boundary > 0 && !text.is_char_boundary(boundary) {
+        boundary -= 1;
+    }
+    boundary
+}
+
 fn extract_section_object_candidates(text: &str) -> Vec<Value> {
     // Look for compact object literals with type + zone nearby: type: "Hero", zone: "BODY"
     let mut out = Vec::new();
     let mut search = text;
     while let Some(type_idx) = find_type_literal(search) {
-        let window_start = type_idx.saturating_sub(80);
-        let window_end = (type_idx + 200).min(search.len());
+        let window_start = floor_char_boundary(search, type_idx.saturating_sub(80));
+        let window_end = floor_char_boundary(search, (type_idx + 200).min(search.len()));
         let window = &search[window_start..window_end];
         let Some((section_type, _)) = quoted_after(window, "type:") else {
             search = &search[type_idx + 5..];
@@ -267,7 +275,9 @@ fn extract_section_object_candidates(text: &str) -> Vec<Value> {
 }
 
 fn find_type_literal(text: &str) -> Option<usize> {
-    text.find("type: \"").or_else(|| text.find("type: '")).or_else(|| text.find("type:\"").or_else(|| text.find("type:'")))
+    text.find("type: \"")
+        .or_else(|| text.find("type: '"))
+        .or_else(|| text.find("type:\"").or_else(|| text.find("type:'")))
 }
 
 fn quoted_after(text: &str, key: &str) -> Option<(String, usize)> {
@@ -359,7 +369,10 @@ fn extract_css_custom_properties(text: &str) -> Vec<String> {
             .unwrap_or(rest.len().min(64));
         if name_end > 3 {
             let name = &rest[..name_end];
-            if name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+            if name
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+            {
                 out.push(name.to_string());
             }
         }
@@ -411,5 +424,19 @@ mod tests {
             app_router_route_from_path("app/page.tsx").as_deref(),
             Some("/")
         );
+    }
+
+    #[test]
+    fn section_candidate_windows_are_utf8_safe() {
+        for tail in ["a", "\u{00a0}", "é", "🙂"] {
+            let source = format!(
+                "const section = {{ type: \"Hero\", zone: \"BODY\", name: \"Café\" }};{}",
+                tail.repeat(220)
+            );
+            let candidates = extract_section_object_candidates(&source);
+            assert_eq!(candidates.len(), 1, "failed for tail {tail:?}");
+            assert_eq!(candidates[0]["type"], "Hero");
+            assert_eq!(candidates[0]["zone"], "BODY");
+        }
     }
 }
