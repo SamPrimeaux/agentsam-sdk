@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { createReadStream, existsSync, statSync } from "node:fs";
+import { createReadStream, existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { extname, join, resolve } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 
