@@ -102,15 +102,22 @@ test('Local Studio package.json explicitly declares client-cms-editor dependenci
 });
 
 test('Local Studio mounts CMS route with default site agentsam-sdk', () => {
-  assert.ok(fs.existsSync(at('apps', 'local-studio', 'frontend', 'src', 'routes', '_app', 'cms.tsx')));
-  const routeContent = read('apps', 'local-studio', 'frontend', 'src', 'routes', '_app', 'cms.tsx');
+  const liveRoute = at('apps', 'local-studio', 'frontend', 'src', 'routes', '(apps)', 'cms.tsx');
+  assert.ok(fs.existsSync(liveRoute), 'live CMS route must be routes/(apps)/cms.tsx');
+  const routeContent = read('apps', 'local-studio', 'frontend', 'src', 'routes', '(apps)', 'cms.tsx');
 
-  // Must default to agentsam-sdk
-  assert.match(routeContent, /"agentsam-sdk"/);
+  // Superseded donor must stay inert — do not revive obsolete _app/cms.tsx contracts.
+  const donor = read('apps', 'local-studio', 'frontend', 'src', 'routes', '_app', 'cms.tsx');
+  assert.match(donor, /SUPERSEDED/);
+  assert.doesNotMatch(donor, /from ["']@inneranimalmedia\/agentsam-cms-frontend["']/);
+  assert.doesNotMatch(donor, /createFileRoute\(/);
+  assert.match(donor, /export\s*\{\s*\}\s*;/);
+
+  // Live route defaults to agentsam-sdk and uses HttpCmsAdapter + site catalog.
+  assert.match(routeContent, /createHttpCmsAdapter/);
+  assert.match(routeContent, /slug:\s*"agentsam-sdk"/);
+  assert.match(routeContent, /search\.site \|\| search\.project_slug \|\| search\.project \|\| "agentsam-sdk"/);
   assert.doesNotMatch(routeContent, /default\s*:\s*["']inneranimalmedia["']/);
-
-  // Must use same-origin relative basePath
-  assert.match(routeContent, /basePath="\/cms"/);
 
   // NavRail must include CMS entry
   const navRail = read('apps', 'local-studio', 'frontend', 'src', 'components', 'shell', 'nav-rail.tsx');

@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const cmsBin = path.join(root, 'apps/client-cms-editor/bin/agentsam-cms.mjs');
 
-function scaffold(persistence) {
+function scaffold(persistence, extraArgs = []) {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-cms-scaffold-'));
   const target = path.join(temp, 'editor');
   execFileSync(process.execPath, [
@@ -18,6 +18,7 @@ function scaffold(persistence) {
     target,
     '--persistence',
     persistence,
+    ...extraArgs,
   ], { cwd: root, stdio: 'pipe' });
   return { temp, target };
 }
@@ -25,46 +26,51 @@ function scaffold(persistence) {
 test('CMS editor scaffold is self-contained and records SQLite authority', () => {
   const { temp, target } = scaffold('sqlite');
   try {
-    assert.equal(fs.existsSync(path.join(target, 'bin/agentsam-cms.mjs')), true);
     assert.equal(fs.existsSync(path.join(target, 'agentsam.app.json')), true);
-    assert.equal(fs.existsSync(path.join(target, 'packages/agentsam-contracts/package.json')), true);
-    assert.equal(fs.existsSync(path.join(target, 'packages/agentsam-workbench/package.json')), true);
+    assert.equal(fs.existsSync(path.join(target, 'cms.config.json')), true);
+    assert.equal(fs.existsSync(path.join(target, '.agentsam/cms.sqlite')), true);
+    assert.equal(fs.existsSync(path.join(target, '.agentsam/assets')), true);
+    assert.equal(fs.existsSync(path.join(target, 'public')), true);
 
-    const rootPkg = JSON.parse(fs.readFileSync(path.join(target, 'package.json'), 'utf8'));
-    assert.ok(rootPkg.workspaces.includes('packages/*'));
+    const cfg = JSON.parse(fs.readFileSync(path.join(target, 'cms.config.json'), 'utf8'));
+    assert.equal(cfg.schema, 'agentsam.cms.project.v1');
+    assert.equal(cfg.persistence, 'sqlite');
+    assert.equal(cfg.dbPath, '.agentsam/cms.sqlite');
+    assert.equal(cfg.cmsBase, '/cms');
+    assert.equal(cfg.auth?.mode, 'local-dev-principal');
 
-    const frontendPkg = JSON.parse(fs.readFileSync(path.join(target, 'frontend/package.json'), 'utf8'));
-    assert.equal(frontendPkg.dependencies['@inneranimalmedia/agentsam-contracts'], '0.1.0');
-    assert.equal(frontendPkg.dependencies['@inneranimalmedia/agentsam-workbench'], '0.1.0');
+    const app = JSON.parse(fs.readFileSync(path.join(target, 'agentsam.app.json'), 'utf8'));
+    assert.equal(app.schema, 'agentsam.app.v1');
+    assert.equal(app.product_id, 'cms');
+    assert.equal(app.package, '@inneranimalmedia/client-cms-editor');
 
-    const sharedPkg = JSON.parse(fs.readFileSync(path.join(target, 'shared/cms/package.json'), 'utf8'));
-    assert.equal(sharedPkg.dependencies['@inneranimalmedia/agentsam-contracts'], '0.1.0');
-
-    const escaped = [
-      ...Object.values(frontendPkg.dependencies || {}),
-      ...Object.values(sharedPkg.dependencies || {}),
-    ].filter((value) => String(value).startsWith('file:'));
-    assert.deepEqual(escaped, []);
-
-    const runtime = JSON.parse(fs.readFileSync(path.join(target, '.agentsam/cms-runtime.json'), 'utf8'));
-    assert.equal(runtime.schema, 'agentsam.cms.runtime.v1');
-    assert.equal(runtime.app_id, 'client-cms-editor');
-    assert.equal(runtime.authority, 'sqlite');
-    assert.equal(runtime.cache, 'localStorage');
-    assert.equal(runtime.cache_only, false);
+    // Lean project shell — no monorepo package vendoring / file: escapes.
+    assert.equal(fs.existsSync(path.join(target, 'packages')), false);
+    assert.equal(fs.existsSync(path.join(target, 'frontend/package.json')), false);
   } finally {
     fs.rmSync(temp, { recursive: true, force: true });
   }
 });
 
-test('CMS editor localStorage option is explicitly cache-only', () => {
-  const { temp, target } = scaffold('localStorage');
+test('CMS editor rejects localStorage as persistence authority', () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-cms-scaffold-'));
+  const target = path.join(temp, 'editor');
   try {
-    const runtime = JSON.parse(fs.readFileSync(path.join(target, '.agentsam/cms-runtime.json'), 'utf8'));
-    assert.equal(runtime.authority, null);
-    assert.equal(runtime.cache, 'localStorage');
-    assert.equal(runtime.cache_only, true);
-    assert.match(runtime.note, /cache only/i);
+    assert.throws(
+      () => execFileSync(process.execPath, [
+        cmsBin,
+        'scaffold',
+        target,
+        '--persistence',
+        'localStorage',
+      ], { cwd: root, stdio: 'pipe', encoding: 'utf8' }),
+      (error) => {
+        const message = String(error?.stderr || error?.message || error);
+        return /unsupported persistence "localStorage"/i.test(message)
+          && /choose sqlite or d1/i.test(message);
+      },
+    );
+    assert.equal(fs.existsSync(target), false);
   } finally {
     fs.rmSync(temp, { recursive: true, force: true });
   }

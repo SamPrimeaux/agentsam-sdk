@@ -6,11 +6,20 @@ import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 
 const repoRoot = path.resolve(new URL('../..', import.meta.url).pathname);
+/** Repo bin first — clean CI has no global `agentsam`; loader requires it on PATH. */
+function testEnv(home, extra = {}) {
+  return {
+    ...process.env,
+    ...extra,
+    HOME: home,
+    PATH: `${path.join(repoRoot, 'bin')}${path.delimiter}${process.env.PATH || ''}`,
+  };
+}
 
 test('agentsam env init creates provider profile and reusable source loader', { skip: process.platform === 'win32' }, t => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-env-cli-'));
   t.after(() => fs.rmSync(home, { recursive: true, force: true }));
-  const env = { ...process.env, HOME: home };
+  const env = testEnv(home);
   const result = spawnSync(process.execPath, ['src/cli.js', 'env', 'init', 'openai'], { cwd: repoRoot, env, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /source ~\/.agentsam\/load-agent-env\.sh(?:\s|$)/);
@@ -40,11 +49,12 @@ test('Cloudflare env init backfills exactly one Wrangler account without printin
 test('generated loader exports the selected provider profile into the caller shell', { skip: process.platform === 'win32' }, t => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-env-source-'));
   t.after(() => fs.rmSync(home, { recursive: true, force: true }));
-  const env = { ...process.env, HOME: home };
+  const env = testEnv(home);
   let result = spawnSync(process.execPath, ['src/cli.js', 'env', 'init', 'openai'], { cwd: repoRoot, env, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
   fs.writeFileSync(path.join(home, '.agentsam', 'env.d', 'openai.env'), 'export OPENAI_API_KEY="sentinel-provider-key"\
 ', { mode: 0o600 });
-  result = spawnSync('bash', ['-lc', 'source "$HOME/.agentsam/load-agent-env.sh" openai && test "$OPENAI_API_KEY" = "sentinel-provider-key"'], { env, encoding: 'utf8' });
+  // Use bash -c (not -lc): a login shell resets PATH and drops the repo bin/agentsam needed on clean CI.
+  result = spawnSync('bash', ['-c', 'source "$HOME/.agentsam/load-agent-env.sh" openai && test "$OPENAI_API_KEY" = "sentinel-provider-key"'], { env, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
 });

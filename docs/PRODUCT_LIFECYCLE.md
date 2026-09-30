@@ -1,7 +1,7 @@
 # AgentSam product lifecycle — infra at a glance
 
 **Status:** standing engineering law (2026-09-30)  
-**Repo tip when audited:** `a6dee86d` (Lane 0c merged on agentsam-sdk `main`)  
+**Repo tip when audited:** Lane 0d CI trust branch (from `7684a4e5`)  
 **Companion:** [apps/README.md](../apps/README.md) (product app ownership boundary)
 
 This document is the glanceable SSOT for **implement → prove → extract → rebrand → repack → install**.  
@@ -292,19 +292,10 @@ Declare and prove the relationship so `apps/church-site` and `packages/theme-chu
 DONE     Branch closure + Identity branding (#81 @ c6a1519c+)
 DONE     PRODUCT_LIFECYCLE.md SSOT
 DONE     0c PROJECT AUTHORITY / TOOL INTEGRITY (#83 @ a6dee86d)
+DONE     0d CI TRUST / DEPENDENCY CLOSURE (#85 @ 821d0d3e)   ← GHA green
   │
   ▼
-0d CI TRUST / DEPENDENCY CLOSURE        ← NEXT (short baseline repair)
-  │
-  ├── dependency-health wrapper boots on a clean checkout before node_modules exists
-  ├── repair incomplete workspace lock graph (PR #83 artifact: 54 missing Radix edges under agentsam-nav)
-  ├── resolve current blocking dependency-health findings without force upgrades
-  ├── close stale CMS/scaffold assertions that make verify red on unchanged main
-  ├── close existing source-boundary violations or make the boundary rule accurately reflect intended ownership
-  └── prove the exact GitHub CI job green from clean checkout
-  │
-  ▼
-1 IDENTITY PORTABILITY
+1 IDENTITY PORTABILITY                  ← NEXT
   │
   ▼
 2 DESKTOP TRANSPORT / PACKAGING
@@ -321,12 +312,12 @@ Local Studio / CMS / Ecommerce / CAD
 ```
 
 Identity / Desktop / Database / Settings work **must not** deepen monorepo-only `file:` coupling or lie in manifests.  
-Lane **0c must stay short** — integrity over machinery we already built, not a new product.
+Lane **0d** made install/verify gates enforceable from a clean checkout; do not reopen dependency-graph or bootstrap debt in later lanes.
 
 | Lane | Focus | Graduation constraint |
 |---|---|---|
 | **0c** Project authority — **DONE** | Describe **this** repo’s architecture from evidence | #83 / `a6dee86d`: customer fixture + FNF regression + packed-npm proof green |
-| **0d** CI trust / dependency closure | Make the repo's own gates executable and meaningful from a clean checkout | exact CI Install + Verify green; complete lock graph; no unexplained baseline-red gates |
+| **0d** CI trust / dependency closure — **DONE** | Make the repo's own gates executable and meaningful from a clean checkout | #85 / `821d0d3e`: clean Install + complete lock graph + `npm run verify` + GHA green |
 | **1** Identity portable contract | SQLite + portable D1 + IAM compat | Migrations/adapters consumable **outside** monorepo |
 | **2** Desktop transport | Authenticated `/api` bridge + packaging | Desktop uses session transport — not Sam’s D1 credentials |
 | **3** Database Studio | Bound vs OAuth vs local; user-scoped | Empty state guides **user123** — never platform owner fallback |
@@ -457,25 +448,41 @@ Verified at `a6dee86d`:
 
 ### Lane 0d rules
 
-This is a **baseline-repair sprint**, not a dependency-upgrade free-for-all.
+This was a **baseline-repair sprint**, not a dependency-upgrade free-for-all.
 
-- Make the install/dependency-health gate bootstrap-safe from a fresh checkout.
-- Repair/regenerate the workspace lock graph so dependency inventory is complete. Do not hand-add phantom edges.
-- Resolve blocking advisories with tested, bounded upgrades/replacements where practical; **no `npm audit fix --force`** and no silent major-version churn.
-- Fix stale tests when implementation is authoritative; fix implementation when tests expose a real contract breach. Do not weaken tests merely to get green.
-- Resolve source-boundary findings against current ownership law instead of adding broad ignores.
-- Re-run the exact GitHub Actions sequence, not a local approximation.
+Proven on the Lane 0d branch:
+
+- Security `run` defers Merkle/TypeScript scan imports until after the child install command.
+- Workspace lock graph repaired so `agentsam-nav` Radix edges resolve; `npm --prefix packages/agentsam-nav run build` passes after clean `npm ci`.
+- Bounded upgrades: vitest `^4.1.11`, sharp `^0.35.5`, esbuild override `0.28.1`; no `npm audit fix --force`.
+- Stale CMS scaffold/tenancy tests updated to current implementation authority (`adapter-ready`, lean sqlite scaffold, live `(apps)/cms.tsx`).
+- Source-boundary debt closed by moving `machine-binary` beside the machine command and relocating flat root tests under `test/integration/`.
 
 ### Done when
 
-1. Fresh checkout / no `node_modules` can execute the CI Install step successfully.
-2. Dependency-health receipt is complete and has no unexplained lock-graph gaps.
-3. `npm run verify` is green from that install.
-4. Remaining app/runtime jobs in `.github/workflows/ci.yml` run rather than being skipped behind Install/Verify failure.
-5. GitHub Actions is green on the Lane 0d PR.
-6. No product behavior, provider support, or portability contract is weakened merely to satisfy CI.
+1. Fresh checkout / no `node_modules` can execute the CI Install step successfully. **PASS**
+2. Dependency-health receipt is complete and has no unexplained lock-graph gaps. **PASS** (`security run` surfaces child `npm ci` failures before Merkle/TS import)
+3. `npm run verify` is green from that install. **PASS** (CMS dist ensure + repo `bin` on PATH for env loader)
+4. Remaining app/runtime jobs in `.github/workflows/ci.yml` run rather than being skipped behind Install/Verify failure. **PASS** (Go Cloudflare dry-run optional branch only when `CLOUDFLARE_ACCOUNT_ID` is set)
+5. GitHub Actions is green on the Lane 0d PR. **PASS** — run [36775673676](https://github.com/SamPrimeaux/agentsam-sdk/actions/runs/36775673676) @ `821d0d3e`
+6. No product behavior, provider support, or portability contract is weakened merely to satisfy CI. **PASS**
+
+`security run` control law (0d): child command executes with bootstrap-safe imports only; on nonzero child exit, emit `command-failed` receipt and **do not** import the Merkle/TypeScript security stack.
 
 Only then proceed to Lane 1 Identity portability.
+
+### Standing runtime law (record only — do not implement in 0d / Lane 1)
+
+`agentsam.runtime.v1` is the stable contract. Language is an implementation detail behind capabilities.
+
+| Concern | Rule |
+|---|---|
+| INSTANCE | Which machine (Mac / VM / sandbox) |
+| ADAPTER | What executes (`agentsamd` / ExecOS / `cloudflare_sandbox` / future) |
+| TRANSPORT | How reached (localhost / CF Tunnel / VPC / service binding) |
+| AUTH | Why this caller may use it |
+
+Local Studio same-machine path: Tauri → loopback → `agentsamd`. No VPC, Tunnel, Worker, or Durable Object required for local PTY. Remote reachability is optional per enrolled `terminal_connection` (machine-scoped transport, never one tunnel per PTY). PTY/session/process lifetime belongs on the execution host — do not make a Durable Object the PTY authority. ExecOS remains supported; do not delete or replace it in these lanes.
 
 ---
 
@@ -504,6 +511,7 @@ Until then: develop in `apps/`, but **do not** advertise extract/install readine
 
 - [apps/README.md](../apps/README.md) — product app ownership boundary  
 - Branch closure trail (IAM): `inneranimalmedia/docs/platform/BRANCH_DISPOSITION_20260930.md`  
-- Work plan: Cursor `identity_portability_status` — **Lane 0d next**, then Identity → Desktop → Database → Settings → prebuild graduation  
+- Work plan: Cursor `identity_portability_status` — **Lane 1 Identity next** after Lane 0d merges  
 - Lane 0c project authority merged in #83 at `a6dee86d`; preserve its customer-repo/runtime discovery contract in every later lane  
+- Lane 0d closes clean-checkout CI trust; do not reopen ExecOS/terminal implementation during Identity
 - Runtime protocol note: ExecOS remains supported working machinery; `execos_legacy` is a compatibility identifier, not an approved retirement decision

@@ -8,7 +8,7 @@
     "node": ">=22 <25"
   },
   "dependencies": {
-    "sharp": "^0.34.5"
+    "sharp": "^0.35.5"
   },
   "main": "./src/index.js",
   "bin": {

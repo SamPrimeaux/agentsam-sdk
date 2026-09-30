@@ -3,7 +3,7 @@ import test from "node:test";
 import {
   listThemePackages,
   resolveThemePackage,
-} from "../packages/theme-scenes/src/registry.js";
+} from "../../packages/theme-scenes/src/registry.js";
 
 test("theme registry resolves donor aliases to neutral canonical ids", () => {
   const companions = resolveThemePackage("companions-of-caddo");

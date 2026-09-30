@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import { scanProjectSecurity, reportExitCode, repairProject, formatSecurityReport } from '../security/index.js';
 import { runProcess } from '../security/process.js';
 import { diagnosticFromError, renderDiagnosticError } from '../errors/index.js';
 
@@ -19,6 +18,54 @@ const help = [
   'Exit: 0 clean/verified, 1 unresolved findings or command failure, 2 incomplete/error.',
   ''
 ].join('\n');
+
+async function loadSecurityModules() {
+  // Deferred until after any pre-install child command (e.g. npm ci) so the
+  // Merkle/TypeScript trust-boundary stack is not required before dependencies exist.
+  return import('../security/index.js');
+}
+
+/** Bootstrap-safe receipt when the child install/build command fails — never import the heavy scan stack. */
+function bootstrapSafeCommandFailureReceipt(result, childArgs) {
+  const stdout = result.stdout || '';
+  const stderr = result.stderr || '';
+  return {
+    schema_version: 1,
+    ok: false,
+    complete: true,
+    status: 'command-failed',
+    command: childArgs,
+    command_exit_code: result.code,
+    signal: result.signal || null,
+    stdout,
+    stderr,
+    log: stdout + (stdout && stderr ? '\n' : '') + stderr,
+    issues: [`Child command exited with code ${result.code}`],
+    findings: [],
+    results: [],
+    dependency_count: 0,
+    checked_count: 0,
+    dependency_complete: false,
+  };
+}
+
+function formatCommandFailureReport(report) {
+  const lines = [
+    'Agent Sam · security · COMMAND-FAILED',
+    '',
+    'Command: ' + (Array.isArray(report.command) ? report.command.join(' ') : String(report.command || '')),
+    'Exit code: ' + String(report.command_exit_code),
+  ];
+  if (report.signal) lines.push('Signal: ' + report.signal);
+  for (const issue of report.issues || []) lines.push('  ! ' + issue);
+  if (report.stderr) {
+    lines.push('', 'stderr:', report.stderr.trimEnd());
+  } else if (report.stdout) {
+    lines.push('', 'stdout:', report.stdout.trimEnd());
+  }
+  return lines.join('\n') + '\n';
+}
+
 export async function runSecurity(argv) {
   const ownArgs = argv.slice(0, argv.indexOf('--') < 0 ? argv.length : argv.indexOf('--'));
   if (ownArgs.includes('--help') || ownArgs.includes('-h') || !argv.length) { process.stdout.write(help); return; }
@@ -52,13 +99,29 @@ export async function runSecurity(argv) {
     const abort = () => controller.abort();
     process.once('SIGINT', abort); process.once('SIGTERM', abort);
     let report;
+    let reportExitCode;
+    let formatSecurityReport;
     try {
       if (command === 'run') {
         const result = await runProcess(childArgs[0], childArgs.slice(1), { cwd: options.projectRoot || process.cwd(), signal: options.signal });
-        report = await scanProjectSecurity({ ...options, log: result.stdout + '\n' + result.stderr });
+        // Child failure must surface as command-failed without importing Merkle/TypeScript.
+        if (result.code !== 0) {
+          report = bootstrapSafeCommandFailureReceipt(result, childArgs);
+          process.stdout.write(options.json ? JSON.stringify(report, null, 2) + '\n' : formatCommandFailureReport(report));
+          process.exitCode = 1;
+          return;
+        }
+        const security = await loadSecurityModules();
+        reportExitCode = security.reportExitCode;
+        formatSecurityReport = security.formatSecurityReport;
+        report = await security.scanProjectSecurity({ ...options, log: result.stdout + '\n' + result.stderr });
         report.command_exit_code = result.code;
-        if (result.code) { report.ok = false; report.status = 'command-failed'; }
-      } else report = command === 'repair' ? await repairProject(options) : await scanProjectSecurity(options);
+      } else {
+        const security = await loadSecurityModules();
+        reportExitCode = security.reportExitCode;
+        formatSecurityReport = security.formatSecurityReport;
+        report = command === 'repair' ? await security.repairProject(options) : await security.scanProjectSecurity(options);
+      }
     } finally {
       process.removeListener('SIGINT', abort); process.removeListener('SIGTERM', abort);
     }

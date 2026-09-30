@@ -17,6 +17,9 @@ export function triageLog(text) {
     else if (/\b([1-9]\d*)\s+(?:(?:low|moderate|high|critical)\s+(?:severity\s+)?)?vulnerabilit/i.test(raw) || /npm audit fix/i.test(raw)) add('audit', line, 'rescan-current-lockfile');
     else if (/ExperimentalWarning/.test(raw)) add('experimental-runtime', line, 'informational', { blocking: false });
     else if (/new (?:release|(?:patch |minor |major )?version).*(?:pip|npm)|(?:pip|npm).*new (?:release|version)/i.test(raw)) add('tool-update', line, 'informational', { blocking: false });
+    // package.json allowScripts is the project authority; a user/global .npmrc allow-scripts clash is expected noise.
+    else if (/npm (?:warn|warning) allow-scripts.*declares its own allowScripts/i.test(raw)) add('configuration', line, 'informational', { blocking: false });
+    else if (/npm (?:warn|warning) allow-scripts/i.test(raw)) add('configuration', line, 'review-package-manager-config');
     else if (/npm (?:warn|warning).*config/i.test(raw)) add('configuration', line, 'review-package-manager-config');
     else if (/\b(?:warning|warn|npm ERR!|npm error)\b/i.test(raw)) add('unclassified-warning', line, 'review-log-at-source');
   }

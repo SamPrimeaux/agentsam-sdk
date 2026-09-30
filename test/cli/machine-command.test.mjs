@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getCliCommand } from '../../src/cli/command-catalog.js';
-import { resolveMachineBinary } from '../../src/lib/machine-binary.js';
+import { resolveMachineBinary } from '../../src/commands/machine-binary.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -19,7 +19,7 @@ test('machine crate + CLI sources exist for graduation', () => {
   assert.equal(fs.existsSync(path.join(root, 'native/agentsam-machine/Cargo.toml')), true);
   assert.equal(fs.existsSync(path.join(root, 'native/agentsam-machine/cli/src/main.rs')), true);
   assert.equal(fs.existsSync(path.join(root, 'src/commands/machine.js')), true);
-  assert.equal(fs.existsSync(path.join(root, 'src/lib/machine-binary.js')), true);
+  assert.equal(fs.existsSync(path.join(root, 'src/commands/machine-binary.js')), true);
 });
 
 test('resolveMachineBinary finds crate binary or cargo fallback in this repo', () => {
