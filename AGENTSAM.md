@@ -8,6 +8,35 @@ conventional client variable for that machinery, never a human identity. Prefer 
 “AgentSam executes through SAM…” over anthropomorphic phrasing. Architecture SSOT:
 `docs/architecture/SAM_KERNEL.md`.
 
+## AgentSam system model: deterministic machinery + LLM augmentation
+
+AgentSam is deliberately **not** “an LLM with tools.” It is a layered system:
+
+- **Old-school AgentSam / SAM** owns deterministic perception and execution: repository discovery, manifests, Git/Merkle evidence, AST/indexes, capability probes, provider/runtime discovery, schemas/migrations, routing constraints, typed operations, receipts, and verification.
+- **LLM AgentSam** augments that machinery where language-model reasoning is valuable: interpreting intent, resolving ambiguity, planning across valid options, composing/translating content or code, explaining evidence, and proposing transformations.
+- Deterministic evidence is authoritative when it can answer a question reliably. Do not ask an LLM to rediscover or guess facts that SAM can inspect, derive, or prove.
+- LLM output never overrides authorization, runtime capability evidence, manifests, migrations, provider state, product contracts, or verification receipts.
+- Core product workflows should remain inspectable and recoverable without hidden model reasoning. Emit typed/versioned receipts and explicit state transitions instead of treating a transcript as system state.
+- A model may recommend an action; trusted machinery decides whether the action is available, authorized, correctly scoped, and verifiably complete.
+
+This division is a product requirement: **LLMs supercharge AgentSam; they do not become the source of truth that holds AgentSam together.**
+
+## Portability, resale, and repurposability law
+
+AgentSam machinery is only reusable when an unrelated user can install or instantiate it without inheriting the operator's machine, identity, credentials, infrastructure, or monorepo.
+
+- A reusable package, app, template, or pipeline must not require Sam/operator-specific usernames, device names, absolute paths, domains, account IDs, database IDs, repository names, credentials, customer content, or private infrastructure assumptions.
+- Customer differences belong primarily in manifests, portable schema/data, company/brand rows, themes, provider grants, capability configuration, and content — **not source-code forks**.
+- Product apps under `apps/` are independently extractable. Advertised CLI/app capabilities must work from the published/packed artifact outside this monorepo; repo-local `file:` escape dependencies are not a valid release mechanism.
+- If the SDK advertises a datastore, provider, runtime, or backend as supported, the corresponding contract and implementation must ship together. Do not mark placeholders or “follow-up” adapters as supported production paths.
+- Generic packages stay generic. Product/customer seeds, deployment bindings, brand values, and app-specific migrations belong with the consuming app or installation.
+- Authorization and resource visibility are always principal/installation scoped. **No authorized resource must never fall back to a platform-owner resource.**
+- Product readiness is proven, not asserted. Use current manifests, machine inspection, clean-room packaging/install tests, migrations, doctors, and receipts. If a product cannot pass its declared contract, mark it non-graduated/unavailable rather than advertising readiness.
+- Extend existing authorities and adapters instead of creating parallel copies of Identity, Database Studio, Settings, themes, registries, or runtime state.
+
+Product graduation and resale enforcement are defined in
+[`docs/PRODUCT_LIFECYCLE.md`](docs/PRODUCT_LIFECYCLE.md).
+
 ## Execution
 
 - Infer routine implementation details when repository evidence makes the answer clear; do not block on unnecessary questions.
