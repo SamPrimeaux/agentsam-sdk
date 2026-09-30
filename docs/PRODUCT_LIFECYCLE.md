@@ -1,7 +1,7 @@
 # AgentSam product lifecycle — infra at a glance
 
 **Status:** standing engineering law (2026-09-30)  
-**Repo tip when audited:** `c27355e3` (agentsam-sdk `main`)  
+**Repo tip when audited:** `a6dee86d` (Lane 0c merged on agentsam-sdk `main`)  
 **Companion:** [apps/README.md](../apps/README.md) (product app ownership boundary)
 
 This document is the glanceable SSOT for **implement → prove → extract → rebrand → repack → install**.  
@@ -291,16 +291,17 @@ Declare and prove the relationship so `apps/church-site` and `packages/theme-chu
 ```text
 DONE     Branch closure + Identity branding (#81 @ c6a1519c+)
 DONE     PRODUCT_LIFECYCLE.md SSOT
+DONE     0c PROJECT AUTHORITY / TOOL INTEGRITY (#83 @ a6dee86d)
   │
   ▼
-0c PROJECT AUTHORITY / TOOL INTEGRITY   ← NEXT (short integrity pass)
+0d CI TRUST / DEPENDENCY CLOSURE        ← NEXT (short baseline repair)
   │
-  ├── AutoRAG / knowledge respects current repo evidence
-  ├── Wrangler resource discovery (ai, vectorize, D1, R2, …)
-  ├── cloudflare_vectorize = real backend (Worker bind + OAuth API transports)
-  ├── code scopes include apps/ (not only packages+src)
-  ├── Machine Unicode fix; machine inspect every agentsam.app.json
-  └── packed-npm proof (not monorepo-only)
+  ├── dependency-health wrapper boots on a clean checkout before node_modules exists
+  ├── repair incomplete workspace lock graph (PR #83 artifact: 54 missing Radix edges under agentsam-nav)
+  ├── resolve current blocking dependency-health findings without force upgrades
+  ├── close stale CMS/scaffold assertions that make verify red on unchanged main
+  ├── close existing source-boundary violations or make the boundary rule accurately reflect intended ownership
+  └── prove the exact GitHub CI job green from clean checkout
   │
   ▼
 1 IDENTITY PORTABILITY
@@ -324,13 +325,14 @@ Lane **0c must stay short** — integrity over machinery we already built, not a
 
 | Lane | Focus | Graduation constraint |
 |---|---|---|
-| **0c** Project authority | Describe **this** repo’s architecture from evidence | Customer fixture + FNF regression; packed-npm proof |
+| **0c** Project authority — **DONE** | Describe **this** repo’s architecture from evidence | #83 / `a6dee86d`: customer fixture + FNF regression + packed-npm proof green |
+| **0d** CI trust / dependency closure | Make the repo's own gates executable and meaningful from a clean checkout | exact CI Install + Verify green; complete lock graph; no unexplained baseline-red gates |
 | **1** Identity portable contract | SQLite + portable D1 + IAM compat | Migrations/adapters consumable **outside** monorepo |
 | **2** Desktop transport | Authenticated `/api` bridge + packaging | Desktop uses session transport — not Sam’s D1 credentials |
 | **3** Database Studio | Bound vs OAuth vs local; user-scoped | Empty state guides **user123** — never platform owner fallback |
 | **4** Settings host | Real host, not fixtures | Settings remains published capability; no permanent repo-local `file:` |
 
-**Standing truth Lane 0c must make true:**
+**Standing truth Lane 0c made true and future lanes must preserve:**
 
 > Running AgentSam in an unrelated customer repository describes and uses **that** repository’s actual architecture, not assumptions inherited from the AgentSam SDK monorepo.
 
@@ -431,14 +433,49 @@ Same logical backend id. Matches the Desktop service-vs-OAuth split used elsewhe
 | Workers AI `operational:false` despite Worker binding | Must separate local vs worker execution |
 | Machine panics on Local Studio `\u{a0}` | Every `agentsam.app.json` must survive `machine inspect` |
 
-### Acceptance tests (Lane 0c done when all green)
+### Acceptance tests — DONE in #83 / `a6dee86d`
 
 1. **Customer fixture** with `apps/my-product/`, wrangler `[ai]` + `[[vectorize]]`, `.agentsam/app.json` → correct resource discovery (no FNF-specific code in SDK).  
 2. **`agentsam autorag setup`** in that fixture proposes the **existing** Vectorize binding — not unrelated OpenAI/Gemini/local defaults.  
 3. **`agentsam machine inspect`** passes on **every** `agentsam.app.json` product (incl. Local Studio + arbitrary valid Unicode).  
-4. **Entire suite from packed npm SDK**, not the monorepo checkout.
+4. **Packed npm SDK clean-room proof** compiles/runs Machine outside the monorepo.
 
-**Regression target:** fuelnfreetime (D1, R2, Workers AI, Vectorize, app manifest, local SQLite, Merkle, mounted Ecommerce prebuild) — understood without FNF forks in the SDK.
+FNF regression on merged main now resolves canonical repo identity, current local generation, local SQLite, Workers AI, Vectorize, D1, and R2 with no resource conflicts. Preserve that behavior in later lanes.
+
+---
+
+## 10c. Lane 0d — CI trust + dependency closure
+
+Lane 0c is complete, but the repository baseline is still knowingly red. Do **not** start a large Identity change while CI cannot distinguish a new regression from existing install/verify debt.
+
+Verified at `a6dee86d`:
+
+- PR #83's GitHub Actions dependency-health artifact is incomplete because the root lock graph is missing **54 transitive Radix edges under `packages/agentsam-nav`**.
+- From a truly clean checkout with no `node_modules`, the current CI wrapper `node src/security/cli.mjs run --json -- npm ci` can import the Merkle/TypeScript stack before dependencies are installed and fail before `npm ci` runs.
+- A plain `npm ci` succeeds; once dependencies exist, the security wrapper runs and exposes the real dependency-health findings.
+- Existing verify debt remains: stale CMS/scaffold expectations and source-boundary violations already present on pre-0c main.
+
+### Lane 0d rules
+
+This is a **baseline-repair sprint**, not a dependency-upgrade free-for-all.
+
+- Make the install/dependency-health gate bootstrap-safe from a fresh checkout.
+- Repair/regenerate the workspace lock graph so dependency inventory is complete. Do not hand-add phantom edges.
+- Resolve blocking advisories with tested, bounded upgrades/replacements where practical; **no `npm audit fix --force`** and no silent major-version churn.
+- Fix stale tests when implementation is authoritative; fix implementation when tests expose a real contract breach. Do not weaken tests merely to get green.
+- Resolve source-boundary findings against current ownership law instead of adding broad ignores.
+- Re-run the exact GitHub Actions sequence, not a local approximation.
+
+### Done when
+
+1. Fresh checkout / no `node_modules` can execute the CI Install step successfully.
+2. Dependency-health receipt is complete and has no unexplained lock-graph gaps.
+3. `npm run verify` is green from that install.
+4. Remaining app/runtime jobs in `.github/workflows/ci.yml` run rather than being skipped behind Install/Verify failure.
+5. GitHub Actions is green on the Lane 0d PR.
+6. No product behavior, provider support, or portability contract is weakened merely to satisfy CI.
+
+Only then proceed to Lane 1 Identity portability.
 
 ---
 
@@ -467,5 +504,6 @@ Until then: develop in `apps/`, but **do not** advertise extract/install readine
 
 - [apps/README.md](../apps/README.md) — product app ownership boundary  
 - Branch closure trail (IAM): `inneranimalmedia/docs/platform/BRANCH_DISPOSITION_20260930.md`  
-- Work plan: Cursor `identity_portability_status` — **Lane 0c next**, then Identity → Desktop → Database → Settings → prebuild graduation  
-- Tip note: Identity branding merged at `c6a1519c` (#81); lifecycle SSOT landed after on `main`
+- Work plan: Cursor `identity_portability_status` — **Lane 0d next**, then Identity → Desktop → Database → Settings → prebuild graduation  
+- Lane 0c project authority merged in #83 at `a6dee86d`; preserve its customer-repo/runtime discovery contract in every later lane  
+- Runtime protocol note: ExecOS remains supported working machinery; `execos_legacy` is a compatibility identifier, not an approved retirement decision
