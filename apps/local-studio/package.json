@@ -40,7 +40,8 @@
     "cf:env": "bash scripts/with-cloudflare-env.sh",
     "verify:npm10-lock": "node scripts/verify-npm10-lock.mjs",
     "smoke:desktop": "node scripts/smoke-desktop-spa.mjs",
-    "verify:desktop": "npm run build:desktop && npm run smoke:desktop"
+    "verify:desktop": "npm run build:desktop && npm run smoke:desktop",
+    "verify:database-honesty": "node --test ../../test/database-hosted-honesty.test.mjs"
   },
   "dependencies": {
     "@cloudflare/codemode": "^0.5.2",

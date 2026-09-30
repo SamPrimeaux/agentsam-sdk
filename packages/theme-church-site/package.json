@@ -1,5 +1,5 @@
 {
-  "name": "@inneranimalmedia/theme-church-site",
+  "name": "@inneranimalmedia/theme-cypress",
   "version": "0.1.0",
   "description": "Real New Iberia Church of Christ public pages \u2014 visit, groups, mission, and giving.",
   "type": "module",
@@ -29,6 +29,8 @@
     "icon": "theme",
     "lineage": "nic",
     "family": "community-faith",
-    "normalization": "needs_normalization"
+    "normalization": "canonical_id_assigned",
+    "canonicalId": "cypress",
+    "legacyPackageName": "@inneranimalmedia/theme-church-site"
   }
 }

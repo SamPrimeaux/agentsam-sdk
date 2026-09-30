@@ -8,10 +8,11 @@
       "donor": "fuelnfreetime",
       "donor_display": "Fuel & Free Time",
       "package_current": "@inneranimalmedia/theme-fuelnfree-site",
-      "package_target": "@inneranimalmedia/theme-fnf",
+      "package_target": "@inneranimalmedia/theme-ember",
       "gallery_slug": "fuelnfree-site",
       "status": "needs_normalization",
-      "installable": false
+      "installable": false,
+      "canonical_id": "ember"
     },
     "afm": {
       "display": "AFM",
@@ -19,10 +20,11 @@
       "donor": "anything-floors",
       "donor_display": "Anything Floors & More",
       "package_current": "@inneranimalmedia/theme-floors-site",
-      "package_target": "@inneranimalmedia/theme-afm",
+      "package_target": "@inneranimalmedia/theme-grove",
       "gallery_slug": "floors-site",
       "status": "needs_normalization",
-      "installable": false
+      "installable": false,
+      "canonical_id": "grove"
     },
     "phs": {
       "display": "PHS",
@@ -30,10 +32,11 @@
       "donor": "primeaux-handyman",
       "donor_display": "Primeaux Handyman Services",
       "package_current": "@inneranimalmedia/theme-handyman-site",
-      "package_target": "@inneranimalmedia/theme-phs",
+      "package_target": "@inneranimalmedia/theme-forge",
       "gallery_slug": "handyman-site",
       "status": "needs_normalization",
-      "installable": false
+      "installable": false,
+      "canonical_id": "forge"
     },
     "nic": {
       "display": "NIC",
@@ -41,10 +44,11 @@
       "donor": "new-iberia-church",
       "donor_display": "New Iberia Church of Christ",
       "package_current": "@inneranimalmedia/theme-church-site",
-      "package_target": "@inneranimalmedia/theme-nic",
+      "package_target": "@inneranimalmedia/theme-cypress",
       "gallery_slug": "church-site",
       "status": "needs_normalization",
-      "installable": false
+      "installable": false,
+      "canonical_id": "cypress"
     },
     "coc": {
       "display": "COC",
@@ -52,10 +56,11 @@
       "donor": "companions-of-caddo",
       "donor_display": "Companions of Caddo",
       "package_current": "@inneranimalmedia/theme-companions-site",
-      "package_target": "@inneranimalmedia/theme-coc",
+      "package_target": "@inneranimalmedia/theme-violet",
       "gallery_slug": "companions-site",
       "status": "needs_normalization",
-      "installable": false
+      "installable": false,
+      "canonical_id": "violet"
     },
     "cci": {
       "display": "CCI",
@@ -63,10 +68,11 @@
       "donor": "chrystal-clear-insurance",
       "donor_display": "Chrystal Clear Insurance",
       "package_current": "@inneranimalmedia/theme-insurance-site",
-      "package_target": "@inneranimalmedia/theme-cci",
+      "package_target": "@inneranimalmedia/theme-harbor",
       "gallery_slug": "insurance-site",
       "status": "needs_normalization",
-      "installable": false
+      "installable": false,
+      "canonical_id": "harbor"
     },
     "shin": {
       "display": "SHIN",
@@ -74,10 +80,11 @@
       "donor": "shinshu-solutions",
       "donor_display": "Shinshu Solutions",
       "package_current": "@inneranimalmedia/theme-shinshu-site",
-      "package_target": "@inneranimalmedia/theme-shin",
+      "package_target": "@inneranimalmedia/theme-summit",
       "gallery_slug": "shinshu-site",
       "status": "needs_normalization",
-      "installable": false
+      "installable": false,
+      "canonical_id": "summit"
     }
   },
   "stages": [

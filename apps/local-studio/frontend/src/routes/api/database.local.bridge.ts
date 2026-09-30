@@ -4,13 +4,42 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * Dev/local-only SQLite bridge. Cloudflare Worker never serves this route —
+ * Dev/local-only SQLite bridge.
+ * Hosted Cloudflare Workers MUST hard-fail — comments alone are insufficient.
  * Tauri desktop uses invoke(`local_sqlite_bridge`) instead.
  */
+function isHostedWorkerRuntime(): boolean {
+  // Cloudflare Workers expose WebSocketPair; nodejs_compat may still present process.
+  try {
+    if (typeof (globalThis as { WebSocketPair?: unknown }).WebSocketPair === "function") {
+      return true;
+    }
+  } catch {
+    /* ignore */
+  }
+  if (typeof process !== "undefined") {
+    const env = process.env || {};
+    if (env.AGENTSAM_HOSTED_WORKER === "1" || env.CF_WORKER === "1") return true;
+  }
+  return false;
+}
+
 export const Route = createFileRoute("/api/database/local/bridge")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        if (isHostedWorkerRuntime()) {
+          return Response.json(
+            {
+              ok: false,
+              error: "requires_local_runtime",
+              message:
+                "Local SQLite cannot run inside the hosted Worker. Open AgentSam Local Studio or attach a local runtime.",
+            },
+            { status: 501 },
+          );
+        }
+
         const body = await request.json().catch(() => ({}));
         const repoRoot = path.resolve(
           path.dirname(fileURLToPath(import.meta.url)),

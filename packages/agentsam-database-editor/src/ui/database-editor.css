@@ -174,7 +174,7 @@
   padding: 0 12px;
   border-bottom: 1px solid var(--db-border);
   color: var(--db-muted);
-  font: 500 11px "IBM Plex Mono", ui-monospace, monospace;
+  font: 500 11px var(--font-mono, "IBM Plex Mono", ui-monospace, monospace);
 }
 .db-source-meta > span:first-child { color: var(--db-text); }
 .db-chip {
@@ -222,11 +222,11 @@
 .db-kpi-label,
 .db-eyebrow {
   color: var(--db-muted);
-  font: 500 10px "IBM Plex Mono", ui-monospace, monospace;
+  font: 500 10px var(--font-mono, "IBM Plex Mono", ui-monospace, monospace);
   letter-spacing: .08em;
   text-transform: uppercase;
 }
-.db-kpi-value { margin-top: 10px; font: 500 24px "IBM Plex Mono", ui-monospace, monospace; }
+.db-kpi-value { margin-top: 10px; font: 500 24px var(--font-mono, "IBM Plex Mono", ui-monospace, monospace); }
 .db-kpi-sub { margin-top: 7px; color: var(--db-muted); font-size: 10px; }
 .db-chart-card { margin-top: 10px; overflow: hidden; }
 .db-chart-title {
@@ -347,7 +347,7 @@
   padding: 0 10px;
   border-bottom: 1px solid var(--db-border);
   color: var(--db-muted);
-  font: 500 10px "IBM Plex Mono", ui-monospace, monospace;
+  font: 500 10px var(--font-mono, "IBM Plex Mono", ui-monospace, monospace);
 }
 .db-result-meta > span:first-child { color: var(--db-text); }
 .db-result-meta .warn { color: #f0b86e; }
@@ -364,7 +364,7 @@
   padding: 0 9px;
   white-space: nowrap;
   text-align: left;
-  font: 500 10.5px "IBM Plex Mono", ui-monospace, monospace;
+  font: 500 10.5px var(--font-mono, "IBM Plex Mono", ui-monospace, monospace);
 }
 .db-data-grid th {
   position: sticky;
@@ -399,7 +399,7 @@
   background: #0b0b0b;
   color: var(--db-text);
   padding: 14px;
-  font: 12px/1.55 "IBM Plex Mono", ui-monospace, monospace;
+  font: 12px/1.55 var(--font-mono, "IBM Plex Mono", ui-monospace, monospace);
 }
 .db-sql-actions {
   display: flex;
@@ -424,7 +424,7 @@
   background: #0b0b0b;
   padding: 10px;
   color: #d9d7d1;
-  font: 10.5px/1.5 "IBM Plex Mono", ui-monospace, monospace;
+  font: 10.5px/1.5 var(--font-mono, "IBM Plex Mono", ui-monospace, monospace);
 }
 
 .db-editor-empty { display: grid; flex: 1; place-items: center; align-content: center; gap: 8px; color: var(--db-muted); font-size: 12px; }
@@ -459,7 +459,7 @@
 .db-modal-header strong { display: block; margin-top: 4px; font-size: 13px; }
 .db-modal-fields { overflow: auto; padding: 12px; display: grid; gap: 8px; }
 .db-field { display: grid; grid-template-columns: minmax(130px, 180px) minmax(0, 1fr); align-items: center; gap: 12px; }
-.db-field > span { font: 500 11px "IBM Plex Mono", ui-monospace, monospace; }
+.db-field > span { font: 500 11px var(--font-mono, "IBM Plex Mono", ui-monospace, monospace); }
 .db-field small { display: block; margin-top: 2px; color: var(--db-muted); font-size: 9px; }
 .db-modal-actions {
   display: flex;
