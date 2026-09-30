@@ -8,6 +8,7 @@ use std::time::{Duration, Instant};
 
 const DEFAULT_SERVICE_ORIGIN: &str = "https://agentsam.inneranimalmedia.com";
 const GOOGLE_AUTH_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
+const GOOGLE_TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
 const GOOGLE_IDENTITY_SCOPES: &str = "openid email profile";
 const CALLBACK_TIMEOUT: Duration = Duration::from_secs(180);
 
@@ -37,6 +38,12 @@ pub struct GoogleDesktopIdentityResult {
     pub session_id: String,
     pub expires_at: Option<serde_json::Value>,
     pub user: Option<GoogleDesktopIdentityUser>,
+    #[serde(default)]
+    pub oauth_client_id: String,
+    #[serde(default)]
+    pub oauth_redirect_uri: String,
+    #[serde(default)]
+    pub pkce_method: String,
 }
 
 fn random_url_safe(nbytes: usize) -> String {
@@ -51,11 +58,48 @@ fn pkce_challenge(verifier: &str) -> String {
     URL_SAFE_NO_PAD.encode(hasher.finalize())
 }
 
+fn build_google_authorization_url(
+    client_id: &str,
+    redirect_uri: &str,
+    state: &str,
+    challenge: &str,
+) -> Result<reqwest::Url, String> {
+    let mut auth_url = reqwest::Url::parse(GOOGLE_AUTH_URL)
+        .map_err(|_| "google_authorize_url_invalid".to_string())?;
+    auth_url
+        .query_pairs_mut()
+        .append_pair("client_id", client_id)
+        .append_pair("redirect_uri", redirect_uri)
+        .append_pair("response_type", "code")
+        .append_pair("scope", GOOGLE_IDENTITY_SCOPES)
+        .append_pair("state", state)
+        .append_pair("code_challenge", challenge)
+        .append_pair("code_challenge_method", "S256")
+        .append_pair("prompt", "select_account");
+    Ok(auth_url)
+}
+
+fn google_token_exchange_form(
+    code: &str,
+    verifier: &str,
+    client_id: &str,
+    redirect_uri: &str,
+) -> Vec<(&'static str, String)> {
+    vec![
+        ("grant_type", "authorization_code".to_string()),
+        ("code", code.to_string()),
+        ("code_verifier", verifier.to_string()),
+        ("client_id", client_id.to_string()),
+        ("redirect_uri", redirect_uri.to_string()),
+    ]
+}
+
 fn validated_origin(raw: Option<String>) -> Result<String, String> {
     let value = raw
         .filter(|value| !value.trim().is_empty())
         .unwrap_or_else(|| DEFAULT_SERVICE_ORIGIN.to_string());
-    let parsed = reqwest::Url::parse(value.trim()).map_err(|_| "identity_service_origin_invalid".to_string())?;
+    let parsed = reqwest::Url::parse(value.trim())
+        .map_err(|_| "identity_service_origin_invalid".to_string())?;
     let loopback = matches!(parsed.host_str(), Some("127.0.0.1" | "localhost" | "::1"));
     if parsed.scheme() != "https" && !(parsed.scheme() == "http" && loopback) {
         return Err("identity_service_origin_requires_https".into());
@@ -103,9 +147,15 @@ fn callback_params(listener: TcpListener, expected_state: String) -> Result<Stri
     let code = params.get("code").cloned().unwrap_or_default();
 
     let (heading, message) = if let Some(ref error) = error {
-        ("Sign-in failed", format!("Google returned {error}. You can close this window and return to AgentSam."))
+        (
+            "Sign-in failed",
+            format!("Google returned {error}. You can close this window and return to AgentSam."),
+        )
     } else {
-        ("AgentSam", "Sign-in received. You can close this window and return to AgentSam.".to_string())
+        (
+            "AgentSam",
+            "Sign-in received. You can close this window and return to AgentSam.".to_string(),
+        )
     };
     let body = format!(
         "<!doctype html><html><head><meta charset=\"utf-8\"><title>{heading}</title></head><body style=\"font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:48px;background:#111318;color:#f5f7fb\"><h1>{heading}</h1><p>{message}</p></body></html>"
@@ -165,54 +215,88 @@ pub async fn google_desktop_identity_login(
     let verifier = random_url_safe(48);
     let challenge = pkce_challenge(&verifier);
 
-    let mut auth_url = reqwest::Url::parse(GOOGLE_AUTH_URL)
-        .map_err(|_| "google_authorize_url_invalid".to_string())?;
-    auth_url
-        .query_pairs_mut()
-        .append_pair("client_id", &client_id)
-        .append_pair("redirect_uri", &redirect_uri)
-        .append_pair("response_type", "code")
-        .append_pair("scope", GOOGLE_IDENTITY_SCOPES)
-        .append_pair("state", &state)
-        .append_pair("code_challenge", &challenge)
-        .append_pair("code_challenge_method", "S256")
-        .append_pair("prompt", "select_account");
+    let auth_url = build_google_authorization_url(&client_id, &redirect_uri, &state, &challenge)?;
 
     super::system::open_external_url(auth_url.to_string())?;
 
     let expected_state = state.clone();
-    let code = tauri::async_runtime::spawn_blocking(move || callback_params(listener, expected_state))
+    let code =
+        tauri::async_runtime::spawn_blocking(move || callback_params(listener, expected_state))
+            .await
+            .map_err(|error| format!("loopback_task_failed:{error}"))??;
+
+    let token_form = google_token_exchange_form(&code, &verifier, &client_id, &redirect_uri);
+    let token_response = client
+        .post(GOOGLE_TOKEN_URL)
+        .header("Accept", "application/json")
+        .form(&token_form)
+        .send()
         .await
-        .map_err(|error| format!("loopback_task_failed:{error}"))??;
+        .map_err(|error| format!("google_token_exchange_failed:{error}"))?;
+
+    let token_status = token_response.status();
+    let token_body: serde_json::Value = token_response
+        .json()
+        .await
+        .map_err(|error| format!("google_token_json_failed:{error}"))?;
+    if !token_status.is_success() {
+        let detail = token_body
+            .get("error_description")
+            .or_else(|| token_body.get("error"))
+            .and_then(|value| value.as_str())
+            .unwrap_or("google_token_exchange_failed");
+        return Err(format!(
+            "google_token_http_{}:{detail}",
+            token_status.as_u16()
+        ));
+    }
+
+    let access_token = token_body
+        .get("access_token")
+        .and_then(|value| value.as_str())
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "google_token_missing_access_token".to_string())?;
+    let id_token = token_body
+        .get("id_token")
+        .and_then(|value| value.as_str())
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "google_token_missing_id_token".to_string())?;
 
     let response = client
         .post(format!("{origin}/api/oauth/google/desktop-login-exchange"))
         .header("Accept", "application/json")
         .json(&serde_json::json!({
-            "code": code,
-            "code_verifier": verifier,
+            "access_token": access_token,
+            "id_token": id_token,
             "client_id": client_id,
-            "redirect_uri": redirect_uri,
         }))
         .send()
         .await
-        .map_err(|error| format!("google_desktop_login_exchange_failed:{error}"))?;
+        .map_err(|error| format!("google_desktop_session_exchange_failed:{error}"))?;
 
     let status = response.status();
     let body: serde_json::Value = response
         .json()
         .await
-        .map_err(|error| format!("google_desktop_login_json_failed:{error}"))?;
+        .map_err(|error| format!("google_desktop_session_json_failed:{error}"))?;
     if !status.is_success() {
         let detail = body
             .get("detail")
             .or_else(|| body.get("error"))
             .and_then(|value| value.as_str())
-            .unwrap_or("google_desktop_login_failed");
-        return Err(format!("google_desktop_login_http_{}:{detail}", status.as_u16()));
+            .unwrap_or("google_desktop_session_failed");
+        return Err(format!(
+            "google_desktop_session_http_{}:{detail}",
+            status.as_u16()
+        ));
     }
 
-    serde_json::from_value(body).map_err(|error| format!("google_desktop_login_contract_invalid:{error}"))
+    let mut result: GoogleDesktopIdentityResult = serde_json::from_value(body)
+        .map_err(|error| format!("google_desktop_login_contract_invalid:{error}"))?;
+    result.oauth_client_id = client_id;
+    result.oauth_redirect_uri = redirect_uri;
+    result.pkce_method = "S256".into();
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -227,6 +311,54 @@ mod tests {
         assert!(!challenge.contains('='));
         assert!(!challenge.contains('+'));
         assert!(!challenge.contains('/'));
+    }
+
+    #[test]
+    fn desktop_token_exchange_is_public_pkce_without_client_secret() {
+        let verifier = "V".repeat(64);
+        let form = google_token_exchange_form(
+            "auth-code",
+            &verifier,
+            "desktop-client.apps.googleusercontent.com",
+            "http://127.0.0.1:43123/callback",
+        );
+        let map: std::collections::HashMap<_, _> = form.into_iter().collect();
+        assert_eq!(
+            map.get("grant_type").map(String::as_str),
+            Some("authorization_code")
+        );
+        assert_eq!(map.get("code").map(String::as_str), Some("auth-code"));
+        assert_eq!(
+            map.get("client_id").map(String::as_str),
+            Some("desktop-client.apps.googleusercontent.com")
+        );
+        assert_eq!(
+            map.get("redirect_uri").map(String::as_str),
+            Some("http://127.0.0.1:43123/callback")
+        );
+        assert_eq!(map.get("code_verifier").map(String::len), Some(64));
+        assert!(!map.contains_key("client_secret"));
+    }
+
+    #[test]
+    fn authorization_and_token_exchange_share_client_and_redirect() {
+        let client_id = "desktop-client.apps.googleusercontent.com";
+        let redirect = "http://127.0.0.1:43123/callback";
+        let verifier = "A".repeat(64);
+        let challenge = pkce_challenge(&verifier);
+        let auth =
+            build_google_authorization_url(client_id, redirect, "state", &challenge).unwrap();
+        let query: std::collections::HashMap<_, _> = auth.query_pairs().into_owned().collect();
+        let form: std::collections::HashMap<_, _> =
+            google_token_exchange_form("code", &verifier, client_id, redirect)
+                .into_iter()
+                .collect();
+        assert_eq!(query.get("client_id"), form.get("client_id"));
+        assert_eq!(query.get("redirect_uri"), form.get("redirect_uri"));
+        assert_eq!(
+            query.get("code_challenge_method").map(String::as_str),
+            Some("S256")
+        );
     }
 
     #[test]

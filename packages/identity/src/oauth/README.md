@@ -4,7 +4,7 @@
 |------|----------|------|
 | **IAM platform (default)** | `IAM_CLIENT_ID` + `IAM_CLIENT_SECRET` | Minted at install/build for every customer worker |
 | Developer Google (web) | `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` | Takes `/api/oauth/google/start` when set |
-| Google Desktop / CLI | `GOOGLE_DESKTOP_CLIENT_ID` (+ optional `GOOGLE_DESKTOP_CLIENT_SECRET`) | `POST /api/oauth/google/desktop-exchange` (loopback PKCE) |
+| Google Desktop / CLI | `GOOGLE_DESKTOP_CLIENT_ID` | Public Authorization Code + PKCE with loopback redirect; no desktop secret |
 | Developer GitHub | `GITHUB_CLIENT_ID` + `GITHUB_CLIENT_SECRET` | Takes `/api/oauth/github/start` when set |
 | Cloudflare sign-in | `CLOUDFLARE_OAUTH_CLIENT_ID` (+ optional secret) | Takes `/api/oauth/cloudflare/start` when set |
 

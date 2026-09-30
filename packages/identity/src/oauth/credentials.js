@@ -89,12 +89,11 @@ export function resolveOAuthCredentialLane(env, provider) {
 
   if (key === 'google_desktop') {
     const clientId = String(env?.GOOGLE_DESKTOP_CLIENT_ID || '').trim();
-    const clientSecret = String(env?.GOOGLE_DESKTOP_CLIENT_SECRET || '').trim();
     if (clientId) {
       return {
         lane: 'byok_google_desktop',
         clientId,
-        clientSecret,
+        clientSecret: '',
         provider: 'google_desktop',
       };
     }
