@@ -3,7 +3,9 @@
 `apps/` is the development/authoring source of truth for runnable AgentSam product surfaces. Product apps are independently extractable and are intentionally **not** members of the SDK root npm workspace graph.
 
 **Lifecycle SSOT (validate → machine → prove → graduate → install):** [`docs/PRODUCT_LIFECYCLE.md`](../docs/PRODUCT_LIFECYCLE.md).  
-Use that doc for product map, graduation gates, scaffold vocabulary, and how Identity/Desktop/Database lanes must stay extractable for resale.
+Use that doc for product map, graduation gates, scaffold vocabulary, old-school SAM + LLM layering, and how Identity/Desktop/Database lanes must stay extractable for resale.
+
+**Global agent/runtime law:** [`AGENTSAM.md`](../AGENTSAM.md). Product apps may specialize behavior through app-owned manifests/data, but they must not weaken the portability, principal-isolation, deterministic-evidence, or receipt-backed completion rules.
 
 ## Product app law
 
