@@ -21,7 +21,8 @@ describe('auth portal preview server', () => {
     const loginRes = await fetch(`${baseUrl}/auth/login`);
     assert.equal(loginRes.status, 200);
     const loginHtml = await loginRes.text();
-    assert.match(loginHtml, /Sign in \| AgentSam/);
+    assert.match(loginHtml, /<title>Sign in<\/title>/);
+    assert.match(loginHtml, /data-company-name>App</);
 
     const signupRes = await fetch(`${baseUrl}/auth/signup`);
     assert.equal(signupRes.status, 200);
@@ -34,7 +35,8 @@ describe('auth portal preview server', () => {
     const companyRes = await fetch(`${baseUrl}/api/company`);
     const companyJson = await companyRes.json();
     assert.equal(companyJson.ok, true);
-    assert.equal(companyJson.company.supportEmail, 'support@agentsam.dev');
+    assert.equal(companyJson.company.supportEmail, 'support@example.com');
+    assert.equal(companyJson.company.name, 'Preview App');
 
     const apiRes = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST',

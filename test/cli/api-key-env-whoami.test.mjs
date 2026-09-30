@@ -86,7 +86,7 @@ test('whoami surfaces tokenPermissions and authType from context', async () => {
       tokenPermissions: ['account:read', 'repository:read', 'models:invoke'],
       credential: {
         id: 'aakcred_1',
-        name: 'Sams-iMac',
+        name: 'dev-machine',
         prefix: 'aak_7fm…',
         environment: 'development',
         status: 'active',
@@ -99,7 +99,7 @@ test('whoami surfaces tokenPermissions and authType from context', async () => {
   assert.equal(status.loggedIn, true);
   assert.equal(status.authType, 'api_key');
   assert.deepEqual(status.tokenPermissions, ['account:read', 'repository:read', 'models:invoke']);
-  assert.equal(status.credential.name, 'Sams-iMac');
+  assert.equal(status.credential.name, 'dev-machine');
   assert.doesNotMatch(JSON.stringify(status), /aak_presented/);
 });
 

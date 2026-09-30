@@ -363,6 +363,41 @@ export function createCloudflareD1Adapter(db, options = {}) {
       return normalizeCompanyRow(row);
     },
 
+    /**
+     * Resolve portal branding by request host against company.meta.hosts (or website_url host).
+     * Product-agnostic — each tenant lists their own hosts in D1.
+     * @param {string | null | undefined} hostname
+     */
+    async getCompanyByHost(hostname) {
+      const host = String(hostname || '')
+        .trim()
+        .toLowerCase()
+        .split(':')[0];
+      if (!host) return null;
+      const { results } = await db.prepare(
+        `SELECT id, slug, name, legal_name, logo_url, favicon_url, primary_color, auth_bg_color,
+                support_email, website_url, tagline, meta_json, created_at, updated_at
+         FROM company`,
+      ).all();
+      for (const row of results || []) {
+        const company = normalizeCompanyRow(row);
+        if (!company) continue;
+        const hosts = Array.isArray(company.meta?.hosts)
+          ? company.meta.hosts.map((h) => String(h || '').trim().toLowerCase()).filter(Boolean)
+          : [];
+        if (hosts.includes(host)) return company;
+        try {
+          if (company.websiteUrl) {
+            const siteHost = new URL(company.websiteUrl).hostname.toLowerCase();
+            if (siteHost && siteHost === host) return company;
+          }
+        } catch {
+          // ignore invalid website_url
+        }
+      }
+      return null;
+    },
+
     async getDefaultCompany() {
       const bySlug = await this.getCompanyBySlug(DEFAULT_COMPANY_SLUG);
       if (bySlug) return bySlug;

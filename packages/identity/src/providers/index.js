@@ -9,8 +9,8 @@ import { ChatGptProvider } from './chatgpt/index.js';
 
 /**
  * Active identity provider registry.
- * `inneranimalmedia` is the canonical platform template id; `iam` remains a
- * legacy lookup alias (OAuth/DB provider key on platform identities).
+ * `inneranimalmedia` is the canonical platform template id; `iam` and `inneranimal` remain
+ * legacy lookup aliases (OAuth/DB provider keys on platform identities).
  * @type {Record<string, import('../provider-contract.js').IdentityProvider>}
  */
 export const identityProviders = Object.freeze({
@@ -27,7 +27,9 @@ export const identityProviders = Object.freeze({
 /** @param {string} id */
 export function getIdentityProvider(id) {
   const key = String(id || '').trim().toLowerCase();
-  if (key === 'iam') return identityProviders.inneranimalmedia || identityProviders.iam || null;
+  if (key === 'iam' || key === 'inneranimal') {
+    return identityProviders.inneranimalmedia || identityProviders.iam || null;
+  }
   if (key === 'openai' || key === 'chatgpt-hosted' || key === 'chatgpt_hosted') {
     return identityProviders.chatgpt || null;
   }

@@ -87,9 +87,9 @@
 
     if (url.pathname === '/api/company') {
       return jsonResponse({
-        name: 'AgentSam',
-        tagline: 'Instant Access',
-        logoUrl: '/shared/agentsam-mark.svg',
+        name: 'App',
+        tagline: 'Welcome',
+        logoUrl: '/shared/app-icon.png',
         authBgColor: '#050508',
       });
     }

@@ -9,7 +9,7 @@ test('identity command prints this host vocabulary without calling the network',
   const result = await runTerminal(['identity'], {
     write: (line) => lines.push(line),
     collectIdentity: async () => ({
-      hostname: 'Sams-iMac',
+      hostname: 'dev-machine',
       platform: 'macos',
       arch: 'arm64',
       model: 'Mac16,2',
@@ -41,7 +41,7 @@ test('enroll posts canonical identity for the instance the caller named', async 
   const result = await runTerminal(['enroll', '--instance', 'tinst_sams_imac', '--json'], {
     write: () => {},
     collectIdentity: async () => ({
-      hostname: 'Sams-iMac',
+      hostname: 'dev-machine',
       platform: 'macos',
       arch: 'arm64',
       model: 'Mac16,2',
