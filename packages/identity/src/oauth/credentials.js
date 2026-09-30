@@ -121,18 +121,7 @@ export function resolveOAuthCredentialLane(env, provider) {
     return null;
   }
 
-  // Default: Google/GitHub buttons route through IAM platform when minted.
-  const iam = resolveIamPlatformCredentials(env);
-  if (iam) {
-    return {
-      lane: 'iam_platform',
-      clientId: iam.clientId,
-      clientSecret: iam.clientSecret,
-      origin: iam.origin,
-      issuer: iam.issuer,
-      provider: 'inneranimalmedia',
-    };
-  }
-
+  // Provider selection is fail-closed. A Google or GitHub button must never
+  // silently become InnerAnimalMedia/IAM. IAM remains an explicit provider.
   return null;
 }
