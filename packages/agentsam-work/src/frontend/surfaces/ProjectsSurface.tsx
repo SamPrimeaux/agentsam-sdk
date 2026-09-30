@@ -120,20 +120,14 @@ export function ProjectsSurface({
                 height: 145,
                 display: "grid",
                 placeItems: "center",
-                background:
-                  project.coverImageUrl === "fixture:companions"
-                    ? "linear-gradient(135deg, #fff, #f9f9f9)"
-                    : "color-mix(in srgb, var(--agentsam-work-panel-subtle) 85%, " + project.accent + " 15%)",
+                background: project.coverImageUrl
+                  ? `center / cover no-repeat url(${JSON.stringify(project.coverImageUrl)})`
+                  : "color-mix(in srgb, var(--agentsam-work-panel-subtle) 85%, " + project.accent + " 15%)",
               }}
             >
-              {project.coverImageUrl === "fixture:companions" ? (
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 54, fontWeight: 700, letterSpacing: "-.08em" }}>CPAS</div>
-                  <div style={{ fontSize: 10, letterSpacing: ".25em" }}>COMPANIONS</div>
-                </div>
-              ) : (
+              {!project.coverImageUrl ? (
                 <Camera size={20} color="var(--agentsam-work-muted)" />
-              )}
+              ) : null}
               <button
                 type="button"
                 style={{

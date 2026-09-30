@@ -1,20 +1,19 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { createHttpWorkHost } from "@inneranimalmedia/agentsam-work/client";
 import {
   WorkProduct,
   applyWorkThemeTokens,
-  createHttpWorkHost,
-  createFixtureWorkHost,
-  populatedWorkFixture,
   readStoredWorkThemeTokens,
-  type WorkSurfaceId,
-} from "@inneranimalmedia/agentsam-work";
+} from "@inneranimalmedia/agentsam-work/frontend";
+import type { WorkHost, WorkSurfaceId } from "@inneranimalmedia/agentsam-work/contracts";
 import "@inneranimalmedia/agentsam-work/theme.css";
 
 /**
  * Production / hosted default: HTTP WorkHost → GET /api/work/snapshot.
- * Fixture host only when explicitly requested (?fixture=populated|demo) or
- * VITE_WORK_FIXTURE=1 for Storybook/local preview — never the production default.
+ * Fixture host only when explicitly requested (?fixture=populated|demo) —
+ * never the production default, and fixtures are lazy-loaded so they stay
+ * out of the cold production authority path when unused.
  */
 function resolveWorkHostMode(): "http" | "fixture" {
   if (typeof window === "undefined") return "http";
@@ -25,13 +24,25 @@ function resolveWorkHostMode(): "http" | "fixture" {
   return "http";
 }
 
-function useLocalStudioWorkHost() {
-  return useMemo(() => {
-    if (resolveWorkHostMode() === "fixture") {
-      return createFixtureWorkHost(populatedWorkFixture);
-    }
-    return createHttpWorkHost("");
-  }, []);
+function useLocalStudioWorkHost(): WorkHost | null {
+  const mode = useMemo(() => resolveWorkHostMode(), []);
+  const [host, setHost] = useState<WorkHost | null>(() =>
+    mode === "http" ? createHttpWorkHost("") : null,
+  );
+
+  useEffect(() => {
+    if (mode !== "fixture") return;
+    let cancelled = false;
+    void import("@inneranimalmedia/agentsam-work/fixtures").then((mod) => {
+      if (cancelled) return;
+      setHost(mod.createFixtureWorkHost(mod.populatedWorkFixture));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [mode]);
+
+  return host;
 }
 
 export function LocalStudioWorkPage({
@@ -45,14 +56,23 @@ export function LocalStudioWorkPage({
 }) {
   const navigate = useNavigate();
   const host = useLocalStudioWorkHost();
+  const mode = resolveWorkHostMode();
 
   useEffect(() => {
     const stored = readStoredWorkThemeTokens();
     if (stored) applyWorkThemeTokens(stored);
   }, []);
 
+  if (!host) {
+    return (
+      <div className="flex h-full min-h-0 items-center justify-center text-sm text-muted-foreground">
+        Loading Work…
+      </div>
+    );
+  }
+
   return (
-    <div className="h-full min-h-0" data-work-host={resolveWorkHostMode()}>
+    <div className="h-full min-h-0" data-work-host={mode}>
       <WorkProduct
         host={host}
         surface={surface}
