@@ -31,7 +31,11 @@ export function createTicketId() {
 }
 
 /**
- * Generate SQL for ticket creation with mandatory agentsam_agent_run when active.
+ * Generate SQL for ticket creation.
+ *
+ * Goal state and execution state are separate nouns. Creating/activating a
+ * ticket must not fabricate an agentsam_agent_run. Callers may link an
+ * already-created real run explicitly via agentRunId.
  */
 export function generateTicketCreateSql({
   accountId,
