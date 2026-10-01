@@ -90,6 +90,23 @@ export async function createLocalSqliteDatabase(filePath = '.agentsam/data/agent
         },
       };
     },
+    async batch(statements = []) {
+      database.exec('BEGIN IMMEDIATE');
+      try {
+        const results = [];
+        for (const statement of statements) {
+          if (!statement || typeof statement.run !== 'function') {
+            throw new TypeError('Local SQLite batch entries must expose run()');
+          }
+          results.push(await statement.run());
+        }
+        database.exec('COMMIT');
+        return results;
+      } catch (error) {
+        try { database.exec('ROLLBACK'); } catch {}
+        throw error;
+      }
+    },
     exec(sql) {
       database.exec(sql);
     },
