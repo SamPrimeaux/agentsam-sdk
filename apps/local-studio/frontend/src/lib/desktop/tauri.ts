@@ -125,6 +125,23 @@ export async function resolveDesktopStudioAccountId(): Promise<string> {
 }
 
 
+export type DesktopWorkspaceContext = {
+  home_dir: string;
+  process_cwd: string;
+  default_cwd: string;
+  source: string;
+};
+
+export async function getDesktopWorkspaceContext(): Promise<DesktopWorkspaceContext | null> {
+  const invoke = getTauriInvoke();
+  if (!invoke) return null;
+  try {
+    return (await invoke("desktop_workspace_context", {})) as DesktopWorkspaceContext;
+  } catch {
+    return null;
+  }
+}
+
 export async function openExternalUrl(url: string): Promise<void> {
   if (!/^https?:\/\//i.test(url)) throw new Error("external_url_scheme_not_allowed");
   const invoke = getTauriInvoke();
