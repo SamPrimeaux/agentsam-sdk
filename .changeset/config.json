@@ -11,7 +11,11 @@
   ],
   "commit": true,
   "ignore": [],
-  "fixed": [],
+  "fixed": [
+    [
+      "@inneranimalmedia/*"
+    ]
+  ],
   "linked": [],
   "updateInternalDependencies": "patch"
 }

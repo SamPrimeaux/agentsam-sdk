@@ -1,7 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-local-studio",
   "version": "2.6.7",
-  "private": true,
   "sideEffects": false,
   "type": "module",
   "workspaces": [
@@ -81,5 +80,31 @@
     "node-pty@1.1.0": true,
     "protobufjs@7.6.6": true,
     "workerd@1.20260925.1": true
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "apps/local-studio"
+  },
+  "bin": {
+    "agentsam-studio": "bin/agentsam-studio.mjs"
+  },
+  "files": [
+    "bin/",
+    "agentsam.app.json",
+    "README.md",
+    "docs/",
+    "scripts/",
+    ".env.cloudflare.example",
+    ".nvmrc",
+    "vite.config.ts",
+    "vite.desktop.config.ts",
+    "tsconfig.json",
+    "frontend/",
+    "backend/",
+    "shared/"
+  ]
 }

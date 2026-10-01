@@ -1,9 +1,8 @@
 {
   "name": "@inneranimalmedia/agentsam-vault",
-  "version": "0.1.0",
-  "private": true,
+  "version": "2.6.7",
   "type": "module",
-  "description": "AgentSam credential vault core \u2014 contracts, AES-GCM crypto, provider registry, resolver. UI lives in agentsam-key-manager.",
+  "description": "AgentSam credential vault core — contracts, AES-GCM crypto, provider registry, resolver. UI lives in agentsam-key-manager.",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
   "exports": {
@@ -28,5 +27,16 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/agentsam-vault"
+  },
+  "files": [
+    "src"
+  ]
 }

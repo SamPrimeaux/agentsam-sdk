@@ -1,9 +1,8 @@
 {
   "name": "@inneranimalmedia/agentsam-sdk-identity",
-  "version": "2.6.5",
-  "private": true,
+  "version": "2.6.7",
   "type": "module",
-  "description": "Identity module for @inneranimalmedia/agentsam-sdk (workspace \u2014 publish via root SDK)",
+  "description": "Identity module for @inneranimalmedia/agentsam-sdk (workspace — publish via root SDK)",
   "agentsam": {
     "system": "identity",
     "kind": "library",
@@ -45,5 +44,16 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/identity"
+  },
+  "files": [
+    "src"
+  ]
 }

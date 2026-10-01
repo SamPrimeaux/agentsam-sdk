@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-content-studio",
-  "version": "0.1.0",
+  "version": "2.6.7",
   "description": "Canonical React UI for AgentSam Content Studio: library, inspectors, assistant rail. Host apps provide a ContentRuntime; the UI never knows their names.",
   "type": "module",
   "main": "./dist/index.js",
@@ -19,7 +19,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-content": "*"
+    "@inneranimalmedia/agentsam-content": "^2.6.7"
   },
   "peerDependencies": {
     "react": ">=18"
@@ -32,5 +32,13 @@
     "typescript": "^5.9.3",
     "vitest": "^4.1.11"
   },
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/agentsam-content-studio"
+  }
 }

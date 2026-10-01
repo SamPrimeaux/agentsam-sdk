@@ -1,7 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-ide",
-  "version": "0.1.0",
-  "private": true,
+  "version": "2.6.7",
   "description": "AgentSam IDE packages — Monaco, file tree, xterm, LSP client, first-login onboarding. Rapidly deployable into Local Studio / desktop.",
   "type": "module",
   "main": "./src/index.ts",
@@ -30,5 +29,16 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "typescript": "^5.9.3"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/agentsam-ide"
+  },
+  "files": [
+    "src"
+  ]
 }

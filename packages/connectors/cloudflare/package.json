@@ -1,12 +1,22 @@
 {
   "name": "@inneranimalmedia/agentsam-connector-cloudflare",
-  "version": "0.1.0",
-  "private": true,
+  "version": "2.6.7",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js",
     "./capabilities": "./src/capabilities.js",
     "./api-client": "./src/api-client.js"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/connectors/cloudflare"
+  },
+  "files": [
+    "src"
+  ]
 }

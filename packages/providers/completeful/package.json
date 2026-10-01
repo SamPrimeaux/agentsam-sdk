@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-provider-completeful",
-  "version": "0.1.0",
+  "version": "2.6.7",
   "private": false,
   "description": "Portable Completeful provider adapter and AgentSam tool definitions.",
   "type": "module",
@@ -25,5 +25,10 @@
   "publishConfig": {
     "access": "public"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/providers/completeful"
+  }
 }

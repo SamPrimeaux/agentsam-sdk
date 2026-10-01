@@ -1,7 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-cms-backend",
-  "version": "0.1.0-alpha.0",
-  "private": true,
+  "version": "2.6.7",
   "description": "Internal CMS backend bridge (bundled into @inneranimalmedia/client-cms-editor — not published separately).",
   "type": "module",
   "exports": {
@@ -15,9 +14,20 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-cms-shared": "0.1.0-alpha.0"
+    "@inneranimalmedia/agentsam-cms-shared": "^2.6.7"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "apps/client-cms-editor/backend"
+  },
+  "files": [
+    "src"
+  ]
 }

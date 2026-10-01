@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-content",
-  "version": "0.1.0",
+  "version": "2.6.7",
   "description": "Portable content/library peer domain over Asset Core: lifecycle, usage, providers, intelligence, and createContentRuntime(). BrandPack remains peer brand authority.",
   "type": "module",
   "main": "./dist/index.js",
@@ -43,14 +43,22 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-assets-core": "*",
-    "@inneranimalmedia/agentsam-scoring": "*",
-    "@inneranimalmedia/agentsam-cloudflare-images": "*"
+    "@inneranimalmedia/agentsam-assets-core": "^2.6.7",
+    "@inneranimalmedia/agentsam-scoring": "^2.6.7",
+    "@inneranimalmedia/agentsam-cloudflare-images": "^2.6.7"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.11"
   },
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/agentsam-content"
+  }
 }

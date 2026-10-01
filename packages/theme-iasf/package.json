@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/theme-iasf",
-  "version": "0.1.0",
+  "version": "2.6.7",
   "description": "IASF — stock Inner Animal Storefront theme pack (normalized from studio-cms-editor harvest).",
   "type": "module",
   "main": "./src/index.js",
@@ -42,5 +42,10 @@
       "theme-inneranimals-site",
       "inner-animals-storefront"
     ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/theme-iasf"
   }
 }

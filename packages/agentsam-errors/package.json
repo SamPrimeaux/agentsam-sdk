@@ -1,7 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-errors",
-  "version": "0.1.0",
-  "private": true,
+  "version": "2.6.7",
   "description": "Canonical AgentSam runtime error normalization, classification, transport, remediation and rendering.",
   "type": "module",
   "main": "./src/index.js",
@@ -13,5 +12,16 @@
   },
   "engines": {
     "node": ">=22 <25"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/agentsam-errors"
+  },
+  "files": [
+    "src"
+  ]
 }

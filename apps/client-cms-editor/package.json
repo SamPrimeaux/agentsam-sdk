@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/client-cms-editor",
-  "version": "0.1.0-alpha.0",
+  "version": "2.6.7",
   "private": false,
   "description": "Reusable full-stack website + CMS kit with multi-page public sites, a protected authoring dashboard, local SQLite, starter/theme import, and pluggable auth, storage, and deployment adapters.",
   "type": "module",
@@ -113,5 +113,10 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "apps/client-cms-editor"
   }
 }

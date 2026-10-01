@@ -1,7 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-sdk-ecommerce",
-  "version": "0.1.0",
-  "private": true,
+  "version": "2.6.7",
   "type": "module",
   "workspaces": [
     "frontend"
@@ -12,6 +11,26 @@
     "preview": "npm run preview --workspace=frontend",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "clean": "rm -rf frontend/dist"
-  }
+    "clean": "rm -rf frontend/dist",
+    "prepack": "npm run build"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "apps/ecommerce-cms-agentsam"
+  },
+  "bin": {
+    "agentsam-ecommerce": "bin/agentsam-ecommerce.mjs"
+  },
+  "files": [
+    "bin/",
+    "agentsam.app.json",
+    "IMPORT_PROVENANCE.json",
+    "docs/",
+    "providers/",
+    "frontend/"
+  ]
 }
