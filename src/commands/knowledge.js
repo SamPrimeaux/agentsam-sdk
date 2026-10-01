@@ -227,7 +227,8 @@ export function renderRepositoryObservation(observation) {
 export async function runRepository(argv) {
   const { values: opts, positionals } = flags(argv, { save: { type: 'boolean' }, 'churn-days': { type: 'string' } });
   const command = positionals[0] || 'snapshot';
-  if (opts.help) { console.log('agentsam repo snapshot [--cwd PATH] [--churn-days 30] [--save] [--json]\nagentsam repo history|compare [--cwd PATH]\nUses the bundled Python repository intelligence; --save retains observations for comparisons.'); return; }
+  if (opts.help) { console.log('agentsam repo [snapshot] [--cwd PATH] [--churn-days 30] [--save] [--json]\nagentsam repo history|compare [--cwd PATH]\nDefault output is a human summary; --json emits the full deterministic receipt.'); return; }
+  if (command === 'context') throw new Error('Repository context is `agentsam context`. Use `agentsam repo snapshot|history|compare` for repository intelligence.');
   if (positionals.length > 1 || !['snapshot', 'history', 'compare'].includes(command)) throw new Error('Use agentsam repo snapshot|history|compare.');
   const root = repositoryRoot(opts.cwd);
   let store;
