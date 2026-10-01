@@ -302,7 +302,7 @@ ON CONFLICT(repository_id) DO UPDATE SET
   return {
     ok: true,
     ticketId,
-    agentRunId,
+    agentRunId: null,
     title: cleanTitle,
     status,
     priority,
