@@ -289,17 +289,7 @@ export async function runSetup(argv = [], options = {}) {
   writeLine(write, receipt.ok ? '  ✓ Agent Sam setup complete' : '  ✕ Setup finished with failures');
   writeLine(write, `  Receipt  ${receipt.path}`);
   writeLine(write, '');
-  writeLine(write, '  Next');
-  writeLine(write, '    agentsam doctor');
-  writeLine(write, '    agentsam capabilities');
-  if (capabilityIds.includes('google.cloud')) {
-    writeLine(write, '    agentsam setup google.cloud --inventory');
-    writeLine(write, '    agentsam gcloud auth login');
-  }
-  if (capabilityIds.includes('image.vectorize')) {
-    writeLine(write, '    agentsam image optimize ./logo.png   # when image command ships');
-  }
-  writeLine(write, '');
+  writeSetupNext(write, capabilityIds);
 
   if (json) write(JSON.stringify({ environment, plan, receipt }, null, 2) + '\n');
   return receipt.ok ? 0 : 2;
