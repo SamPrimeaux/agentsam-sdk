@@ -271,8 +271,7 @@ export async function runSetup(argv = [], options = {}) {
   if (dryRun || !plan.would_install.length) {
     if (!plan.would_install.length) {
       writeLine(write, '  ✓ setup complete — requested capabilities already satisfied');
-      writeLine(write, '  Next: agentsam doctor · agentsam capabilities · agentsam google-cloud doctor');
-      writeLine(write, '');
+      writeSetupNext(write, capabilityIds);
     }
     if (json) write(JSON.stringify({ environment, plan, executed: false }, null, 2) + '\n');
     return 0;
