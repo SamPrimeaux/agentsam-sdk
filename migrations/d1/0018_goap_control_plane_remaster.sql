@@ -1,17 +1,15 @@
 -- 0018_goap_control_plane_remaster.sql
--- Additive remaster only: no new GOAP table family.
--- Existing nouns remain authoritative; these columns freeze portable v1 contracts.
+-- Additive ticket/event contract remaster only: no new GOAP table family.
+--
+-- This migration intentionally targets tables owned by the portable D1/SQLite
+-- control-plane baseline (0010) and equivalent legacy host tables.
+-- Blackboard/workspace state is a runtime concern and is evolved separately by
+-- migrations/runtime/0002_goap_blackboard_v1.sql.
 --
 -- NOTE: account_id/repository_id are intentionally NOT added to ticket_events here.
 -- Portable 0010 already has them, while the legacy platform table does not.
 -- The GOAP adapter supports eventOwnership=ticket_join for that host shape until a
--- dedicated platform-only repair can be applied without breaking portable installs.
-
-ALTER TABLE agentsam_workspace_state
-  ADD COLUMN state_schema TEXT NOT NULL DEFAULT 'agentsam.blackboard.v1';
-
-ALTER TABLE agentsam_workspace_state
-  ADD COLUMN revision INTEGER NOT NULL DEFAULT 1 CHECK (revision > 0);
+-- dedicated platform-only ownership repair is intentionally applied.
 
 ALTER TABLE agentsam_tickets
   ADD COLUMN goal_schema TEXT;
@@ -32,9 +30,6 @@ ALTER TABLE agentsam_ticket_events
 
 ALTER TABLE agentsam_ticket_events
   ADD COLUMN schema_version TEXT NOT NULL DEFAULT 'agentsam.event.v1';
-
-CREATE INDEX IF NOT EXISTS idx_agentsam_workspace_state_repo_revision
-  ON agentsam_workspace_state(repository_id, revision);
 
 CREATE INDEX IF NOT EXISTS idx_agentsam_ticket_events_workflow_run
   ON agentsam_ticket_events(workflow_run_id, created_at)
