@@ -16,6 +16,7 @@ import './shell.css';
 import { AnnotationHelper } from './AnnotationHelper';
 import { DesktopIdentityPortal } from '@/components/desktop/DesktopIdentityPortal';
 import { DesktopStartupOverlay } from '@/components/desktop/DesktopStartupOverlay';
+import { ToolPermissionProvider } from '@/components/workbench/ToolPermissionProvider';
 import { isPackagedDesktop } from '@/lib/desktop/tauri';
 import { readShellAppearancePreference } from '@inneranimalmedia/agentsam-settings';
 import { applyShellAppearance, applyTheme, readTheme, type ShellAppearancePreference } from '@/lib/work/theme';
@@ -171,7 +172,7 @@ export function AgentSamShell() {
       { id: 'site', label: 'Create or edit a site', icon: <Globe />, onSelect: () => go('/cms') },
     ],
   };
-  return <TooltipProvider><Nav.Provider value={value} theme={theme} accentColor={accent} defaultOpen={false} peekable>
+  return <ToolPermissionProvider><TooltipProvider><Nav.Provider value={value} theme={theme} accentColor={accent} defaultOpen={false} peekable>
     <Nav.Scope className="agentsam-shell" data-agentsam-app-shell="local-studio">
       <Nav.Sidenav /><div className="agentsam-main">
         {!isConversation ? <Nav.Topbar><Nav.TopbarLogo toggle /><span>{pathname.startsWith('/cad') ? 'CAD Creator' : pathname.startsWith('/cms') ? 'Sites' : pathname.startsWith('/artifacts') ? 'Library' : pathname.split('/')[1].replace(/^./, (letter) => letter.toUpperCase())}</span><Nav.TopbarSpacer /><Nav.AccountSwitcher /></Nav.Topbar> : null}
@@ -183,7 +184,7 @@ export function AgentSamShell() {
       <AnnotationHelper />
       <Toaster theme={theme === 'light' ? 'light' : 'dark'} position="bottom-center" />
     </Nav.Scope>
-  </Nav.Provider></TooltipProvider>;
+  </Nav.Provider></TooltipProvider></ToolPermissionProvider>;
 }
 
 export function SidePanelToggle() {

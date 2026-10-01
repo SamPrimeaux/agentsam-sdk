@@ -96,3 +96,25 @@ export interface AgentToolCall {
   error?: string;
   metadata?: Record<string, unknown>;
 }
+
+export type AgentToolPermissionDecision = 'allow_once' | 'allow_session' | 'deny';
+
+export interface AgentToolPermissionDatum {
+  label: string;
+  value: string;
+}
+
+export interface AgentToolPermissionRequest {
+  id: string;
+  toolKey: string;
+  displayName: string;
+  provider?: string;
+  summary?: string;
+  scope?: string;
+  sharedData?: AgentToolPermissionDatum[];
+  riskLevel?: AgentToolRiskLevel;
+  sideEffectLevel?: AgentToolSideEffectLevel;
+  destructive?: boolean;
+  openWorld?: boolean;
+  metadata?: Record<string, unknown>;
+}
