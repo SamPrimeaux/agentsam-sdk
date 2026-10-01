@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { shortLabel, type StudioInventoryModel, type StudioModelSelection } from "@/lib/work/models";
+import { DEFAULT_SELECTION, shortLabel, type StudioInventoryModel, type StudioModelSelection } from "@/lib/work/models";
 import { useWorkStore } from "@/lib/work/store";
 import { cn } from "@/lib/utils";
 import { invokeStudioService, isPackagedDesktop, resolveDesktopStudioAccountId } from "@/lib/desktop/tauri";
@@ -31,12 +31,21 @@ function groupModels(models: StudioInventoryModel[]) {
   return [...groups.entries()];
 }
 
+function eligibilityLabel(reason?: string | null) {
+  if (reason === "provider_adapter_unavailable") return "No chat adapter yet";
+  if (reason === "embedding_model") return "Embedding model";
+  if (reason === "specialized_output_model") return "Specialized output model";
+  if (reason === "capability_excludes_chat") return "Not a chat model";
+  return "Chat capability not reported";
+}
+
 export function ModelSelect({ compact = false }: { compact?: boolean }) {
   const selection = useWorkStore((s) => s.modelSelection);
   const setModelSelection = useWorkStore((s) => s.setModelSelection);
   const [inventory, setInventory] = useState<InventoryPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showOther, setShowOther] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,9 +83,14 @@ export function ModelSelect({ compact = false }: { compact?: boolean }) {
         if (cancelled) return;
         setInventory(body);
         const models = body.availableModels || [];
-        if (models.length && (!selection?.provider || !selection?.model_id)) {
-          const first = models[0]!;
-          setModelSelection({ provider: first.provider, model_id: first.model_id });
+        const chatModels = models.filter((model) => model.chat_eligible === true);
+        const active = useWorkStore.getState().modelSelection;
+        const activeIsEligible = chatModels.some(
+          (model) => model.provider === active?.provider && model.model_id === active?.model_id,
+        );
+        if (!activeIsEligible) {
+          const first = chatModels[0];
+          setModelSelection(first ? { provider: first.provider, model_id: first.model_id } : DEFAULT_SELECTION);
         }
       } catch (err) {
         if (!cancelled) setError("Models are unavailable right now. Check your provider connection in Settings.");
@@ -89,8 +103,16 @@ export function ModelSelect({ compact = false }: { compact?: boolean }) {
     };
   }, [setModelSelection]);
 
-  const groups = useMemo(() => groupModels(inventory?.availableModels || []), [inventory]);
-  const current = (inventory?.availableModels || []).find(
+  const eligibleModels = useMemo(
+    () => (inventory?.availableModels || []).filter((model) => model.chat_eligible === true),
+    [inventory],
+  );
+  const otherModels = useMemo(
+    () => (inventory?.availableModels || []).filter((model) => model.chat_eligible !== true),
+    [inventory],
+  );
+  const groups = useMemo(() => groupModels(eligibleModels), [eligibleModels]);
+  const current = eligibleModels.find(
     (m) => m.provider === selection?.provider && m.model_id === selection?.model_id,
   );
   const triggerLabel = current
@@ -157,6 +179,31 @@ export function ModelSelect({ compact = false }: { compact?: boolean }) {
             })}
           </div>
         ))}
+        {otherModels.length ? (
+          <>
+            <DropdownMenuSeparator />
+            <button
+              type="button"
+              className="flex w-full items-center justify-between px-2 py-1.5 text-left text-[11px] font-medium text-muted-foreground hover:text-foreground"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setShowOther((value) => !value);
+              }}
+            >
+              <span>Other model types ({otherModels.length})</span>
+              <ChevronDown className={cn("size-3 transition-transform", showOther && "rotate-180")} />
+            </button>
+            {showOther ? otherModels.map((item) => (
+              <div key={`${item.provider}:${item.model_id}`} className="px-2 py-1.5 text-xs opacity-75">
+                <div className="truncate text-foreground">{item.provider}:{item.model_id}</div>
+                <div className="truncate text-[11px] text-muted-foreground">
+                  {eligibilityLabel(item.eligibility_reason)}
+                </div>
+              </div>
+            )) : null}
+          </>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );

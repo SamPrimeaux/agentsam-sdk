@@ -12,6 +12,9 @@ export type StudioInventoryModel = {
   context_window?: number | null;
   reasoning_efforts?: string[];
   capabilities?: Record<string, unknown>;
+  chat_eligible?: boolean;
+  eligibility_reason?: string | null;
+  eligibility_source?: string;
   hint?: string;
 };
 
