@@ -19,12 +19,11 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            keychain::get_token,
-            keychain::set_token,
-            keychain::delete_token,
-            keychain::secure_store_get,
-            keychain::secure_store_set,
-            keychain::secure_store_delete,
+            keychain::identity_pending_set,
+            keychain::identity_pending_delete,
+            keychain::provider_key_exists,
+            keychain::provider_key_set,
+            keychain::provider_key_delete,
             deep_link::handle_callback,
             deep_link::take_pending_deep_links,
             updater::check_for_update,

@@ -21,34 +21,40 @@ export function isPackagedDesktop(): boolean {
 }
 
 
-const SECURE_STORE_APP_ID = "local-studio";
-
-export async function secureStoreGet(account: string): Promise<string | null> {
+export async function identityStoreGet(account: string): Promise<string | null> {
   const invoke = getTauriInvoke();
   if (!invoke) return null;
-  return (await invoke("secure_store_get", {
-    appId: SECURE_STORE_APP_ID,
-    account,
-  })) as string | null;
+  return (await invoke("identity_store_get", { account })) as string | null;
 }
 
-export async function secureStoreSet(account: string, value: string): Promise<void> {
+export async function identityStoreSet(account: string, value: string): Promise<void> {
   const invoke = getTauriInvoke();
-  if (!invoke) throw new Error("secure_store_unavailable");
-  await invoke("secure_store_set", {
-    appId: SECURE_STORE_APP_ID,
-    account,
-    value,
-  });
+  if (!invoke) throw new Error("identity_store_unavailable");
+  await invoke("identity_store_set", { account, value });
 }
 
-export async function secureStoreDelete(account: string): Promise<void> {
+export async function identityStoreDelete(account: string): Promise<void> {
   const invoke = getTauriInvoke();
   if (!invoke) return;
-  await invoke("secure_store_delete", {
-    appId: SECURE_STORE_APP_ID,
-    account,
-  });
+  await invoke("identity_store_delete", { account });
+}
+
+export async function providerKeyExists(provider: string): Promise<boolean> {
+  const invoke = getTauriInvoke();
+  if (!invoke) return false;
+  return Boolean(await invoke("provider_key_exists", { provider }));
+}
+
+export async function providerKeySet(provider: string, value: string): Promise<void> {
+  const invoke = getTauriInvoke();
+  if (!invoke) throw new Error("provider_key_store_unavailable");
+  await invoke("provider_key_set", { provider, value });
+}
+
+export async function providerKeyDelete(provider: string): Promise<void> {
+  const invoke = getTauriInvoke();
+  if (!invoke) return;
+  await invoke("provider_key_delete", { provider });
 }
 
 export async function invokeIdentity(payload: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -79,7 +85,7 @@ export async function invokeStudioService(payload: {
 }): Promise<StudioServiceResponse> {
   const invoke = getTauriInvoke();
   if (!invoke) throw new Error("studio_service_bridge_unavailable");
-  const sessionId = isPackagedDesktop() ? await secureStoreGet("identity_session") : null;
+  const sessionId = isPackagedDesktop() ? await identityStoreGet("identity_session") : null;
   const raw = (await invoke("studio_service_bridge", {
     requestJson: JSON.stringify({ ...payload, session_id: sessionId || undefined }),
   })) as string;
@@ -89,7 +95,7 @@ export async function invokeStudioService(payload: {
 export async function resolveDesktopStudioAccountId(): Promise<string> {
   if (!isPackagedDesktop()) return "studio-local";
   try {
-    const sessionId = await secureStoreGet("identity_session");
+    const sessionId = await identityStoreGet("identity_session");
     if (!sessionId) return "studio-local";
     const status = await invokeIdentity({ op: "status", session_id: sessionId });
     const user = status.user as { id?: unknown } | null | undefined;

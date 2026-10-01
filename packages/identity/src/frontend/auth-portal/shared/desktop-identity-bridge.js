@@ -12,7 +12,6 @@
   var invoke = getInvoke();
   if (!invoke) return;
 
-  var APP_ID = 'local-studio';
   var SESSION_ACCOUNT = 'identity_session';
   var originalFetch = window.fetch.bind(window);
 
@@ -28,15 +27,13 @@
   }
 
   async function getSessionId() {
-    return await invoke('secure_store_get', {
-      appId: APP_ID,
+    return await invoke('identity_store_get', {
       account: SESSION_ACCOUNT,
     });
   }
 
   async function setSessionId(sessionId) {
-    await invoke('secure_store_set', {
-      appId: APP_ID,
+    await invoke('identity_store_set', {
       account: SESSION_ACCOUNT,
       value: String(sessionId || ''),
     });
@@ -44,8 +41,7 @@
 
   async function clearSessionId() {
     try {
-      await invoke('secure_store_delete', {
-        appId: APP_ID,
+      await invoke('identity_store_delete', {
         account: SESSION_ACCOUNT,
       });
     } catch {}
