@@ -56,7 +56,7 @@ func PTYHandler(checkAuth PTYAuthChecker) http.HandlerFunc {
 		}
 		defer conn.Close()
 
-		cwd := strings.TrimSpace(r.URL.Query().Get("cwd"))
+		cwd := resolvePTYCwd(strings.TrimSpace(r.URL.Query().Get("cwd")))
 		if runtime.GOOS == "windows" {
 			runWindowsShellStream(conn, cwd)
 			return
