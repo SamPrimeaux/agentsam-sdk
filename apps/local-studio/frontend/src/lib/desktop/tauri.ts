@@ -61,7 +61,7 @@ export async function invokeIdentity(payload: Record<string, unknown>): Promise<
 }
 
 
-export type StudioServiceOperation = "inventory" | "chat" | "cms" | "database" | "connections";
+export type StudioServiceOperation = "inventory" | "chat" | "vault" | "cms" | "database" | "connections";
 
 export type StudioServiceResponse = {
   ok: boolean;

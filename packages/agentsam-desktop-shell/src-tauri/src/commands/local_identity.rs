@@ -96,6 +96,26 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
     match request.operation.trim() {
         "inventory" => Ok((Method::GET, "/api/llm/inventory".to_string())),
         "chat" => Ok((Method::POST, "/api/chat".to_string())),
+        "vault" => {
+            let path = request.path.as_deref().unwrap_or("").trim();
+            if !(path == "/api/vault/secrets"
+                || path.starts_with("/api/vault/secrets/")
+                || path == "/api/vault/credentials"
+                || path.starts_with("/api/vault/credentials/"))
+                || path.contains("://")
+                || path.contains('\\')
+                || path.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10)
+            {
+                return Err("studio_service_vault_path_invalid".into());
+            }
+            let method = match request.method.as_deref().unwrap_or("GET").to_ascii_uppercase().as_str() {
+                "GET" => Method::GET,
+                "POST" => Method::POST,
+                "DELETE" => Method::DELETE,
+                _ => return Err("studio_service_vault_method_invalid".into()),
+            };
+            Ok((method, path.to_string()))
+        }
         "connections" => {
             let path = request.path.as_deref().unwrap_or("").trim();
             if !(path == "/api/connections" || path.starts_with("/api/connections/"))
@@ -478,6 +498,28 @@ mod tests {
         assert_eq!(
             identity_service_route("desktop_magic").unwrap_err(),
             "unsupported_identity_operation"
+        );
+    }
+
+    #[test]
+    fn vault_bridge_is_strictly_scoped_to_vault_paths() {
+        let request = StudioServiceBridgeRequest {
+            operation: "vault".into(),
+            account_id: None,
+            body: None,
+            path: Some("/api/vault/secrets/usec_test".into()),
+            method: Some("DELETE".into()),
+            session_id: None,
+        };
+        let (method, path) = studio_service_route(&request).expect("vault route");
+        assert_eq!(method, Method::DELETE);
+        assert_eq!(path, "/api/vault/secrets/usec_test");
+
+        let mut bad = request;
+        bad.path = Some("/api/database/query".into());
+        assert_eq!(
+            studio_service_route(&bad).unwrap_err(),
+            "studio_service_vault_path_invalid"
         );
     }
 }

@@ -11,7 +11,7 @@ import {
 import { DEFAULT_SELECTION, shortLabel, type StudioInventoryModel, type StudioModelSelection } from "@/lib/work/models";
 import { useWorkStore } from "@/lib/work/store";
 import { cn } from "@/lib/utils";
-import { invokeStudioService, isPackagedDesktop, resolveDesktopStudioAccountId } from "@/lib/desktop/tauri";
+import { invokeStudioService, isPackagedDesktop } from "@/lib/desktop/tauri";
 
 type InventoryPayload = {
   ok?: boolean;
@@ -53,16 +53,9 @@ export function ModelSelect({ compact = false }: { compact?: boolean }) {
       setLoading(true);
       setError(null);
       try {
-        const userId =
-          (typeof window !== "undefined" && window.localStorage.getItem("agentsam-user-id")) ||
-          "studio-local";
         let body: InventoryPayload;
         if (isPackagedDesktop()) {
-          const accountId = await resolveDesktopStudioAccountId();
-          const bridged = await invokeStudioService({
-            operation: "inventory",
-            account_id: accountId,
-          });
+          const bridged = await invokeStudioService({ operation: "inventory" });
           try {
             body = JSON.parse(bridged.body || "{}") as InventoryPayload;
           } catch {
@@ -72,9 +65,7 @@ export function ModelSelect({ compact = false }: { compact?: boolean }) {
             throw new Error(body.error || "inventory_http_" + bridged.status);
           }
         } else {
-          const res = await fetch("/api/llm/inventory", {
-            headers: { "X-User-Id": userId },
-          });
+          const res = await fetch("/api/llm/inventory", { credentials: "same-origin" });
           body = (await res.json()) as InventoryPayload;
           if (!res.ok || body.ok === false) {
             throw new Error(body.error || "inventory_http_" + res.status);
