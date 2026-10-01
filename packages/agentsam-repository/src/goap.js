@@ -335,7 +335,7 @@ export async function switchGoapGoal({
     query,
     wranglerConfig,
     databaseName,
-    sql: `SELECT id, account_id, repository_id FROM agentsam_tickets WHERE id = '${sqlEsc(tid)}' LIMIT 1;`,
+    sql: `SELECT id, account_id, repository_id, agent_run_id FROM agentsam_tickets WHERE id = '${sqlEsc(tid)}' LIMIT 1;`,
   });
   const ticket = lookup?.[0]?.results?.[0];
   const accId = clean(accountId);
@@ -411,7 +411,7 @@ export async function closeGoapGoal({
     query,
     wranglerConfig,
     databaseName,
-    sql: `SELECT id, account_id, repository_id FROM agentsam_tickets WHERE id = '${sqlEsc(tid)}' LIMIT 1;`,
+    sql: `SELECT id, account_id, repository_id, agent_run_id FROM agentsam_tickets WHERE id = '${sqlEsc(tid)}' LIMIT 1;`,
   });
   const ticket = lookup?.[0]?.results?.[0];
   const accId = clean(accountId);
