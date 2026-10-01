@@ -518,11 +518,11 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
       socket.onopen = () => {
         useTerminalSessionStore.getState().patchSession(sessionId, {
           state: "connected",
-          cwd: project0.workspaceRoot || undefined,
+          cwd: resolvedCwd || undefined,
           shell: "zsh",
           error: undefined,
         });
-        term.writeln(`AgentSam PTY  ·  ${project0.workspaceRoot || cwdParam}`);
+        term.writeln(`AgentSam PTY  ·  ${resolvedCwd || "(runtime default)"}`);
         term.writeln(
           `workspace ${project0.workspaceId || "?"}  ·  real shell — same host root as Monaco`,
         );
