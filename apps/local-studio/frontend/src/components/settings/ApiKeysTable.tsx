@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { KeyRound, Loader2, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { vaultRequest } from "@/lib/vault/client";
+import {
+  accountInventoryRequest,
+  vaultRequest,
+  type AccountInventoryPayload,
+} from "@/lib/vault/client";
 import type { VaultSecret } from "./types";
 
 const SERVICE_LABELS: Record<string, string> = {
@@ -20,6 +24,35 @@ const SERVICE_LABELS: Record<string, string> = {
   other: "Other",
 };
 
+const MODEL_PROVIDER_IDS = new Set(["openai", "anthropic", "gemini", "xai", "cursor", "cloudflare"]);
+
+function canonicalProvider(service: string): string {
+  const id = String(service || "").trim().toLowerCase();
+  if (id === "google") return "gemini";
+  if (id === "grok") return "xai";
+  return id;
+}
+
+function providerStatus(
+  service: string,
+  inventory: AccountInventoryPayload | null,
+  selected: boolean,
+): string {
+  const provider = canonicalProvider(service);
+  if (!MODEL_PROVIDER_IDS.has(provider)) return "Not checked";
+  if (!selected) return "Not selected";
+  if (!inventory) return "Not checked";
+  const discovery = inventory.discovery?.[provider];
+  if (discovery?.ok === true) {
+    const count = (inventory.availableModels || []).filter((model) => model.provider === provider).length;
+    return `Connected · ${count} model${count === 1 ? "" : "s"}`;
+  }
+  if (discovery?.error === "provider_credential_rejected") {
+    return `${SERVICE_LABELS[provider] || provider} rejected this key`;
+  }
+  return "Not checked";
+}
+
 function formatUnixDate(epoch: number | string | null | undefined) {
   if (epoch == null || epoch === "") return "—";
   const seconds = typeof epoch === "number" ? epoch : Number(epoch);
@@ -36,6 +69,7 @@ function formatUnixDate(epoch: number | string | null | undefined) {
 
 export function ApiKeysTable({ refreshToken = 0 }: { refreshToken?: number }) {
   const [secrets, setSecrets] = useState<VaultSecret[]>([]);
+  const [inventory, setInventory] = useState<AccountInventoryPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
@@ -48,8 +82,15 @@ export function ApiKeysTable({ refreshToken = 0 }: { refreshToken?: number }) {
       const response = await vaultRequest<{ error?: string; secrets?: VaultSecret[] }>("/api/vault/secrets");
       if (!response.ok) throw new Error(response.data.error || `Could not load secrets (${response.status})`);
       setSecrets(Array.isArray(response.data.secrets) ? response.data.secrets : []);
+      try {
+        const inventoryResponse = await accountInventoryRequest();
+        setInventory(inventoryResponse.ok && inventoryResponse.data.ok !== false ? inventoryResponse.data : null);
+      } catch {
+        setInventory(null);
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not load secrets");
+      setInventory(null);
     } finally {
       setLoading(false);
     }
@@ -85,6 +126,8 @@ export function ApiKeysTable({ refreshToken = 0 }: { refreshToken?: number }) {
     );
   }
 
+  const selectedProviders = new Set<string>();
+
   return (
     <div>
       {error ? (
@@ -114,9 +157,15 @@ export function ApiKeysTable({ refreshToken = 0 }: { refreshToken?: number }) {
           </div>
           <ul className="divide-y divide-border">
             {secrets.map((secret) => {
+              const providerId = canonicalProvider(secret.service);
+              const selected = !selectedProviders.has(providerId);
+              if (MODEL_PROVIDER_IDS.has(providerId) && selected) selectedProviders.add(providerId);
+              const service = SERVICE_LABELS[String(secret.service || "").toLowerCase()]
+                || SERVICE_LABELS[providerId]
+                || secret.service
+                || "—";
+              const status = providerStatus(secret.service, inventory, selected);
               const confirming = confirmId === secret.id;
-              const service =
-                SERVICE_LABELS[String(secret.service || "").toLowerCase()] || secret.service || "—";
               return (
                 <li
                   key={secret.id}
@@ -129,9 +178,13 @@ export function ApiKeysTable({ refreshToken = 0 }: { refreshToken?: number }) {
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-foreground">{secret.name}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground md:hidden">{service}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{status}</p>
                     </div>
                   </div>
-                  <p className="hidden text-sm text-muted-foreground md:block">{service}</p>
+                  <div className="hidden min-w-0 md:block">
+                    <p className="text-sm text-muted-foreground">{service}</p>
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">{status}</p>
+                  </div>
                   <p className="font-mono text-sm text-muted-foreground">
                     {secret.last4 ? `•••• ${secret.last4}` : "Encrypted"}
                   </p>

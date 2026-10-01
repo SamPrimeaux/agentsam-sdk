@@ -56,9 +56,9 @@ export function LiveKeysSettingsPage() {
                 Generated keys for CLI, SDK, and machine callers.
               </p>
             </div>
-            <Button type="button" onClick={() => setMintOpen(true)} className="gap-1.5">
+            <Button type="button" variant="secondary" onClick={() => setMintOpen(true)} className="gap-1.5">
               <Plus className="size-3.5" aria-hidden="true" />
-              Create secret key
+              Create AgentSam key
             </Button>
           </div>
           <CredentialsTable refreshToken={credRefresh} />

@@ -48,3 +48,49 @@ export async function vaultRequest<T = Record<string, unknown>>(
   }
   return { ok: response.ok, status: response.status, data };
 }
+
+export type AccountInventoryModel = {
+  provider: string;
+  model_id: string;
+};
+
+export type AccountInventoryProvider = {
+  id: string;
+  configured: boolean;
+  source?: string | null;
+};
+
+export type AccountInventoryDiscovery = {
+  ok?: boolean;
+  error?: string | null;
+};
+
+export type AccountInventoryPayload = {
+  ok?: boolean;
+  error?: string;
+  providers?: AccountInventoryProvider[];
+  discovery?: Record<string, AccountInventoryDiscovery>;
+  availableModels?: AccountInventoryModel[];
+};
+
+export async function accountInventoryRequest(): Promise<VaultResponse<AccountInventoryPayload>> {
+  if (isPackagedDesktop()) {
+    const response = await invokeStudioService({ operation: "inventory" });
+    let data: AccountInventoryPayload = {};
+    try {
+      data = response.body ? (JSON.parse(response.body) as AccountInventoryPayload) : {};
+    } catch {
+      /* status remains authoritative */
+    }
+    return { ok: response.ok, status: response.status, data };
+  }
+
+  const response = await fetch("/api/llm/inventory", { credentials: "same-origin" });
+  let data: AccountInventoryPayload = {};
+  try {
+    data = (await response.json()) as AccountInventoryPayload;
+  } catch {
+    /* status remains authoritative */
+  }
+  return { ok: response.ok, status: response.status, data };
+}
