@@ -1,6 +1,7 @@
 # GOAP alignment: uniform errors and reuse
 
 **Status:** plan only. No GOAP source changes land with this document.
+**Revision 2:** error mapping now targets specific reasons (see `docs/plans/ERRORS-SPECIFIC-REASONS-2026-10-01.md`, branch `plan/errors-specific-reasons-20261001`), with the generic parent reason as the interim fallback.
 **Branch base:** `feat/goap-control-plane-remaster-20261001` @ `2e2c8e2`, which is behind `main` (cut from `4137cbc`; `main` is now at or past `dfb40ed`).
 **Goal:** GOAP is built on the SDK's existing authorities (errors, events, queue, work graph) so it is uniform with the rest of AgentSam, not a one-off.
 
@@ -11,7 +12,7 @@
 | Finding | Where | Why it matters |
 |---|---|---|
 | `GoapConflictError` is a bespoke class with its own string code `goap_revision_conflict` | `packages/agentsam-goap/src/contracts.js` | It bypasses `agentsam-errors`, the catalog, and the `errors:check` gate. Consumers would have to learn a second error shape. |
-| Input and wiring failures throw bare `TypeError` | `contracts.js`, `control-plane.js` | Same problem: no code, reason, severity, retry or remediation semantics. |
+| Input and wiring failures throw bare `TypeError` | `contracts.js`, `control-plane.js` | No code, reason, severity, retry or remediation semantics, and no evidence about what exactly was wrong. |
 | README maps ports that have no implementation | `README.md`, `contracts.js` `GOAP_PORT_METHODS` | Plan, plan-run, action-run, approval, queue, runtime and evidence ports are method-name lists only. `assertGoapPorts` requires just blackboard, goal and event stores. Violates "support means implemented now". |
 | Control plane exposes only `snapshot`, `activateGoal`, `appendEvent` | `control-plane.js` | No planner, no plan or action execution. |
 | New event schema `agentsam.event.v1` is declared frozen | `contracts.js` | May overlap existing event/activity contracts (`agentsam-contracts/events`, `protocol/sam/activity.v1`). Not yet compared. |
@@ -20,25 +21,31 @@
 | `0018` migration uses plain `ALTER TABLE ... ADD COLUMN` | `migrations/d1/0018_goap_control_plane_remaster.sql` | Not idempotent; re-running fails. |
 | Branch is behind `main`; six lockfile-only commits | branch history | Expect conflicts in `package.json` and `package-lock.json` on rebase. |
 
-## 2. Error mapping (verified against `protocol/errors/error-catalog.json` and `envelope.js` on `main`)
+## 2. Error mapping
 
-No catalog change is required. Every GOAP failure maps to a reason that already exists.
+GOAP failures must be specific enough that a caller never has to re-inspect. The target is the specific reasons below, each with typed required details. They depend on catalog v2 and the pack mechanism in the errors plan. Until those land, emit the generic parent reason, which already exists in the catalog on `main`, and keep the same details in the envelope `details` field so the move to the specific reason changes only the reason name.
 
-| GOAP failure | Reason | Code (from catalog) | Notes |
+| GOAP failure | Target specific reason (proposed) | Required details | Interim parent reason (exists today) |
 |---|---|---|---|
-| Revision conflict (stale `expectedRevision`) | `stale_version` | `ABORTED` (HTTP 409, gRPC 10) | Catalog policy: severity `transient`, retryable, owner `user`, remediation `retry`. Set `domain: "persistence"`, `operation.side_effect_state: "confirmed_not_applied"`, `resource: { type: "goap.blackboard", id }`, and put `expected_revision` and `actual_revision` in `details`. |
-| Invalid `goalId`, `expectedRevision`, scope, event type | `input_invalid` | `INVALID_ARGUMENT` | replaces bare `TypeError` |
-| Unsupported ticket or goal status | `input_invalid` | `INVALID_ARGUMENT` | |
-| Required port or method missing (for example `mutationPort.activateGoal`) | `unsupported_operation` | `UNIMPLEMENTED` | configuration problem, user fixable |
-| Referenced goal or blackboard not found | `target_not_found` | `NOT_FOUND` | |
+| Revision conflict (stale `expectedRevision`) | `goap_blackboard_revision_stale` | `blackboard_id`, `expected_revision`, `actual_revision`, scope | `stale_version` |
+| Referenced goal not found | `goap_goal_not_found` | `goal_id`, scope | `target_not_found` |
+| Unsupported ticket or goal status | `goap_goal_status_unsupported` | `status`, `supported[]` | `input_invalid` |
+| Required port or method missing | `goap_port_method_missing` | `port`, `method` | `unsupported_operation` |
+| Missing or empty scope field | `goap_scope_field_missing` | `field` | `input_invalid` |
+| Invalid `goalId` or `expectedRevision` | `goap_activation_argument_invalid` | `argument`, `value`, `expected` | `input_invalid` |
+
+Interim behavior verified against `protocol/errors/error-catalog.json` and `envelope.js` on `main`:
+- `stale_version` maps to code `ABORTED` (HTTP 409, gRPC 10), severity `transient`, retryable, owner `user`, remediation `retry`.
+- For the revision conflict set `domain: "persistence"`, `operation.side_effect_state: "confirmed_not_applied"`, and `resource: { type: "goap.blackboard", id }`.
 
 Constraints enforced by `createErrorEnvelope` that the change must respect:
 - A catalogued reason requires its canonical code; passing a different code throws.
 - `transient` severity requires `retryable: true`; `retry` remediation requires `retryable: true`.
 - `domain` must be one of the catalog domains (`persistence` is valid).
+- An uncatalogued reason does not throw today; it falls back to the `unknown` policy (code `UNKNOWN`, severity `blocking_internal`). Do not rely on that. Emit only catalogued reasons.
 - Do not hand-edit `packages/agentsam-errors/src/vocabulary.js`, `packages/agentsam-contracts/src/errors.ts`, or `protocol/errors/error-envelope.schema.json`. They are generated by `npm run errors:generate` from the catalog.
 
-Behavior change to plan for: `AgentSamError` sets `.code` to the catalog code (`ABORTED`), so the old `error.code === 'goap_revision_conflict'` check changes. Callers and the existing test must assert `error.reason === 'stale_version'` (and `error.code === 'ABORTED'`). `GoapConflictError` may remain as a thin exported subclass of `AgentSamError` for compatibility, carrying the envelope above.
+Behavior change to plan for: `AgentSamError` sets `.code` to the catalog code (`ABORTED`), so the old `error.code === 'goap_revision_conflict'` check changes. Callers and the existing test must assert on `error.reason` and `error.code`. `GoapConflictError` may remain as a thin exported subclass of `AgentSamError` for compatibility.
 
 ## 3. Open packaging decision (blocks the code change)
 
@@ -57,16 +64,18 @@ In order:
 
 1. Rebase the GOAP branch on current `main`; resolve `package.json` and `package-lock.json` conflicts without weakening any gate.
 2. Resolve the packaging decision in section 3.
-3. Route all GOAP failures through `AgentSamError` using the mapping in section 2; update the existing tests to assert reason and code; add tests for each mapped failure.
-4. Make `0018` safe to re-run or document a guarded apply path (SQLite and D1 differ on `ADD COLUMN IF NOT EXISTS`; verify before choosing).
-5. Compare `agentsam.event.v1` with `agentsam-contracts/events` and `protocol/sam/activity.v1`. Reuse the existing contract if it fits; otherwise record why a new schema is required before freezing it.
-6. Compare GOAP's goal, plan and run concepts with `work-graph`; record the overlap and which package owns which concept.
-7. Either implement the remaining ports (using `agentsam-queue-control` for `QueuePort` rather than a copy), or reduce the README and `GOAP_PORT_METHODS` to what is implemented now: blackboard, goal and event stores plus goal activation. Remove or hide the `./goap` export claims for anything unimplemented.
-8. Add the GOAP tests to the workspace gate if not already present, and confirm `npm run verify`, `npm run errors:check`, `npm run verify:boundaries` and `npm run verify:package` pass from a clean install.
+3. Route all GOAP failures through `AgentSamError` using the interim parent reasons and the details in section 2; update the existing tests to assert reason and code; add a test for each mapped failure that checks the required details are present.
+4. When catalog v2 and packs land (errors plan phases 1 to 3), ship a GOAP `errors.pack.json` with the specific reasons above and switch the call sites to the generated typed constructors. This changes reason names only.
+5. Make `0018` safe to re-run or document a guarded apply path (SQLite and D1 differ on `ADD COLUMN IF NOT EXISTS`; verify before choosing).
+6. Compare `agentsam.event.v1` with `agentsam-contracts/events` and `protocol/sam/activity.v1`. Reuse the existing contract if it fits; otherwise record why a new schema is required before freezing it.
+7. Compare GOAP's goal, plan and run concepts with `work-graph`; record the overlap and which package owns which concept.
+8. Either implement the remaining ports (using `agentsam-queue-control` for `QueuePort` rather than a copy), or reduce the README and `GOAP_PORT_METHODS` to what is implemented now: blackboard, goal and event stores plus goal activation. Remove or hide the `./goap` export claims for anything unimplemented.
+9. Add the GOAP tests to the workspace gate if not already present, and confirm `npm run verify`, `npm run errors:check`, `npm run verify:boundaries` and `npm run verify:package` pass from a clean install.
 
 ## 5. Done when
 
 - No GOAP failure surfaces as a bare `TypeError` or a private error code.
+- Each GOAP failure carries typed, specific evidence in its envelope.
 - `errors:check` and the boundary and package gates are green with GOAP included.
 - README, exports and port contracts describe only implemented behavior.
 - The event schema and work-graph overlap decisions are written down in this file.
@@ -74,4 +83,4 @@ In order:
 
 ## 6. Not verified
 
-This plan was written from reading the GOAP package, the catalog and the envelope code. No tests were run, no CI results were available, and the packaging decision in section 3 was not resolved.
+This plan was written from reading the GOAP package, the catalog and the envelope code. No tests were run, no CI results were available, and the packaging decision in section 3 was not resolved. The specific reason names and detail sets are proposals until catalog v2 exists.
