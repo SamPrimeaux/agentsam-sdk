@@ -18,6 +18,7 @@ import {
   RUNTIME_PROFILES,
 } from '../lib/setup/runtime.js';
 import { runRuntime } from './runtime.js';
+import { getCliCommand } from '../cli/command-catalog.js';
 
 function writeLine(write, value = '') {
   write(`${value}\n`);
