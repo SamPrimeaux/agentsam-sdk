@@ -851,7 +851,15 @@ export default {
 
     // Public liveness only — no DB/vault/OAuth diagnostics.
     if (url.pathname === "/health") {
-      return json({ ok: true, app: APP.id, worker: "agentsam-sdk" }, 200);
+      const versionMetadata = env.CF_VERSION_METADATA || {};
+      return json({
+        ok: true,
+        app: APP.id,
+        worker: "agentsam-sdk",
+        version: APP.version || null,
+        git_sha: versionMetadata.tag || null,
+        deployment_id: versionMetadata.id || null,
+      }, 200);
     }
 
     // Authenticated diagnostics (bridge or session).

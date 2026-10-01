@@ -35,7 +35,7 @@
     "cf:verify-output": "node scripts/verify-cloudflare-output.mjs",
     "cf:dry-run": "npm run build && npm run cf:verify-output && wrangler deploy -c backend/wrangler.jsonc --dry-run",
     "cf:ensure-vault": "bash scripts/with-cloudflare-env.sh node scripts/ensure-vault-secret.mjs",
-    "cf:deploy": "npm run build && npm run cf:verify-output && npm run cf:ensure-vault && bash scripts/with-cloudflare-env.sh wrangler deploy -c backend/wrangler.jsonc",
+    "cf:deploy": "npm run build && npm run cf:verify-output && npm run cf:ensure-vault && bash scripts/with-cloudflare-env.sh node scripts/deploy-cloudflare.mjs",
     "cf:tail": "wrangler tail agentsam-sdk -c backend/wrangler.jsonc",
     "cf:env": "bash scripts/with-cloudflare-env.sh",
     "verify:npm10-lock": "node scripts/verify-npm10-lock.mjs",
