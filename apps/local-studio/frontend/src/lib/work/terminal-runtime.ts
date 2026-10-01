@@ -12,7 +12,7 @@ import { readSecrets, writeSecrets } from "@/lib/work/secrets";
 import { navigateApp } from "@/lib/work/navigate";
 import { slugify } from "@/lib/work/seed";
 import { useWorkStore } from "@/lib/work/store";
-import { getTauriInvoke } from "@/lib/desktop/tauri";
+import { getDesktopWorkspaceContext, getTauriInvoke } from "@/lib/desktop/tauri";
 import { activeTerminalSession, useTerminalSessionStore } from "@/lib/work/terminal-sessions";
 import type { Project, ShellEffect } from "@inneranimalmedia/agentsam-local-shared";
 import type { Terminal } from "@xterm/xterm";
