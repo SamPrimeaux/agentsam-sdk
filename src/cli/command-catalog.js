@@ -93,7 +93,7 @@ export const CLI_COMMAND_CATALOG = Object.freeze([
   { id: 'init', summary: 'Knowledge setup or local scaffold', topic: 'create', skill: 'agentsam-app-fundamentals' },
   { id: 'codebaseindex', aliases: ['ingest', 'codebase-index'], summary: 'Guided codebase ingest: materials, allowlist, embeddings, storage', topic: 'work', skill: 'agentsam-codebaseindex', operation: 'codebaseindex.ingest', common: true },
   { id: 'brand', summary: 'Deterministic brand intelligence', topic: 'work', skill: 'agentsam-app-fundamentals', operation: 'brand.scan' },
-  { id: 'plan', summary: 'Composable plans (e.g. brand)', topic: 'work', skill: 'agentsam-app-fundamentals' },
+  { id: 'plan', summary: 'Durable project-local work plans + domain plans', topic: 'work', skill: 'agentsam-app-fundamentals' },
   { id: 'security', aliases: ['sca'], summary: 'Dependency + trust-boundary scan', topic: 'work', skill: 'agentsam-progression-guard', operation: 'security.scan', common: true },
   { id: 'merkle', summary: 'File integrity snapshots and explorer', topic: 'work', skill: 'agentsam-app-fundamentals' },
   { id: 'cad', summary: 'Blender/OpenSCAD/FreeCAD CAD tools', topic: 'work', skill: 'agentsam-app-fundamentals', operation: 'cad.blender.inspect' },

@@ -32,7 +32,7 @@ export const SLASH_COMMANDS = [
   { cmd: '/agent', description: 'Send a goal to the configured local Agent Sam runtime', lane: 'agent' },
   { cmd: '/goap', description: 'Inspect and manage GOAP blackboard: /goap [status|goal|why|plan|list|new|switch|close]', lane: 'agent' },
   { cmd: '/brand', description: 'Brand intelligence: /brand [scan|resolve|plan|inspect]', lane: 'product' },
-  { cmd: '/plan', description: 'Composable plans: /plan brand', lane: 'product' },
+  { cmd: '/plan', description: 'Durable local plans: /plan [new|list|show|add|start|done|block|complete|brand]', lane: 'product' },
   { cmd: '/next', description: 'Suggested next actions from session progression', lane: 'product' },
   { cmd: '/logs', description: 'Show local Agent Sam execution events', lane: 'observability' },
   { cmd: '/deploy', description: 'Add a cloud adapter and deploy intentionally', lane: 'deploy' },
