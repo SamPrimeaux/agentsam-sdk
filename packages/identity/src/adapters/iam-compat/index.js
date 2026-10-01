@@ -1,4 +1,4 @@
-import { SESSION_POLICY } from '../../core/constants.js';
+import { SESSION_POLICY, shouldRenewDesktopSession } from '../../core/constants.js';
 import { NATIVE_HANDOFF_TTL_SECONDS, SESSION_TYPES } from '../../core/session-policy.js';
 import { IdentitySchemaError } from '../../contracts/identity-store.js';
 import { IDENTITY_STORE_SCHEMA_VERSION } from '../../contracts/identity-store.js';
@@ -242,12 +242,23 @@ export function createIamCompatIdentityAdapter(db, options = {}) {
 
     async getSession(sessionId) {
       const row = await db.prepare(
-        `SELECT id, user_id, email, provider, provider_subject, display_name, expires_at, revoked_at, created_at, last_active_at
+        `SELECT id, user_id, email, provider, provider_subject, display_name, expires_at, revoked_at, created_at, last_active_at, type
          FROM auth_sessions WHERE id = ? LIMIT 1`,
       ).bind(sessionId).first();
       if (!row) return null;
       if (row.revoked_at) return null;
-      if (row.expires_at <= nowUnix()) return null;
+      const now = nowUnix();
+      if (row.expires_at <= now) return null;
+      if (shouldRenewDesktopSession(row, now)) {
+        const renewedExpiresAt = now + SESSION_POLICY.desktop.ttlSeconds;
+        await db.prepare(
+          `UPDATE auth_sessions
+           SET expires_at = ?, last_active_at = ?
+           WHERE id = ? AND revoked_at IS NULL AND expires_at > ?`,
+        ).bind(renewedExpiresAt, now, sessionId, now).run();
+        row.expires_at = renewedExpiresAt;
+        row.last_active_at = now;
+      }
       return row;
     },
 
