@@ -30,7 +30,7 @@ test('generateTicketCreateSql requires account_id and title', () => {
   assert.throws(() => generateTicketCreateSql({ accountId: 'acc_1' }), /title_required/);
 });
 
-test('generateTicketCreateSql with status=active mints an agent_run and links it on the ticket insert', () => {
+test('generateTicketCreateSql with status=active does not fabricate an agent run', () => {
   const { sql, ticketId, agentRunId } = generateTicketCreateSql({
     accountId: 'acc_1',
     title: 'Wire GOAP planner',
@@ -38,12 +38,10 @@ test('generateTicketCreateSql with status=active mints an agent_run and links it
     now: 1000,
   });
   assert.ok(ticketId.startsWith('tkt_'));
-  assert.ok(agentRunId && agentRunId.startsWith('arun_'));
-  assert.match(sql, /INSERT INTO agentsam_agent_run/);
+  assert.equal(agentRunId, null);
+  assert.doesNotMatch(sql, /INSERT INTO agentsam_agent_run/);
   assert.match(sql, /INSERT INTO agentsam_tickets/);
   assert.match(sql, /INSERT INTO agentsam_ticket_events/);
-  const runOccurrences = sql.split(agentRunId).length - 1;
-  assert.ok(runOccurrences >= 2, 'agent_run id should appear in both the run insert and the ticket insert');
 });
 
 test('generateTicketCreateSql with status=backlog does not mint an agent_run', () => {
