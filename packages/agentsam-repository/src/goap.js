@@ -251,7 +251,6 @@ export async function createGoapGoal({
   if (!accId) throw new Error('account_id_required');
 
   const ticketId = createTicketId();
-  const agentRunId = createAgentRunId();
   const now = Math.floor(Date.now() / 1000);
 
   const { sql: ticketSql } = generateTicketCreateSql({
