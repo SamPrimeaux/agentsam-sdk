@@ -1,5 +1,5 @@
 /**
- * @inneranimalmedia/agentsam-sdk-brand
+ * @inneranimalmedia/agentsam-brand
  *
  * Brand intelligence (scan/resolve/plan) + portable brand-asset promotion SDK.
  * Product-specific assets (e.g. AgentSam icons) live outside this package.

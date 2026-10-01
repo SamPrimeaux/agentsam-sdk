@@ -6,7 +6,7 @@
 
 import { SESSION_POLICY } from './session-policy.js';
 
-export { SESSION_POLICY, clampAgentSessionTtl } from './session-policy.js';
+export { SESSION_POLICY, clampAgentSessionTtl, shouldRenewDesktopSession } from './session-policy.js';
 
 export const AUTH_COOKIE_NAME = 'session';
 

@@ -185,6 +185,7 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
     if (!ctx) return jsonResponse({ ok: false, error: 'session_required' }, 401);
     return jsonResponse({
       ok: true,
+      authenticated: true,
       user: {
         id: ctx.user.id,
         email: ctx.user.email,

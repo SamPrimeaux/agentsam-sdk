@@ -136,7 +136,7 @@ export const THEME_PACKAGE_REGISTRY = Object.freeze([
   },
   {
     id: "heuristic",
-    packageName: "@inneranimalmedia/heuristic-theme",
+    packageName: "@inneranimalmedia/theme-heuristic",
     path: "packages/heuristic-theme",
     kind: "storefront-shell",
     label: "Heuristic storefront shell",

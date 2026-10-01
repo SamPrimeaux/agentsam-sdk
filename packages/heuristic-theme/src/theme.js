@@ -32,7 +32,7 @@ export function createStorefrontShellTheme() {
       { type: "footer", label: "Footer" },
     ],
     metadata: {
-      package: "@inneranimalmedia/heuristic-theme",
+      package: "@inneranimalmedia/theme-heuristic",
       capability: "theme.storefront.shell",
       deterministic: true,
       demoSite: "demo",

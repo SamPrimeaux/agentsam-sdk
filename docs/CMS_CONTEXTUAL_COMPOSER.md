@@ -9,7 +9,7 @@ These FNF packages are **examples of the ideal state**, not permanent homes. Eac
 | Proving ground (FNF) | SDK target | Role |
 |---|---|---|
 | `packages/agentsam-workbench` | `@inneranimalmedia/agentsam-workbench` | miniAgentSam + contextual composer |
-| `packages/heuristic-theme` | `@inneranimalmedia/heuristic-theme` | **Stock CMS theme preset** |
+| `packages/heuristic-theme` | `@inneranimalmedia/theme-heuristic` | **Stock CMS theme preset** |
 | `packages/commerce-analytics` | `@inneranimalmedia/commerce-analytics` | Commerce analytics surfaces |
 
 `agentsam create … --preset cms` should land on **heuristic-theme** as the basic stock theme.

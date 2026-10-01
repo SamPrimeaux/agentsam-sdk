@@ -13,6 +13,7 @@
       "enum": ["workspace", "app", "store", "portal", "brand"]
     },
     "launch_path": { "type": "string", "pattern": "^/.*" },
+    "app_manifest": { "type": "string", "description": "Path to the product agentsam.app.json, resolved relative to this brand manifest." },
     "routes": {
       "type": "object",
       "additionalProperties": { "type": "string" },

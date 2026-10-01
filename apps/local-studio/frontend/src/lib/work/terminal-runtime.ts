@@ -12,7 +12,7 @@ import { readSecrets, writeSecrets } from "@/lib/work/secrets";
 import { navigateApp } from "@/lib/work/navigate";
 import { slugify } from "@/lib/work/seed";
 import { useWorkStore } from "@/lib/work/store";
-import { getTauriInvoke } from "@/lib/desktop/tauri";
+import { getDesktopWorkspaceContext, getTauriInvoke } from "@/lib/desktop/tauri";
 import { activeTerminalSession, useTerminalSessionStore } from "@/lib/work/terminal-sessions";
 import type { Project, ShellEffect } from "@inneranimalmedia/agentsam-local-shared";
 import type { Terminal } from "@xterm/xterm";
@@ -470,7 +470,15 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
   if (useRealPty && runtimeBase) {
     const base = String(runtimeBase).replace(/\/$/, "");
     const wsUrl = base.replace(/^http/, "ws");
-    const cwdParam = encodeURIComponent(project0.workspaceRoot || "");
+    const persistedCwd = activeTerminalSession().cwd;
+    let resolvedCwd =
+      project0.workspaceRoot ||
+      (persistedCwd && persistedCwd !== "/" ? persistedCwd : "");
+    if (!resolvedCwd && usingAgentsamd) {
+      const nativeContext = await getDesktopWorkspaceContext();
+      resolvedCwd = nativeContext?.default_cwd || "";
+    }
+    const cwdParam = encodeURIComponent(resolvedCwd);
     const cap = encodeURIComponent(String(runtimeCap || "local"));
     let socket: WebSocket | null = null;
     try {
@@ -510,11 +518,11 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
       socket.onopen = () => {
         useTerminalSessionStore.getState().patchSession(sessionId, {
           state: "connected",
-          cwd: project0.workspaceRoot || undefined,
+          cwd: resolvedCwd || undefined,
           shell: "zsh",
           error: undefined,
         });
-        term.writeln(`AgentSam PTY  ·  ${project0.workspaceRoot || cwdParam}`);
+        term.writeln(`AgentSam PTY  ·  ${resolvedCwd || "(runtime default)"}`);
         term.writeln(
           `workspace ${project0.workspaceId || "?"}  ·  real shell — same host root as Monaco`,
         );

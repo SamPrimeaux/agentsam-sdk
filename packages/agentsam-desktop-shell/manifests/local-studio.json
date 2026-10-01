@@ -6,6 +6,7 @@
   "base_url": "app://local-studio",
   "surface": "app",
   "launch_path": "/agentsam",
+  "app_manifest": "../../../apps/local-studio/agentsam.app.json",
   "routes": {
     "home": "/agentsam",
     "login": "/auth/login",
@@ -15,7 +16,7 @@
   "auth": {
     "authority": "service",
     "ui": "bundled-auth-portal",
-    "service_origin": "install-config",
+    "service_origin": "https://agentsam.inneranimalmedia.com",
     "native_session": "bearer",
     "session_store": "os_secure_store",
     "standalone_adapter": "sqlite",

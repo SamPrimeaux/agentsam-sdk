@@ -1,0 +1,25 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "grok-game-animation-frames",
+  "name": "Grok \u00b7 game-animation-frames",
+  "description": "Video-first animation frames that actually cycle",
+  "icon": "skill",
+  "slash": {
+    "suggested": "/grok-game-animation-frames"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  },
+  "provenance": {
+    "source": "apps/local-studio/.grok/skills",
+    "vendor": "grok",
+    "status": "imported"
+  }
+}

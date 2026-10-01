@@ -1,9 +1,9 @@
-# @inneranimalmedia/heuristic-theme
+# @inneranimalmedia/theme-heuristic
 
 Stock AgentSam CMS storefront shell theme. Exports a deterministic theme contract consumed by CMS presets and `theme.storefront.shell`.
 
 ```js
-import { createStorefrontShellTheme } from "@inneranimalmedia/heuristic-theme";
+import { createStorefrontShellTheme } from "@inneranimalmedia/theme-heuristic";
 
 const theme = createStorefrontShellTheme();
 ```

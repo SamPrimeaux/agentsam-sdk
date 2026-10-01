@@ -1,7 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-repository",
-  "version": "0.1.0",
-  "private": true,
+  "version": "2.6.7",
   "description": "Portable AgentSam repository identity, Merkle, semantic file metadata, persistence, and repository graph runtime contracts.",
   "type": "module",
   "main": "./src/index.js",
@@ -21,5 +20,16 @@
   },
   "engines": {
     "node": ">=22 <25"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/agentsam-repository"
+  },
+  "files": [
+    "src"
+  ]
 }

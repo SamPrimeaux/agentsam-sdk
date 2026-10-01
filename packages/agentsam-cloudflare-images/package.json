@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-cloudflare-images",
-  "version": "0.1.0",
+  "version": "2.6.7",
   "description": "Shared Cloudflare Images transport: credentials, delivery URLs, and HTTP client. Content and Brand consume this — duplicate clients are not allowed.",
   "type": "module",
   "main": "./dist/index.js",
@@ -23,5 +23,13 @@
     "typescript": "^5.9.3",
     "vitest": "^4.1.11"
   },
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/agentsam-cloudflare-images"
+  }
 }

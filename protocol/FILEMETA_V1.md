@@ -36,7 +36,7 @@ Semantic entries correspond one-for-one with non-directory content entries and r
   "size": 213,
   "mode": 420,
   "hash": "sha256:...",
-  "package": "@inneranimalmedia/agentsam-sdk-identity",
+  "package": "@inneranimalmedia/agentsam-identity",
   "package_root": "packages/identity",
   "package_kind": "library",
   "system": "identity",
@@ -70,7 +70,7 @@ A package may declare stable package-level semantics without tagging every file:
 
 ```json
 {
-  "name": "@inneranimalmedia/agentsam-sdk-identity",
+  "name": "@inneranimalmedia/agentsam-identity",
   "agentsam": {
     "system": "identity",
     "kind": "library",

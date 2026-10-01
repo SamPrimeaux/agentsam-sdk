@@ -1,4 +1,4 @@
-declare module "@inneranimalmedia/agentsam-sdk-brand" {
+declare module "@inneranimalmedia/agentsam-brand" {
   export interface OptimizeResult {
     path: string;
     format: string;

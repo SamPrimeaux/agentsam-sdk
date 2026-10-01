@@ -3,7 +3,7 @@
  * Alias ≠ authority: skill tips and SAM operation ids live here so help is not a prose-only dump.
  */
 
-/** @typedef {{ id: string, aliases?: string[], summary: string, topic: string, skill?: string, operation?: string, common?: boolean }} CliCommandEntry */
+/** @typedef {{ id: string, aliases?: string[], summary: string, topic: string, skill?: string, operation?: string, common?: boolean, usage?: string[], options?: Array<{ flag: string, description: string }> }} CliCommandEntry */
 
 /** @type {CliCommandEntry[]} */
 export const CLI_COMMAND_CATALOG = Object.freeze([
@@ -15,10 +15,34 @@ export const CLI_COMMAND_CATALOG = Object.freeze([
   { id: 'inspect', summary: 'Bounded repository inspect / authority view', topic: 'work', skill: 'agentsam-app-fundamentals', operation: 'repository.inspect', common: true },
   { id: 'machine', summary: 'Deterministic local machine perception (inspect / asset discovery)', topic: 'work', skill: 'agentsam-app-fundamentals', operation: 'machine.inspect', common: true },
   { id: 'capabilities', summary: 'Inspect capability contracts', topic: 'create', skill: 'agentsam-app-fundamentals' },
-  { id: 'setup', summary: 'Discover → plan → approve → install capabilities (Homebrew-style)', topic: 'start', skill: 'agentsam-app-fundamentals', common: true },
+  {
+    id: 'setup',
+    summary: 'Discover → plan → approve → install capabilities (Homebrew-style)',
+    topic: 'start',
+    skill: 'agentsam-app-fundamentals',
+    common: true,
+    usage: [
+      'agentsam setup [capability-id] [--dry-run|--yes]',
+      'agentsam setup runtime [--profile <id>] [--dry-run|--yes]',
+      'agentsam setup --list',
+    ],
+  },
   { id: 'skills', aliases: ['skill'], summary: 'List or load portable skill instructions', topic: 'create', skill: 'agentsam-app-fundamentals', common: true },
   { id: 'context', summary: 'Git + bridge context from any repo', topic: 'work', skill: 'agentsam-app-fundamentals' },
-  { id: 'status', summary: 'Account, models, terminal, and live deploy awareness', topic: 'runtime', skill: 'agentsam-progression-guard', common: true },
+  {
+    id: 'status',
+    summary: 'Account, models, terminal, and live deploy awareness',
+    topic: 'runtime',
+    skill: 'agentsam-progression-guard',
+    common: true,
+    usage: ['agentsam status [--offline] [--no-discover] [--json] [-i|--interactive]'],
+    options: [
+      { flag: '--offline', description: 'Skip network-dependent status probes.' },
+      { flag: '--no-discover', description: 'Skip provider model discovery.' },
+      { flag: '--json', description: 'Emit the machine-readable status + next-action plan.' },
+      { flag: '-i, --interactive', description: 'Open the interactive next-action menu.' },
+    ],
+  },
   { id: 'db', summary: 'Project-local SQLite status/init', topic: 'runtime', skill: 'agentsam-app-fundamentals' },
   { id: 'models', summary: 'Probe hosted/local model availability', topic: 'start', skill: 'agentsam-app-fundamentals', common: true },
   { id: 'providers', summary: 'Configure machine provider credentials', topic: 'start', skill: 'agentsam-app-fundamentals' },
@@ -48,7 +72,24 @@ export const CLI_COMMAND_CATALOG = Object.freeze([
   { id: 'eval', summary: 'Context fixtures and live eval telemetry', topic: 'runtime', skill: 'agentsam-app-fundamentals' },
   { id: 'index', summary: 'Plan/run incremental AST (+ optional embeddings)', topic: 'work', skill: 'agentsam-codebaseindex', operation: 'codebaseindex.ingest' },
   { id: 'search', summary: 'Retrieve indexed code/text', topic: 'work', skill: 'agentsam-codebaseindex' },
-  { id: 'repo', summary: 'Repository snapshot / observations', topic: 'work', skill: 'agentsam-app-fundamentals', operation: 'repository.inspect' },
+  {
+    id: 'repo',
+    summary: 'Repository snapshot / observations',
+    topic: 'work',
+    skill: 'agentsam-app-fundamentals',
+    operation: 'repository.inspect',
+    usage: [
+      'agentsam repo [snapshot] [--cwd <path>] [--churn-days <days>] [--save] [--json]',
+      'agentsam repo history [--cwd <path>]',
+      'agentsam repo compare [--cwd <path>]',
+    ],
+    options: [
+      { flag: '--json', description: 'Emit the full deterministic repository-intelligence receipt.' },
+      { flag: '--save', description: 'Persist the observation for history/compare.' },
+      { flag: '--churn-days <days>', description: 'Set the Git churn window (1..3650).' },
+      { flag: '--cwd <path>', description: 'Inspect another repository root.' },
+    ],
+  },
   { id: 'init', summary: 'Knowledge setup or local scaffold', topic: 'create', skill: 'agentsam-app-fundamentals' },
   { id: 'codebaseindex', aliases: ['ingest', 'codebase-index'], summary: 'Guided codebase ingest: materials, allowlist, embeddings, storage', topic: 'work', skill: 'agentsam-codebaseindex', operation: 'codebaseindex.ingest', common: true },
   { id: 'brand', summary: 'Deterministic brand intelligence', topic: 'work', skill: 'agentsam-app-fundamentals', operation: 'brand.scan' },

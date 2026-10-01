@@ -1,7 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-database-editor",
-  "version": "0.0.0",
-  "private": true,
+  "version": "2.6.7",
   "type": "module",
   "description": "Portable AgentSam Database Editor — adapters for SQLite/D1/Postgres/Supabase + vectors surface. Donor: IAM /dashboard/database.",
   "main": "./src/index.js",
@@ -32,5 +31,21 @@
     "react-dom": ">=18",
     "lucide-react": ">=0.400.0",
     "recharts": ">=2.0.0"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/agentsam-database-editor"
+  },
+  "files": [
+    "backend",
+    "frontend",
+    "src",
+    "bin",
+    "scripts",
+    "agentsam.app.json"
+  ]
 }

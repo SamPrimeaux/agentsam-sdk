@@ -100,7 +100,7 @@ Dispatch supports exact kinds and prefix wildcards such as `cad.*`.
 
 ## Relationship to WorkGraph
 
-Queue Control does not replace `@inneranimalmedia/work-graph`. A WorkGraph can release ready nodes; Queue Control then schedules those nodes to an executor. Completion receipts can be projected back into the graph by the host.
+Queue Control does not replace `@inneranimalmedia/agentsam-work-graph`. A WorkGraph can release ready nodes; Queue Control then schedules those nodes to an executor. Completion receipts can be projected back into the graph by the host.
 
 ## Relationship to AgentSam tools and MCP
 

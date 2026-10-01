@@ -89,6 +89,42 @@ export function renderHelpOverview(version, options = {}) {
   return lines.join('\n');
 }
 
+export function renderCommandHelp(entryOrId, version = String(pkg.version || 'unknown')) {
+  const entry = typeof entryOrId === 'string' ? getCliCommand(entryOrId) : entryOrId;
+  if (!entry) return renderHelpOverview(version);
+
+  const usage = entry.usage?.length ? entry.usage : [`agentsam ${entry.id}`];
+  const lines = [
+    '',
+    '  ' + pc.bold('Agent Sam') + ' ' + pc.dim('v' + version) + ' ' + pc.dim('·') + ' ' + pc.bold(entry.id),
+    '  ' + pc.dim(entry.summary),
+    '',
+    '  ' + pc.bold('Usage'),
+    ...usage.map((row) => '    ' + pc.cyan(row)),
+  ];
+
+  if (entry.options?.length) {
+    const width = Math.min(32, Math.max(...entry.options.map((row) => row.flag.length), 0));
+    lines.push(
+      '',
+      '  ' + pc.bold('Options'),
+      ...entry.options.map((row) => '    ' + pc.cyan(row.flag.padEnd(width)) + '  ' + pc.dim(row.description)),
+    );
+  }
+
+  if (entry.aliases?.length) {
+    lines.push('', '  ' + pc.bold('Aliases'), '    ' + entry.aliases.map((alias) => pc.cyan(`agentsam ${alias}`)).join(' · '));
+  }
+  if (entry.skill) {
+    lines.push('', '  ' + pc.dim(`Skill: agentsam skills ${entry.skill}`));
+  }
+  if (entry.operation) {
+    lines.push('  ' + pc.dim(`Operation: ${entry.operation}`));
+  }
+  lines.push('');
+  return lines.join('\n');
+}
+
 export function renderHelpTopic(topic, version) {
   if (!topic) return renderHelpOverview(version);
   const skillHint = topic.rows?.[0]?.[1]?.includes('skill')
@@ -153,6 +189,11 @@ export async function runHelp(argv = [], options = {}) {
 
   const topicArg = args.find((arg) => !arg.startsWith('-'));
   if (topicArg) {
+    const command = getCliCommand(topicArg);
+    if (command) {
+      write(renderCommandHelp(command, version));
+      return;
+    }
     const topic = resolveHelpTopic(topicArg);
     if (!topic) {
       write(renderHelpOverview(version));

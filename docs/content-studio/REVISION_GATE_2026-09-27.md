@@ -24,7 +24,7 @@ or a hardcoded provider — it is not finished.
    `protocol/assets/`) owns canonical asset identity (`ast_*`), machine facts,
    provenance and provider **representations**.
 
-3. **BrandPack** (`brand.pack.json` / `@inneranimalmedia/agentsam-sdk-brand`)
+3. **BrandPack** (`brand.pack.json` / `@inneranimalmedia/agentsam-brand`)
    owns the canonical brand system **AND brand-scoped assets**: logos, icons,
    fonts, imagery, video, models, themes, styles, tokens, motion, semantic
    roles and brand delivery rules. BrandPack does **not** own physical storage

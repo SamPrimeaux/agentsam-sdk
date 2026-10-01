@@ -1,0 +1,25 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "grok-og",
+  "name": "Grok \u00b7 og",
+  "description": "Brand assets: og.jpg card, X feed banner, SVG favicon, PWA icons \u2014 always a non-blocking `task` subagent",
+  "icon": "skill",
+  "slash": {
+    "suggested": "/grok-og"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  },
+  "provenance": {
+    "source": "apps/local-studio/.grok/skills",
+    "vendor": "grok",
+    "status": "imported"
+  }
+}

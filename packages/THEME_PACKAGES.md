@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | Site themes | `packages/theme-*-site/` + `packages/theme-iasf/` | `@inneranimalmedia/theme-{cypress,violet,grove,ember,forge,harbor,summit,iasf}` | Public-site CSS/content packs |
 | Scenes | `packages/theme-scenes/` | `@inneranimalmedia/theme-scenes` | Composition vocabulary + registry |
-| Storefront shell | `packages/heuristic-theme/` | `@inneranimalmedia/heuristic-theme` | Stock CMS shell |
+| Storefront shell | `packages/heuristic-theme/` | `@inneranimalmedia/theme-heuristic` | Stock CMS shell |
 | Docs skin | `packages/agentsam-docs-theme/` | `@inneranimalmedia/agentsam-docs-theme` | Docs-only tokens |
 | Gallery demos | `apps/theme-gallery-preview/` | (app) | Preview only |
 

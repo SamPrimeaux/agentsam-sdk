@@ -4,7 +4,7 @@
   "name": "AgentSam Local Studio",
   "kind": "app",
   "package": "@inneranimalmedia/agentsam-local-studio",
-  "version": "2.6.6",
+  "version": "2.6.7",
   "entrypoints": {
     "frontend": "./frontend",
     "backend": "./backend",

@@ -88,17 +88,21 @@ test('CMS D1 queries all enforce project-scoped tenancy without cross-tenant lea
   }
 });
 
-test('Local Studio package.json explicitly declares client-cms-editor dependencies', () => {
+test('Local Studio declares portable registry versions for client-cms-editor dependencies', () => {
   const pkgPath = at('apps', 'local-studio', 'frontend', 'package.json');
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+  const rootPkg = JSON.parse(fs.readFileSync(at('package.json'), 'utf8'));
 
-  assert.ok(pkg.dependencies['@inneranimalmedia/agentsam-cms-frontend'], 'missing @inneranimalmedia/agentsam-cms-frontend');
-  assert.ok(pkg.dependencies['@inneranimalmedia/agentsam-cms-backend'], 'missing @inneranimalmedia/agentsam-cms-backend');
-  assert.ok(pkg.dependencies['@inneranimalmedia/agentsam-cms-shared'], 'missing @inneranimalmedia/agentsam-cms-shared');
-
-  assert.equal(pkg.dependencies['@inneranimalmedia/agentsam-cms-frontend'], 'file:../../client-cms-editor/frontend');
-  assert.equal(pkg.dependencies['@inneranimalmedia/agentsam-cms-backend'], 'file:../../client-cms-editor/backend');
-  assert.equal(pkg.dependencies['@inneranimalmedia/agentsam-cms-shared'], 'file:../../client-cms-editor/shared/cms');
+  for (const name of [
+    '@inneranimalmedia/agentsam-cms-frontend',
+    '@inneranimalmedia/agentsam-cms-backend',
+    '@inneranimalmedia/agentsam-cms-shared',
+  ]) {
+    const declared = pkg.dependencies[name];
+    assert.ok(declared, 'missing ' + name);
+    assert.equal(declared, rootPkg.version, name + ' must track the lockstep SDK release');
+    assert.doesNotMatch(declared, /^(?:file:|link:|workspace:)/, name + ' must install from the registry');
+  }
 });
 
 test('Local Studio mounts CMS route with default site agentsam-sdk', () => {

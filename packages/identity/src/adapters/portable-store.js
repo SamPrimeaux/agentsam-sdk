@@ -3,7 +3,7 @@ import {
   IdentitySchemaError,
 } from '../contracts/identity-store.js';
 import { DEFAULT_COMPANY_ID, DEFAULT_COMPANY_SLUG, normalizeCompanyRow } from '../contracts/company.js';
-import { SESSION_POLICY, SESSION_TYPES, NATIVE_HANDOFF_TTL_SECONDS } from '../core/session-policy.js';
+import { SESSION_POLICY, SESSION_TYPES, NATIVE_HANDOFF_TTL_SECONDS, shouldRenewDesktopSession } from '../core/session-policy.js';
 import {
   newAccountIdentityId,
   newAuthEventId,
@@ -169,7 +169,18 @@ export function createPortableIdentityStore(db, options = {}) {
         `SELECT id, user_id, email, provider, provider_subject, display_name, expires_at, revoked_at, created_at, last_active_at, type
          FROM identity_sessions WHERE id = ? LIMIT 1`,
       ).bind(sessionId).first();
-      if (!row || row.revoked_at || row.expires_at <= nowUnix()) return null;
+      const now = nowUnix();
+      if (!row || row.revoked_at || row.expires_at <= now) return null;
+      if (shouldRenewDesktopSession(row, now)) {
+        const renewedExpiresAt = now + SESSION_POLICY.desktop.ttlSeconds;
+        await db.prepare(
+          `UPDATE identity_sessions
+           SET expires_at = ?, last_active_at = ?
+           WHERE id = ? AND revoked_at IS NULL AND expires_at > ?`,
+        ).bind(renewedExpiresAt, now, sessionId, now).run();
+        row.expires_at = renewedExpiresAt;
+        row.last_active_at = now;
+      }
       return row;
     },
 

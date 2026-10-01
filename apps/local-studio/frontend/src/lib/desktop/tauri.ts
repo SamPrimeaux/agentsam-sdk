@@ -27,6 +27,17 @@ export async function identitySessionExists(): Promise<boolean> {
   return Boolean(await invoke("identity_session_exists", {}));
 }
 
+export type IdentityRuntimeConfig = {
+  authority: "service" | "standalone";
+  service_origin: string | null;
+};
+
+export async function getIdentityRuntimeConfig(): Promise<IdentityRuntimeConfig> {
+  const invoke = getTauriInvoke();
+  if (!invoke) throw new Error("identity_runtime_config_unavailable");
+  return (await invoke("identity_runtime_config", {})) as IdentityRuntimeConfig;
+}
+
 export async function identityPendingGet(): Promise<string | null> {
   const invoke = getTauriInvoke();
   if (!invoke) return null;
@@ -73,7 +84,7 @@ export async function invokeIdentity(payload: Record<string, unknown>): Promise<
 }
 
 
-export type StudioServiceOperation = "inventory" | "chat" | "vault" | "cms" | "database" | "connections";
+export type StudioServiceOperation = "inventory" | "chat" | "vault" | "cms" | "database" | "connections" | "plugins";
 
 export async function invokeLocalProvider<T = Record<string, unknown>>(payload: {
   operation: "inventory" | "chat";
@@ -124,6 +135,23 @@ export async function resolveDesktopStudioAccountId(): Promise<string> {
   }
 }
 
+
+export type DesktopWorkspaceContext = {
+  home_dir: string;
+  process_cwd: string;
+  default_cwd: string;
+  source: string;
+};
+
+export async function getDesktopWorkspaceContext(): Promise<DesktopWorkspaceContext | null> {
+  const invoke = getTauriInvoke();
+  if (!invoke) return null;
+  try {
+    return (await invoke("desktop_workspace_context", {})) as DesktopWorkspaceContext;
+  } catch {
+    return null;
+  }
+}
 
 export async function openExternalUrl(url: string): Promise<void> {
   if (!/^https?:\/\//i.test(url)) throw new Error("external_url_scheme_not_allowed");

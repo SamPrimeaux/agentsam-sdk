@@ -1,7 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-contracts",
-  "version": "0.1.0",
-  "private": true,
+  "version": "2.6.7",
   "description": "Framework-neutral AgentSam contracts for workbench, tools, providers, events, hooks, execution, identity and repository context.",
   "type": "module",
   "main": "./src/index.ts",
@@ -28,5 +27,16 @@
   },
   "devDependencies": {
     "typescript": "^5.9.3"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/agentsam-contracts"
+  },
+  "files": [
+    "src"
+  ]
 }

@@ -3,7 +3,7 @@
   "id": "ecommerce-cms-agentsam",
   "name": "AgentSam Ecommerce + CMS",
   "kind": "app",
-  "package": "@inneranimalmedia/agentsam-sdk-ecommerce",
+  "package": "@inneranimalmedia/ecommerce-cms-agentsam",
   "version": "0.1.0",
   "entrypoints": {
     "frontend": "./frontend",
@@ -58,7 +58,7 @@
   "notes": "Standalone local preview is buildable and runs through frontend/src with the mock AdminHost adapter. The rescued UI remains intentionally disconnected from production provider/backend writes, so product capabilities stay false until real backend adapters are wired and verified.",
   "bin": "bin/agentsam-ecommerce.mjs",
   "install": {
-    "command": "npm install @inneranimalmedia/agentsam-sdk-ecommerce",
+    "command": "npm install @inneranimalmedia/ecommerce-cms-agentsam",
     "selector": "ecommerce-cms-agentsam",
     "paths": ["/install/ecommerce", "/install/ecommerce-cms-agentsam"]
   },

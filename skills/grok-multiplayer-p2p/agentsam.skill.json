@@ -1,0 +1,25 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "grok-multiplayer-p2p",
+  "name": "Grok \u00b7 multiplayer-p2p",
+  "description": "WebRTC P2P mesh, signaled at /api/rtc",
+  "icon": "skill",
+  "slash": {
+    "suggested": "/grok-multiplayer-p2p"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  },
+  "provenance": {
+    "source": "apps/local-studio/.grok/skills",
+    "vendor": "grok",
+    "status": "imported"
+  }
+}

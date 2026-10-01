@@ -31,4 +31,33 @@ function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
   );
 }
 
-export { Input, Textarea };
+/**
+ * Masked secret field that password managers (iCloud Passwords, Chrome, 1Password,
+ * LastPass, Bitwarden) will not offer to save. A type="password" field next to a name
+ * field gets treated as a login form, so API keys ended up in the user's saved
+ * passwords. Masking is done with CSS on a text input instead.
+ */
+function SecretInput({
+  revealed = false,
+  className,
+  ...props
+}: Omit<React.ComponentProps<"input">, "type"> & { revealed?: boolean }) {
+  return (
+    <Input
+      {...props}
+      type="text"
+      autoComplete="off"
+      autoCorrect="off"
+      autoCapitalize="off"
+      spellCheck={false}
+      data-1p-ignore
+      data-lpignore="true"
+      data-bwignore
+      data-form-type="other"
+      className={cn(!revealed && "[-webkit-text-security:disc]", className)}
+    />
+  );
+}
+
+
+export { Input, Textarea, SecretInput };

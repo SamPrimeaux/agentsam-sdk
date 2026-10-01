@@ -1,5 +1,6 @@
 import {
   getCurrentDeepLinks,
+  getIdentityRuntimeConfig,
   getTauriInvoke,
   invokeIdentity,
   listenDeepLinks,
@@ -12,7 +13,6 @@ import {
 export const DESKTOP_NATIVE_AUTH_PENDING_ACCOUNT = "identity_native_oauth_pending";
 export const DESKTOP_NATIVE_REDIRECT = "agentsamstudio://auth/callback";
 
-const DEFAULT_IDENTITY_SERVICE_ORIGIN = "https://agentsam.inneranimalmedia.com";
 const PENDING_AUTH_MAX_AGE_MS = 10 * 60 * 1000;
 const PKCE_VALUE = /^[A-Za-z0-9_-]{43}$/;
 
@@ -47,18 +47,22 @@ function base64Url(bytes: Uint8Array): string {
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
-function identityServiceOrigin(override?: string): string {
-  const viteOrigin = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env
-    ?.VITE_AGENTSAM_IDENTITY_SERVICE_ORIGIN;
-  const raw = String(override || viteOrigin || DEFAULT_IDENTITY_SERVICE_ORIGIN)
-    .trim()
-    .replace(/\/+$/, "");
+function validateIdentityServiceOrigin(value: string): string {
+  const raw = String(value || "").trim().replace(/\/+$/, "");
+  if (!raw) throw new Error("identity_service_not_configured");
   const parsed = new URL(raw);
   const isLoopback = ["127.0.0.1", "localhost", "[::1]", "::1"].includes(parsed.hostname);
   if (parsed.protocol !== "https:" && !(parsed.protocol === "http:" && isLoopback)) {
     throw new Error("identity_service_origin_requires_https");
   }
   return parsed.origin;
+}
+
+async function resolveIdentityServiceOrigin(override?: string): Promise<string> {
+  if (override) return validateIdentityServiceOrigin(override);
+  const config = await getIdentityRuntimeConfig();
+  if (config.authority !== "service") throw new Error("identity_service_authority_required");
+  return validateIdentityServiceOrigin(config.service_origin || "");
 }
 
 function notifyDesktopIdentity(authenticated: boolean, user: NativeIdentityUser | null = null): void {
@@ -109,7 +113,7 @@ export async function createPkcePair(): Promise<{ verifier: string; challenge: s
 export function buildNativeLoginUrl(
   provider: NativeIdentityProvider,
   challenge: string,
-  serviceOrigin?: string,
+  serviceOrigin: string,
 ): string {
   if (!PKCE_VALUE.test(challenge)) throw new Error("native_challenge_invalid");
   if (provider === "google") {
@@ -118,7 +122,7 @@ export function buildNativeLoginUrl(
   if (!["github", "cloudflare", "inneranimalmedia"].includes(provider)) {
     throw new Error("native_provider_invalid");
   }
-  const url = new URL(`/api/oauth/${provider}/start`, identityServiceOrigin(serviceOrigin));
+  const url = new URL(`/api/oauth/${provider}/start`, validateIdentityServiceOrigin(serviceOrigin));
   url.searchParams.set("client", "native");
   url.searchParams.set("native_challenge", challenge);
   url.searchParams.set("native_redirect", DESKTOP_NATIVE_REDIRECT);
@@ -175,9 +179,10 @@ async function beginGoogleDesktopLogin(
 ): Promise<NativeIdentityStatus> {
   const invoke = getTauriInvoke();
   if (!invoke) throw new Error("google_desktop_identity_unavailable");
+  const origin = await resolveIdentityServiceOrigin(serviceOrigin);
   const response = (await invoke("google_desktop_identity_login", {
     request: {
-      serviceOrigin: identityServiceOrigin(serviceOrigin),
+      serviceOrigin: origin,
     },
   })) as NativeIdentityStatus;
   return acceptDesktopIdentity(response);
@@ -201,7 +206,8 @@ export async function beginNativeLogin(
   };
   await identityPendingSet(JSON.stringify(pending));
   try {
-    await openExternalUrl(buildNativeLoginUrl(provider, challenge, serviceOrigin));
+    const origin = await resolveIdentityServiceOrigin(serviceOrigin);
+    await openExternalUrl(buildNativeLoginUrl(provider, challenge, origin));
     return null;
   } catch (error) {
     await identityPendingDelete();
@@ -233,8 +239,10 @@ export async function exchangeNativeHandoff(callbackUrl: string): Promise<Native
   }
 
   await identityPendingDelete();
-  const status = (await invokeIdentity({ op: "status" })) as NativeIdentityStatus;
-  return acceptDesktopIdentity(status);
+  return acceptDesktopIdentity({
+    ...response,
+    authenticated: true,
+  });
 }
 
 export async function restoreNativeSession(): Promise<NativeIdentityStatus> {

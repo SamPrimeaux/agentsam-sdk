@@ -2,7 +2,7 @@
 
 **Law:** discover ≠ promote · install ≠ activate · automation ≠ authority  
 **SSOT for registry:** live `inneranimalmedia-business` D1 (`agentsam_products` + `asset_relationships` + evidence/artifacts)  
-**SSOT for packages:** `agentsam-sdk` workspaces (`@inneranimalmedia/heuristic-theme`, `@inneranimalmedia/theme-*`)
+**SSOT for packages:** `agentsam-sdk` workspaces (`@inneranimalmedia/theme-heuristic`, `@inneranimalmedia/theme-*`)
 
 Python owns deterministic harvest/normalize/preview/QA. AgentSam owns interpretation. **Every meaningful product unit must reconcile into D1** — filesystem-only runs are incomplete.
 
@@ -113,7 +113,7 @@ discovered / matched / registered / updated / unchanged products · repositories
 
 | Package | Role |
 |---------|------|
-| `@inneranimalmedia/heuristic-theme` | Stock CMS `theme.storefront.shell` |
+| `@inneranimalmedia/theme-heuristic` | Stock CMS `theme.storefront.shell` |
 | `@inneranimalmedia/theme-<slug>` | Installable gallery theme contracts |
 | `apps/theme-gallery-preview` | Proving surface / historical mounts — not the package SSOT |
 

@@ -1,0 +1,25 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "grok-generate2dmap",
+  "name": "Grok \u00b7 generate2dmap",
+  "description": "2D game maps: layered art, props, collision metadata",
+  "icon": "skill",
+  "slash": {
+    "suggested": "/grok-generate2dmap"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  },
+  "provenance": {
+    "source": "apps/local-studio/.grok/skills",
+    "vendor": "grok",
+    "status": "imported"
+  }
+}

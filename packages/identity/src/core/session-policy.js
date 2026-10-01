@@ -22,6 +22,7 @@ export const SESSION_POLICY = Object.freeze({
   /** Native app bearer session (OS keychain) — minted via the native OAuth handoff. */
   desktop: Object.freeze({
     ttlSeconds: 30 * 24 * 60 * 60,
+    renewWindowSeconds: 7 * 24 * 60 * 60,
   }),
   /** Temporary execution authority — not the user's Local Studio login. */
   agent: Object.freeze({
@@ -30,6 +31,23 @@ export const SESSION_POLICY = Object.freeze({
     maxTtlSeconds: 24 * 60 * 60,
   }),
 });
+
+/**
+ * Desktop sessions are durable/revocable AgentSam sessions, not provider tokens.
+ * Renew only near expiry so normal app launches remain read-mostly.
+ */
+export function shouldRenewDesktopSession(session, nowSeconds) {
+  const now = Number.isFinite(Number(nowSeconds))
+    ? Math.floor(Number(nowSeconds))
+    : Math.floor(Date.now() / 1000);
+  const expiresAt = Number(session?.expires_at);
+  return (
+    session?.type === SESSION_TYPES.DESKTOP
+    && Number.isFinite(expiresAt)
+    && expiresAt > now
+    && expiresAt - now <= SESSION_POLICY.desktop.renewWindowSeconds
+  );
+}
 
 /**
  * Clamp a requested agent/runtime grant TTL into policy bounds.

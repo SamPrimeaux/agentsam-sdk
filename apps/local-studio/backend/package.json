@@ -1,14 +1,14 @@
 {
   "name": "@inneranimalmedia/agentsam-local-studio-backend",
-  "version": "0.0.0",
+  "version": "2.6.7",
   "private": true,
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-sdk": "file:../../..",
-    "@inneranimalmedia/agentsam-work": "file:../../../packages/agentsam-work"
+    "@inneranimalmedia/agentsam-sdk": "2.6.7",
+    "@inneranimalmedia/agentsam-work": "2.6.7"
   },
   "devDependencies": {
     "@types/node": "^22.16.5",

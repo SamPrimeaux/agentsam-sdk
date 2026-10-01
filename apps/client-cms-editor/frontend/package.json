@@ -1,7 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-cms-frontend",
-  "version": "0.1.0-alpha.0",
-  "private": true,
+  "version": "2.6.7",
   "description": "Internal CMS frontend (bundled into @inneranimalmedia/client-cms-editor — not published separately).",
   "type": "module",
   "exports": {
@@ -16,8 +15,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-cms-backend": "0.1.0-alpha.0",
-    "@inneranimalmedia/agentsam-cms-shared": "0.1.0-alpha.0",
+    "@inneranimalmedia/agentsam-cms-backend": "2.6.7",
+    "@inneranimalmedia/agentsam-cms-shared": "2.6.7",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
@@ -28,5 +27,16 @@
     "typescript": "^5.9.3",
     "vite": "^6.4.3",
     "vitest": "^4.1.11"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "apps/client-cms-editor/frontend"
+  },
+  "files": [
+    "src"
+  ]
 }

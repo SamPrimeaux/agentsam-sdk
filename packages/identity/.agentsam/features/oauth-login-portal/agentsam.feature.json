@@ -5,7 +5,7 @@
   "kind": "integration",
   "status": "extracted",
   "package": {
-    "name": "@inneranimalmedia/agentsam-sdk-identity",
+    "name": "@inneranimalmedia/agentsam-identity",
     "version": "2.6.3",
     "directory": "packages/identity"
   },

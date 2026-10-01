@@ -481,7 +481,7 @@
       "version": 1,
       "domain": "theme",
       "runtime": "node",
-      "package": "@inneranimalmedia/heuristic-theme",
+      "package": "@inneranimalmedia/theme-heuristic",
       "export": "createStorefrontShellTheme",
       "description": "Resolve the stock AgentSam CMS storefront shell theme contract.",
       "deterministic": true,

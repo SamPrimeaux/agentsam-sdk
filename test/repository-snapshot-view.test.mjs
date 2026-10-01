@@ -25,13 +25,13 @@ function snapshot() {
       files: [
         {
           path: 'packages/identity/src/core/accounts.js', type: 'file', size: 213, mode: 420, hash: `sha256:${'a'.repeat(64)}`,
-          package: '@inneranimalmedia/agentsam-sdk-identity', package_root: 'packages/identity', system: 'identity',
+          package: '@inneranimalmedia/agentsam-identity', package_root: 'packages/identity', system: 'identity',
           category: 'accounts', layer: 'core', kind: 'source', language: 'javascript', role: 'business-logic', execution_domain: 'unknown',
           tags: ['account-scoped', 'authentication'], symbols: ['accountLinkingNotConfigured'], imports: [],
         },
         {
           path: 'packages/identity/src/oauth/login.js', type: 'file', size: 300, mode: 420, hash: `sha256:${'b'.repeat(64)}`,
-          package: '@inneranimalmedia/agentsam-sdk-identity', package_root: 'packages/identity', system: 'identity',
+          package: '@inneranimalmedia/agentsam-identity', package_root: 'packages/identity', system: 'identity',
           category: 'login', layer: 'oauth', kind: 'source', language: 'javascript', role: 'business-logic', execution_domain: 'unknown',
           tags: ['authentication'], symbols: ['login'], imports: ['./accounts.js'],
         },

@@ -1,7 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-knowledge",
-  "version": "0.1.0",
-  "private": true,
+  "version": "2.6.7",
   "description": "Portable AutoRAG discovery, adapter registries, probes, and company routing contracts for AgentSam.",
   "type": "module",
   "exports": {
@@ -10,6 +9,21 @@
     "./providers": "./src/providers/index.js",
     "./backends": "./src/backends/index.js"
   },
-  "scripts": { "test": "node --test test/*.test.mjs" },
-  "engines": { "node": ">=22 <25" }
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/agentsam-knowledge"
+  },
+  "files": [
+    "src"
+  ]
 }

@@ -50,7 +50,7 @@ export const LOCAL_DEV_PRINCIPAL: CmsPrincipal = {
 
 /**
  * Stock sign-in options offered during OAuth / CMS prebuild.
- * Keep ids aligned with `@inneranimalmedia/agentsam-sdk-identity` stock catalog.
+ * Keep ids aligned with `@inneranimalmedia/agentsam-identity` stock catalog.
  */
 export const CMS_STOCK_SIGN_IN_OPTIONS = Object.freeze([
   {

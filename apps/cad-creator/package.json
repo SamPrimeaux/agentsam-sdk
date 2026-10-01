@@ -1,6 +1,6 @@
 {
-  "name": "@inneranimalmedia/agentsam-sdk-cad-creator",
-  "version": "0.1.0",
+  "name": "@inneranimalmedia/agentsam-cad-creator",
+  "version": "2.6.7",
   "description": "Prepackaged AgentSam CAD, spatial design, and robotics application kit.",
   "type": "module",
   "license": "UNLICENSED",
@@ -74,5 +74,10 @@
     "esbuild@0.28.2": true,
     "esbuild@0.28.1": true,
     "workerd@1.20260921.1": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "apps/cad-creator"
   }
 }

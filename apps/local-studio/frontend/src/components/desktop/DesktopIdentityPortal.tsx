@@ -15,6 +15,7 @@ import {
   type NativeIdentityProvider,
   type NativeIdentityStatus,
 } from "@/lib/desktop/native-auth";
+import { ProviderIcon, friendlyAuthError } from "./ProviderPresentation";
 
 const PROVIDERS: Array<{ id: NativeIdentityProvider; label: string }> = [
   { id: "google", label: "Continue with Google" },
@@ -57,7 +58,7 @@ export function DesktopIdentityPortal({
       (error) => {
         if (!active) return;
         setBusy(null);
-        setMessage(error.message);
+        setMessage(friendlyAuthError(error.message));
       },
     )
       .then((dispose) => {
@@ -85,7 +86,7 @@ export function DesktopIdentityPortal({
       .catch((error) => {
         if (active) {
           setStatus({ ok: false, authenticated: false, user: null });
-          setMessage(error instanceof Error ? error.message : String(error));
+          setMessage(friendlyAuthError(error instanceof Error ? error.message : String(error)));
         }
       });
     return () => {
@@ -106,7 +107,7 @@ export function DesktopIdentityPortal({
       }
     } catch (error) {
       setBusy(null);
-      setMessage(error instanceof Error ? error.message : String(error));
+      setMessage(friendlyAuthError(error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -136,7 +137,10 @@ export function DesktopIdentityPortal({
         className="w-[min(92vw,460px)] max-w-none overflow-hidden border border-border bg-card p-0 text-card-foreground shadow-2xl"
       >
         <div className="border-b border-border px-6 py-5">
-          <DialogTitle className="text-base font-semibold">AgentSam account</DialogTitle>
+          <div className="flex items-center gap-3">
+            <img src="/brand/agentsam-mark.svg" alt="" className="size-10 rounded-xl bg-[#12141a] p-2" />
+            <DialogTitle className="text-base font-semibold">AgentSam account</DialogTitle>
+          </div>
           <DialogDescription className="mt-1 text-sm leading-5 text-muted-foreground">
             Sign in through your system browser. Provider authorization such as Cloudflare resource
             access remains a separate grant from your AgentSam account session.
@@ -190,11 +194,12 @@ export function DesktopIdentityPortal({
                   <Button
                     key={provider.id}
                     variant="outline"
-                    className="w-full justify-between"
+                    className="h-12 w-full justify-start gap-3 rounded-xl border border-white/20 bg-white text-slate-900 shadow-sm hover:bg-white/90 hover:text-slate-900 disabled:opacity-60"
                     disabled={busy !== null}
                     onClick={() => void startLogin(provider.id)}
                   >
-                    <span>{provider.label}</span>
+                    <ProviderIcon provider={provider.id} />
+                    <span className="flex-1 text-left font-medium">{provider.label}</span>
                     {busy === provider.id ? (
                       <Loader2 className="size-4 animate-spin" />
                     ) : (

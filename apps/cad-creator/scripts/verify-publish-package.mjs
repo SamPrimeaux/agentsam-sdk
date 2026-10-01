@@ -25,7 +25,7 @@ if (!assets.some((name) => name.startsWith('RoboticsWorkspace-') && name.endsWit
 
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 if (pkg.private === true) throw new Error('publish package must not be private');
-if (pkg.name !== '@inneranimalmedia/agentsam-sdk-cad-creator') {
+if (pkg.name !== '@inneranimalmedia/agentsam-cad-creator') {
   throw new Error(`unexpected package name: ${pkg.name}`);
 }
 if (!Array.isArray(pkg.files) || pkg.files.some((entry) => entry.startsWith('reference'))) {

@@ -526,7 +526,7 @@ async function main() {
     const outFormat = String(req.format || "webp").toLowerCase();
     const outAbs = path.join(outDir, `${stem}-${Date.now()}.${outFormat}`);
     try {
-      const brand = await import("@inneranimalmedia/agentsam-sdk-brand");
+      const brand = await import("@inneranimalmedia/agentsam-brand");
       const result = await brand.optimizeWithScheduler(buf, {
         format: outFormat,
         outPath: outAbs,

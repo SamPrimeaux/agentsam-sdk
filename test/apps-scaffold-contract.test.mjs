@@ -63,7 +63,7 @@ test('CAD creator app package is curated for third-party installation', () => {
   const pkg = packageJson('apps', 'cad-creator');
   const manifest = JSON.parse(read('apps', 'cad-creator', 'agentsam.app.json'));
 
-  assert.equal(pkg.name, '@inneranimalmedia/agentsam-sdk-cad-creator');
+  assert.equal(pkg.name, '@inneranimalmedia/agentsam-cad-creator');
   assert.notEqual(pkg.private, true);
   assert.equal(pkg.bin['agentsam-cad-creator'], 'bin/agentsam-cad-creator.mjs');
   assert.equal(pkg.publishConfig.access, 'public');

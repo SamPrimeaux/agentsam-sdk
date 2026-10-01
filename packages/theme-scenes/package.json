@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/theme-scenes",
-  "version": "0.1.0",
+  "version": "2.6.7",
   "description": "Reusable scene / shell / block vocabulary for branded website experiences. BrandPack owns look; theme-scenes owns composition.",
   "type": "module",
   "license": "MIT",
@@ -34,7 +34,7 @@
     "directory": "packages/theme-scenes"
   },
   "publishConfig": {
-    "access": "restricted"
+    "access": "public"
   },
   "keywords": [
     "agentsam",
@@ -48,7 +48,7 @@
     "kind": "theme-runtime",
     "slug": "theme-scenes",
     "depends_on": [
-      "@inneranimalmedia/agentsam-sdk-brand"
+      "@inneranimalmedia/agentsam-brand"
     ]
   }
 }
