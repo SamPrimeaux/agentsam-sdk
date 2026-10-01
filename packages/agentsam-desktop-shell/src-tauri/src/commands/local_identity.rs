@@ -80,8 +80,6 @@ struct StudioServiceBridgeRequest {
     path: Option<String>,
     #[serde(default)]
     method: Option<String>,
-    #[serde(default)]
-    session_id: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -209,7 +207,7 @@ async fn service_studio_bridge(
         }
     }
 
-    if let Some(session_id) = request.session_id.as_deref() {
+    if let Some(session_id) = super::keychain::identity_session_get_internal()? {
         let session_id = session_id.trim();
         if !session_id.is_empty() {
             if session_id.len() > 2048 || session_id.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10) {
@@ -275,11 +273,11 @@ async fn service_identity_bridge(
         .and_then(Value::as_str)
         .unwrap_or("")
         .to_string();
-    let session_id = request
-        .get("session_id")
-        .and_then(Value::as_str)
-        .map(str::to_string)
-        .filter(|value| !value.is_empty());
+    let stored_session = if matches!(op.as_str(), "status" | "logout") {
+        super::keychain::identity_session_get_internal()?
+    } else {
+        None
+    };
 
     let (method, path, native_session) = identity_service_route(op.as_str())?;
 
@@ -294,7 +292,7 @@ async fn service_identity_bridge(
     if native_session {
         builder = builder.header("X-AgentSam-Native-Client", "1");
     }
-    if let Some(session_id) = session_id {
+    if let Some(session_id) = stored_session.as_deref() {
         builder = builder.bearer_auth(session_id);
     }
     if method != Method::GET {
@@ -307,6 +305,29 @@ async fn service_identity_bridge(
         .map_err(|e| format!("identity_service_request_failed:{e}"))?;
     let status = response.status();
     let body = response.text().await.unwrap_or_default();
+
+    if status.is_success() && matches!(op.as_str(), "login" | "signup" | "native_exchange") {
+        let mut value: Value = serde_json::from_str(&body)
+            .map_err(|_| "identity_session_response_invalid".to_string())?;
+        let session_id = value
+            .get("session_id")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| "identity_session_missing".to_string())?;
+        super::keychain::identity_session_set_internal(session_id)?;
+        if let Value::Object(ref mut map) = value {
+            map.remove("session_id");
+        }
+        return serde_json::to_string(&value).map_err(|e| format!("identity_response_encode_failed:{e}"));
+    }
+
+    if op == "logout" {
+        super::keychain::identity_session_delete_internal()?;
+    } else if op == "status" && status.as_u16() == 401 {
+        let _ = super::keychain::identity_session_delete_internal();
+    }
+
     if !body.trim().is_empty() {
         return Ok(body);
     }
@@ -509,7 +530,6 @@ mod tests {
             body: None,
             path: Some("/api/vault/secrets/usec_test".into()),
             method: Some("DELETE".into()),
-            session_id: None,
         };
         let (method, path) = studio_service_route(&request).expect("vault route");
         assert_eq!(method, Method::DELETE);

@@ -11,7 +11,7 @@ import {
 import { DEFAULT_SELECTION, shortLabel, type StudioInventoryModel, type StudioModelSelection } from "@/lib/work/models";
 import { useWorkStore } from "@/lib/work/store";
 import { cn } from "@/lib/utils";
-import { invokeStudioService, isPackagedDesktop } from "@/lib/desktop/tauri";
+import { identitySessionExists, invokeLocalProvider, invokeStudioService, isPackagedDesktop } from "@/lib/desktop/tauri";
 
 type InventoryPayload = {
   ok?: boolean;
@@ -55,14 +55,19 @@ export function ModelSelect({ compact = false }: { compact?: boolean }) {
       try {
         let body: InventoryPayload;
         if (isPackagedDesktop()) {
-          const bridged = await invokeStudioService({ operation: "inventory" });
-          try {
-            body = JSON.parse(bridged.body || "{}") as InventoryPayload;
-          } catch {
-            throw new Error("inventory_invalid_response_" + bridged.status);
-          }
-          if (!bridged.ok || body.ok === false) {
-            throw new Error(body.error || "inventory_http_" + bridged.status);
+          if (await identitySessionExists()) {
+            const bridged = await invokeStudioService({ operation: "inventory" });
+            try {
+              body = JSON.parse(bridged.body || "{}") as InventoryPayload;
+            } catch {
+              throw new Error("inventory_invalid_response_" + bridged.status);
+            }
+            if (!bridged.ok || body.ok === false) {
+              throw new Error(body.error || "inventory_http_" + bridged.status);
+            }
+          } else {
+            body = await invokeLocalProvider<InventoryPayload>({ operation: "inventory" });
+            if (body.ok === false) throw new Error(body.error || "local_inventory_failed");
           }
         } else {
           const res = await fetch("/api/llm/inventory", { credentials: "same-origin" });

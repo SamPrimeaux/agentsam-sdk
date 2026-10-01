@@ -10,6 +10,7 @@ use serde::Serialize;
 
 const KEYCHAIN_APP_ID: &str = "local-studio";
 const IDENTITY_SESSION_ACCOUNT: &str = "identity_session";
+const IDENTITY_PENDING_ACCOUNT: &str = "identity_native_oauth_pending";
 const PROVIDER_PREFIX: &str = "provider:";
 
 #[derive(Debug, Serialize)]
@@ -94,11 +95,21 @@ fn delete_value(account: &str) -> Result<(), KeychainError> {
 }
 
 #[tauri::command]
+pub fn identity_session_exists() -> Result<bool, KeychainError> {
+    Ok(get_value(IDENTITY_SESSION_ACCOUNT)?.is_some())
+}
+
+#[tauri::command]
 pub fn identity_pending_set(value: String) -> Result<(), KeychainError> {
     if value.trim().is_empty() {
         return Err(KeychainError { message: "identity_pending_value_required".into() });
     }
     set_value(IDENTITY_PENDING_ACCOUNT, value.as_str())
+}
+
+#[tauri::command]
+pub fn identity_pending_get() -> Result<Option<String>, KeychainError> {
+    get_value(IDENTITY_PENDING_ACCOUNT)
 }
 
 #[tauri::command]
@@ -121,13 +132,7 @@ pub(crate) fn identity_session_delete_internal() -> Result<(), String> {
     delete_value(IDENTITY_SESSION_ACCOUNT).map_err(|error| error.message)
 }
 
-pub(crate) fn identity_pending_get_internal() -> Result<Option<String>, String> {
-    get_value(IDENTITY_PENDING_ACCOUNT).map_err(|error| error.message)
-}
 
-pub(crate) fn identity_pending_delete_internal() -> Result<(), String> {
-    delete_value(IDENTITY_PENDING_ACCOUNT).map_err(|error| error.message)
-}
 
 #[tauri::command]
 pub fn provider_key_exists(provider: String) -> Result<bool, KeychainError> {
@@ -147,6 +152,11 @@ pub fn provider_key_delete(provider: String) -> Result<(), KeychainError> {
     delete_value(provider_account(provider.as_str())?.as_str())
 }
 
+pub(crate) fn provider_key_get_internal(provider: &str) -> Result<Option<String>, String> {
+    let account = provider_account(provider).map_err(|error| error.message)?;
+    get_value(account.as_str()).map_err(|error| error.message)
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -155,7 +165,7 @@ mod tests {
     #[test]
     fn identity_store_is_allowlisted() {
         assert!(identity_account_allowed(IDENTITY_SESSION_ACCOUNT));
-        assert!(identity_account_allowed("identity_native_auth_pending"));
+        assert!(identity_account_allowed("identity_native_oauth_pending"));
         assert!(identity_account_allowed("identity_native_pkce_pending"));
         assert!(!identity_account_allowed("provider:openai"));
         assert!(!identity_account_allowed("anything_else"));

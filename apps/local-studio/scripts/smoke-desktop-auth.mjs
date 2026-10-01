@@ -28,6 +28,7 @@ const source = {
   googleDesktopRust: read(join(repoRoot, "packages/agentsam-desktop-shell/src-tauri/src/commands/google_desktop_identity.rs")),
   googleDesktopWorker: read(join(repoRoot, "packages/identity/src/oauth/google-desktop-exchange.js")),
   deepLink: read(join(repoRoot, "packages/agentsam-desktop-shell/src-tauri/src/commands/deep_link.rs")),
+  keychain: read(join(repoRoot, "packages/agentsam-desktop-shell/src-tauri/src/commands/keychain.rs")),
   config: read(join(repoRoot, "packages/agentsam-desktop-shell/src-tauri/tauri.conf.json")),
 };
 
@@ -44,7 +45,10 @@ requireSource(!source.portal.includes("<iframe"), "desktop_identity_iframe_prese
 requireSource(!source.portal.includes("/auth/login.html?desktop=1"), "legacy_desktop_login_path_present");
 requireSource(source.auth.includes("agentsamstudio://auth/callback"), "native_callback_scheme_missing");
 requireSource(source.auth.includes('op: "native_exchange"'), "native_exchange_client_missing");
-requireSource(source.auth.includes("identity_native_oauth_pending"), "pkce_pending_secure_store_missing");
+requireSource(source.tauri.includes('invoke("identity_pending_set"'), "pkce_pending_set_command_missing");
+requireSource(source.tauri.includes('invoke("identity_pending_get"'), "pkce_pending_get_command_missing");
+requireSource(source.tauri.includes('invoke("identity_pending_delete"'), "pkce_pending_delete_command_missing");
+requireSource(source.keychain.includes('"identity_native_oauth_pending"'), "pkce_pending_native_account_missing");
 requireSource(source.auth.includes("openExternalUrl"), "system_browser_open_missing");
 requireSource(source.auth.includes("listenDeepLinks"), "frontend_deep_link_listener_missing");
 requireSource(source.tauri.includes('invoke("take_pending_deep_links"'), "native_deep_link_drain_missing");
@@ -83,7 +87,9 @@ if (!existsSync(desktopDist)) {
   const bundle = jsFiles.map(read).join("\n");
   requireSource(bundle.includes("agentsamstudio://auth/callback"), "built_native_callback_missing");
   requireSource(bundle.includes("native_exchange"), "built_native_exchange_missing");
-  requireSource(bundle.includes("identity_native_oauth_pending"), "built_pkce_pending_missing");
+  requireSource(bundle.includes("identity_pending_set"), "built_pkce_pending_set_missing");
+  requireSource(bundle.includes("identity_pending_get"), "built_pkce_pending_get_missing");
+  requireSource(bundle.includes("identity_pending_delete"), "built_pkce_pending_delete_missing");
   requireSource(bundle.includes("google_desktop_identity_login"), "built_google_desktop_command_missing");
   requireSource(bundle.includes("google_desktop_native_flow_required"), "built_google_web_native_fail_closed_missing");
   requireSource(!bundle.includes("/auth/login.html?desktop=1"), "built_legacy_desktop_iframe_path_present");

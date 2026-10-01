@@ -42,7 +42,8 @@
       "../../../migrations/runtime": "runtime/migrations",
       "../../identity/scripts/local-identity-bridge.mjs": "runtime/identity/scripts/local-identity-bridge.mjs",
       "../../identity/src": "runtime/identity/src",
-      "../../identity/migrations/sqlite": "runtime/identity/migrations/sqlite"
+      "../../identity/migrations/sqlite": "runtime/identity/migrations/sqlite",
+      "generated/local-provider-bridge.mjs": "runtime/provider/local-provider-bridge.mjs"
     }
   },
   "plugins": {

@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { KeyRound, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AddKeyModal } from "./AddKeyModal";
 import { ApiKeysTable } from "./ApiKeysTable";
 import { CredentialsTable } from "./CredentialsTable";
 import { MintCredentialModal } from "./MintCredentialModal";
+import { DeviceProviderKeys } from "./DeviceProviderKeys";
+import { identitySessionExists, isPackagedDesktop } from "@/lib/desktop/tauri";
 
 /**
  * Live /settings/keys — AgentSam minted credentials + provider BYOK.
@@ -15,6 +17,17 @@ export function LiveKeysSettingsPage() {
   const [secretRefresh, setSecretRefresh] = useState(0);
   const [mintOpen, setMintOpen] = useState(false);
   const [addSecretOpen, setAddSecretOpen] = useState(false);
+  const packaged = isPackagedDesktop();
+  const [signedIn, setSignedIn] = useState(!packaged);
+  const [identityReady, setIdentityReady] = useState(!packaged);
+
+  useEffect(() => {
+    if (!packaged) return;
+    void identitySessionExists().then((exists) => {
+      setSignedIn(exists);
+      setIdentityReady(true);
+    });
+  }, [packaged]);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -33,6 +46,8 @@ export function LiveKeysSettingsPage() {
           </p>
         </header>
 
+        {identityReady && signedIn ? (
+          <>
         <section className="space-y-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -64,6 +79,18 @@ export function LiveKeysSettingsPage() {
           </div>
           <ApiKeysTable refreshToken={secretRefresh} />
         </section>
+
+          </>
+        ) : identityReady && packaged ? (
+          <section className="rounded-2xl bg-card px-5 py-4 shadow-hairline">
+            <h2 className="text-base font-medium text-foreground">Account vault</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Not connected. Sign in when you want this device to use your synchronized AgentSam account vault.
+            </p>
+          </section>
+        ) : null}
+
+        {packaged ? <DeviceProviderKeys /> : null}
 
         <MintCredentialModal
           open={mintOpen}

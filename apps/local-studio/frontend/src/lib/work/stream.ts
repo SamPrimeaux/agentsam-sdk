@@ -1,5 +1,5 @@
 import type { AgentMessage as ChatMessage } from "@inneranimalmedia/agentsam-contracts";
-import { invokeStudioService, isPackagedDesktop, resolveDesktopStudioAccountId } from "@/lib/desktop/tauri";
+import { identitySessionExists, invokeLocalProvider, invokeStudioService, isPackagedDesktop } from "@/lib/desktop/tauri";
 
 export async function streamChat(opts: {
   messages: Pick<ChatMessage, "role" | "content">[];
@@ -16,9 +16,6 @@ export async function streamChat(opts: {
     throw new Error("Select a provider and model before chatting.");
   }
 
-  const userId =
-    (typeof window !== "undefined" && window.localStorage.getItem("agentsam-user-id")) ||
-    "studio-local";
   const requestBody = {
     messages: opts.messages.map((m) => ({ role: m.role, content: m.content })),
     mode: opts.mode,
@@ -31,32 +28,42 @@ export async function streamChat(opts: {
 
   if (isPackagedDesktop()) {
     if (opts.signal.aborted) throw new DOMException("Aborted", "AbortError");
-    const accountId = await resolveDesktopStudioAccountId();
-    const bridged = await invokeStudioService({
-      operation: "chat",
-      account_id: accountId,
-      body: requestBody,
-    });
-    if (!bridged.ok) {
-      let message = "Studio model error " + bridged.status;
-      try {
-        const body = JSON.parse(bridged.body) as { error?: string; detail?: string };
-        message = body.detail || body.error || message;
-      } catch {
-        /* preserve bounded fallback */
+    if (await identitySessionExists()) {
+      const bridged = await invokeStudioService({
+        operation: "chat",
+        body: requestBody,
+      });
+      if (!bridged.ok) {
+        let message = "Studio model error " + bridged.status;
+        try {
+          const body = JSON.parse(bridged.body) as { error?: string; detail?: string };
+          message = body.detail || body.error || message;
+        } catch {
+          /* preserve bounded fallback */
+        }
+        throw new Error(message);
       }
-      throw new Error(message);
+      if (bridged.body) opts.onDelta(bridged.body);
+      return bridged.body;
     }
-    if (bridged.body) opts.onDelta(bridged.body);
-    return bridged.body;
+
+    const local = await invokeLocalProvider<{ ok?: boolean; error?: string; text?: string }>({
+      operation: "chat",
+      provider: opts.provider,
+      model_id: opts.model_id,
+      messages: requestBody.messages,
+    });
+    if (local.ok !== true) throw new Error(local.error || "Local provider chat failed");
+    if (opts.signal.aborted) throw new DOMException("Aborted", "AbortError");
+    const text = String(local.text || "");
+    if (text) opts.onDelta(text);
+    return text;
   }
 
   const res = await fetch("/api/chat", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-User-Id": userId,
-    },
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
     body: JSON.stringify(requestBody),
     signal: opts.signal,
   });
