@@ -189,6 +189,11 @@ export async function runHelp(argv = [], options = {}) {
 
   const topicArg = args.find((arg) => !arg.startsWith('-'));
   if (topicArg) {
+    const command = getCliCommand(topicArg);
+    if (command) {
+      write(renderCommandHelp(command, version));
+      return;
+    }
     const topic = resolveHelpTopic(topicArg);
     if (!topic) {
       write(renderHelpOverview(version));
