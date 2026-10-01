@@ -52,7 +52,7 @@ try {
     assert.equal(cli(['search', 'customerFeature']).hits[0].path, 'lib/task.ts');
     cli(['repo', 'snapshot', '--save', '--json']);
     fs.appendFileSync(path.join(repo, 'lib/task.ts'), 'export const nextFeature = true;\n');
-    cli(['repo', 'snapshot', '--save']);
+    cli(['repo', 'snapshot', '--save', '--json']);
     assert.equal(cli(['repo', 'compare', '--json']).counts.total_lines.delta, 1);
     assert.equal(cli(['repo', 'history', '--json']).length, 2);
     run(process.execPath, [installed, 'dockerize', '--type', 'knowledge_service', '--name', `knowledge-${name}`, '--repository', `${name}=${repo}`, '--write-only'], repo);
