@@ -12,6 +12,7 @@ function parseStatusArgs(argv = []) {
     offline: false,
     discoverModels: true,
     interactive: false,
+    help: false,
   };
   for (const arg of argv) {
     if (arg === '--json') opts.json = true;
