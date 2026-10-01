@@ -63,16 +63,7 @@ export function generateTicketCreateSql({
   if (!tTitle) throw new Error('title_required');
 
   const statements = [];
-  let runId = clean(agentRunId);
-
-  if (status === 'active' && !runId) {
-    runId = createAgentRunId();
-    statements.push(`INSERT INTO agentsam_agent_run (
-  id, account_id, mode, status, started_at_unix, created_at_unix, updated_at_unix
-) VALUES (
-  ${sqlText(runId)}, ${sqlText(account)}, 'agent', 'running', ${sqlInt(now)}, ${sqlInt(now)}, ${sqlInt(now)}
-);`);
-  }
+  const runId = clean(agentRunId);
 
   statements.push(`INSERT INTO agentsam_tickets (
   id, title, description, status, status_reason, project, subsystem,
