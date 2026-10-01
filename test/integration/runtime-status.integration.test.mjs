@@ -34,7 +34,8 @@ test('checked-in Cloudflare deployment contract resolves the real Worker and por
   assert.equal(contract.config, 'apps/local-studio/backend/wrangler.jsonc');
   assert.deepEqual(contract.bindings.map((row) => row.name), [
     'AGENTSAM_WAI', 'ASSETS', 'CLOUDFLARE_ACCOUNT_ID', 'DB', 'EXECOS',
-    'GOOGLE_CLIENT_ID', 'GOOGLE_DESKTOP_CLIENT_ID', 'HYPERDRIVE', 'IAM_CLIENT_ID',
+    'GITHUB_APP_ID', 'GITHUB_CLIENT_ID', 'GOOGLE_CLIENT_ID', 'GOOGLE_DESKTOP_CLIENT_ID',
+    'HYPERDRIVE', 'IAM_CLIENT_ID',
     'IAM_OAUTH_ISSUER', 'PTY_SERVICE', 'WEBSITE_ASSETS',
   ]);
 });
