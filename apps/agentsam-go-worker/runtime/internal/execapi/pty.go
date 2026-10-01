@@ -37,6 +37,21 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
+func resolvePTYCwd(requested string) string {
+	if cwd := strings.TrimSpace(requested); cwd != "" {
+		return cwd
+	}
+	if home, err := os.UserHomeDir(); err == nil && strings.TrimSpace(home) != "" {
+		if info, statErr := os.Stat(home); statErr == nil && info.IsDir() {
+			return home
+		}
+	}
+	if cwd, err := os.Getwd(); err == nil && strings.TrimSpace(cwd) != "" {
+		return cwd
+	}
+	return ""
+}
+
 // PTYHandler returns the GET /v1/pty (WebSocket) handler.
 func PTYHandler(checkAuth PTYAuthChecker) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
