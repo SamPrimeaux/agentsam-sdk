@@ -5,7 +5,6 @@ import { execFileSync } from 'node:child_process';
 import { tryResolveGitContext } from './git-context.js';
 import {
   createTicketId,
-  createAgentRunId,
   generateTicketCreateSql,
   generateTicketCloseSql,
 } from './tickets.js';
