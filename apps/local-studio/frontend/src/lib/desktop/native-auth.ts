@@ -4,12 +4,11 @@ import {
   invokeIdentity,
   listenDeepLinks,
   openExternalUrl,
-  identityStoreDelete,
-  identityStoreGet,
-  identityStoreSet,
+  identityPendingDelete,
+  identityPendingGet,
+  identityPendingSet,
 } from "@/lib/desktop/tauri";
 
-export const DESKTOP_IDENTITY_SESSION_ACCOUNT = "identity_session";
 export const DESKTOP_NATIVE_AUTH_PENDING_ACCOUNT = "identity_native_oauth_pending";
 export const DESKTOP_NATIVE_REDIRECT = "agentsamstudio://auth/callback";
 
@@ -29,7 +28,6 @@ export type NativeIdentityUser = {
 export type NativeIdentityStatus = {
   ok?: boolean;
   authenticated?: boolean;
-  session_id?: string;
   expires_at?: string | number | null;
   user?: NativeIdentityUser | null;
   error?: string;
@@ -162,25 +160,14 @@ export function isNativeIdentityCallback(urlValue: string): boolean {
   }
 }
 
-async function persistDesktopIdentitySession(
+async function acceptDesktopIdentity(
   response: NativeIdentityStatus,
 ): Promise<NativeIdentityStatus> {
-  const sessionId = typeof response.session_id === "string" ? response.session_id.trim() : "";
-  if (response.ok === false || !sessionId) {
+  if (response.ok === false || response.authenticated !== true) {
     throw new Error(response.error || "desktop_identity_session_missing");
   }
-  try {
-    await identityStoreSet(DESKTOP_IDENTITY_SESSION_ACCOUNT, sessionId);
-  } catch (error) {
-    try {
-      await invokeIdentity({ op: "logout", session_id: sessionId });
-    } catch {
-      // Best effort: don't strand a server session if Keychain persistence fails.
-    }
-    throw error;
-  }
   notifyDesktopIdentity(true, response.user || null);
-  return { ...response, authenticated: true };
+  return response;
 }
 
 async function beginGoogleDesktopLogin(
@@ -193,7 +180,7 @@ async function beginGoogleDesktopLogin(
       serviceOrigin: identityServiceOrigin(serviceOrigin),
     },
   })) as NativeIdentityStatus;
-  return persistDesktopIdentitySession(response);
+  return acceptDesktopIdentity(response);
 }
 
 export async function beginNativeLogin(
@@ -212,25 +199,25 @@ export async function beginNativeLogin(
     provider,
     created_at_ms: Date.now(),
   };
-  await identityStoreSet(DESKTOP_NATIVE_AUTH_PENDING_ACCOUNT, JSON.stringify(pending));
+  await identityPendingSet(JSON.stringify(pending));
   try {
     await openExternalUrl(buildNativeLoginUrl(provider, challenge, serviceOrigin));
     return null;
   } catch (error) {
-    await identityStoreDelete(DESKTOP_NATIVE_AUTH_PENDING_ACCOUNT);
+    await identityPendingDelete();
     throw error;
   }
 }
 
 export async function exchangeNativeHandoff(callbackUrl: string): Promise<NativeIdentityStatus> {
   const { handoff } = parseNativeCallback(callbackUrl);
-  const pending = parsePendingNativeAuth(await identityStoreGet(DESKTOP_NATIVE_AUTH_PENDING_ACCOUNT));
+  const pending = parsePendingNativeAuth(await identityPendingGet());
   if (!pending) {
-    await identityStoreDelete(DESKTOP_NATIVE_AUTH_PENDING_ACCOUNT);
+    await identityPendingDelete();
     throw new Error("native_login_not_pending");
   }
   if (Date.now() - pending.created_at_ms > PENDING_AUTH_MAX_AGE_MS) {
-    await identityStoreDelete(DESKTOP_NATIVE_AUTH_PENDING_ACCOUNT);
+    await identityPendingDelete();
     throw new Error("native_login_expired");
   }
 
@@ -240,58 +227,33 @@ export async function exchangeNativeHandoff(callbackUrl: string): Promise<Native
     code_verifier: pending.verifier,
   })) as NativeIdentityStatus;
 
-  if (response.ok === false || !response.session_id) {
-    await identityStoreDelete(DESKTOP_NATIVE_AUTH_PENDING_ACCOUNT);
+  if (response.ok === false) {
+    await identityPendingDelete();
     throw new Error(response.error || "native_exchange_failed");
   }
 
-  try {
-    const persisted = await persistDesktopIdentitySession(response);
-    await identityStoreDelete(DESKTOP_NATIVE_AUTH_PENDING_ACCOUNT);
-    return persisted;
-  } catch (error) {
-    await identityStoreDelete(DESKTOP_NATIVE_AUTH_PENDING_ACCOUNT);
-    throw error;
-  }
+  await identityPendingDelete();
+  const status = (await invokeIdentity({ op: "status" })) as NativeIdentityStatus;
+  return acceptDesktopIdentity(status);
 }
 
 export async function restoreNativeSession(): Promise<NativeIdentityStatus> {
-  const sessionId = await identityStoreGet(DESKTOP_IDENTITY_SESSION_ACCOUNT);
-  if (!sessionId) return { ok: true, authenticated: false, user: null };
-
-  const status = (await invokeIdentity({
-    op: "status",
-    session_id: sessionId,
-  })) as NativeIdentityStatus;
-
-  if (!status.authenticated) {
-    await identityStoreDelete(DESKTOP_IDENTITY_SESSION_ACCOUNT);
-    notifyDesktopIdentity(false, null);
-  }
+  const status = (await invokeIdentity({ op: "status" })) as NativeIdentityStatus;
+  if (!status.authenticated) notifyDesktopIdentity(false, null);
   return status;
 }
 
 export async function logoutNativeSession(): Promise<void> {
-  const sessionId = await identityStoreGet(DESKTOP_IDENTITY_SESSION_ACCOUNT);
   let revokeError: unknown = null;
-  if (sessionId) {
-    try {
-      const response = (await invokeIdentity({
-        op: "logout",
-        session_id: sessionId,
-      })) as NativeIdentityStatus;
-      if (response.ok === false) {
-        revokeError = new Error(response.error || "identity_logout_failed");
-      }
-    } catch (error) {
-      revokeError = error;
-    }
+  try {
+    const response = (await invokeIdentity({ op: "logout" })) as NativeIdentityStatus;
+    if (response.ok === false) revokeError = new Error(response.error || "identity_logout_failed");
+  } catch (error) {
+    revokeError = error;
   }
 
-  await identityStoreDelete(DESKTOP_IDENTITY_SESSION_ACCOUNT);
-  await identityStoreDelete(DESKTOP_NATIVE_AUTH_PENDING_ACCOUNT);
+  await identityPendingDelete();
   notifyDesktopIdentity(false, null);
-
   if (revokeError) throw revokeError;
 }
 

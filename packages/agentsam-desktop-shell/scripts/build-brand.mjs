@@ -10,6 +10,7 @@ import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { spawnSync } from 'node:child_process';
 import { composePlatformAppIcons } from './compose-app-icon.mjs';
+import { buildSync as esbuildSync } from 'esbuild';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -332,6 +333,18 @@ writeFileSync(
   JSON.stringify(identityRuntimeConfig, null, 2) + '\n',
 );
 
+if (desktopSpa && targetFamily === 'desktop') {
+  esbuildSync({
+    entryPoints: [path.join(ROOT, 'scripts', 'local-provider-bridge.mjs')],
+    outfile: path.join(generatedDir, 'local-provider-bridge.mjs'),
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    target: 'node22',
+    logLevel: 'silent',
+  });
+}
+
 if (agentsamdSidecar) {
   const prep = spawnSync(process.execPath, [path.join(__dirname, 'prepare-sidecars.mjs')], {
     cwd: ROOT,
@@ -382,6 +395,7 @@ const config = {
                     'runtime/identity/scripts/local-identity-bridge.mjs',
                   '../../identity/src': 'runtime/identity/src',
                   '../../identity/migrations/sqlite': 'runtime/identity/migrations/sqlite',
+                  'generated/local-provider-bridge.mjs': 'runtime/provider/local-provider-bridge.mjs',
                 }
               : {}),
           },

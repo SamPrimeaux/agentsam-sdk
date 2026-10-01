@@ -12,7 +12,6 @@
   var invoke = getInvoke();
   if (!invoke) return;
 
-  var SESSION_ACCOUNT = 'identity_session';
   var originalFetch = window.fetch.bind(window);
 
   async function callIdentity(payload) {
@@ -26,26 +25,6 @@
     return body;
   }
 
-  async function getSessionId() {
-    return await invoke('identity_store_get', {
-      account: SESSION_ACCOUNT,
-    });
-  }
-
-  async function setSessionId(sessionId) {
-    await invoke('identity_store_set', {
-      account: SESSION_ACCOUNT,
-      value: String(sessionId || ''),
-    });
-  }
-
-  async function clearSessionId() {
-    try {
-      await invoke('identity_store_delete', {
-        account: SESSION_ACCOUNT,
-      });
-    } catch {}
-  }
 
   function jsonResponse(body, status) {
     return new Response(JSON.stringify(body), {
@@ -99,7 +78,6 @@
           password: loginBody.password,
           next: loginBody.next || '/agentsam',
         });
-        await setSessionId(login.session_id);
         notifyAuthenticated(login);
         return jsonResponse({ ok: true, user: login.user, redirect: '/agentsam' });
       } catch (error) {
@@ -117,7 +95,6 @@
           displayName: signupBody.name || signupBody.displayName || signupBody.display_name,
           next: signupBody.next || '/agentsam',
         });
-        await setSessionId(signup.session_id);
         notifyAuthenticated(signup);
         return jsonResponse({ ok: true, user: signup.user, redirect: '/agentsam' });
       } catch (error) {
@@ -155,13 +132,9 @@
     }
 
     if (url.pathname === '/api/auth/logout') {
-      var sessionId = await getSessionId();
-      if (sessionId) {
-        try {
-          await callIdentity({ op: 'logout', session_id: sessionId });
-        } catch {}
-      }
-      await clearSessionId();
+      try {
+        await callIdentity({ op: 'logout' });
+      } catch {}
       return jsonResponse({ ok: true });
     }
 

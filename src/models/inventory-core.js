@@ -166,6 +166,15 @@ export async function collectCredentialScopedInventory(options = {}) {
   };
 }
 
+function sanitizeDiscoveryError(error) {
+  const raw = String(error || '').trim();
+  if (!raw) return null;
+  if (/\b(?:401|403)\b|unauthoriz|forbidden|invalid[_ -]?(?:api[_ -]?)?key|credential.*reject/i.test(raw)) {
+    return 'provider_credential_rejected';
+  }
+  return 'provider_discovery_failed';
+}
+
 export function sanitizeInventoryForClient(status = {}) {
   const out = {
     schemaVersion: status.schemaVersion,
@@ -177,9 +186,12 @@ export function sanitizeInventoryForClient(status = {}) {
       label: row.label,
       configured: row.configured === true,
       source: row.source || null,
-      credentialError: row.credentialError || null,
+      credentialError: sanitizeDiscoveryError(row.credentialError),
     })),
-    discovery: status.discovery || {},
+    discovery: Object.fromEntries(Object.entries(status.discovery || {}).map(([provider, row]) => [provider, {
+      ...row,
+      error: sanitizeDiscoveryError(row?.error),
+    }])) ,
     availableModels: (status.availableModels || []).map((row) => ({
       provider: row.provider === 'grok' ? 'xai' : row.provider,
       model_id: row.provider_model_id || row.model_id,

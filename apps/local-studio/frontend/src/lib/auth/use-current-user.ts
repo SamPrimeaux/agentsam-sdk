@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { authClient, authEnabled } from "./client";
-import { getTauriInvoke, invokeIdentity, isPackagedDesktop, identityStoreGet } from "@/lib/desktop/tauri";
+import { getTauriInvoke, invokeIdentity, isPackagedDesktop } from "@/lib/desktop/tauri";
 
 /** Normalized user shape used across the app, auth on or off. */
 export type AppUser = {
@@ -66,17 +66,7 @@ function useDesktopCurrentUserState(): CurrentUserState {
 
     async function restore() {
       try {
-        const sessionId = await identityStoreGet("identity_session");
-
-        if (!sessionId) {
-          if (active) setState({ user: DEV_USER, isPending: false });
-          return;
-        }
-
-        const status = (await invokeIdentity({
-          op: "status",
-          session_id: sessionId,
-        })) as DesktopIdentityMessage;
+        const status = (await invokeIdentity({ op: "status" })) as DesktopIdentityMessage;
         const user = normalizeDesktopUser(status.user);
         if (active) {
           setState({

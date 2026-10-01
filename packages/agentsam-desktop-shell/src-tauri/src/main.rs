@@ -4,7 +4,7 @@
 mod commands;
 mod tray;
 
-use commands::{agentsamd, deep_link, google_desktop_identity, keychain, local_content, local_identity, local_node, local_sqlite, native_capabilities, system, updater};
+use commands::{agentsamd, deep_link, google_desktop_identity, keychain, local_content, local_identity, local_node, local_provider, local_sqlite, native_capabilities, system, updater};
 
 fn main() {
     tauri::Builder::default()
@@ -19,7 +19,9 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            keychain::identity_session_exists,
             keychain::identity_pending_set,
+            keychain::identity_pending_get,
             keychain::identity_pending_delete,
             keychain::provider_key_exists,
             keychain::provider_key_set,
@@ -32,6 +34,7 @@ fn main() {
             agentsamd::agentsamd_health,
             agentsamd::agentsamd_pairing_token,
             local_sqlite::local_sqlite_bridge,
+            local_provider::local_provider_bridge,
             local_identity::local_identity_bridge,
             local_identity::identity_bridge,
             local_identity::studio_service_bridge,

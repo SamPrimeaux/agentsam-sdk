@@ -35,6 +35,7 @@ pub struct GoogleDesktopIdentityUser {
 pub struct GoogleDesktopIdentityResult {
     pub ok: bool,
     pub authenticated: bool,
+    #[serde(skip_serializing)]
     pub session_id: String,
     pub expires_at: Option<serde_json::Value>,
     pub user: Option<GoogleDesktopIdentityUser>,
@@ -293,6 +294,10 @@ pub async fn google_desktop_identity_login(
 
     let mut result: GoogleDesktopIdentityResult = serde_json::from_value(body)
         .map_err(|error| format!("google_desktop_login_contract_invalid:{error}"))?;
+    if result.session_id.trim().is_empty() {
+        return Err("google_desktop_session_missing".into());
+    }
+    super::keychain::identity_session_set_internal(result.session_id.as_str())?;
     result.oauth_client_id = client_id;
     result.oauth_redirect_uri = redirect_uri;
     result.pkce_method = "S256".into();
