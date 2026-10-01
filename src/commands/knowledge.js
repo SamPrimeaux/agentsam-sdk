@@ -173,7 +173,7 @@ function compactNumber(value) {
   const n = Number(value || 0);
   if (!Number.isFinite(n)) return '0';
   if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 1 : 2).replace(/\.0+$/, '')}m`;
-  if (Math.abs(n) >= 1_000) return `${(n / 1_000).toFixed(n >= 100_000 ? 0 : 1).replace(/\\.0$/, '')}k`;
+  if (Math.abs(n) >= 1_000) return `${(n / 1_000).toFixed(n >= 100_000 ? 0 : 1).replace(/\.0$/, '')}k`;
   return String(n);
 }
 
