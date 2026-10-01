@@ -376,7 +376,7 @@ ON CONFLICT(repository_id) DO UPDATE SET
     ok: true,
     ticketId: tid,
     repositoryId: repoId,
-    agentRunId: runId,
+    agentRunId: ticket.agent_run_id || null,
   };
 }
 
