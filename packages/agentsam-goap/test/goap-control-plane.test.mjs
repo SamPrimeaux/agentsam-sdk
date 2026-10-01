@@ -2,8 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import {
+  AgentSamError,
+  ERROR_REASON,
+  planRecovery,
+} from '@inneranimalmedia/agentsam-errors';
+import {
   GOAP_SCHEMAS,
-  GoapConflictError,
   MemoryGoapAdapter,
   createD1SqliteGoapAdapter,
   createGoapControlPlane,
@@ -59,7 +63,14 @@ test('memory adapter atomically activates goal with CAS and append-only cursor',
 
   await assert.rejects(
     service.activateGoal({ scope, goalId: 'tkt_1', expectedRevision: 4 }),
-    (error) => error instanceof GoapConflictError && error.code === 'goap_revision_conflict',
+    (error) => {
+      assert.equal(error instanceof AgentSamError, true);
+      assert.equal(error.reason, ERROR_REASON.STALE_VERSION);
+      assert.equal(error.code, 'ABORTED');
+      assert.equal(error.envelope.tool, 'goap');
+      assert.equal(planRecovery(error.envelope).disposition, 'retry');
+      return true;
+    },
   );
 });
 
@@ -138,14 +149,20 @@ function createSqlite({ eventOwnership = true } = {}) {
   return sqlite;
 }
 
-test('D1/SQLite adapter atomically guards stale revisions', async () => {
+test('D1/SQLite adapter atomically guards stale revisions with canonical AgentSam errors', async () => {
   const sqlite = createSqlite();
   const ports = createD1SqliteGoapAdapter({ db: d1Like(sqlite) });
   const service = createGoapControlPlane({ ports, clock: () => 1234 });
 
   await assert.rejects(
     service.activateGoal({ scope, goalId: 'tkt_sql', expectedRevision: 6 }),
-    (error) => error instanceof GoapConflictError,
+    (error) => {
+      assert.equal(error instanceof AgentSamError, true);
+      assert.equal(error.reason, ERROR_REASON.STALE_VERSION);
+      assert.equal(error.envelope.domain, 'tool');
+      assert.equal(error.envelope.tool, 'goap');
+      return true;
+    },
   );
 
   assert.equal(sqlite.prepare('SELECT revision FROM agentsam_workspace_state').get().revision, 7);

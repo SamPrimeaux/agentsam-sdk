@@ -1,11 +1,18 @@
 import {
-  GoapConflictError,
   GOAP_SCHEMAS,
   normalizeBlackboard,
   normalizeEvent,
   normalizeGoal,
   normalizeGoapScope,
 } from '../contracts.js';
+import {
+  goapAdapterError,
+  goapInputError,
+  goapInvariantError,
+  goapPersistenceError,
+  goapStaleVersion,
+  goapTargetNotFound,
+} from '../errors.js';
 
 function parseJson(value, fallback = {}) {
   if (value && typeof value === 'object') return value;
@@ -29,20 +36,72 @@ function resultChanges(result) {
 }
 
 async function first(db, sql, values = []) {
-  return db.prepare(sql).bind(...values).first();
+  try {
+    return await db.prepare(sql).bind(...values).first();
+  } catch (error) {
+    throw goapPersistenceError(error, {
+      stage: 'persistence_read',
+      operation: {
+        kind: 'persistence',
+        action: 'read',
+        read_only: true,
+        idempotent: true,
+        side_effect_state: 'none',
+      },
+    });
+  }
 }
 
 async function all(db, sql, values = []) {
-  const result = await db.prepare(sql).bind(...values).all();
-  return Array.isArray(result) ? result : (result?.results ?? []);
+  try {
+    const result = await db.prepare(sql).bind(...values).all();
+    return Array.isArray(result) ? result : (result?.results ?? []);
+  } catch (error) {
+    throw goapPersistenceError(error, {
+      stage: 'persistence_read',
+      operation: {
+        kind: 'persistence',
+        action: 'list',
+        read_only: true,
+        idempotent: true,
+        side_effect_state: 'none',
+      },
+    });
+  }
 }
 
 async function run(db, sql, values = []) {
-  return db.prepare(sql).bind(...values).run();
+  try {
+    return await db.prepare(sql).bind(...values).run();
+  } catch (error) {
+    throw goapPersistenceError(error, {
+      stage: 'persistence_write',
+      operation: {
+        kind: 'persistence',
+        action: 'write',
+        read_only: false,
+        idempotent: false,
+        side_effect_state: 'unknown',
+      },
+    });
+  }
 }
 
 function bound(db, sql, values = []) {
-  return db.prepare(sql).bind(...values);
+  try {
+    return db.prepare(sql).bind(...values);
+  } catch (error) {
+    throw goapPersistenceError(error, {
+      stage: 'prepare_atomic_mutation',
+      operation: {
+        kind: 'persistence',
+        action: 'prepare',
+        read_only: false,
+        idempotent: false,
+        side_effect_state: 'not_started',
+      },
+    });
+  }
 }
 
 export function createD1SqliteGoapAdapter({
@@ -51,9 +110,17 @@ export function createD1SqliteGoapAdapter({
   eventOwnership = 'columns',
   cursorPrefix = 'sqlite',
 } = {}) {
-  if (!db?.prepare) throw new TypeError('A D1/SQLite-compatible db.prepare() binding is required');
+  if (!db?.prepare) {
+    throw goapAdapterError('A D1/SQLite-compatible db.prepare() binding is required', {
+      stage: 'configure_adapter',
+      adapter: 'd1-sqlite',
+    });
+  }
   if (!['columns', 'ticket_join'].includes(eventOwnership)) {
-    throw new TypeError('eventOwnership must be columns or ticket_join');
+    throw goapInputError('eventOwnership must be columns or ticket_join', {
+      stage: 'configure_adapter',
+      details: { eventOwnership },
+    });
   }
 
   const cursorFor = (row) => row?.event_rowid == null ? null : cursorPrefix + ':' + row.event_rowid;
@@ -93,11 +160,16 @@ export function createD1SqliteGoapAdapter({
     async compareAndSwap({ scope: scopeInput, expectedRevision, patch = {} }) {
       const scope = normalizeGoapScope(scopeInput);
       const current = await blackboardStore.get(scope);
-      if (!current) throw new Error('blackboard_not_found');
+      if (!current) {
+        throw goapTargetNotFound('blackboard', scope.repository_id, {
+          stage: 'compare_and_swap',
+        });
+      }
       if (current.revision !== expectedRevision) {
-        throw new GoapConflictError('goap_revision_conflict', {
-          expected_revision: expectedRevision,
-          actual_revision: current.revision,
+        throw goapStaleVersion({
+          expectedRevision,
+          actualRevision: current.revision,
+          blackboardId: current.id,
         });
       }
 
@@ -129,9 +201,10 @@ export function createD1SqliteGoapAdapter({
 
       if (resultChanges(result) !== 1) {
         const latest = await blackboardStore.get(scope);
-        throw new GoapConflictError('goap_revision_conflict', {
-          expected_revision: expectedRevision,
-          actual_revision: latest?.revision ?? null,
+        throw goapStaleVersion({
+          expectedRevision,
+          actualRevision: latest?.revision ?? null,
+          blackboardId: current.id,
         });
       }
       return blackboardStore.get(scope);
@@ -170,7 +243,11 @@ export function createD1SqliteGoapAdapter({
         'UPDATE agentsam_tickets SET status = ?, updated_at = ? WHERE id = ?' + ownership,
         values,
       );
-      if (resultChanges(result) !== 1) throw new Error('goal_not_found:' + id);
+      if (resultChanges(result) !== 1) {
+        throw goapTargetNotFound('goal', id, {
+          stage: 'update_goal_status',
+        });
+      }
       return goalStore.get({ id, ...scope });
     },
   };
@@ -265,18 +342,32 @@ export function createD1SqliteGoapAdapter({
   const mutationPort = {
     async activateGoal({ scope: scopeInput, goal_id, expected_revision, event, updated_at }) {
       if (typeof db.batch !== 'function') {
-        throw new TypeError('db.batch() is required for atomic GOAP mutations');
+        throw goapAdapterError('db.batch() is required for atomic GOAP mutations', {
+          stage: 'activate_goal',
+          adapter: 'd1-sqlite',
+        });
       }
 
       const scope = normalizeGoapScope(scopeInput);
       const blackboard = await blackboardStore.get(scope);
       const goal = await goalStore.get({ ...scope, id: goal_id });
-      if (!blackboard) throw new Error('blackboard_not_found');
-      if (!goal) throw new Error('goal_not_found:' + goal_id);
+      if (!blackboard) {
+        throw goapTargetNotFound('blackboard', scope.repository_id, {
+          stage: 'activate_goal',
+        });
+      }
+      if (!goal) {
+        throw goapTargetNotFound('goal', goal_id, {
+          stage: 'activate_goal',
+        });
+      }
       if (blackboard.revision !== expected_revision) {
-        throw new GoapConflictError('goap_revision_conflict', {
-          expected_revision,
-          actual_revision: blackboard.revision,
+        throw goapStaleVersion({
+          expectedRevision: expected_revision,
+          actualRevision: blackboard.revision,
+          blackboardId: blackboard.id,
+          stage: 'activate_goal',
+          action: 'activate_goal',
         });
       }
 
@@ -390,16 +481,46 @@ export function createD1SqliteGoapAdapter({
         );
       }
 
-      const results = await db.batch([updateBlackboard, updateGoal, insertEvent]);
+      let results;
+      try {
+        results = await db.batch([updateBlackboard, updateGoal, insertEvent]);
+      } catch (error) {
+        throw goapPersistenceError(error, {
+          stage: 'activate_goal',
+          resource: { type: 'goal', id: goal_id },
+          operation: {
+            kind: 'persistence',
+            action: 'activate_goal',
+            resource_type: 'goal',
+            resource_id: goal_id,
+            read_only: false,
+            idempotent: false,
+            side_effect_state: 'unknown',
+          },
+        });
+      }
+
       if (resultChanges(results?.[0]) !== 1) {
         const latest = await blackboardStore.get(scope);
-        throw new GoapConflictError('goap_revision_conflict', {
-          expected_revision,
-          actual_revision: latest?.revision ?? null,
+        throw goapStaleVersion({
+          expectedRevision: expected_revision,
+          actualRevision: latest?.revision ?? null,
+          blackboardId: blackboard.id,
+          stage: 'activate_goal',
+          action: 'activate_goal',
         });
       }
       if (resultChanges(results?.[1]) !== 1 || resultChanges(results?.[2]) !== 1) {
-        throw new Error('goap_atomic_activation_incomplete');
+        throw goapInvariantError('Atomic GOAP activation did not update every required record.', {
+          stage: 'activate_goal',
+          resource: { type: 'goal', id: goal_id },
+          details: {
+            blackboard_changes: resultChanges(results?.[0]),
+            goal_changes: resultChanges(results?.[1]),
+            event_changes: resultChanges(results?.[2]),
+          },
+          sideEffectState: 'partially_applied',
+        });
       }
 
       return {

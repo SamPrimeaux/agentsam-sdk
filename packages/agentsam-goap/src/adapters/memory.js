@@ -1,11 +1,14 @@
 import {
-  GoapConflictError,
   goalStatusFromTicket,
   normalizeBlackboard,
   normalizeEvent,
   normalizeGoal,
   normalizeGoapScope,
 } from '../contracts.js';
+import {
+  goapStaleVersion,
+  goapTargetNotFound,
+} from '../errors.js';
 
 function clone(value) {
   return value == null ? value : structuredClone(value);
@@ -69,11 +72,16 @@ export class MemoryGoapAdapter {
         compareAndSwap: async ({ scope, expectedRevision, patch = {} }) => {
           const key = scopeKey(scope);
           const current = adapter.blackboards.get(key);
-          if (!current) throw new Error('blackboard_not_found');
+          if (!current) {
+            throw goapTargetNotFound('blackboard', key, {
+              stage: 'compare_and_swap',
+            });
+          }
           if (current.revision !== expectedRevision) {
-            throw new GoapConflictError('goap_revision_conflict', {
-              expected_revision: expectedRevision,
-              actual_revision: current.revision,
+            throw goapStaleVersion({
+              expectedRevision,
+              actualRevision: current.revision,
+              blackboardId: current.id,
             });
           }
           const next = normalizeBlackboard({
@@ -94,7 +102,11 @@ export class MemoryGoapAdapter {
         updateStatus: async ({ id, status, updated_at, ...scope }) => {
           const key = goalKey(scope, id);
           const current = adapter.goals.get(key);
-          if (!current) throw new Error('goal_not_found:' + id);
+          if (!current) {
+            throw goapTargetNotFound('goal', id, {
+              stage: 'update_goal_status',
+            });
+          }
           const next = {
             ...current,
             status: goalStatusFromTicket(status),
@@ -134,12 +146,23 @@ export class MemoryGoapAdapter {
           const currentBlackboard = adapter.blackboards.get(bbKey);
           const currentGoal = adapter.goals.get(gKey);
 
-          if (!currentBlackboard) throw new Error('blackboard_not_found');
-          if (!currentGoal) throw new Error('goal_not_found:' + goal_id);
+          if (!currentBlackboard) {
+            throw goapTargetNotFound('blackboard', bbKey, {
+              stage: 'activate_goal',
+            });
+          }
+          if (!currentGoal) {
+            throw goapTargetNotFound('goal', goal_id, {
+              stage: 'activate_goal',
+            });
+          }
           if (currentBlackboard.revision !== expected_revision) {
-            throw new GoapConflictError('goap_revision_conflict', {
-              expected_revision,
-              actual_revision: currentBlackboard.revision,
+            throw goapStaleVersion({
+              expectedRevision: expected_revision,
+              actualRevision: currentBlackboard.revision,
+              blackboardId: currentBlackboard.id,
+              stage: 'activate_goal',
+              action: 'activate_goal',
             });
           }
 

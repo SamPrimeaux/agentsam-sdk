@@ -4,6 +4,10 @@ import {
   normalizeEvent,
   normalizeGoapScope,
 } from './contracts.js';
+import {
+  goapAdapterError,
+  goapInputError,
+} from './errors.js';
 
 function defaultId(prefix) {
   return prefix + '_' + crypto.randomUUID().replaceAll('-', '');
@@ -46,12 +50,23 @@ export function createGoapControlPlane({
     payload = {},
   } = {}) {
     const scope = normalizeGoapScope(scopeInput);
-    if (!goalId) throw new TypeError('goalId is required');
+    if (!goalId) {
+      throw goapInputError('goalId is required', {
+        stage: 'activate_goal',
+        details: { field: 'goalId' },
+      });
+    }
     if (!Number.isInteger(expectedRevision) || expectedRevision < 1) {
-      throw new TypeError('expectedRevision must be a positive integer');
+      throw goapInputError('expectedRevision must be a positive integer', {
+        stage: 'activate_goal',
+        details: { field: 'expectedRevision', value: expectedRevision ?? null },
+      });
     }
     if (typeof ports.mutationPort?.activateGoal !== 'function') {
-      throw new TypeError('mutationPort.activateGoal is required for durable goal activation');
+      throw goapAdapterError('mutationPort.activateGoal is required for durable goal activation', {
+        stage: 'activate_goal',
+        adapter: 'mutationPort',
+      });
     }
 
     const event = normalizeEvent({

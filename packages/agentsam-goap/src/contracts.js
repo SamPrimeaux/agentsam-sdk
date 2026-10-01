@@ -1,3 +1,8 @@
+import {
+  goapAdapterError,
+  goapInputError,
+} from './errors.js';
+
 export const GOAP_SCHEMAS = Object.freeze({
   blackboard: 'agentsam.blackboard.v1',
   goal: 'agentsam.goal.v1',
@@ -50,22 +55,23 @@ function objectOrEmpty(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
-export class GoapConflictError extends Error {
-  constructor(message = 'goap_revision_conflict', detail = {}) {
-    super(message);
-    this.name = 'GoapConflictError';
-    this.code = 'goap_revision_conflict';
-    this.detail = detail;
-  }
-}
-
 export function normalizeGoapScope(input = {}) {
   const accountId = clean(input.account_id ?? input.accountId);
   const repositoryId = clean(input.repository_id ?? input.repositoryId);
   const workspaceId = clean(input.workspace_id ?? input.workspaceId) || null;
 
-  if (!accountId) throw new TypeError('scope.account_id is required');
-  if (!repositoryId) throw new TypeError('scope.repository_id is required');
+  if (!accountId) {
+    throw goapInputError('scope.account_id is required', {
+      stage: 'normalize_scope',
+      details: { field: 'account_id' },
+    });
+  }
+  if (!repositoryId) {
+    throw goapInputError('scope.repository_id is required', {
+      stage: 'normalize_scope',
+      details: { field: 'repository_id' },
+    });
+  }
 
   return {
     account_id: accountId,
@@ -76,13 +82,23 @@ export function normalizeGoapScope(input = {}) {
 
 export function goalStatusFromTicket(status) {
   const mapped = TICKET_TO_GOAL_STATUS[clean(status)];
-  if (!mapped) throw new TypeError('Unsupported ticket status: ' + status);
+  if (!mapped) {
+    throw goapInputError('Unsupported ticket status: ' + status, {
+      stage: 'map_status',
+      details: { status },
+    });
+  }
   return mapped;
 }
 
 export function ticketStatusFromGoal(status) {
   const mapped = GOAL_TO_TICKET_STATUS[clean(status)];
-  if (!mapped) throw new TypeError('Unsupported GOAP goal status: ' + status);
+  if (!mapped) {
+    throw goapInputError('Unsupported GOAP goal status: ' + status, {
+      stage: 'map_status',
+      details: { status },
+    });
+  }
   return mapped;
 }
 
@@ -142,7 +158,10 @@ export function normalizeGoal(input = {}) {
     : goalStatusFromTicket(input.status ?? 'backlog');
 
   if (!GOAL_STATUSES.includes(status)) {
-    throw new TypeError('Unsupported GOAP goal status: ' + status);
+    throw goapInputError('Unsupported GOAP goal status: ' + status, {
+      stage: 'normalize_goal',
+      details: { status },
+    });
   }
 
   return {
@@ -161,7 +180,12 @@ export function normalizeGoal(input = {}) {
 
 export function normalizeEvent(input = {}) {
   const type = clean(input.type ?? input.event_type);
-  if (!type) throw new TypeError('event.type is required');
+  if (!type) {
+    throw goapInputError('event.type is required', {
+      stage: 'normalize_event',
+      details: { field: 'type' },
+    });
+  }
 
   return {
     schema: GOAP_SCHEMAS.event,
@@ -181,10 +205,19 @@ export function normalizeEvent(input = {}) {
 export function assertGoapPorts(ports = {}, required = ['blackboardStore', 'goalStore', 'eventStore']) {
   for (const portName of required) {
     const port = ports[portName];
-    if (!port || typeof port !== 'object') throw new TypeError(portName + ' is required');
+    if (!port || typeof port !== 'object') {
+      throw goapAdapterError(portName + ' is required', {
+        stage: 'validate_ports',
+        adapter: portName,
+      });
+    }
     for (const method of GOAP_PORT_METHODS[portName] || []) {
       if (typeof port[method] !== 'function') {
-        throw new TypeError(portName + '.' + method + ' must be a function');
+        throw goapAdapterError(portName + '.' + method + ' must be a function', {
+          stage: 'validate_ports',
+          adapter: portName,
+          details: { method },
+        });
       }
     }
   }
