@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { discoverOpenAIModels, discoverGeminiModels, discoverCursorModels } from '../src/models/discovery.js';
-import { sanitizeInventoryForClient } from '../src/models/inventory-core.js';
+import { discoverOpenAIModels, discoverGeminiModels, discoverCursorModels } from '../../src/models/discovery.js';
+import { sanitizeInventoryForClient } from '../../src/models/inventory-core.js';
 
 function json(body) {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
