@@ -53,7 +53,14 @@ test('skills CLI lists compact cards and loads quick reminders by alias', () => 
 
 test('portable npm package still owns all skill files', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  assert.ok(pkg.files.includes('skills'));
+  for (const rel of [
+    'skills/catalog.json',
+    'skills/agentsam-app-fundamentals',
+    'skills/agentsam-cloudflare-workers',
+    'skills/agentsam-codebaseindex',
+    'skills/agentsam-jr-dev',
+    'skills/agentsam-progression-guard',
+  ]) assert.ok(pkg.files.includes(rel), `package files must include ${rel}`);
   for (const rel of [
     'skills/agentsam-app-fundamentals/SKILL.md',
     'skills/agentsam-progression-guard/SKILL.md',
