@@ -169,6 +169,61 @@ export async function runSearch(argv) {
   finally { await store?.close(); }
 }
 
+function compactNumber(value) {
+  const n = Number(value || 0);
+  if (!Number.isFinite(n)) return '0';
+  if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 1 : 2).replace(/\\.0+$/, '')}m`;
+  if (Math.abs(n) >= 1_000) return `${(n / 1_000).toFixed(n >= 100_000 ? 0 : 1).replace(/\\.0$/, '')}k`;
+  return String(n);
+}
+
+export function renderRepositoryObservation(observation) {
+  const data = observation?.data || {};
+  const git = data.git || {};
+  const summary = data.summary || {};
+  const top = Array.isArray(data.top_level) ? data.top_level.slice(0, 5) : [];
+  const pressure = Array.isArray(data.pressure_points) ? data.pressure_points.slice(0, 6) : [];
+  const dirty = git.dirty ? `dirty · ${git.changed_paths || 0} changed` : 'clean';
+  const head = git.head_sha ? String(git.head_sha).slice(0, 10) : 'unknown';
+
+  const lines = [
+    '',
+    '  Agent Sam · repository',
+    '',
+    `  repo       ${data.repo_name || path.basename(data.repo_root || '') || 'unknown'}`,
+    `  root       ${data.repo_root || 'unknown'}`,
+    `  git        ${git.branch || 'unknown'} @ ${head} · ${dirty}`,
+    `  scale      ${compactNumber(summary.file_count)} files · ${compactNumber(summary.source_file_count)} source · ${compactNumber(summary.total_lines)} lines`,
+  ];
+
+  if (top.length) {
+    lines.push('', '  Primary areas');
+    for (const row of top) {
+      lines.push(`    ${String(row.path || '.').padEnd(28)} ${compactNumber(row.files)} files · ${compactNumber(row.lines)} lines`);
+    }
+  }
+
+  if (pressure.length) {
+    lines.push('', '  Change pressure');
+    for (const row of pressure) {
+      lines.push(`    ${String(row.path || '.').padEnd(28)} pressure ${Number(row.pressure_score || 0).toFixed(1)} · stability ${Number(row.stability_score || 0).toFixed(1)}`);
+    }
+    lines.push('    relative activity heuristics — not quality grades');
+  }
+
+  lines.push(
+    '',
+    '  More',
+    '    agentsam repo --json              full deterministic receipt',
+    '    agentsam repo history             saved observations',
+    '    agentsam repo compare             compare latest saved observations',
+    '    agentsam inspect                  bounded architecture / authority view',
+    '    agentsam machine inspect          native deterministic perception',
+    '',
+  );
+  return lines.join('\n');
+}
+
 export async function runRepository(argv) {
   const { values: opts, positionals } = flags(argv, { save: { type: 'boolean' }, 'churn-days': { type: 'string' } });
   const command = positionals[0] || 'snapshot';
