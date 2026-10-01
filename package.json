@@ -145,6 +145,7 @@
     "packages/agentsam-nav/dist",
     "packages/work-graph",
     "packages/agentsam-queue-control",
+    "packages/agentsam-goap",
     "packages/connectors/cloudflare",
     "packages/providers/completeful",
     "templates",
