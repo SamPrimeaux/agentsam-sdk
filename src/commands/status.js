@@ -71,6 +71,11 @@ async function runInteractiveMenu(status, write) {
 
 export async function runStatus(argv = [], opts = {}) {
   const parsed = parseStatusArgs(argv);
+  const write = opts.write || ((value) => process.stdout.write(value));
+  if (parsed.help) {
+    write(renderCommandHelp('status'));
+    return null;
+  }
   const status = await (opts.collectRuntime || collectRuntimeStatus)({
     ...opts,
     cwd: opts.cwd || process.cwd(),
