@@ -470,7 +470,15 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
   if (useRealPty && runtimeBase) {
     const base = String(runtimeBase).replace(/\/$/, "");
     const wsUrl = base.replace(/^http/, "ws");
-    const cwdParam = encodeURIComponent(project0.workspaceRoot || "");
+    const persistedCwd = activeTerminalSession().cwd;
+    let resolvedCwd =
+      project0.workspaceRoot ||
+      (persistedCwd && persistedCwd !== "/" ? persistedCwd : "");
+    if (!resolvedCwd && usingAgentsamd) {
+      const nativeContext = await getDesktopWorkspaceContext();
+      resolvedCwd = nativeContext?.default_cwd || "";
+    }
+    const cwdParam = encodeURIComponent(resolvedCwd);
     const cap = encodeURIComponent(String(runtimeCap || "local"));
     let socket: WebSocket | null = null;
     try {
