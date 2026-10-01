@@ -1,22 +1,10 @@
-import { useMemo } from "react";
 import {
   SettingsProductPage,
-  createFixtureSettingsHost,
-  getSettingsFixture,
-  type SettingsFixtureName,
   type SettingsUnitId,
 } from "@inneranimalmedia/agentsam-settings";
 import { localStudioSettingsManifest } from "./localStudioSettingsManifest";
+import { localStudioSettingsHost } from "./localStudioSettingsHost";
 import { LiveKeysSettingsPage } from "./LiveKeysSettingsPage";
-
-function fixtureFromLocation(): SettingsFixtureName {
-  if (typeof window === "undefined") return "populated";
-  const value = new URLSearchParams(window.location.search).get("fixture");
-  if (value === "first-run" || value === "degraded" || value === "security-findings") {
-    return value;
-  }
-  return "populated";
-}
 
 export function LocalStudioSettingsPage({
   unitId,
@@ -29,16 +17,10 @@ export function LocalStudioSettingsPage({
     return <LiveKeysSettingsPage />;
   }
 
-  const fixture = fixtureFromLocation();
-  const host = useMemo(
-    () => createFixtureSettingsHost(getSettingsFixture(fixture)),
-    [fixture],
-  );
-
   return (
     <SettingsProductPage
       manifest={localStudioSettingsManifest}
-      host={host}
+      host={localStudioSettingsHost}
       unitId={unitId}
       requestedView={requestedView}
       onViewChange={(view) => {

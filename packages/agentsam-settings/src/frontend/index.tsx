@@ -741,7 +741,7 @@ function KeysView({ snapshot }: { snapshot: SettingsSnapshot }) {
             <label className="block">
               <span className="mb-1.5 block text-[11px] font-medium">Project</span>
               <select className="h-9 w-full rounded-md border border-border bg-muted/25 px-3 text-[11px] outline-none">
-                <option>demo-app</option>
+                <option>Current project</option>
                 <option>Account-wide</option>
               </select>
             </label>

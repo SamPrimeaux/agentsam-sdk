@@ -37,6 +37,7 @@ export function AgentSamShell() {
   const trail = state.trails.find((item) => item.id === state.activeTrailId);
   const project = state.projects.find((item) => item.id === trail?.projectId);
   const isConversation = pathname === '/agentsam' || pathname.startsWith('/trails');
+  const isSettings = pathname === '/settings' || pathname.startsWith('/settings/');
   const go = (to: string) => {
     if (isPackagedDesktop()) {
       const normalized = to.startsWith('/') ? to : '/' + to;
@@ -173,7 +174,7 @@ export function AgentSamShell() {
   };
   return <TooltipProvider><Nav.Provider value={value} theme={theme} accentColor={accent} defaultOpen={false} peekable>
     <Nav.Scope className="agentsam-shell" data-agentsam-app-shell="local-studio">
-      <Nav.Sidenav /><div className="agentsam-main">
+      {!isSettings ? <Nav.Sidenav /> : null}<div className="agentsam-main">
         {!isConversation ? <Nav.Topbar><Nav.TopbarLogo toggle /><span>{pathname.startsWith('/cad') ? 'CAD Creator' : pathname.startsWith('/cms') ? 'Sites' : pathname.startsWith('/artifacts') ? 'Library' : pathname.split('/')[1].replace(/^./, (letter) => letter.toUpperCase())}</span><Nav.TopbarSpacer /><Nav.AccountSwitcher /></Nav.Topbar> : null}
         <OfflineBanner /><main className="agentsam-route"><Outlet /></main>
       </div><CliDrawer /><CommandPalette />
