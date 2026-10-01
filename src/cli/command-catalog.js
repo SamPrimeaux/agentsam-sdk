@@ -3,7 +3,7 @@
  * Alias ≠ authority: skill tips and SAM operation ids live here so help is not a prose-only dump.
  */
 
-/** @typedef {{ id: string, aliases?: string[], summary: string, topic: string, skill?: string, operation?: string, common?: boolean }} CliCommandEntry */
+/** @typedef {{ id: string, aliases?: string[], summary: string, topic: string, skill?: string, operation?: string, common?: boolean, usage?: string[], options?: Array<{ flag: string, description: string }> }} CliCommandEntry */
 
 /** @type {CliCommandEntry[]} */
 export const CLI_COMMAND_CATALOG = Object.freeze([
