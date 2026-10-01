@@ -62,12 +62,13 @@ export class MemoryGoapAdapter {
   }
 
   ports() {
+    const adapter = this;
     return {
       blackboardStore: {
-        get: async (scope) => clone(this.blackboards.get(scopeKey(scope)) ?? null),
+        get: async (scope) => clone(adapter.blackboards.get(scopeKey(scope)) ?? null),
         compareAndSwap: async ({ scope, expectedRevision, patch = {} }) => {
           const key = scopeKey(scope);
-          const current = this.blackboards.get(key);
+          const current = adapter.blackboards.get(key);
           if (!current) throw new Error('blackboard_not_found');
           if (current.revision !== expectedRevision) {
             throw new GoapConflictError('goap_revision_conflict', {
@@ -78,26 +79,28 @@ export class MemoryGoapAdapter {
           const next = normalizeBlackboard({
             ...current,
             ...patch,
-            current_goal_id: patch.current_goal_id ?? current.current_goal_id,
+            current_goal_id: Object.hasOwn(patch, 'current_goal_id')
+              ? patch.current_goal_id
+              : current.current_goal_id,
             state: patch.state ?? current.state,
             revision: current.revision + 1,
           });
-          this.blackboards.set(key, next);
+          adapter.blackboards.set(key, next);
           return clone(next);
         },
       },
       goalStore: {
-        get: async ({ id, ...scope }) => clone(this.goals.get(goalKey(scope, id)) ?? null),
+        get: async ({ id, ...scope }) => clone(adapter.goals.get(goalKey(scope, id)) ?? null),
         updateStatus: async ({ id, status, updated_at, ...scope }) => {
           const key = goalKey(scope, id);
-          const current = this.goals.get(key);
+          const current = adapter.goals.get(key);
           if (!current) throw new Error('goal_not_found:' + id);
           const next = {
             ...current,
             status: goalStatusFromTicket(status),
             updated_at: updated_at ?? current.updated_at,
           };
-          this.goals.set(key, next);
+          adapter.goals.set(key, next);
           return clone(next);
         },
       },
@@ -105,14 +108,14 @@ export class MemoryGoapAdapter {
         append: async ({ scope, event }) => {
           const key = scopeKey(scope);
           const normalized = normalizeEvent(event);
-          this.sequence += 1;
-          normalized.cursor = 'memory:' + this.sequence;
-          if (!this.events.has(key)) this.events.set(key, []);
-          this.events.get(key).push(normalized);
+          adapter.sequence += 1;
+          normalized.cursor = 'memory:' + adapter.sequence;
+          if (!adapter.events.has(key)) adapter.events.set(key, []);
+          adapter.events.get(key).push(normalized);
           return clone(normalized);
         },
         list: async ({ cursor = null, limit = 50, goal_id = null, ...scope }) => {
-          const rows = this.events.get(scopeKey(scope)) ?? [];
+          const rows = adapter.events.get(scopeKey(scope)) ?? [];
           const after = cursor ? Number(String(cursor).split(':').at(-1)) || 0 : 0;
           return rows
             .filter((row) => {
@@ -122,6 +125,50 @@ export class MemoryGoapAdapter {
             })
             .slice(0, Math.max(0, Number(limit) || 50))
             .map(clone);
+        },
+      },
+      mutationPort: {
+        activateGoal: async ({ scope, goal_id, expected_revision, event, updated_at }) => {
+          const bbKey = scopeKey(scope);
+          const gKey = goalKey(scope, goal_id);
+          const currentBlackboard = adapter.blackboards.get(bbKey);
+          const currentGoal = adapter.goals.get(gKey);
+
+          if (!currentBlackboard) throw new Error('blackboard_not_found');
+          if (!currentGoal) throw new Error('goal_not_found:' + goal_id);
+          if (currentBlackboard.revision !== expected_revision) {
+            throw new GoapConflictError('goap_revision_conflict', {
+              expected_revision,
+              actual_revision: currentBlackboard.revision,
+            });
+          }
+
+          const nextBlackboard = normalizeBlackboard({
+            ...currentBlackboard,
+            current_goal_id: goal_id,
+            last_action: 'activated_goal',
+            updated_at,
+            revision: currentBlackboard.revision + 1,
+          });
+          const nextGoal = {
+            ...currentGoal,
+            status: 'active',
+            updated_at,
+          };
+          const normalizedEvent = normalizeEvent(event);
+          adapter.sequence += 1;
+          normalizedEvent.cursor = 'memory:' + adapter.sequence;
+
+          adapter.blackboards.set(bbKey, nextBlackboard);
+          adapter.goals.set(gKey, nextGoal);
+          if (!adapter.events.has(bbKey)) adapter.events.set(bbKey, []);
+          adapter.events.get(bbKey).push(normalizedEvent);
+
+          return {
+            blackboard: clone(nextBlackboard),
+            goal: clone(nextGoal),
+            event: clone(normalizedEvent),
+          };
         },
       },
     };

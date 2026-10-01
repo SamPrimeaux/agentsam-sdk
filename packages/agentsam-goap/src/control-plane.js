@@ -3,7 +3,6 @@ import {
   assertGoapPorts,
   normalizeEvent,
   normalizeGoapScope,
-  ticketStatusFromGoal,
 } from './contracts.js';
 
 function defaultId(prefix) {
@@ -51,28 +50,9 @@ export function createGoapControlPlane({
     if (!Number.isInteger(expectedRevision) || expectedRevision < 1) {
       throw new TypeError('expectedRevision must be a positive integer');
     }
-
-    const goal = await ports.goalStore.get({ ...scope, id: goalId });
-    if (!goal) throw new Error('goal_not_found:' + goalId);
-
-    if (goal.status !== 'active') {
-      await ports.goalStore.updateStatus({
-        ...scope,
-        id: goalId,
-        status: ticketStatusFromGoal('active'),
-        updated_at: clock(),
-      });
+    if (typeof ports.mutationPort?.activateGoal !== 'function') {
+      throw new TypeError('mutationPort.activateGoal is required for durable goal activation');
     }
-
-    const blackboard = await ports.blackboardStore.compareAndSwap({
-      scope,
-      expectedRevision,
-      patch: {
-        current_goal_id: goalId,
-        last_action: 'activated_goal',
-        updated_at: clock(),
-      },
-    });
 
     const event = normalizeEvent({
       id: idFactory('gevt'),
@@ -81,14 +61,21 @@ export function createGoapControlPlane({
       payload: {
         schema: GOAP_SCHEMAS.event,
         ...payload,
-        blackboard_revision: blackboard.revision,
+        blackboard_revision: expectedRevision + 1,
       },
       actor_type: actor.type ?? null,
       actor_id: actor.id ?? null,
       created_at: clock(),
     });
 
-    await ports.eventStore.append({ scope, event });
+    await ports.mutationPort.activateGoal({
+      scope,
+      goal_id: goalId,
+      expected_revision: expectedRevision,
+      event,
+      updated_at: clock(),
+    });
+
     return snapshot(scope);
   }
 

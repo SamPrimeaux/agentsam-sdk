@@ -23,7 +23,7 @@ test('status mapping preserves database statuses while exposing logical GOAP sta
   assert.equal(ticketStatusFromGoal('satisfied'), 'shipped');
 });
 
-test('memory adapter provides CAS blackboard and append-only cursor semantics', async () => {
+test('memory adapter atomically activates goal with CAS and append-only cursor', async () => {
   const adapter = new MemoryGoapAdapter({
     blackboards: [{
       ...scope,
@@ -83,11 +83,24 @@ function d1Like(db) {
         },
       };
     },
+    async batch(statements) {
+      db.exec('BEGIN IMMEDIATE');
+      try {
+        const results = [];
+        for (const statement of statements) results.push(await statement.run());
+        db.exec('COMMIT');
+        return results;
+      } catch (error) {
+        try { db.exec('ROLLBACK'); } catch {}
+        throw error;
+      }
+    },
   };
 }
 
-test('D1/SQLite adapter uses existing table nouns and revision CAS', async () => {
+function createSqlite({ eventOwnership = true } = {}) {
   const sqlite = new DatabaseSync(':memory:');
+  const eventOwnershipColumns = eventOwnership ? 'account_id TEXT, repository_id TEXT,' : '';
   sqlite.exec([
     'CREATE TABLE agentsam_workspace_state (',
     'id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, repository_id TEXT NOT NULL,',
@@ -101,17 +114,15 @@ test('D1/SQLite adapter uses existing table nouns and revision CAS', async () =>
     'goal_spec_json TEXT, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL);',
     'CREATE TABLE agentsam_ticket_events (',
     'id TEXT PRIMARY KEY, ticket_id TEXT NOT NULL, event_type TEXT NOT NULL, detail TEXT,',
-    'created_at INTEGER NOT NULL, actor_type TEXT, actor_id TEXT, account_id TEXT, repository_id TEXT,',
+    'created_at INTEGER NOT NULL, actor_type TEXT, actor_id TEXT, ' + eventOwnershipColumns,
     'payload_json TEXT NOT NULL DEFAULT \\'{}\\', workflow_run_id TEXT, execution_step_id TEXT,',
     'schema_version TEXT NOT NULL DEFAULT \\'agentsam.event.v1\\');',
   ].join('\\n'));
-
   sqlite.prepare(
     'INSERT INTO agentsam_workspace_state ' +
     '(id, workspace_id, repository_id, current_task_id, state_json, revision, updated_at) ' +
     'VALUES (?, ?, ?, NULL, \\'{}\\', 7, 1)',
   ).run('bb_sql', scope.workspace_id, scope.repository_id);
-
   sqlite.prepare(
     'INSERT INTO agentsam_tickets ' +
     '(id, title, status, account_id, repository_id, goal_schema, goal_spec_json, created_at, updated_at) ' +
@@ -124,9 +135,23 @@ test('D1/SQLite adapter uses existing table nouns and revision CAS', async () =>
     GOAP_SCHEMAS.goal,
     JSON.stringify({ schema: GOAP_SCHEMAS.goal, desired: [] }),
   );
+  return sqlite;
+}
 
+test('D1/SQLite adapter atomically guards stale revisions', async () => {
+  const sqlite = createSqlite();
   const ports = createD1SqliteGoapAdapter({ db: d1Like(sqlite) });
   const service = createGoapControlPlane({ ports, clock: () => 1234 });
+
+  await assert.rejects(
+    service.activateGoal({ scope, goalId: 'tkt_sql', expectedRevision: 6 }),
+    (error) => error instanceof GoapConflictError,
+  );
+
+  assert.equal(sqlite.prepare('SELECT revision FROM agentsam_workspace_state').get().revision, 7);
+  assert.equal(sqlite.prepare('SELECT status FROM agentsam_tickets').get().status, 'backlog');
+  assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM agentsam_ticket_events').get().n, 0);
+
   const result = await service.activateGoal({
     scope,
     goalId: 'tkt_sql',
@@ -147,6 +172,30 @@ test('D1/SQLite adapter uses existing table nouns and revision CAS', async () =>
   assert.equal(eventRow.repository_id, scope.repository_id);
   assert.equal(eventRow.schema_version, GOAP_SCHEMAS.event);
   assert.equal(JSON.parse(eventRow.payload_json).blackboard_revision, 8);
+
+  sqlite.close();
+});
+
+test('ticket_join event ownership supports the legacy platform event table', async () => {
+  const sqlite = createSqlite({ eventOwnership: false });
+  const ports = createD1SqliteGoapAdapter({
+    db: d1Like(sqlite),
+    eventOwnership: 'ticket_join',
+    cursorPrefix: 'd1',
+  });
+  const service = createGoapControlPlane({ ports, clock: () => 2000 });
+
+  const result = await service.activateGoal({
+    scope,
+    goalId: 'tkt_sql',
+    expectedRevision: 7,
+  });
+
+  assert.equal(result.blackboard.revision, 8);
+  assert.equal(result.goal.status, 'active');
+  assert.equal(result.events.length, 1);
+  assert.match(result.events[0].cursor, /^d1:/);
+  assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM agentsam_ticket_events').get().n, 1);
 
   sqlite.close();
 });

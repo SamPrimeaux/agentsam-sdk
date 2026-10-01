@@ -32,6 +32,7 @@ export const GOAP_PORT_METHODS = Object.freeze({
   blackboardStore: ['get', 'compareAndSwap'],
   goalStore: ['get', 'updateStatus'],
   eventStore: ['append', 'list'],
+  mutationPort: ['activateGoal'],
   planStore: ['get'],
   planRunStore: ['get', 'heartbeat'],
   actionRunStore: ['get', 'record'],

@@ -1,6 +1,11 @@
 -- 0018_goap_control_plane_remaster.sql
 -- Additive remaster only: no new GOAP table family.
 -- Existing nouns remain authoritative; these columns freeze portable v1 contracts.
+--
+-- NOTE: account_id/repository_id are intentionally NOT added to ticket_events here.
+-- Portable 0010 already has them, while the legacy platform table does not.
+-- The GOAP adapter supports eventOwnership=ticket_join for that host shape until a
+-- dedicated platform-only repair can be applied without breaking portable installs.
 
 ALTER TABLE agentsam_workspace_state
   ADD COLUMN state_schema TEXT NOT NULL DEFAULT 'agentsam.blackboard.v1';
@@ -16,12 +21,6 @@ ALTER TABLE agentsam_tickets
     CHECK (goal_spec_json IS NULL OR json_valid(goal_spec_json));
 
 ALTER TABLE agentsam_ticket_events
-  ADD COLUMN account_id TEXT;
-
-ALTER TABLE agentsam_ticket_events
-  ADD COLUMN repository_id TEXT;
-
-ALTER TABLE agentsam_ticket_events
   ADD COLUMN payload_json TEXT NOT NULL DEFAULT '{}'
     CHECK (json_valid(payload_json));
 
@@ -34,28 +33,8 @@ ALTER TABLE agentsam_ticket_events
 ALTER TABLE agentsam_ticket_events
   ADD COLUMN schema_version TEXT NOT NULL DEFAULT 'agentsam.event.v1';
 
--- Legacy event rows inherit portable ownership from their ticket when available.
-UPDATE agentsam_ticket_events
-SET account_id = (
-  SELECT t.account_id
-  FROM agentsam_tickets t
-  WHERE t.id = agentsam_ticket_events.ticket_id
-)
-WHERE account_id IS NULL;
-
-UPDATE agentsam_ticket_events
-SET repository_id = (
-  SELECT t.repository_id
-  FROM agentsam_tickets t
-  WHERE t.id = agentsam_ticket_events.ticket_id
-)
-WHERE repository_id IS NULL;
-
 CREATE INDEX IF NOT EXISTS idx_agentsam_workspace_state_repo_revision
   ON agentsam_workspace_state(repository_id, revision);
-
-CREATE INDEX IF NOT EXISTS idx_agentsam_ticket_events_account_repo_cursor
-  ON agentsam_ticket_events(account_id, repository_id, created_at, ticket_id);
 
 CREATE INDEX IF NOT EXISTS idx_agentsam_ticket_events_workflow_run
   ON agentsam_ticket_events(workflow_run_id, created_at)
