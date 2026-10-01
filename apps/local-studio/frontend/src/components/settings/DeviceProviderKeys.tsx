@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { CheckCircle2, KeyRound, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SecretInput } from "@/components/ui/input";
 import {
   invokeLocalProvider,
   providerKeyDelete,
@@ -181,12 +181,10 @@ export function DeviceProviderKeys() {
                   </Button>
                 ) : (
                   <div className="flex w-full gap-2 sm:w-auto">
-                    <Input
-                      type="password"
+                    <SecretInput
                       value={drafts[id]}
                       onChange={(event) => setDrafts((current) => ({ ...current, [id]: event.target.value }))}
                       placeholder={`Paste ${label} key`}
-                      autoComplete="off"
                       className="h-9 min-w-0 font-mono sm:w-64"
                     />
                     <Button

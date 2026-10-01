@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Eye, EyeOff, KeyRound, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Input, SecretInput } from "@/components/ui/input";
 import { vaultRequest } from "@/lib/vault/client";
 
 /** service_name stored in user_secrets — drives vault AAD + Studio provider map. */
@@ -134,6 +134,7 @@ export function AddKeyModal({
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   placeholder={`${selectedLabel} production key`}
+                  autoComplete="off"
                   required
                   autoFocus
                   maxLength={120}
@@ -146,11 +147,10 @@ export function AddKeyModal({
               <label className="block space-y-2 text-sm font-medium text-foreground">
                 <span>API key</span>
                 <div className="relative">
-                  <Input
-                    type={showValue ? "text" : "password"}
+                  <SecretInput
+                    revealed={showValue}
                     value={value}
                     onChange={(event) => setValue(event.target.value)}
-                    autoComplete="off"
                     placeholder="Paste key or token"
                     className="h-11 pr-12 font-mono"
                     required

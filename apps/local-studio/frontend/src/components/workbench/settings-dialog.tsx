@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { Input, SecretInput } from "@/components/ui/input";
 import { clearSecrets, readSecrets, writeSecrets } from "@/lib/work/secrets";
 import { useWorkStore } from "@/lib/work/store";
 import {
@@ -164,11 +164,11 @@ export function SettingsDialog() {
           >
             <label className="flex flex-col gap-1.5 text-xs text-muted-foreground">
               GitHub token
-              <Input type="password" autoComplete="off" value={github} onChange={(e) => setGithub(e.target.value)} placeholder="ghp_…" />
+              <SecretInput value={github} onChange={(e) => setGithub(e.target.value)} placeholder="ghp_…" />
             </label>
             <label className="flex flex-col gap-1.5 text-xs text-muted-foreground">
               Cloudflare API token
-              <Input type="password" autoComplete="off" value={cloudflare} onChange={(e) => setCloudflare(e.target.value)} placeholder="Pages edit permission" />
+              <SecretInput value={cloudflare} onChange={(e) => setCloudflare(e.target.value)} placeholder="Pages edit permission" />
             </label>
             <div className="flex justify-end gap-2">
               <Button
