@@ -40,6 +40,20 @@
     "access": "public"
   },
   "files": [
-    "scripts"
-  ]
+    "scripts",
+    "manifests",
+    "icons",
+    "src-tauri",
+    "!src-tauri/target",
+    "!src-tauri/binaries",
+    "!src-tauri/generated",
+    "worker"
+  ],
+  "agentsam": {
+    "releaseIgnore": [
+      "dist",
+      "update-signing.key",
+      "update-signing.key.pub"
+    ]
+  }
 }

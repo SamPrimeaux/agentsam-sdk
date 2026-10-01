@@ -17,8 +17,8 @@
     "typescript": "^5.7.0"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-contracts": "^2.6.7",
-    "@inneranimalmedia/agentsam-vault": "^2.6.7",
-    "@inneranimalmedia/agentsam-sdk": "^2.6.7"
+    "@inneranimalmedia/agentsam-contracts": "2.6.7",
+    "@inneranimalmedia/agentsam-vault": "2.6.7",
+    "@inneranimalmedia/agentsam-sdk": "2.6.7"
   }
 }

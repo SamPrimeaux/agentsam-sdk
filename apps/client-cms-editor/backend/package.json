@@ -1,7 +1,7 @@
 {
   "name": "@inneranimalmedia/agentsam-cms-backend",
   "version": "2.6.7",
-  "description": "Internal CMS backend bridge (bundled into @inneranimalmedia/client-cms-editor — not published separately).",
+  "description": "Internal CMS backend bridge (bundled into @inneranimalmedia/client-cms-editor \u2014 not published separately).",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-cms-shared": "^2.6.7"
+    "@inneranimalmedia/agentsam-cms-shared": "2.6.7"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
@@ -29,5 +29,11 @@
   },
   "files": [
     "src"
-  ]
+  ],
+  "agentsam": {
+    "releaseIgnore": [
+      "worker",
+      "wrangler.jsonc"
+    ]
+  }
 }

@@ -118,5 +118,18 @@
     "type": "git",
     "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
     "directory": "apps/client-cms-editor"
+  },
+  "agentsam": {
+    "releaseIgnore": [
+      "adapters",
+      "backend",
+      "frontend",
+      "import",
+      "local",
+      "scripts",
+      "shared",
+      "starter-packs",
+      "tsup.config.ts"
+    ]
   }
 }

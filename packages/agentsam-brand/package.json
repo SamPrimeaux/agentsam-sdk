@@ -1,5 +1,5 @@
 {
-  "name": "@inneranimalmedia/agentsam-sdk-brand",
+  "name": "@inneranimalmedia/agentsam-brand",
   "version": "2.6.7",
   "description": "Deterministic Brand Intelligence + portable brand-asset promotion SDK for AgentSam (inspect, derive, plan, promote, publish, verify).",
   "type": "module",

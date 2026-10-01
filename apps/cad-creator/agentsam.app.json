@@ -3,7 +3,7 @@
   "id": "cad-creator",
   "name": "AgentSam CAD Creator",
   "kind": "app",
-  "package": "@inneranimalmedia/agentsam-sdk-cad-creator",
+  "package": "@inneranimalmedia/agentsam-cad-creator",
   "version": "0.1.0",
   "entrypoints": {
     "frontend": "./frontend",
@@ -83,7 +83,7 @@
   },
   "bin": "bin/agentsam-cad-creator.mjs",
   "install": {
-    "command": "npm install @inneranimalmedia/agentsam-sdk-cad-creator",
+    "command": "npm install @inneranimalmedia/agentsam-cad-creator",
     "selector": "cad-creator",
     "paths": ["/install/cad", "/install/cad-creator"]
   }

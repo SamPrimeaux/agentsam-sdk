@@ -48,7 +48,7 @@
     "kind": "theme-runtime",
     "slug": "theme-scenes",
     "depends_on": [
-      "@inneranimalmedia/agentsam-sdk-brand"
+      "@inneranimalmedia/agentsam-brand"
     ]
   }
 }

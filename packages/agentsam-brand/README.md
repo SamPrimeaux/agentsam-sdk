@@ -1,4 +1,4 @@
-# @inneranimalmedia/agentsam-sdk-brand
+# @inneranimalmedia/agentsam-brand
 
 **Brand compiler** — not just an image optimizer CLI.
 

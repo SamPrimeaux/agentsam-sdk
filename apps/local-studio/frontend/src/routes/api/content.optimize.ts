@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { optimizeWithScheduler } from "@inneranimalmedia/agentsam-sdk-brand";
+import { optimizeWithScheduler } from "@inneranimalmedia/agentsam-brand";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

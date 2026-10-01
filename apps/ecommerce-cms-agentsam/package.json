@@ -1,5 +1,5 @@
 {
-  "name": "@inneranimalmedia/agentsam-sdk-ecommerce",
+  "name": "@inneranimalmedia/ecommerce-cms-agentsam",
   "version": "2.6.7",
   "type": "module",
   "workspaces": [

@@ -55,7 +55,8 @@ assert.ok(!pkg.files?.includes('packages/agentsam-workbench'), 'root package mus
 assert.ok(!pkg.files?.includes('apps/client-cms-editor'), 'root package must not publish the entire CMS editor workspace');
 assert.ok(pkg.files?.includes('packages/agentsam-contracts'), 'published files must include framework-neutral contracts');
 assert.ok(pkg.files?.includes('packages/agentsam-errors'), 'published files must include canonical errors runtime');
-assert.equal(errors.private, true, 'errors runtime is distributed through the root SDK, not separately published');
+assert.notEqual(errors.private, true, 'errors runtime is a publishable workspace package and is also distributed through the root SDK');
+assert.equal(errors.publishConfig?.access, 'public', 'errors workspace must remain publicly publishable');
 assert.equal(pkg.exports?.['./brand'], './packages/agentsam-brand/src/index.js', 'brand subpath must resolve to the brand workspace');
 assert.equal(pkg.exports?.['./errors'], './src/errors/index.js', 'errors subpath must resolve to the canonical facade');
 assert.equal(pkg.exports?.['./errors/schema'], './protocol/errors/error-envelope.schema.json', 'errors JSON Schema export must be stable');
@@ -68,7 +69,8 @@ assert.ok(
   'published files must include the Cloudflare connector imported by the CLI',
 );
 assert.ok(pkg.files?.includes('AGENTSAM.md') && existsSync(join(root, 'AGENTSAM.md')), 'published files must include the stable AgentSam runtime contract');
-assert.equal(identity.private, true, 'identity is distributed through the root SDK, not separately published');
+assert.notEqual(identity.private, true, 'identity is a publishable workspace package and is also distributed through the root SDK');
+assert.equal(identity.publishConfig?.access, 'public', 'identity workspace must remain publicly publishable');
 for (const file of ['services/knowledge/package.json', 'services/knowledge/package-lock.json']) {
   assert.ok(pkg.files.includes(file) && existsSync(join(root, file)), `missing knowledge service runtime asset: ${file}`);
 }

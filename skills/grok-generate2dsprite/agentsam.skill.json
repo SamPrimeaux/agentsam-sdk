@@ -1,0 +1,25 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "grok-generate2dsprite",
+  "name": "Grok \u00b7 generate2dsprite",
+  "description": "2D sprite sheets: imagine_text_to_image + magenta chroma postprocess",
+  "icon": "skill",
+  "slash": {
+    "suggested": "/grok-generate2dsprite"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  },
+  "provenance": {
+    "source": "apps/local-studio/.grok/skills",
+    "vendor": "grok",
+    "status": "imported"
+  }
+}

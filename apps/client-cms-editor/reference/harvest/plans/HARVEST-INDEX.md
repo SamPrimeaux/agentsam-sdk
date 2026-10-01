@@ -105,7 +105,7 @@ Primary source:
 
 Preserve the hosted ChatGPT identity pattern as a reference adapter for:
 
-`@inneranimalmedia/agentsam-sdk-identity`
+`@inneranimalmedia/agentsam-identity`
 
 Target architecture:
 

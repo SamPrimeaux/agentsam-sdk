@@ -21,7 +21,7 @@ import '@inneranimalmedia/agentsam-nav/theme.css';
 import { ProjectsSurface } from '@inneranimalmedia/agentsam-workbench/projects';
 import { GanttBoard } from '@inneranimalmedia/agentsam-workbench/timeline';
 import '@inneranimalmedia/agentsam-workbench/project-control.css';
-import { createGanttModel } from '@inneranimalmedia/work-graph/renderers/gantt-model';
+import { createGanttModel } from '@inneranimalmedia/agentsam-work-graph/renderers/gantt-model';
 import './styles.css';
 
 const projects = [

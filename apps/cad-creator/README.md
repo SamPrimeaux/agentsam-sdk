@@ -462,7 +462,7 @@ If you want, I can also **put this directly into `SamPrimeaux/AgentSamCadCreatio
 CAD Creator is packaged independently from the core SDK as:
 
 ```text
-@inneranimalmedia/agentsam-sdk-cad-creator
+@inneranimalmedia/agentsam-cad-creator
 ```
 
 The package deliberately contains both:
@@ -477,13 +477,13 @@ It deliberately does **not** publish `reference/`, donor ZIPs/snapshots, `node_m
 Once published:
 
 ```bash
-npx @inneranimalmedia/agentsam-sdk-cad-creator
+npx @inneranimalmedia/agentsam-cad-creator
 ```
 
 or after installing it:
 
 ```bash
-npm install @inneranimalmedia/agentsam-sdk-cad-creator
+npm install @inneranimalmedia/agentsam-cad-creator
 npx agentsam-cad-creator --port 3000
 ```
 
@@ -500,7 +500,7 @@ The normal Design Studio shell loads first. The MuJoCo/robotics workspace remain
 ### Materialize an editable project
 
 ```bash
-npx @inneranimalmedia/agentsam-sdk-cad-creator scaffold ./my-cad-app
+npx @inneranimalmedia/agentsam-cad-creator scaffold ./my-cad-app
 cd ./my-cad-app
 npm install
 npm run dev

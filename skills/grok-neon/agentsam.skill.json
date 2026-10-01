@@ -1,0 +1,25 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "grok-neon",
+  "name": "Grok \u00b7 neon",
+  "description": "Neon Postgres (with a local PGLite fallback) for this template",
+  "icon": "skill",
+  "slash": {
+    "suggested": "/grok-neon"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  },
+  "provenance": {
+    "source": "apps/local-studio/.grok/skills",
+    "vendor": "grok",
+    "status": "imported"
+  }
+}

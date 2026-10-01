@@ -46,7 +46,7 @@ runtime:
 packages:
   root_sdk:
     name: "@inneranimalmedia/agentsam-sdk"
-    version: "2.6.5"
+    version: "2.6.7"
     path: .
     private: false
     registry: npm
@@ -58,12 +58,12 @@ packages:
       - agentsam-scaffold
       - agentsam-auth-portal
   identity:
-    name: "@inneranimalmedia/agentsam-sdk-identity"
-    version: "2.6.3"
+    name: "@inneranimalmedia/agentsam-identity"
+    version: "2.6.7"
     path: packages/identity
-    private: true
-    separately_published: false
-    distribution: bundled through root SDK exports
+    private: false
+    separately_published: true
+    distribution: published workspace package + bundled root SDK exports
     public_import_prefix: "@inneranimalmedia/agentsam-sdk/identity"
   agentsam_contracts:
     name: "@inneranimalmedia/agentsam-contracts"
@@ -235,10 +235,10 @@ security_contract:
 
 release:
   root_sdk:
-    target_version: "2.6.5"
+    target_version: "2.6.7"
     state: candidate
     registry: npm
-    current_latest: "2.6.3"
+    current_latest: "2.6.5"
     current_alpha: "2.0.0-alpha.identity.12"
     candidate_base_head: 2d7c8214809bf9a947f6151e9745d98695892f46
     published_at_utc: "2026-09-25T01:08:01.582Z"
@@ -248,7 +248,7 @@ release:
     verification_command: npm run verify:release
     publish_mode: manual
   identity:
-    publish_separately: false
+    publish_separately: true
   python:
     publish_to_pypi: false
 

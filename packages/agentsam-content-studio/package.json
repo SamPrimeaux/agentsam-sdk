@@ -19,7 +19,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-content": "^2.6.7"
+    "@inneranimalmedia/agentsam-content": "2.6.7"
   },
   "peerDependencies": {
     "react": ">=18"

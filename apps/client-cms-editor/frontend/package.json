@@ -15,8 +15,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-cms-backend": "^2.6.7",
-    "@inneranimalmedia/agentsam-cms-shared": "^2.6.7",
+    "@inneranimalmedia/agentsam-cms-backend": "2.6.7",
+    "@inneranimalmedia/agentsam-cms-shared": "2.6.7",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

@@ -1,0 +1,25 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "grok-game-character-consistency",
+  "name": "Grok \u00b7 game-character-consistency",
+  "description": "Same character, every image",
+  "icon": "skill",
+  "slash": {
+    "suggested": "/grok-game-character-consistency"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  },
+  "provenance": {
+    "source": "apps/local-studio/.grok/skills",
+    "vendor": "grok",
+    "status": "imported"
+  }
+}

@@ -43,6 +43,9 @@
   "files": [
     "backend",
     "frontend",
-    "src"
+    "src",
+    "bin",
+    "scripts",
+    "agentsam.app.json"
   ]
 }

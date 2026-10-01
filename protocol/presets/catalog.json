@@ -54,7 +54,7 @@
         "composer": "agentsam.mini-composer"
       },
       "packages": {
-        "theme": "@inneranimalmedia/heuristic-theme",
+        "theme": "@inneranimalmedia/theme-heuristic",
         "composer": "@inneranimalmedia/agentsam-workbench",
         "analytics": "@inneranimalmedia/commerce-analytics"
       },
@@ -128,7 +128,7 @@
       "capabilities": [
         "theme.storefront.shell"
       ],
-      "description": "Stock storefront theme selection — default package @inneranimalmedia/heuristic-theme (theme.storefront.shell). Theme is a projection of Brand, not brand authority."
+      "description": "Stock storefront theme selection — default package @inneranimalmedia/theme-heuristic (theme.storefront.shell). Theme is a projection of Brand, not brand authority."
     },
     "brand": {
       "id": "brand",

@@ -10,7 +10,7 @@ test("createStorefrontShellTheme returns stable stock contract", () => {
   assert.ok(theme.surfaces.includes("cms.editor"));
   assert.ok(theme.slots.shell.includes("header"));
   assert.equal(theme.tokens["--color-accent"], "#1e6a6f");
-  assert.equal(theme.metadata.package, "@inneranimalmedia/heuristic-theme");
+  assert.equal(theme.metadata.package, "@inneranimalmedia/theme-heuristic");
   assert.deepEqual(createStorefrontShellTheme(), theme);
 });
 

@@ -22,7 +22,7 @@
     "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-contracts": "^2.6.7"
+    "@inneranimalmedia/agentsam-contracts": "2.6.7"
   },
   "peerDependencies": {
     "react": ">=18",

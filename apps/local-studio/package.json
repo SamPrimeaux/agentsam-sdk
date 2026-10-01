@@ -106,5 +106,11 @@
     "frontend/",
     "backend/",
     "shared/"
-  ]
+  ],
+  "agentsam": {
+    "releaseIgnore": [
+      "artifacts",
+      "attachments"
+    ]
+  }
 }

@@ -39,7 +39,7 @@
     "directory": "packages/agentsam-shell-kit"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-workbench": "^2.6.7"
+    "@inneranimalmedia/agentsam-workbench": "2.6.7"
   },
   "publishConfig": {
     "access": "public"

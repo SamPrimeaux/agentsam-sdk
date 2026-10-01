@@ -15,10 +15,25 @@ SKIP = {"node_modules", ".git", ".output", "dist", "target", "desktop-dist", ".a
 # apps/README.md law: apps are their own npm workspace roots (NOT in the SDK root workspace graph);
 # frontend/backend/shared are app-internal and get bundled into the app package, so they stay private.
 # Only packages/* and the app root packages are published.
-PRIVATE_GLOBS = ["apps/*-site", "apps/project-control", "apps/*/frontend", "apps/*/backend", "apps/*/shared/*"]
+# packages/theme-*-site were harvested from real client sites: held private until scrubbed of client identity.
+PRIVATE_GLOBS = ["packages/theme-*-site", "apps/*-site", "apps/project-control", "apps/*/frontend", "apps/*/backend", "apps/*/shared/*"]
 # Consumed by ANOTHER app (ecommerce depends on these), so they must be installable from the registry.
 # Promote them to packages/* when you can; until then they publish with a warning.
 PUBLISH_EXTRA = {"apps/client-cms-editor/shared/cms", "apps/client-cms-editor/frontend", "apps/client-cms-editor/backend"}
+ALWAYS_OK = {"node_modules", "package.json", "package-lock.json", "README.md", "LICENSE", "CHANGELOG.md",
+             "tests", "test", "__tests__", "docs", "examples", "fixtures", "coverage", "reference"}
+# Dev/provenance files that are never part of an installable (matched on top-level names).
+DEV_ONLY = ["tsconfig*.json", "vitest.config.*", "vite.config.*", "eslint.config.*", "index.html", "*.md", "*.tgz", "startup.sh",
+            "*IMPORT_PROVENANCE.json", "screenshots"]
+NAME_OK = re.compile(r"^@inneranimalmedia/(agentsam-[a-z0-9-]+|theme-[a-z0-9-]+|client-cms-editor|ecommerce-cms-agentsam)$")
+RENAMES = {  # unpublished/pre-publication names that break the grammar -> canonical public names
+    "@inneranimalmedia/agentsam-sdk-brand": "@inneranimalmedia/agentsam-brand",
+    "@inneranimalmedia/agentsam-sdk-identity": "@inneranimalmedia/agentsam-identity",
+    "@inneranimalmedia/agentsam-sdk-cad-creator": "@inneranimalmedia/agentsam-cad-creator",
+    "@inneranimalmedia/agentsam-sdk-ecommerce": "@inneranimalmedia/ecommerce-cms-agentsam",
+    "@inneranimalmedia/work-graph": "@inneranimalmedia/agentsam-work-graph",
+    "@inneranimalmedia/heuristic-theme": "@inneranimalmedia/theme-heuristic",
+}
 DEP_SECTIONS = ("dependencies", "devDependencies", "peerDependencies", "optionalDependencies")
 ROOT = os.getcwd()
 WRITE, CHECK = "--write" in sys.argv, "--check" in sys.argv
@@ -63,29 +78,6 @@ def discover():
     return sorted(out)
 
 
-def public_files(data, rel):
-    """Ship exactly what the package declares public (exports/main/module/types/bin) + src."""
-    paths = []
-
-    def walk(node):
-        if isinstance(node, str):
-            paths.append(node)
-        elif isinstance(node, dict):
-            for v in node.values():
-                walk(v)
-        elif isinstance(node, list):
-            for v in node:
-                walk(v)
-
-    for key in ("exports", "main", "module", "types", "bin"):
-        walk(data.get(key))
-    tops = {re.sub(r"^\./", "", p).split("/")[0] for p in paths}
-    tops.discard("")
-    if os.path.isdir(os.path.join(ROOT, rel, "src")):
-        tops.add("src")
-    return sorted(t for t in tops if os.path.exists(os.path.join(ROOT, rel, t)))
-
-
 def main():
     pkgs = discover()
     names = [d["name"] for _, _, d, _ in pkgs]
@@ -94,7 +86,7 @@ def main():
         sys.exit(f"duplicate package names: {sorted(dupes)}")
     internal = set(names)
     baseline = max((d.get("version", "0.0.0") for _, _, d, _ in pkgs), key=semver_key)
-    caret = "^" + baseline
+    pin = baseline  # exact: a mismatched internal version must fail the install, not float
     violations, rows, review = [], [], []
 
     for rel, path, data, indent in pkgs:
@@ -114,9 +106,9 @@ def main():
             for dep, spec in list((data.get(sect) or {}).items()):
                 if dep not in internal and re.match(r"^(file:|link:)", spec or ""):
                     violations.append(f"{rel}: {dep}@{spec} points at a local path")
-                if dep in internal and spec != caret:
-                    notes.append(f"{dep.split('/')[1]}@{spec} -> {caret}")
-                    data[sect][dep] = caret
+                if dep in internal and spec != pin:
+                    notes.append(f"{dep.split('/')[1]}@{spec} -> {pin}")
+                    data[sect][dep] = pin
         if not private:
             if (data.get("publishConfig") or {}).get("access") != "public":
                 data.setdefault("publishConfig", {})["access"] = "public"
@@ -125,15 +117,24 @@ def main():
                 data["repository"] = {"type": "git", "url": REPO_URL, **({} if is_root else {"directory": rel})}
                 notes.append("repository added")
             if not data.get("files"):
-                files = public_files(data, rel)
-                if files:
-                    data["files"] = files
-                    notes.append(f"files={files}")
-                else:
-                    # Fail safe: never let a package with no `files` list reach `changeset publish`.
-                    data["private"] = True
-                    notes.append("HELD private: no `files` derivable; set `files` by hand")
-                    violations.append(f"{rel}: no files derivable; set `files` by hand")
+                data["private"] = True
+                notes.append("HELD private: no `files` allowlist; set it by hand")
+                violations.append(f"{rel}: no `files` allowlist (held private)")
+            elif not is_root:
+                ignore = set((data.get("agentsam") or {}).get("releaseIgnore", []))
+                shipped = {f.lstrip("!").rstrip("/").split("/")[0] for f in data["files"]}
+                main_target = str(data.get("main") or "")
+                compiled_inputs = {"src", "scripts"} if main_target.startswith("./dist/") else set()
+                present = [e for e in os.listdir(os.path.join(ROOT, rel))
+                           if not e.startswith(".") and e not in SKIP and e not in ALWAYS_OK
+                           and e not in ignore and e not in compiled_inputs and e not in shipped
+                           and not any(fnmatch.fnmatch(e, g) for g in DEV_ONLY)]
+                if present:
+                    violations.append(f"{rel}: on disk but not shipped (add to files, or agentsam.releaseIgnore): {sorted(present)}")
+            if not is_root and not NAME_OK.match(data["name"]):
+                violations.append(f"{rel}: name {data['name']} breaks the naming grammar -> {RENAMES.get(data['name'], '(name pending owner decision; do not auto-rename)')}")
+            if data["name"].startswith("@inneranimalmedia/agentsam-sdk-"):
+                violations.append(f"{rel}: '-sdk-' infix makes a package look like a chunk of the SDK; use {RENAMES.get(data['name'], 'agentsam-<name>')}")
             if rel.startswith("apps/"):
                 review.append(rel + ("   (PROMOTE to packages/*: another app consumes it)" if rel in PUBLISH_EXTRA else ""))
         rows.append((rel, data["name"], "private" if private else "PUBLISH", notes))
@@ -174,7 +175,7 @@ def main():
         print("\nREVIEW `files` by hand (apps ship built output, not just declared entries):")
         for r in review:
             print("  ", r)
-    if violations and (CHECK or WRITE):
+    if violations:
         print("\nVIOLATIONS:")
         for v in violations:
             print("  ", v)

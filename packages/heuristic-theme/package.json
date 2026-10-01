@@ -1,5 +1,5 @@
 {
-  "name": "@inneranimalmedia/heuristic-theme",
+  "name": "@inneranimalmedia/theme-heuristic",
   "version": "2.6.7",
   "description": "Stock AgentSam CMS storefront shell theme contract (heuristic-theme).",
   "type": "module",

@@ -14,11 +14,11 @@ export function createHeuristicThemeProductRow({ accountId, repositoryId = null 
     status: "wired",
     repository_id: repositoryId,
     canonical_path: "packages/heuristic-theme",
-    package_name: "@inneranimalmedia/heuristic-theme",
+    package_name: "@inneranimalmedia/theme-heuristic",
     metadata: {
       origin: "gallery_mount",
       normalization_state: "wired",
-      package: "@inneranimalmedia/heuristic-theme",
+      package: "@inneranimalmedia/theme-heuristic",
       preview_kind: "live",
       capabilities: ["theme.storefront.shell"],
       app_manifest: null,

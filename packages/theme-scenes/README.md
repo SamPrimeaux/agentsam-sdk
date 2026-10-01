@@ -4,7 +4,7 @@ Reusable **scene / shell / block** vocabulary for branded website experiences.
 
 | Layer | Owns |
 | --- | --- |
-| `@inneranimalmedia/agentsam-sdk-brand` | BrandPack — assets, tokens, roles, delivery |
+| `@inneranimalmedia/agentsam-brand` | BrandPack — assets, tokens, roles, delivery |
 | **`@inneranimalmedia/theme-scenes`** | How brands compose into experiences |
 | Page content | What this page says/shows |
 | Demo adapters | Real product surfaces inside scenes |
