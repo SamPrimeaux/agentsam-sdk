@@ -81,16 +81,29 @@ test('generateTicketActivationSql requires account and ticket id', () => {
   assert.throws(() => generateTicketActivationSql({ accountId: 'a' }), /ticket_id_required/);
 });
 
-test('generateTicketActivationSql wires a fresh agent_run and clears closed_at', () => {
+test('generateTicketActivationSql changes focus without fabricating an agent run', () => {
   const { sql, agentRunId } = generateTicketActivationSql({
     accountId: 'acc_1',
     ticketId: 'tkt_abc',
     now: 1000,
   });
-  assert.ok(agentRunId.startsWith('arun_'));
+  assert.equal(agentRunId, null);
+  assert.doesNotMatch(sql, /INSERT INTO agentsam_agent_run/);
   assert.match(sql, /status = 'active'/);
   assert.match(sql, /closed_at = NULL/);
-  assert.match(sql, /COALESCE\(agent_run_id,/);
+  assert.match(sql, /agent_run_id = COALESCE\(NULL, agent_run_id\)/);
+});
+
+test('generateTicketActivationSql can link a run created by the execution subsystem', () => {
+  const { sql, agentRunId } = generateTicketActivationSql({
+    accountId: 'acc_1',
+    ticketId: 'tkt_abc',
+    agentRunId: 'arun_real',
+    now: 1000,
+  });
+  assert.equal(agentRunId, 'arun_real');
+  assert.doesNotMatch(sql, /INSERT INTO agentsam_agent_run/);
+  assert.match(sql, /agent_run_id = COALESCE\('arun_real', agent_run_id\)/);
 });
 
 test('generateTicketCloseSql maps shipped -> completed and abandoned/blocked -> failed run status', () => {
