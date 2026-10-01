@@ -248,9 +248,9 @@ export async function runSetup(argv = [], options = {}) {
       }
       writeLine(write, '');
       writeLine(write, '  Next');
-      writeLine(write, '    agentsam gcloud auth login');
-      writeLine(write, '    agentsam google-cloud connection set --identity EMAIL --project PROJECT');
-      writeLine(write, '    agentsam google-cloud doctor');
+      writeLine(write, `    ${catalogCommand('google-cloud', 'auth login')}`);
+      writeLine(write, `    ${catalogCommand('google-cloud', 'connection set --identity EMAIL --project PROJECT')}`);
+      writeLine(write, `    ${catalogCommand('google-cloud', 'doctor')}`);
       writeLine(write, '');
     }
     return inv.errors?.length ? 2 : 0;
