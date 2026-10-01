@@ -82,7 +82,6 @@ export async function runStatus(argv = [], opts = {}) {
     offline: parsed.offline,
     discoverModels: parsed.discoverModels,
   });
-  const write = opts.write || ((value) => process.stdout.write(value));
   if (parsed.json) {
     const plan = buildStatusActionPlan(status);
     write(`${JSON.stringify({ ...status, next: plan }, null, 2)}\n`);
