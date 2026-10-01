@@ -342,16 +342,10 @@ export async function switchGoapGoal({
   if (!ticket) throw new Error('ticket_not_found');
   if (ticket.repository_id && ticket.repository_id !== repoId) throw new Error('ticket_repository_mismatch');
   if (!accId || ticket.account_id !== accId) throw new Error('ticket_account_mismatch');
-  const runId = createAgentRunId();
 
   const sql = `
-INSERT INTO agentsam_agent_run (
-  id, account_id, mode, status, started_at_unix, created_at_unix, updated_at_unix
-) VALUES ('${sqlEsc(runId)}', '${sqlEsc(accId)}', 'agent', 'running', ${now}, ${now}, ${now});
-
 UPDATE agentsam_tickets SET
   status = 'active',
-  agent_run_id = '${sqlEsc(runId)}',
   updated_at = ${now}
 WHERE id = '${sqlEsc(tid)}';
 
