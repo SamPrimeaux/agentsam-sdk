@@ -19,6 +19,7 @@ function parseStatusArgs(argv = []) {
     else if (arg === '--offline') opts.offline = true;
     else if (arg === '--no-discover') opts.discoverModels = false;
     else if (arg === '--interactive' || arg === '-i') opts.interactive = true;
+    else if (arg === '--help' || arg === '-h') opts.help = true;
     else throw new Error(`unknown status option: ${arg}`);
   }
   return opts;
