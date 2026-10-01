@@ -24,6 +24,33 @@ function writeLine(write, value = '') {
   write(`${value}\n`);
 }
 
+function catalogCommand(id, args = '') {
+  const entry = getCliCommand(id);
+  if (!entry) throw new Error(`setup_next_command_not_catalogued: ${id}`);
+  return `agentsam ${entry.id}${args ? ` ${args}` : ''}`;
+}
+
+export function setupNextCommands(capabilityIds = []) {
+  const commands = [
+    catalogCommand('status'),
+    catalogCommand('capabilities'),
+    catalogCommand('google-cloud', 'doctor'),
+  ];
+  if (capabilityIds.includes('google.cloud')) {
+    commands.push(catalogCommand('setup', 'google.cloud --inventory'));
+  }
+  if (capabilityIds.includes('image.vectorize')) {
+    commands.push(catalogCommand('capabilities', 'image.vectorize'));
+  }
+  return [...new Set(commands)];
+}
+
+function writeSetupNext(write, capabilityIds = []) {
+  writeLine(write, '  Next');
+  for (const command of setupNextCommands(capabilityIds)) writeLine(write, `    ${command}`);
+  writeLine(write, '');
+}
+
 function printHelp(write) {
   writeLine(write, '');
   writeLine(write, '  Agent Sam · setup');
