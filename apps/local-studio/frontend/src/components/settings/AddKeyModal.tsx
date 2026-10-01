@@ -3,6 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Eye, EyeOff, KeyRound, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { vaultRequest } from "@/lib/vault/client";
 
 /** service_name stored in user_secrets — drives vault AAD + Studio provider map. */
 const SERVICES = [
@@ -58,20 +59,17 @@ export function AddKeyModal({
     setSaving(true);
     setError(null);
     try {
-      const response = await fetch("/api/vault/secrets", {
+      const response = await vaultRequest<{ error?: string; vault_item_id?: string }>("/api/vault/secrets", {
         method: "POST",
-        credentials: "same-origin",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+        body: {
           service_name: service,
           secret_name: secretName,
           secret_type: "api_key",
           value,
           description: secretName,
-        }),
+        },
       });
-      const data = (await response.json().catch(() => ({}))) as { error?: string };
-      if (!response.ok) throw new Error(data.error || `Could not save secret (${response.status})`);
+      if (!response.ok) throw new Error(response.data.error || `Could not save secret (${response.status})`);
       setValue("");
       onSaved();
       onOpenChange(false);

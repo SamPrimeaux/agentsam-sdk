@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { KeyRound, Loader2, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { vaultRequest } from "@/lib/vault/client";
 
 export type StudioMintedCredential = {
   id: string;
@@ -40,13 +41,11 @@ export function CredentialsTable({ refreshToken = 0 }: { refreshToken?: number }
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/vault/credentials", { credentials: "same-origin" });
-      const data = (await response.json().catch(() => ({}))) as {
-        error?: string;
-        credentials?: StudioMintedCredential[];
-      };
-      if (!response.ok) throw new Error(data.error || `Could not load credentials (${response.status})`);
-      setRows(Array.isArray(data.credentials) ? data.credentials : []);
+      const response = await vaultRequest<{ error?: string; credentials?: StudioMintedCredential[] }>(
+        "/api/vault/credentials",
+      );
+      if (!response.ok) throw new Error(response.data.error || `Could not load credentials (${response.status})`);
+      setRows(Array.isArray(response.data.credentials) ? response.data.credentials : []);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not load credentials");
     } finally {
@@ -62,12 +61,11 @@ export function CredentialsTable({ refreshToken = 0 }: { refreshToken?: number }
     setRevoking(id);
     setError(null);
     try {
-      const response = await fetch(`/api/vault/credentials/${encodeURIComponent(id)}`, {
-        method: "DELETE",
-        credentials: "same-origin",
-      });
-      const data = (await response.json().catch(() => ({}))) as { error?: string; ok?: boolean };
-      if (!response.ok || data.ok === false) throw new Error(data.error || "Could not revoke");
+      const response = await vaultRequest<{ error?: string; ok?: boolean }>(
+        `/api/vault/credentials/${encodeURIComponent(id)}`,
+        { method: "DELETE" },
+      );
+      if (!response.ok || response.data.ok === false) throw new Error(response.data.error || "Could not revoke");
       setConfirmId(null);
       await load();
     } catch (caught) {

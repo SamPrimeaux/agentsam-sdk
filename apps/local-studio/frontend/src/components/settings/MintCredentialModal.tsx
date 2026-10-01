@@ -3,6 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Check, Copy, Eye, EyeOff, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { vaultRequest } from "@/lib/vault/client";
 
 type OwnerKind = "account" | "service";
 
@@ -47,25 +48,22 @@ export function MintCredentialModal({
     setSaving(true);
     setError(null);
     try {
-      const response = await fetch("/api/vault/credentials", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          kind,
-          name: label,
-          expiration,
-          client_type: kind === "service" ? "integration" : "cli",
-        }),
-      });
-      const data = (await response.json().catch(() => ({}))) as {
+      const response = await vaultRequest<{
         error?: string;
         secret_once?: string;
         env?: string;
         credential?: { env?: string };
-      };
-      if (!response.ok) throw new Error(data.error || `Mint failed (${response.status})`);
-      const secret = String(data.secret_once || "").trim();
+      }>("/api/vault/credentials", {
+        method: "POST",
+        body: {
+          kind,
+          name: label,
+          expiration,
+          client_type: kind === "service" ? "integration" : "cli",
+        },
+      });
+      if (!response.ok) throw new Error(response.data.error || `Mint failed (${response.status})`);
+      const secret = String(response.data.secret_once || "").trim();
       if (!secret) throw new Error("mint_returned_no_secret");
       const expectedPrefix = kind === "service" ? "brk_" : "aak_";
       if (!secret.startsWith(expectedPrefix)) {
@@ -73,8 +71,8 @@ export function MintCredentialModal({
       }
       setSecretOnce(secret);
       setEnvName(
-        data.env ||
-          data.credential?.env ||
+        response.data.env ||
+          response.data.credential?.env ||
           (kind === "service" ? "AGENTSAM_BRIDGE_KEY" : "AGENTSAM_API_KEY"),
       );
       onMinted();

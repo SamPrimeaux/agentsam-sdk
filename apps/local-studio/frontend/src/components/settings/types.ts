@@ -35,6 +35,7 @@ export type OAuthConnectionRecord = {
 
 export type VaultSecret = {
   id: string;
+  vault_item_id: string;
   name: string;
   type: string;
   service: string;

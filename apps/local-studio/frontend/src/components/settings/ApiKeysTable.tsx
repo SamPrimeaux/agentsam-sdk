@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { KeyRound, Loader2, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { vaultRequest } from "@/lib/vault/client";
 import type { VaultSecret } from "./types";
 
 const SERVICE_LABELS: Record<string, string> = {
@@ -44,13 +45,9 @@ export function ApiKeysTable({ refreshToken = 0 }: { refreshToken?: number }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/vault/secrets", { credentials: "same-origin" });
-      const data = (await response.json().catch(() => ({}))) as {
-        error?: string;
-        secrets?: VaultSecret[];
-      };
-      if (!response.ok) throw new Error(data.error || `Could not load secrets (${response.status})`);
-      setSecrets(Array.isArray(data.secrets) ? data.secrets : []);
+      const response = await vaultRequest<{ error?: string; secrets?: VaultSecret[] }>("/api/vault/secrets");
+      if (!response.ok) throw new Error(response.data.error || `Could not load secrets (${response.status})`);
+      setSecrets(Array.isArray(response.data.secrets) ? response.data.secrets : []);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not load secrets");
     } finally {
@@ -66,12 +63,11 @@ export function ApiKeysTable({ refreshToken = 0 }: { refreshToken?: number }) {
     setRevoking(id);
     setError(null);
     try {
-      const response = await fetch(`/api/vault/secrets/${encodeURIComponent(id)}`, {
-        method: "DELETE",
-        credentials: "same-origin",
-      });
-      const data = (await response.json().catch(() => ({}))) as { error?: string };
-      if (!response.ok) throw new Error(data.error || "Could not revoke secret");
+      const response = await vaultRequest<{ error?: string }>(
+        `/api/vault/secrets/${encodeURIComponent(id)}`,
+        { method: "DELETE" },
+      );
+      if (!response.ok) throw new Error(response.data.error || "Could not revoke secret");
       setConfirmId(null);
       await load();
     } catch (caught) {

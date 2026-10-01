@@ -351,6 +351,7 @@ async function handleList(env, accountId) {
       }
       return {
         id: r.id,
+        vault_item_id: r.id,
         name: r.secret_name,
         type: r.secret_type,
         kind: r.kind || "provider_key",
@@ -448,6 +449,7 @@ async function handleCreate(env, accountId, body) {
   return json({
     ok: true,
     id: row?.id || id,
+    vault_item_id: row?.id || id,
     service,
     name,
     last4: last4(value),
