@@ -1,0 +1,28 @@
+{
+  "name": "@inneranimalmedia/agentsam-goap",
+  "version": "0.1.0",
+  "description": "Portable AgentSam GOAP control-plane contracts and adapters over existing blackboard, ticket, workflow, execution, approval, queue, runtime, and evidence stores.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./contracts": "./src/contracts.js",
+    "./control-plane": "./src/control-plane.js",
+    "./adapters/memory": "./src/adapters/memory.js",
+    "./adapters/d1-sqlite": "./src/adapters/d1-sqlite.js"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT"
+}
