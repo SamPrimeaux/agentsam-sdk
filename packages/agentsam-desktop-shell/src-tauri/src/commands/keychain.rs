@@ -7,10 +7,11 @@
 #[cfg(not(target_os = "android"))]
 use keyring::Entry;
 use serde::Serialize;
+use std::sync::Mutex;
+use tauri::State;
 
 const KEYCHAIN_APP_ID: &str = "local-studio";
 const IDENTITY_SESSION_ACCOUNT: &str = "identity_session";
-const IDENTITY_PENDING_ACCOUNT: &str = "identity_native_oauth_pending";
 const PROVIDER_PREFIX: &str = "provider:";
 
 #[derive(Debug, Serialize)]
@@ -18,8 +19,24 @@ pub struct KeychainError {
     message: String,
 }
 
-fn identity_account_allowed(account: &str) -> bool {
-    account == IDENTITY_SESSION_ACCOUNT || account.starts_with("identity_native_")
+#[derive(Default)]
+pub struct IdentityPendingState {
+    value: Mutex<Option<String>>,
+}
+
+#[derive(Default)]
+pub struct IdentitySessionState {
+    cache: Mutex<IdentitySessionCache>,
+}
+
+#[derive(Default)]
+struct IdentitySessionCache {
+    loaded: bool,
+    value: Option<String>,
+}
+
+fn state_lock_error() -> KeychainError {
+    KeychainError { message: "identity_secure_state_poisoned".into() }
 }
 
 fn canonical_provider(provider: &str) -> Result<&'static str, KeychainError> {
@@ -94,42 +111,91 @@ fn delete_value(account: &str) -> Result<(), KeychainError> {
     }
 }
 
-#[tauri::command]
-pub fn identity_session_exists() -> Result<bool, KeychainError> {
-    Ok(get_value(IDENTITY_SESSION_ACCOUNT)?.is_some())
+fn session_get_cached(state: &IdentitySessionState) -> Result<Option<String>, KeychainError> {
+    {
+        let cache = state.cache.lock().map_err(|_| state_lock_error())?;
+        if cache.loaded {
+            return Ok(cache.value.clone());
+        }
+    }
+    let value = get_value(IDENTITY_SESSION_ACCOUNT)?;
+    let mut cache = state.cache.lock().map_err(|_| state_lock_error())?;
+    cache.loaded = true;
+    cache.value = value.clone();
+    Ok(value)
+}
+
+fn session_set_cached(state: &IdentitySessionState, value: &str) -> Result<(), KeychainError> {
+    set_value(IDENTITY_SESSION_ACCOUNT, value)?;
+    let mut cache = state.cache.lock().map_err(|_| state_lock_error())?;
+    cache.loaded = true;
+    cache.value = Some(value.to_string());
+    Ok(())
+}
+
+fn session_delete_cached(state: &IdentitySessionState) -> Result<(), KeychainError> {
+    delete_value(IDENTITY_SESSION_ACCOUNT)?;
+    let mut cache = state.cache.lock().map_err(|_| state_lock_error())?;
+    cache.loaded = true;
+    cache.value = None;
+    Ok(())
 }
 
 #[tauri::command]
-pub fn identity_pending_set(value: String) -> Result<(), KeychainError> {
+pub fn identity_session_exists(state: State<'_, IdentitySessionState>) -> Result<bool, KeychainError> {
+    Ok(session_get_cached(&state)?.is_some())
+}
+
+#[tauri::command]
+pub fn identity_pending_set(
+    state: State<'_, IdentityPendingState>,
+    value: String,
+) -> Result<(), KeychainError> {
     if value.trim().is_empty() {
         return Err(KeychainError { message: "identity_pending_value_required".into() });
     }
-    set_value(IDENTITY_PENDING_ACCOUNT, value.as_str())
+    let mut pending = state.value.lock().map_err(|_| state_lock_error())?;
+    *pending = Some(value);
+    Ok(())
 }
 
 #[tauri::command]
-pub fn identity_pending_get() -> Result<Option<String>, KeychainError> {
-    get_value(IDENTITY_PENDING_ACCOUNT)
+pub fn identity_pending_get(
+    state: State<'_, IdentityPendingState>,
+) -> Result<Option<String>, KeychainError> {
+    let pending = state.value.lock().map_err(|_| state_lock_error())?;
+    Ok(pending.clone())
 }
 
 #[tauri::command]
-pub fn identity_pending_delete() -> Result<(), KeychainError> {
-    delete_value(IDENTITY_PENDING_ACCOUNT)
+pub fn identity_pending_delete(
+    state: State<'_, IdentityPendingState>,
+) -> Result<(), KeychainError> {
+    let mut pending = state.value.lock().map_err(|_| state_lock_error())?;
+    *pending = None;
+    Ok(())
 }
 
-pub(crate) fn identity_session_get_internal() -> Result<Option<String>, String> {
-    get_value(IDENTITY_SESSION_ACCOUNT).map_err(|error| error.message)
+pub(crate) fn identity_session_get_internal(
+    state: &IdentitySessionState,
+) -> Result<Option<String>, String> {
+    session_get_cached(state).map_err(|error| error.message)
 }
 
-pub(crate) fn identity_session_set_internal(value: &str) -> Result<(), String> {
+pub(crate) fn identity_session_set_internal(
+    state: &IdentitySessionState,
+    value: &str,
+) -> Result<(), String> {
     if value.trim().is_empty() {
         return Err("identity_session_value_required".into());
     }
-    set_value(IDENTITY_SESSION_ACCOUNT, value).map_err(|error| error.message)
+    session_set_cached(state, value).map_err(|error| error.message)
 }
 
-pub(crate) fn identity_session_delete_internal() -> Result<(), String> {
-    delete_value(IDENTITY_SESSION_ACCOUNT).map_err(|error| error.message)
+pub(crate) fn identity_session_delete_internal(
+    state: &IdentitySessionState,
+) -> Result<(), String> {
+    session_delete_cached(state).map_err(|error| error.message)
 }
 
 
@@ -161,15 +227,6 @@ pub(crate) fn provider_key_get_internal(provider: &str) -> Result<Option<String>
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn identity_store_is_allowlisted() {
-        assert!(identity_account_allowed(IDENTITY_SESSION_ACCOUNT));
-        assert!(identity_account_allowed("identity_native_oauth_pending"));
-        assert!(identity_account_allowed("identity_native_pkce_pending"));
-        assert!(!identity_account_allowed("provider:openai"));
-        assert!(!identity_account_allowed("anything_else"));
-    }
 
     #[test]
     fn provider_accounts_use_canonical_ids() {

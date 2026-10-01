@@ -102,6 +102,88 @@ test('desktop identity validates token audience and provisions AgentSam desktop 
   assert.equal(calls[0].sessionType, 'desktop');
 });
 
+
+
+test('desktop identity exchanges PKCE code server-side and uses provider-issued installed-app secret when required', async () => {
+  const identity = {
+    async provisionOAuthUser() {
+      return {
+        authUserId: 'au_code',
+        sessionId: 'sess_code',
+        session: { expires_at: '2026-10-29T00:00:00.000Z' },
+      };
+    },
+  };
+  const adapter = {
+    async findUserById() {
+      return { id: 'au_code', email: 'code@example.com', display_name: 'Code User' };
+    },
+    async logAuthEvent() {},
+  };
+
+  let tokenExchangeSeen = false;
+  let tokenInfoSeen = false;
+  const response = await handleGoogleDesktopLoginExchangeRequest(
+    request({
+      code: 'one-time-code',
+      code_verifier: 'v'.repeat(64),
+      redirect_uri: 'http://127.0.0.1:43123/callback',
+      client_id: DESKTOP_ID,
+    }),
+    {
+      GOOGLE_DESKTOP_CLIENT_ID: DESKTOP_ID,
+      GOOGLE_DESKTOP_CLIENT_SECRET: 'desktop-provider-secret',
+    },
+    {
+      identity,
+      adapter,
+      fetchImpl: async (url, init = {}) => {
+        const parsed = new URL(String(url));
+        if (parsed.pathname === '/token') {
+          tokenExchangeSeen = true;
+          const form = new URLSearchParams(String(init.body || ''));
+          assert.equal(form.get('client_id'), DESKTOP_ID);
+          assert.equal(form.get('client_secret'), 'desktop-provider-secret');
+          assert.equal(form.get('code'), 'one-time-code');
+          assert.equal(form.get('code_verifier'), 'v'.repeat(64));
+          return Response.json({
+            access_token: 'server-exchanged-access',
+            id_token: 'server-exchanged-id',
+          });
+        }
+        if (parsed.pathname === '/tokeninfo') {
+          tokenInfoSeen = true;
+          assert.equal(parsed.searchParams.get('id_token'), 'server-exchanged-id');
+          return Response.json({
+            aud: DESKTOP_ID,
+            iss: 'https://accounts.google.com',
+            exp: String(Math.floor(Date.now() / 1000) + 300),
+            sub: 'google-code-user',
+            email: 'code@example.com',
+            email_verified: 'true',
+          });
+        }
+        throw new Error('unexpected_google_url:' + parsed.toString());
+      },
+      fetchProfile: async (accessToken) => {
+        assert.equal(accessToken, 'server-exchanged-access');
+        return {
+          sub: 'google-code-user',
+          email: 'code@example.com',
+          name: 'Code User',
+        };
+      },
+    },
+  );
+
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.authenticated, true);
+  assert.equal(body.session_id, 'sess_code');
+  assert.equal(tokenExchangeSeen, true);
+  assert.equal(tokenInfoSeen, true);
+});
+
 test('desktop identity rejects a Google token minted for another client', async () => {
   const response = await handleGoogleDesktopLoginExchangeRequest(
     request({

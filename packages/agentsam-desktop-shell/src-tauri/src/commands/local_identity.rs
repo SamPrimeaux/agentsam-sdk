@@ -2,7 +2,7 @@ use reqwest::Method;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::path::PathBuf;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, State};
 
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 use std::io::Write;
@@ -188,6 +188,7 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
 
 async fn service_studio_bridge(
     config: &IdentityRuntimeConfig,
+    session_state: &super::keychain::IdentitySessionState,
     request_json: &str,
 ) -> Result<String, String> {
     let origin = config
@@ -221,7 +222,7 @@ async fn service_studio_bridge(
         }
     }
 
-    if let Some(session_id) = super::keychain::identity_session_get_internal()? {
+    if let Some(session_id) = super::keychain::identity_session_get_internal(session_state)? {
         let session_id = session_id.trim();
         if !session_id.is_empty() {
             if session_id.len() > 2048 || session_id.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10) {
@@ -272,6 +273,7 @@ fn identity_service_route(op: &str) -> Result<(Method, &'static str, bool), Stri
 
 async fn service_identity_bridge(
     config: &IdentityRuntimeConfig,
+    session_state: &super::keychain::IdentitySessionState,
     request_json: &str,
 ) -> Result<String, String> {
     let origin = config
@@ -288,7 +290,7 @@ async fn service_identity_bridge(
         .unwrap_or("")
         .to_string();
     let stored_session = if matches!(op.as_str(), "status" | "logout") {
-        super::keychain::identity_session_get_internal()?
+        super::keychain::identity_session_get_internal(session_state)?
     } else {
         None
     };
@@ -329,7 +331,7 @@ async fn service_identity_bridge(
             .map(str::trim)
             .filter(|value| !value.is_empty())
             .ok_or_else(|| "identity_session_missing".to_string())?;
-        super::keychain::identity_session_set_internal(session_id)?;
+        super::keychain::identity_session_set_internal(session_state, session_id)?;
         if let Value::Object(ref mut map) = value {
             map.remove("session_id");
         }
@@ -337,9 +339,9 @@ async fn service_identity_bridge(
     }
 
     if op == "logout" {
-        super::keychain::identity_session_delete_internal()?;
+        super::keychain::identity_session_delete_internal(session_state)?;
     } else if op == "status" && status.as_u16() == 401 {
-        let _ = super::keychain::identity_session_delete_internal();
+        let _ = super::keychain::identity_session_delete_internal(session_state);
     }
 
     if !body.trim().is_empty() {
@@ -432,19 +434,27 @@ async fn run_local_identity(app: AppHandle, request_json: String) -> Result<Stri
 }
 
 #[tauri::command]
-pub async fn studio_service_bridge(app: AppHandle, request_json: String) -> Result<String, String> {
+pub async fn studio_service_bridge(
+    app: AppHandle,
+    session_state: State<'_, super::keychain::IdentitySessionState>,
+    request_json: String,
+) -> Result<String, String> {
     let config = load_runtime_config(&app)?;
     if config.authority != "service" {
         return Err("studio_service_requires_connected_authority".into());
     }
-    service_studio_bridge(&config, &request_json).await
+    service_studio_bridge(&config, &session_state, &request_json).await
 }
 
 #[tauri::command]
-pub async fn identity_bridge(app: AppHandle, request_json: String) -> Result<String, String> {
+pub async fn identity_bridge(
+    app: AppHandle,
+    session_state: State<'_, super::keychain::IdentitySessionState>,
+    request_json: String,
+) -> Result<String, String> {
     let config = load_runtime_config(&app)?;
     match config.authority.as_str() {
-        "service" => service_identity_bridge(&config, &request_json).await,
+        "service" => service_identity_bridge(&config, &session_state, &request_json).await,
         "standalone" => {
             #[cfg(not(any(target_os = "ios", target_os = "android")))]
             {

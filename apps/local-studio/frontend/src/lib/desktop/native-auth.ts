@@ -239,8 +239,10 @@ export async function exchangeNativeHandoff(callbackUrl: string): Promise<Native
   }
 
   await identityPendingDelete();
-  const status = (await invokeIdentity({ op: "status" })) as NativeIdentityStatus;
-  return acceptDesktopIdentity(status);
+  return acceptDesktopIdentity({
+    ...response,
+    authenticated: true,
+  });
 }
 
 export async function restoreNativeSession(): Promise<NativeIdentityStatus> {

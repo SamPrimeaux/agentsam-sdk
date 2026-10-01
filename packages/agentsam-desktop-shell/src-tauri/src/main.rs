@@ -13,6 +13,8 @@ fn main() {
         .manage(agentsamd::AgentsamdState::default())
         .manage(local_content::LocalContentState::default())
         .manage(deep_link::DeepLinkState::default())
+        .manage(keychain::IdentityPendingState::default())
+        .manage(keychain::IdentitySessionState::default())
         .setup(|app| {
             tray::setup_tray(app)?;
             deep_link::register_scheme(app)?;
