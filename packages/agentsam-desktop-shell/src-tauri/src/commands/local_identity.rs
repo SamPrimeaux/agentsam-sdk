@@ -131,6 +131,20 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
             };
             Ok((method, path.to_string()))
         }
+        "plugins" => {
+            let path = request.path.as_deref().unwrap_or("").trim();
+            if path != "/api/plugins/tools/execute"
+                || path.contains("://")
+                || path.contains('\\')
+                || path.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10)
+            {
+                return Err("studio_service_plugins_path_invalid".into());
+            }
+            if request.method.as_deref().unwrap_or("POST").to_ascii_uppercase() != "POST" {
+                return Err("studio_service_plugins_method_invalid".into());
+            }
+            Ok((Method::POST, path.to_string()))
+        }
         "database" => {
             let path = request.path.as_deref().unwrap_or("").trim();
             if !path.starts_with("/api/database/")

@@ -50,11 +50,11 @@ try {
     assert.equal(cli(['index', 'run']).published, true);
     assert.equal(cli(['index', 'run']).published, false);
     assert.equal(cli(['search', 'customerFeature']).hits[0].path, 'lib/task.ts');
-    cli(['repo', 'snapshot', '--save']);
+    cli(['repo', 'snapshot', '--save', '--json']);
     fs.appendFileSync(path.join(repo, 'lib/task.ts'), 'export const nextFeature = true;\n');
-    cli(['repo', 'snapshot', '--save']);
-    assert.equal(cli(['repo', 'compare']).counts.total_lines.delta, 1);
-    assert.equal(cli(['repo', 'history']).length, 2);
+    cli(['repo', 'snapshot', '--save', '--json']);
+    assert.equal(cli(['repo', 'compare', '--json']).counts.total_lines.delta, 1);
+    assert.equal(cli(['repo', 'history', '--json']).length, 2);
     run(process.execPath, [installed, 'dockerize', '--type', 'knowledge_service', '--name', `knowledge-${name}`, '--repository', `${name}=${repo}`, '--write-only'], repo);
     const manifest = JSON.parse(fs.readFileSync(path.join(repo, '.agentsam/docker/index.json'), 'utf8'));
     const build = Object.values(manifest)[0];

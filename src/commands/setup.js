@@ -18,9 +18,37 @@ import {
   RUNTIME_PROFILES,
 } from '../lib/setup/runtime.js';
 import { runRuntime } from './runtime.js';
+import { getCliCommand } from '../cli/command-catalog.js';
 
 function writeLine(write, value = '') {
   write(`${value}\n`);
+}
+
+function catalogCommand(id, args = '') {
+  const entry = getCliCommand(id);
+  if (!entry) throw new Error(`setup_next_command_not_catalogued: ${id}`);
+  return `agentsam ${entry.id}${args ? ` ${args}` : ''}`;
+}
+
+export function setupNextCommands(capabilityIds = []) {
+  const commands = [
+    catalogCommand('status'),
+    catalogCommand('capabilities'),
+    catalogCommand('google-cloud', 'doctor'),
+  ];
+  if (capabilityIds.includes('google.cloud')) {
+    commands.push(catalogCommand('setup', 'google.cloud --inventory'));
+  }
+  if (capabilityIds.includes('image.vectorize')) {
+    commands.push(catalogCommand('capabilities', 'image.vectorize'));
+  }
+  return [...new Set(commands)];
+}
+
+function writeSetupNext(write, capabilityIds = []) {
+  writeLine(write, '  Next');
+  for (const command of setupNextCommands(capabilityIds)) writeLine(write, `    ${command}`);
+  writeLine(write, '');
 }
 
 function printHelp(write) {
@@ -220,9 +248,9 @@ export async function runSetup(argv = [], options = {}) {
       }
       writeLine(write, '');
       writeLine(write, '  Next');
-      writeLine(write, '    agentsam gcloud auth login');
-      writeLine(write, '    agentsam google-cloud connection set --identity EMAIL --project PROJECT');
-      writeLine(write, '    agentsam google-cloud doctor');
+      writeLine(write, `    ${catalogCommand('google-cloud', 'auth login')}`);
+      writeLine(write, `    ${catalogCommand('google-cloud', 'connection set --identity EMAIL --project PROJECT')}`);
+      writeLine(write, `    ${catalogCommand('google-cloud', 'doctor')}`);
       writeLine(write, '');
     }
     return inv.errors?.length ? 2 : 0;
@@ -243,8 +271,7 @@ export async function runSetup(argv = [], options = {}) {
   if (dryRun || !plan.would_install.length) {
     if (!plan.would_install.length) {
       writeLine(write, '  ✓ setup complete — requested capabilities already satisfied');
-      writeLine(write, '  Next: agentsam doctor · agentsam capabilities · agentsam google-cloud doctor');
-      writeLine(write, '');
+      writeSetupNext(write, capabilityIds);
     }
     if (json) write(JSON.stringify({ environment, plan, executed: false }, null, 2) + '\n');
     return 0;
@@ -262,17 +289,7 @@ export async function runSetup(argv = [], options = {}) {
   writeLine(write, receipt.ok ? '  ✓ Agent Sam setup complete' : '  ✕ Setup finished with failures');
   writeLine(write, `  Receipt  ${receipt.path}`);
   writeLine(write, '');
-  writeLine(write, '  Next');
-  writeLine(write, '    agentsam doctor');
-  writeLine(write, '    agentsam capabilities');
-  if (capabilityIds.includes('google.cloud')) {
-    writeLine(write, '    agentsam setup google.cloud --inventory');
-    writeLine(write, '    agentsam gcloud auth login');
-  }
-  if (capabilityIds.includes('image.vectorize')) {
-    writeLine(write, '    agentsam image optimize ./logo.png   # when image command ships');
-  }
-  writeLine(write, '');
+  writeSetupNext(write, capabilityIds);
 
   if (json) write(JSON.stringify({ environment, plan, receipt }, null, 2) + '\n');
   return receipt.ok ? 0 : 2;

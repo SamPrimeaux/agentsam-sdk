@@ -4,6 +4,7 @@ import { buildStatusActionPlan } from '../status/actions.js';
 import { openExternalUrl } from '../lib/open-url.js';
 import readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
+import { renderCommandHelp } from '../ui/cli/help.js';
 
 function parseStatusArgs(argv = []) {
   const opts = {
@@ -11,12 +12,14 @@ function parseStatusArgs(argv = []) {
     offline: false,
     discoverModels: true,
     interactive: false,
+    help: false,
   };
   for (const arg of argv) {
     if (arg === '--json') opts.json = true;
     else if (arg === '--offline') opts.offline = true;
     else if (arg === '--no-discover') opts.discoverModels = false;
     else if (arg === '--interactive' || arg === '-i') opts.interactive = true;
+    else if (arg === '--help' || arg === '-h') opts.help = true;
     else throw new Error(`unknown status option: ${arg}`);
   }
   return opts;
@@ -68,13 +71,17 @@ async function runInteractiveMenu(status, write) {
 
 export async function runStatus(argv = [], opts = {}) {
   const parsed = parseStatusArgs(argv);
+  const write = opts.write || ((value) => process.stdout.write(value));
+  if (parsed.help) {
+    write(renderCommandHelp('status'));
+    return null;
+  }
   const status = await (opts.collectRuntime || collectRuntimeStatus)({
     ...opts,
     cwd: opts.cwd || process.cwd(),
     offline: parsed.offline,
     discoverModels: parsed.discoverModels,
   });
-  const write = opts.write || ((value) => process.stdout.write(value));
   if (parsed.json) {
     const plan = buildStatusActionPlan(status);
     write(`${JSON.stringify({ ...status, next: plan }, null, 2)}\n`);

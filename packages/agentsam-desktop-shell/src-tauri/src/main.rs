@@ -43,6 +43,7 @@ fn main() {
             local_content::local_content_bridge,
             native_capabilities::native_capabilities,
             system::open_external_url,
+            system::desktop_workspace_context,
             google_desktop_identity::google_desktop_identity_login,
         ])
         .run(tauri::generate_context!())
