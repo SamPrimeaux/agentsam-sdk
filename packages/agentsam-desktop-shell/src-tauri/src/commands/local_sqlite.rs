@@ -9,49 +9,10 @@ use std::process::{Command, Stdio};
 use tauri::{AppHandle, Manager};
 
 fn find_bridge_script(app: &AppHandle) -> Result<PathBuf, String> {
-  // Prefer env override for packaged apps.
-  if let Ok(p) = std::env::var("AGENTSAM_SQLITE_BRIDGE") {
-    let path = PathBuf::from(p);
-    if path.is_file() {
-      return Ok(path);
-    }
-  }
-
   if let Ok(resources) = app.path().resource_dir() {
     let packaged = resources.join("runtime/database/scripts/local-sqlite-bridge.mjs");
     if packaged.is_file() {
       return Ok(packaged);
-    }
-  }
-
-  // Dev: walk up from cwd / executable for monorepo package script.
-  let mut candidates: Vec<PathBuf> = Vec::new();
-  if let Ok(cwd) = std::env::current_dir() {
-    candidates.push(cwd.clone());
-    if let Some(parent) = cwd.parent() {
-      candidates.push(parent.to_path_buf());
-    }
-  }
-  if let Ok(exe) = std::env::current_exe() {
-    if let Some(dir) = exe.parent() {
-      candidates.push(dir.to_path_buf());
-      for _ in 0..6 {
-        if let Some(parent) = candidates.last().and_then(|p| p.parent().map(|x| x.to_path_buf())) {
-          candidates.push(parent);
-        }
-      }
-    }
-  }
-
-  for root in candidates {
-    let path = root.join("packages/agentsam-database-editor/scripts/local-sqlite-bridge.mjs");
-    if path.is_file() {
-      return Ok(path);
-    }
-    let alt = root
-      .join("../agentsam-database-editor/scripts/local-sqlite-bridge.mjs");
-    if alt.is_file() {
-      return Ok(alt.canonicalize().unwrap_or(alt));
     }
   }
 
@@ -94,29 +55,15 @@ pub async fn local_sqlite_bridge(app: AppHandle, request_json: String) -> Result
   }
   let body = serde_json::to_string(&payload).map_err(|e| e.to_string())?;
 
-  let node = if let Ok(path) = std::env::var("AGENTSAM_NODE_BINARY") {
-    let candidate = PathBuf::from(path);
-    if candidate.is_file() { candidate } else { PathBuf::from("node") }
-  } else if let Ok(exe) = std::env::current_exe() {
-    let candidate = exe
-      .parent()
-      .map(|dir| dir.join(if cfg!(windows) { "node.exe" } else { "node" }))
-      .unwrap_or_else(|| PathBuf::from("node"));
-    if candidate.is_file() {
-      candidate
-    } else {
-      [
-        PathBuf::from("/opt/homebrew/bin/node"),
-        PathBuf::from("/usr/local/bin/node"),
-        PathBuf::from("/usr/bin/node"),
-      ]
-      .into_iter()
-      .find(|path| path.is_file())
-      .unwrap_or_else(|| PathBuf::from("node"))
-    }
-  } else {
-    PathBuf::from("node")
-  };
+  let exe = std::env::current_exe()
+    .map_err(|e| format!("packaged_node_executable_unavailable:{e}"))?;
+  let dir = exe
+    .parent()
+    .ok_or_else(|| "packaged_node_directory_unavailable".to_string())?;
+  let node = dir.join(if cfg!(windows) { "node.exe" } else { "node" });
+  if !node.is_file() {
+    return Err("packaged_node_runtime_missing".into());
+  }
 
   let mut command = Command::new(node);
   command
@@ -128,7 +75,7 @@ pub async fn local_sqlite_bridge(app: AppHandle, request_json: String) -> Result
   if let Ok(resources) = app.path().resource_dir() {
     let migrations = resources.join("runtime/migrations");
     if migrations.is_dir() {
-      command.env("AGENTSAM_RUNTIME_MIGRATIONS", migrations);
+      command.arg("--migrations").arg(migrations);
     }
   }
   let mut child = command

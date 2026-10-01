@@ -22,41 +22,41 @@ fn default_authority() -> String {
 }
 
 fn load_runtime_config(app: &AppHandle) -> Result<IdentityRuntimeConfig, String> {
-    let env_authority = std::env::var("AGENTSAM_IDENTITY_AUTHORITY").ok();
-    let env_origin = std::env::var("AGENTSAM_IDENTITY_SERVICE_ORIGIN").ok();
-
-    let mut config = if let Ok(resources) = app.path().resource_dir() {
-        let path = resources.join("runtime/identity/runtime.json");
-        if path.is_file() {
-            let raw = std::fs::read_to_string(&path)
-                .map_err(|e| format!("identity_runtime_config_read_failed:{e}"))?;
-            serde_json::from_str::<IdentityRuntimeConfig>(&raw)
-                .map_err(|e| format!("identity_runtime_config_invalid:{e}"))?
-        } else {
-            IdentityRuntimeConfig {
-                authority: default_authority(),
-                service_origin: None,
-            }
-        }
-    } else {
-        IdentityRuntimeConfig {
-            authority: default_authority(),
-            service_origin: None,
-        }
-    };
-
-    if let Some(authority) = env_authority {
-        config.authority = authority;
+    let resources = app
+        .path()
+        .resource_dir()
+        .map_err(|e| format!("identity_runtime_resource_dir_unavailable:{e}"))?;
+    let path = resources.join("runtime/identity/runtime.json");
+    if !path.is_file() {
+        return Err("identity_runtime_config_missing".into());
     }
-    if let Some(origin) = env_origin {
-        config.service_origin = Some(origin);
-    }
+    let raw = std::fs::read_to_string(&path)
+        .map_err(|e| format!("identity_runtime_config_read_failed:{e}"))?;
+    let mut config = serde_json::from_str::<IdentityRuntimeConfig>(&raw)
+        .map_err(|e| format!("identity_runtime_config_invalid:{e}"))?;
+
     config.authority = config.authority.trim().to_lowercase();
     config.service_origin = config
         .service_origin
         .map(|value| value.trim().trim_end_matches('/').to_string())
         .filter(|value| !value.is_empty());
     Ok(config)
+}
+
+#[tauri::command]
+pub fn identity_runtime_config(app: AppHandle) -> Result<Value, String> {
+    let config = load_runtime_config(&app)?;
+    if config.authority == "service" {
+        let origin = config
+            .service_origin
+            .as_deref()
+            .ok_or_else(|| "identity_service_not_configured".to_string())?;
+        validate_service_origin(origin)?;
+    }
+    Ok(json!({
+        "authority": config.authority,
+        "service_origin": config.service_origin,
+    }))
 }
 
 fn validate_service_origin(origin: &str) -> Result<(), String> {
@@ -354,29 +354,10 @@ async fn service_identity_bridge(
 
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 fn find_bridge_script(app: &AppHandle) -> Result<PathBuf, String> {
-    if let Ok(p) = std::env::var("AGENTSAM_IDENTITY_BRIDGE") {
-        let path = PathBuf::from(p);
-        if path.is_file() {
-            return Ok(path);
-        }
-    }
     if let Ok(resources) = app.path().resource_dir() {
         let packaged = resources.join("runtime/identity/scripts/local-identity-bridge.mjs");
         if packaged.is_file() {
             return Ok(packaged);
-        }
-    }
-    let mut roots = Vec::new();
-    if let Ok(cwd) = std::env::current_dir() {
-        roots.push(cwd.clone());
-        if let Some(parent) = cwd.parent() {
-            roots.push(parent.to_path_buf());
-        }
-    }
-    for root in roots {
-        let direct = root.join("packages/identity/scripts/local-identity-bridge.mjs");
-        if direct.is_file() {
-            return Ok(direct);
         }
     }
     Err("local_identity_bridge_script_not_found".into())
@@ -384,51 +365,27 @@ fn find_bridge_script(app: &AppHandle) -> Result<PathBuf, String> {
 
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 fn find_manifest(app: &AppHandle) -> Result<PathBuf, String> {
-    if let Ok(p) = std::env::var("AGENTSAM_IDENTITY_APP_MANIFEST") {
-        let path = PathBuf::from(p);
-        if path.is_file() {
-            return Ok(path);
-        }
-    }
     if let Ok(resources) = app.path().resource_dir() {
         let packaged = resources.join("runtime/identity/app.json");
         if packaged.is_file() {
             return Ok(packaged);
         }
     }
-    let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
-    let path = cwd.join("apps/local-studio/agentsam.app.json");
-    if path.is_file() {
-        return Ok(path);
-    }
     Err("local_identity_app_manifest_not_found".into())
 }
 
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
-fn node_binary(_app: &AppHandle) -> PathBuf {
-    if let Ok(path) = std::env::var("AGENTSAM_NODE_BINARY") {
-        let candidate = PathBuf::from(path);
-        if candidate.is_file() {
-            return candidate;
-        }
+fn node_binary(_app: &AppHandle) -> Result<PathBuf, String> {
+    let exe = std::env::current_exe()
+        .map_err(|e| format!("packaged_node_executable_unavailable:{e}"))?;
+    let dir = exe
+        .parent()
+        .ok_or_else(|| "packaged_node_directory_unavailable".to_string())?;
+    let candidate = dir.join(if cfg!(windows) { "node.exe" } else { "node" });
+    if !candidate.is_file() {
+        return Err("packaged_node_runtime_missing".into());
     }
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(dir) = exe.parent() {
-            let candidate = dir.join(if cfg!(windows) { "node.exe" } else { "node" });
-            if candidate.is_file() {
-                return candidate;
-            }
-        }
-    }
-    // Development fallback only; packaged desktop builds carry a node sidecar.
-    [
-        PathBuf::from("/opt/homebrew/bin/node"),
-        PathBuf::from("/usr/local/bin/node"),
-        PathBuf::from("/usr/bin/node"),
-    ]
-    .into_iter()
-    .find(|path| path.is_file())
-    .unwrap_or_else(|| PathBuf::from("node"))
+    Ok(candidate)
 }
 
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
@@ -439,12 +396,14 @@ async fn run_local_identity(app: AppHandle, request_json: String) -> Result<Stri
     std::fs::create_dir_all(&app_data).map_err(|e| e.to_string())?;
     let db_path = app_data.join("identity.sqlite");
 
-    let mut command = Command::new(node_binary(&app));
+    let mut command = Command::new(node_binary(&app)?);
     command
         .arg(&script)
+        .arg("--db")
+        .arg(&db_path)
+        .arg("--manifest")
+        .arg(&manifest)
         .current_dir(&app_data)
-        .env("AGENTSAM_IDENTITY_DB", &db_path)
-        .env("AGENTSAM_IDENTITY_APP_MANIFEST", &manifest)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());

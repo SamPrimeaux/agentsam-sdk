@@ -173,12 +173,6 @@ pub async fn ensure_agentsamd(
 
 
 fn agentsam_home() -> Option<PathBuf> {
-  if let Ok(value) = std::env::var("AGENTSAM_HOME") {
-    let trimmed = value.trim();
-    if !trimmed.is_empty() {
-      return Some(PathBuf::from(trimmed));
-    }
-  }
   std::env::var("HOME")
     .ok()
     .filter(|v| !v.trim().is_empty())

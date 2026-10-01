@@ -27,6 +27,17 @@ export async function identitySessionExists(): Promise<boolean> {
   return Boolean(await invoke("identity_session_exists", {}));
 }
 
+export type IdentityRuntimeConfig = {
+  authority: "service" | "standalone";
+  service_origin: string | null;
+};
+
+export async function getIdentityRuntimeConfig(): Promise<IdentityRuntimeConfig> {
+  const invoke = getTauriInvoke();
+  if (!invoke) throw new Error("identity_runtime_config_unavailable");
+  return (await invoke("identity_runtime_config", {})) as IdentityRuntimeConfig;
+}
+
 export async function identityPendingGet(): Promise<string | null> {
   const invoke = getTauriInvoke();
   if (!invoke) return null;

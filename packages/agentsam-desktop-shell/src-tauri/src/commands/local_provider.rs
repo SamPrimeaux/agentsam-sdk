@@ -42,60 +42,28 @@ fn canonical_provider(value: &str) -> Result<&str, String> {
 }
 
 fn find_bridge_script(app: &AppHandle) -> Result<PathBuf, String> {
-    if let Ok(resources) = app.path().resource_dir() {
-        let packaged = resources.join("runtime/provider/local-provider-bridge.mjs");
-        if packaged.is_file() {
-            return Ok(packaged);
-        }
+    let resources = app
+        .path()
+        .resource_dir()
+        .map_err(|e| format!("local_provider_resource_dir_unavailable:{e}"))?;
+    let packaged = resources.join("runtime/provider/local-provider-bridge.mjs");
+    if !packaged.is_file() {
+        return Err("local_provider_bridge_script_not_found".into());
     }
-
-    let mut roots = Vec::new();
-    if let Ok(cwd) = std::env::current_dir() {
-        roots.push(cwd);
-    }
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(dir) = exe.parent() {
-            let mut current = dir.to_path_buf();
-            for _ in 0..8 {
-                roots.push(current.clone());
-                if !current.pop() {
-                    break;
-                }
-            }
-        }
-    }
-    for root in roots {
-        let candidate = root.join("packages/agentsam-desktop-shell/scripts/local-provider-bridge.mjs");
-        if candidate.is_file() {
-            return Ok(candidate);
-        }
-    }
-    Err("local_provider_bridge_script_not_found".into())
+    Ok(packaged)
 }
 
-fn find_node_binary() -> PathBuf {
-    if let Ok(path) = std::env::var("AGENTSAM_NODE_BINARY") {
-        let candidate = PathBuf::from(path);
-        if candidate.is_file() {
-            return candidate;
-        }
+fn find_node_binary() -> Result<PathBuf, String> {
+    let exe = std::env::current_exe()
+        .map_err(|e| format!("packaged_node_executable_unavailable:{e}"))?;
+    let dir = exe
+        .parent()
+        .ok_or_else(|| "packaged_node_directory_unavailable".to_string())?;
+    let candidate = dir.join(if cfg!(windows) { "node.exe" } else { "node" });
+    if !candidate.is_file() {
+        return Err("packaged_node_runtime_missing".into());
     }
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(dir) = exe.parent() {
-            let candidate = dir.join(if cfg!(windows) { "node.exe" } else { "node" });
-            if candidate.is_file() {
-                return candidate;
-            }
-        }
-    }
-    [
-        PathBuf::from("/opt/homebrew/bin/node"),
-        PathBuf::from("/usr/local/bin/node"),
-        PathBuf::from("/usr/bin/node"),
-    ]
-    .into_iter()
-    .find(|path| path.is_file())
-    .unwrap_or_else(|| PathBuf::from("node"))
+    Ok(candidate)
 }
 
 fn credential_object(operation: &str, selected_provider: Option<&str>) -> Result<Map<String, Value>, String> {
@@ -158,7 +126,7 @@ pub async fn local_provider_bridge(app: AppHandle, request_json: String) -> Resu
     let body = serde_json::to_vec(&payload).map_err(|_| "local_provider_request_encode_failed".to_string())?;
     let script = find_bridge_script(&app)?;
 
-    let mut child = Command::new(find_node_binary())
+    let mut child = Command::new(find_node_binary()?)
         .arg(script)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

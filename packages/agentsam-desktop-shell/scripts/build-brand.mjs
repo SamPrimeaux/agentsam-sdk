@@ -32,6 +32,8 @@ const { values: flags, positionals } = parseArgs({
   args: process.argv.slice(2),
   options: {
     'icon-url': { type: 'string' },
+    target: { type: 'string' },
+    'node-sidecar': { type: 'string' },
   },
   allowPositionals: true,
   strict: false,
@@ -121,15 +123,12 @@ if (existsSync(pubkeyPath)) {
 // --- 4. resolve icon ---
 // Precedence:
 //   1. manifest.app_icon (SVG mark + surface profiles → platform masters)
-//   2. --icon-url / <APP_ID>_ICON_URL / BRAND_ICON_URL / icon_source_url (fallback raster)
+//   2. --icon-url / manifest.icon_source_url (fallback raster)
 //   3. manifest.icon_set/icon.png on disk
 // Never use Cloudflare Images avatar/hero/public delivery variants as masters.
 const srcTauriDir = path.join(ROOT, 'src-tauri');
 const iconsDir = path.join(srcTauriDir, 'icons');
 const targetIcon = path.join(iconsDir, 'icon.png');
-const namespacedEnvKey = `${String(manifest.app_id || 'app')
-  .toUpperCase()
-  .replace(/[^A-Z0-9]+/g, '_')}_ICON_URL`;
 
 async function fetchIconFromUrl(url, dest) {
   const res = await fetch(url);
@@ -172,8 +171,6 @@ async function resolveIcon() {
 
   const iconUrl = String(
     flags['icon-url'] ||
-      process.env[namespacedEnvKey] ||
-      process.env.BRAND_ICON_URL ||
       manifest.app_icon?.fallback_master ||
       manifest.icon_source_url ||
       '',
@@ -203,7 +200,7 @@ async function resolveIcon() {
     );
   } else {
     console.warn(
-      `[build-brand] WARNING: no icon source. Set app_icon, --icon-url, ${namespacedEnvKey}, BRAND_ICON_URL, or manifest.icon_source_url.`,
+      `[build-brand] WARNING: no icon source. Set app_icon, manifest.icon_source_url, or pass --icon-url.`,
     );
   }
   return { forceRegen: false, source: 'none' };
@@ -285,36 +282,27 @@ const launchUrl = offlineShell || desktopSpa
   ? 'index.html'
   : new URL(manifest.launch_path || '/', manifest.base_url).toString();
 const rawPlatform = String(process.env.TAURI_ENV_PLATFORM || '').toLowerCase();
-const targetFamily = String(
-  process.env.AGENTSAM_TARGET_FAMILY
-    || (rawPlatform === 'ios' || rawPlatform === 'android' ? 'mobile' : 'desktop'),
-).toLowerCase();
-if (!['desktop', 'mobile'].includes(targetFamily)) {
-  fail('AGENTSAM_TARGET_FAMILY must be desktop or mobile, got: ' + targetFamily);
-}
+const targetFamily = rawPlatform === 'ios' || rawPlatform === 'android' ? 'mobile' : 'desktop';
 
 const agentsamdSidecar = targetFamily === 'desktop'
   && manifest.feature_flags?.agentsamd_sidecar === true;
 
-const identityAuthority = String(
-  process.env.AGENTSAM_IDENTITY_AUTHORITY || manifest.auth?.authority || 'service',
-).toLowerCase();
-const configuredServiceOrigin = String(
-  process.env.AGENTSAM_IDENTITY_SERVICE_ORIGIN
-    || (manifest.auth?.service_origin && manifest.auth.service_origin !== 'install-config'
-      ? manifest.auth.service_origin
-      : ''),
-).trim().replace(/\/$/, '');
+// Identity config comes from the manifest only -- no environment variables.
+const identityAuthority = String(manifest.auth?.authority || 'service').toLowerCase();
+const configuredServiceOrigin = String(manifest.auth?.service_origin || '').trim().replace(/\/$/, '');
 
 if (!['service', 'standalone'].includes(identityAuthority)) {
   fail('identity authority must be service or standalone, got: ' + identityAuthority);
+}
+if (desktopSpa && identityAuthority === 'service' && !configuredServiceOrigin) {
+  fail('manifest auth.service_origin is required for service-authority desktop builds (e.g. "https://your-identity-service.example.com")');
 }
 if (identityAuthority === 'service' && configuredServiceOrigin) {
   try {
     const parsed = new URL(configuredServiceOrigin);
     if (!['https:', 'http:'].includes(parsed.protocol)) throw new Error('unsupported protocol');
   } catch {
-    fail('AGENTSAM_IDENTITY_SERVICE_ORIGIN is not a valid HTTP(S) origin: ' + configuredServiceOrigin);
+    fail('manifest auth.service_origin is not a valid HTTP(S) origin: ' + configuredServiceOrigin);
   }
 }
 
@@ -346,12 +334,28 @@ if (desktopSpa && targetFamily === 'desktop') {
 }
 
 if (agentsamdSidecar) {
-  const prep = spawnSync(process.execPath, [path.join(__dirname, 'prepare-sidecars.mjs')], {
+  const sidecarArgs = [path.join(__dirname, 'prepare-sidecars.mjs')];
+  if (flags.target) sidecarArgs.push('--target', flags.target);
+  if (flags['node-sidecar']) sidecarArgs.push('--node-sidecar', flags['node-sidecar']);
+  const prep = spawnSync(process.execPath, sidecarArgs, {
     cwd: ROOT,
     stdio: 'inherit',
     env: process.env,
   });
   if (prep.status !== 0) fail(`agentsamd sidecar build failed (exit ${prep.status})`);
+}
+
+const declaredAppManifest = String(manifest.app_manifest || '').trim();
+let appManifestRel = null;
+if (desktopSpa) {
+  if (!declaredAppManifest) {
+    fail('desktop_spa builds require manifest.app_manifest (path to this product agentsam.app.json)');
+  }
+  const appManifestAbs = path.resolve(path.dirname(manifestPath), declaredAppManifest);
+  if (!existsSync(appManifestAbs)) {
+    fail('manifest.app_manifest not found: ' + appManifestAbs);
+  }
+  appManifestRel = path.relative(srcTauriDir, appManifestAbs).split(path.sep).join('/');
 }
 
 const config = {
@@ -383,7 +387,7 @@ const config = {
       ? {
           resources: {
             'generated/identity-runtime.json': 'runtime/identity/runtime.json',
-            '../../../apps/local-studio/agentsam.app.json': 'runtime/identity/app.json',
+            [appManifestRel]: 'runtime/identity/app.json',
             ...(targetFamily === 'desktop'
               ? {
                   '../../agentsam-database-editor/scripts/local-sqlite-bridge.mjs':

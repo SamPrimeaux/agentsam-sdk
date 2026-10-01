@@ -36,6 +36,7 @@ fn main() {
             local_sqlite::local_sqlite_bridge,
             local_provider::local_provider_bridge,
             local_identity::local_identity_bridge,
+            local_identity::identity_runtime_config,
             local_identity::identity_bridge,
             local_identity::studio_service_bridge,
             local_sqlite::local_sqlite_pick_database,
