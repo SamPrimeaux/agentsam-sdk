@@ -222,6 +222,7 @@
     "packages/agentsam-nav",
     "packages/work-graph",
     "packages/agentsam-queue-control",
+    "packages/agentsam-goap",
     "packages/agentsam-workbench",
     "packages/agentsam-assets-core",
     "packages/agentsam-scoring",
