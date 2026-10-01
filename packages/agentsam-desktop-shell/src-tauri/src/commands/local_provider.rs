@@ -68,8 +68,10 @@ fn find_node_binary() -> Result<PathBuf, String> {
 
 fn credential_object(operation: &str, selected_provider: Option<&str>) -> Result<Map<String, Value>, String> {
     let mut credentials = Map::new();
-    let providers: Vec<&str> = if operation == "chat" {
-        vec![selected_provider.ok_or_else(|| "local_provider_required".to_string())?]
+    let providers: Vec<&str> = if let Some(provider) = selected_provider {
+        vec![provider]
+    } else if operation == "chat" {
+        return Err("local_provider_required".to_string());
     } else {
         PROVIDERS.to_vec()
     };
