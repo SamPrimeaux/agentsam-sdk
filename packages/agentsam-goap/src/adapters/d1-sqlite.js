@@ -108,6 +108,7 @@ export function createD1SqliteGoapAdapter({
   db,
   strictOwnership = true,
   eventOwnership = 'columns',
+  blackboardOwnership = 'repository',
   cursorPrefix = 'sqlite',
 } = {}) {
   if (!db?.prepare) {
@@ -122,6 +123,12 @@ export function createD1SqliteGoapAdapter({
       details: { eventOwnership },
     });
   }
+  if (!['repository', 'repository_join'].includes(blackboardOwnership)) {
+    throw goapInputError('blackboardOwnership must be repository or repository_join', {
+      stage: 'configure_adapter',
+      details: { blackboardOwnership },
+    });
+  }
 
   const cursorFor = (row) => row?.event_rowid == null ? null : cursorPrefix + ':' + row.event_rowid;
   const eventSelectFrom = eventOwnership === 'columns'
@@ -132,18 +139,26 @@ export function createD1SqliteGoapAdapter({
   const blackboardStore = {
     async get(scopeInput) {
       const scope = normalizeGoapScope(scopeInput);
-      const workspaceFilter = scope.workspace_id ? ' AND workspace_id = ?' : '';
-      const values = scope.workspace_id
-        ? [scope.repository_id, scope.workspace_id]
-        : [scope.repository_id];
+      const workspaceFilter = scope.workspace_id ? ' AND w.workspace_id = ?' : '';
+      const joined = blackboardOwnership === 'repository_join';
+      const values = joined
+        ? (scope.workspace_id
+          ? [scope.account_id, scope.repository_id, scope.workspace_id]
+          : [scope.account_id, scope.repository_id])
+        : (scope.workspace_id
+          ? [scope.repository_id, scope.workspace_id]
+          : [scope.repository_id]);
 
       const sql =
-        'SELECT id, workspace_id, repository_id, current_task_id, state_json, ' +
-        'state_schema, revision, locked_by, lock_expires_at, checkpoint_sha, ' +
-        'last_agent_action, updated_at ' +
-        'FROM agentsam_workspace_state ' +
-        'WHERE repository_id = ?' + workspaceFilter + ' ' +
-        'ORDER BY updated_at DESC LIMIT 1';
+        'SELECT w.id, w.workspace_id, w.repository_id, w.current_task_id, w.state_json, ' +
+        'w.state_schema, w.revision, w.locked_by, w.lock_expires_at, w.checkpoint_sha, ' +
+        'w.last_agent_action, w.updated_at ' +
+        'FROM agentsam_workspace_state w ' +
+        (joined
+          ? 'JOIN code_repositories r ON r.id = w.repository_id AND r.account_id = ? '
+          : '') +
+        'WHERE w.repository_id = ?' + workspaceFilter + ' ' +
+        'ORDER BY w.updated_at DESC LIMIT 1';
 
       const row = await first(db, sql, values);
       if (!row) return null;
@@ -182,12 +197,16 @@ export function createD1SqliteGoapAdapter({
         : current.last_action;
       const nextUpdatedAt = patch.updated_at ?? Math.floor(Date.now() / 1000);
 
+      const sharedOwnershipGuard = blackboardOwnership === 'repository_join'
+        ? ' AND EXISTS (SELECT 1 FROM code_repositories r ' +
+          'WHERE r.id = agentsam_workspace_state.repository_id AND r.account_id = ?)'
+        : '';
       const result = await run(
         db,
         'UPDATE agentsam_workspace_state ' +
           'SET current_task_id = ?, state_json = ?, state_schema = ?, ' +
           'revision = revision + 1, last_agent_action = ?, updated_at = ? ' +
-          'WHERE id = ? AND revision = ?',
+          'WHERE id = ? AND revision = ?' + sharedOwnershipGuard,
         [
           nextGoalId,
           JSON.stringify(nextState),
@@ -196,6 +215,7 @@ export function createD1SqliteGoapAdapter({
           nextUpdatedAt,
           current.id,
           expectedRevision,
+          ...(blackboardOwnership === 'repository_join' ? [scope.account_id] : []),
         ],
       );
 
@@ -375,12 +395,16 @@ export function createD1SqliteGoapAdapter({
       const nextRevision = expected_revision + 1;
       const now = updated_at ?? Math.floor(Date.now() / 1000);
 
+      const sharedBlackboardGuard = blackboardOwnership === 'repository_join'
+        ? ' AND EXISTS (SELECT 1 FROM code_repositories r ' +
+          'WHERE r.id = agentsam_workspace_state.repository_id AND r.account_id = ?)'
+        : '';
       const updateBlackboard = bound(
         db,
         'UPDATE agentsam_workspace_state ' +
           'SET current_task_id = ?, state_schema = ?, revision = revision + 1, ' +
           'last_agent_action = ?, updated_at = ? ' +
-          'WHERE id = ? AND revision = ? ' +
+          'WHERE id = ? AND revision = ?' + sharedBlackboardGuard + ' ' +
           'AND EXISTS (SELECT 1 FROM agentsam_tickets ' +
           'WHERE id = ? AND account_id = ? AND repository_id = ?)',
         [
@@ -390,6 +414,7 @@ export function createD1SqliteGoapAdapter({
           now,
           blackboard.id,
           expected_revision,
+          ...(blackboardOwnership === 'repository_join' ? [scope.account_id] : []),
           goal_id,
           scope.account_id,
           scope.repository_id,

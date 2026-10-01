@@ -149,6 +149,33 @@ function createSqlite({ eventOwnership = true } = {}) {
   return sqlite;
 }
 
+
+test('repository_join blackboard ownership rejects cross-account reads on shared stores', async () => {
+  const sqlite = createSqlite();
+  sqlite.exec(
+    'CREATE TABLE code_repositories (id TEXT PRIMARY KEY, account_id TEXT NOT NULL);',
+  );
+  sqlite.prepare(
+    'INSERT INTO code_repositories (id, account_id) VALUES (?, ?)',
+  ).run(scope.repository_id, scope.account_id);
+
+  const ports = createD1SqliteGoapAdapter({
+    db: d1Like(sqlite),
+    blackboardOwnership: 'repository_join',
+  });
+
+  const owned = await ports.blackboardStore.get(scope);
+  assert.equal(owned.repository_id, scope.repository_id);
+
+  const foreign = await ports.blackboardStore.get({
+    ...scope,
+    account_id: 'acct_other',
+  });
+  assert.equal(foreign, null);
+
+  sqlite.close();
+});
+
 test('D1/SQLite adapter atomically guards stale revisions with canonical AgentSam errors', async () => {
   const sqlite = createSqlite();
   const ports = createD1SqliteGoapAdapter({ db: d1Like(sqlite) });

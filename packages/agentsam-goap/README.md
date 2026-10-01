@@ -45,3 +45,5 @@ Cross-store state changes must go through MutationPort. Goal activation updates 
 The Memory adapter is the conformance/reference adapter. The D1/SQLite adapter targets the common prepare/bind/first/all/run binding shape. Local SQLite supplies a transactional batch shim; Cloudflare D1 supplies batch natively.
 
 Portable ticket_events rows carry account_id and repository_id directly. The older platform host table does not. Set eventOwnership to ticket_join for that legacy shape; it scopes events through their owning ticket without requiring a second event table or a duplicate-column migration.
+
+Blackboard ownership is adapter-specific. Use blackboardOwnership=repository for account-owned portable/local stores. Shared hosts must verify repository ownership instead of trusting caller scope; IAM D1 uses blackboardOwnership=repository_join, which checks code_repositories.account_id on blackboard reads and CAS writes.
