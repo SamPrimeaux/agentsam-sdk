@@ -12,8 +12,17 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cmsRoot = path.join(root, 'apps/client-cms-editor');
 const marker = path.join(cmsRoot, 'dist/sqlite-adapter.js');
 
+// npm run can export user-level allow-scripts config as npm_config_*.
+// npm 11 rejects that inherited option for a nested project-scoped install
+// (npm ci --prefix ...). Preserve the user's npm config on disk, but do not
+// forward this parent-process option into the nested CMS install.
+const childEnv = { ...process.env };
+for (const key of Object.keys(childEnv)) {
+  if (/^npm_config_allow[_-]?scripts$/i.test(key)) delete childEnv[key];
+}
+
 function run(command, args) {
-  const result = spawnSync(command, args, { cwd: root, stdio: 'inherit', env: process.env });
+  const result = spawnSync(command, args, { cwd: root, stdio: 'inherit', env: childEnv });
   if (result.status) process.exit(result.status ?? 1);
 }
 
