@@ -104,8 +104,8 @@ function createSqlite({ eventOwnership = true } = {}) {
   sqlite.exec([
     'CREATE TABLE agentsam_workspace_state (',
     'id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, repository_id TEXT NOT NULL,',
-    'current_task_id TEXT, state_json TEXT NOT NULL DEFAULT \\'{}\\',',
-    'state_schema TEXT NOT NULL DEFAULT \\'agentsam.blackboard.v1\\',',
+    'current_task_id TEXT, state_json TEXT NOT NULL DEFAULT \'{}\',',
+    'state_schema TEXT NOT NULL DEFAULT \'agentsam.blackboard.v1\',',
     'revision INTEGER NOT NULL DEFAULT 1, locked_by TEXT, lock_expires_at INTEGER,',
     'checkpoint_sha TEXT, last_agent_action TEXT, updated_at INTEGER NOT NULL);',
     'CREATE TABLE agentsam_tickets (',
@@ -115,18 +115,18 @@ function createSqlite({ eventOwnership = true } = {}) {
     'CREATE TABLE agentsam_ticket_events (',
     'id TEXT PRIMARY KEY, ticket_id TEXT NOT NULL, event_type TEXT NOT NULL, detail TEXT,',
     'created_at INTEGER NOT NULL, actor_type TEXT, actor_id TEXT, ' + eventOwnershipColumns,
-    'payload_json TEXT NOT NULL DEFAULT \\'{}\\', workflow_run_id TEXT, execution_step_id TEXT,',
-    'schema_version TEXT NOT NULL DEFAULT \\'agentsam.event.v1\\');',
-  ].join('\\n'));
+    'payload_json TEXT NOT NULL DEFAULT \'{}\', workflow_run_id TEXT, execution_step_id TEXT,',
+    'schema_version TEXT NOT NULL DEFAULT \'agentsam.event.v1\');',
+  ].join('\n'));
   sqlite.prepare(
     'INSERT INTO agentsam_workspace_state ' +
     '(id, workspace_id, repository_id, current_task_id, state_json, revision, updated_at) ' +
-    'VALUES (?, ?, ?, NULL, \\'{}\\', 7, 1)',
+    'VALUES (?, ?, ?, NULL, \'{}\', 7, 1)',
   ).run('bb_sql', scope.workspace_id, scope.repository_id);
   sqlite.prepare(
     'INSERT INTO agentsam_tickets ' +
     '(id, title, status, account_id, repository_id, goal_schema, goal_spec_json, created_at, updated_at) ' +
-    'VALUES (?, ?, \\'backlog\\', ?, ?, ?, ?, 1, 1)',
+    'VALUES (?, ?, \'backlog\', ?, ?, ?, ?, 1, 1)',
   ).run(
     'tkt_sql',
     'Ship portable GOAP',
