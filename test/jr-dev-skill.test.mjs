@@ -22,5 +22,5 @@ test('agentsam-jr-dev ships as a portable skill with depth references', () => {
   assert.match(text, /backend owns trusted execution/);
 
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  assert.ok(pkg.files.includes('skills'), 'root npm package must include portable skills');
+  assert.ok(pkg.files.includes('skills/agentsam-jr-dev'), 'root npm package must include the AgentSam Jr Dev portable skill');
 });

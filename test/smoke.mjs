@@ -65,13 +65,21 @@ assert.deepEqual(
   'deploy lane keeps global shell controls and excludes commands from other lanes',
 );
 
-printContextSummary({
-  iam: { ready: true, source: 'api_key', detail: 'AGENTSAM_API_KEY' },
-  gcp: { source: 'vm-metadata', email: 'execos@project.iam.gserviceaccount.com' },
-  gcp_vm: true,
-  github: { source: 'gh-cli', account: 'user@example.com' },
-  cloudflare: { source: 'wrangler', account: 'user@cloudflare.test' },
-});
+const contextSummaryLines = [];
+const originalConsoleLog = console.log;
+console.log = (...args) => contextSummaryLines.push(args.join(' '));
+try {
+  printContextSummary({
+    iam: { ready: true, source: 'api_key', detail: 'AGENTSAM_API_KEY' },
+    gcp: { source: 'vm-metadata', email: 'execos@project.iam.gserviceaccount.com' },
+    gcp_vm: true,
+    github: { source: 'gh-cli', account: 'user@example.com' },
+    cloudflare: { source: 'wrangler', account: 'user@cloudflare.test' },
+  });
+} finally {
+  console.log = originalConsoleLog;
+}
+assert.match(contextSummaryLines.join('\n'), /Detected credentials/);
 assert.deepEqual(missingForInit({ iam: { ready: false } }, '', { runTarget: 'local' }), []);
 assert.deepEqual(missingForInit({ iam: { ready: false } }, '', { runTarget: 'cloudflare' }), ['iam']);
 

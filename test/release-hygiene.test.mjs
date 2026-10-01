@@ -37,6 +37,17 @@ test('dead branded splash paths are gone and UI preview stays dev-only', () => {
   assert.equal(fs.existsSync(path.join(root, 'src/ui/runtime-activity.js')), true, 'automatic runtime activity must ship with the product CLI');
 
   const pkg = JSON.parse(read('package.json'));
-  assert.ok(pkg.files.includes('skills'));
+  for (const rel of [
+    'skills/catalog.json',
+    'skills/agentsam-app-fundamentals',
+    'skills/agentsam-cloudflare-workers',
+    'skills/agentsam-codebaseindex',
+    'skills/agentsam-jr-dev',
+    'skills/agentsam-progression-guard',
+  ]) {
+    assert.ok(pkg.files.includes(rel), 'curated portable skill payload must include ' + rel);
+  }
+  assert.equal(pkg.files.includes('skills'), false, 'root package must not publish every donor skill');
+  assert.equal(pkg.files.includes('test'), false, 'contributor tests must not be published');
   assert.equal(pkg.files.includes('scripts'), false, 'internal preview scripts must not be published');
 });
