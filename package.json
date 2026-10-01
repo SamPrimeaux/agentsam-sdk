@@ -118,10 +118,7 @@
     "./theme/forge": "./packages/theme-handyman-site/src/index.js",
     "./theme/harbor": "./packages/theme-insurance-site/src/index.js",
     "./theme/summit": "./packages/theme-shinshu-site/src/index.js",
-    "./models/inventory": {
-      "types": "./src/models/inventory-core.d.ts",
-      "default": "./src/models/inventory-core.js"
-    }
+    "./models/inventory": "./src/models/inventory-core.js"
   },
   "bin": {
     "agentsam": "bin/agentsam",
