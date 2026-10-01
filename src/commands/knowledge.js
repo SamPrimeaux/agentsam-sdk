@@ -246,6 +246,7 @@ export async function runRepository(argv) {
     });
     const observation = { id: randomUUID(), created_at: new Date().toISOString(), kind: 'repository-intelligence', data: JSON.parse(result.stdout) };
     if (store) await store.observe(cacheNamespace(readConfig(root)), observation);
-    show(observation);
+    if (opts.json) show(observation);
+    else console.log(renderRepositoryObservation(observation));
   } finally { await store?.close(); }
 }
