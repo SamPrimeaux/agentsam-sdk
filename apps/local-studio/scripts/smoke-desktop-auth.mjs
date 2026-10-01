@@ -48,7 +48,8 @@ requireSource(source.auth.includes('op: "native_exchange"'), "native_exchange_cl
 requireSource(source.tauri.includes('invoke("identity_pending_set"'), "pkce_pending_set_command_missing");
 requireSource(source.tauri.includes('invoke("identity_pending_get"'), "pkce_pending_get_command_missing");
 requireSource(source.tauri.includes('invoke("identity_pending_delete"'), "pkce_pending_delete_command_missing");
-requireSource(source.keychain.includes('"identity_native_oauth_pending"'), "pkce_pending_native_account_missing");
+requireSource(source.keychain.includes("IdentityPendingState"), "pkce_pending_process_state_missing");
+requireSource(!source.keychain.includes('"identity_native_oauth_pending"'), "pkce_pending_still_in_keychain");
 requireSource(source.auth.includes("openExternalUrl"), "system_browser_open_missing");
 requireSource(source.auth.includes("listenDeepLinks"), "frontend_deep_link_listener_missing");
 requireSource(source.tauri.includes('invoke("take_pending_deep_links"'), "native_deep_link_drain_missing");
@@ -59,13 +60,9 @@ requireSource(source.auth.includes("google_desktop_identity_login"), "google_des
 requireSource(source.auth.includes("google_desktop_native_flow_required"), "google_web_native_fail_closed_missing");
 requireSource(source.googleDesktopRust.includes("google_desktop_client_id"), "google_desktop_public_config_missing");
 requireSource(source.googleDesktopRust.includes("openid email profile"), "google_desktop_identity_scopes_missing");
-requireSource(source.googleDesktopRust.includes("https://oauth2.googleapis.com/token"), "google_desktop_token_endpoint_missing");
-requireSource(source.googleDesktopRust.includes("google_token_exchange_form"), "google_desktop_native_token_exchange_missing");
-const googleTokenForm = source.googleDesktopRust.slice(
-  source.googleDesktopRust.indexOf("fn google_token_exchange_form"),
-  source.googleDesktopRust.indexOf("fn validated_origin"),
-);
-requireSource(!googleTokenForm.includes("client_secret"), "google_desktop_secret_reference_present");
+requireSource(!source.googleDesktopRust.includes("https://oauth2.googleapis.com/token"), "google_desktop_direct_token_exchange_present");
+requireSource(!source.googleDesktopRust.includes("google_token_exchange_form"), "google_desktop_duplicate_token_exchange_present");
+requireSource(source.googleDesktopRust.includes('"code_verifier": verifier'), "google_desktop_pkce_forward_missing");
 requireSource(source.portal.includes("Continue with Google"), "google_provider_removed");
 requireSource(source.portal.includes("Continue with GitHub"), "github_provider_removed");
 requireSource(source.portal.includes("Continue with Cloudflare"), "cloudflare_provider_removed");
@@ -74,8 +71,9 @@ requireSource(source.googleDesktopRust.includes("/api/oauth/google/desktop-login
 requireSource(source.googleDesktopWorker.includes("GOOGLE_DESKTOP_CLIENT_ID"), "google_desktop_worker_client_gate_missing");
 requireSource(source.googleDesktopWorker.includes("sessionType: SESSION_TYPES.DESKTOP"), "google_desktop_session_type_missing");
 requireSource(googleAccountWorker.includes("desktop_public_pkce_native_exchange"), "google_desktop_native_session_handoff_missing");
-requireSource(!googleAccountWorker.includes("GOOGLE_DESKTOP_CLIENT_SECRET"), "google_desktop_account_secret_gate_present");
-requireSource(!googleAccountWorker.includes("code_verifier"), "google_desktop_worker_pkce_exchange_present");
+requireSource(source.googleDesktopWorker.includes("GOOGLE_DESKTOP_CLIENT_SECRET"), "google_desktop_provider_secret_support_missing");
+requireSource(googleAccountWorker.includes("code_verifier"), "google_desktop_worker_pkce_exchange_missing");
+requireSource(googleAccountWorker.includes("exchangeGoogleAuthorizationCode"), "google_desktop_worker_token_exchange_missing");
 requireSource(source.rust.includes('"/api/oauth/native/exchange"'), "native_exchange_rust_route_missing");
 requireSource(source.deepLink.includes('"agentsam://deep-link"'), "rust_deep_link_emit_missing");
 requireSource(source.config.includes('"agentsamstudio"'), "deep_link_registration_missing");

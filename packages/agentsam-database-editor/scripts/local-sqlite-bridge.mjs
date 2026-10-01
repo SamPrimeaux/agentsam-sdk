@@ -17,8 +17,13 @@ import { createSqliteAdapter } from "../src/adapters/sqlite.js";
 
 const REGISTRY_SCHEMA = "agentsam.local-databases.v1";
 
+function cliArg(name) {
+  const i = process.argv.indexOf(name);
+  return i > 1 ? process.argv[i + 1] : undefined;
+}
+
 function agentsamHome() {
-  return path.resolve(String(process.env.AGENTSAM_HOME || path.join(os.homedir(), ".agentsam")));
+  return path.join(os.homedir(), ".agentsam");
 }
 
 function registryPath() {
@@ -155,7 +160,9 @@ function initializePreset(filePath, preset) {
     db.exec("PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS agentsam_database_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);");
     db.prepare("INSERT OR REPLACE INTO agentsam_database_meta (key, value) VALUES (?, ?)").run("preset", preset);
     if (preset === "agentsam") {
-      const migrationsDir = path.resolve(String(process.env.AGENTSAM_RUNTIME_MIGRATIONS || path.join(path.dirname(new URL(import.meta.url).pathname), "../../../migrations/runtime")));
+      const migrationsArg = cliArg("--migrations");
+      if (!migrationsArg) throw new Error("agentsam_runtime_migrations_missing");
+      const migrationsDir = path.resolve(migrationsArg);
       if (fs.existsSync(migrationsDir)) {
         for (const name of fs.readdirSync(migrationsDir).filter((item) => /^\d+.*\.sql$/i.test(item)).sort()) {
           db.exec(fs.readFileSync(path.join(migrationsDir, name), "utf8"));
@@ -180,8 +187,6 @@ function findProjectRoot(startDir) {
 }
 
 function agentsamDbPath(root) {
-  const envPath = String(process.env.AGENTSAM_DB || "").trim();
-  if (envPath) return path.resolve(envPath);
   return path.join(root, ".agentsam", "data", "agentsam.sqlite");
 }
 

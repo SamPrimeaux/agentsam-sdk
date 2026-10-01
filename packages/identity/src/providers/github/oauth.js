@@ -2,12 +2,11 @@ const GITHUB_AUTH_URL = 'https://github.com/login/oauth/authorize';
 const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
 
 /** @param {import('../../provider-contract.js').OAuthAuthorizeInput} input */
-export function getGithubAuthUrl({ clientId, redirectUri, state, codeChallenge, scope } = {}) {
+export function getGithubAuthUrl({ clientId, redirectUri, state, codeChallenge } = {}) {
   const url = new URL(GITHUB_AUTH_URL);
   url.searchParams.set('client_id', clientId || '');
   url.searchParams.set('redirect_uri', redirectUri || '');
   url.searchParams.set('response_type', 'code');
-  url.searchParams.set('scope', scope || 'read:user user:email');
   url.searchParams.set('state', state || '');
   if (codeChallenge) {
     url.searchParams.set('code_challenge', codeChallenge);

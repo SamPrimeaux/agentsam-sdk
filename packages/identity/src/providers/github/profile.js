@@ -3,7 +3,8 @@ const GITHUB_EMAILS_URL = 'https://api.github.com/user/emails';
 
 const GITHUB_HEADERS = {
   Accept: 'application/vnd.github+json',
-  'X-GitHub-Api-Version': '2022-11-28',
+  'X-GitHub-Api-Version': '2026-03-10',
+  'User-Agent': 'AgentSam-Local-Studio',
 };
 
 /** @param {string} accessToken */
@@ -17,7 +18,15 @@ export async function fetchGithubProfile(accessToken) {
         headers: { Authorization: `Bearer ${accessToken}`, ...GITHUB_HEADERS },
       }),
     ]);
-    if (!userRes.ok) return null;
+    if (!userRes.ok) {
+      const detail = (await userRes.text()).slice(0, 500);
+      console.error('github_userinfo_failed', {
+        status: userRes.status,
+        requestId: userRes.headers.get('x-github-request-id'),
+        detail,
+      });
+      return null;
+    }
     const user = await userRes.json();
     let email = null;
     let emailVerified = false;
@@ -26,6 +35,11 @@ export async function fetchGithubProfile(accessToken) {
       const primary = Array.isArray(emails) ? emails.find((e) => e?.primary) : null;
       email = primary?.email || null;
       emailVerified = !!primary?.verified;
+    } else {
+      console.warn('github_user_emails_failed', {
+        status: emailRes.status,
+        requestId: emailRes.headers.get('x-github-request-id'),
+      });
     }
     return { ...user, email, email_verified: emailVerified };
   } catch {

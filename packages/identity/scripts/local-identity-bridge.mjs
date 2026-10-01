@@ -59,14 +59,20 @@ function sanitizeUser(user) {
   };
 }
 
+function cliArg(name) {
+  const i = process.argv.indexOf(name);
+  return i > 1 ? process.argv[i + 1] : undefined;
+}
+
 const request = await readStdin();
-const dbPath = path.resolve(
-  process.env.AGENTSAM_IDENTITY_DB || '.agentsam/data/local-studio-identity.sqlite',
-);
-const manifestPath = path.resolve(
-  process.env.AGENTSAM_IDENTITY_APP_MANIFEST
-    || new URL('../../../apps/local-studio/agentsam.app.json', import.meta.url).pathname,
-);
+const dbArg = cliArg('--db');
+const manifestArg = cliArg('--manifest');
+if (!dbArg || !manifestArg) {
+  process.stderr.write('usage: local-identity-bridge.mjs --db <sqlite path> --manifest <agentsam.app.json>\n');
+  process.exit(2);
+}
+const dbPath = path.resolve(dbArg);
+const manifestPath = path.resolve(manifestArg);
 
 fs.mkdirSync(path.dirname(dbPath), { recursive: true, mode: 0o700 });
 const nativeDb = new DatabaseSync(dbPath);

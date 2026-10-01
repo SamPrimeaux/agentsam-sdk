@@ -21,7 +21,6 @@ fn existing_dir(value: Option<String>) -> Option<PathBuf> {
 
 #[tauri::command]
 pub fn desktop_workspace_context() -> DesktopWorkspaceContext {
-    let explicit = existing_dir(std::env::var("AGENTSAM_PROJECT_ROOT").ok());
     let process_cwd = std::env::current_dir().ok().filter(|path| path.is_dir());
     let home = existing_dir(
         std::env::var("HOME")
@@ -34,9 +33,7 @@ pub fn desktop_workspace_context() -> DesktopWorkspaceContext {
         .filter(|path| path.as_path() != Path::new("/"))
         .cloned();
 
-    let (default_cwd, source) = if let Some(path) = explicit {
-        (path, "AGENTSAM_PROJECT_ROOT")
-    } else if let Some(path) = useful_process_cwd {
+    let (default_cwd, source) = if let Some(path) = useful_process_cwd {
         (path, "process_cwd")
     } else if let Some(path) = home.clone() {
         (path, "home")

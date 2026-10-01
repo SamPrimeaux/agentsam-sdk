@@ -13,6 +13,8 @@ fn main() {
         .manage(agentsamd::AgentsamdState::default())
         .manage(local_content::LocalContentState::default())
         .manage(deep_link::DeepLinkState::default())
+        .manage(keychain::IdentityPendingState::default())
+        .manage(keychain::IdentitySessionState::default())
         .setup(|app| {
             tray::setup_tray(app)?;
             deep_link::register_scheme(app)?;
@@ -36,6 +38,7 @@ fn main() {
             local_sqlite::local_sqlite_bridge,
             local_provider::local_provider_bridge,
             local_identity::local_identity_bridge,
+            local_identity::identity_runtime_config,
             local_identity::identity_bridge,
             local_identity::studio_service_bridge,
             local_sqlite::local_sqlite_pick_database,

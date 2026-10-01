@@ -4,9 +4,11 @@ import { SESSION_TYPES } from '../core/session-policy.js';
 /**
  * Server-side Google token exchange for CLI / desktop PKCE.
  *
- * Desktop/"installed" OAuth clients are public PKCE clients and never use an
- * AgentSam desktop client-secret configuration. The hosted web client remains
- * confidential and uses GOOGLE_CLIENT_SECRET.
+ * Desktop/"installed" OAuth clients are public PKCE clients. Some Google
+ * installed-app credentials still include a provider-issued client_secret.
+ * That value is not a confidentiality boundary, but if Google requires it for
+ * token exchange the service may keep it in GOOGLE_DESKTOP_CLIENT_SECRET.
+ * Hosted web OAuth remains confidential and uses GOOGLE_CLIENT_SECRET.
  */
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -43,12 +45,17 @@ export function resolveGoogleExchangeSecret(env, clientId) {
   const desktopId = clean(env?.GOOGLE_DESKTOP_CLIENT_ID);
   const webId = clean(env?.GOOGLE_CLIENT_ID);
   const webSecret = clean(env?.GOOGLE_CLIENT_SECRET);
+  const desktopSecret = clean(env?.GOOGLE_DESKTOP_CLIENT_SECRET);
 
   if (id && webId && id === webId && webSecret) {
     return { clientId: id, clientSecret: webSecret, mode: 'web_confidential' };
   }
   if (id && desktopId && id === desktopId) {
-    return { clientId: id, clientSecret: null, mode: 'desktop_public_pkce' };
+    return {
+      clientId: id,
+      clientSecret: desktopSecret || null,
+      mode: 'desktop_public_pkce',
+    };
   }
   return { clientId: id || null, clientSecret: null, mode: 'unknown_client' };
 }
@@ -196,11 +203,11 @@ async function verifyGoogleDesktopIdToken(idToken, clientId, fetchImpl = fetch) 
  * Google Desktop account identity handoff.
  *
  * The installed app is the public OAuth client. It performs Google
- * Authorization Code + PKCE + loopback and exchanges the authorization code
- * directly with Google. This endpoint never receives the PKCE verifier and
- * never needs a desktop client secret; it validates the transient Google ID
- * token against GOOGLE_DESKTOP_CLIENT_ID, resolves the profile, and mints the
- * normal AgentSam desktop session.
+ * Authorization Code + PKCE + loopback; this endpoint receives the one-time
+ * code + verifier, performs the provider token exchange, validates the Google
+ * ID token against GOOGLE_DESKTOP_CLIENT_ID, resolves the profile, and mints
+ * the normal AgentSam desktop session. No Google access token is persisted in
+ * the desktop app for identity-only sign-in.
  */
 export async function handleGoogleDesktopLoginExchangeRequest(request, env, opts = {}) {
   if (request.method !== 'POST') {
@@ -219,19 +226,54 @@ export async function handleGoogleDesktopLoginExchangeRequest(request, env, opts
     return json({ ok: false, error: 'invalid_json' }, 400);
   }
 
-  const accessToken = clean(payload.access_token || payload.accessToken);
-  const idToken = clean(payload.id_token || payload.idToken);
+  let accessToken = clean(payload.access_token || payload.accessToken);
+  let idToken = clean(payload.id_token || payload.idToken);
   const clientId = clean(payload.client_id || payload.clientId);
-  if (!accessToken || !idToken || !clientId) {
-    return json({
-      ok: false,
-      error: 'access_token_id_token_client_id_required',
-    }, 400);
-  }
 
   const desktopId = clean(env?.GOOGLE_DESKTOP_CLIENT_ID);
-  if (!desktopId || clientId !== desktopId) {
+  if (!desktopId || !clientId || clientId !== desktopId) {
     return json({ ok: false, error: 'google_desktop_client_id_required' }, 403);
+  }
+
+  if (!accessToken || !idToken) {
+    const code = clean(payload.code);
+    const codeVerifier = clean(payload.code_verifier || payload.codeVerifier);
+    const redirectUri = clean(payload.redirect_uri || payload.redirectUri);
+    if (!code || !codeVerifier || !redirectUri) {
+      return json({
+        ok: false,
+        error: 'code_code_verifier_redirect_uri_required',
+      }, 400);
+    }
+    if (!isLoopbackRedirect(redirectUri)) {
+      return json({ ok: false, error: 'redirect_uri_must_be_loopback' }, 400);
+    }
+
+    const resolved = resolveGoogleExchangeSecret(env, clientId);
+    const exchanged = await exchangeGoogleAuthorizationCode({
+      code,
+      codeVerifier,
+      clientId,
+      redirectUri,
+      clientSecret: resolved.clientSecret,
+      fetchImpl: opts.fetchImpl || fetch,
+    });
+    if (!exchanged.ok) {
+      return json({
+        ok: false,
+        error: 'google_token_exchange_failed',
+        detail: clean(
+          exchanged.data?.error_description
+          || exchanged.data?.error
+          || ('http_' + exchanged.status),
+        ),
+      }, 502);
+    }
+    accessToken = clean(exchanged.data?.access_token);
+    idToken = clean(exchanged.data?.id_token);
+    if (!accessToken || !idToken) {
+      return json({ ok: false, error: 'google_token_payload_incomplete' }, 502);
+    }
   }
 
   const verified = await verifyGoogleDesktopIdToken(
