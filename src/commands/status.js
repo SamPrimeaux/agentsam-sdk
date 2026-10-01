@@ -4,6 +4,7 @@ import { buildStatusActionPlan } from '../status/actions.js';
 import { openExternalUrl } from '../lib/open-url.js';
 import readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
+import { renderCommandHelp } from '../ui/cli/help.js';
 
 function parseStatusArgs(argv = []) {
   const opts = {
