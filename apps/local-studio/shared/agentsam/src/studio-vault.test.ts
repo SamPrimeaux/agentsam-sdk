@@ -44,8 +44,8 @@ describe("serviceToProvider", () => {
     assert.equal(serviceToProvider("anthropic"), "anthropic");
     assert.equal(serviceToProvider("gemini"), "gemini");
     assert.equal(serviceToProvider("google"), "gemini");
-    assert.equal(serviceToProvider("xai"), "grok");
-    assert.equal(serviceToProvider("grok"), "grok");
+    assert.equal(serviceToProvider("xai"), "xai");
+    assert.equal(serviceToProvider("grok"), "xai");
     assert.equal(serviceToProvider("cursor"), "cursor");
     assert.equal(serviceToProvider("cloudflare"), "cloudflare");
     assert.equal(serviceToProvider("OPENAI"), "openai");

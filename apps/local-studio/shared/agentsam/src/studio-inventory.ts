@@ -25,7 +25,7 @@ export function platformCredentials(env: NodeJS.ProcessEnv) {
   put("openai", env.OPENAI_API_KEY);
   put("anthropic", env.ANTHROPIC_API_KEY);
   put("gemini", env.GEMINI_API_KEY);
-  put("grok", env.XAI_API_KEY);
+  put("xai", env.XAI_API_KEY);
   put("cursor", env.CURSOR_API_KEY);
   put("cloudflare", env.CLOUDFLARE_API_TOKEN, {
     cloudflare_account_id: env.CLOUDFLARE_ACCOUNT_ID || null,

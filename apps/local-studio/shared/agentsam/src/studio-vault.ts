@@ -28,15 +28,15 @@ export type StudioEnv = Record<string, string | undefined>;
 
 /**
  * D1 user_secrets.service_name → Studio provider id.
- * Service-name aliases (xai→grok, google→gemini) are intentional D1 values, not env fallbacks.
+ * Service-name aliases (grok→xai, google→gemini) are intentional D1 values, not env fallbacks.
  */
 export const SERVICE_TO_PROVIDER: Readonly<Record<string, string>> = Object.freeze({
   openai: "openai",
   anthropic: "anthropic",
   gemini: "gemini",
   google: "gemini",
-  xai: "grok",
-  grok: "grok",
+  xai: "xai",
+  grok: "xai",
   cursor: "cursor",
   cloudflare: "cloudflare",
   meshy: "meshy",
@@ -165,7 +165,7 @@ export function platformCredentialFor(
   if (id === "openai") return pick(env.OPENAI_API_KEY);
   if (id === "anthropic") return pick(env.ANTHROPIC_API_KEY);
   if (id === "gemini") return pick(env.GEMINI_API_KEY);
-  if (id === "grok") return pick(env.XAI_API_KEY);
+  if (id === "xai") return pick(env.XAI_API_KEY);
   if (id === "cursor") return pick(env.CURSOR_API_KEY);
   if (id === "meshy") return pick(env.MESHYAI_API_KEY);
   if (id === "resend") return pick(env.RESEND_API_KEY);

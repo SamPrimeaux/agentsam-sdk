@@ -22,6 +22,7 @@ export interface DiscoveredModelRecord {
   service_tiers?: string[];
   capabilities?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
+  source?: Record<string, unknown>;
 }
 
 export interface CredentialScopedInventory {
@@ -87,7 +88,15 @@ export function sanitizeInventoryForClient(status?: Partial<CredentialScopedInve
     reasoning_efforts: string[];
     service_tiers: string[];
     capabilities: Record<string, unknown>;
+    chat_eligible: boolean;
+    eligibility_reason: string | null;
+    eligibility_source: string;
   }>;
+};
+export function modelChatEligibility(row?: DiscoveredModelRecord): {
+  chat_eligible: boolean;
+  eligibility_reason: string | null;
+  eligibility_source: string;
 };
 export function assertModelAvailableForProvider(
   inventory: { availableModels?: Array<Record<string, unknown>> },

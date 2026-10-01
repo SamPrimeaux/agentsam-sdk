@@ -7,7 +7,7 @@ export const INVENTORY_API_PROVIDERS = Object.freeze([
   { id: 'openai', label: 'OpenAI', service: 'openai', env: 'OPENAI_API_KEY' },
   { id: 'anthropic', label: 'Anthropic', service: 'anthropic', env: 'ANTHROPIC_API_KEY' },
   { id: 'gemini', label: 'Gemini', service: 'gemini', env: 'GEMINI_API_KEY' },
-  { id: 'grok', label: 'Grok / xAI', service: 'xai', env: 'XAI_API_KEY', aliases: ['xai', 'grok'] },
+  { id: 'xai', label: 'Grok / xAI', service: 'xai', env: 'XAI_API_KEY', aliases: ['grok'] },
   { id: 'cursor', label: 'Cursor', service: 'cursor', env: 'CURSOR_API_KEY' },
   { id: 'cloudflare', label: 'Cloudflare', service: 'cloudflare', env: 'CLOUDFLARE_API_TOKEN' },
 ]);
@@ -29,8 +29,8 @@ const SERVICE_TO_PROVIDER = Object.freeze({
   openai: 'openai',
   anthropic: 'anthropic',
   gemini: 'gemini',
-  xai: 'grok',
-  grok: 'grok',
+  xai: 'xai',
+  grok: 'xai',
   cursor: 'cursor',
   cloudflare: 'cloudflare',
 });
@@ -68,6 +68,41 @@ export function makeMapCredentialResolver(credentialByProvider) {
       account_id: row.account_id || null,
     };
   };
+}
+
+const CHAT_ADAPTER_PROVIDERS = new Set(['openai', 'anthropic', 'gemini', 'xai', 'cloudflare']);
+
+export function modelChatEligibility(row = {}) {
+  const rawProvider = String(row.provider || '').trim().toLowerCase();
+  const provider = rawProvider === 'grok' ? 'xai' : rawProvider;
+  const caps = row.capabilities && typeof row.capabilities === 'object' ? row.capabilities : {};
+  const metadata = row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+  const source = String(metadata.capability_source || (row.source?.fallback?.url ? 'provider_reference' : 'provider_api'));
+
+  if (!CHAT_ADAPTER_PROVIDERS.has(provider)) {
+    return { chat_eligible: false, eligibility_reason: 'provider_adapter_unavailable', eligibility_source: source };
+  }
+  if (caps.embeddings === true) {
+    return { chat_eligible: false, eligibility_reason: 'embedding_model', eligibility_source: source };
+  }
+  if (caps.agent_runtime === false) {
+    return { chat_eligible: false, eligibility_reason: 'capability_excludes_chat', eligibility_source: source };
+  }
+
+  const positive =
+    (provider === 'openai' && caps.responses === true && caps.agent_runtime === true)
+    || (provider === 'anthropic' && caps.messages === true)
+    || (provider === 'gemini' && caps.generate_content === true && caps.text_output === true)
+    || (provider === 'xai' && caps.responses === true && caps.text_output === true)
+    || (provider === 'cloudflare' && caps.workers_ai === true && caps.agent_runtime === true && caps.embeddings !== true);
+
+  if (positive) {
+    return { chat_eligible: true, eligibility_reason: null, eligibility_source: source };
+  }
+  if (metadata.specialized_output === true || caps.text_output === false) {
+    return { chat_eligible: false, eligibility_reason: 'specialized_output_model', eligibility_source: source };
+  }
+  return { chat_eligible: false, eligibility_reason: 'capability_unknown', eligibility_source: source };
 }
 
 /**
@@ -146,7 +181,7 @@ export function sanitizeInventoryForClient(status = {}) {
     })),
     discovery: status.discovery || {},
     availableModels: (status.availableModels || []).map((row) => ({
-      provider: row.provider,
+      provider: row.provider === 'grok' ? 'xai' : row.provider,
       model_id: row.provider_model_id || row.model_id,
       model_key: row.model_key || null,
       label: row.label || row.provider_model_id || row.model_id,
@@ -156,6 +191,7 @@ export function sanitizeInventoryForClient(status = {}) {
       reasoning_efforts: row.reasoning_efforts || [],
       service_tiers: row.service_tiers || [],
       capabilities: row.capabilities || {},
+      ...modelChatEligibility(row),
     })),
   };
   if (status.local) {

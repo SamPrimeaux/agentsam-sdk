@@ -100,27 +100,9 @@ function baseRecord(provider, id, values = {}) {
 
 function openAIModelCapabilities(id) {
   const fallback = fallbackRecord('openai', id);
-  if (fallback?.capabilities) return {};
-
-  const normalized = clean(id);
-  if (/^text-embedding-/i.test(normalized)) {
-    return { agent_runtime: false, embeddings: true };
-  }
-
-  // Purpose-specific model families/suffixes must win before broad GPT-family
-  // matching. A model being named `gpt-*` does not make it an interactive
-  // Responses model (for example gpt-4o-mini-transcribe-*).
-  if (
-    /^(?:gpt-image|chatgpt-image|gpt-audio|gpt-realtime|sora|tts|whisper|omni-moderation)/i.test(normalized)
-    || /(?:^|[-_.])(?:audio|realtime|transcribe|transcription|speech|tts|image|video|embedding|moderation)(?:[-_.]|$)/i.test(normalized)
-  ) {
-    return { agent_runtime: false };
-  }
-
-  if (/^(?:gpt-(?:4o|4\.1|5|6)|o[1-9])/i.test(normalized)) {
-    return { agent_runtime: true, responses: true };
-  }
-  return { agent_runtime: false };
+  // /v1/models proves credential-scoped availability but does not expose
+  // per-model modality / Responses compatibility. Never guess from names.
+  return fallback?.capabilities ? {} : {};
 }
 
 async function fetchJson(fetchImpl, url, init) {
@@ -169,8 +151,8 @@ export async function discoverAnthropicModels(apiKey, fetchImpl = fetch) {
         return baseRecord('anthropic', id, {
           label: clean(row?.display_name) || id,
           source_url: 'https://api.anthropic.com/v1/models',
-          capabilities: { messages: true, function_calling: true, prompt_caching: true },
-          metadata: { created_at: row?.created_at || null, type: row?.type || null },
+          capabilities: { messages: true },
+          metadata: { created_at: row?.created_at || null, type: row?.type || null, capability_source: 'provider_endpoint_contract' },
         });
       })
       .filter(Boolean);
@@ -191,6 +173,8 @@ export async function discoverGeminiModels(apiKey, fetchImpl = fetch) {
       .map((row) => {
         const id = clean(row?.baseModelId || row?.name).replace(/^models\//, '');
         if (!id) return null;
+        const providerDescription = clean(row?.description);
+        const specializedOutput = /(?:text[- ]to[- ]speech|\btts\b|image generation|generate images?|transcription|transcribe|audio generation)/i.test(providerDescription);
         return baseRecord('gemini', id, {
           label: clean(row?.displayName) || id,
           context_window: positiveInt(row?.inputTokenLimit),
@@ -199,12 +183,15 @@ export async function discoverGeminiModels(apiKey, fetchImpl = fetch) {
           source_url: 'https://generativelanguage.googleapis.com/v1beta/models',
           capabilities: {
             generate_content: true,
-            function_calling: true,
+            text_output: !specializedOutput,
             thinking: row?.thinking === true,
           },
           metadata: {
             version: row?.version || null,
+            description: providerDescription || null,
             supported_generation_methods: row?.supportedGenerationMethods || [],
+            capability_source: 'provider_api',
+            specialized_output: specializedOutput,
           },
         });
       })
@@ -250,22 +237,39 @@ function xaiPricing(row) {
 export async function discoverXaiModels(apiKey, fetchImpl = fetch) {
   if (!clean(apiKey)) return failure('credential unavailable', false);
   try {
-    const body = await fetchJson(fetchImpl, 'https://api.x.ai/v1/models', {
-      headers: { authorization: `Bearer ${clean(apiKey)}` },
-    });
+    const auth = { authorization: 'Bearer ' + clean(apiKey) };
+    const body = await fetchJson(fetchImpl, 'https://api.x.ai/v1/models', { headers: auth });
+    let languageRows = [];
+    try {
+      const languageBody = await fetchJson(fetchImpl, 'https://api.x.ai/v1/language-models', { headers: auth });
+      languageRows = Array.isArray(languageBody?.models) ? languageBody.models : [];
+    } catch {
+      // Keep full availability even if capability discovery is temporarily unavailable.
+    }
+    const languageById = new Map(languageRows.map((row) => [clean(row?.id), row]).filter(([id]) => id));
     const models = (Array.isArray(body?.data) ? body.data : [])
       .map((row) => {
         const id = clean(row?.id);
-        if (!id || /image|video|voice|embedding/i.test(id)) return null;
-        return baseRecord('grok', id, {
-          context_window: positiveInt(row?.context_length),
+        if (!id) return null;
+        const language = languageById.get(id) || null;
+        const outputModalities = Array.isArray(language?.output_modalities)
+          ? language.output_modalities.map(clean).filter(Boolean)
+          : [];
+        return baseRecord('xai', id, {
+          context_window: positiveInt(language?.context_length ?? row?.context_length),
           pricing: xaiPricing(row),
           source_url: 'https://api.x.ai/v1/models',
-          capabilities: { responses: true, function_calling: true, prompt_caching: true },
+          capabilities: {
+            responses: Boolean(language),
+            text_output: Boolean(language) && outputModalities.includes('text'),
+          },
           metadata: {
-            aliases: row?.aliases || [],
-            created: row?.created || null,
-            owned_by: row?.owned_by || null,
+            aliases: row?.aliases || language?.aliases || [],
+            created: row?.created || language?.created || null,
+            owned_by: row?.owned_by || language?.owned_by || null,
+            input_modalities: Array.isArray(language?.input_modalities) ? language.input_modalities : [],
+            output_modalities: outputModalities,
+            capability_source: language ? 'provider_api_language_models' : 'provider_api_models_only',
           },
         });
       })
@@ -300,6 +304,7 @@ export async function discoverCursorModels(apiKey, fetchImpl = fetch) {
             aliases: Array.isArray(row?.aliases) ? row.aliases : [],
             parameters: params,
             variants: Array.isArray(row?.variants) ? row.variants : [],
+            capability_source: 'provider_api',
           },
         });
       })
@@ -344,6 +349,7 @@ export async function discoverCloudflareModels(apiToken, accountId, fetchImpl = 
             task,
             author: clean(row?.author) || null,
             description: clean(row?.description) || null,
+            capability_source: 'provider_api_task',
           },
         });
       })

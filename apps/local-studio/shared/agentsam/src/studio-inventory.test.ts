@@ -42,6 +42,8 @@ test("Studio inventory is live and credential-scoped per user", async (t) => {
     ["openai:gpt-5.6-sol"],
   );
   assert.notDeepEqual(user123.availableModels, user345.availableModels);
+  assert.equal(user123.availableModels.find((row) => row.model_id === "gpt-5.6-luna")?.chat_eligible, true);
+  assert.equal(user345.availableModels.find((row) => row.model_id === "gpt-5.6-sol")?.chat_eligible, true);
   assert.equal(user123.providers.find((row: { id: string; source: string | null }) => row.id === "openai")?.source, "user_vault");
   assert.equal(user345.providers.find((row: { id: string; source: string | null }) => row.id === "openai")?.source, "user_vault");
 });
