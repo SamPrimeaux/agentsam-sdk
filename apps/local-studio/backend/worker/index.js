@@ -21,6 +21,10 @@ import {
   last4 as vaultLast4,
   createProviderRegistry,
 } from "../../../../packages/agentsam-vault/src/index.js";
+import {
+  collectCredentialScopedInventory,
+  sanitizeInventoryForClient,
+} from "../../../../src/models/inventory-core.js";
 import { handleCmsWorkerRequest } from "./cms-service.js";
 import { serveCanonicalHomepage } from "./canonical-homepage.js";
 import { isPublicSitePath, servePublicSitePage } from "./public-site.js";
@@ -615,35 +619,29 @@ async function handleLlmInventory(env, userId, request) {
     if (!merged.has(id)) merged.set(id, row);
   }
 
-  // Worker stays boundary-safe: return credential provenance only (no root src import).
-  // Live model discovery for Studio UI uses the Nitro/TanStack inventory route.
-  // Cloudflare counts as configured when the Workers AI binding is present,
-  // even with no API token — chat routes through env.AGENTSAM_WAI (platform).
-  const providers = INVENTORY_PROVIDER_IDS.map((id) => {
-    const row = merged.get(id);
-    const viaWorkersAI = id === 'cloudflare' && Boolean(env.AGENTSAM_WAI);
-    return {
-      id,
-      configured: Boolean(row?.value) || viaWorkersAI,
-      source: row?.source || (viaWorkersAI ? 'platform' : null),
-    };
+  const credentialPlane = vault.size ? (platform.size ? 'mixed' : 'studio_vault') : 'platform';
+  const discovered = await collectCredentialScopedInventory({
+    credentialPlane,
+    resolveCredential: async (providerId) => {
+      const row = merged.get(providerId);
+      if (!row?.value) {
+        return { configured: false, value: '', source: null, error: null };
+      }
+      return {
+        configured: true,
+        value: row.value,
+        source: row.source || 'injected',
+        account_id: row.cloudflare_account_id || row.account_id || null,
+      };
+    },
   });
+  const inventory = sanitizeInventoryForClient(discovered);
 
   return json({
     ok: true,
     user_id: userId,
-    schemaVersion: 'agentsam-model-inventory-v3',
-    authority: 'per_credential_provider_discovery',
-    credential_plane: vault.size ? (platform.size ? 'mixed' : 'studio_vault') : 'platform',
-    providers,
-    availableModels: [],
-    discovery: Object.fromEntries(providers.map((p) => [p.id, {
-      attempted: false,
-      ok: false,
-      error: p.configured ? 'discover_via_studio_inventory_route' : null,
-      returnedModelCount: 0,
-    }])),
-    note: 'Worker inventory returns vault/platform credential provenance. Call Studio /api/llm/inventory for live model discovery.',
+    account_id: userId,
+    ...inventory,
   });
 }
 
