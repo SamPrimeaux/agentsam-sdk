@@ -6,12 +6,6 @@
  * already speak the same D1-shaped statement API — not because D1 was forced
  * through a Node sqlite emulator.
  */
-export {
-  applyPortableIdentityMigrations,
-  applySqliteIdentityMigrations,
-  resolveIdentitySchemaPack,
-} from '../../../migrations/apply-portable.js';
-
 import { createPortableIdentityStore } from '../portable-store.js';
 
 /**
