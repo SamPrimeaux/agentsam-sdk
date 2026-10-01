@@ -266,7 +266,6 @@ export async function createGoapGoal({
     repositoryId: repoId,
     ownerRef: repoId,
     source: 'agentsam_sdk',
-    agentRunId,
     now,
   });
 
