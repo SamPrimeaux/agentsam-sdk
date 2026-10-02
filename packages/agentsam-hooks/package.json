@@ -1,0 +1,65 @@
+{
+  "name": "@inneranimalmedia/agentsam-hooks",
+  "version": "2.6.9",
+  "description": "Provider-neutral, language-agnostic AgentSam lifecycle hooks with callback, command, HTTP, model, tool, MCP, LSP, and sub-agent adapters.",
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    },
+    "./contracts": "./src/contracts.js",
+    "./runtime": "./src/runtime.js",
+    "./config": "./src/config.js",
+    "./adapters/callback": "./src/adapters/callback.js",
+    "./adapters/command": "./src/adapters/command.js",
+    "./adapters/http": "./src/adapters/http.js",
+    "./adapters/provider": "./src/adapters/provider.js",
+    "./adapters/capability": "./src/adapters/capability.js",
+    "./adapters/composite": "./src/adapters/composite.js",
+    "./adapters/mcp": "./src/adapters/mcp.js",
+    "./adapters/lsp": "./src/adapters/lsp.js",
+    "./adapters/agents": "./src/adapters/agents.js",
+    "./protocol/input": "./protocol/agentsam.hook.v1.schema.json",
+    "./protocol/output": "./protocol/agentsam.hook.output.v1.schema.json",
+    "./protocol/config": "./protocol/agentsam.hooks.config.v1.schema.json",
+    "./package.json": "./package.json",
+    "./protocol/receipt": "./protocol/agentsam.hook.receipt.v1.schema.json"
+  },
+  "bin": {
+    "agentsam-hooks": "./bin/agentsam-hooks.mjs"
+  },
+  "files": [
+    "bin",
+    "bindings",
+    "protocol",
+    "scripts",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "sync:protocol": "node scripts/sync-protocol.mjs",
+    "clean:protocol": "node scripts/clean-protocol.mjs",
+    "build": "npm run sync:protocol",
+    "pretest": "npm run sync:protocol",
+    "test": "node --test test/*.test.mjs",
+    "posttest": "npm run clean:protocol",
+    "typecheck": "tsc --noEmit --allowJs false --skipLibCheck src/index.d.ts",
+    "prepack": "npm run sync:protocol",
+    "postpack": "npm run clean:protocol"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/agentsam-hooks"
+  }
+}

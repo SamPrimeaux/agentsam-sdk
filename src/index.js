@@ -25,6 +25,35 @@ export {
   suggestCliCommands,
 } from './cli/command-catalog.js';
 export { routeIntent } from './lib/router.js';
+export {
+  HOOK_PROTOCOL_SCHEMA,
+  HOOK_CONFIG_SCHEMA,
+  HOOK_RECEIPT_SCHEMA,
+  HOOK_EVENTS,
+  PERMISSION_DECISIONS,
+  ERROR_HANDLING_DECISIONS,
+  HOOK_FAILURE_MODES,
+  AgentSamHooks,
+  HookExecutionError,
+  HookPermissionError,
+  normalizeHookEvent,
+  normalizeHookOutput,
+  createHookEnvelope,
+  createHookRuntime,
+  createHookRuntimeFromConfig,
+  ensureHookRuntime,
+  findHookConfig,
+  loadHookConfig,
+  createCallbackHookAdapter,
+  createCommandHookAdapter,
+  createHttpHookAdapter,
+  createHookedProviderAdapter,
+  createHookedCapabilityAdapter,
+  createCompositeCapabilityAdapter,
+  createMcpCapabilityAdapter,
+  createLspCapabilityAdapter,
+  createAgentCapabilityAdapter,
+} from '../packages/agentsam-hooks/src/index.js';
 export { searchToolCards, toToolCard, hydrateToolSchemas } from './tools/index.js';
 export {
   AGENTSAM_PLUGIN_SCHEMA_VERSION,

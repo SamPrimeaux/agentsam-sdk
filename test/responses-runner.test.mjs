@@ -184,6 +184,57 @@ test('runtime approval hook can deny a model-triggered tool before execution', a
   assert.equal(invoked, false);
 });
 
+test('runner hooks instrument prompts and providers and can request a bounded autonomous continuation', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-runner-hooks-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.writeFileSync(path.join(root, 'package.json'), '{"name":"hooks-demo"}');
+  let modelCalls = 0;
+  let stopCalls = 0;
+  const modelInputs = [];
+  const provider = {
+    provider: 'openai',
+    async create(params) {
+      modelCalls += 1;
+      modelInputs.push(params.input);
+      return {
+        response_id: `resp_hook_${modelCalls}`,
+        provider_state: { previous_response_id: `resp_hook_${modelCalls}` },
+        output_text: modelCalls === 1 ? 'first pass' : 'verified',
+        actual_service_tier: 'default', tool_calls: [],
+        usage_snapshot: usage(1_000, modelCalls * 1_000), cost: cost(0.01),
+      };
+    },
+    async continueWithToolOutputs() { throw new Error('unused'); },
+  };
+  const hooks = {
+    user_prompt_submitted: ({ input }) => ({ modified_prompt: `${input.prompt} with hook policy` }),
+    pre_model_use: ({ input }) => ({ permission_decision: 'allow', modified_request: { ...input.request, promptCacheKey: 'portable-hook-cache' } }),
+    agent_stop: () => {
+      stopCalls += 1;
+      return stopCalls === 1 ? { decision: 'block', reason: 'Run one verification pass.' } : { decision: 'allow' };
+    },
+  };
+  const result = await runResponsesAgent({
+    provider,
+    capabilityAdapter: createCapabilityAdapter(),
+    hooks,
+    cwd: root,
+    prompt: 'inspect repository',
+    model: 'gpt-6-astra',
+    maxHookContinuations: 1,
+  });
+  assert.equal(modelCalls, 2);
+  assert.equal(modelInputs[0], 'inspect repository with hook policy');
+  assert.equal(modelInputs[1], 'Run one verification pass.');
+  assert.equal(result.output_text, 'verified');
+  assert.equal(result.total_cost_usd, 0.02);
+  assert.equal(result.cost_breakdown_usd.input, 0.01);
+  assert.equal(result.run_budget.hook_continuations, 1);
+  assert.equal(result.run_budget.max_hook_continuations, 1);
+  assert.ok(result.hook_receipts.some(row => row.hook === 'user_prompt_submitted'));
+  assert.ok(result.hook_receipts.some(row => row.hook === 'agent_stop'));
+});
+
 test('runner compacts before a projected high-context continuation rather than crossing normal policy blindly', async () => {
   let compactCalls = 0;
   let createInput = null;

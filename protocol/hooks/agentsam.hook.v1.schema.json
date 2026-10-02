@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.dev/protocol/hooks/agentsam.hook.v1.schema.json",
+  "title": "AgentSam hook invocation envelope",
+  "type": "object",
+  "required": ["schema", "hook", "timestamp", "cwd", "invocation", "input"],
+  "properties": {
+    "schema": { "const": "agentsam.hook.v1" },
+    "hook": {
+      "enum": [
+        "session_start", "session_end", "user_prompt_submitted", "user_prompt_transformed",
+        "pre_model_use", "post_model_use", "pre_tool_use", "post_tool_use",
+        "post_tool_use_failure", "error_occurred", "agent_stop", "subagent_start", "subagent_stop"
+      ]
+    },
+    "timestamp": { "type": "number", "minimum": 0, "description": "Unix epoch milliseconds." },
+    "cwd": { "type": "string" },
+    "invocation": {
+      "type": "object",
+      "properties": {
+        "session_id": { "type": "string" },
+        "run_id": { "type": "string" },
+        "turn_id": { "type": "string" },
+        "message_id": { "type": "string" },
+        "agent_id": { "type": "string" },
+        "parent_agent_id": { "type": "string" },
+        "source": { "type": "string" },
+        "metadata": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "input": { "type": "object", "description": "Event-specific, provider-neutral payload." }
+  },
+  "additionalProperties": false
+}

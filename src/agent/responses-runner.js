@@ -7,6 +7,11 @@ import { searchToolCards, hydrateToolSchemas } from '../tools/index.js';
 import { createAgentEvent } from '../telemetry/index.js';
 import { diagnosticFromError } from '../errors/index.js';
 import { runAgentSamModelTurn } from './model-turn.js';
+import {
+  createHookedCapabilityAdapter,
+  createHookedProviderAdapter,
+  ensureHookRuntime,
+} from '../../packages/agentsam-hooks/src/index.js';
 
 const RUNTIME_OWNED_KEYS = new Set(['account_id', 'user_id', 'tenant_id', 'workspace_id', 'connection_id', 'runtime_lease_id', 'execution_id']);
 
@@ -229,7 +234,7 @@ function toolOutputInput(outputs) {
   }));
 }
 
-export async function runAgentSamTurn(options = {}) {
+async function runAgentSamTurnCore(options = {}) {
   const provider = options.provider;
   if (!provider?.create || !provider?.continueWithToolOutputs) throw new TypeError('Responses provider adapter is required');
   if (!options.capabilityAdapter) throw new TypeError('capabilityAdapter is required');
@@ -612,6 +617,136 @@ export async function runAgentSamTurn(options = {}) {
       usage_snapshot: response.usage_snapshot,
       compact_before_next_turn: finalPressure?.shouldCompact ?? false,
     }),
+  });
+}
+
+function hookInvocation(options = {}) {
+  return {
+    session_id: options.sessionId,
+    run_id: options.runId,
+    turn_id: options.turnId,
+    message_id: options.messageId,
+    agent_id: options.agentId,
+    source: options.source || 'agentsam-sdk',
+    metadata: options.hookMetadata,
+  };
+}
+
+/**
+ * Provider-neutral AgentSam turn with optional lifecycle instrumentation.
+ *
+ * Passing `hookRuntime` (or a plain `hooks` registry) instruments the model
+ * and capability adapters without teaching the orchestration loop any
+ * provider, MCP, LSP, or sub-agent wire format. An agent_stop hook may request
+ * another bounded turn; continuation reuses provider state and cumulative
+ * usage instead of constructing a hidden second session.
+ */
+export async function runAgentSamTurn(options = {}) {
+  const hookSource = options.hookRuntime || options.hooks;
+  if (!hookSource) return runAgentSamTurnCore(options);
+
+  const hooks = ensureHookRuntime(hookSource);
+  const cwd = path.resolve(options.cwd || process.cwd());
+  const invocation = hookInvocation(options);
+  const submitted = await hooks.dispatch('user_prompt_submitted', {
+    prompt: clean(options.prompt),
+    cwd,
+  }, invocation, { cwd });
+  const prompt = clean(submitted.input.prompt);
+  if (!prompt) throw new TypeError('prompt is required');
+  const additionalContext = submitted.output.additional_context;
+  const instrumented = {
+    ...options,
+    prompt,
+    provider: createHookedProviderAdapter(options.provider, {
+      hookRuntime: hooks,
+      invocation,
+      cwd,
+      requestPermission: options.requestPermission,
+      maxRetries: options.maxHookRetries,
+    }),
+    capabilityAdapter: createHookedCapabilityAdapter(options.capabilityAdapter, {
+      hookRuntime: hooks,
+      invocation,
+      cwd,
+      requestPermission: options.requestPermission,
+      maxRetries: options.maxHookRetries,
+    }),
+    ...(additionalContext && options.instructions != null
+      ? { instructions: [String(options.instructions), additionalContext].filter(Boolean).join('\n\n') }
+      : {}),
+    ...(additionalContext && options.instructions == null
+      ? {
+          contextItems: [
+            ...(options.contextItems || []),
+            { kind: 'hook', ref: 'hook://user-prompt/context', priority: 95, content: additionalContext },
+          ],
+        }
+      : {}),
+  };
+
+  const maxContinuations = Number.isInteger(options.maxHookContinuations)
+    ? Math.max(0, Math.min(options.maxHookContinuations, 8))
+    : 4;
+  const continuationReceipts = [];
+  let current = instrumented;
+  let result;
+  let totalCost = 0;
+  let totalRounds = 0;
+  let totalCalls = 0;
+  let totalElapsedMs = 0;
+  let hookContinuations = 0;
+  const costBreakdown = { input: 0, cached_input: 0, cache_write: 0, output: 0 };
+  const allToolReceipts = [];
+  const allContinuationCompactions = [];
+
+  for (let continuationIndex = 0; ; continuationIndex += 1) {
+    result = await runAgentSamTurnCore(current);
+    totalCost += Number(result.total_cost_usd || 0);
+    totalRounds += Number(result.run_budget?.tool_rounds || 0);
+    totalCalls += Number(result.run_budget?.tool_calls || 0);
+    totalElapsedMs += Number(result.run_budget?.elapsed_ms || 0);
+    for (const key of Object.keys(costBreakdown)) costBreakdown[key] += Number(result.cost_breakdown_usd?.[key] || 0);
+    allToolReceipts.push(...(result.tool_receipts || []));
+    allContinuationCompactions.push(...(result.continuation_compactions || []));
+    const stopped = await hooks.dispatch('agent_stop', {
+      stop_reason: result.output_text ? 'completed' : 'no_output',
+      stop_hook_active: continuationIndex > 0,
+      output_text: result.output_text,
+      continuation_index: continuationIndex,
+      run_budget: result.run_budget,
+    }, invocation, { cwd });
+    continuationReceipts.push(...stopped.receipts);
+    if (stopped.output.decision !== 'block') break;
+    if (continuationIndex >= maxContinuations) throw new Error(`hook_continuation_limit_exceeded:${maxContinuations}`);
+    const reason = clean(stopped.output.reason);
+    if (!reason) throw new Error('hook_continuation_reason_required');
+    hookContinuations += 1;
+    current = {
+      ...instrumented,
+      prompt: reason,
+      previousProviderState: result.provider_state,
+      previousUsageSnapshot: result.usage_snapshot,
+      cumulativeUsage: result.cumulative_usage,
+    };
+  }
+
+  return Object.freeze({
+    ...result,
+    ...(submitted.output.suppress_output === true ? { output_text: '', suppressed_by_hook: true } : {}),
+    total_cost_usd: totalCost,
+    cost_breakdown_usd: Object.freeze(costBreakdown),
+    tool_receipts: Object.freeze(allToolReceipts),
+    continuation_compactions: Object.freeze(allContinuationCompactions),
+    run_budget: Object.freeze({
+      ...result.run_budget,
+      tool_rounds: totalRounds,
+      tool_calls: totalCalls,
+      elapsed_ms: totalElapsedMs,
+      hook_continuations: hookContinuations,
+      max_hook_continuations: maxContinuations,
+    }),
+    hook_receipts: Object.freeze([...submitted.receipts, ...continuationReceipts]),
   });
 }
 

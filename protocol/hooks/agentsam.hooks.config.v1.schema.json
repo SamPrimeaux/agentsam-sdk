@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.dev/protocol/hooks/agentsam.hooks.config.v1.schema.json",
+  "title": "AgentSam portable hook configuration",
+  "type": "object",
+  "required": ["schema", "adapters", "hooks"],
+  "properties": {
+    "schema": { "const": "agentsam.hooks.config.v1" },
+    "adapters": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["type", "command"],
+            "properties": {
+              "type": { "const": "command" },
+              "command": { "type": "string", "minLength": 1 },
+              "args": { "type": "array", "items": { "type": "string" } },
+              "cwd": { "type": "string" },
+              "env": { "type": "object", "additionalProperties": { "type": "string" } },
+              "inherit_environment": { "type": "boolean" },
+              "timeout_ms": { "type": "integer", "minimum": 1, "maximum": 600000 },
+              "max_output_bytes": { "type": "integer", "minimum": 1, "maximum": 16777216 }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": ["type", "url"],
+            "properties": {
+              "type": { "const": "http" },
+              "url": { "type": "string", "format": "uri" },
+              "headers": { "type": "object", "additionalProperties": { "type": "string" } },
+              "timeout_ms": { "type": "integer", "minimum": 1, "maximum": 600000 },
+              "max_response_bytes": { "type": "integer", "minimum": 1, "maximum": 16777216 }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "hooks": {
+      "type": "object",
+      "propertyNames": {
+        "enum": [
+          "session_start", "session_end", "user_prompt_submitted", "user_prompt_transformed",
+          "pre_model_use", "post_model_use", "pre_tool_use", "post_tool_use",
+          "post_tool_use_failure", "error_occurred", "agent_stop", "subagent_start", "subagent_stop"
+        ]
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "oneOf": [
+            { "type": "string" },
+            {
+              "type": "object",
+              "required": ["adapter"],
+              "properties": {
+                "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$" },
+                "adapter": { "type": "string" },
+                "priority": { "type": "number" },
+                "timeout_ms": { "type": "integer", "minimum": 1, "maximum": 600000 },
+                "failure_mode": { "enum": ["open", "closed", "error"] },
+                "enabled": { "type": "boolean" },
+                "metadata": { "type": "object" }
+              },
+              "additionalProperties": false
+            }
+          ]
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

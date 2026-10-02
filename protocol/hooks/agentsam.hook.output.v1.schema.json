@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.dev/protocol/hooks/agentsam.hook.output.v1.schema.json",
+  "title": "AgentSam hook output",
+  "type": "object",
+  "properties": {
+    "permission_decision": { "enum": ["allow", "deny", "ask"] },
+    "permission_decision_reason": { "type": "string" },
+    "modified_args": { "type": "object" },
+    "modified_request": { "type": "object" },
+    "modified_result": {},
+    "modified_prompt": { "type": "string" },
+    "modified_transformed_prompt": { "type": "string" },
+    "additional_context": { "type": "string" },
+    "suppress_output": { "type": "boolean" },
+    "error_handling": { "enum": ["retry", "skip", "abort"] },
+    "retry_count": { "type": "integer", "minimum": 0, "maximum": 10 },
+    "user_notification": { "type": "string" },
+    "decision": { "enum": ["allow", "block"] },
+    "reason": { "type": "string" },
+    "cleanup_actions": { "type": "array", "items": { "type": "string" } },
+    "session_summary": { "type": "string" },
+    "metadata": { "type": "object" }
+  },
+  "additionalProperties": false
+}
