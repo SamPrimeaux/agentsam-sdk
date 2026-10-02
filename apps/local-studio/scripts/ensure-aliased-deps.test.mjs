@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, symlinkSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, symlinkSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -49,4 +49,21 @@ test('ensure-aliased-deps links missing nav deps from studio node_modules', () =
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+
+test('ensure-aliased-deps strips inherited npm allow-scripts flags before nested install', () => {
+  const source = readFileSync(script, 'utf8');
+  assert.match(source, /npm_config_allow\[_-\]\?scripts/);
+  assert.match(source, /delete env\[key\]/);
+  assert.match(source, /env: childNpmEnv\(\)/);
+});
+
+
+test('ensure-aliased-deps links local workspace packages before falling back to npm', () => {
+  const source = readFileSync(script, 'utf8');
+  assert.match(source, /workspacePackages\.set\(pkg\.name, dir\)/);
+  assert.match(source, /linkFromWorkspace\(pkgDir, dep\)/);
+  assert.match(source, /--workspaces=false/);
+  assert.match(source, /npm_config_workspace\(s\)\?/);
 });
