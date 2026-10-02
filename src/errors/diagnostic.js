@@ -6,7 +6,7 @@ import {
   normalizeError,
   redactErrorValue,
   redactString,
-} from '../../packages/agentsam-errors/src/index.js';
+} from '@inneranimalmedia/agentsam-errors';
 
 const DEFAULT_MAX_DETAIL_CHARS = 12_000;
 function clean(value) { return value == null ? '' : String(value).trim(); }

@@ -2,8 +2,8 @@
 import {
   ERROR_CODE,
   ERROR_REASON,
-} from '../../packages/agentsam-errors/src/vocabulary.js';
-import { canonicalCodeFromHttpStatus } from '../../packages/agentsam-errors/src/envelope.js';
+} from '@inneranimalmedia/agentsam-errors';
+import { canonicalCodeFromHttpStatus } from '@inneranimalmedia/agentsam-errors';
 
 export {
   ERROR_SCHEMA_VERSION,
@@ -15,7 +15,7 @@ export {
   ERROR_DOMAIN,
   REMEDIATION_ACTION,
   GRPC_STATUS,
-} from '../../packages/agentsam-errors/src/vocabulary.js';
+} from '@inneranimalmedia/agentsam-errors';
 
 export {
   canonicalCodeFromHttpStatus,
@@ -27,7 +27,7 @@ export {
   assertErrorEnvelope,
   serializeError,
   parseError,
-} from '../../packages/agentsam-errors/src/envelope.js';
+} from '@inneranimalmedia/agentsam-errors';
 
 // Legacy compact classifier shapes remain public here; richer envelope classifiers
 // live in packages/agentsam-errors and are available via the other adapter exports.
