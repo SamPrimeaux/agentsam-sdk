@@ -2,6 +2,13 @@
 name = "agentsam-machine-core"
 version = "0.1.0"
 edition = "2021"
+description = "Deterministic repository and asset perception primitives for AgentSam."
+license = "MIT"
+repository = "https://github.com/SamPrimeaux/agentsam-sdk"
+homepage = "https://github.com/SamPrimeaux/agentsam-sdk/tree/main/native/agentsam-machine"
+readme = "README.md"
+keywords = ["agents", "repository", "inspection", "deterministic", "tooling"]
+categories = ["development-tools"]
 
 [lib]
 crate-type = ["rlib"]
