@@ -1,16 +1,18 @@
 /**
  * Resolve the agentsam-machine native binary.
  * Preference order:
- *   1. AGENTSAM_MACHINE_BIN
- *   2. agentsam-machine on PATH
- *   3. Built binary under native/agentsam-machine/target/{release,debug}
- *   4. cargo run --manifest-path … (dev fallback inside the SDK repo)
+ *   1. AgentSam-managed user runtime under ~/.agentsam/runtimes/machine
+ *   2. AGENTSAM_MACHINE_BIN explicit override
+ *   3. agentsam-machine on PATH
+ *   4. Built binary under native/agentsam-machine/target/{release,debug}
+ *   5. cargo run --manifest-path (SDK contributor fallback)
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { findExecutable, managedMachineResolution } from './machine-runtime.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const sdkRoot = path.resolve(here, '../..');
@@ -18,7 +20,7 @@ const machineCrate = path.join(sdkRoot, 'native/agentsam-machine');
 const machineManifest = path.join(machineCrate, 'Cargo.toml');
 
 /**
- * @typedef {{ kind: 'binary', path: string, source: string } | { kind: 'cargo', manifest: string, source: string } | { kind: 'missing', tried: string[] }} MachineBinaryResolution
+ * @typedef {{ kind: 'binary', path: string, source: string, version?: string } | { kind: 'cargo', manifest: string, source: string } | { kind: 'missing', tried: string[] }} MachineBinaryResolution
  */
 
 /**
@@ -26,6 +28,17 @@ const machineManifest = path.join(machineCrate, 'Cargo.toml');
  */
 export function resolveMachineBinary(env = process.env) {
   const tried = [];
+
+  const managed = managedMachineResolution(env);
+  tried.push(...managed.tried);
+  if (managed.available) {
+    return {
+      kind: 'binary',
+      path: managed.path,
+      source: 'managed-runtime',
+      version: managed.state.current_version,
+    };
+  }
 
   const explicit = String(env.AGENTSAM_MACHINE_BIN || '').trim();
   if (explicit) {
@@ -35,25 +48,25 @@ export function resolveMachineBinary(env = process.env) {
     }
   }
 
-  const pathHit = which('agentsam-machine');
-  if (pathHit) {
-    return { kind: 'binary', path: pathHit, source: 'PATH' };
-  }
+  const pathHit = findExecutable('agentsam-machine', env);
+  if (pathHit) return { kind: 'binary', path: pathHit, source: 'PATH' };
   tried.push('PATH:agentsam-machine');
 
   for (const rel of ['target/release/agentsam-machine', 'target/debug/agentsam-machine']) {
     const candidate = path.join(machineCrate, rel);
     tried.push(candidate);
     if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
-      return { kind: 'binary', path: candidate, source: rel.includes('release') ? 'crate-release' : 'crate-debug' };
+      return {
+        kind: 'binary',
+        path: candidate,
+        source: rel.includes('release') ? 'crate-release' : 'crate-debug',
+      };
     }
   }
 
   if (fs.existsSync(machineManifest)) {
-    const cargo = which('cargo');
-    if (cargo) {
-      return { kind: 'cargo', manifest: machineManifest, source: 'cargo-run' };
-    }
+    const cargo = findExecutable('cargo', env);
+    if (cargo) return { kind: 'cargo', manifest: machineManifest, source: 'cargo-run' };
     tried.push('cargo');
   }
 
@@ -62,7 +75,7 @@ export function resolveMachineBinary(env = process.env) {
 
 /**
  * @param {MachineBinaryResolution} resolution
- * @param {string[]} machineArgv  args after `agentsam machine` (e.g. ['inspect', './site', '--json'])
+ * @param {string[]} machineArgv
  * @param {{ stdio?: import('node:child_process').StdioOptions, env?: NodeJS.ProcessEnv }} [options]
  */
 export function spawnMachine(resolution, machineArgv, options = {}) {
@@ -73,6 +86,7 @@ export function spawnMachine(resolution, machineArgv, options = {}) {
   if (resolution.kind === 'binary') {
     return spawnSync(resolution.path, machineArgv, { stdio, env, encoding: 'utf8', maxBuffer });
   }
+
   if (resolution.kind === 'cargo') {
     return spawnSync(
       'cargo',
@@ -80,22 +94,14 @@ export function spawnMachine(resolution, machineArgv, options = {}) {
       { stdio, env, encoding: 'utf8', maxBuffer },
     );
   }
+
   const err = new Error(
-    `agentsam-machine binary not found. Tried: ${(resolution.tried || []).join(', ') || '(none)'}. Install with: cargo install agentsam-machine-cli, ensure Cargo's bin directory is on PATH (normally ~/.cargo/bin), or set AGENTSAM_MACHINE_BIN. SDK contributors can build with: cargo build --manifest-path native/agentsam-machine/Cargo.toml --release`,
+    'agentsam-machine is not installed. Run: agentsam machine install. ' +
+    'Standalone Cargo users can run: cargo install agentsam-machine-cli. ' +
+    'Tried: ' + ((resolution.tried || []).join(', ') || '(none)'),
   );
   err.code = 'AGENTSAM_MACHINE_BINARY_MISSING';
   throw err;
-}
-
-function which(cmd) {
-  const probe = process.platform === 'win32' ? ['where', [cmd]] : ['which', [cmd]];
-  const result = spawnSync(probe[0], probe[1], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
-  if (result.status !== 0) return null;
-  const line = String(result.stdout || '')
-    .split(/\r?\n/)
-    .map((s) => s.trim())
-    .find(Boolean);
-  return line || null;
 }
 
 export function machineSdkRoot() {

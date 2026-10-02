@@ -126,16 +126,30 @@ agentsam-machine inspect . --json
 ```
 
 The Cargo package is named `agentsam-machine-cli`; the installed executable is
-`agentsam-machine`. Cargo normally installs binaries to `~/.cargo/bin`, which
-the standard Rust installer places on PATH. The npm CLI's `agentsam machine`
-command first looks for `agentsam-machine` on PATH and uses the in-repo Cargo
-source path only as a contributor-development fallback.
+`agentsam-machine`. Standalone Cargo installs normally place it in `~/.cargo/bin`.
+
+The AgentSam npm CLI also owns one user-level Machine runtime shared by every
+repository on that computer:
+
+```sh
+agentsam machine status
+agentsam machine install
+agentsam machine update
+agentsam machine doctor
+```
+
+Managed versions live under `~/.agentsam/runtimes/machine/versions/<version>/`
+with `current.json` selecting the active version. AgentSam resolves this managed
+runtime before environment overrides, PATH binaries, or contributor source-tree
+fallbacks. Projects keep their own evidence/state under `<repo>/.agentsam/`; they
+do not install or choose a Machine executable.
 
 The crates.io distribution is self-contained: the published CLI resolves the
 published `agentsam-machine-core` crate by version. Deleting a local AgentSam SDK
-checkout does not affect a registry installation. Precompiled npm-native platform
-binaries are a separate distribution lane; the current crates.io install requires
-a Rust/Cargo toolchain.
+checkout does not affect a registry installation. Install/update are explicit and
+do not run just because a user enters a repository. Precompiled npm-native
+platform binaries remain a separate future distribution lane; the current managed
+installer uses Cargo and therefore requires a Rust/Cargo toolchain.
 
 ## Capability discovery and available kits
 
