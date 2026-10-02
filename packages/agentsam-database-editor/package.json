@@ -1,8 +1,8 @@
 {
   "name": "@inneranimalmedia/agentsam-database-editor",
-  "version": "2.6.7",
+  "version": "2.6.9",
   "type": "module",
-  "description": "Portable AgentSam Database Editor \u2014 adapters for SQLite/D1/Postgres/Supabase + vectors surface. Donor: IAM /dashboard/database.",
+  "description": "Portable AgentSam Database Editor — adapters for SQLite/D1/Postgres/Supabase + vectors surface. Donor: IAM /dashboard/database.",
   "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js",
@@ -36,9 +36,9 @@
     "./dist/src/ui/database-editor.css"
   ],
   "peerDependencies": {
+    "lucide-react": ">=0.400.0",
     "react": ">=18",
     "react-dom": ">=18",
-    "lucide-react": ">=0.400.0",
     "recharts": ">=2.0.0"
   },
   "publishConfig": {

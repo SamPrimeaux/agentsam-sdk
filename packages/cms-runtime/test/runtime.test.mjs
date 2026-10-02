@@ -9,6 +9,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 const PACKAGE_ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const CLI = join(PACKAGE_ROOT, 'bin', 'cms-runtime.mjs');
+const PACKAGE_VERSION = JSON.parse(readFileSync(join(PACKAGE_ROOT, 'package.json'), 'utf8')).version;
 
 function run(root, ...args) {
   const stdout = execFileSync(process.execPath, [CLI, ...args, '--root', root, '--json'], {
@@ -36,7 +37,7 @@ test('clean project init is package-relative and self-describing', () => {
   assert.equal(receipt.project.id, 'user123-site');
   assert.equal(receipt.package.name, '@inneranimalmedia/cms-runtime');
   assert.equal(receipt.schemaRef, 'package:@inneranimalmedia/cms-runtime/sqlite-schema');
-  assert.equal(receipt.package.version, '2.6.8');
+  assert.equal(receipt.package.version, PACKAGE_VERSION);
   assert.equal(receiptText.includes('/Users/samprimeaux'), false);
   assert.equal(receiptText.includes('agentsam-sdk-cms-runtime-release'), false);
 

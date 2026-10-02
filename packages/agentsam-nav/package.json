@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-nav",
-  "version": "2.6.7",
+  "version": "2.6.9",
   "private": false,
   "description": "Reusable responsive navigation primitives for AgentSam dashboard-family applications.",
   "type": "module",

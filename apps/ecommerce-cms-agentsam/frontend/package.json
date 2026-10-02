@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-ecommerce-frontend",
-  "version": "2.6.7",
+  "version": "2.6.9",
   "private": true,
   "type": "module",
   "exports": {

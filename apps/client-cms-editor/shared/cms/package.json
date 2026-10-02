@@ -1,7 +1,7 @@
 {
   "name": "@inneranimalmedia/agentsam-cms-shared",
-  "version": "2.6.7",
-  "description": "Internal CMS shared contracts (bundled into @inneranimalmedia/client-cms-editor — not published separately).",
+  "version": "2.6.9",
+  "description": "Internal CMS shared contracts (bundled into @inneranimalmedia/client-cms-editor \u2014 not published separately).",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
@@ -17,9 +17,6 @@
   "devDependencies": {
     "typescript": "^5.9.3"
   },
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
@@ -27,5 +24,6 @@
   },
   "files": [
     "src"
-  ]
+  ],
+  "private": true
 }

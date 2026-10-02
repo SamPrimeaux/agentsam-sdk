@@ -1,17 +1,32 @@
 {
   "name": "@inneranimalmedia/agentsam-work",
-  "version": "2.6.7",
+  "version": "2.6.9",
   "type": "module",
   "sideEffects": [
-    "./src/frontend/theme.css"
+    "./dist/frontend/theme.css"
   ],
   "exports": {
-    ".": "./src/index.ts",
-    "./contracts": "./src/contracts/index.ts",
-    "./frontend": "./src/frontend/index.ts",
-    "./client": "./src/client/index.ts",
-    "./fixtures": "./src/fixtures/index.ts",
-    "./theme.css": "./src/frontend/theme.css"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts/index.d.ts",
+      "import": "./dist/contracts/index.js"
+    },
+    "./frontend": {
+      "types": "./dist/frontend/index.d.ts",
+      "import": "./dist/frontend/index.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "import": "./dist/client/index.js"
+    },
+    "./fixtures": {
+      "types": "./dist/fixtures/index.d.ts",
+      "import": "./dist/fixtures/index.js"
+    },
+    "./theme.css": "./dist/frontend/theme.css"
   },
   "peerDependencies": {
     "lucide-react": "^0.510.0",
@@ -27,6 +42,27 @@
     "directory": "packages/agentsam-work"
   },
   "files": [
-    "src"
-  ]
+    "dist",
+    "README.md"
+  ],
+  "description": "Portable AgentSam Work product surface: shared work contracts, fixture and HTTP hosts, project/ticket/mail/calendar/artifact views, and host-neutral React UI.",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "pretest": "npm run build",
+    "test": "node --test test/*.test.mjs",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "esbuild": "^0.28.1",
+    "lucide-react": "^0.510.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "typescript": "^5.9.3"
+  }
 }

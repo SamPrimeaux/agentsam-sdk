@@ -10,7 +10,7 @@ import {
   printAssistTip,
   suggestCliCommands,
 } from '../../src/cli/command-catalog.js';
-import { parsePastedPaths, classifyMaterial, stageMaterials } from '../../src/indexing/ingest/materials.js';
+import { parsePastedPaths, classifyMaterial, inspectArchive, stageMaterials } from '../../src/indexing/ingest/materials.js';
 import { ensureSeedOperations, getSamOperation, AgentSamClient } from '../../src/sam/index.js';
 import { getSkill, loadSkill } from '../../src/skills/index.js';
 import { resolveHelpTopic, renderHelpOverview } from '../../src/ui/cli/help.js';
@@ -60,12 +60,23 @@ describe('material paste/drop intake', () => {
     const bundle = path.join(root, 'bundle');
     fs.mkdirSync(bundle);
     fs.writeFileSync(path.join(bundle, 'index.html'), '<html>build</html>');
+    fs.writeFileSync(path.join(bundle, 'clip.mp4'), Buffer.alloc(1024, 7));
     execFileSync('tar', ['-cf', tarPath, '-C', bundle, '.']);
 
+    const inspection = inspectArchive(tarPath);
+    assert.equal(inspection.entries_total, 3);
+    assert.equal(inspection.entries.find((entry) => entry.path.endsWith('index.html'))?.selected, true);
+    assert.equal(inspection.entries.find((entry) => entry.path.endsWith('clip.mp4'))?.reason, 'asset_inventory_only');
+
     const staged = stageMaterials({ root, materials: [html, tarPath] });
-    assert.equal(staged.schema, 'agentsam.ingest.materials.v1');
+    assert.equal(staged.schema, 'agentsam.ingest.materials.v2');
     assert.ok(staged.include.length >= 1);
-    assert.ok(staged.assets.some((a) => a.kind === 'document') || staged.items.some((i) => i.kind === 'archive'));
+    const archive = staged.items.find((item) => item.kind === 'archive');
+    assert.equal(archive?.status, 'mined');
+    assert.equal(archive?.extract?.mined_files, 1);
+    assert.ok(archive?.extract?.skipped.some((entry) => entry.path.endsWith('clip.mp4')));
+    assert.ok(fs.existsSync(path.join(archive.stage, 'index.html')));
+    assert.equal(fs.existsSync(path.join(archive.stage, 'clip.mp4')), false);
     assert.ok(fs.existsSync(path.join(root, staged.stage_root, 'manifest.json')));
   });
 });
