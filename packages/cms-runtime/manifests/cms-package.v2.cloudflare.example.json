@@ -1,0 +1,71 @@
+{
+  "apiVersion": "inneranimalmedia.com/cms/v2",
+  "kind": "CmsPackage",
+  "metadata": {
+    "name": "example-cloudflare-site",
+    "displayName": "Example Cloudflare Site",
+    "version": "0.1.0"
+  },
+  "runtime": {
+    "project": {
+      "id": "example-cloudflare-site"
+    },
+    "endpoints": {
+      "apiBaseUrl": "/api/cms",
+      "assetBaseUrl": "/cms-assets"
+    }
+  },
+  "capabilities": {
+    "database": {
+      "role": "cms_metadata",
+      "provider": "d1"
+    },
+    "objectStorage": {
+      "role": "cms_content",
+      "provider": "r2",
+      "publicOrigin": "https://assets.example.com"
+    },
+    "cache": {
+      "required": false,
+      "role": "cms_hot_cache",
+      "provider": "kv"
+    },
+    "queue": {
+      "required": false
+    },
+    "collaboration": {
+      "required": false
+    },
+    "ai": {
+      "required": false,
+      "role": "cms_ai",
+      "provider": "workers-ai"
+    }
+  },
+  "adapters": {
+    "cloudflare": {
+      "databaseBinding": "DB",
+      "objectStorageBinding": "CMS_BUCKET",
+      "cacheBinding": "SESSION_CACHE",
+      "aiBinding": "AI"
+    }
+  },
+  "distribution": {
+    "studio": {
+      "source": "package",
+      "entry": "studio"
+    },
+    "pipeline": {
+      "source": "package",
+      "entry": "cms-pipeline"
+    }
+  },
+  "gates": [
+    "schema_valid",
+    "capabilities_resolved",
+    "database_migrated",
+    "api_conformance",
+    "studio_build",
+    "preview_smoke"
+  ]
+}
