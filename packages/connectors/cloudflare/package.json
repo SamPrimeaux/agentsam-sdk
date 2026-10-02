@@ -18,5 +18,7 @@
   },
   "files": [
     "src"
-  ]
+  ],
+  "description": "Portable Cloudflare capability connector for AgentSam applications and SDK consumers.",
+  "license": "MIT"
 }

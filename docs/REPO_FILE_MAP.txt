@@ -1,0 +1,132 @@
+AGENTSAM SDK - REPOSITORY FILE MAP
+=================================
+ASCII orientation map; logical map, not exhaustive per-file inventory.
+Scope: tracked layout. Generated, ignored, and machine-local content is omitted.
+Baseline evidence: repository audit on feat/public-package-graduation.
+Use git status / agentsam context for the current revision rather than treating
+this orientation map as revision authority.
+
+1. SYSTEM WIREFRAME
+-------------------
+
+  Consumer / developer
+       |
+       +--> README.md, DEVELOPMENT.md, docs/ -------- architecture, contracts, guidance
+       +--> bin/agentsam ------------------------------ CLI launcher
+       |      +--> src/cli + src/commands ----------- CLI composition
+       |      +--> src/index.* ----------------------- SDK public facade
+       |      +--> src/sam --------------------------- typed execution spine
+       |      `--> src/* ----------------------------- SDK domains and adapters
+       +--> package.json / package-lock.json --------- root npm product and lockfile
+              +--> packages/* ------------------------ reusable packages
+              +--> apps/* ---------------------------- product applications
+              `--> services/* ------------------------ service implementations
+
+  Shared vocabulary: protocol/* + contracts/* + packages/agentsam-contracts
+  Data schemas:      migrations/{runtime,sqlite,d1}
+  Provider seams:    src/providers, src/cloudflare, packages/connectors/*
+  Verification:      test/*, package-local tests, scripts/verify-* and npm gates
+
+2. TOP-LEVEL FILE MAP
+---------------------
+
+  /
+  |-- README.md, DEVELOPMENT.md, AGENTSAM.md, .agentsamrules
+  |      Product overview, contributor workflow, runtime/repo instructions.
+  |-- package.json, package-lock.json, tsconfig.base.json
+  |      Root package/workspaces, dependency lock, shared TypeScript settings.
+  |-- agentsam.yaml, .agentsam/config.json
+  |      Portable project config and host/install config (not run history).
+  |-- bin/                 CLI launchers
+  |-- src/                 ROOT SDK AND CLI IMPLEMENTATION
+  |   |-- index, cli, commands       Public facade and command composition
+  |   |-- sam, schemas, rpc, errors  Execution kernel and typed boundaries
+  |   |-- agent, models, providers   Agent/model/provider seams
+  |   |-- repository, context, indexing, knowledge
+  |   |-- security, local, local-fs, capabilities, tools
+  |   |-- cloudflare, plugins, features, skills, telemetry, eval
+  |   `-- lib/                      Legacy extraction zone (see SOURCE_ARCHITECTURE.md)
+  |-- packages/             REUSABLE PACKAGE BOUNDARIES
+  |   |-- contracts, errors, runtime-protocol
+  |   |-- identity, key-manager, vault, settings
+  |   |-- repository, knowledge, work-graph, work, workbench, queue-control, goap
+  |   |-- connectors/*, providers/*
+  |   |-- brand, content*, assets-core, cloudflare-images, scoring
+  |   |-- nav, shell-kit, desktop-shell, ide, database-editor
+  |   `-- theme-* / heuristic-theme / docs-theme
+  |       Examples/families, not an exhaustive package list.
+  |-- apps/                 PRODUCT APPLICATIONS
+  |   |-- local-studio, project-control, frontend, theme-gallery-preview
+  |   |-- cad-creator, client-cms-editor, ecommerce-cms-agentsam
+  |   |-- agentsam-go-worker, agentsamd
+  |   |-- church-site, companions-site, floors-site, fuelnfree-site,
+  |   |   handyman-site, insurance-site, shinshu-site
+  |   `-- _incoming/         Intake area
+  |       App-specific frontend/backend/shared code and deployment configs stay
+  |       with the app; see docs/architecture/AGENTSAM_APPLICATION_CONTRACT.md.
+  |-- services/              Standalone service areas (cad, knowledge)
+  |-- protocol/              Cross-system protocol definitions (SAM, runtime,
+  |   |                      repository, database, apps, skills, etc.)
+  |   `-- README.md           Ownership and host-adapter boundaries
+  |-- contracts/             Root-level contract artifacts
+  |-- migrations/            d1, runtime, sqlite migration families
+  |-- test/                  Root unit, CLI, integration, terminal, live, Go tests
+  |-- scripts/               Generation, verification, release, site, tooling
+  |-- python/                Python SDK/tooling, tests, docs
+  |-- native/                Native machine/runtime component(s)
+  |-- docs/                  Architecture, product, tools, ops, plans
+  |   |-- architecture/      System boundaries and architecture contracts
+  |   |-- product/           Lifecycle and UX standards
+  |   |-- tools/             Capability/tool references
+  |   `-- plans/             Dated plans/handoffs; not implementation SSOT
+  |-- skills/                Portable skill definitions
+  |-- templates/             Scaffolding templates
+  |-- registry/              Tool and domain registries
+  |-- examples/, assets/     Examples and shared assets
+  |-- sites/                 Public-site source/content
+  |-- focus-timer/           Separate tracked top-level mini-app/site
+  |-- .github/, .changeset/  CI workflows and release metadata
+  `-- tags/                  Repository tag metadata
+
+3. AUDIT / NAVIGATION NOTES
+---------------------------
+
+  * docs/SOURCE_ARCHITECTURE.md defines root src as the SDK/package composition
+    layer and calls src/lib a legacy extraction zone. Put new reusable modules in
+    a coherent owned package instead of adding unrelated code to src/lib.
+  * package.json explicitly enumerates root npm workspaces. Not every directory
+    under packages/ is necessarily a configured workspace: check before using
+    workspace commands or assuming it is published.
+  * protocol/, packages/agentsam-contracts, and root contracts/ are distinct
+    locations. Follow their local ownership docs instead of conflating them.
+  * Select the correct migration family and owning app/service before changing data
+    schemas. App-specific seeds and bindings belong with the consuming app.
+  * APP identity/validation: docs/architecture/AGENTSAM_APPLICATION_CONTRACT.md;
+    root gates are npm run app:validate / npm run guard:apps.
+  * Local filesystem discovery also surfaced folders such as generated/, .wrangler/,
+    level-1/, test2/, and agentsam-originalsetup-inspect/. They are omitted here:
+    this map describes tracked repository roots, not every local/ignored directory.
+  * Public package distribution is audited by agentsam package audit/status/verify/
+    publish-plan. A publishConfig alone is intent, not proof that a package is
+    consumer-ready.
+  * native/agentsam-machine is the Rust machine-perception workspace. Its CLI resolves
+    from PATH, a built repo binary, or a Cargo fallback; treat native distribution as
+    its own release lane rather than assuming the npm package publishes a native binary.
+  * This file is an orientation map, not implementation or release authority.
+
+4. QUICK TEST / RELEASE ENTRY POINTS
+------------------------------------
+
+  npm run test:standard       focused root test bundle
+  npm run test:workspaces     selected package tests/typechecks
+  npm run verify              broad SDK/package/app/boundary/package checks
+  npm run verify:release      verify + knowledge package + Python + release security
+  npm run app:validate        validate all product app manifests
+  agentsam package audit --public
+                            compare public intent with registry/quality state
+  agentsam package verify <name>
+                            run declared package gates + npm pack dry-run
+  agentsam package publish-plan
+                            dependency-ordered, read-only publication plan
+
+Use DEVELOPMENT.md and each package/app README for current, more detailed commands.

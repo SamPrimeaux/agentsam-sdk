@@ -1,20 +1,41 @@
 {
   "name": "@inneranimalmedia/agentsam-ide",
   "version": "2.6.7",
-  "description": "AgentSam IDE packages — Monaco, file tree, xterm, LSP client, first-login onboarding. Rapidly deployable into Local Studio / desktop.",
+  "description": "AgentSam IDE packages \u2014 Monaco, file tree, xterm, LSP client, first-login onboarding. Rapidly deployable into Local Studio / desktop.",
   "type": "module",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
   "exports": {
-    ".": "./src/index.ts",
-    "./monaco": "./src/monaco/index.ts",
-    "./filetree": "./src/filetree/index.ts",
-    "./terminal": "./src/terminal/index.ts",
-    "./lsp": "./src/lsp/index.ts",
-    "./onboarding": "./src/onboarding/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./monaco": {
+      "types": "./dist/monaco/index.d.ts",
+      "import": "./dist/monaco/index.js"
+    },
+    "./filetree": {
+      "types": "./dist/filetree/index.d.ts",
+      "import": "./dist/filetree/index.js"
+    },
+    "./terminal": {
+      "types": "./dist/terminal/index.d.ts",
+      "import": "./dist/terminal/index.js"
+    },
+    "./lsp": {
+      "types": "./dist/lsp/index.d.ts",
+      "import": "./dist/lsp/index.js"
+    },
+    "./onboarding": {
+      "types": "./dist/onboarding/index.d.ts",
+      "import": "./dist/onboarding/index.js"
+    }
   },
   "scripts": {
+    "clean": "rm -rf dist",
+    "build": "npm run clean && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --experimental-strip-types --test src/**/*.test.ts"
+    "test": "node --experimental-strip-types --test src/**/*.test.ts",
+    "prepack": "npm run build"
   },
   "peerDependencies": {
     "react": ">=18",
@@ -39,6 +60,9 @@
     "directory": "packages/agentsam-ide"
   },
   "files": [
-    "src"
-  ]
+    "dist",
+    "README.md"
+  ],
+  "types": "./dist/index.d.ts",
+  "license": "MIT"
 }

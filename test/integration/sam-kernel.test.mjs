@@ -28,6 +28,7 @@ describe('SAM kernel seed', () => {
       'security.scan',
       'terminal.exec',
       'cad.blender.inspect',
+      'package.audit',
       'codebaseindex.ingest',
       'planning.astar',
       'planning.goap',
@@ -77,6 +78,20 @@ describe('SAM kernel seed', () => {
     assert.equal(viaModule.ok, true);
     assert.equal(viaModule.operation, 'security.scan');
     assert.equal(viaModule.data?.scanner, 'agentsam-sca');
+  });
+
+  it('invoke package.audit returns deterministic offline package authority', async () => {
+    const sam = new AgentSamClient({ cwd: process.cwd() });
+    const result = await sam.invoke('package.audit', {
+      root: process.cwd(),
+      publicOnly: true,
+      offline: true,
+    });
+    assert.equal(result.ok, true);
+    assert.equal(result.operation, 'package.audit');
+    assert.equal(result.receipt.execution.model_used, false);
+    assert.equal(result.data?.schema, 'agentsam.package.audit.v1');
+    assert.ok(result.data?.packages?.some((pkg) => pkg.name === '@inneranimalmedia/agentsam-ide'));
   });
 
   it('invoke unknown operation fails cleanly', async () => {

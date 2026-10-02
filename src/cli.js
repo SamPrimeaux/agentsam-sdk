@@ -32,6 +32,7 @@ import { runMini } from './commands/mini.js';
 import { runMerkle } from './commands/merkle.js';
 import { runDeployReceipt } from './commands/deploy-receipt.js';
 import { runSecurity } from './commands/security.js';
+import { runPackage } from './commands/package.js';
 import { runRecon } from './commands/recon.js';
 import { runCad } from './commands/cad.js';
 import { runMachine } from './commands/machine.js';
@@ -725,6 +726,13 @@ if (command === '--version' || command === '-v') {
 } else if (command === 'cad') {
   try {
     await runCad(rest);
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
+  }
+} else if (command === 'package') {
+  try {
+    await runPackage(rest);
   } catch (e) {
     reportCliError(e);
     process.exitCode = 1;
