@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pages — Fuel & Free Time Admin</title>
+<link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="/admin/css/console.css">
+<link rel="stylesheet" href="/admin/css/pages.css">
+</head>
+<body>
+<script src="/admin/js/shell.js"></script>
+<script src="/admin/js/pages-shared.js"></script>
+<script>
+renderShell("/admin/pages", `
+  <div class="pages-hub">
+    <header class="pages-hub-head">
+      <h1>Pages</h1>
+      <button type="button" class="btn ghost" id="cms-bootstrap-btn">Sync CMS to live</button>
+      <button type="button" class="btn primary" id="add-page-btn">Add page</button>
+    </header>
+
+    <div class="pages-card">
+      <div class="pages-toolbar">
+        <label class="pages-search">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m20 20-3.2-3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <input type="search" id="pages-search" placeholder="Search pages" autocomplete="off">
+        </label>
+      </div>
+      <table class="pages-table">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="pages-select-all" aria-label="Select all pages"></th>
+            <th>Title</th>
+            <th>Visibility</th>
+            <th>Content</th>
+            <th>Updated</th>
+          </tr>
+        </thead>
+        <tbody id="pages-body">
+          <tr><td colspan="5" class="pages-empty">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+`);
+
+let allPages = [];
+
+function renderRows(pages) {
+  const body = document.getElementById("pages-body");
+  if (!pages.length) {
+    body.innerHTML = '<tr><td colspan="5" class="pages-empty">No pages match your search.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = pages
+    .map((p) => {
+      const badge = visibilityBadge(p.status || "draft");
+      const editHref = `/admin/page-edit?slug=${encodeURIComponent(p.slug)}`;
+      return `
+        <tr data-href="${editHref}" data-slug="${p.slug}">
+          <td><input type="checkbox" aria-label="Select ${cmsEscapeHtml(p.title)}" onclick="event.stopPropagation()"></td>
+          <td><a href="${editHref}" class="pages-title-link" onclick="event.stopPropagation()">${cmsEscapeHtml(p.title)}</a></td>
+          <td><span class="${badge.cls}">${badge.label}</span></td>
+          <td><span class="pages-preview">${cmsEscapeHtml(p.preview || "—")}</span></td>
+          <td class="pages-updated">${fmtPageDate(p.updated_at)}</td>
+        </tr>`;
+    })
+    .join("");
+
+  body.querySelectorAll("tr[data-href]").forEach((row) => {
+    row.addEventListener("click", () => {
+      window.location.href = row.dataset.href;
+    });
+  });
+}
+
+function filterPages(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return allPages;
+  return allPages.filter(
+    (p) =>
+      p.title.toLowerCase().includes(q) ||
+      p.slug.toLowerCase().includes(q) ||
+      (p.preview || "").toLowerCase().includes(q)
+  );
+}
+
+document.getElementById("pages-search")?.addEventListener("input", (e) => {
+  renderRows(filterPages(e.target.value));
+});
+
+document.getElementById("pages-select-all")?.addEventListener("change", (e) => {
+  document.querySelectorAll("#pages-body input[type=checkbox]").forEach((cb) => {
+    cb.checked = e.target.checked;
+  });
+});
+
+document.getElementById("add-page-btn")?.addEventListener("click", () => {
+  alert("Custom page creation is coming soon. Edit Home, Shop, About, Community, or Site (global) for now.");
+});
+
+document.getElementById("cms-bootstrap-btn")?.addEventListener("click", async () => {
+  const btn = document.getElementById("cms-bootstrap-btn");
+  btn.disabled = true;
+  try {
+    await adminFetch("/api/admin/cms/bootstrap", { method: "POST" });
+    alert("CMS synced — all pages published to live cache.");
+    location.reload();
+  } catch (err) {
+    alert(err.message || "Bootstrap failed");
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+(async function () {
+  try {
+    const d = await adminFetch("/api/admin/cms/pages");
+    allPages = d.pages || [];
+    renderRows(allPages);
+  } catch (err) {
+    document.getElementById("pages-body").innerHTML =
+      `<tr><td colspan="5" class="pages-empty">${cmsEscapeHtml(err.message)}</td></tr>`;
+  }
+})();
+</script>
+</body>
+</html>

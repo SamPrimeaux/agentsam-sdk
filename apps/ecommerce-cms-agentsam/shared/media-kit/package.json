@@ -1,0 +1,14 @@
+{
+  "name": "@inneranimalmedia/media-kit",
+  "version": "0.1.0",
+  "description": "Provider-neutral media contracts, preview presets, and collection primitives for portable CMS/admin applications.",
+  "type": "module",
+  "files": ["src", "README.md"],
+  "exports": {
+    ".": "./src/index.js",
+    "./providers": "./src/providers.js",
+    "./preview": "./src/preview.js",
+    "./collections": "./src/collections.js"
+  },
+  "license": "MIT"
+}

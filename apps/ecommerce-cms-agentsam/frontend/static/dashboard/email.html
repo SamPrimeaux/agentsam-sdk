@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Email — Fuel & Free Time Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="/admin/css/console.css">
+<link rel="stylesheet" href="/admin/css/mail.css">
+</head>
+<body>
+<template id="mail-app-template">
+<div class="stage">
+  <div class="mobile-tabs" id="mobileTabs" aria-label="Mail mobile navigation">
+    <button class="active" data-panel="list">Inbox</button>
+    <button data-panel="reader">Read</button>
+  </div>
+
+  <main class="mail-app" id="mailApp" data-mobile="list">
+    <section class="message-list" aria-label="Mailbox message list">
+      <div class="list-head">
+        <div class="list-title-row">
+          <div class="list-title">
+            <h2 id="folderTitle">Inbox</h2>
+            <span id="folderSubhead">Loading messages…</span>
+          </div>
+          <div class="list-actions">
+            <button class="primary-button list-compose" id="composeButton" type="button" title="Compose">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+              <span>Compose</span>
+            </button>
+          </div>
+        </div>
+
+        <label class="search-box" for="mailSearch">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.2-3.2"></path></svg>
+          <input id="mailSearch" type="search" placeholder="Search messages, senders, subject…" />
+        </label>
+
+        <div class="segmented" id="filterTabs" aria-label="Mail filters">
+          <button class="active" type="button" data-filter="all">All</button>
+          <button type="button" data-filter="unread">Unread</button>
+          <button type="button" data-filter="starred">Starred</button>
+          <button type="button" data-filter="needs">Needs reply</button>
+        </div>
+      </div>
+
+      <div class="inbox-meta">
+        <span id="metaCount">Showing latest messages</span>
+      </div>
+
+      <div class="rows" id="rows"></div>
+
+      <div class="list-foot">
+        <button class="ghost-button" type="button" id="prevPage">Previous</button>
+        <span id="pageLabel">Page 1</span>
+        <button class="ghost-button" type="button" id="nextPage">Next</button>
+      </div>
+    </section>
+
+    <div class="drag-handle detail-handle" data-handle="list" aria-hidden="true"></div>
+
+    <section class="reader" aria-label="Email reader">
+      <div class="reader-toolbar">
+        <div class="toolbar-left">
+          <button class="toolbar-button icon-only" type="button" id="mobileBack" aria-label="Back to list" title="Back to list">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+          </button>
+          <button class="toolbar-button" type="button" data-action="reply"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 17-5-5 5-5"></path><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg><span>Reply</span></button>
+          <button class="toolbar-button" type="button" data-action="replyAll"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 17-5-5 5-5"></path><path d="m13 17-5-5 5-5"></path><path d="M22 18v-2a4 4 0 0 0-4-4H8"></path></svg><span>Reply all</span></button>
+          <button class="toolbar-button" type="button" data-action="forward"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 17 5-5-5-5"></path><path d="M4 18v-2a4 4 0 0 1 4-4h12"></path></svg><span>Forward</span></button>
+        </div>
+        <div class="toolbar-right">
+          <button class="toolbar-button icon-only" type="button" data-action="archive" aria-label="Archive" title="Archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"></path><path d="M7 7v12h10V7"></path><path d="M9 4h6l1 3H8l1-3Z"></path></svg></button>
+          <button class="toolbar-button icon-only" type="button" data-action="star" aria-label="Star" title="Star"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"></path></svg></button>
+          <button class="toolbar-button icon-only danger" type="button" data-action="delete" aria-label="Delete" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path></svg></button>
+          <button class="toolbar-button icon-only" type="button" id="moreButton" aria-label="More actions" title="More"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></svg></button>
+        </div>
+      </div>
+      <div class="body-scroll" id="readerBody"></div>
+    </section>
+  </main>
+</div>
+
+<div class="context-menu" id="contextMenu" role="menu" aria-label="Message actions">
+  <button type="button" data-menu-action="open">Open <span>Enter</span></button>
+  <button type="button" data-menu-action="reply">Reply <span>R</span></button>
+  <button type="button" data-menu-action="replyAll">Reply all <span>A</span></button>
+  <button type="button" data-menu-action="forward">Forward <span>F</span></button>
+  <div class="divider"></div>
+  <button type="button" data-menu-action="unread">Mark unread</button>
+  <button type="button" data-menu-action="archive">Archive</button>
+  <button type="button" data-menu-action="delete">Delete</button>
+</div>
+
+<div class="more-menu" id="moreMenu" role="menu" aria-label="More mail actions">
+  <button type="button" data-menu-action="summarize">Summarize thread</button>
+  <button type="button" data-menu-action="task">Create task</button>
+  <button type="button" data-menu-action="settings">Account settings</button>
+</div>
+
+<section class="compose-sheet" id="composeSheet" aria-label="Compose message">
+  <div class="compose-head">
+    <strong id="composeTitle">New message</strong>
+    <button type="button" id="closeCompose" aria-label="Close compose">×</button>
+  </div>
+  <div class="compose-fields">
+    <label class="compose-field">From
+      <select id="composeFrom"></select>
+    </label>
+    <label class="compose-field">To <input id="composeTo" placeholder="recipient@example.com" /></label>
+    <label class="compose-field">Subject <input id="composeSubject" placeholder="Subject" /></label>
+  </div>
+  <div class="compose-body">
+    <textarea id="composeText" placeholder="Write a clear, focused message…"></textarea>
+  </div>
+  <div class="compose-actions">
+    <button class="ghost-button" type="button" id="draftButton">Save draft</button>
+    <button class="primary-button" type="button" id="sendButton"><span>Send</span></button>
+  </div>
+</section>
+
+<div class="toast" id="toast">Saved</div>
+
+</template>
+
+<script src="/admin/js/shell.js?v=20260625"></script>
+<script src="/admin/js/mail.js?v=20260625c"></script>
+<script>
+renderShell(
+  window.location.pathname + window.location.search,
+  `<div id="mail-root" class="mail-root" aria-label="Mail workspace"></div>`,
+  {
+    fullBleed: true,
+    onReady: () => {
+      document.querySelector(".console-main")?.classList.add("admin-main--mail");
+      const root = document.getElementById("mail-root");
+      const boot = window.bootMailApp;
+      if (typeof boot !== "function") {
+        if (root) {
+          root.innerHTML = `<div class="mail-boot-error"><h2>Mail script blocked or cached</h2><p>Hard refresh with Cmd+Shift+R.</p></div>`;
+        }
+        return;
+      }
+      boot().catch((err) => {
+        if (root) {
+          root.innerHTML = `<div class="mail-boot-error"><h2>Email workspace failed</h2><p>${err.message || err}</p></div>`;
+        }
+      });
+    },
+  }
+);
+</script>
+</body>
+</html>

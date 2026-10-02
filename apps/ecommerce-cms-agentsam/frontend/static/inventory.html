@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventory — Fuel & Free Time Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="/admin/css/console.css">
+</head>
+<body>
+<script src="/admin/js/shell.js"></script>
+<script>
+renderShell('/admin/inventory', `
+  <h1 class="admin-page-title">Inventory</h1>
+  <p class="admin-page-sub">Every SKU across every product, lowest stock first.</p>
+
+  <div class="admin-card">
+    <table class="admin-table">
+      <thead><tr><th>Product</th><th>SKU</th><th>Size</th><th>Color</th><th>Qty</th><th></th></tr></thead>
+      <tbody id="inv-body"><tr><td colspan="6" class="admin-empty">Loading…</td></tr></tbody>
+    </table>
+  </div>
+`);
+
+async function load() {
+  try {
+    const d = await adminFetch('/api/admin/inventory');
+    const body = document.getElementById('inv-body');
+    if (!d.inventory.length) {
+      body.innerHTML = '<tr><td colspan="6" class="admin-empty">No variants yet — add products and variants first.</td></tr>';
+      return;
+    }
+    body.innerHTML = d.inventory.map(v => `
+      <tr data-id="${v.id}">
+        <td><a href="/admin/product-edit?id=${v.product_id}">${v.product_title}</a></td>
+        <td>${v.sku}</td>
+        <td>${v.size || '—'}</td>
+        <td>${v.color || '—'}</td>
+        <td>
+          <input class="admin-inline-qty inv-qty" type="number" value="${v.inventory_qty}">
+          ${v.inventory_qty <= 3 ? '<span class="badge low">low</span>' : ''}
+        </td>
+        <td><button class="btn ghost small inv-save">Save</button></td>
+      </tr>
+    `).join('');
+
+    body.querySelectorAll('tr').forEach(row => {
+      const id = row.dataset.id;
+      row.querySelector('.inv-save').addEventListener('click', async () => {
+        try {
+          await adminFetch(`/api/admin/variants/${id}/inventory`, {
+            method: 'PATCH',
+            body: JSON.stringify({ inventory_qty: row.querySelector('.inv-qty').value }),
+          });
+          load();
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+    });
+  } catch (err) {
+    document.getElementById('inv-body').innerHTML = `<tr><td colspan="6" class="admin-empty">${err.message}</td></tr>`;
+  }
+}
+load();
+</script>
+</body>
+</html>

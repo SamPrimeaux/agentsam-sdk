@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Content — Fuel & Free Time Admin</title>
+<link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="/admin/css/console.css">
+<link rel="stylesheet" href="/admin/css/media-library.css">
+<link rel="stylesheet" href="/admin/css/brand-workspace.css">
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+</head>
+<body>
+<script src="/admin/js/shell.js"></script>
+<script src="/admin/js/brand-workspace.js"></script>
+<script>
+renderShell("/admin/content", `
+  <div class="content-product-tabs" role="tablist" aria-label="Content views">
+    <button type="button" class="content-product-tab is-active" id="content-tab-library" data-content-view="library" role="tab" aria-selected="true">Library</button>
+    <button type="button" class="content-product-tab" id="content-tab-brand" data-content-view="brand" role="tab" aria-selected="false">Brand</button>
+  </div>
+
+  <section id="content-view-library" data-content-panel="library">
+  <div class="media-lib">
+    <div class="media-lib-toolbar">
+      <nav class="media-lib-crumb" id="media-crumb" aria-label="Media location"></nav>
+      <div class="media-lib-actions">
+        <label class="media-lib-search" for="media-search">
+          <span class="sr-only">Search content</span>
+          <input type="search" id="media-search" placeholder="Search assets" autocomplete="off">
+        </label>
+        <select id="media-kind-filter" class="media-lib-filter" aria-label="Filter by type">
+          <option value="all">All types</option>
+          <option value="image">Images</option>
+          <option value="video">Videos</option>
+          <option value="model">3D models</option>
+        </select>
+        <select id="media-status-filter" class="media-lib-filter" aria-label="Filter by status">
+          <option value="all">All statuses</option>
+          <option value="ready">Ready</option>
+          <option value="processing">Processing</option>
+          <option value="failed">Failed</option>
+        </select>
+        <select id="media-sort-filter" class="media-lib-filter" aria-label="Sort media">
+          <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
+          <option value="name">Name A–Z</option>
+          <option value="largest">Largest</option>
+          <option value="manual">Manual order</option>
+        </select>
+        <input type="file" id="media-file-input" multiple accept="image/*,video/*,.glb,.usdz">
+        <button type="button" class="btn small" id="media-upload-btn">Upload</button>
+        <button type="button" class="btn primary small" id="media-gallery-new">+ Create gallery</button>
+      </div>
+    </div>
+
+    <div class="media-lib-folders" id="media-folders"></div>
+
+    <div class="media-albums-head">
+      <div>
+        <strong>Albums</strong>
+        <span>Curate campaign, product, gallery, and page-ready groups without moving the original files.</span>
+      </div>
+      <button type="button" class="btn small" id="media-album-new">+ New album</button>
+    </div>
+    <div class="media-albums" id="media-albums" aria-label="Media albums"></div>
+
+    <dialog class="media-album-dialog" id="media-album-dialog">
+      <form method="dialog" class="media-album-form" id="media-album-form">
+        <div>
+          <p class="media-album-kicker">Content organization</p>
+          <h2>Create album</h2>
+          <p>Albums group existing media without copying or moving the source asset.</p>
+        </div>
+        <label>
+          Album name
+          <input type="text" id="media-album-name" maxlength="120" required placeholder="Dirt Bike Launch">
+        </label>
+        <label>
+          Description
+          <textarea id="media-album-description" rows="3" maxlength="1000" placeholder="Launch campaign selects, hero candidates, gallery images..."></textarea>
+        </label>
+        <div class="media-album-form-actions">
+          <button type="button" class="btn small" id="media-album-cancel">Cancel</button>
+          <button type="button" class="btn primary small" id="media-album-create">Create album</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="media-album-dialog media-gallery-dialog" id="media-gallery-dialog">
+      <form method="dialog" class="media-album-form media-gallery-form" id="media-gallery-form">
+        <div>
+          <p class="media-album-kicker">Gallery builder</p>
+          <h2>Create gallery</h2>
+          <p>Combine existing library selections with new device uploads. New files are added to this gallery automatically.</p>
+        </div>
+        <label>
+          Gallery name
+          <input type="text" id="media-gallery-name" maxlength="120" required placeholder="Dirt Bike Launch">
+        </label>
+        <label>
+          Description
+          <textarea id="media-gallery-description" rows="3" maxlength="1000" placeholder="Launch gallery, product story, campaign selects..."></textarea>
+        </label>
+        <div class="media-gallery-source-summary">
+          <div><strong id="media-gallery-selected-count">0</strong><span> existing selected</span></div>
+          <label class="media-gallery-device-picker">
+            <span>Upload from device</span>
+            <input type="file" id="media-gallery-files" multiple accept="image/*,video/*,.glb,.usdz">
+          </label>
+          <div class="media-gallery-file-count" id="media-gallery-file-count">No new files selected</div>
+        </div>
+        <div class="media-album-form-actions">
+          <button type="button" class="btn small" id="media-gallery-cancel">Cancel</button>
+          <button type="button" class="btn primary small" id="media-gallery-create">Create gallery</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="media-lib-drop" id="media-drop">
+      <div id="media-drop-label">Drag and drop files here, or click to choose</div>
+    </div>
+    <div class="admin-note" id="media-note" style="display:none;"></div>
+
+    <div class="media-batch-bar" id="media-batch-bar" hidden></div>
+    <div class="media-pagination media-pagination-top" id="media-pagination-top" aria-label="Media pagination"></div>
+    <div class="media-lib-grid" id="media-grid"><div class="admin-empty">Loading…</div></div>
+    <div class="media-pagination media-pagination-bottom" id="media-pagination" aria-label="Media pagination"></div>
+  </div>
+  </section>
+
+  <section class="brand-workspace" id="content-view-brand" data-content-panel="brand" hidden>
+    <div class="brand-workspace-head">
+      <div>
+        <p class="brand-eyebrow">Brand system</p>
+        <h1>Identity & assets</h1>
+        <p>Manage the identity and reusable assets used across storefront, auth, social previews, and content.</p>
+      </div>
+      <button type="button" class="btn primary" id="brand-save">Save brand</button>
+    </div>
+
+    <div class="brand-overview">
+      <div class="brand-preview-card">
+        <div class="brand-preview-mark" id="brand-preview-mark"></div>
+        <div>
+          <strong id="brand-preview-name">Brand</strong>
+          <p id="brand-preview-tagline">Loading…</p>
+        </div>
+      </div>
+
+      <div class="brand-fields">
+        <label>Brand name<input type="text" id="brand-name" autocomplete="organization"></label>
+        <label>Tagline<input type="text" id="brand-tagline"></label>
+        <label>Website<input type="url" id="brand-website" autocomplete="url"></label>
+        <label>Support email<input type="email" id="brand-support-email" autocomplete="email"></label>
+        <label>Primary color<div class="brand-color-row"><input type="color" id="brand-primary-color-picker"><input type="text" id="brand-primary-color" placeholder="#000000"></div></label>
+        <label>Auth background<div class="brand-color-row"><input type="color" id="brand-auth-bg-picker"><input type="text" id="brand-auth-bg" placeholder="#ffffff"></div></label>
+      </div>
+    </div>
+
+    <div class="brand-section-head">
+      <div>
+        <h2>Brand assets</h2>
+        <p>Each role points to an asset already managed in the Content library.</p>
+      </div>
+    </div>
+    <div class="brand-role-grid" id="brand-role-grid"><div class="admin-empty">Loading brand assets…</div></div>
+    <div class="admin-note" id="brand-note" style="display:none;"></div>
+  </section>
+
+  <div class="brand-picker-backdrop" id="brand-picker-backdrop"></div>
+  <section class="brand-picker" id="brand-picker" aria-modal="true" role="dialog" aria-label="Choose brand asset" aria-hidden="true" hidden inert>
+    <div class="brand-picker-head">
+      <div>
+        <strong id="brand-picker-title">Choose asset</strong>
+        <span id="brand-picker-count"></span>
+      </div>
+      <button type="button" class="btn ghost small" id="brand-picker-close">Close</button>
+    </div>
+    <div class="brand-picker-search"><input type="search" id="brand-picker-query" placeholder="Search image assets"></div>
+    <div class="brand-picker-grid" id="brand-picker-grid"></div>
+  </section>
+
+  <div class="media-drawer-backdrop" id="media-drawer-backdrop"></div>
+  <aside class="media-drawer" id="media-drawer" aria-label="Asset details">
+    <div class="media-drawer-head">
+      <div class="media-drawer-title">
+        <strong id="media-drawer-title">Asset</strong>
+        <span class="media-status-pill" id="media-drawer-status">Ready</span>
+      </div>
+      <div class="media-drawer-nav">
+        <button type="button" class="btn ghost small" id="media-drawer-prev" aria-label="Previous asset">‹</button>
+        <button type="button" class="btn ghost small" id="media-drawer-next" aria-label="Next asset">›</button>
+        <button type="button" class="btn ghost small" id="media-drawer-close">Close</button>
+      </div>
+    </div>
+    <div class="media-drawer-body">
+      <div class="media-drawer-preview-shell" id="media-drawer-preview-shell">
+        <div class="media-drawer-preview" id="media-drawer-preview"></div>
+      </div>
+      <div class="media-preview-presets" id="media-preview-presets" aria-label="Preview sizes"></div>
+      <p class="media-preview-note" id="media-preview-note">Preview only — no derivative file is generated.</p>
+      <div class="media-inspector-tabs" role="tablist" aria-label="Asset inspector">
+        <button type="button" class="is-active" data-media-inspector-tab="details">Details</button>
+        <button type="button" data-media-inspector-tab="optimize">Optimize</button>
+        <button type="button" data-media-inspector-tab="seo">SEO</button>
+        <button type="button" data-media-inspector-tab="usage">Usage</button>
+        <button type="button" data-media-inspector-tab="versions">Versions</button>
+      </div>
+      <div class="media-inspector-panel is-active" data-media-inspector-panel="details">
+      <div class="media-drawer-field">
+        <label for="media-field-filename">Filename</label>
+        <input type="text" id="media-field-filename" autocomplete="off">
+      </div>
+      <div class="media-drawer-field">
+        <label for="media-field-alt">Alt text</label>
+        <textarea id="media-field-alt" rows="2" placeholder="Describe the image for accessibility"></textarea>
+      </div>
+      <div class="media-drawer-field">
+        <label for="media-field-folder">Folder</label>
+        <select id="media-field-folder">
+          <option value="images">Images</option>
+          <option value="videos">Videos</option>
+          <option value="products">Products</option>
+        </select>
+      </div>
+
+      <div class="media-glb-placement" id="media-glb-placement" hidden>
+        <div class="media-glb-placement-head">
+          <strong>3D placement</strong>
+          <button type="button" class="btn ghost small" id="media-glb-reset">Reset</button>
+        </div>
+        <p class="media-glb-placement-note">Drag the model to orbit, scroll to zoom — controls sync live. Shift+drag pans the frame (X/Y).</p>
+
+        <div class="media-glb-placement-grid">
+          <label>Theta °<input type="number" id="glb-theta" step="1" min="-180" max="180"></label>
+          <label>Phi °<input type="number" id="glb-phi" step="1" min="0" max="180"></label>
+          <label>Radius %<input type="number" id="glb-radius" step="1" min="50" max="200"></label>
+          <label>FOV °<input type="number" id="glb-fov" step="1" min="15" max="60"></label>
+          <label>X px<input type="number" id="glb-x" step="1" min="-200" max="200"></label>
+          <label>Y px<input type="number" id="glb-y" step="1" min="-200" max="200"></label>
+          <label>Z px<input type="number" id="glb-z" step="1" min="-200" max="200"></label>
+          <label>Scale<input type="number" id="glb-scale" step="0.01" min="0.25" max="3"></label>
+        </div>
+
+        <div class="media-glb-sliders">
+          <label>Theta <input type="range" id="glb-theta-range" min="-180" max="180" step="1"></label>
+          <label>Phi <input type="range" id="glb-phi-range" min="0" max="180" step="1"></label>
+          <label>Radius <input type="range" id="glb-radius-range" min="50" max="200" step="1"></label>
+          <label>Y offset <input type="range" id="glb-y-range" min="-120" max="120" step="1"></label>
+          <label>Scale <input type="range" id="glb-scale-range" min="0.25" max="2" step="0.01"></label>
+        </div>
+
+        <div class="media-drawer-field">
+          <label for="media-glb-export">Placement notes</label>
+          <textarea id="media-glb-export" rows="8" readonly></textarea>
+        </div>
+        <button type="button" class="btn ghost small media-glb-copy" id="media-glb-copy">Copy placement notes</button>
+      </div>
+
+      <div class="media-drawer-field media-drawer-meta">
+        <div>Size: <span id="media-meta-size">—</span></div>
+        <div>Uploaded: <span id="media-meta-date">—</span></div>
+        <div>Source: <code id="media-meta-key" style="font-size:11px;word-break:break-all;">—</code></div>
+      </div>
+      </div>
+      <div class="media-inspector-panel" data-media-inspector-panel="optimize">
+        <div class="media-inspector-card">
+          <strong>Prepare for storefront</strong>
+          <p id="media-drawer-optimize-note">Preview sizes first. Materialize only the delivery versions you actually need.</p>
+          <button type="button" class="btn primary small" id="media-drawer-optimize">Prepare recommended versions</button>
+        </div>
+      </div>
+      <div class="media-inspector-panel" data-media-inspector-panel="seo">
+        <div class="media-inspector-card">
+          <strong>SEO & accessibility</strong>
+          <p id="media-drawer-seo-summary">Review filename, alt text, and available suggestions before applying changes.</p>
+          <div id="media-drawer-seo-review" class="media-seo-review"></div>
+          <button type="button" class="btn small" id="media-drawer-apply-seo">Apply approved</button>
+        </div>
+      </div>
+      <div class="media-inspector-panel" data-media-inspector-panel="usage">
+        <div class="media-inspector-card">
+          <strong>Where it is used</strong>
+          <p id="media-drawer-usage">Usage links will appear here as CMS sections, products, galleries, and campaigns reference this asset.</p>
+        </div>
+      </div>
+      <div class="media-inspector-panel" data-media-inspector-panel="versions">
+        <div class="media-inspector-card">
+          <strong>Versions</strong>
+          <div id="media-drawer-versions"></div>
+        </div>
+      </div>
+    </div>
+    <div class="media-drawer-foot">
+      <div class="media-drawer-foot-links">
+        <button type="button" class="btn small" id="media-drawer-open">Open original</button>
+        <button type="button" class="btn small" id="media-drawer-download">Download</button>
+      </div>
+      <div class="media-drawer-foot-actions">
+        <button type="button" class="btn danger small" id="media-drawer-delete">Delete</button>
+        <button type="button" class="btn primary small" id="media-drawer-save">Save</button>
+      </div>
+    </div>
+  </aside>
+`, { onReady: async () => { const media = await import("/admin/js/media-library.js"); media.initMediaLibrary(); initBrandWorkspace(); } });
+</script>
+</body>
+</html>

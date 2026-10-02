@@ -1,0 +1,439 @@
+/* Fuel & Free Time — Discounts admin */
+
+.discounts-mount {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.fnf-discounts-app {
+  --bg: #eeeeee;
+  --card: #ffffff;
+  --text: #202124;
+  --muted: #666a70;
+  --border: #d9dde2;
+  --black: #101214;
+  --green: #16a36b;
+  --radius: 14px;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 28px 40px 48px;
+}
+
+.fnf-discounts-app * {
+  box-sizing: border-box;
+}
+
+.fnf-disc-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.fnf-disc-head {
+  margin-bottom: 20px;
+}
+
+.fnf-disc-title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.fnf-disc-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.fnf-disc-btn {
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fnf-disc-btn.primary {
+  background: var(--black);
+  border-color: var(--black);
+  color: #fff;
+}
+
+.fnf-disc-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.fnf-disc-empty {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 56px 32px 48px;
+  text-align: center;
+  max-width: 720px;
+  margin: 40px auto 0;
+}
+
+.fnf-disc-loading {
+  margin: 24px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+.fnf-disc-loading[hidden] {
+  display: none;
+}
+
+.fnf-disc-empty-art {
+  margin-bottom: 18px;
+}
+
+.fnf-disc-empty h2 {
+  margin: 0 0 10px;
+  font-size: 22px;
+}
+
+.fnf-disc-empty p {
+  margin: 0 0 20px;
+  color: var(--muted);
+}
+
+.fnf-disc-learn {
+  display: inline-block;
+  margin-top: 18px;
+  color: #1a73e8;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.fnf-disc-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.fnf-disc-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.fnf-disc-table th,
+.fnf-disc-table td {
+  padding: 14px 16px;
+  text-align: left;
+  border-bottom: 1px solid #eceff2;
+  font-size: 14px;
+}
+
+.fnf-disc-table th {
+  color: var(--muted);
+  font-weight: 600;
+  background: #fafafa;
+}
+
+.fnf-disc-table tbody tr {
+  cursor: pointer;
+}
+
+.fnf-disc-table tbody tr:hover {
+  background: #fafafa;
+}
+
+.fnf-disc-status {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #eceff2;
+}
+
+.fnf-disc-status-active {
+  background: #daf5e8;
+  color: #0f6b42;
+}
+
+.fnf-disc-status-draft {
+  background: #eef1f4;
+  color: #4f555b;
+}
+
+.fnf-disc-editor-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.fnf-disc-editor-head h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.fnf-disc-back {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+}
+
+.fnf-disc-editor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 18px;
+  align-items: start;
+}
+
+.fnf-disc-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 14px;
+}
+
+.fnf-disc-panel h2 {
+  margin: 0 0 14px;
+  font-size: 16px;
+}
+
+.fnf-disc-field label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fnf-disc-field input,
+.fnf-disc-panel input,
+.fnf-disc-panel select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+}
+
+.fnf-disc-segment {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.fnf-disc-segment button {
+  border: 0;
+  background: #fff;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fnf-disc-segment button.active {
+  background: #eef1f4;
+}
+
+.fnf-disc-code-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.fnf-disc-code-row input {
+  flex: 1;
+}
+
+.fnf-disc-link {
+  border: 0;
+  background: none;
+  color: #1a73e8;
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.fnf-disc-hint {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.fnf-disc-value-row {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 10px;
+}
+
+.fnf-disc-value-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fnf-disc-value-input input {
+  flex: 1;
+}
+
+.fnf-disc-radio,
+.fnf-disc-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.fnf-disc-dates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.fnf-disc-summary-code {
+  font-weight: 650;
+  margin: 0 0 10px;
+}
+
+.fnf-disc-summary ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.fnf-disc-editor-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.fnf-disc-error {
+  color: #b42318;
+  font-size: 13px;
+}
+
+.fnf-disc-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: grid;
+  place-items: center;
+}
+
+.fnf-disc-modal[hidden] {
+  display: none;
+}
+
+.fnf-disc-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(16, 18, 20, 0.45);
+}
+
+.fnf-disc-modal-panel {
+  position: relative;
+  width: min(560px, calc(100vw - 32px));
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.fnf-disc-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.fnf-disc-modal-head h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.fnf-disc-modal-close {
+  border: 0;
+  background: none;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.fnf-disc-type-list {
+  padding: 8px 0;
+}
+
+.fnf-disc-type-item {
+  width: 100%;
+  border: 0;
+  background: #fff;
+  display: grid;
+  grid-template-columns: 40px 1fr 20px;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 18px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fnf-disc-type-item:hover {
+  background: #fafafa;
+}
+
+.fnf-disc-type-item strong {
+  display: block;
+  font-size: 14px;
+}
+
+.fnf-disc-type-item small {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.fnf-disc-type-icon {
+  font-size: 20px;
+}
+
+.fnf-disc-chevron {
+  color: var(--muted);
+  font-size: 20px;
+}
+
+.fnf-disc-modal-foot {
+  padding: 12px 18px 16px;
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 960px) {
+  .fnf-discounts-app {
+    padding: 20px 16px 32px;
+  }
+
+  .fnf-disc-editor-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .fnf-disc-dates {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Home — Fuel & Free Time Admin</title>
+<link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="/admin/css/console.css">
+</head>
+<body>
+<script src="/admin/js/shell.js"></script>
+<script>
+renderShell("/admin/home", `
+  <div class="console-page">
+    <h1 class="admin-page-title" id="home-greeting">Welcome back</h1>
+    <div class="console-stat-grid" id="home-stats">
+      <div class="console-stat-card"><div class="label">Products</div><div class="value">—</div></div>
+      <div class="console-stat-card"><div class="label">Inventory units</div><div class="value">—</div></div>
+      <div class="console-stat-card"><div class="label">Orders</div><div class="value">—</div></div>
+      <div class="console-stat-card"><div class="label">Subscribers</div><div class="value">—</div></div>
+    </div>
+
+    <div class="console-panel">
+      <h2>What can I help you with?</h2>
+      <p style="color:var(--c-muted);font-size:14px;margin:-8px 0 14px;">Ask Agent Sam about orders, inventory, pages, or what to publish next.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a href="/admin/agentsam" class="btn ghost small">Open AgentSam</a>
+        <button type="button" class="btn ghost small" data-agentsam-prompt="Summarize today's store activity">Summarize activity</button>
+        <button type="button" class="btn ghost small" data-agentsam-prompt="Which products are low on stock?">Low stock check</button>
+        <button type="button" class="btn ghost small" data-agentsam-prompt="Draft hero copy for the shop page">Draft shop hero</button>
+        <button type="button" class="btn ghost small" data-agentsam-prompt="What should I publish next on the site?">Publish ideas</button>
+      </div>
+    </div>
+
+    <h2 style="font-size:16px;font-weight:600;margin:8px 0 16px;">Set up your store</h2>
+    <div class="console-panel" style="display:flex;overflow:hidden;padding:0;">
+      <div style="flex:1;padding:24px;">
+        <div style="font-size:16px;font-weight:600;">Customize your storefront</div>
+        <p style="font-size:14px;color:var(--c-muted);margin-top:8px;line-height:1.5;max-width:440px;">Edit page heroes and publish live — no redeploy. Products, media, and CMS sections are wired.</p>
+        <a href="/admin/theme-editor?slug=shop" class="btn primary" style="margin-top:16px;display:inline-flex;">Open theme editor</a>
+      </div>
+      <div style="width:280px;flex:none;background:linear-gradient(135deg,#1a1310,#2a1c12);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:20px;">
+        <div style="font-size:10px;letter-spacing:3px;color:#c9c9c9;">TIME IS THE</div>
+        <div style="font-size:22px;font-weight:800;background:linear-gradient(90deg,#f59e0b,#ea580c);-webkit-background-clip:text;background-clip:text;color:transparent;">HORSEPOWER</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div class="console-panel">
+        <div style="font-size:15px;font-weight:600;">Products</div>
+        <p style="font-size:13.5px;color:var(--c-muted);margin-top:6px;line-height:1.5;">Manage catalog, variants, and inventory.</p>
+        <a href="/admin/products" class="btn ghost" style="margin-top:14px;display:inline-flex;">View products</a>
+      </div>
+      <div class="console-panel">
+        <div style="font-size:15px;font-weight:600;">Content &amp; media</div>
+        <p style="font-size:13.5px;color:var(--c-muted);margin-top:6px;line-height:1.5;">Upload assets and attach them to products or page sections.</p>
+        <a href="/admin/content" class="btn ghost" style="margin-top:14px;display:inline-flex;">Open content</a>
+      </div>
+    </div>
+  </div>
+`);
+
+(async function () {
+  try {
+    const d = await adminFetch("/api/admin/overview");
+    const cards = document.querySelectorAll("#home-stats .value");
+    cards[0].textContent = d.products;
+    cards[1].textContent = d.inventory_units;
+    cards[2].textContent = d.orders;
+    cards[3].textContent = d.subscribers;
+    if (d.low_stock_variants > 0) {
+      cards[1].parentElement.querySelector(".label").textContent = "Inventory units (low stock)";
+    }
+  } catch (err) {
+    console.error(err);
+  }
+})();
+</script>
+</body>
+</html>
