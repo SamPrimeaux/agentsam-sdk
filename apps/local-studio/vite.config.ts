@@ -57,13 +57,16 @@ const keyManagerPackageRoot = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-key-manager", import.meta.url)),
 );
 const studioRoot = resolvePath(fileURLToPath(new URL(".", import.meta.url)));
-const studioNm = (...segments: string[]) => resolvePath(studioRoot, "node_modules", ...segments);
+const repoNodeModules = resolvePath(studioRoot, "..", "..", "node_modules");
+const studioNm = (...segments: string[]) => {
+  const local = resolvePath(studioRoot, "node_modules", ...segments);
+  return existsSync(local) ? local : resolvePath(repoNodeModules, ...segments);
+};
 
 /**
- * When vite aliases packages to /src, Rolldown resolves bare imports from that
- * package directory — not apps/local-studio/node_modules. Pin nav runtime deps
- * to the studio install so Cloudflare Builds (npm ci local-studio only) works
- * even if packages/agentsam-nav/node_modules is incomplete.
+ * When Vite aliases packages to /src, Rolldown resolves bare imports from that
+ * package directory. Prefer a package-local install when present, but fall back
+ * to the monorepo's hoisted node_modules for clean workspace builds.
  */
 const navRuntimeAliases = [
   {
