@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts src/lib/vault/device-sync.test.ts src/lib/work/model-inventory-core.test.ts"
+    "test": "node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts src/lib/vault/device-sync.test.ts src/lib/runtime-visuals/local-studio-runtime.test.ts src/lib/work/model-inventory-core.test.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
@@ -82,7 +82,8 @@
     "tw-animate-css": "^1.3.4",
     "vaul": "^1.1.2",
     "zod": "^4.4.0",
-    "zustand": "^5.0.0"
+    "zustand": "^5.0.0",
+    "@inneranimalmedia/agentsam-loading-scene": "2.6.9"
   },
   "devDependencies": {
     "@types/node": "^22.16.5",

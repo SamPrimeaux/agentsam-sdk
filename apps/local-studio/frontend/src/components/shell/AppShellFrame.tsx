@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { CommandPalette } from "@/components/workbench/command-palette";
 import { NavRail } from "@/components/shell/nav-rail";
 import { OfflineBanner } from "@/components/shell/offline-banner";
+import { LocalStudioRuntimeField } from "@/components/runtime/LocalStudioRuntimeField";
 import { CliDrawer } from "@/components/shell/cli-drawer";
 import { registerOfflineShell } from "@/lib/offline/register-sw";
 import { useOnline } from "@/hooks/use-online";
@@ -25,6 +26,7 @@ export function AppShellFrame() {
   const navigate = useNavigate();
   const online = useOnline();
   const flushOfflineQueue = useWorkStore((s) => s.flushOfflineQueue);
+  const hydrated = useWorkStore((s) => s.hydrated);
   const [shellMode, setShellMode] = useState<"dark" | "light">("dark");
 
   useEffect(() => {
@@ -136,8 +138,11 @@ export function AppShellFrame() {
               <Nav.Trigger />
             </header>
             <OfflineBanner />
-            <main className="min-h-0 flex-1 overflow-hidden">
-              <Outlet />
+            <main className="relative min-h-0 flex-1 overflow-hidden">
+              <div className="relative z-10 h-full min-h-0">
+                <Outlet />
+              </div>
+              <LocalStudioRuntimeField blocking={!hydrated} />
             </main>
           </div>
           <CliDrawer />
