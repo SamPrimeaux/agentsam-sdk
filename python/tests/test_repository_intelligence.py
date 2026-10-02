@@ -65,5 +65,35 @@ class TestRepositoryIntelligence(unittest.TestCase):
             self.assertTrue(any(row["path"] == "src/a.py" for row in snapshot["hot_files"]))
 
 
+    def test_default_evidence_noise_never_becomes_architecture_pressure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.email", "fixture@example.com"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.name", "Fixture"], cwd=root, check=True)
+            (root / "src").mkdir()
+            (root / "python_modules").mkdir()
+            (root / ".agentsam" / "machine").mkdir(parents=True)
+            (root / "dist").mkdir()
+            (root / "src" / "app.js").write_text("export const app = 1;\n", encoding="utf-8")
+            (root / "python_modules" / "vendor.py").write_text("x = 1\n" * 100, encoding="utf-8")
+            (root / ".agentsam" / "machine" / "receipt.json").write_text("{}", encoding="utf-8")
+            (root / "dist" / "app.bundle.js").write_text("x" * 5000, encoding="utf-8")
+            subprocess.run(["git", "add", "-f", "."], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-m", "fixture"], cwd=root, check=True, capture_output=True)
+
+            paths, _ = active_paths(root)
+            self.assertIn("src/app.js", paths)
+            self.assertNotIn("python_modules/vendor.py", paths)
+            self.assertNotIn(".agentsam/machine/receipt.json", paths)
+            self.assertNotIn("dist/app.bundle.js", paths)
+
+            snapshot = build_snapshot(root, churn_days=30, top=20)
+            pressure = {row["path"] for row in snapshot["pressure_points"]}
+            self.assertFalse(any(path.startswith("python_modules") for path in pressure))
+            self.assertFalse(any(path.startswith(".agentsam") for path in pressure))
+            self.assertFalse(any(path.startswith("dist") for path in pressure))
+
+
 if __name__ == "__main__":
     unittest.main()

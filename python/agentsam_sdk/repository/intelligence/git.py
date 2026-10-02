@@ -6,6 +6,8 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
+from .discovery import is_default_evidence_noise_path
+
 
 def run_git(repo_root: Path, *args: str) -> str:
     try:
@@ -56,6 +58,8 @@ def git_churn(repo_root: Path, *, days: int = 30) -> dict[str, dict[str, int]]:
         if len(parts) != 3:
             continue
         added_raw, deleted_raw, path = parts
+        if is_default_evidence_noise_path(path):
+            continue
         if added_raw == "-" or deleted_raw == "-":
             continue
         try:

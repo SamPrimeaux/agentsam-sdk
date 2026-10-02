@@ -462,6 +462,8 @@ export function renderGoapStatus(state = {}) {
   const cp = state.cursor || {};
   const git = state.git || {};
   const headSha = git?.revisionSha || git?.headSha || 'unknown';
+  const localPlan = state.localPlan || null;
+  const world = state.worldSnapshot || null;
 
   return [
     '================================================================================',
@@ -478,6 +480,12 @@ export function renderGoapStatus(state = {}) {
     `Checkpoint:    ${ws.checkpoint_sha ? ws.checkpoint_sha.slice(0, 10) : 'none'} (Tracker cursor: ${cp.last_sha ? cp.last_sha.slice(0, 10) : 'none'})`,
     `Last Action:   ${ws.last_agent_action || 'none'}`,
     `Updated:       ${formatDate(ws.updated_at || ticket.updated_at)}`,
+    ...(localPlan ? [
+      `Plan:          ${localPlan.title} (${localPlan.tasks_done}/${localPlan.tasks_total})`,
+      `World:         ${world?.snapshot_id || 'local'} · Merkle ${world?.merkle_root ? world.merkle_root.slice(0, 20) + '…' : 'unknown'}`,
+      `Knowledge:     ${world?.knowledge_freshness?.status || 'unknown'}${world?.knowledge_freshness?.reason ? ' (' + world.knowledge_freshness.reason + ')' : ''}`,
+      `Actions:       ${world?.actions?.available?.length || 0} available · ${world?.actions?.blocked?.length || 0} blocked`,
+    ] : []),
     '--------------------------------------------------------------------------------',
     ...(!ticket.id && !ws.current_task_id ? [
       '  No active goal. What are you trying to achieve?',
@@ -490,7 +498,7 @@ export function renderGoapStatus(state = {}) {
       : ['  (no commits ingested yet)']),
     ...(state.stepsUnavailable
       ? ['--------------------------------------------------------------------------------',
-         '  (note: step/plan linkage unavailable — agentsam_plans has no agent_run_id column yet)']
+         '  (note: remote step/plan linkage is unavailable for this repository)']
       : []),
     '================================================================================',
   ].join('\n');

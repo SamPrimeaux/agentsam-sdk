@@ -10,6 +10,11 @@ DEFAULT_FALLBACK_EXCLUDE_DIRS = frozenset(
     {
         ".git",
         "node_modules",
+        "python_modules",
+        ".agentsam",
+        ".wrangler",
+        "vendor",
+        "target",
         "dist",
         "build",
         "coverage",
@@ -20,6 +25,25 @@ DEFAULT_FALLBACK_EXCLUDE_DIRS = frozenset(
         "__pycache__",
     }
 )
+
+
+
+DEFAULT_EVIDENCE_NOISE_DIRS = frozenset(DEFAULT_FALLBACK_EXCLUDE_DIRS)
+DEFAULT_EVIDENCE_NOISE_SUFFIXES = (".min.js", ".bundle.js", ".map")
+
+
+def is_default_evidence_noise_path(value: str) -> bool:
+    path = str(value or "").replace("\\", "/").strip("/")
+    if not path:
+        return False
+    parts = path.split("/")
+    if any(part in DEFAULT_EVIDENCE_NOISE_DIRS for part in parts[:-1]):
+        return True
+    name = parts[-1]
+    if name in DEFAULT_EVIDENCE_NOISE_DIRS:
+        return True
+    lowered = name.lower()
+    return lowered.endswith(DEFAULT_EVIDENCE_NOISE_SUFFIXES)
 
 LANGUAGE_BY_EXT = {
     ".js": "JavaScript", ".mjs": "JavaScript", ".cjs": "JavaScript", ".jsx": "JavaScript",
@@ -79,8 +103,9 @@ def active_paths(
     """Return active paths and discovery source (`git` or `filesystem`)."""
     paths = _git_paths(repo_root)
     if paths:
-        return paths, "git"
-    return _walk_paths(repo_root, fallback_exclude_dir_names), "filesystem"
+        return [path for path in paths if not is_default_evidence_noise_path(path)], "git"
+    walked = _walk_paths(repo_root, fallback_exclude_dir_names)
+    return [path for path in walked if not is_default_evidence_noise_path(path)], "filesystem"
 
 
 def _line_count(path: Path) -> int | None:

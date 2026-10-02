@@ -1,7 +1,11 @@
 import { runBrand } from './brand.js';
 import {
+  acceptPlanStep,
+  addPlanDependency,
   addPlanStep,
+  addPlanStepEvidence,
   createPlan,
+  getNextPlanStep,
   getPlan,
   listPlans,
   openPlanLedger,
@@ -62,7 +66,11 @@ function help() {
     '  agentsam plan new "<title>" [--goal "..."] [--type feature|sprint|refactor|incident|daily|run]',
     '  agentsam plan list [--all] [--json]',
     '  agentsam plan show [current|PLAN_ID] [--json]',
-    '  agentsam plan add "<step>" [--plan PLAN_ID] [--kind inspect|implement|verify|deploy|decision]',
+    '  agentsam plan next [--plan PLAN_ID] [--start] [--json]',
+    '  agentsam plan add "<step>" [--plan PLAN_ID] [--kind inspect|implement|verify|deploy|decision] [--acceptance "..."]',
+    '  agentsam plan evidence TODO_ID --type TYPE --ref REF [--note "..."]',
+    '  agentsam plan accept TODO_ID "<criterion>" [--evidence REF]',
+    '  agentsam plan depends TODO_ID DEPENDENCY_ID',
     '  agentsam plan start TODO_ID',
     '  agentsam plan done TODO_ID',
     '  agentsam plan block TODO_ID [--reason "..."]',
@@ -98,6 +106,8 @@ export async function runPlan(argv = []) {
       result = listPlans(ctx, { all: Boolean(opts.all) });
     } else if (sub === 'show') {
       result = getPlan(ctx, rest[0] || 'current');
+    } else if (sub === 'next') {
+      result = getNextPlanStep(ctx, { planId: opts.plan || 'current', start: Boolean(opts.start) });
     } else if (sub === 'add') {
       result = addPlanStep(ctx, {
         planId: opts.plan || 'current',
@@ -107,7 +117,17 @@ export async function runPlan(argv = []) {
         kind: opts.kind || 'work',
         tokenBudget: opts.budget ? Number(opts.budget) : null,
         requiresApproval: Boolean(opts.approval),
+        acceptance: opts.acceptance ? [{ criterion: String(opts.acceptance), required: true, status: 'pending' }] : [],
       });
+    } else if (sub === 'evidence') {
+      if (!rest[0]) throw new Error('TODO_ID is required');
+      result = addPlanStepEvidence(ctx, rest[0], { type: opts.type, ref: opts.ref, note: opts.note, hash: opts.hash });
+    } else if (sub === 'accept') {
+      if (!rest[0]) throw new Error('TODO_ID is required');
+      result = acceptPlanStep(ctx, rest[0], rest.slice(1).join(' '), { evidenceRef: opts.evidence || null });
+    } else if (sub === 'depends') {
+      if (!rest[0] || !rest[1]) throw new Error('TODO_ID and DEPENDENCY_ID are required');
+      result = addPlanDependency(ctx, rest[0], rest[1]);
     } else if (['start', 'done', 'block', 'cancel'].includes(sub)) {
       const taskId = rest[0];
       if (!taskId) throw new Error('TODO_ID is required');
@@ -127,7 +147,31 @@ export async function runPlan(argv = []) {
         for (const plan of result) console.log('  ' + plan.id + '  [' + plan.status + '] ' + plan.title + '  ' + plan.tasks_done + '/' + plan.tasks_total);
         console.log('');
       }
-    } else if (sub === 'add' || ['start', 'done', 'block', 'cancel'].includes(sub)) {
+    } else if (sub === 'next') {
+      if (!result.step) {
+        console.log('\nNo executable open step. Check dependencies or plan completion.\n');
+      } else {
+        console.log([
+          '',
+          'Next executable step',
+          '',
+          '  ' + result.step.id,
+          '  ' + result.step.title,
+          '',
+          '  kind       ' + (result.step.metadata?.kind || 'work'),
+          '  priority   ' + result.step.priority,
+          '  plan       ' + result.plan.title,
+          '  depends    ' + (result.depends_on.length ? result.depends_on.join(', ') : 'none'),
+          '  status     ' + result.step.status,
+          '  evidence   ' + result.evidence.length,
+          '  acceptance ' + result.acceptance.length,
+          '',
+          '  Recommended',
+          '    ' + result.recommended_action,
+          '',
+        ].join('\n'));
+      }
+    } else if (['add','evidence','accept','depends'].includes(sub) || ['start', 'done', 'block', 'cancel'].includes(sub)) {
       console.log('\n  ' + result.id + '  [' + result.status + '] ' + result.title + '\n');
     } else {
       console.log(renderPlan(result));

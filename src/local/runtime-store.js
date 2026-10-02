@@ -43,14 +43,36 @@ export function createRuntimeRunId() {
 export async function startRuntimeRun(value = {}) {
   const id = clean(value.id) || createRuntimeRunId();
   await withStore(value.projectRoot || value.cwd, async (db) => {
+    const activeStep = (!clean(value.plan_id) || !clean(value.todo_id))
+      ? await db.prepare(`
+          SELECT t.id AS todo_id, t.plan_id
+          FROM agentsam_todo t
+          JOIN agentsam_plans p ON p.id = t.plan_id
+          WHERE t.status = 'running' AND p.status = 'active'
+          ORDER BY t.updated_at_unix DESC, t.created_at_unix DESC
+          LIMIT 1
+        `).first()
+      : null;
+    const activePlan = !clean(value.plan_id) && !activeStep?.plan_id
+      ? await db.prepare(`
+          SELECT id AS plan_id FROM agentsam_plans
+          WHERE status = 'active'
+          ORDER BY updated_at_unix DESC, created_at_unix DESC
+          LIMIT 1
+        `).first()
+      : null;
+    const planId = clean(value.plan_id) || clean(activeStep?.plan_id) || clean(activePlan?.plan_id) || null;
+    const todoId = clean(value.todo_id) || clean(activeStep?.todo_id) || null;
     await db.prepare(`
       INSERT INTO agentsam_agent_run (
-        id, account_id, source_client, surface, mode, model_key,
+        id, account_id, plan_id, todo_id, source_client, surface, mode, model_key,
         reasoning_effort, requested_service_tier, status, started_at_unix, updated_at_unix
-      ) VALUES (?, ?, 'agentsam-cli', 'cli', ?, ?, ?, ?, 'running', unixepoch(), unixepoch())
+      ) VALUES (?, ?, ?, ?, 'agentsam-cli', 'cli', ?, ?, ?, ?, 'running', unixepoch(), unixepoch())
     `).bind(
       id,
       clean(value.account_id) || null,
+      planId,
+      todoId,
       clean(value.mode) || 'agent',
       clean(value.model_key) || null,
       clean(value.reasoning_effort) || null,

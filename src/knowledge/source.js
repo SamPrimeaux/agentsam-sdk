@@ -7,7 +7,7 @@ import { isKnowledgeSourcePath } from '../../packages/agentsam-repository/src/so
 import { fingerprint } from './config.js';
 
 export const PARSER = `typescript:${ts.version}:agentsam-1`;
-const OMIT = /(^|\/)(?:\.git|\.agentsam|node_modules|dist|build|coverage|vendor|\.next|\.wrangler|\.venv|__pycache__)(\/|$)|(^|\/)(?:\.env[^/]*|\.dev\.vars[^/]*|package-lock\.json|npm-shrinkwrap\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|Cargo\.lock|poetry\.lock|uv\.lock|[^/]*\.(?:pem|key|p12|pfx|min\.js|map))$/i;
+const OMIT = /(^|\/)(?:\.git|\.agentsam|node_modules|python_modules|dist|build|target|coverage|vendor|\.next|\.wrangler|\.venv|__pycache__)(\/|$)|(^|\/)(?:\.env[^/]*|\.dev\.vars[^/]*|package-lock\.json|npm-shrinkwrap\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|Cargo\.lock|poetry\.lock|uv\.lock|[^/]*\.(?:pem|key|p12|pfx|min\.js|bundle\.js|map))$/i;
 const under = (file, scope) => scope === '.' || file === scope || file.startsWith(scope + '/');
 export function inventory(root, scope) {
   let files;
