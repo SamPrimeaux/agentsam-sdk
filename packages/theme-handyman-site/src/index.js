@@ -8,7 +8,7 @@ const THEME = {
   "version": "0.1.0",
   "kind": "gallery-theme",
   "icon": "theme",
-  "package": "@inneranimalmedia/theme-handyman-site",
+  "package": "@inneranimalmedia/theme-forge",
   "category": "Services",
   "industries": [
     "Home Services",

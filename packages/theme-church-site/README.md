@@ -1,10 +1,10 @@
-# @inneranimalmedia/theme-church-site
+# @inneranimalmedia/theme-cypress
 
 Installable AgentSam theme: **New Iberia Church of Christ**.
 
 Gallery preview source: `apps/theme-gallery-preview/themes/church-site`.
 
 ```js
-import { createTheme } from "@inneranimalmedia/theme-church-site";
+import { createTheme } from "@inneranimalmedia/theme-cypress";
 const theme = createTheme();
 ```

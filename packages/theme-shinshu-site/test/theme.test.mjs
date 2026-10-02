@@ -8,7 +8,7 @@ test('shinshu-site theme package exports harvested (not installable) contract', 
   assert.equal(theme.installable, false);
   assert.equal(theme.lineage, "shin");
   assert.equal(theme.family, "consulting-portfolio");
-  assert.equal(theme.package, "@inneranimalmedia/theme-shinshu-site");
+  assert.equal(theme.package, "@inneranimalmedia/theme-summit");
   assert.ok(Array.isArray(theme.pages));
 });
 

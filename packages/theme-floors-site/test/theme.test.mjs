@@ -8,7 +8,7 @@ test('floors-site theme package exports harvested (not installable) contract', (
   assert.equal(theme.installable, false);
   assert.equal(theme.lineage, "afm");
   assert.equal(theme.family, "service-gallery");
-  assert.equal(theme.package, "@inneranimalmedia/theme-floors-site");
+  assert.equal(theme.package, "@inneranimalmedia/theme-grove");
   assert.ok(Array.isArray(theme.pages));
 });
 

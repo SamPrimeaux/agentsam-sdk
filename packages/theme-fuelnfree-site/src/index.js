@@ -8,7 +8,7 @@ const THEME = {
   "version": "0.1.0",
   "kind": "gallery-theme",
   "icon": "theme",
-  "package": "@inneranimalmedia/theme-fuelnfree-site",
+  "package": "@inneranimalmedia/theme-ember",
   "category": "Commerce",
   "industries": [
     "Retail",

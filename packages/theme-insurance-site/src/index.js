@@ -8,7 +8,7 @@ const THEME = {
   "version": "0.1.0",
   "kind": "gallery-theme",
   "icon": "theme",
-  "package": "@inneranimalmedia/theme-insurance-site",
+  "package": "@inneranimalmedia/theme-harbor",
   "category": "Professional",
   "industries": [
     "Insurance",

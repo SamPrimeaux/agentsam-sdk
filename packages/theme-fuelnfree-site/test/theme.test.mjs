@@ -8,7 +8,7 @@ test('fuelnfree-site theme package exports harvested (not installable) contract'
   assert.equal(theme.installable, false);
   assert.equal(theme.lineage, "fnf");
   assert.equal(theme.family, "editorial-commerce");
-  assert.equal(theme.package, "@inneranimalmedia/theme-fuelnfree-site");
+  assert.equal(theme.package, "@inneranimalmedia/theme-ember");
   assert.ok(Array.isArray(theme.pages));
 });
 

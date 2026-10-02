@@ -8,7 +8,7 @@ const THEME = {
   "version": "0.1.0",
   "kind": "gallery-theme",
   "icon": "theme",
-  "package": "@inneranimalmedia/theme-church-site",
+  "package": "@inneranimalmedia/theme-cypress",
   "category": "Community",
   "industries": [
     "Church",
