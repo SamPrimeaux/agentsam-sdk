@@ -8,6 +8,7 @@ import { codebaseindexIngestOp } from './operations/codebaseindex-ingest.js';
 import { planningAstarOp } from './operations/planning-astar.js';
 import { planningGoapOp } from './operations/planning-goap.js';
 import { decisionEvaluateOp } from './operations/decision-evaluate.js';
+import { packageAuditOp } from './operations/package-audit.js';
 
 export const SEED_OPERATIONS = [
   repositoryInspect,
@@ -19,6 +20,7 @@ export const SEED_OPERATIONS = [
   planningAstarOp,
   planningGoapOp,
   decisionEvaluateOp,
+  packageAuditOp,
 ];
 
 let seeded = false;
