@@ -114,6 +114,29 @@ The JavaScript/TypeScript parser records syntactic relationships, not a fully re
 semantic call graph. Model/dimension changes create a distinct embedding profile.
 Python-backed snapshots capture repository composition and Git churn.
 
+## Native Machine engine
+
+AgentSam's deterministic Rust perception engine is also published independently
+on crates.io. A clean machine does not need this repository checked out:
+
+```sh
+cargo install agentsam-machine-cli
+agentsam-machine --help
+agentsam-machine inspect . --json
+```
+
+The Cargo package is named `agentsam-machine-cli`; the installed executable is
+`agentsam-machine`. Cargo normally installs binaries to `~/.cargo/bin`, which
+the standard Rust installer places on PATH. The npm CLI's `agentsam machine`
+command first looks for `agentsam-machine` on PATH and uses the in-repo Cargo
+source path only as a contributor-development fallback.
+
+The crates.io distribution is self-contained: the published CLI resolves the
+published `agentsam-machine-core` crate by version. Deleting a local AgentSam SDK
+checkout does not affect a registry installation. Precompiled npm-native platform
+binaries are a separate distribution lane; the current crates.io install requires
+a Rust/Cargo toolchain.
+
 ## Capability discovery and available kits
 
 The canonical machine-readable capability registry is available through `agentsam capabilities --json`

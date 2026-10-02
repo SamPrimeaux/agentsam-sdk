@@ -23,7 +23,7 @@ Notes:
   Large detail is externalized under <target>/.agentsam/machine/runs/<run_id>/.
   Generated/cache trees are summarized unless --include-generated is set.
   Remote fetch/probe, optimization, storage, and reference rewriting are separate explicit actions.
-  Set AGENTSAM_MACHINE_BIN to force a specific agentsam-machine binary.`;
+  Standalone install: cargo install agentsam-machine-cli\n  Cargo normally installs agentsam-machine into ~/.cargo/bin; ensure that directory is on PATH.\n  Set AGENTSAM_MACHINE_BIN to force a specific agentsam-machine binary.`;
 }
 
 function parseArgs(argv = []) {
