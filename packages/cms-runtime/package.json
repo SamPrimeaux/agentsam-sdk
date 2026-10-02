@@ -4,7 +4,7 @@
   "description": "Portable self-describing local CMS runtime with SQLite schema, tool/skill catalogs, and provider-neutral package contracts.",
   "type": "module",
   "bin": {
-    "cms-runtime": "./bin/cms-runtime.mjs"
+    "cms-runtime": "bin/cms-runtime.mjs"
   },
   "exports": {
     "./manifest-schema": "./schemas/cms-package.v2.schema.json",
