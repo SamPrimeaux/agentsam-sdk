@@ -18,7 +18,7 @@ function run(cmd, args, cwd) {
   // for nested project installs. Strip that inherited allowance in the child only.
   const env = { ...process.env };
   for (const key of Object.keys(env)) {
-    if (/^npm_config_allow[_-]scripts$/i.test(key)) delete env[key];
+    if (/^npm_config_(?:allow[_-]?scripts|dry[_-]?run)$/i.test(key)) delete env[key];
   }
   return execFileSync(cmd, args, {
     cwd,
