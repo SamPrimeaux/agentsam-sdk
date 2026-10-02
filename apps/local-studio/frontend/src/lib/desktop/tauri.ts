@@ -125,10 +125,11 @@ export async function invokeIdentity(payload: Record<string, unknown>): Promise<
 export type StudioServiceOperation = "inventory" | "chat" | "vault" | "cms" | "database" | "connections" | "plugins";
 
 export async function invokeLocalProvider<T = Record<string, unknown>>(payload: {
-  operation: "inventory" | "chat";
+  operation: "inventory" | "chat" | "select_model";
   provider?: string;
   model_id?: string;
   messages?: Array<{ role: string; content: string }>;
+  cwd?: string;
 }): Promise<T> {
   const invoke = getTauriInvoke();
   if (!invoke) throw new Error("local_provider_bridge_unavailable");

@@ -525,6 +525,8 @@ function EmptyState({ title }: { title: string }) {
 }
 
 function ModelTable({ models }: { models: SettingsModel[] }) {
+  if (!models.length) return <EmptyState title="No runnable models yet." />;
+
   const columns = {
     display: "grid",
     gridTemplateColumns: "minmax(180px, 1.6fr) 1fr 0.8fr 0.8fr auto",
@@ -548,15 +550,25 @@ function ModelTable({ models }: { models: SettingsModel[] }) {
         {models.map((model) => (
           <div key={model.id} className="px-3 py-3 sm:grid" style={columns}>
             <div>
-              <div className="text-[12px] font-medium">{model.name}</div>
-              <div className="mt-0.5 text-[10px] text-muted-foreground sm:hidden">
-                {model.provider} · {model.tier}
+              <div className="flex items-center gap-1.5 text-[12px] font-medium">
+                <span className="truncate">{model.name}</span>
+                {model.selected ? (
+                  <span className="rounded-full border border-border px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                    Selected
+                  </span>
+                ) : null}
+              </div>
+              <div className="mt-0.5 truncate text-[10px] text-muted-foreground sm:hidden">
+                {model.provider} · {model.source || model.tier}
               </div>
             </div>
-            <div className="hidden text-[11px] text-muted-foreground sm:block">{model.provider}</div>
+            <div className="hidden min-w-0 sm:block">
+              <div className="truncate text-[11px] text-muted-foreground">{model.provider}</div>
+              {model.source ? <div className="truncate text-[9px] text-muted-foreground/70">{model.source}</div> : null}
+            </div>
             <div className="hidden text-[11px] text-muted-foreground sm:block">{model.tier}</div>
             <div className="hidden text-[11px] text-muted-foreground sm:block">{model.context}</div>
-            <StatusPill status={model.status} label={model.enabled ? "Enabled" : "Disabled"} />
+            <StatusPill status={model.status} label={model.enabled ? "Runnable" : "Other"} />
           </div>
         ))}
       </div>
@@ -869,6 +881,9 @@ function AgentsView({ snapshot, view }: { snapshot: SettingsSnapshot; view: stri
 
   return (
     <Section title="Agent catalog" description="Configured roles and their current model/runtime relationship.">
+      {!snapshot.agents.length ? (
+        <EmptyState title="No configured agents yet." />
+      ) : (
       <div className="grid gap-3 md:grid-cols-2">
         {snapshot.agents.map((agent) => (
           <article key={agent.id} className="rounded-lg border border-border/70 bg-muted/10 p-4">
@@ -889,6 +904,7 @@ function AgentsView({ snapshot, view }: { snapshot: SettingsSnapshot; view: stri
           </article>
         ))}
       </div>
+      )}
     </Section>
   );
 }
@@ -1332,13 +1348,18 @@ export function SettingsProductPage({
 
   useEffect(() => {
     let cancelled = false;
-    host.snapshot().then((next) => {
-      if (!cancelled) setSnapshot(next);
-    });
+    const refresh = () => {
+      void host.snapshot().then((next) => {
+        if (!cancelled) setSnapshot(next);
+      });
+    };
+    refresh();
+    const unsubscribe = host.subscribe?.(unitId, refresh);
     return () => {
       cancelled = true;
+      unsubscribe?.();
     };
-  }, [host]);
+  }, [host, unitId]);
 
   useEffect(() => {
     setActiveView(requestedView || defaultView);

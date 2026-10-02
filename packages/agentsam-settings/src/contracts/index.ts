@@ -96,6 +96,9 @@ export type SettingsModel = {
   context: string;
   status: HealthState;
   enabled: boolean;
+  source?: string | null;
+  selected?: boolean;
+  verifiedAt?: string | null;
 };
 
 export type SettingsCatalogItem = {
@@ -188,6 +191,7 @@ export type SettingsSnapshot = {
 export interface SettingsHost {
   capabilities(): Promise<SettingsCapabilities>;
   snapshot(): Promise<SettingsSnapshot>;
+  subscribe?(unitId: SettingsUnitId, callback: () => void): () => void;
 }
 
 export function defineSettingsManifest(manifest: SettingsManifest): SettingsManifest {
