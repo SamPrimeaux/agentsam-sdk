@@ -272,6 +272,9 @@
     "packages/theme-scenes",
     "packages/theme-shinshu-site",
     "packages/work-graph",
+    "apps/local-studio/frontend",
+    "apps/local-studio/backend",
+    "apps/local-studio/shared/agentsam",
     "examples/hyperspace-demo"
   ],
   "scripts": {
