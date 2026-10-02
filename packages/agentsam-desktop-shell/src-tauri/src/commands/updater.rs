@@ -1,8 +1,7 @@
-// Real check against tauri-plugin-updater. Update endpoint (R2/Worker
-// -hosted version manifest) isn't configured yet -- plugins.updater
-// isn't set in tauri.conf.json -- so this compiles and runs but will
-// error at call time until that's wired up per-brand. That's a
-// deployment-config gap, not a code gap.
+// Real check against tauri-plugin-updater. The signed Local Studio
+// update endpoint is configured in tauri.conf.json and served by
+// updates.inneranimalmedia.com. Product-specific channels should reuse
+// that authority rather than introducing alternate updater hosts.
 
 use tauri::AppHandle;
 use tauri_plugin_updater::UpdaterExt;
