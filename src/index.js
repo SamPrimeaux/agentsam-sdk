@@ -78,6 +78,26 @@ export {
 } from './capabilities/index.js';
 export { getPreset, listPresets, resolvePreset, getAddon, listAddons } from './presets/index.js';
 export {
+  LOCAL_ENGINE_SCHEMA,
+  LOCAL_ENGINE_BENCHMARK_SCHEMA,
+  ENGINE_CAPABILITIES,
+  LocalEngineRegistry,
+  createLocalEngineRegistry,
+  createOllamaEngine,
+  createMlxLmEngine,
+  createLlamaCppEngine,
+  auditLocalCompute,
+  auditHost,
+  auditAppleHost,
+  auditTools,
+  auditAssets,
+  adoptAsset,
+  readAssetManifest,
+  assetManifestPath,
+  benchmarkEngine,
+  validateStructuredOutput,
+} from './local-engine/index.js';
+export {
   COMPANY_REPOSITORY_GRAPH_SCHEMA_VERSION,
   REPOSITORY_STATUSES,
   REPOSITORY_CONTRACT_TYPES,

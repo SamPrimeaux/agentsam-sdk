@@ -2,7 +2,9 @@
  * agentsam machine — deterministic native Machine lifecycle + perception.
  */
 
+import os from 'node:os';
 import path from 'node:path';
+import pc from 'picocolors';
 import { resolveMachineBinary, spawnMachine } from './machine-binary.js';
 import {
   installManagedMachine,
@@ -12,23 +14,35 @@ import {
 } from './machine-runtime.js';
 
 function usage() {
-  return 'agentsam machine — deterministic local perception (native engine)\n\n' +
-    'Usage:\n' +
-    '  agentsam machine status [--json]\n' +
-    '  agentsam machine doctor [--json]\n' +
-    '  agentsam machine install [--version <semver>] [--force] [--json]\n' +
-    '  agentsam machine update [--force] [--json]\n' +
-    '  agentsam machine inspect <path> [--json] [--run-id <id>] [--include-generated]\n' +
-    '  agentsam machine --help\n\n' +
-    'Runtime authority:\n' +
-    '  AgentSam manages one user-level Machine runtime under ~/.agentsam/runtimes/machine/.\n' +
-    '  Every repository uses that managed runtime first; PATH and SDK source are fallbacks only.\n' +
-    '  Install/update are explicit and never run merely because you entered a repository.\n\n' +
-    'Notes:\n' +
-    '  Default inspect is read-only and network-free.\n' +
-    '  Large detail is externalized under <target>/.agentsam/machine/runs/<run_id>/.\n' +
-    '  Generated/cache trees are summarized unless --include-generated is set.\n' +
-    '  Current registry distribution uses crates.io and therefore requires Cargo for install/update.\n';
+  return [
+    `${pc.bold('agentsam machine')} — deterministic local perception (native engine)`,
+    '',
+    pc.bold('Usage'),
+    `  ${pc.cyan('agentsam machine status')}                         Show the active runtime`,
+    `  ${pc.cyan('agentsam machine doctor')}                         Diagnose runtime resolution`,
+    `  ${pc.cyan('agentsam machine install')} [--version <semver>]   Install the managed runtime`,
+    `  ${pc.cyan('agentsam machine update')}                        Update the managed runtime`,
+    `  ${pc.cyan('agentsam machine inspect <path>')}                Inspect a repository or directory`,
+    '',
+    pc.bold('Options'),
+    `  ${pc.dim('--json')}                  Machine-readable output`,
+    `  ${pc.dim('--force')}                 Replace an existing managed version`,
+    `  ${pc.dim('--run-id <id>')}           Reuse an externalized inspection run`,
+    `  ${pc.dim('--include-generated')}    Include generated and cache trees`,
+    `  ${pc.dim('--help')}                 Show this help`,
+    '',
+    pc.bold('Runtime authority'),
+    '  AgentSam manages one user-level Machine runtime under ~/.agentsam/runtimes/machine/.',
+    '  Resolution order: managed runtime → explicit override → PATH → SDK source.',
+    '  Install and update are explicit; entering a repository never changes the host.',
+    '',
+    pc.bold('Behavior'),
+    '  Inspect is read-only and network-free by default.',
+    '  Large detail is externalized under <target>/.agentsam/machine/runs/<run_id>/.',
+    '  Generated and cache trees are summarized unless --include-generated is set.',
+    '  Install/update use the crates.io distribution and require Cargo.',
+    '',
+  ].join('\n');
 }
 
 function parseArgs(argv = []) {
@@ -86,44 +100,63 @@ function statusPayload() {
   };
 }
 
+function compactPath(value) {
+  const raw = String(value || '—');
+  const home = os.homedir();
+  return home && (raw === home || raw.startsWith(home + path.sep))
+    ? '~' + raw.slice(home.length)
+    : raw;
+}
+
+function stateLabel(installed) {
+  return installed ? pc.green('installed') : pc.yellow('not installed');
+}
+
 function printTextStatus(payload) {
-  console.log('AgentSam Machine');
+  const managed = payload.managed;
+  const effective = payload.effective;
+  console.log(pc.bold('AgentSam Machine'));
+  console.log(pc.dim('Deterministic local perception · native runtime'));
   console.log('');
-  console.log('  managed      ' + (payload.managed.installed ? 'installed' : 'not installed'));
-  console.log('  version      ' + (payload.managed.current_version || '—'));
-  console.log('  binary       ' + (payload.managed.binary || '—'));
-  console.log('  runtime      ' + payload.managed.runtime_root);
-  console.log('  effective    ' + payload.effective.source);
-  console.log('  effective v  ' + (payload.effective.version || 'unknown'));
-  console.log('  cargo        ' + (payload.managed.cargo.available ? payload.managed.cargo.path : 'not found'));
-  if (!payload.managed.installed) {
+  console.log(pc.bold('Managed runtime'));
+  console.log(`  status       ${stateLabel(managed.installed)}`);
+  console.log(`  version      ${managed.current_version || pc.dim('—')}`);
+  console.log(`  runtime      ${compactPath(managed.runtime_root)}`);
+  console.log(`  binary       ${compactPath(managed.binary)}`);
+  console.log('');
+  console.log(pc.bold('Active resolution'));
+  console.log(`  source       ${effective.source || pc.dim('unavailable')}`);
+  console.log(`  version      ${effective.version || pc.dim('unknown')}`);
+  console.log(`  cargo        ${managed.cargo.available ? compactPath(managed.cargo.path) : pc.dim('not found')}`);
+  if (!managed.installed) {
     console.log('');
-    console.log('  Run agentsam machine install to adopt the user-managed runtime.');
+    console.log(`  ${pc.yellow('Next step')}  agentsam machine install`);
   }
 }
 
 function printTextDoctor(payload) {
   printTextStatus(payload);
   console.log('');
+  console.log(pc.bold('Doctor'));
   if (payload.effective.kind === 'missing') {
-    console.log('  ✕ Machine unavailable');
-    console.log('  tried        ' + (payload.effective.tried || []).join(', '));
+    console.log(`  ${pc.red('✕')} Machine unavailable`);
+    console.log(`    tried      ${(payload.effective.tried || []).map(compactPath).join(', ') || pc.dim('none')}`);
   } else if (payload.managed.installed) {
-    console.log('  ✓ managed Machine runtime is available');
+    console.log(`  ${pc.green('✓')} Managed Machine runtime is available`);
   } else {
-    console.log('  ○ Machine works through fallback source: ' + payload.effective.source);
-    console.log('  ○ install the managed runtime to make resolution consistent across repositories');
+    console.log(`  ${pc.yellow('○')} Fallback runtime is active: ${payload.effective.source}`);
+    console.log('    install the managed runtime for consistent resolution across repositories');
   }
 }
 
 function printInstallResult(action, result) {
-  console.log('AgentSam Machine ' + action);
+  console.log(pc.bold(`AgentSam Machine · ${action}`));
   console.log('');
-  console.log('  version      ' + result.version);
-  console.log('  binary       ' + result.binary);
-  console.log('  alias        ' + result.alias);
-  console.log('  source       ' + result.source);
-  console.log('  changed      ' + (result.changed ? 'yes' : 'no'));
+  console.log(`  ${pc.green('✓')} Runtime ${result.changed ? 'installed' : 'already current'}`);
+  console.log(`  version      ${result.version}`);
+  console.log(`  source       ${result.source}`);
+  console.log(`  binary       ${compactPath(result.binary)}`);
+  console.log(`  alias        ${compactPath(result.alias)}`);
 }
 
 export async function runMachine(argv = []) {

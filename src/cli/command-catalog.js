@@ -14,6 +14,7 @@ export const CLI_COMMAND_CATALOG = Object.freeze([
   { id: 'dev', summary: 'Run this project’s npm dev script', topic: 'work', skill: 'agentsam-app-fundamentals' },
   { id: 'inspect', summary: 'Bounded repository inspect / authority view', topic: 'work', skill: 'agentsam-app-fundamentals', operation: 'repository.inspect', common: true },
   { id: 'machine', summary: 'Deterministic local machine perception (inspect / asset discovery)', topic: 'work', skill: 'agentsam-app-fundamentals', operation: 'machine.inspect', common: true },
+  { id: 'engine', summary: 'Discover, audit, benchmark, and govern local AI engines', topic: 'runtime', skill: 'agentsam-app-fundamentals', operation: 'engine.audit', common: true },
   { id: 'package', summary: 'Audit, verify, and plan publication of distributable packages', topic: 'work', skill: 'agentsam-progression-guard', operation: 'package.audit', common: true, usage: ['agentsam package audit [--public] [--offline] [--json]', 'agentsam package status <name> [--offline] [--json]', 'agentsam package verify <name> [--offline] [--json]', 'agentsam package publish-plan [--offline] [--json]'] },
   { id: 'capabilities', summary: 'Inspect capability contracts', topic: 'create', skill: 'agentsam-app-fundamentals' },
   {

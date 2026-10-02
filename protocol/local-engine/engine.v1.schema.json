@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentsam.local-engine.v1",
+  "type": "object",
+  "required": ["schema_version", "engine_id", "status", "capabilities"],
+  "properties": {
+    "schema_version": { "const": "agentsam.local-engine.v1" },
+    "engine_id": { "type": "string", "minLength": 1 },
+    "version": { "type": ["string", "null"] },
+    "model": { "type": ["string", "null"] },
+    "status": { "enum": ["installed", "available", "unavailable", "unknown", "completed", "unsupported"] },
+    "capabilities": { "type": "object", "additionalProperties": { "type": "boolean" } },
+    "evidence": { "type": "array" },
+    "warnings": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": true
+}

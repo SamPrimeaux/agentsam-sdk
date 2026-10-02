@@ -30,6 +30,21 @@ function printIdentity(identity, write) {
   write(`hw_model:  ${identity.model || 'unknown'}`);
 }
 
+function terminalUsage() {
+  return [
+    'agentsam terminal — device identity and ExecOS enrollment',
+    '',
+    'Usage:',
+    '  agentsam terminal identity [--json]',
+    '  agentsam terminal enroll --instance <id> [--endpoint <url>] [--pair] [--json]',
+    '  agentsam terminal --help',
+    '',
+    'Identity lanes:',
+    '  AGENTSAM_API_KEY      account/CLI identity used to mint enrollment',
+    '  AGENTSAM_BRIDGE_KEY   one terminal_connection credential written by --pair',
+  ].join('\n');
+}
+
 function defaultExecosEnrollBin() {
   return path.join(homedir(), 'ExecOS', 'bin', 'enroll.mjs');
 }
@@ -52,6 +67,10 @@ function pairWithExecos(enrollmentToken, options = {}) {
 
 export async function runTerminal(argv = [], options = {}) {
   const write = options.write || ((line) => console.log(line));
+  if (argv.includes('--help') || argv.includes('-h') || argv.includes('help')) {
+    write(terminalUsage());
+    return { ok: true, help: true };
+  }
   const sub = argv[0] && !argv[0].startsWith('--') ? argv[0] : 'identity';
   const json = argv.includes('--json') || options.json === true;
   const pair = argv.includes('--pair') || options.pair === true;
@@ -70,14 +89,7 @@ export async function runTerminal(argv = [], options = {}) {
   }
 
   if (sub !== 'enroll') {
-    write([
-      'Usage: agentsam terminal identity [--json]',
-      '       agentsam terminal enroll --instance <id> [--endpoint <url>] [--pair] [--json]',
-      '',
-      'Lanes:',
-      '  AGENTSAM_API_KEY      account (CLI / whoami / mint enrollment) — required for this command',
-      '  AGENTSAM_BRIDGE_KEY   one terminal_connection secret (written by --pair into ExecOS profile)',
-    ].join('\n'));
+    write(terminalUsage());
     return { ok: false, error: 'terminal_usage' };
   }
 

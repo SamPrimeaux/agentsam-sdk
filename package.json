@@ -119,6 +119,11 @@
     "./theme/harbor": "./packages/theme-insurance-site/src/index.js",
     "./theme/summit": "./packages/theme-shinshu-site/src/index.js",
     "./models/inventory": "./src/models/inventory-core.js",
+    "./local-engine": "./src/local-engine/index.js",
+    "./local-engine/contracts": "./src/local-engine/contracts.js",
+    "./local-engine/audit": "./src/local-engine/audit.js",
+    "./local-engine/assets": "./src/local-engine/assets.js",
+    "./local-engine/benchmark": "./src/local-engine/benchmark.js",
     "./goap": "./packages/agentsam-goap/src/index.js"
   },
   "bin": {
@@ -297,7 +302,8 @@
     "errors:check": "node scripts/verify-error-contracts.mjs",
     "cad:registry:check": "node scripts/cad-registry.mjs --check",
     "app:validate": "node bin/agentsam app validate --all",
-    "guard:apps": "npm run app:validate",
+    "app:packaging": "node scripts/verify-app-packaging.mjs --pack",
+    "guard:apps": "npm run app:validate && npm run app:packaging",
     "test:providers": "node --test packages/providers/completeful/test/*.test.mjs",
     "test:themes": "npm --prefix packages/heuristic-theme test && npm --prefix packages/theme-church-site test && npm --prefix packages/theme-companions-site test && npm --prefix packages/theme-floors-site test && npm --prefix packages/theme-fuelnfree-site test && npm --prefix packages/theme-handyman-site test && npm --prefix packages/theme-insurance-site test && npm --prefix packages/theme-shinshu-site test && npm --prefix packages/theme-scenes test",
     "test:theme-scenes": "npm --prefix packages/theme-scenes test",

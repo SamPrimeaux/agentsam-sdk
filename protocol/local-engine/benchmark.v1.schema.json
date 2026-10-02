@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentsam.engine.benchmark.v1",
+  "type": "object",
+  "required": ["schema_version", "engine_id", "runs", "summary"],
+  "properties": {
+    "schema_version": { "const": "agentsam.engine.benchmark.v1" },
+    "engine_id": { "type": "string" },
+    "model": { "type": ["string", "null"] },
+    "runs": { "type": "array" },
+    "summary": { "type": "object" },
+    "resource": { "type": "object" }
+  }
+}
