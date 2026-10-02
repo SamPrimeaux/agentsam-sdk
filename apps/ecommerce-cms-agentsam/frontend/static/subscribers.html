@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subscribers — Fuel & Free Time Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="/admin/css/console.css">
+</head>
+<body>
+<script src="/admin/js/shell.js"></script>
+<script>
+renderShell('/admin/subscribers', `
+  <div class="admin-toolbar">
+    <div>
+      <h1 class="admin-page-title">Subscribers</h1>
+      <p class="admin-page-sub">Newsletter signups from across the site.</p>
+    </div>
+    <button class="btn ghost" id="export-btn">Export CSV</button>
+  </div>
+
+  <div class="admin-card">
+    <table class="admin-table">
+      <thead><tr><th>Email</th><th>Source Page</th><th>Signed Up</th></tr></thead>
+      <tbody id="subs-body"><tr><td colspan="3" class="admin-empty">Loading…</td></tr></tbody>
+    </table>
+  </div>
+`);
+
+let allSubs = [];
+
+(async function () {
+  try {
+    const d = await adminFetch('/api/admin/subscribers');
+    allSubs = d.subscribers;
+    const body = document.getElementById('subs-body');
+    if (!allSubs.length) {
+      body.innerHTML = '<tr><td colspan="3" class="admin-empty">No signups yet.</td></tr>';
+      return;
+    }
+    body.innerHTML = allSubs.map(s => `
+      <tr><td>${s.email}</td><td>${s.source_page || '—'}</td><td>${fmtDate(s.created_at)}</td></tr>
+    `).join('');
+  } catch (err) {
+    document.getElementById('subs-body').innerHTML = `<tr><td colspan="3" class="admin-empty">${err.message}</td></tr>`;
+  }
+})();
+
+document.getElementById('export-btn').addEventListener('click', () => {
+  if (!allSubs.length) return;
+  const rows = [['email', 'source_page', 'created_at'], ...allSubs.map(s => [s.email, s.source_page || '', s.created_at])];
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'fnf-subscribers.csv';
+  a.click();
+});
+</script>
+</body>
+</html>

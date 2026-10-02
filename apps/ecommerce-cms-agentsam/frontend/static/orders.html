@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orders — Fuel & Free Time Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="/admin/css/console.css">
+</head>
+<body>
+<script src="/admin/js/shell.js"></script>
+<script>
+renderShell('/admin/orders', `
+  <style>
+    .badge.warn { background: rgba(244,185,66,0.15); color: var(--warn); }
+    .badge.bad { background: rgba(255,107,74,0.12); color: var(--bad); }
+    .order-row { cursor: pointer; }
+    .order-detail-body { padding: 4px 0; }
+    .order-detail-body .oi-line { display: flex; justify-content: space-between; gap: 16px; padding: 3px 0; }
+  </style>
+  <h1 class="admin-page-title">Orders</h1>
+  <p class="admin-page-sub">Stripe checkout is live — paid orders commit inventory automatically.</p>
+
+  <div class="admin-card">
+    <table class="admin-table">
+      <thead><tr><th>#</th><th>Customer</th><th>Status</th><th>Total</th><th>Paid</th><th>Session</th><th>Placed</th></tr></thead>
+      <tbody id="orders-body"><tr><td colspan="7" class="admin-empty">Loading…</td></tr></tbody>
+    </table>
+  </div>
+`);
+
+(function () {
+  function statusBadgeClass(s) {
+    if (s === 'paid' || s === 'fulfilled') return 'active';
+    if (s === 'awaiting_payment' || s === 'pending') return 'warn';
+    if (s === 'expired' || s === 'failed' || s === 'cancelled') return 'bad';
+    return 'draft';
+  }
+
+  function sessionShort(id) {
+    return id ? id.slice(0, 20) + '…' : '—';
+  }
+
+  const loaded = new Set();
+
+  async function toggleDetail(id) {
+    const detail = document.getElementById('order-detail-' + id);
+    if (!detail) return;
+    if (!detail.hidden) { detail.hidden = true; return; }
+    detail.hidden = false;
+    if (loaded.has(id)) return;
+    const cell = detail.querySelector('.order-detail-body');
+    cell.textContent = 'Loading…';
+    try {
+      const d = await adminFetch('/api/admin/orders/' + id);
+      loaded.add(id);
+      if (!d.items || !d.items.length) {
+        cell.textContent = 'No line items.';
+        return;
+      }
+      cell.innerHTML = d.items.map(it =>
+        `<div class="oi-line"><span>${it.title || '—'} × ${it.qty}</span><span>${centsToDollars(it.price_cents)}</span></div>`
+      ).join('');
+    } catch (err) {
+      cell.textContent = err.message;
+    }
+  }
+
+  (async function () {
+    const body = document.getElementById('orders-body');
+    try {
+      const d = await adminFetch('/api/admin/orders');
+      if (!d.orders.length) {
+        body.innerHTML = '<tr><td colspan="7" class="admin-empty">No orders yet.</td></tr>';
+        return;
+      }
+      body.innerHTML = d.orders.map(o => `
+        <tr class="order-row" data-id="${o.id}">
+          <td>#${o.id}</td>
+          <td>${o.customer_email || '—'}</td>
+          <td><span class="badge ${statusBadgeClass(o.status)}">${o.status}</span></td>
+          <td>${centsToDollars(o.total_cents)}</td>
+          <td>${fmtDate(o.paid_at) || '—'}</td>
+          <td>${sessionShort(o.stripe_checkout_session_id)}</td>
+          <td>${fmtDate(o.created_at)}</td>
+        </tr>
+        <tr class="order-detail" id="order-detail-${o.id}" hidden>
+          <td colspan="7"><div class="order-detail-body"></div></td>
+        </tr>
+      `).join('');
+
+      body.querySelectorAll('.order-row').forEach(row => {
+        row.addEventListener('click', () => toggleDetail(row.dataset.id));
+      });
+    } catch (err) {
+      body.innerHTML = `<tr><td colspan="7" class="admin-empty">${err.message}</td></tr>`;
+    }
+  })();
+})();
+</script>
+</body>
+</html>

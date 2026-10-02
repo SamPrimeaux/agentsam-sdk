@@ -1,0 +1,81 @@
+/* Light outer shell (matches admin console) + dark glassmorphic cards inside iframe */
+
+.embed--light-shell {
+  --shell-bg: #f1f1f1;
+  background: var(--shell-bg);
+  min-height: 100vh;
+}
+
+.embed-bar--range-only {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 8px 16px;
+  min-height: 0;
+  background: var(--shell-bg);
+  border-bottom: 1px solid #dedede;
+}
+
+.embed--light-shell .embed-bar {
+  background: var(--shell-bg);
+  border-bottom: 1px solid #dedede;
+  padding: 10px 16px;
+}
+
+.embed--light-shell .page {
+  background: var(--shell-bg);
+}
+
+.embed--light-shell .page-title {
+  color: #141414;
+}
+
+.embed--light-shell .page-sub {
+  color: #616161;
+}
+
+.embed--light-shell .seg {
+  background: #fff;
+  border-color: #dedede;
+}
+
+.embed--light-shell .seg button {
+  color: #616161;
+}
+
+.embed--light-shell .seg button.active {
+  background: #ebebeb;
+  color: #141414;
+}
+
+.embed--light-shell .btn:not(.primary) {
+  background: #fff;
+  border-color: #dedede;
+  color: #141414;
+}
+
+.embed--light-shell .btn:not(.primary):hover {
+  background: #ebebeb;
+}
+
+.embed--light-shell .card,
+.embed--light-shell .kpi,
+.embed--light-shell .tbl-wrap {
+  background: oklch(0.18 0.012 270 / 0.78);
+  backdrop-filter: blur(16px) saturate(1.15);
+  -webkit-backdrop-filter: blur(16px) saturate(1.15);
+  border-color: oklch(0.35 0.014 270 / 0.5);
+  box-shadow:
+    0 8px 32px oklch(0 0 0 / 0.22),
+    inset 0 1px 0 oklch(1 0 0 / 0.06);
+}
+
+.embed--light-shell .card-title,
+.embed--light-shell .kpi-val,
+.embed--light-shell .kpi-label {
+  color: var(--fg);
+}
+
+.embed--light-shell ::-webkit-scrollbar-thumb {
+  border-color: var(--shell-bg);
+}

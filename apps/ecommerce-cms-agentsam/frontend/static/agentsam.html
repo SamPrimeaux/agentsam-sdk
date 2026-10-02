@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentSam — Fuel & Free Time Admin</title>
+<link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="/admin/css/console.css">
+<link rel="stylesheet" href="/admin/css/agentsam-page.css">
+</head>
+<body class="agentsam-page-body">
+<script src="/admin/js/shell.js"></script>
+<script>
+renderShell("/admin/agentsam", `
+  <div class="agentsam-page" id="agentsam-page" data-agent-view="chat">
+    <div class="agentsam-page-view-switch" id="agentsam-view-switch" role="tablist" aria-label="Agent view">
+      <button type="button" class="is-active" role="tab" aria-selected="true" data-agent-view-option="chat">Chat</button>
+      <button type="button" role="tab" aria-selected="false" data-agent-view-option="work">Work</button>
+    </div>
+    <div class="agentsam-page-stage">
+      <div class="agentsam-page-hero" id="agentsam-hero">
+        <h1>Where should we begin?</h1>
+      </div>
+      <div class="agentsam-page-thread" id="agentsam-thread" role="log" aria-live="polite" hidden></div>
+    </div>
+    <div class="agentsam-page-dock">
+      <div class="agentsam-page-composer-wrap">
+        <form class="agentsam-page-composer" id="agentsam-page-form">
+          <div class="agentsam-page-composer-main">
+            <div class="agentsam-page-compose-modes" id="agentsam-compose-modes" hidden></div>
+            <div class="agentsam-page-attachments" id="agentsam-attachments" hidden></div>
+            <textarea id="agentsam-page-input" rows="1" placeholder="Ask anything" autocomplete="off"></textarea>
+            <div class="agentsam-page-bottom-bar">
+              <div class="agentsam-page-bottom-left">
+                <div class="agentsam-page-tools">
+                  <button type="button" class="agentsam-page-plus" id="agentsam-plus" aria-expanded="false" aria-haspopup="menu" aria-controls="agentsam-tool-menu" aria-label="Tools and attachments">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                  </button>
+                  <input type="file" id="agentsam-file-input" hidden multiple accept="image/png,image/jpeg,image/webp,image/gif,.txt,.md,.csv,.json">
+                </div>
+                <div class="agentsam-page-connection-pills" id="agentsam-connection-pills" hidden></div>
+              </div>
+              <button type="submit" class="agentsam-page-send" id="agentsam-page-send" aria-label="Send">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 19V5M12 5l-6 6M12 5l6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+          </div>
+        </form>
+        <div class="agentsam-page-menu" id="agentsam-tool-menu" role="menu" hidden>
+          <button type="button" role="menuitem" data-tool="attach">
+            <span class="agentsam-page-menu-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            <span class="agentsam-page-menu-copy"><strong>Add photos &amp; files</strong><small>Upload images, documents, or data</small></span>
+          </button>
+          <button type="button" role="menuitem" data-tool="image" id="agentsam-menu-image">
+            <span class="agentsam-page-menu-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="10" r="1.5" stroke="currentColor" stroke-width="1.5"/><path d="m6 17 4-4 3 3 2-2 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <span class="agentsam-page-menu-copy"><strong data-menu-label>Create image</strong><small>Generate a new visual from a prompt</small></span>
+          </button>
+          <div class="agentsam-page-menu-divider"></div>
+          <div class="agentsam-page-menu-label">Connections</div>
+          <div id="agentsam-mcp-list"></div>
+        </div>
+      </div>
+      <div class="agentsam-page-chips" id="agentsam-page-chips"></div>
+    </div>
+    <div class="agentsam-tool-modal" id="agentsam-tool-modal" hidden>
+      <div class="agentsam-tool-modal-backdrop" data-close-modal></div>
+      <div class="agentsam-tool-modal-panel" role="dialog" aria-modal="true" aria-labelledby="agentsam-tool-modal-title">
+        <header class="agentsam-tool-modal-head">
+          <h2 id="agentsam-tool-modal-title">Tool call</h2>
+          <button type="button" class="agentsam-tool-modal-close" data-close-modal aria-label="Close">&times;</button>
+        </header>
+        <div class="agentsam-tool-modal-body" id="agentsam-tool-modal-body"></div>
+        <footer class="agentsam-tool-modal-foot">
+          <button type="button" class="agentsam-tool-modal-copy" id="agentsam-tool-modal-copy">Copy</button>
+          <button type="button" class="agentsam-tool-modal-close-btn" data-close-modal>Close</button>
+        </footer>
+      </div>
+    </div>
+  </div>
+`, {
+  fullBleed: true,
+  onReady() {
+    document.body.classList.add("agentsam-page-body");
+    const toggle = document.getElementById("agentsam-toggle");
+    if (toggle) {
+      toggle.addEventListener("click", (e) => {
+        if (location.pathname === "/admin/agentsam") {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          document.getElementById("agentsam-page-input")?.focus();
+        }
+      }, true);
+    }
+    const s = document.createElement("script");
+    s.src = "/admin/js/agentsam-page.js";
+    document.body.appendChild(s);
+  },
+});
+</script>
+</body>
+</html>

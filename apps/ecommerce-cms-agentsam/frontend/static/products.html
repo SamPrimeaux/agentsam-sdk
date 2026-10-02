@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Products — Fuel & Free Time Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="/admin/css/console.css">
+</head>
+<body>
+<script src="/admin/js/shell.js"></script>
+<script>
+renderShell('/admin/products', `
+  <div class="admin-toolbar">
+    <div>
+      <h1 class="admin-page-title">Products</h1>
+      <p class="admin-page-sub">Manage catalog items, pricing, and status.</p>
+    </div>
+    <a href="/admin/products/create" class="btn primary">+ New Product</a>
+  </div>
+
+  <div class="admin-card">
+    <table class="admin-table">
+      <thead><tr><th>Title</th><th>Collection</th><th>Price</th><th>Status</th><th>Variants</th><th>Inventory</th><th></th></tr></thead>
+      <tbody id="products-body"><tr><td colspan="7" class="admin-empty">Loading…</td></tr></tbody>
+    </table>
+  </div>
+`);
+
+function badgeFor(status) {
+  return `<span class="badge ${status}">${status}</span>`;
+}
+
+(async function () {
+  try {
+    const d = await adminFetch('/api/admin/products');
+    const body = document.getElementById('products-body');
+    if (!d.products.length) {
+      body.innerHTML = '<tr><td colspan="7" class="admin-empty">No products yet — create your first one.</td></tr>';
+      return;
+    }
+    body.innerHTML = d.products.map(p => `
+      <tr>
+        <td><a href="/admin/product-edit?id=${p.id}">${p.title}</a></td>
+        <td>${p.collection || '—'}</td>
+        <td>${centsToDollars(p.price_cents)}</td>
+        <td>${badgeFor(p.status)}</td>
+        <td>${p.variant_count}</td>
+        <td>${p.total_inventory}${p.total_inventory <= 3 && p.variant_count > 0 ? ' <span class="badge low">low</span>' : ''}</td>
+        <td><a href="/admin/product-edit?id=${p.id}" class="btn ghost small">Edit</a></td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    document.getElementById('products-body').innerHTML =
+      `<tr><td colspan="7" class="admin-empty">${err.message}</td></tr>`;
+  }
+})();
+</script>
+</body>
+</html>

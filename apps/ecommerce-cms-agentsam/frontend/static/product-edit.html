@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Product — Fuel & Free Time Admin</title>
+<link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="/admin/css/console.css">
+<link rel="stylesheet" href="/admin/css/product-edit.css">
+<link rel="stylesheet" href="/admin/css/media-picker.css">
+</head>
+<body>
+<script src="/admin/js/shell.js"></script>
+<script src="/admin/js/media-picker.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const productId = params.get("id");
+const isNew = !productId;
+
+let productSlug = "";
+let dirty = false;
+let saveInFlight = false;
+let variantCount = 0;
+/** @type {{ id: number, url: string, filename?: string }[]} */
+let pendingImages = [];
+
+function slugify(text) {
+  return String(text || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function setDirty(next) {
+  dirty = next;
+  const hint = document.getElementById("save-hint");
+  const btn = document.getElementById("save-btn");
+  if (hint) {
+    hint.textContent = dirty ? "Unsaved changes" : isNew ? "Create this product to add images and variants" : "All changes saved";
+    hint.classList.toggle("is-dirty", dirty);
+  }
+  if (btn) btn.disabled = !dirty || saveInFlight;
+}
+
+function imgNote(msg, kind) {
+  const el = document.getElementById("img-note");
+  if (!el) return;
+  el.textContent = msg || "";
+  el.className = "product-note" + (kind ? ` is-${kind}` : "");
+  el.style.display = msg ? "block" : "none";
+}
+
+function showNote(msg, kind) {
+  const el = document.getElementById("form-note");
+  if (!el) return;
+  el.textContent = msg || "";
+  el.className = "product-note" + (kind ? ` is-${kind}` : "");
+  el.style.display = msg ? "block" : "none";
+  if (msg && kind === "error") {
+    el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+}
+
+function statusBadge(status) {
+  const cls =
+    status === "active"
+      ? "product-status-badge--active"
+      : status === "archived"
+        ? "product-status-badge--archived"
+        : "product-status-badge--draft";
+  return `<span class="product-status-badge ${cls}" id="status-badge">${status || "draft"}</span>`;
+}
+
+function updateHeaderTitle(title) {
+  const h1 = document.getElementById("crumb-title");
+  if (h1) h1.textContent = title || (isNew ? "New product" : "Product");
+  document.title = (title || "Product") + " — Fuel & Free Time Admin";
+}
+
+function updateSeoPreview() {
+  const title = document.getElementById("title")?.value.trim() || "Product title";
+  const slugField = document.getElementById("slug");
+  const slug = slugField?.value.trim() || slugify(title) || "product";
+  const desc = document.getElementById("description")?.value.trim() || "";
+  const price = document.getElementById("price")?.value || "0.00";
+  const previewTitle = document.getElementById("seo-title");
+  const previewUrl = document.getElementById("seo-url");
+  const previewDesc = document.getElementById("seo-desc");
+  if (previewTitle) previewTitle.textContent = title;
+  if (previewUrl) previewUrl.textContent = `https://fuelnfreetime.com/products/${slug}`;
+  if (previewDesc) {
+    previewDesc.textContent = desc
+      ? desc.slice(0, 160)
+      : `$${Number(price).toFixed(2)} USD`;
+  }
+}
+
+function syncStatusUi() {
+  const status = document.getElementById("status-sidebar")?.value || "draft";
+  const badge = document.getElementById("status-badge");
+  if (badge) {
+    badge.textContent = status;
+    badge.className =
+      "product-status-badge " +
+      (status === "active"
+        ? "product-status-badge--active"
+        : status === "archived"
+          ? "product-status-badge--archived"
+          : "product-status-badge--draft");
+  }
+  const viewBtn = document.getElementById("view-btn");
+  if (viewBtn && productSlug && status === "active") {
+    viewBtn.href = `/products/${productSlug}`;
+    viewBtn.style.visibility = "visible";
+  } else if (viewBtn) {
+    viewBtn.href = "#";
+    viewBtn.style.visibility = isNew ? "hidden" : "visible";
+  }
+}
+
+renderShell("/admin/products", `
+  <div class="product-editor">
+    <header class="product-editor-top">
+      <div class="product-editor-crumb">
+        <a href="/admin/products">Products</a>
+        <span aria-hidden="true">›</span>
+        <h1 id="crumb-title">${isNew ? "New product" : "…"}</h1>
+        ${isNew ? "" : statusBadge("draft")}
+      </div>
+      <div class="product-editor-top-actions">
+        <button type="button" class="btn ghost small" id="duplicate-btn" ${isNew ? "disabled" : ""}>Duplicate</button>
+        <a href="#" class="btn ghost small" id="view-btn" target="_blank" rel="noopener" style="${isNew ? "visibility:hidden" : ""}">View</a>
+        <div class="product-editor-more">
+          <button type="button" class="btn ghost small" id="more-btn">More actions</button>
+          <div class="product-editor-menu" id="more-menu">
+            <a href="#" id="menu-view" target="_blank" rel="noopener">View on storefront</a>
+            <button type="button" class="is-danger" id="menu-delete" ${isNew ? "disabled" : ""}>Delete product</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="product-editor-grid">
+      <div class="product-editor-main">
+        <div class="product-card">
+          <label for="title">Title</label>
+          <input type="text" id="title" required autocomplete="off" placeholder="Comfort Cotton Tee">
+        </div>
+
+        <div class="product-card">
+          <label for="description">Description</label>
+          <div class="product-toolbar" aria-hidden="true">
+            <button type="button" disabled><strong>B</strong></button>
+            <button type="button" disabled><em>I</em></button>
+            <button type="button" disabled>U</button>
+            <button type="button" disabled>🔗</button>
+            <button type="button" disabled>≡</button>
+          </div>
+          <textarea id="description" placeholder="Describe this product for the storefront…"></textarea>
+        </div>
+
+        <div class="product-card" id="media-card">
+          <div class="product-card-head">
+            <label>Media</label>
+          </div>
+          <p class="product-media-hint-new" id="media-new-hint" style="${isNew ? "" : "display:none"}">
+            Pick images from your R2 library (including Shopify imports) or upload new files. They attach when you save the product.
+          </p>
+          <div class="product-media-toolbar">
+            <button type="button" class="btn primary small" id="browse-library-btn">Browse library</button>
+            <button type="button" class="btn ghost small" id="upload-images-btn">Upload new</button>
+            <input type="file" id="file-input" multiple accept="image/*" hidden>
+          </div>
+          <div class="product-media-staged" id="staged-grid" style="display:none"></div>
+          <div class="product-media-grid" id="media-grid"></div>
+          <p class="product-note" id="img-note" style="display:none"></p>
+        </div>
+
+        <div class="product-card">
+          <label for="collection">Category / collection</label>
+          <input type="text" id="collection" placeholder="Essentials, High Octane, Masters…">
+          <p class="product-card-hint">Used for grouping in the admin and storefront filters.</p>
+        </div>
+
+        <div class="product-card">
+          <label for="price">Price</label>
+          <div class="product-price-row">
+            <span>$</span>
+            <input type="number" id="price" step="0.01" min="0" required value="0.00">
+            <span>USD</span>
+          </div>
+        </div>
+
+        <div class="product-card" id="inventory-card" style="${isNew ? "display:none" : ""}">
+          <div class="product-card-head">
+            <label>Inventory</label>
+            <span class="product-card-hint" style="margin:0">Tracked per variant</span>
+          </div>
+          <table class="product-inventory-table">
+            <thead>
+              <tr>
+                <th>Location</th>
+                <th>Variant</th>
+                <th>SKU</th>
+                <th>Available</th>
+              </tr>
+            </thead>
+            <tbody id="inventory-body">
+              <tr><td colspan="4" class="pages-empty">No variants yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="product-card" id="variants-card" style="${isNew ? "display:none" : ""}">
+          <div class="product-card-head">
+            <label>Variants</label>
+          </div>
+          <div id="variants-root">
+            <div class="product-variants-empty" id="variants-empty">
+              <p>Add options like size or color for separate SKUs and inventory.</p>
+              <button type="button" class="btn ghost" id="show-variant-form">+ Add variant options</button>
+            </div>
+            <div id="variants-table-wrap" style="display:none">
+              <table class="product-inventory-table">
+                <thead>
+                  <tr><th>SKU</th><th>Size</th><th>Color</th><th>Price</th><th>Qty</th><th></th></tr>
+                </thead>
+                <tbody id="variants-body"></tbody>
+              </table>
+            </div>
+            <div class="product-variant-add" id="variant-form" style="display:none">
+              <div class="product-variant-add-grid">
+                <div><label>SKU</label><input type="text" id="new-sku" placeholder="tee-blk-m"></div>
+                <div><label>Size</label><input type="text" id="new-size" placeholder="M"></div>
+                <div><label>Color</label><input type="text" id="new-color" placeholder="Black"></div>
+                <div><label>Price ($)</label><input type="number" id="new-price" step="0.01" placeholder="optional"></div>
+                <div><label>Qty</label><input type="number" id="new-qty" value="0"></div>
+              </div>
+              <button type="button" class="btn ghost" id="add-variant-btn">+ Add variant</button>
+              <p class="product-note" id="variant-note" style="display:none"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="product-editor-sidebar">
+        <div class="product-sidebar-card">
+          <h3>Status</h3>
+          <div class="product-sidebar-row">
+            <select id="status-sidebar">
+              <option value="draft">Draft</option>
+              <option value="active">Active</option>
+              <option value="archived">Archived</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="product-sidebar-card">
+          <h3>Publishing</h3>
+          <p class="product-sidebar-static">Online Store</p>
+          <p class="product-card-hint" style="margin-top:8px">Active products appear in the shop catalog.</p>
+        </div>
+
+        <div class="product-sidebar-card">
+          <h3>Product organization</h3>
+          <div class="product-sidebar-row">
+            <label for="slug">URL handle</label>
+            <input type="text" id="slug" placeholder="auto-from-title">
+          </div>
+          <div class="product-sidebar-row">
+            <label>Vendor</label>
+            <p class="product-sidebar-static">Fuel &amp; Free Time</p>
+          </div>
+          <div class="product-sidebar-row">
+            <label for="product-type">Product type</label>
+            <input type="text" id="product-type" placeholder="Apparel" disabled>
+          </div>
+        </div>
+
+        <div class="product-sidebar-card">
+          <h3>Search engine listing</h3>
+          <div class="product-seo-preview">
+            <div class="seo-title" id="seo-title">Product title</div>
+            <div class="seo-url" id="seo-url">https://fuelnfreetime.com/products/…</div>
+            <div class="seo-desc" id="seo-desc">$0.00 USD</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <p class="product-note" id="form-note" style="display:none"></p>
+  </div>
+
+  <footer class="product-editor-bar">
+    <span class="product-editor-bar-hint" id="save-hint">${isNew ? "Create this product to add images and variants" : "Loading…"}</span>
+    <div class="product-editor-bar-actions">
+      <a href="/admin/products" class="btn ghost">Discard</a>
+      <button type="button" class="btn primary" id="save-btn" disabled>${isNew ? "Save product" : "Save"}</button>
+    </div>
+  </footer>
+`);
+
+document.body.classList.add("console-body-bleed");
+
+function bindDirtyFields() {
+  ["title", "description", "collection", "price", "slug", "status-sidebar"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("input", () => {
+      setDirty(true);
+      updateSeoPreview();
+      if (id === "status-sidebar") syncStatusUi();
+    });
+    el.addEventListener("change", () => {
+      setDirty(true);
+      updateSeoPreview();
+      if (id === "status-sidebar") syncStatusUi();
+    });
+  });
+  document.getElementById("title")?.addEventListener("input", () => {
+    const slugEl = document.getElementById("slug");
+    if (slugEl && !slugEl.dataset.manual) {
+      slugEl.value = slugify(document.getElementById("title").value);
+      updateSeoPreview();
+    }
+  });
+  document.getElementById("slug")?.addEventListener("input", (e) => {
+    e.target.dataset.manual = "1";
+    updateSeoPreview();
+  });
+}
+
+// ----- Media -----
+
+function renderStagedGrid() {
+  const grid = document.getElementById("staged-grid");
+  if (!grid) return;
+  if (!pendingImages.length) {
+    grid.style.display = "none";
+    grid.innerHTML = "";
+    return;
+  }
+  grid.style.display = "grid";
+  grid.innerHTML = pendingImages
+    .map(
+      (img, idx) => `
+    <div class="product-media-staged-tile">
+      <img src="${img.url}" alt="">
+      <button type="button" data-staged-idx="${idx}" aria-label="Remove">×</button>
+    </div>`
+    )
+    .join("");
+  grid.querySelectorAll("[data-staged-idx]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      pendingImages.splice(Number(btn.dataset.stagedIdx), 1);
+      renderStagedGrid();
+      setDirty(true);
+    });
+  });
+}
+
+async function attachAssetsToProduct(assetIds) {
+  for (const id of assetIds) {
+    await adminFetch(`/api/admin/products/${productId}/images`, {
+      method: "POST",
+      body: JSON.stringify({ media_asset_id: id }),
+    });
+  }
+}
+
+async function openBrowseLibrary() {
+  const picked = await openMediaPicker({
+    title: "Attach product images",
+    multi: true,
+  });
+  if (!picked?.length) return;
+
+  if (isNew) {
+    for (const a of picked) {
+      if (!pendingImages.some((p) => p.id === a.id)) {
+        pendingImages.push({ id: a.id, url: a.url, filename: a.filename });
+      }
+    }
+    renderStagedGrid();
+    setDirty(true);
+    imgNote(`Added ${picked.length} image(s) — save product to attach.`, "success");
+    return;
+  }
+
+  try {
+    await attachAssetsToProduct(picked.map((a) => a.id));
+    imgNote(`Attached ${picked.length} image(s).`, "success");
+    loadImages();
+  } catch (err) {
+    imgNote(err.message, "error");
+  }
+}
+
+function bindMediaToolbar() {
+  document.getElementById("browse-library-btn")?.addEventListener("click", openBrowseLibrary);
+  const fileInput = document.getElementById("file-input");
+  document.getElementById("upload-images-btn")?.addEventListener("click", () => fileInput?.click());
+  fileInput?.addEventListener("change", () => {
+    if (fileInput.files?.length) uploadFiles(fileInput.files);
+    fileInput.value = "";
+  });
+}
+
+function renderMediaGrid(images) {
+  const grid = document.getElementById("media-grid");
+  if (!grid) return;
+
+  if (isNew) {
+    grid.innerHTML = pendingImages.length
+      ? ""
+      : `<div class="product-media-add" id="drop-zone" role="button" tabindex="0">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>Drop files to upload</span>
+      <button type="button" class="product-media-browse-link" data-browse-drop>Browse library</button>
+    </div>`;
+    bindDropZone();
+    return;
+  }
+
+  const tiles = (images || [])
+    .map(
+      (img) => `
+    <div class="product-media-tile ${img.is_primary ? "is-primary" : ""}" data-asset-id="${img.id}">
+      ${img.is_primary ? '<span class="primary-tag">Primary</span>' : ""}
+      <img src="${img.url}" alt="${img.filename || ""}">
+      <div class="tile-actions">
+        ${img.is_primary ? "" : '<button type="button" class="btn ghost small set-primary-btn">Primary</button>'}
+        <button type="button" class="btn danger small remove-btn">Remove</button>
+      </div>
+    </div>`
+    )
+    .join("");
+
+  grid.innerHTML =
+    tiles +
+    `<div class="product-media-add" id="drop-zone" role="button" tabindex="0">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>Drop files to upload</span>
+      <button type="button" class="product-media-browse-link" data-browse-drop>Browse library</button>
+    </div>`;
+
+  grid.querySelectorAll(".product-media-tile").forEach((tile) => {
+    const assetId = tile.dataset.assetId;
+    tile.querySelector(".set-primary-btn")?.addEventListener("click", async () => {
+      await adminFetch(`/api/admin/products/${productId}/images/${assetId}/primary`, { method: "POST" });
+      loadImages();
+    });
+    tile.querySelector(".remove-btn")?.addEventListener("click", async () => {
+      await adminFetch(`/api/admin/products/${productId}/images/${assetId}`, { method: "DELETE" });
+      loadImages();
+    });
+  });
+
+  bindDropZone();
+}
+
+function bindDropZone() {
+  const dropZone = document.getElementById("drop-zone");
+  if (!dropZone || dropZone.dataset.bound) return;
+  dropZone.dataset.bound = "1";
+
+  const openUpload = () => document.getElementById("file-input")?.click();
+
+  dropZone.addEventListener("click", (e) => {
+    if (e.target.closest("[data-browse-drop]")) return;
+    openUpload();
+  });
+
+  dropZone.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      openUpload();
+    }
+  });
+
+  dropZone.querySelector("[data-browse-drop]")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openBrowseLibrary();
+  });
+
+  ["dragenter", "dragover"].forEach((evt) =>
+    dropZone.addEventListener(evt, (e) => {
+      e.preventDefault();
+      dropZone.classList.add("is-dragover");
+    })
+  );
+  ["dragleave", "drop"].forEach((evt) =>
+    dropZone.addEventListener(evt, (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("is-dragover");
+      if (evt === "drop" && e.dataTransfer?.files?.length) uploadFiles(e.dataTransfer.files);
+    })
+  );
+}
+
+async function loadImages() {
+  if (isNew) {
+    renderStagedGrid();
+    renderMediaGrid([]);
+    return;
+  }
+  try {
+    const d = await adminFetch(`/api/admin/products/${productId}/images`);
+    renderMediaGrid(d.images);
+  } catch (err) {
+    document.getElementById("media-grid").innerHTML = `<p class="product-card-hint">${err.message}</p>`;
+  }
+}
+
+async function uploadFiles(fileList) {
+  const form = new FormData();
+  for (const f of fileList) form.append("files", f);
+  form.append("prefix", `products/${productSlug || slugify(document.getElementById("title")?.value || "misc")}/`);
+  form.append("category", "product");
+  form.append("folder", "products");
+
+  try {
+    const res = await fetch("/api/admin/media", {
+      method: "POST",
+      body: form,
+      credentials: "include",
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Upload failed");
+
+    if (isNew) {
+      for (const asset of data.assets) {
+        if (!pendingImages.some((p) => p.id === asset.id)) {
+          pendingImages.push({ id: asset.id, url: asset.url, filename: asset.filename });
+        }
+      }
+      renderStagedGrid();
+      renderMediaGrid([]);
+      setDirty(true);
+      imgNote(`Uploaded ${data.assets.length} image(s) — save product to attach.`, "success");
+      return;
+    }
+
+    await attachAssetsToProduct(data.assets.map((a) => a.id));
+    imgNote(`Uploaded and attached ${data.assets.length} image(s).`, "success");
+    loadImages();
+  } catch (err) {
+    imgNote(err.message, "error");
+  }
+}
+
+// ----- Variants -----
+
+function variantNote(msg, kind) {
+  const el = document.getElementById("variant-note");
+  if (!el) return;
+  el.textContent = msg || "";
+  el.className = "product-note" + (kind ? ` is-${kind}` : "");
+  el.style.display = msg ? "block" : "none";
+}
+
+function renderInventory(variants) {
+  const body = document.getElementById("inventory-body");
+  if (!body) return;
+  if (!variants.length) {
+    body.innerHTML = '<tr><td colspan="4" class="pages-empty">No variants — inventory tracked when you add SKUs</td></tr>';
+    return;
+  }
+  body.innerHTML = variants
+    .map((v) => {
+      const label = [v.size, v.color].filter(Boolean).join(" / ") || "Default";
+      return `<tr>
+        <td>Default</td>
+        <td>${label}</td>
+        <td>${v.sku}</td>
+        <td>${v.inventory_qty}</td>
+      </tr>`;
+    })
+    .join("");
+}
+
+function renderVariants(variants) {
+  variantCount = variants.length;
+  const empty = document.getElementById("variants-empty");
+  const wrap = document.getElementById("variants-table-wrap");
+  const form = document.getElementById("variant-form");
+  const body = document.getElementById("variants-body");
+
+  if (!variants.length) {
+    empty.style.display = "block";
+    wrap.style.display = "none";
+    form.style.display = "none";
+    renderInventory([]);
+    return;
+  }
+
+  empty.style.display = "none";
+  wrap.style.display = "block";
+  form.style.display = "block";
+
+  body.innerHTML = variants
+    .map(
+      (v) => `
+    <tr data-id="${v.id}">
+      <td><input class="v-sku" value="${v.sku}"></td>
+      <td><input class="v-size" value="${v.size || ""}"></td>
+      <td><input class="v-color" value="${v.color || ""}"></td>
+      <td><input class="v-price" type="number" step="0.01" value="${v.price_cents != null ? (v.price_cents / 100).toFixed(2) : ""}"></td>
+      <td><input class="v-qty" type="number" value="${v.inventory_qty}"></td>
+      <td>
+        <button type="button" class="btn ghost small v-save">Save</button>
+        <button type="button" class="btn ghost small v-delete">Delete</button>
+      </td>
+    </tr>`
+    )
+    .join("");
+
+  body.querySelectorAll("tr").forEach((row) => {
+    const id = row.dataset.id;
+    row.querySelector(".v-save").addEventListener("click", async () => {
+      try {
+        await adminFetch(`/api/admin/variants/${id}`, {
+          method: "PUT",
+          body: JSON.stringify({
+            sku: row.querySelector(".v-sku").value.trim(),
+            size: row.querySelector(".v-size").value.trim(),
+            color: row.querySelector(".v-color").value.trim(),
+            price_cents: row.querySelector(".v-price").value
+              ? Math.round(parseFloat(row.querySelector(".v-price").value) * 100)
+              : null,
+            inventory_qty: row.querySelector(".v-qty").value,
+          }),
+        });
+        variantNote("Variant saved.", "success");
+        loadProduct();
+      } catch (err) {
+        variantNote(err.message, "error");
+      }
+    });
+    row.querySelector(".v-delete").addEventListener("click", async () => {
+      if (!confirm("Delete this variant?")) return;
+      try {
+        await adminFetch(`/api/admin/variants/${id}`, { method: "DELETE" });
+        loadProduct();
+      } catch (err) {
+        variantNote(err.message, "error");
+      }
+    });
+  });
+
+  renderInventory(variants);
+}
+
+async function loadProduct() {
+  if (isNew) {
+    updateHeaderTitle("New product");
+    updateSeoPreview();
+    setDirty(false);
+    loadImages();
+    return;
+  }
+
+  try {
+    const d = await adminFetch(`/api/admin/products/${productId}`);
+    const p = d.product;
+    document.getElementById("title").value = p.title;
+    document.getElementById("slug").value = p.slug;
+    document.getElementById("slug").dataset.manual = "1";
+    productSlug = p.slug;
+    document.getElementById("description").value = p.description || "";
+    document.getElementById("collection").value = p.collection || "";
+    document.getElementById("status-sidebar").value = p.status;
+    document.getElementById("price").value = (p.price_cents / 100).toFixed(2);
+    updateHeaderTitle(p.title);
+    syncStatusUi();
+    updateSeoPreview();
+    renderVariants(d.variants);
+    loadImages();
+    setDirty(false);
+
+    const menuView = document.getElementById("menu-view");
+    if (menuView && p.status === "active") menuView.href = `/products/${p.slug}`;
+  } catch (err) {
+    showNote(err.message, "error");
+  }
+}
+
+function collectPayload() {
+  const priceVal = parseFloat(document.getElementById("price").value || "0");
+  return {
+    title: document.getElementById("title").value.trim(),
+    slug: document.getElementById("slug").value.trim() || slugify(document.getElementById("title").value),
+    description: document.getElementById("description").value.trim(),
+    collection: document.getElementById("collection").value.trim(),
+    status: document.getElementById("status-sidebar").value,
+    price_cents: Number.isFinite(priceVal) ? Math.round(priceVal * 100) : 0,
+  };
+}
+
+async function saveProduct() {
+  const payload = collectPayload();
+  if (!payload.title) {
+    showNote("Title is required.", "error");
+    return;
+  }
+
+  if (payload.status === "active" && !isNew) {
+    const issues = [];
+    if (variantCount === 0) issues.push("Add at least one size variant so customers can purchase");
+    if (payload.price_cents <= 0 && variantCount === 0) issues.push("Set a base price or variant pricing");
+    if (issues.length) {
+      const ok = confirm(
+        "This product is active but not ready for checkout:\n\n• " +
+          issues.join("\n• ") +
+          "\n\nCustomers will see the product page but cannot add to cart. Save anyway?"
+      );
+      if (!ok) return;
+    }
+  }
+
+  saveInFlight = true;
+  setDirty(dirty);
+  document.getElementById("save-btn").textContent = isNew ? "Saving…" : "Saving…";
+
+  try {
+    if (isNew) {
+      const d = await adminFetch("/api/admin/products", { method: "POST", body: JSON.stringify(payload) });
+      const newId = d.id;
+      if (pendingImages.length) {
+        const results = await Promise.allSettled(
+          pendingImages.map((p) =>
+            adminFetch(`/api/admin/products/${newId}/images`, {
+              method: "POST",
+              body: JSON.stringify({ media_asset_id: p.id }),
+            })
+          )
+        );
+        const failed = results.filter((r) => r.status === "rejected").length;
+        if (failed) {
+          showNote(`Product created, but ${failed} image(s) failed to attach.`, "error");
+        }
+      }
+      window.location.href = `/admin/product-edit?id=${newId}`;
+      return;
+    }
+    await adminFetch(`/api/admin/products/${productId}`, { method: "PUT", body: JSON.stringify(payload) });
+    productSlug = payload.slug;
+    updateHeaderTitle(payload.title);
+    syncStatusUi();
+    updateSeoPreview();
+    setDirty(false);
+    showNote("Product saved.", "success");
+  } catch (err) {
+    showNote(err.message, "error");
+    setDirty(true);
+  } finally {
+    saveInFlight = false;
+    document.getElementById("save-btn").textContent = isNew ? "Save product" : "Save";
+    setDirty(dirty);
+  }
+}
+
+document.getElementById("save-btn").addEventListener("click", saveProduct);
+
+document.getElementById("duplicate-btn")?.addEventListener("click", () => {
+  alert("Duplicate product is coming soon.");
+});
+
+document.getElementById("more-btn")?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  document.getElementById("more-menu").classList.toggle("is-open");
+});
+document.addEventListener("click", () => {
+  document.getElementById("more-menu")?.classList.remove("is-open");
+});
+
+async function deleteProduct() {
+  if (!confirm("Delete this product and all its variants? This cannot be undone.")) return;
+  try {
+    await adminFetch(`/api/admin/products/${productId}`, { method: "DELETE" });
+    window.location.href = "/admin/products";
+  } catch (err) {
+    showNote(err.message, "error");
+  }
+}
+
+document.getElementById("menu-delete")?.addEventListener("click", deleteProduct);
+
+document.getElementById("show-variant-form")?.addEventListener("click", () => {
+  document.getElementById("variants-empty").style.display = "none";
+  document.getElementById("variant-form").style.display = "block";
+});
+
+document.getElementById("add-variant-btn")?.addEventListener("click", async () => {
+  const sku = document.getElementById("new-sku").value.trim();
+  if (!sku) {
+    variantNote("SKU is required.", "error");
+    return;
+  }
+  try {
+    await adminFetch(`/api/admin/products/${productId}/variants`, {
+      method: "POST",
+      body: JSON.stringify({
+        sku,
+        size: document.getElementById("new-size").value.trim(),
+        color: document.getElementById("new-color").value.trim(),
+        price_cents: document.getElementById("new-price").value
+          ? Math.round(parseFloat(document.getElementById("new-price").value) * 100)
+          : null,
+        inventory_qty: document.getElementById("new-qty").value || 0,
+      }),
+    });
+    document.getElementById("new-sku").value = "";
+    document.getElementById("new-size").value = "";
+    document.getElementById("new-color").value = "";
+    document.getElementById("new-price").value = "";
+    document.getElementById("new-qty").value = "0";
+    variantNote("Variant added.", "success");
+    loadProduct();
+  } catch (err) {
+    variantNote(err.message, "error");
+  }
+});
+
+bindDirtyFields();
+bindMediaToolbar();
+loadProduct();
+</script>
+</body>
+</html>
