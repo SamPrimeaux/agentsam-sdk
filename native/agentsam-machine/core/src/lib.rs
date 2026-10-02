@@ -31,6 +31,8 @@ const IGNORE_DIRS: &[&str] = &[
     ".git",
     ".agentsam",
     "node_modules",
+    "python_modules",
+    "vendor",
     "target",
     "build",
     "dist",
@@ -694,10 +696,14 @@ fn is_ignored_directory(name: &str) -> bool {
 }
 
 fn is_noise_file(name: &str) -> bool {
+    let lower = name.to_ascii_lowercase();
     name == ".DS_Store"
         || name == "Thumbs.db"
         || name == "desktop.ini"
         || name.starts_with("._")
+        || lower.ends_with(".min.js")
+        || lower.ends_with(".bundle.js")
+        || lower.ends_with(".map")
 }
 
 fn relative_path(root: &Path, path: &Path) -> String {

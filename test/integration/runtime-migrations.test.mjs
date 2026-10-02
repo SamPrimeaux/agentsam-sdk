@@ -34,6 +34,11 @@ test('portable runtime migration installs AgentSam CLI state tables idempotently
       'agentsam_todo',
     ]) assert.equal(names.has(name), true, name);
 
+    const runColumns = await db.prepare('PRAGMA table_info(agentsam_agent_run)').all();
+    const runColumnNames = new Set(runColumns.results.map((row) => row.name));
+    assert.equal(runColumnNames.has('plan_id'), true);
+    assert.equal(runColumnNames.has('todo_id'), true);
+
     const timers = await db.prepare(
       "SELECT name FROM sqlite_master WHERE type='table' AND name='active_timers'"
     ).first();

@@ -52,7 +52,17 @@ test('S2-S4: cwd and model changes preserve project state; repository switch sel
   assert.equal(loadLocalSession(session.id, { home, cwd: projectA }).model_key, 'gemini:example');
   assert.equal(loadLocalSession(session.id, { home, cwd: projectB }), null);
 
-  const runId = await startRuntimeRun({ projectRoot: projectA, model_key: 'test:model' });
+  const setup = createLocalSqliteDatabaseSync(path.join(projectA, '.agentsam', 'data', 'agentsam.sqlite'));
+  applyRuntimeMigrationsSync(setup);
+  setup.prepare("INSERT INTO agentsam_plans (id,plan_type,title,status,summary_text,metadata_json) VALUES ('plan_test','feature','Test','active','Test','{}')").run();
+  setup.prepare("INSERT INTO agentsam_todo (id,plan_id,title,status,metadata_json) VALUES ('todo_test','plan_test','Test step','open','{}')").run();
+  setup.close();
+  const runId = await startRuntimeRun({ projectRoot: projectA, model_key: 'test:model', plan_id: 'plan_test', todo_id: 'todo_test' });
+  const attributed = createLocalSqliteDatabaseSync(runtimeDatabasePath(projectA));
+  const attributedRow = attributed.prepare('SELECT plan_id, todo_id FROM agentsam_agent_run WHERE id = ?').get(runId);
+  attributed.close();
+  assert.equal(attributedRow.plan_id, 'plan_test');
+  assert.equal(attributedRow.todo_id, 'todo_test');
   let output = '';
   const state = { cwd: child, projectRoot: projectA, home, session: changedModel, interactive: false, write(value) { output += value; } };
   await dispatchShellLine('/logs', state);

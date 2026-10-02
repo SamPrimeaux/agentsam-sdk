@@ -19,12 +19,15 @@ This package does not define a second GOAP database. It maps stable logical port
 
 The core package imports no Wrangler, Cloudflare, SQLite, Postgres, Tauri, filesystem, or terminal implementation. Those are adapters.
 
+`projectGoapWorld()` is the deterministic perception seam: callers supply repository facts, the active project-local plan/TODO, knowledge freshness, and bounded evidence. It emits `agentsam.goap.world.v1` plus canonical blackboard, goal, and action contracts without performing storage, network, filesystem, or model work.
+
 ## Frozen v1 contracts
 
 - agentsam.blackboard.v1
 - agentsam.goal.v1
 - agentsam.goap.action.v1
 - agentsam.goap.plan.v1
+- agentsam.goap.world.v1
 - agentsam.event.v1
 
 Database ticket statuses stay unchanged. The package maps them to logical goal states:

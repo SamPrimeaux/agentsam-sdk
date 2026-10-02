@@ -18,8 +18,11 @@ const presetCatalog = readJson('protocol/presets/catalog.json');
 assert.equal(pkg.name, '@inneranimalmedia/agentsam-sdk');
 assert.equal(pkg.version, lock.version, 'package.json and package-lock.json versions must match');
 assert.equal(pkg.version, lock.packages?.['']?.version, 'root lock package version must match');
-assert.equal(pkg.version, identity.version, 'identity workspace version must track the root SDK');
-assert.equal(pkg.version, lock.packages?.['packages/identity']?.version, 'identity lock version must match');
+assert.equal(
+  identity.version,
+  lock.packages?.['packages/identity']?.version,
+  'identity workspace package.json and lockfile versions must match independently of the root SDK',
+);
 assert.equal(pkg.dependencies?.[pkg.name], undefined, 'SDK must never depend on itself');
 assert.equal(lock.packages?.[`node_modules/${pkg.name}`], undefined, 'lockfile must not contain nested SDK self-install');
 assert.equal(pkg.scripts?.postinstall, undefined, 'root SDK install must be side-effect free');

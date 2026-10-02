@@ -11,6 +11,7 @@ import {
   renderGoapPlan,
 } from '../../packages/agentsam-repository/src/goap.js';
 import { readAccountSession } from '../lib/account-session.js';
+import { buildLocalGoapState } from './goap-world.js';
 
 function parseArgs(args = []) {
   const flags = { _: [] };
@@ -147,9 +148,15 @@ export async function runGoap(subcommand = 'status', options = {}) {
     return;
   }
 
-  const state = await readGoapState({ cwd, accountId });
-  if (!state.ok) {
-    console.error(`Error reading GOAP state: ${state.error || 'unknown error'}`);
+  let state = null;
+  try {
+    state = await buildLocalGoapState({ cwd });
+  } catch (error) {
+    if (jsonMode && options.debug) console.error(error?.stack || error);
+  }
+  if (!state && accountId) state = await readGoapState({ cwd, accountId });
+  if (!state?.ok) {
+    console.error(`Error reading GOAP state: ${state?.error || 'no local plan or remote GOAP state available'}`);
     return;
   }
 
