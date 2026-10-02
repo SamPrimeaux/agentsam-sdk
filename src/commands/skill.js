@@ -49,6 +49,22 @@ function looksLikeNpmPackage(source) {
  * Download an npm package tarball and return the extracted package root
  * that contains agentsam.skill.json (or package root for relative resolve).
  */
+
+function buildNpmPackEnv(baseEnv = process.env) {
+  const env = { ...baseEnv };
+
+  // resolveNpmSkillPackage requires a physical tarball.
+  // Parent npm lifecycle flags such as `npm publish --dry-run`
+  // must not change the semantics of this nested npm invocation.
+  for (const key of Object.keys(env)) {
+    if (/^npm_config_dry[_-]?run$/i.test(key)) {
+      delete env[key];
+    }
+  }
+
+  return env;
+}
+
 export function resolveNpmSkillPackage(spec, options = {}) {
   const spawn = options.spawnSyncImpl || spawnSync;
   const maxPackAttempts = 2;
@@ -63,7 +79,7 @@ export function resolveNpmSkillPackage(spec, options = {}) {
     const pack = spawn('npm', ['pack', spec, '--json', '--pack-destination', tmp], {
       encoding: 'utf8',
       cwd: options.cwd || process.cwd(),
-      env: options.env || process.env,
+      env: buildNpmPackEnv(options.env || process.env),
     });
 
     if ((pack.status ?? 1) !== 0) {

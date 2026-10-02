@@ -87,6 +87,49 @@ test('resolveNpmSkillPackage retries once when npm reports success without mater
   assert.ok(fs.existsSync(path.join(resolved, 'agentsam.skill.json')));
 });
 
+
+test('resolveNpmSkillPackage ignores inherited npm dry-run lifecycle state', () => {
+  const pkgRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'agentsam-npm-skill-dry-run-'),
+  );
+
+  fs.writeFileSync(
+    path.join(pkgRoot, 'package.json'),
+    JSON.stringify({
+      name: 'tmp-agentsam-skill-dry-run',
+      version: '0.0.0',
+      private: true,
+    }),
+  );
+
+  fs.writeFileSync(
+    path.join(pkgRoot, 'agentsam.skill.json'),
+    JSON.stringify({
+      schema: 'agentsam.skill.v1',
+      id: 'npm-dry-run-fixture',
+      name: 'NPM Dry Run Fixture',
+      instructions: {
+        source: 'inline',
+        inline: '# npm dry-run fixture',
+      },
+      execution: {
+        mode: 'turn',
+      },
+    }),
+  );
+
+  const resolved = resolveNpmSkillPackage(pkgRoot, {
+    env: {
+      ...process.env,
+      npm_config_dry_run: 'true',
+    },
+  });
+
+  assert.ok(
+    fs.existsSync(path.join(resolved, 'agentsam.skill.json')),
+  );
+});
+
 test('env boot-line prints source load-agent-env command', async () => {
   const home = tmpHome();
   const lines = [];
