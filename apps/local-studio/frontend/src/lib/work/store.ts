@@ -5,6 +5,7 @@ import { extractArtifacts, mergeArtifacts } from "@/lib/work/files";
 import { DEFAULT_SELECTION, type StudioModelSelection } from "@/lib/work/models";
 import { newProject, newFilesystemProject } from "@/lib/work/seed";
 import { streamChat } from "@/lib/work/stream";
+import { localStudioRuntimeVisuals } from "@/lib/runtime-visuals/local-studio-runtime";
 import type {
   Artifact,
   ChatMessage,
@@ -482,8 +483,11 @@ export const useWorkStore = create<WorkState>()(
             }
           };
 
+          const visualOperationId = "agent-turn:" + assistantId;
+          localStudioRuntimeVisuals.startAgentTurn(visualOperationId, "Resuming queued work");
           try {
             let assembled = "";
+            let sawDelta = false;
             await streamChat({
               messages: payload,
               mode: item.targetKind,
@@ -494,14 +498,23 @@ export const useWorkStore = create<WorkState>()(
               workspace: workspacePayload(project),
               signal: controller.signal,
               onDelta: (chunk) => {
+                if (!sawDelta) {
+                  sawDelta = true;
+                  localStudioRuntimeVisuals.markAgentTurnStreaming(visualOperationId);
+                }
                 assembled += chunk;
                 write(assembled, false);
               },
             });
             write(assembled, true);
+            localStudioRuntimeVisuals.completeAgentTurn(visualOperationId);
           } catch (err) {
-            if ((err as Error).name === "AbortError") continue;
+            if ((err as Error).name === "AbortError") {
+              localStudioRuntimeVisuals.completeAgentTurn(visualOperationId);
+              continue;
+            }
             const message = err instanceof Error ? err.message : "The studio model could not reply.";
+            localStudioRuntimeVisuals.failAgentTurn(visualOperationId, message);
             write(message, true);
           } finally {
             aborts.delete(item.targetId);
@@ -1050,8 +1063,11 @@ export const useWorkStore = create<WorkState>()(
         };
 
         let completed = false;
+        const visualOperationId = "agent-turn:" + assistantId;
+        localStudioRuntimeVisuals.startAgentTurn(visualOperationId);
         try {
           let assembled = "";
+          let sawDelta = false;
           await streamChat({
             messages: payload,
             mode: targetKind,
@@ -1062,12 +1078,17 @@ export const useWorkStore = create<WorkState>()(
             workspace: workspacePayload(project),
             signal: controller.signal,
             onDelta: (chunk) => {
+              if (!sawDelta) {
+                sawDelta = true;
+                localStudioRuntimeVisuals.markAgentTurnStreaming(visualOperationId);
+              }
               assembled += chunk;
               write(assembled, false);
             },
           });
           write(assembled, true);
           completed = true;
+          localStudioRuntimeVisuals.completeAgentTurn(visualOperationId);
           if (targetKind === "side") {
             const tab = get().sideTabs.find((t) => t.id === targetId);
             if (tab?.reportToLead && assembled.trim()) {
@@ -1081,12 +1102,15 @@ export const useWorkStore = create<WorkState>()(
         } catch (err) {
           if ((err as Error).name !== "AbortError") {
             const message = err instanceof Error ? err.message : "The studio model could not reply.";
+            localStudioRuntimeVisuals.failAgentTurn(visualOperationId, message);
             write(message, true);
             set((s) => ({
               pausedQueueTargets: s.pausedQueueTargets.includes(targetId)
                 ? s.pausedQueueTargets
                 : [...s.pausedQueueTargets, targetId],
             }));
+          } else {
+            localStudioRuntimeVisuals.completeAgentTurn(visualOperationId);
           }
         } finally {
           aborts.delete(targetId);
