@@ -7,7 +7,6 @@ const DOCS = Object.freeze({
   gpt56Sol: 'https://developers.openai.com/api/docs/models/gpt-5.6-sol',
   gpt56Terra: 'https://developers.openai.com/api/docs/models/gpt-5.6-terra',
   gpt56Luna: 'https://developers.openai.com/api/docs/models/gpt-5.6-luna',
-  gpt53Codex: 'https://developers.openai.com/api/docs/models/gpt-5.3-codex',
   embeddingLarge: 'https://developers.openai.com/api/docs/models/text-embedding-3-large',
   embeddingSmall: 'https://developers.openai.com/api/docs/models/text-embedding-3-small',
 });
@@ -226,53 +225,6 @@ const GPT_56_LUNA = openAiAgentModel({
   pricing: freezePricing({ input: 0.2, cachedInput: 0.02, cacheWrite: 0.25, output: 1.2, source: DOCS.gpt56Luna }),
 });
 
-const GPT_53_CODEX = openAiAgentModel({
-  id: 'gpt-5.3-codex',
-  label: 'GPT-5.3-Codex',
-  source: DOCS.gpt53Codex,
-  reasoning: ['low', 'medium', 'high', 'xhigh'],
-  contextWindow: 400_000,
-  maxOutputTokens: 128_000,
-  knowledgeCutoff: '2025-08-31',
-  description: 'Agentic coding model for Codex-style software workflows.',
-  pricing: freezePricing({
-    input: 1.75,
-    cachedInput: 0.175,
-    cacheWrite: 0,
-    output: 14,
-    source: DOCS.gpt53Codex,
-    longContext: false,
-    processing: false,
-  }),
-  capabilities: {
-    web_search: false,
-    file_search: false,
-    image_generation: false,
-    code_interpreter: false,
-    hosted_shell: false,
-    apply_patch: false,
-    skills: false,
-    computer_use: false,
-    mcp: false,
-    tool_search: false,
-    async_tool_calls: false,
-    mid_turn_steering: false,
-    configuration_update: false,
-    fast: false,
-    flex: false,
-  },
-  serviceTiers: ['default'],
-  contextPolicy: Object.freeze({
-    target_input_tokens: 100_000,
-    compact_at_tokens: 160_000,
-    intervene_at_tokens: 210_000,
-    max_normal_input_tokens: 240_000,
-    pricing_threshold_tokens: null,
-    max_cumulative_input_tokens: 400_000,
-    safety_margin_tokens: 20_000,
-  }),
-});
-
 const TEXT_EMBEDDING_3_LARGE = openAiEmbeddingModel({
   id: 'text-embedding-3-large',
   label: 'text-embedding-3-large',
@@ -296,7 +248,6 @@ export const MODEL_CATALOG = Object.freeze([
   GPT_56_LUNA,
   GPT_56_TERRA,
   GPT_56_SOL,
-  GPT_53_CODEX,
   TEXT_EMBEDDING_3_LARGE,
   TEXT_EMBEDDING_3_SMALL,
 ]);
