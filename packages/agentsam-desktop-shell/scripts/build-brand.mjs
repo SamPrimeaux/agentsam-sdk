@@ -268,11 +268,10 @@ generateIconSet({ force: forceIconRegen });
 // placeholders, substituted by the updater plugin itself. app_id is
 // baked in statically here since tauri.conf.json is already per-brand.
 //
-// UPDATES_DOMAIN is a placeholder until the Worker (../worker) is
-// actually deployed and given a real route -- update it here once that
-// domain exists. Left as a named constant, not scattered inline, so
-// there's exactly one place to change it.
-const UPDATES_DOMAIN = 'https://updates.agentsam.dev';
+// The signed updater Worker is already deployed at the canonical
+// InnerAnimalMedia update authority. Keep one constant here so generated
+// per-brand Tauri configs cannot drift back to a retired host.
+const UPDATES_DOMAIN = 'https://updates.inneranimalmedia.com';
 const updaterEndpoint = `${UPDATES_DOMAIN}/updates/${manifest.app_id}/{{target}}/{{arch}}/{{current_version}}`;
 
 // --- 6. assemble tauri.conf.json ---
