@@ -31,7 +31,8 @@ test('device OpenAI credential discovers live inventory without leaking the key'
     credentials: { openai: CANARY },
   }, { fetchImpl: openAiFetch });
   assert.equal(result.ok, true);
-  assert.equal(result.credential_plane, 'device_keychain');
+  assert.equal(result.credential_plane, 'machine');
+  assert.equal(result.providers.find((row) => row.id === 'openai')?.source, 'device_keychain');
   assert.equal(result.providers.find((row) => row.id === 'openai')?.configured, true);
   assert.equal(result.availableModels.some((row) => row.provider === 'openai' && row.model_id === 'gpt-5.6-sol'), true);
   assert.equal(JSON.stringify(result).includes(CANARY), false);

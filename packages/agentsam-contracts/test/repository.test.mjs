@@ -6,7 +6,10 @@ test('repository graph vocabulary is owned and exported by the contracts package
   const pkg = JSON.parse(await fs.readFile(new URL('../package.json', import.meta.url), 'utf8'));
   const source = await fs.readFile(new URL('../src/repository.ts', import.meta.url), 'utf8');
 
-  assert.equal(pkg.exports['./repository'], './src/repository.ts');
+  assert.deepEqual(pkg.exports['./repository'], {
+    types: './dist/repository.d.ts',
+    import: './dist/repository.js',
+  });
   for (const value of [
     'informational', 'compatible', 'strict', 'critical',
     'warn', 'block_certification', 'block_deploy', 'degrade',

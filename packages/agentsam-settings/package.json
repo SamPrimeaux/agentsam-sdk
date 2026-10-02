@@ -3,12 +3,24 @@
   "version": "2.6.7",
   "type": "module",
   "sideEffects": false,
-  "types": "./src/index.ts",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./contracts": "./src/contracts/index.ts",
-    "./frontend": "./src/frontend/index.tsx",
-    "./fixtures": "./src/fixtures/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts/index.d.ts",
+      "import": "./dist/contracts/index.js"
+    },
+    "./frontend": {
+      "types": "./dist/frontend/index.d.ts",
+      "import": "./dist/frontend/index.js"
+    },
+    "./fixtures": {
+      "types": "./dist/fixtures/index.d.ts",
+      "import": "./dist/fixtures/index.js"
+    }
   },
   "peerDependencies": {
     "lucide-react": "^0.510.0",
@@ -24,6 +36,25 @@
     "directory": "packages/agentsam-settings"
   },
   "files": [
-    "src"
-  ]
+    "dist",
+    "README.md"
+  ],
+  "description": "Portable AgentSam Settings shell, contracts, fixtures, and host adapter surface for desktop and hosted applications.",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --experimental-strip-types --test test/*.test.mjs",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "esbuild": "^0.28.1",
+    "lucide-react": "^0.510.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "typescript": "^5.9.3"
+  }
 }

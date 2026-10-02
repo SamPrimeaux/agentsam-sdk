@@ -3,23 +3,46 @@
   "version": "2.6.7",
   "description": "Reusable AgentSam workbench primitives for agent threads, composer, browser, terminal and resizable work surfaces.",
   "type": "module",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
   "exports": {
-    ".": "./src/index.ts",
-    "./agent": "./src/agent/index.ts",
-    "./agent/mini-agentsam.css": "./src/agent/mini-agentsam.css",
-    "./agent/contextual-composer.css": "./src/agent/contextual-composer.css",
-    "./agent/tool-permission.css": "./src/agent/tool-permission.css",
-    "./shell": "./src/shell/index.ts",
-    "./browser": "./src/browser/index.ts",
-    "./terminal": "./src/terminal/index.ts",
-    "./projects": "./src/projects/index.ts",
-    "./timeline": "./src/timeline/index.ts",
-    "./project-control.css": "./src/project-control.css"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./agent": {
+      "types": "./dist/agent/index.d.ts",
+      "import": "./dist/agent/index.js"
+    },
+    "./shell": {
+      "types": "./dist/shell/index.d.ts",
+      "import": "./dist/shell/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser/index.d.ts",
+      "import": "./dist/browser/index.js"
+    },
+    "./terminal": {
+      "types": "./dist/terminal/index.d.ts",
+      "import": "./dist/terminal/index.js"
+    },
+    "./projects": {
+      "types": "./dist/projects/index.d.ts",
+      "import": "./dist/projects/index.js"
+    },
+    "./timeline": {
+      "types": "./dist/timeline/index.d.ts",
+      "import": "./dist/timeline/index.js"
+    },
+    "./agent/mini-agentsam.css": "./dist/agent/mini-agentsam.css",
+    "./agent/contextual-composer.css": "./dist/agent/contextual-composer.css",
+    "./agent/tool-permission.css": "./dist/agent/tool-permission.css",
+    "./project-control.css": "./dist/project-control.css"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "build": "node scripts/build.mjs",
+    "prepack": "npm run build"
   },
   "dependencies": {
     "@inneranimalmedia/agentsam-contracts": "2.6.7"
@@ -33,7 +56,8 @@
     "@types/react-dom": "^19.2.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "esbuild": "^0.28.1"
   },
   "publishConfig": {
     "access": "public"
@@ -44,6 +68,9 @@
     "directory": "packages/agentsam-workbench"
   },
   "files": [
-    "src"
-  ]
+    "dist",
+    "README.md"
+  ],
+  "license": "MIT",
+  "types": "./dist/index.d.ts"
 }

@@ -6,10 +6,15 @@ import { getCliCommand } from '../../src/cli/command-catalog.js';
 import {
   auditPackages,
   buildPublishPlan,
+  resolvePackageRoot,
   verifyPackage,
 } from '../../src/commands/package.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+
+test('package command resolves the repository it is invoked from instead of the installed SDK root', () => {
+  assert.equal(resolvePackageRoot(path.join(root, 'packages/agentsam-settings')), root);
+});
 
 test('package command is catalogued as package.audit', () => {
   const entry = getCliCommand('package');
@@ -32,8 +37,9 @@ test('package audit discovers explicit public package intent offline', async () 
 
   const settings = report.packages.find((pkg) => pkg.name === '@inneranimalmedia/agentsam-settings');
   assert.ok(settings);
-  assert.equal(settings.state, 'public_manifest_incomplete');
-  assert.ok(settings.raw_typescript_entrypoints.length > 0);
+  assert.equal(settings.state, 'public_candidate_unchecked');
+  assert.deepEqual(settings.raw_typescript_entrypoints, []);
+  assert.deepEqual(settings.structural_blockers, []);
 });
 
 test('publish plan orders public internal dependencies before dependents', async () => {

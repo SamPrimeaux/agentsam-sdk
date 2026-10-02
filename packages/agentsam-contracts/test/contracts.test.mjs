@@ -11,6 +11,9 @@ test('contracts package stays framework neutral', async () => {
 test('execution-plane contracts are exported as first-class package surfaces', async () => {
   const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
   for (const key of ['./tools', './authority', './execution', './providers', './events', './hooks']) {
-    assert.equal(typeof pkg.exports[key], 'string', `missing contract export: ${key}`);
+    const entry = pkg.exports[key];
+    assert.equal(typeof entry, 'object', `missing typed contract export: ${key}`);
+    assert.match(entry.types, /^\.\/dist\/.+\.d\.ts$/);
+    assert.match(entry.import, /^\.\/dist\/.+\.js$/);
   }
 });
