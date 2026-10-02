@@ -100,6 +100,7 @@ function printLegacyHelp() {
     agentsam dev               Run this project's existing npm dev script
     agentsam inspect [--json]  Bounded repository index by default; use --view full for authority envelope
     agentsam machine inspect   Native deterministic perception + asset discovery (--json)
+    agentsam engine status|audit|benchmark|assets  Local AI engine + compute tooling
     agentsam brand [scan|…]    Deterministic brand intelligence on repository.snapshot authority
     agentsam plan brand        Composable brand normalization plan (--goap optional)
     agentsam deploy            Graduate an AgentSam project intentionally
