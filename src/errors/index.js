@@ -1,4 +1,4 @@
-export * from '../../packages/agentsam-errors/src/index.js';
+export * from '@inneranimalmedia/agentsam-errors';
 
 export {
   AgentSamDiagnosticError,
