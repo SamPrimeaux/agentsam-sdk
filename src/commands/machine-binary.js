@@ -81,7 +81,7 @@ export function spawnMachine(resolution, machineArgv, options = {}) {
     );
   }
   const err = new Error(
-    `agentsam-machine binary not found. Tried: ${(resolution.tried || []).join(', ') || '(none)'}. Build with: cargo build --manifest-path native/agentsam-machine/Cargo.toml --release`,
+    `agentsam-machine binary not found. Tried: ${(resolution.tried || []).join(', ') || '(none)'}. Install with: cargo install agentsam-machine-cli, ensure Cargo's bin directory is on PATH (normally ~/.cargo/bin), or set AGENTSAM_MACHINE_BIN. SDK contributors can build with: cargo build --manifest-path native/agentsam-machine/Cargo.toml --release`,
   );
   err.code = 'AGENTSAM_MACHINE_BINARY_MISSING';
   throw err;
