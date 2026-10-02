@@ -52,7 +52,7 @@ function looksLikeNpmPackage(source) {
 export function resolveNpmSkillPackage(spec, options = {}) {
   const spawn = options.spawnSyncImpl || spawnSync;
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-skill-npm-'));
-  const pack = spawn('npm', ['pack', spec, '--pack-destination', tmp], {
+  const pack = spawn('npm', ['pack', spec, '--json', '--pack-destination', tmp], {
     encoding: 'utf8',
     cwd: options.cwd || process.cwd(),
     env: options.env || process.env,
@@ -60,13 +60,36 @@ export function resolveNpmSkillPackage(spec, options = {}) {
   if ((pack.status ?? 1) !== 0) {
     throw new Error(`npm_pack_failed:${spec}:${String(pack.stderr || pack.stdout || '').trim() || 'unknown'}`);
   }
-  const tgzName = String(pack.stdout || '')
-    .trim()
-    .split(/\r?\n/)
-    .filter(Boolean)
-    .pop();
+
+  let tgzName = null;
+  try {
+    const payload = JSON.parse(String(pack.stdout || ''));
+    const entry = Array.isArray(payload) ? payload[0] : payload;
+    if (entry?.filename) tgzName = path.basename(String(entry.filename));
+  } catch {
+    // Fall through to filesystem discovery below.
+  }
+
+  if (!tgzName) {
+    const packed = fs.readdirSync(tmp)
+      .filter((name) => name.endsWith('.tgz'))
+      .sort();
+    if (packed.length === 1) tgzName = packed[0];
+  }
+
   if (!tgzName) throw new Error(`npm_pack_empty:${spec}`);
-  const tgzPath = path.join(tmp, path.basename(tgzName));
+
+  let tgzPath = path.join(tmp, tgzName);
+
+  if (!fs.existsSync(tgzPath)) {
+    const packed = fs.readdirSync(tmp)
+      .filter((name) => name.endsWith('.tgz'))
+      .sort();
+    if (packed.length === 1) {
+      tgzPath = path.join(tmp, packed[0]);
+    }
+  }
+
   if (!fs.existsSync(tgzPath)) throw new Error(`npm_pack_missing:${tgzPath}`);
 
   const extractDir = path.join(tmp, 'pkg');
