@@ -101,7 +101,19 @@ export function classifyPackage(pkg, registry = null) {
 
   if (!manifest.version) structuralBlockers.push('missing version');
   if (publicIntent && !manifest.description) structuralBlockers.push('missing description');
+  if (publicIntent && !manifest.license) structuralBlockers.push('missing license');
+  if (publicIntent && !manifest.repository) structuralBlockers.push('missing repository metadata');
   if (publicIntent && !Array.isArray(manifest.files)) structuralBlockers.push('missing files allowlist');
+
+  const rawTypeScriptEntrypoints = entrypoints.filter(
+    (entry) => (entry.endsWith('.ts') || entry.endsWith('.tsx')) && !entry.endsWith('.d.ts')
+  );
+  const explicitSourceDistribution = manifest.agentsam?.distribution?.source === true;
+  if (publicIntent && rawTypeScriptEntrypoints.length && !explicitSourceDistribution) {
+    structuralBlockers.push(
+      `raw TypeScript entrypoints require a build or agentsam.distribution.source=true: ${rawTypeScriptEntrypoints.join(', ')}`
+    );
+  }
   if (missingEntrypoints.length && !manifest.scripts?.build) {
     structuralBlockers.push(`missing entrypoints: ${missingEntrypoints.join(', ')}`);
   }
@@ -113,7 +125,9 @@ export function classifyPackage(pkg, registry = null) {
   if (isPrivate) state = 'private';
   else if (publicIntent && registry?.checked === false && structuralBlockers.length) state = 'public_manifest_incomplete';
   else if (publicIntent && registry?.checked === false) state = 'public_candidate_unchecked';
+  else if (publicIntent && localPublished && structuralBlockers.length) state = 'published_nonconformant';
   else if (publicIntent && localPublished) state = 'published_current';
+  else if (publicIntent && latest && structuralBlockers.length) state = 'published_stale_nonconformant';
   else if (publicIntent && latest) state = 'published_stale';
   else if (publicIntent && structuralBlockers.length) state = 'public_manifest_incomplete';
   else if (publicIntent) state = 'public_unpublished';
@@ -137,6 +151,8 @@ export function classifyPackage(pkg, registry = null) {
     },
     structural_blockers: structuralBlockers,
     build_outputs_missing: missingEntrypoints,
+    raw_typescript_entrypoints: rawTypeScriptEntrypoints,
+    source_distribution: explicitSourceDistribution,
     verification_required: publicIntent && !isPrivate,
   };
 }

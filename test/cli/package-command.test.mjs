@@ -29,6 +29,11 @@ test('package audit discovers explicit public package intent offline', async () 
 
   assert.ok(goap);
   assert.equal(goap.public_intent, true);
+
+  const settings = report.packages.find((pkg) => pkg.name === '@inneranimalmedia/agentsam-settings');
+  assert.ok(settings);
+  assert.equal(settings.state, 'public_manifest_incomplete');
+  assert.ok(settings.raw_typescript_entrypoints.length > 0);
 });
 
 test('publish plan orders public internal dependencies before dependents', async () => {
