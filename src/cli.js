@@ -36,6 +36,7 @@ import { runPackage } from './commands/package.js';
 import { runRecon } from './commands/recon.js';
 import { runCad } from './commands/cad.js';
 import { runMachine } from './commands/machine.js';
+import { runEngine } from './commands/engine.js';
 import { runSkills } from './commands/skills.js';
 import { runSkill } from './commands/skill.js';
 import { runEval } from './commands/eval.js';
@@ -454,6 +455,14 @@ if (command === '--version' || command === '-v') {
 } else if (command === 'inspect') {
   try { await runInspect(rest); }
   catch (e) { reportCliError(e); process.exitCode = 1; }
+} else if (command === 'engine') {
+  try {
+    const code = await runEngine(rest);
+    if (typeof code === 'number' && code !== 0) process.exitCode = code;
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = e?.exitCode || 1;
+  }
 } else if (command === 'machine') {
   try {
     const code = await runMachine(rest);
