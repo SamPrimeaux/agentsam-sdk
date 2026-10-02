@@ -275,6 +275,9 @@
     "apps/local-studio/frontend",
     "apps/local-studio/backend",
     "apps/local-studio/shared/agentsam",
+    "apps/client-cms-editor/frontend",
+    "apps/client-cms-editor/backend",
+    "apps/client-cms-editor/shared/cms",
     "examples/hyperspace-demo"
   ],
   "scripts": {
