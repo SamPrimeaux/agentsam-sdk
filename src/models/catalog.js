@@ -7,7 +7,6 @@ const DOCS = Object.freeze({
   gpt56Sol: 'https://developers.openai.com/api/docs/models/gpt-5.6-sol',
   gpt56Terra: 'https://developers.openai.com/api/docs/models/gpt-5.6-terra',
   gpt56Luna: 'https://developers.openai.com/api/docs/models/gpt-5.6-luna',
-  gpt53Codex: 'https://developers.openai.com/api/docs/models/gpt-5.3-codex',
   embeddingLarge: 'https://developers.openai.com/api/docs/models/text-embedding-3-large',
   embeddingSmall: 'https://developers.openai.com/api/docs/models/text-embedding-3-small',
 });
