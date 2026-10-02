@@ -1,9 +1,9 @@
-//! Shared source-type taxonomy loaded from contracts/source-types.v1.json.
+//! Shared source-type taxonomy loaded from the crate-vendored source-types contract.
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-const SOURCE_TYPES_JSON: &str = include_str!("../../../../contracts/source-types.v1.json");
+const SOURCE_TYPES_JSON: &str = include_str!("../contracts/source-types.v1.json");
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct SourceTypeDef {

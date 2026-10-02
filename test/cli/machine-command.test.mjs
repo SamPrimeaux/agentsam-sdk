@@ -32,3 +32,23 @@ test('resolveMachineBinary finds crate binary or cargo fallback in this repo', (
     assert.equal(fs.existsSync(resolution.manifest), true);
   }
 });
+
+test('machine crate carries a synchronized publish-safe source-type contract', () => {
+  const authority = fs.readFileSync(path.join(root, 'contracts/source-types.v1.json'), 'utf8');
+  const vendored = fs.readFileSync(
+    path.join(root, 'native/agentsam-machine/core/contracts/source-types.v1.json'),
+    'utf8',
+  );
+  assert.equal(vendored, authority);
+});
+
+test('machine CLI crate has a crates.io-safe versioned core dependency', () => {
+  const manifest = fs.readFileSync(
+    path.join(root, 'native/agentsam-machine/cli/Cargo.toml'),
+    'utf8',
+  );
+  assert.match(
+    manifest,
+    /agentsam-machine-core\s*=\s*\{\s*version\s*=\s*"0\.1\.0"\s*,\s*path\s*=\s*"\.\.\/core"\s*\}/,
+  );
+});
