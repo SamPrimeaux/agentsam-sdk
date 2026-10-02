@@ -287,6 +287,14 @@ export default defineConfig(({ command, isPreview }) => ({
         replacement: resolvePath(cfImagesPackageRoot, "src/index.ts"),
       },
       {
+        find: /^@inneranimalmedia\/agentsam-loading-scene$/,
+        replacement: resolvePath(loadingScenePackageRoot, "src/index.ts"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-loading-scene\/react$/,
+        replacement: resolvePath(loadingScenePackageRoot, "src/react/index.ts"),
+      },
+      {
         find: /^@inneranimalmedia\/agentsam-work$/,
         replacement: resolvePath(workPackageRoot, "src/index.ts"),
       },
