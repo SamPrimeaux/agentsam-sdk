@@ -17,6 +17,9 @@ import { isMigrationFile } from "./scripts/migration-plan.mjs";
 // `preserveSymlinks`, imports inside that linked source resolve from its real
 // path, not Local Studio's node_modules. Keep its public Workbench dependency
 // on the package boundary while giving source builds one deterministic target.
+const workPackageRoot = resolvePath(
+  fileURLToPath(new URL("../../packages/agentsam-work", import.meta.url)),
+);
 const workbenchSource = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-workbench/src", import.meta.url)),
 );
