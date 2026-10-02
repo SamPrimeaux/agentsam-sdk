@@ -175,7 +175,7 @@ test('Local Studio Worker serves installer without AGENTSAM_DEFAULT_APP mutation
   assert.doesNotMatch(worker, /APP_SELECTOR=\"\\\\\\$\\{AGENTSAM_DEFAULT_APP/);
   assert.match(worker, /text\/x-shellscript/);
   assert.match(wrangler, /\"type\": \"Text\"/);
-  assert.match(wrangler, /\"\\*\\*\/\\*\.sh\"/);
+  assert.match(wrangler, /"\*\*\/\*\.sh"/);
 });
 
 test('desktop updater uses the InnerAnimalMedia update authority and has no active agentsam.dev endpoint', () => {
