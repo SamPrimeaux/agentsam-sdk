@@ -101,6 +101,15 @@ async function probeAgentsamd() {
   }
 }
 
+async function waitForAgentsamd({ attempts = 8, delayMs = 250 } = {}) {
+  let last = await probeAgentsamd();
+  for (let attempt = 1; attempt < attempts && !last.ok; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    last = await probeAgentsamd();
+  }
+  return last;
+}
+
 async function startAgentsamd(home, write) {
   const bin = agentsamdPath(home);
   if (!fs.existsSync(bin)) throw new Error('agentsamd_not_installed');
@@ -109,8 +118,7 @@ async function startAgentsamd(home, write) {
     try {
       await startWindowsScheduledTask();
       writeLine(write, `  Started Scheduled Task · ${listenAddr()}`);
-      await new Promise((r) => setTimeout(r, 600));
-      return probeAgentsamd();
+      return waitForAgentsamd();
     } catch (err) {
       writeLine(write, `  ○ Scheduled Task start failed (${err.message || err}); falling back to spawn`);
     }
@@ -122,8 +130,7 @@ async function startAgentsamd(home, write) {
       const boot = await bootstrapDarwinLaunchAgent(plist);
       if (boot.ok) {
         writeLine(write, `  Loaded LaunchAgent ${DARWIN_LAUNCH_LABEL}`);
-        await new Promise((r) => setTimeout(r, 400));
-        return probeAgentsamd();
+        return waitForAgentsamd();
       }
     }
   }
@@ -138,8 +145,7 @@ async function startAgentsamd(home, write) {
   ensureRuntimeStateDir(home);
   fs.writeFileSync(pidPath(home), String(child.pid));
   writeLine(write, `  Started agentsamd pid ${child.pid} · ${listenAddr()}`);
-  await new Promise((r) => setTimeout(r, 400));
-  return probeAgentsamd();
+  return waitForAgentsamd();
 }
 
 async function stopAgentsamd(home, write) {
@@ -218,12 +224,21 @@ export async function runRuntime(argv = [], options = {}) {
         writeLine(write, `  Impl       ${probe.body.implementation}`);
       }
       writeLine(write, '');
-      writeLine(write, '  Next');
-      writeLine(write, '    agentsam setup runtime');
-      writeLine(write, '    agentsam runtime install --yes');
+      if (probe.ok) {
+        writeLine(write, sub === 'doctor' ? '  Doctor     ✓ healthy; no repair needed' : '  State      ✓ ready');
+        writeLine(write, '  Next       agentsam terminal --help');
+      } else if (facts.agentsamd.installed) {
+        writeLine(write, '  Repair');
+        writeLine(write, '    agentsam runtime start');
+        writeLine(write, '    agentsam runtime install --yes   # rebuild only if start still fails');
+      } else {
+        writeLine(write, '  Next');
+        writeLine(write, '    agentsam setup runtime');
+        writeLine(write, '    agentsam runtime install --yes');
+      }
       writeLine(write, '');
     }
-    return probe.ok || facts.agentsamd.installed ? 0 : (sub === 'doctor' ? 2 : 0);
+    return sub === 'doctor' ? (probe.ok ? 0 : 2) : 0;
   }
 
   if (sub === 'probe') {

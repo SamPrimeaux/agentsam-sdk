@@ -1,3 +1,5 @@
+import { createToolError, ERROR_CODE, ERROR_REASON } from '@inneranimalmedia/agentsam-errors';
+
 export const LOCAL_ENGINE_SCHEMA = 'agentsam.local-engine.v1';
 export const LOCAL_ENGINE_BENCHMARK_SCHEMA = 'agentsam.engine.benchmark.v1';
 
@@ -47,12 +49,21 @@ export function engineInventory({ engineId, version = null, installed = false, r
   });
 }
 
-export function engineError(code, message, details = {}) {
-  const error = new Error(message || code);
-  error.code = code;
-  error.engine = details.engine_id || details.engineId || null;
-  Object.assign(error, details);
-  return error;
+export function engineError(localCode, message, details = {}) {
+  const unsupported = localCode === 'LOCAL_ENGINE_UNSUPPORTED';
+  const engineId = details.engine_id || details.engineId || 'unknown';
+  return createToolError({
+    tool: `local-engine.${engineId}`,
+    domain: 'runtime',
+    stage: details.operation || 'execute',
+    code: unsupported ? ERROR_CODE.UNIMPLEMENTED : ERROR_CODE.UNAVAILABLE,
+    reason: unsupported ? ERROR_REASON.UNSUPPORTED_OPERATION : ERROR_REASON.PROVIDER_UNAVAILABLE,
+    message: message || localCode,
+    retryable: !unsupported,
+    provider: engineId,
+    native: { code: localCode },
+    details: { ...details, local_code: localCode },
+  });
 }
 
 export function assertEngineContract(engine) {

@@ -19,3 +19,8 @@ test('rapid rust root bin and native crate ship in source tree', () => {
   assert.equal(fs.existsSync(path.join(root, 'packages/agentsam-rapid-rust/Cargo.toml')), true);
   assert.equal(fs.existsSync(path.join(root, 'scripts/build_rapid_rust_cli.py')), true);
 });
+
+test('rapid rust native help keeps the public agentsam rust command name', () => {
+  const source = fs.readFileSync(path.join(root, 'packages/agentsam-rapid-rust/src/main.rs'), 'utf8');
+  assert.match(source, /bin_name = "agentsam rust"/);
+});

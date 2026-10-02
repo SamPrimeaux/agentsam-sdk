@@ -14,6 +14,7 @@ const COMPATIBILITY_DATE: &str = "2026-09-27";
 #[derive(Parser, Debug)]
 #[command(
     name = "agentsam-rapid-rust",
+    bin_name = "agentsam rust",
     version,
     about = "Scaffold, teach, verify, build, and explicitly deploy Cloudflare Rust/Wasm Workers"
 )]

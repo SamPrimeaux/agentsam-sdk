@@ -13,7 +13,7 @@ import {
   createMlxLmEngine,
   createOllamaEngine,
   validateStructuredOutput,
-} from '../src/local-engine/index.js';
+} from '../../src/local-engine/index.js';
 
 test('local engine registry exposes the portable engine contract', () => {
   const registry = new LocalEngineRegistry([createOllamaEngine({ env: {}, fetchImpl: async () => new Response('{}', { status: 500 }) })]);
@@ -58,4 +58,24 @@ test('asset adoption records an external reference without copying weights', () 
   assert.equal(result.copied, false);
   assert.equal(result.asset.reference, 'external');
   assert.equal(auditAssets({ env }).assets[0].exists, true);
+});
+
+test('engine errors use the canonical AgentSam error contract', async () => {
+  const engine = createLlamaCppEngine({
+    endpoint: 'http://127.0.0.1:9998',
+    fetchImpl: async () => new Response('{}', { status: 503 }),
+  });
+  await assert.rejects(
+    () => engine.chat({ model: 'fixture', messages: [] }),
+    (error) => error?.code === 'UNAVAILABLE' && error?.envelope?.reason === 'provider_unavailable',
+  );
+});
+
+test('declared streaming support stays false until adapters actually stream tokens', async () => {
+  const mlx = createMlxLmEngine({ endpoint: 'http://127.0.0.1:9999' });
+  const llama = createLlamaCppEngine({ endpoint: 'http://127.0.0.1:9998' });
+  const mlxCaps = await mlx.capabilities({ model: 'fixture' });
+  const llamaCaps = await llama.capabilities({ model: 'fixture' });
+  assert.equal(mlxCaps.capabilities['chat.streaming'], false);
+  assert.equal(llamaCaps.capabilities['chat.streaming'], false);
 });

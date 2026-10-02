@@ -380,14 +380,16 @@ export function renderRuntimePlan(plan) {
         lines.push(`      missing tools: ${c.constraints.missing_tools.join(', ')}`);
       }
     } else if (c.goap.action_ids.length) {
-      lines.push(`      plan: ${c.goap.action_ids.join(' → ')}`);
+      lines.push(`      target plan: ${c.goap.action_ids.join(' → ')}`);
     }
   }
   lines.push('');
   if (plan.recommended) {
     lines.push(`  Recommended  ${plan.recommended.profile.label} (${plan.recommended.profile.id})`);
     lines.push(`  Next         agentsam setup runtime --profile ${plan.recommended.profile.id} --yes`);
-    lines.push(`               agentsam runtime install`);
+    lines.push(plan.facts.agentsamd.installed
+      ? '               agentsam runtime status'
+      : '               agentsam runtime install');
   }
   lines.push('');
   return `${lines.join('\n')}\n`;

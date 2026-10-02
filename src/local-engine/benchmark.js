@@ -15,12 +15,12 @@ export function validateStructuredOutput(text, schema = null) {
 export async function benchmarkEngine(engine, options = {}) {
   const runs = Math.max(1, Number(options.runs) || 1); const prompt = options.prompt || 'Reply with a short JSON object containing an answer field.'; const results = [];
   for (let i = 0; i < runs; i += 1) {
-    const started = performance.now(); let first = null;
-    const result = await engine.chat({ model: options.model, messages: [{ role: 'user', content: prompt }], responseFormat: options.schema ? { type: 'json_object' } : null, onEvent: (event) => { if (first == null && event?.type === 'token') first = performance.now(); } });
-    const ended = performance.now(); const outputTokens = tokenCount(result); const ttft = first == null ? null : first - started; const elapsed = ended - started;
+    const started = performance.now();
+    const result = await engine.chat({ model: options.model, messages: [{ role: 'user', content: prompt }], responseFormat: options.schema ? { type: 'json_object' } : null });
+    const ended = performance.now(); const outputTokens = tokenCount(result); const ttft = Number.isFinite(result?.timing?.ttft_ms) ? result.timing.ttft_ms : null; const elapsed = ended - started;
     results.push({ run: i + 1, ttft_ms: ttft, elapsed_ms: elapsed, output_tokens: outputTokens, tokens_per_second: elapsed > 0 ? outputTokens / (elapsed / 1000) : null, structured_output: options.schema ? validateStructuredOutput(result.output_text, options.schema) : null });
   }
-  return { schema_version: LOCAL_ENGINE_BENCHMARK_SCHEMA, engine_id: engine.id, model: options.model || null, generated_at: new Date().toISOString(), fixture: { id: options.fixtureId || 'default-json', prompt_hash: cryptoHash(prompt) }, runs: results, summary: summarize(results), resource: { memory: null, source: 'not_available' }, warnings: ['Memory utilization requires an engine/platform sampler.'] };
+  return { schema_version: LOCAL_ENGINE_BENCHMARK_SCHEMA, engine_id: engine.id, model: options.model || null, generated_at: new Date().toISOString(), fixture: { id: options.fixtureId || 'default-json', prompt_hash: cryptoHash(prompt) }, runs: results, summary: summarize(results), resource: { memory: null, source: 'not_available' }, warnings: ['Memory utilization requires an engine/platform sampler.', 'TTFT is null unless the engine adapter reports a measured first-token time.'] };
 }
 function cryptoHash(value) { let h = 2166136261; for (const char of String(value)) h = Math.imul(h ^ char.charCodeAt(0), 16777619); return (h >>> 0).toString(16); }
 function summarize(rows) { const average = (key) => { const values = rows.map((row) => row[key]).filter((x) => Number.isFinite(x)); return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null; }; return { average_ttft_ms: average('ttft_ms'), average_tokens_per_second: average('tokens_per_second'), valid_structured_outputs: rows.filter((row) => row.structured_output?.valid === true).length, run_count: rows.length }; }

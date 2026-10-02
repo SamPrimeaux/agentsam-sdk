@@ -86,3 +86,19 @@ test('normalizer matches the worker vocabulary', () => {
   assert.equal(normalizeTerminalArch('x64'), 'x86_64');
   assert.equal(normalizeTerminalArch('aarch64'), 'arm64');
 });
+
+test('terminal --help is help-only and does not collect machine identity', async () => {
+  const lines = [];
+  let collected = false;
+  const result = await runTerminal(['--help'], {
+    write: (line) => lines.push(String(line)),
+    collectIdentity: async () => {
+      collected = true;
+      throw new Error('identity should not be collected for help');
+    },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.help, true);
+  assert.equal(collected, false);
+  assert.match(lines.join('\n'), /agentsam terminal identity/);
+});

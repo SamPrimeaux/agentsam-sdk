@@ -139,7 +139,7 @@ async function runSetupRuntime(argv = [], options = {}) {
   if (dryRun || !yes) {
     writeLine(write, `  Plan receipt  ${planPath}`);
     if (!yes) {
-      writeLine(write, '  Pass --yes to install agentsamd (when profile needs it) and write install receipt.');
+      writeLine(write, '  Pass --yes to apply the selected runtime profile; healthy agentsamd installs are reused.');
     }
     writeLine(write, '');
     return 0;
@@ -154,9 +154,26 @@ async function runSetupRuntime(argv = [], options = {}) {
 
   let installResult = null;
   if (recommended.target.runtime_adapter === 'agentsamd') {
-    const code = await runRuntime(['install', '--yes'], { write, home });
-    installResult = { code, adapter: 'agentsamd' };
-    if (code !== 0) return code;
+    if (plan.facts.agentsamd.installed) {
+      const doctorCode = await runRuntime(['doctor', '--json'], { write: () => {}, home });
+      if (doctorCode === 0) {
+        installResult = { code: 0, adapter: 'agentsamd', skipped: true, reason: 'already_installed_healthy' };
+        writeLine(write, '  ✓ agentsamd already installed and healthy; reusing current runtime');
+      } else {
+        const startCode = await runRuntime(['start'], { write, home });
+        if (startCode === 0) {
+          installResult = { code: 0, adapter: 'agentsamd', skipped: true, reason: 'existing_runtime_restarted' };
+        } else {
+          const code = await runRuntime(['install', '--yes'], { write, home });
+          installResult = { code, adapter: 'agentsamd', repaired: true };
+          if (code !== 0) return code;
+        }
+      }
+    } else {
+      const code = await runRuntime(['install', '--yes'], { write, home });
+      installResult = { code, adapter: 'agentsamd' };
+      if (code !== 0) return code;
+    }
   }
 
   const receiptPath = writeRuntimeInstallReceipt({
@@ -164,7 +181,12 @@ async function runSetupRuntime(argv = [], options = {}) {
     profile_id: recommended.profile.id,
     target: recommended.target,
     goap: recommended.goap,
-    install: installResult,
+    goap_execution: {
+      status: 'planned_only',
+      executed_action_ids: [],
+      pending_action_ids: recommended.goap.action_ids || [],
+    },
+    adapter_apply: installResult,
     plan_receipt: planPath,
   }, home);
 
@@ -175,7 +197,9 @@ async function runSetupRuntime(argv = [], options = {}) {
       plan,
       plan_receipt: planPath,
       install_receipt: receiptPath,
-      executed: true,
+      adapter_applied: true,
+      goap_execution: 'planned_only',
+      executed: false,
     }, null, 2) + '\n');
   }
   return 0;

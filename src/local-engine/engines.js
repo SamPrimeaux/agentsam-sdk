@@ -20,7 +20,7 @@ export function createOllamaEngine(options = {}) {
         engineId: 'ollama', version: binary.ok ? String(binary.stdout || binary.stderr).trim() : null,
         installed: binary.installed, reachable: api.online, endpoint: config.baseUrl,
         models: api.models || [],
-        capabilities: { chat: api.chat_ready, embed: api.embed_ready, 'chat.streaming': true, 'chat.tools': true, 'model.unload': true },
+        capabilities: { chat: api.chat_ready, embed: api.embed_ready, 'chat.streaming': false, 'chat.tools': true, 'model.unload': true },
         evidence: [{ source: 'ollama', endpoint: config.baseUrl, status: api.status }],
         warnings: api.error ? [api.error] : [],
       });
@@ -28,7 +28,7 @@ export function createOllamaEngine(options = {}) {
     async capabilities({ model } = {}) {
       const probe = await probeOllamaModel(model || config.model, config, fetchImpl);
       return capabilityCard({ engineId: 'ollama', model: model || config.model, status: probe.ok ? 'available' : 'unavailable', capabilities: {
-        chat: probe.ok, 'chat.streaming': true, 'chat.tools': probe.capabilities?.includes('tools') === true,
+        chat: probe.ok, 'chat.streaming': false, 'chat.tools': probe.capabilities?.includes('tools') === true,
         embed: false, 'output.json': true, 'output.json_schema': false, 'model.unload': true, 'metrics.ttft': true,
       }, evidence: [{ source: 'ollama/api/show', context_window: probe.context_window, capabilities: probe.capabilities || [] }], warnings: probe.error ? [probe.error] : [] });
     },
@@ -51,16 +51,32 @@ export function createOllamaEngine(options = {}) {
   };
 }
 
-function openAiEndpoint(options, defaultUrl) { return String(options.endpoint || process.env[options.envKey || 'AGENTSAM_LOCAL_ENGINE_ENDPOINT'] || defaultUrl).replace(/\/$/, ''); }
+function openAiEndpoint(options, defaultUrl) {
+  const env = options.env || process.env;
+  return String(options.endpoint || env[options.envKey || 'AGENTSAM_LOCAL_ENGINE_ENDPOINT'] || defaultUrl).replace(/\/$/, '');
+}
 
-function createOpenAiCompatibleEngine({ id, endpoint, command, args, env = process.env, capabilities = {}, options = {} }) {
+function createOpenAiCompatibleEngine({ id, endpoint, command, versionArgs = ['--version'], env = process.env, capabilities = {}, options = {} }) {
   const fetchImpl = options.fetchImpl || fetch;
   return {
     id,
     async discover() {
-      const binary = runCommand(command, ['--version'], { env });
+      const binary = runCommand(command, versionArgs, { env });
       const health = await fetchJson(`${endpoint}/v1/models`, {}, fetchImpl);
-      return engineInventory({ engineId: id, version: binary.ok ? String(binary.stdout || binary.stderr).trim() : null, installed: binary.installed, reachable: health.ok, endpoint, models: modelNames(health.body?.data ? { models: health.body.data.map((row) => ({ name: row.id })) } : health.body), capabilities, evidence: [{ source: 'openai-compatible', endpoint }], warnings: health.error ? [health.error] : [] });
+      return engineInventory({
+        engineId: id,
+        version: binary.ok ? String(binary.stdout || binary.stderr).trim() : null,
+        installed: binary.ok,
+        reachable: health.ok,
+        endpoint,
+        models: modelNames(health.body?.data ? { models: health.body.data.map((row) => ({ name: row.id })) } : health.body),
+        capabilities,
+        evidence: [
+          { source: 'binary-probe', command, binary: binary.binary || null, ok: binary.ok, exit_status: binary.status },
+          { source: 'openai-compatible', endpoint, ok: health.ok, status: health.status },
+        ],
+        warnings: health.error ? [health.error] : [],
+      });
     },
     async capabilities({ model = null } = {}) { return capabilityCard({ engineId: id, model, status: 'unknown', capabilities, evidence: [{ source: 'adapter declaration', endpoint }], warnings: ['Model-specific capabilities require a live probe.'] }); },
     async chat({ model, messages = [], tools = [], responseFormat = null, onEvent, signal } = {}) {
@@ -69,8 +85,7 @@ function createOpenAiCompatibleEngine({ id, endpoint, command, args, env = proce
       if (!response.ok) throw engineError('LOCAL_ENGINE_CHAT_FAILED', response.error || `${id} chat failed`, { engine_id: id });
       const choice = response.body?.choices?.[0] || {};
       const text = choice.message?.content || '';
-      onEvent?.({ type: 'token', text, timestamp_ms: performance.now() });
-      return normalizeChatResult({ model, output_text: text, tool_calls: choice.message?.tool_calls || [], usage: response.body?.usage || {}, timing: { elapsed_ms: performance.now() - started, ttft_ms: performance.now() - started } }, id);
+      return normalizeChatResult({ model, output_text: text, tool_calls: choice.message?.tool_calls || [], usage: response.body?.usage || {}, timing: { elapsed_ms: performance.now() - started, ttft_ms: null } }, id);
     },
     async embed({ model, inputs = [], signal } = {}) {
       const response = await fetchJson(`${endpoint}/v1/embeddings`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model, input: inputs }), signal }, fetchImpl);
@@ -84,12 +99,44 @@ function createOpenAiCompatibleEngine({ id, endpoint, command, args, env = proce
 
 export function createMlxLmEngine(options = {}) {
   const endpoint = openAiEndpoint(options, 'http://127.0.0.1:8080');
-  return createOpenAiCompatibleEngine({ id: 'mlx-lm', endpoint, command: options.command || 'python3', args: [], env: options.env || process.env, capabilities: { chat: true, 'chat.streaming': true, embed: false, 'runtime.mlx': true, 'runtime.metal': true, 'output.json': true }, options });
+  return createOpenAiCompatibleEngine({
+    id: 'mlx-lm',
+    endpoint,
+    command: options.command || 'python3',
+    versionArgs: options.versionArgs || ['-c', 'import importlib.metadata as m; print(m.version("mlx-lm"))'],
+    env: options.env || process.env,
+    capabilities: {
+      chat: true,
+      'chat.streaming': false,
+      embed: false,
+      'runtime.mlx': process.platform === 'darwin' && process.arch === 'arm64',
+      'runtime.metal': process.platform === 'darwin' && process.arch === 'arm64',
+      'output.json': true,
+    },
+    options,
+  });
 }
 
 export function createLlamaCppEngine(options = {}) {
   const endpoint = openAiEndpoint(options, 'http://127.0.0.1:8080');
-  return createOpenAiCompatibleEngine({ id: 'llama.cpp', endpoint, command: options.command || 'llama-server', args: [], env: options.env || process.env, capabilities: { chat: true, 'chat.streaming': true, 'chat.tools': true, embed: true, 'format.gguf': true, 'runtime.metal': true, 'output.grammar': true, 'output.json_schema': true, 'model.unload': false }, options });
+  return createOpenAiCompatibleEngine({
+    id: 'llama.cpp',
+    endpoint,
+    command: options.command || 'llama-server',
+    env: options.env || process.env,
+    capabilities: {
+      chat: true,
+      'chat.streaming': false,
+      'chat.tools': true,
+      embed: true,
+      'format.gguf': true,
+      'runtime.metal': process.platform === 'darwin',
+      'output.grammar': true,
+      'output.json_schema': true,
+      'model.unload': false,
+    },
+    options,
+  });
 }
 
 export function defaultLocalEngines(options = {}) { return [createOllamaEngine(options), createMlxLmEngine(options.mlx || options), createLlamaCppEngine(options.llamaCpp || options)]; }
