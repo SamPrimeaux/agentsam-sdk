@@ -234,6 +234,7 @@
     "packages/agentsam-ide",
     "packages/agentsam-key-manager",
     "packages/agentsam-knowledge",
+    "packages/agentsam-loading-scene",
     "packages/agentsam-nav",
     "packages/agentsam-queue-control",
     "packages/agentsam-repository",
@@ -257,7 +258,8 @@
     "packages/theme-insurance-site",
     "packages/theme-scenes",
     "packages/theme-shinshu-site",
-    "packages/work-graph"
+    "packages/work-graph",
+    "examples/hyperspace-demo"
   ],
   "scripts": {
     "test": "npm run test:standard && npm --prefix packages/identity test && npm --prefix packages/agentsam-brand test && npm run test:connectors && npm run test:providers",

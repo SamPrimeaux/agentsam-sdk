@@ -1,0 +1,11 @@
+export * from "./core/types.js";
+export { blendIntents, applyConcurrency, DEFAULT_SEMANTIC_INTENTS } from "./core/visual-intent.js";
+export { OperationStore, type OperationRecord, type StoreSnapshot } from "./core/operation-store.js";
+export { deriveScene, type ReducerMemory } from "./core/reducer.js";
+export { TransitionEngine } from "./core/transition-engine.js";
+export { LoadingSceneController, type SceneListener } from "./core/controller.js";
+export { HyperspaceRenderer, type RendererDeps, type CanvasLike } from "./renderer/canvas-renderer.js";
+export { createWorld, stepWorld, type World } from "./renderer/world.js";
+export { makeViewport, alongRay, type Viewport } from "./renderer/projection.js";
+export { computationalHyperspace } from "./presets/computational-hyperspace.js";
+export { adaptAgentSamEvent, mapRuntimeEventType, type RawRuntimeEvent } from "./adapters/agentsam.js";
