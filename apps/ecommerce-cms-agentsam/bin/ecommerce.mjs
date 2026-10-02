@@ -10,15 +10,21 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
 const app = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const source = path.resolve(app, "../..");
 const manifest = JSON.parse(fs.readFileSync(path.join(app, "agentsam.app.json"), "utf8"));
-const missing = [
-  "apps/ecommerce-cms-agentsam/backend/index.js",
-  "public",
-  "apps/ecommerce-cms-agentsam/frontend/package.json",
-  "db/schema.sql",
-  "wrangler.toml",
-].filter((f) => !fs.existsSync(path.join(source, f)));
+
+const requiredPackageFiles = [
+  "backend/index.js",
+  "frontend/package.json",
+  "frontend/static/home.html",
+  "shared/assets/jobs.js",
+  "shared/media-kit/src/providers.js",
+  "templates/db/schema.sql",
+  "templates/scripts/sync-app-frontend.mjs",
+];
+
+const missing = requiredPackageFiles.filter(
+  (file) => !fs.existsSync(path.join(app, file))
+);
 const [command = "info", ...args] = process.argv.slice(2);
 
 function scaffoldWrangler(workerName = "my-ecommerce") {
@@ -182,76 +188,246 @@ ON CONFLICT(id) DO UPDATE SET
 }
 
 function scaffold(destination) {
-  if (!destination) throw new Error("Provide an empty destination directory.");
-  if (missing.length) throw new Error("Source unavailable: " + missing.join(", "));
-  const target = path.resolve(destination);
-  if (target === source || target.startsWith(source + path.sep)) {
-    throw new Error("Use a destination outside the source checkout.");
-  }
-  if (fs.existsSync(target) && fs.readdirSync(target).length) {
-    throw new Error("Destination must be empty.");
-  }
-  fs.mkdirSync(target, { recursive: true });
-  const filter = (file) =>
-    !/(^|[/\\])(node_modules|\.git|\.wrangler|\.env[^/\\]*|\.dev\.vars[^/\\]*|dist|seed-[^/\\]*)($|[/\\])/.test(
-      file,
+  if (!destination) {
+    throw new Error(
+      "Provide an empty destination directory."
     );
-  for (const relative of [
-    "public",
-    "packages",
-    "db",
-    "apps/ecommerce-cms-agentsam",
-    "docs",
-    "lib",
-    "package.json",
-    "package-lock.json",
-    "AGENTS.md",
-    "ecommerce-cms-agentsam.md",
-  ]) {
-    const from = path.join(source, relative);
-    if (fs.existsSync(from)) fs.cpSync(from, path.join(target, relative), { recursive: true, filter });
-  }
-  fs.mkdirSync(path.join(target, "scripts"), { recursive: true });
-  for (const name of ["sync-app-frontend.mjs", "guard-boundaries.mjs"]) {
-    fs.copyFileSync(path.join(source, "scripts", name), path.join(target, "scripts", name));
   }
 
-  fs.writeFileSync(path.join(target, "wrangler.toml"), scaffoldWrangler("my-ecommerce"));
-  fs.writeFileSync(path.join(target, "db/seed-customer-bootstrap.sql"), scaffoldBootstrapSql());
-  fs.writeFileSync(
-    path.join(target, ".gitignore"),
-    "node_modules/\napps/ecommerce-cms-agentsam/frontend/node_modules/\n.wrangler/\n.env*\n.dev.vars*\n",
+  if (missing.length) {
+    throw new Error(
+      "Package unavailable: " +
+      missing.join(", ")
+    );
+  }
+
+  const target = path.resolve(destination);
+
+  if (
+    target === app ||
+    target.startsWith(app + path.sep)
+  ) {
+    throw new Error(
+      "Use a destination outside the installed package."
+    );
+  }
+
+  if (
+    fs.existsSync(target) &&
+    fs.readdirSync(target).length
+  ) {
+    throw new Error(
+      "Destination must be empty."
+    );
+  }
+
+  fs.mkdirSync(target, {
+    recursive: true
+  });
+
+  const appTarget = path.join(
+    target,
+    "apps",
+    "ecommerce-cms-agentsam"
   );
 
-  const pkgPath = path.join(target, "package.json");
-  const pkg = JSON.parse(fs.readFileSync(pkgPath));
-  pkg.name = "my-ecommerce";
-  pkg.scripts = {
-    "app:frontend:sync": "node scripts/sync-app-frontend.mjs",
-    "dev": "npm run build && wrangler dev",
-    "build":
-      "npm run build --prefix apps/ecommerce-cms-agentsam/frontend && npm run app:frontend:sync",
-    "deploy": "npm run build && wrangler deploy",
-    "ecommerce": "node apps/ecommerce-cms-agentsam/bin/ecommerce.mjs",
+  const filter = file => {
+    const relative = path.relative(app, file);
+
+    if (!relative) {
+      return true;
+    }
+
+    const parts = relative.split(path.sep);
+
+    if (
+      parts.some(part =>
+        ["node_modules", ".git", ".wrangler", "dist"].includes(part)
+      )
+    ) {
+      return false;
+    }
+
+    return !relative.endsWith(".tgz");
   };
-  fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
-  fs.writeFileSync(
-    path.join(target, "SETUP.md"),
-    `# Your ecommerce app
 
-Portable SSOT (do not put brand/MCP URLs in Wrangler):
-
-1. Edit \`db/seed-customer-bootstrap.sql\` — company name/logo/colors + plugin endpoints + mail From.
-2. \`npm install && npm install --prefix apps/ecommerce-cms-agentsam/frontend\`
-3. Provision D1/R2/KV/Queue; set binding IDs in \`wrangler.toml\` (bindings + ALLOWED_ORIGINS only).
-4. Apply schema + migrations + \`db/seed-customer-bootstrap.sql\`.
-5. Set secrets (\`CAPP_KEY\`, \`RESEND_API_KEY\`, \`AGENTSAM_BRIDGE_KEY\`, …). Keep \`COMPLETEFUL_ALLOW_LIVE_WRITES=false\` until tested.
-6. \`npm run build && npm run dev\`
-
-Doctor checks source presence only.
-`,
+  fs.cpSync(
+    app,
+    appTarget,
+    {
+      recursive: true,
+      filter
+    }
   );
-  console.log("Scaffold created: " + target + "\nRead SETUP.md before running or deploying.");
+
+  fs.mkdirSync(
+    path.join(target, "db"),
+    { recursive: true }
+  );
+
+  fs.copyFileSync(
+    path.join(
+      app,
+      "templates",
+      "db",
+      "schema.sql"
+    ),
+    path.join(
+      target,
+      "db",
+      "schema.sql"
+    )
+  );
+
+  fs.writeFileSync(
+    path.join(
+      target,
+      "db",
+      "seed-customer-bootstrap.sql"
+    ),
+    scaffoldBootstrapSql()
+  );
+
+  fs.mkdirSync(
+    path.join(target, "public"),
+    { recursive: true }
+  );
+
+  fs.writeFileSync(
+    path.join(
+      target,
+      "public",
+      "index.html"
+    ),
+    '<!doctype html>' +
+    '<meta charset="utf-8">' +
+    '<meta http-equiv="refresh" content="0;url=/admin/home">' +
+    '<title>Ecommerce Admin</title>\n'
+  );
+
+  fs.mkdirSync(
+    path.join(target, "scripts"),
+    { recursive: true }
+  );
+
+  fs.copyFileSync(
+    path.join(
+      app,
+      "templates",
+      "scripts",
+      "sync-app-frontend.mjs"
+    ),
+    path.join(
+      target,
+      "scripts",
+      "sync-app-frontend.mjs"
+    )
+  );
+
+  fs.writeFileSync(
+    path.join(
+      target,
+      "wrangler.toml"
+    ),
+    scaffoldWrangler("my-ecommerce")
+  );
+
+  fs.writeFileSync(
+    path.join(
+      target,
+      ".gitignore"
+    ),
+    [
+      "node_modules/",
+      ".wrangler/",
+      "dist/",
+      ".env*",
+      ".dev.vars*",
+      "apps/ecommerce-cms-agentsam/frontend/dist/",
+      ""
+    ].join("\n")
+  );
+
+  const pkg = {
+    name: "my-ecommerce",
+    version: "0.1.0",
+    private: true,
+    type: "module",
+
+    workspaces: [
+      "apps/ecommerce-cms-agentsam",
+      "apps/ecommerce-cms-agentsam/frontend"
+    ],
+
+    scripts: {
+      "app:frontend:sync":
+        "node scripts/sync-app-frontend.mjs",
+
+      build:
+        "npm run build --workspace=@inneranimalmedia/ecommerce-dashboard && npm run app:frontend:sync",
+
+      dev:
+        "npm run build && wrangler dev",
+
+      deploy:
+        "npm run build && wrangler deploy",
+
+      ecommerce:
+        "node apps/ecommerce-cms-agentsam/bin/ecommerce.mjs",
+
+      "db:migrate:local":
+        "wrangler d1 execute my-ecommerce --local --file=db/schema.sql",
+
+      "db:migrate:remote":
+        "wrangler d1 execute my-ecommerce --remote --file=db/schema.sql"
+    },
+
+    devDependencies: {
+      wrangler: "4.145.0"
+    }
+  };
+
+  fs.writeFileSync(
+    path.join(
+      target,
+      "package.json"
+    ),
+    JSON.stringify(
+      pkg,
+      null,
+      2
+    ) + "\n"
+  );
+
+  fs.writeFileSync(
+    path.join(
+      target,
+      "SETUP.md"
+    ),
+`# Your ecommerce app
+
+This project was scaffolded from @inneranimalmedia/ecommerce-cms-agentsam.
+
+1. Edit db/seed-customer-bootstrap.sql.
+2. Run npm install.
+3. Run npm run build.
+4. Provision D1, R2, KV, Queue and AI bindings.
+5. Replace placeholder resource IDs in wrangler.toml.
+6. Apply db/schema.sql and db/seed-customer-bootstrap.sql.
+7. Configure provider secrets.
+8. Run npm run dev.
+
+Fuel & Free Time is customer #1. Its branding, products,
+campaigns, media, credentials and business data are not
+package defaults.
+`
+  );
+
+  console.log(
+    "Scaffold created: " +
+    target +
+    "\nRead SETUP.md before deploying."
+  );
 }
 
 try {
@@ -259,7 +435,13 @@ try {
   else if (command === "doctor") {
     console.log(
       JSON.stringify(
-        { app: manifest.id, source, missing, source_ready: !missing.length, deployment_ready: false },
+        {
+          app: manifest.id,
+          package_root: app,
+          missing,
+          source_ready: !missing.length,
+          deployment_ready: false
+        },
         null,
         2,
       ),
@@ -268,10 +450,23 @@ try {
   } else if (command === "scaffold") scaffold(args[0]);
   else if (command === "preview") {
     if (missing.length) throw new Error("Run doctor first.");
-    const result = spawnSync(process.platform === "win32" ? "npm.cmd" : "npm", ["run", "dev", "--", ...args], {
-      cwd: source,
-      stdio: "inherit",
-    });
+    const result = spawnSync(
+      process.platform === "win32"
+        ? "npm.cmd"
+        : "npm",
+      [
+        "run",
+        "dev",
+        "--prefix",
+        path.join(app, "frontend"),
+        "--",
+        ...args
+      ],
+      {
+        cwd: app,
+        stdio: "inherit"
+      }
+    );
     if (result.error) throw result.error;
     process.exitCode = result.status ?? 1;
   } else if (["help", "--help", "-h"].includes(command)) {
