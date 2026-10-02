@@ -29,6 +29,9 @@ function parseOutput(stdout, command) {
   catch (error) {
     const failure = new Error(`hook_command_invalid_json:${command}:${error.message}`);
     failure.code = 'AGENTSAM_HOOK_INVALID_OUTPUT';
+    failure.adapter = 'command';
+    failure.protocol = 'agentsam.hook.v1';
+    failure.transport = 'process';
     throw failure;
   }
 }
@@ -63,6 +66,9 @@ export function createCommandHookAdapter(options = {}) {
     const fail = (message, code = 'AGENTSAM_HOOK_COMMAND_FAILED') => {
       const error = new Error(message);
       error.code = code;
+      error.adapter = 'command';
+      error.protocol = 'agentsam.hook.v1';
+      error.transport = 'process';
       finish(reject, error);
     };
     const append = (target, chunk) => {

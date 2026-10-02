@@ -46,14 +46,19 @@ def command_adapter(
     environment.update({str(key): str(value) for key, value in (env or {}).items()})
 
     async def invoke(envelope: HookEnvelope):
-        process = await asyncio.create_subprocess_exec(
-            command, *configured_args,
-            cwd=cwd or envelope.cwd,
-            env=environment,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
+        try:
+            process = await asyncio.create_subprocess_exec(
+                command, *configured_args,
+                cwd=cwd or envelope.cwd,
+                env=environment,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+        except Exception as error:
+            failure = RuntimeError(f"hook_command_spawn_failed:{command}:{error}")
+            failure.__cause__ = error
+            raise failure
         payload = (json.dumps(envelope.to_dict(), separators=(",", ":")) + "\n").encode()
         try:
             stdout, stderr = await asyncio.wait_for(process.communicate(payload), timeout=timeout_ms / 1000)
@@ -91,6 +96,14 @@ def http_adapter(
         raise ValueError("hook_http_url_must_not_contain_credentials")
     configured_headers = {"Accept": "application/json", "Content-Type": "application/json", **dict(headers or {})}
 
+    def failure(message: str, cause: BaseException) -> RuntimeError:
+        error = RuntimeError(message)
+        error.adapter = "http"
+        error.protocol = "http"
+        error.transport = parsed.scheme
+        error.__cause__ = cause
+        return error
+
     def request(envelope: HookEnvelope):
         payload = json.dumps(envelope.to_dict(), separators=(",", ":")).encode()
         req = urllib.request.Request(url, data=payload, headers=configured_headers, method="POST")
@@ -99,10 +112,19 @@ def http_adapter(
                 body = response.read(max_response_bytes + 1)
         except urllib.error.HTTPError as error:
             detail = error.read(512).decode(errors="replace")
-            raise RuntimeError(f"hook_http_failed:{error.code}:{detail}") from error
+            raise failure(f"hook_http_failed:{error.code}:{detail}", error)
+        except (urllib.error.URLError, TimeoutError) as error:
+            detail = str(getattr(error, "reason", error))
+            reason = "hook_http_timeout" if "timed out" in detail.lower() or isinstance(getattr(error, "reason", None), TimeoutError) else "hook_http_request_failed"
+            raise failure(f"{reason}:{detail}", error)
         if len(body) > max_response_bytes:
-            raise RuntimeError(f"hook_http_response_limit_exceeded:{max_response_bytes}")
-        return json.loads(body) if body.strip() else None
+            raise failure(f"hook_http_response_limit_exceeded:{max_response_bytes}", RuntimeError("response limit exceeded"))
+        if not body.strip():
+            return None
+        try:
+            return json.loads(body)
+        except json.JSONDecodeError as error:
+            raise failure(f"hook_http_invalid_json:{error}", error)
 
     async def invoke(envelope: HookEnvelope):
         return await asyncio.to_thread(request, envelope)

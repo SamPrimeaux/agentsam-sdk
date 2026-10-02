@@ -62,6 +62,18 @@ test('MCP adapter discovers tools through a host port', async () => {
   assert.equal(adapter.toolDescriptors()[0].name, 'mcp.docs.search');
   assert.deepEqual(await adapter.invoke('mcp.docs.search', { q: 'hooks' }), { matches: 2 });
   assert.deepEqual(calls[0], { server: 'docs', tool: 'search', args: { q: 'hooks' } });
+
+  const timedOut = await createMcpCapabilityAdapter({
+    servers: { docs: { transport: 'stdio', tools: [{ name: 'search' }] } },
+    callTool: async () => { throw new Error('request timed out'); },
+  });
+  await assert.rejects(timedOut.invoke('mcp.docs.search', {}), (error) => {
+    assert.equal(error.reason, 'mcp_timeout');
+    assert.equal(error.adapter, 'mcp');
+    assert.equal(error.protocol, 'mcp');
+    assert.equal(error.transport, 'stdio');
+    return true;
+  });
 });
 
 test('LSP adapter maps portable capabilities to standard protocol methods', async () => {
@@ -74,6 +86,18 @@ test('LSP adapter maps portable capabilities to standard protocol methods', asyn
   assert.deepEqual(result, { contents: 'number' });
   assert.equal(calls[0].method, 'textDocument/hover');
   assert.deepEqual(calls[0].params.position, { line: 2, character: 4 });
+
+  const unavailable = createLspCapabilityAdapter({
+    languages: { rust: { command: 'rust-analyzer' } },
+    request: async () => { throw Object.assign(new Error('server not running'), { code: 'ENOENT' }); },
+  });
+  await assert.rejects(unavailable.invoke('lsp.hover', { language: 'rust', document_uri: 'file:///a.rs', line: 0, character: 0 }), (error) => {
+    assert.equal(error.reason, 'lsp_server_unavailable');
+    assert.equal(error.adapter, 'lsp');
+    assert.equal(error.protocol, 'lsp');
+    assert.equal(error.transport, 'stdio');
+    return true;
+  });
 });
 
 test('sub-agent adapter emits lifecycle hooks around host scheduling', async () => {
@@ -150,6 +174,24 @@ test('portable hook store keeps scoped definitions and value-free execution evid
   assert.doesNotMatch(executions[0].receipt_json, /do not persist me/);
   assert.deepEqual(executions[0].receipt.invocation, { session_id: 'sess_1' });
   assert.deepEqual(executions[0].correlation, { trace_id: 'trace_safe' });
+
+  await store.recordExecution({
+    schema: 'agentsam.hook.receipt.v1', hook_id: 'audit.prompt', hook: 'post_tool_use', status: 'failed',
+    started_at: 1, completed_at: 2, duration_ms: 1, input_keys: ['tool_name'], output_keys: [],
+    error: {
+      error_code: 'DEADLINE_EXCEEDED', reason: 'hook_http_timeout', domain: 'hook', failure_class: 'timeout',
+      stage: 'execute', feature: 'hooks.post_tool_use', failure_behavior: 'fail_open', retryable: false,
+      side_effect_state: 'confirmed_applied', adapter: 'http', protocol: 'http', transport: 'https',
+      fingerprint: 'err_1234567890abcdef', message: 'redacted timeout',
+    },
+    native_evidence: { code: 'ETIMEDOUT', exception_type: 'Error', message: 'redacted timeout' },
+  });
+  const failed = (await store.listExecutions()).find((row) => row.status === 'timeout');
+  assert.equal(failed.error_code, 'DEADLINE_EXCEEDED');
+  assert.equal(failed.reason, 'hook_http_timeout');
+  assert.equal(failed.receipt.error.failure_behavior, 'fail_open');
+  assert.equal(failed.receipt.error.side_effect_state, 'confirmed_applied');
+  assert.equal(failed.receipt.native_evidence.code, 'ETIMEDOUT');
   database.close();
 });
 

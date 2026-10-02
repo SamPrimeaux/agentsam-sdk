@@ -129,7 +129,13 @@ export function createHookRuntimeFromConfig(configOrFilename, options = {}) {
         ...entry,
         matches: entry.match ? (envelope) => matchesHookInput(entry.match, envelope.input) : undefined,
         handler: handlers.get(entry.adapter),
-        metadata: { ...(entry.metadata || {}), hook_source: 'config', adapter: entry.adapter, config_source: config.source },
+        metadata: {
+          ...(entry.metadata || {}),
+          hook_source: 'config',
+          adapter: entry.adapter,
+          adapter_type: config.adapters[entry.adapter]?.type || null,
+          config_source: config.source,
+        },
       });
     }
   }

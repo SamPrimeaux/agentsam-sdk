@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { AgentSamError } from '../packages/agentsam-errors/src/index.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SERVICE = path.join(ROOT, 'apps', 'agentsam-go-worker');
@@ -55,13 +56,29 @@ function run(command, args, options = {}) {
 
   const result = spawnSync(command, args, spawnOptions);
   if (result.status !== 0) {
-    const error = new Error('distribution_command_failed: ' + command + ' ' + args.join(' '));
-    error.detail = {
-      status: result.status,
-      stdout: (result.stdout || '').slice(-6000),
-      stderr: (result.stderr || '').slice(-6000),
-    };
-    throw error;
+    const operation = args[0] || command;
+    const reason = command === 'npm' && operation === 'pack'
+      ? 'pack_failed'
+      : command === 'npm' && operation === 'install'
+        ? 'distribution_install_failed'
+        : 'distribution_smoke_failed';
+    throw new AgentSamError({
+      reason,
+      stage: operation === 'pack' ? 'publish' : operation === 'install' ? 'install' : 'verify',
+      feature: 'distribution.go',
+      message: `${command} ${args.join(' ')} failed while verifying the clean-room distribution`,
+      source: { kind: 'agentsam', name: 'verify-go-distribution' },
+      native: {
+        code: result.error?.code || null,
+        exception_type: result.error?.name || null,
+        exit_code: result.status,
+        signal: result.signal || null,
+        stdout: (result.stdout || '').slice(-6000),
+        stderr: (result.stderr || '').slice(-6000),
+      },
+      details: { command, args },
+      side_effect_state: 'unknown',
+    }, { cause: result.error });
   }
   return result;
 }

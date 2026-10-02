@@ -8,6 +8,24 @@ function toolRows(value) {
   return Array.isArray(value) ? value : Array.isArray(value?.tools) ? value.tools : [];
 }
 
+function annotateMcpFailure(value, server) {
+  const error = value && typeof value === 'object' ? value : new Error(String(value || 'MCP call failed'));
+  const message = String(error?.message || error || '').toLowerCase();
+  if (!error.reason) {
+    error.reason = /timeout|timed out|deadline/.test(message)
+      ? 'mcp_timeout'
+      : /unavailable|not running|econnrefused|enoent/.test(message)
+        ? 'mcp_server_unavailable'
+        : /connection|transport|socket|stdio|http|sse/.test(message)
+          ? 'mcp_transport_failed'
+          : 'mcp_call_failed';
+  }
+  error.adapter = error.adapter || 'mcp';
+  error.protocol = error.protocol || 'mcp';
+  error.transport = error.transport || server?.transport || null;
+  return error;
+}
+
 export async function createMcpCapabilityAdapter(options = {}) {
   const servers = options.servers || {};
   const listTools = options.listTools;
@@ -48,7 +66,11 @@ export async function createMcpCapabilityAdapter(options = {}) {
     async invoke(id, input = {}, context = {}) {
       const row = tools.get(String(id));
       if (!row) throw new Error(`mcp_capability_unavailable:${id}`);
-      return callTool(row.server_name, row.tool_name, input, { ...context, server: row.server_config });
+      try {
+        return await callTool(row.server_name, row.tool_name, input, { ...context, server: row.server_config });
+      } catch (error) {
+        throw annotateMcpFailure(error, row.server_config);
+      }
     },
   });
 }

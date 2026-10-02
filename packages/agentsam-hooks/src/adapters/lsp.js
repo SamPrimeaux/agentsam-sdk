@@ -71,6 +71,24 @@ function paramsFor(tool, input) {
   return { textDocument, position };
 }
 
+function annotateLspFailure(value, server) {
+  const error = value && typeof value === 'object' ? value : new Error(String(value || 'LSP request failed'));
+  const message = String(error?.message || error || '').toLowerCase();
+  if (!error.reason) {
+    error.reason = /timeout|timed out|deadline/.test(message)
+      ? 'lsp_timeout'
+      : /unavailable|not running|econnrefused|enoent/.test(message)
+        ? 'lsp_server_unavailable'
+        : /connection|transport|socket|stdio/.test(message)
+          ? 'lsp_transport_failed'
+          : 'lsp_request_failed';
+  }
+  error.adapter = error.adapter || 'lsp';
+  error.protocol = error.protocol || 'lsp';
+  error.transport = error.transport || server?.transport || (server?.command ? 'stdio' : null);
+  return error;
+}
+
 export function createLspCapabilityAdapter(options = {}) {
   if (typeof options.request !== 'function') throw new TypeError('lsp_request_adapter_required');
   const languages = Object.keys(options.languages || {}).sort();
@@ -84,10 +102,15 @@ export function createLspCapabilityAdapter(options = {}) {
       const language = String(input.language || '').trim();
       if (!language) throw new TypeError('lsp_language_required');
       if (languages.length && !Object.hasOwn(options.languages, language)) throw new Error(`lsp_language_not_configured:${language}`);
-      return options.request(language, tool.method, paramsFor(tool, input), {
-        ...context,
-        server: options.languages?.[language] || null,
-      });
+      const server = options.languages?.[language] || null;
+      try {
+        return await options.request(language, tool.method, paramsFor(tool, input), {
+          ...context,
+          server,
+        });
+      } catch (error) {
+        throw annotateLspFailure(error, server);
+      }
     },
   });
 }

@@ -2,11 +2,15 @@ import {
   DEFAULT_HTTP_STATUS,
   ERROR_CODE,
   ERROR_DOMAIN,
+  ERROR_FAILURE_BEHAVIOR,
+  ERROR_FAILURE_CLASS,
   ERROR_REASON_POLICY,
   ERROR_RESOLUTION_OWNER,
   ERROR_SCHEMA_VERSION,
   ERROR_SEVERITY,
+  ERROR_SIDE_EFFECT_STATE,
   ERROR_SOURCE_KIND,
+  ERROR_STAGE,
   GRPC_STATUS,
   REMEDIATION_ACTION,
 } from './vocabulary.js';
@@ -20,7 +24,19 @@ const SEVERITY_VALUES = VALUES(ERROR_SEVERITY);
 const SOURCE_VALUES = VALUES(ERROR_SOURCE_KIND);
 const OWNER_VALUES = VALUES(ERROR_RESOLUTION_OWNER);
 const DOMAIN_VALUES = VALUES(ERROR_DOMAIN);
+const FAILURE_CLASS_VALUES = VALUES(ERROR_FAILURE_CLASS);
+const STAGE_VALUES = VALUES(ERROR_STAGE);
+const FAILURE_BEHAVIOR_VALUES = VALUES(ERROR_FAILURE_BEHAVIOR);
+const SIDE_EFFECT_STATE_VALUES = VALUES(ERROR_SIDE_EFFECT_STATE);
 const ACTION_VALUES = VALUES(REMEDIATION_ACTION);
+const FEATURE_PATTERN = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
+const STAGE_ALIASES = new Map([
+  ['discovery', 'discover'], ['configuration', 'configure'], ['request', 'execute'], ['run', 'execute'],
+  ['dispatch', 'execute'], ['adapter', 'execute'], ['spawn', 'start'], ['parse', 'transform'],
+  ['render', 'transform'], ['compaction', 'transform'], ['persistence', 'persist'],
+  ['persistence_read', 'load'], ['persistence_write', 'persist'], ['search', 'discover'],
+  ['inventory', 'discover'], ['approve', 'authorize'],
+]);
 const GRPC_CODE_BY_NUMBER = new Map(Object.entries(GRPC_STATUS).map(([name, value]) => [value, ERROR_CODE[name]]));
 const HTTP_OVERRIDES = new Map([
   [400, ERROR_CODE.INVALID_ARGUMENT], [401, ERROR_CODE.UNAUTHENTICATED], [403, ERROR_CODE.PERMISSION_DENIED],
@@ -51,6 +67,11 @@ const USER_ACTIONS = new Set([
   REMEDIATION_ACTION.SELECT_MODEL,
   REMEDIATION_ACTION.CHANGE_REGION,
   REMEDIATION_ACTION.RESTART_RUNTIME,
+  REMEDIATION_ACTION.RESTART_SERVICE,
+  REMEDIATION_ACTION.REPAIR_SCHEMA,
+  REMEDIATION_ACTION.RUN_MIGRATION,
+  REMEDIATION_ACTION.UPDATE_LOCKFILE,
+  REMEDIATION_ACTION.REINSTALL_WORKSPACE,
 ]);
 
 function clean(value) { return value == null ? '' : String(value).trim(); }
@@ -107,6 +128,21 @@ export function canonicalCodeFromGrpcStatus(status) { return GRPC_CODE_BY_NUMBER
 export function defaultHttpStatusForCode(code) { return DEFAULT_HTTP_STATUS[code] ?? 500; }
 export function grpcStatusForCode(code) { return GRPC_STATUS[code] ?? GRPC_STATUS.UNKNOWN; }
 
+function normalizeStage(value, fallback) {
+  const requested = clean(value);
+  if (!requested) return { stage: fallback, nativeStage: null };
+  if (STAGE_VALUES.has(requested)) return { stage: requested, nativeStage: null };
+  const generic = STAGE_ALIASES.get(requested);
+  return { stage: generic || fallback, nativeStage: requested };
+}
+
+function vocabularyValue(value, allowed, label, fallback = null) {
+  const normalized = clean(value || fallback);
+  if (!normalized && fallback == null) return null;
+  if (!allowed.has(normalized)) throw new TypeError(`Unknown AgentSam error ${label}: ${normalized}`);
+  return normalized;
+}
+
 export function createErrorEnvelope(input = {}) {
   const reason = clean(input.reason || 'unknown');
   if (!REASON_PATTERN.test(reason)) throw new TypeError(`Invalid AgentSam error reason: ${reason}`);
@@ -121,8 +157,19 @@ export function createErrorEnvelope(input = {}) {
   const retryable = input.retryable == null ? Boolean(policy.retryable) : Boolean(input.retryable);
   const resolutionOwner = clean(input.resolution_owner || policy.resolution_owner);
   if (!OWNER_VALUES.has(resolutionOwner)) throw new TypeError(`Unknown AgentSam error resolution owner: ${resolutionOwner}`);
-  const domain = clean(input.domain || ERROR_DOMAIN.RUNTIME);
-  if (!DOMAIN_VALUES.has(domain)) throw new TypeError(`Unknown AgentSam error domain: ${domain}`);
+  const domain = vocabularyValue(input.domain, DOMAIN_VALUES, 'domain', policy.domain || ERROR_DOMAIN.RUNTIME);
+  const failureClass = vocabularyValue(input.failure_class, FAILURE_CLASS_VALUES, 'failure class', policy.failure_class || 'internal');
+  const normalizedStage = normalizeStage(input.stage, policy.default_stage || ERROR_STAGE.EXECUTE);
+  const nativeStage = optional(input.native_stage, 256) || normalizedStage.nativeStage;
+  const feature = optional(input.feature, 256);
+  if (feature && !FEATURE_PATTERN.test(feature)) throw new TypeError(`Invalid AgentSam error feature: ${feature}`);
+  const failureBehavior = vocabularyValue(input.failure_behavior, FAILURE_BEHAVIOR_VALUES, 'failure behavior');
+  const sideEffectState = vocabularyValue(
+    input.side_effect_state || input.operation?.side_effect_state,
+    SIDE_EFFECT_STATE_VALUES,
+    'side effect state',
+    input.operation ? ERROR_SIDE_EFFECT_STATE.UNKNOWN : ERROR_SIDE_EFFECT_STATE.NONE,
+  );
   const remediation = normalizeRemediation(input.remediation, policy);
   if (severity === ERROR_SEVERITY.TRANSIENT && !retryable) throw new TypeError('transient AgentSam errors must be retryable');
   if ((remediation.action === REMEDIATION_ACTION.RETRY || remediation.action === REMEDIATION_ACTION.RETRY_LATER) && !retryable) {
@@ -139,14 +186,22 @@ export function createErrorEnvelope(input = {}) {
     schema_version: ERROR_SCHEMA_VERSION,
     code,
     reason,
-    severity,
-    source,
-    resolution_owner: resolutionOwner,
     domain,
-    tool: optional(input.tool, 256),
-    stage: optional(input.stage, 256),
-    message: redactString(input.message || 'Operation failed', 4_000),
+    failure_class: failureClass,
+    stage: normalizedStage.stage,
+    native_stage: nativeStage,
+    feature,
+    failure_behavior: failureBehavior,
+    severity,
     retryable,
+    side_effect_state: sideEffectState,
+    resolution_owner: resolutionOwner,
+    source,
+    adapter: optional(input.adapter, 256),
+    protocol: optional(input.protocol, 256),
+    transport: optional(input.transport, 256),
+    tool: optional(input.tool, 256),
+    message: redactString(input.message || 'Operation failed', 4_000),
     retry_after_ms: input.retry_after_ms == null ? null : Math.max(0, Math.round(Number(input.retry_after_ms) || 0)),
     remediation,
     resource: normalizeResource(input.resource),
@@ -154,7 +209,6 @@ export function createErrorEnvelope(input = {}) {
     environment,
     http_status: input.http_status == null ? defaultHttpStatusForCode(code) : Number(input.http_status),
     grpc_status: input.grpc_status == null ? grpcStatusForCode(code) : Number(input.grpc_status),
-    transport: optional(input.transport, 256),
     provider: optional(input.provider, 256),
     provider_code: optional(input.provider_code, 512),
     request_id: optional(input.request_id, 512),
@@ -167,9 +221,7 @@ export function createErrorEnvelope(input = {}) {
   if (!Number.isInteger(envelope.grpc_status) || envelope.grpc_status < 0 || envelope.grpc_status > 16) envelope.grpc_status = null;
   envelope.fingerprint = optional(input.fingerprint, 128) || fingerprintError(envelope);
 
-  // Optional recovery dimensions (v1-compatible extras — orthogonal to reason enum)
-  const failureClass = input.failure_class || null;
-  if (failureClass) envelope.failure_class = clean(failureClass);
+  // Optional recovery plans remain orthogonal to the canonical v2 failure dimensions.
   if (input.operation && typeof input.operation === 'object') {
     envelope.operation = Object.freeze({
       kind: optional(input.operation.kind, 256),
@@ -178,7 +230,7 @@ export function createErrorEnvelope(input = {}) {
       resource_id: optional(input.operation.resource_id, 512),
       read_only: input.operation.read_only === true,
       idempotent: input.operation.idempotent === true,
-      side_effect_state: optional(input.operation.side_effect_state, 64) || 'unknown',
+      side_effect_state: sideEffectState,
     });
   }
   if (input.retry && typeof input.retry === 'object') {

@@ -71,7 +71,23 @@ export interface HookReceipt {
   duration_ms: number;
   input_keys: readonly string[];
   output_keys: readonly string[];
-  error?: { code: string; message: string };
+  error?: {
+    error_code: string;
+    reason: string;
+    domain: string;
+    failure_class: string;
+    stage: string;
+    feature: string;
+    failure_behavior: 'fail_closed' | 'fail_open' | 'observe_only' | 'retry_bounded' | 'skip' | 'abort' | 'no_replay';
+    retryable: boolean;
+    side_effect_state: 'none' | 'not_started' | 'confirmed_not_applied' | 'confirmed_applied' | 'partially_applied' | 'unknown';
+    adapter: string | null;
+    protocol: string | null;
+    transport: string | null;
+    fingerprint: string;
+    message: string;
+  };
+  native_evidence?: { code: string | null; exception_type: string | null; message: string };
 }
 export interface HookDispatchResult {
   schema: 'agentsam.hook.dispatch.v1';
@@ -79,7 +95,7 @@ export interface HookDispatchResult {
   input: Readonly<Record<string, unknown>>;
   output: Readonly<HookOutput>;
   receipts: readonly HookReceipt[];
-  errors: readonly { hook_id: string; hook: HookEvent; code: string; message: string }[];
+  errors: readonly (NonNullable<HookReceipt['error']> & { hook_id: string; hook: HookEvent; native_evidence?: HookReceipt['native_evidence'] })[];
 }
 export interface HookRuntime {
   register(event: HookEvent | string, definition: HookDefinition | HookHandler): this;

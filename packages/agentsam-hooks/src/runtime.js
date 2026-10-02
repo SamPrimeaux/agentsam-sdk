@@ -5,6 +5,10 @@ import {
   normalizeHookEvent,
   normalizeHookOutput,
 } from './contracts.js';
+import {
+  generatedErrorPolicy,
+  normalizeGeneratedErrorReason,
+} from './errors-generated.js';
 
 function clone(value) {
   return value == null ? value : structuredClone(value);
@@ -25,6 +29,75 @@ function errorMessage(error) {
     .slice(0, 512);
 }
 
+function fingerprint(fields) {
+  const text = fields.map((value) => String(value || '').trim()).join('\u001f');
+  let hash = 0xcbf29ce484222325n;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= BigInt(text.charCodeAt(index));
+    hash = BigInt.asUintN(64, hash * 0x100000001b3n);
+  }
+  return `err_${hash.toString(16).padStart(16, '0')}`;
+}
+
+function adapterFacts(reason, definition, error) {
+  const inferred = ['http', 'mcp', 'lsp', 'command'].find((name) => reason.startsWith(`hook_${name}_`)) || null;
+  const adapter = String(error?.adapter || definition.metadata?.adapter_type || inferred || '').trim() || null;
+  const protocol = String(error?.protocol || (adapter === 'command' ? 'agentsam.hook.v1' : adapter || '')).trim() || null;
+  const transport = String(error?.transport || (adapter === 'command' ? 'process' : '')).trim() || null;
+  return { adapter, protocol, transport };
+}
+
+function failureBehavior(definition) {
+  if (definition.failure_mode === 'closed') return 'fail_closed';
+  if (definition.failure_mode === 'open') return 'fail_open';
+  if (['post_tool_use', 'post_model_use'].includes(definition.hook)) return 'no_replay';
+  return 'abort';
+}
+
+function sideEffectState(hook) {
+  if (['post_tool_use', 'post_model_use'].includes(hook)) return 'confirmed_applied';
+  if (hook === 'post_tool_use_failure') return 'unknown';
+  return 'not_started';
+}
+
+function canonicalHookFailure(definition, error) {
+  let reason = normalizeGeneratedErrorReason(error?.reason, error?.message, error?.code);
+  if (/^(mcp|lsp)_/.test(reason)) {
+    const hookSpecific = normalizeGeneratedErrorReason(`hook_${reason}`);
+    if (hookSpecific !== 'hook_handler_failed') reason = hookSpecific;
+  }
+  const policy = generatedErrorPolicy(reason);
+  const behavior = failureBehavior(definition);
+  const sideEffect = sideEffectState(definition.hook);
+  const facts = adapterFacts(reason, definition, error);
+  const message = errorMessage(error);
+  const feature = `hooks.${definition.hook}`;
+  const canonical = {
+    error_code: policy.code,
+    reason,
+    domain: policy.domain,
+    failure_class: policy.failure_class,
+    stage: policy.default_stage,
+    feature,
+    failure_behavior: behavior,
+    retryable: sideEffect === 'confirmed_applied' || behavior === 'fail_closed' ? false : policy.retryable,
+    side_effect_state: sideEffect,
+    adapter: facts.adapter,
+    protocol: facts.protocol,
+    transport: facts.transport,
+    fingerprint: fingerprint([policy.code, reason, policy.domain, policy.failure_class, policy.default_stage, feature, behavior, sideEffect, facts.adapter, facts.protocol, facts.transport, definition.id]),
+    message,
+  };
+  return Object.freeze({
+    error: Object.freeze(canonical),
+    native_evidence: Object.freeze({
+      code: error?.code ? String(error.code).slice(0, 128) : null,
+      exception_type: error?.name ? String(error.name).slice(0, 128) : null,
+      message,
+    }),
+  });
+}
+
 function withTimeout(promise, timeoutMs, hookId) {
   let timer;
   const timeout = new Promise((_, reject) => {
@@ -38,6 +111,7 @@ function withTimeout(promise, timeoutMs, hookId) {
 }
 
 function receiptFor({ definition, envelope, startedAt, completedAt, status, output, error }) {
+  const failure = error ? canonicalHookFailure(definition, error) : null;
   return Object.freeze({
     schema: HOOK_RECEIPT_SCHEMA,
     hook_id: definition.id,
@@ -49,7 +123,7 @@ function receiptFor({ definition, envelope, startedAt, completedAt, status, outp
     duration_ms: Math.max(0, completedAt - startedAt),
     input_keys: Object.freeze(Object.keys(envelope.input).sort()),
     output_keys: Object.freeze(Object.keys(output || {}).sort()),
-    ...(error ? { error: Object.freeze({ code: error.code || 'AGENTSAM_HOOK_FAILED', message: errorMessage(error) }) } : {}),
+    ...(failure || {}),
   });
 }
 
@@ -95,6 +169,8 @@ export class HookExecutionError extends Error {
     super(`hook_execution_failed:${definition.id}:${errorMessage(cause)}`, { cause });
     this.name = 'HookExecutionError';
     this.code = 'AGENTSAM_HOOK_EXECUTION_FAILED';
+    this.reason = normalizeGeneratedErrorReason(cause?.reason, cause?.message, cause?.code);
+    this.error_code = generatedErrorPolicy(this.reason).code;
     this.hook = definition.hook;
     this.hook_id = definition.id;
   }
@@ -167,7 +243,7 @@ export function createHookRuntime(options = {}) {
       } catch (error) {
         const completedAt = nowMs(clock);
         receipt = receiptFor({ definition, envelope, startedAt, completedAt, status: 'failed', error });
-        errors.push(Object.freeze({ hook_id: definition.id, hook, code: error.code || 'AGENTSAM_HOOK_FAILED', message: errorMessage(error) }));
+        errors.push(Object.freeze({ hook_id: definition.id, hook, ...receipt.error, native_evidence: receipt.native_evidence }));
         receipts.push(receipt);
         if (typeof onReceipt === 'function') {
           try { await onReceipt(receipt); } catch { /* Observer failures never replace hook policy. */ }
