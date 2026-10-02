@@ -1,0 +1,38 @@
+{
+  "name": "@inneranimalmedia/cms-runtime",
+  "version": "2.6.8",
+  "description": "Portable self-describing local CMS runtime with SQLite schema, tool/skill catalogs, and provider-neutral package contracts.",
+  "type": "module",
+  "bin": {
+    "cms-runtime": "./bin/cms-runtime.mjs"
+  },
+  "exports": {
+    "./manifest-schema": "./schemas/cms-package.v2.schema.json",
+    "./sqlite-schema": "./schemas/sqlite/cms-local-runtime.v1.sql",
+    "./examples/local": "./manifests/cms-package.v2.local.example.json",
+    "./examples/cloudflare": "./manifests/cms-package.v2.cloudflare.example.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "bin",
+    "schemas",
+    "manifests",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "pack:check": "npm pack --dry-run"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/cms-runtime"
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "apiVersion": "inneranimalmedia.com/cms/v2",
+  "kind": "CmsPackage",
+  "metadata": {
+    "name": "example-local-site",
+    "displayName": "Example Local Site",
+    "version": "0.1.0"
+  },
+  "runtime": {
+    "project": {
+      "id": "example-local-site"
+    },
+    "endpoints": {
+      "apiBaseUrl": "/api/cms",
+      "assetBaseUrl": "/cms-assets"
+    }
+  },
+  "capabilities": {
+    "database": {
+      "role": "cms_core",
+      "provider": "sqlite"
+    },
+    "objectStorage": {
+      "role": "cms_content",
+      "provider": "filesystem"
+    },
+    "cache": {
+      "required": false
+    },
+    "queue": {
+      "required": false
+    },
+    "collaboration": {
+      "required": false
+    },
+    "ai": {
+      "required": false
+    }
+  },
+  "adapters": {
+    "local": {
+      "sqlitePath": ".agentsam/cms.sqlite",
+      "contentPath": ".agentsam/cms-content",
+      "mode": "local_authority",
+      "schemaPath": "schemas/sqlite/cms-local-runtime.v1.sql"
+    }
+  },
+  "distribution": {
+    "studio": {
+      "source": "package",
+      "entry": "studio"
+    },
+    "pipeline": {
+      "source": "package",
+      "entry": "cms-pipeline"
+    }
+  },
+  "gates": [
+    "schema_valid",
+    "capabilities_resolved",
+    "database_migrated",
+    "api_conformance",
+    "studio_build",
+    "preview_smoke"
+  ]
+}

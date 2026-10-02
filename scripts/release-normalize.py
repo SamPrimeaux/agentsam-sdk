@@ -25,7 +25,7 @@ ALWAYS_OK = {"node_modules", "package.json", "package-lock.json", "README.md", "
 # Dev/provenance files that are never part of an installable (matched on top-level names).
 DEV_ONLY = ["tsconfig*.json", "vitest.config.*", "vite.config.*", "eslint.config.*", "index.html", "*.md", "*.tgz", "startup.sh",
             "*IMPORT_PROVENANCE.json", "screenshots"]
-NAME_OK = re.compile(r"^@inneranimalmedia/(agentsam-[a-z0-9-]+|theme-[a-z0-9-]+|client-cms-editor|ecommerce-cms-agentsam)$")
+NAME_OK = re.compile(r"^@inneranimalmedia/(agentsam-[a-z0-9-]+|theme-[a-z0-9-]+|client-cms-editor|ecommerce-cms-agentsam|cms-runtime)$")
 RENAMES = {  # unpublished/pre-publication names that break the grammar -> canonical public names
     "@inneranimalmedia/agentsam-sdk-brand": "@inneranimalmedia/agentsam-brand",
     "@inneranimalmedia/agentsam-sdk-identity": "@inneranimalmedia/agentsam-identity",
