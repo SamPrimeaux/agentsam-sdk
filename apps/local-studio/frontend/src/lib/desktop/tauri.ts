@@ -62,6 +62,44 @@ export async function providerKeyExists(provider: string): Promise<boolean> {
   return Boolean(await invoke("provider_key_exists", { provider }));
 }
 
+export type ProviderKeyStatus = {
+  exists: boolean;
+  last4: string | null;
+  synced_secret_id: string | null;
+  synced_last4: string | null;
+};
+
+export type ProviderKeySyncResult = {
+  ok: boolean;
+  provider: string;
+  direction: "device_to_account" | "account_to_device";
+  secret_id: string;
+  last4: string | null;
+};
+
+export async function providerKeyStatus(provider: string): Promise<ProviderKeyStatus> {
+  const invoke = getTauriInvoke();
+  if (!invoke) {
+    return { exists: false, last4: null, synced_secret_id: null, synced_last4: null };
+  }
+  return (await invoke("provider_key_status", { provider })) as ProviderKeyStatus;
+}
+
+export async function providerKeySyncToAccount(provider: string): Promise<ProviderKeySyncResult> {
+  const invoke = getTauriInvoke();
+  if (!invoke) throw new Error("provider_key_sync_unavailable");
+  return (await invoke("provider_key_sync_to_account", { provider })) as ProviderKeySyncResult;
+}
+
+export async function providerKeySyncFromAccount(
+  provider: string,
+  secretId: string,
+): Promise<ProviderKeySyncResult> {
+  const invoke = getTauriInvoke();
+  if (!invoke) throw new Error("provider_key_sync_unavailable");
+  return (await invoke("provider_key_sync_from_account", { provider, secretId })) as ProviderKeySyncResult;
+}
+
 export async function providerKeySet(provider: string, value: string): Promise<void> {
   const invoke = getTauriInvoke();
   if (!invoke) throw new Error("provider_key_store_unavailable");

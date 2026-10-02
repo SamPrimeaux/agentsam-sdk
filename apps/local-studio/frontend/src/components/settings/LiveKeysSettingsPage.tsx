@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { KeyRound, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AddKeyModal } from "./AddKeyModal";
@@ -20,6 +20,7 @@ export function LiveKeysSettingsPage() {
   const packaged = isPackagedDesktop();
   const [signedIn, setSignedIn] = useState(!packaged);
   const [identityReady, setIdentityReady] = useState(!packaged);
+  const refreshSecrets = useCallback(() => setSecretRefresh((n) => n + 1), []);
 
   useEffect(() => {
     if (!packaged) return;
@@ -77,7 +78,7 @@ export function LiveKeysSettingsPage() {
               Add provider secret
             </Button>
           </div>
-          <ApiKeysTable refreshToken={secretRefresh} />
+          <ApiKeysTable refreshToken={secretRefresh} onChanged={refreshSecrets} />
         </section>
 
           </>
@@ -90,7 +91,7 @@ export function LiveKeysSettingsPage() {
           </section>
         ) : null}
 
-        {packaged ? <DeviceProviderKeys /> : null}
+        {packaged ? <DeviceProviderKeys refreshToken={secretRefresh} onAccountChanged={refreshSecrets} /> : null}
 
         <MintCredentialModal
           open={mintOpen}
@@ -100,7 +101,7 @@ export function LiveKeysSettingsPage() {
         <AddKeyModal
           open={addSecretOpen}
           onOpenChange={setAddSecretOpen}
-          onSaved={() => setSecretRefresh((n) => n + 1)}
+          onSaved={refreshSecrets}
         />
       </div>
     </div>
