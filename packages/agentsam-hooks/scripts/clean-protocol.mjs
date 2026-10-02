@@ -14,3 +14,4 @@ for (const filename of [
 ]) {
   fs.rmSync(path.join(target, filename), { force: true });
 }
+fs.rmSync(path.join(packageRoot, 'schema', 'migrations', 'sqlite', '001_hooks_core.sql'), { force: true });

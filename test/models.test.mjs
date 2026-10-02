@@ -3,7 +3,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { DatabaseSync } from 'node:sqlite';
 import { collectModelsStatus, renderModelsStatus } from '../src/commands/models.js';
+import { createAiPluginProbePatch, createProviderModelSnapshot } from '../src/models/inventory-core.js';
+import { recordAiPluginModelDiscovery } from '../src/plugins/registry.js';
 
 function response(body, status = 200) {
   return { ok: status >= 200 && status < 300, status, async json() { return body; } };
@@ -28,7 +31,7 @@ test('model inventory reports configured API providers without exposing credenti
   });
   assert.equal(status.providers.find((row) => row.id === 'openai').configured, true);
   assert.equal(status.providers.find((row) => row.id === 'gemini').configured, false);
-  assert.equal(status.providers.find((row) => row.id === 'grok').configured, true);
+  assert.equal(status.providers.find((row) => row.id === 'xai').configured, true);
   assert.equal(status.providers.find((row) => row.id === 'anthropic').configured, true);
   assert.equal(status.providers.find((row) => row.id === 'cloudflare').configured, true);
   assert.equal(status.local.online, true);
@@ -37,6 +40,82 @@ test('model inventory reports configured API providers without exposing credenti
   assert.match(rendered, /OpenAI/);
   assert.match(rendered, /qwen:test/);
   assert.doesNotMatch(rendered, /secret-openai|secret-xai|secret-anthropic|secret-cf/);
+});
+
+test('provider discovery snapshots stay compact in the existing AI plugin row and preserve last good data', () => {
+  const snapshot = createProviderModelSnapshot('openai', [
+    { provider_model_id: 'model-b' },
+    { provider_model_id: 'model-a' },
+    { provider_model_id: 'model-a' },
+  ], { fetchedAtUnix: 123 });
+  assert.deepEqual(snapshot.model_ids, ['model-a', 'model-b']);
+  assert.equal(snapshot.model_count, 2);
+  assert.match(snapshot.models_hash, /^fnv1a32:[0-9a-f]{8}$/);
+
+  const healthy = createAiPluginProbePatch({}, { ok: true, provider: 'openai', models: snapshot.model_ids }, { fetchedAtUnix: 123 });
+  const failed = createAiPluginProbePatch(healthy.metadata, { ok: false, provider: 'openai', error: '401 invalid api key' }, { fetchedAtUnix: 456 });
+  assert.deepEqual(failed.metadata.model_snapshot, healthy.metadata.model_snapshot);
+  assert.equal(failed.health_status, 'auth_error');
+  assert.equal(failed.last_error_code, 'provider_credential_rejected');
+  assert.doesNotMatch(JSON.stringify(failed), /invalid api key/);
+});
+
+test('AI plugin discovery persists compact snapshots in the existing plugin row', async () => {
+  const sqlite = new DatabaseSync(':memory:');
+  sqlite.exec(`
+    CREATE TABLE agentsam_plugins (
+      id TEXT PRIMARY KEY, account_id TEXT NOT NULL, plugin_key TEXT NOT NULL,
+      provider_key TEXT, environment TEXT, plugin_kind TEXT, metadata_json TEXT,
+      health_status TEXT, last_health_at INTEGER, last_healthy_at INTEGER,
+      consecutive_failures INTEGER NOT NULL DEFAULT 0, avg_latency_ms REAL,
+      error_rate_24h REAL NOT NULL DEFAULT 0, last_error_code TEXT,
+      last_error_message TEXT, updated_at INTEGER
+    );
+    CREATE TABLE agentsam_plugin_health_checks (
+      id TEXT PRIMARY KEY, plugin_id TEXT, plugin_key TEXT, account_id TEXT,
+      environment TEXT, check_kind TEXT, check_source TEXT, status TEXT,
+      started_at INTEGER, completed_at INTEGER, latency_ms INTEGER,
+      http_status INTEGER, provider_request_id TEXT, error_code TEXT,
+      error_message TEXT, details_json TEXT, created_at INTEGER
+    );
+    INSERT INTO agentsam_plugins (
+      id, account_id, plugin_key, provider_key, environment, plugin_kind, metadata_json
+    ) VALUES ('plg_ai', 'acct_test', 'ai.xai', 'xai', 'production', 'ai', '{"keep":true}');
+  `);
+  const db = {
+    prepare(sql) {
+      const statement = sqlite.prepare(sql);
+      return {
+        bind(...values) {
+          return {
+            run: () => statement.run(...values),
+            first: () => statement.get(...values) ?? null,
+            all: () => ({ results: statement.all(...values) }),
+          };
+        },
+      };
+    },
+  };
+
+  const success = await recordAiPluginModelDiscovery(db, {
+    pluginId: 'plg_ai', accountId: 'acct_test', completedAt: 123,
+    discovery: { ok: true, models: ['grok-b', 'grok-a'] },
+  });
+  assert.deepEqual(success.model_snapshot.model_ids, ['grok-a', 'grok-b']);
+  let row = sqlite.prepare("SELECT metadata_json, health_status, consecutive_failures FROM agentsam_plugins WHERE id='plg_ai'").get();
+  assert.equal(JSON.parse(row.metadata_json).keep, true);
+  assert.equal(row.health_status, 'healthy');
+
+  await recordAiPluginModelDiscovery(db, {
+    pluginId: 'plg_ai', accountId: 'acct_test', completedAt: 456,
+    discovery: { ok: false, error: '401 secret credential rejected' },
+  });
+  row = sqlite.prepare("SELECT metadata_json, health_status, consecutive_failures, last_error_message FROM agentsam_plugins WHERE id='plg_ai'").get();
+  assert.deepEqual(JSON.parse(row.metadata_json).model_snapshot, success.model_snapshot);
+  assert.equal(row.health_status, 'auth_error');
+  assert.equal(row.consecutive_failures, 1);
+  assert.equal(row.last_error_message, 'Provider credential rejected');
+  sqlite.close();
 });
 
 test('static/reference metadata never invents hosted model availability', async t => {
@@ -115,7 +194,7 @@ test('Gemini and xAI discovery keep per-key limits from provider metadata', asyn
   assert.equal(gemini.context_window_source, 'provider_api');
   assert.deepEqual(gemini.reasoning_efforts, ['auto', 'low', 'medium', 'high']);
 
-  const grok = status.providerModels.grok[0];
+  const grok = status.providerModels.xai[0];
   assert.equal(grok.provider_model_id, 'grok-test');
   assert.equal(grok.context_window, 256000);
   assert.equal(grok.pricing.input, 1);

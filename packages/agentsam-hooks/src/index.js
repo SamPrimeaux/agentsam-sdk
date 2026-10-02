@@ -2,6 +2,7 @@ export * from './contracts.js';
 export * from './runtime.js';
 export * from './policy.js';
 export * from './config.js';
+export * from './store.js';
 export * from './adapters/callback.js';
 export * from './adapters/command.js';
 export * from './adapters/http.js';

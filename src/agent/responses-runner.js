@@ -652,9 +652,17 @@ export async function runAgentSamTurn(options = {}) {
     prompt: clean(options.prompt),
     cwd,
   }, invocation, { cwd });
-  const prompt = clean(submitted.input.prompt);
-  if (!prompt) throw new TypeError('prompt is required');
-  const additionalContext = submitted.output.additional_context;
+  const submittedPrompt = clean(submitted.input.prompt);
+  if (!submittedPrompt) throw new TypeError('prompt is required');
+  const transformed = await hooks.dispatch('user_prompt_transformed', {
+    original_prompt: clean(options.prompt),
+    transformed_prompt: submittedPrompt,
+    cwd,
+  }, invocation, { cwd });
+  const prompt = clean(transformed.input.transformed_prompt);
+  if (!prompt) throw new TypeError('transformed prompt is required');
+  const additionalContext = [submitted.output.additional_context, transformed.output.additional_context]
+    .filter(Boolean).join('\n\n');
   const instrumented = {
     ...options,
     prompt,
@@ -733,7 +741,8 @@ export async function runAgentSamTurn(options = {}) {
 
   return Object.freeze({
     ...result,
-    ...(submitted.output.suppress_output === true ? { output_text: '', suppressed_by_hook: true } : {}),
+    ...(submitted.output.suppress_output === true || transformed.output.suppress_output === true
+      ? { output_text: '', suppressed_by_hook: true } : {}),
     total_cost_usd: totalCost,
     cost_breakdown_usd: Object.freeze(costBreakdown),
     tool_receipts: Object.freeze(allToolReceipts),
@@ -746,7 +755,7 @@ export async function runAgentSamTurn(options = {}) {
       hook_continuations: hookContinuations,
       max_hook_continuations: maxContinuations,
     }),
-    hook_receipts: Object.freeze([...submitted.receipts, ...continuationReceipts]),
+    hook_receipts: Object.freeze([...submitted.receipts, ...transformed.receipts, ...continuationReceipts]),
   });
 }
 

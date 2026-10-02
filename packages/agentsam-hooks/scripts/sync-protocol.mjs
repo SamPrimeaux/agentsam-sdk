@@ -19,3 +19,9 @@ for (const filename of files) {
   if (fs.existsSync(sourceFile)) fs.copyFileSync(sourceFile, targetFile);
   else if (!fs.existsSync(targetFile)) throw new Error(`Canonical hook protocol is unavailable: ${sourceFile}`);
 }
+
+const migrationSource = path.join(repositoryRoot, 'migrations', 'runtime', '0005_agentsam_hooks.sql');
+const migrationTarget = path.join(packageRoot, 'schema', 'migrations', 'sqlite', '001_hooks_core.sql');
+fs.mkdirSync(path.dirname(migrationTarget), { recursive: true });
+if (fs.existsSync(migrationSource)) fs.copyFileSync(migrationSource, migrationTarget);
+else if (!fs.existsSync(migrationTarget)) throw new Error(`Canonical hook migration is unavailable: ${migrationSource}`);

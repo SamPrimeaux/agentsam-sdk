@@ -83,6 +83,8 @@ pub struct Output {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub modified_transformed_prompt: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub modified_config: Option<Map<String, Value>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub additional_context: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub suppress_output: Option<bool>,
@@ -119,6 +121,9 @@ impl Output {
         }
         if let Some(decision) = &self.decision {
             if event != "agent_stop" || !["allow", "block"].contains(&decision.as_str()) { return Err(HookError::new(format!("invalid_stop_decision:{decision}"))); }
+        }
+        if self.modified_config.is_some() && event != "session_start" {
+            return Err(HookError::new(format!("modified_config_not_supported:{event}")));
         }
         Ok(())
     }
@@ -224,6 +229,10 @@ fn apply(event: &str, input: &mut Map<String, Value>, output: &Output) {
     if let Some(value) = &output.modified_result { input.insert(if event == "post_tool_use" { "tool_result" } else { "model_result" }.into(), value.clone()); }
     if let Some(value) = &output.modified_prompt { input.insert("prompt".into(), value.clone().into()); }
     if let Some(value) = &output.modified_transformed_prompt { input.insert("transformed_prompt".into(), value.clone().into()); }
+    if let Some(value) = &output.modified_config {
+        let mut config = input.get("config").and_then(Value::as_object).cloned().unwrap_or_default();
+        config.extend(value.clone()); input.insert("config".into(), Value::Object(config));
+    }
 }
 
 fn merge(target: &mut Output, update: &Output, contexts: &mut Vec<String>) {
@@ -231,6 +240,9 @@ fn merge(target: &mut Output, update: &Output, contexts: &mut Vec<String>) {
     if update.modified_args.is_some() { target.modified_args = update.modified_args.clone(); } if update.modified_request.is_some() { target.modified_request = update.modified_request.clone(); }
     if update.modified_result.is_some() { target.modified_result = update.modified_result.clone(); } if update.modified_prompt.is_some() { target.modified_prompt = update.modified_prompt.clone(); }
     if update.modified_transformed_prompt.is_some() { target.modified_transformed_prompt = update.modified_transformed_prompt.clone(); }
+    if let Some(value) = &update.modified_config {
+        target.modified_config.get_or_insert_with(Map::new).extend(value.clone());
+    }
     if let Some(value) = &update.additional_context { contexts.push(value.clone()); }
     target.suppress_output = Some(target.suppress_output.unwrap_or(false) || update.suppress_output.unwrap_or(false));
     if update.error_handling.is_some() { target.error_handling = update.error_handling.clone(); } target.retry_count = Some(target.retry_count.unwrap_or(0).max(update.retry_count.unwrap_or(0)));

@@ -33,6 +33,7 @@ import { grantExecutionApproval, isExecutionApproved, toolApprovalKey } from '..
 import { runWhoami } from './whoami.js';
 import { runCredentials } from './credentials.js';
 import { runCheatSheet } from './cheat-sheet.js';
+import { createProjectHookRuntime, runHooks } from './hooks.js';
 import pkg from '../../package.json' with { type: 'json' };
 import { runLogin, runLogout } from './account-auth.js';
 import { runHelp } from '../ui/cli/help.js';
@@ -262,21 +263,48 @@ function spawnGit(cwd, args) {
   if (result.status !== 0) throw new Error(`git exited ${result.status}`);
 }
 
-function selectedModel(cwd) {
-  const preferences = readCliPreferences(cwd) || {};
-  const snapshot = preferences.modelSnapshot?.model_key === preferences.modelPreference
-    ? mergeModelReference(preferences.modelSnapshot)
+function selectedModel(cwd, state = null) {
+  const saved = readCliPreferences(cwd) || {};
+  const sessionConfig = state?.hookEffectiveConfig || {};
+  const preferences = {
+    ...saved,
+    ...(sessionConfig.model_key ? { modelPreference: sessionConfig.model_key } : {}),
+    ...(sessionConfig.reasoning_effort ? { reasoningEffort: sessionConfig.reasoning_effort } : {}),
+    ...(sessionConfig.requested_service_tier ? { serviceTier: sessionConfig.requested_service_tier } : {}),
+  };
+  const snapshot = saved.modelSnapshot?.model_key === preferences.modelPreference
+    ? mergeModelReference(saved.modelSnapshot)
     : null;
   let model = snapshot || getModelRecord(preferences.modelPreference);
+  if (!model && sessionConfig.model_key && sessionConfig.model_key.includes(':')) {
+    const [provider, ...modelParts] = sessionConfig.model_key.split(':');
+    const providerModelId = modelParts.join(':');
+    if (provider && providerModelId) {
+      model = {
+        model_key: sessionConfig.model_key,
+        provider,
+        provider_model_id: providerModelId,
+        label: providerModelId,
+        context_window: null,
+        context_window_source: 'unknown',
+        max_output_tokens: null,
+        max_output_tokens_source: 'unknown',
+        reasoning_efforts: ['auto'],
+        default_reasoning_effort: null,
+        service_tiers: ['default'],
+        capabilities: {},
+      };
+    }
+  }
   if (!model && (preferences.modelPreference === 'auto' || !preferences.modelPreference)) {
-    model = mergeModelReference(preferences.modelSnapshot) || listModelCatalog()[0];
+    model = mergeModelReference(saved.modelSnapshot) || listModelCatalog()[0];
   }
   if (!model) throw new Error('Select an exact provider-verified model with /model first so Agent Sam can verify supported runtime controls.');
   return { preferences, model };
 }
 
 async function resolveModelForTurn(cwd, state) {
-  const selected = selectedModel(cwd);
+  const selected = selectedModel(cwd, state);
   const { preferences } = selected;
   let model = selected.model;
 
@@ -291,7 +319,7 @@ async function resolveModelForTurn(cwd, state) {
       capabilities: { ...(model.capabilities || {}), local_runtime: true, ...(Object.fromEntries((probe.capabilities || []).map((name) => [name, true]))) },
     };
     updateCliPreferences(cwd, { modelPreference: model.model_key, modelSnapshot: model });
-    return { preferences: readCliPreferences(cwd) || preferences, model, credential: null, verification: 'local_runtime' };
+    return { preferences: { ...(readCliPreferences(cwd) || preferences), reasoningEffort: preferences.reasoningEffort, serviceTier: preferences.serviceTier }, model, credential: null, verification: 'local_runtime' };
   }
 
   const credential = resolveProviderCredential(model.provider, { home: state.home });
@@ -305,7 +333,7 @@ async function resolveModelForTurn(cwd, state) {
     if (!live) throw new Error(`selected_model_not_available_for_credential:${model.provider}:${model.provider_model_id}`);
     model = live;
     updateCliPreferences(cwd, { modelPreference: live.model_key, modelSnapshot: live });
-    return { preferences: readCliPreferences(cwd) || preferences, model, credential, verification: 'provider_api' };
+    return { preferences: { ...(readCliPreferences(cwd) || preferences), reasoningEffort: preferences.reasoningEffort, serviceTier: preferences.serviceTier }, model, credential, verification: 'provider_api' };
   }
 
   if (preferences.modelSnapshot?.availability === 'available') {
@@ -595,7 +623,47 @@ function checkpointCompaction(state, model, result) {
   return receipt;
 }
 
+async function ensureShellHookExperience(state) {
+  if (state.hookExperience) return state.hookExperience;
+  const experience = await createProjectHookRuntime({
+    cwd: state.cwd,
+    projectRoot: state.projectRoot,
+    home: state.home,
+    sessionId: state.session?.id,
+    conversationId: state.session?.conversation_id,
+    hooks: state.codeHooks,
+  });
+  state.hookExperience = experience;
+  if (!state.hookSessionStarted) {
+    const config = {
+      model_key: state.session?.model_key || null,
+      reasoning_effort: state.session?.reasoning_effort || null,
+      requested_service_tier: state.session?.requested_service_tier || 'default',
+      auto_compact: state.session?.auto_compact !== false,
+    };
+    const started = await experience.runtime.dispatch('session_start', {
+      config,
+      project_root: state.projectRoot,
+      cwd: state.cwd,
+    }, {
+      session_id: state.session?.id,
+      source: 'agentsam-cli',
+    }, { cwd: state.cwd });
+    const modified = started.input.config || config;
+    const allowed = {};
+    for (const key of ['model_key', 'reasoning_effort', 'requested_service_tier', 'auto_compact']) {
+      if (modified[key] !== undefined) allowed[key] = modified[key];
+    }
+    state.hookEffectiveConfig = { ...config, ...allowed };
+    if (state.session && Object.keys(allowed).length) persistSession(state, allowed);
+    state.hookSessionContext = started.output.additional_context || null;
+    state.hookSessionStarted = true;
+  }
+  return experience;
+}
+
 async function runInteractiveModelTurn(prompt, state) {
+  const hookExperience = await ensureShellHookExperience(state);
   const resolved = await resolveModelForTurn(state.cwd, state);
   const { preferences, model, credential } = resolved;
   const provider = createProviderAdapter({
@@ -660,7 +728,13 @@ async function runInteractiveModelTurn(prompt, state) {
       autoCompact: state.session?.auto_compact !== false,
       onCompaction: result => { if (state.session) checkpointCompaction(state, model, result); },
       promptCacheKey: state.session?.id || undefined,
+      hookRuntime: hookExperience.runtime,
+      sessionId: state.session?.id || undefined,
       runId: runtimeRunId || state.session?.id || undefined,
+      source: 'agentsam-cli',
+      ...(state.hookSessionContext ? {
+        contextItems: [{ kind: 'hook', ref: 'hook://session-start/context', priority: 96, content: state.hookSessionContext }],
+      } : {}),
       beforeRequest: (preflight) => approveModelRequest(preflight, state),
       beforeTool: (request) => approveToolExecution(request, state),
       emit(event) {
@@ -793,7 +867,7 @@ export async function dispatchShellLine(line, state = {}) {
       'help', 'exit', 'quit', 'clear', 'status', 'models', 'model',
       'whoami', 'cf', 'cloudflare', 'db', 'tunnel', 'connections',
       'connect', 'usage', 'session', 'providers', 'credentials', 'cheatsheet',
-      'settings', 'logs',
+      'settings', 'logs', 'hooks', 'hook',
       'git', 'diff', 'pwd', 'cd', 'fast', 'flex', 'standard', 'reasoning',
     ];
     if (commonVerbs.includes(bare)) {
@@ -862,6 +936,22 @@ export async function dispatchShellLine(line, state = {}) {
           state.rl?.resume?.();
         }
         break;
+      case '/hooks':
+      case '/hook': {
+        const hookCommand = args[0] || 'status';
+        await runHooks(args.length ? args : ['status'], { cwd: state.cwd, write, home: state.home, hooks: state.codeHooks });
+        if (['init', 'enable', 'disable'].includes(hookCommand)) {
+          if (state.hookExperience && state.hookSessionStarted) {
+            await state.hookExperience.runtime.dispatch('session_end', {
+              status: 'reloading_hooks',
+              elapsed_ms: state.session ? localSessionElapsedMs(state.session) : 0,
+            }, { session_id: state.session?.id, source: 'agentsam-cli' }, { cwd: state.cwd });
+          }
+          state.hookExperience = null;
+          state.hookSessionStarted = false;
+        }
+        break;
+      }
       case '/providers':
         state.rl?.pause?.();
         try {
@@ -1113,6 +1203,7 @@ export async function runShell(argv = [], options = {}) {
     session: options.session || null,
     home: options.home,
     providerFetchImpl: options.providerFetchImpl,
+    codeHooks: options.hooks || null,
     persistFooter: options.persistFooter === true,
   };
   const sub = argv[0] || '';
@@ -1200,6 +1291,20 @@ export async function runShell(argv = [], options = {}) {
   } finally {
     restorePaste();
     state.rl = null;
+  }
+  if (state.hookExperience && state.hookSessionStarted) {
+    try {
+      await state.hookExperience.runtime.dispatch('session_end', {
+        status: interrupted ? 'interrupted' : 'paused',
+        elapsed_ms: state.session ? localSessionElapsedMs(state.session) : 0,
+        cumulative_usage: state.session?.cumulative_usage || {},
+      }, {
+        session_id: state.session?.id,
+        source: 'agentsam-cli',
+      }, { cwd: state.cwd });
+    } catch (error) {
+      writeLine(write, `  Hook cleanup warning: ${error?.message || error}`);
+    }
   }
   if (state.session) {
     const activeElapsedMs = localSessionElapsedMs(state.session);

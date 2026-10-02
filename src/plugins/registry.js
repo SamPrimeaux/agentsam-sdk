@@ -1,4 +1,5 @@
 import { normalizePluginManifest } from './contracts.js';
+import { createAiPluginProbePatch } from '../models/inventory-core.js';
 
 function clean(value) { return value == null ? '' : String(value).trim(); }
 function json(value, fallback) { try { return JSON.parse(String(value ?? '')); } catch { return fallback; } }
@@ -186,6 +187,61 @@ export async function recordPluginHealthCheck(db, value = {}) {
     value.pluginId, value.accountId,
   ]);
   return { id: checkId, status: value.status };
+}
+
+/**
+ * Persist credential-verified AI model availability in the existing plugin
+ * installation metadata. A failed probe records health evidence but preserves
+ * the last successful model snapshot.
+ */
+export async function recordAiPluginModelDiscovery(db, value = {}) {
+  if (!db?.prepare) throw new TypeError('D1-compatible database binding required');
+  const pluginId = clean(value.pluginId);
+  const accountId = clean(value.accountId);
+  if (!pluginId) throw new Error('plugin_id_required');
+  if (!accountId) throw new Error('plugin_account_id_required');
+  const plugin = await db.prepare(`
+    SELECT id, plugin_key, provider_key, environment, plugin_kind, metadata_json
+    FROM agentsam_plugins WHERE id = ? AND account_id = ? LIMIT 1
+  `).bind(pluginId, accountId).first();
+  if (!plugin) throw new Error(`plugin_not_found:${pluginId}`);
+  if (clean(plugin.plugin_kind) !== 'ai') throw new Error(`plugin_not_ai:${pluginId}`);
+
+  const probe = createAiPluginProbePatch(json(plugin.metadata_json, {}), value.discovery || {}, {
+    provider: value.provider || plugin.provider_key,
+    fetchedAtUnix: value.completedAt,
+  });
+  await runMutation(db, `
+    UPDATE agentsam_plugins SET metadata_json = ?, updated_at = unixepoch()
+    WHERE id = ? AND account_id = ?
+  `, [JSON.stringify(probe.metadata), pluginId, accountId]);
+
+  const snapshot = probe.metadata.model_snapshot || null;
+  const health = await recordPluginHealthCheck(db, {
+    pluginId,
+    pluginKey: plugin.plugin_key,
+    accountId,
+    environment: plugin.environment,
+    checkKind: 'model_inventory',
+    checkSource: value.checkSource || 'provider_discovery',
+    status: probe.health_status,
+    startedAt: value.startedAt,
+    completedAt: probe.last_health_at,
+    latencyMs: value.latencyMs,
+    httpStatus: value.httpStatus,
+    providerRequestId: value.providerRequestId,
+    errorCode: probe.last_error_code,
+    errorMessage: probe.last_error_message,
+    details: snapshot ? {
+      schema: snapshot.schema,
+      provider: snapshot.provider,
+      model_count: snapshot.model_count,
+      models_hash: snapshot.models_hash,
+      fetched_at_unix: snapshot.fetched_at_unix,
+      ...(value.discovery?.ok === true ? {} : { snapshot_preserved: true }),
+    } : { provider: clean(value.provider || plugin.provider_key), snapshot_preserved: true },
+  });
+  return Object.freeze({ ...health, plugin_id: pluginId, health_status: probe.health_status, model_snapshot: snapshot });
 }
 
 export async function recordToolCall(db, value = {}) {

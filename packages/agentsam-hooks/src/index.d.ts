@@ -36,6 +36,7 @@ export interface HookOutput {
   modified_result?: unknown;
   modified_prompt?: string;
   modified_transformed_prompt?: string;
+  modified_config?: Record<string, unknown>;
   additional_context?: string;
   suppress_output?: boolean;
   error_handling?: ErrorHandlingDecision;
@@ -52,6 +53,7 @@ export type HookHandler = (envelope: HookEnvelope) => HookOutput | null | undefi
 export interface HookDefinition {
   id?: string;
   handler: HookHandler;
+  matches?: (envelope: HookEnvelope) => boolean | Promise<boolean>;
   priority?: number;
   timeout_ms?: number;
   failure_mode?: HookFailureMode;
@@ -62,6 +64,7 @@ export interface HookReceipt {
   schema: 'agentsam.hook.receipt.v1';
   hook_id: string;
   hook: HookEvent;
+  invocation?: Readonly<HookInvocation>;
   status: 'completed' | 'failed';
   started_at: number;
   completed_at: number;
@@ -81,7 +84,7 @@ export interface HookDispatchResult {
 export interface HookRuntime {
   register(event: HookEvent | string, definition: HookDefinition | HookHandler): this;
   unregister(event: HookEvent | string, id: string): boolean;
-  list(event?: HookEvent | string): readonly Omit<HookDefinition, 'handler'>[];
+  list(event?: HookEvent | string): readonly Omit<HookDefinition, 'handler' | 'matches'>[];
   dispatch(event: HookEvent | string, input?: Record<string, unknown>, invocation?: HookInvocation, options?: { cwd?: string }): Promise<HookDispatchResult>;
 }
 
@@ -104,7 +107,7 @@ export class AgentSamHooks implements HookRuntime {
   constructor(options?: { hooks?: Record<string, HookDefinition | HookHandler | (HookDefinition | HookHandler)[]>; clock?: () => number; onReceipt?: (receipt: HookReceipt) => unknown });
   register(event: HookEvent | string, definition: HookDefinition | HookHandler): this;
   unregister(event: HookEvent | string, id: string): boolean;
-  list(event?: HookEvent | string): readonly Omit<HookDefinition, 'handler'>[];
+  list(event?: HookEvent | string): readonly Omit<HookDefinition, 'handler' | 'matches'>[];
   dispatch(event: HookEvent | string, input?: Record<string, unknown>, invocation?: HookInvocation, options?: { cwd?: string }): Promise<HookDispatchResult>;
 }
 export function ensureHookRuntime(value?: HookRuntime | Record<string, unknown>, options?: Record<string, unknown>): HookRuntime;
@@ -118,7 +121,42 @@ export function createHttpHookAdapter(options: { url: string; headers?: Record<s
 export function findHookConfig(startDirectory?: string, options?: Record<string, unknown>): string | null;
 export function loadHookConfig(filename?: string, options?: Record<string, unknown>): Record<string, unknown>;
 export function normalizeHookConfig(value: Record<string, unknown>, options?: Record<string, unknown>): Record<string, unknown>;
+export function createConfiguredHookAdapter(definition: Record<string, unknown>, configDirectory: string, options?: Record<string, unknown>): HookHandler;
 export function createHookRuntimeFromConfig(configOrFilename?: string | Record<string, unknown>, options?: Record<string, unknown>): { runtime: HookRuntime; config: Record<string, unknown> };
+
+export interface StoredHook {
+  id: string;
+  owner_id: string;
+  hook_key: string;
+  event_type: HookEvent;
+  source_kind: 'stored' | 'config' | 'code' | 'system';
+  scope_type: 'global' | 'account' | 'repository' | 'project' | 'session';
+  scope_ref: string | null;
+  handler_type: string;
+  handler_config: Record<string, unknown>;
+  match: Record<string, unknown>;
+  failure_mode: HookFailureMode;
+  priority: number;
+  timeout_ms: number;
+  is_active: boolean;
+  workflow_id: string | null;
+  description: string | null;
+  metadata: Record<string, unknown>;
+  revision: number;
+}
+export interface HookStore {
+  readonly ownerId: string;
+  listHooks(query?: Record<string, unknown>): Promise<readonly StoredHook[]>;
+  getHook(id: string): Promise<StoredHook | null>;
+  upsertHook(value: Record<string, unknown>): Promise<StoredHook>;
+  setHookActive(id: string, active: boolean): Promise<boolean>;
+  removeHook(id: string): Promise<boolean>;
+  recordExecution(receipt: HookReceipt, correlation?: Record<string, unknown>): Promise<string>;
+  listExecutions(query?: Record<string, unknown>): Promise<readonly Record<string, unknown>[]>;
+}
+export function createHookStore(db: { prepare(sql: string): unknown }, options?: { ownerId?: string }): HookStore;
+export function matchesHookInput(match?: Record<string, unknown>, input?: Record<string, unknown>): boolean;
+export function registerStoredHooks(runtime: HookRuntime, store: HookStore, options?: Record<string, unknown>): Promise<readonly StoredHook[]>;
 
 export interface CapabilityAdapter {
   toolDescriptors(options?: Record<string, unknown>): Array<{ name: string; description?: string; input_schema?: Record<string, unknown>; [key: string]: unknown }>;

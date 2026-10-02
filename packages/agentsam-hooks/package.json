@@ -13,6 +13,7 @@
     "./contracts": "./src/contracts.js",
     "./runtime": "./src/runtime.js",
     "./config": "./src/config.js",
+    "./store": "./src/store.js",
     "./adapters/callback": "./src/adapters/callback.js",
     "./adapters/command": "./src/adapters/command.js",
     "./adapters/http": "./src/adapters/http.js",
@@ -25,6 +26,8 @@
     "./protocol/input": "./protocol/agentsam.hook.v1.schema.json",
     "./protocol/output": "./protocol/agentsam.hook.output.v1.schema.json",
     "./protocol/config": "./protocol/agentsam.hooks.config.v1.schema.json",
+    "./schema/manifest": "./schema/manifest.json",
+    "./schema/sqlite": "./schema/migrations/sqlite/001_hooks_core.sql",
     "./package.json": "./package.json",
     "./protocol/receipt": "./protocol/agentsam.hook.receipt.v1.schema.json"
   },
@@ -36,6 +39,7 @@
     "bindings",
     "protocol",
     "scripts",
+    "schema",
     "src",
     "README.md"
   ],

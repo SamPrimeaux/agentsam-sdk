@@ -43,6 +43,7 @@ const OUTPUT_ALIASES = Object.freeze({
   modifiedRequest: 'modified_request',
   modifiedPrompt: 'modified_prompt',
   modifiedTransformedPrompt: 'modified_transformed_prompt',
+  modifiedConfig: 'modified_config',
   additionalContext: 'additional_context',
   suppressOutput: 'suppress_output',
   errorHandling: 'error_handling',
@@ -53,7 +54,7 @@ const OUTPUT_ALIASES = Object.freeze({
 });
 const OUTPUT_FIELDS = new Set([
   'permission_decision', 'permission_decision_reason', 'modified_args', 'modified_result',
-  'modified_request', 'modified_prompt', 'modified_transformed_prompt', 'additional_context',
+  'modified_request', 'modified_prompt', 'modified_transformed_prompt', 'modified_config', 'additional_context',
   'suppress_output', 'error_handling', 'retry_count', 'user_notification', 'decision',
   'reason', 'cleanup_actions', 'session_summary', 'metadata',
 ]);
@@ -68,6 +69,35 @@ function isObject(value) {
 
 function clone(value) {
   return value == null ? value : structuredClone(value);
+}
+
+function matchValue(expected, actual) {
+  if (expected == null || typeof expected !== 'object') return Object.is(expected, actual);
+  if (Array.isArray(expected)) {
+    return Array.isArray(actual) && expected.every((item) => actual.some((candidate) => matchValue(item, candidate)));
+  }
+  if ('$exists' in expected) return Boolean(expected.$exists) === (actual !== undefined && actual !== null);
+  if ('$eq' in expected) return matchValue(expected.$eq, actual);
+  if ('$in' in expected) {
+    if (!Array.isArray(expected.$in)) throw new TypeError('hook_match_$in_must_be_array');
+    return expected.$in.some((candidate) => matchValue(candidate, actual));
+  }
+  if ('$contains' in expected) {
+    if (typeof actual === 'string') return actual.includes(String(expected.$contains));
+    if (Array.isArray(actual)) return actual.some((candidate) => matchValue(expected.$contains, candidate));
+    return false;
+  }
+  if (!actual || typeof actual !== 'object' || Array.isArray(actual)) return false;
+  const entries = Object.entries(expected);
+  const unsupported = entries.find(([key]) => key.startsWith('$'));
+  if (unsupported) throw new Error(`unsupported_hook_match_operator:${unsupported[0]}`);
+  return entries.every(([key, value]) => matchValue(value, actual[key]));
+}
+
+/** Portable partial JSON matcher shared by config and stored hooks. */
+export function matchesHookInput(match = {}, input = {}) {
+  if (!isObject(match)) throw new TypeError('hook_match_must_be_object');
+  return matchValue(match, input);
 }
 
 function asOptionalString(value, field = 'value') {
@@ -176,6 +206,11 @@ export function normalizeHookOutput(event, value) {
     if (typeof source.modified_transformed_prompt !== 'string') throw new TypeError('modified_transformed_prompt_must_be_string');
     output.modified_transformed_prompt = source.modified_transformed_prompt;
   }
+  if (source.modified_config !== undefined) {
+    if (hook !== 'session_start') throw new Error(`modified_config_not_supported:${hook}`);
+    if (!isObject(source.modified_config)) throw new TypeError('modified_config_must_be_object');
+    output.modified_config = clone(source.modified_config);
+  }
 
   const context = asOptionalString(source.additional_context, 'additional_context');
   if (context) output.additional_context = context;
@@ -228,6 +263,7 @@ export function normalizeHookDefinition(event, value, index = 0) {
   const source = typeof value === 'function' ? { handler: value } : value;
   if (!isObject(source)) throw new TypeError(`hook_definition_must_be_object:${hook}`);
   if (typeof source.handler !== 'function') throw new TypeError(`hook_handler_required:${hook}`);
+  if (source.matches != null && typeof source.matches !== 'function') throw new TypeError(`hook_matches_must_be_function:${hook}`);
   const id = clean(source.id || `${hook}:${index + 1}`);
   if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(id)) throw new Error(`invalid_hook_id:${id}`);
   const timeoutMs = Number(source.timeout_ms ?? source.timeoutMs ?? 10_000);
@@ -238,6 +274,7 @@ export function normalizeHookDefinition(event, value, index = 0) {
     id,
     hook,
     handler: source.handler,
+    matches: source.matches,
     priority,
     timeout_ms: timeoutMs,
     failure_mode: normalizeHookFailureMode(source.failure_mode ?? source.failureMode, hook),

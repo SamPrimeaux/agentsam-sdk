@@ -24,6 +24,75 @@ export const WORKERS_AI_CURATED_MODEL_IDS = Object.freeze([
 ]);
 
 const CURATED = new Set(WORKERS_AI_CURATED_MODEL_IDS);
+export const PROVIDER_MODEL_SNAPSHOT_SCHEMA = 'agentsam.provider-model-snapshot.v1';
+
+function modelSnapshotHash(modelIds) {
+  const source = modelIds.join('\n');
+  let hash = 2166136261;
+  for (let index = 0; index < source.length; index += 1) {
+    hash ^= source.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `fnv1a32:${(hash >>> 0).toString(16).padStart(8, '0')}`;
+}
+
+/**
+ * Compact credential-scoped availability evidence for an existing
+ * `agentsam_plugins` AI installation. The global catalog remains curated
+ * reference data; discovery never creates one model row per user.
+ */
+export function createProviderModelSnapshot(provider, models = [], options = {}) {
+  const providerId = String(provider || '').trim().toLowerCase();
+  if (!providerId) throw new TypeError('provider_required');
+  const modelIds = [...new Set(models.map((row) => String(
+    typeof row === 'string' ? row : row?.provider_model_id || row?.model_id || '',
+  ).trim()).filter(Boolean))].sort();
+  const fetchedAtUnix = Number.isFinite(Number(options.fetchedAtUnix))
+    ? Math.max(0, Math.floor(Number(options.fetchedAtUnix)))
+    : Math.floor(Date.now() / 1000);
+  return Object.freeze({
+    schema: PROVIDER_MODEL_SNAPSHOT_SCHEMA,
+    provider: providerId,
+    model_ids: Object.freeze(modelIds),
+    model_count: modelIds.length,
+    models_hash: modelSnapshotHash(modelIds),
+    fetched_at_unix: fetchedAtUnix,
+    authority: 'credential_scoped_provider_discovery',
+  });
+}
+
+/**
+ * Produce fields for the existing `agentsam_plugins` row. Failed probes keep
+ * the last good snapshot while updating health evidence; no secret or model
+ * catalog rows are written.
+ */
+export function createAiPluginProbePatch(previousMetadata = {}, discovery = {}, options = {}) {
+  const now = Number.isFinite(Number(options.fetchedAtUnix))
+    ? Math.max(0, Math.floor(Number(options.fetchedAtUnix)))
+    : Math.floor(Date.now() / 1000);
+  const metadata = previousMetadata && typeof previousMetadata === 'object' && !Array.isArray(previousMetadata)
+    ? { ...previousMetadata }
+    : {};
+  if (discovery.ok === true) {
+    metadata.model_snapshot = createProviderModelSnapshot(
+      options.provider || discovery.provider,
+      discovery.models || [],
+      { fetchedAtUnix: now },
+    );
+  }
+  const error = String(discovery.error || '').trim();
+  const authFailure = /\b(?:401|403)\b|unauthoriz|forbidden|invalid[_ -]?(?:api[_ -]?)?key|credential.*reject/i.test(error);
+  return Object.freeze({
+    metadata,
+    health_status: discovery.ok === true ? 'healthy' : authFailure ? 'auth_error' : 'unreachable',
+    last_health_at: now,
+    ...(discovery.ok === true ? { last_healthy_at: now, consecutive_failures: 0, last_error_code: null, last_error_message: null } : {
+      consecutive_failures_delta: 1,
+      last_error_code: authFailure ? 'provider_credential_rejected' : 'provider_discovery_failed',
+      last_error_message: authFailure ? 'Provider credential rejected' : 'Provider model discovery failed',
+    }),
+  });
+}
 
 const SERVICE_TO_PROVIDER = Object.freeze({
   openai: 'openai',

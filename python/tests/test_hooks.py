@@ -21,6 +21,7 @@ class HookContractTests(unittest.TestCase):
         self.assertEqual(normalize_event("onPreToolUse"), "pre_tool_use")
         self.assertEqual(HookOutput(permission_decision="allow").to_dict(), {"permission_decision": "allow"})
         self.assertEqual(HookOutput.from_value({"modified_result": None}).to_dict(), {"modified_result": None})
+        self.assertEqual(HookOutput.from_value({"modified_config": {"auto_compact": False}}).to_dict(), {"modified_config": {"auto_compact": False}})
         with self.assertRaisesRegex(ValueError, "invalid_permission_decision"):
             HookOutput(permission_decision="maybe")
 
@@ -49,6 +50,23 @@ class HookRuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["input"]["tool_args"], {"value": 1, "first": True, "second": True})
         self.assertEqual(result["output"]["additional_context"], "first context\n\nsecond context")
         self.assertEqual([row["hook_id"] for row in result["receipts"]], ["first", "second"])
+
+    async def test_session_config_patches_compose(self):
+        runtime = HookRuntime()
+        runtime.register("session_start", HookDefinition(
+            id="model", priority=10,
+            handler=lambda _: {"modified_config": {"model_key": "xai:grok-4"}},
+        ))
+        runtime.register("session_start", HookDefinition(
+            id="effort", priority=20,
+            handler=lambda _: {"modified_config": {"reasoning_effort": "high"}},
+        ))
+        result = await runtime.dispatch("session_start", {"config": {"auto_compact": True}})
+        self.assertEqual(result["input"]["config"], {
+            "auto_compact": True,
+            "model_key": "xai:grok-4",
+            "reasoning_effort": "high",
+        })
 
     async def test_permission_hook_fails_closed(self):
         runtime = HookRuntime()

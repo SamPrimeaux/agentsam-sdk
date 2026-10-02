@@ -107,7 +107,9 @@ The package also supplies composable host ports for model providers, capabilitie
 MCP tools, LSP requests, and bounded sub-agent delegation. `runAgentSamTurn({ hooks })`
 instruments the existing autonomous tool loop directly, including capped
 `agent_stop` continuation. No hook config depends on a particular username, home
-directory plugin, model vendor, or operator account. See
+directory plugin, model vendor, or operator account. `agentsam hooks status|list|executions`
+shows code, project-config, and stored hooks through one ordered contract. The optional
+schema pack uses opaque owner/scope keys rather than tenant/workspace dependencies. See
 [`packages/agentsam-hooks/README.md`](packages/agentsam-hooks/README.md).
 
 ## Index an existing repository

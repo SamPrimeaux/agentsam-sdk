@@ -24,6 +24,7 @@ test('contract accepts ergonomic event/output aliases but emits canonical fields
   assert.equal(HOOK_PROTOCOL_SCHEMA, 'agentsam.hook.v1');
   assert.equal(new AgentSamHooks().list().length, 0);
   assert.equal(normalizeHookEvent('onPreToolUse'), 'pre_tool_use');
+  assert.deepEqual(normalizeHookOutput('session_start', { modifiedConfig: { auto_compact: false } }), { modified_config: { auto_compact: false } });
   assert.deepEqual(normalizeHookOutput('pre_tool_use', {
     permissionDecision: 'allow',
     modifiedArgs: { timeout: 30 },
@@ -69,6 +70,25 @@ test('runtime composes modifications in priority order and receipts exclude valu
   assert.equal(result.output.additional_context, 'first context\n\nsecond context');
   assert.deepEqual(result.receipts.map((row) => row.hook_id), ['first', 'second']);
   assert.equal(JSON.stringify(observed).includes('not-in-receipt'), false);
+});
+
+test('session-start config patches compose without discarding prior or base keys', async () => {
+  const hooks = createHookRuntime({ hooks: {
+    session_start: [
+      { id: 'model', priority: 10, handler: () => ({ modified_config: { model_key: 'xai:grok-4' } }) },
+      { id: 'effort', priority: 20, handler: () => ({ modified_config: { reasoning_effort: 'high' } }) },
+    ],
+  } });
+  const result = await hooks.dispatch('session_start', { config: { auto_compact: true } });
+  assert.deepEqual(result.input.config, {
+    auto_compact: true,
+    model_key: 'xai:grok-4',
+    reasoning_effort: 'high',
+  });
+  assert.deepEqual(result.output.modified_config, {
+    model_key: 'xai:grok-4',
+    reasoning_effort: 'high',
+  });
 });
 
 test('pre hooks fail closed by default while observers fail open', async () => {

@@ -208,6 +208,7 @@ test('runner hooks instrument prompts and providers and can request a bounded au
   };
   const hooks = {
     user_prompt_submitted: ({ input }) => ({ modified_prompt: `${input.prompt} with hook policy` }),
+    user_prompt_transformed: ({ input }) => ({ modified_transformed_prompt: `${input.transformed_prompt} and transformed guardrail` }),
     pre_model_use: ({ input }) => ({ permission_decision: 'allow', modified_request: { ...input.request, promptCacheKey: 'portable-hook-cache' } }),
     agent_stop: () => {
       stopCalls += 1;
@@ -224,7 +225,7 @@ test('runner hooks instrument prompts and providers and can request a bounded au
     maxHookContinuations: 1,
   });
   assert.equal(modelCalls, 2);
-  assert.equal(modelInputs[0], 'inspect repository with hook policy');
+  assert.equal(modelInputs[0], 'inspect repository with hook policy and transformed guardrail');
   assert.equal(modelInputs[1], 'Run one verification pass.');
   assert.equal(result.output_text, 'verified');
   assert.equal(result.total_cost_usd, 0.02);
@@ -232,6 +233,7 @@ test('runner hooks instrument prompts and providers and can request a bounded au
   assert.equal(result.run_budget.hook_continuations, 1);
   assert.equal(result.run_budget.max_hook_continuations, 1);
   assert.ok(result.hook_receipts.some(row => row.hook === 'user_prompt_submitted'));
+  assert.ok(result.hook_receipts.some(row => row.hook === 'user_prompt_transformed'));
   assert.ok(result.hook_receipts.some(row => row.hook === 'agent_stop'));
 });
 

@@ -54,6 +54,8 @@ def _merge_output(current: dict[str, Any], update: dict[str, Any]) -> None:
             current[key] = max(int(current.get(key, 0)), int(value))
         elif key == "cleanup_actions":
             current[key] = [*current.get(key, []), *value]
+        elif key == "modified_config":
+            current[key] = {**current.get(key, {}), **copy.deepcopy(value)}
         else:
             current[key] = copy.deepcopy(value)
 
@@ -69,6 +71,8 @@ def _update_input(event: str, value: dict[str, Any], output: dict[str, Any]) -> 
         value["prompt"] = output["modified_prompt"]
     if "modified_transformed_prompt" in output:
         value["transformed_prompt"] = output["modified_transformed_prompt"]
+    if "modified_config" in output:
+        value["config"] = {**value.get("config", {}), **copy.deepcopy(output["modified_config"])}
 
 
 def _terminal(event: str, output: dict[str, Any]) -> bool:

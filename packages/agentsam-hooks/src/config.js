@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { HOOK_CONFIG_SCHEMA, normalizeHookEvent } from './contracts.js';
+import { HOOK_CONFIG_SCHEMA, matchesHookInput, normalizeHookEvent } from './contracts.js';
 import { createHookRuntime } from './runtime.js';
 import { createCommandHookAdapter } from './adapters/command.js';
 import { createHttpHookAdapter } from './adapters/http.js';
@@ -74,12 +74,13 @@ export function normalizeHookConfig(value, options = {}) {
       if (typeof entry === 'string') return { id: `${hook}:${index + 1}`, adapter: entry };
       if (!object(entry)) throw new TypeError(`invalid_configured_hook:${hook}:${index}`);
       for (const key of Object.keys(entry)) {
-        if (!['id', 'adapter', 'priority', 'timeout_ms', 'failure_mode', 'enabled', 'metadata'].includes(key)) {
+        if (!['id', 'adapter', 'priority', 'timeout_ms', 'failure_mode', 'enabled', 'match', 'metadata'].includes(key)) {
           throw new Error(`unsupported_configured_hook_field:${hook}:${key}`);
         }
       }
       const adapter = clean(entry.adapter);
       if (!normalizedAdapters[adapter]) throw new Error(`unknown_hook_adapter:${adapter}`);
+      if (entry.match !== undefined && !object(entry.match)) throw new TypeError(`configured_hook_match_must_be_object:${hook}:${index}`);
       return { ...structuredClone(entry), id: clean(entry.id || `${hook}:${index + 1}`), adapter };
     });
   }
@@ -101,7 +102,7 @@ export function loadHookConfig(filename, options = {}) {
   return normalizeHookConfig(parsed, { source: resolved });
 }
 
-function configuredAdapter(definition, configDirectory, options) {
+export function createConfiguredHookAdapter(definition, configDirectory, options = {}) {
   const resolved = resolveEnvReferences(definition, options.env || process.env);
   if (resolved.type === 'http') return createHttpHookAdapter({ ...resolved, fetchImpl: options.fetchImpl });
   const cwd = resolved.cwd ? path.resolve(configDirectory, resolved.cwd) : configDirectory;
@@ -119,15 +120,16 @@ export function createHookRuntimeFromConfig(configOrFilename, options = {}) {
   const configDirectory = config.source ? path.dirname(config.source) : path.resolve(options.cwd || process.cwd());
   const handlers = new Map();
   for (const [id, definition] of Object.entries(config.adapters)) {
-    handlers.set(id, configuredAdapter(definition, configDirectory, options));
+    handlers.set(id, createConfiguredHookAdapter(definition, configDirectory, options));
   }
-  const runtime = createHookRuntime({ clock: options.clock, onReceipt: options.onReceipt });
+  const runtime = options.runtime || createHookRuntime({ clock: options.clock, onReceipt: options.onReceipt });
   for (const [hook, entries] of Object.entries(config.hooks)) {
     for (const entry of entries) {
       runtime.register(hook, {
         ...entry,
+        matches: entry.match ? (envelope) => matchesHookInput(entry.match, envelope.input) : undefined,
         handler: handlers.get(entry.adapter),
-        metadata: { ...(entry.metadata || {}), adapter: entry.adapter, config_source: config.source },
+        metadata: { ...(entry.metadata || {}), hook_source: 'config', adapter: entry.adapter, config_source: config.source },
       });
     }
   }

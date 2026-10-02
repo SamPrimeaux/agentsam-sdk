@@ -119,6 +119,7 @@
     "./theme/harbor": "./packages/theme-insurance-site/src/index.js",
     "./theme/summit": "./packages/theme-shinshu-site/src/index.js",
     "./models/inventory": "./src/models/inventory-core.js",
+    "./models/provider-snapshot-schema": "./protocol/models/provider-model-snapshot.v1.schema.json",
     "./local-engine": "./src/local-engine/index.js",
     "./local-engine/contracts": "./src/local-engine/contracts.js",
     "./local-engine/audit": "./src/local-engine/audit.js",
@@ -126,10 +127,13 @@
     "./local-engine/benchmark": "./src/local-engine/benchmark.js",
     "./goap": "./packages/agentsam-goap/src/index.js",
     "./hooks": "./packages/agentsam-hooks/src/index.js",
+    "./hooks/store": "./packages/agentsam-hooks/src/store.js",
     "./hooks/protocol/input": "./protocol/hooks/agentsam.hook.v1.schema.json",
     "./hooks/protocol/output": "./protocol/hooks/agentsam.hook.output.v1.schema.json",
     "./hooks/protocol/config": "./protocol/hooks/agentsam.hooks.config.v1.schema.json",
-    "./hooks/protocol/receipt": "./protocol/hooks/agentsam.hook.receipt.v1.schema.json"
+    "./hooks/protocol/receipt": "./protocol/hooks/agentsam.hook.receipt.v1.schema.json",
+    "./hooks/schema/manifest": "./packages/agentsam-hooks/schema/manifest.json",
+    "./hooks/schema/sqlite": "./migrations/runtime/0005_agentsam_hooks.sql"
   },
   "bin": {
     "agentsam": "bin/agentsam",

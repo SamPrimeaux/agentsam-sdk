@@ -1,0 +1,54 @@
+{
+  "$schema": "https://agentsam.dev/protocol/database/agentsam.schema-pack.v1.schema.json",
+  "schema": "agentsam.schema-pack.v1",
+  "id": "agentsam.hooks",
+  "version": "1.0.0",
+  "pack_family": "agentsam.hooks",
+  "components": [
+    "hooks.core"
+  ],
+  "component_dependencies": {
+    "hooks.core": []
+  },
+  "adapters": [
+    "sqlite",
+    "portable-d1",
+    "injected-sql"
+  ],
+  "sql": {
+    "portable_dir": "migrations/sqlite",
+    "files": {
+      "hooks.core": [
+        "001_hooks_core.sql"
+      ]
+    },
+    "apply_order_fresh": [
+      "001_hooks_core.sql"
+    ],
+    "apply_order_upgrade_v1_to_v2": [],
+    "optional_after_core": []
+  },
+  "tables": {
+    "hooks.core": [
+      "agentsam_hook",
+      "agentsam_hook_execution"
+    ]
+  },
+  "table_patterns": [
+    "agentsam_hook*"
+  ],
+  "seed_policy": "none",
+  "compatibility": {
+    "legacy-hosted": {
+      "owns_portable_schema": false,
+      "notes": "Hosted tables with tenant_id/workspace_id/user_id require an explicit host-owned rebuild; the portable pack never guesses account ownership."
+    }
+  },
+  "recovery": {
+    "authority": "execution receipts",
+    "storage": "value-free input/output key lists plus redacted errors",
+    "retention": "host policy"
+  },
+  "owner": "@inneranimalmedia/agentsam-hooks",
+  "notes": "Portable hook definitions use opaque owner_id plus scope_type/scope_ref instead of tenant/workspace columns. Code and config hooks share the event and receipt contracts but do not need to be materialized as definition rows. Secrets remain runtime-owned references."
+}

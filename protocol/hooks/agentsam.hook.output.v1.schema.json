@@ -11,6 +11,7 @@
     "modified_result": {},
     "modified_prompt": { "type": "string" },
     "modified_transformed_prompt": { "type": "string" },
+    "modified_config": { "type": "object" },
     "additional_context": { "type": "string" },
     "suppress_output": { "type": "boolean" },
     "error_handling": { "enum": ["retry", "skip", "abort"] },

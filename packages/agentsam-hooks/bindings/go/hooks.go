@@ -60,8 +60,9 @@ type Output struct {
 	ModifiedRequest          map[string]any `json:"modified_request,omitempty"`
 	ModifiedResult           any            `json:"modified_result,omitempty"`
 	ModifiedPrompt           *string        `json:"modified_prompt,omitempty"`
-	ModifiedTransformedPrompt *string       `json:"modified_transformed_prompt,omitempty"`
-	AdditionalContext        string         `json:"additional_context,omitempty"`
+	ModifiedTransformedPrompt *string        `json:"modified_transformed_prompt,omitempty"`
+	ModifiedConfig            map[string]any `json:"modified_config,omitempty"`
+	AdditionalContext         string         `json:"additional_context,omitempty"`
 	SuppressOutput           bool           `json:"suppress_output,omitempty"`
 	ErrorHandling            string         `json:"error_handling,omitempty"`
 	RetryCount               int            `json:"retry_count,omitempty"`
@@ -88,6 +89,7 @@ func (o Output) Validate(event string) error {
 	if o.Decision != "" && (event != "agent_stop" || (o.Decision != "allow" && o.Decision != "block")) {
 		return fmt.Errorf("invalid_stop_decision:%s", o.Decision)
 	}
+	if o.ModifiedConfig != nil && event != "session_start" { return fmt.Errorf("modified_config_not_supported:%s", event) }
 	return nil
 }
 
@@ -177,6 +179,10 @@ func apply(event string, input map[string]any, output Output) {
 	if output.ModifiedResult != nil { if event == "post_tool_use" { input["tool_result"] = output.ModifiedResult } else { input["model_result"] = output.ModifiedResult } }
 	if output.ModifiedPrompt != nil { input["prompt"] = *output.ModifiedPrompt }
 	if output.ModifiedTransformedPrompt != nil { input["transformed_prompt"] = *output.ModifiedTransformedPrompt }
+	if output.ModifiedConfig != nil {
+		config, _ := input["config"].(map[string]any); config = cloneMap(config)
+		for key, value := range output.ModifiedConfig { config[key] = value }; input["config"] = config
+	}
 }
 
 func merge(target *Output, update Output, contexts *[]string) {
@@ -184,6 +190,10 @@ func merge(target *Output, update Output, contexts *[]string) {
 	if update.ModifiedArgs != nil { target.ModifiedArgs = update.ModifiedArgs }; if update.ModifiedRequest != nil { target.ModifiedRequest = update.ModifiedRequest }
 	if update.ModifiedResult != nil { target.ModifiedResult = update.ModifiedResult }; if update.ModifiedPrompt != nil { target.ModifiedPrompt = update.ModifiedPrompt }
 	if update.ModifiedTransformedPrompt != nil { target.ModifiedTransformedPrompt = update.ModifiedTransformedPrompt }
+	if update.ModifiedConfig != nil {
+		if target.ModifiedConfig == nil { target.ModifiedConfig = map[string]any{} }
+		for key, value := range update.ModifiedConfig { target.ModifiedConfig[key] = value }
+	}
 	if update.AdditionalContext != "" { *contexts = append(*contexts, update.AdditionalContext) }
 	target.SuppressOutput = target.SuppressOutput || update.SuppressOutput
 	if update.ErrorHandling != "" { target.ErrorHandling = update.ErrorHandling }; if update.RetryCount > target.RetryCount { target.RetryCount = update.RetryCount }

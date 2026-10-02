@@ -80,6 +80,7 @@ class HookOutput:
     modified_result: Any = None
     modified_prompt: Optional[str] = None
     modified_transformed_prompt: Optional[str] = None
+    modified_config: Optional[Mapping[str, Any]] = None
     additional_context: Optional[str] = None
     suppress_output: Optional[bool] = None
     error_handling: Optional[str] = None

@@ -133,6 +133,41 @@ printf '%s\n' '{"tool_name":"repository.snapshot","tool_args":{}}' \
 
 `invoke` is useful for conformance tests and host runtimes. It is not a permission bypass: the host must still enforce the returned decision.
 
+The full AgentSam CLI also exposes the merged code/config/stored view and its
+execution evidence:
+
+```sh
+agentsam hooks status
+agentsam hooks list
+agentsam hooks executions
+```
+
+## Portable storage pack
+
+`schema/manifest.json` describes the optional `agentsam.hooks` schema pack. Its
+SQLite/D1-compatible migration creates only `agentsam_hook` and
+`agentsam_hook_execution`. Portable ownership is an opaque `owner_id` plus an
+optional `scope_type`/`scope_ref`; it does not require tenant, workspace, user,
+workflow, or credential tables.
+
+```js
+import { createHookStore, createHookRuntime, registerStoredHooks } from '@inneranimalmedia/agentsam-hooks';
+
+const store = createHookStore(db, { ownerId: accountId });
+const runtime = createHookRuntime({ onReceipt: receipt => store.recordExecution(receipt) });
+await registerStoredHooks(runtime, store, {
+  cwd: projectRoot,
+  context: { project_root: projectRoot, session_id: sessionId },
+});
+```
+
+Receipts retain ids, timing, input/output **keys**, status, and redacted errors;
+they do not retain prompt, model response, tool argument, or tool result values.
+Handler secrets must remain host-owned references. Config `match` and stored
+`match_json` use the same portable partial-object matcher with exact values plus
+`$eq`, `$in`, `$exists`, and `$contains`; unmatched hooks are not invoked and do
+not emit execution receipts.
+
 ## Composition semantics
 
 Hooks run by ascending `priority`, then ID. Modifications are passed into the next hook. Additional context is appended in order. Suppression is sticky. A `deny`, `ask`, or agent-stop `block` decision ends that hook chain.

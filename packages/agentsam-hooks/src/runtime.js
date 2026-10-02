@@ -10,6 +10,8 @@ function clone(value) {
   return value == null ? value : structuredClone(value);
 }
 
+const SKIPPED_MATCH = Symbol('agentsam_hook_skipped_match');
+
 function nowMs(clock) {
   const value = Number(clock());
   if (!Number.isFinite(value) || value < 0) throw new TypeError('hook_clock_must_return_non_negative_number');
@@ -61,6 +63,10 @@ function updateWorkingInput(hook, input, output) {
   }
   if (output.modified_prompt !== undefined) next.prompt = output.modified_prompt;
   if (output.modified_transformed_prompt !== undefined) next.transformed_prompt = output.modified_transformed_prompt;
+  if (output.modified_config !== undefined) next.config = {
+    ...(next.config && typeof next.config === 'object' && !Array.isArray(next.config) ? next.config : {}),
+    ...clone(output.modified_config),
+  };
   return next;
 }
 
@@ -71,6 +77,7 @@ function mergeOutput(current, output) {
     if (key === 'suppress_output') next.suppress_output = next.suppress_output === true || value === true;
     else if (key === 'retry_count') next.retry_count = Math.max(Number(next.retry_count || 0), Number(value || 0));
     else if (key === 'cleanup_actions') next.cleanup_actions = [...(next.cleanup_actions || []), ...value];
+    else if (key === 'modified_config') next.modified_config = { ...(next.modified_config || {}), ...clone(value) };
     else next[key] = clone(value);
   }
   return next;
@@ -123,9 +130,9 @@ export function createHookRuntime(options = {}) {
   }
 
   function list(event) {
-    if (event == null) return Object.freeze([...registry.values()].flat().map((row) => Object.freeze({ ...row, handler: undefined })));
+    if (event == null) return Object.freeze([...registry.values()].flat().map((row) => Object.freeze({ ...row, handler: undefined, matches: undefined })));
     const hook = normalizeHookEvent(event);
-    return Object.freeze((registry.get(hook) || []).map((row) => Object.freeze({ ...row, handler: undefined })));
+    return Object.freeze((registry.get(hook) || []).map((row) => Object.freeze({ ...row, handler: undefined, matches: undefined })));
   }
 
   async function dispatch(event, input = {}, invocation = {}, dispatchOptions = {}) {
@@ -146,7 +153,11 @@ export function createHookRuntime(options = {}) {
       let output;
       let receipt;
       try {
-        const raw = await withTimeout(Promise.resolve().then(() => definition.handler(envelope)), definition.timeout_ms, definition.id);
+        const raw = await withTimeout(Promise.resolve().then(async () => {
+          if (definition.matches && !await definition.matches(envelope)) return SKIPPED_MATCH;
+          return definition.handler(envelope);
+        }), definition.timeout_ms, definition.id);
+        if (raw === SKIPPED_MATCH) continue;
         output = normalizeHookOutput(hook, raw);
         workingInput = updateWorkingInput(hook, workingInput, output);
         combinedOutput = mergeOutput(combinedOutput, output);

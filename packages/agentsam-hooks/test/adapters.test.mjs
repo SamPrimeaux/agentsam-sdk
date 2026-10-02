@@ -2,15 +2,18 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 import {
   createAgentCapabilityAdapter,
   createCompositeCapabilityAdapter,
   createHookRuntime,
   createHookRuntimeFromConfig,
+  createHookStore,
   createLspCapabilityAdapter,
   createMcpCapabilityAdapter,
   findHookConfig,
+  registerStoredHooks,
 } from '../src/index.js';
 
 function temporaryDirectory(t) {
@@ -39,12 +42,14 @@ test('explicit project config discovers and runs a relative command adapter', as
   fs.writeFileSync(configFile, JSON.stringify({
     schema: 'agentsam.hooks.config.v1',
     adapters: { policy: { type: 'command', command: process.execPath, args: ['allow.mjs'], timeout_ms: 2000 } },
-    hooks: { pre_tool_use: [{ id: 'policy', adapter: 'policy', failure_mode: 'closed' }] },
+    hooks: { pre_tool_use: [{ id: 'policy', adapter: 'policy', failure_mode: 'closed', match: { tool_name: { $eq: 'safe' } } }] },
   }));
   assert.equal(findHookConfig(nested), configFile);
   const { runtime } = createHookRuntimeFromConfig(configFile);
   const result = await runtime.dispatch('pre_tool_use', { tool_name: 'safe', tool_args: {} });
   assert.equal(result.output.permission_decision, 'allow');
+  const skipped = await runtime.dispatch('pre_tool_use', { tool_name: 'other', tool_args: {} });
+  assert.equal(skipped.receipts.length, 0);
 });
 
 test('MCP adapter discovers tools through a host port', async () => {
@@ -95,6 +100,59 @@ test('composite adapter rejects duplicate names and routes distinct capabilities
   assert.throws(() => createCompositeCapabilityAdapter([first, first]).toolDescriptors(), /duplicate_capability/);
 });
 
+test('portable hook store keeps scoped definitions and value-free execution evidence', async () => {
+  const database = new DatabaseSync(':memory:');
+  const schemaFile = path.resolve(import.meta.dirname, '../schema/migrations/sqlite/001_hooks_core.sql');
+  database.exec(fs.readFileSync(schemaFile, 'utf8'));
+  const db = {
+    prepare(sql) {
+      const statement = database.prepare(sql);
+      return {
+        bind(...values) {
+          return {
+            run: async () => statement.run(...values),
+            first: async () => statement.get(...values) ?? null,
+            all: async () => ({ results: statement.all(...values) }),
+          };
+        },
+      };
+    },
+  };
+  const store = createHookStore(db, { ownerId: 'acct_test' });
+  await store.upsertHook({
+    hook_key: 'audit.prompt',
+    event_type: 'user_prompt_submitted',
+    source_kind: 'stored',
+    scope_type: 'project',
+    scope_ref: '/workspace/demo',
+    handler_type: 'log_only',
+    match: { prompt: { $contains: 'persist' } },
+    priority: 20,
+  });
+  assert.equal((await store.listHooks({ context: { project_root: '/workspace/other' } })).length, 0);
+  assert.equal((await store.listHooks({ context: { project_root: '/workspace/demo' } })).length, 1);
+
+  const runtime = createHookRuntime();
+  await registerStoredHooks(runtime, store, { cwd: '/workspace/demo', context: { project_root: '/workspace/demo' } });
+  const skipped = await runtime.dispatch('user_prompt_submitted', { prompt: 'unmatched' }, { session_id: 'sess_1' });
+  assert.equal(skipped.receipts.length, 0);
+  const dispatched = await runtime.dispatch('user_prompt_submitted', { prompt: 'do not persist me' }, {
+    session_id: 'sess_1',
+    metadata: { private_note: 'also do not persist me' },
+  });
+  await store.recordExecution(dispatched.receipts[0], {
+    source_kind: 'stored',
+    context: { trace_id: 'trace_safe', private_note: 'still do not persist me' },
+  });
+  const executions = await store.listExecutions();
+  assert.equal(executions.length, 1);
+  assert.deepEqual(executions[0].input_keys, ['prompt']);
+  assert.doesNotMatch(executions[0].receipt_json, /do not persist me/);
+  assert.deepEqual(executions[0].receipt.invocation, { session_id: 'sess_1' });
+  assert.deepEqual(executions[0].correlation, { trace_id: 'trace_safe' });
+  database.close();
+});
+
 test('generated package schemas stay byte-identical to protocol authority', () => {
   const root = path.resolve(import.meta.dirname, '../../..');
   for (const filename of [
@@ -108,4 +166,9 @@ test('generated package schemas stay byte-identical to protocol authority', () =
       fs.readFileSync(path.join(root, 'packages', 'agentsam-hooks', 'protocol', filename), 'utf8'),
     );
   }
+  assert.equal(
+    fs.readFileSync(path.join(root, 'migrations', 'runtime', '0005_agentsam_hooks.sql'), 'utf8'),
+    fs.readFileSync(path.join(root, 'packages', 'agentsam-hooks', 'schema', 'migrations', 'sqlite', '001_hooks_core.sql'), 'utf8'),
+  );
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root, 'packages', 'agentsam-hooks', 'schema', 'manifest.json'))).id, 'agentsam.hooks');
 });
