@@ -8,6 +8,7 @@ import {
   adoptAsset,
   auditAssets,
   auditLocalCompute,
+  auditHost,
   createLlamaCppEngine,
   createMlxLmEngine,
   createOllamaEngine,
@@ -36,6 +37,16 @@ test('compute audit is read-only and honest on non-Apple hosts', () => {
   assert.equal(result.schema_version, 'agentsam.compute.audit.v1');
   assert.equal(result.hardware.memory.vram_bytes, null);
   assert.equal(result.hardware.apple_silicon, false);
+  assert.equal(Array.isArray(result.hardware.shells), true);
+});
+
+test('host audit dispatches without Apple assumptions', () => {
+  const windows = auditHost({ platform: 'win32', arch: 'x64', env: {} });
+  assert.equal(windows.host.platform, 'windows');
+  assert.equal(windows.memory.vram_bytes, null);
+  const linux = auditHost({ platform: 'linux', arch: 'x64', env: {} });
+  assert.equal(linux.host.platform, 'linux');
+  assert.equal(linux.memory.unified_memory_bytes, null);
 });
 
 test('asset adoption records an external reference without copying weights', () => {

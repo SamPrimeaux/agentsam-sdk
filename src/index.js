@@ -87,6 +87,7 @@ export {
   createMlxLmEngine,
   createLlamaCppEngine,
   auditLocalCompute,
+  auditHost,
   auditAppleHost,
   auditTools,
   auditAssets,

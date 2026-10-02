@@ -75,6 +75,59 @@ export function auditTools(options = {}) {
   });
 }
 
+function auditLinuxHost(options = {}) {
+  const env = options.env || process.env;
+  const memory = command('free', ['-b'], options.runner || spawnSync);
+  const cpu = command('lscpu', [], options.runner || spawnSync);
+  const osRelease = command('uname', ['-a'], options.runner || spawnSync);
+  const memoryLine = memory.stdout.split(/\n/).find((line) => /^Mem:/i.test(line));
+  const memoryBytes = memoryLine ? Number(memoryLine.trim().split(/\s+/)[1]) || null : null;
+  return {
+    schema_version: COMPUTE_AUDIT_SCHEMA,
+    generated_at: new Date().toISOString(),
+    host: { platform: 'linux', arch: options.arch || process.arch, hostname: os.hostname() },
+    apple_silicon: false,
+    chip: { name: value(cpu.stdout, 'Model name') || value(cpu.stdout, 'Architecture'), family: null, cores: value(cpu.stdout, 'CPU\\(s\\)') },
+    memory: { unified_memory_bytes: null, system_memory_bytes: memoryBytes, vram_bytes: null, model: 'system' },
+    accelerators: [{ id: 'nvidia-smi', available: Boolean(executable('nvidia-smi', env)), evidence: 'optional' }],
+    shells: auditShells(options),
+    evidence: [{ source: 'uname', ok: osRelease.ok }, { source: 'lscpu', ok: cpu.ok }, { source: 'free', ok: memory.ok }],
+    warnings: ['Linux accelerator memory is engine/vendor-specific and is not inferred as system VRAM.'],
+  };
+}
+
+function auditWindowsHost(options = {}) {
+  const env = options.env || process.env;
+  const powershell = executable('pwsh', env) || executable('powershell.exe', env);
+  const result = powershell ? command(powershell, ['-NoProfile', '-NonInteractive', '-Command', '$c=Get-CimInstance Win32_ComputerSystem; $g=Get-CimInstance Win32_VideoController; [pscustomobject]@{model=$c.Model;memory=$c.TotalPhysicalMemory;gpu=($g.Name -join ";")}|ConvertTo-Json -Compress'], options.runner || spawnSync) : { ok: false, stdout: '' };
+  let facts = {}; try { facts = JSON.parse(result.stdout || '{}'); } catch {}
+  return {
+    schema_version: COMPUTE_AUDIT_SCHEMA,
+    generated_at: new Date().toISOString(),
+    host: { platform: 'windows', arch: options.arch || process.arch, hostname: os.hostname() },
+    apple_silicon: false,
+    chip: { name: facts.model || null, family: null, cores: null },
+    memory: { unified_memory_bytes: null, system_memory_bytes: Number(facts.memory) || null, vram_bytes: null, model: 'system' },
+    accelerators: [{ id: 'video-controller', available: Boolean(facts.gpu), name: facts.gpu || null }],
+    shells: auditShells(options),
+    evidence: [{ source: powershell || 'powershell', ok: result.ok }],
+    warnings: ['Windows GPU memory is reported only when the vendor API exposes it; no VRAM estimate is made.'],
+  };
+}
+
+function auditShells(options = {}) {
+  const env = options.env || process.env;
+  return ['pwsh', 'powershell.exe', 'bash', 'zsh', 'sh'].map((name) => ({ id: name, path: executable(name, env), available: Boolean(executable(name, env)) }));
+}
+
+export function auditHost(options = {}) {
+  const platform = options.platform || process.platform;
+  if (platform === 'darwin') return { ...auditAppleHost(options), shells: auditShells(options) };
+  if (platform === 'win32') return auditWindowsHost(options);
+  if (platform === 'linux') return auditLinuxHost(options);
+  return { ...parseAppleAudit({ platform, arch: options.arch || process.arch }), shells: auditShells(options) };
+}
+
 export function auditLocalCompute(options = {}) {
-  return { schema_version: COMPUTE_AUDIT_SCHEMA, generated_at: new Date().toISOString(), hardware: auditAppleHost(options), engines: auditTools(options) };
+  return { schema_version: COMPUTE_AUDIT_SCHEMA, generated_at: new Date().toISOString(), hardware: auditHost(options), engines: auditTools(options) };
 }

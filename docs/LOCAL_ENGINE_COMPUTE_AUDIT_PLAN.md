@@ -123,9 +123,20 @@ The contract must distinguish `supported`, `unsupported`, `unknown`, and `availa
 
 ## 5. Hardware and engine inventory implementation
 
-### 5.1 Apple Silicon audit
+### 5.1 Cross-platform host audit
 
-Implement `src/local-engine/audit/apple.js` with injectable command/filesystem readers. On macOS, collect only available facts using bounded probes:
+The compute audit is universal. Apple Silicon is a high-value specialization, not the host assumption. Implement platform modules behind one `auditHost()` dispatcher with injectable command/filesystem readers:
+
+- **macOS:** Apple Silicon, unified memory, Metal, system profiler, and MLX evidence.
+- **Linux:** distribution/kernel, CPU topology, system memory, NVIDIA/AMD accelerator discovery when vendor tools are present, and shell/runtime inventory.
+- **Windows:** PowerShell or `pwsh`, WMI/CIM hardware facts, GPU controller discovery, system memory, and shell/runtime inventory.
+- **Other platforms:** return normalized host identity and explicit unavailable fields; never emulate Apple/VRAM facts.
+
+All platform implementations must report `vram_bytes: null` unless a vendor/API probe provides a defensible value. PowerShell, Bash, Zsh, and POSIX shell availability are inventory facts, not engine assumptions.
+
+### 5.2 Apple Silicon audit
+
+Implement the macOS specialization with injectable command/filesystem readers. On macOS, collect only available facts using bounded probes:
 
 - `uname`/Node OS facts: platform, kernel, architecture, Rosetta indicators.
 - `sysctl`: `hw.model`, `hw.memsize`, CPU brand/core counts where available.
