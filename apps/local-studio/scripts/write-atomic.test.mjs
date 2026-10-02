@@ -15,6 +15,8 @@ import { test } from "node:test";
 import { handOver, parseWriteAtomicArgs, stagingError } from "./write-atomic.mjs";
 
 const TEMPLATE_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const SDK_ROOT = join(TEMPLATE_ROOT, "..", "..");
+const CANONICAL_OG_SKILL_ROOT = join(SDK_ROOT, "skills/grok-og");
 const SCRIPT = join(TEMPLATE_ROOT, "scripts/write-atomic.mjs");
 
 function makeWorkspace() {
@@ -166,7 +168,7 @@ test("cli: relative paths follow the script's root, not the caller's cwd", () =>
 
 test("every hand-over the og skill prints is one this script accepts", () => {
   // The card and banner recipes live in the skill's references/, not SKILL.md.
-  const skillDir = join(TEMPLATE_ROOT, ".grok/skills/og");
+  const skillDir = CANONICAL_OG_SKILL_ROOT;
   const docs = [
     join(skillDir, "SKILL.md"),
     ...readdirSync(join(skillDir, "references")).map((f) => join(skillDir, "references", f)),

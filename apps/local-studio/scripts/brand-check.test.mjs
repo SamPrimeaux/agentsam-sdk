@@ -16,6 +16,8 @@ import {
 } from "./brand-check.mjs";
 
 const TEMPLATE_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const SDK_ROOT = join(TEMPLATE_ROOT, "..", "..");
+const CANONICAL_OG_SKILL_ROOT = join(SDK_ROOT, "skills/grok-og");
 const SCRIPT = join(TEMPLATE_ROOT, "scripts/brand-check.mjs");
 
 const GAME_SITE = JSON.stringify({ title: "Wild Race", type: "x:game", card: "custom" });
@@ -303,7 +305,13 @@ test("cli: a non-game with a compliant card passes", () => {
 
 // --- the prompts are the only enforcement here, so pin them to the code ---
 
-const readDoc = (rel) => readFileSync(join(TEMPLATE_ROOT, rel), "utf8");
+const readDoc = (rel) =>
+  readFileSync(
+    rel === ".grok/skills/og/SKILL.md"
+      ? join(CANONICAL_OG_SKILL_ROOT, "SKILL.md")
+      : join(TEMPLATE_ROOT, rel),
+    "utf8",
+  );
 
 test("SKILL.md and AGENTS.md name the marker path and bound this script uses", () => {
   // Prose wraps, so the minute count may straddle a line break.
