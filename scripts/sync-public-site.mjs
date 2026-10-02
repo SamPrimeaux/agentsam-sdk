@@ -98,6 +98,29 @@ const installables = {
 };
 
 const outJson = path.join(siteRoot, 'global/installables.json');
+
+// Keep generated output idempotent. If the payload is unchanged apart from
+// generated_at, preserve the prior timestamp instead of dirtying the repo on
+// every site:sync / prepublishOnly run.
+if (fs.existsSync(outJson)) {
+  try {
+    const previous = JSON.parse(fs.readFileSync(outJson, 'utf8'));
+    const comparable = {
+      ...installables,
+      generated_at: previous.generated_at,
+    };
+
+    if (
+      typeof previous.generated_at === 'string' &&
+      JSON.stringify(previous) === JSON.stringify(comparable)
+    ) {
+      installables.generated_at = previous.generated_at;
+    }
+  } catch {
+    // Invalid/missing prior output: generate a fresh timestamp normally.
+  }
+}
+
 fs.mkdirSync(path.dirname(outJson), { recursive: true });
 fs.writeFileSync(outJson, `${JSON.stringify(installables, null, 2)}\n`);
 
