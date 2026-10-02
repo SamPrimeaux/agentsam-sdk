@@ -119,12 +119,21 @@
     "./theme/harbor": "./packages/theme-insurance-site/src/index.js",
     "./theme/summit": "./packages/theme-shinshu-site/src/index.js",
     "./models/inventory": "./src/models/inventory-core.js",
+    "./models/provider-snapshot-schema": "./protocol/models/provider-model-snapshot.v1.schema.json",
     "./local-engine": "./src/local-engine/index.js",
     "./local-engine/contracts": "./src/local-engine/contracts.js",
     "./local-engine/audit": "./src/local-engine/audit.js",
     "./local-engine/assets": "./src/local-engine/assets.js",
     "./local-engine/benchmark": "./src/local-engine/benchmark.js",
-    "./goap": "./packages/agentsam-goap/src/index.js"
+    "./goap": "./packages/agentsam-goap/src/index.js",
+    "./hooks": "./packages/agentsam-hooks/src/index.js",
+    "./hooks/store": "./packages/agentsam-hooks/src/store.js",
+    "./hooks/protocol/input": "./protocol/hooks/agentsam.hook.v1.schema.json",
+    "./hooks/protocol/output": "./protocol/hooks/agentsam.hook.output.v1.schema.json",
+    "./hooks/protocol/config": "./protocol/hooks/agentsam.hooks.config.v1.schema.json",
+    "./hooks/protocol/receipt": "./protocol/hooks/agentsam.hook.receipt.v1.schema.json",
+    "./hooks/schema/manifest": "./packages/agentsam-hooks/schema/manifest.json",
+    "./hooks/schema/sqlite": "./migrations/runtime/0005_agentsam_hooks.sql"
   },
   "bin": {
     "agentsam": "bin/agentsam",
@@ -132,7 +141,8 @@
     "agentsam-scaffold": "bin/scaffold.mjs",
     "agentsam-auth-portal": "packages/identity/scripts/preview-auth-portal.mjs",
     "agentsam-rapid-rust": "bin/agentsam-rapid-rust",
-    "agentsam-rust": "bin/agentsam-rapid-rust"
+    "agentsam-rust": "bin/agentsam-rapid-rust",
+    "agentsam-hooks": "packages/agentsam-hooks/bin/agentsam-hooks.mjs"
   },
   "files": [
     "src",
@@ -142,6 +152,7 @@
     "packages/agentsam-brand/bin",
     "packages/agentsam-brand/src",
     "packages/agentsam-contracts",
+    "packages/agentsam-hooks",
     "packages/agentsam-errors",
     "packages/agentsam-repository",
     "packages/agentsam-knowledge",
@@ -231,6 +242,7 @@
     "packages/agentsam-docs-theme",
     "packages/agentsam-errors",
     "packages/agentsam-goap",
+    "packages/agentsam-hooks",
     "packages/agentsam-ide",
     "packages/agentsam-key-manager",
     "packages/agentsam-knowledge",
@@ -271,7 +283,7 @@
     "test:terminal:mock": "node --test test/terminal/*.test.mjs",
     "test:live:terminal": "node --test test/live/*.live.test.mjs",
     "test:identity": "npm --prefix packages/identity test",
-    "test:workspaces": "npm --prefix packages/agentsam-contracts test && npm --prefix packages/agentsam-contracts run typecheck && npm --prefix packages/agentsam-errors test && npm --prefix packages/agentsam-vault test && npm --prefix packages/agentsam-repository test && npm --prefix packages/agentsam-workbench test && npm --prefix packages/agentsam-workbench run typecheck && npm --prefix packages/agentsam-nav run typecheck && npm --prefix packages/agentsam-shell-kit run typecheck && npm --prefix packages/work-graph test && npm --prefix packages/agentsam-queue-control test && npm --prefix packages/cms-runtime test && npm --prefix packages/agentsam-goap test",
+    "test:workspaces": "npm --prefix packages/agentsam-contracts test && npm --prefix packages/agentsam-contracts run typecheck && npm --prefix packages/agentsam-errors test && npm --prefix packages/agentsam-vault test && npm --prefix packages/agentsam-repository test && npm --prefix packages/agentsam-workbench test && npm --prefix packages/agentsam-workbench run typecheck && npm --prefix packages/agentsam-nav run typecheck && npm --prefix packages/agentsam-shell-kit run typecheck && npm --prefix packages/work-graph test && npm --prefix packages/agentsam-queue-control test && npm --prefix packages/cms-runtime test && npm --prefix packages/agentsam-goap test && npm --prefix packages/agentsam-hooks test",
     "test:autorag": "npm --prefix packages/agentsam-knowledge test",
     "smoke": "node test/smoke.mjs",
     "verify:package": "node scripts/verify-package.mjs",
@@ -316,7 +328,8 @@
     "release:train:check": "node scripts/release-train.mjs check",
     "release:train:align": "node scripts/release-train.mjs align",
     "ci:products": "node scripts/ci-products.mjs",
-    "verify:packages:public": "node scripts/verify-public-packages.mjs"
+    "verify:packages:public": "node scripts/verify-public-packages.mjs",
+    "test:hooks": "npm --prefix packages/agentsam-hooks test"
   },
   "engines": {
     "node": ">=22 <25",

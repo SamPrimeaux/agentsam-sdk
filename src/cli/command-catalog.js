@@ -47,6 +47,7 @@ export const CLI_COMMAND_CATALOG = Object.freeze([
   },
   { id: 'db', summary: 'Project-local SQLite status/init', topic: 'runtime', skill: 'agentsam-app-fundamentals' },
   { id: 'models', summary: 'Probe hosted/local model availability', topic: 'start', skill: 'agentsam-app-fundamentals', common: true },
+  { id: 'hooks', aliases: ['hook'], summary: 'Inspect lifecycle hooks, sources, and execution receipts', topic: 'runtime', skill: 'agentsam-app-fundamentals', common: true, usage: ['agentsam hooks status', 'agentsam hooks list', 'agentsam hooks executions [--limit N]', 'agentsam hooks init'] },
   { id: 'providers', summary: 'Configure machine provider credentials', topic: 'start', skill: 'agentsam-app-fundamentals' },
   { id: 'credentials', aliases: ['credential'], summary: 'Audit credentials, drift, and failure remediation (never prints secrets)', topic: 'start', skill: 'agentsam-app-fundamentals', common: true },
   { id: 'cheat-sheet', aliases: ['cheatsheet'], summary: 'Organized command groups (gcloud-like)', topic: 'start', skill: 'agentsam-app-fundamentals', common: true },

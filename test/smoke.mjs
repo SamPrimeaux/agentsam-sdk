@@ -57,6 +57,7 @@ assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/db'));
 assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/agent'));
 assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/model'));
 assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/providers'));
+assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/hooks'));
 assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/reasoning'));
 assert.ok(SLASH_COMMANDS.some((c) => c.cmd === '/fast'));
 assert.deepEqual(

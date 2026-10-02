@@ -95,6 +95,23 @@ Portal-hosted OAuth (Cloudflare’s own consent on `*.mcp.cloudflare.com`) is se
 from AgentSam’s CF connection token. Keep tokens in each client’s credential store;
 do not commit them.
 
+## Lifecycle hooks and portable agent adapters
+
+`@inneranimalmedia/agentsam-hooks` and the SDK `/hooks` export provide a
+provider-neutral `agentsam.hook.v1` lifecycle boundary. In-process JavaScript and
+TypeScript callbacks use the same JSON envelope as Python, Go, Rust, command, and
+HTTP hooks. Pre-tool/model policy fails closed by default; observational hooks
+fail open with bounded, value-free receipts.
+
+The package also supplies composable host ports for model providers, capabilities,
+MCP tools, LSP requests, and bounded sub-agent delegation. `runAgentSamTurn({ hooks })`
+instruments the existing autonomous tool loop directly, including capped
+`agent_stop` continuation. No hook config depends on a particular username, home
+directory plugin, model vendor, or operator account. `agentsam hooks status|list|executions`
+shows code, project-config, and stored hooks through one ordered contract. The optional
+schema pack uses opaque owner/scope keys rather than tenant/workspace dependencies. See
+[`packages/agentsam-hooks/README.md`](packages/agentsam-hooks/README.md).
+
 ## Index an existing repository
 
 ```sh
@@ -161,6 +178,7 @@ read-only `repository.snapshot` composition primitive. See [Capabilities and pre
 | --- | --- | --- |
 | Capability registry + presets | `agentsam capabilities`, `/capabilities`, `/presets` | [Capabilities](docs/CAPABILITIES.md) |
 | Portable AgentSam skills | `agentsam skills`; `/skills` | [Skills](skills/README.md) |
+| Lifecycle hooks + MCP/LSP/sub-agent adapters | `/hooks`; `agentsam-hooks` | [AgentSam Hooks](packages/agentsam-hooks/README.md) |
 | Canonical repository snapshot | `agentsam inspect --json`; `/repository` | [Capabilities](docs/CAPABILITIES.md) |
 | Git context and bridge client | `agentsam context --json`; `/git-context`, `/bridge-client` | [Portable context](docs/PORTABLE_CONTEXT.md) |
 | Identity contracts and adapters | `/identity`; `agentsam identity init` | [Identity](packages/identity/README.md) |

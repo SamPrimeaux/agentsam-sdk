@@ -75,6 +75,7 @@ const GROUPS = Object.freeze([
     label: 'AI',
     commands: [
       ['models', 'Hosted + local model probes'],
+      ['hooks', 'Lifecycle sources, dispatch order, and receipts'],
       ['skills', 'Portable skill vocabulary'],
       ['context', 'Context economics + git bridge'],
       ['usage / session', 'Spend and resume receipts'],

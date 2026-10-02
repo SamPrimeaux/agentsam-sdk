@@ -13,6 +13,26 @@ python3 -m unittest discover -s tests -v
 
 Protocol: [`../protocol/README.md`](../protocol/README.md). Do not advance this tree without mirroring the monorepo (or the reverse).
 
+## Portable lifecycle hooks
+
+`agentsam_sdk.hooks` implements the same `agentsam.hook.v1` envelope as the
+JavaScript/TypeScript, Go, Rust, command, and HTTP adapters. It is stdlib-only:
+
+```python
+from agentsam_sdk.hooks import HookRuntime
+
+hooks = HookRuntime()
+hooks.register("pre_tool_use", lambda envelope: {
+    "permission_decision": "allow"
+})
+result = await hooks.dispatch("pre_tool_use", {
+    "tool_name": "repository.snapshot", "tool_args": {}
+})
+```
+
+See [`../packages/agentsam-hooks/README.md`](../packages/agentsam-hooks/README.md)
+for composition, permission, and subprocess transport rules.
+
 ## Optional sibling packages (not part of stdlib core)
 
 | Package | Path | Notes |

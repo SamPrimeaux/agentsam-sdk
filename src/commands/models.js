@@ -17,7 +17,7 @@ export const API_PROVIDERS = Object.freeze([
   { id: 'openai', label: 'OpenAI', credential: 'OPENAI_API_KEY' },
   { id: 'anthropic', label: 'Anthropic', credential: 'ANTHROPIC_API_KEY' },
   { id: 'gemini', label: 'Gemini', credential: 'GEMINI_API_KEY' },
-  { id: 'grok', label: 'Grok / xAI', credential: 'XAI_API_KEY' },
+  { id: 'xai', label: 'Grok / xAI', credential: 'XAI_API_KEY' },
   { id: 'cursor', label: 'Cursor', credential: 'CURSOR_API_KEY' },
   { id: 'cloudflare', label: 'Cloudflare', credential: 'CLOUDFLARE_API_TOKEN' },
 ]);

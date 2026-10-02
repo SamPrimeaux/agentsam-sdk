@@ -1,0 +1,11 @@
+[package]
+name = "agentsam-hooks"
+version = "2.6.9"
+edition = "2021"
+description = "Language-neutral agentsam.hook.v1 contracts and callback runtime"
+license = "MIT"
+repository = "https://github.com/SamPrimeaux/agentsam-sdk"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

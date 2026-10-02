@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.dev/protocol/models/provider-model-snapshot.v1.schema.json",
+  "title": "AgentSam credential-scoped provider model snapshot",
+  "description": "Compact metadata_json payload for an agentsam_plugins AI installation. This is availability evidence, not the global model catalog and never contains credential material.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "provider", "model_ids", "model_count", "models_hash", "fetched_at_unix"],
+  "properties": {
+    "schema": { "const": "agentsam.provider-model-snapshot.v1" },
+    "provider": { "type": "string", "minLength": 1 },
+    "model_ids": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "model_count": { "type": "integer", "minimum": 0 },
+    "models_hash": { "type": "string", "pattern": "^fnv1a32:[0-9a-f]{8}$" },
+    "fetched_at_unix": { "type": "integer", "minimum": 0 },
+    "authority": { "const": "credential_scoped_provider_discovery" }
+  }
+}

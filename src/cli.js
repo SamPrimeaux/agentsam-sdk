@@ -52,6 +52,7 @@ import { runLogin, runLogout } from './commands/account-auth.js';
 import { runPlugins } from './commands/plugins.js';
 import { runCredentials } from './commands/credentials.js';
 import { runCheatSheet } from './commands/cheat-sheet.js';
+import { runHooks } from './commands/hooks.js';
 import { runCompute } from './commands/compute.js';
 import { runGoogleCloud } from './commands/google-cloud.js';
 import { runBilling } from './commands/billing.js';
@@ -502,6 +503,14 @@ if (command === '--version' || command === '-v') {
   } catch (e) {
     reportCliError(e);
     process.exit(1);
+  }
+} else if (command === 'hooks' || command === 'hook') {
+  try {
+    const code = await runHooks(rest);
+    if (typeof code === 'number' && code !== 0) process.exitCode = code;
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
   }
 } else if (command === 'app' || command === 'apps') {
   try {

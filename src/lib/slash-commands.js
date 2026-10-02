@@ -12,6 +12,7 @@ export const SLASH_COMMANDS = [
   { cmd: '/context', description: 'Show model context economics; add repo for Git bridge context', lane: 'context' },
   { cmd: '/status', description: 'Honest project awareness: account, models, terminal, live deploy', lane: 'local' },
   { cmd: '/models', description: 'Probe providers and provider-verified known models', lane: 'model' },
+  { cmd: '/hooks', description: 'Inspect lifecycle hook sources, order, and execution receipts', lane: 'agent' },
   { cmd: '/providers', description: 'Configure and verify machine provider credentials', lane: 'model' },
   { cmd: '/credentials', description: 'Audit credentials, drift, and remediation (never prints secrets)', lane: 'identity' },
   { cmd: '/cheat-sheet', description: 'Organized Agent Sam command groups', lane: 'local' },

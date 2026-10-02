@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.dev/protocol/hooks/agentsam.hook.receipt.v1.schema.json",
+  "title": "AgentSam hook execution receipt",
+  "type": "object",
+  "required": ["schema", "hook_id", "hook", "status", "started_at", "completed_at", "duration_ms", "input_keys", "output_keys"],
+  "properties": {
+    "schema": { "const": "agentsam.hook.receipt.v1" },
+    "hook_id": { "type": "string", "minLength": 1 },
+    "hook": {
+      "enum": [
+        "session_start", "session_end", "user_prompt_submitted", "user_prompt_transformed",
+        "pre_model_use", "post_model_use", "pre_tool_use", "post_tool_use",
+        "post_tool_use_failure", "error_occurred", "agent_stop", "subagent_start", "subagent_stop"
+      ]
+    },
+    "invocation": { "type": "object" },
+    "status": { "enum": ["completed", "failed"] },
+    "started_at": { "type": "number", "minimum": 0 },
+    "completed_at": { "type": "number", "minimum": 0 },
+    "duration_ms": { "type": "number", "minimum": 0 },
+    "input_keys": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "output_keys": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "error": {
+      "type": "object",
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "type": "string" },
+        "message": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

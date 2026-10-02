@@ -4,6 +4,7 @@ import { createLocalSqliteDatabase } from './sqlite.js';
 import { applyRuntimeMigrations } from './migrations.js';
 import { findCliProjectRoot } from '../lib/cli-preferences.js';
 import { getLocalDatabasePath, tryReadProjectConfig } from '../lib/project-config.js';
+import { createHookStore } from '../../packages/agentsam-hooks/src/store.js';
 
 function clean(value) { return value == null ? '' : String(value).trim(); }
 function hash(value) { return createHash('sha256').update(String(value || '')).digest('hex'); }
@@ -186,4 +187,49 @@ export async function pruneExpiredRuntimeState(value = {}) {
     const approvals = await db.prepare("UPDATE agentsam_approval_queue SET status = 'expired' WHERE status = 'pending' AND expires_at IS NOT NULL AND expires_at <= ?").bind(nowUnix).run();
     return { digests: Number(digests.changes || 0), compactions: Number(compactions.changes || 0), approvals_expired: Number(approvals.changes || 0) };
   });
+}
+
+function hookStore(db, value = {}) {
+  return createHookStore(db, { ownerId: clean(value.owner_id || value.account_id) || 'local' });
+}
+
+export async function listRuntimeHooks(value = {}) {
+  return withStore(value.projectRoot || value.cwd, (db) => hookStore(db, value).listHooks({
+    activeOnly: value.activeOnly,
+    event_type: value.event_type,
+    context: value.context,
+  }));
+}
+
+export async function upsertRuntimeHook(value = {}) {
+  return withStore(value.projectRoot || value.cwd, (db) => hookStore(db, value).upsertHook(value));
+}
+
+export async function setRuntimeHookActive(value = {}) {
+  return withStore(value.projectRoot || value.cwd, (db) => hookStore(db, value).setHookActive(value.hook_id || value.hook_key, value.active));
+}
+
+export async function removeRuntimeHook(value = {}) {
+  return withStore(value.projectRoot || value.cwd, (db) => hookStore(db, value).removeHook(value.hook_id || value.hook_key));
+}
+
+export async function recordRuntimeHookReceipt(value = {}) {
+  if (!value.receipt) return null;
+  return withStore(value.projectRoot || value.cwd, (db) => hookStore(db, value).recordExecution(value.receipt, {
+    source_kind: value.source_kind,
+    hook_id: value.hook_id,
+    invocation_id: value.invocation_id,
+    agent_run_id: value.agent_run_id,
+    session_id: value.session_id,
+    conversation_id: value.conversation_id,
+    context: value.context,
+  }));
+}
+
+export async function listRuntimeHookExecutions(value = {}) {
+  return withStore(value.projectRoot || value.cwd, (db) => hookStore(db, value).listExecutions({
+    hook_key: value.hook_key,
+    status: value.status,
+    limit: value.limit,
+  }));
 }
