@@ -365,6 +365,7 @@ export async function runApp(argv = [], options = {}) {
       'agentsam app doctor <id>',
       'agentsam app preview <id>',
       'agentsam app scaffold <id> <dir>',
+      'agentsam app package <id> [--dry-run]',
       '',
     ].join('\n'));
     return;
@@ -423,6 +424,15 @@ export async function runApp(argv = [], options = {}) {
     write(`  ${curl}\n\n`);
     write('  app_id is stable product identity. Pass --app-id explicitly; no AGENTSAM_DEFAULT_APP.\n\n');
     return { id: app.id, curl, command: npmCmd };
+  }
+  if (command === 'package') {
+    const dryRun = rest.includes('--dry-run') || !rest.includes('--write');
+    const packArgs = ['pack', ...(dryRun ? ['--dry-run', '--ignore-scripts'] : []), '--json'];
+    const result = spawnSync('npm', packArgs, { cwd: app.dir, encoding: 'utf8', env: process.env });
+    if (result.status !== 0) throw new Error(String(result.stderr || result.stdout || `npm pack failed for ${app.id}`).trim());
+    const metadata = JSON.parse(result.stdout)[0];
+    write(`${JSON.stringify({ app_id: app.id, package: metadata.name, version: metadata.version, filename: metadata.filename, size: metadata.size, dry_run: dryRun }, null, 2)}\n`);
+    return metadata;
   }
   if (command === 'doctor' || command === 'preview') {
     runAppBin(app, [command, ...rest], options);

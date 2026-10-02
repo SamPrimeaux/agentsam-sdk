@@ -37,3 +37,28 @@ Rules:
 - The SDK root owns package/tooling release concerns; app workspace dependencies stay inside each app.
 
 Current product apps governed by the architecture test are `local-studio/`, `cad-creator/`, and `client-cms-editor/`. `frontend/` remains a public-site seed lane rather than a self-contained product workspace, and `_incoming/` is an import drop zone.
+
+## Portable packaging checklist
+
+Run from the repository root before publishing an APP:
+
+```sh
+npm run app:validate
+npm run app:packaging
+agentsam app package <app-id> --dry-run
+```
+
+`app:packaging` audits every APP manifest in `apps/` and package-owned APP under `packages/`. It verifies the package name/manifest relationship, explicit npm `files` allowlists, app-owned lockfiles, CLI bins, frontend/backend package boundaries where declared, and excludes donor/reference/attachment payloads from packed artifacts. It does not download dependencies, build a frontend, deploy a Worker, or claim a release is ready.
+
+For an app workspace, the release sequence is:
+
+```sh
+cd apps/<app-id>
+npm ci
+npm run build
+npm run typecheck --workspaces --if-present
+npm test
+npm pack --dry-run --json
+```
+
+Frontend packages must publish compiled browser-safe assets only when they are intentionally public. Backend packages must keep secrets, `.dev.vars`, local databases, and host credentials out of `files`. Cloudflare Worker configuration remains backend-owned and is deployed separately from the npm tarball unless the app's package contract explicitly includes it.
