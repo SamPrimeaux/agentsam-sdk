@@ -284,6 +284,30 @@ export default defineConfig(({ command, isPreview }) => ({
         replacement: resolvePath(cfImagesPackageRoot, "src/index.ts"),
       },
       {
+        find: /^@inneranimalmedia\/agentsam-work$/,
+        replacement: resolvePath(workPackageRoot, "src/index.ts"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-work\/client$/,
+        replacement: resolvePath(workPackageRoot, "src/client/index.ts"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-work\/contracts$/,
+        replacement: resolvePath(workPackageRoot, "src/contracts/index.ts"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-work\/frontend$/,
+        replacement: resolvePath(workPackageRoot, "src/frontend/index.ts"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-work\/fixtures$/,
+        replacement: resolvePath(workPackageRoot, "src/fixtures/index.ts"),
+      },
+      {
+        find: /^@inneranimalmedia\/agentsam-work\/theme\.css$/,
+        replacement: resolvePath(workPackageRoot, "src/frontend/theme.css"),
+      },
+      {
         find: "@inneranimalmedia/agentsam-workbench",
         replacement: workbenchSource,
       },
