@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-workbench",
-  "version": "2.6.7",
+  "version": "2.6.9",
   "description": "Reusable AgentSam workbench primitives for agent threads, composer, browser, terminal and resizable work surfaces.",
   "type": "module",
   "main": "./dist/index.js",
@@ -45,7 +45,7 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-contracts": "2.6.7"
+    "@inneranimalmedia/agentsam-contracts": "2.6.9"
   },
   "peerDependencies": {
     "react": ">=18",
@@ -54,10 +54,10 @@
   "devDependencies": {
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "esbuild": "^0.28.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "typescript": "^5.9.3",
-    "esbuild": "^0.28.1"
+    "typescript": "^5.9.3"
   },
   "publishConfig": {
     "access": "public"

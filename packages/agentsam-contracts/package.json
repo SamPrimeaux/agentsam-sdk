@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-contracts",
-  "version": "2.6.7",
+  "version": "2.6.9",
   "description": "Framework-neutral AgentSam contracts for workbench, tools, providers, events, hooks, execution, identity and repository context.",
   "type": "module",
   "main": "./dist/index.js",
@@ -73,8 +73,8 @@
     "prepack": "npm run build"
   },
   "devDependencies": {
-    "typescript": "^5.9.3",
-    "esbuild": "^0.28.1"
+    "esbuild": "^0.28.1",
+    "typescript": "^5.9.3"
   },
   "publishConfig": {
     "access": "public"

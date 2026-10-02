@@ -46,7 +46,7 @@ runtime:
 packages:
   root_sdk:
     name: "@inneranimalmedia/agentsam-sdk"
-    version: "2.6.8"
+    version: "2.6.9"
     path: .
     private: false
     registry: npm
@@ -59,7 +59,7 @@ packages:
       - agentsam-auth-portal
   identity:
     name: "@inneranimalmedia/agentsam-identity"
-    version: "2.6.7"
+    version: "2.6.9"
     path: packages/identity
     private: false
     separately_published: true
@@ -67,22 +67,22 @@ packages:
     public_import_prefix: "@inneranimalmedia/agentsam-sdk/identity"
   agentsam_contracts:
     name: "@inneranimalmedia/agentsam-contracts"
-    version: "0.1.0"
+    version: "2.6.9"
     path: packages/agentsam-contracts
-    private: true
-    separately_published: false
+    private: false
+    separately_published: true
   agentsam_workbench:
     name: "@inneranimalmedia/agentsam-workbench"
-    version: "0.1.0"
+    version: "2.6.9"
     path: packages/agentsam-workbench
-    private: true
-    separately_published: false
+    private: false
+    separately_published: true
   shell_kit:
     name: "@inneranimalmedia/agentsam-shell-kit"
-    version: "0.1.0"
+    version: "2.6.9"
     path: packages/agentsam-shell-kit
-    private: true
-    separately_published: false
+    private: false
+    separately_published: true
     compatibility_facade_for: "@inneranimalmedia/agentsam-workbench/shell"
   python_tools:
     name: agentsam-sdk
@@ -235,16 +235,16 @@ security_contract:
 
 release:
   root_sdk:
-    target_version: "2.6.8"
+    target_version: "2.6.9"
     state: candidate
     registry: npm
-    current_latest: "2.6.7"
+    current_latest: "2.6.8"
     current_alpha: "2.0.0-alpha.identity.12"
     candidate_base_head: 2d7c8214809bf9a947f6151e9745d98695892f46
-    published_at_utc: "2026-09-25T01:08:01.582Z"
-    published_git_head: 9564560d715df507527631e1065fe4f496566414
-    dist_integrity: "sha512-jGQbLHwurW3zt0MkpDzsvuy9y+fqc9RQzDpUjtQC/LiCoZT7yThAuQQyL2KXj0oeKK15mVM+VOjdG0Xg4yL0oA=="
-    git_tag: v2.6.3
+    published_at_utc: "2026-10-02T05:00:55.232Z"
+    published_git_head: f6b9ffa44f48b07fc6f172210e26c5dc23646778
+    dist_integrity: "sha512-7UIZeM2i79nky3vCKkA1nh2t5SpuojqaVV3S/6w7NxcLQc7FFii9lF0uK/4iqNhK2C26DrylR9KkUqAhfHuQCA=="
+    git_tag: v2.6.8
     verification_command: npm run verify:release
     publish_mode: manual
   identity:

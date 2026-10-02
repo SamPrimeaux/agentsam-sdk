@@ -1,7 +1,7 @@
 {
   "name": "@inneranimalmedia/theme-grove",
-  "version": "2.6.7",
-  "description": "Real Anything Floors & More public site — services, gallery, process, and contact.",
+  "version": "2.6.9",
+  "description": "Real Anything Floors & More public site \u2014 services, gallery, process, and contact.",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
@@ -37,6 +37,5 @@
     "type": "git",
     "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
     "directory": "packages/theme-floors-site"
-  },
-  "private": true
+  }
 }

@@ -34,6 +34,14 @@ describe('Lane 1 packed identity consumer proof', () => {
     const work = fs.mkdtempSync(path.join(os.tmpdir(), 'lane1-pack-'));
     const artifacts = path.join(work, 'artifacts');
     fs.mkdirSync(artifacts);
+    const errorsRoot = path.join(REPO, 'packages', 'agentsam-errors');
+    const errorsPackOut = run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', artifacts], errorsRoot);
+    const errorsPacked = JSON.parse(errorsPackOut);
+    const errorsTarballName = errorsPacked[0]?.filename || errorsPacked.filename;
+    assert.ok(errorsTarballName, 'agentsam-errors npm pack must emit a tarball name');
+    const errorsTarballDest = path.join(artifacts, errorsTarballName);
+    assert.ok(fs.existsSync(errorsTarballDest), errorsTarballDest);
+
     const packOut = run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', artifacts], REPO);
     const packed = JSON.parse(packOut);
     const tarballName = packed[0]?.filename || packed.filename;
@@ -54,7 +62,7 @@ describe('Lane 1 packed identity consumer proof', () => {
     );
     run(
       'npm',
-      ['install', tarballDest, '--ignore-scripts', '--no-audit', '--no-fund'],
+      ['install', errorsTarballDest, tarballDest, '--ignore-scripts', '--no-audit', '--no-fund'],
       consumer,
     );
 

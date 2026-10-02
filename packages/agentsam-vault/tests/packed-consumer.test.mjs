@@ -7,6 +7,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const expectedVersion = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8')).version;
 
 function run(command, args, cwd) {
   const env = { ...process.env };
@@ -53,7 +54,7 @@ test('packed vault exposes every declared public subpath to a clean consumer', (
     if (!resolver.createCredentialResolver) throw new Error('resolver export missing');
     if (!oauth.sealOauthToken) throw new Error('oauth export missing');
     if (pkg.default.name !== '@inneranimalmedia/agentsam-vault') throw new Error('package identity mismatch');
-    if (pkg.default.version !== '2.6.8') throw new Error('package version mismatch');
+    if (pkg.default.version !== ${JSON.stringify(expectedVersion)}) throw new Error('package version mismatch');
   `;
   run(process.execPath, ['--input-type=module', '-e', script], consumer);
 

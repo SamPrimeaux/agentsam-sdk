@@ -1,19 +1,30 @@
 {
   "name": "@inneranimalmedia/agentsam-shell-kit",
-  "version": "2.6.7",
+  "version": "2.6.9",
   "description": "Compatibility facade for the AgentSam workbench shell. New code uses @inneranimalmedia/agentsam-workbench.",
   "type": "module",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
   "exports": {
-    ".": "./src/index.ts",
-    "./shell": "./src/shell/index.ts",
-    "./empty-state": "./src/empty-state/index.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./shell": {
+      "types": "./dist/shell/index.d.ts",
+      "import": "./dist/shell/index.js"
+    },
+    "./empty-state": {
+      "types": "./dist/empty-state/index.d.ts",
+      "import": "./dist/empty-state/index.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "tsc --noEmit",
-    "test": "echo \"shell-kit: private workspace — not published yet\" && exit 0",
-    "typecheck": "tsc --noEmit"
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "pretest": "npm run build",
+    "test": "node --test test/*.test.mjs",
+    "prepack": "npm run build"
   },
   "peerDependencies": {
     "react": ">=18",
@@ -21,7 +32,8 @@
   },
   "devDependencies": {
     "@types/react": "19.2.18",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "esbuild": "^0.28.1"
   },
   "keywords": [
     "agentsam",
@@ -39,13 +51,17 @@
     "directory": "packages/agentsam-shell-kit"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-workbench": "2.6.7"
+    "@inneranimalmedia/agentsam-workbench": "2.6.9"
   },
   "publishConfig": {
     "access": "public"
   },
   "files": [
-    "package.json",
-    "src"
+    "dist",
+    "README.md"
+  ],
+  "types": "./dist/index.d.ts",
+  "sideEffects": [
+    "./dist/empty-state/EmptyState.css"
   ]
 }

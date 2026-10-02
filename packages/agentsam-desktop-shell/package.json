@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-desktop-shell",
-  "version": "2.6.8",
+  "version": "2.6.9",
   "description": "Tauri desktop shell for AgentSam-powered brand dashboards — manifest-driven, multi-brand installs.",
   "type": "module",
   "bin": {

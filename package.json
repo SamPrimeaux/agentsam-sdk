@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-sdk",
-  "version": "2.6.8",
+  "version": "2.6.9",
   "description": "Portable AgentSam SDK and CLI kits for local scaffolding, repository intelligence, incremental indexing, identity adapters, and verified dependency maintenance.",
   "type": "module",
   "main": "./src/index.js",
@@ -279,9 +279,9 @@
     "verify:bootstrap": "node scripts/verify-bootstrap.mjs",
     "verify:knowledge-package": "node scripts/verify-knowledge-package.mjs && npm run test:autorag",
     "test:python": "node scripts/verify-python.mjs",
-    "verify:release": "npm run verify && npm run verify:knowledge-package && npm run test:python && npm run security:release",
+    "verify:release": "npm run verify && npm run verify:packages:public && npm run verify:knowledge-package && npm run test:python && npm run security:release",
     "pack:check": "node scripts/verify-pack.mjs",
-    "verify": "npm run errors:check && npm run proto:check && npm test && npm run test:workspaces && npm run cad:registry:check && npm run app:validate && npm run verify:boundaries && npm run verify:package && npm run verify:bootstrap && npm run pack:check",
+    "verify": "npm run release:train:check && npm run errors:check && npm run proto:check && npm test && npm run test:workspaces && npm run cad:registry:check && npm run app:validate && npm run verify:boundaries && npm run verify:package && npm run verify:bootstrap && npm run pack:check",
     "publish:identity-alpha": "bash scripts/publish-identity-alpha.sh",
     "publish:identity-alpha:dry-run": "bash scripts/publish-identity-alpha.sh --dry-run",
     "publish:identity-alpha:publish-only": "bash scripts/publish-identity-alpha.sh --publish-only",
@@ -312,7 +312,11 @@
     "prove:product": "node scripts/prove-agentsam-product.mjs",
     "security:release": "node scripts/verify-release-security.mjs",
     "verify:database-honesty": "node --test test/integration/database-hosted-honesty.test.mjs",
-    "ensure:cms-dist": "node scripts/ensure-cms-dist.mjs"
+    "ensure:cms-dist": "node scripts/ensure-cms-dist.mjs",
+    "release:train:check": "node scripts/release-train.mjs check",
+    "release:train:align": "node scripts/release-train.mjs align",
+    "ci:products": "node scripts/ci-products.mjs",
+    "verify:packages:public": "node scripts/verify-public-packages.mjs"
   },
   "engines": {
     "node": ">=22 <25",
@@ -321,7 +325,7 @@
   "dependencies": {
     "@clack/prompts": "^1.7.0",
     "@grpc/grpc-js": "^1.14.4",
-    "@inneranimalmedia/agentsam-errors": "2.6.8",
+    "@inneranimalmedia/agentsam-errors": "2.6.9",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "google-protobuf": "^3.21.4",
     "node-pty": "^1.1.0",

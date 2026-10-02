@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/client-cms-editor",
-  "version": "2.6.7",
+  "version": "2.6.9",
   "private": false,
   "description": "Reusable full-stack website + CMS kit with multi-page public sites, a protected authoring dashboard, local SQLite, starter/theme import, and pluggable auth, storage, and deployment adapters.",
   "type": "module",

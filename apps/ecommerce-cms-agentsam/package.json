@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/ecommerce-cms-agentsam",
-  "version": "2.6.7",
+  "version": "2.6.9",
   "type": "module",
   "workspaces": [
     "frontend"
@@ -10,7 +10,7 @@
     "build": "npm run build --workspace=frontend",
     "preview": "npm run preview --workspace=frontend",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
+    "test": "node --test test/*.test.mjs && npm run test --workspaces --if-present",
     "clean": "rm -rf frontend/dist",
     "prepack": "npm run build"
   },
@@ -31,6 +31,12 @@
     "IMPORT_PROVENANCE.json",
     "docs/",
     "providers/",
-    "frontend/"
-  ]
+    "frontend/",
+    "README.md",
+    "AGENTS.md",
+    "reference/",
+    "test/"
+  ],
+  "description": "Productized AgentSam ecommerce + CMS application: public storefront, OAuth-gated admin, theme/page editing, media and product workflows, analytics, provider adapters, and Cloudflare deployment surfaces.",
+  "license": "UNLICENSED"
 }

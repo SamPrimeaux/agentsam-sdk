@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-provider-completeful",
-  "version": "2.6.7",
+  "version": "2.6.9",
   "private": false,
   "description": "Portable Completeful provider adapter and AgentSam tool definitions.",
   "type": "module",

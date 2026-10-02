@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-repository",
-  "version": "2.6.7",
+  "version": "2.6.9",
   "description": "Portable AgentSam repository identity, Merkle, semantic file metadata, persistence, and repository graph runtime contracts.",
   "type": "module",
   "main": "./src/index.js",
@@ -31,5 +31,6 @@
   },
   "files": [
     "src"
-  ]
+  ],
+  "license": "MIT"
 }

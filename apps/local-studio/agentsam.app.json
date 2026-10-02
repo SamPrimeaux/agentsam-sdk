@@ -4,7 +4,7 @@
   "name": "AgentSam Local Studio",
   "kind": "app",
   "package": "@inneranimalmedia/agentsam-local-studio",
-  "version": "2.6.8",
+  "version": "2.6.9",
   "entrypoints": {
     "frontend": "./frontend",
     "backend": "./backend",
@@ -51,30 +51,105 @@
     }
   },
   "routes": {
-    "app.authenticated": { "path": "/agentsam", "auth": "optional", "spa": true },
-    "app.home": { "path": "/agentsam" },
-    "identity.login": { "path": "/auth/login" },
-    "identity.signup": { "path": "/auth/signup" },
-    "identity.reset": { "path": "/auth/reset" },
-    "identity.recovery": { "path": "/auth/login" },
-    "identity.oauth.start": { "path": "/api/oauth/:provider/start" },
-    "identity.oauth.callback": { "path": "/api/oauth/:provider/callback" },
+    "app.authenticated": {
+      "path": "/agentsam",
+      "auth": "optional",
+      "spa": true
+    },
+    "app.home": {
+      "path": "/agentsam"
+    },
+    "identity.login": {
+      "path": "/auth/login"
+    },
+    "identity.signup": {
+      "path": "/auth/signup"
+    },
+    "identity.reset": {
+      "path": "/auth/reset"
+    },
+    "identity.recovery": {
+      "path": "/auth/login"
+    },
+    "identity.oauth.start": {
+      "path": "/api/oauth/:provider/start"
+    },
+    "identity.oauth.callback": {
+      "path": "/api/oauth/:provider/callback"
+    },
     "entry": "/agentsam",
     "mounts": [
-      { "path": "/agentsam", "auth": "optional", "spa": true, "shell": "dist/index.html" },
-      { "path": "/collaborate", "auth": "optional", "spa": true },
-      { "path": "/mail", "auth": "optional", "spa": true },
-      { "path": "/projects", "auth": "optional", "spa": true },
-      { "path": "/artifacts", "auth": "optional", "spa": true },
-      { "path": "/files", "auth": "optional", "spa": true },
-      { "path": "/browse", "auth": "optional", "spa": true },
-      { "path": "/cli", "auth": "optional", "spa": true },
-      { "path": "/ship", "auth": "optional", "spa": true },
-      { "path": "/cad", "auth": "optional", "spa": true },
-      { "path": "/cms", "auth": "optional", "spa": true },
-      { "path": "/database", "auth": "optional", "spa": true },
-      { "path": "/settings", "auth": "optional", "spa": true },
-      { "path": "/settings/themes", "auth": "optional", "spa": true }
+      {
+        "path": "/agentsam",
+        "auth": "optional",
+        "spa": true,
+        "shell": "dist/index.html"
+      },
+      {
+        "path": "/collaborate",
+        "auth": "optional",
+        "spa": true
+      },
+      {
+        "path": "/mail",
+        "auth": "optional",
+        "spa": true
+      },
+      {
+        "path": "/projects",
+        "auth": "optional",
+        "spa": true
+      },
+      {
+        "path": "/artifacts",
+        "auth": "optional",
+        "spa": true
+      },
+      {
+        "path": "/files",
+        "auth": "optional",
+        "spa": true
+      },
+      {
+        "path": "/browse",
+        "auth": "optional",
+        "spa": true
+      },
+      {
+        "path": "/cli",
+        "auth": "optional",
+        "spa": true
+      },
+      {
+        "path": "/ship",
+        "auth": "optional",
+        "spa": true
+      },
+      {
+        "path": "/cad",
+        "auth": "optional",
+        "spa": true
+      },
+      {
+        "path": "/cms",
+        "auth": "optional",
+        "spa": true
+      },
+      {
+        "path": "/database",
+        "auth": "optional",
+        "spa": true
+      },
+      {
+        "path": "/settings",
+        "auth": "optional",
+        "spa": true
+      },
+      {
+        "path": "/settings/themes",
+        "auth": "optional",
+        "spa": true
+      }
     ]
   },
   "runtime": {
@@ -95,7 +170,10 @@
   "install": {
     "command": "npm install @inneranimalmedia/agentsam-local-studio",
     "selector": "local-studio",
-    "paths": ["/install/studio", "/install/local-studio"]
+    "paths": [
+      "/install/studio",
+      "/install/local-studio"
+    ]
   },
   "secrets": {
     "platform_server": [
