@@ -187,8 +187,14 @@ test('desktop updater uses the InnerAnimalMedia update authority and has no acti
     path.join(root, 'packages/agentsam-desktop-shell/src-tauri/src/commands/updater.rs'),
     'utf8',
   );
+  const brandBuilder = fs.readFileSync(
+    path.join(root, 'packages/agentsam-desktop-shell/scripts/build-brand.mjs'),
+    'utf8',
+  );
 
   assert.match(tauri, /https:\/\/updates\.inneranimalmedia\.com\/updates\/local-studio/);
   assert.doesNotMatch(tauri, /updates\.agentsam\.dev/);
+  assert.match(brandBuilder, /https:\/\/updates\.inneranimalmedia\.com/);
+  assert.doesNotMatch(brandBuilder, /updates\.agentsam\.dev/);
   assert.doesNotMatch(updater, /isn't configured yet|isn't set in tauri\.conf\.json/);
 });
