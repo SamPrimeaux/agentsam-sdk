@@ -16,8 +16,11 @@ const settingsFrontend = read('packages/agentsam-settings/src/frontend/index.tsx
 test('production Settings never mounts fixture data', () => {
   assert.doesNotMatch(settingsPage, /createFixtureSettingsHost|getSettingsFixture|SettingsFixtureName/);
   assert.doesNotMatch(settingsHost, /demo-app|Demo Org|health:\s*["']healthy["']/i);
-  assert.match(settingsHost, /repositoryLabel:\s*["']Not connected["']/);
-  assert.match(settingsHost, /browser:\s*["']Not checked["']/);
+  assert.match(settingsHost, /loadEffectiveModelInventory/);
+  assert.match(settingsHost, /identitySessionExists/);
+  assert.match(settingsHost, /getDesktopWorkspaceContext/);
+  assert.match(settingsHost, /repositoryLabel:\s*["']Local runtime["']/);
+  assert.match(settingsHost, /browser:\s*["']Available["']/);
   assert.match(settingsHost, /health:\s*["']unknown["']/);
   assert.doesNotMatch(settingsFrontend, /demo-app|Demo Org/);
 });

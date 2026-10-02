@@ -3,6 +3,7 @@ import path from 'node:path';
 import { execFile, spawnSync } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
+import { findCliProjectRoot } from '../lib/cli-preferences.js';
 
 const execFileAsync = promisify(execFile);
 const SDK_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -403,6 +404,10 @@ function parseArgs(argv) {
   return { positional, flags };
 }
 
+export function resolvePackageRoot(cwd = process.cwd()) {
+  return findCliProjectRoot(cwd);
+}
+
 function printHelp() {
   console.log(`agentsam package — audit and graduate distributable packages
 
@@ -474,6 +479,7 @@ export async function runPackage(argv = []) {
   const sub = positional[0];
   const json = flags.has('--json');
   const offline = flags.has('--offline');
+  const root = resolvePackageRoot(process.cwd());
 
   if (!sub || flags.has('--help') || flags.has('-h')) {
     printHelp();
@@ -482,6 +488,7 @@ export async function runPackage(argv = []) {
 
   if (sub === 'audit') {
     const report = await auditPackages({
+      root,
       publicOnly: flags.has('--public'),
       offline,
     });
@@ -495,7 +502,7 @@ export async function runPackage(argv = []) {
     const name = positional[1];
     if (!name) throw new Error('package status requires a package name');
 
-    const pkg = collectPackageManifests().find((item) => item.name === name);
+    const pkg = collectPackageManifests(root).find((item) => item.name === name);
     if (!pkg) throw new Error(`Unknown @inneranimalmedia package: ${name}`);
 
     const status = classifyPackage(pkg, await registryLookup(pkg, offline));
@@ -509,7 +516,7 @@ export async function runPackage(argv = []) {
     const name = positional[1];
     if (!name) throw new Error('package verify requires a package name');
 
-    const report = await verifyPackage(name, { offline });
+    const report = await verifyPackage(name, { root, offline });
 
     if (json) console.log(JSON.stringify(report, null, 2));
     else printVerify(report);
@@ -519,7 +526,7 @@ export async function runPackage(argv = []) {
   }
 
   if (sub === 'publish-plan') {
-    const plan = await buildPublishPlan({ offline });
+    const plan = await buildPublishPlan({ root, offline });
 
     if (json) console.log(JSON.stringify(plan, null, 2));
     else printPlan(plan);
