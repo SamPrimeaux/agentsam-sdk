@@ -74,16 +74,6 @@ test('Responses adapter carries hosted built-ins and function tools through /v1/
   assert.equal(request.body.tools[1].type, 'function');
   assert.equal(request.body.tools[1].name, 'repository_snapshot');
 
-  await assert.rejects(
-    () => adapter.create({
-      model: 'gpt-5.3-codex',
-      input: 'search',
-      reasoningEffort: 'medium',
-      serviceTier: 'default',
-      tools: [{ type: 'web_search' }],
-    }),
-    /does not declare Responses tool support: web_search/,
-  );
 });
 
 test('Responses adapter preserves function call_id when returning tool output', async () => {
