@@ -5,31 +5,34 @@
 # Never inject a silent default app into the installer body.
 set -euo pipefail
 
-PACKAGE="${AGENTSAM_PACKAGE:-@inneranimalmedia/agentsam-sdk}"
+ROOT_PACKAGE="${AGENTSAM_PACKAGE:-@inneranimalmedia/agentsam-sdk}"
+PACKAGE="$ROOT_PACKAGE"
 CHANNEL="${AGENTSAM_CHANNEL:-latest}"
 VERSION=""
 APP_SELECTOR=""
+APP_PACKAGE=""
 APP_BIN=""
+APP_NEEDS_WRAPPER="0"
 INSTALL_ROOT="${AGENTSAM_HOME:-$HOME/.agentsam}"
 BIN_DIR="${AGENTSAM_BIN_DIR:-$HOME/.local/bin}"
-MODE="npm"
+MODE="npm-global"
 
 usage() {
   cat <<'EOF'
 AgentSam installer
 
   curl -fsSL https://agentsam.inneranimalmedia.com/install | bash
-  curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --version 2.6.2
-  curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --app-id database-editor
-  curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --app studio
+  curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --version 2.6.10
+  curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --app-id local-studio
+  curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --app ecommerce
   curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --channel beta
 
 Flags:
   --version <ver>   Install a specific npm package version
   --channel <name>  latest|beta (npm dist-tag)
-  --app-id <id>     Stable app id (database-editor|local-studio|cad-creator|client-cms-editor|…)
-  --app <alias>     Legacy alias: cad|cms|studio (maps to --app-id)
-  --prefix <dir>    Bin directory (default: ~/.local/bin)
+  --app-id <id>     Stable app id (local-studio|cad-creator|client-cms-editor|ecommerce-cms-agentsam|database-editor)
+  --app <alias>     Legacy alias: studio|cad|cms|ecommerce|database
+  --prefix <dir>    Legacy wrapper bin directory (default: ~/.local/bin)
   --help            Show this help
 EOF
 }
@@ -38,25 +41,38 @@ select_app() {
   case "$1" in
     cad|cad-creator)
       APP_SELECTOR="cad-creator"
+      APP_PACKAGE="@inneranimalmedia/agentsam-cad-creator"
       APP_BIN="agentsam-cad-creator"
       ;;
     cms|client-cms-editor)
       APP_SELECTOR="client-cms-editor"
+      APP_PACKAGE="@inneranimalmedia/client-cms-editor"
       APP_BIN="agentsam-cms"
       ;;
     studio|local-studio)
       APP_SELECTOR="local-studio"
+      APP_PACKAGE="@inneranimalmedia/agentsam-local-studio"
       APP_BIN="agentsam-studio"
       ;;
+    ecommerce|ecommerce-cms-agentsam)
+      APP_SELECTOR="ecommerce-cms-agentsam"
+      APP_PACKAGE="@inneranimalmedia/ecommerce-cms-agentsam"
+      APP_BIN="agentsam-ecommerce"
+      ;;
     database|database-editor)
+      # The current database-editor package does not expose a package bin yet.
+      # Keep the legacy SDK launcher only for this one compatibility case.
       APP_SELECTOR="database-editor"
+      APP_PACKAGE="$ROOT_PACKAGE"
       APP_BIN="agentsam-database-editor"
+      APP_NEEDS_WRAPPER="1"
       ;;
     *)
-      echo "unknown app: $1 (expected cad, cms, studio, database-editor, or a known --app-id)" >&2
+      echo "unknown app: $1 (expected studio, cad, cms, ecommerce, database-editor, or a known --app-id)" >&2
       exit 2
       ;;
   esac
+  PACKAGE="$APP_PACKAGE"
 }
 
 require_value() {
@@ -112,12 +128,15 @@ fi
 
 printf '  Node    %s\n' "$NODE_VERSION"
 printf '  mode    %s\n' "$MODE"
+printf '  package %s\n' "$PACKAGE"
 if [ -n "$APP_SELECTOR" ]; then
   printf '  app_id  %s\n' "$APP_SELECTOR"
 fi
 
+REQUESTED="$CHANNEL"
 SPEC="$PACKAGE@$CHANNEL"
 if [ -n "$VERSION" ]; then
+  REQUESTED="$VERSION"
   SPEC="$PACKAGE@$VERSION"
 fi
 
@@ -126,12 +145,12 @@ echo "Installing $SPEC ..."
 npm install --global "$SPEC"
 
 mkdir -p "$INSTALL_ROOT" "$BIN_DIR"
-AGENTSAM_COMMAND="$(command -v agentsam || true)"
-if [ -z "$AGENTSAM_COMMAND" ]; then
-  AGENTSAM_COMMAND="agentsam"
-fi
 
-if [ -n "$APP_SELECTOR" ]; then
+if [ "$APP_NEEDS_WRAPPER" = "1" ]; then
+  AGENTSAM_COMMAND="$(command -v agentsam || true)"
+  if [ -z "$AGENTSAM_COMMAND" ]; then
+    AGENTSAM_COMMAND="agentsam"
+  fi
   APP_LAUNCHER="$BIN_DIR/$APP_BIN"
   {
     printf '%s\n' '#!/usr/bin/env sh' 'set -eu'
@@ -141,17 +160,57 @@ if [ -n "$APP_SELECTOR" ]; then
   chmod +x "$APP_LAUNCHER"
 fi
 
+RESOLVED_VERSION="$(
+  npm list --global "$PACKAGE" --depth=0 --json 2>/dev/null |
+    node -e '
+      let s = "";
+      process.stdin.on("data", d => s += d);
+      process.stdin.on("end", () => {
+        try {
+          const j = JSON.parse(s);
+          const name = process.argv[1];
+          process.stdout.write(j.dependencies?.[name]?.version || "");
+        } catch {}
+      });
+    ' "$PACKAGE"
+)"
+if [ -z "$RESOLVED_VERSION" ]; then
+  RESOLVED_VERSION="unknown"
+fi
+
+if [ -n "$APP_SELECTOR" ]; then
+  if [ "$APP_NEEDS_WRAPPER" = "1" ]; then
+    EXECUTABLE="$BIN_DIR/$APP_BIN"
+  else
+    EXECUTABLE="$(command -v "$APP_BIN" || true)"
+    if [ -z "$EXECUTABLE" ]; then
+      EXECUTABLE="$APP_BIN"
+    fi
+  fi
+else
+  EXECUTABLE="$(command -v agentsam || true)"
+  if [ -z "$EXECUTABLE" ]; then
+    EXECUTABLE="agentsam"
+  fi
+fi
+
 cat > "$INSTALL_ROOT/install-receipt.json" <<EOF
 {
-  "schema": "agentsam.install.v1",
+  "schema": "agentsam.install.v2",
+  "receipt_schema": "agentsam.install.v2",
   "installed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "package": "$SPEC",
-  "mode": "$MODE",
+  "distribution": "$MODE",
+  "package": "$PACKAGE",
+  "requested": "$REQUESTED",
+  "requested_channel": $(if [ -z "$VERSION" ]; then printf '"%s"' "$CHANNEL"; else printf 'null'; fi),
+  "requested_version": $(if [ -n "$VERSION" ]; then printf '"%s"' "$VERSION"; else printf 'null'; fi),
+  "resolved_version": "$RESOLVED_VERSION",
   "os": "$OS",
   "arch": "$ARCH",
   "node": "$NODE_VERSION",
   "app_id": $(if [ -n "$APP_SELECTOR" ]; then printf '"%s"' "$APP_SELECTOR"; else printf 'null'; fi),
   "app": $(if [ -n "$APP_SELECTOR" ]; then printf '"%s"' "$APP_SELECTOR"; else printf 'null'; fi),
+  "executable": "$EXECUTABLE",
   "bin_dir": "$BIN_DIR",
   "standalone_ready": false,
   "checksum_contract": "sha256sums-future"
@@ -160,18 +219,10 @@ EOF
 
 echo
 echo "✓ AgentSam installed"
-if command -v agentsam >/dev/null 2>&1; then
-  agentsam --version || true
-  AGENTSAM_BIN="$(command -v agentsam)"
-  printf '  agentsam    %s\n' "$AGENTSAM_BIN"
-else
-  echo "  agentsam binary not found on PATH; ensure npm global bin is on PATH"
-fi
+printf '  package     %s@%s\n' "$PACKAGE" "$RESOLVED_VERSION"
+printf '  executable  %s\n' "$EXECUTABLE"
 printf '  config      %s\n' "$INSTALL_ROOT"
 printf '  receipt     %s/install-receipt.json\n' "$INSTALL_ROOT"
-if [ -n "$APP_SELECTOR" ]; then
-  printf '  app         %s\n' "$BIN_DIR/$APP_BIN"
-fi
 echo
 echo "Run:"
 echo
