@@ -8,7 +8,7 @@ test('insurance-site theme package exports harvested (not installable) contract'
   assert.equal(theme.installable, false);
   assert.equal(theme.lineage, "cci");
   assert.equal(theme.family, "professional-leadgen");
-  assert.equal(theme.package, "@inneranimalmedia/theme-insurance-site");
+  assert.equal(theme.package, "@inneranimalmedia/theme-harbor");
   assert.ok(Array.isArray(theme.pages));
 });
 

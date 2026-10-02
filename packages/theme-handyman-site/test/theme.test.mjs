@@ -8,7 +8,7 @@ test('handyman-site theme package exports harvested (not installable) contract',
   assert.equal(theme.installable, false);
   assert.equal(theme.lineage, "phs");
   assert.equal(theme.family, "trade-services");
-  assert.equal(theme.package, "@inneranimalmedia/theme-handyman-site");
+  assert.equal(theme.package, "@inneranimalmedia/theme-forge");
   assert.ok(Array.isArray(theme.pages));
 });
 

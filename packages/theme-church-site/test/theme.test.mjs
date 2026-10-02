@@ -8,7 +8,7 @@ test('church-site theme package exports harvested (not installable) contract', (
   assert.equal(theme.installable, false);
   assert.equal(theme.lineage, "nic");
   assert.equal(theme.family, "community-faith");
-  assert.equal(theme.package, "@inneranimalmedia/theme-church-site");
+  assert.equal(theme.package, "@inneranimalmedia/theme-cypress");
   assert.ok(Array.isArray(theme.pages));
 });
 

@@ -8,7 +8,7 @@ test('companions-site theme package exports harvested (not installable) contract
   assert.equal(theme.installable, false);
   assert.equal(theme.lineage, "coc");
   assert.equal(theme.family, "nonprofit-campaign");
-  assert.equal(theme.package, "@inneranimalmedia/theme-companions-site");
+  assert.equal(theme.package, "@inneranimalmedia/theme-violet");
   assert.ok(Array.isArray(theme.pages));
 });
 
