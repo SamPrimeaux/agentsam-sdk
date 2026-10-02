@@ -103,7 +103,8 @@ proto.agentsam.knowledge.v1.ErrorDetail.toObject = function(includeInstance, msg
     detailsJson: jspb.Message.getFieldWithDefault(msg, 25, ""),
     occurrenceCount: jspb.Message.getFieldWithDefault(msg, 26, 0),
     requestId: jspb.Message.getFieldWithDefault(msg, 27, ""),
-    schemaVersion: jspb.Message.getFieldWithDefault(msg, 28, 0)
+    schemaVersion: jspb.Message.getFieldWithDefault(msg, 28, 0),
+    nativeStage: jspb.Message.getFieldWithDefault(msg, 29, "")
   };
 
   if (includeInstance) {
@@ -251,6 +252,10 @@ proto.agentsam.knowledge.v1.ErrorDetail.deserializeBinaryFromReader = function(m
     case 28:
       var value = /** @type {number} */ (reader.readUint32());
       msg.setSchemaVersion(value);
+      break;
+    case 29:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setNativeStage(value);
       break;
     default:
       reader.skipField();
@@ -474,6 +479,13 @@ proto.agentsam.knowledge.v1.ErrorDetail.serializeBinaryToWriter = function(messa
   if (f != null) {
     writer.writeUint32(
       28,
+      f
+    );
+  }
+  f = /** @type {string} */ (jspb.Message.getField(message, 29));
+  if (f != null) {
+    writer.writeString(
+      29,
       f
     );
   }
@@ -1413,6 +1425,42 @@ proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearSchemaVersion = function(
  */
 proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasSchemaVersion = function() {
   return jspb.Message.getField(this, 28) != null;
+};
+
+
+/**
+ * optional string native_stage = 29;
+ * @return {string}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.getNativeStage = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 29, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.setNativeStage = function(value) {
+  return jspb.Message.setField(this, 29, value);
+};
+
+
+/**
+ * Clears the field making it undefined.
+ * @return {!proto.agentsam.knowledge.v1.ErrorDetail} returns this
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.clearNativeStage = function() {
+  return jspb.Message.setField(this, 29, undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.agentsam.knowledge.v1.ErrorDetail.prototype.hasNativeStage = function() {
+  return jspb.Message.getField(this, 29) != null;
 };
 
 

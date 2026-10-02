@@ -76,10 +76,19 @@ Local Studio owns authenticated account identity, OAuth/token storage, Cloudflar
 ## CLI/install
 
 ```sh
-agentsam app install database-editor
-# or
 curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --app-id database-editor
+
+agentsam-database-editor info
+agentsam-database-editor doctor
 ```
+
+The installer resolves `database-editor` directly to
+`@inneranimalmedia/agentsam-database-editor`; it does not manufacture an SDK wrapper.
+
+The package is independently installable as the portable database capability layer.
+The full interactive `/database` surface is currently host-rendered by Local Studio.
+When `agentsam-studio` is installed, `agentsam-database-editor preview` delegates to
+that host.
 
 `app_id = database-editor` is stable product identity.
 

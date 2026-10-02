@@ -60,12 +60,9 @@ select_app() {
       APP_BIN="agentsam-ecommerce"
       ;;
     database|database-editor)
-      # The current database-editor package does not expose a package bin yet.
-      # Keep the legacy SDK launcher only for this one compatibility case.
       APP_SELECTOR="database-editor"
-      APP_PACKAGE="$ROOT_PACKAGE"
+      APP_PACKAGE="@inneranimalmedia/agentsam-database-editor"
       APP_BIN="agentsam-database-editor"
-      APP_NEEDS_WRAPPER="1"
       ;;
     *)
       echo "unknown app: $1 (expected studio, cad, cms, ecommerce, database-editor, or a known --app-id)" >&2

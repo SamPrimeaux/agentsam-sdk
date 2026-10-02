@@ -56,4 +56,5 @@ message ErrorDetail {
   optional uint32 occurrence_count = 26;
   optional string request_id = 27;
   optional uint32 schema_version = 28;
+  optional string native_stage = 29;
 }

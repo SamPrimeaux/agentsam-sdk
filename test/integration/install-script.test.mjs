@@ -22,6 +22,7 @@ test('install.sh is a bash npm bootstrap with platform detection', () => {
   assert.match(source, /@inneranimalmedia\/agentsam-cad-creator/);
   assert.match(source, /@inneranimalmedia\/client-cms-editor/);
   assert.match(source, /@inneranimalmedia\/ecommerce-cms-agentsam/);
+  assert.match(source, /@inneranimalmedia\/agentsam-database-editor/);
   assert.match(source, /agentsam\.install\.v2/);
   assert.match(source, /resolved_version/);
   assert.match(source, /executable/);
@@ -40,6 +41,7 @@ test('install.sh installs selected app packages directly instead of manufacturin
     ['cms', 'client-cms-editor', 'agentsam-cms', '@inneranimalmedia/client-cms-editor'],
     ['studio', 'local-studio', 'agentsam-studio', '@inneranimalmedia/agentsam-local-studio'],
     ['ecommerce', 'ecommerce-cms-agentsam', 'agentsam-ecommerce', '@inneranimalmedia/ecommerce-cms-agentsam'],
+    ['database', 'database-editor', 'agentsam-database-editor', '@inneranimalmedia/agentsam-database-editor'],
   ];
 
   for (const [alias, appId, executable, packageName] of cases) {
@@ -71,7 +73,7 @@ test('install.sh installs selected app packages directly instead of manufacturin
         encoding: 'utf8',
         env: {
           ...process.env,
-          PATH: `${fakeBin}:${process.env.PATH}`,
+          PATH: `${fakeBin}:/usr/bin:/bin`,
           HOME: temp,
           AGENTSAM_HOME: installRoot,
           NPM_LOG: npmLog,
@@ -96,62 +98,6 @@ test('install.sh installs selected app packages directly instead of manufacturin
     } finally {
       fs.rmSync(temp, { recursive: true, force: true });
     }
-  }
-});
-
-test('database-editor retains the legacy SDK wrapper until its package exposes a bin', () => {
-  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-install-database-'));
-  const fakeBin = path.join(temp, 'fake-bin');
-  const installRoot = path.join(temp, 'home');
-  const binDir = path.join(temp, 'bin');
-  const npmLog = path.join(temp, 'npm.log');
-  fs.mkdirSync(fakeBin, { recursive: true });
-
-  fs.writeFileSync(
-    path.join(fakeBin, 'uname'),
-    '#!/usr/bin/env bash\ncase "$1" in -s) echo Darwin ;; -m) echo arm64 ;; esac\n',
-    { mode: 0o755 },
-  );
-  fs.writeFileSync(
-    path.join(fakeBin, 'node'),
-    '#!/usr/bin/env bash\ncase "$*" in *split*) echo 22 ;; -p*) echo 22.14.0 ;; *) cat >/dev/null; echo 2.6.10 ;; esac\n',
-    { mode: 0o755 },
-  );
-  fs.writeFileSync(
-    path.join(fakeBin, 'npm'),
-    '#!/usr/bin/env bash\necho "$*" >> "$NPM_LOG"\nif [ "$1" = "list" ]; then echo "{\\"dependencies\\":{}}"; fi\nexit 0\n',
-    { mode: 0o755 },
-  );
-  fs.writeFileSync(path.join(fakeBin, 'agentsam'), '#!/usr/bin/env bash\necho "agentsam 2.6.10"\n', {
-    mode: 0o755,
-  });
-
-  try {
-    const result = spawnSync('bash', [installScript, '--app-id', 'database-editor', '--prefix', binDir], {
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        PATH: `${fakeBin}:${process.env.PATH}`,
-        HOME: temp,
-        AGENTSAM_HOME: installRoot,
-        NPM_LOG: npmLog,
-      },
-    });
-    assert.equal(result.status, 0, result.stderr);
-
-    const npmCalls = fs.readFileSync(npmLog, 'utf8');
-    assert.match(npmCalls, /install --global @inneranimalmedia\/agentsam-sdk@latest/);
-
-    const launcherPath = path.join(binDir, 'agentsam-database-editor');
-    const launcher = fs.readFileSync(launcherPath, 'utf8');
-    assert.match(launcher, /app preview database-editor/);
-
-    const receipt = JSON.parse(fs.readFileSync(path.join(installRoot, 'install-receipt.json'), 'utf8'));
-    assert.equal(receipt.app_id, 'database-editor');
-    assert.equal(receipt.package, '@inneranimalmedia/agentsam-sdk');
-    assert.equal(receipt.executable, launcherPath);
-  } finally {
-    fs.rmSync(temp, { recursive: true, force: true });
   }
 });
 

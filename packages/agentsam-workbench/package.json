@@ -39,7 +39,7 @@
     "./project-control.css": "./dist/project-control.css"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "node scripts/ensure-local-deps.mjs && tsc --noEmit -p tsconfig.json",
     "test": "node --test test/*.test.mjs",
     "build": "node scripts/build.mjs",
     "prepack": "npm run build"

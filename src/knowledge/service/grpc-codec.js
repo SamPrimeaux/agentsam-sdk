@@ -77,6 +77,7 @@ export function encodeErrorDetail(value) {
   detail.setDomain(envelope.domain);
   if (envelope.tool) detail.setTool(envelope.tool);
   if (envelope.stage) detail.setStage(envelope.stage);
+  if (envelope.native_stage) detail.setNativeStage(envelope.native_stage);
   detail.setRemediationAction(envelope.remediation.action);
   if (envelope.remediation.message) detail.setRemediationMessage(envelope.remediation.message);
   detail.setFingerprint(envelope.fingerprint);
@@ -115,6 +116,7 @@ export function decodeErrorDetail(detail) {
     domain: detail.hasDomain?.() ? detail.getDomain() : 'runtime',
     tool: detail.hasTool?.() ? detail.getTool() : null,
     stage: detail.hasStage?.() ? detail.getStage() : null,
+    native_stage: detail.hasNativeStage?.() ? detail.getNativeStage() : null,
     remediation: {
       action: detail.hasRemediationAction?.() ? detail.getRemediationAction() : undefined,
       message: detail.hasRemediationMessage?.() ? detail.getRemediationMessage() : null,

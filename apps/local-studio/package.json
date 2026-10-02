@@ -41,7 +41,8 @@
     "smoke:desktop": "node scripts/smoke-desktop-spa.mjs",
     "verify:desktop": "npm run build:desktop && npm run smoke:desktop && npm run smoke:desktop-auth",
     "verify:database-honesty": "node --test ../../test/database-hosted-honesty.test.mjs",
-    "smoke:desktop-auth": "node scripts/smoke-desktop-auth.mjs"
+    "smoke:desktop-auth": "node scripts/smoke-desktop-auth.mjs",
+    "prepack": "npm run build:desktop"
   },
   "dependencies": {
     "@cloudflare/codemode": "^0.5.2",
@@ -105,7 +106,10 @@
     "tsconfig.json",
     "frontend/",
     "backend/",
-    "shared/"
+    "shared/",
+    "desktop-dist/",
+    "!frontend/node_modules/",
+    "!backend/node_modules/"
   ],
   "agentsam": {
     "releaseIgnore": [
