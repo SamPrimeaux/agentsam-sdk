@@ -25,6 +25,7 @@
     "shared/",
     ".agentsam/app.json",
     "agentsam.app.json",
-    "README.md"
+    "README.md",
+    "templates/"
   ]
 }
