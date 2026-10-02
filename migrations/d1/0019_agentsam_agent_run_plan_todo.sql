@@ -1,3 +1,4 @@
+-- 0019_agentsam_agent_run_plan_todo.sql
 -- Attribute remote AgentSam run attempts to the durable plan/TODO that caused them.
 -- This mirrors migrations/runtime/0004_agent_run_plan_linkage.sql for local SQLite.
 ALTER TABLE agentsam_agent_run

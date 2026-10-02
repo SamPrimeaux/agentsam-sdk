@@ -8,6 +8,7 @@ export const GOAP_SCHEMAS = Object.freeze({
   goal: 'agentsam.goal.v1',
   action: 'agentsam.goap.action.v1',
   plan: 'agentsam.goap.plan.v1',
+  world: 'agentsam.goap.world.v1',
   event: 'agentsam.event.v1',
 });
 

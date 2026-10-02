@@ -1,6 +1,7 @@
 import { buildRepositoryAuditPacket } from '../agent/repository-audit.js';
 import { repositorySnapshot } from '../capabilities/repository-snapshot.js';
 import { getNextPlanStep, getPlan, openPlanLedger } from './plan-ledger.js';
+import { projectGoapWorld } from '../../packages/agentsam-goap/src/world.js';
 
 const PRIORITY_TO_TICKET = Object.freeze({
   critical: 'P0',
@@ -31,35 +32,6 @@ export function knowledgeFreshness(snapshot = {}) {
   return { status: 'current', reason: 'active_generation_matches_world' };
 }
 
-function dependencyBlockers(plan, step) {
-  const byId = new Map((plan?.tasks || []).map((task) => [task.id, task]));
-  const deps = Array.isArray(step?.metadata?.depends_on) ? step.metadata.depends_on : [];
-  return deps
-    .map((id) => byId.get(id) || { id, status: 'missing', title: null })
-    .filter((task) => task.status !== 'complete')
-    .map((task) => ({ id: task.id, status: task.status, title: task.title || null }));
-}
-
-function availableActions(plan) {
-  const actions = [];
-  const blocked = [];
-  for (const step of plan?.tasks || []) {
-    if (step.status !== 'open') continue;
-    const blockers = dependencyBlockers(plan, step);
-    const action = {
-      id: step.id,
-      title: step.title,
-      kind: step.metadata?.kind || 'work',
-      priority: step.priority,
-      expected_effect: 'todo.complete:' + step.id,
-      requires: Array.isArray(step.metadata?.depends_on) ? step.metadata.depends_on : [],
-    };
-    if (blockers.length) blocked.push({ ...action, blockers });
-    else actions.push(action);
-  }
-  return { available: actions, blocked };
-}
-
 export async function buildLocalGoapState({ cwd = process.cwd(), snapshot = null } = {}) {
   const ctx = openPlanLedger(cwd);
   try {
@@ -77,7 +49,20 @@ export async function buildLocalGoapState({ cwd = process.cwd(), snapshot = null
       evidenceBudget: 6000,
     });
     const freshness = knowledgeFreshness(world);
-    const actions = availableActions(plan);
+    const projectedWorld = projectGoapWorld({
+      repository: {
+        ...world.repository,
+        merkle_root: world.tree?.merkle_root || null,
+      },
+      plan,
+      activeTodo: step,
+      knowledge: {
+        ...freshness,
+        generation_id: world.knowledge?.generation_id || null,
+      },
+      evidence: packet,
+      updatedAt: step?.updated_at_unix || plan.updated_at_unix || null,
+    });
     const run = step?.agent_run_id
       ? ctx.db.prepare('SELECT * FROM agentsam_agent_run WHERE id = ? LIMIT 1').get(step.agent_run_id) || null
       : null;
@@ -138,9 +123,10 @@ export async function buildLocalGoapState({ cwd = process.cwd(), snapshot = null
         knowledge_generation_id: world.knowledge?.generation_id || null,
         knowledge_freshness: freshness,
         repository: world.repository,
-        actions,
+        actions: projectedWorld.actions,
       },
       boundedEvidence: packet,
+      canonicalWorld: projectedWorld,
     };
   } finally {
     ctx.close();

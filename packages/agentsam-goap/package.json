@@ -9,7 +9,8 @@
     "./contracts": "./src/contracts.js",
     "./control-plane": "./src/control-plane.js",
     "./adapters/memory": "./src/adapters/memory.js",
-    "./adapters/d1-sqlite": "./src/adapters/d1-sqlite.js"
+    "./adapters/d1-sqlite": "./src/adapters/d1-sqlite.js",
+    "./world": "./src/world.js"
   },
   "files": [
     "src",
