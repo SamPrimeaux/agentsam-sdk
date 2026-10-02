@@ -1,6 +1,7 @@
 export * from './vocabulary.js';
 export * from './envelope.js';
 export * from './error.js';
+export * from './tool.js';
 export * from './normalize.js';
 export * from './redaction.js';
 export * from './fingerprint.js';

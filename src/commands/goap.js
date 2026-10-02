@@ -102,7 +102,7 @@ export async function runGoap(subcommand = 'status', options = {}) {
     console.log(`Successfully created and activated GOAP goal: ${res.ticketId}`);
     console.log(`  Title:     ${res.title}`);
     console.log(`  Priority:  ${res.priority} [Subsystem: ${res.subsystem}]`);
-    console.log(`  Agent Run: ${res.agentRunId}`);
+    if (res.agentRunId) console.log(`  Agent Run: ${res.agentRunId}`);
     return;
   }
 

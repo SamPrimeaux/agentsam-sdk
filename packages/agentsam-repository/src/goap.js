@@ -5,7 +5,6 @@ import { execFileSync } from 'node:child_process';
 import { tryResolveGitContext } from './git-context.js';
 import {
   createTicketId,
-  createAgentRunId,
   generateTicketCreateSql,
   generateTicketCloseSql,
 } from './tickets.js';
@@ -252,7 +251,6 @@ export async function createGoapGoal({
   if (!accId) throw new Error('account_id_required');
 
   const ticketId = createTicketId();
-  const agentRunId = createAgentRunId();
   const now = Math.floor(Date.now() / 1000);
 
   const { sql: ticketSql } = generateTicketCreateSql({
@@ -268,7 +266,6 @@ export async function createGoapGoal({
     repositoryId: repoId,
     ownerRef: repoId,
     source: 'agentsam_sdk',
-    agentRunId,
     now,
   });
 
@@ -305,7 +302,7 @@ ON CONFLICT(repository_id) DO UPDATE SET
   return {
     ok: true,
     ticketId,
-    agentRunId,
+    agentRunId: null,
     title: cleanTitle,
     status,
     priority,
@@ -338,23 +335,17 @@ export async function switchGoapGoal({
     query,
     wranglerConfig,
     databaseName,
-    sql: `SELECT id, account_id, repository_id FROM agentsam_tickets WHERE id = '${sqlEsc(tid)}' LIMIT 1;`,
+    sql: `SELECT id, account_id, repository_id, agent_run_id FROM agentsam_tickets WHERE id = '${sqlEsc(tid)}' LIMIT 1;`,
   });
   const ticket = lookup?.[0]?.results?.[0];
   const accId = clean(accountId);
   if (!ticket) throw new Error('ticket_not_found');
   if (ticket.repository_id && ticket.repository_id !== repoId) throw new Error('ticket_repository_mismatch');
   if (!accId || ticket.account_id !== accId) throw new Error('ticket_account_mismatch');
-  const runId = createAgentRunId();
 
   const sql = `
-INSERT INTO agentsam_agent_run (
-  id, account_id, mode, status, started_at_unix, created_at_unix, updated_at_unix
-) VALUES ('${sqlEsc(runId)}', '${sqlEsc(accId)}', 'agent', 'running', ${now}, ${now}, ${now});
-
 UPDATE agentsam_tickets SET
   status = 'active',
-  agent_run_id = '${sqlEsc(runId)}',
   updated_at = ${now}
 WHERE id = '${sqlEsc(tid)}';
 
@@ -385,7 +376,7 @@ ON CONFLICT(repository_id) DO UPDATE SET
     ok: true,
     ticketId: tid,
     repositoryId: repoId,
-    agentRunId: runId,
+    agentRunId: ticket.agent_run_id || null,
   };
 }
 
@@ -420,7 +411,7 @@ export async function closeGoapGoal({
     query,
     wranglerConfig,
     databaseName,
-    sql: `SELECT id, account_id, repository_id FROM agentsam_tickets WHERE id = '${sqlEsc(tid)}' LIMIT 1;`,
+    sql: `SELECT id, account_id, repository_id, agent_run_id FROM agentsam_tickets WHERE id = '${sqlEsc(tid)}' LIMIT 1;`,
   });
   const ticket = lookup?.[0]?.results?.[0];
   const accId = clean(accountId);

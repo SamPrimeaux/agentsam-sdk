@@ -31,7 +31,11 @@ export function createTicketId() {
 }
 
 /**
- * Generate SQL for ticket creation with mandatory agentsam_agent_run when active.
+ * Generate SQL for ticket creation.
+ *
+ * Goal state and execution state are separate nouns. Creating/activating a
+ * ticket must not fabricate an agentsam_agent_run. Callers may link an
+ * already-created real run explicitly via agentRunId.
  */
 export function generateTicketCreateSql({
   accountId,
@@ -59,16 +63,7 @@ export function generateTicketCreateSql({
   if (!tTitle) throw new Error('title_required');
 
   const statements = [];
-  let runId = clean(agentRunId);
-
-  if (status === 'active' && !runId) {
-    runId = createAgentRunId();
-    statements.push(`INSERT INTO agentsam_agent_run (
-  id, account_id, mode, status, started_at_unix, created_at_unix, updated_at_unix
-) VALUES (
-  ${sqlText(runId)}, ${sqlText(account)}, 'agent', 'running', ${sqlInt(now)}, ${sqlInt(now)}, ${sqlInt(now)}
-);`);
-  }
+  const runId = clean(agentRunId);
 
   statements.push(`INSERT INTO agentsam_tickets (
   id, title, description, status, status_reason, project, subsystem,
@@ -98,12 +93,15 @@ export function generateTicketCreateSql({
 }
 
 /**
- * Generate SQL to activate a ticket and wire a real agentsam_agent_run row.
+ * Generate SQL to activate a ticket.
+ *
+ * agentRunId is optional and must reference a run created by the execution
+ * subsystem. Activation itself never creates a run.
  */
 export function generateTicketActivationSql({
   accountId,
   ticketId,
-  agentRunId = createAgentRunId(),
+  agentRunId = null,
   statusReason = null,
   now = Math.floor(Date.now() / 1000),
 }) {
@@ -111,18 +109,13 @@ export function generateTicketActivationSql({
   const tid = clean(ticketId);
   if (!account) throw new Error('account_id_required');
   if (!tid) throw new Error('ticket_id_required');
-  const runId = clean(agentRunId) || createAgentRunId();
+  const runId = clean(agentRunId);
 
   const statements = [
-    `INSERT INTO agentsam_agent_run (
-  id, account_id, mode, status, started_at_unix, created_at_unix, updated_at_unix
-) VALUES (
-  ${sqlText(runId)}, ${sqlText(account)}, 'agent', 'running', ${sqlInt(now)}, ${sqlInt(now)}, ${sqlInt(now)}
-);`,
     `UPDATE agentsam_tickets SET
   status = 'active',
   status_reason = ${sqlText(statusReason)},
-  agent_run_id = COALESCE(agent_run_id, ${sqlText(runId)}),
+  agent_run_id = COALESCE(${sqlText(runId || null)}, agent_run_id),
   updated_at = ${sqlInt(now)},
   closed_at = NULL
 WHERE id = ${sqlText(tid)};`,
@@ -130,14 +123,14 @@ WHERE id = ${sqlText(tid)};`,
   id, ticket_id, event_type, from_status, to_status, detail, actor_type, created_at
 ) VALUES (
   'tke_' || lower(hex(randomblob(8))), ${sqlText(tid)}, 'status_change', 'backlog', 'active',
-  'activated_with_agent_run', 'agentsam_sdk', ${sqlInt(now)}
+  'activated', 'agentsam_sdk', ${sqlInt(now)}
 );`,
   ];
 
   return {
     sql: statements.join('\n\n'),
     ticketId: tid,
-    agentRunId: runId,
+    agentRunId: runId || null,
   };
 }
 

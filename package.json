@@ -118,7 +118,8 @@
     "./theme/forge": "./packages/theme-handyman-site/src/index.js",
     "./theme/harbor": "./packages/theme-insurance-site/src/index.js",
     "./theme/summit": "./packages/theme-shinshu-site/src/index.js",
-    "./models/inventory": "./src/models/inventory-core.js"
+    "./models/inventory": "./src/models/inventory-core.js",
+    "./goap": "./packages/agentsam-goap/src/index.js"
   },
   "bin": {
     "agentsam": "bin/agentsam",
@@ -144,6 +145,7 @@
     "packages/agentsam-nav/dist",
     "packages/work-graph",
     "packages/agentsam-queue-control",
+    "packages/agentsam-goap",
     "packages/connectors/cloudflare",
     "packages/providers/completeful",
     "templates",
@@ -223,6 +225,7 @@
     "packages/agentsam-desktop-shell",
     "packages/agentsam-docs-theme",
     "packages/agentsam-errors",
+    "packages/agentsam-goap",
     "packages/agentsam-ide",
     "packages/agentsam-key-manager",
     "packages/agentsam-knowledge",
@@ -262,7 +265,7 @@
     "test:terminal:mock": "node --test test/terminal/*.test.mjs",
     "test:live:terminal": "node --test test/live/*.live.test.mjs",
     "test:identity": "npm --prefix packages/identity test",
-    "test:workspaces": "npm --prefix packages/agentsam-contracts test && npm --prefix packages/agentsam-contracts run typecheck && npm --prefix packages/agentsam-errors test && npm --prefix packages/agentsam-repository test && npm --prefix packages/agentsam-workbench test && npm --prefix packages/agentsam-workbench run typecheck && npm --prefix packages/agentsam-nav run typecheck && npm --prefix packages/agentsam-shell-kit run typecheck && npm --prefix packages/work-graph test && npm --prefix packages/agentsam-queue-control test",
+    "test:workspaces": "npm --prefix packages/agentsam-contracts test && npm --prefix packages/agentsam-contracts run typecheck && npm --prefix packages/agentsam-errors test && npm --prefix packages/agentsam-repository test && npm --prefix packages/agentsam-workbench test && npm --prefix packages/agentsam-workbench run typecheck && npm --prefix packages/agentsam-nav run typecheck && npm --prefix packages/agentsam-shell-kit run typecheck && npm --prefix packages/work-graph test && npm --prefix packages/agentsam-queue-control test && npm --prefix packages/agentsam-goap test",
     "test:autorag": "npm --prefix packages/agentsam-knowledge test",
     "smoke": "node test/smoke.mjs",
     "verify:package": "node scripts/verify-package.mjs",
