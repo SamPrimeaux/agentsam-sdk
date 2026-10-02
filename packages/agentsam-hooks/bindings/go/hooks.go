@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -106,16 +107,17 @@ type Definition struct {
 }
 
 type Receipt struct {
-	Schema      string         `json:"schema"`
-	HookID      string         `json:"hook_id"`
-	Hook        string         `json:"hook"`
-	Status      string         `json:"status"`
-	StartedAt   int64          `json:"started_at"`
-	CompletedAt int64          `json:"completed_at"`
-	DurationMS  int64          `json:"duration_ms"`
-	InputKeys   []string       `json:"input_keys"`
-	OutputKeys  []string       `json:"output_keys"`
-	Error       map[string]any `json:"error,omitempty"`
+	Schema         string         `json:"schema"`
+	HookID         string         `json:"hook_id"`
+	Hook           string         `json:"hook"`
+	Status         string         `json:"status"`
+	StartedAt      int64          `json:"started_at"`
+	CompletedAt    int64          `json:"completed_at"`
+	DurationMS     int64          `json:"duration_ms"`
+	InputKeys      []string       `json:"input_keys"`
+	OutputKeys     []string       `json:"output_keys"`
+	Error          map[string]any `json:"error,omitempty"`
+	NativeEvidence map[string]any `json:"native_evidence,omitempty"`
 }
 
 type DispatchResult struct {
@@ -201,6 +203,57 @@ func merge(target *Output, update Output, contexts *[]string) {
 	target.CleanupActions = append(target.CleanupActions, update.CleanupActions...); if update.SessionSummary != "" { target.SessionSummary = update.SessionSummary }
 }
 
+var hookSecretPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`(?i)(authorization\s*[:=]\s*bearer\s+)[^\s,;]+`),
+	regexp.MustCompile(`(?i)((?:api[_-]?key|password|secret|token)\s*[:=]\s*)[^\s,;]+`),
+}
+
+func safeHookError(err error) string {
+	message := err.Error()
+	for _, pattern := range hookSecretPatterns { message = pattern.ReplaceAllString(message, `${1}[REDACTED]`) }
+	if len(message) > 512 { message = message[:512] }
+	return message
+}
+
+func hookFingerprint(values ...string) string {
+	text := strings.Join(values, "\x1f")
+	hash := uint64(0xcbf29ce484222325)
+	for index := 0; index < len(text); index++ { hash ^= uint64(text[index]); hash *= 0x100000001b3 }
+	return fmt.Sprintf("err_%016x", hash)
+}
+
+func canonicalHookFailure(definition Definition, event string, hookErr error) (map[string]any, map[string]any) {
+	reason := NormalizeErrorReason(hookErr.Error())
+	message := safeHookError(hookErr)
+	if strings.HasPrefix(reason, "mcp_") || strings.HasPrefix(reason, "lsp_") {
+		if _, ok := ErrorReasonPolicies["hook_"+reason]; ok { reason = "hook_"+reason }
+	}
+	policy := ErrorReasonPolicies[reason]
+	isPost := event == "post_tool_use" || event == "post_model_use"
+	behavior := "abort"
+	if definition.FailureMode == "closed" { behavior = "fail_closed" } else if definition.FailureMode == "open" { behavior = "fail_open" } else if isPost { behavior = "no_replay" }
+	sideEffect := "not_started"
+	if isPost { sideEffect = "confirmed_applied" }
+	adapter, _ := definition.Metadata["adapter_type"].(string)
+	if adapter == "" {
+		for _, candidate := range []string{"http", "mcp", "lsp", "command"} { if strings.HasPrefix(reason, "hook_"+candidate+"_") { adapter = candidate; break } }
+	}
+	protocol := adapter
+	transport := ""
+	if adapter == "command" { protocol = ProtocolSchema; transport = "process" }
+	retryable := policy.Retryable && sideEffect != "confirmed_applied" && behavior != "fail_closed"
+	feature := "hooks." + event
+	errorValue := map[string]any{
+		"error_code": policy.Code, "reason": reason, "domain": policy.Domain, "failure_class": policy.FailureClass,
+		"stage": policy.DefaultStage, "feature": feature, "failure_behavior": behavior, "retryable": retryable,
+		"side_effect_state": sideEffect, "adapter": nil, "protocol": nil, "transport": nil,
+		"fingerprint": hookFingerprint(policy.Code, reason, policy.Domain, policy.FailureClass, policy.DefaultStage, feature, behavior, sideEffect, adapter, protocol, transport, definition.ID),
+		"message": message,
+	}
+	if adapter != "" { errorValue["adapter"] = adapter }; if protocol != "" { errorValue["protocol"] = protocol }; if transport != "" { errorValue["transport"] = transport }
+	return errorValue, map[string]any{"code": nil, "exception_type": fmt.Sprintf("%T", hookErr), "message": message}
+}
+
 func (r *Runtime) Dispatch(ctx context.Context, event string, input map[string]any, invocation Invocation, cwd string) (DispatchResult, error) {
 	event, err := normalizeEvent(event); if err != nil { return DispatchResult{}, err }
 	if cwd == "" { cwd, _ = os.Getwd() }
@@ -213,10 +266,13 @@ func (r *Runtime) Dispatch(ctx context.Context, event string, input map[string]a
 		receipt := Receipt{Schema: ReceiptSchema, HookID: definition.ID, Hook: event, StartedAt: started.UnixMilli(), CompletedAt: completed.UnixMilli(), DurationMS: completed.Sub(started).Milliseconds(), InputKeys: keys(envelope.Input)}
 		if hookErr == nil && output != nil { hookErr = output.Validate(event) }
 		if hookErr != nil {
-			receipt.Status = "failed"; receipt.Error = map[string]any{"code": "AGENTSAM_HOOK_FAILED", "message": hookErr.Error()}; failures = append(failures, map[string]any{"hook_id": definition.ID, "hook": event, "message": hookErr.Error()})
+			receipt.Status = "failed"
+			receipt.Error, receipt.NativeEvidence = canonicalHookFailure(definition, event, hookErr)
+			failure := map[string]any{"hook_id": definition.ID, "hook": event, "native_evidence": receipt.NativeEvidence}
+			for key, value := range receipt.Error { failure[key] = value }; failures = append(failures, failure)
 			receipts = append(receipts, receipt); if r.onReceipt != nil { r.onReceipt(receipt) }
 			if definition.FailureMode == "error" { return DispatchResult{}, fmt.Errorf("hook_execution_failed:%s: %w", definition.ID, hookErr) }
-			if definition.FailureMode == "closed" { combined.PermissionDecision = "deny"; combined.PermissionDecisionReason = fmt.Sprintf("Hook '%s' failed closed: %s", definition.ID, hookErr); break }
+			if definition.FailureMode == "closed" { combined.PermissionDecision = "deny"; combined.PermissionDecisionReason = fmt.Sprintf("Hook '%s' failed closed: %s", definition.ID, safeHookError(hookErr)); break }
 			continue
 		}
 		if output == nil { output = &Output{} }; receipt.Status = "completed"; receipt.OutputKeys = outputKeys(*output); receipts = append(receipts, receipt); if r.onReceipt != nil { r.onReceipt(receipt) }

@@ -60,12 +60,17 @@ assert.ok(pkg.files?.includes('packages/agentsam-contracts'), 'published files m
 assert.ok(pkg.files?.includes('packages/agentsam-errors'), 'published files must include canonical errors runtime');
 assert.notEqual(errors.private, true, 'errors runtime is a publishable workspace package and is also distributed through the root SDK');
 assert.equal(errors.publishConfig?.access, 'public', 'errors workspace must remain publicly publishable');
+assert.ok(errors.files?.includes('protocol'), 'standalone errors package must ship the generated catalog and v2 schema');
+assert.ok(errors.files?.includes('types'), 'standalone errors package must ship generated TypeScript contracts');
+assert.equal(errors.exports?.['./catalog'], './protocol/error-catalog.json', 'standalone errors catalog export must be stable');
+assert.equal(errors.exports?.['./schema'], './protocol/agentsam.error.v2.schema.json', 'standalone errors v2 schema export must be stable');
 assert.equal(pkg.exports?.['./brand'], './packages/agentsam-brand/src/index.js', 'brand subpath must resolve to the brand workspace');
 assert.equal(pkg.exports?.['./errors'], './src/errors/index.js', 'errors subpath must resolve to the canonical facade');
 assert.equal(pkg.exports?.['./errors/schema'], './protocol/errors/error-envelope.schema.json', 'errors JSON Schema export must be stable');
+assert.equal(pkg.exports?.['./errors/schema-v2'], './protocol/errors/agentsam.error.v2.schema.json', 'errors v2 JSON Schema export must be explicit');
 assert.equal(pkg.exports?.['./errors/catalog'], './protocol/errors/error-catalog.json', 'errors catalog export must be stable');
-assert.equal(errorCatalog.schema_version, 1, 'error catalog schema version must be 1');
-assert.equal(errorSchema.properties?.schema_version?.const, 1, 'error envelope JSON Schema must match catalog version');
+assert.equal(errorCatalog.schema_version, 2, 'error catalog schema version must be 2');
+assert.equal(errorSchema.properties?.schema_version?.const, 2, 'error envelope JSON Schema must match catalog version');
 assert.ok(errorSchema.properties?.code?.enum?.includes('INTERNAL'), 'error envelope schema must publish canonical codes');
 assert.ok(
   pkg.files?.includes('packages/connectors/cloudflare') && existsSync(join(root, 'packages/connectors/cloudflare/src/index.js')),

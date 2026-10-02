@@ -1,4 +1,4 @@
-import { ERROR_REASON_POLICY, normalizeError } from '../errors/index.js';
+import { ERROR_REASON_POLICY, canonicalizeErrorReason, normalizeError } from '../errors/index.js';
 import { receiptPayload, redactToolValue } from './redact.js';
 
 function defaultId(prefix) {
@@ -6,6 +6,11 @@ function defaultId(prefix) {
 }
 
 function reasonForError(error) {
+  const nativeReason = canonicalizeErrorReason(error);
+  if (/^(hook|mcp|lsp|tool|provider)_/.test(nativeReason || '')) return nativeReason;
+  const message = String(error?.message || error || '').toLowerCase();
+  if (message.includes('provider adapter not registered') || message.includes('no registered execution target')) return 'tool_handler_unavailable';
+  if (/timeout|timed out|deadline/.test(message)) return 'tool_timeout';
   const status = Number(error?.status || error?.http_status || 0);
   if (status === 401) return 'provider_credential_invalid';
   if (status === 403) return 'provider_scope_insufficient';
@@ -16,12 +21,12 @@ function reasonForError(error) {
   if (status === 400 || status === 422) return 'provider_request_invalid';
   if (error?.code === 'completeful_idempotency_required') return 'input_invalid';
   if (error instanceof TypeError) return 'input_invalid';
-  return 'execution_failed';
+  return nativeReason || 'tool_execution_failed';
 }
 
-function normalizeToolError(error, definition) {
+function normalizeToolError(error, definition, sideEffectState = 'unknown') {
   const reason = reasonForError(error);
-  const policy = ERROR_REASON_POLICY[reason] || ERROR_REASON_POLICY.execution_failed;
+  const policy = ERROR_REASON_POLICY[reason] || ERROR_REASON_POLICY.tool_execution_failed;
   return normalizeError(error, {
     code: policy.code,
     reason,
@@ -29,6 +34,9 @@ function normalizeToolError(error, definition) {
       ? { kind: 'provider', name: definition.provider, service: definition.provider }
       : { kind: 'runtime', name: 'agentsam-tool-runtime' },
     domain: 'tool',
+    stage: 'execute',
+    feature: 'tool.execute',
+    side_effect_state: sideEffectState,
     tool: definition.toolKey,
     provider: definition.provider || null,
     provider_code: error?.code || null,
@@ -132,7 +140,7 @@ export function createToolExecutor({
     try {
       invoke = await resolveExecutionTarget(registry, definition);
     } catch (error) {
-      const normalized = normalizeToolError(error, definition);
+      const normalized = normalizeToolError(error, definition, 'not_started');
       const completedAt = now();
       const receipt = {
         invocationId: invocation.id,

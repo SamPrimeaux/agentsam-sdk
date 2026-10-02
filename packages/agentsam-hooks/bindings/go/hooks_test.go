@@ -35,4 +35,14 @@ func TestPermissionHooksFailClosed(t *testing.T) {
 	result, err := runtime.Dispatch(context.Background(), "pre_model_use", map[string]any{"request": map[string]any{}}, Invocation{}, ".")
 	if err != nil { t.Fatal(err) }
 	if result.Output.PermissionDecision != "deny" { t.Fatalf("decision = %q", result.Output.PermissionDecision) }
+	failure := result.Receipts[0].Error
+	if failure["error_code"] != "DEADLINE_EXCEEDED" || failure["reason"] != "hook_handler_timeout" { t.Fatalf("canonical failure = %#v", failure) }
+	if failure["failure_behavior"] != "fail_closed" || failure["side_effect_state"] != "not_started" { t.Fatalf("policy semantics = %#v", failure) }
+}
+
+func TestGeneratedErrorAliasesShareCanonicalPolicy(t *testing.T) {
+	reason := NormalizeErrorReason("AGENTSAM_HOOK_HTTP_FAILED")
+	if reason != "hook_http_request_failed" { t.Fatalf("reason = %q", reason) }
+	policy := ErrorReasonPolicies[reason]
+	if policy.Code != "UNAVAILABLE" || policy.Domain != "hook" || !policy.Retryable { t.Fatalf("policy = %#v", policy) }
 }

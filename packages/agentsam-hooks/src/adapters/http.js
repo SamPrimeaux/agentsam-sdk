@@ -46,6 +46,11 @@ export function createHttpHookAdapter(options = {}) {
         invalid.code = 'AGENTSAM_HOOK_INVALID_OUTPUT';
         throw invalid;
       }
+    } catch (error) {
+      error.adapter = 'http';
+      error.protocol = 'http';
+      error.transport = url.protocol.slice(0, -1);
+      throw error;
     } finally {
       clearTimeout(timer);
     }

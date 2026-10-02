@@ -1,3 +1,5 @@
+import { ERROR_FAILURE_CLASS, ERROR_SIDE_EFFECT_STATE } from './vocabulary.js';
+
 /**
  * Recovery policy — separates "what failed" from "what to do".
  *
@@ -6,39 +8,10 @@
  * Critical rule: unknown side_effect_state ⇒ reconcile before retry.
  */
 
-export const FAILURE_CLASS = Object.freeze({
-  INPUT: 'input',
-  AUTHENTICATION: 'authentication',
-  AUTHORIZATION: 'authorization',
-  POLICY: 'policy',
-  DISCOVERY: 'discovery',
-  RESOLUTION: 'resolution',
-  TRANSPORT: 'transport',
-  PROTOCOL: 'protocol',
-  TIMEOUT: 'timeout',
-  RATE_LIMIT: 'rate_limit',
-  CAPACITY: 'capacity',
-  RESOURCE: 'resource',
-  FILESYSTEM: 'filesystem',
-  PERSISTENCE: 'persistence',
-  CONSISTENCY: 'consistency',
-  CONFLICT: 'conflict',
-  DEPENDENCY: 'dependency',
-  PROCESS: 'process',
-  IPC: 'ipc',
-  DATA_INTEGRITY: 'data_integrity',
-  CANCELLED: 'cancelled',
-  UNKNOWN: 'unknown',
-});
-
-export const SIDE_EFFECT_STATE = Object.freeze({
-  NONE: 'none',
-  NOT_STARTED: 'not_started',
-  CONFIRMED_NOT_APPLIED: 'confirmed_not_applied',
-  CONFIRMED_APPLIED: 'confirmed_applied',
-  PARTIALLY_APPLIED: 'partially_applied',
-  UNKNOWN: 'unknown',
-});
+// Compatibility names now project the generated v2 vocabulary instead of
+// maintaining a second recovery-only taxonomy.
+export const FAILURE_CLASS = ERROR_FAILURE_CLASS;
+export const SIDE_EFFECT_STATE = ERROR_SIDE_EFFECT_STATE;
 
 export const RECOVERY_SCHEMA = 'agentsam.recovery.v1';
 
@@ -85,6 +58,7 @@ export function inferFailureClass(error = {}) {
  * @param {object} [operationContext]
  */
 export function inferSideEffectState(error = {}, operationContext = {}) {
+  if (error.side_effect_state && Object.values(SIDE_EFFECT_STATE).includes(error.side_effect_state)) return error.side_effect_state;
   const op = error.operation || operationContext.operation || {};
   if (op.side_effect_state) return op.side_effect_state;
   if (op.read_only === true || op.side_effect_state === SIDE_EFFECT_STATE.NONE) {
@@ -148,7 +122,7 @@ export function planRecovery(error = {}, operationContext = {}) {
   };
 
   // Cancellations are not defects
-  if (failure_class === FAILURE_CLASS.CANCELLED) {
+  if (failure_class === FAILURE_CLASS.CANCELLED || failure_class === FAILURE_CLASS.CANCELLATION) {
     return freezePlan({
       ...plan,
       disposition: 'abort',
@@ -195,7 +169,7 @@ export function planRecovery(error = {}, operationContext = {}) {
     });
   }
 
-  if (failure_class === FAILURE_CLASS.INPUT || failure_class === FAILURE_CLASS.CONFLICT) {
+  if ([FAILURE_CLASS.INPUT, FAILURE_CLASS.VALIDATION, FAILURE_CLASS.CONFLICT].includes(failure_class)) {
     const disposition = failure_class === FAILURE_CLASS.CONFLICT && error.retryable
       ? 'retry'
       : 'await_user';

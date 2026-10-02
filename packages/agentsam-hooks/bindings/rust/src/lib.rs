@@ -9,6 +9,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+mod errors_generated;
+pub use errors_generated::{error_policy, normalize_error_reason, ErrorPolicy, ERROR_REASON_ALIASES, ERROR_REASON_POLICIES, ERROR_SCHEMA_VERSION};
+
 pub const PROTOCOL_SCHEMA: &str = "agentsam.hook.v1";
 pub const RECEIPT_SCHEMA: &str = "agentsam.hook.receipt.v1";
 pub const EVENTS: &[&str] = &[
@@ -165,7 +168,9 @@ pub struct Receipt {
     pub input_keys: Vec<String>,
     pub output_keys: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<BTreeMap<String, String>>,
+    pub error: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub native_evidence: Option<Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -175,7 +180,7 @@ pub struct DispatchResult {
     pub input: Map<String, Value>,
     pub output: Output,
     pub receipts: Vec<Receipt>,
-    pub errors: Vec<BTreeMap<String, String>>,
+    pub errors: Vec<Value>,
 }
 
 #[derive(Default)]
@@ -208,11 +213,18 @@ impl Runtime {
                     if (["pre_tool_use", "pre_model_use"].contains(&event) && matches!(output.permission_decision.as_deref(), Some("deny" | "ask"))) || (event == "agent_stop" && output.decision.as_deref() == Some("block")) { break; }
                 }
                 Err(error) => {
-                    let completed = now_ms(); receipts.push(receipt(definition, event, started, completed, "failed", &envelope.input, &Output::default(), Some(&error)));
-                    errors.push(BTreeMap::from([("hook_id".into(), definition.id.clone()), ("hook".into(), event.into()), ("message".into(), error.to_string())]));
+                    let completed = now_ms();
+                    let failed_receipt = receipt(definition, event, started, completed, "failed", &envelope.input, &Output::default(), Some(&error));
+                    let mut failure = failed_receipt.error.clone().unwrap_or_else(|| Value::Object(Map::new()));
+                    if let Some(object) = failure.as_object_mut() {
+                        object.insert("hook_id".into(), definition.id.clone().into());
+                        object.insert("hook".into(), event.into());
+                        object.insert("native_evidence".into(), failed_receipt.native_evidence.clone().unwrap_or(Value::Null));
+                    }
+                    receipts.push(failed_receipt); errors.push(failure);
                     match definition.failure_mode.as_deref().unwrap_or("open") {
                         "error" => return Err(HookError::new(format!("hook_execution_failed:{}:{error}", definition.id))),
-                        "closed" => { combined.permission_decision = Some("deny".into()); combined.permission_decision_reason = Some(format!("Hook '{}' failed closed: {error}", definition.id)); break; }
+                        "closed" => { combined.permission_decision = Some("deny".into()); combined.permission_decision_reason = Some(format!("Hook '{}' failed closed: {}", definition.id, safe_hook_error(&error))); break; }
                         _ => {}
                     }
                 }
@@ -250,10 +262,66 @@ fn merge(target: &mut Output, update: &Output, contexts: &mut Vec<String>) {
     target.cleanup_actions.extend(update.cleanup_actions.clone()); if update.session_summary.is_some() { target.session_summary = update.session_summary.clone(); }
 }
 
+fn safe_hook_error(error: &HookError) -> String {
+    let message = error.to_string();
+    let lower = message.to_ascii_lowercase();
+    if ["authorization:", "authorization=", "bearer ", "api_key", "api-key", "password", "secret", "token"]
+        .iter().any(|marker| lower.contains(marker))
+    {
+        return "[REDACTED hook error; sensitive native evidence removed]".into();
+    }
+    message.chars().take(512).collect()
+}
+
+fn hook_fingerprint(values: &[&str]) -> String {
+    let text = values.join("\u{1f}");
+    let mut hash: u64 = 0xcbf29ce484222325;
+    for byte in text.as_bytes() { hash ^= u64::from(*byte); hash = hash.wrapping_mul(0x100000001b3); }
+    format!("err_{hash:016x}")
+}
+
+fn canonical_hook_failure(definition: &Definition, event: &str, error: &HookError) -> (Value, Value) {
+    let mut reason = normalize_error_reason(&[&error.message]);
+    let hook_specific;
+    if reason.starts_with("mcp_") || reason.starts_with("lsp_") {
+        hook_specific = format!("hook_{reason}");
+        if let Some(policy) = error_policy(&hook_specific) { reason = policy.reason; }
+    }
+    let policy = error_policy(reason).expect("generated hook error policy");
+    let message = safe_hook_error(error);
+    let is_post = event == "post_tool_use" || event == "post_model_use";
+    let behavior = match definition.failure_mode.as_deref() {
+        Some("closed") => "fail_closed",
+        Some("open") => "fail_open",
+        Some("error") if is_post => "no_replay",
+        _ => "abort",
+    };
+    let side_effect = if is_post { "confirmed_applied" } else { "not_started" };
+    let adapter = ["http", "mcp", "lsp", "command"].iter().find(|name| reason.starts_with(&format!("hook_{name}_"))).copied();
+    let protocol = adapter.map(|value| if value == "command" { PROTOCOL_SCHEMA } else { value });
+    let transport = adapter.and_then(|value| if value == "command" { Some("process") } else { None });
+    let feature = format!("hooks.{event}");
+    let retryable = policy.retryable && !is_post && behavior != "fail_closed";
+    let fingerprint = hook_fingerprint(&[
+        policy.code, reason, policy.domain, policy.failure_class, policy.default_stage, &feature,
+        behavior, side_effect, adapter.unwrap_or(""), protocol.unwrap_or(""), transport.unwrap_or(""), &definition.id,
+    ]);
+    let canonical = serde_json::json!({
+        "error_code": policy.code, "reason": reason, "domain": policy.domain,
+        "failure_class": policy.failure_class, "stage": policy.default_stage, "feature": feature,
+        "failure_behavior": behavior, "retryable": retryable, "side_effect_state": side_effect,
+        "adapter": adapter, "protocol": protocol, "transport": transport,
+        "fingerprint": fingerprint, "message": message.clone(),
+    });
+    let native = serde_json::json!({"code": null, "exception_type": "HookError", "message": message});
+    (canonical, native)
+}
+
 fn receipt(definition: &Definition, event: &str, started: u64, completed: u64, status: &str, input: &Map<String, Value>, output: &Output, error: Option<&HookError>) -> Receipt {
     let mut input_keys: Vec<_> = input.keys().cloned().collect(); input_keys.sort();
     let object = serde_json::to_value(output).ok().and_then(|value| value.as_object().cloned()).unwrap_or_default(); let mut output_keys: Vec<_> = object.keys().cloned().collect(); output_keys.sort();
-    Receipt { schema: RECEIPT_SCHEMA.into(), hook_id: definition.id.clone(), hook: event.into(), status: status.into(), started_at: started, completed_at: completed, duration_ms: completed.saturating_sub(started), input_keys, output_keys, error: error.map(|value| BTreeMap::from([("code".into(), "AGENTSAM_HOOK_FAILED".into()), ("message".into(), value.to_string())])) }
+    let (error, native_evidence) = error.map(|value| canonical_hook_failure(definition, event, value)).map_or((None, None), |(canonical, native)| (Some(canonical), Some(native)));
+    Receipt { schema: RECEIPT_SCHEMA.into(), hook_id: definition.id.clone(), hook: event.into(), status: status.into(), started_at: started, completed_at: completed, duration_ms: completed.saturating_sub(started), input_keys, output_keys, error, native_evidence }
 }
 
 #[derive(Debug, Clone)]
@@ -299,5 +367,31 @@ mod tests {
         assert_eq!(result.output.additional_context.as_deref(), Some("Rust policy"));
         assert_eq!(result.input["tool_args"]["bounded"], true);
         assert_eq!(result.receipts[0].schema, RECEIPT_SCHEMA);
+    }
+
+    #[test]
+    fn generated_error_aliases_share_canonical_policy() {
+        let reason = normalize_error_reason(&["AGENTSAM_HOOK_HTTP_FAILED"]);
+        assert_eq!(reason, "hook_http_request_failed");
+        let policy = error_policy(reason).unwrap();
+        assert_eq!(policy.code, "UNAVAILABLE");
+        assert_eq!(policy.domain, "hook");
+        assert!(policy.retryable);
+    }
+
+    #[test]
+    fn failed_post_hook_records_no_replay_and_applied_side_effect() {
+        let mut runtime = Runtime::new();
+        let handler: Handler = Arc::new(|_| Err(HookError::new("hook_mcp_timeout:server")));
+        let mut definition = Definition::new("observer", handler);
+        definition.failure_mode = Some("open".into());
+        runtime.register("post_tool_use", definition).unwrap();
+        let result = runtime.dispatch("post_tool_use", ".", Invocation::default(), Map::new()).unwrap();
+        let error = result.receipts[0].error.as_ref().unwrap();
+        assert_eq!(error["error_code"], "DEADLINE_EXCEEDED");
+        assert_eq!(error["reason"], "hook_mcp_timeout");
+        assert_eq!(error["failure_behavior"], "fail_open");
+        assert_eq!(error["side_effect_state"], "confirmed_applied");
+        assert_eq!(error["retryable"], false);
     }
 }

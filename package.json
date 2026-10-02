@@ -90,6 +90,7 @@
     "./work-graph/adapters/business/projects": "./packages/work-graph/src/adapters/business/projects.js",
     "./errors": "./src/errors/index.js",
     "./errors/schema": "./protocol/errors/error-envelope.schema.json",
+    "./errors/schema-v2": "./protocol/errors/agentsam.error.v2.schema.json",
     "./errors/catalog": "./protocol/errors/error-catalog.json",
     "./cloudflare": "./src/cloudflare/index.js",
     "./eval": "./src/eval/index.js",

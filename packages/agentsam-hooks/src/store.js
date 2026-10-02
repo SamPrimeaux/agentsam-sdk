@@ -158,7 +158,7 @@ export function createHookStore(db, options = {}) {
     const error = receipt.error || {};
     const sourceKind = clean(correlation.source_kind || invocation.metadata?.hook_source) || 'config';
     const status = receipt.status === 'completed' ? 'completed'
-      : error.code === 'AGENTSAM_HOOK_TIMEOUT' ? 'timeout' : 'failed';
+      : error.error_code === 'DEADLINE_EXCEEDED' || error.failure_class === 'timeout' ? 'timeout' : 'failed';
     const ranAt = Number(receipt.completed_at || receipt.started_at || Date.now());
     const ranAtUnix = ranAt > 10_000_000_000 ? Math.floor(ranAt / 1000) : Math.floor(ranAt);
     const executionId = clean(correlation.id) || id('hexec');
@@ -174,6 +174,7 @@ export function createHookStore(db, options = {}) {
       input_keys: receipt.input_keys || [],
       output_keys: receipt.output_keys || [],
       ...(receipt.error ? { error: receipt.error } : {}),
+      ...(receipt.native_evidence ? { native_evidence: receipt.native_evidence } : {}),
     };
     await db.prepare(`
       INSERT INTO agentsam_hook_execution (
@@ -189,8 +190,8 @@ export function createHookStore(db, options = {}) {
       clean(invocation.session_id || correlation.session_id) || null,
       clean(correlation.conversation_id) || null, status, Math.max(0, Number(receipt.duration_ms || 0)),
       jsonText(receipt.input_keys, []), jsonText(receipt.output_keys, []),
-      clean(correlation.decision) || null, clean(correlation.reason) || null,
-      clean(error.code) || null, clean(error.message).slice(0, 512) || null,
+      clean(correlation.decision) || null, clean(error.reason || correlation.reason) || null,
+      clean(error.error_code) || null, clean(error.message).slice(0, 512) || null,
       jsonText(safeReceipt, {}), jsonText(safeCorrelation, {}), ranAtUnix,
     ).run();
     return executionId;
@@ -251,6 +252,7 @@ export async function registerStoredHooks(runtime, store, options = {}) {
       metadata: {
         ...row.metadata,
         hook_source: 'stored',
+        adapter_type: row.handler_type,
         stored_hook_id: row.id,
         owner_id: row.owner_id,
         scope_type: row.scope_type,

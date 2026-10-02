@@ -30,7 +30,12 @@ export function fromHttpError({ status, body, headers, source, provider, domain 
         : code === 'RESOURCE_EXHAUSTED' ? ERROR_REASON.RATE_LIMITED
           : code === 'UNAVAILABLE' ? ERROR_REASON.TRANSPORT_UNREACHABLE
             : code === 'DEADLINE_EXCEEDED' ? ERROR_REASON.TRANSPORT_TIMEOUT
-              : ERROR_REASON.UNKNOWN,
+              : code === 'INTERNAL' ? ERROR_REASON.INTERNAL
+                : code === 'INVALID_ARGUMENT' ? ERROR_REASON.INPUT_INVALID
+                  : code === 'NOT_FOUND' ? ERROR_REASON.TARGET_NOT_FOUND
+                    : code === 'FAILED_PRECONDITION' ? ERROR_REASON.PRECONDITION_FAILED
+                      : code === 'UNIMPLEMENTED' ? ERROR_REASON.UNSUPPORTED_OPERATION
+                        : ERROR_REASON.UNKNOWN,
     message: candidate?.message || candidate?.error || `HTTP ${status || 500} request failed`,
     retryable: Number(status) === 429 || Number(status) >= 500,
     retry_after_ms: (() => {

@@ -23,10 +23,36 @@
     "output_keys": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
     "error": {
       "type": "object",
-      "required": ["code", "message"],
+      "required": [
+        "error_code", "reason", "domain", "failure_class", "stage", "feature",
+        "failure_behavior", "retryable", "side_effect_state", "adapter", "protocol",
+        "transport", "fingerprint", "message"
+      ],
       "properties": {
-        "code": { "type": "string" },
+        "error_code": { "type": "string", "pattern": "^[A-Z][A-Z_]{1,63}$" },
+        "reason": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,127}$" },
+        "domain": { "type": "string", "minLength": 1 },
+        "failure_class": { "type": "string", "minLength": 1 },
+        "stage": { "type": "string", "minLength": 1 },
+        "feature": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$" },
+        "failure_behavior": { "enum": ["fail_closed", "fail_open", "observe_only", "retry_bounded", "skip", "abort", "no_replay"] },
+        "retryable": { "type": "boolean" },
+        "side_effect_state": { "enum": ["none", "not_started", "confirmed_not_applied", "confirmed_applied", "partially_applied", "unknown"] },
+        "adapter": { "type": ["string", "null"] },
+        "protocol": { "type": ["string", "null"] },
+        "transport": { "type": ["string", "null"] },
+        "fingerprint": { "type": "string", "pattern": "^err_[A-Za-z0-9_-]{8,128}$" },
         "message": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "native_evidence": {
+      "type": "object",
+      "required": ["code", "exception_type", "message"],
+      "properties": {
+        "code": { "type": ["string", "null"] },
+        "exception_type": { "type": ["string", "null"] },
+        "message": { "type": "string", "maxLength": 512 }
       },
       "additionalProperties": false
     }

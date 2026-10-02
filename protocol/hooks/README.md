@@ -5,7 +5,7 @@
 - `agentsam.hook.v1.schema.json`: invocation envelope.
 - `agentsam.hook.output.v1.schema.json`: handler response.
 - `agentsam.hooks.config.v1.schema.json`: explicit command/HTTP wiring.
-- `agentsam.hook.receipt.v1.schema.json`: value-free execution evidence.
+- `agentsam.hook.receipt.v1.schema.json`: value-free execution evidence with canonical AgentSam error dimensions and separately redacted native evidence.
 
 The wire format uses snake_case and Unix epoch milliseconds. Event-specific data stays under `input`; host-owned correlation IDs stay under `invocation`. Providers, MCP transports, LSP clients, runtimes, and agent schedulers adapt into this boundary rather than adding provider fields to the lifecycle contract.
 
@@ -14,3 +14,5 @@ Hooks are policy and transformation ports, not identity or capability authoritie
 The optional portable registry is owned by `migrations/runtime/0005_agentsam_hooks.sql`; package lifecycle scripts generate the standalone schema-pack copy from that authority. It uses `owner_id` plus `scope_type`/`scope_ref`, not required tenant/workspace tables.
 
 Cross-language bindings live in `packages/agentsam-hooks`. Its `sync:protocol` pretest/prepack gate generates distributable schema copies from this authority; a package test verifies that those generated artifacts are byte-identical.
+
+Failed receipts do not invent a hook-only error taxonomy. They store `error_code`, `reason`, `domain`, `failure_class`, `stage`, `feature`, `failure_behavior`, `retryable`, `side_effect_state`, and `fingerprint` from `protocol/errors/error-catalog.json`. Adapter, protocol, and transport remain separate dimensions. Redacted native code/type/message evidence is stored in `native_evidence`. A failed post-tool or post-model hook records the already-applied side effect and is never routed back through the tool/model replay path.

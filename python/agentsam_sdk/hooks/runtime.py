@@ -10,6 +10,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Mapping, Optional
 
+from ..errors import error_policy, normalize_error_reason
 from .contracts import FAILURE_MODES, HookEnvelope, HookOutput, normalize_event
 
 HookHandler = Callable[[HookEnvelope], Optional[HookOutput | Mapping[str, Any]] | Awaitable[Optional[HookOutput | Mapping[str, Any]]]]
@@ -29,6 +30,9 @@ class HookDefinition:
 class HookExecutionError(RuntimeError):
     def __init__(self, definition: HookDefinition, cause: BaseException):
         super().__init__(f"hook_execution_failed:{definition.id}:{cause}")
+        self.code = "AGENTSAM_HOOK_EXECUTION_FAILED"
+        self.reason = normalize_error_reason(getattr(cause, "reason", None), str(cause), getattr(cause, "code", None))
+        self.error_code = error_policy(self.reason)["code"]
         self.hook_id = definition.id
         self.__cause__ = cause
 
@@ -38,6 +42,55 @@ def _safe_error(error: BaseException) -> str:
     message = re.sub(r"(authorization\s*[:=]\s*bearer\s+)[^\s,;]+", r"\1[REDACTED]", message, flags=re.I)
     message = re.sub(r"((?:api[_-]?key|password|secret|token)\s*[:=]\s*)[^\s,;]+", r"\1[REDACTED]", message, flags=re.I)
     return message[:512]
+
+
+def _fingerprint(*values: object) -> str:
+    text = "\x1f".join(str(value or "").strip() for value in values).encode()
+    value = 0xCBF29CE484222325
+    for byte in text:
+        value ^= byte
+        value = (value * 0x100000001B3) & 0xFFFFFFFFFFFFFFFF
+    return f"err_{value:016x}"
+
+
+def _canonical_failure(definition: HookDefinition, event: str, error: BaseException) -> tuple[dict[str, Any], dict[str, Any]]:
+    reason = normalize_error_reason(getattr(error, "reason", None), str(error), getattr(error, "code", None))
+    if reason == "hook_handler_failed" and isinstance(error, (TimeoutError, asyncio.TimeoutError)):
+        reason = "hook_handler_timeout"
+    if reason.startswith(("mcp_", "lsp_")):
+        hook_specific = normalize_error_reason(f"hook_{reason}")
+        if hook_specific != "hook_handler_failed":
+            reason = hook_specific
+    policy = error_policy(reason)
+    is_post = event in ("post_tool_use", "post_model_use")
+    mode = definition.failure_mode or _default_failure_mode(event)
+    behavior = "fail_closed" if mode == "closed" else "fail_open" if mode == "open" else "no_replay" if is_post else "abort"
+    side_effect = "confirmed_applied" if is_post else "unknown" if event == "post_tool_use_failure" else "not_started"
+    adapter = str(getattr(error, "adapter", "") or definition.metadata.get("adapter_type", "") or "").strip() or None
+    if adapter is None:
+        adapter = next((name for name in ("http", "mcp", "lsp", "command") if reason.startswith(f"hook_{name}_")), None)
+    protocol = str(getattr(error, "protocol", "") or ("agentsam.hook.v1" if adapter == "command" else adapter or "")).strip() or None
+    transport = str(getattr(error, "transport", "") or ("process" if adapter == "command" else "")).strip() or None
+    feature = f"hooks.{event}"
+    message = _safe_error(error)
+    retryable = bool(policy["retryable"]) and not is_post and behavior != "fail_closed"
+    canonical = {
+        "error_code": policy["code"], "reason": reason, "domain": policy["domain"],
+        "failure_class": policy["failure_class"], "stage": policy["default_stage"], "feature": feature,
+        "failure_behavior": behavior, "retryable": retryable, "side_effect_state": side_effect,
+        "adapter": adapter, "protocol": protocol, "transport": transport,
+        "fingerprint": _fingerprint(
+            policy["code"], reason, policy["domain"], policy["failure_class"], policy["default_stage"],
+            feature, behavior, side_effect, adapter, protocol, transport, definition.id,
+        ),
+        "message": message,
+    }
+    native = {
+        "code": str(getattr(error, "code", ""))[:128] or None,
+        "exception_type": type(error).__name__[:128],
+        "message": message,
+    }
+    return canonical, native
 
 
 def _default_failure_mode(event: str) -> str:
@@ -172,14 +225,15 @@ class HookRuntime:
             except Exception as error:
                 completed = int(self._clock())
                 safe_error = _safe_error(error)
+                canonical, native_evidence = _canonical_failure(definition, hook, error)
                 receipt = {
                     "schema": "agentsam.hook.receipt.v1", "hook_id": definition.id, "hook": hook,
                     "status": "failed", "started_at": started, "completed_at": completed,
                     "duration_ms": max(0, completed - started), "input_keys": sorted(envelope.input.keys()),
-                    "output_keys": [], "error": {"code": getattr(error, "code", "AGENTSAM_HOOK_FAILED"), "message": safe_error},
+                    "output_keys": [], "error": canonical, "native_evidence": native_evidence,
                 }
                 receipts.append(receipt)
-                errors.append({"hook_id": definition.id, "hook": hook, **receipt["error"]})
+                errors.append({"hook_id": definition.id, "hook": hook, **canonical, "native_evidence": native_evidence})
                 await self._observe(receipt)
                 mode = definition.failure_mode or _default_failure_mode(hook)
                 if mode == "error":

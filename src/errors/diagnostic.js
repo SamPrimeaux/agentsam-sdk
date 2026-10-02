@@ -181,16 +181,16 @@ export function diagnosticFromError(error, fallback = {}) {
   if (error?.diagnostic) return error.diagnostic;
   const envelope = error?.envelope || (error?.ok === false && error?.schema_version ? error : null);
   if (envelope) return legacyDiagnosticFromEnvelope(envelope, fallback);
-  return Object.freeze({
-    schema_version: 1,
-    source: fallback.source || 'agentsam',
-    kind: fallback.kind || 'runtime_error',
-    code: clean(error?.code || fallback.code) || 'runtime_error',
-    message: redactString(error?.message || error || fallback.message || 'Unknown error', 4_000),
-    http_status: Number(error?.status || fallback.status || 0) || null,
-    retriable: Boolean(fallback.retriable),
-    retry_strategy: fallback.retry_strategy || 'inspect_error',
+  const canonical = normalizeError(error, {
+    reason: fallback.reason,
+    domain: fallback.domain || 'runtime',
+    stage: fallback.stage,
+    feature: fallback.feature,
+    failure_behavior: fallback.failure_behavior,
+    side_effect_state: fallback.side_effect_state,
+    source: { kind: 'runtime', name: fallback.source || 'agentsam-sdk' },
   });
+  return legacyDiagnosticFromEnvelope(canonical, fallback);
 }
 
 export function renderDiagnosticError(error) {

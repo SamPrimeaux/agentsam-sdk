@@ -97,11 +97,29 @@ test('pre hooks fail closed by default while observers fail open', async () => {
   assert.equal(denied.output.permission_decision, 'deny');
   assert.match(denied.output.permission_decision_reason, /failed closed/);
   assert.doesNotMatch(JSON.stringify(denied), /do-not-record/);
+  assert.deepEqual({
+    code: denied.receipts[0].error.error_code,
+    reason: denied.receipts[0].error.reason,
+    domain: denied.receipts[0].error.domain,
+    behavior: denied.receipts[0].error.failure_behavior,
+    sideEffect: denied.receipts[0].error.side_effect_state,
+    retryable: denied.receipts[0].error.retryable,
+  }, {
+    code: 'INTERNAL', reason: 'hook_handler_failed', domain: 'hook', behavior: 'fail_closed',
+    sideEffect: 'not_started', retryable: false,
+  });
+  assert.match(denied.receipts[0].error.fingerprint, /^err_[a-f0-9]{16}$/);
+  assert.equal(denied.receipts[0].native_evidence.message.includes('do-not-record'), false);
 
-  const post = createHookRuntime({ hooks: { post_tool_use: { id: 'audit', handler: () => { throw new Error('offline'); } } } });
+  const post = createHookRuntime({ hooks: { post_tool_use: { id: 'audit', handler: () => { throw new Error('hook_http_timeout:1000'); } } } });
   const allowed = await post.dispatch('post_tool_use', { tool_name: 'x', tool_result: { ok: true } });
   assert.deepEqual(allowed.input.tool_result, { ok: true });
   assert.equal(allowed.errors.length, 1);
+  assert.equal(allowed.receipts[0].error.reason, 'hook_http_timeout');
+  assert.equal(allowed.receipts[0].error.error_code, 'DEADLINE_EXCEEDED');
+  assert.equal(allowed.receipts[0].error.failure_behavior, 'fail_open');
+  assert.equal(allowed.receipts[0].error.side_effect_state, 'confirmed_applied');
+  assert.equal(allowed.receipts[0].error.retryable, false);
 });
 
 test('callback adapter exposes input and invocation without changing wire envelope', async () => {
@@ -202,7 +220,8 @@ test('provider wrapper modifies a provider-neutral request and result', async ()
 });
 
 test('post-hook failures never replay a completed side effect or paid model request', async () => {
-  const hooks = createHookRuntime({ hooks: {
+  const receipts = [];
+  const hooks = createHookRuntime({ onReceipt: (receipt) => receipts.push(receipt), hooks: {
     post_tool_use: { id: 'tool-post', failure_mode: 'error', handler: () => { throw new Error('observer failed'); } },
     post_model_use: { id: 'model-post', failure_mode: 'error', handler: () => { throw new Error('observer failed'); } },
     error_occurred: () => ({ error_handling: 'retry', retry_count: 3 }),
@@ -223,6 +242,13 @@ test('post-hook failures never replay a completed side effect or paid model requ
   }, { hookRuntime: hooks });
   await assert.rejects(provider.create({ model: 'fixture' }), /hook_execution_failed:model-post/);
   assert.equal(modelCalls, 1);
+  const failures = receipts.filter((receipt) => receipt.status === 'failed');
+  assert.equal(failures.length, 2);
+  for (const receipt of failures) {
+    assert.equal(receipt.error.failure_behavior, 'no_replay');
+    assert.equal(receipt.error.side_effect_state, 'confirmed_applied');
+    assert.equal(receipt.error.retryable, false);
+  }
 });
 
 test('runtime rejects duplicate hook ids', () => {

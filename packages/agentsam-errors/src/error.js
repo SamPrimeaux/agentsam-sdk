@@ -11,8 +11,14 @@ export class AgentSamError extends Error {
     this.diagnostic = normalized;
     this.code = normalized.code;
     this.reason = normalized.reason;
+    this.domain = normalized.domain;
+    this.failure_class = normalized.failure_class;
+    this.stage = normalized.stage;
+    this.feature = normalized.feature;
+    this.failure_behavior = normalized.failure_behavior;
     this.severity = normalized.severity;
     this.retryable = normalized.retryable;
+    this.side_effect_state = normalized.side_effect_state;
     this.status = normalized.http_status;
     this.fingerprint = normalized.fingerprint;
   }

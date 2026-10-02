@@ -5,6 +5,7 @@ import os
 import sys
 import unittest
 
+from agentsam_sdk.errors import normalize_error_reason
 from agentsam_sdk.hooks import (
     HOOK_PROTOCOL_SCHEMA,
     HookDefinition,
@@ -24,6 +25,8 @@ class HookContractTests(unittest.TestCase):
         self.assertEqual(HookOutput.from_value({"modified_config": {"auto_compact": False}}).to_dict(), {"modified_config": {"auto_compact": False}})
         with self.assertRaisesRegex(ValueError, "invalid_permission_decision"):
             HookOutput(permission_decision="maybe")
+        self.assertEqual(normalize_error_reason("AGENTSAM_HOOK_HTTP_FAILED"), "hook_http_request_failed")
+        self.assertEqual(normalize_error_reason("hook_command_invalid_json:node"), "hook_command_output_invalid")
 
 
 class HookRuntimeTests(unittest.IsolatedAsyncioTestCase):
@@ -76,6 +79,25 @@ class HookRuntimeTests(unittest.IsolatedAsyncioTestCase):
         result = await runtime.dispatch("pre_tool_use", {"tool_name": "write", "tool_args": {}})
         self.assertEqual(result["output"]["permission_decision"], "deny")
         self.assertIn("failed closed", result["output"]["permission_decision_reason"])
+        error = result["receipts"][0]["error"]
+        self.assertEqual(error["error_code"], "INTERNAL")
+        self.assertEqual(error["reason"], "hook_handler_failed")
+        self.assertEqual(error["failure_behavior"], "fail_closed")
+        self.assertEqual(error["side_effect_state"], "not_started")
+        self.assertFalse(error["retryable"])
+
+    async def test_observer_receipt_preserves_timeout_and_applied_side_effect(self):
+        runtime = HookRuntime()
+        def broken(_):
+            raise TimeoutError("hook_lsp_timeout:rust")
+        runtime.register("post_tool_use", HookDefinition(id="observer", handler=broken))
+        result = await runtime.dispatch("post_tool_use", {"tool_name": "write", "tool_result": {"ok": True}})
+        error = result["receipts"][0]["error"]
+        self.assertEqual(error["error_code"], "DEADLINE_EXCEEDED")
+        self.assertEqual(error["reason"], "hook_lsp_timeout")
+        self.assertEqual(error["failure_behavior"], "fail_open")
+        self.assertEqual(error["side_effect_state"], "confirmed_applied")
+        self.assertFalse(error["retryable"])
 
     async def test_command_adapter_uses_same_wire_envelope(self):
         code = (
