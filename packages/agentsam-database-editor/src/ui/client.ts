@@ -32,8 +32,37 @@ export type DatabaseSource = {
   source_kind?: string;
   /** user | account | deployment */
   owner_scope?: string;
-  capabilities?: string[];
 };
+
+
+const DATABASE_CAPABILITY_IDS = new Set<DatabaseCapabilityId>([
+  "read_rows", "query", "schema", "insert", "update", "delete", "metrics", "export", "transactions",
+]);
+
+/** Normalize wire/provider capability vocab into the portable UI contract. */
+export function normalizeDatabaseCapabilities(value: unknown): DatabaseSourceCapabilities {
+  const out: DatabaseSourceCapabilities = {};
+  if (Array.isArray(value)) {
+    for (const raw of value) {
+      const id = String(raw || "").trim() === "read" ? "read_rows" : String(raw || "").trim();
+      if (DATABASE_CAPABILITY_IDS.has(id as DatabaseCapabilityId)) out[id as DatabaseCapabilityId] = true;
+    }
+    return out;
+  }
+  if (value && typeof value === "object") {
+    for (const [rawKey, rawValue] of Object.entries(value as Record<string, unknown>)) {
+      const key = rawKey === "read" ? "read_rows" : rawKey;
+      if (DATABASE_CAPABILITY_IDS.has(key as DatabaseCapabilityId) && typeof rawValue === "boolean") {
+        out[key as DatabaseCapabilityId] = rawValue;
+      }
+    }
+  }
+  return out;
+}
+
+function normalizeDatabaseSource(source: DatabaseSource & { capabilities?: unknown }): DatabaseSource {
+  return { ...source, capabilities: normalizeDatabaseCapabilities(source.capabilities) };
+}
 
 export type DatabaseConnectionStatus = {
   provider?: string;
@@ -198,8 +227,12 @@ export function createDatabaseStudioClient(
   };
 
   return {
-    listSources() {
-      return fetchJson<DatabaseSourcesResponse>("/sources");
+    async listSources() {
+      const response = await fetchJson<DatabaseSourcesResponse>("/sources");
+      return {
+        ...response,
+        sources: (response.sources || []).map((source) => normalizeDatabaseSource(source)),
+      };
     },
 
     metrics(sourceId: string, range: string) {

@@ -16,10 +16,12 @@ const cssText = readdirSync(assetsDir)
   .map((name) => readFileSync(join(assetsDir, name), "utf8"))
   .join("\n");
 const requiredUtilitySelectors = [
-  ".w-72",
-  ".max-h-80",
-  ".max-w-36",
+  // Keep this list tied to utilities the current packaged Work/Settings UI really uses.
+  // Stale class names make the smoke test fail even when the current UI is styled correctly.
+  ".w-80",
+  ".max-w-40",
   ".min-w-44",
+  ".rounded-full",
   ".bg-popover",
   ".text-popover-foreground",
   ".text-xs",

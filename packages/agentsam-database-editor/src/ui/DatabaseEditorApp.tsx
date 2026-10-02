@@ -52,6 +52,7 @@ export type DatabaseEditorAppProps = {
   initialSourceId?: string;
   compact?: boolean;
   onOpenConnections?: () => void;
+  onAuthenticate?: () => void;
   /** Machine-local SQLite host (Local Studio / Tauri / agentsamd). */
   localHost?: LocalDatabaseHost;
   onAskAgentSam?: (context: Record<string, unknown>) => void;
@@ -284,6 +285,7 @@ export function DatabaseEditorApp({
   initialSourceId,
   compact = false,
   onOpenConnections,
+  onAuthenticate,
   localHost,
   onAskAgentSam,
 }: DatabaseEditorAppProps) {
@@ -307,6 +309,7 @@ export function DatabaseEditorApp({
   const [busyMutation, setBusyMutation] = useState(false);
   const [editMode, setEditMode] = useState<EditMode | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sourceLoadStatus, setSourceLoadStatus] = useState<number | null>(null);
   const [localCapability, setLocalCapability] = useState<ProviderCapability>("attachable");
   const [attachOpen, setAttachOpen] = useState(false);
   const [lastSourceByFamily, setLastSourceByFamily] = useState<Record<string, string>>({});
@@ -325,9 +328,11 @@ export function DatabaseEditorApp({
   const loadSources = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setSourceLoadStatus(null);
     try {
       const next = await client.listSources();
       setCatalog(next);
+      setSourceLoadStatus(null);
       if (localHost) {
         try {
           const status = await localHost.status();
@@ -347,6 +352,11 @@ export function DatabaseEditorApp({
         return next.sources[0]?.id || "";
       });
     } catch (caught) {
+      setSourceLoadStatus(
+        typeof caught === "object" && caught !== null && "status" in caught
+          ? Number((caught as { status?: unknown }).status) || null
+          : null,
+      );
       setError(errorText(caught));
     } finally {
       setLoading(false);
@@ -661,6 +671,32 @@ export function DatabaseEditorApp({
 
   const cloudflareConnection = catalog?.connections?.cloudflare;
   const localConnection = catalog?.connections?.local_sqlite;
+
+  if (!catalog && error) {
+    const unauthorized = sourceLoadStatus === 401;
+    return (
+      <div className="db-editor db-empty" style={themeVars as React.CSSProperties}>
+        <Database size={28} />
+        <div className="db-eyebrow">AGENTSAM DATABASE</div>
+        <h1>{unauthorized ? "Sign in to load database resources" : "Database sources could not be loaded"}</h1>
+        <p>
+          {unauthorized
+            ? "Local Studio needs an authenticated user session before it can resolve that user's separate database provider connections."
+            : error}
+        </p>
+        <div className="db-empty-actions">
+          {unauthorized && onAuthenticate ? (
+            <button className="db-button primary" type="button" onClick={onAuthenticate}>Sign in</button>
+          ) : null}
+          <button className="db-button secondary" type="button" onClick={() => void loadSources()}>Retry</button>
+          {onOpenConnections ? (
+            <button className="db-button secondary" type="button" onClick={onOpenConnections}>Connections</button>
+          ) : null}
+        </div>
+        <small>Provider authorization remains separate from the Local Studio user session.</small>
+      </div>
+    );
+  }
 
   if (!catalog?.sources.length) {
     return (

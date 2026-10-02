@@ -11,6 +11,7 @@ export type StudioInventoryModel = {
   availability?: string;
   context_window?: number | null;
   reasoning_efforts?: string[];
+  service_tiers?: string[];
   capabilities?: Record<string, unknown>;
   chat_eligible?: boolean;
   eligibility_reason?: string | null;

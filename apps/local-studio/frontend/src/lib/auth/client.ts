@@ -17,7 +17,20 @@ import { GROK_PROVIDERS } from "./providers";
  * leaves the bearer token in place, and `onRequest` keeps re-attaching it, so
  * the visitor stays signed in.
  */
-type BrowserAuthClient = ReturnType<typeof createAuthClient>;
+function createBrowserAuthClient() {
+  return createAuthClient({
+    plugins: [genericOAuthClient()],
+    fetchOptions: {
+      onRequest(ctx) {
+        const token = getBearerToken();
+        if (token) ctx.headers.set("Authorization", `Bearer ${token}`);
+        return ctx;
+      },
+    },
+  });
+}
+
+type BrowserAuthClient = ReturnType<typeof createBrowserAuthClient>;
 
 function isHostedBrowserAuthSurface(): boolean {
   if (typeof window === "undefined") return true;
@@ -31,16 +44,7 @@ function getBrowserAuthClient(): BrowserAuthClient {
     throw new Error("browser_auth_unavailable_on_native_surface");
   }
   if (!browserAuthClient) {
-    browserAuthClient = createAuthClient({
-      plugins: [genericOAuthClient()],
-      fetchOptions: {
-        onRequest(ctx) {
-          const token = getBearerToken();
-          if (token) ctx.headers.set("Authorization", `Bearer ${token}`);
-          return ctx;
-        },
-      },
-    });
+    browserAuthClient = createBrowserAuthClient();
   }
   return browserAuthClient;
 }

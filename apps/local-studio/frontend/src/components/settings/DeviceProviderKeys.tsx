@@ -14,6 +14,7 @@ import {
 } from "@/lib/desktop/tauri";
 import { vaultRequest } from "@/lib/vault/client";
 import { canonicalProviderId, planProviderSync } from "@/lib/vault/device-sync";
+import { announceModelInventoryChanged } from "@/lib/work/model-inventory";
 import type { StudioInventoryModel } from "@/lib/work/models";
 import type { VaultSecret } from "./types";
 
@@ -27,6 +28,7 @@ const DEVICE_PROVIDERS = [
 
 type DeviceProviderId = (typeof DEVICE_PROVIDERS)[number]["id"];
 type InventoryPayload = {
+  providers?: Array<{ id: string; configured?: boolean; source?: string | null }>;
   availableModels?: StudioInventoryModel[];
   discovery?: Record<string, { ok?: boolean; error?: string | null }>;
 };
@@ -34,6 +36,7 @@ type ProviderState = {
   exists: boolean;
   accountExists: boolean;
   synced: boolean;
+  machineAvailable: boolean;
   checking: boolean;
   message: string | null;
   rejected: boolean;
@@ -43,6 +46,7 @@ const EMPTY_STATE: ProviderState = {
   exists: false,
   accountExists: false,
   synced: false,
+  machineAvailable: false,
   checking: false,
   message: null,
   rejected: false,
@@ -104,6 +108,7 @@ export function DeviceProviderKeys({
 
       const local = new Map<DeviceProviderId, ProviderKeyStatus>();
       const syncErrors = new Set<DeviceProviderId>();
+      let inventoryChanged = false;
 
       for (const { id } of DEVICE_PROVIDERS) {
         let status = await providerKeyStatus(id);
@@ -117,9 +122,11 @@ export function DeviceProviderKeys({
             );
             if (action === "pull" && accountSecret) {
               await providerKeySyncFromAccount(id, accountSecret.id);
+              inventoryChanged = true;
               status = await providerKeyStatus(id);
             } else if (action === "push") {
               const pushed = await providerKeySyncToAccount(id);
+              inventoryChanged = true;
               status = await providerKeyStatus(id);
               accountSecret = {
                 id: pushed.secret_id,
@@ -139,6 +146,7 @@ export function DeviceProviderKeys({
               onAccountChanged?.();
             } else if (action === "delete_local") {
               await providerKeyDelete(id);
+              inventoryChanged = true;
               status = await providerKeyStatus(id);
             }
           } catch {
@@ -150,12 +158,10 @@ export function DeviceProviderKeys({
       }
 
       let inventory: InventoryPayload | null = null;
-      if ([...local.values()].some((status) => status.exists)) {
-        try {
-          inventory = await invokeLocalProvider<InventoryPayload>({ operation: "inventory" });
-        } catch {
-          inventory = null;
-        }
+      try {
+        inventory = await invokeLocalProvider<InventoryPayload>({ operation: "inventory" });
+      } catch {
+        inventory = null;
       }
 
       setRows(
@@ -169,6 +175,8 @@ export function DeviceProviderKeys({
             };
             const accountSecret = account.get(id) || null;
             const discovery = inventory?.discovery?.[id];
+            const machineProvider = inventory?.providers?.find((provider) => provider.id === id);
+            const machineAvailable = machineProvider?.configured === true;
             const count = (inventory?.availableModels || []).filter((model) => model.provider === id).length;
             const rejected = discovery?.error === "provider_credential_rejected";
             const synced = connected && accountReady && keyIsSynced(status, accountSecret);
@@ -193,6 +201,10 @@ export function DeviceProviderKeys({
                 : "Stored on this device";
             } else if (accountSecret && connected) {
               message = "Saved in account · Device sync pending";
+            } else if (machineAvailable) {
+              message = discovery?.ok
+                ? `Available to AgentSam on this machine · ${count} model${count === 1 ? "" : "s"}`
+                : "Available to AgentSam on this machine";
             }
 
             return [
@@ -201,6 +213,7 @@ export function DeviceProviderKeys({
                 exists: status.exists,
                 accountExists: Boolean(accountSecret),
                 synced,
+                machineAvailable,
                 checking: false,
                 message,
                 rejected,
@@ -209,6 +222,7 @@ export function DeviceProviderKeys({
           }),
         ) as Record<DeviceProviderId, ProviderState>,
       );
+      if (inventoryChanged) announceModelInventoryChanged();
     } finally {
       setRefreshing(false);
     }
@@ -260,6 +274,7 @@ export function DeviceProviderKeys({
       }
 
       setDrafts((current) => ({ ...current, [provider]: "" }));
+      announceModelInventoryChanged();
       await refresh();
     } catch {
       setDrafts((current) => ({ ...current, [provider]: "" }));
@@ -273,6 +288,7 @@ export function DeviceProviderKeys({
   async function removeLocal(provider: DeviceProviderId) {
     await providerKeyDelete(provider);
     setDrafts((current) => ({ ...current, [provider]: "" }));
+    announceModelInventoryChanged();
     await refresh();
   }
 
@@ -285,8 +301,8 @@ export function DeviceProviderKeys({
           </h2>
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
             {signedIn
-              ? "Your account vault is the signed-in authority. AgentSam keeps a matching native Keychain copy for local execution; plaintext never returns from Keychain to the UI."
-              : "Local BYOK is stored only in the operating system credential store until you sign in. Raw keys never return to the app UI."}
+              ? "Your account vault is the signed-in authority. AgentSam also discovers supported machine credentials for local execution; plaintext never returns to the UI."
+              : "AgentSam can use keys from the operating system credential store or your existing machine profile. Raw keys never return to the app UI."}
           </p>
         </div>
         <Button
@@ -315,10 +331,10 @@ export function DeviceProviderKeys({
                   <div className="flex items-center gap-2">
                     <KeyRound className="size-4 text-muted-foreground" aria-hidden="true" />
                     <span className="font-medium text-foreground">{label}</span>
-                    {state.exists && !state.rejected ? (
+                    {(state.exists || state.machineAvailable) && !state.rejected ? (
                       <CheckCircle2
                         className="size-4 text-muted-foreground"
-                        aria-label={state.synced ? "Synced with account" : "Stored on this device"}
+                        aria-label={state.synced ? "Synced with account" : state.exists ? "Stored on this device" : "Available to AgentSam"}
                       />
                     ) : null}
                   </div>

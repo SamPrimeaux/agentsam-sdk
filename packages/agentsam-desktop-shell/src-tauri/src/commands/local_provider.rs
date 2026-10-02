@@ -23,6 +23,8 @@ pub struct LocalProviderBridgeRequest {
     model_id: Option<String>,
     #[serde(default)]
     messages: Option<Vec<LocalProviderMessage>>,
+    #[serde(default)]
+    cwd: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -85,7 +87,7 @@ fn credential_object(operation: &str, selected_provider: Option<&str>) -> Result
 
 fn child_payload(request: LocalProviderBridgeRequest) -> Result<Value, String> {
     let operation = request.operation.trim().to_ascii_lowercase();
-    if operation != "inventory" && operation != "chat" {
+    if operation != "inventory" && operation != "chat" && operation != "select_model" {
         return Err("local_provider_operation_invalid".into());
     }
 
@@ -94,11 +96,11 @@ fn child_payload(request: LocalProviderBridgeRequest) -> Result<Value, String> {
         .as_deref()
         .map(canonical_provider)
         .transpose()?;
-    if operation == "chat" && provider.is_none() {
+    if (operation == "chat" || operation == "select_model") && provider.is_none() {
         return Err("local_provider_required".into());
     }
     let model_id = request.model_id.unwrap_or_default().trim().to_string();
-    if operation == "chat" && model_id.is_empty() {
+    if (operation == "chat" || operation == "select_model") && model_id.is_empty() {
         return Err("local_provider_model_required".into());
     }
 
@@ -114,6 +116,7 @@ fn child_payload(request: LocalProviderBridgeRequest) -> Result<Value, String> {
         "provider": provider,
         "model_id": model_id,
         "messages": messages,
+        "cwd": request.cwd.unwrap_or_default(),
         "credentials": Value::Object(credential_object(operation.as_str(), provider)?),
     }))
 }
@@ -164,6 +167,16 @@ mod tests {
     fn request_rejects_secret_fields_from_webview() {
         let raw = r#"{"operation":"inventory","credentials":{"openai":"secret"}}"#;
         assert!(serde_json::from_str::<LocalProviderBridgeRequest>(raw).is_err());
+    }
+
+    #[test]
+    fn select_model_request_accepts_workspace_without_secret_fields() {
+        let raw = r#"{"operation":"select_model","provider":"openai","model_id":"gpt-test","cwd":"/tmp/project"}"#;
+        let request = serde_json::from_str::<LocalProviderBridgeRequest>(raw).unwrap();
+        assert_eq!(request.operation, "select_model");
+        assert_eq!(request.provider.as_deref(), Some("openai"));
+        assert_eq!(request.model_id.as_deref(), Some("gpt-test"));
+        assert_eq!(request.cwd.as_deref(), Some("/tmp/project"));
     }
 
     #[test]
