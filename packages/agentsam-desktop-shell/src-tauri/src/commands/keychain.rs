@@ -6,13 +6,14 @@
 
 #[cfg(not(target_os = "android"))]
 use keyring::Entry;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use tauri::State;
 
 const KEYCHAIN_APP_ID: &str = "local-studio";
 const IDENTITY_SESSION_ACCOUNT: &str = "identity_session";
 const PROVIDER_PREFIX: &str = "provider:";
+const PROVIDER_SYNC_PREFIX: &str = "provider-sync:";
 
 #[derive(Debug, Serialize)]
 pub struct KeychainError {
@@ -54,6 +55,65 @@ fn canonical_provider(provider: &str) -> Result<&'static str, KeychainError> {
 
 fn provider_account(provider: &str) -> Result<String, KeychainError> {
     Ok(format!("{PROVIDER_PREFIX}{}", canonical_provider(provider)?))
+}
+
+fn provider_sync_account(provider: &str) -> Result<String, KeychainError> {
+    Ok(format!("{PROVIDER_SYNC_PREFIX}{}", canonical_provider(provider)?))
+}
+
+fn secret_last4(value: &str) -> Option<String> {
+    let chars: Vec<char> = value.chars().collect();
+    if chars.is_empty() {
+        return None;
+    }
+    let start = chars.len().saturating_sub(4);
+    Some(chars[start..].iter().collect())
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct ProviderSyncMarker {
+    secret_id: String,
+    #[serde(default)]
+    last4: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ProviderKeyStatus {
+    exists: bool,
+    last4: Option<String>,
+    synced_secret_id: Option<String>,
+    synced_last4: Option<String>,
+}
+
+fn provider_sync_marker_get(provider: &str) -> Result<Option<ProviderSyncMarker>, KeychainError> {
+    let Some(raw) = get_value(provider_sync_account(provider)?.as_str())? else {
+        return Ok(None);
+    };
+    let marker = serde_json::from_str::<ProviderSyncMarker>(&raw)
+        .map_err(|_| KeychainError { message: "provider_sync_marker_invalid".into() })?;
+    Ok(Some(marker))
+}
+
+fn provider_sync_marker_set(
+    provider: &str,
+    secret_id: &str,
+    last4: Option<&str>,
+) -> Result<(), KeychainError> {
+    let secret_id = secret_id.trim();
+    if secret_id.is_empty() || secret_id.len() > 256 {
+        return Err(KeychainError { message: "provider_sync_secret_id_invalid".into() });
+    }
+    let marker = ProviderSyncMarker {
+        secret_id: secret_id.to_string(),
+        last4: last4.map(str::to_string),
+    };
+    let raw = serde_json::to_string(&marker)
+        .map_err(|_| KeychainError { message: "provider_sync_marker_encode_failed".into() })?;
+    set_value(provider_sync_account(provider)?.as_str(), raw.as_str())
+}
+
+fn provider_sync_marker_delete(provider: &str) -> Result<(), KeychainError> {
+    delete_value(provider_sync_account(provider)?.as_str())
 }
 
 #[cfg(not(target_os = "android"))]
@@ -206,21 +266,64 @@ pub fn provider_key_exists(provider: String) -> Result<bool, KeychainError> {
 }
 
 #[tauri::command]
+pub fn provider_key_status(provider: String) -> Result<ProviderKeyStatus, KeychainError> {
+    let value = get_value(provider_account(provider.as_str())?.as_str())?;
+    let marker = provider_sync_marker_get(provider.as_str())?;
+    Ok(ProviderKeyStatus {
+        exists: value.is_some(),
+        last4: value.as_deref().and_then(secret_last4),
+        synced_secret_id: marker.as_ref().map(|value| value.secret_id.clone()),
+        synced_last4: marker.and_then(|value| value.last4),
+    })
+}
+
+#[tauri::command]
 pub fn provider_key_set(provider: String, value: String) -> Result<(), KeychainError> {
     if value.trim().is_empty() {
         return Err(KeychainError { message: "provider_key_value_required".into() });
     }
-    set_value(provider_account(provider.as_str())?.as_str(), value.as_str())
+    set_value(provider_account(provider.as_str())?.as_str(), value.as_str())?;
+    // A direct device edit is unsynced until the service confirms the account copy.
+    provider_sync_marker_delete(provider.as_str())?;
+    Ok(())
 }
 
 #[tauri::command]
 pub fn provider_key_delete(provider: String) -> Result<(), KeychainError> {
-    delete_value(provider_account(provider.as_str())?.as_str())
+    delete_value(provider_account(provider.as_str())?.as_str())?;
+    provider_sync_marker_delete(provider.as_str())?;
+    Ok(())
 }
 
 pub(crate) fn provider_key_get_internal(provider: &str) -> Result<Option<String>, String> {
     let account = provider_account(provider).map_err(|error| error.message)?;
     get_value(account.as_str()).map_err(|error| error.message)
+}
+
+pub(crate) fn provider_key_set_synced_internal(
+    provider: &str,
+    value: &str,
+    secret_id: &str,
+    last4: Option<&str>,
+) -> Result<(), String> {
+    if value.trim().is_empty() {
+        return Err("provider_key_value_required".into());
+    }
+    let account = provider_account(provider).map_err(|error| error.message)?;
+    set_value(account.as_str(), value).map_err(|error| error.message)?;
+    if let Err(error) = provider_sync_marker_set(provider, secret_id, last4) {
+        let _ = delete_value(account.as_str());
+        return Err(error.message);
+    }
+    Ok(())
+}
+
+pub(crate) fn provider_sync_marker_set_internal(
+    provider: &str,
+    secret_id: &str,
+    last4: Option<&str>,
+) -> Result<(), String> {
+    provider_sync_marker_set(provider, secret_id, last4).map_err(|error| error.message)
 }
 
 
@@ -232,7 +335,15 @@ mod tests {
     fn provider_accounts_use_canonical_ids() {
         assert_eq!(provider_account("openai").unwrap(), "provider:openai");
         assert_eq!(provider_account("xai").unwrap(), "provider:xai");
+        assert_eq!(provider_sync_account("openai").unwrap(), "provider-sync:openai");
         assert!(provider_account("grok").is_err());
         assert!(provider_account("other").is_err());
+    }
+
+    #[test]
+    fn provider_status_last4_never_returns_full_secret() {
+        assert_eq!(secret_last4("sk-example-1234").as_deref(), Some("1234"));
+        assert_eq!(secret_last4("abc").as_deref(), Some("abc"));
+        assert_eq!(secret_last4(""), None);
     }
 }

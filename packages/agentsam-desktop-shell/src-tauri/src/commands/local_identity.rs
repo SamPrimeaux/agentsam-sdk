@@ -186,6 +186,174 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
     }
 }
 
+const PROVIDER_SYNC_SECRET_NAME: &str = "AgentSam synced";
+
+fn canonical_sync_provider(provider: &str) -> Result<&'static str, String> {
+    match provider.trim().to_ascii_lowercase().as_str() {
+        "openai" => Ok("openai"),
+        "anthropic" => Ok("anthropic"),
+        "gemini" | "google" => Ok("gemini"),
+        "cursor" => Ok("cursor"),
+        "xai" | "grok" => Ok("xai"),
+        "cloudflare" => Ok("cloudflare"),
+        _ => Err("provider_key_provider_invalid".into()),
+    }
+}
+
+async fn native_vault_session_request(
+    config: &IdentityRuntimeConfig,
+    session_state: &super::keychain::IdentitySessionState,
+    method: Method,
+    path: &str,
+    body: Option<Value>,
+) -> Result<Value, String> {
+    if config.authority != "service" {
+        return Err("vault_sync_requires_connected_authority".into());
+    }
+    let origin = config
+        .service_origin
+        .as_deref()
+        .ok_or_else(|| "identity_service_not_configured".to_string())?;
+    validate_service_origin(origin)?;
+
+    let session_id = super::keychain::identity_session_get_internal(session_state)?
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "vault_sync_requires_identity_session".to_string())?;
+    if session_id.len() > 2048
+        || session_id
+            .as_bytes()
+            .iter()
+            .any(|byte| *byte == 13 || *byte == 10)
+    {
+        return Err("studio_service_session_invalid".into());
+    }
+
+    let url = format!("{origin}{path}");
+    let mut builder = reqwest::Client::new()
+        .request(method.clone(), url)
+        .header("accept", "application/json")
+        .header("X-AgentSam-Native-Client", "1")
+        .bearer_auth(session_id);
+
+    if method != Method::GET {
+        builder = builder.json(&body.unwrap_or_else(|| json!({})));
+    }
+
+    let response = builder
+        .send()
+        .await
+        .map_err(|e| format!("vault_sync_service_request_failed:{e}"))?;
+    let status = response.status();
+    let raw = response.text().await.unwrap_or_default();
+    let data = if raw.trim().is_empty() {
+        json!({})
+    } else {
+        serde_json::from_str::<Value>(&raw)
+            .map_err(|_| format!("vault_sync_service_response_invalid:{}", status.as_u16()))?
+    };
+
+    if !status.is_success() {
+        let error = data
+            .get("error")
+            .and_then(Value::as_str)
+            .unwrap_or("request_failed");
+        return Err(format!("vault_sync_service_error:{}:{error}", status.as_u16()));
+    }
+    Ok(data)
+}
+
+#[tauri::command]
+pub async fn provider_key_sync_to_account(
+    app: AppHandle,
+    session_state: State<'_, super::keychain::IdentitySessionState>,
+    provider: String,
+) -> Result<Value, String> {
+    let provider = canonical_sync_provider(provider.as_str())?;
+    let value = super::keychain::provider_key_get_internal(provider)?
+        .ok_or_else(|| "provider_key_not_stored".to_string())?;
+    let config = load_runtime_config(&app)?;
+    let data = native_vault_session_request(
+        &config,
+        &session_state,
+        Method::POST,
+        "/api/vault/secrets",
+        Some(json!({
+            "service_name": provider,
+            "secret_name": PROVIDER_SYNC_SECRET_NAME,
+            "secret_type": "api_key",
+            "value": value,
+            "description": "Synchronized with AgentSam Local Studio",
+        })),
+    )
+    .await?;
+
+    let secret_id = data
+        .get("vault_item_id")
+        .or_else(|| data.get("id"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "vault_sync_secret_id_missing".to_string())?;
+    let last4 = data.get("last4").and_then(Value::as_str);
+    super::keychain::provider_sync_marker_set_internal(provider, secret_id, last4)?;
+
+    Ok(json!({
+        "ok": true,
+        "provider": provider,
+        "direction": "device_to_account",
+        "secret_id": secret_id,
+        "last4": last4,
+    }))
+}
+
+#[tauri::command]
+pub async fn provider_key_sync_from_account(
+    app: AppHandle,
+    session_state: State<'_, super::keychain::IdentitySessionState>,
+    provider: String,
+    secret_id: String,
+) -> Result<Value, String> {
+    let provider = canonical_sync_provider(provider.as_str())?;
+    let secret_id = secret_id.trim();
+    if secret_id.is_empty() || secret_id.len() > 256 {
+        return Err("vault_sync_secret_id_invalid".into());
+    }
+
+    let config = load_runtime_config(&app)?;
+    let data = native_vault_session_request(
+        &config,
+        &session_state,
+        Method::POST,
+        "/api/vault/unwrap",
+        Some(json!({ "id": secret_id })),
+    )
+    .await?;
+
+    let service = data
+        .get("service")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "vault_sync_service_missing".to_string())?;
+    if canonical_sync_provider(service)? != provider {
+        return Err("vault_sync_provider_mismatch".into());
+    }
+    let value = data
+        .get("value")
+        .and_then(Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| "vault_sync_value_missing".to_string())?;
+    let last4 = data.get("last4").and_then(Value::as_str);
+    super::keychain::provider_key_set_synced_internal(provider, value, secret_id, last4)?;
+
+    Ok(json!({
+        "ok": true,
+        "provider": provider,
+        "direction": "account_to_device",
+        "secret_id": secret_id,
+        "last4": last4,
+    }))
+}
+
 async fn service_studio_bridge(
     config: &IdentityRuntimeConfig,
     session_state: &super::keychain::IdentitySessionState,
@@ -506,6 +674,14 @@ mod tests {
     }
 
     #[test]
+    fn vault_sync_provider_aliases_are_canonical() {
+        assert_eq!(canonical_sync_provider("openai").unwrap(), "openai");
+        assert_eq!(canonical_sync_provider("google").unwrap(), "gemini");
+        assert_eq!(canonical_sync_provider("grok").unwrap(), "xai");
+        assert!(canonical_sync_provider("other").is_err());
+    }
+
+    #[test]
     fn vault_bridge_is_strictly_scoped_to_vault_paths() {
         let request = StudioServiceBridgeRequest {
             operation: "vault".into(),
@@ -520,6 +696,13 @@ mod tests {
 
         let mut bad = request;
         bad.path = Some("/api/database/query".into());
+        assert_eq!(
+            studio_service_route(&bad).unwrap_err(),
+            "studio_service_vault_path_invalid"
+        );
+
+        bad.path = Some("/api/vault/unwrap".into());
+        bad.method = Some("POST".into());
         assert_eq!(
             studio_service_route(&bad).unwrap_err(),
             "studio_service_vault_path_invalid"

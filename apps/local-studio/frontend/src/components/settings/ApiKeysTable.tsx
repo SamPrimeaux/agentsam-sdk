@@ -67,7 +67,13 @@ function formatUnixDate(epoch: number | string | null | undefined) {
   }
 }
 
-export function ApiKeysTable({ refreshToken = 0 }: { refreshToken?: number }) {
+export function ApiKeysTable({
+  refreshToken = 0,
+  onChanged,
+}: {
+  refreshToken?: number;
+  onChanged?: () => void;
+}) {
   const [secrets, setSecrets] = useState<VaultSecret[]>([]);
   const [inventory, setInventory] = useState<AccountInventoryPayload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -111,6 +117,7 @@ export function ApiKeysTable({ refreshToken = 0 }: { refreshToken?: number }) {
       if (!response.ok) throw new Error(response.data.error || "Could not revoke secret");
       setConfirmId(null);
       await load();
+      onChanged?.();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not revoke secret");
     } finally {
