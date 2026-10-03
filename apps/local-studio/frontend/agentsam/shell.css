@@ -1,4 +1,14 @@
 .agentsam-shell {
+  --agentsam-mode-agent-accent: #6f9fe8;
+  --agentsam-mode-agent-strong: #5f8ed6;
+  --agentsam-mode-plan-accent: #d4ab52;
+  --agentsam-mode-plan-strong: #be9340;
+  --agentsam-mode-debug-accent: #df6670;
+  --agentsam-mode-debug-strong: #c94f5a;
+  --agentsam-mode-ask-accent: #58b487;
+  --agentsam-mode-ask-strong: #449b70;
+  --agentsam-mode-multitask-accent: #8b7fd8;
+  --agentsam-mode-multitask-strong: #776ac8;
   --color-background: var(--nav-canvas); --color-foreground: var(--nav-text);
   --color-card: var(--nav-surface); --color-card-foreground: var(--nav-text);
   --color-popover: var(--nav-popover); --color-popover-foreground: var(--nav-text);
@@ -99,9 +109,102 @@
 .agentsam-conversation [data-agent-conversation-empty="true"] .agentsam-dock { padding-top: 0; }
 .agentsam-conversation [data-agent-conversation-composer] > * { margin-inline: auto; width: 100%; max-width: 840px; }
 .agentsam-conversation > [data-agent-thread] { font-size: 16px; line-height: 1.65; }
-.agentsam-side-panel { min-width: 280px; max-width: 70%; border-left: 1px solid var(--nav-border); overflow: auto; }
+.agentsam-side-panel { min-width: 280px; max-width: min(70%, calc(100% - 420px)); border-left: 1px solid var(--nav-border); overflow: auto; }
 .agentsam-workspace > .studio-separator { width: 5px; flex-shrink: 0; background: transparent; cursor: col-resize; }
 .agentsam-workspace > .studio-separator:hover, .agentsam-workspace > .studio-separator:focus-visible { background: var(--nav-accent); }
 @media (max-width: 1000px) { .agentsam-side-panel { width: 46%; min-width: 280px; } }
 @media (max-width: 767px) { .agentsam-welcome { padding: 16px 0; } .agentsam-welcome h1 { font-size: 24px; } .agentsam-side-panel { position: absolute; inset: 56px 0 0; z-index: 50; width: 100%; max-width: 100%; min-width: 0; resize: none; background: var(--nav-canvas); } .agentsam-start-context { max-width: 90%; } }
 @media (max-width: 767px) { .agentsam-side-panel { width: 100% !important; } .agentsam-workspace > .studio-separator { display: none; } }
+
+/* Agent run-mode profiles — semantic composer chrome shared by lead + co-worker. */
+.agentsam-shell [data-agent-composer] {
+  --composer-mode-accent: var(--agentsam-mode-agent-accent);
+  --composer-mode-accent-strong: var(--agentsam-mode-agent-strong);
+  position: relative;
+  border-color: color-mix(in srgb, var(--composer-mode-accent) 34%, var(--nav-border));
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+.agentsam-shell [data-agent-composer][data-agent-mode="agent"] {
+  --composer-mode-accent: var(--agentsam-mode-agent-accent);
+  --composer-mode-accent-strong: var(--agentsam-mode-agent-strong);
+}
+.agentsam-shell [data-agent-composer][data-agent-mode="plan"] {
+  --composer-mode-accent: var(--agentsam-mode-plan-accent);
+  --composer-mode-accent-strong: var(--agentsam-mode-plan-strong);
+}
+.agentsam-shell [data-agent-composer][data-agent-mode="debug"] {
+  --composer-mode-accent: var(--agentsam-mode-debug-accent);
+  --composer-mode-accent-strong: var(--agentsam-mode-debug-strong);
+}
+.agentsam-shell [data-agent-composer][data-agent-mode="ask"] {
+  --composer-mode-accent: var(--agentsam-mode-ask-accent);
+  --composer-mode-accent-strong: var(--agentsam-mode-ask-strong);
+}
+.agentsam-shell [data-agent-composer]:focus-within {
+  border-color: color-mix(in srgb, var(--composer-mode-accent) 76%, var(--nav-border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--composer-mode-accent) 18%, transparent);
+}
+.agentsam-shell [data-agent-composer] [data-composer-send] {
+  --composer-send-bg: var(--composer-mode-accent-strong);
+  --composer-control-hover: color-mix(in srgb, var(--composer-mode-accent-strong) 84%, #000);
+}
+.agentsam-shell [data-agent-composer] [data-composer-send]:disabled {
+  background: color-mix(in srgb, var(--composer-mode-accent) 58%, var(--nav-surface));
+  color: color-mix(in srgb, #fff 82%, var(--composer-mode-accent));
+  opacity: .78;
+}
+.agentsam-shell [data-agent-mode-trigger] {
+  color: var(--composer-mode-accent);
+}
+
+/* Multitask is intentionally subtle: a slow moving perimeter + send gradient, never a neon HUD. */
+.agentsam-shell [data-agent-composer][data-agent-mode="multitask"] {
+  --composer-mode-accent: var(--agentsam-mode-multitask-accent);
+  --composer-mode-accent-strong: var(--agentsam-mode-multitask-strong);
+  border-color: transparent;
+}
+.agentsam-shell [data-agent-composer][data-agent-mode="multitask"]::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  opacity: .62;
+  background: conic-gradient(from var(--agentsam-multitask-angle, 0deg), var(--agentsam-mode-agent-accent), var(--agentsam-mode-multitask-accent), var(--agentsam-mode-ask-accent), var(--agentsam-mode-plan-accent), var(--agentsam-mode-agent-accent));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: agentsam-multitask-orbit 9s linear infinite;
+}
+.agentsam-shell [data-agent-composer][data-agent-mode="multitask"] > * {
+  position: relative;
+  z-index: 1;
+}
+.agentsam-shell [data-agent-composer][data-agent-mode="multitask"] [data-composer-send] {
+  background: linear-gradient(120deg, var(--agentsam-mode-agent-accent), var(--agentsam-mode-multitask-accent) 38%, var(--agentsam-mode-ask-accent) 72%, var(--agentsam-mode-plan-accent));
+  background-size: 220% 220%;
+  animation: agentsam-multitask-shift 8s ease-in-out infinite;
+}
+.agentsam-shell [data-agent-composer][data-agent-mode="multitask"] [data-composer-send]:disabled {
+  opacity: .72;
+}
+@property --agentsam-multitask-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes agentsam-multitask-orbit {
+  to { --agentsam-multitask-angle: 360deg; }
+}
+@keyframes agentsam-multitask-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentsam-shell [data-agent-composer][data-agent-mode="multitask"]::before,
+  .agentsam-shell [data-agent-composer][data-agent-mode="multitask"] [data-composer-send] {
+    animation: none;
+  }
+}

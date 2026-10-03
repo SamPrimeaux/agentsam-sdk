@@ -1,4 +1,4 @@
-import type { AgentMessage, AgentRole } from "@inneranimalmedia/agentsam-contracts";
+import type { AgentMessage, AgentRole, AgentRunMode } from "@inneranimalmedia/agentsam-contracts";
 
 export type Role = Exclude<AgentRole, "tool">;
 
@@ -137,6 +137,7 @@ export type OfflineQueuedSend = {
   targetKind: "trail" | "side";
   text: string;
   noteId: string;
+  runMode?: AgentRunMode;
   createdAt: number;
 };
 

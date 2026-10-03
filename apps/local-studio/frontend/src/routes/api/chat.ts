@@ -7,6 +7,10 @@ import {
   WORKERS_AI_CURATED,
 } from "@inneranimalmedia/agentsam-local-shared/studio-inventory";
 import {
+  buildStudioSystemMessages,
+  type StudioChatSurface,
+} from "@inneranimalmedia/agentsam-local-shared/studio-chat-policy";
+import {
   mergeStudioCredentials,
   resolveStudioAccountId,
   shouldUseWorkersAI,
@@ -24,6 +28,9 @@ const Body = z.object({
     )
     .min(1)
     .max(24),
+  surface: z.enum(["trail", "side"]).optional(),
+  run_mode: z.enum(["ask", "plan", "agent", "debug", "multitask"]).optional(),
+  /** @deprecated legacy surface field; use surface. */
   mode: z.enum(["trail", "side"]).optional(),
   provider: z.string().min(1).max(40),
   model_id: z.string().min(1).max(160),
@@ -34,25 +41,6 @@ const Body = z.object({
     .max(24)
     .optional(),
 });
-
-const TRAIL_SYSTEM = `You are AgentSam, the lead studio operator for InnerAnimalMedia.
-Calm, precise, no fluff. Help with software, writing, research, and shipping work.
-This workbench has a virtual git workspace, Monaco, an in-app browser, an xterm CLI with live Cloudflare Pages deploy feeds, and GitHub / Cloudflare ship methods.
-
-Match response scope and depth directly to the user's prompt: for casual check-ins or brief questions (e.g. "wyd", "what's up", status checks), reply concisely in 1-2 conversational sentences without unsolicited code dumps or architectural blueprints. Only generate code, files, or scaffolding when explicitly asked.
-
-Co-worker side chats can help you in parallel — they report brief handoffs back into this lead chat when they finish a reply.
-
-When you create or edit files, use fenced code blocks tagged with a path:
-\`\`\`html index.html
-\`\`\`
-Prefer short structured answers. Do not use emoji unless asked.
-For deploys, tell the user they can run \`wrangler pages deploy\` or \`git push\` in the CLI after adding tokens in Ship — the CLI streams real Cloudflare API progress.`;
-
-const SIDE_SYSTEM = `You are an AgentSam co-worker: a focused specialist helping the lead agent in the main project chat.
-Be concise and actionable. Match response scope to the prompt. You share the same project workspace. Advance the lead's work — research, draft files, review, or unblock — without restating the whole thread.
-When you create files, fence them with a path. No emoji unless asked.
-Assume a short summary of your reply will be handed back to the lead chat.`;
 
 const BUILD_EXTRA = `You are in vibecode mode. Write complete, runnable files. Prefer small static sites, wrangler.toml, and GitHub Actions that deploy to Cloudflare Pages.`;
 
@@ -233,30 +221,18 @@ export const Route = createFileRoute("/api/chat")({
           return Response.json({ error: message }, { status: 409 });
         }
 
-        const mode = parsed.mode ?? "trail";
-        const system = mode === "side" ? SIDE_SYSTEM : TRAIL_SYSTEM;
-        const messages: { role: string; content: string }[] = [{ role: "system", content: system }];
+        const surface: StudioChatSurface = parsed.surface ?? parsed.mode ?? "trail";
+        const runMode = parsed.run_mode ?? (surface === "side" ? "ask" : "agent");
+        const messages: { role: string; content: string }[] = buildStudioSystemMessages({
+          surface,
+          runMode,
+          parentTitle: parsed.parentTitle,
+          parentExcerpt: parsed.parentExcerpt,
+          workspace: parsed.workspace,
+        });
 
         if (/build/i.test(modelId)) {
           messages.push({ role: "system", content: BUILD_EXTRA });
-        }
-
-        if (mode === "side" && parsed.parentTitle) {
-          messages.push({
-            role: "system",
-            content: `You are assisting the lead chat “${parsed.parentTitle}”. Treat this as living context from the lead agent — help them finish the job:\n\n${parsed.parentExcerpt ?? "(lead chat is empty)"}`,
-          });
-        }
-
-        if (parsed.workspace?.length) {
-          const listing = parsed.workspace
-            .map((f) => `## ${f.path}\n${f.content}`)
-            .join("\n\n")
-            .slice(0, 40000);
-          messages.push({
-            role: "system",
-            content: `Current project workspace (virtual). Edit by rewriting fenced files with paths.\n\n${listing}`,
-          });
         }
 
         for (const message of parsed.messages) {
@@ -264,7 +240,7 @@ export const Route = createFileRoute("/api/chat")({
           messages.push({ role: message.role, content: message.content });
         }
 
-        const maxTokens = mode === "side" ? 2200 : 4200;
+        const maxTokens = surface === "side" ? 2200 : 4200;
         const chatBody = {
           model: modelId,
           stream: true,
@@ -279,6 +255,7 @@ export const Route = createFileRoute("/api/chat")({
           "X-Content-Type-Options": "nosniff",
           "X-AgentSam-Provider": providerId,
           "X-AgentSam-Model": modelId,
+          "X-AgentSam-Run-Mode": runMode,
         };
 
         // Cloudflare lane: Workers AI binding first, token REST fallback.

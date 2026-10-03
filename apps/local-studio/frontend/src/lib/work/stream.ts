@@ -1,10 +1,12 @@
-import type { AgentMessage as ChatMessage } from "@inneranimalmedia/agentsam-contracts";
+import type { AgentMessage as ChatMessage, AgentRunMode } from "@inneranimalmedia/agentsam-contracts";
 import type { RawRuntimeEvent } from "@inneranimalmedia/agentsam-loading-scene";
+import { buildStudioSystemMessages, type StudioChatSurface } from "@inneranimalmedia/agentsam-local-shared/studio-chat-policy";
 import { identitySessionExists, invokeLocalProvider, invokeStudioService, isPackagedDesktop } from "@/lib/desktop/tauri";
 
 export async function streamChat(opts: {
   messages: Pick<ChatMessage, "role" | "content">[];
-  mode: "trail" | "side";
+  surface: StudioChatSurface;
+  runMode: AgentRunMode;
   provider?: string;
   model_id?: string;
   parentTitle?: string | null;
@@ -31,7 +33,8 @@ export async function streamChat(opts: {
 
   const requestBody = {
     messages: opts.messages.map((m) => ({ role: m.role, content: m.content })),
-    mode: opts.mode,
+    surface: opts.surface,
+    run_mode: opts.runMode,
     provider: opts.provider,
     model_id: opts.model_id,
     parentTitle: opts.parentTitle ?? undefined,
@@ -49,20 +52,30 @@ export async function streamChat(opts: {
     try {
       emitActivity(
         "provider.pending.local",
-        opts.mode === "side" ? "Co-worker calling local model" : "Calling local model",
+        opts.surface === "side" ? "Co-worker calling local model" : "Calling local model",
         opts.model_id,
       );
+      const localMessages = [
+        ...buildStudioSystemMessages({
+          surface: opts.surface,
+          runMode: opts.runMode,
+          parentTitle: opts.parentTitle,
+          parentExcerpt: opts.parentExcerpt,
+          workspace: opts.workspace,
+        }),
+        ...requestBody.messages.filter((message) => message.role !== "system"),
+      ];
       const local = await invokeLocalProvider<{ ok?: boolean; error?: string; text?: string }>({
         operation: "chat",
         provider: opts.provider,
         model_id: opts.model_id,
-        messages: requestBody.messages,
+        messages: localMessages,
       });
       if (local.ok === true) {
         if (opts.signal.aborted) throw new DOMException("Aborted", "AbortError");
         emitActivity(
           "model.response.local",
-          opts.mode === "side" ? "Co-worker received model response" : "Model response received",
+          opts.surface === "side" ? "Co-worker received model response" : "Model response received",
           opts.model_id,
         );
         const text = String(local.text || "");
@@ -77,7 +90,7 @@ export async function streamChat(opts: {
     if (await identitySessionExists().catch(() => false)) {
       emitActivity(
         "provider.pending.account",
-        opts.mode === "side" ? "Co-worker using account model service" : "Using account model service",
+        opts.surface === "side" ? "Co-worker using account model service" : "Using account model service",
         opts.model_id,
       );
       const bridged = await invokeStudioService({
@@ -87,7 +100,7 @@ export async function streamChat(opts: {
       if (bridged.ok) {
         emitActivity(
           "model.response.account",
-          opts.mode === "side" ? "Co-worker received model response" : "Model response received",
+          opts.surface === "side" ? "Co-worker received model response" : "Model response received",
           opts.model_id,
         );
         if (bridged.body) opts.onDelta(bridged.body);
@@ -108,7 +121,7 @@ export async function streamChat(opts: {
 
   emitActivity(
     "provider.pending.web",
-    opts.mode === "side" ? "Co-worker calling model service" : "Calling model service",
+    opts.surface === "side" ? "Co-worker calling model service" : "Calling model service",
     opts.model_id,
   );
   const res = await fetch("/api/chat", {
@@ -149,7 +162,7 @@ export async function streamChat(opts: {
       reportedResponse = true;
       emitActivity(
         "model.response.web",
-        opts.mode === "side" ? "Co-worker receiving model output" : "Receiving model output",
+        opts.surface === "side" ? "Co-worker receiving model output" : "Receiving model output",
         opts.model_id,
       );
     }

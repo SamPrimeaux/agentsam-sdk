@@ -4,10 +4,19 @@ import { AgentComposer, GoalStatusStrip } from "@inneranimalmedia/agentsam-workb
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ModelSelect } from "@/components/workbench/model-select";
+import { RunModeSelect } from "@/components/workbench/run-mode-select";
 import { cn, formatElapsed } from "@/lib/utils";
-import { useWorkStore } from "@/lib/work/store";
+import { defaultRunModeForTarget, useWorkStore } from "@/lib/work/store";
 import { PluginPicker } from '../../../agentsam/PluginPicker';
 import { Nav } from '@inneranimalmedia/agentsam-nav';
+
+const RUN_MODE_PLACEHOLDERS = {
+  agent: "Work on anything…",
+  plan: "Describe what you want to plan…",
+  debug: "Describe the bug — evidence first, then a targeted fix",
+  multitask: "Coordinate parallel work…",
+  ask: "Ask anything…",
+} as const;
 
 export function Composer({
   targetId,
@@ -23,6 +32,8 @@ export function Composer({
   const send = useWorkStore((s) => s.send);
   const stop = useWorkStore((s) => s.stop);
   const streaming = useWorkStore((s) => s.streamingIds.includes(targetId));
+  const runMode = useWorkStore((s) => s.runModes[targetId] ?? defaultRunModeForTarget(targetKind));
+  const setRunMode = useWorkStore((s) => s.setRunMode);
   const fileRef = useRef<HTMLInputElement>(null);
   const goal = useWorkStore((s) => targetKind === "trail" ? s.goals[targetId] : undefined);
   const clearGoal = useWorkStore((s) => s.clearGoal);
@@ -96,6 +107,7 @@ export function Composer({
       >
         <Paperclip className="size-4" />
       </Button>
+      <RunModeSelect value={runMode} onChange={(mode) => setRunMode(targetId, mode)} />
       <ModelSelect compact />
     </>
   );
@@ -217,18 +229,16 @@ export function Composer({
       ) : null}
       <PluginPicker value={value} onChange={(next) => setDraft(targetId, next)}>{({ trigger, onKeyDown, onSelect }) => <AgentComposer
         value={value}
+        runMode={runMode}
         onChange={(next) => setDraft(targetId, next)}
         onSend={() => send(targetId, targetKind)}
         onCancel={() => stop(targetId)}
         streaming={streaming}
-        placeholder={placeholder}
+        placeholder={targetKind === "side" ? placeholder : RUN_MODE_PLACEHOLDERS[runMode]}
         toolbarStart={<>{trigger}{attachControl}</>}
         sendControl={sendControl}
         cancelControl={cancelControl}
-        containerClassName={cn(
-          "mx-auto flex w-full max-w-3xl flex-col rounded-2xl bg-card p-2 pl-3 shadow-hairline",
-          "focus-within:shadow-[0_0_0_1.5px_var(--color-accent)]",
-        )}
+        containerClassName="mx-auto flex w-full max-w-3xl flex-col rounded-2xl bg-card p-2 pl-3 shadow-hairline"
         inputClassName={cn(
           "flex min-h-[44px] max-h-52 w-full resize-none rounded-lg bg-transparent px-1 py-2.5 text-sm text-foreground placeholder:text-muted-foreground",
           "focus:outline-none focus-visible:outline-none focus-visible:shadow-none disabled:cursor-not-allowed disabled:opacity-40",

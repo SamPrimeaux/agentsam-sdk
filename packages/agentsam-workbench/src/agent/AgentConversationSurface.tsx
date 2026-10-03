@@ -50,36 +50,38 @@ export function AgentConversationSurface({
     >
       {runtime}
 
-      {empty ? <div data-agent-conversation-spacer="" style={{ flex: 1 }} /> : null}
-
-      {emptyState ? (
-        <div
-          data-agent-conversation-empty-state=""
-          aria-hidden={empty ? undefined : true}
-          style={{
-            display: empty ? 'block' : 'none',
-            flexShrink: 0,
-            minWidth: 0,
-          }}
-        >
-          {emptyState}
-        </div>
-      ) : null}
-
       <div
         className={bodyClassName}
         data-agent-conversation-body=""
-        aria-hidden={empty ? true : undefined}
+        data-agent-conversation-body-empty={empty ? 'true' : 'false'}
         style={{
-          display: empty ? 'none' : 'flex',
+          display: 'flex',
           minWidth: 0,
           minHeight: 0,
-          flex: empty ? '0 0 auto' : '1 1 auto',
+          flex: '1 1 auto',
           flexDirection: 'column',
           overflow: 'hidden',
         }}
       >
-        {thread}
+        {empty ? (
+          emptyState ? (
+            <div
+              data-agent-conversation-empty-state=""
+              style={{
+                display: 'flex',
+                minWidth: 0,
+                minHeight: 0,
+                flex: '1 1 auto',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {emptyState}
+            </div>
+          ) : null
+        ) : (
+          thread
+        )}
       </div>
 
       {status ? (
@@ -101,7 +103,6 @@ export function AgentConversationSurface({
         {composer}
       </div>
 
-      {empty ? <div data-agent-conversation-spacer="" style={{ flex: 1.08 }} /> : null}
     </section>
   );
 }

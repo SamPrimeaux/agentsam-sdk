@@ -7,7 +7,8 @@
     ".": "./src/index.ts",
     "./work-types": "./src/work-types.ts",
     "./studio-inventory": "./src/studio-inventory.ts",
-    "./studio-vault": "./src/studio-vault.ts"
+    "./studio-vault": "./src/studio-vault.ts",
+    "./studio-chat-policy": "./src/studio-chat-policy.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

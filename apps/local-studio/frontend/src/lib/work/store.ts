@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { AgentRunMode } from "@inneranimalmedia/agentsam-contracts";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { titleFromText, uid } from "@/lib/utils";
 import { extractArtifacts, mergeArtifacts } from "@/lib/work/files";
@@ -112,6 +113,21 @@ function workspacePayload(project: Project) {
     }));
 }
 
+const RUN_MODES = new Set<AgentRunMode>(["ask", "plan", "agent", "debug", "multitask"]);
+
+export function defaultRunModeForTarget(targetKind: "trail" | "side"): AgentRunMode {
+  return targetKind === "side" ? "ask" : "agent";
+}
+
+function normalizedRunModes(value: unknown): Record<string, AgentRunMode> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).filter(
+      (entry): entry is [string, AgentRunMode] => typeof entry[1] === "string" && RUN_MODES.has(entry[1] as AgentRunMode),
+    ),
+  );
+}
+
 type FollowupQueuedSend = {
   id: string;
   targetId: string;
@@ -119,6 +135,7 @@ type FollowupQueuedSend = {
   text: string;
   projectId: string;
   modelSelection: StudioModelSelection;
+  runMode: AgentRunMode;
   createdAt: number;
 };
 
@@ -138,6 +155,8 @@ type WorkState = {
   settingsOpen: boolean;
   navView: NavView;
   modelSelection: StudioModelSelection;
+  modelSelectionMode: "auto" | "manual";
+  runModes: Record<string, AgentRunMode>;
   sideTabs: SideTab[];
   activeSideTabId: string | null;
   streamingIds: string[];
@@ -157,6 +176,8 @@ type WorkState = {
   setDraft: (id: string, value: string) => void;
   setNavView: (view: NavView) => void;
   setModelSelection: (selection: StudioModelSelection) => void;
+  setModelSelectionMode: (mode: "auto" | "manual") => void;
+  setRunMode: (targetId: string, mode: AgentRunMode) => void;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
   setMobileNavOpen: (open: boolean) => void;
@@ -199,7 +220,7 @@ type WorkState = {
     targetId: string,
     targetKind: "trail" | "side",
     text?: string,
-    context?: { projectId?: string; modelSelection?: StudioModelSelection },
+    context?: { projectId?: string; modelSelection?: StudioModelSelection; runMode?: AgentRunMode },
   ) => Promise<void>;
   stop: (id: string) => void;
   removeFollowup: (id: string) => void;
@@ -220,6 +241,8 @@ function ensureShape(raw: Partial<WorkState> | undefined): Pick<
   | "terminalHeight"
   | "navView"
   | "modelSelection"
+  | "modelSelectionMode"
+  | "runModes"
   | "sideTabs"
   | "activeSideTabId"
   | "goals"
@@ -272,6 +295,8 @@ function ensureShape(raw: Partial<WorkState> | undefined): Pick<
       raw?.modelSelection && raw.modelSelection.provider && raw.modelSelection.model_id
         ? raw.modelSelection
         : { ...DEFAULT_SELECTION },
+    modelSelectionMode: raw?.modelSelectionMode === "manual" ? "manual" : "auto",
+    runModes: normalizedRunModes(raw?.runModes),
     sideTabs: (raw?.sideTabs ?? []).map((t) => {
       const tab = t as SideTab;
       return {
@@ -340,6 +365,8 @@ export const useWorkStore = create<WorkState>()(
       setDraft: (id, value) => set((s) => ({ drafts: { ...s.drafts, [id]: value } })),
       setNavView: (navView) => set({ navView, sidebarOpen: true }),
       setModelSelection: (modelSelection) => set({ modelSelection }),
+      setModelSelectionMode: (modelSelectionMode) => set({ modelSelectionMode }),
+      setRunMode: (targetId, mode) => set((state) => ({ runModes: { ...state.runModes, [targetId]: mode } })),
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
       setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
       setMobileNavOpen: (mobileNavOpen) => set({ mobileNavOpen }),
@@ -507,7 +534,8 @@ export const useWorkStore = create<WorkState>()(
             let sawDelta = false;
             await streamChat({
               messages: payload,
-              mode: item.targetKind,
+              surface: item.targetKind,
+              runMode: item.runMode ?? after.runModes[item.targetId] ?? defaultRunModeForTarget(item.targetKind),
               provider: after.modelSelection?.provider,
               model_id: after.modelSelection?.model_id,
               parentTitle,
@@ -937,6 +965,7 @@ export const useWorkStore = create<WorkState>()(
         void get().send(next.targetId, next.targetKind, next.text, {
           projectId: next.projectId,
           modelSelection: next.modelSelection,
+          runMode: next.runMode,
         });
       },
       send: async (targetId, targetKind, text, context) => {
@@ -967,6 +996,7 @@ export const useWorkStore = create<WorkState>()(
             text: draft.slice(0, 12000),
             projectId: state.activeProjectId,
             modelSelection: { ...state.modelSelection },
+            runMode: context?.runMode ?? state.runModes[targetId] ?? defaultRunModeForTarget(targetKind),
             createdAt: Date.now(),
           };
           set((s) => ({
@@ -985,6 +1015,7 @@ export const useWorkStore = create<WorkState>()(
             targetKind,
             text: draft.slice(0, 12000),
             noteId,
+            runMode: context?.runMode ?? state.runModes[targetId] ?? defaultRunModeForTarget(targetKind),
             createdAt: Date.now(),
           };
           const userMsg: ChatMessage = {
@@ -1181,7 +1212,8 @@ export const useWorkStore = create<WorkState>()(
           let sawDelta = false;
           await streamChat({
             messages: payload,
-            mode: targetKind,
+            surface: targetKind,
+            runMode: context?.runMode ?? after.runModes[targetId] ?? defaultRunModeForTarget(targetKind),
             provider: context?.modelSelection?.provider ?? after.modelSelection?.provider,
             model_id: context?.modelSelection?.model_id ?? after.modelSelection?.model_id,
             parentTitle,
@@ -1270,6 +1302,7 @@ export const useWorkStore = create<WorkState>()(
               void get().send(next.targetId, next.targetKind, next.text, {
                 projectId: next.projectId,
                 modelSelection: next.modelSelection,
+                runMode: next.runMode,
               });
             }
           }
@@ -1280,7 +1313,7 @@ export const useWorkStore = create<WorkState>()(
       name: "agentsam-work-v1",
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
-      version: 4,
+      version: 5,
       merge: (persisted, current) => {
         const raw = (persisted ?? {}) as Partial<WorkState>;
         const shaped = ensureShape(raw);
@@ -1313,6 +1346,8 @@ export const useWorkStore = create<WorkState>()(
         terminalHeight: s.terminalHeight,
         navView: s.navView,
         modelSelection: s.modelSelection,
+        modelSelectionMode: s.modelSelectionMode,
+        runModes: s.runModes,
         sideTabs: s.sideTabs,
         activeSideTabId: s.activeSideTabId,
         offlineQueue: s.offlineQueue,
