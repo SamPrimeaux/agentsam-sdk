@@ -57,6 +57,12 @@
       "bucket_name": "agentsam-os-blueprint-content"
     }
   ],
+  "pipelines": [
+    {
+      "binding": "AGENTSAM_ACTIVITY",
+      "stream": "ed136b38bbf1476395ab8326f75b77a3"
+    }
+  ],
   "ai": {
     "binding": "AGENTSAM_WAI"
   },

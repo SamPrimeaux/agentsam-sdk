@@ -9,4 +9,3 @@ export {
 } from "./analytics-ui";
 export { fmtNum } from "./format";
 export type { ChartSeries, DonutSlice, RangeKey } from "./types";
-export * from "./contracts";
