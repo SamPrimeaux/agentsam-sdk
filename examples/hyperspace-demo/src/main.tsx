@@ -1,9 +1,11 @@
 import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
+  HYPERSPACE_STUDIES,
   LoadingSceneController,
-  computationalHyperspace,
   adaptAgentSamEvent,
+  computationalHyperspace,
+  type HyperspaceStudyId,
 } from "@inneranimalmedia/agentsam-loading-scene";
 import {
   LoadingScene,
@@ -13,141 +15,249 @@ import {
 
 const preset = computationalHyperspace;
 
-/**
- * Simulated "create a site" run: realistic runtime events flow through
- * the adapter → controller, exactly as a real CMS app would wire it.
- * The renderer never sees any of these names.
- */
-function simulateSiteCreation(controller: LoadingSceneController, onDone: () => void) {
-  const timeline: Array<[number, () => void]> = [];
-  const at = (ms: number, fn: () => void) => timeline.push([ms, fn]);
-  const ev = (raw: Parameters<typeof adaptAgentSamEvent>[0]) =>
+type StudyChoice = HyperspaceStudyId | "auto";
+
+function simulateRuntime(
+  controller: LoadingSceneController,
+  onDone: () => void,
+) {
+  const timers: number[] = [];
+  const later = (ms: number, fn: () => void) => {
+    timers.push(window.setTimeout(fn, ms));
+  };
+  const emit = (raw: Parameters<typeof adaptAgentSamEvent>[0]) =>
     controller.handle(adaptAgentSamEvent(raw));
 
-  at(0, () => ev({ type: "agent.session.started", operationId: "session", label: "Starting up" }));
-  at(900, () => controller.complete("session"));
+  later(0, () =>
+    emit({
+      type: "agent.session.started",
+      operationId: "boot",
+      label: "Preparing runtime",
+    }),
+  );
+  later(3600, () => controller.complete("boot"));
 
-  at(1000, () => ev({ type: "context.workspace.loading", operationId: "ctx", label: "Gathering context" }));
-  // 19 rapid file reads — coalesced, no flicker
-  for (let i = 0; i < 19; i++) {
-    at(1200 + i * 60, () => ev({ type: "file.read", label: "Understanding your project" }));
-  }
-  at(2600, () => controller.complete("ctx"));
+  later(3900, () =>
+    emit({
+      type: "file.read",
+      operationId: "read",
+      label: "Reading project context",
+    }),
+  );
+  later(7700, () => controller.complete("read"));
 
-  at(2700, () => ev({ type: "model.planning", operationId: "plan", label: "Planning your site" }));
-  at(5200, () => controller.complete("plan"));
+  later(8000, () =>
+    emit({
+      type: "context.workspace.loading",
+      operationId: "context",
+      label: "Loading context",
+    }),
+  );
+  later(11900, () => controller.complete("context"));
 
-  // parallel tools + asset generation blending
-  at(5300, () => ev({ type: "tool.invoke", operationId: "t1", label: "Laying out pages" }));
-  at(5450, () => ev({ type: "tool.invoke", operationId: "t2", label: "Writing copy" }));
-  at(5600, () => ev({ type: "tool.image.generate", operationId: "hero", label: "Generating hero artwork" }));
-  at(9400, () => controller.complete("t1"));
-  at(10200, () => controller.complete("t2"));
-  at(12500, () => ev({ type: "content.asset.generated", operationId: "hero", label: "Hero artwork ready" }));
+  later(12200, () =>
+    emit({
+      type: "tool.invoke",
+      operationId: "tool-a",
+      label: "Running tools",
+    }),
+  );
+  later(12450, () =>
+    emit({
+      type: "tool.invoke",
+      operationId: "tool-b",
+      label: "Tracing dependencies",
+    }),
+  );
+  later(16300, () => controller.complete("tool-a"));
+  later(16600, () => controller.complete("tool-b"));
 
-  at(12800, () => ev({ type: "catalog.indexing", operationId: "idx", label: "Organizing your content" }));
-  at(15200, () => controller.complete("idx"));
+  later(16900, () =>
+    emit({
+      type: "catalog.indexing",
+      operationId: "index",
+      label: "Reconciling state",
+    }),
+  );
+  later(20700, () => controller.complete("index"));
 
-  at(15400, () => ev({ type: "site.build", operationId: "build", label: "Building your site", progress: 0 }));
-  at(16500, () => ev({ type: "site.build", operationId: "build", progress: 0.35 }));
-  at(17800, () => ev({ type: "site.build", operationId: "build", progress: 0.8 }));
-  at(18900, () => controller.complete("build"));
+  later(21000, () =>
+    emit({
+      type: "site.build",
+      operationId: "build",
+      label: "Building application",
+      progress: 0,
+    }),
+  );
+  later(22200, () =>
+    emit({
+      type: "site.build",
+      operationId: "build",
+      progress: 0.38,
+    }),
+  );
+  later(23500, () =>
+    emit({
+      type: "site.build",
+      operationId: "build",
+      progress: 0.78,
+    }),
+  );
+  later(24900, () => controller.complete("build"));
 
-  at(19000, () => ev({ type: "output.verify", operationId: "verify", label: "Checking everything" }));
-  at(21500, () => controller.complete("verify"));
+  later(26200, onDone);
 
-  at(21700, () => ev({ type: "site.deploy", operationId: "deploy", label: "Publishing" }));
-  at(24800, () => {
-    controller.complete("deploy");
-    onDone();
-  });
-
-  const ids = timeline.map(([ms, fn]) => window.setTimeout(fn, ms));
-  return () => ids.forEach((id) => window.clearTimeout(id));
+  return () => timers.forEach((id) => window.clearTimeout(id));
 }
 
-function EditorSurface() {
+function PreviewSurface() {
   return (
     <div
       style={{
         height: "100%",
         display: "grid",
-        gridTemplateRows: "56px 1fr",
-        color: "#d5d7e0",
-        fontFamily: "system-ui, sans-serif",
+        placeItems: "center",
+        background: "#090A0E",
+        color: "#F7F5FB",
+        fontFamily:
+          'Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       }}
     >
-      <header
-        style={{
-          borderBottom: "1px solid rgba(255,255,255,0.08)",
-          display: "flex",
-          alignItems: "center",
-          padding: "0 20px",
-          gap: 16,
-          fontSize: 13,
-          letterSpacing: "0.06em",
-        }}
-      >
-        <strong style={{ color: "#8b7db7" }}>AgentSam</strong>
-        <span style={{ opacity: 0.5 }}>Fuel N Free Time — Home</span>
-        <span style={{ marginLeft: "auto", opacity: 0.4, fontSize: 12 }}>Draft saved</span>
-      </header>
-      <main style={{ padding: 32, display: "grid", gap: 20, alignContent: "start" }}>
-        <div style={{ height: 220, borderRadius: 10, background: "linear-gradient(135deg, rgba(139,125,183,0.18), rgba(104,117,173,0.1))", border: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, opacity: 0.8 }}>
-          Hero section — generated artwork placed here
+      <div style={{ textAlign: "center", opacity: 0.9 }}>
+        <div
+          style={{
+            fontSize: 12,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            color: "#B5B1C0",
+          }}
+        >
+          AgentSam
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16 }}>
-          {["Collection grid", "Countdown banner", "Newsletter"].map((s) => (
-            <div key={s} style={{ height: 110, borderRadius: 8, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, opacity: 0.65 }}>
-              {s}
-            </div>
-          ))}
+        <div
+          style={{
+            marginTop: 10,
+            fontSize: 30,
+            letterSpacing: "-0.035em",
+            fontWeight: 600,
+          }}
+        >
+          Runtime complete
         </div>
-      </main>
+      </div>
     </div>
   );
 }
 
 function App() {
-  const controller = useMemo(() => new LoadingSceneController(preset), []);
+  const controller = useMemo(
+    () => new LoadingSceneController(preset),
+    [],
+  );
   const [run, setRun] = useState(0);
-  const debug = new URLSearchParams(window.location.search).get("debugRuntimeVisuals") === "1";
+  const params = useMemo(
+    () => new URLSearchParams(window.location.search),
+    [],
+  );
+  const debug = params.get("debugRuntimeVisuals") === "1";
+  const initialStudy = params.get("study") as StudyChoice | null;
+  const [study, setStudy] = useState<StudyChoice>(
+    initialStudy &&
+      (initialStudy === "auto" ||
+        HYPERSPACE_STUDIES.some((item) => item.id === initialStudy))
+      ? initialStudy
+      : "auto",
+  );
 
   useEffect(() => {
-    if (debug) return; // devtools drive the controller instead
-    return simulateSiteCreation(controller, () => undefined);
+    if (debug) return;
+    return simulateRuntime(controller, () => {
+      window.setTimeout(() => {
+        controller.reset();
+        setRun((value) => value + 1);
+      }, 1500);
+    });
   }, [controller, run, debug]);
 
   return (
-    <div style={{ position: "fixed", inset: 0 }}>
-      <LoadingScene controller={controller} preset={preset} style={{ width: "100%", height: "100%" }}>
-        <EditorSurface />
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "#090A0E",
+      }}
+    >
+      <LoadingScene
+        controller={controller}
+        preset={preset}
+        study={study}
+        reducedMotion="auto"
+        style={{ width: "100%", height: "100%" }}
+      >
+        <PreviewSurface />
       </LoadingScene>
-      <div style={{ position: "fixed", left: 24, bottom: 24, pointerEvents: "none" }}>
-        <LoadingSceneStatus controller={controller} preset={preset} />
+
+      <div
+        style={{
+          position: "fixed",
+          left: 24,
+          bottom: 24,
+          pointerEvents: "none",
+          zIndex: 5,
+        }}
+      >
+        <LoadingSceneStatus
+          controller={controller}
+          preset={preset}
+        />
       </div>
-      {!debug && (
-        <button
-          onClick={() => {
-            controller.reset();
-            setRun((r) => r + 1);
-          }}
-          style={{
-            position: "fixed",
-            top: 16,
-            right: 16,
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.12)",
-            borderRadius: 6,
-            color: "#9ea1b0",
-            padding: "6px 12px",
-            fontSize: 12,
-            cursor: "pointer",
-          }}
-        >
-          Replay
-        </button>
-      )}
+
+      <div
+        style={{
+          position: "fixed",
+          top: 16,
+          right: 16,
+          zIndex: 10,
+          display: "flex",
+          gap: 6,
+          flexWrap: "wrap",
+          justifyContent: "flex-end",
+          maxWidth: "min(860px, calc(100vw - 32px))",
+          fontFamily:
+            'Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        }}
+      >
+        {(["auto", ...HYPERSPACE_STUDIES.map((item) => item.id)] as StudyChoice[]).map(
+          (item) => (
+            <button
+              key={item}
+              type="button"
+              onClick={() => setStudy(item)}
+              style={{
+                border:
+                  item === study
+                    ? "1px solid #8B5CF6"
+                    : "1px solid rgba(255,255,255,.12)",
+                background:
+                  item === study
+                    ? "rgba(139,92,246,.16)"
+                    : "rgba(9,10,14,.72)",
+                color: item === study ? "#F7F5FB" : "#B5B1C0",
+                borderRadius: 999,
+                padding: "7px 10px",
+                fontSize: 11,
+                cursor: "pointer",
+                backdropFilter: "blur(10px)",
+              }}
+            >
+              {item === "auto"
+                ? "Auto"
+                : HYPERSPACE_STUDIES.find((entry) => entry.id === item)?.title}
+            </button>
+          ),
+        )}
+      </div>
+
       <LoadingSceneDevtools controller={controller} enabled={debug} />
     </div>
   );

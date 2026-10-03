@@ -2,27 +2,40 @@ import type { ScenePreset } from "../core/types.js";
 import { DEFAULT_SEMANTIC_INTENTS } from "../core/visual-intent.js";
 
 /**
- * First preset of the generic framework. Near-black, very thin geometry,
- * huge negative space, viewer inside the structure. Future presets
- * (Architectural Blueprint, …) reuse the same machinery.
+ * AgentSam Computational Hyperspace.
+ *
+ * Six full-frame studies share one runtime contract and one persistent canvas.
+ * Runtime semantics choose the active study; the renderer cross-fades between
+ * them without rebuilding the controller/world/RAF.
  */
 export const computationalHyperspace: ScenePreset = {
   id: "computational-hyperspace",
   palette: {
-    canvas: "#000000",
-    line: "rgba(148, 152, 170, 0.5)",
+    canvas: "#090A0E",
+    line: "rgba(181, 177, 192, 0.34)",
     accents: [
-      "rgba(139, 125, 183, 0.85)", // muted violet
-      "rgba(104, 117, 173, 0.85)", // indigo
-      "rgba(176, 134, 146, 0.8)", // dusty rose
-      "rgba(190, 165, 118, 0.7)", // subtle amber
-      "rgba(120, 143, 162, 0.8)", // steel blue
+      "rgba(139, 92, 246, 0.94)",  // AgentSam violet
+      "rgba(182, 154, 248, 0.90)", // accent soft
+      "rgba(218, 111, 143, 0.84)", // dusty rose
+      "rgba(228, 158, 83, 0.86)",  // amber
+      "rgba(104, 173, 215, 0.88)", // steel cyan
     ],
-    warning: "rgba(198, 134, 110, 0.9)",
-    text: "rgba(220, 222, 232, 0.8)",
+    warning: "rgba(242, 139, 130, 0.94)",
+    text: "rgba(247, 245, 251, 0.96)",
   },
   semanticIntents: DEFAULT_SEMANTIC_INTENTS,
-  geometry: { pathCount: 56, signalCount: 24, layerCount: 7, topologyCount: 14 },
-  transition: { easing: 0.045, settleMs: 950 },
-  reducedMotion: { signalActivity: 0.05, forwardMotion: 0.02 },
+  geometry: {
+    pathCount: 56,
+    signalCount: 24,
+    layerCount: 7,
+    topologyCount: 14,
+  },
+  transition: {
+    easing: 0.045,
+    settleMs: 950,
+  },
+  reducedMotion: {
+    signalActivity: 0.05,
+    forwardMotion: 0.02,
+  },
 };

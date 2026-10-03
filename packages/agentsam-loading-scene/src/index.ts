@@ -5,6 +5,7 @@ export { deriveScene, type ReducerMemory } from "./core/reducer.js";
 export { TransitionEngine } from "./core/transition-engine.js";
 export { LoadingSceneController, type SceneListener } from "./core/controller.js";
 export { HyperspaceRenderer, type RendererDeps, type CanvasLike } from "./renderer/canvas-renderer.js";
+export { HYPERSPACE_STUDIES, DEFAULT_SEMANTIC_STUDY, studyForSemantic, studyForScene, type HyperspaceStudyId, type HyperspaceStudyDefinition } from "./renderer/study-selection.js";
 export { createWorld, stepWorld, type World } from "./renderer/world.js";
 export { makeViewport, alongRay, type Viewport } from "./renderer/projection.js";
 export { computationalHyperspace } from "./presets/computational-hyperspace.js";

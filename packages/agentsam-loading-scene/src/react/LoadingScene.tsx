@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { LoadingSceneController } from "../core/controller.js";
 import type { ScenePreset } from "../core/types.js";
+import type { HyperspaceStudyId } from "../renderer/study-selection.js";
 import { HyperspaceRenderer } from "../renderer/canvas-renderer.js";
 import { useLoadingScene } from "./useLoadingScene.js";
 
@@ -10,6 +11,8 @@ export interface LoadingSceneProps {
   /** Content revealed through the settling geometry on success. */
   children?: ReactNode;
   reducedMotion?: boolean | "auto";
+  /** Force one of the six fullscreen studies, or follow runtime semantics. */
+  study?: HyperspaceStudyId | "auto";
   style?: CSSProperties;
   className?: string;
 }
@@ -24,6 +27,7 @@ export function LoadingScene({
   preset,
   children,
   reducedMotion = "auto",
+  study = "auto",
   style,
   className,
 }: LoadingSceneProps) {
@@ -37,7 +41,7 @@ export function LoadingScene({
     const canvas = canvasRef.current;
     const host = hostRef.current;
     if (!canvas || !host) return;
-    const renderer = new HyperspaceRenderer(preset, { canvas, reducedMotion });
+    const renderer = new HyperspaceRenderer(preset, { canvas, reducedMotion, study });
     rendererRef.current = renderer;
     const fit = () => renderer.setSize(host.clientWidth, host.clientHeight);
     fit();
@@ -49,7 +53,7 @@ export function LoadingScene({
       renderer.dispose();
       rendererRef.current = null;
     };
-  }, [preset, reducedMotion, controller]);
+  }, [preset, reducedMotion, controller, study]);
 
   useEffect(() => {
     rendererRef.current?.setScene(scene);
