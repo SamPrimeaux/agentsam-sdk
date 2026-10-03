@@ -1064,7 +1064,29 @@ export const useWorkStore = create<WorkState>()(
 
         let completed = false;
         const visualOperationId = "agent-turn:" + assistantId;
-        localStudioRuntimeVisuals.startAgentTurn(visualOperationId);
+        const taskSummary = draft.replace(/\s+/g, " ").trim().slice(0, 180);
+        localStudioRuntimeVisuals.startAgentTurn(
+          visualOperationId,
+          "Understanding your request",
+          taskSummary || undefined,
+        );
+        const visualWorkspace = workspacePayload(project);
+        if (visualWorkspace.length > 0) {
+          localStudioRuntimeVisuals.activity(
+            visualOperationId,
+            "context_loading",
+            "Loading workspace context",
+            null,
+            project.name,
+          );
+        }
+        localStudioRuntimeVisuals.activity(
+          visualOperationId,
+          "thinking",
+          "Planning the next step",
+          null,
+          taskSummary || undefined,
+        );
         try {
           let assembled = "";
           let sawDelta = false;
