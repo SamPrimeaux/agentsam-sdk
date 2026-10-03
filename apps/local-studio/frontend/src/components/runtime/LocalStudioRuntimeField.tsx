@@ -4,7 +4,7 @@ import {
   computationalHyperspace,
 } from "@inneranimalmedia/agentsam-loading-scene";
 import {
-  LoadingSceneStatus,
+  LoadingSceneNarration,
   useLoadingScene,
 } from "@inneranimalmedia/agentsam-loading-scene/react";
 import { localStudioRuntimeVisuals } from "@/lib/runtime-visuals/local-studio-runtime";
