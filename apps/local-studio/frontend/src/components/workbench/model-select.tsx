@@ -44,7 +44,9 @@ function navigateToKeys() {
 
 export function ModelSelect({ compact = false }: { compact?: boolean }) {
   const selection = useWorkStore((s) => s.modelSelection);
+  const selectionMode = useWorkStore((s) => s.modelSelectionMode);
   const setModelSelection = useWorkStore((s) => s.setModelSelection);
+  const setModelSelectionMode = useWorkStore((s) => s.setModelSelectionMode);
   const [inventory, setInventory] = useState<StudioInventoryPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,19 +60,17 @@ export function ModelSelect({ compact = false }: { compact?: boolean }) {
       setInventory(body);
       const models = body.availableModels || [];
       const chatModels = models.filter((model) => model.chat_eligible === true);
-      const active = useWorkStore.getState().modelSelection;
+      const state = useWorkStore.getState();
+      const active = state.modelSelection;
       const activeIsEligible = chatModels.some(
         (model) => model.provider === active?.provider && model.model_id === active?.model_id,
       );
-      const preferred = body.selection
-        ? chatModels.find(
-            (model) => model.provider === body.selection?.provider && model.model_id === body.selection?.model_id,
-          )
-        : null;
-      if (preferred && (active?.provider !== preferred.provider || active?.model_id !== preferred.model_id)) {
-        setModelSelection({ provider: preferred.provider, model_id: preferred.model_id });
+      if (state.modelSelectionMode === "auto") {
+        const next = chatModels[0];
+        setModelSelection(next ? { provider: next.provider, model_id: next.model_id } : DEFAULT_SELECTION);
       } else if (!activeIsEligible) {
         const next = chatModels[0];
+        setModelSelectionMode("auto");
         setModelSelection(next ? { provider: next.provider, model_id: next.model_id } : DEFAULT_SELECTION);
       }
     } catch {
@@ -78,7 +78,7 @@ export function ModelSelect({ compact = false }: { compact?: boolean }) {
     } finally {
       setLoading(false);
     }
-  }, [setModelSelection]);
+  }, [setModelSelection, setModelSelectionMode]);
 
   useEffect(() => {
     let active = true;
@@ -113,13 +113,15 @@ export function ModelSelect({ compact = false }: { compact?: boolean }) {
   const current = eligibleModels.find(
     (model) => model.provider === selection?.provider && model.model_id === selection?.model_id,
   );
-  const triggerLabel = current
-    ? compact
-      ? shortLabel(current)
-      : current.label
-    : loading
-      ? "Checking…"
-      : "Select model";
+  const triggerLabel = selectionMode === "auto"
+    ? "Auto"
+    : current
+      ? compact
+        ? shortLabel(current)
+        : current.label
+      : loading
+        ? "Checking…"
+        : "Select model";
 
   return (
     <DropdownMenu>
@@ -180,6 +182,25 @@ export function ModelSelect({ compact = false }: { compact?: boolean }) {
           </div>
         ) : null}
 
+        {eligibleModels.length ? (
+          <>
+            <DropdownMenuItem
+              onSelect={() => {
+                const next = eligibleModels[0];
+                setModelSelectionMode("auto");
+                setModelSelection(next ? { provider: next.provider, model_id: next.model_id } : DEFAULT_SELECTION);
+              }}
+              className="gap-2"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block text-[12px] font-medium">Auto</span>
+                <span className="block truncate text-[10px] text-muted-foreground">Workspace routing policy</span>
+              </span>
+              {selectionMode === "auto" ? <Check className="size-3.5 shrink-0" /> : null}
+            </DropdownMenuItem>
+          </>
+        ) : null}
+
         {groups.map(([provider, models]) => (
           <div key={provider}>
             <DropdownMenuSeparator />
@@ -188,11 +209,12 @@ export function ModelSelect({ compact = false }: { compact?: boolean }) {
             </DropdownMenuLabel>
             {models.map((item) => {
               const next: StudioModelSelection = { provider: item.provider, model_id: item.model_id };
-              const selected = selection?.provider === item.provider && selection?.model_id === item.model_id;
+              const selected = selectionMode === "manual" && selection?.provider === item.provider && selection?.model_id === item.model_id;
               return (
                 <DropdownMenuItem
                   key={`${item.provider}:${item.model_id}`}
                   onSelect={() => {
+                    setModelSelectionMode("manual");
                     setModelSelection(next);
                     void persistEffectiveModelSelection(next);
                   }}

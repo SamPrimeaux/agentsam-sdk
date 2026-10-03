@@ -23,6 +23,6 @@ test('installed Go Worker package is discovered outside the monorepo', () => {
   assert.equal(discovery.schema, 'agentsam.go-discovery.v2');
   assert.equal(discovery.runtime?.origin, 'installed_package');
   assert.equal(discovery.distribution?.package_name, GO_WORKER_PACKAGE);
-  assert.equal(discovery.distribution?.package_version, '0.1.0');
+  assert.equal(discovery.distribution?.package_version, JSON.parse(fs.readFileSync(path.join(PRODUCT_ROOT, 'package.json'), 'utf8')).version);
   assert.equal(fs.realpathSync(resolveProductRoot(discovery)), fs.realpathSync(PRODUCT_ROOT));
 });

@@ -11,15 +11,12 @@ import {
 } from './receipts.js';
 import { applyInnerAnimalMediaOfficialGoProductRegistry } from './official-registry.js';
 import { SDK_ROOT } from './discover.js';
+import { resolveWranglerBin } from './contract.js';
 
 const EXPECTED_HASH = '2e60bba13dc2bc37d75dd2ce5deb25466f19cb2994e20889388948879875eae9';
 
 function resolveWranglerInvocation(productRoot) {
-  const js = path.join(productRoot, 'node_modules', 'wrangler', 'bin', 'wrangler.js');
-  if (fs.existsSync(js)) return { command: process.execPath, args: [js] };
-  const bin = path.join(productRoot, 'node_modules', '.bin', 'wrangler');
-  if (fs.existsSync(bin)) return { command: bin, args: [] };
-  return { command: 'npx', args: ['--yes', 'wrangler'] };
+  return resolveWranglerBin(productRoot);
 }
 
 function runWrangler(wrangler, args, {

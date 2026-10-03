@@ -17,6 +17,10 @@
       "types": "./dist/events.d.ts",
       "import": "./dist/events.js"
     },
+    "./run": {
+      "types": "./dist/run.d.ts",
+      "import": "./dist/run.js"
+    },
     "./tools": {
       "types": "./dist/tools.d.ts",
       "import": "./dist/tools.js"

@@ -110,6 +110,11 @@ assert.equal(
   'Go service tarball must contain runtime/go.mod',
 );
 assert.equal(
+  servicePack.files.some((file) => file.path === 'runtime/go.sum'),
+  true,
+  'Go service tarball must contain runtime/go.sum',
+);
+assert.equal(
   servicePack.files.some((file) => file.path === 'worker/src/index.js'),
   true,
   'Go service tarball must contain Worker adapter',
@@ -140,6 +145,34 @@ assert.equal(inspect.stateRoot.includes('node_modules'), false, 'state root must
 assert.equal(path.resolve(inspect.stateRoot), fs.realpathSync(app));
 assert.equal(fs.existsSync(path.join(inspect.productRoot, '.agentsam')), false);
 
+const globalPrefix = path.join(temp, 'global-prefix');
+const globalProject = path.join(temp, 'global-newuser123');
+fs.mkdirSync(globalPrefix, { recursive: true });
+fs.mkdirSync(globalProject, { recursive: true });
+
+run('npm', [
+  'install',
+  '--global',
+  '--ignore-scripts',
+  '--prefix',
+  globalPrefix,
+  path.join(artifacts, sdkPack.filename),
+  path.join(artifacts, servicePack.filename),
+], { cwd: temp });
+
+const globalCli = process.platform === 'win32'
+  ? path.join(globalPrefix, 'agentsam.cmd')
+  : path.join(globalPrefix, 'bin', 'agentsam');
+const globalInspectResult = run(globalCli, ['go', 'inspect', '--json'], { cwd: globalProject });
+const globalInspect = JSON.parse(globalInspectResult.stdout);
+
+assert.equal(globalInspect.discovery.runtime.origin, 'installed_package');
+assert.equal(globalInspect.discovery.distribution.package_name, '@inneranimalmedia/agentsam-go-worker');
+assert.equal(globalInspect.discovery.distribution.package_version, servicePack.version);
+assert.equal(globalInspect.productRoot.includes(ROOT), false, 'global install must not resolve to maintainer checkout');
+assert.equal(globalInspect.stateRoot.includes('node_modules'), false, 'global install state root must not be package source');
+assert.equal(path.resolve(globalInspect.stateRoot), fs.realpathSync(globalProject));
+
 const receipt = {
   schema: 'agentsam.go-distribution-proof.v1',
   ok: true,
@@ -163,12 +196,19 @@ const receipt = {
     product_root: inspect.productRoot,
     state_root: inspect.stateRoot,
   },
+  global_install: {
+    origin: globalInspect.discovery.runtime.origin,
+    source_package: globalInspect.discovery.distribution.package_name,
+    source_version: globalInspect.discovery.distribution.package_version,
+    product_root: globalInspect.productRoot,
+    state_root: globalInspect.stateRoot,
+  },
   cloudflare_dry_run: null,
 };
 
 const accountId = String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim();
 if (accountId) {
-  const dryRunResult = run(cli, [
+  const dryRunResult = run(globalCli, [
     'go',
     '--cloudflare',
     'agentsam-go-worker',
@@ -176,7 +216,7 @@ if (accountId) {
     '--account',
     accountId,
     '--json',
-  ], { cwd: app });
+  ], { cwd: globalProject });
   const dryRun = JSON.parse(dryRunResult.stdout);
   assert.equal(dryRun.ok, true);
   assert.equal(dryRun.mode, 'self_host');

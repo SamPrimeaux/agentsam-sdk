@@ -6,6 +6,19 @@ function uniquePhysicalQueueNames(topology) {
   return [...new Set(Object.values(topology?.routes || {}).filter(Boolean))];
 }
 
+const MAX_CLOUDFLARE_DELAY_SECONDS = 86_400;
+
+export function delaySecondsForAvailableAt(availableAt, now = Math.floor(Date.now() / 1000)) {
+  if (availableAt == null) return 0;
+  const delay = Math.max(0, Math.ceil(Number(availableAt) - Number(now)));
+  if (delay > MAX_CLOUDFLARE_DELAY_SECONDS) {
+    const error = new RangeError('cloudflare_queue_delay_exceeds_24h');
+    error.code = 'delay_exceeds_provider_limit';
+    throw error;
+  }
+  return delay;
+}
+
 export class CloudflareQueueBindingAdapter {
   constructor({ bindings = {} } = {}) {
     this.bindings = bindings;
@@ -20,16 +33,25 @@ export class CloudflareQueueBindingAdapter {
   }
 
   async publish(queue, job, options = {}) {
-    await this.resolve(queue).send(job, options.send_options);
-    return { provider: 'cloudflare-binding', queue, accepted: 1 };
+    const sendOptions = { ...(options.send_options || {}) };
+    const delaySeconds = delaySecondsForAvailableAt(job.available_at, options.now);
+    if (delaySeconds > 0) sendOptions.delaySeconds = delaySeconds;
+    await this.resolve(queue).send(job, Object.keys(sendOptions).length ? sendOptions : undefined);
+    return { provider: 'cloudflare-binding', queue, accepted: 1, delay_seconds: delaySeconds };
   }
 
-  async publishBatch(queue, jobs) {
+  async publishBatch(queue, jobs, options = {}) {
     const binding = this.resolve(queue);
     if (typeof binding.sendBatch === 'function') {
-      await binding.sendBatch(jobs.map((body) => ({ body })));
+      await binding.sendBatch(jobs.map((body) => {
+        const delaySeconds = delaySecondsForAvailableAt(body.available_at, options.now);
+        return delaySeconds > 0 ? { body, delaySeconds } : { body };
+      }));
     } else {
-      await Promise.all(jobs.map((job) => binding.send(job)));
+      await Promise.all(jobs.map((job) => {
+        const delaySeconds = delaySecondsForAvailableAt(job.available_at, options.now);
+        return binding.send(job, delaySeconds > 0 ? { delaySeconds } : undefined);
+      }));
     }
     return { provider: 'cloudflare-binding', queue, accepted: jobs.length };
   }
@@ -91,6 +113,7 @@ export class CloudflareQueueApiAdapter {
     max_retries = 3,
     retry_delay = 5,
     max_concurrency,
+    dead_letter_queue = null,
   } = {}) {
     if (!script_name) throw new TypeError('script_name is required');
     const settings = {
@@ -109,6 +132,7 @@ export class CloudflareQueueApiAdapter {
       body: JSON.stringify({
         type: 'worker',
         script_name,
+        ...(dead_letter_queue ? { dead_letter_queue } : {}),
         settings,
       }),
     });
@@ -134,7 +158,11 @@ export class CloudflareQueueApiAdapter {
       if (consumer?.script_name) {
         const queueId = queue.queue_id ?? queue.id;
         if (!queueId) throw new Error(`cloudflare_queue_id_missing:${queueName}`);
-        await this.attachWorkerConsumer(queueId, consumer);
+        const physical = Object.values(topology.physical || {}).find((entry) => entry?.name === queueName);
+        await this.attachWorkerConsumer(queueId, {
+          ...consumer,
+          dead_letter_queue: consumer.dead_letter_queue || physical?.dead_letter || null,
+        });
       }
     }
 

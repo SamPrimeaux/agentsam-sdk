@@ -11,6 +11,46 @@ function normalizeAgent(value) {
   });
 }
 
+export async function runWithSubagentHooks(options = {}) {
+  if (typeof options.run !== 'function') throw new TypeError('subagent_run_required');
+  const agentId = String(options.agentId || options.agent_id || '').trim();
+  if (!agentId) throw new TypeError('subagent_agent_id_required');
+  const task = String(options.task || '').trim();
+  if (!task) throw new TypeError('subagent_task_required');
+
+  const hooks = ensureHookRuntime(options.hooks || options.hookRuntime);
+  const context = options.context && typeof options.context === 'object' ? options.context : {};
+  const invocation = {
+    ...(options.invocation || {}),
+    agent_id: agentId,
+  };
+
+  await hooks.dispatch('subagent_start', {
+    agent_id: agentId,
+    task,
+    context,
+  }, invocation, { cwd: options.cwd });
+
+  try {
+    const result = await options.run({ task, context, invocation });
+    await hooks.dispatch('subagent_stop', {
+      agent_id: agentId,
+      task,
+      status: 'completed',
+      result,
+    }, invocation, { cwd: options.cwd });
+    return result;
+  } catch (error) {
+    await hooks.dispatch('subagent_stop', {
+      agent_id: agentId,
+      task,
+      status: 'failed',
+      error: { code: error?.code || null, message: String(error?.message || error) },
+    }, invocation, { cwd: options.cwd });
+    throw error;
+  }
+}
+
 export function createAgentCapabilityAdapter(options = {}) {
   if (typeof options.runAgent !== 'function') throw new TypeError('run_agent_adapter_required');
   const agents = (options.agents || []).map(normalizeAgent);
@@ -48,35 +88,21 @@ export function createAgentCapabilityAdapter(options = {}) {
         parent_agent_id: parentInvocation.agent_id || null,
         agent_id: agent.id,
       };
-      await hooks.dispatch('subagent_start', {
-        agent_id: agent.id,
+      return runWithSubagentHooks({
+        hookRuntime: hooks,
+        agentId: agent.id,
         task,
         context: input.context || {},
-      }, agentInvocation, { cwd: context.cwd || options.cwd });
-      try {
-        const result = await options.runAgent({
+        invocation: agentInvocation,
+        cwd: context.cwd || options.cwd,
+        run: () => options.runAgent({
           agent,
           task,
           context: input.context || {},
           parent: context,
           invocation: agentInvocation,
-        });
-        await hooks.dispatch('subagent_stop', {
-          agent_id: agent.id,
-          task,
-          status: 'completed',
-          result,
-        }, agentInvocation, { cwd: context.cwd || options.cwd });
-        return result;
-      } catch (error) {
-        await hooks.dispatch('subagent_stop', {
-          agent_id: agent.id,
-          task,
-          status: 'failed',
-          error: { code: error?.code || null, message: String(error?.message || error) },
-        }, agentInvocation, { cwd: context.cwd || options.cwd });
-        throw error;
-      }
+        }),
+      });
     },
   });
 }

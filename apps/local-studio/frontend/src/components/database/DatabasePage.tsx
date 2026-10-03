@@ -13,7 +13,13 @@ import { useWorkStore } from "@/lib/work/store";
  * owner-gated on the Worker (deployment owner only).
  */
 export function DatabasePage() {
-  const client = useMemo(() => createLocalStudioDatabaseClient("/api/database"), []);
+  const workspaceRoot = useWorkStore(
+    (s) => s.projects.find((project) => project.id === s.activeProjectId)?.workspaceRoot,
+  );
+  const client = useMemo(
+    () => createLocalStudioDatabaseClient("/api/database", { cwd: workspaceRoot || null }),
+    [workspaceRoot],
+  );
   const openSideTab = useWorkStore((s) => s.openSideTab);
   const setSideOpen = useWorkStore((s) => s.setSideOpen);
 

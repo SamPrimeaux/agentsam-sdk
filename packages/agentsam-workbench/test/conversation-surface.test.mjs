@@ -10,6 +10,8 @@ test('conversation surface owns one persistent composer slot', async () => {
   assert.match(source, /data-agent-conversation-composer/);
   assert.match(source, /\{composer\}/);
   assert.doesNotMatch(source, /empty\s*\?[^:]*composer/s);
+  assert.doesNotMatch(source, /data-agent-conversation-spacer/);
+  assert.match(source, /data-agent-conversation-body-empty/);
 });
 
 test('lead Local Studio conversation mounts one composer through the reusable surface', async () => {
@@ -49,4 +51,14 @@ test('legacy Local Studio TrailThread also uses the portable conversation surfac
   );
   assert.match(source, /AgentConversationSurface/);
   assert.match(source, /AgentRuntimeField/);
+});
+
+
+test('composer exposes the canonical semantic run mode', async () => {
+  const source = await readFile(
+    new URL('../src/agent/Composer.tsx', import.meta.url),
+    'utf8',
+  );
+  assert.match(source, /AgentRunMode/);
+  assert.match(source, /data-agent-mode=\{runMode\}/);
 });

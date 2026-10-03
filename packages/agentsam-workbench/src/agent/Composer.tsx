@@ -1,4 +1,5 @@
 import { useRef, type KeyboardEvent, type ReactNode, type TextareaHTMLAttributes } from 'react';
+import type { AgentRunMode } from '@inneranimalmedia/agentsam-contracts';
 
 export interface AgentComposerProps {
   value: string;
@@ -17,6 +18,8 @@ export interface AgentComposerProps {
   toolbarClassName?: string;
   textareaProps?: Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'value' | 'onChange' | 'placeholder'>;
   maxHeight?: number;
+  /** Semantic run mode. Hosts own behavior; the primitive exposes it for accessible styling. */
+  runMode?: AgentRunMode;
 }
 
 /**
@@ -43,6 +46,7 @@ export function AgentComposer({
   toolbarClassName,
   textareaProps,
   maxHeight = 220,
+  runMode = 'agent',
 }: AgentComposerProps) {
   const areaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -66,7 +70,12 @@ export function AgentComposer({
   const defaultStop = <button type="button" onClick={() => void onCancel?.()}>Stop</button>;
 
   return (
-    <div className={containerClassName} data-agent-composer="" aria-busy={streaming || undefined}>
+    <div
+      className={containerClassName}
+      data-agent-composer=""
+      data-agent-mode={runMode}
+      aria-busy={streaming || undefined}
+    >
       <textarea
         {...textareaProps}
         ref={areaRef}

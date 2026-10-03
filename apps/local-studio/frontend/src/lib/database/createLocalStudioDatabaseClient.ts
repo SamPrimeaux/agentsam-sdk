@@ -5,7 +5,7 @@ import {
   type DatabaseStudioClient,
   type DatabaseTableInfo,
 } from "@inneranimalmedia/agentsam-database-editor/frontend";
-import { createLocalStudioLocalHost, localBridgeDispatch } from "./localHost";
+import { createLocalStudioLocalHost, localBridgeDispatch, type LocalStudioLocalHostOptions } from "./localHost";
 import { invokeStudioService, isPackagedDesktop, resolveDesktopStudioAccountId } from "@/lib/desktop/tauri";
 
 const desktopDatabaseFetch: DatabaseHttpFetch = async (input, init) => {
@@ -64,11 +64,12 @@ function isLocalSourceId(sourceId: string) {
  */
 export function createLocalStudioDatabaseClient(
   baseUrl = "/api/database",
+  localOptions: LocalStudioLocalHostOptions = {},
 ): DatabaseStudioClient & { localHost: ReturnType<typeof createLocalStudioLocalHost> } {
   const remote = createDatabaseStudioClient(baseUrl, {
     fetch: isPackagedDesktop() ? desktopDatabaseFetch : undefined,
   });
-  const localHost = createLocalStudioLocalHost();
+  const localHost = createLocalStudioLocalHost(localOptions);
 
   return {
     localHost,
@@ -78,7 +79,7 @@ export function createLocalStudioDatabaseClient(
       let localSources: DatabaseSource[] = [];
       let localStatus = "requires_local_runtime";
       let localMessage =
-        "Attach AgentSam Local Studio / local runtime to inspect `.agentsam/data/agentsam.sqlite`.";
+        "Attach AgentSam Local Studio / local runtime to inspect the configured AgentSam local database.";
 
       try {
         const status = await localHost.status();
@@ -87,22 +88,26 @@ export function createLocalStudioDatabaseClient(
           localStatus = "connected";
           localMessage = "Local SQLite via AgentSam local runtime";
           for (const ref of listed) {
-            if (ref.kind === "agentsam" || ref.id === "local-sqlite:agentsam") {
-              const opened = await localBridgeDispatch({ op: "open_agentsam", cwd: "." });
-              if (opened.source && typeof opened.source === "object") {
-                localSources.push(withLocalCapabilities(opened.source as DatabaseSource));
-              } else {
-                localSources.push({
-                  id: "local-sqlite:agentsam",
-                  provider: "local-sqlite",
-                  engine: "sqlite",
-                  label: ref.label || "AgentSam local database",
-                  writable: true,
-                  metrics: false,
-                  capabilities: LOCAL_DATABASE_CAPABILITIES,
-                  connection: "local_runtime",
-                });
-              }
+            const isAgentSam = ref.kind === "agentsam" || ref.id === "local-sqlite:agentsam";
+            const opened = await localBridgeDispatch(
+              isAgentSam
+                ? { op: "open_agentsam" }
+                : { op: "open_database", ref: ref.ref, source_id: ref.id },
+              localOptions,
+            );
+            if (opened.source && typeof opened.source === "object") {
+              localSources.push(withLocalCapabilities(opened.source as DatabaseSource));
+            } else {
+              localSources.push({
+                id: ref.id,
+                provider: "local-sqlite",
+                engine: "sqlite",
+                label: ref.label || (isAgentSam ? "AgentSam local database" : "Local SQLite database"),
+                writable: ref.writable !== false,
+                metrics: false,
+                capabilities: LOCAL_DATABASE_CAPABILITIES,
+                connection: "local_runtime",
+              });
             }
           }
         } else if (status === "attachable") {
@@ -132,14 +137,12 @@ export function createLocalStudioDatabaseClient(
       const tables = await localBridgeDispatch({
         op: "tables",
         source_id: sourceId,
-        ref: "agentsam",
-        cwd: ".",
-      });
+      }, localOptions);
       const source = (tables.source || {
         id: sourceId,
         provider: "local-sqlite",
         engine: "sqlite",
-        label: "AgentSam local database",
+        label: sourceId === "local-sqlite:agentsam" ? "AgentSam local database" : "Local SQLite database",
         writable: true,
         metrics: false,
         capabilities: LOCAL_DATABASE_CAPABILITIES,
@@ -172,9 +175,7 @@ export function createLocalStudioDatabaseClient(
       const body = await localBridgeDispatch({
         op: "tables",
         source_id: sourceId,
-        ref: "agentsam",
-        cwd: ".",
-      });
+      }, localOptions);
       return {
         ok: true,
         source: body.source as DatabaseSource,
@@ -187,10 +188,8 @@ export function createLocalStudioDatabaseClient(
       const body = await localBridgeDispatch({
         op: "schema",
         source_id: sourceId,
-        ref: "agentsam",
         table: table.name,
-        cwd: ".",
-      });
+      }, localOptions);
       return {
         ok: true,
         source: {
@@ -211,12 +210,10 @@ export function createLocalStudioDatabaseClient(
       const body = await localBridgeDispatch({
         op: "rows",
         source_id: sourceId,
-        ref: "agentsam",
         table: table.name,
         page: options.page || 1,
         limit: options.limit || 50,
-        cwd: ".",
-      });
+      }, localOptions);
       return {
         ok: true,
         source: {
@@ -242,11 +239,9 @@ export function createLocalStudioDatabaseClient(
       const body = await localBridgeDispatch({
         op: "query",
         source_id: sourceId,
-        ref: "agentsam",
         sql: input.sql,
         params: input.params || [],
-        cwd: ".",
-      });
+      }, localOptions);
       return { ok: true, ...body };
     },
 
@@ -255,11 +250,9 @@ export function createLocalStudioDatabaseClient(
       const body = await localBridgeDispatch({
         op: "insert",
         source_id: sourceId,
-        ref: "agentsam",
         table: table.name,
         values,
-        cwd: ".",
-      });
+      }, localOptions);
       return { ok: true, result: body.result as never };
     },
 
@@ -273,12 +266,10 @@ export function createLocalStudioDatabaseClient(
       const body = await localBridgeDispatch({
         op: "update",
         source_id: sourceId,
-        ref: "agentsam",
         table: table.name,
         values,
         where,
-        cwd: ".",
-      });
+      }, localOptions);
       return { ok: true, result: body.result as never };
     },
 
@@ -287,11 +278,9 @@ export function createLocalStudioDatabaseClient(
       const body = await localBridgeDispatch({
         op: "delete",
         source_id: sourceId,
-        ref: "agentsam",
         table: table.name,
         where,
-        cwd: ".",
-      });
+      }, localOptions);
       return { ok: true, result: body.result as never };
     },
   };

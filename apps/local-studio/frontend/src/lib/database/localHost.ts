@@ -1,6 +1,7 @@
 /**
  * Local Studio host: detect Tauri / local Node bridge and expose LocalDatabaseHost.
  */
+import { getDesktopWorkspaceContext } from "@/lib/desktop/tauri";
 import type {
   CreateLocalDatabaseOptions,
   LocalDatabaseHost,
@@ -9,6 +10,31 @@ import type {
 } from "@inneranimalmedia/agentsam-database-editor/frontend";
 
 type BridgeRequest = Record<string, unknown>;
+
+export type LocalStudioLocalHostOptions = {
+  cwd?: string | null | (() => string | null | Promise<string | null>);
+};
+
+async function resolveHostCwd(options: LocalStudioLocalHostOptions = {}): Promise<string> {
+  const configured = typeof options.cwd === "function" ? await options.cwd() : options.cwd;
+  const value = String(configured || "").trim();
+  if (value && value !== ".") return value;
+
+  const desktop = await getDesktopWorkspaceContext();
+  const native = String(desktop?.default_cwd || "").trim();
+  if (native && native !== ".") return native;
+
+  return ".";
+}
+
+async function withResolvedCwd(
+  payload: BridgeRequest,
+  options: LocalStudioLocalHostOptions = {},
+): Promise<BridgeRequest> {
+  const existing = String(payload.cwd || "").trim();
+  if (existing && existing !== ".") return payload;
+  return { ...payload, cwd: await resolveHostCwd(options) };
+}
 
 declare global {
   interface Window {
@@ -46,11 +72,11 @@ async function invokeBridge(payload: BridgeRequest): Promise<Record<string, unkn
   return body;
 }
 
-export function createLocalStudioLocalHost(): LocalDatabaseHost {
+export function createLocalStudioLocalHost(options: LocalStudioLocalHostOptions = {}): LocalDatabaseHost {
   return {
     async status(): Promise<LocalRuntimeStatus> {
       try {
-        const body = await invokeBridge({ op: "status", cwd: "." });
+        const body = await invokeBridge(await withResolvedCwd({ op: "status" }, options));
         const status = String(body.status || "");
         if (status === "available" || status === "attachable") return status;
         return body.exists ? "available" : "attachable";
@@ -62,7 +88,7 @@ export function createLocalStudioLocalHost(): LocalDatabaseHost {
 
     async list(): Promise<LocalDatabaseRef[]> {
       try {
-        const body = await invokeBridge({ op: "list", cwd: "." });
+        const body = await invokeBridge(await withResolvedCwd({ op: "list" }, options));
         return Array.isArray(body.refs) ? (body.refs as LocalDatabaseRef[]) : [];
       } catch {
         return [];
@@ -77,26 +103,24 @@ export function createLocalStudioLocalHost(): LocalDatabaseHost {
 
     async open(ref: LocalDatabaseRef) {
       if (ref.kind === "agentsam" || ref.ref === "agentsam" || ref.id === "local-sqlite:agentsam") {
-        const body = await invokeBridge({ op: "open_agentsam", cwd: "." });
+        const body = await invokeBridge(await withResolvedCwd({ op: "open_agentsam" }, options));
         return { sourceId: String(body.sourceId || "local-sqlite:agentsam") };
       }
-      const body = await invokeBridge({
+      const body = await invokeBridge(await withResolvedCwd({
         op: "open_database",
-        cwd: ".",
         ref: ref.ref,
         source_id: ref.id,
-      });
+      }, options));
       return { sourceId: String(body.sourceId || ref.id) };
     },
 
-    async create(options: CreateLocalDatabaseOptions) {
-      const body = await invokeBridge({
+    async create(createOptions: CreateLocalDatabaseOptions) {
+      const body = await invokeBridge(await withResolvedCwd({
         op: "create_database",
-        cwd: ".",
-        name: options.name,
-        directory_ref: options.directoryRef,
-        preset: options.preset,
-      });
+        name: createOptions.name,
+        directory_ref: createOptions.directoryRef,
+        preset: createOptions.preset,
+      }, options));
       return {
         sourceId: String(body.sourceId || "local-sqlite:created"),
         ref: body.ref as LocalDatabaseRef,
@@ -110,16 +134,18 @@ export function createLocalStudioLocalHost(): LocalDatabaseHost {
     },
 
     async detach(ref: LocalDatabaseRef): Promise<void> {
-      await invokeBridge({
+      await invokeBridge(await withResolvedCwd({
         op: "detach_database",
-        cwd: ".",
         ref: ref.ref,
         source_id: ref.id,
-      });
+      }, options));
     },
   };
 }
 
-export async function localBridgeDispatch(payload: BridgeRequest) {
-  return invokeBridge(payload);
+export async function localBridgeDispatch(
+  payload: BridgeRequest,
+  options: LocalStudioLocalHostOptions = {},
+) {
+  return invokeBridge(await withResolvedCwd(payload, options));
 }

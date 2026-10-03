@@ -106,6 +106,7 @@ export const CLI_COMMAND_CATALOG = Object.freeze([
   { id: 'autorag', summary: 'AutoRAG configure/probe helpers', topic: 'work', skill: 'agentsam-codebaseindex' },
   { id: 'identity', summary: 'Identity portal, providers, protocol surfaces', topic: 'create', skill: 'agentsam-app-fundamentals' },
   { id: 'scaffold', summary: 'Generate CMS or worker-api starter', topic: 'create', skill: 'agentsam-jr-dev' },
+  { id: 'run', aliases: ['runs'], summary: 'Inspect and control AgentSam runs across local or hosted control planes', topic: 'work', skill: 'agentsam-app-fundamentals' },
   { id: 'goap', summary: 'GOAP blackboard status/plan', topic: 'inside', skill: 'agentsam-app-fundamentals' },
   { id: 'app', aliases: ['apps'], summary: 'Bundled AgentSam apps launcher', topic: 'create', skill: 'agentsam-app-fundamentals' },
 ]);
