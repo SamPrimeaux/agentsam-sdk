@@ -89,9 +89,12 @@ export function LocalStudioRuntimeField({ blocking }: { blocking: boolean }) {
         style={{ opacity: blocking ? 1 : 0.34 }}
       />
       {active ? (
-        <LoadingSceneStatus
+        <LoadingSceneNarration
           controller={controller}
           preset={computationalHyperspace}
+          align={blocking ? "center" : "start"}
+          showStudy
+          showMeta
           style={{
             position: "absolute",
             left: blocking ? "50%" : 18,
