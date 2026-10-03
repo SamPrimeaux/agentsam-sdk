@@ -1,36 +1,31 @@
 /**
- * Dev/preview (Vite) half of the platform PWA chrome: serves the ?install=1
- * tutorial and the per-app manifest, and injects missing PWA head tags into
- * app documents. The deployed-app half lives in server/middleware/grok-pwa.ts;
- * both share scripts/grok-pwa-shared.mjs.
+ * Dev/preview (Vite) half of the PWA chrome: serves the ?install=1 tutorial
+ * and the app manifest, and injects missing PWA head tags into app documents.
+ * The deployed-app half lives in backend/server/middleware/agentsam-pwa.ts;
+ * both share scripts/agentsam-pwa-shared.mjs.
  */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  PWA_MANIFEST_PATH,
   acceptsHtml,
   createHeadInjector,
-  injectGrokPwaHead,
+  injectPwaHead,
   isDocumentPath,
   isInstallQuery,
   renderInstallPageHtml,
   renderWebManifest,
-  snapshotOgIdentity,
-} from "./grok-pwa-shared.mjs";
+  snapshotPwaIdentity,
+} from "./agentsam-pwa-shared.mjs";
 
-export const GROK_OG_IDENTITY_ID = "virtual:grok-og-identity";
+export const PWA_IDENTITY_ID = "virtual:agentsam-pwa-identity";
 
 const INSTALL_PAGE_PATH = join(dirname(fileURLToPath(import.meta.url)), "install-page.html");
 
-function requestHost(req) {
-  const forwarded = req.headers["x-forwarded-host"];
-  const host = forwarded ?? req.headers.host ?? req.headers[":authority"];
-  return Array.isArray(host) ? host[0] : host;
-}
-
-export function renderInstallPage(hostHeader, url = "/") {
+export function renderInstallPage(identity, url = "/") {
   const template = readFileSync(INSTALL_PAGE_PATH, "utf8");
-  return renderInstallPageHtml(template, { host: hostHeader, url });
+  return renderInstallPageHtml(template, { identity, url });
 }
 
 function sendHtml(res, html) {
@@ -42,7 +37,7 @@ function sendHtml(res, html) {
   res.end(body);
 }
 
-function serveGrokPwa(middlewares) {
+function servePwa(middlewares, identity) {
   middlewares.use((req, res, next) => {
     const rawUrl = req.url ?? "";
     const pathOnly = rawUrl.split("?", 1)[0] ?? "";
@@ -52,8 +47,8 @@ function serveGrokPwa(middlewares) {
       return;
     }
 
-    if (pathOnly === "/__grok/manifest.webmanifest" || pathOnly === "/__grok/manifest.json") {
-      const body = Buffer.from(renderWebManifest(requestHost(req)), "utf8");
+    if (pathOnly === PWA_MANIFEST_PATH || pathOnly === PWA_MANIFEST_PATH.replace(/\.webmanifest$/, ".json")) {
+      const body = Buffer.from(renderWebManifest(identity), "utf8");
       res.statusCode = 200;
       res.setHeader("content-type", "application/manifest+json; charset=utf-8");
       res.setHeader("cache-control", "no-cache");
@@ -64,9 +59,9 @@ function serveGrokPwa(middlewares) {
 
     if (isInstallQuery(rawUrl) && isDocumentPath(pathOnly) && acceptsHtml(req.headers.accept)) {
       try {
-        sendHtml(res, renderInstallPage(requestHost(req), rawUrl));
+        sendHtml(res, renderInstallPage(identity, rawUrl));
       } catch (err) {
-        console.error("[app-builder] install page missing:", err);
+        console.error("[agentsam] install page missing:", err);
         res.statusCode = 500;
         res.end("install page unavailable");
       }
@@ -84,7 +79,7 @@ function serveGrokPwa(middlewares) {
  * content-encoded: under `vite preview` the compression middleware can hand
  * this wrapper gzipped bytes, which must pass through untouched.
  */
-function wrapHtmlResponses(middlewares, cwd) {
+function wrapHtmlResponses(middlewares, identity) {
   middlewares.use((req, res, next) => {
     const rawUrl = req.url ?? "";
     const pathOnly = rawUrl.split("?", 1)[0] ?? "";
@@ -101,11 +96,7 @@ function wrapHtmlResponses(middlewares, cwd) {
 
     const originalWrite = res.write.bind(res);
     const originalEnd = res.end.bind(res);
-    const host = requestHost(req);
-    const injector = createHeadInjector({
-      host,
-      cwd,
-    });
+    const injector = createHeadInjector(identity);
     let mode = null; // null = undecided, "inject" | "passthrough"
 
     const decideMode = () => {
@@ -151,39 +142,49 @@ function wrapHtmlResponses(middlewares, cwd) {
   });
 }
 
-export function grokPwaPlugin() {
+export function agentsamPwaPlugin() {
   let root = process.cwd();
+  let identity = snapshotPwaIdentity(root);
   return {
-    name: "app-builder:grok-pwa",
+    name: "agentsam:pwa",
     configResolved(config) {
       root = config.root;
+      identity = snapshotPwaIdentity(root);
     },
     resolveId(id) {
-      if (id === GROK_OG_IDENTITY_ID) return `\0${GROK_OG_IDENTITY_ID}`;
+      if (id === PWA_IDENTITY_ID) return `\0${PWA_IDENTITY_ID}`;
     },
     load(id) {
-      if (id !== `\0${GROK_OG_IDENTITY_ID}`) return;
-      return `export const grokOgIdentity = ${JSON.stringify(snapshotOgIdentity(root))};`;
+      if (id !== `\0${PWA_IDENTITY_ID}`) return;
+      return `export const pwaIdentity = ${JSON.stringify(identity)};`;
     },
     transformIndexHtml(html) {
-      return injectGrokPwaHead(html, {
-        host: process.env.VITE_PUBLIC_HOSTNAME ?? "",
-        cwd: root,
+      return injectPwaHead(html, identity);
+    },
+    generateBundle() {
+      // The deployed Worker serves static assets only (no Nitro middleware),
+      // so ship the manifest as a real file in the client build.
+      const env = this.environment?.name;
+      if (env && env !== "client") return;
+      this.emitFile({
+        type: "asset",
+        fileName: PWA_MANIFEST_PATH.slice(1),
+        source: renderWebManifest(identity),
       });
     },
     configureServer(server) {
       // Registered directly (not in a returned post-hook) so both run BEFORE
       // TanStack Start's SSR middleware, like the auth-popup plugin.
-      serveGrokPwa(server.middlewares);
-      wrapHtmlResponses(server.middlewares, root);
+      servePwa(server.middlewares, identity);
+      wrapHtmlResponses(server.middlewares, identity);
     },
     configurePreviewServer(server) {
-      serveGrokPwa(server.middlewares);
+      servePwa(server.middlewares, identity);
       // Post-hook: preview registers compression between the direct hooks and
       // the post-hooks, and the injector must wrap AFTER compression so it
       // sees plaintext HTML (compression then compresses the injected output).
       return () => {
-        wrapHtmlResponses(server.middlewares, root);
+        wrapHtmlResponses(server.middlewares, identity);
       };
     },
   };
