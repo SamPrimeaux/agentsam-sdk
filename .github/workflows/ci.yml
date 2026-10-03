@@ -31,7 +31,24 @@ jobs:
           cache: false
 
       - name: Install
-        run: node src/security/cli.mjs run --json -- npm ci > "$RUNNER_TEMP/dependency-health.json"
+        shell: bash
+        run: |
+          set -o pipefail
+          npm ci 2>&1 | tee "$RUNNER_TEMP/npm-ci.log"
+
+      - name: Dependency health
+        run: node src/security/cli.mjs check --log "$RUNNER_TEMP/npm-ci.log" --json > "$RUNNER_TEMP/dependency-health.json"
+
+      - name: Verify canonical errors package resolution
+        run: |
+          node --input-type=module - <<'NODE'
+          const resolved = import.meta.resolve('@inneranimalmedia/agentsam-errors');
+          console.log(resolved);
+
+          if (!resolved.includes('/packages/agentsam-errors/src/index.js')) {
+            throw new Error(`unexpected agentsam-errors resolution: ${resolved}`);
+          }
+          NODE
 
       - name: Verify SDK
         run: npm run verify
