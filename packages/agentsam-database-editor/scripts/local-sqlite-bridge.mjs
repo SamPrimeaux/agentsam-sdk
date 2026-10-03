@@ -186,8 +186,38 @@ function findProjectRoot(startDir) {
   return path.resolve(startDir);
 }
 
+function readProjectConfig(root) {
+  const configPath = path.join(root, ".agentsam", "config.json");
+  try {
+    const parsed = JSON.parse(fs.readFileSync(configPath, "utf8"));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function configuredAgentSamDatabase(root) {
+  const config = readProjectConfig(root);
+  const configured = String(config?.local?.database || config?.db_path || "").trim();
+  return configured || path.join(".agentsam", "data", "agentsam.sqlite");
+}
+
 function agentsamDbPath(root) {
-  return path.join(root, ".agentsam", "data", "agentsam.sqlite");
+  const configured = configuredAgentSamDatabase(root);
+  return ensureSqlitePath(path.isAbsolute(configured) ? configured : path.resolve(root, configured));
+}
+
+function databasePathHint(root, filePath) {
+  const relative = path.relative(root, filePath);
+  if (
+    relative &&
+    relative !== ".." &&
+    !relative.startsWith(".." + path.sep) &&
+    !path.isAbsolute(relative)
+  ) {
+    return relative.split(path.sep).join("/");
+  }
+  return filePath;
 }
 
 function readStdin() {
@@ -252,7 +282,7 @@ async function main() {
         id: "local-sqlite:agentsam",
         label: "AgentSam local database",
         ref: "agentsam",
-        pathHint: ".agentsam/data/agentsam.sqlite",
+        pathHint: databasePathHint(root, defaultPath),
         kind: "agentsam",
         writable: true,
         sizeBytes: st.size,

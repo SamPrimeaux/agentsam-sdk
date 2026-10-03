@@ -42,10 +42,16 @@ pub async fn local_sqlite_bridge(app: AppHandle, request_json: String) -> Result
   let script = find_bridge_script(&app)?;
   let cwd = find_project_cwd();
 
-  // Ensure cwd is present in the request for the Node bridge.
+  // Resolve the workspace cwd natively when the webview does not provide one.
+  // A literal "." from the webview is not authoritative in a packaged app.
   let mut payload: Value =
     serde_json::from_str(&request_json).map_err(|e| format!("invalid_json:{e}"))?;
-  if payload.get("cwd").is_none() {
+  let requested_cwd = payload
+    .get("cwd")
+    .and_then(|value| value.as_str())
+    .map(str::trim)
+    .filter(|value| !value.is_empty() && *value != ".");
+  if requested_cwd.is_none() {
     if let Some(obj) = payload.as_object_mut() {
       obj.insert(
         "cwd".into(),
