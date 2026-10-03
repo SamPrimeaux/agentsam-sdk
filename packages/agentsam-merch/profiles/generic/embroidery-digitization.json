@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "agentsam.manufacturing-profile.v1",
+  "id": "generic.embroidery.pre-digitization",
+  "manufacturer": "generic",
+  "process": "embroidery",
+  "preferredFormat": "svg",
+  "colorMode": "spot",
+  "allowRaster": false,
+  "allowVector": true,
+  "allowGradients": false,
+  "requireClosedPaths": true,
+  "outlineText": true,
+  "handoff": {
+    "status": "prepared_for_digitization",
+    "reason": "Stitch direction, density, underlay, pull compensation, thread sequencing, and machine format require embroidery-specific digitization."
+  },
+  "source": {
+    "kind": "process-safety-default",
+    "verified": true
+  },
+  "$schema": "https://schemas.inneranimalmedia.com/agentsam/schemas/agentsam.manufacturing-profile.v1.json"
+}

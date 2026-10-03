@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/schemas/agentsam.receipt.v1.json",
+  "title": "AgentSam Receipt Envelope v1",
+  "type": "object",
+  "required": [
+    "$schema",
+    "schema",
+    "receipt_id",
+    "kind",
+    "status",
+    "retention_class",
+    "identity",
+    "metrics",
+    "evidence",
+    "payload"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.inneranimalmedia.com/agentsam/schemas/agentsam.receipt.v1.json"
+    },
+    "schema": { "const": "agentsam.receipt.v1" },
+    "receipt_id": { "type": "string", "minLength": 1 },
+    "kind": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["passed", "failed", "skipped"] },
+    "retention_class": {
+      "enum": ["ephemeral_success", "failure_bundle", "release_proof"]
+    },
+    "identity": {
+      "type": "object",
+      "required": ["account_id"],
+      "properties": {
+        "account_id": { "type": "string", "minLength": 1 },
+        "repository_id": { "type": "string" },
+        "git_sha": { "type": "string" },
+        "run_id": { "type": "string" },
+        "pty_session_id": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "metrics": {
+      "type": "object",
+      "required": [
+        "created_at_unix",
+        "duration_ms",
+        "workspace_byte_size",
+        "receipt_byte_size"
+      ],
+      "properties": {
+        "created_at_unix": { "type": "integer", "minimum": 0 },
+        "duration_ms": { "type": "number", "minimum": 0 },
+        "workspace_byte_size": { "type": "integer", "minimum": 0 },
+        "receipt_byte_size": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["summary", "artifacts"],
+      "properties": {
+        "summary": { "type": "object" },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["role", "sha256", "r2_key", "byte_size"],
+            "properties": {
+              "role": { "type": "string", "minLength": 1 },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-fA-F0-9]{32,128}$"
+              },
+              "r2_key": {
+                "type": "string",
+                "pattern": "^agentsam/runtime/blobs/sha256/"
+              },
+              "byte_size": { "type": "integer", "minimum": 0 }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "payload": {
+      "type": "object",
+      "required": ["schema"],
+      "properties": {
+        "schema": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

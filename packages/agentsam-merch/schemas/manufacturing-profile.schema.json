@@ -1,0 +1,221 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/schemas/agentsam.manufacturing-profile.v1.json",
+  "title": "AgentSam Manufacturing Profile",
+  "type": "object",
+  "required": [
+    "id",
+    "manufacturer",
+    "process"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "agentsam.manufacturing-profile.v1"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "manufacturer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "process": {
+      "type": "string",
+      "minLength": 1
+    },
+    "format": {
+      "type": "string"
+    },
+    "preferredFormat": {
+      "type": "string"
+    },
+    "colorSpace": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "colorMode": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "alpha": {
+      "type": "boolean"
+    },
+    "requireAlpha": {
+      "type": "boolean"
+    },
+    "ppi": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "exclusiveMinimum": 0
+    },
+    "maxBytes": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "exclusiveMinimum": 0
+    },
+    "preferredPrintWidthIn": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "exclusiveMinimum": 0
+    },
+    "preferredPrintHeightIn": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "exclusiveMinimum": 0
+    },
+    "allowRaster": {
+      "type": "boolean"
+    },
+    "allowVector": {
+      "type": "boolean"
+    },
+    "allowGradients": {
+      "type": "boolean"
+    },
+    "requireClosedPaths": {
+      "type": "boolean"
+    },
+    "outlineText": {
+      "type": "boolean"
+    },
+    "match": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "handoff": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "source": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "verified": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "resolution": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "readyPpi": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "minimumPpi": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "autoNormalize": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "trimAlpha": {
+          "type": "boolean"
+        },
+        "colorSpace": {
+          "type": "boolean"
+        },
+        "svgOptimize": {
+          "type": "boolean"
+        },
+        "outlineText": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "vectorization": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "preferredTracer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "maxAspectDrift": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "minBoundaryIntegrity": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "outputFormat": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "requireViewBox": {
+      "type": "boolean"
+    }
+  },
+  "anyOf": [
+    {
+      "required": [
+        "format"
+      ]
+    },
+    {
+      "required": [
+        "preferredFormat"
+      ]
+    }
+  ],
+  "additionalProperties": true
+}

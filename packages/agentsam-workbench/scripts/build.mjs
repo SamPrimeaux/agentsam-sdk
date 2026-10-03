@@ -16,6 +16,7 @@ await build({
     'terminal/index': 'src/terminal/index.ts',
     'projects/index': 'src/projects/index.ts',
     'timeline/index': 'src/timeline/index.ts',
+    'manufacturing/index': 'src/manufacturing/index.ts',
   },
   outdir: 'dist',
   outbase: 'src',

@@ -33,6 +33,8 @@ import { runMerkle } from './commands/merkle.js';
 import { runDeployReceipt } from './commands/deploy-receipt.js';
 import { runSecurity } from './commands/security.js';
 import { runPackage } from './commands/package.js';
+import { runMerch } from './commands/merch.js';
+import { runReceipts } from './commands/receipts.js';
 import { runRecon } from './commands/recon.js';
 import { runCad } from './commands/cad.js';
 import { runMachine } from './commands/machine.js';
@@ -760,6 +762,20 @@ if (command === '--version' || command === '-v') {
 } else if (command === 'package') {
   try {
     await runPackage(rest);
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
+  }
+} else if (command === 'merch') {
+  try {
+    await runMerch(rest);
+  } catch (e) {
+    reportCliError(e);
+    process.exitCode = 1;
+  }
+} else if (command === 'receipts') {
+  try {
+    await runReceipts(rest);
   } catch (e) {
     reportCliError(e);
     process.exitCode = 1;
