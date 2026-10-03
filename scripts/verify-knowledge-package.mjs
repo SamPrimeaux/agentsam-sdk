@@ -16,13 +16,58 @@ for (const key of Object.keys(childEnv)) {
 }
 const run = (bin, args, cwd) => execFileSync(bin, args, { cwd, env: childEnv, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
 try {
-  const packed = JSON.parse(run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', tmp], root))[0];
+  const rootManifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  const workspaces = JSON.parse(run('npm', ['query', '.workspace', '--json'], root));
+  const workspaceByName = new Map(
+    workspaces
+      .filter(row => row?.name && row?.location)
+      .map(row => [row.name, path.join(root, row.location)])
+  );
+
+  const packed = JSON.parse(
+    run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', tmp], root)
+  )[0];
+
+  const localFirstPartyTarballs = [];
+  const firstPartyDependencies = Object.keys(rootManifest.dependencies || {})
+    .filter(name => name.startsWith('@inneranimalmedia/'));
+
+  for (const name of firstPartyDependencies) {
+    const workspaceDir = workspaceByName.get(name);
+    assert.ok(workspaceDir, `First-party dependency is not a workspace: ${name}`);
+
+    const dependencyPack = JSON.parse(
+      run(
+        'npm',
+        ['pack', '--json', '--ignore-scripts', '--pack-destination', tmp],
+        workspaceDir
+      )
+    )[0];
+
+    localFirstPartyTarballs.push(path.join(tmp, dependencyPack.filename));
+  }
+
+  const installReleaseCandidate = cwd =>
+    run(
+      'npm',
+      [
+        'install',
+        ...localFirstPartyTarballs,
+        path.join(tmp, packed.filename),
+        '--ignore-scripts',
+        '--no-audit',
+        '--no-fund',
+        ...(process.argv.includes('--offline') ? ['--offline'] : [])
+      ],
+      cwd
+    );
+
   const shipped = new Set(packed.files.map(f => f.path));
   for (const file of ['src/knowledge/engine.js', 'src/knowledge/stores/postgres.sql', 'packages/agentsam-knowledge/src/autorag/index.js', 'protocol/knowledge/context-pack.schema.json', 'python/agentsam_sdk/repository/intelligence/__main__.py', 'docs/knowledge-branch-recovery.md']) assert.ok(shipped.has(file), `Missing packed asset: ${file}`);
   const consumer = path.join(tmp, 'consumer'); fs.mkdirSync(consumer);
   // Explicitly allow no lifecycle scripts, including when the parent npm exports allow-scripts.
   fs.writeFileSync(path.join(consumer, 'package.json'), '{"private":true,"type":"module","allowScripts":{}}\n');
-  run('npm', ['install', path.join(tmp, packed.filename), '--ignore-scripts', '--no-audit', '--no-fund', ...(process.argv.includes('--offline') ? ['--offline'] : [])], consumer);
+  installReleaseCandidate(consumer);
   const installed = path.join(consumer, 'node_modules/@inneranimalmedia/agentsam-sdk/src/cli.js');
   const exported = run(process.execPath, ['--input-type=module', '-e', 'import {runIndex, KnowledgeClient} from "@inneranimalmedia/agentsam-sdk/knowledge"; console.log(typeof runIndex, typeof KnowledgeClient)'], consumer);
   assert.equal(exported.trim(), 'function function');
@@ -37,7 +82,7 @@ try {
   const app = path.join(tmp, 'fresh-app');
   const manifest = JSON.parse(fs.readFileSync(path.join(app, 'package.json'), 'utf8'));
   assert.equal(manifest.dependencies['@inneranimalmedia/agentsam-sdk'], packed.version.includes('-') ? packed.version : `^${packed.version}`);
-  run('npm', ['install', path.join(tmp, packed.filename), '--ignore-scripts', '--no-audit', '--no-fund', ...(process.argv.includes('--offline') ? ['--offline'] : [])], app);
+  installReleaseCandidate(app);
   run('npm', ['run', 'smoke'], app);
   for (const name of ['warehouse', 'design-system']) {
     const repo = path.join(tmp, name); fs.mkdirSync(path.join(repo, 'lib'), { recursive: true });

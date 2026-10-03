@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-shell-kit",
-  "version": "2.6.9",
+  "version": "2.6.10",
   "description": "Compatibility facade for the AgentSam workbench shell. New code uses @inneranimalmedia/agentsam-workbench.",
   "type": "module",
   "main": "./dist/index.js",
@@ -51,7 +51,7 @@
     "directory": "packages/agentsam-shell-kit"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-workbench": "2.6.9"
+    "@inneranimalmedia/agentsam-workbench": "2.6.10"
   },
   "publishConfig": {
     "access": "public"

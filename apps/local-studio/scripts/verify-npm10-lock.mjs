@@ -2,7 +2,7 @@
 /**
  * Local Studio is an independently locked product workspace.
  * Cloudflare Workers Builds uses Node 22 + npm 10.9.2 and npm ci.
- * Keep the product lock aligned with 2.6.9, local source links, and the
+ * Keep the product lock aligned with the current release train, local source links, and the
  * lru-cache peer required by Nitro/unstorage.
  */
 import fs from 'node:fs';

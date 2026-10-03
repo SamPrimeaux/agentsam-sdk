@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-settings",
-  "version": "2.6.9",
+  "version": "2.6.10",
   "type": "module",
   "sideEffects": false,
   "types": "./dist/index.d.ts",

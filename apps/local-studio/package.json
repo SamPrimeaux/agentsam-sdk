@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-local-studio",
-  "version": "2.6.9",
+  "version": "2.6.10",
   "sideEffects": false,
   "type": "module",
   "workspaces": [

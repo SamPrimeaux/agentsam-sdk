@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-hooks",
-  "version": "2.6.9",
+  "version": "2.6.10",
   "description": "Provider-neutral, language-agnostic AgentSam lifecycle hooks with callback, command, HTTP, model, tool, MCP, LSP, and sub-agent adapters.",
   "type": "module",
   "main": "./src/index.js",

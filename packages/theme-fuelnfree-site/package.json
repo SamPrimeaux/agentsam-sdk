@@ -1,7 +1,7 @@
 {
   "name": "@inneranimalmedia/theme-ember",
-  "version": "2.6.9",
-  "description": "Real Fuel & Free Time legacy storefront pages \u2014 home, shop, about, and community.",
+  "version": "2.6.10",
+  "description": "Real Fuel & Free Time legacy storefront pages — home, shop, about, and community.",
   "type": "module",
   "main": "./src/index.js",
   "exports": {

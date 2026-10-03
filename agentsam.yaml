@@ -46,7 +46,7 @@ runtime:
 packages:
   root_sdk:
     name: "@inneranimalmedia/agentsam-sdk"
-    version: "2.6.9"
+    version: "2.6.10"
     path: .
     private: false
     registry: npm
@@ -59,7 +59,7 @@ packages:
       - agentsam-auth-portal
   identity:
     name: "@inneranimalmedia/agentsam-identity"
-    version: "2.6.9"
+    version: "2.6.10"
     path: packages/identity
     private: false
     separately_published: true
@@ -67,19 +67,19 @@ packages:
     public_import_prefix: "@inneranimalmedia/agentsam-sdk/identity"
   agentsam_contracts:
     name: "@inneranimalmedia/agentsam-contracts"
-    version: "2.6.9"
+    version: "2.6.10"
     path: packages/agentsam-contracts
     private: false
     separately_published: true
   agentsam_workbench:
     name: "@inneranimalmedia/agentsam-workbench"
-    version: "2.6.9"
+    version: "2.6.10"
     path: packages/agentsam-workbench
     private: false
     separately_published: true
   shell_kit:
     name: "@inneranimalmedia/agentsam-shell-kit"
-    version: "2.6.9"
+    version: "2.6.10"
     path: packages/agentsam-shell-kit
     private: false
     separately_published: true
@@ -235,7 +235,7 @@ security_contract:
 
 release:
   root_sdk:
-    target_version: "2.6.9"
+    target_version: "2.6.10"
     state: candidate
     registry: npm
     current_latest: "2.6.8"

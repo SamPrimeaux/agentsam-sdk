@@ -1,7 +1,7 @@
 {
   "name": "@inneranimalmedia/theme-forge",
-  "version": "2.6.9",
-  "description": "Real Primeaux Handyman PWA build \u2014 mobile-first service site with estimates and project proof.",
+  "version": "2.6.10",
+  "description": "Real Primeaux Handyman PWA build — mobile-first service site with estimates and project proof.",
   "type": "module",
   "main": "./src/index.js",
   "exports": {

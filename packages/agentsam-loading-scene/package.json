@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-loading-scene",
-  "version": "2.6.9",
+  "version": "2.6.10",
   "description": "Provider-agnostic runtime visualization: normalized runtime events → operation graph → blended visual intent → one persistent Canvas world. Computational Hyperspace is the first preset.",
   "type": "module",
   "main": "./dist/index.js",

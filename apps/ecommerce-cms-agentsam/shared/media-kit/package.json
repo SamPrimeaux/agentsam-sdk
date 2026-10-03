@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/media-kit",
-  "version": "2.6.9",
+  "version": "2.6.10",
   "description": "Provider-neutral media contracts, preview presets, and collection primitives for portable CMS/admin applications.",
   "type": "module",
   "files": [

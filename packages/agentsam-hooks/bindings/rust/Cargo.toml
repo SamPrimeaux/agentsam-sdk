@@ -1,6 +1,6 @@
 [package]
 name = "agentsam-hooks"
-version = "2.6.9"
+version = "2.6.10"
 edition = "2021"
 description = "Language-neutral agentsam.hook.v1 contracts and callback runtime"
 license = "MIT"

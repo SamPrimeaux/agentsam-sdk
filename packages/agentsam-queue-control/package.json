@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-queue-control",
-  "version": "2.6.9",
+  "version": "2.6.10",
   "description": "Portable AgentSam queue, job-routing, batching, and execution-control primitives with Cloudflare-first adapters.",
   "type": "module",
   "main": "./src/index.js",

@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-scoring",
-  "version": "2.6.9",
+  "version": "2.6.10",
   "description": "Generic ScoreCard contract and versioned weight formulas. Raw evidence is SSOT; scores are recomputable derived views — never a grand similarity_score.",
   "type": "module",
   "main": "./dist/index.js",

@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-content-studio",
-  "version": "2.6.9",
+  "version": "2.6.10",
   "description": "Canonical React UI for AgentSam Content Studio: library, inspectors, assistant rail. Host apps provide a ContentRuntime; the UI never knows their names.",
   "type": "module",
   "main": "./dist/index.js",
@@ -19,7 +19,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-content": "2.6.9"
+    "@inneranimalmedia/agentsam-content": "2.6.10"
   },
   "peerDependencies": {
     "react": ">=18"

@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/cms-runtime",
-  "version": "2.6.9",
+  "version": "2.6.10",
   "description": "Portable self-describing local CMS runtime with SQLite schema, tool/skill catalogs, and provider-neutral package contracts.",
   "type": "module",
   "bin": {

@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-contracts",
-  "version": "2.6.9",
+  "version": "2.6.10",
   "description": "Framework-neutral AgentSam contracts for workbench, tools, providers, events, hooks, execution, identity and repository context.",
   "type": "module",
   "main": "./dist/index.js",

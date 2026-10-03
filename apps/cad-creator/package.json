@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-cad-creator",
-  "version": "2.6.9",
+  "version": "2.6.10",
   "description": "Prepackaged AgentSam CAD, spatial design, and robotics application kit.",
   "type": "module",
   "license": "UNLICENSED",

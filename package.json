@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-sdk",
-  "version": "2.6.9",
+  "version": "2.6.10",
   "description": "Portable AgentSam SDK and CLI kits for local scaffolding, repository intelligence, incremental indexing, identity adapters, and verified dependency maintenance.",
   "type": "module",
   "main": "./src/index.js",
@@ -341,7 +341,7 @@
   "dependencies": {
     "@clack/prompts": "^1.7.0",
     "@grpc/grpc-js": "^1.14.4",
-    "@inneranimalmedia/agentsam-errors": "2.6.9",
+    "@inneranimalmedia/agentsam-errors": "2.6.10",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "google-protobuf": "^3.21.4",
     "node-pty": "^1.1.0",
