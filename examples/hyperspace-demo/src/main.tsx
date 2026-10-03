@@ -53,6 +53,7 @@ function simulateRuntime(
       type: "context.workspace.loading",
       operationId: "context",
       label: "Loading context",
+      detail: "Assembling the workspace state needed for this turn",
     }),
   );
   later(11900, () => controller.complete("context"));
