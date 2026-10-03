@@ -105,6 +105,7 @@ test('HTTP ACP client is provider-neutral and carries bearer auth to a compatibl
     }
     if (url.includes('/events?')) return Response.json([]);
     if (url.endsWith('/tree')) return Response.json({ id: 'arun_remote', status: 'running', children: [] });
+    if (url.endsWith('/spawn')) return Response.json({ schema: 'agentsam.child-run-spawn.v1', parent_run_id: 'arun_remote', child_run_id: 'arun_child_remote', dependency_status: 'pending' });
     if (url.endsWith('/cancel')) return Response.json({ id: 'arun_remote', status: 'running', cancelRequested: true });
     if (url.endsWith('/receipt')) return Response.json({ schema: 'agentsam.run-receipt.v1', runId: 'arun_remote', status: 'running' });
     return new Response('not found', { status: 404 });
@@ -117,13 +118,18 @@ test('HTTP ACP client is provider-neutral and carries bearer auth to a compatibl
   assert.equal((await client.getRun('arun_remote')).id, 'arun_remote');
   await client.events('arun_remote', { after: 4, limit: 12 });
   await client.tree('arun_remote');
+  const spawned = await client.spawn('arun_remote', { objective: 'delegate', runtime_requirements: { capabilities: ['exec'] } });
+  assert.equal(spawned.child_run_id, 'arun_child_remote');
   await client.cancel('arun_remote');
   await client.receipt('arun_remote');
 
-  assert.equal(requests.length, 5);
+  assert.equal(requests.length, 6);
   assert.equal(new Headers(requests[0].init.headers).get('authorization'), 'Bearer secret-token');
   assert.match(requests[1].url, /after=4&limit=12$/);
   assert.equal(requests[3].init.method, 'POST');
+  assert.match(requests[3].url, /\/spawn$/);
+  assert.deepEqual(JSON.parse(requests[3].init.body).runtime_requirements, { capabilities: ['exec'] });
+  assert.equal(requests[4].init.method, 'POST');
 
   const resolved = createAgentControlClient({
     cwd: process.cwd(),

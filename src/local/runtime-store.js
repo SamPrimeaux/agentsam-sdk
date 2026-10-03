@@ -5,6 +5,7 @@ import { applyRuntimeMigrations } from './migrations.js';
 import { findCliProjectRoot } from '../lib/cli-preferences.js';
 import { getLocalDatabasePath, tryReadProjectConfig } from '../lib/project-config.js';
 import { createHookStore } from '../../packages/agentsam-hooks/src/store.js';
+import { reconcileParentAfterChildTerminal } from '../acp/dependencies.js';
 
 function clean(value) { return value == null ? '' : String(value).trim(); }
 function hash(value) { return createHash('sha256').update(String(value || '')).digest('hex'); }
@@ -115,6 +116,13 @@ export async function finishRuntimeRun(value = {}) {
       Number.isFinite(Number(value.latency_ms)) ? Math.max(0, Math.round(Number(value.latency_ms))) : null,
       value.id,
     ).run();
+
+    await reconcileParentAfterChildTerminal(db, {
+      runId: value.id,
+      status: clean(value.status) || 'completed',
+      errorCode: clean(value.error_code) || null,
+      errorMessage: clean(value.error_message) || null,
+    });
   });
 }
 

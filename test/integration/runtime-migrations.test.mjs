@@ -25,6 +25,7 @@ test('portable runtime migration installs AgentSam CLI state tables idempotently
     for (const name of [
       'agentsam_agent_run',
       'agentsam_agent_run_event',
+      'agentsam_agent_run_dependency',
       'agentsam_agent_run_suspension',
       'agentsam_approval_queue',
       'agentsam_compaction_events',
@@ -52,6 +53,12 @@ test('portable runtime migration installs AgentSam CLI state tables idempotently
     const eventColumnNames = new Set(eventColumns.results.map((row) => row.name));
     for (const name of ['run_id', 'parent_run_id', 'seq', 'event_type', 'phase', 'dedupe_key', 'evidence_json']) {
       assert.equal(eventColumnNames.has(name), true, `event.${name}`);
+    }
+
+    const dependencyColumns = await db.prepare('PRAGMA table_info(agentsam_agent_run_dependency)').all();
+    const dependencyColumnNames = new Set(dependencyColumns.results.map((row) => row.name));
+    for (const name of ['parent_run_id', 'child_run_id', 'relation', 'work_item_id', 'step_id', 'status', 'metadata_json']) {
+      assert.equal(dependencyColumnNames.has(name), true, 'run_dependency.' + name);
     }
 
     const queueColumns = await db.prepare('PRAGMA table_info(agentsam_queue_job)').all();

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { createLocalSqliteDatabase } from '../local/sqlite.js';
 import { applyRuntimeMigrations } from '../local/migrations.js';
 import { runtimeDatabasePath } from '../local/runtime-store.js';
+import { spawnChildRun } from './dependencies.js';
 
 function clean(value) { return value == null ? '' : String(value).trim(); }
 function parseJson(value, fallback = null) {
@@ -130,6 +131,24 @@ export class LocalAgentControlClient {
     });
   }
 
+  async spawn(id, input = {}) {
+    return withLocalDb(this.cwd, async (db) => spawnChildRun(db, {
+      parentRunId: id,
+      childRunId: input.child_run_id ?? input.childRunId ?? null,
+      accountId: input.account_id ?? input.accountId ?? null,
+      objective: input.objective ?? '',
+      role: input.role ?? input.role_slug ?? null,
+      workItemId: input.work_item_id ?? input.workItemId ?? null,
+      stepId: input.step_id ?? input.stepId ?? null,
+      modelKey: input.model_key ?? input.modelKey ?? null,
+      reasoningEffort: input.reasoning_effort ?? input.reasoningEffort ?? null,
+      serviceTier: input.service_tier ?? input.serviceTier ?? null,
+      runtimeRequirements: input.runtime_requirements ?? input.runtimeRequirements ?? {},
+      metadata: input.metadata ?? {},
+      priority: input.priority ?? 'normal',
+    }));
+  }
+
   async cancel(id) {
     const result = await withLocalDb(this.cwd, async (db) => {
       const row = await db.prepare(RUN_JOIN + ' WHERE r.id = ? LIMIT 1').bind(id).first();
@@ -205,6 +224,9 @@ export class HttpAgentControlClient {
     return this.request(`/v1/runs/${encodeURIComponent(id)}/events?after=${encodeURIComponent(after)}&limit=${encodeURIComponent(limit)}`);
   }
   tree(id) { return this.request(`/v1/runs/${encodeURIComponent(id)}/tree`); }
+  spawn(id, input = {}) {
+    return this.request(`/v1/runs/${encodeURIComponent(id)}/spawn`, { method: 'POST', body: JSON.stringify(input) });
+  }
   cancel(id) { return this.request(`/v1/runs/${encodeURIComponent(id)}/cancel`, { method: 'POST', body: '{}' }); }
   receipt(id) { return this.request(`/v1/runs/${encodeURIComponent(id)}/receipt`); }
 }
