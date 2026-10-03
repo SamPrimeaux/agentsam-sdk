@@ -395,7 +395,7 @@
     "@electric-sql/pglite-pgvector": "0.0.9",
     "esbuild": "0.28.1",
     "grpc-tools": "^1.13.1",
-    "wrangler": "4.145.0"
+    "wrangler": "4.147.0"
   },
   "overrides": {
     "@types/react": "19.2.18",
