@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Health — Fuel & Free Time Admin</title>
+<link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="/admin/css/console.css">
+</head>
+<body>
+<script src="/admin/js/shell.js"></script>
+<script src="/admin/js/analytics-boot.js"></script>
+<script>
+renderShell("/admin/analytics/health", `<div id="analytics-mount" class="admin-analytics-mount"></div>`, {
+  fullBleed: true,
+  onReady: () => bootAnalytics("health"),
+});
+</script>
+</body>
+</html>

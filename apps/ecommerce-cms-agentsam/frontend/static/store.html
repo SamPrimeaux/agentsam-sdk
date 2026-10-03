@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Online Store — Fuel & Free Time Admin</title>
+<link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="/admin/css/console.css">
+</head>
+<body>
+<script src="/admin/js/shell.js"></script>
+<script>
+renderShell("/admin/store", `
+  <div class="online-store">
+    <header class="online-store-head">
+      <div class="online-store-title">
+        ${storeIcon()}
+        <h1>Online Store</h1>
+      </div>
+      <div class="online-store-actions">
+        <button type="button" class="online-store-pill" id="store-visibility-btn" aria-haspopup="true">
+          <span class="online-store-pill-dot" aria-hidden="true"></span>
+          <span id="store-visibility-label">Public</span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <a href="/" class="btn ghost small" target="_blank" rel="noopener">View store</a>
+        <button type="button" class="online-store-icon-btn" aria-label="More actions">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <section class="online-store-perf" aria-label="Store performance">
+      <div class="online-store-perf-period">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="6" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M4 10h16M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span>30 days</span>
+      </div>
+      <div class="online-store-perf-stat">
+        <div class="label">LCP P75</div>
+        <div class="value" id="perf-lcp">—</div>
+      </div>
+      <div class="online-store-perf-stat">
+        <div class="label">INP P75</div>
+        <div class="value" id="perf-inp">—</div>
+      </div>
+      <div class="online-store-perf-stat">
+        <div class="label">Cumulative Layout Shift</div>
+        <div class="value" id="perf-cls">—</div>
+      </div>
+      <div class="online-store-perf-stat online-store-perf-stat--wide">
+        <div class="label">Sessions by Device Type</div>
+        <div class="value online-store-devices" id="perf-sessions">
+          <span class="device desktop">— Desktop</span>
+          <span class="device mobile">— Mobile</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="online-store-card online-store-active" aria-label="Current theme">
+      <div class="online-store-previews">
+        <div class="online-store-preview online-store-preview--desktop">
+          <iframe id="theme-preview-desktop" title="Desktop theme preview" loading="lazy"></iframe>
+        </div>
+        <div class="online-store-preview online-store-preview--mobile">
+          <iframe id="theme-preview-mobile" title="Mobile theme preview" loading="lazy"></iframe>
+        </div>
+      </div>
+      <div class="online-store-theme-meta">
+        <div>
+          <div class="online-store-theme-name">
+            <span id="active-theme-name">Fuel &amp; Free Time</span>
+            <span class="online-store-badge online-store-badge--active">Active</span>
+          </div>
+          <div class="online-store-theme-sub" id="active-theme-saved">Last saved: —</div>
+          <div class="online-store-version" id="active-theme-version" hidden>
+            <span class="online-store-version-dot" aria-hidden="true"></span>
+            <span id="active-version-text"></span>
+          </div>
+        </div>
+        <div class="online-store-theme-actions">
+          <button type="button" class="online-store-icon-btn" aria-label="Theme options">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>
+          </button>
+          <a href="/admin/theme-editor?slug=shop" class="btn primary" id="edit-theme-btn">Edit theme</a>
+        </div>
+      </div>
+    </section>
+
+    <header class="online-store-drafts-head">
+      <div>
+        <h2>Draft themes</h2>
+        <p>These themes are only visible to you. Publishing a theme from your library will switch it to your current theme.</p>
+      </div>
+      <button type="button" class="btn ghost small" id="import-theme-btn">Import <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </header>
+
+    <section class="online-store-card online-store-drafts" id="draft-themes" aria-label="Draft themes"></section>
+  </div>
+`);
+
+function storeIcon() {
+  return `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9 5 5h14l1 4M4 9h16v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM5.5 13V20h13v-7" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>`;
+}
+
+function fmtStoreDate(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso.replace(" ", "T") + "Z");
+  return d.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).replace(",", " at");
+}
+
+function formatMs(ms) {
+  if (ms == null) return "—";
+  if (ms >= 1000) return `${(ms / 1000).toFixed(1)} s`;
+  return `${ms} ms`;
+}
+
+function renderDraftRow(theme) {
+  return `
+    <div class="online-store-draft-row">
+      <div class="online-store-draft-thumb" aria-hidden="true"><span>F&amp;FT</span></div>
+      <div class="online-store-draft-copy">
+        <div class="online-store-draft-name">${theme.name}</div>
+        <div class="online-store-draft-meta">${theme.meta}</div>
+        <div class="online-store-version"><span class="online-store-version-dot" aria-hidden="true"></span>Version ${theme.version} available</div>
+      </div>
+      <div class="online-store-draft-actions">
+        <button type="button" class="online-store-icon-btn" aria-label="Theme options"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="19" cy="12" r="1.5" fill="currentColor"/></svg></button>
+        <button type="button" class="btn ghost small draft-publish" data-theme-id="${theme.id}">Publish</button>
+        <a href="${theme.edit_href}" class="btn ghost small">Edit theme</a>
+      </div>
+    </div>`;
+}
+
+function setPreviewFrames(url) {
+  const bust = Date.now();
+  const src = `${url}?preview=1&_=${bust}`;
+  document.getElementById("theme-preview-desktop").src = src;
+  document.getElementById("theme-preview-mobile").src = src;
+}
+
+(async function () {
+  try {
+    const d = await adminFetch("/api/admin/store/online");
+
+    document.getElementById("store-visibility-label").textContent =
+      d.store.visibility === "public" ? "Public" : "Password protected";
+
+    const perf = d.performance;
+    document.getElementById("perf-lcp").textContent = formatMs(perf.lcp_ms);
+    document.getElementById("perf-inp").textContent = formatMs(perf.inp_ms);
+    document.getElementById("perf-cls").textContent =
+      perf.cls != null ? String(perf.cls) : "—";
+
+    const desktop = perf.sessions_desktop;
+    const mobile = perf.sessions_mobile;
+    document.getElementById("perf-sessions").innerHTML = `
+      <span class="device desktop">${desktop != null ? desktop : "—"} Desktop</span>
+      <span class="device mobile">${mobile != null ? mobile : "—"} Mobile</span>`;
+
+    const theme = d.active_theme;
+    document.getElementById("active-theme-name").textContent = theme.name;
+    document.getElementById("active-theme-saved").textContent =
+      `Last saved: ${fmtStoreDate(theme.last_saved)}`;
+    document.getElementById("edit-theme-btn").href = theme.edit_href;
+    setPreviewFrames(theme.preview_href || "/");
+
+    if (theme.version_available) {
+      const ver = document.getElementById("active-theme-version");
+      ver.hidden = false;
+      document.getElementById("active-version-text").textContent =
+        `Version ${theme.version_available} available`;
+    }
+
+    document.getElementById("draft-themes").innerHTML = (d.draft_themes || [])
+      .map(renderDraftRow)
+      .join("");
+
+    document.querySelectorAll(".draft-publish").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        try {
+          await adminFetch("/api/admin/cms/pages/shop/publish", { method: "POST" });
+          btn.textContent = "Published";
+          btn.disabled = true;
+        } catch (err) {
+          alert(err.message || "Could not publish theme.");
+        }
+      });
+    });
+  } catch (err) {
+    console.error(err);
+  }
+})();
+
+document.getElementById("import-theme-btn")?.addEventListener("click", () => {
+  alert("Theme import is coming soon. Use the theme editor to customize your live storefront.");
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Discounts — Fuel &amp; Free Time Admin</title>
+<link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="/admin/css/console.css">
+<link rel="stylesheet" href="/admin/css/discounts.css">
+</head>
+<body>
+<script src="/admin/js/shell.js"></script>
+<script src="/admin/js/discounts.js"></script>
+<script>
+renderShell("/admin/discounts", `<div id="discountsMount" class="discounts-mount"></div>`, {
+  fullBleed: true,
+  onReady() {
+    initDiscountsPage();
+  },
+});
+</script>
+</body>
+</html>

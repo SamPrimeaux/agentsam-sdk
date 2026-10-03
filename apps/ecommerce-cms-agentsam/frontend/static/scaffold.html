@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coming soon — Fuel & Free Time Admin</title>
+<link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="/admin/css/console.css">
+</head>
+<body>
+<script src="/admin/js/shell.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const view = params.get("view") || "feature";
+
+if (view === "agentic") {
+  location.replace("/admin/agentsam");
+} else if (view === "growth") {
+  location.replace("/admin/growth");
+} else if (view === "discounts") {
+  location.replace("/admin/discounts");
+} else {
+const titles = {
+  markets: "Markets",
+  pos: "Point of Sale",
+};
+const title = titles[view] || "Feature";
+renderShell(`/admin/scaffold?view=${encodeURIComponent(view)}`, `
+  <div class="console-page">
+    <h1 class="admin-page-title">${title}</h1>
+    <div class="console-scaffold">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" stroke="#8a5a00" stroke-width="1.5" stroke-linejoin="round"/></svg>
+      <h1>${title} is on the roadmap</h1>
+      <p>This section ships after the core console is live. Products, content, pages, finance, and email are wired today.</p>
+      <a href="/admin/home" class="btn primary">Back to home</a>
+    </div>
+  </div>
+`, {
+  onReady() {},
+});
+}
+</script>
+</body>
+</html>

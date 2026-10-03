@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Page Editor — Fuel & Free Time Admin</title>
+<link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="/admin/css/console.css">
+<link rel="stylesheet" href="/admin/css/pages.css">
+</head>
+<body>
+<script src="/admin/js/shell.js"></script>
+<script src="/admin/js/pages-shared.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const slug = params.get("slug") || "shop";
+
+let pageData = null;
+let mediaLibrary = [];
+let mediaTargetId = null;
+let dirty = false;
+let allPages = [];
+
+renderShell("/admin/pages", `
+  <div class="page-editor">
+    <header class="page-editor-top">
+      <div class="page-editor-crumb">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4h7l4 4v12H7z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M13 4v5h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <a href="/admin/pages">Pages</a>
+        <span aria-hidden="true">›</span>
+        <h1 id="page-crumb-title">…</h1>
+      </div>
+      <div class="page-editor-top-actions">
+        <a href="/admin/theme-editor?slug=${slug}" class="btn primary small" id="visual-edit-btn">Edit visually</a>
+        <a href="#" class="btn ghost small" id="view-btn" target="_blank" rel="noopener">View live</a>
+        <div class="page-editor-more">
+          <button type="button" class="btn ghost small" id="more-btn">More actions</button>
+          <div class="page-editor-menu" id="more-menu">
+            <a href="#" id="menu-preview" target="_blank" rel="noopener">Preview draft</a>
+            <button type="button" id="menu-publish">Publish live</button>
+          </div>
+        </div>
+        <div class="page-editor-nav-arrows">
+          <button type="button" id="prev-page" aria-label="Previous page">▲</button>
+          <button type="button" id="next-page" aria-label="Next page">▼</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="page-editor-role">
+      <div>
+        <span class="page-editor-role__eyebrow">Page settings</span>
+        <strong>Content, visibility, and search metadata</strong>
+      </div>
+      <p>Use Theme editor for visual layout, sections, blocks, media placement, and responsive preview.</p>
+    </div>
+
+    <div class="page-editor-grid">
+      <div class="page-editor-main">
+        <div class="page-editor-card">
+          <label for="page-title-input">Title</label>
+          <div class="page-editor-input-wrap">
+            <input type="text" id="page-title-input" autocomplete="off">
+            <button type="button" class="page-editor-ai" id="title-ai-btn" aria-label="Ask Agent Sam about this title" title="Agent Sam">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="page-editor-card" id="content-card">
+          <div class="page-editor-card-head">
+            <div>
+              <label>Structured page content</label>
+              <p class="page-editor-card-help">These fields feed the same CMS document used by Theme editor and the live storefront.</p>
+            </div>
+            <button type="button" class="page-editor-ai" id="content-ai-btn" aria-label="Ask Agent Sam to draft content" title="Agent Sam" style="position:static;transform:none">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          <div id="sections-root"></div>
+        </div>
+        <div class="page-editor-card">
+          <div class="page-editor-card-head">
+            <div>
+              <label>Search preview</label>
+              <p class="page-editor-card-help">Derived from the page title and leading content. Dedicated SEO overrides will appear here when the page metadata contract supports them.</p>
+            </div>
+          </div>
+          <div class="page-editor-seo-preview">
+            <div class="page-editor-seo-title" id="seo-title">Fuel &amp; Free Time</div>
+            <div class="page-editor-seo-url" id="seo-url">https://fuelnfreetime.com › …</div>
+            <div class="page-editor-seo-desc" id="seo-desc">Page description preview</div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="page-editor-sidebar">
+        <div class="page-editor-card">
+          <label>Visibility</label>
+          <label class="page-editor-radio">
+            <input type="radio" name="visibility" value="published" id="vis-visible">
+            <span>Visible</span>
+          </label>
+          <div class="page-editor-radio-meta" id="vis-visible-meta"></div>
+          <label class="page-editor-radio">
+            <input type="radio" name="visibility" value="draft" id="vis-hidden">
+            <span>Hidden</span>
+          </label>
+        </div>
+
+        <div class="page-editor-card">
+          <label class="page-editor-template-label">
+            Template
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/></svg>
+          </label>
+          <div class="page-editor-readonly" id="page-template-name">Loading…</div>
+          <p class="page-editor-card-help">Visual structure is managed in Theme editor.</p>
+        </div>
+      </aside>
+    </div>
+
+    <div class="page-editor-note" id="page-note"></div>
+  </div>
+
+  <footer class="page-editor-savebar">
+    <button type="button" class="btn primary" id="save-btn" disabled>Save</button>
+  </footer>
+
+  <div class="page-editor-media-modal" id="page-media-modal" hidden>
+    <div class="page-editor-media-dialog" role="dialog" aria-modal="true" aria-labelledby="page-media-title">
+      <div class="page-editor-media-dialog__head">
+        <div>
+          <span class="page-editor-role__eyebrow">Media library</span>
+          <strong id="page-media-title">Choose an asset</strong>
+        </div>
+        <button type="button" class="btn ghost small" id="page-media-close">Close</button>
+      </div>
+      <div class="page-editor-media-dialog__tools">
+        <input type="search" id="page-media-search" placeholder="Search media" autocomplete="off">
+        <a class="btn ghost small" href="/admin/content">Open media manager</a>
+      </div>
+      <div class="page-editor-media-grid" id="page-media-grid"></div>
+    </div>
+  </div>
+`);
+
+function setDirty(next = true) {
+  dirty = next;
+  document.getElementById("save-btn").disabled = !dirty;
+}
+
+function showNote(msg, kind) {
+  const el = document.getElementById("page-note");
+  if (!msg) {
+    el.className = "page-editor-note";
+    el.textContent = "";
+    return;
+  }
+  el.className = `page-editor-note is-visible is-${kind || "success"}`;
+  el.textContent = msg;
+}
+
+function updateSeoPreview() {
+  const title = document.getElementById("page-title-input")?.value.trim() || pageData?.title || "Page";
+  document.getElementById("page-crumb-title").textContent = title;
+  document.getElementById("seo-title").textContent = `${title} – Fuel & Free Time`;
+
+  const path = slug === "home" ? "" : slug;
+  document.getElementById("seo-url").textContent = `https://fuelnfreetime.com › ${path || "home"}`;
+
+  const section = pageData?.sections?.[0];
+  const schema = SECTION_FIELDS[slug]?.[section?.key] || [];
+  let desc = "";
+  if (section && schema.length) {
+    const subField = schema.find((f) => f.key === "subheadline") || schema.find((f) => f.type === "textarea");
+    if (subField) {
+      const el = document.getElementById(cmsFieldId(section.key, subField.key));
+      desc = el?.value.trim() || cmsGetPath(section.content, subField.key) || "";
+    }
+  }
+  document.getElementById("seo-desc").textContent = desc || "Add a subheadline to improve your search preview.";
+}
+
+function renderAllSections(sections) {
+  if (!sections?.length) {
+    return `<p class="pages-empty">No sections on this page yet. Use Publish or run CMS bootstrap.</p>`;
+  }
+  return sections
+    .map(
+      (section) => `
+    <div class="page-editor-section-block" data-section-key="${cmsEscapeAttr(section.key)}">
+      <h3 class="page-editor-section-title">${cmsEscapeHtml(section.key)}</h3>
+      ${renderSectionFields(section)}
+    </div>`
+    )
+    .join("");
+}
+
+function renderSectionFields(section) {
+  const schema = SECTION_FIELDS[slug]?.[section.key];
+  if (!schema) {
+    return `<p class="pages-empty">No editor schema for this section yet.</p>`;
+  }
+
+  return schema
+    .map((field) => {
+      const id = cmsFieldId(section.key, field.key);
+      const val = cmsGetPath(section.content, field.key) ?? "";
+      const input =
+        field.type === "boolean"
+          ? `<label class="page-editor-check"><input id="${id}" type="checkbox" ${val ? "checked" : ""} data-track-dirty><span>Enabled</span></label>`
+          : field.type === "textarea" || field.type === "rich_text"
+            ? `<textarea id="${id}" rows="4" data-track-dirty>${cmsEscapeHtml(String(val))}</textarea>`
+            : `<input id="${id}" type="${field.type === "url" || field.type === "link" || field.type === "media" || field.type === "video" ? "url" : field.type === "number" || field.type === "range" ? "number" : "text"}" value="${cmsEscapeAttr(String(val))}" data-track-dirty>`;
+
+      const isMedia = field.media || field.type === "media" || field.type === "video";
+      const mediaRow = isMedia
+        ? `<div class="page-editor-media">
+             <img id="${id}-thumb" src="${cmsEscapeAttr(String(val || ""))}" alt="" onerror="this.style.opacity='0.2'">
+             <button type="button" class="btn ghost small" data-media-target="${id}">Pick from library</button>
+           </div>`
+        : "";
+
+      return `
+        <div class="page-editor-field">
+          <label for="${id}">${cmsEscapeHtml(field.label)}<span>${cmsEscapeHtml(field.type || "text")}</span></label>
+          ${input}
+          ${mediaRow}
+        </div>`;
+    })
+    .join("");
+}
+
+function collectSectionContent(sectionKey) {
+  const schema = SECTION_FIELDS[slug]?.[sectionKey] || [];
+  const current = pageData?.sections?.find((section) => section.key === sectionKey);
+  const content = structuredClone(current?.content || {});
+  schema.forEach((field) => {
+    const el = document.getElementById(cmsFieldId(sectionKey, field.key));
+    if (!el) return;
+    let value;
+    if (field.type === "boolean") {
+      value = !!el.checked;
+    } else if (field.type === "number" || field.type === "range") {
+      const parsed = Number(el.value);
+      value = Number.isFinite(parsed) ? parsed : 0;
+    } else {
+      value = el.value.trim();
+    }
+    cmsSetPath(content, field.key, value);
+  });
+  return content;
+}
+
+function collectAllSectionContent() {
+  const out = [];
+  for (const section of pageData?.sections || []) {
+    out.push({
+      key: section.key,
+      content: collectSectionContent(section.key),
+      expectedVersion: Number(section.version || 0),
+    });
+  }
+  return out;
+}
+
+function wireDirtyTracking() {
+  document.querySelectorAll("[data-track-dirty]").forEach((el) => {
+    el.addEventListener("input", () => {
+      setDirty(true);
+      updateSeoPreview();
+    });
+  });
+  document.getElementById("page-title-input")?.addEventListener("input", () => {
+    setDirty(true);
+    updateSeoPreview();
+  });
+  document.querySelectorAll('input[name="visibility"]').forEach((el) => {
+    el.addEventListener("change", () => setDirty(true));
+  });
+}
+
+function setVisibilityUI(status, updatedAt) {
+  const visible = status === "published";
+  document.getElementById("vis-visible").checked = visible;
+  document.getElementById("vis-hidden").checked = !visible;
+  document.getElementById("vis-visible-meta").textContent = visible
+    ? `Visible on your online store${updatedAt ? ` · Last updated ${fmtPageDate(updatedAt)}` : ""}`
+    : "";
+}
+
+function navigateSibling(delta) {
+  const slugs = allPages.length
+    ? allPages.map((p) => p.slug)
+    : PAGE_SLUG_ORDER;
+  const idx = slugs.indexOf(slug);
+  if (idx < 0) return;
+  const next = slugs[idx + delta];
+  if (next) window.location.href = `/admin/page-edit?slug=${encodeURIComponent(next)}`;
+}
+
+async function loadPage() {
+  const liveUrl = PAGE_ROUTES[slug] || "/";
+  const previewUrl = `${liveUrl}${liveUrl.includes("?") ? "&" : "?"}preview=1`;
+  document.getElementById("view-btn").href = liveUrl;
+  document.getElementById("menu-preview").href = previewUrl;
+
+  try {
+    const [pageRes, listRes] = await Promise.all([
+      adminFetch(`/api/admin/cms/pages/${slug}`),
+      adminFetch("/api/admin/cms/pages").catch(() => ({ pages: [] })),
+    ]);
+
+    await loadCmsRegistry();
+
+    pageData = pageRes.page;
+    allPages = listRes.pages || [];
+
+    const slugs = allPages.map((p) => p.slug);
+    const idx = slugs.indexOf(slug);
+    document.getElementById("prev-page").disabled = idx <= 0;
+    document.getElementById("next-page").disabled = idx < 0 || idx >= slugs.length - 1;
+
+    document.getElementById("page-title-input").value = pageData.title || "";
+    document.getElementById("page-template-name").textContent = slug;
+    document.getElementById("visual-edit-btn").href = `/admin/theme-editor?slug=${encodeURIComponent(slug)}`;
+
+    document.getElementById("sections-root").innerHTML = renderAllSections(pageData.sections);
+
+    setVisibilityUI(pageData.status, pageData.updated_at);
+    updateSeoPreview();
+    wireDirtyTracking();
+
+    document.querySelectorAll("[data-media-target]").forEach((btn) => {
+      btn.addEventListener("click", () => openMediaPicker(btn.dataset.mediaTarget));
+    });
+
+    setDirty(false);
+  } catch (err) {
+    document.getElementById("sections-root").innerHTML =
+      `<p class="pages-empty">${cmsEscapeHtml(err.message)}</p>`;
+  }
+}
+
+function mediaIsImage(asset) {
+  const type = String(asset?.content_type || "").toLowerCase();
+  const url = String(asset?.url || "");
+  return type.startsWith("image/") || /\.(png|jpe?g|gif|webp|avif|svg)(\?|$)/i.test(url);
+}
+
+function renderPageMediaGrid(query = "") {
+  const needle = String(query || "").trim().toLowerCase();
+  const assets = mediaLibrary.filter((asset) => {
+    const haystack = [
+      asset.filename,
+      asset.folder,
+      asset.content_type,
+      asset.r2_key,
+    ].filter(Boolean).join(" ").toLowerCase();
+    return !needle || haystack.includes(needle);
+  });
+
+  const grid = document.getElementById("page-media-grid");
+  grid.innerHTML = assets.length
+    ? assets.map((asset, index) => {
+        const preview = mediaIsImage(asset)
+          ? `<img src="${cmsEscapeAttr(asset.url || "")}" alt="">`
+          : `<span class="page-editor-media-type">${cmsEscapeHtml((asset.content_type || "file").split("/").pop())}</span>`;
+        return `
+          <button type="button" class="page-editor-media-card" data-media-index="${index}">
+            <span class="page-editor-media-card__preview">${preview}</span>
+            <span class="page-editor-media-card__copy">
+              <strong>${cmsEscapeHtml(asset.filename || asset.r2_key || "Asset")}</strong>
+              <span>${cmsEscapeHtml(asset.folder || asset.content_type || "media")}</span>
+            </span>
+          </button>`;
+      }).join("")
+    : '<div class="pages-empty">No media matches that search.</div>';
+
+  grid.querySelectorAll("[data-media-index]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const asset = assets[Number(button.dataset.mediaIndex)];
+      if (!asset || !mediaTargetId) return;
+      const input = document.getElementById(mediaTargetId);
+      const thumb = document.getElementById(`${mediaTargetId}-thumb`);
+      if (input) {
+        input.value = asset.url || "";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      if (thumb && mediaIsImage(asset)) {
+        thumb.src = asset.url || "";
+        thumb.style.opacity = "1";
+      }
+      closeMediaPicker();
+    });
+  });
+}
+
+function closeMediaPicker() {
+  const modal = document.getElementById("page-media-modal");
+  if (modal) modal.hidden = true;
+  mediaTargetId = null;
+  const search = document.getElementById("page-media-search");
+  if (search) search.value = "";
+}
+
+async function openMediaPicker(targetId) {
+  mediaTargetId = targetId;
+  const modal = document.getElementById("page-media-modal");
+  const grid = document.getElementById("page-media-grid");
+  modal.hidden = false;
+  grid.innerHTML = '<div class="pages-empty">Loading media…</div>';
+
+  try {
+    if (!mediaLibrary.length) {
+      const d = await adminFetch("/api/admin/media?view=all");
+      mediaLibrary = d.assets || d.media || [];
+    }
+    renderPageMediaGrid("");
+    requestAnimationFrame(() => document.getElementById("page-media-search")?.focus());
+  } catch (err) {
+    grid.innerHTML = `<div class="pages-empty">${cmsEscapeHtml(err.message || "Could not load media library.")}</div>`;
+  }
+}
+
+document.getElementById("page-media-close")?.addEventListener("click", closeMediaPicker);
+document.getElementById("page-media-search")?.addEventListener("input", (event) => {
+  renderPageMediaGrid(event.target.value);
+});
+document.getElementById("page-media-modal")?.addEventListener("click", (event) => {
+  if (event.target.id === "page-media-modal") closeMediaPicker();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !document.getElementById("page-media-modal")?.hidden) {
+    closeMediaPicker();
+  }
+});
+
+async function savePage() {
+  const saveBtn = document.getElementById("save-btn");
+  saveBtn.disabled = true;
+
+  try {
+    const title = document.getElementById("page-title-input").value.trim();
+    const status = document.querySelector('input[name="visibility"]:checked')?.value || "draft";
+
+    await adminFetch(`/api/admin/cms/pages/${slug}`, {
+      method: "PUT",
+      body: JSON.stringify({ title }),
+    });
+
+    for (const { key, content, expectedVersion } of collectAllSectionContent()) {
+      await adminFetch(`/api/admin/cms/pages/${slug}/sections/${encodeURIComponent(key)}`, {
+        method: "PUT",
+        body: JSON.stringify({ content, expected_version: expectedVersion }),
+      });
+    }
+
+    if (status === "published") {
+      await adminFetch(`/api/admin/cms/pages/${slug}/publish`, { method: "POST" });
+      showNote("Page saved and published.", "success");
+    } else {
+      await adminFetch(`/api/admin/cms/pages/${slug}`, {
+        method: "PUT",
+        body: JSON.stringify({ status: "draft" }),
+      });
+      showNote("Page saved as draft.", "success");
+    }
+
+    await loadPage();
+  } catch (err) {
+    showNote(
+      err?.status === 409
+        ? "This page changed in another tab. Reload before saving."
+        : err.message,
+      "error"
+    );
+    setDirty(true);
+  }
+}
+
+async function publishPage() {
+  try {
+    await adminFetch(`/api/admin/cms/pages/${slug}/publish`, { method: "POST" });
+    showNote("Published to live site.", "success");
+    await loadPage();
+  } catch (err) {
+    showNote(err.message, "error");
+  }
+}
+
+document.getElementById("save-btn").addEventListener("click", savePage);
+document.getElementById("menu-publish").addEventListener("click", publishPage);
+document.getElementById("prev-page").addEventListener("click", () => navigateSibling(-1));
+document.getElementById("next-page").addEventListener("click", () => navigateSibling(1));
+
+document.getElementById("more-btn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  document.getElementById("more-menu").classList.toggle("is-open");
+});
+document.addEventListener("click", () => {
+  document.getElementById("more-menu")?.classList.remove("is-open");
+});
+
+document.getElementById("title-ai-btn")?.addEventListener("click", () => {
+  window.openAgentsamDrawer?.();
+  window.sendAgentsamMessage?.(`Suggest a stronger page title for the ${slug} page on Fuel & Free Time.`);
+});
+
+document.getElementById("content-ai-btn")?.addEventListener("click", () => {
+  window.openAgentsamDrawer?.();
+  window.sendAgentsamMessage?.(`Draft hero copy for the ${slug} page on Fuel & Free Time.`);
+});
+
+async function initPageEditor() {
+  try {
+    await loadCmsRegistry();
+  } catch (err) {
+    showNote(`Could not load editor schema: ${err.message}`, "error");
+  }
+
+  loadPage();
+}
+
+initPageEditor();
+</script>
+</body>
+</html>

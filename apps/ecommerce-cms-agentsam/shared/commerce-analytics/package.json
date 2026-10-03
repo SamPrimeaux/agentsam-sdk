@@ -1,0 +1,17 @@
+{
+  "name": "@inneranimalmedia/commerce-analytics",
+  "version": "0.1.0",
+  "description": "Reusable commerce analytics UI primitives for Inner Animal Media admin shells.",
+  "type": "module",
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "react": ">=19"
+  },
+  "license": "MIT"
+}

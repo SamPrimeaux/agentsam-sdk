@@ -1,24 +1,24 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { AdminApp } from './app/AdminApp';
-import { AdminProvider } from './app/AdminProvider';
-import { createMockAdminHost } from './platform/adapters/MockAdminHost';
-import { ToastProvider } from './design-system/Toast';
-import './styles.css';
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import App from "./App";
+import "./styles/analytics.css";
+import "./styles/analytics-shell.css";
+import "./index.css";
 
-const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error('AgentSam Ecommerce + CMS could not find #root');
-}
+window.renderShell(
+  window.location.pathname,
+  '<div id="ecommerce-react-content"></div>',
+  { fullBleed: true },
+);
 
-const host = createMockAdminHost();
+const host = document.getElementById("ecommerce-react-content");
+if (!host) throw new Error("Admin shell did not create the React content mount");
 
-ReactDOM.createRoot(rootElement).render(
-  <React.StrictMode>
-    <ToastProvider>
-      <AdminProvider host={host} initialPath="/admin">
-        <AdminApp />
-      </AdminProvider>
-    </ToastProvider>
-  </React.StrictMode>,
+createRoot(host).render(
+  <StrictMode>
+    <BrowserRouter basename="/admin">
+      <App />
+    </BrowserRouter>
+  </StrictMode>,
 );

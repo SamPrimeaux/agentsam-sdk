@@ -1,0 +1,8 @@
+/* React mounts inside the app-owned console shell created by shell.js. */
+
+#ecommerce-react-content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
