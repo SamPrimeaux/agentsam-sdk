@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as appsAgentsamRouteImport } from './routes/(apps)/agentsam'
+import { Route as appsAnalyticsRouteImport } from './routes/(apps)/analytics'
 import { Route as appsArtifactsRouteImport } from './routes/(apps)/artifacts'
 import { Route as appsBrowseRouteImport } from './routes/(apps)/browse'
 import { Route as appsCadRouteImport } from './routes/(apps)/cad'
@@ -55,6 +56,11 @@ const IndexRoute = IndexRouteImport.update({
 const appsAgentsamRoute = appsAgentsamRouteImport.update({
   id: '/(apps)/agentsam',
   path: '/agentsam',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const appsAnalyticsRoute = appsAnalyticsRouteImport.update({
+  id: '/(apps)/analytics',
+  path: '/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const appsArtifactsRoute = appsArtifactsRouteImport.update({
@@ -239,6 +245,7 @@ const ApiDatabaseLocalBridgeRoute = ApiDatabaseLocalBridgeRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agentsam': typeof appsAgentsamRouteWithChildren
+  '/analytics': typeof appsAnalyticsRoute
   '/artifacts': typeof appsArtifactsRouteWithChildren
   '/browse': typeof appsBrowseRoute
   '/cad': typeof appsCadRoute
@@ -278,6 +285,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agentsam': typeof appsAgentsamRouteWithChildren
+  '/analytics': typeof appsAnalyticsRoute
   '/browse': typeof appsBrowseRoute
   '/cad': typeof appsCadRoute
   '/cli': typeof appsCliRoute
@@ -314,6 +322,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/(apps)/agentsam': typeof appsAgentsamRouteWithChildren
+  '/(apps)/analytics': typeof appsAnalyticsRoute
   '/(apps)/artifacts': typeof appsArtifactsRouteWithChildren
   '/(apps)/browse': typeof appsBrowseRoute
   '/(apps)/cad': typeof appsCadRoute
@@ -355,6 +364,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/agentsam'
+    | '/analytics'
     | '/artifacts'
     | '/browse'
     | '/cad'
@@ -394,6 +404,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/agentsam'
+    | '/analytics'
     | '/browse'
     | '/cad'
     | '/cli'
@@ -429,6 +440,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/(apps)/agentsam'
+    | '/(apps)/analytics'
     | '/(apps)/artifacts'
     | '/(apps)/browse'
     | '/(apps)/cad'
@@ -469,6 +481,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   appsAgentsamRoute: typeof appsAgentsamRouteWithChildren
+  appsAnalyticsRoute: typeof appsAnalyticsRoute
   appsArtifactsRoute: typeof appsArtifactsRouteWithChildren
   appsBrowseRoute: typeof appsBrowseRoute
   appsCadRoute: typeof appsCadRoute
@@ -507,6 +520,13 @@ declare module '@tanstack/react-router' {
       path: '/agentsam'
       fullPath: '/agentsam'
       preLoaderRoute: typeof appsAgentsamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/analytics': {
+      id: '/(apps)/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof appsAnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(apps)/artifacts': {
@@ -835,6 +855,7 @@ const appsSettingsRouteWithChildren = appsSettingsRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   appsAgentsamRoute: appsAgentsamRouteWithChildren,
+  appsAnalyticsRoute: appsAnalyticsRoute,
   appsArtifactsRoute: appsArtifactsRouteWithChildren,
   appsBrowseRoute: appsBrowseRoute,
   appsCadRoute: appsCadRoute,

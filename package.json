@@ -235,6 +235,8 @@
     "packages/agentsam-workbench/tsconfig.json"
   ],
   "workspaces": [
+    "packages/agentsam-analytics",
+    "packages/analytics-ui",
     "packages/agentsam-assets-core",
     "packages/agentsam-brand",
     "packages/agentsam-cloudflare-images",

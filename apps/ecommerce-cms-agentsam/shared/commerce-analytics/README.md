@@ -12,3 +12,18 @@ Current consumer: apps/ecommerce-cms-agentsam/frontend/src/pages/analytics/.
 
 Do not add app routing, authentication, D1 queries, or Fuel & Free Time-specific
 business rules to this package.
+
+## Dual analytics product boundary
+
+Commerce analytics remains first-class. This package is not being replaced by
+AgentSam runtime analytics.
+
+Shared visual grammar may be harvested into
+`@inneranimalmedia/analytics-ui`, but commerce keeps ownership of revenue,
+orders, AOV, units, product mix, customers/cohorts, conversion, COGS, margin,
+store health, and AgentSam AI cost attributable to commerce work.
+
+AgentSam runtime analytics owns runs, tools, models, GOAP, waits, retries,
+runtime cost, failures, and score families.
+
+Correlation is explicit through stable IDs instead of schema collapse.

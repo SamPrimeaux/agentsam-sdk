@@ -1,0 +1,17 @@
+{
+  "name": "@inneranimalmedia/analytics-ui",
+  "version": "2.6.10",
+  "description": "Domain-neutral analytics presentation primitives for Inner Animal Media products.",
+  "type": "module",
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "react": ">=19"
+  },
+  "license": "MIT"
+}

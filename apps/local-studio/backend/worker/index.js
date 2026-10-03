@@ -36,6 +36,7 @@ import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js"
 import { handleWorkRequest, isWorkRequest } from "./work-service.js";
 import { createLocalStudioPluginRuntime } from "./plugin-registry.js";
 import { emitAnalyticsFact } from "./analytics-service.js";
+import { handleAnalyticsQueryRequest } from "./analytics-query-service.js";
 import {
   mintStudioCredential,
   listStudioCredentials,
@@ -658,6 +659,7 @@ export default {
     const isWorkApi = isWorkRequest(url.pathname);
     const isPluginToolExecute = url.pathname === "/api/plugins/tools/execute";
     const isAnalyticsSmoke = url.pathname === "/api/analytics/smoke";
+    const isAnalyticsApi = url.pathname.startsWith("/api/analytics/");
 
     // Public marketing/docs: WEBSITE_ASSETS R2 SSOT (Worker ASSETS = bootstrap only)
     if (request.method === "GET" && isPublicSitePath(url.pathname)) {
@@ -797,6 +799,21 @@ export default {
           500,
         );
       }
+    }
+
+if (isAnalyticsApi && !isAnalyticsSmoke) {
+      const sid = await sessionUser();
+      const gate = await requireBridgeKey(request, env);
+
+      if (!sid && !gate.ok) {
+        return json(
+          { ok: false, error: gate.error || "unauthorized" },
+          gate.status || 401,
+        );
+      }
+
+      const result = await handleAnalyticsQueryRequest(request, env);
+      return json(result.body, result.status, result.headers || {});
     }
 
     if (isDatabaseApi) {
