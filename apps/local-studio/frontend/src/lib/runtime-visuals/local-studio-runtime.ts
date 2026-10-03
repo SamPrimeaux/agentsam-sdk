@@ -32,20 +32,30 @@ export function createLocalStudioRuntimeVisuals() {
       controller.complete(WORKSPACE_BOOT_OPERATION);
     },
 
-    startAgentTurn(operationId: string, label = "AgentSam is working") {
+    startAgentTurn(
+      operationId: string,
+      label = "Understanding your request",
+      detail?: string,
+    ) {
       controller.start({
         operationId,
         scope: "workspace",
         semantic: "thinking",
         label,
+        detail,
       });
     },
 
-    markAgentTurnStreaming(operationId: string, label = "Responding") {
+    markAgentTurnStreaming(
+      operationId: string,
+      label = "Writing response",
+      detail?: string,
+    ) {
       controller.activity({
         operationId,
         semantic: "thinking",
         label,
+        detail,
       });
     },
 
