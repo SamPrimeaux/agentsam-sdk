@@ -190,4 +190,20 @@ export function createHookedProviderAdapter(base: ProviderAdapter, options?: Rec
 export function createCompositeCapabilityAdapter(adapters: CapabilityAdapter[]): CapabilityAdapter;
 export function createMcpCapabilityAdapter(options: Record<string, unknown>): Promise<CapabilityAdapter>;
 export function createLspCapabilityAdapter(options: Record<string, unknown>): CapabilityAdapter;
+export interface SubagentHookRunOptions {
+  hooks?: unknown;
+  hookRuntime?: unknown;
+  agentId?: string;
+  agent_id?: string;
+  task: string;
+  context?: Record<string, unknown>;
+  invocation?: Record<string, unknown>;
+  cwd?: string;
+  run: (input: {
+    task: string;
+    context: Record<string, unknown>;
+    invocation: Record<string, unknown>;
+  }) => Promise<unknown> | unknown;
+}
+export function runWithSubagentHooks(options: SubagentHookRunOptions): Promise<unknown>;
 export function createAgentCapabilityAdapter(options: Record<string, unknown>): CapabilityAdapter;
