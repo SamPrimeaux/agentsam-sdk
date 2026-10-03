@@ -97,3 +97,26 @@ test('ACP agent.run execution emits subagent_stop failed while preserving the ex
     ['stop', 'failed', 'arun_child', 'provider_unavailable'],
   ]);
 });
+
+test('root agent.run jobs do not masquerade as subagent lifecycle events', async () => {
+  const seen = [];
+  const hooks = createHookRuntime({ hooks: {
+    subagent_start: () => seen.push('start'),
+    subagent_stop: () => seen.push('stop'),
+  } });
+  const handler = createAgentRunJobHandler({
+    hookRuntime: hooks,
+    execute: async ({ runId, parentRunId }) => ({ runId, parentRunId }),
+  });
+  const job = createJobEnvelope({
+    id: 'job_agent_run_root',
+    account_id: 'acct_1',
+    kind: 'agent.run',
+    source_run_id: 'arun_root',
+    payload: { run_id: 'arun_root', objective: 'Run the root objective', role: 'lead' },
+  });
+  const result = await handler(job);
+  assert.equal(result.runId, 'arun_root');
+  assert.equal(result.parentRunId, null);
+  assert.deepEqual(seen, []);
+});

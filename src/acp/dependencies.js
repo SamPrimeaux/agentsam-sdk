@@ -9,7 +9,7 @@ function clean(value) {
   return value == null ? '' : String(value).trim();
 }
 
-function localQueueControl(database) {
+export function createLocalQueueControl(database) {
   return new QueueControl({
     adapter: new SqliteQueueAdapter({
       database,
@@ -246,7 +246,7 @@ export async function spawnChildRun(database, {
     createdAt: now,
   });
 
-  const queueControl = localQueueControl(database);
+  const queueControl = createLocalQueueControl(database);
   const queued = await queueControl.enqueue(
     {
       kind: 'agent.run',
@@ -391,7 +391,7 @@ export async function reconcileParentAfterChildTerminal(database, {
   });
 
   const resolvedAccount = clean(parent.account_id) || clean(child.account_id) || 'local';
-  const queueControl = localQueueControl(database);
+  const queueControl = createLocalQueueControl(database);
   const queued = await queueControl.enqueue(
     {
       kind: 'agent.resume',

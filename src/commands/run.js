@@ -26,7 +26,7 @@ function parse(argv = []) {
     runtimeRequirements: {},
   };
   let i = 1;
-  if (out.command !== 'help' && argv[i] && !String(argv[i]).startsWith('-')) out.id = String(argv[i++]);
+  if (!['help', 'start'].includes(out.command) && argv[i] && !String(argv[i]).startsWith('-')) out.id = String(argv[i++]);
   for (; i < argv.length; i += 1) {
     const arg = String(argv[i]);
     if (arg === '--json') out.json = true;
@@ -63,6 +63,7 @@ function help() {
     'Provider-neutral Agent Control Plane inspection and control.',
     '',
     'Usage:',
+    '  agentsam run start --objective <text> [--role <slug>] [--model <key>] [--runtime-json <json>] [--json]',
     '  agentsam run get <run_id> [--json] [--local | --url <base-url>]',
     '  agentsam run tree <run_id> [--json]',
     '  agentsam run events <run_id> [--after <seq>] [--limit <n>] [--json]',
@@ -123,10 +124,10 @@ export async function runRun(argv = [], options = {}) {
     write(help() + '\n');
     return { ok: true, command: 'help' };
   }
-  if (!['get', 'tree', 'events', 'watch', 'spawn', 'cancel', 'receipt'].includes(args.command)) {
+  if (!['start', 'get', 'tree', 'events', 'watch', 'spawn', 'cancel', 'receipt'].includes(args.command)) {
     throw new Error(`unknown_run_command:${args.command}`);
   }
-  requireId(args);
+  if (args.command !== 'start') requireId(args);
 
   const client = options.client || createAgentControlClient({
     cwd: options.cwd || process.cwd(),
@@ -135,6 +136,30 @@ export async function runRun(argv = [], options = {}) {
     local: args.local,
     fetchImpl: options.fetchImpl,
   });
+
+  if (args.command === 'start') {
+    if (!clean(args.objective)) {
+      const error = new Error('run_objective_required');
+      error.hint = 'Usage: agentsam run start --objective <text>';
+      throw error;
+    }
+    const started = await client.start({
+      objective: args.objective,
+      role: clean(args.role) || 'lead',
+      model_key: clean(args.modelKey) || null,
+      runtime_requirements: args.runtimeRequirements,
+    });
+    if (args.json) write(JSON.stringify(started, null, 2) + '\n');
+    else {
+      write([
+        'Agent Sam · run started',
+        `run      ${started.run_id}`,
+        `queue    ${started.queue || 'host-managed'}`,
+        `status   ${started.status || 'queued'}`,
+      ].join('\n') + '\n');
+    }
+    return started;
+  }
 
   if (args.command === 'get') {
     const run = await client.getRun(args.id);

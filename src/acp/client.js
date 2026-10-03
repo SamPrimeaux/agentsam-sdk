@@ -3,6 +3,7 @@ import { createLocalSqliteDatabase } from '../local/sqlite.js';
 import { applyRuntimeMigrations } from '../local/migrations.js';
 import { runtimeDatabasePath } from '../local/runtime-store.js';
 import { spawnChildRun } from './dependencies.js';
+import { createRootRun } from './runs.js';
 
 function clean(value) { return value == null ? '' : String(value).trim(); }
 function parseJson(value, fallback = null) {
@@ -86,6 +87,25 @@ export class LocalAgentControlClient {
   async getRun(id) {
     return withLocalDb(this.cwd, async (db) =>
       mapRun(await db.prepare(RUN_JOIN + ' WHERE r.id = ? LIMIT 1').bind(id).first()));
+  }
+
+  async start(input = {}) {
+    return withLocalDb(this.cwd, async (db) => createRootRun(db, {
+      runId: input.run_id ?? input.runId ?? null,
+      accountId: input.account_id ?? input.accountId ?? null,
+      conversationId: input.conversation_id ?? input.conversationId ?? null,
+      objective: input.objective ?? '',
+      role: input.role ?? 'lead',
+      mode: input.mode ?? 'agent',
+      modelKey: input.model_key ?? input.modelKey ?? null,
+      reasoningEffort: input.reasoning_effort ?? input.reasoningEffort ?? null,
+      serviceTier: input.service_tier ?? input.serviceTier ?? null,
+      runtimeRequirements: input.runtime_requirements ?? input.runtimeRequirements ?? {},
+      metadata: input.metadata ?? {},
+      priority: input.priority ?? 'normal',
+      sourceClient: input.source_client ?? input.sourceClient ?? 'agentsam-acp',
+      surface: input.surface ?? 'control-plane',
+    }));
   }
 
   async events(id, { after = -1, limit = 200 } = {}) {
@@ -218,6 +238,9 @@ export class HttpAgentControlClient {
       error.code = body?.error?.code || `acp_http_${response.status}`; error.status = response.status; throw error;
     }
     return body;
+  }
+  start(input = {}) {
+    return this.request('/v1/runs', { method: 'POST', body: JSON.stringify(input) });
   }
   getRun(id) { return this.request(`/v1/runs/${encodeURIComponent(id)}`); }
   events(id, { after = -1, limit = 200 } = {}) {

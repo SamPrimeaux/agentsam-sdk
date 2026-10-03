@@ -139,3 +139,91 @@ test('HTTP ACP client is provider-neutral and carries bearer auth to a compatibl
   });
   assert.equal(resolved.kind, 'http');
 });
+
+test('agentsam run start creates a queued provider-neutral root run without invoking a model', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-acp-start-'));
+  fs.writeFileSync(path.join(root, 'package.json'), '{"name":"acp-start-test","private":true}\n');
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  const output = [];
+  const started = await runRun([
+    'start',
+    '--objective', 'Audit and package this repository',
+    '--role', 'lead',
+    '--model', 'provider/model',
+    '--runtime-json', '{"capabilities":["filesystem","exec"]}',
+    '--json',
+  ], {
+    cwd: root,
+    write: (value) => output.push(String(value)),
+  });
+
+  assert.equal(started.schema, 'agentsam.run-start.v1');
+  assert.match(started.run_id, /^arun_/);
+  assert.equal(started.status, 'queued');
+  assert.equal(started.queue_job.kind, 'agent.run');
+  assert.equal(started.queue_job.source_run_id, started.run_id);
+  assert.equal(started.queue_job.payload.parent_run_id, null);
+  assert.equal(started.queue_job.payload.role, 'lead');
+  assert.deepEqual(started.queue_job.payload.runtime_requirements, { capabilities: ['filesystem', 'exec'] });
+
+  const client = new LocalAgentControlClient({ cwd: root });
+  const run = await client.getRun(started.run_id);
+  assert.equal(run.status, 'queued');
+  assert.equal(run.parentRunId, undefined);
+  assert.equal(run.modelKey, 'provider/model');
+  assert.equal(run.modelCallCount, 0);
+  assert.equal(run.toolCallCount, 0);
+
+  const events = await client.events(started.run_id);
+  assert.deepEqual(events.map((event) => event.eventType), ['run.created', 'run.queued']);
+  assert.equal(JSON.parse(output.join('')).run_id, started.run_id);
+
+  const db = await createLocalSqliteDatabase(runtimeDatabasePath(root));
+  try {
+    await applyRuntimeMigrations(db);
+    const rows = await db.prepare(
+      "SELECT kind, status, job_json FROM agentsam_queue_job WHERE source_run_id = ? ORDER BY created_at_unix"
+    ).bind(started.run_id).all();
+    assert.equal(rows.results.length, 1);
+    assert.equal(rows.results[0].kind, 'agent.run');
+    assert.equal(rows.results[0].status, 'queued');
+    assert.equal(JSON.parse(rows.results[0].job_json).idempotency_key, 'agent-run:' + started.run_id);
+  } finally {
+    db.close();
+  }
+});
+
+test('HTTP ACP start uses the same POST /v1/runs contract as any hosted provider', async () => {
+  const requests = [];
+  const client = new HttpAgentControlClient({
+    baseUrl: 'https://provider.example.test',
+    token: 'provider-token',
+    fetchImpl: async (url, init = {}) => {
+      requests.push({ url, init });
+      return Response.json({
+        schema: 'agentsam.run-start.v1',
+        run_id: 'arun_remote_root',
+        status: 'queued',
+        queue: 'provider-managed',
+      });
+    },
+  });
+
+  const started = await client.start({
+    objective: 'Run on any compatible host',
+    role: 'lead',
+    runtime_requirements: { capabilities: ['exec'] },
+  });
+
+  assert.equal(started.run_id, 'arun_remote_root');
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].url, 'https://provider.example.test/v1/runs');
+  assert.equal(requests[0].init.method, 'POST');
+  assert.equal(new Headers(requests[0].init.headers).get('authorization'), 'Bearer provider-token');
+  assert.deepEqual(JSON.parse(requests[0].init.body), {
+    objective: 'Run on any compatible host',
+    role: 'lead',
+    runtime_requirements: { capabilities: ['exec'] },
+  });
+});

@@ -65,6 +65,21 @@ export function createAgentRunJobHandler({
       },
     };
 
+    const executeRun = () => execute({
+      job,
+      runId,
+      parentRunId: parentRunId || null,
+      role,
+      objective,
+      runtimeRequirements,
+      executionContext,
+      invocation,
+    }, context);
+
+    // Only child AgentSam runs are subagents. Root agent.run jobs retain the
+    // normal session/model/tool hook lifecycle owned by the execution host.
+    if (!parentRunId) return executeRun();
+
     return runWithSubagentHooks({
       hookRuntime: context.hookRuntime || hookRuntime,
       agentId: role,
@@ -72,16 +87,7 @@ export function createAgentRunJobHandler({
       context: executionContext,
       invocation,
       cwd: context.cwd || cwd,
-      run: () => execute({
-        job,
-        runId,
-        parentRunId: parentRunId || null,
-        role,
-        objective,
-        runtimeRequirements,
-        executionContext,
-        invocation,
-      }, context),
+      run: executeRun,
     });
   };
 }
