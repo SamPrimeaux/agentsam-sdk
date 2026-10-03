@@ -820,7 +820,9 @@ Measure these before claiming dollar/token savings.
 
 ## 24. Immediate tickets
 
-Implementation checkpoint (2026-10-03): ACP-001 through ACP-006 are implemented on `feat/agent-control-plane`. Portable contracts own the richer run/suspension/wake/event semantics; runtime migration `0006_agent_run_suspend_activity.sql` persists suspension and the append-only journal without rebuilding the legacy `agentsam_agent_run.status` check. Queue Control owns delayed availability, retry/backoff/jitter, stable idempotency identity, lease claim/refresh/release, provider-independent dead-letter jobs, and provider-managed DLQ delegation. Runtime migration `0007_queue_control.sql` plus the SQLite adapter provide the durable local scheduler reference implementation; Cloudflare Queues remains one hosted adapter rather than the control-plane authority.
+Implementation checkpoint (2026-10-03): ACP-001 through ACP-007 are implemented on `feat/agent-control-plane`. Portable contracts own the richer run/suspension/wake/event semantics; runtime migration `0006_agent_run_suspend_activity.sql` persists suspension and the append-only journal without rebuilding the legacy `agentsam_agent_run.status` check. Queue Control owns delayed availability, retry/backoff/jitter, stable idempotency identity, lease claim/refresh/release, provider-independent dead-letter jobs, and provider-managed DLQ delegation. Runtime migration `0007_queue_control.sql` plus the SQLite adapter provide the durable local scheduler reference implementation; Cloudflare Queues remains one hosted adapter rather than the control-plane authority.
+
+ACP host note: `agentsam run` now defaults to project-local SQLite and can target any HTTP-compatible Agent Control Plane via `AGENTSAM_CONTROL_PLANE_URL` / `--url`; no Cloudflare, GCP, AWS, Fly, Docker, VM, or local runtime provider is encoded into run semantics. Hosted implementations must conform to the same `/v1/runs/:id` control contract.
 
 Workbench audit note: `@inneranimalmedia/agentsam-workbench` already owns the portable thread + persistent composer surface (`AgentConversationSurface`), and its lead/co-worker/legacy composition tests pass. Do not create a second composer primitive in Local Studio; any remaining disappearing-lead-composer bug should be treated as Local Studio viewport/composition behavior unless a new portable invariant is proven missing.
 
@@ -831,7 +833,7 @@ ACP-003  DONE  Define append-only run event journal and activity projection
 ACP-004  DONE  Add queue availableAt/backoff/jitter/idempotency/lease contract
 ACP-005  DONE  Implement local SQLite delayed-work scheduler
 ACP-006  DONE  Implement provider queue delay/retry/DLQ adapters (Cloudflare first)
-ACP-007        Add agentsam run get/watch/tree/cancel/events/receipt
+ACP-007  DONE  Add agentsam run get/watch/tree/cancel/events/receipt
 
 KNOW-001 Add knowledge.resolve pre-model retrieval boundary
 KNOW-002 Attach KnowledgeRetrievalReceipt to runs

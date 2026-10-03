@@ -59,6 +59,7 @@ import { runBilling } from './commands/billing.js';
 import { runUpdate } from './commands/update.js';
 import { runSetup } from './commands/setup.js';
 import { runRuntime } from './commands/runtime.js';
+import { runRun } from './commands/run.js';
 import { applyPresetSelection, runAdd, runCapabilities, runDev, runInspect } from './commands/product.js';
 import { listPresets, resolvePreset } from './presets/index.js';
 import {
@@ -620,6 +621,13 @@ if (command === '--version' || command === '-v') {
 } else if (command === 'go') {
   try {
     await runGo(rest);
+  } catch (e) {
+    if (!e?.reported) reportCliError(e);
+    process.exitCode = 1;
+  }
+} else if (command === 'run' || command === 'runs') {
+  try {
+    await runRun(rest);
   } catch (e) {
     if (!e?.reported) reportCliError(e);
     process.exitCode = 1;
