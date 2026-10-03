@@ -109,6 +109,15 @@ export type SettingsCatalogItem = {
   meta?: string;
 };
 
+export type SettingsCatalogKind =
+  | "plugins"
+  | "mcps"
+  | "skills"
+  | "subagents"
+  | "rules"
+  | "commands"
+  | "hooks";
+
 export type SettingsTheme = {
   id: string;
   name: string;
@@ -191,6 +200,8 @@ export type SettingsSnapshot = {
 export interface SettingsHost {
   capabilities(): Promise<SettingsCapabilities>;
   snapshot(): Promise<SettingsSnapshot>;
+  upsertCatalogItem?(kind: SettingsCatalogKind, item: SettingsCatalogItem): Promise<void>;
+  removeCatalogItem?(kind: SettingsCatalogKind, id: string): Promise<void>;
   subscribe?(unitId: SettingsUnitId, callback: () => void): () => void;
 }
 

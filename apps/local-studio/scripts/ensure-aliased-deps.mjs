@@ -111,9 +111,9 @@ for (const name of ALIASED) {
     continue;
   }
   const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf8'));
-  const deps = { ...(pkg.dependencies || {}) };
+  const deps = { ...(pkg.dependencies || {}), ...(pkg.peerDependencies || {}) };
   if (!Object.keys(deps).length) {
-    console.log(`[ensure-aliased-deps] ${name}: no runtime deps`);
+    console.log(`[ensure-aliased-deps] ${name}: no runtime or peer deps`);
     continue;
   }
 
