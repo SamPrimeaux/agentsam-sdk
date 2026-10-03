@@ -33,6 +33,7 @@ function simulateRuntime(
       type: "agent.session.started",
       operationId: "boot",
       label: "Preparing runtime",
+      detail: "Opening the AgentSam workspace",
     }),
   );
   later(3600, () => controller.complete("boot"));
