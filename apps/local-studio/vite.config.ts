@@ -63,10 +63,17 @@ const keyManagerPackageRoot = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-key-manager", import.meta.url)),
 );
 const studioRoot = resolvePath(fileURLToPath(new URL(".", import.meta.url)));
+const frontendNodeModules = resolvePath(studioRoot, "frontend", "node_modules");
 const repoNodeModules = resolvePath(studioRoot, "..", "..", "node_modules");
+
 const studioNm = (...segments: string[]) => {
+  const frontend = resolvePath(frontendNodeModules, ...segments);
+  if (existsSync(frontend)) return frontend;
+
   const local = resolvePath(studioRoot, "node_modules", ...segments);
-  return existsSync(local) ? local : resolvePath(repoNodeModules, ...segments);
+  if (existsSync(local)) return local;
+
+  return resolvePath(repoNodeModules, ...segments);
 };
 
 /**

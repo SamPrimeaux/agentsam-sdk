@@ -39,7 +39,7 @@
     "lucide-react": ">=0.400.0",
     "react": ">=18",
     "react-dom": ">=18",
-    "recharts": ">=2.0.0"
+    "recharts": ">=3.0.0 <4"
   },
   "publishConfig": {
     "access": "public"
@@ -72,7 +72,7 @@
     "lucide-react": "^0.510.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "recharts": "^2.15.4",
+    "recharts": "^3.10.1",
     "typescript": "^5.9.3"
   },
   "bin": {
