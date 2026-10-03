@@ -63,6 +63,7 @@ function simulateRuntime(
       type: "tool.invoke",
       operationId: "tool-a",
       label: "Running tools",
+      detail: "Executing the first task action",
     }),
   );
   later(12450, () =>
