@@ -110,6 +110,53 @@ export function createRetrySchedule(job, { now_ms = Date.now(), random = Math.ra
   };
 }
 
+export function createDeadLetterJob(job, {
+  error = null,
+  attempt = (Number.isInteger(job?.attempt) ? job.attempt : 0) + 1,
+  now = Math.floor(Date.now() / 1000),
+} = {}) {
+  assertJobEnvelope(job);
+  const originalKey = clean(job.idempotency_key) || job.id;
+  return createJobEnvelope({
+    id: job.id + ':dlq:' + attempt,
+    account_id: job.account_id,
+    kind: 'dead_letter',
+    logical_queue: 'dead_letter',
+    executor: 'queue',
+    priority: job.priority === 'urgent' ? 'urgent' : 'high',
+    parent_job_id: job.id,
+    conversation_id: job.conversation_id,
+    agent_id: job.agent_id,
+    source_run_id: job.source_run_id,
+    step_id: job.step_id,
+    idempotency_key: originalKey + ':dlq:' + attempt,
+    payload: {
+      original_job: job,
+      failure: error == null ? null : {
+        message: String(error?.message || error),
+        code: clean(error?.code) || null,
+      },
+    },
+    metadata: {
+      ...(job.metadata || {}),
+      dead_letter: true,
+      original_job_id: job.id,
+      original_kind: job.kind,
+      exhausted_attempt: attempt,
+    },
+    retry: {
+      max_attempts: 1,
+      backoff: 'fixed',
+      initial_delay_ms: 0,
+      max_delay_ms: 0,
+      jitter: false,
+    },
+    attempt: 0,
+    available_at: now,
+    created_at: now,
+  });
+}
+
 export function isJobAvailable(job, now = Math.floor(Date.now() / 1000)) {
   return (job?.available_at ?? 0) <= now;
 }

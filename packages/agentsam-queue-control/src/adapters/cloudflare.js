@@ -113,6 +113,7 @@ export class CloudflareQueueApiAdapter {
     max_retries = 3,
     retry_delay = 5,
     max_concurrency,
+    dead_letter_queue = null,
   } = {}) {
     if (!script_name) throw new TypeError('script_name is required');
     const settings = {
@@ -131,6 +132,7 @@ export class CloudflareQueueApiAdapter {
       body: JSON.stringify({
         type: 'worker',
         script_name,
+        ...(dead_letter_queue ? { dead_letter_queue } : {}),
         settings,
       }),
     });
@@ -156,7 +158,11 @@ export class CloudflareQueueApiAdapter {
       if (consumer?.script_name) {
         const queueId = queue.queue_id ?? queue.id;
         if (!queueId) throw new Error(`cloudflare_queue_id_missing:${queueName}`);
-        await this.attachWorkerConsumer(queueId, consumer);
+        const physical = Object.values(topology.physical || {}).find((entry) => entry?.name === queueName);
+        await this.attachWorkerConsumer(queueId, {
+          ...consumer,
+          dead_letter_queue: consumer.dead_letter_queue || physical?.dead_letter || null,
+        });
       }
     }
 

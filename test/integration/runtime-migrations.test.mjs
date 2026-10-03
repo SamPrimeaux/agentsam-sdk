@@ -32,6 +32,7 @@ test('portable runtime migration installs AgentSam CLI state tables idempotently
       'agentsam_cron_runs',
       'agentsam_plans',
       'agentsam_project_sessions',
+      'agentsam_queue_job',
       'agentsam_schema_migrations',
       'agentsam_todo',
     ]) assert.equal(names.has(name), true, name);
@@ -51,6 +52,16 @@ test('portable runtime migration installs AgentSam CLI state tables idempotently
     const eventColumnNames = new Set(eventColumns.results.map((row) => row.name));
     for (const name of ['run_id', 'parent_run_id', 'seq', 'event_type', 'phase', 'dedupe_key', 'evidence_json']) {
       assert.equal(eventColumnNames.has(name), true, `event.${name}`);
+    }
+
+    const queueColumns = await db.prepare('PRAGMA table_info(agentsam_queue_job)').all();
+    const queueColumnNames = new Set(queueColumns.results.map((row) => row.name));
+    for (const name of [
+      'physical_queue', 'logical_queue', 'status', 'available_at',
+      'idempotency_key', 'source_run_id', 'step_id',
+      'lease_owner', 'lease_expires_at', 'lease_generation', 'job_json',
+    ]) {
+      assert.equal(queueColumnNames.has(name), true, 'queue_job.' + name);
     }
 
     const timers = await db.prepare(

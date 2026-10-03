@@ -1,4 +1,4 @@
-import { createJobEnvelope, assertJobEnvelope, computeRetryDelayMs, createRetrySchedule } from './contracts.js';
+import { createJobEnvelope, assertJobEnvelope, computeRetryDelayMs, createRetrySchedule, createDeadLetterJob } from './contracts.js';
 import { buildQueueTopology, resolvePhysicalQueue } from './topology.js';
 import { routeWork, shouldRequireProvisionApproval } from './policy.js';
 import { JobDispatcher } from './dispatch.js';
@@ -117,6 +117,16 @@ export class QueueControl {
     return this.adapter.ensureTopology(this.topology, options);
   }
 
+  async deadLetter(job, error, { attempt = (job.attempt || 0) + 1 } = {}) {
+    const deadLetter = createDeadLetterJob(job, { error, attempt });
+    const queue = resolvePhysicalQueue(this.topology, 'dead_letter');
+    const receipt = await this.adapter.publish(queue, deadLetter, {
+      logical_queue: 'dead_letter',
+      dead_letter: true,
+    });
+    return { job: deadLetter, queue, receipt: receipt ?? null };
+  }
+
   async consume(messages, context = {}) {
     const results = [];
     for (const message of messages) {
@@ -132,8 +142,21 @@ export class QueueControl {
           const attempt = Number.isInteger(message.attempts) ? message.attempts : (job.attempt + 1);
           const maxAttempts = Math.max(1, Number(job.retry?.max_attempts) || 3);
           if (attempt >= maxAttempts) {
-            if (typeof message?.ack === 'function') message.ack();
-            retry = { scheduled: false, exhausted: true, provider_managed: true, attempt };
+            // Do not ACK an exhausted provider-managed message here. A configured
+            // provider DLQ is the crash-safe fallback; retry/failure delivery lets
+            // the provider move it after max_retries instead of silently deleting it.
+            const delayMs = computeRetryDelayMs(job.retry, attempt);
+            const delaySeconds = Math.max(0, Math.ceil(delayMs / 1000));
+            message.retry(delaySeconds > 0 ? { delaySeconds } : undefined);
+            retry = {
+              scheduled: false,
+              exhausted: true,
+              provider_managed: true,
+              delegated_to_provider_dlq: true,
+              attempt,
+              delay_ms: delayMs,
+              delay_seconds: delaySeconds,
+            };
           } else {
             const delayMs = computeRetryDelayMs(job.retry, attempt);
             const delaySeconds = Math.max(0, Math.ceil(delayMs / 1000));
@@ -153,7 +176,15 @@ export class QueueControl {
               attempt: schedule.attempt,
             };
           } else {
-            retry = { scheduled: false, exhausted: true, attempt: schedule.attempt };
+            const deadLetter = await this.deadLetter(job, error, { attempt: schedule.attempt });
+            retry = {
+              scheduled: false,
+              exhausted: true,
+              attempt: schedule.attempt,
+              dead_lettered: true,
+              dead_letter_job_id: deadLetter.job.id,
+              dead_letter_queue: deadLetter.queue,
+            };
           }
         }
         results.push({

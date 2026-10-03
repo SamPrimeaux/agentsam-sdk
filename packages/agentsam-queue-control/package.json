@@ -1,7 +1,7 @@
 {
   "name": "@inneranimalmedia/agentsam-queue-control",
   "version": "2.6.10",
-  "description": "Portable AgentSam queue, job-routing, batching, and execution-control primitives with Cloudflare-first adapters.",
+  "description": "Portable AgentSam queue, job-routing, retry, scheduling, and execution-control primitives with provider adapters.",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
@@ -11,7 +11,8 @@
     "./topology": "./src/topology.js",
     "./dispatch": "./src/dispatch.js",
     "./adapters/memory": "./src/adapters/memory.js",
-    "./adapters/cloudflare": "./src/adapters/cloudflare.js"
+    "./adapters/cloudflare": "./src/adapters/cloudflare.js",
+    "./adapters/sqlite": "./src/adapters/sqlite.js"
   },
   "files": [
     "src",

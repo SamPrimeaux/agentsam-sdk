@@ -5,6 +5,7 @@ import {
   QueueControl,
   MemoryQueueAdapter,
   CloudflareQueueBindingAdapter,
+  CloudflareQueueApiAdapter,
   canClaimJobLease,
   claimJobLease,
   computeRetryDelayMs,
@@ -327,12 +328,83 @@ test('provider-managed retry exhaustion stops requeueing instead of polling fore
     retry() { retried = true; },
     ack() { acked = true; },
   }]);
-  assert.equal(retried, false);
-  assert.equal(acked, true);
+  assert.equal(retried, true);
+  assert.equal(acked, false);
   assert.deepEqual(result.retry, {
     scheduled: false,
     exhausted: true,
     provider_managed: true,
+    delegated_to_provider_dlq: true,
     attempt: 3,
+    delay_ms: 1000,
+    delay_seconds: 1,
   });
+});
+
+test('exhausted local retries are materialized as a deterministic dead-letter job', async () => {
+  const topology = buildQueueTopology({ namespace: 'acp', environment: 'test' });
+  const adapter = new MemoryQueueAdapter();
+  const control = new QueueControl({ adapter, topology });
+  control.register('always.fail', async () => {
+    throw Object.assign(new Error('boom'), { code: 'provider_unavailable' });
+  });
+
+  const job = createJobEnvelope({
+    id: 'job_exhaust_local',
+    account_id: 'acct_1',
+    kind: 'always.fail',
+    logical_queue: 'jobs',
+    retry: {
+      max_attempts: 1,
+      backoff: 'fixed',
+      initial_delay_ms: 0,
+      max_delay_ms: 0,
+      jitter: false,
+    },
+  });
+
+  const [result] = await control.consume([job]);
+  assert.equal(result.ok, false);
+  assert.equal(result.retry.exhausted, true);
+  assert.equal(result.retry.dead_lettered, true);
+
+  const dlq = resolvePhysicalQueue(topology, 'dead_letter');
+  const [dead] = await adapter.pull(dlq, 1);
+  assert.equal(dead.kind, 'dead_letter');
+  assert.equal(dead.payload.original_job.id, 'job_exhaust_local');
+  assert.equal(dead.payload.failure.code, 'provider_unavailable');
+  assert.equal(dead.metadata.dead_letter, true);
+});
+
+test('Cloudflare consumer provisioning carries the topology dead-letter queue', async () => {
+  const requests = [];
+  const adapter = new CloudflareQueueApiAdapter({
+    cloudflareAccountId: 'acct_cf',
+    apiToken: 'token',
+    fetchImpl: async (url, init = {}) => {
+      requests.push({ url, init });
+      if (init.method === 'POST' && url.endsWith('/consumers')) {
+        return Response.json({ success: true, result: { consumer_id: 'consumer_1' } });
+      }
+      if (init.method === 'POST') {
+        const name = JSON.parse(init.body).queue_name;
+        return Response.json({ success: true, result: { queue_id: name + '_id', queue_name: name } });
+      }
+      return Response.json({ success: true, result: [] });
+    },
+  });
+
+  const topology = buildQueueTopology({ namespace: 'acp', environment: 'prod' });
+  const jobsQueue = resolvePhysicalQueue(topology, 'jobs');
+  await adapter.ensureTopology(topology, {
+    consumers: {
+      [jobsQueue]: { script_name: 'agentsam-acp-consumer', max_retries: 3 },
+    },
+  });
+
+  const consumerRequest = requests.find((row) => row.url.endsWith('/consumers'));
+  assert.ok(consumerRequest);
+  const body = JSON.parse(consumerRequest.init.body);
+  assert.equal(body.dead_letter_queue, resolvePhysicalQueue(topology, 'dead_letter'));
+  assert.equal(body.settings.max_retries, 3);
 });

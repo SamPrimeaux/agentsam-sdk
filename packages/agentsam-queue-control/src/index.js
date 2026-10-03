@@ -5,3 +5,4 @@ export * from './dispatch.js';
 export * from './control-plane.js';
 export * from './adapters/memory.js';
 export * from './adapters/cloudflare.js';
+export * from './adapters/sqlite.js';
