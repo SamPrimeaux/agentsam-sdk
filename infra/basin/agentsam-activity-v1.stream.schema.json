@@ -1,0 +1,55 @@
+{
+  "fields": [
+    { "name": "event_id",            "type": "string",    "required": true  },
+    { "name": "schema",              "type": "string",    "required": true  },
+    { "name": "occurred_at",         "type": "timestamp", "required": true  },
+
+    { "name": "event_kind",          "type": "string",    "required": true  },
+    { "name": "domain",              "type": "string",    "required": true  },
+    { "name": "operation",           "type": "string",    "required": true  },
+    { "name": "outcome",             "type": "string",    "required": false },
+
+    { "name": "account_id",          "type": "string",    "required": false },
+    { "name": "tenant_id",           "type": "string",    "required": false },
+    { "name": "workspace_id",        "type": "string",    "required": false },
+    { "name": "repository_id",       "type": "string",    "required": false },
+    { "name": "git_sha",             "type": "string",    "required": false },
+    { "name": "run_id",              "type": "string",    "required": false },
+    { "name": "receipt_id",          "type": "string",    "required": false },
+
+    { "name": "source_client",       "type": "string",    "required": false },
+    { "name": "source_table",        "type": "string",    "required": false },
+    { "name": "source_id",           "type": "string",    "required": false },
+
+    { "name": "provider",            "type": "string",    "required": false },
+    { "name": "model",               "type": "string",    "required": false },
+    { "name": "tool_key",            "type": "string",    "required": false },
+
+    { "name": "duration_ms",         "type": "int64",     "required": false },
+    { "name": "queue_wait_ms",       "type": "int64",     "required": false },
+    { "name": "external_wait_ms",    "type": "int64",     "required": false },
+    { "name": "active_model_ms",     "type": "int64",     "required": false },
+
+    { "name": "input_tokens",        "type": "int64",     "required": false },
+    { "name": "cached_input_tokens", "type": "int64",     "required": false },
+    { "name": "output_tokens",       "type": "int64",     "required": false },
+    { "name": "reasoning_tokens",    "type": "int64",     "required": false },
+    { "name": "cost_usd",            "type": "float64",   "required": false },
+
+    { "name": "attempt_count",       "type": "int32",     "required": false },
+    { "name": "retry_count",         "type": "int32",     "required": false },
+    { "name": "plan_points",         "type": "float64",   "required": false },
+
+    { "name": "score_family",        "type": "string",    "required": false },
+    { "name": "score_value",         "type": "float64",   "required": false },
+    { "name": "weights_version",     "type": "string",    "required": false },
+
+    { "name": "error_code",          "type": "string",    "required": false },
+    { "name": "failure_origin",      "type": "string",    "required": false },
+
+    { "name": "artifact_ref",        "type": "string",    "required": false },
+
+    { "name": "dimensions",          "type": "json",      "required": false },
+    { "name": "metrics",             "type": "json",      "required": false }
+  ]
+}
