@@ -82,6 +82,7 @@ function simulateRuntime(
       type: "catalog.indexing",
       operationId: "index",
       label: "Reconciling state",
+      detail: "Checking the resulting workspace state",
     }),
   );
   later(20700, () => controller.complete("index"));
