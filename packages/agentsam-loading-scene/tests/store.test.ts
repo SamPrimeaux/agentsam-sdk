@@ -58,6 +58,26 @@ describe("operation store + coalescing", () => {
   });
 });
 
+  it("preserves runtime-supplied task detail for narration", () => {
+    const nowRef = { t: 1000 };
+    const c = makeController(nowRef);
+    c.start({
+      operationId: "task",
+      semantic: "thinking",
+      label: "Planning the next step",
+    });
+    c.activity({
+      operationId: "task",
+      semantic: "tool_execution",
+      label: "Running package checks",
+      detail: "Verifying the loading-scene package before preview",
+    });
+    const scene = c.getScene();
+    expect(scene.detail).toBe(
+      "Verifying the loading-scene package before preview",
+    );
+  });
+
 describe("controller lifecycle", () => {
   it("complete → success, fail → error, reset → idle", () => {
     const nowRef = { t: 1000 };
