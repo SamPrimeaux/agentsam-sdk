@@ -22,7 +22,29 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     <Nav.Topbar startup={empty} rightSlot={<><AnnotationToggle /><SidePanelToggle /></>} />
     <div className="agentsam-workspace">
       <section className="agentsam-conversation" aria-label="Conversation" inert={isMobile && state.sideOpen}>
-        {empty ? <div className="agentsam-welcome"><h1>{data.mode === 'work' ? 'What should we work on?' : 'Where should we begin?'}</h1><Composer targetId={trail.id} targetKind="trail" placeholder={data.mode === 'work' ? 'Work on anything…' : 'Ask anything…'} /></div> : <><MessageList messages={trail.messages} trailId={trail.id} streaming={streaming} /><div className="agentsam-dock"><Composer targetId={trail.id} targetKind="trail" placeholder={data.mode === 'work' ? 'Work on anything…' : 'Ask anything…'} /></div></>}
+        {empty ? (
+          <div className="agentsam-welcome">
+            <h1>{data.mode === 'work' ? 'What should we work on?' : 'Where should we begin?'}</h1>
+            <Composer
+              targetId={trail.id}
+              targetKind="trail"
+              placeholder={data.mode === 'work' ? 'Work on anything…' : 'Ask anything…'}
+            />
+          </div>
+        ) : (
+          <div className="agentsam-active-thread">
+            <div className="agentsam-thread-slot">
+              <MessageList messages={trail.messages} trailId={trail.id} streaming={streaming} />
+            </div>
+            <div className="agentsam-dock" data-lead-composer-dock="">
+              <Composer
+                targetId={trail.id}
+                targetKind="trail"
+                placeholder={data.mode === 'work' ? 'Work on anything…' : 'Ask anything…'}
+              />
+            </div>
+          </div>
+        )}
       </section>
       {state.sideOpen ? <><SplitHandle label="Resize Side Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(280, Math.min(900, width - delta)))} onDoubleClick={() => setPanelWidth(480)} /><aside className="agentsam-side-panel" style={{ width: panelWidth }} aria-label="Side Panel"><SideStage /></aside></> : null}
     </div>

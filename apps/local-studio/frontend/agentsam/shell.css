@@ -94,8 +94,11 @@
 .agentsam-plugin-previews button { display: flex; align-items: center; gap: 5px; min-height: 28px; color: var(--nav-muted); font-size: 12px; }
 .mini-agentsam-panel .agentsam-plugin-menu { position: static; margin-top: 8px; max-height: 200px; }
 .agentsam-shell .mini-agentsam-panel [data-agent-composer] { border: 0; border-radius: 12px; background: transparent; padding: 0; }
-.agentsam-dock { flex-shrink: 0; padding-top: 12px; }
-.agentsam-conversation > [data-agent-thread] { font-size: 16px; line-height: 1.65; }
+.agentsam-active-thread { position: relative; min-height: 0; flex: 1; overflow: hidden; }
+.agentsam-thread-slot { position: absolute; inset: 0; min-height: 0; overflow: hidden; }
+.agentsam-thread-slot > [data-agent-thread] { height: 100%; min-height: 0; overflow-y: auto; padding-bottom: 132px; scroll-padding-bottom: 132px; font-size: 16px; line-height: 1.65; }
+.agentsam-dock { position: absolute; z-index: 20; right: 0; bottom: 0; left: 0; padding-top: 28px; background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--nav-canvas) 92%, transparent) 28%, var(--nav-canvas) 54%); pointer-events: none; }
+.agentsam-dock > * { pointer-events: auto; }
 .agentsam-side-panel { min-width: 280px; max-width: 70%; border-left: 1px solid var(--nav-border); overflow: auto; }
 .agentsam-workspace > .studio-separator { width: 5px; flex-shrink: 0; background: transparent; cursor: col-resize; }
 .agentsam-workspace > .studio-separator:hover, .agentsam-workspace > .studio-separator:focus-visible { background: var(--nav-accent); }
