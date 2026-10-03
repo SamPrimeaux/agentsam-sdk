@@ -484,7 +484,24 @@ export const useWorkStore = create<WorkState>()(
           };
 
           const visualOperationId = "agent-turn:" + assistantId;
-          localStudioRuntimeVisuals.startAgentTurn(visualOperationId, "Resuming queued work");
+          const queuedTaskSummary = item.text.replace(/\s+/g, " ").trim().slice(0, 180);
+          const queuedCoworker = item.targetKind === "side";
+          localStudioRuntimeVisuals.startAgentTurn(
+            visualOperationId,
+            queuedCoworker ? "Resuming co-worker task" : "Resuming queued work",
+            queuedTaskSummary || undefined,
+            item.targetId,
+          );
+          localStudioRuntimeVisuals.progressPoints(
+            visualOperationId,
+            "thinking",
+            queuedCoworker ? "Resuming co-worker task" : "Resuming queued work",
+            1,
+            4,
+            queuedTaskSummary || undefined,
+            "phase-points",
+            item.targetId,
+          );
           try {
             let assembled = "";
             let sawDelta = false;
@@ -497,24 +514,71 @@ export const useWorkStore = create<WorkState>()(
               parentExcerpt,
               workspace: workspacePayload(project),
               signal: controller.signal,
+              operationId: visualOperationId,
+              onActivity: (event) => localStudioRuntimeVisuals.reportRuntimeEvent(event, item.targetId),
               onDelta: (chunk) => {
                 if (!sawDelta) {
                   sawDelta = true;
-                  localStudioRuntimeVisuals.markAgentTurnStreaming(visualOperationId);
+                  localStudioRuntimeVisuals.markAgentTurnStreaming(
+                    visualOperationId,
+                    queuedCoworker ? "Co-worker drafting response" : "Writing response",
+                    queuedTaskSummary || undefined,
+                    item.targetId,
+                  );
+                  localStudioRuntimeVisuals.progressPoints(
+                    visualOperationId,
+                    "thinking",
+                    queuedCoworker ? "Co-worker drafting response" : "Writing response",
+                    2,
+                    4,
+                    queuedTaskSummary || undefined,
+                    "phase-points",
+                    item.targetId,
+                  );
                 }
                 assembled += chunk;
                 write(assembled, false);
               },
             });
             write(assembled, true);
-            localStudioRuntimeVisuals.completeAgentTurn(visualOperationId);
+            localStudioRuntimeVisuals.progressPoints(
+              visualOperationId,
+              "verification",
+              queuedCoworker ? "Preparing co-worker handoff" : "Finalizing response",
+              3,
+              4,
+              queuedCoworker ? parentTitle || project.name : queuedTaskSummary || undefined,
+              "phase-points",
+              item.targetId,
+            );
+            if (queuedCoworker) {
+              const tab = get().sideTabs.find((t) => t.id === item.targetId);
+              if (tab?.reportToLead && assembled.trim()) {
+                const brief =
+                  assembled.trim().length > 1200
+                    ? `${assembled.trim().slice(0, 1200).trim()}…`
+                    : assembled.trim();
+                get().reportCoworkerToLead(item.targetId, brief);
+              }
+            }
+            localStudioRuntimeVisuals.progressPoints(
+              visualOperationId,
+              "verification",
+              queuedCoworker ? "Co-worker handoff ready" : "Response ready",
+              4,
+              4,
+              queuedCoworker ? parentTitle || project.name : undefined,
+              "phase-points",
+              item.targetId,
+            );
+            localStudioRuntimeVisuals.completeAgentTurn(visualOperationId, item.targetId);
           } catch (err) {
             if ((err as Error).name === "AbortError") {
-              localStudioRuntimeVisuals.completeAgentTurn(visualOperationId);
+              localStudioRuntimeVisuals.completeAgentTurn(visualOperationId, item.targetId);
               continue;
             }
             const message = err instanceof Error ? err.message : "The studio model could not reply.";
-            localStudioRuntimeVisuals.failAgentTurn(visualOperationId, message);
+            localStudioRuntimeVisuals.failAgentTurn(visualOperationId, message, item.targetId);
             write(message, true);
           } finally {
             aborts.delete(item.targetId);
@@ -532,7 +596,9 @@ export const useWorkStore = create<WorkState>()(
         set((s) => ({
           trails: s.trails.map((t) => (t.id === id ? { ...t, pinned: !t.pinned } : t)),
         })),
-      deleteTrail: (id) =>
+      deleteTrail: (id) => {
+        get().stop(id);
+        localStudioRuntimeVisuals.releaseSurface(id);
         set((s) => {
           const trails = s.trails.filter((t) => t.id !== id);
           const fallback = trails[0] ?? newTrail({ projectId: s.activeProjectId });
@@ -541,7 +607,8 @@ export const useWorkStore = create<WorkState>()(
             trails: nextTrails,
             activeTrailId: s.activeTrailId === id ? nextTrails[0]!.id : s.activeTrailId,
           };
-        }),
+        });
+      },
       setActiveProject: (id) => {
         const project = get().projects.find((p) => p.id === id);
         if (!project) return;
@@ -761,6 +828,7 @@ export const useWorkStore = create<WorkState>()(
           };
         });
         get().stop(id);
+        localStudioRuntimeVisuals.releaseSurface(id);
       },
       setActiveSideTab: (id) => set({ activeSideTabId: id, sideOpen: true }),
       setTabUrl: (id, url) =>
@@ -1065,27 +1133,48 @@ export const useWorkStore = create<WorkState>()(
         let completed = false;
         const visualOperationId = "agent-turn:" + assistantId;
         const taskSummary = draft.replace(/\s+/g, " ").trim().slice(0, 180);
+        const isCoworker = targetKind === "side";
+        const initialLabel = isCoworker ? "Briefing co-worker" : "Understanding your request";
+        const planningLabel = isCoworker ? "Co-worker planning the task" : "Planning the next step";
+        const responseLabel = isCoworker ? "Co-worker drafting response" : "Writing response";
         localStudioRuntimeVisuals.startAgentTurn(
           visualOperationId,
-          "Understanding your request",
+          initialLabel,
           taskSummary || undefined,
+          targetId,
         );
-        const visualWorkspace = workspacePayload(project);
-        if (visualWorkspace.length > 0) {
-          localStudioRuntimeVisuals.activity(
-            visualOperationId,
-            "context_loading",
-            "Loading workspace context",
-            null,
-            project.name,
-          );
-        }
-        localStudioRuntimeVisuals.activity(
+        localStudioRuntimeVisuals.progressPoints(
           visualOperationId,
           "thinking",
-          "Planning the next step",
-          null,
+          initialLabel,
+          0,
+          5,
           taskSummary || undefined,
+          "phase-points",
+          targetId,
+        );
+        const visualWorkspace = workspacePayload(project);
+        localStudioRuntimeVisuals.progressPoints(
+          visualOperationId,
+          visualWorkspace.length > 0 ? "context_loading" : "thinking",
+          visualWorkspace.length > 0
+            ? (isCoworker ? "Co-worker loading shared context" : "Loading workspace context")
+            : "Preparing request context",
+          1,
+          5,
+          visualWorkspace.length > 0 ? project.name : taskSummary || undefined,
+          "phase-points",
+          targetId,
+        );
+        localStudioRuntimeVisuals.progressPoints(
+          visualOperationId,
+          "thinking",
+          planningLabel,
+          2,
+          5,
+          taskSummary || undefined,
+          "phase-points",
+          targetId,
         );
         try {
           let assembled = "";
@@ -1099,13 +1188,26 @@ export const useWorkStore = create<WorkState>()(
             parentExcerpt,
             workspace: visualWorkspace,
             signal: controller.signal,
+            operationId: visualOperationId,
+            onActivity: (event) => localStudioRuntimeVisuals.reportRuntimeEvent(event, targetId),
             onDelta: (chunk) => {
               if (!sawDelta) {
                 sawDelta = true;
                 localStudioRuntimeVisuals.markAgentTurnStreaming(
                   visualOperationId,
-                  "Writing response",
+                  responseLabel,
                   taskSummary || undefined,
+                  targetId,
+                );
+                localStudioRuntimeVisuals.progressPoints(
+                  visualOperationId,
+                  "thinking",
+                  responseLabel,
+                  3,
+                  5,
+                  taskSummary || undefined,
+                  "phase-points",
+                  targetId,
                 );
               }
               assembled += chunk;
@@ -1113,8 +1215,16 @@ export const useWorkStore = create<WorkState>()(
             },
           });
           write(assembled, true);
-          completed = true;
-          localStudioRuntimeVisuals.completeAgentTurn(visualOperationId);
+          localStudioRuntimeVisuals.progressPoints(
+            visualOperationId,
+            targetKind === "side" ? "verification" : "verification",
+            targetKind === "side" ? "Preparing co-worker handoff" : "Finalizing response",
+            4,
+            5,
+            targetKind === "side" ? parentTitle || project.name : taskSummary || undefined,
+            "phase-points",
+            targetId,
+          );
           if (targetKind === "side") {
             const tab = get().sideTabs.find((t) => t.id === targetId);
             if (tab?.reportToLead && assembled.trim()) {
@@ -1125,10 +1235,22 @@ export const useWorkStore = create<WorkState>()(
               get().reportCoworkerToLead(targetId, brief);
             }
           }
+          localStudioRuntimeVisuals.progressPoints(
+            visualOperationId,
+            "verification",
+            targetKind === "side" ? "Co-worker handoff ready" : "Response ready",
+            5,
+            5,
+            targetKind === "side" ? parentTitle || project.name : undefined,
+            "phase-points",
+            targetId,
+          );
+          completed = true;
+          localStudioRuntimeVisuals.completeAgentTurn(visualOperationId, targetId);
         } catch (err) {
           if ((err as Error).name !== "AbortError") {
             const message = err instanceof Error ? err.message : "The studio model could not reply.";
-            localStudioRuntimeVisuals.failAgentTurn(visualOperationId, message);
+            localStudioRuntimeVisuals.failAgentTurn(visualOperationId, message, targetId);
             write(message, true);
             set((s) => ({
               pausedQueueTargets: s.pausedQueueTargets.includes(targetId)
@@ -1136,7 +1258,7 @@ export const useWorkStore = create<WorkState>()(
                 : [...s.pausedQueueTargets, targetId],
             }));
           } else {
-            localStudioRuntimeVisuals.completeAgentTurn(visualOperationId);
+            localStudioRuntimeVisuals.completeAgentTurn(visualOperationId, targetId);
           }
         } finally {
           aborts.delete(targetId);

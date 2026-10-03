@@ -117,4 +117,22 @@ describe("controller lifecycle", () => {
     c.activity({ operationId: "a", semantic: "build", progress: 0.4 });
     expect(c.getScene().progress).toBeCloseTo(0.4);
   });
+
+  it("projects metric points into deterministic progress", () => {
+    const nowRef = { t: 1000 };
+    const c = makeController(nowRef);
+    c.start({
+      operationId: "run",
+      semantic: "thinking",
+      label: "Planning",
+      metricPoints: { completed: 2, total: 8, basis: "plan-points" },
+    });
+    const scene = c.getScene();
+    expect(scene.metricPoints).toEqual({
+      completed: 2,
+      total: 8,
+      basis: "plan-points",
+    });
+    expect(scene.progress).toBe(0.25);
+  });
 });

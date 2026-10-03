@@ -26,7 +26,7 @@ await build({
   jsx: 'automatic',
   loader: { '.css': 'copy' },
   assetNames: '[dir]/[name]',
-  external: ['react', 'react/*', 'react-dom', 'react-dom/*', '@inneranimalmedia/agentsam-contracts'],
+  external: ['react', 'react/*', 'react-dom', 'react-dom/*', '@inneranimalmedia/agentsam-contracts', '@inneranimalmedia/agentsam-loading-scene', '@inneranimalmedia/agentsam-loading-scene/*'],
 });
 mkdirSync(`${cwd}/dist/agent`, { recursive: true });
 for (const file of ['mini-agentsam.css', 'contextual-composer.css', 'tool-permission.css']) {

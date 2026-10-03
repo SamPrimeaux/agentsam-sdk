@@ -45,7 +45,8 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-contracts": "2.6.10"
+    "@inneranimalmedia/agentsam-contracts": "2.6.10",
+    "@inneranimalmedia/agentsam-loading-scene": "2.6.10"
   },
   "peerDependencies": {
     "react": ">=18",

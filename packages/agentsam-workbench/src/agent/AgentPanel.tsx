@@ -3,6 +3,7 @@ import type { AgentMessage, ModelOption } from '@inneranimalmedia/agentsam-contr
 import { AgentThread } from './Thread';
 import { AgentComposer } from './Composer';
 import { AgentModelSelect } from './ModelSelect';
+import { AgentConversationSurface } from './AgentConversationSurface';
 
 export interface AgentPanelProps {
   messages: AgentMessage[];
@@ -24,17 +25,33 @@ export function AgentPanel(props: AgentPanelProps) {
   const modelControl = props.models?.length && props.selectedModelId && props.onModelChange
     ? <AgentModelSelect value={props.selectedModelId} models={props.models} onChange={props.onModelChange} />
     : null;
+  const thread = (
+    <AgentThread
+      messages={props.messages}
+      streaming={props.streaming}
+      renderMessage={props.renderMessage}
+      empty={props.empty}
+    />
+  );
+  const composer = (
+    <AgentComposer
+      value={props.draft}
+      onChange={props.onDraftChange}
+      onSend={props.onSend}
+      onCancel={props.onCancel}
+      streaming={props.streaming}
+      toolbarStart={modelControl}
+    />
+  );
+
   return (
     <section className={props.className} data-agent-panel="">
       {props.header}
-      <AgentThread messages={props.messages} streaming={props.streaming} renderMessage={props.renderMessage} empty={props.empty} />
-      <AgentComposer
-        value={props.draft}
-        onChange={props.onDraftChange}
-        onSend={props.onSend}
-        onCancel={props.onCancel}
-        streaming={props.streaming}
-        toolbarStart={modelControl}
+      <AgentConversationSurface
+        empty={props.messages.length === 0}
+        thread={thread}
+        composer={composer}
+        emptyState={props.empty}
       />
     </section>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode, type UIEvent } from 'react';
+import { useEffect, useRef, type CSSProperties, type ReactNode, type UIEvent } from 'react';
 import type { AgentMessage } from '@inneranimalmedia/agentsam-contracts';
 
 export interface AgentThreadProps {
@@ -8,6 +8,8 @@ export interface AgentThreadProps {
   empty?: ReactNode;
   scrollerClassName?: string;
   listClassName?: string;
+  scrollerStyle?: CSSProperties;
+  listStyle?: CSSProperties;
   stickThreshold?: number;
 }
 
@@ -18,6 +20,8 @@ export function AgentThread({
   empty = null,
   scrollerClassName,
   listClassName,
+  scrollerStyle,
+  listStyle,
   stickThreshold = 80,
 }: AgentThreadProps) {
   const scroller = useRef<HTMLDivElement>(null);
@@ -35,8 +39,19 @@ export function AgentThread({
   }
 
   return (
-    <div ref={scroller} className={scrollerClassName} data-agent-thread="" onScroll={onScroll}>
-      <div className={listClassName}>
+    <div
+      ref={scroller}
+      className={scrollerClassName}
+      data-agent-thread=""
+      onScroll={onScroll}
+      style={
+        scrollerStyle ??
+        (scrollerClassName
+          ? undefined
+          : { minHeight: 0, flex: 1, overflowY: 'auto' })
+      }
+    >
+      <div className={listClassName} style={listStyle}>
         {messages.length === 0
           ? empty
           : messages.map((message, index) =>

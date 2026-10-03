@@ -6,6 +6,7 @@ import type {
   OperationScope,
   SceneState,
   ScenePreset,
+  MetricPointProgress,
 } from "./types.js";
 
 export type SceneListener = (scene: SceneState) => void;
@@ -37,6 +38,9 @@ export class LoadingSceneController {
     label?: string;
     semantic?: LoadingSceneSemantic;
     parentOperationId?: string;
+    detail?: string;
+    progress?: number | null;
+    metricPoints?: MetricPointProgress;
   }): void {
     this.handle({
       operationId: input.operationId,
@@ -45,6 +49,9 @@ export class LoadingSceneController {
       semantic: input.semantic ?? "boot",
       phase: "started",
       label: input.label,
+      detail: input.detail,
+      progress: input.progress,
+      metricPoints: input.metricPoints,
       timestamp: this.now(),
     });
   }
@@ -56,6 +63,7 @@ export class LoadingSceneController {
     label?: string;
     detail?: string;
     progress?: number | null;
+    metricPoints?: MetricPointProgress;
   }): void {
     this.handle({
       ...input,

@@ -9,4 +9,4 @@ export { HYPERSPACE_STUDIES, DEFAULT_SEMANTIC_STUDY, studyForSemantic, studyForS
 export { createWorld, stepWorld, type World } from "./renderer/world.js";
 export { makeViewport, alongRay, type Viewport } from "./renderer/projection.js";
 export { computationalHyperspace } from "./presets/computational-hyperspace.js";
-export { adaptAgentSamEvent, mapRuntimeEventType, type RawRuntimeEvent } from "./adapters/agentsam.js";
+export { adaptAgentSamActivity, adaptAgentSamEvent, mapRuntimeEventType, type AgentSamActivityEvent, type RawRuntimeEvent } from "./adapters/agentsam.js";

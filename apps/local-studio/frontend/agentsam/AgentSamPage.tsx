@@ -7,6 +7,8 @@ import { SideStage } from '@/components/workbench/side-stage';
 import { SidePanelToggle } from './AgentSamShell';
 import { SplitHandle } from '@/components/shell/split-handle';
 import { AnnotationToggle } from './AnnotationHelper';
+import { AgentConversationSurface, AgentRuntimeField } from '@inneranimalmedia/agentsam-workbench/agent';
+import { localStudioRuntimeVisuals } from '@/lib/runtime-visuals/local-studio-runtime';
 
 export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const { data, isMobile } = useNav();
@@ -22,7 +24,22 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     <Nav.Topbar startup={empty} rightSlot={<><AnnotationToggle /><SidePanelToggle /></>} />
     <div className="agentsam-workspace">
       <section className="agentsam-conversation" aria-label="Conversation" inert={isMobile && state.sideOpen}>
-        {empty ? <div className="agentsam-welcome"><h1>{data.mode === 'work' ? 'What should we work on?' : 'Where should we begin?'}</h1><Composer targetId={trail.id} targetKind="trail" placeholder={data.mode === 'work' ? 'Work on anything…' : 'Ask anything…'} /></div> : <><MessageList messages={trail.messages} trailId={trail.id} streaming={streaming} /><div className="agentsam-dock"><Composer targetId={trail.id} targetKind="trail" placeholder={data.mode === 'work' ? 'Work on anything…' : 'Ask anything…'} /></div></>}
+        <AgentConversationSurface
+          empty={empty}
+          runtime={
+            <AgentRuntimeField
+              controller={localStudioRuntimeVisuals.controllerFor(trail.id)}
+              blocking={false}
+              passiveOpacity={0.48}
+              style={{ zIndex: 1 }}
+              narrationStyle={{ bottom: 96 }}
+            />
+          }
+          thread={<MessageList messages={trail.messages} trailId={trail.id} streaming={streaming} />}
+          emptyState={<div className="agentsam-welcome-heading"><h1>{data.mode === 'work' ? 'What should we work on?' : 'Where should we begin?'}</h1></div>}
+          composer={<Composer targetId={trail.id} targetKind="trail" placeholder={data.mode === 'work' ? 'Work on anything…' : 'Ask anything…'} />}
+          composerClassName="agentsam-dock"
+        />
       </section>
       {state.sideOpen ? <><SplitHandle label="Resize Side Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(280, Math.min(900, width - delta)))} onDoubleClick={() => setPanelWidth(480)} /><aside className="agentsam-side-panel" style={{ width: panelWidth }} aria-label="Side Panel"><SideStage /></aside></> : null}
     </div>

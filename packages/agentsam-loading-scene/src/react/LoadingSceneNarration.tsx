@@ -41,6 +41,9 @@ export function LoadingSceneNarration({
   const metadata: string[] = [];
 
   if (scene.secondary) metadata.push(scene.secondary);
+  if (scene.metricPoints && scene.metricPoints.total > 0) {
+    metadata.push(`${scene.metricPoints.completed} / ${scene.metricPoints.total} points`);
+  }
   if (typeof scene.progress === "number") {
     metadata.push(`${Math.round(scene.progress * 100)}%`);
   }

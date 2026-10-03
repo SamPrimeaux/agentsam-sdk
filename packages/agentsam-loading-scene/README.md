@@ -53,6 +53,26 @@ const controller = new LoadingSceneController(computationalHyperspace);
 
 For galleries, fixtures, and targeted previews, pin one study with `study="runway"`, `signal`, `layers`, `quantum`, `merkle`, or `horizon`.
 
+
+
+## Canonical AgentSam activity
+
+The package directly accepts the SDK runtime contract `agentsam.activity.v1`
+through `adaptAgentSamActivity()`. `progress.current / progress.total` is
+projected as deterministic metric points and can drive both the progress
+indicator and scene narration.
+
+```ts
+const sceneEvent = adaptAgentSamActivity(activityEvent);
+controller.handle(sceneEvent);
+```
+
+The adapter maps observe/context/plan/execute/verify/compact/waiting/complete
+phases and tool/artifact/file/approval/verification events to the same semantic
+scene vocabulary. This lets CLI, web, desktop, lead chat and co-worker surfaces
+consume one run activity stream instead of inventing product-specific progress.
+
+
 ## Performance contract
 
 - one persistent canvas

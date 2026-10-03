@@ -22,3 +22,29 @@ values are withheld. Cross-origin and sandboxed iframe contents are not inspecte
 their host frame may be selected as a contextual resource. Mark semantic ancestors
 with `data-agentsam-resource` and excluded controls with `data-annotation-control`.
 Local Studio stages the annotation in its active conversation draft for review.
+
+
+## Conversation and runtime surfaces
+
+`AgentConversationSurface` is the portable thread + persistent-composer ownership
+boundary. Product apps provide state and actions; the surface guarantees that
+moving between an empty conversation and an active thread does not replace the
+composer DOM ownership.
+
+`AgentRuntimeField` projects `@inneranimalmedia/agentsam-loading-scene` into the
+same surface. A lead thread and each co-worker may bind separate controllers, so
+parallel work can show independent semantic scenes and task narration without
+duplicating renderer code in product apps.
+
+```tsx
+<AgentConversationSurface
+  empty={messages.length === 0}
+  runtime={<AgentRuntimeField controller={runtimeController} />}
+  thread={<AgentThread messages={messages} />}
+  composer={<AgentComposer {...composerProps} />}
+/>
+```
+
+The workbench owns presentation mechanics. The host still owns model/provider
+selection, tool execution, persistence, permissions, runtime events, queueing and
+cancel semantics.

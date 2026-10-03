@@ -21,6 +21,12 @@ export type OperationScope = "workspace" | "site" | "page" | "asset" | "build" |
 
 export type OperationPhase = "started" | "progress" | "completed" | "failed";
 
+export interface MetricPointProgress {
+  completed: number;
+  total: number;
+  basis?: "plan-points" | "phase-points" | "steps" | "provider" | "unknown";
+}
+
 export interface LoadingSceneEvent {
   operationId?: string;
   parentOperationId?: string;
@@ -32,6 +38,8 @@ export interface LoadingSceneEvent {
   detail?: string;
   /** Real measurable progress only. Never fabricated. */
   progress?: number | null;
+  /** Optional weighted metric-point projection for the current run/plan. */
+  metricPoints?: MetricPointProgress;
   activeCount?: number;
   severity?: "normal" | "warning" | "error";
   timestamp: number;
@@ -67,6 +75,8 @@ export interface SceneState {
   activeCount: number;
   /** Known progress 0..1 or null when unknowable. */
   progress: number | null;
+  /** Weighted metric-point projection when the runtime can provide one. */
+  metricPoints?: MetricPointProgress;
   dominantSemantic: LoadingSceneSemantic;
 }
 

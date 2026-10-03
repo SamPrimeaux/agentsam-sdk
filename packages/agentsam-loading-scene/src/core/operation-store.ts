@@ -2,6 +2,7 @@ import type {
   LoadingSceneEvent,
   LoadingSceneSemantic,
   OperationScope,
+  MetricPointProgress,
 } from "./types.js";
 
 export interface OperationRecord {
@@ -32,6 +33,7 @@ export interface StoreSnapshot {
   latestLabel?: string;
   latestDetail?: string;
   progress: number | null;
+  metricPoints?: MetricPointProgress;
   anyFailed: boolean;
   allSettled: boolean;
   waitingOnly: boolean;
@@ -48,8 +50,12 @@ const PULSE_WINDOW_MS = 1500;
 export class OperationStore {
   private ops = new Map<string, OperationRecord>();
   private pulses: Pulse[] = [];
+  private latestMetricPoints?: MetricPointProgress;
 
   handle(event: LoadingSceneEvent): void {
+    if (event.metricPoints && event.metricPoints.total > 0) {
+      this.latestMetricPoints = { ...event.metricPoints };
+    }
     if (!event.operationId) {
       this.pulses.push({ semantic: event.semantic, at: event.timestamp });
       if (this.pulses.length > 500) this.pulses.splice(0, this.pulses.length - 500);
@@ -111,6 +117,7 @@ export class OperationStore {
   reset(): void {
     this.ops.clear();
     this.pulses = [];
+    this.latestMetricPoints = undefined;
   }
 
   snapshot(now = Date.now()): StoreSnapshot {
@@ -157,7 +164,11 @@ export class OperationStore {
       weights: [...weightMap.entries()].map(([semantic, weight]) => ({ semantic, weight })),
       latestLabel: withLabel?.label ?? latest?.label,
       latestDetail: withLabel?.detail ?? latest?.detail,
-      progress,
+      progress:
+        this.latestMetricPoints && this.latestMetricPoints.total > 0
+          ? Math.max(0, Math.min(1, this.latestMetricPoints.completed / this.latestMetricPoints.total))
+          : progress,
+      metricPoints: this.latestMetricPoints,
       anyFailed: all.some((o) => o.phase === "failed"),
       allSettled: all.length > 0 && active.length === 0,
       waitingOnly,

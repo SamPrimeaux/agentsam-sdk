@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AgentConversationSurface, AgentRuntimeField } from "@inneranimalmedia/agentsam-workbench/agent";
 import { Box, Database, FileCode, Globe, Layers, Plus, SquareTerminal, Target, Upload, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { useActiveSideTab, useWorkStore } from "@/lib/work/store";
 import { StudioMark } from "@/components/mark";
 import { consumePendingDatabaseAssistantContext } from "@/lib/database/assistantContext";
+import { localStudioRuntimeVisuals } from "@/lib/runtime-visuals/local-studio-runtime";
 
 function TabIcon({ kind }: { kind: string }) {
   if (kind === "chat") return <Users className="size-3.5" />;
@@ -286,25 +288,39 @@ function CoworkerChat({ tabId }: { tabId: string }) {
           ) : null}
         </div>
       ) : null}
-      {empty ? (
-        <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-          <StudioMark className="mb-3 size-10" />
-          <h2 className="text-base font-medium">
-            {databaseContext ? "Database co-worker" : "Co-worker"}
-          </h2>
-          <p className="mt-1 max-w-sm text-sm text-muted-foreground text-pretty">
-            {databaseContext
-              ? "Selected database context is loaded below. Brief AgentSam to explain schema, draft SQL, or reason about the current error — writes still require confirmation in the editor."
-              : "Spin up a specialist beside the lead agent — research, draft files, review — without derailing the main chat. Brief handoffs land back in the lead thread."}
-          </p>
-        </div>
-      ) : (
-        <MessageList messages={tab.messages} trailId={parent?.id} streaming={streaming} />
-      )}
-      <Composer
-        targetId={tab.id}
-        targetKind="side"
-        placeholder={databaseContext ? "Ask about this database…" : "Brief the co-worker"}
+      <AgentConversationSurface
+        empty={empty}
+        runtime={
+          <AgentRuntimeField
+            controller={localStudioRuntimeVisuals.controllerFor(tab.id)}
+            blocking={false}
+            passiveOpacity={0.56}
+            style={{ zIndex: 1 }}
+            narrationStyle={{ bottom: 92, left: 16 }}
+          />
+        }
+        thread={<MessageList messages={tab.messages} trailId={parent?.id} streaming={streaming} />}
+        emptyState={
+          <div className="flex flex-col items-center justify-center px-6 text-center">
+            <StudioMark className="mb-3 size-10" />
+            <h2 className="text-base font-medium">
+              {databaseContext ? "Database co-worker" : "Co-worker"}
+            </h2>
+            <p className="mt-1 max-w-sm text-sm text-muted-foreground text-pretty">
+              {databaseContext
+                ? "Selected database context is loaded below. Brief AgentSam to explain schema, draft SQL, or reason about the current error — writes still require confirmation in the editor."
+                : "Spin up a specialist beside the lead agent — research, draft files, review — without derailing the main chat. Brief handoffs land back in the lead thread."}
+            </p>
+          </div>
+        }
+        composer={
+          <Composer
+            targetId={tab.id}
+            targetKind="side"
+            placeholder={databaseContext ? "Ask about this database…" : "Brief the co-worker"}
+          />
+        }
+        composerClassName="px-3 pb-3 pt-3"
       />
     </div>
   );

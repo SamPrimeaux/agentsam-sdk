@@ -1,4 +1,5 @@
 import type { AgentMessage as ChatMessage } from "@inneranimalmedia/agentsam-contracts";
+import type { RawRuntimeEvent } from "@inneranimalmedia/agentsam-loading-scene";
 import { identitySessionExists, invokeLocalProvider, invokeStudioService, isPackagedDesktop } from "@/lib/desktop/tauri";
 
 export async function streamChat(opts: {
@@ -10,11 +11,23 @@ export async function streamChat(opts: {
   parentExcerpt?: string | null;
   workspace?: { path: string; content: string }[];
   signal: AbortSignal;
+  operationId?: string;
+  onActivity?: (event: RawRuntimeEvent) => void;
   onDelta: (chunk: string) => void;
 }): Promise<string> {
   if (!opts.provider || !opts.model_id) {
     throw new Error("Select a provider and model before chatting.");
   }
+
+  const emitActivity = (type: string, label: string, detail?: string) => {
+    opts.onActivity?.({
+      type,
+      operationId: opts.operationId,
+      label,
+      detail,
+      timestamp: Date.now(),
+    });
+  };
 
   const requestBody = {
     messages: opts.messages.map((m) => ({ role: m.role, content: m.content })),
@@ -34,6 +47,11 @@ export async function streamChat(opts: {
     // additive fallback for credentials or models that only exist remotely.
     let localError = "";
     try {
+      emitActivity(
+        "provider.pending.local",
+        opts.mode === "side" ? "Co-worker calling local model" : "Calling local model",
+        opts.model_id,
+      );
       const local = await invokeLocalProvider<{ ok?: boolean; error?: string; text?: string }>({
         operation: "chat",
         provider: opts.provider,
@@ -42,6 +60,11 @@ export async function streamChat(opts: {
       });
       if (local.ok === true) {
         if (opts.signal.aborted) throw new DOMException("Aborted", "AbortError");
+        emitActivity(
+          "model.response.local",
+          opts.mode === "side" ? "Co-worker received model response" : "Model response received",
+          opts.model_id,
+        );
         const text = String(local.text || "");
         if (text) opts.onDelta(text);
         return text;
@@ -52,11 +75,21 @@ export async function streamChat(opts: {
     }
 
     if (await identitySessionExists().catch(() => false)) {
+      emitActivity(
+        "provider.pending.account",
+        opts.mode === "side" ? "Co-worker using account model service" : "Using account model service",
+        opts.model_id,
+      );
       const bridged = await invokeStudioService({
         operation: "chat",
         body: requestBody,
       });
       if (bridged.ok) {
+        emitActivity(
+          "model.response.account",
+          opts.mode === "side" ? "Co-worker received model response" : "Model response received",
+          opts.model_id,
+        );
         if (bridged.body) opts.onDelta(bridged.body);
         return bridged.body;
       }
@@ -73,6 +106,11 @@ export async function streamChat(opts: {
     throw new Error(localError || "Local provider chat failed");
   }
 
+  emitActivity(
+    "provider.pending.web",
+    opts.mode === "side" ? "Co-worker calling model service" : "Calling model service",
+    opts.model_id,
+  );
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -101,11 +139,20 @@ export async function streamChat(opts: {
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let full = "";
+  let reportedResponse = false;
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
     const chunk = decoder.decode(value, { stream: true });
     if (!chunk) continue;
+    if (!reportedResponse) {
+      reportedResponse = true;
+      emitActivity(
+        "model.response.web",
+        opts.mode === "side" ? "Co-worker receiving model output" : "Receiving model output",
+        opts.model_id,
+      );
+    }
     full += chunk;
     opts.onDelta(chunk);
   }

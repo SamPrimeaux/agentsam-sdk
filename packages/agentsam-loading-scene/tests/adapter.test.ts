@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adaptAgentSamEvent, mapRuntimeEventType } from "../src/adapters/agentsam.js";
+import { adaptAgentSamActivity, adaptAgentSamEvent, mapRuntimeEventType } from "../src/adapters/agentsam.js";
 
 describe("agentsam adapter", () => {
   it("maps runtime event types to semantics", () => {
@@ -34,5 +34,55 @@ describe("agentsam adapter", () => {
     const adapted = adaptAgentSamEvent({ type: "deploy.failed", operationId: "op1" });
     expect(adapted.phase).toBe("failed");
     expect(adapted.severity).toBe("error");
+  });
+});
+
+
+describe("agentsam.activity.v1 adapter", () => {
+  it("canonical activity progress becomes plan metric points", () => {
+    const event = adaptAgentSamActivity({
+      schema: "agentsam.activity.v1",
+      run_id: "run-1",
+      step_id: "step-build",
+      phase: "execute",
+      event: "step.progress",
+      label: "Building preview",
+      detail: "Rendering the selected application surface",
+      progress: { current: 7, total: 10 },
+      timestamp: "2026-10-03T06:00:00.000Z",
+    });
+
+    expect(event.semantic).toBe("tool_execution");
+    expect(event.metricPoints).toEqual({
+      completed: 7,
+      total: 10,
+      basis: "plan-points",
+    });
+    expect(event.progress).toBe(0.7);
+    expect(event.operationId).toBe("step-build");
+    expect(event.parentOperationId).toBe("run-1");
+  });
+
+  it("activity kinds route to task-appropriate semantic scenes", () => {
+    expect(adaptAgentSamActivity({
+      schema: "agentsam.activity.v1",
+      run_id: "r",
+      phase: "execute",
+      event: "artifact.created",
+    }).semantic).toBe("asset_generation");
+
+    expect(adaptAgentSamActivity({
+      schema: "agentsam.activity.v1",
+      run_id: "r",
+      phase: "waiting",
+      event: "approval.required",
+    }).semantic).toBe("waiting_external");
+
+    expect(adaptAgentSamActivity({
+      schema: "agentsam.activity.v1",
+      run_id: "r",
+      phase: "verify",
+      event: "run.failed",
+    }).semantic).toBe("error");
   });
 });

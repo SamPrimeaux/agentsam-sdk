@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { AgentThread } from "@inneranimalmedia/agentsam-workbench/agent";
+import { AgentConversationSurface, AgentRuntimeField, AgentThread } from "@inneranimalmedia/agentsam-workbench/agent";
 import { MessageMarkdown } from "@/components/workbench/markdown";
 import { Composer } from "@/components/workbench/composer";
 import { StudioMark } from "@/components/mark";
 import { formatElapsed } from "@/lib/utils";
+import { localStudioRuntimeVisuals } from "@/lib/runtime-visuals/local-studio-runtime";
 import { useWorkStore, useActiveTrail } from "@/lib/work/store";
 import type { ChatMessage } from "@inneranimalmedia/agentsam-local-shared";
 import { Button } from "@/components/ui/button";
@@ -93,29 +94,40 @@ export function TrailThread() {
   const streaming = useWorkStore((s) => s.streamingIds.includes(trail.id));
   const empty = trail.messages.length === 0;
 
+  const starterStatus =
+    trail.id === "trail-studio" && trail.messages.length === 1 ? (
+      <div className="mx-auto mb-2 flex w-full max-w-3xl flex-wrap gap-2 px-4">
+        {STARTERS.map((prompt) => (
+          <Button
+            key={prompt}
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-auto max-w-full rounded-full px-3 py-2 text-left text-xs font-normal text-muted-foreground"
+            onClick={() => void send(trail.id, "trail", prompt)}
+          >
+            {prompt}
+          </Button>
+        ))}
+      </div>
+    ) : null;
+
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      {empty ? <EmptyTrail onPrompt={(text) => void send(trail.id, "trail", text)} /> : (
-        <MessageList messages={trail.messages} trailId={trail.id} streaming={streaming} />
-      )}
-      {trail.id === "trail-studio" && trail.messages.length === 1 ? (
-        <div className="mx-auto mb-2 flex w-full max-w-3xl flex-wrap gap-2 px-4">
-          {STARTERS.map((prompt) => (
-            <Button
-              key={prompt}
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-auto max-w-full rounded-full px-3 py-2 text-left text-xs font-normal text-muted-foreground"
-              onClick={() => void send(trail.id, "trail", prompt)}
-            >
-              {prompt}
-            </Button>
-          ))}
-        </div>
-      ) : null}
-      <Composer targetId={trail.id} targetKind="trail" />
-    </div>
+    <AgentConversationSurface
+      empty={empty}
+      runtime={
+        <AgentRuntimeField
+          controller={localStudioRuntimeVisuals.controllerFor(trail.id)}
+          blocking={false}
+          passiveOpacity={0.48}
+          narrationStyle={{ bottom: 92, left: 16 }}
+        />
+      }
+      thread={<MessageList messages={trail.messages} trailId={trail.id} streaming={streaming} />}
+      emptyState={<EmptyTrail onPrompt={(text) => void send(trail.id, "trail", text)} />}
+      status={starterStatus}
+      composer={<Composer targetId={trail.id} targetKind="trail" />}
+    />
   );
 }
 

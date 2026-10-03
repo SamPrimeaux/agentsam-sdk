@@ -64,6 +64,7 @@ export function deriveScene(
     secondary,
     activeCount: snapshot.activeCount,
     progress: snapshot.progress,
+    metricPoints: snapshot.metricPoints,
     dominantSemantic: dominant,
   };
 }
