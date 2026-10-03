@@ -1,7 +1,9 @@
 import {
   LoadingSceneController,
+  adaptAgentSamEvent,
   computationalHyperspace,
   type LoadingSceneSemantic,
+  type RawRuntimeEvent,
 } from "@inneranimalmedia/agentsam-loading-scene";
 
 const WORKSPACE_BOOT_OPERATION = "local-studio:workspace-boot";
