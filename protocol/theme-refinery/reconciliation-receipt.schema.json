@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "agentsam.theme-refinery.reconciliation-receipt.v1",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/theme-refinery/reconciliation-receipt.schema.json",
   "title": "ThemeRefineryReconciliationReceipt",
   "type": "object",
   "required": ["schema_version", "batch_id", "captured_at", "products", "repositories", "relationships", "evidence", "artifacts", "promotions", "failures"],

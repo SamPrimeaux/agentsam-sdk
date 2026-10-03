@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "agentsam.database-connection.v1",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/database/connection.v1.schema.json",
   "title": "AgentSamDatabaseConnection",
   "type": "object",
   "required": ["id", "engine", "provider", "connection"],

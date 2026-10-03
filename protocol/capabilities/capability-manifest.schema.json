@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.inneranimalmedia.com/agentsam/capabilities/manifest.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/capabilities/capability-manifest.schema.json",
   "title": "AgentSam capability manifest",
   "type": "object",
   "additionalProperties": false,

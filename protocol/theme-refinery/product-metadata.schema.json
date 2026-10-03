@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "agentsam.theme-refinery.product-metadata.v1",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/theme-refinery/product-metadata.schema.json",
   "title": "agentsam_products.metadata for theme-refinery provenance",
   "type": "object",
   "additionalProperties": false,

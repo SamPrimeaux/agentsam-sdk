@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "agentsam.icon.v1",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/ui/icon.v1.schema.json",
   "title": "AgentSamSemanticIconKey",
   "description": "Stable semantic icon key used by AgentSam registries and manifests. Persist semantic meaning only; renderer-specific icon library identifiers, emoji, SVG paths, and asset URLs are not valid values. Vocabulary is additive-only: never rename a shipped key; alias on ingest if needed.",
   "type": "string",

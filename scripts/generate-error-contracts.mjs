@@ -91,7 +91,7 @@ function jsonSchema() {
   const nullableEnum = values => ({ anyOf: [{ enum: values }, { type: 'null' }] });
   const schema = {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
-    $id: 'https://agentsam.inneranimalmedia.com/protocol/errors/agentsam.error.v2.schema.json',
+    $id: 'https://schemas.inneranimalmedia.com/agentsam/errors/agentsam.error.v2.schema.json',
     title: 'AgentSam ErrorEnvelope v2',
     type: 'object',
     additionalProperties: false,

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "agentsam.local-engine.v1",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/local-engine/engine.v1.schema.json",
   "type": "object",
   "required": ["schema_version", "engine_id", "status", "capabilities"],
   "properties": {

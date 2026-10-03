@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "agentsam.interaction.v1",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/skills/agentsam.interaction.v1.schema.json",
   "title": "AgentSamInteraction",
   "description": "Host-agnostic interaction contract for CLI (Clack), Local Studio, Tauri, and other AgentSam surfaces.",
   "type": "object",

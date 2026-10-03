@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "agentsam.skill.v1",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/skills/agentsam.skill.v1.schema.json",
   "title": "AgentSamSkillManifest",
   "description": "Portable AgentSam skill definition. Identity is package/local id — not workspace, tenant, R2 key, or default model.",
   "type": "object",
