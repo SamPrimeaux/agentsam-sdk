@@ -34,5 +34,12 @@
       "pattern": "runtime.inneranimalmedia.com",
       "custom_domain": true
     }
-  ]
+  ],
+
+  "observability": {
+    "logs": {
+      "enabled": false,
+      "invocation_logs": true
+    }
+  }
 }
