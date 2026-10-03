@@ -4,7 +4,7 @@
   "description": "Tauri desktop shell for AgentSam-powered brand dashboards — manifest-driven, multi-brand installs.",
   "type": "module",
   "bin": {
-    "build-brand": "./scripts/build-brand.mjs"
+    "build-brand": "scripts/build-brand.mjs"
   },
   "scripts": {
     "dev": "npm --prefix ../../apps/local-studio run build:desktop && node scripts/build-brand.mjs local-studio && node scripts/sync-local-studio-dist.mjs && tauri dev",
