@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentsam.inneranimalmedia.com/protocol/apps/agentsam.host-install.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/apps/agentsam.host-install.v1.schema.json",
   "title": "agentsam.host-install.v1",
   "description": "Host/installation state for an AgentSam APP. Lives under .agentsam/app.json. References APP.id; must not redefine product identity (enforced by agentsam app validate).",
   "type": "object",

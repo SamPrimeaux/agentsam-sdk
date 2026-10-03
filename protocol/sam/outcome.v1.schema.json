@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentsam.inneranimalmedia.com/protocol/sam/outcome.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/sam/outcome.v1.schema.json",
   "title": "AgentSamDecisionOutcome",
   "type": "object",
   "required": ["schema", "success", "recorded_at"],

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentsam.inneranimalmedia.com/protocol/sam/operation.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/sam/operation.schema.json",
   "title": "SamOperation",
   "type": "object",
   "additionalProperties": false,

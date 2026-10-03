@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentsam.dev/protocol/hooks/agentsam.hook.output.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/hooks/agentsam.hook.output.v1.schema.json",
   "title": "AgentSam hook output",
   "type": "object",
   "properties": {

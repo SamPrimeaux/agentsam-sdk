@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentsam.inneranimalmedia.com/protocol/sam/answer.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/sam/answer.v1.schema.json",
   "title": "AgentSamDecisionAnswer",
   "type": "object",
   "required": ["type", "question_id", "value"],

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentsam.inneranimalmedia.com/protocol/runtime/workspace-fs.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/runtime/workspace-fs.v1.schema.json",
   "title": "AgentSamWorkspaceFilesystemContract",
   "description": "Stable browser/WorkspaceAdapter contract. TypeScript local-fs implements today; Go agentsamd may replace the host without changing these operations.",
   "type": "object",

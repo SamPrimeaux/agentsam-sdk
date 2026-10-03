@@ -1,5 +1,5 @@
 {
-  "$schema": "https://agentsam.dev/protocol/database/agentsam.schema-pack.v1.schema.json",
+  "$schema": "https://schemas.inneranimalmedia.com/agentsam/database/agentsam.schema-pack.v1.schema.json",
   "schema": "agentsam.schema-pack.v1",
   "id": "agentsam.hooks",
   "version": "1.0.0",

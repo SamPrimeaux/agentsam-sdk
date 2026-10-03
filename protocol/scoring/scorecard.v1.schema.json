@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentsam.inneranimalmedia.com/protocol/scoring/scorecard.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/scoring/scorecard.v1.schema.json",
   "title": "AgentSamScoreCard",
   "description": "Versioned derived score view. Raw evidence remains SSOT; ScoreCards are recomputable. Independent score families — never one grand similarity_score.",
   "type": "object",

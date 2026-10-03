@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentsam.inneranimalmedia.com/protocol/sam/calibration.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/sam/calibration.v1.schema.json",
   "title": "AgentSamDecisionCalibration",
   "type": "object",
   "properties": {

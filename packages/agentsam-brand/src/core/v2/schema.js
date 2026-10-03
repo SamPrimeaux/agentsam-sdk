@@ -6,7 +6,7 @@
  */
 
 export const BRAND_PACK_SCHEMA = 'agentsam.brand-pack.v2';
-export const BRAND_PACK_SCHEMA_URL = 'https://agentsam.dev/schemas/brand-pack/v2.json';
+export const BRAND_PACK_SCHEMA_URL = 'https://agentsam.inneranimalmedia.com/schemas/brand-pack/v2.json';
 export const BRAND_PACK_FILENAME = 'brand.pack.json';
 
 /** Empty brand graph — never seeds product identity. */

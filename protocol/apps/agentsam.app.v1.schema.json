@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentsam.inneranimalmedia.com/protocol/apps/agentsam.app.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/apps/agentsam.app.v1.schema.json",
   "title": "agentsam.app.v1",
   "description": "Installable AgentSam product APP. Canonical identity is id (kebab-case). Package, Worker, route, desktop, and service names live in other namespaces.",
   "type": "object",

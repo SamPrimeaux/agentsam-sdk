@@ -35,7 +35,7 @@ function tokensToCss(tokens = {}) {
 }
 
 function tokensToJson(tokens = {}) {
-  return `${JSON.stringify({ $schema: 'https://agentsam.dev/schemas/brand-tokens/v1.json', ...tokens }, null, 2)}\n`;
+  return `${JSON.stringify({ $schema: 'https://agentsam.inneranimalmedia.com/schemas/brand-tokens/v1.json', ...tokens }, null, 2)}\n`;
 }
 
 function buildStudioHtml(pack) {

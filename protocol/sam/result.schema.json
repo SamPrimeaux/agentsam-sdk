@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentsam.inneranimalmedia.com/protocol/sam/result.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/sam/result.schema.json",
   "title": "SamResult",
   "type": "object",
   "additionalProperties": false,

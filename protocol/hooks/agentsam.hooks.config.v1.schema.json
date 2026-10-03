@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentsam.dev/protocol/hooks/agentsam.hooks.config.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/hooks/agentsam.hooks.config.v1.schema.json",
   "title": "AgentSam portable hook configuration",
   "type": "object",
   "required": ["schema", "adapters", "hooks"],

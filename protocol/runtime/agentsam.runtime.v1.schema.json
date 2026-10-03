@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentsam.inneranimalmedia.com/protocol/runtime/agentsam.runtime.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/runtime/agentsam.runtime.v1.schema.json",
   "title": "agentsam.runtime.v1",
   "description": "AgentSam Runtime Registry + protocol. Physical D1 tables remain terminal_*; domain nouns are Runtime*. PTY is a capability. transport ≠ adapter.",
   "type": "object",

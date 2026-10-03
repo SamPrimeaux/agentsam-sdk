@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentsam.inneranimalmedia.com/protocol/sam/evaluation.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/sam/evaluation.v1.schema.json",
   "title": "AgentSamDecisionEvaluation",
   "type": "object",
   "required": ["schema", "ok", "answers", "state_hash"],

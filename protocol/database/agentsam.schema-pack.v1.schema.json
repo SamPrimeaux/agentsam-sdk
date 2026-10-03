@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentsam.dev/protocol/database/agentsam.schema-pack.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/database/agentsam.schema-pack.v1.schema.json",
   "title": "AgentSam schema pack family manifest",
   "description": "Generic reusable contract for product schema packs (Identity, CMS, CAD, …). Packs own their manifests; this schema is protocol authority.",
   "type": "object",

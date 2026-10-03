@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentsam.inneranimalmedia.com/protocol/assets/asset-record.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/assets/asset-record.v1.schema.json",
   "title": "AgentSamAssetRecord",
   "description": "Shared Asset Core — canonical ast_* identity. BrandPack and Content are peer domains over this record. Providers hold representations only.",
   "type": "object",

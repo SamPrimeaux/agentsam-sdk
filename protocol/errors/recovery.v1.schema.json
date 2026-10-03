@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentsam.inneranimalmedia.com/protocol/errors/recovery.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/errors/recovery.v1.schema.json",
   "title": "AgentSamRecoveryPlan",
   "type": "object",
   "required": ["schema", "disposition", "attempts", "notify", "reason"],

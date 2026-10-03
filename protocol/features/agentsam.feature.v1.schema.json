@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentsam.dev/protocol/features/agentsam.feature.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/features/agentsam.feature.v1.schema.json",
   "title": "AgentSam Feature Capsule",
   "description": "Vertical product capability that a host APP can activate. npm install is inert; AgentSam activates after plan + approval. Not a full APP \u2014 use agentsam.app.v1 / .agentsam/app.json for runnable compositions.",
   "type": "object",

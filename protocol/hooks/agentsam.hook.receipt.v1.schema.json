@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentsam.dev/protocol/hooks/agentsam.hook.receipt.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/hooks/agentsam.hook.receipt.v1.schema.json",
   "title": "AgentSam hook execution receipt",
   "type": "object",
   "required": ["schema", "hook_id", "hook", "status", "started_at", "completed_at", "duration_ms", "input_keys", "output_keys"],

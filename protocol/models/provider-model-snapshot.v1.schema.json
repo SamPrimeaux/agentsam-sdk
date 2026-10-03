@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentsam.dev/protocol/models/provider-model-snapshot.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/models/provider-model-snapshot.v1.schema.json",
   "title": "AgentSam credential-scoped provider model snapshot",
   "description": "Compact metadata_json payload for an agentsam_plugins AI installation. This is availability evidence, not the global model catalog and never contains credential material.",
   "type": "object",

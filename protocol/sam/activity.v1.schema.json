@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentsam.inneranimalmedia.com/protocol/sam/activity.v1.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/sam/activity.v1.schema.json",
   "title": "AgentSamActivityEvent",
   "type": "object",
   "required": ["schema", "run_id", "seq", "timestamp", "phase", "event", "label"],
