@@ -86,7 +86,7 @@ export function LocalStudioRuntimeField({ blocking }: { blocking: boolean }) {
         ref={canvasRef}
         aria-hidden="true"
         className="absolute inset-0 h-full w-full"
-        style={{ opacity: blocking ? 1 : 0.22 }}
+        style={{ opacity: blocking ? 1 : 0.34 }}
       />
       {active ? (
         <LoadingSceneStatus
