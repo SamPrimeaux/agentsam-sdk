@@ -35,6 +35,7 @@ import { loadConnectionsRegistry } from "./connections-registry.js";
 import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js";
 import { handleWorkRequest, isWorkRequest } from "./work-service.js";
 import { createLocalStudioPluginRuntime } from "./plugin-registry.js";
+import { emitAnalyticsFact } from "./analytics-service.js";
 import {
   mintStudioCredential,
   listStudioCredentials,
@@ -656,6 +657,7 @@ export default {
     const isDatabaseApi = isDatabaseRequest(url.pathname);
     const isWorkApi = isWorkRequest(url.pathname);
     const isPluginToolExecute = url.pathname === "/api/plugins/tools/execute";
+    const isAnalyticsSmoke = url.pathname === "/api/analytics/smoke";
 
     // Public marketing/docs: WEBSITE_ASSETS R2 SSOT (Worker ASSETS = bootstrap only)
     if (request.method === "GET" && isPublicSitePath(url.pathname)) {
@@ -746,6 +748,55 @@ export default {
     async function sessionUser() {
       if (sessionUserId === undefined) sessionUserId = await resolveSessionUserId(request, env);
       return sessionUserId;
+    }
+
+    if (isAnalyticsSmoke) {
+      if (request.method !== "POST") {
+        return json({ ok: false, error: "method_not_allowed" }, 405, {
+          allow: "POST",
+        });
+      }
+
+      const gate = await requireBridgeKey(request, env);
+      if (!gate.ok) {
+        return json(
+          { ok: false, error: gate.error || "unauthorized" },
+          gate.status || 401,
+        );
+      }
+
+      try {
+        const versionMetadata = env.CF_VERSION_METADATA || {};
+        const result = await emitAnalyticsFact(env, {
+          event_kind: "runtime",
+          domain: "analytics",
+          operation: "basin_smoke_test",
+          outcome: "passed",
+          repository_id: "github:samprimeaux/agentsam-sdk",
+          git_sha: versionMetadata.tag || null,
+          source_client: "operator_smoke",
+          duration_ms: 1,
+          attempt_count: 1,
+          dimensions: { source: "operator_smoke" },
+          metrics: { smoke: true },
+        });
+
+        return json({
+          ok: true,
+          operation: "basin_smoke_test",
+          analytics: result,
+        });
+      } catch (error) {
+        console.error("analytics_smoke_failed", String(error));
+        return json(
+          {
+            ok: false,
+            error: "analytics_smoke_failed",
+            detail: String(error?.message || error).slice(0, 200),
+          },
+          500,
+        );
+      }
     }
 
     if (isDatabaseApi) {
