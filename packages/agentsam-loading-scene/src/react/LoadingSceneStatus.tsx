@@ -33,6 +33,9 @@ export function LoadingSceneStatus({ controller, preset, style }: LoadingSceneSt
       }}
     >
       <span>{scene.label}</span>
+      {scene.detail ? (
+        <span style={{ opacity: 0.72, fontSize: 11 }}>{scene.detail}</span>
+      ) : null}
       {scene.secondary ? (
         <span style={{ opacity: 0.55, fontSize: 11 }}>{scene.secondary}</span>
       ) : null}
