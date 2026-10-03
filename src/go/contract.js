@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { DEFAULT_PRODUCT } from './discover.js';
 
 const PACKAGE_TEMPLATE = {
@@ -127,18 +128,39 @@ export function preflightToolchain({ requireDocker = false, productRoot = null }
   return { ok: failed.length === 0, checks, failed, wrangler: wranglerBin };
 }
 
-function resolveWranglerBin(productRoot) {
+export function resolveWranglerBin(productRoot) {
+  if (productRoot) {
+    try {
+      const req = createRequire(path.join(productRoot, 'package.json'));
+      const resolved = req.resolve('wrangler');
+      if (resolved) {
+        return { command: process.execPath, args: [resolved], source: 'package_dependency' };
+      }
+    } catch {
+      // Fall through to explicit paths / pinned npx fallback.
+    }
+  }
+
   const candidates = [];
   if (productRoot) {
-    candidates.push(path.join(productRoot, 'node_modules', 'wrangler', 'bin', 'wrangler.js'));
     candidates.push(path.join(productRoot, 'node_modules', '.bin', 'wrangler'));
   }
   candidates.push(path.join(process.cwd(), 'node_modules', '.bin', 'wrangler'));
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) {
-      if (candidate.endsWith('.js')) return { command: process.execPath, args: [candidate] };
-      return { command: candidate, args: [] };
+      return { command: candidate, args: [], source: 'local_bin' };
     }
   }
-  return { command: 'npx', args: ['--yes', 'wrangler'] };
+
+  let requested = 'wrangler';
+  if (productRoot) {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(productRoot, 'package.json'), 'utf8'));
+      const version = pkg.dependencies?.wrangler || pkg.devDependencies?.wrangler || '';
+      if (version) requested = 'wrangler@' + version;
+    } catch {
+      // Keep generic fallback only when package metadata is unavailable.
+    }
+  }
+  return { command: 'npx', args: ['--yes', requested], source: 'npx_fallback' };
 }
