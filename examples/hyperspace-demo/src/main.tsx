@@ -43,6 +43,7 @@ function simulateRuntime(
       type: "file.read",
       operationId: "read",
       label: "Reading project context",
+      detail: "Reviewing files and instructions relevant to the task",
     }),
   );
   later(7700, () => controller.complete("read"));
