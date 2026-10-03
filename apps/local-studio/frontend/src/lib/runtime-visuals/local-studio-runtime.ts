@@ -72,8 +72,13 @@ export function createLocalStudioRuntimeVisuals() {
       semantic: LoadingSceneSemantic,
       label?: string,
       progress?: number | null,
+      detail?: string,
     ) {
-      controller.activity({ operationId, semantic, label, progress });
+      controller.activity({ operationId, semantic, label, progress, detail });
+    },
+
+    reportRuntimeEvent(event: RawRuntimeEvent) {
+      controller.handle(adaptAgentSamEvent(event));
     },
   };
 }
