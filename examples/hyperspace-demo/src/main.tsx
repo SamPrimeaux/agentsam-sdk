@@ -92,6 +92,7 @@ function simulateRuntime(
       type: "site.build",
       operationId: "build",
       label: "Building application",
+      detail: "Producing the requested preview",
       progress: 0,
     }),
   );
