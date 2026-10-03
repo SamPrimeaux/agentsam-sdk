@@ -22,3 +22,4 @@ export * from "./processors/index.js";
 export * from "./intelligence/index.js";
 export * from "./runtime/index.js";
 export * from "./local/index.js";
+export * from "./storage/index.js";

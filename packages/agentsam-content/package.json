@@ -33,6 +33,18 @@
     "./runtime": {
       "types": "./dist/runtime/index.d.ts",
       "default": "./dist/runtime/index.js"
+    },
+    "./server/r2-admin": {
+      "types": "./dist/server/r2-admin.d.ts",
+      "default": "./dist/server/r2-admin.js"
+    },
+    "./server/discover-storage": {
+      "types": "./dist/server/discover-storage.d.ts",
+      "default": "./dist/server/discover-storage.js"
+    },
+    "./storage": {
+      "types": "./dist/storage/index.d.ts",
+      "default": "./dist/storage/index.js"
     }
   },
   "files": [
