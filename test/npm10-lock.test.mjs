@@ -29,9 +29,21 @@ describe('Local Studio npm 10 product lock', () => {
     });
     assert.equal(packages['../../packages/agentsam-loading-scene']?.version, pkg.version);
 
-    const sdk = packages['node_modules/@inneranimalmedia/agentsam-sdk'];
-    assert.equal(sdk?.version, pkg.version);
-    assert.notEqual(sdk?.link, true);
+    const sdkPackageSuffix = 'node_modules/@inneranimalmedia/agentsam-sdk';
+    const sdkEntries = Object.entries(packages)
+      .filter(([key]) => key === sdkPackageSuffix || key.endsWith('/' + sdkPackageSuffix));
+
+    assert.ok(sdkEntries.length > 0, 'published SDK resolution must be present');
+    for (const [key, sdk] of sdkEntries) {
+      assert.equal(sdk?.version, pkg.version, key + ' must match product version');
+      assert.notEqual(sdk?.link, true, key + ' must not be a local link');
+      assert.match(
+        sdk?.resolved || '',
+        new RegExp('agentsam-sdk-' + pkg.version.replace(/\./g, '\\.') + '\\.tgz$'),
+        key + ' must resolve from the npm registry tarball'
+      );
+      assert.ok(sdk?.integrity, key + ' must carry registry integrity metadata');
+    }
 
     const lru = packages['node_modules/lru-cache'];
     assert.equal(lru?.version, '11.5.2');

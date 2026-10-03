@@ -53,9 +53,24 @@ if (loading?.version !== version) {
   fail('Loading Scene lock metadata is not on release ' + version);
 }
 
-const sdk = packages['node_modules/@inneranimalmedia/agentsam-sdk'];
-if (sdk?.version !== version || sdk?.link) {
-  fail('Local Studio must consume published @inneranimalmedia/agentsam-sdk@' + version + ' in its product lock');
+const sdkPackageSuffix = 'node_modules/@inneranimalmedia/agentsam-sdk';
+const sdkEntries = Object.entries(packages)
+  .filter(([key]) => key === sdkPackageSuffix || key.endsWith('/' + sdkPackageSuffix));
+
+if (sdkEntries.length === 0) {
+  fail('Local Studio product lock is missing @inneranimalmedia/agentsam-sdk@' + version);
+}
+
+for (const [key, sdk] of sdkEntries) {
+  if (sdk?.version !== version || sdk?.link) {
+    fail('Local Studio must consume published @inneranimalmedia/agentsam-sdk@' + version + ' at ' + key);
+  }
+  if (
+    !String(sdk.resolved || '').includes('/agentsam-sdk-' + version + '.tgz') ||
+    !sdk.integrity
+  ) {
+    fail('Local Studio SDK lock entry is missing registry resolution/integrity metadata at ' + key);
+  }
 }
 
 const lru = packages['node_modules/lru-cache'];
