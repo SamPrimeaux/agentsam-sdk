@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "agentsam.manufacturing-profile.v1",
+  "id": "completeful.dtg.back-large",
+  "manufacturer": "completeful",
+  "process": "dtg",
+  "format": "png",
+  "colorSpace": "srgb",
+  "alpha": true,
+  "ppi": 300,
+  "maxBytes": 20000000,
+  "preferredPrintWidthIn": 13,
+  "allowRaster": true,
+  "allowVector": false,
+  "match": {
+    "manufacturer": "completeful",
+    "process": "dtg",
+    "locationName": "back",
+    "minWidthIn": 10
+  },
+  "source": {
+    "kind": "provider-documentation",
+    "verified": true,
+    "verifiedAt": "2026-10-03",
+    "notes": [
+      "PNG recommended for transparent artwork",
+      "RGB/sRGB color mode",
+      "300 DPI minimum at final print size",
+      "20 MB PNG upload limit"
+    ]
+  },
+  "$schema": "https://schemas.inneranimalmedia.com/agentsam/schemas/agentsam.manufacturing-profile.v1.json",
+  "resolution": {
+    "readyPpi": 300,
+    "minimumPpi": 300
+  },
+  "autoNormalize": {
+    "trimAlpha": true,
+    "colorSpace": true,
+    "svgOptimize": false,
+    "outlineText": false
+  }
+}

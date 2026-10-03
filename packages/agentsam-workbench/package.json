@@ -36,7 +36,11 @@
     "./agent/mini-agentsam.css": "./dist/agent/mini-agentsam.css",
     "./agent/contextual-composer.css": "./dist/agent/contextual-composer.css",
     "./agent/tool-permission.css": "./dist/agent/tool-permission.css",
-    "./project-control.css": "./dist/project-control.css"
+    "./project-control.css": "./dist/project-control.css",
+    "./manufacturing": {
+      "types": "./dist/manufacturing/index.d.ts",
+      "import": "./dist/manufacturing/index.js"
+    }
   },
   "scripts": {
     "typecheck": "node scripts/ensure-local-deps.mjs && tsc --noEmit -p tsconfig.json",

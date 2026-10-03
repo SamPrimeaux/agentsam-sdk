@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "agentsam.manufacturing-profile.v1",
+  "id": "completeful.laser-engraving",
+  "manufacturer": "completeful",
+  "process": "engraving",
+  "preferredFormat": "svg",
+  "colorMode": "monochrome",
+  "allowRaster": false,
+  "allowVector": true,
+  "allowGradients": false,
+  "requireClosedPaths": true,
+  "outlineText": true,
+  "match": {
+    "manufacturer": "completeful",
+    "process": [
+      "engraving",
+      "etching"
+    ]
+  },
+  "source": {
+    "kind": "operator-defined",
+    "verified": false
+  },
+  "$schema": "https://schemas.inneranimalmedia.com/agentsam/schemas/agentsam.manufacturing-profile.v1.json",
+  "requireViewBox": true,
+  "autoNormalize": {
+    "trimAlpha": false,
+    "colorSpace": false,
+    "svgOptimize": true,
+    "outlineText": true
+  },
+  "vectorization": {
+    "enabled": true,
+    "preferredTracer": "auto",
+    "maxAspectDrift": 0.02,
+    "minBoundaryIntegrity": 0.98,
+    "outputFormat": "svg"
+  }
+}

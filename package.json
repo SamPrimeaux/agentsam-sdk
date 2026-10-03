@@ -137,7 +137,11 @@
     "./hooks/schema/sqlite": "./migrations/runtime/0005_agentsam_hooks.sql",
     "./acp": "./src/acp/index.js",
     "./acp/http": "./src/acp/http.js",
-    "./acp/runtime-selection": "./src/acp/runtime-selection.js"
+    "./acp/runtime-selection": "./src/acp/runtime-selection.js",
+    "./receipts": "./src/receipts/index.js",
+    "./receipts/schema": "./protocol/receipts/agentsam.receipt.v1.json",
+    "./merch": "./packages/agentsam-merch/src/index.js",
+    "./merch/node": "./packages/agentsam-merch/src/node/index.js"
   },
   "bin": {
     "agentsam": "bin/agentsam",
@@ -232,7 +236,8 @@
     "packages/agentsam-workbench/package.json",
     "packages/agentsam-workbench/README.md",
     "packages/agentsam-workbench/src",
-    "packages/agentsam-workbench/tsconfig.json"
+    "packages/agentsam-workbench/tsconfig.json",
+    "packages/agentsam-merch"
   ],
   "workspaces": [
     "packages/agentsam-analytics",
@@ -253,6 +258,7 @@
     "packages/agentsam-key-manager",
     "packages/agentsam-knowledge",
     "packages/agentsam-loading-scene",
+    "packages/agentsam-merch",
     "packages/agentsam-nav",
     "packages/agentsam-queue-control",
     "packages/agentsam-repository",

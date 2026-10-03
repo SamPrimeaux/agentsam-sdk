@@ -531,6 +531,182 @@ const drawHorizon: DrawStudy = ({ ctx, width: w, height: h, time, preset, scene,
   vignette(ctx, w, h, 0.5);
 };
 
+
+const drawVectorTrace: DrawStudy = ({
+  ctx,
+  width: w,
+  height: h,
+  time,
+  preset,
+  scene,
+  intent,
+  reducedMotion,
+}) => {
+  const cx = w * 0.5;
+  const cy = h * 0.5;
+  const progress = scene.progress ?? 0.45;
+  const totalMetric = Math.max(12, Math.min(120, Math.round(scene.metricPoints?.total ?? 48)));
+  const completedMetric = scene.metricPoints?.completed ?? totalMetric * progress;
+  const collapse = Math.max(0, Math.min(1, completedMetric / totalMetric));
+  const activity = reducedMotion ? 0.08 : 0.22 + intent.structure * 0.55;
+  const t = time * activity;
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,255,255,0.055)";
+  ctx.lineWidth = 1;
+  const spacing = Math.max(28, Math.min(w, h) * 0.055);
+  for (let x = -spacing; x <= w + spacing; x += spacing) {
+    const pull = (x - cx) * collapse * 0.08;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x - pull, h);
+    ctx.stroke();
+  }
+  for (let y = -spacing; y <= h + spacing; y += spacing) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y + Math.sin((y + t * 0.02) * 0.015) * 5 * collapse);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  const rx = Math.min(w, h) * (0.24 - collapse * 0.025);
+  const ry = rx * 0.64;
+  const color = accent(preset, 4);
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.35;
+  ctx.globalAlpha *= 0.42 + collapse * 0.28;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 9;
+  ctx.beginPath();
+  for (let i = 0; i <= totalMetric; i++) {
+    const a = (i / totalMetric) * TAU;
+    const wobble = (1 - collapse) * Math.sin(a * 5 + t * 0.0009) * rx * 0.08;
+    const x = cx + Math.cos(a) * (rx + wobble);
+    const y = cy + Math.sin(a) * (ry + wobble * 0.5);
+    if (i) ctx.lineTo(x, y);
+    else ctx.moveTo(x, y);
+  }
+  ctx.closePath();
+  ctx.stroke();
+  ctx.restore();
+
+  for (let i = 0; i < totalMetric; i++) {
+    const a = (i / totalMetric) * TAU;
+    const jitter = (1 - collapse) * Math.sin(i * 1.71 + t * 0.0012) * rx * 0.09;
+    const x = cx + Math.cos(a) * (rx + jitter);
+    const y = cy + Math.sin(a) * (ry + jitter * 0.5);
+    ctx.save();
+    ctx.fillStyle = i < completedMetric ? color : "rgba(255,255,255,0.34)";
+    ctx.globalAlpha *= i < completedMetric ? 0.9 : 0.42;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = i < completedMetric ? 7 : 0;
+    ctx.beginPath();
+    ctx.arc(x, y, i < completedMetric ? 1.8 : 1.2, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  vignette(ctx, w, h, 0.46);
+};
+
+const drawGamut: DrawStudy = ({
+  ctx,
+  width: w,
+  height: h,
+  time,
+  scene,
+  intent,
+  reducedMotion,
+}) => {
+  const cx = w * 0.5;
+  const cy = h * 0.5;
+  const progress = scene.progress ?? 0.5;
+  const activity = reducedMotion ? 0.05 : 0.18 + intent.convergence * 0.32;
+  const t = time * activity;
+  const spread = (1 - progress) * Math.min(w, h) * 0.035;
+  const rings = [
+    { color: "rgba(0, 210, 225, 0.62)", phase: 0 },
+    { color: "rgba(224, 70, 160, 0.58)", phase: Math.PI * 0.5 },
+    { color: "rgba(238, 204, 72, 0.56)", phase: Math.PI },
+    { color: "rgba(215, 220, 230, 0.38)", phase: Math.PI * 1.5 },
+  ];
+
+  rings.forEach((ring, index) => {
+    const drift = reducedMotion ? 0 : Math.sin(t * 0.001 + ring.phase) * spread;
+    const radius = Math.min(w, h) * (0.16 + index * 0.045);
+    ctx.save();
+    ctx.strokeStyle = ring.color;
+    ctx.globalAlpha *= 0.42 + progress * 0.32;
+    ctx.lineWidth = 1.2;
+    ctx.shadowColor = ring.color;
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.ellipse(
+      cx + drift,
+      cy - drift * 0.45,
+      radius,
+      radius * (0.52 + progress * 0.09),
+      Math.sin(t * 0.00017 + index) * (1 - progress) * 0.08,
+      0,
+      TAU,
+    );
+    ctx.stroke();
+    ctx.restore();
+  });
+
+  const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.min(w, h) * 0.2);
+  core.addColorStop(0, "rgba(245,245,250,0.13)");
+  core.addColorStop(0.45, "rgba(130,160,220,0.07)");
+  core.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = core;
+  const r = Math.min(w, h) * 0.2;
+  ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+
+  vignette(ctx, w, h, 0.44);
+};
+
+const drawThread: DrawStudy = ({
+  ctx,
+  width: w,
+  height: h,
+  time,
+  preset,
+  scene,
+  intent,
+  reducedMotion,
+}) => {
+  const progress = scene.progress ?? 0.35;
+  const metricTotal = Math.max(8, Math.min(96, Math.round(scene.metricPoints?.total ?? 36)));
+  const density = Math.max(10, Math.min(72, Math.round(metricTotal * 0.75)));
+  const activity = reducedMotion ? 0.04 : 0.2 + intent.signalActivity * 0.38;
+  const t = time * activity;
+  const color = accent(preset, 2);
+  const margin = w * 0.12;
+  const span = w - margin * 2;
+
+  ctx.save();
+  for (let i = 0; i < density; i++) {
+    const y = h * 0.18 + (i / Math.max(1, density - 1)) * h * 0.64;
+    const sweep = reducedMotion ? 0 : Math.sin(t * 0.001 + i * 0.27) * 8;
+    const x0 = margin + (i % 2 === 0 ? 0 : span * 0.06) + sweep;
+    const x1 = margin + span - (i % 2 === 0 ? span * 0.06 : 0) + sweep;
+    ctx.strokeStyle = i / density <= progress ? color : "rgba(255,255,255,0.12)";
+    ctx.globalAlpha = i / density <= progress ? 0.48 : 0.28;
+    ctx.lineWidth = i % 5 === 0 ? 1.25 : 0.7;
+    ctx.beginPath();
+    ctx.moveTo(x0, y);
+    ctx.lineTo(x1, y + Math.sin(i * 0.8) * h * 0.012);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  const scanX = margin + span * ((t * 0.00015) % 1);
+  glowLine(ctx, scanX, h * 0.14, scanX, h * 0.86, color, 0.22, 1.1, 10);
+  vignette(ctx, w, h, 0.48);
+};
+
 const STUDY_DRAWERS: Record<HyperspaceStudyId, DrawStudy> = {
   runway: drawRunway,
   signal: drawSignal,
@@ -538,6 +714,9 @@ const STUDY_DRAWERS: Record<HyperspaceStudyId, DrawStudy> = {
   quantum: drawQuantum,
   merkle: drawMerkle,
   horizon: drawHorizon,
+  vector: drawVectorTrace,
+  gamut: drawGamut,
+  thread: drawThread,
 };
 
 export function drawHyperspaceStudy(id: HyperspaceStudyId, input: StudyRenderContext, alpha = 1): void {
