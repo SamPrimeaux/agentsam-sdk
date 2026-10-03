@@ -71,6 +71,7 @@ function simulateRuntime(
       type: "tool.invoke",
       operationId: "tool-b",
       label: "Tracing dependencies",
+      detail: "Following related package and runtime edges",
     }),
   );
   later(16300, () => controller.complete("tool-a"));
