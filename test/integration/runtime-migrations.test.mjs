@@ -27,6 +27,8 @@ test('portable runtime migration installs AgentSam CLI state tables idempotently
       'agentsam_agent_run_event',
       'agentsam_agent_run_dependency',
       'agentsam_agent_run_suspension',
+      'agentsam_analytics',
+      'agentsam_analytics_aggregate_legacy_20261003',
       'agentsam_approval_queue',
       'agentsam_compaction_events',
       'agentsam_context_digest',
@@ -37,6 +39,33 @@ test('portable runtime migration installs AgentSam CLI state tables idempotently
       'agentsam_schema_migrations',
       'agentsam_todo',
     ]) assert.equal(names.has(name), true, name);
+
+    const analyticsColumns = await db.prepare('PRAGMA table_info(agentsam_analytics)').all();
+    const analyticsColumnNames = new Set(analyticsColumns.results.map((row) => row.name));
+    for (const name of [
+      'schema_name', 'repository_id', 'event_kind', 'domain', 'operation', 'outcome',
+      'duration_ms', 'queue_wait_ms', 'external_wait_ms', 'active_model_ms',
+      'input_tokens', 'cached_input_tokens', 'output_tokens', 'reasoning_tokens',
+      'cost_usd', 'attempt_count', 'retry_count', 'plan_points',
+      'score_family', 'score_value', 'weights_version', 'artifact_ref',
+      'dimensions_json', 'metrics_json', 'created_at_unix',
+    ]) {
+      assert.equal(analyticsColumnNames.has(name), true, 'analytics.' + name);
+    }
+
+    const legacyAnalyticsColumns = await db.prepare(
+      'PRAGMA table_info(agentsam_analytics_aggregate_legacy_20261003)'
+    ).all();
+    const legacyAnalyticsColumnNames = new Set(
+      legacyAnalyticsColumns.results.map((row) => row.name)
+    );
+    for (const name of [
+      'date_key', 'event_type', 'event_name', 'total_calls',
+      'total_input_tok', 'total_output_tok', 'total_cached_tok',
+      'avg_latency_ms', 'p95_latency_ms', 'success_rate',
+    ]) {
+      assert.equal(legacyAnalyticsColumnNames.has(name), true, 'analytics_legacy.' + name);
+    }
 
     const runColumns = await db.prepare('PRAGMA table_info(agentsam_agent_run)').all();
     const runColumnNames = new Set(runColumns.results.map((row) => row.name));
