@@ -32,7 +32,7 @@
     "./protocol/receipt": "./protocol/agentsam.hook.receipt.v1.schema.json"
   },
   "bin": {
-    "agentsam-hooks": "./bin/agentsam-hooks.mjs"
+    "agentsam-hooks": "bin/agentsam-hooks.mjs"
   },
   "files": [
     "bin",

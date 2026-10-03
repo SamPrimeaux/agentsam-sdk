@@ -1,6 +1,8 @@
 import type {
   HealthState,
   SettingsCapabilities,
+  SettingsCatalogItem,
+  SettingsCatalogKind,
   SettingsHost,
   SettingsModel,
   SettingsSnapshot,
@@ -20,9 +22,65 @@ const capabilities: SettingsCapabilities = {
   host: "local-studio",
   capabilities: [
     { id: "settings.read", available: true },
+    { id: "settings.write", available: true },
     { id: "models.inventory", available: true },
   ],
 };
+
+const SETTINGS_CATALOG_KEY = "agentsam-settings-catalog-v1";
+const SETTINGS_CATALOG_CHANGED_EVENT = "agentsam:settings-catalog-changed";
+const CATALOG_KINDS: SettingsCatalogKind[] = [
+  "plugins",
+  "mcps",
+  "skills",
+  "subagents",
+  "rules",
+  "commands",
+  "hooks",
+];
+
+type CatalogOverlayEntry = {
+  items: SettingsCatalogItem[];
+  removedIds: string[];
+};
+
+type CatalogOverlay = Partial<Record<SettingsCatalogKind, CatalogOverlayEntry>>;
+
+function readCatalogOverlay(): CatalogOverlay {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(SETTINGS_CATALOG_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw) as CatalogOverlay;
+  } catch {
+    return {};
+  }
+}
+
+function writeCatalogOverlay(overlay: CatalogOverlay) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(SETTINGS_CATALOG_KEY, JSON.stringify(overlay));
+  window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
+}
+
+function applyCatalogOverlay(snapshot: SettingsSnapshot): SettingsSnapshot {
+  const overlay = readCatalogOverlay();
+  for (const kind of CATALOG_KINDS) {
+    const entry = overlay[kind];
+    if (!entry) continue;
+    const removed = new Set(entry.removedIds || []);
+    const overrides = new Map((entry.items || []).map((item) => [item.id, item]));
+    const base = snapshot[kind]
+      .filter((item) => !removed.has(item.id))
+      .map((item) => overrides.get(item.id) ?? item);
+    const baseIds = new Set(base.map((item) => item.id));
+    snapshot[kind] = [
+      ...base,
+      ...(entry.items || []).filter((item) => !baseIds.has(item.id)),
+    ];
+  }
+  return snapshot;
+}
 
 function formatContextWindow(value?: number | null): string {
   const tokens = Number(value || 0);
@@ -124,7 +182,7 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
   if (!inventoryResult.ok || !inventoryResult.value) {
     snapshot.health = "attention";
     snapshot.repositoryLabel = desktop ? "Runtime ready · models unavailable" : "Models unavailable";
-    return snapshot;
+    return applyCatalogOverlay(snapshot);
   }
 
   const inventory = inventoryResult.value;
@@ -156,7 +214,7 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
     : `Web runtime · ${runnable} runnable models`;
   snapshot.network.health = health;
 
-  return snapshot;
+  return applyCatalogOverlay(snapshot);
 }
 
 export const localStudioSettingsHost: SettingsHost = {
@@ -166,13 +224,34 @@ export const localStudioSettingsHost: SettingsHost = {
   async snapshot() {
     return liveSnapshot();
   },
+  async upsertCatalogItem(kind, item) {
+    const overlay = readCatalogOverlay();
+    const entry = overlay[kind] ?? { items: [], removedIds: [] };
+    entry.items = [
+      ...entry.items.filter((candidate) => candidate.id !== item.id),
+      item,
+    ];
+    entry.removedIds = entry.removedIds.filter((id) => id !== item.id);
+    overlay[kind] = entry;
+    writeCatalogOverlay(overlay);
+  },
+  async removeCatalogItem(kind, id) {
+    const overlay = readCatalogOverlay();
+    const entry = overlay[kind] ?? { items: [], removedIds: [] };
+    entry.items = entry.items.filter((candidate) => candidate.id !== id);
+    if (!entry.removedIds.includes(id)) entry.removedIds.push(id);
+    overlay[kind] = entry;
+    writeCatalogOverlay(overlay);
+  },
   subscribe(_unitId, callback) {
     if (typeof window === "undefined") return () => {};
     const onChanged = () => callback();
     window.addEventListener(MODEL_INVENTORY_CHANGED_EVENT, onChanged);
+    window.addEventListener(SETTINGS_CATALOG_CHANGED_EVENT, onChanged);
     window.addEventListener("focus", onChanged);
     return () => {
       window.removeEventListener(MODEL_INVENTORY_CHANGED_EVENT, onChanged);
+      window.removeEventListener(SETTINGS_CATALOG_CHANGED_EVENT, onChanged);
       window.removeEventListener("focus", onChanged);
     };
   },

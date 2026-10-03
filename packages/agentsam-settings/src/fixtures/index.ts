@@ -405,6 +405,8 @@ export function getSettingsFixture(name: SettingsFixtureName | string | undefine
 export function createFixtureSettingsHost(
   fixture: SettingsSnapshot = populatedSettingsFixture,
 ): SettingsHost {
+  let current = structuredClone(fixture);
+  const subscribers = new Set<() => void>();
   const capabilities: SettingsCapabilities = {
     host: "fixture",
     capabilities: [
@@ -420,7 +422,28 @@ export function createFixtureSettingsHost(
       return capabilities;
     },
     async snapshot() {
-      return fixture;
+      return current;
+    },
+    async upsertCatalogItem(kind, item) {
+      current = {
+        ...current,
+        [kind]: [
+          ...current[kind].filter((candidate) => candidate.id !== item.id),
+          item,
+        ],
+      };
+      subscribers.forEach((callback) => callback());
+    },
+    async removeCatalogItem(kind, id) {
+      current = {
+        ...current,
+        [kind]: current[kind].filter((candidate) => candidate.id !== id),
+      };
+      subscribers.forEach((callback) => callback());
+    },
+    subscribe(_unitId, callback) {
+      subscribers.add(callback);
+      return () => subscribers.delete(callback);
     },
   };
 }

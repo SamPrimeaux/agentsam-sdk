@@ -42,6 +42,7 @@ import {
 import type {
   HealthState,
   SettingsCatalogItem,
+  SettingsCatalogKind,
   SettingsCredential,
   SettingsHost,
   SettingsManifest,
@@ -112,6 +113,8 @@ export function SettingsShell({
   onNavigate,
   children,
   railStatus,
+  rootLabel = manifest.productName,
+  onExit,
 }: {
   manifest: SettingsManifest;
   activeUnit: SettingsUnitId;
@@ -119,9 +122,14 @@ export function SettingsShell({
   children: ReactNode;
   /** Sidebar footer — live vault when unset uses production copy. */
   railStatus?: { title: string; detail: string };
+  /** Compact breadcrumb root supplied by the host product. */
+  rootLabel?: string;
+  /** Returns to the host product without coupling Settings to a router. */
+  onExit?: () => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const activeLabel = manifest.units.find((unit) => unit.id === activeUnit)?.label ?? "Settings";
   const status = railStatus ?? {
     title: activeUnit === "keys" ? "Account vault" : "Local Studio",
     detail:
@@ -205,16 +213,30 @@ export function SettingsShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border/70 px-3 md:hidden">
+        <div className="flex h-10 shrink-0 items-center gap-1.5 border-b border-border/70 px-3 text-[11px]">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="mr-1 flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
             aria-label="Open settings navigation"
           >
-            <Menu className="size-4" />
+            <Menu className="size-3.5" />
           </button>
-          <span className="text-[12px] font-semibold">Settings</span>
+          {onExit ? (
+            <button
+              type="button"
+              onClick={onExit}
+              className="rounded px-1.5 py-1 font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              {rootLabel}
+            </button>
+          ) : (
+            <span className="px-1.5 py-1 font-medium text-muted-foreground">{rootLabel}</span>
+          )}
+          <ChevronRight className="size-3 text-muted-foreground/70" />
+          <span className="px-1 py-1 font-medium text-foreground">Settings</span>
+          <ChevronRight className="hidden size-3 text-muted-foreground/70 sm:block" />
+          <span className="hidden truncate px-1 py-1 text-muted-foreground sm:block">{activeLabel}</span>
         </div>
         <div className="min-h-0 flex-1">{children}</div>
       </div>
@@ -484,31 +506,49 @@ function MetricCard({ label, value, detail }: { label: string; value: string; de
 function Catalog({
   items,
   empty = "Nothing configured yet.",
+  onSelect,
 }: {
   items: SettingsCatalogItem[];
   empty?: string;
+  onSelect?: (item: SettingsCatalogItem) => void;
 }) {
   if (!items.length) {
     return <EmptyState title={empty} />;
   }
   return (
     <div className="divide-y divide-border/60 rounded-lg border border-border/70">
-      {items.map((item) => (
-        <div key={item.id} className="flex items-center gap-3 px-3 py-3">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted/20">
-            <Boxes className="size-3.5 text-muted-foreground" />
+      {items.map((item) => {
+        const content = (
+          <>
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted/20">
+              <Boxes className="size-3.5 text-muted-foreground" />
+            </div>
+            <div className="min-w-0 flex-1 text-left">
+              <div className="truncate text-[12px] font-medium">{item.name}</div>
+              <div className="mt-0.5 truncate text-[10px] text-muted-foreground">{item.subtitle}</div>
+            </div>
+            <div className="hidden items-center gap-2 sm:flex">
+              {item.meta && <span className="text-[10px] text-muted-foreground">{item.meta}</span>}
+              <StatusPill status={item.status} />
+            </div>
+            {onSelect ? <ChevronRight className="size-3.5 text-muted-foreground" /> : null}
+          </>
+        );
+        return onSelect ? (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => onSelect(item)}
+            className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-muted/35"
+          >
+            {content}
+          </button>
+        ) : (
+          <div key={item.id} className="flex items-center gap-3 px-3 py-3">
+            {content}
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[12px] font-medium">{item.name}</div>
-            <div className="mt-0.5 truncate text-[10px] text-muted-foreground">{item.subtitle}</div>
-          </div>
-          <div className="hidden items-center gap-2 sm:flex">
-            {item.meta && <span className="text-[10px] text-muted-foreground">{item.meta}</span>}
-            <StatusPill status={item.status} />
-          </div>
-          <ChevronRight className="size-3.5 text-muted-foreground" />
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -909,8 +949,18 @@ function AgentsView({ snapshot, view }: { snapshot: SettingsSnapshot; view: stri
   );
 }
 
-function CustomizeView({ snapshot, view }: { snapshot: SettingsSnapshot; view: string }) {
-  const map: Record<string, SettingsCatalogItem[]> = {
+function CustomizeView({
+  snapshot,
+  view,
+  host,
+  onChanged,
+}: {
+  snapshot: SettingsSnapshot;
+  view: string;
+  host: SettingsHost;
+  onChanged: () => Promise<void>;
+}) {
+  const map: Record<SettingsCatalogKind, SettingsCatalogItem[]> = {
     plugins: snapshot.plugins,
     mcps: snapshot.mcps,
     skills: snapshot.skills,
@@ -919,7 +969,7 @@ function CustomizeView({ snapshot, view }: { snapshot: SettingsSnapshot; view: s
     commands: snapshot.commands,
     hooks: snapshot.hooks,
   };
-  const labels: Record<string, string> = {
+  const labels: Record<SettingsCatalogKind, string> = {
     plugins: "Plugins",
     mcps: "MCP servers",
     skills: "Skills",
@@ -928,19 +978,160 @@ function CustomizeView({ snapshot, view }: { snapshot: SettingsSnapshot; view: s
     commands: "Commands",
     hooks: "Hooks",
   };
+  const kind = (view in map ? view : "plugins") as SettingsCatalogKind;
+  const canWrite = Boolean(host.upsertCatalogItem);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [draft, setDraft] = useState<{
+    id: string;
+    name: string;
+    subtitle: string;
+    meta: string;
+    status: HealthState;
+  }>({ id: "", name: "", subtitle: "", meta: "", status: "unknown" });
+
+  function openAdd() {
+    setDraft({ id: "", name: "", subtitle: "", meta: "", status: "unknown" });
+    setSheetOpen(true);
+  }
+
+  function openEdit(item: SettingsCatalogItem) {
+    setDraft({
+      id: item.id,
+      name: item.name,
+      subtitle: item.subtitle,
+      meta: item.meta ?? "",
+      status: item.status,
+    });
+    setSheetOpen(true);
+  }
+
+  async function save() {
+    if (!host.upsertCatalogItem) return;
+    const name = draft.name.trim();
+    if (!name) return;
+    const id = draft.id || `${kind}-${globalThis.crypto?.randomUUID?.() ?? Date.now().toString(36)}`;
+    await host.upsertCatalogItem(kind, {
+      id,
+      name,
+      subtitle: draft.subtitle.trim() || "Configured in Local Studio",
+      meta: draft.meta.trim() || undefined,
+      status: draft.status,
+    });
+    await onChanged();
+    setSheetOpen(false);
+  }
+
+  async function remove() {
+    if (!draft.id || !host.removeCatalogItem) return;
+    await host.removeCatalogItem(kind, draft.id);
+    await onChanged();
+    setSheetOpen(false);
+  }
+
+  const singular = labels[kind].replace(/s$/, "");
+
   return (
-    <Section
-      title={labels[view] ?? "Extensions"}
-      description="One extension surface with normalized status and configuration behavior."
-      action={
-        <button type="button" className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-3 text-[10px] text-muted-foreground hover:bg-muted hover:text-foreground">
-          <Plus className="size-3.5" />
-          Add
-        </button>
-      }
-    >
-      <Catalog items={map[view] ?? snapshot.plugins} />
-    </Section>
+    <>
+      <Section
+        title={labels[kind]}
+        description="One extension surface with normalized status and configuration behavior."
+        action={
+          <button
+            type="button"
+            onClick={openAdd}
+            disabled={!canWrite}
+            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-3 text-[10px] text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Plus className="size-3.5" />
+            Add
+          </button>
+        }
+      >
+        <Catalog items={map[kind]} onSelect={canWrite ? openEdit : undefined} />
+      </Section>
+
+      <SettingsSheet
+        open={sheetOpen}
+        title={draft.id ? `Edit ${singular}` : `Add ${singular}`}
+        description="Saved through the Settings host so each product can provide its own persistence adapter."
+        onClose={() => setSheetOpen(false)}
+      >
+        <div className="space-y-4">
+          <label className="block">
+            <span className="mb-1.5 block text-[11px] font-medium">Name</span>
+            <input
+              value={draft.name}
+              onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
+              className="h-9 w-full rounded-md border border-border bg-muted/20 px-3 text-[12px] outline-none focus:border-foreground/30"
+              placeholder={`New ${singular.toLowerCase()}`}
+              autoFocus
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-[11px] font-medium">Description</span>
+            <input
+              value={draft.subtitle}
+              onChange={(event) => setDraft((current) => ({ ...current, subtitle: event.target.value }))}
+              className="h-9 w-full rounded-md border border-border bg-muted/20 px-3 text-[12px] outline-none focus:border-foreground/30"
+              placeholder="What this extension does"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-[11px] font-medium">Metadata</span>
+            <input
+              value={draft.meta}
+              onChange={(event) => setDraft((current) => ({ ...current, meta: event.target.value }))}
+              className="h-9 w-full rounded-md border border-border bg-muted/20 px-3 text-[12px] outline-none focus:border-foreground/30"
+              placeholder="Package, endpoint, command, or source"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-[11px] font-medium">Status</span>
+            <select
+              value={draft.status}
+              onChange={(event) => setDraft((current) => ({ ...current, status: event.target.value as HealthState }))}
+              className="h-9 w-full rounded-md border border-border bg-muted/20 px-3 text-[12px] outline-none focus:border-foreground/30"
+            >
+              <option value="unknown">Unknown</option>
+              <option value="healthy">Healthy</option>
+              <option value="attention">Attention</option>
+              <option value="blocked">Blocked</option>
+            </select>
+          </label>
+
+          <div className="flex items-center justify-between border-t border-border/70 pt-4">
+            <div>
+              {draft.id && host.removeCatalogItem ? (
+                <button
+                  type="button"
+                  onClick={() => void remove()}
+                  className="h-8 rounded-md px-2.5 text-[10px] text-red-300 hover:bg-red-500/10"
+                >
+                  Delete
+                </button>
+              ) : null}
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setSheetOpen(false)}
+                className="h-8 rounded-md border border-border px-3 text-[10px] text-muted-foreground hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void save()}
+                disabled={!draft.name.trim()}
+                className="h-8 rounded-md bg-foreground px-3 text-[10px] font-medium text-background disabled:opacity-40"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      </SettingsSheet>
+    </>
   );
 }
 
@@ -1295,14 +1486,20 @@ function KeysSubView({ view, snapshot }: { view: string; snapshot: SettingsSnaps
   );
 }
 
-function renderUnit(unit: SettingsUnitId, snapshot: SettingsSnapshot, view: string) {
+function renderUnit(
+  unit: SettingsUnitId,
+  snapshot: SettingsSnapshot,
+  view: string,
+  host: SettingsHost,
+  onChanged: () => Promise<void>,
+) {
   switch (unit) {
     case "general":
       return <GeneralView snapshot={snapshot} />;
     case "agents":
       return <AgentsView snapshot={snapshot} view={view} />;
     case "customize":
-      return <CustomizeView snapshot={snapshot} view={view} />;
+      return <CustomizeView snapshot={snapshot} view={view} host={host} onChanged={onChanged} />;
     case "design":
       return <DesignView />;
     case "git-prs":
@@ -1395,7 +1592,9 @@ export function SettingsProductPage({
           }}
         />
         <div className={unit.views?.length ? "" : "pt-5"}>
-          {renderUnit(unit.id, snapshot, validView)}
+          {renderUnit(unit.id, snapshot, validView, host, async () => {
+            setSnapshot(await host.snapshot());
+          })}
         </div>
       </div>
     </div>

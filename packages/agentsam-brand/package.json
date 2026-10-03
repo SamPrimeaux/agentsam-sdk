@@ -12,7 +12,7 @@
   },
   "main": "./src/index.js",
   "bin": {
-    "agentsam-brand": "./bin/agentsam-brand.mjs"
+    "agentsam-brand": "bin/agentsam-brand.mjs"
   },
   "exports": {
     ".": "./src/index.js",
