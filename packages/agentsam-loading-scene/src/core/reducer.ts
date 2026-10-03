@@ -60,6 +60,7 @@ export function deriveScene(
     status,
     intent,
     label,
+    detail: snapshot.latestDetail && snapshot.latestDetail !== label ? snapshot.latestDetail : undefined,
     secondary,
     activeCount: snapshot.activeCount,
     progress: snapshot.progress,
