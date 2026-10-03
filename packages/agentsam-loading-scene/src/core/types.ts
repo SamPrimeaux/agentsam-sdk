@@ -60,6 +60,9 @@ export interface SceneState {
   status: SceneStatus;
   intent: VisualIntent;
   label: string;
+  /** Task-specific commentary supplied by the runtime. Never fabricated by the renderer. */
+  detail?: string;
+  /** Small system metadata such as concurrency/waiting state. */
   secondary?: string;
   activeCount: number;
   /** Known progress 0..1 or null when unknowable. */
