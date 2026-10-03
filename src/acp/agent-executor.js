@@ -20,6 +20,7 @@ export function createAgentRunJobHandler({
   hookRuntime = null,
   cwd = process.cwd(),
   source = 'agentsam-acp',
+  runtimeSelector = null,
 } = {}) {
   if (typeof execute !== 'function') throw new TypeError('agent_run_execute_required');
 
@@ -65,6 +66,17 @@ export function createAgentRunJobHandler({
       },
     };
 
+    const selector = context.runtimeSelector || runtimeSelector;
+    const runtimeSelection = typeof selector === 'function'
+      ? await selector(runtimeRequirements, {
+          ...context,
+          account_id: job.account_id,
+          run_id: runId,
+          parent_run_id: parentRunId || null,
+          job_id: job.id,
+        })
+      : null;
+
     const executeRun = () => execute({
       job,
       runId,
@@ -72,6 +84,7 @@ export function createAgentRunJobHandler({
       role,
       objective,
       runtimeRequirements,
+      runtimeSelection,
       executionContext,
       invocation,
     }, context);

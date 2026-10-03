@@ -120,3 +120,33 @@ test('root agent.run jobs do not masquerade as subagent lifecycle events', async
   assert.equal(result.parentRunId, null);
   assert.deepEqual(seen, []);
 });
+
+test('agent.run execution can resolve any agentsam.runtime.v1 host before invoking the child', async () => {
+  const selections = [];
+  const handler = createAgentRunJobHandler({
+    runtimeSelector: async (requirements, context) => {
+      selections.push({ requirements, context });
+      return {
+        schema: 'agentsam.runtime-selection.v1',
+        runtime_id: 'runtime_gcp',
+        runtime: {
+          schema: 'agentsam.runtime.v1',
+          provider: 'google_cloud',
+          substrate: 'vm',
+          lifecycle: 'persistent',
+          runtime_adapter: 'agentsamd',
+          status: 'ready',
+          capabilities: { exec: true, filesystem: true },
+        },
+      };
+    },
+    execute: async ({ runtimeSelection }) => ({ selected: runtimeSelection.runtime_id }),
+  });
+
+  const result = await handler(childJob());
+  assert.equal(result.selected, 'runtime_gcp');
+  assert.equal(selections.length, 1);
+  assert.deepEqual(selections[0].requirements, { capabilities: ['exec', 'filesystem'] });
+  assert.equal(selections[0].context.account_id, 'acct_1');
+  assert.equal(selections[0].context.run_id, 'arun_child');
+});

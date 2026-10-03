@@ -822,7 +822,7 @@ Measure these before claiming dollar/token savings.
 
 Implementation checkpoint (2026-10-03): ACP-001 through ACP-007 are implemented on `feat/agent-control-plane`. Portable contracts own the richer run/suspension/wake/event semantics; runtime migration `0006_agent_run_suspend_activity.sql` persists suspension and the append-only journal without rebuilding the legacy `agentsam_agent_run.status` check. Queue Control owns delayed availability, retry/backoff/jitter, stable idempotency identity, lease claim/refresh/release, provider-independent dead-letter jobs, and provider-managed DLQ delegation. Runtime migration `0007_queue_control.sql` plus the SQLite adapter provide the durable local scheduler reference implementation; Cloudflare Queues remains one hosted adapter rather than the control-plane authority.
 
-AgentSam Hooks integration checkpoint: ACP does not create a parallel hook mechanism. agent.run execution reuses the existing portable subagent_start / subagent_stop lifecycle contract through runWithSubagentHooks. Hook callbacks remain lifecycle policy/observability; the run journal, Queue Control, WorkGraph linkage, and receipts remain authoritative. This placement is intentionally at execution time rather than child-record creation time, so queued work does not look started before a provider/runtime actually claims it.
+AgentSam Hooks integration checkpoint: ACP does not create a parallel hook mechanism. agent.run execution reuses the existing portable subagent_start / subagent_stop lifecycle contract through runWithSubagentHooks. Hook callbacks remain lifecycle policy/observability; the run journal, Queue Control, WorkGraph linkage, and receipts remain authoritative. This placement is intentionally at execution time rather than child-record creation time, so queued work does not look started before a provider/runtime actually claims it. Runtime selection now hard-filters candidates through agentsam.runtime.v1 capabilities and explicit constraints; provider/substrate preference is caller-supplied rather than a Cloudflare-specific hidden score.
 
 ACP host note: `agentsam run` now defaults to project-local SQLite and can target any HTTP-compatible Agent Control Plane via `AGENTSAM_CONTROL_PLANE_URL` / `--url`; no Cloudflare, GCP, AWS, Fly, Docker, VM, or local runtime provider is encoded into run semantics. Hosted implementations must conform to the same `/v1/runs/:id` control contract.
 
@@ -847,6 +847,8 @@ KNOW-006 Add verified-change post-run incremental indexing hook
 MULTI-001 DONE  Bind child runs to parent_run_id + WorkGraph dependency
 MULTI-002 DONE  Resume parent from child completion without polling
 HOOK-001  DONE  Reuse agentsam-hooks subagent_start/subagent_stop at agent.run execution boundary
+RUNTIME-001 DONE Match agent.run runtime requirements against agentsam.runtime.v1 without provider lock-in
+HTTP-001   DONE Define provider-neutral Fetch-compatible /v1/runs host contract
 
 UI-001   Bind Local Studio lead/co-worker panels to actual run ids/activity
 OBS-001  Record waiting/model-active/retrieval/queue effectiveness metrics
