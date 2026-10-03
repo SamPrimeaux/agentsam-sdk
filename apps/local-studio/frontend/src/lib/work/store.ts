@@ -1097,12 +1097,16 @@ export const useWorkStore = create<WorkState>()(
             model_id: context?.modelSelection?.model_id ?? after.modelSelection?.model_id,
             parentTitle,
             parentExcerpt,
-            workspace: workspacePayload(project),
+            workspace: visualWorkspace,
             signal: controller.signal,
             onDelta: (chunk) => {
               if (!sawDelta) {
                 sawDelta = true;
-                localStudioRuntimeVisuals.markAgentTurnStreaming(visualOperationId);
+                localStudioRuntimeVisuals.markAgentTurnStreaming(
+                  visualOperationId,
+                  "Writing response",
+                  taskSummary || undefined,
+                );
               }
               assembled += chunk;
               write(assembled, false);
