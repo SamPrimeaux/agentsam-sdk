@@ -4,6 +4,11 @@ import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 
 const cwd = fileURLToPath(new URL('../', import.meta.url));
+execFileSync(
+  process.execPath,
+  ['scripts/ensure-local-deps.mjs'],
+  { cwd, stdio: 'inherit' },
+);
 rmSync(`${cwd}/dist`, { recursive: true, force: true });
 await build({
   absWorkingDir: cwd,

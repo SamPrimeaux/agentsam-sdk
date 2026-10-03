@@ -21,7 +21,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "node scripts/ensure-local-deps.mjs && tsc --noEmit -p tsconfig.json",
     "pretest": "npm run build",
     "test": "node --test test/*.test.mjs",
     "prepack": "npm run build"
