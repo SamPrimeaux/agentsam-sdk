@@ -18,8 +18,17 @@ export class MemoryQueueAdapter {
     return { provider: 'memory', queue, accepted: jobs.length };
   }
 
-  async pull(queue, max = 1) {
-    return this.#queue(queue).splice(0, Math.max(0, Number(max) || 1));
+  async pull(queue, max = 1, { now = Math.floor(Date.now() / 1000) } = {}) {
+    const items = this.#queue(queue);
+    const limit = Math.max(0, Number(max) || 1);
+    const ready = [];
+    const pending = [];
+    for (const item of items) {
+      if (ready.length < limit && (item.available_at ?? 0) <= now) ready.push(item);
+      else pending.push(item);
+    }
+    this.queues.set(queue, pending);
+    return ready;
   }
 
   async ensureTopology(topology) {

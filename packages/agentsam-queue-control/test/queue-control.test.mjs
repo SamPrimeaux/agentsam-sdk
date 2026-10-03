@@ -4,6 +4,16 @@ import assert from 'node:assert/strict';
 import {
   QueueControl,
   MemoryQueueAdapter,
+  CloudflareQueueBindingAdapter,
+  canClaimJobLease,
+  claimJobLease,
+  computeRetryDelayMs,
+  createJobEnvelope,
+  createRetrySchedule,
+  delaySecondsForAvailableAt,
+  jobExecutionIdentity,
+  refreshJobLease,
+  releaseJobLease,
   buildQueueTopology,
   resolvePhysicalQueue,
   routeWork,
@@ -97,4 +107,232 @@ test('infrastructure provisioning is approval-gated by default', async () => {
   const result = await allowed.provision();
   assert.equal(result.provider, 'memory');
   assert.ok(result.created.includes('demo-test-jobs'));
+});
+
+
+test('job envelopes support delayed availability without making early work runnable', async () => {
+  const adapter = new MemoryQueueAdapter();
+  const control = new QueueControl({
+    adapter,
+    topology: buildQueueTopology({ namespace: 'demo', environment: 'test' }),
+  });
+  const queue = resolvePhysicalQueue(control.topology, 'deployments');
+  const createdAt = 1_000;
+  const availableAt = 1_060;
+  const result = await control.enqueue({
+    account_id: 'acct_real',
+    kind: 'deploy.cloudflare',
+  }, {
+    created_at: createdAt,
+    availableAt,
+  });
+
+  assert.equal(result.job.available_at, availableAt);
+  assert.equal((await adapter.pull(queue, 10, { now: 1_059 })).length, 0);
+  assert.equal(adapter.depth(queue), 1);
+  assert.equal((await adapter.pull(queue, 10, { now: 1_060 })).length, 1);
+});
+
+test('retry scheduling uses bounded exponential backoff with injectable jitter', () => {
+  const job = createJobEnvelope({
+    account_id: 'acct_real',
+    kind: 'repository.index',
+    created_at: 1_000,
+    retry: {
+      max_attempts: 3,
+      initial_delay_ms: 1_000,
+      max_delay_ms: 10_000,
+      backoff: 'exponential',
+      jitter: true,
+    },
+  });
+
+  assert.equal(computeRetryDelayMs(job.retry, 1, () => 0), 500);
+  assert.equal(computeRetryDelayMs(job.retry, 2, () => 1), 2_000);
+
+  const retry = createRetrySchedule(job, { now_ms: 1_000_000, random: () => 1 });
+  assert.equal(retry.retryable, true);
+  assert.equal(retry.job.status, 'retry_scheduled');
+  assert.equal(retry.job.attempt, 1);
+  assert.equal(retry.available_at, 1_001);
+
+  const exhausted = createRetrySchedule({ ...job, attempt: 2 }, { now_ms: 1_000_000 });
+  assert.equal(exhausted.retryable, false);
+  assert.equal(exhausted.exhausted, true);
+});
+
+test('local queue failures are re-enqueued for a future deterministic retry', async () => {
+  const adapter = new MemoryQueueAdapter();
+  const control = new QueueControl({
+    adapter,
+    topology: buildQueueTopology({ namespace: 'demo', environment: 'test' }),
+  });
+  control.register('repository.*', async () => {
+    throw new Error('temporary');
+  });
+
+  await control.enqueue({ account_id: 'acct_real', kind: 'repository.index' }, {
+    created_at: 1_000,
+    retry: { max_attempts: 3, initial_delay_ms: 1_000, max_delay_ms: 1_000, jitter: false },
+  });
+  const queue = resolvePhysicalQueue(control.topology, 'indexing');
+  const [job] = await adapter.pull(queue, 1, { now: 1_000 });
+  const [result] = await control.consume([job]);
+
+  assert.equal(result.ok, false);
+  assert.equal(result.retry.scheduled, true);
+  assert.equal(result.retry.provider_managed, false);
+  assert.equal(adapter.depth(queue), 1);
+  assert.equal((await adapter.pull(queue, 1, { now: result.retry.available_at - 1 })).length, 0);
+  assert.equal((await adapter.pull(queue, 1, { now: result.retry.available_at })).length, 1);
+});
+
+test('Cloudflare queue binding maps available_at to delaySeconds and rejects delays beyond provider limit', async () => {
+  const calls = [];
+  const adapter = new CloudflareQueueBindingAdapter({
+    bindings: {
+      default: {
+        async send(body, options) { calls.push({ body, options }); },
+      },
+    },
+  });
+  const job = createJobEnvelope({
+    account_id: 'acct_real',
+    kind: 'deploy.cloudflare',
+    created_at: 1_000,
+    available_at: 1_600,
+  });
+
+  const receipt = await adapter.publish('demo', job, { now: 1_000 });
+  assert.equal(receipt.delay_seconds, 600);
+  assert.equal(calls[0].options.delaySeconds, 600);
+  assert.equal(delaySecondsForAvailableAt(87_400, 1_000), 86_400);
+  assert.throws(() => delaySecondsForAvailableAt(87_401, 1_000), /exceeds_24h/);
+});
+
+test('provider-managed retries receive a deterministic retry delay instead of immediate polling', async () => {
+  const adapter = new MemoryQueueAdapter();
+  const control = new QueueControl({
+    adapter,
+    topology: buildQueueTopology({ namespace: 'demo', environment: 'test' }),
+  });
+  control.register('deploy.*', async () => {
+    throw new Error('pending');
+  });
+  const job = createJobEnvelope({
+    account_id: 'acct_real',
+    kind: 'deploy.cloudflare',
+    logical_queue: 'deployments',
+    retry: { max_attempts: 3, initial_delay_ms: 2_000, max_delay_ms: 2_000, jitter: false },
+  });
+  let retryOptions = null;
+  const message = {
+    body: job,
+    attempts: 1,
+    retry(options) { retryOptions = options; },
+  };
+
+  const [result] = await control.consume([message]);
+  assert.equal(result.retry.provider_managed, true);
+  assert.equal(result.retry.delay_seconds, 2);
+  assert.deepEqual(retryOptions, { delaySeconds: 2 });
+});
+
+
+test('job execution identity always carries a stable idempotency key and run/step attribution', () => {
+  const job = createJobEnvelope({
+    id: 'job_fixed',
+    account_id: 'acct_real',
+    kind: 'embeddings.generate',
+    run_id: 'arun_parent',
+    step_id: 'step_embed',
+  });
+  assert.equal(job.idempotency_key, 'job_fixed');
+  assert.deepEqual(jobExecutionIdentity(job), {
+    job_id: 'job_fixed',
+    run_id: 'arun_parent',
+    step_id: 'step_embed',
+    attempt: 0,
+    idempotency_key: 'job_fixed',
+    lease_owner: null,
+    lease_expires_at: null,
+    lease_generation: 0,
+  });
+
+  const explicit = createJobEnvelope({
+    id: 'job_other',
+    account_id: 'acct_real',
+    kind: 'deploy.cloudflare',
+    idempotency_key: 'deploy:commit:abc123',
+  });
+  assert.equal(explicit.idempotency_key, 'deploy:commit:abc123');
+});
+
+test('lease contract supports claim, refresh, release, crash expiry, and rejects live double claims', () => {
+  const job = createJobEnvelope({
+    account_id: 'acct_real',
+    kind: 'repository.index',
+    created_at: 1_000,
+  });
+  const claimed = claimJobLease(job, { owner: 'worker-a', now: 1_000, ttl_seconds: 30 });
+  assert.equal(claimed.status, 'claimed');
+  assert.equal(claimed.lease_owner, 'worker-a');
+  assert.equal(claimed.lease_expires_at, 1_030);
+  assert.equal(claimed.lease_generation, 1);
+  assert.equal(canClaimJobLease(claimed, { owner: 'worker-b', now: 1_010 }), false);
+  assert.throws(
+    () => claimJobLease(claimed, { owner: 'worker-b', now: 1_010 }),
+    /job_lease_held/,
+  );
+
+  const refreshed = refreshJobLease(claimed, { owner: 'worker-a', now: 1_010, ttl_seconds: 30 });
+  assert.equal(refreshed.lease_expires_at, 1_040);
+  assert.throws(
+    () => refreshJobLease(refreshed, { owner: 'worker-a', now: 1_041, ttl_seconds: 30 }),
+    /job_lease_expired/,
+  );
+
+  assert.equal(canClaimJobLease(refreshed, { owner: 'worker-b', now: 1_041 }), true);
+  const reclaimed = claimJobLease(refreshed, { owner: 'worker-b', now: 1_041, ttl_seconds: 30 });
+  assert.equal(reclaimed.lease_generation, 2);
+  assert.equal(reclaimed.lease_owner, 'worker-b');
+
+  const released = releaseJobLease(reclaimed, { owner: 'worker-b', status: 'queued' });
+  assert.equal(released.lease_owner, null);
+  assert.equal(released.lease_expires_at, null);
+  assert.equal(released.status, 'queued');
+});
+
+
+test('provider-managed retry exhaustion stops requeueing instead of polling forever', async () => {
+  const adapter = new MemoryQueueAdapter();
+  const control = new QueueControl({
+    adapter,
+    topology: buildQueueTopology({ namespace: 'demo', environment: 'test' }),
+  });
+  control.register('deploy.*', async () => {
+    throw new Error('still pending');
+  });
+  const job = createJobEnvelope({
+    account_id: 'acct_real',
+    kind: 'deploy.cloudflare',
+    logical_queue: 'deployments',
+    retry: { max_attempts: 3, initial_delay_ms: 1_000, max_delay_ms: 1_000, jitter: false },
+  });
+  let retried = false;
+  let acked = false;
+  const [result] = await control.consume([{
+    body: job,
+    attempts: 3,
+    retry() { retried = true; },
+    ack() { acked = true; },
+  }]);
+  assert.equal(retried, false);
+  assert.equal(acked, true);
+  assert.deepEqual(result.retry, {
+    scheduled: false,
+    exhausted: true,
+    provider_managed: true,
+    attempt: 3,
+  });
 });

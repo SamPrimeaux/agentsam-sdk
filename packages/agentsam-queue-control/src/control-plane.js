@@ -1,4 +1,4 @@
-import { createJobEnvelope, assertJobEnvelope } from './contracts.js';
+import { createJobEnvelope, assertJobEnvelope, computeRetryDelayMs, createRetrySchedule } from './contracts.js';
 import { buildQueueTopology, resolvePhysicalQueue } from './topology.js';
 import { routeWork, shouldRequireProvisionApproval } from './policy.js';
 import { JobDispatcher } from './dispatch.js';
@@ -127,12 +127,41 @@ export class QueueControl {
         if (typeof message?.ack === 'function') message.ack();
         results.push({ job_id: job.id, ok: true, result });
       } catch (error) {
-        if (typeof message?.retry === 'function') message.retry();
+        let retry = null;
+        if (typeof message?.retry === 'function') {
+          const attempt = Number.isInteger(message.attempts) ? message.attempts : (job.attempt + 1);
+          const maxAttempts = Math.max(1, Number(job.retry?.max_attempts) || 3);
+          if (attempt >= maxAttempts) {
+            if (typeof message?.ack === 'function') message.ack();
+            retry = { scheduled: false, exhausted: true, provider_managed: true, attempt };
+          } else {
+            const delayMs = computeRetryDelayMs(job.retry, attempt);
+            const delaySeconds = Math.max(0, Math.ceil(delayMs / 1000));
+            message.retry(delaySeconds > 0 ? { delaySeconds } : undefined);
+            retry = { scheduled: true, provider_managed: true, attempt, delay_ms: delayMs, delay_seconds: delaySeconds };
+          }
+        } else if (job.logical_queue) {
+          const schedule = createRetrySchedule(job, { error });
+          if (schedule.retryable && schedule.job) {
+            const queue = resolvePhysicalQueue(this.topology, job.logical_queue);
+            await this.adapter.publish(queue, schedule.job, { logical_queue: job.logical_queue });
+            retry = {
+              scheduled: true,
+              provider_managed: false,
+              delay_ms: schedule.delay_ms,
+              available_at: schedule.available_at,
+              attempt: schedule.attempt,
+            };
+          } else {
+            retry = { scheduled: false, exhausted: true, attempt: schedule.attempt };
+          }
+        }
         results.push({
           job_id: job.id,
           ok: false,
           error: String(error?.message || error),
           code: error?.code ?? null,
+          retry,
         });
       }
     }

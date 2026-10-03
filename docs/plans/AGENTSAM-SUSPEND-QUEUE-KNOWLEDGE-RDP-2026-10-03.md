@@ -820,12 +820,16 @@ Measure these before claiming dollar/token savings.
 
 ## 24. Immediate tickets
 
+Implementation checkpoint (2026-10-03): ACP-001 through ACP-004 are implemented on `feat/agent-control-plane`. Portable contracts now own the richer run/suspension/wake/event semantics; runtime migration `0006_agent_run_suspend_activity.sql` persists suspension and the append-only journal without rebuilding the legacy `agentsam_agent_run.status` check; Queue Control owns delayed availability, retry/backoff/jitter, stable idempotency identity, and lease claim/refresh/release contracts.
+
+Workbench audit note: `@inneranimalmedia/agentsam-workbench` already owns the portable thread + persistent composer surface (`AgentConversationSurface`), and its lead/co-worker/legacy composition tests pass. Do not create a second composer primitive in Local Studio; any remaining disappearing-lead-composer bug should be treated as Local Studio viewport/composition behavior unless a new portable invariant is proven missing.
+
 ~~~text
-ACP-001  Promote agentsam_agent_run fields into portable AgentRun contract
-ACP-002  Define AgentRunSuspension + wake conditions
-ACP-003  Define append-only run event journal and activity projection
-ACP-004  Add queue availableAt/backoff/jitter/idempotency/lease contract
-ACP-005  Implement local SQLite delayed-work scheduler
+ACP-001  DONE  Promote agentsam_agent_run fields into portable AgentRun contract
+ACP-002  DONE  Define AgentRunSuspension + wake conditions
+ACP-003  DONE  Define append-only run event journal and activity projection
+ACP-004  DONE  Add queue availableAt/backoff/jitter/idempotency/lease contract
+ACP-005        Implement local SQLite delayed-work scheduler
 ACP-006  Implement Cloudflare Queue delay/retry/DLQ adapter
 ACP-007  Add agentsam run get/watch/tree/cancel/events/receipt
 
