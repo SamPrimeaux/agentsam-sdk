@@ -1,67 +1,18 @@
 {
-  "schema": "agentsam.app.v1",
-  "id": "ecommerce-cms-agentsam",
-  "name": "AgentSam Ecommerce + CMS",
-  "package": "@inneranimalmedia/ecommerce-cms-agentsam",
-  "version": "0.2.0",
-  "modes": ["standalone", "embedded"],
-  "bin": "bin/ecommerce.mjs",
-  "commands": {
-    "info": "ecommerce info",
-    "doctor": "ecommerce doctor",
-    "preview": "ecommerce preview",
-    "scaffold": "ecommerce scaffold <directory>"
+  "schema": "agentsam.host-install.v1",
+  "app_id": "ecommerce-cms-agentsam",
+  "config": {
+    "modes": [
+      "standalone",
+      "embedded"
+    ]
   },
-  "surfaces": [
-    "admin",
-    "commerce",
-    "cms",
-    "content-studio",
-    "growth",
-    "analytics",
-    "email",
-    "integrations",
-    "agentsam"
+  "mounts": [
+    {
+      "id": "admin",
+      "path": "/admin"
+    }
   ],
-  "provides": [
-    "commerce.admin",
-    "cms.content",
-    "media.library",
-    "agentsam.workbench.host"
-  ],
-  "requires": [
-    "account.context",
-    "storage.sql"
-  ],
-  "optional": [
-    "email.send",
-    "commerce.catalog",
-    "agentsam.mini-composer",
-    "admin.shell-nav"
-  ],
-  "features": [
-    "admin.shell-nav",
-    "agentsam.mini-composer",
-    "commerce.product-studio",
-    "growth.campaigns",
-    "provider.completeful",
-    "provider.resend"
-  ],
-  "mounts": {
-    "web": "/admin"
-  },
-  "runtime": {
-    "local_preview": "worker",
-    "cloudflare": "requires-owner-provisioning",
-    "browser": "ready"
-  },
-  "capabilities": {
-    "products": true,
-    "cms": true,
-    "media": true,
-    "catalog": true,
-    "annotation": true,
-    "fulfillment_automation": false
-  },
-  "notes": "Mountable ecommerce admin APP. Canonical SDK identity TBD reconcile with @inneranimalmedia/agentsam-sdk-ecommerce."
+  "features": [],
+  "notes": "Installation state for this checkout. Product definition: ../agentsam.app.json."
 }

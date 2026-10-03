@@ -26,10 +26,10 @@ selected theme.
 
 App-local commands:
 
-    node apps/ecommerce-cms-agentsam/bin/ecommerce.mjs info
-    node apps/ecommerce-cms-agentsam/bin/ecommerce.mjs doctor
-    node apps/ecommerce-cms-agentsam/bin/ecommerce.mjs preview
-    node apps/ecommerce-cms-agentsam/bin/ecommerce.mjs scaffold /outside/empty-directory
+    node apps/ecommerce-cms-agentsam/bin/agentsam-ecommerce.mjs info
+    node apps/ecommerce-cms-agentsam/bin/agentsam-ecommerce.mjs doctor
+    node apps/ecommerce-cms-agentsam/bin/agentsam-ecommerce.mjs preview
+    node apps/ecommerce-cms-agentsam/bin/agentsam-ecommerce.mjs scaffold /outside/empty-directory
 
 The package exposes the top-level ecommerce executable when installed or linked. SDK registration uses agentsam.app.json and its bin. The SDK app already has a separate preview executable; do not blindly replace its host adapter. This workspace-source package must travel with its runtime source to scaffold.
 

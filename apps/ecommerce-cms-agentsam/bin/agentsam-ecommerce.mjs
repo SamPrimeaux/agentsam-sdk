@@ -373,7 +373,7 @@ function scaffold(destination) {
         "npm run build && wrangler deploy",
 
       ecommerce:
-        "node apps/ecommerce-cms-agentsam/bin/ecommerce.mjs",
+        "node apps/ecommerce-cms-agentsam/bin/agentsam-ecommerce.mjs",
 
       "db:migrate:local":
         "wrangler d1 execute my-ecommerce --local --file=db/schema.sql",
@@ -433,12 +433,43 @@ package defaults.
 try {
   if (command === "info") console.log(JSON.stringify(manifest, null, 2));
   else if (command === "doctor") {
+    const packageJsonPath = path.join(app, "package.json");
+    const frontendPackageJsonPath = path.join(app, "frontend", "package.json");
+    const binPath = path.join(app, manifest.bin || "");
+
+    const packageJson = fs.existsSync(packageJsonPath)
+      ? JSON.parse(fs.readFileSync(packageJsonPath, "utf8"))
+      : null;
+
+    const contractConsistent =
+      packageJson?.name === manifest.package &&
+      packageJson?.bin?.["agentsam-ecommerce"] === manifest.bin &&
+      manifest.runtime?.local_preview === "ready" &&
+      manifest.runtime?.source_scaffold === "ready";
+
+    const runnable =
+      missing.length === 0 &&
+      fs.existsSync(binPath) &&
+      fs.existsSync(frontendPackageJsonPath);
+
     console.log(
       JSON.stringify(
         {
-          app: manifest.id,
+          app_id: manifest.id,
           package_root: app,
           missing,
+          source: {
+            frontend: fs.existsSync(frontendPackageJsonPath)
+          },
+          runtime: {
+            package_json: fs.existsSync(packageJsonPath),
+            runnable
+          },
+          manifest_runtime: {
+            local_preview: manifest.runtime?.local_preview ?? null,
+            source_scaffold: manifest.runtime?.source_scaffold ?? null
+          },
+          contract_consistent: contractConsistent,
           source_ready: !missing.length,
           deployment_ready: false
         },
@@ -446,7 +477,8 @@ try {
         2,
       ),
     );
-    if (missing.length) process.exitCode = 1;
+
+    if (!runnable || !contractConsistent) process.exitCode = 1;
   } else if (command === "scaffold") scaffold(args[0]);
   else if (command === "preview") {
     if (missing.length) throw new Error("Run doctor first.");
@@ -470,8 +502,8 @@ try {
     if (result.error) throw result.error;
     process.exitCode = result.status ?? 1;
   } else if (["help", "--help", "-h"].includes(command)) {
-    console.log("ecommerce info | doctor | preview | scaffold <empty-directory>");
-  } else throw new Error("Unknown ecommerce command: " + command);
+    console.log("agentsam-ecommerce info | doctor | preview | scaffold <empty-directory>");
+  } else throw new Error("Unknown agentsam-ecommerce command: " + command);
 } catch (error) {
   console.error(error.message);
   process.exitCode = 1;

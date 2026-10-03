@@ -4,11 +4,11 @@
   "private": false,
   "type": "module",
   "bin": {
-    "ecommerce": "bin/ecommerce.mjs"
+    "agentsam-ecommerce": "bin/agentsam-ecommerce.mjs"
   },
   "scripts": {
-    "doctor": "node bin/ecommerce.mjs doctor",
-    "preview": "node bin/ecommerce.mjs preview"
+    "doctor": "node bin/agentsam-ecommerce.mjs doctor",
+    "preview": "node bin/agentsam-ecommerce.mjs preview"
   },
   "dependencies": {
     "@inneranimalmedia/revise-theme": "0.2.0",
@@ -27,5 +27,11 @@
     "agentsam.app.json",
     "README.md",
     "templates/"
-  ]
+  ],
+  "description": "Portable AgentSam ecommerce CMS runtime, scaffolding, media, analytics, and admin application package.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/SamPrimeaux/agentsam-sdk.git"
+  }
 }

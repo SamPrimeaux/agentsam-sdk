@@ -3,16 +3,16 @@
   "id": "ecommerce-cms-agentsam",
   "name": "AgentSam Ecommerce + CMS",
   "version": "0.2.0",
-  "bin": "bin/ecommerce.mjs",
+  "bin": "bin/agentsam-ecommerce.mjs",
   "commands": {
-    "info": "ecommerce info",
-    "doctor": "ecommerce doctor",
-    "preview": "ecommerce preview",
-    "scaffold": "ecommerce scaffold <directory>"
+    "info": "agentsam-ecommerce info",
+    "doctor": "agentsam-ecommerce doctor",
+    "preview": "agentsam-ecommerce preview",
+    "scaffold": "agentsam-ecommerce scaffold <directory>"
   },
   "runtime": {
-    "local_preview": "worker",
-    "source_scaffold": "workspace-source",
+    "local_preview": "ready",
+    "source_scaffold": "ready",
     "cloudflare": "requires-owner-provisioning"
   },
   "capabilities": {
@@ -23,7 +23,10 @@
     "annotation": true,
     "fulfillment_automation": false
   },
-  "modes": ["standalone", "embedded"],
+  "modes": [
+    "standalone",
+    "embedded"
+  ],
   "features": [
     "admin.shell-nav",
     "agentsam.mini-composer",
@@ -32,5 +35,13 @@
     "provider.completeful",
     "provider.resend"
   ],
-  "notes": "Fuel & Free Time reference installation. Feature capsules under ../../features/*. App contract twin: .agentsam/app.json"
+  "notes": "Fuel & Free Time reference installation. Feature capsules under ../../features/*. App contract twin: .agentsam/app.json",
+  "kind": "app",
+  "package": "@inneranimalmedia/ecommerce-cms-agentsam",
+  "preview": {
+    "kind": "web",
+    "bridge": "agentsam.preview.v1",
+    "entry": "/admin",
+    "port": 4174
+  }
 }
