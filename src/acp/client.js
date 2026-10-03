@@ -81,16 +81,21 @@ async function withLocalDb(cwd, fn) {
   try { await applyRuntimeMigrations(db); return await fn(db); } finally { db.close(); }
 }
 
-export class LocalAgentControlClient {
-  constructor({ cwd = process.cwd() } = {}) { this.cwd = cwd; this.kind = 'local'; }
+export class DatabaseAgentControlClient {
+  constructor({ database, kind = 'database' } = {}) {
+    if (!database || typeof database.prepare !== 'function') {
+      throw new TypeError('database with prepare() is required');
+    }
+    this.database = database;
+    this.kind = clean(kind) || 'database';
+  }
 
   async getRun(id) {
-    return withLocalDb(this.cwd, async (db) =>
-      mapRun(await db.prepare(RUN_JOIN + ' WHERE r.id = ? LIMIT 1').bind(id).first()));
+    return mapRun(await this.database.prepare(RUN_JOIN + ' WHERE r.id = ? LIMIT 1').bind(id).first());
   }
 
   async start(input = {}) {
-    return withLocalDb(this.cwd, async (db) => createRootRun(db, {
+    return createRootRun(this.database, {
       runId: input.run_id ?? input.runId ?? null,
       accountId: input.account_id ?? input.accountId ?? null,
       conversationId: input.conversation_id ?? input.conversationId ?? null,
@@ -105,54 +110,55 @@ export class LocalAgentControlClient {
       priority: input.priority ?? 'normal',
       sourceClient: input.source_client ?? input.sourceClient ?? 'agentsam-acp',
       surface: input.surface ?? 'control-plane',
-    }));
+    });
   }
 
   async events(id, { after = -1, limit = 200 } = {}) {
-    return withLocalDb(this.cwd, async (db) => {
-      const result = await db.prepare(`
-        SELECT * FROM agentsam_agent_run_event
-        WHERE run_id = ? AND seq > ?
-        ORDER BY seq ASC LIMIT ?
-      `).bind(id, Math.max(-1, Number(after)), Math.max(1, Math.min(1000, Number(limit)))).all();
-      return (result.results || []).map(mapEvent);
-    });
+    const result = await this.database.prepare(`
+      SELECT * FROM agentsam_agent_run_event
+      WHERE run_id = ? AND seq > ?
+      ORDER BY seq ASC LIMIT ?
+    `).bind(id, Math.max(-1, Number(after)), Math.max(1, Math.min(1000, Number(limit)))).all();
+    return (result.results || []).map(mapEvent);
   }
 
   async tree(id) {
-    return withLocalDb(this.cwd, async (db) => {
-      const result = await db.prepare(`
-        WITH RECURSIVE descendants(id, depth, path) AS (
-          SELECT id, 0, ',' || id || ',' FROM agentsam_agent_run WHERE id = ?
-          UNION ALL
-          SELECT child.id, descendants.depth + 1, descendants.path || child.id || ','
-          FROM agentsam_agent_run child
-          JOIN descendants ON child.parent_run_id = descendants.id
-          WHERE descendants.depth < 64
-            AND instr(descendants.path, ',' || child.id || ',') = 0
-        )
-        SELECT r.*, descendants.depth,
-               s.state AS suspension_state, s.reason AS suspension_reason,
-               s.wake_at_unix, s.wake_event, s.dependency_run_ids_json,
-               s.resume_step_id, s.checkpoint_ref, s.expires_at_unix,
-               s.attempt AS suspension_attempt, s.metadata_json AS suspension_metadata_json
-        FROM descendants
-        JOIN agentsam_agent_run r ON r.id = descendants.id
-        LEFT JOIN agentsam_agent_run_suspension s ON s.run_id = r.id
-        ORDER BY descendants.depth, r.created_at_unix, r.id
-      `).bind(id).all();
-      const rows = result.results || [];
-      if (!rows.length) return null;
-      const byId = new Map(rows.map((row) => [row.id, { ...mapRun(row), depth: Number(row.depth || 0), children: [] }]));
-      for (const node of byId.values()) {
-        if (node.parentRunId && byId.has(node.parentRunId)) byId.get(node.parentRunId).children.push(node);
+    const result = await this.database.prepare(`
+      WITH RECURSIVE descendants(id, depth, path) AS (
+        SELECT id, 0, ',' || id || ',' FROM agentsam_agent_run WHERE id = ?
+        UNION ALL
+        SELECT child.id, descendants.depth + 1, descendants.path || child.id || ','
+        FROM agentsam_agent_run child
+        JOIN descendants ON child.parent_run_id = descendants.id
+        WHERE descendants.depth < 64
+          AND instr(descendants.path, ',' || child.id || ',') = 0
+      )
+      SELECT r.*, descendants.depth,
+             s.state AS suspension_state, s.reason AS suspension_reason,
+             s.wake_at_unix, s.wake_event, s.dependency_run_ids_json,
+             s.resume_step_id, s.checkpoint_ref, s.expires_at_unix,
+             s.attempt AS suspension_attempt, s.metadata_json AS suspension_metadata_json
+      FROM descendants
+      JOIN agentsam_agent_run r ON r.id = descendants.id
+      LEFT JOIN agentsam_agent_run_suspension s ON s.run_id = r.id
+      ORDER BY descendants.depth, r.created_at_unix, r.id
+    `).bind(id).all();
+    const rows = result.results || [];
+    if (!rows.length) return null;
+    const byId = new Map(rows.map((row) => [
+      row.id,
+      { ...mapRun(row), depth: Number(row.depth || 0), children: [] },
+    ]));
+    for (const node of byId.values()) {
+      if (node.parentRunId && byId.has(node.parentRunId)) {
+        byId.get(node.parentRunId).children.push(node);
       }
-      return byId.get(id) || null;
-    });
+    }
+    return byId.get(id) || null;
   }
 
   async spawn(id, input = {}) {
-    return withLocalDb(this.cwd, async (db) => spawnChildRun(db, {
+    return spawnChildRun(this.database, {
       parentRunId: id,
       childRunId: input.child_run_id ?? input.childRunId ?? null,
       accountId: input.account_id ?? input.accountId ?? null,
@@ -166,56 +172,99 @@ export class LocalAgentControlClient {
       runtimeRequirements: input.runtime_requirements ?? input.runtimeRequirements ?? {},
       metadata: input.metadata ?? {},
       priority: input.priority ?? 'normal',
-    }));
+    });
   }
 
   async cancel(id) {
-    const result = await withLocalDb(this.cwd, async (db) => {
-      const row = await db.prepare(RUN_JOIN + ' WHERE r.id = ? LIMIT 1').bind(id).first();
-      if (!row) return null;
-      const run = mapRun(row);
-      if (isTerminal(run.status)) return { ...run, cancelAccepted: false };
-      await db.prepare('UPDATE agentsam_agent_run SET cancel_requested=1, updated_at_unix=unixepoch() WHERE id=?')
-        .bind(id).run();
-      const seqRow = await db.prepare(
-        'SELECT COALESCE(MAX(seq), -1) + 1 AS next_seq FROM agentsam_agent_run_event WHERE run_id=?'
-      ).bind(id).first();
-      await db.prepare(`
-        INSERT OR IGNORE INTO agentsam_agent_run_event (
-          event_id, run_id, parent_run_id, seq, event_type, phase, label,
-          source_kind, evidence_json, dedupe_key
-        ) VALUES (?, ?, ?, ?, 'run.cancel_requested', 'recover', ?, 'sam', ?, ?)
-      `).bind(
-        `evt_${randomUUID()}`, id, row.parent_run_id || null, Number(seqRow?.next_seq || 0),
-        'Cancellation requested', JSON.stringify({ requested_by: 'user' }), `cancel:${id}`,
-      ).run();
-      return null;
-    });
-    return result || { ...(await this.getRun(id)), cancelAccepted: true };
+    const row = await this.database.prepare(RUN_JOIN + ' WHERE r.id = ? LIMIT 1').bind(id).first();
+    if (!row) return null;
+    const run = mapRun(row);
+    if (isTerminal(run.status)) return { ...run, cancelAccepted: false };
+
+    await this.database.prepare(
+      'UPDATE agentsam_agent_run SET cancel_requested=1, updated_at_unix=unixepoch() WHERE id=?'
+    ).bind(id).run();
+    const seqRow = await this.database.prepare(
+      'SELECT COALESCE(MAX(seq), -1) + 1 AS next_seq FROM agentsam_agent_run_event WHERE run_id=?'
+    ).bind(id).first();
+    await this.database.prepare(`
+      INSERT OR IGNORE INTO agentsam_agent_run_event (
+        event_id, run_id, parent_run_id, seq, event_type, phase, label,
+        source_kind, evidence_json, dedupe_key
+      ) VALUES (?, ?, ?, ?, 'run.cancel_requested', 'recover', ?, 'sam', ?, ?)
+    `).bind(
+      `evt_${randomUUID()}`,
+      id,
+      row.parent_run_id || null,
+      Number(seqRow?.next_seq || 0),
+      'Cancellation requested',
+      JSON.stringify({ requested_by: 'user' }),
+      `cancel:${id}`,
+    ).run();
+
+    return { ...(await this.getRun(id)), cancelAccepted: true };
   }
 
   async receipt(id) {
     const run = await this.getRun(id);
     if (!run) return null;
-    const [events, tree] = await Promise.all([this.events(id, { limit: 1000 }), this.tree(id)]);
+    const [events, tree] = await Promise.all([
+      this.events(id, { limit: 1000 }),
+      this.tree(id),
+    ]);
     const lastEvent = events.length ? events[events.length - 1] : null;
     return {
-      schema: 'agentsam.run-receipt.v1', runId: id, status: run.status, terminal: isTerminal(run.status),
-      parentRunId: run.parentRunId ?? null, planId: run.planId ?? null, todoId: run.todoId ?? null,
+      schema: 'agentsam.run-receipt.v1',
+      runId: id,
+      status: run.status,
+      terminal: isTerminal(run.status),
+      parentRunId: run.parentRunId ?? null,
+      planId: run.planId ?? null,
+      todoId: run.todoId ?? null,
       usage: {
-        modelCalls: run.modelCallCount, toolCalls: run.toolCallCount,
-        inputTokens: run.inputTokens, cachedInputTokens: run.cachedInputTokens,
-        outputTokens: run.outputTokens, reasoningTokens: run.reasoningTokens, costUsd: run.costUsd,
+        modelCalls: run.modelCallCount,
+        toolCalls: run.toolCallCount,
+        inputTokens: run.inputTokens,
+        cachedInputTokens: run.cachedInputTokens,
+        outputTokens: run.outputTokens,
+        reasoningTokens: run.reasoningTokens,
+        costUsd: run.costUsd,
       },
       timing: {
-        createdAt: run.createdAt ?? null, startedAt: run.startedAt ?? null,
-        completedAt: run.completedAt ?? null, latencyMs: run.latencyMs ?? null,
+        createdAt: run.createdAt ?? null,
+        startedAt: run.startedAt ?? null,
+        completedAt: run.completedAt ?? null,
+        latencyMs: run.latencyMs ?? null,
       },
-      error: run.errorCode || run.errorMessage ? { code: run.errorCode ?? null, message: run.errorMessage ?? null } : null,
-      suspension: run.suspension, eventCount: events.length,
-      childRunCount: tree?.children?.length || 0, lastEvent,
+      error: run.errorCode || run.errorMessage
+        ? { code: run.errorCode ?? null, message: run.errorMessage ?? null }
+        : null,
+      suspension: run.suspension,
+      eventCount: events.length,
+      childRunCount: tree?.children?.length || 0,
+      lastEvent,
     };
   }
+}
+
+export class LocalAgentControlClient {
+  constructor({ cwd = process.cwd() } = {}) {
+    this.cwd = cwd;
+    this.kind = 'local';
+  }
+
+  async #withClient(fn) {
+    return withLocalDb(this.cwd, (database) =>
+      fn(new DatabaseAgentControlClient({ database, kind: this.kind })));
+  }
+
+  getRun(id) { return this.#withClient((client) => client.getRun(id)); }
+  start(input = {}) { return this.#withClient((client) => client.start(input)); }
+  events(id, options = {}) { return this.#withClient((client) => client.events(id, options)); }
+  tree(id) { return this.#withClient((client) => client.tree(id)); }
+  spawn(id, input = {}) { return this.#withClient((client) => client.spawn(id, input)); }
+  cancel(id) { return this.#withClient((client) => client.cancel(id)); }
+  receipt(id) { return this.#withClient((client) => client.receipt(id)); }
 }
 
 export class HttpAgentControlClient {
