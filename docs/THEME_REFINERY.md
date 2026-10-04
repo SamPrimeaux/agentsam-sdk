@@ -26,9 +26,9 @@ apps/<sellable-theme>  +  @inneranimalmedia/theme-<slug>
 
 | Kind | Use when |
 |------|----------|
-| `app` | Sellable site/APP (`insurance-site`) |
+| `app` | Sellable site/APP (`harbor`) |
 | `theme` | Visual/design product or stock shell (`heuristic-theme`) |
-| `sdk-package` | npm boundary (`@inneranimalmedia/theme-insurance-site`) |
+| `sdk-package` | npm boundary (`@inneranimalmedia/theme-harbor`) |
 | `section` / `block` | Reusable CMS pieces (also may write `cms_component_templates`) |
 | `ui-component` | Header/nav shells extracted for reuse |
 | `integration` | Provider adapters (Resend, Square, …) |
@@ -44,7 +44,7 @@ UPSERT by stable `slug`. Never delete/recreate to refresh metadata.
 ### 1. `agentsam_products` — canonical identity
 
 - Resolve `repository_id` from live `code_repositories` (never invent IDs).
-- Set `canonical_path` (e.g. `apps/insurance-site`, `packages/theme-insurance-site`).
+- Set `canonical_path` (e.g. `apps/harbor`, `packages/theme-harbor`).
 - Rely on existing triggers for `defined_in` → `code_repository`.
 - Provenance in `metadata` only (no secrets). See `protocol/theme-refinery/product-metadata.schema.json`.
 
@@ -57,9 +57,9 @@ Preferred verbs already in use: `defined_in`, `depends_on`, `consumed_by`, `buil
 Example:
 
 ```
-insurance-site --sourced_from--> (evidence / donor path hash)
-insurance-site --packaged_as--> @inneranimalmedia/theme-insurance-site
-insurance-site --depends_on--> theme.storefront.shell / cms contracts
+harbor --sourced_from--> (evidence / donor path hash)
+harbor --packaged_as--> @inneranimalmedia/theme-harbor
+harbor --depends_on--> theme.storefront.shell / cms contracts
 ```
 
 ### 3. `agentsam_evidence_snapshots` — point-in-time proof

@@ -1,6 +1,6 @@
 /**
  * Worker-safe ingest plan: classify → route pipeline → canonical URL intent.
- * Heavy sharp promote runs via bin/fnf-assets; Worker never pretends optimize finished.
+ * Heavy sharp promote runs via bin/commerce-assets; Worker never pretends optimize finished.
  */
 
 import { ASSET_STORAGE, publicUrlsForKey, deliveryUrlForKey } from "./config.js";
@@ -120,7 +120,7 @@ export function planAssetIngest(input) {
     execution: willPromote
       ? {
           mode: "cli_or_node",
-          command: `bin/fnf-assets promote --key ${key}`,
+          command: `bin/commerce-assets promote --key ${key}`,
           note: "Promote optimized result to canonical key, then delete intake.",
         }
       : {

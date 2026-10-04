@@ -1,7 +1,7 @@
 # @inneranimalmedia/analytics-ui
 
 Neutral analytics presentation primitives harvested from the proven
-Fuel & Free Time analytics UI.
+Ember Supply analytics UI.
 
 This package owns reusable visual mechanics only:
 

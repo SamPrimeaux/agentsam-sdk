@@ -49,7 +49,7 @@ export interface R2Config {
   bucketName?: string;
   /** Public delivery domain bound to the bucket, e.g. https://media.example.com */
   publicBaseUrl?: string;
-  /** Key prefix namespace, e.g. "brands/fuel-free-time/". */
+  /** Key prefix namespace, e.g. "brands/ember/". */
   prefix?: string;
 }
 

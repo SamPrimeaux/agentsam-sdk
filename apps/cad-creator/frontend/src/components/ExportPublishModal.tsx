@@ -4,7 +4,7 @@ import {
   Download,
   Share2,
   HardDrive,
-  Github,
+  GitBranch,
   Cloud,
   Server,
   CheckCircle2,
@@ -257,7 +257,7 @@ export const ExportPublishModal: React.FC<ExportPublishModalProps> = ({
                         }`}
                       >
                         <div className="flex justify-center">
-                          {pub.id === 'github' && <Github className="w-5 h-5 text-indigo-400" />}
+                          {pub.id === 'github' && <GitBranch className="w-5 h-5 text-indigo-400" />}
                           {pub.id === 'cloudflare' && <Cloud className="w-5 h-5 text-amber-400" />}
                           {pub.id === 'local' && <HardDrive className="w-5 h-5 text-blue-400" />}
                           {pub.id === 'docker' && <Server className="w-5 h-5 text-emerald-400" />}

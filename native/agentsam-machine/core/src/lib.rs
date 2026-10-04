@@ -880,10 +880,10 @@ mod tests {
     #[test]
     fn church_site_fixture_produces_semantic_perception() {
         let fixture = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../../apps/client-cms-editor/fixtures/donor-themes/church-site");
+            .join("../../../apps/client-cms-editor/fixtures/donor-themes/cypress");
         assert!(
             fixture.join("site/index.html").exists(),
-            "church-site fixture missing at {}",
+            "cypress fixture missing at {}",
             fixture.display()
         );
 

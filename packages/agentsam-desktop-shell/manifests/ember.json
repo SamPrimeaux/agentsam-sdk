@@ -1,14 +1,14 @@
 {
   "$schema": "./schema.json",
-  "app_id": "fuelnfreetime",
-  "app_name": "Fuel & Free Time",
-  "bundle_identifier": "com.fuelnfreetime.app",
-  "base_url": "https://fuelnfreetime.com",
+  "app_id": "ember",
+  "app_name": "Ember Supply",
+  "bundle_identifier": "com.ember.app",
+  "base_url": "https://ember.example",
   "surface": "store",
   "launch_path": "/",
-  "deep_link_scheme": "fuelnfreetime",
+  "deep_link_scheme": "ember",
   "identity_provider": "inneranimalmedia",
-  "icon_set": "icons/fuelnfreetime",
+  "icon_set": "icons/ember",
   "theme": {
     "primary_color": "#18181b",
     "accent_color": "#f59e0b"

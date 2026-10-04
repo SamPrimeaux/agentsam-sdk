@@ -1,17 +1,17 @@
-<section id="fnfDiscountsApp" class="fnf-discounts-app" data-view="list">
-  <div class="fnf-discounts-page" data-page="list">
-    <header class="fnf-disc-head fnf-disc-row">
-      <h1 class="fnf-disc-title">Discounts</h1>
-      <div class="fnf-disc-actions">
-        <button class="fnf-disc-btn" type="button" id="discExportBtn" disabled>Export</button>
-        <button class="fnf-disc-btn primary" type="button" id="discCreateBtn">Create discount</button>
+<section id="commerceDiscountsApp" class="commerce-discounts-app" data-view="list">
+  <div class="commerce-discounts-page" data-page="list">
+    <header class="commerce-disc-head commerce-disc-row">
+      <h1 class="commerce-disc-title">Discounts</h1>
+      <div class="commerce-disc-actions">
+        <button class="commerce-disc-btn" type="button" id="discExportBtn" disabled>Export</button>
+        <button class="commerce-disc-btn primary" type="button" id="discCreateBtn">Create discount</button>
       </div>
     </header>
 
     <div id="discListWrap">
-      <p class="fnf-disc-loading" id="discLoadingState">Loading discounts…</p>
-      <div class="fnf-disc-empty" id="discEmptyState" hidden>
-        <div class="fnf-disc-empty-art" aria-hidden="true">
+      <p class="commerce-disc-loading" id="discLoadingState">Loading discounts…</p>
+      <div class="commerce-disc-empty" id="discEmptyState" hidden>
+        <div class="commerce-disc-empty-art" aria-hidden="true">
           <svg viewBox="0 0 120 80" width="120" height="80" fill="none">
             <circle cx="60" cy="40" r="38" fill="#eceff2"/>
             <rect x="28" y="24" width="52" height="32" rx="4" fill="#f4b942"/>
@@ -23,12 +23,12 @@
         </div>
         <h2>Manage discounts and promotions</h2>
         <p>Add discount codes and automatic discounts that apply at checkout.</p>
-        <button class="fnf-disc-btn primary" type="button" data-open-type-picker>Create discount</button>
-        <a class="fnf-disc-learn" href="https://help.shopify.com/en/manual/discounts" target="_blank" rel="noopener">Learn more about discounts</a>
+        <button class="commerce-disc-btn primary" type="button" data-open-type-picker>Create discount</button>
+        <a class="commerce-disc-learn" href="https://help.shopify.com/en/manual/discounts" target="_blank" rel="noopener">Learn more about discounts</a>
       </div>
 
-      <div class="fnf-disc-card" id="discTableWrap" hidden>
-        <table class="fnf-disc-table">
+      <div class="commerce-disc-card" id="discTableWrap" hidden>
+        <table class="commerce-disc-table">
           <thead>
             <tr>
               <th>Title</th>
@@ -45,52 +45,52 @@
     </div>
   </div>
 
-  <div class="fnf-discounts-page" data-page="editor" hidden>
-    <header class="fnf-disc-editor-head">
-      <button class="fnf-disc-back" type="button" id="discBackBtn" aria-label="Back">←</button>
+  <div class="commerce-discounts-page" data-page="editor" hidden>
+    <header class="commerce-disc-editor-head">
+      <button class="commerce-disc-back" type="button" id="discBackBtn" aria-label="Back">←</button>
       <h1 id="discEditorTitle">Create discount</h1>
     </header>
 
-    <div class="fnf-disc-editor-layout">
-      <div class="fnf-disc-editor-main">
-        <section class="fnf-disc-panel">
+    <div class="commerce-disc-editor-layout">
+      <div class="commerce-disc-editor-main">
+        <section class="commerce-disc-panel">
           <h2 id="discTypeHeading">Amount off products</h2>
-          <div class="fnf-disc-field">
+          <div class="commerce-disc-field">
             <label>Method</label>
-            <div class="fnf-disc-segment" role="tablist">
+            <div class="commerce-disc-segment" role="tablist">
               <button type="button" class="active" data-method="code">Discount code</button>
               <button type="button" data-method="automatic">Automatic discount</button>
             </div>
           </div>
-          <div class="fnf-disc-field" id="discCodeField">
+          <div class="commerce-disc-field" id="discCodeField">
             <label for="discCode">Discount code</label>
-            <div class="fnf-disc-code-row">
+            <div class="commerce-disc-code-row">
               <input id="discCode" type="text" placeholder="SUMMER10" autocomplete="off">
-              <button type="button" class="fnf-disc-link" id="discGenCode">Generate random code</button>
+              <button type="button" class="commerce-disc-link" id="discGenCode">Generate random code</button>
             </div>
-            <p class="fnf-disc-hint">Customers must enter this code at checkout.</p>
+            <p class="commerce-disc-hint">Customers must enter this code at checkout.</p>
           </div>
-          <div class="fnf-disc-field">
+          <div class="commerce-disc-field">
             <label for="discTitle">Title</label>
             <input id="discTitle" type="text" placeholder="Summer sale">
           </div>
         </section>
 
-        <section class="fnf-disc-panel">
+        <section class="commerce-disc-panel">
           <h2>Discount value</h2>
-          <div class="fnf-disc-value-row">
+          <div class="commerce-disc-value-row">
             <select id="discValueType">
               <option value="percent">Percentage</option>
               <option value="fixed">Fixed amount</option>
             </select>
-            <div class="fnf-disc-value-input">
+            <div class="commerce-disc-value-input">
               <input id="discValue" type="number" min="0" step="1" value="10">
               <span id="discValueSuffix">%</span>
             </div>
           </div>
         </section>
 
-        <section class="fnf-disc-panel" id="discAppliesPanel">
+        <section class="commerce-disc-panel" id="discAppliesPanel">
           <h2>Applies to</h2>
           <select id="discAppliesTo">
             <option value="all">All products</option>
@@ -99,24 +99,24 @@
           </select>
         </section>
 
-        <section class="fnf-disc-panel">
+        <section class="commerce-disc-panel">
           <h2>Minimum purchase requirements</h2>
-          <label class="fnf-disc-radio"><input type="radio" name="minReq" value="none" checked> No minimum requirements</label>
-          <label class="fnf-disc-radio"><input type="radio" name="minReq" value="amount"> Minimum purchase amount ($)</label>
-          <label class="fnf-disc-radio"><input type="radio" name="minReq" value="quantity"> Minimum quantity of items</label>
+          <label class="commerce-disc-radio"><input type="radio" name="minReq" value="none" checked> No minimum requirements</label>
+          <label class="commerce-disc-radio"><input type="radio" name="minReq" value="amount"> Minimum purchase amount ($)</label>
+          <label class="commerce-disc-radio"><input type="radio" name="minReq" value="quantity"> Minimum quantity of items</label>
           <input id="discMinValue" type="number" min="0" step="1" hidden>
         </section>
 
-        <section class="fnf-disc-panel">
+        <section class="commerce-disc-panel">
           <h2>Maximum discount uses</h2>
-          <label class="fnf-disc-check"><input type="checkbox" id="discLimitTotal"> Limit number of times this discount can be used in total</label>
+          <label class="commerce-disc-check"><input type="checkbox" id="discLimitTotal"> Limit number of times this discount can be used in total</label>
           <input id="discMaxTotal" type="number" min="1" step="1" hidden>
-          <label class="fnf-disc-check"><input type="checkbox" id="discLimitCustomer"> Limit to one use per customer</label>
+          <label class="commerce-disc-check"><input type="checkbox" id="discLimitCustomer"> Limit to one use per customer</label>
         </section>
 
-        <section class="fnf-disc-panel">
+        <section class="commerce-disc-panel">
           <h2>Active dates</h2>
-          <div class="fnf-disc-dates">
+          <div class="commerce-disc-dates">
             <div>
               <label for="discStarts">Start date</label>
               <input id="discStarts" type="datetime-local">
@@ -129,10 +129,10 @@
         </section>
       </div>
 
-      <aside class="fnf-disc-editor-side">
-        <section class="fnf-disc-panel fnf-disc-summary">
+      <aside class="commerce-disc-editor-side">
+        <section class="commerce-disc-panel commerce-disc-summary">
           <h2>Summary</h2>
-          <p class="fnf-disc-summary-code" id="discSummaryCode">No discount code yet</p>
+          <p class="commerce-disc-summary-code" id="discSummaryCode">No discount code yet</p>
           <ul id="discSummaryList">
             <li>All customers</li>
             <li>For Online Store</li>
@@ -141,7 +141,7 @@
             <li>Active from today</li>
           </ul>
         </section>
-        <section class="fnf-disc-panel">
+        <section class="commerce-disc-panel">
           <label for="discStatus">Status</label>
           <select id="discStatus">
             <option value="active">Active</option>
@@ -149,46 +149,46 @@
             <option value="disabled">Disabled</option>
           </select>
         </section>
-        <div class="fnf-disc-editor-actions">
-          <button type="button" class="fnf-disc-btn" id="discDiscardBtn">Discard</button>
-          <button type="button" class="fnf-disc-btn primary" id="discSaveBtn">Save discount</button>
+        <div class="commerce-disc-editor-actions">
+          <button type="button" class="commerce-disc-btn" id="discDiscardBtn">Discard</button>
+          <button type="button" class="commerce-disc-btn primary" id="discSaveBtn">Save discount</button>
         </div>
-        <p class="fnf-disc-error" id="discEditorError" hidden></p>
+        <p class="commerce-disc-error" id="discEditorError" hidden></p>
       </aside>
     </div>
   </div>
 
-  <div class="fnf-disc-modal" id="discTypeModal" hidden>
-    <div class="fnf-disc-modal-backdrop" data-close-modal></div>
-    <div class="fnf-disc-modal-panel" role="dialog" aria-modal="true" aria-labelledby="discTypeModalTitle">
-      <header class="fnf-disc-modal-head">
+  <div class="commerce-disc-modal" id="discTypeModal" hidden>
+    <div class="commerce-disc-modal-backdrop" data-close-modal></div>
+    <div class="commerce-disc-modal-panel" role="dialog" aria-modal="true" aria-labelledby="discTypeModalTitle">
+      <header class="commerce-disc-modal-head">
         <h2 id="discTypeModalTitle">Select discount type</h2>
-        <button type="button" class="fnf-disc-modal-close" data-close-modal aria-label="Close">×</button>
+        <button type="button" class="commerce-disc-modal-close" data-close-modal aria-label="Close">×</button>
       </header>
-      <div class="fnf-disc-type-list">
-        <button type="button" class="fnf-disc-type-item" data-type="product_percent">
-          <span class="fnf-disc-type-icon">🏷</span>
+      <div class="commerce-disc-type-list">
+        <button type="button" class="commerce-disc-type-item" data-type="product_percent">
+          <span class="commerce-disc-type-icon">🏷</span>
           <span><strong>Amount off products</strong><small>Discount specific products or collections</small></span>
-          <span class="fnf-disc-chevron">›</span>
+          <span class="commerce-disc-chevron">›</span>
         </button>
-        <button type="button" class="fnf-disc-type-item" data-type="buy_x_get_y">
-          <span class="fnf-disc-type-icon">🏷</span>
+        <button type="button" class="commerce-disc-type-item" data-type="buy_x_get_y">
+          <span class="commerce-disc-type-icon">🏷</span>
           <span><strong>Buy X get Y</strong><small>Discount when customers buy a minimum quantity</small></span>
-          <span class="fnf-disc-chevron">›</span>
+          <span class="commerce-disc-chevron">›</span>
         </button>
-        <button type="button" class="fnf-disc-type-item" data-type="order_percent">
-          <span class="fnf-disc-type-icon">🛍</span>
+        <button type="button" class="commerce-disc-type-item" data-type="order_percent">
+          <span class="commerce-disc-type-icon">🛍</span>
           <span><strong>Amount off order</strong><small>Discount the total order amount</small></span>
-          <span class="fnf-disc-chevron">›</span>
+          <span class="commerce-disc-chevron">›</span>
         </button>
-        <button type="button" class="fnf-disc-type-item" data-type="free_shipping">
-          <span class="fnf-disc-type-icon">🚚</span>
+        <button type="button" class="commerce-disc-type-item" data-type="free_shipping">
+          <span class="commerce-disc-type-icon">🚚</span>
           <span><strong>Free shipping</strong><small>Offer free shipping on an order</small></span>
-          <span class="fnf-disc-chevron">›</span>
+          <span class="commerce-disc-chevron">›</span>
         </button>
       </div>
-      <footer class="fnf-disc-modal-foot">
-        <button type="button" class="fnf-disc-btn" data-close-modal>Cancel</button>
+      <footer class="commerce-disc-modal-foot">
+        <button type="button" class="commerce-disc-btn" data-close-modal>Cancel</button>
       </footer>
     </div>
   </div>

@@ -187,7 +187,7 @@ function openAgentsamDrawer() {
   document.getElementById("agentsam-toggle")?.setAttribute("aria-expanded", "true");
   document.getElementById("agentsam-toggle")?.classList.add("is-agentsam-active");
   try {
-    sessionStorage.setItem("fnf_agentsam_open", "1");
+    sessionStorage.setItem("commerce_agentsam_open", "1");
   } catch {
     /* ignore */
   }
@@ -202,7 +202,7 @@ function closeAgentsamDrawer() {
   document.getElementById("agentsam-toggle")?.setAttribute("aria-expanded", "false");
   document.getElementById("agentsam-toggle")?.classList.remove("is-agentsam-active");
   try {
-    sessionStorage.setItem("fnf_agentsam_open", "0");
+    sessionStorage.setItem("commerce_agentsam_open", "0");
   } catch {
     /* ignore */
   }
@@ -271,7 +271,7 @@ function initAgentsamDrawer() {
   loadAgentsamMeta();
 
   try {
-    if (sessionStorage.getItem("fnf_agentsam_open") === "1") openAgentsamDrawer();
+    if (sessionStorage.getItem("commerce_agentsam_open") === "1") openAgentsamDrawer();
   } catch {
     /* ignore */
   }

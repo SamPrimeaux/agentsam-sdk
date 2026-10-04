@@ -51,7 +51,7 @@ export function buildDeterministicSuggestions(input) {
   });
 
   const stem = slugify(filename);
-  const brand = input.brandName || "Fuel & Free Time";
+  const brand = input.brandName || "Ember Supply";
   const title = humanize(stem);
   const role = classification.media_role;
   const alt =

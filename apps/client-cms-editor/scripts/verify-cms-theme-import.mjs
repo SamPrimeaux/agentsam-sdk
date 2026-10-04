@@ -11,7 +11,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
-const donorDir = join(packageRoot, 'fixtures/donor-themes/church-site');
+const donorDir = join(packageRoot, 'fixtures/donor-themes/cypress');
 
 async function load(rel) {
   return import(pathToFileURL(join(packageRoot, rel)).href);
@@ -28,7 +28,7 @@ function zipDonor(destZip) {
 }
 
 async function main() {
-  assert.ok(existsSync(join(donorDir, 'site/index.html')), 'church-site donor fixture missing');
+  assert.ok(existsSync(join(donorDir, 'site/index.html')), 'cypress donor fixture missing');
 
   const importMod = await load('dist/import/index.js');
   const { SqliteCmsAdapter } = await load('dist/sqlite-adapter.js');
@@ -41,10 +41,10 @@ async function main() {
   const work = mkdtempSync(join(tmpdir(), 'cms-theme-import-'));
   const packOut = join(work, 'theme-pack');
   const dbPath = join(work, 'cms.sqlite');
-  const zipPath = join(work, 'church-site.zip');
+  const zipPath = join(work, 'cypress.zip');
 
   try {
-    const pack = importMod.importThemeFromSource(donorDir, { outDir: packOut, packId: 'church-site' });
+    const pack = importMod.importThemeFromSource(donorDir, { outDir: packOut, packId: 'cypress' });
     assert.equal(pack.manifest.schema, 'agentsam.theme-pack.v1');
     assert.ok(pack.manifest.pages.includes('/'), 'home route required');
     assert.ok(pack.manifest.pages.length >= 3, 'imported theme must expose multiple pages');
@@ -56,13 +56,13 @@ async function main() {
     zipDonor(zipPath);
     const zipPack = importMod.importThemeFromSource(zipPath, {
       outDir: join(work, 'theme-pack-zip'),
-      packId: 'church-site-zip',
+      packId: 'cypress-zip',
     });
     assert.ok(zipPack.manifest.pages.length >= 3, 'zip import must yield multiple pages');
 
     let adapter = new SqliteCmsAdapter(dbPath);
     try {
-      const installed = await root.installStarterPack(adapter, pack.starterPack, { siteId: 'church-site' });
+      const installed = await root.installStarterPack(adapter, pack.starterPack, { siteId: 'cypress' });
       assert.ok(installed.pageIds.length >= 3);
       for (const pageId of installed.pageIds) {
         await adapter.publish(pageId);
@@ -72,13 +72,13 @@ async function main() {
     }
 
     adapter = new SqliteCmsAdapter(dbPath);
-    const site = await adapter.loadSite('church-site');
+    const site = await adapter.loadSite('cypress');
     assert.ok(site.pages.length >= 3, 'imported pages must survive reopen');
     assert.ok(Object.keys(site.theme?.cssVars || {}).length > 0, 'theme tokens must survive');
 
     const runtime = await startLocalCmsRuntime({
       adapter,
-      siteId: 'church-site',
+      siteId: 'cypress',
       port: 0,
       host: '127.0.0.1',
     });

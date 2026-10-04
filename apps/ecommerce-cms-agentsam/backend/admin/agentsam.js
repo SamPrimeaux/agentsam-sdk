@@ -38,7 +38,7 @@ import {
 import {
   formatSemanticSearchForPrompt,
   maybeRunSemanticSearch,
-} from "../agentsam/fnf-vectorize.js";
+} from "../agentsam/commerce-vectorize.js";
 import { listMcpServersForUi, mcpRuntimeConfig } from "../agentsam/mcp-servers.js";
 import { listDrawerWorkflows, listStudioWorkflows, routeAgentsamRequest } from "../agentsam/router.js";
 import { getAgentSamSkill, listAgentSamSkills, buildSkillHash, recordSkillInvocations } from "../agentsam/skills.js";
@@ -295,7 +295,7 @@ export async function agentsamChat(request, env, executionCtx = null) {
       routing: {
         classification: {
           intent: "general",
-          workflow_key: "fnf_agentsam_chat",
+          workflow_key: "commerce_agentsam_chat",
           task_type: "admin_chat",
           source: "feature_gate",
         },
@@ -944,7 +944,7 @@ export async function agentsamSemanticSearch(request, env) {
   if (!query) return json({ error: "query required" }, { status: 400 });
 
   const { executeAgentSamTool } = await import("../agentsam/tool-handlers.js");
-  const result = await executeAgentSamTool(env, "fnf_semantic_search", {
+  const result = await executeAgentSamTool(env, "commerce_semantic_search", {
     query,
     top_k: body.top_k || body.limit || 8,
     source_type: body.source_type || null,

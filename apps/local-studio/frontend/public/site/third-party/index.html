@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en" data-asbd-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Third-party integrations and trademarks — AgentSam</title>
+  <meta name="description" content="Attribution and interoperability notice for third-party services, APIs, runtimes, and frameworks used with AgentSam.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://agentsam.inneranimalmedia.com/third-party/">
+  <link rel="stylesheet" href="/site/global/asbd-tokens.css">
+  <script src="/site/global/asbd-theme.js" defer></script>
+  <meta name="third-party-trademark-notice" content="Third-party names and trademarks belong to their respective owners; compatibility references do not imply sponsorship, endorsement, partnership, collaboration, or affiliation." />
+</head>
+<body data-asbd-theme="light">
+  <div id="asbd-header-mount"></div>
+  <main style="max-width:900px;margin:0 auto;padding:128px 32px 80px;font-family:var(--asbd-font-sans);">
+    <p style="text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:800;">Legal / attribution</p>
+    <h1 style="font-size:clamp(2.4rem,7vw,5.5rem);line-height:.95;margin:.2em 0;">Third-party integrations</h1>
+    <p style="font-size:1.15rem;line-height:1.7;max-width:760px;">AgentSam can interoperate with third-party services, APIs, runtimes, frameworks, and developer tools. Third-party names and trademarks belong to their respective owners.</p>
+    <p style="font-size:1.15rem;line-height:1.7;max-width:760px;"><strong>References describe compatibility, a user-configured integration, an integration target, or implementation technology only. They do not imply sponsorship, endorsement, partnership, joint development, certification, or affiliation unless an explicit written statement says otherwise.</strong></p>
+    <h2>Provider credit</h2>
+    <ul style="line-height:1.9;">
+      <li>Cloudflare — optional Workers, D1, R2, Vectorize, Images, and related platform capabilities.</li>
+      <li>OpenAI — optional model, multimodal, and API capabilities.</li>
+      <li>Google / Gemini — optional model and Google identity/service capabilities.</li>
+      <li>Anthropic — optional model capabilities.</li>
+      <li>GitHub — repository, source-control, and OAuth workflows.</li>
+      <li>Supabase — optional database and application integrations.</li>
+      <li>Tauri — open-source desktop application framework used by AgentSam desktop packaging.</li>
+      <li>Resend — optional email delivery and inbound-mail integration.</li>
+      <li>Completeful — optional commerce and fulfillment integration.</li>
+      <li>Ollama — optional local model and embedding runtime.</li>
+      <li>Cursor — optional provider/tool integration where configured.</li>
+    </ul>
+    <p>AgentSam does not rebrand these providers as Inner Animal Media technology. Provider identity remains visible where it materially explains provenance, authentication, billing, attribution, or execution.</p>
+  </main>
+  <div id="asbd-footer-mount"></div>
+  <script>
+    (function () {
+      function inject(id, url) {
+        var slot = document.getElementById(id);
+        if (!slot) return Promise.resolve();
+        return fetch(url).then(function (r) { return r.text(); }).then(function (html) {
+          var wrap = document.createElement('div');
+          wrap.innerHTML = html.trim();
+          while (wrap.firstChild) slot.parentNode.insertBefore(wrap.firstChild, slot);
+          slot.remove();
+        }).catch(function () {});
+      }
+      Promise.all([
+        inject('asbd-header-mount', '/site/global/asbd-header.html'),
+        inject('asbd-footer-mount', '/site/global/asbd-footer.html')
+      ]);
+    })();
+  </script>
+</body>
+</html>

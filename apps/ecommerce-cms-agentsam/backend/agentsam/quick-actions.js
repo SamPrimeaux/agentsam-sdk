@@ -2,7 +2,7 @@
  * D1-backed quick actions and + menu capabilities for AgentSam UI.
  */
 
-import { FNF_ACCOUNT_ID } from "./constants.js";
+import { COMMERCE_ACCOUNT_ID } from "./constants.js";
 import {
   getAgentFeatures,
   isFeatureEnabled,
@@ -17,7 +17,7 @@ const DEFAULT_ACTIONS = [
   {
     id: "write_edit",
     label: "Write or edit",
-    workflow_key: "fnf_content_studio",
+    workflow_key: "commerce_content_studio",
     task_type: "text_generation",
     lane: "general",
     prompt: "Draft or improve product copy for the selected item.",
@@ -26,7 +26,7 @@ const DEFAULT_ACTIONS = [
   {
     id: "repo_work",
     label: "Repo work",
-    workflow_key: "fnf_content_studio",
+    workflow_key: "commerce_content_studio",
     task_type: "code_generation",
     lane: "code",
     prompt: "Summarize recent repository changes and what should be verified before deploy.",
@@ -41,7 +41,7 @@ async function hasActiveImageModels(env) {
       `SELECT COUNT(*) AS n FROM agentsam_ai
        WHERE account_id = ? AND status = 'active' AND task_type = 'image_generation'`
     )
-      .bind(FNF_ACCOUNT_ID)
+      .bind(COMMERCE_ACCOUNT_ID)
       .first();
     return (row?.n ?? 0) > 0;
   } catch {
@@ -58,11 +58,11 @@ export async function buildQuickActions(env) {
   const actions = [];
 
   if (imageReady) {
-    const creative = workflows.find((w) => w.workflow_key === "fnf_creative_studio");
+    const creative = workflows.find((w) => w.workflow_key === "commerce_creative_studio");
     actions.push({
       id: "create_image",
       label: "Create an image",
-      workflow_key: "fnf_creative_studio",
+      workflow_key: "commerce_creative_studio",
       task_type: "image_generation",
       lane: "image",
       prompt: creative?.suggested_prompts?.[0] || "Describe the image you want to create.",
@@ -71,12 +71,12 @@ export async function buildQuickActions(env) {
     });
   }
 
-  const content = workflows.find((w) => w.workflow_key === "fnf_content_studio");
+  const content = workflows.find((w) => w.workflow_key === "commerce_content_studio");
   if (content) {
     actions.push({
       id: "write_edit",
       label: "Write or edit",
-      workflow_key: "fnf_content_studio",
+      workflow_key: "commerce_content_studio",
       task_type: "text_generation",
       lane: "general",
       prompt: content.suggested_prompts?.[0] || "Write better product copy for this item.",
@@ -87,7 +87,7 @@ export async function buildQuickActions(env) {
       actions.push({
         id: "improve_copy",
         label: "Improve product copy",
-        workflow_key: "fnf_content_studio",
+        workflow_key: "commerce_content_studio",
         task_type: "text_generation",
         lane: "general",
         prompt: content.suggested_prompts[0] || "Improve this product description.",
@@ -100,7 +100,7 @@ export async function buildQuickActions(env) {
     actions.push({
       id: "review_image",
       label: "Review uploaded image",
-      workflow_key: "fnf_creative_studio",
+      workflow_key: "commerce_creative_studio",
       task_type: "image_to_text",
       lane: "vision",
       prompt: "Review the attached image and suggest useful edits.",
@@ -112,7 +112,7 @@ export async function buildQuickActions(env) {
     actions.push({
       id: "repo_work",
       label: "Repo work",
-      workflow_key: "fnf_content_studio",
+      workflow_key: "commerce_content_studio",
       task_type: "code_generation",
       lane: "code",
       prompt: "Summarize recent repository changes and what should be verified before deploy.",
@@ -130,7 +130,7 @@ export function buildPlusMenuCapabilities({ imageReady }) {
       enabled: imageReady && isFeatureEnabled("image_generation"),
       label: "Create image",
       mode: "image",
-      workflow_key: "fnf_creative_studio",
+      workflow_key: "commerce_creative_studio",
     },
   };
 }

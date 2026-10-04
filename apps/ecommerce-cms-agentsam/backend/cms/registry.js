@@ -293,7 +293,7 @@ export const PAGE_REGISTRY = {
           newsletterTitle: "Get Updates",
           newsletterPlaceholder: "Your email",
           newsletterButtonLabel: "Join",
-          copyright: "Fuel & Free Time. All rights reserved.",
+          copyright: "Ember Supply. All rights reserved.",
           closingLine: "Built for those who've earned it.",
         },
       },
@@ -340,7 +340,7 @@ export const PAGE_REGISTRY = {
           line2: "We chase",
           highlight2: "hours.",
           body1:
-            "Fuel & Free Time isn't about how fast you go — it's about finally having the time to go at all.",
+            "Ember Supply isn't about how fast you go — it's about finally having the time to go at all.",
           body2:
             "Born in a Lafayette garage, built for those who've earned their freedom. Whether you're a veteran who's done your time, a weekend warrior stealing moments, or a young gun working toward that first real ride.",
           body3: "You get it. Time is everything money can't buy back.",
@@ -476,7 +476,7 @@ export const PAGE_REGISTRY = {
           headline: "A lifestyle built from grit — and time.",
           subheadline:
             "Shop High Octane, Masters, and Essentials. Clean grid. Real stories. Fire-orange attitude.",
-          imageUrl: "/assets/presets/fuel-free-time/earned-hours-hero.webp",
+          imageUrl: "/assets/presets/ember/earned-hours-hero.webp",
           ctaPrimary: { label: "Shop the Drop", href: "#catalog" },
           ctaSecondary: { label: "Browse Collections", href: "/shop/collections" },
         },
@@ -520,16 +520,16 @@ export const PAGE_REGISTRY = {
             ],
             defaultContent: {
               name: "New collection",
-              imageUrl: "/assets/presets/fuel-free-time/earned-hours-hero.webp",
+              imageUrl: "/assets/presets/ember/earned-hours-hero.webp",
               href: "/shop/collections",
             },
           },
         ],
         defaultContent: {
           title: "Collections",
-          card1: { name: "High Octane Collection", imageUrl: "/assets/presets/fuel-free-time/earned-hours-hero.webp", href: "/shop/collections/high-octane-performance-gear" },
-          card2: { name: "Masters Collection", imageUrl: "/assets/presets/fuel-free-time/masters.webp", href: "/shop/collections/masters" },
-          card3: { name: "Everyday Essentials", imageUrl: "/assets/presets/fuel-free-time/essentials.webp", href: "/shop/collections/essentials" },
+          card1: { name: "High Octane Collection", imageUrl: "/assets/presets/ember/earned-hours-hero.webp", href: "/shop/collections/high-octane-performance-gear" },
+          card2: { name: "Masters Collection", imageUrl: "/assets/presets/ember/masters.webp", href: "/shop/collections/masters" },
+          card3: { name: "Everyday Essentials", imageUrl: "/assets/presets/ember/essentials.webp", href: "/shop/collections/essentials" },
           __editor: {
             blocks: [
               { id: "card1", templateKey: "collection-card", enabled: true },
@@ -593,7 +593,7 @@ export const PAGE_REGISTRY = {
         ],
         defaultContent: {
           headline: "The Moment That Started It All",
-          body: "Late nights in the garage. Engines cooling. Stories flowing. That's where Fuel & Free Time was born.",
+          body: "Late nights in the garage. Engines cooling. Stories flowing. That's where Ember Supply was born.",
           videoUrl: M.videoAbout1,
         },
       },
@@ -610,7 +610,7 @@ export const PAGE_REGISTRY = {
         ],
         defaultContent: {
           title: "Three Collections. One Brotherhood.",
-          card1: { title: "Fuel & Free Time Core Collection", imageUrl: M.coreCollection },
+          card1: { title: "Ember Supply Core Collection", imageUrl: M.coreCollection },
           card2: { title: "High Octane Performance Collection", imageUrl: M.vette },
           card3: { title: "Masters Series Limited Edition", imageUrl: M.fuelUp },
         },
@@ -624,7 +624,7 @@ export const PAGE_REGISTRY = {
           { key: "videoUrl", label: "Video URL", type: "url", media: true },
         ],
         defaultContent: {
-          headline: "Fuel & Free Time Origins",
+          headline: "Ember Supply Origins",
           body: "From Lafayette garages to open roads — every design starts with a story worth wearing.",
           imageUrl: M.coreCollection,
           videoUrl: M.videoAbout2,
@@ -705,7 +705,7 @@ export const PAGE_REGISTRY = {
         ],
         defaultContent: {
           eyebrow: "Build something worth remembering",
-          headline: "Collaborate with Fuel & Free Time",
+          headline: "Collaborate with Ember Supply",
           intro:
             "Partnerships should feel earned, useful, and real. We are open to aligned brands, makers, events, creators, retailers, and community projects that respect the hours people put in.",
         },
@@ -733,7 +733,7 @@ export const PAGE_REGISTRY = {
             "Garage nights, rides, launches, pop-ups, fundraisers, and experiences built around people instead of impressions.",
           retailTitle: "Retail & Wholesale",
           retailBody:
-            "Thoughtful retail relationships for shops and spaces that understand the Fuel & Free Time customer.",
+            "Thoughtful retail relationships for shops and spaces that understand the Ember Supply customer.",
           creatorTitle: "Creators & Stories",
           creatorBody:
             "Photography, film, editorial, machines, craft, travel, and earned-time stories that fit the world we are building.",
@@ -771,7 +771,7 @@ export const PAGE_REGISTRY = {
           eyebrow: "Store policies",
           headline: "Straightforward by design",
           intro:
-            "This page is the working policy baseline for the Fuel & Free Time storefront. Product-specific notices and checkout terms can add detail where needed.",
+            "This page is the working policy baseline for the Ember Supply storefront. Product-specific notices and checkout terms can add detail where needed.",
         },
       },
       policy: {
@@ -820,9 +820,9 @@ export const PAGE_REGISTRY = {
         ],
         defaultContent: {
           eyebrow: "Store terms",
-          headline: "Terms for using the Fuel & Free Time storefront",
+          headline: "Terms for using the Ember Supply storefront",
           intro:
-            "These terms provide a practical baseline for browsing the site and purchasing goods from Fuel & Free Time. Product, checkout, promotion, and fulfillment notices shown at the time of purchase also apply.",
+            "These terms provide a practical baseline for browsing the site and purchasing goods from Ember Supply. Product, checkout, promotion, and fulfillment notices shown at the time of purchase also apply.",
         },
       },
       terms: {
@@ -853,7 +853,7 @@ export const PAGE_REGISTRY = {
             "Do not misuse the site, attempt unauthorized access, interfere with store operations, scrape protected account information, submit fraudulent orders, or use the storefront in a way that violates applicable law or the rights of others.",
           ipTitle: "Brand & Content",
           ipBody:
-            "Fuel & Free Time names, marks, artwork, photography, product designs, copy, and other original storefront materials remain protected by their applicable intellectual-property rights unless a different license is expressly stated.",
+            "Ember Supply names, marks, artwork, photography, product designs, copy, and other original storefront materials remain protected by their applicable intellectual-property rights unless a different license is expressly stated.",
           availabilityTitle: "Availability & Service",
           availabilityBody:
             "Inventory, product details, site features, and third-party services can change. We work to keep storefront information accurate, but temporary outages, fulfillment changes, supplier updates, and technical errors can occur.",

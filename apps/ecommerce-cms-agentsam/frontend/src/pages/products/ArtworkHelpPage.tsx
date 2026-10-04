@@ -218,7 +218,7 @@ export default function ArtworkHelpPage() {
             ))}
           </div>
           <p className="provider-help__fineprint">
-            Fuel & Free Time’s Product Studio may intentionally enforce a stricter local
+            Ember Supply’s Product Studio may intentionally enforce a stricter local
             upload limit than Completeful for some formats. A local limit is an application
             policy, not a statement that Completeful rejects the provider-supported format.
           </p>

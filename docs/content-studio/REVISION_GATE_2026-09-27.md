@@ -3,7 +3,7 @@
 **Acceptance sentence (every package):**
 
 > Could this exact capability be consumed tomorrow by Local Studio, IAM,
-> Fuel & Free Time, and an unknown customer app without modifying the package?
+> Ember Supply, and an unknown customer app without modifying the package?
 
 If the answer is no because of branding, routes, credentials, storage, RAG,
 or a hardcoded provider — it is not finished.
@@ -237,12 +237,12 @@ Scan output must produce **actionable proposals** (package-readiness scores, tok
 
 ## Severity / product context
 
-Paying customer galleries (e.g. Fuel & Free Time) underperform vs the donor
+Paying customer galleries (e.g. Ember Supply) underperform vs the donor
 gallery that already includes R2, Google Drive, Cloudflare Images, tagging,
 editing, multi-size variants, and inspect. The same portable gallery must
 serve **at least three hosts without forks**:
 
-1. Fuel & Free Time (customer)
+1. Ember Supply (customer)
 2. Inner Animal Media platform dashboard
 3. AgentSam Local Studio
 

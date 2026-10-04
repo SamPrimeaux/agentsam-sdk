@@ -82,11 +82,11 @@ describe("createContentRuntime", () => {
   it("refuses to delete assets with live usage, allows after detach", async () => {
     const rt = makeRuntime();
     const asset = await rt.createAsset({ origin: "upload", source: { type: "upload" }, kind: "image", filename: "hero.png" });
-    await rt.attachUsage(asset.id, { app: "fuel-free-time", surface: "home.hero", live: true });
+    await rt.attachUsage(asset.id, { app: "ember", surface: "home.hero", live: true });
 
     await expect(rt.deleteAsset(asset.id)).rejects.toThrow(/Used in 1 live surface/);
 
-    await rt.detachUsage(asset.id, "fuel-free-time", "home.hero");
+    await rt.detachUsage(asset.id, "ember", "home.hero");
     await rt.deleteAsset(asset.id);
     expect(await rt.getAsset(asset.id)).toBeNull();
   });
@@ -132,11 +132,11 @@ describe("createContentRuntime", () => {
       kind: "image",
       filename: "IMG_5933.PNG",
       title: "AgentSam workbench review mobile screenshot",
-      brandId: "fuel-free-time",
+      brandId: "ember",
     });
     const named = await rt.applySemanticAlias(asset.id);
     expect(named.filename).toBe("IMG_5933.PNG"); // original preserved
-    expect(named.semanticAlias).toContain("fuel-free-time");
+    expect(named.semanticAlias).toContain("ember");
     expect(named.semanticAlias).toMatch(/^[a-z0-9-]+$/);
   });
 
@@ -148,7 +148,7 @@ describe("createContentRuntime", () => {
       filename: "big.png",
       rawBytes: pngBytes(2000, 1000),
     });
-    await rt.attachUsage(asset.id, { app: "fuel-free-time", surface: "home.hero", live: true });
+    await rt.attachUsage(asset.id, { app: "ember", surface: "home.hero", live: true });
 
     const ctx = await rt.assistantContext(asset.id, { currentInspector: "delivery" });
     expect(ctx.accountId).toBe("acct_test");

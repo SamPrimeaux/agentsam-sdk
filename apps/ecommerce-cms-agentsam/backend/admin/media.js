@@ -1,7 +1,7 @@
 /**
  * Media library control plane.
  *
- * The reusable CMS must not assume one storage vendor. Fuel & Free Time currently
+ * The reusable CMS must not assume one storage vendor. Ember Supply currently
  * uses the R2 adapter (WEBSITE_ASSETS), while the portable media contract also
  * supports provider-backed assets such as Cloudflare Images, Google Drive, or a
  * local filesystem/runtime. Folder membership and display_order are metadata
@@ -416,7 +416,7 @@ export async function syncMediaFromR2(env) {
   await env.DB.prepare(
     `UPDATE media_assets
      SET url = '/media/' || r2_key
-     WHERE url IS NULL OR url = '' OR url LIKE 'https://assets.fuelnfreetime.com/%'`
+     WHERE url IS NULL OR url = '' OR url LIKE 'https://assets.ember.example/%'`
   ).run();
 
   return { ok: true, scanned, inserted, counts: await folderCounts(env) };

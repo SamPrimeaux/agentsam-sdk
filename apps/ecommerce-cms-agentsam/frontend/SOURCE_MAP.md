@@ -1,4 +1,4 @@
-# Fuel & Free Time — Admin UI (`apps/ecommerce-cms-agentsam/frontend/`)
+# Ember Supply — Admin UI (`apps/ecommerce-cms-agentsam/frontend/`)
 
 First-class React + TypeScript admin application. Built with Vite, served at clean URLs **`/admin/analytics/*`** (no `.html`).
 
@@ -16,7 +16,7 @@ Vite bundles live at `/admin/_spa/assets/` (internal only). Legacy `/admin-app/*
 
 ```bash
 # Terminal 1 — Worker API + legacy static admin
-cd ~/fuelnfreetime && npm run dev
+cd ~/ember && npm run dev
 
 # Terminal 2 — Admin SPA with HMR
 npm run dev:admin

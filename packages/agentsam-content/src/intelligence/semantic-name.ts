@@ -13,7 +13,7 @@ export function slugify(input: string): string {
 /**
  * Propose a semantic alias without destructive rename:
  * original_name stays, semantic_alias is additive.
- * "IMG_5933.PNG" → "fuel-free-time-workbench-review-mobile-screenshot".
+ * "IMG_5933.PNG" → "ember-workbench-review-mobile-screenshot".
  */
 export function proposeSemanticAlias(asset: ContentAsset): string {
   const parts: string[] = [];

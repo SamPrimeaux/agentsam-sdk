@@ -1,12 +1,12 @@
 // Completeful Partner API client (host shim).
 // Portable provider package: @inneranimalmedia/agentsam-provider-completeful
 //   → agentsam-sdk/packages/providers/completeful
-// This host file keeps FNF env names (CAPP_KEY) and remains the Worker import
-// surface until the app depends on the published package. No FNF_ACCOUNT_ID.
+// This host file keeps Commerce env names (CAPP_KEY) and remains the Worker import
+// surface until the app depends on the published package. No COMMERCE_ACCOUNT_ID.
 //
 // Source contract: docs/providers/completeful/openapi.json
 // The browser never receives CAPP_KEY. All provider traffic goes through the
-// authenticated Fuel & Free Time Worker/admin API.
+// authenticated Ember Supply Worker/admin API.
 
 const DEFAULT_API_ORIGIN = "https://vxapi.completeful.com";
 

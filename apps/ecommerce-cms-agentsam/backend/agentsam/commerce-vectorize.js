@@ -1,12 +1,12 @@
 /**
- * FNF Vectorize — dedicated BGE M3 1024-dim index (never agentsam-*-1536).
+ * Commerce Vectorize — dedicated BGE M3 1024-dim index (never agentsam-*-1536).
  */
 
-import { FNF_ACCOUNT_ID } from "./constants.js";
+import { COMMERCE_ACCOUNT_ID } from "./constants.js";
 
-export const FNF_VECTORIZE_INDEX = "fnf-agentsam-bge-m3-1024";
-export const FNF_EMBED_MODEL = "@cf/baai/bge-m3";
-export const FNF_EMBED_DIMS = 1024;
+export const COMMERCE_VECTORIZE_INDEX = "commerce-agentsam-bge-m3-1024";
+export const COMMERCE_EMBED_MODEL = "@cf/baai/bge-m3";
+export const COMMERCE_EMBED_DIMS = 1024;
 
 const FORBIDDEN_INDEX_PREFIXES = ["agentsam-", "agentsam_"];
 
@@ -14,35 +14,35 @@ export function assertFnfVectorizeIndex(indexName) {
   const name = String(indexName || "").toLowerCase();
   for (const prefix of FORBIDDEN_INDEX_PREFIXES) {
     if (name.startsWith(prefix) && name.includes("1536")) {
-      throw new Error(`FNF worker must not use IAM 1536-dim index: ${indexName}`);
+      throw new Error(`Commerce worker must not use IAM 1536-dim index: ${indexName}`);
     }
   }
   if (name.includes("1536") && name.includes("agentsam")) {
-    throw new Error(`FNF worker must not use agentsam 1536-dim index: ${indexName}`);
+    throw new Error(`Commerce worker must not use agentsam 1536-dim index: ${indexName}`);
   }
 }
 
 export function getFnfVectorizeBinding(env) {
-  const binding = env?.FNF_VECTORIZE;
+  const binding = env?.COMMERCE_VECTORIZE;
   if (!binding?.query) return null;
   return binding;
 }
 
 function workspaceFilter() {
-  return { account_id: FNF_ACCOUNT_ID };
+  return { account_id: COMMERCE_ACCOUNT_ID };
 }
 
 export async function createFnfEmbedding(env, text) {
   const input = String(text || "").trim();
   if (!input) throw new Error("embedding input required");
   if (!env?.AGENTSAM_WAI?.run && !env?.AI?.run) {
-    throw new Error("Workers AI binding required for FNF embeddings");
+    throw new Error("Workers AI binding required for Commerce embeddings");
   }
 
   const ai = env.AGENTSAM_WAI || env.AI;
-  const resp = await ai.run(FNF_EMBED_MODEL, { text: [input] }, { gateway: { id: "fuelnfreetime-agentsam", skipCache: true } });
+  const resp = await ai.run(COMMERCE_EMBED_MODEL, { text: [input] }, { gateway: { id: "ember-agentsam", skipCache: true } });
   const emb = resp?.data?.[0] ?? resp?.result?.[0];
-  if (!Array.isArray(emb) || emb.length !== FNF_EMBED_DIMS) {
+  if (!Array.isArray(emb) || emb.length !== COMMERCE_EMBED_DIMS) {
     throw new Error(`Unexpected embedding dimensions: ${emb?.length ?? 0}`);
   }
   return emb;
@@ -54,10 +54,10 @@ export async function queryFnfVectorize(env, queryText, options = {}) {
     return { ok: false, skipped: "no_binding", matches: [] };
   }
 
-  assertFnfVectorizeIndex(FNF_VECTORIZE_INDEX);
+  assertFnfVectorizeIndex(COMMERCE_VECTORIZE_INDEX);
 
   const embedding = options.embedding || (await createFnfEmbedding(env, queryText));
-  if (!Array.isArray(embedding) || embedding.length !== FNF_EMBED_DIMS) {
+  if (!Array.isArray(embedding) || embedding.length !== COMMERCE_EMBED_DIMS) {
     throw new Error("Invalid query embedding dimensions");
   }
 
@@ -76,12 +76,12 @@ export async function queryFnfVectorize(env, queryText, options = {}) {
 
   const matches = (result?.matches || result?.result?.matches || []).filter((m) => {
     const ws = m?.metadata?.account_id;
-    return !ws || ws === FNF_ACCOUNT_ID;
+    return !ws || ws === COMMERCE_ACCOUNT_ID;
   });
 
   return {
     ok: true,
-    index: FNF_VECTORIZE_INDEX,
+    index: COMMERCE_VECTORIZE_INDEX,
     top_k: topK,
     match_count: matches.length,
     matches,
@@ -112,7 +112,7 @@ export async function executeFnfSemanticSearch(env, params = {}) {
 
   return {
     ok: result.ok !== false,
-    tool_key: "fnf_semantic_search",
+    tool_key: "commerce_semantic_search",
     query,
     latency_ms: Date.now() - started,
     match_count: matches.length,
@@ -128,7 +128,7 @@ export function shouldRunSemanticSearch(message, routing = {}) {
   const hay = String(message || "");
   if (SEMANTIC_SEARCH_RE.test(hay)) return true;
   const toolKeys = (routing.tools || []).map((t) => t.tool_key);
-  if (toolKeys.includes("fnf_semantic_search")) return true;
+  if (toolKeys.includes("commerce_semantic_search")) return true;
   if (/\b(product copy|page copy|brand voice|collection description|homepage copy)\b/i.test(hay)) {
     return true;
   }
@@ -142,7 +142,7 @@ export async function maybeRunSemanticSearch(env, message, routing = {}) {
   try {
     return await executeFnfSemanticSearch(env, { query: message, top_k: 6 });
   } catch (err) {
-    console.error("fnf semantic search failed", err?.message || err);
+    console.error("commerce semantic search failed", err?.message || err);
     return { ok: false, error: err?.message || "semantic_search_failed" };
   }
 }
@@ -157,7 +157,7 @@ export function formatSemanticSearchForPrompt(result) {
   });
 
   return [
-    "SEMANTIC SEARCH RESULTS (FNF_VECTORIZE — workspace ede6590ac0d2fb7daf155b35653457b2 only):",
+    "SEMANTIC SEARCH RESULTS (COMMERCE_VECTORIZE — workspace demo-commerce-account only):",
     `Query: ${result.query}`,
     "",
     lines.join("\n\n"),

@@ -1,12 +1,12 @@
 // Main App — embedded mode (no sidebar/topbar)
 function App() {
-  const initial = window.__FNF_INITIAL_VIEW || 'overview';
+  const initial = window.__COMMERCE_INITIAL_VIEW || 'overview';
   const [view, setView] = useState(initial);
   const [range, setRange] = useState('30d');
 
   React.useEffect(() => {
     function onMessage(event) {
-      if (event.data?.type !== 'fnf-analytics-set-view') return;
+      if (event.data?.type !== 'commerce-analytics-set-view') return;
       const next = event.data.view;
       if (next === 'overview' || next === 'finance' || next === 'health') {
         setView(next);

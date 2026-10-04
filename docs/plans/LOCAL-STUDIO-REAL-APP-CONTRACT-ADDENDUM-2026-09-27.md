@@ -221,7 +221,7 @@ There is no fourth category: “looks finished but doesn’t do anything.”
 
 Surfaces currently represented (must eventually be REAL or withheld): AgentSam/chat, Library, Sites/CMS, CAD, Database, Projects, Settings (Account, Agents, Customize, Brand & Design, Git & PRs, Codebase, Browser & Network, Themes, Storage, Keys & Secrets, Plan & Usage, Notifications, Docs), terminal/runtime controls.
 
-Themes cards (AgentSam Graphite, Fuel N Free, Shinshu, …) must become discovered/installed theme projections — not permanent hard-coded gallery fakes. Healthy badges and Local account must derive from real checks/identity.
+Themes cards (AgentSam Graphite, Ember Supply, Shinshu, …) must become discovered/installed theme projections — not permanent hard-coded gallery fakes. Healthy badges and Local account must derive from real checks/identity.
 
 ### Library vs Sites → Media
 
@@ -324,7 +324,7 @@ Do **not** hand-patch the generated file. Do **regenerate** via normal `npm run 
 
 #### 8. FnF migration
 
-Keep Fuel & Free Time migration **separate** until Local Studio acceptance for this slice passes. Then migrate FnF onto the same Content Studio package/runtime — do not recreate.
+Keep Ember Supply migration **separate** until Local Studio acceptance for this slice passes. Then migrate FnF onto the same Content Studio package/runtime — do not recreate.
 
 ### Minimum acceptance test (this media feature)
 

@@ -317,10 +317,10 @@ export async function probeGitHubViaBridge(env) {
     return { connected: false, needs_oauth: true, error: body.error };
   }
   const repos = body?.repos || body?.data?.repos;
-  const hasFnf = Array.isArray(repos)
-    ? repos.some((r) => String(r?.full_name || r?.name || "").includes("fuelnfreetime"))
+  const hasCommerce = Array.isArray(repos)
+    ? repos.some((r) => String(r?.full_name || r?.name || "").includes("ember"))
     : body?.ok === true;
-  return { connected: body?.ok !== false, has_fnf_repo: hasFnf, sample: body };
+  return { connected: body?.ok !== false, has_commerce_repo: hasCommerce, sample: body };
 }
 
 export async function fetchGithubContextForChat(env, message, userId = null, logCtx = {}) {
@@ -356,7 +356,7 @@ export async function fetchGithubContextForChat(env, message, userId = null, log
     if (body?.ok === false && body?.error === "github_not_connected") {
       return {
         context:
-          "GITHUB MCP (bridge): not connected — set FNF_GITHUB_TOKEN or connect GitHub OAuth in AgentSam.",
+          "GITHUB MCP (bridge): not connected — set COMMERCE_GITHUB_TOKEN or connect GitHub OAuth in AgentSam.",
         meta: {
           success: false,
           source: "bridge",
@@ -372,11 +372,11 @@ export async function fetchGithubContextForChat(env, message, userId = null, log
     }
 
     if (body?.ok !== false) {
-      const hasFnf = (body?.repos || []).some(
+      const hasCommerce = (body?.repos || []).some(
         (r) => String(r.full_name || "").toLowerCase() === repo.toLowerCase(),
       );
       return {
-        context: `GITHUB MCP (bridge):\nRepo: ${repo}\nAccessible: ${hasFnf ? "yes" : "check token scope"}`,
+        context: `GITHUB MCP (bridge):\nRepo: ${repo}\nAccessible: ${hasCommerce ? "yes" : "check token scope"}`,
         meta: {
           success: true,
           source: "bridge",

@@ -1,5 +1,5 @@
 /**
- * FNF compatibility adapter.
+ * Commerce compatibility adapter.
  *
  * The generic Cloudflare R2 admin transport lives in
  * @inneranimalmedia/agentsam-content/server/r2-admin. This file only binds it

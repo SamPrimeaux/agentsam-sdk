@@ -7,7 +7,7 @@ are Path B / host-app work — do **not** fork packages per host.
 
 Each host supplies a `ContentRuntime` via `createContentRuntime({...})`:
 
-| Seam | Local Studio | IAM dashboard | Fuel & Free Time (customer) |
+| Seam | Local Studio | IAM dashboard | Ember Supply (customer) |
 |---|---|---|---|
 | `account` / `actor` | desktop session | IAM auth session | customer tenant session |
 | `providers` / capability adapters | local + optional CF | R2 / Images / Drive / Stream | customer-scoped providers |

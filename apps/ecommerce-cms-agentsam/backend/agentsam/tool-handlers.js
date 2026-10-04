@@ -1,8 +1,8 @@
 /**
- * AgentSam tool execution — FNF-scoped handlers (vectorize, future d1).
+ * AgentSam tool execution — Commerce-scoped handlers (vectorize, future d1).
  */
 
-import { executeFnfSemanticSearch } from "./fnf-vectorize.js";
+import { executeFnfSemanticSearch } from "./commerce-vectorize.js";
 import { getAgentSamTool } from "./tools-registry.js";
 
 export async function executeAgentSamTool(env, toolKey, params = {}) {
@@ -11,7 +11,7 @@ export async function executeAgentSamTool(env, toolKey, params = {}) {
     return { ok: false, error: "tool_not_found", tool_key: toolKey };
   }
 
-  if (toolKey === "fnf_semantic_search" || tool.handler_type === "vectorize") {
+  if (toolKey === "commerce_semantic_search" || tool.handler_type === "vectorize") {
     return executeFnfSemanticSearch(env, {
       ...params,
       source_type: params.source_type || tool.handler_config?.default_source_type || null,

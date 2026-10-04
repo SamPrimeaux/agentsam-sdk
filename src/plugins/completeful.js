@@ -1,7 +1,7 @@
 import { normalizePluginManifest } from './contracts.js';
 
 // Curated ecommerce capabilities are part of the reusable
-// ecommerce-cms-agentsam native family. FNF is the first packaged deployment;
+// ecommerce-cms-agentsam native family. Commerce is the first packaged deployment;
 // the handler remains an injected app adapter, never a hard-coded store.
 const readSchema = {
   type: 'object', properties: {}, additionalProperties: true,
@@ -29,7 +29,7 @@ export const COMPLETEFUL_PLUGIN_MANIFEST = normalizePluginManifest({
     { capability_key: 'order.create', domain: 'commerce', verb: 'create', description: 'Create an order.', is_mutating: true },
   ],
   tool_lanes: ['native', 'curated'],
-  metadata: { family: 'ecommerce-cms-agentsam', packaged_deployment: 'fuelnfreetime' },
+  metadata: { family: 'ecommerce-cms-agentsam', packaged_deployment: 'ember' },
   health_strategy: 'provider_probe',
   tools: [
     ['completeful_catalog_list', 'Catalog list', 'catalog.list', 'low', false],

@@ -20,7 +20,7 @@ Do not delete the work store, composer, SideStage, browser, terminal, CMS packag
 
 ## Consumer portability
 
-Fuel & Free Time can mount the same package via React or `mountNav` in its plain JavaScript shell. Its routes, identity, account choices, and colorway are supplied by the host. No Fuel & Free Time production files are changed by this integration. The nav package intentionally excludes its composer and plugin connections.
+Ember Supply can mount the same package via React or `mountNav` in its plain JavaScript shell. Its routes, identity, account choices, and colorway are supplied by the host. No Ember Supply production files are changed by this integration. The nav package intentionally excludes its composer and plugin connections.
 # Composer plugins and annotation
 
 `PluginPicker` supplies one composer-width menu for `+` and `@`, keyboard selection,

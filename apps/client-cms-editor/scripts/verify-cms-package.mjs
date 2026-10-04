@@ -298,8 +298,8 @@ for (const rel of distRequired) {
 if (!existsSync(join(packageRoot, 'starter-packs/blank/index.ts'))) {
   fail('missing starter-packs/blank — Blank first-run starter required');
 }
-if (!existsSync(join(packageRoot, 'fixtures/donor-themes/church-site/site/index.html'))) {
-  fail('missing fixtures/donor-themes/church-site — real import donor fixture required for alpha');
+if (!existsSync(join(packageRoot, 'fixtures/donor-themes/cypress/site/index.html'))) {
+  fail('missing fixtures/donor-themes/cypress — real import donor fixture required for alpha');
 }
 
 if (rootPkg.bin?.['agentsam-cms'] !== 'bin/agentsam-cms.js') {

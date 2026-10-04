@@ -128,7 +128,7 @@ APIs & Services → OAuth consent screen:
   - `profile`
   - For Cloud resource discovery later: add Cloud Platform scopes only when Connections needs them (`https://www.googleapis.com/auth/cloud-platform` is powerful — prefer incremental scopes)
 
-Publishing status: **Testing** while iterating; add test users (you, Connor).
+Publishing status: **Testing** while iterating; add test users (you, Operator).
 
 ### 3. Create OAuth client
 

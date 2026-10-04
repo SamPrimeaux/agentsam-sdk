@@ -1,11 +1,11 @@
 /**
- * AgentSam tools registry — D1-backed catalog (IAM parity, FNF scoped).
+ * AgentSam tools registry — D1-backed catalog (IAM parity, Commerce scoped).
  */
 
 import {
-  FNF_PLATFORM_SCOPE,
-  FNF_ACCOUNT_ID,
-  FNF_TOOL_SCOPE_NOTE,
+  COMMERCE_PLATFORM_SCOPE,
+  COMMERCE_ACCOUNT_ID,
+  COMMERCE_TOOL_SCOPE_NOTE,
 } from "./constants.js";
 import { isToolKeyAllowed } from "./feature-gates.js";
 import { sanitizeAnalyticsText } from "./analytics.js";
@@ -69,38 +69,38 @@ function mapServerRow(row) {
 
 function matchesFnfPlatformScope(tool) {
   const cfg = tool.handler_config || {};
-  const scope = cfg.fnf_scope || {};
+  const scope = cfg.commerce_scope || {};
 
-  if (cfg.database && cfg.database !== FNF_PLATFORM_SCOPE.d1_database) return false;
-  if (cfg.d1_database && cfg.d1_database !== FNF_PLATFORM_SCOPE.d1_database) return false;
-  if (cfg.binding && cfg.binding !== FNF_PLATFORM_SCOPE.d1_binding && cfg.binding !== FNF_PLATFORM_SCOPE.r2_binding) {
+  if (cfg.database && cfg.database !== COMMERCE_PLATFORM_SCOPE.d1_database) return false;
+  if (cfg.d1_database && cfg.d1_database !== COMMERCE_PLATFORM_SCOPE.d1_database) return false;
+  if (cfg.binding && cfg.binding !== COMMERCE_PLATFORM_SCOPE.d1_binding && cfg.binding !== COMMERCE_PLATFORM_SCOPE.r2_binding) {
     return false;
   }
-  if (cfg.r2_bucket && cfg.r2_bucket !== FNF_PLATFORM_SCOPE.r2_bucket) return false;
-  if (cfg.worker && cfg.worker !== FNF_PLATFORM_SCOPE.worker) return false;
+  if (cfg.r2_bucket && cfg.r2_bucket !== COMMERCE_PLATFORM_SCOPE.r2_bucket) return false;
+  if (cfg.worker && cfg.worker !== COMMERCE_PLATFORM_SCOPE.worker) return false;
 
   const repos = cfg.repo_allowlist || scope.github_repos || [];
   if (Array.isArray(repos) && repos.length) {
-    const ok = repos.every((r) => String(r).toLowerCase() === FNF_PLATFORM_SCOPE.github_repo.toLowerCase());
+    const ok = repos.every((r) => String(r).toLowerCase() === COMMERCE_PLATFORM_SCOPE.github_repo.toLowerCase());
     if (!ok) return false;
   }
 
-  if (scope.account_id && scope.account_id !== FNF_ACCOUNT_ID) return false;
+  if (scope.account_id && scope.account_id !== COMMERCE_ACCOUNT_ID) return false;
 
   return true;
 }
 
 export function formatScopeForPrompt() {
   return `TOOL PLATFORM SCOPE (hard limit):
-- Worker: ${FNF_PLATFORM_SCOPE.worker}
-- D1: ${FNF_PLATFORM_SCOPE.d1_database} via ${FNF_PLATFORM_SCOPE.d1_binding}
-- R2: ${FNF_PLATFORM_SCOPE.r2_bucket} via ${FNF_PLATFORM_SCOPE.r2_binding}
-- GitHub: ${FNF_PLATFORM_SCOPE.github_repo}
-- Domain: ${FNF_PLATFORM_SCOPE.domain}
-${FNF_TOOL_SCOPE_NOTE}`;
+- Worker: ${COMMERCE_PLATFORM_SCOPE.worker}
+- D1: ${COMMERCE_PLATFORM_SCOPE.d1_database} via ${COMMERCE_PLATFORM_SCOPE.d1_binding}
+- R2: ${COMMERCE_PLATFORM_SCOPE.r2_bucket} via ${COMMERCE_PLATFORM_SCOPE.r2_binding}
+- GitHub: ${COMMERCE_PLATFORM_SCOPE.github_repo}
+- Domain: ${COMMERCE_PLATFORM_SCOPE.domain}
+${COMMERCE_TOOL_SCOPE_NOTE}`;
 }
 
-export { FNF_PLATFORM_SCOPE, FNF_TOOL_SCOPE_NOTE };
+export { COMMERCE_PLATFORM_SCOPE, COMMERCE_TOOL_SCOPE_NOTE };
 
 function scoreTool(tool, { intent, message, workflowKey, taskType, domain }) {
   let score = 0;
@@ -126,7 +126,7 @@ export async function listAgentSamTools(env, options = {}) {
 
   const includeInactive = options.includeInactive === true;
   const clauses = ["account_id = ?", "(account_id IS NULL OR account_id = ?)"];
-  const binds = [options.account_id || FNF_ACCOUNT_ID, options.account_id || FNF_ACCOUNT_ID];
+  const binds = [options.account_id || COMMERCE_ACCOUNT_ID, options.account_id || COMMERCE_ACCOUNT_ID];
 
   if (!includeInactive) clauses.push("is_active = 1");
   if (options.handler_type) {
@@ -170,7 +170,7 @@ export async function getAgentSamTool(env, toolKey) {
        WHERE account_id = ? AND tool_key = ? AND is_active = 1
        LIMIT 1`
     )
-      .bind(FNF_ACCOUNT_ID, toolKey)
+      .bind(COMMERCE_ACCOUNT_ID, toolKey)
       .first();
     return mapToolRow(row);
   } catch {
@@ -193,7 +193,7 @@ export async function listAgentSamMcpServers(env) {
          AND (plugin_kind = 'mcp' OR plugin_key LIKE '%mcp%')
        ORDER BY display_name ASC`,
     )
-      .bind(FNF_ACCOUNT_ID)
+      .bind(COMMERCE_ACCOUNT_ID)
       .all();
 
     if (plugins?.length) {
@@ -222,7 +222,7 @@ export async function listAgentSamMcpServers(env) {
        WHERE account_id = ? AND is_active = 1
        ORDER BY display_name ASC`,
     )
-      .bind(FNF_ACCOUNT_ID)
+      .bind(COMMERCE_ACCOUNT_ID)
       .all();
     return (results || []).map((row) => mapServerRow({ ...row, source: "agentsam_mcp_servers" }));
   } catch (err) {
@@ -240,7 +240,7 @@ export async function listToolPolicyKeys(env, policyKind) {
        WHERE account_id = ? AND policy_kind = ? AND is_active = 1
        ORDER BY sort_order ASC`
     )
-      .bind(FNF_ACCOUNT_ID, policyKind)
+      .bind(COMMERCE_ACCOUNT_ID, policyKind)
       .all();
     return results || [];
   } catch {
@@ -279,21 +279,21 @@ export async function getToolsRegistryStatus(env) {
       const t = await env.DB.prepare(
         `SELECT COUNT(*) AS n FROM agentsam_tools WHERE account_id = ? AND is_active = 1`
       )
-        .bind(FNF_ACCOUNT_ID)
+        .bind(COMMERCE_ACCOUNT_ID)
         .first();
       toolsCount = t?.n ?? 0;
 
       const s = await env.DB.prepare(
         `SELECT COUNT(*) AS n FROM agentsam_mcp_servers WHERE account_id = ? AND is_active = 1`
       )
-        .bind(FNF_ACCOUNT_ID)
+        .bind(COMMERCE_ACCOUNT_ID)
         .first();
       mcpServersCount = s?.n ?? 0;
 
       const p = await env.DB.prepare(
         `SELECT COUNT(*) AS n FROM agentsam_tool_policy_keys WHERE account_id = ? AND is_active = 1`
       )
-        .bind(FNF_ACCOUNT_ID)
+        .bind(COMMERCE_ACCOUNT_ID)
         .first();
       policyKeysCount = p?.n ?? 0;
     }
@@ -339,7 +339,7 @@ export async function logToolCall(env, event, options = {}) {
     )
       .bind(
         id,
-        FNF_ACCOUNT_ID,
+        COMMERCE_ACCOUNT_ID,
         options.session_id ?? null,
         options.conversation_id ?? null,
         options.message_id ?? null,

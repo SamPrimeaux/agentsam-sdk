@@ -79,7 +79,7 @@ export async function optimizeImageObject(item, opts) {
       productSlug,
       collection,
       assetKind: classification.media_kind === "icon" ? "icon" : "image",
-      source: opts.source || "fnf-assets-cli",
+      source: opts.source || "commerce-assets-cli",
     });
     return {
       ok: true,
@@ -128,7 +128,7 @@ export async function optimizeImageObject(item, opts) {
     productSlug,
     collection,
     assetKind: classification.media_kind === "icon" ? "icon" : productSlug ? "product" : "image",
-    source: opts.source || "fnf-assets-cli",
+    source: opts.source || "commerce-assets-cli",
   });
 
   const putOpts = { cwd: opts.cwd, dryRun: opts.dryRun };
@@ -138,9 +138,9 @@ export async function optimizeImageObject(item, opts) {
     outMime,
     {
       ...tags.cf,
-      "fnf-asset-role": "canonical",
-      "fnf-variant": "canonical",
-      "fnf-intake-key": key.slice(0, 200),
+      "commerce-asset-role": "canonical",
+      "commerce-variant": "canonical",
+      "commerce-intake-key": key.slice(0, 200),
     },
     putOpts,
   );

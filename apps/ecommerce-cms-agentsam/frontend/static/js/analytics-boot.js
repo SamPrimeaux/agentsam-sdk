@@ -59,7 +59,7 @@ function navigateAnalytics(view, { pushState = true, replaceState = false } = {}
   const route = VIEW_ROUTES[view];
   if (!route) return;
 
-  window.__FNF_INITIAL_VIEW = view;
+  window.__COMMERCE_INITIAL_VIEW = view;
 
   if (pushState || replaceState) {
     const state = { analyticsView: view };
@@ -68,15 +68,15 @@ function navigateAnalytics(view, { pushState = true, replaceState = false } = {}
   }
 
   const titles = {
-    overview: "Overview — Fuel & Free Time Admin",
-    finance: "Finance — Fuel & Free Time Admin",
-    health: "Health — Fuel & Free Time Admin",
+    overview: "Overview — Ember Supply Admin",
+    finance: "Finance — Ember Supply Admin",
+    health: "Health — Ember Supply Admin",
   };
   document.title = titles[view] || titles.overview;
 
-  const iframe = window.__fnfAnalyticsIframe;
+  const iframe = window.__commerceAnalyticsIframe;
   if (iframe?.contentWindow) {
-    iframe.contentWindow.postMessage({ type: "fnf-analytics-set-view", view }, "*");
+    iframe.contentWindow.postMessage({ type: "commerce-analytics-set-view", view }, "*");
     updateAnalyticsNavActive(view);
     return;
   }
@@ -117,8 +117,8 @@ function createAnalyticsIframe(mount, view) {
 
   iframe.addEventListener("load", () => {
     loading.remove();
-    window.__fnfAnalyticsReady = true;
-    iframe.contentWindow?.postMessage({ type: "fnf-analytics-set-view", view }, "*");
+    window.__commerceAnalyticsReady = true;
+    iframe.contentWindow?.postMessage({ type: "commerce-analytics-set-view", view }, "*");
   });
 
   iframe.addEventListener("error", () => {
@@ -126,28 +126,28 @@ function createAnalyticsIframe(mount, view) {
   });
 
   mount.appendChild(iframe);
-  window.__fnfAnalyticsIframe = iframe;
+  window.__commerceAnalyticsIframe = iframe;
   return iframe;
 }
 
 function bootAnalytics(view) {
-  window.__FNF_INITIAL_VIEW = view;
+  window.__COMMERCE_INITIAL_VIEW = view;
 
   const mount = document.getElementById("analytics-mount");
   if (!mount) return;
 
   ensureAnalyticsStyles();
 
-  const existing = window.__fnfAnalyticsIframe;
-  if (existing && window.__fnfAnalyticsReady) {
+  const existing = window.__commerceAnalyticsIframe;
+  if (existing && window.__commerceAnalyticsReady) {
     attachIframe(mount, existing);
-    existing.contentWindow?.postMessage({ type: "fnf-analytics-set-view", view }, "*");
+    existing.contentWindow?.postMessage({ type: "commerce-analytics-set-view", view }, "*");
     updateAnalyticsNavActive(view);
     history.replaceState({ analyticsView: view }, "", VIEW_ROUTES[view]);
     return;
   }
 
-  if (existing && !window.__fnfAnalyticsReady) {
+  if (existing && !window.__commerceAnalyticsReady) {
     attachIframe(mount, existing);
     return;
   }
@@ -157,13 +157,13 @@ function bootAnalytics(view) {
   history.replaceState({ analyticsView: view }, "", VIEW_ROUTES[view]);
 }
 
-if (!window.__fnfAnalyticsPopstate) {
-  window.__fnfAnalyticsPopstate = true;
+if (!window.__commerceAnalyticsPopstate) {
+  window.__commerceAnalyticsPopstate = true;
   window.addEventListener("popstate", () => {
     if (!isAnalyticsPage()) return;
     const view = history.state?.analyticsView || viewFromPath();
-    window.__fnfAnalyticsIframe?.contentWindow?.postMessage(
-      { type: "fnf-analytics-set-view", view },
+    window.__commerceAnalyticsIframe?.contentWindow?.postMessage(
+      { type: "commerce-analytics-set-view", view },
       "*"
     );
     updateAnalyticsNavActive(view);

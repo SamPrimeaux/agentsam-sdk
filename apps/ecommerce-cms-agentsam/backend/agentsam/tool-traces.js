@@ -2,7 +2,7 @@
  * Tool call traces for AgentSam chat UI (safe previews only).
  */
 
-import { FNF_ACCOUNT_ID } from "./constants.js";
+import { COMMERCE_ACCOUNT_ID } from "./constants.js";
 import { IAM_LOGO } from "./quick-actions.js";
 
 const PREVIEW_MAX = 400;
@@ -35,7 +35,7 @@ function displayNameFor(meta) {
   if (meta.display_name) return meta.display_name;
   const key = meta.tool_key || meta.mcp_tool || "";
   if (/github_repo_list|github/.test(key)) return "Reading repository";
-  if (/semantic_search|fnf_semantic/.test(key)) return "Semantic search";
+  if (/semantic_search|commerce_semantic/.test(key)) return "Semantic search";
   if (/mcp/.test(meta.mcp_server || "")) return "Called tool";
   if (/d1/.test(key)) return "Querying D1";
   if (/r2|media/.test(key)) return "Listing media assets";
@@ -73,7 +73,7 @@ export function buildToolCallFromGithubMeta(meta, ids = {}) {
     duration_ms: meta.mcp_latency_ms ?? null,
     input_preview: clip(meta.github_operation || meta.input_preview || "GitHub context request"),
     output_preview: clip(
-      meta.output_preview || (meta.success ? `Repo: ${meta.github_repo || "fuelnfreetime"}` : meta.error || "Failed")
+      meta.output_preview || (meta.success ? `Repo: ${meta.github_repo || "ember"}` : meta.error || "Failed")
     ),
     icon: iconForTool(toolKey, provider),
     conversation_id: ids.conversation_id,
@@ -86,7 +86,7 @@ export async function getToolCallById(env, id) {
   const row = await env.DB.prepare(
     `SELECT * FROM agentsam_tool_call_log WHERE id = ? AND account_id = ? LIMIT 1`
   )
-    .bind(id, FNF_ACCOUNT_ID)
+    .bind(id, COMMERCE_ACCOUNT_ID)
     .first();
   if (!row) return null;
 

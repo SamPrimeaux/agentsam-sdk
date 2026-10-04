@@ -1,5 +1,5 @@
 /**
- * Production asset job runner — shared by Worker queue consumer and bin/fnf-assets.
+ * Production asset job runner — shared by Worker queue consumer and bin/commerce-assets.
  * Operator-facing lifecycle: processing → ready (never “optimize planned”).
  */
 
@@ -204,9 +204,9 @@ export async function processAssetJobById(env, jobId, opts = {}) {
       await env.WEBSITE_ASSETS.put(destKey, out.bytes, {
         httpMetadata: { contentType: out.contentType },
         customMetadata: {
-          "fnf-asset-role": "canonical",
-          "fnf-intake-key": intakeKey.slice(0, 200),
-          "fnf-pipeline": classification.pipeline || "image",
+          "commerce-asset-role": "canonical",
+          "commerce-intake-key": intakeKey.slice(0, 200),
+          "commerce-pipeline": classification.pipeline || "image",
         },
       });
 
@@ -262,7 +262,7 @@ async function transformWithSharp(intakeKey, sourceSize, opts) {
   const { join } = await import("node:path");
   const { tmpdir } = await import("node:os");
   const { optimizeImageObject } = await import("./image-optimize.js");
-  const workDir = join(tmpdir(), `fnf-job-${Date.now()}`);
+  const workDir = join(tmpdir(), `commerce-job-${Date.now()}`);
   mkdirSync(workDir, { recursive: true });
   const row = await optimizeImageObject(
     { key: intakeKey, size: sourceSize },

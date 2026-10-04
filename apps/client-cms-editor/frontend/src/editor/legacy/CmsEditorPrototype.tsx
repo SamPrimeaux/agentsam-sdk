@@ -788,11 +788,11 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
   }
 
 
-  return <main className={`cms-shell cms-shell--fnf${agentSamOpen ? " is-agentsam-open" : ""}${inspectorSheetOpen ? " is-inspector-open" : ""}`}>
-    <header className="fnf-topbar" data-annotation-control="">
-      <div className="fnf-topbar-left">
+  return <main className={`cms-shell cms-shell--commerce${agentSamOpen ? " is-agentsam-open" : ""}${inspectorSheetOpen ? " is-inspector-open" : ""}`}>
+    <header className="commerce-topbar" data-annotation-control="">
+      <div className="commerce-topbar-left">
         <button
-          className="fnf-topbar-ghost"
+          className="commerce-topbar-ghost"
           onClick={() => {
             const target = basePath || "/cms";
             if (onNavigate) onNavigate(target);
@@ -809,30 +809,30 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
           {siteSwitcher && <SiteSwitcher sites={sites} active={site.id} choose={chooseSite} close={() => setSiteSwitcher(false)} newSite={() => { setSiteSwitcher(false); toast("Create sites from the CMS hub", "info"); }}/>}
         </div>
       </div>
-      <button className="fnf-search" type="button" onClick={() => setModal("palette")} aria-label="Search">
+      <button className="commerce-search" type="button" onClick={() => setModal("palette")} aria-label="Search">
         <Icon name="search" size={14}/>
         <span>Search pages, sections…</span>
         <kbd>⌘K</kbd>
       </button>
-      <div className="fnf-topbar-actions">
+      <div className="commerce-topbar-actions">
         <ViewportSwitcher viewport={viewport} setViewport={setViewport}/>
         <button
           type="button"
-          className={`fnf-topbar-btn${annotateSelecting ? " is-active" : ""}`}
+          className={`commerce-topbar-btn${annotateSelecting ? " is-active" : ""}`}
           data-annotation-control=""
           onClick={() => setAnnotateSelecting((v) => !v)}
           title="Annotate canvas"
         >{annotateSelecting ? "Selecting…" : "Annotate"}</button>
-        <button type="button" className="fnf-topbar-icon" onClick={undo} disabled={!history.length} title="Undo ⌘Z"><Icon name="undo" size={14}/></button>
-        <button type="button" className="fnf-topbar-icon" onClick={redo} disabled={!future.length} title="Redo ⌘⇧Z"><Icon name="redo" size={14}/></button>
-        <button type="button" className="fnf-topbar-btn" onClick={() => setPreview(true)}>Preview</button>
+        <button type="button" className="commerce-topbar-icon" onClick={undo} disabled={!history.length} title="Undo ⌘Z"><Icon name="undo" size={14}/></button>
+        <button type="button" className="commerce-topbar-icon" onClick={redo} disabled={!future.length} title="Redo ⌘⇧Z"><Icon name="redo" size={14}/></button>
+        <button type="button" className="commerce-topbar-btn" onClick={() => setPreview(true)}>Preview</button>
         <div className="publish-wrap">
           <Button icon="publish" kind="accent" onClick={() => setPublishMenu(v => !v)}>Publish live <Icon name="down" size={11}/></Button>
           {publishMenu && <PublishMenu action={(m: string) => { if (m === "Schedule") { setModal("schedule"); } else { setSaving(true); publishIamPage(page.id).then(() => toast("Page published")).catch((error) => toast(error?.message || "Publish failed", "error")).finally(() => setSaving(false)); } setPublishMenu(false); }}/>}
         </div>
         <button
           type="button"
-          className={`fnf-topbar-icon${agentSamOpen ? " is-agentsam-active" : ""}`}
+          className={`commerce-topbar-icon${agentSamOpen ? " is-agentsam-active" : ""}`}
           data-annotation-control=""
           aria-label="AgentSam"
           aria-expanded={agentSamOpen}
@@ -842,14 +842,14 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
         </button>
       </div>
-      <div className="fnf-mobile-top" data-annotation-control="">
-        <button type="button" className="fnf-topbar-ghost" onClick={() => { setSidebarCollapsed(false); setRail("sections"); }} aria-label="Library"><Icon name="menu" size={16}/></button>
+      <div className="commerce-mobile-top" data-annotation-control="">
+        <button type="button" className="commerce-topbar-ghost" onClick={() => { setSidebarCollapsed(false); setRail("sections"); }} aria-label="Library"><Icon name="menu" size={16}/></button>
         <b>{page.title}</b>
-        <div className="fnf-mobile-top-actions">
-          <button type="button" className={`fnf-topbar-btn${inspectorSheetOpen ? " is-active" : ""}`} onClick={() => setInspectorSheetOpen((v) => !v)}>{inspectorSheetOpen ? "Preview" : "Edit"}</button>
+        <div className="commerce-mobile-top-actions">
+          <button type="button" className={`commerce-topbar-btn${inspectorSheetOpen ? " is-active" : ""}`} onClick={() => setInspectorSheetOpen((v) => !v)}>{inspectorSheetOpen ? "Preview" : "Edit"}</button>
           <button
             type="button"
-            className={`fnf-topbar-icon${agentSamOpen ? " is-agentsam-active" : ""}`}
+            className={`commerce-topbar-icon${agentSamOpen ? " is-agentsam-active" : ""}`}
             aria-label="AgentSam"
             aria-expanded={agentSamOpen}
             onClick={() => setAgentSamOpen((v) => !v)}
@@ -860,13 +860,13 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
       </div>
     </header>
 
-    <div className="fnf-workspace">
-      <nav className="rail fnf-rail" data-annotation-control="">
+    <div className="commerce-workspace">
+      <nav className="rail commerce-rail" data-annotation-control="">
         {railItems.map((item, i) => <button key={item.id} className={rail === item.id ? "active" : ""} onClick={() => { setRail(item.id); setSidebarCollapsed(false); }} data-tip={`${item.label}  ⌘${i + 1}`}><Icon name={item.icon}/></button>)}
         <button className="rail-collapse" onClick={() => setSidebarCollapsed(v => !v)} data-tip={sidebarCollapsed ? "Expand library" : "Collapse library"}><Icon name="collapse"/></button>
       </nav>
 
-      <aside className={`sidebar fnf-library ${sidebarCollapsed ? "collapsed" : ""}`} data-annotation-control="">
+      <aside className={`sidebar commerce-library ${sidebarCollapsed ? "collapsed" : ""}`} data-annotation-control="">
         <SidebarHeader rail={rail} search={search} setSearch={setSearch} action={() => rail === "pages" ? setModal("page") : rail === "sections" ? setModal("add-section") : rail === "blocks" ? addBlock() : rail === "media" ? setModal("upload") : toast("No create action is available for this panel", "info")}/>
         <div className="sidebar-scroll">
           {rail === "pages" && <PagesSidebar pages={filteredPages} active={page.id} choose={choosePage} create={() => setModal("page")} toast={toast}/>}
@@ -879,14 +879,14 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
         </div>
       </aside>
 
-      <div className="fnf-editor">
-        <aside className={`fnf-inspector ${inspectorCollapsed ? "collapsed" : ""}`} data-annotation-control="">
-          <div className="fnf-inspector-head">
+      <div className="commerce-editor">
+        <aside className={`commerce-inspector ${inspectorCollapsed ? "collapsed" : ""}`} data-annotation-control="">
+          <div className="commerce-inspector-head">
             <div>
               <strong>{selectedBlock ? selectedBlock.type : selected?.name || "Section"}</strong>
               <span className={`badge ${dirty ? "draft" : "active"}`}>{dirty ? "draft" : "saved"}</span>
             </div>
-            <button type="button" className="fnf-topbar-icon" onClick={() => setInspectorCollapsed((v) => !v)} title="Collapse inspector"><Icon name="collapse" size={14}/></button>
+            <button type="button" className="commerce-topbar-icon" onClick={() => setInspectorCollapsed((v) => !v)} title="Collapse inspector"><Icon name="collapse" size={14}/></button>
           </div>
           {selected && (
             <div className="selected-head">
@@ -912,14 +912,14 @@ const FALLBACK_TEMPLATE_CARDS: TemplateCard[] = [
             {tab === "crm" ? <InspectorCrm contacts={contacts} viewAll={() => setRail("crm")} select={setContactId}/> : null}
             {!selected && tab === "content" ? <EmptyState icon="layers" title="Select a section" copy="Choose a section from the library or canvas markers to edit fields."/> : null}
           </div>
-          <p className="fnf-live-note">{dirty ? "Unsaved changes" : "Live editing connected."}</p>
+          <p className="commerce-live-note">{dirty ? "Unsaved changes" : "Live editing connected."}</p>
         </aside>
 
-        <section className="canvas-area fnf-canvas" ref={canvasScopeRef} data-agentsam-resource={`page:${page.id}`} aria-label={`${page.title} canvas`}>
-          <div className="fnf-preview-bar" data-annotation-control="">
+        <section className="canvas-area commerce-canvas" ref={canvasScopeRef} data-agentsam-resource={`page:${page.id}`} aria-label={`${page.title} canvas`}>
+          <div className="commerce-preview-bar" data-annotation-control="">
             <span>Preview — {page.slug || page.title}</span>
-            <div className="fnf-preview-bar-actions">
-              <button type="button" className="fnf-topbar-btn" onClick={() => setPreview(true)}>Open in tab</button>
+            <div className="commerce-preview-bar-actions">
+              <button type="button" className="commerce-topbar-btn" onClick={() => setPreview(true)}>Open in tab</button>
             </div>
           </div>
           <div className="canvas-stage">

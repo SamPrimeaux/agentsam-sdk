@@ -43,10 +43,10 @@ const projects = [
     ],
   },
   {
-    id: 'fuelnfreetime',
-    name: 'Fuel & Free Time',
+    id: 'ember',
+    name: 'Ember Supply',
     description: 'Commerce, CMS, Completeful fulfillment, media and storefront systems.',
-    repository: 'fuelnfreetime.com',
+    repository: 'ember.example',
     branch: 'main',
     status: 'healthy',
     health: 'healthy' as const,

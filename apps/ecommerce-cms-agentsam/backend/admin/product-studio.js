@@ -50,7 +50,7 @@ function draftFromRow(row) {
 }
 
 function siteOrigin(env) {
-  const domain = String(env.APP_DOMAIN || "fuelnfreetime.com").trim();
+  const domain = String(env.APP_DOMAIN || "ember.example").trim();
   if (/^https?:\/\//i.test(domain)) return domain.replace(/\/$/, "");
   return `https://${domain.replace(/^\/+|\/+$/g, "")}`;
 }
@@ -776,7 +776,7 @@ async function createProductFromDraft(request, env, id) {
               title: draft.title,
               description: draft.description || null,
               retail_price: Number(draft.retail_price_cents) / 100,
-              sku: `fnf-${draft.product_id}`,
+              sku: `commerce-${draft.product_id}`,
               design_id: design.designId,
               preview_url: draft.completeful_render_url || null,
               variants: providerSelection,

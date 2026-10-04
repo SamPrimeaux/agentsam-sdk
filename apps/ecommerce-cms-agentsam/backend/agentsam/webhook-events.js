@@ -1,4 +1,4 @@
-import { FNF_ACCOUNT_ID } from "./constants.js";
+import { COMMERCE_ACCOUNT_ID } from "./constants.js";
 
 export const WEBHOOK_ENDPOINT_IDS = {
   resend_inbound: "awh_resend_inbound",
@@ -158,7 +158,7 @@ export async function insertAgentSamWebhookEvent(
     )
       .bind(
         id,
-        FNF_ACCOUNT_ID,
+        COMMERCE_ACCOUNT_ID,
         resolvedWebhookId,
         provider,
         eventType,
@@ -188,7 +188,7 @@ export async function insertAgentSamWebhookEvent(
            SET last_event_at_unix = ?, updated_at_unix = ?
            WHERE id = ? AND account_id = ?`
         )
-          .bind(now, now, resolvedWebhookId, FNF_ACCOUNT_ID)
+          .bind(now, now, resolvedWebhookId, COMMERCE_ACCOUNT_ID)
           .run()
           .catch(() => {});
       }
@@ -207,7 +207,7 @@ export async function insertAgentSamWebhookEvent(
        WHERE account_id = ? AND provider = ? AND dedupe_key = ?
        LIMIT 1`
     )
-      .bind(FNF_ACCOUNT_ID, provider, resolvedDedupeKey)
+      .bind(COMMERCE_ACCOUNT_ID, provider, resolvedDedupeKey)
       .first();
 
     if (
@@ -317,7 +317,7 @@ export async function updateAgentSamWebhookEvent(
         payloadExpiresAt,
         expiresAt,
         id,
-        FNF_ACCOUNT_ID
+        COMMERCE_ACCOUNT_ID
       )
       .run();
     return { ok: true, changes: result.meta?.changes ?? 0 };

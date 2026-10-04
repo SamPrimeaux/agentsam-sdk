@@ -2,7 +2,7 @@
  * AgentSam file uploads — R2 bodies + D1 metadata.
  */
 
-import { FNF_ACCOUNT_ID } from "./constants.js";
+import { COMMERCE_ACCOUNT_ID } from "./constants.js";
 import { isFeatureEnabled } from "./feature-gates.js";
 import { getSessionUser } from "../lib/auth.js";
 
@@ -69,7 +69,7 @@ export async function getAttachmentById(env, id) {
   return env.DB.prepare(
     `SELECT * FROM agentsam_attachments WHERE id = ? AND account_id = ? AND status != 'deleted' LIMIT 1`
   )
-    .bind(id, FNF_ACCOUNT_ID)
+    .bind(id, COMMERCE_ACCOUNT_ID)
     .first();
 }
 
@@ -194,7 +194,7 @@ export async function agentsamFileUpload(request, env) {
   )
     .bind(
       attachmentId,
-      FNF_ACCOUNT_ID,
+      COMMERCE_ACCOUNT_ID,
       conversationId,
       user.id || null,
       fileName,
@@ -241,7 +241,7 @@ export async function agentsamFileDelete(env, id) {
   await env.DB.prepare(
     `UPDATE agentsam_attachments SET status = 'deleted' WHERE id = ? AND account_id = ?`
   )
-    .bind(id, FNF_ACCOUNT_ID)
+    .bind(id, COMMERCE_ACCOUNT_ID)
     .run();
   return json({ ok: true, deleted: true });
 }

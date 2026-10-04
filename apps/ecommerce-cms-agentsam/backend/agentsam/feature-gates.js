@@ -2,7 +2,7 @@
  * Fuel n Freetime AgentSam feature gates — advanced capabilities off until paid/approved.
  */
 
-export const FNF_AGENT_FEATURES = {
+export const COMMERCE_AGENT_FEATURES = {
   web_search: false,
   deep_research: false,
   pdf_extraction: false,
@@ -17,11 +17,11 @@ export const FNF_AGENT_FEATURES = {
 };
 
 export function isFeatureEnabled(feature) {
-  return Boolean(FNF_AGENT_FEATURES[feature]);
+  return Boolean(COMMERCE_AGENT_FEATURES[feature]);
 }
 
 export function getAgentFeatures() {
-  return { ...FNF_AGENT_FEATURES };
+  return { ...COMMERCE_AGENT_FEATURES };
 }
 
 const WEB_PATTERNS =
@@ -68,9 +68,9 @@ export function detectBlockedFeatureRequest(message, attachments = []) {
 const TOOL_KEY_ALLOWLIST = new Set([
   "agentsam_github_repo_list",
   "search_cloudflare_documentation",
-  "fnf_d1_query",
-  "fnf_r2_list",
-  "fnf_cms_read",
+  "commerce_d1_query",
+  "commerce_r2_list",
+  "commerce_cms_read",
 ]);
 
 export function isToolKeyAllowed(toolKey, displayName = "") {

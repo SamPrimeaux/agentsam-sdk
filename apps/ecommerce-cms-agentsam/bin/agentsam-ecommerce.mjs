@@ -417,7 +417,7 @@ This project was scaffolded from @inneranimalmedia/ecommerce-cms-agentsam.
 7. Configure provider secrets.
 8. Run npm run dev.
 
-Fuel & Free Time is customer #1. Its branding, products,
+Ember Supply is customer #1. Its branding, products,
 campaigns, media, credentials and business data are not
 package defaults.
 `

@@ -104,7 +104,7 @@ Shell interactive work is **separate** from Apps Clack catalog (`agentsam apps`)
 | `client-cms-editor` | product |
 | `ecommerce-cms-agentsam` | product |
 | `local-studio` | product |
-| `church-site` … `shinshu-site` (7) | harvested — `.agentsam/app.json` |
+| `cypress` … `summit` (7) | harvested — `.agentsam/app.json` |
 | `theme-gallery-preview`, `frontend`, `project-control`, `agentsam-go-worker`, `_incoming` | maturity TBD via calculated gates |
 
 ---

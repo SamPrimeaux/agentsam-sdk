@@ -9,7 +9,7 @@ import {
 test('OAuth consent uses company as issuer brand SSOT without product-specific copy', () => {
   const company = normalizeOAuthConsentCompany({
     id: 'co_default',
-    name: 'Fuel & Free Time',
+    name: 'Ember Supply',
     logo_url: 'https://assets.example.test/logo.png',
     primary_color: '#f15a24',
     auth_bg_color: '#101214',
@@ -17,9 +17,9 @@ test('OAuth consent uses company as issuer brand SSOT without product-specific c
   const view = buildOAuthConsentView({
     company,
     resource: {
-      id: 'res_fnf_mcp',
-      audience: 'https://fuelnfreetime.com/mcp',
-      display_name: 'Fuel & Free Time MCP',
+      id: 'res_commerce_mcp',
+      audience: 'https://ember.example/mcp',
+      display_name: 'Ember Supply MCP',
       description: 'Store, content, and experience tools.',
     },
     client: {
@@ -29,13 +29,13 @@ test('OAuth consent uses company as issuer brand SSOT without product-specific c
     signed_in_email: 'customer@example.test',
     scopes: [
       {
-        scope: 'fnf:store.read',
+        scope: 'commerce:store.read',
         label: 'Store data',
         description: 'Read published store and CMS data.',
         sort_order: 20,
       },
       {
-        scope: 'fnf:experience.read',
+        scope: 'commerce:experience.read',
         label: 'Interactive experiences',
         description: 'Read published interactive scene metadata.',
         sort_order: 10,
@@ -43,13 +43,13 @@ test('OAuth consent uses company as issuer brand SSOT without product-specific c
     ],
   });
 
-  assert.equal(view.issuer.name, 'Fuel & Free Time');
+  assert.equal(view.issuer.name, 'Ember Supply');
   assert.equal(view.issuer.primaryColor, '#f15a24');
-  assert.equal(view.copy.headline, 'Fuel & Free Time MCP wants to connect to ChatGPT');
-  assert.equal(view.copy.footer, 'Authorization secured by Fuel & Free Time');
+  assert.equal(view.copy.headline, 'Ember Supply MCP wants to connect to ChatGPT');
+  assert.equal(view.copy.footer, 'Authorization secured by Ember Supply');
   assert.deepEqual(view.scopes.map((scope) => scope.scope), [
-    'fnf:experience.read',
-    'fnf:store.read',
+    'commerce:experience.read',
+    'commerce:store.read',
   ]);
 });
 

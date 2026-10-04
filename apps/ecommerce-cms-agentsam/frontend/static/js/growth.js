@@ -103,25 +103,25 @@ function paintMetrics(app, metrics) {
   setGrowthMetric(app, "kpi-revenue", revenue);
   setGrowthMetric(app, "readiness-score", `${readiness}%`);
 
-  const bar = app.querySelector(".fnf-traffic-bar");
+  const bar = app.querySelector(".commerce-traffic-bar");
   if (bar && total > 0) {
     const spans = bar.querySelectorAll("span");
     if (spans[0]) spans[0].style.flex = String(direct);
     if (spans[1]) spans[1].style.flex = String(organic);
   }
 
-  const directCard = app.querySelector('[data-page="overview"] .fnf-source:nth-of-type(1)');
+  const directCard = app.querySelector('[data-page="overview"] .commerce-source:nth-of-type(1)');
   if (directCard) {
-    const sessionEl = directCard.querySelector(".fnf-source-top div:last-child");
-    const valueEl = directCard.querySelector(".fnf-source-value");
+    const sessionEl = directCard.querySelector(".commerce-source-top div:last-child");
+    const valueEl = directCard.querySelector(".commerce-source-value");
     if (sessionEl) sessionEl.textContent = `${direct} sessions`;
     if (valueEl) valueEl.textContent = revenue;
   }
 
-  const googleCard = app.querySelector('[data-page="overview"] .fnf-source:nth-of-type(2)');
+  const googleCard = app.querySelector('[data-page="overview"] .commerce-source:nth-of-type(2)');
   if (googleCard) {
-    const sessionEl = googleCard.querySelector(".fnf-source-top div:last-child");
-    const valueEl = googleCard.querySelector(".fnf-source-value");
+    const sessionEl = googleCard.querySelector(".commerce-source-top div:last-child");
+    const valueEl = googleCard.querySelector(".commerce-source-value");
     if (sessionEl) sessionEl.textContent = `${organic} sessions`;
     if (valueEl) valueEl.textContent = revenue;
   }
@@ -135,11 +135,11 @@ function renderCampaignGrid(app, campaigns) {
 
   if (!items.length) {
     grid.innerHTML = `
-      <article class="fnf-campaign-card" data-go="create">
-        <div class="fnf-tag">Starter</div>
+      <article class="commerce-campaign-card" data-go="create">
+        <div class="commerce-tag">Starter</div>
         <h3>Create your first campaign</h3>
         <p>Turn store signals into a draft homepage banner, email pack, and UTM-ready links.</p>
-        <div class="fnf-campaign-foot">
+        <div class="commerce-campaign-foot">
           <span>0 channels</span>
           <span>Draft</span>
         </div>
@@ -152,11 +152,11 @@ function renderCampaignGrid(app, campaigns) {
     .slice(0, 6)
     .map(
       (c) => `
-      <article class="fnf-campaign-card" data-campaign-id="${c.id}" tabindex="0">
-        <div class="fnf-tag">${campaignTag(c)}</div>
+      <article class="commerce-campaign-card" data-campaign-id="${c.id}" tabindex="0">
+        <div class="commerce-tag">${campaignTag(c)}</div>
         <h3>${escapeHtml(c.name)}</h3>
         <p>${escapeHtml(c.brief || c.goal || "Campaign draft")}</p>
-        <div class="fnf-campaign-foot">
+        <div class="commerce-campaign-foot">
           <span>${(c.channels || []).length} channel${(c.channels || []).length === 1 ? "" : "s"}</span>
           <span>${fmtStatus(c.status)}</span>
         </div>
@@ -185,26 +185,26 @@ function escapeHtml(str) {
 }
 
 function readCreateForm(app) {
-  const goal = app.querySelector("#fnfCampaignGoal")?.value || "";
-  const audience = app.querySelector("#fnfAudience")?.value || "";
-  const priorityLabel = app.querySelector("#fnfPriority")?.value || "Normal campaign";
-  const approvalLabel = app.querySelector("#fnfApproval")?.value || "Draft only, require approval";
-  const sourceLabel = app.querySelector("#fnfSource")?.value || "Website and email";
+  const goal = app.querySelector("#commerceCampaignGoal")?.value || "";
+  const audience = app.querySelector("#commerceAudience")?.value || "";
+  const priorityLabel = app.querySelector("#commercePriority")?.value || "Normal campaign";
+  const approvalLabel = app.querySelector("#commerceApproval")?.value || "Draft only, require approval";
+  const sourceLabel = app.querySelector("#commerceSource")?.value || "Website and email";
 
   const channels = [];
-  app.querySelectorAll('#fnfChannelChoices input[name="channel"]:checked').forEach((input) => {
+  app.querySelectorAll('#commerceChannelChoices input[name="channel"]:checked').forEach((input) => {
     channels.push(input.value);
   });
 
   return {
-    name: app.querySelector("#fnfCampaignName")?.value?.trim() || "",
+    name: app.querySelector("#commerceCampaignName")?.value?.trim() || "",
     goal,
     audience,
     priority: PRIORITY_MAP[priorityLabel] || "normal",
-    brief: app.querySelector("#fnfBrief")?.value?.trim() || "",
+    brief: app.querySelector("#commerceBrief")?.value?.trim() || "",
     channels,
-    start_date: app.querySelector("#fnfStart")?.value || null,
-    end_date: app.querySelector("#fnfEnd")?.value || null,
+    start_date: app.querySelector("#commerceStart")?.value || null,
+    end_date: app.querySelector("#commerceEnd")?.value || null,
     primary_source: SOURCE_MAP[sourceLabel] || "website_email",
     approval_mode: APPROVAL_MAP[approvalLabel] || "draft_only",
   };
@@ -218,24 +218,24 @@ function fillCreateForm(app, campaign) {
     if (el && val != null) el.value = val;
   };
 
-  setVal("fnfCampaignName", campaign.name);
-  setVal("fnfCampaignGoal", campaign.goal || "Drive product sales");
-  setVal("fnfAudience", campaign.audience || "All visitors");
-  setVal("fnfBrief", campaign.brief || "");
-  setVal("fnfStart", campaign.start_date || "");
-  setVal("fnfEnd", campaign.end_date || "");
+  setVal("commerceCampaignName", campaign.name);
+  setVal("commerceCampaignGoal", campaign.goal || "Drive product sales");
+  setVal("commerceAudience", campaign.audience || "All visitors");
+  setVal("commerceBrief", campaign.brief || "");
+  setVal("commerceStart", campaign.start_date || "");
+  setVal("commerceEnd", campaign.end_date || "");
 
   const priorityReverse = Object.fromEntries(Object.entries(PRIORITY_MAP).map(([k, v]) => [v, k]));
-  setVal("fnfPriority", priorityReverse[campaign.priority] || "Normal campaign");
+  setVal("commercePriority", priorityReverse[campaign.priority] || "Normal campaign");
 
   const approvalReverse = Object.fromEntries(Object.entries(APPROVAL_MAP).map(([k, v]) => [v, k]));
-  setVal("fnfApproval", approvalReverse[campaign.approval_mode] || "Draft only, require approval");
+  setVal("commerceApproval", approvalReverse[campaign.approval_mode] || "Draft only, require approval");
 
   const sourceReverse = Object.fromEntries(Object.entries(SOURCE_MAP).map(([k, v]) => [v, k]));
-  setVal("fnfSource", sourceReverse[campaign.primary_source] || "Website and email");
+  setVal("commerceSource", sourceReverse[campaign.primary_source] || "Website and email");
 
   const selected = new Set(campaign.channels || []);
-  app.querySelectorAll('#fnfChannelChoices input[name="channel"]').forEach((input) => {
+  app.querySelectorAll('#commerceChannelChoices input[name="channel"]').forEach((input) => {
     input.checked = selected.has(input.value);
   });
 
@@ -245,16 +245,16 @@ function fillCreateForm(app, campaign) {
 
 function renderPackPreview(app, campaign) {
   const pack = campaign?.pack || {};
-  const banner = app.querySelector("#fnfPreviewBanner");
-  const subject = app.querySelector("#fnfPreviewSubject");
-  const preview = app.querySelector("#fnfPreviewEmailPreview");
-  const body = app.querySelector("#fnfPreviewEmailBody");
-  const status = app.querySelector("#fnfPackStatus");
+  const banner = app.querySelector("#commercePreviewBanner");
+  const subject = app.querySelector("#commercePreviewSubject");
+  const preview = app.querySelector("#commercePreviewEmailPreview");
+  const body = app.querySelector("#commercePreviewEmailBody");
+  const status = app.querySelector("#commercePackStatus");
 
   if (banner) banner.textContent = pack.homepage_banner || "Time is the horsepower.";
   if (subject) subject.textContent = pack.email_subject || "Built for the ones who move first.";
-  if (preview) preview.textContent = pack.email_preview || "A clean drop campaign for the next Fuel & Free Time push.";
-  if (body) body.textContent = pack.email_body_text || "The drop is live. Shop the latest from Fuel & Free Time.";
+  if (preview) preview.textContent = pack.email_preview || "A clean drop campaign for the next Ember Supply push.";
+  if (body) body.textContent = pack.email_body_text || "The drop is live. Shop the latest from Ember Supply.";
 
   if (status) {
     if (campaign?.status === "generating") {
@@ -269,16 +269,16 @@ function renderPackPreview(app, campaign) {
     }
   }
 
-  const checklist = app.querySelector(".fnf-checklist");
+  const checklist = app.querySelector(".commerce-checklist");
   if (checklist) {
     const channels = campaign?.channels || [];
     const hasUtm = Boolean(pack.utm_links?.homepage || pack.utm_campaign);
     const isActive = campaign?.status === "active";
     checklist.innerHTML = `
-      <div class="fnf-check"><span>Homepage banner</span><strong>${isActive && channels.includes("homepage_banner") ? "Live" : pack.homepage_banner ? "Ready" : channels.includes("homepage_banner") ? "Pending" : "Off"}</strong></div>
-      <div class="fnf-check"><span>Email draft</span><strong>${isActive && channels.includes("email") ? "Published" : pack.email_subject ? "Ready" : channels.includes("email") ? "Pending" : "Off"}</strong></div>
-      <div class="fnf-check"><span>UTM links</span><strong>${hasUtm ? "Ready" : "Needed"}</strong></div>
-      <div class="fnf-check"><span>Status</span><strong>${fmtStatus(campaign?.status)}</strong></div>`;
+      <div class="commerce-check"><span>Homepage banner</span><strong>${isActive && channels.includes("homepage_banner") ? "Live" : pack.homepage_banner ? "Ready" : channels.includes("homepage_banner") ? "Pending" : "Off"}</strong></div>
+      <div class="commerce-check"><span>Email draft</span><strong>${isActive && channels.includes("email") ? "Published" : pack.email_subject ? "Ready" : channels.includes("email") ? "Pending" : "Off"}</strong></div>
+      <div class="commerce-check"><span>UTM links</span><strong>${hasUtm ? "Ready" : "Needed"}</strong></div>
+      <div class="commerce-check"><span>Status</span><strong>${fmtStatus(campaign?.status)}</strong></div>`;
   }
 
   renderUtmLinks(app, pack);
@@ -286,18 +286,18 @@ function renderPackPreview(app, campaign) {
 }
 
 function renderUtmLinks(app, pack) {
-  const box = app.querySelector("#fnfUtmLinks");
+  const box = app.querySelector("#commerceUtmLinks");
   if (!box) return;
   const links = pack?.utm_links || {};
   const entries = Object.entries(links);
   if (!entries.length) {
-    box.innerHTML = '<p class="fnf-muted">Generate a pack to create tracked links.</p>';
+    box.innerHTML = '<p class="commerce-muted">Generate a pack to create tracked links.</p>';
     return;
   }
   box.innerHTML = entries
     .map(
       ([channel, href]) =>
-        `<div class="fnf-link-row"><span>${channel}</span><a href="${escapeHtml(href)}" target="_blank" rel="noopener">${escapeHtml(href)}</a></div>`
+        `<div class="commerce-link-row"><span>${channel}</span><a href="${escapeHtml(href)}" target="_blank" rel="noopener">${escapeHtml(href)}</a></div>`
     )
     .join("");
 }
@@ -516,7 +516,7 @@ function bindGrowthApp(app) {
   });
 
   app.querySelectorAll("[data-dismiss]").forEach((button) => {
-    button.addEventListener("click", () => button.closest(".fnf-notice")?.remove());
+    button.addEventListener("click", () => button.closest(".commerce-notice")?.remove());
   });
 
   app.querySelectorAll("[data-generate]").forEach((button) => {
@@ -547,7 +547,7 @@ async function initGrowthPage() {
     const res = await fetch("/admin/partials/growth-app.html", { credentials: "same-origin" });
     if (!res.ok) throw new Error(`Growth partial HTTP ${res.status}`);
     mount.innerHTML = await res.text();
-    const app = document.getElementById("fnfGrowthApp");
+    const app = document.getElementById("commerceGrowthApp");
     bindGrowthApp(app);
     await refreshOverview(app);
     syncAgentsamContext(null);

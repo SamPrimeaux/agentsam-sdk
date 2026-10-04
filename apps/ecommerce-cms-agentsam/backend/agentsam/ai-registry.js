@@ -2,7 +2,7 @@
  * AgentSam Workers AI model registry — D1-backed selection and fallback chains.
  */
 
-import { FNF_ACCOUNT_ID } from "./constants.js";
+import { COMMERCE_ACCOUNT_ID } from "./constants.js";
 
 const ACTIVE_STATUSES = ["active", "experimental"];
 const CHAT_TASK_TYPES = new Set([
@@ -87,7 +87,7 @@ function sortModels(models, message) {
 export function resolveAIRouting(classification, message, context = {}) {
   const intent = classification?.intent || "general";
   const workflowKey =
-    classification?.workflow_key || context.workflow_key || "fnf_agentsam_chat";
+    classification?.workflow_key || context.workflow_key || "commerce_agentsam_chat";
   const hay = String(message || "").toLowerCase();
 
   const attachmentImage = (context.attachments || []).find(
@@ -212,7 +212,7 @@ export function normalizeChatRouting(routing) {
 }
 
 export async function getAIModels(env, options = {}) {
-  const accountId = options.account_id || FNF_ACCOUNT_ID;
+  const accountId = options.account_id || COMMERCE_ACCOUNT_ID;
   const includeDisabled = options.includeDisabled === true;
 
   if (!env.DB) return [];
@@ -298,7 +298,7 @@ export async function getDefaultModelId(env, taskType, lane) {
        ORDER BY priority ASC
        LIMIT 1`
     )
-      .bind(FNF_ACCOUNT_ID, taskType, lane)
+      .bind(COMMERCE_ACCOUNT_ID, taskType, lane)
       .first();
     return row?.model_id || null;
   } catch {
@@ -317,14 +317,14 @@ export async function getAIRegistryStatus(env) {
       const total = await env.DB.prepare(
         `SELECT COUNT(*) AS n FROM agentsam_ai WHERE account_id = ? AND status IN ('active','experimental')`
       )
-        .bind(FNF_ACCOUNT_ID)
+        .bind(COMMERCE_ACCOUNT_ID)
         .first();
       aiRegistryCount = total?.n ?? 0;
 
       const disabled = await env.DB.prepare(
         `SELECT COUNT(*) AS n FROM agentsam_ai WHERE account_id = ? AND status = 'disabled'`
       )
-        .bind(FNF_ACCOUNT_ID)
+        .bind(COMMERCE_ACCOUNT_ID)
         .first();
       disabledModelCount = disabled?.n ?? 0;
     }

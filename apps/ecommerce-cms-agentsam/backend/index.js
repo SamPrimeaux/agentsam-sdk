@@ -1,11 +1,11 @@
 /**
- * Fuel & Free Time — Worker entry point
+ * Ember Supply — Worker entry point
  *
  * Bindings (see wrangler.toml):
- *   DB             D1 database "fuelnfreetime"
- *   WEBSITE_ASSETS R2 bucket "fuelnfreetime"
+ *   DB             D1 database "ember"
+ *   WEBSITE_ASSETS R2 bucket "ember"
  *   AGENTSAM_WAI   Workers AI
- *   CMS_CACHE      KV namespace "fuelnfreetime-cache"
+ *   CMS_CACHE      KV namespace "ember-cache"
  *   ASSETS         Static files served from /public (marketing pages + /admin dashboard)
  */
 

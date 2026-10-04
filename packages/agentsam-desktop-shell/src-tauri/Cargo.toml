@@ -2,7 +2,7 @@
 name = "agentsam-desktop-shell"
 version = "0.1.0"
 description = "Tauri desktop shell for AgentSam-powered brand dashboards"
-authors = ["Sam Primeaux <sam@inneranimalmedia.com>"]
+authors = ["Inner Animal Media <sam@inneranimalmedia.com>"]
 license = "MIT"
 edition = "2021"
 rust-version = "1.77"

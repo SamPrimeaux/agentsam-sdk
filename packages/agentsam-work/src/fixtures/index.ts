@@ -187,7 +187,7 @@ export const populatedWorkFixture: WorkSnapshot = {
     },
     {
       id: "proj_anything_floors_site",
-      name: "Anything Floors & More Website",
+      name: "Grove Surface Co. Website",
       description: "Commerce storefront",
       projectType: "e-commerce",
       status: "production",
@@ -201,7 +201,7 @@ export const populatedWorkFixture: WorkSnapshot = {
     },
     {
       id: "proj_anything_floors",
-      name: "Anything Floors and More",
+      name: "Grove Surface and More",
       description: "Operations project",
       projectType: "project",
       status: "production",

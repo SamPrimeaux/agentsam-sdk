@@ -2,7 +2,7 @@
  * AgentSam compiled prompt cache — D1 metadata + KV hot + R2 large payloads.
  */
 
-import { FNF_ACCOUNT_ID } from "./constants.js";
+import { COMMERCE_ACCOUNT_ID } from "./constants.js";
 import { estimateTokens, buildPromptPack } from "./prompt-registry.js";
 
 const D1_INLINE_MAX = 4000;
@@ -26,7 +26,7 @@ function ttlForPack(routing = {}) {
 
 export function buildPromptCacheKey(parts = {}) {
   const segments = [
-    parts.account_id || FNF_ACCOUNT_ID,
+    parts.account_id || COMMERCE_ACCOUNT_ID,
     parts.workflow_key || "_",
     parts.route_lane || "_",
     parts.task_type || "_",
@@ -102,7 +102,7 @@ export async function getPromptCache(env, cacheKey) {
        AND (expires_unix IS NULL OR expires_unix > ?)
      LIMIT 1`
   )
-    .bind(FNF_ACCOUNT_ID, cacheKey, Math.floor(Date.now() / 1000))
+    .bind(COMMERCE_ACCOUNT_ID, cacheKey, Math.floor(Date.now() / 1000))
     .first();
 
   if (!row) return null;
@@ -175,7 +175,7 @@ export async function putPromptCache(env, compiledPromptPack, options = {}) {
   )
     .bind(
       id,
-      FNF_ACCOUNT_ID,
+      COMMERCE_ACCOUNT_ID,
       cacheKey,
       compiledPromptPack.promptHash,
       options.context_hash || null,
@@ -207,7 +207,7 @@ export async function invalidatePromptCache(env, options = {}) {
   if (!env?.DB) return { invalidated: 0 };
   const reason = options.reason || "manual_invalidation";
   let query = `UPDATE agentsam_prompt_cache SET status = 'invalidated', invalidation_reason = ?, updated_at = datetime('now') WHERE account_id = ? AND status = 'active'`;
-  const binds = [reason, FNF_ACCOUNT_ID];
+  const binds = [reason, COMMERCE_ACCOUNT_ID];
 
   if (options.workflow_key) {
     query += ` AND workflow_key = ?`;
@@ -216,7 +216,7 @@ export async function invalidatePromptCache(env, options = {}) {
   if (options.cache_key) {
     query = `UPDATE agentsam_prompt_cache SET status = 'invalidated', invalidation_reason = ?, updated_at = datetime('now') WHERE account_id = ? AND cache_key = ?`;
     binds.length = 0;
-    binds.push(reason, FNF_ACCOUNT_ID, options.cache_key);
+    binds.push(reason, COMMERCE_ACCOUNT_ID, options.cache_key);
   }
 
   const result = await env.DB.prepare(query).bind(...binds).run();
@@ -236,8 +236,8 @@ export async function getOrBuildPromptPack(env, routing, context, options = {}) 
   } catch (err) {
     console.error("buildPromptPack failed", err?.message || err);
     catalogPack = {
-      systemPrompt: "You are Agent Sam for Fuel & Free Time. Be direct, scoped, and helpful.",
-      promptKeys: ["fnf_agentsam_base_system"],
+      systemPrompt: "You are Agent Sam for Ember Supply. Be direct, scoped, and helpful.",
+      promptKeys: ["commerce_agentsam_base_system"],
       fragmentKeys: [],
       promptHash: "fallback",
       estimatedTokens: 40,
@@ -250,7 +250,7 @@ export async function getOrBuildPromptPack(env, routing, context, options = {}) 
   const contextHash = options.context_hash || options.stable_context_hash || "";
 
   const cacheKey = buildPromptCacheKey({
-    account_id: FNF_ACCOUNT_ID,
+    account_id: COMMERCE_ACCOUNT_ID,
     workflow_key: workflowKey,
     route_lane: routeLane,
     task_type: taskType,
@@ -313,7 +313,7 @@ export async function summarizePromptCache(env) {
   const active = await env.DB.prepare(
     `SELECT COUNT(*) AS n FROM agentsam_prompt_cache WHERE account_id = ? AND status = 'active'`
   )
-    .bind(FNF_ACCOUNT_ID)
+    .bind(COMMERCE_ACCOUNT_ID)
     .first();
 
   const usage = await env.DB.prepare(
@@ -324,7 +324,7 @@ export async function summarizePromptCache(env) {
      FROM agentsam_prompt_usage
      WHERE account_id = ? AND created_at_unix >= ?`
   )
-    .bind(FNF_ACCOUNT_ID, since)
+    .bind(COMMERCE_ACCOUNT_ID, since)
     .first();
 
   return {
@@ -353,7 +353,7 @@ export async function logPromptUsage(env, data = {}, options = {}) {
        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       `puse_${crypto.randomUUID().replace(/-/g, "").slice(0, 24)}`,
-      FNF_ACCOUNT_ID,
+      COMMERCE_ACCOUNT_ID,
       data.conversation_id ?? null,
       data.message_id ?? null,
       data.run_id ?? null,

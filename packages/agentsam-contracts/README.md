@@ -1,6 +1,6 @@
 # @inneranimalmedia/agentsam-contracts
 
-Framework-neutral AgentSam contracts shared by product surfaces. This package has no React dependency and must not know whether the host is Local Studio, CAD Studio, CMS Studio, Fuel & Free Time, or another product.
+Framework-neutral AgentSam contracts shared by product surfaces. This package has no React dependency and must not know whether the host is Local Studio, CAD Studio, CMS Studio, Ember Supply, or another product.
 
 It owns the portable AgentSam vocabulary: messages, inputs/runs, workbench events, tool calls/capabilities, tool definitions, provider descriptors/adapters, authority requirements, orchestration events, hook definitions, execution receipts, artifacts/attachments, explicit host context, model options, repository/company graph records, and adapter interfaces.
 

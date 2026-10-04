@@ -733,7 +733,7 @@ function renderMcpList(servers) {
       trailing = `<span class="agentsam-page-mcp-check" aria-hidden="true">✓</span>`;
     } else if ((s.slug === "agentsam-mcp" || s.oauth_start) && !s.connected) {
       trailing = `<span class="agentsam-page-mcp-link">Connect</span>`;
-    } else if (s.slug === "github" && !s.connected && connectUrls.fnf_github_oauth) {
+    } else if (s.slug === "github" && !s.connected && connectUrls.commerce_github_oauth) {
       trailing = `<span class="agentsam-page-mcp-link">Connect</span>`;
     } else if (!s.connected && s.status === "needs_bridge") {
       trailing = `<span class="agentsam-page-mcp-hint">Setup</span>`;
@@ -758,8 +758,8 @@ function renderMcpList(servers) {
         closeToolMenu();
         return;
       }
-      if (s.slug === "github" && !s.connected && connectUrls.fnf_github_oauth && !isActive) {
-        window.location.href = connectUrls.fnf_github_oauth;
+      if (s.slug === "github" && !s.connected && connectUrls.commerce_github_oauth && !isActive) {
+        window.location.href = connectUrls.commerce_github_oauth;
         closeToolMenu();
         return;
       }
@@ -952,7 +952,7 @@ function bindUi() {
         composeContext = {
           mode: "image",
           label: "Creative Studio",
-          workflow_key: plusMenuConfig.image.workflow_key || "fnf_creative_studio",
+          workflow_key: plusMenuConfig.image.workflow_key || "commerce_creative_studio",
           task_type: "image_generation",
           lane: "image",
         };

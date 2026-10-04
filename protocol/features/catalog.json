@@ -5,14 +5,14 @@
     {
       "id": "admin.shell-nav",
       "kind": "ui",
-      "proving_ground": "fuelnfreetime",
-      "manifest": "fuelnfreetime/features/admin-shell-nav/agentsam.feature.json"
+      "proving_ground": "ember",
+      "manifest": "ember/features/admin-shell-nav/agentsam.feature.json"
     },
     {
       "id": "agentsam.mini-composer",
       "kind": "composer",
-      "proving_ground": "fuelnfreetime",
-      "manifest": "fuelnfreetime/features/mini-agentsam-composer/agentsam.feature.json"
+      "proving_ground": "ember",
+      "manifest": "ember/features/mini-agentsam-composer/agentsam.feature.json"
     },
     {
       "id": "cms.hyperspace-runtime",
@@ -29,8 +29,8 @@
     {
       "id": "commerce.product-studio",
       "kind": "domain",
-      "proving_ground": "fuelnfreetime",
-      "manifest": "fuelnfreetime/features/product-studio/agentsam.feature.json",
+      "proving_ground": "ember",
+      "manifest": "ember/features/product-studio/agentsam.feature.json",
       "requires": [
         "commerce.catalog"
       ]
@@ -38,8 +38,8 @@
     {
       "id": "growth.campaigns",
       "kind": "domain",
-      "proving_ground": "fuelnfreetime",
-      "manifest": "fuelnfreetime/features/growth-campaigns/agentsam.feature.json"
+      "proving_ground": "ember",
+      "manifest": "ember/features/growth-campaigns/agentsam.feature.json"
     },
     {
       "id": "identity.oauth-login-portal",
@@ -50,16 +50,16 @@
     {
       "id": "provider.completeful",
       "kind": "provider",
-      "proving_ground": "fuelnfreetime",
+      "proving_ground": "ember",
       "status": "extracted",
       "package": "@inneranimalmedia/agentsam-provider-completeful",
-      "manifest": "fuelnfreetime/features/provider-completeful/agentsam.feature.json"
+      "manifest": "ember/features/provider-completeful/agentsam.feature.json"
     },
     {
       "id": "provider.resend",
       "kind": "provider",
-      "proving_ground": "fuelnfreetime",
-      "manifest": "fuelnfreetime/features/provider-resend/agentsam.feature.json"
+      "proving_ground": "ember",
+      "manifest": "ember/features/provider-resend/agentsam.feature.json"
     }
   ]
 }

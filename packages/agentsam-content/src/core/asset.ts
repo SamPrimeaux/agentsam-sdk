@@ -113,7 +113,7 @@ export interface ModelAssetExt {
   textures?: number;
   animations?: number;
   boundingBox?: { min: [number, number, number]; max: [number, number, number] };
-  /** Harvested from the Fuel & Free Time GLB inspector. */
+  /** Harvested from the Ember Supply GLB inspector. */
   camera?: { theta: number; phi: number; radius: number; fov: number };
   placement?: {
     position: [number, number, number];

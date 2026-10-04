@@ -7,7 +7,7 @@ AgentSam Workmode ( agent reading this-- we will clone/repackage the build menti
 Calm vibecode bench: persistent trails, helper chats, in-app browser, Monaco, xterm CLI, projects/artifacts, model picker, and GitHub / Cloudflare ship.
 
 Repo: SamPrimeaux/AgentSam-Grok-Workmode
-Account ID: ede6590ac0d2fb7daf155b35653457b2
+Account ID: demo-commerce-account
 Canonical D1: inneranimalmedia-business (cf87b717-d4e2-4cf8-bab0-a81268e32d49)
 Product domain: https://simple.inneranimalmedia.com
 UI Worker: agentsam-grok-workmode → https://agentsam-grok-workmode.meauxbility.workers.dev
@@ -55,7 +55,7 @@ Docs: agentsam-sdk
 Deploy / bind Cloudflare Worker + D1
 Account + database (SSOT)
 Binding	Value
-Account ID	ede6590ac0d2fb7daf155b35653457b2
+Account ID	demo-commerce-account
 Account	Inner Animal Media Cloudflare account
 D1 name	inneranimalmedia-business
 D1 UUID	cf87b717-d4e2-4cf8-bab0-a81268e32d49
@@ -73,7 +73,7 @@ Auth for Wrangler (never commit tokens)
 npx wrangler login
 
 # or export a scoped API token in your shell only
-export CLOUDFLARE_ACCOUNT_ID="ede6590ac0d2fb7daf155b35653457b2"
+export CLOUDFLARE_ACCOUNT_ID="demo-commerce-account"
 export CLOUDFLARE_API_TOKEN="<token-with-workers+d1>"
 On the IAM Mac desk, prefer the monorepo env wrappers instead of pasting tokens into chat:
 

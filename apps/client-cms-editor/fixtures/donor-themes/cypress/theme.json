@@ -1,7 +1,7 @@
 {
-  "slug": "church-site",
-  "appId": "church-site",
-  "name": "New Iberia Church of Christ",
+  "slug": "cypress",
+  "appId": "cypress",
+  "name": "Cypress Commons",
   "eyebrow": "Church / Community",
   "category": "Community",
   "industries": [
@@ -13,7 +13,7 @@
     "giving",
     "visit"
   ],
-  "description": "Real New Iberia Church of Christ public pages \u2014 visit, groups, mission, and giving.",
+  "description": "Real Cypress Commons public pages \u2014 visit, groups, mission, and giving.",
   "features": [
     "CMS",
     "Events",
@@ -32,19 +32,19 @@
   ],
   "preview": {
     "kind": "live",
-    "card": "/themes/church-site/demo/",
-    "desktop": "/themes/church-site/demo/",
-    "mobile": "/themes/church-site/demo/",
-    "demoUrl": "/themes/church-site/demo/"
+    "card": "/themes/cypress/demo/",
+    "desktop": "/themes/cypress/demo/",
+    "mobile": "/themes/cypress/demo/",
+    "demoUrl": "/themes/cypress/demo/"
   },
   "installable": true,
   "_internal": {
     "normalization": "scaffolded",
     "source": "local-donor://Library/Mobile Documents/com~apple~CloudDocs/Projects/Cloudflare/NewIberiaChurchofChrist",
     "harvest_batch": "theme-harvest-20260924",
-    "harvest_path": "work/theme-harvest/church-site",
-    "app_path": "apps/church-site",
+    "harvest_path": "work/theme-harvest/cypress",
+    "app_path": "apps/cypress",
     "source_hash": "0a8ae5de768f874ccdebe92a5e438ad8e4d51b4c5fdae9679c7e09268328fee6"
   },
-  "package": "@inneranimalmedia/theme-church-site"
+  "package": "@inneranimalmedia/theme-cypress"
 }

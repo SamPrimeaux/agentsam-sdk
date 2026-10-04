@@ -16,9 +16,9 @@
   const resourceCache = Object.create(null);
   let dirty = false;
   const dirtySections = new Set();
-  let device = localStorage.getItem('fnf-theme-editor-device') || 'desktop';
-  let showOutlines = localStorage.getItem('fnf-theme-editor-outlines') !== '0';
-  let autoPreview = localStorage.getItem('fnf-theme-editor-auto-preview') !== '0';
+  let device = localStorage.getItem('commerce-theme-editor-device') || 'desktop';
+  let showOutlines = localStorage.getItem('commerce-theme-editor-outlines') !== '0';
+  let autoPreview = localStorage.getItem('commerce-theme-editor-auto-preview') !== '0';
 
   const fallbackPages = host ? [] : [
     { slug: 'home', title: 'Home page', route: '/' },
@@ -523,7 +523,7 @@
     const outlineSwitch = byId('te-outline-switch');
     if (outlineSwitch) outlineSwitch.addEventListener('click', function(event) {
       showOutlines = event.currentTarget.getAttribute('aria-checked') !== 'true';
-      localStorage.setItem('fnf-theme-editor-outlines', showOutlines ? '1' : '0');
+      localStorage.setItem('commerce-theme-editor-outlines', showOutlines ? '1' : '0');
       event.currentTarget.setAttribute('aria-checked', String(showOutlines));
       bindPreviewSelection();
     });
@@ -531,7 +531,7 @@
     const autoSwitch = byId('te-auto-switch');
     if (autoSwitch) autoSwitch.addEventListener('click', function(event) {
       autoPreview = event.currentTarget.getAttribute('aria-checked') !== 'true';
-      localStorage.setItem('fnf-theme-editor-auto-preview', autoPreview ? '1' : '0');
+      localStorage.setItem('commerce-theme-editor-auto-preview', autoPreview ? '1' : '0');
       event.currentTarget.setAttribute('aria-checked', String(autoPreview));
     });
   }
@@ -802,7 +802,7 @@
     const iframe = byId('theme-preview');
     if (!iframe?.contentWindow || !pageData) return;
     iframe.contentWindow.postMessage({
-      type: 'fnf-cms-preview',
+      type: 'commerce-cms-preview',
       slug: slug,
       sections: (pageData.sections || []).map(function(section) {
         return {
@@ -890,21 +890,21 @@
     try { doc = frame.contentDocument; } catch { return; }
     if (!doc || !doc.documentElement) return;
 
-    let style = doc.getElementById('fnf-theme-editor-preview-style');
+    let style = doc.getElementById('commerce-theme-editor-preview-style');
     if (!style) {
       style = doc.createElement('style');
-      style.id = 'fnf-theme-editor-preview-style';
+      style.id = 'commerce-theme-editor-preview-style';
       style.textContent =
-        'html.fnf-theme-editor-outlines [data-cms-section]{outline:1px dashed rgba(95,67,213,.24);outline-offset:-1px}' +
-        'html.fnf-theme-editor-outlines [data-cms]{cursor:pointer!important}' +
-        'html.fnf-theme-editor-outlines [data-cms]:hover{outline:2px solid rgba(95,67,213,.52);outline-offset:2px}' +
+        'html.commerce-theme-editor-outlines [data-cms-section]{outline:1px dashed rgba(95,67,213,.24);outline-offset:-1px}' +
+        'html.commerce-theme-editor-outlines [data-cms]{cursor:pointer!important}' +
+        'html.commerce-theme-editor-outlines [data-cms]:hover{outline:2px solid rgba(95,67,213,.52);outline-offset:2px}' +
         '[data-theme-editor-selected="true"]{outline:2px solid #7656ee!important;outline-offset:2px!important;box-shadow:0 0 0 3px rgba(118,86,238,.12)!important}';
       if (doc.head) doc.head.appendChild(style);
     }
-    doc.documentElement.classList.toggle('fnf-theme-editor-outlines', showOutlines);
+    doc.documentElement.classList.toggle('commerce-theme-editor-outlines', showOutlines);
 
-    if (doc.documentElement.dataset.fnfThemeEditorBound !== '1') {
-      doc.documentElement.dataset.fnfThemeEditorBound = '1';
+    if (doc.documentElement.dataset.commerceThemeEditorBound !== '1') {
+      doc.documentElement.dataset.commerceThemeEditorBound = '1';
       doc.addEventListener('click', function(event) {
         const target = event.target && event.target.closest && event.target.closest('[data-cms], [data-cms-block], [data-cms-section], [data-section-id]');
         if (!target) return;
@@ -964,7 +964,7 @@
 
   function setDevice(next) {
     device = next;
-    localStorage.setItem('fnf-theme-editor-device', device);
+    localStorage.setItem('commerce-theme-editor-device', device);
     byId('te-preview-device').dataset.device = device;
     document.querySelectorAll('.te-device-btn').forEach(function(button) {
       button.classList.toggle('is-active', button.dataset.device === device);

@@ -187,7 +187,7 @@ async function executeModel(env, model, systemPrompt, userMessage, routing) {
 
   if (taskType === "image_to_text") {
     const payload = buildVisionPayload(model, systemPrompt, userMessage, routing, defaults);
-    const result = await env.AGENTSAM_WAI.run(model.model_id, payload, { gateway: { id: "fuelnfreetime-agentsam", skipCache: false } });
+    const result = await env.AGENTSAM_WAI.run(model.model_id, payload, { gateway: { id: "ember-agentsam", skipCache: false } });
     const reply = extractReply(result).trim();
     if (reply) return { reply };
     throw new Error("empty_vision_response");
@@ -200,7 +200,7 @@ async function executeModel(env, model, systemPrompt, userMessage, routing) {
     ],
     max_tokens: defaults.max_tokens || 1024,
     ...defaults,
-  }, { gateway: { id: "fuelnfreetime-agentsam", skipCache: false } });
+  }, { gateway: { id: "ember-agentsam", skipCache: false } });
 
   const reply = extractReply(result).trim();
   if (reply) return { reply };

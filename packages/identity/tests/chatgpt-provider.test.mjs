@@ -27,7 +27,7 @@ describe('chatgpt identity provider', () => {
       [CHATGPT_USER_FULL_NAME_ENCODING_HEADER]: CHATGPT_PERCENT_ENCODED_UTF8,
     });
     assert.equal(user?.email, 'sam@example.com');
-    assert.equal(user?.fullName, 'Sam Primeaux');
+    assert.equal(user?.fullName, 'Demo Owner');
 
     const normalized = normalizeChatGptIdentity({
       email: user.email,
@@ -36,7 +36,7 @@ describe('chatgpt identity provider', () => {
     });
     assert.equal(normalized.provider, 'chatgpt');
     assert.equal(normalized.subject, 'sam@example.com');
-    assert.equal(normalized.name, 'Sam Primeaux');
+    assert.equal(normalized.name, 'Demo Owner');
     assert.equal(normalized.raw?.source, 'chatgpt_hosted');
     assert.ok(!JSON.stringify(normalized).includes('oai-authenticated'));
   });

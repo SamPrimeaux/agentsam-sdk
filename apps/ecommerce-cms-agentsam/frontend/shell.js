@@ -181,7 +181,7 @@ function adminPathBase(href) {
 
 function mailNavFromHref(href) {
   try {
-    const u = new URL(href || "/admin/email", "https://fuelnfreetime.com");
+    const u = new URL(href || "/admin/email", "https://ember.example");
     return {
       folder: u.searchParams.get("folder") || "inbox",
       mailbox: u.searchParams.get("mailbox") || "all",
@@ -623,13 +623,13 @@ function syncPersistentNavState() {
 
 function setPersistentNav(open) {
   document.body.classList.toggle("console-nav-collapsed", !open);
-  try { localStorage.setItem("fnf-console-nav", open ? "open" : "collapsed"); } catch {}
+  try { localStorage.setItem("commerce-console-nav", open ? "open" : "collapsed"); } catch {}
   syncPersistentNavState();
 }
 
 function initPersistentNav() {
   let open = true;
-  try { open = localStorage.getItem("fnf-console-nav") !== "collapsed"; } catch {}
+  try { open = localStorage.getItem("commerce-console-nav") !== "collapsed"; } catch {}
   setPersistentNav(open);
 }
 

@@ -11,7 +11,7 @@ const repoRoot = path.resolve(new URL('..', import.meta.url).pathname);
 
 test('shell tokenizer preserves Windows paths and quoted arguments', () => {
   assert.deepEqual(tokenizeShellLine('/cd C:\\Users\\conno\\fuelnreetime'), ['/cd', 'C:\\Users\\conno\\fuelnreetime']);
-  assert.deepEqual(tokenizeShellLine('/cd "C:\\Users\\Connor Smith\\repo"'), ['/cd', 'C:\\Users\\Connor Smith\\repo']);
+  assert.deepEqual(tokenizeShellLine('/cd "C:\\Users\\Operator Smith\\repo"'), ['/cd', 'C:\\Users\\Operator Smith\\repo']);
   assert.deepEqual(tokenizeShellLine('/agent "inspect this repo"'), ['/agent', 'inspect this repo']);
 });
 

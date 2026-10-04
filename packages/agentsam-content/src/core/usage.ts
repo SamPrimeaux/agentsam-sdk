@@ -4,7 +4,7 @@
  */
 
 export interface ContentUsage {
-  /** Consuming application/site, e.g. "fuel-free-time". */
+  /** Consuming application/site, e.g. "ember". */
   app: string;
   /** Surface path, e.g. "home.hero", "product.42.gallery". */
   surface: string;

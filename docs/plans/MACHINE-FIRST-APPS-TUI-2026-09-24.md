@@ -132,7 +132,7 @@ Calculated maturity gates (facts, not labels):
 - `verify-package` / `verify-source-boundaries`: keep; add app-level contract checks invoked by `agentsam app doctor` and maturity.
 - Imperfect apps stay listed; failures become receipts on the catalog row.
 
-**Acceptance B:** `agentsam inspect apps/cad-creator` and `agentsam inspect apps/church-site` both emit world-state; `agentsam app list --json` shows maturity for every `apps/*`.
+**Acceptance B:** `agentsam inspect apps/cad-creator` and `agentsam inspect apps/cypress` both emit world-state; `agentsam app list --json` shows maturity for every `apps/*`.
 
 ---
 

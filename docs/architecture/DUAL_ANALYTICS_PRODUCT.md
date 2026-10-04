@@ -98,7 +98,7 @@ UI reads stable read models, never raw tables directly.
 
 ## Visual grammar
 
-Fuel & Free Time remains the donor:
+Ember Supply remains the donor:
 
 - light application shell
 - dark analytical cards
