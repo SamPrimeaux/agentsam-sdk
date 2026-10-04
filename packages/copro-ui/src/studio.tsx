@@ -11,7 +11,12 @@ export type CoProStudioAction =
   | { type: "duplicate"; clipId: string }
   | { type: "delete"; clipId: string }
   | { type: "move"; clipId: string; startUs: number }
-  | { type: "trim"; clipId: string; patch: { startUs?: number; inUs?: number; durationUs?: number } };
+  | { type: "trim"; clipId: string; patch: { startUs?: number; inUs?: number; durationUs?: number } }
+  | { type: "speed"; clipId: string; playbackRate: number }
+  | { type: "volume"; clipId: string; volume: number }
+  | { type: "text"; clipId: string; text: string }
+  | { type: "add-track" }
+  | { type: "track-state"; trackId: string; patch: { visible?: boolean; muted?: boolean; locked?: boolean } };
 
 export type CoProStudioProps = {
   project: CoProProjectView;
@@ -180,6 +185,8 @@ export function CoProStudio({
             onSeek={onSeek}
             onMoveClip={(clipId, startUs) => onAction?.({ type: "move", clipId, startUs })}
             onTrimClip={(clipId, patch) => onAction?.({ type: "trim", clipId, patch })}
+            onAddTrack={() => onAction?.({ type: "add-track" })}
+            onTrackState={(trackId, patch) => onAction?.({ type: "track-state", trackId, patch })}
           />
 
           <section className="copro-context-tools" aria-label="Editing tools">
@@ -192,7 +199,17 @@ export function CoProStudio({
         </div>
       </main>
 
-      <CoProToolSheet tool={activeTool} open={Boolean(activeTool)} onClose={() => setActiveTool(null)} />
+      <CoProToolSheet
+        tool={activeTool}
+        open={Boolean(activeTool)}
+        onClose={() => setActiveTool(null)}
+        initialSpeed={selectedClip?.playbackRate ?? 1}
+        initialVolume={selectedClip?.volume ?? 1}
+        initialText={typeof selectedClip?.metadata?.text === "string" ? selectedClip.metadata.text : ""}
+        onSpeedChange={(playbackRate) => selectedClip && onAction?.({ type: "speed", clipId: selectedClip.id, playbackRate })}
+        onVolumeChange={(volume) => selectedClip && onAction?.({ type: "volume", clipId: selectedClip.id, volume })}
+        onTextChange={(text) => selectedClip && onAction?.({ type: "text", clipId: selectedClip.id, text })}
+      />
       <CoProExportSheet open={exportOpen} onClose={() => setExportOpen(false)} />
     </section>
   );

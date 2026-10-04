@@ -105,6 +105,60 @@ export function applyCoProCommand(inputProject, command) {
       break;
     }
 
+    case "clip.set_speed": {
+      const found = locateClip(project, payload.clipId);
+      if (!found) throw new Error("copro_clip_not_found");
+      const rate = Number(payload.playbackRate);
+      if (!(rate > 0)) throw new Error("copro_clip_playback_rate_invalid");
+      found.clip.playbackRate = rate;
+      break;
+    }
+
+    case "clip.set_volume": {
+      const found = locateClip(project, payload.clipId);
+      if (!found) throw new Error("copro_clip_not_found");
+      const volume = Number(payload.volume);
+      if (!(volume >= 0)) throw new Error("copro_clip_volume_invalid");
+      found.clip.volume = volume;
+      break;
+    }
+
+    case "clip.set_text": {
+      const found = locateClip(project, payload.clipId);
+      if (!found) throw new Error("copro_clip_not_found");
+      found.clip.metadata = { ...(found.clip.metadata ?? {}), text: String(payload.text ?? "") };
+      break;
+    }
+
+    case "track.insert": {
+      if (!payload.track?.id) throw new Error("copro_track_invalid");
+      if (locateTrack(project, payload.track.id)) throw new Error("copro_track_id_conflict");
+      const index = Number.isInteger(payload.index)
+        ? Math.max(0, Math.min(project.tracks.length, payload.index))
+        : project.tracks.length;
+      project.tracks.splice(index, 0, clone(payload.track));
+      break;
+    }
+
+    case "track.reorder": {
+      const index = project.tracks.findIndex((track) => track.id === payload.trackId);
+      if (index < 0) throw new Error("copro_track_not_found");
+      if (!Number.isInteger(payload.index)) throw new Error("copro_track_index_invalid");
+      const [track] = project.tracks.splice(index, 1);
+      const target = Math.max(0, Math.min(project.tracks.length, payload.index));
+      project.tracks.splice(target, 0, track);
+      break;
+    }
+
+    case "track.set_state": {
+      const track = locateTrack(project, payload.trackId);
+      if (!track) throw new Error("copro_track_not_found");
+      if (payload.visible !== undefined) track.visible = Boolean(payload.visible);
+      if (payload.muted !== undefined) track.muted = Boolean(payload.muted);
+      if (payload.locked !== undefined) track.locked = Boolean(payload.locked);
+      break;
+    }
+
     case "clip.delete": {
       const found = locateClip(project, payload.clipId);
       if (!found) throw new Error("copro_clip_not_found");

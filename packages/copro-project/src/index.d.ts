@@ -9,6 +9,8 @@ export type CoProClip = {
   inUs: number;
   layer: number;
   muted: boolean;
+  playbackRate: number;
+  volume: number;
   metadata: Record<string, unknown>;
 };
 
@@ -16,6 +18,9 @@ export type CoProTrack = {
   id: string;
   kind: "video" | "audio" | "overlay" | "captions";
   name?: string;
+  visible: boolean;
+  muted: boolean;
+  locked: boolean;
   clips: CoProClip[];
 };
 
@@ -54,6 +59,8 @@ export declare function createClip(input?: {
   inUs?: number;
   layer?: number;
   muted?: boolean;
+  playbackRate?: number;
+  volume?: number;
   metadata?: Record<string, unknown>;
 }): CoProClip;
 

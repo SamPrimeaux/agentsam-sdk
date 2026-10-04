@@ -45,3 +45,44 @@ export function clampPlayheadUs(project, timeUs) {
   const durationUs = projectDurationUs(project);
   return Math.max(0, Math.min(Math.round(timeUs), durationUs));
 }
+
+
+export function collectSnapPointsUs(project, {
+  excludeClipId,
+  includeGrid = true,
+  gridUs = 500_000,
+  playheadUs,
+} = {}) {
+  const points = new Set([0]);
+  for (const track of project?.tracks ?? []) {
+    for (const clip of track.clips ?? []) {
+      if (clip.id === excludeClipId) continue;
+      points.add(clip.startUs);
+      points.add(clip.startUs + clip.durationUs);
+    }
+  }
+
+  if (Number.isInteger(playheadUs) && playheadUs >= 0) points.add(playheadUs);
+
+  if (includeGrid && Number.isInteger(gridUs) && gridUs > 0) {
+    const duration = projectDurationUs(project);
+    for (let point = 0; point <= duration + gridUs; point += gridUs) points.add(point);
+  }
+
+  return [...points].sort((a, b) => a - b);
+}
+
+export function snapTimeUs(timeUs, snapPointsUs, thresholdUs = 120_000) {
+  let best = timeUs;
+  let bestDistance = thresholdUs + 1;
+
+  for (const point of snapPointsUs ?? []) {
+    const distance = Math.abs(point - timeUs);
+    if (distance < bestDistance) {
+      best = point;
+      bestDistance = distance;
+    }
+  }
+
+  return bestDistance <= thresholdUs ? best : timeUs;
+}

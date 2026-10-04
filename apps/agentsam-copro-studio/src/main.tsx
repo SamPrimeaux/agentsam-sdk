@@ -1,7 +1,8 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { CoProEditorSession } from "@inneranimalmedia/copro-editor";
 import { createCoProProject, createTrack, createClip } from "@inneranimalmedia/copro-project";
+import { BrowserLocalStorageProjectStore } from "@inneranimalmedia/copro-storage";
 import {
   CoProProjectsScreen,
   CoProSheet,
@@ -22,25 +23,67 @@ const FIXTURE_PROJECTS: CoProProjectSummary[] = [
   { id:"demo:archive", title:"Product reel v1", subtitle:"Archived", kind:"video", status:"archived", durationMs:22_000, aspectRatio:"1:1", updatedAt:"2026-09-28T14:00:00Z", thumbnailTone:"slate" },
 ];
 
+const store = new BrowserLocalStorageProjectStore({ prefix:"agentsam.copro.project:" });
+
 function makeDemoProject(id = "project:demo", title = "Weekend cut") {
   const project = createCoProProject({ id, title, now:"2026-10-04T00:00:00.000Z" });
-  const video = createTrack({ id:"track:video", kind:"video" });
+
+  const video = createTrack({ id:"track:video", kind:"video", name:"Video" });
   video.clips.push(
     createClip({ id:"clip:1", assetId:"asset:mountain", startUs:0, durationUs:4_500_000 }),
     createClip({ id:"clip:2", assetId:"asset:street", startUs:4_500_000, durationUs:3_200_000 }),
     createClip({ id:"clip:3", assetId:"asset:portrait", startUs:7_700_000, durationUs:4_200_000 })
   );
-  project.tracks.push(video);
+
+  const audio = createTrack({ id:"track:audio", kind:"audio", name:"Audio" });
+  audio.clips.push(createClip({
+    id:"audio:music",
+    assetId:"asset:music-bed",
+    startUs:0,
+    durationUs:11_900_000,
+    volume:.72,
+  }));
+
+  const captions = createTrack({ id:"track:captions", kind:"captions", name:"Captions" });
+  captions.clips.push(
+    createClip({
+      id:"caption:1",
+      assetId:"caption:1",
+      startUs:350_000,
+      durationUs:2_600_000,
+      metadata:{ text:"Okay chat, today’s goal…" },
+    }),
+    createClip({
+      id:"caption:2",
+      assetId:"caption:2",
+      startUs:3_100_000,
+      durationUs:2_800_000,
+      metadata:{ text:"Make one cut worth watching." },
+    })
+  );
+
+  const overlay = createTrack({ id:"track:overlay", kind:"overlay", name:"Text" });
+  overlay.clips.push(createClip({
+    id:"overlay:title",
+    assetId:"text:title",
+    startUs:800_000,
+    durationUs:2_800_000,
+    metadata:{ text:"CO-PRODUCED WITH AGENTSAM" },
+  }));
+
+  project.tracks.push(video, audio, captions, overlay);
   return project;
 }
 
 function makeImportedProject(file: File) {
   const project = createCoProProject({
-    id:"project:import:" + file.name,
+    id:"project:import:" + file.name + ":" + Date.now(),
     title:file.name.replace(/\.[^.]+$/, ""),
     now:new Date(),
   });
-  const track = createTrack({ id:"track:video", kind:"video" });
+
+  const kind = file.type.startsWith("audio/") ? "audio" : "video";
+  const track = createTrack({ id:"track:" + kind, kind, name:kind === "audio" ? "Audio" : "Video" });
   track.clips.push(createClip({
     id:"clip:imported",
     assetId:"asset:" + file.name,
@@ -61,33 +104,57 @@ function App() {
   const [playheadUs, setPlayheadUs] = useState(5_800_000);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [previewKind, setPreviewKind] = useState<"video" | "image" | null>(null);
+  const [restored, setRestored] = useState(false);
 
   const projects = useMemo(() => FIXTURE_PROJECTS, []);
 
-  function openProject(id: string) {
-    const summary = projects.find((item) => item.id === id);
-    const next = makeDemoProject("project:" + id, summary?.title ?? "CoPro project");
+  useEffect(() => {
+    let cancelled = false;
+    void store.loadRecent().then((recent) => {
+      if (cancelled || !recent) {
+        setRestored(true);
+        return;
+      }
+      sessionRef.current = new CoProEditorSession(recent);
+      setProject(sessionRef.current.project);
+      setSelectedClipId(recent.tracks.flatMap((track:any) => track.clips)[0]?.id ?? null);
+      setRestored(true);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!restored) return;
+    const timer = window.setTimeout(() => {
+      void store.save(project);
+    }, 140);
+    return () => window.clearTimeout(timer);
+  }, [project, restored]);
+
+  function installProject(next: any, selectedId: string | null = null) {
     sessionRef.current = new CoProEditorSession(next);
     setProject(sessionRef.current.project);
-    setSelectedClipId(next.tracks[0]?.clips[0]?.id ?? null);
+    setSelectedClipId(selectedId ?? next.tracks.flatMap((track:any) => track.clips)[0]?.id ?? null);
     setPlayheadUs(0);
+    setProjectSeed((value) => value + 1);
+    void store.save(next);
+  }
+
+  function openProject(id: string) {
+    const summary = projects.find((item) => item.id === id);
+    installProject(makeDemoProject("project:" + id, summary?.title ?? "CoPro project"));
     setPreviewSrc(null);
     setPreviewKind(null);
-    setProjectSeed((value) => value + 1);
     setScreen("editor");
   }
 
   function createBlank() {
     const next = createCoProProject({ id:"project:new:" + Date.now(), title:"Untitled project" });
-    next.tracks.push(createTrack({ id:"track:video", kind:"video" }));
-    sessionRef.current = new CoProEditorSession(next);
-    setProject(sessionRef.current.project);
-    setSelectedClipId(null);
-    setPlayheadUs(0);
+    next.tracks.push(createTrack({ id:"track:video", kind:"video", name:"Video" }));
+    installProject(next, null);
     setPreviewSrc(null);
     setPreviewKind(null);
     setCreateOpen(false);
-    setProjectSeed((value) => value + 1);
     setScreen("editor");
   }
 
@@ -96,14 +163,10 @@ function App() {
     if (old) URL.revokeObjectURL(old);
     const url = URL.createObjectURL(file);
     const next = makeImportedProject(file);
-    sessionRef.current = new CoProEditorSession(next);
-    setProject(sessionRef.current.project);
-    setSelectedClipId("clip:imported");
-    setPlayheadUs(0);
+    installProject(next, "clip:imported");
     setPreviewSrc(url);
-    setPreviewKind(file.type.startsWith("image/") ? "image" : "video");
+    setPreviewKind(file.type.startsWith("image/") ? "image" : file.type.startsWith("video/") ? "video" : null);
     setCreateOpen(false);
-    setProjectSeed((value) => value + 1);
     setScreen("editor");
   }
 
@@ -115,6 +178,23 @@ function App() {
     if (action.type === "redo") { setProject(session.redo()); return; }
     if (action.type === "move") { setProject(session.execute({ type:"clip.move", payload:{ clipId:action.clipId, startUs:action.startUs } })); return; }
     if (action.type === "trim") { setProject(session.execute({ type:"clip.trim", payload:{ clipId:action.clipId, ...action.patch } })); return; }
+    if (action.type === "speed") { setProject(session.execute({ type:"clip.set_speed", payload:{ clipId:action.clipId, playbackRate:action.playbackRate } })); return; }
+    if (action.type === "volume") { setProject(session.execute({ type:"clip.set_volume", payload:{ clipId:action.clipId, volume:action.volume } })); return; }
+    if (action.type === "text") { setProject(session.execute({ type:"clip.set_text", payload:{ clipId:action.clipId, text:action.text } })); return; }
+    if (action.type === "track-state") { setProject(session.execute({ type:"track.set_state", payload:{ trackId:action.trackId, ...action.patch } })); return; }
+
+    if (action.type === "add-track") {
+      const kinds = ["video","audio","captions","overlay"] as const;
+      const counts = new Map<string,number>();
+      for (const track of project.tracks) counts.set(track.kind, (counts.get(track.kind) ?? 0) + 1);
+      const kind = kinds.reduce((best, candidate) => (counts.get(candidate) ?? 0) < (counts.get(best) ?? 0) ? candidate : best, kinds[0]);
+      const index = (counts.get(kind) ?? 0) + 1;
+      const id = "track:" + kind + ":" + Date.now();
+      const track = createTrack({ id, kind, name:(kind === "overlay" ? "Text" : kind.charAt(0).toUpperCase() + kind.slice(1)) + " " + index });
+      setProject(session.execute({ type:"track.insert", payload:{ track } }));
+      return;
+    }
+
     if (action.type === "split") {
       const clip = project.tracks.flatMap((track:any) => track.clips).find((item:any) => item.id === action.clipId);
       if (!clip || action.atUs <= clip.startUs || action.atUs >= clip.startUs + clip.durationUs) return;
@@ -123,6 +203,7 @@ function App() {
       setSelectedClipId(rightId);
       return;
     }
+
     if (action.type === "duplicate") {
       let newId = action.clipId + ":copy";
       while (project.tracks.some((track:any) => track.clips.some((clip:any) => clip.id === newId))) newId += ":copy";
@@ -130,10 +211,15 @@ function App() {
       setSelectedClipId(newId);
       return;
     }
+
     if (action.type === "delete") {
       setProject(session.execute({ type:"clip.delete", payload:{ clipId:action.clipId } }));
       setSelectedClipId(null);
     }
+  }
+
+  if (!restored) {
+    return <div className="copro-boot"><span>CoPro</span><small>Restoring project…</small></div>;
   }
 
   if (screen === "projects") {
@@ -158,7 +244,7 @@ function App() {
             />
             <i>⇧</i><span><strong>Import media</strong><small>From this device</small></span>
           </label>
-          <button disabled title="Template library lands in the next UI slice"><i>▦</i><span><strong>From template</strong><small>Coming in next slice</small></span></button>
+          <button disabled title="Template library lands in the next UI slice"><i>▦</i><span><strong>From template</strong><small>Requires template browser</small></span></button>
           <button disabled title="Recording requires camera capability"><i>●</i><span><strong>Record</strong><small>Requires camera capability</small></span></button>
         </div>
       </CoProSheet>

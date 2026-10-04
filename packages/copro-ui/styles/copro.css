@@ -195,3 +195,45 @@
 .copro-create-options small,.copro-create-option-file small { color:#8f97a4; font-size:10px; }
 .copro-create-option-file input { position:absolute; opacity:0; pointer-events:none; }
 .copro-mobile-nav button:disabled { opacity:.35; }
+
+
+.copro-timeline-shell { height:230px; display:flex; flex-direction:column; }
+.copro-timeline-toolbar { height:34px; flex:0 0 34px; padding:0 8px; display:flex; align-items:center; justify-content:space-between; gap:8px; background:#0a0c10; border-bottom:1px solid rgba(255,255,255,.06); }
+.copro-timeline-toolbar button { min-width:30px; height:26px; border:1px solid var(--copro-line); border-radius:8px; background:#141820; color:#a9b0bc; font:inherit; font-size:9px; }
+.copro-timeline-toolbar button.is-active { color:#051014; background:var(--copro-accent); border-color:var(--copro-accent); }
+.copro-timeline-tool-group { display:flex; align-items:center; gap:5px; }
+.copro-timeline-tool-group span { min-width:50px; text-align:center; color:#6e7682; font-size:8px; }
+.copro-timeline-layout { min-height:0; flex:1; display:grid; grid-template-columns:78px minmax(0,1fr); }
+.copro-track-labels { min-height:0; overflow:hidden; background:#0a0c10; border-right:1px solid rgba(255,255,255,.07); padding-top:0; }
+.copro-track-label-spacer { height:28px; border-bottom:1px solid rgba(255,255,255,.06); }
+.copro-track-label { height:62px; padding:6px 5px 4px 7px; border-bottom:1px solid rgba(255,255,255,.055); display:grid; align-content:center; gap:5px; }
+.copro-track-label > div:first-child { min-width:0; display:grid; gap:1px; }
+.copro-track-label strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:9px; }
+.copro-track-label small { color:#626a76; font-size:7px; text-transform:uppercase; }
+.copro-track-state { display:flex; gap:2px; }
+.copro-track-state button { width:20px; height:17px; border:0; border-radius:5px; background:#151922; color:#59616d; padding:0; font-size:7px; }
+.copro-track-state button.is-on { color:#061014; background:var(--copro-accent); }
+.copro-track-state button.is-off { opacity:.4; }
+.copro-add-track-label { width:100%; height:26px; border:0; background:transparent; color:#59616d; font-size:8px; text-align:left; padding-left:7px; }
+.copro-timeline-scroll { min-width:0; min-height:0; height:auto; }
+.copro-track-row { height:62px; border-bottom:1px solid rgba(255,255,255,.045); }
+.copro-track-row.is-hidden-track { opacity:.28; }
+.copro-track-audio .copro-clip { background:#112c2b; }
+.copro-track-captions .copro-clip { background:#33230d; }
+.copro-track-overlay .copro-clip { background:#211b37; }
+.copro-waveform { position:absolute; inset:5px 5px 14px; display:flex; align-items:center; gap:2px; overflow:hidden; opacity:.78; }
+.copro-waveform i { width:2px; min-width:2px; border-radius:999px; background:#45d8ca; }
+.copro-text-clip { position:absolute; inset:0 6px 14px; display:flex; align-items:center; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:9px; color:#f7e2ae; }
+.copro-track-overlay .copro-text-clip { color:#d8c9ff; }
+.copro-tool-control button:disabled,.copro-tool-grid button:disabled { opacity:.4; cursor:not-allowed; }
+@media (min-width:760px) {
+  .copro-timeline-shell { height:330px; }
+  .copro-timeline-layout { grid-template-columns:104px minmax(0,1fr); }
+  .copro-track-label,.copro-track-row { height:68px; }
+  .copro-track-label strong { font-size:10px; }
+}
+
+
+.copro-boot { min-height:100dvh; display:grid; place-content:center; gap:5px; text-align:center; background:var(--copro-bg); color:#fff; }
+.copro-boot span { font-size:28px; font-weight:900; letter-spacing:-.05em; }
+.copro-boot small { color:#78808c; font-size:10px; }

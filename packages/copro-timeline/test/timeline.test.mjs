@@ -36,3 +36,16 @@ test("playhead clamps to project duration", () => {
   assert.equal(clampPlayheadUs(project, -1), 0);
   assert.equal(clampPlayheadUs(project, 9_000_000), 6_000_000);
 });
+
+
+test("snap helper prefers nearby clip edges and leaves distant times alone", async () => {
+  const { collectSnapPointsUs, snapTimeUs } = await import("../src/index.js");
+  const project = fixture();
+  const points = collectSnapPointsUs(project, {
+    excludeClipId: "clip:b",
+    includeGrid: false,
+    playheadUs: 3_500_000,
+  });
+  assert.equal(snapTimeUs(3_060_000, points, 100_000), 3_000_000);
+  assert.equal(snapTimeUs(3_220_000, points, 100_000), 3_220_000);
+});

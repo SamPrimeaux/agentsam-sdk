@@ -48,6 +48,9 @@ export function createTrack({ id, kind = "video", name } = {}) {
     id: String(id),
     kind,
     ...(name ? { name: String(name) } : {}),
+    visible: true,
+    muted: false,
+    locked: false,
     clips: [],
   };
 }
@@ -61,6 +64,8 @@ export function createClip({
   layer = 0,
   muted = false,
   metadata = {},
+  playbackRate = 1,
+  volume = 1,
 } = {}) {
   if (!id) throw new Error("copro_clip_id_required");
   if (!assetId) throw new Error("copro_clip_asset_id_required");
@@ -70,6 +75,8 @@ export function createClip({
     }
   }
   if (durationUs <= 0) throw new Error("copro_clip_duration_required");
+  if (!(Number(playbackRate) > 0)) throw new Error("copro_clip_playback_rate_invalid");
+  if (!(Number(volume) >= 0)) throw new Error("copro_clip_volume_invalid");
   return {
     id: String(id),
     assetId: String(assetId),
@@ -78,6 +85,8 @@ export function createClip({
     inUs,
     layer,
     muted: Boolean(muted),
+    playbackRate: Number(playbackRate),
+    volume: Number(volume),
     metadata: clone(metadata),
   };
 }

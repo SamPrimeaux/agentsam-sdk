@@ -295,7 +295,8 @@
     "packages/copro-templates",
     "packages/copro-proof",
     "packages/copro-ui",
-    "apps/agentsam-copro-studio"
+    "apps/agentsam-copro-studio",
+    "packages/copro-storage"
   ],
   "scripts": {
     "test": "npm run test:standard && npm --prefix packages/identity test && npm --prefix packages/agentsam-brand test && npm run test:connectors && npm run test:providers",

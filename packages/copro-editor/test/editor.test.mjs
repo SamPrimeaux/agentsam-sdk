@@ -60,3 +60,25 @@ test("session supports deterministic undo and redo", () => {
   session.redo();
   assert.equal(session.project.tracks[0].clips[0].startUs, 2_000_000);
 });
+
+
+test("speed, volume and track state are canonical commands", () => {
+  let project = fixture();
+  project = applyCoProCommand(project, {
+    type: "clip.set_speed",
+    payload: { clipId: "clip:1", playbackRate: 1.5 },
+  });
+  project = applyCoProCommand(project, {
+    type: "clip.set_volume",
+    payload: { clipId: "clip:1", volume: 0.65 },
+  });
+  project = applyCoProCommand(project, {
+    type: "track.set_state",
+    payload: { trackId: "track:1", muted: true, locked: true },
+  });
+
+  assert.equal(project.tracks[0].clips[0].playbackRate, 1.5);
+  assert.equal(project.tracks[0].clips[0].volume, 0.65);
+  assert.equal(project.tracks[0].muted, true);
+  assert.equal(project.tracks[0].locked, true);
+});
