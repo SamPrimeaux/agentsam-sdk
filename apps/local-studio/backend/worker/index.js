@@ -30,7 +30,7 @@ import {
   handleGoogleCliCloudRequest,
   isGoogleCliCloudCallbackRequest,
   isGoogleCliCloudPath,
-} from "./google-cli-cloud.js";
+} from "./gclioa.js";
 import { loadConnectionsRegistry } from "./connections-registry.js";
 import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js";
 import { handleWorkRequest, isWorkRequest } from "./work-service.js";
