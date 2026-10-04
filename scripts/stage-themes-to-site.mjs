@@ -15,6 +15,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const galleryRoot = path.join(root, 'apps/theme-gallery-preview');
 const siteThemes = path.join(root, 'apps/frontend/public/site/themes');
 const catalogSrc = path.join(galleryRoot, 'data/catalog.json');
+const galleryCopySrc = path.join(galleryRoot, 'data/gallery-copy.json');
 
 function esc(v) {
   return String(v ?? '')
@@ -39,7 +40,7 @@ function rmrf(dir) {
   if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true });
 }
 
-function asbdShell(title, description, bodyHtml, active = 'themes') {
+function asbdShell(title, description, bodyHtml, active = 'themes', meta = {}) {
   return `<!doctype html>
 <html lang="en" data-asbd-theme="light">
 <head>
@@ -47,8 +48,19 @@ function asbdShell(title, description, bodyHtml, active = 'themes') {
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>${esc(title)}</title>
   <meta name="description" content="${esc(description)}" />
+  <meta name="robots" content="index,follow,max-image-preview:large" />
+  <link rel="canonical" href="${esc(meta.canonical || 'https://agentsam.inneranimalmedia.com/themes/')}" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="${esc(meta.ogTitle || title)}" />
+  <meta property="og:description" content="${esc(meta.ogDescription || description)}" />
+  <meta property="og:url" content="${esc(meta.canonical || 'https://agentsam.inneranimalmedia.com/themes/')}" />
+  ${meta.ogImage ? `<meta property="og:image" content="${esc(meta.ogImage)}" />` : ''}
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="${esc(meta.ogTitle || title)}" />
+  <meta name="twitter:description" content="${esc(meta.ogDescription || description)}" />
+  ${meta.ogImage ? `<meta name="twitter:image" content="${esc(meta.ogImage)}" />` : ''}
   <meta name="agentsam:page" content="themes" />
-  <meta name="agentsam:route" content="agentsam.inneranimalmedia.com/themes/" />
+  <meta name="agentsam:route" content="${esc(meta.route || 'agentsam.inneranimalmedia.com/themes/')}" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -142,7 +154,7 @@ function galleryPage(themes) {
   <div class="card-preview"><iframe loading="lazy" title="${esc(t.slug)} preview" src="/themes/${esc(t.slug)}/demo/?embed=1"></iframe></div>
   <div class="card-info">
     <div class="card-top">
-      <div><div class="card-title">${esc(t.name)}</div><div class="card-sub">${esc(t.eyebrow || '')}</div></div>
+      <div><div class="card-title">${esc(t.name)}</div><div class="card-sub">${esc(t.eyebrow || '')}</div><p class="card-blurb">${esc(t.cardBlurb || t.tagline || '')}</p></div>
       <button class="btn card-add" type="button" onclick="event.preventDefault();event.stopPropagation();openUse('${esc(t.slug)}','${esc(t.name)}','${feats}')">Use</button>
     </div>
     <div class="chips">${chips}</div>
@@ -154,9 +166,9 @@ function galleryPage(themes) {
   const featsCur = esc((current.features || []).join('|'));
   const body = `<main class="shell themes-asbd-pad">
   <section class="hero-wrap">
-    <div class="kicker">Website + APP template explorer</div>
-    <h1 class="page-title">A theme shelf of sites you can actually open.</h1>
-    <p class="lede">Every card mounts a real historical build — browse, scroll, click through. Normalize later without changing this gallery.</p>
+    <div class="kicker">${esc(galleryCopy.kicker)}</div>
+    <h1 class="page-title">${esc(galleryCopy.headline)}</h1>
+    <p class="lede">${esc(galleryCopy.lede)}</p>
   </section>
   <section class="current-card">
     <div class="current-browser">
@@ -176,7 +188,7 @@ function galleryPage(themes) {
   </section>
   <section id="discover">
     <div class="discovery-head">
-      <div><h2>Discover themes</h2><p>${themes.length} real builds mounted for live preview.</p></div>
+      <div><h2>${esc(galleryCopy.discover_title)}</h2><p>${esc(galleryCopy.discover_copy)}</p></div>
       <div class="controls">
         <input id="theme-search" class="control" placeholder="Search themes" oninput="filterCards()">
         <select id="category-filter" class="control" onchange="filterCards()">${options}</select>
@@ -187,7 +199,19 @@ function galleryPage(themes) {
 </main>
 ${useModal()}`;
 
-  return asbdShell('AgentSam Themes', 'Live theme gallery of real historical website builds.', body);
+  return asbdShell(
+    galleryCopy.seo_title || 'AgentSam Prebuilds',
+    galleryCopy.seo_description || galleryCopy.lede,
+    body,
+    'themes',
+    {
+      canonical: 'https://agentsam.inneranimalmedia.com/themes/',
+      route: 'agentsam.inneranimalmedia.com/themes/',
+      ogTitle: galleryCopy.seo_title,
+      ogDescription: galleryCopy.seo_description,
+      ogImage: 'https://agentsam.inneranimalmedia.com/themes/static/agent-sam-prebuilds-social.webp',
+    },
+  );
 }
 
 function detailPage(t) {
@@ -232,7 +256,19 @@ function detailPage(t) {
   </div>
 </div>
 ${useModal()}`;
-  return asbdShell(`${t.name} — AgentSam Themes`, t.description || t.name, body);
+  return asbdShell(
+    t.seo?.title || `${t.name} — AgentSam Prebuild`,
+    t.seo?.description || t.description || t.name,
+    body,
+    'themes',
+    {
+      canonical: `https://agentsam.inneranimalmedia.com/themes/${t.slug}/`,
+      route: `agentsam.inneranimalmedia.com/themes/${t.slug}/`,
+      ogTitle: t.seo?.title || `${t.name} — AgentSam Prebuild`,
+      ogDescription: t.seo?.description || t.description,
+      ogImage: t.seo?.ogImage ? `https://agentsam.inneranimalmedia.com${t.seo.ogImage}` : undefined,
+    },
+  );
 }
 
 if (!fs.existsSync(catalogSrc)) {
@@ -241,6 +277,17 @@ if (!fs.existsSync(catalogSrc)) {
 }
 
 const raw = JSON.parse(fs.readFileSync(catalogSrc, 'utf8'));
+const galleryCopy = fs.existsSync(galleryCopySrc)
+  ? JSON.parse(fs.readFileSync(galleryCopySrc, 'utf8'))
+  : {
+      kicker: 'Prebuild library',
+      headline: 'Start with a point of view.',
+      lede: 'Complete starting points with real structure, behavior, and responsive design.',
+      discover_title: 'Find your starting point',
+      discover_copy: `${(raw.themes || []).length} prebuilds available for live preview.`,
+      seo_title: 'AgentSam Prebuilds',
+      seo_description: 'Explore AgentSam website prebuilds and live theme demos.',
+    };
 const themes = (raw.themes || []).map((t) => {
   const copy = { ...t };
   delete copy._internal;
@@ -254,7 +301,7 @@ const staticDest = path.join(siteThemes, 'static');
 copyDir(path.join(galleryRoot, 'gallery/static'), staticDest);
 
 // Pad for fixed ASBD header
-const padCss = `\n/* staged for ASBD shell */\n.themes-asbd-pad{padding-top:calc(var(--asbd-header-height,76px) + 8px)}\n`;
+const padCss = `\n/* staged for ASBD shell */\n.themes-asbd-pad{padding-top:calc(var(--asbd-header-height,76px) + 8px)}\n.card-blurb{margin:.55rem 0 0;color:var(--asbd-muted,#6b6b6b);font-size:.82rem;line-height:1.45;max-width:36ch}\n`;
 fs.appendFileSync(path.join(staticDest, 'styles.css'), padCss);
 
 // Client-side receipt when /api/requests is absent on production
