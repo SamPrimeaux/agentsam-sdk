@@ -1,0 +1,23 @@
+{
+  "name": "@inneranimalmedia/agentsam-browser-surface",
+  "version": "1.0.0",
+  "description": "AgentSamBrowserSurface: a portable Browse/Build browser capability with a provider registry so the lightweight Local Studio browser and the AgentSam Browser Shell can be swapped behind one stable host composition.",
+  "author": "Inner Animal Media <info@inneranimals.com>",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist", "src", "README.md", "artifact.json"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "prepack": "npm run build"
+  },
+  "engines": { "node": ">=20.0.0" },
+  "publishConfig": { "access": "public" },
+  "keywords": ["agentsam", "browser", "browse-mode", "build-mode", "provider", "generative-browser"]
+}

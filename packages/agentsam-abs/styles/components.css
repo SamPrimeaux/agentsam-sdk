@@ -1,0 +1,126 @@
+/**
+ * AgentSam presentation primitives. Class names describe presentation roles,
+ * never third-party products.
+ *
+ *   as-button--primary      loudest      Build / Publish / Create
+ *   as-button--ghost-glass  premium 2nd  Apply / Preview / Request
+ *   as-button--subtle       quiet        Cancel / Back / Later
+ */
+
+.as-button {
+  appearance: none;
+  min-height: 44px;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border-radius: var(--as-radius-md);
+  border: 1px solid transparent;
+  font-family: var(--as-font-ui);
+  font-size: 14px;
+  font-weight: 680;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition:
+    transform var(--as-duration-fast) var(--as-ease-out),
+    background-color var(--as-duration-normal) var(--as-ease-standard),
+    border-color var(--as-duration-normal) var(--as-ease-standard),
+    box-shadow var(--as-duration-normal) var(--as-ease-standard),
+    color var(--as-duration-normal) var(--as-ease-standard);
+}
+
+.as-button:hover:not(:disabled):not([aria-disabled="true"]) { transform: translateY(-1px); }
+.as-button:active:not(:disabled):not([aria-disabled="true"]) { transform: translateY(0); }
+.as-button:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--as-focus-ring); }
+.as-button:disabled,
+.as-button[aria-disabled="true"] { opacity: 0.48; cursor: not-allowed; transform: none; }
+
+.as-button--primary {
+  border-color: var(--as-brand);
+  background: var(--as-brand);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(var(--as-brand-rgb), 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+.as-button--primary:hover:not(:disabled) {
+  border-color: var(--as-brand-hover);
+  background: var(--as-brand-hover);
+  box-shadow: 0 12px 32px rgba(var(--as-brand-rgb), 0.31), inset 0 1px 0 rgba(255, 255, 255, 0.20);
+}
+
+.as-button--ghost-glass {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--as-ghost-border);
+  background: var(--as-ghost-bg);
+  color: var(--as-ghost-text);
+  backdrop-filter: var(--as-glass-blur);
+  -webkit-backdrop-filter: var(--as-glass-blur);
+  box-shadow: var(--as-ghost-shadow);
+}
+.as-button--ghost-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 42%, transparent 100%);
+}
+.as-button--ghost-glass > * { position: relative; z-index: 1; }
+.as-button--ghost-glass:hover:not(:disabled) {
+  border-color: var(--as-ghost-border-hover);
+  background: var(--as-ghost-bg-hover);
+  box-shadow: var(--as-ghost-shadow-hover);
+}
+.as-button--ghost-glass:active:not(:disabled) { background: var(--as-ghost-bg-active); }
+
+.as-button--subtle {
+  border-color: var(--as-border);
+  background: transparent;
+  color: var(--as-text-secondary);
+}
+.as-button--subtle:hover:not(:disabled) {
+  border-color: var(--as-border-strong);
+  background: var(--as-control-hover);
+  color: var(--as-text);
+}
+
+.as-button--sm { min-height: 36px; padding-inline: 13px; border-radius: var(--as-radius-sm); font-size: 12px; }
+.as-button--lg { min-height: 52px; padding-inline: 22px; border-radius: var(--as-radius-lg); font-size: 15px; }
+
+.as-glass-panel {
+  border: 1px solid var(--as-glass-border);
+  border-radius: var(--as-radius-xl);
+  background: var(--as-glass-bg);
+  backdrop-filter: var(--as-glass-blur);
+  -webkit-backdrop-filter: var(--as-glass-blur);
+  box-shadow: var(--as-shadow-md), inset 0 1px 0 var(--as-glass-highlight);
+}
+
+.as-chip {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--as-border);
+  border-radius: var(--as-radius-pill);
+  background: var(--as-glass-bg);
+  color: var(--as-text-secondary);
+  font-size: 12px;
+  font-weight: 620;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+@media (max-width: 479px) {
+  .as-button, .as-button--sm { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .as-button { transition: none; }
+  .as-button:hover { transform: none; }
+}

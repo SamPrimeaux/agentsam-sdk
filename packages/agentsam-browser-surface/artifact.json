@@ -1,0 +1,20 @@
+{
+  "schema": "inneranimal.artifact.v1",
+  "id": "agentsam-browser-surface",
+  "name": "AgentSam Browser Surface",
+  "package": { "name": "@inneranimalmedia/agentsam-browser-surface", "version": "1.0.0" },
+  "kind": "foundation",
+  "family": "browser-shell",
+  "summary": "Provider-agnostic Browse/Build browser contract plus registry. SideStage -> BrowserStage -> BrowserProvider (lightweight | AgentSamBrowserShell).",
+  "status": "candidate",
+  "capabilities": [
+    "browse-mode",
+    "build-mode",
+    "provider-registry",
+    "lightweight-provider",
+    "abs-provider",
+    "runtime-event-bridge"
+  ],
+  "related": ["agentsam-abs", "agentsam-platform", "agentsam-runtime-state"],
+  "preview": { "kind": "package" }
+}

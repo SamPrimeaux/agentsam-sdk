@@ -1,0 +1,29 @@
+{
+  "schema": "inneranimal.artifact.v1",
+  "id": "agentsam-browser-site",
+  "name": "AgentSam Browser \u2014 Public Site",
+  "package": {
+    "name": "@inneranimalmedia/agentsam-browser-site",
+    "version": "0.0.0"
+  },
+  "kind": "app",
+  "family": "browser",
+  "summary": "Public site that hosts the real AgentSam Browser package with a preview runtime and the mxs section kit.",
+  "status": "experimental",
+  "capabilities": [
+    "browser-surface",
+    "build-preview",
+    "theme-switch",
+    "public-preview"
+  ],
+  "related": [
+    "agentsam-abs",
+    "agentsam-sections",
+    "agentsam-browser-surface",
+    "agentsam-runtime-state"
+  ],
+  "preview": {
+    "kind": "application",
+    "route": "/"
+  }
+}
