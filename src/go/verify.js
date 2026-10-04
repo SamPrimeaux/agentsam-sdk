@@ -1,5 +1,5 @@
 import { readLatestStatus } from './receipts.js';
-import { probeGoDeployment } from './cloudflare.js';
+import { probeGoDeployment } from './probe.js';
 import { runGoTests, runGoVet } from './build.js';
 
 export async function verifyGoProduct({

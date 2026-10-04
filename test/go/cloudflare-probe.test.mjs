@@ -5,11 +5,13 @@ import { fileURLToPath } from 'node:url';
 import {
   deployGoCloudflare,
   extractWorkersDevUrl,
-  probeGoDeployment,
   readLatestWranglerDeployment,
   resolveWranglerIdentity,
   resolveConfiguredDeploymentUrl,
-} from '../../src/go/cloudflare.js';
+} from '../../src/go/providers/cloudflare.js';
+import {
+  probeGoDeployment,
+} from '../../src/go/probe.js';
 import { buildProductRow } from '../../src/go/receipts.js';
 
 const SDK_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -17,9 +19,19 @@ const PRODUCT_ROOT = path.join(SDK_ROOT, 'apps/agentsam-go-worker');
 const EXPECTED_HASH = '2e60bba13dc2bc37d75dd2ce5deb25466f19cb2994e20889388948879875eae9';
 
 
-test('configured custom domain is canonical Go deployment URL', () => {
+test('portable config does not claim the InnerAnimalMedia production domain', () => {
   assert.equal(
     resolveConfiguredDeploymentUrl(PRODUCT_ROOT),
+    null,
+  );
+});
+
+test('official InnerAnimalMedia config owns the canonical production domain', () => {
+  assert.equal(
+    resolveConfiguredDeploymentUrl(
+      PRODUCT_ROOT,
+      'wrangler.inneranimalmedia.jsonc',
+    ),
     'https://runtime.inneranimalmedia.com',
   );
 });

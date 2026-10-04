@@ -9,7 +9,6 @@
     {
       "class_name": "AgentSamGoRuntime",
       "image": "./Dockerfile",
-      "max_instances": 3,
       "instance_type": "basic"
     }
   ],
@@ -29,17 +28,13 @@
       ]
     }
   ],
-  "routes": [
-    {
-      "pattern": "runtime.inneranimalmedia.com",
-      "custom_domain": true
-    }
-  ],
-
   "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
     "logs": {
-      "enabled": false,
+      "enabled": true,
       "invocation_logs": true
     }
-  }
+  },
+  "workers_dev": true
 }

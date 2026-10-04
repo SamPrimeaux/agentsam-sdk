@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { cancel, confirm, intro, isCancel, outro, select } from '@clack/prompts';
+import { cancel, confirm, intro, isCancel, outro, select, text } from '@clack/prompts';
 import pc from 'picocolors';
 import {
   DEFAULT_PRODUCT,
@@ -32,6 +32,7 @@ function parse(argv = []) {
     skipDeploy: false,
     skipRegistry: false,
     accountId: null,
+    receiptRoot: null,
     officialRelease: false,
     yes: false,
     help: false,
@@ -48,6 +49,7 @@ function parse(argv = []) {
     else if (arg === '--official-release') out.officialRelease = true;
     else if (arg === '--yes' || arg === '-y') out.yes = true;
     else if (arg === '--account') out.accountId = String(argv[++i] || '').trim() || null;
+    else if (arg === '--receipt-root') out.receiptRoot = String(argv[++i] || '').trim() || null;
     else if (arg === '--cwd') out.cwd = path.resolve(argv[++i] || out.cwd);
     else if (arg === '--cloudflare') {
       out.cloudflare = true;
@@ -106,6 +108,7 @@ const HELP = `Agent Sam · Go
 
   Flags:
     --account <id>       Explicit Cloudflare account target
+    --receipt-root <path>  Base directory for AgentSam Go receipts/state
     --yes, -y            Confirm a live non-interactive deployment
     --json               Machine-readable output
     --dry-run            Build/probe + Wrangler dry-run; no live deploy or InnerAnimalMedia registry write
@@ -180,9 +183,13 @@ export async function runGo(argv = [], options = {}) {
 
   const discovery = discoverGoRuntime(args.cwd);
   const productRoot = resolveProductRoot(discovery, args.product);
-  const stateRoot = options.stateRoot
+
+  let stateRoot = options.stateRoot
     ? path.resolve(options.stateRoot)
-    : resolveGoStateRoot(discovery, args.cwd);
+    : args.receiptRoot
+      ? path.resolve(args.cwd, args.receiptRoot)
+      : resolveGoStateRoot(discovery, args.cwd);
+
   const runtimeRoot = discovery.runtime?.runtimeRoot || path.join(productRoot, 'runtime');
 
   if (args.subcommand === 'menu' && process.stdout.isTTY && !args.json) {
@@ -485,7 +492,7 @@ async function shipCloudflare({ discovery, productRoot, stateRoot, runtimeRoot, 
   }
 
   const preflight = preflightToolchain({
-    requireDocker: !args.skipDeploy,
+    requireDocker: !args.skipDeploy && !args.dryRun,
     productRoot,
   });
   for (const check of preflight.checks) {
@@ -519,7 +526,7 @@ async function shipCloudflare({ discovery, productRoot, stateRoot, runtimeRoot, 
   note('✓ native runtime boot/probe/shutdown');
 
   let container = null;
-  if (!args.skipDeploy) {
+  if (!args.skipDeploy && !args.dryRun) {
     if (!args.json) write('\n  Container\n');
     container = await verifyGoContainer({
       productRoot,
@@ -634,6 +641,62 @@ async function shipCloudflare({ discovery, productRoot, stateRoot, runtimeRoot, 
 
 async function runInteractiveMenu({ discovery, productRoot, stateRoot, runtimeRoot, args, write }) {
   intro(pc.bgCyan(pc.black(' Agent Sam · Go ')));
+
+  const receiptChoice = await select({
+    message: 'Where should AgentSam Go store run receipts?',
+    options: [
+      {
+        value: 'project',
+        label: 'This project',
+        hint: path.join(stateRoot, '.agentsam', 'go'),
+      },
+      {
+        value: 'home',
+        label: 'Central AgentSam receipts folder',
+        hint: '~/.agentsam/receipts',
+      },
+      {
+        value: 'custom',
+        label: 'Choose another folder',
+      },
+    ],
+  });
+
+  if (isCancel(receiptChoice)) {
+    cancel('Cancelled.');
+    return { ok: false, cancelled: true };
+  }
+
+  if (receiptChoice === 'home') {
+    stateRoot = path.join(
+      process.env.HOME || process.env.USERPROFILE || stateRoot,
+      '.agentsam',
+      'receipts',
+      path.basename(path.resolve(args.cwd)),
+    );
+  } else if (receiptChoice === 'custom') {
+    const customRoot = await text({
+      message: 'Receipt/state base directory',
+      placeholder: '/path/to/agentsam-receipts',
+      validate(value) {
+        return String(value || '').trim()
+          ? undefined
+          : 'Enter a directory.';
+      },
+    });
+
+    if (isCancel(customRoot)) {
+      cancel('Cancelled.');
+      return { ok: false, cancelled: true };
+    }
+
+    stateRoot = path.resolve(
+      String(customRoot).replace(/^~(?=\/|$)/, process.env.HOME || '~'),
+    );
+  }
+
+  write(`\n  Receipts\n    ${path.join(stateRoot, '.agentsam', 'go')}\n`);
+
   const status = readLatestStatus(stateRoot);
   write(`\n  Runtime\n`);
   write(`    ${discovery.go?.ok ? '✓' : '✗'} Go ${discovery.go?.goversion || ''}\n`);
@@ -671,7 +734,14 @@ async function runInteractiveMenu({ discovery, productRoot, stateRoot, runtimeRo
     return { ok: false, cancelled: true };
   }
   outro(`Running ${action}`);
-  const forwarded = [action, args.product, '--cwd', args.cwd];
+  const forwarded = [
+    action,
+    args.product,
+    '--cwd',
+    args.cwd,
+    '--receipt-root',
+    stateRoot,
+  ];
   if (action === 'deploy') forwarded.push('--cloudflare');
   if (args.json) forwarded.push('--json');
   return runGo(forwarded, { write });
