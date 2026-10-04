@@ -170,7 +170,7 @@ console.log(JSON.stringify({ ok: true, schemaVersion: IDENTITY_STORE_SCHEMA_VERS
     const depValues = Object.values(installedPkg.dependencies || {});
     for (const v of depValues) {
       assert.equal(String(v).startsWith('file:../'), false, v);
-      assert.equal(String(v).includes('/Users/samprimeaux'), false, v);
+      assert.equal(/\/Users\/[^/]+\//.test(String(v)), false, v);
     }
 
     // Packed tarball must include portable SQL + manifest

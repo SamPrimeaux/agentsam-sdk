@@ -40,7 +40,7 @@
   "installable": true,
   "_internal": {
     "normalization": "scaffolded",
-    "source": "/Users/samprimeaux/Library/Mobile Documents/com~apple~CloudDocs/Projects/Cloudflare/NewIberiaChurchofChrist",
+    "source": "local-donor://Library/Mobile Documents/com~apple~CloudDocs/Projects/Cloudflare/NewIberiaChurchofChrist",
     "harvest_batch": "theme-harvest-20260924",
     "harvest_path": "work/theme-harvest/church-site",
     "app_path": "apps/church-site",

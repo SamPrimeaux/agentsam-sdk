@@ -37,7 +37,7 @@
   "installable": true,
   "_internal": {
     "normalization": "scaffolded",
-    "source": "/Users/samprimeaux/fuelnfreetime/legacy",
+    "source": "local-donor://fuelnfreetime/legacy",
     "harvest_batch": "theme-harvest-20260924",
     "harvest_path": "work/theme-harvest/fuelnfree-site",
     "app_path": "apps/fuelnfree-site",

@@ -38,7 +38,7 @@
   "installable": true,
   "_internal": {
     "normalization": "scaffolded",
-    "source": "/Users/samprimeaux/companionscpas/static",
+    "source": "local-donor://companionscpas/static",
     "harvest_batch": "theme-harvest-20260924",
     "harvest_path": "work/theme-harvest/companions-site",
     "app_path": "apps/companions-site",

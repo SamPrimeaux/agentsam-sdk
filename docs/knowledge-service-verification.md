@@ -10,12 +10,12 @@ command from the isolated worktree, invoked as `node src/cli.js dockerize`:
 
 ```sh
 node src/cli.js dockerize --type knowledge_service --name agentsam-knowledge \
-  --repository sdk=/Users/samprimeaux/agentsam-sdk \
-  --repository app=/Users/samprimeaux/inneranimalmedia \
+  --repository sdk=repo://agentsam-sdk \
+  --repository app=repo://inneranimalmedia \
   --port 8792 --no-register-tag
 ```
 
-- Checkout: `/Users/samprimeaux/agent-worktrees/knowledge-service/agentsam-sdk`
+- Checkout: `worktree://knowledge-service/agentsam-sdk`
 - Container/image: `agentsam-knowledge` / `agentsam-knowledge:7c108871c3`
 - API: `http://127.0.0.1:8792`; authenticated routes; `/healthz` reports liveness
 - Data: named Docker volume `agentsam-knowledge-data`

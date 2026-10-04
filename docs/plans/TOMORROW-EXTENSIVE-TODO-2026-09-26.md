@@ -1,6 +1,6 @@
 # Tomorrow — comprehensive work list (2026-09-26 evening snapshot)
 
-**Repo:** `/Users/samprimeaux/agentsam-sdk` · `main`  
+**Repo:** `repo://agentsam-sdk` · `main`
 **Also read:** [`TOMORROW-MACHINE-FIRST-BRIEFING.md`](./TOMORROW-MACHINE-FIRST-BRIEFING.md) · [`MACHINE_INTELLIGENCE.md`](../MACHINE_INTELLIGENCE.md)  
 **Settings merge:** Settings v2 (`packages/agentsam-settings` + Local Studio host) is **on `main`** as of this evening. Fixture-backed localhost UI — **no D1/vault migration yet**.
 
@@ -204,7 +204,7 @@ Tomorrow only if bandwidth after A–D:
 ## F. Hygiene / ops
 
 - [ ] Push/PR any leftover worktrees after review (`project-control`)  
-- [ ] Optional: clean stale `/Users/samprimeaux/agent-worktrees/*` clones  
+- [ ] Optional: clean stale `worktree://*` clones
 - [ ] Confirm published SDK version vs docs (`2.6.4` installables; bump notes if needed)  
 - [ ] Site: `npm run site:publish` uses `--remote` (fixed) for Learn/ASFB assets  
 

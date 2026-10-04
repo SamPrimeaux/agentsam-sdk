@@ -76,8 +76,8 @@ Ship **Phases 1–5 in full** (Phase 5 is a real IDE product cut, not stubs). Au
 
 **Required code/doc changes:**
 
-1. **IAM** ([`agentsam-account-credentials.js`](/Users/samprimeaux/inneranimalmedia/backend/auth/agentsam-account-credentials.js)): `resolveNativeCliClientId` / `DEFAULT_NATIVE_CLI_CLIENT_ID` must resolve to **`iam_agentsam_sdk_web`** (or accept tokens whose `oauth_clients.client_id` is that production client). Stop requiring `iam_cli_agentsam` for `oauth_cli` / SDK API auth.
-2. **SDK** [`src/lib/auth.js`](/Users/samprimeaux/agentsam-sdk/src/lib/auth.js): `agentsam login` must use `iam_agentsam_sdk_web` (env from vault / documented default aligned with Local Studio Worker — not inventing `iam_cli_agentsam`). Loopback redirects allowed on that client (or Worker-mediated exchange keeping secret on Worker).
+1. **IAM** ([`agentsam-account-credentials.js`](repo://inneranimalmedia/backend/auth/agentsam-account-credentials.js)): `resolveNativeCliClientId` / `DEFAULT_NATIVE_CLI_CLIENT_ID` must resolve to **`iam_agentsam_sdk_web`** (or accept tokens whose `oauth_clients.client_id` is that production client). Stop requiring `iam_cli_agentsam` for `oauth_cli` / SDK API auth.
+2. **SDK** [`src/lib/auth.js`](repo://agentsam-sdk/src/lib/auth.js): `agentsam login` must use `iam_agentsam_sdk_web` (env from vault / documented default aligned with Local Studio Worker — not inventing `iam_cli_agentsam`). Loopback redirects allowed on that client (or Worker-mediated exchange keeping secret on Worker).
 3. **Docs/contracts** that say “native CLI = `iam_cli_agentsam`” (`sdk-auth-contract-consumer.md`, CATALOG, etc.) rewritten to **`iam_agentsam_sdk_web` = Studio + CLI login**.
 4. Deprecate / do-not-teach `AGENTSAM_NATIVE_OAUTH_CLIENT_ID=iam_cli_agentsam` for new installs.
 
@@ -117,7 +117,7 @@ flowchart TB
 
 ## Phase 1 — Windows agentsamd install (parity with LaunchAgent)
 
-**Today:** [`agentsam-sdk/src/commands/runtime.js`](/Users/samprimeaux/agentsam-sdk/src/commands/runtime.js) builds `agentsamd.exe` on win32 but `writeLaunchAgent` returns `null` on non-Darwin; install never registers persistence.
+**Today:** [`agentsam-sdk/src/commands/runtime.js`](repo://agentsam-sdk/src/commands/runtime.js) builds `agentsamd.exe` on win32 but `writeLaunchAgent` returns `null` on non-Darwin; install never registers persistence.
 
 **Implement:**
 - `writeWindowsScheduledTask(home, binary)` — write XML task under `%USERPROFILE%\.agentsam\runtime\` and register via `schtasks /Create /TN "InnerAnimalMedia\\agentsamd" /XML ... /F` (user-level, InteractiveToken, Run at logon + restart on failure).
@@ -133,7 +133,7 @@ flowchart TB
 
 ## Phase 2 — AgentSam family brand / icon grammar
 
-**Today:** [`manifests/local-studio.json`](/Users/samprimeaux/agentsam-sdk/packages/agentsam-desktop-shell/manifests/local-studio.json) + [`icons/local-studio/AgentSam-Mark.svg`](/Users/samprimeaux/agentsam-sdk/packages/agentsam-desktop-shell/icons/local-studio/) + [`scripts/build-brand.mjs`](/Users/samprimeaux/agentsam-sdk/packages/agentsam-desktop-shell/scripts/build-brand.mjs). No 1024 `icon.png` yet.
+**Today:** [`manifests/local-studio.json`](repo://agentsam-sdk/packages/agentsam-desktop-shell/manifests/local-studio.json) + [`icons/local-studio/AgentSam-Mark.svg`](repo://agentsam-sdk/packages/agentsam-desktop-shell/icons/local-studio/) + [`scripts/build-brand.mjs`](repo://agentsam-sdk/packages/agentsam-desktop-shell/scripts/build-brand.mjs). No 1024 `icon.png` yet.
 
 **Implement:**
 - `docs/brand/AGENT_SAM_ICON_GRAMMAR.md` — graphite base, spectral blue→violet accent, one dominant shape, no text in icons; product variations (Local Studio = master + portal; CAD = plane/cube; Ecommerce = modular card).
@@ -167,7 +167,7 @@ flowchart TB
 
 ## Phase 4 — Offline-first shell + agentsamd sidecar
 
-**Stop** sole boot via remote URL in [`tauri.conf.json`](/Users/samprimeaux/agentsam-sdk/packages/agentsam-desktop-shell/src-tauri/tauri.conf.json).
+**Stop** sole boot via remote URL in [`tauri.conf.json`](repo://agentsam-sdk/packages/agentsam-desktop-shell/src-tauri/tauri.conf.json).
 
 **Implement:**
 - `package.json` pre-tauri step: build `apps/local-studio` frontend → copy into `packages/agentsam-desktop-shell/dist/` (replace placeholder).
@@ -186,9 +186,9 @@ flowchart TB
 
 | Piece | Status |
 |---|---|
-| Monaco | Already used via `@monaco-editor/react` in [`monaco-pane.tsx`](/Users/samprimeaux/agentsam-sdk/apps/local-studio/frontend/src/components/workbench/monaco-pane.tsx) — syntax/theme only, **no LSP** |
-| File tree | [`files.tsx`](/Users/samprimeaux/agentsam-sdk/apps/local-studio/frontend/src/components/workbench/files.tsx) has dir toggle/`openDirs` over **virtual scratch artifacts**, not host FS |
-| xterm | Real `@xterm/xterm` in [`terminal.tsx`](/Users/samprimeaux/agentsam-sdk/apps/local-studio/frontend/src/components/workbench/terminal.tsx) + [`terminal-runtime.ts`](/Users/samprimeaux/agentsam-sdk/apps/local-studio/frontend/src/lib/work/terminal-runtime.ts) — primarily **browser virtual shell**; filesystem/PTY path partial |
+| Monaco | Already used via `@monaco-editor/react` in [`monaco-pane.tsx`](repo://agentsam-sdk/apps/local-studio/frontend/src/components/workbench/monaco-pane.tsx) — syntax/theme only, **no LSP** |
+| File tree | [`files.tsx`](repo://agentsam-sdk/apps/local-studio/frontend/src/components/workbench/files.tsx) has dir toggle/`openDirs` over **virtual scratch artifacts**, not host FS |
+| xterm | Real `@xterm/xterm` in [`terminal.tsx`](repo://agentsam-sdk/apps/local-studio/frontend/src/components/workbench/terminal.tsx) + [`terminal-runtime.ts`](repo://agentsam-sdk/apps/local-studio/frontend/src/lib/work/terminal-runtime.ts) — primarily **browser virtual shell**; filesystem/PTY path partial |
 | README claim | “Files open in Monaco / CLI is real xterm” — UI exists; **machine truth + LSP + guided setup** do not |
 
 ### 5A — npm package layout (rapidly deployable SDK)
@@ -204,7 +204,7 @@ Extract / harden under `packages/` (publishable, versioned; Local Studio imports
 | `@inneranimalmedia/agentsam-ide-onboarding` | First-login CLI tutorial scripts (step machine, not a wall of text) |
 | `@inneranimalmedia/agentsam-ide` | Meta package re-exporting the above for one-line Studio install |
 
-Each package: `package.json` exports, typed public API, vitest/node tests, README with “drop into any AgentSam surface.” Prefer evolving [`agentsam-workbench`](/Users/samprimeaux/agentsam-sdk/packages/agentsam-workbench) into these exports rather than a third parallel UI stack.
+Each package: `package.json` exports, typed public API, vitest/node tests, README with “drop into any AgentSam surface.” Prefer evolving [`agentsam-workbench`](repo://agentsam-sdk/packages/agentsam-workbench) into these exports rather than a third parallel UI stack.
 
 ### 5B — Real Files (Monaco + collapsible tree)
 

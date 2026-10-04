@@ -4,7 +4,7 @@
 `ASTRA-BRIEF-2026-09-18.md`) are backlog/reference only. Do not treat them as
 a live status report.
 
-Repo: `/Users/samprimeaux/agentsam-sdk`
+Repo: `repo://agentsam-sdk`
 
 ## Repository truth (verified this pass)
 
@@ -24,11 +24,11 @@ No `npm publish`. No Worker deployment for that batch.
 
 | Path | Branch | Tip |
 | --- | --- | --- |
-| `/Users/samprimeaux/agentsam-sdk` | `main` | `88cb30d` |
-| `/Users/samprimeaux/agent-worktrees/studio-auth-ai-wiring` | `feat/studio-auth-and-ai-wiring` | `b8fffbb` |
-| `/Users/samprimeaux/agentsam-sdk-errors` | `feat/errors-v1-runtime-contract` | `f39b92b` (local; remote ahead elsewhere) |
-| `/Users/samprimeaux/agentsam-sdk-errors-integrate` | `integrate/errors-v1-main` | `0136a96` |
-| `/Users/samprimeaux/agentsam-sdk-tui-oauth` | `feat/cli-oauth-tui-productization` | `3a86138` (remote gone; tip is ancestor of main) |
+| `repo://agentsam-sdk` | `main` | `88cb30d` |
+| `worktree://studio-auth-ai-wiring` | `feat/studio-auth-and-ai-wiring` | `b8fffbb` |
+| `repo://agentsam-sdk-errors` | `feat/errors-v1-runtime-contract` | `f39b92b` (local; remote ahead elsewhere) |
+| `repo://agentsam-sdk-errors-integrate` | `integrate/errors-v1-main` | `0136a96` |
+| `repo://agentsam-sdk-tui-oauth` | `feat/cli-oauth-tui-productization` | `3a86138` (remote gone; tip is ancestor of main) |
 
 ### Parallel remote branches to inspect before rebuilding equivalent work
 

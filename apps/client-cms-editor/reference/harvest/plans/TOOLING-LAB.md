@@ -52,7 +52,7 @@ The fixture has its own disposable Git repository and .agentsam directory so tes
 
 Suggested command:
 
-python3 scripts/harvest_tooling_lab.py --sdk /Users/samprimeaux/agentsam-sdk --replace-export --replace-db
+python3 scripts/harvest_tooling_lab.py --sdk repo://agentsam-sdk --replace-export --replace-db
 
 For the wider product, use the same acceptance fixture on:
 - local CLI / desktop
