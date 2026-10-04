@@ -129,5 +129,14 @@ try {
   await page.reload();
   await editor.locator('.te-tree-row').first().waitFor();
   assert.equal(await editor.locator('.te-field input').first().inputValue(), 'Revised theme hero');
+  await page.goto(origin + '/index.html#/store');
+  const packaged = discoverThemeSurfaces(repo).themes.find((t) => t.capabilities.editable && t.pages.some((p) => p.slug === 'home'));
+  assert.ok(packaged, 'A real packaged home page is required');
+  await page.locator(`[data-theme-id="${packaged.id}"]`).getByRole('button', { name: 'Edit', exact: true }).click();
+  await editor.locator('.te-tree-row').first().waitFor();
+  assert.ok(await editor.locator('.te-field').count(), 'Real packaged content is editable');
+  await editor.getByRole('button', { name: 'Layout', exact: true }).click();
+  assert.ok(await editor.getByText('Padding', { exact: true }).count());
+  await capture('packaged-theme-editor');
   console.log('[theme-surfaces] PASS mini long draft/review, package discovery, persistence, conflict, real preview, editor reload; themes=' + discovered.length);
 } finally { await browser.close(); await new Promise((r) => server.close(r)); }
