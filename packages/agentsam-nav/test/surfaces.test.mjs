@@ -21,3 +21,12 @@ test('consumer context and brand tokens stay isolated between providers', () => 
   assert.match(html, /--nav-sidebar:#223344/);
   assert.match(html, /Other workspace/);
 });
+
+test('brand image surfaces retain an icon fallback when a consumer image fails', async () => {
+  const source = await import('node:fs/promises').then(({ readFile }) =>
+    readFile(new URL('../src/Surfaces.tsx', import.meta.url), 'utf8'),
+  );
+  assert.match(source, /logoFailed/);
+  assert.match(source, /onError=\{\(\) => setLogoFailed\(true\)\}/);
+  assert.match(source, /: <PanelLeft \/>/);
+});

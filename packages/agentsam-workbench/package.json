@@ -49,13 +49,14 @@
   },
   "scripts": {
     "typecheck": "node scripts/ensure-local-deps.mjs && tsc --noEmit -p tsconfig.json",
-    "test": "node --test test/*.test.mjs",
+    "test": "npm run build && node --test test/*.test.mjs",
     "build": "node scripts/build.mjs",
     "prepack": "npm run build"
   },
   "dependencies": {
     "@inneranimalmedia/agentsam-contracts": "2.6.11",
-    "@inneranimalmedia/agentsam-loading-scene": "2.6.11"
+    "@inneranimalmedia/agentsam-loading-scene": "2.6.11",
+    "lucide-react": "^0.510.0"
   },
   "peerDependencies": {
     "react": ">=18",

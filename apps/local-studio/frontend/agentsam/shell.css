@@ -109,7 +109,6 @@
 .agentsam-plugin-previews { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 4px 0; }
 .agentsam-plugin-previews button { display: flex; align-items: center; gap: 5px; min-height: 28px; color: var(--nav-muted); font-size: 12px; }
 .mini-agentsam-panel .agentsam-plugin-menu { position: static; margin-top: 8px; max-height: 200px; }
-.agentsam-shell .mini-agentsam-panel [data-agent-composer] { border: 0; border-radius: 12px; background: transparent; padding: 0; }
 .agentsam-conversation-dock { flex-shrink: 0; padding: 12px 24px 0; }
 .agentsam-conversation [data-agent-conversation-empty="true"] .agentsam-conversation-dock { padding-top: 0; }
 .agentsam-conversation [data-agent-conversation-composer] > * { margin-inline: auto; width: 100%; max-width: 840px; }
