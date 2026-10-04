@@ -2,8 +2,8 @@
   "schema": "agentsam.donor-sync.browser-promo.v1",
   "donor_commit": "268cda57fd340e023a55c97ef05d9fa680a9a04c",
   "donor_tag": "template/browser-promo-v1",
-  "donor_repo": "/Users/samprimeaux/AgentSam-BrowserShell",
-  "target_repo": "/Users/samprimeaux/agentsam-sdk-browser-promotion",
+  "donor_repo": "https://github.com/SamPrimeaux/AgentSam-BrowserShell",
+  "target_repo": "https://github.com/SamPrimeaux/agentsam-sdk",
   "target_branch": "feat/browser-shell-provider",
   "synced_at_utc": "2026-10-04T03:18:24.263818+00:00",
   "paths": {
