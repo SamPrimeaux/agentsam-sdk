@@ -132,6 +132,8 @@ try {
   await page.goto(origin + '/index.html#/store');
   const packaged = discoverThemeSurfaces(repo).themes.find((t) => t.capabilities.editable && t.pages.some((p) => p.slug === 'home'));
   assert.ok(packaged, 'A real packaged home page is required');
+  page.on('pageerror', (error) => console.error('browser-error', error.message));
+  await page.evaluate(() => { window.__themeNavigateEvents = []; window.addEventListener('agentsam:navigate', (event) => window.__themeNavigateEvents.push(event.detail)); });
   await page.locator(`[data-theme-id="${packaged.id}"]`).getByRole('button', { name: 'Edit', exact: true }).click();
   await editor.locator('.te-tree-row').first().waitFor({ timeout: 5000 }).catch(async (error) => { console.error('packaged-theme-load', page.url(), await page.locator('[role=alert]').allTextContents(), await page.locator('body').innerText()); throw error; });
   assert.ok(await editor.locator('.te-field').count(), 'Real packaged content is editable');
