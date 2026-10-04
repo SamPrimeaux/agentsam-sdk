@@ -37,7 +37,7 @@ export function discoverThemeSurfaces(root = repoRoot) {
         const url = `themes/${id}/${rel}`;
         assets.set(url, file);
         if (extname(file) === '.html' && !rel.startsWith('help/')) {
-          pages.push({ slug: rel.replace(/\.html$/, '').replace(/\/index$/, '').replace(/^site\//, '') || 'home', title: rel.split('/').pop().replace(/\.html$/, ''), url: '/' + url });
+          pages.push({ slug: rel.replace(/^site\//, '').replace(/\.html$/, '').replace(/(?:^|\/)index$/, '') || 'home', title: rel.split('/').pop().replace(/\.html$/, ''), url: '/' + url });
         }
       }
     }
