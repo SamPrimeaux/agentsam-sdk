@@ -111,7 +111,7 @@ export {
 export {
   handleGoogleDesktopExchangeRequest,
   resolveGoogleExchangeSecret,
-} from './oauth/google-desktop-exchange.js';
+} from './oauth/goaude.js';
 export { createCloudflareD1Adapter, createIamCompatIdentityAdapter } from './adapters/cloudflare-d1/index.js';
 export {
   createSqliteIdentityAdapter,

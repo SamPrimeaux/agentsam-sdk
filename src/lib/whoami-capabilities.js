@@ -9,7 +9,7 @@ import { listProviderCredentialStatus } from './provider-credentials.js';
 import {
   listCloudflareFeaturePacks,
   scopesForFeaturePacks,
-} from '../../packages/connectors/cloudflare/src/index.js';
+} from '../../packages/connectors/cfoa/src/index.js';
 import { projectTerminalCapability } from './terminal-scopes.js';
 
 function clean(value) {

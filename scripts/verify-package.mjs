@@ -73,7 +73,7 @@ assert.equal(errorCatalog.schema_version, 2, 'error catalog schema version must 
 assert.equal(errorSchema.properties?.schema_version?.const, 2, 'error envelope JSON Schema must match catalog version');
 assert.ok(errorSchema.properties?.code?.enum?.includes('INTERNAL'), 'error envelope schema must publish canonical codes');
 assert.ok(
-  pkg.files?.includes('packages/connectors/cloudflare') && existsSync(join(root, 'packages/connectors/cloudflare/src/index.js')),
+  pkg.files?.includes('packages/connectors/cfoa') && existsSync(join(root, 'packages/connectors/cfoa/src/index.js')),
   'published files must include the Cloudflare connector imported by the CLI',
 );
 assert.ok(pkg.files?.includes('AGENTSAM.md') && existsSync(join(root, 'AGENTSAM.md')), 'published files must include the stable AgentSam runtime contract');

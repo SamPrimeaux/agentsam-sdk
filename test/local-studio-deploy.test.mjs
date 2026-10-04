@@ -31,7 +31,7 @@ describe('local-studio deploy resolver', () => {
   });
 
   it('fingerprints the cloudflare connector package', () => {
-    assert.equal(DEPLOY_INPUT_GLOBS.includes('packages/connectors/cloudflare'), true);
+    assert.equal(DEPLOY_INPUT_GLOBS.includes('packages/connectors/cfoa'), true);
     assert.equal(DEPLOY_INPUT_GLOBS.includes('apps/local-studio'), true);
   });
 

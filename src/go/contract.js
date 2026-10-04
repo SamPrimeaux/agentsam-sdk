@@ -91,12 +91,16 @@ function rel(root, file) {
   return path.relative(root, file).split(path.sep).join('/');
 }
 
-export function preflightToolchain({ requireDocker = false, productRoot = null } = {}) {
+export function preflightToolchain({
+  requireDocker = false,
+  productRoot = null,
+  spawn = spawnSync,
+} = {}) {
   const checks = [];
   const push = (id, ok, detail = '') => checks.push({ id, ok, detail });
 
   try {
-    const v = spawnSync('go', ['version'], { encoding: 'utf8' });
+    const v = spawn('go', ['version'], { encoding: 'utf8' });
     push('go', v.status === 0, (v.stdout || v.stderr || '').trim());
   } catch (e) {
     push('go', false, e.message);
@@ -104,7 +108,7 @@ export function preflightToolchain({ requireDocker = false, productRoot = null }
 
   const wranglerBin = resolveWranglerBin(productRoot);
   try {
-    const v = spawnSync(wranglerBin.command, wranglerBin.args.concat(['--version']), {
+    const v = spawn(wranglerBin.command, wranglerBin.args.concat(['--version']), {
       encoding: 'utf8',
       cwd: productRoot || process.cwd(),
     });
@@ -113,18 +117,32 @@ export function preflightToolchain({ requireDocker = false, productRoot = null }
     push('wrangler', false, e.message);
   }
 
-  try {
-    const v = spawnSync('docker', ['info'], { encoding: 'utf8' });
-    push('docker', v.status === 0, v.status === 0 ? 'available' : (v.stderr || 'unavailable').trim().slice(0, 200));
-  } catch (e) {
-    push('docker', false, e.message);
+  // Docker is capability-gated.
+  //
+  // A caller that does not require a container must not execute
+  // `docker info` merely to discover that Docker is optional.
+  //
+  // Besides wasting work, Docker Desktop may be installed while its
+  // daemon is stopped/unhealthy, and `docker info` can block for a
+  // significant period.
+  if (requireDocker) {
+    try {
+      const v = spawn('docker', ['info'], { encoding: 'utf8' });
+      push(
+        'docker',
+        v.status === 0,
+        v.status === 0
+          ? 'available'
+          : (v.stderr || 'unavailable').trim().slice(0, 200),
+      );
+    } catch (e) {
+      push('docker', false, e.message);
+    }
+  } else {
+    push('docker', true, 'skipped:not-required');
   }
 
-  const failed = checks.filter((c) => {
-    if (c.ok) return false;
-    if (c.id === 'docker' && !requireDocker) return false;
-    return true;
-  });
+  const failed = checks.filter((c) => !c.ok);
   return { ok: failed.length === 0, checks, failed, wrangler: wranglerBin };
 }
 

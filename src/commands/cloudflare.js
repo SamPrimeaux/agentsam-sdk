@@ -21,8 +21,8 @@ import {
   tokenValidation,
   pages,
   snippets,
-} from '../../packages/connectors/cloudflare/src/index.js';
-import { AGENTSAM_TAG_VOCABULARY as TAG_VOCAB } from '../../packages/connectors/cloudflare/src/families/tags.js';
+} from '../../packages/connectors/cfoa/src/index.js';
+import { AGENTSAM_TAG_VOCABULARY as TAG_VOCAB } from '../../packages/connectors/cfoa/src/families/tags.js';
 import {
   isCloudflareLoginFamily,
   runCloudflareBrowserOAuthLogin,

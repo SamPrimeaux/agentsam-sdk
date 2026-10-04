@@ -110,7 +110,7 @@ export function resolveOAuthCredentialLane(env, provider) {
 
   if (key === 'cloudflare') {
     // Reuses the same Worker secrets as the Local Studio Cloudflare resource
-    // connector (packages/connectors/cloudflare). clientSecret may be empty
+    // connector (packages/connectors/cfoa). clientSecret may be empty
     // if that client is configured as PKCE-only (Token Authentication
     // Method = None) — exchangeCloudflareCode() omits it in that case.
     const clientId = String(env?.CLOUDFLARE_OAUTH_CLIENT_ID || '').trim();

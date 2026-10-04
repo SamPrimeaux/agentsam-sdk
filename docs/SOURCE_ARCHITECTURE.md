@@ -36,7 +36,7 @@ Package behavior belongs with the package:
 packages/identity/tests/*
 packages/agentsam-contracts/test/*
 packages/agentsam-workbench/test/*
-packages/connectors/cloudflare/tests/*
+packages/connectors/cfoa/tests/*
 ```
 
 Root SDK tests should move toward explicit roles:

@@ -244,13 +244,26 @@ export async function deployGoCloudflare({
     accountId = cfIdentity.account.id;
   }
 
-  const docker = spawn('docker', ['info'], { encoding: 'utf8' });
-  const dockerOk = docker.status === 0;
-  if (!dockerOk && !skipDeploy) {
-    const err = new Error('docker_unavailable');
-    err.detail = (docker.stderr || docker.stdout || '').trim().slice(0, 400);
-    err.hint = 'Cloudflare Containers require a local container engine for image build.';
-    throw err;
+  // Docker is part of the actual deployment/container lane only.
+  //
+  // --skip-deploy is explicitly a local build + validation-receipt path.
+  // It must not contact Docker merely to decide that Docker is unnecessary.
+  //
+  // This is especially important when Docker Desktop is installed but its
+  // daemon is stopped or unhealthy: `docker info` may block for a long time.
+  let docker = null;
+  let dockerOk = true;
+
+  if (!skipDeploy) {
+    docker = spawn('docker', ['info'], { encoding: 'utf8' });
+    dockerOk = docker.status === 0;
+
+    if (!dockerOk) {
+      const err = new Error('docker_unavailable');
+      err.detail = (docker.stderr || docker.stdout || '').trim().slice(0, 400);
+      err.hint = 'Cloudflare Containers require a local container engine for image build.';
+      throw err;
+    }
   }
 
   const wrangler = resolveWranglerInvocation(productRoot);

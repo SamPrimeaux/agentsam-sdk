@@ -7,7 +7,7 @@ import {
   CLOUDFLARE_FIXTURE_CLIENT_ID,
   cloudflareConnectionSafeStatus,
   resolveCloudflareOAuthClient,
-} from '../../packages/connectors/cloudflare/src/index.js';
+} from '../../packages/connectors/cfoa/src/index.js';
 import { resolveIamIssuer } from '../../packages/identity/src/contracts/auth-config.js';
 import { collectRuntimeStatus } from './runtime-status.js';
 

@@ -1,7 +1,7 @@
 import nitroWorker from "../../.output/server/index.mjs";
 import installScript from "../../../../scripts/install.sh";
-import { handleCloudflareConnectionRequest, isCloudflareConnectionPath } from "../../../../packages/connectors/cloudflare/src/routes.js";
-import { resolveCloudflareOAuthClient } from "../../../../packages/connectors/cloudflare/src/index.js";
+import { handleCloudflareConnectionRequest, isCloudflareConnectionPath } from "../../../../packages/connectors/cfoa/src/routes.js";
+import { resolveCloudflareOAuthClient } from "../../../../packages/connectors/cfoa/src/index.js";
 import {
   handleIdentityWorkerRequest,
   createIdentityService,
@@ -25,12 +25,12 @@ import { handleCmsWorkerRequest } from "./cms-service.js";
 import { serveCanonicalHomepage } from "./canonical-homepage.js";
 import { isPublicSitePath, servePublicSitePage } from "./public-site.js";
 import { handlePublicConfigRequest } from "./public-config.js";
-import { handleGoogleDesktopExchangeRequest } from "./google-desktop-exchange.js";
+import { handleGoogleDesktopExchangeRequest } from "./goaude.js";
 import {
   handleGoogleCliCloudRequest,
   isGoogleCliCloudCallbackRequest,
   isGoogleCliCloudPath,
-} from "./google-cli-cloud.js";
+} from "./gclioa.js";
 import { loadConnectionsRegistry } from "./connections-registry.js";
 import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js";
 import { handleWorkRequest, isWorkRequest } from "./work-service.js";

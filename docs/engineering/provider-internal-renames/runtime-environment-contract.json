@@ -1,0 +1,220 @@
+{
+  "allowed_environments": [
+    "production",
+    "previews",
+    "base"
+  ],
+  "entries": {
+    "AGENTSAM_API_KEY": {
+      "approved": true,
+      "classification": "protected-runtime-secret",
+      "may_commit_value": false,
+      "may_log_value": false,
+      "preserve_existing_value": true,
+      "preserve_name": true,
+      "type": "secret"
+    },
+    "AGENTSAM_BRIDGE_KEY": {
+      "approved": true,
+      "classification": "protected-runtime-secret",
+      "may_commit_value": false,
+      "may_log_value": false,
+      "preserve_existing_value": true,
+      "preserve_name": true,
+      "type": "secret"
+    },
+    "CLOUDFLARE_ACCOUNT_ID": {
+      "approved": true,
+      "classification": "protected-runtime-variable",
+      "may_commit_value": false,
+      "may_log_value": false,
+      "preserve_existing_value": true,
+      "preserve_name": true,
+      "type": "variable"
+    },
+    "CLOUDFLARE_API_TOKEN": {
+      "approved": true,
+      "classification": "protected-runtime-secret",
+      "may_commit_value": false,
+      "may_log_value": false,
+      "preserve_existing_value": true,
+      "preserve_name": true,
+      "type": "secret"
+    },
+    "CLOUDFLARE_BREAK_GLASS_ADMIN_TOKEN": {
+      "approved": true,
+      "classification": "protected-runtime-secret",
+      "may_commit_value": false,
+      "may_log_value": false,
+      "preserve_existing_value": true,
+      "preserve_name": true,
+      "type": "secret"
+    },
+    "CLOUDFLARE_OAUTH_CLIENT_ID": {
+      "approved": true,
+      "classification": "protected-runtime-secret",
+      "may_commit_value": false,
+      "may_log_value": false,
+      "preserve_existing_value": true,
+      "preserve_name": true,
+      "type": "secret"
+    },
+    "CURSOR_API_KEY": {
+      "approved": true,
+      "classification": "protected-runtime-secret",
+      "may_commit_value": false,
+      "may_log_value": false,
+      "preserve_existing_value": true,
+      "preserve_name": true,
+      "type": "secret"
+    },
+    "GEMINI_API_KEY": {
+      "approved": true,
+      "classification": "protected-runtime-secret",
+      "may_commit_value": false,
+      "may_log_value": false,
+      "preserve_existing_value": true,
+      "preserve_name": true,
+      "type": "secret"
+    },
+    "GITHUB_APP_ID": {
+      "approved": true,
+      "classification": "protected-runtime-variable",
+      "may_commit_value": false,
+      "may_log_value": false,
+      "preserve_existing_value": true,
+      "preserve_name": true,
+      "type": "variable"
+    },
+    "GITHUB_APP_PRIVATE_KEY": {
+      "approved": true,
+      "classification": "protected-runtime-secret",
+      "may_commit_value": false,
+      "may_log_value": false,
+      "preserve_existing_value": true,
+      "preserve_name": true,
+      "type": "secret"
+    },
+    "GITHUB_CLIENT_ID": {
+      "approved": true,
+      "classification": "protected-runtime-variable",
+      "may_commit_value": false,
+      "may_log_value": false,
+      "preserve_existing_value": true,
+      "preserve_name": true,
+      "type": "variable"
+    },
+    "GITHUB_CLIENT_SECRET": {
+      "approved": true,
+      "classification": "protected-runtime-secret",
+      "may_commit_value": false,
+      "may_log_value": false,
+      "preserve_existing_value": true,
+      "preserve_name": true,
+      "type": "secret"
+    },
+    "GITHUB_WEBHOOK_SECRET": {
+      "approved": true,
+      "classification": "protected-runtime-secret",
+      "may_commit_value": false,
+      "may_log_value": false,
+      "preserve_existing_value": true,
+      "preserve_name": true,
+      "type": "secret"
+    },
+    "GOOGLE_CLIENT_ID": {
+      "approved": true,
+      "classification": "protected-runtime-variable",
+      "may_commit_value": false,
+      "may_log_value": false,
+      "preserve_existing_value": true,
+      "preserve_name": true,
+      "type": "variable"
+    },
+    "GOOGLE_CLIENT_SECRET": {
+      "approved": true,
+      "classification": "protected-runtime-secret",
+      "may_commit_value": false,
+      "may_log_value": false,
+      "preserve_existing_value": true,
+      "preserve_name": true,
+      "type": "secret"
+    },
+    "GOOGLE_DESKTOP_CLIENT_ID": {
+      "approved": true,
+      "classification": "protected-runtime-variable",
+      "may_commit_value": false,
+      "may_log_value": false,
+      "preserve_existing_value": true,
+      "preserve_name": true,
+      "type": "variable"
+    },
+    "GOOGLE_DESKTOP_CLIENT_SECRET": {
+      "approved": true,
+      "classification": "protected-runtime-secret",
+      "may_commit_value": false,
+      "may_log_value": false,
+      "preserve_existing_value": true,
+      "preserve_name": true,
+      "type": "secret"
+    },
+    "IAM_CLIENT_ID": {
+      "approved": true,
+      "classification": "protected-runtime-variable",
+      "may_commit_value": false,
+      "may_log_value": false,
+      "preserve_existing_value": true,
+      "preserve_name": true,
+      "type": "variable"
+    },
+    "IAM_CLIENT_SECRET": {
+      "approved": true,
+      "classification": "protected-runtime-secret",
+      "may_commit_value": false,
+      "may_log_value": false,
+      "preserve_existing_value": true,
+      "preserve_name": true,
+      "type": "secret"
+    },
+    "IAM_OAUTH_ISSUER": {
+      "approved": true,
+      "classification": "protected-runtime-variable",
+      "may_commit_value": false,
+      "may_log_value": false,
+      "preserve_existing_value": true,
+      "preserve_name": true,
+      "type": "variable"
+    },
+    "OPENAI_API_KEY": {
+      "approved": true,
+      "classification": "protected-runtime-secret",
+      "may_commit_value": false,
+      "may_log_value": false,
+      "preserve_existing_value": true,
+      "preserve_name": true,
+      "type": "secret"
+    },
+    "VAULT_MASTER_KEY": {
+      "approved": true,
+      "classification": "protected-runtime-secret",
+      "may_commit_value": false,
+      "may_log_value": false,
+      "preserve_existing_value": true,
+      "preserve_name": true,
+      "type": "secret"
+    }
+  },
+  "prohibited_refactor_behavior": [
+    "rename environment variable",
+    "convert provider environment variable to internal abbreviation",
+    "commit runtime value into repository",
+    "print secret value during migration or verification",
+    "move secret into frontend/browser state",
+    "move secret into query parameters",
+    "move secret into localStorage/sessionStorage",
+    "replace existing runtime authority with package-specific credential storage"
+  ],
+  "purpose": "Protect known-good Local Studio / AgentSam runtime environment variable and secret names during provider-internal refactors.",
+  "schema": "agentsam.runtime-environment-contract.v1",
+  "status": "approved"
+}

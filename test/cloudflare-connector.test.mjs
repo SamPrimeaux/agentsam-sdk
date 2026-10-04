@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { handleCloudflareConnectionRequest } from '../packages/connectors/cloudflare/src/routes.js';
-import { rejectUntrustedOwnerHints } from '../packages/connectors/cloudflare/src/owner.js';
+import { handleCloudflareConnectionRequest } from '../packages/connectors/cfoa/src/routes.js';
+import { rejectUntrustedOwnerHints } from '../packages/connectors/cfoa/src/owner.js';
 
 function req(url, { method = 'GET', headers = {}, body } = {}) {
   return new Request(url, { method, headers, body });

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   handleGoogleDesktopLoginExchangeRequest,
-} from '../src/oauth/google-desktop-exchange.js';
+} from '../src/oauth/goaude.js';
 
 const DESKTOP_ID = 'desktop-client.apps.googleusercontent.com';
 
