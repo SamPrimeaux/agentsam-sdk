@@ -13,3 +13,6 @@ It owns deterministic repository identity and Merkle behavior that must be reusa
 It does **not** own authenticated account sessions, CLI commands, UI rendering, knowledge retrieval, deployment orchestration, or product application state. Those layers consume this package through explicit imports.
 
 The workspace is private while the extraction stabilizes. Cross-repository consumers should continue using the published `@inneranimalmedia/agentsam-sdk` facade until this package receives its own release policy.
+
+<!-- agentsam:trademark-notice -->
+> Independent project. Not affiliated with, endorsed by, or sponsored by Cloudflare, Inc. or by any other company whose products are named here. Cloudflare is a registered trademark of Cloudflare, Inc. Other names are trademarks of their respective owners. See [TRADEMARKS](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/TRADEMARKS.md).

@@ -11,7 +11,7 @@ The package deliberately separates four concerns:
 
 ## Goals
 
-- Cloudflare-first without Cloudflare lock-in.
+- Runs well on Cloudflare without Cloudflare lock-in.
 - One stable job envelope across CAD, code indexing, CMS, commerce, deployment, webhook, batch-AI, and future worker types.
 - Logical queues stay stable while physical topology can start compact and split later.
 - Deterministic routing keeps LLMs out of timers, polling loops, retries, and ordinary scheduling.
@@ -105,3 +105,6 @@ Queue Control does not replace `@inneranimalmedia/agentsam-work-graph`. A WorkGr
 ## Relationship to AgentSam tools and MCP
 
 The canonical capability/tool contract should sit above transports. A tool may be called inline, queued, from a WorkGraph, from a hook, from CLI, or exposed through MCP. Queue Control only owns execution routing and job lifecycle semantics.
+
+<!-- agentsam:trademark-notice -->
+> Independent project. Not affiliated with, endorsed by, or sponsored by Cloudflare, Inc. or by any other company whose products are named here. Cloudflare is a registered trademark of Cloudflare, Inc. Other names are trademarks of their respective owners. See [TRADEMARKS](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/TRADEMARKS.md).

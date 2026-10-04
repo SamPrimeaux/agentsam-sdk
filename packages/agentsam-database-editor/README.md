@@ -93,3 +93,6 @@ that host.
 `app_id = database-editor` is stable product identity.
 
 See [docs/HARVEST_REPORT.md](./docs/HARVEST_REPORT.md) for the donor inventory and portability rules.
+
+<!-- agentsam:trademark-notice -->
+> Independent project. Not affiliated with, endorsed by, or sponsored by Cloudflare, Inc. or by any other company whose products are named here. Cloudflare is a registered trademark of Cloudflare, Inc. Other names are trademarks of their respective owners. See [TRADEMARKS](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/TRADEMARKS.md).

@@ -239,3 +239,6 @@ This service is the deployed Go seed. The reusable native core should graduate i
 agentsamd should reuse that core for customer/user machines. It should not become a copy of the Cloudflare deployment wrapper, and products should request capabilities from one shared machine runtime rather than each shipping another daemon.
 
 See docs/architecture/AGENTSAM_GO_RUNTIME.md and docs/architecture/AGENTSAM_DISTRIBUTION_OWNERSHIP.md.
+
+<!-- agentsam:trademark-notice -->
+> Independent project. Not affiliated with, endorsed by, or sponsored by Cloudflare, Inc. or by any other company whose products are named here. Cloudflare is a registered trademark of Cloudflare, Inc. Other names are trademarks of their respective owners. See [TRADEMARKS](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/TRADEMARKS.md).

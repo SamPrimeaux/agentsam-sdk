@@ -136,9 +136,13 @@
   ],
   "name_allow": [
     "packages/agentsam-cloudflare-images",
+    "packages/agentsam-cloudflare-images/*",
     "packages/connectors/cfoa",
+    "packages/connectors/cfoa/*",
     "skills/agentsam-cloudflare-workers",
-    "skills/grok-*"
+    "skills/agentsam-cloudflare-workers/*",
+    "skills/grok-*",
+    "skills/grok-*/*"
   ],
   "exclude": [
     "*package-lock.json",

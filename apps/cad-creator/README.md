@@ -726,3 +726,6 @@ External engines such as IfcOpenShell, build123d, FreeCAD, OpenSCAD and Blender 
 Use CAD Creator as the production/reference host that proves the abstraction. When an operation survives real app usage, tests, failure cases, discovery, auth/authority rules and deployment, keep that machinery reusable rather than copying it into another app.
 
 This is the same product-development pattern used elsewhere in AgentSam: the SDK owns normalized contracts and execution machinery; real applications prove them.
+
+<!-- agentsam:trademark-notice -->
+> Independent project. Not affiliated with, endorsed by, or sponsored by Cloudflare, Inc. or by any other company whose products are named here. Cloudflare is a registered trademark of Cloudflare, Inc. Other names are trademarks of their respective owners. See [TRADEMARKS](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/TRADEMARKS.md).

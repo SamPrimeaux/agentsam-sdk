@@ -54,3 +54,6 @@ Serves production paths (`/auth/login`, `/auth/signup`, `/auth/reset`) with stub
 | OAuth buttons | stub page + link to globe-exit demo |
 
 Hub: `http://127.0.0.1:8791/` lists all entry points.
+
+<!-- agentsam:trademark-notice -->
+> Independent project. Not affiliated with, endorsed by, or sponsored by Cloudflare, Inc. or by any other company whose products are named here. Cloudflare is a registered trademark of Cloudflare, Inc. Other names are trademarks of their respective owners. See [TRADEMARKS](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/TRADEMARKS.md).

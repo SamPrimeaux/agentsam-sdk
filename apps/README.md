@@ -62,3 +62,6 @@ npm pack --dry-run --json
 ```
 
 Frontend packages must publish compiled browser-safe assets only when they are intentionally public. Backend packages must keep secrets, `.dev.vars`, local databases, and host credentials out of `files`. Cloudflare Worker configuration remains backend-owned and is deployed separately from the npm tarball unless the app's package contract explicitly includes it.
+
+<!-- agentsam:trademark-notice -->
+> Independent project. Not affiliated with, endorsed by, or sponsored by Cloudflare, Inc. or by any other company whose products are named here. Cloudflare is a registered trademark of Cloudflare, Inc. Other names are trademarks of their respective owners. See [TRADEMARKS](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/TRADEMARKS.md).

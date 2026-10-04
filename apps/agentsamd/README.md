@@ -49,3 +49,6 @@ agentsam cloudflare permissions authorize --packs all
 ## Enroll (next)
 
 Studio/IAM mint via `agentsam terminal enroll`; daemon consume of enrollment tokens is the next cut after health/runtime MVP.
+
+<!-- agentsam:trademark-notice -->
+> Independent project. Not affiliated with, endorsed by, or sponsored by Cloudflare, Inc. or by any other company whose products are named here. Cloudflare is a registered trademark of Cloudflare, Inc. Other names are trademarks of their respective owners. See [TRADEMARKS](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/TRADEMARKS.md).

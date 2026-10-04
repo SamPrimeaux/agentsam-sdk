@@ -32,3 +32,6 @@ be confused with D1 `agentsam_skill` rows or `agentsam_tools`.
 
 Apps may contain host-specific skill directories of their own. Those do not
 replace the portable SDK skills in this directory.
+
+<!-- agentsam:trademark-notice -->
+> Independent project. Not affiliated with, endorsed by, or sponsored by Cloudflare, Inc. or by any other company whose products are named here. Cloudflare is a registered trademark of Cloudflare, Inc. Other names are trademarks of their respective owners. See [TRADEMARKS](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/TRADEMARKS.md).
