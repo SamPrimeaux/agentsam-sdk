@@ -18,7 +18,7 @@ externally meaningful provider identities.
 | `apps/local-studio/backend/worker/gclioa.js` | `apps/local-studio/backend/worker/gclioa.js` |
 | `apps/local-studio/backend/worker/goaude.js` | `apps/local-studio/backend/worker/goaude.js` |
 | `packages/identity/src/oauth/goaude.js` | `packages/identity/src/oauth/goaude.js` |
-| `packages/agentsam-content/src/providers/google-drive.ts` | `packages/agentsam-content/src/providers/gdrv.ts` |
+| `packages/agentsam-content/src/providers/gdrv.ts` | `packages/agentsam-content/src/providers/gdrv.ts` |
 
 Mnemonics:
 
