@@ -9,7 +9,7 @@
 import {
   scopesForCapabilities,
   scopesForFeaturePacks,
-} from '../../packages/connectors/cloudflare/src/capabilities.js';
+} from '../../packages/connectors/cfoa/src/capabilities.js';
 
 /**
  * @typedef {object} CloudflareMcpBundle

@@ -12,7 +12,7 @@ export const DEPLOY_INPUT_GLOBS = Object.freeze([
   'apps/local-studio',
   'packages/agentsam-contracts',
   'packages/agentsam-workbench',
-  'packages/connectors/cloudflare',
+  'packages/connectors/cfoa',
 ]);
 
 export function findRepoRoot(start = process.cwd()) {
@@ -176,7 +176,7 @@ export async function runLocalStudioDeploy({
       target.wranglerConfig,
       path.join(target.appRoot, '.env.cloudflare.example'),
       path.join(target.appRoot, 'backend/worker/index.js'),
-      path.join(target.repoRoot, 'packages/connectors/cloudflare/src/index.js'),
+      path.join(target.repoRoot, 'packages/connectors/cfoa/src/index.js'),
     ]);
   }
   if (plan.skip) {

@@ -14,7 +14,7 @@ externally meaningful provider identities.
 
 | Existing path | Internal path |
 | --- | --- |
-| `packages/connectors/cloudflare/` | `packages/connectors/cfoa/` |
+| `packages/connectors/cfoa/` | `packages/connectors/cfoa/` |
 | `apps/local-studio/backend/worker/google-cli-cloud.js` | `apps/local-studio/backend/worker/gclioa.js` |
 | `apps/local-studio/backend/worker/google-desktop-exchange.js` | `apps/local-studio/backend/worker/goaude.js` |
 | `packages/identity/src/oauth/google-desktop-exchange.js` | `packages/identity/src/oauth/goaude.js` |

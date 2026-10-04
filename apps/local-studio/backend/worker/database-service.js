@@ -6,7 +6,7 @@ import {
   readD1Metrics,
   readPostgresMetrics,
 } from '../../../../packages/agentsam-database-editor/backend/index.js';
-import { resolveCloudflareCredential as resolveCloudflareConnectorCredential } from '../../../../packages/connectors/cloudflare/src/credential.js';
+import { resolveCloudflareCredential as resolveCloudflareConnectorCredential } from '../../../../packages/connectors/cfoa/src/credential.js';
 
 const RANGE_SECONDS = Object.freeze({
   '1h': 60 * 60,

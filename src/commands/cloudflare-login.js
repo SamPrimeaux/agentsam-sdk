@@ -16,7 +16,7 @@ import {
   getCloudflareFeaturePack,
   scopesForFeaturePacks,
   scopesForCapabilities,
-} from '../../packages/connectors/cloudflare/src/index.js';
+} from '../../packages/connectors/cfoa/src/index.js';
 
 function clean(value) {
   return value == null ? '' : String(value).trim();

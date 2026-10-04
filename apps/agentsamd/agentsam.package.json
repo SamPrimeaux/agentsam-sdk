@@ -57,8 +57,8 @@
       "other",
       "all"
     ],
-    "scope_catalog": "packages/connectors/cloudflare/src/scope-catalog.js",
-    "permission_options": "packages/connectors/cloudflare/src/permission-options.js",
+    "scope_catalog": "packages/connectors/cfoa/src/scope-catalog.js",
+    "permission_options": "packages/connectors/cfoa/src/permission-options.js",
     "mcp_portals": {
       "manage_scopes": ["mcp-portals.read", "mcp-portals.write"],
       "bundles": "src/mcp/cloudflare-bundles.js",

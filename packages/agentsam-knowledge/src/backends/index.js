@@ -1,4 +1,4 @@
-import { vectorizeDelete, vectorizeGetByIds, vectorizeHealth, vectorizeQuery, vectorizeUpsert } from '../../../connectors/cloudflare/src/families/vectorize.js';
+import { vectorizeDelete, vectorizeGetByIds, vectorizeHealth, vectorizeQuery, vectorizeUpsert } from '../../../connectors/cfoa/src/families/vectorize.js';
 
 const clean = value => String(value || '').trim();
 function profileGuard(profile, supported) {

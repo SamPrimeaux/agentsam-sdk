@@ -1,7 +1,7 @@
 import nitroWorker from "../../.output/server/index.mjs";
 import installScript from "../../../../scripts/install.sh";
-import { handleCloudflareConnectionRequest, isCloudflareConnectionPath } from "../../../../packages/connectors/cloudflare/src/routes.js";
-import { resolveCloudflareOAuthClient } from "../../../../packages/connectors/cloudflare/src/index.js";
+import { handleCloudflareConnectionRequest, isCloudflareConnectionPath } from "../../../../packages/connectors/cfoa/src/routes.js";
+import { resolveCloudflareOAuthClient } from "../../../../packages/connectors/cfoa/src/index.js";
 import {
   handleIdentityWorkerRequest,
   createIdentityService,

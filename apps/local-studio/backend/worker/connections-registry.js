@@ -1,7 +1,7 @@
 import {
   cloudflareConnectionSafeStatus,
   loadCloudflareConnectionRecord,
-} from "../../../../packages/connectors/cloudflare/src/index.js";
+} from "../../../../packages/connectors/cfoa/src/index.js";
 import { loadPluginRegistry, materializeCloudflarePlugin } from "./plugin-registry.js";
 
 export const BYOK_PROVIDER_DEFINITIONS = Object.freeze([
