@@ -10,14 +10,15 @@ import {
   type CmsPublicationSnapshot,
   type CmsRevision,
 } from '../../../shared/cms/src/adapter';
-import type {
-  CmsEditorBlock,
-  CmsEditorPage,
-  CmsEditorSection,
-  CmsEditorSite,
-  CmsSiteCreateInput,
-  CmsSiteRecord,
-  CmsSiteUpdatePatch,
+import {
+  buildCmsEditorGroups,
+  type CmsEditorBlock,
+  type CmsEditorPage,
+  type CmsEditorSection,
+  type CmsEditorSite,
+  type CmsSiteCreateInput,
+  type CmsSiteRecord,
+  type CmsSiteUpdatePatch,
 } from '../../../shared/cms/src/editor-types';
 
 type Json = Record<string, any>;
@@ -26,12 +27,12 @@ function siteQuery(siteId: string) {
   return `site=${encodeURIComponent(siteId)}`;
 }
 
-async function api<T = Json>(path: string, init: RequestInit = {}): Promise<T> {
+async function api<T = Json>(path: string, init: RequestInit = {}, transport: typeof fetch = fetch): Promise<T> {
   const headers = new Headers(init.headers || {});
   if (init.body && !(init.body instanceof FormData) && !headers.has('content-type')) {
     headers.set('content-type', 'application/json');
   }
-  const response = await fetch(path, {
+  const response = await transport(path, {
     credentials: 'same-origin',
     cache: 'no-store',
     ...init,
@@ -181,14 +182,17 @@ function hydratePages(boot: Json): CmsEditorPage[] {
 export class HttpCmsAdapter implements CmsEditorAdapter {
   readonly temporary = false;
   private readonly base: string;
+  private readonly transport: typeof fetch;
   private readonly knownSites: Map<string, CmsSiteRecord>;
 
   constructor(
     options: {
       base?: string;
+      transport?: typeof fetch;
       sites?: Array<{ id?: string; slug?: string; name?: string; domain?: string }>;
     } = {},
   ) {
+    this.transport = options.transport || fetch;
     this.base = String(options.base || '').replace(/\/$/, '');
     this.knownSites = new Map();
     for (const site of options.sites || []) {
@@ -206,6 +210,8 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
     }
   }
 
+  private api<T = Json>(path: string, init: RequestInit = {}): Promise<T> { return api<T>(path, init, this.transport); }
+
   private url(path: string) {
     return `${this.base}${path}`;
   }
@@ -213,14 +219,14 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
   async listSites(): Promise<CmsSiteRecord[]> {
     if (this.knownSites.size) return [...this.knownSites.values()].map((s) => structuredClone(s));
     // Fallback: bootstrap the default studio site so hub/editor share one authority.
-    const boot = await api<Json>(this.url(`/api/cms/bootstrap?${siteQuery('agentsam-sdk')}`));
+    const boot = await this.api<Json>(this.url(`/api/cms/bootstrap?${siteQuery('agentsam-sdk')}`));
     const record = siteRecordFromBootstrap('agentsam-sdk', boot);
     this.knownSites.set(record.id, record);
     return [structuredClone(record)];
   }
 
   async getSite(siteId: string): Promise<CmsSiteRecord> {
-    const boot = await api<Json>(this.url(`/api/cms/bootstrap?${siteQuery(siteId)}`));
+    const boot = await this.api<Json>(this.url(`/api/cms/bootstrap?${siteQuery(siteId)}`));
     const record = siteRecordFromBootstrap(siteId, boot);
     this.knownSites.set(siteId, record);
     return structuredClone(record);
@@ -237,7 +243,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
   async updateSite(siteId: string, patch: CmsSiteUpdatePatch): Promise<CmsSiteRecord> {
     const current = await this.getSite(siteId);
     if (patch.theme?.cssVars) {
-      await api(this.url(`/api/cms/theme-vars?${siteQuery(siteId)}`), {
+      await this.api(this.url(`/api/cms/theme-vars?${siteQuery(siteId)}`), {
         method: 'PATCH',
         body: JSON.stringify({ project_slug: siteId, vars: patch.theme.cssVars }),
       });
@@ -252,7 +258,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
   }
 
   async loadSite(siteId: string): Promise<CmsEditorSite> {
-    const boot = await api<Json>(this.url(`/api/cms/bootstrap?${siteQuery(siteId)}`));
+    const boot = await this.api<Json>(this.url(`/api/cms/bootstrap?${siteQuery(siteId)}`));
     const meta = siteRecordFromBootstrap(siteId, boot);
     this.knownSites.set(siteId, meta);
     return {
@@ -270,7 +276,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
     // Worker page GET requires site slug — resolve via known sites / bootstrap scan.
     for (const siteId of this.knownSites.keys()) {
       try {
-        const body = await api<Json>(
+        const body = await this.api<Json>(
           this.url(`/api/cms/pages/${encodeURIComponent(pageId)}?${siteQuery(siteId)}`),
         );
         const sections = Array.isArray(body.sections)
@@ -301,7 +307,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
     input: Partial<CmsEditorPage> & { title: string; slug: string },
   ): Promise<CmsEditorPage> {
     const slug = input.slug.replace(/^\/+/, '');
-    const body = await api<Json>(this.url(`/api/cms/pages?${siteQuery(siteId)}`), {
+    const body = await this.api<Json>(this.url(`/api/cms/pages?${siteQuery(siteId)}`), {
       method: 'POST',
       body: JSON.stringify({
         project_id: siteId,
@@ -318,7 +324,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
 
   async updatePage(pageId: string, patch: Partial<CmsEditorPage>): Promise<CmsEditorPage> {
     const siteId = await this.findPageSiteId(pageId);
-    const body = await api<Json>(
+    const body = await this.api<Json>(
       this.url(`/api/cms/pages/${encodeURIComponent(pageId)}?${siteQuery(siteId)}`),
       {
         method: 'PUT',
@@ -336,8 +342,11 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
     return mapPage(body.page || body, patch.sections || []);
   }
 
-  async deletePage(_pageId: string): Promise<void> {
-    throw new CmsCapabilityError('deletePage', 'Hosted page delete not enabled yet', 'cms_capability_unsupported');
+  async deletePage(pageId: string): Promise<void> {
+    const siteId = await this.findPageSiteId(pageId);
+    await this.api(this.url(`/api/cms/pages/${encodeURIComponent(pageId)}?${siteQuery(siteId)}`), {
+      method: 'DELETE',
+    });
   }
 
   async listSections(pageId: string): Promise<CmsEditorSection[]> {
@@ -359,7 +368,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
     input: Partial<CmsEditorSection> & { name: string },
   ): Promise<CmsEditorSection> {
     const siteId = await this.findPageSiteId(pageId);
-    const body = await api<Json>(this.url(`/api/cms/sections?${siteQuery(siteId)}`), {
+    const body = await this.api<Json>(this.url(`/api/cms/sections?${siteQuery(siteId)}`), {
       method: 'POST',
       body: JSON.stringify({
         page_id: pageId,
@@ -377,7 +386,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
     patch: Partial<CmsEditorSection>,
   ): Promise<CmsEditorSection> {
     const siteId = await this.guessSiteId();
-    const body = await api<Json>(
+    const body = await this.api<Json>(
       this.url(`/api/cms/sections/${encodeURIComponent(sectionId)}?${siteQuery(siteId)}`),
       {
         method: 'PUT',
@@ -392,13 +401,16 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
     return mapSection(body.section || body, patch.blocks || []);
   }
 
-  async deleteSection(_sectionId: string): Promise<void> {
-    throw new CmsCapabilityError('deleteSection', 'Hosted section delete not enabled yet', 'cms_capability_unsupported');
+  async deleteSection(sectionId: string): Promise<void> {
+    const siteId = await this.guessSiteId();
+    await this.api(this.url(`/api/cms/sections/${encodeURIComponent(sectionId)}?${siteQuery(siteId)}`), {
+      method: 'DELETE',
+    });
   }
 
   async reorderSections(pageId: string, sectionIds: string[]): Promise<void> {
     const siteId = await this.findPageSiteId(pageId);
-    await api(this.url(`/api/cms/sections/reorder?${siteQuery(siteId)}`), {
+    await this.api(this.url(`/api/cms/sections/reorder?${siteQuery(siteId)}`), {
       method: 'POST',
       body: JSON.stringify({
         page_id: pageId,
@@ -409,7 +421,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
 
   async setSectionVisibility(sectionId: string, visible: boolean): Promise<void> {
     const siteId = await this.guessSiteId();
-    await api(
+    await this.api(
       this.url(`/api/cms/sections/${encodeURIComponent(sectionId)}/visibility?${siteQuery(siteId)}`),
       {
         method: 'POST',
@@ -439,7 +451,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
     input: Partial<CmsEditorBlock> & { type: string },
   ): Promise<CmsEditorBlock> {
     const siteId = await this.guessSiteId();
-    const body = await api<Json>(this.url(`/api/cms/blocks?${siteQuery(siteId)}`), {
+    const body = await this.api<Json>(this.url(`/api/cms/blocks?${siteQuery(siteId)}`), {
       method: 'POST',
       body: JSON.stringify({
         section_id: sectionId,
@@ -454,7 +466,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
 
   async updateBlock(blockId: string, patch: Partial<CmsEditorBlock>): Promise<CmsEditorBlock> {
     const siteId = await this.guessSiteId();
-    const body = await api<Json>(
+    const body = await this.api<Json>(
       this.url(`/api/cms/blocks/${encodeURIComponent(blockId)}?${siteQuery(siteId)}`),
       {
         method: 'PUT',
@@ -468,50 +480,202 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
     return mapBlock(body.block || body.component || { id: blockId, ...patch }, patch.sectionId || '');
   }
 
-  async deleteBlock(_blockId: string): Promise<void> {
-    throw new CmsCapabilityError('deleteBlock', 'Hosted block delete not enabled yet', 'cms_capability_unsupported');
+  async deleteBlock(blockId: string): Promise<void> {
+    const siteId = await this.guessSiteId();
+    await this.api(this.url(`/api/cms/blocks/${encodeURIComponent(blockId)}?${siteQuery(siteId)}`), {
+      method: 'DELETE',
+    });
+  }
+
+  async reorderBlocks(sectionId: string, blockIds: string[]): Promise<void> {
+    const siteId = await this.guessSiteId();
+    await this.api(this.url(`/api/cms/blocks/reorder?${siteQuery(siteId)}`), {
+      method: 'POST',
+      body: JSON.stringify({
+        section_id: sectionId,
+        order: blockIds.map((id, index) => ({ id, sort_order: (index + 1) * 10 })),
+      }),
+    });
   }
 
   async saveDraft(pageId: string, payload: unknown): Promise<CmsRevision> {
     const siteId = await this.findPageSiteId(pageId);
     const body = payload as { sections?: CmsEditorSection[] };
-    if (Array.isArray(body?.sections)) {
-      for (const section of body.sections) {
-        await api(this.url(`/api/cms/sections/${encodeURIComponent(section.id)}?${siteQuery(siteId)}`), {
-          method: 'PUT',
-          body: JSON.stringify({
-            section_name: section.name,
-            section_data: section.fields || {},
-            css: section.css || {},
-            is_visible: section.visible === false ? 0 : 1,
-          }),
+    const sections = Array.isArray(body?.sections) ? body.sections : [];
+
+    for (const section of sections) {
+      await this.api(this.url(`/api/cms/sections/${encodeURIComponent(section.id)}?${siteQuery(siteId)}`), {
+        method: 'PUT',
+        body: JSON.stringify({
+          section_name: section.name,
+          section_data: section.fields || {},
+          css: section.css || {},
+          is_visible: section.visible === false ? 0 : 1,
+        }),
+      });
+      await this.setSectionVisibility(section.id, section.visible !== false);
+
+      for (const block of section.blocks || []) {
+        await this.updateBlock(block.id, {
+          ...block,
+          sectionId: section.id,
         });
       }
+      await this.reorderBlocks(section.id, (section.blocks || []).map((block) => block.id));
     }
-    // Mark page draft
-    await api(this.url(`/api/cms/pages/${encodeURIComponent(pageId)}?${siteQuery(siteId)}`), {
+
+    // The page is only the route/container. Revision snapshots are composition-first:
+    // groups -> sections -> blocks.
+    await this.api(this.url(`/api/cms/pages/${encodeURIComponent(pageId)}?${siteQuery(siteId)}`), {
       method: 'PUT',
       body: JSON.stringify({ status: 'draft' }),
     });
+
+    const composition = {
+      version: 1,
+      groups: buildCmsEditorGroups(sections),
+      sections,
+    };
+    const revisionBody = await this.api<Json>(
+      this.url(`/api/cms/pages/${encodeURIComponent(pageId)}/revisions?${siteQuery(siteId)}`),
+      {
+        method: 'POST',
+        body: JSON.stringify({ kind: 'draft', snapshot: composition }),
+      },
+    );
+    const revision = revisionBody.revision || revisionBody;
     return {
-      id: `rev_${Date.now()}`,
-      pageId,
-      kind: 'draft',
-      createdAt: new Date().toISOString(),
-      snapshot: payload,
+      id: String(revision.id),
+      pageId: String(revision.pageId || revision.page_id || pageId),
+      kind: revision.kind === 'publication' ? 'publication' : 'draft',
+      createdAt: String(revision.createdAt || revision.created_at || new Date().toISOString()),
+      label: revision.label ? String(revision.label) : undefined,
+      snapshot: revision.snapshot,
     };
   }
 
-  async getRevision(_revisionId: string): Promise<CmsRevision> {
-    throw new CmsCapabilityError('getRevision', 'revision history API not wired yet', 'cms_capability_unsupported');
+  async getRevision(revisionId: string): Promise<CmsRevision> {
+    if (!this.knownSites.size) await this.listSites();
+    for (const siteId of this.knownSites.keys()) {
+      try {
+        const body = await this.api<Json>(
+          this.url(`/api/cms/revisions/${encodeURIComponent(revisionId)}?${siteQuery(siteId)}`),
+        );
+        const revision = body.revision || body;
+        return {
+          id: String(revision.id),
+          pageId: String(revision.pageId || revision.page_id),
+          kind: revision.kind === 'publication' ? 'publication' : 'draft',
+          createdAt: String(revision.createdAt || revision.created_at || new Date().toISOString()),
+          label: revision.label ? String(revision.label) : undefined,
+          snapshot: revision.snapshot,
+        };
+      } catch {
+        // Revision ids are scoped to a site; try the next known site.
+      }
+    }
+    throw new CmsCapabilityError('getRevision', `revision_not_found:${revisionId}`, 'cms_source_not_found');
   }
 
-  async listRevisions(_pageId: string): Promise<CmsRevision[]> {
-    return [];
+  async listRevisions(pageId: string): Promise<CmsRevision[]> {
+    const siteId = await this.findPageSiteId(pageId);
+    const body = await this.api<Json>(
+      this.url(`/api/cms/pages/${encodeURIComponent(pageId)}/revisions?${siteQuery(siteId)}`),
+    );
+    return (body.revisions || []).map((revision: Json) => ({
+      id: String(revision.id),
+      pageId: String(revision.pageId || revision.page_id || pageId),
+      kind: revision.kind === 'publication' ? 'publication' : 'draft',
+      createdAt: String(revision.createdAt || revision.created_at || ''),
+      label: revision.label ? String(revision.label) : undefined,
+    }));
   }
 
-  async restoreRevision(_pageId: string, _revisionId: string): Promise<CmsEditorPage> {
-    throw new CmsCapabilityError('restoreRevision', 'revision restore not wired yet', 'cms_capability_unsupported');
+  async restoreRevision(pageId: string, revisionId: string): Promise<CmsEditorPage> {
+    const revision = await this.getRevision(revisionId);
+    if (revision.pageId !== pageId) {
+      throw new CmsCapabilityError('restoreRevision', 'revision_page_mismatch', 'cms_permission_denied');
+    }
+
+    const snapshot = (revision.snapshot || {}) as {
+      sections?: CmsEditorSection[];
+      groups?: unknown[];
+      version?: number;
+    };
+    const desiredSections = Array.isArray(snapshot.sections) ? snapshot.sections : [];
+    const current = await this.getPage(pageId);
+    const currentSections = new Map(current.sections.map((section) => [section.id, section]));
+    const desiredIds = new Set(desiredSections.map((section) => section.id));
+    const restoredSectionIds: string[] = [];
+
+    // Restore composition only. Route/page metadata is deliberately left untouched.
+    for (const section of current.sections) {
+      if (!desiredIds.has(section.id)) await this.deleteSection(section.id);
+    }
+
+    for (const desired of desiredSections) {
+      const existing = currentSections.get(desired.id);
+      let sectionId = desired.id;
+
+      if (existing) {
+        await this.updateSection(existing.id, {
+          name: desired.name,
+          type: desired.type,
+          zone: desired.zone,
+          visible: desired.visible,
+          color: desired.color,
+          fields: desired.fields,
+          css: desired.css,
+        });
+        await this.setSectionVisibility(existing.id, desired.visible !== false);
+      } else {
+        const created = await this.createSection(pageId, {
+          name: desired.name,
+          type: desired.type,
+          zone: desired.zone,
+          visible: desired.visible,
+          color: desired.color,
+          fields: desired.fields,
+          css: desired.css,
+        });
+        sectionId = created.id;
+      }
+
+      const liveSection = existing || { ...desired, id: sectionId, blocks: [] };
+      const existingBlocks = new Map((liveSection.blocks || []).map((block) => [block.id, block]));
+      const desiredBlockIds = new Set((desired.blocks || []).map((block) => block.id));
+
+      for (const block of liveSection.blocks || []) {
+        if (!desiredBlockIds.has(block.id)) await this.deleteBlock(block.id);
+      }
+
+      const restoredBlockIds: string[] = [];
+      for (const desiredBlock of desired.blocks || []) {
+        const liveBlock = existingBlocks.get(desiredBlock.id);
+        let blockId = desiredBlock.id;
+        if (liveBlock) {
+          await this.updateBlock(liveBlock.id, {
+            ...desiredBlock,
+            sectionId,
+          });
+        } else {
+          const createdBlock = await this.createBlock(sectionId, {
+            type: desiredBlock.type,
+            visible: desiredBlock.visible,
+            data: desiredBlock.data,
+            sortOrder: desiredBlock.sortOrder,
+          });
+          blockId = createdBlock.id;
+        }
+        restoredBlockIds.push(blockId);
+      }
+
+      await this.reorderBlocks(sectionId, restoredBlockIds);
+      restoredSectionIds.push(sectionId);
+    }
+
+    await this.reorderSections(pageId, restoredSectionIds);
+    return this.getPage(pageId);
   }
 
   async previewDraft(pageId: string): Promise<{ previewUrl?: string; snapshot: unknown }> {
@@ -525,17 +689,25 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
 
   async publish(pageId: string): Promise<CmsPublicationSnapshot> {
     const siteId = await this.findPageSiteId(pageId);
-    const body = await api<Json>(
+    const body = await this.api<Json>(
       this.url(`/api/cms/pages/${encodeURIComponent(pageId)}/publish?${siteQuery(siteId)}`),
       { method: 'POST', body: JSON.stringify({}) },
     );
-    const page = mapPage(body.page || { id: pageId, slug: '/' }, []);
+    const page = await this.getPage(pageId);
     return {
       publicationId: `pub_${pageId}`,
       route: page.slug,
       revision: 1,
       theme: 'default',
-      sections: [],
+      sections: page.sections.map((section) => ({
+        type: section.type,
+        props: {
+          ...section.fields,
+          name: section.name,
+          group: section.fields?.group || section.fields?.group_id,
+          blocks: section.blocks,
+        },
+      })),
       publishedAt: new Date().toISOString(),
     };
   }
@@ -561,7 +733,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
   }
 
   async listAssets(siteId: string): Promise<CmsAsset[]> {
-    const body = await api<Json>(this.url(`/api/cms/assets?${siteQuery(siteId)}`));
+    const body = await this.api<Json>(this.url(`/api/cms/assets?${siteQuery(siteId)}`));
     return (body.assets || []).map((row: Json) => ({
       id: String(row.id),
       name: String(row.original_filename || row.filename || row.id),
@@ -582,22 +754,65 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
   }
 
   async uploadAsset(
-    _siteId: string,
-    _file: Blob,
-    _meta?: { name?: string; metadata?: Record<string, unknown> },
+    siteId: string,
+    file: Blob,
+    meta?: { name?: string; metadata?: Record<string, unknown> },
   ): Promise<CmsAsset> {
-    throw new CmsCapabilityError('uploadAsset', 'Hosted asset upload uses Media studio', 'cms_capability_unsupported');
+    const form = new FormData();
+    const filename = meta?.name || ('name' in file && typeof file.name === 'string' ? file.name : 'asset');
+    form.set('file', file, filename);
+    if (meta?.name) form.set('name', meta.name);
+    if (meta?.metadata) form.set('metadata', JSON.stringify(meta.metadata));
+
+    const body = await this.api<Json>(this.url(`/api/cms/assets?${siteQuery(siteId)}`), {
+      method: 'POST',
+      body: form,
+    });
+    const row = body.asset || body;
+    return {
+      id: String(row.id),
+      name: String(row.original_filename || row.filename || row.id),
+      mimeType: row.mime_type ? String(row.mime_type) : undefined,
+      size: row.content_size_bytes != null ? Number(row.content_size_bytes) : undefined,
+      url: row.public_url ? String(row.public_url) : undefined,
+      key: String(row.id),
+      metadata: parseFields(row.metadata),
+    };
   }
 
   async updateAsset(
-    _assetId: string,
-    _patch: Partial<Pick<CmsAsset, 'name' | 'metadata' | 'url' | 'key'>>,
+    assetId: string,
+    patch: Partial<Pick<CmsAsset, 'name' | 'metadata' | 'url' | 'key'>>,
   ): Promise<CmsAsset> {
-    throw new CmsCapabilityError('updateAsset', 'Hosted asset update not enabled', 'cms_capability_unsupported');
+    const siteId = await this.findAssetSiteId(assetId);
+    const body = await this.api<Json>(
+      this.url(`/api/cms/assets/${encodeURIComponent(assetId)}?${siteQuery(siteId)}`),
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: patch.name,
+          metadata: patch.metadata,
+        }),
+      },
+    );
+    const row = body.asset || body;
+    return {
+      id: String(row.id),
+      name: String(row.original_filename || row.filename || row.id),
+      mimeType: row.mime_type ? String(row.mime_type) : undefined,
+      size: row.content_size_bytes != null ? Number(row.content_size_bytes) : undefined,
+      url: row.public_url ? String(row.public_url) : undefined,
+      key: String(row.id),
+      metadata: parseFields(row.metadata),
+    };
   }
 
-  async deleteAsset(_assetId: string): Promise<void> {
-    throw new CmsCapabilityError('deleteAsset', 'Hosted asset delete not enabled', 'cms_capability_unsupported');
+  async deleteAsset(assetId: string): Promise<void> {
+    const siteId = await this.findAssetSiteId(assetId);
+    await this.api(
+      this.url(`/api/cms/assets/${encodeURIComponent(assetId)}?${siteQuery(siteId)}`),
+      { method: 'DELETE' },
+    );
   }
 
   private guessSiteId() {
@@ -619,6 +834,21 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
     }
     return this.guessSiteId();
   }
+
+  private async findAssetSiteId(assetId: string): Promise<string> {
+    if (!this.knownSites.size) {
+      await this.listSites();
+    }
+    for (const siteId of this.knownSites.keys()) {
+      try {
+        const assets = await this.listAssets(siteId);
+        if (assets.some((asset) => asset.id === assetId)) return siteId;
+      } catch {
+        // continue
+      }
+    }
+    throw new CmsCapabilityError('getAsset', `asset_not_found:${assetId}`, 'cms_source_not_found');
+  }
 }
 
 export function createHttpCmsAdapter(
@@ -626,3 +856,4 @@ export function createHttpCmsAdapter(
 ): HttpCmsAdapter {
   return new HttpCmsAdapter(options);
 }
+

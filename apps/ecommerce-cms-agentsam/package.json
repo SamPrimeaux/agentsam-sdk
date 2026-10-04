@@ -8,10 +8,14 @@
   },
   "scripts": {
     "doctor": "node bin/agentsam-ecommerce.mjs doctor",
-    "preview": "node bin/agentsam-ecommerce.mjs preview"
+    "preview": "node bin/agentsam-ecommerce.mjs preview",
+    "test:cms": "node --test frontend/cms/*.test.mjs",
+    "verify:cms-product": "node scripts/verify-cms-product.mjs"
   },
   "dependencies": {
     "@inneranimalmedia/agentsam-content": "2.6.11",
+    "@inneranimalmedia/client-cms-editor": "2.6.11",
+    "@inneranimalmedia/cms-runtime": "2.6.11",
     "@inneranimalmedia/revise-theme": "0.2.0",
     "@inneranimalmedia/section-library": "0.1.0",
     "@inneranimalmedia/site-contracts": "0.1.0"
@@ -34,5 +38,23 @@
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/SamPrimeaux/agentsam-sdk.git"
+  },
+  "exports": {
+    "./theme-editor/mount": "./frontend/theme-editor/mount.mjs",
+    "./theme-editor/bridge": "./frontend/theme-editor/bridge.mjs",
+    "./theme-editor/project": "./frontend/theme-editor/project.mjs",
+    "./theme-editor/cms-adapter": "./frontend/theme-editor/cms-adapter.mjs",
+    "./cms": {
+      "types": "./frontend/cms/index.d.ts",
+      "import": "./frontend/cms/index.mjs"
+    },
+    "./cms/capabilities": {
+      "types": "./frontend/cms/capabilities.d.ts",
+      "import": "./frontend/cms/capabilities.mjs"
+    }
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   }
 }

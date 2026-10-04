@@ -1,6 +1,6 @@
 /* Agent host side drawer */
 
-.agentsam-dock {
+.cms-shell .agentsam-dock {
   flex: none;
   width: 0;
   min-width: 0;
@@ -13,7 +13,7 @@
   z-index: 25;
 }
 
-.agentsam-dock.is-open {
+.cms-shell .agentsam-dock.is-open {
   width: min(400px, 36vw);
   border-left-width: 1px;
 }
@@ -202,7 +202,7 @@
 }
 
 @media (max-width: 900px) {
-  .agentsam-dock.is-open {
+  .cms-shell .agentsam-dock.is-open {
     width: min(100%, 420px);
     position: absolute;
     right: 0;
@@ -212,3 +212,4 @@
     box-shadow: -12px 0 40px rgba(0, 0, 0, 0.15);
   }
 }
+

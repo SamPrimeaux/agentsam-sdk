@@ -38,7 +38,6 @@ const requiredLinks = [
   ['@inneranimalmedia/agentsam-nav', '../../packages/agentsam-nav'],
   ['@inneranimalmedia/agentsam-settings', '../../packages/agentsam-settings'],
   ['@inneranimalmedia/agentsam-contracts', '../../packages/agentsam-contracts'],
-  ['@inneranimalmedia/agentsam-cms-frontend', '../client-cms-editor/frontend'],
 ];
 
 for (const [name, resolved] of requiredLinks) {
@@ -83,5 +82,5 @@ if (!String(lru.resolved || '').includes('lru-cache-11.5.2.tgz') || !lru.integri
 
 console.log(
   'ok Local Studio lock: ' + version +
-  ' · product workspaces aligned · source links present · lru-cache@11.5.2'
+  ' · product workspaces aligned · canonical source links present · lru-cache@11.5.2'
 );

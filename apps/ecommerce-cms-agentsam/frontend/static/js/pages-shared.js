@@ -1,6 +1,6 @@
 /** Shared CMS page editor config (pages list + page edit) */
 
-window.PAGE_ROUTES = {
+window.PAGE_ROUTES = window.AgentSamThemeEditorHost ? (window.AgentSamThemeEditorHost.pageRoutes || {}) : {
   home: "/",
   shop: "/shop",
   about: "/about",
@@ -11,15 +11,17 @@ window.PAGE_ROUTES = {
   site: "/",
 };
 
-window.PAGE_SLUG_ORDER = ["home", "shop", "about", "community", "collaborate", "policies", "terms", "site"];
+window.PAGE_SLUG_ORDER = window.AgentSamThemeEditorHost ? [] : ["home", "shop", "about", "community", "collaborate", "policies", "terms", "site"];
 
 window.SECTION_FIELDS = {};
 window.SECTION_SCHEMAS = {};
 window.cmsRegistry = null;
 
 window.loadCmsRegistry = async function loadCmsRegistry() {
-  if (window.cmsRegistry) return window.cmsRegistry;
-  const data = await adminFetch("/api/admin/cms/registry");
+  if (window.cmsRegistry && !window.AgentSamThemeEditorHost) return window.cmsRegistry;
+  const data = window.AgentSamThemeEditorHost
+    ? await window.AgentSamThemeEditorHost.adapter.getRegistry()
+    : await adminFetch("/api/admin/cms/registry");
   window.cmsRegistry = data;
   window.SECTION_FIELDS = {};
   window.SECTION_SCHEMAS = {};
@@ -92,3 +94,4 @@ window.visibilityBadge = function visibilityBadge(status) {
   }
   return { label: "Hidden", cls: "pages-badge pages-badge--hidden" };
 };
+

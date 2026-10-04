@@ -1,8 +1,13 @@
 import type { NavBrand } from '@inneranimalmedia/agentsam-nav';
 
-/** Application identity is replaceable without changing navigation components. */
+/**
+ * Local Studio uses the same canonical artwork as the native Tauri bundle.
+ * The PNG is packaged into frontend/public so hosted and desktop builds resolve
+ * identical bytes without a network dependency.
+ */
 export const brand: NavBrand = {
   name: 'AgentSam',
   home: '/agentsam',
-  logo: 'https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ac515729-af6b-4ea5-8b10-e581a4d02100/thumbnail',
+  logo: '/brand/agentsam-local-studio-icon.png',
+  lightLogo: '/brand/agentsam-local-studio-icon.png',
 };
