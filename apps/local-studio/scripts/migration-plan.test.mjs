@@ -10,7 +10,14 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { isMigrationFile, migrationName, pendingMigrations } from "./migration-plan.mjs";
+import {
+  isEngineEligible,
+  isMigrationFile,
+  migrationEngine,
+  migrationName,
+  pendingMigrations,
+  POSTGRES_ENGINE,
+} from "./migration-plan.mjs";
 import { projectRoot } from "./with-app-env.mjs";
 
 const AUTH_MIGRATION = "0001_auth.sql";
@@ -54,6 +61,40 @@ test("pending migrations are returned in name order", () => {
 test("non-.sql entries are dropped (readdir also yields the auth/ directory)", () => {
   assert.equal(isMigrationFile("auth"), false);
   assert.deepEqual(pendingMigrations(["auth", "README.md"], []), []);
+});
+
+test("engine tags gate a migration to its own lane", () => {
+  const d1Seed = "-- agentsam-engine: d1\ninsert into company (created_at) values (unixepoch());\n";
+  assert.equal(migrationEngine(d1Seed), "d1");
+  assert.equal(isEngineEligible(d1Seed, POSTGRES_ENGINE), false);
+  assert.equal(isEngineEligible(d1Seed, "d1"), true);
+
+  // Untagged migrations are engine-neutral and apply everywhere.
+  assert.equal(migrationEngine("create table todos (id text primary key);\n"), null);
+  assert.equal(isEngineEligible("select 1;\n", POSTGRES_ENGINE), true);
+
+  // The tag must be the first line — a marker mid-file is just prose.
+  assert.equal(migrationEngine("-- plain header\n-- agentsam-engine: d1\nselect 1;\n"), null);
+});
+
+test("D1-dialect seeds in the globbed directory carry the engine tag", () => {
+  // An untagged D1-dialect file (unixepoch/randomblob, or schema that only the
+  // deployed business D1 has) breaks the embedded-Postgres preview at startup —
+  // the exact regression that killed `npm run dev` on a fresh checkout.
+  const migrationsDir = join(projectRoot(), "backend", "migrations");
+  for (const entry of readdirSync(migrationsDir)) {
+    if (!isMigrationFile(entry)) continue;
+    const contents = readFileSync(join(migrationsDir, entry), "utf8");
+    const dialect = /\bunixepoch\s*\(|\brandomblob\s*\(/i.test(contents);
+    const engine = migrationEngine(contents);
+    if (dialect || engine !== null) {
+      assert.equal(
+        engine,
+        "d1",
+        `${entry} is engine-tagged or D1-dialect and must be tagged 'agentsam-engine: d1' so Postgres appliers skip it`,
+      );
+    }
+  }
 });
 
 test("the auth schema ships outside the globbed directory", () => {

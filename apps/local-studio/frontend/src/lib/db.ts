@@ -1,4 +1,4 @@
-import { pendingMigrations } from "../../../scripts/migration-plan.mjs";
+import { isEngineEligible, POSTGRES_ENGINE, pendingMigrations } from "../../../scripts/migration-plan.mjs";
 
 /** Which database backend is active. */
 export type DbSource = "neon" | "pglite";
@@ -147,6 +147,11 @@ async function createPgliteSql(): Promise<Sql> {
     );
     const done = doneRows.rows.map((r) => r.name);
     for (const { name, path } of pendingMigrations(Object.keys(migrations), done)) {
+      // Engine-tagged migrations (`-- agentsam-engine: d1`) belong to another
+      // database lane: business-D1 seeds use the SQLite dialect and assume the
+      // deployed D1 schema, so running them on this embedded Postgres preview
+      // would fail dev-server startup. Untagged files are this app's own schema.
+      if (!isEngineEligible(migrations[path], POSTGRES_ENGINE)) continue;
       // Apply + record atomically (parity with scripts/migrate.mjs) so a failed
       // statement can't leave a file half-applied but untracked.
       await pg.transaction(async (tx) => {
