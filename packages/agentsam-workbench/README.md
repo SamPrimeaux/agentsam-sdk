@@ -48,3 +48,20 @@ duplicating renderer code in product apps.
 The workbench owns presentation mechanics. The host still owns model/provider
 selection, tool execution, persistence, permissions, runtime events, queueing and
 cancel semantics.
+
+## Widgets
+
+`@inneranimalmedia/agentsam-workbench/widgets` is the shared widget surface:
+`WidgetFrame` (size/state chrome around any widget body), `useCountdown`, and
+`CountdownWidget`. Widget identity — kind, sizes, data source, deep link — comes
+from the framework-neutral contracts in `@inneranimalmedia/agentsam-contracts/widgets`.
+
+Countdown time authority is an absolute deadline, not accumulated interval
+ticks: remaining time is derived from `Date.now()` on every render tick, so a
+sleeping or backgrounded tab cannot corrupt the timer. Import
+`@inneranimalmedia/agentsam-workbench/widgets/widgets.css` once in the host;
+the widget tokens inherit the host theme.
+
+Widgets are app-native primitives, not installable prebuilds — the host decides
+where a widget appears and what its data means. Local Studio's `/widgets`
+utilities surface is the proof consumer.

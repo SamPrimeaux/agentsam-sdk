@@ -11,12 +11,20 @@
  *
  * No DATABASE_URL (local / preview builds) -> skip; the PGLite fallback applies
  * the same files at startup instead (see src/lib/db.ts).
+ *
+ * Files tagged `-- agentsam-engine: d1` (business-D1 seeds) are skipped by both
+ * Postgres appliers — see migration-plan.mjs for the tag contract.
  */
 import { readdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import pg from "pg";
-import { pendingMigrations } from "./migration-plan.mjs";
+import {
+  isEngineEligible,
+  migrationEngine,
+  POSTGRES_ENGINE,
+  pendingMigrations,
+} from "./migration-plan.mjs";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -55,6 +63,12 @@ async function main() {
     let count = 0;
     for (const { name } of pendingMigrations(entries, applied)) {
       const text = await readFile(join(migrationsDir, name), "utf8");
+      // Engine-tagged migrations (`-- agentsam-engine: d1`) belong to another
+      // database lane and must not run against this Postgres target.
+      if (!isEngineEligible(text, POSTGRES_ENGINE)) {
+        console.log(`[migrate] skipped ${name} (agentsam-engine: ${migrationEngine(text)} — not a Postgres migration).`);
+        continue;
+      }
       try {
         await client.query("BEGIN");
         // pg's simple-query protocol runs a whole multi-statement file at once.

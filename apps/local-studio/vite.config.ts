@@ -248,6 +248,10 @@ export default defineConfig(({ command, isPreview }) => ({
     host: "0.0.0.0",
     port: 8080,
     strictPort: true,
+    // The live preview is served through a proxied *.e2b.app host, which Vite's
+    // DNS-rebinding guard rejects by default. Allow that proxy family
+    // explicitly — not `true`, which would admit arbitrary Host headers.
+    allowedHosts: [".e2b.app"],
   },
   preview: {
     host: "127.0.0.1",

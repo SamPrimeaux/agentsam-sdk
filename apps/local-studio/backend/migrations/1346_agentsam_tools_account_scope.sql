@@ -1,3 +1,6 @@
+-- agentsam-engine: d1
+-- Targets the deployed business D1 schema (`agentsam_tools`) — Postgres appliers skip it.
+--
 -- Tool identity has two valid scopes:
 --
 -- 1. Global catalog tools:
