@@ -43,6 +43,7 @@ type TimelineProps = {
   onSeek?: (timeUs: number) => void;
   onAddTrack?: () => void;
   onTrackState?: (trackId: string, patch: { visible?: boolean; muted?: boolean; locked?: boolean }) => void;
+  onTrackReorder?: (trackId: string, index: number) => void;
 };
 
 const MIN_CLIP_US = 100_000;
@@ -59,6 +60,7 @@ export function CoProTimeline({
   onSeek,
   onAddTrack,
   onTrackState,
+  onTrackReorder,
 }: TimelineProps) {
   const scroller = useRef<HTMLDivElement>(null);
   const pinchStart = useRef<{ distance: number; pixelsPerSecond: number } | null>(null);
@@ -122,7 +124,7 @@ export function CoProTimeline({
       <div className="copro-timeline-layout">
         <div className="copro-track-labels">
           <div className="copro-track-label-spacer" />
-          {project.tracks.map((track) => (
+          {project.tracks.map((track, trackIndex) => (
             <div className="copro-track-label" key={track.id}>
               <div>
                 <strong>{track.name ?? humanTrackKind(track.kind)}</strong>
@@ -144,6 +146,16 @@ export function CoProTimeline({
                   aria-label={track.locked ? "Unlock track" : "Lock track"}
                   onClick={() => onTrackState?.(track.id, { locked: !track.locked })}
                 >⌑</button>
+                <button
+                  disabled={trackIndex === 0}
+                  aria-label="Move track up"
+                  onClick={() => onTrackReorder?.(track.id, trackIndex - 1)}
+                >↑</button>
+                <button
+                  disabled={trackIndex === project.tracks.length - 1}
+                  aria-label="Move track down"
+                  onClick={() => onTrackReorder?.(track.id, trackIndex + 1)}
+                >↓</button>
               </div>
             </div>
           ))}

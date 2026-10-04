@@ -78,6 +78,7 @@ test("speed, volume and track state are canonical commands", () => {
   });
 
   assert.equal(project.tracks[0].clips[0].playbackRate, 1.5);
+  assert.equal(project.tracks[0].clips[0].durationUs, 6_666_667);
   assert.equal(project.tracks[0].clips[0].volume, 0.65);
   assert.equal(project.tracks[0].muted, true);
   assert.equal(project.tracks[0].locked, true);

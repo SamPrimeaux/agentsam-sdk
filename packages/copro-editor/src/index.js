@@ -110,7 +110,10 @@ export function applyCoProCommand(inputProject, command) {
       if (!found) throw new Error("copro_clip_not_found");
       const rate = Number(payload.playbackRate);
       if (!(rate > 0)) throw new Error("copro_clip_playback_rate_invalid");
+      const previousRate = Number(found.clip.playbackRate) > 0 ? Number(found.clip.playbackRate) : 1;
+      const sourceSpanUs = found.clip.durationUs * previousRate;
       found.clip.playbackRate = rate;
+      found.clip.durationUs = Math.max(1, Math.round(sourceSpanUs / rate));
       break;
     }
 

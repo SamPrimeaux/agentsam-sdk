@@ -75,6 +75,33 @@ function makeDemoProject(id = "project:demo", title = "Weekend cut") {
   return project;
 }
 
+async function probeMediaDurationUs(file: File): Promise<number> {
+  if (!file.type.startsWith("video/") && !file.type.startsWith("audio/")) {
+    return 3_000_000;
+  }
+
+  const url = URL.createObjectURL(file);
+  try {
+    const media = document.createElement(file.type.startsWith("audio/") ? "audio" : "video");
+    media.preload = "metadata";
+    media.src = url;
+
+    const duration = await new Promise<number>((resolve) => {
+      const done = () => {
+        const seconds = Number.isFinite(media.duration) && media.duration > 0 ? media.duration : 8;
+        resolve(seconds);
+      };
+      media.addEventListener("loadedmetadata", done, { once:true });
+      media.addEventListener("error", () => resolve(8), { once:true });
+      window.setTimeout(() => resolve(8), 2500);
+    });
+
+    return Math.max(100_000, Math.round(duration * 1_000_000));
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 function makeImportedProject(file: File) {
   const project = createCoProProject({
     id:"project:import:" + file.name + ":" + Date.now(),
@@ -170,7 +197,7 @@ function App() {
     setScreen("editor");
   }
 
-  function commit(action: CoProStudioAction) {
+  async function commit(action: CoProStudioAction) {
     const session = sessionRef.current;
 
     if (action.type === "back") { setScreen("projects"); return; }
@@ -182,6 +209,91 @@ function App() {
     if (action.type === "volume") { setProject(session.execute({ type:"clip.set_volume", payload:{ clipId:action.clipId, volume:action.volume } })); return; }
     if (action.type === "text") { setProject(session.execute({ type:"clip.set_text", payload:{ clipId:action.clipId, text:action.text } })); return; }
     if (action.type === "track-state") { setProject(session.execute({ type:"track.set_state", payload:{ trackId:action.trackId, ...action.patch } })); return; }
+    if (action.type === "track-reorder") { setProject(session.execute({ type:"track.reorder", payload:{ trackId:action.trackId, index:action.index } })); return; }
+
+    if (action.type === "import-media") {
+      const file = action.file;
+      const durationUs = await probeMediaDurationUs(file);
+      const mime = file.type;
+      const kind = mime.startsWith("audio/") ? "audio" : mime.startsWith("image/") ? "overlay" : "video";
+
+      let track = project.tracks.find((item:any) => item.kind === kind && !item.locked);
+      if (!track) {
+        const trackId = "track:" + kind + ":" + Date.now();
+        const created = createTrack({
+          id:trackId,
+          kind,
+          name:kind === "overlay" ? "Overlay" : kind.charAt(0).toUpperCase() + kind.slice(1),
+        });
+        const afterTrack = session.execute({ type:"track.insert", payload:{ track:created } });
+        setProject(afterTrack);
+        track = afterTrack.tracks.find((item:any) => item.id === trackId);
+      }
+
+      if (!track) return;
+
+      const clipId = "clip:media:" + Date.now();
+      const clip = createClip({
+        id:clipId,
+        assetId:"asset:" + file.name + ":" + file.lastModified,
+        startUs:action.atUs,
+        durationUs,
+        metadata:{
+          fileName:file.name,
+          mimeType:file.type,
+          localSessionOnly:true,
+        },
+      });
+
+      const next = session.execute({
+        type:"clip.insert",
+        payload:{ trackId:track.id, clip },
+      });
+      setProject(next);
+      setSelectedClipId(clipId);
+
+      if (previewSrc) URL.revokeObjectURL(previewSrc);
+      const url = URL.createObjectURL(file);
+      if (file.type.startsWith("video/")) {
+        setPreviewSrc(url);
+        setPreviewKind("video");
+      } else if (file.type.startsWith("image/")) {
+        setPreviewSrc(url);
+        setPreviewKind("image");
+      } else {
+        URL.revokeObjectURL(url);
+      }
+      return;
+    }
+
+    if (action.type === "create-text") {
+      let track = project.tracks.find((item:any) => item.kind === action.kind && !item.locked);
+      if (!track) {
+        const trackId = "track:" + action.kind + ":" + Date.now();
+        const created = createTrack({
+          id:trackId,
+          kind:action.kind,
+          name:action.kind === "captions" ? "Captions" : "Text",
+        });
+        const afterTrack = session.execute({ type:"track.insert", payload:{ track:created } });
+        setProject(afterTrack);
+        track = afterTrack.tracks.find((item:any) => item.id === trackId);
+      }
+
+      if (!track) return;
+      const clipId = action.kind + ":" + Date.now();
+      const clip = createClip({
+        id:clipId,
+        assetId:(action.kind === "captions" ? "caption:" : "text:") + clipId,
+        startUs:action.atUs,
+        durationUs:2_500_000,
+        metadata:{ text:action.text },
+      });
+      const next = session.execute({ type:"clip.insert", payload:{ trackId:track.id, clip } });
+      setProject(next);
+      setSelectedClipId(clipId);
+      return;
+    }
 
     if (action.type === "add-track") {
       const kinds = ["video","audio","captions","overlay"] as const;

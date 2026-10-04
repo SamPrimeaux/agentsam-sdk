@@ -8,9 +8,11 @@ export function CoProToolSheet({
   initialSpeed = 1,
   initialVolume = 1,
   initialText = "",
+  hasSelection = false,
   onSpeedChange,
   onVolumeChange,
-  onTextChange,
+  onTextCommit,
+  onMediaPicked,
 }: {
   tool: string | null;
   open: boolean;
@@ -18,9 +20,11 @@ export function CoProToolSheet({
   initialSpeed?: number;
   initialVolume?: number;
   initialText?: string;
+  hasSelection?: boolean;
   onSpeedChange?: (rate: number) => void;
   onVolumeChange?: (volume: number) => void;
-  onTextChange?: (text: string) => void;
+  onTextCommit?: (text: string, kind: "overlay" | "captions") => void;
+  onMediaPicked?: (file: File) => void;
 }) {
   const [speed, setSpeed] = useState(initialSpeed);
   const [volume, setVolume] = useState(Math.round(initialVolume * 100));
@@ -87,14 +91,23 @@ export function CoProToolSheet({
           <label className="copro-text-field">
             <span>{tool === "captions" ? "Caption" : "Text"}</span>
             <textarea
+              autoFocus
               value={text}
-              onChange={(e) => {
-                setText(e.target.value);
-                onTextChange?.(e.target.value);
-              }}
+              onChange={(e) => setText(e.target.value)}
               placeholder={tool === "captions" ? "Type caption…" : "Add text…"}
             />
           </label>
+          <button
+            className="copro-inline-primary"
+            disabled={!text.trim()}
+            onClick={() => {
+              if (!text.trim()) return;
+              onTextCommit?.(text.trim(), tool === "captions" ? "captions" : "overlay");
+              onClose();
+            }}
+          >
+            {hasSelection ? "Update" : tool === "captions" ? "Add caption" : "Add text"}
+          </button>
           <div className="copro-toggle-list">
             <button disabled title="Style editor is not enabled yet">Style</button>
             <button disabled title="Canvas positioning lands with overlay transforms">Position</button>
@@ -111,7 +124,18 @@ export function CoProToolSheet({
         </div>
       ) : tool === "media" ? (
         <div className="copro-media-import">
-          <input id="copro-file-input" type="file" accept="video/*,audio/*,image/*" multiple />
+          <input
+            id="copro-file-input"
+            type="file"
+            accept="video/*,audio/*,image/*"
+            multiple={false}
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              if (!file) return;
+              onMediaPicked?.(file);
+              onClose();
+            }}
+          />
           <label htmlFor="copro-file-input" className="copro-file-picker">
             <b>＋</b><strong>Choose media</strong><span>Video, image, or audio from this device</span>
           </label>

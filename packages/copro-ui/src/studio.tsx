@@ -15,8 +15,11 @@ export type CoProStudioAction =
   | { type: "speed"; clipId: string; playbackRate: number }
   | { type: "volume"; clipId: string; volume: number }
   | { type: "text"; clipId: string; text: string }
+  | { type: "create-text"; kind: "overlay" | "captions"; text: string; atUs: number }
+  | { type: "import-media"; file: File; atUs: number }
   | { type: "add-track" }
-  | { type: "track-state"; trackId: string; patch: { visible?: boolean; muted?: boolean; locked?: boolean } };
+  | { type: "track-state"; trackId: string; patch: { visible?: boolean; muted?: boolean; locked?: boolean } }
+  | { type: "track-reorder"; trackId: string; index: number };
 
 export type CoProStudioProps = {
   project: CoProProjectView;
@@ -68,13 +71,30 @@ export function CoProStudio({
   const [exportOpen, setExportOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const selectedClip = useMemo(() => {
+  const selectedEntry = useMemo(() => {
     for (const track of project.tracks) {
       const found = track.clips.find((clip) => clip.id === selectedClipId);
-      if (found) return found;
+      if (found) return { clip: found, track };
     }
     return null;
   }, [project, selectedClipId]);
+
+  const selectedClip = selectedEntry?.clip ?? null;
+  const selectedTrack = selectedEntry?.track ?? null;
+
+  const activeCanvasText = useMemo(() => {
+    const overlays: Array<{ id: string; kind: string; text: string }> = [];
+    for (const track of project.tracks) {
+      if (track.visible === false || (track.kind !== "overlay" && track.kind !== "captions")) continue;
+      for (const clip of track.clips) {
+        if (playheadUs < clip.startUs || playheadUs >= clip.startUs + clip.durationUs) continue;
+        const text = typeof clip.metadata?.text === "string" ? clip.metadata.text : "";
+        if (!text) continue;
+        overlays.push({ id: clip.id, kind: track.kind, text });
+      }
+    }
+    return overlays;
+  }, [project, playheadUs]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -83,7 +103,43 @@ export function CoProStudio({
     if (Math.abs(video.currentTime - seekSeconds) > .25 && Number.isFinite(video.duration)) {
       video.currentTime = Math.min(seekSeconds, video.duration || seekSeconds);
     }
-  }, [playheadUs]);
+    video.playbackRate = Math.max(.25, Math.min(4, selectedClip?.playbackRate ?? 1));
+    video.volume = Math.max(0, Math.min(1, selectedClip?.volume ?? 1));
+  }, [playheadUs, selectedClip?.playbackRate, selectedClip?.volume]);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable=true]")) return;
+
+      const meta = event.metaKey || event.ctrlKey;
+      if (meta && event.key.toLowerCase() === "z") {
+        event.preventDefault();
+        onAction?.({ type: event.shiftKey ? "redo" : "undo" });
+        return;
+      }
+
+      if ((event.key === "Delete" || event.key === "Backspace") && selectedClip) {
+        event.preventDefault();
+        onAction?.({ type: "delete", clipId: selectedClip.id });
+        return;
+      }
+
+      if (event.key.toLowerCase() === "s" && selectedClip) {
+        event.preventDefault();
+        onAction?.({ type: "split", clipId: selectedClip.id, atUs: playheadUs });
+        return;
+      }
+
+      if (event.key === " " && !event.repeat) {
+        event.preventDefault();
+        void togglePlayback();
+      }
+    };
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
   async function togglePlayback() {
     const video = videoRef.current;
@@ -165,6 +221,18 @@ export function CoProStudio({
                   <p>Drop media or tap Media</p>
                 </div>
               )}
+
+              <div className="copro-canvas-overlays" aria-live="polite">
+                {activeCanvasText.map((item) => (
+                  <button
+                    key={item.id}
+                    className={"copro-canvas-text copro-canvas-text-" + item.kind + (selectedClipId === item.id ? " is-selected" : "")}
+                    onClick={() => onSelectClip?.(item.id)}
+                  >
+                    {item.text}
+                  </button>
+                ))}
+              </div>
             </div>
           </section>
 
@@ -187,6 +255,7 @@ export function CoProStudio({
             onTrimClip={(clipId, patch) => onAction?.({ type: "trim", clipId, patch })}
             onAddTrack={() => onAction?.({ type: "add-track" })}
             onTrackState={(trackId, patch) => onAction?.({ type: "track-state", trackId, patch })}
+            onTrackReorder={(trackId, index) => onAction?.({ type: "track-reorder", trackId, index })}
           />
 
           <section className="copro-context-tools" aria-label="Editing tools">
@@ -206,9 +275,25 @@ export function CoProStudio({
         initialSpeed={selectedClip?.playbackRate ?? 1}
         initialVolume={selectedClip?.volume ?? 1}
         initialText={typeof selectedClip?.metadata?.text === "string" ? selectedClip.metadata.text : ""}
+        hasSelection={Boolean(
+          selectedClip &&
+          ((activeTool === "text" && selectedTrack?.kind === "overlay") ||
+            (activeTool === "captions" && selectedTrack?.kind === "captions"))
+        )}
         onSpeedChange={(playbackRate) => selectedClip && onAction?.({ type: "speed", clipId: selectedClip.id, playbackRate })}
         onVolumeChange={(volume) => selectedClip && onAction?.({ type: "volume", clipId: selectedClip.id, volume })}
-        onTextChange={(text) => selectedClip && onAction?.({ type: "text", clipId: selectedClip.id, text })}
+        onTextCommit={(text, kind) => {
+          const selectedMatchesKind =
+            selectedClip &&
+            ((kind === "overlay" && selectedTrack?.kind === "overlay") ||
+              (kind === "captions" && selectedTrack?.kind === "captions"));
+          if (selectedMatchesKind) {
+            onAction?.({ type: "text", clipId: selectedClip.id, text });
+          } else {
+            onAction?.({ type: "create-text", kind, text, atUs: playheadUs });
+          }
+        }}
+        onMediaPicked={(file) => onAction?.({ type: "import-media", file, atUs: playheadUs })}
       />
       <CoProExportSheet open={exportOpen} onClose={() => setExportOpen(false)} />
     </section>
