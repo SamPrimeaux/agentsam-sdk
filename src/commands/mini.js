@@ -7,7 +7,7 @@ export function printMiniHelp() {
   console.log(`
   agentsam mini — small local gadgets and prototypes
 
-  agentsam mini <name>                      Create and preview a timer gadget
+  agentsam mini <name>                      Create and preview a small interactive prototype
   agentsam mini <name> --template page       Create and preview a simple page
   agentsam mini <name> --template data       Create and preview a JSON viewer
   agentsam mini <name> --write-only          Create files without starting anything

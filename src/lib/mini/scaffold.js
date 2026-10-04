@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const templateRoot = fileURLToPath(new URL('../../../templates/mini/', import.meta.url));
 export const MINI_TEMPLATES = Object.freeze({
-  gadget: 'A working focus timer',
+  gadget: 'A blank interactive widget canvas',
   page: 'A small editable landing page',
   data: 'A searchable JSON viewer',
 });
