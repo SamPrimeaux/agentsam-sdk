@@ -133,7 +133,7 @@ try {
   const packaged = discoverThemeSurfaces(repo).themes.find((t) => t.capabilities.editable && t.pages.some((p) => p.slug === 'home'));
   assert.ok(packaged, 'A real packaged home page is required');
   await page.locator(`[data-theme-id="${packaged.id}"]`).getByRole('button', { name: 'Edit', exact: true }).click();
-  await editor.locator('.te-tree-row').first().waitFor();
+  await editor.locator('.te-tree-row').first().waitFor({ timeout: 5000 }).catch(async (error) => { console.error('packaged-theme-load', page.url(), await page.locator('[role=alert]').allTextContents(), await page.locator('body').innerText()); throw error; });
   assert.ok(await editor.locator('.te-field').count(), 'Real packaged content is editable');
   await editor.getByRole('button', { name: 'Layout', exact: true }).click();
   assert.ok(await editor.getByText('Padding', { exact: true }).count());
