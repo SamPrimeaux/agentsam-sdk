@@ -283,8 +283,7 @@
     "packages/theme-resolve",
     "packages/agentsam-abs",
     "packages/agentsam-browser-surface",
-    "packages/agentsam-sections",
-    "apps/agentsam-browser-site"
+    "packages/agentsam-sections"
   ],
   "scripts": {
     "test": "npm run test:standard && npm --prefix packages/identity test && npm --prefix packages/agentsam-brand test && npm run test:connectors && npm run test:providers",
@@ -352,9 +351,9 @@
     "verify:theme-packages": "node scripts/verify-theme-packages.mjs",
     "build:browser-packages": "npm run build -w @inneranimalmedia/agentsam-loading-scene && npm run build -w @inneranimalmedia/agentsam-abs && npm run build -w @inneranimalmedia/agentsam-browser-surface && npm run build -w @inneranimalmedia/agentsam-sections",
     "typecheck:browser-packages": "npm run build -w @inneranimalmedia/agentsam-loading-scene && npm run typecheck -w @inneranimalmedia/agentsam-abs && npm run typecheck -w @inneranimalmedia/agentsam-browser-surface && npm run typecheck -w @inneranimalmedia/agentsam-sections",
-    "dev:browser-site": "npm run dev -w @inneranimalmedia/agentsam-browser-site",
-    "build:browser-site": "npm run build -w @inneranimalmedia/agentsam-browser-site",
-    "typecheck:browser-site": "npm run typecheck -w @inneranimalmedia/agentsam-browser-site",
+    "dev:browser-site": "npm --prefix apps/agentsam-browser-site run dev",
+    "build:browser-site": "npm --prefix apps/agentsam-browser-site run build",
+    "typecheck:browser-site": "npm --prefix apps/agentsam-browser-site run typecheck",
     "verify:browser-promo": "npm run typecheck:browser-packages && npm run build:browser-packages && npm run typecheck:browser-site && npm run build:browser-site"
   },
   "engines": {

@@ -23,7 +23,7 @@ describe('chatgpt identity provider', () => {
   it('reads hosted headers without leaking raw oai keys into normalized identity', () => {
     const user = readChatGptUserFromHeaders({
       [CHATGPT_USER_EMAIL_HEADER]: 'Sam@Example.com',
-      [CHATGPT_USER_FULL_NAME_HEADER]: 'Sam%20Primeaux',
+      [CHATGPT_USER_FULL_NAME_HEADER]: 'Demo%20Owner',
       [CHATGPT_USER_FULL_NAME_ENCODING_HEADER]: CHATGPT_PERCENT_ENCODED_UTF8,
     });
     assert.equal(user?.email, 'sam@example.com');

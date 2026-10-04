@@ -88,21 +88,16 @@ test('CMS D1 queries all enforce project-scoped tenancy without cross-tenant lea
   }
 });
 
-test('Local Studio declares portable registry versions for client-cms-editor dependencies', () => {
-  const pkgPath = at('apps', 'local-studio', 'frontend', 'package.json');
-  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-  const expected = new Map([
-    ['@inneranimalmedia/agentsam-cms-frontend', JSON.parse(fs.readFileSync(at('apps', 'client-cms-editor', 'frontend', 'package.json'), 'utf8')).version],
-    ['@inneranimalmedia/agentsam-cms-backend', JSON.parse(fs.readFileSync(at('apps', 'client-cms-editor', 'backend', 'package.json'), 'utf8')).version],
-    ['@inneranimalmedia/agentsam-cms-shared', JSON.parse(fs.readFileSync(at('apps', 'client-cms-editor', 'shared', 'cms', 'package.json'), 'utf8')).version],
-  ]);
+test('Local Studio consumes the portable ecommerce CMS product boundary', () => {
+  const route = read('apps', 'local-studio', 'frontend', 'src', 'routes', '(apps)', 'cms.tsx');
+  const ecommercePkg = JSON.parse(read('apps', 'ecommerce-cms-agentsam', 'package.json'));
+  const rootPkg = JSON.parse(read('package.json'));
 
-  for (const [name, expectedVersion] of expected) {
-    const declared = pkg.dependencies[name];
-    assert.ok(declared, 'missing ' + name);
-    assert.equal(declared, expectedVersion, name + ' must match its independently versioned workspace package');
-    assert.doesNotMatch(declared, /^(?:file:|link:|workspace:)/, name + ' must install from the registry');
-  }
+  assert.equal(ecommercePkg.name, '@inneranimalmedia/ecommerce-cms-agentsam');
+  assert.equal(ecommercePkg.version, rootPkg.version);
+  assert.ok(ecommercePkg.exports?.['./cms'], 'ecommerce CMS product must export ./cms');
+  assert.match(route, /from ['"]@inneranimalmedia\/ecommerce-cms-agentsam\/cms['"]/);
+  assert.doesNotMatch(route, /from ['"]@inneranimalmedia\/agentsam-cms-(?:frontend|backend|shared)/);
 });
 
 test('Local Studio mounts CMS route with default site agentsam-sdk', () => {

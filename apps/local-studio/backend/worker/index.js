@@ -24,7 +24,7 @@ import {
 import {
   collectCredentialScopedInventory,
   sanitizeInventoryForClient,
-} from "../../../../src/models/inventory-core.js";
+} from "@inneranimalmedia/agentsam-sdk/models/inventory";
 import { handleCmsWorkerRequest } from "./cms-service.js";
 import { serveCanonicalHomepage } from "./canonical-homepage.js";
 import { isPublicSitePath, servePublicSitePage } from "./public-site.js";
