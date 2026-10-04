@@ -108,10 +108,18 @@ try {
   await page.getByRole('button', { name: 'Create draft', exact: true }).click();
   const editor = page.frameLocator('iframe[title="Theme Editor"]');
   await editor.locator('.te-tree-row').first().waitFor();
+  const chrome = await editor.locator('.te-inspector-head').evaluate((el) => ({ background: getComputedStyle(el).backgroundColor, color: getComputedStyle(el).color }));
+  assert.notEqual(chrome.background, 'rgb(255, 255, 255)');
+  assert.notEqual(chrome.color, 'rgb(34, 34, 34)');
+  const titleField = editor.locator('.te-field input').first();
+  await titleField.fill('Revised theme hero');
+  await editor.getByRole('button', { name: 'Save draft', exact: true }).click();
+  await editor.locator('#te-note').filter({ hasText: 'Draft saved.' }).waitFor();
   await capture('cms-theme-editor');
   assert.ok(await editor.locator('#theme-preview').count());
   assert.equal(await editor.getByRole('button', { name: 'Publish', exact: true }).isDisabled(), true);
   await page.reload();
   await editor.locator('.te-tree-row').first().waitFor();
+  assert.equal(await editor.locator('.te-field input').first().inputValue(), 'Revised theme hero');
   console.log('[theme-surfaces] PASS mini long draft/review, package discovery, persistence, conflict, real preview, editor reload; themes=' + discovered.length);
 } finally { await browser.close(); await new Promise((r) => server.close(r)); }
