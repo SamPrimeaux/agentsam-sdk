@@ -138,7 +138,7 @@ try {
   await editor.locator('.te-tree-row').first().waitFor({ timeout: 5000 }).catch(async (error) => { console.error('packaged-theme-load', await page.evaluate(() => ({events: window.__themeNavigateEvents, desktop: window.__AGENTSAM_DESKTOP__, hash: location.hash})), page.url(), await page.locator('[role=alert]').allTextContents(), await page.locator('body').innerText()); throw error; });
   assert.ok(await editor.locator('.te-field').count(), 'Real packaged content is editable');
   await editor.getByRole('button', { name: 'Layout', exact: true }).click();
-  assert.ok(await editor.getByText('Padding', { exact: true }).count());
+  await editor.locator('[data-field-key="layout_padding"]').waitFor();
   await capture('packaged-theme-editor');
   console.log('[theme-surfaces] PASS mini long draft/review, package discovery, persistence, conflict, real preview, editor reload; themes=' + discovered.length);
 } finally { await browser.close(); await new Promise((r) => server.close(r)); }
