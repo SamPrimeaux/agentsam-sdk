@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-sections",
-  "version": "0.1.0",
+  "version": "2.6.11",
   "description": "Reusable mxs-* page kit: global header/footer, scroll-driven split sections, and a media slot for image, gif, video, glb and sandboxed app previews.",
   "license": "Apache-2.0",
   "type": "module",

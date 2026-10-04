@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-abs",
-  "version": "1.0.0",
+  "version": "2.6.11",
   "description": "AgentSam Auto Browser Shell: dual-mode Explore/Build browser surface with provider-agnostic generative navigation, sandboxed previews, deterministic history, and packaged runtime scenes.",
   "license": "Apache-2.0",
   "type": "module",
@@ -46,7 +46,7 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-loading-scene": "2.6.10"
+    "@inneranimalmedia/agentsam-loading-scene": "2.6.11"
   },
   "peerDependencies": {
     "react": ">=18",
