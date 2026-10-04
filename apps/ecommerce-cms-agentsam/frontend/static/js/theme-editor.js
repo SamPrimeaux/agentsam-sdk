@@ -1012,7 +1012,7 @@
         editorRequest('/api/admin/cms/pages').catch(function() { return { pages: [] }; })
       ]);
       pageData = results[0].page;
-      pages = (results[1].pages || []).filter(function(page) { return page.slug !== 'site'; });
+      pages = (results[1].pages || []).filter(function(page) { return host || page.slug !== 'site'; });
 
       if (!pages.some(function(page) { return page.slug === slug; })) pages.unshift({ slug: slug, title: pageData.title || humanize(slug) });
       if (!activeSectionKey || !pageData.sections.some(function(section) { return section.key === activeSectionKey; })) {
