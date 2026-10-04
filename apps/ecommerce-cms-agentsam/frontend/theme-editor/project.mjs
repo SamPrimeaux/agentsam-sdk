@@ -67,10 +67,10 @@ export function extractThemePage(html, { slug = 'home', title = 'Home', baseUrl 
     node.replaceWith(doc.createComment('theme-section:' + key));
     return section;
   });
-  return { slug, title, status: 'draft', template: '<!DOCTYPE html>' + doc.documentElement.outerHTML, sections };
+  return { slug, title, assetBase: baseUrl, status: 'draft', template: '<!DOCTYPE html>' + doc.documentElement.outerHTML, sections };
 }
 
-export function renderThemePage(page, tokens = {}) {
+export function renderThemePage(page, tokens = {}, { baseUrl } = {}) {
   const fragments = page.sections.filter((s) => s.content.__editor?.visibility?.enabled !== false).map((section) => {
     const doc = new DOMParser().parseFromString(section.html, 'text/html');
     const apply = (doc, fields, content) => {
@@ -104,6 +104,7 @@ export function renderThemePage(page, tokens = {}) {
   const marker = /<!--theme-section:[^>]+-->/g;
   const count = [...page.template.matchAll(marker)].length;
   let html = page.template.replace(marker, () => ++i === count ? fragments.slice(i - 1).join('') : fragments[i - 1] || '');
+  if (baseUrl) { const doc = new DOMParser().parseFromString(html, 'text/html'); const base = doc.querySelector('base') || doc.head.prepend(doc.createElement('base')); doc.querySelector('base').href = baseUrl; html = '<!DOCTYPE html>' + doc.documentElement.outerHTML; }
   // Preview tokens live only in the customer document, never the editor chrome.
   const vars = Object.entries(tokens).filter(([k]) => /^--[a-zA-Z0-9-]+$/.test(k)).map(([k, v]) => `${k}:${String(v).replace(/[<>;]/g, '')}`).join(';');
   html = html.replace('</head>', `<style>:root{${vars}}</style></head>`);
@@ -112,7 +113,7 @@ export function renderThemePage(page, tokens = {}) {
 }
 
 /** Store is injected: IndexedDB, filesystem, SQLite or HTTP all share the same editing model. */
-export function createThemeProjectAdapter(project, store, { publish } = {}) {
+export function createThemeProjectAdapter(project, store, { publish, resolveAssetBase = (base) => base } = {}) {
   let state = validateThemeProject(project);
   state.sectionTemplates ||= Object.fromEntries(state.pages.flatMap((p) => p.sections).map((s) => [s.schema.key, clone(s)]));
   const get = (slug) => { const p = state.pages.find((p) => p.slug === slug); if (!p) throw new Error('theme_page_not_found'); return p; };
@@ -130,7 +131,7 @@ export function createThemeProjectAdapter(project, store, { publish } = {}) {
     listPages: async () => state.pages.map(({ slug, title }) => ({ slug, title })),
     getPage: async (slug) => clone(get(slug)),
     getRegistry: async () => ({ pages: Object.fromEntries(state.pages.map((p) => [p.slug, { sections: { ...Object.fromEntries(Object.values(state.sectionTemplates).map((s) => [s.schema.key, s.schema])), ...Object.fromEntries(p.sections.map((s) => [s.key, s.schema])) } }])) }),
-    resolvePreview: async (slug, draft) => ({ html: renderThemePage(draft || get(slug), state.tokens) }),
+    resolvePreview: async (slug, draft) => { const p = draft || get(slug); return { html: renderThemePage(p, state.tokens, { baseUrl: p.assetBase ? await resolveAssetBase(p.assetBase) : undefined }) }; },
     async saveDraft(slug, key, content, expectedVersion) {
       const latest = await store.get(state.id);
       if (latest) { const templates = state.sectionTemplates; state = validateThemeProject(latest); state.sectionTemplates ||= templates; }

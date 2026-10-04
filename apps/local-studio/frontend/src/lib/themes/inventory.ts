@@ -9,7 +9,7 @@ function draftPreview(project: any) {
   const cached = draftPreviews.get(project.id);
   if (cached && cached.stamp === project.updatedAt) return cached.url;
   if (cached) URL.revokeObjectURL(cached.url);
-  const url = URL.createObjectURL(new Blob([renderThemePage(project.pages[0], project.tokens)], { type: 'text/html' }));
+  const url = URL.createObjectURL(new Blob([renderThemePage(project.pages[0], project.tokens, { baseUrl: project.pages[0].assetBase ? new URL(project.pages[0].assetBase, location.href).href : undefined })], { type: 'text/html' }));
   draftPreviews.set(project.id, { stamp: project.updatedAt, url }); return url;
 }
 
@@ -35,7 +35,7 @@ export async function createThemeDraft(id: string | null, name: string) {
       if (!response.ok) throw new Error(`Theme source unavailable: ${page.url}`);
       const html = await response.text();
       for (const match of html.matchAll(/(--[a-zA-Z0-9-]+)\s*:\s*([^;{}]+)[;]/g)) if (!tokens[match[1]]) tokens[match[1]] = match[2].trim();
-      return extractThemePage(html, { slug: page.slug.replace(/[^a-zA-Z0-9_-]/g, '_') || `page_${i}`, title: page.title, baseUrl: new URL('.', new URL(page.url, location.href)).href });
+      return extractThemePage(html, { slug: page.slug.replace(/[^a-zA-Z0-9_-]/g, '_') || `page_${i}`, title: page.title, baseUrl: new URL('.', new URL(page.url, location.href)).pathname });
     }));
     source = { pages, tokens, sourceThemeId: id, sourcePackage: descriptor.packageName };
   }

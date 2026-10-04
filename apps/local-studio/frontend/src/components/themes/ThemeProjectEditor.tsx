@@ -11,7 +11,7 @@ export function ThemeProjectEditor({ id, page }: { id: string; page?: string }) 
   const [revision, setRevision] = useState(0);
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => { let live = true; void themeProjectStore.get(id).then((project) => { if (!live) return; if (!project) setError('Theme draft not found'); else setProject(project); }, (error) => { if (live) setError(error.message); }); return () => { live = false; }; }, [id]);
-  const adapter = useMemo(() => project ? createThemeProjectAdapter(project, themeProjectStore) : null, [project]);
+  const adapter = useMemo(() => project ? createThemeProjectAdapter(project, themeProjectStore, { resolveAssetBase: (base: string) => new URL(base, location.href).href }) : null, [project]);
   const openSettings = useCallback(async (slug: string) => { const latest = await adapter.getProject(); setSettings({ slug, name: latest.name, title: latest.pages.find((p: any) => p.slug === slug)?.title, tokens: latest.tokens || {} }); }, [adapter]);
   useEffect(() => { if (settings) dialog.current?.showModal(); else dialog.current?.close(); }, [settings]);
   if (error) return <p role="alert" className="p-6">{error}</p>;
