@@ -1,5 +1,6 @@
 // @ts-ignore Portable ecommerce CMS surface adapter.
 import { createCmsThemeEditorAdapter } from '@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/cms-adapter';
+import { ThemeStorePage } from '@/components/themes/ThemeStorePage';
 import { ThemeEditorFrame } from '@/components/themes/ThemeEditorFrame';
 import { ThemeProjectEditor } from '@/components/themes/ThemeProjectEditor';
 import { studioCmsFetch } from '@/lib/cms/transport';
@@ -153,6 +154,9 @@ function CmsPage() {
       </div>
     );
   }
+
+  // Design starts with an actual theme project; legacy content pages remain an adapter seam.
+  if (!search.theme_project && !activeThemeProject && !search.page && (!search.panel || search.panel === 'pages')) return <ThemeStorePage />;
 
   return (
     <div className="size-full overflow-hidden" data-cms-adapter="http">

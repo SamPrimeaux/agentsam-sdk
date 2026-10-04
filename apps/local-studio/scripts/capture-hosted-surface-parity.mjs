@@ -10,7 +10,8 @@ mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.CHROME_BIN || (process.platform === 'darwin' ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : undefined), headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 try {
-  for (const [name, route, selector] of [['work-empty', '/agentsam', '[data-agent-composer]'], ['cms-hub', '/cms', '.iam-cms-hub-page'], ['settings-themes', '/settings/themes', '[data-settings-theme-gallery]']]) {
+  const failures = [];
+  for (const [name, route, selector] of [['work-empty', '/agentsam', '[data-agent-composer]'], ['cms-hub', '/cms', '.iam-cms-hub-page'], ['settings-themes', '/settings/themes', '.agentsam-shell']]) {
     await page.goto(base + route);
     await page.locator(selector).first().waitFor({ timeout: 15000 });
     await page.evaluate(() => document.fonts.ready);
@@ -22,8 +23,9 @@ try {
     });
     writeFileSync(resolve(out, name + '.json'), JSON.stringify(state, null, 2));
     const expected = JSON.parse(readFileSync(resolve(desktop, name + '.json')));
-    assert.deepEqual(state.tokens, expected.tokens, `${name} token parity failed`);
-    if (name === 'settings-themes') assert.deepEqual(state.themes.sort(), expected.themes.sort(), 'Hosted/desktop theme inventory differs');
+    try { assert.deepEqual(state.tokens, expected.tokens, `${name} token parity failed`); } catch (error) { failures.push(error.message); }
+    if (name === 'settings-themes') try { assert.deepEqual(state.themes.sort(), expected.themes.sort(), 'Hosted/desktop theme inventory differs'); } catch (error) { failures.push(error.message); }
   }
+  assert.equal(failures.length, 0, failures.join('\n'));
   console.log('[hosted-parity] PASS token and inventory parity');
 } finally { await browser.close(); }
