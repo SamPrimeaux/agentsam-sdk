@@ -26,12 +26,12 @@ function siteQuery(siteId: string) {
   return `site=${encodeURIComponent(siteId)}`;
 }
 
-async function api<T = Json>(path: string, init: RequestInit = {}): Promise<T> {
+async function api<T = Json>(path: string, init: RequestInit = {}, transport: typeof fetch = fetch): Promise<T> {
   const headers = new Headers(init.headers || {});
   if (init.body && !(init.body instanceof FormData) && !headers.has('content-type')) {
     headers.set('content-type', 'application/json');
   }
-  const response = await fetch(path, {
+  const response = await transport(path, {
     credentials: 'same-origin',
     cache: 'no-store',
     ...init,
@@ -181,14 +181,17 @@ function hydratePages(boot: Json): CmsEditorPage[] {
 export class HttpCmsAdapter implements CmsEditorAdapter {
   readonly temporary = false;
   private readonly base: string;
+  private readonly transport: typeof fetch;
   private readonly knownSites: Map<string, CmsSiteRecord>;
 
   constructor(
     options: {
       base?: string;
+      transport?: typeof fetch;
       sites?: Array<{ id?: string; slug?: string; name?: string; domain?: string }>;
     } = {},
   ) {
+    this.transport = options.transport || fetch;
     this.base = String(options.base || '').replace(/\/$/, '');
     this.knownSites = new Map();
     for (const site of options.sites || []) {
@@ -206,6 +209,8 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
     }
   }
 
+  private api<T = Json>(path: string, init: RequestInit = {}): Promise<T> { return api<T>(path, init, this.transport); }
+
   private url(path: string) {
     return `${this.base}${path}`;
   }
@@ -213,14 +218,14 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
   async listSites(): Promise<CmsSiteRecord[]> {
     if (this.knownSites.size) return [...this.knownSites.values()].map((s) => structuredClone(s));
     // Fallback: bootstrap the default studio site so hub/editor share one authority.
-    const boot = await api<Json>(this.url(`/api/cms/bootstrap?${siteQuery('agentsam-sdk')}`));
+    const boot = await this.api<Json>(this.url(`/api/cms/bootstrap?${siteQuery('agentsam-sdk')}`));
     const record = siteRecordFromBootstrap('agentsam-sdk', boot);
     this.knownSites.set(record.id, record);
     return [structuredClone(record)];
   }
 
   async getSite(siteId: string): Promise<CmsSiteRecord> {
-    const boot = await api<Json>(this.url(`/api/cms/bootstrap?${siteQuery(siteId)}`));
+    const boot = await this.api<Json>(this.url(`/api/cms/bootstrap?${siteQuery(siteId)}`));
     const record = siteRecordFromBootstrap(siteId, boot);
     this.knownSites.set(siteId, record);
     return structuredClone(record);
@@ -237,7 +242,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
   async updateSite(siteId: string, patch: CmsSiteUpdatePatch): Promise<CmsSiteRecord> {
     const current = await this.getSite(siteId);
     if (patch.theme?.cssVars) {
-      await api(this.url(`/api/cms/theme-vars?${siteQuery(siteId)}`), {
+      await this.api(this.url(`/api/cms/theme-vars?${siteQuery(siteId)}`), {
         method: 'PATCH',
         body: JSON.stringify({ project_slug: siteId, vars: patch.theme.cssVars }),
       });
@@ -252,7 +257,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
   }
 
   async loadSite(siteId: string): Promise<CmsEditorSite> {
-    const boot = await api<Json>(this.url(`/api/cms/bootstrap?${siteQuery(siteId)}`));
+    const boot = await this.api<Json>(this.url(`/api/cms/bootstrap?${siteQuery(siteId)}`));
     const meta = siteRecordFromBootstrap(siteId, boot);
     this.knownSites.set(siteId, meta);
     return {
@@ -270,7 +275,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
     // Worker page GET requires site slug — resolve via known sites / bootstrap scan.
     for (const siteId of this.knownSites.keys()) {
       try {
-        const body = await api<Json>(
+        const body = await this.api<Json>(
           this.url(`/api/cms/pages/${encodeURIComponent(pageId)}?${siteQuery(siteId)}`),
         );
         const sections = Array.isArray(body.sections)
@@ -301,7 +306,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
     input: Partial<CmsEditorPage> & { title: string; slug: string },
   ): Promise<CmsEditorPage> {
     const slug = input.slug.replace(/^\/+/, '');
-    const body = await api<Json>(this.url(`/api/cms/pages?${siteQuery(siteId)}`), {
+    const body = await this.api<Json>(this.url(`/api/cms/pages?${siteQuery(siteId)}`), {
       method: 'POST',
       body: JSON.stringify({
         project_id: siteId,
@@ -318,7 +323,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
 
   async updatePage(pageId: string, patch: Partial<CmsEditorPage>): Promise<CmsEditorPage> {
     const siteId = await this.findPageSiteId(pageId);
-    const body = await api<Json>(
+    const body = await this.api<Json>(
       this.url(`/api/cms/pages/${encodeURIComponent(pageId)}?${siteQuery(siteId)}`),
       {
         method: 'PUT',
@@ -359,7 +364,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
     input: Partial<CmsEditorSection> & { name: string },
   ): Promise<CmsEditorSection> {
     const siteId = await this.findPageSiteId(pageId);
-    const body = await api<Json>(this.url(`/api/cms/sections?${siteQuery(siteId)}`), {
+    const body = await this.api<Json>(this.url(`/api/cms/sections?${siteQuery(siteId)}`), {
       method: 'POST',
       body: JSON.stringify({
         page_id: pageId,
@@ -377,7 +382,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
     patch: Partial<CmsEditorSection>,
   ): Promise<CmsEditorSection> {
     const siteId = await this.guessSiteId();
-    const body = await api<Json>(
+    const body = await this.api<Json>(
       this.url(`/api/cms/sections/${encodeURIComponent(sectionId)}?${siteQuery(siteId)}`),
       {
         method: 'PUT',
@@ -398,7 +403,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
 
   async reorderSections(pageId: string, sectionIds: string[]): Promise<void> {
     const siteId = await this.findPageSiteId(pageId);
-    await api(this.url(`/api/cms/sections/reorder?${siteQuery(siteId)}`), {
+    await this.api(this.url(`/api/cms/sections/reorder?${siteQuery(siteId)}`), {
       method: 'POST',
       body: JSON.stringify({
         page_id: pageId,
@@ -409,7 +414,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
 
   async setSectionVisibility(sectionId: string, visible: boolean): Promise<void> {
     const siteId = await this.guessSiteId();
-    await api(
+    await this.api(
       this.url(`/api/cms/sections/${encodeURIComponent(sectionId)}/visibility?${siteQuery(siteId)}`),
       {
         method: 'POST',
@@ -439,7 +444,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
     input: Partial<CmsEditorBlock> & { type: string },
   ): Promise<CmsEditorBlock> {
     const siteId = await this.guessSiteId();
-    const body = await api<Json>(this.url(`/api/cms/blocks?${siteQuery(siteId)}`), {
+    const body = await this.api<Json>(this.url(`/api/cms/blocks?${siteQuery(siteId)}`), {
       method: 'POST',
       body: JSON.stringify({
         section_id: sectionId,
@@ -454,7 +459,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
 
   async updateBlock(blockId: string, patch: Partial<CmsEditorBlock>): Promise<CmsEditorBlock> {
     const siteId = await this.guessSiteId();
-    const body = await api<Json>(
+    const body = await this.api<Json>(
       this.url(`/api/cms/blocks/${encodeURIComponent(blockId)}?${siteQuery(siteId)}`),
       {
         method: 'PUT',
@@ -477,7 +482,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
     const body = payload as { sections?: CmsEditorSection[] };
     if (Array.isArray(body?.sections)) {
       for (const section of body.sections) {
-        await api(this.url(`/api/cms/sections/${encodeURIComponent(section.id)}?${siteQuery(siteId)}`), {
+        await this.api(this.url(`/api/cms/sections/${encodeURIComponent(section.id)}?${siteQuery(siteId)}`), {
           method: 'PUT',
           body: JSON.stringify({
             section_name: section.name,
@@ -489,7 +494,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
       }
     }
     // Mark page draft
-    await api(this.url(`/api/cms/pages/${encodeURIComponent(pageId)}?${siteQuery(siteId)}`), {
+    await this.api(this.url(`/api/cms/pages/${encodeURIComponent(pageId)}?${siteQuery(siteId)}`), {
       method: 'PUT',
       body: JSON.stringify({ status: 'draft' }),
     });
@@ -525,7 +530,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
 
   async publish(pageId: string): Promise<CmsPublicationSnapshot> {
     const siteId = await this.findPageSiteId(pageId);
-    const body = await api<Json>(
+    const body = await this.api<Json>(
       this.url(`/api/cms/pages/${encodeURIComponent(pageId)}/publish?${siteQuery(siteId)}`),
       { method: 'POST', body: JSON.stringify({}) },
     );
@@ -561,7 +566,7 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
   }
 
   async listAssets(siteId: string): Promise<CmsAsset[]> {
-    const body = await api<Json>(this.url(`/api/cms/assets?${siteQuery(siteId)}`));
+    const body = await this.api<Json>(this.url(`/api/cms/assets?${siteQuery(siteId)}`));
     return (body.assets || []).map((row: Json) => ({
       id: String(row.id),
       name: String(row.original_filename || row.filename || row.id),
@@ -626,3 +631,4 @@ export function createHttpCmsAdapter(
 ): HttpCmsAdapter {
   return new HttpCmsAdapter(options);
 }
+

@@ -1,6 +1,6 @@
 /** Shared CMS page editor config (pages list + page edit) */
 
-window.PAGE_ROUTES = {
+window.PAGE_ROUTES = window.AgentSamThemeEditorHost?.pageRoutes || {
   home: "/",
   shop: "/shop",
   about: "/about",
@@ -19,7 +19,9 @@ window.cmsRegistry = null;
 
 window.loadCmsRegistry = async function loadCmsRegistry() {
   if (window.cmsRegistry) return window.cmsRegistry;
-  const data = await adminFetch("/api/admin/cms/registry");
+  const data = window.AgentSamThemeEditorHost
+    ? await window.AgentSamThemeEditorHost.adapter.getRegistry()
+    : await adminFetch("/api/admin/cms/registry");
   window.cmsRegistry = data;
   window.SECTION_FIELDS = {};
   window.SECTION_SCHEMAS = {};
@@ -92,3 +94,4 @@ window.visibilityBadge = function visibilityBadge(status) {
   }
   return { label: "Hidden", cls: "pages-badge pages-badge--hidden" };
 };
+

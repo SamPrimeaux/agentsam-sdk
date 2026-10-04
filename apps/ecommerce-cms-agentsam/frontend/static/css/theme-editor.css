@@ -1,16 +1,16 @@
 /* Theme Studio — focused visual CMS workspace.
    This file intentionally scopes everything under .theme-studio so the admin shell stays stable. */
 
-:root {
-  --te-panel: #ffffff;
-  --te-canvas: #f4f4f2;
-  --te-border: #e3e3df;
-  --te-border-strong: #d4d4cf;
-  --te-text: #20201f;
-  --te-muted: #74746f;
-  --te-soft: #f7f7f5;
-  --te-accent: #5f43d5;
-  --te-accent-soft: #f1edff;
+.theme-studio, .te-media-modal {
+  --te-panel: var(--color-card, #181818);
+  --te-canvas: var(--color-background, #111111);
+  --te-border: var(--color-border, #ffffff1a);
+  --te-border-strong: var(--color-border, #ffffff26);
+  --te-text: var(--color-foreground, #f5f5f5);
+  --te-muted: var(--color-muted-foreground, #a1a1aa);
+  --te-soft: var(--color-muted, #262626);
+  --te-accent: var(--color-accent, #c8bda9);
+  --te-accent-soft: color-mix(in srgb, var(--color-accent, #c8bda9) 12%, transparent);
   --te-success: #17844a;
   --te-danger: #b42318;
 }
@@ -32,7 +32,7 @@
   gap: 12px;
   padding: 8px 14px;
   border-bottom: 1px solid var(--te-border);
-  background: rgba(255,255,255,.9);
+  background: color-mix(in srgb, var(--te-panel) 90%, transparent);
   backdrop-filter: blur(22px) saturate(1.12);
   -webkit-backdrop-filter: blur(22px) saturate(1.12);
   z-index: 8;
@@ -83,7 +83,7 @@
 .te-page-trigger {
   height: 34px;
   border: 1px solid var(--te-border);
-  background: #fff;
+  background: var(--te-panel);
   color: var(--te-text);
   border-radius: 9px;
   display: inline-flex;
@@ -127,7 +127,7 @@
 }
 
 .te-device-btn.is-active {
-  background: #fff;
+  background: var(--te-panel);
   color: #1f1f1e;
   box-shadow: 0 1px 2px rgba(0,0,0,.08);
 }
@@ -157,7 +157,7 @@
   padding: 8px;
   border: 1px solid var(--te-border);
   border-radius: 13px;
-  background: #fff;
+  background: var(--te-panel);
   box-shadow: 0 18px 55px rgba(0,0,0,.16);
   z-index: 50;
   overflow: hidden;
@@ -213,7 +213,7 @@
 .te-toolbar-btn.is-primary {
   border-color: #171716;
   background: #171716;
-  color: #fff;
+  color: var(--te-panel);
   font-weight: 600;
 }
 
@@ -357,7 +357,7 @@
 .te-tree-row.is-active .te-tree-row__icon {
   border-color: #c9bfff;
   color: var(--te-accent);
-  background: #fff;
+  background: var(--te-panel);
 }
 
 .te-tree-row__copy {
@@ -389,7 +389,7 @@
 
 .te-tree-footer a {
   font-size: 12px;
-  color: #5f43d5;
+  color: var(--te-accent);
   text-decoration: none;
 }
 
@@ -548,7 +548,7 @@
   position: sticky;
   top: 51px;
   z-index: 4;
-  background: #fff;
+  background: var(--te-panel);
 }
 
 .te-tab {
@@ -598,7 +598,7 @@
   box-sizing: border-box;
   border: 1px solid #deded9;
   border-radius: 8px;
-  background: #fff;
+  background: var(--te-panel);
   color: #222;
   padding: 9px 10px;
   font: inherit;
@@ -673,7 +673,7 @@
   gap: 6px;
   padding: 7px;
   border-top: 1px solid #e7e7e2;
-  background: #fff;
+  background: var(--te-panel);
 }
 
 .te-media-button {
@@ -681,7 +681,7 @@
   border: 1px solid #deded9;
   border-radius: 7px;
   padding: 0 9px;
-  background: #fff;
+  background: var(--te-panel);
   font-size: 11px;
   cursor: pointer;
 }
@@ -741,7 +741,7 @@
   width: 17px;
   height: 17px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--te-panel);
   box-shadow: 0 1px 2px rgba(0,0,0,.2);
   transition: transform .16s ease;
 }
@@ -802,7 +802,7 @@
   width: min(880px, calc(100vw - 60px));
   height: min(680px, calc(100vh - 90px));
   border-radius: 14px;
-  background: #fff;
+  background: var(--te-panel);
   box-shadow: 0 24px 80px rgba(0,0,0,.22);
   display: grid;
   grid-template-rows: 56px 46px minmax(0, 1fr);
@@ -851,7 +851,7 @@
   padding: 0;
   border: 1px solid var(--te-border);
   border-radius: 10px;
-  background: #fff;
+  background: var(--te-panel);
   overflow: hidden;
   text-align: left;
   cursor: pointer;
@@ -911,7 +911,7 @@
   padding: 0 10px;
   cursor: pointer;
   font-size: 11px;
-  background: #fff;
+  background: var(--te-panel);
 }
 
 .te-upload-target input { display: none; }
@@ -976,7 +976,7 @@
   border: 1px solid #deded9;
   border-bottom: 0;
   border-radius: 8px 8px 0 0;
-  background: #f7f7f5;
+  background: var(--te-soft);
 }
 
 .te-rich-toolbar button {
@@ -1000,7 +1000,7 @@
   padding: 9px 10px;
   border: 1px solid #deded9;
   border-radius: 0 0 8px 8px;
-  background: #fff;
+  background: var(--te-panel);
   font-size: 12px;
   line-height: 1.45;
   outline: none;
@@ -1075,7 +1075,7 @@
   padding: 8px;
   border: 1px solid var(--te-border);
   border-radius: 9px;
-  background: #fff;
+  background: var(--te-panel);
 }
 
 .te-section-menu select {
@@ -1086,7 +1086,7 @@
   font: inherit;
   font-size: 11px;
   padding: 0 8px;
-  background: #fff;
+  background: var(--te-panel);
 }
 
 .te-section-menu__actions {
@@ -1227,7 +1227,7 @@
   height: 29px;
   border: 1px solid var(--te-border);
   border-radius: 6px;
-  background: #fff;
+  background: var(--te-panel);
   color: var(--te-text);
   padding: 0 6px;
   font: inherit;
@@ -1274,3 +1274,8 @@
     max-height: none;
   }
 }
+
+
+/* Embedded height belongs to the host viewport, independent of runtime. */
+[data-theme-editor-embedded] { margin: 0; height: 100vh; font-family: var(--font-sans, system-ui, sans-serif); }
+[data-theme-editor-embedded] .theme-studio { height: 100%; min-height: 0; }

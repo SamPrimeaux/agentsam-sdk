@@ -34,5 +34,11 @@
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/SamPrimeaux/agentsam-sdk.git"
+  },
+  "exports": {
+    "./theme-editor/mount": "./frontend/theme-editor/mount.mjs",
+    "./theme-editor/bridge": "./frontend/theme-editor/bridge.mjs",
+    "./theme-editor/project": "./frontend/theme-editor/project.mjs",
+    "./theme-editor/cms-adapter": "./frontend/theme-editor/cms-adapter.mjs"
   }
 }

@@ -1,11 +1,14 @@
+// @ts-ignore Portable ecommerce CMS surface adapter.
+import { createCmsThemeEditorAdapter } from '@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/cms-adapter';
+import { ThemeEditorFrame } from '@/components/themes/ThemeEditorFrame';
+import { ThemeProjectEditor } from '@/components/themes/ThemeProjectEditor';
+import { studioCmsFetch } from '@/lib/cms/transport';
 import { useMemo } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
-  CmsEditor,
   CmsHubPage,
   createHttpCmsAdapter,
 } from "@inneranimalmedia/agentsam-cms-frontend";
-import "@inneranimalmedia/agentsam-cms-frontend/styles/studio.css";
 import { ContentStudioPage } from "@/components/content/ContentStudioPage";
 import {
   parseCmsNavigatePath,
@@ -13,6 +16,7 @@ import {
 } from "@/lib/cms/parseCmsNavigatePath";
 
 interface CmsSearchParams {
+  theme_project?: string;
   site?: string;
   project?: string;
   project_slug?: string;
@@ -24,6 +28,7 @@ interface CmsSearchParams {
 export const Route = createFileRoute("/(apps)/cms")({
   validateSearch: (search: Record<string, unknown>): CmsSearchParams => {
     return {
+      theme_project: typeof search.theme_project === "string" ? search.theme_project : undefined,
       site: typeof search.site === "string" ? search.site : undefined,
       project: typeof search.project === "string" ? search.project : undefined,
       project_slug: typeof search.project_slug === "string" ? search.project_slug : undefined,
@@ -53,6 +58,7 @@ function CmsPage() {
   const adapter = useMemo(
     () =>
       createHttpCmsAdapter({
+        transport: studioCmsFetch,
         sites: SITE_CATALOG.map((s) => ({
           id: s.slug,
           slug: s.slug,
@@ -63,7 +69,16 @@ function CmsPage() {
     [],
   );
 
+  const themeAdapter = useMemo(() => createCmsThemeEditorAdapter(adapter, siteSlug, {
+    resolvePreview: async (_site: unknown, page: { id: string }) => {
+      const response = await studioCmsFetch(`/api/cms/render-page?site=${encodeURIComponent(siteSlug)}&page_id=${encodeURIComponent(page.id)}&mode=draft`);
+      if (!response.ok) throw new Error("cms_preview_unavailable");
+      return { html: await response.text() };
+    },
+  }), [adapter, siteSlug]);
+
   const isEditorView = Boolean(
+    search.theme_project ||
     search.page ||
       (search.panel && search.panel !== "hub") ||
       search.view === "editor",
@@ -152,34 +167,9 @@ function CmsPage() {
         <span>Editor</span>
       </div>
       <div className="min-h-0 flex-1 overflow-hidden" style={{ height: "calc(100% - 41px)" }}>
-        <CmsEditor
-          adapter={adapter}
-          siteId={siteSlug}
-          initialPageId={search.page || null}
-          host={{
-            navigate: (path: string) => {
-              if (path === "/cms" || path === "/cms?panel=hub") {
-                goHub();
-                return;
-              }
-              if (path.startsWith("/cms")) {
-                const parsed = parseCmsNavigatePath(path, siteSlug);
-                void navigate({
-                  to: "/cms",
-                  search: {
-                    site: parsed.site,
-                    panel: parsed.panel,
-                    page: parsed.page,
-                    view: parsed.view,
-                  },
-                });
-                return;
-              }
-              void navigate({ to: path as never });
-            },
-          }}
-        />
+        {search.theme_project ? <ThemeProjectEditor id={search.theme_project} page={search.page} /> : <ThemeEditorFrame adapter={themeAdapter} page={search.page} />}
       </div>
     </div>
   );
 }
+

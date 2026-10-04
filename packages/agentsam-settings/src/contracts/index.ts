@@ -168,6 +168,11 @@ export type SettingsTheme = {
   packageName: string;
   category: string;
   swatches: string[];
+  version?: string;
+  source?: 'bundled' | 'installed' | 'workspace' | 'local' | 'imported';
+  status?: string;
+  previewUrl?: string;
+  capabilities?: { preview: boolean; editable: boolean; duplicable: boolean; publishable: boolean };
   active?: boolean;
 };
 
@@ -253,9 +258,16 @@ export interface SettingsHost {
   setWidgetVisible?(id: string, visible: boolean): Promise<void>;
   openWidget?(id: string): void;
   removeWidget?(id: string): Promise<void>;
+  activateTheme?(id: string): Promise<void>;
+  editTheme?(id: string): Promise<void>;
+  duplicateTheme?(id: string, name: string): Promise<void>;
+  createTheme?(name: string): Promise<void>;
+  importTheme?(project: unknown): Promise<void>;
+  exportTheme?(id: string): Promise<void>;
   subscribe?(unitId: SettingsUnitId, callback: () => void): () => void;
 }
 
 export function defineSettingsManifest(manifest: SettingsManifest): SettingsManifest {
   return manifest;
 }
+

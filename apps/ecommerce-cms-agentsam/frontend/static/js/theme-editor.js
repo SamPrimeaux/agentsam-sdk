@@ -1,6 +1,8 @@
 (() => {
+  const host = window.AgentSamThemeEditorHost || null;
+  const editorRequest = host ? host.adapter.request.bind(host.adapter) : window.adminFetch;
   const params = new URLSearchParams(location.search);
-  let slug = params.get('slug') || 'shop';
+  let slug = host?.page || params.get('slug') || 'shop';
   let pageData = null;
   let pages = [];
   let activeSectionKey = null;
@@ -80,7 +82,13 @@
     ].join('');
   }
 
-  renderShell('/admin/theme-editor', shellMarkup(), { fullBleed: true });
+  if (host) document.body.innerHTML = shellMarkup();
+  else renderShell('/admin/theme-editor', shellMarkup(), { fullBleed: true });
+  if (host) {
+    document.body.dataset.themeEditorEmbedded = '';
+    const publish = document.getElementById('te-publish');
+    if (host.adapter.capabilities?.publish === false) { publish.disabled = true; publish.title = 'No publish adapter configured'; }
+  }
 
   const byId = function(id) { return document.getElementById(id); };
 
@@ -720,7 +728,7 @@
       let options = [];
       if (type === 'product') {
         if (!resourceCache.products) {
-          const data = await adminFetch('/api/admin/products');
+          const data = await editorRequest('/api/admin/products');
           resourceCache.products = (data.products || []).map(function(product) {
             return { value: product.slug || String(product.id), label: product.title || product.slug };
           });
@@ -728,7 +736,7 @@
         options = resourceCache.products;
       } else if (type === 'collection') {
         if (!resourceCache.collections) {
-          const data = await adminFetch('/api/store/collections');
+          const data = await editorRequest('/api/store/collections');
           resourceCache.collections = (data.collections || []).map(function(collection) {
             return { value: collection.slug || String(collection.id), label: collection.title || collection.slug };
           });
@@ -739,7 +747,7 @@
         if (productSlug) {
           const cacheKey = 'variants:' + productSlug;
           if (!resourceCache[cacheKey]) {
-            const data = await adminFetch('/api/store/products/' + encodeURIComponent(productSlug));
+            const data = await editorRequest('/api/store/products/' + encodeURIComponent(productSlug));
             resourceCache[cacheKey] = (data.variants || []).map(function(variant) {
               const label = [variant.title, variant.size, variant.color, variant.sku].filter(Boolean).join(' · ');
               return { value: variant.sku || String(variant.id), label: label || String(variant.id) };
@@ -783,6 +791,7 @@
   }
 
   function pushLocalPreview() {
+    if (host) { void refreshPreview(); return; }
     const iframe = byId('theme-preview');
     if (!iframe?.contentWindow || !pageData) return;
     iframe.contentWindow.postMessage({
@@ -955,7 +964,24 @@
     });
   }
 
-  function refreshPreview() {
+  let previewSequence = 0;
+  async function refreshPreview() {
+    if (host) {
+      const sequence = ++previewSequence;
+      try {
+        const preview = await host.adapter.resolvePreview(slug, pageData);
+        if (sequence !== previewSequence) return;
+        const frame = byId('theme-preview');
+        frame.setAttribute('sandbox', 'allow-scripts');
+        if (preview.html !== undefined) { frame.removeAttribute('src'); frame.srcdoc = preview.html; }
+        else { frame.removeAttribute('srcdoc'); frame.src = preview.url; }
+        const link = byId('te-open-tab');
+        link.hidden = !preview.url;
+        if (preview.url) { link.href = preview.url; link.target = '_blank'; link.rel = 'noopener'; }
+        byId('te-preview-label').textContent = 'Preview — ' + (pageData?.title || slug);
+      } catch (error) { setNote(error.message || String(error), 'error'); }
+      return;
+    }
     const route = pageRoute(slug);
     const separator = route.indexOf('?') >= 0 ? '&' : '?';
     byId('theme-preview').src = route + separator + 'preview=1&_=' + Date.now();
@@ -975,8 +1001,8 @@
     try {
       await loadCmsRegistry();
       const results = await Promise.all([
-        adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug)),
-        adminFetch('/api/admin/cms/pages').catch(function() { return { pages: [] }; })
+        editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug)),
+        editorRequest('/api/admin/cms/pages').catch(function() { return { pages: [] }; })
       ]);
       pageData = results[0].page;
       pages = (results[1].pages || []).filter(function(page) { return page.slug !== 'site'; });
@@ -997,8 +1023,10 @@
       }
 
       byId('te-page-title').textContent = pageData.title || humanize(slug);
-      byId('te-page-settings').href = '/admin/page-edit?slug=' + encodeURIComponent(slug);
-      byId('te-manage-page').href = '/admin/page-edit?slug=' + encodeURIComponent(slug);
+      for (const id of ['te-page-settings', 'te-manage-page']) {
+        if (host) { byId(id).href = '#'; byId(id).onclick = (event) => { event.preventDefault(); host.onPageSettings?.(slug); }; }
+        else byId(id).href = '/admin/page-edit?slug=' + encodeURIComponent(slug);
+      }
       renderPageOptions('');
       renderTree();
       renderInspector();
@@ -1022,7 +1050,7 @@
       for (const key of keys) {
         const section = pageData && pageData.sections && pageData.sections.find(function(item) { return item.key === key; });
         if (!section) continue;
-        const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(section.key), {
+        const result = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(section.key), {
           method: 'PUT',
           body: JSON.stringify({
             content: section.content,
@@ -1062,7 +1090,7 @@
     button.textContent = 'Publishing…';
     try {
       if (dirty && !(await saveDraft())) throw new Error('Could not save draft before publishing');
-      const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/publish', { method: 'POST' });
+      const result = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/publish', { method: 'POST' });
       pageData.status = 'published';
       (pageData.sections || []).forEach(function(section) { section.status = 'published'; });
       setDirty(false);
@@ -1082,7 +1110,7 @@
   async function insertSection(templateKey) {
     setNote('Adding section…');
     try {
-      const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections', {
+      const result = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections', {
         method: 'POST',
         body: JSON.stringify({ templateKey: templateKey, toIndex: (pageData?.sections || []).length })
       });
@@ -1100,7 +1128,7 @@
   async function duplicateSection(sectionKey) {
     setNote('Duplicating section…');
     try {
-      const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/duplicate', {
+      const result = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/duplicate', {
         method: 'POST',
         body: JSON.stringify({})
       });
@@ -1117,7 +1145,7 @@
 
   async function moveSection(sectionKey, toIndex) {
     try {
-      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/move', {
+      await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/move', {
         method: 'POST',
         body: JSON.stringify({ toIndex: toIndex })
       });
@@ -1131,7 +1159,7 @@
 
   async function setSectionVisibility(sectionKey, enabled) {
     try {
-      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/visibility', {
+      await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/visibility', {
         method: 'PUT',
         body: JSON.stringify({ enabled: enabled })
       });
@@ -1152,7 +1180,7 @@
     if (!confirm('Remove "' + label + '" from this page? You can add it again later.')) return;
 
     try {
-      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey), {
+      await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey), {
         method: 'DELETE'
       });
       setNote('Section removed.', 'success');
@@ -1170,7 +1198,7 @@
     try {
       const section = (pageData?.sections || []).find(function(item) { return item.key === sectionKey; });
       const blocks = section?.content?.__editor?.blocks || [];
-      const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks', {
+      const result = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks', {
         method: 'POST',
         body: JSON.stringify({ templateKey: templateKey, toIndex: blocks.length })
       });
@@ -1188,7 +1216,7 @@
   async function duplicateBlock(sectionKey, blockId) {
     setNote('Duplicating block…');
     try {
-      const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId) + '/duplicate', {
+      const result = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId) + '/duplicate', {
         method: 'POST',
         body: JSON.stringify({})
       });
@@ -1205,7 +1233,7 @@
 
   async function moveBlock(sectionKey, blockId, toIndex) {
     try {
-      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId) + '/move', {
+      await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId) + '/move', {
         method: 'POST',
         body: JSON.stringify({ toIndex: toIndex })
       });
@@ -1225,7 +1253,7 @@
     if (!confirm('Remove "' + label + '" from this section?')) return;
 
     try {
-      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId), {
+      await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId), {
         method: 'DELETE'
       });
       setNote('Block removed.', 'success');
@@ -1251,7 +1279,8 @@
     activeSectionKey = null;
     activeBlockId = null;
     activeFieldKey = null;
-    history.replaceState(null, '', '?slug=' + encodeURIComponent(slug));
+    if (!host) history.replaceState(null, '', '?slug=' + encodeURIComponent(slug));
+    else host.onPageChange?.(slug);
     closePageMenu();
     await loadPage();
   }
@@ -1270,7 +1299,7 @@
   }
 
   async function loadMedia() {
-    const response = await adminFetch('/api/admin/media?view=all');
+    const response = await editorRequest('/api/admin/media?view=all');
     mediaLibrary = response.assets || response.media || [];
     return mediaLibrary;
   }
@@ -1319,7 +1348,9 @@
     files.forEach(function(file) { form.append('files', file); });
     form.append('prefix', 'uploads/theme-editor/');
 
-    const response = await fetch('/api/admin/media', { method: 'POST', credentials: 'include', body: form });
+    const response = host
+      ? await host.adapter.uploadMedia(files)
+      : await fetch('/api/admin/media', { method: 'POST', credentials: 'include', body: form });
     if (response.status === 401) {
       location.href = '/admin/login';
       throw new Error('Unauthorized');

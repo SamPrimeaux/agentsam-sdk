@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import { defineConfig, type Plugin, type UserConfig } from "vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import { themeSurfacesPlugin } from "./scripts/theme-surfaces-plugin.mjs";
 import baseExport from "./vite.config.ts";
 
 function desktopApiRouteStubs(): Plugin {
@@ -56,10 +57,11 @@ export default defineConfig({
   base: "./",
   publicDir: resolve(studioRoot, "frontend/public"),
   resolve: shared.resolve,
-  plugins: [desktopApiRouteStubs(), forbidDesktopNodeBuiltins(), tailwindcss(), viteReact()],
+  plugins: [themeSurfacesPlugin(), desktopApiRouteStubs(), forbidDesktopNodeBuiltins(), tailwindcss(), viteReact()],
   build: {
     ...(shared.build || {}),
     outDir: resolve(studioRoot, "desktop-dist"),
     emptyOutDir: true,
   },
 });
+

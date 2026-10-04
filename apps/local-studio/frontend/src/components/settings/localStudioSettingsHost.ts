@@ -1,3 +1,5 @@
+import { listStudioThemes, themeManagement } from "@/lib/themes/inventory";
+import { THEME_PROJECTS_CHANGED } from "@/lib/themes/projects";
 import type {
   HealthState,
   SettingsCapabilities,
@@ -250,6 +252,7 @@ function emptySnapshot(): SettingsSnapshot {
 async function liveSnapshot(): Promise<SettingsSnapshot> {
   const snapshot = emptySnapshot();
   const desktop = isPackagedDesktop();
+  snapshot.themes = await listStudioThemes();
 
   const [inventoryResult, pluginResult, signedIn, workspace] = await Promise.all([
     loadEffectiveModelInventory().then(
@@ -312,6 +315,7 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
 }
 
 export const localStudioSettingsHost: SettingsHost = {
+  ...themeManagement,
   async capabilities() {
     return capabilities;
   },
@@ -386,12 +390,15 @@ export const localStudioSettingsHost: SettingsHost = {
     window.addEventListener(MODEL_INVENTORY_CHANGED_EVENT, onChanged);
     window.addEventListener(SETTINGS_CATALOG_CHANGED_EVENT, onChanged);
     window.addEventListener("focus", onChanged);
+    window.addEventListener(THEME_PROJECTS_CHANGED, onChanged);
     const unsubscribeWidgets = subscribeLocalStudioWidgets(onChanged);
     return () => {
       window.removeEventListener(MODEL_INVENTORY_CHANGED_EVENT, onChanged);
       window.removeEventListener(SETTINGS_CATALOG_CHANGED_EVENT, onChanged);
       window.removeEventListener("focus", onChanged);
+      window.removeEventListener(THEME_PROJECTS_CHANGED, onChanged);
       unsubscribeWidgets();
     };
   },
 };
+

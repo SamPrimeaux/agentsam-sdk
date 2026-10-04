@@ -1,3 +1,5 @@
+import { SettingsThemeGallery } from "./themes";
+export { SettingsThemeGallery } from "./themes";
 import {
   AlertTriangle,
   BarChart3,
@@ -1201,42 +1203,8 @@ function KeysView({ snapshot }: { snapshot: SettingsSnapshot }) {
   );
 }
 
-function ThemesView({ themes }: { themes: SettingsTheme[] }) {
-  return (
-    <>
-      <AppearancePreferences />
-      <Section title="Theme gallery" description="Brand authority projected into reusable product themes.">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {themes.map((theme) => (
-            <article key={theme.id} className="overflow-hidden rounded-xl border border-border/70 bg-muted/10">
-              <div className="relative h-28 border-b border-border/70 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.09),transparent_45%),linear-gradient(135deg,rgba(255,255,255,0.02),rgba(255,255,255,0.06))]">
-                <div className="absolute inset-x-4 bottom-4 flex gap-1.5">
-                  {theme.swatches.map((swatch) => (
-                    <span
-                      key={swatch}
-                      className="size-6 rounded-full border border-white/15 shadow-sm"
-                      style={{ backgroundColor: swatch }}
-                      title={swatch}
-                    />
-                  ))}
-                </div>
-              </div>
-              <div className="p-3.5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-[12px] font-medium">{theme.name}</div>
-                    <div className="mt-1 text-[10px] text-muted-foreground">{theme.category}</div>
-                  </div>
-                  {theme.active && <StatusPill status="healthy" label="Active" />}
-                </div>
-                <code className="mt-3 block truncate text-[9px] text-muted-foreground">{theme.packageName}</code>
-              </div>
-            </article>
-          ))}
-        </div>
-      </Section>
-    </>
-  );
+function ThemesView({ themes, host, onChanged }: { themes: SettingsTheme[]; host: SettingsHost; onChanged: () => void }) {
+  return <><AppearancePreferences /><SettingsThemeGallery themes={themes} host={host} onChanged={onChanged} /></>;
 }
 
 function AgentsView({ snapshot, view }: { snapshot: SettingsSnapshot; view: string }) {
@@ -1513,7 +1481,7 @@ function GeneralView({ snapshot }: { snapshot: SettingsSnapshot }) {
   );
 }
 
-const SHELL_APPEARANCE_KEY = "agentsam-shell-appearance-v1";
+const SHELL_APPEARANCE_KEY=[REDACTED];
 const SHELL_ACCENTS = [
   { id: "#8B5CF6", label: "Violet" },
   { id: "#2563EB", label: "Blue" },
@@ -1864,7 +1832,7 @@ function renderUnit(
     case "network":
       return <NetworkView snapshot={snapshot} />;
     case "themes":
-      return <ThemesView themes={snapshot.themes} />;
+      return <ThemesView themes={snapshot.themes} host={host} onChanged={onChanged} />;
     case "storage":
       return <StorageView snapshot={snapshot} />;
     case "keys":
@@ -1955,3 +1923,4 @@ export function SettingsProductPage({
     </div>
   );
 }
+
