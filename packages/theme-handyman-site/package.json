@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/theme-forge",
-  "version": "2.6.10",
+  "version": "2.6.11",
   "description": "Real Primeaux Handyman PWA build — mobile-first service site with estimates and project proof.",
   "type": "module",
   "main": "./src/index.js",

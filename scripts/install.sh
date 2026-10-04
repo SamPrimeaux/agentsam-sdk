@@ -22,7 +22,7 @@ usage() {
 AgentSam installer
 
   curl -fsSL https://agentsam.inneranimalmedia.com/install | bash
-  curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --version 2.6.10
+  curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --version 2.6.11
   curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --app-id local-studio
   curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --app ecommerce
   curl -fsSL https://agentsam.inneranimalmedia.com/install | bash -s -- --channel beta

@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-vault",
-  "version": "2.6.10",
+  "version": "2.6.11",
   "type": "module",
   "description": "AgentSam credential vault core — contracts, AES-GCM crypto, provider registry, resolver. UI lives in agentsam-key-manager.",
   "main": "./src/index.js",

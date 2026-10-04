@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-goap",
-  "version": "2.6.10",
+  "version": "2.6.11",
   "description": "Portable AgentSam GOAP control-plane contracts and adapters over existing blackboard, ticket, workflow, execution, approval, queue, runtime, and evidence stores.",
   "type": "module",
   "main": "./src/index.js",
@@ -20,7 +20,7 @@
     "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-errors": "2.6.10"
+    "@inneranimalmedia/agentsam-errors": "2.6.11"
   },
   "engines": {
     "node": ">=22 <25"

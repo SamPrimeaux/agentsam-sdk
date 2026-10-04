@@ -1,7 +1,7 @@
 {
   "name": "@inneranimalmedia/ecommerce-dashboard",
   "private": true,
-  "version": "2.6.10",
+  "version": "2.6.11",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@inneranimalmedia/commerce-analytics": "2.6.10",
+    "@inneranimalmedia/commerce-analytics": "2.6.11",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.18.4"

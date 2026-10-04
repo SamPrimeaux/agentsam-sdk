@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-content",
-  "version": "2.6.10",
+  "version": "2.6.11",
   "description": "Portable content/library peer domain over Asset Core: lifecycle, usage, providers, intelligence, and createContentRuntime(). BrandPack remains peer brand authority.",
   "type": "module",
   "main": "./dist/index.js",
@@ -55,9 +55,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-assets-core": "2.6.10",
-    "@inneranimalmedia/agentsam-scoring": "2.6.10",
-    "@inneranimalmedia/agentsam-cloudflare-images": "2.6.10"
+    "@inneranimalmedia/agentsam-assets-core": "2.6.11",
+    "@inneranimalmedia/agentsam-scoring": "2.6.11",
+    "@inneranimalmedia/agentsam-cloudflare-images": "2.6.11"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

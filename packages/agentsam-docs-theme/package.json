@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-docs-theme",
-  "version": "2.6.10",
+  "version": "2.6.11",
   "description": "Violet docs skin tokens for AgentSam public guides (Systematic Autonomous Machinery).",
   "exports": {
     ".": "./tokens.css",

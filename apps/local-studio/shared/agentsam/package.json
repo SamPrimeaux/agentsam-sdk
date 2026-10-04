@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-local-shared",
-  "version": "2.6.10",
+  "version": "2.6.11",
   "private": true,
   "type": "module",
   "exports": {
@@ -18,8 +18,8 @@
     "typescript": "^5.7.0"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-contracts": "2.6.10",
-    "@inneranimalmedia/agentsam-sdk": "2.6.10",
-    "@inneranimalmedia/agentsam-vault": "2.6.10"
+    "@inneranimalmedia/agentsam-contracts": "2.6.11",
+    "@inneranimalmedia/agentsam-sdk": "2.6.11",
+    "@inneranimalmedia/agentsam-vault": "2.6.11"
   }
 }
