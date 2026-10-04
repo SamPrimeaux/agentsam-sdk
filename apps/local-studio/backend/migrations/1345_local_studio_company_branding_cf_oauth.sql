@@ -1,4 +1,6 @@
+-- agentsam-engine: d1
 -- Local Studio portal branding in D1 `company` (SSOT for /api/company via meta.hosts).
+-- Targets the deployed business D1 (SQLite dialect: unixepoch()) — Postgres appliers skip it.
 -- Logo = composed macOS app icon (same master as the downloadable .app / Finder icon).
 
 INSERT INTO company (
