@@ -6,3 +6,5 @@ export * from './projects';
 export * from './timeline';
 
 export * from './manufacturing';
+
+export * from './widgets';

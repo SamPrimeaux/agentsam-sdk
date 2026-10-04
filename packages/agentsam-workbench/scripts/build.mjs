@@ -17,6 +17,7 @@ await build({
     'projects/index': 'src/projects/index.ts',
     'timeline/index': 'src/timeline/index.ts',
     'manufacturing/index': 'src/manufacturing/index.ts',
+    'widgets/index': 'src/widgets/index.ts',
   },
   outdir: 'dist',
   outbase: 'src',
@@ -34,4 +35,6 @@ for (const file of ['mini-agentsam.css', 'contextual-composer.css', 'tool-permis
   copyFileSync(`${cwd}/src/agent/${file}`, `${cwd}/dist/agent/${file}`);
 }
 copyFileSync(`${cwd}/src/project-control.css`, `${cwd}/dist/project-control.css`);
+mkdirSync(`${cwd}/dist/widgets`, { recursive: true });
+copyFileSync(`${cwd}/src/widgets/widgets.css`, `${cwd}/dist/widgets/widgets.css`);
 execFileSync('tsc', ['-p', 'tsconfig.build.json'], { cwd, stdio: 'inherit' });

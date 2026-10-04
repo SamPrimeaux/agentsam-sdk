@@ -1,0 +1,102 @@
+.agentsam-widget {
+  --widget-surface: var(--card, var(--dashboard-surface, rgba(20, 20, 24, 0.72)));
+  --widget-border: var(--border, var(--dashboard-border, rgba(127, 127, 140, 0.22)));
+  --widget-text: var(--foreground, var(--dashboard-text, currentColor));
+  --widget-muted: var(--muted-foreground, var(--dashboard-muted, color-mix(in srgb, currentColor 62%, transparent)));
+  --widget-accent: var(--primary, var(--dashboard-accent, #8b5cf6));
+  color: var(--widget-text);
+  background: var(--widget-surface);
+  border: 1px solid var(--widget-border);
+  border-radius: var(--dashboard-card-radius, 20px);
+  padding: 18px;
+  min-width: 0;
+  box-shadow: 0 16px 50px color-mix(in srgb, black 10%, transparent);
+}
+
+.agentsam-widget[data-widget-size="medium"] { padding: 22px; }
+.agentsam-widget[data-widget-size="large"] { padding: 26px; }
+
+.agentsam-widget__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.agentsam-widget__heading { min-width: 0; }
+.agentsam-widget__title {
+  margin: 0;
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.agentsam-widget__description,
+.agentsam-widget__message {
+  margin: 4px 0 0;
+  color: var(--widget-muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+.agentsam-widget__state {
+  flex: 0 0 auto;
+  border: 1px solid var(--widget-border);
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: var(--widget-muted);
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.agentsam-widget__body { min-width: 0; }
+.agentsam-widget__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.agentsam-countdown {
+  display: grid;
+  gap: 14px;
+}
+.agentsam-countdown__time {
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(2.8rem, 12vw, 5rem);
+  line-height: 1;
+  letter-spacing: -0.06em;
+}
+.agentsam-countdown[data-compact="true"] .agentsam-countdown__time {
+  font-size: clamp(2rem, 9vw, 3.2rem);
+}
+.agentsam-countdown__controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.agentsam-widget-button {
+  min-height: 40px;
+  border: 1px solid var(--widget-border);
+  border-radius: 10px;
+  padding: 8px 13px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 550;
+  cursor: pointer;
+}
+.agentsam-widget-button:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
+.agentsam-widget-button:focus-visible {
+  outline: 2px solid var(--widget-accent);
+  outline-offset: 2px;
+}
+.agentsam-widget-button--primary {
+  border-color: color-mix(in srgb, var(--widget-accent) 72%, transparent);
+  background: var(--widget-accent);
+  color: var(--primary-foreground, white);
+}
+.agentsam-countdown__status {
+  min-height: 1em;
+  color: var(--widget-muted);
+  font-size: 0.75rem;
+}
