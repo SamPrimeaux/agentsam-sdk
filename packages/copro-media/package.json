@@ -1,0 +1,39 @@
+{
+  "name": "@inneranimalmedia/copro-media",
+  "version": "2.6.11",
+  "description": "Provider-neutral CoPro media asset identity, provenance, and repository contracts.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "pack:dry": "npm pack --dry-run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/copro-media"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "copro",
+    "media",
+    "asset-management",
+    "provenance",
+    "video",
+    "agentsam"
+  ]
+}
