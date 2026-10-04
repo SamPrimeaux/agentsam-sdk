@@ -33,3 +33,6 @@ npm run build               # brand + sync + tauri build
 npm run build:brand -- local-studio
 npm run build:brand -- cad-creator
 ```
+
+<!-- agentsam:trademark-notice -->
+> Independent project. Not affiliated with, endorsed by, or sponsored by any company whose products are named here. Names are trademarks of their respective owners. See [TRADEMARKS](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/TRADEMARKS.md).

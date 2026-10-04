@@ -237,7 +237,8 @@
     "packages/agentsam-workbench/README.md",
     "packages/agentsam-workbench/src",
     "packages/agentsam-workbench/tsconfig.json",
-    "packages/agentsam-merch"
+    "packages/agentsam-merch",
+    "TRADEMARKS.md"
   ],
   "workspaces": [
     "packages/agentsam-analytics",
@@ -288,6 +289,9 @@
   "scripts": {
     "test": "npm run test:standard && npm --prefix packages/identity test && npm --prefix packages/agentsam-brand test && npm run test:connectors && npm run test:providers",
     "test:brand": "npm --prefix packages/agentsam-brand test",
+    "brand:scan": "python3 scripts/brand-compliance/brand_compliance.py scan",
+    "brand:check": "python3 scripts/brand-compliance/brand_compliance.py check",
+    "brand:apply": "python3 scripts/brand-compliance/brand_compliance.py apply",
     "test:content": "npm run build -w @inneranimalmedia/agentsam-assets-core && npm run test -w @inneranimalmedia/agentsam-assets-core && npm run build -w @inneranimalmedia/agentsam-scoring && npm run test -w @inneranimalmedia/agentsam-scoring && npm run build -w @inneranimalmedia/agentsam-cloudflare-images && npm run test -w @inneranimalmedia/agentsam-cloudflare-images && npm run build -w @inneranimalmedia/agentsam-content && npm run test -w @inneranimalmedia/agentsam-content && npm run build -w @inneranimalmedia/agentsam-content-studio && npm run test -w @inneranimalmedia/agentsam-content-studio",
     "build:content": "npm run build -w @inneranimalmedia/agentsam-assets-core && npm run build -w @inneranimalmedia/agentsam-scoring && npm run build -w @inneranimalmedia/agentsam-cloudflare-images && npm run build -w @inneranimalmedia/agentsam-content && npm run build -w @inneranimalmedia/agentsam-content-studio",
     "test:standard": "node test/smoke.mjs && npm run test:unit && npm run test:cli && npm run test:integration:mock && npm run test:terminal:mock",
@@ -307,7 +311,7 @@
     "test:python": "node scripts/verify-python.mjs",
     "verify:release": "npm run verify && npm run verify:packages:public && npm run verify:knowledge-package && npm run test:python && npm run security:release",
     "pack:check": "node scripts/verify-pack.mjs",
-    "verify": "npm run release:train:check && npm run errors:check && npm run proto:check && npm test && npm run test:workspaces && npm run cad:registry:check && npm run app:validate && npm run verify:boundaries && npm run verify:package && npm run verify:bootstrap && npm run pack:check",
+    "verify": "npm run brand:check && npm run release:train:check && npm run errors:check && npm run proto:check && npm test && npm run test:workspaces && npm run cad:registry:check && npm run app:validate && npm run verify:boundaries && npm run verify:package && npm run verify:bootstrap && npm run pack:check",
     "publish:identity-alpha": "bash scripts/publish-identity-alpha.sh",
     "publish:identity-alpha:dry-run": "bash scripts/publish-identity-alpha.sh --dry-run",
     "publish:identity-alpha:publish-only": "bash scripts/publish-identity-alpha.sh --publish-only",

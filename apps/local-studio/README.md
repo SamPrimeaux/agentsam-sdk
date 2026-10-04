@@ -56,3 +56,6 @@ The current build writes `.output/` as an intermediate donor-compatible build. T
 ## Donor provenance
 
 See `IMPORT_PROVENANCE.json` for the immutable source revision and `reference/DONOR_README.md` / `reference/DONOR_APP_LAYOUT.md` for the original Workmode documentation.
+
+<!-- agentsam:trademark-notice -->
+> Independent project. Not affiliated with, endorsed by, or sponsored by any company whose products are named here. Names are trademarks of their respective owners. See [TRADEMARKS](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/TRADEMARKS.md).

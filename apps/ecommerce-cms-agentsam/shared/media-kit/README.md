@@ -12,3 +12,6 @@ Provider-neutral media primitives for reusable CMS/admin applications.
 - The package contains no customer branding, customer domains, bucket names, or customer-specific routes.
 
 The application provides persistence, provider adapters, authorization, and rendering shells.
+
+<!-- agentsam:trademark-notice -->
+> Independent project. Not affiliated with, endorsed by, or sponsored by Cloudflare, Inc. or by any other company whose products are named here. Cloudflare is a registered trademark of Cloudflare, Inc. Other names are trademarks of their respective owners. See [TRADEMARKS](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/TRADEMARKS.md).

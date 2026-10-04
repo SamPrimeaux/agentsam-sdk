@@ -3,7 +3,7 @@
   "version": "2.6.10",
   "description": "Prepackaged AgentSam CAD, spatial design, and robotics application kit.",
   "type": "module",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "workspaces": [
     "frontend",
     "backend",

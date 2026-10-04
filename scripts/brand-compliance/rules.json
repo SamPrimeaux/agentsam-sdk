@@ -1,0 +1,290 @@
+{
+  "project_name": "AgentSam",
+  "marks": [
+    {
+      "name": "Cloudflare",
+      "display": "Cloudflare, Inc.",
+      "terms": [
+        "cloudflare"
+      ],
+      "attribution": "Cloudflare is a registered trademark of Cloudflare, Inc.",
+      "products": [
+        "Cloudflare Workers",
+        "D1",
+        "R2",
+        "Vectorize",
+        "Durable Objects",
+        "Cloudflare Images",
+        "Cloudflare Stream",
+        "Cloudflare Containers",
+        "Wrangler"
+      ]
+    },
+    {
+      "name": "Google",
+      "terms": [
+        "google",
+        "gmail",
+        "gdrive",
+        "gemini"
+      ]
+    },
+    {
+      "name": "GitHub",
+      "terms": [
+        "github"
+      ]
+    },
+    {
+      "name": "OpenAI",
+      "terms": [
+        "openai",
+        "chatgpt",
+        "gpt"
+      ]
+    },
+    {
+      "name": "Anthropic",
+      "terms": [
+        "anthropic",
+        "claude"
+      ]
+    },
+    {
+      "name": "xAI",
+      "terms": [
+        "xai",
+        "grok"
+      ]
+    },
+    {
+      "name": "Supabase",
+      "terms": [
+        "supabase"
+      ]
+    },
+    {
+      "name": "Vercel",
+      "terms": [
+        "vercel"
+      ]
+    },
+    {
+      "name": "HubSpot",
+      "terms": [
+        "hubspot"
+      ]
+    },
+    {
+      "name": "Canva",
+      "terms": [
+        "canva"
+      ]
+    },
+    {
+      "name": "Meshy",
+      "terms": [
+        "meshy"
+      ]
+    },
+    {
+      "name": "FreeCAD",
+      "terms": [
+        "freecad"
+      ]
+    },
+    {
+      "name": "OpenSCAD",
+      "terms": [
+        "openscad"
+      ]
+    },
+    {
+      "name": "Tauri",
+      "terms": [
+        "tauri"
+      ]
+    },
+    {
+      "name": "Cursor",
+      "terms": [
+        "cursor"
+      ],
+      "generic": true
+    },
+    {
+      "name": "Resend",
+      "terms": [
+        "resend"
+      ],
+      "generic": true
+    },
+    {
+      "name": "Stripe",
+      "terms": [
+        "stripe"
+      ],
+      "generic": true
+    },
+    {
+      "name": "Blender",
+      "terms": [
+        "blender"
+      ],
+      "generic": true
+    }
+  ],
+  "name_allow": [
+    "packages/agentsam-cloudflare-images",
+    "packages/agentsam-cloudflare-images/*",
+    "packages/connectors/cfoa",
+    "packages/connectors/cfoa/*",
+    "skills/agentsam-cloudflare-workers",
+    "skills/agentsam-cloudflare-workers/*",
+    "skills/grok-*",
+    "skills/grok-*/*"
+  ],
+  "exclude": [
+    "*package-lock.json",
+    "*/node_modules/*",
+    "*/dist/*",
+    "skills/*/references/*",
+    "migrations/*",
+    "scripts/brand-compliance/*"
+  ],
+  "license": {
+    "spdx": "MIT",
+    "replace": [
+      "UNLICENSED"
+    ],
+    "text_source": "LICENSE"
+  },
+  "renames": [],
+  "description_suffix": "Independent project; not affiliated with {display}.",
+  "phrase_rewrites": [
+    {
+      "pattern": "Cloudflare-first",
+      "replace": "Runs well on Cloudflare",
+      "ext": [
+        ".md",
+        ".html"
+      ]
+    }
+  ],
+  "compound_suffixes_error": "native|first|powered|branded",
+  "logo_filename_patterns": [
+    "(?:cloudflare|google|github|openai|anthropic|claude|supabase|vercel|grok)[-_.]?(?:logo|icon|mark|badge)",
+    "orange[-_]?cloud"
+  ],
+  "lucide_brand_icons": [
+    "Github",
+    "Gitlab",
+    "Chrome",
+    "Figma",
+    "Slack",
+    "Twitter",
+    "Facebook",
+    "Instagram",
+    "Linkedin",
+    "Youtube",
+    "Twitch",
+    "Dribbble",
+    "Framer",
+    "Codepen",
+    "Trello",
+    "Codesandbox"
+  ],
+  "brand_color_sets": [
+    {
+      "mark": "Google",
+      "hexes": [
+        "#4285f4",
+        "#ea4335",
+        "#fbbc05",
+        "#34a853"
+      ],
+      "min_hits": 3
+    }
+  ],
+  "vendored_dir_names": [
+    "reference",
+    "references",
+    "vendor",
+    "vendored",
+    "third_party",
+    "donor"
+  ],
+  "provenance_files": [
+    "source.md",
+    "license",
+    "license.md",
+    "license.txt",
+    "notice",
+    "notice.md",
+    "provenance.md",
+    "assets.json",
+    "third_party_notices.md"
+  ],
+  "claims": {
+    "partnership_regexes": [
+      "\\b(official|certified|authorized|approved|verified|preferred|premier)\\s+(?:\\w+\\s+){0,2}(?:partner|reseller|integration)\\b",
+      "\\b(?:partner(?:ed|ship)?\\s+with|endorsed\\s+by|sponsored\\s+by|certified\\s+by|approved\\s+by)\\s+(?:{marks})\\b",
+      "\\b(?:{marks})\\b[^.\\n]{0,25}\\b(?:partner|partnership|certified|endorsed|sponsored|approved)\\b"
+    ],
+    "negation_markers": [
+      "not ",
+      " no ",
+      "n't",
+      "without",
+      "independent",
+      "affiliat",
+      "unaffiliated",
+      "disclaim",
+      "never"
+    ],
+    "guarantee_regexes": [
+      "\\b(?:guarantee[sd]?|warrant(?:y|ies|s)|certif(?:y|ies|ied)|100%|fully|completely|totally)\\s+(?:\\w+\\s+){0,2}(?:compliant|legal|licensed|cleared|infring\\w*|trademark\\w*|copyright\\w*)\\b"
+    ],
+    "own_text_denylist": [
+      "promptly",
+      "guarantee",
+      "no third-party logos",
+      "fully compliant",
+      "we ensure",
+      "we never",
+      "we promise"
+    ]
+  },
+  "license_audit": {
+    "risky": [
+      "AGPL",
+      "GPL-2.0",
+      "GPL-3.0",
+      "SSPL",
+      "BUSL",
+      "CC-BY-NC",
+      "UNLICENSED",
+      "PROPRIETARY"
+    ],
+    "info": [
+      "LGPL"
+    ],
+    "allow_name_globs": [
+      "@img/sharp-*"
+    ]
+  },
+  "readme_notice_cloudflare": "> Independent project. Not affiliated with, endorsed by, or sponsored by Cloudflare, Inc. or by any other company whose products are named here. Cloudflare is a registered trademark of Cloudflare, Inc. Other names are trademarks of their respective owners. See [TRADEMARKS]({trademarks_url}).",
+  "readme_notice_generic": "> Independent project. Not affiliated with, endorsed by, or sponsored by any company whose products are named here. Names are trademarks of their respective owners. See [TRADEMARKS]({trademarks_url}).",
+  "notice_marker": "<!-- agentsam:trademark-notice -->",
+  "site_page_glob": "*/public/site/*",
+  "integration_path_term": "cloudflare",
+  "compound_suffixes_hyphen_warn": "ready|based|only",
+  "compound_suffixes_space_warn": "powered|branded",
+  "provenance_exempt": [
+    "skills/agentsam-*"
+  ],
+  "catalog_id_allow": [
+    "agentsam-cloudflare-workers",
+    "deploy-cloudflare"
+  ]
+}
