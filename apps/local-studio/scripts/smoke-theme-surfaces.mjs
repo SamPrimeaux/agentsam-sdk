@@ -83,12 +83,25 @@ try {
     let conflict = false;
     try { await adapter.saveDraft('home', section.key, section.content, 0); } catch (error) { conflict = error.status === 409; }
     const loaded = createThemeProjectAdapter(saved, store);
-    return { initial, updated: (await loaded.resolvePreview('home')).html, conflict };
+    const updated = (await loaded.resolvePreview('home')).html;
+    const blockPage = extractThemePage('<main><section><article><h2>One</h2></article><article><h2>Two</h2></article></section></main>');
+    saved.pages = [blockPage];
+    const blocks = createThemeProjectAdapter(saved, store);
+    const copy = await blocks.duplicateBlock('home', 'section_1', 'block_1');
+    await blocks.moveBlock('home', 'section_1', copy.block_id, 0);
+    await blocks.removeBlock('home', 'section_1', 'block_2');
+    const blockHtml = (await blocks.resolvePreview('home')).html;
+    await blocks.removeSection('home', 'section_1');
+    await blocks.addSection('home', 'section_1', 0);
+    return { initial, updated, conflict, blockHtml, restored: (await blocks.getPage('home')).sections.length };
   });
   assert.match(result.initial, /Hello <em>world<\/em>/);
   assert.match(result.initial, /src="cover.png"/);
   assert.match(result.updated, /Saved content/);
   assert.equal(result.conflict, true);
+  assert.equal((result.blockHtml.match(/<h2[^>]*>One<\/h2>/g) || []).length, 2);
+  assert.ok(!result.blockHtml.includes('>Two</h2>'));
+  assert.equal(result.restored, 1);
   // Create a real durable draft through the public management UI and mount the donor editor.
   await page.getByRole('button', { name: 'Create theme', exact: true }).click();
   await page.getByLabel('Name', { exact: true }).fill('Parity acceptance draft');

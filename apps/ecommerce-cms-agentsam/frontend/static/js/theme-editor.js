@@ -91,6 +91,13 @@
   }
 
   const byId = function(id) { return document.getElementById(id); };
+  if (host) window.addEventListener('message', function(event) {
+    if (event.source !== byId('theme-preview')?.contentWindow || event.data?.type !== 'agentsam:theme-preview-select') return;
+    const section = pageData?.sections?.find(function(s) { return s.key === event.data.section; });
+    if (!section) return;
+    if (event.data.block && section.content.__editor?.blocks?.some(function(b) { return b.id === event.data.block; })) selectBlock(section.key, event.data.block, null, false);
+    else selectSection(section.key, null, false);
+  });
 
   function humanize(value) {
     return String(value || '').replace(/[_-]+/g, ' ').replace(/\b\w/g, function(m) { return m.toUpperCase(); });
@@ -221,7 +228,7 @@
 
     byId('te-page-options').innerHTML = filtered.length ? filtered.map(function(page) {
       return '<button type="button" class="te-page-option' + (page.slug === slug ? ' is-active' : '') + '" data-page-slug="' + cmsEscapeAttr(page.slug) + '">' +
-        icon.page + '<span><strong style="font-size:12px">' + cmsEscapeHtml(page.title || humanize(page.slug)) + '</strong><span style="display:block;font-size:10px;color:#858580;margin-top:2px">' +
+        icon.page + '<span><strong style="font-size:12px">' + cmsEscapeHtml(page.title || humanize(page.slug)) + '</strong><span style="display:block;font-size:10px;color:var(--te-muted);margin-top:2px">' +
         cmsEscapeHtml(pageRoute(page.slug)) + '</span></span></button>';
     }).join('') : '<div class="te-empty">No pages match that search.</div>';
 
@@ -1024,7 +1031,7 @@
 
       byId('te-page-title').textContent = pageData.title || humanize(slug);
       for (const id of ['te-page-settings', 'te-manage-page']) {
-        if (host) { byId(id).href = '#'; byId(id).onclick = (event) => { event.preventDefault(); host.onPageSettings?.(slug); }; }
+        if (host) { byId(id).href = '#'; byId(id).onclick = async (event) => { event.preventDefault(); if (host.onPageSettings && (!dirty || await saveDraft())) host.onPageSettings(slug); }; byId(id).hidden = !host.onPageSettings; }
         else byId(id).href = '/admin/page-edit?slug=' + encodeURIComponent(slug);
       }
       renderPageOptions('');

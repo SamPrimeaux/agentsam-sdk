@@ -29,12 +29,15 @@ export async function createThemeDraft(id: string | null, name: string) {
   if (!source && id) {
     const descriptor = (bundled as BundledTheme[]).find((theme) => theme.id === id);
     if (!descriptor?.pages.length) throw new Error('This package has no editable page source');
+    const tokens: Record<string, string> = {};
     const pages = await Promise.all(descriptor.pages.map(async (page, i) => {
       const response = await fetch(page.url);
       if (!response.ok) throw new Error(`Theme source unavailable: ${page.url}`);
-      return extractThemePage(await response.text(), { slug: page.slug.replace(/[^a-zA-Z0-9_-]/g, '_') || `page_${i}`, title: page.title, baseUrl: new URL('.', new URL(page.url, location.href)).href });
+      const html = await response.text();
+      for (const match of html.matchAll(/(--[a-zA-Z0-9-]+)\s*:\s*([^;{}]+)[;]/g)) if (!tokens[match[1]]) tokens[match[1]] = match[2].trim();
+      return extractThemePage(html, { slug: page.slug.replace(/[^a-zA-Z0-9_-]/g, '_') || `page_${i}`, title: page.title, baseUrl: new URL('.', new URL(page.url, location.href)).href });
     }));
-    source = { pages, tokens: {}, sourceThemeId: id, sourcePackage: descriptor.packageName };
+    source = { pages, tokens, sourceThemeId: id, sourcePackage: descriptor.packageName };
   }
   if (!source) source = { tokens: {}, pages: [extractThemePage('<!doctype html><html><head><title>New theme</title></head><body><main><section><h1>New theme</h1><p>Start with your content.</p></section></main></body></html>', { slug: 'home', title: 'Home' })] };
   const project = { ...source, schema: THEME_PROJECT_SCHEMA, id: 'theme_' + crypto.randomUUID().replaceAll('-', ''), name, version: '0.1.0', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };

@@ -1,3 +1,4 @@
+/* Fixed red values below express error/destructive status; surfaces and accents follow host semantics. */
 /* AgentSam CMS contextual composer — Sidekick-style select → suggest → generate */
 
 .as-contextual-shell {
@@ -127,8 +128,8 @@
   margin: 0 auto;
   border-radius: 18px;
   background:
-    radial-gradient(circle at 35% 35%, #c4b5fd, transparent 50%),
-    linear-gradient(145deg, var(--color-accent, #c8bda9), #4c1d95);
+    radial-gradient(circle at 35% 35%, var(--color-accent, #c8bda9), transparent 50%),
+    linear-gradient(145deg, var(--color-accent, #c8bda9), color-mix(in srgb, var(--color-accent, #c8bda9) 65%, black));
 }
 
 .as-cc-messages { display: flex; flex-direction: column; gap: 12px; }
@@ -163,7 +164,7 @@
 .as-cc-spinner {
   width: 12px;
   height: 12px;
-  border: 2px solid #ddd6fe;
+  border: 2px solid color-mix(in srgb, var(--color-accent, #c8bda9) 30%, transparent);
   border-top-color: var(--color-accent, #c8bda9);
   border-radius: 50%;
   animation: as-spin 0.7s linear infinite;
@@ -178,7 +179,7 @@
   gap: 10px;
   align-items: start;
   text-align: left;
-  border: 1px solid #ddd6fe;
+  border: 1px solid color-mix(in srgb, var(--color-accent, #c8bda9) 30%, transparent);
   background: color-mix(in srgb, var(--color-accent, #c8bda9) 10%, var(--color-card, #18181b));
   border-radius: 14px;
   padding: 12px;
@@ -209,7 +210,7 @@
 }
 
 .as-cc-suggestion-copy strong {
-  color: #6d28d9;
+  color: var(--color-accent, #c8bda9);
   font-size: 14px;
 }
 
@@ -287,7 +288,7 @@
 /* —— Generation preview (polished, not raw-first) —— */
 .as-gen-preview {
   margin: 0 12px 8px;
-  border: 1px solid #e9d5ff;
+  border: 1px solid var(--color-border, #ffffff1a);
   border-radius: 14px;
   background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent, #c8bda9) 10%, var(--color-card, #18181b)), var(--color-card, #18181b));
   overflow: hidden;
@@ -308,7 +309,7 @@
   margin: 0 10px;
   border-radius: 10px;
   overflow: hidden;
-  background: #0f172a;
+  background: var(--color-background, #111111);
 }
 
 .as-gen-code {
@@ -317,7 +318,7 @@
   overflow: auto;
   padding: 12px;
   font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: #c4b5fd;
+  color: var(--color-accent, #c8bda9);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -447,14 +448,14 @@
 
 .as-layer-list button.selected {
   background: color-mix(in srgb, var(--color-accent, #c8bda9) 15%, transparent);
-  color: #5b21b6;
+  color: var(--color-accent, #c8bda9);
 }
 
 .as-layer-kind {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #a1a1aa;
+  color: var(--color-muted-foreground, #a1a1aa);
 }
 
 .as-prop-editor {
@@ -487,7 +488,7 @@
 }
 
 .as-prop-group.is-agent-flash {
-  background: #f5f3ff;
+  background: var(--color-muted, #27272a);
   box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.25);
 }
 
@@ -534,7 +535,7 @@
 .as-linkish {
   border: 0;
   background: transparent;
-  color: #6d28d9;
+  color: var(--color-accent, #c8bda9);
   text-align: left;
   padding: 0;
   cursor: pointer;
@@ -560,7 +561,7 @@
   height: 22px;
   border-radius: 999px;
   border: 0;
-  background: #d4d4d8;
+  background: var(--color-border, #ffffff1a);
   position: relative;
   cursor: pointer;
 }
@@ -601,7 +602,7 @@
   text-align: left;
 }
 
-.as-cc-muted { color: #a1a1aa; padding: 8px; margin: 0; }
+.as-cc-muted { color: var(--color-muted-foreground, #a1a1aa); padding: 8px; margin: 0; }
 
 @media (max-width: 960px) {
   .as-contextual-shell {
