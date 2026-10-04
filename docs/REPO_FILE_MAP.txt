@@ -84,7 +84,6 @@ this orientation map as revision authority.
   |-- registry/              Tool and domain registries
   |-- examples/, assets/     Examples and shared assets
   |-- sites/                 Public-site source/content
-  |-- focus-timer/           Separate tracked top-level mini-app/site
   |-- .github/, .changeset/  CI workflows and release metadata
   `-- tags/                  Repository tag metadata
 

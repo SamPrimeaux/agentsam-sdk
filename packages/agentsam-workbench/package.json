@@ -40,7 +40,12 @@
     "./manufacturing": {
       "types": "./dist/manufacturing/index.d.ts",
       "import": "./dist/manufacturing/index.js"
-    }
+    },
+    "./widgets": {
+      "types": "./dist/widgets/index.d.ts",
+      "import": "./dist/widgets/index.js"
+    },
+    "./widgets/widgets.css": "./dist/widgets/widgets.css"
   },
   "scripts": {
     "typecheck": "node scripts/ensure-local-deps.mjs && tsc --noEmit -p tsconfig.json",

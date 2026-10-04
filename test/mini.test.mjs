@@ -59,7 +59,7 @@ test('preview reflects edits and protects files outside public/', async (t) => {
   t.after(() => preview.stop());
   const home = await request(preview.url, '/');
   assert.equal(home.status, 200);
-  assert.match(home.body, /focus timer/i);
+  assert.match(home.body, /interactive starter/i);
   assert.equal(home.headers['cache-control'], 'no-store');
   assert.equal((await request(preview.url, '/app.js')).status, 200);
   assert.equal((await request(preview.url, '/', { method: 'HEAD' })).body, '');

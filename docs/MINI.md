@@ -3,12 +3,12 @@
 Create a small local gadget, page, or data prototype with one command:
 
 ```bash
-agentsam mini focus-timer --open
+agentsam mini quick-tool --open
 agentsam mini landing --template page
 agentsam mini json-viewer --template data
 ```
 
-The default `gadget` starter is a working focus timer. `page` offers an editable headline preview; `data` accepts and filters JSON entirely in the browser. These are ordinary HTML, CSS, and JavaScript files, with no dependency install, framework, AI call, credential setup, or container.
+The default `gadget` starter is a neutral interactive canvas. `page` offers an editable headline preview; `data` accepts and filters JSON entirely in the browser. These are ordinary HTML, CSS, and JavaScript files, with no dependency install, framework, AI call, credential setup, or container.
 
 ## Files and preview lifecycle
 
@@ -32,3 +32,5 @@ agentsam mini --help
 - Multiple minis can be previewed in separate terminals; automatic ports avoid conflicts. `--open` is optional.
 
 `agentsam init` still creates the full local agent project with SQLite and runtime adapters. Mini is the smaller static-prototype path; it does not add an AI backend or publish anything.
+
+Mini starters are scaffolds for local prototyping, not a catalog of installable prebuilds. Product features belong in their owning app or reusable package once they prove useful.
