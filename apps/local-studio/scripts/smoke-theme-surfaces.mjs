@@ -1,14 +1,16 @@
 import { createServer } from 'node:http';
-import { readFileSync, existsSync, statSync, mkdirSync, writeFileSync } from 'node:fs';
+import { readFileSync, existsSync, statSync, mkdirSync, writeFileSync, copyFileSync } from 'node:fs';
 import { resolve, extname } from 'node:path';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import { discoverThemeSurfaces } from './theme-surfaces-plugin.mjs';
+import { changedPixelRatio } from './compare-surface-png.mjs';
 
 const studio = resolve(import.meta.dirname, '..');
 const repo = resolve(studio, '../..');
 const root = resolve(studio, 'desktop-dist');
 const out = resolve(studio, 'artifacts/surface-parity/desktop');
+const baseline = resolve(studio, 'scripts/fixtures/surface-parity/desktop');
 mkdirSync(out, { recursive: true });
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.json': 'application/json' };
 const server = createServer((req, res) => {
@@ -28,7 +30,13 @@ try {
   await page.locator('[data-agentsam-app-shell="local-studio"]').waitFor();
   await page.locator('[data-agent-composer] textarea').first().waitFor();
   const capture = async (name) => {
-    await page.screenshot({ path: resolve(out, name + '.png'), fullPage: false });
+    await page.evaluate(() => document.fonts.ready);
+    await page.screenshot({ path: resolve(out, name + '.png'), fullPage: false, animations: 'disabled' });
+    if (['work-empty', 'cms-hub', 'cms-theme-editor'].includes(name)) {
+      const expected = resolve(baseline, name + '.png');
+      if (process.argv.includes('--update-baselines')) { mkdirSync(baseline, { recursive: true }); copyFileSync(resolve(out, name + '.png'), expected); }
+      else { assert.ok(existsSync(expected), `Missing ${name} baseline; review captures and run --update-baselines`); assert.ok(changedPixelRatio(readFileSync(resolve(out, name + '.png')), readFileSync(expected)) <= 0.005, `${name} visual regression; inspect ${out}`); }
+    }
     const state = await page.evaluate(() => {
       const scope = document.querySelector('.agentsam-shell') || document.body;
       const css = getComputedStyle(scope);
