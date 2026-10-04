@@ -10,3 +10,15 @@
 .mini-agentsam-panel textarea { width: 100%; resize: vertical; min-height: 64px; background: transparent; color: var(--mini-text); font: inherit; padding: 8px; }
 .mini-agentsam-panel textarea::placeholder { color: var(--mini-muted); }
 .mini-agentsam-panel p { font-size: 12px; margin: 8px; }
+
+
+.mini-agentsam-panel:focus-within { box-shadow: 0 0 0 1px var(--composer-mode-accent, var(--mini-accent)), 0 0 0 3px color-mix(in srgb, var(--composer-mode-accent, var(--mini-accent)) 18%, transparent), 0 16px 48px #00000028; }
+.mini-agentsam-panel textarea { resize: none; max-height: 120px; overflow-y: auto; border: 0; outline: none; }
+.mini-agentsam-heading button { display: grid; place-items: center; border: 0; border-radius: 10px; background: transparent; color: var(--mini-muted); cursor: pointer; }
+.mini-agentsam-heading button:hover { background: var(--nav-hover, #ffffff0d); color: var(--mini-text); }
+.mini-agentsam-review-backdrop { position: fixed; inset: 0; z-index: 10000; pointer-events: auto; background: #0008; backdrop-filter: blur(8px); }
+.mini-agentsam-panel[data-expanded="true"] { z-index: 10001; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(760px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); padding: 20px; background: var(--mini-surface); }
+.mini-agentsam-panel[data-expanded="true"] textarea { min-height: min(45dvh, 360px); max-height: 60dvh !important; height: min(45dvh, 360px) !important; }
+.mini-agentsam-send { display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; background: var(--composer-send-bg, var(--mini-accent)); color: var(--composer-send-fg, var(--nav-canvas, #171717)); cursor: pointer; }
+.mini-agentsam-send:disabled { opacity: .4; cursor: default; }
+@media (prefers-reduced-motion: reduce) { .mini-agentsam-panel { transition: none; } }
