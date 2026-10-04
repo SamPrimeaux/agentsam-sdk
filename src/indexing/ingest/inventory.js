@@ -57,7 +57,7 @@ const CATEGORY_TOOLING = new Set([
 /** Generated / historical — review before including. */
 const CATEGORY_GENERATED = new Set([
   'generated', 'fixtures', 'snapshots', 'artifacts',
-  'site', 'sites', 'templates', 'level-1', 'focus-timer',
+  'site', 'sites', 'templates', 'level-1',
 ]);
 
 /** AgentSam / config control plane — review. */
