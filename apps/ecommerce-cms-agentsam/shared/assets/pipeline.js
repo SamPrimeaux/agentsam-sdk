@@ -60,7 +60,7 @@ export async function runImageOptimizePipeline(options) {
   );
 
   const stages = stageDirsForPrefix(prefix);
-  const workDir = join(tmpdir(), `fnf-assets-${Date.now()}`);
+  const workDir = join(tmpdir(), `commerce-assets-${Date.now()}`);
   mkdirSync(workDir, { recursive: true });
 
   const results = [];
@@ -78,7 +78,7 @@ export async function runImageOptimizePipeline(options) {
         quality: options.quality,
         stageOptimized: stages.stageOptimized,
         stagePreview: stages.stagePreview,
-        source: options.source || "fnf_image_pipeline",
+        source: options.source || "commerce_image_pipeline",
       });
       results.push(row);
       if (row.transform_state === "no_transform") {
@@ -105,7 +105,7 @@ export async function runImageOptimizePipeline(options) {
   );
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const report = {
-    workflow_key: "fnf_image_pipeline",
+    workflow_key: "commerce_image_pipeline",
     bucket: ASSET_STORAGE.bucket,
     binding: ASSET_STORAGE.binding,
     prefix,
@@ -126,7 +126,7 @@ export async function runImageOptimizePipeline(options) {
     results,
   };
 
-  const reportDir = options.reportDir ?? join(cwd, ".fnf-backups");
+  const reportDir = options.reportDir ?? join(cwd, ".commerce-backups");
   if (reportDir) {
     if (!existsSync(reportDir)) mkdirSync(reportDir, { recursive: true });
     const localPath = join(reportDir, `image-batch-${stamp}.json`);
@@ -140,8 +140,8 @@ export async function runImageOptimizePipeline(options) {
     const reportFile = join(workDir, "report.json");
     writeFileSync(reportFile, JSON.stringify(report, null, 2));
     putObjectFromFile(reportKey, reportFile, "application/json", {
-      "fnf-pipeline": "fnf_image_pipeline",
-      "fnf-report": "1",
+      "commerce-pipeline": "commerce_image_pipeline",
+      "commerce-report": "1",
     }, { cwd });
     report.r2_report_key = reportKey;
     log(`r2 report: ${ASSET_STORAGE.workerMediaBaseUrl}/${reportKey}`);

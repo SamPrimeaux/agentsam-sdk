@@ -15,7 +15,7 @@
  * }} input
  */
 export function buildAssetTags(input) {
-  const brand = input.brand || "Fuel & Free Time";
+  const brand = input.brand || "Ember Supply";
   const kind = input.assetKind || "image";
   const key = String(input.r2Key || "");
   const file = key.split("/").pop() || "";
@@ -43,15 +43,15 @@ export function buildAssetTags(input) {
 
   /** Cloudflare / R2 custom metadata (string values only). */
   const cf = {
-    "fnf-brand": brand,
-    "fnf-asset-kind": kind,
-    "fnf-pipeline": "fnf_image_pipeline",
-    "fnf-optimized": "1",
-    "fnf-source-key": key.slice(0, 200),
-    ...(input.productSlug ? { "fnf-product-slug": String(input.productSlug).slice(0, 120) } : {}),
-    ...(input.collection ? { "fnf-collection": String(input.collection).slice(0, 120) } : {}),
-    ...(input.source ? { "fnf-source": String(input.source).slice(0, 80) } : {}),
-    "fnf-seo-alt": seo.alt.slice(0, 200),
+    "commerce-brand": brand,
+    "commerce-asset-kind": kind,
+    "commerce-pipeline": "commerce_image_pipeline",
+    "commerce-optimized": "1",
+    "commerce-source-key": key.slice(0, 200),
+    ...(input.productSlug ? { "commerce-product-slug": String(input.productSlug).slice(0, 120) } : {}),
+    ...(input.collection ? { "commerce-collection": String(input.collection).slice(0, 120) } : {}),
+    ...(input.source ? { "commerce-source": String(input.source).slice(0, 80) } : {}),
+    "commerce-seo-alt": seo.alt.slice(0, 200),
   };
 
   return { seo, cf };

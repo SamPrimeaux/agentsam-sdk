@@ -1,10 +1,10 @@
 # AgentSam product lifecycle — infra at a glance
 
-**Status:** standing engineering law (2026-09-30)  
-**Repo tip when audited:** Lane 0d CI trust branch (from `7684a4e5`)  
+**Status:** standing engineering law (2026-09-30)
+**Repo tip when audited:** Lane 0d CI trust branch (from `7684a4e5`)
 **Companion:** [apps/README.md](../apps/README.md) (product app ownership boundary)
 
-This document is the glanceable SSOT for **implement → prove → extract → rebrand → repack → install**.  
+This document is the glanceable SSOT for **implement → prove → extract → rebrand → repack → install**.
 Do not invent a new product architecture. Close the graduation loop around the machinery that already exists.
 
 The global agent/runtime law is [`AGENTSAM.md`](../AGENTSAM.md). This lifecycle document applies that law to product authoring, extraction, resale, and graduation.
@@ -69,10 +69,10 @@ agentsam-sdk/
 
 **Law from `apps/README.md` (unchanged):**
 
-> `apps/` is the development/authoring source of truth for runnable AgentSam product surfaces.  
+> `apps/` is the development/authoring source of truth for runnable AgentSam product surfaces.
 > **Product apps are independently extractable.**
 
-`packages/` is not a mistake when an app depends on it.  
+`packages/` is not a mistake when an app depends on it.
 **Escape hatch that is a mistake:** `file:../../../packages/foo` that only resolves inside this monorepo.
 
 ---
@@ -113,7 +113,7 @@ Identity · vault · settings · database-editor · desktop-shell · work · wor
 
 Registry must eventually distinguish those two classes. One catalog, two product-classes — not two conflicting authorities.
 
-Architecture test today only names: `local-studio`, `cad-creator`, `client-cms-editor`.  
+Architecture test today only names: `local-studio`, `cad-creator`, `client-cms-editor`.
 If a manifest claims a graduated prebuilt app, **either** the same product law applies **or** the manifest explicitly marks non-graduated.
 
 ---
@@ -207,9 +207,9 @@ Same underlying generators allowed. **Contracts must not share one word for two 
 
 **Today (too many hands):**
 
-- `agentsam.app.json` manifests  
-- `src/lib/init-options.js` hardcoded scaffold list  
-- presets registry  
+- `agentsam.app.json` manifests
+- `src/lib/init-options.js` hardcoded scaffold list
+- presets registry
 - `registry/.../installable-products.json` cache (incomplete: cms / client-cms-editor / rapid-rust only)
 
 **Target:**
@@ -282,7 +282,7 @@ starter pack
 new apps/<product> or customer instance
 ```
 
-Declare and prove the relationship so `apps/church-site` and `packages/theme-church-site` cannot silently drift.
+Declare and prove the relationship so `apps/cypress` and `packages/theme-cypress` cannot silently drift.
 
 ---
 
@@ -309,12 +309,12 @@ PREBUILD GRADUATION
 Local Studio / CMS / Ecommerce / CAD
 ```
 
-Identity / Desktop / Database / Settings work **must not** deepen monorepo-only `file:` coupling or lie in manifests.  
+Identity / Desktop / Database / Settings work **must not** deepen monorepo-only `file:` coupling or lie in manifests.
 Lane **0d** made install/verify gates enforceable from a clean checkout; do not reopen dependency-graph or bootstrap debt in later lanes.
 
 | Lane | Focus | Graduation constraint |
 |---|---|---|
-| **0c** Project authority — **DONE** | Describe **this** repo’s architecture from evidence | #83 / `a6dee86d`: customer fixture + FNF regression + packed-npm proof green |
+| **0c** Project authority — **DONE** | Describe **this** repo’s architecture from evidence | #83 / `a6dee86d`: customer fixture + Commerce regression + packed-npm proof green |
 | **0d** CI trust / dependency closure — **DONE** | Make the repo's own gates executable and meaningful from a clean checkout | #85 / `821d0d3e`: clean Install + complete lock graph + `npm run verify` + GHA green |
 | **1** Identity portable contract — **DONE** | SQLite + portable D1 + IAM compat | #86 / `99044cfc`: pack + three adapters + packed-npm proof; GHA [36781550250](https://github.com/SamPrimeaux/agentsam-sdk/actions/runs/36781550250) green |
 | **2** Desktop transport | Authenticated `/api` bridge + packaging | Desktop uses session transport — not Sam’s D1 credentials |
@@ -340,7 +340,7 @@ git clone / npm install SDK
 
 ## 10b. Lane 0c — Project authority + machinery integrity
 
-Merkle / repository discovery is **not** the rewrite target (FNF: ~900 files, ~46.6 MB, ~0.66s, correct Git root/revision).  
+Merkle / repository discovery is **not** the rewrite target (Commerce: ~900 files, ~46.6 MB, ~0.66s, correct Git root/revision).
 Failure is **after** discovery: AutoRAG / status / scopes treat the customer project like a blank SDK clone.
 
 ### Authority stack → PROJECT CONTEXT RECEIPT
@@ -366,14 +366,14 @@ CURRENT REPOSITORY
           └── missing / conflicting (drift between policy and wrangler)
 ```
 
-Truthful example shape (FNF-class):
+Truthful example shape (Commerce-class):
 
 ```json
 {
   "vectorize": {
     "configured": true,
-    "binding": "FNF_VECTORIZE",
-    "index": "fnf-agentsam-bge-m3-1024",
+    "binding": "COMMERCE_VECTORIZE",
+    "index": "commerce-agentsam-bge-m3-1024",
     "source": "wrangler.toml"
   },
   "workers_ai": {
@@ -389,7 +389,7 @@ Truthful example shape (FNF-class):
 }
 ```
 
-Do **not** collapse “no `.agentsam/knowledge.json`” into “this project has no AI/vector resources.”  
+Do **not** collapse “no `.agentsam/knowledge.json`” into “this project has no AI/vector resources.”
 Offer adoption of **observed** wrangler resources instead.
 
 ### `knowledge.json` vs wrangler
@@ -416,7 +416,7 @@ Same logical backend id. Matches the Desktop service-vs-OAuth split used elsewhe
 |---|---|
 | `repository_intelligence` requires root `packages/agentsam-repository` | Customer repos must not vendor SDK internals to own CLI capability |
 | AutoRAG only reads `.agentsam/knowledge.json` | Ignores wrangler / manifest / binding evidence |
-| Default code scope = `packages` + `src` | Omits real product under `apps/` (FNF) |
+| Default code scope = `packages` + `src` | Omits real product under `apps/` (Commerce) |
 | `cloudflare_vectorize` advertised `supported: true` while adapter incomplete | Label ≠ backend |
 | codebaseindex: Vectorize “recorded… follow-up slice” | Not a completed backend |
 | Workers AI `operational:false` despite Worker binding | Must separate local vs worker execution |
@@ -424,12 +424,12 @@ Same logical backend id. Matches the Desktop service-vs-OAuth split used elsewhe
 
 ### Acceptance tests — DONE in #83 / `a6dee86d`
 
-1. **Customer fixture** with `apps/my-product/`, wrangler `[ai]` + `[[vectorize]]`, `.agentsam/app.json` → correct resource discovery (no FNF-specific code in SDK).  
-2. **`agentsam autorag setup`** in that fixture proposes the **existing** Vectorize binding — not unrelated OpenAI/Gemini/local defaults.  
-3. **`agentsam machine inspect`** passes on **every** `agentsam.app.json` product (incl. Local Studio + arbitrary valid Unicode).  
+1. **Customer fixture** with `apps/my-product/`, wrangler `[ai]` + `[[vectorize]]`, `.agentsam/app.json` → correct resource discovery (no Commerce-specific code in SDK).
+2. **`agentsam autorag setup`** in that fixture proposes the **existing** Vectorize binding — not unrelated OpenAI/Gemini/local defaults.
+3. **`agentsam machine inspect`** passes on **every** `agentsam.app.json` product (incl. Local Studio + arbitrary valid Unicode).
 4. **Packed npm SDK clean-room proof** compiles/runs Machine outside the monorepo.
 
-FNF regression on merged main now resolves canonical repo identity, current local generation, local SQLite, Workers AI, Vectorize, D1, and R2 with no resource conflicts. Preserve that behavior in later lanes.
+Commerce regression on merged main now resolves canonical repo identity, current local generation, local SQLite, Workers AI, Vectorize, D1, and R2 with no resource conflicts. Preserve that behavior in later lanes.
 
 ---
 
@@ -486,8 +486,8 @@ Local Studio same-machine path: Tauri → loopback → `agentsamd`. No VPC, Tunn
 
 ## 10d. Lane 1 — Identity portability — **DONE**
 
-Branch: `lane-1-identity-portability` from clean main `a5d58c0a347eaee4be2ca2fd1717acb0ae304643`.  
-Merged: PR [#86](https://github.com/SamPrimeaux/agentsam-sdk/pull/86) @ `99044cfcb14930f7bdcb6f1769aa20ed8abf8430` (merge commit `1b075a53`).  
+Branch: `lane-1-identity-portability` from clean main `a5d58c0a347eaee4be2ca2fd1717acb0ae304643`.
+Merged: PR [#86](https://github.com/SamPrimeaux/agentsam-sdk/pull/86) @ `99044cfcb14930f7bdcb6f1769aa20ed8abf8430` (merge commit `1b075a53`).
 CI: [36781550250](https://github.com/SamPrimeaux/agentsam-sdk/actions/runs/36781550250) **PASS** (verify, 4m22s) on PR HEAD `99044cfc`.
 
 **Product law:** IdentityStore behavior + schema-pack ownership are product authority. SQLite, D1, and IAM are adapters. Do not make Cloudflare/IAM table names the portable contract. Do not create a second Desktop OAuth authority. Do not rename/rebuild production IAM schema merely to match portable names.
@@ -538,18 +538,18 @@ CI: [36781550250](https://github.com/SamPrimeaux/agentsam-sdk/actions/runs/36781
 
 A product may claim `source_scaffold = ready` / graduate / appear as a first-class installable only when a current receipt says:
 
-- [ ] manifest validate PASS  
-- [ ] app architecture law PASS (or explicit non-graduated class)  
-- [ ] machine inspect PASS (incl. UTF-8 / parse)  
-- [ ] no personal leakage PASS  
-- [ ] no escaping `file:` deps PASS  
-- [ ] SQLite + D1 schema packs PASS (as claimed)  
-- [ ] scaffold isolation PASS (complete product extract)  
-- [ ] npm tarball install PASS  
-- [ ] doctor from clean install PASS  
-- [ ] frontend + backend build PASS  
-- [ ] Cloudflare dry-run PASS (if claimed)  
-- [ ] desktop parity PASS or N/A  
+- [ ] manifest validate PASS
+- [ ] app architecture law PASS (or explicit non-graduated class)
+- [ ] machine inspect PASS (incl. UTF-8 / parse)
+- [ ] no personal leakage PASS
+- [ ] no escaping `file:` deps PASS
+- [ ] SQLite + D1 schema packs PASS (as claimed)
+- [ ] scaffold isolation PASS (complete product extract)
+- [ ] npm tarball install PASS
+- [ ] doctor from clean install PASS
+- [ ] frontend + backend build PASS
+- [ ] Cloudflare dry-run PASS (if claimed)
+- [ ] desktop parity PASS or N/A
 
 Until then: develop in `apps/`, but **do not** advertise extract/install readiness.
 
@@ -557,8 +557,8 @@ Until then: develop in `apps/`, but **do not** advertise extract/install readine
 
 ## 12. Related docs
 
-- [apps/README.md](../apps/README.md) — product app ownership boundary  
-- Branch closure trail (IAM): `inneranimalmedia/docs/platform/BRANCH_DISPOSITION_20260930.md`  
+- [apps/README.md](../apps/README.md) — product app ownership boundary
+- Branch closure trail (IAM): `inneranimalmedia/docs/platform/BRANCH_DISPOSITION_20260930.md`
 - Work plan: Cursor `identity_portability_status` — **Lane 1 Identity DONE** (#86 @ `99044cfc` / main `1b075a53`); next is Lane 2 Desktop transport
 - Lane 0c project authority merged in #83 at `a6dee86d`; preserve its customer-repo/runtime discovery contract in every later lane
 - Lane 0d closes clean-checkout CI trust; do not reopen ExecOS/terminal implementation during Identity

@@ -57,7 +57,7 @@ and `origin/main` before acting.
    detection genuinely fails. Both `wizards/cms.js` and
    `wizards/worker-api.js` now call this instead of a raw `text()` prompt
    asking the user to hand-paste an ID that `agentsam cloudflare` already
-   knows. Verified live: resolves to `ede6590ac0d2fb7daf155b35653457b2`
+   knows. Verified live: resolves to `demo-commerce-account`
    ("Info@inneranimals.com's Account") with zero prompts.
 3. **`src/lib/scaffold/templates/worker-api/index.js` +
    `templates/cms/index.js` + `templates/wrangler-dev/...`** (3 templates

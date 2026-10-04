@@ -1,12 +1,12 @@
 /**
- * Admin GitHub OAuth — scoped to SamPrimeaux/fuelnfreetime via post-auth repo check.
+ * Admin GitHub OAuth — scoped to InnerAnimalMedia/commerce-demo via post-auth repo check.
  *
  * Register OAuth App: https://github.com/settings/developers
- *   Name: Fuel & Free Time AgentSam
- *   Homepage: https://fuelnfreetime.com/admin/agentsam
- *   Callback: https://fuelnfreetime.com/api/admin/agentsam/github/callback
+ *   Name: Ember Supply AgentSam
+ *   Homepage: https://ember.example/admin/agentsam
+ *   Callback: https://ember.example/api/admin/agentsam/github/callback
  *
- * Secrets: FNF_GITHUB_CLIENT_ID, FNF_GITHUB_CLIENT_SECRET
+ * Secrets: COMMERCE_GITHUB_CLIENT_ID, COMMERCE_GITHUB_CLIENT_SECRET
  */
 
 import { adminLoginPath } from "../lib/admin-routes.js";
@@ -14,7 +14,7 @@ import { getSessionUser } from "../lib/auth.js";
 import { resolveGithubRepo } from "../lib/integration-config.js";
 import { githubStatus } from "../agentsam/github-client.js";
 
-const OAUTH_STATE_COOKIE = "fnf_github_oauth_state";
+const OAUTH_STATE_COOKIE = "commerce_github_oauth_state";
 const SCOPES = "read:user repo";
 
 function json(data, init = {}) {
@@ -62,7 +62,7 @@ async function verifyRepoAccess(env, token) {
       Authorization: `Bearer ${token}`,
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "FuelNFreetime-AgentSam/1.0",
+      "User-Agent": "Embertime-AgentSam/1.0",
     },
   });
   if (!res.ok) {
@@ -76,8 +76,8 @@ export async function agentsamGithubOAuthStart(request, env) {
   const user = await getSessionUser(request, env);
   if (!user) return redirect(new URL(adminLoginPath(), request.url).toString());
 
-  const clientId = String(env.FNF_GITHUB_CLIENT_ID || "").trim();
-  const clientSecret = String(env.FNF_GITHUB_CLIENT_SECRET || "").trim();
+  const clientId = String(env.COMMERCE_GITHUB_CLIENT_ID || "").trim();
+  const clientSecret = String(env.COMMERCE_GITHUB_CLIENT_SECRET || "").trim();
   if (!clientId || !clientSecret) {
     return redirect(agentsamUrl(request, "github=oauth_not_configured"));
   }
@@ -126,8 +126,8 @@ export async function agentsamGithubOAuthCallback(request, env) {
   const userId = env.CMS_CACHE ? await env.CMS_CACHE.get(`github_oauth:${stateHash}`) : null;
   if (!userId) return redirect(agentsamUrl(request, "github=expired"));
 
-  const clientId = String(env.FNF_GITHUB_CLIENT_ID || "").trim();
-  const clientSecret = String(env.FNF_GITHUB_CLIENT_SECRET || "").trim();
+  const clientId = String(env.COMMERCE_GITHUB_CLIENT_ID || "").trim();
+  const clientSecret = String(env.COMMERCE_GITHUB_CLIENT_SECRET || "").trim();
   if (!clientId || !clientSecret || !code) {
     return redirect(agentsamUrl(request, "github=oauth_not_configured"));
   }
@@ -160,7 +160,7 @@ export async function agentsamGithubOAuthCallback(request, env) {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       Accept: "application/vnd.github+json",
-      "User-Agent": "FuelNFreetime-AgentSam/1.0",
+      "User-Agent": "Embertime-AgentSam/1.0",
     },
   });
   const ghUser = await userRes.json().catch(() => ({}));
@@ -205,7 +205,7 @@ export async function agentsamGithubOAuthStatus(request, env) {
   const status = await githubStatus(env, user.id);
   const resolved = await resolveGithubRepo(env);
   const oauthConfigured = Boolean(
-    String(env.FNF_GITHUB_CLIENT_ID || "").trim() && String(env.FNF_GITHUB_CLIENT_SECRET || "").trim()
+    String(env.COMMERCE_GITHUB_CLIENT_ID || "").trim() && String(env.COMMERCE_GITHUB_CLIENT_SECRET || "").trim()
   );
 
   return json({
@@ -213,7 +213,7 @@ export async function agentsamGithubOAuthStatus(request, env) {
     scoped_repo: status.scoped_repo || resolved.repo,
     oauth_app_configured: oauthConfigured,
     connect_url: oauthConfigured ? "/api/admin/agentsam/github/start" : null,
-    service_token: Boolean(String(env.FNF_GITHUB_TOKEN || "").trim()),
+    service_token: Boolean(String(env.COMMERCE_GITHUB_TOKEN || "").trim()),
     ...status,
   });
 }

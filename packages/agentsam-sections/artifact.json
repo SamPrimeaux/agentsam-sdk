@@ -1,0 +1,24 @@
+{
+  "schema": "inneranimal.artifact.v1",
+  "id": "agentsam-sections",
+  "name": "AgentSam Sections",
+  "package": {
+    "name": "@inneranimalmedia/agentsam-sections",
+    "version": "0.1.0"
+  },
+  "kind": "ui",
+  "family": "layout",
+  "summary": "Reusable global header/footer, scroll-driven split sections and a media slot (image, gif, video, glb, sandboxed app) under the standardized mxs-* theme.",
+  "status": "experimental",
+  "capabilities": [
+    "header",
+    "footer",
+    "scroll-sections",
+    "media-slot",
+    "model-viewer",
+    "app-preview"
+  ],
+  "related": [
+    "agentsam-abs"
+  ]
+}

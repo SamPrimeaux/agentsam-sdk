@@ -913,7 +913,7 @@ function bindUi() {
         composeContext = {
           mode: "image",
           label: "Creative Studio",
-          workflow_key: plusMenuConfig.image.workflow_key || "fnf_creative_studio",
+          workflow_key: plusMenuConfig.image.workflow_key || "commerce_creative_studio",
           task_type: "image_generation",
           lane: "image",
         };

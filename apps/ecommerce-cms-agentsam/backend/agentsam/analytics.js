@@ -3,7 +3,7 @@
  * Never throws; never stores secrets or full prompts by default.
  */
 
-import { FNF_ACCOUNT_ID } from "./constants.js";
+import { COMMERCE_ACCOUNT_ID } from "./constants.js";
 
 const PREVIEW_MAX = 240;
 const ERROR_MAX = 500;
@@ -60,7 +60,7 @@ export function sanitizeAnalyticsText(text, maxLength = PREVIEW_MAX) {
     .replace(/\b(ghp_[A-Za-z0-9]+)/gi, "[redacted]")
     .replace(/\b(github_pat_[A-Za-z0-9_]+)/gi, "[redacted]")
     .replace(/\b(Bearer\s+[A-Za-z0-9._-]+)/gi, "Bearer [redacted]")
-    .replace(/\b(AGENTSAM_BRIDGE_KEY|FNF_GITHUB_TOKEN|IAM_MCP_TOKEN)\s*[:=]\s*\S+/gi, "$1=[redacted]")
+    .replace(/\b(AGENTSAM_BRIDGE_KEY|COMMERCE_GITHUB_TOKEN|IAM_MCP_TOKEN)\s*[:=]\s*\S+/gi, "$1=[redacted]")
     .trim();
 
   if (s.length > maxLength) {
@@ -225,7 +225,7 @@ async function buildRow(env, event, options = {}) {
   const totalTokens = merged.total_tokens ?? inputTokens + outputTokens;
 
   return {
-    account_id: merged.account_id || FNF_ACCOUNT_ID,
+    account_id: merged.account_id || COMMERCE_ACCOUNT_ID,
     event_type: merged.event_type,
     event_name: merged.event_name,
     status: merged.status || "success",
@@ -332,7 +332,7 @@ function rangeSeconds(range = "24h") {
 }
 
 export async function summarizeAgentSamAnalytics(env, options = {}) {
-  const accountId = options.account_id || FNF_ACCOUNT_ID;
+  const accountId = options.account_id || COMMERCE_ACCOUNT_ID;
   const since = Math.floor(Date.now() / 1000) - rangeSeconds(options.range || "24h");
 
   if (!env?.DB) {
@@ -489,7 +489,7 @@ export async function getAgentSamAnalyticsStatus(env) {
        WHERE account_id = ?
          AND date_key = ?`
     )
-      .bind(FNF_ACCOUNT_ID, today)
+      .bind(COMMERCE_ACCOUNT_ID, today)
       .first();
 
     const topModel = await env.DB.prepare(
@@ -500,7 +500,7 @@ export async function getAgentSamAnalyticsStatus(env) {
        ORDER BY n DESC
        LIMIT 1`
     )
-      .bind(FNF_ACCOUNT_ID, today)
+      .bind(COMMERCE_ACCOUNT_ID, today)
       .first();
 
     const topWorkflow = await env.DB.prepare(
@@ -511,7 +511,7 @@ export async function getAgentSamAnalyticsStatus(env) {
        ORDER BY n DESC
        LIMIT 1`
     )
-      .bind(FNF_ACCOUNT_ID, today)
+      .bind(COMMERCE_ACCOUNT_ID, today)
       .first();
 
     const chats = totals?.chats ?? 0;

@@ -39,14 +39,14 @@ export const projects: Project[] = [
     image: "/projects/kith.jpg",
   },
   {
-    slug: "fuel-freetime",
-    title: "Fuel & Free Time",
+    slug: "ember",
+    title: "Ember Supply",
     category: "Brand",
     year: "2025",
     role: "Lifestyle · commerce",
     description:
       "Lafayette-born apparel. Full e-commerce stack, limited drops, and a community platform with end-to-end identity.",
-    image: "/projects/fuel-freetime.jpg",
+    image: "/projects/ember.jpg",
   },
   {
     slug: "pawlove",

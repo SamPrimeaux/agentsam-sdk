@@ -1,0 +1,27 @@
+{
+  "name": "@inneranimalmedia/agentsam-browser-site",
+  "version": "2.6.11",
+  "private": true,
+  "description": "Public site for AgentSam Browser. Consumes the real ABS and sections packages.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@inneranimalmedia/agentsam-abs": "2.6.11",
+    "@inneranimalmedia/agentsam-sections": "2.6.11",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "typescript": "~5.8.2",
+    "vite": "^8.2.0"
+  }
+}

@@ -223,13 +223,13 @@ export function canonicalKeyForPromotion(input) {
 export function routePipelineWorkflow(classification) {
   switch (classification.pipeline) {
     case "image":
-      return "fnf_image_pipeline";
+      return "commerce_image_pipeline";
     case "icon":
-      return "fnf_icon_pipeline";
+      return "commerce_icon_pipeline";
     case "video":
-      return "fnf_video_pipeline";
+      return "commerce_video_pipeline";
     case "glb":
-      return "fnf_glb_pipeline";
+      return "commerce_glb_pipeline";
     default:
       return null;
   }

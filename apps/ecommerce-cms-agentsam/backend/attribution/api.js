@@ -24,7 +24,7 @@ export async function handleAttributionVisit(request, env) {
   }
 
   const cookies = parseCookies(request.headers.get("Cookie"));
-  const sid = cookies.fnf_vid || body.session_id || sessionId();
+  const sid = cookies.commerce_vid || body.session_id || sessionId();
   const utm = {
     utm_source: body.utm_source || null,
     utm_medium: body.utm_medium || null,
@@ -84,7 +84,7 @@ export async function handleAttributionRedirect(request, env, url) {
   const channel = url.searchParams.get("ch") || "campaign";
   const to = url.searchParams.get("to") || "/shop";
   const cookies = parseCookies(request.headers.get("Cookie"));
-  const sid = cookies.fnf_vid || sessionId();
+  const sid = cookies.commerce_vid || sessionId();
 
   const utm = utmFromSearchParams(url.searchParams);
   if (!utm.utm_source) utm.utm_source = channel;
@@ -107,7 +107,7 @@ export async function handleAttributionRedirect(request, env, url) {
   if (utm.utm_source) dest.searchParams.set("utm_source", utm.utm_source);
   if (utm.utm_medium) dest.searchParams.set("utm_medium", utm.utm_medium);
   if (utm.utm_campaign) dest.searchParams.set("utm_campaign", utm.utm_campaign);
-  if (campaignId) dest.searchParams.set("fnf_c", campaignId);
+  if (campaignId) dest.searchParams.set("commerce_c", campaignId);
 
   const headers = new Headers({ Location: dest.toString() });
   appendAttributionCookies(headers, {

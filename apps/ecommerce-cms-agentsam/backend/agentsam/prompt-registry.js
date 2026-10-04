@@ -2,13 +2,13 @@
  * AgentSam prompt registry — templates, fragments, and prompt pack assembly.
  */
 
-import { FNF_ACCOUNT_ID } from "./constants.js";
+import { COMMERCE_ACCOUNT_ID } from "./constants.js";
 import { estimateTokens } from "./analytics.js";
 
 const PREVIEW_MAX = 480;
 const BASE_FRAGMENT_KEYS = [
-  "fnf_scope",
-  "fnf_feature_gates",
+  "commerce_scope",
+  "commerce_feature_gates",
   "agentsam_response_style",
   "agentsam_tool_policy",
   "agentsam_storage_policy",
@@ -83,7 +83,7 @@ export async function loadPromptTemplate(env, options = {}) {
        WHERE account_id = ? AND prompt_key = ? AND status = 'active'
        ORDER BY version DESC LIMIT 1`
     )
-      .bind(FNF_ACCOUNT_ID, prompt_key)
+      .bind(COMMERCE_ACCOUNT_ID, prompt_key)
       .first();
   }
 
@@ -102,7 +102,7 @@ export async function loadPromptTemplate(env, options = {}) {
        version DESC`
   )
     .bind(
-      FNF_ACCOUNT_ID,
+      COMMERCE_ACCOUNT_ID,
       workflow_key || "",
       route_lane || "",
       task_type || "",
@@ -117,10 +117,10 @@ export async function loadPromptTemplate(env, options = {}) {
   if (!results.length) {
     return env.DB.prepare(
       `SELECT * FROM agentsam_prompts
-       WHERE account_id = ? AND prompt_key = 'fnf_agentsam_base_system' AND status = 'active'
+       WHERE account_id = ? AND prompt_key = 'commerce_agentsam_base_system' AND status = 'active'
        ORDER BY version DESC LIMIT 1`
     )
-      .bind(FNF_ACCOUNT_ID)
+      .bind(COMMERCE_ACCOUNT_ID)
       .first();
   }
 
@@ -130,7 +130,7 @@ export async function loadPromptTemplate(env, options = {}) {
   const laneMatch = results.find((r) => r.route_lane === route_lane && !r.workflow_key);
   if (laneMatch) return laneMatch;
 
-  return results.find((r) => r.prompt_key === "fnf_agentsam_base_system") || results[0];
+  return results.find((r) => r.prompt_key === "commerce_agentsam_base_system") || results[0];
 }
 
 export async function loadPromptFragments(env, options = {}) {
@@ -141,15 +141,15 @@ export async function loadPromptFragments(env, options = {}) {
      WHERE account_id = ? AND status = 'active'
      ORDER BY priority ASC, fragment_key ASC`
   )
-    .bind(FNF_ACCOUNT_ID)
+    .bind(COMMERCE_ACCOUNT_ID)
     .all();
 
   const seen = new Set();
   const out = [];
 
   const wantedKeys = new Set(BASE_FRAGMENT_KEYS);
-  if (options.workflow_key === "fnf_content_studio" || options.workflow_key === "fnf_creative_studio" || options.workflow_key === "fnf_brand_refresh") {
-    wantedKeys.add("fnf_brand_voice");
+  if (options.workflow_key === "commerce_content_studio" || options.workflow_key === "commerce_creative_studio" || options.workflow_key === "commerce_brand_refresh") {
+    wantedKeys.add("commerce_brand_voice");
   }
   if (options.route_lane === "code" || options.intent === "code") {
     wantedKeys.add("agentsam_repo_policy");
@@ -207,16 +207,16 @@ export async function buildPromptPack(env, routing = {}, context = {}, options =
     workflow_key: workflowKey || "",
     route_lane: routeLane || "",
     task_type: taskType || "",
-    brand: "Fuel & Free Time",
+    brand: "Ember Supply",
   };
 
   const fragmentBlocks = fragments.map((f) => f.content_text).filter(Boolean);
   const templateBody = template
     ? renderTemplate(template.template_text, variables)
-    : "You are Agent Sam for Fuel & Free Time.";
+    : "You are Agent Sam for Ember Supply.";
 
   const systemPrompt = [...fragmentBlocks, templateBody].filter(Boolean).join("\n\n");
-  const promptKeys = template ? [template.prompt_key] : ["fnf_agentsam_base_system"];
+  const promptKeys = template ? [template.prompt_key] : ["commerce_agentsam_base_system"];
   const fragmentKeys = fragments.map((f) => f.fragment_key);
   const promptHash = await hashText(`${promptKeys.join("|")}:${fragmentKeys.join("|")}:${systemPrompt}`);
 
@@ -239,7 +239,7 @@ export async function listPromptTemplates(env) {
     `SELECT prompt_key, prompt_type, workflow_key, route_lane, task_type, status, version, priority, estimated_tokens
      FROM agentsam_prompts WHERE account_id = ? ORDER BY prompt_type, priority`
   )
-    .bind(FNF_ACCOUNT_ID)
+    .bind(COMMERCE_ACCOUNT_ID)
     .all();
   return results || [];
 }
@@ -250,7 +250,7 @@ export async function listPromptFragments(env) {
     `SELECT fragment_key, fragment_type, priority, status, estimated_tokens, version
      FROM agentsam_prompt_fragments WHERE account_id = ? ORDER BY priority`
   )
-    .bind(FNF_ACCOUNT_ID)
+    .bind(COMMERCE_ACCOUNT_ID)
     .all();
   return results || [];
 }
@@ -262,6 +262,6 @@ export async function invalidatePromptRegistryCaches(env, reason = "registry_cha
     `UPDATE agentsam_prompt_cache SET status = 'invalidated', invalidation_reason = ?, updated_at = datetime('now')
      WHERE account_id = ? AND status = 'active'`
   )
-    .bind(reason, FNF_ACCOUNT_ID)
+    .bind(reason, COMMERCE_ACCOUNT_ID)
     .run();
 }

@@ -122,7 +122,7 @@ apps/<app-id>/
 | `agentsam.app.json` | Package/product definition — sole APP identity authority |
 | `.agentsam/` | Host/user/project **installation** state for this checkout or customer |
 
-Same APP installed into Fuel & Free Time, Companions CPAs, InnerAnimalMedia, or a customer localhost keeps the same `APP.id`. `.agentsam/` describes **this** installation.
+Same APP installed into Ember Supply, Companions CPAs, InnerAnimalMedia, or a customer localhost keeps the same `APP.id`. `.agentsam/` describes **this** installation.
 
 ## Physical shape
 

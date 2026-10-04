@@ -1,0 +1,82 @@
+@import "./tokens.css";
+@import "./components.css";
+
+:root,
+.abs-browser[data-abs-theme="dark"] {
+  color-scheme: dark;
+  --app-bg: #090a0e;
+  --app-canvas-bg: #090a0e;
+  --app-surface-1: #101117;
+  --app-surface-2: #171822;
+  --app-surface-3: #1f202d;
+  --app-border: #252636;
+  --app-border-hover: #383a52;
+  --app-border-focus: #8b5cf6;
+  --app-text-primary: #f7f5fb;
+  --app-text-secondary: #b5b1c0;
+  --app-text-muted: #7e798e;
+  --app-accent: #8b5cf6;
+  --app-accent-rgb: 139, 92, 246;
+  --app-accent-glow: rgba(139, 92, 246, 0.28);
+  --app-accent-hover: #b69af8;
+  --app-accent-soft: #b69af8;
+  --app-success: #4ade9b;
+  --app-warning: #f59e0b;
+  --app-error: #f87171;
+  --app-tab-bg: #101117;
+  --app-tab-active: #1b1c26;
+  --app-omnibar-bg: #0d0e13;
+  --app-omnibar-focus: #151620;
+  --app-shadow: 0 18px 60px rgba(0, 0, 0, 0.42);
+  --app-radius-base: 10px;
+  --app-radius-card: 16px;
+  --app-radius-pill: 999px;
+  --app-font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --abs-toolbar-bg: rgba(16, 17, 23, 0.88);
+  --abs-stage-bg: #0b0c11;
+  --abs-control-hover: rgba(255, 255, 255, 0.065);
+  --abs-chrome-highlight: rgba(255, 255, 255, 0.055);
+}
+
+.abs-browser[data-abs-theme="light"] {
+  color-scheme: light;
+  --app-bg: #eef0f4;
+  --app-canvas-bg: #f5f6f8;
+  --app-surface-1: #ffffff;
+  --app-surface-2: #f3f4f7;
+  --app-surface-3: #e8eaf0;
+  --app-border: #d8dbe3;
+  --app-border-hover: #bcc1cc;
+  --app-border-focus: #7c3aed;
+  --app-text-primary: #17181d;
+  --app-text-secondary: #555b68;
+  --app-text-muted: #818896;
+  --app-accent: #7c3aed;
+  --app-accent-rgb: 124, 58, 237;
+  --app-accent-glow: rgba(124, 58, 237, 0.16);
+  --app-accent-hover: #6d28d9;
+  --app-accent-soft: #8b5cf6;
+  --app-success: #059669;
+  --app-warning: #d97706;
+  --app-error: #dc2626;
+  --app-tab-bg: #e9ebf0;
+  --app-tab-active: #ffffff;
+  --app-omnibar-bg: #f2f3f6;
+  --app-omnibar-focus: #ffffff;
+  --app-shadow: 0 18px 50px rgba(15, 23, 42, 0.12);
+  --app-radius-base: 10px;
+  --app-radius-card: 16px;
+  --app-radius-pill: 999px;
+  --app-font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --abs-toolbar-bg: rgba(255, 255, 255, 0.9);
+  --abs-stage-bg: #ffffff;
+  --abs-control-hover: rgba(15, 23, 42, 0.055);
+  --abs-chrome-highlight: rgba(255, 255, 255, 0.8);
+}
+
+.abs-browser {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+}

@@ -2,10 +2,10 @@
  * AgentSam conversation metadata — D1 index + KV recent cache + R2 thread keys.
  */
 
-import { FNF_ACCOUNT_ID } from "./constants.js";
+import { COMMERCE_ACCOUNT_ID } from "./constants.js";
 import { getSessionUser } from "../lib/auth.js";
 
-const KV_RECENT_KEY = `agentsam:recent:${FNF_ACCOUNT_ID}`;
+const KV_RECENT_KEY = `agentsam:recent:${COMMERCE_ACCOUNT_ID}`;
 const RECENT_LIMIT = 20;
 const PREVIEW_MAX = 120;
 
@@ -51,7 +51,7 @@ export async function listConversations(env, { limit = RECENT_LIMIT, status = "a
        ORDER BY last_active_unix DESC
        LIMIT ?`
     )
-      .bind(FNF_ACCOUNT_ID, status, limit)
+      .bind(COMMERCE_ACCOUNT_ID, status, limit)
       .all();
     return results || [];
   } catch {
@@ -64,7 +64,7 @@ export async function getConversation(env, id) {
   return env.DB.prepare(
     `SELECT * FROM agentsam_conversations WHERE id = ? AND account_id = ? AND status != 'deleted' LIMIT 1`
   )
-    .bind(id, FNF_ACCOUNT_ID)
+    .bind(id, COMMERCE_ACCOUNT_ID)
     .first();
 }
 
@@ -83,7 +83,7 @@ export async function createConversation(env, { title, createdBy, workflowKey } 
   )
     .bind(
       id,
-      FNF_ACCOUNT_ID,
+      COMMERCE_ACCOUNT_ID,
       safeTitle,
       workflowKey || null,
       r2Key,
@@ -147,7 +147,7 @@ export async function touchConversation(
       attachmentDelta,
       now,
       conversationId,
-      FNF_ACCOUNT_ID
+      COMMERCE_ACCOUNT_ID
     )
     .run();
 }
@@ -157,7 +157,7 @@ export async function softDeleteConversation(env, id) {
   await env.DB.prepare(
     `UPDATE agentsam_conversations SET status = 'deleted', updated_at = datetime('now') WHERE id = ? AND account_id = ?`
   )
-    .bind(id, FNF_ACCOUNT_ID)
+    .bind(id, COMMERCE_ACCOUNT_ID)
     .run();
   return true;
 }

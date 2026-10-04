@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Page Editor — Fuel & Free Time Admin</title>
+<title>Page Editor — Ember Supply Admin</title>
 <link rel="stylesheet" href="/admin/css/admin.css">
 <link rel="stylesheet" href="/admin/css/console.css">
 <link rel="stylesheet" href="/admin/css/pages.css">
@@ -88,7 +88,7 @@ renderShell("/admin/pages", `
           </div>
           <div class="page-editor-seo-preview">
             <div class="page-editor-seo-title" id="seo-title">Fuel &amp; Free Time</div>
-            <div class="page-editor-seo-url" id="seo-url">https://fuelnfreetime.com › …</div>
+            <div class="page-editor-seo-url" id="seo-url">https://ember.example › …</div>
             <div class="page-editor-seo-desc" id="seo-desc">Page description preview</div>
           </div>
         </div>
@@ -163,10 +163,10 @@ function showNote(msg, kind) {
 function updateSeoPreview() {
   const title = document.getElementById("page-title-input")?.value.trim() || pageData?.title || "Page";
   document.getElementById("page-crumb-title").textContent = title;
-  document.getElementById("seo-title").textContent = `${title} – Fuel & Free Time`;
+  document.getElementById("seo-title").textContent = `${title} – Ember Supply`;
 
   const path = slug === "home" ? "" : slug;
-  document.getElementById("seo-url").textContent = `https://fuelnfreetime.com › ${path || "home"}`;
+  document.getElementById("seo-url").textContent = `https://ember.example › ${path || "home"}`;
 
   const section = pageData?.sections?.[0];
   const schema = SECTION_FIELDS[slug]?.[section?.key] || [];
@@ -504,12 +504,12 @@ document.addEventListener("click", () => {
 
 document.getElementById("title-ai-btn")?.addEventListener("click", () => {
   window.openAgentsamDrawer?.();
-  window.sendAgentsamMessage?.(`Suggest a stronger page title for the ${slug} page on Fuel & Free Time.`);
+  window.sendAgentsamMessage?.(`Suggest a stronger page title for the ${slug} page on Ember Supply.`);
 });
 
 document.getElementById("content-ai-btn")?.addEventListener("click", () => {
   window.openAgentsamDrawer?.();
-  window.sendAgentsamMessage?.(`Draft hero copy for the ${slug} page on Fuel & Free Time.`);
+  window.sendAgentsamMessage?.(`Draft hero copy for the ${slug} page on Ember Supply.`);
 });
 
 async function initPageEditor() {

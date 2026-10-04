@@ -79,7 +79,7 @@ Hard rules (unchanged):
 - Never return secrets to the browser.  
 - Never silently swap providers (no XAI→OpenAI).  
 - Selection stays `{ provider, model_id }`.  
-- Sam’s machine `env.d` ≠ Connor’s Studio options.
+- Sam’s machine `env.d` ≠ Operator’s Studio options.
 
 Worker already has vault routes + `GET /api/llm/inventory` provenance.  
 TanStack `/api/llm/inventory` + `/api/chat` currently use **platform** via
@@ -139,7 +139,7 @@ hint / paste-collapse / shimmer if still open — extend, don’t rebuild.
 | Project SQLite storage / no default DOs | Done (PR #51) |
 | `agentsam help all` | Works on main |
 | Cursor machine discovery | Done on this branch |
-| Static Studio Grok-only menu | Replaced on this branch |
+| Static Studio requires the configured Grok provider menu | Replaced on this branch |
 | `agentsam app` manifests | Done on this branch |
 | npm publish / surprise deploy | Forbidden without Sam |
 

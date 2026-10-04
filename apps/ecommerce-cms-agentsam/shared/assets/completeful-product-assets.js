@@ -47,7 +47,7 @@ export async function optimizeProductAsset(input) {
     };
   }
 
-  const workDir = join(tmpdir(), `fnf-product-asset-${Date.now()}`);
+  const workDir = join(tmpdir(), `commerce-product-asset-${Date.now()}`);
   mkdirSync(workDir, { recursive: true });
 
   const stageOpt = `${ASSET_STORAGE.stage.products}/${input.productSlug || "general"}/optimized`;

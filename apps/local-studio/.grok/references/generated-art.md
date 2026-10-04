@@ -38,7 +38,7 @@ Image tools do **not** create 3D models; use geometry/glTF for interactive 3D
   maps, collision zones): follow **`generate2dmap`**. Default engine target is
   browser (`raw_canvas` / Phaser), not Godot/Unity. Tileable ground/walls → also
   `game-tilesets` for seamlessness checks.
-- **Denser motion from video** (optional, Grok-only): **`video2dsprite`** —
+- **Denser motion from video** (optional, requires the configured Grok provider): **`video2dsprite`** —
   `imagine_image_to_video` → ffmpeg → magenta chroma scripts. Prefer
   `generate2dsprite` for crisp production sheets, and use `video2dsprite` rather
   than ad-hoc ffmpeg for the sandbox execution path.

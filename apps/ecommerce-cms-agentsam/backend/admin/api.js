@@ -317,7 +317,7 @@ function extractR2KeyFromMediaUrl(url) {
   if (!s) return null;
   const mediaIdx = s.indexOf("/media/");
   if (mediaIdx !== -1) return s.slice(mediaIdx + "/media/".length).replace(/^\/+/, "");
-  const cdn = "https://assets.fuelnfreetime.com/";
+  const cdn = "https://assets.ember.example/";
   if (s.startsWith(cdn)) return s.slice(cdn.length);
   if (!s.includes("://") && !s.startsWith("/")) return s;
   return null;

@@ -1,6 +1,6 @@
 /**
  * Route contract: the studio never hardcodes app paths. Hosts provide
- * a RouteMap; the studio asks for hrefs. IAM, Fuel & Free Time and
+ * a RouteMap; the studio asks for hrefs. IAM, Ember Supply and
  * Local Studio can all mount the same UI at different URL shapes.
  */
 export interface RouteMap {

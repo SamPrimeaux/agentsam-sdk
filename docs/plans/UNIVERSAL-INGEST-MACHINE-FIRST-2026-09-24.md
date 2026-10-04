@@ -147,7 +147,7 @@ No branch merge queue. All remaining work is **new implementation on clean main*
 | `client-cms-editor` | same |
 | `ecommerce-cms-agentsam` | same |
 | `local-studio` | same |
-| `church-site` … `shinshu-site` (7 harvested) | `.agentsam/app.json` (theme-refinery) |
+| `cypress` … `summit` (7 harvested) | `.agentsam/app.json` (theme-refinery) |
 | `theme-gallery-preview`, `frontend`, `_incoming` | maturity TBD via calculated gates |
 
 ### Batch C — Ingest feeds world-state

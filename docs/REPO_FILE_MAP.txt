@@ -59,8 +59,8 @@ this orientation map as revision authority.
   |   |-- local-studio, project-control, frontend, theme-gallery-preview
   |   |-- cad-creator, client-cms-editor, ecommerce-cms-agentsam
   |   |-- agentsam-go-worker, agentsamd
-  |   |-- church-site, companions-site, floors-site, fuelnfree-site,
-  |   |   handyman-site, insurance-site, shinshu-site
+  |   |-- cypress, violet, grove, ember,
+  |   |   forge, harbor, summit
   |   `-- _incoming/         Intake area
   |       App-specific frontend/backend/shared code and deployment configs stay
   |       with the app; see docs/architecture/AGENTSAM_APPLICATION_CONTRACT.md.

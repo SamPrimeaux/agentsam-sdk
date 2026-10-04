@@ -5,7 +5,7 @@
 - Priority: P1
 - Project: `studio-cms-editor`
 - Subsystem: `inneranimals-content`
-- Owner: Agent Sam with Sam Primeaux as content approver
+- Owner: Agent Sam with Demo Owner as content approver
 - State: backlog
 - Production surface: `https://inneranimals.com`
 - Editor surface: `https://inneranimals.com/studio`

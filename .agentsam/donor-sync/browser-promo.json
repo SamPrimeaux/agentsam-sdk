@@ -1,0 +1,77 @@
+{
+  "schema": "agentsam.donor-sync.browser-promo.v1",
+  "donor_commit": "268cda57fd340e023a55c97ef05d9fa680a9a04c",
+  "donor_tag": "template/browser-promo-v1",
+  "donor_repo": "/Users/samprimeaux/AgentSam-BrowserShell",
+  "target_repo": "/Users/samprimeaux/agentsam-sdk-browser-promotion",
+  "target_branch": "feat/browser-shell-provider",
+  "synced_at_utc": "2026-10-04T03:18:24.263818+00:00",
+  "paths": {
+    "packages/agentsam-abs": {
+      "files": {
+        "README.md": "3e9f730204583f8de996c2b8630472e767478079b1b86bb3268b781f8136b9d3",
+        "artifact.json": "3c51d3212b521bfa5ceb1e7c661f7c817061304144fb7117fa17a1252926d168",
+        "package.json": "84f2f94674de950ad4e1da4237c421d23d06f174867a16579846f87cac284048",
+        "src/client.ts": "64d2ab06dff1bff2ac65382a4d244e201476ef4aa29525dadf790f8057010865",
+        "src/index.ts": "6e4a34e7ac57c9c182e7e5ada13e5288ce0805d2d033c6f6ef100339ad0f34d1",
+        "src/react/AbsBuildHome.tsx": "721e809bd3abdd3a4db234c606d6faa1304c2e626920eabfd96b3b3064a0e3d4",
+        "src/react/AbsGeneratedPreview.tsx": "dc752ed2d89120d7369b1ad46b507bc4aec4e170123cea29d9399e06bd5bd184",
+        "src/react/AbsRuntimeSurface.tsx": "a1ba8e0c321a761f41a3c11fefa8aa2610637219f79866abbc38228322efdca7",
+        "src/react/AgentSamAbsBrowser.tsx": "0c16be39992277f1396e1b493cc7141a413400a3832b1dfe5ac482b0ac9be9ac",
+        "src/react/index.ts": "81d3b5bb9f10c48717861b02a1347ad67b0b16eb5facbb83c632ea3ffd4476d0",
+        "src/runtime.ts": "c106fe8900e52133c67e08816f77ee160a265f65a04ce844967c0c42eaabdc8f",
+        "src/theme.ts": "7993d2e185bbe4618c8235e2f6fca5a487572bb58b84a2561b7d27a992dab6fe",
+        "src/types.ts": "cf2cea4d15dd010e8dc68dd1d6d6b079e7dc7450d0946a4182beee076f719a42",
+        "styles/browser.css": "8af749abb979006009ab455f501492f645f86ef62c6668e403dbd8fc2969d9e8",
+        "styles/components.css": "e1dc7d817a85ad8dddb3b291187621a7183169f6ba6c2a409aabfca838d0e84e",
+        "styles/theme.css": "828edcdd8a8f6ba8f10d02e621c5626d94b3e1bee772ff106a4cd5a7fa58a25e",
+        "styles/tokens.css": "6ff19e0b1af4a61fe2660f1f2d728ed0da57fd354ae694120722f86bd333eac5",
+        "test/client.test.mjs": "69f5e8ce0919f9e1162543500f381d22d0f8c06d1012a2c8b30812caee86f9ad",
+        "test/theme.test.mjs": "a4389147c22928558d0ef913e6c2ff7c7ed19089f3f76c5f2c0f246a8d4c2d1f",
+        "tsconfig.json": "06b07ad9e64d69fcd3044e45410102b9a305568fe0eb1e29d559b80517b74bf6"
+      }
+    },
+    "packages/agentsam-browser-surface": {
+      "files": {
+        "README.md": "058c964d32b04805ba2dbf2ecfa32a1950c4cf2a2c12b991eb22faeaad3cc1a4",
+        "artifact.json": "da02d98ac210ba40a102a8646ba905702aa62b3997a6b05675686e3e4ff6ada6",
+        "package.json": "33809fad752b5e131563c6b974cc2f0c2a29be5df72e22db36154d5e7df19bbe",
+        "src/index.ts": "be6fb6c72a106146c4c06a6c4d2fb67e56c9e6973bfe92a1b2b335e31160389a",
+        "src/providers/abs.ts": "3500c1cbf1b3537d171b9644444dc97889fd4c9250a9d9a2e7735f93be29a381",
+        "src/providers/lightweight.ts": "a779b0e9ff9299ac1c4461c8f6abd9882fbb177a44471d0e0b19ce6f815386ca",
+        "tsconfig.json": "0aca4f92936bf57241b7633c8bab18478fcc05d7860fba81eb4b80a806a0c126"
+      }
+    },
+    "packages/agentsam-sections": {
+      "files": {
+        "README.md": "be014d5c6d5a3df589254751231f94f42740be30fb55fa57cb58b0ea708a7fc2",
+        "artifact.json": "ce72e974bff36a0a9d1b623747cc28bc686d1990c441448d1267560cd4eff85b",
+        "package.json": "b92f125353efdd9181dbecb0230bee15be5d9732f9ef035ea12d9f31ff2eb2cb",
+        "src/MxsChrome.tsx": "4f8109c3720f00e71427dd8fea94dc2d9cd873a704a4641b97bea967ab868c08",
+        "src/MxsMedia.tsx": "905c2bf233284e1e76a46f134cdb9573239b3ada37fc122121ff52362d4487f2",
+        "src/MxsSection.tsx": "f5e3e76d7fc9c3d9fd8d60f711239304b02a34933149ad92bea6b5e8d22cf689",
+        "src/index.ts": "26e86f4f7a30c366bfae8231bea987ae81479d623d31a8cd380e0ce819da080a",
+        "src/types.ts": "6ec77d73aa8e541354ed81475ecce637a71f3323882148027c7214f1ca7f382a",
+        "src/useMxsScroll.ts": "77fa2a1b56310f007885ae643509c26ddcb41e66235d79dbc0b9f67c56f09d04",
+        "styles/mxs.css": "4e1f686bfc21be8e2e2de00753ded5288977dafe3494413706141309c122b648",
+        "tsconfig.json": "4f54932e1b85d240459c45014f2d00170f661347a91637fa094a37963a7ed382"
+      }
+    },
+    "apps/agentsam-browser-site": {
+      "files": {
+        "README.md": "13606722eaf2130e4c89071672df634d0c7444cfc6c6bb99471df70e5a98857c",
+        "artifact.json": "ed0216bfd6bb6bb29d7c61a23122b4b5c168a9bc3c7dee91c0cbbd0da898233a",
+        "index.html": "6ec74bee7d7be06b75ded71fbe75a6488ad7836095e570594100a9ee8a517464",
+        "package.json": "b6a53e0fdadc0352188c0fd68ebffb9d30d065d46baa1a9de845837016fcfc08",
+        "public/media/section-01.svg": "255a917b76803e899d1be88421b075ecf9463d5995a761f56d8fa6a53f1e1ee3",
+        "public/media/section-02-poster.svg": "60166ea17c2306a1ed3eb1094f1ee287bfb56b192ea75bf691dafff9d3ad241e",
+        "public/media/section-03.svg": "ac5e152112bc34b135cc2ba2fa57bdf18892411314e840a920f0bbede334128e",
+        "src/LiveBrowser.tsx": "a83f60cf21049d15a2a5f51b3c1eb875f11aaf7d6bb4b1d7781c71bc0ac0a3a2",
+        "src/main.tsx": "5f6ff2862d25fb196b68ea2d0ec35d7e0a3a73f7ba76bfbd4a5b0e4f6cbdc31f",
+        "src/site.css": "ec89a0c4ee9153e8ff2b841d4e76e8ba75266c8dc95b68aeb6030302c67c340d",
+        "tsconfig.json": "333f0d4a85c6dec4418987593975019c47cdfba8f140f13c32a3e32100606512",
+        "vite.config.ts": "f2decabd92688a81d1265248dcc26be9c4622b0297b60d24c7b95a3b6775e8e1"
+      }
+    }
+  }
+}

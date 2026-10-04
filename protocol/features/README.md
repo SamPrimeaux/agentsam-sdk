@@ -10,7 +10,7 @@ Detailed JSON lives in each integration’s own territory, e.g.:
 ```
 packages/identity/.agentsam/features/oauth-login-portal/
 packages/providers/completeful/.agentsam/features/provider/   (target)
-fuelnfreetime/features/*                                      (proving ground)
+ember/features/*                                      (proving ground)
 ```
 
 ## Selection vs package packet vs resolved

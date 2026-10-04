@@ -128,7 +128,7 @@ test("collection lab uses explicit approvals and valid transitions", () => {
   const concept = createCollectionCandidate({
     id: "burn-it-gt-back-tee",
     designId: "burn-it-gt",
-    collectionPath: ["Fuel & Free Time", "Performance", "Burn It GT"],
+    collectionPath: ["Ember Supply", "Performance", "Burn It GT"],
     approvals: { artwork: true, wording: true, palette: true, visualIdentity: true },
   });
   assert.equal(approvalsComplete(concept), true);

@@ -1,7 +1,7 @@
 const MAIL_DEFAULTS = {
-  resendFrom: "hello@fuelnfreetime.com",
-  resendPaymentsFrom: "payments@fuelnfreetime.com",
-  resendDomain: "fuelnfreetime.com",
+  resendFrom: "hello@ember.example",
+  resendPaymentsFrom: "payments@ember.example",
+  resendDomain: "ember.example",
   resendReplyTo: "",
   resendApiKey: "",
   resendTransactional: true,
@@ -55,7 +55,7 @@ function collectSettings() {
   const checkbox = (id) => !!get(id)?.checked;
   return {
     resendFrom: get("resendFrom")?.value.trim() || "",
-    resendPaymentsFrom: get("resendPaymentsFrom")?.value.trim() || "payments@fuelnfreetime.com",
+    resendPaymentsFrom: get("resendPaymentsFrom")?.value.trim() || "payments@ember.example",
     resendDomain: get("resendDomain")?.value.trim() || "",
     resendReplyTo: get("resendReplyTo")?.value.trim() || "",
     resendApiKey: get("resendApiKey")?.value.trim() || "",
@@ -90,7 +90,7 @@ function renderAccounts(settings = normalizeSettings(collectSettings())) {
   list.innerHTML = `
     <div class="account-row">
       <div class="account-row-icon resend">RS</div>
-      <div class="account-row-main"><strong>${settings.resendFrom || "Resend sender not set"}</strong><span>${settings.resendDomain || "fuelnfreetime.com"} — inbound &amp; outbound</span></div>
+      <div class="account-row-main"><strong>${settings.resendFrom || "Resend sender not set"}</strong><span>${settings.resendDomain || "ember.example"} — inbound &amp; outbound</span></div>
       <button class="account-pill ${settings.resendTransactional ? "connected" : "warning"}" type="button" data-mail-tab="resend">Resend</button>
     </div>`;
 }
@@ -276,7 +276,7 @@ async function createMailbox(event) {
       method: "POST",
       body: JSON.stringify({ local_part: localPart, label, kind }),
     });
-    showFormNote("mailbox-note", `Created ${data.mailbox?.address || localPart + "@fuelnfreetime.com"}`, true);
+    showFormNote("mailbox-note", `Created ${data.mailbox?.address || localPart + "@ember.example"}`, true);
     $("mailbox-form")?.reset();
     await loadMailSettings();
     await loadTeamSection();
@@ -297,8 +297,8 @@ async function sendResendTest() {
       method: "POST",
       body: JSON.stringify({
         to,
-        subject: "Fuel & Free Time — Resend E2E test",
-        body: "If you received this, Resend outbound mail is working for fuelnfreetime.com.",
+        subject: "Ember Supply — Resend E2E test",
+        body: "If you received this, Resend outbound mail is working for ember.example.",
         fromProvider: "resend",
         test: true,
       }),

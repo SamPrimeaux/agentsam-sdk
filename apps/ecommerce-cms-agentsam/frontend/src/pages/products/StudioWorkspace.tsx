@@ -394,7 +394,7 @@ export default function StudioWorkspace({
             task_type: "image_generation",
             lane: "image",
             mode: "image",
-            workflow_key: "fnf_creative_studio",
+            workflow_key: "commerce_creative_studio",
           }
         : {};
       const result = await adminFetch<{

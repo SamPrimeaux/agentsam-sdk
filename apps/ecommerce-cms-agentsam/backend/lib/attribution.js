@@ -2,10 +2,10 @@
  * First-party UTM attribution — visits, redirects, order joins.
  */
 
-import { FNF_ACCOUNT_ID } from "../agentsam/constants.js";
+import { COMMERCE_ACCOUNT_ID } from "../agentsam/constants.js";
 
-const ATTR_COOKIE = "fnf_ca";
-const VID_COOKIE = "fnf_vid";
+const ATTR_COOKIE = "commerce_ca";
+const VID_COOKIE = "commerce_vid";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 
 export function visitId() {
@@ -106,7 +106,7 @@ export async function resolveCampaignId(env, { campaignId, utmCampaign }) {
     const row = await env.DB.prepare(
       `SELECT id FROM growth_campaigns WHERE account_id = ? AND id = ? LIMIT 1`
     )
-      .bind(FNF_ACCOUNT_ID, campaignId)
+      .bind(COMMERCE_ACCOUNT_ID, campaignId)
       .first()
       .catch(() => null);
     if (row) return row.id;
@@ -115,7 +115,7 @@ export async function resolveCampaignId(env, { campaignId, utmCampaign }) {
     const row = await env.DB.prepare(
       `SELECT id FROM growth_campaigns WHERE account_id = ? AND slug = ? LIMIT 1`
     )
-      .bind(FNF_ACCOUNT_ID, utmCampaign)
+      .bind(COMMERCE_ACCOUNT_ID, utmCampaign)
       .first()
       .catch(() => null);
     if (row) return row.id;
@@ -138,7 +138,7 @@ export async function recordVisit(env, payload) {
   )
     .bind(
       id,
-      FNF_ACCOUNT_ID,
+      COMMERCE_ACCOUNT_ID,
       campaignId,
       payload.session_id,
       payload.landing_path || null,
@@ -162,7 +162,7 @@ export async function recordVisit(env, payload) {
        SET session_count = COALESCE(session_count, 0) + 1, updated_at = datetime('now')
        WHERE account_id = ? AND id = ?`
     )
-      .bind(FNF_ACCOUNT_ID, campaignId)
+      .bind(COMMERCE_ACCOUNT_ID, campaignId)
       .run()
       .catch(() => {});
   }
@@ -207,7 +207,7 @@ export async function attachAttributionToOrder(env, orderId, attribution) {
              updated_at = datetime('now')
          WHERE account_id = ? AND id = ?`
       )
-        .bind(order.total_cents, FNF_ACCOUNT_ID, attribution.campaign_id)
+        .bind(order.total_cents, COMMERCE_ACCOUNT_ID, attribution.campaign_id)
         .run()
         .catch(() => {});
     }
@@ -219,7 +219,7 @@ export async function getAttributionMetrics(env) {
     env.DB.prepare(
       `SELECT COUNT(*) AS n FROM attribution_visits WHERE account_id = ?`
     )
-      .bind(FNF_ACCOUNT_ID)
+      .bind(COMMERCE_ACCOUNT_ID)
       .first()
       .catch(() => ({ n: 0 })),
     env.DB.prepare(
@@ -231,14 +231,14 @@ export async function getAttributionMetrics(env) {
        GROUP BY COALESCE(utm_source, channel, 'direct')
        ORDER BY sessions DESC`
     )
-      .bind(FNF_ACCOUNT_ID)
+      .bind(COMMERCE_ACCOUNT_ID)
       .all()
       .catch(() => ({ results: [] })),
     env.DB.prepare(
       `SELECT COALESCE(SUM(attributed_revenue_cents), 0) AS cents
        FROM growth_campaigns WHERE account_id = ?`
     )
-      .bind(FNF_ACCOUNT_ID)
+      .bind(COMMERCE_ACCOUNT_ID)
       .first()
       .catch(() => ({ cents: 0 })),
     env.DB.prepare(

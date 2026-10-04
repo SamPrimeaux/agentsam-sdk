@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Account — Fuel & Free Time Admin</title>
+<title>Account — Ember Supply Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
@@ -37,7 +37,7 @@ renderShell('/admin/account', `
           <div class="account-form-grid">
             <div class="account-field full">
               <label for="profileDisplayName">Display name</label>
-              <input id="profileDisplayName" type="text" placeholder="Sam Primeaux" autocomplete="name">
+              <input id="profileDisplayName" type="text" placeholder="Demo Owner" autocomplete="name">
             </div>
             <div class="account-field full">
               <label for="profileAvatarUrl">Avatar URL (optional)</label>
@@ -89,13 +89,13 @@ renderShell('/admin/account', `
     <div class="account-section-head">
       <div>
         <h2>Team &amp; mailboxes</h2>
-        <p>Invite admins and create additional @fuelnfreetime.com addresses on Resend (no Gmail forwarding).</p>
+        <p>Invite admins and create additional @ember.example addresses on Resend (no Gmail forwarding).</p>
       </div>
     </div>
     <div class="account-grid">
       <div class="account-card">
         <div class="account-card-title">
-          <div><strong>Invite member</strong><span>Creates login + personal @fuelnfreetime.com inbox.</span></div>
+          <div><strong>Invite member</strong><span>Creates login + personal @ember.example inbox.</span></div>
         </div>
         <form id="invite-form">
           <div class="account-form-grid">
@@ -113,7 +113,7 @@ renderShell('/admin/account', `
       </div>
       <div class="account-card">
         <div class="account-card-title">
-          <div><strong>Create mailbox</strong><span>Shared or personal address on fuelnfreetime.com.</span></div>
+          <div><strong>Create mailbox</strong><span>Shared or personal address on ember.example.</span></div>
         </div>
         <form id="mailbox-form">
           <div class="account-form-grid">
@@ -138,7 +138,7 @@ renderShell('/admin/account', `
     <div class="account-section-head">
       <div>
         <h2>Mail (Resend)</h2>
-        <p>End-to-end Resend on fuelnfreetime.com — inbound catch-all and outbound send. No Gmail sync.</p>
+        <p>End-to-end Resend on ember.example — inbound catch-all and outbound send. No Gmail sync.</p>
       </div>
       <span class="account-pill" id="accountStatusPill">Resend</span>
     </div>
@@ -152,7 +152,7 @@ renderShell('/admin/account', `
     <div class="account-panel active" id="mail-panel-accounts">
       <div class="account-card full">
         <div class="account-card-title">
-          <div><strong>@fuelnfreetime.com mailboxes</strong><span>Resend catch-all inbound routes by recipient address. Each inbox filters in Admin → Email.</span></div>
+          <div><strong>@ember.example mailboxes</strong><span>Resend catch-all inbound routes by recipient address. Each inbox filters in Admin → Email.</span></div>
         </div>
         <div id="mailboxList" class="account-webhook-list"></div>
       </div>
@@ -176,10 +176,10 @@ renderShell('/admin/account', `
             <span class="account-pill" id="resendStatus">Pending</span>
           </div>
           <div class="account-form-grid">
-            <div class="account-field full"><label for="resendFrom">Default from email</label><input id="resendFrom" type="email" placeholder="hello@fuelnfreetime.com"></div>
-            <div class="account-field full"><label for="resendPaymentsFrom">Payments from email</label><input id="resendPaymentsFrom" type="email" placeholder="payments@fuelnfreetime.com"></div>
-            <div class="account-field"><label for="resendDomain">Verified domain</label><input id="resendDomain" placeholder="fuelnfreetime.com"></div>
-            <div class="account-field"><label for="resendReplyTo">Reply-to</label><input id="resendReplyTo" type="email" placeholder="support@fuelnfreetime.com"></div>
+            <div class="account-field full"><label for="resendFrom">Default from email</label><input id="resendFrom" type="email" placeholder="hello@ember.example"></div>
+            <div class="account-field full"><label for="resendPaymentsFrom">Payments from email</label><input id="resendPaymentsFrom" type="email" placeholder="payments@ember.example"></div>
+            <div class="account-field"><label for="resendDomain">Verified domain</label><input id="resendDomain" placeholder="ember.example"></div>
+            <div class="account-field"><label for="resendReplyTo">Reply-to</label><input id="resendReplyTo" type="email" placeholder="support@ember.example"></div>
             <div class="account-field full"><label for="resendApiKey">API key (optional — prefer Worker secret)</label><input id="resendApiKey" type="password" placeholder="re_••••••••••••••••" autocomplete="off"></div>
           </div>
           <div class="account-actions">
@@ -199,11 +199,11 @@ renderShell('/admin/account', `
           <div class="account-webhook-list">
             <div class="account-webhook-row">
               <div><strong>Outbound</strong> <span id="webhookOutboundStatus">Not configured</span></div>
-              <code id="webhookOutboundUrl">https://fuelnfreetime.com/api/webhooks/resend/outbound</code>
+              <code id="webhookOutboundUrl">https://ember.example/api/webhooks/resend/outbound</code>
             </div>
             <div class="account-webhook-row">
               <div><strong>Inbound</strong> <span id="webhookInboundStatus">Not configured</span></div>
-              <code id="webhookInboundUrl">https://fuelnfreetime.com/api/webhooks/resend/inbound</code>
+              <code id="webhookInboundUrl">https://ember.example/api/webhooks/resend/inbound</code>
             </div>
           </div>
         </div>

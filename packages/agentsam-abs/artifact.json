@@ -1,0 +1,34 @@
+{
+  "schema": "inneranimal.artifact.v1",
+  "id": "agentsam-abs",
+  "name": "AgentSam Auto Browser Shell",
+  "package": {
+    "name": "@inneranimalmedia/agentsam-abs",
+    "version": "1.0.0"
+  },
+  "kind": "ui",
+  "family": "browser-shell",
+  "summary": "Dual-mode Explore/Build browser surface with provider-agnostic generative navigation, sandboxed generated previews, deterministic history, and packaged runtime visualization.",
+  "status": "candidate",
+  "visual": {
+    "brandPack": "agentsam",
+    "theme": "agdpg",
+    "modes": ["dark"]
+  },
+  "capabilities": [
+    "browser-explore",
+    "browser-build",
+    "generated-preview",
+    "generated-navigation",
+    "history-navigation",
+    "packaged-theme",
+    "runtime-loading-scene"
+  ],
+  "consumers": [
+    "AgentSam-BrowserShell donor"
+  ],
+  "preview": {
+    "kind": "application",
+    "fixture": "browser-shell-default"
+  }
+}

@@ -1,12 +1,12 @@
 # CMS Editor — Agent Sam Contextual Composer
 
-24 Sept 2026 · build target for `apps/client-cms-editor` (agentsam-sdk), proven on Fuel & Free Time, then brought into Inner Animal Media.
+24 Sept 2026 · build target for `apps/client-cms-editor` (agentsam-sdk), proven on Ember Supply, then brought into Inner Animal Media.
 
-## Ideal-state packages (FNF = proving ground)
+## Ideal-state packages (Commerce = proving ground)
 
-These FNF packages are **examples of the ideal state**, not permanent homes. Each becomes an SDK-packaged prebuild:
+These Commerce packages are **examples of the ideal state**, not permanent homes. Each becomes an SDK-packaged prebuild:
 
-| Proving ground (FNF) | SDK target | Role |
+| Proving ground (Commerce) | SDK target | Role |
 |---|---|---|
 | `packages/agentsam-workbench` | `@inneranimalmedia/agentsam-workbench` | miniAgentSam + contextual composer |
 | `packages/heuristic-theme` | `@inneranimalmedia/theme-heuristic` | **Stock CMS theme preset** |

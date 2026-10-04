@@ -458,7 +458,7 @@ export async function getResendStatus(env) {
   const domain = settings.resendDomain || "";
   const status = await getResendDomainStatus(env, domain);
   const { getCompanyDomain } = await import("../lib/company.js");
-  const appDomain = (await getCompanyDomain(env)) || domain || "fuelnfreetime.com";
+  const appDomain = (await getCompanyDomain(env)) || domain || "ember.example";
   return Response.json({
     ok: true,
     configured: resendConfigured(env),

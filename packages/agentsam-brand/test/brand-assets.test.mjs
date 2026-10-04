@@ -36,9 +36,9 @@ test('key layout is portable — no product-specific leaf names', () => {
 });
 
 test('generic brands get portable filenames', () => {
-  assert.equal(brandAssetPrefix({ brand: 'FuelNFree', asset: 'Logo', version: 'V2' }), 'brands/fuelnfree/logo/v2');
-  const keys = resolveKeyLayout({ brand: 'fuelnfree', asset: 'logo', version: 'v2' });
-  assert.equal(keys.vector.mark, 'brands/fuelnfree/logo/v2/vector/logo-mark.svg');
+  assert.equal(brandAssetPrefix({ brand: 'Ember', asset: 'Logo', version: 'V2' }), 'brands/ember/logo/v2');
+  const keys = resolveKeyLayout({ brand: 'ember', asset: 'logo', version: 'v2' });
+  assert.equal(keys.vector.mark, 'brands/ember/logo/v2/vector/logo-mark.svg');
 });
 
 test('SVG gate rejects scripts and data rasters; accepts clean mark', () => {

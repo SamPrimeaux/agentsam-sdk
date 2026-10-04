@@ -3,7 +3,7 @@
  *
  * The tool row owns binding/model/index/filter details. This keeps Vectorize
  * execution portable across ecommerce-cms-agentsam installs instead of hiding
- * FNF-specific configuration in code.
+ * Commerce-specific configuration in code.
  */
 
 function asObject(value) {

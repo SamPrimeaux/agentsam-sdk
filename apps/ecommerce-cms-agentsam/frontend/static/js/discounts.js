@@ -81,11 +81,11 @@ function $(sel, root) {
 function setView(app, view) {
   if (!app) return;
   app.dataset.view = view;
-  app.querySelectorAll(".fnf-discounts-page").forEach((page) => {
+  app.querySelectorAll(".commerce-discounts-page").forEach((page) => {
     page.hidden = page.dataset.page !== view;
   });
   if (view === "editor") {
-    app.querySelector('.fnf-discounts-page[data-page="editor"]')?.scrollIntoView({ block: "start" });
+    app.querySelector('.commerce-discounts-page[data-page="editor"]')?.scrollIntoView({ block: "start" });
   }
 }
 
@@ -113,7 +113,7 @@ function fromLocalInput(value) {
 
 function updateSummary(app) {
   const code = $("#discCode", app)?.value?.trim();
-  const method = app.querySelector('.fnf-disc-segment button.active')?.dataset.method || "code";
+  const method = app.querySelector('.commerce-disc-segment button.active')?.dataset.method || "code";
   const minReq = app.querySelector('input[name="minReq"]:checked')?.value || "none";
   const minVal = Number($("#discMinValue", app)?.value || 0);
   const limitTotal = $("#discLimitTotal", app)?.checked;
@@ -143,7 +143,7 @@ function applyTypePreset(app, typeKey) {
   if (preset.value != null) $("#discValue", app).value = String(preset.value);
 
   const appliesPanel = $("#discAppliesPanel", app);
-  const valuePanel = $("#discValue", app)?.closest(".fnf-disc-panel");
+  const valuePanel = $("#discValue", app)?.closest(".commerce-disc-panel");
   const isShipping = preset.discount_type === "shipping";
   const isBuyX = preset.discount_type === "buy_x_get_y";
 
@@ -185,8 +185,8 @@ function resetEditor(app) {
   $("#discLimitCustomer", app).checked = false;
   $("#discEditorError", app).hidden = true;
   app.querySelector('input[name="minReq"][value="none"]')?.click();
-  const codeBtn = app.querySelector('.fnf-disc-segment button[data-method="code"]');
-  const autoBtn = app.querySelector('.fnf-disc-segment button[data-method="automatic"]');
+  const codeBtn = app.querySelector('.commerce-disc-segment button[data-method="code"]');
+  const autoBtn = app.querySelector('.commerce-disc-segment button[data-method="automatic"]');
   codeBtn?.classList.add("active");
   autoBtn?.classList.remove("active");
   $("#discCodeField", app).hidden = false;
@@ -195,7 +195,7 @@ function resetEditor(app) {
 
 function readEditor(app) {
   const preset = TYPE_PRESETS[discState.draftType] || TYPE_PRESETS.product_percent;
-  const method = app.querySelector('.fnf-disc-segment button.active')?.dataset.method || "code";
+  const method = app.querySelector('.commerce-disc-segment button.active')?.dataset.method || "code";
   const minReq = app.querySelector('input[name="minReq"]:checked')?.value || "none";
   const minRaw = Number($("#discMinValue", app)?.value || 0);
   const valueType = $("#discValueType", app)?.value || "percent";
@@ -263,7 +263,7 @@ function fillEditor(app, discount) {
   $("#discLimitCustomer", app).checked = (discount.max_uses_per_customer || 0) > 0;
 
   const method = discount.method || "code";
-  app.querySelectorAll(".fnf-disc-segment button").forEach((btn) => {
+  app.querySelectorAll(".commerce-disc-segment button").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.method === method);
   });
   $("#discCodeField", app).hidden = method === "automatic";
@@ -311,7 +311,7 @@ function renderList(app, { error = "" } = {}) {
       <td><strong>${escapeHtml(d.title)}</strong></td>
       <td>${escapeHtml(d.code || "Automatic")}</td>
       <td>${escapeHtml(typeLabel(d))}</td>
-      <td><span class="fnf-disc-status fnf-disc-status-${escapeHtml(d.status)}">${fmtStatus(d.status)}</span></td>
+      <td><span class="commerce-disc-status commerce-disc-status-${escapeHtml(d.status)}">${fmtStatus(d.status)}</span></td>
       <td>${d.uses_count ?? 0}</td>
       <td>${fmtDate(d.updated_at)}</td>
     </tr>`
@@ -364,7 +364,7 @@ function bindTypeModal(app) {
     });
   });
 
-  modal.querySelectorAll(".fnf-disc-type-item").forEach((btn) => {
+  modal.querySelectorAll(".commerce-disc-type-item").forEach((btn) => {
     btn.addEventListener("click", () => openCreate(app, btn.dataset.type));
   });
 }
@@ -439,9 +439,9 @@ function bindDiscountsApp(app) {
     updateSummary(app);
   });
 
-  app.querySelectorAll(".fnf-disc-segment button").forEach((btn) => {
+  app.querySelectorAll(".commerce-disc-segment button").forEach((btn) => {
     btn.addEventListener("click", () => {
-      app.querySelectorAll(".fnf-disc-segment button").forEach((b) => b.classList.remove("active"));
+      app.querySelectorAll(".commerce-disc-segment button").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       $("#discCodeField", app).hidden = btn.dataset.method === "automatic";
       updateSummary(app);
@@ -472,7 +472,7 @@ function bindDiscountsApp(app) {
     const blob = await res.blob();
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "fnf-discounts.csv";
+    a.download = "commerce-discounts.csv";
     a.click();
   });
 
@@ -491,7 +491,7 @@ async function initDiscountsPage() {
     if (!res.ok) throw new Error(`Discounts UI failed to load (HTTP ${res.status})`);
     mount.innerHTML = await res.text();
 
-    const app = document.getElementById("fnfDiscountsApp");
+    const app = document.getElementById("commerceDiscountsApp");
     if (!app) throw new Error("Discounts app markup missing");
 
     setView(app, "list");
@@ -500,10 +500,10 @@ async function initDiscountsPage() {
   } catch (err) {
     console.error("[discounts/init]", err);
     mount.innerHTML = `
-      <div class="fnf-discounts-app" style="padding:40px;">
-        <h1 class="fnf-disc-title">Discounts</h1>
+      <div class="commerce-discounts-app" style="padding:40px;">
+        <h1 class="commerce-disc-title">Discounts</h1>
         <p style="color:#b42318;margin:12px 0 0;">${escapeHtml(err.message || "Failed to load discounts.")}</p>
-        <button type="button" class="fnf-disc-btn primary" style="margin-top:16px;" onclick="location.reload()">Retry</button>
+        <button type="button" class="commerce-disc-btn primary" style="margin-top:16px;" onclick="location.reload()">Retry</button>
       </div>`;
   }
 }

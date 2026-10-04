@@ -2,7 +2,7 @@
  * Growth campaigns API — /api/admin/growth/*
  */
 
-import { FNF_ACCOUNT_ID } from "../agentsam/constants.js";
+import { COMMERCE_ACCOUNT_ID } from "../agentsam/constants.js";
 import { updateSection, publishPage } from "../cms/api.js";
 import { readSectionContent } from "../cms/r2-store.js";
 import { PAGE_REGISTRY } from "../cms/registry.js";
@@ -79,7 +79,7 @@ async function uniqueSlug(env, base) {
     const existing = await env.DB.prepare(
       `SELECT id FROM growth_campaigns WHERE account_id = ? AND slug = ? LIMIT 1`
     )
-      .bind(FNF_ACCOUNT_ID, candidate)
+      .bind(COMMERCE_ACCOUNT_ID, candidate)
       .first();
     if (!existing) return candidate;
     n += 1;
@@ -95,7 +95,7 @@ async function getOverview(env) {
          SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active
        FROM growth_campaigns WHERE account_id = ?`
     )
-      .bind(FNF_ACCOUNT_ID)
+      .bind(COMMERCE_ACCOUNT_ID)
       .first()
       .catch(() => ({ total: 0, drafts: 0, active: 0 })),
     env.DB.prepare(`SELECT COUNT(*) AS n, COALESCE(SUM(total_cents), 0) AS revenue FROM orders`)
@@ -107,7 +107,7 @@ async function getOverview(env) {
     env.DB.prepare(
       `SELECT * FROM growth_campaigns WHERE account_id = ? ORDER BY updated_at DESC LIMIT 6`
     )
-      .bind(FNF_ACCOUNT_ID)
+      .bind(COMMERCE_ACCOUNT_ID)
       .all()
       .catch(() => ({ results: [] })),
   ]);
@@ -115,7 +115,7 @@ async function getOverview(env) {
   const sessionRow = await env.DB.prepare(
     `SELECT COALESCE(SUM(session_count), 0) AS n FROM growth_campaigns WHERE account_id = ?`
   )
-    .bind(FNF_ACCOUNT_ID)
+    .bind(COMMERCE_ACCOUNT_ID)
     .first()
     .catch(() => ({ n: 0 }));
 
@@ -156,7 +156,7 @@ async function getOverview(env) {
 async function listCampaigns(env, url) {
   const status = url.searchParams.get("status");
   let sql = `SELECT * FROM growth_campaigns WHERE account_id = ?`;
-  const binds = [FNF_ACCOUNT_ID];
+  const binds = [COMMERCE_ACCOUNT_ID];
   if (status) {
     sql += ` AND status = ?`;
     binds.push(status);
@@ -170,7 +170,7 @@ async function getCampaign(env, id) {
   const row = await env.DB.prepare(
     `SELECT * FROM growth_campaigns WHERE account_id = ? AND id = ? LIMIT 1`
   )
-    .bind(FNF_ACCOUNT_ID, id)
+    .bind(COMMERCE_ACCOUNT_ID, id)
     .first();
   if (!row) return json({ error: "Campaign not found" }, { status: 404 });
   return json({ ok: true, campaign: mapCampaign(row) });
@@ -193,7 +193,7 @@ async function createCampaign(request, env, user) {
   )
     .bind(
       id,
-      FNF_ACCOUNT_ID,
+      COMMERCE_ACCOUNT_ID,
       user.id,
       user.id,
       body.name.trim(),
@@ -219,7 +219,7 @@ async function updateCampaign(request, env, user, id) {
   const existing = await env.DB.prepare(
     `SELECT id FROM growth_campaigns WHERE account_id = ? AND id = ? LIMIT 1`
   )
-    .bind(FNF_ACCOUNT_ID, id)
+    .bind(COMMERCE_ACCOUNT_ID, id)
     .first();
   if (!existing) return json({ error: "Campaign not found" }, { status: 404 });
 
@@ -263,7 +263,7 @@ async function updateCampaign(request, env, user, id) {
   await env.DB.prepare(
     `UPDATE growth_campaigns SET ${fields.join(", ")} WHERE account_id = ? AND id = ?`
   )
-    .bind(...binds, FNF_ACCOUNT_ID, id)
+    .bind(...binds, COMMERCE_ACCOUNT_ID, id)
     .run();
 
   return getCampaign(env, id);
@@ -273,7 +273,7 @@ async function generateCampaignPack(env, user, id) {
   const row = await env.DB.prepare(
     `SELECT * FROM growth_campaigns WHERE account_id = ? AND id = ? LIMIT 1`
   )
-    .bind(FNF_ACCOUNT_ID, id)
+    .bind(COMMERCE_ACCOUNT_ID, id)
     .first();
   if (!row) return json({ error: "Campaign not found" }, { status: 404 });
 
@@ -474,7 +474,7 @@ async function publishCampaign(request, env, user, id) {
   const row = await env.DB.prepare(
     `SELECT * FROM growth_campaigns WHERE account_id = ? AND id = ? LIMIT 1`
   )
-    .bind(FNF_ACCOUNT_ID, id)
+    .bind(COMMERCE_ACCOUNT_ID, id)
     .first();
   if (!row) return json({ error: "Campaign not found" }, { status: 404 });
 
@@ -550,13 +550,13 @@ async function publishCampaign(request, env, user, id) {
      SET status = 'active', pack_json = ?, metadata_json = ?, updated_by = ?, updated_at = datetime('now')
      WHERE account_id = ? AND id = ?`
   )
-    .bind(JSON.stringify(pack), JSON.stringify(metadata), user.id, FNF_ACCOUNT_ID, id)
+    .bind(JSON.stringify(pack), JSON.stringify(metadata), user.id, COMMERCE_ACCOUNT_ID, id)
     .run();
 
   const refreshed = await env.DB.prepare(
     `SELECT * FROM growth_campaigns WHERE account_id = ? AND id = ? LIMIT 1`
   )
-    .bind(FNF_ACCOUNT_ID, id)
+    .bind(COMMERCE_ACCOUNT_ID, id)
     .first();
 
   return json({ ok: true, campaign: mapCampaign(refreshed), publish: publishResult });

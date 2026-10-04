@@ -35,7 +35,7 @@ export default function App() {
 
 function AccountRoute() {
   useEffect(() => {
-    document.title = "Account — Fuel & Free Time Admin";
+    document.title = "Account — Ember Supply Admin";
   }, []);
   return <AccountPage />;
 }
@@ -43,7 +43,7 @@ function AccountRoute() {
 function ProductStudioRoute() {
   const { productId } = useParams();
   useEffect(() => {
-    document.title = "Create & Explore Designs — Fuel & Free Time Admin";
+    document.title = "Create & Explore Designs — Ember Supply Admin";
   }, []);
   return <ProductStudioPage key={productId || "catalog"} />;
 }
@@ -57,7 +57,7 @@ function AnalyticsRoute({
 }) {
   const { range } = useOutletContext<AnalyticsOutletContext>();
   useEffect(() => {
-    document.title = `${title} — Fuel & Free Time Admin`;
+    document.title = `${title} — Ember Supply Admin`;
   }, [title]);
   return <Page range={range} tenant="all" />;
 }

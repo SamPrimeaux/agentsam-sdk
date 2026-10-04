@@ -4,7 +4,7 @@ import { ascii, readU32LE, type ContentProcessor, type ProbeResult } from "./typ
  * GLB probe: header + embedded glTF JSON chunk → meshes/materials/
  * textures/animations counts and (when accessors expose min/max)
  * a bounding box. This backs the generic ModelInspector contract
- * harvested from the Fuel & Free Time GLB editor.
+ * harvested from the Ember Supply GLB editor.
  */
 export const modelProcessor: ContentProcessor = {
   kind: "model",

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Cloud, Github, KeyRound } from "lucide-react";
+import { Cloud, GitBranch, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,7 +137,7 @@ export function DeployStage() {
 
         <section className="rounded-2xl bg-card p-4 shadow-hairline">
           <div className="mb-3 flex items-center gap-2">
-            <Github className="size-4 text-stone" />
+            <GitBranch className="size-4 text-stone" />
             <h3 className="text-sm font-medium">GitHub</h3>
           </div>
           <div className="flex flex-col gap-2">

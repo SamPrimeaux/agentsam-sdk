@@ -1,7 +1,7 @@
 /**
- * Fuel & Free Time GitHub client — repo-scoped path for AgentSam.
+ * Ember Supply GitHub client — repo-scoped path for AgentSam.
  * Repository slug authority: agentsam_plugins (github / MCP config).
- * Token: FNF_GITHUB_TOKEN or per-admin OAuth (admin_github_tokens).
+ * Token: COMMERCE_GITHUB_TOKEN or per-admin OAuth (admin_github_tokens).
  */
 
 import { resolveGithubRepo } from "../lib/integration-config.js";
@@ -11,7 +11,7 @@ function trim(v) {
 }
 
 export function githubTokenConfigured(env) {
-  return Boolean(trim(env.FNF_GITHUB_TOKEN));
+  return Boolean(trim(env.COMMERCE_GITHUB_TOKEN));
 }
 
 export function normalizeRepo(raw, fallback = "") {
@@ -43,7 +43,7 @@ export function assertRepoAllowed(repo, scopedRepo) {
 }
 
 async function resolveToken(env, userId = null) {
-  const service = trim(env.FNF_GITHUB_TOKEN);
+  const service = trim(env.COMMERCE_GITHUB_TOKEN);
   if (service) return { token: service, source: "service" };
 
   if (userId && env.DB) {
@@ -77,7 +77,7 @@ async function ghFetch(token, path, opts = {}) {
       Authorization: `Bearer ${token}`,
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "FuelNFreetime-AgentSam/1.0",
+      "User-Agent": "Embertime-AgentSam/1.0",
       ...(opts.headers || {}),
     },
   });

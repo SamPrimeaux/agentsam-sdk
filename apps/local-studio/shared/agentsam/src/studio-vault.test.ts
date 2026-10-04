@@ -149,11 +149,11 @@ describe("loadVaultCredentialMap", () => {
       ]),
       accountId,
       masterKey: MASTER_V1,
-      cloudflareAccountId: "ede6590ac0d2fb7daf155b35653457b2",
+      cloudflareAccountId: "demo-commerce-account",
     });
     assert.equal(
       map.get("cloudflare")?.cloudflare_account_id,
-      "ede6590ac0d2fb7daf155b35653457b2",
+      "demo-commerce-account",
     );
   });
 });

@@ -58,7 +58,7 @@
         "composer": "@inneranimalmedia/agentsam-workbench",
         "analytics": "@inneranimalmedia/commerce-analytics"
       },
-      "notes": "Fuel & Free Time hosts proving-ground copies; SDK packages are the publish targets."
+      "notes": "Ember Supply hosts proving-ground copies; SDK packages are the publish targets."
     },
     "prototype": {
       "id": "prototype",

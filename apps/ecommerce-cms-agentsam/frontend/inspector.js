@@ -1,4 +1,4 @@
-/* Fuel & Free Time host adapter. miniAgentSam owns reusable UI. */
+/* Ember Supply host adapter. miniAgentSam owns reusable UI. */
 (() => {
   let instance;
   let active = false;

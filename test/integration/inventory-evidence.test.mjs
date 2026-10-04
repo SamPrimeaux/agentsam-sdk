@@ -92,33 +92,33 @@ describe('inventory classifies by evidence', () => {
 
   it('detects coherent theme signatures from markup and CSS evidence', () => {
     const evidence = extractStyleEvidence(`
-      <html data-theme-preset="fuel-free-time" data-header-preset="adaptive-bar">
+      <html data-theme-preset="ember" data-header-preset="adaptive-bar">
         <link rel="stylesheet" href="/css/heuristic-theme.css">
         <body>
-          <header class="fnf-header fnf-header--adaptive-bar">
-            <a class="fnf-logo"></a>
-            <nav class="fnf-primary"></nav>
+          <header class="commerce-header commerce-header--adaptive-bar">
+            <a class="commerce-logo"></a>
+            <nav class="commerce-primary"></nav>
           </header>
         </body>
       </html>
       <style>
-        :root { --fnf-accent: #ff4d00; --fnf-logo-height: 58px; }
-        .fnf-header { color: var(--fnf-accent); }
-        .fnf-logo { height: var(--fnf-logo-height); }
+        :root { --commerce-accent: #ff4d00; --commerce-logo-height: 58px; }
+        .commerce-header { color: var(--commerce-accent); }
+        .commerce-logo { height: var(--commerce-logo-height); }
       </style>
     `);
 
-    assert.equal(evidence.theme_presets['fuel-free-time'], 1);
+    assert.equal(evidence.theme_presets['ember'], 1);
     assert.equal(evidence.header_presets['adaptive-bar'], 1);
     assert.equal(evidence.stylesheets['/css/heuristic-theme.css'], 1);
-    const fnf = evidence.namespaces.find((row) => row.prefix === 'fnf');
-    assert.ok(fnf);
-    assert.ok(fnf.signal_kinds >= 2);
-    assert.ok(fnf.signals.class_tokens >= 3);
-    assert.ok(fnf.signals.custom_properties >= 2);
+    const commerce = evidence.namespaces.find((row) => row.prefix === 'commerce');
+    assert.ok(commerce);
+    assert.ok(commerce.signal_kinds >= 2);
+    assert.ok(commerce.signals.class_tokens >= 3);
+    assert.ok(commerce.signals.custom_properties >= 2);
 
     const final = finalizeStyleEvidence(mergeStyleEvidence(null, evidence));
-    const finalFnf = final.namespaces.find((row) => row.prefix === 'fnf');
+    const finalFnf = final.namespaces.find((row) => row.prefix === 'commerce');
     assert.equal(final.theme_candidate, true);
     assert.equal(finalFnf?.candidate, true);
   });

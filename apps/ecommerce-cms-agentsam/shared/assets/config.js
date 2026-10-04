@@ -3,19 +3,19 @@
  * The reusable pipeline consumes this contract; deployment values live here.
  */
 export const ASSET_STORAGE = Object.freeze({
-  accountId: "ede6590ac0d2fb7daf155b35653457b2",
-  bucket: "fuelnfreetime",
+  accountId: "demo-commerce-account",
+  bucket: "ember",
   binding: "WEBSITE_ASSETS",
   location: "WNAM",
-  s3Api: "https://ede6590ac0d2fb7daf155b35653457b2.r2.cloudflarestorage.com/fuelnfreetime",
+  s3Api: "https://demo-commerce-account.r2.cloudflarestorage.com/ember",
   /** Preferred public hostname (Active custom domain). May 404 until CDN path proven. */
-  publicBaseUrl: "https://assets.fuelnfreetime.com",
+  publicBaseUrl: "https://assets.ember.example",
   /** Verified Worker serve path. */
-  workerMediaBaseUrl: "https://fuelnfreetime.com/media",
+  workerMediaBaseUrl: "https://ember.example/media",
   corsOrigins: Object.freeze([
-    "https://fuelnfreetime.com",
-    "https://www.fuelnfreetime.com",
-    "https://fuelnfreetime.meauxbility.workers.dev",
+    "https://ember.example",
+    "https://www.ember.example",
+    "https://ember.meauxbility.workers.dev",
     "http://localhost:8787",
     "http://127.0.0.1:8787",
   ]),
@@ -38,7 +38,7 @@ export const ASSET_STORAGE = Object.freeze({
 });
 
 /** @deprecated Deployment compatibility alias. New reusable code uses ASSET_STORAGE. */
-export const FNF_R2 = ASSET_STORAGE;
+export const COMMERCE_R2 = ASSET_STORAGE;
 
 /** Derive public URLs from durable r2_key — never persist signed URLs. */
 export function publicUrlsForKey(r2Key) {

@@ -23,7 +23,7 @@ export interface ContentStudioProps {
 
 /**
  * The canonical studio shell. It does not know host application names —
- * IAM, Fuel & Free Time and Local Studio all mount this same component
+ * IAM, Ember Supply and Local Studio all mount this same component
  * with different runtimes.
  */
 export function ContentStudio(props: ContentStudioProps) {

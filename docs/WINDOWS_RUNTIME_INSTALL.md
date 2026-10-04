@@ -1,4 +1,4 @@
-# Windows — agentsamd install (Connor / PowerShell)
+# Windows — agentsamd install (Operator / PowerShell)
 
 ## Why `Unknown command: runtime` happens
 

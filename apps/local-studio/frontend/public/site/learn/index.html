@@ -58,6 +58,7 @@
     /* Full-bleed hero sits under sticky header */
     .asbd-promo-hero { margin-top: var(--asbd-header-height); }
   </style>
+  <meta name="third-party-trademark-notice" content="Third-party names and trademarks belong to their respective owners; compatibility references do not imply sponsorship, endorsement, partnership, collaboration, or affiliation." />
 </head>
 <body data-asbd-theme="dark">
   <div id="asbd-header-mount"></div>
@@ -155,13 +156,13 @@
           <p>Seven real historical builds on a Theme Store shelf. Preview desktop/mobile, open the live mount, or start a use-this-design plan — without fake one-click provisioning.</p>
           <div class="mod-actions">
             <a class="primary" href="/themes/">Open Themes</a>
-            <a href="/themes/insurance-site/">Sample: Insurance</a>
+            <a href="/themes/harbor/">Sample: Insurance</a>
             <button type="button" data-try="themes-try">Try install path</button>
           </div>
           <div class="try-panel" id="themes-try">
             <div>Browse locally while developing:</div>
             <pre>cd apps/theme-gallery-preview
-python3 scripts/stage_themes.py
+npm run site:sync
 python3 app.py
 # http://127.0.0.1:8765/themes</pre>
             <div class="copy-note" data-note></div>

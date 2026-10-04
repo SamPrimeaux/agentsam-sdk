@@ -4,8 +4,8 @@ import { evaluateDeleteSafety } from "../src/core/usage.js";
 describe("usage graph delete safety", () => {
   it("refuses when live surfaces reference the asset", () => {
     const safety = evaluateDeleteSafety([
-      { app: "fuel-free-time", surface: "home.hero", live: true },
-      { app: "fuel-free-time", surface: "about.story", live: true },
+      { app: "ember", surface: "home.hero", live: true },
+      { app: "ember", surface: "about.story", live: true },
       { app: "agentsam", surface: "brand-story.gallery", live: true },
     ]);
     expect(safety.safe).toBe(false);
@@ -15,7 +15,7 @@ describe("usage graph delete safety", () => {
   it("allows with last-used context when only historical references exist", () => {
     const detachedAt = new Date(Date.now() - 94 * 86_400_000).toISOString();
     const safety = evaluateDeleteSafety([
-      { app: "iam", surface: "case-study.fuel-free-time", live: false, detachedAt },
+      { app: "iam", surface: "case-study.ember", live: false, detachedAt },
     ]);
     expect(safety.safe).toBe(true);
     expect(safety.reason).toContain("Last used 94 days ago");

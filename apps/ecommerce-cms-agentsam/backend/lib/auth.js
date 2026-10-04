@@ -6,7 +6,7 @@ import { resolveApplicationAccountId } from "./account-context.js";
 
 const ITERATIONS = 100000;
 const SESSION_DAYS = 7;
-const COOKIE_NAME = "fnf_admin_session";
+const COOKIE_NAME = "commerce_admin_session";
 
 function toHex(buf) {
   return Array.from(new Uint8Array(buf))

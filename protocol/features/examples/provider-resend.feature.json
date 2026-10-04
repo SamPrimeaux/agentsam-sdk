@@ -11,7 +11,7 @@
   "provides": ["email.send", "email.webhook.receive"],
   "runtime": ["worker", "node"],
   "source": {
-    "proving_ground": "fuelnfreetime",
-    "notes": "See fuelnfreetime/features/provider-resend/agentsam.feature.json for full contribution map."
+    "proving_ground": "ember",
+    "notes": "See ember/features/provider-resend/agentsam.feature.json for full contribution map."
   }
 }
