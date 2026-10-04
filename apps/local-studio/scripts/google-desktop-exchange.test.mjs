@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 import {
   resolveGoogleExchangeSecret,
   handleGoogleDesktopExchangeRequest,
-} from '../backend/worker/google-desktop-exchange.js';
+} from '../backend/worker/goaude.js';
 
 describe('google desktop exchange broker', () => {
   it('always treats the configured desktop client as public PKCE', () => {

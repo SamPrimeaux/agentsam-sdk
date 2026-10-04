@@ -53,7 +53,7 @@ OIDC scopes: `openid profile email` (not a bespoke `identity:*` namespace).
 ## Code
 
 - `credentials.js` — lane resolution
-- `google-desktop-exchange.js` — desktop PKCE token broker
+- `goaude.js` — desktop PKCE token broker
 - `providers/iam/` — IAM AS client (`getIamAuthUrl`, `exchangeIamCode`, `fetchIamProfile`)
 - `iam-platform.js` — customer-worker start/callback wiring (uses `providers/iam/`)
 - `pkce.js` — shared PKCE helpers

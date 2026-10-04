@@ -26,7 +26,7 @@ const source = {
   tauri: read(join(appRoot, "frontend/src/lib/desktop/tauri.ts")),
   rust: read(join(repoRoot, "packages/agentsam-desktop-shell/src-tauri/src/commands/local_identity.rs")),
   googleDesktopRust: read(join(repoRoot, "packages/agentsam-desktop-shell/src-tauri/src/commands/google_desktop_identity.rs")),
-  googleDesktopWorker: read(join(repoRoot, "packages/identity/src/oauth/google-desktop-exchange.js")),
+  googleDesktopWorker: read(join(repoRoot, "packages/identity/src/oauth/goaude.js")),
   deepLink: read(join(repoRoot, "packages/agentsam-desktop-shell/src-tauri/src/commands/deep_link.rs")),
   keychain: read(join(repoRoot, "packages/agentsam-desktop-shell/src-tauri/src/commands/keychain.rs")),
   config: read(join(repoRoot, "packages/agentsam-desktop-shell/src-tauri/tauri.conf.json")),

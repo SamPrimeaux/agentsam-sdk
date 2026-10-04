@@ -4,7 +4,7 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { resolveOAuthCredentialLane } from '../src/oauth/credentials.js';
-import { resolveGoogleExchangeSecret } from '../src/oauth/google-desktop-exchange.js';
+import { resolveGoogleExchangeSecret } from '../src/oauth/goaude.js';
 import { IdentityProviders } from '../src/contracts/provider.js';
 import { loadIdentityProviders, normalizeProviderTemplateId } from '../../../src/features/resolve.js';
 

@@ -25,7 +25,7 @@ import { handleCmsWorkerRequest } from "./cms-service.js";
 import { serveCanonicalHomepage } from "./canonical-homepage.js";
 import { isPublicSitePath, servePublicSitePage } from "./public-site.js";
 import { handlePublicConfigRequest } from "./public-config.js";
-import { handleGoogleDesktopExchangeRequest } from "./google-desktop-exchange.js";
+import { handleGoogleDesktopExchangeRequest } from "./goaude.js";
 import {
   handleGoogleCliCloudRequest,
   isGoogleCliCloudCallbackRequest,

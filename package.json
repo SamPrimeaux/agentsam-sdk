@@ -60,7 +60,7 @@
     "./identity/oauth/finalize-inbound": "./packages/identity/src/oauth/finalize-inbound.js",
     "./identity/oauth/redirect-paths": "./packages/identity/src/oauth/redirect-paths.js",
     "./identity/oauth/credentials": "./packages/identity/src/oauth/credentials.js",
-    "./identity/oauth/google-desktop-exchange": "./packages/identity/src/oauth/google-desktop-exchange.js",
+    "./identity/oauth/google-desktop-exchange": "./packages/identity/src/oauth/goaude.js",
     "./identity/oauth/iam-platform": "./packages/identity/src/oauth/iam-platform.js",
     "./identity/recovery/password-reset": "./packages/identity/src/recovery/password-reset.js",
     "./identity/server/worker-router": "./packages/identity/src/server/worker-router.js",

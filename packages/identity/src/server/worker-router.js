@@ -17,7 +17,7 @@ import {
   GOOGLE_DESKTOP_LOGIN_EXCHANGE_PATH,
   handleGoogleDesktopExchangeRequest,
   handleGoogleDesktopLoginExchangeRequest,
-} from '../oauth/google-desktop-exchange.js';
+} from '../oauth/goaude.js';
 import { iamPlatformOAuthCallback, iamPlatformOAuthStart } from '../oauth/iam-platform.js';
 import { pkceChallenge, pkceVerifier, randomOAuthState } from '../oauth/pkce.js';
 import {
