@@ -24,7 +24,8 @@
     "./assets": "./src/index.js",
     "./presets": "./src/presets/index.js",
     "./cli": "./src/cli/controller.js",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./public": "./src/public.js"
   },
   "files": [
     "bin",

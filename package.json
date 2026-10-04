@@ -135,7 +135,8 @@
     "./receipts/schema": "./protocol/receipts/agentsam.receipt.v1.json",
     "./merch": "./packages/agentsam-merch/src/index.js",
     "./merch/node": "./packages/agentsam-merch/src/node/index.js",
-    "./theme/resolve": "./packages/theme-resolve/src/index.js"
+    "./theme/resolve": "./packages/theme-resolve/src/index.js",
+    "./campaign": "./packages/agentsam-campaign/src/index.js"
   },
   "bin": {
     "agentsam": "bin/agentsam",
@@ -240,6 +241,7 @@
     "packages/analytics-ui",
     "packages/agentsam-assets-core",
     "packages/agentsam-brand",
+    "packages/agentsam-campaign",
     "packages/agentsam-cloudflare-images",
     "packages/agentsam-content",
     "packages/agentsam-content-studio",

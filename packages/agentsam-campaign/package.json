@@ -1,0 +1,84 @@
+{
+  "name": "@inneranimalmedia/agentsam-campaign",
+  "version": "2.6.11",
+  "description": "Portable AgentSam campaign intelligence for promotional planning, product launches, SEO/content strategy, merchandising, audience targeting, conversion, brand consistency, and evidence-backed campaign evaluation.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "pack:dry": "npm pack --dry-run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/agentsam-campaign"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "agentsam",
+    "campaign",
+    "campaign-planning",
+    "campaign-management",
+    "campaign-analysis",
+    "marketing",
+    "marketing-campaign",
+    "digital-marketing",
+    "growth-marketing",
+    "product-marketing",
+    "promotional",
+    "promotion",
+    "promotional-campaign",
+    "product-launch",
+    "launch-planning",
+    "go-to-market",
+    "gtm",
+    "commerce",
+    "ecommerce",
+    "retail",
+    "merch",
+    "merchandising",
+    "product",
+    "product-strategy",
+    "offer-strategy",
+    "sales",
+    "conversion",
+    "conversion-optimization",
+    "audience",
+    "audience-targeting",
+    "segmentation",
+    "inventory",
+    "margin",
+    "profitability",
+    "brand",
+    "brand-consistency",
+    "creative-strategy",
+    "content-strategy",
+    "seo",
+    "search-engine-optimization",
+    "content-marketing",
+    "performance-marketing",
+    "marketing-analytics",
+    "campaign-scoring",
+    "campaign-ranking",
+    "ai-marketing",
+    "agentic-marketing",
+    "marketing-automation",
+    "decision-support",
+    "evidence-based",
+    "provider-neutral"
+  ]
+}
