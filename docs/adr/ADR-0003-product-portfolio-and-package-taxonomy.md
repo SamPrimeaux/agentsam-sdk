@@ -1,7 +1,7 @@
 # ADR: AgentSam Product Portfolio and Package Taxonomy
 
-**Status:** Accepted  
-**Decision type:** Product / architecture / packaging  
+**Status:** Accepted
+**Decision type:** Product / architecture / packaging
 **Applies to:** `agentsam-sdk`, public packages, Local Studio, packaged apps, plugins, hosted runtimes, themes, adapters
 
 ## Context

@@ -1,8 +1,8 @@
 # AgentSam Content Studio
 ## Product Requirements Document
 
-**Status:** Alpha  
-**Portfolio:** AgentSam  
+**Status:** Alpha
+**Portfolio:** AgentSam
 **Primary package/app composition:** see Package composition below
 
 ## Product vision

@@ -1,7 +1,7 @@
 # ADR: AgentSam Product Composition and Provider Neutrality
 
-**Status:** Accepted  
-**Decision type:** Architecture / product boundary  
+**Status:** Accepted
+**Decision type:** Architecture / product boundary
 **Applies to:** all AgentSam offers, packages, adapters, plugins, hosted and desktop surfaces
 
 ## Decision

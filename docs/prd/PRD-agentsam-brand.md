@@ -1,8 +1,8 @@
 # AgentSam Brand
 ## Product Requirements Document
 
-**Status:** Experimental  
-**Portfolio:** AgentSam  
+**Status:** Experimental
+**Portfolio:** AgentSam
 **Primary package/app composition:** see Package composition below
 
 ## Product vision

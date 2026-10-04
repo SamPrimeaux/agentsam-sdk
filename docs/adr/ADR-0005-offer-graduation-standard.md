@@ -1,7 +1,7 @@
 # ADR: AgentSam Offer Graduation Standard
 
-**Status:** Accepted  
-**Decision type:** Product quality / release governance  
+**Status:** Accepted
+**Decision type:** Product quality / release governance
 **Applies to:** any AgentSam package or app proposed as a real-world product, plugin, paid feature, or standalone offer
 
 ## Context
