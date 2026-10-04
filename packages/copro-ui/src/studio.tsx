@@ -15,6 +15,8 @@ export type CoProStudioAction =
   | { type: "speed"; clipId: string; playbackRate: number }
   | { type: "volume"; clipId: string; volume: number }
   | { type: "text"; clipId: string; text: string }
+  | { type: "effect"; clipId: string; effect: string }
+  | { type: "transition"; clipId: string; transition: string; durationUs?: number }
   | { type: "create-text"; kind: "overlay" | "captions"; text: string; atUs: number }
   | { type: "import-media"; file: File; atUs: number }
   | { type: "add-track" }
@@ -43,6 +45,7 @@ const PRIMARY_TOOLS = [
   ["text", "Text", "T"],
   ["captions", "Captions", "CC"],
   ["effects", "Effects", "✦"],
+  ["transitions", "Transitions", "◇"],
   ["templates", "Templates", "▦"],
 ] as const;
 
@@ -51,6 +54,8 @@ const CLIP_TOOLS = [
   ["trim", "Trim", "↔"],
   ["speed", "Speed", "1×"],
   ["volume", "Volume", "◖"],
+  ["effects", "Effects", "✦"],
+  ["transitions", "Transitions", "◇"],
   ["duplicate", "Duplicate", "▣"],
   ["delete", "Delete", "⌫"],
 ] as const;
@@ -210,7 +215,7 @@ export function CoProStudio({
               {previewSrc && previewKind === "video" ? (
                 <video
                   ref={videoRef}
-                  className="copro-preview-media"
+                  className={"copro-preview-media copro-preview-effect-" + String(selectedClip?.metadata?.effect ?? "none")}
                   src={previewSrc}
                   playsInline
                   onPlay={() => setPlaying(true)}
@@ -218,7 +223,11 @@ export function CoProStudio({
                   onTimeUpdate={(event) => onSeek?.(Math.round(event.currentTarget.currentTime * 1_000_000))}
                 />
               ) : previewSrc && previewKind === "image" ? (
-                <img className="copro-preview-media" src={previewSrc} alt="" />
+                <img
+                  className={"copro-preview-media copro-preview-effect-" + String(selectedClip?.metadata?.effect ?? "none")}
+                  src={previewSrc}
+                  alt=""
+                />
               ) : (
                 <div className="copro-preview-placeholder">
                   <div className="copro-preview-mark">CoPro</div>
@@ -300,6 +309,10 @@ export function CoProStudio({
         onMediaPicked={(file) => onAction?.({ type: "import-media", file, atUs: playheadUs })}
         mediaItems={mediaItems}
         onMediaAdd={(id) => onMediaAdd?.(id, playheadUs)}
+        currentEffect={String(selectedClip?.metadata?.effect ?? "none")}
+        currentTransition={String((selectedClip?.metadata?.transitionOut as any)?.type ?? "none")}
+        onEffectChange={(effect) => selectedClip && onAction?.({ type: "effect", clipId: selectedClip.id, effect })}
+        onTransitionChange={(transition) => selectedClip && onAction?.({ type: "transition", clipId: selectedClip.id, transition, durationUs: 300_000 })}
       />
       <CoProExportSheet open={exportOpen} onClose={() => setExportOpen(false)} />
     </section>

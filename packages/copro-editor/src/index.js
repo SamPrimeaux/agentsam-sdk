@@ -133,6 +133,28 @@ export function applyCoProCommand(inputProject, command) {
       break;
     }
 
+    case "clip.set_effect": {
+      const found = locateClip(project, payload.clipId);
+      if (!found) throw new Error("copro_clip_not_found");
+      const effect = String(payload.effect ?? "none");
+      found.clip.metadata = { ...(found.clip.metadata ?? {}), effect };
+      break;
+    }
+
+    case "clip.set_transition": {
+      const found = locateClip(project, payload.clipId);
+      if (!found) throw new Error("copro_clip_not_found");
+      const transition = String(payload.transition ?? "none");
+      const durationUs = Number.isInteger(payload.durationUs) && payload.durationUs >= 0
+        ? payload.durationUs
+        : 300_000;
+      found.clip.metadata = {
+        ...(found.clip.metadata ?? {}),
+        transitionOut: { type: transition, durationUs },
+      };
+      break;
+    }
+
     case "track.insert": {
       if (!payload.track?.id) throw new Error("copro_track_invalid");
       if (locateTrack(project, payload.track.id)) throw new Error("copro_track_id_conflict");

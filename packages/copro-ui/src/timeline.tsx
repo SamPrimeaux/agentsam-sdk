@@ -319,6 +319,10 @@ export function CoProTimeline({
                           {clip.playbackRate && clip.playbackRate !== 1 ? " · " + clip.playbackRate.toFixed(2) + "×" : ""}
                         </span>
 
+                        {clip.metadata?.transitionOut && (clip.metadata.transitionOut as any).type !== "none" ? (
+                          <span className="copro-transition-marker" title={"Transition: " + String((clip.metadata.transitionOut as any).type)}>◇</span>
+                        ) : null}
+
                         {selected && !track.locked && (
                           <button
                             className="copro-trim-handle copro-trim-right"

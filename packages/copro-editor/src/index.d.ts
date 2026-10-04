@@ -9,6 +9,8 @@ export type CoProCommand =
   | { type: "clip.set_speed"; payload: { clipId: string; playbackRate: number } }
   | { type: "clip.set_volume"; payload: { clipId: string; volume: number } }
   | { type: "clip.set_text"; payload: { clipId: string; text: string } }
+  | { type: "clip.set_effect"; payload: { clipId: string; effect: string } }
+  | { type: "clip.set_transition"; payload: { clipId: string; transition: string; durationUs?: number } }
   | { type: "track.insert"; payload: { track: unknown; index?: number } }
   | { type: "track.reorder"; payload: { trackId: string; index: number } }
   | { type: "track.set_state"; payload: { trackId: string; visible?: boolean; muted?: boolean; locked?: boolean } }

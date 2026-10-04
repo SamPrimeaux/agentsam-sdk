@@ -83,3 +83,22 @@ test("speed, volume and track state are canonical commands", () => {
   assert.equal(project.tracks[0].muted, true);
   assert.equal(project.tracks[0].locked, true);
 });
+
+
+test("effects and transitions are canonical clip commands", () => {
+  let project = fixture();
+  project = applyCoProCommand(project, {
+    type: "clip.set_effect",
+    payload: { clipId: "clip:1", effect: "warm" },
+  });
+  project = applyCoProCommand(project, {
+    type: "clip.set_transition",
+    payload: { clipId: "clip:1", transition: "crossfade", durationUs: 420_000 },
+  });
+
+  assert.equal(project.tracks[0].clips[0].metadata.effect, "warm");
+  assert.deepEqual(project.tracks[0].clips[0].metadata.transitionOut, {
+    type: "crossfade",
+    durationUs: 420_000,
+  });
+});

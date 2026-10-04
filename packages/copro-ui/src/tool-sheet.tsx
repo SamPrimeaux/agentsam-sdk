@@ -23,6 +23,10 @@ export function CoProToolSheet({
   onMediaPicked,
   mediaItems = [],
   onMediaAdd,
+  currentEffect = "none",
+  currentTransition = "none",
+  onEffectChange,
+  onTransitionChange,
 }: {
   tool: string | null;
   open: boolean;
@@ -37,6 +41,10 @@ export function CoProToolSheet({
   onMediaPicked?: (file: File) => void;
   mediaItems?: CoProMediaShelfItem[];
   onMediaAdd?: (id: string) => void;
+  currentEffect?: string;
+  currentTransition?: string;
+  onEffectChange?: (effect: string) => void;
+  onTransitionChange?: (transition: string) => void;
 }) {
   const [speed, setSpeed] = useState(initialSpeed);
   const [volume, setVolume] = useState(Math.round(initialVolume * 100));
@@ -126,13 +134,50 @@ export function CoProToolSheet({
             <button disabled title="Animation adapter is not enabled yet">Animation</button>
           </div>
         </div>
-      ) : tool === "effects" || tool === "templates" ? (
+      ) : tool === "effects" ? (
         <div className="copro-tool-grid">
-          {["Clean","Punch","Soft","Film","Mono","Warm"].map((label) => (
-            <button disabled title="Effect adapter not enabled yet" key={label}>
-              <i>{label.slice(0,1)}</i><span>{label}</span>
+          {[
+            ["none","Clean"],
+            ["punch","Punch"],
+            ["soft","Soft"],
+            ["film","Film"],
+            ["mono","Mono"],
+            ["warm","Warm"],
+          ].map(([id,label]) => (
+            <button
+              className={currentEffect === id ? "is-active" : ""}
+              key={id}
+              onClick={() => onEffectChange?.(id)}
+            >
+              <i className={"copro-effect-preview copro-effect-" + id}>{label.slice(0,1)}</i>
+              <span>{label}</span>
             </button>
           ))}
+        </div>
+      ) : tool === "transitions" ? (
+        <div className="copro-tool-grid">
+          {[
+            ["none","None"],
+            ["crossfade","Crossfade"],
+            ["dip-black","Dip black"],
+            ["slide","Slide"],
+            ["zoom","Zoom"],
+            ["blur","Blur"],
+          ].map(([id,label]) => (
+            <button
+              className={currentTransition === id ? "is-active" : ""}
+              key={id}
+              onClick={() => onTransitionChange?.(id)}
+            >
+              <i>{label.slice(0,1)}</i>
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
+      ) : tool === "templates" ? (
+        <div className="copro-capability-note">
+          <strong>Templates</strong>
+          <p>Template browser is not enabled in this slice yet.</p>
         </div>
       ) : tool === "media" ? (
         <div className="copro-media-library">
