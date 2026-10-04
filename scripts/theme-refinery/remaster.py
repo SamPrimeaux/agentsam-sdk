@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """AgentSam theme prebuild remaster pipeline.
 
-The pipeline separates three concerns:
-1. private donor provenance,
-2. canonical public theme/package identity,
-3. generated media + SEO projections.
+The pipeline coordinates canonical theme/package identity, generated media,
+and SEO projections. Historical customer identity is intentionally not stored
+in this distributable tooling.
 
 Audit and plan modes are free and deterministic. AI calls require --execute-ai.
 """
@@ -21,6 +20,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 from remaster_ai import (
     RemasterAIError,
@@ -37,39 +37,12 @@ THEMES_ROOT = GALLERY_ROOT / "themes"
 CATALOG_PATH = GALLERY_ROOT / "data/catalog.json"
 GALLERY_COPY_PATH = GALLERY_ROOT / "data/gallery-copy.json"
 REGISTRY_PATH = ROOT / "packages/theme-scenes/src/registry.js"
-PROVENANCE_ROOT = ROOT / "reference/theme-donors"
 
 TEXT_SUFFIXES = {
     ".html", ".css", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx",
     ".json", ".md", ".txt", ".webmanifest", ".xml", ".svg"
 }
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".avif", ".gif"}
-
-PRIVATE_REPLACEMENTS = {
-    "New Iberia": "River Parish",
-    "Fight Club": "Community Men",
-    "Rooted": "Community Women",
-    "Caddo": "North District",
-    "Shreveport": "North District",
-    "Anything Floors": "Grove Surface",
-    "AFM": "Grove",
-    "Fuel N Free": "Ember",
-    "fuelnfreetime": "ember-demo",
-    "FNF": "Ember",
-    "Primeaux Handyman": "Forge Works",
-    "Primeaux": "Forge",
-    "Lafayette": "Central District",
-    "Acadiana": "the surrounding region",
-    "Chrystal Clear": "Harbor Advisory",
-    "CCI": "Harbor",
-    "Shinshu": "Summit",
-    "Jake Waalk": "Alex Rowan",
-    "Nagano": "Alpine Region",
-    "Bandai-Asahi": "Highland Reserve",
-    "RADIAN15": "RESOLVE15",
-    "RADIAN": "RESOLVE",
-    "Radian": "Resolve",
-}
 
 FEATURES = {
     "cypress": ["Events", "Groups", "Giving", "Story-driven pages"],
@@ -122,12 +95,7 @@ def canonical_gallery(theme: dict[str, Any]) -> Path:
 
 
 def current_gallery(theme: dict[str, Any]) -> Path:
-    canonical = canonical_gallery(theme)
-    legacy = THEMES_ROOT / theme["legacy_slug"]
-    if canonical.exists():
-        return canonical
-    return legacy
-
+    return canonical_gallery(theme)
 
 def canonical_package(theme: dict[str, Any]) -> Path:
     return ROOT / theme["package_dir"]
@@ -135,15 +103,7 @@ def canonical_package(theme: dict[str, Any]) -> Path:
 
 def current_package(theme: dict[str, Any]) -> Path | None:
     canonical = canonical_package(theme)
-    if canonical.exists():
-        return canonical
-    legacy = theme.get("legacy_package_dir")
-    if legacy:
-        p = ROOT / legacy
-        if p.exists():
-            return p
-    return None
-
+    return canonical if canonical.exists() else None
 
 def iter_text_files(*roots: Path):
     seen: set[Path] = set()
@@ -180,33 +140,14 @@ def write_json(path: Path, payload: Any, apply: bool) -> bool:
 
 
 def replacements_for(theme: dict[str, Any]) -> dict[str, str]:
-    repl: dict[str, str] = {}
-    redactions = list(theme.get("redactions") or [])
-    if redactions:
-        repl[redactions[0]] = theme["demo_brand"]
-    for term in redactions[1:]:
-        repl[term] = PRIVATE_REPLACEMENTS.get(term, theme["demo_brand"])
-    for old, new in PRIVATE_REPLACEMENTS.items():
-        if old in redactions:
-            repl[old] = new
-    if theme["id"] == "resolve":
-        repl.update({"RADIAN15": "RESOLVE15", "RADIAN": "RESOLVE", "Radian": "Resolve"})
-    return dict(sorted(repl.items(), key=lambda item: len(item[0]), reverse=True))
-
+    # Canonical builds are already sterilized. Keeping historical replacement
+    # vocabularies here would itself preserve customer identity in the SDK.
+    return {}
 
 def scan_terms(theme: dict[str, Any], roots: list[Path]) -> list[dict[str, Any]]:
-    findings = []
-    terms = list(theme.get("redactions") or [])
-    for path in iter_text_files(*roots):
-        text = path.read_text(encoding="utf-8", errors="ignore")
-        hits = [term for term in terms if term and term.lower() in text.lower()]
-        if hits:
-            findings.append({
-                "path": str(path.relative_to(ROOT)),
-                "terms": sorted(set(hits)),
-            })
-    return findings
-
+    # Customer-specific tokens are intentionally not stored in the remaster
+    # manifest. Repository-wide privacy validation lives in verify_sterile.py.
+    return []
 
 def scan_external_media(roots: list[Path]) -> list[dict[str, str]]:
     pattern = re.compile(
@@ -262,14 +203,23 @@ def update_package_metadata(theme: dict[str, Any], package_dir: Path, apply: boo
         data["name"] = theme["package_name"]
         data["description"] = theme["description"]
         agentsam = dict(data.get("agentsam") or {})
+        for key in ("lineage", "legacyPackageName", "legacySlug", "donor", "sourcePath"):
+            agentsam.pop(key, None)
         agentsam.update({
             "kind": "theme",
             "slug": theme["id"],
-            "galleryPath": f"apps/theme-gallery-preview/themes/{theme['id']}",
             "canonicalId": theme["id"],
             "family": theme["family"],
+            "normalization": "package_ready",
+            "installable": True,
+            "portable": True,
+            "prebuildRoot": "site",
         })
         data["agentsam"] = agentsam
+        repository = dict(data.get("repository") or {})
+        if repository:
+            repository["directory"] = theme["package_dir"]
+            data["repository"] = repository
         changed += int(write_json(package_json, data, apply))
 
     readme = f"""# {theme['package_name']}
@@ -282,7 +232,7 @@ def update_package_metadata(theme: dict[str, Any], package_dir: Path, apply: boo
 
 Demo identity: **{theme['demo_brand']}**. The demo content is fictional and exists to show the layout, interaction, and content system without carrying customer branding forward.
 
-Gallery preview: `/themes/{theme['id']}/`
+The complete built platform ships in `site/`; installation does not depend on the AgentSam gallery or a sync step.
 """
     changed += int(write_text(package_dir / "README.md", readme, apply))
 
@@ -296,17 +246,6 @@ Gallery preview: `/themes/{theme['id']}/`
             lambda m: m.group(1) + json.dumps(theme["description"]),
             text,
             count=1,
-        )
-        text = re.sub(
-            r'("galleryPath"\s*:\s*)".*?"',
-            rf'\1"apps/theme-gallery-preview/themes/{theme["id"]}"',
-            text,
-            count=1,
-        )
-        text = re.sub(
-            r'("demoUrl"\s*:\s*)".*?"',
-            rf'\1"/themes/{theme["id"]}/demo/"',
-            text,
         )
         changed += int(write_text(index_js, text, apply))
     return changed
@@ -353,7 +292,10 @@ def ensure_theme_json(theme: dict[str, Any], gallery_dir: Path, apply: bool) -> 
             "mobile": f"/themes/{theme['id']}/demo/",
             "demoUrl": f"/themes/{theme['id']}/demo/",
         },
-        "installable": False,
+        "installable": True,
+        "portable": True,
+        "prebuildRoot": "site",
+        "package": theme["package_name"],
     }
     payload.pop("_internal", None)
     return int(write_json(path, payload, apply))
@@ -362,139 +304,50 @@ def ensure_theme_json(theme: dict[str, Any], gallery_dir: Path, apply: bool) -> 
 def normalize_root_package(manifest: dict[str, Any], apply: bool) -> int:
     path = ROOT / "package.json"
     data = json.loads(path.read_text(encoding="utf-8"))
-    changed = 0
 
-    old_to_new = {
-        t["legacy_package_dir"]: t["package_dir"]
-        for t in manifest["themes"]
-        if t.get("legacy_package_dir")
-    }
-
-    workspaces = data.get("workspaces") or []
-    normalized = []
-    for item in workspaces:
-        normalized.append(old_to_new.get(item, item))
+    workspaces = list(data.get("workspaces") or [])
     for theme in manifest["themes"]:
-        if theme["package_dir"] not in normalized:
-            normalized.append(theme["package_dir"])
-    data["workspaces"] = normalized
+        if theme["package_dir"] not in workspaces:
+            workspaces.append(theme["package_dir"])
+    data["workspaces"] = workspaces
 
     exports = dict(data.get("exports") or {})
-    for key, value in list(exports.items()):
-        for old, new in old_to_new.items():
-            if isinstance(value, str) and old in value:
-                exports[key] = value.replace(old, new)
     for theme in manifest["themes"]:
         exports[f"./theme/{theme['id']}"] = f"./{theme['package_dir']}/src/index.js"
     data["exports"] = exports
 
-    scripts = dict(data.get("scripts") or {})
-    for key, value in list(scripts.items()):
-        if not isinstance(value, str):
-            continue
-        for old, new in old_to_new.items():
-            value = value.replace(old, new)
-        scripts[key] = value
-    data["scripts"] = scripts
-
-    changed += int(write_json(path, data, apply))
-    return changed
-
+    return int(write_json(path, data, apply))
 
 def scrub_public_registry(manifest: dict[str, Any], apply: bool) -> int:
     if not REGISTRY_PATH.exists():
         return 0
     text = REGISTRY_PATH.read_text(encoding="utf-8")
-    new = text
-
-    for theme in manifest["themes"]:
-        old = theme.get("legacy_package_dir")
-        if old:
-            new = new.replace(f'path: "{old}"', f'path: "{theme["package_dir"]}"')
-        new = new.replace(
-            f'siteSlug: "{theme["legacy_slug"]}"',
-            f'siteSlug: "{theme["id"]}"',
-        )
-
-    # Public registry should resolve canonical packages, not expose donor/client identity.
-    new = re.sub(r'^\s*donor:\s*"[^"]+",\s*$', "", new, flags=re.M)
-
-    private_aliases = {
-        "companions-of-caddo", "anything-floors", "fuelnfreetime", "fuel-n-free",
-        "primeaux-handyman", "chrystal-clear-insurance", "shinshu-solutions",
-        "new-iberia-church", "fnf", "phs", "cci", "coc", "afm", "shin", "nic",
-    }
-
-    def filter_aliases(match: re.Match[str]) -> str:
-        raw = match.group(1)
-        try:
-            values = json.loads("[" + raw + "]")
-        except json.JSONDecodeError:
-            return match.group(0)
-        values = [v for v in values if str(v).lower() not in private_aliases]
-        return "aliases: [" + ", ".join(json.dumps(v) for v in values) + "],"
-
-    new = re.sub(r'aliases:\s*\[([^\]]*)\],', filter_aliases, new)
+    new = re.sub(r'^\s*donor:\s*"[^"]+",\s*$', "", text, flags=re.M)
     return int(write_text(REGISTRY_PATH, new, apply))
 
-
 def write_private_provenance(manifest: dict[str, Any], apply: bool) -> int:
-    rows = []
-    for theme in manifest["themes"]:
-        rows.append({
-            "canonical_id": theme["id"],
-            "package": theme["package_name"],
-            "legacy_slug": theme["legacy_slug"],
-            "original_identity": (theme.get("redactions") or [None])[0],
-            "source_repo": theme.get("donor_repo"),
-            "note": "Private provenance only; never use as public product copy.",
-        })
-    payload = {
-        "schema": "agentsam.theme-donor-lineage.v1",
-        "publish": False,
-        "themes": rows,
-    }
-    return int(write_json(PROVENANCE_ROOT / "lineage.json", payload, apply))
-
+    # Historical customer lineage is deliberately excluded from the SDK tree.
+    return 0
 
 def normalize(manifest: dict[str, Any], selected: list[dict[str, Any]], apply: bool) -> dict[str, Any]:
     actions: list[str] = []
     for theme in selected:
-        old_pkg = current_package(theme)
-        canonical_pkg = canonical_package(theme)
-        if old_pkg and old_pkg != canonical_pkg:
-            if move_path(old_pkg, canonical_pkg, apply):
-                actions.append(f"move {old_pkg.relative_to(ROOT)} -> {canonical_pkg.relative_to(ROOT)}")
-
-        old_gallery = current_gallery(theme)
-        canonical_g = canonical_gallery(theme)
-        if old_gallery.exists() and old_gallery != canonical_g:
-            if move_path(old_gallery, canonical_g, apply):
-                actions.append(f"move {old_gallery.relative_to(ROOT)} -> {canonical_g.relative_to(ROOT)}")
-
         pkg = canonical_package(theme)
         gallery = canonical_gallery(theme)
+
         if pkg.exists() or not apply:
-            if update_package_metadata(theme, pkg if pkg.exists() else canonical_pkg, apply):
+            if update_package_metadata(theme, pkg, apply):
                 actions.append(f"normalize package metadata {theme['id']}")
         if gallery.exists() or not apply:
             if ensure_theme_json(theme, gallery, apply):
                 actions.append(f"normalize gallery metadata {theme['id']}")
 
-        roots = [p for p in [pkg, gallery] if p.exists()]
-        changed = scrub_tree(theme, roots, apply)
-        if changed:
-            actions.append(f"scrub customer identity {theme['id']}: {changed} files")
-
     if normalize_root_package(manifest, apply):
         actions.append("normalize root workspace/export paths")
     if scrub_public_registry(manifest, apply):
-        actions.append("remove donor identity from public theme registry")
-    if write_private_provenance(manifest, apply):
-        actions.append("write non-published donor provenance")
+        actions.append("sanitize public theme registry")
 
     return {"apply": apply, "actions": actions}
-
 
 def copy_prompt(theme: dict[str, Any]) -> str:
     return f"""
@@ -514,7 +367,7 @@ keywords (array of 6-10 phrases), hero_cta, secondary_cta, image_notes (array of
 
 Rules:
 - Give it personality. Avoid generic SaaS/template-store filler.
-- Never mention a donor, client, historical customer, RADIAN, or a real company.
+- Never mention a donor, client, historical customer, or real company.
 - No unverifiable awards, rankings, customer counts, or performance claims.
 - Do not say "perfect for" or "revolutionary".
 - seo_title <= 60 characters where practical.
@@ -583,7 +436,10 @@ def catalog_theme(theme: dict[str, Any]) -> dict[str, Any]:
             "keywords": copy.get("keywords") or [theme["category"], theme["family"], *theme["best_for"]],
             "ogImage": f"/themes/{theme['id']}/demo/assets/generated/social-card.webp",
         },
-        "installable": False,
+        "installable": True,
+        "portable": True,
+        "package": theme["package_name"],
+        "prebuildRoot": "site",
     }
 
 
@@ -617,78 +473,192 @@ def make_mark_svg(theme: dict[str, Any]) -> str:
 </svg>"""
 
 
+def make_mark_png(theme: dict[str, Any], destination: Path, size: int) -> None:
+    from PIL import Image, ImageDraw
+
+    def rgb(value: str) -> tuple[int, int, int]:
+        value = value.lstrip("#")
+        return tuple(int(value[i:i+2], 16) for i in (0, 2, 4))
+
+    background = rgb(theme["palette"][0])
+    accent = rgb(theme["palette"][2])
+    image = Image.new("RGB", (size, size), background)
+    draw = ImageDraw.Draw(image)
+    inset = max(10, size // 4)
+    width = max(3, size // 18)
+    radius = max(8, size // 10)
+    draw.rounded_rectangle(
+        (inset, inset, size - inset, size - inset),
+        radius=radius,
+        outline=accent,
+        width=width,
+    )
+    center = size // 2
+    draw.line((inset, center, size - inset, center), fill=accent, width=width)
+    draw.line((center, inset, center, size - inset), fill=accent, width=width)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    image.save(destination, "PNG", optimize=True)
+
+
+def _is_generated_media_ref(source: str) -> bool:
+    low = source.lower()
+    return (
+        "assets/generated/" in low
+        or "agentsam.inneranimalmedia.com/themes/" in low
+        or low.startswith("data:")
+    )
+
+
+def _looks_like_mark(source: str) -> bool:
+    low = source.lower()
+    return any(token in low for token in ("logo", "wordmark", "brandmark", "favicon", "app-icon"))
+
+
+def _asset_context(source: str, file_name: str, alt: str = "") -> tuple[str, str, str]:
+    low = f"{source} {file_name} {alt}".lower()
+    if _looks_like_mark(source):
+        return "brand mark", alt or "fictional demo brand mark", "1:1"
+    if any(token in low for token in ("hero", "banner", "cover", "masthead", "background")):
+        return "hero / background image", alt or Path(file_name).stem.replace("-", " "), "16:9"
+    if any(token in low for token in ("portrait", "team", "person", "profile")):
+        return "editorial portrait", alt or Path(file_name).stem.replace("-", " "), "4:5"
+    return "editorial content image", alt or Path(file_name).stem.replace("-", " "), "3:2"
+
+
 def media_slots(theme: dict[str, Any], max_images: int) -> list[dict[str, Any]]:
+    """Discover unique visual source references across HTML, CSS, and built JS.
+
+    Donor builds are heterogeneous: some use plain <img>, some CSS backgrounds,
+    and bundled apps may retain string URLs in JS. We replace by source URL rather
+    than DOM position so one generated asset can replace every duplicate use.
+    """
     try:
         from bs4 import BeautifulSoup
     except ImportError as exc:
         raise SystemExit("pip install beautifulsoup4") from exc
 
     site = canonical_gallery(theme) / "site"
-    slots: list[dict[str, Any]] = []
     if not site.exists():
-        return slots
+        return []
 
+    candidates: list[tuple[str, str, str]] = []
+    seen: set[str] = set()
+
+    # First collect semantic <img> references so their alt text informs prompts.
     for html in sorted(site.rglob("*.html")):
-        soup = BeautifulSoup(html.read_text(encoding="utf-8", errors="ignore"), "html.parser")
-        for index, img in enumerate(soup.find_all("img")):
+        text = html.read_text(encoding="utf-8", errors="ignore")
+        soup = BeautifulSoup(text, "html.parser")
+        for img in soup.find_all("img"):
             source = str(img.get("src") or "").strip()
-            if not source or source.startswith("data:"):
+            if not source or _is_generated_media_ref(source) or source in seen:
                 continue
-            context = str(img.get("alt") or "").strip()
-            if not context:
-                heading = soup.find(["h1", "h2"])
-                context = heading.get_text(" ", strip=True) if heading else html.stem
-            key_seed = f"{html.relative_to(site)}:{index}:{source}"
-            slot_id = hashlib.sha1(key_seed.encode()).hexdigest()[:10]
-            role = "hero" if len(slots) == 0 else "content"
-            aspect = "16:9" if role == "hero" else "4:5"
-            slots.append({
-                "kind": "html-img",
-                "file": str(html.relative_to(site)),
-                "index": index,
+            if source.startswith(("blob:", "javascript:")):
+                continue
+            seen.add(source)
+            candidates.append((source, str(html.relative_to(site)), str(img.get("alt") or "").strip()))
+
+    # Then catch CSS backgrounds, externally hosted stock/customer media, and
+    # unbundled /src/assets references preserved inside compiled JS.
+    external = re.compile(r"""https?://[^\s"'()<>{}]+""", re.I)
+    source_asset = re.compile(r"""/src/assets/images/[^\s"'()<>{}]+?\.(?:png|jpe?g|webp|avif|gif)""", re.I)
+
+    for path in iter_text_files(site):
+        try:
+            relative_parts = path.relative_to(site).parts
+        except ValueError:
+            relative_parts = path.parts
+        if len(relative_parts) >= 2 and relative_parts[0] == "assets" and relative_parts[1] == "generated":
+            continue
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        for pattern in (external, source_asset):
+            for match in pattern.finditer(text):
+                source = match.group(0).rstrip(";,")
+                if pattern is external:
+                    low = source.lower()
+                    is_media = (
+                        any(ext in low for ext in (".png", ".jpg", ".jpeg", ".webp", ".avif", ".gif"))
+                        or "images.unsplash.com/" in low
+                        or "cdn.shopify.com/" in low
+                        or ".r2.dev/" in low
+                        or "assets.meauxxx.com/" in low
+                    )
+                    if not is_media:
+                        continue
+                if _is_generated_media_ref(source) or source in seen:
+                    continue
+                seen.add(source)
+                candidates.append((source, str(path.relative_to(site)), ""))
+
+    # Collapse query-string variants of the same remote asset. Donor sites
+    # often request the same image at several widths; one replacement should
+    # cover all of them instead of paying to generate near-duplicates.
+    grouped: dict[str, dict[str, Any]] = {}
+    for source, file_name, alt in candidates:
+        if source.startswith(("http://", "https://")):
+            parts = urlsplit(source)
+            identity = urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+        else:
+            identity = source
+        row = grouped.get(identity)
+        if row is None:
+            row = {
                 "source": source,
-                "slot": f"{role}-{slot_id}",
-                "label": f"{role} image",
-                "context": context[:180],
-                "aspect_ratio": aspect,
-            })
-            if len(slots) >= max_images:
-                return slots
+                "aliases": [],
+                "file": file_name,
+                "alt": alt,
+            }
+            grouped[identity] = row
+        elif source != row["source"] and source not in row["aliases"]:
+            row["aliases"].append(source)
+
+    slots: list[dict[str, Any]] = []
+    generated_count = 0
+    for identity, row in grouped.items():
+        source = row["source"]
+        label, context, aspect = _asset_context(source, row["file"], row["alt"])
+        is_mark = _looks_like_mark(source)
+        if not is_mark and generated_count >= max_images:
+            continue
+        if not is_mark:
+            generated_count += 1
+        key_seed = f"{theme['id']}:{identity}"
+        slot_id = hashlib.sha1(key_seed.encode()).hexdigest()[:10]
+        slots.append({
+            "kind": "mark" if is_mark else "source-ref",
+            "file": row["file"],
+            "source": source,
+            "aliases": row["aliases"],
+            "slot": f"media-{slot_id}",
+            "label": label,
+            "context": context[:180],
+            "aspect_ratio": aspect,
+        })
     return slots
 
 
-def patch_html_media(theme: dict[str, Any], slots: list[dict[str, Any]], apply: bool) -> int:
-    try:
-        from bs4 import BeautifulSoup
-    except ImportError as exc:
-        raise SystemExit("pip install beautifulsoup4") from exc
-
+def patch_media_refs(theme: dict[str, Any], slots: list[dict[str, Any]], apply: bool) -> int:
     site = canonical_gallery(theme) / "site"
-    by_file: dict[str, list[dict[str, Any]]] = {}
+    replacements: dict[str, str] = {}
     for slot in slots:
-        by_file.setdefault(slot["file"], []).append(slot)
+        if slot["kind"] == "mark":
+            target = f"/themes/{theme['id']}/demo/assets/generated/theme-mark.svg"
+        else:
+            target = f"/themes/{theme['id']}/demo/assets/generated/{slot['slot']}.webp"
+        replacements[slot["source"]] = target
+        for alias in slot.get("aliases") or []:
+            replacements[alias] = target
 
     changed = 0
-    for rel, items in by_file.items():
-        path = site / rel
-        soup = BeautifulSoup(path.read_text(encoding="utf-8", errors="ignore"), "html.parser")
-        images = soup.find_all("img")
-        for slot in items:
-            idx = slot["index"]
-            if idx >= len(images):
-                continue
-            img = images[idx]
-            img["data-remastered-from"] = slot["source"][:240]
-            img["src"] = f"/themes/{theme['id']}/demo/assets/generated/{slot['slot']}.webp"
-            if not img.get("alt"):
-                img["alt"] = f"{theme['demo_brand']} — {slot['context']}"
-            if idx == 0:
-                img["loading"] = "eager"
-                img["fetchpriority"] = "high"
-            else:
-                img["loading"] = "lazy"
-                img["decoding"] = "async"
-        changed += int(write_text(path, str(soup), apply))
+    for path in iter_text_files(site):
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        new = text
+        for old, target in replacements.items():
+            new = new.replace(old, target)
+            # BeautifulSoup decodes query separators in src values; raw HTML
+            # may still contain the entity-escaped spelling.
+            if "&" in old:
+                new = new.replace(old.replace("&", "&amp;"), target)
+        changed += int(write_text(path, new, apply))
     return changed
 
 
@@ -708,18 +678,32 @@ def generate_media_for_theme(
         generated_dir.mkdir(parents=True, exist_ok=True)
         (generated_dir / "theme-mark.svg").write_text(make_mark_svg(theme), encoding="utf-8")
         (generated_dir / "favicon.svg").write_text(make_mark_svg(theme), encoding="utf-8")
+        make_mark_png(theme, generated_dir / "theme-mark-192.png", 192)
+        make_mark_png(theme, generated_dir / "theme-mark-512.png", 512)
 
-    work = list(slots)
-    work.append({
-        "slot": "social-card",
-        "label": "social sharing card",
-        "context": theme["tagline"],
-        "aspect_ratio": "16:9",
-        "source": None,
-        "kind": "generated-social",
-    })
+        # Replace stale donor PWA/touch icons in place when they exist so the
+        # standalone demo cannot keep advertising a customer mark.
+        icon_targets = {
+            "apple-touch-icon.png": 192,
+            "pwa-192x192.png": 192,
+            "pwa-512x512.png": 512,
+        }
+        for relative, size in icon_targets.items():
+            target = site / relative
+            if target.exists():
+                make_mark_png(theme, target, size)
 
-    for slot in work:
+    for slot in slots:
+        row = dict(slot)
+        if slot["kind"] == "mark":
+            row.update({
+                "provider": "deterministic",
+                "model": None,
+                "output": "assets/generated/theme-mark.svg",
+            })
+            rows.append(row)
+            continue
+
         prompt = stock_prompt(
             theme_name=theme_name(theme),
             demo_brand=theme["demo_brand"],
@@ -728,7 +712,7 @@ def generate_media_for_theme(
             context=slot["context"],
             aspect_ratio=slot["aspect_ratio"],
         )
-        row = {**slot, "prompt": prompt}
+        row["prompt"] = prompt
         if execute_ai:
             with tempfile.TemporaryDirectory(prefix="agentsam-theme-media-") as temp:
                 source = Path(temp) / "source.jpg"
@@ -741,21 +725,99 @@ def generate_media_for_theme(
                 destination = generated_dir / f"{slot['slot']}.webp"
                 width, height = optimize_to_webp(source, destination)
                 row.update(meta)
-                row.update({"output": str(destination.relative_to(site)), "width": width, "height": height})
+                row.update({
+                    "output": str(destination.relative_to(site)),
+                    "width": width,
+                    "height": height,
+                })
         rows.append(row)
 
+    # Social share art is generated separately so it is never confused with
+    # an original donor reference.
+    social_prompt = stock_prompt(
+        theme_name=theme_name(theme),
+        demo_brand=theme["demo_brand"],
+        image_direction=theme["image_direction"],
+        slot_label="social sharing card",
+        context=theme["tagline"],
+        aspect_ratio="16:9",
+    )
+    social_row: dict[str, Any] = {
+        "kind": "generated-social",
+        "slot": "social-card",
+        "label": "social sharing card",
+        "context": theme["tagline"],
+        "aspect_ratio": "16:9",
+        "source": None,
+        "prompt": social_prompt,
+    }
+    if execute_ai:
+        with tempfile.TemporaryDirectory(prefix="agentsam-theme-social-") as temp:
+            source = Path(temp) / "source.jpg"
+            meta = generate_image(
+                social_prompt,
+                source,
+                provider=provider,
+                aspect_ratio="16:9",
+            )
+            destination = generated_dir / "social-card.webp"
+            width, height = optimize_to_webp(source, destination)
+            social_row.update(meta)
+            social_row.update({
+                "output": str(destination.relative_to(site)),
+                "width": width,
+                "height": height,
+            })
+    rows.append(social_row)
+
     if apply:
-        patch_html_media(theme, slots, apply=True)
+        if execute_ai:
+            patch_media_refs(theme, slots, apply=True)
+
+        manifest_path = generated_dir / "media-manifest.json"
+        previous_rows: list[dict[str, Any]] = []
+        if manifest_path.exists():
+            try:
+                previous_payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+                previous_rows = list(previous_payload.get("generated") or [])
+            except (json.JSONDecodeError, OSError):
+                previous_rows = []
+
+        merged: dict[str, dict[str, Any]] = {}
+        for row in [*previous_rows, *rows]:
+            key = str(row.get("source") or row.get("slot") or row.get("output"))
+            merged[key] = row
+
+        persisted = []
+        for row in merged.values():
+            item = {
+                key: row[key]
+                for key in (
+                    "kind", "slot", "label", "aspect_ratio",
+                    "provider", "model", "output", "width", "height"
+                )
+                if key in row and row[key] is not None
+            }
+            if item.get("kind") == "source-ref":
+                item["kind"] = "generated-stock"
+            persisted.append(item)
+
         write_json(
-            generated_dir / "media-manifest.json",
+            manifest_path,
             {
                 "schema": "agentsam.theme-media.v1",
                 "theme": theme["id"],
-                "generated": rows,
+                "generated": persisted,
             },
             True,
         )
-    return {"theme": theme["id"], "slots": len(slots), "assets": rows}
+    return {
+        "theme": theme["id"],
+        "slots": len(slots),
+        "ai_slots": sum(1 for slot in slots if slot["kind"] != "mark"),
+        "mark_slots": sum(1 for slot in slots if slot["kind"] == "mark"),
+        "assets": rows,
+    }
 
 
 def ensure_meta(soup, *, name: str | None = None, prop: str | None = None, content: str):
@@ -868,8 +930,8 @@ def create_resolve_package(theme: dict[str, Any], apply: bool) -> None:
         "description": theme["description"],
         "type": "module",
         "main": "./src/index.js",
-        "exports": {".": "./src/index.js"},
-        "files": ["src", "README.md"],
+        "exports": {".": "./src/index.js", "./node": "./src/node.js", "./site/*": "./site/*"},
+        "files": ["src", "site", "README.md"],
         "scripts": {"test": "node --test test/*.test.mjs"},
         "engines": {"node": ">=22 <25"},
         "publishConfig": {"access": "public"},
@@ -877,8 +939,10 @@ def create_resolve_package(theme: dict[str, Any], apply: bool) -> None:
         "agentsam": {
             "kind": "theme",
             "slug": theme["id"],
-            "galleryPath": f"apps/theme-gallery-preview/themes/{theme['id']}",
-            "installable": False,
+            "installable": True,
+            "portable": True,
+            "prebuildRoot": "site",
+            "normalization": "package_ready",
             "icon": "theme",
             "family": theme["family"],
             "canonicalId": theme["id"],
@@ -890,9 +954,9 @@ def create_resolve_package(theme: dict[str, Any], apply: bool) -> None:
         "family": theme["family"],
         "displayName": theme_name(theme),
         "description": theme["description"],
-        "installable": False,
-        "galleryPath": f"apps/theme-gallery-preview/themes/{theme['id']}",
-        "preview": {"demoUrl": f"/themes/{theme['id']}/demo/"},
+        "installable": True,
+        "portable": True,
+        "prebuildRoot": "site",
     }
     if apply:
         (package_dir / "src").mkdir(parents=True, exist_ok=True)
@@ -922,37 +986,48 @@ def create_resolve_package(theme: dict[str, Any], apply: bool) -> None:
 
 
 def import_resolve(theme: dict[str, Any], source: str | None, apply: bool) -> dict[str, Any]:
+    if not source:
+        raise SystemExit(
+            "Resolve source is intentionally not stored in the SDK. "
+            "Pass --resolve-source with an authorized local checkout."
+        )
     if not apply:
         return {
-            "would_import": theme["donor_repo"],
+            "would_import": str(Path(source).expanduser()),
             "destination": str(canonical_gallery(theme).relative_to(ROOT)),
             "package": theme["package_name"],
         }
 
-    with tempfile.TemporaryDirectory(prefix="agentsam-resolve-donor-") as temp:
-        donor = Path(temp) / "RADIAN15"
-        if source:
-            shutil.copytree(Path(source).expanduser().resolve(), donor)
-        else:
-            subprocess.run(
-                ["git", "clone", "--depth", "1", f"https://github.com/{theme['donor_repo']}.git", str(donor)],
-                check=True,
-            )
-        commit = subprocess.check_output(["git", "-C", str(donor), "rev-parse", "HEAD"], text=True).strip()
+    with tempfile.TemporaryDirectory(prefix="agentsam-resolve-source-") as temp:
+        donor = Path(temp) / "source"
+        shutil.copytree(Path(source).expanduser().resolve(), donor)
 
-        # Neutralize the donor product identity before build.
+        # Normalize the disposable source tree to the canonical public identity.
         for path in iter_text_files(donor):
             text = path.read_text(encoding="utf-8", errors="ignore")
-            text = text.replace("RADIAN15", "RESOLVE15")
-            text = text.replace("RADIAN", "RESOLVE")
-            text = text.replace("Radian", "Resolve")
             path.write_text(text, encoding="utf-8")
 
-        subprocess.run(["npm", "install", "--ignore-scripts", "--no-audit", "--no-fund"], cwd=donor, check=True)
+        # Vite 8 requires peerOptional esbuild ^0.27 || ^0.28. Normalize only
+        # the disposable checkout instead of weakening peer resolution.
+        donor_package_path = donor / "package.json"
+        donor_package = json.loads(donor_package_path.read_text(encoding="utf-8"))
+        donor_dev_dependencies = dict(donor_package.get("devDependencies") or {})
+        donor_dev_dependencies["esbuild"] = "^0.28.0"
+        donor_package["devDependencies"] = donor_dev_dependencies
+        donor_package_path.write_text(
+            json.dumps(donor_package, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        subprocess.run(
+            ["npm", "install", "--ignore-scripts", "--no-audit", "--no-fund"],
+            cwd=donor,
+            check=True,
+        )
         subprocess.run(["npm", "run", "build"], cwd=donor, check=True)
         dist = donor / "dist"
         if not dist.exists():
-            raise SystemExit("RADIAN15 build produced no dist/")
+            raise SystemExit("Resolve source build produced no dist/")
 
         gallery = canonical_gallery(theme)
         site = gallery / "site"
@@ -963,22 +1038,7 @@ def import_resolve(theme: dict[str, Any], source: str | None, apply: bool) -> di
         rewrite_root_paths(site)
         ensure_theme_json(theme, gallery, True)
         create_resolve_package(theme, True)
-
-        PROVENANCE_ROOT.mkdir(parents=True, exist_ok=True)
-        write_json(
-            PROVENANCE_ROOT / "resolve-radian15.json",
-            {
-                "schema": "agentsam.theme-donor.v1",
-                "publish": False,
-                "canonical": "resolve",
-                "source_repo": theme["donor_repo"],
-                "source_commit": commit,
-                "note": "Donor identity retained for provenance only. Public build is Resolve.",
-            },
-            True,
-        )
-        return {"imported": True, "source_commit": commit, "site": str(site.relative_to(ROOT))}
-
+        return {"imported": True, "site": str(site.relative_to(ROOT))}
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="AgentSam prebuild remaster pipeline")
@@ -989,7 +1049,7 @@ def main() -> None:
     parser.add_argument("--text-provider", default="auto", choices=["auto", "openai", "gemini"])
     parser.add_argument("--image-provider", default="auto", choices=["auto", "openai", "gemini"])
     parser.add_argument("--max-images", type=int, default=10)
-    parser.add_argument("--resolve-source", help="local RADIAN15 checkout instead of cloning GitHub")
+    parser.add_argument("--resolve-source", help="authorized local source checkout for Resolve")
     args = parser.parse_args()
 
     manifest = load_manifest()

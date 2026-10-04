@@ -1,0 +1,23 @@
+{
+  "schema": "agentsam.prebuild.v1",
+  "id": "harbor",
+  "package": "@inneranimalmedia/theme-harbor",
+  "version": "2.6.11",
+  "siteRoot": "site",
+  "entrypoint": "index.html",
+  "rootDeployable": true,
+  "portable": true,
+  "materializer": {
+    "export": "@inneranimalmedia/theme-harbor/node",
+    "function": "materializePrebuild"
+  },
+  "defaults": {
+    "basePath": "/",
+    "canonicalOrigin": "https://example.com/",
+    "apiBasePath": "/api"
+  },
+  "notes": [
+    "Static site payload is shipped in this package.",
+    "Backend/API capabilities are supplied by the host and are never simulated by the package."
+  ]
+}

@@ -1,0 +1,151 @@
+{
+  "schema": "agentsam.privacy-blocklist.v1",
+  "normalization": "lowercase alphanumeric tokens joined by one space",
+  "entries": [
+    {
+      "id": "identity_01",
+      "tokens": 3,
+      "sha256": "c3bb16987cbf25524f550d002dbe937e8ff34c8acaad9debb5a46c094762f3f9"
+    },
+    {
+      "id": "identity_02",
+      "tokens": 2,
+      "sha256": "80ea7976c55691b0e2c4d6d40bf7a92262bf8d3815bf138f4c60173dc3120bb9"
+    },
+    {
+      "id": "identity_03",
+      "tokens": 2,
+      "sha256": "a5eca0210a050a1e4d5c13f741c9a16acdd2fd8e63fcd781554219dd31f898c8"
+    },
+    {
+      "id": "identity_04",
+      "tokens": 1,
+      "sha256": "267b5d085eb4b97a929fd6aa19fd942413dff65577a2f4ae3fabfc159f6561e0"
+    },
+    {
+      "id": "identity_05",
+      "tokens": 2,
+      "sha256": "608a7c84055abc3da45492dd169010c226322c24c5d7d8b5d688285c33972f3d"
+    },
+    {
+      "id": "identity_06",
+      "tokens": 3,
+      "sha256": "830a18a73bde7d3ad35b56282719801030e0f55ac3e5ee10aa292ade922a022a"
+    },
+    {
+      "id": "identity_07",
+      "tokens": 4,
+      "sha256": "8abf96e09176b727f6f20e4d1a032d8037e2df821d605c870eb79abe8260c897"
+    },
+    {
+      "id": "identity_08",
+      "tokens": 3,
+      "sha256": "fed8c12223e844f24f43f0dec0840041211228aea19abbcdc482b496a77513aa"
+    },
+    {
+      "id": "identity_09",
+      "tokens": 1,
+      "sha256": "30f137c1756e7726f8cc503ee1239208accb17258403c2e667c71b798aaa9a18"
+    },
+    {
+      "id": "identity_10",
+      "tokens": 3,
+      "sha256": "830a18a73bde7d3ad35b56282719801030e0f55ac3e5ee10aa292ade922a022a"
+    },
+    {
+      "id": "identity_11",
+      "tokens": 1,
+      "sha256": "5f8b740691b24ddc4ab756bdb4f325ee46fde5c07b834dd3607247bee4c38f61"
+    },
+    {
+      "id": "identity_12",
+      "tokens": 3,
+      "sha256": "e76f72835147ff06a33d5d03b978118495ab3269ad8145641d33d534ee1703f2"
+    },
+    {
+      "id": "identity_13",
+      "tokens": 2,
+      "sha256": "ee998964e80f892a6a8f8d1b22b4266fd4e5123bad4a0a4b08e2a6cbc727c5ef"
+    },
+    {
+      "id": "identity_15",
+      "tokens": 5,
+      "sha256": "bdd7d94d665e85695eb388852dd86f8f42b84f43281f2bbe8b0617bb0b5c41ab"
+    },
+    {
+      "id": "identity_16",
+      "tokens": 2,
+      "sha256": "f1a643a4224fe6b6fcb3a53204f2cedfad3cf5f50ce5e5f9ddc2ef568736af15"
+    },
+    {
+      "id": "identity_17",
+      "tokens": 3,
+      "sha256": "ab319ebff410bcfef8b971882843d4b3cd0c52348abd7969e64a224152adbb8d"
+    },
+    {
+      "id": "identity_18",
+      "tokens": 1,
+      "sha256": "467727e76851935f6c4deab265054b66a9dda5e01b85237194c38bf6ffab4867"
+    },
+    {
+      "id": "identity_19",
+      "tokens": 1,
+      "sha256": "e62e982a52ec3cbc69c8f352c9304b013ed8251ebe76f9e6fe741504007528b8"
+    },
+    {
+      "id": "identity_20",
+      "tokens": 3,
+      "sha256": "c6f270259970863116fa78aa1efda3e7a48b68ebc0e1c8ebb6b843b109e8fdd8"
+    },
+    {
+      "id": "identity_21",
+      "tokens": 2,
+      "sha256": "3193a2b3f9c355666ee8bff3773dbc19832a2879ad2aa9b1a184b96ea76fe79f"
+    },
+    {
+      "id": "identity_22",
+      "tokens": 1,
+      "sha256": "b9cbfa993cbe0a2366f74e6f46baaf452b879f9fe624157ef9706208e1eb6f82"
+    },
+    {
+      "id": "identity_23",
+      "tokens": 1,
+      "sha256": "12ecd66d69e5e1ead6921a7976f228551dff8bfce0951a08d597d67a805b87dd"
+    },
+    {
+      "id": "identity_24",
+      "tokens": 2,
+      "sha256": "38c3f2d109cbcb985d9ad7af6ba704c397f88fc5d5f7d30b6bb9a09a559634bf"
+    },
+    {
+      "id": "identity_25",
+      "tokens": 2,
+      "sha256": "3177f7d5dfe7a06977058d656f8c547bdddbadc2b24a5c28a315237f76b299d8"
+    },
+    {
+      "id": "identity_26",
+      "tokens": 2,
+      "sha256": "2dda3154b6de3a241e184e85503950bb3f4b3d7fee748e4733b8a3ec3fbbe6e7"
+    },
+    {
+      "id": "identity_27",
+      "tokens": 2,
+      "sha256": "eeac78acb0580e6ddb5755ce3c497a1e19f00775c344f75c7fd58debef979aa0"
+    },
+    {
+      "id": "identity_28",
+      "tokens": 2,
+      "sha256": "202d57ffa784fc075702cf2c7e618f321773dcd2b1de606f892b92c98d21e0a2"
+    },
+    {
+      "id": "identity_29",
+      "tokens": 2,
+      "sha256": "eea8d61d97fc06332396b883cc0730d4d9a1385f8a91e7c110990d1f4962bf2a"
+    },
+    {
+      "id": "identity_30",
+      "tokens": 2,
+      "sha256": "b9f67e4c2d8ee3b266480e2d735a1a9a1cbb5bf7acda5a082aed06235304e579"
+    }
+  ]
+}

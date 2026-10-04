@@ -1,0 +1,50 @@
+{
+  "slug": "violet",
+  "appId": "violet",
+  "name": "Violet",
+  "eyebrow": "Campaign / advocacy",
+  "category": "Campaign",
+  "industries": [
+    "Nonprofit",
+    "Animal Rescue"
+  ],
+  "tags": [
+    "donate",
+    "foster",
+    "campaigns"
+  ],
+  "description": "A campaign-forward prebuild with bold calls to action, impact proof, stories, donation moments, and participation paths designed to turn attention into action.",
+  "features": [
+    "Campaign CTAs",
+    "Impact stories",
+    "Donations",
+    "Participation paths"
+  ],
+  "pages": [
+    "Home",
+    "Campaigns",
+    "Stories",
+    "Impact",
+    "Get involved",
+    "Donate"
+  ],
+  "preview": {
+    "kind": "live",
+    "card": "/themes/violet/demo/",
+    "desktop": "/themes/violet/demo/",
+    "mobile": "/themes/violet/demo/",
+    "demoUrl": "/themes/violet/demo/"
+  },
+  "installable": true,
+  "package": "@inneranimalmedia/theme-violet",
+  "demoBrand": "Violet Initiative",
+  "family": "nonprofit-campaign",
+  "tagline": "Make the cause impossible to scroll past.",
+  "bestFor": [
+    "Advocacy",
+    "Fundraising",
+    "Community campaigns"
+  ],
+  "prebuildRoot": "site",
+  "portable": true
+}

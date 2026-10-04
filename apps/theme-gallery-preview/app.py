@@ -132,7 +132,7 @@ def gallery(query: dict) -> str:
         body = """<main class="shell"><section class="hero-wrap">
           <div class="kicker">Setup required</div>
           <h1 class="page-title">No themes staged yet.</h1>
-          <p class="lede">Run <code>python3 scripts/stage_themes.py</code> then restart the server.</p>
+          <p class="lede">This preview mirror is missing. The canonical distributable lives in <code>packages/theme-&lt;id&gt;/site</code>.</p>
         </section></main>"""
         return page("AgentSam Themes", body)
 

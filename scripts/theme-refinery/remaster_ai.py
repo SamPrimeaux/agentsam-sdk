@@ -73,7 +73,7 @@ def generate_text_json(prompt: str, provider: str = "auto") -> Any:
     except ImportError as exc:
         raise RemasterAIError("pip install google-genai") from exc
 
-    client = genai.Client()
+    client = genai.Client(api_key=os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
     response = client.models.generate_content(
         model=os.getenv("GEMINI_TEXT_MODEL", "gemini-3.8-flash"),
         contents=prompt,
@@ -128,7 +128,7 @@ def generate_image(
         raise RemasterAIError("pip install google-genai") from exc
 
     model = os.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image")
-    client = genai.Client()
+    client = genai.Client(api_key=os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
     interaction = client.interactions.create(
         model=model,
         input=prompt,

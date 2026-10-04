@@ -1,0 +1,44 @@
+{
+  "name": "@inneranimalmedia/theme-harbor",
+  "version": "2.6.11",
+  "description": "A professional-services prebuild for trust-heavy businesses: clear service storytelling, proof, resources, and lead capture with enough editorial polish to avoid the usual corporate-blue template look.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./node": "./src/node.js",
+    "./site/*": "./site/*"
+  },
+  "files": [
+    "src",
+    "site",
+    "README.md",
+    "prebuild.json"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "agentsam": {
+    "kind": "theme",
+    "slug": "harbor",
+    "installable": true,
+    "icon": "theme",
+    "family": "professional-leadgen",
+    "normalization": "package_ready",
+    "canonicalId": "harbor",
+    "portable": true,
+    "prebuildRoot": "site"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/theme-harbor"
+  }
+}

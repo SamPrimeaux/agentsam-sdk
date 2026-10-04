@@ -6,7 +6,8 @@ Public gallery of **real** historical websites — not synthetic theme mocks.
 
 ```bash
 cd apps/theme-gallery-preview
-python3 scripts/stage_themes.py   # once (or after source updates)
+Canonical package sites live under packages/theme-<id>/site/.
+The gallery is a preview/catalog surface; customer installs do not depend on a staging or sync step.
 python3 app.py
 ```
 
@@ -39,7 +40,7 @@ theme-gallery-preview/
 ├── app.py
 ├── data/catalog.json          ← generated from theme.json files
 ├── gallery/static/            ← Theme Store shell
-├── scripts/stage_themes.py
+├── themes/                 # development preview mirrors of packaged sites
 └── themes/
     └── <slug>/
         ├── theme.json

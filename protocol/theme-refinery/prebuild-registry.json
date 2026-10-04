@@ -1,0 +1,45 @@
+{
+  "schema": "agentsam.prebuild-registry.v1",
+  "themes": [
+    {
+      "id": "cypress",
+      "package": "@inneranimalmedia/theme-cypress",
+      "family": "community-faith"
+    },
+    {
+      "id": "violet",
+      "package": "@inneranimalmedia/theme-violet",
+      "family": "nonprofit-campaign"
+    },
+    {
+      "id": "grove",
+      "package": "@inneranimalmedia/theme-grove",
+      "family": "service-gallery"
+    },
+    {
+      "id": "ember",
+      "package": "@inneranimalmedia/theme-ember",
+      "family": "editorial-commerce"
+    },
+    {
+      "id": "forge",
+      "package": "@inneranimalmedia/theme-forge",
+      "family": "trade-services"
+    },
+    {
+      "id": "harbor",
+      "package": "@inneranimalmedia/theme-harbor",
+      "family": "professional-leadgen"
+    },
+    {
+      "id": "summit",
+      "package": "@inneranimalmedia/theme-summit",
+      "family": "consulting-portfolio"
+    },
+    {
+      "id": "resolve",
+      "package": "@inneranimalmedia/theme-resolve",
+      "family": "luxury-commerce"
+    }
+  ]
+}

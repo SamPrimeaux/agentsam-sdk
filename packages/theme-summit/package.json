@@ -1,0 +1,44 @@
+{
+  "name": "@inneranimalmedia/theme-summit",
+  "version": "2.6.11",
+  "description": "A restrained consulting and portfolio prebuild with editorial services, case studies, multilingual-ready structure, media, and thoughtful spacing that lets expertise do the talking.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./node": "./src/node.js",
+    "./site/*": "./site/*"
+  },
+  "files": [
+    "src",
+    "site",
+    "README.md",
+    "prebuild.json"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "agentsam": {
+    "kind": "theme",
+    "slug": "summit",
+    "installable": true,
+    "icon": "theme",
+    "family": "consulting-portfolio",
+    "normalization": "package_ready",
+    "canonicalId": "summit",
+    "portable": true,
+    "prebuildRoot": "site"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/theme-summit"
+  }
+}

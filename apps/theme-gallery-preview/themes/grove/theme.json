@@ -1,0 +1,50 @@
+{
+  "slug": "grove",
+  "appId": "grove",
+  "name": "Grove",
+  "eyebrow": "Home / service gallery",
+  "category": "Home services",
+  "industries": [
+    "Contractor",
+    "Flooring"
+  ],
+  "tags": [
+    "gallery",
+    "estimates",
+    "projects"
+  ],
+  "description": "A visual service-business prebuild centered on project galleries, material detail, process, reviews, and estimate conversion — polished enough for a studio, practical enough for a crew.",
+  "features": [
+    "Project gallery",
+    "Process",
+    "Reviews",
+    "Estimate capture"
+  ],
+  "pages": [
+    "Home",
+    "Services",
+    "Projects",
+    "Process",
+    "Reviews",
+    "Contact"
+  ],
+  "preview": {
+    "kind": "live",
+    "card": "/themes/grove/demo/",
+    "desktop": "/themes/grove/demo/",
+    "mobile": "/themes/grove/demo/",
+    "demoUrl": "/themes/grove/demo/"
+  },
+  "installable": true,
+  "package": "@inneranimalmedia/theme-grove",
+  "demoBrand": "Grove Surface Co.",
+  "family": "service-gallery",
+  "tagline": "Show the work. Make the craft feel premium.",
+  "bestFor": [
+    "Flooring",
+    "Interiors",
+    "Home improvement"
+  ],
+  "prebuildRoot": "site",
+  "portable": true
+}

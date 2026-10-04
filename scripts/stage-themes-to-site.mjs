@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
- * Stage theme-gallery-preview mounts into the public AgentSam site tree.
+ * Project canonical packaged prebuilds into the hosted AgentSam gallery.
  *
- *   apps/theme-gallery-preview/themes/<slug>/site  →  apps/frontend/public/site/themes/<slug>/demo/
- *   catalog + gallery CSS/JS + ASBD-wrapped index/detail pages
+ *   packages/theme-<slug>/site  →  apps/frontend/public/site/themes/<slug>/demo/
  *
- * Called from site:sync. Live path: https://agentsam.inneranimalmedia.com/themes
+ * Packages are the source artifact. This script exists only for the hosted
+ * gallery projection; installed customer prebuilds never depend on it.
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const galleryRoot = path.join(root, 'apps/theme-gallery-preview');
@@ -335,11 +335,17 @@ fs.writeFileSync(path.join(siteThemes, 'index.html'), galleryPage(themes));
 
 for (const t of themes) {
   const slugDir = path.join(siteThemes, t.slug);
-  const demoSrc = path.join(galleryRoot, 'themes', t.slug, 'site');
   const demoDest = path.join(slugDir, 'demo');
+  const packageHelper = path.join(root, 'packages', `theme-${t.slug}`, 'src', 'node.js');
+  if (!fs.existsSync(packageHelper)) {
+    throw new Error(`Missing portable prebuild helper for ${t.slug}: ${packageHelper}`);
+  }
   fs.mkdirSync(slugDir, { recursive: true });
-  if (fs.existsSync(demoSrc)) copyDir(demoSrc, demoDest);
-  else fs.mkdirSync(demoDest, { recursive: true });
+  const { materializePrebuild } = await import(pathToFileURL(packageHelper).href);
+  materializePrebuild(demoDest, {
+    basePath: `/themes/${t.slug}/demo/`,
+    canonicalOrigin: `https://agentsam.inneranimalmedia.com/themes/${t.slug}/demo/`,
+  });
   fs.writeFileSync(path.join(slugDir, 'index.html'), detailPage(t));
 }
 
