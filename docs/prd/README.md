@@ -16,3 +16,24 @@ Use PRDs for user problems, product promises, product boundaries, lifecycle, req
 - `PRD-agentsam-campaign.md` — AgentSam Campaign product requirements
 
 PRDs describe **what the product must accomplish**. ADRs describe **why architecture and authority boundaries are fixed a certain way**.
+
+## AgentSam offer portfolio
+
+See `../product/OFFER-PORTFOLIO.md` for the package-to-product map. Current product PRDs include:
+
+- `PRD-agentsam-platform.md`
+- `PRD-agentsam-local-studio.md`
+- `PRD-agentsam-work.md`
+- `PRD-agentsam-brand.md`
+- `PRD-agentsam-campaign.md`
+- `PRD-agentsam-content-studio.md`
+- `PRD-agentsam-database-studio.md`
+- `PRD-agentsam-browser.md`
+- `PRD-agentsam-analytics.md`
+- `PRD-agentsam-knowledge.md`
+- `PRD-agentsam-merch.md`
+- `PRD-agentsam-cad-studio.md`
+- `PRD-agentsam-commerce-studio.md`
+- `PRD-agentsam-site-studio.md`
+- `PRD-agentsam-developer-studio.md`
+- `PRD-agentsam-hosted-runtime.md`
