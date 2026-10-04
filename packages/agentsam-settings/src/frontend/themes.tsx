@@ -58,6 +58,7 @@ export function SettingsThemeGallery({ themes, host, onChanged = () => {} }: { t
     </dialog>
     <dialog ref={naming} onClose={() => setAuthor(null)} className="m-auto w-[min(440px,94vw)] rounded-xl border border-border bg-card p-5 text-foreground backdrop:bg-black/60">
       <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); const source = author; if (!source || !name.trim()) return; void run('author', async () => { if (source === 'new') await host.createTheme?.(name.trim()); else await host.duplicateTheme?.(source.id, name.trim()); setAuthor(null); }); }}>
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <h3 className="font-medium">{author === 'new' ? 'Create theme' : 'Revise theme'}</h3>
         <label className="block text-sm">Name<input autoFocus value={name} onChange={(event) => setName(event.target.value)} required className="mt-2 w-full rounded-lg border border-border bg-background p-3" /></label>
         <div className="flex justify-end gap-2"><button type="button" className={button} onClick={() => setAuthor(null)}>Cancel</button><button className={button} disabled={busy !== null || !name.trim()}>Create draft</button></div>

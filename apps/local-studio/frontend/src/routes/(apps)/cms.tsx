@@ -3,7 +3,8 @@ import { createCmsThemeEditorAdapter } from '@inneranimalmedia/ecommerce-cms-age
 import { ThemeEditorFrame } from '@/components/themes/ThemeEditorFrame';
 import { ThemeProjectEditor } from '@/components/themes/ThemeProjectEditor';
 import { studioCmsFetch } from '@/lib/cms/transport';
-import { useMemo } from "react";
+import { getActiveThemeId } from '@/lib/themes/projects';
+import { useMemo, useState, useEffect } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   CmsHubPage,
@@ -51,6 +52,8 @@ const SITE_CATALOG = [
 function CmsPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
+  const [activeThemeProject, setActiveThemeProject] = useState<string>();
+  useEffect(() => { void getActiveThemeId().then(setActiveThemeProject); }, []);
 
   const siteSlug = (search.site || search.project_slug || search.project || "agentsam-sdk").trim();
   const siteName = SITE_CATALOG.find((s) => s.slug === siteSlug)?.name ?? siteSlug;
@@ -167,7 +170,7 @@ function CmsPage() {
         <span>Editor</span>
       </div>
       <div className="min-h-0 flex-1 overflow-hidden" style={{ height: "calc(100% - 41px)" }}>
-        {search.theme_project ? <ThemeProjectEditor id={search.theme_project} page={search.page} /> : <ThemeEditorFrame adapter={themeAdapter} page={search.page} />}
+        {(search.theme_project || activeThemeProject) ? <ThemeProjectEditor id={(search.theme_project || activeThemeProject)!} page={search.page} /> : <ThemeEditorFrame adapter={themeAdapter} page={search.page} />}
       </div>
     </div>
   );

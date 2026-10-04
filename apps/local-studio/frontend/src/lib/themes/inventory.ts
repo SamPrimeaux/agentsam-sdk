@@ -1,8 +1,17 @@
 import bundled from 'virtual:agentsam-theme-inventory';
 import type { SettingsTheme } from '@inneranimalmedia/agentsam-settings/contracts';
 // @ts-ignore Public portable JavaScript theme authoring contract.
-import { THEME_PROJECT_SCHEMA, extractThemePage, validateThemeProject } from '@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/project';
+import { THEME_PROJECT_SCHEMA, extractThemePage, validateThemeProject, renderThemePage } from '@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/project';
 import { getActiveThemeId, setActiveThemeId, themeProjectStore } from './projects';
+
+const draftPreviews = new Map<string, { stamp: string; url: string }>();
+function draftPreview(project: any) {
+  const cached = draftPreviews.get(project.id);
+  if (cached?.stamp === project.updatedAt) return cached.url;
+  if (cached) URL.revokeObjectURL(cached.url);
+  const url = URL.createObjectURL(new Blob([renderThemePage(project.pages[0], project.tokens)], { type: 'text/html' }));
+  draftPreviews.set(project.id, { stamp: project.updatedAt, url }); return url;
+}
 
 export type BundledTheme = SettingsTheme & { pages: { slug: string; title: string; url: string }[] };
 export async function listStudioThemes(): Promise<SettingsTheme[]> {
@@ -10,7 +19,7 @@ export async function listStudioThemes(): Promise<SettingsTheme[]> {
   const [projects, activeId] = await Promise.all([themeProjectStore.list(), getActiveThemeId()]);
   return [...bundled, ...projects.map((project) => ({
     id: project.id, name: project.name, packageName: project.packageName || 'Local theme project', version: project.version || 'Draft',
-    category: 'Draft', source: 'local' as const, status: 'Editable draft · saved on this installation', swatches: Object.values(project.tokens || {}).filter((v): v is string => typeof v === 'string' && /^#[0-9a-f]{3,8}$/i.test(v)),
+    previewUrl: draftPreview(project), category: 'Draft', source: 'local' as const, status: 'Editable draft · saved on this installation', swatches: Object.values(project.tokens || {}).filter((v): v is string => typeof v === 'string' && /^#[0-9a-f]{3,8}$/i.test(v)),
     capabilities: { preview: true, editable: true, duplicable: true, publishable: false },
   }))].map((theme) => ({ ...theme, active: theme.id === activeId }));
 }
@@ -40,7 +49,8 @@ export function openThemeProject(id: string) {
 export const themeManagement = {
   async activateTheme(id: string) {
     if (!(await listStudioThemes()).some((theme) => theme.id === id)) throw new Error('theme_not_found');
-    await setActiveThemeId(id);
+    const draft = await themeProjectStore.get(id) || await createThemeDraft(id, (bundled as BundledTheme[]).find((theme) => theme.id === id)?.name || 'Active theme');
+    await setActiveThemeId(draft.id);
   },
   async editTheme(id: string) {
     const project = await themeProjectStore.get(id) || await createThemeDraft(id, (bundled as BundledTheme[]).find((theme) => theme.id === id)?.name || 'Theme draft');

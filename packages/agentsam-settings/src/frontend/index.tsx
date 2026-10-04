@@ -1481,7 +1481,7 @@ function GeneralView({ snapshot }: { snapshot: SettingsSnapshot }) {
   );
 }
 
-const SHELL_APPEARANCE_KEY=[REDACTED];
+const SHELL_APPEARANCE_STORAGE_ID = "agentsam-shell-appearance-v1";
 const SHELL_ACCENTS = [
   { id: "#8B5CF6", label: "Violet" },
   { id: "#2563EB", label: "Blue" },
@@ -1502,7 +1502,7 @@ export function readShellAppearancePreference(
     storage ?? (typeof window !== "undefined" ? window.localStorage : undefined);
   if (!source) return null;
   try {
-    const value = source.getItem(SHELL_APPEARANCE_KEY);
+    const value = source.getItem(SHELL_APPEARANCE_STORAGE_ID);
     if (!value) return null;
     const raw = JSON.parse(value) as Partial<ShellAppearancePreference>;
     if (raw.theme !== "dark" && raw.theme !== "light" && raw.theme !== "system") return null;
@@ -1527,7 +1527,7 @@ function AppearancePreferences() {
   function commit(nextTheme: typeof theme, nextAccent: string) {
     setTheme(nextTheme);
     setAccent(nextAccent);
-    localStorage.setItem(SHELL_APPEARANCE_KEY, JSON.stringify({ theme: nextTheme, accent: nextAccent }));
+    localStorage.setItem(SHELL_APPEARANCE_STORAGE_ID, JSON.stringify({ theme: nextTheme, accent: nextAccent }));
     window.dispatchEvent(
       new CustomEvent("agentsam:shell-appearance", { detail: { theme: nextTheme, accent: nextAccent } }),
     );

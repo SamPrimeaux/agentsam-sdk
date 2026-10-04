@@ -83,6 +83,12 @@
       ],
       "recharts": [
         "../node_modules/recharts"
+      ],
+      "@inneranimalmedia/agentsam-workbench": [
+        "../../../packages/agentsam-workbench/src/index.ts"
+      ],
+      "@inneranimalmedia/agentsam-workbench/*": [
+        "../../../packages/agentsam-workbench/src/*"
       ]
     },
     "allowImportingTsExtensions": true,

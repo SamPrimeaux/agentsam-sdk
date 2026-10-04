@@ -18,7 +18,7 @@ window.SECTION_SCHEMAS = {};
 window.cmsRegistry = null;
 
 window.loadCmsRegistry = async function loadCmsRegistry() {
-  if (window.cmsRegistry) return window.cmsRegistry;
+  if (window.cmsRegistry && !window.AgentSamThemeEditorHost) return window.cmsRegistry;
   const data = window.AgentSamThemeEditorHost
     ? await window.AgentSamThemeEditorHost.adapter.getRegistry()
     : await adminFetch("/api/admin/cms/registry");
