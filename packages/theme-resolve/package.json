@@ -1,0 +1,39 @@
+{
+  "name": "@inneranimalmedia/theme-resolve",
+  "version": "2.6.11",
+  "description": "A high-fashion commerce prebuild built around cinematic scroll, shoppable editorial, sticky purchase rails, lookbooks, stories, bundles, and micro-interactions that make the storefront feel directed instead of assembled.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./node": "./src/node.js",
+    "./site/*": "./site/*"
+  },
+  "files": [
+    "src",
+    "site",
+    "README.md",
+    "prebuild.json"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "agentsam": {
+    "kind": "theme",
+    "slug": "resolve",
+    "installable": true,
+    "icon": "theme",
+    "family": "luxury-commerce",
+    "canonicalId": "resolve",
+    "normalization": "package_ready",
+    "portable": true,
+    "prebuildRoot": "site"
+  }
+}

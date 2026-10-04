@@ -1,0 +1,206 @@
+{
+  "schema": "agentsam.theme-remaster.v1",
+  "gallery": {
+    "kicker": "Eight personalities. One production spine.",
+    "headline": "Pick a point of view, not a pile of CSS.",
+    "lede": "AgentSam prebuilds are complete starting points with real navigation, responsive behavior, content structure, and interaction patterns. Swap the story, keep the machinery.",
+    "discover_title": "Find your starting point",
+    "discover_copy": "Start with the mood that fits. Every prebuild is meant to be rewritten, re-skinned, and connected to real content — not treated like a locked demo.",
+    "seo_title": "AgentSam Prebuilds — Production-ready website starting points",
+    "seo_description": "Explore AgentSam prebuilt website themes for commerce, professional services, nonprofits, local services, portfolios, and editorial storefronts."
+  },
+  "themes": [
+    {
+      "id": "cypress",
+      "package_dir": "packages/theme-cypress",
+      "package_name": "@inneranimalmedia/theme-cypress",
+      "family": "community-faith",
+      "category": "Community",
+      "demo_brand": "Cypress Commons",
+      "eyebrow": "Community / nonprofit",
+      "tagline": "Warm, grounded, built for belonging.",
+      "description": "A welcoming community prebuild for organizations that need events, groups, giving, visits, and mission-driven storytelling without looking like a generic nonprofit template.",
+      "best_for": [
+        "Community organizations",
+        "Faith communities",
+        "Membership groups"
+      ],
+      "voice": "warm, grounded, generous, contemporary, human",
+      "palette": [
+        "#10211b",
+        "#f4efe5",
+        "#c59762",
+        "#78957f"
+      ],
+      "image_direction": "documentary community photography, warm natural light, oak and cypress textures, contemporary gathering spaces, candid connection, Louisiana-inspired atmosphere without identifiable landmarks"
+    },
+    {
+      "id": "violet",
+      "package_dir": "packages/theme-violet",
+      "package_name": "@inneranimalmedia/theme-violet",
+      "family": "nonprofit-campaign",
+      "category": "Campaign",
+      "demo_brand": "Violet Initiative",
+      "eyebrow": "Campaign / advocacy",
+      "tagline": "Make the cause impossible to scroll past.",
+      "description": "A campaign-forward prebuild with bold calls to action, impact proof, stories, donation moments, and participation paths designed to turn attention into action.",
+      "best_for": [
+        "Advocacy",
+        "Fundraising",
+        "Community campaigns"
+      ],
+      "voice": "clear, urgent, optimistic, editorial, credible",
+      "palette": [
+        "#17111f",
+        "#f6f1fa",
+        "#8b5cf6",
+        "#c4a7e7"
+      ],
+      "image_direction": "editorial nonprofit campaign photography, volunteers and community action, strong negative space, violet accents, authentic moments, no logos or real organizations"
+    },
+    {
+      "id": "grove",
+      "package_dir": "packages/theme-grove",
+      "package_name": "@inneranimalmedia/theme-grove",
+      "family": "service-gallery",
+      "category": "Home services",
+      "demo_brand": "Grove Surface Co.",
+      "eyebrow": "Home / service gallery",
+      "tagline": "Show the work. Make the craft feel premium.",
+      "description": "A visual service-business prebuild centered on project galleries, material detail, process, reviews, and estimate conversion — polished enough for a studio, practical enough for a crew.",
+      "best_for": [
+        "Flooring",
+        "Interiors",
+        "Home improvement"
+      ],
+      "voice": "tactile, confident, crafted, practical, premium",
+      "palette": [
+        "#182018",
+        "#f3efe7",
+        "#8c6d4f",
+        "#a9b59f"
+      ],
+      "image_direction": "architectural interiors and material detail photography, wood stone textile surfaces, natural daylight, precise craftsmanship, clean residential spaces, no company marks"
+    },
+    {
+      "id": "ember",
+      "package_dir": "packages/theme-ember",
+      "package_name": "@inneranimalmedia/theme-ember",
+      "family": "editorial-commerce",
+      "category": "Commerce",
+      "demo_brand": "Ember Supply",
+      "eyebrow": "Editorial commerce",
+      "tagline": "A storefront with a pulse.",
+      "description": "An editorial commerce prebuild that mixes product discovery, brand story, collections, community, and launch moments without collapsing into another tiled product grid.",
+      "best_for": [
+        "Apparel",
+        "Lifestyle goods",
+        "Creator brands"
+      ],
+      "voice": "cinematic, energetic, assured, slightly rebellious, concise",
+      "palette": [
+        "#111111",
+        "#f4efe4",
+        "#e36b2c",
+        "#655f55"
+      ],
+      "image_direction": "cinematic lifestyle commerce photography, motion and texture, apparel and objects without visible trademarks, dusk light, asphalt, steel, warm ember highlights, editorial composition"
+    },
+    {
+      "id": "forge",
+      "package_dir": "packages/theme-forge",
+      "package_name": "@inneranimalmedia/theme-forge",
+      "family": "trade-services",
+      "category": "Local services",
+      "demo_brand": "Forge Works",
+      "eyebrow": "Trades / local services",
+      "tagline": "Built to get the phone ringing.",
+      "description": "A mobile-first local-services prebuild with estimate capture, service-area confidence, project proof, reviews, and practical trust signals that stay sharp on the smallest screen.",
+      "best_for": [
+        "Contractors",
+        "Repair services",
+        "Field teams"
+      ],
+      "voice": "direct, capable, local, trustworthy, no-nonsense",
+      "palette": [
+        "#101417",
+        "#f3f5f7",
+        "#d2743c",
+        "#73808a"
+      ],
+      "image_direction": "premium documentary trade-service photography, hands at work, tools and finished details, modern homes, natural light, clean workwear, no logos, no unsafe work practices"
+    },
+    {
+      "id": "harbor",
+      "package_dir": "packages/theme-harbor",
+      "package_name": "@inneranimalmedia/theme-harbor",
+      "family": "professional-leadgen",
+      "category": "Professional",
+      "demo_brand": "Harbor Advisory",
+      "eyebrow": "Professional / lead generation",
+      "tagline": "Calm confidence for serious decisions.",
+      "description": "A professional-services prebuild for trust-heavy businesses: clear service storytelling, proof, resources, and lead capture with enough editorial polish to avoid the usual corporate-blue template look.",
+      "best_for": [
+        "Advisory",
+        "Insurance",
+        "Professional services"
+      ],
+      "voice": "calm, precise, reassuring, modern, authoritative",
+      "palette": [
+        "#0d1b24",
+        "#f4f0e7",
+        "#6f93a7",
+        "#b8a27d"
+      ],
+      "image_direction": "refined professional editorial photography, thoughtful consultation, architecture, paper and glass textures, soft coastal light, diverse adult professionals, no logos or branded offices"
+    },
+    {
+      "id": "summit",
+      "package_dir": "packages/theme-summit",
+      "package_name": "@inneranimalmedia/theme-summit",
+      "family": "consulting-portfolio",
+      "category": "Portfolio",
+      "demo_brand": "Summit Practice",
+      "eyebrow": "Consulting / portfolio",
+      "tagline": "A quieter kind of authority.",
+      "description": "A restrained consulting and portfolio prebuild with editorial services, case studies, multilingual-ready structure, media, and thoughtful spacing that lets expertise do the talking.",
+      "best_for": [
+        "Consultants",
+        "Studios",
+        "Cross-border services"
+      ],
+      "voice": "quiet, intelligent, worldly, editorial, restrained",
+      "palette": [
+        "#0e1111",
+        "#f4f4ef",
+        "#8ba09f",
+        "#c7b8a5"
+      ],
+      "image_direction": "quiet premium consulting photography, modern Japanese-influenced architecture without identifiable landmarks, mountain atmosphere, editorial notebooks, subtle human presence, muted natural palette"
+    },
+    {
+      "id": "resolve",
+      "package_dir": "packages/theme-resolve",
+      "package_name": "@inneranimalmedia/theme-resolve",
+      "family": "luxury-commerce",
+      "category": "Commerce",
+      "demo_brand": "Resolve Atelier",
+      "eyebrow": "Luxury commerce / editorial",
+      "tagline": "Quiet luxury. Loud interaction design.",
+      "description": "A high-fashion commerce prebuild built around cinematic scroll, shoppable editorial, sticky purchase rails, lookbooks, stories, bundles, and micro-interactions that make the storefront feel directed instead of assembled.",
+      "best_for": [
+        "Fashion",
+        "Luxury goods",
+        "Editorial retail"
+      ],
+      "voice": "editorial, minimal, exacting, cinematic, assured",
+      "palette": [
+        "#0b0b0b",
+        "#f4f2ed",
+        "#7f1d1d",
+        "#a79f96"
+      ],
+      "image_direction": "high-fashion editorial commerce photography, sculptural garments and abstract materials, dramatic studio light, deep oxblood and charcoal palette, no logos, no real fashion houses, no text in image"
+    }
+  ]
+}

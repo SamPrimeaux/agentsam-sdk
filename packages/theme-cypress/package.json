@@ -1,0 +1,44 @@
+{
+  "name": "@inneranimalmedia/theme-cypress",
+  "version": "2.6.11",
+  "description": "A welcoming community prebuild for organizations that need events, groups, giving, visits, and mission-driven storytelling without looking like a generic nonprofit template.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./node": "./src/node.js",
+    "./site/*": "./site/*"
+  },
+  "files": [
+    "src",
+    "site",
+    "README.md",
+    "prebuild.json"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "agentsam": {
+    "kind": "theme",
+    "slug": "cypress",
+    "installable": true,
+    "icon": "theme",
+    "family": "community-faith",
+    "normalization": "package_ready",
+    "canonicalId": "cypress",
+    "portable": true,
+    "prebuildRoot": "site"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/theme-cypress"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "slug": "harbor",
+  "appId": "harbor",
+  "name": "Harbor",
+  "eyebrow": "Professional / lead generation",
+  "category": "Professional",
+  "industries": [
+    "Insurance",
+    "Professional Services"
+  ],
+  "tags": [
+    "quotes",
+    "trust",
+    "lead-forms"
+  ],
+  "description": "A professional-services prebuild for trust-heavy businesses: clear service storytelling, proof, resources, and lead capture with enough editorial polish to avoid the usual corporate-blue template look.",
+  "features": [
+    "Lead capture",
+    "Services",
+    "Resources",
+    "Trust signals"
+  ],
+  "pages": [
+    "Home",
+    "Services",
+    "About",
+    "Resources",
+    "FAQ",
+    "Contact"
+  ],
+  "preview": {
+    "kind": "live",
+    "card": "/themes/harbor/demo/",
+    "desktop": "/themes/harbor/demo/",
+    "mobile": "/themes/harbor/demo/",
+    "demoUrl": "/themes/harbor/demo/"
+  },
+  "installable": true,
+  "package": "@inneranimalmedia/theme-harbor",
+  "demoBrand": "Harbor Advisory",
+  "family": "professional-leadgen",
+  "tagline": "Calm confidence for serious decisions.",
+  "bestFor": [
+    "Advisory",
+    "Insurance",
+    "Professional services"
+  ],
+  "prebuildRoot": "site",
+  "portable": true
+}

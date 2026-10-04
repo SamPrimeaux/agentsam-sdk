@@ -1,0 +1,50 @@
+{
+  "slug": "ember",
+  "appId": "ember",
+  "name": "Ember",
+  "eyebrow": "Editorial commerce",
+  "category": "Commerce",
+  "industries": [
+    "Retail",
+    "Lifestyle"
+  ],
+  "tags": [
+    "shop",
+    "collections",
+    "brand"
+  ],
+  "description": "An editorial commerce prebuild that mixes product discovery, brand story, collections, community, and launch moments without collapsing into another tiled product grid.",
+  "features": [
+    "Collections",
+    "Editorial stories",
+    "Community",
+    "Launch moments"
+  ],
+  "pages": [
+    "Home",
+    "Shop",
+    "Collections",
+    "Story",
+    "Community",
+    "Journal"
+  ],
+  "preview": {
+    "kind": "live",
+    "card": "/themes/ember/demo/",
+    "desktop": "/themes/ember/demo/",
+    "mobile": "/themes/ember/demo/",
+    "demoUrl": "/themes/ember/demo/"
+  },
+  "installable": true,
+  "package": "@inneranimalmedia/theme-ember",
+  "demoBrand": "Ember Supply",
+  "family": "editorial-commerce",
+  "tagline": "A storefront with a pulse.",
+  "bestFor": [
+    "Apparel",
+    "Lifestyle goods",
+    "Creator brands"
+  ],
+  "prebuildRoot": "site",
+  "portable": true
+}
