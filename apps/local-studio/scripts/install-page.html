@@ -2,146 +2,91 @@
 <html lang="en" class="device-desktop">
   <head>
     <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" content="{{THEME_COLOR}}" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="{{APP_NAME}}" />
     <title>Add {{APP_NAME}} to your Home Screen</title>
-    <link rel="manifest" href="/__grok/manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="/__grok/icon-180.png" />
-    <link rel="stylesheet" href="/__grok/install/styles.css" />
+    <link rel="manifest" href="{{MANIFEST_PATH}}" />
+    <link rel="apple-touch-icon" href="{{ICON_PATH}}" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: {{THEME_COLOR}};
+        --fg: #f2f3f5;
+        --muted: #9aa0ab;
+        --line: #2a2d36;
+        --accent: #8ab4ff;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--fg); }
+      body {
+        font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      }
+      .page { max-width: 420px; margin: 0 auto; padding: 48px 24px; text-align: center; }
+      .icon { width: 72px; height: 72px; border-radius: 16px; }
+      h1 { font-size: 22px; line-height: 1.25; margin: 20px 0 8px; font-weight: 650; }
+      .lead { color: var(--muted); margin: 0 0 28px; }
+      ol { list-style: none; counter-reset: step; margin: 0; padding: 0; text-align: left; }
+      li {
+        counter-increment: step;
+        display: flex; align-items: center; gap: 12px;
+        padding: 14px 0; border-top: 1px solid var(--line);
+      }
+      li:last-child { border-bottom: 1px solid var(--line); }
+      li::before {
+        content: counter(step);
+        flex: none; width: 24px; height: 24px; border-radius: 50%;
+        display: grid; place-items: center;
+        font-size: 13px; color: var(--muted); border: 1px solid var(--line);
+      }
+      .glyph { display: inline-block; vertical-align: -4px; margin: 0 2px; color: var(--accent); }
+      .only-ios { display: none; }
+      .device-ios .only-ios { display: block; }
+      .device-ios .only-other { display: none; }
+      a.open {
+        display: inline-block; margin-top: 24px; padding: 10px 18px;
+        border: 1px solid var(--line); border-radius: 10px;
+        color: var(--fg); text-decoration: none;
+      }
+    </style>
     <script>
       (function () {
         var ua = navigator.userAgent || "";
         var touch = navigator.maxTouchPoints || 0;
-        var isiPad = /iPad/.test(ua) || (/Macintosh/.test(ua) && touch > 1);
-        var isiPhone = /iPhone|iPod/.test(ua);
-        var isIOS = isiPhone || isiPad;
-        var isAndroid = /Android/i.test(ua);
-        var isAndroidPhone = isAndroid && /Mobile/i.test(ua);
-        var isAndroidTablet = isAndroid && !/Mobile/i.test(ua);
-        var minSide = Math.min(screen.width || 0, screen.height || 0);
-        var maxSide = Math.max(screen.width || 0, screen.height || 0);
-
-        var type = "desktop";
-        if (isiPhone) type = "phone";
-        else if (isiPad || isAndroidTablet) type = "tablet";
-        else if (isAndroidPhone) type = "phone";
-        else if (touch > 0 && minSide > 0 && minSide <= 500) type = "phone";
-        else if (touch > 0 && minSide > 500 && maxSide <= 1400) type = "tablet";
-
-        var iosMajor = null;
-        var osToken = null;
-        var safariToken = null;
-        var iphoneOs = ua.match(/iPhone OS (\d+)[._]/);
-        var ipadOs = ua.match(/CPU OS (\d+)[._](\d+) like Mac OS X/);
-        var safariVer = ua.match(/Version\/(\d+)[._]/);
-        if (iphoneOs) osToken = parseInt(iphoneOs[1], 10);
-        else if (ipadOs) osToken = parseInt(ipadOs[1], 10);
-        if (isIOS && safariVer) safariToken = parseInt(safariVer[1], 10);
-        if (osToken != null || safariToken != null) {
-          iosMajor = Math.max(osToken || 0, safariToken || 0);
-        }
-
-        var root = document.documentElement;
-        var classes = ["device-" + type];
-        if (iosMajor != null) {
-          root.dataset.ios = String(iosMajor);
-          classes.push(iosMajor >= 27 ? "ios-27-plus" : "ios-below-27");
-        }
-        root.className = classes.join(" ");
+        var isIPad = /iPad/.test(ua) || (/Macintosh/.test(ua) && touch > 1);
+        var isIPhone = /iPhone|iPod/.test(ua);
+        if (isIPad || isIPhone) document.documentElement.className = "device-ios";
       })();
     </script>
   </head>
   <body>
-    <div class="page">
-      <header class="powered" aria-label="Powered by Grok">
-        <span class="powered-by">Powered by</span>
-        <span class="powered-brand">
-          <img
-            class="grok-logo"
-            src="/__grok/install/assets/homescreen/logo-grok.svg"
-            width="14"
-            height="14"
-            alt=""
-          />
-          <span class="powered-grok">Grok</span>
-        </span>
-      </header>
+    <main class="page">
+      <img class="icon" src="{{ICON_PATH}}" width="72" height="72" alt="" />
 
-      <main class="content">
-        <div class="ob" aria-hidden="true">
-          <img
-            class="ob-img ob-phone"
-            src="/__grok/install/assets/homescreen/ob-phone.png"
-            width="338"
-            height="294"
-            alt=""
-          />
-          <img
-            class="ob-img ob-ipad"
-            src="/__grok/install/assets/homescreen/ob-ipad.png"
-            width="634"
-            height="294"
-            alt=""
-          />
-        </div>
+      <section class="only-ios">
+        <h1>Add {{APP_NAME}} to your Home&nbsp;Screen</h1>
+        <p class="lead">Open it like an app, full screen.</p>
+        <ol>
+          <li>
+            <span>Tap the Share button
+              <svg class="glyph" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 3v12" /><path d="M8 7l4-4 4 4" /><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+              </svg>
+            </span>
+          </li>
+          <li><span>Choose <strong>Add to Home Screen</strong></span></li>
+          <li><span>Tap <strong>Add</strong></span></li>
+        </ol>
+      </section>
 
-        <section class="copy">
-          <h1>Add {{APP_NAME}} to your&nbsp;Home&nbsp;Screen</h1>
-
-          <div class="steps">
-            <p class="step step-tap step-ios27">
-              <span class="muted">Tap</span>
-              <span class="glass glass--icon" aria-hidden="true">
-                <img src="/__grok/install/assets/homescreen/glass-puzzle.svg" width="24" height="24" alt="" />
-              </span>
-              <span class="muted loc loc-phone">in the bottom bar, then</span>
-              <span class="muted loc loc-ipad">in the tool bar, then</span>
-              <span class="glass glass--icon" aria-hidden="true">
-                <img src="/__grok/install/assets/homescreen/glass-share.svg" width="24" height="24" alt="" />
-              </span>
-            </p>
-
-            <p class="step step-tap step-ios-legacy">
-              <span class="muted">Tap</span>
-              <span class="glass glass--icon" aria-hidden="true">
-                <img src="/__grok/install/assets/homescreen/glass-share.svg" width="24" height="24" alt="" />
-              </span>
-              <span class="muted loc loc-phone">in the bottom bar</span>
-              <span class="muted loc loc-ipad">in the tool bar</span>
-            </p>
-
-            <p class="step step-select">
-              <span class="muted">Select</span>
-              <span class="add-label">
-                <img
-                  class="plus-icon"
-                  src="/__grok/install/assets/homescreen/plus.svg"
-                  width="16"
-                  height="16"
-                  alt=""
-                />
-                <span class="add-text">Add to Home Screen</span>
-              </span>
-            </p>
-          </div>
-        </section>
-      </main>
-
-      <main class="content content-desktop">
-        <section class="copy">
-          <h1>Open this link on your iPhone&nbsp;or&nbsp;iPad</h1>
-          <p class="desktop-note">
-            This page shows how to add {{APP_NAME}} to an iOS Home Screen.
-          </p>
-          <a class="desktop-open" href="{{APP_URL}}">Open {{APP_NAME}}</a>
-        </section>
-      </main>
-    </div>
+      <section class="only-other">
+        <h1>Open this link on your iPhone&nbsp;or&nbsp;iPad</h1>
+        <p class="lead">This page shows how to add {{APP_NAME}} to an iOS Home Screen.</p>
+        <a class="open" href="{{APP_URL}}">Open {{APP_NAME}}</a>
+      </section>
+    </main>
   </body>
 </html>

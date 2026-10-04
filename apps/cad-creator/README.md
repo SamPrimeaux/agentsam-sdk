@@ -303,7 +303,7 @@ video-generation workflows
 real-time WebSocket collaboration
 owner / editor / viewer collaboration roles
 
-The current implementation uses a React/Three.js frontend with a lightweight TypeScript server and Gemini-powered multimodal capabilities.
+The current implementation uses a React/Three.js frontend with a lightweight TypeScript server and multimodal capabilities that use Gemini.
 
 This is still an experimental architecture.
 

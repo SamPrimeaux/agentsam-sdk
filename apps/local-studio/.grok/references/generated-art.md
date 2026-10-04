@@ -60,8 +60,6 @@ A custom share card is the default: open the **`og`** skill and produce a custom
   is layout, not the game signal.
 - Title defaults to the host slug; `src/lib/og/site.json` is only needed when
   the display name is not the slug, or the app is a game.
-- The tags come from the PWA injector (`scripts/grok-pwa-shared.mjs`), which
-  overwrites anything in `__root.tsx`. Live preview emits the same tags (via
-  `X-Forwarded-Host`), and identity is baked at `vite build` so published Nitro
-  can inject without reading the workspace filesystem.
+- The PWA injector (`scripts/agentsam-pwa-shared.mjs`) no longer emits `og:*`
+  tags; set them in `__root.tsx` if the app needs them.
 - Applies at build time, publish or not.
