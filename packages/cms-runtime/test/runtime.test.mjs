@@ -38,7 +38,7 @@ test('clean project init is package-relative and self-describing', () => {
   assert.equal(receipt.package.name, '@inneranimalmedia/cms-runtime');
   assert.equal(receipt.schemaRef, 'package:@inneranimalmedia/cms-runtime/sqlite-schema');
   assert.equal(receipt.package.version, PACKAGE_VERSION);
-  assert.equal(receiptText.includes('/Users/samprimeaux'), false);
+  assert.equal(/\/Users\/[^/]+\//.test(receiptText), false);
   assert.equal(receiptText.includes('agentsam-sdk-cms-runtime-release'), false);
 
   const doctor = run(root, 'doctor');

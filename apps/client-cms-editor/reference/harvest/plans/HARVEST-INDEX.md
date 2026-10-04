@@ -153,7 +153,7 @@ To stage the curated export inside AgentSam SDK without touching active packages
 
 ```bash
 python3 scripts/harvest_all.py \
-  --sdk /Users/samprimeaux/agentsam-sdk \
+  --sdk repo://agentsam-sdk \
   --stage-sdk
 ```
 

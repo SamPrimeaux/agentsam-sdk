@@ -9,7 +9,7 @@
       "M package-lock.json"
     ]
   },
-  "output": "/Users/samprimeaux/studio-cms-editor-harvest-export",
+  "output": "local-donor://studio-cms-editor-harvest-export",
   "lanes": {
     "cms_editor_donor": [
       {

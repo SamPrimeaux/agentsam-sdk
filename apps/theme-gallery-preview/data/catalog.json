@@ -41,7 +41,7 @@
       "installable": false,
       "_internal": {
         "normalization": "pending",
-        "source": "/Users/samprimeaux/Projects/client-demos/chrystal-clear-insurance/chrystal-clear-insurance/dist"
+        "source": "local-donor://Projects/client-demos/chrystal-clear-insurance/chrystal-clear-insurance/dist"
       }
     },
     {
@@ -85,7 +85,7 @@
       "installable": false,
       "_internal": {
         "normalization": "pending",
-        "source": "/Users/samprimeaux/worktrees/primeaux-handyman-services-agent/dist"
+        "source": "worktree://primeaux-handyman-services-agent/dist"
       }
     },
     {
@@ -130,7 +130,7 @@
       "installable": false,
       "_internal": {
         "normalization": "pending",
-        "source": "/Users/samprimeaux/Library/Mobile Documents/com~apple~CloudDocs/Projects/Cloudflare/NewIberiaChurchofChrist"
+        "source": "local-donor://Library/Mobile Documents/com~apple~CloudDocs/Projects/Cloudflare/NewIberiaChurchofChrist"
       }
     },
     {
@@ -173,7 +173,7 @@
       "installable": false,
       "_internal": {
         "normalization": "pending",
-        "source": "/Users/samprimeaux/companionscpas/static"
+        "source": "local-donor://companionscpas/static"
       }
     },
     {
@@ -260,7 +260,7 @@
       "installable": false,
       "_internal": {
         "normalization": "pending",
-        "source": "/Users/samprimeaux/IAM-Library/01_Template_Candidates/MEAUXIDERANDOMBUILDS/06_shinshu_static_site_archive/source/shinshu-solutions/static"
+        "source": "local-donor://IAM-Library/01_Template_Candidates/MEAUXIDERANDOMBUILDS/06_shinshu_static_site_archive/source/shinshu-solutions/static"
       }
     },
     {
@@ -302,7 +302,7 @@
       "installable": false,
       "_internal": {
         "normalization": "pending",
-        "source": "/Users/samprimeaux/fuelnfreetime/legacy"
+        "source": "local-donor://fuelnfreetime/legacy"
       }
     }
   ],

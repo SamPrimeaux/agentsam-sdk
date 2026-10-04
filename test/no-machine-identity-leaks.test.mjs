@@ -28,6 +28,12 @@ test('tracked source contains no developer-specific absolute home paths', () => 
 
     if (allowedExtensions.has(ext)) continue;
 
+    // Tests intentionally exercise synthetic absolute paths (for example,
+    // /Users/alice/...) when validating prompt/path rendering. The portability
+    // guard targets product, docs, fixtures, generated assets, and protocol
+    // artifacts rather than test-vector literals.
+    if (file.startsWith('test/') || file.includes('/test/') || file.includes('/tests/')) continue;
+
     let source;
     try {
       source = readFileSync(file, 'utf8');

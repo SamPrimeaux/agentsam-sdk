@@ -260,7 +260,7 @@ forces a package change, the seam is wrong.
 
 | Field | Value |
 |---|---|
-| Worktree | `/Users/samprimeaux/agent-worktrees/content-studio-audit` |
+| Worktree | `worktree://content-studio-audit` |
 | Branch | `audit/agentsam-content-studio-transplant-20260927` |
 | Base head | `28ef451` (transplant on main) |
 | Brand audit | `/tmp/agentsam-brand-authority-audit.json` |

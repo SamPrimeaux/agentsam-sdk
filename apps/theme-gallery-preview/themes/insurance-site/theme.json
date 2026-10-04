@@ -39,7 +39,7 @@
   "installable": true,
   "_internal": {
     "normalization": "scaffolded",
-    "source": "/Users/samprimeaux/Projects/client-demos/chrystal-clear-insurance/chrystal-clear-insurance/dist",
+    "source": "local-donor://Projects/client-demos/chrystal-clear-insurance/chrystal-clear-insurance/dist",
     "harvest_batch": "theme-harvest-20260924",
     "harvest_path": "work/theme-harvest/insurance-site",
     "app_path": "apps/insurance-site",

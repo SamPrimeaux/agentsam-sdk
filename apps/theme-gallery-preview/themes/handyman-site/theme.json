@@ -39,7 +39,7 @@
   "installable": true,
   "_internal": {
     "normalization": "scaffolded",
-    "source": "/Users/samprimeaux/worktrees/primeaux-handyman-services-agent/dist",
+    "source": "worktree://primeaux-handyman-services-agent/dist",
     "harvest_batch": "theme-harvest-20260924",
     "harvest_path": "work/theme-harvest/handyman-site",
     "app_path": "apps/handyman-site",

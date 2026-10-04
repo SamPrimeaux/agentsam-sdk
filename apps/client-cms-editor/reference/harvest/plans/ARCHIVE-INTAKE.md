@@ -122,7 +122,7 @@ The full AgentSam acceptance lab now accepts archive paths positionally:
 
 ```bash
 python3 scripts/harvest_tooling_lab.py \
-  --sdk /Users/samprimeaux/agentsam-sdk \
+  --sdk repo://agentsam-sdk \
   --replace-export \
   --replace-db \
   ~/Downloads/theme-one.zip \

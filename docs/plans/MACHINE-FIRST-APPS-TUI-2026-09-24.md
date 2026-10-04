@@ -22,7 +22,7 @@ isProject: false
 
 # Machine-first AgentSam + Apps Clack Catalog
 
-**Home:** [`/Users/samprimeaux/agentsam-sdk`](/Users/samprimeaux/agentsam-sdk) · supersedes pending todos in [UNIVERSAL-INGEST-MACHINE-FIRST-2026-09-24.md](./UNIVERSAL-INGEST-MACHINE-FIRST-2026-09-24.md)
+**Home:** [`repo://agentsam-sdk`](repo://agentsam-sdk) · supersedes pending todos in [UNIVERSAL-INGEST-MACHINE-FIRST-2026-09-24.md](./UNIVERSAL-INGEST-MACHINE-FIRST-2026-09-24.md)
 
 **Locked product intent:** Apps become a Clack/TUI selectable catalog of packaged previews/prebuilds of past work. Selecting an app leads to Preview (primary), then Scaffold/Add, then Deploy when maturity allows. Machine Intelligence + world-state make that catalog honest (calculated maturity, not hand badges).
 
@@ -67,12 +67,12 @@ flowchart TB
 
 | Piece | Path | Use |
 |-------|------|-----|
-| CLI router (`app`/`apps` alias) | [`src/cli.js`](/Users/samprimeaux/agentsam-sdk/src/cli.js) | Route bare `apps` → TUI |
-| App commands today | [`src/commands/app.js`](/Users/samprimeaux/agentsam-sdk/src/commands/app.js) | Extend discovery + actions; today only `agentsam.app.json` (4 product apps) |
+| CLI router (`app`/`apps` alias) | [`src/cli.js`](repo://agentsam-sdk/src/cli.js) | Route bare `apps` → TUI |
+| App commands today | [`src/commands/app.js`](repo://agentsam-sdk/src/commands/app.js) | Extend discovery + actions; today only `agentsam.app.json` (4 product apps) |
 | Clack already | `@clack/prompts` in help/models/providers/scaffold | Same patterns for apps menu |
-| Inspect | [`src/commands/product.js`](/Users/samprimeaux/agentsam-sdk/src/commands/product.js) → [`repository-snapshot.js`](/Users/samprimeaux/agentsam-sdk/src/capabilities/repository-snapshot.js) | Expand into world-state envelope |
-| Progression / next | [`src/progression/engine.js`](/Users/samprimeaux/agentsam-sdk/src/progression/engine.js) | Feed maturity next-actions |
-| Brand Intelligence | [`docs/BRAND_INTELLIGENCE.md`](/Users/samprimeaux/agentsam-sdk/docs/BRAND_INTELLIGENCE.md) + `packages/agentsam-brand` | Consumer of world-state + primitives |
+| Inspect | [`src/commands/product.js`](repo://agentsam-sdk/src/commands/product.js) → [`repository-snapshot.js`](repo://agentsam-sdk/src/capabilities/repository-snapshot.js) | Expand into world-state envelope |
+| Progression / next | [`src/progression/engine.js`](repo://agentsam-sdk/src/progression/engine.js) | Feed maturity next-actions |
+| Brand Intelligence | [`docs/BRAND_INTELLIGENCE.md`](repo://agentsam-sdk/docs/BRAND_INTELLIGENCE.md) + `packages/agentsam-brand` | Consumer of world-state + primitives |
 | Verify | `scripts/verify-package.mjs`, `verify-source-boundaries.mjs` | Strengthen; wire into maturity |
 | Theme apps | `.agentsam/app.json` on 7 harvested sites | Include in catalog (today invisible to `listAppManifests`) |
 
@@ -81,7 +81,7 @@ flowchart TB
 ## Batch A — Machine Intelligence foundation
 
 ### A1. Docs
-- Add [`docs/MACHINE_INTELLIGENCE.md`](/Users/samprimeaux/agentsam-sdk/docs/MACHINE_INTELLIGENCE.md): ladder, MINI/APP/WORLD, confidence ≠ risk, receipts, LLM as one handler.
+- Add [`docs/MACHINE_INTELLIGENCE.md`](repo://agentsam-sdk/docs/MACHINE_INTELLIGENCE.md): ladder, MINI/APP/WORLD, confidence ≠ risk, receipts, LLM as one handler.
 - Cross-link Brand Intelligence + Repository Intelligence + this Apps catalog.
 - Demote mini as architectural poster in help copy (Batch D completes that).
 
@@ -111,7 +111,7 @@ Converge into one JSON envelope (new capability `world.state` or extend `reposit
 `agentsam inspect [path]` returns this envelope for arbitrary paths **and** every `apps/*`.
 
 ### B2. Discovery + maturity engine
-Extend [`listAppManifests`](/Users/samprimeaux/agentsam-sdk/src/commands/app.js):
+Extend [`listAppManifests`](repo://agentsam-sdk/src/commands/app.js):
 
 1. Prefer `agentsam.app.json` (product apps).
 2. Fall back to `.agentsam/app.json` (theme-refinery / harvested).
@@ -179,8 +179,8 @@ Non-TTY / scripted: keep `agentsam app list|info|doctor|preview|scaffold` and ad
 
 Implementation touchpoints:
 
-- Expand [`src/commands/app.js`](/Users/samprimeaux/agentsam-sdk/src/commands/app.js) with `runAppsInteractive()` using `@clack/prompts` `select` / `confirm` (same style as [`src/ui/cli/help.js`](/Users/samprimeaux/agentsam-sdk/src/ui/cli/help.js)).
-- [`src/cli.js`](/Users/samprimeaux/agentsam-sdk/src/cli.js): bare `apps` with empty argv → interactive; `app list` stays non-interactive default for scripts.
+- Expand [`src/commands/app.js`](repo://agentsam-sdk/src/commands/app.js) with `runAppsInteractive()` using `@clack/prompts` `select` / `confirm` (same style as [`src/ui/cli/help.js`](repo://agentsam-sdk/src/ui/cli/help.js)).
+- [`src/cli.js`](repo://agentsam-sdk/src/cli.js): bare `apps` with empty argv → interactive; `app list` stays non-interactive default for scripts.
 
 ### D2. npm distribute
 - Curate publishable set for product apps (cad / cms / studio / ecommerce) toward `@inneranimalmedia/<app>` or documented `agentsam app add` from registry.
@@ -224,4 +224,4 @@ Suggested first PR slice after plan approval: A1+A2 + B2 discovery expansion + D
 
 ## Optional hygiene (non-blocking)
 
-Review leftover `/Users/samprimeaux/agent-worktrees/*` clones (stale SDK @ 892 behind, etc.) when convenient.
+Review leftover `worktree://*` clones (stale SDK @ 892 behind, etc.) when convenient.

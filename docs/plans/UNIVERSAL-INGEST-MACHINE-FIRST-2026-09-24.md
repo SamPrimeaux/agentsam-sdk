@@ -30,7 +30,7 @@ todos:
     content: "Batch D — Keep mini as instant zero-dep utility lane; demote from architectural poster framing in docs/help"
     status: pending
   - id: disk-clutter
-    content: "Optional hygiene — review leftover /Users/samprimeaux/agent-worktrees/* dirs (not linked worktrees; some 50–254MB clones)"
+    content: "Optional hygiene — review leftover worktree://* dirs (not linked worktrees; some 50–254MB clones)"
     status: pending
 isProject: false
 ---
@@ -41,7 +41,7 @@ isProject: false
 
 **Audit and strengthen the current system. Do not redesign the repo around package purity.**
 
-Home: [`/Users/samprimeaux/agentsam-sdk`](/Users/samprimeaux/agentsam-sdk) @ clean `main` (`c017da3` Brand Intelligence).
+Home: [`repo://agentsam-sdk`](repo://agentsam-sdk) @ clean `main` (`c017da3` Brand Intelligence).
 
 Preserve ownership:
 
@@ -101,7 +101,7 @@ Repo now: **local `main` only**, synced to `origin/main` @ `c017da3`. No linked 
 
 ### Leftover disk (not git branches — optional hygiene)
 
-Under `/Users/samprimeaux/agent-worktrees/` (not registered with `git worktree list`):
+Under `worktree://` (not registered with `git worktree list`):
 
 | Dir | Approx | Note |
 |-----|--------|------|
