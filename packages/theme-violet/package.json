@@ -1,0 +1,44 @@
+{
+  "name": "@inneranimalmedia/theme-violet",
+  "version": "2.6.11",
+  "description": "A campaign-forward prebuild with bold calls to action, impact proof, stories, donation moments, and participation paths designed to turn attention into action.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./node": "./src/node.js",
+    "./site/*": "./site/*"
+  },
+  "files": [
+    "src",
+    "site",
+    "README.md",
+    "prebuild.json"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "agentsam": {
+    "kind": "theme",
+    "slug": "violet",
+    "installable": true,
+    "icon": "theme",
+    "family": "nonprofit-campaign",
+    "normalization": "package_ready",
+    "canonicalId": "violet",
+    "portable": true,
+    "prebuildRoot": "site"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/theme-violet"
+  }
+}

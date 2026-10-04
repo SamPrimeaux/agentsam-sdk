@@ -1,0 +1,50 @@
+{
+  "slug": "forge",
+  "appId": "forge",
+  "name": "Forge",
+  "eyebrow": "Trades / local services",
+  "category": "Local services",
+  "industries": [
+    "Home Services",
+    "Trades"
+  ],
+  "tags": [
+    "estimates",
+    "pwa",
+    "local"
+  ],
+  "description": "A mobile-first local-services prebuild with estimate capture, service-area confidence, project proof, reviews, and practical trust signals that stay sharp on the smallest screen.",
+  "features": [
+    "Estimate forms",
+    "Service areas",
+    "Project proof",
+    "Mobile-first"
+  ],
+  "pages": [
+    "Home",
+    "Services",
+    "Projects",
+    "Service areas",
+    "Reviews",
+    "Estimate"
+  ],
+  "preview": {
+    "kind": "live",
+    "card": "/themes/forge/demo/",
+    "desktop": "/themes/forge/demo/",
+    "mobile": "/themes/forge/demo/",
+    "demoUrl": "/themes/forge/demo/"
+  },
+  "installable": true,
+  "package": "@inneranimalmedia/theme-forge",
+  "demoBrand": "Forge Works",
+  "family": "trade-services",
+  "tagline": "Built to get the phone ringing.",
+  "bestFor": [
+    "Contractors",
+    "Repair services",
+    "Field teams"
+  ],
+  "prebuildRoot": "site",
+  "portable": true
+}

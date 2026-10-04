@@ -1,0 +1,50 @@
+{
+  "slug": "summit",
+  "appId": "summit",
+  "name": "Summit",
+  "eyebrow": "Consulting / portfolio",
+  "category": "Portfolio",
+  "industries": [
+    "Consulting",
+    "Education"
+  ],
+  "tags": [
+    "bilingual",
+    "portfolio",
+    "cms"
+  ],
+  "description": "A restrained consulting and portfolio prebuild with editorial services, case studies, multilingual-ready structure, media, and thoughtful spacing that lets expertise do the talking.",
+  "features": [
+    "Services",
+    "Case studies",
+    "Media",
+    "Multilingual-ready"
+  ],
+  "pages": [
+    "Home",
+    "Services",
+    "Work",
+    "About",
+    "Journal",
+    "Contact"
+  ],
+  "preview": {
+    "kind": "live",
+    "card": "/themes/summit/demo/",
+    "desktop": "/themes/summit/demo/",
+    "mobile": "/themes/summit/demo/",
+    "demoUrl": "/themes/summit/demo/"
+  },
+  "installable": true,
+  "package": "@inneranimalmedia/theme-summit",
+  "demoBrand": "Summit Practice",
+  "family": "consulting-portfolio",
+  "tagline": "A quieter kind of authority.",
+  "bestFor": [
+    "Consultants",
+    "Studios",
+    "Cross-border services"
+  ],
+  "prebuildRoot": "site",
+  "portable": true
+}

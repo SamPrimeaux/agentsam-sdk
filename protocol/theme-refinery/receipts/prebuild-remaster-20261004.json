@@ -1,0 +1,21 @@
+{
+  "schema": "agentsam.theme-remaster-receipt.v1",
+  "created_at": "2026-10-04",
+  "privacy": {
+    "customer_identity_retained": false,
+    "customer_source_paths_retained": false,
+    "customer_domains_retained": false,
+    "customer_brand_assets_retained": false
+  },
+  "canonical_prebuilds": [
+    {"id":"cypress","package":"@inneranimalmedia/theme-cypress"},
+    {"id":"violet","package":"@inneranimalmedia/theme-violet"},
+    {"id":"grove","package":"@inneranimalmedia/theme-grove"},
+    {"id":"ember","package":"@inneranimalmedia/theme-ember"},
+    {"id":"forge","package":"@inneranimalmedia/theme-forge"},
+    {"id":"harbor","package":"@inneranimalmedia/theme-harbor"},
+    {"id":"summit","package":"@inneranimalmedia/theme-summit"},
+    {"id":"resolve","package":"@inneranimalmedia/theme-resolve"}
+  ],
+  "note": "Historical donor/customer identity is intentionally excluded from the distributable SDK tree. Canonical prebuilds retain only reusable layout, interaction, and content-system patterns."
+}

@@ -1,0 +1,50 @@
+{
+  "slug": "cypress",
+  "appId": "cypress",
+  "name": "Cypress",
+  "eyebrow": "Community / nonprofit",
+  "category": "Community",
+  "industries": [
+    "Church",
+    "Nonprofit"
+  ],
+  "tags": [
+    "groups",
+    "giving",
+    "visit"
+  ],
+  "description": "A welcoming community prebuild for organizations that need events, groups, giving, visits, and mission-driven storytelling without looking like a generic nonprofit template.",
+  "features": [
+    "Events",
+    "Groups",
+    "Giving",
+    "Story-driven pages"
+  ],
+  "pages": [
+    "Home",
+    "Visit",
+    "Events",
+    "Groups",
+    "Mission",
+    "Give"
+  ],
+  "preview": {
+    "kind": "live",
+    "card": "/themes/cypress/demo/",
+    "desktop": "/themes/cypress/demo/",
+    "mobile": "/themes/cypress/demo/",
+    "demoUrl": "/themes/cypress/demo/"
+  },
+  "installable": true,
+  "package": "@inneranimalmedia/theme-cypress",
+  "demoBrand": "Cypress Commons",
+  "family": "community-faith",
+  "tagline": "Warm, grounded, built for belonging.",
+  "bestFor": [
+    "Community organizations",
+    "Faith communities",
+    "Membership groups"
+  ],
+  "prebuildRoot": "site",
+  "portable": true
+}

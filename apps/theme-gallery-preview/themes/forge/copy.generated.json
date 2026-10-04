@@ -1,0 +1,28 @@
+{
+  "headline": "Make the next estimate easy to request.",
+  "subheadline": "Forge is a mobile-first local-services prebuild for contractors, repair services, and field teams—built to make the next step clear.",
+  "description": "Forge Works shows how a trade-services website can turn a local visit into a clear next step. The prebuild puts estimate requests up front, makes service areas easy to find, and gives project proof, reviews, and practical trust details room to do their job. The layout stays direct and readable on small screens.",
+  "card_blurb": "A sharp local-services prebuild with upfront estimate capture, clear service areas, project proof, and trust signals that hold up on mobile.",
+  "seo_title": "Forge | Local Services Website Prebuild",
+  "seo_description": "A mobile-first local services prebuild with clear estimate requests, service-area details, project photos, reviews, and practical trust signals for trade teams.",
+  "keywords": [
+    "local services website prebuild",
+    "contractor website design",
+    "repair service website",
+    "trade services website",
+    "mobile-first service website",
+    "estimate request form",
+    "service area pages",
+    "project portfolio website"
+  ],
+  "hero_cta": "Request an estimate",
+  "secondary_cta": "See recent work",
+  "image_notes": [
+    "Lead with authentic job-site and finished-project photography; keep the subject clear at phone size.",
+    "Use close-up details of tools, materials, and workmanship to make project proof feel concrete.",
+    "Choose locally grounded service-area imagery without implying coverage beyond the demo content.",
+    "Keep people and equipment naturally framed, with enough contrast for text overlays and mobile crops."
+  ],
+  "theme": "forge",
+  "demo_brand": "Forge Works"
+}

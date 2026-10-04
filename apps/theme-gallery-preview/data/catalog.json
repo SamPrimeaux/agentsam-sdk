@@ -1,310 +1,461 @@
 {
+  "schema": "agentsam.themes.v2",
   "themes": [
     {
-      "slug": "insurance-site",
-      "appId": "insurance-site",
-      "name": "Chrystal Clear Insurance",
-      "eyebrow": "Insurance / Professional Services",
-      "category": "Professional",
-      "industries": [
-        "Insurance",
-        "Professional Services"
+      "slug": "cypress",
+      "appId": "cypress",
+      "name": "Cypress",
+      "demoBrand": "Cypress Commons",
+      "eyebrow": "Community / nonprofit",
+      "category": "Community",
+      "family": "community-faith",
+      "tagline": "Warm, grounded, built for belonging.",
+      "cardBlurb": "A welcoming home for events, groups, giving, and the stories that bring a community together.",
+      "description": "Cypress is a community website prebuild designed to make the next step feel clear and personal. Its warm, contemporary layout gives events, groups, visits, and giving their own easy-to-find paths, while space for mission-driven stories helps explain what brings people together. The fictional Cypress Commons content shows how an organization can welcome newcomers and keep its community connected without leaning on a generic nonprofit look.",
+      "bestFor": [
+        "Community organizations",
+        "Faith communities",
+        "Membership groups"
       ],
-      "tags": [
-        "quotes",
-        "trust",
-        "lead-forms"
-      ],
-      "description": "Real Chrystal Clear Insurance build \u2014 editorial insurance storefront with coverage storytelling and quote capture.",
       "features": [
-        "CMS",
-        "Lead forms",
-        "Media",
-        "Email"
+        "Events",
+        "Groups",
+        "Giving",
+        "Story-driven pages"
       ],
       "pages": [
         "Home",
-        "Coverage",
-        "About",
-        "Claims",
-        "Resources",
-        "Contact",
-        "Help"
+        "Visit",
+        "Events",
+        "Groups",
+        "Mission",
+        "Give"
       ],
       "preview": {
         "kind": "live",
-        "card": "/themes/insurance-site/demo/",
-        "desktop": "/themes/insurance-site/demo/",
-        "mobile": "/themes/insurance-site/demo/",
-        "demoUrl": "/themes/insurance-site/demo/"
+        "card": "/themes/cypress/demo/",
+        "desktop": "/themes/cypress/demo/",
+        "mobile": "/themes/cypress/demo/",
+        "demoUrl": "/themes/cypress/demo/"
       },
-      "installable": false,
-      "_internal": {
-        "normalization": "pending",
-        "source": "local-donor://Projects/client-demos/chrystal-clear-insurance/chrystal-clear-insurance/dist"
-      }
+      "seo": {
+        "title": "Cypress Community Website Prebuild | AgentSam",
+        "description": "Explore Cypress, a warm community website prebuild with clear paths to events, groups, giving, visits, and the mission behind the work.",
+        "keywords": [
+          "community website prebuild",
+          "faith community website design",
+          "community organization website",
+          "events and groups website",
+          "membership community website",
+          "giving page design",
+          "community visit information",
+          "mission-driven storytelling"
+        ],
+        "ogImage": "/themes/cypress/demo/assets/generated/social-card.webp"
+      },
+      "installable": true,
+      "portable": true,
+      "package": "@inneranimalmedia/theme-cypress",
+      "prebuildRoot": "site"
     },
     {
-      "slug": "handyman-site",
-      "appId": "handyman-site",
-      "name": "Primeaux Handyman Services",
-      "eyebrow": "Home Services / Trades",
-      "category": "Services",
-      "industries": [
-        "Home Services",
-        "Trades"
+      "slug": "violet",
+      "appId": "violet",
+      "name": "Violet",
+      "demoBrand": "Violet Initiative",
+      "eyebrow": "Campaign / advocacy",
+      "category": "Campaign",
+      "family": "nonprofit-campaign",
+      "tagline": "Make the cause impossible to scroll past.",
+      "cardBlurb": "Bold campaign pages pair impact proof and human stories with clear ways to give, share, volunteer, and join in.",
+      "description": "Violet is designed to move people from interest to involvement. Bold calls to action lead the way, while impact highlights and human stories give the campaign room to make its case. Donation moments sit alongside clear paths to volunteer, share, and join in—so participation feels like part of the story, not an afterthought.",
+      "bestFor": [
+        "Advocacy",
+        "Fundraising",
+        "Community campaigns"
       ],
-      "tags": [
-        "estimates",
-        "pwa",
-        "local"
-      ],
-      "description": "Real Primeaux Handyman PWA build \u2014 mobile-first service site with estimates and project proof.",
       "features": [
-        "CMS",
-        "PWA",
-        "Forms",
-        "Leads"
+        "Campaign CTAs",
+        "Impact stories",
+        "Donations",
+        "Participation paths"
+      ],
+      "pages": [
+        "Home",
+        "Campaigns",
+        "Stories",
+        "Impact",
+        "Get involved",
+        "Donate"
+      ],
+      "preview": {
+        "kind": "live",
+        "card": "/themes/violet/demo/",
+        "desktop": "/themes/violet/demo/",
+        "mobile": "/themes/violet/demo/",
+        "demoUrl": "/themes/violet/demo/"
+      },
+      "seo": {
+        "title": "Violet Campaign Website Prebuild",
+        "description": "Explore a campaign website prebuild built around bold calls to action, impact proof, human stories, donation moments, and clear ways to take part.",
+        "keywords": [
+          "campaign website prebuild",
+          "nonprofit campaign design",
+          "advocacy campaign website",
+          "fundraising landing page",
+          "community campaign website",
+          "donation call to action",
+          "campaign impact storytelling",
+          "volunteer sign-up page"
+        ],
+        "ogImage": "/themes/violet/demo/assets/generated/social-card.webp"
+      },
+      "installable": true,
+      "portable": true,
+      "package": "@inneranimalmedia/theme-violet",
+      "prebuildRoot": "site"
+    },
+    {
+      "slug": "grove",
+      "appId": "grove",
+      "name": "Grove",
+      "demoBrand": "Grove Surface Co.",
+      "eyebrow": "Home / service gallery",
+      "category": "Home services",
+      "family": "service-gallery",
+      "tagline": "Show the work. Make the craft feel premium.",
+      "cardBlurb": "A tactile, gallery-led home-services site that puts materials, finished projects, and estimate requests in clear view.",
+      "description": "Grove gives flooring and interiors businesses a visual-first website structure with room for project galleries, close-up material photography, process steps, customer reviews, and estimate requests. Warm typography, considered spacing, and grounded colors give the work a studio-quality frame without getting in the crew’s way.",
+      "bestFor": [
+        "Flooring",
+        "Interiors",
+        "Home improvement"
+      ],
+      "features": [
+        "Project gallery",
+        "Process",
+        "Reviews",
+        "Estimate capture"
       ],
       "pages": [
         "Home",
         "Services",
         "Projects",
-        "Service Areas",
-        "About",
-        "Contact",
-        "Help"
-      ],
-      "preview": {
-        "kind": "live",
-        "card": "/themes/handyman-site/demo/",
-        "desktop": "/themes/handyman-site/demo/",
-        "mobile": "/themes/handyman-site/demo/",
-        "demoUrl": "/themes/handyman-site/demo/"
-      },
-      "installable": false,
-      "_internal": {
-        "normalization": "pending",
-        "source": "worktree://primeaux-handyman-services-agent/dist"
-      }
-    },
-    {
-      "slug": "church-site",
-      "appId": "church-site",
-      "name": "New Iberia Church of Christ",
-      "eyebrow": "Church / Community",
-      "category": "Community",
-      "industries": [
-        "Church",
-        "Nonprofit"
-      ],
-      "tags": [
-        "groups",
-        "giving",
-        "visit"
-      ],
-      "description": "Real New Iberia Church of Christ public pages \u2014 visit, groups, mission, and giving.",
-      "features": [
-        "CMS",
-        "Events",
-        "Giving",
-        "Media"
-      ],
-      "pages": [
-        "Home",
-        "Beliefs",
-        "Community",
-        "Mission",
-        "Groups",
-        "Donate",
-        "Connect",
-        "Help"
-      ],
-      "preview": {
-        "kind": "live",
-        "card": "/themes/church-site/demo/",
-        "desktop": "/themes/church-site/demo/",
-        "mobile": "/themes/church-site/demo/",
-        "demoUrl": "/themes/church-site/demo/"
-      },
-      "installable": false,
-      "_internal": {
-        "normalization": "pending",
-        "source": "local-donor://Library/Mobile Documents/com~apple~CloudDocs/Projects/Cloudflare/NewIberiaChurchofChrist"
-      }
-    },
-    {
-      "slug": "companions-site",
-      "appId": "companions-site",
-      "name": "Companions of Caddo",
-      "eyebrow": "Nonprofit / Animal Rescue",
-      "category": "Community",
-      "industries": [
-        "Nonprofit",
-        "Animal Rescue"
-      ],
-      "tags": [
-        "donate",
-        "foster",
-        "campaigns"
-      ],
-      "description": "Real Companions of Caddo public static surface \u2014 mission, campaigns, and involvement paths.",
-      "features": [
-        "CMS",
-        "Donations",
-        "Campaigns",
-        "Email"
-      ],
-      "pages": [
-        "Home",
-        "About",
-        "Campaigns",
-        "Get Involved",
-        "Donate",
-        "Help"
-      ],
-      "preview": {
-        "kind": "live",
-        "card": "/themes/companions-site/demo/",
-        "desktop": "/themes/companions-site/demo/",
-        "mobile": "/themes/companions-site/demo/",
-        "demoUrl": "/themes/companions-site/demo/"
-      },
-      "installable": false,
-      "_internal": {
-        "normalization": "pending",
-        "source": "local-donor://companionscpas/static"
-      }
-    },
-    {
-      "slug": "floors-site",
-      "appId": "floors-site",
-      "name": "Anything Floors & More",
-      "eyebrow": "Contractor / Construction",
-      "category": "Services",
-      "industries": [
-        "Contractor",
-        "Flooring"
-      ],
-      "tags": [
-        "gallery",
-        "estimates",
-        "projects"
-      ],
-      "description": "Real Anything Floors & More public site \u2014 services, gallery, process, and contact.",
-      "features": [
-        "CMS",
-        "Gallery",
-        "Forms",
-        "Auth"
-      ],
-      "pages": [
-        "Home",
-        "Services",
-        "Gallery",
         "Process",
-        "Contact",
-        "Help"
+        "Reviews",
+        "Contact"
       ],
       "preview": {
         "kind": "live",
-        "card": "/themes/floors-site/demo/",
-        "desktop": "/themes/floors-site/demo/",
-        "mobile": "/themes/floors-site/demo/",
-        "demoUrl": "/themes/floors-site/demo/"
+        "card": "/themes/grove/demo/",
+        "desktop": "/themes/grove/demo/",
+        "mobile": "/themes/grove/demo/",
+        "demoUrl": "/themes/grove/demo/"
       },
-      "installable": false,
-      "_internal": {
-        "normalization": "pending",
-        "source": "/Volumes/Expansion/Anything Floors & More"
-      }
+      "seo": {
+        "title": "Grove — Home Services Website Prebuild",
+        "description": "A tactile home-services website prebuild for flooring and interiors, with project galleries, material details, process storytelling, reviews, and estimate requests.",
+        "keywords": [
+          "home services website prebuild",
+          "flooring website design",
+          "interior renovation website",
+          "project gallery website",
+          "home improvement website",
+          "material photography layout",
+          "estimate request website",
+          "service business website"
+        ],
+        "ogImage": "/themes/grove/demo/assets/generated/social-card.webp"
+      },
+      "installable": true,
+      "portable": true,
+      "package": "@inneranimalmedia/theme-grove",
+      "prebuildRoot": "site"
     },
     {
-      "slug": "shinshu-site",
-      "appId": "shinshu-site",
-      "name": "Shinshu Solutions",
-      "eyebrow": "Consultant / Leadership",
-      "category": "Professional",
-      "industries": [
-        "Consulting",
-        "Education"
-      ],
-      "tags": [
-        "bilingual",
-        "portfolio",
-        "cms"
-      ],
-      "description": "Real Shinshu Solutions static archive \u2014 services, gallery, and CMS-ready pages.",
-      "features": [
-        "CMS",
-        "Portfolio",
-        "Media",
-        "Forms"
-      ],
-      "pages": [
-        "Home",
-        "Services",
-        "About",
-        "Gallery",
-        "Adventures",
-        "Contact",
-        "Help"
-      ],
-      "preview": {
-        "kind": "live",
-        "card": "/themes/shinshu-site/demo/",
-        "desktop": "/themes/shinshu-site/demo/",
-        "mobile": "/themes/shinshu-site/demo/",
-        "demoUrl": "/themes/shinshu-site/demo/"
-      },
-      "installable": false,
-      "_internal": {
-        "normalization": "pending",
-        "source": "local-donor://IAM-Library/01_Template_Candidates/MEAUXIDERANDOMBUILDS/06_shinshu_static_site_archive/source/shinshu-solutions/static"
-      }
-    },
-    {
-      "slug": "fuelnfree-site",
-      "appId": "fuelnfree-site",
-      "name": "Fuel & Free Time",
-      "eyebrow": "Retail / Ecommerce",
+      "slug": "ember",
+      "appId": "ember",
+      "name": "Ember",
+      "demoBrand": "Ember Supply",
+      "eyebrow": "Editorial commerce",
       "category": "Commerce",
-      "industries": [
-        "Retail",
-        "Lifestyle"
+      "family": "editorial-commerce",
+      "tagline": "A storefront with a pulse.",
+      "cardBlurb": "A story-first storefront for bold drops, lived-in brand worlds, and product discovery beyond the grid.",
+      "description": "Ember pairs expressive editorial layouts with considered shopping flows. Lead with a campaign, bring collections into focus, tell the story behind the goods, and give community a place to gather—without defaulting to a wall of product tiles.",
+      "bestFor": [
+        "Apparel",
+        "Lifestyle goods",
+        "Creator brands"
       ],
-      "tags": [
-        "shop",
-        "collections",
-        "brand"
-      ],
-      "description": "Real Fuel & Free Time legacy storefront pages \u2014 home, shop, about, and community.",
       "features": [
-        "Commerce",
-        "CMS",
-        "Search",
-        "Cart"
+        "Collections",
+        "Editorial stories",
+        "Community",
+        "Launch moments"
       ],
       "pages": [
         "Home",
         "Shop",
-        "About",
+        "Collections",
+        "Story",
         "Community",
-        "Help"
+        "Journal"
       ],
       "preview": {
         "kind": "live",
-        "card": "/themes/fuelnfree-site/demo/",
-        "desktop": "/themes/fuelnfree-site/demo/",
-        "mobile": "/themes/fuelnfree-site/demo/",
-        "demoUrl": "/themes/fuelnfree-site/demo/"
+        "card": "/themes/ember/demo/",
+        "desktop": "/themes/ember/demo/",
+        "mobile": "/themes/ember/demo/",
+        "demoUrl": "/themes/ember/demo/"
       },
-      "installable": false,
-      "_internal": {
-        "normalization": "pending",
-        "source": "local-donor://fuelnfreetime/legacy"
-      }
+      "seo": {
+        "title": "Ember — Editorial Commerce Website Prebuild",
+        "description": "Ember is an editorial commerce prebuild for bold product discovery, brand stories, collection launches, and community—without defaulting to a tiled grid.",
+        "keywords": [
+          "editorial commerce website",
+          "apparel storefront prebuild",
+          "lifestyle goods website",
+          "creator brand commerce",
+          "product discovery design",
+          "collection launch pages",
+          "brand storytelling website",
+          "community-led commerce"
+        ],
+        "ogImage": "/themes/ember/demo/assets/generated/social-card.webp"
+      },
+      "installable": true,
+      "portable": true,
+      "package": "@inneranimalmedia/theme-ember",
+      "prebuildRoot": "site"
+    },
+    {
+      "slug": "forge",
+      "appId": "forge",
+      "name": "Forge",
+      "demoBrand": "Forge Works",
+      "eyebrow": "Trades / local services",
+      "category": "Local services",
+      "family": "trade-services",
+      "tagline": "Built to get the phone ringing.",
+      "cardBlurb": "A sharp local-services prebuild with upfront estimate capture, clear service areas, project proof, and trust signals that hold up on mobile.",
+      "description": "Forge Works shows how a trade-services website can turn a local visit into a clear next step. The prebuild puts estimate requests up front, makes service areas easy to find, and gives project proof, reviews, and practical trust details room to do their job. The layout stays direct and readable on small screens.",
+      "bestFor": [
+        "Contractors",
+        "Repair services",
+        "Field teams"
+      ],
+      "features": [
+        "Estimate forms",
+        "Service areas",
+        "Project proof",
+        "Mobile-first"
+      ],
+      "pages": [
+        "Home",
+        "Services",
+        "Projects",
+        "Service areas",
+        "Reviews",
+        "Estimate"
+      ],
+      "preview": {
+        "kind": "live",
+        "card": "/themes/forge/demo/",
+        "desktop": "/themes/forge/demo/",
+        "mobile": "/themes/forge/demo/",
+        "demoUrl": "/themes/forge/demo/"
+      },
+      "seo": {
+        "title": "Forge | Local Services Website Prebuild",
+        "description": "A mobile-first local services prebuild with clear estimate requests, service-area details, project photos, reviews, and practical trust signals for trade teams.",
+        "keywords": [
+          "local services website prebuild",
+          "contractor website design",
+          "repair service website",
+          "trade services website",
+          "mobile-first service website",
+          "estimate request form",
+          "service area pages",
+          "project portfolio website"
+        ],
+        "ogImage": "/themes/forge/demo/assets/generated/social-card.webp"
+      },
+      "installable": true,
+      "portable": true,
+      "package": "@inneranimalmedia/theme-forge",
+      "prebuildRoot": "site"
+    },
+    {
+      "slug": "harbor",
+      "appId": "harbor",
+      "name": "Harbor",
+      "demoBrand": "Harbor Advisory",
+      "eyebrow": "Professional / lead generation",
+      "category": "Professional",
+      "family": "professional-leadgen",
+      "tagline": "Calm confidence for serious decisions.",
+      "cardBlurb": "Clear service stories, thoughtful proof, and reassuring lead capture—with an editorial feel beyond corporate blue.",
+      "description": "Built for trust-heavy work, Harbor gives service stories room to breathe, brings proof and resources into view, and makes lead capture feel considered rather than pushy. Its restrained palette, generous spacing, and crisp typography bring a modern editorial character without defaulting to corporate blue.",
+      "bestFor": [
+        "Advisory",
+        "Insurance",
+        "Professional services"
+      ],
+      "features": [
+        "Lead capture",
+        "Services",
+        "Resources",
+        "Trust signals"
+      ],
+      "pages": [
+        "Home",
+        "Services",
+        "About",
+        "Resources",
+        "FAQ",
+        "Contact"
+      ],
+      "preview": {
+        "kind": "live",
+        "card": "/themes/harbor/demo/",
+        "desktop": "/themes/harbor/demo/",
+        "mobile": "/themes/harbor/demo/",
+        "demoUrl": "/themes/harbor/demo/"
+      },
+      "seo": {
+        "title": "Harbor | Professional Services Website Prebuild",
+        "description": "A polished professional-services website prebuild with clear service pages, thoughtful proof, useful resources, and calm, confident lead capture.",
+        "keywords": [
+          "professional services website prebuild",
+          "advisory website design",
+          "insurance website template",
+          "professional lead generation website",
+          "service storytelling",
+          "editorial business website",
+          "trust-focused website design",
+          "professional services landing page"
+        ],
+        "ogImage": "/themes/harbor/demo/assets/generated/social-card.webp"
+      },
+      "installable": true,
+      "portable": true,
+      "package": "@inneranimalmedia/theme-harbor",
+      "prebuildRoot": "site"
+    },
+    {
+      "slug": "summit",
+      "appId": "summit",
+      "name": "Summit",
+      "demoBrand": "Summit Practice",
+      "eyebrow": "Consulting / portfolio",
+      "category": "Portfolio",
+      "family": "consulting-portfolio",
+      "tagline": "A quieter kind of authority.",
+      "cardBlurb": "An editorial portfolio prebuild for expertise that travels well.",
+      "description": "Summit is a consulting and portfolio prebuild shaped by editorial clarity and thoughtful spacing. Its structure brings services, case studies, and media into focus, with a multilingual-ready foundation for reaching across languages and markets.",
+      "bestFor": [
+        "Consultants",
+        "Studios",
+        "Cross-border services"
+      ],
+      "features": [
+        "Services",
+        "Case studies",
+        "Media",
+        "Multilingual-ready"
+      ],
+      "pages": [
+        "Home",
+        "Services",
+        "Work",
+        "About",
+        "Journal",
+        "Contact"
+      ],
+      "preview": {
+        "kind": "live",
+        "card": "/themes/summit/demo/",
+        "desktop": "/themes/summit/demo/",
+        "mobile": "/themes/summit/demo/",
+        "demoUrl": "/themes/summit/demo/"
+      },
+      "seo": {
+        "title": "Summit — Consulting Portfolio Prebuild",
+        "description": "Summit is a restrained consulting portfolio prebuild with editorial service pages, case studies, media, multilingual-ready structure, and room to think.",
+        "keywords": [
+          "consulting portfolio prebuild",
+          "editorial portfolio website",
+          "consulting services pages",
+          "case study portfolio layout",
+          "multilingual-ready website",
+          "cross-border consulting site",
+          "studio portfolio design",
+          "professional media portfolio"
+        ],
+        "ogImage": "/themes/summit/demo/assets/generated/social-card.webp"
+      },
+      "installable": true,
+      "portable": true,
+      "package": "@inneranimalmedia/theme-summit",
+      "prebuildRoot": "site"
+    },
+    {
+      "slug": "resolve",
+      "appId": "resolve",
+      "name": "Resolve",
+      "demoBrand": "Resolve Atelier",
+      "eyebrow": "Luxury commerce / editorial",
+      "category": "Commerce",
+      "family": "luxury-commerce",
+      "tagline": "Quiet luxury. Loud interaction design.",
+      "cardBlurb": "Cinematic scroll, shoppable stories, and a purchase rail that stays in step.",
+      "description": "A high-fashion commerce prebuild shaped by cinematic scroll, shoppable editorial, and sticky purchase rails. Lookbooks, stories, considered bundles, and precise micro-interactions give each page a sense of pace and intention.",
+      "bestFor": [
+        "Fashion",
+        "Luxury goods",
+        "Editorial retail"
+      ],
+      "features": [
+        "Lookbooks",
+        "Sticky PDP rails",
+        "Bundles",
+        "Stories"
+      ],
+      "pages": [
+        "Home",
+        "Shop",
+        "Lookbook",
+        "Product",
+        "Stories",
+        "Journal"
+      ],
+      "preview": {
+        "kind": "live",
+        "card": "/themes/resolve/demo/",
+        "desktop": "/themes/resolve/demo/",
+        "mobile": "/themes/resolve/demo/",
+        "demoUrl": "/themes/resolve/demo/"
+      },
+      "seo": {
+        "title": "Resolve — Luxury Commerce Prebuild",
+        "description": "A luxury commerce prebuild with cinematic scroll, shoppable editorial, sticky purchase rails, lookbooks, and considered details for fashion-led storefronts.",
+        "keywords": [
+          "luxury commerce prebuild",
+          "fashion storefront design",
+          "shoppable editorial",
+          "cinematic ecommerce",
+          "sticky purchase rail",
+          "fashion lookbook",
+          "editorial retail",
+          "luxury product storytelling"
+        ],
+        "ogImage": "/themes/resolve/demo/assets/generated/social-card.webp"
+      },
+      "installable": true,
+      "portable": true,
+      "package": "@inneranimalmedia/theme-resolve",
+      "prebuildRoot": "site"
     }
-  ],
-  "version": 1
+  ]
 }

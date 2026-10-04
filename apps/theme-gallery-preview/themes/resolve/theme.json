@@ -1,0 +1,41 @@
+{
+  "slug": "resolve",
+  "appId": "resolve",
+  "name": "Resolve",
+  "demoBrand": "Resolve Atelier",
+  "eyebrow": "Luxury commerce / editorial",
+  "category": "Commerce",
+  "family": "luxury-commerce",
+  "tagline": "Quiet luxury. Loud interaction design.",
+  "description": "A high-fashion commerce prebuild built around cinematic scroll, shoppable editorial, sticky purchase rails, lookbooks, stories, bundles, and micro-interactions that make the storefront feel directed instead of assembled.",
+  "bestFor": [
+    "Fashion",
+    "Luxury goods",
+    "Editorial retail"
+  ],
+  "features": [
+    "Lookbooks",
+    "Sticky PDP rails",
+    "Bundles",
+    "Stories"
+  ],
+  "pages": [
+    "Home",
+    "Shop",
+    "Lookbook",
+    "Product",
+    "Stories",
+    "Journal"
+  ],
+  "preview": {
+    "kind": "live",
+    "card": "/themes/resolve/demo/",
+    "desktop": "/themes/resolve/demo/",
+    "mobile": "/themes/resolve/demo/",
+    "demoUrl": "/themes/resolve/demo/"
+  },
+  "installable": true,
+  "package": "@inneranimalmedia/theme-resolve",
+  "prebuildRoot": "site",
+  "portable": true
+}

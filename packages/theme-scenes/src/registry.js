@@ -1,15 +1,9 @@
 /**
- * Theme package registry — neutral product identity + donor aliases.
+ * Theme package registry — canonical AgentSam prebuild identities.
  *
  * Storage model (do not flatten or delete built CSS mounts):
- *   packages/theme-*-site          → package folders (path may keep donor slug)
- *   packages/theme-scenes          → composition vocabulary
- *   packages/heuristic-theme       → stock CMS shell
- *   packages/agentsam-docs-theme   → docs skin
- *   apps/theme-gallery-preview     → gallery demos only
- *
- * Canonical public ids are neutral (cypress/violet/…). Donor names stay private
- * provenance via aliases[]. Gallery/static URLs can keep old mounts.
+ * Canonical site-theme packages use neutral AgentSam product identities.
+ * Historical customer naming is intentionally not retained here.
  *
  * Host typography: apps/local-studio/frontend/src/styles.css
  * (--font-sans / --font-display / --font-mono).
@@ -21,12 +15,10 @@
  * @typedef {object} ThemePackageEntry
  * @property {string} id
  * @property {string} packageName
- * @property {string} [packageNameLegacy]
  * @property {string} path
  * @property {ThemePackageKind} kind
  * @property {string} label
  * @property {string} [siteSlug]
- * @property {string} [donor]
  * @property {string[]} [aliases]
  */
 
@@ -35,79 +27,72 @@ export const THEME_PACKAGE_REGISTRY = Object.freeze([
   {
     id: "cypress",
     packageName: "@inneranimalmedia/theme-cypress",
-    packageNameLegacy: "@inneranimalmedia/theme-church-site",
-    path: "packages/theme-church-site",
+    path: "packages/theme-cypress",
     kind: "site-theme",
     label: "Cypress",
-    siteSlug: "church-site",
-    donor: "new-iberia-church",
-    aliases: ["church-site", "theme-church", "church", "theme-church-site", "nic"],
+    siteSlug: "cypress",
+
+    aliases: ["cypress", "theme-cypress"],
   },
   {
     id: "violet",
     packageName: "@inneranimalmedia/theme-violet",
-    packageNameLegacy: "@inneranimalmedia/theme-companions-site",
-    path: "packages/theme-companions-site",
+    path: "packages/theme-violet",
     kind: "site-theme",
     label: "Violet",
-    siteSlug: "companions-site",
-    donor: "companions-of-caddo",
-    aliases: ["companions-site", "theme-companions", "companions", "companions-of-caddo", "theme-companions-site", "coc"],
+    siteSlug: "violet",
+
+    aliases: ["violet", "theme-violet"],
   },
   {
     id: "grove",
     packageName: "@inneranimalmedia/theme-grove",
-    packageNameLegacy: "@inneranimalmedia/theme-floors-site",
-    path: "packages/theme-floors-site",
+    path: "packages/theme-grove",
     kind: "site-theme",
     label: "Grove",
-    siteSlug: "floors-site",
-    donor: "anything-floors",
-    aliases: ["floors-site", "theme-floors", "floors", "anything-floors", "theme-floors-site", "afm"],
+    siteSlug: "grove",
+
+    aliases: ["grove", "theme-grove"],
   },
   {
     id: "ember",
     packageName: "@inneranimalmedia/theme-ember",
-    packageNameLegacy: "@inneranimalmedia/theme-fuelnfree-site",
-    path: "packages/theme-fuelnfree-site",
+    path: "packages/theme-ember",
     kind: "site-theme",
     label: "Ember",
-    siteSlug: "fuelnfree-site",
-    donor: "fuelnfreetime",
-    aliases: ["fuelnfree-site", "theme-fuelnfree", "fuelnfreetime", "fuel-n-free", "theme-fuelnfree-site", "fnf"],
+    siteSlug: "ember",
+
+    aliases: ["ember", "theme-ember"],
   },
   {
     id: "forge",
     packageName: "@inneranimalmedia/theme-forge",
-    packageNameLegacy: "@inneranimalmedia/theme-handyman-site",
-    path: "packages/theme-handyman-site",
+    path: "packages/theme-forge",
     kind: "site-theme",
     label: "Forge",
-    siteSlug: "handyman-site",
-    donor: "primeaux-handyman",
-    aliases: ["handyman-site", "theme-handyman", "handyman", "theme-handyman-site", "phs"],
+    siteSlug: "forge",
+
+    aliases: ["forge", "theme-forge"],
   },
   {
     id: "harbor",
     packageName: "@inneranimalmedia/theme-harbor",
-    packageNameLegacy: "@inneranimalmedia/theme-insurance-site",
-    path: "packages/theme-insurance-site",
+    path: "packages/theme-harbor",
     kind: "site-theme",
     label: "Harbor",
-    siteSlug: "insurance-site",
-    donor: "chrystal-clear-insurance",
-    aliases: ["insurance-site", "theme-insurance", "insurance", "theme-insurance-site", "cci"],
+    siteSlug: "harbor",
+
+    aliases: ["harbor", "theme-harbor"],
   },
   {
     id: "summit",
     packageName: "@inneranimalmedia/theme-summit",
-    packageNameLegacy: "@inneranimalmedia/theme-shinshu-site",
-    path: "packages/theme-shinshu-site",
+    path: "packages/theme-summit",
     kind: "site-theme",
     label: "Summit",
-    siteSlug: "shinshu-site",
-    donor: "shinshu-solutions",
-    aliases: ["shinshu-site", "theme-shinshu", "shinshu", "theme-shinshu-site", "shin"],
+    siteSlug: "summit",
+
+    aliases: ["summit", "theme-summit"],
   },
   {
     id: "iasf",
@@ -116,7 +101,7 @@ export const THEME_PACKAGE_REGISTRY = Object.freeze([
     kind: "site-theme",
     label: "IASF Storefront",
     siteSlug: "iasf",
-    donor: "inner-animals-storefront",
+
     aliases: [
       "theme-iasf",
       "inneranimals-site",
@@ -163,10 +148,8 @@ export function resolveThemePackage(query) {
     const names = [
       entry.id,
       entry.packageName,
-      entry.packageNameLegacy,
       entry.path,
       entry.siteSlug,
-      entry.donor,
       ...(entry.aliases || []),
     ]
       .filter(Boolean)

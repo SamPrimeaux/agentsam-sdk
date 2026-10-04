@@ -1,23 +1,24 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.inneranimalmedia.com/agentsam/theme-refinery/product-metadata.schema.json",
-  "title": "agentsam_products.metadata for theme-refinery provenance",
+  "title": "agentsam_products.metadata for portable prebuild packages",
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "origin": { "type": "string", "enum": ["machine_harvest", "gallery_mount", "manual", "apps_backfill"] },
-    "donor_name": { "type": "string" },
-    "source_path": { "type": "string", "description": "Local donor path; never secrets" },
-    "harvest_batch": { "type": "string" },
+    "origin": {
+      "type": "string",
+      "enum": [
+        "package_prebuild",
+        "manual",
+        "apps_backfill"
+      ]
+    },
+    "build_batch": {
+      "type": "string"
+    },
     "normalization_state": {
       "type": "string",
       "enum": [
-        "fingerprinted",
-        "harvested",
-        "needs_normalization",
-        "scaffolded",
-        "portable",
-        "portable-preview",
         "normalized",
         "remastered",
         "package_ready",
@@ -25,23 +26,59 @@
         "promoted"
       ]
     },
-    "lineage": {
-      "type": "string",
-      "description": "Short remaster codename (fnf, afm, phs, …). Not the customer/donor product name."
-    },
     "family": {
       "type": "string",
-      "description": "Generic reusable family (editorial-commerce, service-gallery, …)."
+      "description": "Generic reusable prebuild family."
     },
-    "source_hash": { "type": "string" },
-    "app_manifest": { "type": "string" },
-    "help_root": { "type": "string" },
-    "preview_kind": { "type": "string", "enum": ["static", "live", "iframe", "none"] },
-    "package": { "type": "string" },
-    "gallery_path": { "type": "string" },
-    "capabilities": { "type": "array", "items": { "type": "string" } },
-    "latest_evidence_snapshot_id": { "type": ["string", "null"] },
-    "latest_quality_report_id": { "type": ["string", "null"] }
+    "source_hash": {
+      "type": "string",
+      "description": "Content fingerprint only; never a customer path or identity."
+    },
+    "app_manifest": {
+      "type": "string"
+    },
+    "help_root": {
+      "type": "string"
+    },
+    "preview_kind": {
+      "type": "string",
+      "enum": [
+        "static",
+        "live",
+        "iframe",
+        "none"
+      ]
+    },
+    "package": {
+      "type": "string"
+    },
+    "prebuild_root": {
+      "type": "string"
+    },
+    "portable": {
+      "type": "boolean"
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "latest_evidence_snapshot_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "latest_quality_report_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
   },
-  "required": ["origin", "normalization_state"]
+  "required": [
+    "origin",
+    "normalization_state"
+  ]
 }
