@@ -3,10 +3,11 @@ import {
   installPlugin,
   listPlugins,
   listPluginTools,
+  updatePluginPreferences,
   recordPluginHealthCheck,
   createPluginRuntime,
   executeVectorizeTool,
-} from '@inneranimalmedia/agentsam-sdk/plugins';
+} from '../../../../src/plugins/index.js';
 import { probeCloudflareConnection } from '../../../../packages/connectors/cfoa/src/index.js';
 import { callCloudflareMcpTool, executeAgentSamCloudflareProgram, searchCloudflareApi } from './cloudflare-code-mode.js';
 import { executeCompletefulNative } from './completeful-native.js';
@@ -21,6 +22,9 @@ export async function materializeCloudflarePlugin(env, accountId, options = {}) 
     accountId,
     environment: options.environment || 'production',
     manifest: LOCAL_STUDIO_CLOUDFLARE_MANIFEST,
+    // Registry refreshes should update manifest metadata without silently
+    // undoing a user's Settings-level enable/disable preference.
+    preserveEnabled: true,
   });
   const probe = options.connected ? await probeCloudflareConnection(env, accountId) : null;
   if (probe) {
@@ -60,12 +64,23 @@ export async function materializeCloudflarePlugin(env, accountId, options = {}) 
   return { installed, probe };
 }
 
-export async function loadPluginRegistry(env, accountId) {
+export async function loadPluginRegistry(env, accountId, options = {}) {
+  const includeDisabled = options.includeDisabled === true;
   const [plugins, tools] = await Promise.all([
-    listPlugins(env.DB, { accountId, environment: 'production' }),
-    listPluginTools(env.DB, { accountId }),
+    listPlugins(env.DB, { accountId, environment: 'production', includeDisabled }),
+    listPluginTools(env.DB, { accountId, includeDisabledPlugins: includeDisabled }),
   ]);
   return { plugins, tools };
+}
+
+export async function updateLocalStudioPluginPreferences(env, accountId, pluginId, value = {}) {
+  return updatePluginPreferences(env.DB, {
+    accountId,
+    pluginId,
+    enabled: value.enabled,
+    composerVisible: value.composer_visible,
+    settingsVisible: value.settings_visible,
+  });
 }
 
 async function recordToolHealth(env, accountId, plugin, status, startedAt, error = null) {

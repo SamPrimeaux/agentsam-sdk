@@ -15,3 +15,16 @@ test('first-run fixture does not fake credentials, agents, or models', () => {
   assert.deepEqual(fixture.agents, []);
   assert.deepEqual(fixture.models, []);
 });
+
+
+test('fixture plugin and widget mutations persist through the same host contract', async () => {
+  const host = createFixtureSettingsHost(getSettingsFixture('populated'));
+  const plugin = (await host.snapshot()).plugins[0];
+  const widget = (await host.snapshot()).widgets[0];
+
+  await host.setPluginEnabled(plugin.id, false);
+  assert.equal((await host.snapshot()).plugins.find((row) => row.id === plugin.id).enabled, false);
+
+  await host.setWidgetVisible(widget.id, false);
+  assert.equal((await host.snapshot()).widgets.find((row) => row.id === widget.id).visible, false);
+});

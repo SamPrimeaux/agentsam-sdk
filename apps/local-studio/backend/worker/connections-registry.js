@@ -28,6 +28,59 @@ function canonicalByokProvider(serviceName) {
   return service === "grok" ? "xai" : service;
 }
 
+
+function safeStringArray(value) {
+  return Array.isArray(value)
+    ? value.map((item) => String(item || "").trim()).filter(Boolean)
+    : [];
+}
+
+export function safePluginSettingsRecord(plugin, tools = []) {
+  const pluginTools = tools.filter((tool) => tool.plugin_id === plugin.id);
+  const disconnectUrl =
+    typeof plugin.config?.disconnect_url === "string" &&
+    plugin.config.disconnect_url.startsWith("/")
+      ? plugin.config.disconnect_url
+      : null;
+  return {
+    id: plugin.id,
+    plugin_key: plugin.plugin_key,
+    provider_key: plugin.provider_key,
+    installation_key: plugin.installation_key,
+    environment: plugin.environment,
+    plugin_kind: plugin.plugin_kind,
+    category: plugin.category,
+    display_name: plugin.display_name,
+    short_name: plugin.short_name || null,
+    description: plugin.description || null,
+    transport: plugin.transport,
+    auth_type: plugin.auth_type,
+    setup_url: plugin.oauth_connect_url || null,
+    disconnect_url: disconnectUrl,
+    icon_url: plugin.icon_url || null,
+    icon_dark_url: plugin.icon_dark_url || null,
+    icon_alt: plugin.icon_alt || null,
+    icon_fit: plugin.icon_fit === "cover" ? "cover" : "contain",
+    composer_visible: plugin.composer_visible === 1 || plugin.composer_visible === true,
+    settings_visible: plugin.settings_visible === 1 || plugin.settings_visible === true,
+    is_enabled: plugin.is_enabled === 1 || plugin.is_enabled === true,
+    setup_status: plugin.setup_status || "unconfigured",
+    health_strategy: plugin.health_strategy || "none",
+    health_status: plugin.health_status || "unknown",
+    last_health_at: plugin.last_health_at || null,
+    last_healthy_at: plugin.last_healthy_at || null,
+    consecutive_failures: Number(plugin.consecutive_failures || 0),
+    avg_latency_ms:
+      plugin.avg_latency_ms == null ? null : Number(plugin.avg_latency_ms),
+    error_rate_24h: Number(plugin.error_rate_24h || 0),
+    last_error_code: plugin.last_error_code || null,
+    last_error_message: plugin.last_error_message || null,
+    capabilities: safeStringArray(plugin.capabilities),
+    tool_lanes: safeStringArray(plugin.tool_lanes),
+    tool_count: pluginTools.length,
+  };
+}
+
 export async function loadConnectionsRegistry(env, userId) {
   const [cloudflareRow, secretsResult] = await Promise.all([
     loadCloudflareConnectionRecord(env, userId),
@@ -54,8 +107,11 @@ export async function loadConnectionsRegistry(env, userId) {
     available: cloudflare.configured,
     checkSource: "page_load",
   });
-  const pluginRegistry = await loadPluginRegistry(env, userId);
+  const pluginRegistry = await loadPluginRegistry(env, userId, { includeDisabled: true });
   const cloudflarePlugin = pluginRegistry.plugins.find((row) => row.plugin_key === "agentsam-mcp") || null;
+  const settingsPlugins = pluginRegistry.plugins
+    .filter((row) => row.settings_visible === 1 || row.settings_visible === true)
+    .map((row) => safePluginSettingsRecord(row, pluginRegistry.tools));
 
   const latestByProvider = new Map();
   for (const row of secretsResult?.results || []) {
@@ -76,8 +132,7 @@ export async function loadConnectionsRegistry(env, userId) {
   }
 
   return {
-    plugins: pluginRegistry.plugins,
-    tools: pluginRegistry.tools,
+    plugins: settingsPlugins,
     connections: [
       {
         provider: "cloudflare",

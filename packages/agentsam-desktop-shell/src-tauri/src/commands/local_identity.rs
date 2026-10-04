@@ -133,17 +133,33 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
         }
         "plugins" => {
             let path = request.path.as_deref().unwrap_or("").trim();
-            if path != "/api/plugins/tools/execute"
-                || path.contains("://")
+            if path.contains("://")
                 || path.contains('\\')
                 || path.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10)
             {
                 return Err("studio_service_plugins_path_invalid".into());
             }
-            if request.method.as_deref().unwrap_or("POST").to_ascii_uppercase() != "POST" {
+
+            if path == "/api/plugins/tools/execute" {
+                if request.method.as_deref().unwrap_or("POST").to_ascii_uppercase() != "POST" {
+                    return Err("studio_service_plugins_method_invalid".into());
+                }
+                return Ok((Method::POST, path.to_string()));
+            }
+
+            let plugin_id = path.strip_prefix("/api/plugins/").unwrap_or("");
+            let valid_plugin_id = plugin_id.starts_with("plg_")
+                && !plugin_id.contains('/')
+                && plugin_id
+                    .chars()
+                    .all(|value| value.is_ascii_alphanumeric() || value == '_');
+            if !valid_plugin_id {
+                return Err("studio_service_plugins_path_invalid".into());
+            }
+            if request.method.as_deref().unwrap_or("PATCH").to_ascii_uppercase() != "PATCH" {
                 return Err("studio_service_plugins_method_invalid".into());
             }
-            Ok((Method::POST, path.to_string()))
+            Ok((Method::PATCH, path.to_string()))
         }
         "database" => {
             let path = request.path.as_deref().unwrap_or("").trim();
@@ -679,6 +695,38 @@ mod tests {
         assert_eq!(canonical_sync_provider("google").unwrap(), "gemini");
         assert_eq!(canonical_sync_provider("grok").unwrap(), "xai");
         assert!(canonical_sync_provider("other").is_err());
+    }
+
+    #[test]
+    fn plugin_bridge_allows_bounded_settings_patch_and_tool_execution() {
+        let settings = StudioServiceBridgeRequest {
+            operation: "plugins".into(),
+            account_id: None,
+            body: None,
+            path: Some("/api/plugins/plg_test123".into()),
+            method: Some("PATCH".into()),
+        };
+        let (method, path) = studio_service_route(&settings).expect("plugin settings route");
+        assert_eq!(method, Method::PATCH);
+        assert_eq!(path, "/api/plugins/plg_test123");
+
+        let execute = StudioServiceBridgeRequest {
+            operation: "plugins".into(),
+            account_id: None,
+            body: None,
+            path: Some("/api/plugins/tools/execute".into()),
+            method: Some("POST".into()),
+        };
+        let (method, path) = studio_service_route(&execute).expect("plugin execute route");
+        assert_eq!(method, Method::POST);
+        assert_eq!(path, "/api/plugins/tools/execute");
+
+        let mut bad = settings;
+        bad.path = Some("/api/plugins/plg_test123/../../vault".into());
+        assert_eq!(
+            studio_service_route(&bad).unwrap_err(),
+            "studio_service_plugins_path_invalid"
+        );
     }
 
     #[test]

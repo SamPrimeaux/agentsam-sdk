@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   BYOK_PROVIDER_DEFINITIONS,
   loadConnectionsRegistry,
+  safePluginSettingsRecord,
 } from "../backend/worker/connections-registry.js";
 
 function database({ cloudflare = null, secrets = [] } = {}) {
@@ -75,5 +76,49 @@ describe("connections registry", () => {
     assert.equal(openai.status, "configured");
     assert.equal(openai.last4, "1234");
     assert.equal(JSON.stringify(result).includes("secret_value"), false);
+  });
+
+
+  it("projects plugin registry rows to a secret-safe Settings record", () => {
+    const safe = safePluginSettingsRecord(
+      {
+        id: "plg_demo",
+        plugin_key: "demo",
+        provider_key: "provider",
+        installation_key: "default",
+        environment: "production",
+        plugin_kind: "oauth",
+        category: "developer",
+        display_name: "Demo",
+        description: "Demo plugin",
+        transport: "http_rest",
+        auth_type: "oauth",
+        oauth_connect_url: "/api/connections/cloudflare/start",
+        icon_url: "https://example.invalid/icon.png",
+        icon_fit: "contain",
+        composer_visible: 1,
+        settings_visible: 1,
+        is_enabled: 1,
+        setup_status: "connected",
+        health_strategy: "oauth_probe",
+        health_status: "healthy",
+        capabilities: ["provider.read"],
+        tool_lanes: ["typed"],
+        config: {
+          disconnect_url: "/api/connections/cloudflare/disconnect",
+          token_endpoint: "https://secret-authority.invalid/token",
+        },
+        metadata: { private_hint: "never-send" },
+      },
+      [{ plugin_id: "plg_demo" }],
+    );
+
+    assert.equal(safe.tool_count, 1);
+    assert.equal(safe.disconnect_url, "/api/connections/cloudflare/disconnect");
+    assert.equal(safe.is_enabled, true);
+    assert.equal("config" in safe, false);
+    assert.equal("metadata" in safe, false);
+    assert.equal(JSON.stringify(safe).includes("secret-authority"), false);
+    assert.equal(JSON.stringify(safe).includes("never-send"), false);
   });
 });

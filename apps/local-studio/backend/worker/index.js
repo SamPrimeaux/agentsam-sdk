@@ -31,10 +31,10 @@ import {
   isGoogleCliCloudCallbackRequest,
   isGoogleCliCloudPath,
 } from "./gclioa.js";
-import { loadConnectionsRegistry } from "./connections-registry.js";
+import { loadConnectionsRegistry, safePluginSettingsRecord } from "./connections-registry.js";
 import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js";
 import { handleWorkRequest, isWorkRequest } from "./work-service.js";
-import { createLocalStudioPluginRuntime } from "./plugin-registry.js";
+import { createLocalStudioPluginRuntime, loadPluginRegistry, updateLocalStudioPluginPreferences } from "./plugin-registry.js";
 import { emitAnalyticsFact } from "./analytics-service.js";
 import { handleAnalyticsQueryRequest } from "./analytics-query-service.js";
 import {
@@ -655,6 +655,7 @@ export default {
     const isLlmInventory = url.pathname === "/api/llm/inventory";
     const isCfConnection = isCloudflareConnectionPath(url.pathname);
     const isConnectionsRegistry = url.pathname === "/api/connections";
+    const pluginSettingsMatch = /^\/api\/plugins\/([^/]+)$/.exec(url.pathname);
     const isDatabaseApi = isDatabaseRequest(url.pathname);
     const isWorkApi = isWorkRequest(url.pathname);
     const isPluginToolExecute = url.pathname === "/api/plugins/tools/execute";
@@ -841,6 +842,37 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       } catch (err) {
         console.error("connections_registry_error", String(err));
         return json({ ok: false, error: "internal_error" }, 500);
+      }
+    }
+
+    if (pluginSettingsMatch) {
+      if (request.method !== "PATCH") {
+        return json({ ok: false, error: "method_not_allowed" }, 405, { allow: "PATCH" });
+      }
+      const userId = await sessionUser();
+      if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
+      const pluginId = decodeURIComponent(pluginSettingsMatch[1] || "").trim();
+      if (!/^plg_[a-z0-9]+$/i.test(pluginId)) {
+        return json({ ok: false, error: "plugin_id_invalid" }, 400);
+      }
+      const body = await request.json().catch(() => ({}));
+      const allowedKeys = new Set(["enabled", "composer_visible", "settings_visible"]);
+      if (Object.keys(body || {}).some((key) => !allowedKeys.has(key))) {
+        return json({ ok: false, error: "plugin_preference_field_invalid" }, 400);
+      }
+      try {
+        await updateLocalStudioPluginPreferences(env, userId, pluginId, body || {});
+        const registry = await loadPluginRegistry(env, userId, { includeDisabled: true });
+        const plugin = registry.plugins.find((row) => row.id === pluginId);
+        if (!plugin) return json({ ok: false, error: "plugin_not_found" }, 404);
+        return json({
+          ok: true,
+          plugin: safePluginSettingsRecord(plugin, registry.tools),
+        });
+      } catch (error) {
+        const code = String(error?.message || "plugin_update_failed");
+        const status = code === "plugin_not_found" ? 404 : 400;
+        return json({ ok: false, error: code.slice(0, 160) }, status);
       }
     }
 
