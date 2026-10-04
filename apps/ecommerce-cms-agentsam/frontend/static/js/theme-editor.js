@@ -20,7 +20,7 @@
   let showOutlines = localStorage.getItem('fnf-theme-editor-outlines') !== '0';
   let autoPreview = localStorage.getItem('fnf-theme-editor-auto-preview') !== '0';
 
-  const fallbackPages = [
+  const fallbackPages = host ? [] : [
     { slug: 'home', title: 'Home page', route: '/' },
     { slug: 'shop', title: 'Shop', route: '/shop' },
     { slug: 'about', title: 'About', route: '/about' },
