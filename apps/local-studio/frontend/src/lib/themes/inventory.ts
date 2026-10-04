@@ -7,7 +7,7 @@ import { getActiveThemeId, setActiveThemeId, themeProjectStore } from './project
 const draftPreviews = new Map<string, { stamp: string; url: string }>();
 function draftPreview(project: any) {
   const cached = draftPreviews.get(project.id);
-  if (cached?.stamp === project.updatedAt) return cached.url;
+  if (cached && cached.stamp === project.updatedAt) return cached.url;
   if (cached) URL.revokeObjectURL(cached.url);
   const url = URL.createObjectURL(new Blob([renderThemePage(project.pages[0], project.tokens)], { type: 'text/html' }));
   draftPreviews.set(project.id, { stamp: project.updatedAt, url }); return url;
