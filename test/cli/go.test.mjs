@@ -11,6 +11,8 @@ import {
   preflightToolchain,
   buildGoProduct,
   deployGoCloudflare,
+  resolveGoStateRoot,
+  resolveConfiguredDeploymentUrl,
 } from '../../src/go/index.js';
 import { runGo } from '../../src/commands/go.js';
 
@@ -87,6 +89,217 @@ test('agentsam go build --json exposes only portable build paths', async () => {
   assert.equal(Object.hasOwn(parsed.probe || {}, 'origin'), false);
   assert.equal(Object.hasOwn(parsed.receipt?.probe || {}, 'origin'), false);
   assert.equal(output.includes(SDK_ROOT), false);
+});
+
+
+
+test('Go state authority belongs to the caller repository, not product source', () => {
+  const discovery = discoverGoRuntime(SDK_ROOT);
+  const productRoot = resolveProductRoot(discovery, 'agentsam-go-worker');
+
+  const project = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'agentsam-go-project-state-'),
+  );
+
+  const stateRoot = resolveGoStateRoot(discovery, project);
+
+  assert.equal(fs.realpathSync(stateRoot), fs.realpathSync(project));
+  assert.notEqual(
+    fs.realpathSync(stateRoot),
+    fs.realpathSync(productRoot),
+  );
+});
+
+
+test('portable Go Worker config contains no InnerAnimalMedia production route', () => {
+  const productRoot = path.join(SDK_ROOT, 'apps', 'agentsam-go-worker');
+
+  const portable = JSON.parse(
+    fs.readFileSync(
+      path.join(productRoot, 'wrangler.jsonc'),
+      'utf8',
+    ),
+  );
+
+  assert.equal(portable.workers_dev, true);
+  assert.equal(
+    JSON.stringify(portable).includes('runtime.inneranimalmedia.com'),
+    false,
+  );
+  assert.equal(resolveConfiguredDeploymentUrl(productRoot), null);
+});
+
+
+test('InnerAnimalMedia production route exists only in maintainer config', () => {
+  const productRoot = path.join(SDK_ROOT, 'apps', 'agentsam-go-worker');
+
+  const official = JSON.parse(
+    fs.readFileSync(
+      path.join(productRoot, 'wrangler.inneranimalmedia.jsonc'),
+      'utf8',
+    ),
+  );
+
+  assert.equal(official.workers_dev, false);
+  assert.equal(
+    official.routes?.[0]?.pattern,
+    'runtime.inneranimalmedia.com',
+  );
+
+  assert.equal(
+    resolveConfiguredDeploymentUrl(
+      productRoot,
+      'wrangler.inneranimalmedia.jsonc',
+    ),
+    'https://runtime.inneranimalmedia.com',
+  );
+});
+
+
+test('self-host dry run always selects portable wrangler config', async () => {
+  const discovery = discoverGoRuntime(SDK_ROOT);
+  const productRoot = resolveProductRoot(discovery, 'agentsam-go-worker');
+  const stateRoot = tempStateRoot();
+  const calls = [];
+
+  const spawn = (command, args = []) => {
+    const argv = Array.isArray(args) ? args.map(String) : [];
+    calls.push({ command: String(command), args: argv });
+
+    if (
+      argv.includes('whoami')
+      && argv.includes('--json')
+    ) {
+      return {
+        status: 0,
+        stdout: JSON.stringify({
+          loggedIn: true,
+          accounts: [
+            {
+              id: 'acct-user123',
+              name: 'user123',
+              type: 'standard',
+            },
+          ],
+        }),
+        stderr: '',
+      };
+    }
+
+    if (String(command) === 'docker') {
+      return {
+        status: 0,
+        stdout: 'available',
+        stderr: '',
+      };
+    }
+
+    if (argv.includes('deploy') && argv.includes('--dry-run')) {
+      return {
+        status: 0,
+        stdout: 'dry run ok',
+        stderr: '',
+      };
+    }
+
+    return {
+      status: 0,
+      stdout: '',
+      stderr: '',
+    };
+  };
+
+  const result = await deployGoCloudflare({
+    productRoot,
+    stateRoot,
+    product: 'agentsam-go-worker',
+    dryRun: true,
+    officialRelease: false,
+    source: {
+      identity: `git:${'1'.repeat(40)}`,
+      commit: '1'.repeat(40),
+      package_name: '@inneranimalmedia/agentsam-go-worker',
+      package_version: '2.6.10',
+    },
+    builtAt: new Date(0).toISOString(),
+    artifactDigest: `sha256:${'1'.repeat(64)}`,
+    spawn,
+  });
+
+  assert.equal(result.dryRunValidated, true);
+
+  const deployCall = calls.find(
+    (call) => call.args.includes('deploy'),
+  );
+
+  assert.ok(deployCall);
+  assert.equal(
+    deployCall.args.includes('wrangler.jsonc'),
+    true,
+  );
+  assert.equal(
+    deployCall.args.includes('wrangler.inneranimalmedia.jsonc'),
+    false,
+  );
+});
+
+
+test('Cloudflare dry run never executes Docker', async () => {
+  const discovery = discoverGoRuntime(SDK_ROOT);
+  const productRoot = resolveProductRoot(discovery, 'agentsam-go-worker');
+  const stateRoot = tempStateRoot();
+  const calls = [];
+
+  const spawn = (command, args = []) => {
+    const argv = Array.isArray(args) ? args.map(String) : [];
+    calls.push({ command: String(command), args: argv });
+
+    if (String(command) === 'docker') {
+      throw new Error('docker_must_not_execute_during_dry_run');
+    }
+
+    if (argv.includes('deploy') && argv.includes('--dry-run')) {
+      return {
+        status: 0,
+        stdout: 'dry run ok',
+        stderr: '',
+      };
+    }
+
+    return {
+      status: 0,
+      stdout: '',
+      stderr: '',
+    };
+  };
+
+  const result = await deployGoCloudflare({
+    productRoot,
+    stateRoot,
+    product: 'agentsam-go-worker',
+    dryRun: true,
+    cloudflareIdentity: {
+      ok: true,
+      authenticated: true,
+      account: {
+        id: 'acct-user123',
+        name: 'user123',
+      },
+    },
+    source: {
+      identity: `git:${'2'.repeat(40)}`,
+      commit: '2'.repeat(40),
+      package_name: '@inneranimalmedia/agentsam-go-worker',
+      package_version: '2.6.10',
+    },
+    spawn,
+  });
+
+  assert.equal(result.dryRunValidated, true);
+  assert.equal(
+    calls.some((call) => call.command === 'docker'),
+    false,
+  );
 });
 
 

@@ -180,10 +180,6 @@ export function probeGoToolchain() {
 }
 
 export function resolveGoStateRoot(discovery, cwd = process.cwd()) {
-  const origin = discovery?.runtime?.origin || null;
-  if (origin === 'repository' || origin === 'sdk_development_tree') {
-    return discovery.runtime.productRoot;
-  }
   return repositoryRoot(cwd);
 }
 

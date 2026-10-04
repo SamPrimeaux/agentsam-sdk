@@ -53,8 +53,11 @@ function publicAccount(account) {
   };
 }
 
-export function resolveConfiguredDeploymentUrl(productRoot) {
-  const configPath = path.join(productRoot, 'wrangler.jsonc');
+export function resolveConfiguredDeploymentUrl(
+  productRoot,
+  configName = 'wrangler.jsonc',
+) {
+  const configPath = path.join(productRoot, configName);
   if (!fs.existsSync(configPath)) return null;
 
   try {
@@ -186,8 +189,9 @@ function deploymentArgs({
   dryRun = false,
   source = null,
   builtAt = null,
+  configName = 'wrangler.jsonc',
 } = {}) {
-  const args = ['deploy', '-c', 'wrangler.jsonc'];
+  const args = ['deploy', '-c', configName];
   if (source?.identity) args.push('--var', 'AGENTSAM_BUILD_SOURCE:' + source.identity);
   if (source?.commit) args.push('--var', 'AGENTSAM_BUILD_COMMIT:' + source.commit);
   if (builtAt) args.push('--var', 'AGENTSAM_BUILT_AT:' + builtAt);
@@ -222,8 +226,16 @@ export async function deployGoCloudflare({
   spawn = spawnSync,
   fetchImpl = globalThis.fetch,
 } = {}) {
-  const wranglerConfig = path.join(productRoot, 'wrangler.jsonc');
-  if (!fs.existsSync(wranglerConfig)) throw new Error('wrangler_config_missing: ' + wranglerConfig);
+  const configName = officialRelease
+    ? 'wrangler.inneranimalmedia.jsonc'
+    : 'wrangler.jsonc';
+
+  const wranglerConfig = path.join(productRoot, configName);
+  if (!fs.existsSync(wranglerConfig)) {
+    const err = new Error('wrangler_config_missing: ' + wranglerConfig);
+    err.code = 'wrangler_config_missing';
+    throw err;
+  }
 
   let cfIdentity = cloudflareIdentity;
   if (!skipDeploy) {
@@ -254,8 +266,11 @@ export async function deployGoCloudflare({
   let docker = null;
   let dockerOk = true;
 
-  if (!skipDeploy) {
-    docker = spawn('docker', ['info'], { encoding: 'utf8' });
+  if (!skipDeploy && !dryRun) {
+    docker = spawn('docker', ['info'], {
+      encoding: 'utf8',
+      timeout: 8000,
+    });
     dockerOk = docker.status === 0;
 
     if (!dockerOk) {
@@ -277,7 +292,12 @@ export async function deployGoCloudflare({
   } else if (dryRun) {
     const res = runWrangler(
       wrangler,
-      deploymentArgs({ dryRun: true, source, builtAt }),
+      deploymentArgs({
+        dryRun: true,
+        source,
+        builtAt,
+        configName,
+      }),
       { productRoot, spawn, accountId },
     );
     deployOutput = res.output;
@@ -290,7 +310,11 @@ export async function deployGoCloudflare({
   } else {
     const res = runWrangler(
       wrangler,
-      deploymentArgs({ source, builtAt }),
+      deploymentArgs({
+        source,
+        builtAt,
+        configName,
+      }),
       { productRoot, spawn, accountId },
     );
     deployOutput = res.output;
@@ -357,7 +381,7 @@ export async function deployGoCloudflare({
 
   const url = deployed
     ? (
-        resolveConfiguredDeploymentUrl(productRoot)
+        resolveConfiguredDeploymentUrl(productRoot, configName)
         || extractWorkersDevUrl(deployOutput)
         || guessWorkersDevUrl(product)
       )

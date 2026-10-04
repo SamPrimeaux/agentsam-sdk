@@ -35,5 +35,11 @@
       "invocation_logs": true
     }
   },
-  "workers_dev": true
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "runtime.inneranimalmedia.com",
+      "custom_domain": true
+    }
+  ]
 }

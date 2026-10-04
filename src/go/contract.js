@@ -127,7 +127,10 @@ export function preflightToolchain({
   // significant period.
   if (requireDocker) {
     try {
-      const v = spawn('docker', ['info'], { encoding: 'utf8' });
+      const v = spawn('docker', ['info'], {
+        encoding: 'utf8',
+        timeout: 8000,
+      });
       push(
         'docker',
         v.status === 0,

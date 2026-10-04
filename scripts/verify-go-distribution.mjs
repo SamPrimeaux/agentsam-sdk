@@ -206,7 +206,13 @@ const receipt = {
   cloudflare_dry_run: null,
 };
 
-const accountId = String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim();
+const liveCloudflareProof =
+  process.env.AGENTSAM_VERIFY_GO_CLOUDFLARE === '1';
+
+const accountId = liveCloudflareProof
+  ? String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim()
+  : '';
+
 if (accountId) {
   const dryRunResult = run(globalCli, [
     'go',
@@ -222,10 +228,7 @@ if (accountId) {
   assert.equal(dryRun.mode, 'self_host');
   assert.equal(dryRun.discovery.runtime.origin, 'installed_package');
   assert.equal(dryRun.build.source.identity, 'npm:@inneranimalmedia/agentsam-go-worker@' + servicePack.version);
-  assert.equal(dryRun.container?.ok, true);
-  assert.equal(dryRun.container?.architecture, 'amd64');
-  assert.notEqual(dryRun.container?.user, 'root');
-  assert.equal(dryRun.container?.probe?.checks?.source_identity, true);
+  assert.equal(dryRun.container, null);
   assert.equal(dryRun.deploy?.dryRunValidated, true);
   assert.equal(dryRun.deploy?.receipt?.skipped_deploy, false);
   assert.equal(dryRun.deploy?.registry?.remote, false);
@@ -237,7 +240,7 @@ if (accountId) {
     account_id: dryRun.cloudflare?.account?.id || null,
     auth_type: dryRun.cloudflare?.auth_type || null,
     source_identity: dryRun.build.source.identity,
-    container_architecture: dryRun.container.architecture,
+    container_architecture: null,
     registry_mode: dryRun.deploy.receipt.registry_mode,
     registry_reason: dryRun.deploy.registry.reason,
   };
