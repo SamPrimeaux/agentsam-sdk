@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { installPlugin, updatePluginPreferences } from '../src/plugins/registry.js';
+import { installPlugin, updatePluginPreferences } from '../../src/plugins/registry.js';
 
 test('plugin preferences update is account scoped and returns normalized registry data', async () => {
   let mutation = null;

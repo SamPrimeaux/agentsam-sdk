@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-connector-cloudflare",
-  "version": "2.6.10",
+  "version": "2.6.11",
   "type": "module",
   "main": "./src/index.js",
   "exports": {

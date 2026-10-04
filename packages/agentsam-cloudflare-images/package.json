@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-cloudflare-images",
-  "version": "2.6.10",
+  "version": "2.6.11",
   "description": "Shared Cloudflare Images transport: credentials, delivery URLs, and HTTP client. Content and Brand consume this — duplicate clients are not allowed. Independent project; not affiliated with Cloudflare, Inc..",
   "type": "module",
   "main": "./dist/index.js",

@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/theme-iasf",
-  "version": "2.6.10",
+  "version": "2.6.11",
   "description": "IASF — stock Inner Animal Storefront theme pack (normalized from studio-cms-editor harvest).",
   "type": "module",
   "main": "./src/index.js",

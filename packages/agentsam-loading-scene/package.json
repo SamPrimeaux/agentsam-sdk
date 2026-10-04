@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-loading-scene",
-  "version": "2.6.10",
+  "version": "2.6.11",
   "description": "Provider-agnostic runtime visualization with six seamless full-frame Computational Hyperspace studies driven by real AgentSam runtime semantics.",
   "type": "module",
   "main": "./dist/index.js",

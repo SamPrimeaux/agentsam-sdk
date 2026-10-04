@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/theme-summit",
-  "version": "2.6.10",
+  "version": "2.6.11",
   "description": "Real Shinshu Solutions static archive — services, gallery, and CMS-ready pages.",
   "type": "module",
   "main": "./src/index.js",

@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-queue-control",
-  "version": "2.6.10",
+  "version": "2.6.11",
   "description": "Portable AgentSam queue, job-routing, retry, scheduling, and execution-control primitives with provider adapters.",
   "type": "module",
   "main": "./src/index.js",

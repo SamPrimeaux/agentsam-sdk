@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/theme-harbor",
-  "version": "2.6.10",
+  "version": "2.6.11",
   "description": "Real Chrystal Clear Insurance build — editorial insurance storefront with coverage storytelling and quote capture.",
   "type": "module",
   "main": "./src/index.js",

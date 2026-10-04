@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/theme-violet",
-  "version": "2.6.10",
+  "version": "2.6.11",
   "description": "Real Companions of Caddo public static surface — mission, campaigns, and involvement paths.",
   "type": "module",
   "main": "./src/index.js",

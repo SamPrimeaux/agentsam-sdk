@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-database-editor",
-  "version": "2.6.10",
+  "version": "2.6.11",
   "type": "module",
   "description": "Portable AgentSam Database Editor — adapters for SQLite/D1/Postgres/Supabase + vectors surface. Donor: IAM /dashboard/database. Independent project; not affiliated with Supabase.",
   "main": "./src/index.js",

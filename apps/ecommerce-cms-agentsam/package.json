@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/ecommerce-cms-agentsam",
-  "version": "2.6.10",
+  "version": "2.6.11",
   "private": false,
   "type": "module",
   "bin": {
@@ -11,7 +11,7 @@
     "preview": "node bin/agentsam-ecommerce.mjs preview"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-content": "2.6.10",
+    "@inneranimalmedia/agentsam-content": "2.6.11",
     "@inneranimalmedia/revise-theme": "0.2.0",
     "@inneranimalmedia/section-library": "0.1.0",
     "@inneranimalmedia/site-contracts": "0.1.0"

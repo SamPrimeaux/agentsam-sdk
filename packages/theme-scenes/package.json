@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/theme-scenes",
-  "version": "2.6.10",
+  "version": "2.6.11",
   "description": "Reusable scene / shell / block vocabulary for branded website experiences. BrandPack owns look; theme-scenes owns composition.",
   "type": "module",
   "license": "MIT",

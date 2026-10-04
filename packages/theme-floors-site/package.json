@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/theme-grove",
-  "version": "2.6.10",
+  "version": "2.6.11",
   "description": "Real Anything Floors & More public site — services, gallery, process, and contact.",
   "type": "module",
   "main": "./src/index.js",

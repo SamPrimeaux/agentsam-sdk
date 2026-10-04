@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/commerce-analytics",
-  "version": "2.6.10",
+  "version": "2.6.11",
   "description": "Reusable commerce analytics UI primitives for Inner Animal Media admin shells.",
   "type": "module",
   "files": [

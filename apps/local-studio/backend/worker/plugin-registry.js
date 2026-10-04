@@ -7,7 +7,7 @@ import {
   recordPluginHealthCheck,
   createPluginRuntime,
   executeVectorizeTool,
-} from '../../../../src/plugins/index.js';
+} from '@inneranimalmedia/agentsam-sdk/plugins';
 import { probeCloudflareConnection } from '../../../../packages/connectors/cfoa/src/index.js';
 import { callCloudflareMcpTool, executeAgentSamCloudflareProgram, searchCloudflareApi } from './cloudflare-code-mode.js';
 import { executeCompletefulNative } from './completeful-native.js';
