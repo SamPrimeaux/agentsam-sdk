@@ -103,7 +103,13 @@ const navRuntimeAliases = [
     replacement: studioNm("recharts"),
   },
 ];
-const cmsFrontendSource = resolvePath(fileURLToPath(new URL("../client-cms-editor/frontend/src", import.meta.url)));
+const cmsProductSource = resolvePath(
+  fileURLToPath(new URL("../ecommerce-cms-agentsam/frontend/cms", import.meta.url)),
+);
+const clientCmsEditorSource = resolvePath(
+  fileURLToPath(new URL("../client-cms-editor/frontend/src", import.meta.url)),
+);
+const cmsFrontendSource = clientCmsEditorSource;
 const cmsBackendSource = resolvePath(
   fileURLToPath(new URL("../client-cms-editor/backend/src", import.meta.url)),
 );
@@ -397,8 +403,20 @@ export default defineConfig(({ command, isPreview }) => ({
         ),
       },
       {
+        find: /^@inneranimalmedia\/ecommerce-cms-agentsam\/cms$/,
+        replacement: resolvePath(cmsProductSource, "index.mjs"),
+      },
+      {
+        find: /^@inneranimalmedia\/ecommerce-cms-agentsam\/cms\/capabilities$/,
+        replacement: resolvePath(cmsProductSource, "capabilities.mjs"),
+      },
+      {
         find: /^@inneranimalmedia\/ecommerce-cms-agentsam\/theme-editor\/(.*)$/,
         replacement: resolvePath(studioRoot, "../ecommerce-cms-agentsam/frontend/theme-editor") + "/$1.mjs",
+      },
+      {
+        find: /^@inneranimalmedia\/client-cms-editor$/,
+        replacement: resolvePath(clientCmsEditorSource, "index.ts"),
       },
       {
         find: /^@inneranimalmedia\/agentsam-cms-frontend$/,

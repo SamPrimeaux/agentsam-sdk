@@ -1,4 +1,5 @@
 import type { CmsEditorAdapter } from '../../../shared/cms/src/adapter';
+import { buildCmsEditorGroups, getCmsSectionGroupId } from '../../../shared/cms/src/editor-types';
 import type { CmsEditorHost } from '../../../shared/cms/src/host';
 import type { CmsAgentHost } from '../lib/agent-host';
 import { CmsEditorProvider } from './CmsEditorProvider';
@@ -14,14 +15,15 @@ export type CmsEditorProps = {
   agentHost?: CmsAgentHost;
   siteId: string;
   initialPageId?: string | null;
-  initialRail?: 'pages' | 'sections' | 'blocks' | 'settings';
+  initialRail?: 'groups' | 'sections' | 'blocks' | 'pages' | 'media' | 'settings';
   /** True when the attached adapter is temporary (e.g. in-memory preview). Pack content is not temporary. */
   temporaryAdapter?: boolean;
 };
 
 function EditorShell() {
   const editor = useCmsEditor();
-  const { site, page, section, ui, published, lastDraft } = editor;
+  const { site, page, section, block, ui, published, lastDraft } = editor;
+  const groups = page ? buildCmsEditorGroups(page.sections) : [];
 
   if (ui.error && !site) {
     return (
@@ -55,6 +57,16 @@ function EditorShell() {
         <div>
           <strong>{site.name}</strong>
           <span>{site.domain || site.id}</span>
+          <label className="cms-route-select">
+            <span>Route</span>
+            <select value={page.id} onChange={(event) => editor.selectPage(event.target.value)}>
+              {site.pages.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.title} · {entry.slug}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         <div className="cms-topbar-actions">
           <span className={ui.dirty ? 'badge draft' : 'badge saved'}>
@@ -87,7 +99,7 @@ function EditorShell() {
 
       <div className="cms-workspace">
         <aside className="cms-rail">
-          {(['pages', 'sections', 'blocks', 'settings'] as const).map((rail) => (
+          {(['groups', 'sections', 'blocks', 'settings'] as const).map((rail) => (
             <button
               key={rail}
               type="button"
@@ -100,23 +112,26 @@ function EditorShell() {
         </aside>
 
         <aside className="cms-sidebar">
-          {ui.rail === 'pages' ? (
+          {ui.rail === 'groups' ? (
             <ul>
-              {site.pages.map((entry) => (
-                <li key={entry.id}>
-                  <button
-                    type="button"
-                    className={entry.id === page.id ? 'active' : ''}
-                    onClick={() => editor.selectPage(entry.id)}
-                  >
-                    {entry.title}
-                    <small>{entry.slug}</small>
-                  </button>
-                </li>
-              ))}
+              {groups.map((group) => {
+                const active = section ? getCmsSectionGroupId(section) === group.id : false;
+                return (
+                  <li key={group.id}>
+                    <button
+                      type="button"
+                      className={active ? 'active' : ''}
+                      onClick={() => group.sectionIds[0] && editor.selectSection(group.sectionIds[0])}
+                    >
+                      {group.name}
+                      <small>{group.sectionIds.length} section{group.sectionIds.length === 1 ? '' : 's'}</small>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           ) : null}
-          {ui.rail === 'sections' || ui.rail === 'blocks' ? (
+          {ui.rail === 'sections' ? (
             <ul>
               {page.sections.map((entry) => (
                 <li key={entry.id}>
@@ -126,7 +141,23 @@ function EditorShell() {
                     onClick={() => editor.selectSection(entry.id)}
                   >
                     {entry.name}
-                    <small>{entry.type}</small>
+                    <small>{getCmsSectionGroupId(entry)} · {entry.type}</small>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {ui.rail === 'blocks' ? (
+            <ul>
+              {(section?.blocks || []).map((entry) => (
+                <li key={entry.id}>
+                  <button
+                    type="button"
+                    className={entry.id === block?.id ? 'active' : ''}
+                    onClick={() => editor.selectBlock(entry.id)}
+                  >
+                    {entry.type}
+                    <small>{entry.visible ? 'Visible' : 'Hidden'}</small>
                   </button>
                 </li>
               ))}
@@ -191,7 +222,7 @@ export default function CmsEditor({
   host,
   siteId,
   initialPageId = null,
-  initialRail = 'sections',
+  initialRail = 'groups',
   temporaryAdapter = false,
 }: CmsEditorProps) {
   const editor = useCmsEditorController({

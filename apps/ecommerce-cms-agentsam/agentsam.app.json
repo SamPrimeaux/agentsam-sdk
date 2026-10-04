@@ -2,7 +2,7 @@
   "schema": "agentsam.app.v1",
   "id": "ecommerce-cms-agentsam",
   "name": "AgentSam Ecommerce + CMS",
-  "version": "0.2.0",
+  "version": "2.6.11",
   "bin": "bin/agentsam-ecommerce.mjs",
   "commands": {
     "info": "agentsam-ecommerce info",
@@ -21,7 +21,16 @@
     "media": true,
     "catalog": true,
     "annotation": true,
-    "fulfillment_automation": false
+    "fulfillment_automation": false,
+    "pages": true,
+    "theme_editor": true,
+    "preview": true,
+    "publish": true,
+    "routes": true,
+    "groups": true,
+    "sections": true,
+    "blocks": true,
+    "composition_revisions": true
   },
   "modes": [
     "standalone",
@@ -35,7 +44,7 @@
     "provider.completeful",
     "provider.resend"
   ],
-  "notes": "Fuel & Free Time reference installation. Feature capsules under ../../features/*. App contract twin: .agentsam/app.json",
+  "notes": "Portable AgentSam Ecommerce + CMS application. Authoring is group/section/block-first; routes/pages are containers. Customer identity, content, providers, and credentials remain installation-owned.",
   "kind": "app",
   "package": "@inneranimalmedia/ecommerce-cms-agentsam",
   "preview": {

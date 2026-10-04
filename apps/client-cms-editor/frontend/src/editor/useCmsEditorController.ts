@@ -10,7 +10,7 @@ import type { CmsEditorHost } from '../../../shared/cms/src/host';
 import type { CmsPublicationSnapshot, CmsRevision } from '../../../shared/cms/src/adapter';
 
 export type CmsEditorUiState = {
-  rail: 'pages' | 'sections' | 'blocks' | 'media' | 'settings';
+  rail: 'groups' | 'sections' | 'blocks' | 'pages' | 'media' | 'settings';
   viewport: 'phone' | 'tablet' | 'desktop';
   dirty: boolean;
   saving: boolean;
@@ -55,7 +55,7 @@ export function useCmsEditorController({
   host,
   siteId,
   initialPageId = null,
-  initialRail = 'sections',
+  initialRail = 'groups',
   temporaryAdapter = false,
 }: UseCmsEditorControllerArgs): CmsEditorController {
   const [site, setSite] = useState<CmsEditorSite | null>(null);
@@ -121,7 +121,7 @@ export function useCmsEditorController({
     setPageId(id);
     setSectionId(null);
     setBlockId(null);
-    setUi((u) => ({ ...u, dirty: false, rail: 'sections' }));
+    setUi((u) => ({ ...u, dirty: false, rail: 'groups' }));
   }, []);
 
   const selectSection = useCallback((id: string) => {

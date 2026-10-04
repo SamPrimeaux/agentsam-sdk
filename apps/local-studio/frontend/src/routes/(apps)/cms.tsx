@@ -1,5 +1,5 @@
 // @ts-ignore Portable ecommerce CMS surface adapter.
-import { createCmsThemeEditorAdapter } from '@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/cms-adapter';
+import { CmsHubPage, createCmsThemeEditorAdapter, createHttpCmsAdapter } from '@inneranimalmedia/ecommerce-cms-agentsam/cms';
 import { ThemeStorePage } from '@/components/themes/ThemeStorePage';
 import { ThemeEditorFrame } from '@/components/themes/ThemeEditorFrame';
 import { ThemeProjectEditor } from '@/components/themes/ThemeProjectEditor';
@@ -7,10 +7,6 @@ import { studioCmsFetch } from '@/lib/cms/transport';
 import { getActiveThemeId } from '@/lib/themes/projects';
 import { useMemo, useState, useEffect } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import {
-  CmsHubPage,
-  createHttpCmsAdapter,
-} from "@inneranimalmedia/agentsam-cms-frontend";
 import { ContentStudioPage } from "@/components/content/ContentStudioPage";
 import {
   parseCmsNavigatePath,

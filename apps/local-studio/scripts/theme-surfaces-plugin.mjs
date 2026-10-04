@@ -27,7 +27,13 @@ export function discoverThemeSurfaces(root = repoRoot) {
     if (meta.kind !== 'theme' && !/\/(?:theme-[\w-]+|heuristic-theme|revise-theme)$/.test(pkg.name || '')) continue;
     const id = (pkg.name || '').split('/').pop().replace(/^theme-/, '');
     if (themes.has(pkg.name)) continue;
-    const roots = [meta.galleryPath && resolve(root, meta.galleryPath), join(p, 'assets'), join(p, 'public')].filter(Boolean);
+    const roots = [
+      meta.prebuildRoot && resolve(p, meta.prebuildRoot),
+      meta.galleryPath && resolve(root, meta.galleryPath),
+      join(p, 'site'),
+      join(p, 'assets'),
+      join(p, 'public'),
+    ].filter(Boolean);
     const source = roots.find((dir) => existsSync(dir) && statSync(dir).isDirectory() && (within(root, dir) || within(p, dir)));
     const pages = [];
     if (source) {

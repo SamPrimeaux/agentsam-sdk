@@ -1,36 +1,30 @@
 # AgentSam Ecommerce + CMS
 
-Fuel & Free Time is customer #1 and the first paying purchaser of
-@inneranimalmedia/ecommerce-cms-agentsam. It is not a donor project.
+`@inneranimalmedia/ecommerce-cms-agentsam` is the portable commerce + public-site authoring product used by AgentSam Local Studio and standalone customer installs.
 
-This F&FT repository is the first production customer installation of the
-product. The app owns the shared navigation renderer and contextual inspector.
-React mounts content through a portal into the same shell used by CMS, product
-editor and media pages. The public shell and inspector are generated mirrors.
+It owns the complete application composition surface: CMS hub, public-site/theme editing, media, commerce administration, analytics, and Theme Studio. `@inneranimalmedia/client-cms-editor` is the reusable editor engine; consumers should enter through this package when they want the complete ecommerce/CMS product.
 
-Customer-specific brand identity, products, media, campaigns, credentials and
-provider selections belong to the F&FT installation. Reusable application
-capabilities belong to @inneranimalmedia/ecommerce-cms-agentsam.
+## Public-site authoring
 
-## Theme packages
+The package is composition-first: groups organize sections, sections contain blocks, and routes/pages are containers and publication targets rather than the primary editing primitive. It supports durable group/section/block authoring, real theme-project editing, composition revisions/restores, draft preview, publication, media selection/upload, design tokens, theme packages, and import/export. Hosted authority uses D1 + the configured `WEBSITE_ASSETS` R2 role. Packaged Local Studio uses the same surface and routes authenticated CMS calls through the native desktop service bridge.
 
-The current customer storefront uses the local
-@inneranimalmedia/heuristic-theme. Additional themes are additive packages,
-not replacements for customer data.
+Site/account provisioning remains intentionally separate from content editing: the CMS edits a selected property but does not silently create/delete Cloudflare accounts, domains, or deployment resources.
 
-The first packaged alternate theme is @inneranimalmedia/revise-theme, backed by
-@inneranimalmedia/site-contracts and
-@inneranimalmedia/section-library. The ecommerce CMS is responsible for theme
-registration/selection and for passing normalized customer content into the
-selected theme.
+Exports:
 
-App-local commands:
+- `@inneranimalmedia/ecommerce-cms-agentsam/cms`
+- `@inneranimalmedia/ecommerce-cms-agentsam/cms/capabilities`
+- `@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/mount`
+- `@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/bridge`
+- `@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/project`
+- `@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/cms-adapter`
 
-    node apps/ecommerce-cms-agentsam/bin/agentsam-ecommerce.mjs info
-    node apps/ecommerce-cms-agentsam/bin/agentsam-ecommerce.mjs doctor
-    node apps/ecommerce-cms-agentsam/bin/agentsam-ecommerce.mjs preview
-    node apps/ecommerce-cms-agentsam/bin/agentsam-ecommerce.mjs scaffold /outside/empty-directory
+## Portable runtime
 
-The package exposes the top-level ecommerce executable when installed or linked. SDK registration uses agentsam.app.json and its bin. The SDK app already has a separate preview executable; do not blindly replace its host adapter. This workspace-source package must travel with its runtime source to scaffold.
+```bash
+npx agentsam-ecommerce doctor
+npx agentsam-ecommerce preview
+npx agentsam-ecommerce scaffold ./my-store
+```
 
-Scaffolds exclude credentials, local state, customer seeds and unrelated scripts. They retain sample storefront branding. Each owner provisions resources and provider accounts. Doctor checks source presence, not deployment readiness. See ecommerce-cms-agentsam.md for release gates.
+Scaffolds exclude credentials, private customer state, and provider secrets. Each owner provisions its own deployment resources and provider accounts.

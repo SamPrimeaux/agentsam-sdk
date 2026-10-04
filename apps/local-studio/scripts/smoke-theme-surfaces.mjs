@@ -110,7 +110,7 @@ try {
   assert.equal((result.blockHtml.match(/<h2[^>]*>One<\/h2>/g) || []).length, 2);
   assert.ok(!result.blockHtml.includes('>Two</h2>'));
   assert.equal(result.restored, 1);
-  // Create a real durable draft through the public management UI and mount the donor editor.
+  // Create a real durable draft through the public management UI and mount the packaged editor.
   await page.getByRole('button', { name: 'Create theme', exact: true }).click();
   await page.getByLabel('Name', { exact: true }).fill('Parity acceptance draft');
   await page.getByRole('button', { name: 'Create draft', exact: true }).click();

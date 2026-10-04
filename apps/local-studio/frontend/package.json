@@ -13,9 +13,6 @@
     "@inneranimalmedia/agentsam-assets-core": "2.6.11",
     "@inneranimalmedia/agentsam-brand": "2.6.11",
     "@inneranimalmedia/agentsam-cloudflare-images": "2.6.11",
-    "@inneranimalmedia/agentsam-cms-backend": "2.6.11",
-    "@inneranimalmedia/agentsam-cms-frontend": "2.6.11",
-    "@inneranimalmedia/agentsam-cms-shared": "2.6.11",
     "@inneranimalmedia/agentsam-content": "2.6.11",
     "@inneranimalmedia/agentsam-content-studio": "2.6.11",
     "@inneranimalmedia/agentsam-contracts": "2.6.11",
@@ -83,8 +80,7 @@
     "tw-animate-css": "^1.3.4",
     "vaul": "^1.1.2",
     "zod": "^4.4.0",
-    "zustand": "^5.0.0",
-    "@inneranimalmedia/ecommerce-cms-agentsam": "file:../../ecommerce-cms-agentsam"
+    "zustand": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.16.5",

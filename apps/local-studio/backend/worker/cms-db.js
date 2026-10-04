@@ -155,6 +155,36 @@ export function createCmsDbClient(db, rawProjectSlug) {
       return this.getPageById(pageId);
     },
 
+    async deletePage(pageId) {
+      const page = await this.getPageById(pageId);
+      if (!page) throw new Error(`Page ${pageId} not found for project ${projectSlug}`);
+
+      await db
+        .prepare(
+          `DELETE FROM cms_section_components
+           WHERE section_id IN (
+             SELECT s.id FROM cms_page_sections s
+             JOIN cms_pages p ON s.page_id = p.id
+             WHERE p.id = ? AND p.project_slug = ?
+           )`
+        )
+        .bind(pageId, projectSlug)
+        .run();
+
+      await db
+        .prepare(
+          `DELETE FROM cms_page_sections
+           WHERE page_id IN (SELECT id FROM cms_pages WHERE id = ? AND project_slug = ?)`
+        )
+        .bind(pageId, projectSlug)
+        .run();
+
+      await db
+        .prepare('DELETE FROM cms_pages WHERE id = ? AND project_slug = ?')
+        .bind(pageId, projectSlug)
+        .run();
+    },
+
     async publishPage(pageId, publishedBy = 'system') {
       const page = await this.getPageById(pageId);
       if (!page) throw new Error(`Page ${pageId} not found for project ${projectSlug}`);
@@ -224,6 +254,29 @@ export function createCmsDbClient(db, rawProjectSlug) {
 
       const updated = await db.prepare('SELECT * FROM cms_page_sections WHERE id = ?').bind(sectionId).all();
       return updated.results?.[0] || null;
+    },
+
+    async deleteSection(sectionId) {
+      const owned = await db
+        .prepare(
+          `SELECT s.id FROM cms_page_sections s
+           JOIN cms_pages p ON s.page_id = p.id
+           WHERE s.id = ? AND p.project_slug = ? LIMIT 1`
+        )
+        .bind(sectionId, projectSlug)
+        .all();
+      if (!owned.results?.length) {
+        throw new Error(`Section ${sectionId} not found for project ${projectSlug}`);
+      }
+
+      await db.prepare('DELETE FROM cms_section_components WHERE section_id = ?').bind(sectionId).run();
+      await db
+        .prepare(
+          `DELETE FROM cms_page_sections
+           WHERE id = ? AND page_id IN (SELECT id FROM cms_pages WHERE project_slug = ?)`
+        )
+        .bind(sectionId, projectSlug)
+        .run();
     },
 
     async setSectionVisibility(sectionId, isVisible) {
@@ -318,6 +371,33 @@ export function createCmsDbClient(db, rawProjectSlug) {
 
       const updated = await db.prepare('SELECT * FROM cms_section_components WHERE id = ?').bind(blockId).all();
       return updated.results?.[0] || null;
+    },
+
+    async deleteBlock(blockId) {
+      const owned = await db
+        .prepare(
+          `SELECT b.id FROM cms_section_components b
+           JOIN cms_page_sections s ON b.section_id = s.id
+           JOIN cms_pages p ON s.page_id = p.id
+           WHERE b.id = ? AND p.project_slug = ? LIMIT 1`
+        )
+        .bind(blockId, projectSlug)
+        .all();
+      if (!owned.results?.length) {
+        throw new Error(`Block ${blockId} not found for project ${projectSlug}`);
+      }
+
+      await db
+        .prepare(
+          `DELETE FROM cms_section_components
+           WHERE id = ? AND section_id IN (
+             SELECT s.id FROM cms_page_sections s
+             JOIN cms_pages p ON s.page_id = p.id
+             WHERE p.project_slug = ?
+           )`
+        )
+        .bind(blockId, projectSlug)
+        .run();
     },
 
     async setBlockVisibility(blockId, isVisible) {

@@ -27,12 +27,18 @@ test('mini composer exposes compact, focused, expandable review chrome', async (
   assert.match(css, /\.mini-agentsam-send svg[\s\S]*transform: none/);
 });
 
-test('Local Studio brand is packaged instead of depending on a remote image service', async () => {
+test('Local Studio brand uses the canonical packaged desktop icon', async () => {
   const brand = await readFile(
     new URL('../../../apps/local-studio/frontend/agentsam/brand.ts', import.meta.url),
     'utf8',
   );
-  assert.match(brand, /data:image\/svg\+xml/);
-  assert.match(brand, /logo: asDataUri\(DARK_MARK\)/);
-  assert.doesNotMatch(brand, /imagedelivery/);
+  const canonicalIcon = await readFile(
+    new URL('../../../packages/agentsam-desktop-shell/icons/local-studio/icon.png', import.meta.url),
+  );
+  const packagedIcon = await readFile(
+    new URL('../../../apps/local-studio/frontend/public/brand/agentsam-local-studio-icon.png', import.meta.url),
+  );
+  assert.match(brand, /\/brand\/agentsam-local-studio-icon\.png/);
+  assert.deepEqual(packagedIcon, canonicalIcon);
+  assert.doesNotMatch(brand, /imagedelivery|https?:\/\//);
 });

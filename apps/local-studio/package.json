@@ -43,7 +43,8 @@
     "smoke:themes": "node scripts/smoke-theme-surfaces.mjs",
     "verify:database-honesty": "node --test ../../test/database-hosted-honesty.test.mjs",
     "smoke:desktop-auth": "node scripts/smoke-desktop-auth.mjs",
-    "prepack": "npm run build:desktop"
+    "prepack": "npm run build:desktop",
+    "verify:cms-architecture": "node scripts/verify-cms-architecture.mjs"
   },
   "dependencies": {
     "@cloudflare/codemode": "^0.5.2",

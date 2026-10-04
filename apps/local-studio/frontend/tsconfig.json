@@ -27,24 +27,6 @@
       "@agentsam/icon-registry": [
         "../../../protocol/ui/icon-registry.mjs"
       ],
-      "@inneranimalmedia/agentsam-cms-frontend": [
-        "../../client-cms-editor/frontend/src/index.ts"
-      ],
-      "@inneranimalmedia/agentsam-cms-frontend/*": [
-        "../../client-cms-editor/frontend/src/*"
-      ],
-      "@inneranimalmedia/agentsam-cms-backend/*": [
-        "../../client-cms-editor/backend/src/*"
-      ],
-      "@inneranimalmedia/agentsam-cms-backend": [
-        "../../client-cms-editor/backend/src/index.ts"
-      ],
-      "@inneranimalmedia/agentsam-cms-shared": [
-        "../../client-cms-editor/shared/cms/src/index.ts"
-      ],
-      "@inneranimalmedia/agentsam-cms-shared/*": [
-        "../../client-cms-editor/shared/cms/src/*"
-      ],
       "@inneranimalmedia/agentsam-nav": [
         "../../../packages/agentsam-nav/src/index.ts"
       ],
@@ -89,6 +71,27 @@
       ],
       "@inneranimalmedia/agentsam-workbench/*": [
         "../../../packages/agentsam-workbench/src/*"
+      ],
+      "@inneranimalmedia/client-cms-editor": [
+        "../../client-cms-editor/frontend/src/index.ts"
+      ],
+      "@inneranimalmedia/ecommerce-cms-agentsam/cms": [
+        "../../ecommerce-cms-agentsam/frontend/cms/index.d.ts"
+      ],
+      "@inneranimalmedia/ecommerce-cms-agentsam/cms/capabilities": [
+        "../../ecommerce-cms-agentsam/frontend/cms/capabilities.d.ts"
+      ],
+      "@inneranimalmedia/agentsam-cms-backend": [
+        "../../client-cms-editor/backend/src/index.ts"
+      ],
+      "@inneranimalmedia/agentsam-cms-backend/*": [
+        "../../client-cms-editor/backend/src/*"
+      ],
+      "@inneranimalmedia/agentsam-cms-shared": [
+        "../../client-cms-editor/shared/cms/src/index.ts"
+      ],
+      "@inneranimalmedia/agentsam-cms-shared/*": [
+        "../../client-cms-editor/shared/cms/src/*"
       ]
     },
     "allowImportingTsExtensions": true,
