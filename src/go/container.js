@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { probeGoDeploymentWithRetry } from './cloudflare.js';
+import { probeGoDeploymentWithRetry } from './probe.js';
 
 function runDocker(args, { productRoot, spawn = spawnSync } = {}) {
   const res = spawn('docker', args, {

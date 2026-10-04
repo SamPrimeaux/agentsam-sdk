@@ -5,10 +5,15 @@ export {
   deployGoCloudflare,
   resolveConfiguredDeploymentUrl,
   resolveWranglerIdentity,
+  readLatestWranglerDeployment,
+  extractWorkersDevUrl,
+  guessWorkersDevUrl,
+} from './providers/cloudflare.js';
+
+export {
   probeGoDeployment,
   probeGoDeploymentWithRetry,
-  readLatestWranglerDeployment,
-} from './cloudflare.js';
+} from './probe.js';
 export { verifyGoContainer } from './container.js';
 export { verifyGoProduct } from './verify.js';
 export {
