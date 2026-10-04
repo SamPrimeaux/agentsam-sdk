@@ -26,3 +26,13 @@ test("memory repository round-trips assets without exposing mutable references",
   copy.name = "Changed";
   assert.equal(repo.get("asset:1").name, "Still");
 });
+
+
+test("waveform envelope is normalized and deterministic", async () => {
+  const { computeWaveformEnvelope } = await import("../src/index.js");
+  const source = Float32Array.from([0, .25, -.5, 1, -.75, .25, 0, .5]);
+  const samples = computeWaveformEnvelope(source, 8);
+  assert.equal(samples.length, 8);
+  assert.equal(Math.max(...samples), 1);
+  assert.deepEqual(samples, [0, .25, .5, 1, .75, .25, 0, .5]);
+});

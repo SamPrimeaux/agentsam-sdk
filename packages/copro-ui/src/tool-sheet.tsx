@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { CoProSheet } from "./sheet";
 
+export type CoProMediaShelfItem = {
+  id: string;
+  name: string;
+  kind: "video" | "audio" | "image";
+  url: string;
+  durationUs?: number;
+};
+
 export function CoProToolSheet({
   tool,
   open,
@@ -13,6 +21,8 @@ export function CoProToolSheet({
   onVolumeChange,
   onTextCommit,
   onMediaPicked,
+  mediaItems = [],
+  onMediaAdd,
 }: {
   tool: string | null;
   open: boolean;
@@ -25,6 +35,8 @@ export function CoProToolSheet({
   onVolumeChange?: (volume: number) => void;
   onTextCommit?: (text: string, kind: "overlay" | "captions") => void;
   onMediaPicked?: (file: File) => void;
+  mediaItems?: CoProMediaShelfItem[];
+  onMediaAdd?: (id: string) => void;
 }) {
   const [speed, setSpeed] = useState(initialSpeed);
   const [volume, setVolume] = useState(Math.round(initialVolume * 100));
@@ -123,22 +135,49 @@ export function CoProToolSheet({
           ))}
         </div>
       ) : tool === "media" ? (
-        <div className="copro-media-import">
-          <input
-            id="copro-file-input"
-            type="file"
-            accept="video/*,audio/*,image/*"
-            multiple={false}
-            onChange={(event) => {
-              const file = event.currentTarget.files?.[0];
-              if (!file) return;
-              onMediaPicked?.(file);
-              onClose();
-            }}
-          />
-          <label htmlFor="copro-file-input" className="copro-file-picker">
-            <b>＋</b><strong>Choose media</strong><span>Video, image, or audio from this device</span>
-          </label>
+        <div className="copro-media-library">
+          <div className="copro-media-import">
+            <input
+              id="copro-file-input"
+              type="file"
+              accept="video/*,audio/*,image/*"
+              multiple={false}
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0];
+                if (!file) return;
+                onMediaPicked?.(file);
+                event.currentTarget.value = "";
+              }}
+            />
+            <label htmlFor="copro-file-input" className="copro-file-picker copro-file-picker-compact">
+              <b>＋</b><strong>Import media</strong><span>From this device</span>
+            </label>
+          </div>
+
+          {mediaItems.length ? (
+            <div className="copro-media-shelf">
+              {mediaItems.map((item) => (
+                <article className="copro-media-shelf-item" key={item.id}>
+                  <div className="copro-media-shelf-preview">
+                    {item.kind === "image" ? (
+                      <img src={item.url} alt="" />
+                    ) : item.kind === "video" ? (
+                      <video src={item.url} muted playsInline preload="metadata" />
+                    ) : (
+                      <span>♪</span>
+                    )}
+                  </div>
+                  <div className="copro-media-shelf-copy">
+                    <strong>{item.name}</strong>
+                    <small>{item.kind}{item.durationUs ? " · " + formatDuration(item.durationUs) : ""}</small>
+                  </div>
+                  <button onClick={() => onMediaAdd?.(item.id)}>Add</button>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="copro-media-empty">Imported media will stay here for this editing session.</p>
+          )}
         </div>
       ) : (
         <div className="copro-capability-note">
@@ -148,4 +187,12 @@ export function CoProToolSheet({
       )}
     </CoProSheet>
   );
+}
+
+
+function formatDuration(durationUs: number) {
+  const total = Math.max(0, Math.round(durationUs / 1_000_000));
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  return minutes + ":" + String(seconds).padStart(2, "0");
 }

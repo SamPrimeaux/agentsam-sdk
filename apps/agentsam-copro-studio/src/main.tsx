@@ -3,16 +3,23 @@ import { createRoot } from "react-dom/client";
 import { CoProEditorSession } from "@inneranimalmedia/copro-editor";
 import { createCoProProject, createTrack, createClip } from "@inneranimalmedia/copro-project";
 import { BrowserLocalStorageProjectStore } from "@inneranimalmedia/copro-storage";
+import { extractBrowserAudioWaveform } from "@inneranimalmedia/copro-media";
 import {
   CoProProjectsScreen,
   CoProSheet,
   CoProStudio,
   type CoProProjectSummary,
   type CoProStudioAction,
+  type CoProMediaShelfItem,
 } from "@inneranimalmedia/copro-ui";
 import "@inneranimalmedia/copro-ui/styles.css";
 
 type Screen = "projects" | "editor";
+
+type SessionMediaItem = CoProMediaShelfItem & {
+  file: File;
+  waveform?: number[];
+};
 
 const FIXTURE_PROJECTS: CoProProjectSummary[] = [
   { id:"demo:weekend", title:"Weekend cut", subtitle:"Short-form video", kind:"video", status:"draft", durationMs:11_900, aspectRatio:"9:16", updatedAt:"2026-10-04T17:10:00Z", thumbnailTone:"cyan" },
@@ -132,6 +139,7 @@ function App() {
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [previewKind, setPreviewKind] = useState<"video" | "image" | null>(null);
   const [restored, setRestored] = useState(false);
+  const [mediaItems, setMediaItems] = useState<SessionMediaItem[]>([]);
 
   const projects = useMemo(() => FIXTURE_PROJECTS, []);
 
@@ -191,10 +199,94 @@ function App() {
     const url = URL.createObjectURL(file);
     const next = makeImportedProject(file);
     installProject(next, "clip:imported");
+    void registerSessionMedia(file);
     setPreviewSrc(url);
     setPreviewKind(file.type.startsWith("image/") ? "image" : file.type.startsWith("video/") ? "video" : null);
     setCreateOpen(false);
     setScreen("editor");
+  }
+
+
+  async function registerSessionMedia(file: File): Promise<SessionMediaItem> {
+    const kind: SessionMediaItem["kind"] =
+      file.type.startsWith("audio/") ? "audio" :
+      file.type.startsWith("image/") ? "image" :
+      "video";
+
+    const id = "asset:" + file.name + ":" + file.lastModified + ":" + file.size;
+    const existing = mediaItems.find((item) => item.id === id);
+    if (existing) return existing;
+
+    let durationUs = await probeMediaDurationUs(file);
+    let waveform: number[] | undefined;
+
+    if (kind === "audio") {
+      const decoded = await extractBrowserAudioWaveform(file, 120);
+      if (decoded.ok) {
+        durationUs = decoded.durationUs;
+        waveform = decoded.samples;
+      }
+    }
+
+    const item: SessionMediaItem = {
+      id,
+      name:file.name,
+      kind,
+      url:URL.createObjectURL(file),
+      durationUs,
+      file,
+      waveform,
+    };
+
+    setMediaItems((current) => [...current, item]);
+    return item;
+  }
+
+  function addSessionMediaToTimeline(item: SessionMediaItem, atUs: number) {
+    const session = sessionRef.current;
+    const kind = item.kind === "audio" ? "audio" : item.kind === "image" ? "overlay" : "video";
+
+    let currentProject = session.project;
+    let track = currentProject.tracks.find((entry:any) => entry.kind === kind && !entry.locked);
+
+    if (!track) {
+      const trackId = "track:" + kind + ":" + Date.now();
+      const created = createTrack({
+        id:trackId,
+        kind,
+        name:kind === "overlay" ? "Overlay" : kind.charAt(0).toUpperCase() + kind.slice(1),
+      });
+      currentProject = session.execute({ type:"track.insert", payload:{ track:created } });
+      track = currentProject.tracks.find((entry:any) => entry.id === trackId);
+    }
+
+    if (!track) return;
+
+    const clipId = "clip:media:" + Date.now() + ":" + Math.random().toString(36).slice(2,6);
+    const clip = createClip({
+      id:clipId,
+      assetId:item.id,
+      startUs:atUs,
+      durationUs:item.durationUs ?? 3_000_000,
+      metadata:{
+        fileName:item.name,
+        mimeType:item.file.type,
+        localSessionOnly:true,
+        ...(item.waveform ? { waveform:item.waveform } : {}),
+      },
+    });
+
+    const next = session.execute({
+      type:"clip.insert",
+      payload:{ trackId:track.id, clip },
+    });
+    setProject(next);
+    setSelectedClipId(clipId);
+
+    if (item.kind === "video" || item.kind === "image") {
+      setPreviewSrc(item.url);
+      setPreviewKind(item.kind);
+    }
   }
 
   async function commit(action: CoProStudioAction) {
@@ -212,57 +304,8 @@ function App() {
     if (action.type === "track-reorder") { setProject(session.execute({ type:"track.reorder", payload:{ trackId:action.trackId, index:action.index } })); return; }
 
     if (action.type === "import-media") {
-      const file = action.file;
-      const durationUs = await probeMediaDurationUs(file);
-      const mime = file.type;
-      const kind = mime.startsWith("audio/") ? "audio" : mime.startsWith("image/") ? "overlay" : "video";
-
-      let track = project.tracks.find((item:any) => item.kind === kind && !item.locked);
-      if (!track) {
-        const trackId = "track:" + kind + ":" + Date.now();
-        const created = createTrack({
-          id:trackId,
-          kind,
-          name:kind === "overlay" ? "Overlay" : kind.charAt(0).toUpperCase() + kind.slice(1),
-        });
-        const afterTrack = session.execute({ type:"track.insert", payload:{ track:created } });
-        setProject(afterTrack);
-        track = afterTrack.tracks.find((item:any) => item.id === trackId);
-      }
-
-      if (!track) return;
-
-      const clipId = "clip:media:" + Date.now();
-      const clip = createClip({
-        id:clipId,
-        assetId:"asset:" + file.name + ":" + file.lastModified,
-        startUs:action.atUs,
-        durationUs,
-        metadata:{
-          fileName:file.name,
-          mimeType:file.type,
-          localSessionOnly:true,
-        },
-      });
-
-      const next = session.execute({
-        type:"clip.insert",
-        payload:{ trackId:track.id, clip },
-      });
-      setProject(next);
-      setSelectedClipId(clipId);
-
-      if (previewSrc) URL.revokeObjectURL(previewSrc);
-      const url = URL.createObjectURL(file);
-      if (file.type.startsWith("video/")) {
-        setPreviewSrc(url);
-        setPreviewKind("video");
-      } else if (file.type.startsWith("image/")) {
-        setPreviewSrc(url);
-        setPreviewKind("image");
-      } else {
-        URL.revokeObjectURL(url);
-      }
+      const item = await registerSessionMedia(action.file);
+      addSessionMediaToTimeline(item, action.atUs);
       return;
     }
 
@@ -373,6 +416,11 @@ function App() {
     canRedo={sessionRef.current.canRedo}
     previewSrc={previewSrc}
     previewKind={previewKind}
+    mediaItems={mediaItems}
+    onMediaAdd={(id, atUs) => {
+      const item = mediaItems.find((entry) => entry.id === id);
+      if (item) addSessionMediaToTimeline(item, atUs);
+    }}
     onSeek={setPlayheadUs}
     onSelectClip={setSelectedClipId}
     onAction={commit}

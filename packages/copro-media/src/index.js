@@ -71,3 +71,54 @@ export class MemoryMediaRepository {
     return this.#assets.delete(id);
   }
 }
+
+
+export function computeWaveformEnvelope(channelData, sampleCount = 96) {
+  if (!channelData || typeof channelData.length !== "number" || channelData.length === 0) {
+    return [];
+  }
+  const count = Math.max(8, Math.min(512, Math.round(sampleCount)));
+  const blockSize = Math.max(1, Math.floor(channelData.length / count));
+  const envelope = [];
+
+  for (let index = 0; index < count; index += 1) {
+    const start = index * blockSize;
+    const end = index === count - 1 ? channelData.length : Math.min(channelData.length, start + blockSize);
+    let peak = 0;
+    for (let cursor = start; cursor < end; cursor += 1) {
+      peak = Math.max(peak, Math.abs(channelData[cursor] ?? 0));
+    }
+    envelope.push(Number(peak.toFixed(4)));
+  }
+
+  const max = Math.max(...envelope, 0);
+  if (max <= 0) return envelope;
+  return envelope.map((value) => Number((value / max).toFixed(4)));
+}
+
+export async function extractBrowserAudioWaveform(blob, sampleCount = 96) {
+  const AudioContextCtor = globalThis.AudioContext || globalThis.webkitAudioContext;
+  if (!AudioContextCtor) {
+    return { ok: false, reason: "audio_context_unavailable", samples: [] };
+  }
+
+  const context = new AudioContextCtor();
+  try {
+    const buffer = await blob.arrayBuffer();
+    const decoded = await context.decodeAudioData(buffer.slice(0));
+    const channel = decoded.getChannelData(0);
+    return {
+      ok: true,
+      durationUs: Math.round(decoded.duration * 1_000_000),
+      samples: computeWaveformEnvelope(channel, sampleCount),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      reason: error instanceof Error ? error.message : "audio_decode_failed",
+      samples: [],
+    };
+  } finally {
+    await context.close().catch(() => undefined);
+  }
+}

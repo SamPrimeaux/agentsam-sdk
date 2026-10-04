@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CoProTimeline, type CoProProjectView } from "./timeline";
-import { CoProToolSheet } from "./tool-sheet";
+import { CoProToolSheet, type CoProMediaShelfItem } from "./tool-sheet";
 import { CoProExportSheet } from "./export-sheet";
 
 export type CoProStudioAction =
@@ -30,8 +30,10 @@ export type CoProStudioProps = {
   projectTitle?: string;
   previewSrc?: string | null;
   previewKind?: "video" | "image" | null;
+  mediaItems?: CoProMediaShelfItem[];
   onSeek?: (timeUs: number) => void;
   onSelectClip?: (clipId: string) => void;
+  onMediaAdd?: (id: string, atUs: number) => void;
   onAction?: (action: CoProStudioAction) => void;
 };
 
@@ -62,8 +64,10 @@ export function CoProStudio({
   projectTitle = "Untitled project",
   previewSrc,
   previewKind,
+  mediaItems = [],
   onSeek,
   onSelectClip,
+  onMediaAdd,
   onAction,
 }: CoProStudioProps) {
   const [playing, setPlaying] = useState(false);
@@ -294,6 +298,8 @@ export function CoProStudio({
           }
         }}
         onMediaPicked={(file) => onAction?.({ type: "import-media", file, atUs: playheadUs })}
+        mediaItems={mediaItems}
+        onMediaAdd={(id) => onMediaAdd?.(id, playheadUs)}
       />
       <CoProExportSheet open={exportOpen} onClose={() => setExportOpen(false)} />
     </section>

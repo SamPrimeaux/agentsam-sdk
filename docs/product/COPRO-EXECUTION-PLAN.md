@@ -20,12 +20,20 @@ Completed in current branch:
 - canonical track visibility/mute/lock state;
 - multi-track demo project with video, audio, captions, and overlay tracks.
 
+Completed additionally:
+- reusable in-editor Media shelf;
+- add imported media to the existing timeline at the playhead;
+- reuse session media multiple times;
+- browser media duration probing;
+- browser-decoded audio waveform envelopes when supported.
+
 Remaining:
 - IndexedDB/OPFS large-project storage;
-- media drawer that adds/replaces assets inside an existing project;
-- metadata probing;
-- real thumbnails/proxies;
-- durable imported asset handles across reload.
+- durable imported asset handles across reload;
+- generated video thumbnails/posters;
+- proxy generation for heavy footage;
+- replace-clip flow;
+- richer metadata probing.
 
 ## Sprint 2 — real editor completion
 
@@ -41,16 +49,24 @@ Completed in current branch:
 - text/caption editing through canonical clip text commands;
 - audio/caption/overlay visual lanes.
 
+Completed additionally:
+- track reorder controls;
+- real decoded audio waveform extraction for supported browser codecs;
+- speed-aware clip duration semantics;
+- selected clip playback speed/volume reflected in preview;
+- create/edit text and captions as real timeline clips;
+- live text/caption canvas overlays;
+- keyboard shortcuts for undo/redo/delete/split/play-pause;
+- add media into an existing edit.
+
 Remaining:
-- track drag reorder UI;
-- real decoded audio waveform extraction;
-- speed-aware media playback/render semantics;
+- drag-based track reorder;
 - volume envelopes/fades;
-- canvas text transforms;
+- canvas text drag/resize/rotate;
 - transitions;
 - real effects adapters;
-- keyboard shortcuts;
-- selection/inspector polish.
+- richer inspector;
+- shortcut customization.
 
 ## Sprint 3 — preview/render
 

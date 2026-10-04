@@ -9,7 +9,10 @@
   },
   "main": "./src/index.js",
   "exports": {
-    ".": "./src/index.js",
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -35,5 +38,6 @@
     "provenance",
     "video",
     "agentsam"
-  ]
+  ],
+  "types": "./src/index.d.ts"
 }

@@ -295,8 +295,15 @@ export function CoProTimeline({
 
                         {track.kind === "audio" ? (
                           <div className="copro-waveform" aria-hidden="true">
-                            {Array.from({ length: Math.max(8, Math.ceil(width / 8)) }, (_, index) => (
-                              <i key={index} style={{ height: (26 + ((index * 37) % 62)) + "%" }} />
+                            {(Array.isArray(clip.metadata?.waveform) && clip.metadata.waveform.length
+                              ? clip.metadata.waveform
+                              : Array.from({ length: Math.max(8, Math.ceil(width / 8)) }, (_, index) => .26 + (((index * 37) % 62) / 100))
+                            ).map((sample, index) => (
+                              <i
+                                key={index}
+                                className={Array.isArray(clip.metadata?.waveform) ? "is-decoded" : "is-fallback"}
+                                style={{ height: Math.max(8, Math.min(100, Number(sample) * 100)) + "%" }}
+                              />
                             ))}
                           </div>
                         ) : track.kind === "captions" || track.kind === "overlay" ? (
