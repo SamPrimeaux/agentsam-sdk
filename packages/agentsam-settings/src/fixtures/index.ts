@@ -1,8 +1,50 @@
 import type {
   SettingsCapabilities,
   SettingsHost,
+  SettingsPlugin,
   SettingsSnapshot,
+  SettingsWidget,
 } from "../contracts/index";
+
+function fixturePlugin(value: Pick<SettingsPlugin, "id" | "name" | "subtitle" | "status"> & Partial<SettingsPlugin>): SettingsPlugin {
+  return {
+    pluginKey: value.id,
+    providerKey: value.id,
+    installationKey: "fixture",
+    environment: "fixture",
+    kind: "api",
+    category: "fixture",
+    meta: "Fixture",
+    transport: "internal",
+    authType: "none",
+    setupStatus: "connected",
+    healthStatus: value.status === "healthy" ? "healthy" : "unknown",
+    healthStrategy: "fixture",
+    enabled: true,
+    composerVisible: true,
+    settingsVisible: true,
+    capabilities: [],
+    toolLanes: [],
+    toolCount: 0,
+    ...value,
+  };
+}
+
+const fixtureWidgets: SettingsWidget[] = [
+  {
+    id: "countdown",
+    name: "Countdown",
+    description: "Portable countdown widget fixture.",
+    kind: "countdown",
+    icon: "clock-3",
+    sizes: ["small", "medium"],
+    visible: true,
+    removable: false,
+    source: "Built in",
+    preferenceScope: "This device",
+    deeplink: "/widgets",
+  },
+];
 
 const baseSnapshot: SettingsSnapshot = {
   fixtureName: "populated",
@@ -110,28 +152,43 @@ const baseSnapshot: SettingsSnapshot = {
     },
   ],
   plugins: [
-    {
+    fixturePlugin({
       id: "plugin-github",
+      pluginKey: "github",
+      providerKey: "github",
       name: "GitHub",
       subtitle: "Repository and pull request operations",
       status: "healthy",
-      meta: "Connected",
-    },
-    {
+      authType: "oauth",
+      transport: "http_rest",
+      capabilities: ["repository.read", "pull_request.write"],
+      toolCount: 8,
+    }),
+    fixturePlugin({
       id: "plugin-cloudflare",
-      name: "Cloudflare",
-      subtitle: "Workers, D1, R2, DNS and account resources",
+      pluginKey: "agentsam-mcp",
+      providerKey: "cloudflare",
+      name: "AgentSam MCP",
+      subtitle: "Cloudflare account tools through OAuth",
       status: "healthy",
-      meta: "OAuth",
-    },
-    {
+      authType: "oauth",
+      transport: "http_rest",
+      capabilities: ["cloudflare.api.search", "cloudflare.api.execute"],
+      toolLanes: ["typed", "mcp", "api", "codemode"],
+      toolCount: 3,
+    }),
+    fixturePlugin({
       id: "plugin-figma",
+      pluginKey: "figma",
+      providerKey: "figma",
       name: "Figma",
       subtitle: "Design inspection and implementation workflows",
       status: "unknown",
-      meta: "Optional",
-    },
+      setupStatus: "unconfigured",
+      enabled: false,
+    }),
   ],
+  widgets: fixtureWidgets,
   mcps: [
     {
       id: "mcp-iam",
@@ -363,6 +420,7 @@ export const firstRunSettingsFixture: SettingsSnapshot = {
   agents: [],
   models: [],
   plugins: [],
+  widgets: fixtureWidgets,
   mcps: [],
   themes: baseSnapshot.themes.slice(0, 1),
   storage: baseSnapshot.storage.slice(0, 1),
@@ -424,6 +482,27 @@ export function createFixtureSettingsHost(
     async snapshot() {
       return current;
     },
+    async setPluginEnabled(id, enabled) {
+      current = {
+        ...current,
+        plugins: current.plugins.map((plugin) =>
+          plugin.id === id ? { ...plugin, enabled } : plugin,
+        ),
+      };
+      subscribers.forEach((callback) => callback());
+    },
+    async beginPluginSetup() {},
+    async disconnectPlugin() {},
+    async setWidgetVisible(id, visible) {
+      current = {
+        ...current,
+        widgets: current.widgets.map((widget) =>
+          widget.id === id ? { ...widget, visible } : widget,
+        ),
+      };
+      subscribers.forEach((callback) => callback());
+    },
+    openWidget() {},
     async upsertCatalogItem(kind, item) {
       current = {
         ...current,

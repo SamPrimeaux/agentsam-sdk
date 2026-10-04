@@ -42,9 +42,11 @@ export async function installPlugin(db, options = {}) {
         provider_key=?, plugin_kind=?, category=?, display_name=?, short_name=?, description=?, mention_aliases_json=?,
         endpoint_url=?, transport=?, auth_type=?, secret_ref=?, oauth_connect_url=?, capabilities_json=?, tool_lanes_json=?,
         resource_scope_json=?, config_json=?, metadata_json=?, icon_url=?, icon_dark_url=?, icon_alt=?, icon_fit=?,
-        composer_visible=?, settings_visible=?, sort_priority=?, health_strategy=?, is_enabled=1, updated_at=unixepoch()
+        composer_visible=?, settings_visible=?, sort_priority=?, health_strategy=?,
+        is_enabled=CASE WHEN ? THEN is_enabled ELSE 1 END,
+        updated_at=unixepoch()
       WHERE id=?
-    `, [...values, pluginId]);
+    `, [...values, options.preserveEnabled === true ? 1 : 0, pluginId]);
   } else {
     await runMutation(db, `
       INSERT INTO agentsam_plugins (
@@ -122,11 +124,13 @@ export async function installPlugin(db, options = {}) {
 export async function listPlugins(db, options = {}) {
   const accountId = clean(options.accountId);
   const environment = clean(options.environment || 'production');
+  const includeDisabled = options.includeDisabled === true;
   const result = await db.prepare(`
     SELECT * FROM agentsam_plugins
-    WHERE account_id = ? AND environment = ? AND is_enabled = 1
+    WHERE account_id = ? AND environment = ?
+      AND (? = 1 OR is_enabled = 1)
     ORDER BY sort_priority, display_name
-  `).bind(accountId, environment).all();
+  `).bind(accountId, environment, includeDisabled ? 1 : 0).all();
   return (result?.results || []).map((row) => ({
     ...row,
     mention_aliases: json(row.mention_aliases_json, []), capabilities: json(row.capabilities_json, []),
@@ -137,16 +141,65 @@ export async function listPlugins(db, options = {}) {
 
 export async function listPluginTools(db, options = {}) {
   const accountId = clean(options.accountId);
+  const includeDisabledPlugins = options.includeDisabledPlugins === true;
   const result = await db.prepare(`
     SELECT t.* FROM agentsam_tools t
     JOIN agentsam_plugins p ON p.id = t.plugin_id
-    WHERE t.account_id = ? AND t.is_active = 1 AND p.is_enabled = 1
+    WHERE t.account_id = ? AND t.is_active = 1
+      AND (? = 1 OR p.is_enabled = 1)
     ORDER BY t.connector_priority, t.sort_priority, t.tool_name
-  `).bind(accountId).all();
+  `).bind(accountId, includeDisabledPlugins ? 1 : 0).all();
   return (result?.results || []).map((row) => ({
     ...row, input_schema: json(row.input_schema, {}), output_schema: json(row.output_schema, null),
     handler_config: json(row.handler_config, {}), intent_tags: json(row.intent_tags, []),
   }));
+}
+
+
+export async function updatePluginPreferences(db, options = {}) {
+  if (!db?.prepare) throw new TypeError('D1-compatible database binding required');
+  const accountId = clean(options.accountId);
+  const pluginId = clean(options.pluginId);
+  if (!accountId) throw new Error('plugin_account_id_required');
+  if (!pluginId) throw new Error('plugin_id_required');
+
+  const fields = [];
+  const values = [];
+  if (typeof options.enabled === 'boolean') {
+    fields.push('is_enabled=?');
+    values.push(options.enabled ? 1 : 0);
+  }
+  if (typeof options.composerVisible === 'boolean') {
+    fields.push('composer_visible=?');
+    values.push(options.composerVisible ? 1 : 0);
+  }
+  if (typeof options.settingsVisible === 'boolean') {
+    fields.push('settings_visible=?');
+    values.push(options.settingsVisible ? 1 : 0);
+  }
+  if (!fields.length) throw new Error('plugin_preferences_empty');
+
+  await runMutation(db, `
+    UPDATE agentsam_plugins
+    SET ${fields.join(', ')}, updated_at=unixepoch()
+    WHERE id=? AND account_id=?
+  `, [...values, pluginId, accountId]);
+
+  const row = await db.prepare(`
+    SELECT * FROM agentsam_plugins
+    WHERE id=? AND account_id=?
+    LIMIT 1
+  `).bind(pluginId, accountId).first();
+  if (!row) throw new Error('plugin_not_found');
+  return {
+    ...row,
+    mention_aliases: json(row.mention_aliases_json, []),
+    capabilities: json(row.capabilities_json, []),
+    tool_lanes: json(row.tool_lanes_json, []),
+    resource_scope: json(row.resource_scope_json, {}),
+    config: json(row.config_json, {}),
+    metadata: json(row.metadata_json, {}),
+  };
 }
 
 export async function recordPluginHealthCheck(db, value = {}) {

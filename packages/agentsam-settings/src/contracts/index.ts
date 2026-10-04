@@ -109,6 +109,50 @@ export type SettingsCatalogItem = {
   meta?: string;
 };
 
+export type SettingsPlugin = SettingsCatalogItem & {
+  pluginKey: string;
+  providerKey: string;
+  installationKey: string;
+  environment: string;
+  kind: string;
+  category: string;
+  transport: string;
+  authType: string;
+  setupStatus: string;
+  healthStatus: string;
+  healthStrategy: string;
+  enabled: boolean;
+  composerVisible: boolean;
+  settingsVisible: boolean;
+  setupUrl?: string | null;
+  disconnectUrl?: string | null;
+  iconUrl?: string | null;
+  iconDarkUrl?: string | null;
+  iconAlt?: string | null;
+  iconFit?: "contain" | "cover";
+  capabilities: string[];
+  toolLanes: string[];
+  toolCount: number;
+  lastHealthAt?: number | null;
+  lastHealthyAt?: number | null;
+  lastErrorCode?: string | null;
+  lastErrorMessage?: string | null;
+};
+
+export type SettingsWidget = {
+  id: string;
+  name: string;
+  description: string;
+  kind: string;
+  icon?: string | null;
+  sizes: string[];
+  visible: boolean;
+  removable: boolean;
+  source: string;
+  preferenceScope: string;
+  deeplink?: string | null;
+};
+
 export type SettingsCatalogKind =
   | "plugins"
   | "mcps"
@@ -156,7 +200,8 @@ export type SettingsSnapshot = {
   credentials: SettingsCredential[];
   agents: SettingsAgent[];
   models: SettingsModel[];
-  plugins: SettingsCatalogItem[];
+  plugins: SettingsPlugin[];
+  widgets: SettingsWidget[];
   mcps: SettingsCatalogItem[];
   skills: SettingsCatalogItem[];
   subagents: SettingsCatalogItem[];
@@ -202,6 +247,12 @@ export interface SettingsHost {
   snapshot(): Promise<SettingsSnapshot>;
   upsertCatalogItem?(kind: SettingsCatalogKind, item: SettingsCatalogItem): Promise<void>;
   removeCatalogItem?(kind: SettingsCatalogKind, id: string): Promise<void>;
+  setPluginEnabled?(id: string, enabled: boolean): Promise<void>;
+  beginPluginSetup?(id: string): Promise<void>;
+  disconnectPlugin?(id: string): Promise<void>;
+  setWidgetVisible?(id: string, visible: boolean): Promise<void>;
+  openWidget?(id: string): void;
+  removeWidget?(id: string): Promise<void>;
   subscribe?(unitId: SettingsUnitId, callback: () => void): () => void;
 }
 

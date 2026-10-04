@@ -24,10 +24,48 @@ export type LocalStudioConnectionRecord = {
   };
 };
 
+export type LocalStudioPluginRecord = {
+  id: string;
+  plugin_key: string;
+  provider_key: string;
+  installation_key: string;
+  environment: string;
+  plugin_kind: string;
+  category: string;
+  display_name: string;
+  short_name?: string | null;
+  description?: string | null;
+  transport: string;
+  auth_type: string;
+  setup_url?: string | null;
+  disconnect_url?: string | null;
+  icon_url?: string | null;
+  icon_dark_url?: string | null;
+  icon_alt?: string | null;
+  icon_fit?: "contain" | "cover";
+  composer_visible: boolean;
+  settings_visible: boolean;
+  is_enabled: boolean;
+  setup_status: string;
+  health_strategy: string;
+  health_status: string;
+  last_health_at?: number | null;
+  last_healthy_at?: number | null;
+  consecutive_failures: number;
+  avg_latency_ms?: number | null;
+  error_rate_24h: number;
+  last_error_code?: string | null;
+  last_error_message?: string | null;
+  capabilities: string[];
+  tool_lanes: string[];
+  tool_count: number;
+};
+
 export type LocalStudioConnectionsResponse = {
   ok?: boolean;
   connections?: LocalStudioConnectionRecord[];
   items?: LocalStudioConnectionRecord[];
+  plugins?: LocalStudioPluginRecord[];
   error?: string;
 };
 
@@ -143,4 +181,45 @@ export async function disconnectLocalStudioProvider(provider: string) {
     "/api/connections/" + encodeURIComponent(providerId) + "/disconnect",
     { method: "POST", body: {} },
   );
+}
+
+
+export async function updateLocalStudioPlugin(
+  pluginId: string,
+  patch: {
+    enabled?: boolean;
+    composer_visible?: boolean;
+    settings_visible?: boolean;
+  },
+) {
+  const id = String(pluginId || "").trim();
+  if (!/^plg_[a-z0-9]+$/i.test(id)) throw new Error("plugin_id_invalid");
+  const path = "/api/plugins/" + encodeURIComponent(id);
+
+  if (isPackagedDesktop()) {
+    const accountId = await resolveDesktopStudioAccountId();
+    const response = await invokeStudioService({
+      operation: "plugins",
+      account_id: accountId,
+      method: "PATCH",
+      path,
+      body: patch,
+    });
+    const payload = parseJsonBody(response.body);
+    if (!response.ok) throw responseError(response.status, payload);
+    return payload as { ok?: boolean; plugin?: LocalStudioPluginRecord; error?: string };
+  }
+
+  const response = await fetch(path, {
+    method: "PATCH",
+    credentials: "same-origin",
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(patch),
+  });
+  const payload = parseJsonBody(await response.text());
+  if (!response.ok) throw responseError(response.status, payload);
+  return payload as { ok?: boolean; plugin?: LocalStudioPluginRecord; error?: string };
 }

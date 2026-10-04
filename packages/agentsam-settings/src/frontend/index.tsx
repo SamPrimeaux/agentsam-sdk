@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   ChevronRight,
   CircleDot,
+  Clock3,
   Cloud,
   Code2,
   Copy,
@@ -23,7 +24,9 @@ import {
   Menu,
   Paintbrush,
   Palette,
+  Plug,
   Plus,
+  RefreshCw,
   Search,
   Settings,
   ShieldCheck,
@@ -47,7 +50,9 @@ import type {
   SettingsHost,
   SettingsManifest,
   SettingsModel,
+  SettingsPlugin,
   SettingsSnapshot,
+  SettingsWidget,
   SettingsTheme,
   SettingsUnitDefinition,
   SettingsUnitId,
@@ -553,6 +558,349 @@ function Catalog({
   );
 }
 
+function ExtensionTile({
+  name,
+  subtitle,
+  imageUrl,
+  imageAlt,
+  imageFit = "contain",
+  icon,
+  badge,
+  muted = false,
+  onClick,
+}: {
+  name: string;
+  subtitle: string;
+  imageUrl?: string | null;
+  imageAlt?: string | null;
+  imageFit?: "contain" | "cover";
+  icon?: ReactNode;
+  badge?: ReactNode;
+  muted?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cx(
+        "group min-w-0 rounded-2xl border border-transparent p-2.5 text-center transition",
+        "hover:border-border/80 hover:bg-muted/25 focus-visible:border-foreground/30 focus-visible:outline-none",
+        muted && "opacity-55",
+      )}
+    >
+      <div className="relative mx-auto size-16">
+        <div className="flex size-16 items-center justify-center overflow-hidden rounded-[16px] border border-white/10 bg-gradient-to-br from-muted/90 via-muted/45 to-background shadow-[0_8px_26px_rgba(0,0,0,0.24)] ring-1 ring-black/10 transition-transform group-hover:-translate-y-0.5">
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={imageAlt || ""}
+              className={cx("size-full", imageFit === "cover" ? "object-cover" : "object-contain p-2.5")}
+            />
+          ) : (
+            icon ?? <Boxes className="size-6 text-muted-foreground" />
+          )}
+        </div>
+        {badge ? <div className="absolute -bottom-1 -right-1">{badge}</div> : null}
+      </div>
+      <div className="mt-2 truncate text-[11px] font-medium text-foreground">{name}</div>
+      <div className="mt-0.5 truncate text-[9px] text-muted-foreground">{subtitle}</div>
+    </button>
+  );
+}
+
+function PluginCustomizeView({
+  plugins,
+  host,
+  onChanged,
+}: {
+  plugins: SettingsPlugin[];
+  host: SettingsHost;
+  onChanged: () => Promise<void>;
+}) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = plugins.find((plugin) => plugin.id === selectedId) ?? null;
+  const [busy, setBusy] = useState(false);
+
+  async function run(action: () => Promise<void>) {
+    setBusy(true);
+    try {
+      await action();
+      await onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <Section
+        title="Plugins"
+        description="Installed capabilities from the live AgentSam plugin registry. Health is measured by the runtime; it is not manually editable."
+        action={
+          <button
+            type="button"
+            onClick={() => void onChanged()}
+            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-3 text-[10px] text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <RefreshCw className="size-3.5" />
+            Refresh
+          </button>
+        }
+      >
+        {plugins.length ? (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {plugins.map((plugin) => (
+              <ExtensionTile
+                key={plugin.id}
+                name={plugin.name}
+                subtitle={plugin.setupStatus === "connected" ? plugin.healthStatus : plugin.setupStatus}
+                imageUrl={plugin.iconUrl}
+                imageAlt={plugin.iconAlt}
+                imageFit={plugin.iconFit}
+                icon={<Plug className="size-6 text-muted-foreground" />}
+                muted={!plugin.enabled}
+                badge={<span className={cx("block size-3 rounded-full border-2 border-background", plugin.status === "healthy" ? "bg-emerald-400" : plugin.status === "attention" ? "bg-amber-400" : "bg-muted-foreground")} />}
+                onClick={() => setSelectedId(plugin.id)}
+              />
+            ))}
+          </div>
+        ) : (
+          <EmptyState title="No installed plugins were returned by this account's registry." />
+        )}
+      </Section>
+
+      <SettingsSheet
+        open={Boolean(selected)}
+        title={selected?.name || "Plugin"}
+        description={selected?.subtitle}
+        onClose={() => setSelectedId(null)}
+      >
+        {selected ? (
+          <div className="space-y-5">
+            <div className="flex items-center gap-4">
+              <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-[16px] border border-border bg-muted/25">
+                {selected.iconUrl ? (
+                  <img
+                    src={selected.iconUrl}
+                    alt={selected.iconAlt || ""}
+                    className={cx("size-full", selected.iconFit === "cover" ? "object-cover" : "object-contain p-2.5")}
+                  />
+                ) : (
+                  <Plug className="size-6 text-muted-foreground" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusPill status={selected.status} label={selected.healthStatus} />
+                  <span className="rounded-full border border-border px-2 py-0.5 text-[9px] text-muted-foreground">
+                    {selected.setupStatus}
+                  </span>
+                </div>
+                <div className="mt-2 text-[10px] text-muted-foreground">
+                  {selected.providerKey} · {selected.kind}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-border/70 px-3">
+              <PreferenceRow
+                label="Enabled"
+                description="Controls whether this installed plugin may contribute tools and capabilities."
+                trailing={
+                  <Toggle
+                    enabled={selected.enabled}
+                    onChange={(enabled) => {
+                      if (!host.setPluginEnabled) return;
+                      void run(() => host.setPluginEnabled!(selected.id, enabled));
+                    }}
+                  />
+                }
+              />
+              <PreferenceRow label="Provider" description="Canonical provider key." value={selected.providerKey} />
+              <PreferenceRow label="Transport" description="Execution transport." value={selected.transport} />
+              <PreferenceRow label="Authentication" description="Credential/connection authority." value={selected.authType} />
+              <PreferenceRow label="Tools" description="Active tools registered for this installation." value={String(selected.toolCount)} />
+              <PreferenceRow label="Environment" description="Plugin installation environment." value={selected.environment} />
+            </div>
+
+            {selected.lastErrorCode ? (
+              <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
+                <div className="text-[10px] font-medium text-amber-300">{selected.lastErrorCode}</div>
+                {selected.lastErrorMessage ? (
+                  <div className="mt-1 text-[10px] leading-4 text-muted-foreground">{selected.lastErrorMessage}</div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {selected.capabilities.length ? (
+              <div>
+                <div className="mb-2 text-[10px] font-medium">Capabilities</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {selected.capabilities.map((capability) => (
+                    <span key={capability} className="rounded-md border border-border bg-muted/20 px-2 py-1 text-[9px] text-muted-foreground">
+                      {capability}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {selected.toolLanes.length ? (
+              <div>
+                <div className="mb-2 text-[10px] font-medium">Tool lanes</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {selected.toolLanes.map((lane) => (
+                    <span key={lane} className="rounded-md bg-muted px-2 py-1 text-[9px] text-muted-foreground">
+                      {lane}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="flex flex-wrap gap-2 border-t border-border/70 pt-4">
+              {selected.setupUrl && host.beginPluginSetup ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void run(() => host.beginPluginSetup!(selected.id))}
+                  className="h-9 rounded-md bg-foreground px-3 text-[10px] font-medium text-background disabled:opacity-40"
+                >
+                  {selected.setupStatus === "connected" ? "Reconnect" : "Set up"}
+                </button>
+              ) : null}
+              {selected.disconnectUrl && selected.setupStatus === "connected" && host.disconnectPlugin ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void run(() => host.disconnectPlugin!(selected.id))}
+                  className="h-9 rounded-md border border-border px-3 text-[10px] text-muted-foreground hover:bg-muted disabled:opacity-40"
+                >
+                  Disconnect
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+      </SettingsSheet>
+    </>
+  );
+}
+
+function WidgetCustomizeView({
+  widgets,
+  host,
+  onChanged,
+}: {
+  widgets: SettingsWidget[];
+  host: SettingsHost;
+  onChanged: () => Promise<void>;
+}) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = widgets.find((widget) => widget.id === selectedId) ?? null;
+
+  async function setVisible(visible: boolean) {
+    if (!selected || !host.setWidgetVisible) return;
+    await host.setWidgetVisible(selected.id, visible);
+    await onChanged();
+  }
+
+  return (
+    <>
+      <Section
+        title="Widgets"
+        description="Portable app utilities. Visibility is a preference, so hiding a widget never destroys its underlying capability or data."
+      >
+        {widgets.length ? (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {widgets.map((widget) => (
+              <ExtensionTile
+                key={widget.id}
+                name={widget.name}
+                subtitle={widget.visible ? "Visible" : "Hidden"}
+                icon={<Clock3 className="size-6 text-muted-foreground" />}
+                muted={!widget.visible}
+                badge={
+                  <span className={cx(
+                    "flex size-4 items-center justify-center rounded-full border-2 border-background",
+                    widget.visible ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground",
+                  )}>
+                    {widget.visible ? <Check className="size-2.5" /> : <EyeOff className="size-2.5" />}
+                  </span>
+                }
+                onClick={() => setSelectedId(widget.id)}
+              />
+            ))}
+          </div>
+        ) : (
+          <EmptyState title="No widgets are registered by this build." />
+        )}
+      </Section>
+
+      <SettingsSheet
+        open={Boolean(selected)}
+        title={selected?.name || "Widget"}
+        description={selected?.description}
+        onClose={() => setSelectedId(null)}
+      >
+        {selected ? (
+          <div className="space-y-5">
+            <div className="flex items-center gap-4">
+              <div className="flex size-16 shrink-0 items-center justify-center rounded-[16px] border border-border bg-gradient-to-br from-muted/90 via-muted/40 to-background">
+                <Clock3 className="size-6 text-muted-foreground" />
+              </div>
+              <div>
+                <div className="text-[12px] font-medium">{selected.name}</div>
+                <div className="mt-1 text-[10px] text-muted-foreground">{selected.kind}</div>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-border/70 px-3">
+              <PreferenceRow
+                label="Visible"
+                description="Show this widget on Local Studio's Utilities surface."
+                trailing={<Toggle enabled={selected.visible} onChange={(value) => void setVisible(value)} />}
+              />
+              <PreferenceRow label="Preference scope" description="Where this visibility choice is stored." value={selected.preferenceScope} />
+              <PreferenceRow label="Source" description="Widget installation/source authority." value={selected.source} />
+              <PreferenceRow label="Sizes" description="Supported widget presentation sizes." value={selected.sizes.join(", ")} />
+            </div>
+
+            <div className="flex flex-wrap gap-2 border-t border-border/70 pt-4">
+              {host.openWidget ? (
+                <button
+                  type="button"
+                  onClick={() => host.openWidget?.(selected.id)}
+                  className="h-9 rounded-md bg-foreground px-3 text-[10px] font-medium text-background"
+                >
+                  View widget
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => void setVisible(!selected.visible)}
+                className="h-9 rounded-md border border-border px-3 text-[10px] text-muted-foreground hover:bg-muted"
+              >
+                {selected.visible ? "Hide" : "Show"}
+              </button>
+              {selected.removable && host.removeWidget ? (
+                <button
+                  type="button"
+                  onClick={() => void host.removeWidget?.(selected.id).then(onChanged)}
+                  className="h-9 rounded-md px-3 text-[10px] text-red-300 hover:bg-red-500/10"
+                >
+                  Remove
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+      </SettingsSheet>
+    </>
+  );
+}
+
 function EmptyState({ title }: { title: string }) {
   return (
     <div className="flex min-h-28 items-center justify-center rounded-lg border border-dashed border-border bg-muted/10 px-6 text-center">
@@ -960,6 +1308,13 @@ function CustomizeView({
   host: SettingsHost;
   onChanged: () => Promise<void>;
 }) {
+  if (view === "plugins") {
+    return <PluginCustomizeView plugins={snapshot.plugins} host={host} onChanged={onChanged} />;
+  }
+  if (view === "widgets") {
+    return <WidgetCustomizeView widgets={snapshot.widgets} host={host} onChanged={onChanged} />;
+  }
+
   const map: Record<SettingsCatalogKind, SettingsCatalogItem[]> = {
     plugins: snapshot.plugins,
     mcps: snapshot.mcps,

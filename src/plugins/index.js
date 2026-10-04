@@ -9,6 +9,7 @@ export {
   installPlugin,
   listPlugins,
   listPluginTools,
+  updatePluginPreferences,
   recordPluginHealthCheck,
   recordAiPluginModelDiscovery,
   recordToolCall,
