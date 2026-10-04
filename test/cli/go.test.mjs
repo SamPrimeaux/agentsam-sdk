@@ -4,7 +4,14 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { discoverGoRuntime, resolveProductRoot, ensureProductContract, buildGoProduct } from '../../src/go/index.js';
+import {
+  discoverGoRuntime,
+  resolveProductRoot,
+  ensureProductContract,
+  preflightToolchain,
+  buildGoProduct,
+  deployGoCloudflare,
+} from '../../src/go/index.js';
 import { runGo } from '../../src/commands/go.js';
 
 const SDK_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -81,6 +88,106 @@ test('agentsam go build --json exposes only portable build paths', async () => {
   assert.equal(Object.hasOwn(parsed.receipt?.probe || {}, 'origin'), false);
   assert.equal(output.includes(SDK_ROOT), false);
 });
+
+
+test('Go preflight does not execute Docker when Docker is not required', () => {
+  const discovery = discoverGoRuntime(SDK_ROOT);
+  const productRoot = resolveProductRoot(discovery, 'agentsam-go-worker');
+  const calls = [];
+
+  const spawn = (command, args = []) => {
+    calls.push({
+      command: String(command),
+      args: Array.isArray(args) ? args.map(String) : [],
+    });
+
+    if (String(command) === 'docker') {
+      throw new Error('docker_must_not_execute_when_not_required');
+    }
+
+    return {
+      status: 0,
+      stdout: 'ok',
+      stderr: '',
+    };
+  };
+
+  const result = preflightToolchain({
+    requireDocker: false,
+    productRoot,
+    spawn,
+  });
+
+  assert.equal(result.ok, true);
+
+  assert.equal(
+    calls.some((call) => call.command === 'docker'),
+    false,
+  );
+
+  const dockerCheck = result.checks.find(
+    (check) => check.id === 'docker',
+  );
+
+  assert.equal(dockerCheck?.ok, true);
+  assert.equal(dockerCheck?.detail, 'skipped:not-required');
+});
+
+
+test('deployGoCloudflare skipDeploy never executes Docker or remote deployment', async () => {
+  const discovery = discoverGoRuntime(SDK_ROOT);
+  const productRoot = resolveProductRoot(discovery, 'agentsam-go-worker');
+  const stateRoot = tempStateRoot();
+  const calls = [];
+
+  const spawn = (command, args = []) => {
+    calls.push({
+      command: String(command),
+      args: Array.isArray(args) ? args.map(String) : [],
+    });
+
+    throw new Error(
+      'spawn_must_not_execute_during_skip_deploy: '
+      + String(command),
+    );
+  };
+
+  const commit = '0'.repeat(40);
+
+  const result = await deployGoCloudflare({
+    productRoot,
+    stateRoot,
+    product: 'agentsam-go-worker',
+    skipDeploy: true,
+    officialRelease: false,
+    source: {
+      identity: `git:${commit}`,
+      commit,
+      package_name: '@inneranimalmedia/agentsam-go-worker',
+      package_version: '0.1.0',
+    },
+    builtAt: new Date(0).toISOString(),
+    artifactDigest: `sha256:${'0'.repeat(64)}`,
+    containerDigest: null,
+    spawn,
+  });
+
+  assert.equal(result.deployed, false);
+  assert.equal(result.probes.skipped, true);
+  assert.equal(result.registry.remote, false);
+  assert.equal(
+    result.registry.reason,
+    'self_host_registry_isolated',
+  );
+
+  assert.equal(calls.length, 0);
+
+  assert.ok(result.receiptPath);
+  assert.ok(result.productPath);
+  assert.ok(fs.existsSync(result.receiptPath));
+  assert.ok(fs.existsSync(result.productPath));
+});
+
 
 test('agentsam go --cloudflare agentsam-go-worker --skip-deploy is idempotent', async () => {
   const stateRoot = tempStateRoot();
