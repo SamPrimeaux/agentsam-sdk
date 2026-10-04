@@ -38,10 +38,11 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
           thread={<MessageList messages={trail.messages} trailId={trail.id} streaming={streaming} />}
           emptyState={<div className="agentsam-welcome-heading"><h1>{data.mode === 'work' ? 'What should we work on?' : 'Where should we begin?'}</h1></div>}
           composer={<Composer targetId={trail.id} targetKind="trail" placeholder={data.mode === 'work' ? 'Work on anything…' : 'Ask anything…'} />}
-          composerClassName="agentsam-dock"
+          composerClassName="agentsam-conversation-dock"
         />
       </section>
       {state.sideOpen ? <><SplitHandle label="Resize Side Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(280, Math.min(900, width - delta)))} onDoubleClick={() => setPanelWidth(480)} /><aside className="agentsam-side-panel" style={{ width: panelWidth }} aria-label="Side Panel"><SideStage /></aside></> : null}
     </div>
   </div>;
 }
+
