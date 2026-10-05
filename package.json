@@ -415,6 +415,7 @@
     "workerd@1.20260925.1": true,
     "esbuild@0.28.2": true,
     "workerd@1.20260930.2": true,
+    "workerd@1.20261001.1": true,
     "sharp@0.34.5": true,
     "sharp@0.35.4": true,
     "sharp@0.35.5": true
