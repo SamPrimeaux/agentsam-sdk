@@ -1,0 +1,43 @@
+{
+  "name": "@inneranimalmedia/copro-project",
+  "version": "2.6.11",
+  "description": "Provider-neutral CoPro project document, serialization, validation, and migration contracts.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "main": "./src/index.js",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "pack:dry": "npm pack --dry-run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/copro-project"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "copro",
+    "video-editing",
+    "creative-project",
+    "timeline",
+    "media",
+    "agentsam"
+  ],
+  "types": "./src/index.d.ts"
+}

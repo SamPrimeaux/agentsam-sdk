@@ -1,0 +1,46 @@
+{
+  "name": "@inneranimalmedia/copro-timeline",
+  "version": "2.6.11",
+  "description": "Headless CoPro timeline projection, ordering, duration, and viewport math.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "main": "./src/index.js",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "pack:dry": "npm pack --dry-run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/copro-timeline"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "copro",
+    "timeline",
+    "video-editing",
+    "playhead",
+    "zoom",
+    "agentsam"
+  ],
+  "dependencies": {
+    "@inneranimalmedia/copro-project": "2.6.11"
+  },
+  "types": "./src/index.d.ts"
+}

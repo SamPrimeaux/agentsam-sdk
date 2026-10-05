@@ -1,0 +1,40 @@
+{
+  "name": "@inneranimalmedia/copro-provider-contracts",
+  "version": "2.6.11",
+  "description": "Provider-neutral CoPro capability contracts for media, generation, transcription, embeddings, conversion, and rendering.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "pack:dry": "npm pack --dry-run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/copro-provider-contracts"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "copro",
+    "providers",
+    "video-generation",
+    "transcription",
+    "embeddings",
+    "rendering",
+    "agentsam"
+  ]
+}

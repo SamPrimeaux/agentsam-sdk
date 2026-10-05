@@ -1,0 +1,38 @@
+{
+  "name": "@inneranimalmedia/copro-storage",
+  "version": "2.6.11",
+  "description": "Portable CoPro project persistence adapters for memory and browser local storage.",
+  "type": "module",
+  "license": "MIT",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "pack:dry": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "@inneranimalmedia/copro-project": "2.6.11"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "copro",
+    "storage",
+    "autosave",
+    "indexeddb",
+    "local-first",
+    "agentsam"
+  ]
+}

@@ -285,7 +285,18 @@
     "packages/theme-resolve",
     "packages/agentsam-abs",
     "packages/agentsam-browser-surface",
-    "packages/agentsam-sections"
+    "packages/agentsam-sections",
+    "packages/copro-project",
+    "packages/copro-editor",
+    "packages/copro-media",
+    "packages/copro-render",
+    "packages/copro-provider-contracts",
+    "packages/copro-timeline",
+    "packages/copro-templates",
+    "packages/copro-proof",
+    "packages/copro-ui",
+    "apps/agentsam-copro-studio",
+    "packages/copro-storage"
   ],
   "scripts": {
     "test": "npm run test:standard && npm --prefix packages/identity test && npm --prefix packages/agentsam-brand test && npm run test:connectors && npm run test:providers",
