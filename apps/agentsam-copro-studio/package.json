@@ -8,15 +8,15 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "prebuild": "npm run build --workspace @inneranimalmedia/copro-ui",
-    "pretypecheck": "npm run build --workspace @inneranimalmedia/copro-ui"
+    "prebuild": "npm --prefix ../../packages/copro-ui run build",
+    "pretypecheck": "npm --prefix ../../packages/copro-ui run build"
   },
   "dependencies": {
-    "@inneranimalmedia/copro-editor": "2.6.11",
-    "@inneranimalmedia/copro-media": "2.6.11",
-    "@inneranimalmedia/copro-project": "2.6.11",
-    "@inneranimalmedia/copro-storage": "2.6.11",
-    "@inneranimalmedia/copro-ui": "2.6.11",
+    "@inneranimalmedia/copro-editor": "file:../../packages/copro-editor",
+    "@inneranimalmedia/copro-media": "file:../../packages/copro-media",
+    "@inneranimalmedia/copro-project": "file:../../packages/copro-project",
+    "@inneranimalmedia/copro-storage": "file:../../packages/copro-storage",
+    "@inneranimalmedia/copro-ui": "file:../../packages/copro-ui",
     "react": "^19.2.3",
     "react-dom": "^19.2.3"
   },

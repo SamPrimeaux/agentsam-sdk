@@ -295,7 +295,6 @@
     "packages/copro-templates",
     "packages/copro-proof",
     "packages/copro-ui",
-    "apps/agentsam-copro-studio",
     "packages/copro-storage"
   ],
   "scripts": {
