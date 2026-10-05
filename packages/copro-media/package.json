@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/copro-media",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "description": "Provider-neutral CoPro media asset identity, provenance, and repository contracts.",
   "type": "module",
   "license": "MIT",

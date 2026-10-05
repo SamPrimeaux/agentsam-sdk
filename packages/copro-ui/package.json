@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/copro-ui",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "description": "Mobile-first creator UI for CoPro with preview, timeline, direct manipulation, edit tools, media tray, transport, and responsive desktop composition.",
   "type": "module",
   "license": "MIT",
@@ -26,9 +26,9 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@inneranimalmedia/copro-editor": "2.6.11",
-    "@inneranimalmedia/copro-project": "2.6.11",
-    "@inneranimalmedia/copro-timeline": "2.6.11"
+    "@inneranimalmedia/copro-editor": "2.6.12",
+    "@inneranimalmedia/copro-project": "2.6.12",
+    "@inneranimalmedia/copro-timeline": "2.6.12"
   },
   "peerDependencies": {
     "react": ">=18",

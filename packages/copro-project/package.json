@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/copro-project",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "description": "Provider-neutral CoPro project document, serialization, validation, and migration contracts.",
   "type": "module",
   "license": "MIT",

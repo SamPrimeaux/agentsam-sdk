@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/copro-timeline",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "description": "Headless CoPro timeline projection, ordering, duration, and viewport math.",
   "type": "module",
   "license": "MIT",
@@ -40,7 +40,7 @@
     "agentsam"
   ],
   "dependencies": {
-    "@inneranimalmedia/copro-project": "2.6.11"
+    "@inneranimalmedia/copro-project": "2.6.12"
   },
   "types": "./src/index.d.ts"
 }

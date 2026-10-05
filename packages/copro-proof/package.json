@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/copro-proof",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "description": "Mechanical vertical proof that CoPro project, media, editor, timeline, render, templates, and provider contracts compose correctly.",
   "type": "module",
   "license": "MIT",
@@ -36,12 +36,12 @@
     "agentsam"
   ],
   "dependencies": {
-    "@inneranimalmedia/copro-project": "2.6.11",
-    "@inneranimalmedia/copro-editor": "2.6.11",
-    "@inneranimalmedia/copro-media": "2.6.11",
-    "@inneranimalmedia/copro-render": "2.6.11",
-    "@inneranimalmedia/copro-provider-contracts": "2.6.11",
-    "@inneranimalmedia/copro-timeline": "2.6.11",
-    "@inneranimalmedia/copro-templates": "2.6.11"
+    "@inneranimalmedia/copro-project": "2.6.12",
+    "@inneranimalmedia/copro-editor": "2.6.12",
+    "@inneranimalmedia/copro-media": "2.6.12",
+    "@inneranimalmedia/copro-render": "2.6.12",
+    "@inneranimalmedia/copro-provider-contracts": "2.6.12",
+    "@inneranimalmedia/copro-timeline": "2.6.12",
+    "@inneranimalmedia/copro-templates": "2.6.12"
   }
 }

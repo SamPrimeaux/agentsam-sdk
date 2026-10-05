@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/copro-templates",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "description": "Structured CoPro creative template contracts for canvas, slots, track skeletons, captions, transitions, audio cues, styles, and generation slots.",
   "type": "module",
   "license": "MIT",
@@ -37,6 +37,6 @@
     "agentsam"
   ],
   "dependencies": {
-    "@inneranimalmedia/copro-project": "2.6.11"
+    "@inneranimalmedia/copro-project": "2.6.12"
   }
 }

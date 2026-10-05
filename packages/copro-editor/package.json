@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/copro-editor",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "description": "Deterministic headless CoPro edit command engine with undo and redo.",
   "type": "module",
   "license": "MIT",

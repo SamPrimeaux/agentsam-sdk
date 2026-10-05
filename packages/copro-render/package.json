@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/copro-render",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "description": "CoPro render planning and renderer capability selection without renderer leakage into project files.",
   "type": "module",
   "license": "MIT",
