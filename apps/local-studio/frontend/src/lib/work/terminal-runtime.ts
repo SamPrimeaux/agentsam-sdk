@@ -399,11 +399,58 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
   };
 
   const project0 = getProject();
-  // Happy path: filesystem + live start-local PTY. Also auto-upgrade when
-  // agentsam start-local is already on :3099 even if the project was opened as scratch.
+  const tauriInvoke = getTauriInvoke();
+  const browserHost = typeof window !== "undefined" ? window.location.hostname : "";
+  const isLoopbackBrowser = ["localhost", "127.0.0.1", "::1"].includes(browserHost);
+  const isHostedWeb = !tauriInvoke && !isLoopbackBrowser;
+  const terminalSession = activeTerminalSession();
+
+  type HostedTerminalConnect = {
+    ok?: boolean;
+    error?: string;
+    ws_url?: string;
+    session_id?: string;
+    connection_id?: string;
+    instance_id?: string;
+    instance_kind?: string;
+    runtime_label?: string;
+    cwd?: string | null;
+    shell?: string | null;
+  };
+
+  let hostedConnect: HostedTerminalConnect | null = null;
+  let hostedConnectError = "";
+  if (isHostedWeb) {
+    try {
+      const requestBody: Record<string, unknown> = {
+        kind: terminalSession.lane,
+        client_id: sessionId,
+        pty_slot: `slot_${terminalSession.ptySlot}`,
+        cols: term.cols,
+        rows: term.rows,
+      };
+      if (terminalSession.connectionId && terminalSession.connectionId !== "runtime-auto") {
+        requestBody.connection_id = terminalSession.connectionId;
+      }
+      if (terminalSession.cwd) requestBody.cwd = terminalSession.cwd;
+      const response = await fetch("/api/agent/terminal/connect", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+      const payload = (await response.json().catch(() => ({}))) as HostedTerminalConnect;
+      if (response.ok && payload.ok && payload.ws_url) hostedConnect = payload;
+      else hostedConnectError = String(payload.error || `terminal_connect_${response.status}`);
+    } catch (error) {
+      hostedConnectError = error instanceof Error ? error.message : "terminal_connect_failed";
+    }
+  }
+
+  // Direct loopback probing is only valid for desktop/local-browser hosts.
   let runtimeBase = project0.runtimeBaseUrl;
   let runtimeCap = project0.runtimeCapability;
-  if (!runtimeBase) {
+  if (!runtimeBase && !isHostedWeb) {
     try {
       const probe = await fetch("http://127.0.0.1:3099/health", { signal: AbortSignal.timeout(800) });
       if (probe.ok) {
@@ -416,14 +463,14 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
     }
   }
   let usingAgentsamd = false;
-  const desktopAgentsamdToken = !runtimeBase ? await ensureDesktopAgentsamdToken() : null;
+  const desktopAgentsamdToken = !runtimeBase && !isHostedWeb ? await ensureDesktopAgentsamdToken() : null;
   let agentsamdToken: string | null = desktopAgentsamdToken;
   if (desktopAgentsamdToken && !runtimeBase) {
     runtimeBase = "http://127.0.0.1:18765";
     runtimeCap = runtimeCap || "local";
     usingAgentsamd = true;
   }
-  if (!runtimeBase) {
+  if (!runtimeBase && !isHostedWeb) {
     try {
       const amd = await fetch("http://127.0.0.1:18765/health", { signal: AbortSignal.timeout(600) });
       if (amd.ok) {
@@ -444,11 +491,38 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
   }
 
   const useRealPty =
-    Boolean(runtimeBase) &&
-    Boolean(runtimeCap) &&
-    (project0.kind === "filesystem" || Boolean(runtimeBase));
+    Boolean(hostedConnect?.ws_url) ||
+    (
+      Boolean(runtimeBase) &&
+      Boolean(runtimeCap) &&
+      (project0.kind === "filesystem" || Boolean(runtimeBase))
+    );
 
-  if (project0.kind === "filesystem" && (!runtimeBase || !runtimeCap)) {
+  if (isHostedWeb && !useRealPty) {
+    const detail = hostedConnectError || "terminal_connection_missing";
+    term.writeln("No runtime connected.");
+    term.writeln(`Connect or enroll a runtime to use Terminal in Web Local Studio.  ·  ${detail}`);
+    useTerminalSessionStore.getState().patchSession(sessionId, {
+      state: "disconnected",
+      runtimeLabel: "No runtime connected",
+      error: detail,
+    });
+    return {
+      sessionId,
+      term,
+      fit,
+      run: async () => {
+        term.writeln("No runtime connected.");
+      },
+      host: null,
+      park,
+      observer: null,
+      refCount: 0,
+      getProject,
+    };
+  }
+
+  if (project0.kind === "filesystem" && !useRealPty) {
     term.writeln("Filesystem workspace requires a live local runtime + capability.");
     term.writeln("Run `agentsam start-local` from the workspace root, then reopen this project.");
     term.writeln("Virtual shell is disabled for filesystem projects (no silent fallback).");
@@ -467,11 +541,12 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
     };
   }
 
-  if (useRealPty && runtimeBase) {
-    const base = String(runtimeBase).replace(/\/$/, "");
-    const wsUrl = base.replace(/^http/, "ws");
+  if (useRealPty && (runtimeBase || hostedConnect?.ws_url)) {
+    const base = String(runtimeBase || "").replace(/\/$/, "");
+    const wsUrl = hostedConnect?.ws_url || base.replace(/^http/, "ws");
     const persistedCwd = activeTerminalSession().cwd;
     let resolvedCwd =
+      hostedConnect?.cwd ||
       project0.workspaceRoot ||
       (persistedCwd && persistedCwd !== "/" ? persistedCwd : "");
     if (!resolvedCwd && usingAgentsamd) {
@@ -482,7 +557,9 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
     const cap = encodeURIComponent(String(runtimeCap || "local"));
     let socket: WebSocket | null = null;
     try {
-      if (usingAgentsamd) {
+      if (hostedConnect?.ws_url) {
+        socket = new WebSocket(hostedConnect.ws_url);
+      } else if (usingAgentsamd) {
         const token = encodeURIComponent(agentsamdToken || "");
         socket = new WebSocket(`${wsUrl}/v1/pty?token=${token}&cwd=${cwdParam}`);
       } else {
@@ -492,8 +569,12 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
       term.writeln(
         `PTY attach failed: ${err instanceof Error ? err.message : String(err)}.`,
       );
-      if (project0.kind === "filesystem") {
-        term.writeln("Filesystem mode does not fall back to the Scratch virtual shell.");
+      if (isHostedWeb || project0.kind === "filesystem") {
+        term.writeln(
+          isHostedWeb
+            ? "Hosted Web Terminal requires a connected runtime; no virtual shell fallback is allowed."
+            : "Filesystem mode does not fall back to the Scratch virtual shell.",
+        );
         return {
           sessionId,
           term,
@@ -514,17 +595,23 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
 
     if (socket) {
       socket.binaryType = "arraybuffer";
-      let ptySessionId: string | null = null;
+      let ptySessionId: string | null = hostedConnect?.session_id || null;
       socket.onopen = () => {
+        const runtimeLabel = hostedConnect?.runtime_label || (usingAgentsamd ? "Local runtime" : "AgentSam runtime");
         useTerminalSessionStore.getState().patchSession(sessionId, {
           state: "connected",
+          connectionId: hostedConnect?.connection_id || terminalSession.connectionId,
+          instanceId: hostedConnect?.instance_id || terminalSession.instanceId,
+          runtimeLabel,
           cwd: resolvedCwd || undefined,
-          shell: "zsh",
+          shell: hostedConnect?.shell || "zsh",
           error: undefined,
         });
-        term.writeln(`AgentSam PTY  ·  ${resolvedCwd || "(runtime default)"}`);
+        term.writeln(`AgentSam PTY  ·  ${runtimeLabel}  ·  ${resolvedCwd || "(runtime default)"}`);
         term.writeln(
-          `workspace ${project0.workspaceId || "?"}  ·  real shell — same host root as Monaco`,
+          isHostedWeb
+            ? "real shell · connected runtime"
+            : `workspace ${project0.workspaceId || "?"}  ·  real shell — same host root as Monaco`,
         );
         if (usingAgentsamd && socket && socket.readyState === WebSocket.OPEN) {
           socket.send(JSON.stringify({ type: "resize", cols: term.cols, rows: term.rows }));
@@ -571,7 +658,11 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
       };
       socket.onerror = () => {
         useTerminalSessionStore.getState().patchSession(sessionId, { state: "error", error: "PTY socket error" });
-        term.writeln("PTY socket error — is `agentsam start-local` running?");
+        term.writeln(
+          isHostedWeb
+            ? "PTY socket error — connected runtime is unreachable."
+            : "PTY socket error — is `agentsam start-local` running?",
+        );
       };
       socket.onclose = () => {
         useTerminalSessionStore.getState().patchSession(sessionId, { state: "disconnected" });

@@ -659,6 +659,7 @@ export default {
     const isPluginToolExecute = url.pathname === "/api/plugins/tools/execute";
     const isAnalyticsSmoke = url.pathname === "/api/analytics/smoke";
     const isAnalyticsApi = url.pathname.startsWith("/api/analytics/");
+    const isTerminalConnect = url.pathname === "/api/agent/terminal/connect";
 
     // Public marketing/docs: WEBSITE_ASSETS R2 SSOT (Worker ASSETS = bootstrap only)
     if (request.method === "GET" && isPublicSitePath(url.pathname)) {
@@ -749,6 +750,40 @@ export default {
     async function sessionUser() {
       if (sessionUserId === undefined) sessionUserId = await resolveSessionUserId(request, env);
       return sessionUserId;
+    }
+
+    if (isTerminalConnect) {
+      if (request.method !== "POST") {
+        return json({ ok: false, error: "method_not_allowed" }, 405, { allow: "POST" });
+      }
+      const userId = await sessionUser();
+      if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
+      if (!env.EXECOS?.fetch) {
+        return json({ ok: false, error: "execos_binding_unavailable" }, 503);
+      }
+      const bridgeKey = String(env.AGENTSAM_BRIDGE_KEY || "").trim();
+      if (!bridgeKey) {
+        return json({ ok: false, error: "execos_bridge_key_unavailable" }, 503);
+      }
+      const body = await request.json().catch(() => ({}));
+      try {
+        const upstream = await env.EXECOS.fetch("https://execos.internal/terminal/connect", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-bridge-key": bridgeKey,
+          },
+          body: JSON.stringify({ ...body, account_id: userId }),
+        });
+        const payload = await upstream.json().catch(() => ({
+          ok: false,
+          error: `execos_terminal_connect_http_${upstream.status}`,
+        }));
+        return json(payload, upstream.status);
+      } catch (error) {
+        console.error("execos_terminal_connect_error", String(error));
+        return json({ ok: false, error: "execos_terminal_connect_failed" }, 502);
+      }
     }
 
     if (isAnalyticsSmoke) {

@@ -29,13 +29,12 @@ type TerminalSessionState = {
 const INITIAL_SESSION_ID = "term_local_1";
 const initialSession: StudioTerminalSession = {
   id: INITIAL_SESSION_ID,
-  title: "local:1",
-  connectionId: "local-agentsamd",
-  instanceId: "local-host",
+  title: "Terminal",
+  connectionId: "runtime-auto",
   lane: "local",
   ptySlot: 0,
   state: "connecting",
-  runtimeLabel: "My Computer",
+  runtimeLabel: "Resolving runtime",
 };
 
 function nextId() {
@@ -48,20 +47,20 @@ export const useTerminalSessionStore = create<TerminalSessionState>()(
       sessions: [initialSession],
       activeSessionId: INITIAL_SESSION_ID,
       createSession(input = {}) {
-        const connectionId = input.connectionId || "local-agentsamd";
+        const connectionId = input.connectionId || "runtime-auto";
         const localSessions = get().sessions.filter((item) => item.connectionId === connectionId);
         const slot = localSessions.reduce((max, item) => Math.max(max, item.ptySlot), -1) + 1;
         const id = nextId();
         const session: StudioTerminalSession = {
           id,
-          title: input.title || `local:${slot + 1}`,
+          title: input.title || `Terminal ${slot + 1}`,
           connectionId,
-          instanceId: input.instanceId || "local-host",
+          instanceId: input.instanceId,
           lane: input.lane || "local",
           cwd: input.cwd,
           ptySlot: slot,
           state: "connecting",
-          runtimeLabel: input.runtimeLabel || "My Computer",
+          runtimeLabel: input.runtimeLabel || "Resolving runtime",
         };
         set((state) => ({ sessions: [...state.sessions, session], activeSessionId: id }));
         return id;
