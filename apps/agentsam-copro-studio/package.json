@@ -1,0 +1,28 @@
+{
+  "name": "@inneranimalmedia/agentsam-copro-studio",
+  "version": "2.6.11",
+  "private": true,
+  "description": "CoPro Studio composition app: mobile-first visual video editor over the portable CoPro package family.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@inneranimalmedia/copro-editor": "2.6.11",
+    "@inneranimalmedia/copro-project": "2.6.11",
+    "@inneranimalmedia/copro-ui": "2.6.11",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "@inneranimalmedia/copro-storage": "2.6.11",
+    "@inneranimalmedia/copro-media": "2.6.11"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  }
+}

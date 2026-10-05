@@ -1,0 +1,43 @@
+{
+  "name": "@inneranimalmedia/copro-editor",
+  "version": "2.6.11",
+  "description": "Deterministic headless CoPro edit command engine with undo and redo.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "main": "./src/index.js",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "pack:dry": "npm pack --dry-run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/copro-editor"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "copro",
+    "video-editor",
+    "undo-redo",
+    "timeline",
+    "command-engine",
+    "agentsam"
+  ],
+  "types": "./src/index.d.ts"
+}

@@ -1,0 +1,47 @@
+{
+  "name": "@inneranimalmedia/copro-proof",
+  "version": "2.6.11",
+  "description": "Mechanical vertical proof that CoPro project, media, editor, timeline, render, templates, and provider contracts compose correctly.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "pack:dry": "npm pack --dry-run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/copro-proof"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "copro",
+    "proof",
+    "acceptance-testing",
+    "video-editing",
+    "agentsam"
+  ],
+  "dependencies": {
+    "@inneranimalmedia/copro-project": "2.6.11",
+    "@inneranimalmedia/copro-editor": "2.6.11",
+    "@inneranimalmedia/copro-media": "2.6.11",
+    "@inneranimalmedia/copro-render": "2.6.11",
+    "@inneranimalmedia/copro-provider-contracts": "2.6.11",
+    "@inneranimalmedia/copro-timeline": "2.6.11",
+    "@inneranimalmedia/copro-templates": "2.6.11"
+  }
+}
