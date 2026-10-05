@@ -7,22 +7,24 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "prebuild": "npm --prefix ../../packages/copro-ui run build",
+    "pretypecheck": "npm --prefix ../../packages/copro-ui run build"
   },
   "dependencies": {
     "@inneranimalmedia/copro-editor": "2.6.11",
+    "@inneranimalmedia/copro-media": "2.6.11",
     "@inneranimalmedia/copro-project": "2.6.11",
+    "@inneranimalmedia/copro-storage": "2.6.11",
     "@inneranimalmedia/copro-ui": "2.6.11",
     "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "@inneranimalmedia/copro-storage": "2.6.11",
-    "@inneranimalmedia/copro-media": "2.6.11"
+    "react-dom": "^19.2.3"
   },
   "devDependencies": {
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react": "^5.2.0",
     "typescript": "^5.6.3",
-    "vite": "^5.4.11"
+    "vite": "^8.2.0"
   }
 }

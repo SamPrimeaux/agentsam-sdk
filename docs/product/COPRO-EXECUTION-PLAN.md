@@ -1,7 +1,7 @@
 # CoPro Execution Plan
 
 Branch: feat/copro-cleanroom-v1
-Worktree: /Users/samprimeaux/agentsam-sdk-copro
+Worktree: dedicated AgentSam SDK CoPro feature worktree
 
 ## Sprint 0 — contracts and visual proof
 
