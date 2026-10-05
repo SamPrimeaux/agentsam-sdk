@@ -14,5 +14,8 @@
     "The standalone /widgets product route is not the long-term product model.",
     "Hosted Local Studio and packaged desktop must consume the same widget package code.",
     "Theme behavior must inherit canonical AgentSam semantic tokens rather than create an isolated theme authority."
-  ]
+  ],
+  "staging_path": "packages/agentsam-workbench/donor/weather-widget-platform",
+  "canonical_target": "packages/agentsam-workbench/src/widgets",
+  "staging_rule": "Donor source is preserved outside src so it is not compiled or exported until deliberately graduated."
 }

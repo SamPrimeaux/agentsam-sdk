@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import { execFileSync } from "node:child_process";
 
 const root = process.cwd();
@@ -88,11 +89,114 @@ for (const rel of [
   "dist/widgets/widgets.css",
 ]) {
   if (!files.has(rel)) {
-    fail(`npm tarball would omit ${rel}`);
+    fail("npm tarball would omit " + rel);
   } else {
-    pass(`npm tarball includes ${rel}`);
+    pass("npm tarball includes " + rel);
   }
 }
+
+console.log("\\nPacking local first-party dependency closure...");
+
+const workspacePackages = new Map();
+for (const base of ["packages", "apps"]) {
+  const basePath = path.join(root, base);
+  if (!fs.existsSync(basePath)) continue;
+  for (const entry of fs.readdirSync(basePath, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const manifestPath = path.join(basePath, entry.name, "package.json");
+    if (!fs.existsSync(manifestPath)) continue;
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+    if (typeof manifest.name === "string" && manifest.name.startsWith("@inneranimalmedia/")) {
+      workspacePackages.set(manifest.name, { manifest, dir: path.dirname(manifestPath) });
+    }
+  }
+}
+
+const collectFirstPartyClosure = (name, seen = new Set()) => {
+  if (seen.has(name)) return seen;
+  const record = workspacePackages.get(name);
+  if (!record) return seen;
+  seen.add(name);
+  const sections = [
+    record.manifest.dependencies || {},
+    record.manifest.optionalDependencies || {},
+    record.manifest.peerDependencies || {},
+  ];
+  for (const deps of sections) {
+    for (const depName of Object.keys(deps)) {
+      if (workspacePackages.has(depName)) collectFirstPartyClosure(depName, seen);
+    }
+  }
+  return seen;
+};
+
+const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "agentsam-widget-pack-"));
+const closure = [...collectFirstPartyClosure("@inneranimalmedia/agentsam-workbench")];
+const tarballs = [];
+
+for (const name of closure) {
+  const record = workspacePackages.get(name);
+  if (!record) continue;
+  const packedJson = JSON.parse(
+    execFileSync(
+      "npm",
+      ["pack", "--json", "--pack-destination", tempRoot],
+      { cwd: record.dir, encoding: "utf8" },
+    ),
+  );
+  const filename = packedJson[0]?.filename;
+  if (!filename) {
+    fail("npm pack did not return a tarball filename for " + name);
+    continue;
+  }
+  tarballs.push(path.join(tempRoot, filename));
+  pass("packed local first-party dependency: " + name);
+}
+
+console.log("\\nInstalling isolated consumer from local tarballs...");
+const consumerDir = path.join(tempRoot, "consumer");
+fs.mkdirSync(consumerDir, { recursive: true });
+fs.writeFileSync(
+  path.join(consumerDir, "package.json"),
+  JSON.stringify({ name: "agentsam-widget-pack-smoke", private: true, type: "module" }, null, 2) + "\n",
+);
+
+const cleanNpmEnv = Object.fromEntries(
+  Object.entries(process.env).filter(
+    ([key]) => key.toLowerCase() !== "npm_config_allow_scripts",
+  ),
+);
+
+execFileSync(
+  "npm",
+  [
+    "install",
+    "--userconfig",
+    "/dev/null",
+    "--ignore-scripts",
+    "--no-audit",
+    "--no-fund",
+    ...tarballs,
+    "react@^19.0.0",
+    "react-dom@^19.0.0",
+  ],
+  { cwd: consumerDir, stdio: "inherit", env: cleanNpmEnv },
+);
+
+fs.writeFileSync(
+  path.join(consumerDir, "smoke.mjs"),
+  [
+    'import * as widgets from "@inneranimalmedia/agentsam-workbench/widgets";',
+    "const keys = Object.keys(widgets);",
+    'if (!keys.length) throw new Error("widget export is empty");',
+    'console.log("PASS: isolated tarball consumer imported widget package");',
+    "console.log(keys.sort());",
+    "",
+  ].join("\n"),
+);
+
+execFileSync("node", ["smoke.mjs"], { cwd: consumerDir, stdio: "inherit" });
+pass("isolated tarball consumer imported ./widgets successfully");
 
 const exampleRoot = path.join(root, "examples/widget-consumer");
 

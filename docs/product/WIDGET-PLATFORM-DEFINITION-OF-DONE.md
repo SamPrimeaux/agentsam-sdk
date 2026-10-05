@@ -62,7 +62,7 @@ If this fixture breaks, widget portability is broken.
 
 The staged donor directory is a source/reference area, not the finished product:
 
-`packages/agentsam-workbench/src/widgets/donor-weather-platform/`
+`packages/agentsam-workbench/donor/weather-widget-platform/`
 
 For each migrated widget:
 
