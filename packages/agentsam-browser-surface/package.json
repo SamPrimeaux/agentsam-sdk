@@ -1,6 +1,11 @@
 {
   "name": "@inneranimalmedia/agentsam-browser-surface",
   "version": "2.6.12",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/agentsam-browser-surface"
+  },
   "description": "AgentSamBrowserSurface: a portable Browse/Build browser capability with a provider registry so the lightweight Local Studio browser and the AgentSam Browser Shell can be swapped behind one stable host composition.",
   "author": "Inner Animal Media <info@inneranimals.com>",
   "license": "Apache-2.0",
