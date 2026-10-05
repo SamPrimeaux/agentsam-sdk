@@ -51,5 +51,14 @@
     "timeline",
     "creator-tools",
     "agentsam"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/copro-ui"
+  },
+  "bugs": {
+    "url": "https://github.com/SamPrimeaux/agentsam-sdk/issues"
+  },
+  "homepage": "https://github.com/SamPrimeaux/agentsam-sdk#readme"
 }
