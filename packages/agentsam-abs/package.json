@@ -1,6 +1,11 @@
 {
   "name": "@inneranimalmedia/agentsam-abs",
   "version": "2.6.12",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/agentsam-abs"
+  },
   "description": "AgentSam Auto Browser Shell: dual-mode Explore/Build browser surface with provider-agnostic generative navigation, sandboxed previews, deterministic history, and packaged runtime scenes.",
   "license": "Apache-2.0",
   "type": "module",
