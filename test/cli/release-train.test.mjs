@@ -11,5 +11,5 @@ test('release train check enforces one first-party workspace version and exact i
     cwd: root,
     encoding: 'utf8',
   });
-  assert.match(output, /PASS all first-party workspace versions and dependency pins aligned/);
+  assert.match(output, /PASS all first-party package intents, versions, and dependency pins aligned/);
 });
