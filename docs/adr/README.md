@@ -17,3 +17,9 @@ Use ADRs for durable architecture, trust-boundary, authority, portability, and p
 - `ADR-0002-brand-campaign-plugin-boundaries.md` — Brand/Campaign ownership, composition, data authority, and public MCP boundary.
 
 ADRs describe **why the system is shaped this way**. Product behavior and acceptance criteria belong in PRDs.
+
+## Portfolio ADRs
+
+- `ADR-0003-product-portfolio-and-package-taxonomy.md`
+- `ADR-0004-product-composition-and-provider-neutrality.md`
+- `ADR-0005-offer-graduation-standard.md`
