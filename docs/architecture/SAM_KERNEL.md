@@ -152,11 +152,25 @@ Handlers reuse existing implementations. New work asks: **What module owns this 
 
 ---
 
-## Go / agentsamd (next lane — Slice H)
+## agentsamd / PTY / ExecOS ownership
 
-Local durable machine service (`agentsamd`) owns PTY, jobs, local invoke — **not** a Tauri rewrite. `AGENTSAM_API_KEY` authenticates **remote/platform** operations; local capabilities stay key-optional. Tauri may later consume the same daemon.
+`agentsamd` is the canonical local machine-runtime role. The current implementation direction is Go/native, but the architectural authority is the role and `agentsam.runtime.v1` capability contract—not a permanent language choice.
 
-See: Go Worker product lane already live; expand carefully.
+```text
+PTY       = operating-system capability
+agentsamd = local machine capability host
+ExecOS    = remote enrollment / resolution / routing plane
+xterm     = presentation/client
+Tauri     = desktop host/supervisor
+```
+
+Local/installed products should use `agentsamd` directly for supported machine capabilities and must not require InnerAnimalMedia infrastructure merely to operate locally. Hosted callers may use ExecOS to reach an enrolled runtime.
+
+Current production still has overlap: ExecOS's Node daemon hosts real PTY/process behavior for existing managed connections, and Tauri has some direct native bridges. Do not document the target as already complete and do not add another runtime implementation to paper over the overlap.
+
+The consolidation lane is audit-first: `docs/plans/AGENTSAMD-RUNTIME-UNIFICATION.md`.
+
+See also: `docs/architecture/AGENTSAM_RUNTIME_PROTOCOL.md`.
 
 ---
 

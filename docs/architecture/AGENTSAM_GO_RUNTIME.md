@@ -2,12 +2,14 @@
 
 ## Purpose
 
-Go is AgentSam's native deterministic machinery layer. It is reused by two different ownership surfaces:
+Go is the **current implementation direction** for a substantial part of AgentSam's native deterministic machinery. It is reused by two different ownership surfaces:
 
-- agentsam-go-worker — an independently deployed hosted/self-host service.
-- agentsamd — the user-machine runtime that products can share.
+- `agentsam-go-worker` — an independently deployed hosted/self-host service.
+- `agentsamd` — the canonical user-machine runtime role that products can share.
 
-Those are not the same product. They should reuse protocol-compatible native core code without sharing deployment authority.
+Those are not the same product. They may reuse protocol-compatible native core code without sharing deployment authority.
+
+`agentsamd` is an architectural role; Go is an implementation choice. Rust or another native implementation may be evaluated through the same conformance/acceptance tests without changing the ownership model.
 
 The TypeScript/protocol layer remains canonical contract authority.
 
@@ -27,6 +29,8 @@ The TypeScript/protocol layer remains canonical contract authority.
 The Worker owns edge routing and deploy-time identity. The container owns native Go execution.
 
 Normal AgentSam users consume the official hosted service where appropriate. They do not need to deploy this Worker just to use AgentSam.
+
+This hosted Container topology does **not** apply to the local `agentsamd` daemon. A local `agentsamd` is a native binary on the user's machine and does not inherently require Docker, Cloudflare, or a Container.
 
 ## User-machine topology
 

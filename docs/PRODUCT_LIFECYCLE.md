@@ -476,11 +476,11 @@ Only then proceed to Lane 1 Identity portability.
 | Concern | Rule |
 |---|---|
 | INSTANCE | Which machine (Mac / VM / sandbox) |
-| ADAPTER | What executes (`agentsamd` / ExecOS / `cloudflare_sandbox` / future) |
+| ADAPTER | What hosts machine capabilities (`agentsamd` target; current ExecOS compatibility; `cloudflare_sandbox`; future) |
 | TRANSPORT | How reached (localhost / CF Tunnel / VPC / service binding) |
 | AUTH | Why this caller may use it |
 
-Local Studio same-machine path: Tauri → loopback → `agentsamd`. No VPC, Tunnel, Worker, or Durable Object required for local PTY. Remote reachability is optional per enrolled `terminal_connection` (machine-scoped transport, never one tunnel per PTY). PTY/session/process lifetime belongs on the execution host — do not make a Durable Object the PTY authority. ExecOS remains supported; do not delete or replace it in these lanes.
+Local Studio same-machine path: Tauri → loopback → `agentsamd`. No VPC, Tunnel, Worker, or Durable Object is required for local PTY. PTY is an OS capability; `agentsamd` is the canonical local machine-runtime role. Remote reachability is optional per enrolled `terminal_connection`, with ExecOS as the supported remote enrollment/resolution/routing plane. Current ExecOS Node machinery still hosts PTY/process behavior for managed connections; preserve it until shared acceptance tests prove migration parity. Do not make a Durable Object the PTY authority.
 
 ---
 
