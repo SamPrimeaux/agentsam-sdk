@@ -86,6 +86,11 @@ function check() {
   const failures = [];
   let dependencyEdges = 0;
   for (const { file, manifest } of workspaces) {
+    const isPrivate = manifest.private === true;
+    const isPublic = !isPrivate && manifest.publishConfig?.access === 'public';
+    if (!isPrivate && !isPublic) {
+      failures.push((manifest.name || '<unnamed>') + ': package intent is ambiguous; set private=true or publishConfig.access=public (' + relative(file) + ')');
+    }
     if (manifest.version !== targetVersion) {
       failures.push(`${manifest.name}: version ${manifest.version || '<missing>'} != ${targetVersion} (${relative(file)})`);
     }
@@ -119,7 +124,7 @@ function check() {
     process.exitCode = 1;
     return;
   }
-  console.log('  PASS all first-party workspace versions and dependency pins aligned');
+  console.log('  PASS all first-party package intents, versions, and dependency pins aligned');
 }
 
 function align() {

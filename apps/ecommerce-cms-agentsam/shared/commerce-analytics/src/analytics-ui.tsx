@@ -151,7 +151,7 @@ export function Sparkline({
   const max = Math.max(...data);
   const range = max - min || 1;
   const stepX = width / (data.length - 1 || 1);
-  const points = data.map((v, i) => [i * stepX, height - ((v - min) / range) * height]);
+  const points: Array<[number, number]> = data.map((v, i) => [i * stepX, height - ((v - min) / range) * height]);
   const path = points.map((p, i) => (i === 0 ? "M" : "L") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
   const fillPath = path + ` L${width} ${height} L0 ${height} Z`;
   const gradientId = `sg-${id}`;
@@ -202,7 +202,10 @@ export function AreaChart({
 
   useEffect(() => {
     if (!ref.current) return;
-    const ro = new ResizeObserver(([e]) => setW(e.contentRect.width));
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) setW(entry.contentRect.width);
+    });
     ro.observe(ref.current);
     return () => ro.disconnect();
   }, []);
@@ -216,7 +219,7 @@ export function AreaChart({
   if (stacked) {
     for (let i = 0; i < n; i++) {
       let sum = 0;
-      for (const s of series) sum += s.data[i];
+      for (const s of series) sum += s.data[i] ?? 0;
       allValues.push(sum);
     }
   } else {
@@ -237,9 +240,9 @@ export function AreaChart({
     if (!stacked) return series.map((s) => s.data);
     const acc = new Array(n).fill(0);
     return series.map((s) => {
-      const top = s.data.map((v, i) => acc[i] + v);
+      const top = s.data.map((v, i) => (acc[i] ?? 0) + v);
       const bottom = [...acc];
-      for (let i = 0; i < n; i++) acc[i] = top[i];
+      for (let i = 0; i < n; i++) acc[i] = top[i] ?? 0;
       return { top, bottom };
     });
   }, [series, stacked, n]);
@@ -297,7 +300,7 @@ export function AreaChart({
               topPath +
               " " +
               sd.bottom
-                .map((v, i) => "L" + xScale(n - 1 - i) + " " + yScale(sd.bottom[n - 1 - i]))
+                .map((v, i) => "L" + xScale(n - 1 - i) + " " + yScale(sd.bottom[n - 1 - i] ?? 0))
                 .join(" ") +
               " Z";
           } else {
@@ -335,9 +338,9 @@ export function AreaChart({
             {series.map((s, si) => {
               let y: number;
               if (stacked && !Array.isArray(stackedData[si])) {
-                y = yScale((stackedData[si] as { top: number[] }).top[hover.i]);
+                y = yScale((stackedData[si] as { top: number[] }).top[hover.i] ?? 0);
               } else {
-                y = yScale(s.data[hover.i]);
+                y = yScale(s.data[hover.i] ?? 0);
               }
               return (
                 <circle key={si} cx={xScale(hover.i)} cy={y} r="3.5" fill="var(--bg)" stroke={s.color} strokeWidth="2" />
@@ -364,7 +367,7 @@ export function AreaChart({
                 />{" "}
                 {s.name}
               </span>
-              <span className="val">{yFormat(s.data[hover.i])}</span>
+              <span className="val">{yFormat(s.data[hover.i] ?? 0)}</span>
             </div>
           ))}
         </div>

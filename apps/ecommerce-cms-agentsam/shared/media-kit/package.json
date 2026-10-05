@@ -13,5 +13,13 @@
     "./preview": "./src/preview.js",
     "./collections": "./src/collections.js"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "apps/ecommerce-cms-agentsam/shared/media-kit"
+  }
 }

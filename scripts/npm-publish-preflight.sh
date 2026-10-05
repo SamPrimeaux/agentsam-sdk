@@ -1,29 +1,32 @@
 #!/usr/bin/env bash
-# Preflight before `npm publish` for @inneranimalmedia/agentsam-sdk.
 set -euo pipefail
 
-PKG='@inneranimalmedia/agentsam-sdk'
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
 
-node scripts/verify-package.mjs
+git fetch origin --prune >/dev/null
 
-who="$(npm whoami 2>/dev/null || true)"
-if [[ -z "$who" ]]; then
-  echo "FAIL: not logged in — run: npm login" >&2
+if [[ "$(git branch --show-current)" != "main" ]]; then
+  echo "REFUSE PUBLISH: branch is not main" >&2
   exit 1
 fi
 
-echo "npm whoami: $who"
-
-echo "Authenticated. npm will enforce this account's package publishing permissions."
-echo "Package: $PKG"
-npm view "$PKG" version 2>/dev/null && echo "registry: package exists" || echo "registry: first publish under this scope"
-
-ver="$(node -p "require('./package.json').version")"
-echo "local version: $ver"
-echo ""
-if [[ "$ver" == *-* ]]; then
-  echo "Next: npm publish --tag alpha --access public"
-else
-  echo "Next: npm publish --tag latest --access public"
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "REFUSE PUBLISH: working tree is not clean" >&2
+  git status -sb >&2
+  exit 1
 fi
-echo "The prepublishOnly hook runs the complete release verification before upload."
+
+if [[ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]]; then
+  echo "REFUSE PUBLISH: HEAD does not equal origin/main" >&2
+  exit 1
+fi
+
+npm whoami >/dev/null
+npm run release:train:check
+node scripts/verify-registry-train.mjs --intent-only
+
+echo "PUBLISH PREFLIGHT PASS"
+echo "branch=main"
+echo "sha=$(git rev-parse HEAD)"
+echo "version=$(node -p 'require("./package.json").version')"

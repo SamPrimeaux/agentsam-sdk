@@ -4,15 +4,27 @@
   "description": "Portable AgentSam analytics read models and operational analytics surfaces.",
   "type": "module",
   "files": [
-    "src",
+    "dist",
     "README.md"
   ],
   "exports": {
-    ".": "./src/index.ts",
-    "./contracts": "./src/contracts/index.ts",
-    "./client": "./src/client/index.ts",
-    "./frontend": "./src/frontend/index.tsx",
-    "./theme.css": "./src/frontend/theme.css"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts/index.d.ts",
+      "import": "./dist/contracts/index.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "import": "./dist/client/index.js"
+    },
+    "./frontend": {
+      "types": "./dist/frontend/index.d.ts",
+      "import": "./dist/frontend/index.js"
+    },
+    "./theme.css": "./dist/frontend/theme.css"
   },
   "dependencies": {
     "@inneranimalmedia/analytics-ui": "2.6.12"
@@ -20,5 +32,25 @@
   "peerDependencies": {
     "react": ">=19"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && mkdir -p dist/frontend && cp src/frontend/theme.css dist/frontend/theme.css",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "react": "^19.2.0",
+    "typescript": "^5.9.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/agentsam-analytics"
+  }
 }

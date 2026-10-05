@@ -366,7 +366,10 @@
     "dev:browser-site": "npm --prefix apps/agentsam-browser-site run dev",
     "build:browser-site": "npm --prefix apps/agentsam-browser-site run build",
     "typecheck:browser-site": "npm --prefix apps/agentsam-browser-site run typecheck",
-    "verify:browser-promo": "npm run typecheck:browser-packages && npm run build:browser-packages && npm run typecheck:browser-site && npm run build:browser-site"
+    "verify:browser-promo": "npm run typecheck:browser-packages && npm run build:browser-packages && npm run typecheck:browser-site && npm run build:browser-site",
+    "release:registry:intent": "node scripts/verify-registry-train.mjs --intent-only",
+    "release:registry:check": "node scripts/verify-registry-train.mjs",
+    "release:publish:preflight": "bash scripts/npm-publish-preflight.sh"
   },
   "engines": {
     "node": ">=22 <25",
