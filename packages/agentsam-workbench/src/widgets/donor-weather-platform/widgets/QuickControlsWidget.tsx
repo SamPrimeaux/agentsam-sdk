@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * QuickControlsWidget: Studio & runtime toggles for dev server, telemetry, audio, and atmosphere.
  */
 

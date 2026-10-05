@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * ContentListWidget: Structured task checklist with progress and priority badges.
  */
 

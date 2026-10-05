@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * CloudflareObservabilityWidget: Live Cloudflare Worker telemetry, CPU execution duration,
  * invocation outcomes, error rates, and Workers Observability MCP capabilities.
  */
@@ -16,7 +16,7 @@ export interface CloudflareObservabilityWidgetProps extends Partial<WidgetFrameP
   className?: string;
 }
 
-export const CloudflareObservabilityWidget: React.FC<CloudflareObservabilityWidgetProps> = ({ 
+export const CloudflareObservabilityWidget: React.FC<CloudflareObservabilityWidgetProps> = ({
   className = '',
   ...frameProps
 }) => {

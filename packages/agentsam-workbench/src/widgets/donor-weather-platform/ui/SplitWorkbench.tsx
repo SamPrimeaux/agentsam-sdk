@@ -1,23 +1,23 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * SplitWorkbench: Dual-pane canvas pairing the live Weather Dashboard Agent
  * with real-time workbench utility and agent runtime widgets.
  */
 
 import React, { useState } from 'react';
-import { 
-  Columns, 
-  CloudSun, 
-  Cpu, 
-  Timer, 
-  ShieldAlert, 
-  Coins, 
+import {
+  Columns,
+  CloudSun,
+  Cpu,
+  Timer,
+  ShieldAlert,
+  Coins,
   Sliders,
   ChevronRight
 } from 'lucide-react';
-import { 
+import {
   CountdownWidget,
   ActiveRunWidget,
   TokenCostWidget,
@@ -63,7 +63,7 @@ export const SplitWorkbench: React.FC<SplitWorkbenchProps> = ({
         {/* Right Column: Companion Runtime & Utility Stack */}
         <div className="xl:col-span-5 space-y-4">
           {/* Tab selector for companion widgets */}
-          <div 
+          <div
             className="p-2 rounded-2xl border flex items-center justify-between"
             style={{
               background: activeTheme.glass.cardFill,

@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * CalculatorWidget: Rapid utility calculator with expression memory and calculation tape.
  */
 

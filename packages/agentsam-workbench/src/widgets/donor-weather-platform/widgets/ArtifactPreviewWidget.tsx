@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * ArtifactPreviewWidget: Code and contract inspector for AgentSam Workbench widgets.
  */
 

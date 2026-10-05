@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * HapticsAdapter: Semantic haptic feedback engine for AgentSam Workbench.
  * Triggers physical confirmations on meaningful gesture & state thresholds.
  * Web-safe capability detection with zero fake sound/shake distractions.

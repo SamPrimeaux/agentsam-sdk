@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * ClockWidget: World & precision clock with timezone selector, UTC offset, and live seconds.
  */
 

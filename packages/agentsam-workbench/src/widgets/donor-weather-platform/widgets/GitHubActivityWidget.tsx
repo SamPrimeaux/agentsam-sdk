@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * GitHubActivityWidget: Repository PR status, checks, branch sync, and commit feed.
  */
 
@@ -14,7 +14,7 @@ export interface GitHubActivityWidgetProps extends Partial<WidgetFrameProps> {
   className?: string;
 }
 
-export const GitHubActivityWidget: React.FC<GitHubActivityWidgetProps> = ({ 
+export const GitHubActivityWidget: React.FC<GitHubActivityWidgetProps> = ({
   className = '',
   ...frameProps
 }) => {

@@ -1,20 +1,20 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * AddWidgetSheet: Product-grade widget library, search, preview, and layout manager sheet.
  * Supports iOS-style previewing in size classes (S/M/L), instant install, and hidden widget restoration.
  */
 
 import React, { useState } from 'react';
-import { 
-  X, 
-  Search, 
-  Plus, 
-  Check, 
-  Eye, 
-  EyeOff, 
-  RotateCcw, 
+import {
+  X,
+  Search,
+  Plus,
+  Check,
+  Eye,
+  EyeOff,
+  RotateCcw,
   Sparkles,
   Layers,
   ArrowRight
@@ -45,7 +45,7 @@ export const AddWidgetSheet: React.FC<AddWidgetSheetProps> = ({ isOpen, onClose 
 
   const filteredCatalog = INITIAL_WIDGET_CATALOG.filter((w) => {
     const matchesCat = activeCategory === 'all' || w.category === activeCategory;
-    const matchesSearch = !searchQuery.trim() || 
+    const matchesSearch = !searchQuery.trim() ||
       w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       w.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       w.tags.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -63,7 +63,7 @@ export const AddWidgetSheet: React.FC<AddWidgetSheetProps> = ({ isOpen, onClose 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/65 backdrop-blur-md animate-in fade-in duration-200">
-      <div 
+      <div
         className="w-full max-w-[880px] max-h-[90vh] rounded-[28px] border shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
         style={{
           background: activeTheme.glass.cardFill,

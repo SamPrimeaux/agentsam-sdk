@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * QueueStatusWidget: Agent pipeline worker concurrency and subtask distribution.
  */
 

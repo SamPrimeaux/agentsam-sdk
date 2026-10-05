@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * GestureWidgetFrame: Physics-based centralized gesture handler using motion/react.
  * Powers physical card-swiping, swipe-to-reveal contextual actions, compression on touch,
  * spring snap dynamics, and card lifting into edit mode with semantic haptic feedback.
@@ -9,16 +9,16 @@
 
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { 
-  Pin, 
-  EyeOff, 
-  Trash2, 
-  RotateCcw, 
-  ExternalLink, 
-  MoreVertical, 
-  ChevronDown, 
-  ChevronUp, 
-  MoveUp, 
+import {
+  Pin,
+  EyeOff,
+  Trash2,
+  RotateCcw,
+  ExternalLink,
+  MoreVertical,
+  ChevronDown,
+  ChevronUp,
+  MoveUp,
   MoveDown
 } from 'lucide-react';
 import { useTheme } from '@inneranimalmedia/agentsam-themes';
@@ -192,7 +192,7 @@ export const GestureWidgetFrame: React.FC<GestureWidgetFrameProps> = ({
         className="relative rounded-[22px] flex flex-col z-10 select-none cursor-grab active:cursor-grabbing"
       >
         {/* Top Hairline Highlight */}
-        <div 
+        <div
           className="absolute top-0 left-0 right-0 h-[1px] pointer-events-none rounded-t-[22px]"
           style={{
             background: `linear-gradient(90deg, transparent 0%, ${activeTheme.glass.cardHighlight} 50%, transparent 100%)`
@@ -203,7 +203,7 @@ export const GestureWidgetFrame: React.FC<GestureWidgetFrameProps> = ({
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 relative z-10">
           <div className="flex items-center gap-2.5 min-w-0">
             {icon && (
-              <div 
+              <div
                 className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 border border-white/10"
                 style={{
                   background: 'rgba(255, 255, 255, 0.08)',
@@ -215,7 +215,7 @@ export const GestureWidgetFrame: React.FC<GestureWidgetFrameProps> = ({
             )}
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 
+                <h3
                   className="text-[13.5px] font-semibold tracking-tight truncate leading-tight"
                   style={{ color: activeTheme.text.primary }}
                 >
@@ -310,7 +310,7 @@ export const GestureWidgetFrame: React.FC<GestureWidgetFrameProps> = ({
 
         {/* Management Drawer (Accessible menu alternative) */}
         {showMenu && (
-          <div 
+          <div
             className="p-3 bg-black/75 border-b border-white/10 flex flex-col gap-2.5 animate-in fade-in duration-200 text-xs"
             onClick={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}

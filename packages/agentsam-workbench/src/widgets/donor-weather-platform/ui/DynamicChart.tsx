@@ -58,14 +58,14 @@ function formatChartDate(value: any, showTime: boolean): string {
         // e.g., "Feb" -> "Feb"
         const monthStr = date.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
         const year = date.getUTCFullYear().toString().slice(-2);
-        
+
         let formatted = `${day}-${monthStr}-${year}`;
-        
+
         if (showTime && value.includes(':')) {
           const timeStr = date.toLocaleString('en-US', { hour: 'numeric', hour12: true, timeZone: 'UTC' });
           formatted = `${formatted}, ${timeStr}`;
         }
-        
+
         return formatted;
       }
     }
@@ -91,14 +91,14 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({ widget }) => {
   // Analyze raw data time span to determine how to format axis and align pivoted data
   const timeInfo = React.useMemo(() => {
     if (!Array.isArray(data) || data.length < 2) return { isHourly: false, daysSpan: 0 };
-    
+
     let dates = data
       .map(row => {
         const val = row[xAxisKey];
         return typeof val === 'string' ? new Date(val).getTime() : NaN;
       })
       .filter(time => !isNaN(time));
-      
+
     if (dates.length >= 2) {
       // Sort and remove near-duplicates (within same hour) to prevent multiple cities from skewing the average diff
       const sortedDates = [...dates].sort((a, b) => a - b);
@@ -108,17 +108,17 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({ widget }) => {
           uniqueSortedDates.push(sortedDates[i]);
         }
       }
-      
+
       if (uniqueSortedDates.length >= 2) {
         const timeSpan = uniqueSortedDates[uniqueSortedDates.length - 1] - uniqueSortedDates[0];
         const daysSpan = timeSpan / (1000 * 60 * 60 * 24);
-        
+
         let totalDiff = 0;
         for (let i = 1; i < uniqueSortedDates.length; i++) {
           totalDiff += uniqueSortedDates[i] - uniqueSortedDates[i-1];
         }
         const avgDiff = totalDiff / (uniqueSortedDates.length - 1);
-        
+
         // If average difference between unique data points is less than ~20 hours, it's hourly data
         const isHourly = avgDiff < 72000000;
         return { isHourly, daysSpan };
@@ -135,7 +135,7 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({ widget }) => {
       const seriesKey = widget.seriesKey;
       const valueKey = activeDataKeys[0]; // when grouping, we usually plot one metric (like temperature_2m) across multiple cities
       const uniqueSeries = Array.from(new Set(data.map(d => d[seriesKey]).filter(Boolean)));
-      
+
       const pivoted = data.reduce((acc, row) => {
         // Normalize date strings to prevent staggered x-axis points
         let rawX = row[xAxisKey];
@@ -165,10 +165,10 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({ widget }) => {
         }
         return acc;
       }, [] as any[]);
-      
+
       return { chartData: pivoted, renderKeys: uniqueSeries as string[] };
     }
-    
+
     return { chartData: data, renderKeys: activeDataKeys };
   }, [data, widget.seriesKey, xAxisKey, activeDataKeys, timeInfo.isHourly]);
 
@@ -185,34 +185,34 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({ widget }) => {
             <LineChart data={chartData as any[]} margin={{ bottom: 15 }}>
               {/* No grid lines, minimal */}
               <CartesianGrid strokeDasharray="3 3" opacity={0} vertical={false} />
-              <XAxis 
-                dataKey={xAxisKey} 
-                stroke="transparent" 
-                fontSize={10} 
-                tickLine={false} 
-                axisLine={false} 
+              <XAxis
+                dataKey={xAxisKey}
+                stroke="transparent"
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
                 dy={10}
                 fontFamily="Inter, sans-serif"
                 tickFormatter={(val) => formatChartDate(val, showAxisTime)}
                 tick={isDenseData ? false : { fill: "rgba(255,255,255,0.55)", fontSize: 10, fontWeight: 500 }}
               />
-              <YAxis 
-                stroke="transparent" 
-                fontSize={10} 
-                tickLine={false} 
-                axisLine={false} 
-                tickFormatter={(value) => `${value}`} 
+              <YAxis
+                stroke="transparent"
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(value) => `${value}`}
                 dx={-10}
                 fontFamily="Inter, sans-serif"
                 tick={{ fill: "rgba(255,255,255,0.55)", fontSize: 10, fontWeight: 500 }}
               />
-              <Tooltip 
+              <Tooltip
                 contentStyle={{ backgroundColor: "#f1fcff", border: "1px solid rgba(45,212,191,0.4)", borderRadius: "12px", color: "#0f172a", padding: "12px", boxShadow: "0 20px 25px -5px rgba(15,23,42,0.15), 0 10px 10px -5px rgba(15,23,42,0.08)" }}
                 itemStyle={{ color: "#0f172a", fontSize: 12, fontWeight: 500 }}
                 labelStyle={{ color: "#0369a1", marginBottom: "8px", fontSize: 10, letterSpacing: "0.05em" }}
                 cursor={{ stroke: "rgba(15,23,42,0.12)", strokeWidth: 1 }}
                 formatter={(value: any, name: any) => [
-                  typeof value === 'number' ? Number(value.toFixed(1)) : value, 
+                  typeof value === 'number' ? Number(value.toFixed(1)) : value,
                   typeof name === 'string' ? formatKeyName(name) : name
                 ]}
                 labelFormatter={(label) => formatChartDate(label, showTooltipTime)}
@@ -238,42 +238,42 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({ widget }) => {
           <ResponsiveContainer width="100%" height="100%" minHeight={250}>
             <BarChart data={chartData as any[]} barGap={8} margin={{ bottom: 15 }}>
               <CartesianGrid strokeDasharray="3 3" opacity={0} vertical={false} />
-              <XAxis 
-                dataKey={xAxisKey} 
-                stroke="transparent" 
-                fontSize={10} 
-                tickLine={false} 
-                axisLine={false} 
+              <XAxis
+                dataKey={xAxisKey}
+                stroke="transparent"
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
                 dy={10}
                 tickFormatter={(val) => formatChartDate(val, showAxisTime)}
                 tick={isDenseData ? false : { fill: "rgba(255,255,255,0.55)", fontSize: 10, fontWeight: 500 }}
               />
-              <YAxis 
-                stroke="transparent" 
-                fontSize={10} 
-                tickLine={false} 
-                axisLine={false} 
+              <YAxis
+                stroke="transparent"
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
                 dx={-10}
                 tick={{ fill: "rgba(255,255,255,0.55)", fontSize: 10, fontWeight: 500 }}
               />
-              <Tooltip 
+              <Tooltip
                 contentStyle={{ backgroundColor: "#f1fcff", border: "1px solid rgba(45,212,191,0.4)", borderRadius: "12px", color: "#0f172a", padding: "12px" }}
                 cursor={{ fill: "rgba(15,23,42,0.03)", radius: 8 }}
                 itemStyle={{ color: "#0f172a", fontSize: 12 }}
                 labelStyle={{ color: "#0369a1", marginBottom: "8px", fontSize: 10, textTransform: "none" }}
                 formatter={(value: any, name: any) => [
-                  typeof value === 'number' ? Number(value.toFixed(1)) : value, 
+                  typeof value === 'number' ? Number(value.toFixed(1)) : value,
                   typeof name === 'string' ? formatKeyName(name) : name
                 ]}
                 labelFormatter={(label) => formatChartDate(label, showTooltipTime)}
               />
               {renderKeys.map((key, index) => (
-                <Bar 
+                <Bar
                   name={formatKeyName(key)}
-                  key={key} 
-                  dataKey={key} 
-                  fill={COLORS[index % COLORS.length]} 
-                  radius={[4, 4, 4, 4]} 
+                  key={key}
+                  dataKey={key}
+                  fill={COLORS[index % COLORS.length]}
+                  radius={[4, 4, 4, 4]}
                   barSize={32}
                 />
               ))}
@@ -293,30 +293,30 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({ widget }) => {
                 ))}
               </defs>
               <CartesianGrid strokeDasharray="3 3" opacity={0} vertical={false} />
-              <XAxis 
-                dataKey={xAxisKey} 
-                stroke="transparent" 
-                fontSize={10} 
-                tickLine={false} 
-                axisLine={false} 
+              <XAxis
+                dataKey={xAxisKey}
+                stroke="transparent"
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
                 dy={10}
                 tickFormatter={(val) => formatChartDate(val, showAxisTime)}
                 tick={isDenseData ? false : { fill: "rgba(255,255,255,0.55)", fontSize: 10, fontWeight: 500 }}
               />
-              <YAxis 
-                stroke="transparent" 
-                fontSize={10} 
-                tickLine={false} 
-                axisLine={false} 
+              <YAxis
+                stroke="transparent"
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
                 dx={-10}
                 tick={{ fill: "rgba(255,255,255,0.55)", fontSize: 10, fontWeight: 500 }}
               />
-              <Tooltip 
+              <Tooltip
                 contentStyle={{ backgroundColor: "#f1fcff", border: "1px solid rgba(45,212,191,0.4)", borderRadius: "12px", color: "#0f172a", padding: "12px" }}
                 itemStyle={{ color: "#0f172a", fontSize: 12 }}
                 labelStyle={{ color: "#0369a1", marginBottom: "8px", fontSize: 10, textTransform: "none" }}
                 formatter={(value: any, name: any) => [
-                  typeof value === 'number' ? Number(value.toFixed(1)) : value, 
+                  typeof value === 'number' ? Number(value.toFixed(1)) : value,
                   typeof name === 'string' ? formatKeyName(name) : name
                 ]}
                 labelFormatter={(label) => formatChartDate(label, showTooltipTime)}
@@ -342,11 +342,11 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({ widget }) => {
           <ResponsiveContainer width="100%" height="100%" minHeight={250}>
             <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
               <CartesianGrid strokeDasharray="3 3" opacity={0} />
-              <XAxis 
-                type="number" 
-                dataKey={widget.xLabel} 
-                name={formatKeyName(widget.xLabel || "")} 
-                stroke="transparent" 
+              <XAxis
+                type="number"
+                dataKey={widget.xLabel}
+                name={formatKeyName(widget.xLabel || "")}
+                stroke="transparent"
                 fontSize={10}
                 tickLine={false}
                 axisLine={false}
@@ -355,11 +355,11 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({ widget }) => {
                 tick={{ fill: "rgba(255,255,255,0.55)", fontSize: 10, fontWeight: 500 }}
                 label={{ value: widget.xLabel, position: 'bottom', offset: 0, fill: "rgba(255,255,255,0.55)", fontSize: 10, style: { textTransform: "none", letterSpacing: "0.05em" } }}
               />
-              <YAxis 
-                type="number" 
-                dataKey={widget.yLabel} 
-                name={formatKeyName(widget.yLabel || "")} 
-                stroke="transparent" 
+              <YAxis
+                type="number"
+                dataKey={widget.yLabel}
+                name={formatKeyName(widget.yLabel || "")}
+                stroke="transparent"
                 fontSize={10}
                 tickLine={false}
                 axisLine={false}
@@ -368,20 +368,20 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({ widget }) => {
                 tick={{ fill: "rgba(255,255,255,0.55)", fontSize: 10, fontWeight: 500 }}
                 label={{ value: widget.yLabel, angle: -90, position: 'insideLeft', fill: "rgba(255,255,255,0.55)", fontSize: 10, style: { textTransform: "none", letterSpacing: "0.05em" } }}
               />
-              <Tooltip 
-                cursor={{ strokeDasharray: "3 3" }} 
+              <Tooltip
+                cursor={{ strokeDasharray: "3 3" }}
                 contentStyle={{ backgroundColor: "#f1fcff", border: "1px solid rgba(45,212,191,0.4)", borderRadius: "12px", color: "#0f172a", padding: "12px" }}
                 itemStyle={{ color: "#0f172a", fontSize: 12 }}
                 labelStyle={{ color: "#0369a1", marginBottom: "8px", fontSize: 10, textTransform: "none" }}
                 formatter={(value: any, name: any) => [
-                  typeof value === 'number' ? Number(value.toFixed(1)) : value, 
+                  typeof value === 'number' ? Number(value.toFixed(1)) : value,
                   typeof name === 'string' ? formatKeyName(name) : name
                 ]}
                 labelFormatter={(label) => formatChartDate(label, showTooltipTime)}
               />
-              <Scatter 
-                name={widget.title} 
-                data={chartData as any[]} 
+              <Scatter
+                name={widget.title}
+                data={chartData as any[]}
                 fill={COLORS[0]}
                 shape="circle"
               >
@@ -414,11 +414,11 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({ widget }) => {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} strokeWidth={0} />
                 ))}
               </Pie>
-              <Tooltip 
+              <Tooltip
                 contentStyle={{ backgroundColor: "#f1fcff", border: "1px solid rgba(45,212,191,0.4)", borderRadius: "12px", color: "#0f172a", padding: "12px" }}
                 itemStyle={{ color: "#0f172a", fontSize: 12 }}
                 formatter={(value: any, name: any) => [
-                  typeof value === 'number' ? Number(value.toFixed(1)) : value, 
+                  typeof value === 'number' ? Number(value.toFixed(1)) : value,
                   typeof name === 'string' ? formatKeyName(name) : name
                 ]}
                 labelFormatter={(label) => formatChartDate(label, showTooltipTime)}
@@ -431,41 +431,41 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({ widget }) => {
           <ResponsiveContainer width="100%" height="100%" minHeight={250}>
             <ComposedChart data={chartData as any[]} margin={{ bottom: 15 }}>
               <CartesianGrid strokeDasharray="3 3" opacity={0} vertical={false} />
-              <XAxis 
-                dataKey={xAxisKey} 
-                stroke="transparent" 
-                fontSize={10} 
-                tickLine={false} 
-                axisLine={false} 
+              <XAxis
+                dataKey={xAxisKey}
+                stroke="transparent"
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
                 dy={10}
                 tickFormatter={(val) => formatChartDate(val, showAxisTime)}
                 tick={isDenseData ? false : { fill: "rgba(255,255,255,0.55)", fontSize: 10, fontWeight: 500 }}
               />
-              <YAxis 
-                stroke="transparent" 
-                fontSize={10} 
-                tickLine={false} 
-                axisLine={false} 
+              <YAxis
+                stroke="transparent"
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
                 dx={-10}
                 tick={{ fill: "rgba(255,255,255,0.55)", fontSize: 10, fontWeight: 500 }}
               />
-              <Tooltip 
+              <Tooltip
                 contentStyle={{ backgroundColor: "#f1fcff", border: "1px solid rgba(45,212,191,0.4)", borderRadius: "12px", color: "#0f172a", padding: "12px", boxShadow: "0 20px 25px -5px rgba(15,23,42,0.15), 0 10px 10px -5px rgba(15,23,42,0.08)" }}
                 itemStyle={{ color: "#0f172a", fontSize: 12, fontWeight: 500 }}
                 labelStyle={{ color: "#0369a1", marginBottom: "8px", fontSize: 10, letterSpacing: "0.05em" }}
                 cursor={{ fill: "rgba(15,23,42,0.03)", radius: 8 }}
                 formatter={(value: any, name: any) => [
-                  typeof value === 'number' ? Number(value.toFixed(1)) : value, 
+                  typeof value === 'number' ? Number(value.toFixed(1)) : value,
                   typeof name === 'string' ? formatKeyName(name) : name
                 ]}
                 labelFormatter={(label) => formatChartDate(label, showTooltipTime)}
               />
               {renderKeys.length > 0 && (
-                <Bar 
+                <Bar
                   name={formatKeyName(renderKeys[0])}
-                  dataKey={renderKeys[0]} 
-                  fill={COLORS[0]} 
-                  radius={[4, 4, 4, 4]} 
+                  dataKey={renderKeys[0]}
+                  fill={COLORS[0]}
+                  radius={[4, 4, 4, 4]}
                   barSize={32}
                 />
               )}
@@ -489,21 +489,21 @@ export const DynamicChart: React.FC<DynamicChartProps> = ({ widget }) => {
           <ResponsiveContainer width="100%" height="100%" minHeight={250}>
             <RadarChart cx="50%" cy="50%" outerRadius="70%" data={chartData as any[]}>
               <PolarGrid stroke="rgba(255,255,255,0.15)" />
-              <PolarAngleAxis 
-                dataKey={xAxisKey} 
-                tick={isDenseData ? false : { fill: "rgba(255,255,255,0.7)", fontSize: 10, fontWeight: 500 }} 
+              <PolarAngleAxis
+                dataKey={xAxisKey}
+                tick={isDenseData ? false : { fill: "rgba(255,255,255,0.7)", fontSize: 10, fontWeight: 500 }}
               />
-              <PolarRadiusAxis 
-                angle={30} 
-                domain={['auto', 'auto']} 
-                tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }} 
+              <PolarRadiusAxis
+                angle={30}
+                domain={['auto', 'auto']}
+                tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }}
                 axisLine={false}
               />
-              <Tooltip 
+              <Tooltip
                 contentStyle={{ backgroundColor: "#f1fcff", border: "1px solid rgba(45,212,191,0.4)", borderRadius: "12px", color: "#0f172a", padding: "12px" }}
                 itemStyle={{ color: "#0f172a", fontSize: 12, fontWeight: 500 }}
                 formatter={(value: any, name: any) => [
-                  typeof value === 'number' ? Number(value.toFixed(1)) : value, 
+                  typeof value === 'number' ? Number(value.toFixed(1)) : value,
                   typeof name === 'string' ? formatKeyName(name) : name
                 ]}
                 labelFormatter={(label) => formatChartDate(label, showTooltipTime)}

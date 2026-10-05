@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * ActiveRunWidget: Live agent execution step tracker, thought streaming, and tool calls.
  */
 

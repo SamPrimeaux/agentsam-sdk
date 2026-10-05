@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * TaskProgressWidget: Multi-stage agent task execution stepper with milestone progress and ETA.
  */
 

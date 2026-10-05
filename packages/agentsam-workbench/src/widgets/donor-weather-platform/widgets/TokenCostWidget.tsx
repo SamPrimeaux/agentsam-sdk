@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * TokenCostWidget: Real-time token consumption breakdown and estimated USD compute cost.
  */
 

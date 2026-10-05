@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * ApprovalsWidget: Human-in-the-loop review requests for external API calls, file writes, and budget gates.
  */
 

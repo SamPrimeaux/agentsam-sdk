@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * GlanceMetricsWidget: Real-time operational telemetry and sparkline metrics.
  */
 

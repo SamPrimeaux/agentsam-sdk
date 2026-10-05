@@ -1,21 +1,21 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * UtilitiesSurface: App-native /widgets Utilities surface for Local Studio.
  * Directly consumes packaged widgets with real layout persistence, size classes,
  * hidden widget recovery shelf, and instant undo toasts.
  */
 
 import React, { useState, useMemo } from 'react';
-import { 
-  Search, 
-  Boxes, 
-  RotateCcw, 
-  Sparkles, 
-  Plus, 
-  Eye, 
-  EyeOff, 
+import {
+  Search,
+  Boxes,
+  RotateCcw,
+  Sparkles,
+  Plus,
+  Eye,
+  EyeOff,
   SlidersHorizontal,
   CheckCircle2,
   Trash2,
@@ -231,7 +231,7 @@ export const UtilitiesSurface: React.FC<UtilitiesSurfaceProps> = ({
       )}
 
       {/* Control Surface & Filter Bar */}
-      <div 
+      <div
         className="p-5 rounded-[24px] border"
         style={{
           background: activeTheme.glass.cardFill,

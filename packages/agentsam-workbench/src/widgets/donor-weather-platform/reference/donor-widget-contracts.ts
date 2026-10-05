@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * @inneranimalmedia/agentsam-contracts/widgets
  * Widget definition and state contracts for AgentSam Workbench & Local Studio.
  */

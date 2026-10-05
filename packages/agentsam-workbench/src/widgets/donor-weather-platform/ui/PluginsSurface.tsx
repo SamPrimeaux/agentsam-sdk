@@ -1,29 +1,29 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * PluginsSurface: Real extension and account connection control center for AgentSam Studio.
  * Replaces placeholder screens with concrete connection states, OAuth scopes, and health telemetry.
  */
 
 import React, { useState } from 'react';
-import { 
-  Plug, 
-  CheckCircle2, 
-  AlertCircle, 
-  ExternalLink, 
-  Settings, 
-  Trash2, 
-  RefreshCw, 
-  Search, 
-  HardDrive, 
-  Mail, 
-  Calendar, 
-  Folder, 
-  Cloud, 
-  GitBranch, 
-  Database, 
-  Terminal, 
+import {
+  Plug,
+  CheckCircle2,
+  AlertCircle,
+  ExternalLink,
+  Settings,
+  Trash2,
+  RefreshCw,
+  Search,
+  HardDrive,
+  Mail,
+  Calendar,
+  Folder,
+  Cloud,
+  GitBranch,
+  Database,
+  Terminal,
   Network,
   CloudSun,
   ShieldCheck,
@@ -31,10 +31,10 @@ import {
   X
 } from 'lucide-react';
 import { useTheme } from '@inneranimalmedia/agentsam-themes';
-import { 
-  PLUGIN_CATALOG, 
-  INITIAL_PLUGIN_INSTALLS, 
-  INITIAL_PLUGIN_CONNECTIONS 
+import {
+  PLUGIN_CATALOG,
+  INITIAL_PLUGIN_INSTALLS,
+  INITIAL_PLUGIN_CONNECTIONS
 } from '../packages/plugins';
 import { AgentSamPluginRecord, UserPluginInstallRecord, PluginConnectionRecord } from '../packages/contracts/widgets/database';
 import { haptics } from '../packages/workbench/haptics';
@@ -103,7 +103,7 @@ export const PluginsSurface: React.FC = () => {
   return (
     <div className="w-full max-w-[1300px] mx-auto px-4 sm:px-6 py-6 space-y-6">
       {/* Surface Header */}
-      <div 
+      <div
         className="p-6 rounded-[24px] border border-white/10"
         style={{
           background: activeTheme.glass.cardFill,
@@ -312,7 +312,7 @@ export const PluginsSurface: React.FC = () => {
       )}
 
       {activeTab === 'permissions' && (
-        <div 
+        <div
           className="p-6 rounded-2xl border space-y-4"
           style={{
             background: activeTheme.glass.cardFill,
@@ -342,7 +342,7 @@ export const PluginsSurface: React.FC = () => {
       {/* Configure Modal */}
       {selectedPlugin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-          <div 
+          <div
             className="w-full max-w-[500px] rounded-[24px] border p-6 space-y-4"
             style={{
               background: activeTheme.glass.cardFill,

@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * WeatherAgentWidget: Weather dashboard agent packaged as a workbench widget,
  * preserving the pristine glassmorphic design and Open-Meteo live data integration.
  */

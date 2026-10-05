@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * GestureManager: Centralized physics-based gesture engine powered by Framer Motion.
  * Coordinates:
  *  1. Press-and-hold physics detection for Edit Mode elevation with haptic pulses.
@@ -11,13 +11,13 @@
  */
 
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { 
-  motion, 
-  useMotionValue, 
-  useTransform, 
-  animate, 
-  MotionValue, 
-  PanInfo 
+import {
+  motion,
+  useMotionValue,
+  useTransform,
+  animate,
+  MotionValue,
+  PanInfo
 } from 'motion/react';
 import { haptics } from '../haptics';
 
@@ -80,7 +80,7 @@ export interface GestureSessionState {
   lastGridSnap: { col: number; row: number } | null;
 }
 
-export type GestureEventType = 
+export type GestureEventType =
   | 'hold_start'
   | 'edit_mode_entered'
   | 'drag_start'
@@ -501,12 +501,12 @@ export function useWidgetGestures({
     }
   };
 
-  const dragType: 'x' | 'y' | boolean = disabled 
-    ? false 
-    : (allowDragToReorder || isEditMode) 
-      ? true 
-      : allowSwipe 
-        ? 'x' 
+  const dragType: 'x' | 'y' | boolean = disabled
+    ? false
+    : (allowDragToReorder || isEditMode)
+      ? true
+      : allowSwipe
+        ? 'x'
         : false;
 
   const dragConstraints = (allowDragToReorder || isEditMode)

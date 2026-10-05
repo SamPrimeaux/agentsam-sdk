@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * LauncherWidget: Fast command palette and query launcher for AgentSam Workbench.
  */
 

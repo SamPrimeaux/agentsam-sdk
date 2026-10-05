@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * @inneranimalmedia/agentsam-themes
  * Reusable packaged theme system for AgentSam Studio & Local Workbench.
  * 6 pristine atmospheres: Weather Auto, Azure Sky, Deep Slate, Twilight, Aurora, Emerald.
@@ -9,7 +9,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export type ThemeId = 
+export type ThemeId =
   | 'weather-auto'
   | 'azure-sky'
   | 'deep-slate'

@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * WidgetFrame: Universal container frame for AgentSam Workbench & Local Studio.
  * Re-exports the centralized physics-based GestureWidgetFrame using motion/react.
  */

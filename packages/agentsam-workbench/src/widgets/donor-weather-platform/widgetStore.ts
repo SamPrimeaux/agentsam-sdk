@@ -1,18 +1,18 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * WidgetStore: Centralized reactive store managing widget lifecycle,
  * layout placements, size classes, dock state, and undo history.
  */
 
 import { useState, useEffect } from 'react';
-import { 
-  AgentSamWidgetCatalogRecord, 
-  UserWidgetInstallRecord, 
+import {
+  AgentSamWidgetCatalogRecord,
+  UserWidgetInstallRecord,
   UserWidgetLayoutRecord,
   WidgetSizeClass,
-  SurfaceType 
+  SurfaceType
 } from '../contracts/widgets/database';
 import { WIDGET_REGISTRY } from '../contracts/widgets';
 import { haptics } from './haptics';

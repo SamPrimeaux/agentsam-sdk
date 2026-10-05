@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * Database schemas & entity contracts for AgentSam Widget System & Plugin Registry.
  * Directly conforms to the requested core tables.
  */
@@ -10,11 +10,11 @@ import { WidgetCategory, WidgetSize } from './index';
 
 export type WidgetSizeClass = 'XS' | 'S' | 'M' | 'L' | 'XL' | 'Full';
 
-export type SurfaceType = 
-  | 'widgets_home' 
-  | 'dock' 
-  | 'workbench_split' 
-  | 'app_home' 
+export type SurfaceType =
+  | 'widgets_home'
+  | 'dock'
+  | 'workbench_split'
+  | 'app_home'
   | 'glance_overlay';
 
 /** Table: agentsam_widget_catalog (Master widget catalog) */

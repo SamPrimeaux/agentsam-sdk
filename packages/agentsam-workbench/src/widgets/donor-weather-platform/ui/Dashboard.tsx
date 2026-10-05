@@ -59,7 +59,7 @@ interface DashboardProps {
   onOpenWidgetsSurface?: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ 
+export const Dashboard: React.FC<DashboardProps> = ({
   externalQuery,
   onAtmosphereChange,
   onOpenWidgetsSurface
@@ -125,10 +125,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
     if (!searchQuery.trim()) return;
     setIsLoading(true);
     setError(null);
-    
+
     // Start timing the total search latency
     console.time("Total Search Latency");
-    
+
     // Clear the old dashboard data so we transition back to the main loading spinner
     setDashboardData(null);
     setActiveQuery(searchQuery);
@@ -141,10 +141,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
     try {
       const result = await generateDashboardConfig(searchQuery);
       setDashboardData(result);
-      
+
       // Stop the timer and print the result
       console.timeEnd("Total Search Latency");
-      
+
       // Ensure we hit the absolute top after the new data renders and layout shifts
       setTimeout(() => {
         if (scrollContainerRef.current) {
@@ -210,7 +210,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {/* Header */}
       <div className="absolute top-0 left-0 w-full p-4 sm:p-6 z-40 flex items-center justify-between pointer-events-none">
-        <button 
+        <button
           onClick={() => {
             setDashboardData(null);
             setQuery("");
@@ -240,7 +240,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <AnimatePresence mode="wait">
             {/* Landing state */}
             {isLanding && (
-              <motion.div 
+              <motion.div
                 key="landing"
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -251,7 +251,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <h1 className="text-white text-[32px] md:text-[42px] font-medium tracking-wide text-center leading-tight px-4 drop-shadow-sm">
                 Ask me about the weather and I'll fetch the data and build a custom dashboard
                 </h1>
-                
+
                 <div className="w-full p-6">
                   {/* Search input */}
                   <form onSubmit={onSubmit} className="relative w-full max-w-[600px] mx-auto">
@@ -272,7 +272,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         </AnimatePresence>
                       </div>
                     )}
-                    
+
                     <textarea
                       ref={landingTextareaRef}
                       rows={1}
@@ -300,10 +300,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </form>
 
                   <div className="mt-6 text-center">
-                    <a 
-                      href="https://open-meteo.com/" 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
+                    <a
+                      href="https://open-meteo.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="text-white/40 hover:text-white/60 text-[11px] font-medium tracking-wide transition-colors"
                     >
                       Weather data by Open-Meteo.com
@@ -435,10 +435,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </form>
 
                 <div className="text-center pt-1">
-                  <a 
-                    href="https://open-meteo.com/" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
+                  <a
+                    href="https://open-meteo.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="text-black/30 hover:text-black/50 text-[11px] font-medium tracking-wide transition-colors"
                   >
                     Weather data by Open-Meteo.com

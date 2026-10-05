@@ -15,7 +15,7 @@ interface ThreeWeatherVisProps {
 
 const Bar = ({ position, height, color, label, value }: { position: [number, number, number], height: number, color: string, label: string, value: string }) => {
   const mesh = useRef<THREE.Mesh>(null);
-  
+
   // Animate the bars growing
   useFrame((state) => {
     if (mesh.current) {
@@ -63,20 +63,20 @@ const Scene = ({ widget }: { widget: DashboardWidget }) => {
   const xAxisKey = widget.xAxisKey || 'date';
   // Use first data key for visualization if available, otherwise 'temperature_2m'
   const dataKey = widget.dataKeys?.[0] || 'temperature_2m';
-  
+
   const processedData = useMemo(() => {
     // Limit to top 20 items to avoid clutter
     const sliced = data.slice(0, 20);
     const maxVal = Math.max(...sliced.map((d: any) => Number(d[dataKey]) || 0), 10);
-    
+
     return sliced.map((item: any, index: number) => {
       const val = Number(item[dataKey]) || 0;
       // Normalize height: max height 10 units
-      const height = (val / maxVal) * 8; 
+      const height = (val / maxVal) * 8;
       // Calculate color based on value (e.g. cold blue to hot red)
       const t = Math.min(Math.max((val + 10) / 50, 0), 1); // approximate range -10 to 40
       const color = new THREE.Color().setHSL(0.6 - t * 0.6, 1, 0.5); // Blue to Red
-      
+
       // Simple date formatting
       let label = item[xAxisKey];
       if (typeof label === 'string' && label.includes('T')) {
@@ -102,16 +102,16 @@ const Scene = ({ widget }: { widget: DashboardWidget }) => {
       <ambientLight intensity={0.5} />
       <pointLight position={[10, 10, 10]} intensity={1} />
       <Stars radius={50} depth={50} count={1000} factor={4} saturation={0} fade speed={1} />
-      
+
       <group position={[0, -2, 0]}>
         {processedData.map((d, i) => (
           <Bar key={i} {...d} />
         ))}
       </group>
-      
-      <OrbitControls 
-        enablePan={true} 
-        enableZoom={true} 
+
+      <OrbitControls
+        enablePan={true}
+        enableZoom={true}
         enableRotate={true}
         minPolarAngle={Math.PI / 4}
         maxPolarAngle={Math.PI / 2}

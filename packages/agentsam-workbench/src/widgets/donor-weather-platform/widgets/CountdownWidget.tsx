@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * CountdownWidget: Consumes useCountdown with absolute deadline protection.
  * Tab sleep, background throttling, and OS suspend will never drift the target completion.
  */

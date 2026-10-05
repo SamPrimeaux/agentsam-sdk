@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * GlanceJobsWidget: Scheduled cron runs, background tasks, and trigger actions.
  */
 

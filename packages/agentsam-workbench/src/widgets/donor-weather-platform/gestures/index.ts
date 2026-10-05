@@ -1,14 +1,14 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * Centralized gestures package exports for AgentSam Workbench & Local Studio.
  */
 
-export { 
-  GestureManager, 
+export {
+  GestureManager,
   GestureManagerOrchestrator,
-  useWidgetGestures 
+  useWidgetGestures
 } from './GestureManager';
 
 export type {

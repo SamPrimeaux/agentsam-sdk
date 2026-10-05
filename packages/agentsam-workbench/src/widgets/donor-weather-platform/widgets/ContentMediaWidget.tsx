@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * ContentMediaWidget: Atmospheric radar loops and Web Audio ambient soundscapes.
  */
 

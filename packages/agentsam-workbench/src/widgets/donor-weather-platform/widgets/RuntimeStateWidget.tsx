@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * RuntimeStateWidget: Cluster health, sandbox container status, and node environment.
  */
 

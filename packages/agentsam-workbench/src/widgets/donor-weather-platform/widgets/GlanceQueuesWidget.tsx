@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * GlanceQueuesWidget: Inbound queue depth, priority lanes, and dead-letter count.
  */
 

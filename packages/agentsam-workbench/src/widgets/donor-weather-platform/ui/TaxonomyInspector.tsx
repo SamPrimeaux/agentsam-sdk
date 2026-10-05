@@ -1,19 +1,19 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * TaxonomyInspector: Interactive visualization of the AgentSam Widget System hierarchy & contracts.
  */
 
 import React, { useState } from 'react';
-import { 
-  FolderTree, 
-  ChevronRight, 
-  ChevronDown, 
-  Terminal, 
-  Check, 
-  Copy, 
-  Layers, 
+import {
+  FolderTree,
+  ChevronRight,
+  ChevronDown,
+  Terminal,
+  Check,
+  Copy,
+  Layers,
   Sparkles,
   ArrowRight
 } from 'lucide-react';
@@ -70,7 +70,7 @@ export const TaxonomyInspector: React.FC<TaxonomyInspectorProps> = ({ onSelectWi
 
   return (
     <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 py-6 space-y-6 pb-24">
-      <div 
+      <div
         className="p-6 rounded-[24px] border"
         style={{
           background: activeTheme.glass.cardFill,
