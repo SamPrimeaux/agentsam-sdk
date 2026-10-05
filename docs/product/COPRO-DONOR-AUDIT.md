@@ -1,6 +1,6 @@
 # CoPro Donor Audit
 
-MovieMode in /Users/samprimeaux/inneranimalmedia is the primary donor, not the new product authority.
+MovieMode in the InnerAnimalMedia product repository is the primary donor, not the new product authority.
 
 Harvest its timeline interaction behavior, media/video management, streaming workflows, Remotion preview/render knowledge, conversions, transcription, media embeddings/search, video generation, persistence concepts, and templates.
 
