@@ -1,0 +1,12 @@
+{
+  "name": "@inneranimalmedia/widget-consumer-example",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@inneranimalmedia/agentsam-workbench": "2.6.12"
+  },
+  "scripts": {
+    "smoke": "node src/smoke.mjs"
+  }
+}

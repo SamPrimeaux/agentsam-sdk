@@ -209,3 +209,74 @@ Every migration batch must verify:
 6. same widget behavior in both hosts
 
 A hosted-only widget fix is incomplete.
+
+
+## Non-negotiable completion gates
+
+The implementation agent must not report this project as complete merely because donor UI appears in Local Studio.
+
+Before completion, the agent must run:
+
+```bash
+npm run verify:widget-platform
+```
+
+and provide the result.
+
+The required chain is:
+
+`donor UI -> canonical workbench widget source -> workbench build -> npm tarball -> portable consumer -> Local Studio hosted -> Local Studio desktop`
+
+No stage may be silently skipped.
+
+### Forbidden shortcuts
+
+The following do not satisfy the task:
+
+- copying donor components only into `apps/local-studio`;
+- importing from `packages/agentsam-workbench/src/*`;
+- importing directly from the donor staging directory in production host code;
+- creating Local Studio-only widget contracts;
+- hardcoding Local Studio routes into reusable widget primitives;
+- displaying demo values as live values;
+- claiming npm release based only on local package versions;
+- publishing only the root SDK while leaving the changed workbench package unpublished;
+- creating a second widget implementation for desktop;
+- calling a widget complete without package tests and portable consumer proof.
+
+### Registry truth requirement
+
+For a release containing Widget Platform changes, the changed package must itself be published.
+
+If `@inneranimalmedia/agentsam-workbench` changed, the release is incomplete until:
+
+```bash
+npm view @inneranimalmedia/agentsam-workbench@VERSION version
+npm view @inneranimalmedia/agentsam-workbench@VERSION exports --json
+```
+
+prove that exact version exists and includes:
+
+- `./widgets`
+- `./widgets/widgets.css`
+
+The root SDK version alone is not sufficient proof.
+
+### Required finishing-agent handoff
+
+The finishing agent must leave a handoff containing:
+
+- canonical package files changed;
+- donor files graduated;
+- widgets added;
+- widgets still using Demo adapters;
+- live adapters completed;
+- package tests;
+- portable consumer result;
+- Local Studio hosted result;
+- desktop result;
+- npm pack result;
+- registry result if released;
+- remaining work.
+
+If any required verification is incomplete, it must be labeled incomplete rather than implied complete.
