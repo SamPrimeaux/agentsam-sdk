@@ -1,0 +1,18 @@
+{
+  "schema": "agentsam.donor-sync.v1",
+  "name": "weather-widget-platform",
+  "source": "/Users/samprimeaux/agentsamweatherwidget-audit",
+  "source_archive": "/Users/samprimeaux/Downloads/agentsamweatherwidget.zip",
+  "target": "@inneranimalmedia/agentsam-workbench",
+  "purpose": "Graduate the donor widget operating model, polished widget UI, gestures, layout system, catalog UX, theme behavior, split-workbench patterns, plugin directory patterns, and demo-backed widgets into reusable AgentSam package authority.",
+  "migration_rules": [
+    "Preserve polished visible UI and interaction behavior wherever practical.",
+    "Do not require all widgets to have live production adapters before being visible.",
+    "Demo-backed widgets may ship with explicit Demo status until real adapters exist.",
+    "Settings -> Customize -> Widgets is the canonical widget library/configuration surface.",
+    "Widgets may render on any eligible host surface, including AgentSam side-stage panels.",
+    "The standalone /widgets product route is not the long-term product model.",
+    "Hosted Local Studio and packaged desktop must consume the same widget package code.",
+    "Theme behavior must inherit canonical AgentSam semantic tokens rather than create an isolated theme authority."
+  ]
+}
