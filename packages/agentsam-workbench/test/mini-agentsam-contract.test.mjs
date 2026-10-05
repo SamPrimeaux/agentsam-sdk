@@ -38,7 +38,8 @@ test('Local Studio brand uses the canonical packaged desktop icon', async () => 
   const packagedIcon = await readFile(
     new URL('../../../apps/local-studio/frontend/public/brand/agentsam-local-studio-icon.png', import.meta.url),
   );
-  assert.match(brand, /\/brand\/agentsam-local-studio-icon\.png/);
+  assert.match(brand, /\/brand\/agentsam-mark-on-dark\.svg/);
+  assert.match(brand, /\/brand\/agentsam-mark-on-light\.svg/);
   assert.deepEqual(packagedIcon, canonicalIcon);
   assert.doesNotMatch(brand, /imagedelivery|https?:\/\//);
 });
