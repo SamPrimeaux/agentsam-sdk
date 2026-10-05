@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-cad-frontend",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,7 +11,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-cad-shared": "2.6.11",
+    "@inneranimalmedia/agentsam-cad-shared": "2.6.12",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "react": "^19.0.1",

@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-cms-frontend",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "description": "Internal CMS frontend (bundled into @inneranimalmedia/client-cms-editor — not published separately).",
   "type": "module",
   "exports": {
@@ -15,8 +15,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-cms-backend": "2.6.11",
-    "@inneranimalmedia/agentsam-cms-shared": "2.6.11",
+    "@inneranimalmedia/agentsam-cms-backend": "2.6.12",
+    "@inneranimalmedia/agentsam-cms-shared": "2.6.12",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

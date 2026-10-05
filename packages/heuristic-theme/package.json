@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/theme-heuristic",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "description": "Stock AgentSam CMS storefront shell theme contract (heuristic-theme).",
   "type": "module",
   "main": "./src/index.js",

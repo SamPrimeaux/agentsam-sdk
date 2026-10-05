@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/theme-violet",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "description": "A campaign-forward prebuild with bold calls to action, impact proof, stories, donation moments, and participation paths designed to turn attention into action.",
   "type": "module",
   "main": "./src/index.js",

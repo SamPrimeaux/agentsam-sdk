@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/analytics-ui",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "description": "Domain-neutral analytics presentation primitives for Inner Animal Media products.",
   "type": "module",
   "files": [

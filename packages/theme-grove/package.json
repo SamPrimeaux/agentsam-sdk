@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/theme-grove",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "description": "A visual service-business prebuild centered on project galleries, material detail, process, reviews, and estimate conversion — polished enough for a studio, practical enough for a crew.",
   "type": "module",
   "main": "./src/index.js",

@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/theme-summit",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "description": "A restrained consulting and portfolio prebuild with editorial services, case studies, multilingual-ready structure, media, and thoughtful spacing that lets expertise do the talking.",
   "type": "module",
   "main": "./src/index.js",

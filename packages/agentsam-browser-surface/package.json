@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-browser-surface",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "description": "AgentSamBrowserSurface: a portable Browse/Build browser capability with a provider registry so the lightweight Local Studio browser and the AgentSam Browser Shell can be swapped behind one stable host composition.",
   "author": "Inner Animal Media <info@inneranimals.com>",
   "license": "Apache-2.0",

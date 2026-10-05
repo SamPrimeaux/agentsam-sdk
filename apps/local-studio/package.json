@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-local-studio",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "sideEffects": false,
   "type": "module",
   "workspaces": [
@@ -39,12 +39,13 @@
     "cf:env": "bash scripts/with-cloudflare-env.sh",
     "verify:npm10-lock": "node scripts/verify-npm10-lock.mjs",
     "smoke:desktop": "node scripts/smoke-desktop-spa.mjs",
-    "verify:desktop": "npm run build:desktop && npm run smoke:desktop && npm run smoke:themes && npm run smoke:desktop-auth",
+    "verify:desktop": "npm run verify:brand-assets && npm run build:desktop && npm run smoke:desktop && npm run smoke:themes && npm run smoke:desktop-auth",
     "smoke:themes": "node scripts/smoke-theme-surfaces.mjs",
     "verify:database-honesty": "node --test ../../test/database-hosted-honesty.test.mjs",
     "smoke:desktop-auth": "node scripts/smoke-desktop-auth.mjs",
     "prepack": "npm run build:desktop",
-    "verify:cms-architecture": "node scripts/verify-cms-architecture.mjs"
+    "verify:cms-architecture": "node scripts/verify-cms-architecture.mjs",
+    "verify:brand-assets": "node scripts/verify-brand-assets.mjs"
   },
   "dependencies": {
     "@cloudflare/codemode": "^0.5.2",

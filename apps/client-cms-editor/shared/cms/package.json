@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-cms-shared",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "description": "Internal CMS shared contracts (bundled into @inneranimalmedia/client-cms-editor — not published separately).",
   "type": "module",
   "exports": {

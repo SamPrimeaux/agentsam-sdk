@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/theme-cypress",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "description": "A welcoming community prebuild for organizations that need events, groups, giving, visits, and mission-driven storytelling without looking like a generic nonprofit template.",
   "type": "module",
   "main": "./src/index.js",

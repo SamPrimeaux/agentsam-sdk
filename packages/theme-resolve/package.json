@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/theme-resolve",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "description": "A high-fashion commerce prebuild built around cinematic scroll, shoppable editorial, sticky purchase rails, lookbooks, stories, bundles, and micro-interactions that make the storefront feel directed instead of assembled.",
   "type": "module",
   "main": "./src/index.js",

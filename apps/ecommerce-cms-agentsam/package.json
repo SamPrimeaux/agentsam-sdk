@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/ecommerce-cms-agentsam",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "private": false,
   "type": "module",
   "bin": {
@@ -13,9 +13,9 @@
     "verify:cms-product": "node scripts/verify-cms-product.mjs"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-content": "2.6.11",
-    "@inneranimalmedia/client-cms-editor": "2.6.11",
-    "@inneranimalmedia/cms-runtime": "2.6.11",
+    "@inneranimalmedia/agentsam-content": "2.6.12",
+    "@inneranimalmedia/client-cms-editor": "2.6.12",
+    "@inneranimalmedia/cms-runtime": "2.6.12",
     "@inneranimalmedia/revise-theme": "0.2.0",
     "@inneranimalmedia/section-library": "0.1.0",
     "@inneranimalmedia/site-contracts": "0.1.0"

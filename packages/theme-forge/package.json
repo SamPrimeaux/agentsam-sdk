@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/theme-forge",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "description": "A mobile-first local-services prebuild with estimate capture, service-area confidence, project proof, reviews, and practical trust signals that stay sharp on the smallest screen.",
   "type": "module",
   "main": "./src/index.js",

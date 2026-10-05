@@ -26,7 +26,7 @@
   "identity_provider": "portable",
   "brand_family": "agentsam",
   "product_mark_variant": "local-studio-portal",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "icon_set": "icons/local-studio",
   "icon_mark_svg": "icons/local-studio/AgentSam-Mark.svg",
   "app_icon": {

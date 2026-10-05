@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-assets-core",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "description": "Shared Asset Core: canonical ast_* identity, machine facts, provenance, and provider representations. Peer BrandPack and Content domains build on this — neither owns the other.",
   "type": "module",
   "main": "./dist/index.js",

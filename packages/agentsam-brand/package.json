@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-brand",
-  "version": "2.6.11",
+  "version": "2.6.12",
   "description": "Deterministic Brand Intelligence + portable brand-asset promotion SDK for AgentSam (inspect, derive, plan, promote, publish, verify).",
   "type": "module",
   "license": "MIT",
