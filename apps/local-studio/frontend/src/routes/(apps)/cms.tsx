@@ -103,9 +103,42 @@ function CmsPage() {
     });
   };
 
-  // The useful CMS starts with the actual packaged theme workspace. The old
-  // generic CMS hub remains available only through explicit legacy/page routes.
-  if (!isEditorView) return <ThemeStorePage />;
+  if (!isEditorView) {
+    if (siteLoadError) {
+      return <p role="alert" className="p-6 text-destructive">Could not load accessible websites: {siteLoadError}</p>;
+    }
+    if (!siteCatalog) return <p role="status" className="p-6">Loading your websites…</p>;
+    if (!siteCatalog.length) return <p role="status" className="p-6">No editable websites are connected to this account.</p>;
+    return (
+      <div className="size-full overflow-y-auto" data-cms-site-source="authorized">
+        <CmsHubPage
+          sites={siteCatalog}
+          activeSiteSlug={siteSlug}
+          onSelectSite={(slug: string) => {
+            navigate({
+              to: "/cms",
+              search: { ...search, site: slug, panel: undefined, page: undefined },
+            });
+          }}
+          onNavigate={(path: string) => {
+            if (path.startsWith("/cms")) {
+              const parsed = parseCmsNavigatePath(path, siteSlug);
+              navigate({
+                to: "/cms",
+                search: { site: parsed.site, panel: parsed.panel, page: parsed.page, view: parsed.view },
+              });
+            } else {
+              window.location.href = path;
+            }
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (!siteSlug && !search.theme_project && !activeThemeProject) {
+    return <p role="alert" className="p-6">Choose a website that belongs to your account before editing.</p>;
+  }
 
   if (search.panel === "media") {
     return (
