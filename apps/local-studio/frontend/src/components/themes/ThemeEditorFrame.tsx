@@ -21,7 +21,10 @@ export function ThemeEditorFrame({ adapter, page, onPageSettings }: { adapter: a
       try {
         const pages = await adapter.listPages();
         if (disposed) return;
-        const initial = pages.find((p: any) => p.slug === page || p.id === page)?.slug || pages[0]?.slug;
+        const initial =
+          pages.find((p: any) => p.slug === page || p.id === page)?.slug ||
+          pages.find((p: any) => p.slug === 'home')?.slug ||
+          pages[0]?.slug;
         if (!initial) throw new Error('This site has no pages to edit');
         await mountThemeEditor(iframe, { adapter: createThemeEditorBridge(adapter), page: initial, onPageSettings });
       } catch (error) { if (!disposed) setError(error instanceof Error ? error.message : String(error)); }
