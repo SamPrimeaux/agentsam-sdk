@@ -103,7 +103,9 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
     return json({ ok: false, error: 'site_slug_required', detail: 'Pass ?site= or project_slug — no hardcoded default site.' }, 400);
   }
   const access = /\/publish$/.test(url.pathname) ? 'publish' : method === 'GET' ? 'read' : 'write';
-  const authorization = await requireCmsSiteAccess(env.DB, actorUserId, siteSlug, access);
+  const authorization = await requireCmsSiteAccess(env.DB, actorUserId, siteSlug, access, {
+    remoteWorkerNames: configuredCmsWorkers(env),
+  });
   if (!authorization.ok) return json({ ok: false, error: authorization.error }, authorization.status);
   const ownedSite = authorization.site;
   if (ownedSite.source === 'worker') {
