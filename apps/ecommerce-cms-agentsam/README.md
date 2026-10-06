@@ -61,5 +61,5 @@ npm run build:dev --prefix apps/local-studio
 npm run build:desktop --prefix apps/local-studio
 npm run smoke:commerce-store --prefix apps/local-studio
 npm run smoke:themes --prefix apps/local-studio
-node --test test/cms-multisite-security.test.mjs
+node --test test/integration/cms-multisite-security.test.mjs
 ```
