@@ -40,7 +40,7 @@ test('CMS site discovery returns real Worker authority and prevents slug-based i
   assert.deepEqual(owned[0], { ...site, domain:'fuelnfreetime.com', workspace_id: 'ws_test' });
   assert.equal((await requireCmsSiteAccess(fakeDb([]), ACCOUNT, 'fuelnfreetime')).status, 404);
   assert.equal((await requireCmsSiteAccess(fakeDb([returnedSite()]), ACCOUNT, 'someone-else', 'read', opts)).status, 404);
-  assert.equal((await requireCmsSiteAccess(fakeDb([{ ...returnedSite(), role: 'viewer' }]), ACCOUNT, 'fuelnfreetime', 'write')).status, 403);
+  assert.equal((await requireCmsSiteAccess(fakeDb([{ ...returnedSite(), role: 'viewer' }]), ACCOUNT, 'fuelnfreetime', 'write', opts)).status, 403);
   assert.equal((await requireCmsSiteAccess(fakeDb([returnedSite()]), ACCOUNT, 'fuelnfreetime', 'publish')).ok, true);
 });
 
