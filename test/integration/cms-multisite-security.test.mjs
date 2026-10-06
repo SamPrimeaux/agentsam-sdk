@@ -33,6 +33,14 @@ function returnedSite() {
   };
 }
 
+test('FNF bridge requires AGENTSAM_BRIDGE_KEY, not a second CMS credential or project variable', async () => {
+  const request = new Request('https://fuelnfreetime.com/api/internal/studio-cms/pages');
+  const withCanonicalKey = await handleStudioCmsBridge(request, { AGENTSAM_BRIDGE_KEY: SECRET });
+  assert.equal(withCanonicalKey.status, 401, 'configured bridge reaches HMAC verification without extra project vars');
+  const withObsoleteKey = await handleStudioCmsBridge(request, { CMS_BRIDGE_SECRET: SECRET });
+  assert.equal(withObsoleteKey.status, 503, 'obsolete credential must not authenticate');
+});
+
 test('CMS site discovery returns real Worker authority and prevents slug-based impersonation', async () => {
   const opts = { remoteWorkerNames: ['fuelnfreetime'] };
   assert.deepEqual(await listAuthorizedCmsSites(fakeDb([returnedSite()]), ACCOUNT), [], 'no unconfigured workers in catalog');
