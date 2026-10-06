@@ -1,6 +1,6 @@
 /** Studio-owned public MCP OAuth 2.1 PKCE broker. No OAuth credentials enter the WebView. */
 import { importVaultMasterKey, encryptVaultSecret, decryptVaultSecret } from '../../../../packages/agentsam-vault/src/index.js';
-import { discoverPublicPlugins } from './plugin-discovery.js';
+import { discoverPublicPlugins, fetchPluginResource } from './plugin-discovery.js';
 import { listRemoteMcpTools, callRemoteMcpTool } from './plugin-mcp-client.js';
 
 const ISSUER='https://inneranimalmedia.com';
@@ -164,7 +164,8 @@ async function finishAuthorizedConnection(env,pending,payload,fetcher=fetch){
   const installed=await getOwnedCatalogPlugin(env.DB,pending.account_id,pending.plugin_id);
   const entry=await catalogEntry(env,installed.plugin_key,fetcher);
   if(entry.oauthResource!==pending.resource_url||entry.endpointUrl!==installed.endpoint_url)fail('plugin_oauth_resource_changed');
-  const listed=await listRemoteMcpTools(entry.endpointUrl,entry.oauthResource,payload.access_token,fetcher);
+  const listed=await listRemoteMcpTools(entry.endpointUrl,entry.oauthResource,payload.access_token,
+    (url,options)=>fetchPluginResource(env,url,options,fetcher));
   const tools=checkedTools(listed,entry,scopes);
   const until=now()+Math.min(86400,Math.max(60,Number(payload.expires_in||3600)));
   const ciphertext=await seal(env,{
@@ -248,7 +249,8 @@ export async function runRemotePluginTool(env,accountId,tool,args,fetcher=fetch)
   const grant=await getRemotePluginToken(env,accountId,tool.plugin_id,fetcher);
   const required=Array.isArray(metadata.required_scopes)?metadata.required_scopes:[];
   if(required.length===0||!required.every(scope=>grant.scopes.includes(scope)))fail('plugin_oauth_scope_missing');
-  return callRemoteMcpTool(installed.endpoint_url,grant.resource,grant.token,tool.tool_key,args,fetcher);
+  return callRemoteMcpTool(installed.endpoint_url,grant.resource,grant.token,tool.tool_key,args,
+    (url,options)=>fetchPluginResource(env,url,options,fetcher));
 }
 export async function disconnectPublicPlugin(env,accountId,pluginId){
   await getOwnedCatalogPlugin(env.DB,accountId,pluginId);

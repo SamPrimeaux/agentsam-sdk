@@ -56,6 +56,20 @@ export function configuredPluginCatalogSources(env) {
   });
 }
 
+/**
+ * Route first-party plugin traffic over the existing Cloudflare service binding.
+ * A public custom domain remains the sole URL in manifests and OAuth audiences;
+ * the binding only avoids same-account Worker-to-Worker fetch limitations.
+ * Independent third-party catalogs continue through ordinary HTTPS.
+ */
+export function fetchPluginResource(env, url, init = {}, requestFetch = fetch) {
+  const origin = new URL(url).origin;
+  if (origin === 'https://plugins.inneranimalmedia.com' && env?.PLUGIN_CATALOG?.fetch) {
+    return env.PLUGIN_CATALOG.fetch(url, init);
+  }
+  return requestFetch(url, init);
+}
+
 export function normalizeDiscoveredPlugin(input, source) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('plugin_catalog_item_invalid');
   const key = text(input.plugin_key, 81);
@@ -117,12 +131,12 @@ export async function discoverPublicPlugins(env, requestFetch = fetch) {
   const keys = new Set();
   for (const url of sources) {
     try {
-      const response = await requestFetch(url.toString(), {
+      const response = await fetchPluginResource(env, url.toString(), {
         method: 'GET',
         redirect: 'error',
         headers: { accept: 'application/json' },
         signal: AbortSignal.timeout(6000),
-      });
+      }, requestFetch);
       if (!response.ok) throw new Error('upstream_unavailable');
       if (Number(response.headers.get('content-length') || '0') > MAX_BYTES) throw new Error('upstream_too_large');
       const body = await response.text();

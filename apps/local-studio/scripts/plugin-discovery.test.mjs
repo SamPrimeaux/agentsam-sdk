@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   configuredPluginCatalogSources,
+  fetchPluginResource,
   normalizeDiscoveredPlugin,
   discoverPublicPlugins,
   installFromCatalog,
@@ -35,6 +36,32 @@ const fetcher = async (_url, options) => {
     status:200,headers:{'content-type':'application/json'},
   });
 };
+
+test('official domain uses Cloudflare service binding; third-party sources keep standard fetch',async()=>{
+  const called=[];
+  const publicSource='https://plugins.inneranimalmedia.com/catalog/plugins';
+  const thirdParty='https://other.example.org/catalog/plugins';
+  const service={fetch:async(url)=>{
+    called.push('binding:'+url);
+    return new Response(JSON.stringify({schema:'agentsam.plugin-catalog/v1',plugins:[{
+      ...item,plugin_key:'agentsam-brand',endpoint_url:'https://plugins.inneranimalmedia.com/mcp/brand',
+    }]}),{status:200});
+  }};
+  const outside=async url=>{
+    called.push('external:'+url);
+    return new Response('ok');
+  };
+  const official=await discoverPublicPlugins({
+    AGENTSAM_PLUGIN_CATALOG_URLS:JSON.stringify([publicSource]),
+    PLUGIN_CATALOG:service,
+  },outside);
+  assert.deepEqual(official.errors,[]);
+  assert.deepEqual(official.plugins.map(plugin=>plugin.pluginKey),['agentsam-brand']);
+  assert.deepEqual(called,['binding:'+publicSource]);
+  const response=await fetchPluginResource({PLUGIN_CATALOG:service},thirdParty,{},outside);
+  assert.equal(await response.text(),'ok');
+  assert.equal(called[1],'external:'+thirdParty);
+});
 
 test('catalog source is operator-configured HTTPS with bounded path',()=>{
   assert.deepEqual(configuredPluginCatalogSources(env).map(x=>x.href),[SOURCE]);

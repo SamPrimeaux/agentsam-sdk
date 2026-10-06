@@ -68,8 +68,10 @@ Third-party ChatGPT plugins without compatible public MCP endpoints, credentials
 `apps/local-studio/backend/wrangler.jsonc` owns the first-party catalog source in the deployment configuration:
 
 ```json
-"AGENTSAM_PLUGIN_CATALOG_URLS": "[\"https://agentsam-plugin-mcp.meauxbility.workers.dev/catalog/plugins\"]"
+"AGENTSAM_PLUGIN_CATALOG_URLS": "[\"https://plugins.inneranimalmedia.com/catalog/plugins\"]"
 ```
+
+The official plugin worker owns `https://plugins.inneranimalmedia.com` and publishes Brand and Campaign with MCP, OAuth resource and icon URLs under that same domain. The Local Studio Worker uses a Cloudflare `PLUGIN_CATALOG` service binding for same-account requests to that origin; the public custom domain remains the identity presented to customers and OAuth clients. No workers.dev URL is used as an official public endpoint. Existing grants bound to the old OAuth audience need an explicit reconnect, not a silent token rewrite.
 
 The Worker treats this string as a JSON list of reviewed HTTPS sources. Each additional compatible provider can be added to that list **after operator review** and without touching the portable Settings UI. Preserve the first-party source when extending the array; a deploy must not silently reset the catalog. The app's catalog-validation test protects the baseline.
 

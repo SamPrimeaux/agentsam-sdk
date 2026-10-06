@@ -37,7 +37,7 @@
     "GITHUB_APP_ID": "5151862",
     "GITHUB_CLIENT_ID": "Iv23likfrsHDFXHiiXAK",
     "CLOUDFLARE_ACCOUNT_ID": "ede6590ac0d2fb7daf155b35653457b2",
-    "AGENTSAM_PLUGIN_CATALOG_URLS": "[\"https://agentsam-plugin-mcp.meauxbility.workers.dev/catalog/plugins\"]",
+    "AGENTSAM_PLUGIN_CATALOG_URLS": "[\"https://plugins.inneranimalmedia.com/catalog/plugins\"]",
     "CMS_SITE_BRIDGES": "{\"fuelnfreetime\":\"CMS_FNF\"}"
   },
   "d1_databases": [
@@ -76,6 +76,10 @@
     {
       "binding": "CMS_FNF",
       "service": "fuelnfreetime"
+    },
+    {
+      "binding": "PLUGIN_CATALOG",
+      "service": "agentsam-plugin-mcp"
     }
   ],
   "vpc_services": [
