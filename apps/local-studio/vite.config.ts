@@ -403,6 +403,10 @@ export default defineConfig(({ command, isPreview }) => ({
         ),
       },
       {
+        find: /^@inneranimalmedia\/agentsam-campaign\/project$/,
+        replacement: resolvePath(studioRoot, "../../packages/agentsam-campaign/src/project.js"),
+      },
+      {
         find: /^@inneranimalmedia\/ecommerce-cms-agentsam\/cms$/,
         replacement: resolvePath(cmsProductSource, "index.mjs"),
       },
