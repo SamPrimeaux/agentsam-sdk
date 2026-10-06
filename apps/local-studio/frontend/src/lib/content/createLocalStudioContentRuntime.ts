@@ -8,7 +8,7 @@
 import {
   createContentRuntime,
   inferBrandAssociation,
-  localFiles,
+  createIndexedDbContentStorage,
   noopKnowledgeAdapter,
   proposeAlt,
   proposeSemanticAlias,
