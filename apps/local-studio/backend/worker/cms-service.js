@@ -118,6 +118,9 @@ export async function handleCmsWorkerRequest(request, env, { userId = null } = {
   if (!canAccessCmsSite(authorizedSites, siteSlug)) {
     return json({ ok: false, error: 'cms_site_not_allowed' }, 403);
   }
+  if (method !== 'GET' && method !== 'HEAD' && !(await canEditCmsSite(env.DB, userId, siteSlug))) {
+    return json({ ok: false, error: 'cms_site_read_only' }, 403);
+  }
   const dbClient = createCmsDbClient(env.DB, siteSlug);
 
   try {
