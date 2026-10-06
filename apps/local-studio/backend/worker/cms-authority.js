@@ -32,8 +32,9 @@ function asJson(value) {
  * project_id, and external Workers through project.worker_id; never infer
  * a site from the current host, fixtures, or a user-supplied hostname.
  */
-export async function listAuthorizedCmsSites(db, actorUserId) {
+export async function listAuthorizedCmsSites(db, actorUserId, { remoteWorkerNames = [] } = {}) {
   const actor = cmsActorRequired(actorUserId);
+  const configuredRemoteWorkers = new Set(remoteWorkerNames);
   if (!db?.prepare) throw new Error('cms_db_binding_unavailable');
   const result = await db.prepare(`
     SELECT p.id AS project_id, p.name, p.domain, p.worker_id, p.metadata_json,
