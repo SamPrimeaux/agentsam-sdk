@@ -108,7 +108,7 @@ try {
     const blockHtml = (await blocks.resolvePreview('home')).html;
     await blocks.removeSection('home', 'section_1');
     await blocks.addSection('home', 'section_1', 0);
-    return { initial, updated, conflict, blockHtml, restored: (await blocks.getPage('home')).sections.length };
+    return { initial, updated, conflict, chromeSummary, blockHtml, restored: (await blocks.getPage('home')).sections.length };
   });
   assert.match(result.initial, /Hello <em>world<\/em>/);
   assert.match(result.initial, /src="cover.png"/);
