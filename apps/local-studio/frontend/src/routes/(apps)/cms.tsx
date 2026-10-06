@@ -41,7 +41,7 @@ interface CmsSite {
   id: string;
   slug: string;
   name: string;
-  domain: string | null;
+  domain?: string;
   page_count: number;
 }
 
