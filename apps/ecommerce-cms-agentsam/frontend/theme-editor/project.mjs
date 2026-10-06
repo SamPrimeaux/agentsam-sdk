@@ -153,7 +153,17 @@ export function extractThemePage(html, { slug = 'home', title = 'Home', baseUrl 
       version: 0,
       status: 'draft',
       sort_order: index,
-      schema: { key, label: name, zone, fields, settings, blocks, capabilities: { reorder: true } },
+      schema: {
+        key,
+        label: name,
+        zone,
+        fields,
+        settings,
+        blocks,
+        capabilities: zone === 'BODY'
+          ? { reorder: true, duplicate: true, remove: true }
+          : { reorder: false, duplicate: false, remove: false },
+      },
     };
     node.replaceWith(doc.createComment('theme-section:' + key));
     return section;
