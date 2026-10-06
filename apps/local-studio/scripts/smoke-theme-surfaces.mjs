@@ -111,7 +111,7 @@ try {
     await blocks.addSection('home', 'section_1', 0);
     return { initial, updated, conflict, chromeSummary, blockHtml, restored: (await blocks.getPage('home')).sections.length };
   });
-  assert.match(result.initial, /Hello <em>world<\/em>/);
+  assert.match(result.initial, /Hello <em[^>]*>world<\/em>/);
   assert.match(result.initial, /src="cover.png"/);
   assert.match(result.updated, /Saved content/);
   assert.equal(result.conflict, true);
