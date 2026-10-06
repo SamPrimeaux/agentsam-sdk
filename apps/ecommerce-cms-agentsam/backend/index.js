@@ -281,6 +281,12 @@ export default {
       return handlePublicCmsApi(request, env, url);
     }
 
+    // Account-scoped, signed service delegation for AgentSam's portable CMS.
+    // This handler validates signatures and restricts operations independently
+    // of the customer-facing FNF admin session/cookie.
+    if (path.startsWith("/api/internal/studio-cms/")) {
+      return noStore(await handleStudioCmsBridge(request, env));
+    }
     if (path.startsWith("/api/admin/")) {
       return noStore(await handleAdminApi(request, env, url, ctx));
     }
