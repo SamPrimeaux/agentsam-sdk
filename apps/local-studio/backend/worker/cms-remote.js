@@ -26,7 +26,12 @@ function bindingForWorker(env, workerName) {
 export async function handleRemoteCmsRequest(request, env, { actorUserId, site, path }) {
   if (!site || site.source !== 'worker' || !site.worker_id) return response('cms_remote_site_required', 400);
   if (!actorUserId || !site.can_edit && request.method !== 'GET') return response('cms_remote_permission_denied', 403);
-  if (/\/publish$/.test(path) && !site.can_publish) return response('cms_remote_publish_forbidden', 403);
+  if (/\/publish$/.test(path)) {
+    if (!site.can_publish) return response('cms_remote_publish_forbidden', 403);
+    if (env.CMS_REMOTE_PUBLISH_ENABLED !== 'true') {
+      return response('cms_publish_requires_verified_preview_and_release_gate', 409);
+    }
+  }
   const method = request.method.toUpperCase();
   if (!isAllowedStudioCmsBridgeRoute(path, method)) return response('cms_remote_operation_denied', 403);
   const service = bindingForWorker(env, site.worker_id);
