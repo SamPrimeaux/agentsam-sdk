@@ -217,12 +217,25 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
   }
 
   async listSites(): Promise<CmsSiteRecord[]> {
-    if (this.knownSites.size) return [...this.knownSites.values()].map((s) => structuredClone(s));
-    // Fallback: bootstrap the default studio site so hub/editor share one authority.
-    const boot = await this.api<Json>(this.url(`/api/cms/bootstrap?${siteQuery('agentsam-sdk')}`));
-    const record = siteRecordFromBootstrap('agentsam-sdk', boot);
-    this.knownSites.set(record.id, record);
-    return [structuredClone(record)];
+    // The authenticated Worker discovers owned projects and their CMS source.
+    // Never silently bootstrap a particular customer, template, or default site.
+    const catalog = await this.api<{ sites: Array<{ slug: string; name: string; domain?: string }> }>(
+      this.url('/api/cms/sites'),
+    );
+    const sites = (catalog.sites || []).map((site) => {
+      const id = String(site.slug || '').trim();
+      const name = String(site.name || id);
+      return {
+        id,
+        name,
+        initials: initialsFrom(name),
+        domain: String(site.domain || ''),
+        edited: 'synced',
+        color: '#1e6a6f',
+      } satisfies CmsSiteRecord;
+    });
+    this.knownSites = new Map(sites.map((site) => [site.id, site]));
+    return structuredClone(sites);
   }
 
   async getSite(siteId: string): Promise<CmsSiteRecord> {
