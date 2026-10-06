@@ -64,7 +64,7 @@ function resolveSiteSlug(url, body = {}) {
   return trimmed || null;
 }
 
-export async function handleCmsWorkerRequest(request, env) {
+export async function handleCmsWorkerRequest(request, env, actorUserId) {
   const url = new URL(request.url);
   const method = request.method.toUpperCase();
 
