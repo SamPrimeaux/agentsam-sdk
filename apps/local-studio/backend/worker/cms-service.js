@@ -107,15 +107,23 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
   if (!authorization.ok) return json({ ok: false, error: authorization.error }, authorization.status);
   const ownedSite = authorization.site;
   if (ownedSite.source === 'worker') {
-    // Worker-owned sites use their own D1/R2 authority. An archived shadow row
-    // in this database must never be presented as editable live storefront data.
+    // External site writes pass ONLY through its signed, narrowly scoped
+    // Worker bridge; never edit the archived D1 projection in Studio.
+    if (url.pathname.startsWith('/api/cms/remote/')) {
+      return handleRemoteCmsRequest(request, env, {
+        actorUserId, site: ownedSite,
+        path: url.pathname.slice('/api/cms/remote/'.length),
+      });
+    }
     return json({
       ok: false,
-      error: 'cms_remote_site_adapter_unavailable',
-      site: siteSlug,
+      error: 'cms_site_uses_remote_adapter',
       source: 'worker',
-      worker_id: ownedSite.worker_id,
-    }, 503);
+      site: siteSlug,
+    }, 409);
+  }
+  if (url.pathname.startsWith('/api/cms/remote/')) {
+    return json({ ok: false, error: 'cms_site_uses_shared_d1_adapter' }, 400);
   }
   const dbClient = createCmsDbClient(env.DB, siteSlug);
 
