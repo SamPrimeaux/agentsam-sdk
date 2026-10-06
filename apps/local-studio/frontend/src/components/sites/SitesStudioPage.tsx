@@ -34,7 +34,7 @@ export function SitesWorkspace() {
     setBusy(true); setError('');
     try {
       const project = await createThemeDraft(null, name.trim());
-      openThemeProject(project.id);
+      openEditor(project.id);
     } catch (e) { setError(String(e)); }
     finally { setBusy(false); }
   }
