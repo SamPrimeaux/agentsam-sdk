@@ -86,38 +86,9 @@ function CmsPage() {
     });
   };
 
-  if (!isEditorView) {
-    return (
-      <div className="size-full overflow-y-auto">
-        <CmsHubPage
-          sites={SITE_CATALOG}
-          activeSiteSlug={siteSlug}
-          onSelectSite={(slug) => {
-            navigate({
-              to: "/cms",
-              search: { ...search, site: slug, panel: undefined, page: undefined },
-            });
-          }}
-          onNavigate={(path) => {
-            if (path.startsWith("/cms")) {
-              const parsed = parseCmsNavigatePath(path, siteSlug);
-              navigate({
-                to: "/cms",
-                search: {
-                  site: parsed.site,
-                  panel: parsed.panel,
-                  page: parsed.page,
-                  view: parsed.view,
-                },
-              });
-            } else {
-              window.location.href = path;
-            }
-          }}
-        />
-      </div>
-    );
-  }
+  // The useful CMS starts with the actual packaged theme workspace. The old
+  // generic CMS hub remains available only through explicit legacy/page routes.
+  if (!isEditorView) return <ThemeStorePage />;
 
   if (search.panel === "media") {
     return (
