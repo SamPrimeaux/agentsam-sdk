@@ -115,6 +115,20 @@ export async function listAuthorizedCmsSites(db, actorUserId, { remoteWorkerName
   }).filter(Boolean);
 }
 
+export function configuredCmsWorkers(env) {
+  let bindings;
+  try { bindings = JSON.parse(String(env.CMS_SITE_BRIDGES || '{}')); }
+  catch { return []; }
+  if (!bindings || typeof bindings !== 'object' || Array.isArray(bindings)) return [];
+  return Object.entries(bindings)
+    .filter(([worker, binding]) =>
+      typeof worker === 'string' &&
+      typeof binding === 'string' &&
+      /^[A-Z][A-Z0-9_]{1,63}$/.test(binding) &&
+      env[binding] && typeof env[binding].fetch === 'function')
+    .map(([worker]) => worker);
+}
+
 export async function requireCmsSiteAccess(db, actorUserId, siteSlug, access = 'read', opts = {}) {
   const slug = assertCmsSlug(siteSlug);
   const sites = await listAuthorizedCmsSites(db, actorUserId, opts);
