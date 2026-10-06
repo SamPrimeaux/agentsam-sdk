@@ -816,7 +816,7 @@ function PluginCustomizeView({
             {categories.map(category=>(
               <button key={category} type="button" aria-pressed={activeCategory===category} onClick={()=>setActiveCategory(category)}
                 className={cx("shrink-0 rounded-full border px-3 py-1.5 text-[11px] transition-colors",
-                  activeCategory===category ? "border-foreground/80 bg-foreground font-medium text-background" :
+                  activeCategory===category ? "border-violet-400/50 bg-violet-400/15 font-medium text-foreground" :
                     "border-border/70 bg-background/45 text-muted-foreground hover:text-foreground")}>
                 {category==="all"?"All plugins":category}
               </button>
