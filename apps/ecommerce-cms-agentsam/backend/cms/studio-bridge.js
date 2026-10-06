@@ -15,6 +15,9 @@ export async function handleStudioCmsBridge(request,env){
   if(!url.pathname.startsWith(PREFIX))return error('cms_bridge_route_not_found',404);
   const tail=url.pathname.slice(PREFIX.length);
   if(!isAllowedStudioCmsBridgeRoute(tail,method))return error('cms_bridge_operation_denied',403);
+  if(tail.endsWith('/publish') && env.CMS_BRIDGE_PUBLISH_ENABLED !== 'true') {
+    return error('cms_publish_requires_verified_preview_and_release_gate',409);
+  }
   if(!env.CMS_BRIDGE_SECRET || !env.CMS_BRIDGE_PROJECT_ID) return error('cms_bridge_not_configured',503);
   let proof;
   try { proof=await verifyCmsBridgeRequest(request,{secret:env.CMS_BRIDGE_SECRET,expectedProject:env.CMS_BRIDGE_PROJECT_ID}); }
