@@ -73,7 +73,7 @@ test('operation allowlist cannot route orders, settings, warm, or arbitrary path
 test('remote gateway delegates signed, allowlisted requests to service binding only', async () => {
   let captured;
   const env={
-    CMS_BRIDGE_SECRET: SECRET,
+    AGENTSAM_BRIDGE_KEY: SECRET,
     CMS_SITE_BRIDGES:JSON.stringify({fuelnfreetime:'CMS_FNF'}),
     CMS_FNF:{async fetch(request){
       captured=request;
