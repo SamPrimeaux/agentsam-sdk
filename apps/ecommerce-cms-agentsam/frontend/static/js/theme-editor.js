@@ -306,7 +306,7 @@
     }).join('');
 
     byId('te-tree').innerHTML =
-      '<div class="te-tree-group"><div class="te-tree-group__label">Sections</div>' + rows + '</div>' +
+      '<div class="te-tree-group">' + rows + '</div>' +
       '<button type="button" class="te-add-section" id="te-add-section">+ Add section</button>' +
       '<div class="te-section-menu" id="te-section-menu" hidden><select id="te-section-template">' + templateOptions + '</select>' +
       '<div class="te-section-menu__actions"><button type="button" class="te-media-button" id="te-section-cancel">Cancel</button><button type="button" class="te-media-button" id="te-section-insert">Add</button></div></div>';
