@@ -28,6 +28,16 @@ export function SitesWorkspace() {
   const [error, setError] = useState('');
   const reload = useCallback(async () => setProjects(await themeProjectStore.list()), []);
   useEffect(() => {
+    let mounted = true;
+    studioCmsFetch('/api/cms/sites').then(async (response) => {
+      const body = await response.json();
+      if (!response.ok || !body.ok) throw new Error(body.error || 'cms_site_discovery_failed');
+      if (mounted) setHostedSites(body.sites || []);
+    }).catch((cause) => { if (mounted) setHostedError(String(cause)); })
+      .finally(() => { if (mounted) setHostedLoading(false); });
+    return () => { mounted = false; };
+  }, []);
+  useEffect(() => {
     void reload().catch((e) => setError(String(e)));
     const listener = () => { void reload().catch((e) => setError(String(e))); };
     window.addEventListener(THEME_PROJECTS_CHANGED, listener);
