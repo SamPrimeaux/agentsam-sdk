@@ -1,6 +1,8 @@
 // @ts-ignore Portable ecommerce CMS surface adapter.
 import { createCmsThemeEditorAdapter, createHttpCmsAdapter } from '@inneranimalmedia/ecommerce-cms-agentsam/cms';
 import { CmsHomePage } from '@/components/sites/CmsHomePage';
+// @ts-ignore Portable JS adapter to the real remotely owned ecommerce CMS.
+import { createRemoteThemeEditorAdapter } from '@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/remote-worker-adapter';
 import { ThemeEditorFrame } from '@/components/themes/ThemeEditorFrame';
 import { ThemeProjectEditor } from '@/components/themes/ThemeProjectEditor';
 import { studioCmsFetch } from '@/lib/cms/transport';
