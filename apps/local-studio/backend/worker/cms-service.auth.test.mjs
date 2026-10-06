@@ -59,3 +59,27 @@ test('CMS OPTIONS preflight remains available', async () => {
   );
   assert.equal(response.status, 204);
 });
+
+test('read-only CMS collaborator cannot mutate an otherwise accessible site', async () => {
+  const env = {
+    DB: {
+      prepare(sql) {
+        if (sql.includes('SELECT 1 AS allowed')) {
+          return { bind() { return { first: async () => null }; } };
+        }
+        return fakeEnv().DB.prepare(sql);
+      },
+    },
+  };
+  const response = await handleCmsWorkerRequest(
+    new Request('https://studio.example/api/cms/pages?site=inneranimalmedia', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: 'Not allowed' }),
+    }),
+    env,
+    { userId: user },
+  );
+  assert.equal(response.status, 403);
+  assert.equal((await response.json()).error, 'cms_site_read_only');
+});
