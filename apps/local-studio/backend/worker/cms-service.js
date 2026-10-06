@@ -68,15 +68,14 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
   const url = new URL(request.url);
   const method = request.method.toUpperCase();
 
-  if (method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        'access-control-allow-origin': '*',
-        'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-        'access-control-allow-headers': 'content-type, authorization, x-user-id',
-      },
-    });
+  // The entry Worker validated the session; never accept an unverified actor
+  // from request headers, and do not enable wildcard CORS on authoring APIs.
+  try { cmsActorRequired(actorUserId); }
+  catch { return json({ ok: false, error: 'unauthorized' }, 401); }
+  if (method === 'OPTIONS') return new Response(null, { status: 204 });
+  if (url.pathname === '/api/cms/sites' && method === 'GET') {
+    const sites = await listAuthorizedCmsSites(env.DB, actorUserId);
+    return json({ ok: true, sites });
   }
 
   let body = null;
