@@ -112,7 +112,7 @@ function CmsPage() {
     return (
       <div className="size-full overflow-y-auto" data-cms-site-source="authorized">
         <CmsHubPage
-          sites={siteCatalog}
+          sites={siteCatalog.map((s) => ({ ...s, domain: s.domain || undefined }))}
           activeSiteSlug={siteSlug}
           onSelectSite={(slug: string) => {
             navigate({
