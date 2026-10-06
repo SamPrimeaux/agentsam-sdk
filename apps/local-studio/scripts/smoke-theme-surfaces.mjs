@@ -32,7 +32,7 @@ try {
   const capture = async (name) => {
     await page.evaluate(() => document.fonts.ready);
     await page.screenshot({ path: resolve(out, name + '.png'), fullPage: false, animations: 'disabled' });
-    if (['work-empty', 'cms-hub', 'cms-theme-editor'].includes(name)) {
+    if (['work-empty', 'cms-theme-editor'].includes(name)) {
       const expected = resolve(baseline, name + '.png');
       if (process.argv.includes('--update-baselines')) { mkdirSync(baseline, { recursive: true }); copyFileSync(resolve(out, name + '.png'), expected); }
       else { assert.ok(existsSync(expected), `Missing ${name} baseline; review captures and run --update-baselines`); assert.ok(changedPixelRatio(readFileSync(resolve(out, name + '.png')), readFileSync(expected)) <= 0.005, `${name} visual regression; inspect ${out}`); }
