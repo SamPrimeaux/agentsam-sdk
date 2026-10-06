@@ -115,7 +115,7 @@ export function createCmsDbClient(db, rawProjectSlug) {
         )
         .bind(
           pageId,
-          `proj_${projectSlug.replace(/[^a-zA-Z0-9_]/g, '_')}`,
+          projectId,
           projectSlug,
           tenantId,
           slug,
