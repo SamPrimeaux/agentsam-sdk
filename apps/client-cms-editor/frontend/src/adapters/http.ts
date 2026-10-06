@@ -306,13 +306,11 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
         // try next site
       }
     }
-    // Last resort: agentsam-sdk
-    const full = await this.loadSite('agentsam-sdk');
-    const hit = full.pages.find((p) => p.id === pageId);
-    if (!hit) {
-      throw new CmsCapabilityError('getPage', `page_not_found:${pageId}`, 'cms_source_not_found');
-    }
-    return structuredClone(hit);
+    throw new CmsCapabilityError(
+      'getPage',
+      `page_not_found_or_site_not_loaded:${pageId}`,
+      'cms_source_not_found',
+    );
   }
 
   async createPage(
