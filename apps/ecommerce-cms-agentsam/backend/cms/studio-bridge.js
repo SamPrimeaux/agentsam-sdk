@@ -7,27 +7,6 @@ import { handleAdminCmsApi } from './api.js';
 import { verifyCmsBridgeRequest, isAllowedStudioCmsBridgeRoute } from './studio-bridge-protocol.js';
 
 const PREFIX='/api/internal/studio-cms/';
-const SEG=/^[a-z0-9-]+$/i;
-export function isAllowedStudioCmsBridgeRoute(tail,method) {
-  if(tail==='registry'||tail==='pages')return method==='GET';
-  const s=tail.split('/');
-  if(s[0]!=='pages'||!SEG.test(s[1]||''))return false;
-  const rest=s.slice(2);
-  if(rest.length===0)return ['GET','PUT'].includes(method);
-  if(rest.length===1&&rest[0]==='publish')return method==='POST';
-  if(rest[0]!=='sections')return false;
-  if(rest.length===1)return method==='POST';
-  if(!SEG.test(rest[1]||''))return false;
-  if(rest.length===2)return ['PUT','DELETE'].includes(method);
-  if(rest.length===3&&['duplicate','move'].includes(rest[2]))return method==='POST';
-  if(rest.length===3&&rest[2]==='visibility')return method==='PUT';
-  if(rest[2]!=='blocks')return false;
-  if(rest.length===3)return method==='POST';
-  if(!SEG.test(rest[3]||''))return false;
-  if(rest.length===4)return method==='DELETE';
-  if(rest.length===5&&['duplicate','move'].includes(rest[4]))return method==='POST';
-  return false;
-}
 const WRITE_METHODS=new Set(['POST','PUT','PATCH','DELETE']);
 function error(code,status){return Response.json({ok:false,error:code},{status,headers:{'cache-control':'no-store'}});}
 
