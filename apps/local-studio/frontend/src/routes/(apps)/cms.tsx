@@ -70,32 +70,34 @@ function CmsPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
   const [activeThemeProject, setActiveThemeProject] = useState<string>();
+  const { sites, loading: sitesLoading, error: sitesError } = useAuthorizedCmsSites();
   useEffect(() => { void getActiveThemeId().then(setActiveThemeProject); }, []);
 
-  const siteSlug = (search.site || search.project_slug || search.project || "agentsam-sdk").trim();
-  const siteName = SITE_CATALOG.find((s) => s.slug === siteSlug)?.name ?? siteSlug;
+  const requestedSlug = (search.site || search.project_slug || search.project || '').trim();
+  const ownedSite = sites.find((site) => site.slug === requestedSlug);
+  const siteSlug = ownedSite?.slug || '';
+  const siteName = ownedSite?.name || requestedSlug || 'Site';
 
   const adapter = useMemo(
-    () =>
-      createHttpCmsAdapter({
-        transport: studioCmsFetch,
-        sites: SITE_CATALOG.map((s) => ({
-          id: s.slug,
-          slug: s.slug,
-          name: s.name,
-          domain: s.domain,
-        })),
-      }),
+    () => createHttpCmsAdapter({ transport: studioCmsFetch }),
     [],
   );
 
-  const themeAdapter = useMemo(() => createCmsThemeEditorAdapter(adapter, siteSlug, {
-    resolvePreview: async (_site: unknown, page: { id: string }) => {
-      const response = await studioCmsFetch(`/api/cms/render-page?site=${encodeURIComponent(siteSlug)}&page_id=${encodeURIComponent(page.id)}&mode=draft`);
-      if (!response.ok) throw new Error("cms_preview_unavailable");
-      return { html: await response.text() };
-    },
-  }), [adapter, siteSlug]);
+  const themeAdapter = useMemo(() => {
+    if (!ownedSite || !ownedSite.can_edit) return null;
+    if (ownedSite.source === 'worker') {
+      return createRemoteThemeEditorAdapter(ownedSite.slug, studioCmsFetch);
+    }
+    return createCmsThemeEditorAdapter(adapter, ownedSite.slug, {
+      resolvePreview: async (_site: unknown, page: { id: string }) => {
+        const response = await studioCmsFetch(
+          `/api/cms/render-page?site=${encodeURIComponent(ownedSite.slug)}&page_id=${encodeURIComponent(page.id)}&mode=draft`,
+        );
+        if (!response.ok) throw new Error('cms_preview_unavailable');
+        return { html: await response.text() };
+      },
+    });
+  }, [adapter, ownedSite]);
 
   const isEditorView = Boolean(
     search.theme_project ||
