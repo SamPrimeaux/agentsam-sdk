@@ -10,6 +10,7 @@ import {
   Images,
   Layers,
   LayoutTemplate,
+  Megaphone,
   MessageSquare,
   Palette,
   Settings,
