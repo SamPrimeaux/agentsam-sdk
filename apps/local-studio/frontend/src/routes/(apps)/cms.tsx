@@ -35,12 +35,10 @@ export const Route = createFileRoute("/(apps)/cms")({
   component: CmsPage,
 });
 
-/** Hosted site catalog — real public properties, not fixture gallery cards. */
+/** Known hosted CMS authorities. Never surface fixture/donor sites as customer properties. */
 const SITE_CATALOG = [
-  { slug: "agentsam-sdk", name: "Agent Sam SDK", domain: "agentsam.inneranimalmedia.com", hub_priority: 100 },
-  { slug: "inneranimalmedia", name: "Inner Animal Media", domain: "inneranimalmedia.com", hub_priority: 90 },
-  { slug: "ember", name: "Ember Supply", domain: "ember.example", hub_priority: 80 },
-  { slug: "meauxbility", name: "Meauxbility", domain: "meauxbility.org", hub_priority: 70 },
+  { slug: "agentsam-sdk", name: "Agent Sam SDK", domain: "agentsam.inneranimalmedia.com" },
+  { slug: "inneranimalmedia", name: "Inner Animal Media", domain: "inneranimalmedia.com" },
 ];
 
 function CmsPage() {
