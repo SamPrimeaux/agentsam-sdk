@@ -60,3 +60,42 @@ export async function listAuthorizedCmsSites(db, userId) {
 export function canAccessCmsSite(sites, slug) {
   return typeof slug === 'string' && sites.some((site) => site.slug === slug);
 }
+
+/**
+ * Resolve write permission separately from site visibility. View-only members
+ * may discover/read a CMS site, but cannot publish, reorder or delete content.
+ */
+export async function canEditCmsSite(db, userId, slug) {
+  if (!db || !userId || !slug) return false;
+  const row = await db.prepare(`
+SELECT 1 AS allowed
+FROM cms_pages cp
+LEFT JOIN projects p
+  ON p.id = cp.project_slug
+  OR p.project_id = cp.project_slug
+  OR p.id = 'proj_' || cp.project_slug
+WHERE cp.project_slug = ?
+  AND COALESCE(cp.is_active, 1) = 1
+  AND (
+    p.owner_user_id = ?
+    OR EXISTS (
+      SELECT 1 FROM workspace_members wm
+      WHERE wm.user_id = ?
+        AND COALESCE(wm.is_active, 1) = 1
+        AND wm.workspace_id = COALESCE(NULLIF(cp.workspace_id, ''), p.workspace_id)
+        AND (
+          LOWER(COALESCE(wm.role, '')) IN ('owner', 'admin', 'editor')
+          OR LOWER(COALESCE(wm.workspace_role, '')) IN ('owner', 'admin', 'editor', 'developer', 'platform_operator')
+        )
+    )
+    OR EXISTS (
+      SELECT 1 FROM workspaces w
+      WHERE w.user_id = ?
+        AND w.id = COALESCE(NULLIF(cp.workspace_id, ''), p.workspace_id)
+    )
+  )
+LIMIT 1
+`).bind(slug, userId, userId, userId).first();
+  return Boolean(row?.allowed);
+}
+
