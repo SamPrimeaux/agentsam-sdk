@@ -114,6 +114,11 @@ try {
   assert.match(result.initial, /src="cover.png"/);
   assert.match(result.updated, /Saved content/);
   assert.equal(result.conflict, true);
+  assert.deepEqual(result.chromeSummary.map((section) => section.zone), ['HEADER', 'BODY', 'FOOTER']);
+  assert.deepEqual(result.chromeSummary.map((section) => section.label), ['Header', 'Built in the Garage', 'Footer']);
+  assert.equal(result.chromeSummary[0].blockCount, 0, 'navigation list items must not become fake content blocks');
+  assert.ok(result.chromeSummary[1].fieldKeys.includes('heading_1'));
+  assert.ok(result.chromeSummary[1].fieldKeys.includes('text_1'));
   assert.equal((result.blockHtml.match(/<h2[^>]*>One<\/h2>/g) || []).length, 2);
   assert.ok(!result.blockHtml.includes('>Two</h2>'));
   assert.equal(result.restored, 1);
