@@ -202,9 +202,13 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
         const title = body?.title || 'Untitled';
         const slug = (body?.slug || title.toLowerCase().replace(/\s+/g, '-')).replace(/^\/+/, '');
         const routePath = body?.route_path || `/${slug}`;
-        const pageType = body?.page_type || 'interior';
-        const status = body?.status || 'draft';
-        const page = await dbClient.createPage({ title, slug, routePath, pageType, status });
+        const pageType = body?.page_type || 'custom';
+        const status = 'draft';
+        const page = await dbClient.createPage({
+          title, slug, routePath, pageType, status,
+          tenantId: ownedSite.tenant_id,
+          projectId: ownedSite.project_id,
+        });
         return json({ ok: true, page, id: page.id, route_path: page.route_path }, 201);
       }
     }
