@@ -1,6 +1,13 @@
 /**
  * CMS site catalogs come from the authenticated site authority, never a
  * compiled-in list of customer names or example domains.
+ *
+ * @typedef {{id:string, slug:string, name:string, domain:string|null, page_count:number}} CmsSiteEntry
+ */
+
+/**
+ * @param {(path:string, options?:RequestInit)=>Promise<Response>} transport
+ * @returns {Promise<CmsSiteEntry[]>}
  */
 export async function loadAuthorizedCmsSiteCatalog(transport) {
   const response = await transport('/api/cms/websites', { credentials: 'same-origin' });
@@ -9,8 +16,10 @@ export async function loadAuthorizedCmsSiteCatalog(transport) {
   }
   const payload = await response.json();
   if (!payload || !Array.isArray(payload.websites)) throw new Error('cms_site_catalog_invalid');
+  /** @type {Array<Record<string, any>>} */
+  const websites = payload.websites;
   const seen = new Set();
-  return payload.websites
+  return websites
     .filter((site) => site && typeof site.slug === 'string' && /^[a-zA-Z0-9_-]+$/.test(site.slug) && !['__proto__', 'constructor', 'prototype'].includes(site.slug))
     .filter((site) => {
       if (seen.has(site.slug)) return false;
@@ -26,6 +35,11 @@ export async function loadAuthorizedCmsSiteCatalog(transport) {
     }));
 }
 
+/**
+ * @param {CmsSiteEntry[]} sites
+ * @param {string|null|undefined} requestedSlug
+ * @returns {CmsSiteEntry|null}
+ */
 export function selectAuthorizedCmsSite(sites, requestedSlug) {
   const requested = String(requestedSlug || '').trim();
   return sites.find((site) => site.slug === requested) || sites[0] || null;
