@@ -58,6 +58,34 @@ try {
   await page.locator('[data-theme-id]').first().waitFor({ timeout: 15000 });
   await page.goto(origin + '/index.html#/media');
   await page.getByText('Content Studio', { exact: true }).first().waitFor({ timeout: 15000 });
+  await page.getByText('Drag files here, or click to choose').waitFor({ timeout: 15000 });
+  await page.locator('input[type="file"]').setInputFiles({
+    name: 'desktop-proof.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from('An actual persisted media file, not a fake inventory card.'),
+  });
+  await page.getByText('desktop-proof.txt', { exact: true }).first().waitFor({ timeout: 15000 });
+  const savedBytes = await page.evaluate(async () => {
+    const request = indexedDB.open('agentsam-content-persistent-v1');
+    const db = await new Promise((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const assets = await new Promise((resolve, reject) => {
+      const r = db.transaction('assets').objectStore('assets').getAll();
+      r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error);
+    });
+    const originals = await new Promise((resolve, reject) => {
+      const r = db.transaction('objects').objectStore('objects').getAll();
+      r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error);
+    });
+    db.close();
+    return { assets, originals };
+  });
+  assert.ok(savedBytes.assets.some((asset) => asset.filename === 'desktop-proof.txt' && asset.providerRefs?.length), 'asset metadata references stored bytes');
+  assert.ok(savedBytes.originals.some((item) => item.name === 'desktop-proof.txt' && item.bytes?.length > 0), 'original file bytes saved to durable IndexedDB');
+  await page.reload();
+  await page.getByText('desktop-proof.txt', { exact: true }).first().waitFor({ timeout: 15000 });
   assert.equal(jsErrors.length, 0, 'no uncaught client exceptions');
 } catch (error) {
   const state = await page.evaluate(() => ({ url: location.href, heading: document.body.innerText.slice(0, 850) })).catch(() => null);
