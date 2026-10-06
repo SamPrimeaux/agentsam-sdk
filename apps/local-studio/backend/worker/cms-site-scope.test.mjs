@@ -44,3 +44,24 @@ test('SQL filters site by active page and authenticated membership', () => {
   assert.match(CMS_AUTHORIZED_SITES_SQL, /wm\.user_id = \?/);
   assert.match(CMS_AUTHORIZED_SITES_SQL, /wm\.is_active/);
 });
+
+test('mutations require edit rights, not merely membership', async () => {
+  const calls = [];
+  const db = {
+    prepare(sql) {
+      assert.match(sql, /workspace_role/);
+      assert.match(sql, /editor/);
+      return {
+        bind(...params) {
+          calls.push(params);
+          return { first: async () => ({ allowed: 1 }) };
+        },
+      };
+    },
+  };
+  assert.equal(await canEditCmsSite(db, 'user_1', 'inneranimalmedia'), true);
+  assert.deepEqual(calls, [['inneranimalmedia', 'user_1', 'user_1', 'user_1']]);
+  const readonlyDb = { prepare() { return { bind() { return { first: async () => null }; } }; } };
+  assert.equal(await canEditCmsSite(readonlyDb, 'viewer', 'inneranimalmedia'), false);
+  assert.equal(await canEditCmsSite(readonlyDb, '', 'inneranimalmedia'), false);
+});
