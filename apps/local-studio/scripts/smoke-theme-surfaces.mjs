@@ -154,7 +154,15 @@ try {
     await editor.locator('.te-block-row__main').first().click();
     packagedFieldCount = await editor.locator('.te-field').count();
   }
-  assert.ok(packagedFieldCount, 'Real packaged section/block content is editable');
+  if (!packagedFieldCount) {
+    const diagnostic = {
+      tree: await editor.locator('.te-tree-row__name').allTextContents(),
+      blocks: await editor.locator('.te-block-row__copy strong').allTextContents(),
+      inspector: await editor.locator('#te-inspector-body').innerText(),
+      note: await editor.locator('#te-note').innerText(),
+    };
+    assert.fail('Real packaged section/block content is editable: ' + JSON.stringify(diagnostic));
+  }
   await editor.locator('.te-tree-row__main').first().click();
   await editor.getByRole('button', { name: 'Layout', exact: true }).click();
   await editor.locator('[data-field-key="layout_padding"]').waitFor();
