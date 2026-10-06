@@ -39,7 +39,7 @@ import { loadConnectionsRegistry, safePluginSettingsRecord } from "./connections
 import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js";
 import { handleWorkRequest, isWorkRequest } from "./work-service.js";
 import { createLocalStudioPluginRuntime, loadPluginRegistry, updateLocalStudioPluginPreferences } from "./plugin-registry.js";
-import { discoverPublicPlugins, listCatalogForAccount, installFromCatalog, removeCatalogInstallation } from "./plugin-discovery.js";
+import { listCatalogForAccount, installFromCatalog, removeCatalogInstallation } from "./plugin-discovery.js";
 import { beginPluginOAuth, completePluginOAuth, disconnectPublicPlugin } from "./plugin-oauth.js";
 import { emitAnalyticsFact } from "./analytics-service.js";
 import { handleAnalyticsQueryRequest } from "./analytics-query-service.js";
@@ -927,29 +927,6 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
         const code=String(error?.code||error?.message||'plugin_oauth_failed').slice(0,120);
         console.warn('plugin_oauth_action_failed',code);
         return json({ok:false,error:code},code.includes('not_found')?404:code.includes('unavailable')?503:400);
-      }
-    }
-    // Public read-only health of the already-public plugin catalog. No account data,
-    // grants, credentials or installed tools are exposed here.
-    if (url.pathname === "/api/public/plugin-catalog/health") {
-      if (request.method !== "GET") return json({ok:false,error:"method_not_allowed"},405);
-      const sources = JSON.parse(String(env.AGENTSAM_PLUGIN_CATALOG_URLS || "[]"));
-      const official = sources.find(value=>new URL(value).origin === "https://plugins.inneranimalmedia.com");
-      if (!official) return json({ok:false,error:"first_party_catalog_not_configured"},503);
-      if (typeof env.PLUGIN_CATALOG?.fetch !== "function") return json({ok:false,error:"plugin_service_binding_missing"},503);
-      try {
-        const result = await env.PLUGIN_CATALOG.fetch(official,{method:"GET",headers:{accept:"application/json"}});
-        const body = await result.json();
-        const discovered = await discoverPublicPlugins(env);
-        return json({ok:result.ok && body?.schema === "agentsam.plugin-catalog/v1" && !discovered.errors.length,
-          httpStatus:result.status,schema:body?.schema||null,
-          pluginCount:Array.isArray(body?.plugins)?body.plugins.length:0,
-          keys:Array.isArray(body?.plugins)?body.plugins.map(entry=>entry.plugin_key):[],
-          discoveryCount:discovered.plugins.length,discoveryErrors:discovered.errors},
-          result.ok && !discovered.errors.length?200:503);
-      } catch (error) {
-        console.warn("plugin_catalog_binding_probe_failed",error?.name,String(error?.message||"error").slice(0,180));
-        return json({ok:false,error:"plugin_binding_fetch_failed",type:String(error?.name||"Error").slice(0,40)},503);
       }
     }
     if (isPluginCatalog) {
