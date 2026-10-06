@@ -36,7 +36,7 @@ export async function handleRemoteCmsRequest(request, env, { actorUserId, site, 
   if (!isAllowedStudioCmsBridgeRoute(path, method)) return response('cms_remote_operation_denied', 403);
   const service = bindingForWorker(env, site.worker_id);
   if (!service) return response('cms_remote_worker_binding_not_configured', 503);
-  if (!env.CMS_BRIDGE_SECRET) return response('cms_bridge_secret_not_configured', 503);
+  if (!env.AGENTSAM_BRIDGE_KEY) return response('agentsam_bridge_key_not_configured', 503);
 
   const input = new URL(request.url);
   const destination = new URL('https://cms-worker.internal/api/internal/studio-cms/' + path);
@@ -51,7 +51,7 @@ export async function handleRemoteCmsRequest(request, env, { actorUserId, site, 
   if (!['GET', 'HEAD'].includes(method)) opts.body = clone.body;
   const remoteRequest = new Request(destination, opts);
   const signature = await signCmsBridgeRequest(remoteRequest, {
-    secret: env.CMS_BRIDGE_SECRET,
+    secret: env.AGENTSAM_BRIDGE_KEY,
     actor: actorUserId,
     project: site.project_id,
   });

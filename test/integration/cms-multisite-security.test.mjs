@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { signCmsBridgeRequest, verifyCmsBridgeRequest, isAllowedStudioCmsBridgeRoute } from '../../apps/ecommerce-cms-agentsam/backend/cms/studio-bridge-protocol.js';
 import { listAuthorizedCmsSites, requireCmsSiteAccess } from '../../apps/local-studio/backend/worker/cms-authority.js';
 import { handleRemoteCmsRequest } from '../../apps/local-studio/backend/worker/cms-remote.js';
+import { handleStudioCmsBridge } from '../../apps/ecommerce-cms-agentsam/backend/cms/studio-bridge.js';
 import { createRemoteThemeEditorAdapter } from '../../apps/ecommerce-cms-agentsam/frontend/theme-editor/remote-worker-adapter.mjs';
 
 const SECRET = 'cms-test-' + 'c'.repeat(48);
@@ -31,6 +32,14 @@ function returnedSite() {
     workspace_id: 'ws_test', role: 'owner', cms_slug: null,
   };
 }
+
+test('FNF bridge requires AGENTSAM_BRIDGE_KEY, not a second CMS credential or project variable', async () => {
+  const request = new Request('https://fuelnfreetime.com/api/internal/studio-cms/pages');
+  const withCanonicalKey = await handleStudioCmsBridge(request, { AGENTSAM_BRIDGE_KEY: SECRET });
+  assert.equal(withCanonicalKey.status, 401, 'configured bridge reaches HMAC verification without extra project vars');
+  const withObsoleteKey = await handleStudioCmsBridge(request, { CMS_BRIDGE_SECRET: SECRET });
+  assert.equal(withObsoleteKey.status, 503, 'obsolete credential must not authenticate');
+});
 
 test('CMS site discovery returns real Worker authority and prevents slug-based impersonation', async () => {
   const opts = { remoteWorkerNames: ['fuelnfreetime'] };
@@ -73,7 +82,7 @@ test('operation allowlist cannot route orders, settings, warm, or arbitrary path
 test('remote gateway delegates signed, allowlisted requests to service binding only', async () => {
   let captured;
   const env={
-    CMS_BRIDGE_SECRET: SECRET,
+    AGENTSAM_BRIDGE_KEY: SECRET,
     CMS_SITE_BRIDGES:JSON.stringify({fuelnfreetime:'CMS_FNF'}),
     CMS_FNF:{async fetch(request){
       captured=request;
