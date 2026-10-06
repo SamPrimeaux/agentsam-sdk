@@ -64,6 +64,23 @@ export function SitesWorkspace() {
       </section>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <div className="flex items-center justify-between"><h2 className="text-sm font-semibold">Saved website drafts</h2><span className="text-xs text-muted-foreground">{projects.length} local projects</span></div>
+      <section className="space-y-3 border-b border-border pb-8">
+        <div className="flex items-center justify-between"><h2 className="text-sm font-semibold">Your connected websites</h2><span className="text-xs text-muted-foreground">{hostedLoading ? 'Verifying access…' : hostedSites.length + ' sites'}</span></div>
+        {hostedError && <p role="alert" className="text-sm text-destructive">Unable to load hosted sites: {hostedError}</p>}
+        {!hostedLoading && !hostedError && !hostedSites.length && <p className="text-sm text-muted-foreground">No hosted sites are assigned to this account.</p>}
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {hostedSites.map((site) => <article key={site.id} className="flex flex-col rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <div className="flex items-center justify-between"><span className="rounded-md bg-muted p-2"><Globe2 size={18}/></span><span className="text-[11px] text-muted-foreground">{site.source === 'worker' ? 'Worker CMS' : 'Hosted CMS'}</span></div>
+            <h3 className="mt-4 truncate text-lg font-semibold">{site.name}</h3>
+            <p className="mt-1 truncate text-xs text-muted-foreground">{site.domain || site.slug}</p>
+            <div className="mt-auto flex items-center justify-between pt-5"><span className="text-xs capitalize text-muted-foreground">{site.role} · {site.can_edit ? 'Editor access' : 'View only'}</span>
+              <button className={control} disabled={!site.can_edit} onClick={() => { void navigate({ to: '/cms', search: { site: site.slug, view: 'editor' } }); }}>
+                <Pencil size={14}/> Edit website
+              </button>
+            </div>
+          </article>)}
+        </div>
+      </section>
       {!projects.length && <div className="rounded-2xl border border-dashed border-border p-12 text-center"><Globe2 size={28} className="mx-auto text-muted-foreground"/><h3 className="mt-3 font-medium">No saved sites on this installation yet</h3><p className="mt-2 text-sm text-muted-foreground">Create a site above or use a packaged theme as a starting point.</p><button className={control + ' mt-4'} onClick={() => go('/themes')}><FilePlus2 size={15}/> Start from a theme</button></div>}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {projects.map((project) => <article key={project.id} className="flex flex-col rounded-2xl border border-border bg-card p-5 shadow-sm">
