@@ -189,6 +189,10 @@ function settingsWidgets(): SettingsWidget[] {
     source: widget.source,
     preferenceScope: widget.preferenceScope,
     deeplink: widget.deeplink || null,
+    category: widget.category,
+    tags: [...(widget.tags ?? [])],
+    availability: widget.availability,
+    ownerPackage: widget.ownerPackage,
   }));
 }
 

@@ -1,4 +1,5 @@
 import { SettingsThemeGallery } from "./themes";
+import { WidgetGalleryPreview } from "./WidgetGalleryPreview";
 export { SettingsThemeGallery } from "./themes";
 import {
   AlertTriangle,
@@ -800,45 +801,148 @@ function WidgetCustomizeView({
   onChanged: () => Promise<void>;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeCategory, setActiveCategory] = useState("all");
   const selected = widgets.find((widget) => widget.id === selectedId) ?? null;
+  const ready = widgets.filter((widget) => widget.availability !== "demo").length;
+  const previewCount = widgets.length - ready;
+  const categories = [
+    { id: "all", label: "All widgets" },
+    { id: "utility", label: "Utilities" },
+    { id: "glance", label: "At a glance" },
+    { id: "agent/runtime", label: "Agent & runtime" },
+    { id: "navigation", label: "Navigation" },
+    { id: "content", label: "Content" },
+    { id: "weather", label: "Weather" },
+  ];
+  const filtered = useMemo(() => widgets.filter((widget) => {
+    if (activeCategory !== "all" && widget.category !== activeCategory) return false;
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return true;
+    return [widget.name, widget.description, widget.category || "", widget.ownerPackage || "", ...(widget.tags || [])]
+      .some((value) => value.toLowerCase().includes(query));
+  }), [widgets, activeCategory, searchTerm]);
 
   async function setVisible(visible: boolean) {
-    if (!selected || !host.setWidgetVisible) return;
+    if (!selected || selected.availability === "demo" || !host.setWidgetVisible) return;
     await host.setWidgetVisible(selected.id, visible);
     await onChanged();
   }
 
+  const categoryLabel = (id: string | undefined) =>
+    categories.find((category) => category.id === id)?.label ?? "Widget";
+
   return (
     <>
-      <Section
-        title="Widgets"
-        description="Portable app utilities. Visibility is a preference, so hiding a widget never destroys its underlying capability or data."
-      >
-        {widgets.length ? (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-            {widgets.map((widget) => (
-              <ExtensionTile
-                key={widget.id}
-                name={widget.name}
-                subtitle={widget.visible ? "Visible" : "Hidden"}
-                icon={<Clock3 className="size-6 text-muted-foreground" />}
-                muted={!widget.visible}
-                badge={
-                  <span className={cx(
-                    "flex size-4 items-center justify-center rounded-full border-2 border-background",
-                    widget.visible ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground",
-                  )}>
-                    {widget.visible ? <Check className="size-2.5" /> : <EyeOff className="size-2.5" />}
-                  </span>
-                }
-                onClick={() => setSelectedId(widget.id)}
+      <section className="space-y-6 pb-8">
+        <div className="relative overflow-hidden rounded-[22px] border border-border/70 bg-gradient-to-br from-muted/50 via-background to-violet-500/[0.055] p-5 sm:p-7">
+          <div className="pointer-events-none absolute -right-24 -top-28 size-72 rounded-full bg-violet-500/[0.085] blur-3xl" />
+          <div className="relative flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-xl">
+              <div className="mb-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <Boxes className="size-3.5 text-violet-400" /> Workbench collection
+              </div>
+              <h2 className="text-[24px] font-semibold tracking-[-0.045em] sm:text-[28px]">Your widget library</h2>
+              <p className="mt-2 max-w-lg text-[12px] leading-[1.7] text-muted-foreground">
+                Explore the original widget concepts, inspect their designs and enable widgets as they become real, portable capabilities.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 self-start rounded-full border border-border/80 bg-background/65 px-3 py-2 text-[10px] text-muted-foreground">
+              <span className="size-1.5 rounded-full bg-emerald-400" />
+              <span><strong className="font-semibold text-foreground">{ready}</strong> ready</span>
+              <span className="mx-0.5 text-foreground/15">/</span>
+              <span><strong className="font-semibold text-foreground">{previewCount}</strong> concepts</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <label className="relative block w-full sm:max-w-[280px]">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="search"
+                aria-label="Search widgets"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search widgets or capabilities"
+                className="h-10 w-full rounded-xl border border-border/80 bg-background/70 pl-10 pr-3 text-[12px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-violet-400/70 focus:ring-2 focus:ring-violet-400/10"
               />
+            </label>
+            <span className="text-[11px] text-muted-foreground">{filtered.length} of {widgets.length} widgets</span>
+          </div>
+          <div className="flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label="Filter widgets by category">
+            {categories.filter((category) => category.id === "all" || widgets.some((widget) => widget.category === category.id)).map((category) => (
+              <button
+                key={category.id}
+                type="button"
+                aria-pressed={activeCategory === category.id}
+                onClick={() => setActiveCategory(category.id)}
+                className={cx(
+                  "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
+                  activeCategory === category.id
+                    ? "border-foreground/80 bg-foreground text-background"
+                    : "border-border/75 bg-background/40 text-muted-foreground hover:border-foreground/25 hover:text-foreground"
+                )}
+              >
+                {category.label}
+              </button>
             ))}
           </div>
+        </div>
+
+        {filtered.length ? (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            {filtered.map((widget) => {
+              const demo = widget.availability === "demo";
+              return (
+                <button
+                  type="button"
+                  key={widget.id}
+                  onClick={() => setSelectedId(widget.id)}
+                  className="group min-w-0 overflow-hidden rounded-[19px] border border-border/75 bg-background/65 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/25 hover:bg-muted/20 hover:shadow-[0_14px_38px_-22px_rgba(0,0,0,0.5)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+                  aria-label={`Preview ${widget.name}${demo ? " concept" : " widget"}`}
+                >
+                  <div className="relative h-[158px] overflow-hidden border-b border-border/60 bg-gradient-to-br from-muted/50 via-muted/20 to-violet-400/[0.075] px-5 py-4">
+                    <div className="pointer-events-none absolute -right-12 -top-12 size-36 rounded-full bg-violet-400/[0.07] blur-2xl" />
+                    <div className="relative h-full"><WidgetGalleryPreview id={widget.id} /></div>
+                  </div>
+                  <div className="space-y-2 p-4">
+                    <div className="flex min-w-0 items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-[12px] font-semibold tracking-[-0.015em] text-foreground">{widget.name}</p>
+                        <p className="mt-0.5 text-[10px] text-muted-foreground">{categoryLabel(widget.category)}</p>
+                      </div>
+                      <span className={cx(
+                        "shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-medium",
+                        demo ? "border-border bg-muted/45 text-muted-foreground" : "border-emerald-500/25 bg-emerald-500/10 text-emerald-400"
+                      )}>
+                        {demo ? "Concept" : "Ready"}
+                      </span>
+                    </div>
+                    <p className="line-clamp-2 min-h-[31px] text-[10px] leading-[1.55] text-muted-foreground">{widget.description}</p>
+                    <div className="flex items-center justify-between border-t border-border/60 pt-2.5">
+                      <span className="text-[10px] text-muted-foreground">{demo ? "Sample preview" : widget.visible ? "Visible in Utilities" : "Hidden in Utilities"}</span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-foreground/80">
+                        Explore <ChevronRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         ) : (
-          <EmptyState title="No widgets are registered by this build." />
+          <div className="rounded-2xl border border-dashed border-border p-12 text-center">
+            <Search className="mx-auto size-5 text-muted-foreground" />
+            <p className="mt-3 text-[12px] font-medium">No widgets match your search.</p>
+            <button type="button" className="mt-2 text-[11px] text-muted-foreground underline underline-offset-4" onClick={() => {setSearchTerm("");setActiveCategory("all");}}>Clear filters</button>
+          </div>
         )}
-      </Section>
+        <p className="text-[10px] leading-relaxed text-muted-foreground">
+          Concept previews use sample artwork/data and do not connect to, control, or represent live AgentSam systems. They become installable after their package adapters and safety checks are completed.
+        </p>
+      </section>
 
       <SettingsSheet
         open={Boolean(selected)}
@@ -848,53 +952,43 @@ function WidgetCustomizeView({
       >
         {selected ? (
           <div className="space-y-5">
-            <div className="flex items-center gap-4">
-              <div className="flex size-16 shrink-0 items-center justify-center rounded-[16px] border border-border bg-gradient-to-br from-muted/90 via-muted/40 to-background">
-                <Clock3 className="size-6 text-muted-foreground" />
+            <div className="overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-muted/45 to-violet-400/[0.06] p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Design preview</span>
+                <span className="rounded-full border border-border bg-background/75 px-2 py-0.5 text-[9px] text-muted-foreground">
+                  {selected.availability === "demo" ? "Concept · sample data" : "Packaged widget"}
+                </span>
               </div>
-              <div>
-                <div className="text-[12px] font-medium">{selected.name}</div>
-                <div className="mt-1 text-[10px] text-muted-foreground">{selected.kind}</div>
-              </div>
+              <div className="mx-auto h-40 max-w-sm"><WidgetGalleryPreview id={selected.id} /></div>
             </div>
-
             <div className="rounded-lg border border-border/70 px-3">
-              <PreferenceRow
-                label="Visible"
-                description="Show this widget on Local Studio's Utilities surface."
-                trailing={<Toggle enabled={selected.visible} onChange={(value) => void setVisible(value)} />}
-              />
-              <PreferenceRow label="Preference scope" description="Where this visibility choice is stored." value={selected.preferenceScope} />
-              <PreferenceRow label="Source" description="Widget installation/source authority." value={selected.source} />
-              <PreferenceRow label="Sizes" description="Supported widget presentation sizes." value={selected.sizes.join(", ")} />
+              <PreferenceRow label="Status" description="Availability of this widget implementation." value={selected.availability === "demo" ? "Design concept · not yet installed" : "Ready to use"} />
+              <PreferenceRow label="Category" description="Widget library grouping." value={categoryLabel(selected.category)} />
+              {selected.ownerPackage ? <PreferenceRow label="Proposed owner" description="Target package authority for this widget." value={selected.ownerPackage} /> : null}
+              <PreferenceRow label="Sizes" description="Supported presentation sizes." value={selected.sizes.join(", ")} />
+              {selected.availability !== "demo" ? (
+                <>
+                  <PreferenceRow label="Preference scope" description="Where the current visibility choice is stored." value={selected.preferenceScope} />
+                  <PreferenceRow
+                    label="Visible"
+                    description="Show this widget in the Utilities surface."
+                    trailing={<Toggle enabled={selected.visible} onChange={(value) => void setVisible(value)} />}
+                  />
+                </>
+              ) : (
+                <p className="py-3 text-[11px] leading-relaxed text-muted-foreground">
+                  Preview only. This design will be enabled once its renderer, source adapter, and permissions are connected to a real package. No demo controls will mutate production data.
+                </p>
+              )}
             </div>
-
             <div className="flex flex-wrap gap-2 border-t border-border/70 pt-4">
-              {host.openWidget ? (
-                <button
-                  type="button"
-                  onClick={() => host.openWidget?.(selected.id)}
-                  className="h-9 rounded-md bg-foreground px-3 text-[10px] font-medium text-background"
-                >
-                  View widget
-                </button>
+              {selected.availability !== "demo" && host.openWidget ? (
+                <button type="button" onClick={() => host.openWidget?.(selected.id)} className="h-9 rounded-lg bg-foreground px-4 text-[11px] font-medium text-background">Open widget</button>
               ) : null}
-              <button
-                type="button"
-                onClick={() => void setVisible(!selected.visible)}
-                className="h-9 rounded-md border border-border px-3 text-[10px] text-muted-foreground hover:bg-muted"
-              >
-                {selected.visible ? "Hide" : "Show"}
-              </button>
-              {selected.removable && host.removeWidget ? (
-                <button
-                  type="button"
-                  onClick={() => void host.removeWidget?.(selected.id).then(onChanged)}
-                  className="h-9 rounded-md px-3 text-[10px] text-red-300 hover:bg-red-500/10"
-                >
-                  Remove
-                </button>
+              {selected.availability !== "demo" && host.setWidgetVisible ? (
+                <button type="button" onClick={() => void setVisible(!selected.visible)} className="h-9 rounded-lg border border-border px-4 text-[11px] hover:bg-muted">{selected.visible ? "Hide widget" : "Show widget"}</button>
               ) : null}
+              <button type="button" onClick={() => setSelectedId(null)} className="h-9 rounded-lg border border-border px-4 text-[11px] text-muted-foreground hover:bg-muted">Close preview</button>
             </div>
           </div>
         ) : null}

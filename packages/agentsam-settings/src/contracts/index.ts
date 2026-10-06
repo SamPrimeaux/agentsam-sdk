@@ -151,6 +151,11 @@ export type SettingsWidget = {
   source: string;
   preferenceScope: string;
   deeplink?: string | null;
+  /** Portable widget gallery metadata; undefined means a legacy ready widget. */
+  category?: string;
+  tags?: string[];
+  availability?: "ready" | "demo";
+  ownerPackage?: string;
 };
 
 export type SettingsCatalogKind =
