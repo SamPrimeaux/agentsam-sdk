@@ -802,7 +802,7 @@ function PluginCustomizeView({
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h3 className="text-[16px] font-semibold tracking-[-0.025em]">Discover plugins</h3>
-              <p className="mt-1 text-[11px] text-muted-foreground">Published plugin packages from configured, verified catalog sources.</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">Published plugin packages from configured, verified catalog sources. {catalog ? `${catalog.configuredSources} source${catalog.configuredSources===1?"":"s"} configured` : "Checking sources…"}</p>
             </div>
             <span className="text-[11px] text-muted-foreground">{filtered.length} plugins</span>
           </div>
