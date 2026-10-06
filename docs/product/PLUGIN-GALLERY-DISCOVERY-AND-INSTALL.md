@@ -1,7 +1,7 @@
 # AgentSam Plugin Gallery — Discovery and Installation
 
 Date: 2026-10-06
-Status: Discovery and account-registration slice. Authenticated remote execution is not yet complete.
+Status: Catalog discovery, account registration, and IAM OAuth-mediated tool authorization are implemented and integration-tested. A fresh-account live browser/OAuth smoke and independent external-host smoke remain release gates.
 
 ## Authorities
 
