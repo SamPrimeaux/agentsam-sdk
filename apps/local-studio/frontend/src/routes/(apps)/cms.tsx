@@ -1,6 +1,6 @@
 // @ts-ignore Portable ecommerce CMS surface adapter.
 import { createCmsThemeEditorAdapter, createHttpCmsAdapter } from '@inneranimalmedia/ecommerce-cms-agentsam/cms';
-import { ThemeStorePage } from '@/components/themes/ThemeStorePage';
+import { CmsHomePage } from '@/components/sites/CmsHomePage';
 import { ThemeEditorFrame } from '@/components/themes/ThemeEditorFrame';
 import { ThemeProjectEditor } from '@/components/themes/ThemeProjectEditor';
 import { studioCmsFetch } from '@/lib/cms/transport';
