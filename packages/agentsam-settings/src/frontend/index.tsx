@@ -781,7 +781,9 @@ function PluginCustomizeView({
                     aria-label={"View installed "+plugin.name}
                     className="group flex w-[100px] shrink-0 flex-col items-center gap-2 rounded-xl p-2 text-center hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400">
                     <span className="relative flex size-[67px] items-center justify-center overflow-hidden rounded-[20px] border border-border/90 bg-muted/35 text-foreground/85 shadow-[0_8px_20px_-14px_rgba(0,0,0,0.5)]">
-                      {plugin.iconUrl ? <img src={plugin.iconUrl} alt={plugin.iconAlt || ""} className={cx("size-full",plugin.iconFit==="cover"?"object-cover":"object-contain p-2.5")}/> : iconFor(matched ?? plugin,"size-7")}
+                      {iconFor(matched ?? plugin,"size-7")}
+                      {plugin.iconUrl ? <img src={plugin.iconUrl} alt={plugin.iconAlt || ""} onError={event=>{event.currentTarget.hidden=true;}}
+                        className={cx("absolute inset-0 size-full bg-muted/35",plugin.iconFit==="cover"?"object-cover":"object-contain p-2.5")}/> : null}
                       <span className={cx("absolute bottom-1 right-1 size-2.5 rounded-full border-2 border-background",isRunnable(plugin)?"bg-emerald-400":"bg-amber-400")}/>
                     </span>
                     <span className="w-full truncate text-[11px] font-medium text-foreground">{plugin.name}</span>
