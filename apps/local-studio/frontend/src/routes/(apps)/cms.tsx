@@ -39,6 +39,7 @@ export const Route = createFileRoute("/(apps)/cms")({
 const SITE_CATALOG = [
   { slug: "agentsam-sdk", name: "Agent Sam SDK", domain: "agentsam.inneranimalmedia.com" },
   { slug: "inneranimalmedia", name: "Inner Animal Media", domain: "inneranimalmedia.com" },
+  { slug: "meauxbility", name: "Meauxbility", domain: "meauxbility.org" },
 ];
 
 function CmsPage() {
