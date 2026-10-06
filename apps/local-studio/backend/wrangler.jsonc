@@ -71,6 +71,10 @@
     {
       "binding": "EXECOS",
       "service": "execos"
+    },
+    {
+      "binding": "CMS_FNF",
+      "service": "fuelnfreetime"
     }
   ],
   "vpc_services": [
