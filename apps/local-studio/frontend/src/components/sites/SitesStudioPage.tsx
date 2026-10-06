@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ArrowUpRight, FilePlus2, Globe2, Images, LayoutTemplate, Megaphone, Pencil, Plus } from 'lucide-react';
 import { themeProjectStore, THEME_PROJECTS_CHANGED } from '@/lib/themes/projects';
 import { createThemeDraft } from '@/lib/themes/inventory';
+import { studioCmsFetch } from '@/lib/cms/transport';
 import { useNavigate } from '@tanstack/react-router';
 import { useCurrentUserState } from '@/lib/auth/use-current-user';
 import { RedirectToSignIn } from '@/lib/auth/gates';
