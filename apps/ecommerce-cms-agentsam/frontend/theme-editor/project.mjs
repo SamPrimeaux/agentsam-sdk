@@ -75,12 +75,17 @@ export function extractThemePage(html, { slug = 'home', title = 'Home', baseUrl 
     const bind = (scope, target) => {
       const fields = [];
       const counts = Object.create(null);
+      const boundElements = new Map();
       const nextKey = (kind) => {
         counts[kind] = (counts[kind] || 0) + 1;
         return `${kind}_${counts[kind]}`;
       };
-      const candidates = [...scope.querySelectorAll('h1,h2,h3,h4,p,img,a,button,label')];
-      if (scope.matches('h1,h2,h3,h4,p,img,a,button,label')) candidates.unshift(scope);
+      // Bind leaf text nodes so editing copy does not flatten nested theme markup.
+      // Including common inline wrappers makes real themes editable even when
+      // headings/buttons/links use spans, strong tags, or emphasis wrappers.
+      const selector = 'h1,h2,h3,h4,p,img,a,button,label,span,small,strong,em';
+      const candidates = [...scope.querySelectorAll(selector)];
+      if (scope.matches(selector)) candidates.unshift(scope);
 
       candidates.filter((el) => el.tagName === 'IMG' || !el.children.length).forEach((el) => {
         const kind =
@@ -92,6 +97,7 @@ export function extractThemePage(html, { slug = 'home', title = 'Home', baseUrl 
         const field = nextKey(kind);
         const copy = meaningfulText(el);
         el.setAttribute('data-theme-project-field', field);
+        boundElements.set(el, field);
         const attribute = el.tagName === 'IMG' ? 'src' : undefined;
         target[field] = attribute ? el.getAttribute(attribute) || '' : el.textContent || '';
         fields.push({
@@ -106,11 +112,20 @@ export function extractThemePage(html, { slug = 'home', title = 'Home', baseUrl 
           target[alt] = el.getAttribute('alt') || '';
           fields.push({ key: alt, label: (copy || 'Image') + ' alt text', type: 'text', binding: { field, attribute: 'alt' } });
         }
-        if (el.tagName === 'A') {
-          const href = field + '_href';
-          target[href] = el.getAttribute('href') || '';
-          fields.push({ key: href, label: (copy || 'Link') + ' destination', type: 'link', binding: { field, attribute: 'href' } });
+      });
+
+      // Link destinations are editable even when the anchor wraps styled spans
+      // or icons and therefore cannot safely be flattened into one text field.
+      [...scope.querySelectorAll('a')].forEach((el) => {
+        let field = boundElements.get(el);
+        if (!field) {
+          field = nextKey('link');
+          el.setAttribute('data-theme-project-field', field);
         }
+        const href = field + '_href';
+        const copy = meaningfulText(el);
+        target[href] = el.getAttribute('href') || '';
+        fields.push({ key: href, label: (copy || 'Link') + ' destination', type: 'link', binding: { field, attribute: 'href' } });
       });
       return fields;
     };
