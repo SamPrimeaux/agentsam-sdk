@@ -18,9 +18,9 @@ export async function handleStudioCmsBridge(request,env){
   if(tail.endsWith('/publish') && env.CMS_BRIDGE_PUBLISH_ENABLED !== 'true') {
     return error('cms_publish_requires_verified_preview_and_release_gate',409);
   }
-  if(!env.CMS_BRIDGE_SECRET || !env.CMS_BRIDGE_PROJECT_ID) return error('cms_bridge_not_configured',503);
+  if(!env.AGENTSAM_BRIDGE_KEY || !env.CMS_BRIDGE_PROJECT_ID) return error('cms_bridge_not_configured',503);
   let proof;
-  try { proof=await verifyCmsBridgeRequest(request,{secret:env.CMS_BRIDGE_SECRET,expectedProject:env.CMS_BRIDGE_PROJECT_ID}); }
+  try { proof=await verifyCmsBridgeRequest(request,{secret:env.AGENTSAM_BRIDGE_KEY,expectedProject:env.CMS_BRIDGE_PROJECT_ID}); }
   catch{return error('cms_bridge_not_authorized',401);}
   if(!proof.ok)return error('cms_bridge_not_authorized',401);
   if(WRITE_METHODS.has(method)){
