@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:heuristic-commerce:schema:theme:v1",
+  "title": "Heuristic Commerce Theme",
+  "type": "object",
+  "required": ["id", "name", "version", "entry", "pages", "runtime", "contracts", "presets", "sections"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "name": { "type": "string", "minLength": 1 },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "entry": { "type": "string" },
+    "pages": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "runtime": { "type": "object", "additionalProperties": { "type": "string", "pattern": "^/" } },
+    "contracts": { "type": "object", "additionalProperties": { "type": "string" } },
+    "presets": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["label", "manifest"],
+        "properties": {
+          "label": { "type": "string" },
+          "manifest": { "type": "string", "pattern": "^presets/[a-z0-9-]+/preset\\.json$" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "sections": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "status": { "enum": ["reference-implementation", "stable", "deprecated"] }
+  },
+  "additionalProperties": false
+}

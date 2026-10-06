@@ -1,0 +1,4 @@
+{
+  "$schema": "../../../contracts/page.schema.json", "id": "about", "route": "/about", "title": "About",
+  "sections": [{ "id": "about-story", "type": "story.immersive", "blocks": [{ "id": "about-heading", "type": "copy.display", "content": { "eyebrow": "Est. 2025 · Lafayette, Louisiana", "title": "Built in the garage" }, "visibility": { "enabled": true } }, { "id": "about-body", "type": "copy.rich", "content": { "source": "cms.about.story" }, "dataBindings": [{ "kind": "page", "source": "about.story", "slot": "content" }], "visibility": { "enabled": true } }], "appearance": { "theme": "dark", "width": "wide" }, "motion": { "preset": "fade", "intensity": 0.2 }, "responsive": { "desktop": { "layout": "split" }, "tablet": { "layout": "split" }, "mobile": { "layout": "stacked" } }, "visibility": { "enabled": true } }]
+}

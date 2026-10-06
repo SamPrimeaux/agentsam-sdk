@@ -1,0 +1,81 @@
+/* Heuristic storefront contract: brand presets map semantic tokens to shared sections. */
+:root {
+  --h-color-ink: #f7f5f0;
+  --h-color-paper: #f2efe8;
+  --h-color-canvas: #090909;
+  --h-color-surface: #141414;
+  --h-color-surface-raised: #1b1b1b;
+  --h-color-muted: #aaa8a2;
+  --h-color-line: rgba(255, 255, 255, 0.12);
+  --h-color-accent: #ff4d00;
+  --h-color-accent-soft: #e5a558;
+  --h-color-positive: #21c78a;
+  --h-font-display: "Bebas Neue", Impact, sans-serif;
+  --h-font-body: "Inter", system-ui, sans-serif;
+  --h-radius-sm: 0.5rem;
+  --h-radius-md: 1rem;
+  --h-radius-lg: 1.5rem;
+  --h-radius-pill: 999px;
+  --h-container: 1440px;
+  --h-gutter: clamp(1rem, 4vw, 4rem);
+  --h-section-y: clamp(4rem, 9vw, 8rem);
+  --h-shadow-float: 0 24px 70px rgba(0, 0, 0, 0.34);
+  --h-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+html[data-theme-preset="fuel-free-time"] {
+  --h-color-accent: #ff4d00;
+  --h-color-accent-soft: #d99142;
+  --h-color-positive: #22adae;
+}
+
+.h-container {
+  width: min(100%, var(--h-container));
+  margin-inline: auto;
+  padding-inline: var(--h-gutter);
+}
+
+.h-eyebrow {
+  margin: 0 0 0.75rem;
+  color: var(--h-color-accent-soft);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.h-display {
+  margin: 0;
+  font-family: var(--h-font-display);
+  font-size: clamp(3.25rem, 8vw, 8rem);
+  font-weight: 400;
+  letter-spacing: 0.025em;
+  line-height: 0.88;
+  text-transform: uppercase;
+}
+
+.h-button {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  padding: 0.8rem 1.35rem;
+  border: 1px solid transparent;
+  border-radius: var(--h-radius-pill);
+  background: var(--h-color-accent);
+  color: #0a0a0a;
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: transform 0.2s var(--h-ease), background 0.2s var(--h-ease);
+}
+
+.h-button:hover { transform: translateY(-2px); }
+.h-button--ghost { border-color: var(--h-color-line); background: transparent; color: inherit; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}

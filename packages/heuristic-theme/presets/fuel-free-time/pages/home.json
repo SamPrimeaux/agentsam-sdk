@@ -1,0 +1,92 @@
+{
+  "$schema": "../../../contracts/page.schema.json",
+  "id": "home",
+  "route": "/",
+  "title": "Fuel & Free Time",
+  "sections": [
+    {
+      "id": "home-hero",
+      "type": "hero.editorial",
+      "cmsKey": "hero",
+      "blocks": [
+        { "id": "hero-copy", "type": "copy.display", "content": { "eyebrow": "The Earned Hours Collection", "title": "Time is the real horsepower.", "body": "Hard-wearing essentials for garage nights, early launches, long roads, and every hour you fought to make your own." }, "visibility": { "enabled": true } },
+        { "id": "hero-actions", "type": "actions.group", "content": { "primary": { "label": "Shop the drop", "href": "/shop" }, "secondary": { "label": "Explore collections", "href": "/shop/collections" } }, "visibility": { "enabled": true } },
+        { "id": "hero-media", "type": "media.image", "content": { "asset": "home/earned-hours-hero", "alt": "Fuel & Free Time lifestyle in the garage" }, "visibility": { "enabled": true } }
+      ],
+      "appearance": { "theme": "dark", "width": "full-bleed", "minHeightPx": 720, "headerMode": "ghost-light" },
+      "motion": { "preset": "blur-recede", "intensity": 0.35, "scrollDepthVh": 1 },
+      "responsive": { "desktop": { "layout": "split" }, "tablet": { "layout": "split" }, "mobile": { "layout": "stacked" } },
+      "visibility": { "enabled": true }
+    },
+    {
+      "id": "home-manifesto",
+      "type": "story.immersive",
+      "cmsKey": "manifesto",
+      "blocks": [
+        { "id": "manifesto-heading", "type": "copy.display", "content": { "title": "Some chase horsepower. We chase hours." }, "visibility": { "enabled": true } },
+        { "id": "manifesto-body", "type": "copy.rich", "content": { "paragraphs": ["Fuel & Free Time isn't about how fast you go — it's about finally having the time to go at all.", "Born in a Lafayette garage, built for those who've earned their freedom.", "Time is everything money can't buy back."] }, "visibility": { "enabled": true } },
+        { "id": "manifesto-media", "type": "media.image", "content": { "asset": "home/manifesto", "alt": "A life built around earned time" }, "visibility": { "enabled": true } }
+      ],
+      "appearance": { "theme": "dark", "width": "wide" },
+      "motion": { "preset": "fade", "intensity": 0.25 },
+      "responsive": { "desktop": { "layout": "split" }, "tablet": { "layout": "split" }, "mobile": { "layout": "stacked" } },
+      "visibility": { "enabled": true }
+    },
+    {
+      "id": "home-collections",
+      "type": "collections.lineup",
+      "cmsKey": "collections",
+      "blocks": [
+        { "id": "collections-heading", "type": "copy.section-heading", "content": { "eyebrow": "Limited drops", "title": "Fuel your style" }, "visibility": { "enabled": true } },
+        { "id": "collection-high-octane", "type": "collection.card", "content": { "title": "High Octane", "body": "Performance gear for redline living", "asset": "collections/high-octane", "href": "/shop/collections/high-octane-performance-gear" }, "visibility": { "enabled": true } },
+        { "id": "collection-masters", "type": "collection.card", "content": { "title": "Masters", "body": "For those who've earned their stripes", "asset": "collections/masters", "href": "/shop/collections/masters" }, "visibility": { "enabled": true } },
+        { "id": "collection-essentials", "type": "collection.card", "content": { "title": "Essentials", "body": "Daily drivers for the daily grind", "asset": "collections/essentials", "href": "/shop/collections/essentials" }, "visibility": { "enabled": true } }
+      ],
+      "appearance": { "theme": "light", "width": "wide" },
+      "motion": { "preset": "horizontal-scrub", "intensity": 0.2 },
+      "responsive": { "desktop": { "columns": 3 }, "tablet": { "columns": 2 }, "mobile": { "columns": 1 } },
+      "visibility": { "enabled": true }
+    },
+    {
+      "id": "home-values",
+      "type": "content.feature-grid",
+      "cmsKey": "values",
+      "blocks": [
+        { "id": "values-heading", "type": "copy.section-heading", "content": { "title": "More than merch" }, "visibility": { "enabled": true } },
+        { "id": "value-earned", "type": "feature.card", "content": { "title": "Earned not given", "body": "Every thread tells a story of hard work and dedication." }, "visibility": { "enabled": true } },
+        { "id": "value-lafayette", "type": "feature.card", "content": { "title": "Built in Lafayette", "body": "Designed from Louisiana with a point of view rooted in real work." }, "visibility": { "enabled": true } },
+        { "id": "value-community", "type": "feature.card", "content": { "title": "Community first", "body": "Real people, real stories, real freedom." }, "visibility": { "enabled": true } }
+      ],
+      "appearance": { "theme": "dark", "width": "contained" },
+      "motion": { "preset": "fade", "intensity": 0.18 },
+      "responsive": { "desktop": { "columns": 3 }, "tablet": { "columns": 2 }, "mobile": { "columns": 1 } },
+      "visibility": { "enabled": true }
+    },
+    {
+      "id": "home-community",
+      "type": "community.callout",
+      "cmsKey": "community",
+      "blocks": [
+        { "id": "community-copy", "type": "copy.display", "content": { "title": "Join the movement", "body": "Where every mile has a story and every hour is earned." }, "visibility": { "enabled": true } },
+        { "id": "community-actions", "type": "actions.group", "content": { "primary": { "label": "Meet the community", "href": "/community" } }, "visibility": { "enabled": true } }
+      ],
+      "appearance": { "theme": "dark", "width": "full-bleed" },
+      "motion": { "preset": "parallax", "intensity": 0.2 },
+      "responsive": { "desktop": { "layout": "split" }, "tablet": { "layout": "split" }, "mobile": { "layout": "stacked" } },
+      "visibility": { "enabled": true }
+    },
+    {
+      "id": "home-newsletter",
+      "type": "newsletter.signup",
+      "cmsKey": "newsletter",
+      "blocks": [
+        { "id": "newsletter-copy", "type": "copy.section-heading", "content": { "title": "Stay fueled up", "body": "Get first access to drops, event invites, and the stories that matter." }, "visibility": { "enabled": true } },
+        { "id": "newsletter-form", "type": "form.email", "content": { "placeholder": "Email address", "buttonLabel": "Join" }, "visibility": { "enabled": true } }
+      ],
+      "appearance": { "theme": "dark", "width": "contained" },
+      "motion": { "preset": "fade", "intensity": 0.15 },
+      "responsive": { "desktop": { "layout": "inline" }, "tablet": { "layout": "inline" }, "mobile": { "layout": "stacked" } },
+      "visibility": { "enabled": true }
+    }
+  ]
+}

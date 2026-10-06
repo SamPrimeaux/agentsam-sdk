@@ -34,8 +34,13 @@ export function createRemoteThemeEditorAdapter(siteSlug, transport) {
     capabilities: { publish: false },
     async listPages() {
       const result = await request('pages');
-      return (result.pages || []).map(({slug,title}) => ({ slug, title, id: slug }));
+      return (result.pages || []).map((page) => ({
+        ...page, id: page.id || page.slug,
+        slug: page.slug, title: page.title,
+      }));
     },
+    // Read the owning Worker's actual active theme, storefront domain, and tokens.
+    async getStoreOverview() { return request('store/online'); },
     async getRegistry() { return request('registry'); },
     async getPage(slug) { const result = await request('pages/' + part(slug)); return result.page; },
     async saveDraft(slug, key, content, expectedVersion) {
@@ -73,23 +78,29 @@ export function createRemoteThemeEditorAdapter(siteSlug, transport) {
     async publish() {
       throw new Error('cms_live_publish_requires_verified_preview_and_rollback');
     },
-    async resolvePreview(slug, draft) {
-      // This is a real data-bound visual composition from the portable FNF
-      // renderer, NOT a claim that the exact published Heuristic storefront
-      // will look identical. The live-publish gate remains intentionally shut.
-      if (typeof window === 'undefined') throw new Error('cms_preview_requires_browser');
-      if (!window.ThemeStudioPreview) {
-        await import('../../../../packages/theme-contract/runtime/theme-preview-registry.js');
+    async resolvePreview(slug) {
+      // Use FNF's installed theme and source-defined live_route, rather than
+      // drawing a synthetic FNF layout and calling it the active Heuristic site.
+      // Published preview is read-only: this never claims draft parity.
+      const [overview, pageResult] = await Promise.all([
+        request('store/online'), request('pages/' + part(slug)),
+      ]);
+      const route = pageResult.page?.live_route;
+      const publicUrl = overview.store?.url;
+      if (typeof route !== 'string' || !route.startsWith('/') ||
+          route.startsWith('//') || route.includes('..')) {
+        throw new Error('cms_page_has_no_verified_published_theme_route');
       }
-      if (!window.ThemeStudioPreview.getTheme('fnf')) {
-        await import('../../../../packages/fnf-theme/src/editor/preview-adapter.js');
+      if (!publicUrl || typeof publicUrl !== 'string') {
+        throw new Error('cms_storefront_domain_not_verified');
       }
-      const site = slug === 'site'
-        ? draft
-        : (await request('pages/site').catch(() => ({ page: null }))).page;
-      const html = window.ThemeStudioPreview.render('fnf', draft, site);
-      if (!html || !html.includes('<html')) throw new Error('cms_visual_preview_unavailable');
-      return { html };
+      const origin = new URL(publicUrl);
+      if (origin.protocol !== 'https:' || origin.username || origin.password) {
+        throw new Error('cms_storefront_domain_not_verified');
+      }
+      const url = new URL(route, origin);
+      if (url.origin !== origin.origin) throw new Error('cms_preview_origin_mismatch');
+      return { url: url.href, mode: 'published', source: 'owning-worker' };
     },
     async listMedia() { return []; },
   };

@@ -1,0 +1,4 @@
+{
+  "$schema": "../../../contracts/page.schema.json", "id": "cart", "route": "/cart", "title": "Your cart",
+  "sections": [{ "id": "cart-main", "type": "cart.summary", "blocks": [{ "id": "cart-lines", "type": "cart.line-items", "content": {}, "visibility": { "enabled": true } }, { "id": "cart-totals", "type": "cart.totals", "content": {}, "visibility": { "enabled": true } }, { "id": "cart-checkout", "type": "cart.checkout", "content": {}, "visibility": { "enabled": true } }], "appearance": { "theme": "dark", "width": "wide" }, "motion": { "preset": "none", "intensity": 0 }, "responsive": { "desktop": { "layout": "split" }, "tablet": { "layout": "split" }, "mobile": { "layout": "stacked" } }, "visibility": { "enabled": true } }]
+}

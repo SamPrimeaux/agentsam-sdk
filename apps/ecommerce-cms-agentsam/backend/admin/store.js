@@ -12,6 +12,19 @@ import {
 } from "../lib/site-nav.js";
 import { getCompany, companyDomain } from "../lib/company.js";
 import { hashPassword, verifyPassword } from "../lib/auth.js";
+// Installed theme owns its appearance: never substitute a store-specific color
+// guess or force the FNF orange/light admin preset on unrelated CMS sites.
+import heuristicManifest from '../../../../packages/heuristic-theme/theme.json' with { type: 'json' };
+import heuristicTokens from '../../../../packages/heuristic-theme/presets/fuel-free-time/tokens.json' with { type: 'json' };
+
+function appearanceForInstalledPackage(theme) {
+  if (theme?.package_name === '@inneranimalmedia/heuristic-theme' &&
+      heuristicManifest.entry === 'presets/fuel-free-time/preset.json') {
+    return { theme_id: heuristicManifest.id, preset_id: 'fuel-free-time', tokens: heuristicTokens };
+  }
+  return null; // A new theme must supply its own registered visual contract.
+}
+
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -210,7 +223,7 @@ async function resolveThemes(env) {
   // No fabricated themes. Prefer agentsam_products theme rows if present; else empty.
   try {
     const { results } = await env.DB.prepare(
-      `SELECT slug AS id, name, version, status, updated_at
+      `SELECT slug AS id, name, version, status, updated_at, package_name
        FROM agentsam_products
        WHERE kind = 'theme'
        ORDER BY updated_at DESC
@@ -224,6 +237,8 @@ async function resolveThemes(env) {
       last_saved: t.updated_at || null,
       edit_href: `/admin/theme-editor?slug=shop`,
       preview_href: "/",
+      package_name: t.package_name || null,
+      appearance: appearanceForInstalledPackage(t),
     }));
     const active = themes.find((t) => t.status === "active" || t.status === "wired") || null;
     const drafts = themes.filter((t) => t !== active);

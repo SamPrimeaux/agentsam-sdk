@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" data-theme-preset="fuel-free-time">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cart – Fuel & Free Time</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/heuristic-theme.css">
+  <link rel="stylesheet" href="/css/store-shell.css">
+  <link rel="stylesheet" href="/css/store-cart.css">
+  <style>
+    body {
+      margin: 0;
+      font-family: Inter, sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      line-height: 1.5;
+    }
+    a { color: inherit; }
+  </style>
+</head>
+<body>
+  <div id="fnf-store-mount"></div>
+  <main class="store-page store-cart-page" data-h-section="cart.summary" data-h-section-id="cart-summary" data-h-motion="none" data-h-header="glass-light">
+    <div class="cart-head">
+      <div><p class="cart-eyebrow">Ready when you are</p><h1>Your Cart</h1></div>
+      <p class="cart-head-meta" id="cart-item-count">0 items</p>
+    </div>
+    <section class="cart-progress" id="cart-progress" hidden aria-live="polite"><div class="cart-progress__copy"><span id="cart-progress-label">You are on your way.</span><strong id="cart-progress-value"></strong></div><div class="cart-progress__track"><span id="cart-progress-bar"></span></div></section>
+    <div class="cart-layout">
+      <div class="cart-items-panel" id="cart-root"></div>
+      <form id="checkout-form" class="checkout-panel" hidden>
+        <h2>Order summary</h2>
+        <div class="checkout-lines" id="checkout-lines"></div>
+        <div class="checkout-promo">
+          <label for="checkout-discount">Discount code</label>
+          <div class="checkout-promo-row">
+            <input id="checkout-discount" type="text" placeholder="Enter code" autocomplete="off">
+            <button type="button" id="checkout-apply-discount">Apply</button>
+          </div>
+          <p class="checkout-promo-msg" id="checkout-discount-msg"></p>
+        </div>
+        <div class="checkout-row checkout-subtotal" id="checkout-subtotal-row" hidden><span>Subtotal</span><span id="cart-subtotal">$0.00</span></div>
+        <div class="checkout-row checkout-discount" id="checkout-discount-row" hidden><span>Discount</span><span id="cart-discount">−$0.00</span></div>
+        <div class="checkout-row"><span>Total</span><span id="cart-total">$0.00</span></div>
+        <label for="checkout-email">Email for confirmation</label>
+        <input id="checkout-email" type="email" required placeholder="you@example.com" autocomplete="email">
+        <button type="submit" id="checkout-submit">Place order</button>
+        <p class="checkout-trust">Secure checkout is powered by Stripe. Your cart is cleared only after payment is confirmed.</p>
+        <p class="checkout-status" id="checkout-status"></p>
+      </form>
+    </div>
+    <section class="cart-perks" aria-label="Checkout benefits"><div><strong>Live inventory</strong><span>Your selection is verified before payment.</span></div><div><strong>Secure checkout</strong><span>Stripe handles payment details.</span></div><div><strong>Order confirmation</strong><span>Receipts and updates go to your email.</span></div></section>
+    <a class="cart-continue" href="/shop">← Continue shopping</a>
+  </main>
+  <script src="/js/fnf-attribution.js" defer></script>
+  <script src="/js/store-catalog.js" defer></script>
+  <script src="/js/store-shell.js" defer></script>
+  <script src="/js/store-cart.js" defer></script>
+  <script src="/js/heuristic-runtime.js" defer></script>
+</body>
+</html>

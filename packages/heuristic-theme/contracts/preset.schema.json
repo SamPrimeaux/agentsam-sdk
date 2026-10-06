@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:heuristic-commerce:schema:preset:v1",
+  "title": "Heuristic Theme Preset",
+  "type": "object",
+  "required": ["id", "label", "scope", "tokens", "assets", "assetsRoot", "globals", "pages"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "label": { "type": "string", "minLength": 1 },
+    "scope": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "tokens": { "type": "string", "pattern": "^\\./tokens\\.json$" },
+    "assets": { "type": "string", "pattern": "^\\./assets\\.json$" },
+    "assetsRoot": { "type": "string", "pattern": "^/assets/presets/[a-z0-9-]+$" },
+    "globals": { "type": "object", "minProperties": 1, "additionalProperties": { "type": "string" } },
+    "pages": { "type": "object", "minProperties": 1, "additionalProperties": { "type": "string" } }
+  },
+  "additionalProperties": false
+}

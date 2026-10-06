@@ -999,8 +999,30 @@
         const link = byId('te-open-tab');
         link.hidden = !preview.url;
         if (preview.url) { link.href = preview.url; link.target = '_blank'; link.rel = 'noopener'; }
-        byId('te-preview-label').textContent = 'Preview — ' + (pageData?.title || slug);
-      } catch (error) { setNote(error.message || String(error), 'error'); }
+        const published = preview.mode === 'published';
+        frame.dataset.previewFidelity = published ? 'published' : 'draft';
+        byId('te-preview-label').textContent =
+          (published ? 'Published storefront — ' : 'Draft composition — ') + (pageData?.title || slug);
+        const mode = document.querySelector('.te-preview-mode');
+        if (mode) mode.textContent = published
+          ? 'Published website · edits are saved as drafts and will not appear in this preview'
+          : 'Draft composition preview';
+      } catch (error) {
+        // Do not retain a stale/wrong-site iframe after the renderer fails.
+        const frame = byId('theme-preview');
+        frame.removeAttribute('src');
+        frame.dataset.previewFidelity = 'unavailable';
+        frame.setAttribute('sandbox', '');
+        frame.srcdoc = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+          '<style>html,body{margin:0;min-height:100%;background:#14161b;color:#f3f3f5;font-family:system-ui,sans-serif}main{box-sizing:border-box;min-height:100vh;padding:clamp(24px,6vw,72px);display:flex;flex-direction:column;justify-content:center;gap:16px}h1{font-size:clamp(23px,3vw,34px);line-height:1.2;margin:0}p{color:#b9bac3;line-height:1.6;max-width:56ch;margin:0}code{font-size:12px;color:#a7abc5}</style></head><body>' +
+          '<main><code>THEME RENDERER UNAVAILABLE</code><h1>This content is not connected to a published theme.</h1>' +
+          '<p>The content fields can be edited, but no verified theme/template renderer is installed for this page. A different website will not be substituted as its preview.</p></main></body></html>';
+        byId('te-open-tab').hidden = true;
+        byId('te-preview-label').textContent = 'Preview unavailable — ' + (pageData?.title || slug);
+        const mode = document.querySelector('.te-preview-mode');
+        if (mode) mode.textContent = 'Content-only project · publishing requires an installed renderer';
+        setNote(error.message || String(error), 'error');
+      }
       return;
     }
     const route = pageRoute(slug);

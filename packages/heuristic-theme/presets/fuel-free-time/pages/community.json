@@ -1,0 +1,4 @@
+{
+  "$schema": "../../../contracts/page.schema.json", "id": "community", "route": "/community", "title": "Community",
+  "sections": [{ "id": "community-main", "type": "community.callout", "blocks": [{ "id": "community-heading", "type": "copy.display", "content": { "title": "Join the movement", "body": "Every mile has a story. Every hour is earned." }, "visibility": { "enabled": true } }, { "id": "community-events", "type": "events.grid", "content": { "source": "cms.community.events" }, "dataBindings": [{ "kind": "page", "source": "community.events", "slot": "items" }], "visibility": { "enabled": true } }], "appearance": { "theme": "dark", "width": "wide" }, "motion": { "preset": "fade", "intensity": 0.2 }, "responsive": { "desktop": { "columns": 3 }, "tablet": { "columns": 2 }, "mobile": { "columns": 1 } }, "visibility": { "enabled": true } }]
+}

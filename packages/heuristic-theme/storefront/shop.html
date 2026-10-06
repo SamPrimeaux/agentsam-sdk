@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en" data-cms-page="shop" data-theme-preset="fuel-free-time" data-header-preset="frost-pill" data-header-overlay>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shop — Fuel & Free Time</title>
+  <meta name="description" content="Premium gear for the hours you earned.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/heuristic-theme.css">
+  <link rel="stylesheet" href="/css/store-shell.css">
+  <link rel="stylesheet" href="/css/store-shop.css">
+  <link rel="stylesheet" href="/css/global-footer.css">
+</head>
+<body>
+  <div id="fnf-store-mount"></div>
+  <main class="store-page">
+    <section class="shop-hero" data-cms-section="hero" data-h-section="hero.editorial" data-h-section-id="shop-hero" data-h-motion="blur-recede" data-h-motion-intensity="0.38" data-h-header="ghost-light">
+      <div class="shop-hero__media" aria-hidden="true">
+        <img data-cms="imageUrl" data-cms-attr="src" src="/assets/presets/fuel-free-time/earned-hours-hero.webp" alt="" fetchpriority="high">
+      </div>
+      <div class="h-container">
+        <div class="shop-hero__content">
+          <p class="h-eyebrow" data-cms="eyebrow">The earned hours collection</p>
+          <h1 class="h-display" data-cms="headline">Time is the<br>real horsepower.</h1>
+          <p class="shop-hero__copy" data-cms="subheadline">Hard-wearing essentials for garage nights, early launches, long roads, and every hour you fought to make your own.</p>
+          <div class="shop-hero__actions">
+            <a class="h-button" data-cms="ctaPrimary.href" data-cms-attr="href" href="#catalog"><span data-cms="ctaPrimary.label">Shop the drop</span> <span aria-hidden="true">→</span></a>
+            <a class="h-button h-button--ghost" data-cms="ctaSecondary.href" data-cms-attr="href" href="/shop/collections"><span data-cms="ctaSecondary.label">Explore collections</span></a>
+          </div>
+          <div class="shop-hero__proof" aria-label="Store benefits">
+            <span>Secure checkout</span><span>Small-batch drops</span><span>Designed in Louisiana</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="collection-lineup" id="collections" data-cms-section="collections" data-h-section="collections.lineup" data-h-section-id="shop-collection-lineup" data-h-motion="fade" data-h-motion-intensity="0.2" data-h-header="glass-dark">
+      <div class="h-container">
+        <header class="shop-section-head">
+          <div><p class="h-eyebrow">Find your lane</p><h2 data-cms="title">Shop by collection</h2></div>
+          <p>Each collection is a distinct point of view, backed by the same product and inventory contract.</p>
+        </header>
+        <div class="collection-lineup__grid" id="collection-lineup">
+          <a class="collection-card" data-cms-block="card1" data-cms-block-template="collection-card" data-cms="card1.href" data-cms-attr="href" data-h-collection="high-octane-performance-gear" href="/shop/collections/high-octane-performance-gear">
+            <div class="collection-card__media"><img data-cms="card1.imageUrl" data-cms-attr="src" src="/assets/presets/fuel-free-time/earned-hours-hero.webp" alt="High Octane collection" loading="lazy"><span class="collection-card__index">01</span></div>
+            <h3 data-cms="card1.name">High Octane</h3><p>Built for motion, noise, and redline living.</p>
+          </a>
+          <a class="collection-card" data-cms-block="card2" data-cms-block-template="collection-card" data-cms="card2.href" data-cms-attr="href" data-h-collection="masters" href="/shop/collections/masters">
+            <div class="collection-card__media"><img data-cms="card2.imageUrl" data-cms-attr="src" src="/assets/presets/fuel-free-time/masters.webp" alt="Masters collection" loading="lazy"><span class="collection-card__index">02</span></div>
+            <h3 data-cms="card2.name">Masters</h3><p>Quiet confidence for time well earned.</p>
+          </a>
+          <a class="collection-card" data-cms-block="card3" data-cms-block-template="collection-card" data-cms="card3.href" data-cms-attr="href" data-h-collection="essentials" href="/shop/collections/essentials">
+            <div class="collection-card__media"><img data-cms="card3.imageUrl" data-cms-attr="src" src="/assets/presets/fuel-free-time/essentials.webp" alt="Essentials collection" loading="lazy"><span class="collection-card__index">03</span></div>
+            <h3 data-cms="card3.name">Essentials</h3><p>Daily drivers made for repeat wear.</p>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="editorial-strip" aria-label="Collection stories" data-h-section="collections.editorial-grid" data-h-section-id="shop-editorial-grid" data-h-motion="fade" data-h-motion-intensity="0.25" data-h-header="glass-light">
+      <div class="h-container editorial-strip__grid">
+        <a class="editorial-tile" data-h-collection="high-octane-performance-gear" href="/shop/collections/high-octane-performance-gear"><img src="/assets/presets/fuel-free-time/earned-hours-hero.webp" alt="Performance machines at dusk" loading="lazy"><div class="editorial-tile__copy"><span>High Octane</span><h3>Run it past redline</h3></div></a>
+        <a class="editorial-tile" data-h-action="shop-all" href="#catalog"><img src="/assets/presets/fuel-free-time/masters.webp" alt="Quiet confidence in the workshop" loading="lazy"><div class="editorial-tile__copy"><span>The long way home</span><h3>Wear the hours you earned</h3></div></a>
+        <a class="editorial-tile" data-h-collection="essentials" href="/shop/collections/essentials"><img src="/assets/presets/fuel-free-time/essentials.webp" alt="Time outdoors" loading="lazy"><div class="editorial-tile__copy"><span>Essentials</span><h3>Clock out. Get gone.</h3></div></a>
+      </div>
+    </section>
+
+    <section class="catalog" id="catalog" aria-labelledby="catalog-title" data-h-section="products.grid" data-h-section-id="shop-product-grid" data-h-motion="none" data-h-header="glass-dark">
+      <div class="h-container">
+        <header class="shop-section-head">
+          <div><p class="h-eyebrow">Available now</p><h2 id="catalog-title">Shop all gear</h2></div>
+          <p id="catalog-status">Loading the current drop…</p>
+        </header>
+        <div class="catalog-toolbar" aria-label="Catalog controls">
+          <div class="catalog-chips" id="catalog-chips">
+            <button class="catalog-chip is-active" type="button" data-filter="all">All</button>
+            <button class="catalog-chip" type="button" data-filter="high-octane-performance-gear">High Octane</button>
+            <button class="catalog-chip" type="button" data-filter="masters">Masters</button>
+            <button class="catalog-chip" type="button" data-filter="essentials">Essentials</button>
+          </div>
+          <select class="catalog-sort" id="catalog-sort" aria-label="Sort products"><option value="featured">Featured</option><option value="price-asc">Price: low to high</option><option value="price-desc">Price: high to low</option><option value="title">Name</option></select>
+        </div>
+        <section class="fft-grid" id="fft-grid" aria-live="polite"></section>
+      </div>
+    </section>
+
+    <section class="brand-story" data-cms-section="stories" data-h-section="story.immersive" data-h-section-id="shop-brand-story" data-h-motion="parallax" data-h-motion-intensity="0.32" data-h-header="ghost-light">
+      <div class="brand-story__media" aria-hidden="true"><img data-cms="imageUrl" data-cms-attr="src" src="/assets/presets/fuel-free-time/earned-hours-hero.webp" alt="" loading="lazy"></div>
+      <div class="h-container"><div class="brand-story__content"><p class="h-eyebrow">Fuel & Free Time</p><h2 class="h-display" data-cms="title">Built for the long haul.</h2><p data-cms="body">This is gear for the hours after the work is done—when the garage door lifts, the road opens up, and the clock finally belongs to you.</p><a class="h-button h-button--ghost" href="/about">Our story <span aria-hidden="true">→</span></a></div></div>
+    </section>
+  </main>
+
+  <div id="fnf-footer-mount" data-global-footer></div>
+
+  <div class="shop-qv" id="fft-qv" hidden>
+    <section class="shop-qv__dialog" role="dialog" aria-modal="true" aria-labelledby="fft-qv-title">
+      <button class="shop-qv__close" id="fft-qv-close" type="button" aria-label="Close quick view">×</button>
+      <div class="shop-qv__media"><img id="fft-qv-img" src="" alt=""></div>
+      <div class="shop-qv__copy"><p class="h-eyebrow" id="fft-qv-collection">Current drop</p><h2 id="fft-qv-title"></h2><p id="fft-qv-meta"></p><p id="fft-qv-description"></p><a class="h-button" id="fft-qv-link" href="/shop">Choose options <span aria-hidden="true">→</span></a></div>
+    </section>
+  </div>
+
+  <script src="/js/fnf-attribution.js" defer></script>
+  <script src="/js/store-catalog.js" defer></script>
+  <script src="/js/store-shell.js" defer></script>
+  <script src="/js/store-cart.js" defer></script>
+  <script src="/js/cms-hydrate.js" defer></script>
+  <script src="/js/heuristic-runtime.js" defer></script>
+  <script src="/js/global-footer.js" defer></script>
+</body>
+</html>

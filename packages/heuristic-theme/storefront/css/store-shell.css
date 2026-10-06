@@ -1,0 +1,474 @@
+/* Sitewide storefront header — single source (store-shell.js + D1 nav config) */
+
+:root {
+  --fnf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --fnf-ink: #fff;
+  --fnf-muted: #c8cdd2;
+  --fnf-accent: #ff4500;
+  --fnf-accent-light: #e5a558;
+  --fnf-teal: #00a6a6;
+  --fnf-header: 80px;
+  --fnf-header-md: 70px;
+  --fnf-announcement-h: 0px;
+  --fnf-maxw: 1440px;
+  --fnf-header-light-ink: #f8f7f4;
+  --fnf-header-dark-ink: #191816;
+  --fnf-header-dark-surface: rgba(10, 10, 10, 0.88);
+  --fnf-header-frost-surface: rgba(248, 246, 241, 0.72);
+}
+
+body.fnf-nav-open {
+  overflow: hidden;
+}
+
+.fnf-shell-error {
+  min-height: 3rem;
+  display: grid;
+  place-items: center;
+  padding: 0.75rem 1rem;
+  color: #fff;
+  background: #8f1d0f;
+  font: 700 0.82rem/1.3 Inter, system-ui, sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.fnf-shell {
+  box-sizing: border-box;
+}
+
+.fnf-shell *,
+.fnf-shell *::before,
+.fnf-shell *::after {
+  box-sizing: border-box;
+}
+
+.fnf-header {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: calc(var(--fnf-header) + var(--fnf-announcement-h));
+  z-index: 10000;
+  --fnf-glass-opacity: 0;
+  background: transparent;
+  transition: transform 0.32s var(--fnf-ease), backdrop-filter 0.22s var(--fnf-ease),
+    background 0.22s var(--fnf-ease), box-shadow 0.22s var(--fnf-ease);
+}
+
+.fnf-announcement {
+  height: var(--fnf-announcement-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding-inline: 1rem;
+  color: #111;
+  background: var(--fnf-accent);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-align: center;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .fnf-header--adaptive-bar.is-glass .fnf-row,
+  .fnf-header--adaptive-bar[data-header-tone="light"] .fnf-row,
+  .fnf-header--frost-pill .fnf-row {
+    backdrop-filter: blur(22px) saturate(1.18);
+    -webkit-backdrop-filter: blur(22px) saturate(1.18);
+  }
+}
+
+.fnf-header.is-glass {
+  border-bottom: 1px solid rgba(255, 255, 255, calc(0.04 + var(--fnf-glass-opacity) * 0.1));
+}
+
+.fnf-header.is-hidden {
+  transform: translateY(-100%);
+}
+
+.fnf-row {
+  max-width: var(--fnf-maxw);
+  margin: 0 auto;
+  height: var(--fnf-header);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 clamp(1rem, 4vw, 3.5rem);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--fnf-header-light-ink);
+  transition:
+    max-width .28s var(--fnf-ease),
+    height .28s var(--fnf-ease),
+    margin .28s var(--fnf-ease),
+    border-radius .28s var(--fnf-ease),
+    border-color .22s var(--fnf-ease),
+    background .22s var(--fnf-ease),
+    color .18s var(--fnf-ease),
+    box-shadow .22s var(--fnf-ease);
+}
+
+/* Reusable preset: adaptive full-width bar.
+ * The runtime assigns data-header-tone by explicit section metadata first,
+ * then samples the visible surface behind the header.
+ */
+.fnf-header--adaptive-bar .fnf-row {
+  background: var(--fnf-header-dark-surface);
+  border-color: rgba(255,255,255,.055);
+  box-shadow: 0 10px 34px rgba(0,0,0,.18);
+  color: var(--fnf-header-light-ink);
+}
+
+.fnf-header--adaptive-bar[data-header-tone="light"] .fnf-row {
+  background: rgba(248,246,241,.66);
+  border-color: rgba(255,255,255,.58);
+  box-shadow: 0 12px 38px rgba(44,39,31,.12);
+  color: var(--fnf-header-dark-ink);
+}
+
+.fnf-header--adaptive-bar[data-header-tone="dark"] .fnf-row {
+  background: rgba(10,10,10,.84);
+  border-color: rgba(255,255,255,.07);
+  color: var(--fnf-header-light-ink);
+}
+
+.fnf-header--adaptive-bar.is-glass .fnf-row {
+  max-width: min(calc(var(--fnf-maxw) - 6rem), calc(100% - 2rem));
+  height: calc(100% - 16px);
+  margin-top: 8px;
+  border-radius: 999px;
+}
+
+/* Reusable preset: floating frost-white pill.
+ * It deliberately keeps dark ink because the surface itself owns contrast.
+ */
+.fnf-header--frost-pill .fnf-row {
+  max-width: min(calc(var(--fnf-maxw) - 2rem), calc(100% - 2rem));
+  height: calc(100% - 16px);
+  margin-top: 8px;
+  border-radius: 999px;
+  border-color: rgba(255,255,255,.62);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.04)),
+    var(--fnf-header-frost-surface);
+  box-shadow:
+    0 14px 40px rgba(35,31,25,.12),
+    inset 0 1px 0 rgba(255,255,255,.58);
+  color: var(--fnf-header-dark-ink);
+}
+
+.fnf-header--frost-pill .fnf-nav a,
+.fnf-header--frost-pill .fnf-cart-btn,
+.fnf-header--frost-pill .fnf-burger {
+  color: var(--fnf-header-dark-ink);
+}
+
+.fnf-logo {
+  height: min(var(--fnf-logo-height, 58px), 54px);
+  max-height: calc(var(--fnf-header) - 20px);
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  justify-self: start;
+}
+
+.fnf-logo img {
+  height: 100%;
+  width: auto;
+  display: block;
+  filter: brightness(0.96);
+  transition: filter 0.25s var(--fnf-ease);
+}
+
+.fnf-logo:hover img {
+  filter: brightness(1.05);
+}
+
+.fnf-primary {
+  justify-self: center;
+}
+
+.fnf-nav {
+  list-style: none;
+  display: flex;
+  gap: clamp(1.25rem, 3vw, 2.75rem);
+  margin: 0;
+  padding: 0;
+}
+
+.fnf-nav a {
+  color: currentColor;
+  opacity: .72;
+  text-decoration: none;
+  font-size: 0.92rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  position: relative;
+  white-space: nowrap;
+}
+
+.fnf-nav a::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--fnf-accent), var(--fnf-accent-light));
+  transform: scaleX(0);
+  transition: transform 0.25s var(--fnf-ease);
+  transform-origin: center;
+}
+
+.fnf-nav a:hover,
+.fnf-nav a.is-active,
+.fnf-nav a:focus-visible {
+  color: currentColor;
+  opacity: 1;
+}
+
+.fnf-nav a:hover::before,
+.fnf-nav a.is-active::before,
+.fnf-nav a:focus-visible::before {
+  transform: scaleX(1);
+}
+
+.fnf-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  justify-self: end;
+}
+
+.fnf-cart-btn,
+.fnf-burger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: none;
+  outline: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--fnf-accent);
+  text-decoration: none;
+  cursor: pointer;
+  line-height: 0;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.fnf-cart-btn:hover,
+.fnf-burger:hover {
+  opacity: 0.85;
+}
+
+.fnf-burger:focus-visible {
+  outline: 2px solid var(--fnf-accent);
+  outline-offset: 3px;
+  background: rgba(255, 69, 0, 0.08);
+}
+
+.fnf-cart-btn svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.fnf-cart-count {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--fnf-teal);
+  color: #001;
+  font-size: 0.62rem;
+  font-weight: 900;
+  line-height: 16px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.fnf-cart-count[hidden] {
+  display: none !important;
+}
+
+.fnf-burger span {
+  display: block;
+  position: absolute;
+  width: 25px;
+  height: 2px;
+  background: currentColor;
+  margin: 0;
+  transition: transform 0.32s var(--fnf-ease), width 0.22s var(--fnf-ease);
+  transform-origin: center;
+}
+
+.fnf-burger span:nth-child(1) { transform: translateY(-5px); }
+.fnf-burger span:nth-child(2) { width: 19px; transform: translate(3px, 5px); }
+
+.fnf-burger.is-open span:nth-child(1) {
+  transform: rotate(45deg);
+}
+
+.fnf-burger.is-open span:nth-child(2) {
+  width: 25px;
+  transform: rotate(-45deg);
+}
+
+/* Mobile drawer — compact glass slide-in from the left */
+.fnf-mobile {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.fnf-mobile.is-open {
+  pointer-events: auto;
+  visibility: visible;
+}
+
+.fnf-mobile-backdrop {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  opacity: 0;
+  transition: opacity 0.32s var(--fnf-ease);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .fnf-mobile-backdrop {
+    backdrop-filter: none;
+  }
+}
+
+.fnf-mobile.is-open .fnf-mobile-backdrop {
+  opacity: 1;
+}
+
+.fnf-mobile-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: min(320px, 88vw);
+  padding: calc(var(--fnf-header) + var(--fnf-announcement-h) + 1.25rem) 1.5rem 1.5rem;
+  background: rgba(16, 16, 18, 0.78);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 12px 0 40px rgba(0, 0, 0, 0.35);
+  transform: translateX(-104%);
+  transition: transform 0.34s var(--fnf-ease);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .fnf-mobile-panel {
+    backdrop-filter: blur(22px) saturate(1.25);
+  }
+}
+
+.fnf-mobile.is-open .fnf-mobile-panel {
+  transform: translateX(0);
+}
+
+.fnf-mobile ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+}
+
+.fnf-mobile a {
+  display: block;
+  color: var(--fnf-ink);
+  text-decoration: none;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  position: relative;
+}
+
+.fnf-mobile a::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0.65rem;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--fnf-accent), var(--fnf-accent-light));
+  transition: width 0.25s var(--fnf-ease);
+}
+
+.fnf-mobile a.is-active {
+  color: var(--fnf-accent-light);
+}
+
+.fnf-mobile a.is-active::before {
+  width: 2rem;
+}
+
+.fnf-spacer {
+  height: calc(var(--fnf-header) + var(--fnf-announcement-h));
+  display: block;
+}
+
+.store-page {
+  min-height: calc(100vh - var(--fnf-header));
+}
+
+@media (max-width: 960px) {
+  :root {
+    --fnf-header: var(--fnf-header-md);
+  }
+
+  .fnf-row {
+    grid-template-columns: 1fr auto;
+  }
+
+  .fnf-header.is-glass .fnf-row {
+    max-width: calc(100% - 1rem);
+    height: calc(100% - 10px);
+    margin-top: 5px;
+  }
+
+  .fnf-primary {
+    display: none;
+  }
+
+  .fnf-burger {
+    display: inline-flex;
+  }
+
+  .fnf-logo {
+    height: min(var(--fnf-logo-height, 58px), 48px);
+    max-height: calc(var(--fnf-header) - 16px);
+  }
+
+  .fnf-header--frost-pill .fnf-row,
+  .fnf-header--adaptive-bar.is-glass .fnf-row {
+    max-width: calc(100% - 1rem);
+    height: calc(100% - 10px);
+    margin-top: 5px;
+  }
+}
+
+@media (min-width: 961px) {
+  .fnf-burger {
+    display: none;
+  }
+}

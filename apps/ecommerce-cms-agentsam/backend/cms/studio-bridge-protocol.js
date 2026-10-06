@@ -10,7 +10,7 @@ const te = new TextEncoder();
 
 const SEG=/^[a-z0-9-]+$/i;
 export function isAllowedStudioCmsBridgeRoute(tail,method) {
-  if(tail==='registry'||tail==='pages')return method==='GET';
+  if(tail==='registry'||tail==='pages'||tail==='store/online')return method==='GET';
   const s=tail.split('/');
   if(s[0]!=='pages'||!SEG.test(s[1]||''))return false;
   const rest=s.slice(2);

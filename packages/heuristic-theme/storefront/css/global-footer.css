@@ -1,0 +1,401 @@
+/* Fuel & Free Time global storefront footer.
+ * Canonicalized from the production About/Community footer.
+ * Content is supplied by global-footer.js from site CMS + safe fallbacks.
+ */
+
+.fnf-footer {
+  --fnf-footer-black: var(--black, #0a0a0a);
+  --fnf-footer-steel: var(--steel, #1a1a1a);
+  --fnf-footer-smoke: var(--smoke, #8a8a8a);
+  --fnf-footer-white: var(--white, #ffffff);
+  --fnf-footer-orange: var(--fire-orange, #ff4500);
+  --fnf-footer-red: var(--racing-red, #dc143c);
+  --fnf-footer-bronze: var(--bronze, #cd7f32);
+  --fnf-footer-bronze-light: var(--bronze-light, #e5a558);
+  box-sizing: border-box;
+  position: relative;
+  padding: 80px 0 30px;
+  border-top: 1px solid rgba(255, 69, 0, 0.1);
+  background: linear-gradient(180deg, var(--fnf-footer-steel) 0%, #1a1a1a 20%, var(--fnf-footer-black) 100%);
+  color: var(--fnf-footer-white);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.fnf-footer *,
+.fnf-footer *::before,
+.fnf-footer *::after {
+  box-sizing: border-box;
+}
+
+.fnf-footer::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--fnf-footer-orange) 20%, var(--fnf-footer-red) 50%, var(--fnf-footer-orange) 80%, transparent);
+  opacity: 0.6;
+}
+
+.fnf-footer-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 40px;
+}
+
+.fnf-footer-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1.5fr;
+  gap: 60px;
+  margin-bottom: 60px;
+}
+
+.fnf-footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.fnf-footer-logo {
+  display: inline-block;
+  width: max-content;
+  height: 60px;
+  transition: all 0.3s ease;
+}
+
+.fnf-footer-logo img {
+  width: auto;
+  height: 100%;
+  display: block;
+  filter: brightness(0.9);
+  transition: filter 0.3s ease;
+}
+
+.fnf-footer-logo:hover img {
+  filter: brightness(1.1) drop-shadow(0 0 10px rgba(255, 69, 0, 0.5));
+}
+
+.fnf-footer-tagline {
+  margin: 0;
+  color: var(--fnf-footer-smoke);
+  font-size: 18px;
+  font-style: italic;
+  letter-spacing: 0.5px;
+  line-height: 1.6;
+}
+
+.fnf-footer-description {
+  max-width: 400px;
+  margin: 0;
+  color: var(--fnf-footer-smoke);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.fnf-footer-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.fnf-footer-nav h3,
+.fnf-footer-connect h3 {
+  position: relative;
+  margin: 0 0 5px;
+  padding-bottom: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.fnf-footer-nav h3 {
+  color: var(--fnf-footer-orange);
+}
+
+.fnf-footer-connect h3 {
+  background: linear-gradient(135deg, var(--fnf-footer-bronze) 0%, var(--fnf-footer-bronze-light) 50%, var(--fnf-footer-bronze) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: var(--fnf-footer-bronze-light);
+  -webkit-text-fill-color: transparent;
+}
+
+.fnf-footer-nav h3::after,
+.fnf-footer-connect h3::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: 2px;
+  transition: width 0.6s ease;
+}
+
+.fnf-footer-nav h3::after {
+  background: var(--fnf-footer-orange);
+}
+
+.fnf-footer-connect h3::after {
+  background: linear-gradient(90deg, var(--fnf-footer-bronze), var(--fnf-footer-bronze-light));
+}
+
+.fnf-footer-nav h3.animate::after,
+.fnf-footer-connect h3.animate::after {
+  width: 100%;
+}
+
+.fnf-footer-nav ul {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fnf-footer-nav a {
+  position: relative;
+  display: inline-block;
+  color: var(--fnf-footer-smoke);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.fnf-footer-nav a::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 0;
+  height: 1px;
+  background: var(--fnf-footer-orange);
+  transition: width 0.3s ease;
+}
+
+.fnf-footer-nav a:hover::before,
+.fnf-footer-nav a:focus-visible::before {
+  width: 100%;
+}
+
+.fnf-footer-nav a:hover,
+.fnf-footer-nav a:focus-visible {
+  color: var(--fnf-footer-white);
+  transform: translateX(3px);
+}
+
+.fnf-footer-connect {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.fnf-social-links {
+  display: flex;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.fnf-social-link {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 69, 0, 0.3);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--fnf-footer-smoke);
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.fnf-social-link:hover,
+.fnf-social-link:focus-visible {
+  border-color: var(--fnf-footer-orange);
+  background: var(--fnf-footer-orange);
+  color: var(--fnf-footer-white);
+  box-shadow: 0 5px 15px rgba(255, 69, 0, 0.3);
+  transform: translateY(-3px);
+}
+
+.fnf-social-link.is-disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.fnf-social-link.is-disabled:hover {
+  border-color: rgba(255, 69, 0, 0.3);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--fnf-footer-smoke);
+  box-shadow: none;
+  transform: none;
+}
+
+.fft-newsletter-mini {
+  margin-top: 10px;
+}
+
+.fft-newsletter-form {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.fft-newsletter-input {
+  min-width: 0;
+  flex: 1;
+  padding: 12px 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fnf-footer-white);
+  font: inherit;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.fft-newsletter-input::placeholder {
+  color: var(--fnf-footer-smoke);
+}
+
+.fft-newsletter-input:focus {
+  outline: none;
+  border-color: var(--fnf-footer-orange);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.fft-newsletter-submit {
+  padding: 12px 20px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--fnf-footer-orange);
+  color: var(--fnf-footer-white);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+}
+
+.fft-newsletter-submit:hover,
+.fft-newsletter-submit:focus-visible {
+  background: var(--fnf-footer-red);
+  box-shadow: 0 5px 15px rgba(255, 69, 0, 0.3);
+  transform: translateY(-2px);
+}
+
+.fft-newsletter-submit:disabled {
+  cursor: wait;
+  opacity: 0.7;
+  transform: none;
+}
+
+.fft-newsletter-status {
+  min-height: 1.1rem;
+  margin: 8px 0 0;
+  color: var(--fnf-footer-smoke);
+  font-size: 12px;
+}
+
+.fft-newsletter-status.is-success {
+  color: #76d5a6;
+}
+
+.fft-newsletter-status.is-error {
+  color: #ff9a7a;
+}
+
+.fnf-footer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-top: 30px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  flex-wrap: wrap;
+}
+
+.fnf-footer-copyright,
+.fnf-footer-closing {
+  margin: 0;
+  color: var(--fnf-footer-smoke);
+  font-size: 14px;
+}
+
+.fnf-footer-legal {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+.fnf-footer-legal a {
+  color: var(--fnf-footer-smoke);
+  font-size: 14px;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.fnf-footer-legal a:hover,
+.fnf-footer-legal a:focus-visible {
+  color: var(--fnf-footer-white);
+}
+
+@media (max-width: 1024px) {
+  .fnf-footer-content {
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+  }
+}
+
+@media (max-width: 768px) {
+  .fnf-footer {
+    padding: 60px 0 30px;
+  }
+
+  .fnf-footer-container {
+    padding: 0 24px;
+  }
+
+  .fnf-footer-content {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    text-align: center;
+  }
+
+  .fnf-footer-brand {
+    align-items: center;
+  }
+
+  .fnf-footer-nav h3.animate::after,
+  .fnf-footer-connect h3.animate::after {
+    left: 50%;
+    width: 100%;
+    transform: translateX(-50%);
+  }
+
+  .fnf-footer-nav ul {
+    align-items: center;
+  }
+
+  .fnf-social-links {
+    justify-content: center;
+  }
+
+  .fnf-footer-bottom,
+  .fnf-footer-legal {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .fnf-footer-legal {
+    gap: 15px;
+  }
+
+  .fft-newsletter-form {
+    flex-direction: column;
+  }
+}

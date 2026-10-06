@@ -1,0 +1,4 @@
+{
+  "$schema": "../../../contracts/page.schema.json", "id": "collection", "route": "/shop/collections/:slug", "title": "Collection",
+  "sections": [{ "id": "collection-products", "type": "products.grid", "blocks": [{ "id": "collection-binding", "type": "product.query", "content": { "query": "route.collection" }, "dataBindings": [{ "kind": "product-query", "source": "route.collection", "slot": "items" }], "visibility": { "enabled": true } }], "appearance": { "theme": "dark", "width": "wide" }, "motion": { "preset": "none", "intensity": 0 }, "responsive": { "desktop": { "columns": 4 }, "tablet": { "columns": 2 }, "mobile": { "columns": 2 } }, "visibility": { "enabled": true } }]
+}

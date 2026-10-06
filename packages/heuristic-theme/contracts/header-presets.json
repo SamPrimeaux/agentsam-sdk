@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "defaultPreset": "adaptive-bar",
+  "presets": {
+    "adaptive-bar": {
+      "label": "Adaptive bar",
+      "shape": "bar",
+      "surface": "adaptive",
+      "contrast": "ambient",
+      "description": "Full-width storefront header that automatically switches between dark and frost surfaces based on the content behind it."
+    },
+    "frost-pill": {
+      "label": "Frost pill",
+      "shape": "pill",
+      "surface": "frost",
+      "contrast": "dark-ink",
+      "description": "Floating translucent frost-white pill for hero-led commerce pages."
+    }
+  }
+}
