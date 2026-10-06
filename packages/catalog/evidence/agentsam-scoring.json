@@ -1,0 +1,39 @@
+{
+  "directory": "packages/agentsam-scoring",
+  "readme": {
+    "headings": [],
+    "path": null,
+    "summary": null,
+    "title": null
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Generic ScoreCard contract and versioned weight formulas. Raw evidence is SSOT; scores are recomputable derived views \u2014 never a grand similarity_score.",
+    "exports": [
+      ".",
+      "./dist/index.d.ts",
+      "./dist/index.js",
+      "./weights/*"
+    ],
+    "kind": "npm",
+    "main": "./dist/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-scoring",
+    "private": false,
+    "scripts": [
+      "build",
+      "test"
+    ],
+    "types": "./dist/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "typescript": 7
+  }
+}

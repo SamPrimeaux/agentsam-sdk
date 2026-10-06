@@ -1,0 +1,42 @@
+{
+  "directory": "packages/copro-editor",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/copro-editor"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/copro-editor/README.md",
+    "summary": "Headless deterministic editing commands for CoPro.",
+    "title": "@inneranimalmedia/copro-editor"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Deterministic headless CoPro edit command engine with undo and redo.",
+    "exports": [
+      ".",
+      "./package.json",
+      "./src/index.d.ts",
+      "./src/index.js"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/copro-editor",
+    "private": false,
+    "scripts": [
+      "pack:dry",
+      "test"
+    ],
+    "types": "./src/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 2,
+    "typescript": 1
+  }
+}

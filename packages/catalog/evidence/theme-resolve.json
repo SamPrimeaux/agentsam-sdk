@@ -1,0 +1,41 @@
+{
+  "directory": "packages/theme-resolve",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/theme-resolve"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/theme-resolve/README.md",
+    "summary": "Quiet luxury. Loud interaction design.",
+    "title": "@inneranimalmedia/theme-resolve"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "A high-fashion commerce prebuild built around cinematic scroll, shoppable editorial, sticky purchase rails, lookbooks, stories, bundles, and micro-interactions that make the storefront feel directed instead of assembled.",
+    "exports": [
+      ".",
+      "./node",
+      "./site/*",
+      "./src/index.js",
+      "./src/node.js"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/theme-resolve",
+    "private": false,
+    "scripts": [
+      "test"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 4
+  }
+}

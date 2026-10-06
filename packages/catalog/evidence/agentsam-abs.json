@@ -1,0 +1,76 @@
+{
+  "directory": "packages/agentsam-abs",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/agentsam-abs",
+      "Product contract",
+      "Runtime visualization",
+      "Public surfaces",
+      "Browser sandbox",
+      "Theme",
+      "Development gates",
+      "Presentation tokens"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-abs/README.md",
+    "summary": "AgentSam Auto Browser Shell (ABS) is the donor-staged browser system for turning a normal in-app browser into a provider-agnostic rapid development and presentation surface.",
+    "title": "@inneranimalmedia/agentsam-abs"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [
+        "@inneranimalmedia/agentsam-loading-scene"
+      ],
+      "optionalDependencies": [],
+      "peerDependencies": [
+        "react",
+        "react-dom"
+      ]
+    },
+    "description": "AgentSam Auto Browser Shell: dual-mode Explore/Build browser surface with provider-agnostic generative navigation, sandboxed previews, deterministic history, and packaged runtime scenes.",
+    "exports": [
+      ".",
+      "./browser.css",
+      "./client",
+      "./components.css",
+      "./dist/client.d.ts",
+      "./dist/client.js",
+      "./dist/index.d.ts",
+      "./dist/index.js",
+      "./dist/react/index.d.ts",
+      "./dist/react/index.js",
+      "./dist/runtime.d.ts",
+      "./dist/runtime.js",
+      "./dist/theme.d.ts",
+      "./dist/theme.js",
+      "./package.json",
+      "./react",
+      "./runtime",
+      "./styles/browser.css",
+      "./styles/components.css",
+      "./styles/theme.css",
+      "./styles/tokens.css",
+      "./theme",
+      "./theme.css",
+      "./tokens.css"
+    ],
+    "kind": "npm",
+    "main": "./dist/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-abs",
+    "private": false,
+    "scripts": [
+      "build",
+      "prepack",
+      "test",
+      "typecheck"
+    ],
+    "types": "./dist/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 2,
+    "typescript": 10
+  }
+}

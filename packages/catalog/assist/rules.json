@@ -1,0 +1,125 @@
+{
+  "schema": "agentsam.assist-rules.v1",
+  "rules": [
+    {
+      "id": "rust-shared-core",
+      "priority": 100,
+      "when": {"reusable_core": "yes"},
+      "recommend": {
+        "title": "Rust shared core + host adapter",
+        "language": "rust",
+        "package": "agentsam-rapid-rust",
+        "template": "shared-core",
+        "why": [
+          "Keeps domain logic independent from the Cloudflare-specific adapter.",
+          "Makes the same core usable from Worker, CLI, desktop/native, and tests."
+        ],
+        "start": [
+          "cargo install agentsam-rapid-rust",
+          "agentsam-rapid-rust new my-service --template shared-core"
+        ],
+        "learn": [
+          "agentsam explain rust",
+          "agentsam explain rapid-rust",
+          "agentsam explain wasm"
+        ]
+      }
+    },
+    {
+      "id": "rust-crypto-auth",
+      "priority": 95,
+      "when": {"execution": "edge", "signed_input": "yes", "lifetime": "short"},
+      "recommend": {
+        "title": "Rust/Wasm signed-request Worker",
+        "language": "rust",
+        "package": "agentsam-rapid-rust",
+        "template": "crypto-auth",
+        "why": [
+          "The workload is bounded request-time work.",
+          "The template starts with HMAC verification and constant-time comparison."
+        ]
+      }
+    },
+    {
+      "id": "rust-data-processor",
+      "priority": 90,
+      "when": {"goal": "data", "execution": "edge", "workload_size": "bounded"},
+      "recommend": {
+        "title": "Rust/Wasm typed data processor",
+        "language": "rust",
+        "package": "agentsam-rapid-rust",
+        "template": "data-processor",
+        "why": [
+          "Typed deterministic transforms fit bounded edge execution."
+        ]
+      }
+    },
+    {
+      "id": "worker-api",
+      "priority": 80,
+      "when": {"goal": "api", "execution": "edge", "lifetime": "short"},
+      "recommend": {
+        "title": "Cloudflare Worker",
+        "runtime": "cloudflare-worker",
+        "alternatives": [
+          "TypeScript for ordinary web/API ecosystem integration.",
+          "Rust/Wasm `api` template when Rust typing/native-core reuse is valuable."
+        ]
+      }
+    },
+    {
+      "id": "container-or-go",
+      "priority": 85,
+      "when": {"lifetime": "long"},
+      "recommend": {
+        "title": "Normal service/container runtime",
+        "runtime": "container-or-native-service",
+        "language": "go-or-runtime-appropriate",
+        "why": [
+          "Long-running work is a poor fit for a short-lived Worker isolate.",
+          "Normal services support broader OS/process/runtime assumptions."
+        ]
+      }
+    },
+    {
+      "id": "native-required",
+      "priority": 110,
+      "when_any": {
+        "native_access": ["process", "libraries"]
+      },
+      "recommend": {
+        "title": "Native process or container",
+        "runtime": "native-or-container",
+        "why": [
+          "The workload requires capabilities that generic WebAssembly Workers should not be assumed to provide."
+        ]
+      }
+    },
+    {
+      "id": "desktop-tauri",
+      "priority": 80,
+      "when": {"goal": "desktop"},
+      "recommend": {
+        "title": "Tauri-style TypeScript UI + Rust native boundary",
+        "language": "typescript+rust",
+        "runtime": "desktop",
+        "why": [
+          "TypeScript suits the application/UI layer while Rust owns native device capabilities."
+        ]
+      }
+    },
+    {
+      "id": "browser-typescript",
+      "priority": 80,
+      "when": {"goal": "web-ui"},
+      "recommend": {
+        "title": "TypeScript/browser application",
+        "language": "typescript",
+        "runtime": "browser",
+        "why": [
+          "The browser and AgentSam UI/package ecosystem are TypeScript-first."
+        ]
+      }
+    }
+  ]
+}

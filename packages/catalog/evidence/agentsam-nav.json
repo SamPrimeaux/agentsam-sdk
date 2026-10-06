@@ -1,0 +1,63 @@
+{
+  "directory": "packages/agentsam-nav",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/agentsam-nav",
+      "Configuration",
+      "Appearance contract",
+      "Plain JavaScript hosts",
+      "Boundaries"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-nav/README.md",
+    "summary": "One navigation context, two independently mountable surfaces. The package owns navigation presentation and transient interaction state. The host owns routing, accounts, projects, conversations, persistence, and all network access.",
+    "title": "@inneranimalmedia/agentsam-nav"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [
+        "@radix-ui/react-dialog",
+        "@radix-ui/react-dropdown-menu",
+        "lucide-react"
+      ],
+      "optionalDependencies": [],
+      "peerDependencies": [
+        "react",
+        "react-dom"
+      ]
+    },
+    "description": "Reusable responsive navigation primitives for AgentSam dashboard-family applications.",
+    "exports": [
+      ".",
+      "./browser",
+      "./browser.global.js",
+      "./dist/browser.d.ts",
+      "./dist/browser.global.js",
+      "./dist/browser.js",
+      "./dist/index.d.ts",
+      "./dist/index.js",
+      "./dist/legacy.css",
+      "./dist/theme.css",
+      "./legacy.css",
+      "./theme.css"
+    ],
+    "kind": "npm",
+    "main": "./dist/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-nav",
+    "private": false,
+    "scripts": [
+      "build",
+      "prepack",
+      "test",
+      "typecheck"
+    ],
+    "types": "./dist/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 2,
+    "typescript": 14
+  }
+}

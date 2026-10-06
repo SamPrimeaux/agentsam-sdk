@@ -1,0 +1,52 @@
+{
+  "directory": "packages/agentsam-sections",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/agentsam-sections",
+      "Media kinds",
+      "Motion",
+      "Theme",
+      "Design invariant: inverse glass chrome",
+      "Product previews"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-sections/README.md",
+    "summary": "Reusable page kit under the standardized `mxs-*` theme: global header / footer, scroll-driven split sections, and one media slot for image, gif, video, glb and sandboxed interactive app previews.",
+    "title": "@inneranimalmedia/agentsam-sections"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": [
+        "react",
+        "react-dom"
+      ]
+    },
+    "description": "Reusable mxs-* page kit: global header/footer, scroll-driven split sections, and a media slot for image, gif, video, glb and sandboxed app previews.",
+    "exports": [
+      ".",
+      "./dist/index.d.ts",
+      "./dist/index.js",
+      "./mxs.css",
+      "./package.json",
+      "./styles/mxs.css"
+    ],
+    "kind": "npm",
+    "main": "./dist/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-sections",
+    "private": false,
+    "scripts": [
+      "build",
+      "prepack",
+      "typecheck"
+    ],
+    "types": "./dist/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "typescript": 6
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "directory": "packages/theme-forge",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/theme-forge"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/theme-forge/README.md",
+    "summary": "Built to get the phone ringing.",
+    "title": "@inneranimalmedia/theme-forge"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "A mobile-first local-services prebuild with estimate capture, service-area confidence, project proof, reviews, and practical trust signals that stay sharp on the smallest screen.",
+    "exports": [
+      ".",
+      "./node",
+      "./site/*",
+      "./src/index.js",
+      "./src/node.js"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/theme-forge",
+    "private": false,
+    "scripts": [
+      "test"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 7
+  }
+}

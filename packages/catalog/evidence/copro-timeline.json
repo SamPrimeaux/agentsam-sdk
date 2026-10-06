@@ -1,0 +1,44 @@
+{
+  "directory": "packages/copro-timeline",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/copro-timeline"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/copro-timeline/README.md",
+    "summary": "Headless timeline projection and geometry for CoPro.",
+    "title": "@inneranimalmedia/copro-timeline"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [
+        "@inneranimalmedia/copro-project"
+      ],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Headless CoPro timeline projection, ordering, duration, and viewport math.",
+    "exports": [
+      ".",
+      "./package.json",
+      "./src/index.d.ts",
+      "./src/index.js"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/copro-timeline",
+    "private": false,
+    "scripts": [
+      "pack:dry",
+      "test"
+    ],
+    "types": "./src/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 2,
+    "typescript": 1
+  }
+}

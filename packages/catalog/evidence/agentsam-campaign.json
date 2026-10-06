@@ -1,0 +1,46 @@
+{
+  "directory": "packages/agentsam-campaign",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/agentsam-campaign",
+      "Purpose",
+      "Benefits",
+      "Core capabilities",
+      "Intended surfaces",
+      "Typical campaign types",
+      "Design principle"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-campaign/README.md",
+    "summary": "Portable, provider-neutral campaign intelligence for AgentSam.",
+    "title": "@inneranimalmedia/agentsam-campaign"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Portable AgentSam campaign intelligence for promotional planning, product launches, SEO/content strategy, merchandising, audience targeting, conversion, brand consistency, and evidence-backed campaign evaluation.",
+    "exports": [
+      ".",
+      "./package.json",
+      "./src/index.js"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-campaign",
+    "private": false,
+    "scripts": [
+      "pack:dry",
+      "test"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 2
+  }
+}

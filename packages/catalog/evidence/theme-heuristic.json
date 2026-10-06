@@ -1,0 +1,40 @@
+{
+  "directory": "packages/heuristic-theme",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/theme-heuristic"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/heuristic-theme/README.md",
+    "summary": "Stock AgentSam CMS storefront shell theme. Exports a deterministic theme contract consumed by CMS presets and `theme.storefront.shell`.",
+    "title": "@inneranimalmedia/theme-heuristic"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Stock AgentSam CMS storefront shell theme contract (heuristic-theme).",
+    "exports": [
+      ".",
+      "./src/index.js",
+      "./src/theme.js",
+      "./theme"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/theme-heuristic",
+    "private": false,
+    "scripts": [
+      "test"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 4
+  }
+}

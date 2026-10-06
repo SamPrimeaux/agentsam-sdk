@@ -1,0 +1,64 @@
+{
+  "directory": "packages/agentsam-ide",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/agentsam-ide"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-ide/README.md",
+    "summary": "Publishable IDE building blocks for AgentSam Local Studio / desktop.",
+    "title": "@inneranimalmedia/agentsam-ide"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": [
+        "@monaco-editor/react",
+        "@xterm/addon-fit",
+        "@xterm/xterm",
+        "react",
+        "react-dom"
+      ]
+    },
+    "description": "AgentSam IDE packages \u2014 Monaco, file tree, xterm, LSP client, first-login onboarding. Rapidly deployable into Local Studio / desktop.",
+    "exports": [
+      ".",
+      "./dist/filetree/index.d.ts",
+      "./dist/filetree/index.js",
+      "./dist/index.d.ts",
+      "./dist/index.js",
+      "./dist/lsp/index.d.ts",
+      "./dist/lsp/index.js",
+      "./dist/monaco/index.d.ts",
+      "./dist/monaco/index.js",
+      "./dist/onboarding/index.d.ts",
+      "./dist/onboarding/index.js",
+      "./dist/terminal/index.d.ts",
+      "./dist/terminal/index.js",
+      "./filetree",
+      "./lsp",
+      "./monaco",
+      "./onboarding",
+      "./terminal"
+    ],
+    "kind": "npm",
+    "main": "./dist/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-ide",
+    "private": false,
+    "scripts": [
+      "build",
+      "clean",
+      "prepack",
+      "test",
+      "typecheck"
+    ],
+    "types": "./dist/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "typescript": 7
+  }
+}

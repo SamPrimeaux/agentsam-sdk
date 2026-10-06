@@ -1,0 +1,41 @@
+{
+  "directory": "packages/theme-summit",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/theme-summit"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/theme-summit/README.md",
+    "summary": "A restrained consulting and portfolio prebuild with editorial services, case studies, multilingual-ready structure, media, and thoughtful spacing that lets expertise do the talking.",
+    "title": "@inneranimalmedia/theme-summit"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "A restrained consulting and portfolio prebuild with editorial services, case studies, multilingual-ready structure, media, and thoughtful spacing that lets expertise do the talking.",
+    "exports": [
+      ".",
+      "./node",
+      "./site/*",
+      "./src/index.js",
+      "./src/node.js"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/theme-summit",
+    "private": false,
+    "scripts": [
+      "test"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 7
+  }
+}

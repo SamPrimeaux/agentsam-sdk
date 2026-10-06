@@ -1,0 +1,46 @@
+{
+  "directory": "packages/agentsam-key-manager",
+  "readme": {
+    "headings": [],
+    "path": null,
+    "summary": null,
+    "title": null
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [
+        "@inneranimalmedia/agentsam-vault"
+      ],
+      "optionalDependencies": [],
+      "peerDependencies": [
+        "react"
+      ]
+    },
+    "description": "AgentSam settings UI for keys + integrations. Uses agentsam-vault contracts; Kumo-style SensitiveInput primitives.",
+    "exports": [
+      ".",
+      "./IntegrationsPage",
+      "./KeysPage",
+      "./SensitiveInput",
+      "./src/components/SensitiveInput.jsx",
+      "./src/index.js",
+      "./src/pages/IntegrationsPage.d.ts",
+      "./src/pages/IntegrationsPage.jsx",
+      "./src/pages/KeysPage.jsx"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-key-manager",
+    "private": false,
+    "scripts": [],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 9,
+    "typescript": 1
+  }
+}

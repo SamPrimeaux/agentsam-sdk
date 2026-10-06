@@ -1,0 +1,70 @@
+{
+  "directory": "packages/agentsam-content",
+  "readme": {
+    "headings": [],
+    "path": null,
+    "summary": null,
+    "title": null
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [
+        "@inneranimalmedia/agentsam-assets-core",
+        "@inneranimalmedia/agentsam-cloudflare-images",
+        "@inneranimalmedia/agentsam-scoring"
+      ],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Portable content/library peer domain over Asset Core: lifecycle, usage, providers, intelligence, and createContentRuntime(). BrandPack remains peer brand authority.",
+    "exports": [
+      ".",
+      "./contracts",
+      "./core",
+      "./dist/contracts/index.d.ts",
+      "./dist/contracts/index.js",
+      "./dist/core/index.d.ts",
+      "./dist/core/index.js",
+      "./dist/index.d.ts",
+      "./dist/index.js",
+      "./dist/intelligence/index.d.ts",
+      "./dist/intelligence/index.js",
+      "./dist/processors/index.d.ts",
+      "./dist/processors/index.js",
+      "./dist/providers/index.d.ts",
+      "./dist/providers/index.js",
+      "./dist/runtime/index.d.ts",
+      "./dist/runtime/index.js",
+      "./dist/server/discover-storage.d.ts",
+      "./dist/server/discover-storage.js",
+      "./dist/server/r2-admin.d.ts",
+      "./dist/server/r2-admin.js",
+      "./dist/storage/index.d.ts",
+      "./dist/storage/index.js",
+      "./intelligence",
+      "./processors",
+      "./providers",
+      "./runtime",
+      "./server/discover-storage",
+      "./server/r2-admin",
+      "./storage"
+    ],
+    "kind": "npm",
+    "main": "./dist/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-content",
+    "private": false,
+    "scripts": [
+      "build",
+      "test"
+    ],
+    "types": "./dist/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 2,
+    "typescript": 70
+  }
+}

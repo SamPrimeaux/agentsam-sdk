@@ -1,0 +1,56 @@
+{
+  "directory": "packages/agentsam-shell-kit",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/agentsam-shell-kit"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-shell-kit/README.md",
+    "summary": "Compatibility facade only. New product code must import `@inneranimalmedia/agentsam-workbench` (or its `/shell` subpath).",
+    "title": "@inneranimalmedia/agentsam-shell-kit"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [
+        "@inneranimalmedia/agentsam-workbench"
+      ],
+      "optionalDependencies": [],
+      "peerDependencies": [
+        "react",
+        "react-dom"
+      ]
+    },
+    "description": "Compatibility facade for the AgentSam workbench shell. New code uses @inneranimalmedia/agentsam-workbench.",
+    "exports": [
+      ".",
+      "./dist/empty-state/index.d.ts",
+      "./dist/empty-state/index.js",
+      "./dist/index.d.ts",
+      "./dist/index.js",
+      "./dist/shell/index.d.ts",
+      "./dist/shell/index.js",
+      "./empty-state",
+      "./package.json",
+      "./shell"
+    ],
+    "kind": "npm",
+    "main": "./dist/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-shell-kit",
+    "private": false,
+    "scripts": [
+      "build",
+      "prepack",
+      "pretest",
+      "test",
+      "typecheck"
+    ],
+    "types": "./dist/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 3,
+    "typescript": 4
+  }
+}

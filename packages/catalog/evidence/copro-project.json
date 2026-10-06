@@ -1,0 +1,42 @@
+{
+  "directory": "packages/copro-project",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/copro-project"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/copro-project/README.md",
+    "summary": "Canonical provider-neutral CoPro project documents.",
+    "title": "@inneranimalmedia/copro-project"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Provider-neutral CoPro project document, serialization, validation, and migration contracts.",
+    "exports": [
+      ".",
+      "./package.json",
+      "./src/index.d.ts",
+      "./src/index.js"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/copro-project",
+    "private": false,
+    "scripts": [
+      "pack:dry",
+      "test"
+    ],
+    "types": "./src/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 2,
+    "typescript": 1
+  }
+}

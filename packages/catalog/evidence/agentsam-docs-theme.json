@@ -1,0 +1,35 @@
+{
+  "directory": "packages/agentsam-docs-theme",
+  "readme": {
+    "headings": [
+      "AgentSam Docs Theme"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-docs-theme/README.md",
+    "summary": "Violet skin for public AgentSam documentation (`data-asbd-skin=\"violet\"`).",
+    "title": "AgentSam Docs Theme"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Violet docs skin tokens for AgentSam public guides (Systematic Autonomous Machinery).",
+    "exports": [
+      ".",
+      "./docs-layout.css",
+      "./tokens.css"
+    ],
+    "kind": "npm",
+    "main": null,
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-docs-theme",
+    "private": false,
+    "scripts": [],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {}
+}

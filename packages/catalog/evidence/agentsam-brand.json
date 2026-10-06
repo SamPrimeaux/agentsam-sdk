@@ -1,0 +1,73 @@
+{
+  "directory": "packages/agentsam-brand",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/agentsam-brand",
+      "BrandPack v2",
+      "CLI",
+      "Ingest folder, previous build zip/tar/gz, or HTML/CSS for token extraction",
+      "Compile dist + studio + zip export",
+      "Preview studio (prefers studio.html)",
+      "Asset roles (examples)",
+      "Semantic derivatives",
+      "Format families",
+      "Templates",
+      "V1 still works",
+      "Image / media processors (pluggable)",
+      "Website composition (sibling package)"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-brand/README.md",
+    "summary": "drop anything \u2192 ingest/classify \u2192 brand.pack.json (source of truth) \u2502 \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510 \u25bc                 \u25bc                 \u25bc localhost studio      ZIP export     production publish",
+    "title": "@inneranimalmedia/agentsam-brand"
+  },
+  "registry": {
+    "bin": {
+      "agentsam-brand": "bin/agentsam-brand.mjs"
+    },
+    "dependencies": {
+      "dependencies": [
+        "sharp"
+      ],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Deterministic Brand Intelligence + portable brand-asset promotion SDK for AgentSam (inspect, derive, plan, promote, publish, verify).",
+    "exports": [
+      ".",
+      "./assets",
+      "./cli",
+      "./contract",
+      "./goap-actions",
+      "./package.json",
+      "./plan",
+      "./presets",
+      "./public",
+      "./resolve",
+      "./scan",
+      "./src/cli/controller.js",
+      "./src/contract.js",
+      "./src/goap-actions.js",
+      "./src/index.js",
+      "./src/plan.js",
+      "./src/presets/index.js",
+      "./src/public.js",
+      "./src/resolve.js",
+      "./src/scan.js"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-brand",
+    "private": false,
+    "scripts": [
+      "pack:dry",
+      "test"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 48
+  }
+}

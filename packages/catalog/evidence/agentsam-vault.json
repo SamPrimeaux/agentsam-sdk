@@ -1,0 +1,61 @@
+{
+  "directory": "packages/agentsam-vault",
+  "readme": {
+    "headings": [
+      "AgentSam Credential System",
+      "Answers (current Worker)",
+      "How does `/api/vault/*` work?",
+      "VAULT_MASTER_KEY format",
+      "App-owned keys (no cross-app coupling)",
+      "After rotation \u2014 BYOK re-save",
+      "Where is `AGENTSAM_API_KEY` minted / used?",
+      "New packages (this change)",
+      "Authority split (from your CF dashboard)"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-vault/README.md",
+    "summary": "Browser /settings/keys \u2502 \u25bc POST /api/vault/secrets  { service_name, value } \u2502 \u25bc AES-256-GCM encrypt with VAULT_MASTER_KEY AAD = userId:service:name \u2502 \u25bc D1 user_secrets (ciphertext + metadata + last4) \u2502 GET list \u2192 metadata only (never plaintext) POST unwrap \u2192 service lane only (bridge / internal)",
+    "title": "AgentSam Credential System"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "AgentSam credential vault core \u2014 contracts, AES-GCM crypto, provider registry, resolver. UI lives in agentsam-key-manager.",
+    "exports": [
+      ".",
+      "./contracts",
+      "./crypto",
+      "./oauth",
+      "./package.json",
+      "./providers",
+      "./resolver",
+      "./src/contracts/credential.d.ts",
+      "./src/contracts/credential.js",
+      "./src/crypto/aes-gcm.d.ts",
+      "./src/crypto/aes-gcm.js",
+      "./src/crypto/oauth-envelope.js",
+      "./src/index.d.ts",
+      "./src/index.js",
+      "./src/providers/registry.js",
+      "./src/runtime/resolver.js"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-vault",
+    "private": false,
+    "scripts": [
+      "test"
+    ],
+    "types": "./src/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 10,
+    "typescript": 3
+  }
+}

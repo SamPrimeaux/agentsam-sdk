@@ -1,0 +1,63 @@
+{
+  "directory": "packages/agentsam-work",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/agentsam-work",
+      "Exports"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-work/README.md",
+    "summary": "Portable AgentSam Work contracts and React product surfaces for projects, tickets, mail, calendars, artifacts, and related host-driven work data. The package does not own a second persistence layer; host applications supply `WorkHost`.",
+    "title": "@inneranimalmedia/agentsam-work"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": [
+        "lucide-react",
+        "react",
+        "react-dom"
+      ]
+    },
+    "description": "Portable AgentSam Work product surface: shared work contracts, fixture and HTTP hosts, project/ticket/mail/calendar/artifact views, and host-neutral React UI.",
+    "exports": [
+      ".",
+      "./client",
+      "./contracts",
+      "./dist/client/index.d.ts",
+      "./dist/client/index.js",
+      "./dist/contracts/index.d.ts",
+      "./dist/contracts/index.js",
+      "./dist/fixtures/index.d.ts",
+      "./dist/fixtures/index.js",
+      "./dist/frontend/index.d.ts",
+      "./dist/frontend/index.js",
+      "./dist/frontend/theme.css",
+      "./dist/index.d.ts",
+      "./dist/index.js",
+      "./fixtures",
+      "./frontend",
+      "./theme.css"
+    ],
+    "kind": "npm",
+    "main": "./dist/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-work",
+    "private": false,
+    "scripts": [
+      "build",
+      "prepack",
+      "pretest",
+      "test",
+      "typecheck"
+    ],
+    "types": "./dist/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 2,
+    "typescript": 15
+  }
+}

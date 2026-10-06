@@ -1,0 +1,52 @@
+{
+  "directory": "packages/agentsam-goap",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/agentsam-goap",
+      "Frozen v1 contracts",
+      "Realtime and durability rule"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-goap/README.md",
+    "summary": "Portable GOAP control-plane contracts for AgentSam.",
+    "title": "@inneranimalmedia/agentsam-goap"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [
+        "@inneranimalmedia/agentsam-errors"
+      ],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Portable AgentSam GOAP control-plane contracts and adapters over existing blackboard, ticket, workflow, execution, approval, queue, runtime, and evidence stores.",
+    "exports": [
+      ".",
+      "./adapters/d1-sqlite",
+      "./adapters/memory",
+      "./contracts",
+      "./control-plane",
+      "./src/adapters/d1-sqlite.js",
+      "./src/adapters/memory.js",
+      "./src/contracts.js",
+      "./src/control-plane.js",
+      "./src/index.js",
+      "./src/world.js",
+      "./world"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-goap",
+    "private": false,
+    "scripts": [
+      "test"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 9
+  }
+}

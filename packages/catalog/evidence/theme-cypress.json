@@ -1,0 +1,41 @@
+{
+  "directory": "packages/theme-cypress",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/theme-cypress"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/theme-cypress/README.md",
+    "summary": "Warm, grounded, built for belonging.",
+    "title": "@inneranimalmedia/theme-cypress"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "A welcoming community prebuild for organizations that need events, groups, giving, visits, and mission-driven storytelling without looking like a generic nonprofit template.",
+    "exports": [
+      ".",
+      "./node",
+      "./site/*",
+      "./src/index.js",
+      "./src/node.js"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/theme-cypress",
+    "private": false,
+    "scripts": [
+      "test"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 5
+  }
+}

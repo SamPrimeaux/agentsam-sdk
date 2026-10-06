@@ -1,0 +1,48 @@
+{
+  "directory": "packages/copro-proof",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/copro-proof"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/copro-proof/README.md",
+    "summary": "Mechanical vertical acceptance proof for the clean-room CoPro architecture.",
+    "title": "@inneranimalmedia/copro-proof"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [
+        "@inneranimalmedia/copro-editor",
+        "@inneranimalmedia/copro-media",
+        "@inneranimalmedia/copro-project",
+        "@inneranimalmedia/copro-provider-contracts",
+        "@inneranimalmedia/copro-render",
+        "@inneranimalmedia/copro-templates",
+        "@inneranimalmedia/copro-timeline"
+      ],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Mechanical vertical proof that CoPro project, media, editor, timeline, render, templates, and provider contracts compose correctly.",
+    "exports": [
+      ".",
+      "./package.json",
+      "./src/index.js"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/copro-proof",
+    "private": false,
+    "scripts": [
+      "pack:dry",
+      "test"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 2
+  }
+}

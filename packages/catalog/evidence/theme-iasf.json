@@ -1,0 +1,48 @@
+{
+  "directory": "packages/theme-iasf",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/theme-iasf",
+      "Usage"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/theme-iasf/README.md",
+    "summary": "Normalized from `studio-cms-editor` harvest lane `theme_layout_donor` into a portable package:",
+    "title": "@inneranimalmedia/theme-iasf"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "IASF \u2014 stock Inner Animal Storefront theme pack (normalized from studio-cms-editor harvest).",
+    "exports": [
+      ".",
+      "./content",
+      "./favicon.svg",
+      "./package.json",
+      "./src/content.js",
+      "./src/favicon.svg",
+      "./src/index.js",
+      "./src/styles/storefront.css",
+      "./src/tokens.js",
+      "./styles/storefront.css",
+      "./tokens"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/theme-iasf",
+    "private": false,
+    "scripts": [
+      "test"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 4
+  }
+}

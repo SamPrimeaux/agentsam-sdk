@@ -1,0 +1,38 @@
+{
+  "directory": "packages/agentsam-assets-core",
+  "readme": {
+    "headings": [],
+    "path": null,
+    "summary": null,
+    "title": null
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Shared Asset Core: canonical ast_* identity, machine facts, provenance, and provider representations. Peer BrandPack and Content domains build on this \u2014 neither owns the other.",
+    "exports": [
+      ".",
+      "./dist/index.d.ts",
+      "./dist/index.js"
+    ],
+    "kind": "npm",
+    "main": "./dist/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-assets-core",
+    "private": false,
+    "scripts": [
+      "build",
+      "test"
+    ],
+    "types": "./dist/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "typescript": 5
+  }
+}

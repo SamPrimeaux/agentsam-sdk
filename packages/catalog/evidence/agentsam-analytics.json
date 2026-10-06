@@ -1,0 +1,56 @@
+{
+  "directory": "packages/agentsam-analytics",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/agentsam-analytics"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-analytics/README.md",
+    "summary": "Portable AgentSam runtime analytics product.",
+    "title": "@inneranimalmedia/agentsam-analytics"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [
+        "@inneranimalmedia/analytics-ui"
+      ],
+      "optionalDependencies": [],
+      "peerDependencies": [
+        "react"
+      ]
+    },
+    "description": "Portable AgentSam analytics read models and operational analytics surfaces.",
+    "exports": [
+      ".",
+      "./client",
+      "./contracts",
+      "./dist/client/index.d.ts",
+      "./dist/client/index.js",
+      "./dist/contracts/index.d.ts",
+      "./dist/contracts/index.js",
+      "./dist/frontend/index.d.ts",
+      "./dist/frontend/index.js",
+      "./dist/frontend/theme.css",
+      "./dist/index.d.ts",
+      "./dist/index.js",
+      "./frontend",
+      "./theme.css"
+    ],
+    "kind": "npm",
+    "main": "./dist/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-analytics",
+    "private": false,
+    "scripts": [
+      "build",
+      "prepack",
+      "typecheck"
+    ],
+    "types": "./dist/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "typescript": 4
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "directory": "packages/work-graph",
+  "readme": {
+    "headings": [
+      "Work Graph",
+      "Engineering adapter",
+      "Business adapter",
+      "Origin"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/work-graph/README.md",
+    "summary": "Core primitive for AgentSam workflows. Import it through the published SDK, for example `@inneranimalmedia/agentsam-sdk/work-graph` or the matching `/work-graph/renderers/timeline` subpath. The sibling workspace package stays private until it has its own release process.",
+    "title": "Work Graph"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Core AgentSam work-graph primitive: one graph model (WorkItem, Dependency, TimelineEvent, Artifact, Evidence, Actor) powering an engineering adapter (git/MCP/tests/deploys) and a business adapter (projects/clients/approvals/milestones), with Gantt/timeline rendering as a pure projection over the graph rather than its own source of truth.",
+    "exports": [
+      ".",
+      "./adapters/business/projects",
+      "./adapters/engineering/git",
+      "./adapters/engineering/mcp",
+      "./renderers/gantt-model",
+      "./renderers/timeline",
+      "./src/adapters/business/projects.js",
+      "./src/adapters/engineering/git.js",
+      "./src/adapters/engineering/mcp.js",
+      "./src/index.js",
+      "./src/renderers/gantt-model.js",
+      "./src/renderers/timeline.js"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-work-graph",
+    "private": false,
+    "scripts": [
+      "test"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 7
+  }
+}
