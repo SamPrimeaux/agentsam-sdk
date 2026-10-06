@@ -4,7 +4,7 @@
 //   node scripts/build-brand.mjs <brand> [--icon-url <url>]
 //   build-brand <brand> --icon-url https://asr…/icon.png
 
-import { readFileSync, writeFileSync, existsSync, copyFileSync, mkdirSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, copyFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
@@ -26,6 +26,17 @@ function loadJson(filePath) {
   } catch (err) {
     fail(`could not read/parse ${filePath}: ${err.message}`);
   }
+}
+
+function filesEqual(left, right) {
+  if (!existsSync(left) || !existsSync(right)) return false;
+  return readFileSync(left).equals(readFileSync(right));
+}
+
+function copyFileIfChanged(source, destination) {
+  if (filesEqual(source, destination)) return false;
+  copyFileSync(source, destination);
+  return true;
 }
 
 const { values: flags, positionals } = parseArgs({
@@ -136,7 +147,9 @@ async function fetchIconFromUrl(url, dest) {
   const buf = Buffer.from(await res.arrayBuffer());
   if (buf.length < 64) throw new Error('icon URL returned empty/too-small body');
   mkdirSync(iconsDir, { recursive: true });
+  if (existsSync(dest) && readFileSync(dest).equals(buf)) return false;
   writeFileSync(dest, buf);
+  return true;
 }
 
 async function resolveIcon() {
@@ -157,7 +170,11 @@ async function resolveIcon() {
         console.log(
           `[build-brand] icon previews: ${path.join(iconsDir, 'composed', 'preview')} (1024…32)`,
         );
-        return { forceRegen: true, source: 'app_icon_compose', composed };
+        return {
+          forceRegen: Boolean(composed.tauriInputChanged),
+          source: 'app_icon_compose',
+          composed,
+        };
       }
       console.warn(
         `[build-brand] WARNING: app_icon compose skipped (${composed.reason}) — falling back.`,
@@ -178,9 +195,13 @@ async function resolveIcon() {
 
   if (iconUrl) {
     try {
-      await fetchIconFromUrl(iconUrl, targetIcon);
-      console.log(`[build-brand] icon downloaded from ${iconUrl} (fallback raster)`);
-      return { forceRegen: true, source: 'fallback_url' };
+      const changed = await fetchIconFromUrl(iconUrl, targetIcon);
+      console.log(
+        changed
+          ? `[build-brand] icon downloaded from ${iconUrl} (fallback raster)`
+          : `[build-brand] fallback icon unchanged: ${iconUrl}`,
+      );
+      return { forceRegen: changed, source: 'fallback_url' };
     } catch (error) {
       console.warn(
         `[build-brand] WARNING: icon URL failed (${error.message}) — falling back to icon_set/placeholder.`,
@@ -191,9 +212,13 @@ async function resolveIcon() {
   if (manifest.icon_set) {
     const brandIconPath = path.resolve(ROOT, manifest.icon_set, 'icon.png');
     if (existsSync(brandIconPath)) {
-      copyFileSync(brandIconPath, targetIcon);
-      console.log(`[build-brand] icon copied from ${brandIconPath}`);
-      return { forceRegen: true, source: 'icon_set' };
+      const changed = copyFileIfChanged(brandIconPath, targetIcon);
+      console.log(
+        changed
+          ? `[build-brand] icon copied from ${brandIconPath}`
+          : `[build-brand] icon_set unchanged: ${brandIconPath}`,
+      );
+      return { forceRegen: changed, source: 'icon_set' };
     }
     console.warn(
       `[build-brand] WARNING: icon_set "${manifest.icon_set}" has no icon.png at ${brandIconPath} -- keeping existing placeholder icon.`,
@@ -227,19 +252,20 @@ function generateIconSet({ force = false } = {}) {
     return;
   }
   const icns = path.join(iconsDir, 'icon.icns');
+  const master = path.join(iconsDir, 'icon-1024-master.png');
+  const sourceChanged = !filesEqual(targetIcon, master);
   const needsRegen =
     force ||
+    sourceChanged ||
     !existsSync(icns) ||
     !existsSync(path.join(iconsDir, '32x32.png')) ||
-    !existsSync(path.join(iconsDir, 'icon.ico')) ||
-    statSync(targetIcon).mtimeMs > statSync(icns).mtimeMs;
+    !existsSync(path.join(iconsDir, 'icon.ico'));
   if (!needsRegen) {
-    console.log('[build-brand] icon set up to date (icns/png/ico present)');
+    console.log('[build-brand] icon set up to date (content unchanged; outputs present)');
     return;
   }
-  // Prefer a stable master so tauri icon doesn't overwrite the 1024 source mid-run.
-  const master = path.join(iconsDir, 'icon-1024-master.png');
-  if (!existsSync(master) || statSync(targetIcon).mtimeMs >= statSync(master).mtimeMs) {
+  // Keep one stable content-addressed master. Never use mtimes as icon authority.
+  if (sourceChanged) {
     copyFileSync(targetIcon, master);
   }
   console.log('[build-brand] generating Tauri icon set from', master);
@@ -251,8 +277,8 @@ function generateIconSet({ force = false } = {}) {
   if (r.status !== 0) {
     fail(`tauri icon failed (exit ${r.status}) — macOS bundle needs icon.icns`);
   }
-  // Restore tray/app PNG to a known good raster (tauri icon rewrites icon.png smaller).
-  if (existsSync(master)) copyFileSync(master, targetIcon);
+  // Restore tray/app PNG only if Tauri rewrote it to different bytes.
+  if (existsSync(master)) copyFileIfChanged(master, targetIcon);
   // Verify expected bundle icons exist.
   for (const rel of BUNDLE_ICONS) {
     const p = path.join(srcTauriDir, rel);

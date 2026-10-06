@@ -12,7 +12,6 @@ import {
   mkdirSync,
   readFileSync,
   writeFileSync,
-  copyFileSync,
 } from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -48,6 +47,16 @@ function resolveSharp() {
 function fail(message) {
   console.error(`[compose-app-icon] ERROR: ${message}`);
   process.exit(1);
+}
+
+function writeBufferIfChanged(destination, buffer) {
+  if (existsSync(destination) && readFileSync(destination).equals(buffer)) return false;
+  writeFileSync(destination, buffer);
+  return true;
+}
+
+function copyFileIfChanged(source, destination) {
+  return writeBufferIfChanged(destination, readFileSync(source));
 }
 
 function resolveMarkSvg(manifest, root) {
@@ -258,9 +267,12 @@ export async function composePlatformAppIcons(opts) {
     opticalScale: macos.optical_scale ?? 0.74,
   });
   const macosMaster = path.join(outDir, 'macos-1024.png');
-  writeFileSync(macosMaster, macosBuf);
+  const master1024 = path.join(iconsDir, 'icon-1024-master.png');
+  result.tauriInputChanged =
+    !existsSync(master1024) || !readFileSync(master1024).equals(macosBuf);
+  writeBufferIfChanged(macosMaster, macosBuf);
   result.masters.macos = macosMaster;
-  copyFileSync(macosMaster, targetIcon);
+  copyFileIfChanged(macosMaster, targetIcon);
   result.previews.push(
     ...(await writePreviewLadder(sharp, macosBuf, previewDir, 'macos')),
   );
@@ -370,9 +382,8 @@ export async function composePlatformAppIcons(opts) {
     result.previews.push(...(await writePreviewLadder(sharp, trayBuf, previewDir, 'tray')));
   }
 
-  // Stable 1024 master for tauri icon regen
-  const master1024 = path.join(iconsDir, 'icon-1024-master.png');
-  copyFileSync(macosMaster, master1024);
+  // Stable content-addressed 1024 master for Tauri icon generation.
+  copyFileIfChanged(macosMaster, master1024);
   result.masters.tauri_input = master1024;
 
   writeFileSync(
@@ -382,6 +393,7 @@ export async function composePlatformAppIcons(opts) {
         schema: 'agentsam.desktop.app_icon.receipt.v1',
         mark: path.relative(root, markPath),
         profiles: Object.keys(profiles),
+        tauri_input_changed: Boolean(result.tauriInputChanged),
         masters: Object.fromEntries(
           Object.entries(result.masters).map(([k, v]) => [k, path.relative(root, v)]),
         ),
