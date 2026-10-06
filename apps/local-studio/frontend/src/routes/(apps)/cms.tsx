@@ -87,9 +87,9 @@ function CmsPage() {
     });
   };
 
-  // The useful CMS starts with the actual packaged theme workspace. The old
-  // generic CMS hub remains available only through explicit legacy/page routes.
-  if (!isEditorView) return <ThemeStorePage />;
+  // /cms is a genuine application home; theme editing has its own launch flow.
+  // Existing deep links to hosted pages and local theme projects remain intact.
+  if (!isEditorView) return <CmsHomePage />;
 
   if (search.panel === "media") {
     return (
