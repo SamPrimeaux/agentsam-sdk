@@ -39,6 +39,7 @@ import { loadConnectionsRegistry, safePluginSettingsRecord } from "./connections
 import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js";
 import { handleWorkRequest, isWorkRequest } from "./work-service.js";
 import { createLocalStudioPluginRuntime, loadPluginRegistry, updateLocalStudioPluginPreferences } from "./plugin-registry.js";
+import { listCatalogForAccount, installFromCatalog, removeCatalogInstallation } from "./plugin-discovery.js";
 import { emitAnalyticsFact } from "./analytics-service.js";
 import { handleAnalyticsQueryRequest } from "./analytics-query-service.js";
 import {
@@ -653,6 +654,8 @@ export default {
     const isLlmInventory = url.pathname === "/api/llm/inventory";
     const isCfConnection = isCloudflareConnectionPath(url.pathname);
     const isConnectionsRegistry = url.pathname === "/api/connections";
+    const isPluginCatalog = url.pathname === "/api/plugins/catalog";
+    const isPluginInstall = url.pathname === "/api/plugins/install";
     const pluginSettingsMatch = /^\/api\/plugins\/([^/]+)$/.exec(url.pathname);
     const isDatabaseApi = isDatabaseRequest(url.pathname);
     const isWorkApi = isWorkRequest(url.pathname);
@@ -878,15 +881,59 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       }
     }
 
+    if (isPluginCatalog) {
+      if (request.method !== "GET") return json({ok:false,error:"method_not_allowed"},405,{allow:"GET"});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:"unauthorized"},401);
+      try {
+        const catalog = await listCatalogForAccount(env,userId);
+        return json({ok:true,...catalog});
+      } catch (error) {
+        console.error("plugin_catalog_error",String(error?.message||error));
+        return json({ok:false,error:"plugin_catalog_unavailable"},503);
+      }
+    }
+    if (isPluginInstall) {
+      if (request.method !== "POST") return json({ok:false,error:"method_not_allowed"},405,{allow:"POST"});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:"unauthorized"},401);
+      if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
+        return json({ok:false,error:"json_content_type_required"},415);
+      }
+      const origin = request.headers.get("origin");
+      if (origin && origin !== url.origin) return json({ok:false,error:"origin_not_allowed"},403);
+      const body = await request.json().catch(()=>null);
+      if (!body || typeof body !== "object" || Object.keys(body).some(key=>key!=="plugin_key")) {
+        return json({ok:false,error:"plugin_install_request_invalid"},400);
+      }
+      try {
+        const result = await installFromCatalog(env,userId,body.plugin_key);
+        return json({ok:true,...result},201);
+      } catch (error) {
+        const code = String(error?.message||'plugin_install_failed');
+        const status = code.includes('unavailable')?503:code.includes('not_found')?404:code.includes('conflict')||code.includes('requires_reconnect')?409:400;
+        return json({ok:false,error:code.slice(0,140)},status);
+      }
+    }
     if (pluginSettingsMatch) {
-      if (request.method !== "PATCH") {
-        return json({ ok: false, error: "method_not_allowed" }, 405, { allow: "PATCH" });
+      if (request.method !== "PATCH" && request.method !== "DELETE") {
+        return json({ ok: false, error: "method_not_allowed" }, 405, { allow: "PATCH, DELETE" });
       }
       const userId = await sessionUser();
       if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
       const pluginId = decodeURIComponent(pluginSettingsMatch[1] || "").trim();
       if (!/^plg_[a-z0-9]+$/i.test(pluginId)) {
         return json({ ok: false, error: "plugin_id_invalid" }, 400);
+      }
+      if (request.method === "DELETE") {
+        const origin = request.headers.get("origin");
+        if (origin && origin !== url.origin) return json({ok:false,error:"origin_not_allowed"},403);
+        try {
+          return json({ok:true,...(await removeCatalogInstallation(env,userId,pluginId))});
+        } catch(error) {
+          const code=String(error?.message||'plugin_remove_failed');
+          return json({ok:false,error:code.slice(0,120)},code.includes('not_found')?404:400);
+        }
       }
       const body = await request.json().catch(() => ({}));
       const allowedKeys = new Set(["enabled", "composer_visible", "settings_visible"]);

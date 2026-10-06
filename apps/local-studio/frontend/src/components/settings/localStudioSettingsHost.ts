@@ -23,6 +23,9 @@ import {
 } from "@/lib/work/model-inventory";
 import type { StudioInventoryModel } from "@/lib/work/models";
 import {
+  discoverLocalStudioPlugins,
+  installLocalStudioPublicPlugin,
+  removeLocalStudioPublicPlugin,
   disconnectLocalStudioProvider,
   listLocalStudioConnections,
   startLocalStudioProviderConnection,
@@ -325,6 +328,26 @@ export const localStudioSettingsHost: SettingsHost = {
   },
   async snapshot() {
     return liveSnapshot();
+  },
+  async discoverPlugins() {
+    const result = await discoverLocalStudioPlugins();
+    return {
+      plugins: result.plugins,
+      errors: result.errors,
+      configuredSources: result.configuredSources,
+    };
+  },
+  async installPluginFromCatalog(pluginKey) {
+    await installLocalStudioPublicPlugin(pluginKey);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
+    }
+  },
+  async removeCatalogPlugin(pluginId) {
+    await removeLocalStudioPublicPlugin(pluginId);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
+    }
   },
   async setPluginEnabled(id, enabled) {
     await updateLocalStudioPlugin(id, { enabled });

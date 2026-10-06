@@ -139,6 +139,43 @@ export type SettingsPlugin = SettingsCatalogItem & {
   lastErrorMessage?: string | null;
 };
 
+/** Operator-reviewed plugin catalog entries, never implicit permission grants. */
+export type SettingsDiscoveredPlugin = {
+  pluginKey: string;
+  name: string;
+  subtitle: string;
+  description: string;
+  publisher: string;
+  iconUrl: string | null;
+  category: string;
+  version: string;
+  keywords: string[];
+  capabilities: string[];
+  examples: string[];
+  tools: string[];
+  toolCount: number;
+  skillCount: number;
+  endpointUrl: string;
+  catalogUrl: string;
+  transport: string;
+  authType: string;
+  websiteUrl: string | null;
+  privacyUrl: string | null;
+  termsUrl: string | null;
+  supportUrl: string | null;
+  repositoryUrl: string | null;
+  installationId: string | null;
+  setupStatus: string;
+  enabled: boolean;
+  healthStatus: string;
+  availability: 'available' | 'requires_connection' | 'connected';
+};
+export type SettingsPluginDiscovery = {
+  plugins: SettingsDiscoveredPlugin[];
+  errors: { source: string; reason: string }[];
+  configuredSources: number;
+};
+
 export type SettingsWidget = {
   id: string;
   name: string;
@@ -257,6 +294,9 @@ export interface SettingsHost {
   snapshot(): Promise<SettingsSnapshot>;
   upsertCatalogItem?(kind: SettingsCatalogKind, item: SettingsCatalogItem): Promise<void>;
   removeCatalogItem?(kind: SettingsCatalogKind, id: string): Promise<void>;
+  discoverPlugins?(): Promise<SettingsPluginDiscovery>;
+  installPluginFromCatalog?(pluginKey: string): Promise<void>;
+  removeCatalogPlugin?(pluginId: string): Promise<void>;
   setPluginEnabled?(id: string, enabled: boolean): Promise<void>;
   beginPluginSetup?(id: string): Promise<void>;
   disconnectPlugin?(id: string): Promise<void>;
