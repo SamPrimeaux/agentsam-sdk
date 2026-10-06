@@ -101,6 +101,17 @@ test('multiple trusted catalog sources compose generically without domain-specif
   assert.equal(result.plugins.length,2);
   assert.deepEqual(result.plugins.map(p=>p.pluginKey),['agentsam-example','agentsam-analytics']);
 });
+test('Cloudflare-compatible manual redirect handling rejects redirected catalog sources',async()=>{
+  let requestOptions;
+  const result=await discoverPublicPlugins(env,async(_url,options)=>{
+    requestOptions=options;
+    return new Response(null,{status:302,headers:{location:'https://untrusted.example.org/catalog/plugins'}});
+  });
+  assert.equal(requestOptions.redirect,'manual');
+  assert.equal(result.plugins.length,0);
+  assert.equal(result.errors.length,1);
+});
+
 test('discovery uses only declared source and never creates executable tools',async()=>{
   const result=await discoverPublicPlugins(env,fetcher);
   assert.equal(result.plugins.length,1);
