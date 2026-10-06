@@ -15,6 +15,27 @@ export async function mountOnlineStore(frame, host, { assetsBase = '/commerce-st
   }
 
   win.AgentSamOnlineStoreHost = host;
+  doc.documentElement.dataset.cmsEmbeddedStore = 'true';
+  const applyInstalledAppearance = (appearance) => {
+    const tokens = appearance?.tokens?.color;
+    if (!tokens || typeof tokens !== 'object') return;
+    const palette = {
+      canvas: tokens.canvas,
+      surface: tokens.surface,
+      raised: tokens.surfaceRaised,
+      ink: tokens.ink,
+      muted: tokens.muted,
+      accent: tokens.accent,
+    };
+    const themeId = appearance?.theme_id;
+    if (!themeId || !Object.values(palette).every((v) => typeof v === 'string' && /^#[a-f0-9]{3,8}$/i.test(v))) return;
+    for (const [name, value] of Object.entries(palette)) {
+      doc.documentElement.style.setProperty('--cms-store-' + name, value);
+    }
+    doc.documentElement.dataset.cmsThemeLoaded = 'true';
+    doc.documentElement.dataset.cmsThemeId = String(themeId).slice(0, 100);
+  };
+
   // Native admin passes this markup to shell.js. Studio already owns navigation:
   // only the product content is mounted here, not a second application shell.
   win.renderShell = (_route, markup) => { doc.body.innerHTML = markup; };
@@ -23,8 +44,27 @@ export async function mountOnlineStore(frame, host, { assetsBase = '/commerce-st
       throw new Error('store_operation_not_supported_by_host');
     }
     try {
-      return await host.loadStore();
+      const overview = await host.loadStore();
+      applyInstalledAppearance(overview?.active_theme?.appearance);
+      const verified = overview?.store?.url && host.storefrontUrl &&
+        new URL(overview.store.url).origin === new URL(host.storefrontUrl).origin;
+      const viewStore = doc.querySelector('.online-store-actions a[href="/"], .online-store-actions a[data-store-link]');
+      if (viewStore) {
+        viewStore.dataset.storeLink = 'true';
+        if (verified) {
+          viewStore.href = overview.store.url;
+          viewStore.removeAttribute('aria-disabled');
+          viewStore.removeAttribute('title');
+        } else {
+          viewStore.removeAttribute('href');
+          viewStore.setAttribute('aria-disabled', 'true');
+          viewStore.title = 'No verified storefront publication is linked';
+        }
+      }
+      host.onReady?.(overview);
+      return overview;
     } catch (cause) {
+      host.onReady?.(null);
       doc.getElementById('store-visibility-label')?.replaceChildren('Unavailable');
       const alert = doc.createElement('p');
       alert.setAttribute('role', 'alert');
@@ -37,7 +77,7 @@ export async function mountOnlineStore(frame, host, { assetsBase = '/commerce-st
 
   // Preserve the FNF product classes and CSS in a self-contained viewport.
   doc.body.style.margin = '0';
-  doc.body.style.background = '#f1f1f1';
+  doc.body.style.background = 'var(--cms-store-canvas, var(--color-background, #13151b))';
   for (const name of ['admin.css', 'console.css', 'online-store.css']) {
     const css = doc.createElement('link');
     css.rel = 'stylesheet';
@@ -67,9 +107,13 @@ export async function mountOnlineStore(frame, host, { assetsBase = '/commerce-st
   }
 
   const viewStore = doc.querySelector('.online-store-actions a[href="/"]');
-  if (viewStore) {
-    if (host.storefrontUrl) viewStore.href = host.storefrontUrl;
-    else { viewStore.removeAttribute('href'); viewStore.setAttribute('aria-disabled', 'true'); viewStore.title = 'No public storefront registered'; }
+  if (viewStore && !viewStore.dataset.storeLink) {
+    viewStore.dataset.storeLink = 'true';
+    // Storefront navigation is enabled only after the owning Worker confirms
+    // the installed domain. The project registry alone is insufficient.
+    viewStore.removeAttribute('href');
+    viewStore.setAttribute('aria-disabled', 'true');
+    viewStore.title = 'Verifying public storefront…';
   }
   // These controls currently lack transactions in the portable CMS contract.
   // Do not present dead buttons as working merchant features.

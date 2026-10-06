@@ -1,0 +1,23 @@
+{
+  "$schema": "../../contracts/preset.schema.json",
+  "id": "fuel-free-time",
+  "label": "Fuel & Free Time",
+  "scope": "fnf",
+  "tokens": "./tokens.json",
+  "assets": "./assets.json",
+  "assetsRoot": "/assets/presets/fuel-free-time",
+  "globals": {
+    "shell": "./globals/shell.json"
+  },
+  "pages": {
+    "home": "./pages/home.json",
+    "shop": "./pages/shop.json",
+    "collections": "./pages/collections.json",
+    "collection": "./pages/collection.json",
+    "product": "./pages/product.json",
+    "cart": "./pages/cart.json",
+    "about": "./pages/about.json",
+    "community": "./pages/community.json",
+    "order-confirmation": "./pages/order-confirmation.json"
+  }
+}

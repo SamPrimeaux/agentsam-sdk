@@ -1,0 +1,4 @@
+{
+  "$schema": "../../../contracts/page.schema.json", "id": "product", "route": "/products/:slug", "title": "Product",
+  "sections": [{ "id": "product-main", "type": "product.purchase-panel", "blocks": [{ "id": "product-media", "type": "product.media-gallery", "content": {}, "dataBindings": [{ "kind": "product", "source": "route.product", "slot": "media" }], "visibility": { "enabled": true } }, { "id": "product-purchase", "type": "product.purchase-form", "content": {}, "dataBindings": [{ "kind": "product", "source": "route.product", "slot": "product" }], "visibility": { "enabled": true } }], "appearance": { "theme": "dark", "width": "wide" }, "motion": { "preset": "none", "intensity": 0 }, "responsive": { "desktop": { "layout": "split" }, "tablet": { "layout": "split" }, "mobile": { "layout": "stacked" } }, "visibility": { "enabled": true } }]
+}

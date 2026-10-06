@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:heuristic-commerce:schema:block:v1",
+  "title": "Heuristic Block",
+  "type": "object",
+  "required": ["id", "type", "content", "visibility"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-zA-Z0-9_-]{1,80}$" },
+    "type": { "type": "string", "pattern": "^[a-z0-9]+([.-][a-z0-9]+)*$" },
+    "content": { "type": "object" },
+    "settings": { "type": "object" },
+    "dataBindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "source"],
+        "properties": {
+          "kind": { "enum": ["product", "collection", "product-query", "page", "media"] },
+          "source": { "type": "string", "maxLength": 240 },
+          "slot": { "type": "string", "maxLength": 80 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "visibility": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": { "enabled": { "type": "boolean" } },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

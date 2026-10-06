@@ -1,0 +1,199 @@
+/* Shared branded scaffold for storefront utility/editorial pages. */
+:root {
+  --content-page-bg: #0a0a0a;
+  --content-page-surface: #151515;
+  --content-page-surface-soft: #1d1d1d;
+  --content-page-ink: #f8f6f1;
+  --content-page-muted: #aaa7a1;
+  --content-page-line: rgba(255,255,255,.1);
+  --content-page-orange: #ff4500;
+  --content-page-bronze: #d99142;
+  --content-page-max: 1180px;
+}
+
+html[data-theme-preset="fuel-free-time"] body.content-page-body,
+body.content-page-body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 20% 12%, rgba(255,69,0,.12), transparent 28rem),
+    radial-gradient(circle at 85% 15%, rgba(217,145,66,.08), transparent 24rem),
+    var(--content-page-bg);
+  color: var(--content-page-ink);
+  font-family: "Inter", system-ui, sans-serif;
+  line-height: 1.6;
+}
+
+.content-page {
+  min-height: 70vh;
+}
+
+.content-hero {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(5rem, 10vw, 9rem) clamp(1.25rem, 5vw, 4rem) clamp(3.5rem, 7vw, 6rem);
+  border-bottom: 1px solid var(--content-page-line);
+}
+
+.content-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(120deg, rgba(255,69,0,.2), transparent 35%),
+    linear-gradient(180deg, transparent 20%, rgba(0,0,0,.4));
+  pointer-events: none;
+}
+
+.content-hero__inner,
+.content-section__inner {
+  width: min(100%, var(--content-page-max));
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.content-eyebrow {
+  margin: 0 0 1rem;
+  color: var(--content-page-bronze);
+  font-size: .75rem;
+  font-weight: 900;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.content-hero h1 {
+  max-width: 900px;
+  margin: 0;
+  font-family: "Bebas Neue", Impact, sans-serif;
+  font-size: clamp(3.4rem, 8vw, 7.5rem);
+  font-weight: 400;
+  letter-spacing: .02em;
+  line-height: .9;
+  text-transform: uppercase;
+}
+
+.content-hero__intro {
+  max-width: 760px;
+  margin: 1.6rem 0 0;
+  color: #d3d0ca;
+  font-size: clamp(1rem, 2vw, 1.25rem);
+}
+
+.content-section {
+  padding: clamp(3.5rem, 7vw, 6rem) clamp(1.25rem, 5vw, 4rem);
+}
+
+.content-section--soft {
+  border-top: 1px solid var(--content-page-line);
+  border-bottom: 1px solid var(--content-page-line);
+  background: rgba(255,255,255,.025);
+}
+
+.content-section h2 {
+  margin: 0 0 1.6rem;
+  font-family: "Bebas Neue", Impact, sans-serif;
+  font-size: clamp(2.2rem, 4vw, 4rem);
+  font-weight: 400;
+  letter-spacing: .025em;
+  text-transform: uppercase;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 1rem;
+}
+
+.content-card {
+  padding: clamp(1.5rem, 3vw, 2.25rem);
+  border: 1px solid var(--content-page-line);
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.045), rgba(255,255,255,.015)),
+    var(--content-page-surface);
+  box-shadow: 0 18px 55px rgba(0,0,0,.16);
+}
+
+.content-card__index {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: var(--content-page-orange);
+  font-size: .7rem;
+  font-weight: 900;
+  letter-spacing: .15em;
+}
+
+.content-card h3,
+.content-prose h2 {
+  margin: 0 0 .75rem;
+  color: var(--content-page-ink);
+  font-size: 1.05rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.content-card p,
+.content-prose p {
+  margin: 0;
+  color: var(--content-page-muted);
+  font-size: .98rem;
+}
+
+.content-prose {
+  display: grid;
+  gap: 1rem;
+}
+
+.content-prose article {
+  padding: 1.5rem 0 1.75rem;
+  border-bottom: 1px solid var(--content-page-line);
+}
+
+.content-prose article:last-child {
+  border-bottom: 0;
+}
+
+.content-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .8rem;
+  margin-top: 1.75rem;
+}
+
+.content-button {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  padding: .8rem 1.25rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--content-page-orange);
+  color: #101010;
+  font-size: .78rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.content-button--ghost {
+  border-color: var(--content-page-line);
+  background: transparent;
+  color: var(--content-page-ink);
+}
+
+.content-note {
+  margin-top: 2rem;
+  padding: 1rem 1.1rem;
+  border-left: 2px solid var(--content-page-bronze);
+  background: rgba(217,145,66,.06);
+  color: var(--content-page-muted);
+  font-size: .86rem;
+}
+
+@media (max-width: 760px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+}

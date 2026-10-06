@@ -4,6 +4,7 @@
  * generic /api/admin/*, orders, identity, checkout, or customer records.
  */
 import { handleAdminCmsApi } from './api.js';
+import { onlineStoreOverview } from '../admin/store.js';
 import { verifyCmsBridgeRequest, isAllowedStudioCmsBridgeRoute } from './studio-bridge-protocol.js';
 
 const PREFIX='/api/internal/studio-cms/';
@@ -33,6 +34,19 @@ export async function handleStudioCmsBridge(request,env){
         'INSERT INTO cms_studio_bridge_nonces (nonce, actor_id, project_id, operation, created_at) VALUES (?,?,?,?,?)'
       ).bind(proof.nonce,proof.actor,proof.project,method+' '+tail,proof.timestamp).run();
     }catch{return error('cms_bridge_replay_or_migration_missing',409);}
+  }
+  // Existing Store Overview is the authority for active installed theme,
+  // storefront URL, and site analytics. Same IAM/HMAC gate as CMS writes.
+  if(tail==='store/online' && method==='GET') {
+    try {
+      const overview=await onlineStoreOverview(env);
+      const response=new Response(overview.body,overview);
+      response.headers.set('cache-control','no-store');
+      return response;
+    } catch (cause) {
+      console.error('cms_store_overview_failed',String(cause?.name||cause));
+      return error('cms_store_overview_unavailable',503);
+    }
   }
   const adminUrl=new URL('/api/admin/cms/'+tail+url.search,url.origin);
   const headers=new Headers();

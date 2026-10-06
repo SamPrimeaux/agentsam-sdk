@@ -1,0 +1,39 @@
+{
+  "$schema": "../../../contracts/page.schema.json",
+  "id": "order-confirmation",
+  "route": "/order-confirmation",
+  "title": "Order confirmation",
+  "sections": [
+    {
+      "id": "order-confirmation-main",
+      "type": "order.confirmation",
+      "blocks": [
+        {
+          "id": "order-status",
+          "type": "order.status",
+          "content": {},
+          "dataBindings": [
+            { "kind": "page", "source": "route.checkout-session", "slot": "order" }
+          ],
+          "visibility": { "enabled": true }
+        },
+        {
+          "id": "order-next-actions",
+          "type": "actions.group",
+          "content": {
+            "primary": { "label": "Continue shopping", "href": "/shop" }
+          },
+          "visibility": { "enabled": true }
+        }
+      ],
+      "appearance": { "theme": "dark", "width": "contained" },
+      "motion": { "preset": "fade", "intensity": 0.1 },
+      "responsive": {
+        "desktop": { "layout": "centered" },
+        "tablet": { "layout": "centered" },
+        "mobile": { "layout": "stacked" }
+      },
+      "visibility": { "enabled": true }
+    }
+  ]
+}

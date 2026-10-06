@@ -124,3 +124,46 @@ test('portable FNF adapter preserves optimistic version on real draft writes', a
   assert.deepEqual(JSON.parse(mutation.body),{content:{headline:'Updated'},expected_version:8});
   await assert.rejects(()=>adapter.publish('shop'),/requires_verified_preview/);
 });
+
+test('signed Store Overview is read-only and project-scoped', async () => {
+  assert.equal(isAllowedStudioCmsBridgeRoute('store/online', 'GET'), true);
+  for (const method of ['POST', 'PUT', 'DELETE']) {
+    assert.equal(isAllowedStudioCmsBridgeRoute('store/online', method), false);
+  }
+  const src = new Request('https://cms-worker.internal/api/internal/studio-cms/store/online');
+  const proof = await signCmsBridgeRequest(src, {
+    secret: SECRET, actor: ACCOUNT, project: PROJECT,
+    now: 1810000000, nonce: '12345678-1234-4abc-9abc-123456789abc',
+  });
+  const signed = new Request(src, { headers: proof });
+  assert.equal((await verifyCmsBridgeRequest(signed, { secret: SECRET, expectedProject: PROJECT, now: 1810000001 })).ok, true);
+  assert.equal((await verifyCmsBridgeRequest(signed, { secret: SECRET, expectedProject: 'proj_other', now: 1810000001 })).ok, false);
+});
+
+test('remote theme editor previews the actual owning Worker route, never a synthetic template', async () => {
+  const called = [];
+  const transport = async (url) => {
+    called.push(url);
+    if (url.includes('/store/online')) {
+      return Response.json({
+        ok: true,
+        store: { url: 'https://fuelnfreetime.com/' },
+        active_theme: { id: 'heuristic', name: 'Heuristic' },
+      });
+    }
+    if (url.includes('/pages/shop')) {
+      return Response.json({ ok: true, page: { slug: 'shop', live_route: '/shop' } });
+    }
+    if (url.includes('/pages/unknown')) {
+      return Response.json({ ok: true, page: { slug: 'unknown', live_route: null } });
+    }
+    return Response.json({ ok: false, error: 'unhandled' }, { status: 404 });
+  };
+  const adapter = createRemoteThemeEditorAdapter('fuelnfreetime', transport);
+  const preview = await adapter.resolvePreview('shop', {});
+  assert.deepEqual(preview, {
+    url: 'https://fuelnfreetime.com/shop', mode: 'published', source: 'owning-worker',
+  });
+  assert.equal(called.filter((url) => url.includes('/store/online')).length, 1);
+  await assert.rejects(() => adapter.resolvePreview('unknown', {}), /no_verified_published_theme_route/);
+});

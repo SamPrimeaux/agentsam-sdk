@@ -74,8 +74,13 @@ function CmsPage() {
   const requestedSlug = (search.site || search.project_slug || search.project || '').trim();
   // Never substitute an unrelated property when an explicit site was requested.
   // On a plain /cms visit, choose only from authenticated properties.
+  // Prefer an installed, reachable CMS Worker for plain /cms visits.
+  // A legacy project containing CMS rows is not necessarily an online store.
   const ownedSite = sites.find((site) => site.slug === requestedSlug) ||
-    (!requestedSlug ? (sites.find((site) => site.can_edit) || sites[0]) : undefined);
+    (!requestedSlug ? (
+      sites.find((site) => site.source === 'worker' && site.can_edit) ||
+      sites.find((site) => site.can_edit) || sites[0]
+    ) : undefined);
   const siteSlug = ownedSite?.slug || '';
   const siteName = ownedSite?.name || requestedSlug || 'Site';
 
@@ -94,7 +99,10 @@ function CmsPage() {
         const response = await studioCmsFetch(
           `/api/cms/render-page?site=${encodeURIComponent(ownedSite.slug)}&page_id=${encodeURIComponent(page.id)}&mode=draft`,
         );
-        if (!response.ok) throw new Error('cms_preview_unavailable');
+        if (!response.ok) {
+          const reason = await response.json().catch(() => ({}));
+          throw new Error(reason?.error || 'cms_preview_unavailable');
+        }
         return { html: await response.text() };
       },
     });
@@ -147,7 +155,9 @@ function CmsPage() {
         <select id="cms-site-select" aria-label="Choose a website" value={siteSlug}
           onChange={(event) => goHub(event.target.value)}
           className="max-w-[min(60vw,340px)] rounded-lg border border-border bg-background px-3 py-1.5 text-foreground">
-          {sites.map((site) => <option key={site.slug} value={site.slug}>{site.name}</option>)}
+          {sites.map((site) => <option key={site.slug} value={site.slug}>
+            {site.name}{site.source === 'worker' ? ' · Connected site' : ' · Content only'}
+          </option>)}
         </select>
         <button type="button" className="ml-auto rounded-lg border border-border px-3 py-1.5 hover:bg-muted"
           onClick={() => navigate({ to: '/sites' })}>All sites</button>

@@ -379,3 +379,34 @@
   flex-wrap: wrap;
   justify-content: flex-end;
 }
+
+
+/* Embedded Studio surface: only an installed, verified theme manifest can
+   override the chrome. No FNF-specific white/orange loading defaults. */
+:root[data-cms-embedded-store="true"][data-cms-theme-loaded="true"] body,
+:root[data-cms-embedded-store="true"][data-cms-theme-loaded="true"] .online-store {
+  background: var(--cms-store-canvas);
+  color: var(--cms-store-ink);
+}
+:root[data-cms-embedded-store="true"][data-cms-theme-loaded="true"] .online-store-card,
+:root[data-cms-embedded-store="true"][data-cms-theme-loaded="true"] .online-store-perf,
+:root[data-cms-embedded-store="true"][data-cms-theme-loaded="true"] .online-store-pill,
+:root[data-cms-embedded-store="true"][data-cms-theme-loaded="true"] .online-store-icon-btn {
+  background: var(--cms-store-surface);
+  color: var(--cms-store-ink);
+  border-color: var(--cms-store-raised);
+}
+:root[data-cms-embedded-store="true"][data-cms-theme-loaded="true"] .online-store-preview,
+:root[data-cms-embedded-store="true"][data-cms-theme-loaded="true"] .online-store-preview-message {
+  background: var(--cms-store-raised);
+}
+:root[data-cms-embedded-store="true"][data-cms-theme-loaded="true"] .online-store-perf .label,
+:root[data-cms-embedded-store="true"][data-cms-theme-loaded="true"] .online-store-theme-sub,
+:root[data-cms-embedded-store="true"][data-cms-theme-loaded="true"] .online-store-drafts-head p,
+:root[data-cms-embedded-store="true"][data-cms-theme-loaded="true"] .online-store-draft-meta {
+  color: var(--cms-store-muted);
+}
+:root[data-cms-embedded-store="true"][data-cms-theme-loaded="true"] .online-store-theme-actions .btn.primary {
+  background: var(--cms-store-accent);
+  color: var(--cms-store-canvas);
+}

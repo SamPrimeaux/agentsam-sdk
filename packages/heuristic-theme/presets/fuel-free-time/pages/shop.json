@@ -1,0 +1,9 @@
+{
+  "$schema": "../../../contracts/page.schema.json",
+  "id": "shop", "route": "/shop", "title": "Shop",
+  "sections": [
+    { "id": "shop-hero", "type": "hero.editorial", "blocks": [{ "id": "shop-hero-copy", "type": "copy.display", "content": { "eyebrow": "Collections", "title": "A lifestyle built from grit — and time." }, "visibility": { "enabled": true } }], "appearance": { "theme": "dark", "width": "full-bleed" }, "motion": { "preset": "blur-recede", "intensity": 0.3 }, "responsive": { "desktop": {}, "tablet": {}, "mobile": {} }, "visibility": { "enabled": true } },
+    { "id": "shop-collections", "type": "collections.editorial-grid", "blocks": [{ "id": "shop-collections-query", "type": "collection.query", "content": { "query": "published" }, "dataBindings": [{ "kind": "collection", "source": "published", "slot": "items" }], "visibility": { "enabled": true } }], "appearance": { "theme": "light", "width": "wide" }, "motion": { "preset": "fade", "intensity": 0.15 }, "responsive": { "desktop": { "columns": 3 }, "tablet": { "columns": 2 }, "mobile": { "columns": 1 } }, "visibility": { "enabled": true } },
+    { "id": "shop-products", "type": "products.grid", "blocks": [{ "id": "shop-product-query", "type": "product.query", "content": { "query": "available" }, "dataBindings": [{ "kind": "product-query", "source": "available", "slot": "items" }], "visibility": { "enabled": true } }], "appearance": { "theme": "dark", "width": "wide" }, "motion": { "preset": "none", "intensity": 0 }, "responsive": { "desktop": { "columns": 4 }, "tablet": { "columns": 2 }, "mobile": { "columns": 2 } }, "visibility": { "enabled": true } }
+  ]
+}

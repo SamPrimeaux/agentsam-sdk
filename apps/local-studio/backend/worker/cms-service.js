@@ -533,21 +533,24 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
       }
     }
 
-    // ── RENDER PAGE (with HTMLRewriter edge partial injection) ──
+    // ── PREVIEW RENDERER INTEGRITY ──
+    // Shared CMS page sections are structured content, not installed theme
+    // templates. Rendering each section as an <h2> was falsely presenting a
+    // generic wireframe as the live website. A site may only serve a draft
+    // preview once its actual theme renderer is installed and can compose the
+    // current draft. Do not cross-wire unrelated project domains as a fallback.
     if (url.pathname === '/api/cms/render-page' && method === 'GET') {
       const pageId = url.searchParams.get('page_id') || url.searchParams.get('id');
       const page = pageId ? await dbClient.getPageById(pageId) : (await dbClient.getPages())[0];
       if (!page) return json({ ok: false, error: 'page_not_found' }, 404);
-      const sections = await dbClient.getSectionsForPage(page.id);
-      const sectionsHtml = sections
-        .filter((s) => s.is_visible)
-        .map((s) => `<section id="${s.id}" data-section-type="${s.section_type}" class="cms-section ${s.css_classes || ''}"><h2>${s.section_name}</h2></section>`)
-        .join('\n');
-      const rawHtml = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>${page.title}</title></head><body data-route="${page.route_path}"><main class="cms-main">${sectionsHtml}</main></body></html>`;
-      const baseResponse = new Response(rawHtml, {
-        headers: { 'content-type': 'text/html; charset=utf-8' },
-      });
-      return injectSitePartials(baseResponse, env, siteSlug);
+      return json({
+        ok: false,
+        error: 'cms_theme_renderer_not_installed',
+        site: siteSlug,
+        page_id: page.id,
+        message: 'This content project has no verified theme/template renderer. No fabricated website preview is available.',
+        missing: ['site_theme_installation', 'page_template', 'draft_renderer'],
+      }, 409);
     }
 
     // ── CONTACTS ──

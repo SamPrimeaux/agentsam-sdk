@@ -6,11 +6,21 @@
   "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js",
-    "./theme": "./src/theme.js"
+    "./theme": "./src/theme.js",
+    "./commerce/manifest": "./theme.json",
+    "./commerce/theme.json": "./theme.json",
+    "./commerce/contracts/*": "./contracts/*",
+    "./commerce/presets/*": "./presets/*",
+    "./commerce/storefront/*": "./storefront/*"
   },
   "files": [
     "src",
-    "README.md"
+    "README.md",
+    "contracts",
+    "presets",
+    "storefront",
+    "theme.json",
+    "theme.schema.json"
   ],
   "scripts": {
     "test": "node --test test/*.test.mjs"

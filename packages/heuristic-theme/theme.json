@@ -1,0 +1,55 @@
+{
+  "$schema": "./theme.schema.json",
+  "id": "heuristic-commerce",
+  "name": "Heuristic Commerce",
+  "version": "0.2.0",
+  "entry": "presets/fuel-free-time/preset.json",
+  "pages": [
+    "home",
+    "shop",
+    "collections",
+    "collection",
+    "product",
+    "cart",
+    "about",
+    "community",
+    "order-confirmation"
+  ],
+  "runtime": {
+    "catalog": "/api/store/products",
+    "collections": "/api/store/collections",
+    "checkout": "/api/store/checkout/session",
+    "cms": "/api/cms",
+    "media": "/media"
+  },
+  "contracts": {
+    "tokens": "heuristic.tokens.v1",
+    "preset": "contracts/preset.schema.json",
+    "page": "contracts/page.schema.json",
+    "sections": "contracts/section.schema.json",
+    "blocks": "contracts/block.schema.json",
+    "collection": "commerce.collection.v1",
+    "product": "commerce.product.v1",
+    "cart": "commerce.cart.v1"
+  },
+  "presets": {
+    "fuel-free-time": {
+      "label": "Fuel & Free Time",
+      "manifest": "presets/fuel-free-time/preset.json"
+    }
+  },
+  "sections": [
+    "hero.editorial",
+    "collections.lineup",
+    "collections.editorial-grid",
+    "products.grid",
+    "story.immersive",
+    "content.feature-grid",
+    "community.callout",
+    "newsletter.signup",
+    "product.purchase-panel",
+    "cart.summary",
+    "order.confirmation"
+  ],
+  "status": "reference-implementation"
+}

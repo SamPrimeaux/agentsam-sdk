@@ -1,0 +1,422 @@
+/* Cart page v1 */
+
+.store-cart-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 4vw, 2.5rem) clamp(1rem, 4vw, 2.5rem) 4rem;
+}
+
+.cart-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.75rem;
+}
+
+.cart-head h1 {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: clamp(2.2rem, 5vw, 3rem);
+  letter-spacing: 0.05em;
+  line-height: 1;
+  margin: 0;
+}
+
+.cart-eyebrow {
+  margin: 0 0 .35rem;
+  color: #e5a558;
+  font-size: .68rem;
+  font-weight: 900;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.cart-progress {
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 14px;
+  background: linear-gradient(90deg, rgba(255,69,0,.11), rgba(0,166,166,.08));
+}
+
+.cart-progress__copy { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: .65rem; color: #c8cdd2; font-size: .82rem; }
+.cart-progress__copy strong { color: #fff; }
+.cart-progress__track { height: 5px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.1); }
+.cart-progress__track span { display: block; width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ff4500, #e5a558, #00a6a6); transition: width .35s ease; }
+
+.cart-head-meta {
+  color: #9aa3ac;
+  font-size: 0.92rem;
+}
+
+.cart-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  gap: clamp(1.25rem, 3vw, 2rem);
+  align-items: start;
+}
+
+.cart-items-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cart-line {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  background: #15181b;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 1rem;
+}
+
+.cart-line img {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 10px;
+  background: #0a0a0a;
+}
+
+.cart-line-body h2 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin: 0 0 0.25rem;
+}
+
+.cart-line-body h2 a:hover {
+  color: #00a6a6;
+}
+
+.cart-line-meta {
+  color: #9aa3ac;
+  font-size: 0.88rem;
+  margin-bottom: 0.65rem;
+}
+
+.cart-line-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.65rem;
+}
+
+.cart-line-total {
+  font-weight: 900;
+  font-size: 1.05rem;
+}
+
+.cart-qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.cart-qty button {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.cart-qty button:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.cart-qty span {
+  min-width: 28px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
+.cart-remove {
+  background: none;
+  border: none;
+  color: #9aa3ac;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  padding: 0;
+}
+
+.cart-remove:hover {
+  color: #ff6b6b;
+}
+
+.cart-empty {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  background: #15181b;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+}
+
+.cart-empty-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 1rem;
+  color: #00a6a6;
+  opacity: 0.85;
+}
+
+.cart-empty h2 {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 1.75rem;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.5rem;
+}
+
+.cart-empty p {
+  color: #9aa3ac;
+  max-width: 32ch;
+  margin: 0 auto 1.25rem;
+}
+
+.cart-empty .store-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.9rem 1.5rem;
+  border-radius: 999px;
+  font-weight: 800;
+  background: #00a6a6;
+  color: #001;
+  text-decoration: none;
+}
+
+.checkout-panel {
+  position: sticky;
+  top: calc(var(--fnf-header, 80px) + 1rem);
+  padding: 1.35rem;
+  background: #15181b;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+}
+
+.checkout-panel h2 {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 1.35rem;
+  letter-spacing: 0.05em;
+  margin: 0 0 1rem;
+}
+
+.checkout-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.checkout-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.9rem;
+  color: #c8cdd2;
+}
+
+.checkout-line strong {
+  color: #fff;
+  font-weight: 700;
+}
+
+.checkout-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-weight: 900;
+  font-size: 1.15rem;
+  margin-bottom: 1.25rem;
+}
+
+.checkout-panel label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 0.45rem;
+  color: #c8cdd2;
+}
+
+.checkout-panel input {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #0a0a0a;
+  color: #fff;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+.checkout-panel input:focus {
+  outline: 2px solid rgba(0, 166, 166, 0.45);
+  border-color: rgba(0, 166, 166, 0.45);
+}
+
+.checkout-panel button[type="submit"] {
+  width: 100%;
+  padding: 1rem;
+  border: none;
+  border-radius: 999px;
+  background: #00a6a6;
+  color: #001;
+  font-weight: 900;
+  font-size: 0.95rem;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+}
+
+.checkout-panel button[type="submit"]:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.checkout-trust {
+  margin-top: 0.85rem;
+  font-size: 0.78rem;
+  color: #9aa3ac;
+  line-height: 1.45;
+}
+
+.checkout-status {
+  margin-top: 0.85rem;
+  font-size: 0.88rem;
+  color: #9aa3ac;
+  line-height: 1.45;
+}
+
+.checkout-status.ok {
+  color: #5dffa8;
+}
+
+.checkout-status.err {
+  color: #ff6b6b;
+}
+
+.cart-continue {
+  display: inline-flex;
+  margin-top: 1rem;
+  color: #9aa3ac;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.cart-continue:hover {
+  color: #fff;
+}
+
+.cart-perks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  margin-top: 2rem;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  background: rgba(255,255,255,.08);
+}
+
+.cart-perks div { display: grid; gap: .2rem; padding: 1rem; background: #111315; }
+.cart-perks strong { font-size: .82rem; }
+.cart-perks span { color: #9aa3ac; font-size: .74rem; }
+
+.checkout-promo {
+  margin: 1rem 0;
+}
+
+.checkout-promo label {
+  display: block;
+  font-size: 0.82rem;
+  color: #9aa3ac;
+  margin-bottom: 0.4rem;
+}
+
+.checkout-promo-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.checkout-promo-row input {
+  flex: 1;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #0a0a0a;
+  color: #fff;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+}
+
+.checkout-promo-row button {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #15181b;
+  color: #fff;
+  border-radius: 10px;
+  padding: 0 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.checkout-promo-msg {
+  min-height: 1.1rem;
+  margin: 0.45rem 0 0;
+  font-size: 0.82rem;
+  color: #9aa3ac;
+}
+
+.checkout-promo-msg.ok {
+  color: #38c172;
+}
+
+.checkout-promo-msg.err {
+  color: #ff6b4a;
+}
+
+.checkout-subtotal span:last-child,
+.checkout-discount span:last-child {
+  color: #c8cdd2;
+}
+
+.checkout-discount span:last-child {
+  color: #38c172;
+}
+
+@media (max-width: 860px) {
+  .cart-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .checkout-panel {
+    position: static;
+  }
+
+  .cart-line {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .cart-line-side {
+    grid-column: 2;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+  .cart-perks { grid-template-columns: 1fr; }
+}
