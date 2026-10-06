@@ -4,8 +4,7 @@
  * The service binding name is resolved from deploy-time bindings, never from a
  * user URL, personal CF token, site name heuristic or shared D1 shadow.
  */
-import { signCmsBridgeRequest } from '../../../../ecommerce-cms-agentsam/backend/cms/studio-bridge-protocol.js';
-import { isAllowedStudioCmsBridgeRoute } from '../../../../ecommerce-cms-agentsam/backend/cms/studio-bridge.js';
+import { signCmsBridgeRequest, isAllowedStudioCmsBridgeRoute } from '../../../../ecommerce-cms-agentsam/backend/cms/studio-bridge-protocol.js';
 
 function response(error, status) {
   return Response.json({ ok: false, error }, { status, headers: { 'cache-control': 'no-store' } });
