@@ -713,10 +713,15 @@ function PluginCustomizeView({
     }
   }
 
+  // Installation or OAuth completion alone never means executable tools are ready.
+  const isRunnable = (row: SettingsPlugin | null | undefined) => Boolean(
+    row?.setupStatus === "connected" && row.enabled && row.toolCount > 0 && row.healthStatus === "healthy"
+  );
+  const installedState = (row: SettingsPlugin) => isRunnable(row)
+    ? "Connected" : row.setupStatus === "connected" ? "Verify tools" : "Needs connection";
   const stateFor = (entry: SettingsDiscoveredPlugin) => {
     const row = plugins.find(plugin=>plugin.pluginKey === entry.pluginKey);
-    if (row?.setupStatus === "connected" && row.enabled && row.toolCount > 0 && row.healthStatus === "healthy") return "Connected";
-    return row || entry.installationId ? "Needs connection" : "Available";
+    return row ? installedState(row) : entry.installationId ? "Needs connection" : "Available";
   };
 
   function iconFor(plugin: { name: string; keywords?: string[] }, size = "size-6") {
