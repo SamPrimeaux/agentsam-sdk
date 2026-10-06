@@ -101,6 +101,21 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
   if (!siteSlug) {
     return json({ ok: false, error: 'site_slug_required', detail: 'Pass ?site= or project_slug — no hardcoded default site.' }, 400);
   }
+  const access = /\/publish$/.test(url.pathname) ? 'publish' : method === 'GET' ? 'read' : 'write';
+  const authorization = await requireCmsSiteAccess(env.DB, actorUserId, siteSlug, access);
+  if (!authorization.ok) return json({ ok: false, error: authorization.error }, authorization.status);
+  const ownedSite = authorization.site;
+  if (ownedSite.source === 'worker') {
+    // Worker-owned sites use their own D1/R2 authority. An archived shadow row
+    // in this database must never be presented as editable live storefront data.
+    return json({
+      ok: false,
+      error: 'cms_remote_site_adapter_unavailable',
+      site: siteSlug,
+      source: 'worker',
+      worker_id: ownedSite.worker_id,
+    }, 503);
+  }
   const dbClient = createCmsDbClient(env.DB, siteSlug);
 
   try {
