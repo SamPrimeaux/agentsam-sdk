@@ -940,9 +940,13 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       try {
         const result = await env.PLUGIN_CATALOG.fetch(official,{method:"GET",headers:{accept:"application/json"}});
         const body = await result.json();
-        return json({ok:result.ok && body?.schema === "agentsam.plugin-catalog/v1",httpStatus:result.status,
-          schema:body?.schema||null,pluginCount:Array.isArray(body?.plugins)?body.plugins.length:0,
-          keys:Array.isArray(body?.plugins)?body.plugins.map(entry=>entry.plugin_key):[]},result.ok?200:503);
+        const discovered = await discoverPublicPlugins(env);
+        return json({ok:result.ok && body?.schema === "agentsam.plugin-catalog/v1" && !discovered.errors.length,
+          httpStatus:result.status,schema:body?.schema||null,
+          pluginCount:Array.isArray(body?.plugins)?body.plugins.length:0,
+          keys:Array.isArray(body?.plugins)?body.plugins.map(entry=>entry.plugin_key):[],
+          discoveryCount:discovered.plugins.length,discoveryErrors:discovered.errors},
+          result.ok && !discovered.errors.length?200:503);
       } catch (error) {
         console.warn("plugin_catalog_binding_probe_failed",error?.name,String(error?.message||"error").slice(0,180));
         return json({ok:false,error:"plugin_binding_fetch_failed",type:String(error?.name||"Error").slice(0,40)},503);
