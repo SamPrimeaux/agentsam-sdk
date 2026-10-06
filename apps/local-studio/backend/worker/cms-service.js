@@ -75,7 +75,7 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
   catch { return json({ ok: false, error: 'unauthorized' }, 401); }
   if (method === 'OPTIONS') return new Response(null, { status: 204 });
   if (url.pathname === '/api/cms/sites' && method === 'GET') {
-    const sites = await listAuthorizedCmsSites(env.DB, actorUserId);
+    const sites = await listAuthorizedCmsSites(env.DB, actorUserId, { remoteWorkerNames: configuredCmsWorkers(env) });
     return json({ ok: true, sites });
   }
 
