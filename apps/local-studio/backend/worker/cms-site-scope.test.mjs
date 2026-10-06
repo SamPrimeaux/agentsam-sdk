@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   CMS_AUTHORIZED_SITES_SQL,
   canAccessCmsSite,
+  canEditCmsSite,
   listAuthorizedCmsSites,
 } from './cms-site-scope.js';
 
