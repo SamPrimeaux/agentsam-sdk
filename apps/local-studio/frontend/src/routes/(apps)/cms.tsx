@@ -8,10 +8,7 @@ import { getActiveThemeId } from '@/lib/themes/projects';
 import { useMemo, useState, useEffect } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ContentStudioPage } from "@/components/content/ContentStudioPage";
-import {
-  parseCmsNavigatePath,
-  type CmsPanel,
-} from "@/lib/cms/parseCmsNavigatePath";
+import type { CmsPanel } from "@/lib/cms/parseCmsNavigatePath";
 
 interface CmsSearchParams {
   theme_project?: string;
