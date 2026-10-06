@@ -57,7 +57,7 @@ export function SitesWorkspace() {
           <h3 className="mt-4 line-clamp-2 text-lg font-semibold">{project.name}</h3>
           <p className="mt-1 text-xs text-muted-foreground">{project.pages?.length || 0} page(s) · {project.sourcePackage || 'Original site'}</p>
           <p className="mt-2 truncate font-mono text-[10px] text-muted-foreground" title={project.id}>{project.id}</p>
-          <div className="mt-auto flex items-center justify-between gap-2 pt-5"><span className="text-[11px] text-muted-foreground">{project.updatedAt ? new Date(project.updatedAt).toLocaleDateString() : ''}</span><button className={control} onClick={() => openThemeProject(project.id)}><Pencil size={14}/> Edit site</button></div>
+          <div className="mt-auto flex items-center justify-between gap-2 pt-5"><span className="text-[11px] text-muted-foreground">{project.updatedAt ? new Date(project.updatedAt).toLocaleDateString() : ''}</span><button className={control} onClick={() => openEditor(project.id)}><Pencil size={14}/> Edit site</button></div>
         </article>)}
       </div>
       <div className="grid gap-3 md:grid-cols-3">
