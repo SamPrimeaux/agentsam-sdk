@@ -41,6 +41,7 @@
   },
   "exports": {
     "./theme-editor/mount": "./frontend/theme-editor/mount.mjs",
+    "./store/mount": "./frontend/store/mount.mjs",
     "./theme-editor/bridge": "./frontend/theme-editor/bridge.mjs",
     "./theme-editor/project": "./frontend/theme-editor/project.mjs",
     "./theme-editor/cms-adapter": "./frontend/theme-editor/cms-adapter.mjs",
