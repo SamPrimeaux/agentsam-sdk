@@ -37,12 +37,34 @@ export const Route = createFileRoute("/(apps)/cms")({
   component: CmsPage,
 });
 
-/** Known hosted CMS authorities. Never surface fixture/donor sites as customer properties. */
-const SITE_CATALOG = [
-  { slug: "agentsam-sdk", name: "Agent Sam SDK", domain: "agentsam.inneranimalmedia.com" },
-  { slug: "inneranimalmedia", name: "Inner Animal Media", domain: "inneranimalmedia.com" },
-  { slug: "meauxbility", name: "Meauxbility", domain: "meauxbility.org" },
-];
+interface AuthorizedCmsSite {
+  id: string;
+  slug: string;
+  name: string;
+  domain?: string | null;
+  source: 'shared-d1' | 'worker';
+  worker_id?: string | null;
+  can_edit: boolean;
+  can_publish: boolean;
+}
+
+/** Every website comes from the authenticated project/tenant registry. */
+function useAuthorizedCmsSites() {
+  const [sites, setSites] = useState<AuthorizedCmsSite[]>([]);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let mounted = true;
+    studioCmsFetch('/api/cms/sites').then(async (response) => {
+      const result = await response.json();
+      if (!response.ok || !result.ok) throw new Error(result.error || 'cms_sites_unavailable');
+      if (mounted) setSites(result.sites || []);
+    }).catch((cause) => { if (mounted) setError(String(cause)); })
+      .finally(() => { if (mounted) setLoading(false); });
+    return () => { mounted = false; };
+  }, []);
+  return { sites, error, loading };
+}
 
 function CmsPage() {
   const search = Route.useSearch();
