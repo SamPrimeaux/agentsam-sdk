@@ -410,3 +410,17 @@
   background: var(--cms-store-accent);
   color: var(--cms-store-canvas);
 }
+
+
+:root[data-cms-embedded-store="true"][data-cms-theme-loaded="true"] .online-store-title,
+:root[data-cms-embedded-store="true"][data-cms-theme-loaded="true"] .online-store-theme-name,
+:root[data-cms-embedded-store="true"][data-cms-theme-loaded="true"] .online-store-version,
+:root[data-cms-embedded-store="true"][data-cms-theme-loaded="true"] .online-store-perf-stat .value,
+:root[data-cms-embedded-store="true"][data-cms-theme-loaded="true"] .online-store-drafts-head h2 {
+  color: var(--cms-store-ink);
+}
+:root[data-cms-embedded-store="true"][data-cms-theme-loaded="true"] .online-store-perf-period,
+:root[data-cms-embedded-store="true"][data-cms-theme-loaded="true"] .online-store-perf-stat,
+:root[data-cms-embedded-store="true"][data-cms-theme-loaded="true"] .online-store-draft-row {
+  border-color: var(--cms-store-raised);
+}

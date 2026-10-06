@@ -84,6 +84,12 @@ try {
     'Real installed Worker is preferred over a legacy project on /cms');
   const store = page.frameLocator('iframe[title*="Online Store"]');
   await store.locator('#active-theme-name').getByText('Heuristic').waitFor({ timeout: 14000 });
+  const palette = await store.locator('.online-store-title').evaluate((el) => ({
+    title: getComputedStyle(el).color,
+    canvas: getComputedStyle(el.ownerDocument.body).backgroundColor,
+  }));
+  assert.equal(palette.title, 'rgb(247, 245, 240)', 'Active-theme ink remains readable on dark canvas');
+  assert.equal(palette.canvas, 'rgb(9, 9, 9)', 'Active Heuristic canvas replaces hardcoded white');
   assert.equal(await store.locator('html').evaluate((root) => root.dataset.cmsThemeId), 'heuristic-commerce',
     'Store consumes installed active-theme manifest');
   assert.equal(new URL(await store.locator('#theme-preview-desktop').getAttribute('src')).origin,

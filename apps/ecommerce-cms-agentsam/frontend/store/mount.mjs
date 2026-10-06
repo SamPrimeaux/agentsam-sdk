@@ -29,6 +29,9 @@ export async function mountOnlineStore(frame, host, { assetsBase = '/commerce-st
     };
     const themeId = appearance?.theme_id;
     if (!themeId || !Object.values(palette).every((v) => typeof v === 'string' && /^#[a-f0-9]{3,8}$/i.test(v))) return;
+    // Rebind the FNF admin's original semantic foreground variable too;
+    // otherwise its light-mode #171717 ink remains on the dark Heuristic canvas.
+    doc.documentElement.style.setProperty('--c-ink', palette.ink);
     for (const [name, value] of Object.entries(palette)) {
       doc.documentElement.style.setProperty('--cms-store-' + name, value);
     }
