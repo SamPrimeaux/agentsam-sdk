@@ -241,6 +241,10 @@ export type LocalStudioDiscoveredPlugin = {
   tools: string[];
   toolCount: number;
   skillCount: number;
+  oauthScopes: string[];
+  readOnlyScopes: string[];
+  oauthResource: string | null;
+  toolPermissions: {id:string;title:string;scopes:string[];readOnly:boolean;requiresApproval:boolean}[];
   endpointUrl: string;
   catalogUrl: string;
   transport: string;
@@ -302,4 +306,19 @@ export function installLocalStudioPublicPlugin(pluginKey: string) {
 export function removeLocalStudioPublicPlugin(pluginId: string) {
   if (!/^plg_[a-z0-9]+$/i.test(pluginId)) throw new Error('plugin_id_invalid');
   return pluginCatalogRequest<{ok:true;removed:true}>('DELETE','/api/plugins/'+encodeURIComponent(pluginId));
+}
+
+
+export function beginLocalStudioPublicPluginOAuth(pluginId:string,allowWrites=false) {
+  if(!/^plg_[a-z0-9]+$/i.test(pluginId))throw new Error('plugin_id_invalid');
+  return pluginCatalogRequest<{ok:boolean;authorize_url:string;status:string}>(
+    'POST','/api/plugins/'+encodeURIComponent(pluginId)+'/oauth/start',
+    {allow_writes:allowWrites,desktop:isPackagedDesktop()},
+  );
+}
+export function disconnectLocalStudioPublicPlugin(pluginId:string) {
+  if(!/^plg_[a-z0-9]+$/i.test(pluginId))throw new Error('plugin_id_invalid');
+  return pluginCatalogRequest<{ok:boolean;disconnected:boolean}>(
+    'POST','/api/plugins/'+encodeURIComponent(pluginId)+'/oauth/disconnect',{}
+  );
 }
