@@ -16,6 +16,7 @@ import { drainAssetJobs, processAssetJobById } from "./assets/product-optimize.j
 import { handleStoreApi } from "./store/api.js";
 import { handleAttributionApi } from "./attribution/api.js";
 import { handlePublicCmsApi } from "./cms/api.js";
+import { handleStudioCmsBridge } from "./cms/studio-bridge.js";
 import { handleCmsWarmInternal } from "./cms/deploy.js";
 import {
   serveStorefrontPage,
