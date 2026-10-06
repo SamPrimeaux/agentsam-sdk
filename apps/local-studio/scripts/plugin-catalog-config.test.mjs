@@ -10,7 +10,9 @@ test("Local Studio Worker includes a trusted first-party plugin catalog", () => 
   assert.ok(setting, "missing AGENTSAM_PLUGIN_CATALOG_URLS in deploy config");
   const sources = JSON.parse(JSON.parse(setting[1]));
   assert.ok(Array.isArray(sources) && sources.length > 0 && sources.length <= 8);
-  assert.ok(sources.includes("https://agentsam-plugin-mcp.meauxbility.workers.dev/catalog/plugins"));
+  assert.ok(sources.includes("https://plugins.inneranimalmedia.com/catalog/plugins"));
+  assert.match(config, /"binding": "PLUGIN_CATALOG"/);
+  assert.match(config, /"service": "agentsam-plugin-mcp"/);
   for (const value of sources) {
     const url = new URL(value);
     assert.equal(url.protocol, "https:");
