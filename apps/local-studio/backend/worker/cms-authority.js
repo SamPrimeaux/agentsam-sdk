@@ -115,9 +115,9 @@ export async function listAuthorizedCmsSites(db, actorUserId, { remoteWorkerName
   }).filter(Boolean);
 }
 
-export async function requireCmsSiteAccess(db, actorUserId, siteSlug, access = 'read') {
+export async function requireCmsSiteAccess(db, actorUserId, siteSlug, access = 'read', opts = {}) {
   const slug = assertCmsSlug(siteSlug);
-  const sites = await listAuthorizedCmsSites(db, actorUserId);
+  const sites = await listAuthorizedCmsSites(db, actorUserId, opts);
   const site = sites.find((candidate) => candidate.slug === slug);
   if (!site) return { ok: false, status: 404, error: 'cms_site_not_found_or_not_authorized' };
   if (access !== 'read' && !site.can_edit) {
