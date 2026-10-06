@@ -8,7 +8,7 @@ on:
       - 'apps/local-studio/backend/worker/cms-*.js'
       - 'apps/ecommerce-cms-agentsam/backend/cms/studio-bridge*.js'
       - 'apps/ecommerce-cms-agentsam/frontend/theme-editor/remote-worker-adapter.mjs'
-      - 'test/cms-multisite-security.test.mjs'
+      - 'test/integration/cms-multisite-security.test.mjs'
       - '.github/workflows/cms-multisite.yml'
 jobs:
   cms-contract:
@@ -29,4 +29,4 @@ jobs:
           node --check apps/ecommerce-cms-agentsam/backend/cms/studio-bridge-protocol.js
           node --check apps/ecommerce-cms-agentsam/frontend/theme-editor/remote-worker-adapter.mjs
       - name: Authorization, signature and optimistic version tests
-        run: node --test test/cms-multisite-security.test.mjs
+        run: node --test test/integration/cms-multisite-security.test.mjs
