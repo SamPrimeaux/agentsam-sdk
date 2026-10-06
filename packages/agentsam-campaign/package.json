@@ -10,6 +10,7 @@
   "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js",
+    "./project": "./src/project.js",
     "./package.json": "./package.json"
   },
   "files": [
