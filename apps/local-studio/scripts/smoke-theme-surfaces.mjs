@@ -92,6 +92,13 @@ try {
     try { await adapter.saveDraft('home', section.key, section.content, 0); } catch (error) { conflict = error.status === 409; }
     const loaded = createThemeProjectAdapter(saved, store);
     const updated = (await loaded.resolvePreview('home')).html;
+    const chromePage = extractThemePage('<body><header aria-label="Site header"><nav><ul><li><a href="/">Home</a></li><li><a href="/about">About</a></li></ul></nav></header><main><section id="built-in-the-garage"><h2>Built in the Garage</h2><p>Real section copy</p></section></main><footer><p>Footer copy</p></footer></body>');
+    const chromeSummary = chromePage.sections.map((section) => ({
+      label: section.schema.label,
+      zone: section.schema.zone,
+      blockCount: section.schema.blocks.length,
+      fieldKeys: section.schema.fields.map((field) => field.key),
+    }));
     const blockPage = extractThemePage('<main><section><article><h2>One</h2></article><article><h2>Two</h2></article></section></main>');
     saved.pages = [blockPage];
     const blocks = createThemeProjectAdapter(saved, store);
