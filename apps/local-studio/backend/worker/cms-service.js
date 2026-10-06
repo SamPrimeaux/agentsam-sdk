@@ -115,6 +115,9 @@ export async function handleCmsWorkerRequest(request, env, { userId = null } = {
   if (!siteSlug) {
     return json({ ok: false, error: 'site_slug_required', detail: 'Pass ?site= or project_slug — no hardcoded default site.' }, 400);
   }
+  if (!canAccessCmsSite(authorizedSites, siteSlug)) {
+    return json({ ok: false, error: 'cms_site_not_allowed' }, 403);
+  }
   const dbClient = createCmsDbClient(env.DB, siteSlug);
 
   try {
