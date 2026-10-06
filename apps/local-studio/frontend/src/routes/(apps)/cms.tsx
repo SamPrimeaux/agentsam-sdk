@@ -4,6 +4,8 @@ import { ThemeStorePage } from '@/components/themes/ThemeStorePage';
 import { ThemeEditorFrame } from '@/components/themes/ThemeEditorFrame';
 import { ThemeProjectEditor } from '@/components/themes/ThemeProjectEditor';
 import { studioCmsFetch } from '@/lib/cms/transport';
+// @ts-ignore Portable authenticated site discovery module.
+import { loadAuthorizedCmsSiteCatalog, selectAuthorizedCmsSite } from '@/lib/cms/site-catalog.mjs';
 import { getActiveThemeId } from '@/lib/themes/projects';
 import { useMemo, useState, useEffect } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
