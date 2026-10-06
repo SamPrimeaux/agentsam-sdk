@@ -101,7 +101,9 @@ export function createCmsDbClient(db, rawProjectSlug) {
       return res.results || [];
     },
 
-    async createPage({ id, title, slug, routePath, pageType, status = 'draft', tenantId = 'tenant_sam_primeaux' }) {
+    async createPage({ id, title, slug, routePath, pageType, status = 'draft', tenantId, projectId }) {
+      if (!tenantId || !projectId) throw new Error('cms_page_authorized_project_and_tenant_required');
+      if (status !== 'draft') throw new Error('cms_page_must_start_as_draft');
       const pageId = id || `page_${projectSlug}_${slug}_${Date.now().toString(36)}`;
       const now = Math.floor(Date.now() / 1000);
       await db
