@@ -16,6 +16,8 @@ export function SitesStudioPage() {
   return <SitesWorkspace />;
 }
 export function SitesWorkspace() {
+  const navigate = useNavigate();
+  const openEditor = (id: string) => { void navigate({ to: '/cms', search: { view: 'editor', theme_project: id } }); };
   const [projects, setProjects] = useState<any[]>([]);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
