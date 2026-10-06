@@ -79,6 +79,19 @@ export async function handleCmsWorkerRequest(request, env, { userId = null } = {
     });
   }
 
+  if (!userId) return json({ ok: false, error: 'unauthorized' }, 401);
+
+  // Every CMS route, not only site discovery, is constrained to the same
+  // owner/workspace membership. Passing ?site= is never an authorization grant.
+  const authorizedSites = await listAuthorizedCmsSites(env.DB, userId);
+  if (url.pathname === '/api/cms/websites' && method === 'GET') {
+    return json({
+      ok: true,
+      websites: authorizedSites,
+      primary_project_slug: authorizedSites[0]?.slug || null,
+    });
+  }
+
   let body = null;
   let formData = null;
   if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
