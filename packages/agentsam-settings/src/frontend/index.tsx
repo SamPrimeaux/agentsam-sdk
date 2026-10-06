@@ -713,10 +713,15 @@ function PluginCustomizeView({
     }
   }
 
+  // Installation or OAuth completion alone never means executable tools are ready.
+  const isRunnable = (row: SettingsPlugin | null | undefined) => Boolean(
+    row?.setupStatus === "connected" && row.enabled && row.toolCount > 0 && row.healthStatus === "healthy"
+  );
+  const installedState = (row: SettingsPlugin) => isRunnable(row)
+    ? "Connected" : row.setupStatus === "connected" ? "Verify tools" : "Needs connection";
   const stateFor = (entry: SettingsDiscoveredPlugin) => {
     const row = plugins.find(plugin=>plugin.pluginKey === entry.pluginKey);
-    if (row?.setupStatus === "connected" && row.enabled && row.toolCount > 0 && row.healthStatus === "healthy") return "Connected";
-    return row || entry.installationId ? "Needs connection" : "Available";
+    return row ? installedState(row) : entry.installationId ? "Needs connection" : "Available";
   };
 
   function iconFor(plugin: { name: string; keywords?: string[] }, size = "size-6") {
@@ -776,11 +781,13 @@ function PluginCustomizeView({
                     aria-label={"View installed "+plugin.name}
                     className="group flex w-[100px] shrink-0 flex-col items-center gap-2 rounded-xl p-2 text-center hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400">
                     <span className="relative flex size-[67px] items-center justify-center overflow-hidden rounded-[20px] border border-border/90 bg-muted/35 text-foreground/85 shadow-[0_8px_20px_-14px_rgba(0,0,0,0.5)]">
-                      {plugin.iconUrl ? <img src={plugin.iconUrl} alt={plugin.iconAlt || ""} className={cx("size-full",plugin.iconFit==="cover"?"object-cover":"object-contain p-2.5")}/> : iconFor(matched ?? plugin,"size-7")}
-                      <span className={cx("absolute bottom-1 right-1 size-2.5 rounded-full border-2 border-background",plugin.setupStatus==="connected"&&plugin.enabled?"bg-emerald-400":"bg-amber-400")}/>
+                      {iconFor(matched ?? plugin,"size-7")}
+                      {plugin.iconUrl ? <img src={plugin.iconUrl} alt={plugin.iconAlt || ""} onError={event=>{event.currentTarget.hidden=true;}}
+                        className={cx("absolute inset-0 size-full bg-muted/35",plugin.iconFit==="cover"?"object-cover":"object-contain p-2.5")}/> : null}
+                      <span className={cx("absolute bottom-1 right-1 size-2.5 rounded-full border-2 border-background",isRunnable(plugin)?"bg-emerald-400":"bg-amber-400")}/>
                     </span>
                     <span className="w-full truncate text-[11px] font-medium text-foreground">{plugin.name}</span>
-                    <span className="w-full truncate text-[9px] text-muted-foreground">{plugin.setupStatus==="connected"?"Connected":plugin.setupStatus==="unconfigured"?"Needs setup":plugin.setupStatus}</span>
+                    <span className="w-full truncate text-[9px] text-muted-foreground">{installedState(plugin)}</span>
                   </button>
                 );
               })}
@@ -797,7 +804,7 @@ function PluginCustomizeView({
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h3 className="text-[16px] font-semibold tracking-[-0.025em]">Discover plugins</h3>
-              <p className="mt-1 text-[11px] text-muted-foreground">Published plugin packages from configured, verified catalog sources.</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">Published plugin packages from configured, verified catalog sources. {catalog ? `${catalog.configuredSources} source${catalog.configuredSources===1?"":"s"} configured` : "Checking sources…"}</p>
             </div>
             <span className="text-[11px] text-muted-foreground">{filtered.length} plugins</span>
           </div>
@@ -811,7 +818,7 @@ function PluginCustomizeView({
             {categories.map(category=>(
               <button key={category} type="button" aria-pressed={activeCategory===category} onClick={()=>setActiveCategory(category)}
                 className={cx("shrink-0 rounded-full border px-3 py-1.5 text-[11px] transition-colors",
-                  activeCategory===category ? "border-foreground/80 bg-foreground font-medium text-background" :
+                  activeCategory===category ? "border-violet-400/50 bg-violet-400/15 font-medium text-foreground" :
                     "border-border/70 bg-background/45 text-muted-foreground hover:text-foreground")}>
                 {category==="all"?"All plugins":category}
               </button>
@@ -820,7 +827,7 @@ function PluginCustomizeView({
           {catalogError ? (
             <div className="flex items-start gap-2 rounded-xl border border-amber-400/25 bg-amber-400/[0.065] p-3 text-[11px] text-amber-200">
               <AlertTriangle className="mt-0.5 size-4 shrink-0"/>
-              <span>{catalogError}</span>
+              <span>{catalogError}{catalog?.errors?.length ? ` Affected source${catalog.errors.length===1?"":"s"}: ${catalog.errors.map(error=>error.source).join(", ")}.` : ""}</span>
             </div>
           ) : null}
           {loading && !catalog ? <div className="rounded-2xl border border-border/70 p-8 text-center text-[12px] text-muted-foreground">Loading verified plugin catalog…</div>
@@ -883,8 +890,8 @@ function PluginCustomizeView({
                 <p className="text-[16px] font-semibold tracking-[-0.025em]">{name}</p>
                 <p className="text-[11px] text-muted-foreground">{selectedCatalog?.publisher || installed?.providerKey || "Plugin provider"}</p>
                 <span className={cx("inline-block rounded-full border px-2 py-0.5 text-[10px]",stateClasses(
-                  selectedCatalog ? stateFor(selectedCatalog) : installed?.setupStatus==="connected"&&installed.enabled?"Connected":"Needs connection"))}>
-                  {selectedCatalog ? stateFor(selectedCatalog) : installed?.setupStatus==="connected"&&installed.enabled?"Connected":"Needs connection"}
+                  selectedCatalog ? stateFor(selectedCatalog) : installed ? installedState(installed) : "Available"))}>
+                  {selectedCatalog ? stateFor(selectedCatalog) : installed ? installedState(installed) : "Available"}
                 </span>
               </div>
             </div>

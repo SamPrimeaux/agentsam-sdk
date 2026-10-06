@@ -42,7 +42,7 @@ test('agentsam-sdk Worker uses the backend Worker entry, custom domain only, and
   assert.doesNotMatch(wrangler, /"OLLAMA_BASE_URL"\s*:/);
   assert.doesNotMatch(wrangler, /"OLLAMA_MODEL"\s*:/);
   assert.doesNotMatch(wrangler, /"OLLAMA_EMBED_MODEL"\s*:/);
-  assert.doesNotMatch(wrangler, /workers\.dev/);
+  // Third-party catalog URLs may be hosted on workers.dev; only this Worker\'s\n  // deployment route must remain custom-domain-only.\n  const deploymentRoutes = wrangler.match(/"routes"\\s*:\\s*\\[[\\s\\S]*?\\]/)?.[0] || "";\n  assert.doesNotMatch(deploymentRoutes, /workers\\.dev/);
 });
 
 test('canonical Worker preserves vault routes and delegates app traffic to Nitro', () => {

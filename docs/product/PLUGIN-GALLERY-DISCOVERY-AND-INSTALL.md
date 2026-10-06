@@ -1,7 +1,7 @@
 # AgentSam Plugin Gallery — Discovery and Installation
 
 Date: 2026-10-06
-Status: Discovery and account-registration slice. Authenticated remote execution is not yet complete.
+Status: Catalog discovery, account registration, and IAM OAuth-mediated tool authorization are implemented and integration-tested. A fresh-account live browser/OAuth smoke and independent external-host smoke remain release gates.
 
 ## Authorities
 
@@ -63,6 +63,33 @@ Copy prompt and Copy MCP endpoint work without pretending remote tools can alrea
 
 Third-party ChatGPT plugins without compatible public MCP endpoints, credentials and permissions cannot be made usable merely by importing their name/icon.
 
-## Remaining v1 connection work
+## Host configuration and third-party onboarding
 
-Implement the OAuth authorization callback, secure token custody, tool discovery, scope enforcement and health probes for first-party Brand/Campaign; test real read/write actions with user consent before marking them connected. Repeat for independently hosted third-party catalogs with explicit source approval.
+`apps/local-studio/backend/wrangler.jsonc` owns the first-party catalog source in the deployment configuration:
+
+```json
+"AGENTSAM_PLUGIN_CATALOG_URLS": "[\"https://agentsam-plugin-mcp.meauxbility.workers.dev/catalog/plugins\"]"
+```
+
+The Worker treats this string as a JSON list of reviewed HTTPS sources. Each additional compatible provider can be added to that list **after operator review** and without touching the portable Settings UI. Preserve the first-party source when extending the array; a deploy must not silently reset the catalog. The app's catalog-validation test protects the baseline.
+
+An external provider must publish a compatible `agentsam.plugin-catalog/v1` feed with same-origin `/mcp` endpoint, Streamable HTTP transport, and OAuth authorization. Installation only creates a disabled account registration. OAuth authorization, authenticated MCP tools/list registration, health verification, and explicit write approvals happen separately. Unsupported third-party ChatGPT apps, OAuth schemes, or arbitrary MCP URLs must not be surfaced as ready-to-use plugins without a compatible adapter.
+
+User journey:
+
+1. Browse verified plugin catalog, inspect real permissions/tools and publisher.
+2. Add to Studio (creates account-scoped installation with no executable authority).
+3. Connect using provider OAuth; grant only requested scopes.
+4. Verify active registered tools and health; only then show **Connected**.
+5. Execute an approved read operation; require explicit review for permitted write operations.
+6. Disconnect/revoke; verify tools are no longer executable.
+
+### Release verification
+
+- `node --test apps/local-studio/scripts/plugin-catalog-config.test.mjs` proves the deployed source configuration is present.
+- `node apps/local-studio/scripts/plugin-discovery.test.mjs` proves URL/trust validation, generic multi-catalog composition and account-scoped installation.
+- `node apps/local-studio/scripts/plugin-oauth-integration.test.mjs` covers OAuth, identity matching, registered tool scopes and approved writes.
+- `npm run typecheck --prefix packages/agentsam-settings` and `npm run test --prefix packages/agentsam-settings` verify the portable UI.
+- **Still required before claiming live customer readiness:** deploy the reviewed changes, run Brand/Campaign OAuth on a fresh real account, verify `tools/list` and one read call, test a write with approval and its denial, then independently connect one reviewed third-party compatible MCP catalog.
+
+Do not conflate passing local integration tests, successful installation, and a genuinely verified live user connection.
