@@ -929,6 +929,25 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
         return json({ok:false,error:code},code.includes('not_found')?404:code.includes('unavailable')?503:400);
       }
     }
+    // Public read-only health of the already-public plugin catalog. No account data,
+    // grants, credentials or installed tools are exposed here.
+    if (url.pathname === "/api/public/plugin-catalog/health") {
+      if (request.method !== "GET") return json({ok:false,error:"method_not_allowed"},405);
+      const sources = JSON.parse(String(env.AGENTSAM_PLUGIN_CATALOG_URLS || "[]"));
+      const official = sources.find(value=>new URL(value).origin === "https://plugins.inneranimalmedia.com");
+      if (!official) return json({ok:false,error:"first_party_catalog_not_configured"},503);
+      if (typeof env.PLUGIN_CATALOG?.fetch !== "function") return json({ok:false,error:"plugin_service_binding_missing"},503);
+      try {
+        const result = await env.PLUGIN_CATALOG.fetch(official,{method:"GET",headers:{accept:"application/json"}});
+        const body = await result.json();
+        return json({ok:result.ok && body?.schema === "agentsam.plugin-catalog/v1",httpStatus:result.status,
+          schema:body?.schema||null,pluginCount:Array.isArray(body?.plugins)?body.plugins.length:0,
+          keys:Array.isArray(body?.plugins)?body.plugins.map(entry=>entry.plugin_key):[]},result.ok?200:503);
+      } catch (error) {
+        console.warn("plugin_catalog_binding_probe_failed",error?.name,String(error?.message||"error").slice(0,180));
+        return json({ok:false,error:"plugin_binding_fetch_failed",type:String(error?.name||"Error").slice(0,40)},503);
+      }
+    }
     if (isPluginCatalog) {
       if (request.method !== "GET") return json({ok:false,error:"method_not_allowed"},405,{allow:"GET"});
       const userId = await sessionUser();
