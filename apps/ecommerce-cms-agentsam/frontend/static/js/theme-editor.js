@@ -574,7 +574,14 @@
 
     const fields = currentSchema().filter(function(field) { return fieldKind(field) === activeTab; });
     if (!fields.length) {
-      byId('te-inspector-body').innerHTML = '<div class="te-empty">No ' + cmsEscapeHtml(activeTab) + ' controls are registered for this section.</div>';
+      const editor = section.content && section.content.__editor || {};
+      const blockCount = Array.isArray(editor.blocks) ? editor.blocks.length : 0;
+      const message = activeBlockId
+        ? 'This block does not expose any ' + activeTab + ' fields.'
+        : blockCount
+          ? 'This section is built from ' + blockCount + ' editable block' + (blockCount === 1 ? '' : 's') + '. Select a block in the page structure to edit its ' + activeTab + '.'
+          : 'This section does not expose any ' + activeTab + ' fields.';
+      byId('te-inspector-body').innerHTML = '<div class="te-empty">' + cmsEscapeHtml(message) + '</div>';
       return;
     }
 
