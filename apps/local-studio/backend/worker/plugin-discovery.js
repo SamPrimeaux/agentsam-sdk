@@ -182,8 +182,17 @@ export async function installFromCatalog(env,accountId,pluginKey,fetcher=fetch) 
   if (existing && existing.installation_key !== 'catalog-v1') {
     throw new Error('plugin_installation_conflict');
   }
-  if (existing && existing.setup_status === 'connected' && existing.endpoint_url !== entry.endpointUrl) {
-    throw new Error('plugin_endpoint_changed_requires_reconnect');
+  if (existing) {
+    // Idempotent: a second add request never overwrites an existing authorized
+    // connection, tool inventory, custom scopes, health state, or user choices.
+    if (existing.endpoint_url !== entry.endpointUrl) {
+      throw new Error('plugin_endpoint_changed_requires_reconnect');
+    }
+    return {
+      pluginId: existing.id,
+      pluginKey: entry.pluginKey,
+      status: existing.setup_status === 'connected' ? 'connected' : 'requires_connection',
+    };
   }
   const manifest = {
     plugin_key: entry.pluginKey,
@@ -211,9 +220,7 @@ export async function installFromCatalog(env,accountId,pluginKey,fetcher=fetch) 
     manifest,
     preserveEnabled:true,
   });
-  if (!existing) {
-    await updatePluginPreferences(env.DB,{accountId,pluginId:installed.plugin_id,enabled:false,composerVisible:false});
-  }
+  await updatePluginPreferences(env.DB,{accountId,pluginId:installed.plugin_id,enabled:false,composerVisible:false});
   return {pluginId:installed.plugin_id,pluginKey:entry.pluginKey,status:'requires_connection'};
 }
 

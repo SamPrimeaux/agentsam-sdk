@@ -117,6 +117,30 @@ test('installation saves an account-scoped, disabled record without executable t
   assert.equal(calls.filter(row=>row.sql.includes('INSERT INTO agentsam_tools')).length,0);
   assert.ok(calls.some(row=>row.sql.includes('is_enabled=?') && row.args.includes(0)));
 });
+test('adding an already connected plugin preserves its authority and registered tools', async()=>{
+  const installed={
+    id:'plg_previously123',
+    plugin_key:'agentsam-example',
+    installation_key:'catalog-v1',
+    environment:'production',
+    setup_status:'connected',
+    endpoint_url:'https://plugins.example.org/mcp/example',
+    is_enabled:1,
+  };
+  const registryCalls=[];
+  const db={
+    prepare(sql){
+      return {
+        bind(){return this},
+        async all(){return {results:sql.includes('SELECT * FROM agentsam_plugins')?[installed]:[{id:'t1',plugin_key:'agentsam-example',plugin_id:installed.id}]}},
+        async run(){throw new Error('unexpected_mutation_of_existing_installation')},
+      }
+    }
+  };
+  const result=await installFromCatalog({...env,DB:db},'au_user','agentsam-example',fetcher);
+  assert.equal(result.pluginId,installed.id);
+  assert.equal(result.status,'connected');
+});
 test('deletion only removes account-owned catalog installations', async()=>{
   const queries=[];
   const db={
