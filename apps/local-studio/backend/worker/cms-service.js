@@ -299,9 +299,9 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
     // ── PAGE BY ID / UPDATE / PUBLISH ──
     const pagePublishMatch = url.pathname.match(/^\/api\/cms\/pages\/([^/]+)\/publish$/);
     if (pagePublishMatch && method === 'POST') {
-      const pageId = decodeURIComponent(pagePublishMatch[1]);
-      const page = await dbClient.publishPage(pageId);
-      return json({ ok: true, page });
+      // Marking a D1 row 'published' does not publish AgentSam's R2-backed
+      // website. Block until real artifact promotion + rollback is installed.
+      return json({ ok: false, error: 'cms_publish_requires_renderer_promotion_and_receipt' }, 409);
     }
 
     const pageMatch = url.pathname.match(/^\/api\/cms\/pages\/([^/]+)$/);
