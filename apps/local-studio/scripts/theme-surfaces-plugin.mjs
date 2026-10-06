@@ -47,7 +47,8 @@ export function discoverThemeSurfaces(root = repoRoot) {
         }
       }
     }
-    const home = pages.find((page) => /(?:^|\/)index\.html$/.test(page.url)) || pages[0];
+    pages.sort((a, b) => (a.slug === 'home' ? -1 : b.slug === 'home' ? 1 : a.slug.localeCompare(b.slug)));
+    const home = pages.find((page) => page.slug === 'home') || pages.find((page) => /(?:^|\/)index\.html$/.test(page.url)) || pages[0];
     themes.set(pkg.name, {
       id, name: meta.displayName || id.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
       packageName: pkg.name, version: pkg.version, category: meta.category || meta.family || 'Theme',

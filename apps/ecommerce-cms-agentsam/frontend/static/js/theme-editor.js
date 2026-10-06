@@ -249,9 +249,16 @@
     byId('te-tree-title').textContent = (pageData && pageData.title) || humanize(slug);
     byId('te-tree-path').textContent = pageRoute(slug);
 
+    let lastTreeZone = null;
     const rows = sections.map(function(section, index) {
       const schema = schemaForSection(section) || {};
       const fields = schema.fields || [];
+      const labelHint = String(schema.label || section.key || '');
+      const zone = String(schema.zone || (/header/i.test(labelHint) ? 'HEADER' : /footer/i.test(labelHint) ? 'FOOTER' : 'BODY')).toUpperCase();
+      const zoneHeading = zone !== lastTreeZone
+        ? '<div class="te-tree-group__label">' + cmsEscapeHtml(zone === 'BODY' ? 'Page sections' : humanize(zone)) + '</div>'
+        : '';
+      lastTreeZone = zone;
       const editor = section.content && section.content.__editor || {};
       const visible = !editor.visibility || editor.visibility.enabled !== false;
       const capabilities = schema.capabilities || {};
@@ -277,7 +284,7 @@
           '</select><button type="button" class="te-media-button" data-insert-block="' + cmsEscapeAttr(section.key) + '">Add</button></div>'
         : '';
 
-      return '<div class="te-tree-section" data-tree-section="' + cmsEscapeAttr(section.key) + '">' +
+      return zoneHeading + '<div class="te-tree-section" data-tree-section="' + cmsEscapeAttr(section.key) + '">' +
         '<div class="te-tree-row' + (section.key === activeSectionKey && !activeBlockId ? ' is-active' : '') + '" data-section-key="' + cmsEscapeAttr(section.key) + '" draggable="' + (capabilities.reorder !== false) + '" data-index="' + index + '">' +
           '<button type="button" class="te-tree-row__main" data-select-section="' + cmsEscapeAttr(section.key) + '">' +
             '<span class="te-tree-row__icon">' + icon.section + '</span><span class="te-tree-row__copy"><span class="te-tree-row__name">' + cmsEscapeHtml(label) +
@@ -299,7 +306,7 @@
     }).join('');
 
     byId('te-tree').innerHTML =
-      '<div class="te-tree-group"><div class="te-tree-group__label">Sections</div>' + rows + '</div>' +
+      '<div class="te-tree-group">' + rows + '</div>' +
       '<button type="button" class="te-add-section" id="te-add-section">+ Add section</button>' +
       '<div class="te-section-menu" id="te-section-menu" hidden><select id="te-section-template">' + templateOptions + '</select>' +
       '<div class="te-section-menu__actions"><button type="button" class="te-media-button" id="te-section-cancel">Cancel</button><button type="button" class="te-media-button" id="te-section-insert">Add</button></div></div>';
@@ -567,7 +574,14 @@
 
     const fields = currentSchema().filter(function(field) { return fieldKind(field) === activeTab; });
     if (!fields.length) {
-      byId('te-inspector-body').innerHTML = '<div class="te-empty">No ' + cmsEscapeHtml(activeTab) + ' controls are registered for this section.</div>';
+      const editor = section.content && section.content.__editor || {};
+      const blockCount = Array.isArray(editor.blocks) ? editor.blocks.length : 0;
+      const message = activeBlockId
+        ? 'This block does not expose any ' + activeTab + ' fields.'
+        : blockCount
+          ? 'This section is built from ' + blockCount + ' editable block' + (blockCount === 1 ? '' : 's') + '. Select a block in the page structure to edit its ' + activeTab + '.'
+          : 'This section does not expose any ' + activeTab + ' fields.';
+      byId('te-inspector-body').innerHTML = '<div class="te-empty">' + cmsEscapeHtml(message) + '</div>';
       return;
     }
 

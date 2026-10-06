@@ -22,38 +22,138 @@ export function validateThemeProject(value) {
 export function extractThemePage(html, { slug = 'home', title = 'Home', baseUrl = '' } = {}) {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   if (baseUrl) { const base = doc.createElement('base'); base.href = baseUrl; doc.head.prepend(base); }
-  let nodes = [...doc.querySelectorAll('main > section, main > header, main > footer')];
-  if (!nodes.length) nodes = [...doc.body.children].filter((el) => !['SCRIPT', 'STYLE', 'LINK'].includes(el.tagName));
+
+  const humanize = (value) => String(value || '')
+    .replace(/^(section|sec|block)[-_]*/i, '')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+  const meaningfulText = (el) => String(
+    el.getAttribute('aria-label') ||
+    el.getAttribute('data-label') ||
+    el.querySelector?.('h1,h2,h3,h4,strong')?.textContent ||
+    el.textContent ||
+    ''
+  ).replace(/\s+/g, ' ').trim().slice(0, 60);
+  const sectionLabel = (node, index) => {
+    if (node.tagName === 'HEADER') return 'Header';
+    if (node.tagName === 'FOOTER') return 'Footer';
+    const explicit = node.getAttribute('data-section-label') ||
+      node.getAttribute('data-section') ||
+      node.getAttribute('data-cms-section') ||
+      node.getAttribute('aria-label');
+    if (explicit) return humanize(explicit);
+    const heading = node.querySelector('h1,h2,h3')?.textContent?.replace(/\s+/g, ' ').trim();
+    if (heading) return heading.slice(0, 60);
+    if (node.id) return humanize(node.id);
+    const usefulClass = [...node.classList].find((name) => !/^(section|container|wrapper|inner|grid|row|dark|light)$/i.test(name));
+    return usefulClass ? humanize(usefulClass) : `Section ${index + 1}`;
+  };
+  const zoneFor = (node) => node.tagName === 'HEADER' ? 'HEADER' : node.tagName === 'FOOTER' ? 'FOOTER' : 'BODY';
+
+  // Preserve the real site chrome and every direct page region. The previous
+  // importer only looked for <section> inside <main>, dropping ordinary
+  // body-level headers/footers and themes that use direct <div>/<article> regions.
+  const main = doc.querySelector('main');
+  let nodes = [
+    ...doc.querySelectorAll('body > header'),
+    ...(main ? [...main.children].filter((el) => !['SCRIPT', 'STYLE', 'LINK'].includes(el.tagName)) : []),
+    ...doc.querySelectorAll('body > footer'),
+  ];
+  if (!nodes.length) {
+    nodes = [...doc.body.children].filter((el) => !['SCRIPT', 'STYLE', 'LINK', 'MAIN'].includes(el.tagName));
+  }
+  nodes = [...new Set(nodes)].sort((a, b) =>
+    a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1
+  );
+
   const sections = nodes.map((node, index) => {
     const key = `section_${index + 1}`;
     const content = { __editor: { templateKey: key, visibility: { enabled: true }, blocks: [] } };
-    const bind = (node, content) => {
-    const fields = [];
-    const candidates = [...node.querySelectorAll('h1,h2,h3,h4,p,img,a,button,label')];
-    if (node.matches('h1,h2,h3,h4,p,img,a,button,label')) candidates.unshift(node);
-    candidates.filter((el) => el.tagName === 'IMG' || !el.children.length).forEach((el, i) => {
-      const field = `field_${i + 1}`;
-      el.setAttribute('data-theme-project-field', field);
-      const attribute = el.tagName === 'IMG' ? 'src' : undefined;
-      content[field] = attribute ? el.getAttribute(attribute) || '' : el.textContent || '';
-      fields.push({ key: field, label: el.getAttribute('alt') || (el.textContent || el.tagName).trim().slice(0, 60), type: attribute ? 'media' : 'text', binding: { attribute } });
-      if (el.tagName === 'A') { const link = field + '_href'; content[link] = el.getAttribute('href') || ''; fields.push({ key: link, label: 'Link destination', type: 'link', binding: { field, attribute: 'href' } }); }
-    });
-    return fields;
+
+    const bind = (scope, target) => {
+      const fields = [];
+      const counts = Object.create(null);
+      const boundElements = new Map();
+      const nextKey = (kind) => {
+        counts[kind] = (counts[kind] || 0) + 1;
+        return `${kind}_${counts[kind]}`;
+      };
+      // Bind leaf text nodes so editing copy does not flatten nested theme markup.
+      // Including common inline wrappers makes real themes editable even when
+      // headings/buttons/links use spans, strong tags, or emphasis wrappers.
+      const selector = 'h1,h2,h3,h4,p,img,a,button,label,span,small,strong,em';
+      const candidates = [...scope.querySelectorAll(selector)];
+      if (scope.matches(selector)) candidates.unshift(scope);
+
+      candidates.filter((el) => el.tagName === 'IMG' || !el.children.length).forEach((el) => {
+        const kind =
+          el.tagName === 'IMG' ? 'image' :
+          /^H[1-4]$/.test(el.tagName) ? 'heading' :
+          el.tagName === 'A' ? 'link' :
+          el.tagName === 'BUTTON' ? 'button' :
+          el.tagName === 'LABEL' ? 'label' : 'text';
+        const field = nextKey(kind);
+        const copy = meaningfulText(el);
+        el.setAttribute('data-theme-project-field', field);
+        boundElements.set(el, field);
+        const attribute = el.tagName === 'IMG' ? 'src' : undefined;
+        target[field] = attribute ? el.getAttribute(attribute) || '' : el.textContent || '';
+        fields.push({
+          key: field,
+          label: copy || humanize(kind),
+          type: attribute ? 'media' : 'text',
+          binding: { attribute },
+        });
+
+        if (el.tagName === 'IMG') {
+          const alt = field + '_alt';
+          target[alt] = el.getAttribute('alt') || '';
+          fields.push({ key: alt, label: (copy || 'Image') + ' alt text', type: 'text', binding: { field, attribute: 'alt' } });
+        }
+      });
+
+      // Link destinations are editable even when the anchor wraps styled spans
+      // or icons and therefore cannot safely be flattened into one text field.
+      [...scope.querySelectorAll('a')].forEach((el) => {
+        let field = boundElements.get(el);
+        if (!field) {
+          field = nextKey('link');
+          el.setAttribute('data-theme-project-field', field);
+        }
+        const href = field + '_href';
+        const copy = meaningfulText(el);
+        target[href] = el.getAttribute('href') || '';
+        fields.push({ key: href, label: (copy || 'Link') + ' destination', type: 'link', binding: { field, attribute: 'href' } });
+      });
+      return fields;
     };
-    const blockSelector = 'article,li,[data-theme-block],.card';
-    const blocks = [...node.querySelectorAll(blockSelector)].filter((el) => {
-      const ancestor = el.parentElement?.closest(blockSelector); return !ancestor || !node.contains(ancestor);
-    }).map((el, i) => {
-      const blockId = `block_${i + 1}`, values = {};
+
+    // Treat explicit cards/articles and only direct section lists as repeatable
+    // blocks. The old "every li is a block" heuristic turned nav menus and
+    // nested lists into meaningless Block 1..N rows.
+    const explicitBlocks = [...node.querySelectorAll('article,[data-theme-block],.card')];
+    const directListBlocks = [...node.querySelectorAll(':scope > ul > li, :scope > ol > li')];
+    const blockNodes = [...new Set([...explicitBlocks, ...directListBlocks])].filter((el, _, all) =>
+      !all.some((candidate) => candidate !== el && candidate.contains(el))
+    );
+    const blocks = blockNodes.map((el, i) => {
+      const blockId = `block_${i + 1}`;
+      const values = {};
       const fields = bind(el, values);
-      const label = el.querySelector('h2,h3,h4')?.textContent?.trim().slice(0, 60) || `Block ${i + 1}`;
+      const label =
+        el.getAttribute('data-block-label') ||
+        el.getAttribute('aria-label') ||
+        meaningfulText(el) ||
+        `Block ${i + 1}`;
       content[blockId] = values;
       content.__editor.blocks.push({ id: blockId, templateKey: blockId });
-      const html = el.outerHTML;
+      const blockHtml = el.outerHTML;
       el.replaceWith(doc.createComment('theme-block:' + blockId));
-      return { key: blockId, label, fields, settings: [], html, defaults: values };
+      return { key: blockId, label: label.slice(0, 60), fields, settings: [], html: blockHtml, defaults: values };
     });
+
     const fields = bind(node, content);
     node.setAttribute('data-theme-section', key);
     node.setAttribute('data-theme-project-field', '__section');
@@ -61,9 +161,30 @@ export function extractThemePage(html, { slug = 'home', title = 'Home', baseUrl 
       { key: 'layout_padding', label: 'Padding', type: 'text', group: 'Spacing', binding: { field: '__section', styleProperty: 'padding' } },
       { key: 'layout_background', label: 'Background', type: 'text', group: 'Surface', binding: { field: '__section', styleProperty: 'background' } },
     ];
-    content.layout_padding = node.style.padding; content.layout_background = node.style.background;
-    const name = node.querySelector('h1,h2,h3')?.textContent?.trim().slice(0, 60) || node.getAttribute('aria-label') || `Section ${index + 1}`;
-    const section = { key, name, html: node.outerHTML, content, version: 0, status: 'draft', sort_order: index, schema: { key, label: name, fields, settings, blocks, capabilities: { reorder: true } } };
+    content.layout_padding = node.style.padding;
+    content.layout_background = node.style.background;
+    const name = sectionLabel(node, index);
+    const zone = zoneFor(node);
+    const section = {
+      key,
+      name,
+      html: node.outerHTML,
+      content,
+      version: 0,
+      status: 'draft',
+      sort_order: index,
+      schema: {
+        key,
+        label: name,
+        zone,
+        fields,
+        settings,
+        blocks,
+        capabilities: zone === 'BODY'
+          ? { reorder: true, duplicate: true, remove: true }
+          : { reorder: false, duplicate: false, remove: false },
+      },
+    };
     node.replaceWith(doc.createComment('theme-section:' + key));
     return section;
   });

@@ -32,7 +32,7 @@ try {
   const capture = async (name) => {
     await page.evaluate(() => document.fonts.ready);
     await page.screenshot({ path: resolve(out, name + '.png'), fullPage: false, animations: 'disabled' });
-    if (['work-empty', 'cms-hub', 'cms-theme-editor'].includes(name)) {
+    if (['work-empty', 'cms-theme-editor'].includes(name)) {
       const expected = resolve(baseline, name + '.png');
       if (process.argv.includes('--update-baselines')) { mkdirSync(baseline, { recursive: true }); copyFileSync(resolve(out, name + '.png'), expected); }
       else { assert.ok(existsSync(expected), `Missing ${name} baseline; review captures and run --update-baselines`); assert.ok(changedPixelRatio(readFileSync(resolve(out, name + '.png')), readFileSync(expected)) <= 0.005, `${name} visual regression; inspect ${out}`); }
@@ -65,12 +65,13 @@ try {
   assert.equal(await mini.locator('textarea').inputValue(), text);
   await mini.getByRole('button', { name: 'Close miniAgentSam' }).click();
   await page.goto(origin + '/index.html#/cms');
-  await page.locator('.iam-cms-hub-page').waitFor();
-  await capture('cms-hub');
+  await page.locator('[data-theme-id]').first().waitFor();
+  const discovered = discoverThemeSurfaces(repo).themes.map((t) => t.id).sort();
+  const cmsState = await capture('cms-studio-home');
+  assert.deepEqual(cmsState.themes.sort(), discovered, '/cms must expose the real packaged theme workspace');
   await page.goto(origin + '/index.html#/store');
   await page.locator('[data-theme-id]').first().waitFor();
   const storeState = await capture('theme-store');
-  const discovered = discoverThemeSurfaces(repo).themes.map((t) => t.id).sort();
   assert.deepEqual(storeState.themes.sort(), discovered);
   await page.goto(origin + '/index.html#/settings/themes');
   await page.locator('[data-theme-id]').first().waitFor();
@@ -92,6 +93,13 @@ try {
     try { await adapter.saveDraft('home', section.key, section.content, 0); } catch (error) { conflict = error.status === 409; }
     const loaded = createThemeProjectAdapter(saved, store);
     const updated = (await loaded.resolvePreview('home')).html;
+    const chromePage = extractThemePage('<body><header aria-label="Site header"><nav><ul><li><a href="/">Home</a></li><li><a href="/about">About</a></li></ul></nav></header><main><section id="built-in-the-garage"><h2>Built in the Garage</h2><p>Real section copy</p></section></main><footer><p>Footer copy</p></footer></body>');
+    const chromeSummary = chromePage.sections.map((section) => ({
+      label: section.schema.label,
+      zone: section.schema.zone,
+      blockCount: section.schema.blocks.length,
+      fieldKeys: section.schema.fields.map((field) => field.key),
+    }));
     const blockPage = extractThemePage('<main><section><article><h2>One</h2></article><article><h2>Two</h2></article></section></main>');
     saved.pages = [blockPage];
     const blocks = createThemeProjectAdapter(saved, store);
@@ -101,12 +109,17 @@ try {
     const blockHtml = (await blocks.resolvePreview('home')).html;
     await blocks.removeSection('home', 'section_1');
     await blocks.addSection('home', 'section_1', 0);
-    return { initial, updated, conflict, blockHtml, restored: (await blocks.getPage('home')).sections.length };
+    return { initial, updated, conflict, chromeSummary, blockHtml, restored: (await blocks.getPage('home')).sections.length };
   });
-  assert.match(result.initial, /Hello <em>world<\/em>/);
+  assert.match(result.initial, /Hello <em[^>]*>world<\/em>/);
   assert.match(result.initial, /src="cover.png"/);
   assert.match(result.updated, /Saved content/);
   assert.equal(result.conflict, true);
+  assert.deepEqual(result.chromeSummary.map((section) => section.zone), ['HEADER', 'BODY', 'FOOTER']);
+  assert.deepEqual(result.chromeSummary.map((section) => section.label), ['Header', 'Built in the Garage', 'Footer']);
+  assert.equal(result.chromeSummary[0].blockCount, 0, 'navigation list items must not become fake content blocks');
+  assert.ok(result.chromeSummary[1].fieldKeys.includes('heading_1'));
+  assert.ok(result.chromeSummary[1].fieldKeys.includes('text_1'));
   assert.equal((result.blockHtml.match(/<h2[^>]*>One<\/h2>/g) || []).length, 2);
   assert.ok(!result.blockHtml.includes('>Two</h2>'));
   assert.equal(result.restored, 1);
@@ -136,7 +149,21 @@ try {
   await page.evaluate(() => { window.__themeNavigateEvents = []; window.addEventListener('agentsam:navigate', (event) => window.__themeNavigateEvents.push(event.detail)); });
   await page.locator(`[data-theme-id="${packaged.id}"]`).getByRole('button', { name: 'Edit', exact: true }).click();
   await editor.locator('.te-tree-row').first().waitFor({ timeout: 5000 }).catch(async (error) => { console.error('packaged-theme-load', await page.evaluate(() => ({events: window.__themeNavigateEvents, desktop: window.__AGENTSAM_DESKTOP__, hash: location.hash})), page.url(), await page.locator('[role=alert]').allTextContents(), await page.locator('body').innerText()); throw error; });
-  assert.ok(await editor.locator('.te-field').count(), 'Real packaged content is editable');
+  let packagedFieldCount = await editor.locator('.te-field').count();
+  if (!packagedFieldCount && await editor.locator('.te-block-row').count()) {
+    await editor.locator('.te-block-row__main').first().click();
+    packagedFieldCount = await editor.locator('.te-field').count();
+  }
+  if (!packagedFieldCount) {
+    const diagnostic = {
+      tree: await editor.locator('.te-tree-row__name').allTextContents(),
+      blocks: await editor.locator('.te-block-row__copy strong').allTextContents(),
+      inspector: await editor.locator('#te-inspector-body').innerText(),
+      note: await editor.locator('#te-note').innerText(),
+    };
+    assert.fail('Real packaged section/block content is editable: ' + JSON.stringify(diagnostic));
+  }
+  await editor.locator('.te-tree-row__main').first().click();
   await editor.getByRole('button', { name: 'Layout', exact: true }).click();
   await editor.locator('[data-field-key="layout_padding"]').waitFor();
   await capture('packaged-theme-editor');

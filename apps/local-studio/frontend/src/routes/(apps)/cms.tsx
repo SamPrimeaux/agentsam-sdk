@@ -1,5 +1,5 @@
 // @ts-ignore Portable ecommerce CMS surface adapter.
-import { CmsHubPage, createCmsThemeEditorAdapter, createHttpCmsAdapter } from '@inneranimalmedia/ecommerce-cms-agentsam/cms';
+import { createCmsThemeEditorAdapter, createHttpCmsAdapter } from '@inneranimalmedia/ecommerce-cms-agentsam/cms';
 import { ThemeStorePage } from '@/components/themes/ThemeStorePage';
 import { ThemeEditorFrame } from '@/components/themes/ThemeEditorFrame';
 import { ThemeProjectEditor } from '@/components/themes/ThemeProjectEditor';
@@ -8,10 +8,7 @@ import { getActiveThemeId } from '@/lib/themes/projects';
 import { useMemo, useState, useEffect } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ContentStudioPage } from "@/components/content/ContentStudioPage";
-import {
-  parseCmsNavigatePath,
-  type CmsPanel,
-} from "@/lib/cms/parseCmsNavigatePath";
+import type { CmsPanel } from "@/lib/cms/parseCmsNavigatePath";
 
 interface CmsSearchParams {
   theme_project?: string;
@@ -38,12 +35,11 @@ export const Route = createFileRoute("/(apps)/cms")({
   component: CmsPage,
 });
 
-/** Hosted site catalog — real public properties, not fixture gallery cards. */
+/** Known hosted CMS authorities. Never surface fixture/donor sites as customer properties. */
 const SITE_CATALOG = [
-  { slug: "agentsam-sdk", name: "Agent Sam SDK", domain: "agentsam.inneranimalmedia.com", hub_priority: 100 },
-  { slug: "inneranimalmedia", name: "Inner Animal Media", domain: "inneranimalmedia.com", hub_priority: 90 },
-  { slug: "ember", name: "Ember Supply", domain: "ember.example", hub_priority: 80 },
-  { slug: "meauxbility", name: "Meauxbility", domain: "meauxbility.org", hub_priority: 70 },
+  { slug: "agentsam-sdk", name: "Agent Sam SDK", domain: "agentsam.inneranimalmedia.com" },
+  { slug: "inneranimalmedia", name: "Inner Animal Media", domain: "inneranimalmedia.com" },
+  { slug: "meauxbility", name: "Meauxbility", domain: "meauxbility.org" },
 ];
 
 function CmsPage() {
@@ -91,38 +87,9 @@ function CmsPage() {
     });
   };
 
-  if (!isEditorView) {
-    return (
-      <div className="size-full overflow-y-auto">
-        <CmsHubPage
-          sites={SITE_CATALOG}
-          activeSiteSlug={siteSlug}
-          onSelectSite={(slug) => {
-            navigate({
-              to: "/cms",
-              search: { ...search, site: slug, panel: undefined, page: undefined },
-            });
-          }}
-          onNavigate={(path) => {
-            if (path.startsWith("/cms")) {
-              const parsed = parseCmsNavigatePath(path, siteSlug);
-              navigate({
-                to: "/cms",
-                search: {
-                  site: parsed.site,
-                  panel: parsed.panel,
-                  page: parsed.page,
-                  view: parsed.view,
-                },
-              });
-            } else {
-              window.location.href = path;
-            }
-          }}
-        />
-      </div>
-    );
-  }
+  // The useful CMS starts with the actual packaged theme workspace. The old
+  // generic CMS hub remains available only through explicit legacy/page routes.
+  if (!isEditorView) return <ThemeStorePage />;
 
   if (search.panel === "media") {
     return (
