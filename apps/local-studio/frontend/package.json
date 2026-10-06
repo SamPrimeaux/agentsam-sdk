@@ -14,6 +14,7 @@
     "@inneranimalmedia/agentsam-brand": "2.6.12",
     "@inneranimalmedia/agentsam-cloudflare-images": "2.6.12",
     "@inneranimalmedia/agentsam-content": "2.6.12",
+    "@inneranimalmedia/agentsam-campaign": "2.6.12",
     "@inneranimalmedia/agentsam-content-studio": "2.6.12",
     "@inneranimalmedia/agentsam-contracts": "2.6.12",
     "@inneranimalmedia/agentsam-key-manager": "2.6.12",
