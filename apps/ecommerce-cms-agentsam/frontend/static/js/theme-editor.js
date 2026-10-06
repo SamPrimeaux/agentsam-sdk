@@ -284,7 +284,7 @@
           '</select><button type="button" class="te-media-button" data-insert-block="' + cmsEscapeAttr(section.key) + '">Add</button></div>'
         : '';
 
-      return '<div class="te-tree-section" data-tree-section="' + cmsEscapeAttr(section.key) + '">' +
+      return zoneHeading + '<div class="te-tree-section" data-tree-section="' + cmsEscapeAttr(section.key) + '">' +
         '<div class="te-tree-row' + (section.key === activeSectionKey && !activeBlockId ? ' is-active' : '') + '" data-section-key="' + cmsEscapeAttr(section.key) + '" draggable="' + (capabilities.reorder !== false) + '" data-index="' + index + '">' +
           '<button type="button" class="te-tree-row__main" data-select-section="' + cmsEscapeAttr(section.key) + '">' +
             '<span class="te-tree-row__icon">' + icon.section + '</span><span class="te-tree-row__copy"><span class="te-tree-row__name">' + cmsEscapeHtml(label) +
