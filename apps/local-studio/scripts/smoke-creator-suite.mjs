@@ -54,7 +54,11 @@ try {
   await page.getByRole('textbox', { name: 'New site name' }).fill('Desktop sample site');
   await page.getByRole('button', { name: 'Create site draft' }).click();
   await page.frameLocator('iframe[title="Theme Editor"]').locator('.te-tree-row').first().waitFor({ timeout: 15000 });
-  await visit('/themes', ''); // Theme Store has theme cards but no standalone product marker.
+  await page.goto(origin + '/index.html#/themes');
+  await page.locator('[data-theme-id]').first().waitFor({ timeout: 15000 });
+  await page.goto(origin + '/index.html#/media');
+  await page.getByText('Content Studio', { exact: true }).first().waitFor({ timeout: 15000 });
+  assert.equal(jsErrors.length, 0, 'no uncaught client exceptions');
 } catch (error) {
   const state = await page.evaluate(() => ({ url: location.href, heading: document.body.innerText.slice(0, 850) })).catch(() => null);
   console.error('[creator-suite] Failure state:', state, jsErrors);
