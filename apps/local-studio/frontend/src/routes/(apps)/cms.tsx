@@ -144,8 +144,21 @@ function CmsPage() {
     );
   }
 
-  // Design starts with an actual theme project; legacy content pages remain an adapter seam.
-  if (!search.theme_project && !activeThemeProject && !search.page && (!search.panel || search.panel === 'pages')) return <ThemeStorePage />;
+  // Never edit an unverified URL slug, unrelated theme, or another tenant.
+  const localThemeProjectId = search.theme_project ||
+    (!requestedSlug && !search.page ? activeThemeProject : undefined);
+  if (!localThemeProjectId && sitesLoading) {
+    return <p role="status" className="p-8 text-sm text-muted-foreground">Verifying website access…</p>;
+  }
+  if (!localThemeProjectId && requestedSlug && !ownedSite) {
+    return <div role="alert" className="p-8 text-sm text-destructive">
+      {sitesError || 'This website is not registered to your CMS account.'}
+    </div>;
+  }
+  if (!localThemeProjectId && ownedSite && !ownedSite.can_edit) {
+    return <div role="alert" className="p-8 text-sm text-destructive">You do not have editing permission for this site.</div>;
+  }
+  if (!localThemeProjectId && !ownedSite) return <CmsHomePage />;
 
   return (
     <div className="size-full overflow-hidden" data-cms-adapter="http">
