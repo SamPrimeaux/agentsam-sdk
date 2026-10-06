@@ -2,6 +2,7 @@
  * Desktop Vite does not run tanstackStart, so without this step new app routes
  * silently build but render 404 in packaged Tauri. Keep one canonical route file set.
  */
+import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { getConfig, Generator } from '@tanstack/router-generator';
 const root = resolve(import.meta.dirname, '..');
