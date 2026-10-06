@@ -176,7 +176,7 @@ function CmsPage() {
         <span>Editor</span>
       </div>
       <div className="min-h-0 flex-1 overflow-hidden" style={{ height: "calc(100% - 41px)" }}>
-        {(search.theme_project || activeThemeProject) ? <ThemeProjectEditor id={(search.theme_project || activeThemeProject)!} page={search.page} /> : <ThemeEditorFrame adapter={themeAdapter} page={search.page} />}
+        {localThemeProjectId ? <ThemeProjectEditor id={localThemeProjectId} page={search.page} /> : <ThemeEditorFrame adapter={themeAdapter} page={search.page} />}
       </div>
     </div>
   );
