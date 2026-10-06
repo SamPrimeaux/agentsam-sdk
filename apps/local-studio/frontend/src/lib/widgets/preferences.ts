@@ -1,4 +1,4 @@
-import { BUILTIN_WIDGET_DEFINITIONS } from '@inneranimalmedia/agentsam-workbench/widgets';
+import { BUILTIN_WIDGET_DEFINITIONS, WIDGET_GALLERY_DEFINITIONS } from '@inneranimalmedia/agentsam-workbench/widgets';
 
 export const LOCAL_STUDIO_WIDGET_PREFERENCES_KEY = 'agentsam.local-studio.widgets.v1';
 export const LOCAL_STUDIO_WIDGETS_CHANGED_EVENT = 'agentsam:widgets-changed';
@@ -29,12 +29,13 @@ function writePreferenceMap(next: WidgetPreferenceMap) {
 
 export function listLocalStudioWidgets() {
   const preferences = readPreferenceMap();
-  return BUILTIN_WIDGET_DEFINITIONS.map((definition) => ({
+  return WIDGET_GALLERY_DEFINITIONS.map((definition) => ({
     ...definition,
-    visible: preferences[definition.id]?.visible !== false,
+    visible: definition.availability === 'ready' && preferences[definition.id]?.visible !== false,
     removable: false,
-    source: 'Built in',
-    preferenceScope: 'This device',
+    source: definition.availability === 'ready' ? 'Workbench' : 'Donor concept · preview only',
+    preferenceScope: definition.availability === 'ready' ? 'This device' : 'Not installed',
+    deeplink: definition.availability === 'ready' ? definition.deeplink : undefined,
   }));
 }
 
