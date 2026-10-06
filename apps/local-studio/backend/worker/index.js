@@ -723,9 +723,13 @@ export default {
       });
     }
 
-    // Studio CMS API endpoints
+    // Studio CMS API endpoints require the IAM session (browser cookie or
+    // Keychain-backed desktop Bearer token). Never trust a supplied site slug.
     if (url.pathname.startsWith("/api/cms/")) {
-      return handleCmsWorkerRequest(request, env);
+      if (request.method === "OPTIONS") return handleCmsWorkerRequest(request, env);
+      const userId = await resolveSessionUserId(request, env);
+      if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
+      return handleCmsWorkerRequest(request, env, { userId });
     }
 
     // Gate authenticated Studio app routes from the app manifest mounts.
