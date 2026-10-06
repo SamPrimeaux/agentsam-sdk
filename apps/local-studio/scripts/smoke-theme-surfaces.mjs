@@ -149,7 +149,13 @@ try {
   await page.evaluate(() => { window.__themeNavigateEvents = []; window.addEventListener('agentsam:navigate', (event) => window.__themeNavigateEvents.push(event.detail)); });
   await page.locator(`[data-theme-id="${packaged.id}"]`).getByRole('button', { name: 'Edit', exact: true }).click();
   await editor.locator('.te-tree-row').first().waitFor({ timeout: 5000 }).catch(async (error) => { console.error('packaged-theme-load', await page.evaluate(() => ({events: window.__themeNavigateEvents, desktop: window.__AGENTSAM_DESKTOP__, hash: location.hash})), page.url(), await page.locator('[role=alert]').allTextContents(), await page.locator('body').innerText()); throw error; });
-  assert.ok(await editor.locator('.te-field').count(), 'Real packaged content is editable');
+  let packagedFieldCount = await editor.locator('.te-field').count();
+  if (!packagedFieldCount && await editor.locator('.te-block-row').count()) {
+    await editor.locator('.te-block-row__main').first().click();
+    packagedFieldCount = await editor.locator('.te-field').count();
+  }
+  assert.ok(packagedFieldCount, 'Real packaged section/block content is editable');
+  await editor.locator('.te-tree-row__main').first().click();
   await editor.getByRole('button', { name: 'Layout', exact: true }).click();
   await editor.locator('[data-field-key="layout_padding"]').waitFor();
   await capture('packaged-theme-editor');
