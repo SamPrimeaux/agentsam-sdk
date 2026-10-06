@@ -11,7 +11,7 @@ export async function loadAuthorizedCmsSiteCatalog(transport) {
   if (!payload || !Array.isArray(payload.websites)) throw new Error('cms_site_catalog_invalid');
   const seen = new Set();
   return payload.websites
-    .filter((site) => site && typeof site.slug === 'string' && /^[a-zA-Z0-9_-]+$/.test(site.slug))
+    .filter((site) => site && typeof site.slug === 'string' && /^[a-zA-Z0-9_-]+$/.test(site.slug) && !['__proto__', 'constructor', 'prototype'].includes(site.slug))
     .filter((site) => {
       if (seen.has(site.slug)) return false;
       seen.add(site.slug);
