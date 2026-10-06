@@ -133,7 +133,9 @@ export async function discoverPublicPlugins(env, requestFetch = fetch) {
     try {
       const response = await fetchPluginResource(env, url.toString(), {
         method: 'GET',
-        redirect: 'error',
+        // Cloudflare Workers does not implement fetch redirect:'error'.
+        // Manual mode preserves no-redirect security without failing all requests.
+        redirect: 'manual',
         headers: { accept: 'application/json' },
         signal: AbortSignal.timeout(6000),
       }, requestFetch);
