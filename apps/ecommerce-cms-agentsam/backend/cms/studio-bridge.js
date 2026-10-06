@@ -18,7 +18,9 @@ export async function handleStudioCmsBridge(request,env){
   if(tail.endsWith('/publish') && env.CMS_BRIDGE_PUBLISH_ENABLED !== 'true') {
     return error('cms_publish_requires_verified_preview_and_release_gate',409);
   }
-  // Project and actor are HMAC-bound to the IAM-authorized Studio request.\n  // CMS_BRIDGE_PROJECT_ID remains an optional additional per-deployment pin.\n  if(!env.AGENTSAM_BRIDGE_KEY) return error('cms_bridge_not_configured',503);
+  // Project and actor are HMAC-bound to the IAM-authorized Studio request.
+  // CMS_BRIDGE_PROJECT_ID remains an optional additional per-deployment pin.
+  if(!env.AGENTSAM_BRIDGE_KEY) return error('cms_bridge_not_configured',503);
   let proof;
   try { proof=await verifyCmsBridgeRequest(request,{secret:env.AGENTSAM_BRIDGE_KEY,expectedProject:env.CMS_BRIDGE_PROJECT_ID}); }
   catch{return error('cms_bridge_not_authorized',401);}
