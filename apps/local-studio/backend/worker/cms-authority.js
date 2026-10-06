@@ -94,6 +94,9 @@ export async function listAuthorizedCmsSites(db, actorUserId, { remoteWorkerName
     // A remote Worker owns its own D1 and release process. Do not substitute
     // a stale/archived projection from the shared CMS database for that source.
     const source = workerId ? 'worker' : 'shared-d1';
+    // Owning a Worker does not prove it has a CMS. Only installed CMS bridge
+    // capabilities count; arbitrary API/services must not appear as websites.
+    if (source === 'worker' && !configuredRemoteWorkers.has(workerId)) return null;
     const domain = meta.target_domain || meta.site || row.domain || null;
     return {
       id: row.project_id,
