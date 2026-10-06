@@ -474,19 +474,33 @@ export function createContentRuntime(config: ContentRuntimeConfig): ContentRunti
         throw new Error("importAsset_requires_file_or_bytes");
       }
 
-      const asset = await runtime.createAsset(
-        {
-          origin: input.origin ?? "upload",
-          source: { type: "upload", importedAt: now() },
-          filename,
-          mime,
-          bytes: byteLen,
-          brandId: input.brandId,
-          projectId: input.projectId,
-          rawBytes,
-        },
-        actor,
-      );
+      // Persist original bytes through the host's registered provider. The
+      // previous implementation created only a metadata row and silently lost
+      // the image/document data on refresh or runtime remount.
+      const uploadProvider = registry.withCapability("upload").find((p) => p.name === "local")
+        ?? registry.withCapability("upload")[0];
+      if (!uploadProvider) throw new Error("content_import_requires_upload_provider");
+      const originalRef = await uploadProvider.upload({ name: filename, mime, bytes: rawBytes });
+      let asset: ContentAsset;
+      try {
+        asset = await runtime.createAsset(
+          {
+            origin: input.origin ?? "upload",
+            source: { type: "upload", importedAt: now() },
+            filename,
+            mime,
+            bytes: byteLen,
+            brandId: input.brandId,
+            projectId: input.projectId,
+            providerRefs: [originalRef],
+            rawBytes,
+          },
+          actor,
+        );
+      } catch (error) {
+        await uploadProvider.delete(originalRef.ref).catch(() => {});
+        throw error;
+      }
 
       const wantOptimize =
         input.optimize === false
