@@ -1,5 +1,11 @@
 export { AGENTSAM_PLUGIN_SCHEMA_VERSION, normalizePluginKey, normalizePluginManifest } from './contracts.js';
 export {
+  isCatalogPluginKey,
+  configuredPluginCatalogSources,
+  normalizeDiscoveredPlugin,
+  discoverPublicPlugins,
+} from './discovery.js';
+export {
   AGENTSAM_MCP_PLUGIN_MANIFEST,
   CLOUDFLARE_PLUGIN_MANIFEST,
   INNERANIMALMEDIA_CLOUDFLARE_OAUTH_PLUGIN_MANIFEST,
