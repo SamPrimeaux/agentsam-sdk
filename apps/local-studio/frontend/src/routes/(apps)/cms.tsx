@@ -75,7 +75,7 @@ function CmsPage() {
           id: s.slug,
           slug: s.slug,
           name: s.name,
-          domain: s.domain,
+          domain: s.domain || undefined,
         })),
       }),
     [siteCatalog],
