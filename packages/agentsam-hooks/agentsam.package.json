@@ -1,0 +1,45 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-hooks",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-hooks/README.md"
+  },
+  "execution_domains": [],
+  "id": "agentsam-hooks",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-hooks",
+      "package": "@inneranimalmedia/agentsam-hooks",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "go",
+    "javascript",
+    "rust",
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/agentsam-hooks",
+  "purpose": "Provider-neutral, language-agnostic AgentSam lifecycle hooks with callback, command, HTTP, model, tool, MCP, LSP, and sub-agent adapters.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-hooks",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

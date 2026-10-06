@@ -1,0 +1,43 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-key-manager",
+    "purpose_source": "package-manifest-description",
+    "readme": null
+  },
+  "execution_domains": [],
+  "id": "agentsam-key-manager",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-key-manager",
+      "package": "@inneranimalmedia/agentsam-key-manager",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript",
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/agentsam-key-manager",
+  "purpose": "AgentSam settings UI for keys + integrations. Uses agentsam-vault contracts; Kumo-style SensitiveInput primitives.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-key-manager",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

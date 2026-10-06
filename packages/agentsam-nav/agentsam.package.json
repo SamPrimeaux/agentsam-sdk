@@ -1,0 +1,43 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-nav",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-nav/README.md"
+  },
+  "execution_domains": [],
+  "id": "agentsam-nav",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-nav",
+      "package": "@inneranimalmedia/agentsam-nav",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript",
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/agentsam-nav",
+  "purpose": "Reusable responsive navigation primitives for AgentSam dashboard-family applications.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-nav",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

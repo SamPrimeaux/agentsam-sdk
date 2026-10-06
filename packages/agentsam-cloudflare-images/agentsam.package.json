@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-cloudflare-images",
+    "purpose_source": "package-manifest-description",
+    "readme": null
+  },
+  "execution_domains": [],
+  "id": "agentsam-cloudflare-images",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-cloudflare-images",
+      "package": "@inneranimalmedia/agentsam-cloudflare-images",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/agentsam-cloudflare-images",
+  "purpose": "Shared Cloudflare Images transport: credentials, delivery URLs, and HTTP client. Content and Brand consume this \u2014 duplicate clients are not allowed. Independent project; not affiliated with Cloudflare, Inc..",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-cloudflare-images",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

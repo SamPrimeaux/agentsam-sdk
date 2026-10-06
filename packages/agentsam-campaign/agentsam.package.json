@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-campaign",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-campaign/README.md"
+  },
+  "execution_domains": [],
+  "id": "agentsam-campaign",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-campaign",
+      "package": "@inneranimalmedia/agentsam-campaign",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript"
+  ],
+  "name": "@inneranimalmedia/agentsam-campaign",
+  "purpose": "Portable AgentSam campaign intelligence for promotional planning, product launches, SEO/content strategy, merchandising, audience targeting, conversion, brand consistency, and evidence-backed campaign evaluation.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-campaign",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/copro-templates",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/copro-templates/README.md"
+  },
+  "execution_domains": [],
+  "id": "copro-templates",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/copro-templates",
+      "package": "@inneranimalmedia/copro-templates",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript"
+  ],
+  "name": "@inneranimalmedia/copro-templates",
+  "purpose": "Structured CoPro creative template contracts for canvas, slots, track skeletons, captions, transitions, audio cues, styles, and generation slots.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/copro-templates",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

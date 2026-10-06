@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "theme",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/theme-harbor",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-harbor/README.md"
+  },
+  "execution_domains": [],
+  "id": "theme-harbor",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/theme-harbor",
+      "package": "@inneranimalmedia/theme-harbor",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript"
+  ],
+  "name": "@inneranimalmedia/theme-harbor",
+  "purpose": "A professional-services prebuild for trust-heavy businesses: clear service storytelling, proof, resources, and lead capture with enough editorial polish to avoid the usual corporate-blue template look.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/theme-harbor",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

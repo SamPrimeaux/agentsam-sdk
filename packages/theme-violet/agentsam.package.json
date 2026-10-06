@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "theme",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/theme-violet",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-violet/README.md"
+  },
+  "execution_domains": [],
+  "id": "theme-violet",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/theme-violet",
+      "package": "@inneranimalmedia/theme-violet",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript"
+  ],
+  "name": "@inneranimalmedia/theme-violet",
+  "purpose": "A campaign-forward prebuild with bold calls to action, impact proof, stories, donation moments, and participation paths designed to turn attention into action.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/theme-violet",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

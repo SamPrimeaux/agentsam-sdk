@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "theme",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/heuristic-theme",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/heuristic-theme/README.md"
+  },
+  "execution_domains": [],
+  "id": "theme-heuristic",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/theme-heuristic",
+      "package": "@inneranimalmedia/theme-heuristic",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript"
+  ],
+  "name": "@inneranimalmedia/theme-heuristic",
+  "purpose": "Stock AgentSam CMS storefront shell theme contract (heuristic-theme).",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/theme-heuristic",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

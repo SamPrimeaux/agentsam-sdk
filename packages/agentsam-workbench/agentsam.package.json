@@ -1,0 +1,43 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-workbench",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-workbench/README.md"
+  },
+  "execution_domains": [],
+  "id": "agentsam-workbench",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-workbench",
+      "package": "@inneranimalmedia/agentsam-workbench",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript",
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/agentsam-workbench",
+  "purpose": "Reusable AgentSam workbench primitives for agent threads, composer, browser, terminal and resizable work surfaces.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-workbench",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

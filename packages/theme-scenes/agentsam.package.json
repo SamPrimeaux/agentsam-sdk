@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "theme",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/theme-scenes",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-scenes/README.md"
+  },
+  "execution_domains": [],
+  "id": "theme-scenes",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/theme-scenes",
+      "package": "@inneranimalmedia/theme-scenes",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript"
+  ],
+  "name": "@inneranimalmedia/theme-scenes",
+  "purpose": "Reusable scene / shell / block vocabulary for branded website experiences. BrandPack owns look; theme-scenes owns composition.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/theme-scenes",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

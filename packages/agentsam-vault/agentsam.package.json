@@ -1,0 +1,43 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-vault",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-vault/README.md"
+  },
+  "execution_domains": [],
+  "id": "agentsam-vault",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-vault",
+      "package": "@inneranimalmedia/agentsam-vault",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript",
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/agentsam-vault",
+  "purpose": "AgentSam credential vault core \u2014 contracts, AES-GCM crypto, provider registry, resolver. UI lives in agentsam-key-manager.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-vault",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

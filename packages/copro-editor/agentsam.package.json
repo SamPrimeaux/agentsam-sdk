@@ -1,0 +1,43 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/copro-editor",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/copro-editor/README.md"
+  },
+  "execution_domains": [],
+  "id": "copro-editor",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/copro-editor",
+      "package": "@inneranimalmedia/copro-editor",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript",
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/copro-editor",
+  "purpose": "Deterministic headless CoPro edit command engine with undo and redo.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/copro-editor",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

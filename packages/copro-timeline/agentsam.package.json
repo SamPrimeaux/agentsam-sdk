@@ -1,0 +1,43 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/copro-timeline",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/copro-timeline/README.md"
+  },
+  "execution_domains": [],
+  "id": "copro-timeline",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/copro-timeline",
+      "package": "@inneranimalmedia/copro-timeline",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript",
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/copro-timeline",
+  "purpose": "Headless CoPro timeline projection, ordering, duration, and viewport math.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/copro-timeline",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

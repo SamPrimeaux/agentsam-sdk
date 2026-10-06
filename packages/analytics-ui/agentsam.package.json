@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "ui-package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/analytics-ui",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/analytics-ui/README.md"
+  },
+  "execution_domains": [],
+  "id": "analytics-ui",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/analytics-ui",
+      "package": "@inneranimalmedia/analytics-ui",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/analytics-ui",
+  "purpose": "Domain-neutral analytics presentation primitives for Inner Animal Media products.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/analytics-ui",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

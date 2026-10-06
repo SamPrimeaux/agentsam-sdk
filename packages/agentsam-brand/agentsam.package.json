@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-brand",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-brand/README.md"
+  },
+  "execution_domains": [],
+  "id": "agentsam-brand",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-brand",
+      "package": "@inneranimalmedia/agentsam-brand",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript"
+  ],
+  "name": "@inneranimalmedia/agentsam-brand",
+  "purpose": "Deterministic Brand Intelligence + portable brand-asset promotion SDK for AgentSam (inspect, derive, plan, promote, publish, verify).",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-brand",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

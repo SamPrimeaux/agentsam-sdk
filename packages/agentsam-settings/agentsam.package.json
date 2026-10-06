@@ -1,0 +1,43 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-settings",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-settings/README.md"
+  },
+  "execution_domains": [],
+  "id": "agentsam-settings",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-settings",
+      "package": "@inneranimalmedia/agentsam-settings",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript",
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/agentsam-settings",
+  "purpose": "Portable AgentSam Settings shell, contracts, fixtures, and host adapter surface for desktop and hosted applications.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-settings",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

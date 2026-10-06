@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/identity",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/identity/README.md"
+  },
+  "execution_domains": [],
+  "id": "agentsam-identity",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-identity",
+      "package": "@inneranimalmedia/agentsam-identity",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript"
+  ],
+  "name": "@inneranimalmedia/agentsam-identity",
+  "purpose": "Identity module for @inneranimalmedia/agentsam-sdk (workspace \u2014 publish via root SDK)",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-identity",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

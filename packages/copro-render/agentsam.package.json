@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/copro-render",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/copro-render/README.md"
+  },
+  "execution_domains": [],
+  "id": "copro-render",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/copro-render",
+      "package": "@inneranimalmedia/copro-render",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript"
+  ],
+  "name": "@inneranimalmedia/copro-render",
+  "purpose": "CoPro render planning and renderer capability selection without renderer leakage into project files.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/copro-render",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

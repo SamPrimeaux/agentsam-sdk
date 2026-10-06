@@ -1,0 +1,43 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-desktop-shell",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-desktop-shell/README.md"
+  },
+  "execution_domains": [],
+  "id": "agentsam-desktop-shell",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-desktop-shell",
+      "package": "@inneranimalmedia/agentsam-desktop-shell",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript",
+    "rust"
+  ],
+  "name": "@inneranimalmedia/agentsam-desktop-shell",
+  "purpose": "Tauri desktop shell for AgentSam-powered brand dashboards \u2014 manifest-driven, multi-brand installs. Independent project; not affiliated with Tauri.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-desktop-shell",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

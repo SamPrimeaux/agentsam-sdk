@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-assets-core",
+    "purpose_source": "package-manifest-description",
+    "readme": null
+  },
+  "execution_domains": [],
+  "id": "agentsam-assets-core",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-assets-core",
+      "package": "@inneranimalmedia/agentsam-assets-core",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/agentsam-assets-core",
+  "purpose": "Shared Asset Core: canonical ast_* identity, machine facts, provenance, and provider representations. Peer BrandPack and Content domains build on this \u2014 neither owns the other.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-assets-core",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

@@ -1,0 +1,43 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-content",
+    "purpose_source": "package-manifest-description",
+    "readme": null
+  },
+  "execution_domains": [],
+  "id": "agentsam-content",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-content",
+      "package": "@inneranimalmedia/agentsam-content",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript",
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/agentsam-content",
+  "purpose": "Portable content/library peer domain over Asset Core: lifecycle, usage, providers, intelligence, and createContentRuntime(). BrandPack remains peer brand authority.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-content",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

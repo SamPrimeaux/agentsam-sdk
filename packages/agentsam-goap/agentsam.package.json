@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-goap",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-goap/README.md"
+  },
+  "execution_domains": [],
+  "id": "agentsam-goap",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-goap",
+      "package": "@inneranimalmedia/agentsam-goap",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript"
+  ],
+  "name": "@inneranimalmedia/agentsam-goap",
+  "purpose": "Portable AgentSam GOAP control-plane contracts and adapters over existing blackboard, ticket, workflow, execution, approval, queue, runtime, and evidence stores.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-goap",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

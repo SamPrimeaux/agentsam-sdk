@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-knowledge",
+    "purpose_source": "package-manifest-description",
+    "readme": null
+  },
+  "execution_domains": [],
+  "id": "agentsam-knowledge",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-knowledge",
+      "package": "@inneranimalmedia/agentsam-knowledge",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript"
+  ],
+  "name": "@inneranimalmedia/agentsam-knowledge",
+  "purpose": "Portable AutoRAG discovery, adapter registries, probes, and company routing contracts for AgentSam.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-knowledge",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

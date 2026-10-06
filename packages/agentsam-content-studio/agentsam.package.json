@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-content-studio",
+    "purpose_source": "package-manifest-description",
+    "readme": null
+  },
+  "execution_domains": [],
+  "id": "agentsam-content-studio",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-content-studio",
+      "package": "@inneranimalmedia/agentsam-content-studio",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/agentsam-content-studio",
+  "purpose": "Canonical React UI for AgentSam Content Studio: library, inspectors, assistant rail. Host apps provide a ContentRuntime; the UI never knows their names.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-content-studio",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

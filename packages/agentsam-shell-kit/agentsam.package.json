@@ -1,0 +1,43 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-shell-kit",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-shell-kit/README.md"
+  },
+  "execution_domains": [],
+  "id": "agentsam-shell-kit",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-shell-kit",
+      "package": "@inneranimalmedia/agentsam-shell-kit",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript",
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/agentsam-shell-kit",
+  "purpose": "Compatibility facade for the AgentSam workbench shell. New code uses @inneranimalmedia/agentsam-workbench.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-shell-kit",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

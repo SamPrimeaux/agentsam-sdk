@@ -1,0 +1,40 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "theme",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-docs-theme",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-docs-theme/README.md"
+  },
+  "execution_domains": [],
+  "id": "agentsam-docs-theme",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-docs-theme",
+      "package": "@inneranimalmedia/agentsam-docs-theme",
+      "type": "npm"
+    }
+  ],
+  "languages": [],
+  "name": "@inneranimalmedia/agentsam-docs-theme",
+  "purpose": "Violet docs skin tokens for AgentSam public guides (Systematic Autonomous Machinery).",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-docs-theme",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

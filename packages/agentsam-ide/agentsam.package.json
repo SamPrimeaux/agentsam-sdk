@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-ide",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-ide/README.md"
+  },
+  "execution_domains": [],
+  "id": "agentsam-ide",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-ide",
+      "package": "@inneranimalmedia/agentsam-ide",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/agentsam-ide",
+  "purpose": "AgentSam IDE packages \u2014 Monaco, file tree, xterm, LSP client, first-login onboarding. Rapidly deployable into Local Studio / desktop.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-ide",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

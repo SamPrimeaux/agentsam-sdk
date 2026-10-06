@@ -1,0 +1,43 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-merch",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-merch/README.md"
+  },
+  "execution_domains": [],
+  "id": "agentsam-merch",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-merch",
+      "package": "@inneranimalmedia/agentsam-merch",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript",
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/agentsam-merch",
+  "purpose": "Provider-neutral manufacturing profiles, preflight, derivative planning, and collection-lab primitives for AgentSam.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-merch",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/cms-runtime",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/cms-runtime/README.md"
+  },
+  "execution_domains": [],
+  "id": "cms-runtime",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/cms-runtime",
+      "package": "@inneranimalmedia/cms-runtime",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript"
+  ],
+  "name": "@inneranimalmedia/cms-runtime",
+  "purpose": "Portable self-describing local CMS runtime with SQLite schema, tool/skill catalogs, and provider-neutral package contracts.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/cms-runtime",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

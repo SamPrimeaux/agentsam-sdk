@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "theme",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/theme-grove",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-grove/README.md"
+  },
+  "execution_domains": [],
+  "id": "theme-grove",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/theme-grove",
+      "package": "@inneranimalmedia/theme-grove",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript"
+  ],
+  "name": "@inneranimalmedia/theme-grove",
+  "purpose": "A visual service-business prebuild centered on project galleries, material detail, process, reviews, and estimate conversion \u2014 polished enough for a studio, practical enough for a crew.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/theme-grove",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}
