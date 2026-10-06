@@ -37,7 +37,7 @@ test('checked-in Cloudflare deployment contract resolves the real Worker and por
     'CMS_FNF', 'CMS_SITE_BRIDGES', 'DB', 'EXECOS',
     'GITHUB_APP_ID', 'GITHUB_CLIENT_ID', 'GOOGLE_CLIENT_ID', 'GOOGLE_DESKTOP_CLIENT_ID',
     'HYPERDRIVE', 'IAM_CLIENT_ID',
-    'IAM_OAUTH_ISSUER', 'PTY_SERVICE', 'WEBSITE_ASSETS',
+    'IAM_OAUTH_ISSUER', 'PLUGIN_CATALOG', 'PTY_SERVICE', 'WEBSITE_ASSETS',
   ]);
 });
 
