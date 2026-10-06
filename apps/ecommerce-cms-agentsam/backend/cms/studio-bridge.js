@@ -4,7 +4,7 @@
  * generic /api/admin/*, orders, identity, checkout, or customer records.
  */
 import { handleAdminCmsApi } from './api.js';
-import { verifyCmsBridgeRequest } from './studio-bridge-protocol.js';
+import { verifyCmsBridgeRequest, isAllowedStudioCmsBridgeRoute } from './studio-bridge-protocol.js';
 
 const PREFIX='/api/internal/studio-cms/';
 const SEG=/^[a-z0-9-]+$/i;
