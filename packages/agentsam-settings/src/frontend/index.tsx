@@ -785,7 +785,7 @@ function PluginCustomizeView({
                       <span className={cx("absolute bottom-1 right-1 size-2.5 rounded-full border-2 border-background",isRunnable(plugin)?"bg-emerald-400":"bg-amber-400")}/>
                     </span>
                     <span className="w-full truncate text-[11px] font-medium text-foreground">{plugin.name}</span>
-                    <span className="w-full truncate text-[9px] text-muted-foreground">{plugin.setupStatus==="connected"?"Connected":plugin.setupStatus==="unconfigured"?"Needs setup":plugin.setupStatus}</span>
+                    <span className="w-full truncate text-[9px] text-muted-foreground">{installedState(plugin)}</span>
                   </button>
                 );
               })}
