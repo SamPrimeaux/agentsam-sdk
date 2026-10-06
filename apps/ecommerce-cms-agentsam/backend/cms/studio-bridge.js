@@ -35,8 +35,7 @@ export async function handleStudioCmsBridge(request,env){
   const url=new URL(request.url),method=request.method.toUpperCase();
   if(!url.pathname.startsWith(PREFIX))return error('cms_bridge_route_not_found',404);
   const tail=url.pathname.slice(PREFIX.length);
-  if(!VALID.test(tail)||!['GET','POST','PUT','DELETE'].includes(method))return error('cms_bridge_operation_denied',403);
-  if((tail==='registry'||tail==='pages')&&method!=='GET')return error('cms_bridge_operation_denied',403);
+  if(!isAllowedStudioCmsBridgeRoute(tail,method))return error('cms_bridge_operation_denied',403);
   if(!env.CMS_BRIDGE_SECRET || !env.CMS_BRIDGE_PROJECT_ID) return error('cms_bridge_not_configured',503);
   let proof;
   try { proof=await verifyCmsBridgeRequest(request,{secret:env.CMS_BRIDGE_SECRET,expectedProject:env.CMS_BRIDGE_PROJECT_ID}); }
