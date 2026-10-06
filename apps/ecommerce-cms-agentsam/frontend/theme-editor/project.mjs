@@ -52,16 +52,21 @@ export function extractThemePage(html, { slug = 'home', title = 'Home', baseUrl 
   };
   const zoneFor = (node) => node.tagName === 'HEADER' ? 'HEADER' : node.tagName === 'FOOTER' ? 'FOOTER' : 'BODY';
 
-  // Preserve the real site chrome. The previous importer only looked inside
-  // <main>, which silently dropped ordinary body-level headers and footers.
-  let nodes = [...doc.querySelectorAll('body > header, main > header, main > section, main > footer, body > footer')];
-  nodes = [...new Set(nodes)];
+  // Preserve the real site chrome and every direct page region. The previous
+  // importer only looked for <section> inside <main>, dropping ordinary
+  // body-level headers/footers and themes that use direct <div>/<article> regions.
+  const main = doc.querySelector('main');
+  let nodes = [
+    ...doc.querySelectorAll('body > header'),
+    ...(main ? [...main.children].filter((el) => !['SCRIPT', 'STYLE', 'LINK'].includes(el.tagName)) : []),
+    ...doc.querySelectorAll('body > footer'),
+  ];
   if (!nodes.length) {
     nodes = [...doc.body.children].filter((el) => !['SCRIPT', 'STYLE', 'LINK', 'MAIN'].includes(el.tagName));
-    const main = doc.querySelector('main');
-    if (main) nodes.push(...[...main.children].filter((el) => !['SCRIPT', 'STYLE', 'LINK'].includes(el.tagName)));
-    nodes = [...new Set(nodes)].sort((a, b) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1);
   }
+  nodes = [...new Set(nodes)].sort((a, b) =>
+    a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1
+  );
 
   const sections = nodes.map((node, index) => {
     const key = `section_${index + 1}`;
