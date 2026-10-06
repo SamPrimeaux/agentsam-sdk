@@ -24,7 +24,9 @@ import { useWorkStore } from "@/lib/work/store";
 const ITEMS = [
   { to: "/agentsam", label: "Studio", icon: MessageSquare, match: (p: string) => p === "/agentsam" || p.startsWith("/trails") },
   { to: "/cms", label: "CMS", icon: LayoutTemplate, match: (p: string) => p.startsWith("/cms") },
-  { to: "/content", label: "Content", icon: Images, match: (p: string) => p.startsWith("/content") },
+  { to: "/sites", label: "Sites", icon: Globe, match: (p: string) => p.startsWith("/sites") },
+  { to: "/media", label: "Media", icon: Images, match: (p: string) => p.startsWith("/media") || p.startsWith("/content") },
+  { to: "/campaigns", label: "Campaigns", icon: Megaphone, match: (p: string) => p.startsWith("/campaigns") },
   { to: "/cad", label: "CAD", icon: Layers, match: (p: string) => p.startsWith("/cad") },
   { to: "/database", label: "Database", icon: Database, match: (p: string) => p.startsWith("/database") },
   { to: "/collaborate", label: "Work", icon: CalendarDays, match: (p: string) => p.startsWith("/collaborate") || p.startsWith("/mail") },
