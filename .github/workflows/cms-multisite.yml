@@ -1,0 +1,32 @@
+name: CMS Multisite Contract Checks
+on:
+  push:
+    branches:
+      - feat/cms-multisite-authority-20261006
+  pull_request:
+    paths:
+      - 'apps/local-studio/backend/worker/cms-*.js'
+      - 'apps/ecommerce-cms-agentsam/backend/cms/studio-bridge*.js'
+      - 'apps/ecommerce-cms-agentsam/frontend/theme-editor/remote-worker-adapter.mjs'
+      - 'test/cms-multisite-security.test.mjs'
+      - '.github/workflows/cms-multisite.yml'
+jobs:
+  cms-contract:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax checks
+        run: |
+          node --check apps/local-studio/backend/worker/cms-authority.js
+          node --check apps/local-studio/backend/worker/cms-remote.js
+          node --check apps/local-studio/backend/worker/cms-service.js
+          node --check apps/ecommerce-cms-agentsam/backend/cms/studio-bridge.js
+          node --check apps/ecommerce-cms-agentsam/backend/cms/studio-bridge-protocol.js
+          node --check apps/ecommerce-cms-agentsam/frontend/theme-editor/remote-worker-adapter.mjs
+      - name: Authorization, signature and optimistic version tests
+        run: node --test test/cms-multisite-security.test.mjs
