@@ -31,7 +31,7 @@ const item = Object.freeze({
 });
 const env = {AGENTSAM_PLUGIN_CATALOG_URLS:JSON.stringify([SOURCE])};
 const fetcher = async (_url, options) => {
-  assert.equal(options.redirect,'error');
+  assert.equal(options.redirect,'manual');
   return new Response(JSON.stringify({schema:'agentsam.plugin-catalog/v1',plugins:[item]}),{
     status:200,headers:{'content-type':'application/json'},
   });
