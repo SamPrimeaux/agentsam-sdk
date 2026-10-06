@@ -825,7 +825,7 @@ function PluginCustomizeView({
           {catalogError ? (
             <div className="flex items-start gap-2 rounded-xl border border-amber-400/25 bg-amber-400/[0.065] p-3 text-[11px] text-amber-200">
               <AlertTriangle className="mt-0.5 size-4 shrink-0"/>
-              <span>{catalogError}</span>
+              <span>{catalogError}{catalog?.errors?.length ? ` Affected source${catalog.errors.length===1?"":"s"}: ${catalog.errors.map(error=>error.source).join(", ")}.` : ""}</span>
             </div>
           ) : null}
           {loading && !catalog ? <div className="rounded-2xl border border-border/70 p-8 text-center text-[12px] text-muted-foreground">Loading verified plugin catalog…</div>
