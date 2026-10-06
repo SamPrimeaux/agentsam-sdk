@@ -33,7 +33,9 @@ function returnedSite() {
 }
 
 test('CMS site discovery returns real Worker authority and prevents slug-based impersonation', async () => {
-  const owned = await listAuthorizedCmsSites(fakeDb([returnedSite()]), ACCOUNT);
+  const opts = { remoteWorkerNames: ['fuelnfreetime'] };
+  assert.deepEqual(await listAuthorizedCmsSites(fakeDb([returnedSite()]), ACCOUNT), [], 'no unconfigured workers in catalog');
+  const owned = await listAuthorizedCmsSites(fakeDb([returnedSite()]), ACCOUNT, opts);
   assert.equal(owned.length, 1);
   assert.deepEqual(owned[0], { ...site, domain:'fuelnfreetime.com', workspace_id: 'ws_test' });
   assert.equal((await requireCmsSiteAccess(fakeDb([]), ACCOUNT, 'fuelnfreetime')).status, 404);
