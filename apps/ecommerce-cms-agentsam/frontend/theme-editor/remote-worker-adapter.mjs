@@ -73,8 +73,23 @@ export function createRemoteThemeEditorAdapter(siteSlug, transport) {
     async publish() {
       throw new Error('cms_live_publish_requires_verified_preview_and_rollback');
     },
-    async resolvePreview() {
-      throw new Error('cms_live_draft_preview_not_yet_connected');
+    async resolvePreview(slug, draft) {
+      // This is a real data-bound visual composition from the portable FNF
+      // renderer, NOT a claim that the exact published Heuristic storefront
+      // will look identical. The live-publish gate remains intentionally shut.
+      if (typeof window === 'undefined') throw new Error('cms_preview_requires_browser');
+      if (!window.ThemeStudioPreview) {
+        await import('../../../../packages/theme-contract/runtime/theme-preview-registry.js');
+      }
+      if (!window.ThemeStudioPreview.getTheme('fnf')) {
+        await import('../../../../packages/fnf-theme/src/editor/preview-adapter.js');
+      }
+      const site = slug === 'site'
+        ? draft
+        : (await request('pages/site').catch(() => ({ page: null }))).page;
+      const html = window.ThemeStudioPreview.render('fnf', draft, site);
+      if (!html || !html.includes('<html')) throw new Error('cms_visual_preview_unavailable');
+      return { html };
     },
     async listMedia() { return []; },
   };
