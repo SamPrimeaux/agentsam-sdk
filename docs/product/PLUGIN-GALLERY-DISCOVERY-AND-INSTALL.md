@@ -68,7 +68,7 @@ Third-party ChatGPT plugins without compatible public MCP endpoints, credentials
 `apps/local-studio/backend/wrangler.jsonc` owns the first-party catalog source in the deployment configuration:
 
 ```json
-"AGENTSAM_PLUGIN_CATALOG_URLS": "[\\"https://agentsam-plugin-mcp.meauxbility.workers.dev/catalog/plugins\\"]"
+"AGENTSAM_PLUGIN_CATALOG_URLS": "[\"https://agentsam-plugin-mcp.meauxbility.workers.dev/catalog/plugins\"]"
 ```
 
 The Worker treats this string as a JSON list of reviewed HTTPS sources. Each additional compatible provider can be added to that list **after operator review** and without touching the portable Settings UI. Preserve the first-party source when extending the array; a deploy must not silently reset the catalog. The app's catalog-validation test protects the baseline.
