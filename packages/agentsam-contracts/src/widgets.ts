@@ -25,6 +25,13 @@ export interface AgentSamWidgetDefinition {
   description?: string;
   icon?: string;
   sizes: readonly AgentSamWidgetSize[];
+  /** Gallery taxonomy; layout and presentation must not depend on route names. */
+  category?: 'utility' | 'glance' | 'navigation' | 'content' | 'agent/runtime' | 'weather';
+  tags?: readonly string[];
+  /** Preview-only items must never be offered as live/installed capabilities. */
+  availability?: 'ready' | 'demo';
+  /** Proposed package authority for graduating a donor widget. */
+  ownerPackage?: string;
   data?: AgentSamWidgetDataSource;
   /** Route key or host-resolved deep link. Do not put credentials or raw provider secrets here. */
   deeplink?: string;

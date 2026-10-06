@@ -139,6 +139,47 @@ export type SettingsPlugin = SettingsCatalogItem & {
   lastErrorMessage?: string | null;
 };
 
+/** Operator-reviewed plugin catalog entries, never implicit permission grants. */
+export type SettingsDiscoveredPlugin = {
+  pluginKey: string;
+  name: string;
+  subtitle: string;
+  description: string;
+  publisher: string;
+  iconUrl: string | null;
+  category: string;
+  version: string;
+  keywords: string[];
+  capabilities: string[];
+  examples: string[];
+  tools: string[];
+  toolCount: number;
+  skillCount: number;
+  oauthScopes: string[];
+  readOnlyScopes: string[];
+  oauthResource: string | null;
+  toolPermissions: {id:string;title:string;scopes:string[];readOnly:boolean;requiresApproval:boolean}[];
+  endpointUrl: string;
+  catalogUrl: string;
+  transport: string;
+  authType: string;
+  websiteUrl: string | null;
+  privacyUrl: string | null;
+  termsUrl: string | null;
+  supportUrl: string | null;
+  repositoryUrl: string | null;
+  installationId: string | null;
+  setupStatus: string;
+  enabled: boolean;
+  healthStatus: string;
+  availability: 'available' | 'requires_connection' | 'connected';
+};
+export type SettingsPluginDiscovery = {
+  plugins: SettingsDiscoveredPlugin[];
+  errors: { source: string; reason: string }[];
+  configuredSources: number;
+};
+
 export type SettingsWidget = {
   id: string;
   name: string;
@@ -151,6 +192,11 @@ export type SettingsWidget = {
   source: string;
   preferenceScope: string;
   deeplink?: string | null;
+  /** Portable widget gallery metadata; undefined means a legacy ready widget. */
+  category?: string;
+  tags?: string[];
+  availability?: "ready" | "demo";
+  ownerPackage?: string;
 };
 
 export type SettingsCatalogKind =
@@ -252,8 +298,11 @@ export interface SettingsHost {
   snapshot(): Promise<SettingsSnapshot>;
   upsertCatalogItem?(kind: SettingsCatalogKind, item: SettingsCatalogItem): Promise<void>;
   removeCatalogItem?(kind: SettingsCatalogKind, id: string): Promise<void>;
+  discoverPlugins?(): Promise<SettingsPluginDiscovery>;
+  installPluginFromCatalog?(pluginKey: string): Promise<void>;
+  removeCatalogPlugin?(pluginId: string): Promise<void>;
   setPluginEnabled?(id: string, enabled: boolean): Promise<void>;
-  beginPluginSetup?(id: string): Promise<void>;
+  beginPluginSetup?(id: string, options?: {allowWrites?: boolean}): Promise<void>;
   disconnectPlugin?(id: string): Promise<void>;
   setWidgetVisible?(id: string, visible: boolean): Promise<void>;
   openWidget?(id: string): void;

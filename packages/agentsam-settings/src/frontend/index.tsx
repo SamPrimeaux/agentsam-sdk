@@ -1,4 +1,5 @@
 import { SettingsThemeGallery } from "./themes";
+import { WidgetGalleryPreview } from "./WidgetGalleryPreview";
 export { SettingsThemeGallery } from "./themes";
 import {
   AlertTriangle,
@@ -24,6 +25,9 @@ import {
   HardDrive,
   KeyRound,
   Menu,
+  Megaphone,
+  ExternalLink,
+  ArrowUpRight,
   Paintbrush,
   Palette,
   Plug,
@@ -53,6 +57,8 @@ import type {
   SettingsManifest,
   SettingsModel,
   SettingsPlugin,
+  SettingsDiscoveredPlugin,
+  SettingsPluginDiscovery,
   SettingsSnapshot,
   SettingsWidget,
   SettingsTheme,
@@ -611,6 +617,13 @@ function ExtensionTile({
   );
 }
 
+
+/**
+ * Installed state comes exclusively from SettingsSnapshot/plugins (the host's
+ * real registry). Discoverable entries come from an operator-configured,
+ * manifest-driven catalog. Neither a discovery card nor D1 installation is
+ * proof of a connected, executable tool.
+ */
 function PluginCustomizeView({
   plugins,
   host,
@@ -620,167 +633,376 @@ function PluginCustomizeView({
   host: SettingsHost;
   onChanged: () => Promise<void>;
 }) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selected = plugins.find((plugin) => plugin.id === selectedId) ?? null;
+  const [catalog, setCatalog] = useState<SettingsPluginDiscovery | null>(null);
+  const [loading, setLoading] = useState(Boolean(host.discoverPlugins));
+  const [catalogError, setCatalogError] = useState("");
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeCategory, setActiveCategory] = useState("all");
   const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const [notice, setNotice] = useState("");
+  const discovered = catalog?.plugins || [];
+  const installed = plugins.find(plugin => plugin.id === selectedKey || plugin.pluginKey === selectedKey) ?? null;
+  const selectedCatalog = discovered.find(plugin =>
+    plugin.pluginKey === selectedKey || plugin.pluginKey === installed?.pluginKey
+  ) ?? null;
+  const selected = selectedCatalog || installed;
+  const name = selected?.name || "Plugin";
+  const details = selectedCatalog?.description || installed?.subtitle || "";
+  const categories = useMemo(() => [
+    "all",
+    ...new Set(discovered.map(plugin => plugin.category).filter(Boolean)),
+  ], [discovered]);
+  const filtered = useMemo(() => {
+    const needle = searchTerm.trim().toLowerCase();
+    return discovered.filter(plugin => (
+      (activeCategory === "all" || plugin.category === activeCategory) &&
+      (!needle || [plugin.name, plugin.subtitle, plugin.description, plugin.publisher,
+        ...(plugin.keywords || []), ...(plugin.capabilities || [])]
+        .some(value => value.toLowerCase().includes(needle)))
+    ));
+  }, [discovered, activeCategory, searchTerm]);
 
-  async function run(action: () => Promise<void>) {
-    setBusy(true);
+  async function refresh() {
+    if (!host.discoverPlugins) {
+      setCatalogError("This host has not configured plugin discovery.");
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setCatalogError("");
     try {
-      await action();
+      const result = await host.discoverPlugins();
+      setCatalog(result);
+      if (result.errors?.length) {
+        setCatalogError("Some configured plugin catalogs are unavailable. Existing installations are unaffected.");
+      }
+      if (!result.configuredSources) {
+        setCatalogError("No trusted plugin catalogs are configured for this host.");
+      }
+    } catch {
+      setCatalogError("Plugin discovery is unavailable. Installed plugins are still accessible.");
+    } finally {
+      setLoading(false);
+    }
+  }
+  useEffect(() => { void refresh(); }, [host]);
+
+  async function run(operation: () => Promise<void>) {
+    setBusy(true);
+    setActionError("");
+    setNotice("");
+    try {
+      await operation();
       await onChanged();
+      await refresh();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "plugin_action_failed");
     } finally {
       setBusy(false);
     }
   }
 
+  async function copyText(value: string, label: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setNotice(label + " copied");
+    } catch {
+      setActionError("Clipboard unavailable; select and copy the text directly.");
+    }
+  }
+
+  // Installation or OAuth completion alone never means executable tools are ready.
+  const isRunnable = (row: SettingsPlugin | null | undefined) => Boolean(
+    row?.setupStatus === "connected" && row.enabled && row.toolCount > 0 && row.healthStatus === "healthy"
+  );
+  const installedState = (row: SettingsPlugin) => isRunnable(row)
+    ? "Connected" : row.setupStatus === "connected" ? "Verify tools" : "Needs connection";
+  const stateFor = (entry: SettingsDiscoveredPlugin) => {
+    const row = plugins.find(plugin=>plugin.pluginKey === entry.pluginKey);
+    return row ? installedState(row) : entry.installationId ? "Needs connection" : "Available";
+  };
+
+  function iconFor(plugin: { name: string; keywords?: string[] }, size = "size-6") {
+    const signal = [plugin.name, ...(plugin.keywords ?? [])].join(" ").toLowerCase();
+    if (/brand|identity|design/.test(signal)) return <Palette className={size}/>;
+    if (/campaign|marketing|promotion/.test(signal)) return <Megaphone className={size}/>;
+    return <Plug className={size}/>;
+  }
+  const stateClasses = (state: string) => state === "Connected"
+    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+    : state === "Available"
+      ? "border-sky-400/30 bg-sky-400/10 text-sky-300"
+      : "border-amber-400/25 bg-amber-400/10 text-amber-300";
+  const anySelected = Boolean(selected);
+
   return (
     <>
-      <Section
-        title="Plugins"
-        description="Installed capabilities from the live AgentSam plugin registry. Health is measured by the runtime; it is not manually editable."
-        action={
-          <button
-            type="button"
-            onClick={() => void onChanged()}
-            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-3 text-[10px] text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            <RefreshCw className="size-3.5" />
-            Refresh
-          </button>
-        }
-      >
-        {plugins.length ? (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-            {plugins.map((plugin) => (
-              <ExtensionTile
-                key={plugin.id}
-                name={plugin.name}
-                subtitle={plugin.setupStatus === "connected" ? plugin.healthStatus : plugin.setupStatus}
-                imageUrl={plugin.iconUrl}
-                imageAlt={plugin.iconAlt}
-                imageFit={plugin.iconFit}
-                icon={<Plug className="size-6 text-muted-foreground" />}
-                muted={!plugin.enabled}
-                badge={<span className={cx("block size-3 rounded-full border-2 border-background", plugin.status === "healthy" ? "bg-emerald-400" : plugin.status === "attention" ? "bg-amber-400" : "bg-muted-foreground")} />}
-                onClick={() => setSelectedId(plugin.id)}
-              />
+      <section className="space-y-6 pb-8">
+        <div className="relative overflow-hidden rounded-[22px] border border-border/70 bg-gradient-to-br from-muted/55 via-background to-violet-500/[0.065] p-5 sm:p-7">
+          <div className="pointer-events-none absolute -right-20 -top-20 size-72 rounded-full bg-violet-500/[0.08] blur-3xl" />
+          <div className="relative flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-xl">
+              <p className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                <Plug className="size-3.5 text-violet-400" /> AgentSam integrations
+              </p>
+              <h2 className="text-[25px] font-semibold tracking-[-0.05em] sm:text-[30px]">Make AgentSam yours.</h2>
+              <p className="mt-2 max-w-lg text-[12px] leading-relaxed text-muted-foreground">
+                Browse real published plugins, inspect their capabilities, and manage the integrations connected to your account.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 rounded-full border border-border/70 bg-background/60 px-3 py-2 text-[10px] text-muted-foreground">
+              <span className="size-1.5 rounded-full bg-emerald-400"/>
+              <span><b className="text-foreground">{plugins.length}</b> installed</span>
+              <span className="text-border">/</span>
+              <span><b className="text-foreground">{discovered.length}</b> discoverable</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="flex items-center gap-2 text-[15px] font-semibold tracking-[-0.025em]">Installed <ChevronRight className="size-4 text-muted-foreground"/></h3>
+              <p className="mt-1 text-[11px] text-muted-foreground">Actual plugins saved in this account's registry.</p>
+            </div>
+            <button type="button" onClick={()=>void (async()=>{await onChanged();await refresh();})()}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-3 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground">
+              <RefreshCw className={cx("size-3.5",loading && "animate-spin")}/> Refresh
+            </button>
+          </div>
+          {plugins.length ? (
+            <div className="flex gap-3 overflow-x-auto pb-2" aria-label="Installed plugins">
+              {plugins.map(plugin=>{
+                const matched = discovered.find(entry=>entry.pluginKey===plugin.pluginKey);
+                return (
+                  <button type="button" key={plugin.id} onClick={()=>{setSelectedKey(plugin.id);setActionError("");setNotice("");}}
+                    aria-label={"View installed "+plugin.name}
+                    className="group flex w-[100px] shrink-0 flex-col items-center gap-2 rounded-xl p-2 text-center hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400">
+                    <span className="relative flex size-[67px] items-center justify-center overflow-hidden rounded-[20px] border border-border/90 bg-muted/35 text-foreground/85 shadow-[0_8px_20px_-14px_rgba(0,0,0,0.5)]">
+                      {iconFor(matched ?? plugin,"size-7")}
+                      {plugin.iconUrl ? <img src={plugin.iconUrl} alt={plugin.iconAlt || ""} onError={event=>{event.currentTarget.hidden=true;}}
+                        className={cx("absolute inset-0 size-full bg-muted/35",plugin.iconFit==="cover"?"object-cover":"object-contain p-2.5")}/> : null}
+                      <span className={cx("absolute bottom-1 right-1 size-2.5 rounded-full border-2 border-background",isRunnable(plugin)?"bg-emerald-400":"bg-amber-400")}/>
+                    </span>
+                    <span className="w-full truncate text-[11px] font-medium text-foreground">{plugin.name}</span>
+                    <span className="w-full truncate text-[9px] text-muted-foreground">{installedState(plugin)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 rounded-xl border border-dashed border-border/85 bg-muted/10 p-5">
+              <Plug className="size-5 shrink-0 text-muted-foreground"/>
+              <div className="text-[11px] leading-relaxed text-muted-foreground">No plugins installed in this account yet. Explore the verified catalog below.</div>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-4 border-t border-border/65 pt-6">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h3 className="text-[16px] font-semibold tracking-[-0.025em]">Discover plugins</h3>
+              <p className="mt-1 text-[11px] text-muted-foreground">Published plugin packages from configured, verified catalog sources. {catalog ? `${catalog.configuredSources} source${catalog.configuredSources===1?"":"s"} configured` : "Checking sources…"}</p>
+            </div>
+            <span className="text-[11px] text-muted-foreground">{filtered.length} plugins</span>
+          </div>
+          <label className="relative block w-full max-w-md">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"/>
+            <input type="search" aria-label="Search plugins" value={searchTerm} onChange={e=>setSearchTerm(e.target.value)}
+              placeholder="Search plugins and capabilities"
+              className="h-11 w-full rounded-[14px] border border-border/85 bg-muted/15 pl-10 pr-3 text-[12px] text-foreground outline-none placeholder:text-muted-foreground focus:border-violet-400/70 focus:ring-2 focus:ring-violet-400/15"/>
+          </label>
+          <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Filter plugins by category">
+            {categories.map(category=>(
+              <button key={category} type="button" aria-pressed={activeCategory===category} onClick={()=>setActiveCategory(category)}
+                className={cx("shrink-0 rounded-full border px-3 py-1.5 text-[11px] transition-colors",
+                  activeCategory===category ? "border-violet-400/50 bg-violet-400/15 font-medium text-foreground" :
+                    "border-border/70 bg-background/45 text-muted-foreground hover:text-foreground")}>
+                {category==="all"?"All plugins":category}
+              </button>
             ))}
           </div>
-        ) : (
-          <EmptyState title="No installed plugins were returned by this account's registry." />
-        )}
-      </Section>
+          {catalogError ? (
+            <div className="flex items-start gap-2 rounded-xl border border-amber-400/25 bg-amber-400/[0.065] p-3 text-[11px] text-amber-200">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0"/>
+              <span>{catalogError}{catalog?.errors?.length ? ` Affected source${catalog.errors.length===1?"":"s"}: ${catalog.errors.map(error=>error.source).join(", ")}.` : ""}</span>
+            </div>
+          ) : null}
+          {loading && !catalog ? <div className="rounded-2xl border border-border/70 p-8 text-center text-[12px] text-muted-foreground">Loading verified plugin catalog…</div>
+            : filtered.length ? (
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {filtered.map(plugin=>{
+                  const state=stateFor(plugin);
+                  return (
+                    <button key={plugin.pluginKey} type="button" onClick={()=>{setSelectedKey(plugin.pluginKey);setActionError("");setNotice("");}}
+                      aria-label={"Explore "+plugin.name}
+                      className="group flex min-w-0 flex-col overflow-hidden rounded-[18px] border border-border/75 bg-background/60 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/25 hover:bg-muted/20 hover:shadow-[0_14px_35px_-24px_rgba(0,0,0,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400">
+                      <div className="relative flex min-h-[124px] items-end overflow-hidden bg-gradient-to-br from-violet-400/[0.15] via-sky-400/[0.035] to-fuchsia-400/[0.11] p-4">
+                        <div className="absolute -right-8 -top-10 size-40 rounded-full border border-violet-400/15 bg-violet-400/[0.065]"/>
+                        <div className="relative flex w-full items-end justify-between gap-3">
+                          <span className="flex size-14 items-center justify-center overflow-hidden rounded-[18px] border border-foreground/15 bg-background/75 text-violet-300 shadow-lg">
+                            {plugin.iconUrl
+                              ? <img src={plugin.iconUrl} alt="" loading="lazy" className="size-full object-contain p-1.5"/>
+                              : iconFor(plugin,"size-7")}
+                          </span>
+                          <span className={cx("rounded-full border px-2 py-1 text-[10px] font-medium",stateClasses(state))}>{state}</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-1 flex-col gap-2 p-4">
+                        <p className="text-[13px] font-semibold tracking-[-0.02em] text-foreground">{plugin.name}</p>
+                        <p className="line-clamp-2 min-h-[34px] text-[11px] leading-[1.6] text-muted-foreground">{plugin.subtitle || plugin.description}</p>
+                        <div className="mt-auto flex items-center justify-between gap-2 border-t border-border/65 pt-3">
+                          <span className="text-[10px] text-muted-foreground">{plugin.toolCount} tools · {plugin.skillCount} skills</span>
+                          <span className="flex items-center gap-1 text-[11px] font-medium text-foreground/80">Explore <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-0.5"/></span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-border p-9 text-center text-[11px] text-muted-foreground">
+                {catalog?.plugins.length ? "No plugins match these filters." : "No discoverable plugins available from configured catalogs."}
+                {(searchTerm || activeCategory!=="all") ? <button type="button" onClick={()=>{setSearchTerm("");setActiveCategory("all");}} className="ml-2 underline underline-offset-4">Clear filters</button> : null}
+              </div>
+            )}
+          <p className="text-[10px] leading-relaxed text-muted-foreground">
+            Installing a plugin records it in this account. OAuth authorization, tool registration and verified connection health are separate requirements before tools can execute.
+          </p>
+        </div>
+      </section>
 
-      <SettingsSheet
-        open={Boolean(selected)}
-        title={selected?.name || "Plugin"}
-        description={selected?.subtitle}
-        onClose={() => setSelectedId(null)}
-      >
+      <SettingsSheet open={anySelected} title={name} description={selected?.subtitle}
+        onClose={()=>{setSelectedKey(null);setActionError("");setNotice("");}}>
         {selected ? (
           <div className="space-y-5">
-            <div className="flex items-center gap-4">
-              <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-[16px] border border-border bg-muted/25">
-                {selected.iconUrl ? (
-                  <img
-                    src={selected.iconUrl}
-                    alt={selected.iconAlt || ""}
-                    className={cx("size-full", selected.iconFit === "cover" ? "object-cover" : "object-contain p-2.5")}
-                  />
-                ) : (
-                  <Plug className="size-6 text-muted-foreground" />
+            <div className="flex items-start gap-3.5">
+              <div className="flex size-[70px] shrink-0 items-center justify-center overflow-hidden rounded-[20px] border border-border/80 bg-gradient-to-br from-violet-400/20 to-sky-400/10 text-violet-300">
+                {selectedCatalog?.iconUrl
+                  ? <img src={selectedCatalog.iconUrl} alt="" className="size-full object-contain p-2"/>
+                  : installed?.iconUrl
+                    ? <img src={installed.iconUrl} alt={installed.iconAlt||""} className="size-full object-contain p-2"/>
+                    : iconFor(selectedCatalog ?? installed ?? {name},"size-8")}
+              </div>
+              <div className="min-w-0 space-y-1">
+                <p className="text-[16px] font-semibold tracking-[-0.025em]">{name}</p>
+                <p className="text-[11px] text-muted-foreground">{selectedCatalog?.publisher || installed?.providerKey || "Plugin provider"}</p>
+                <span className={cx("inline-block rounded-full border px-2 py-0.5 text-[10px]",stateClasses(
+                  selectedCatalog ? stateFor(selectedCatalog) : installed ? installedState(installed) : "Available"))}>
+                  {selectedCatalog ? stateFor(selectedCatalog) : installed ? installedState(installed) : "Available"}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-[12px] leading-[1.8] text-muted-foreground">{details}</p>
+
+            {selectedCatalog?.examples.length ? (
+              <div className="space-y-3">
+                <p className="text-[12px] font-semibold">Ideas to try</p>
+                <div className="space-y-2 rounded-[18px] border border-sky-300/25 bg-gradient-to-br from-sky-300/20 via-indigo-400/15 to-violet-400/15 p-3">
+                  {selectedCatalog.examples.slice(0,3).map((prompt,index)=>(
+                    <button key={index} type="button" onClick={()=>void copyText(prompt,"Example prompt")}
+                      aria-label={"Copy example prompt "+(index+1)}
+                      className="group flex w-full items-center gap-3 rounded-[14px] border border-white/10 bg-background/75 px-3.5 py-3.5 text-left transition-colors hover:bg-background/90">
+                      <span className="min-w-0 flex-1 text-[12px] leading-relaxed text-foreground/90">{prompt}</span>
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground text-background"><Copy className="size-3.5"/></span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground">Copy an example to use in a host where this plugin is authorized.</p>
+              </div>
+            ) : null}
+
+            {selectedCatalog?.capabilities.length || installed?.capabilities.length ? (
+              <div className="space-y-2">
+                <p className="text-[12px] font-semibold">Capabilities</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(selectedCatalog?.capabilities || installed?.capabilities || []).map(capability=>(
+                    <span key={capability} className="rounded-lg border border-border/80 bg-muted/20 px-2.5 py-1.5 text-[10px] text-foreground/80">{capability}</span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="overflow-hidden rounded-xl border border-border/80 px-3">
+              {selectedCatalog ? <>
+                <PreferenceRow label="Developer" description="Publisher of the plugin package." value={selectedCatalog.publisher}/>
+                <PreferenceRow label="Version" description="Published plugin manifest version." value={selectedCatalog.version}/>
+                <PreferenceRow label="Transport" description="Declared MCP transport protocol." value={selectedCatalog.transport}/>
+                <PreferenceRow label="Permissions" description="Connection and authorization requirements." value="OAuth authorization required"/>
+                <PreferenceRow label="Tools / skills" description="Capabilities declared by the published manifest." value={selectedCatalog.toolCount+" tools · "+selectedCatalog.skillCount+" skills"}/>
+              </> : null}
+              {installed ? <>
+                <PreferenceRow label="Connection status" description="Recorded connection state for this account." value={installed.setupStatus}/>
+                <PreferenceRow label="Health" description="Runtime-reported health status." value={installed.healthStatus}/>
+                <PreferenceRow label="Tools registered" description="Actual executable tools registered for this installation." value={String(installed.toolCount)}/>
+                <PreferenceRow label="Authentication" description="Required credential type." value={installed.authType}/>
+                {!(installed.installationKey==="catalog-v1" && installed.setupStatus!=="connected") && host.setPluginEnabled ?
+                  <PreferenceRow label="Enabled" description="Controls participation in the active runtime."
+                    trailing={<Toggle enabled={installed.enabled} onChange={value=>void run(()=>host.setPluginEnabled!(installed.id,value))}/>} />
+                  : null}
+              </> : null}
+            </div>
+
+            {selectedCatalog ? (
+              <div className="flex flex-wrap gap-2 text-[11px]">
+                {([
+                  ["Website",selectedCatalog.websiteUrl],
+                  ["Privacy",selectedCatalog.privacyUrl],
+                  ["Terms",selectedCatalog.termsUrl],
+                  ["Support",selectedCatalog.supportUrl],
+                ] as const).filter(item=>Boolean(item[1])).map(([label,url])=>
+                  <a key={label} href={url || undefined} target="_blank" rel="noreferrer noopener"
+                    className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-2 text-muted-foreground hover:text-foreground">{label}<ExternalLink className="size-3"/></a>
                 )}
               </div>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <StatusPill status={selected.status} label={selected.healthStatus} />
-                  <span className="rounded-full border border-border px-2 py-0.5 text-[9px] text-muted-foreground">
-                    {selected.setupStatus}
-                  </span>
-                </div>
-                <div className="mt-2 text-[10px] text-muted-foreground">
-                  {selected.providerKey} · {selected.kind}
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-border/70 px-3">
-              <PreferenceRow
-                label="Enabled"
-                description="Controls whether this installed plugin may contribute tools and capabilities."
-                trailing={
-                  <Toggle
-                    enabled={selected.enabled}
-                    onChange={(enabled) => {
-                      if (!host.setPluginEnabled) return;
-                      void run(() => host.setPluginEnabled!(selected.id, enabled));
-                    }}
-                  />
-                }
-              />
-              <PreferenceRow label="Provider" description="Canonical provider key." value={selected.providerKey} />
-              <PreferenceRow label="Transport" description="Execution transport." value={selected.transport} />
-              <PreferenceRow label="Authentication" description="Credential/connection authority." value={selected.authType} />
-              <PreferenceRow label="Tools" description="Active tools registered for this installation." value={String(selected.toolCount)} />
-              <PreferenceRow label="Environment" description="Plugin installation environment." value={selected.environment} />
-            </div>
-
-            {selected.lastErrorCode ? (
-              <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
-                <div className="text-[10px] font-medium text-amber-300">{selected.lastErrorCode}</div>
-                {selected.lastErrorMessage ? (
-                  <div className="mt-1 text-[10px] leading-4 text-muted-foreground">{selected.lastErrorMessage}</div>
-                ) : null}
-              </div>
             ) : null}
+            {actionError ? <div role="alert" className="rounded-lg border border-red-400/30 bg-red-400/10 p-3 text-[11px] text-red-300">{actionError}</div> : null}
+            {notice ? <div role="status" className="rounded-lg border border-emerald-400/25 bg-emerald-400/10 p-3 text-[11px] text-emerald-300">{notice}</div> : null}
 
-            {selected.capabilities.length ? (
-              <div>
-                <div className="mb-2 text-[10px] font-medium">Capabilities</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {selected.capabilities.map((capability) => (
-                    <span key={capability} className="rounded-md border border-border bg-muted/20 px-2 py-1 text-[9px] text-muted-foreground">
-                      {capability}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {selected.toolLanes.length ? (
-              <div>
-                <div className="mb-2 text-[10px] font-medium">Tool lanes</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {selected.toolLanes.map((lane) => (
-                    <span key={lane} className="rounded-md bg-muted px-2 py-1 text-[9px] text-muted-foreground">
-                      {lane}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            <div className="flex flex-wrap gap-2 border-t border-border/70 pt-4">
-              {selected.setupUrl && host.beginPluginSetup ? (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void run(() => host.beginPluginSetup!(selected.id))}
-                  className="h-9 rounded-md bg-foreground px-3 text-[10px] font-medium text-background disabled:opacity-40"
-                >
-                  {selected.setupStatus === "connected" ? "Reconnect" : "Set up"}
+            <div className="space-y-2 border-t border-border/70 pt-4">
+              {selectedCatalog && !plugins.some(plugin=>plugin.pluginKey===selectedCatalog.pluginKey) && host.installPluginFromCatalog ? (
+                <button type="button" disabled={busy} onClick={()=>void run(()=>host.installPluginFromCatalog!(selectedCatalog.pluginKey))}
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-foreground text-[12px] font-semibold text-background disabled:opacity-40">
+                  <Plus className="size-4"/> Add to Studio
                 </button>
               ) : null}
-              {selected.disconnectUrl && selected.setupStatus === "connected" && host.disconnectPlugin ? (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void run(() => host.disconnectPlugin!(selected.id))}
-                  className="h-9 rounded-md border border-border px-3 text-[10px] text-muted-foreground hover:bg-muted disabled:opacity-40"
-                >
-                  Disconnect
+              {selectedCatalog && plugins.some(plugin=>plugin.pluginKey===selectedCatalog.pluginKey && plugin.setupStatus!=="connected") ? (
+                <div className="rounded-lg border border-amber-400/25 bg-amber-400/[0.06] p-3 text-[11px] leading-relaxed text-muted-foreground">
+                  <span className="font-medium text-amber-300">Installed · authorization required.</span> This plugin's MCP tools will not run in Studio until a supported OAuth connection and tool registration flow is completed.
+                </div>
+              ) : null}
+              {(installed?.setupUrl || installed?.installationKey === "catalog-v1") && host.beginPluginSetup ? (
+                <button type="button" disabled={busy} onClick={()=>void run(()=>host.beginPluginSetup!(installed.id))}
+                  className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-foreground text-[11px] font-semibold text-background disabled:opacity-40">
+                  {installed.installationKey==="catalog-v1" ? "Connect read-only" :
+                    installed.setupStatus==="connected"?"Reconnect":"Connect plugin"} <ArrowUpRight className="size-3.5"/>
                 </button>
+              ) : null}
+              {installed?.installationKey === "catalog-v1" && selectedCatalog?.toolPermissions.some(tool=>tool.requiresApproval) && host.beginPluginSetup ? (
+                <button type="button" disabled={busy}
+                  onClick={()=>void run(()=>host.beginPluginSetup!(installed.id,{allowWrites:true}))}
+                  className="h-10 w-full rounded-full border border-border px-4 text-[11px] font-medium hover:bg-muted disabled:opacity-40">
+                  Connect with approved writes
+                </button>
+              ) : null}
+              {selectedCatalog ? (
+                <button type="button" onClick={()=>void copyText(selectedCatalog.endpointUrl,"MCP endpoint")}
+                  className="h-10 w-full rounded-full border border-border px-4 text-[11px] font-medium hover:bg-muted">
+                  <Copy className="mr-1.5 inline size-3.5"/> Copy MCP endpoint
+                </button>
+              ) : null}
+              {installed?.installationKey==="catalog-v1" && host.removeCatalogPlugin ? (
+                <button type="button" disabled={busy} onClick={()=>void run(async()=>{await host.removeCatalogPlugin!(installed.id);setSelectedKey(null);})}
+                  className="h-9 w-full text-[11px] text-muted-foreground underline underline-offset-4 hover:text-foreground">
+                  Remove installation
+                </button>
+              ) : null}
+              {(installed?.disconnectUrl || installed?.installationKey==="catalog-v1") && installed?.setupStatus==="connected" && host.disconnectPlugin ? (
+                <button type="button" disabled={busy} onClick={()=>void run(()=>host.disconnectPlugin!(installed.id))}
+                  className="h-9 w-full rounded-full border border-border px-4 text-[11px] text-muted-foreground hover:bg-muted">Disconnect</button>
               ) : null}
             </div>
           </div>
@@ -800,45 +1022,148 @@ function WidgetCustomizeView({
   onChanged: () => Promise<void>;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeCategory, setActiveCategory] = useState("all");
   const selected = widgets.find((widget) => widget.id === selectedId) ?? null;
+  const ready = widgets.filter((widget) => widget.availability !== "demo").length;
+  const previewCount = widgets.length - ready;
+  const categories = [
+    { id: "all", label: "All widgets" },
+    { id: "utility", label: "Utilities" },
+    { id: "glance", label: "At a glance" },
+    { id: "agent/runtime", label: "Agent & runtime" },
+    { id: "navigation", label: "Navigation" },
+    { id: "content", label: "Content" },
+    { id: "weather", label: "Weather" },
+  ];
+  const filtered = useMemo(() => widgets.filter((widget) => {
+    if (activeCategory !== "all" && widget.category !== activeCategory) return false;
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return true;
+    return [widget.name, widget.description, widget.category || "", widget.ownerPackage || "", ...(widget.tags || [])]
+      .some((value) => value.toLowerCase().includes(query));
+  }), [widgets, activeCategory, searchTerm]);
 
   async function setVisible(visible: boolean) {
-    if (!selected || !host.setWidgetVisible) return;
+    if (!selected || selected.availability === "demo" || !host.setWidgetVisible) return;
     await host.setWidgetVisible(selected.id, visible);
     await onChanged();
   }
 
+  const categoryLabel = (id: string | undefined) =>
+    categories.find((category) => category.id === id)?.label ?? "Widget";
+
   return (
     <>
-      <Section
-        title="Widgets"
-        description="Portable app utilities. Visibility is a preference, so hiding a widget never destroys its underlying capability or data."
-      >
-        {widgets.length ? (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-            {widgets.map((widget) => (
-              <ExtensionTile
-                key={widget.id}
-                name={widget.name}
-                subtitle={widget.visible ? "Visible" : "Hidden"}
-                icon={<Clock3 className="size-6 text-muted-foreground" />}
-                muted={!widget.visible}
-                badge={
-                  <span className={cx(
-                    "flex size-4 items-center justify-center rounded-full border-2 border-background",
-                    widget.visible ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground",
-                  )}>
-                    {widget.visible ? <Check className="size-2.5" /> : <EyeOff className="size-2.5" />}
-                  </span>
-                }
-                onClick={() => setSelectedId(widget.id)}
+      <section className="space-y-6 pb-8">
+        <div className="relative overflow-hidden rounded-[22px] border border-border/70 bg-gradient-to-br from-muted/50 via-background to-violet-500/[0.055] p-5 sm:p-7">
+          <div className="pointer-events-none absolute -right-24 -top-28 size-72 rounded-full bg-violet-500/[0.085] blur-3xl" />
+          <div className="relative flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-xl">
+              <div className="mb-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <Boxes className="size-3.5 text-violet-400" /> Workbench collection
+              </div>
+              <h2 className="text-[24px] font-semibold tracking-[-0.045em] sm:text-[28px]">Your widget library</h2>
+              <p className="mt-2 max-w-lg text-[12px] leading-[1.7] text-muted-foreground">
+                Explore the original widget concepts, inspect their designs and enable widgets as they become real, portable capabilities.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 self-start rounded-full border border-border/80 bg-background/65 px-3 py-2 text-[10px] text-muted-foreground">
+              <span className="size-1.5 rounded-full bg-emerald-400" />
+              <span><strong className="font-semibold text-foreground">{ready}</strong> ready</span>
+              <span className="mx-0.5 text-foreground/15">/</span>
+              <span><strong className="font-semibold text-foreground">{previewCount}</strong> concepts</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <label className="relative block w-full sm:max-w-[280px]">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="search"
+                aria-label="Search widgets"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search widgets or capabilities"
+                className="h-10 w-full rounded-xl border border-border/80 bg-background/70 pl-10 pr-3 text-[12px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-violet-400/70 focus:ring-2 focus:ring-violet-400/10"
               />
+            </label>
+            <span className="text-[11px] text-muted-foreground">{filtered.length} of {widgets.length} widgets</span>
+          </div>
+          <div className="flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label="Filter widgets by category">
+            {categories.filter((category) => category.id === "all" || widgets.some((widget) => widget.category === category.id)).map((category) => (
+              <button
+                key={category.id}
+                type="button"
+                aria-pressed={activeCategory === category.id}
+                onClick={() => setActiveCategory(category.id)}
+                className={cx(
+                  "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
+                  activeCategory === category.id
+                    ? "border-foreground/80 bg-foreground text-background"
+                    : "border-border/75 bg-background/40 text-muted-foreground hover:border-foreground/25 hover:text-foreground"
+                )}
+              >
+                {category.label}
+              </button>
             ))}
           </div>
+        </div>
+
+        {filtered.length ? (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            {filtered.map((widget) => {
+              const demo = widget.availability === "demo";
+              return (
+                <button
+                  type="button"
+                  key={widget.id}
+                  onClick={() => setSelectedId(widget.id)}
+                  className="group min-w-0 overflow-hidden rounded-[19px] border border-border/75 bg-background/65 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/25 hover:bg-muted/20 hover:shadow-[0_14px_38px_-22px_rgba(0,0,0,0.5)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+                  aria-label={`Preview ${widget.name}${demo ? " concept" : " widget"}`}
+                >
+                  <div className="relative h-[158px] overflow-hidden border-b border-border/60 bg-gradient-to-br from-muted/50 via-muted/20 to-violet-400/[0.075] px-5 py-4">
+                    <div className="pointer-events-none absolute -right-12 -top-12 size-36 rounded-full bg-violet-400/[0.07] blur-2xl" />
+                    <div className="relative h-full"><WidgetGalleryPreview id={widget.id} /></div>
+                  </div>
+                  <div className="space-y-2 p-4">
+                    <div className="flex min-w-0 items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-[12px] font-semibold tracking-[-0.015em] text-foreground">{widget.name}</p>
+                        <p className="mt-0.5 text-[10px] text-muted-foreground">{categoryLabel(widget.category)}</p>
+                      </div>
+                      <span className={cx(
+                        "shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-medium",
+                        demo ? "border-border bg-muted/45 text-muted-foreground" : "border-emerald-500/25 bg-emerald-500/10 text-emerald-400"
+                      )}>
+                        {demo ? "Concept" : "Ready"}
+                      </span>
+                    </div>
+                    <p className="line-clamp-2 min-h-[31px] text-[10px] leading-[1.55] text-muted-foreground">{widget.description}</p>
+                    <div className="flex items-center justify-between border-t border-border/60 pt-2.5">
+                      <span className="text-[10px] text-muted-foreground">{demo ? "Sample preview" : widget.visible ? "Visible in Utilities" : "Hidden in Utilities"}</span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-foreground/80">
+                        Explore <ChevronRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         ) : (
-          <EmptyState title="No widgets are registered by this build." />
+          <div className="rounded-2xl border border-dashed border-border p-12 text-center">
+            <Search className="mx-auto size-5 text-muted-foreground" />
+            <p className="mt-3 text-[12px] font-medium">No widgets match your search.</p>
+            <button type="button" className="mt-2 text-[11px] text-muted-foreground underline underline-offset-4" onClick={() => {setSearchTerm("");setActiveCategory("all");}}>Clear filters</button>
+          </div>
         )}
-      </Section>
+        <p className="text-[10px] leading-relaxed text-muted-foreground">
+          Concept previews use sample artwork/data and do not connect to, control, or represent live AgentSam systems. They become installable after their package adapters and safety checks are completed.
+        </p>
+      </section>
 
       <SettingsSheet
         open={Boolean(selected)}
@@ -848,53 +1173,43 @@ function WidgetCustomizeView({
       >
         {selected ? (
           <div className="space-y-5">
-            <div className="flex items-center gap-4">
-              <div className="flex size-16 shrink-0 items-center justify-center rounded-[16px] border border-border bg-gradient-to-br from-muted/90 via-muted/40 to-background">
-                <Clock3 className="size-6 text-muted-foreground" />
+            <div className="overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-muted/45 to-violet-400/[0.06] p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Design preview</span>
+                <span className="rounded-full border border-border bg-background/75 px-2 py-0.5 text-[9px] text-muted-foreground">
+                  {selected.availability === "demo" ? "Concept · sample data" : "Packaged widget"}
+                </span>
               </div>
-              <div>
-                <div className="text-[12px] font-medium">{selected.name}</div>
-                <div className="mt-1 text-[10px] text-muted-foreground">{selected.kind}</div>
-              </div>
+              <div className="mx-auto h-40 max-w-sm"><WidgetGalleryPreview id={selected.id} /></div>
             </div>
-
             <div className="rounded-lg border border-border/70 px-3">
-              <PreferenceRow
-                label="Visible"
-                description="Show this widget on Local Studio's Utilities surface."
-                trailing={<Toggle enabled={selected.visible} onChange={(value) => void setVisible(value)} />}
-              />
-              <PreferenceRow label="Preference scope" description="Where this visibility choice is stored." value={selected.preferenceScope} />
-              <PreferenceRow label="Source" description="Widget installation/source authority." value={selected.source} />
-              <PreferenceRow label="Sizes" description="Supported widget presentation sizes." value={selected.sizes.join(", ")} />
+              <PreferenceRow label="Status" description="Availability of this widget implementation." value={selected.availability === "demo" ? "Design concept · not yet installed" : "Ready to use"} />
+              <PreferenceRow label="Category" description="Widget library grouping." value={categoryLabel(selected.category)} />
+              {selected.ownerPackage ? <PreferenceRow label="Proposed owner" description="Target package authority for this widget." value={selected.ownerPackage} /> : null}
+              <PreferenceRow label="Sizes" description="Supported presentation sizes." value={selected.sizes.join(", ")} />
+              {selected.availability !== "demo" ? (
+                <>
+                  <PreferenceRow label="Preference scope" description="Where the current visibility choice is stored." value={selected.preferenceScope} />
+                  <PreferenceRow
+                    label="Visible"
+                    description="Show this widget in the Utilities surface."
+                    trailing={<Toggle enabled={selected.visible} onChange={(value) => void setVisible(value)} />}
+                  />
+                </>
+              ) : (
+                <p className="py-3 text-[11px] leading-relaxed text-muted-foreground">
+                  Preview only. This design will be enabled once its renderer, source adapter, and permissions are connected to a real package. No demo controls will mutate production data.
+                </p>
+              )}
             </div>
-
             <div className="flex flex-wrap gap-2 border-t border-border/70 pt-4">
-              {host.openWidget ? (
-                <button
-                  type="button"
-                  onClick={() => host.openWidget?.(selected.id)}
-                  className="h-9 rounded-md bg-foreground px-3 text-[10px] font-medium text-background"
-                >
-                  View widget
-                </button>
+              {selected.availability !== "demo" && host.openWidget ? (
+                <button type="button" onClick={() => host.openWidget?.(selected.id)} className="h-9 rounded-lg bg-foreground px-4 text-[11px] font-medium text-background">Open widget</button>
               ) : null}
-              <button
-                type="button"
-                onClick={() => void setVisible(!selected.visible)}
-                className="h-9 rounded-md border border-border px-3 text-[10px] text-muted-foreground hover:bg-muted"
-              >
-                {selected.visible ? "Hide" : "Show"}
-              </button>
-              {selected.removable && host.removeWidget ? (
-                <button
-                  type="button"
-                  onClick={() => void host.removeWidget?.(selected.id).then(onChanged)}
-                  className="h-9 rounded-md px-3 text-[10px] text-red-300 hover:bg-red-500/10"
-                >
-                  Remove
-                </button>
+              {selected.availability !== "demo" && host.setWidgetVisible ? (
+                <button type="button" onClick={() => void setVisible(!selected.visible)} className="h-9 rounded-lg border border-border px-4 text-[11px] hover:bg-muted">{selected.visible ? "Hide widget" : "Show widget"}</button>
               ) : null}
+              <button type="button" onClick={() => setSelectedId(null)} className="h-9 rounded-lg border border-border px-4 text-[11px] text-muted-foreground hover:bg-muted">Close preview</button>
             </div>
           </div>
         ) : null}

@@ -65,7 +65,7 @@ assert.match(worker, /url\.pathname\.startsWith\(["']\/api\/vault\/["']\)/);
 assert.match(worker, /return nitroWorker\.fetch\(request, env, context\)/);
 assert.doesNotMatch(config, /AGENTSAM_WORKER_ROLE/);
 assert.doesNotMatch(config, /"OLLAMA_BASE_URL"\s*:/);
-assert.doesNotMatch(config, /workers\.dev/);
+// A verified third-party plugin catalog can live on workers.dev; the AgentSam\n// Worker deployment routes themselves must still use the canonical custom domain.\nconst deploymentRoutes = config.match(/"routes"\\s*:\\s*\\[[\\s\\S]*?\\]/)?.[0] || "";\nassert.doesNotMatch(deploymentRoutes, /workers\\.dev/);
 
 console.log("Local Studio Cloudflare output OK");
 console.log(`  worker  ${path.relative(root, workerEntry)}`);

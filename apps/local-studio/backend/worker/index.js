@@ -39,6 +39,8 @@ import { loadConnectionsRegistry, safePluginSettingsRecord } from "./connections
 import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js";
 import { handleWorkRequest, isWorkRequest } from "./work-service.js";
 import { createLocalStudioPluginRuntime, loadPluginRegistry, updateLocalStudioPluginPreferences } from "./plugin-registry.js";
+import { listCatalogForAccount, installFromCatalog, removeCatalogInstallation } from "./plugin-discovery.js";
+import { beginPluginOAuth, completePluginOAuth, disconnectPublicPlugin } from "./plugin-oauth.js";
 import { emitAnalyticsFact } from "./analytics-service.js";
 import { handleAnalyticsQueryRequest } from "./analytics-query-service.js";
 import {
@@ -653,6 +655,10 @@ export default {
     const isLlmInventory = url.pathname === "/api/llm/inventory";
     const isCfConnection = isCloudflareConnectionPath(url.pathname);
     const isConnectionsRegistry = url.pathname === "/api/connections";
+    const isPluginCatalog = url.pathname === "/api/plugins/catalog";
+    const isPluginInstall = url.pathname === "/api/plugins/install";
+    const isPluginOAuthCallback = url.pathname === "/api/plugins/oauth/callback";
+    const pluginOAuthMatch = /^\/api\/plugins\/(plg_[a-z0-9]+)\/oauth\/(start|disconnect)$/i.exec(url.pathname);
     const pluginSettingsMatch = /^\/api\/plugins\/([^/]+)$/.exec(url.pathname);
     const isDatabaseApi = isDatabaseRequest(url.pathname);
     const isWorkApi = isWorkRequest(url.pathname);
@@ -882,15 +888,100 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       }
     }
 
+    if (isPluginOAuthCallback) {
+      if (request.method !== 'GET') return json({ok:false,error:'method_not_allowed'},405);
+      const nav='/settings/customize?view=plugins';
+      try {
+        const result=await completePluginOAuth(env,request);
+        const notice=result.source_client==='desktop'
+          ? 'You can return to the AgentSam desktop app and refresh Plugins.'
+          : 'Return to Local Studio to use your connected plugin.';
+        return new Response('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head><body style="background:#0d0d14;color:#fafaff;font:16px system-ui;padding:45px"><h1>Plugin connected</h1><p>'+notice+'</p><a style="color:#9e8cff" href="'+nav+'">Open AgentSam Plugins</a></body></html>',{
+          status:200,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'},
+        });
+      } catch(error) {
+        console.warn('plugin_oauth_callback_failed',String(error?.code||error?.message||'error').slice(0,90));
+        return new Response('<!doctype html><html><body><h1>Connection was not completed</h1><p>Return to AgentSam and try connecting the plugin again.</p></body></html>',{
+          status:400,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store'},
+        });
+      }
+    }
+    if (pluginOAuthMatch) {
+      if(request.method!=='POST')return json({ok:false,error:'method_not_allowed'},405,{allow:'POST'});
+      const accountId=await sessionUser();
+      if(!accountId)return json({ok:false,error:'unauthorized'},401);
+      const origin=request.headers.get('origin');
+      if(origin&&origin!==url.origin)return json({ok:false,error:'origin_not_allowed'},403);
+      if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))
+        return json({ok:false,error:'json_content_type_required'},415);
+      const body=await request.json().catch(()=>null);
+      if(!body||typeof body!=='object'||Array.isArray(body))return json({ok:false,error:'request_invalid'},400);
+      try {
+        const result=pluginOAuthMatch[2]==='start'
+          ? await beginPluginOAuth(env,accountId,pluginOAuthMatch[1],{
+              allowWrites:body.allow_writes===true,desktop:body.desktop===true,
+            })
+          : await disconnectPublicPlugin(env,accountId,pluginOAuthMatch[1]);
+        return json({ok:true,...result});
+      } catch(error) {
+        const code=String(error?.code||error?.message||'plugin_oauth_failed').slice(0,120);
+        console.warn('plugin_oauth_action_failed',code);
+        return json({ok:false,error:code},code.includes('not_found')?404:code.includes('unavailable')?503:400);
+      }
+    }
+    if (isPluginCatalog) {
+      if (request.method !== "GET") return json({ok:false,error:"method_not_allowed"},405,{allow:"GET"});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:"unauthorized"},401);
+      try {
+        const catalog = await listCatalogForAccount(env,userId);
+        return json({ok:true,...catalog});
+      } catch (error) {
+        console.error("plugin_catalog_error",String(error?.message||error));
+        return json({ok:false,error:"plugin_catalog_unavailable"},503);
+      }
+    }
+    if (isPluginInstall) {
+      if (request.method !== "POST") return json({ok:false,error:"method_not_allowed"},405,{allow:"POST"});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:"unauthorized"},401);
+      if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
+        return json({ok:false,error:"json_content_type_required"},415);
+      }
+      const origin = request.headers.get("origin");
+      if (origin && origin !== url.origin) return json({ok:false,error:"origin_not_allowed"},403);
+      const body = await request.json().catch(()=>null);
+      if (!body || typeof body !== "object" || Object.keys(body).some(key=>key!=="plugin_key")) {
+        return json({ok:false,error:"plugin_install_request_invalid"},400);
+      }
+      try {
+        const result = await installFromCatalog(env,userId,body.plugin_key);
+        return json({ok:true,...result},201);
+      } catch (error) {
+        const code = String(error?.message||'plugin_install_failed');
+        const status = code.includes('unavailable')?503:code.includes('not_found')?404:code.includes('conflict')||code.includes('requires_reconnect')?409:400;
+        return json({ok:false,error:code.slice(0,140)},status);
+      }
+    }
     if (pluginSettingsMatch) {
-      if (request.method !== "PATCH") {
-        return json({ ok: false, error: "method_not_allowed" }, 405, { allow: "PATCH" });
+      if (request.method !== "PATCH" && request.method !== "DELETE") {
+        return json({ ok: false, error: "method_not_allowed" }, 405, { allow: "PATCH, DELETE" });
       }
       const userId = await sessionUser();
       if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
       const pluginId = decodeURIComponent(pluginSettingsMatch[1] || "").trim();
       if (!/^plg_[a-z0-9]+$/i.test(pluginId)) {
         return json({ ok: false, error: "plugin_id_invalid" }, 400);
+      }
+      if (request.method === "DELETE") {
+        const origin = request.headers.get("origin");
+        if (origin && origin !== url.origin) return json({ok:false,error:"origin_not_allowed"},403);
+        try {
+          return json({ok:true,...(await removeCatalogInstallation(env,userId,pluginId))});
+        } catch(error) {
+          const code=String(error?.message||'plugin_remove_failed');
+          return json({ok:false,error:code.slice(0,120)},code.includes('not_found')?404:400);
+        }
       }
       const body = await request.json().catch(() => ({}));
       const allowedKeys = new Set(["enabled", "composer_visible", "settings_visible"]);

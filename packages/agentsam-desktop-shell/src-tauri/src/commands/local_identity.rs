@@ -140,11 +140,41 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
                 return Err("studio_service_plugins_path_invalid".into());
             }
 
+            // Catalog/install routes are exact and remain Worker-authenticated.
+            // Never pass a caller-supplied absolute URL through this bridge.
+            match path {
+                "/api/plugins/catalog" => {
+                    if request.method.as_deref().unwrap_or("GET").to_ascii_uppercase() != "GET" {
+                        return Err("studio_service_plugins_method_invalid".into());
+                    }
+                    return Ok((Method::GET, path.to_string()));
+                }
+                "/api/plugins/install" => {
+                    if request.method.as_deref().unwrap_or("POST").to_ascii_uppercase() != "POST" {
+                        return Err("studio_service_plugins_method_invalid".into());
+                    }
+                    return Ok((Method::POST, path.to_string()));
+                }
+                _ => {}
+            }
+
             if path == "/api/plugins/tools/execute" {
                 if request.method.as_deref().unwrap_or("POST").to_ascii_uppercase() != "POST" {
                     return Err("studio_service_plugins_method_invalid".into());
                 }
                 return Ok((Method::POST, path.to_string()));
+            }
+
+            if let Some(remainder) = path.strip_prefix("/api/plugins/") {
+                if let Some((plugin_id, action)) = remainder.split_once("/oauth/") {
+                    let valid_id = plugin_id.starts_with("plg_")
+                        && plugin_id.chars().all(|value| value.is_ascii_alphanumeric() || value == '_');
+                    if !valid_id || !matches!(action, "start" | "disconnect")
+                        || request.method.as_deref().unwrap_or("POST").to_ascii_uppercase() != "POST" {
+                        return Err("studio_service_plugins_path_invalid".into());
+                    }
+                    return Ok((Method::POST, path.to_string()));
+                }
             }
 
             let plugin_id = path.strip_prefix("/api/plugins/").unwrap_or("");
@@ -156,10 +186,12 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
             if !valid_plugin_id {
                 return Err("studio_service_plugins_path_invalid".into());
             }
-            if request.method.as_deref().unwrap_or("PATCH").to_ascii_uppercase() != "PATCH" {
-                return Err("studio_service_plugins_method_invalid".into());
-            }
-            Ok((Method::PATCH, path.to_string()))
+            let method = match request.method.as_deref().unwrap_or("PATCH").to_ascii_uppercase().as_str() {
+                "PATCH" => Method::PATCH,
+                "DELETE" => Method::DELETE,
+                _ => return Err("studio_service_plugins_method_invalid".into()),
+            };
+            Ok((method, path.to_string()))
         }
         "database" => {
             let path = request.path.as_deref().unwrap_or("").trim();
@@ -695,6 +727,32 @@ mod tests {
         assert_eq!(canonical_sync_provider("google").unwrap(), "gemini");
         assert_eq!(canonical_sync_provider("grok").unwrap(), "xai");
         assert!(canonical_sync_provider("other").is_err());
+    }
+
+    #[test]
+    fn plugin_bridge_accepts_bounded_catalog_install_and_remove() {
+        for (path, method) in [
+            ("/api/plugins/catalog", "GET"),
+            ("/api/plugins/install", "POST"),
+            ("/api/plugins/plg_test123", "DELETE"),
+        ] {
+            let request = StudioServiceBridgeRequest {
+                operation: "plugins".into(),
+                account_id: None,
+                body: None,
+                path: Some(path.into()),
+                method: Some(method.into()),
+            };
+            assert_eq!(studio_service_route(&request).unwrap().0.as_str(), method);
+        }
+        let invalid = StudioServiceBridgeRequest {
+            operation: "plugins".into(),
+            account_id: None,
+            body: None,
+            path: Some("/api/plugins/install/https://localhost".into()),
+            method: Some("POST".into()),
+        };
+        assert!(studio_service_route(&invalid).is_err());
     }
 
     #[test]

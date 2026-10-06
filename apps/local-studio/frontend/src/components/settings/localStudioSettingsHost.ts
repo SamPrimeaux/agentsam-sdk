@@ -23,6 +23,11 @@ import {
 } from "@/lib/work/model-inventory";
 import type { StudioInventoryModel } from "@/lib/work/models";
 import {
+  discoverLocalStudioPlugins,
+  installLocalStudioPublicPlugin,
+  removeLocalStudioPublicPlugin,
+  beginLocalStudioPublicPluginOAuth,
+  disconnectLocalStudioPublicPlugin,
   disconnectLocalStudioProvider,
   listLocalStudioConnections,
   startLocalStudioProviderConnection,
@@ -189,6 +194,10 @@ function settingsWidgets(): SettingsWidget[] {
     source: widget.source,
     preferenceScope: widget.preferenceScope,
     deeplink: widget.deeplink || null,
+    category: widget.category,
+    tags: [...(widget.tags ?? [])],
+    availability: widget.availability,
+    ownerPackage: widget.ownerPackage,
   }));
 }
 
@@ -322,16 +331,42 @@ export const localStudioSettingsHost: SettingsHost = {
   async snapshot() {
     return liveSnapshot();
   },
+  async discoverPlugins() {
+    const result = await discoverLocalStudioPlugins();
+    return {
+      plugins: result.plugins,
+      errors: result.errors,
+      configuredSources: result.configuredSources,
+    };
+  },
+  async installPluginFromCatalog(pluginKey) {
+    await installLocalStudioPublicPlugin(pluginKey);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
+    }
+  },
+  async removeCatalogPlugin(pluginId) {
+    await removeLocalStudioPublicPlugin(pluginId);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
+    }
+  },
   async setPluginEnabled(id, enabled) {
     await updateLocalStudioPlugin(id, { enabled });
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
     }
   },
-  async beginPluginSetup(id) {
+  async beginPluginSetup(id, options = {}) {
     const plugins = await loadPluginSettings();
     const plugin = plugins.find((candidate) => candidate.id === id);
     if (!plugin) throw new Error("plugin_not_found");
+    if (plugin.installationKey === "catalog-v1") {
+      const response = await beginLocalStudioPublicPluginOAuth(plugin.id, options.allowWrites === true);
+      if (!response?.authorize_url?.startsWith("https://")) throw new Error("plugin_oauth_url_invalid");
+      await openExternalUrl(response.authorize_url);
+      return;
+    }
     if (!plugin.setupUrl) throw new Error("plugin_setup_unavailable");
     if (plugin.setupUrl.startsWith("/api/connections/") && plugin.providerKey === "cloudflare") {
       await startLocalStudioProviderConnection("cloudflare", {
@@ -349,6 +384,10 @@ export const localStudioSettingsHost: SettingsHost = {
     const plugins = await loadPluginSettings();
     const plugin = plugins.find((candidate) => candidate.id === id);
     if (!plugin) throw new Error("plugin_not_found");
+    if (plugin.installationKey === "catalog-v1") {
+      await disconnectLocalStudioPublicPlugin(plugin.id);
+      return;
+    }
     if (!plugin.disconnectUrl || plugin.providerKey !== "cloudflare") {
       throw new Error("plugin_disconnect_unavailable");
     }

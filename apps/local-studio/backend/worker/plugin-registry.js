@@ -11,6 +11,7 @@ import {
 import { probeCloudflareConnection } from '../../../../packages/connectors/cfoa/src/index.js';
 import { callCloudflareMcpTool, executeAgentSamCloudflareProgram, searchCloudflareApi } from './cloudflare-code-mode.js';
 import { executeCompletefulNative } from './completeful-native.js';
+import { runRemotePluginTool } from './plugin-oauth.js';
 
 const LOCAL_STUDIO_CLOUDFLARE_MANIFEST = Object.freeze({
   ...CLOUDFLARE_PLUGIN_MANIFEST,
@@ -133,13 +134,17 @@ export async function createLocalStudioPluginRuntime(env, accountId, options = {
   const mcpDispatch = async ({ tool, args }) => {
     const startedAt = Date.now();
     try {
-      const result = await callCloudflareMcpTool(tool.handler_config?.remote_tool || tool.handler_key, args, {
-        endpoint: tool.handler_config?.server_url,
-      });
-      await recordToolHealth(env, accountId, plugin, 'healthy', startedAt);
+      const owner = registry.plugins.find(row => row.id === tool.plugin_id);
+      const result = owner?.installation_key === 'catalog-v1'
+        ? await runRemotePluginTool(env, accountId, tool, args, options.mcpFetch || fetch)
+        : await callCloudflareMcpTool(tool.handler_config?.remote_tool || tool.handler_key, args, {
+            endpoint: tool.handler_config?.server_url,
+          });
+      if(owner)await recordToolHealth(env, accountId, owner, 'healthy', startedAt);
       return result;
     } catch (error) {
-      await recordToolHealth(env, accountId, plugin, 'unhealthy', startedAt, error);
+      const owner=registry.plugins.find(row=>row.id===tool.plugin_id);
+      if(owner)await recordToolHealth(env, accountId, owner, /auth|scope|token/i.test(String(error?.message||''))?'auth_error':'unhealthy', startedAt, error);
       throw error;
     }
   };

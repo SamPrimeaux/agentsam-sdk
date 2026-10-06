@@ -223,3 +223,102 @@ export async function updateLocalStudioPlugin(
   if (!response.ok) throw responseError(response.status, payload);
   return payload as { ok?: boolean; plugin?: LocalStudioPluginRecord; error?: string };
 }
+
+// Public plugin discovery is host configured and account authenticated.
+// A discovered manifest is not a granted connection or executable tool.
+export type LocalStudioDiscoveredPlugin = {
+  pluginKey: string;
+  version: string;
+  name: string;
+  subtitle: string;
+  description: string;
+  publisher: string;
+  iconUrl: string | null;
+  category: string;
+  keywords: string[];
+  capabilities: string[];
+  examples: string[];
+  tools: string[];
+  toolCount: number;
+  skillCount: number;
+  oauthScopes: string[];
+  readOnlyScopes: string[];
+  oauthResource: string | null;
+  toolPermissions: {id:string;title:string;scopes:string[];readOnly:boolean;requiresApproval:boolean}[];
+  endpointUrl: string;
+  catalogUrl: string;
+  transport: string;
+  authType: string;
+  websiteUrl: string | null;
+  privacyUrl: string | null;
+  termsUrl: string | null;
+  supportUrl: string | null;
+  repositoryUrl: string | null;
+  installationId: string | null;
+  setupStatus: string;
+  enabled: boolean;
+  healthStatus: string;
+  availability: 'available' | 'requires_connection' | 'connected';
+};
+
+export type PluginDiscoveryResponse = {
+  ok?: boolean;
+  schema: string;
+  plugins: LocalStudioDiscoveredPlugin[];
+  errors: { source: string; reason: string }[];
+  configuredSources: number;
+};
+
+async function pluginCatalogRequest<T>(method: 'GET' | 'POST' | 'DELETE', path: string, body?: Record<string, unknown>): Promise<T> {
+  if (isPackagedDesktop()) {
+    const accountId = await resolveDesktopStudioAccountId();
+    const response = await invokeStudioService({
+      operation: "plugins",
+      account_id: accountId,
+      method,
+      path,
+      ...(body ? { body } : {}),
+    });
+    const result = parseJsonBody(response.body);
+    if (!response.ok) throw responseError(response.status, result);
+    return result as T;
+  }
+  const response = await fetch(path, {
+    method,
+    credentials: "same-origin",
+    headers: { accept: "application/json", ...(body ? { "content-type": "application/json" } : {}) },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  const result = parseJsonBody(await response.text());
+  if (!response.ok) throw responseError(response.status, result);
+  return result as T;
+}
+
+export function discoverLocalStudioPlugins() {
+  return pluginCatalogRequest<PluginDiscoveryResponse>('GET','/api/plugins/catalog');
+}
+export function installLocalStudioPublicPlugin(pluginKey: string) {
+  if (!/^[a-z0-9][a-z0-9-]{1,79}$/.test(pluginKey)) throw new Error('plugin_key_invalid');
+  return pluginCatalogRequest<{ok:true;pluginId:string;status:string}>(
+    'POST','/api/plugins/install',{plugin_key:pluginKey}
+  );
+}
+export function removeLocalStudioPublicPlugin(pluginId: string) {
+  if (!/^plg_[a-z0-9]+$/i.test(pluginId)) throw new Error('plugin_id_invalid');
+  return pluginCatalogRequest<{ok:true;removed:true}>('DELETE','/api/plugins/'+encodeURIComponent(pluginId));
+}
+
+
+export function beginLocalStudioPublicPluginOAuth(pluginId:string,allowWrites=false) {
+  if(!/^plg_[a-z0-9]+$/i.test(pluginId))throw new Error('plugin_id_invalid');
+  return pluginCatalogRequest<{ok:boolean;authorize_url:string;status:string}>(
+    'POST','/api/plugins/'+encodeURIComponent(pluginId)+'/oauth/start',
+    {allow_writes:allowWrites,desktop:isPackagedDesktop()},
+  );
+}
+export function disconnectLocalStudioPublicPlugin(pluginId:string) {
+  if(!/^plg_[a-z0-9]+$/i.test(pluginId))throw new Error('plugin_id_invalid');
+  return pluginCatalogRequest<{ok:boolean;disconnected:boolean}>(
+    'POST','/api/plugins/'+encodeURIComponent(pluginId)+'/oauth/disconnect',{}
+  );
+}
