@@ -163,7 +163,7 @@ export function createLocalStudioContentRuntime(
   }
 
   const projections = opts.brandProjections ?? [];
-  const local = localFiles();
+  const persistent = createIndexedDbContentStorage(accountId);
   const localHost = createLocalStudioLocalContentHost();
   const imageOptimizer = createLocalStudioImageOptimizer();
 
