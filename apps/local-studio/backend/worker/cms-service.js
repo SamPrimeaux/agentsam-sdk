@@ -6,6 +6,7 @@
  */
 
 import { createCmsDbClient } from './cms-db.js';
+import { canAccessCmsSite, listAuthorizedCmsSites } from './cms-site-scope.js';
 import { fetchSitePartial, putSitePartial, injectSitePartials } from './site-partials.js';
 
 function json(body, status = 200, headers = {}) {
