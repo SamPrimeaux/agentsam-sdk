@@ -723,9 +723,13 @@ export default {
       });
     }
 
-    // Studio CMS API endpoints
+    // CMS is account- and site-scoped. These routes run before the generic
+    // Studio API gate, so they MUST resolve an IAM session themselves.
     if (url.pathname.startsWith("/api/cms/")) {
-      return handleCmsWorkerRequest(request, env);
+      if (request.method === "OPTIONS") return new Response(null, { status: 204 });
+      const cmsActorId = await resolveSessionUserId(request, env);
+      if (!cmsActorId) return json({ ok: false, error: "unauthorized" }, 401);
+      return handleCmsWorkerRequest(request, env, cmsActorId);
     }
 
     // Gate authenticated Studio app routes from the app manifest mounts.

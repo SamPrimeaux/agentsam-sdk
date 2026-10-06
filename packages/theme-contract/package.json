@@ -1,0 +1,10 @@
+{
+  "name": "@inneranimalmedia/theme-contract",
+  "version": "2.6.12",
+  "private": true,
+  "type": "module",
+  "description": "Portable provider-neutral theme preview registry and composition contracts",
+  "exports": {
+    "./preview-registry": "./runtime/theme-preview-registry.js"
+  }
+}

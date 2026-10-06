@@ -100,7 +100,7 @@ test('Local Studio consumes the portable ecommerce CMS product boundary', () => 
   assert.doesNotMatch(route, /from ['"]@inneranimalmedia\/agentsam-cms-(?:frontend|backend|shared)/);
 });
 
-test('Local Studio mounts CMS route with default site agentsam-sdk', () => {
+test('Local Studio mounts authorized merchant CMS with real site discovery, never a hardcoded default', () => {
   const liveRoute = at('apps', 'local-studio', 'frontend', 'src', 'routes', '(apps)', 'cms.tsx');
   assert.ok(fs.existsSync(liveRoute), 'live CMS route must be routes/(apps)/cms.tsx');
   const routeContent = read('apps', 'local-studio', 'frontend', 'src', 'routes', '(apps)', 'cms.tsx');
@@ -112,10 +112,16 @@ test('Local Studio mounts CMS route with default site agentsam-sdk', () => {
   assert.doesNotMatch(donor, /createFileRoute\(/);
   assert.match(donor, /export\s*\{\s*\}\s*;/);
 
-  // Live route defaults to agentsam-sdk and uses HttpCmsAdapter + site catalog.
+  // Authentic sites come from the access-controlled Worker registry.
+  // A sample customer must not be silently substituted as the user's store.
   assert.match(routeContent, /createHttpCmsAdapter/);
-  assert.match(routeContent, /slug:\s*"agentsam-sdk"/);
-  assert.match(routeContent, /search\.site \|\| search\.project_slug \|\| search\.project \|\| "agentsam-sdk"/);
+  assert.match(routeContent, /useAuthorizedCmsSites/);
+  assert.match(routeContent, /studioCmsFetch\('\/api\/cms\/sites'\)/);
+  assert.match(routeContent, /CmsOnlineStoreFrame/);
+  assert.match(routeContent, /!isEditorView && ownedSite/);
+  assert.match(routeContent, /!localThemeProjectId && requestedSlug && !ownedSite/);
+  assert.match(routeContent, /ownedSite && !ownedSite.can_edit/);
+  assert.doesNotMatch(routeContent, /slug:\s*"agentsam-sdk"/);
   assert.doesNotMatch(routeContent, /default\s*:\s*["']inneranimalmedia["']/);
 
   // NavRail must include CMS entry

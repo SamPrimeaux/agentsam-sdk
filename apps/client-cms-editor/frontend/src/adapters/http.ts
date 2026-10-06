@@ -217,12 +217,26 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
   }
 
   async listSites(): Promise<CmsSiteRecord[]> {
-    if (this.knownSites.size) return [...this.knownSites.values()].map((s) => structuredClone(s));
-    // Fallback: bootstrap the default studio site so hub/editor share one authority.
-    const boot = await this.api<Json>(this.url(`/api/cms/bootstrap?${siteQuery('agentsam-sdk')}`));
-    const record = siteRecordFromBootstrap('agentsam-sdk', boot);
-    this.knownSites.set(record.id, record);
-    return [structuredClone(record)];
+    // The authenticated Worker discovers owned projects and their CMS source.
+    // Never silently bootstrap a particular customer, template, or default site.
+    const catalog = await this.api<{ sites: Array<{ slug: string; name: string; domain?: string }> }>(
+      this.url('/api/cms/sites'),
+    );
+    const sites = (catalog.sites || []).map((site) => {
+      const id = String(site.slug || '').trim();
+      const name = String(site.name || id);
+      return {
+        id,
+        name,
+        initials: initialsFrom(name),
+        domain: String(site.domain || ''),
+        edited: 'synced',
+        color: '#1e6a6f',
+      } satisfies CmsSiteRecord;
+    });
+    this.knownSites.clear();
+    for (const site of sites) this.knownSites.set(site.id, site);
+    return structuredClone(sites);
   }
 
   async getSite(siteId: string): Promise<CmsSiteRecord> {
@@ -293,13 +307,11 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
         // try next site
       }
     }
-    // Last resort: agentsam-sdk
-    const full = await this.loadSite('agentsam-sdk');
-    const hit = full.pages.find((p) => p.id === pageId);
-    if (!hit) {
-      throw new CmsCapabilityError('getPage', `page_not_found:${pageId}`, 'cms_source_not_found');
-    }
-    return structuredClone(hit);
+    throw new CmsCapabilityError(
+      'getPage',
+      `page_not_found_or_site_not_loaded:${pageId}`,
+      'cms_source_not_found',
+    );
   }
 
   async createPage(

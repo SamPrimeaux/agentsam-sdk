@@ -65,10 +65,12 @@ try {
   assert.equal(await mini.locator('textarea').inputValue(), text);
   await mini.getByRole('button', { name: 'Close miniAgentSam' }).click();
   await page.goto(origin + '/index.html#/cms');
-  await page.locator('[data-theme-id]').first().waitFor();
+  await page.locator('[data-studio-product="cms-home"]').waitFor();
   const discovered = discoverThemeSurfaces(repo).themes.map((t) => t.id).sort();
-  const cmsState = await capture('cms-studio-home');
-  assert.deepEqual(cmsState.themes.sort(), discovered, '/cms must expose the real packaged theme workspace');
+  await capture('cms-studio-home');
+  await page.goto(origin + '/index.html#/themes');
+  await page.locator('[data-theme-id]').first().waitFor();
+  assert.deepEqual((await capture('cms-theme-gallery')).themes.sort(), discovered, 'packaged themes remain independently accessible');
   await page.goto(origin + '/index.html#/store');
   await page.locator('[data-theme-id]').first().waitFor();
   const storeState = await capture('theme-store');

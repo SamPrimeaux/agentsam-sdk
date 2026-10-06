@@ -8,7 +8,7 @@
 import {
   createContentRuntime,
   inferBrandAssociation,
-  localFiles,
+  createIndexedDbContentStorage,
   noopKnowledgeAdapter,
   proposeAlt,
   proposeSemanticAlias,
@@ -163,7 +163,7 @@ export function createLocalStudioContentRuntime(
   }
 
   const projections = opts.brandProjections ?? [];
-  const local = localFiles();
+  const persistent = createIndexedDbContentStorage(accountId);
   const localHost = createLocalStudioLocalContentHost();
   const imageOptimizer = createLocalStudioImageOptimizer();
 
@@ -173,7 +173,8 @@ export function createLocalStudioContentRuntime(
       id: accountId,
       label: opts.accountLabel ?? accountId,
     },
-    providers: [local],
+    providers: [persistent.provider],
+    store: persistent.store,
     brandResolver: createProjectionBrandResolver(projections),
     knowledge: noopKnowledgeAdapter,
     localHost,

@@ -14,6 +14,7 @@ Exports:
 
 - `@inneranimalmedia/ecommerce-cms-agentsam/cms`
 - `@inneranimalmedia/ecommerce-cms-agentsam/cms/capabilities`
+- `@inneranimalmedia/ecommerce-cms-agentsam/store/mount`
 - `@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/mount`
 - `@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/bridge`
 - `@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/project`
@@ -28,3 +29,37 @@ npx agentsam-ecommerce scaffold ./my-store
 ```
 
 Scaffolds exclude credentials, private customer state, and provider secrets. Each owner provisions its own deployment resources and provider accounts.
+
+## Canonical merchant Online Store surface
+
+The existing FNF Online Store DOM and responsive CSS is packaged as
+`store/mount`, with its runtime and styles emitted to `commerce-store/` by
+Local Studio's `themeSurfacesPlugin`. It is **not** a second CMS editor or a
+hardcoded FNF site: `mountOnlineStore(iframe, { loadStore, onEdit, baseUrl,
+storefrontUrl })` receives authorized site data from its host.
+
+- `/cms` opens the merchant Store for an authenticated, registered property.
+  The existing `/store` and `/themes` theme libraries remain available for
+  bundled theme draft workflows.
+- **Edit theme** opens the existing `theme-editor/mount` runtime with the
+  corresponding site's real registered page adapter.
+- Signed remote Worker CMS requests remain owned by each customer's Worker;
+  no shared-D1 fallback or silent site seeding is permitted.
+- An authorized public domain is used for live desktop/mobile store previews.
+  Missing or inaccessible storefront data is shown as unavailable, not replaced
+  with a fixture or Local Studio's own homepage.
+- Analytics, active-theme metadata, imported themes, and theme publishing must
+  stay unverified/disabled until the commerce site exposes the required real
+  contracts. Page publishing is **not** equivalent to publishing a theme.
+- Hosted and Tauri desktop share the same shipped assets. Offline desktop
+  without registered remote sites still opens local-project authoring.
+
+Verification:
+
+```bash
+npm run build:dev --prefix apps/local-studio
+npm run build:desktop --prefix apps/local-studio
+npm run smoke:commerce-store --prefix apps/local-studio
+npm run smoke:themes --prefix apps/local-studio
+node --test test/integration/cms-multisite-security.test.mjs
+```

@@ -6,6 +6,8 @@
  */
 
 import { createCmsDbClient } from './cms-db.js';
+import { listAuthorizedCmsSites, requireCmsSiteAccess, cmsActorRequired, configuredCmsWorkers } from './cms-authority.js';
+import { handleRemoteCmsRequest } from './cms-remote.js';
 import { fetchSitePartial, putSitePartial, injectSitePartials } from './site-partials.js';
 
 function json(body, status = 200, headers = {}) {
@@ -63,19 +65,18 @@ function resolveSiteSlug(url, body = {}) {
   return trimmed || null;
 }
 
-export async function handleCmsWorkerRequest(request, env) {
+export async function handleCmsWorkerRequest(request, env, actorUserId) {
   const url = new URL(request.url);
   const method = request.method.toUpperCase();
 
-  if (method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        'access-control-allow-origin': '*',
-        'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-        'access-control-allow-headers': 'content-type, authorization, x-user-id',
-      },
-    });
+  // The entry Worker validated the session; never accept an unverified actor
+  // from request headers, and do not enable wildcard CORS on authoring APIs.
+  try { cmsActorRequired(actorUserId); }
+  catch { return json({ ok: false, error: 'unauthorized' }, 401); }
+  if (method === 'OPTIONS') return new Response(null, { status: 204 });
+  if (url.pathname === '/api/cms/sites' && method === 'GET') {
+    const sites = await listAuthorizedCmsSites(env.DB, actorUserId, { remoteWorkerNames: configuredCmsWorkers(env) });
+    return json({ ok: true, sites });
   }
 
   let body = null;
@@ -100,6 +101,31 @@ export async function handleCmsWorkerRequest(request, env) {
   const siteSlug = resolveSiteSlug(url, body);
   if (!siteSlug) {
     return json({ ok: false, error: 'site_slug_required', detail: 'Pass ?site= or project_slug — no hardcoded default site.' }, 400);
+  }
+  const access = /\/publish$/.test(url.pathname) ? 'publish' : method === 'GET' ? 'read' : 'write';
+  const authorization = await requireCmsSiteAccess(env.DB, actorUserId, siteSlug, access, {
+    remoteWorkerNames: configuredCmsWorkers(env),
+  });
+  if (!authorization.ok) return json({ ok: false, error: authorization.error }, authorization.status);
+  const ownedSite = authorization.site;
+  if (ownedSite.source === 'worker') {
+    // External site writes pass ONLY through its signed, narrowly scoped
+    // Worker bridge; never edit the archived D1 projection in Studio.
+    if (url.pathname.startsWith('/api/cms/remote/')) {
+      return handleRemoteCmsRequest(request, env, {
+        actorUserId, site: ownedSite,
+        path: url.pathname.slice('/api/cms/remote/'.length),
+      });
+    }
+    return json({
+      ok: false,
+      error: 'cms_site_uses_remote_adapter',
+      source: 'worker',
+      site: siteSlug,
+    }, 409);
+  }
+  if (url.pathname.startsWith('/api/cms/remote/')) {
+    return json({ ok: false, error: 'cms_site_uses_shared_d1_adapter' }, 400);
   }
   const dbClient = createCmsDbClient(env.DB, siteSlug);
 
@@ -187,9 +213,13 @@ export async function handleCmsWorkerRequest(request, env) {
         const title = body?.title || 'Untitled';
         const slug = (body?.slug || title.toLowerCase().replace(/\s+/g, '-')).replace(/^\/+/, '');
         const routePath = body?.route_path || `/${slug}`;
-        const pageType = body?.page_type || 'interior';
-        const status = body?.status || 'draft';
-        const page = await dbClient.createPage({ title, slug, routePath, pageType, status });
+        const pageType = body?.page_type || 'custom';
+        const status = 'draft';
+        const page = await dbClient.createPage({
+          title, slug, routePath, pageType, status,
+          tenantId: ownedSite.tenant_id,
+          projectId: ownedSite.project_id,
+        });
         return json({ ok: true, page, id: page.id, route_path: page.route_path }, 201);
       }
     }
@@ -271,9 +301,9 @@ export async function handleCmsWorkerRequest(request, env) {
     // ── PAGE BY ID / UPDATE / PUBLISH ──
     const pagePublishMatch = url.pathname.match(/^\/api\/cms\/pages\/([^/]+)\/publish$/);
     if (pagePublishMatch && method === 'POST') {
-      const pageId = decodeURIComponent(pagePublishMatch[1]);
-      const page = await dbClient.publishPage(pageId);
-      return json({ ok: true, page });
+      // Marking a D1 row 'published' does not publish AgentSam's R2-backed
+      // website. Block until real artifact promotion + rollback is installed.
+      return json({ ok: false, error: 'cms_publish_requires_renderer_promotion_and_receipt' }, 409);
     }
 
     const pageMatch = url.pathname.match(/^\/api\/cms\/pages\/([^/]+)$/);

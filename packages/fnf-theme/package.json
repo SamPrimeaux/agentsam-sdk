@@ -1,0 +1,10 @@
+{
+  "name": "@inneranimalmedia/fnf-theme",
+  "version": "2.6.12",
+  "private": true,
+  "type": "module",
+  "description": "Brand-specific FNF theme renderer consuming portable ThemePreview registry",
+  "exports": {
+    "./editor/preview-adapter": "./src/editor/preview-adapter.js"
+  }
+}

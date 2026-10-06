@@ -15,6 +15,7 @@ import { Route as appsAnalyticsRouteImport } from './routes/(apps)/analytics'
 import { Route as appsArtifactsRouteImport } from './routes/(apps)/artifacts'
 import { Route as appsBrowseRouteImport } from './routes/(apps)/browse'
 import { Route as appsCadRouteImport } from './routes/(apps)/cad'
+import { Route as appsCampaignsRouteImport } from './routes/(apps)/campaigns'
 import { Route as appsCliRouteImport } from './routes/(apps)/cli'
 import { Route as appsCmsRouteImport } from './routes/(apps)/cms'
 import { Route as appsCollaborateRouteImport } from './routes/(apps)/collaborate'
@@ -22,10 +23,13 @@ import { Route as appsContentRouteImport } from './routes/(apps)/content'
 import { Route as appsDatabaseRouteImport } from './routes/(apps)/database'
 import { Route as appsFilesRouteImport } from './routes/(apps)/files'
 import { Route as appsMailRouteImport } from './routes/(apps)/mail'
+import { Route as appsMediaRouteImport } from './routes/(apps)/media'
 import { Route as appsProjectsRouteImport } from './routes/(apps)/projects'
 import { Route as appsSettingsRouteImport } from './routes/(apps)/settings'
 import { Route as appsShipRouteImport } from './routes/(apps)/ship'
+import { Route as appsSitesRouteImport } from './routes/(apps)/sites'
 import { Route as appsStoreRouteImport } from './routes/(apps)/store'
+import { Route as appsThemesRouteImport } from './routes/(apps)/themes'
 import { Route as appsWidgetsRouteImport } from './routes/(apps)/widgets'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiCloudflareRouteImport } from './routes/api/cloudflare'
@@ -80,6 +84,11 @@ const appsCadRoute = appsCadRouteImport.update({
   path: '/cad',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsCampaignsRoute = appsCampaignsRouteImport.update({
+  id: '/(apps)/campaigns',
+  path: '/campaigns',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const appsCliRoute = appsCliRouteImport.update({
   id: '/(apps)/cli',
   path: '/cli',
@@ -115,6 +124,11 @@ const appsMailRoute = appsMailRouteImport.update({
   path: '/mail',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsMediaRoute = appsMediaRouteImport.update({
+  id: '/(apps)/media',
+  path: '/media',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const appsProjectsRoute = appsProjectsRouteImport.update({
   id: '/(apps)/projects',
   path: '/projects',
@@ -130,9 +144,19 @@ const appsShipRoute = appsShipRouteImport.update({
   path: '/ship',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsSitesRoute = appsSitesRouteImport.update({
+  id: '/(apps)/sites',
+  path: '/sites',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const appsStoreRoute = appsStoreRouteImport.update({
   id: '/(apps)/store',
   path: '/store',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const appsThemesRoute = appsThemesRouteImport.update({
+  id: '/(apps)/themes',
+  path: '/themes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const appsWidgetsRoute = appsWidgetsRouteImport.update({
@@ -261,6 +285,7 @@ export interface FileRoutesByFullPath {
   '/artifacts': typeof appsArtifactsRouteWithChildren
   '/browse': typeof appsBrowseRoute
   '/cad': typeof appsCadRoute
+  '/campaigns': typeof appsCampaignsRoute
   '/cli': typeof appsCliRoute
   '/cms': typeof appsCmsRoute
   '/collaborate': typeof appsCollaborateRoute
@@ -268,10 +293,13 @@ export interface FileRoutesByFullPath {
   '/database': typeof appsDatabaseRoute
   '/files': typeof appsFilesRoute
   '/mail': typeof appsMailRoute
+  '/media': typeof appsMediaRoute
   '/projects': typeof appsProjectsRouteWithChildren
   '/settings': typeof appsSettingsRouteWithChildren
   '/ship': typeof appsShipRoute
+  '/sites': typeof appsSitesRoute
   '/store': typeof appsStoreRoute
+  '/themes': typeof appsThemesRoute
   '/widgets': typeof appsWidgetsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
@@ -302,6 +330,7 @@ export interface FileRoutesByTo {
   '/analytics': typeof appsAnalyticsRoute
   '/browse': typeof appsBrowseRoute
   '/cad': typeof appsCadRoute
+  '/campaigns': typeof appsCampaignsRoute
   '/cli': typeof appsCliRoute
   '/cms': typeof appsCmsRoute
   '/collaborate': typeof appsCollaborateRoute
@@ -309,8 +338,11 @@ export interface FileRoutesByTo {
   '/database': typeof appsDatabaseRoute
   '/files': typeof appsFilesRoute
   '/mail': typeof appsMailRoute
+  '/media': typeof appsMediaRoute
   '/ship': typeof appsShipRoute
+  '/sites': typeof appsSitesRoute
   '/store': typeof appsStoreRoute
+  '/themes': typeof appsThemesRoute
   '/widgets': typeof appsWidgetsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
@@ -342,6 +374,7 @@ export interface FileRoutesById {
   '/(apps)/artifacts': typeof appsArtifactsRouteWithChildren
   '/(apps)/browse': typeof appsBrowseRoute
   '/(apps)/cad': typeof appsCadRoute
+  '/(apps)/campaigns': typeof appsCampaignsRoute
   '/(apps)/cli': typeof appsCliRoute
   '/(apps)/cms': typeof appsCmsRoute
   '/(apps)/collaborate': typeof appsCollaborateRoute
@@ -349,10 +382,13 @@ export interface FileRoutesById {
   '/(apps)/database': typeof appsDatabaseRoute
   '/(apps)/files': typeof appsFilesRoute
   '/(apps)/mail': typeof appsMailRoute
+  '/(apps)/media': typeof appsMediaRoute
   '/(apps)/projects': typeof appsProjectsRouteWithChildren
   '/(apps)/settings': typeof appsSettingsRouteWithChildren
   '/(apps)/ship': typeof appsShipRoute
+  '/(apps)/sites': typeof appsSitesRoute
   '/(apps)/store': typeof appsStoreRoute
+  '/(apps)/themes': typeof appsThemesRoute
   '/(apps)/widgets': typeof appsWidgetsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
@@ -386,6 +422,7 @@ export interface FileRouteTypes {
     | '/artifacts'
     | '/browse'
     | '/cad'
+    | '/campaigns'
     | '/cli'
     | '/cms'
     | '/collaborate'
@@ -393,10 +430,13 @@ export interface FileRouteTypes {
     | '/database'
     | '/files'
     | '/mail'
+    | '/media'
     | '/projects'
     | '/settings'
     | '/ship'
+    | '/sites'
     | '/store'
+    | '/themes'
     | '/widgets'
     | '/api/chat'
     | '/api/cloudflare'
@@ -427,6 +467,7 @@ export interface FileRouteTypes {
     | '/analytics'
     | '/browse'
     | '/cad'
+    | '/campaigns'
     | '/cli'
     | '/cms'
     | '/collaborate'
@@ -434,8 +475,11 @@ export interface FileRouteTypes {
     | '/database'
     | '/files'
     | '/mail'
+    | '/media'
     | '/ship'
+    | '/sites'
     | '/store'
+    | '/themes'
     | '/widgets'
     | '/api/chat'
     | '/api/cloudflare'
@@ -466,6 +510,7 @@ export interface FileRouteTypes {
     | '/(apps)/artifacts'
     | '/(apps)/browse'
     | '/(apps)/cad'
+    | '/(apps)/campaigns'
     | '/(apps)/cli'
     | '/(apps)/cms'
     | '/(apps)/collaborate'
@@ -473,10 +518,13 @@ export interface FileRouteTypes {
     | '/(apps)/database'
     | '/(apps)/files'
     | '/(apps)/mail'
+    | '/(apps)/media'
     | '/(apps)/projects'
     | '/(apps)/settings'
     | '/(apps)/ship'
+    | '/(apps)/sites'
     | '/(apps)/store'
+    | '/(apps)/themes'
     | '/(apps)/widgets'
     | '/api/chat'
     | '/api/cloudflare'
@@ -509,6 +557,7 @@ export interface RootRouteChildren {
   appsArtifactsRoute: typeof appsArtifactsRouteWithChildren
   appsBrowseRoute: typeof appsBrowseRoute
   appsCadRoute: typeof appsCadRoute
+  appsCampaignsRoute: typeof appsCampaignsRoute
   appsCliRoute: typeof appsCliRoute
   appsCmsRoute: typeof appsCmsRoute
   appsCollaborateRoute: typeof appsCollaborateRoute
@@ -516,10 +565,13 @@ export interface RootRouteChildren {
   appsDatabaseRoute: typeof appsDatabaseRoute
   appsFilesRoute: typeof appsFilesRoute
   appsMailRoute: typeof appsMailRoute
+  appsMediaRoute: typeof appsMediaRoute
   appsProjectsRoute: typeof appsProjectsRouteWithChildren
   appsSettingsRoute: typeof appsSettingsRouteWithChildren
   appsShipRoute: typeof appsShipRoute
+  appsSitesRoute: typeof appsSitesRoute
   appsStoreRoute: typeof appsStoreRoute
+  appsThemesRoute: typeof appsThemesRoute
   appsWidgetsRoute: typeof appsWidgetsRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiCloudflareRoute: typeof ApiCloudflareRoute
@@ -576,6 +628,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appsCadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(apps)/campaigns': {
+      id: '/(apps)/campaigns'
+      path: '/campaigns'
+      fullPath: '/campaigns'
+      preLoaderRoute: typeof appsCampaignsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(apps)/cli': {
       id: '/(apps)/cli'
       path: '/cli'
@@ -625,6 +684,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appsMailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(apps)/media': {
+      id: '/(apps)/media'
+      path: '/media'
+      fullPath: '/media'
+      preLoaderRoute: typeof appsMediaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(apps)/projects': {
       id: '/(apps)/projects'
       path: '/projects'
@@ -646,11 +712,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appsShipRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(apps)/sites': {
+      id: '/(apps)/sites'
+      path: '/sites'
+      fullPath: '/sites'
+      preLoaderRoute: typeof appsSitesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(apps)/store': {
       id: '/(apps)/store'
       path: '/store'
       fullPath: '/store'
       preLoaderRoute: typeof appsStoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/themes': {
+      id: '/(apps)/themes'
+      path: '/themes'
+      fullPath: '/themes'
+      preLoaderRoute: typeof appsThemesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(apps)/widgets': {
@@ -899,6 +979,7 @@ const rootRouteChildren: RootRouteChildren = {
   appsArtifactsRoute: appsArtifactsRouteWithChildren,
   appsBrowseRoute: appsBrowseRoute,
   appsCadRoute: appsCadRoute,
+  appsCampaignsRoute: appsCampaignsRoute,
   appsCliRoute: appsCliRoute,
   appsCmsRoute: appsCmsRoute,
   appsCollaborateRoute: appsCollaborateRoute,
@@ -906,10 +987,13 @@ const rootRouteChildren: RootRouteChildren = {
   appsDatabaseRoute: appsDatabaseRoute,
   appsFilesRoute: appsFilesRoute,
   appsMailRoute: appsMailRoute,
+  appsMediaRoute: appsMediaRoute,
   appsProjectsRoute: appsProjectsRouteWithChildren,
   appsSettingsRoute: appsSettingsRouteWithChildren,
   appsShipRoute: appsShipRoute,
+  appsSitesRoute: appsSitesRoute,
   appsStoreRoute: appsStoreRoute,
+  appsThemesRoute: appsThemesRoute,
   appsWidgetsRoute: appsWidgetsRoute,
   ApiChatRoute: ApiChatRoute,
   ApiCloudflareRoute: ApiCloudflareRoute,

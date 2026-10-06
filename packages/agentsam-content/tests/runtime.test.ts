@@ -24,6 +24,20 @@ function makeRuntime() {
 }
 
 describe("createContentRuntime", () => {
+  it("importAsset stores the actual bytes and links a deliverable provider reference", async () => {
+    const provider = localFiles();
+    const runtime = createContentRuntime({
+      identity: { type: "human", ref: "tester" },
+      account: { id: "acct_test" },
+      providers: [provider],
+    });
+    const bytes = pngBytes(24, 24);
+    const asset = await runtime.importAsset({ bytes, filename: "test.png", mime: "image/png", optimize: false });
+    expect(asset.providerRefs).toHaveLength(1);
+    expect(asset.providerRefs[0]?.provider).toBe("local");
+    expect(await provider.read(asset.providerRefs[0]!.ref)).toEqual(bytes);
+    expect(runtime.deliveryUrl(asset)).toMatch(/^data:image\/png;base64,/);
+  });
   it("creates an asset with machine facts from raw bytes", async () => {
     const rt = makeRuntime();
     const asset = await rt.createAsset({

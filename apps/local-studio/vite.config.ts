@@ -403,12 +403,20 @@ export default defineConfig(({ command, isPreview }) => ({
         ),
       },
       {
+        find: /^@inneranimalmedia\/agentsam-campaign\/project$/,
+        replacement: resolvePath(studioRoot, "../../packages/agentsam-campaign/src/project.js"),
+      },
+      {
         find: /^@inneranimalmedia\/ecommerce-cms-agentsam\/cms$/,
         replacement: resolvePath(cmsProductSource, "index.mjs"),
       },
       {
         find: /^@inneranimalmedia\/ecommerce-cms-agentsam\/cms\/capabilities$/,
         replacement: resolvePath(cmsProductSource, "capabilities.mjs"),
+      },
+      {
+        find: /^@inneranimalmedia\/ecommerce-cms-agentsam\/store\/(.*)$/,
+        replacement: resolvePath(studioRoot, "../ecommerce-cms-agentsam/frontend/store") + "/$1.mjs",
       },
       {
         find: /^@inneranimalmedia\/ecommerce-cms-agentsam\/theme-editor\/(.*)$/,
