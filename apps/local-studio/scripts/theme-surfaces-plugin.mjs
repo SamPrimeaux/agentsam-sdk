@@ -70,6 +70,14 @@ export function themeSurfacesPlugin() {
     for (const [name, source] of [['runtime.js', 'js/theme-editor.js'], ['shared.js', 'js/pages-shared.js'], ['editor.css', 'css/theme-editor.css']]) {
       inventory.assets.set('theme-editor/' + name, join(editor, source));
     }
+    // The original merchant-facing Online Store is packaged alongside Theme Studio.
+    // Reuse its own DOM, script and responsive CSS in both hosted and desktop Studio.
+    for (const [name, source] of [
+      ['runtime.js', 'js/store.js'],
+      ['admin.css', 'css/admin.css'],
+      ['console.css', 'css/console.css'],
+      ['online-store.css', '../store/online-store.css'],
+    ]) inventory.assets.set('commerce-store/' + name, join(editor, source));
     return inventory;
   };
   return {

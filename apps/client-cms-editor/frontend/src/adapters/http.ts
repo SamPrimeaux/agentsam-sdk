@@ -234,7 +234,8 @@ export class HttpCmsAdapter implements CmsEditorAdapter {
         color: '#1e6a6f',
       } satisfies CmsSiteRecord;
     });
-    this.knownSites = new Map(sites.map((site) => [site.id, site]));
+    this.knownSites.clear();
+    for (const site of sites) this.knownSites.set(site.id, site);
     return structuredClone(sites);
   }
 
