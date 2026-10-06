@@ -37,34 +37,48 @@ export const Route = createFileRoute("/(apps)/cms")({
   component: CmsPage,
 });
 
-/** Known hosted CMS authorities. Never surface fixture/donor sites as customer properties. */
-const SITE_CATALOG = [
-  { slug: "agentsam-sdk", name: "Agent Sam SDK", domain: "agentsam.inneranimalmedia.com" },
-  { slug: "inneranimalmedia", name: "Inner Animal Media", domain: "inneranimalmedia.com" },
-  { slug: "meauxbility", name: "Meauxbility", domain: "meauxbility.org" },
-];
+interface CmsSite {
+  id: string;
+  slug: string;
+  name: string;
+  domain: string | null;
+  page_count: number;
+}
 
 function CmsPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
   const [activeThemeProject, setActiveThemeProject] = useState<string>();
+  const [siteCatalog, setSiteCatalog] = useState<CmsSite[] | null>(null);
+  const [siteLoadError, setSiteLoadError] = useState('');
   useEffect(() => { void getActiveThemeId().then(setActiveThemeProject); }, []);
+  useEffect(() => {
+    let mounted = true;
+    void loadAuthorizedCmsSiteCatalog(studioCmsFetch)
+      .then((sites: CmsSite[]) => { if (mounted) setSiteCatalog(sites); })
+      .catch((error: Error) => {
+        if (mounted) setSiteLoadError(error.message || 'cms_site_discovery_unavailable');
+      });
+    return () => { mounted = false; };
+  }, []);
 
-  const siteSlug = (search.site || search.project_slug || search.project || "agentsam-sdk").trim();
-  const siteName = SITE_CATALOG.find((s) => s.slug === siteSlug)?.name ?? siteSlug;
+  const requestedSlug = search.site || search.project_slug || search.project || '';
+  const selectedSite: CmsSite | null = selectAuthorizedCmsSite(siteCatalog || [], requestedSlug);
+  const siteSlug = selectedSite?.slug || '';
+  const siteName = selectedSite?.name || 'Website';
 
   const adapter = useMemo(
     () =>
       createHttpCmsAdapter({
         transport: studioCmsFetch,
-        sites: SITE_CATALOG.map((s) => ({
+        sites: (siteCatalog || []).map((s) => ({
           id: s.slug,
           slug: s.slug,
           name: s.name,
           domain: s.domain,
         })),
       }),
-    [],
+    [siteCatalog],
   );
 
   const themeAdapter = useMemo(() => createCmsThemeEditorAdapter(adapter, siteSlug, {
