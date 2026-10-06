@@ -165,6 +165,18 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
                 return Ok((Method::POST, path.to_string()));
             }
 
+            if let Some(remainder) = path.strip_prefix("/api/plugins/") {
+                if let Some((plugin_id, action)) = remainder.split_once("/oauth/") {
+                    let valid_id = plugin_id.starts_with("plg_")
+                        && plugin_id.chars().all(|value| value.is_ascii_alphanumeric() || value == '_');
+                    if !valid_id || !matches!(action, "start" | "disconnect")
+                        || request.method.as_deref().unwrap_or("POST").to_ascii_uppercase() != "POST" {
+                        return Err("studio_service_plugins_path_invalid".into());
+                    }
+                    return Ok((Method::POST, path.to_string()));
+                }
+            }
+
             let plugin_id = path.strip_prefix("/api/plugins/").unwrap_or("");
             let valid_plugin_id = plugin_id.starts_with("plg_")
                 && !plugin_id.contains('/')

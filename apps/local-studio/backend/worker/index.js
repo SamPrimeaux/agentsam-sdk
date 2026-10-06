@@ -40,6 +40,7 @@ import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js"
 import { handleWorkRequest, isWorkRequest } from "./work-service.js";
 import { createLocalStudioPluginRuntime, loadPluginRegistry, updateLocalStudioPluginPreferences } from "./plugin-registry.js";
 import { listCatalogForAccount, installFromCatalog, removeCatalogInstallation } from "./plugin-discovery.js";
+import { beginPluginOAuth, completePluginOAuth, disconnectPublicPlugin } from "./plugin-oauth.js";
 import { emitAnalyticsFact } from "./analytics-service.js";
 import { handleAnalyticsQueryRequest } from "./analytics-query-service.js";
 import {
@@ -656,6 +657,8 @@ export default {
     const isConnectionsRegistry = url.pathname === "/api/connections";
     const isPluginCatalog = url.pathname === "/api/plugins/catalog";
     const isPluginInstall = url.pathname === "/api/plugins/install";
+    const isPluginOAuthCallback = url.pathname === "/api/plugins/oauth/callback";
+    const pluginOAuthMatch = /^\/api\/plugins\/(plg_[a-z0-9]+)\/oauth\/(start|disconnect)$/i.exec(url.pathname);
     const pluginSettingsMatch = /^\/api\/plugins\/([^/]+)$/.exec(url.pathname);
     const isDatabaseApi = isDatabaseRequest(url.pathname);
     const isWorkApi = isWorkRequest(url.pathname);
@@ -881,6 +884,47 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       }
     }
 
+    if (isPluginOAuthCallback) {
+      if (request.method !== 'GET') return json({ok:false,error:'method_not_allowed'},405);
+      const nav='/settings/customize?view=plugins';
+      try {
+        const result=await completePluginOAuth(env,request);
+        const notice=result.source_client==='desktop'
+          ? 'You can return to the AgentSam desktop app and refresh Plugins.'
+          : 'Return to Local Studio to use your connected plugin.';
+        return new Response('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head><body style="background:#0d0d14;color:#fafaff;font:16px system-ui;padding:45px"><h1>Plugin connected</h1><p>'+notice+'</p><a style="color:#9e8cff" href="'+nav+'">Open AgentSam Plugins</a></body></html>',{
+          status:200,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'},
+        });
+      } catch(error) {
+        console.warn('plugin_oauth_callback_failed',String(error?.code||error?.message||'error').slice(0,90));
+        return new Response('<!doctype html><html><body><h1>Connection was not completed</h1><p>Return to AgentSam and try connecting the plugin again.</p></body></html>',{
+          status:400,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store'},
+        });
+      }
+    }
+    if (pluginOAuthMatch) {
+      if(request.method!=='POST')return json({ok:false,error:'method_not_allowed'},405,{allow:'POST'});
+      const accountId=await sessionUser();
+      if(!accountId)return json({ok:false,error:'unauthorized'},401);
+      const origin=request.headers.get('origin');
+      if(origin&&origin!==url.origin)return json({ok:false,error:'origin_not_allowed'},403);
+      if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))
+        return json({ok:false,error:'json_content_type_required'},415);
+      const body=await request.json().catch(()=>null);
+      if(!body||typeof body!=='object'||Array.isArray(body))return json({ok:false,error:'request_invalid'},400);
+      try {
+        const result=pluginOAuthMatch[2]==='start'
+          ? await beginPluginOAuth(env,accountId,pluginOAuthMatch[1],{
+              allowWrites:body.allow_writes===true,desktop:body.desktop===true,
+            })
+          : await disconnectPublicPlugin(env,accountId,pluginOAuthMatch[1]);
+        return json({ok:true,...result});
+      } catch(error) {
+        const code=String(error?.code||error?.message||'plugin_oauth_failed').slice(0,120);
+        console.warn('plugin_oauth_action_failed',code);
+        return json({ok:false,error:code},code.includes('not_found')?404:code.includes('unavailable')?503:400);
+      }
+    }
     if (isPluginCatalog) {
       if (request.method !== "GET") return json({ok:false,error:"method_not_allowed"},405,{allow:"GET"});
       const userId = await sessionUser();

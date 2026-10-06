@@ -26,6 +26,8 @@ import {
   discoverLocalStudioPlugins,
   installLocalStudioPublicPlugin,
   removeLocalStudioPublicPlugin,
+  beginLocalStudioPublicPluginOAuth,
+  disconnectLocalStudioPublicPlugin,
   disconnectLocalStudioProvider,
   listLocalStudioConnections,
   startLocalStudioProviderConnection,
@@ -355,10 +357,16 @@ export const localStudioSettingsHost: SettingsHost = {
       window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
     }
   },
-  async beginPluginSetup(id) {
+  async beginPluginSetup(id, options = {}) {
     const plugins = await loadPluginSettings();
     const plugin = plugins.find((candidate) => candidate.id === id);
     if (!plugin) throw new Error("plugin_not_found");
+    if (plugin.installationKey === "catalog-v1") {
+      const response = await beginLocalStudioPublicPluginOAuth(plugin.id, options.allowWrites === true);
+      if (!response?.authorize_url?.startsWith("https://")) throw new Error("plugin_oauth_url_invalid");
+      await openExternalUrl(response.authorize_url);
+      return;
+    }
     if (!plugin.setupUrl) throw new Error("plugin_setup_unavailable");
     if (plugin.setupUrl.startsWith("/api/connections/") && plugin.providerKey === "cloudflare") {
       await startLocalStudioProviderConnection("cloudflare", {
@@ -376,6 +384,10 @@ export const localStudioSettingsHost: SettingsHost = {
     const plugins = await loadPluginSettings();
     const plugin = plugins.find((candidate) => candidate.id === id);
     if (!plugin) throw new Error("plugin_not_found");
+    if (plugin.installationKey === "catalog-v1") {
+      await disconnectLocalStudioPublicPlugin(plugin.id);
+      return;
+    }
     if (!plugin.disconnectUrl || plugin.providerKey !== "cloudflare") {
       throw new Error("plugin_disconnect_unavailable");
     }

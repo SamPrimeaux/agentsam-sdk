@@ -155,6 +155,10 @@ export type SettingsDiscoveredPlugin = {
   tools: string[];
   toolCount: number;
   skillCount: number;
+  oauthScopes: string[];
+  readOnlyScopes: string[];
+  oauthResource: string | null;
+  toolPermissions: {id:string;title:string;scopes:string[];readOnly:boolean;requiresApproval:boolean}[];
   endpointUrl: string;
   catalogUrl: string;
   transport: string;
@@ -298,7 +302,7 @@ export interface SettingsHost {
   installPluginFromCatalog?(pluginKey: string): Promise<void>;
   removeCatalogPlugin?(pluginId: string): Promise<void>;
   setPluginEnabled?(id: string, enabled: boolean): Promise<void>;
-  beginPluginSetup?(id: string): Promise<void>;
+  beginPluginSetup?(id: string, options?: {allowWrites?: boolean}): Promise<void>;
   disconnectPlugin?(id: string): Promise<void>;
   setWidgetVisible?(id: string, visible: boolean): Promise<void>;
   openWidget?(id: string): void;

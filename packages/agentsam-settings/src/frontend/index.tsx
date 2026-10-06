@@ -967,10 +967,18 @@ function PluginCustomizeView({
                   <span className="font-medium text-amber-300">Installed · authorization required.</span> This plugin's MCP tools will not run in Studio until a supported OAuth connection and tool registration flow is completed.
                 </div>
               ) : null}
-              {installed?.setupUrl && host.beginPluginSetup ? (
+              {(installed?.setupUrl || installed?.installationKey === "catalog-v1") && host.beginPluginSetup ? (
                 <button type="button" disabled={busy} onClick={()=>void run(()=>host.beginPluginSetup!(installed.id))}
                   className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-foreground text-[11px] font-semibold text-background disabled:opacity-40">
-                  {installed.setupStatus==="connected"?"Reconnect":"Connect plugin"} <ArrowUpRight className="size-3.5"/>
+                  {installed.installationKey==="catalog-v1" ? "Connect read-only" :
+                    installed.setupStatus==="connected"?"Reconnect":"Connect plugin"} <ArrowUpRight className="size-3.5"/>
+                </button>
+              ) : null}
+              {installed?.installationKey === "catalog-v1" && selectedCatalog?.toolPermissions.some(tool=>tool.requiresApproval) && host.beginPluginSetup ? (
+                <button type="button" disabled={busy}
+                  onClick={()=>void run(()=>host.beginPluginSetup!(installed.id,{allowWrites:true}))}
+                  className="h-10 w-full rounded-full border border-border px-4 text-[11px] font-medium hover:bg-muted disabled:opacity-40">
+                  Connect with approved writes
                 </button>
               ) : null}
               {selectedCatalog ? (
@@ -985,7 +993,7 @@ function PluginCustomizeView({
                   Remove installation
                 </button>
               ) : null}
-              {installed?.disconnectUrl && installed.setupStatus==="connected" && host.disconnectPlugin ? (
+              {(installed?.disconnectUrl || installed?.installationKey==="catalog-v1") && installed?.setupStatus==="connected" && host.disconnectPlugin ? (
                 <button type="button" disabled={busy} onClick={()=>void run(()=>host.disconnectPlugin!(installed.id))}
                   className="h-9 w-full rounded-full border border-border px-4 text-[11px] text-muted-foreground hover:bg-muted">Disconnect</button>
               ) : null}
