@@ -249,9 +249,16 @@
     byId('te-tree-title').textContent = (pageData && pageData.title) || humanize(slug);
     byId('te-tree-path').textContent = pageRoute(slug);
 
+    let lastTreeZone = null;
     const rows = sections.map(function(section, index) {
       const schema = schemaForSection(section) || {};
       const fields = schema.fields || [];
+      const labelHint = String(schema.label || section.key || '');
+      const zone = String(schema.zone || (/header/i.test(labelHint) ? 'HEADER' : /footer/i.test(labelHint) ? 'FOOTER' : 'BODY')).toUpperCase();
+      const zoneHeading = zone !== lastTreeZone
+        ? '<div class="te-tree-group__label">' + cmsEscapeHtml(zone === 'BODY' ? 'Page sections' : humanize(zone)) + '</div>'
+        : '';
+      lastTreeZone = zone;
       const editor = section.content && section.content.__editor || {};
       const visible = !editor.visibility || editor.visibility.enabled !== false;
       const capabilities = schema.capabilities || {};
