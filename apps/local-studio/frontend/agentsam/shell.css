@@ -215,7 +215,7 @@
 
 
 
-/* Work surfaces are embedded inside the Local Studio shell.
+/* Work surfaces run inside the Local Studio host theme.
    Local Studio owns appearance; @inneranimalmedia/agentsam-work consumes these live tokens. */
 .local-studio-work-surface {
   min-height: 100%;
