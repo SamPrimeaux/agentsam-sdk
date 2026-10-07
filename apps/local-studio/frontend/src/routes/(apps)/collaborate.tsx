@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { LocalStudioWorkPage } from "@/components/work/LocalStudioWorkPage";
 
 type CollaborateSearch = {
@@ -9,11 +9,14 @@ export const Route = createFileRoute("/(apps)/collaborate")({
   validateSearch: (search: Record<string, unknown>): CollaborateSearch => ({
     seg: typeof search.seg === "string" ? search.seg : undefined,
   }),
+  beforeLoad: ({ search }) => {
+    if (search.seg === "tickets" || search.seg === "tasks") {
+      throw redirect({ to: "/tickets" });
+    }
+  },
   component: CollaborateRoute,
 });
 
 function CollaborateRoute() {
-  const { seg } = Route.useSearch();
-  const surface = seg === "tickets" || seg === "tasks" ? "tickets" : "calendar";
-  return <LocalStudioWorkPage surface={surface} />;
+  return <LocalStudioWorkPage surface="calendar" />;
 }

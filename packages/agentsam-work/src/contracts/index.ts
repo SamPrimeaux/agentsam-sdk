@@ -124,6 +124,17 @@ export type WorkMailMessage = {
   starred?: boolean;
 };
 
+export type WorkMailConnection = {
+  id: string;
+  provider: string;
+  label: string;
+  kind: "mailbox" | "infrastructure";
+  status: "connected" | "ready" | "disconnected" | "needs_scope";
+  accountLabel?: string | null;
+  capabilities?: string[];
+  description?: string | null;
+};
+
 export type WorkCalendarEvent = {
   id: string;
   title: string;
@@ -140,6 +151,8 @@ export type WorkSnapshot = {
   artifacts: WorkArtifact[];
   projects: WorkProject[];
   mail: WorkMailMessage[];
+  mailConnections?: WorkMailConnection[];
+  activeMailConnectionId?: string | null;
   calendar: WorkCalendarEvent[];
   currentProjectId: string;
   ticketAnalytics: {
@@ -149,13 +162,23 @@ export type WorkSnapshot = {
   };
 };
 
+export type WorkSnapshotRequest = {
+  surface?: WorkSurfaceId;
+  mailConnectionId?: string;
+};
+
 export interface WorkHost {
-  snapshot(): Promise<WorkSnapshot>;
+  snapshot(request?: WorkSnapshotRequest): Promise<WorkSnapshot>;
   refresh?(): Promise<void>;
   createTicket?(input: Pick<WorkTicket, "title" | "surface"> & Partial<WorkTicket>): Promise<WorkTicket>;
   updateTicket?(id: string, patch: Partial<WorkTicket>): Promise<WorkTicket>;
-  archiveMail?(id: string): Promise<void>;
-  starMail?(id: string, starred: boolean): Promise<void>;
+  archiveMail?(id: string, connectionId?: string): Promise<void>;
+  starMail?(id: string, starred: boolean, connectionId?: string): Promise<void>;
+  connectMail?(provider?: string): Promise<void>;
+  disconnectMail?(connectionId?: string): Promise<void>;
+  sendMail?(input: { to: string; subject: string; body: string }, connectionId?: string): Promise<void>;
+  selectMailConnection?(connectionId: string): Promise<void> | void;
+  openMailConnections?(): Promise<void> | void;
 }
 
 export type WorkNavigate = (href: string) => void;

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { Settings } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   WorkHost,
   WorkNavigate,
@@ -14,11 +15,23 @@ import { ProjectsSurface } from "./surfaces/ProjectsSurface";
 import { ProjectDetailSurface } from "./surfaces/ProjectDetailSurface";
 import { TicketDetailSurface } from "./surfaces/TicketDetailSurface";
 
+const SNAPSHOT_CACHE = new WeakMap<WorkHost, Map<string, WorkSnapshot>>();
+const SNAPSHOT_REQUESTS = new WeakMap<WorkHost, Map<string, Promise<WorkSnapshot>>>();
+
+function snapshotBucket<T>(cache: WeakMap<WorkHost, Map<string, T>>, host: WorkHost) {
+  let bucket = cache.get(host);
+  if (!bucket) {
+    bucket = new Map<string, T>();
+    cache.set(host, bucket);
+  }
+  return bucket;
+}
+
 const EMPTY_LIVE_SNAPSHOT: WorkSnapshot = {
   fixtureName: "live",
   nav: [
     { id: "calendar", label: "Calendar", href: "/collaborate", group: "work" },
-    { id: "tickets", label: "Tickets", href: "/collaborate?seg=tickets", group: "work" },
+    { id: "tickets", label: "Tickets", href: "/tickets", group: "work" },
     { id: "mail", label: "Mail", href: "/mail", group: "work" },
     { id: "projects", label: "Projects", href: "/projects", group: "work" },
     { id: "artifacts", label: "My artifacts", href: "/artifacts", group: "files" },
@@ -51,6 +64,8 @@ export function WorkProduct({
   projectId,
   ticketId,
   presentation = "standalone",
+  navCollapsed = false,
+  onNavCollapsedChange,
 }: {
   host: WorkHost;
   surface: WorkSurfaceId;
@@ -58,48 +73,74 @@ export function WorkProduct({
   projectId?: string;
   ticketId?: string;
   presentation?: WorkShellPresentation;
+  navCollapsed?: boolean;
+  onNavCollapsedChange?: (collapsed: boolean) => void;
 }) {
-  const [snapshot, setSnapshot] = useState<WorkSnapshot | null>(null);
+  const cacheKey = surface;
+  const [snapshot, setSnapshot] = useState<WorkSnapshot>(() =>
+    snapshotBucket(SNAPSHOT_CACHE, host).get(cacheKey) || { ...EMPTY_LIVE_SNAPSHOT },
+  );
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     setLoadError(null);
-    host
-      .snapshot()
+    const cache = snapshotBucket(SNAPSHOT_CACHE, host);
+    const requests = snapshotBucket(SNAPSHOT_REQUESTS, host);
+    const cached = cache.get(cacheKey);
+    if (cached) setSnapshot(cached);
+
+    let request = requests.get(cacheKey);
+    if (!request) {
+      request = host.snapshot({ surface });
+      requests.set(cacheKey, request);
+    }
+
+    request
       .then((next) => {
-        if (cancelled) return;
-        setSnapshot(next);
+        cache.set(cacheKey, next);
+        requests.delete(cacheKey);
+        if (!cancelled) setSnapshot(next);
       })
       .catch((err: unknown) => {
+        requests.delete(cacheKey);
         if (cancelled) return;
         const message =
           err instanceof Error ? err.message : typeof err === "string" ? err : "unavailable";
         setLoadError(message);
-        // Honest empty live shell — never fall back to populatedWorkFixture.
-        setSnapshot({ ...EMPTY_LIVE_SNAPSHOT });
+        if (!cache.has(cacheKey)) setSnapshot({ ...EMPTY_LIVE_SNAPSHOT });
       });
     return () => {
       cancelled = true;
     };
-  }, [host]);
+  }, [cacheKey, host, surface]);
+
+  const refreshSnapshot = useCallback(async () => {
+    const next = await host.snapshot({ surface });
+    snapshotBucket(SNAPSHOT_CACHE, host).set(cacheKey, next);
+    setSnapshot(next);
+    setLoadError(null);
+    return next;
+  }, [cacheKey, host, surface]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onFocus = () => {
+      void refreshSnapshot().catch(() => undefined);
+    };
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("agentsam:work-refresh", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("agentsam:work-refresh", onFocus);
+    };
+  }, [refreshSnapshot]);
 
   const project = useMemo(() => {
     if (!snapshot) return null;
     const id = projectId || snapshot.currentProjectId;
     return snapshot.projects.find((candidate) => candidate.id === id) || snapshot.projects[0] || null;
   }, [projectId, snapshot]);
-
-  if (!snapshot) {
-    return (
-      <div
-        className="agentsam-work"
-        style={{ height: "100%", display: "grid", placeItems: "center", color: "var(--agentsam-work-muted)" }}
-      >
-        Loading Work…
-      </div>
-    );
-  }
 
   const rightRail =
     surface === "calendar" ||
@@ -122,6 +163,21 @@ export function WorkProduct({
       onNavigate={onNavigate}
       rightRail={rightRail}
       presentation={presentation}
+      navCollapsed={navCollapsed}
+      onNavCollapsedChange={onNavCollapsedChange}
+      trailing={
+        host.openMailConnections ? (
+          <button
+            type="button"
+            className="agentsam-work-toolbar-button"
+            aria-label="Connections"
+            title="Connections"
+            onClick={() => void host.openMailConnections?.()}
+          >
+            <Settings size={15} />
+          </button>
+        ) : undefined
+      }
     >
       {authHint ? (
         <div
@@ -161,7 +217,55 @@ export function WorkProduct({
           />
         )
       ) : null}
-      {surface === "mail" ? <MailSurface messages={snapshot.mail} /> : null}
+      {surface === "mail" ? (
+        <MailSurface
+          messages={snapshot.mail}
+          connections={snapshot.mailConnections || []}
+          activeConnectionId={snapshot.activeMailConnectionId}
+          onSelectConnection={
+            host.selectMailConnection
+              ? async (connectionId) => {
+                  await host.selectMailConnection?.(connectionId);
+                  await refreshSnapshot();
+                }
+              : undefined
+          }
+          onConnectProvider={host.connectMail}
+          onDisconnectConnection={
+            host.disconnectMail
+              ? async (connectionId) => {
+                  await host.disconnectMail?.(connectionId);
+                  await refreshSnapshot();
+                }
+              : undefined
+          }
+          onOpenConnections={host.openMailConnections}
+          onArchive={
+            host.archiveMail
+              ? async (id) => {
+                  await host.archiveMail?.(id, snapshot.activeMailConnectionId || undefined);
+                  await refreshSnapshot();
+                }
+              : undefined
+          }
+          onStar={
+            host.starMail
+              ? async (id, starred) => {
+                  await host.starMail?.(id, starred, snapshot.activeMailConnectionId || undefined);
+                  await refreshSnapshot();
+                }
+              : undefined
+          }
+          onSend={
+            host.sendMail
+              ? async (input) => {
+                  await host.sendMail?.(input, snapshot.activeMailConnectionId || undefined);
+                  await refreshSnapshot();
+                }
+              : undefined
+          }
+        />
+      ) : null}
       {surface === "artifacts" ? <ArtifactsSurface artifacts={snapshot.artifacts} /> : null}
       {surface === "projects" ? (
         <ProjectsSurface projects={snapshot.projects} onNavigate={onNavigate} />

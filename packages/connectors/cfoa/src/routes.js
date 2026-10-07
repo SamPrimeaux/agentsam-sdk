@@ -42,7 +42,15 @@ function resolveReturnTo(url) {
   if (!raw) return '';
   try {
     const destination = new URL(raw, url.origin);
-    return destination.origin === url.origin ? destination.toString() : '';
+    if (destination.origin === url.origin) return destination.toString();
+    if (
+      destination.protocol === 'agentsamstudio:' &&
+      destination.hostname === 'connection' &&
+      destination.pathname === '/callback'
+    ) {
+      return destination.toString();
+    }
+    return '';
   } catch {
     return '';
   }
@@ -403,7 +411,8 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
     const mode = String(request.headers.get('sec-fetch-mode') || '');
     const wantsJson = accept.includes('application/json')
       || mode === 'cors'
-      || request.headers.get('x-agentsam-oauth') === 'json';
+      || request.headers.get('x-agentsam-oauth') === 'json'
+      || url.searchParams.get('format') === 'json';
     if (!wantsJson) {
       return Response.redirect(authorize, 302);
     }

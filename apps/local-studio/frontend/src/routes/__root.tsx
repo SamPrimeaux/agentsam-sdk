@@ -73,6 +73,6 @@ function RootDocument() {
 
 function ApplicationOutlet() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const isApp = /^\/(agentsam|trails|cms|store|content|cad|database|projects|artifacts|mail|collaborate|files|browse|cli|ship|widgets|settings)(\/|$)/.test(pathname);
+  const isApp = /^\/(agentsam|trails|cms|store|content|cad|database|projects|artifacts|mail|tickets|collaborate|files|browse|cli|ship|widgets|settings)(\/|$)/.test(pathname);
   return isApp ? <AgentSamShell /> : <Outlet />;
 }

@@ -10,6 +10,8 @@ import {
   Lightbulb,
   Mail,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
   Search,
   Star,
@@ -88,11 +90,15 @@ function MiniNav({
   surface,
   onNavigate,
   onClose,
+  collapsed = false,
+  onCollapsedChange,
 }: {
   nav: WorkNavItem[];
   surface: WorkSurfaceId;
   onNavigate: WorkNavigate;
   onClose?: () => void;
+  collapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
 }) {
   const current = activeNavId(surface);
   const workItems = nav.filter((item) => item.group === "work");
@@ -106,6 +112,7 @@ function MiniNav({
           type="button"
           className="agentsam-work-mini-nav__item"
           data-active={item.id === current}
+          title={collapsed ? item.label : undefined}
           onClick={() => {
             onNavigate(navHref(item, surface));
             onClose?.();
@@ -133,15 +140,26 @@ function MiniNav({
           >
             <X size={18} />
           </button>
+        ) : onCollapsedChange ? (
+          <button
+            type="button"
+            className="agentsam-work-mini-nav__collapse"
+            aria-label={collapsed ? "Expand Work navigation" : "Collapse Work navigation"}
+            title={collapsed ? "Expand Work navigation" : "Collapse Work navigation"}
+            onClick={() => onCollapsedChange(!collapsed)}
+          >
+            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
         ) : null}
       </div>
       <button
         type="button"
         className="agentsam-work-mini-nav__create"
+        title={collapsed ? "Create" : undefined}
         onClick={() => onNavigate("/collaborate?new=1")}
       >
-        <Plus size={18} style={{ marginRight: 8, verticalAlign: "middle" }} />
-        Create
+        <Plus size={18} className="agentsam-work-mini-nav__create-icon" />
+        <span className="agentsam-work-mini-nav__create-label">Create</span>
       </button>
       <div className="agentsam-work-mini-nav__scroll">
         <div className="agentsam-work-mini-nav__group">{renderItems(workItems)}</div>
@@ -171,7 +189,7 @@ function RightRail({
           onNavigate(
             surface === "artifacts" || surface === "artifact-tickets"
               ? "/artifacts/tickets"
-              : "/collaborate?seg=tickets",
+              : "/tickets",
           )
         }
       >
@@ -205,6 +223,8 @@ export function WorkShell({
   trailing,
   rightRail = false,
   presentation = "standalone",
+  navCollapsed = false,
+  onNavCollapsedChange,
 }: {
   nav: WorkNavItem[];
   surface: WorkSurfaceId;
@@ -213,6 +233,8 @@ export function WorkShell({
   trailing?: ReactNode;
   rightRail?: boolean;
   presentation?: WorkShellPresentation;
+  navCollapsed?: boolean;
+  onNavCollapsedChange?: (collapsed: boolean) => void;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const current = activeNavId(surface);
@@ -228,9 +250,20 @@ export function WorkShell({
   }
 
   return (
-    <div className="agentsam-work agentsam-work-shell" data-presentation="standalone" data-right-rail={rightRail}>
+    <div
+      className="agentsam-work agentsam-work-shell"
+      data-presentation="standalone"
+      data-right-rail={rightRail}
+      data-nav-collapsed={navCollapsed ? "true" : "false"}
+    >
       <aside className="agentsam-work-mini-nav">
-        <MiniNav nav={nav} surface={surface} onNavigate={onNavigate} />
+        <MiniNav
+          nav={nav}
+          surface={surface}
+          onNavigate={onNavigate}
+          collapsed={navCollapsed}
+          onCollapsedChange={onNavCollapsedChange}
+        />
       </aside>
       <section className="agentsam-work-stage">
         <header className="agentsam-work-stage__topbar">
@@ -249,7 +282,7 @@ export function WorkShell({
       <nav className="agentsam-work-bottom-nav" aria-label="Work surfaces">
         {[
           { id: "calendar" as const, label: "Calendar", href: "/collaborate", icon: CalendarDays },
-          { id: "tickets" as const, label: "Tickets", href: "/collaborate?seg=tickets", icon: CheckSquare },
+          { id: "tickets" as const, label: "Tickets", href: "/tickets", icon: CheckSquare },
           { id: "mail" as const, label: "Mail", href: "/mail", icon: Mail },
           { id: "projects" as const, label: "Projects", href: "/projects", icon: FolderKanban },
           { id: "artifacts" as const, label: "Files", href: "/artifacts", icon: Archive },
@@ -264,7 +297,7 @@ export function WorkShell({
         <>
           <button type="button" className="agentsam-work-drawer-backdrop" onClick={() => setDrawerOpen(false)} aria-label="Close Work navigation" />
           <aside className="agentsam-work-drawer">
-            <MiniNav nav={nav} surface={surface} onNavigate={onNavigate} onClose={() => setDrawerOpen(false)} />
+            <MiniNav nav={nav} surface={surface} onNavigate={onNavigate} onClose={() => setDrawerOpen(false)} collapsed={false} />
           </aside>
         </>
       ) : null}

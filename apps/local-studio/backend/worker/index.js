@@ -38,6 +38,7 @@ import {
 import { loadConnectionsRegistry, safePluginSettingsRecord } from "./connections-registry.js";
 import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js";
 import { handleWorkRequest, isWorkRequest } from "./work-service.js";
+import { completeGmailOAuth, isGmailOAuthCallbackRequest } from "./gmail-service.js";
 import { createLocalStudioPluginRuntime, loadPluginRegistry, updateLocalStudioPluginPreferences } from "./plugin-registry.js";
 import { listCatalogForAccount, installFromCatalog, removeCatalogInstallation } from "./plugin-discovery.js";
 import { beginPluginOAuth, completePluginOAuth, disconnectPublicPlugin } from "./plugin-oauth.js";
@@ -686,6 +687,11 @@ export default {
     // Stock public OAuth / issuer config (no secrets) — CLI resolves desktop client from here.
     if (url.pathname === "/api/public-config") {
       return handlePublicConfigRequest(request, env);
+    }
+
+    // Gmail resource OAuth callback is public only long enough to redeem the one-time PKCE state.
+    if (isGmailOAuthCallbackRequest(request)) {
+      return completeGmailOAuth(request, env);
     }
 
     // CLI desktop PKCE token exchange broker (secrets stay on Worker).

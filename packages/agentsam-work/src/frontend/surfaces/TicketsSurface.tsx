@@ -67,7 +67,7 @@ export function TicketsSurface({
         <div style={{ color: "var(--agentsam-work-accent)", fontSize: 12, fontWeight: 700 }}>
           Recommended execution order
         </div>
-        <div style={{ marginTop: 6, color: "color-mix(in srgb, var(--agentsam-work-accent) 75%, black)", fontSize: 11, lineHeight: 1.55 }}>
+        <div style={{ marginTop: 6, color: "var(--agentsam-work-text)", fontSize: 11, lineHeight: 1.55 }}>
           Close in review with proof first → Finding #3 unlocks ledger Phase B → reward single-writer unlocks cost_mean loop → child routing P0s.
         </div>
       </div>
@@ -108,6 +108,7 @@ export function TicketsSurface({
             fontSize: 10,
             lineHeight: 1.65,
             whiteSpace: "pre-wrap",
+            fontFamily: "inherit",
           }}
         >
           {"hardcoded_routing_audit → inferIntent → code hub + image guards\nfinding_3_pending_status → ledger_ownership_b\nreward_events_tenant → arm_cost_mean_loop → consolidate_arm_writers"}

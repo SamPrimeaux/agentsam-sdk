@@ -193,6 +193,32 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
             };
             Ok((method, path.to_string()))
         }
+        "work" => {
+            let path = request.path.as_deref().unwrap_or("").trim();
+            let valid_path = path == "/api/work/snapshot"
+                || path.starts_with("/api/work/snapshot?surface=")
+                || path == "/api/work/gmail/oauth/start"
+                || path == "/api/work/gmail/status"
+                || path == "/api/work/gmail/disconnect"
+                || path == "/api/tickets"
+                || path.starts_with("/api/tickets/")
+                || path == "/api/mail/send"
+                || path.starts_with("/api/mail/email/");
+            if !valid_path
+                || path.contains("://")
+                || path.contains('\\')
+                || path.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10)
+            {
+                return Err("studio_service_work_path_invalid".into());
+            }
+            let method = match request.method.as_deref().unwrap_or("GET").to_ascii_uppercase().as_str() {
+                "GET" => Method::GET,
+                "POST" => Method::POST,
+                "PATCH" => Method::PATCH,
+                _ => return Err("studio_service_work_method_invalid".into()),
+            };
+            Ok((method, path.to_string()))
+        }
         "database" => {
             let path = request.path.as_deref().unwrap_or("").trim();
             if !path.starts_with("/api/database/")
@@ -719,6 +745,44 @@ mod tests {
             identity_service_route("desktop_magic").unwrap_err(),
             "unsupported_identity_operation"
         );
+    }
+
+    #[test]
+    fn work_bridge_allows_only_bounded_work_routes() {
+        for (path, method) in [
+            ("/api/work/snapshot?surface=mail", "GET"),
+            ("/api/work/gmail/oauth/start", "POST"),
+            ("/api/work/gmail/status", "GET"),
+            ("/api/work/gmail/disconnect", "POST"),
+            ("/api/tickets", "POST"),
+            ("/api/tickets/tkt_123", "PATCH"),
+            ("/api/mail/send", "POST"),
+            ("/api/mail/email/msg_123", "PATCH"),
+        ] {
+            let request = StudioServiceBridgeRequest {
+                operation: "work".into(),
+                account_id: None,
+                body: None,
+                path: Some(path.into()),
+                method: Some(method.into()),
+            };
+            assert_eq!(studio_service_route(&request).unwrap().0.as_str(), method);
+        }
+
+        for invalid_path in [
+            "https://evil.invalid/api/work/snapshot",
+            "/api/work/../../vault",
+            r"/api/mail/send\oops",
+        ] {
+            let request = StudioServiceBridgeRequest {
+                operation: "work".into(),
+                account_id: None,
+                body: None,
+                path: Some(invalid_path.into()),
+                method: Some("GET".into()),
+            };
+            assert!(studio_service_route(&request).is_err());
+        }
     }
 
     #[test]

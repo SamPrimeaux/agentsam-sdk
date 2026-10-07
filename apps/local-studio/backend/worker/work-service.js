@@ -4,10 +4,11 @@
  */
 
 import { resolveWebsiteAssets } from './bindings.js';
+import { beginGmailOAuth, disconnectGmail, listGmailConnections, loadGmailMessages, mutateGmailMessage, sendGmailMessage } from './gmail-service.js';
 
 const DEFAULT_NAV = Object.freeze([
   { id: 'calendar', label: 'Calendar', href: '/collaborate', group: 'work' },
-  { id: 'tickets', label: 'Tickets', href: '/collaborate?seg=tickets', group: 'work' },
+  { id: 'tickets', label: 'Tickets', href: '/tickets', group: 'work' },
   { id: 'mail', label: 'Mail', href: '/mail', group: 'work' },
   { id: 'projects', label: 'Projects', href: '/projects', group: 'work' },
   { id: 'artifacts', label: 'My artifacts', href: '/artifacts', group: 'files' },
@@ -42,6 +43,101 @@ function json(data, status = 200) {
 
 function clean(value) {
   return value == null ? '' : String(value).trim();
+}
+
+const CLOUDFLARE_MAIL_SCOPES = Object.freeze({
+  sending: ['email-sending.read', 'email-sending.write'],
+  routing: [
+    'email-routing-account-rule.read',
+    'email-routing-address.read',
+    'email-routing-address.write',
+    'email-routing-rule.read',
+    'email-routing-rule.write',
+    'email-routing-suppression.read',
+    'email-routing-suppression.write',
+  ],
+  security: [
+    'cloud-email-security.read',
+    'cloud-email-security.write',
+    'email-security-dmarcreports.write',
+  ],
+});
+
+function parseScopeSet(...values) {
+  const out = new Set();
+  for (const value of values) {
+    if (!value) continue;
+    let items = [];
+    if (Array.isArray(value)) items = value;
+    else {
+      const raw = clean(value);
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) items = parsed;
+        else items = raw.split(/[\s,]+/);
+      } catch {
+        items = raw.split(/[\s,]+/);
+      }
+    }
+    for (const item of items) {
+      const normalized = clean(item).toLowerCase();
+      if (normalized) out.add(normalized);
+    }
+  }
+  return out;
+}
+
+async function loadCloudflareMailConnection(env, userId) {
+  if (!env.DB?.prepare) return null;
+  let row = null;
+  try {
+    row = await env.DB.prepare(
+      "SELECT account_identifier, account_display, scope, scopes, updated_at " +
+        "FROM user_oauth_tokens WHERE user_id = ? AND LOWER(provider) = 'cloudflare' " +
+        "AND COALESCE(is_active, 1) = 1 AND (revoked_at IS NULL OR revoked_at = 0) " +
+        "ORDER BY updated_at DESC LIMIT 1"
+    ).bind(userId).first();
+  } catch {
+    row = null;
+  }
+
+  const granted = parseScopeSet(row?.scope, row?.scopes);
+  const capabilities = [];
+  if (CLOUDFLARE_MAIL_SCOPES.sending.some((scope) => granted.has(scope))) capabilities.push('email.sending');
+  if (CLOUDFLARE_MAIL_SCOPES.routing.some((scope) => granted.has(scope))) capabilities.push('email.routing');
+  if (CLOUDFLARE_MAIL_SCOPES.security.some((scope) => granted.has(scope))) capabilities.push('email.security');
+
+  if (!row) {
+    return {
+      id: 'cloudflare:email',
+      provider: 'cloudflare',
+      label: 'Cloudflare Email',
+      kind: 'infrastructure',
+      status: env.CLOUDFLARE_OAUTH_CLIENT_ID ? 'ready' : 'disconnected',
+      accountLabel: null,
+      capabilities: [],
+      description: 'Email Sending, Email Routing, and Email Security capabilities.',
+    };
+  }
+
+  return {
+    id: 'cloudflare:email',
+    provider: 'cloudflare',
+    label: 'Cloudflare Email',
+    kind: 'infrastructure',
+    status: capabilities.length ? 'connected' : 'needs_scope',
+    accountLabel: clean(row.account_display || row.account_identifier || 'Cloudflare'),
+    capabilities,
+    description: capabilities.length
+      ? 'Connected Cloudflare email infrastructure.'
+      : 'Cloudflare is connected, but email capabilities need authorization.',
+  };
+}
+
+function gmailAccountFromConnectionId(connectionId) {
+  const raw = clean(connectionId);
+  const prefix = 'google_gmail:';
+  return raw.startsWith(prefix) ? raw.slice(prefix.length) : '';
 }
 
 function initialsFrom(name) {
@@ -344,6 +440,10 @@ function ticketAnalytics(tickets) {
 export function isWorkRequest(pathname) {
   return (
     pathname === '/api/work/snapshot' ||
+    pathname === '/api/work/gmail/oauth/start' ||
+    pathname === '/api/work/gmail/status' ||
+    pathname === '/api/work/gmail/disconnect' ||
+    pathname === '/api/mail/send' ||
     pathname === '/api/tickets' ||
     /^\/api\/tickets\/[^/]+$/.test(pathname) ||
     /^\/api\/mail\/email\/[^/]+$/.test(pathname)
@@ -357,23 +457,62 @@ export async function handleWorkRequest(request, env, accountId) {
 
   try {
     if (url.pathname === '/api/work/snapshot' && method === 'GET') {
-      const [tickets, artifacts] = await Promise.all([
-        loadTickets(env.DB, accountId),
-        loadArtifacts(env, url.origin),
+      const surface = clean(url.searchParams.get('surface'));
+      const needsTickets = !surface || ['tickets', 'projects', 'project-detail', 'artifact-tickets'].includes(surface);
+      const needsArtifacts = !surface || ['artifacts', 'artifact-tickets'].includes(surface);
+      const needsProjects = !surface || ['projects', 'project-detail'].includes(surface);
+      const needsMail = surface === 'mail';
+
+      const [tickets, artifacts, gmailConnections, cloudflareMail] = await Promise.all([
+        needsTickets ? loadTickets(env.DB, accountId) : Promise.resolve([]),
+        needsArtifacts ? loadArtifacts(env, url.origin) : Promise.resolve([]),
+        needsMail ? listGmailConnections(env, accountId) : Promise.resolve([]),
+        needsMail ? loadCloudflareMailConnection(env, accountId) : Promise.resolve(null),
       ]);
-      const projects = await loadProjects(env.DB, accountId, tickets);
+      const mailConnections = needsMail
+        ? [...gmailConnections, ...(cloudflareMail ? [cloudflareMail] : [])]
+        : [];
+      const requestedMailConnectionId = clean(url.searchParams.get('mail_connection'));
+      const selectedGmailId = requestedMailConnectionId && gmailConnections.some((item) => item.id === requestedMailConnectionId)
+        ? requestedMailConnectionId
+        : (gmailConnections.length === 1 ? gmailConnections[0].id : '');
+      const selectedGmailAccount = gmailAccountFromConnectionId(selectedGmailId);
+      const [projects, mail] = await Promise.all([
+        needsProjects ? loadProjects(env.DB, accountId, tickets) : Promise.resolve([]),
+        needsMail && selectedGmailAccount
+          ? loadGmailMessages(env, accountId, selectedGmailAccount)
+          : Promise.resolve([]),
+      ]);
       const snapshot = {
         fixtureName: 'live',
         nav: [...DEFAULT_NAV],
         tickets,
         artifacts,
         projects,
-        mail: [],
+        mail,
+        ...(needsMail ? {
+          mailConnections,
+          activeMailConnectionId: selectedGmailId || null,
+        } : {}),
         calendar: [],
         currentProjectId: projects[0]?.id || '',
         ticketAnalytics: ticketAnalytics(tickets),
       };
       return json({ ok: true, snapshot });
+    }
+
+    if (url.pathname === '/api/work/gmail/oauth/start' && method === 'POST') {
+      return beginGmailOAuth(request, env, accountId);
+    }
+
+    if (url.pathname === '/api/work/gmail/status' && method === 'GET') {
+      return json({ ok: true, connections: await listGmailConnections(env, accountId) });
+    }
+
+    if (url.pathname === '/api/work/gmail/disconnect' && method === 'POST') {
+      const body = await request.json().catch(() => ({}));
+      const accountIdentifier = gmailAccountFromConnectionId(body.connection_id || body.connectionId);
+      return json(await disconnectGmail(env, accountId, accountIdentifier));
     }
 
     if (url.pathname === '/api/tickets' && method === 'POST') {
@@ -497,10 +636,18 @@ export async function handleWorkRequest(request, env, accountId) {
       });
     }
 
+    if (url.pathname === '/api/mail/send' && method === 'POST') {
+      const body = await request.json().catch(() => ({}));
+      const accountIdentifier = gmailAccountFromConnectionId(body.connection_id || body.connectionId);
+      return json(await sendGmailMessage(env, accountId, body, accountIdentifier));
+    }
+
     const mailMatch = url.pathname.match(/^\/api\/mail\/email\/([^/]+)$/);
     if (mailMatch && method === 'PATCH') {
-      // Hosted mail mutations are not wired yet — fail loud instead of pretending.
-      return json({ ok: false, error: 'mail_not_available_on_hosted' }, 501);
+      const messageId = decodeURIComponent(mailMatch[1]);
+      const body = await request.json().catch(() => ({}));
+      const accountIdentifier = gmailAccountFromConnectionId(body.connection_id || body.connectionId);
+      return json(await mutateGmailMessage(env, accountId, messageId, body, accountIdentifier));
     }
 
     return json({ ok: false, error: 'not_found' }, 404);

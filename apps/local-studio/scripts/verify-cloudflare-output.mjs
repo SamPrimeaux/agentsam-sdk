@@ -13,6 +13,7 @@ const siteHome = path.join(assetsDir, "site", "home", "index.html");
 const siteHomepage = path.join(assetsDir, "site", "homepage.html");
 const localStudioWorkPage = path.join(root, "frontend", "src", "components", "work", "LocalStudioWorkPage.tsx");
 const localStudioRootRoute = path.join(root, "frontend", "src", "routes", "__root.tsx");
+const localStudioTicketsRoute = path.join(root, "frontend", "src", "routes", "(apps)", "tickets.tsx");
 
 assert.ok(fs.existsSync(configPath), "backend/wrangler.jsonc is required");
 assert.ok(fs.existsSync(workerEntry), "backend/worker/index.js is required");
@@ -21,10 +22,11 @@ assert.ok(fs.statSync(serverEntry).isFile(), "Nitro server entry must be a file"
 assert.ok(fs.existsSync(assetsDir) && fs.statSync(assetsDir).isDirectory(), ".output/public is required");
 assert.ok(fs.existsSync(localStudioWorkPage), "LocalStudioWorkPage.tsx is required");
 assert.ok(fs.existsSync(localStudioRootRoute), "Local Studio root route is required");
+assert.ok(fs.existsSync(localStudioTicketsRoute), "Local Studio /tickets route is required");
 const localStudioRootSource = fs.readFileSync(localStudioRootRoute, "utf8");
 assert.ok(
-  localStudioRootSource.includes("projects|artifacts|mail|collaborate|files"),
-  "mail and collaborate must remain inside the AgentSam application shell",
+  localStudioRootSource.includes("projects|artifacts|mail|tickets|collaborate|files"),
+  "mail, tickets, and collaborate must remain inside the AgentSam application shell",
 );
 const localStudioWorkSource = fs.readFileSync(localStudioWorkPage, "utf8");
 assert.doesNotMatch(
