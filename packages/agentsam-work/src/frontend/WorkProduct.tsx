@@ -5,7 +5,7 @@ import type {
   WorkSnapshot,
   WorkSurfaceId,
 } from "../contracts/index";
-import { WorkShell } from "./WorkShell";
+import { WorkShell, type WorkShellPresentation } from "./WorkShell";
 import { CalendarSurface } from "./surfaces/CalendarSurface";
 import { TicketsSurface } from "./surfaces/TicketsSurface";
 import { MailSurface } from "./surfaces/MailSurface";
@@ -50,12 +50,14 @@ export function WorkProduct({
   onNavigate,
   projectId,
   ticketId,
+  presentation = "standalone",
 }: {
   host: WorkHost;
   surface: WorkSurfaceId;
   onNavigate: WorkNavigate;
   projectId?: string;
   ticketId?: string;
+  presentation?: WorkShellPresentation;
 }) {
   const [snapshot, setSnapshot] = useState<WorkSnapshot | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -108,9 +110,9 @@ export function WorkProduct({
 
   const authHint =
     loadError === "unauthorized"
-      ? "Sign in to load account-owned projects and artifacts from /api/work/snapshot."
+      ? "The Work host rejected this snapshot request. Check the host access or session configuration."
       : loadError
-        ? `Work snapshot unavailable (${loadError}). Showing an empty live shell — not sample fixture data.`
+        ? "Work snapshot unavailable (" + loadError + "). Showing an empty live surface — not sample fixture data."
         : null;
 
   return (
@@ -119,6 +121,7 @@ export function WorkProduct({
       surface={surface}
       onNavigate={onNavigate}
       rightRail={rightRail}
+      presentation={presentation}
     >
       {authHint ? (
         <div

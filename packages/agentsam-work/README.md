@@ -10,3 +10,12 @@ Portable AgentSam Work contracts and React product surfaces for projects, ticket
 - `@inneranimalmedia/agentsam-work/fixtures` — deterministic fixture host
 - `@inneranimalmedia/agentsam-work/frontend` — React product surface
 - `@inneranimalmedia/agentsam-work/theme.css` — theme token styles
+
+## Host shell integration
+
+WorkProduct supports two presentation modes:
+
+- standalone (default): Work owns its own navigation shell for direct mounting.
+- embedded: the host application owns global navigation/topbar and Work renders only the selected product surface.
+
+Use presentation="embedded" when mounting Work inside an existing application shell. Use the exported --agentsam-work-* CSS variables to map Work into the host design system. Embedded mode intentionally does not render a second sidebar, topbar, right rail, mobile nav, or drawer.

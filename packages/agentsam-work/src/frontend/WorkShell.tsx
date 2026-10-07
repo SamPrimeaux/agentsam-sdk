@@ -195,6 +195,8 @@ function RightRail({
   );
 }
 
+export type WorkShellPresentation = "standalone" | "embedded";
+
 export function WorkShell({
   nav,
   surface,
@@ -202,6 +204,7 @@ export function WorkShell({
   children,
   trailing,
   rightRail = false,
+  presentation = "standalone",
 }: {
   nav: WorkNavItem[];
   surface: WorkSurfaceId;
@@ -209,24 +212,29 @@ export function WorkShell({
   children: ReactNode;
   trailing?: ReactNode;
   rightRail?: boolean;
+  presentation?: WorkShellPresentation;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const current = activeNavId(surface);
 
+  if (presentation === "embedded") {
+    return (
+      <div className="agentsam-work agentsam-work-shell" data-presentation="embedded" data-right-rail="false">
+        <section className="agentsam-work-stage">
+          <div className="agentsam-work-stage__body">{children}</div>
+        </section>
+      </div>
+    );
+  }
+
   return (
-    <div className="agentsam-work agentsam-work-shell" data-right-rail={rightRail}>
+    <div className="agentsam-work agentsam-work-shell" data-presentation="standalone" data-right-rail={rightRail}>
       <aside className="agentsam-work-mini-nav">
         <MiniNav nav={nav} surface={surface} onNavigate={onNavigate} />
       </aside>
-
       <section className="agentsam-work-stage">
         <header className="agentsam-work-stage__topbar">
-          <button
-            type="button"
-            className="agentsam-work-stage__mobile-menu"
-            onClick={() => setDrawerOpen(true)}
-            aria-label="Open Work navigation"
-          >
+          <button type="button" className="agentsam-work-stage__mobile-menu" onClick={() => setDrawerOpen(true)} aria-label="Open Work navigation">
             <Menu size={18} />
           </button>
           <span className="agentsam-work-stage__muted">Work</span>
@@ -237,9 +245,7 @@ export function WorkShell({
         </header>
         <div className="agentsam-work-stage__body">{children}</div>
       </section>
-
       {rightRail ? <RightRail surface={surface} onNavigate={onNavigate} /> : null}
-
       <nav className="agentsam-work-bottom-nav" aria-label="Work surfaces">
         {[
           { id: "calendar" as const, label: "Calendar", href: "/collaborate", icon: CalendarDays },
@@ -248,33 +254,17 @@ export function WorkShell({
           { id: "projects" as const, label: "Projects", href: "/projects", icon: FolderKanban },
           { id: "artifacts" as const, label: "Files", href: "/artifacts", icon: Archive },
         ].map((item) => (
-          <button
-            type="button"
-            key={item.id}
-            data-active={current === item.id}
-            onClick={() => onNavigate(navHref(item, surface))}
-          >
+          <button type="button" key={item.id} data-active={current === item.id} onClick={() => onNavigate(navHref(item, surface))}>
             <item.icon size={17} />
             {item.label}
           </button>
         ))}
       </nav>
-
       {drawerOpen ? (
         <>
-          <button
-            type="button"
-            className="agentsam-work-drawer-backdrop"
-            onClick={() => setDrawerOpen(false)}
-            aria-label="Close Work navigation"
-          />
+          <button type="button" className="agentsam-work-drawer-backdrop" onClick={() => setDrawerOpen(false)} aria-label="Close Work navigation" />
           <aside className="agentsam-work-drawer">
-            <MiniNav
-              nav={nav}
-              surface={surface}
-              onNavigate={onNavigate}
-              onClose={() => setDrawerOpen(false)}
-            />
+            <MiniNav nav={nav} surface={surface} onNavigate={onNavigate} onClose={() => setDrawerOpen(false)} />
           </aside>
         </>
       ) : null}

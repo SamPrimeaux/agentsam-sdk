@@ -46,12 +46,38 @@ function studioDepTarget(name) {
   return path.join(studioNodeModules, ...parts);
 }
 
+function packageEntryTarget(pkg) {
+  const rootExport = pkg?.exports?.['.'];
+  if (typeof rootExport === 'string') return rootExport;
+  if (rootExport && typeof rootExport === 'object') {
+    if (typeof rootExport.import === 'string') return rootExport.import;
+    if (typeof rootExport.default === 'string') return rootExport.default;
+    if (typeof rootExport.require === 'string') return rootExport.require;
+  }
+  if (typeof pkg?.module === 'string') return pkg.module;
+  if (typeof pkg?.main === 'string') return pkg.main;
+  return null;
+}
+
+function packageReady(pkgDir) {
+  const manifest = path.join(pkgDir, 'package.json');
+  if (!existsSync(manifest)) return false;
+  try {
+    const pkg = JSON.parse(readFileSync(manifest, 'utf8'));
+    const entry = packageEntryTarget(pkg);
+    if (!entry || !entry.startsWith('./')) return true;
+    return existsSync(path.join(pkgDir, entry));
+  } catch {
+    return false;
+  }
+}
+
 function missingDeps(pkgDir, deps) {
-  return Object.keys(deps || {}).filter((name) => !existsSync(path.join(depTarget(pkgDir, name), 'package.json')));
+  return Object.keys(deps || {}).filter((name) => !packageReady(depTarget(pkgDir, name)));
 }
 
 function linkPackageDir(pkgDir, name, source) {
-  if (!source || !existsSync(path.join(source, 'package.json'))) return false;
+  if (!source || !packageReady(source)) return false;
   const target = depTarget(pkgDir, name);
   mkdirSync(path.dirname(target), { recursive: true });
   rmSync(target, { recursive: true, force: true });
@@ -68,7 +94,28 @@ function linkFromStudio(pkgDir, name) {
 }
 
 function linkFromWorkspace(pkgDir, name) {
-  return linkPackageDir(pkgDir, name, workspacePackages.get(name));
+  const source = workspacePackages.get(name);
+  if (!source) return false;
+
+  if (!packageReady(source)) {
+    const manifest = path.join(source, 'package.json');
+    try {
+      const pkg = JSON.parse(readFileSync(manifest, 'utf8'));
+      if (pkg?.scripts?.build) {
+        console.log('[ensure-aliased-deps] ' + name + ': building workspace dependency');
+        execFileSync(
+          'npm',
+          ['run', 'build', '--workspaces=false'],
+          { cwd: source, stdio: 'inherit', env: childNpmEnv() },
+        );
+      }
+    } catch (err) {
+      console.warn('[ensure-aliased-deps] ' + name + ': workspace build failed · ' + (err?.message || err));
+      return false;
+    }
+  }
+
+  return linkPackageDir(pkgDir, name, source);
 }
 
 function childNpmEnv() {
@@ -119,36 +166,56 @@ for (const name of ALIASED) {
 
   let missing = missingDeps(pkgDir, deps);
   if (!missing.length) {
-    console.log(`[ensure-aliased-deps] ${name}: node_modules ok`);
-    continue;
+    console.log('[ensure-aliased-deps] ' + name + ': node_modules ok');
+  } else {
+    console.log('[ensure-aliased-deps] ' + name + ': missing ' + missing.join(', '));
+    const linkedFromStudio = [];
+    const linkedFromWorkspace = [];
+    for (const dep of missing) {
+      if (linkFromStudio(pkgDir, dep)) linkedFromStudio.push(dep);
+      else if (linkFromWorkspace(pkgDir, dep)) linkedFromWorkspace.push(dep);
+    }
+    if (linkedFromStudio.length) {
+      console.log('[ensure-aliased-deps] ' + name + ': linked from studio · ' + linkedFromStudio.join(', '));
+    }
+    if (linkedFromWorkspace.length) {
+      console.log('[ensure-aliased-deps] ' + name + ': linked from workspace · ' + linkedFromWorkspace.join(', '));
+    }
+
+    missing = missingDeps(pkgDir, deps);
+    if (missing.length) {
+      console.log('[ensure-aliased-deps] ' + name + ': npm install nested for ' + missing.join(', '));
+      installNested(pkgDir);
+    }
+
+    missing = missingDeps(pkgDir, deps);
+    if (missing.length) {
+      console.error('[ensure-aliased-deps] ' + name + ': still missing after install: ' + missing.join(', '));
+      failed = true;
+      continue;
+    }
   }
 
-  console.log(`[ensure-aliased-deps] ${name}: missing ${missing.join(', ')}`);
-  const linkedFromStudio = [];
-  const linkedFromWorkspace = [];
-  for (const dep of missing) {
-    if (linkFromStudio(pkgDir, dep)) linkedFromStudio.push(dep);
-    else if (linkFromWorkspace(pkgDir, dep)) linkedFromWorkspace.push(dep);
-  }
-  if (linkedFromStudio.length) {
-    console.log(`[ensure-aliased-deps] ${name}: linked from studio · ${linkedFromStudio.join(', ')}`);
-  }
-  if (linkedFromWorkspace.length) {
-    console.log(`[ensure-aliased-deps] ${name}: linked from workspace · ${linkedFromWorkspace.join(', ')}`);
-  }
-
-  missing = missingDeps(pkgDir, deps);
-  if (missing.length) {
-    console.log(`[ensure-aliased-deps] ${name}: npm install nested for ${missing.join(', ')}`);
-    installNested(pkgDir);
+  if (!packageReady(pkgDir) && pkg?.scripts?.build) {
+    console.log('[ensure-aliased-deps] ' + name + ': building aliased package exports');
+    try {
+      execFileSync(
+        'npm',
+        ['run', 'build', '--workspaces=false'],
+        { cwd: pkgDir, stdio: 'inherit', env: childNpmEnv() },
+      );
+    } catch (err) {
+      console.error('[ensure-aliased-deps] ' + name + ': package build failed · ' + (err?.message || err));
+      failed = true;
+      continue;
+    }
   }
 
-  missing = missingDeps(pkgDir, deps);
-  if (missing.length) {
-    console.error(`[ensure-aliased-deps] ${name}: still missing after install: ${missing.join(', ')}`);
+  if (!packageReady(pkgDir)) {
+    console.error('[ensure-aliased-deps] ' + name + ': exported package entry is still missing after build');
     failed = true;
   } else {
-    console.log(`[ensure-aliased-deps] ${name}: ready`);
+    console.log('[ensure-aliased-deps] ' + name + ': ready');
   }
 }
 
