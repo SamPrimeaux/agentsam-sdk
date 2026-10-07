@@ -213,3 +213,28 @@
   }
 }
 
+
+
+/* Work surfaces are embedded inside the Local Studio shell.
+   Local Studio owns appearance; @inneranimalmedia/agentsam-work consumes these live tokens. */
+.local-studio-work-surface {
+  min-height: 100%;
+  background: var(--background);
+  --agentsam-work-canvas: var(--background);
+  --agentsam-work-panel: var(--card);
+  --agentsam-work-panel-subtle: var(--muted);
+  --agentsam-work-text: var(--foreground);
+  --agentsam-work-muted: var(--muted-foreground);
+  --agentsam-work-border: var(--border);
+  --agentsam-work-accent: var(--accent);
+  --agentsam-work-accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+  --agentsam-work-nav-active: color-mix(in srgb, var(--accent) 22%, transparent);
+  --agentsam-work-danger: var(--destructive);
+  --agentsam-work-radius: var(--radius);
+}
+
+.local-studio-work-surface > .agentsam-work,
+.local-studio-work-surface .agentsam-work-shell[data-presentation="embedded"] {
+  min-height: 100%;
+  background: transparent;
+}

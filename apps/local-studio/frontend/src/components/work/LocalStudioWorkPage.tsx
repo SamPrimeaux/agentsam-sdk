@@ -1,11 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { createHttpWorkHost } from "@inneranimalmedia/agentsam-work/client";
-import {
-  WorkProduct,
-  applyWorkThemeTokens,
-  readStoredWorkThemeTokens,
-} from "@inneranimalmedia/agentsam-work/frontend";
+import { WorkProduct } from "@inneranimalmedia/agentsam-work/frontend";
 import type { WorkHost, WorkSurfaceId } from "@inneranimalmedia/agentsam-work/contracts";
 import "@inneranimalmedia/agentsam-work/theme.css";
 
@@ -58,11 +54,6 @@ export function LocalStudioWorkPage({
   const host = useLocalStudioWorkHost();
   const mode = resolveWorkHostMode();
 
-  useEffect(() => {
-    const stored = readStoredWorkThemeTokens();
-    if (stored) applyWorkThemeTokens(stored);
-  }, []);
-
   if (!host) {
     return (
       <div className="flex h-full min-h-0 items-center justify-center text-sm text-muted-foreground">
@@ -72,12 +63,13 @@ export function LocalStudioWorkPage({
   }
 
   return (
-    <div className="h-full min-h-0" data-work-host={mode}>
+    <div className="local-studio-work-surface h-full min-h-0" data-work-host={mode}>
       <WorkProduct
         host={host}
         surface={surface}
         projectId={projectId}
         ticketId={ticketId}
+        presentation="embedded"
         onNavigate={(href) => {
           const url = new URL(href, window.location.origin);
           const search = Object.fromEntries(url.searchParams.entries());

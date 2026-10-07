@@ -22,6 +22,13 @@ assert.ok(fs.existsSync(siteHomepage) && fs.statSync(siteHomepage).size > 20000,
 assert.ok(fs.existsSync(path.join(assetsDir, "site", "packages", "sdk", "help", "index.html")), "SDK help page asset required");
 assert.ok(fs.existsSync(path.join(assetsDir, "site", "learn", "index.html")), "Learn hub asset required");
 assert.ok(fs.existsSync(path.join(assetsDir, "site", "global", "installables.json")), "installables.json asset required");
+assert.ok(fs.existsSync(path.join(assetsDir, "brand", "agentsam-mark-on-dark.svg")), "hosted AgentSam dark mark asset required");
+assert.ok(fs.existsSync(path.join(assetsDir, "brand", "agentsam-mark-on-light.svg")), "hosted AgentSam light mark asset required");
+assert.ok(fs.existsSync(path.join(assetsDir, "brand", "agentsam-local-studio-icon.png")), "hosted AgentSam app icon asset required");
+assert.ok(fs.existsSync(path.join(assetsDir, "favicon.svg")), "hosted AgentSam favicon asset required");
+assert.ok(fs.existsSync(path.join(assetsDir, "__agentsam", "pwa", "icon-180.png")), "hosted AgentSam apple-touch icon required");
+assert.ok(fs.existsSync(path.join(assetsDir, "__agentsam", "pwa", "icon-192.png")), "hosted AgentSam PWA 192 icon required");
+assert.ok(fs.existsSync(path.join(assetsDir, "__agentsam", "pwa", "icon-512.png")), "hosted AgentSam PWA 512 icon required");
 assert.match(fs.readFileSync(workerEntry, "utf8"), /public-site\.js/);
 
 const desktopManifestPath = path.resolve(
