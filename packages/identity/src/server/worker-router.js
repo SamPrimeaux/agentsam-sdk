@@ -2,7 +2,7 @@ import { createCloudflareD1Adapter, createIamCompatIdentityAdapter } from '../ad
 import { createPortableD1IdentityAdapter } from '../adapters/portable-d1/index.js';
 import { createIdentityService } from './identity-service.js';
 import { jsonResponse } from '../core/http-json.js';
-import { hashPassword } from '../core/password-crypto.js';
+import { hashPassword, verifyPassword } from '../core/password-crypto.js';
 import { createPasswordResetService } from '../recovery/password-reset.js';
 import { getGoogleAuthUrl, exchangeGoogleCode } from '../providers/google/oauth.js';
 import { fetchGoogleProfile } from '../providers/google/profile.js';
@@ -190,8 +190,70 @@ export async function handleIdentityWorkerRequest(request, env, options = {}) {
         id: ctx.user.id,
         email: ctx.user.email,
         displayName: ctx.user.display_name,
+        hasPassword: Boolean(
+          ctx.user.password_hash
+          && ctx.user.salt
+          && ctx.user.password_hash !== 'oauth'
+        ),
       },
     });
+  }
+
+  if (path === '/api/auth/password' && method === 'POST') {
+    const ctx = await identity.sessionFromRequest(request);
+    if (!ctx) return jsonResponse({ ok: false, error: 'session_required' }, 401);
+
+    const body = await request.json().catch(() => ({}));
+    const password = String(body.password ?? body.new_password ?? body.newPassword ?? '');
+    const confirmPassword = String(
+      body.confirm_password
+      ?? body.confirmPassword
+      ?? body.confirm
+      ?? password
+    );
+
+    if (!password) {
+      return jsonResponse({ ok: false, error: 'password_required' }, 400);
+    }
+    if (password !== confirmPassword) {
+      return jsonResponse({ ok: false, error: 'passwords_do_not_match' }, 400);
+    }
+    if (password.length < 8) {
+      return jsonResponse({ ok: false, error: 'password_too_short' }, 400);
+    }
+
+    const hasPassword = Boolean(
+      ctx.user.password_hash
+      && ctx.user.salt
+      && ctx.user.password_hash !== 'oauth'
+    );
+    if (hasPassword) {
+      const currentPassword = String(body.current_password ?? body.currentPassword ?? '');
+      if (!currentPassword) {
+        return jsonResponse({ ok: false, error: 'current_password_required' }, 400);
+      }
+      const currentValid = await verifyPassword(
+        currentPassword,
+        ctx.user.salt,
+        ctx.user.password_hash,
+      );
+      if (!currentValid) {
+        return jsonResponse({ ok: false, error: 'current_password_invalid' }, 403);
+      }
+    }
+
+    const { saltHex, hashHex } = await hashPassword(password);
+    await adapter.updateUserPassword(ctx.user.id, hashHex, saltHex);
+    if (typeof adapter.logAuthEvent === 'function') {
+      await adapter.logAuthEvent({
+        userId: ctx.user.id,
+        eventType: hasPassword ? 'password_change' : 'password_enroll',
+        status: 'ok',
+        provider: 'email',
+        request,
+      });
+    }
+    return jsonResponse({ ok: true, hasPassword: true });
   }
 
   if (path === '/api/company' && method === 'GET') {
