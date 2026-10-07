@@ -1,7 +1,7 @@
 {
   "name": "@inneranimalmedia/agentsam-desktop-shell",
   "version": "2.6.12",
-  "description": "Tauri desktop shell for AgentSam-powered brand dashboards — manifest-driven, multi-brand installs. Independent project; not affiliated with Tauri.",
+  "description": "Tauri desktop shell for AgentSam-powered brand dashboards \u2014 manifest-driven, multi-brand installs. Independent project; not affiliated with Tauri.",
   "type": "module",
   "bin": {
     "build-brand": "scripts/build-brand.mjs"
@@ -25,7 +25,8 @@
     "sharp": "^0.35.5"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2"
+    "@tauri-apps/cli": "^2",
+    "esbuild": "0.28.1"
   },
   "keywords": [
     "agentsam",
