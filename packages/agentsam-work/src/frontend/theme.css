@@ -56,7 +56,7 @@
   min-height: 0;
   flex-direction: column;
   border-right: 1px solid var(--agentsam-work-border);
-  background: color-mix(in srgb, var(--agentsam-work-panel-subtle) 72%, white 28%);
+  background: color-mix(in srgb, var(--agentsam-work-panel-subtle) 72%, var(--agentsam-work-panel) 28%);
 }
 
 .agentsam-work-mini-nav__header {
