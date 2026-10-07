@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type {
   ContentAsset,
@@ -50,11 +50,21 @@ export function useRuntimeCapabilities() {
   return caps;
 }
 
+export function mergeLibraryPages(current: ListPage, next: ListPage): ListPage {
+  const seen = new Set(current.assets.map((asset) => asset.id));
+  return {
+    assets: [...current.assets, ...next.assets.filter((asset) => !seen.has(asset.id))],
+    total: next.total,
+    cursor: next.cursor,
+  };
+}
+
 /** Reactive library query: refetches on content events. */
 export function useLibrary(view: string, query?: Partial<ContentQuery>) {
   const runtime = useContentRuntime();
   const [page, setPage] = useState<ListPage>({ assets: [], total: 0 });
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [tick, setTick] = useState(0);
   const queryKey = JSON.stringify(query ?? {});
 
@@ -80,7 +90,24 @@ export function useLibrary(view: string, query?: Partial<ContentQuery>) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runtime, view, queryKey, tick]);
 
-  return { ...page, loading };
+  const loadMore = useCallback(async () => {
+    if (!page.cursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const next = await runtime.listView(view, { ...(query ?? {}), cursor: page.cursor });
+      setPage((current) => mergeLibraryPages(current, next));
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [runtime, view, queryKey, page.cursor, loadingMore]);
+
+  return {
+    ...page,
+    loading,
+    loadingMore,
+    hasMore: Boolean(page.cursor),
+    loadMore,
+  };
 }
 
 /** Reactive single asset. */

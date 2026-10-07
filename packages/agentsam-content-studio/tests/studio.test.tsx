@@ -6,7 +6,7 @@ import {
   localFiles,
   type ContentAsset,
 } from "@inneranimalmedia/agentsam-content";
-import { ContentRuntimeProvider } from "../src/context.js";
+import { ContentRuntimeProvider, mergeLibraryPages } from "../src/context.js";
 import { AssetDetail } from "../src/AssetDetail.js";
 import { ContentStudio } from "../src/ContentStudio.js";
 import { ImageInspector } from "../src/inspectors/ImageInspector.js";
@@ -51,6 +51,20 @@ function withRuntime(node: React.ReactNode) {
     <ContentRuntimeProvider runtime={makeRuntime()}>{node}</ContentRuntimeProvider>,
   );
 }
+
+describe("content studio pagination", () => {
+  it("merges cursor pages without duplicating assets", () => {
+    const first = makeAsset({ id: "asset-1" });
+    const second = makeAsset({ id: "asset-2" });
+    const merged = mergeLibraryPages(
+      { assets: [first], total: 3, cursor: "100" },
+      { assets: [first, second], total: 3, cursor: "200" },
+    );
+    expect(merged.assets.map((asset) => asset.id)).toEqual(["asset-1", "asset-2"]);
+    expect(merged.cursor).toBe("200");
+    expect(merged.total).toBe(3);
+  });
+});
 
 describe("content studio UI", () => {
   it("renders the studio shell with system views and capability chrome", () => {

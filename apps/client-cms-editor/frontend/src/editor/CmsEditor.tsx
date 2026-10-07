@@ -4,7 +4,7 @@ import type { CmsEditorHost } from '../../../shared/cms/src/host';
 import type { CmsAgentHost } from '../lib/agent-host';
 import { CmsEditorProvider } from './CmsEditorProvider';
 import { useCmsEditorController } from './useCmsEditorController';
-import { PreviewCanvas } from './canvas/PreviewCanvas';
+import { PreviewCanvas, type CmsEditorPreviewRenderer } from './canvas/PreviewCanvas';
 import { useCmsEditor } from './CmsEditorProvider';
 import '../styles/studio.css';
 
@@ -18,9 +18,11 @@ export type CmsEditorProps = {
   initialRail?: 'groups' | 'sections' | 'blocks' | 'pages' | 'media' | 'settings';
   /** True when the attached adapter is temporary (e.g. in-memory preview). Pack content is not temporary. */
   temporaryAdapter?: boolean;
+  /** Optional real site renderer supplied by the embedding host. Structural preview remains the fallback. */
+  renderPreview?: CmsEditorPreviewRenderer;
 };
 
-function EditorShell() {
+function EditorShell({ renderPreview }: { renderPreview?: CmsEditorPreviewRenderer }) {
   const editor = useCmsEditor();
   const { site, page, section, block, ui, published, lastDraft } = editor;
   const groups = page ? buildCmsEditorGroups(page.sections) : [];
@@ -185,7 +187,7 @@ function EditorShell() {
               </button>
             ))}
           </div>
-          <PreviewCanvas />
+          <PreviewCanvas renderPreview={renderPreview} />
         </section>
 
         <aside className="cms-inspector">
@@ -224,6 +226,7 @@ export default function CmsEditor({
   initialPageId = null,
   initialRail = 'groups',
   temporaryAdapter = false,
+  renderPreview,
 }: CmsEditorProps) {
   const editor = useCmsEditorController({
     adapter,
@@ -236,7 +239,7 @@ export default function CmsEditor({
 
   return (
     <CmsEditorProvider value={editor}>
-      <EditorShell />
+      <EditorShell renderPreview={renderPreview} />
     </CmsEditorProvider>
   );
 }

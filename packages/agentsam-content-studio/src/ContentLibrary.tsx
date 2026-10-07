@@ -40,7 +40,7 @@ export function ContentLibrary(props: ContentLibraryProps) {
     () => ({ search: search || undefined, limit: props.pageSize ?? 100 }),
     [search, props.pageSize],
   );
-  const { assets, total, loading } = useLibrary(view, query);
+  const { assets, total, loading, loadingMore, hasMore, loadMore } = useLibrary(view, query);
 
   const providerLabels = caps?.providers.map((p) => p.id).join(" · ") || "providers…";
   const localLabel =
@@ -87,7 +87,11 @@ export function ContentLibrary(props: ContentLibraryProps) {
           }}
         />
         <span style={{ color: tokens.textDim, fontSize: 12 }}>
-          {loading ? "Loading…" : `${total} asset${total === 1 ? "" : "s"}`}
+          {loading
+            ? "Loading…"
+            : hasMore
+              ? assets.length + " loaded"
+              : total + " asset" + (total === 1 ? "" : "s")}
         </span>
       </div>
 
@@ -129,6 +133,18 @@ export function ContentLibrary(props: ContentLibraryProps) {
         {!loading && assets.length === 0 && (
           <div style={{ color: tokens.textDim, textAlign: "center", padding: 48 }}>
             No assets in this view.
+          </div>
+        )}
+        {hasMore && (
+          <div style={{ display: "flex", justifyContent: "center", padding: "18px 0 6px" }}>
+            <button
+              type="button"
+              onClick={() => void loadMore()}
+              disabled={loadingMore}
+              style={{ ...styles.button, minWidth: 132 }}
+            >
+              {loadingMore ? "Loading…" : "Load more"}
+            </button>
           </div>
         )}
       </div>
