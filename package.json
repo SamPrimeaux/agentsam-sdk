@@ -43,6 +43,7 @@
     "./brand": "./packages/agentsam-brand/src/index.js",
     "./progression": "./src/progression/index.js",
     "./identity": "./packages/identity/src/index.js",
+    "./identity/contracts/routes": "./packages/identity/src/contracts/routes.js",
     "./identity/providers": "./packages/identity/src/providers/index.js",
     "./identity/providers/google": "./packages/identity/src/providers/google/index.js",
     "./identity/providers/github": "./packages/identity/src/providers/github/index.js",

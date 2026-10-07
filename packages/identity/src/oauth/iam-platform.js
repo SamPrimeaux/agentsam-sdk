@@ -53,7 +53,8 @@ export async function iamPlatformOAuthStart(request, env, adapter, identity) {
       : {}),
   });
 
-  const redirectUri = `${url.origin}${IAM_PLATFORM_CALLBACK_PATH}`;
+  const callbackPath = identity?.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.OAUTH_CALLBACK) || IAM_PLATFORM_CALLBACK_PATH;
+  const redirectUri = `${url.origin}${callbackPath}`;
   const authUrl = getIamAuthUrl({
     origin: creds.origin,
     clientId: creds.clientId,
@@ -91,7 +92,8 @@ export async function iamPlatformOAuthCallback(request, env, adapter, identity) 
     return Response.redirect(`${url.origin}${identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.LOGIN)}?error=state_mismatch`, 302);
   }
 
-  const redirectUri = `${url.origin}${IAM_PLATFORM_CALLBACK_PATH}`;
+  const callbackPath = identity.routeRegistry.resolve(identity.app.id, IDENTITY_ROUTE_IDS.OAUTH_CALLBACK) || IAM_PLATFORM_CALLBACK_PATH;
+  const redirectUri = `${url.origin}${callbackPath}`;
   const token = await exchangeIamCode({
     origin: creds.origin,
     clientId: creds.clientId,

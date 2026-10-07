@@ -7,8 +7,9 @@ const DEFAULT_TTL_SEC = 900;
 const DEFAULT_MAX_ATTEMPTS = 8;
 
 function randomSixDigitCode() {
-  const buf = new Uint8Array(1);
-  crypto.getRandomValues(buf);
+  const buf = new Uint32Array(1);
+  // Rejection sampling keeps all one million six-digit codes equally likely.
+  do { crypto.getRandomValues(buf); } while (buf[0] >= 4294000000);
   return String(buf[0] % 1000000).padStart(6, '0');
 }
 
@@ -42,10 +43,6 @@ export function createPasswordResetService(config) {
     return `${prefix}${normalizeEmail(email)}`;
   }
 
-  function isOAuthOnlyUser(user) {
-    return !user || user.password_hash === 'oauth' || !user.password_hash;
-  }
-
   return Object.freeze({
     async requestReset({ email }) {
       const normalized = normalizeEmail(email);
@@ -53,7 +50,10 @@ export function createPasswordResetService(config) {
         return { ok: true };
       }
       const user = await config.findEligibleUser(normalized);
-      if (isOAuthOnlyUser(user)) {
+      // A verified reset email is also a safe way for OAuth-created/passwordless
+      // accounts to establish their first local password. Only unknown accounts
+      // are intentionally treated as a no-op to avoid account enumeration.
+      if (!user) {
         return { ok: true };
       }
       const code = randomSixDigitCode();
@@ -113,7 +113,7 @@ export function createPasswordResetService(config) {
       }
 
       const user = await config.findEligibleUser(normalized);
-      if (isOAuthOnlyUser(user)) {
+      if (!user) {
         await kv.delete(key);
         return { ok: false, error: 'Account not eligible for password reset', status: 400 };
       }

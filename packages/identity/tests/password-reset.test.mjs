@@ -47,4 +47,47 @@ describe('password reset service', () => {
     assert.equal(ok.ok, true);
     assert.deepEqual(updated, { userId: 'au_1', hashHex: 'hash', saltHex: 'salt' });
   });
+
+  it('lets an OAuth-created passwordless account establish its first password after email verification', async () => {
+    const store = new Map();
+    const kv = {
+      get: async (k) => store.get(k) ?? null,
+      put: async (k, v) => { store.set(k, v); },
+      delete: async (k) => { store.delete(k); },
+    };
+    let updated = null;
+    let emailed = null;
+    const svc = createPasswordResetService({
+      kv,
+      findEligibleUser: async (email) => (
+        email === 'oauth@example.com'
+          ? { id: 'au_oauth', email, name: 'OAuth User', password_hash: null }
+          : null
+      ),
+      hashPassword: async () => ({ saltHex: 'new-salt', hashHex: 'new-hash' }),
+      updatePassword: async (userId, hashHex, saltHex) => {
+        updated = { userId, hashHex, saltHex };
+      },
+      sendResetEmail: async (args) => { emailed = args; },
+    });
+
+    const requested = await svc.requestReset({ email: 'oauth@example.com' });
+    assert.equal(requested.ok, true);
+    assert.ok(emailed?.code, 'passwordless existing account should receive a verification code');
+
+    const confirmed = await svc.confirmReset({
+      email: 'oauth@example.com',
+      code: emailed.code,
+      password: 'new-password',
+      confirmPassword: 'new-password',
+    });
+
+    assert.equal(confirmed.ok, true);
+    assert.deepEqual(updated, {
+      userId: 'au_oauth',
+      hashHex: 'new-hash',
+      saltHex: 'new-salt',
+    });
+  });
+
 });
