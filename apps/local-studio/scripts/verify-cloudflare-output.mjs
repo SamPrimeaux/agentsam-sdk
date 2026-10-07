@@ -11,12 +11,20 @@ const serverEntry = path.join(root, ".output", "server", "index.mjs");
 const assetsDir = path.join(root, ".output", "public");
 const siteHome = path.join(assetsDir, "site", "home", "index.html");
 const siteHomepage = path.join(assetsDir, "site", "homepage.html");
+const localStudioWorkPage = path.join(root, "frontend", "src", "components", "work", "LocalStudioWorkPage.tsx");
 
 assert.ok(fs.existsSync(configPath), "backend/wrangler.jsonc is required");
 assert.ok(fs.existsSync(workerEntry), "backend/worker/index.js is required");
 assert.ok(fs.existsSync(serverEntry), ".output/server/index.mjs is required; run npm run build");
 assert.ok(fs.statSync(serverEntry).isFile(), "Nitro server entry must be a file");
 assert.ok(fs.existsSync(assetsDir) && fs.statSync(assetsDir).isDirectory(), ".output/public is required");
+assert.ok(fs.existsSync(localStudioWorkPage), "LocalStudioWorkPage.tsx is required");
+const localStudioWorkSource = fs.readFileSync(localStudioWorkPage, "utf8");
+assert.doesNotMatch(
+  localStudioWorkSource,
+  /presentation\s*=\s*["']embedded["']/,
+  "Local Studio must retain the standalone Work product shell; embedded mode is for hosts that already own full workspace chrome",
+);
 assert.ok(fs.existsSync(siteHome) && fs.statSync(siteHome).size > 20000, ".output/public/site/home/index.html is required (>20KB)");
 assert.ok(fs.existsSync(siteHomepage) && fs.statSync(siteHomepage).size > 20000, ".output/public/site/homepage.html is required (>20KB)");
 assert.ok(fs.existsSync(path.join(assetsDir, "site", "packages", "sdk", "help", "index.html")), "SDK help page asset required");

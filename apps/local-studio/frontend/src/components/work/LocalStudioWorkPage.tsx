@@ -69,7 +69,6 @@ export function LocalStudioWorkPage({
         surface={surface}
         projectId={projectId}
         ticketId={ticketId}
-        presentation="embedded"
         onNavigate={(href) => {
           const url = new URL(href, window.location.origin);
           const search = Object.fromEntries(url.searchParams.entries());

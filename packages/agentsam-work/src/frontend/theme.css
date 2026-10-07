@@ -349,7 +349,7 @@
   }
 }
 
-/* Host-shell integration --------------------------------------------------- */
+/* Optional host-owned chrome mode. Standalone remains the default product UI. */
 .agentsam-work-shell[data-presentation="embedded"] {
   display: block;
   height: auto;
@@ -368,57 +368,4 @@
   height: auto;
   min-height: 100%;
   overflow: visible;
-}
-
-/* Shared Work page grammar ------------------------------------------------ */
-.agentsam-work-page { width: min(1180px, 100%); margin: 0 auto; padding: clamp(22px, 4vw, 42px); }
-.agentsam-work-page__header { display: flex; align-items: flex-end; gap: 24px; justify-content: space-between; }
-.agentsam-work-page__eyebrow { margin: 0 0 7px; color: var(--agentsam-work-accent); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-.agentsam-work-page__title { margin: 0; color: var(--agentsam-work-text); font-size: clamp(28px, 4vw, 40px); line-height: 1; letter-spacing: -.04em; }
-.agentsam-work-page__description { max-width: 650px; margin: 10px 0 0; color: var(--agentsam-work-muted); font-size: 13px; line-height: 1.55; }
-.agentsam-work-project-search { width: min(280px, 100%); min-height: 38px; display: flex; align-items: center; gap: 8px; padding: 0 11px; border: 1px solid var(--agentsam-work-border); border-radius: 10px; background: var(--agentsam-work-panel); color: var(--agentsam-work-muted); }
-.agentsam-work-project-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--agentsam-work-text); }
-.agentsam-work-tabs { display: flex; gap: 6px; margin-top: 22px; padding-bottom: 14px; border-bottom: 1px solid var(--agentsam-work-border); }
-.agentsam-work-tabs button { min-height: 34px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: var(--agentsam-work-muted); cursor: pointer; }
-.agentsam-work-tabs button[data-active="true"] { background: var(--agentsam-work-accent-soft); color: var(--agentsam-work-accent); font-weight: 700; }
-.agentsam-work-projects__empty { margin-top: 22px; padding: clamp(42px, 8vw, 76px) 22px; border: 1px dashed var(--agentsam-work-border); border-radius: var(--agentsam-work-radius); background: color-mix(in srgb, var(--agentsam-work-panel) 72%, transparent); }
-.agentsam-work-projects__empty strong { display: block; font-size: 16px; }
-.agentsam-work-projects__empty p { max-width: 520px; margin: 8px auto 0; color: var(--agentsam-work-muted); font-size: 12px; line-height: 1.55; }
-.agentsam-work-project-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 22px; }
-.agentsam-work-project-card { min-width: 0; min-height: 190px; padding: 18px; border: 1px solid var(--agentsam-work-border); border-radius: var(--agentsam-work-radius); background: var(--agentsam-work-panel); text-align: left; box-shadow: 0 1px 2px rgb(20 25 22 / 4%); cursor: pointer; transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease; }
-.agentsam-work-project-card:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--agentsam-work-accent) 35%, var(--agentsam-work-border)); box-shadow: 0 8px 26px rgb(20 25 22 / 7%); }
-.agentsam-work-project-card__top, .agentsam-work-project-card__meta, .agentsam-work-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.agentsam-work-project-card__initials { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px; color: white; font-size: 9px; font-weight: 800; }
-.agentsam-work-project-card__status, .agentsam-work-project-detail__status { color: var(--agentsam-work-success); font-size: 10px; font-weight: 700; text-transform: capitalize; }
-.agentsam-work-project-card h2 { margin: 22px 0 0; font-size: 16px; letter-spacing: -.02em; }
-.agentsam-work-project-card > p { min-height: 36px; margin: 7px 0 0; color: var(--agentsam-work-muted); font-size: 11px; line-height: 1.5; }
-.agentsam-work-project-card__progress { height: 5px; overflow: hidden; margin-top: 22px; border-radius: 99px; background: var(--agentsam-work-border); }
-.agentsam-work-project-card__progress span { display: block; height: 100%; border-radius: inherit; }
-.agentsam-work-project-card__meta { margin-top: 9px; color: var(--agentsam-work-muted); font-size: 10px; }
-.agentsam-work-back { margin-bottom: 18px; padding: 0; border: 0; background: transparent; color: var(--agentsam-work-muted); font-size: 11px; cursor: pointer; }
-.agentsam-work-project-detail__header { align-items: center; }
-.agentsam-work-project-detail__status { padding: 7px 10px; border-radius: 999px; background: color-mix(in srgb, var(--agentsam-work-success) 10%, transparent); }
-.agentsam-work-project-detail__layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, 300px); gap: 18px; margin-top: 24px; }
-.agentsam-work-project-detail__main { min-width: 0; display: grid; align-content: start; gap: 14px; }
-.agentsam-work-project-overview, .agentsam-work-project-repo, .agentsam-work-project-detail__rail { padding: 20px; }
-.agentsam-work-section-heading h2, .agentsam-work-project-detail__rail h2 { margin: 0; font-size: 16px; letter-spacing: -.02em; }
-.agentsam-work-section-heading > strong { font-size: 20px; }
-.agentsam-work-stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 18px; }
-.agentsam-work-stat-grid > div { min-width: 0; display: flex; align-items: center; gap: 9px; padding: 12px; border-radius: 10px; background: var(--agentsam-work-panel-subtle); }
-.agentsam-work-stat-grid span { min-width: 0; display: flex; flex-direction: column; }
-.agentsam-work-stat-grid strong { font-size: 12px; }
-.agentsam-work-stat-grid small { margin-top: 2px; color: var(--agentsam-work-muted); font-size: 9px; }
-.agentsam-work-project-repo { display: flex; gap: 12px; align-items: center; }
-.agentsam-work-project-repo p { margin: 3px 0 0; color: var(--agentsam-work-muted); font-size: 11px; }
-.agentsam-work-project-detail__rail { align-self: start; }
-.agentsam-work-project-detail__rail button { width: 100%; min-height: 38px; display: flex; align-items: center; gap: 9px; margin-top: 8px; padding: 0 10px; border: 1px solid var(--agentsam-work-border); border-radius: 9px; background: var(--agentsam-work-panel); cursor: pointer; }
-.agentsam-work-project-detail__rail button:hover { background: var(--agentsam-work-panel-subtle); }
-
-@media (max-width: 760px) {
-  .agentsam-work-page { padding: 18px 14px 84px; }
-  .agentsam-work-page__header { align-items: stretch; flex-direction: column; gap: 16px; }
-  .agentsam-work-project-search { width: 100%; }
-  .agentsam-work-project-detail__layout { grid-template-columns: 1fr; }
-  .agentsam-work-project-detail__rail { order: -1; }
-  .agentsam-work-stat-grid { grid-template-columns: 1fr; }
 }
