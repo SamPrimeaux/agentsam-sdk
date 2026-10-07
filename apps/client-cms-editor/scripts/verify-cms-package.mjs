@@ -50,6 +50,9 @@ if ((rootPkg.files || []).some((f) => String(f).includes('reference/harvest') ||
 if (!rootPkg.exports || typeof rootPkg.exports !== 'object') {
   fail('root package.json missing "exports" map');
 }
+if (rootPkg.exports?.['./styles.css'] !== './dist/index.css') {
+  fail('root package must export ./styles.css -> ./dist/index.css so hub + editor consumers receive the complete CMS surface');
+}
 
 for (const [key, target] of Object.entries(rootPkg.exports)) {
   if (key === './package.json' || key === './acceptance') continue;

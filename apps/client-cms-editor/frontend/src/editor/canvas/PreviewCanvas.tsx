@@ -2,12 +2,40 @@
  * Structural draft canvas — NOT a second pretend website renderer.
  * Shows the same draft model the adapter owns. Schema-driven CmsRenderer replaces this later.
  */
+import type { ReactNode } from 'react';
+import type { CmsEditorPage, CmsEditorSection, CmsEditorSite } from '../../../../shared/cms/src/editor-types';
 import { useCmsEditor } from '../CmsEditorProvider';
 
-export function PreviewCanvas() {
-  const { page, section, selectSection, ui } = useCmsEditor();
-  if (!page) {
+export type CmsEditorPreviewRenderContext = {
+  site: CmsEditorSite;
+  page: CmsEditorPage;
+  section: CmsEditorSection | null;
+  selectedSectionId: string | null;
+  viewport: 'phone' | 'tablet' | 'desktop';
+  onSectionSelect: (sectionId: string) => void;
+};
+
+export type CmsEditorPreviewRenderer = (context: CmsEditorPreviewRenderContext) => ReactNode;
+
+export function PreviewCanvas({ renderPreview }: { renderPreview?: CmsEditorPreviewRenderer }) {
+  const { site, page, section, selectSection, ui } = useCmsEditor();
+  if (!page || !site) {
     return <div className="cms-canvas-empty">Open a page to preview the draft model.</div>;
+  }
+
+  if (renderPreview) {
+    return (
+      <div className={`cms-canvas cms-canvas--${ui.viewport} cms-canvas--host`} data-cms-preview="host-renderer">
+        {renderPreview({
+          site,
+          page,
+          section,
+          selectedSectionId: section?.id ?? null,
+          viewport: ui.viewport,
+          onSectionSelect: selectSection,
+        })}
+      </div>
+    );
   }
 
   return (

@@ -61,6 +61,7 @@
     "./backend/routing": {
       "import": "./dist/backend/routing.js"
     },
+    "./styles.css": "./dist/index.css",
     "./styles/studio.css": "./dist/styles/studio.css"
   },
   "files": [
