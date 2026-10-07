@@ -30,6 +30,7 @@ import { Route as appsShipRouteImport } from './routes/(apps)/ship'
 import { Route as appsSitesRouteImport } from './routes/(apps)/sites'
 import { Route as appsStoreRouteImport } from './routes/(apps)/store'
 import { Route as appsThemesRouteImport } from './routes/(apps)/themes'
+import { Route as appsTicketsRouteImport } from './routes/(apps)/tickets'
 import { Route as appsWidgetsRouteImport } from './routes/(apps)/widgets'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiCloudflareRouteImport } from './routes/api/cloudflare'
@@ -157,6 +158,11 @@ const appsStoreRoute = appsStoreRouteImport.update({
 const appsThemesRoute = appsThemesRouteImport.update({
   id: '/(apps)/themes',
   path: '/themes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const appsTicketsRoute = appsTicketsRouteImport.update({
+  id: '/(apps)/tickets',
+  path: '/tickets',
   getParentRoute: () => rootRouteImport,
 } as any)
 const appsWidgetsRoute = appsWidgetsRouteImport.update({
@@ -300,6 +306,7 @@ export interface FileRoutesByFullPath {
   '/sites': typeof appsSitesRoute
   '/store': typeof appsStoreRoute
   '/themes': typeof appsThemesRoute
+  '/tickets': typeof appsTicketsRoute
   '/widgets': typeof appsWidgetsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
@@ -343,6 +350,7 @@ export interface FileRoutesByTo {
   '/sites': typeof appsSitesRoute
   '/store': typeof appsStoreRoute
   '/themes': typeof appsThemesRoute
+  '/tickets': typeof appsTicketsRoute
   '/widgets': typeof appsWidgetsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
@@ -389,6 +397,7 @@ export interface FileRoutesById {
   '/(apps)/sites': typeof appsSitesRoute
   '/(apps)/store': typeof appsStoreRoute
   '/(apps)/themes': typeof appsThemesRoute
+  '/(apps)/tickets': typeof appsTicketsRoute
   '/(apps)/widgets': typeof appsWidgetsRoute
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
@@ -437,6 +446,7 @@ export interface FileRouteTypes {
     | '/sites'
     | '/store'
     | '/themes'
+    | '/tickets'
     | '/widgets'
     | '/api/chat'
     | '/api/cloudflare'
@@ -480,6 +490,7 @@ export interface FileRouteTypes {
     | '/sites'
     | '/store'
     | '/themes'
+    | '/tickets'
     | '/widgets'
     | '/api/chat'
     | '/api/cloudflare'
@@ -525,6 +536,7 @@ export interface FileRouteTypes {
     | '/(apps)/sites'
     | '/(apps)/store'
     | '/(apps)/themes'
+    | '/(apps)/tickets'
     | '/(apps)/widgets'
     | '/api/chat'
     | '/api/cloudflare'
@@ -572,6 +584,7 @@ export interface RootRouteChildren {
   appsSitesRoute: typeof appsSitesRoute
   appsStoreRoute: typeof appsStoreRoute
   appsThemesRoute: typeof appsThemesRoute
+  appsTicketsRoute: typeof appsTicketsRoute
   appsWidgetsRoute: typeof appsWidgetsRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiCloudflareRoute: typeof ApiCloudflareRoute
@@ -731,6 +744,13 @@ declare module '@tanstack/react-router' {
       path: '/themes'
       fullPath: '/themes'
       preLoaderRoute: typeof appsThemesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/tickets': {
+      id: '/(apps)/tickets'
+      path: '/tickets'
+      fullPath: '/tickets'
+      preLoaderRoute: typeof appsTicketsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(apps)/widgets': {
@@ -994,6 +1014,7 @@ const rootRouteChildren: RootRouteChildren = {
   appsSitesRoute: appsSitesRoute,
   appsStoreRoute: appsStoreRoute,
   appsThemesRoute: appsThemesRoute,
+  appsTicketsRoute: appsTicketsRoute,
   appsWidgetsRoute: appsWidgetsRoute,
   ApiChatRoute: ApiChatRoute,
   ApiCloudflareRoute: ApiCloudflareRoute,

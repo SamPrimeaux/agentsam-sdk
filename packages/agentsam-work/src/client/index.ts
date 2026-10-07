@@ -15,8 +15,12 @@ async function json<T>(response: Response): Promise<T> {
 export function createHttpWorkHost(base = ""): WorkHost {
   const root = base.replace(/\/$/, "");
   return {
-    async snapshot(): Promise<WorkSnapshot> {
-      const response = await fetch(`${root}/api/work/snapshot`, {
+    async snapshot(request = {}): Promise<WorkSnapshot> {
+      const params = new URLSearchParams();
+      if (request.surface) params.set("surface", request.surface);
+      if (request.mailConnectionId) params.set("mail_connection", request.mailConnectionId);
+      const query = params.size ? "?" + params.toString() : "";
+      const response = await fetch(root + "/api/work/snapshot" + query, {
         credentials: "same-origin",
         cache: "no-store",
       });
@@ -43,23 +47,33 @@ export function createHttpWorkHost(base = ""): WorkHost {
       const body = await json<{ ticket: WorkTicket }>(response);
       return body.ticket;
     },
-    async archiveMail(id) {
+    async sendMail(input, connectionId) {
       await json(
-        await fetch(`${root}/api/mail/email/${encodeURIComponent(id)}`, {
-          method: "PATCH",
+        await fetch(root + "/api/mail/send", {
+          method: "POST",
           credentials: "same-origin",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ is_archived: 1 }),
+          body: JSON.stringify({ ...input, connection_id: connectionId }),
         }),
       );
     },
-    async starMail(id, starred) {
+    async archiveMail(id, connectionId) {
       await json(
-        await fetch(`${root}/api/mail/email/${encodeURIComponent(id)}`, {
+        await fetch(root + "/api/mail/email/" + encodeURIComponent(id), {
           method: "PATCH",
           credentials: "same-origin",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ is_starred: starred ? 1 : 0 }),
+          body: JSON.stringify({ is_archived: 1, connection_id: connectionId }),
+        }),
+      );
+    },
+    async starMail(id, starred, connectionId) {
+      await json(
+        await fetch(root + "/api/mail/email/" + encodeURIComponent(id), {
+          method: "PATCH",
+          credentials: "same-origin",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ is_starred: starred ? 1 : 0, connection_id: connectionId }),
         }),
       );
     },

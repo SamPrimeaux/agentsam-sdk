@@ -10,14 +10,14 @@
     "dev": "npm --prefix ../../apps/local-studio run build:desktop && node scripts/build-brand.mjs local-studio && node scripts/sync-local-studio-dist.mjs && tauri dev",
     "build:brand": "node scripts/build-brand.mjs",
     "sync:local-studio": "node scripts/sync-local-studio-dist.mjs",
-    "build": "npm run build:desktop-assets && cargo check --manifest-path src-tauri/Cargo.toml",
+    "build": "npm run prepare:sidecars && npm run build:desktop-assets && node scripts/build-brand.mjs local-studio && cargo check --manifest-path src-tauri/Cargo.toml",
     "build:shell-only": "cargo check --manifest-path src-tauri/Cargo.toml",
     "typecheck": "echo \"agentsam-desktop-shell: no TS surface yet\" && exit 0",
     "test": "node --test scripts/sync-local-studio-dist.mjs 2>/dev/null || echo \"agentsam-desktop-shell: sync script present\"",
     "prepare:sidecars": "node scripts/prepare-sidecars.mjs",
     "build:desktop-assets": "npm --prefix ../../apps/local-studio run build:desktop && node scripts/sync-local-studio-dist.mjs",
-    "bundle": "npm run build:desktop-assets && node scripts/build-brand.mjs local-studio && tauri build --bundles app,dmg --ci",
-    "bundle:app": "npm run build:desktop-assets && node scripts/build-brand.mjs local-studio && tauri build --bundles app --ci",
+    "bundle": "npm run prepare:sidecars && npm run build:desktop-assets && node scripts/build-brand.mjs local-studio && tauri build --bundles app,dmg --ci",
+    "bundle:app": "npm run prepare:sidecars && npm run build:desktop-assets && node scripts/build-brand.mjs local-studio && tauri build --bundles app --ci",
     "bundle:shell-only": "node scripts/build-brand.mjs local-studio && tauri build --bundles app,dmg --ci"
   },
   "dependencies": {
