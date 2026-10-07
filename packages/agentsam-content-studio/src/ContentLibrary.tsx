@@ -90,7 +90,7 @@ export function ContentLibrary(props: ContentLibraryProps) {
           {loading
             ? "Loading…"
             : hasMore
-              ? assets.length + " of " + total + " assets"
+              ? assets.length + " loaded"
               : total + " asset" + (total === 1 ? "" : "s")}
         </span>
       </div>
