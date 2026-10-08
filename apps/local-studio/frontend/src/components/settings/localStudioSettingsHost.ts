@@ -191,6 +191,14 @@ async function settingsRequest<T extends {ok?:boolean;error?:string}>(
   if(status>=400||payload.ok!==true)throw new Error(payload.error||"settings_request_failed_"+status);
   return payload;
 }
+type StudioSkillApiRecord = {
+  id:string;name:string;description:string;trigger:string;content:string;
+};
+function isStudioSkillRecord(value:unknown):value is StudioSkillApiRecord {
+  if(!value||typeof value!=="object")return false;
+  const record=value as Record<string,unknown>;
+  return ["id","name","description","trigger","content"].every(key=>typeof record[key]==="string");
+}
 async function skillRequest(path="",init?:RequestInit) {
   const body=init?.body?JSON.parse(String(init.body)):undefined;
   return settingsRequest<{ok:boolean;skills?:unknown[];error?:string}>(
@@ -222,9 +230,7 @@ async function loadAgentSettings():Promise<{
 
 async function loadAccountSkills():Promise<SettingsCatalogItem[]> {
   const data=await skillRequest();
-  return (data.skills||[]).map((skill:{
-    id:string;name:string;description:string;trigger:string;content:string;
-  })=>({
+  return (data.skills||[]).filter(isStudioSkillRecord).map(skill=>({
     id:skill.id,name:skill.name,subtitle:skill.description,
     meta:skill.trigger,trigger:skill.trigger,content:skill.content,status:"healthy" as const,
   }));

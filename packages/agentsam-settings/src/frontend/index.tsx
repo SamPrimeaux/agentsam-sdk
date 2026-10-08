@@ -135,6 +135,16 @@ export function StatusPill({
   );
 }
 
+/** Portable icon help: hover and keyboard-focus visible, independent of host tooltip providers. */
+function Tooltip({text,children}:{text:string;children:ReactNode}) {
+  return <span className="group relative inline-flex">
+    {children}
+    <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-[300] mt-1 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-background px-2 py-1.5 text-[11px] text-foreground shadow-lg group-hover:block group-focus-within:block">
+      {text}
+    </span>
+  </span>;
+}
+
 export function SettingsShell({
   manifest,
   activeUnit,
@@ -242,6 +252,7 @@ export function SettingsShell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex h-10 shrink-0 items-center gap-1.5 border-b border-border/70 px-3 text-[11px]">
+          <Tooltip text="Open settings navigation">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
@@ -250,6 +261,7 @@ export function SettingsShell({
           >
             <Menu className="size-3.5" />
           </button>
+          </Tooltip>
           {onExit ? (
             <button
               type="button"
@@ -279,6 +291,7 @@ export function SettingsShell({
           />
           <aside className="absolute inset-y-0 left-0 w-[86vw] max-w-[320px] border-r border-border bg-background shadow-2xl">
             <div className="absolute right-2 top-2 z-10">
+              <Tooltip text="Close settings navigation">
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}
@@ -287,6 +300,7 @@ export function SettingsShell({
               >
                 <X className="size-4" />
               </button>
+              </Tooltip>
             </div>
             {rail}
           </aside>
@@ -348,11 +362,10 @@ export function SettingsSheet({
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[250]">
-      <button
-        type="button"
-        aria-label="Close sheet"
-        tabIndex={-1}
-        onClick={onClose}
+      <div
+        role="presentation"
+        aria-hidden="true"
+        onPointerDown={onClose}
         className="absolute inset-0 bg-black/65 backdrop-blur-[2px]"
       />
       <section
@@ -368,6 +381,7 @@ export function SettingsSheet({
             <h2 id={titleId} className="text-[15px] font-semibold">{title}</h2>
             {description && <p id={descriptionId} className="mt-1 text-[11px] leading-4 text-muted-foreground">{description}</p>}
           </div>
+          <Tooltip text="Close dialog (Esc)">
           <button
             ref={closeRef}
             type="button"
@@ -378,6 +392,7 @@ export function SettingsSheet({
           >
             <X className="size-4" />
           </button>
+          </Tooltip>
         </header>
         <div className="px-4 py-5 sm:px-5">{children}</div>
       </section>
