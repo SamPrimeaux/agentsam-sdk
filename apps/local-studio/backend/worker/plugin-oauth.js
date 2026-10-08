@@ -21,7 +21,9 @@ async function unseal(env,payload,aad) {
   return JSON.parse(await decryptVaultSecret(await importVaultMasterKey(env.VAULT_MASTER_KEY),payload,aad));
 }
 async function httpJson(url,options={},fetcher=fetch){
-  const response=await fetcher(url,{...options,redirect:'error',signal:AbortSignal.timeout(10000)});
+  // Workers fetch does not support redirect:'error'; manual preserves the no-follow policy.
+  const response=await fetcher(url,{...options,redirect:'manual',signal:AbortSignal.timeout(10000)});
+  if(response.status>=300&&response.status<400||response.type==='opaqueredirect')fail('plugin_oauth_redirect_rejected');
   if(Number(response.headers.get('content-length')||0)>MAX_JSON)fail('plugin_oauth_response_too_large');
   const body=await response.text();
   if(body.length>MAX_JSON)fail('plugin_oauth_response_too_large');
