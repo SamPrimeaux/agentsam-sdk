@@ -93,6 +93,9 @@ test('OAuth connects approved tools only after PKCE, owner, scope, and endpoint 
   const {DB,sqlite}=dbFixture();const env=envFor(DB);const {fetcher,calls}=mockFetcher();
   const started=await beginPluginOAuth(env,accountId,pluginId,{},fetcher);
   assert.equal(started.status,'authorization_required');
+  const registration = calls.find(c=>c.href.endsWith('/api/oauth/register'));
+  assert.ok(registration);
+  assert.equal(JSON.parse(registration.init.body).client_name,'AgentSam Local Studio MCP');
   const authUrl=new URL(started.authorize_url);
   assert.equal(authUrl.origin,'https://inneranimalmedia.com');
   assert.equal(authUrl.searchParams.get('resource'),resource);
