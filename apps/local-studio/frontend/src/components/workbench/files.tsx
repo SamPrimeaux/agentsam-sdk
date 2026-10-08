@@ -1,11 +1,11 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { ChevronRight, Download, FileCode, Folder, Globe, List, Plus, Trash2 } from "lucide-react";
-import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { languageFromPath, uid } from "@/lib/utils";
 import { downloadText } from "@/lib/work/bundle";
+import { buildWorkspacePreview } from "@/lib/work/workspace-preview";
 import { useActiveProject, useWorkStore } from "@/lib/work/store";
 import type { Artifact, SideTab } from "@inneranimalmedia/agentsam-local-shared";
 import { cn } from "@/lib/utils";
@@ -122,7 +122,6 @@ function TreeRows({
 }
 
 export function FilesStage({ tab }: { tab: SideTab }) {
-  const navigate = useNavigate();
   const project = useActiveProject();
   const upsertFile = useWorkStore((s) => s.upsertFile);
   const deleteFile = useWorkStore((s) => s.deleteFile);
@@ -275,8 +274,8 @@ export function FilesStage({ tab }: { tab: SideTab }) {
       title: file.path,
       ephemeral: false,
     });
-    setBrowserSrcdoc(id, file.content, file.path);
-    void navigate({ to: "/browse" });
+    setBrowserSrcdoc(id, buildWorkspacePreview(file, project.files), file.path);
+    // Remain in the lead conversation: the existing side pane owns this preview.
   }
 
   async function saveFilesystem(file: Artifact, value: string, overwrite = false) {
@@ -437,7 +436,7 @@ export function FilesStage({ tab }: { tab: SideTab }) {
                   type="button"
                   size="icon-sm"
                   variant="ghost"
-                  aria-label="Preview in browser"
+                  aria-label="Preview rendered page"
                   onClick={() => previewHtml(selected)}
                 >
                   <Globe className="size-4" />

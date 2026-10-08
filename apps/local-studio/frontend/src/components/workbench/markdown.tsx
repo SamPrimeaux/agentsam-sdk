@@ -1,11 +1,12 @@
 import { useMemo, type ReactNode } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Check, Copy, FileCode, Globe, Play } from "lucide-react";
 import { useState } from "react";
 import { cn, languageFromPath } from "@/lib/utils";
 import { extractArtifacts } from "@/lib/work/files";
+import { buildWorkspacePreview } from "@/lib/work/workspace-preview";
+import type { Artifact } from "@inneranimalmedia/agentsam-local-shared";
 import { useWorkStore } from "@/lib/work/store";
 import { Button } from "@/components/ui/button";
 
@@ -32,16 +33,20 @@ const SHELL_LANGS = new Set(["bash", "sh", "zsh", "shell", "cli", "console"]);
 function CodeBlock({
   language,
   text,
+  artifactHint,
 }: {
   language: string;
   text: string;
+  artifactHint?: Artifact;
 }) {
   const selectFile = useWorkStore((s) => s.selectFile);
   const upsertFile = useWorkStore((s) => s.upsertFile);
   const enqueueCommand = useWorkStore((s) => s.enqueueCommand);
-  const navigate = useNavigate();
   const artifacts = useMemo(() => extractArtifacts("```" + language + "\n" + text + "\n```"), [language, text]);
-  const artifact = artifacts[0];
+  const artifact = artifactHint ?? artifacts[0];
+  const [showLongCode, setShowLongCode] = useState(false);
+  const isLongCode = text.split("\n").length > 24;
+  const displayCode = !isLongCode || showLongCode;
   const runnable = SHELL_LANGS.has((language.split(/\s+/)[0] ?? "").toLowerCase());
 
   return (
@@ -86,18 +91,46 @@ function CodeBlock({
                   .projects.find((p) => p.id === projectId)
                   ?.files.find((f) => f.path === file.path);
                 if (saved) selectFile(saved.id);
-                void navigate({ to: "/files" });
               }}
             >
               <FileCode className="size-3.5" />
             </Button>
           ) : null}
+          {artifact?.path.endsWith(".html") ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              aria-label="Preview generated page"
+              onClick={() => {
+                const state = useWorkStore.getState();
+                const project = state.projects.find((p) => p.id === state.activeProjectId);
+                const source = project?.files.find((f) => f.path === artifact.path) ?? artifact;
+                const id = state.openSideTab("browser", { title: source.path, ephemeral: false });
+                state.setBrowserSrcdoc(id, buildWorkspacePreview(source, project?.files ?? [source]), source.path);
+              }}
+            >
+              <Globe className="mr-1 size-3.5" />
+              Preview
+            </Button>
+          ) : null}
           <CopyButton text={text} />
         </span>
       </div>
-      <pre className="overflow-x-auto p-3 font-mono text-[12.5px] leading-relaxed text-paper">
-        <code>{text}</code>
-      </pre>
+      {isLongCode ? (
+        <button
+          type="button"
+          className="w-full px-3 py-2 text-left text-xs text-muted-foreground hover:bg-muted/30"
+          onClick={() => setShowLongCode((open) => !open)}
+        >
+          {displayCode ? "Hide source" : "Show source · " + text.split("\n").length + " lines"}
+        </button>
+      ) : null}
+      {displayCode ? (
+        <pre className="overflow-x-auto p-3 font-mono text-[12.5px] leading-relaxed text-paper">
+          <code>{text}</code>
+        </pre>
+      ) : null}
     </div>
   );
 }
@@ -108,7 +141,7 @@ export function MessageMarkdown({
   content: string;
   trailId?: string;
 }) {
-  const navigate = useNavigate();
+  const artifacts = useMemo(() => extractArtifacts(content), [content]);
   const openSideTab = useWorkStore((s) => s.openSideTab);
   const setTabUrl = useWorkStore((s) => s.setTabUrl);
   const sideTabs = useWorkStore((s) => s.sideTabs);
@@ -132,7 +165,6 @@ export function MessageMarkdown({
                   } else {
                     openSideTab("browser", { url: href, title: "Browser", ephemeral: false });
                   }
-                  void navigate({ to: "/browse" });
                 }}
               >
                 {children}
@@ -152,7 +184,8 @@ export function MessageMarkdown({
                 </code>
               );
             }
-            return <CodeBlock language={lang ?? "text"} text={text} />;
+            const matchingArtifact = artifacts.find((item) => item.content === text);
+            return <CodeBlock language={lang ?? "text"} text={text} artifactHint={matchingArtifact} />;
           },
         }}
       >
