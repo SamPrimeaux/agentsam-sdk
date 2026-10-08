@@ -82,7 +82,7 @@ export async function beginPluginOAuth(env,accountId,pluginId,options={},fetcher
   if(installed.endpoint_url!==entry.endpointUrl)fail('plugin_endpoint_changed_requires_reconnect');
   const scopes=scopesFor(entry,options.allowWrites===true);
   const redirectUri='https://agentsam.inneranimalmedia.com/api/plugins/oauth/callback';
-  const clientId=await registerIamClient(redirectUri,scopes,fetcher);
+  const clientId=await registerIamClient(redirectUri,scopes,entry.publisherIconUrl,fetcher);
   const state=codeVerifier();
   const hash=await digest(state);
   const verifier=codeVerifier();
