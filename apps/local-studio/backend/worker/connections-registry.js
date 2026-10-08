@@ -78,6 +78,7 @@ export function safePluginSettingsRecord(plugin, tools = []) {
     capabilities: safeStringArray(plugin.capabilities),
     tool_lanes: safeStringArray(plugin.tool_lanes),
     tool_count: pluginTools.length,
+    mention_aliases: safeStringArray(plugin.mention_aliases),
   };
 }
 
@@ -110,7 +111,8 @@ export async function loadConnectionsRegistry(env, userId) {
   const pluginRegistry = await loadPluginRegistry(env, userId, { includeDisabled: true });
   const cloudflarePlugin = pluginRegistry.plugins.find((row) => row.plugin_key === "agentsam-mcp") || null;
   const settingsPlugins = pluginRegistry.plugins
-    .filter((row) => row.settings_visible === 1 || row.settings_visible === true)
+    .filter((row) => row.settings_visible === 1 || row.settings_visible === true ||
+      row.composer_visible === 1 || row.composer_visible === true)
     .map((row) => safePluginSettingsRecord(row, pluginRegistry.tools));
 
   const latestByProvider = new Map();
