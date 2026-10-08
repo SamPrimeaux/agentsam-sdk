@@ -181,6 +181,7 @@ for (const name of ALIASED) {
     const linkedFromWorkspace = [];
     for (const dep of missing) {
       if (linkFromStudio(pkgDir, dep)) linkedFromStudio.push(dep);
+      else if (linkFromRepoRoot(pkgDir, dep)) linkedFromStudio.push(dep);
       else if (linkFromWorkspace(pkgDir, dep)) linkedFromWorkspace.push(dep);
     }
     if (linkedFromStudio.length) {
