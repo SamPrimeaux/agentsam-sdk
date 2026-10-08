@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { QUALITY_VIEWPORTS } from './viewports.mjs';
+import { QUALITY_VIEWPORTS, BOUNDARY_VIEWPORTS } from './viewports.mjs';
 
 const args = process.argv.slice(2);
 const option = (flag, fallback) => args.includes(flag) ? args[args.indexOf(flag) + 1] : fallback;
