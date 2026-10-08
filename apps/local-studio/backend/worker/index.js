@@ -933,6 +933,7 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
         const result=pluginOAuthMatch[2]==='start'
           ? await beginPluginOAuth(env,accountId,pluginOAuthMatch[1],{
               allowWrites:body.allow_writes===true,desktop:body.desktop===true,
+              callbackUrl:new URL("/api/plugins/oauth/callback",request.url).toString(),
             })
           : await disconnectPublicPlugin(env,accountId,pluginOAuthMatch[1]);
         return json({ok:true,...result});

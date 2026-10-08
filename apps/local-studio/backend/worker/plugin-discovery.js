@@ -64,7 +64,11 @@ export function configuredPluginCatalogSources(env) {
  */
 export function fetchPluginResource(env, url, init = {}, requestFetch = fetch) {
   const origin = new URL(url).origin;
-  if (origin === 'https://plugins.inneranimalmedia.com' && env?.PLUGIN_CATALOG?.fetch) {
+  // The first configured catalog is the first-party Worker associated with the
+  // PLUGIN_CATALOG service binding. No provider URL belongs in SDK source.
+  const boundOrigin = env?.PLUGIN_CATALOG?.fetch
+    ? configuredPluginCatalogSources(env)[0]?.origin : null;
+  if (origin === boundOrigin) {
     return env.PLUGIN_CATALOG.fetch(url, init);
   }
   return requestFetch(url, init);
