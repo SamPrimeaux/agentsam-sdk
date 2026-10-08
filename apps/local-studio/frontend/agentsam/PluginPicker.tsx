@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Bot, Box, Database, FileCode, Globe, Layers, Plus, Plug, ShieldCheck, Sparkles, SquareTerminal, Upload, Users, Wrench, X } from 'lucide-react';
-import { COMPOSER_GROUPS, filterComposerCatalog, projectComposerCatalog, type ComposerCatalogEntry } from '@inneranimalmedia/agentsam-workbench/agent';
+import { COMPOSER_GROUPS, filterComposerCatalog, projectComposerCatalog, type ComposerCatalogEntry } from '@inneranimalmedia/agentsam-workbench/capabilities';
 import { loadComposerCatalog } from './plugins';
 import { sideStageComposerWidgets } from './side-stage-actions';
 import { useWorkStore } from '@/lib/work/store';
