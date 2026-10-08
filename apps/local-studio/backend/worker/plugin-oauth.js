@@ -56,7 +56,7 @@ function scopesFor(entry,allowWrites){
   return allowWrites ? entry.oauthScopes : entry.readOnlyScopes;
 }
 function codeVerifier(){return base64url(bytes())}
-async function registerIamClient(redirectUri,scope,fetcher=fetch){
+async function registerIamClient(redirectUri,scope,logoUri,fetcher=fetch){
   const response=await httpJson(ISSUER+'/api/oauth/register',{
     method:'POST',
     headers:{'content-type':'application/json',accept:'application/json'},
