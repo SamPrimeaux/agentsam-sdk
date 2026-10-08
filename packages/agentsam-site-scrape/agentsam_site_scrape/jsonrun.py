@@ -46,6 +46,24 @@ def run_json(args) -> int:
                                scope={"sameSite": True, "maxPages": args.max_pages},
                                policy={"respectRobots": not args.ignore_robots, "hostDelayMs": int(args.delay * 1000)},
                                capture={"metadata": True, "text": False, "html": False, "assets": False})
+        if getattr(args, "archive_dir", None):
+            from .evidence import stage_evidence, upload_evidence
+            try:
+                staged = stage_evidence(result, receipt, account_id=args.account_id,
+                                        project_id=args.project_id,
+                                        archive_dir=Path(args.archive_dir))
+                print(f"Failed crawl evidence staged: {staged['root']}", file=sys.stderr)
+                receipt["storage"] = {"status": "staged", "prefix": staged["prefix"]}
+                if getattr(args, "upload_archive", False):
+                    uploaded = upload_evidence(staged["root"], bucket=args.archive_bucket,
+                                               repo_root=Path(args.repo_root),
+                                               wrangler_config=getattr(args, "wrangler_config", None))
+                    receipt["storage"] = {"status": "uploaded", "prefix": staged["prefix"],
+                                          "bucket": uploaded["bucket"]}
+                    print(f"Private evidence uploaded: {uploaded['bucket']}/{uploaded['manifest_key']}", file=sys.stderr)
+            except Exception as exc:
+                receipt["storage"] = {"status": "failed", "error": str(exc)}
+                print(f"Evidence archive failed: {exc}", file=sys.stderr)
         json.dump(receipt, sys.stdout, ensure_ascii=False)
         sys.stdout.write("\n")
         return 1
@@ -64,19 +82,40 @@ def run_json(args) -> int:
             expand_domain=args.expand_domain,
             max_pages=args.max_pages,
             delay=args.delay,
-            download_images=False,
-            optimize=False,
+            download_images=getattr(args, "capture_assets", False),
+            optimize=not getattr(args, "no_optimize", False),
+            image_workers=getattr(args, "workers", 8),
+            allow_unoptimized=getattr(args, "allow_unoptimized", False),
             ignore_robots=args.ignore_robots,
         )
 
-    receipt = build_result(
-        result,
-        started_at=started,
-        completed_at=time.time(),
-        scope={"sameSite": True, "maxPages": args.max_pages},
-        policy={"respectRobots": not args.ignore_robots, "hostDelayMs": int(args.delay * 1000)},
-        capture={"metadata": True, "text": False, "html": False, "assets": False},
-    )
-    json.dump(receipt, sys.stdout, indent=2, ensure_ascii=False)
-    sys.stdout.write("\n")
-    return 0 if receipt["status"] != "failed" else 1
+        receipt = build_result(
+            result,
+            started_at=started,
+            completed_at=time.time(),
+            scope={"sameSite": True, "maxPages": args.max_pages},
+            policy={"respectRobots": not args.ignore_robots, "hostDelayMs": int(args.delay * 1000)},
+            capture={"metadata": True, "text": False, "html": False,
+                         "assets": getattr(args, "capture_assets", False)},
+        )
+        if getattr(args, "archive_dir", None):
+            from .evidence import stage_evidence, upload_evidence
+            try:
+                staged = stage_evidence(result, receipt, account_id=args.account_id,
+                                        project_id=args.project_id,
+                                        archive_dir=Path(args.archive_dir))
+                receipt["storage"] = {"status": "staged", "prefix": staged["prefix"]}
+                print(f"Private evidence staged: {staged['root']}", file=sys.stderr)
+                if getattr(args, "upload_archive", False):
+                    uploaded = upload_evidence(staged["root"], bucket=args.archive_bucket,
+                                               repo_root=Path(args.repo_root),
+                                               wrangler_config=getattr(args, "wrangler_config", None))
+                    receipt["storage"] = {"status": "uploaded", "prefix": staged["prefix"],
+                                          "bucket": uploaded["bucket"]}
+                    print(f"Private evidence uploaded: {uploaded['bucket']}/{uploaded['manifest_key']}", file=sys.stderr)
+            except Exception as exc:
+                receipt["storage"] = {"status": "failed", "error": str(exc)}
+                print(f"Evidence archive failed: {exc}", file=sys.stderr)
+        json.dump(receipt, sys.stdout, indent=2, ensure_ascii=False)
+        sys.stdout.write("\n")
+        return 1 if receipt["status"] == "failed" or receipt.get("storage", {}).get("status") == "failed" else 0

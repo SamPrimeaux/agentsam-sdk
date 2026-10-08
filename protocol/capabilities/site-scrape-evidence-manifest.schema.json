@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/capabilities/site-scrape-evidence-manifest.schema.json",
+  "title": "Private site.scrape evidence archive manifest",
+  "description": "Private account/project/run-scoped R2 manifest; uploaded last as an archive completion marker. Account/project keys are labels, not IAM authorization.",
+  "type": "object",
+  "required": ["schema_version", "kind", "visibility", "account_id", "project_id", "run_id", "prefix", "receipt_status", "objects"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "kind": { "const": "agentsam.crawl-evidence.v1" },
+    "visibility": { "const": "private" },
+    "account_id": { "type": "string", "pattern": "^au_[A-Za-z0-9_-]{4,128}$" },
+    "project_id": { "type": "string", "pattern": "^proj_[A-Za-z0-9_-]{3,128}$" },
+    "run_id": { "type": "string", "pattern": "^scrp_[0-9a-f]{24}$" },
+    "prefix": { "type": "string", "pattern": "^v1/accounts/au_[A-Za-z0-9_-]+/projects/proj_[A-Za-z0-9_-]+/runs/scrp_[0-9a-f]{24}$" },
+    "receipt_status": { "enum": ["completed", "partial", "failed", "cancelled"] },
+    "crawl_content_hash": { "type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$" },
+    "objects": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["key", "sha256", "bytes", "content_type"],
+        "properties": {
+          "key": { "type": "string", "minLength": 1 },
+          "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+          "bytes": { "type": "integer", "minimum": 0 },
+          "content_type": { "type": "string", "minLength": 1 },
+          "kind": { "enum": ["page", "image"] },
+          "source_url": { "type": "string" },
+          "section": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
