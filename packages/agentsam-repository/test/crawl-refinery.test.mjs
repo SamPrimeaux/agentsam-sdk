@@ -106,7 +106,7 @@ test('quality aggregator uses existing receipt evidence and never invents a pass
   assert.equal(aggregateRefineryQuality(candidate,{approved:true}).status,'incomplete');
   const checks=['package.audit','package.verify','security.scan','consumer.parity','product.proof'].map(tool=>({tool,status:'passed',receipt_ref:`receipt:${tool}`}));
   const result=aggregateRefineryQuality(candidate,{approved:true,checks});
-  assert.equal(result.status,'verified');
+  assert.equal(result.status,'receipt_review_required');
   assert.equal(result.source_mutated,false);
   assert.equal(aggregateRefineryQuality(candidate,{approved:true,checks:[...checks.slice(0,1),{...checks[1],status:'failed'},...checks.slice(2)]}).status,'blocked');
   assert.equal(aggregateRefineryQuality(candidate,{approved:true,checks:[{tool:'package.audit',status:'passed'}]}).status,'incomplete');
