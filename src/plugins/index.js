@@ -25,6 +25,7 @@ export {
   PLUGIN_QUALITY_RECEIPT_SCHEMA,
   PLUGIN_LIFECYCLE,
   readPluginEvidenceBundle,
+  resolvePluginLifecycle,
   inspectPluginProduct,
   verifyPluginProduct,
   buildPluginQualityReceipt,
