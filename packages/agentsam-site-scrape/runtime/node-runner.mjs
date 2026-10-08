@@ -12,7 +12,10 @@ Usage:
   agentsam site scrape <https://public-site.example> [options]
   agentsam site storage --project-root <project-directory>
   agentsam site verify <archive-directory>
-  agentsam site index <archive-directory>
+  agentsam site index [.]           Crawl/index the current project's website into Knowledge
+  agentsam site index <archive>     Index a verified existing site crawl into Knowledge
+  agentsam site index <https://site.example>  Crawl/index an explicit website
+  agentsam site graph <archive>     Print the existing evidence graph (read-only)
   agentsam site knowledge plan <archive-directory> --project-root <project-directory>
   agentsam site knowledge index <archive-directory> --project-root <project-directory> [--embed]
   agentsam site knowledge search <query> --project-root <project-directory> [--semantic]
@@ -28,6 +31,9 @@ Options:
   --max-pages <N>        Max pages to fetch, 1..5000 (default 20)
   --concurrency <N>      Bounded parallel requests, 1..16 (default 3)
   --capture-assets       Fetch and stage public same-site images (default off)
+  --refresh              For site index, crawl a new run instead of reusing latest evidence
+  --embed                For site index, use project's configured embedding provider
+  --top-k <N>            For site knowledge search, max retrieval results
   --upload-archive       Explicit remote R2 upload after staging (never implicit)
   --archive-bucket <name>  Selected project/customer bucket; overrides project configuration
   --verify-only <path>   Verify a staged local archive, no crawling
@@ -45,7 +51,7 @@ function readArgs(args) {
   const options={},positional=[];
   for(let i=0;i<args.length;i++){
     const a=args[i];
-    if(['--help','-h','--capture-assets','--upload-archive','--embed','--semantic'].includes(a)){
+    if(['--help','-h','--capture-assets','--upload-archive','--embed','--semantic','--refresh'].includes(a)){
       const key=a.slice(2).replaceAll('-','_');options[key]=true;continue;
     }
     if(a.startsWith('--')){
@@ -68,8 +74,61 @@ export async function runNativeSiteScrape(args, {stdout=process.stdout,stderr=pr
     const {options:opts,positional}=readArgs(args);
     if(opts.help||positional.includes('help')||!positional.length){stdout.write(HELP);return 0;}
     const action=positional.shift();
-    const projectRoot=fs.realpathSync(path.resolve(cwd,opts.project_root||'.'));
+    let projectRoot=fs.realpathSync(path.resolve(cwd,opts.project_root||'.'));
     const print=json=>stdout.write(JSON.stringify(json,null,2)+'\n');
+    if(action==='index') {
+      // `site index` is an executable Knowledge operation, NOT a synonym for
+      // reading `<cwd>/manifest.json`. `site graph` is the read-only graph view.
+      const {latestProjectArchive,resolveProjectSeed}=await import('./project-site.mjs');
+      if(positional.length>1)throw Error('site index accepts one project, archive, or website URL');
+      if(opts.upload_archive)throw Error('site index never uploads evidence to R2; use `agentsam site upload <archive>`');
+      const target=positional[0];
+      let chosen=null,seed=null;
+      if(target&&/^https?:\/\//i.test(target)) {
+        seed=target;
+      }else if(target) {
+        const selected=path.resolve(cwd,target);
+        if(!fs.existsSync(selected)||!fs.statSync(selected).isDirectory()){
+          throw Error(`site index target is not a directory: ${target}. Pass a project directory, existing crawl archive, or public URL.`);
+        }
+        if(fs.existsSync(path.join(selected,'manifest.json')))chosen=selected;
+        else projectRoot=fs.realpathSync(selected);
+      }
+      if(!fs.existsSync(path.join(projectRoot,'.agentsam','knowledge.json'))){
+        throw Error(`Knowledge is not configured for ${projectRoot}. Run \`agentsam init . --yes\` from that project before site index.`);
+      }
+      let crawlReceipt=null;
+      if(!chosen && !seed && !opts.refresh){
+        const latest=latestProjectArchive(projectRoot,{archiveDir:opts.archive_dir});
+        if(latest)chosen=latest.root;
+      }
+      if(!chosen){
+        const site=resolveProjectSeed(projectRoot,{url:seed});
+        let crawlJson='';
+        const crawlArgs=['scrape',site.url,'--project-root',projectRoot,
+          '--max-pages',opts.max_pages||'20', '--concurrency',opts.concurrency||'3',
+          ...(opts.archive_dir?['--archive-dir',opts.archive_dir]:[]),
+          ...(opts.account_id?['--account-id',opts.account_id]:[]),
+          ...(opts.project_id?['--project-id',opts.project_id]:[]),
+          ...(opts.capture_assets?['--capture-assets']:[])];
+        const status=await runNativeSiteScrape(crawlArgs,{cwd,stderr,stdout:{write:chunk=>{crawlJson+=chunk;}}});
+        if(status!==0)throw Error(`Site crawl failed for ${site.url} (${site.source}); inspect the crawl receipt before indexing.`);
+        crawlReceipt=JSON.parse(crawlJson);
+        chosen=crawlReceipt.storage?.archive_path;
+        if(!chosen||!crawlReceipt.counts?.pages_fetched){
+          throw Error('No fetched pages in the crawl; Knowledge indexing was not attempted.');
+        }
+      }
+      let indexedJson='';
+      const status=await runNativeSiteScrape(['knowledge','index',chosen,'--project-root',projectRoot,
+        ...(opts.embed?['--embed']:[])],{cwd,stderr,stdout:{write:chunk=>{indexedJson+=chunk;}}});
+      if(status!==0)throw Error(`Knowledge indexing failed for verified archive ${chosen}. Archive remains available for retry.`);
+      const verified=verifyLocalArchive(chosen);
+      print({ok:true,action:'site.index',project_root:projectRoot,run_id:verified.run_id,
+        archive_path:chosen,crawl:crawlReceipt?{status:crawlReceipt.status,pages_fetched:crawlReceipt.counts.pages_fetched}:null,
+        knowledge:JSON.parse(indexedJson)});
+      return 0;
+    }
     if(action==='storage') {print(resolveProjectStorage(projectRoot,{bucket:opts.archive_bucket}));return 0;}
     if(action==='knowledge') {
       const task=positional[0], target=positional.slice(1).join(' ');
@@ -116,10 +175,11 @@ export async function runNativeSiteScrape(args, {stdout=process.stdout,stderr=pr
       const result=positional[0]==='plan'?projectWorkerPlan(projectRoot,config):writeProjectWorker(projectRoot,config);
       print(result);return 0;
     }
-    if(action==='verify' || action==='index' || opts.verify_only){
-      const target=opts.verify_only||positional[0];if(!target)throw Error('site verify requires an archive path');
+    if(action==='verify' || action==='graph' || opts.verify_only){
+      const target=opts.verify_only||positional[0];
+      if(!target)throw Error(`site ${action} requires a crawl archive. Use \`agentsam site index\` to crawl/index the current project.`);
       const manifest=verifyLocalArchive(path.resolve(cwd,target));
-      if(action==='index') {
+      if(action==='graph') {
         print(JSON.parse(fs.readFileSync(path.join(path.resolve(cwd,target),'index.json'),'utf8')));
       } else print({ok:true,run_id:manifest.run_id,objects:manifest.objects.length,prefix:manifest.prefix});
       return 0;

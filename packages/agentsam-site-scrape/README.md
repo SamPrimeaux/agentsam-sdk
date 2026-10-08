@@ -35,7 +35,20 @@ agentsam site scrape https://example.com --project-root ./my-project --max-pages
 agentsam site scrape https://example.com --project-root ./my-project --capture-assets
 agentsam site storage --project-root ./my-project
 agentsam site verify ./my-project/.agentsam/crawls/runs/<run-id>
-agentsam site index ./my-project/.agentsam/crawls/runs/<run-id>
+# One command from the current project: discovers its own configured site,
+# crawls locally if no usable archive exists, then indexes with existing Knowledge.
+agentsam site index
+agentsam site index .
+
+# Explicit source or existing evidence:
+agentsam site index https://example.com --project-root ./my-project --max-pages 10
+agentsam site index ./my-project/.agentsam/crawls/runs/<run-id> --project-root ./my-project
+
+# Read-only graph view (does NOT publish a Knowledge generation):
+agentsam site graph ./my-project/.agentsam/crawls/runs/<run-id>
+
+# Force a fresh crawl instead of re-indexing the latest verified archive:
+agentsam site index --refresh --project-root ./my-project
 ```
 
 Project-local configuration (`./my-project/.agentsam/site-scrape.json`):
@@ -47,6 +60,16 @@ Project-local configuration (`./my-project/.agentsam/site-scrape.json`):
   "storage": { "evidence": { "provider": "r2", "bucket": "my-project-crawls" } }
 }
 ```
+
+`agentsam site index` resolves only the current project's own evidence or
+public site origin. It discovers site origins from that project's explicit
+`.agentsam/site-scrape.json` `site.url` or unambiguous Wrangler custom-domain
+routes. It **never** treats `.` as an archive, guesses a site from
+`ALLOWED_ORIGINS`, or fetches a missing `manifest.json`. On subsequent runs it
+reuses the latest checksum-verified local archive unless `--refresh` is set.
+The default local crawl budget is 20 pages; `--max-pages` controls the bound.
+No remote storage writes happen during the index command. For projects with no
+configured Knowledge profile, run `agentsam init . --yes` first.
 
 The CLI also detects a `CRAWL_EVIDENCE` R2 binding in the selected project's
 Wrangler config. No R2 bucket or Cloudflare credential is borrowed from the

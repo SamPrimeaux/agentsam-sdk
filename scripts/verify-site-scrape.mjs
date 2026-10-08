@@ -14,7 +14,7 @@ for(const publicExport of ['./site-scrape','./site-scrape/worker','./site-scrape
   if(!target || !fs.existsSync(path.join(root,target)))throw new Error(`Missing published site.scrape export: ${publicExport}`);
 }
 
-const native = spawnSync(process.execPath, ['--test', 'runtime/test/runtime.test.mjs', 'runtime/test/knowledge-handoff.test.mjs', 'worker/test/worker.test.mjs'], {
+const native = spawnSync(process.execPath, ['--test', 'runtime/test/runtime.test.mjs', 'runtime/test/project-index-command.test.mjs', 'runtime/test/knowledge-handoff.test.mjs', 'worker/test/worker.test.mjs'], {
   cwd: directory,
   stdio: 'inherit',
   timeout: 120000,
