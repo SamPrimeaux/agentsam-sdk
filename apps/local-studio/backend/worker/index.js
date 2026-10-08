@@ -43,6 +43,8 @@ import { completeGmailOAuth, isGmailOAuthCallbackRequest } from "./gmail-service
 import { createLocalStudioPluginRuntime, loadPluginRegistry, updateLocalStudioPluginPreferences } from "./plugin-registry.js";
 import { listCatalogForAccount, installFromCatalog, removeCatalogInstallation } from "./plugin-discovery.js";
 import { beginPluginOAuth, completePluginOAuth, disconnectPublicPlugin, pluginOAuthReturnUrl } from "./plugin-oauth.js";
+import { handleStudioSkills } from "./studio-skills.js";
+import { readPluginWorkspace } from "./plugin-workspace.js";
 import { emitAnalyticsFact } from "./analytics-service.js";
 import { handleAnalyticsQueryRequest } from "./analytics-query-service.js";
 import {
@@ -657,6 +659,9 @@ export default {
     const isLlmInventory = url.pathname === "/api/llm/inventory";
     const isCfConnection = isCloudflareConnectionPath(url.pathname);
     const isConnectionsRegistry = url.pathname === "/api/connections";
+    const isStudioSkills = url.pathname === "/api/settings/skills"
+      || url.pathname.startsWith("/api/settings/skills/");
+    const workspaceMatch = /^\/api\/plugins\/(plg_[a-z0-9]+)\/workspace$/i.exec(url.pathname);
     const isPluginCatalog = url.pathname === "/api/plugins/catalog";
     const isPluginInstall = url.pathname === "/api/plugins/install";
     const isPluginOAuthCallback = url.pathname === "/api/plugins/oauth/callback";
@@ -769,6 +774,26 @@ export default {
       return sessionUserId;
     }
 
+    if(workspaceMatch) {
+      if(request.method!=="GET")return json({ok:false,error:"method_not_allowed"},405);
+      const accountId=await sessionUser();
+      if(!accountId)return json({ok:false,error:"unauthorized"},401);
+      try{
+        const response=await readPluginWorkspace(env,accountId,workspaceMatch[1]);
+        return json({ok:true,...response},200,{"cache-control":"no-store"});
+      }catch(error){
+        const code=String(error?.message||"plugin_workspace_unavailable");
+        return json({ok:false,error:code.slice(0,120)},code.includes("not_connected")?409:400);
+      }
+    }
+    if (isStudioSkills) {
+      try {
+        return await handleStudioSkills(request,env,await sessionUser());
+      } catch(error) {
+        console.warn('studio_skills_error',String(error?.message||error).slice(0,150));
+        return json({ok:false,error:'skills_unavailable'},503);
+      }
+    }
     if (isTerminalConnect) {
       if (request.method !== "POST") {
         return json({ ok: false, error: "method_not_allowed" }, 405, { allow: "POST" });
