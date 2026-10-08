@@ -78,7 +78,7 @@ export function findRefineryCandidates(graphs, { limit = 100 } = {}) {
     provenance:{ approach:'hash+existing-semantic-ast', model_required:false, source_mutated:false } };
 }
 
-/** Aggregate existing gate receipts; this never runs tools or treats a proposed patch as approved. */
+/** Aggregate supplied gate references, without trusting or certifying their claims. */
 export function aggregateRefineryQuality(candidate, { approved = false, checks = [] } = {}) {
   if (!candidate?.candidate_id || !Array.isArray(candidate.implementations)) throw new TypeError('expected a refinery candidate');
   if (!Array.isArray(checks)) throw new TypeError('checks must be an array');
@@ -90,7 +90,7 @@ export function aggregateRefineryQuality(candidate, { approved = false, checks =
     return { tool, status, receipt_ref: status === 'missing' ? null : check.receipt_ref };
   });
   const status = !approved ? 'awaiting_approval' : gates.some(g=>g.status==='failed') ? 'blocked' :
-    gates.every(g=>g.status==='passed') ? 'verified' : 'incomplete';
+    gates.every(g=>g.status==='passed') ? 'receipt_review_required' : 'incomplete';
   return { schema:'agentsam.refinery.quality.v1', candidate_id:candidate.candidate_id,
     approved, status, gates, source_mutated:false, authority:'external_gate_receipts_only' };
 }
