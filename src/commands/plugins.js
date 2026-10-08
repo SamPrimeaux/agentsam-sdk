@@ -1,6 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { AGENTSAM_MCP_PLUGIN_MANIFEST, normalizePluginKey } from '../plugins/index.js';
+import {
+  AGENTSAM_MCP_PLUGIN_MANIFEST,
+  buildPluginQualityReceipt,
+  inspectPluginProduct,
+  normalizePluginKey,
+  verifyPluginProduct,
+} from '../plugins/index.js';
 import { authenticateViaBrowser } from '../lib/auth.js';
 import { promptToOpenUrl } from '../lib/open-url.js';
 import { readAccountSession, resolveAccountApiKey, saveAccountSession } from '../lib/account-session.js';
@@ -143,6 +149,28 @@ async function statusPlugin(opts, key) {
 
 export async function runPlugins(argv = []) {
   const opts = parse(argv);
+  if (['inspect','verify','receipt'].includes(opts.action)) {
+    const target = path.resolve(opts.cwd, opts.key || '.');
+    const result = opts.action === 'inspect'
+      ? inspectPluginProduct(target)
+      : opts.action === 'verify'
+        ? verifyPluginProduct(target)
+        : buildPluginQualityReceipt(target);
+    if (opts.json || opts.action === 'receipt') writeJson(result);
+    else {
+      console.log(`\n  Plugin ${result.product?.identity?.id || path.basename(target)}`);
+      console.log(`  status: ${result.status}`);
+      for (const row of result.findings || []) console.log(`  ${row.severity.toUpperCase().padEnd(5)} ${row.code}: ${row.message}`);
+      if (opts.action === 'verify') {
+        for (const [id, check] of Object.entries(result.checks || {})) {
+          console.log(`  ${String(check.status).padEnd(12)} ${id}`);
+        }
+      }
+      console.log('');
+    }
+    if (opts.action !== 'inspect' && result.status !== 'READY') process.exitCode = 1;
+    return result;
+  }
   if (opts.action === 'list') {
     const state = readState(opts.cwd);
     const rows = Object.values(CATALOG).map((manifest) => ({
