@@ -111,8 +111,10 @@ export async function loadConnectionsRegistry(env, userId) {
   const pluginRegistry = await loadPluginRegistry(env, userId, { includeDisabled: true });
   const cloudflarePlugin = pluginRegistry.plugins.find((row) => row.plugin_key === "agentsam-mcp") || null;
   const settingsPlugins = pluginRegistry.plugins
-    .filter((row) => row.settings_visible === 1 || row.settings_visible === true ||
-      row.composer_visible === 1 || row.composer_visible === true)
+    .filter((row) => row.settings_visible === 1 || row.settings_visible === true)
+    .map((row) => safePluginSettingsRecord(row, pluginRegistry.tools));
+  const composerPlugins = pluginRegistry.plugins
+    .filter((row) => row.composer_visible === 1 || row.composer_visible === true)
     .map((row) => safePluginSettingsRecord(row, pluginRegistry.tools));
 
   const latestByProvider = new Map();
@@ -135,6 +137,8 @@ export async function loadConnectionsRegistry(env, userId) {
 
   return {
     plugins: settingsPlugins,
+    // Independent views of the SAME registry, never a second authority.
+    composer_plugins: composerPlugins,
     connections: [
       {
         provider: "cloudflare",
