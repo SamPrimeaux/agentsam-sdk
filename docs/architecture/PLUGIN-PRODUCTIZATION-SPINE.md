@@ -2,7 +2,27 @@
 
 Status: canonical platform contract implemented by `agentsam plugin inspect|verify|receipt`.
 
-A plugin is a product package, not merely an MCP endpoint. Every AgentSam plugin must pass the same identity, ownership, capability, permission, installation, authorization, health, verification, portability and release lifecycle.
+A plugin is a product package, not merely an MCP endpoint.
+
+## Governing evidence pipeline
+
+```text
+Machine inspect / crawl
+        ↓
+Repository graph
+        ↓
+repository.mine reuse + authority findings
+        ↓
+plugin inspect
+        ↓
+plugin verify
+        ↓
+quality receipt
+```
+
+Plugin Productization is **not another scanner**. `plugin inspect` consumes already-produced Machine, Repository, capability and package evidence. It may validate its own small manifests, but it must not walk repositories, invent a second dependency graph, rediscover OAuth implementations, or create another MCP registry. When evidence is unavailable it reports the fact as unverified instead of silently scanning again.
+
+Every finding names its evidence source and, when the finding concerns duplicated/misplaced authority, the expected canonical owner. Repository ownership comes from Repository/refinery evidence when available; product code does not maintain a parallel package-owner lookup table. Every AgentSam plugin must pass the same identity, ownership, capability, permission, installation, authorization, health, verification, portability and release lifecycle.
 
 ## Canonical lifecycle
 
@@ -10,7 +30,7 @@ A plugin is a product package, not merely an MCP endpoint. Every AgentSam plugin
 available → installed → needs_connection → connected → ready
 ```
 
-These states MUST NOT collapse. An installation record is not connection proof, and a successful OAuth exchange is not readiness proof.
+These states MUST NOT collapse. An installation record is not connection proof, and a successful OAuth exchange is not readiness proof. `ready` is never a writable product state: it is computed from current evidence. Persistable runtime observations may include `last_verified_at`, `last_verification_receipt`, `last_health`, and `last_error`, but not an administrator-set `ready=true`.
 
 ## Package boundary
 
@@ -40,7 +60,7 @@ agentsam plugin verify ./plugins/agentsam-brand
 agentsam plugin receipt ./plugins/agentsam-brand
 ```
 
-`inspect` reports contract/ownership findings. `verify` evaluates required checks from `agentsam.quality.json`. `receipt` emits an `agentsam.plugin-quality-receipt/v1` document. READY is computed; it is never manually declared.
+`inspect` reports contract/ownership findings and can consume an existing `agentsam.plugin-evidence-bundle/v1` via `--evidence`. `verify` combines package evidence with existing capability/runtime receipts; checks with no proof remain `unverified`. `receipt` renders the same verification result as an `agentsam.plugin-quality-receipt/v1` document rather than running a third verification engine. READY is computed; it is never manually declared.
 
 ## Evidence contract
 
@@ -49,3 +69,10 @@ A plugin may carry `agentsam.quality.json` using `agentsam.plugin-quality-eviden
 Reference graduation checks should include package/manifest validity, install/uninstall, authorization/refresh/disconnect, health, capability discovery, a real tool call, result render/save round-trip, least privilege, tenant isolation, fresh-account and fresh-install portability.
 
 Brand and Campaign are the first reference products. A third official plugin should not establish a competing lifecycle.
+
+
+## Calibration law
+
+Brand and Campaign are the first two reference products and must use this exact generic pipeline without `if brand` / `if campaign` special cases. Do not introduce a third official plugin until both can progress from inspect → verify → computed receipt with fresh-account runtime proof.
+
+The generator is intentionally later. A future `agentsam plugin create <name>` must first consume Repository ownership, Machine/refinery evidence, the capability catalog and this product contract, then propose the smallest domain-only package.
