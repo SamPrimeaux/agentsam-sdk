@@ -42,7 +42,9 @@
         "required": [
           "severity",
           "code",
-          "message"
+          "message",
+          "evidenceSource",
+          "expectedOwner"
         ],
         "properties": {
           "severity": {
@@ -57,6 +59,16 @@
           },
           "message": {
             "type": "string"
+          },
+          "evidenceSource": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expectedOwner": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       }
