@@ -2,7 +2,7 @@
 
 This revision is designed for a repository with dozens of packages.
 
-The goal is not to hand-author 57 manifests blindly. The goal is:
+The goal is not to hand-author manifests blindly. The recovered inventory currently contains 59 package-owned draft manifests. The goal is:
 
 1. inventory every package;
 2. collect evidence from each package itself;
@@ -40,11 +40,16 @@ python3 scripts/catalog/build_catalog.py --repo .
 python3 scripts/catalog/build_catalog.py --repo . --check
 ```
 
-Then implement/verify the actual CLI commands and run:
+The CLI consumer is implemented in `src/commands/catalog.js` and `src/commands/catalog-doctor.js`.
+Run `npm run catalog:check` and `node --test test/offline-catalog.test.mjs` to verify deterministic output.
+For evidence gathering, Python 3.11+ is required (on the operator Mac, use `python3.14`).
+For customers, Python is not a runtime dependency.
 
-```bash
-python3 scripts/catalog/acceptance_randomuser.py --repo .
-```
+The generated `packages/catalog/generated/packages.json` must be committed to the SDK package.
+Entries marked `needs-review` must not be presented as classified/public-ready products.
+Use `python3 scripts/catalog/build_catalog.py --repo . --require-classified` as the optional strict
+publication gate once the explicit package ownership review is complete.
+No live Cloudflare deploy or package publication is implied by the checks.
 
 ## Why evidence first?
 

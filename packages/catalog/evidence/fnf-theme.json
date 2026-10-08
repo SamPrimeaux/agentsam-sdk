@@ -1,0 +1,34 @@
+{
+  "directory": "packages/fnf-theme",
+  "readme": {
+    "headings": [],
+    "path": null,
+    "summary": null,
+    "title": null
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Brand-specific FNF theme renderer consuming portable ThemePreview registry",
+    "exports": [
+      "./editor/preview-adapter",
+      "./src/editor/preview-adapter.js"
+    ],
+    "kind": "npm",
+    "main": null,
+    "module": null,
+    "name": "@inneranimalmedia/fnf-theme",
+    "private": true,
+    "scripts": [],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 1
+  }
+}

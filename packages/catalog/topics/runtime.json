@@ -1,0 +1,33 @@
+{
+  "schema": "agentsam.runtime-topics.v1",
+  "topics": {
+    "rust": {
+      "title": "Rust",
+      "summary": "Compiled systems language for native services, shared libraries, CLIs, and constrained Wasm workloads.",
+      "use_when": ["You need deterministic reusable core logic", "You need native performance or system capabilities"],
+      "avoid_when": ["A browser-only UI is the entire product"],
+      "commands": ["agentsam rust --help", "agentsam explain rapid-rust"]
+    },
+    "workers": {
+      "title": "Cloudflare Workers",
+      "summary": "Request-oriented edge execution; bindings and configured resources belong to the host, not to portable libraries.",
+      "use_when": ["Request/response and bounded edge processing", "A hosted adapter around portable core logic"],
+      "avoid_when": ["Long-running processes", "General native process or filesystem requirements"],
+      "commands": ["agentsam choose runtime --goal edge-api", "agentsam rust --help"]
+    },
+    "wasm": {
+      "title": "WebAssembly (Wasm)",
+      "summary": "Portable compilation target used by some Worker and browser environments; host APIs and runtime limits still apply.",
+      "use_when": ["A host supplies a supported Wasm execution environment"],
+      "avoid_when": ["Unrestricted native filesystem and process requirements"],
+      "commands": ["agentsam explain workers", "agentsam explain rapid-rust"]
+    },
+    "rapid-rust": {
+      "title": "AgentSam Rapid Rust",
+      "summary": "A separately published Rust scaffolder and build/deploy helper for Cloudflare Rust/Wasm projects; deployment remains explicit.",
+      "use_when": ["You want a Rust Worker API, shared-core, signed-request, or data-processing template"],
+      "avoid_when": ["You need an unrestricted long-running native daemon"],
+      "commands": ["cargo install agentsam-rapid-rust", "agentsam-rapid-rust templates", "agentsam-rapid-rust new my-api --template api", "agentsam-rapid-rust check", "agentsam-rapid-rust build", "agentsam-rapid-rust deploy --dry-run"]
+    }
+  }
+}

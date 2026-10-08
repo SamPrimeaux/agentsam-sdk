@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import argparse, json, tomllib
+import argparse, json
+try:
+    import tomllib
+except ModuleNotFoundError:
+    raise SystemExit("Catalog evidence tooling requires Python 3.11+; try python3.14 or python3.12.")
 from pathlib import Path
 
 

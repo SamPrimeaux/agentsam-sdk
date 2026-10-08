@@ -1,0 +1,12 @@
+{
+  "schema": "agentsam.toolchain-doctor.v1",
+  "tools": [
+    {"id":"node","label":"Node.js","required":true,"version_args":["--version"],"why":"Runs the AgentSam JS/TS CLI.","repair":"Install or select a supported Node.js version using nvm, fnm, Volta, or nodejs.org.","verify":"node --version"},
+    {"id":"npm","label":"npm","required":true,"version_args":["--version"],"why":"Installs AgentSam JavaScript packages.","repair":"npm normally ships with Node.js; repair the Node.js installation.","verify":"npm --version"},
+    {"id":"rustc","label":"Rust compiler","required":false,"version_args":["--version"],"why":"Compiles native Rust and Wasm binaries.","repair":"Install rustup from https://rustup.rs/ and open a new terminal.","verify":"rustc --version"},
+    {"id":"cargo","label":"Cargo","required":false,"version_args":["--version"],"why":"Builds/tests Rust crates and installs Rapid Rust.","repair":"Install Rust through rustup, then verify Cargo is on PATH.","verify":"cargo --version"},
+    {"id":"rustup","label":"rustup","required":false,"version_args":["--version"],"why":"Manages toolchains and Wasm compilation targets.","repair":"Install rustup and run: rustup target add wasm32-unknown-unknown","verify":"rustup target list --installed"},
+    {"id":"worker-build","label":"worker-build","required":false,"version_args":["--version"],"why":"Builds Rust/Wasm Workers for Cloudflare.","repair":"For Rapid Rust development run: cargo install worker-build","verify":"worker-build --version"},
+    {"id":"wrangler","label":"Wrangler","required":false,"version_args":["--version"],"why":"Runs local Workers and explicitly dry-runs or deploys them.","repair":"Install Wrangler in the project: npm install -D wrangler; use npx wrangler --version.","verify":"npx wrangler --version"}
+  ]
+}

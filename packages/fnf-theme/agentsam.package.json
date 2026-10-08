@@ -1,0 +1,36 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "theme",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/fnf-theme",
+    "purpose_source": "package-manifest-description",
+    "readme": null
+  },
+  "execution_domains": [],
+  "id": "fnf-theme",
+  "install": [],
+  "languages": [
+    "javascript"
+  ],
+  "name": "@inneranimalmedia/fnf-theme",
+  "purpose": "Brand-specific FNF theme renderer consuming portable ThemePreview registry",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/fnf-theme",
+    "public_claim": false
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

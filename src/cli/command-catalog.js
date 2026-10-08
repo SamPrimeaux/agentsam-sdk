@@ -8,6 +8,10 @@
 /** @type {CliCommandEntry[]} */
 export const CLI_COMMAND_CATALOG = Object.freeze([
   { id: 'help', aliases: ['-h', '--help'], summary: 'Interactive or topic help from this catalog', topic: 'start', skill: 'agentsam-app-fundamentals', common: true },
+  { id: 'doctor', summary: 'Offline toolchain diagnosis with repair commands', topic: 'start', usage: ['agentsam doctor', 'agentsam doctor --json', 'agentsam doctor --teach'] },
+  { id: 'explain', summary: 'Explain a runtime or package from the offline catalog', topic: 'start', usage: ['agentsam explain rust', 'agentsam explain package agentsam-hooks'] },
+  { id: 'assist', summary: 'Choose software architecture using deterministic questions', topic: 'start', usage: ['agentsam assist', 'agentsam assist --answers <json> --json'] },
+  { id: 'choose', summary: 'Choose an execution runtime from explicit goals', topic: 'start', usage: ['agentsam choose runtime --goal reusable-native-logic'] },
   { id: 'create', summary: 'Scaffold a new AgentSam project from a preset', topic: 'create', skill: 'agentsam-app-fundamentals', common: false },
   { id: 'add', summary: 'Add an explicit feature/capability selection', topic: 'create', skill: 'agentsam-app-fundamentals' },
   { id: 'plugins', summary: 'Install and manage AgentSam plugins', topic: 'create', skill: 'agentsam-app-fundamentals' },

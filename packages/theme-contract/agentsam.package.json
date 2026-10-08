@@ -1,0 +1,36 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "theme",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/theme-contract",
+    "purpose_source": "package-manifest-description",
+    "readme": null
+  },
+  "execution_domains": [],
+  "id": "theme-contract",
+  "install": [],
+  "languages": [
+    "javascript"
+  ],
+  "name": "@inneranimalmedia/theme-contract",
+  "purpose": "Portable provider-neutral theme preview registry and composition contracts",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/theme-contract",
+    "public_claim": false
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

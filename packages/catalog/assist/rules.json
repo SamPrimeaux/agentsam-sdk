@@ -4,7 +4,9 @@
     {
       "id": "rust-shared-core",
       "priority": 100,
-      "when": {"reusable_core": "yes"},
+      "when": {
+        "reusable_core": "yes"
+      },
       "recommend": {
         "title": "Rust shared core + host adapter",
         "language": "rust",
@@ -28,7 +30,11 @@
     {
       "id": "rust-crypto-auth",
       "priority": 95,
-      "when": {"execution": "edge", "signed_input": "yes", "lifetime": "short"},
+      "when": {
+        "execution": "edge",
+        "signed_input": "yes",
+        "lifetime": "short"
+      },
       "recommend": {
         "title": "Rust/Wasm signed-request Worker",
         "language": "rust",
@@ -43,7 +49,11 @@
     {
       "id": "rust-data-processor",
       "priority": 90,
-      "when": {"goal": "data", "execution": "edge", "workload_size": "bounded"},
+      "when": {
+        "goal": "data",
+        "execution": "edge",
+        "workload_size": "bounded"
+      },
       "recommend": {
         "title": "Rust/Wasm typed data processor",
         "language": "rust",
@@ -57,7 +67,11 @@
     {
       "id": "worker-api",
       "priority": 80,
-      "when": {"goal": "api", "execution": "edge", "lifetime": "short"},
+      "when": {
+        "goal": "api",
+        "execution": "edge",
+        "lifetime": "short"
+      },
       "recommend": {
         "title": "Cloudflare Worker",
         "runtime": "cloudflare-worker",
@@ -70,7 +84,9 @@
     {
       "id": "container-or-go",
       "priority": 85,
-      "when": {"lifetime": "long"},
+      "when": {
+        "lifetime": "long"
+      },
       "recommend": {
         "title": "Normal service/container runtime",
         "runtime": "container-or-native-service",
@@ -85,7 +101,11 @@
       "id": "native-required",
       "priority": 110,
       "when_any": {
-        "native_access": ["process", "libraries"]
+        "native_access": [
+          "filesystem",
+          "process",
+          "libraries"
+        ]
       },
       "recommend": {
         "title": "Native process or container",
@@ -98,7 +118,9 @@
     {
       "id": "desktop-tauri",
       "priority": 80,
-      "when": {"goal": "desktop"},
+      "when": {
+        "goal": "desktop"
+      },
       "recommend": {
         "title": "Tauri-style TypeScript UI + Rust native boundary",
         "language": "typescript+rust",
@@ -111,7 +133,9 @@
     {
       "id": "browser-typescript",
       "priority": 80,
-      "when": {"goal": "web-ui"},
+      "when": {
+        "goal": "web-ui"
+      },
       "recommend": {
         "title": "TypeScript/browser application",
         "language": "typescript",

@@ -6,7 +6,11 @@ This does not classify product strategy. It gathers facts an agent/human can rev
 
 from __future__ import annotations
 
-import argparse, json, re, tomllib
+import argparse, json, re
+try:
+    import tomllib
+except ModuleNotFoundError:
+    raise SystemExit("Catalog evidence tooling requires Python 3.11+; try python3.14 or python3.12.")
 from collections import Counter
 from pathlib import Path
 
