@@ -1,0 +1,68 @@
+{
+  "directory": "packages/agentsam-merch",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/agentsam-merch",
+      "Profile contract",
+      "Derivative authority",
+      "Collection Lab",
+      "Provider adapters",
+      "CLI kernel"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-merch/README.md",
+    "summary": "Portable manufacturing preflight and merch planning for AgentSam applications.",
+    "title": "@inneranimalmedia/agentsam-merch"
+  },
+  "registry": {
+    "bin": {
+      "agentsam-merch": "./bin/agentsam-merch.mjs"
+    },
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": [
+        "sharp",
+        "svgo"
+      ]
+    },
+    "description": "Provider-neutral manufacturing profiles, preflight, derivative planning, and collection-lab primitives for AgentSam.",
+    "exports": [
+      ".",
+      "./adapters/completeful",
+      "./collection-lab",
+      "./compatibility",
+      "./derivatives",
+      "./node",
+      "./profiles",
+      "./profiles/*",
+      "./registry",
+      "./src/adapters-completeful.js",
+      "./src/collection-lab.js",
+      "./src/compatibility.js",
+      "./src/derivatives.js",
+      "./src/index.d.ts",
+      "./src/index.js",
+      "./src/node/index.d.ts",
+      "./src/node/index.js",
+      "./src/profile-registry.js",
+      "./src/profile.js",
+      "./src/transforms.js",
+      "./transforms"
+    ],
+    "kind": "npm",
+    "main": null,
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-merch",
+    "private": false,
+    "scripts": [
+      "test"
+    ],
+    "types": "./src/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 16,
+    "typescript": 2
+  }
+}

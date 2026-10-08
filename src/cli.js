@@ -54,6 +54,8 @@ import { runLogin, runLogout } from './commands/account-auth.js';
 import { runPlugins } from './commands/plugins.js';
 import { runCredentials } from './commands/credentials.js';
 import { runCheatSheet } from './commands/cheat-sheet.js';
+import { runCatalog } from './commands/catalog.js';
+import { runCatalogDoctor } from './commands/catalog-doctor.js';
 import { runHooks } from './commands/hooks.js';
 import { runCompute } from './commands/compute.js';
 import { runGoogleCloud } from './commands/google-cloud.js';
@@ -435,6 +437,12 @@ if (command === '--version' || command === '-v') {
   } else {
     printHelp();
   }
+} else if (command === 'explain' || command === 'assist' || (command === 'choose' && rest[0] === 'runtime')) {
+  const code = await runCatalog(command === 'choose' ? 'choose' : command, command === 'choose' ? rest.slice(1) : rest);
+  if (code) process.exitCode = code;
+} else if (command === 'doctor') {
+  const code = runCatalogDoctor(rest);
+  if (code) process.exitCode = code;
 } else if (command === 'create') {
   try {
     const opts = parseCreateArgs(rest);

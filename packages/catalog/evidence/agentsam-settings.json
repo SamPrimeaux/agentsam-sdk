@@ -1,0 +1,57 @@
+{
+  "directory": "packages/agentsam-settings",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/agentsam-settings",
+      "Exports"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-settings/README.md",
+    "summary": "Portable Settings contracts and React UI for AgentSam applications. Hosts supply runtime/account/provider state through `SettingsHost`; the package does not own a parallel settings database.",
+    "title": "@inneranimalmedia/agentsam-settings"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": [
+        "lucide-react",
+        "react",
+        "react-dom"
+      ]
+    },
+    "description": "Portable AgentSam Settings shell, contracts, fixtures, and host adapter surface for desktop and hosted applications.",
+    "exports": [
+      ".",
+      "./contracts",
+      "./dist/contracts/index.d.ts",
+      "./dist/contracts/index.js",
+      "./dist/fixtures/index.d.ts",
+      "./dist/fixtures/index.js",
+      "./dist/frontend/index.d.ts",
+      "./dist/frontend/index.js",
+      "./dist/index.d.ts",
+      "./dist/index.js",
+      "./fixtures",
+      "./frontend"
+    ],
+    "kind": "npm",
+    "main": "./dist/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-settings",
+    "private": false,
+    "scripts": [
+      "build",
+      "prepack",
+      "test",
+      "typecheck"
+    ],
+    "types": "./dist/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 3,
+    "typescript": 5
+  }
+}

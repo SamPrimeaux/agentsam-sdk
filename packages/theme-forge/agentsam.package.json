@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "theme",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/theme-forge",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-forge/README.md"
+  },
+  "execution_domains": [],
+  "id": "theme-forge",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/theme-forge",
+      "package": "@inneranimalmedia/theme-forge",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript"
+  ],
+  "name": "@inneranimalmedia/theme-forge",
+  "purpose": "A mobile-first local-services prebuild with estimate capture, service-area confidence, project proof, reviews, and practical trust signals that stay sharp on the smallest screen.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/theme-forge",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

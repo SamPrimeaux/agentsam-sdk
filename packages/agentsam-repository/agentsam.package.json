@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-repository",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-repository/README.md"
+  },
+  "execution_domains": [],
+  "id": "agentsam-repository",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-repository",
+      "package": "@inneranimalmedia/agentsam-repository",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript"
+  ],
+  "name": "@inneranimalmedia/agentsam-repository",
+  "purpose": "Portable AgentSam repository identity, Merkle, semantic file metadata, persistence, and repository graph runtime contracts.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-repository",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

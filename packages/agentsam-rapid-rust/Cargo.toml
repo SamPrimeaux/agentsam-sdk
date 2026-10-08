@@ -4,6 +4,11 @@ version = "0.1.0"
 edition = "2021"
 description = "AgentSam native scaffolder and lifecycle CLI for Cloudflare Rust/Wasm Workers"
 license = "MIT"
+repository = "https://github.com/SamPrimeaux/agentsam-sdk"
+homepage = "https://github.com/SamPrimeaux/agentsam-sdk/tree/main/packages/agentsam-rapid-rust"
+readme = "README.md"
+keywords = ["cloudflare", "workers", "wasm", "scaffolding", "agents"]
+categories = ["command-line-utilities", "development-tools"]
 
 [[bin]]
 name = "agentsam-rapid-rust"

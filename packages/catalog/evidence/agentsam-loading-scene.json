@@ -1,0 +1,54 @@
+{
+  "directory": "packages/agentsam-loading-scene",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/agentsam-loading-scene",
+      "Nine fullscreen studies",
+      "Architecture",
+      "React",
+      "Canonical AgentSam activity",
+      "Performance contract",
+      "Preview",
+      "Gates"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-loading-scene/README.md",
+    "summary": "Provider-agnostic runtime visualization for AgentSam.",
+    "title": "@inneranimalmedia/agentsam-loading-scene"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": [
+        "react"
+      ]
+    },
+    "description": "Provider-agnostic runtime visualization with six seamless full-frame Computational Hyperspace studies driven by real AgentSam runtime semantics.",
+    "exports": [
+      ".",
+      "./dist/index.d.ts",
+      "./dist/index.js",
+      "./dist/react/index.d.ts",
+      "./dist/react/index.js",
+      "./react"
+    ],
+    "kind": "npm",
+    "main": "./dist/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-loading-scene",
+    "private": false,
+    "scripts": [
+      "build",
+      "prepack",
+      "test",
+      "typecheck"
+    ],
+    "types": "./dist/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "typescript": 26
+  }
+}

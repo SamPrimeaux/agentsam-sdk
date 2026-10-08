@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-loading-scene",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-loading-scene/README.md"
+  },
+  "execution_domains": [],
+  "id": "agentsam-loading-scene",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-loading-scene",
+      "package": "@inneranimalmedia/agentsam-loading-scene",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/agentsam-loading-scene",
+  "purpose": "Provider-agnostic runtime visualization with six seamless full-frame Computational Hyperspace studies driven by real AgentSam runtime semantics.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-loading-scene",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

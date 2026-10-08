@@ -1,0 +1,91 @@
+{
+  "directory": "packages/identity",
+  "readme": {
+    "headings": [
+      "Identity (`packages/identity`)",
+      "Customer API",
+      "Layout",
+      "SDK philosophy",
+      "Publish (alpha)",
+      "or pin: @inneranimalmedia/agentsam-sdk@2.0.0-alpha.identity.1",
+      "IAM design lab"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/identity/README.md",
+    "summary": "inneranimalmedia (reference) \u2192 agentsam-sdk (product) \u2192 Legendary-OS (first external proof)",
+    "title": "Identity (`packages/identity`)"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Identity module for @inneranimalmedia/agentsam-sdk (workspace \u2014 publish via root SDK)",
+    "exports": [
+      ".",
+      "./adapters/cloudflare-d1",
+      "./adapters/iam-compat",
+      "./adapters/portable-d1",
+      "./adapters/sqlite",
+      "./contracts/auth-config",
+      "./contracts/external-identity",
+      "./contracts/identity",
+      "./contracts/identity-store",
+      "./contracts/provider",
+      "./contracts/session",
+      "./contracts/sign-in-options",
+      "./frontend/auth-portal/*",
+      "./oauth/callback",
+      "./oauth/consent-view",
+      "./provider-contract",
+      "./providers",
+      "./providers/chatgpt",
+      "./providers/cloudflare",
+      "./providers/email",
+      "./providers/gcp",
+      "./providers/github",
+      "./providers/google",
+      "./providers/iam",
+      "./src/adapters/cloudflare-d1/index.js",
+      "./src/adapters/iam-compat/index.js",
+      "./src/adapters/portable-d1/index.js",
+      "./src/adapters/sqlite/index.js",
+      "./src/contracts/auth-config.js",
+      "./src/contracts/external-identity.js",
+      "./src/contracts/identity-store.js",
+      "./src/contracts/identity.js",
+      "./src/contracts/provider.js",
+      "./src/contracts/session.js",
+      "./src/contracts/sign-in-options.js",
+      "./src/frontend/auth-portal/*",
+      "./src/index.js",
+      "./src/oauth/callback.js",
+      "./src/oauth/consent-view.js",
+      "./src/provider-contract.js",
+      "./src/providers/chatgpt/index.js",
+      "./src/providers/cloudflare/index.js",
+      "./src/providers/email/index.js",
+      "./src/providers/gcp/index.js",
+      "./src/providers/github/index.js",
+      "./src/providers/google/index.js",
+      "./src/providers/iam/index.js",
+      "./src/providers/index.js"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-identity",
+    "private": false,
+    "scripts": [
+      "preview:auth-portal",
+      "test"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 95
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-database-editor",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-database-editor/README.md"
+  },
+  "execution_domains": [],
+  "id": "agentsam-database-editor",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-database-editor",
+      "package": "@inneranimalmedia/agentsam-database-editor",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript",
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/agentsam-database-editor",
+  "purpose": "Portable AgentSam Database Editor \u2014 adapters for SQLite/D1/Postgres/Supabase + vectors surface. Donor: IAM /dashboard/database. Independent project; not affiliated with Supabase.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-database-editor",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

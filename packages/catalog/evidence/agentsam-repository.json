@@ -1,0 +1,50 @@
+{
+  "directory": "packages/agentsam-repository",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/agentsam-repository"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-repository/README.md",
+    "summary": "Owned repository/runtime package for AgentSam.",
+    "title": "@inneranimalmedia/agentsam-repository"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [
+        "typescript"
+      ],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Portable AgentSam repository identity, Merkle, semantic file metadata, persistence, and repository graph runtime contracts.",
+    "exports": [
+      ".",
+      "./contracts",
+      "./git-context",
+      "./merkle",
+      "./merkle/cloudflare-persistence",
+      "./merkle/persistence",
+      "./src/contracts.js",
+      "./src/git-context.js",
+      "./src/index.js",
+      "./src/merkle/cloudflare-persistence.js",
+      "./src/merkle/index.js",
+      "./src/merkle/persistence.js"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-repository",
+    "private": false,
+    "scripts": [
+      "test"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 24
+  }
+}

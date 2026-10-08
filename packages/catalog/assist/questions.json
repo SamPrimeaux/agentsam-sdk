@@ -1,0 +1,205 @@
+{
+  "schema": "agentsam.assist-questions.v1",
+  "questions": [
+    {
+      "id": "goal",
+      "prompt": "What are you primarily building?",
+      "options": [
+        [
+          "api",
+          "HTTP/API or webhook endpoint"
+        ],
+        [
+          "native-core",
+          "Reusable native/domain logic"
+        ],
+        [
+          "data",
+          "Data validation or transformation"
+        ],
+        [
+          "service",
+          "Long-running backend/service"
+        ],
+        [
+          "desktop",
+          "Desktop/native application"
+        ],
+        [
+          "web-ui",
+          "Browser/web interface"
+        ],
+        [
+          "library",
+          "Reusable software package/library"
+        ]
+      ]
+    },
+    {
+      "id": "execution",
+      "prompt": "Where does the important code need to run?",
+      "options": [
+        [
+          "edge",
+          "Edge/request runtime such as Cloudflare Workers"
+        ],
+        [
+          "server",
+          "Normal server/Linux process"
+        ],
+        [
+          "desktop",
+          "User's local desktop/device"
+        ],
+        [
+          "browser",
+          "Browser"
+        ],
+        [
+          "multiple",
+          "More than one host/runtime"
+        ]
+      ]
+    },
+    {
+      "id": "lifetime",
+      "prompt": "What execution shape best matches the workload?",
+      "options": [
+        [
+          "short",
+          "Short request/response or bounded job"
+        ],
+        [
+          "long",
+          "Long-running process or background worker"
+        ],
+        [
+          "mixed",
+          "Both short and long-running work"
+        ]
+      ]
+    },
+    {
+      "id": "native_access",
+      "prompt": "Does it need normal OS capabilities?",
+      "options": [
+        [
+          "none",
+          "No special native OS access"
+        ],
+        [
+          "filesystem",
+          "Filesystem/native APIs"
+        ],
+        [
+          "process",
+          "Child processes or native command execution"
+        ],
+        [
+          "libraries",
+          "Native system libraries/toolchains"
+        ]
+      ]
+    },
+    {
+      "id": "browser_surface",
+      "prompt": "Is a browser/UI surface required?",
+      "options": [
+        [
+          "yes",
+          "Yes, a browser/UI is part of the product"
+        ],
+        [
+          "no",
+          "No browser/UI surface needed"
+        ]
+      ]
+    },
+    {
+      "id": "reusable_core",
+      "prompt": "Should the same core logic be reused across Worker/CLI/desktop/tests?",
+      "options": [
+        [
+          "yes",
+          "Yes, shared core logic matters"
+        ],
+        [
+          "no",
+          "No, one runtime is enough"
+        ]
+      ]
+    },
+    {
+      "id": "signed_input",
+      "prompt": "Do you need to verify signed/authenticated incoming requests?",
+      "options": [
+        [
+          "yes",
+          "Yes"
+        ],
+        [
+          "no",
+          "No"
+        ]
+      ]
+    },
+    {
+      "id": "workload_size",
+      "prompt": "How heavy is the computation/data work?",
+      "options": [
+        [
+          "bounded",
+          "Small/bounded enough for request-time execution"
+        ],
+        [
+          "heavy",
+          "Large, long-running, memory-heavy, or toolchain-heavy"
+        ]
+      ]
+    },
+    {
+      "id": "portability",
+      "prompt": "Which matters more: cross-host portability or native OS access?",
+      "options": [
+        [
+          "portable",
+          "Cross-host portability"
+        ],
+        [
+          "native",
+          "Native system integration"
+        ],
+        [
+          "balanced",
+          "Both matter"
+        ]
+      ]
+    },
+    {
+      "id": "preferred_runtime",
+      "prompt": "Do you have an existing language/runtime constraint?",
+      "options": [
+        [
+          "any",
+          "No fixed preference"
+        ],
+        [
+          "rust",
+          "Rust"
+        ],
+        [
+          "typescript",
+          "TypeScript/JavaScript"
+        ],
+        [
+          "go",
+          "Go"
+        ],
+        [
+          "python",
+          "Python"
+        ]
+      ]
+    }
+  ]
+}

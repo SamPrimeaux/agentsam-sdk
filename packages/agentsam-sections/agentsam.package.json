@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-sections",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-sections/README.md"
+  },
+  "execution_domains": [],
+  "id": "agentsam-sections",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-sections",
+      "package": "@inneranimalmedia/agentsam-sections",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/agentsam-sections",
+  "purpose": "Reusable mxs-* page kit: global header/footer, scroll-driven split sections, and a media slot for image, gif, video, glb and sandboxed app previews.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-sections",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

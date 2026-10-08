@@ -1,0 +1,42 @@
+{
+  "directory": "packages/agentsam-knowledge",
+  "readme": {
+    "headings": [],
+    "path": null,
+    "summary": null,
+    "title": null
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Portable AutoRAG discovery, adapter registries, probes, and company routing contracts for AgentSam.",
+    "exports": [
+      ".",
+      "./autorag",
+      "./backends",
+      "./providers",
+      "./src/autorag/index.js",
+      "./src/backends/index.js",
+      "./src/index.js",
+      "./src/providers/index.js"
+    ],
+    "kind": "npm",
+    "main": null,
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-knowledge",
+    "private": false,
+    "scripts": [
+      "test"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 6
+  }
+}

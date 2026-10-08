@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/copro-proof",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/copro-proof/README.md"
+  },
+  "execution_domains": [],
+  "id": "copro-proof",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/copro-proof",
+      "package": "@inneranimalmedia/copro-proof",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript"
+  ],
+  "name": "@inneranimalmedia/copro-proof",
+  "purpose": "Mechanical vertical proof that CoPro project, media, editor, timeline, render, templates, and provider contracts compose correctly.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/copro-proof",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

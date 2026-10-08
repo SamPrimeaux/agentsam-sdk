@@ -1,0 +1,40 @@
+{
+  "directory": "packages/copro-render",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/copro-render"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/copro-render/README.md",
+    "summary": "The saved project owns creative intent. RenderPlan owns output intent. Runtime adapters decide whether Remotion, WebCodecs, ffmpeg, native, or cloud machinery should execute the plan.",
+    "title": "@inneranimalmedia/copro-render"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "CoPro render planning and renderer capability selection without renderer leakage into project files.",
+    "exports": [
+      ".",
+      "./package.json",
+      "./src/index.js"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/copro-render",
+    "private": false,
+    "scripts": [
+      "pack:dry",
+      "test"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 2
+  }
+}

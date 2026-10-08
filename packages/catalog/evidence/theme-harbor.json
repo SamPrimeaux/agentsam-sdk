@@ -1,0 +1,41 @@
+{
+  "directory": "packages/theme-harbor",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/theme-harbor"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/theme-harbor/README.md",
+    "summary": "Calm confidence for serious decisions.",
+    "title": "@inneranimalmedia/theme-harbor"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "A professional-services prebuild for trust-heavy businesses: clear service storytelling, proof, resources, and lead capture with enough editorial polish to avoid the usual corporate-blue template look.",
+    "exports": [
+      ".",
+      "./node",
+      "./site/*",
+      "./src/index.js",
+      "./src/node.js"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/theme-harbor",
+    "private": false,
+    "scripts": [
+      "test"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 4
+  }
+}

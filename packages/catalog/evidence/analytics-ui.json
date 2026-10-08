@@ -1,0 +1,43 @@
+{
+  "directory": "packages/analytics-ui",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/analytics-ui"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/analytics-ui/README.md",
+    "summary": "Neutral analytics presentation primitives harvested from the proven Ember Supply analytics UI.",
+    "title": "@inneranimalmedia/analytics-ui"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": [
+        "react"
+      ]
+    },
+    "description": "Domain-neutral analytics presentation primitives for Inner Animal Media products.",
+    "exports": [
+      ".",
+      "./dist/index.d.ts",
+      "./dist/index.js"
+    ],
+    "kind": "npm",
+    "main": "./dist/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/analytics-ui",
+    "private": false,
+    "scripts": [
+      "build",
+      "prepack",
+      "typecheck"
+    ],
+    "types": "./dist/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "typescript": 4
+  }
+}

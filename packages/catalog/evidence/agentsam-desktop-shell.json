@@ -1,0 +1,55 @@
+{
+  "directory": "packages/agentsam-desktop-shell",
+  "readme": {
+    "headings": [
+      "AgentSam desktop shell",
+      "What you open when you launch the .app",
+      "agentsam-sdk only (not inneranimalmedia)",
+      "Auth",
+      "Brands"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-desktop-shell/README.md",
+    "summary": "Tauri multi-brand shell. **Local Studio** is the primary product install.",
+    "title": "AgentSam desktop shell"
+  },
+  "registry": {
+    "bin": {
+      "build-brand": "scripts/build-brand.mjs"
+    },
+    "dependencies": {
+      "dependencies": [
+        "sharp"
+      ],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Tauri desktop shell for AgentSam-powered brand dashboards \u2014 manifest-driven, multi-brand installs. Independent project; not affiliated with Tauri.",
+    "exports": [],
+    "kind": "npm",
+    "main": null,
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-desktop-shell",
+    "private": false,
+    "scripts": [
+      "build",
+      "build:brand",
+      "build:desktop-assets",
+      "build:shell-only",
+      "bundle",
+      "bundle:app",
+      "bundle:shell-only",
+      "dev",
+      "prepare:sidecars",
+      "sync:local-studio",
+      "test",
+      "typecheck"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 8,
+    "rust": 16
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-queue-control",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-queue-control/README.md"
+  },
+  "execution_domains": [],
+  "id": "agentsam-queue-control",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-queue-control",
+      "package": "@inneranimalmedia/agentsam-queue-control",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript"
+  ],
+  "name": "@inneranimalmedia/agentsam-queue-control",
+  "purpose": "Portable AgentSam queue, job-routing, retry, scheduling, and execution-control primitives with provider adapters.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-queue-control",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

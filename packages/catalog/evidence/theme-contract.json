@@ -1,0 +1,34 @@
+{
+  "directory": "packages/theme-contract",
+  "readme": {
+    "headings": [],
+    "path": null,
+    "summary": null,
+    "title": null
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Portable provider-neutral theme preview registry and composition contracts",
+    "exports": [
+      "./preview-registry",
+      "./runtime/theme-preview-registry.js"
+    ],
+    "kind": "npm",
+    "main": null,
+    "module": null,
+    "name": "@inneranimalmedia/theme-contract",
+    "private": true,
+    "scripts": [],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 1
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "directory": "packages/theme-ember",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/theme-ember"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/theme-ember/README.md",
+    "summary": "An editorial commerce prebuild that mixes product discovery, brand story, collections, community, and launch moments without collapsing into another tiled product grid.",
+    "title": "@inneranimalmedia/theme-ember"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "An editorial commerce prebuild that mixes product discovery, brand story, collections, community, and launch moments without collapsing into another tiled product grid.",
+    "exports": [
+      ".",
+      "./node",
+      "./site/*",
+      "./src/index.js",
+      "./src/node.js"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/theme-ember",
+    "private": false,
+    "scripts": [
+      "test"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 3
+  }
+}

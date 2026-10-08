@@ -1,0 +1,42 @@
+{
+  "directory": "packages/agentsam-errors",
+  "readme": {
+    "headings": [],
+    "path": null,
+    "summary": null,
+    "title": null
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Canonical AgentSam runtime error normalization, classification, transport, remediation and rendering.",
+    "exports": [
+      ".",
+      "./catalog",
+      "./protocol/agentsam.error.v2.schema.json",
+      "./protocol/error-catalog.json",
+      "./schema",
+      "./src/index.js",
+      "./types/index.d.ts"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-errors",
+    "private": false,
+    "scripts": [
+      "test"
+    ],
+    "types": "./types/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 34,
+    "typescript": 1
+  }
+}

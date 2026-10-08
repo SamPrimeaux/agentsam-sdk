@@ -1,0 +1,92 @@
+{
+  "directory": "packages/agentsam-contracts",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/agentsam-contracts",
+      "Execution-plane ownership"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-contracts/README.md",
+    "summary": "Framework-neutral AgentSam contracts shared by product surfaces. This package has no React dependency and must not know whether the host is Local Studio, CAD Studio, CMS Studio, Ember Supply, or another product.",
+    "title": "@inneranimalmedia/agentsam-contracts"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Framework-neutral AgentSam contracts for workbench, tools, providers, events, hooks, execution, identity and repository context.",
+    "exports": [
+      ".",
+      "./adapter",
+      "./agent",
+      "./artifacts",
+      "./authority",
+      "./context",
+      "./dist/adapter.d.ts",
+      "./dist/adapter.js",
+      "./dist/agent.d.ts",
+      "./dist/agent.js",
+      "./dist/artifacts.d.ts",
+      "./dist/artifacts.js",
+      "./dist/authority.d.ts",
+      "./dist/authority.js",
+      "./dist/context.d.ts",
+      "./dist/context.js",
+      "./dist/errors.d.ts",
+      "./dist/errors.js",
+      "./dist/events.d.ts",
+      "./dist/events.js",
+      "./dist/execution.d.ts",
+      "./dist/execution.js",
+      "./dist/hooks.d.ts",
+      "./dist/hooks.js",
+      "./dist/identity.d.ts",
+      "./dist/identity.js",
+      "./dist/index.d.ts",
+      "./dist/index.js",
+      "./dist/models.d.ts",
+      "./dist/models.js",
+      "./dist/providers.d.ts",
+      "./dist/providers.js",
+      "./dist/repository.d.ts",
+      "./dist/repository.js",
+      "./dist/run.d.ts",
+      "./dist/run.js",
+      "./dist/tools.d.ts",
+      "./dist/tools.js",
+      "./dist/widgets.d.ts",
+      "./dist/widgets.js",
+      "./errors",
+      "./events",
+      "./execution",
+      "./hooks",
+      "./identity",
+      "./models",
+      "./providers",
+      "./repository",
+      "./run",
+      "./tools",
+      "./widgets"
+    ],
+    "kind": "npm",
+    "main": "./dist/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-contracts",
+    "private": false,
+    "scripts": [
+      "build",
+      "prepack",
+      "test",
+      "typecheck"
+    ],
+    "types": "./dist/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 5,
+    "typescript": 17
+  }
+}

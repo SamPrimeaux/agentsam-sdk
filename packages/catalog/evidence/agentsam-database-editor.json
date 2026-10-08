@@ -1,0 +1,82 @@
+{
+  "directory": "packages/agentsam-database-editor",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/agentsam-database-editor",
+      "Package boundary",
+      "Local Studio",
+      "Resource rules",
+      "CLI/install"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-database-editor/README.md",
+    "summary": "Portable AgentSam Database Editor harvested from the production InnerAnimalMedia database studio.",
+    "title": "@inneranimalmedia/agentsam-database-editor"
+  },
+  "registry": {
+    "bin": {
+      "agentsam-database-editor": "bin/agentsam-database-editor.mjs"
+    },
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": [
+        "lucide-react",
+        "react",
+        "react-dom",
+        "recharts"
+      ]
+    },
+    "description": "Portable AgentSam Database Editor \u2014 adapters for SQLite/D1/Postgres/Supabase + vectors surface. Donor: IAM /dashboard/database. Independent project; not affiliated with Supabase.",
+    "exports": [
+      ".",
+      "./adapters/d1",
+      "./adapters/postgres",
+      "./adapters/sqlite",
+      "./adapters/supabase",
+      "./backend",
+      "./backend/index.js",
+      "./backend/sqlite",
+      "./backend/sqlite.js",
+      "./contracts",
+      "./dist/frontend/index.d.ts",
+      "./dist/frontend/index.js",
+      "./dist/src/ui/client.d.ts",
+      "./dist/src/ui/index.d.ts",
+      "./dist/ui/client.js",
+      "./dist/ui/index.js",
+      "./frontend",
+      "./manifest",
+      "./metrics/d1",
+      "./metrics/postgres",
+      "./src/adapters/d1.js",
+      "./src/adapters/postgres.js",
+      "./src/adapters/sqlite.js",
+      "./src/adapters/supabase.js",
+      "./src/contracts/index.js",
+      "./src/index.js",
+      "./src/manifest.js",
+      "./src/metrics/d1.js",
+      "./src/metrics/postgres.js",
+      "./ui",
+      "./ui/client"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-database-editor",
+    "private": false,
+    "scripts": [
+      "build",
+      "prepack",
+      "test",
+      "typecheck"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 23,
+    "typescript": 6
+  }
+}

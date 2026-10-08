@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-scoring",
+    "purpose_source": "package-manifest-description",
+    "readme": null
+  },
+  "execution_domains": [],
+  "id": "agentsam-scoring",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-scoring",
+      "package": "@inneranimalmedia/agentsam-scoring",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/agentsam-scoring",
+  "purpose": "Generic ScoreCard contract and versioned weight formulas. Raw evidence is SSOT; scores are recomputable derived views \u2014 never a grand similarity_score.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-scoring",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

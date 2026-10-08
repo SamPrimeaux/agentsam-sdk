@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "ui-package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/copro-ui",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/copro-ui/README.md"
+  },
+  "execution_domains": [],
+  "id": "copro-ui",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/copro-ui",
+      "package": "@inneranimalmedia/copro-ui",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/copro-ui",
+  "purpose": "Mobile-first creator UI for CoPro with preview, timeline, direct manipulation, edit tools, media tray, transport, and responsive desktop composition.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/copro-ui",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

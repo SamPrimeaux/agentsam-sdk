@@ -1,0 +1,41 @@
+{
+  "directory": "packages/theme-grove",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/theme-grove"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/theme-grove/README.md",
+    "summary": "Show the work. Make the craft feel premium.",
+    "title": "@inneranimalmedia/theme-grove"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "A visual service-business prebuild centered on project galleries, material detail, process, reviews, and estimate conversion \u2014 polished enough for a studio, practical enough for a crew.",
+    "exports": [
+      ".",
+      "./node",
+      "./site/*",
+      "./src/index.js",
+      "./src/node.js"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/theme-grove",
+    "private": false,
+    "scripts": [
+      "test"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 3
+  }
+}

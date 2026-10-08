@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "developer-tool",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-rapid-rust",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-rapid-rust/README.md"
+  },
+  "execution_domains": [],
+  "id": "agentsam-rapid-rust",
+  "install": [
+    {
+      "command": "cargo install agentsam-rapid-rust",
+      "package": "agentsam-rapid-rust",
+      "type": "cargo"
+    }
+  ],
+  "languages": [
+    "rust"
+  ],
+  "name": "agentsam-rapid-rust",
+  "purpose": "AgentSam native scaffolder and lifecycle CLI for Cloudflare Rust/Wasm Workers",
+  "registry": {
+    "kind": "cargo",
+    "name": "agentsam-rapid-rust",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "0.1.0"
+}

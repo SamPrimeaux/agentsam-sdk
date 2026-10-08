@@ -1,0 +1,43 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-abs",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-abs/README.md"
+  },
+  "execution_domains": [],
+  "id": "agentsam-abs",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-abs",
+      "package": "@inneranimalmedia/agentsam-abs",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript",
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/agentsam-abs",
+  "purpose": "AgentSam Auto Browser Shell: dual-mode Explore/Build browser surface with provider-agnostic generative navigation, sandboxed previews, deterministic history, and packaged runtime scenes.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-abs",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

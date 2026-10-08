@@ -1,0 +1,60 @@
+{
+  "directory": "packages/agentsam-queue-control",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/agentsam-queue-control",
+      "Goals",
+      "Fast start",
+      "Logical vs physical queues",
+      "Cloudflare",
+      "Batch AI",
+      "Multi-worker job kinds",
+      "Relationship to WorkGraph",
+      "Relationship to AgentSam tools and MCP"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-queue-control/README.md",
+    "summary": "Portable queue and execution-control primitives for AgentSam.",
+    "title": "@inneranimalmedia/agentsam-queue-control"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Portable AgentSam queue, job-routing, retry, scheduling, and execution-control primitives with provider adapters.",
+    "exports": [
+      ".",
+      "./adapters/cloudflare",
+      "./adapters/memory",
+      "./adapters/sqlite",
+      "./contracts",
+      "./dispatch",
+      "./policy",
+      "./src/adapters/cloudflare.js",
+      "./src/adapters/memory.js",
+      "./src/adapters/sqlite.js",
+      "./src/contracts.js",
+      "./src/dispatch.js",
+      "./src/index.js",
+      "./src/policy.js",
+      "./src/topology.js",
+      "./topology"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-queue-control",
+    "private": false,
+    "scripts": [
+      "test"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 11
+  }
+}

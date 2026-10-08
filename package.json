@@ -163,6 +163,7 @@
     "packages/agentsam-contracts",
     "packages/agentsam-hooks",
     "packages/agentsam-errors",
+    "packages/catalog",
     "packages/agentsam-repository",
     "packages/agentsam-knowledge",
     "packages/agentsam-nav/package.json",
@@ -305,6 +306,7 @@
     "packages/copro-storage"
   ],
   "scripts": {
+    "catalog:check": "python3 scripts/catalog/build_catalog.py --repo . --check",
     "test": "npm run test:standard && npm --prefix packages/identity test && npm --prefix packages/agentsam-brand test && npm run test:connectors && npm run test:providers",
     "test:brand": "npm --prefix packages/agentsam-brand test",
     "brand:scan": "python3 scripts/brand-compliance/brand_compliance.py scan",

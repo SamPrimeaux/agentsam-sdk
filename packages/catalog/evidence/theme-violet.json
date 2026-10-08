@@ -1,0 +1,41 @@
+{
+  "directory": "packages/theme-violet",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/theme-violet"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/theme-violet/README.md",
+    "summary": "Make the cause impossible to scroll past.",
+    "title": "@inneranimalmedia/theme-violet"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "A campaign-forward prebuild with bold calls to action, impact proof, stories, donation moments, and participation paths designed to turn attention into action.",
+    "exports": [
+      ".",
+      "./node",
+      "./site/*",
+      "./src/index.js",
+      "./src/node.js"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/theme-violet",
+    "private": false,
+    "scripts": [
+      "test"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 5
+  }
+}

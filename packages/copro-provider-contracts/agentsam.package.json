@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/copro-provider-contracts",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/copro-provider-contracts/README.md"
+  },
+  "execution_domains": [],
+  "id": "copro-provider-contracts",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/copro-provider-contracts",
+      "package": "@inneranimalmedia/copro-provider-contracts",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "javascript"
+  ],
+  "name": "@inneranimalmedia/copro-provider-contracts",
+  "purpose": "Provider-neutral CoPro capability contracts for media, generation, transcription, embeddings, conversion, and rendering.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/copro-provider-contracts",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

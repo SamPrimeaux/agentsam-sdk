@@ -1,0 +1,68 @@
+{
+  "directory": "packages/theme-scenes",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/theme-scenes",
+      "Install",
+      "Hierarchy",
+      "Scene kinds (harvested from Work/Create HTML)",
+      "Laws",
+      "Quick example",
+      "Presets",
+      "Themes",
+      "Scroll presets",
+      "Demo adapters",
+      "Studio (next)",
+      "Tests"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/theme-scenes/README.md",
+    "summary": "Reusable **scene / shell / block** vocabulary for branded website experiences.",
+    "title": "@inneranimalmedia/theme-scenes"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Reusable scene / shell / block vocabulary for branded website experiences. BrandPack owns look; theme-scenes owns composition.",
+    "exports": [
+      ".",
+      "./blocks",
+      "./contracts",
+      "./demos",
+      "./package.json",
+      "./presets",
+      "./registry",
+      "./scenes",
+      "./shell",
+      "./src/blocks/index.js",
+      "./src/contracts/index.js",
+      "./src/demos/index.js",
+      "./src/index.js",
+      "./src/presets/index.js",
+      "./src/registry.js",
+      "./src/scenes/index.js",
+      "./src/shell/index.js",
+      "./src/themes/index.js",
+      "./src/visuals/index.js",
+      "./themes",
+      "./visuals"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/theme-scenes",
+    "private": false,
+    "scripts": [
+      "test"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 12
+  }
+}

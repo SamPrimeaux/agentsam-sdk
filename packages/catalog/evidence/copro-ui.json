@@ -1,0 +1,52 @@
+{
+  "directory": "packages/copro-ui",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/copro-ui"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/copro-ui/README.md",
+    "summary": "CoPro creator-facing UI primitives.",
+    "title": "@inneranimalmedia/copro-ui"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [
+        "@inneranimalmedia/copro-editor",
+        "@inneranimalmedia/copro-project",
+        "@inneranimalmedia/copro-timeline"
+      ],
+      "optionalDependencies": [],
+      "peerDependencies": [
+        "react",
+        "react-dom"
+      ]
+    },
+    "description": "Mobile-first creator UI for CoPro with preview, timeline, direct manipulation, edit tools, media tray, transport, and responsive desktop composition.",
+    "exports": [
+      ".",
+      "./dist/index.d.ts",
+      "./dist/index.js",
+      "./package.json",
+      "./styles.css",
+      "./styles/copro.css"
+    ],
+    "kind": "npm",
+    "main": "./dist/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/copro-ui",
+    "private": false,
+    "scripts": [
+      "build",
+      "prepack",
+      "test",
+      "typecheck"
+    ],
+    "types": "./dist/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "typescript": 7
+  }
+}

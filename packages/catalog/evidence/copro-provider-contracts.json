@@ -1,0 +1,40 @@
+{
+  "directory": "packages/copro-provider-contracts",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/copro-provider-contracts"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/copro-provider-contracts/README.md",
+    "summary": "Provider-neutral capability contracts for CoPro.",
+    "title": "@inneranimalmedia/copro-provider-contracts"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Provider-neutral CoPro capability contracts for media, generation, transcription, embeddings, conversion, and rendering.",
+    "exports": [
+      ".",
+      "./package.json",
+      "./src/index.js"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/copro-provider-contracts",
+    "private": false,
+    "scripts": [
+      "pack:dry",
+      "test"
+    ],
+    "types": null,
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 2
+  }
+}

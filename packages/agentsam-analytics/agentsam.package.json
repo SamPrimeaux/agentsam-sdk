@@ -1,0 +1,42 @@
+{
+  "avoid_when": [],
+  "catalog_status": "needs-review",
+  "class": "package",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/agentsam-analytics",
+    "purpose_source": "package-manifest-description",
+    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-analytics/README.md"
+  },
+  "execution_domains": [],
+  "id": "agentsam-analytics",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-analytics",
+      "package": "@inneranimalmedia/agentsam-analytics",
+      "type": "npm"
+    }
+  ],
+  "languages": [
+    "typescript"
+  ],
+  "name": "@inneranimalmedia/agentsam-analytics",
+  "purpose": "Portable AgentSam analytics read models and operational analytics surfaces.",
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-analytics",
+    "public_claim": true
+  },
+  "review_required": [
+    "avoid_when",
+    "execution_domains",
+    "status",
+    "topics",
+    "use_when"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "unknown",
+  "topics": [],
+  "use_when": [],
+  "version": "2.6.12"
+}

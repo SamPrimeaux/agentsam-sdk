@@ -1,0 +1,100 @@
+{
+  "directory": "packages/agentsam-hooks",
+  "readme": {
+    "headings": [
+      "`@inneranimalmedia/agentsam-hooks`",
+      "What ships",
+      "JavaScript / TypeScript",
+      "Cross-language command hook",
+      "CLI",
+      "Portable storage pack",
+      "Composition semantics",
+      "MCP, LSP, and sub-agents",
+      "Protocol and bindings",
+      "Security defaults"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-hooks/README.md",
+    "summary": "Portable lifecycle policy and observability for AgentSam runtimes.",
+    "title": "`@inneranimalmedia/agentsam-hooks`"
+  },
+  "registry": {
+    "bin": {
+      "agentsam-hooks": "bin/agentsam-hooks.mjs"
+    },
+    "dependencies": {
+      "dependencies": [],
+      "optionalDependencies": [],
+      "peerDependencies": []
+    },
+    "description": "Provider-neutral, language-agnostic AgentSam lifecycle hooks with callback, command, HTTP, model, tool, MCP, LSP, and sub-agent adapters.",
+    "exports": [
+      ".",
+      "./adapters/agents",
+      "./adapters/callback",
+      "./adapters/capability",
+      "./adapters/command",
+      "./adapters/composite",
+      "./adapters/http",
+      "./adapters/lsp",
+      "./adapters/mcp",
+      "./adapters/provider",
+      "./config",
+      "./contracts",
+      "./package.json",
+      "./protocol/agentsam.hook.output.v1.schema.json",
+      "./protocol/agentsam.hook.receipt.v1.schema.json",
+      "./protocol/agentsam.hook.v1.schema.json",
+      "./protocol/agentsam.hooks.config.v1.schema.json",
+      "./protocol/config",
+      "./protocol/input",
+      "./protocol/output",
+      "./protocol/receipt",
+      "./runtime",
+      "./schema/manifest",
+      "./schema/manifest.json",
+      "./schema/migrations/sqlite/001_hooks_core.sql",
+      "./schema/sqlite",
+      "./src/adapters/agents.js",
+      "./src/adapters/callback.js",
+      "./src/adapters/capability.js",
+      "./src/adapters/command.js",
+      "./src/adapters/composite.js",
+      "./src/adapters/http.js",
+      "./src/adapters/lsp.js",
+      "./src/adapters/mcp.js",
+      "./src/adapters/provider.js",
+      "./src/config.js",
+      "./src/contracts.js",
+      "./src/index.d.ts",
+      "./src/index.js",
+      "./src/runtime.js",
+      "./src/store.js",
+      "./store"
+    ],
+    "kind": "npm",
+    "main": "./src/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-hooks",
+    "private": false,
+    "scripts": [
+      "build",
+      "clean:protocol",
+      "postpack",
+      "posttest",
+      "prepack",
+      "pretest",
+      "sync:protocol",
+      "test",
+      "typecheck"
+    ],
+    "types": "./src/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "go": 4,
+    "javascript": 21,
+    "rust": 2,
+    "typescript": 1
+  }
+}

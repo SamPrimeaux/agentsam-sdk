@@ -1,0 +1,87 @@
+{
+  "directory": "packages/agentsam-workbench",
+  "readme": {
+    "headings": [
+      "@inneranimalmedia/agentsam-workbench",
+      "Floating annotation helper",
+      "Conversation and runtime surfaces",
+      "Widgets"
+    ],
+    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-workbench/README.md",
+    "summary": "Reusable React workbench primitives built on `@inneranimalmedia/agentsam-contracts`.",
+    "title": "@inneranimalmedia/agentsam-workbench"
+  },
+  "registry": {
+    "bin": null,
+    "dependencies": {
+      "dependencies": [
+        "@inneranimalmedia/agentsam-contracts",
+        "@inneranimalmedia/agentsam-loading-scene",
+        "lucide-react"
+      ],
+      "optionalDependencies": [],
+      "peerDependencies": [
+        "react",
+        "react-dom"
+      ]
+    },
+    "description": "Reusable AgentSam workbench primitives for agent threads, composer, browser, terminal and resizable work surfaces.",
+    "exports": [
+      ".",
+      "./agent",
+      "./agent/contextual-composer.css",
+      "./agent/mini-agentsam.css",
+      "./agent/tool-permission.css",
+      "./browser",
+      "./dist/agent/contextual-composer.css",
+      "./dist/agent/index.d.ts",
+      "./dist/agent/index.js",
+      "./dist/agent/mini-agentsam.css",
+      "./dist/agent/tool-permission.css",
+      "./dist/browser/index.d.ts",
+      "./dist/browser/index.js",
+      "./dist/index.d.ts",
+      "./dist/index.js",
+      "./dist/manufacturing/index.d.ts",
+      "./dist/manufacturing/index.js",
+      "./dist/project-control.css",
+      "./dist/projects/index.d.ts",
+      "./dist/projects/index.js",
+      "./dist/shell/index.d.ts",
+      "./dist/shell/index.js",
+      "./dist/terminal/index.d.ts",
+      "./dist/terminal/index.js",
+      "./dist/timeline/index.d.ts",
+      "./dist/timeline/index.js",
+      "./dist/widgets/index.d.ts",
+      "./dist/widgets/index.js",
+      "./dist/widgets/widgets.css",
+      "./manufacturing",
+      "./project-control.css",
+      "./projects",
+      "./shell",
+      "./terminal",
+      "./timeline",
+      "./widgets",
+      "./widgets/widgets.css"
+    ],
+    "kind": "npm",
+    "main": "./dist/index.js",
+    "module": null,
+    "name": "@inneranimalmedia/agentsam-workbench",
+    "private": false,
+    "scripts": [
+      "build",
+      "prepack",
+      "test",
+      "typecheck"
+    ],
+    "types": "./dist/index.d.ts",
+    "version": "2.6.12"
+  },
+  "schema": "agentsam.package-evidence.v1",
+  "source_languages": {
+    "javascript": 7,
+    "typescript": 39
+  }
+}
