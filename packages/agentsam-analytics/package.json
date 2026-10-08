@@ -38,7 +38,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && mkdir -p dist/frontend && cp src/frontend/theme.css dist/frontend/theme.css",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "test": "npm run build && node --test test/*.test.mjs"
   },
   "devDependencies": {
     "@types/react": "^19.2.0",
