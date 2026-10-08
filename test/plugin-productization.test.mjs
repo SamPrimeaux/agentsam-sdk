@@ -80,6 +80,7 @@ test('verify computes READY only from required evidence',()=>{
   assert.equal(ready.status,'READY');
   const missing=verifyPluginProduct(fixture({quality:false}));
   assert.equal(missing.status,'NOT_READY');
+  assert.equal(missing.lifecycle.state,null);
   assert.equal(missing.checks.fresh_account.status,'unverified');
 });
 
@@ -96,6 +97,8 @@ test('runtime receipts override static placeholders without persisting ready sta
   };
   const verified=verifyPluginProduct(root,{evidenceBundle});
   assert.equal(verified.status,'READY');
+  assert.equal(verified.lifecycle.state,'ready');
+  assert.equal(verified.lifecycle.ready,true);
   assert.equal(verified.checks.tool_call.receipt,'receipt:tool-call');
   assert.equal(Object.hasOwn(verified.product,'ready'),false);
 });
@@ -110,6 +113,24 @@ test('receipt renders one verification result instead of running a separate engi
   assert.equal(receipt.schema,'agentsam.plugin-quality-receipt/v1');
   assert.equal(receipt.plugin.id,'agentsam-test');
   assert.equal(receipt.status,'READY');
+  assert.equal(receipt.lifecycle.state,'ready');
   assert.equal(receipt.generatedAt,'2026-10-08T00:00:00.000Z');
   assert.deepEqual(receipt.checks,verification.checks);
+});
+
+
+test('lifecycle distinguishes installed from connected when authorization is missing',()=>{
+  const root=fixture({quality:false});
+  const evidenceBundle={
+    schema:'agentsam.plugin-evidence-bundle/v1',
+    runtimeReceipts:[
+      {check_id:'definition.manifest',status:'passed',receipt_ref:'receipt:def'},
+      {check_id:'installation.account',status:'passed',receipt_ref:'receipt:install'},
+    ],
+  };
+  const verified=verifyPluginProduct(root,{evidenceBundle});
+  assert.equal(verified.lifecycle.state,'needs_connection');
+  assert.equal(verified.lifecycle.installed,true);
+  assert.equal(verified.lifecycle.connected,false);
+  assert.equal(verified.status,'NOT_READY');
 });
