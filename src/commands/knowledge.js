@@ -100,6 +100,7 @@ export async function runKnowledge(argv) {
   if (opts.help) { console.log('agentsam index plan|run|status|history|show|setup-store [--cwd PATH] [--embed] [--max-inputs 100] [--max-characters 200000] [--generation ID] [--json]\nplan is read-only; run defaults to AST/text only; --embed sends selected chunks to the configured provider.'); return; }
   if (positionals.length > 1 || !['plan', 'run', 'status', 'history', 'show', 'setup-store'].includes(command)) throw new Error('Unknown index command; use agentsam index --help.');
   const root = repositoryRoot(opts.cwd), config = resolveKnowledgeConfig(root);
+  if (opts.embed && config.lane?.backend === 'supabase_pgvector') throw new Error('node_api_remote_embedding_requires_host: run index plan/index run without --embed, then autorag remote --publish --allow-paid through an authorized host.');
   const store = await openStore(root, config, !['run', 'setup-store'].includes(command));
   try {
     if (command === 'setup-store') {
@@ -133,6 +134,7 @@ export async function runKnowledgeSearch({
   const root = repositoryRoot(cwd);
   const sqliteFile = localPath(root);
   const config = resolveKnowledgeConfig(root);
+  if (semantic && config.lane?.backend === 'supabase_pgvector') throw new Error('node_api_semantic_search_requires_host: use autorag remote --query through an authorized host; local SQLite is not the configured semantic backend.');
   if (config.storage.driver === 'sqlite' && !fs.existsSync(sqliteFile)) {
     return {
       queryId: 'none',
@@ -164,7 +166,9 @@ export async function runKnowledgeSearch({
 export async function runSearch(argv) {
   const { values: opts, positionals } = flags(argv, { semantic: { type: 'boolean' }, 'top-k': { type: 'string' }, 'token-budget': { type: 'string' }, generation: { type: 'string' } });
   if (opts.help) { console.log('agentsam search "query" [--cwd PATH] [--semantic] [--top-k 8] [--token-budget 6000] [--generation ID]'); return; }
-  const root = repositoryRoot(opts.cwd), config = resolveKnowledgeConfig(root), store = await openStore(root, config, true);
+  const root = repositoryRoot(opts.cwd), config = resolveKnowledgeConfig(root);
+  if (opts.semantic && config.lane?.backend === 'supabase_pgvector') throw new Error('node_api_semantic_search_requires_host: use autorag remote --query through an authorized host; local SQLite is not the configured semantic backend.');
+  const store = await openStore(root, config, true);
   try { show(await retrieve({ store, config, text: positionals.join(' '), semantic: opts.semantic, embedder: opts.semantic ? provider(config.embedding) : null, topK: Number(opts['top-k'] || 8), tokenBudget: Number(opts['token-budget'] || 6000), generationId: opts.generation })); }
   finally { await store?.close(); }
 }

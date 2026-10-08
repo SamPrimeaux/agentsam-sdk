@@ -1,3 +1,4 @@
+import { createSupabaseNodeApiClient } from './supabase-node-api.js';
 import { vectorizeDelete, vectorizeGetByIds, vectorizeHealth, vectorizeQuery, vectorizeUpsert } from '../../../connectors/cfoa/src/families/vectorize.js';
 
 const clean = value => String(value || '').trim();
@@ -46,6 +47,23 @@ function bindingBackend(id, required) {
     health: async context => ({ id, operational: Boolean(context?.backend) }),
   });
 }
+function supabasePgvectorBackend() {
+  const base = bindingBackend('supabase_pgvector', ['resource']);
+  return Object.freeze({
+    ...base,
+    capabilities: () => ({ ...base.capabilities(), transports: ['postgres_connection', 'supabase_edge_node_api'], authorization: 'injected_host' }),
+    connect: options => createSupabaseNodeApiClient(options),
+    queryText(query, options = {}, context = {}) {
+      if (!context.nodeApiClient) throw new Error('backend_authorized_node_api_client_required');
+      return context.nodeApiClient.query({ ...options, query });
+    },
+    ingestGeneration(request, context = {}) {
+      if (!context.nodeApiClient) throw new Error('backend_authorized_node_api_client_required');
+      return context.nodeApiClient.ingest(request);
+    },
+  });
+}
+
 export function createBackendRegistry() {
   const local = Object.freeze({
     id: 'local_exact', capabilities: () => ({ id: 'local_exact', exact: true, external_resource_required: false }),
@@ -53,6 +71,8 @@ export function createBackendRegistry() {
     async upsert(records, context = {}) { if (!context.store?.cachePut) throw new Error('backend_runtime_unavailable:local_exact'); for (const record of records) await context.store.cachePut(record.id, record.vector); return { upserted: records.length }; },
     async delete() { return { deleted: 0 }; }, async query() { throw new Error('backend_query_owned_by_knowledge_store'); }, async verify() { return { verified: true }; }, health: async () => ({ id: 'local_exact', operational: true }),
   });
-  const adapters = new Map([['local_exact', local], ['postgres_pgvector', bindingBackend('postgres_pgvector', ['resource'])], ['supabase_pgvector', bindingBackend('supabase_pgvector', ['resource'])], ['cloudflare_vectorize', vectorizeBackend()]]);
+  const adapters = new Map([['local_exact', local], ['postgres_pgvector', bindingBackend('postgres_pgvector', ['resource'])], ['supabase_pgvector', supabasePgvectorBackend()], ['cloudflare_vectorize', vectorizeBackend()]]);
   return Object.freeze({ ids: () => [...adapters.keys()], get(id) { const item = adapters.get(clean(id)); if (!item) throw new Error(`backend_unsupported:${id}`); return item; }, capabilities: () => [...adapters.values()].map(adapter => adapter.capabilities()) });
 }
+
+export { createSupabaseNodeApiClient, nodeApiEndpoint } from './supabase-node-api.js';
