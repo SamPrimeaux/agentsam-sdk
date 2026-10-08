@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -149,7 +150,57 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Non-interactive page crawl; print the canonical site.scrape receipt as JSON on stdout",
     )
+    parser.add_argument("--account-id", help="IAM account ID for private crawl evidence")
+    parser.add_argument("--project-id", help="Project ID for private crawl evidence")
+    parser.add_argument("--archive-dir", help="Write durable, immutable local crawl evidence to this directory")
+    parser.add_argument("--archive-bucket", help="Private crawl-evidence R2 bucket (not WEBSITE_ASSETS)")
+    parser.add_argument("--upload-archive", action="store_true", help="Explicitly upload staged private evidence to R2")
+    parser.add_argument("--capture-assets", action="store_true", help="In --json mode, download page images into private evidence (requires --archive-dir)")
+    parser.add_argument("--publish-assets", action="store_true", help="Explicitly publish approved images/pages into WEBSITE_ASSETS")
+    parser.add_argument("--verify-archive", metavar="PATH", help="Verify local evidence checksums without crawling or uploading")
+    parser.add_argument("--resume-archive", metavar="PATH", help="Verify and explicitly upload a previously staged archive without recrawling")
     args = parser.parse_args(argv)
+    if not args.verify_archive and not args.resume_archive and (not 1 <= args.max_pages <= 5000 or args.delay < 0):
+        parser.error("--max-pages must be 1..5000 and --delay must be nonnegative")
+    if args.verify_archive and args.resume_archive:
+        parser.error("--verify-archive and --resume-archive cannot be combined")
+    if args.resume_archive and not (args.upload_archive and args.archive_bucket and args.repo_root):
+        parser.error("--resume-archive requires --upload-archive, --archive-bucket, and --repo-root")
+    if args.upload_archive and not (args.resume_archive or (args.archive_dir and args.archive_bucket and args.repo_root)):
+        parser.error("--upload-archive requires --archive-dir, --archive-bucket, and --repo-root")
+    if args.archive_dir and not (args.account_id and args.project_id):
+        parser.error("--archive-dir requires --account-id and --project-id")
+    if args.archive_bucket and not (args.archive_dir or args.resume_archive):
+        parser.error("--archive-bucket requires --archive-dir or --resume-archive")
+    if args.bucket and not args.publish_assets:
+        parser.error("--bucket requires --publish-assets; use --archive-bucket for private evidence")
+    if args.publish_assets and not args.repo_root:
+        parser.error("--publish-assets requires --repo-root for the site's configured WEBSITE_ASSETS binding")
+    if args.json and args.publish_assets:
+        parser.error("--publish-assets is a separate reviewed promotion, unavailable in --json mode")
+    if args.capture_assets and (not args.json or not args.archive_dir):
+        parser.error("--capture-assets requires --json and --archive-dir")
+    if args.capture_assets and not args.no_optimize and not args.allow_unoptimized and not sips_available():
+        parser.error("--capture-assets requires macOS sips, --no-optimize, or --allow-unoptimized")
+    if args.verify_archive or args.resume_archive:
+        from .evidence import verify_evidence, upload_evidence
+        try:
+            root = Path(args.verify_archive or args.resume_archive)
+            manifest = verify_evidence(root)
+            if args.resume_archive:
+                uploaded = upload_evidence(root, bucket=args.archive_bucket,
+                                           repo_root=Path(args.repo_root),
+                                           wrangler_config=args.wrangler_config)
+                print(f"Evidence uploaded: {uploaded['bucket']}/{uploaded['manifest_key']}", file=sys.stderr)
+            print(json.dumps({"verified": True, "run_id": manifest["run_id"],
+                              "account_id": manifest["account_id"],
+                              "project_id": manifest["project_id"],
+                              "object_count": len(manifest["objects"]),
+                              "prefix": manifest["prefix"]}, indent=2))
+            return 0
+        except Exception as exc:
+            print(f"Evidence verification/upload failed: {exc}", file=sys.stderr)
+            return 1
     if args.json:
         from .jsonrun import run_json
 
@@ -186,8 +237,9 @@ def main(argv: list[str] | None = None) -> int:
 
     repo_root = Path(args.repo_root).resolve() if args.repo_root else None
     try:
-        bucket, key_prefix = _select_placement(
-            seed_url, args.yes, repo_root, args.wrangler_config, args.bucket,
+        bucket, key_prefix = (
+            _select_placement(seed_url, args.yes, repo_root, args.wrangler_config, args.bucket)
+            if args.publish_assets else (None, "")
         )
     except Exception as exc:  # noqa: BLE001
         print(f"Placement failed: {exc}", file=sys.stderr)
@@ -235,6 +287,28 @@ def main(argv: list[str] | None = None) -> int:
         f"{ok_images} images processed, {len(failed_images)} image failures, "
         f"{len(crawl_result.errors)} page errors."
     )
+
+    if args.archive_dir:
+        from .evidence import stage_evidence, upload_evidence
+        from .contract import build_result
+        import time
+        now = time.time()
+        receipt = build_result(crawl_result, started_at=now, completed_at=now,
+                               scope={"sameSite": True, "maxPages": args.max_pages},
+                               policy={"respectRobots": not args.ignore_robots, "hostDelayMs": int(args.delay * 1000)},
+                               capture={"metadata": True, "text": False, "html": False,
+                                        "assets": not args.no_images})
+        try:
+            stage = stage_evidence(crawl_result, receipt, account_id=args.account_id,
+                                   project_id=args.project_id, archive_dir=Path(args.archive_dir))
+            print(f"Private evidence staged: {stage['root']}")
+            if args.upload_archive:
+                uploaded = upload_evidence(stage['root'], bucket=args.archive_bucket,
+                                           repo_root=repo_root, wrangler_config=args.wrangler_config)
+                print(f"Private evidence uploaded: {uploaded['bucket']}/{uploaded['manifest_key']}")
+        except Exception as exc:
+            print(f"Evidence archive failed: {exc}", file=sys.stderr)
+            return 1
 
     if bucket and repo_root is not None:
         print(f"Uploading to R2 bucket '{bucket}' ...")

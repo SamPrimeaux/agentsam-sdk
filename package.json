@@ -370,7 +370,8 @@
     "verify:browser-promo": "npm run typecheck:browser-packages && npm run build:browser-packages && npm run typecheck:browser-site && npm run build:browser-site",
     "release:registry:intent": "node scripts/verify-registry-train.mjs --intent-only",
     "release:registry:check": "node scripts/verify-registry-train.mjs",
-    "release:publish:preflight": "bash scripts/npm-publish-preflight.sh"
+    "release:publish:preflight": "bash scripts/npm-publish-preflight.sh",
+    "test:site-scrape": "node scripts/verify-site-scrape.mjs"
   },
   "engines": {
     "node": ">=22 <25",

@@ -74,6 +74,19 @@ jobs:
       - name: Verify Python tools
         run: npm run test:python
 
+      - name: Prepare Python 3.12 for site.scrape
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install site.scrape Python dependencies
+        run: python -m pip install -e packages/agentsam-site-scrape
+
+      - name: Verify site.scrape evidence and redirect boundary
+        run: npm run test:site-scrape
+        env:
+          PYTHON: python
+
       - name: CLI context smoke
         run: node src/cli.js context --json
 

@@ -57,6 +57,10 @@ def build_result(
         }
         for e in crawl_result.errors
     ]
+    image_errors = [
+        {"url": i.url, "kind": "failed", "error": str(i.error or "image_processing_failed")}
+        for i in crawl_result.images if not i.ok
+    ] if capture.get("assets") else []
     counts = {
         "pages_visited": int(getattr(crawl_result, "pages_visited", 0) or (len(pages) + len(errors))),
         "pages_fetched": len(pages),
@@ -64,9 +68,12 @@ def build_result(
         "pages_skipped": sum(1 for e in errors if e["kind"] == "skipped"),
         "pages_failed": sum(1 for e in errors if e["kind"] == "failed"),
     }
+    if capture.get("assets"):
+        counts["images_fetched"] = sum(1 for i in crawl_result.images if i.ok)
+        counts["images_failed"] = len(image_errors)
     if not pages:
         status = STATUS_FAILED
-    elif errors:
+    elif errors or image_errors:
         status = STATUS_PARTIAL
     else:
         status = STATUS_COMPLETED
@@ -97,5 +104,5 @@ def build_result(
             "ignored": list(_UNSUPPORTED_INPUTS),
         },
         "pages": pages,
-        "errors": errors,
+        "errors": errors + image_errors,
     }
