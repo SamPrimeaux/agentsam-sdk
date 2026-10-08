@@ -1,5 +1,5 @@
 import { projectComposerCatalog, type ComposerCatalogEntry } from '@inneranimalmedia/agentsam-workbench/agent';
-import { sideStageComposerWidgets } from './side-stage-actions';
+import { sideStageComposerWidgets } from './side-stage-actions.ts';
 
 export type ComposerPlugin = ComposerCatalogEntry;
 
