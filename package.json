@@ -327,6 +327,7 @@
     "verify:package": "node scripts/verify-package.mjs",
     "verify:boundaries": "node scripts/verify-source-boundaries.mjs",
     "verify:bootstrap": "node scripts/verify-bootstrap.mjs",
+    "verify:ide-package": "node scripts/verify-ide-package.mjs",
     "verify:knowledge-package": "node scripts/verify-knowledge-package.mjs && npm run test:autorag",
     "test:python": "node scripts/verify-python.mjs",
     "verify:release": "npm run verify && npm run verify:packages:public && npm run verify:knowledge-package && npm run test:python && npm run security:release",

@@ -1,6 +1,6 @@
 /**
- * LSP client contract — Monaco talks AgentSam language protocol;
- * agentsamd supervises stdio language servers.
+ * Language capability contract. The host may connect an actual LSP transport.
+ * AgentSam does not claim external LSP readiness from declared capabilities.
  */
 
 export const LANGUAGE_PROTOCOL = 'agentsam.language.v1';
@@ -15,11 +15,11 @@ export type LanguageCapability =
   | 'language.rust'
   | 'language.python';
 
-export type LanguageStatus = 'ready' | 'missing' | 'starting' | 'error';
+export type LanguageStatus = 'available' | 'ready' | 'missing' | 'starting' | 'error';
 
 export type LanguageCapabilities = Record<LanguageCapability, LanguageStatus>;
 
-/** CORE packs always expected with agentsamd IDE cut. */
+/** Monaco ships built-in language workers for these; this is not external LSP proof. */
 export const CORE_LANGUAGE_CAPABILITIES: LanguageCapability[] = [
   'language.typescript',
   'language.javascript',
@@ -36,11 +36,11 @@ export const OPTIONAL_LANGUAGE_PACKS: LanguageCapability[] = [
 
 export function defaultLanguageCapabilities(partial: Partial<LanguageCapabilities> = {}): LanguageCapabilities {
   const base: LanguageCapabilities = {
-    'language.typescript': 'ready',
-    'language.javascript': 'ready',
-    'language.json': 'ready',
-    'language.html': 'ready',
-    'language.css': 'ready',
+    'language.typescript': 'available',
+    'language.javascript': 'available',
+    'language.json': 'available',
+    'language.html': 'available',
+    'language.css': 'available',
     'language.go': 'missing',
     'language.rust': 'missing',
     'language.python': 'missing',

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, Download, FileCode, Folder, Globe, List, Plus, Trash2 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { languageFromPath, uid } from "@/lib/utils";
 import { downloadText } from "@/lib/work/bundle";
 import { useActiveProject, useWorkStore } from "@/lib/work/store";
 import type { Artifact, SideTab } from "@inneranimalmedia/agentsam-local-shared";
+import { WorkspaceSaveQueue, type SaveStatus } from "@inneranimalmedia/agentsam-ide/workspace";
 import { cn } from "@/lib/utils";
 
 const MonacoPane = lazy(() =>
@@ -138,8 +139,41 @@ export function FilesStage({ tab }: { tab: SideTab }) {
   const [mounted, setMounted] = useState(false);
   const [fsError, setFsError] = useState<string | null>(null);
   const [conflict, setConflict] = useState<string | null>(null);
-  const [saveState, setSaveState] = useState<"saved" | "saving" | "modified" | "conflict">("saved");
+  const [saveState, setSaveState] = useState<SaveStatus>("saved");
   const [versions, setVersions] = useState<Record<string, string>>({});
+  const selectedPathRef = useRef<string | null>(selected?.path ?? null);
+  selectedPathRef.current = selected?.path ?? null;
+  const saveQueue = useMemo(() => new WorkspaceSaveQueue({
+    debounceMs: 700,
+    write: async (filePath, content, expectedVersion, overwrite) => {
+      if (!project.runtimeBaseUrl) return { ok: false as const, error: 'filesystem_runtime_unavailable' };
+      const { RuntimeFilesystemAdapter } = await import("@/lib/work/workspace-fs");
+      const adapter = new RuntimeFilesystemAdapter(project.runtimeBaseUrl, project.runtimeCapability);
+      return adapter.write(filePath, content, expectedVersion, overwrite);
+    },
+    onStatus: (filePath, status, reason) => {
+      if (selectedPathRef.current !== filePath) return;
+      setSaveState(status);
+      if (status === 'conflict') setConflict(reason || 'File changed on disk. Reload or overwrite intentionally.');
+      if (status === 'error') setFsError(reason || 'Could not save the file.');
+      if (status === 'saved') { setConflict(null); setFsError(null); }
+    },
+    onCommitted: (filePath, content, result, superseded) => {
+      setVersions(previous => ({ ...previous, [filePath]: result.version }));
+      if (superseded) return; // Never restore a stale snapshot over newer typing.
+      const current = useWorkStore.getState().projects.find(p => p.id === project.id)?.files.find(f => f.path === filePath);
+      if (current?.content !== content) return;
+      upsertFile(project.id, { ...current, updatedAt: result.mtime || Date.now(), origin: 'editor' });
+    },
+  }), [project.id, project.runtimeBaseUrl, project.runtimeCapability, upsertFile]);
+
+  useEffect(() => () => { void saveQueue.flushAll(); }, [saveQueue]);
+  useEffect(() => {
+    if (!isFilesystem || !selected) return;
+    const status = saveQueue.status(selected.path);
+    setSaveState(status);
+    setConflict(status === 'conflict' ? 'File changed on disk. Reload or overwrite intentionally.' : null);
+  }, [selected?.path, isFilesystem, saveQueue]);
 
   useEffect(() => {
     setMounted(true);
@@ -200,6 +234,9 @@ export function FilesStage({ tab }: { tab: SideTab }) {
         return;
       }
       setVersions((v) => ({ ...v, [selected.path]: doc.version }));
+      saveQueue.acceptDiskVersion(selected.path, doc.version);
+      // Late initial read must not overwrite keystrokes already entered in Monaco.
+      if (saveQueue.status(selected.path) !== 'saved') return;
       upsertFile(project.id, {
         ...selected,
         content: doc.content,
@@ -229,11 +266,12 @@ export function FilesStage({ tab }: { tab: SideTab }) {
       const doc = await adapter.read(selected.path);
       if (cancelled || !doc.ok) return;
       if (doc.version !== known) {
-        if (saveState === "modified" || saveState === "saving") {
+        if (saveQueue.status(selected.path) !== 'saved') {
           setSaveState("conflict");
           setConflict("Disk changed while this buffer was dirty. Reload or overwrite intentionally.");
         } else {
           setVersions((v) => ({ ...v, [selected.path]: doc.version }));
+          saveQueue.acceptDiskVersion(selected.path, doc.version);
           upsertFile(project.id, {
             ...selected,
             content: doc.content,
@@ -281,48 +319,21 @@ export function FilesStage({ tab }: { tab: SideTab }) {
 
   async function saveFilesystem(file: Artifact, value: string, overwrite = false) {
     if (!project.runtimeBaseUrl) return;
-    setSaveState("saving");
-    const { RuntimeFilesystemAdapter } = await import("@/lib/work/workspace-fs");
-    const adapter = new RuntimeFilesystemAdapter(
-      project.runtimeBaseUrl,
-      project.runtimeCapability,
-    );
-    const expected = overwrite ? null : versions[file.path];
-    const result = await adapter.write(file.path, value, expected, overwrite);
-    if (!result.ok) {
-      if (result.code === "version_conflict") {
-        setSaveState("conflict");
-        setConflict("File changed on disk. Reload disk version or overwrite intentionally.");
-        return;
-      }
-      setFsError(result.error);
-      setSaveState("modified");
-      return;
-    }
-    setVersions((v) => ({ ...v, [file.path]: result.version }));
-    setSaveState("saved");
-    setConflict(null);
-    upsertFile(project.id, {
-      ...file,
-      content: value,
-      updatedAt: result.mtime,
-      origin: "editor",
-    });
+    if (!overwrite && saveQueue.status(file.path) === 'saved' && file.content === value) return;
+    saveQueue.edit(file.path, value);
+    await saveQueue.flush(file.path, overwrite);
   }
 
   function onEditorChange(value: string) {
     if (!selected) return;
     if (isFilesystem) {
-      setSaveState("modified");
       upsertFile(project.id, {
         ...selected,
         content: value,
         updatedAt: Date.now(),
         origin: "editor",
       });
-      window.setTimeout(() => {
-        void saveFilesystem(selected, value);
-      }, 700);
+      saveQueue.edit(selected.path, value);
       return;
     }
     upsertFile(project.id, {
@@ -414,6 +425,7 @@ export function FilesStage({ tab }: { tab: SideTab }) {
                       const doc = await adapter.read(selected.path);
                       if (doc.ok) {
                         setVersions((v) => ({ ...v, [selected.path]: doc.version }));
+                        saveQueue.discardDraft(selected.path, doc.version);
                         upsertFile(project.id, { ...selected, content: doc.content, updatedAt: doc.mtime });
                         setConflict(null);
                         setSaveState("saved");
@@ -492,7 +504,8 @@ export function FilesStage({ tab }: { tab: SideTab }) {
                     </div>
                   }
                 >
-                  <MonacoPane file={selected} onChange={onEditorChange} />
+                  <MonacoPane file={selected} workspaceId={project.id} onChange={onEditorChange}
+                    onSave={(text) => isFilesystem ? saveFilesystem(selected, text) : undefined} />
                 </Suspense>
               )}
             </div>
@@ -549,6 +562,7 @@ export function FilesStage({ tab }: { tab: SideTab }) {
                     origin: "editor" as const,
                   };
                   setVersions((v) => ({ ...v, [next]: created.version }));
+                  saveQueue.acceptDiskVersion(next, created.version);
                   upsertFile(project.id, file);
                   selectFile(file.id);
                   setCreating(false);

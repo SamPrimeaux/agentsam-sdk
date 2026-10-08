@@ -17,6 +17,7 @@
     "@inneranimalmedia/agentsam-campaign": "2.6.12",
     "@inneranimalmedia/agentsam-content-studio": "2.6.12",
     "@inneranimalmedia/agentsam-contracts": "2.6.12",
+    "@inneranimalmedia/agentsam-ide": "2.6.12",
     "@inneranimalmedia/agentsam-key-manager": "2.6.12",
     "@inneranimalmedia/agentsam-loading-scene": "2.6.12",
     "@inneranimalmedia/agentsam-local-shared": "2.6.12",

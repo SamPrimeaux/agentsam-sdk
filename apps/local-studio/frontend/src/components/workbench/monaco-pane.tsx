@@ -1,90 +1,59 @@
-import { useEffect } from "react";
-import Editor, { type OnMount } from "@monaco-editor/react";
-import type { Artifact } from "@inneranimalmedia/agentsam-local-shared";
-import { hexNoHash, readTheme, type StoredTheme } from "@/lib/work/theme";
+import { useEffect, useMemo, useState } from 'react';
+import { AgentSamMonacoEditor, type AgentSamEditorPalette } from '@inneranimalmedia/agentsam-ide/monaco';
+import type { Artifact } from '@inneranimalmedia/agentsam-local-shared';
+import { readTheme, type StoredTheme } from '@/lib/work/theme';
 
-const THEME = "agentsam";
-let monacoRef: Parameters<OnMount>[1] | null = null;
-
-function paint(monaco: Parameters<OnMount>[1], theme: StoredTheme) {
+function fromLocalStudioTheme(theme: StoredTheme): AgentSamEditorPalette {
   const t = theme.tokens;
-  monaco.editor.defineTheme(THEME, {
+  return {
     base: theme.monacoBase,
-    inherit: true,
-    rules: [
-      { token: "comment", foreground: hexNoHash(t.clay) },
-      { token: "string", foreground: hexNoHash(t.stone) },
-      { token: "keyword", foreground: hexNoHash(t.foreground) },
-    ],
-    colors: {
-      "editor.background": t.background,
-      "editor.foreground": t.foreground,
-      "editorLineNumber.foreground": t.clay,
-      "editorLineNumber.activeForeground": t.stone,
-      "editor.lineHighlightBackground": t.card,
-      "editorCursor.foreground": t.ring,
-      "editor.selectionBackground": `${t.accent}33`,
-      "editorGutter.background": t.background,
-      "editorWidget.background": t.card,
-      "editorWidget.border": t.border,
-      "editorIndentGuide.background": t.border,
-      "editorIndentGuide.activeBackground": t.input,
-    },
-  });
-  monaco.editor.setTheme(THEME);
+    background: t.background,
+    foreground: t.foreground,
+    panel: t.card,
+    border: t.border,
+    muted: t.clay,
+    accent: t.ring,
+    comment: t.clay,
+    string: t.stone,
+    keyword: t.foreground,
+  };
 }
 
-export function MonacoPane({ file, onChange }: { file: Artifact; onChange: (value: string) => void }) {
+/** Local Studio owns theme state and persistence; the editing engine is packaged in agentsam-ide. */
+export function MonacoPane({ file, workspaceId, onChange, onSave }: {
+  file: Artifact;
+  workspaceId: string;
+  onChange: (value: string) => void;
+  onSave?: (value: string) => void | Promise<void>;
+}) {
+  const [theme, setTheme] = useState<StoredTheme>(readTheme);
+  const [runtimeReady, setRuntimeReady] = useState(false);
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
   useEffect(() => {
-    function onTheme(event: Event) {
-      if (!monacoRef) return;
-      const detail = (event as CustomEvent<StoredTheme>).detail ?? readTheme();
-      paint(monacoRef, detail);
+    let mounted = true;
+    // Deliberately browser-only: Monaco + its language workers must not be bundled into the Worker SSR entry.
+    if (!import.meta.env.SSR) {
+      void import('./monaco-runtime').then(() => { if (mounted) setRuntimeReady(true); }).catch(error => {
+        if (mounted) setRuntimeError(error instanceof Error ? error.message : 'Monaco runtime unavailable');
+      });
     }
-    window.addEventListener("agentsam:theme", onTheme);
-    return () => window.removeEventListener("agentsam:theme", onTheme);
+    return () => { mounted = false; };
   }, []);
-
-  const onMount: OnMount = (editor, monaco) => {
-    monacoRef = monaco;
-    paint(monaco, readTheme());
-    editor.addAction({
-      id: "agentsam.format",
-      label: "Format document",
-      keybindings: [monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF],
-      run: async (ed) => {
-        await ed.getAction("editor.action.formatDocument")?.run();
-      },
-    });
-    editor.focus();
-  };
-
+  useEffect(() => {
+    const updated = (event: Event) => setTheme((event as CustomEvent<StoredTheme>).detail ?? readTheme());
+    window.addEventListener('agentsam:theme', updated);
+    return () => window.removeEventListener('agentsam:theme', updated);
+  }, []);
+  const palette = useMemo(() => fromLocalStudioTheme(theme), [theme]);
+  if (runtimeError) return <div role="alert" className="p-3 text-sm text-destructive">Monaco failed to start: {runtimeError}</div>;
+  if (!runtimeReady) return <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Loading local Monaco runtime…</div>;
   return (
-    <Editor
-      height="100%"
-      theme={THEME}
-      path={file.path}
-      language={file.language}
-      value={file.content}
-      onChange={(value) => onChange(value ?? "")}
-      onMount={onMount}
+    <AgentSamMonacoEditor
+      document={{ workspaceId, path: file.path, text: file.content, languageId: file.language }}
+      onChange={onChange}
+      onSave={onSave}
+      palette={palette}
       loading={<div className="flex h-full items-center justify-center text-sm text-muted-foreground">Loading Monaco</div>}
-      options={{
-        minimap: { enabled: false },
-        fontSize: 13,
-        fontFamily: "IBM Plex Mono, ui-monospace, SF Mono, Menlo, monospace",
-        scrollBeyondLastLine: false,
-        smoothScrolling: true,
-        padding: { top: 12, bottom: 12 },
-        renderLineHighlight: "line",
-        automaticLayout: true,
-        tabSize: 2,
-        wordWrap: "on",
-        formatOnPaste: true,
-        bracketPairColorization: { enabled: true },
-        guides: { indentation: true },
-        mouseWheelZoom: true,
-      }}
     />
   );
 }
