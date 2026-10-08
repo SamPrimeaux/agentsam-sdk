@@ -76,3 +76,26 @@ Brand and Campaign are the first reference products. A third official plugin sho
 Brand and Campaign are the first two reference products and must use this exact generic pipeline without `if brand` / `if campaign` special cases. Do not introduce a third official plugin until both can progress from inspect → verify → computed receipt with fresh-account runtime proof.
 
 The generator is intentionally later. A future `agentsam plugin create <name>` must first consume Repository ownership, Machine/refinery evidence, the capability catalog and this product contract, then propose the smallest domain-only package.
+
+
+## Repository/refinery evidence quality
+
+Product inspection must not treat a large candidate count as proof. Repository/refinery evidence should distinguish at least:
+
+- **EXACT** — byte/source equivalent
+- **STRUCTURAL** — same implementation with edits
+- **CAPABILITY** — different implementations of the same job
+- **RELATED** — shared infrastructure but distinct purpose
+- **FALSE_POSITIVE** — similar-looking code that must not be recommended for consolidation
+
+Before refinery recommendations can become trusted automated guidance, fixtures must cover a known exact duplicate, an evolved duplicate, an intentionally separate similar implementation, and a case where an existing package owner is resolved correctly. `plugin inspect` consumes those proposals; it does not perform the classification itself.
+
+## Repository authority bridge
+
+A future `agentsam repository authority <domain>` command belongs on top of the existing Repository graph. It must derive authority from package exports, capability ownership, contracts, consumer imports, manifests and supporting docs. It must not be implemented as a hand-maintained domain→package lookup table.
+
+The result may legitimately be multiple primary authorities for a broad domain. For example, media identity/provenance, content lifecycle/provider representations and media preparation may remain separate package authorities.
+
+## Definition versus observation
+
+The product manifest contains stable definition only. Installation rows, authorization state, health, discovered tool counts, runtime success and READY are observations. A host may persist the latest observation receipt, timestamp, health result and error, but the current status is always re-derived from evidence.
