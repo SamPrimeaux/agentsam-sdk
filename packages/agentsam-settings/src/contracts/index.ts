@@ -147,6 +147,7 @@ export type SettingsDiscoveredPlugin = {
   description: string;
   publisher: string;
   iconUrl: string | null;
+  publisherIconUrl?: string | null;
   category: string;
   version: string;
   keywords: string[];
