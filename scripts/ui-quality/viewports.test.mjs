@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { QUALITY_VIEWPORTS } from './viewports.mjs';
+import { QUALITY_VIEWPORTS, BOUNDARY_VIEWPORTS, VIEWPORT_RANGES } from './viewports.mjs';
 
 test('five named form-factor viewports include an approximately 2000px widescreen', () => {
   assert.deepEqual(QUALITY_VIEWPORTS.map((item) => item.name), [
