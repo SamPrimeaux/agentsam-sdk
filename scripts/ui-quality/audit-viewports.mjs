@@ -9,6 +9,8 @@ const args = process.argv.slice(2);
 const option = (flag, fallback) => args.includes(flag) ? args[args.indexOf(flag) + 1] : fallback;
 const baseUrl = option('--url', '');
 const expectedSelector = option('--expect', '');
+const matrix = option('--matrix', 'standard');
+const viewports = matrix === 'full' ? [...QUALITY_VIEWPORTS, ...BOUNDARY_VIEWPORTS] : QUALITY_VIEWPORTS;
 const out = path.resolve(option('--out', '/tmp/agentsam-ui-quality'));
 if (!baseUrl || !expectedSelector) {
   console.error('Usage: node scripts/ui-quality/audit-viewports.mjs --url http://127.0.0.1:8080/route --expect "[data-agent-conversation-surface]" [--out /tmp/ui-receipts]');
