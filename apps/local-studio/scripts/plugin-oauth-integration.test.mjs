@@ -159,6 +159,22 @@ test('OAuth client registration carries only validated catalog publisher brandin
   assert.equal(JSON.parse(registration.init.body).logo_uri,origin+'/catalog/icons/agentsam.svg');
   sqlite.close();
 });
+test('OAuth and MCP use Workers-compatible manual redirects and never follow 3xx',async()=>{
+  const {DB,sqlite}=dbFixture();const env=envFor(DB);const {fetcher}=mockFetcher();
+  await assert.rejects(beginPluginOAuth(env,accountId,pluginId,{},async(url,init)=>{
+    if(String(url).endsWith('/api/oauth/register')){
+      assert.equal(init.redirect,'manual');
+      return new Response(null,{status:302,headers:{location:'https://unexpected.example/authorize'}});
+    }
+    return fetcher(url,init);
+  }),/plugin_oauth_redirect_rejected/);
+  await assert.rejects(mcpRequest(endpoint,resource,token,'tools/list',{},async(_url,init)=>{
+    assert.equal(init.redirect,'manual');
+    return new Response(null,{status:307,headers:{location:'https://unexpected.example/mcp'}});
+  }),/plugin_mcp_redirect_rejected/);
+  sqlite.close();
+});
+
 test('OAuth refuses an IAM identity mismatch without enabling the plugin',async()=>{
   const {DB,sqlite}=dbFixture();const env=envFor(DB);
   const started=await beginPluginOAuth(env,accountId,pluginId,{},mockFetcher().fetcher);
