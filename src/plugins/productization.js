@@ -177,7 +177,7 @@ export function inspectPluginProduct(target,{evidenceBundle=null}={}){
       findings.push(finding('error','capability_duplicate','duplicate capability: '+capability.id,'agentsam.product.json:capabilities','protocol/capabilities'));
     }
     capabilityIds.add(capability.id);
-    if(!['read','write','destructive'].includes(capability.risk)){
+    if(!['read','prepare','write','destructive'].includes(capability.risk)){
       findings.push(finding('error','capability_risk_invalid','invalid risk for '+capability.id,'agentsam.product.json:capabilities','protocol/capabilities'));
     }
     for(const permission of capability.permissions||[]){
