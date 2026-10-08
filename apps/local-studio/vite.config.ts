@@ -356,6 +356,10 @@ export default defineConfig(({ command, isPreview }) => ({
         replacement: resolvePath(analyticsPackageRoot, "src/index.ts"),
       },
       {
+        find: /^@inneranimalmedia\/agentsam-ide\/lsp$/,
+        replacement: resolvePath(ideSource, "lsp/index.ts"),
+      },
+      {
         find: /^@inneranimalmedia\/agentsam-ide\/workspace$/,
         replacement: resolvePath(ideSource, "workspace/index.ts"),
       },

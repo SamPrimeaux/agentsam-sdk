@@ -9,6 +9,7 @@ import { buildWorkspacePreview } from "@/lib/work/workspace-preview";
 import { useActiveProject, useWorkStore } from "@/lib/work/store";
 import type { Artifact, SideTab } from "@inneranimalmedia/agentsam-local-shared";
 import { WorkspaceSaveQueue, type SaveStatus } from "@inneranimalmedia/agentsam-ide/workspace";
+import { applyLspWorkspaceEdit, workspaceRootFileUri, type LspWorkspaceEdit } from "@inneranimalmedia/agentsam-ide/lsp";
 import { cn } from "@/lib/utils";
 
 const MonacoPane = lazy(() =>
@@ -139,6 +140,10 @@ export function FilesStage({ tab }: { tab: SideTab }) {
   const [fsError, setFsError] = useState<string | null>(null);
   const [conflict, setConflict] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveStatus>("saved");
+  const [lspStatus, setLspStatus] = useState<'missing'|'starting'|'ready'|'error'>('missing');
+  const [lspDetail, setLspDetail] = useState<string | undefined>();
+  const [lspRetry,setLspRetry]=useState(0);
+  const [navigationTarget,setNavigationTarget] = useState<{path:string;line:number;column:number}|undefined>();
   const [versions, setVersions] = useState<Record<string, string>>({});
   const selectedPathRef = useRef<string | null>(selected?.path ?? null);
   selectedPathRef.current = selected?.path ?? null;
@@ -408,6 +413,8 @@ export function FilesStage({ tab }: { tab: SideTab }) {
                 {selected.path}
                 {isFilesystem ? ` · ${saveState}` : ""}
               </span>
+              {isFilesystem ? <span aria-label="Language server status" title={lspDetail} className="px-2 text-[11px] text-muted-foreground">LSP: {lspStatus}{lspDetail&&lspStatus==='ready' ? ` (${lspDetail})` : ''}</span> : null}
+              {isFilesystem&&lspStatus==='error'?<Button type="button" size="sm" variant="outline" title={lspDetail} onClick={()=>setLspRetry(x=>x+1)}>Retry LSP</Button>:null}
               {conflict ? (
                 <>
                   <Button
@@ -504,6 +511,57 @@ export function FilesStage({ tab }: { tab: SideTab }) {
                   }
                 >
                   <MonacoPane file={selected} workspaceId={project.id} onChange={onEditorChange}
+                    runtimeBaseUrl={isFilesystem ? project.runtimeBaseUrl : undefined}
+                    runtimeCapability={isFilesystem ? project.runtimeCapability : undefined}
+                    workspaceRoot={isFilesystem ? project.workspaceRoot : undefined}
+                    savedVersion={isFilesystem ? versions[selected.path] : undefined}
+                    lspRetry={lspRetry}
+                    onLspStatus={(status, detail) => {setLspStatus(status);setLspDetail(detail);}}
+                    navigationTarget={navigationTarget}
+                    onApplyWorkspaceEdit={async (edit) => {
+                      if(!project.runtimeBaseUrl||!project.workspaceRoot)throw new Error('workspace_runtime_required');
+                      await saveQueue.flushAll();
+                      const pending=project.files.filter(item=>saveQueue.status(item.path)!=='saved');
+                      if(pending.length)throw new Error('lsp_rename_requires_clean_saved_files');
+                      const {RuntimeFilesystemAdapter}=await import('@/lib/work/workspace-fs');
+                      const adapter=new RuntimeFilesystemAdapter(project.runtimeBaseUrl,project.runtimeCapability);
+                      try {
+                        await applyLspWorkspaceEdit(edit as LspWorkspaceEdit,workspaceRootFileUri(project.workspaceRoot),{
+                          read:async path=>{
+                            const source=await adapter.read(path);
+                            if(!source.ok)throw new Error(source.error);
+                            return {content:source.content,version:source.version};
+                          },
+                          write:async(path,content,version)=>{
+                            const result=await adapter.write(path,content,version,false);
+                            if(!result.ok)throw new Error(result.error);
+                            return {version:result.version};
+                          },
+                          committed:(path,content,version)=>{
+                            saveQueue.acceptDiskVersion(path,version);
+                            const known=useWorkStore.getState().projects.find(p=>p.id===project.id)?.files.find(file=>file.path===path);
+                            upsertFile(project.id,{id:known?.id||`fs:${path}`,path,language:known?.language||languageFromPath(path),content,updatedAt:Date.now(),kind:'code',origin:'editor'});
+                          },
+                        });
+                      }catch(error){
+                        const message=error instanceof Error?error.message:String(error);
+                        setFsError(message);
+                        throw error;
+                      }
+                    }}
+                    onNavigate={async (uri, range) => {
+                      const root=(project.workspaceRoot||'').replace(/\\/g,'/').replace(/\/$/,'');
+                      if(!root)throw new Error('workspace_root_required');
+                      const prefix=workspaceRootFileUri(root) + '/';
+                      if(!uri.startsWith(prefix))throw new Error('lsp_target_outside_authorized_workspace');
+                      const relative=decodeURIComponent(uri.slice(prefix.length));
+                      if(!relative||relative.split('/').some(part=>part==='..'))throw new Error('lsp_invalid_target_path');
+                      const next=project.files.find(item=>item.path===relative);
+                      const id=next?.id||`fs:${relative}`;
+                      if(!next)upsertFile(project.id,{id,path:relative,language:languageFromPath(relative),content:'',updatedAt:Date.now(),kind:'code',origin:'editor'});
+                      setNavigationTarget({path:relative,line:range.start.line+1,column:range.start.character+1});
+                      selectFile(id);
+                    }}
                     onSave={(text) => isFilesystem ? saveFilesystem(selected, text) : undefined} />
                 </Suspense>
               )}

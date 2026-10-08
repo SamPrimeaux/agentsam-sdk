@@ -1,7 +1,7 @@
 {
   "name": "@inneranimalmedia/agentsam-ide",
   "version": "2.6.12",
-  "description": "AgentSam IDE packages — Monaco, file tree, xterm, LSP client, first-login onboarding. Rapidly deployable into Local Studio / desktop.",
+  "description": "AgentSam IDE packages \u2014 Monaco, file tree, xterm, LSP client, first-login onboarding. Rapidly deployable into Local Studio / desktop.",
   "type": "module",
   "main": "./dist/index.js",
   "exports": {
@@ -32,11 +32,19 @@
     "./onboarding": {
       "types": "./dist/onboarding/index.d.ts",
       "import": "./dist/onboarding/index.js"
+    },
+    "./lsp/contract": {
+      "types": "./dist/lsp/contract.d.ts",
+      "import": "./dist/lsp/contract.js"
+    },
+    "./lsp/host": {
+      "types": "./dist/lsp/host.d.mts",
+      "node": "./dist/lsp/host.mjs"
     }
   },
   "scripts": {
     "clean": "rm -rf dist",
-    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "build": "npm run clean && tsc -p tsconfig.build.json && cp src/lsp/host.mjs src/lsp/host.d.mts dist/lsp/",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --experimental-strip-types --test src/**/*.test.ts",
     "prepack": "npm run build"
@@ -70,5 +78,6 @@
     "README.md"
   ],
   "types": "./dist/index.d.ts",
-  "license": "MIT"
+  "license": "MIT",
+  "sideEffects": false
 }

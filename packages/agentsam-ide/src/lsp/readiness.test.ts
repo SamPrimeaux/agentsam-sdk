@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultLanguageCapabilities, buildLspHandshake } from './index.ts';
+import { defaultLanguageCapabilities, buildLspHandshake } from './status.ts';
 
 test('language support availability cannot masquerade as a verified external LSP session', () => {
   const declared=defaultLanguageCapabilities();
