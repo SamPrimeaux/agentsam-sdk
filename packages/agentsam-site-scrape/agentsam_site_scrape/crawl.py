@@ -119,6 +119,7 @@ class CrawlResult:
     pages: list[PageResult] = field(default_factory=list)
     images: list[ImageResult] = field(default_factory=list)
     errors: list[dict] = field(default_factory=list)
+    pages_visited: int = 0
 
 
 def _extension_for(content_type: str, url: str, sniffed: str | None = None) -> str:
@@ -378,6 +379,7 @@ def crawl(
 
     result = CrawlResult(
         target=target, seed_urls=seed_set, pages=pages, images=images, errors=errors,
+        pages_visited=len(visited),
     )
     manifest = {
         "target": target,

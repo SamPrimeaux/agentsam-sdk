@@ -24,7 +24,13 @@ def clean_url(url: str, base: str | None = None) -> str:
         return ""
     query = [(k, v) for k, v in parse_qsl(p.query, keep_blank_values=True)
              if k.lower() not in TRACKING_PARAMS]
-    p = p._replace(fragment="", query=urlencode(query, doseq=True), netloc=p.netloc.lower())
+    host = (p.hostname or "").lower()
+    port = p.port
+    netloc = f"[{host}]" if ":" in host else host
+    if port and not ((p.scheme == "https" and port == 443) or (p.scheme == "http" and port == 80)):
+        netloc += f":{port}"
+    p = p._replace(fragment="", query=urlencode(query, doseq=True), scheme=p.scheme.lower(),
+                   netloc=netloc, path=p.path or "/")
     return urlunparse(p)
 
 

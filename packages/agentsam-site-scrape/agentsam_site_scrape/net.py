@@ -5,7 +5,9 @@ from __future__ import annotations
 import random
 import threading
 import time
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
+
+from .ssrf import assert_public_http_url
 from urllib.robotparser import RobotFileParser
 
 import requests
@@ -48,7 +50,27 @@ def get_with_retry(
     last_exc: Exception | None = None
     for attempt in range(max_retries + 1):
         try:
-            response = session.get(url, timeout=REQUEST_TIMEOUT, allow_redirects=True, stream=stream)
+            current = assert_public_http_url(url, context="request")
+            visited = set()
+            for redirect_number in range(11):
+                if current in visited:
+                    raise ValueError("redirect_loop")
+                visited.add(current)
+                # Requests MUST NOT follow redirects automatically: validate each next hop
+                # *before* any network request is made to that destination.
+                response = session.get(current, timeout=REQUEST_TIMEOUT, allow_redirects=False, stream=stream)
+                if response.status_code not in (301, 302, 303, 307, 308):
+                    break
+                location = response.headers.get("location")
+                if not location:
+                    break
+                try:
+                    next_url = assert_public_http_url(urljoin(current, location), context="redirect")
+                finally:
+                    response.close()
+                current = next_url
+            else:
+                raise ValueError("too_many_redirects")
         except (requests.ConnectionError, requests.Timeout) as exc:
             last_exc = exc
             if attempt < max_retries:
@@ -87,7 +109,7 @@ class Robots:
             if root not in self.cache:
                 rp = RobotFileParser()
                 try:
-                    response = self.session.get(root + "/robots.txt", timeout=REQUEST_TIMEOUT)
+                    response = get_with_retry(self.session, root + "/robots.txt", max_retries=0)
                     if response.ok:
                         rp.parse(response.text.splitlines())
                         self.cache[root] = rp
