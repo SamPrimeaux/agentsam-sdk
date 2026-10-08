@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/plugin-quality-evidence/v1",
+  "title": "AgentSam Plugin Quality Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "pluginId",
+    "checks"
+  ],
+  "properties": {
+    "schema": {
+      "const": "agentsam.plugin-quality-evidence/v1"
+    },
+    "pluginId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "enum": [
+              "pass",
+              "fail",
+              "unverified",
+              "not_applicable"
+            ]
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "receipt": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
