@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "repository-mine-result",
+  "type": "object",
+  "required": [
+    "schema",
+    "capability",
+    "status",
+    "sources",
+    "candidates",
+    "counts",
+    "provenance"
+  ],
+  "properties": {
+    "schema": {
+      "const": "agentsam.refinery.proposal.v1"
+    },
+    "capability": {
+      "const": "repository.mine"
+    },
+    "status": {
+      "const": "proposals_only"
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 2
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "candidate_id",
+          "match",
+          "implementations",
+          "likely_owner",
+          "evidence",
+          "differences",
+          "recommendation",
+          "promotion"
+        ]
+      }
+    },
+    "counts": {
+      "type": "object"
+    },
+    "provenance": {
+      "type": "object"
+    }
+  }
+}
