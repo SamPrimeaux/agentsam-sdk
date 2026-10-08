@@ -246,3 +246,5 @@ export function buildAuthorizeUrl({ clientId, redirectUri, state, codeChallenge,
   });
   return `${CLOUDFLARE_OAUTH_AUTHORIZE_URL}?${params}`;
 }
+
+export { discoverBasinResources } from './families/basin.js';
