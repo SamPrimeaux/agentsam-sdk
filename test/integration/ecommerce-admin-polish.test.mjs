@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import {
   catalogImageSource,
   serveCatalogImage,
-} from '../apps/ecommerce-cms-agentsam/backend/completeful/images.js';
+} from '../../apps/ecommerce-cms-agentsam/backend/completeful/images.js';
 
 const BRAND_UI = 'apps/ecommerce-cms-agentsam/frontend/static/js/brand-workspace.js';
 const STORE_UI = 'apps/ecommerce-cms-agentsam/frontend/static/store.html';
