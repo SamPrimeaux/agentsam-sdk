@@ -51,3 +51,29 @@ export type RepositoryQualityReadModel = {
   findings:Array<{id:string;kind:string;severity:'info'|'warning'|'error';title:string;source:string}>;
   trends:Array<{bucket:string;errors:number;drifts:number;passed:number}>;
 };
+
+/**
+ * One source-labelled infrastructure + application quality response. The host
+ * populates provider data; React must not synthesize missing source values.
+ */
+export type InfrastructureHealthReadModel = {
+  ok: true;
+  range: '24h'|'7d'|'30d'|'90d';
+  generatedAt: string;
+  probeIntervalMinutes: number;
+  edge: {
+    available:boolean; reason?:string; source:string;
+    requests:number|null; errors:number|null; errorRate:number|null;
+    rpm:number|null; byStatus:Array<{status:string;requests:number}>;
+  };
+  app:{
+    available:boolean; reason?:string; source?:string;
+    totals:{events:number;failures:number;successes:number;costUsd:number|null;avgDurationMs:number|null}|null;
+    timeline:Array<{bucket:string;events:number;failures:number}>;
+    operations:Array<{domain:string;operation:string;samples:number;failures:number;duration_ms:number|null}>;
+    failures:Array<{domain:string;operation:string;error_code:string|null;status:string;occurred_at:number}>;
+    repository:Array<{operation:string;error_code:string|null;status:string;occurred_at:number}>;
+  };
+  basin:BasinCapability;
+  dataAvailability:{cloudflare:boolean;operations:boolean;basin:boolean};
+};
