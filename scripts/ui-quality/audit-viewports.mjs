@@ -71,7 +71,7 @@ try {
   await browser.close();
 }
 const failed = results.some((r) =>
-  !r.passesLayout || !r.passesNaming || r.passesTouch === false ||
+  !r.passesLayout || !r.passesNaming || !r.passesProductSurface || r.passesTouch === false ||
   r.status >= 400 || r.error);
 const receipt = {
   contract: 'agentsam.ui-quality.render.v1',
