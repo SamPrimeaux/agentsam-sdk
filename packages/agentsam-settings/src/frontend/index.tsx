@@ -87,6 +87,15 @@ function cx(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
 }
 
+/** Verified, same-origin catalog SVG, tinted by CSS currentColor for every host theme. */
+function PublisherMark({url,className = "size-4"}: {url?: string | null; className?: string}) {
+  if (!url) return null;
+  const mask = `url("${url}")`;
+  return <span role="img" aria-label="Plugin publisher mark" className={cx("inline-block shrink-0 bg-current",className)}
+    style={{WebkitMaskImage:mask,maskImage:mask,WebkitMaskRepeat:"no-repeat",maskRepeat:"no-repeat",
+      WebkitMaskPosition:"center",maskPosition:"center",WebkitMaskSize:"contain",maskSize:"contain"}}/>;
+}
+
 function statusTone(status: HealthState | SettingsCredential["status"]) {
   if (status === "healthy" || status === "active") {
     return "border-emerald-500/20 bg-emerald-500/8 text-emerald-300";
