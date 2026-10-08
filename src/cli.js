@@ -100,7 +100,7 @@ function printLegacyHelp() {
     agentsam                     Enter the interactive Agent Sam experience
     agentsam create <name> --preset <fullstack|cms|prototype|data>
     agentsam add <auth|cms|knowledge|agent|deploy-cloudflare>
-    agentsam plugin inspect|verify|receipt <path>    Deterministic plugin productization + READY receipt
+    agentsam plugin inspect|verify|receipt <path> [--evidence <bundle.json>]\n                                                   Deterministic productization from existing Machine/Repository/runtime evidence
     agentsam plugins list|install|connect|status|remove [@agentsam-mcp]
     agentsam dev               Run this project's existing npm dev script
     agentsam inspect [--json]  Bounded repository index by default; use --view full for authority envelope
