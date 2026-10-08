@@ -14,7 +14,7 @@ export function nodeApiEndpoint({ endpoint, projectRef } = {}) {
   return url.toString().replace(/\/$/, '');
 }
 
-export function createSupabaseNodeApiClient({ endpoint, projectRef, bridgeKey, getAuthHeaders, fetchImpl = globalThis.fetch, timeoutMs = 15000, principal } = {}) {
+export function createSupabaseNodeApiClient({ endpoint, projectRef, bridgeKey, getAuthHeaders, fetchImpl = globalThis.fetch, timeoutMs = 15000, principal, authenticatedDiscovery = false } = {}) {
   const base = nodeApiEndpoint({ endpoint, projectRef });
   if (typeof fetchImpl !== 'function') throw new Error('node_api_fetch_required');
   const request = async (method, route, { params, body, authenticated = true } = {}) => {
@@ -23,7 +23,7 @@ export function createSupabaseNodeApiClient({ endpoint, projectRef, bridgeKey, g
     const headers = { accept: 'application/json' };
     if (body != null) headers['content-type'] = 'application/json';
     if (authenticated) {
-      const supplied = typeof getAuthHeaders === 'function' ? await getAuthHeaders() : null;
+      const supplied = typeof getAuthHeaders === 'function' ? await getAuthHeaders({ method, route, paid: route === 'vectors/query' || route.endsWith('/ingest') }) : null;
       if (supplied) Object.assign(headers, supplied);
       else if (value(bridgeKey)) headers['x-agentsam-bridge-key'] = bridgeKey;
       else throw new Error('node_api_authorized_host_required');
@@ -48,8 +48,8 @@ export function createSupabaseNodeApiClient({ endpoint, projectRef, bridgeKey, g
   };
   return Object.freeze({
     endpoint: base,
-    health: () => request('GET', 'health', { authenticated: false }),
-    capabilities: () => request('GET', 'capabilities', { authenticated: false }),
+    health: () => request('GET', 'health', { authenticated: authenticatedDiscovery }),
+    capabilities: () => request('GET', 'capabilities', { authenticated: authenticatedDiscovery }),
     status: corpus => request('GET', ({ codebase: 'codebase/status', documents: 'vectors/status', memory: 'memory/status' })[corpus] || 'generations'),
     query({ accountId, repositoryId, corpus = 'codebase', query, limit = 8, ...filters } = {}) {
       if (!value(accountId)) throw new Error('node_api_account_required');
@@ -65,7 +65,7 @@ export function createSupabaseNodeApiClient({ endpoint, projectRef, bridgeKey, g
       if (corpus === 'codebase' && !value(repositoryId)) throw new Error('node_api_repository_required');
       if (!['codebase', 'documents'].includes(corpus)) throw new Error('node_api_ingest_corpus_unsupported');
       if (!Array.isArray(items) || !items.length) throw new Error('node_api_items_required');
-      const config = await request('GET', 'capabilities', { authenticated: false });
+      const config = await request('GET', 'capabilities', { authenticated: authenticatedDiscovery });
       const offered = config?.embedding;
       if (!offered?.default_model || !Number.isInteger(offered.default_dimensions)) throw new Error('node_api_embedding_capability_missing');
       if (embedding?.model && embedding.model !== offered.default_model) throw new Error('node_api_embedding_model_mismatch');
