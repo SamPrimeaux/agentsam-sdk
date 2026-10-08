@@ -7,6 +7,7 @@ import {
   buildPluginQualityReceipt,
   inspectPluginProduct,
   verifyPluginProduct,
+  PLUGIN_OAUTH_RUNTIME_GATES,
 } from '../../src/plugins/productization.js';
 
 function fixture({collision=false,quality=true}={}){
@@ -44,6 +45,17 @@ function fixture({collision=false,quality=true}={}){
   return root;
 }
 
+function runtimeProof() {
+  return [...new Set([
+    'installation.account',
+    'authorization.valid',
+    'authorization.permissions',
+    'runtime.tools_executable',
+    'portability.fresh_account',
+    ...PLUGIN_OAUTH_RUNTIME_GATES,
+  ])].map(check_id=>({check_id,status:'passed',receipt_ref:'fixture-runtime:'+check_id}));
+}
+
 test('inspect enforces shared authority ownership and identifies canonical authority',()=>{
   const root=fixture({collision:true});
   const result=inspectPluginProduct(root);
@@ -78,13 +90,16 @@ test('inspect consumes repository.mine evidence without running another scanner'
   assert.equal(row.expectedOwner,'@inneranimalmedia/agentsam-identity');
 });
 
-test('verify computes READY only from required evidence',()=>{
-  const ready=verifyPluginProduct(fixture());
-  assert.equal(ready.status,'READY');
+test('static quality declarations never produce READY for OAuth or runtime checks',()=>{
+  const declared=verifyPluginProduct(fixture());
+  assert.equal(declared.status,'NOT_READY');
+  assert.equal(declared.checks['authorization.valid'].status,'unverified');
+  assert.equal(declared.checks['authorization.valid'].source,'package_evidence_not_runtime_proof');
+  assert.equal(declared.checks['authorization.resource_registered'].status,'unverified');
+  assert.ok(declared.lifecycle.blockedBy.includes('authorization.resource_registered'));
   const missing=verifyPluginProduct(fixture({quality:false}));
   assert.equal(missing.status,'NOT_READY');
   assert.equal(missing.lifecycle.state,null);
-  assert.equal(missing.checks['portability.fresh_account'].status,'unverified');
 });
 
 test('runtime receipts override static placeholders without persisting ready state',()=>{
@@ -99,6 +114,7 @@ test('runtime receipts override static placeholders without persisting ready sta
       {check_id:'authorization.permissions',status:'passed',receipt_ref:'receipt:scopes'},
       {check_id:'runtime.tools_executable',status:'passed',receipt_ref:'receipt:tool-call'},
       {check_id:'portability.fresh_account',status:'passed',receipt_ref:'receipt:fresh-account'},
+      ...PLUGIN_OAUTH_RUNTIME_GATES.map(check_id=>({check_id,status:'passed',receipt_ref:'receipt:'+check_id})),
     ],
   };
   const verified=verifyPluginProduct(root,{evidenceBundle});
@@ -111,7 +127,10 @@ test('runtime receipts override static placeholders without persisting ready sta
 
 test('receipt renders one verification result instead of running a separate engine',()=>{
   const root=fixture();
-  const verification=verifyPluginProduct(root);
+  const verification=verifyPluginProduct(root,{evidenceBundle:{
+    schema:'agentsam.plugin-evidence-bundle/v1',
+    runtimeReceipts:runtimeProof(),
+  }});
   const receipt=buildPluginQualityReceipt(root,{
     generatedAt:'2026-10-08T00:00:00.000Z',
     verification,
@@ -124,6 +143,22 @@ test('receipt renders one verification result instead of running a separate engi
   assert.deepEqual(receipt.checks,verification.checks);
 });
 
+
+test('missing issuer proof or non-applicable authorization gates block READY',()=>{
+  const root=fixture();
+  const receipts=runtimeProof().filter(row=>row.check_id!=='authorization.resource_registered');
+  const missing=verifyPluginProduct(root,{evidenceBundle:{
+    schema:'agentsam.plugin-evidence-bundle/v1',runtimeReceipts:receipts,
+  }});
+  assert.equal(missing.status,'NOT_READY');
+  assert.equal(missing.checks['authorization.resource_registered'].status,'unverified');
+  const impossible=verifyPluginProduct(root,{evidenceBundle:{
+    schema:'agentsam.plugin-evidence-bundle/v1',
+    runtimeReceipts:[...receipts,{check_id:'authorization.resource_registered',status:'not_applicable',receipt_ref:'receipt:na'}],
+  }});
+  assert.equal(impossible.status,'NOT_READY');
+  assert.equal(impossible.checks['authorization.resource_registered'].status,'unverified');
+});
 
 test('lifecycle distinguishes installed from connected when authorization is missing',()=>{
   const root=fixture({quality:false});
