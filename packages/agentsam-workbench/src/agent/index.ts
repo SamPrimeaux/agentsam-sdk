@@ -13,3 +13,5 @@ export * from './ContextualComposer';
 export * from './ToolPermissionRequest';
 export * from './AgentConversationSurface';
 export * from './AgentRuntimeField';
+
+export * from './capability-catalog';
