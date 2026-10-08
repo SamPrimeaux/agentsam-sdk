@@ -8,6 +8,33 @@
     { "name": "large-desktop", "width": 1728, "height": 1117, "mode": "bounded-panels" },
     { "name": "widescreen-2000", "width": 2000, "height": 1200, "mode": "bounded-panels" }
   ],
+  "viewport_ranges": [
+    { "name": "phone-portrait", "min": 320, "max": 480 },
+    { "name": "phone-landscape-small-tablet", "min": 481, "max": 767 },
+    { "name": "tablet-portrait", "min": 768, "max": 991 },
+    { "name": "tablet-landscape-small-laptop", "min": 992, "max": 1199 },
+    { "name": "standard-desktop", "min": 1200, "max": 1599 },
+    { "name": "large-widescreen", "min": 1600, "max": null }
+  ],
+  "boundary_viewports": [
+    { "name": "compact-phone-320", "width": 320, "height": 680, "mode": "single-primary-surface" },
+    { "name": "phone-360", "width": 360, "height": 780, "mode": "single-primary-surface" },
+    { "name": "large-phone-430", "width": 430, "height": 932, "mode": "single-primary-surface" },
+    { "name": "landscape-small-568", "width": 568, "height": 320, "mode": "single-primary-surface" },
+    { "name": "compact-tablet-744", "width": 744, "height": 1133, "mode": "preview-dominant" },
+    { "name": "threshold-767", "width": 767, "height": 1024, "mode": "preview-dominant" },
+    { "name": "threshold-768", "width": 768, "height": 1024, "mode": "preview-dominant" },
+    { "name": "tablet-991", "width": 991, "height": 1194, "mode": "preview-dominant" },
+    { "name": "tablet-landscape-1024", "width": 1024, "height": 768, "mode": "preview-dominant" },
+    { "name": "threshold-1199", "width": 1199, "height": 900, "mode": "preview-dominant" },
+    { "name": "desktop-1200", "width": 1200, "height": 800, "mode": "editor-and-preview" },
+    { "name": "laptop-1280", "width": 1280, "height": 800, "mode": "editor-and-preview" },
+    { "name": "laptop-1536", "width": 1536, "height": 960, "mode": "editor-and-preview" },
+    { "name": "threshold-1599", "width": 1599, "height": 900, "mode": "editor-and-preview" },
+    { "name": "threshold-1600", "width": 1600, "height": 1000, "mode": "bounded-panels" },
+    { "name": "desktop-1920", "width": 1920, "height": 1080, "mode": "bounded-panels" },
+    { "name": "ultrawide-2560", "width": 2560, "height": 1080, "mode": "bounded-panels" }
+  ],
   "contrast": { "normal_text": 4.5, "large_text": 3, "controls_and_focus": 3 },
   "requirements": [
     "semantic-controls", "accessible-names-and-descriptions",
