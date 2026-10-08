@@ -148,6 +148,21 @@ test('OAuth connects approved tools only after PKCE, owner, scope, and endpoint 
   assert.equal(sqlite.prepare('SELECT setup_status FROM agentsam_plugins').get().setup_status,'unconfigured');
   sqlite.close();
 });
+test('OAuth and MCP reject upstream redirects without following them',async()=>{
+  const {DB,sqlite}=dbFixture();const env=envFor(DB);const {fetcher}=mockFetcher();
+  await assert.rejects(beginPluginOAuth(env,accountId,pluginId,{},async(url,init)=>{
+    if(String(url).endsWith('/api/oauth/register')){
+      assert.equal(init.redirect,'manual');
+      return new Response(null,{status:302,headers:{location:'https://not-trusted.example/authorize'}});
+    }
+    return fetcher(url,init);
+  }),/plugin_oauth_redirect_rejected/);
+  await assert.rejects(mcpRequest(endpoint,resource,token,'tools/list',{},async(_url,init)=>{
+    assert.equal(init.redirect,'manual');
+    return new Response(null,{status:307,headers:{location:'https://not-trusted.example/mcp'}});
+  }),/plugin_mcp_redirect_rejected/);
+  sqlite.close();
+});
 test('OAuth refuses an IAM identity mismatch without enabling the plugin',async()=>{
   const {DB,sqlite}=dbFixture();const env=envFor(DB);
   const started=await beginPluginOAuth(env,accountId,pluginId,{},mockFetcher().fetcher);
