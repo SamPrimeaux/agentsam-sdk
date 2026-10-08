@@ -20,9 +20,11 @@ export { resolveVectorizeConfig, executeVectorizeTool } from './vectorize.js';
 
 export {
   PLUGIN_PRODUCT_SCHEMA,
+  PLUGIN_EVIDENCE_BUNDLE_SCHEMA,
   PLUGIN_QUALITY_EVIDENCE_SCHEMA,
   PLUGIN_QUALITY_RECEIPT_SCHEMA,
   PLUGIN_LIFECYCLE,
+  readPluginEvidenceBundle,
   inspectPluginProduct,
   verifyPluginProduct,
   buildPluginQualityReceipt,
