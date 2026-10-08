@@ -101,6 +101,13 @@ test('multiple trusted catalog sources compose generically without domain-specif
   assert.equal(result.plugins.length,2);
   assert.deepEqual(result.plugins.map(p=>p.pluginKey),['agentsam-example','agentsam-analytics']);
 });
+test('catalog publisher SVG must be catalog-owned and exact-path validated',async()=>{
+  const accepted=normalizeDiscoveredPlugin({...item,publisher_icon_url:'https://plugins.example.org/catalog/icons/agentsam.svg'},SOURCE);
+  assert.equal(accepted.publisherIconUrl,'https://plugins.example.org/catalog/icons/agentsam.svg');
+  assert.equal(normalizeDiscoveredPlugin({...item,publisher_icon_url:'https://untrusted.example.org/logo.svg'},SOURCE).publisherIconUrl,null);
+  assert.equal(normalizeDiscoveredPlugin({...item,publisher_icon_url:'https://plugins.example.org/catalog/icons/other.svg?script=1'},SOURCE).publisherIconUrl,null);
+});
+
 test('Cloudflare-compatible manual redirect handling rejects redirected catalog sources',async()=>{
   let requestOptions;
   const result=await discoverPublicPlugins(env,async(_url,options)=>{
