@@ -199,6 +199,26 @@ function astMetadata(relative, source) {
   };
 }
 
+/** Reuse the canonical TypeScript parser on Machine-verified source material. */
+export function analyzeSemanticSource(relative, source) { return astMetadata(relative, source); }
+
+/** Fingerprint lexer tokens, excluding comments/whitespace but preserving literal values. */
+export function normalizeSemanticTokens(source) {
+  const scanner = ts.createScanner(ts.ScriptTarget.Latest, false, ts.LanguageVariant.Standard, source);
+  const tokens = [];
+  for (let token = scanner.scan(); token !== ts.SyntaxKind.EndOfFileToken; token = scanner.scan()) {
+    if (token !== ts.SyntaxKind.WhitespaceTrivia && token !== ts.SyntaxKind.NewLineTrivia &&
+        token !== ts.SyntaxKind.SingleLineCommentTrivia && token !== ts.SyntaxKind.MultiLineCommentTrivia) {
+      tokens.push([token, scanner.getTokenText()]);
+    }
+  }
+  return JSON.stringify(tokens);
+}
+
+export function resolveSemanticLocalImport(sourcePath, specifier, files) {
+  return resolveLocalImport(sourcePath, specifier, files);
+}
+
 function resolveLocalImport(sourcePath, specifier, files) {
   if (!specifier.startsWith('.')) return null;
   const base = path.posix.normalize(path.posix.join(path.posix.dirname(sourcePath), specifier));

@@ -26,6 +26,14 @@ export function inventory(root, scope) {
   }
   return [...new Set(files)].filter(file => isKnowledgeSourcePath(file) && !OMIT.test(file) && scope.include.some(s => under(file, s)) && !scope.exclude.some(s => under(file, s))).sort();
 }
+/** Consume Machine/Repository file evidence instead of running a second inventory traversal. */
+export function inventoryFromRepositoryCrawl(graph, scope) {
+  if (graph?.schema !== 'agentsam.repository.crawl.v1') throw new TypeError('expected repository crawl evidence');
+  return [...new Set(graph.resources.filter(r => r.id.startsWith('file:')).map(r => r.path))]
+    .filter(file => isKnowledgeSourcePath(file) && !OMIT.test(file) &&
+      scope.include.some(s => under(file,s)) && !scope.exclude.some(s => under(file,s))).sort();
+}
+
 export function readSource(root, file) {
   // Refuse all symlink components, including tracked links into another repository.
   let current = root;

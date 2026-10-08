@@ -22,6 +22,8 @@ const GROUPS = Object.freeze([
       ['inspect', 'Bounded repository authority view'],
       ['machine', 'Deterministic local perception + asset discovery'],
       ['machine inspect', 'Inspect a path (file or directory)'],
+      ['machine crawl', 'Normalize Machine observations to a repository graph'],
+      ['machine mine', 'Compare repository implementations for reuse'],
       ['recon', 'Bounded-worker finding packets'],
       ['codebaseindex', 'AST ingest + optional embeddings'],
       ['index', 'Project inventory + knowledge index commands'],

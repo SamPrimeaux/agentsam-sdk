@@ -10,13 +10,16 @@
     "./contracts": "./src/contracts.js",
     "./merkle": "./src/merkle/index.js",
     "./merkle/persistence": "./src/merkle/persistence.js",
-    "./merkle/cloudflare-persistence": "./src/merkle/cloudflare-persistence.js"
+    "./merkle/cloudflare-persistence": "./src/merkle/cloudflare-persistence.js",
+    "./crawl": "./src/crawl.js",
+    "./refinery": "./src/refinery.js"
   },
   "scripts": {
     "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "jsonc-parser": "^3.3.1"
   },
   "engines": {
     "node": ">=22 <25"
