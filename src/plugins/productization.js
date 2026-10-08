@@ -73,6 +73,28 @@ function evidenceChecks(product,staticEvidence,bundle){
   return checks;
 }
 
+function checkPassed(checks,id){
+  return checks?.[id]?.status === 'pass' || checks?.[id]?.status === 'not_applicable';
+}
+
+export function resolvePluginLifecycle(product,checks,{ready=false}={}){
+  const available=checkPassed(checks,'definition.manifest');
+  const installed=checkPassed(checks,'installation.account');
+  const connectionRequired=Boolean(product?.auth?.connectionRequired);
+  const connected=!connectionRequired || (
+    checkPassed(checks,'authorization.valid') &&
+    checkPassed(checks,'authorization.permissions')
+  );
+  let state=null;
+  if(available) state='available';
+  if(installed) state=connectionRequired && !connected ? 'needs_connection' : 'connected';
+  if(ready) state='ready';
+  const blockedBy=Object.entries(checks||{})
+    .filter(([,check])=>check?.status==='fail'||check?.status==='unverified')
+    .map(([id])=>id);
+  return {state,available,installed,connectionRequired,connected,ready,blockedBy};
+}
+
 function repositoryFindings(bundle,product){
   const mine=bundle?.refinery;
   if(!mine) return [];
@@ -253,7 +275,8 @@ export function verifyPluginProduct(target,{evidenceBundle=null}={}){
   }
   const allPassed=Object.keys(checks).length>0 && Object.values(checks).every(check=>check?.status==='pass'||check?.status==='not_applicable');
   const ready=inspected.ok && allPassed && !inspected.findings.some(row=>row.severity==='error');
-  return {...inspected,checks,ready,status:ready?'READY':'NOT_READY'};
+  const lifecycle=resolvePluginLifecycle(inspected.product,checks,{ready});
+  return {...inspected,checks,lifecycle,ready,status:ready?'READY':'NOT_READY'};
 }
 
 export function buildPluginQualityReceipt(target,{generatedAt=new Date().toISOString(),verification=null,evidenceBundle=null}={}){
@@ -267,6 +290,7 @@ export function buildPluginQualityReceipt(target,{generatedAt=new Date().toISOSt
     generatedAt,
     findings:verified.findings,
     checks:verified.checks,
+    lifecycle:verified.lifecycle||resolvePluginLifecycle(verified.product,verified.checks,{ready:Boolean(verified.ready)}),
     status:verified.ready?'READY':'NOT_READY',
   };
 }
