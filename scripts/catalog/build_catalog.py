@@ -22,7 +22,7 @@ def main():
     args = ap.parse_args()
 
     repo = Path(args.repo).resolve()
-    manifests = sorted((repo / "packages").glob("*/agentsam.package.json"))
+    manifests = sorted({*(repo / "packages").glob("*/agentsam.package.json"), repo / "apps/local-studio/shared/agentsam/agentsam.package.json", repo / "packages/connectors/cfoa/agentsam.package.json"})
     packages, seen, errors = [], {}, []
 
     for p in manifests:

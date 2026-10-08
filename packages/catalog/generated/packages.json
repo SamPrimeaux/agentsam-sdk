@@ -1,5 +1,5 @@
 {
-  "count": 59,
+  "count": 61,
   "packages": [
     {
       "avoid_when": [],
@@ -294,6 +294,52 @@
       "status": "unknown",
       "topics": [],
       "use_when": [],
+      "version": "2.6.12"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/connectors/cfoa",
+        "purpose_source": "package.json",
+        "readme": null
+      },
+      "execution_domains": [
+        "cloudflare"
+      ],
+      "id": "agentsam-connector-cloudflare",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-connector-cloudflare",
+          "package": "@inneranimalmedia/agentsam-connector-cloudflare",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/agentsam-connector-cloudflare",
+      "purpose": "Portable Cloudflare capability connector for AgentSam applications and SDK consumers. Independent project; not affiliated with Cloudflare, Inc..",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-connector-cloudflare",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "runtime-readiness"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [
+        "cloudflare",
+        "connectors"
+      ],
+      "use_when": [
+        "Connect AgentSam to supported Cloudflare services through the capability connector."
+      ],
       "version": "2.6.12"
     },
     {
@@ -889,6 +935,48 @@
       "status": "unknown",
       "topics": [],
       "use_when": [],
+      "version": "2.6.12"
+    },
+    {
+      "avoid_when": [
+        "Building a standalone public runtime package; this module is private to Local Studio."
+      ],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "apps/local-studio/shared/agentsam",
+        "purpose_source": "package.json",
+        "readme": null
+      },
+      "execution_domains": [
+        "desktop",
+        "hosted"
+      ],
+      "id": "agentsam-local-shared",
+      "install": [],
+      "languages": [
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-local-shared",
+      "purpose": "Private shared Local Studio chat, vault, inventory and workspace contracts.",
+      "registry": {
+        "kind": "private-workspace",
+        "name": "@inneranimalmedia/agentsam-local-shared",
+        "public_claim": false
+      },
+      "review_required": [
+        "runtime-readiness"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [
+        "desktop",
+        "contracts"
+      ],
+      "use_when": [
+        "Implement shared Local Studio contracts for chat, workspace, and vault UI."
+      ],
       "version": "2.6.12"
     },
     {

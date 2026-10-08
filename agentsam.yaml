@@ -44,6 +44,253 @@ runtime:
     purpose: optional container target for supported local/background services
 
 packages:
+  # BEGIN AGENTSAM GENERATED INVENTORY
+  inventory:
+    - id: "agentsam-abs"
+      name: "@inneranimalmedia/agentsam-abs"
+      path: "packages/agentsam-abs"
+      readiness: unverified
+    - id: "agentsam-analytics"
+      name: "@inneranimalmedia/agentsam-analytics"
+      path: "packages/agentsam-analytics"
+      readiness: unverified
+    - id: "agentsam-assets-core"
+      name: "@inneranimalmedia/agentsam-assets-core"
+      path: "packages/agentsam-assets-core"
+      readiness: unverified
+    - id: "agentsam-brand"
+      name: "@inneranimalmedia/agentsam-brand"
+      path: "packages/agentsam-brand"
+      readiness: unverified
+    - id: "agentsam-browser-surface"
+      name: "@inneranimalmedia/agentsam-browser-surface"
+      path: "packages/agentsam-browser-surface"
+      readiness: unverified
+    - id: "agentsam-campaign"
+      name: "@inneranimalmedia/agentsam-campaign"
+      path: "packages/agentsam-campaign"
+      readiness: unverified
+    - id: "agentsam-cloudflare-images"
+      name: "@inneranimalmedia/agentsam-cloudflare-images"
+      path: "packages/agentsam-cloudflare-images"
+      readiness: unverified
+    - id: "agentsam-connector-cloudflare"
+      name: "@inneranimalmedia/agentsam-connector-cloudflare"
+      path: "packages/connectors/cfoa"
+      readiness: unverified
+    - id: "agentsam-content"
+      name: "@inneranimalmedia/agentsam-content"
+      path: "packages/agentsam-content"
+      readiness: unverified
+    - id: "agentsam-content-studio"
+      name: "@inneranimalmedia/agentsam-content-studio"
+      path: "packages/agentsam-content-studio"
+      readiness: unverified
+    - id: "agentsam-contracts"
+      name: "@inneranimalmedia/agentsam-contracts"
+      path: "packages/agentsam-contracts"
+      readiness: unverified
+    - id: "agentsam-database-editor"
+      name: "@inneranimalmedia/agentsam-database-editor"
+      path: "packages/agentsam-database-editor"
+      readiness: unverified
+    - id: "agentsam-desktop-shell"
+      name: "@inneranimalmedia/agentsam-desktop-shell"
+      path: "packages/agentsam-desktop-shell"
+      readiness: unverified
+    - id: "agentsam-docs-theme"
+      name: "@inneranimalmedia/agentsam-docs-theme"
+      path: "packages/agentsam-docs-theme"
+      readiness: unverified
+    - id: "agentsam-errors"
+      name: "@inneranimalmedia/agentsam-errors"
+      path: "packages/agentsam-errors"
+      readiness: unverified
+    - id: "agentsam-goap"
+      name: "@inneranimalmedia/agentsam-goap"
+      path: "packages/agentsam-goap"
+      readiness: unverified
+    - id: "agentsam-hooks"
+      name: "@inneranimalmedia/agentsam-hooks"
+      path: "packages/agentsam-hooks"
+      readiness: unverified
+    - id: "agentsam-ide"
+      name: "@inneranimalmedia/agentsam-ide"
+      path: "packages/agentsam-ide"
+      readiness: unverified
+    - id: "agentsam-identity"
+      name: "@inneranimalmedia/agentsam-identity"
+      path: "packages/identity"
+      readiness: unverified
+    - id: "agentsam-key-manager"
+      name: "@inneranimalmedia/agentsam-key-manager"
+      path: "packages/agentsam-key-manager"
+      readiness: unverified
+    - id: "agentsam-knowledge"
+      name: "@inneranimalmedia/agentsam-knowledge"
+      path: "packages/agentsam-knowledge"
+      readiness: unverified
+    - id: "agentsam-loading-scene"
+      name: "@inneranimalmedia/agentsam-loading-scene"
+      path: "packages/agentsam-loading-scene"
+      readiness: unverified
+    - id: "agentsam-local-shared"
+      name: "@inneranimalmedia/agentsam-local-shared"
+      path: "apps/local-studio/shared/agentsam"
+      readiness: unverified
+    - id: "agentsam-merch"
+      name: "@inneranimalmedia/agentsam-merch"
+      path: "packages/agentsam-merch"
+      readiness: unverified
+    - id: "agentsam-nav"
+      name: "@inneranimalmedia/agentsam-nav"
+      path: "packages/agentsam-nav"
+      readiness: unverified
+    - id: "agentsam-queue-control"
+      name: "@inneranimalmedia/agentsam-queue-control"
+      path: "packages/agentsam-queue-control"
+      readiness: unverified
+    - id: "agentsam-rapid-rust"
+      name: "agentsam-rapid-rust"
+      path: "packages/agentsam-rapid-rust"
+      readiness: unverified
+    - id: "agentsam-repository"
+      name: "@inneranimalmedia/agentsam-repository"
+      path: "packages/agentsam-repository"
+      readiness: unverified
+    - id: "agentsam-scoring"
+      name: "@inneranimalmedia/agentsam-scoring"
+      path: "packages/agentsam-scoring"
+      readiness: unverified
+    - id: "agentsam-sections"
+      name: "@inneranimalmedia/agentsam-sections"
+      path: "packages/agentsam-sections"
+      readiness: unverified
+    - id: "agentsam-settings"
+      name: "@inneranimalmedia/agentsam-settings"
+      path: "packages/agentsam-settings"
+      readiness: unverified
+    - id: "agentsam-shell-kit"
+      name: "@inneranimalmedia/agentsam-shell-kit"
+      path: "packages/agentsam-shell-kit"
+      readiness: unverified
+    - id: "agentsam-vault"
+      name: "@inneranimalmedia/agentsam-vault"
+      path: "packages/agentsam-vault"
+      readiness: unverified
+    - id: "agentsam-work"
+      name: "@inneranimalmedia/agentsam-work"
+      path: "packages/agentsam-work"
+      readiness: unverified
+    - id: "agentsam-work-graph"
+      name: "@inneranimalmedia/agentsam-work-graph"
+      path: "packages/work-graph"
+      readiness: unverified
+    - id: "agentsam-workbench"
+      name: "@inneranimalmedia/agentsam-workbench"
+      path: "packages/agentsam-workbench"
+      readiness: unverified
+    - id: "analytics-ui"
+      name: "@inneranimalmedia/analytics-ui"
+      path: "packages/analytics-ui"
+      readiness: unverified
+    - id: "cms-runtime"
+      name: "@inneranimalmedia/cms-runtime"
+      path: "packages/cms-runtime"
+      readiness: unverified
+    - id: "copro-editor"
+      name: "@inneranimalmedia/copro-editor"
+      path: "packages/copro-editor"
+      readiness: unverified
+    - id: "copro-media"
+      name: "@inneranimalmedia/copro-media"
+      path: "packages/copro-media"
+      readiness: unverified
+    - id: "copro-project"
+      name: "@inneranimalmedia/copro-project"
+      path: "packages/copro-project"
+      readiness: unverified
+    - id: "copro-proof"
+      name: "@inneranimalmedia/copro-proof"
+      path: "packages/copro-proof"
+      readiness: unverified
+    - id: "copro-provider-contracts"
+      name: "@inneranimalmedia/copro-provider-contracts"
+      path: "packages/copro-provider-contracts"
+      readiness: unverified
+    - id: "copro-render"
+      name: "@inneranimalmedia/copro-render"
+      path: "packages/copro-render"
+      readiness: unverified
+    - id: "copro-storage"
+      name: "@inneranimalmedia/copro-storage"
+      path: "packages/copro-storage"
+      readiness: unverified
+    - id: "copro-templates"
+      name: "@inneranimalmedia/copro-templates"
+      path: "packages/copro-templates"
+      readiness: unverified
+    - id: "copro-timeline"
+      name: "@inneranimalmedia/copro-timeline"
+      path: "packages/copro-timeline"
+      readiness: unverified
+    - id: "copro-ui"
+      name: "@inneranimalmedia/copro-ui"
+      path: "packages/copro-ui"
+      readiness: unverified
+    - id: "fnf-theme"
+      name: "@inneranimalmedia/fnf-theme"
+      path: "packages/fnf-theme"
+      readiness: unverified
+    - id: "theme-contract"
+      name: "@inneranimalmedia/theme-contract"
+      path: "packages/theme-contract"
+      readiness: unverified
+    - id: "theme-cypress"
+      name: "@inneranimalmedia/theme-cypress"
+      path: "packages/theme-cypress"
+      readiness: unverified
+    - id: "theme-ember"
+      name: "@inneranimalmedia/theme-ember"
+      path: "packages/theme-ember"
+      readiness: unverified
+    - id: "theme-forge"
+      name: "@inneranimalmedia/theme-forge"
+      path: "packages/theme-forge"
+      readiness: unverified
+    - id: "theme-grove"
+      name: "@inneranimalmedia/theme-grove"
+      path: "packages/theme-grove"
+      readiness: unverified
+    - id: "theme-harbor"
+      name: "@inneranimalmedia/theme-harbor"
+      path: "packages/theme-harbor"
+      readiness: unverified
+    - id: "theme-heuristic"
+      name: "@inneranimalmedia/theme-heuristic"
+      path: "packages/heuristic-theme"
+      readiness: unverified
+    - id: "theme-iasf"
+      name: "@inneranimalmedia/theme-iasf"
+      path: "packages/theme-iasf"
+      readiness: unverified
+    - id: "theme-resolve"
+      name: "@inneranimalmedia/theme-resolve"
+      path: "packages/theme-resolve"
+      readiness: unverified
+    - id: "theme-scenes"
+      name: "@inneranimalmedia/theme-scenes"
+      path: "packages/theme-scenes"
+      readiness: unverified
+    - id: "theme-summit"
+      name: "@inneranimalmedia/theme-summit"
+      path: "packages/theme-summit"
+      readiness: unverified
+    - id: "theme-violet"
+      name: "@inneranimalmedia/theme-violet"
+      path: "packages/theme-violet"
+      readiness: unverified
+  # END AGENTSAM GENERATED INVENTORY
   root_sdk:
     name: "@inneranimalmedia/agentsam-sdk"
     version: "2.6.12"
@@ -160,27 +407,79 @@ capabilities:
 
 cli:
   commands:
+    - help
+    - doctor
+    - explain
+    - assist
+    - choose
+    - create
+    - add
+    - plugins
+    - plugin
+    - install
+    - skill
+    - runtime
+    - terminal
+    - dev
+    - inspect
+    - machine
+    - engine
+    - package
+    - merch
+    - receipts
+    - capabilities
+    - setup
+    - skills
     - context
-    - init
-    - index
-    - search
-    - repo
-    - mini
-    - merkle
-    - security
     - status
     - db
     - models
+    - hooks
     - providers
-    - whoami
+    - credentials
+    - cheat-sheet
+    - env
+    - api-key
     - login
     - logout
-    - start-local
+    - whoami
+    - resume
     - shell
+    - start-local
+    - ollama
     - tunnel
+    - connections
+    - compute
+    - google-cloud
+    - billing
+    - update
     - deploy
+    - deploy-receipt
+    - cloudflare
+    - go
+    - rust
+    - mcp
+    - eval
+    - index
+    - search
+    - repo
+    - init
+    - codebaseindex
+    - site
+    - brand
+    - plan
+    - security
+    - merkle
+    - cad
     - dockerize
+    - mini
+    - recon
+    - autorag
     - identity
+    - scaffold
+    - run
+    - goap
+    - app
 
 boundaries:
   sdk_provides:

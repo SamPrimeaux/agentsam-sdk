@@ -80,13 +80,20 @@ import { renderDiagnosticError } from './errors/index.js';
 import { renderHelpOverview, runHelp } from './ui/cli/help.js';
 import { hydrateSecureCredentials } from './security/local-vault.js';
 import { getCliCommand, printAssistTip, suggestCliCommands } from './cli/command-catalog.js';
+import { renderCliError } from '../packages/agentsam-errors/src/cli.js';
 
 const VERSION = pkg.version;
 
 function reportCliError(error) {
   if (error?.reported) return;
-  const rendered = renderDiagnosticError(error).split('\n').map((line) => `  ${line}`).join('\n');
-  console.error(`\n${rendered}\n`);
+  const json = process.argv.includes('--json');
+  const rendered = error?.envelope
+    ? renderCliError(error, { json })
+    : ['provider','transport'].includes(error?.domain)
+      ? renderDiagnosticError(error)
+      : '✗ ' + (error?.message || String(error)) + '\n  next: Run agentsam ' +
+        (process.argv[2] || 'help') + ' --help for usage.';
+  console.error('\n' + rendered.split('\n').map(line => '  ' + line).join('\n') + '\n');
 }
 
 
@@ -94,113 +101,6 @@ function printHelp() {
   console.log(renderHelpOverview(VERSION));
 }
 
-function printLegacyHelp() {
-  console.log(`
-  Agent Sam SDK — CLI v${VERSION}
-
-  Product UX:
-    agentsam                     Enter the interactive Agent Sam experience
-    agentsam create <name> --preset <fullstack|cms|prototype|data>
-    agentsam add <auth|cms|knowledge|agent|deploy-cloudflare>
-    agentsam plugin inspect|verify|receipt <path> [--evidence <bundle.json>]\n                                                   Deterministic productization from existing Machine/Repository/runtime evidence
-    agentsam plugins list|install|connect|status|remove [@agentsam-mcp]
-    agentsam dev               Run this project's existing npm dev script
-    agentsam inspect [--json]  Bounded repository index by default; use --view full for authority envelope
-    agentsam machine inspect   Native deterministic perception + asset discovery (--json)
-    agentsam engine status|audit|benchmark|assets  Local AI engine + compute tooling
-    agentsam brand [scan|…]    Deterministic brand intelligence on repository.snapshot authority
-    agentsam plan brand        Composable brand normalization plan (--goap optional)
-    agentsam deploy            Graduate an AgentSam project intentionally
-
-  Capability discovery:
-    agentsam setup             Discover → plan → approve → install (Homebrew-style)
-    agentsam capabilities [capability-id] [--json]
-    agentsam skill list|create|inspect|install|alias|remove|invoke
-    agentsam skills [skill-id-or-alias] [--references] [--json]
-
-  Power-user UX:
-    agentsam context [--json]  Git repo/revision + bridge configuration from any repo
-    agentsam init              Configure knowledge in this repo; --name scaffolds a new project
-    agentsam index             Plan/run incremental AST and optional embeddings (--help)
-    agentsam codebaseindex     Guided ingest: materials/allowlist/embeddings/storage (alias: ingest)
-    agentsam search "query"    Retrieve indexed code/text; --semantic enables embeddings
-    agentsam repo snapshot     Git composition/churn; --save retains observations
-    agentsam cad blender       Programmatic Blender inspect/build/render/export (--help)
-    agentsam cad project       Editable CAD project tools/workflows (--help)
-    agentsam mini <name>       Create and preview a small local gadget (--help for options)
-    agentsam merkle            File integrity, snapshots, comparisons, and interactive explorer (--help)
-    agentsam deploy-receipt    Merkle deploy/checkpoint capture + promote/failure receipts (--help)
-    agentsam recon             Bounded-worker task packets + finding-report validation (--help)
-    agentsam security          Dependency scan, log triage, and verified repair (--help)
-    agentsam status [--json] [-i]   Honest awareness: account + models + terminal + live Worker
-    agentsam db init|status    Manage the project-local SQLite database
-    agentsam models            Verify configured providers and selectable hosted/local models
-    agentsam providers         Configure, verify, and remove machine provider credentials
-    agentsam env init <name>   Create a secure provider profile + reusable shell loader
-    agentsam login             Sign in to Inner Animal Media and persist a secure machine-local session
-    agentsam logout            Sign out locally; provider credentials stay untouched
-    agentsam whoami [--json]   Authenticated account identity + safe credential status
-    agentsam terminal identity [--json]   This machine's hostname, platform, arch, and model
-    agentsam terminal enroll --instance <id> [--pair] [--json]
-                                          Needs AGENTSAM_API_KEY; --pair writes AGENTSAM_BRIDGE_KEY
-                                          (one terminal_connection in ~/.execos/profiles/)
-    agentsam resume [session]  Resume a saved Agent Sam session; omit id for picker
-    agentsam eval context      Offline context-strategy/economics fixtures (--help)
-    agentsam cloudflare        Capabilities + CF OAuth packs (agentsam cloudflare login --pack agentsam)
-    agentsam go                Go runtime discovery/build/deploy (Cloudflare worker-container)
-    agentsam rust              Rust/Wasm scaffold/doctor/check/build/dev/deploy (explicit deploy)
-    agentsam site scrape       Native public-site crawler, project-scoped evidence, explicit R2 upload
-    agentsam start-local       Local PTY on ws://127.0.0.1:3099 (no tunnel, no Cloudflare)
-    agentsam ollama            Opt-in local Ollama setup/status/model management
-    agentsam shell             Interactive Agent Sam slash-command shell
-    agentsam tunnel            Choose/list/inspect/run real Cloudflare Tunnels via Wrangler
-    agentsam deploy            Graduate to Cloudflare / GCP when ready
-    agentsam dockerize         Build/run app, knowledge, or CAD containers (--help)
-    agentsam identity preview  Preview the reusable local auth portal (not production login)
-    agentsam identity init     Scaffold identity app (+ optional --provider)
-    agentsam identity providers|plan|schema|resolve  Protocol-driven identity surfaces
-    agentsam help
-    agentsam --version
-    agentsam --help
-
-  Context options:
-    --json                     Machine-readable output
-    --cwd <path>               Resolve a different working directory
-
-  Inspect options:
-    --view <full|index|files>  Full authority envelope, facet index, or bounded matching files (default index)
-    --full                     Explicitly request the full authority envelope
-    --system/--package <name>  Filter semantic ownership
-    --category/--tag <value>   Filter semantic classification
-    --layer/--role <value>     Filter architecture role
-    --path <prefix|glob>       Filter repository paths (supports * and **)
-    --symbol/--import <value>  Filter AST symbols or imports
-    --match <text>             Lexical AND-match across semantic routing metadata
-    --limit <1..500>           Bound files view (default 50)
-    --facet-limit <1..200>     Bound each facet list (default 48)
-    --snapshot-file <file>     Reuse a saved canonical repository.snapshot; skips Merkle/AST rescan
-    --save-snapshot <file>     Save the canonical full snapshot while emitting the selected view
-    --pretty                   Pretty-print JSON; machine JSON is compact by default
-    --remote <name>            Preferred Git remote (default origin; falls back to first remote)
-
-  Run agentsam from any project to enter the account-aware interactive experience.
-  Account, model-provider, terminal, and deploy permissions are requested only when the related capability needs them.
-
-  Tunnel commands:
-    agentsam tunnel            Guided picker over Wrangler-visible tunnels
-    agentsam tunnel list       List real Cloudflare Tunnels
-    agentsam tunnel info <id>  Inspect one tunnel
-    agentsam tunnel run <id>   Run/start a connector on this machine
-    agentsam tunnel create <name>
-    agentsam tunnel quick-start [url]
-
-  Init options:
-    --name <name>              Project directory name
-    --lane <fullstack|cms|data|crm|creative>
-    --run-target <local|cloudflare|gcp>   Default: local
-    --yes                      Skip confirmation
-  `);
-}
 
 function parseInitArgs(argv) {
   const opts = {
@@ -415,11 +315,18 @@ const rest = process.argv.slice(3);
 hydrateSecureCredentials(process.env);
 
 const catalogEntry = command && !command.startsWith('-') ? getCliCommand(command) : null;
-if (catalogEntry && command !== 'help') {
+if (catalogEntry && command !== 'help' && !rest.includes('--help') &&
+    !rest.includes('-h') && catalogEntry.skill &&
+    catalogEntry.skill !== 'agentsam-app-fundamentals') {
   printAssistTip(catalogEntry);
 }
 
-if (command === '--version' || command === '-v') {
+try {
+if (command && !command.startsWith('-') && (rest.includes('--help') || rest.includes('-h'))) {
+  const entry = getCliCommand(command);
+  if (!entry) { console.error('Unknown command: ' + command); process.exitCode = 2; }
+  else { console.log('agentsam '+entry.id+' — '+entry.summary); for (const u of entry.usage?.length ? entry.usage : ['agentsam '+entry.id+' [--help]']) console.log('  '+u); }
+} else if (command === '--version' || command === '-v') {
   console.log(VERSION);
 } else if (command === 'help') {
   await runHelp(rest, { version: VERSION });
@@ -649,7 +556,11 @@ if (command === '--version' || command === '-v') {
   catch (e) { reportCliError(e); process.exitCode = 1; }
 } else if (command === 'rust' || command === 'wasm' || command === 'rapid-rust') {
   try {
-    await runRust(rest);
+    if (!rest.length) {
+      console.log('agentsam rust — native Rust build and tooling commands');
+      console.log('  agentsam rust --help');
+      console.log('  agentsam rust status');
+    } else await runRust(rest);
   } catch (e) {
     // This command is a native CLI passthrough, not an HTTP request.
     // Preserve the real exit code and never classify a clap usage error as HTTP 500.
@@ -733,7 +644,8 @@ if (command === '--version' || command === '-v') {
     process.exitCode = 1;
   }
 } else if (command === 'start-local') {
-  await runStartLocal({});
+  if (rest.includes('--help') || rest.includes('-h')) console.log('agentsam start-local — start the local PTY and filesystem server at 127.0.0.1:3099 (Ctrl+C to stop)');
+  else await runStartLocal({});
 } else if (command === 'ollama') {
   try {
     await runOllama(rest);
@@ -757,7 +669,9 @@ if (command === '--version' || command === '-v') {
   }
 } else if (command === 'deploy') {
   try {
-    await runDeploy(parseDeployArgs(rest));
+    if (rest.includes('--help') || rest.includes('-h')) {
+      console.log('agentsam deploy [--target <cloudflare|gcp|local>] [--account-id <id>] [--dry-run] [--plan]');
+    } else await runDeploy(parseDeployArgs(rest));
   } catch (e) {
     reportCliError(e);
     process.exit(1);
@@ -920,5 +834,10 @@ if (command === '--version' || command === '-v') {
     console.error('');
   }
   printHelp();
-  process.exit(1);
+  process.exitCode = 2;
+}
+
+} catch (error) {
+  reportCliError(error);
+  process.exitCode = error?.exitCode || 1;
 }

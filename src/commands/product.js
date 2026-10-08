@@ -145,8 +145,29 @@ export async function runInspect(argv = []) {
   return output;
 }
 
+// Query the same canonical registry used by the agent's capability view.
+import { createRegistry } from '../registry/index.js';
+
 export async function runCapabilities(argv = []) {
   const opts = parseCommon(argv);
+  const registry = createRegistry();
+  if (argv.includes('--inventory') || argv.includes('--commands') || argv.includes('--packages') || argv.includes('--search')) {
+    const kind = argv.includes('--commands') ? 'command' : argv.includes('--packages') ? 'package' : null;
+    const idx = argv.indexOf('--search');
+    const query = idx >= 0 ? (argv[idx+1] || '') : '';
+    const rows = registry.search(query, { type:kind, limit:500 });
+    if (opts.json) console.log(JSON.stringify(rows,null,2));
+    else {
+      console.log('AgentSam inventory (declared does not imply runnable):');
+      for(const row of rows)console.log('  '+row.type.padEnd(11)+' '+row.id.padEnd(32)+' '+(row.summary||row.description||row.purpose||''));
+    }
+    return rows;
+  }
+  if (argv.includes('--help')) {
+    console.log('agentsam capabilities [capability-id] [--json]');
+    console.log('agentsam capabilities --inventory [--commands|--packages] [--search <text>] [--json]');
+    return null;
+  }
   const id = opts.positionals[0] || '';
   const result = id ? getCapability(id) : getCapabilityManifest();
   if (id && !result) throw new Error(`unknown_capability:${id}`);

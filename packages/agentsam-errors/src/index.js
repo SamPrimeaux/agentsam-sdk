@@ -10,3 +10,5 @@ export * from './recovery.js';
 export * from './transport.js';
 export * from './render.js';
 export * from './adapters/index.js';
+
+export { usageError, processError, renderCliError } from './cli.js';

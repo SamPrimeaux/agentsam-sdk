@@ -26,6 +26,7 @@ import { detectCliProject, findCliProjectRoot, readCliPreferences, updateCliPref
 import { buildContextEconomicsReport, renderContextEconomics } from './context-economics.js';
 import { createProviderAdapter } from '../providers/index.js';
 import { createCapabilityAdapter, runResponsesAgent } from '../agent/index.js';
+import { preparedTurnOne, saveTurnOneLocally } from '../registry/turn-one.js';
 import { resolveProviderCredential } from '../lib/provider-credentials.js';
 import { createLocalSession, saveLocalSession, localSessionElapsedMs, loadSessionContinuation } from '../lib/local-sessions.js';
 import { runtimeDatabasePath } from '../local/runtime-store.js';
@@ -672,7 +673,14 @@ async function runInteractiveModelTurn(prompt, state) {
     endpoint: model.provider === 'ollama' ? (process.env.AGENTSAM_OLLAMA_ENDPOINT || process.env.OLLAMA_BASE_URL || process.env.OLLAMA_HOST) : undefined,
     fetchImpl: state.providerFetchImpl,
   });
-  const capabilityAdapter = createCapabilityAdapter();
+  const capabilityAdapter = createCapabilityAdapter({
+    projectRoot: state.cwd,
+    authorizeCapability: ({ capability, input }) => approveToolExecution({
+      capability_id: capability.id,
+      input,
+      descriptor: { side_effects: capability.side_effects },
+    }, state),
+  });
 
   // Reasoning/tier changes do not change the provider conversation's owner.
   const samePolicy = state.session && state.session.model_key === model.model_key;
@@ -735,6 +743,12 @@ async function runInteractiveModelTurn(prompt, state) {
       ...(state.hookSessionContext ? {
         contextItems: [{ kind: 'hook', ref: 'hook://session-start/context', priority: 96, content: state.hookSessionContext }],
       } : {}),
+      onPreparedTurn: (capture) => {
+        const destination = process.env.AGENTSAM_TURN1_AUDIT_FILE;
+        if (!destination || state.turnOneCaptured) return;
+        saveTurnOneLocally(destination,preparedTurnOne(capture));
+        state.turnOneCaptured = true;
+      },
       beforeRequest: (preflight) => approveModelRequest(preflight, state),
       beforeTool: (request) => approveToolExecution(request, state),
       emit(event) {

@@ -48,6 +48,9 @@ jobs:
         if: github.event_name == 'pull_request'
         run: node scripts/ui-quality/check-source.mjs --changed-from "origin/$GITHUB_BASE_REF"
 
+      - name: Verify AgentSam registry and CLI contract
+        run: npm run verify:registry
+
       - name: Dependency health
         run: node src/security/cli.mjs check --log "$RUNNER_TEMP/npm-ci.log" --json > "$RUNNER_TEMP/dependency-health.json"
 

@@ -1,3 +1,4 @@
+import { isStandaloneKnowledgeQuestion } from './intent.js';
 import { compileToolSchema, restoreOptionalArguments } from '../providers/tool-schema.js';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
@@ -260,9 +261,12 @@ async function runAgentSamTurnCore(options = {}) {
     ? Object.freeze({ ...baseRecord, context_policy: Object.freeze({ ...(baseRecord.context_policy || {}), ...dynamicPolicy }) })
     : baseRecord;
   const budget = modelBudget(record, dynamicPolicy);
+  const generalQuestion = options.instructions == null && isStandaloneKnowledgeQuestion(objective);
   let instructions;
   let resolvedContext = null;
-  if (options.instructions == null) {
+  if (generalQuestion) {
+    instructions = 'You are AgentSam. Answer this general knowledge question directly and concisely. No project context, execution tools, or persistent task are needed.';
+  } else if (options.instructions == null) {
     const card = buildProjectCard(cwd, {
       activeTaskId: options.activeTaskId || options.taskId,
       lockedBy: options.lockedBy,
@@ -295,7 +299,14 @@ async function runAgentSamTurnCore(options = {}) {
   } else {
     instructions = String(options.instructions);
   }
-  const toolSurface = buildAgentToolSurface(options.capabilityAdapter, objective, { ...options, schemaProvider: record.provider });
+  const toolSurface = generalQuestion
+    ? Object.freeze({
+        tools: Object.freeze([]), aliases: new Map(), descriptors: Object.freeze([]),
+        receipt: Object.freeze({ catalog_tools: 0, cards_returned: 0, card_chars: 0,
+          hydrated_tools: 0, hydrated_schema_chars: 0, deferred_tools: Object.freeze([]),
+          skipped_reason: 'general_knowledge_question' }),
+      })
+    : buildAgentToolSurface(options.capabilityAdapter, objective, { ...options, schemaProvider: record.provider });
   const emit = options.emit;
   const runId = options.runId;
   event(emit, 'tool.search', toolSurface.receipt, runId);
@@ -403,6 +414,18 @@ async function runAgentSamTurnCore(options = {}) {
     for (const key of Object.keys(costBreakdownUsd)) costBreakdownUsd[key] += Number(cost?.components_usd?.[key] || 0);
   };
   accumulateCost(compacted?.cost);
+  if (typeof options.onPreparedTurn === 'function') {
+    await options.onPreparedTurn({
+      source: 'cli-agent', provider: record.provider, model: record.provider_model_id,
+      instructions, messages: input, tools: toolSurface.tools,
+      context_receipt: resolvedContext?.receipt || null,
+    });
+  }
+  if (typeof options.onPreparedTurn === 'function') await options.onPreparedTurn({
+    source: 'cli-agent', provider: record.provider, model: record.provider_model_id,
+    instructions, messages: input, tools: toolSurface.tools,
+    context_receipt: resolvedContext?.receipt || null,
+  });
   let response = await modelTurn({
     provider,
     model: record.provider_model_id,
