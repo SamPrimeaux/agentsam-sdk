@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { Nav, useNav } from '@inneranimalmedia/agentsam-nav';
 import { useWorkStore } from '@/lib/work/store';
 import { MessageList } from '@/components/workbench/thread';
@@ -31,7 +31,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
               controller={localStudioRuntimeVisuals.controllerFor(trail.id)}
               blocking={false}
               passiveOpacity={0.48}
-              style={{ zIndex: 1 }}
+              className="z-[1]"
               narrationStyle={{ bottom: 96 }}
             />
           }
@@ -41,7 +41,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
           composerClassName="agentsam-conversation-dock"
         />
       </section>
-      {state.sideOpen ? <><SplitHandle label="Resize Side Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(280, Math.min(900, width - delta)))} onDoubleClick={() => setPanelWidth(480)} /><aside className="agentsam-side-panel" style={{ width: panelWidth }} aria-label="Side Panel"><SideStage /></aside></> : null}
+      {state.sideOpen ? <><SplitHandle label="Resize Side Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(280, Math.min(900, width - delta)))} onDoubleClick={() => setPanelWidth(480)} /><aside className="agentsam-side-panel" style={{ "--agentsam-panel-width": panelWidth + "px" } as CSSProperties} aria-label="Side Panel"><SideStage /></aside></> : null}
     </div>
   </div>;
 }
