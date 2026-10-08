@@ -864,7 +864,8 @@ function PluginCustomizeView({
                         </div>
                       </div>
                       <div className="flex flex-1 flex-col gap-2 p-4">
-                        <p className="text-[13px] font-semibold tracking-[-0.02em] text-foreground">{plugin.name}</p>
+                        <p className="flex items-center gap-1.5 text-[13px] font-semibold tracking-[-0.02em] text-foreground">
+                          <PublisherMark url={plugin.publisherIconUrl} className="size-3 text-muted-foreground"/>{plugin.name}</p>
                         <p className="line-clamp-2 min-h-[34px] text-[11px] leading-[1.6] text-muted-foreground">{plugin.subtitle || plugin.description}</p>
                         <div className="mt-auto flex items-center justify-between gap-2 border-t border-border/65 pt-3">
                           <span className="text-[10px] text-muted-foreground">{plugin.toolCount} tools · {plugin.skillCount} skills</span>
