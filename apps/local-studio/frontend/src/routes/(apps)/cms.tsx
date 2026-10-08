@@ -214,7 +214,7 @@ function CmsPage() {
         <span className="text-muted-foreground">/</span>
         <span>Editor</span>
       </div>
-      <div className="min-h-0 flex-1 overflow-hidden" style={{ height: "calc(100% - 41px)" }}>
+      <div className="min-h-0 h-[calc(100%-41px)] flex-1 overflow-hidden">
         {localThemeProjectId ? <ThemeProjectEditor id={localThemeProjectId} page={search.page} /> : <ThemeEditorFrame adapter={themeAdapter} page={search.page} />}
       </div>
     </div>

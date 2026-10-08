@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -35,6 +37,16 @@ jobs:
         run: |
           set -o pipefail
           npm ci 2>&1 | tee "$RUNNER_TEMP/npm-ci.log"
+
+      - name: UI authoring contract tests
+        run: node --test scripts/ui-quality/*.test.mjs
+
+      - name: UI default theme contrast
+        run: node scripts/ui-quality/contrast.mjs
+
+      - name: UI changed-source gate
+        if: github.event_name == 'pull_request'
+        run: node scripts/ui-quality/check-source.mjs --changed-from "origin/$GITHUB_BASE_REF"
 
       - name: Dependency health
         run: node src/security/cli.mjs check --log "$RUNNER_TEMP/npm-ci.log" --json > "$RUNNER_TEMP/dependency-health.json"

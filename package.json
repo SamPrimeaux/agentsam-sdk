@@ -306,6 +306,8 @@
     "packages/copro-storage"
   ],
   "scripts": {
+    "verify:ui-quality": "node --test scripts/ui-quality/*.test.mjs && node scripts/ui-quality/contrast.mjs",
+    "verify:ui-quality:source": "node scripts/ui-quality/check-source.mjs --changed-from origin/main",
     "catalog:check": "python3 scripts/catalog/build_catalog.py --repo . --check",
     "test": "npm run test:standard && npm --prefix packages/identity test && npm --prefix packages/agentsam-brand test && npm run test:connectors && npm run test:providers",
     "test:brand": "npm --prefix packages/agentsam-brand test",

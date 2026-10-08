@@ -1,0 +1,26 @@
+{
+  "id": "agentsam.ui-quality.v1",
+  "description": "Required evidence for generated components, CMS themes, web and desktop UI",
+  "viewports": [
+    { "name": "phone", "width": 390, "height": 844, "mode": "single-primary-surface" },
+    { "name": "tablet", "width": 820, "height": 1180, "mode": "preview-dominant" },
+    { "name": "desktop", "width": 1440, "height": 900, "mode": "editor-and-preview" },
+    { "name": "large-desktop", "width": 1728, "height": 1117, "mode": "bounded-panels" },
+    { "name": "widescreen-2000", "width": 2000, "height": 1200, "mode": "bounded-panels" }
+  ],
+  "contrast": { "normal_text": 4.5, "large_text": 3, "controls_and_focus": 3 },
+  "requirements": [
+    "semantic-controls", "accessible-names-and-descriptions",
+    "icon-tooltips-with-keyboard-and-touch-equivalent",
+    "alt-or-decorative-marking", "visible-keyboard-focus",
+    "no-horizontal-overflow", "mobile-workspace-orchestration",
+    "responsive-five-form-factor-captures",
+    "wcag-aa-rendered-contrast", "utility-classes-or-portable-component-css",
+    "genuine-control-behavior"
+  ],
+  "release_evidence": [
+    "changed-source-audit", "token-contrast-audit",
+    "rendered-five-viewport-receipt", "axe-core-wcag-aa-report",
+    "keyboard-and-screenreader-review", "functional-interaction-proof"
+  ]
+}
