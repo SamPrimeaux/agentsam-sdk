@@ -9,6 +9,7 @@
     "identity",
     "ownership",
     "capabilities",
+    "resources",
     "permissions",
     "auth",
     "health",
@@ -92,6 +93,7 @@
           "risk": {
             "enum": [
               "read",
+              "prepare",
               "write",
               "destructive"
             ]
@@ -212,6 +214,14 @@
           "const": true
         }
       }
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
     }
   }
 }
