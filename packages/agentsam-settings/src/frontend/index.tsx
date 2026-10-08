@@ -931,14 +931,28 @@ function PluginCustomizeView({
               </div>
             ) : null}
 
-            {selectedCatalog?.capabilities.length || installed?.capabilities.length ? (
-              <div className="space-y-2">
-                <p className="text-[12px] font-semibold">Capabilities</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {(selectedCatalog?.capabilities || installed?.capabilities || []).map(capability=>(
-                    <span key={capability} className="rounded-lg border border-border/80 bg-muted/20 px-2.5 py-1.5 text-[10px] text-foreground/80">{capability}</span>
+            {selectedCatalog?.toolPermissions?.length ? (
+              <section className="space-y-2" aria-label="Published tool permissions">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[12px] font-semibold">Published MCP tools</p>
+                  <span className="text-[10px] text-muted-foreground">{selectedCatalog.toolPermissions.length} declared · {installed?.toolCount || 0} registered</span>
+                </div>
+                <p className="text-[10px] leading-relaxed text-muted-foreground">These tools and permissions come from the verified catalog. They are not executable until OAuth and runtime verification succeeds.</p>
+                <div className="space-y-1.5">
+                  {selectedCatalog.toolPermissions.map(tool=>(
+                    <div key={tool.id} className="rounded-lg border border-border/80 bg-muted/20 px-3 py-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="min-w-0 text-[11px] font-medium text-foreground">{tool.title || tool.id}</span>
+                        <span className={cx("shrink-0 rounded px-1.5 py-0.5 text-[9px] font-medium",tool.readOnly?"bg-sky-400/10 text-sky-300":"bg-amber-400/10 text-amber-300")}>{tool.readOnly?"Read / prepare":"Write · approval"}</span>
+                      </div>
+                      <p className="mt-1 break-all font-mono text-[9px] text-muted-foreground">{tool.id} · {tool.scopes.join(', ')}</p>
+                    </div>
                   ))}
                 </div>
+              </section>
+            ) : installed?.capabilities.length ? (
+              <div className="space-y-2"><p className="text-[12px] font-semibold">Installed capabilities</p>
+                <div className="flex flex-wrap gap-1.5">{installed.capabilities.map(capability=><span key={capability} className="rounded-lg border border-border/80 bg-muted/20 px-2.5 py-1.5 text-[10px]">{capability}</span>)}</div>
               </div>
             ) : null}
 
