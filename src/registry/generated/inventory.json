@@ -1,0 +1,3850 @@
+{
+  "schema": "agentsam.registry.generated.v1",
+  "authority": [
+    "src/cli/command-catalog.js",
+    "protocol/capabilities/manifest.json",
+    "packages/catalog/generated/packages.json"
+  ],
+  "counts": {
+    "commands": 73,
+    "capabilities": 43,
+    "packages": 61
+  },
+  "commands": [
+    {
+      "id": "help",
+      "aliases": [
+        "-h",
+        "--help"
+      ],
+      "summary": "Interactive or topic help from this catalog",
+      "topic": "start",
+      "usage": [
+        "agentsam help"
+      ],
+      "operation": null
+    },
+    {
+      "id": "doctor",
+      "aliases": [],
+      "summary": "Offline toolchain diagnosis with repair commands",
+      "topic": "start",
+      "usage": [
+        "agentsam doctor",
+        "agentsam doctor --json",
+        "agentsam doctor --teach"
+      ],
+      "operation": null
+    },
+    {
+      "id": "explain",
+      "aliases": [],
+      "summary": "Explain a runtime or package from the offline catalog",
+      "topic": "start",
+      "usage": [
+        "agentsam explain rust",
+        "agentsam explain package agentsam-hooks"
+      ],
+      "operation": null
+    },
+    {
+      "id": "assist",
+      "aliases": [],
+      "summary": "Choose software architecture using deterministic questions",
+      "topic": "start",
+      "usage": [
+        "agentsam assist",
+        "agentsam assist --answers <json> --json"
+      ],
+      "operation": null
+    },
+    {
+      "id": "choose",
+      "aliases": [],
+      "summary": "Choose an execution runtime from explicit goals",
+      "topic": "start",
+      "usage": [
+        "agentsam choose runtime --goal reusable-native-logic"
+      ],
+      "operation": null
+    },
+    {
+      "id": "create",
+      "aliases": [],
+      "summary": "Scaffold a new AgentSam project from a preset",
+      "topic": "create",
+      "usage": [
+        "agentsam create"
+      ],
+      "operation": null
+    },
+    {
+      "id": "add",
+      "aliases": [],
+      "summary": "Add an explicit feature/capability selection",
+      "topic": "create",
+      "usage": [
+        "agentsam add"
+      ],
+      "operation": null
+    },
+    {
+      "id": "plugins",
+      "aliases": [],
+      "summary": "Install and manage AgentSam plugins",
+      "topic": "create",
+      "usage": [
+        "agentsam plugins"
+      ],
+      "operation": null
+    },
+    {
+      "id": "plugin",
+      "aliases": [],
+      "summary": "Inspect and verify governed plugin products",
+      "topic": "create",
+      "usage": [
+        "agentsam plugin inspect <target>",
+        "agentsam plugin verify <target>",
+        "agentsam plugin receipt <target>"
+      ],
+      "operation": null
+    },
+    {
+      "id": "install",
+      "aliases": [],
+      "summary": "Install an explicitly selected plugin",
+      "topic": "create",
+      "usage": [
+        "agentsam install plugins [name]"
+      ],
+      "operation": null
+    },
+    {
+      "id": "skill",
+      "aliases": [],
+      "summary": "Create, inspect, and install a specific skill",
+      "topic": "start",
+      "usage": [
+        "agentsam skill list",
+        "agentsam skill inspect <path>"
+      ],
+      "operation": null
+    },
+    {
+      "id": "runtime",
+      "aliases": [
+        "agentsamd"
+      ],
+      "summary": "Manage the local agentsamd runtime and daemon",
+      "topic": "runtime",
+      "usage": [
+        "agentsam runtime --help"
+      ],
+      "operation": null
+    },
+    {
+      "id": "terminal",
+      "aliases": [],
+      "summary": "Manage terminal identity and enrollment, distinct from PTY sessions",
+      "topic": "runtime",
+      "usage": [
+        "agentsam terminal identity",
+        "agentsam terminal enroll --instance <id>"
+      ],
+      "operation": null
+    },
+    {
+      "id": "dev",
+      "aliases": [],
+      "summary": "Run this project’s npm dev script",
+      "topic": "work",
+      "usage": [
+        "agentsam dev"
+      ],
+      "operation": null
+    },
+    {
+      "id": "inspect",
+      "aliases": [],
+      "summary": "Bounded repository inspect / authority view",
+      "topic": "work",
+      "usage": [
+        "agentsam inspect"
+      ],
+      "operation": "repository.inspect"
+    },
+    {
+      "id": "machine",
+      "aliases": [],
+      "summary": "Machine inspection, evidence crawl, and read-only code reuse proposals",
+      "topic": "work",
+      "usage": [
+        "agentsam machine"
+      ],
+      "operation": "machine.inspect"
+    },
+    {
+      "id": "engine",
+      "aliases": [],
+      "summary": "Discover, audit, benchmark, and govern local AI engines",
+      "topic": "runtime",
+      "usage": [
+        "agentsam engine"
+      ],
+      "operation": "engine.audit"
+    },
+    {
+      "id": "package",
+      "aliases": [],
+      "summary": "Audit, verify, and plan publication of distributable packages",
+      "topic": "work",
+      "usage": [
+        "agentsam package audit [--public] [--offline] [--json]",
+        "agentsam package status <name> [--offline] [--json]",
+        "agentsam package verify <name> [--offline] [--json]",
+        "agentsam package publish-plan [--offline] [--json]"
+      ],
+      "operation": "package.audit"
+    },
+    {
+      "id": "merch",
+      "aliases": [],
+      "summary": "Preflight designs against portable manufacturing profiles",
+      "topic": "work",
+      "usage": [
+        "agentsam merch profiles",
+        "agentsam merch build <manifest.json> [--all-compatible]"
+      ],
+      "operation": "merch.preflight"
+    },
+    {
+      "id": "receipts",
+      "aliases": [],
+      "summary": "Inspect receipt proofs and prune ephemeral AgentSam workdirs",
+      "topic": "runtime",
+      "usage": [
+        "agentsam receipts list [--limit 20] [--repo <id>]",
+        "agentsam receipts show <receipt-id>",
+        "agentsam receipts failures [--repo <id>]",
+        "agentsam receipts prune [--max-tmp-gb 1.0] [--dry-run]"
+      ],
+      "operation": "receipts.inspect"
+    },
+    {
+      "id": "capabilities",
+      "aliases": [],
+      "summary": "Inspect capability contracts",
+      "topic": "create",
+      "usage": [
+        "agentsam capabilities"
+      ],
+      "operation": null
+    },
+    {
+      "id": "setup",
+      "aliases": [],
+      "summary": "Discover → plan → approve → install capabilities (Homebrew-style)",
+      "topic": "start",
+      "usage": [
+        "agentsam setup [capability-id] [--dry-run|--yes]",
+        "agentsam setup runtime [--profile <id>] [--dry-run|--yes]",
+        "agentsam setup --list"
+      ],
+      "operation": null
+    },
+    {
+      "id": "skills",
+      "aliases": [
+        "skill"
+      ],
+      "summary": "List or load portable skill instructions",
+      "topic": "create",
+      "usage": [
+        "agentsam skills"
+      ],
+      "operation": null
+    },
+    {
+      "id": "context",
+      "aliases": [],
+      "summary": "Git + bridge context from any repo",
+      "topic": "work",
+      "usage": [
+        "agentsam context"
+      ],
+      "operation": null
+    },
+    {
+      "id": "status",
+      "aliases": [],
+      "summary": "Account, models, terminal, and live deploy awareness",
+      "topic": "runtime",
+      "usage": [
+        "agentsam status [--offline] [--no-discover] [--json] [-i|--interactive]"
+      ],
+      "operation": null
+    },
+    {
+      "id": "db",
+      "aliases": [],
+      "summary": "Project-local SQLite status/init",
+      "topic": "runtime",
+      "usage": [
+        "agentsam db"
+      ],
+      "operation": null
+    },
+    {
+      "id": "models",
+      "aliases": [],
+      "summary": "Probe hosted/local model availability",
+      "topic": "start",
+      "usage": [
+        "agentsam models"
+      ],
+      "operation": null
+    },
+    {
+      "id": "hooks",
+      "aliases": [
+        "hook"
+      ],
+      "summary": "Inspect lifecycle hooks, sources, and execution receipts",
+      "topic": "runtime",
+      "usage": [
+        "agentsam hooks status",
+        "agentsam hooks list",
+        "agentsam hooks executions [--limit N]",
+        "agentsam hooks init"
+      ],
+      "operation": null
+    },
+    {
+      "id": "providers",
+      "aliases": [],
+      "summary": "Configure machine provider credentials",
+      "topic": "start",
+      "usage": [
+        "agentsam providers"
+      ],
+      "operation": null
+    },
+    {
+      "id": "credentials",
+      "aliases": [
+        "credential"
+      ],
+      "summary": "Audit credentials, drift, and failure remediation (never prints secrets)",
+      "topic": "start",
+      "usage": [
+        "agentsam credentials"
+      ],
+      "operation": null
+    },
+    {
+      "id": "cheat-sheet",
+      "aliases": [
+        "cheatsheet"
+      ],
+      "summary": "Organized command groups (gcloud-like)",
+      "topic": "start",
+      "usage": [
+        "agentsam cheat-sheet"
+      ],
+      "operation": null
+    },
+    {
+      "id": "env",
+      "aliases": [],
+      "summary": "Provider profile / shell loader helpers",
+      "topic": "start",
+      "usage": [
+        "agentsam env"
+      ],
+      "operation": null
+    },
+    {
+      "id": "api-key",
+      "aliases": [
+        "apikey",
+        "api-keys"
+      ],
+      "summary": "Create/list/rotate AgentSam API keys (aak_*)",
+      "topic": "start",
+      "usage": [
+        "agentsam api-key"
+      ],
+      "operation": null
+    },
+    {
+      "id": "login",
+      "aliases": [],
+      "summary": "Sign in and persist machine-local session",
+      "topic": "start",
+      "usage": [
+        "agentsam login"
+      ],
+      "operation": null
+    },
+    {
+      "id": "logout",
+      "aliases": [],
+      "summary": "Sign out locally",
+      "topic": "start",
+      "usage": [
+        "agentsam logout"
+      ],
+      "operation": null
+    },
+    {
+      "id": "whoami",
+      "aliases": [],
+      "summary": "Authenticated account + tokenPermissions",
+      "topic": "start",
+      "usage": [
+        "agentsam whoami"
+      ],
+      "operation": null
+    },
+    {
+      "id": "resume",
+      "aliases": [],
+      "summary": "Resume a saved AgentSam session",
+      "topic": "start",
+      "usage": [
+        "agentsam resume"
+      ],
+      "operation": null
+    },
+    {
+      "id": "shell",
+      "aliases": [],
+      "summary": "Interactive slash-command shell",
+      "topic": "inside",
+      "usage": [
+        "agentsam shell"
+      ],
+      "operation": null
+    },
+    {
+      "id": "start-local",
+      "aliases": [],
+      "summary": "Local PTY WebSocket service",
+      "topic": "runtime",
+      "usage": [
+        "agentsam start-local"
+      ],
+      "operation": null
+    },
+    {
+      "id": "ollama",
+      "aliases": [],
+      "summary": "Local Ollama setup/status/models",
+      "topic": "runtime",
+      "usage": [
+        "agentsam ollama"
+      ],
+      "operation": null
+    },
+    {
+      "id": "tunnel",
+      "aliases": [],
+      "summary": "Cloudflare Tunnel via Wrangler",
+      "topic": "runtime",
+      "usage": [
+        "agentsam tunnel"
+      ],
+      "operation": null
+    },
+    {
+      "id": "connections",
+      "aliases": [
+        "connection"
+      ],
+      "summary": "Inspect execution connections",
+      "topic": "runtime",
+      "usage": [
+        "agentsam connections"
+      ],
+      "operation": null
+    },
+    {
+      "id": "compute",
+      "aliases": [],
+      "summary": "Alias for google-cloud compute/iam helpers",
+      "topic": "runtime",
+      "usage": [
+        "agentsam compute"
+      ],
+      "operation": null
+    },
+    {
+      "id": "google-cloud",
+      "aliases": [
+        "gcp",
+        "gcloud"
+      ],
+      "summary": "Google Cloud auth, projects, compute, IAM SAs, billing, doctor",
+      "topic": "runtime",
+      "usage": [
+        "agentsam google-cloud"
+      ],
+      "operation": null
+    },
+    {
+      "id": "billing",
+      "aliases": [
+        "costs"
+      ],
+      "summary": "Billing account relationships (not --billing-project)",
+      "topic": "runtime",
+      "usage": [
+        "agentsam billing"
+      ],
+      "operation": null
+    },
+    {
+      "id": "update",
+      "aliases": [],
+      "summary": "Component update preview (gcloud-like)",
+      "topic": "runtime",
+      "usage": [
+        "agentsam update"
+      ],
+      "operation": null
+    },
+    {
+      "id": "deploy",
+      "aliases": [],
+      "summary": "Graduate intentionally to cloud",
+      "topic": "runtime",
+      "usage": [
+        "agentsam deploy"
+      ],
+      "operation": null
+    },
+    {
+      "id": "deploy-receipt",
+      "aliases": [],
+      "summary": "Merkle deploy/checkpoint receipts",
+      "topic": "runtime",
+      "usage": [
+        "agentsam deploy-receipt"
+      ],
+      "operation": null
+    },
+    {
+      "id": "cloudflare",
+      "aliases": [
+        "cf"
+      ],
+      "summary": "Wrangler reads + Worker CPU profiles",
+      "topic": "runtime",
+      "usage": [
+        "agentsam cloudflare"
+      ],
+      "operation": null
+    },
+    {
+      "id": "go",
+      "aliases": [],
+      "summary": "Go product discover/build/deploy",
+      "topic": "runtime",
+      "usage": [
+        "agentsam go"
+      ],
+      "operation": null
+    },
+    {
+      "id": "rust",
+      "aliases": [
+        "wasm",
+        "rapid-rust"
+      ],
+      "summary": "Rust/Wasm scaffold, doctor, check, build, dev, explicit deploy",
+      "topic": "runtime",
+      "usage": [
+        "agentsam rust"
+      ],
+      "operation": null
+    },
+    {
+      "id": "mcp",
+      "aliases": [],
+      "summary": "MCP server catalog and client adapters",
+      "topic": "runtime",
+      "usage": [
+        "agentsam mcp"
+      ],
+      "operation": null
+    },
+    {
+      "id": "eval",
+      "aliases": [],
+      "summary": "Context fixtures and live eval telemetry",
+      "topic": "runtime",
+      "usage": [
+        "agentsam eval"
+      ],
+      "operation": null
+    },
+    {
+      "id": "index",
+      "aliases": [],
+      "summary": "Plan/run incremental AST (+ optional embeddings)",
+      "topic": "work",
+      "usage": [
+        "agentsam index"
+      ],
+      "operation": "codebaseindex.ingest"
+    },
+    {
+      "id": "search",
+      "aliases": [],
+      "summary": "Retrieve indexed code/text",
+      "topic": "work",
+      "usage": [
+        "agentsam search"
+      ],
+      "operation": null
+    },
+    {
+      "id": "repo",
+      "aliases": [],
+      "summary": "Repository snapshot / observations",
+      "topic": "work",
+      "usage": [
+        "agentsam repo [snapshot] [--cwd <path>] [--churn-days <days>] [--save] [--json]",
+        "agentsam repo history [--cwd <path>]",
+        "agentsam repo compare [--cwd <path>]"
+      ],
+      "operation": "repository.inspect"
+    },
+    {
+      "id": "init",
+      "aliases": [],
+      "summary": "Knowledge setup or local scaffold",
+      "topic": "create",
+      "usage": [
+        "agentsam init"
+      ],
+      "operation": null
+    },
+    {
+      "id": "codebaseindex",
+      "aliases": [
+        "ingest",
+        "codebase-index"
+      ],
+      "summary": "Guided codebase ingest: materials, allowlist, embeddings, storage",
+      "topic": "work",
+      "usage": [
+        "agentsam codebaseindex"
+      ],
+      "operation": "codebaseindex.ingest"
+    },
+    {
+      "id": "site",
+      "aliases": [],
+      "summary": "Project-scoped site.scrape crawl and evidence",
+      "topic": "work",
+      "usage": [
+        "agentsam site"
+      ],
+      "operation": "site.scrape"
+    },
+    {
+      "id": "brand",
+      "aliases": [],
+      "summary": "Deterministic brand intelligence",
+      "topic": "work",
+      "usage": [
+        "agentsam brand"
+      ],
+      "operation": "brand.scan"
+    },
+    {
+      "id": "plan",
+      "aliases": [],
+      "summary": "Durable project-local work plans + domain plans",
+      "topic": "work",
+      "usage": [
+        "agentsam plan"
+      ],
+      "operation": null
+    },
+    {
+      "id": "security",
+      "aliases": [
+        "sca"
+      ],
+      "summary": "Dependency + trust-boundary scan",
+      "topic": "work",
+      "usage": [
+        "agentsam security"
+      ],
+      "operation": "security.scan"
+    },
+    {
+      "id": "merkle",
+      "aliases": [],
+      "summary": "File integrity snapshots and explorer",
+      "topic": "work",
+      "usage": [
+        "agentsam merkle"
+      ],
+      "operation": null
+    },
+    {
+      "id": "cad",
+      "aliases": [],
+      "summary": "Blender/OpenSCAD/FreeCAD CAD tools",
+      "topic": "work",
+      "usage": [
+        "agentsam cad"
+      ],
+      "operation": "cad.blender.inspect"
+    },
+    {
+      "id": "dockerize",
+      "aliases": [],
+      "summary": "Build/run supported containers",
+      "topic": "create",
+      "usage": [
+        "agentsam dockerize"
+      ],
+      "operation": null
+    },
+    {
+      "id": "mini",
+      "aliases": [],
+      "summary": "Create a small local gadget",
+      "topic": "create",
+      "usage": [
+        "agentsam mini"
+      ],
+      "operation": null
+    },
+    {
+      "id": "recon",
+      "aliases": [],
+      "summary": "Bounded-worker packets + finding reports",
+      "topic": "work",
+      "usage": [
+        "agentsam recon"
+      ],
+      "operation": null
+    },
+    {
+      "id": "autorag",
+      "aliases": [],
+      "summary": "AutoRAG configure/probe helpers",
+      "topic": "work",
+      "usage": [
+        "agentsam autorag"
+      ],
+      "operation": null
+    },
+    {
+      "id": "identity",
+      "aliases": [],
+      "summary": "Identity portal, providers, protocol surfaces",
+      "topic": "create",
+      "usage": [
+        "agentsam identity"
+      ],
+      "operation": null
+    },
+    {
+      "id": "scaffold",
+      "aliases": [],
+      "summary": "Generate CMS or worker-api starter",
+      "topic": "create",
+      "usage": [
+        "agentsam scaffold"
+      ],
+      "operation": null
+    },
+    {
+      "id": "run",
+      "aliases": [
+        "runs"
+      ],
+      "summary": "Inspect and control AgentSam runs across local or hosted control planes",
+      "topic": "work",
+      "usage": [
+        "agentsam run"
+      ],
+      "operation": null
+    },
+    {
+      "id": "goap",
+      "aliases": [],
+      "summary": "GOAP blackboard status/plan",
+      "topic": "inside",
+      "usage": [
+        "agentsam goap"
+      ],
+      "operation": null
+    },
+    {
+      "id": "app",
+      "aliases": [
+        "apps"
+      ],
+      "summary": "Bundled AgentSam apps launcher",
+      "topic": "create",
+      "usage": [
+        "agentsam app"
+      ],
+      "operation": null
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "machine.inspect",
+      "description": "Read-only native deterministic repository inspection in the authorized workspace; only advertised when a Machine runtime is resolved.",
+      "package": "@inneranimalmedia/agentsam-sdk/capabilities",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "test.run",
+      "description": "Run a named npm test script in the authorized workspace after execution approval.",
+      "package": "@inneranimalmedia/agentsam-sdk/capabilities",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "workspace.read",
+      "description": "Read a bounded UTF-8 file from the selected project workspace without escaping its root.",
+      "package": "@inneranimalmedia/agentsam-sdk/capabilities",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "workspace.write",
+      "description": "Write a bounded UTF-8 file in the selected workspace; updating existing files requires expected_sha256 and host approval.",
+      "package": "@inneranimalmedia/agentsam-sdk/capabilities",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "capability.search",
+      "description": "Search AgentSam registered commands, packages, and executable capability declarations.",
+      "package": "@inneranimalmedia/agentsam-sdk/registry",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "capability.describe",
+      "description": "Describe a named AgentSam capability, CLI command or package without implying it is runnable.",
+      "package": "@inneranimalmedia/agentsam-sdk/registry",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "capability.status",
+      "description": "Report capability handler binding and availability; never infer a working runtime from a declaration.",
+      "package": "@inneranimalmedia/agentsam-sdk/registry",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "capability.invoke",
+      "description": "Invoke one of the allowlisted AgentSam operations through the host-authorized registry, with a structured result.",
+      "package": "@inneranimalmedia/agentsam-sdk/registry",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "repository.snapshot",
+      "description": "Collect a read-only, content-addressed repository evidence snapshot.",
+      "package": "@inneranimalmedia/agentsam-sdk/repository",
+      "cli": "agentsam inspect --json",
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "repository.audit",
+      "description": "Analyze a certified repository snapshot through an injected reasoning adapter without granting mutation authority.",
+      "package": "@inneranimalmedia/agentsam-sdk/agent",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "repository.intelligence",
+      "description": "Observe repository composition, manifests, churn, pressure, and stability.",
+      "package": "@inneranimalmedia/agentsam-sdk/repository",
+      "cli": "agentsam repo snapshot",
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "knowledge.index",
+      "description": "Build the SDK local/portable coherent incremental structural/text generation with optional embeddings.",
+      "package": "@inneranimalmedia/agentsam-sdk/knowledge",
+      "cli": "agentsam index run",
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "knowledge.search",
+      "description": "Retrieve bounded repository context from the SDK local/portable published knowledge generation.",
+      "package": "@inneranimalmedia/agentsam-sdk/knowledge",
+      "cli": "agentsam search \"query\"",
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "merkle.snapshot",
+      "description": "Create a portable SHA-256 filesystem snapshot.",
+      "package": "@inneranimalmedia/agentsam-sdk/merkle",
+      "cli": "agentsam merkle snapshot",
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "deploy.receipt",
+      "description": "Capture and finalize content-addressed deployment evidence.",
+      "package": "@inneranimalmedia/agentsam-sdk/deploy-receipt",
+      "cli": "agentsam deploy-receipt capture",
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "security.scan",
+      "description": "Scan dependency vulnerability evidence and Merkle-bound AST execution trust boundaries; return deterministic contradiction and repair evidence.",
+      "package": "@inneranimalmedia/agentsam-sdk/security",
+      "cli": "agentsam security scan",
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "brand.scan",
+      "description": "Deterministically extract brand/visual evidence from the same repository.snapshot file authority (colors, tokens, components, assets).",
+      "package": "@inneranimalmedia/agentsam-sdk/brand",
+      "cli": "agentsam brand scan",
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "brand.resolve",
+      "description": "Cluster observed brand evidence into inferred roles with confidence; never mutates the repository.",
+      "package": "@inneranimalmedia/agentsam-sdk/brand",
+      "cli": "agentsam brand resolve",
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "brand.plan",
+      "description": "Produce a preserve→normalize→migrate brand coherence plan; optional --goap sequencing.",
+      "package": "@inneranimalmedia/agentsam-sdk/brand",
+      "cli": "agentsam plan brand",
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "identity.init",
+      "description": "Generate portable identity/auth application surfaces from SDK contracts.",
+      "package": "@inneranimalmedia/agentsam-sdk/identity",
+      "cli": "agentsam identity init",
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "scaffold.create",
+      "description": "Create a local-first project from a deterministic preset selection.",
+      "package": "@inneranimalmedia/agentsam-sdk",
+      "cli": "agentsam create <name> --preset <preset>",
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "recon.pack",
+      "description": "Convert explicit evidence slices into bounded worker task packets.",
+      "package": "@inneranimalmedia/agentsam-sdk/repository",
+      "cli": "agentsam recon pack",
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "site.scrape",
+      "description": "Project-scoped public website crawling, verified page/image evidence, Knowledge indexing handoff, and explicit project-owned R2 storage.",
+      "package": "agentsam-site-scrape",
+      "cli": "agentsam site scrape",
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "blender.status",
+      "description": "Discover an already-installed native Blender runtime and report its executable and version.",
+      "package": "@inneranimalmedia/agentsam-sdk/cad",
+      "cli": "agentsam cad blender status --json",
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "blender.inspect",
+      "description": "Inspect a Blender scene headlessly without saving or mutating the source file.",
+      "package": "@inneranimalmedia/agentsam-sdk/cad",
+      "cli": "agentsam cad blender inspect <model.blend> --json",
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "blender.build",
+      "description": "Create or modify Blender geometry through a bounded declarative modeling recipe without arbitrary Python execution.",
+      "package": "@inneranimalmedia/agentsam-sdk/cad",
+      "cli": "agentsam cad blender build <recipe.json> --out <model.blend> --json",
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "blender.render_preview",
+      "description": "Render a bounded preview from an existing Blender scene and return a content hash receipt.",
+      "package": "@inneranimalmedia/agentsam-sdk/cad",
+      "cli": "agentsam cad blender render-preview <model.blend> --out <preview.png> --json",
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "blender.export",
+      "description": "Export selected Blender scene content to GLB, STL, or OBJ with versioned SHA-256 artifact evidence.",
+      "package": "@inneranimalmedia/agentsam-sdk/cad",
+      "cli": "agentsam cad blender export <model.blend> --format <glb|stl|obj> --out <artifact> --json",
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "tools.search",
+      "description": "Discover compact capability cards without injecting the full tool catalog or full schemas.",
+      "package": "@inneranimalmedia/agentsam-sdk/tools",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "context.resolve",
+      "description": "Select bounded evidence against an explicit model-aware context budget and return a measurable receipt.",
+      "package": "@inneranimalmedia/agentsam-sdk/context",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "terminal.exec",
+      "description": "Run a real argv-safe CLI process inside the runtime-owned project, with bounded output, credential-stripped environment, and explicit execution approval.",
+      "package": "@inneranimalmedia/agentsam-sdk",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "cloudflare.wrangler.native",
+      "description": "Execute one allowlisted read-only Wrangler operation with argv-safe cwd/config scoping and structured diagnostics.",
+      "package": "@inneranimalmedia/agentsam-sdk/cloudflare",
+      "cli": "agentsam cloudflare run <command>",
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "cloudflare.cpu.profile",
+      "description": "Summarize a local workerd/DevTools CPU profile into bounded ranked self-time evidence.",
+      "package": "@inneranimalmedia/agentsam-sdk/cloudflare",
+      "cli": "agentsam cloudflare cpu analyze <profile.cpuprofile>",
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "cloudflare.cpu.audit",
+      "description": "Analyze a bounded Cloudflare CPU profile and selected source evidence through an injected reasoning adapter without deploy authority.",
+      "package": "@inneranimalmedia/agentsam-sdk/cloudflare",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "workgraph.model",
+      "description": "Core work-graph primitive (WorkItem, Dependency, TimelineEvent, Artifact, Evidence, Actor) that engineering and business adapters and timeline/Gantt renderers project onto. The graph is the source of truth; the timeline UI is a view over it, not its own state.",
+      "package": "@inneranimalmedia/agentsam-sdk/work-graph",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "workgraph.adapter.engineering",
+      "description": "Maps supplied git commits to work items without network access.",
+      "package": "@inneranimalmedia/agentsam-sdk/work-graph/adapters/engineering/git",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "workgraph.adapter.mcp",
+      "description": "Maps supplied MCP tool call receipts to work items without network access.",
+      "package": "@inneranimalmedia/agentsam-sdk/work-graph/adapters/engineering/mcp",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "workgraph.adapter.business",
+      "description": "Maps supplied project records to work items without network access.",
+      "package": "@inneranimalmedia/agentsam-sdk/work-graph/adapters/business/projects",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "workgraph.render.timeline",
+      "description": "Renders a work graph into a timeline model (lanes by actor, work items per lane, timeline events) for a Gantt-style view. Pure projection — never a data source.",
+      "package": "@inneranimalmedia/agentsam-sdk/work-graph/renderers/timeline",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "workgraph.render.gantt_model",
+      "description": "Projects work items to a Gantt model; a reference HTML prototype is included separately.",
+      "package": "@inneranimalmedia/agentsam-sdk/work-graph/renderers/gantt-model",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "theme.storefront.shell",
+      "description": "Resolve the stock AgentSam CMS storefront shell theme contract.",
+      "package": "@inneranimalmedia/theme-heuristic",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "repository.crawl",
+      "description": "Normalize existing Rust Machine evidence into deterministic repository resources and edges.",
+      "package": "@inneranimalmedia/agentsam-repository",
+      "cli": "agentsam machine crawl <path> --json",
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "repository.mine",
+      "description": "Find evidence-based code-reuse proposals; no source modification or promotion.",
+      "package": "@inneranimalmedia/agentsam-repository",
+      "cli": "agentsam machine mine <path> --against <path> --json",
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    }
+  ],
+  "packages": [
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-abs",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-abs/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-abs",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-abs",
+          "package": "@inneranimalmedia/agentsam-abs",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-abs",
+      "purpose": "AgentSam Auto Browser Shell: dual-mode Explore/Build browser surface with provider-agnostic generative navigation, sandboxed previews, deterministic history, and packaged runtime scenes.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-abs",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "AgentSam Auto Browser Shell: dual-mode Explore/Build browser surface with provider-agnostic generative navigation, sandboxed previews, deterministic history, and packaged runtime scenes."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-analytics",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-analytics/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-analytics",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-analytics",
+          "package": "@inneranimalmedia/agentsam-analytics",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-analytics",
+      "purpose": "Portable AgentSam analytics read models and operational analytics surfaces.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-analytics",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Portable AgentSam analytics read models and operational analytics surfaces."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-assets-core",
+        "purpose_source": "package-manifest-description",
+        "readme": null
+      },
+      "execution_domains": [],
+      "id": "agentsam-assets-core",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-assets-core",
+          "package": "@inneranimalmedia/agentsam-assets-core",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-assets-core",
+      "purpose": "Shared Asset Core: canonical ast_* identity, machine facts, provenance, and provider representations. Peer BrandPack and Content domains build on this — neither owns the other.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-assets-core",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Shared Asset Core: canonical ast_* identity, machine facts, provenance, and provider representations. Peer BrandPack and Content domains build on this — neither owns the other."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-brand",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-brand/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-brand",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-brand",
+          "package": "@inneranimalmedia/agentsam-brand",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/agentsam-brand",
+      "purpose": "Deterministic Brand Intelligence + portable brand-asset promotion SDK for AgentSam (inspect, derive, plan, promote, publish, verify).",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-brand",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Deterministic Brand Intelligence + portable brand-asset promotion SDK for AgentSam (inspect, derive, plan, promote, publish, verify)."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-browser-surface",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-browser-surface/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-browser-surface",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-browser-surface",
+          "package": "@inneranimalmedia/agentsam-browser-surface",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-browser-surface",
+      "purpose": "AgentSamBrowserSurface: a portable Browse/Build browser capability with a provider registry so the lightweight Local Studio browser and the AgentSam Browser Shell can be swapped behind one stable host composition.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-browser-surface",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "AgentSamBrowserSurface: a portable Browse/Build browser capability with a provider registry so the lightweight Local Studio browser and the AgentSam Browser Shell can be swapped behind one stable host composition."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-campaign",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-campaign/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-campaign",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-campaign",
+          "package": "@inneranimalmedia/agentsam-campaign",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/agentsam-campaign",
+      "purpose": "Portable AgentSam campaign intelligence for promotional planning, product launches, SEO/content strategy, merchandising, audience targeting, conversion, brand consistency, and evidence-backed campaign evaluation.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-campaign",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Portable AgentSam campaign intelligence for promotional planning, product launches, SEO/content strategy, merchandising, audience targeting, conversion, brand consistency, and evidence-backed campaign evaluation."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-cloudflare-images",
+        "purpose_source": "package-manifest-description",
+        "readme": null
+      },
+      "execution_domains": [],
+      "id": "agentsam-cloudflare-images",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-cloudflare-images",
+          "package": "@inneranimalmedia/agentsam-cloudflare-images",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-cloudflare-images",
+      "purpose": "Shared Cloudflare Images transport: credentials, delivery URLs, and HTTP client. Content and Brand consume this — duplicate clients are not allowed. Independent project; not affiliated with Cloudflare, Inc..",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-cloudflare-images",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Shared Cloudflare Images transport: credentials, delivery URLs, and HTTP client. Content and Brand consume this — duplicate clients are not allowed. Independent project; not affiliated with Cloudflare, Inc.."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/connectors/cfoa",
+        "purpose_source": "package.json",
+        "readme": null
+      },
+      "execution_domains": [
+        "cloudflare"
+      ],
+      "id": "agentsam-connector-cloudflare",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-connector-cloudflare",
+          "package": "@inneranimalmedia/agentsam-connector-cloudflare",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/agentsam-connector-cloudflare",
+      "purpose": "Portable Cloudflare capability connector for AgentSam applications and SDK consumers. Independent project; not affiliated with Cloudflare, Inc..",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-connector-cloudflare",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "runtime-readiness"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [
+        "cloudflare",
+        "connectors"
+      ],
+      "use_when": [
+        "Connect AgentSam to supported Cloudflare services through the capability connector."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-content",
+        "purpose_source": "package-manifest-description",
+        "readme": null
+      },
+      "execution_domains": [],
+      "id": "agentsam-content",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-content",
+          "package": "@inneranimalmedia/agentsam-content",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-content",
+      "purpose": "Portable content/library peer domain over Asset Core: lifecycle, usage, providers, intelligence, and createContentRuntime(). BrandPack remains peer brand authority.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-content",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Portable content/library peer domain over Asset Core: lifecycle, usage, providers, intelligence, and createContentRuntime(). BrandPack remains peer brand authority."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-content-studio",
+        "purpose_source": "package-manifest-description",
+        "readme": null
+      },
+      "execution_domains": [],
+      "id": "agentsam-content-studio",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-content-studio",
+          "package": "@inneranimalmedia/agentsam-content-studio",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-content-studio",
+      "purpose": "Canonical React UI for AgentSam Content Studio: library, inspectors, assistant rail. Host apps provide a ContentRuntime; the UI never knows their names.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-content-studio",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Canonical React UI for AgentSam Content Studio: library, inspectors, assistant rail. Host apps provide a ContentRuntime; the UI never knows their names."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-contracts",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-contracts/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-contracts",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-contracts",
+          "package": "@inneranimalmedia/agentsam-contracts",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-contracts",
+      "purpose": "Framework-neutral AgentSam contracts for workbench, tools, providers, events, hooks, execution, identity and repository context.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-contracts",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Framework-neutral AgentSam contracts for workbench, tools, providers, events, hooks, execution, identity and repository context."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-database-editor",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-database-editor/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-database-editor",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-database-editor",
+          "package": "@inneranimalmedia/agentsam-database-editor",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-database-editor",
+      "purpose": "Portable AgentSam Database Editor — adapters for SQLite/D1/Postgres/Supabase + vectors surface. Donor: IAM /dashboard/database. Independent project; not affiliated with Supabase.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-database-editor",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Portable AgentSam Database Editor — adapters for SQLite/D1/Postgres/Supabase + vectors surface. Donor: IAM /dashboard/database. Independent project; not affiliated with Supabase."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-desktop-shell",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-desktop-shell/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-desktop-shell",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-desktop-shell",
+          "package": "@inneranimalmedia/agentsam-desktop-shell",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript",
+        "rust"
+      ],
+      "name": "@inneranimalmedia/agentsam-desktop-shell",
+      "purpose": "Tauri desktop shell for AgentSam-powered brand dashboards — manifest-driven, multi-brand installs. Independent project; not affiliated with Tauri.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-desktop-shell",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Tauri desktop shell for AgentSam-powered brand dashboards — manifest-driven, multi-brand installs. Independent project; not affiliated with Tauri."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "theme",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-docs-theme",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-docs-theme/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-docs-theme",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-docs-theme",
+          "package": "@inneranimalmedia/agentsam-docs-theme",
+          "type": "npm"
+        }
+      ],
+      "languages": [],
+      "name": "@inneranimalmedia/agentsam-docs-theme",
+      "purpose": "Violet docs skin tokens for AgentSam public guides (Systematic Autonomous Machinery).",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-docs-theme",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Violet docs skin tokens for AgentSam public guides (Systematic Autonomous Machinery)."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-errors",
+        "purpose_source": "package-manifest-description",
+        "readme": null
+      },
+      "execution_domains": [],
+      "id": "agentsam-errors",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-errors",
+          "package": "@inneranimalmedia/agentsam-errors",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-errors",
+      "purpose": "Canonical AgentSam runtime error normalization, classification, transport, remediation and rendering.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-errors",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Canonical AgentSam runtime error normalization, classification, transport, remediation and rendering."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-goap",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-goap/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-goap",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-goap",
+          "package": "@inneranimalmedia/agentsam-goap",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/agentsam-goap",
+      "purpose": "Portable AgentSam GOAP control-plane contracts and adapters over existing blackboard, ticket, workflow, execution, approval, queue, runtime, and evidence stores.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-goap",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Portable AgentSam GOAP control-plane contracts and adapters over existing blackboard, ticket, workflow, execution, approval, queue, runtime, and evidence stores."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-hooks",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-hooks/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-hooks",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-hooks",
+          "package": "@inneranimalmedia/agentsam-hooks",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "go",
+        "javascript",
+        "rust",
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-hooks",
+      "purpose": "Provider-neutral, language-agnostic AgentSam lifecycle hooks with callback, command, HTTP, model, tool, MCP, LSP, and sub-agent adapters.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-hooks",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Provider-neutral, language-agnostic AgentSam lifecycle hooks with callback, command, HTTP, model, tool, MCP, LSP, and sub-agent adapters."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-ide",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-ide/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-ide",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-ide",
+          "package": "@inneranimalmedia/agentsam-ide",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-ide",
+      "purpose": "AgentSam IDE packages — Monaco, file tree, xterm, LSP client, first-login onboarding. Rapidly deployable into Local Studio / desktop.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-ide",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "AgentSam IDE packages — Monaco, file tree, xterm, LSP client, first-login onboarding. Rapidly deployable into Local Studio / desktop."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/identity",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/identity/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-identity",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-identity",
+          "package": "@inneranimalmedia/agentsam-identity",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/agentsam-identity",
+      "purpose": "Identity module for @inneranimalmedia/agentsam-sdk (workspace — publish via root SDK)",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-identity",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Identity module for @inneranimalmedia/agentsam-sdk (workspace — publish via root SDK)"
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-key-manager",
+        "purpose_source": "package-manifest-description",
+        "readme": null
+      },
+      "execution_domains": [],
+      "id": "agentsam-key-manager",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-key-manager",
+          "package": "@inneranimalmedia/agentsam-key-manager",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-key-manager",
+      "purpose": "AgentSam settings UI for keys + integrations. Uses agentsam-vault contracts; Kumo-style SensitiveInput primitives.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-key-manager",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "AgentSam settings UI for keys + integrations. Uses agentsam-vault contracts; Kumo-style SensitiveInput primitives."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-knowledge",
+        "purpose_source": "package-manifest-description",
+        "readme": null
+      },
+      "execution_domains": [],
+      "id": "agentsam-knowledge",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-knowledge",
+          "package": "@inneranimalmedia/agentsam-knowledge",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/agentsam-knowledge",
+      "purpose": "Portable AutoRAG discovery, adapter registries, probes, and company routing contracts for AgentSam.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-knowledge",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Portable AutoRAG discovery, adapter registries, probes, and company routing contracts for AgentSam."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-loading-scene",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-loading-scene/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-loading-scene",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-loading-scene",
+          "package": "@inneranimalmedia/agentsam-loading-scene",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-loading-scene",
+      "purpose": "Provider-agnostic runtime visualization with six seamless full-frame Computational Hyperspace studies driven by real AgentSam runtime semantics.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-loading-scene",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Provider-agnostic runtime visualization with six seamless full-frame Computational Hyperspace studies driven by real AgentSam runtime semantics."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [
+        "Building a standalone public runtime package; this module is private to Local Studio."
+      ],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "apps/local-studio/shared/agentsam",
+        "purpose_source": "package.json",
+        "readme": null
+      },
+      "execution_domains": [
+        "desktop",
+        "hosted"
+      ],
+      "id": "agentsam-local-shared",
+      "install": [],
+      "languages": [
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-local-shared",
+      "purpose": "Private shared Local Studio chat, vault, inventory and workspace contracts.",
+      "registry": {
+        "kind": "private-workspace",
+        "name": "@inneranimalmedia/agentsam-local-shared",
+        "public_claim": false
+      },
+      "review_required": [
+        "runtime-readiness"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [
+        "desktop",
+        "contracts"
+      ],
+      "use_when": [
+        "Implement shared Local Studio contracts for chat, workspace, and vault UI."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-merch",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-merch/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-merch",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-merch",
+          "package": "@inneranimalmedia/agentsam-merch",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-merch",
+      "purpose": "Provider-neutral manufacturing profiles, preflight, derivative planning, and collection-lab primitives for AgentSam.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-merch",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Provider-neutral manufacturing profiles, preflight, derivative planning, and collection-lab primitives for AgentSam."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-nav",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-nav/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-nav",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-nav",
+          "package": "@inneranimalmedia/agentsam-nav",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-nav",
+      "purpose": "Reusable responsive navigation primitives for AgentSam dashboard-family applications.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-nav",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Reusable responsive navigation primitives for AgentSam dashboard-family applications."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-queue-control",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-queue-control/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-queue-control",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-queue-control",
+          "package": "@inneranimalmedia/agentsam-queue-control",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/agentsam-queue-control",
+      "purpose": "Portable AgentSam queue, job-routing, retry, scheduling, and execution-control primitives with provider adapters.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-queue-control",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Portable AgentSam queue, job-routing, retry, scheduling, and execution-control primitives with provider adapters."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "developer-tool",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-rapid-rust",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-rapid-rust/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-rapid-rust",
+      "install": [
+        {
+          "command": "cargo install agentsam-rapid-rust",
+          "package": "agentsam-rapid-rust",
+          "type": "cargo"
+        }
+      ],
+      "languages": [
+        "rust"
+      ],
+      "name": "agentsam-rapid-rust",
+      "purpose": "AgentSam native scaffolder and lifecycle CLI for Cloudflare Rust/Wasm Workers",
+      "registry": {
+        "kind": "cargo",
+        "name": "agentsam-rapid-rust",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "AgentSam native scaffolder and lifecycle CLI for Cloudflare Rust/Wasm Workers"
+      ],
+      "version": "0.1.0",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [
+        "agentsam machine crawl <path> --json",
+        "agentsam machine mine <path> --against <path> --json"
+      ],
+      "evidence": {
+        "directory": "packages/agentsam-repository",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-repository/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-repository",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-repository",
+          "package": "@inneranimalmedia/agentsam-repository",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/agentsam-repository",
+      "purpose": "Portable AgentSam repository identity, Merkle, semantic file metadata, persistence, and repository graph runtime contracts.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-repository",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Normalize existing Rust Machine evidence into deterministic repository resources and edges.",
+        "Find evidence-based code-reuse proposals; no source modification or promotion."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-scoring",
+        "purpose_source": "package-manifest-description",
+        "readme": null
+      },
+      "execution_domains": [],
+      "id": "agentsam-scoring",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-scoring",
+          "package": "@inneranimalmedia/agentsam-scoring",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-scoring",
+      "purpose": "Generic ScoreCard contract and versioned weight formulas. Raw evidence is SSOT; scores are recomputable derived views — never a grand similarity_score.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-scoring",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Generic ScoreCard contract and versioned weight formulas. Raw evidence is SSOT; scores are recomputable derived views — never a grand similarity_score."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-sections",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-sections/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-sections",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-sections",
+          "package": "@inneranimalmedia/agentsam-sections",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-sections",
+      "purpose": "Reusable mxs-* page kit: global header/footer, scroll-driven split sections, and a media slot for image, gif, video, glb and sandboxed app previews.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-sections",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Reusable mxs-* page kit: global header/footer, scroll-driven split sections, and a media slot for image, gif, video, glb and sandboxed app previews."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-settings",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-settings/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-settings",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-settings",
+          "package": "@inneranimalmedia/agentsam-settings",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-settings",
+      "purpose": "Portable AgentSam Settings shell, contracts, fixtures, and host adapter surface for desktop and hosted applications.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-settings",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Portable AgentSam Settings shell, contracts, fixtures, and host adapter surface for desktop and hosted applications."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-shell-kit",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-shell-kit/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-shell-kit",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-shell-kit",
+          "package": "@inneranimalmedia/agentsam-shell-kit",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-shell-kit",
+      "purpose": "Compatibility facade for the AgentSam workbench shell. New code uses @inneranimalmedia/agentsam-workbench.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-shell-kit",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Compatibility facade for the AgentSam workbench shell. New code uses @inneranimalmedia/agentsam-workbench."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-vault",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-vault/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-vault",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-vault",
+          "package": "@inneranimalmedia/agentsam-vault",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-vault",
+      "purpose": "AgentSam credential vault core — contracts, AES-GCM crypto, provider registry, resolver. UI lives in agentsam-key-manager.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-vault",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "AgentSam credential vault core — contracts, AES-GCM crypto, provider registry, resolver. UI lives in agentsam-key-manager."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-work",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-work/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-work",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-work",
+          "package": "@inneranimalmedia/agentsam-work",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-work",
+      "purpose": "Portable AgentSam Work product surface: shared work contracts, fixture and HTTP hosts, project/ticket/mail/calendar/artifact views, and host-neutral React UI.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-work",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Portable AgentSam Work product surface: shared work contracts, fixture and HTTP hosts, project/ticket/mail/calendar/artifact views, and host-neutral React UI."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/work-graph",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/work-graph/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-work-graph",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-work-graph",
+          "package": "@inneranimalmedia/agentsam-work-graph",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/agentsam-work-graph",
+      "purpose": "Core AgentSam work-graph primitive: one graph model (WorkItem, Dependency, TimelineEvent, Artifact, Evidence, Actor) powering an engineering adapter (git/MCP/tests/deploys) and a business adapter (projects/clients/approvals/milestones), with Gantt/timeline rendering as a pure projection over the graph rather than its own source of truth.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-work-graph",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Core AgentSam work-graph primitive: one graph model (WorkItem, Dependency, TimelineEvent, Artifact, Evidence, Actor) powering an engineering adapter (git/MCP/tests/deploys) and a business adapter (projects/clients/approvals/milestones), with Gantt/timeline rendering as a pure projection over the graph rather than its own source of truth."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-workbench",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/agentsam-workbench/README.md"
+      },
+      "execution_domains": [],
+      "id": "agentsam-workbench",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/agentsam-workbench",
+          "package": "@inneranimalmedia/agentsam-workbench",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-workbench",
+      "purpose": "Reusable AgentSam workbench primitives for agent threads, composer, browser, terminal and resizable work surfaces.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-workbench",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Reusable AgentSam workbench primitives for agent threads, composer, browser, terminal and resizable work surfaces."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "ui-package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/analytics-ui",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/analytics-ui/README.md"
+      },
+      "execution_domains": [],
+      "id": "analytics-ui",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/analytics-ui",
+          "package": "@inneranimalmedia/analytics-ui",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/analytics-ui",
+      "purpose": "Domain-neutral analytics presentation primitives for Inner Animal Media products.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/analytics-ui",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Domain-neutral analytics presentation primitives for Inner Animal Media products."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/cms-runtime",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/cms-runtime/README.md"
+      },
+      "execution_domains": [],
+      "id": "cms-runtime",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/cms-runtime",
+          "package": "@inneranimalmedia/cms-runtime",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/cms-runtime",
+      "purpose": "Portable self-describing local CMS runtime with SQLite schema, tool/skill catalogs, and provider-neutral package contracts.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/cms-runtime",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Portable self-describing local CMS runtime with SQLite schema, tool/skill catalogs, and provider-neutral package contracts."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/copro-editor",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/copro-editor/README.md"
+      },
+      "execution_domains": [],
+      "id": "copro-editor",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/copro-editor",
+          "package": "@inneranimalmedia/copro-editor",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/copro-editor",
+      "purpose": "Deterministic headless CoPro edit command engine with undo and redo.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/copro-editor",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Deterministic headless CoPro edit command engine with undo and redo."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/copro-media",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/copro-media/README.md"
+      },
+      "execution_domains": [],
+      "id": "copro-media",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/copro-media",
+          "package": "@inneranimalmedia/copro-media",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/copro-media",
+      "purpose": "Provider-neutral CoPro media asset identity, provenance, and repository contracts.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/copro-media",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Provider-neutral CoPro media asset identity, provenance, and repository contracts."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/copro-project",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/copro-project/README.md"
+      },
+      "execution_domains": [],
+      "id": "copro-project",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/copro-project",
+          "package": "@inneranimalmedia/copro-project",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/copro-project",
+      "purpose": "Provider-neutral CoPro project document, serialization, validation, and migration contracts.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/copro-project",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Provider-neutral CoPro project document, serialization, validation, and migration contracts."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/copro-proof",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/copro-proof/README.md"
+      },
+      "execution_domains": [],
+      "id": "copro-proof",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/copro-proof",
+          "package": "@inneranimalmedia/copro-proof",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/copro-proof",
+      "purpose": "Mechanical vertical proof that CoPro project, media, editor, timeline, render, templates, and provider contracts compose correctly.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/copro-proof",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Mechanical vertical proof that CoPro project, media, editor, timeline, render, templates, and provider contracts compose correctly."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/copro-provider-contracts",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/copro-provider-contracts/README.md"
+      },
+      "execution_domains": [],
+      "id": "copro-provider-contracts",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/copro-provider-contracts",
+          "package": "@inneranimalmedia/copro-provider-contracts",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/copro-provider-contracts",
+      "purpose": "Provider-neutral CoPro capability contracts for media, generation, transcription, embeddings, conversion, and rendering.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/copro-provider-contracts",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Provider-neutral CoPro capability contracts for media, generation, transcription, embeddings, conversion, and rendering."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/copro-render",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/copro-render/README.md"
+      },
+      "execution_domains": [],
+      "id": "copro-render",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/copro-render",
+          "package": "@inneranimalmedia/copro-render",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/copro-render",
+      "purpose": "CoPro render planning and renderer capability selection without renderer leakage into project files.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/copro-render",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "CoPro render planning and renderer capability selection without renderer leakage into project files."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/copro-storage",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/copro-storage/README.md"
+      },
+      "execution_domains": [],
+      "id": "copro-storage",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/copro-storage",
+          "package": "@inneranimalmedia/copro-storage",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/copro-storage",
+      "purpose": "Portable CoPro project persistence adapters for memory and browser local storage.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/copro-storage",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Portable CoPro project persistence adapters for memory and browser local storage."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/copro-templates",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/copro-templates/README.md"
+      },
+      "execution_domains": [],
+      "id": "copro-templates",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/copro-templates",
+          "package": "@inneranimalmedia/copro-templates",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/copro-templates",
+      "purpose": "Structured CoPro creative template contracts for canvas, slots, track skeletons, captions, transitions, audio cues, styles, and generation slots.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/copro-templates",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Structured CoPro creative template contracts for canvas, slots, track skeletons, captions, transitions, audio cues, styles, and generation slots."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/copro-timeline",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/copro-timeline/README.md"
+      },
+      "execution_domains": [],
+      "id": "copro-timeline",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/copro-timeline",
+          "package": "@inneranimalmedia/copro-timeline",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/copro-timeline",
+      "purpose": "Headless CoPro timeline projection, ordering, duration, and viewport math.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/copro-timeline",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Headless CoPro timeline projection, ordering, duration, and viewport math."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "ui-package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/copro-ui",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/copro-ui/README.md"
+      },
+      "execution_domains": [],
+      "id": "copro-ui",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/copro-ui",
+          "package": "@inneranimalmedia/copro-ui",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/copro-ui",
+      "purpose": "Mobile-first creator UI for CoPro with preview, timeline, direct manipulation, edit tools, media tray, transport, and responsive desktop composition.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/copro-ui",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Mobile-first creator UI for CoPro with preview, timeline, direct manipulation, edit tools, media tray, transport, and responsive desktop composition."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "theme",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/fnf-theme",
+        "purpose_source": "package-manifest-description",
+        "readme": null
+      },
+      "execution_domains": [],
+      "id": "fnf-theme",
+      "install": [],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/fnf-theme",
+      "purpose": "Brand-specific FNF theme renderer consuming portable ThemePreview registry",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/fnf-theme",
+        "public_claim": false
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Brand-specific FNF theme renderer consuming portable ThemePreview registry"
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "theme",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/theme-contract",
+        "purpose_source": "package-manifest-description",
+        "readme": null
+      },
+      "execution_domains": [],
+      "id": "theme-contract",
+      "install": [],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/theme-contract",
+      "purpose": "Portable provider-neutral theme preview registry and composition contracts",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/theme-contract",
+        "public_claim": false
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Portable provider-neutral theme preview registry and composition contracts"
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "theme",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/theme-cypress",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/theme-cypress/README.md"
+      },
+      "execution_domains": [],
+      "id": "theme-cypress",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/theme-cypress",
+          "package": "@inneranimalmedia/theme-cypress",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/theme-cypress",
+      "purpose": "A welcoming community prebuild for organizations that need events, groups, giving, visits, and mission-driven storytelling without looking like a generic nonprofit template.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/theme-cypress",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "A welcoming community prebuild for organizations that need events, groups, giving, visits, and mission-driven storytelling without looking like a generic nonprofit template."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "theme",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/theme-ember",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/theme-ember/README.md"
+      },
+      "execution_domains": [],
+      "id": "theme-ember",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/theme-ember",
+          "package": "@inneranimalmedia/theme-ember",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/theme-ember",
+      "purpose": "An editorial commerce prebuild that mixes product discovery, brand story, collections, community, and launch moments without collapsing into another tiled product grid.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/theme-ember",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "An editorial commerce prebuild that mixes product discovery, brand story, collections, community, and launch moments without collapsing into another tiled product grid."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "theme",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/theme-forge",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/theme-forge/README.md"
+      },
+      "execution_domains": [],
+      "id": "theme-forge",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/theme-forge",
+          "package": "@inneranimalmedia/theme-forge",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/theme-forge",
+      "purpose": "A mobile-first local-services prebuild with estimate capture, service-area confidence, project proof, reviews, and practical trust signals that stay sharp on the smallest screen.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/theme-forge",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "A mobile-first local-services prebuild with estimate capture, service-area confidence, project proof, reviews, and practical trust signals that stay sharp on the smallest screen."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "theme",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/theme-grove",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/theme-grove/README.md"
+      },
+      "execution_domains": [],
+      "id": "theme-grove",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/theme-grove",
+          "package": "@inneranimalmedia/theme-grove",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/theme-grove",
+      "purpose": "A visual service-business prebuild centered on project galleries, material detail, process, reviews, and estimate conversion — polished enough for a studio, practical enough for a crew.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/theme-grove",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "A visual service-business prebuild centered on project galleries, material detail, process, reviews, and estimate conversion — polished enough for a studio, practical enough for a crew."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "theme",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/theme-harbor",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/theme-harbor/README.md"
+      },
+      "execution_domains": [],
+      "id": "theme-harbor",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/theme-harbor",
+          "package": "@inneranimalmedia/theme-harbor",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/theme-harbor",
+      "purpose": "A professional-services prebuild for trust-heavy businesses: clear service storytelling, proof, resources, and lead capture with enough editorial polish to avoid the usual corporate-blue template look.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/theme-harbor",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "A professional-services prebuild for trust-heavy businesses: clear service storytelling, proof, resources, and lead capture with enough editorial polish to avoid the usual corporate-blue template look."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "theme",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/heuristic-theme",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/heuristic-theme/README.md"
+      },
+      "execution_domains": [],
+      "id": "theme-heuristic",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/theme-heuristic",
+          "package": "@inneranimalmedia/theme-heuristic",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/theme-heuristic",
+      "purpose": "Stock AgentSam CMS storefront shell theme contract (heuristic-theme).",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/theme-heuristic",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Resolve the stock AgentSam CMS storefront shell theme contract."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "theme",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/theme-iasf",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/theme-iasf/README.md"
+      },
+      "execution_domains": [],
+      "id": "theme-iasf",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/theme-iasf",
+          "package": "@inneranimalmedia/theme-iasf",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/theme-iasf",
+      "purpose": "IASF — stock Inner Animal Storefront theme pack (normalized from studio-cms-editor harvest).",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/theme-iasf",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "IASF — stock Inner Animal Storefront theme pack (normalized from studio-cms-editor harvest)."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "theme",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/theme-resolve",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/theme-resolve/README.md"
+      },
+      "execution_domains": [],
+      "id": "theme-resolve",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/theme-resolve",
+          "package": "@inneranimalmedia/theme-resolve",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/theme-resolve",
+      "purpose": "A high-fashion commerce prebuild built around cinematic scroll, shoppable editorial, sticky purchase rails, lookbooks, stories, bundles, and micro-interactions that make the storefront feel directed instead of assembled.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/theme-resolve",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "A high-fashion commerce prebuild built around cinematic scroll, shoppable editorial, sticky purchase rails, lookbooks, stories, bundles, and micro-interactions that make the storefront feel directed instead of assembled."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "theme",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/theme-scenes",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/theme-scenes/README.md"
+      },
+      "execution_domains": [],
+      "id": "theme-scenes",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/theme-scenes",
+          "package": "@inneranimalmedia/theme-scenes",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/theme-scenes",
+      "purpose": "Reusable scene / shell / block vocabulary for branded website experiences. BrandPack owns look; theme-scenes owns composition.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/theme-scenes",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "Reusable scene / shell / block vocabulary for branded website experiences. BrandPack owns look; theme-scenes owns composition."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "theme",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/theme-summit",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/theme-summit/README.md"
+      },
+      "execution_domains": [],
+      "id": "theme-summit",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/theme-summit",
+          "package": "@inneranimalmedia/theme-summit",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/theme-summit",
+      "purpose": "A restrained consulting and portfolio prebuild with editorial services, case studies, multilingual-ready structure, media, and thoughtful spacing that lets expertise do the talking.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/theme-summit",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "A restrained consulting and portfolio prebuild with editorial services, case studies, multilingual-ready structure, media, and thoughtful spacing that lets expertise do the talking."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [],
+      "catalog_status": "needs-review",
+      "class": "theme",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/theme-violet",
+        "purpose_source": "package-manifest-description",
+        "readme": "packages/theme-violet/README.md"
+      },
+      "execution_domains": [],
+      "id": "theme-violet",
+      "install": [
+        {
+          "command": "npm install @inneranimalmedia/theme-violet",
+          "package": "@inneranimalmedia/theme-violet",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/theme-violet",
+      "purpose": "A campaign-forward prebuild with bold calls to action, impact proof, stories, donation moments, and participation paths designed to turn attention into action.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/theme-violet",
+        "public_claim": true
+      },
+      "review_required": [
+        "avoid_when",
+        "execution_domains",
+        "status",
+        "topics"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "unknown",
+      "topics": [],
+      "use_when": [
+        "A campaign-forward prebuild with bold calls to action, impact proof, stories, donation moments, and participation paths designed to turn attention into action."
+      ],
+      "version": "2.6.12",
+      "readiness": "unverified"
+    }
+  ]
+}
