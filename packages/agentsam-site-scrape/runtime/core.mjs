@@ -4,6 +4,7 @@
  */
 import { createHash } from 'node:crypto';
 import { parse } from 'parse5';
+import {XMLParser} from 'fast-xml-parser';
 
 export const SITE_SCRAPE_CAPABILITY = 'site.scrape';
 export const SITE_SCRAPE_SCHEMA = 1;
@@ -107,6 +108,54 @@ export async function crawlSite({url,maxPages=20,concurrency=3,maxBytes=1024*102
     }
     return robotsAllowed(await robotsCache.get(origin),pageUrl);
   }
+  // Respect a site's published sitemap. JS-hydrated storefronts commonly
+  // expose SEO metadata in HTML but their navigation links only after JS runs.
+  // Bounded XML sitemap discovery provides real URLs without browser rendering,
+  // a second site scanner, or any cross-site access.
+  async function discoverSitemaps() {
+    const origin=new URL(seed).origin;
+    const roots=[origin+'/sitemap.xml'];
+    if(respectRobots) {
+      try {
+        await allowed(seed);
+        const robots=await robotsCache.get(origin);
+        for(const line of robots.split(/\r?\n/)) {
+          const value=line.replace(/#.*$/,'').match(/^\s*sitemap\s*:\s*(\S+)/i)?.[1];
+          if(value)roots.push(value);
+        }
+      }catch{return; /* crawler will independently report robots failure */}
+    }
+    const seenMaps=new Set();
+    const parser=new XMLParser({ignoreAttributes:true,trimValues:true});
+    while(roots.length && seenMaps.size<8 && candidates.length<maxPages*20) {
+      let sitemap;
+      try {
+        sitemap=normalizeUrl(roots.shift());
+        if(!isSameSite(seed,sitemap)||new URL(sitemap).origin!==origin||seenMaps.has(sitemap))continue;
+        seenMaps.add(sitemap);
+        if(respectRobots && !(await allowed(sitemap)))continue;
+        const response=await fetchPage(sitemap,{maxBytes:1024*1024,
+          contentTypes:['application/xml','text/xml','text/plain','application/rss+xml']});
+        if(response.status>=400)continue;
+        const parsed=parser.parse(response.body.toString('utf8'));
+        const urls=parsed?.urlset?.url, maps=parsed?.sitemapindex?.sitemap;
+        const entries=urls==null?[]:Array.isArray(urls)?urls:[urls];
+        for(const entry of entries) {
+          if(candidates.length>=maxPages*20)break;
+          try {
+            const discovered=normalizeUrl(entry?.loc);
+            if(!isSameSite(seed,discovered)||queued.has(discovered))continue;
+            queued.add(discovered);candidates.push(discovered);
+          }catch{/* invalid sitemap URL is not a crawl target */}
+        }
+        for(const entry of maps==null?[]:Array.isArray(maps)?maps:[maps]) {
+          if(roots.length+seenMaps.size>=8)break;
+          if(typeof entry?.loc==='string')roots.push(entry.loc);
+        }
+      }catch{/* a missing/malformed sitemap is not a fatal crawl error */}
+    }
+  }
+  await discoverSitemaps();
   async function visit(next) {
     try {
       if(!isSameSite(seed,next)) return;

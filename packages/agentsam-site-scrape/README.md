@@ -22,8 +22,11 @@ monorepo `tools/` tree.
 The canonical package now contains a **Node 22+ runtime**, independent of
 Python, `sips`, or a specific customer's Cloudflare account. It uses real
 HTTP fetching with bounded concurrency, public-DNS checks at socket resolution,
-manual per-hop redirect validation, robots handling, structural HTML parsing,
-content-addressed evidence, and a derived deterministic page/link/asset index.
+manual per-hop redirect validation, robots handling, bounded same-origin
+XML sitemap discovery (including robots-listed sitemaps), structural HTML
+parsing, content-addressed evidence, and a derived deterministic
+page/link/asset index. Sitemap discovery is important for client-rendered sites
+whose initial HTML contains little navigational markup.
 Node crawling/archiving is local-first. Python remains a compatible optional
 adapter for specialized local image workflows, not the required runtime.
 Rust Machine/Repository inspect **local** sources; they do not fetch websites.
@@ -62,7 +65,10 @@ Project-local configuration (`./my-project/.agentsam/site-scrape.json`):
 ```
 
 `agentsam site index` resolves only the current project's own evidence or
-public site origin. It discovers site origins from that project's explicit
+public site origin. A successful `--refresh --max-pages 5` on the FNF public
+site can index several sitemap-listed routes even when home page links are
+client-rendered; it still does not execute JavaScript or claim full browser
+capture. It discovers site origins from that project's explicit
 `.agentsam/site-scrape.json` `site.url` or unambiguous Wrangler custom-domain
 routes. It **never** treats `.` as an archive, guesses a site from
 `ALLOWED_ORIGINS`, or fetches a missing `manifest.json`. On subsequent runs it

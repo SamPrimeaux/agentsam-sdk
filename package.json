@@ -388,6 +388,7 @@
     "@grpc/grpc-js": "^1.14.4",
     "@inneranimalmedia/agentsam-errors": "2.6.12",
     "@modelcontextprotocol/sdk": "^1.32.1",
+    "fast-xml-parser": "^5.11.2",
     "google-protobuf": "^3.21.4",
     "jsonc-parser": "^3.3.1",
     "node-pty": "^1.1.0",

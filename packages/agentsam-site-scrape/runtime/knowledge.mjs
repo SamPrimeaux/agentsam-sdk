@@ -25,7 +25,9 @@ export function siteKnowledgeSources(graph, scope={include:['.'],exclude:[]}) {
  for(const page of graph.resources){
    if(typeof page.url!=='string'||!/^https?:\/\//.test(page.url)||!Array.isArray(page.blocks))throw Error('invalid site page evidence');
    const filename=`sites/${sha(page.url).slice(0,32)}.md`;
+   const description=page.meta?.description || page.meta?.['og:description'] || '';
    const text=[`# ${page.title||page.url}`,`Source URL: ${page.url}`,
+     ...(description?[`Description: ${description}`]:[]),
      ...page.blocks.map(block=>`${block.kind||'text'}: ${String(block.text||'')}`)].join('\n\n');
    const bytes=Buffer.byteLength(text);
    if(bytes>2*1024*1024)throw Error('site page exceeds Knowledge source size limit');

@@ -84,3 +84,26 @@ test('graph view is separately named and verified, index is not raw JSON export'
  assert.equal(verified.code,0,verified.stderr);
  assert.equal(verified.json().ok,true);
 });
+
+test('JS-hydrated site uses robots-listed XML sitemap to crawl real public URLs within the page budget',async()=>{
+ const fetched=[],observed=[];
+ const base='https://example.com/';
+ const resources=new Map([
+  [base+'robots.txt',{body:'User-agent: *\nDisallow: /admin\nSitemap: https://example.com/sitemap.xml',type:'text/plain'}],
+  [base+'sitemap.xml',{body:'<?xml version="1.0"?><urlset><url><loc>https://example.com/</loc></url><url><loc>https://example.com/shop</loc></url><url><loc>https://example.com/products/item</loc></url><url><loc>https://example.com/admin</loc></url></urlset>',type:'application/xml'}],
+  [base,{body:'<html><title>Home</title><main id="app"></main></html>',type:'text/html'}],
+  [base+'shop',{body:'<html><title>Shop</title><main id="app"></main></html>',type:'text/html'}],
+  [base+'products/item',{body:'<html><title>Item</title><main id="app"></main></html>',type:'text/html'}],
+ ]);
+ const fetchPage=async(url)=>{
+  fetched.push(url);
+  const item=resources.get(url);
+  return item?{url,body:Buffer.from(item.body),contentType:item.type,status:200}:
+   {url,body:Buffer.from('not found'),contentType:'text/plain',status:404};
+ };
+ const result=await crawlSite({url:base,maxPages:3,concurrency:2,fetchPage,onPage:page=>observed.push(page)});
+ assert.equal(result.counts.pages_fetched,3);
+ assert.deepEqual(observed.map(p=>p.url).sort(),[base,base+'shop',base+'products/item'].sort());
+ assert.ok(fetched.includes(base+'sitemap.xml'));
+ assert.equal(fetched.includes(base+'admin'),false);
+});
