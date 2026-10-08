@@ -100,6 +100,7 @@ function printLegacyHelp() {
     agentsam                     Enter the interactive Agent Sam experience
     agentsam create <name> --preset <fullstack|cms|prototype|data>
     agentsam add <auth|cms|knowledge|agent|deploy-cloudflare>
+    agentsam plugin inspect|verify|receipt <path>    Deterministic plugin productization + READY receipt
     agentsam plugins list|install|connect|status|remove [@agentsam-mcp]
     agentsam dev               Run this project's existing npm dev script
     agentsam inspect [--json]  Bounded repository index by default; use --view full for authority envelope
@@ -448,7 +449,7 @@ if (command === '--version' || command === '-v') {
 } else if (command === 'add') {
   try { await runAdd(rest); }
   catch (e) { reportCliError(e); process.exitCode = 1; }
-} else if (command === 'plugins') {
+} else if (command === 'plugins' || command === 'plugin') {
   try { await runPlugins(rest); }
   catch (e) { reportCliError(e); process.exitCode = 1; }
 } else if (command === 'install' && rest[0] === 'plugins') {
