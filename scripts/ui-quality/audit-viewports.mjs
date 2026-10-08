@@ -22,7 +22,7 @@ const browser = await chromium.launch({ headless: true });
 const results = [];
 await fs.mkdir(out, { recursive: true });
 try {
-  for (const viewport of QUALITY_VIEWPORTS) {
+  for (const viewport of viewports) {
     const page = await browser.newPage({ viewport: { width: viewport.width, height: viewport.height }, deviceScaleFactor: 1, isMobile: viewport.name === 'phone', hasTouch: viewport.name === 'phone' || viewport.name === 'tablet' });
     let result;
     try {
