@@ -5,11 +5,29 @@ function endpointFor(opts, config, env) {
   return opts.resource || config?.lane?.resource || env.AGENTSAM_NODE_API_URL || (env.SUPABASE_PROJECT_REF ? `https://${env.SUPABASE_PROJECT_REF}.supabase.co/functions/v1/node-api` : '');
 }
 
+/**
+ * Studio session IDs are not IAM CLI OAuth access tokens. Only a host-resolved
+ * native Studio session can authorize this server-side bridge; never load the
+ * unrelated ~/.agentsam/auth/session.json access token as a substitute.
+ */
+export async function sessionGatewayAuth(endpoint, opts = {}, env = process.env) {
+  if (!opts['session-auth']) return {};
+  const origin = new URL(endpoint).origin;
+  const trusted = String(opts['trusted-origin'] || '').trim();
+  if (!trusted || new URL(trusted).origin !== origin || new URL(trusted).origin !== trusted.replace(/\/$/, '')) throw new Error('node_api_session_gateway_trusted_origin_required');
+  const studioSession = String(env.AGENTSAM_STUDIO_SESSION_TOKEN || '').trim();
+  if (!studioSession) throw new Error('node_api_studio_session_required: host must inject a native Studio session, not a CLI OAuth access token');
+  return { authenticatedDiscovery: true, getAuthHeaders: ({ paid }) => ({
+    Authorization: `Bearer ${studioSession}`,
+    ...(paid ? { 'x-agentsam-paid-approved': 'true' } : {}),
+  }) };
+}
+
 /** No private bridge key belongs in .agentsam/knowledge.json or a browser bundle. */
 export async function runNodeApiRemote({ opts = {}, config, root, openStore, env = process.env, fetchImpl } = {}) {
   const endpoint = endpointFor(opts, config, env);
   const backend = createBackendRegistry().get('supabase_pgvector');
-  const client = backend.connect({ endpoint, bridgeKey: env.AGENTSAM_BRIDGE_KEY, principal: opts['account-id'], fetchImpl });
+  const client = backend.connect({ endpoint, bridgeKey: env.AGENTSAM_BRIDGE_KEY, principal: opts['account-id'], fetchImpl, ...await sessionGatewayAuth(endpoint, opts, env) });
   const [health, capabilities] = await Promise.all([client.health(), client.capabilities()]);
   const remoteEmbedding = capabilities.embedding;
   if (!health.ok || !remoteEmbedding?.default_model || !Number.isInteger(remoteEmbedding?.default_dimensions)) throw new Error('node_api_remote_capabilities_unavailable');
@@ -17,11 +35,11 @@ export async function runNodeApiRemote({ opts = {}, config, root, openStore, env
   const summary = {
     endpoint: client.endpoint, backend: 'supabase_pgvector', edge_version: health.version,
     embedding: { model: remoteEmbedding.default_model, dimensions: remoteEmbedding.default_dimensions },
-    accessible: true, configured, authorization: env.AGENTSAM_BRIDGE_KEY ? 'server_bridge_key' : 'authorized_host_required',
+    accessible: true, configured, authorization: opts['session-auth'] ? 'host_oauth_session' : env.AGENTSAM_BRIDGE_KEY ? 'server_bridge_key' : 'authorized_host_required',
   };
   if (!opts.query && !opts.publish) {
     let connected = false;
-    if (env.AGENTSAM_BRIDGE_KEY) {
+    if (env.AGENTSAM_BRIDGE_KEY || opts['session-auth']) {
       try { await client.status('codebase'); connected = true; } catch { connected = false; }
     }
     return { ...summary, connected, ready: false, indexed_generation_verified: false,

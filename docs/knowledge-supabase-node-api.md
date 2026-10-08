@@ -41,3 +41,11 @@ Current project connections may offer a private host proxy that supplies credent
 Paid remote publication is budget-capped at 100 selected chunks by default; raise `--max-inputs N` explicitly after reviewing the current `index plan`. This is a **cost guard**, not a fixed source scope.
 
 For a document corpus, pass `--corpus documents` to both `autorag remote --publish` and `autorag remote --query`. The adapter marks and queries each repository using its own `source_type` selector, because the existing documents matching RPC has no `repository_id` argument. The codebase corpus uses the RPC's native repository filter.
+
+## Connected Local Studio Worker bridge
+
+A self-hosted Studio Worker can expose an **authenticated** same-origin route under `/api/knowledge/node-api/` forwarding only `health`, `capabilities`, `codebase/status`, `vectors/status`, `memory/status`, `generations`, `vectors/query`, `codebase/ingest`, and `vectors/ingest`. This route derives account identity from the validated Studio session and supplies its own `AGENTSAM_BRIDGE_KEY` to Edge; the caller never receives the secret. The selected upstream address is configured with the Worker-side `AGENTSAM_NODE_API_URL` (deployment-specific; not required by the generic SDK).
+
+The CLI's `--session-auth` switch deliberately consumes only an **already validated Studio-native session** injected on the host side as `AGENTSAM_STUDIO_SESSION_TOKEN`, together with an explicit `--trusted-origin` matching the configured gateway endpoint. This credential must not be put into project config, frontend JavaScript, `.env` committed files or CLI command-line arguments. An IAM CLI OAuth access token is **not** a Studio session ID and is not substituted for one. In-app Studio fetches may instead use the existing HttpOnly session cookie on the same origin.
+
+For the gateway, protected `/codebase/status` is the bridge-secret equality check, while public `/health` and `/capabilities` prove endpoint availability only. Query/ingest require the caller to explicitly approve paid operations and the Worker caps each request to 20 chunks and a bounded payload, while retaining user-controlled repository scope. A successful Edge ingest response is **not** a canonical generation activation receipt.

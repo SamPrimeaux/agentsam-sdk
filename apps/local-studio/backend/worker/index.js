@@ -38,6 +38,7 @@ import {
 import { loadConnectionsRegistry, safePluginSettingsRecord } from "./connections-registry.js";
 import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js";
 import { handleWorkRequest, isWorkRequest } from "./work-service.js";
+import { handleKnowledgeNodeApiRequest } from "./knowledge-node-api.js";
 import { completeGmailOAuth, isGmailOAuthCallbackRequest } from "./gmail-service.js";
 import { createLocalStudioPluginRuntime, loadPluginRegistry, updateLocalStudioPluginPreferences } from "./plugin-registry.js";
 import { listCatalogForAccount, installFromCatalog, removeCatalogInstallation } from "./plugin-discovery.js";
@@ -864,6 +865,12 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
 
       const result = await handleAnalyticsQueryRequest(request, env);
       return json(result.body, result.status, result.headers || {});
+    }
+
+    if (url.pathname.startsWith("/api/knowledge/node-api")) {
+      const userId = await sessionUser();
+      if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
+      return handleKnowledgeNodeApiRequest(request, env, userId);
     }
 
     if (isDatabaseApi) {
