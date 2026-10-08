@@ -3,6 +3,7 @@ import test from 'node:test';
 import {readFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
 import {beginPluginOAuth,completePluginOAuth,getRemotePluginToken,runRemotePluginTool,disconnectPublicPlugin} from '../backend/worker/plugin-oauth.js';
+import {mcpRequest} from '../backend/worker/plugin-mcp-client.js';
 import {listCatalogForAccount} from '../backend/worker/plugin-discovery.js';
 import {createLocalStudioPluginRuntime} from '../backend/worker/plugin-registry.js';
 
