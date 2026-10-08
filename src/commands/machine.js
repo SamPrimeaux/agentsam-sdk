@@ -23,12 +23,16 @@ function usage() {
     `  ${pc.cyan('agentsam machine install')} [--version <semver>]   Install the managed runtime`,
     `  ${pc.cyan('agentsam machine update')}                        Update the managed runtime`,
     `  ${pc.cyan('agentsam machine inspect <path>')}                Inspect a repository or directory`,
+    `  ${pc.cyan('agentsam machine crawl <path> --json')}           Normalize Machine evidence into a repository graph`,
+    `  ${pc.cyan('agentsam machine mine <path> --against <path>')}   Compare repository implementations safely`,
     '',
     pc.bold('Options'),
     `  ${pc.dim('--json')}                  Machine-readable output`,
     `  ${pc.dim('--force')}                 Replace an existing managed version`,
     `  ${pc.dim('--run-id <id>')}           Reuse an externalized inspection run`,
     `  ${pc.dim('--include-generated')}    Include generated and cache trees`,
+    `  ${pc.dim('--against <path>')}        Second repository for mine`,
+    `  ${pc.dim('--limit <n>')}             Limit displayed proposals`,
     `  ${pc.dim('--help')}                 Show this help`,
     '',
     pc.bold('Runtime authority'),
@@ -56,6 +60,8 @@ function parseArgs(argv = []) {
     subcommand: null,
     target: null,
     positionals: [],
+    against: [],
+    limit: 50,
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -64,7 +70,15 @@ function parseArgs(argv = []) {
     else if (arg === '--json') out.json = true;
     else if (arg === '--force') out.force = true;
     else if (arg === '--include-generated') out.includeGenerated = true;
-    else if (arg === '--run-id') {
+    else if (arg === '--against') {
+      const value = argv[++i];
+      if (!value || value.startsWith('--')) throw new Error('--against requires a path');
+      out.against.push(value);
+    } else if (arg === '--limit') {
+      const value = Number(argv[++i]);
+      if (!Number.isInteger(value) || value < 1 || value > 500) throw new Error('--limit must be 1..500');
+      out.limit = value;
+    } else if (arg === '--run-id') {
       const value = argv[++i];
       if (value == null || value.startsWith('--')) throw new Error('--run-id requires a value');
       out.runId = value;
@@ -198,6 +212,30 @@ export async function runMachine(argv = []) {
     });
     if (args.json) console.log(JSON.stringify({ capability: 'machine.update', ...result }));
     else printInstallResult('update', result);
+    return 0;
+  }
+
+  if (args.subcommand === 'crawl' || args.subcommand === 'mine') {
+    const { createRepositoryCrawl, findRefineryCandidates } = await import('../../packages/agentsam-repository/src/index.js');
+    const resolution = resolveMachineBinary();
+    const targets = [args.target || process.cwd(), ...(args.subcommand === 'mine' ? args.against : [])];
+    if (args.subcommand === 'mine' && targets.length < 2) throw new Error('machine mine requires --against <second-repository>');
+    const graphs = targets.map(target => {
+      const abs = path.resolve(target);
+      const result = spawnMachine(resolution, ['inspect', abs, '--json'], {
+        stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 128 * 1024 * 1024,
+      });
+      if (result.error) throw result.error;
+      if (result.status !== 0) throw new Error(String(result.stderr || `Machine inspection failed: ${abs}`).trim());
+      return createRepositoryCrawl(JSON.parse(String(result.stdout)), { root: abs });
+    });
+    const output = args.subcommand === 'mine' ? findRefineryCandidates(graphs, { limit: args.limit }) : graphs[0];
+    if (args.json) console.log(JSON.stringify(output));
+    else if (args.subcommand === 'crawl') console.log(`repository.crawl ${output.repository}: ${output.counts.files} files, ${output.counts.resources} resources, ${output.counts.edges} edges, ${output.errors.length} errors`);
+    else {
+      console.log(`repository.mine ${output.counts.compared_repositories} repositories: ${output.counts.candidate_pairs} candidate pairs`);
+      for (const item of output.candidates) console.log(`  ${item.match.type} ${item.implementations.map(x=>x.repository + '/' + x.path).join(' <> ')} | owner: ${item.likely_owner?.package || 'unresolved'}`);
+    }
     return 0;
   }
 

@@ -494,6 +494,40 @@
       "model_required": false,
       "side_effects": "none",
       "status": "experimental"
+    },
+    "repository.crawl": {
+      "id": "repository.crawl",
+      "kind": "capability",
+      "version": 1,
+      "domain": "repository",
+      "runtime": "node+rust-machine",
+      "package": "@inneranimalmedia/agentsam-repository",
+      "export": "createRepositoryCrawl",
+      "cli": "agentsam machine crawl <path> --json",
+      "description": "Normalize existing Rust Machine evidence into deterministic repository resources and edges.",
+      "deterministic": true,
+      "model_required": false,
+      "side_effects": "local-state",
+      "input_schema": "protocol/capabilities/repository-crawl-input.schema.json",
+      "output_schema": "protocol/capabilities/repository-crawl-result.schema.json",
+      "status": "stable"
+    },
+    "repository.mine": {
+      "id": "repository.mine",
+      "kind": "capability",
+      "version": 1,
+      "domain": "repository",
+      "runtime": "node+rust-machine",
+      "package": "@inneranimalmedia/agentsam-repository",
+      "export": "findRefineryCandidates",
+      "cli": "agentsam machine mine <path> --against <path> --json",
+      "description": "Find evidence-based code-reuse proposals; no source modification or promotion.",
+      "deterministic": true,
+      "model_required": false,
+      "side_effects": "local-state",
+      "input_schema": "protocol/capabilities/repository-mine-input.schema.json",
+      "output_schema": "protocol/capabilities/repository-mine-result.schema.json",
+      "status": "stable"
     }
   }
 }

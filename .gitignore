@@ -62,3 +62,6 @@ apps/agentsam-go-worker/runtime/.agentsam-build-source
 
 # Rebuildable AgentSam Machine perception/cache
 .agentsam/machine/
+
+# Generated native Machine receipts from nested workspaces
+**/.agentsam/machine/
