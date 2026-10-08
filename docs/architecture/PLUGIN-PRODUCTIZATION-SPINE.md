@@ -20,6 +20,15 @@ plugin verify
 quality receipt
 ```
 
+OAuth-backed product verification follows the normative
+[`protocol/plugins/RESOURCE-AUTHORIZATION.md`](../../protocol/plugins/RESOURCE-AUTHORIZATION.md)
+contract. IAM approves resource identities and scopes; SDK merely consumes proof of that
+approval. Missing resource-registration, discovery, scope, client, token-audience, tool
+security-scheme or cross-service compatibility evidence blocks computed READY even when
+the product manifest predates these gates. Package-authored quality claims cannot prove
+runtime authorization, installation or execution. An absent or self-reported receipt is
+not a production attestation.
+
 Plugin Productization is **not another scanner**. `plugin inspect` consumes already-produced Machine, Repository, capability and package evidence. It may validate its own small manifests, but it must not walk repositories, invent a second dependency graph, rediscover OAuth implementations, or create another MCP registry. When evidence is unavailable it reports the fact as unverified instead of silently scanning again.
 
 Every finding names its evidence source and, when the finding concerns duplicated/misplaced authority, the expected canonical owner. Repository ownership comes from Repository/refinery evidence when available; product code does not maintain a parallel package-owner lookup table. Every AgentSam plugin must pass the same identity, ownership, capability, permission, installation, authorization, health, verification, portability and release lifecycle.
