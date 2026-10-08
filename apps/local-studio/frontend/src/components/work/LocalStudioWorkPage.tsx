@@ -3,6 +3,10 @@ import { useNavigate } from "@tanstack/react-router";
 import { createHttpWorkHost } from "@inneranimalmedia/agentsam-work/client";
 import { invokeStudioService, isPackagedDesktop, listenDeepLinks, openExternalUrl } from "@/lib/desktop/tauri";
 import { WorkProduct } from "@inneranimalmedia/agentsam-work/frontend";
+import { AutoRagWorkflowDialog } from "@inneranimalmedia/agentsam-workbench/knowledge";
+import "@inneranimalmedia/agentsam-workbench/knowledge/autorag-workflow.css";
+import { localStudioAutoRagHost } from "@/lib/knowledge/autorag-host";
+import { getDesktopWorkspaceContext } from "@/lib/desktop/tauri";
 import type { WorkHost, WorkSurfaceId } from "@inneranimalmedia/agentsam-work/contracts";
 import "@inneranimalmedia/agentsam-work/theme.css";
 
@@ -364,6 +368,16 @@ export function LocalStudioWorkPage({
     };
   }, []);
 
+  const [ragOpen, setRagOpen] = useState(false);
+  const [ragRoot, setRagRoot] = useState('');
+  const showAutoRag = surface === 'projects' || surface === 'project-detail';
+  const openAutoRag = () => {
+    void getDesktopWorkspaceContext().then(context => {
+      setRagRoot(context?.default_cwd || '');
+      setRagOpen(true);
+    });
+  };
+
   if (!host) {
     return (
       <div className="flex h-full min-h-0 items-center justify-center text-sm text-muted-foreground">
@@ -373,7 +387,11 @@ export function LocalStudioWorkPage({
   }
 
   return (
-    <div className="local-studio-work-surface h-full min-h-0" data-work-host={mode}>
+    <div className="local-studio-work-surface relative h-full min-h-0" data-work-host={mode}>
+      {showAutoRag && (
+        <button type="button" onClick={openAutoRag} aria-label="Open AutoRAG setup" className="absolute right-5 top-4 z-20 rounded-full border border-white/15 bg-neutral-900 px-4 py-2 text-sm font-medium text-white shadow-xl hover:bg-neutral-800">Knowledge / AutoRAG</button>
+      )}
+      <AutoRagWorkflowDialog open={ragOpen} root={ragRoot} host={localStudioAutoRagHost} onClose={() => setRagOpen(false)} />
       <WorkProduct
         host={host}
         surface={surface}

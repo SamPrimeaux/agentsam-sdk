@@ -1,0 +1,13 @@
+# AutoRAG: reusable CLI + in-app guided workflow
+
+Run `agentsam autorag` in an interactive terminal to inspect the current repository, existing indexes, chosen execution lane and alternative project resources, then continue, edit, inspect history or exit. Noninteractive callers use `agentsam autorag inspect --cwd <project>` for the `agentsam.autorag.workflow.v1` receipt.
+
+The recommended local setup produces an incremental structural/text index without paid embeddings. It is an explicit choice, not a mandate to change existing Cloudflare Vectorize or Supabase resources. All source selections are taken from the customer's repository; folders need not be named `src`, `apps`, `packages` or `docs`.
+
+`agentsam autorag setup --yes --scope <paths> --backend local_exact --provider none --cwd <project>` configures this repo and does not perform ingestion. `agentsam autorag execute --yes --cwd <project>` performs actual source inventory, AST/text chunking, local generation publication, a source-grounded retrieval query, and persists a verification observation bound to the exact generation. `--semantic --allow-paid` opts into embeddings if a real provider/model/dimension is configured. `agentsam autorag inspect` differentiates a selected current generation, scope/config mismatch, unselected historical generations, and independently discovered resources.
+
+**Remote lanes are not automatically local:** A selected remote resource (Cloudflare Vectorize, Supabase Node API, etc.) requires its authorized host transport, compatible embedding model and actual remote proof. The local quick-start fails closed rather than silently creating an unrelated SQLite projection. `autorag remote` retains the explicit hosted Supabase workflow.
+
+The React panel is packaged at `@inneranimalmedia/agentsam-workbench/knowledge`, with host injection via `AutoRagWorkflowHost`. Local Studio Projects uses the native Tauri adapter, which only invokes allowlisted CLI commands in the selected project directory. Browser-hosted Studio reports missing local execution authority instead of inventing access. A packaged desktop install must include the native Rust commands and an installed AgentSam CLI on the host `PATH` or `AGENTSAM_CLI_BIN` set by the desktop provisioner.
+
+Accepted gates: clean unrelated repository -> inspect -> configure -> index -> retrieve -> persisted proof -> repeat inspect -> change scope -> previous generation preserved but proof invalidated. Packaging, native source compilation, in-app build and clean consumer smoke must be checked separately. Cloudflare/Gemini remote retrieval remains a distinct verified-runtime gate.

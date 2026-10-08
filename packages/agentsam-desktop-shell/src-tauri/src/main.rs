@@ -50,6 +50,8 @@ fn main() {
             native_capabilities::native_capabilities,
             system::open_external_url,
             system::desktop_workspace_context,
+            commands::autorag::autorag_workflow_bridge,
+            commands::autorag::autorag_choose_repository,
             google_desktop_identity::google_desktop_identity_login,
         ])
         .run(tauri::generate_context!())

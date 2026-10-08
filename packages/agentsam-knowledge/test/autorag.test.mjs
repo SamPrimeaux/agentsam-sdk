@@ -120,3 +120,16 @@ test('routing is repository first, then account, then portable default', async (
   const routed = await routeCompanyQuestion({ question: 'where is auth?', repositoryId: 'repo', companyAdapter: { candidateRepositories: async () => ['repo', 'related', 'unrelated'] } });
   assert.deepEqual(routed.repositories, ['repo', 'related', 'unrelated']);
 });
+
+
+test('AutoRAG discovers unfamiliar customer source roots instead of relying on named app/src presets', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-autorag-unfamiliar-'));
+  try {
+    fs.mkdirSync(path.join(root, 'modules', 'engine'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'modules', 'engine', 'core.rs'), 'pub fn greet() {}\n');
+    execFileSync('git', ['init', '-q', root]);
+    const discovered = await discoverAutoRag({ root, env: {} });
+    assert.ok(discovered.scopes.includes('modules'));
+    assert.deepEqual(recommendAutoRag({ discovery: discovered }).scope, ['modules']);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});

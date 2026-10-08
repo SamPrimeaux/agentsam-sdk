@@ -49,7 +49,9 @@
       "types": "./dist/widgets/index.d.ts",
       "import": "./dist/widgets/index.js"
     },
-    "./widgets/widgets.css": "./dist/widgets/widgets.css"
+    "./widgets/widgets.css": "./dist/widgets/widgets.css",
+    "./knowledge": { "types": "./dist/knowledge/index.d.ts", "import": "./dist/knowledge/index.js" },
+    "./knowledge/autorag-workflow.css": "./dist/knowledge/autorag-workflow.css"
   },
   "scripts": {
     "typecheck": "node scripts/ensure-local-deps.mjs && tsc --noEmit -p tsconfig.json",

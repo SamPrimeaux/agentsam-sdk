@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { createInterface } from 'node:readline/promises';
@@ -6,6 +7,7 @@ import { repositoryRoot, readConfig, validateConfig, defaultConfig, scopeKey, fi
 import { openSqliteStore } from '../knowledge/stores/sqlite.js';
 import { openPostgresStore } from '../knowledge/stores/postgres.js';
 import { planIndex, runIndex, retrieve } from '../knowledge/engine.js';
+import { inventory, readSource } from '../knowledge/source.js';
 import { discoverKnowledgeRuntime } from '../knowledge/runtime-discovery.js';
 import { getRepositoryId, portableRepositoryIdFromGit, tryReadProjectConfig } from '../lib/project-config.js';
 import { discoverAutoRag, recommendAutoRag, safeAutoRagConfig, runAutoRagProbe, createProviderRegistry, createBackendRegistry } from '../../packages/agentsam-knowledge/src/index.js';
@@ -41,7 +43,7 @@ async function storeFor(root, config, readOnly = false) { return config.storage.
 function defaults(discovery, opts, existing, runtime) {
   const purpose = opts.kind || existing?.scope?.name || 'code';
   const declaredVectorize = (runtime?.cloudflare?.vectorize || []).filter(row => row.binding && row.index);
-  const adoptVectorize = !opts.backend && !existing?.lane?.backend && declaredVectorize.length === 1;
+  const adoptVectorize = declaredVectorize.length === 1 && !opts.resource && (opts.backend === 'cloudflare_vectorize' || (!opts.backend && !existing?.lane?.backend));
   const backend = opts.backend || existing?.lane?.backend || (adoptVectorize ? 'cloudflare_vectorize' : 'local_exact');
   const recommendation = recommendAutoRag({ discovery, purpose, include: opts.scope ? split(opts.scope) : existing?.scope?.include, provider: opts.provider || 'none', backend, semantic: Boolean(opts.semantic) });
   const config = safeAutoRagConfig({ existing: existing || {}, recommendation, repositoryId: existing?.repository_id || discovery.repository.identity, projectKey: existing?.project_key || discovery.repository.identity });
@@ -53,30 +55,156 @@ function defaults(discovery, opts, existing, runtime) {
     config.lane.index = resource.index;
   }
   if (opts.provider) {
-    const models = { fixture: 'deterministic', gemini: 'gemini-embedding-2', openai: 'text-embedding-3-small', 'workers-ai': '@cf/baai/bge-base-en-v1.5', ollama: 'nomic-embed-text' };
-    config.embedding = opts.provider === 'none' ? { provider: 'none', model: 'none', revision: '1', dimensions: 0, parameters: {} } : { provider: opts.provider, model: opts.model || models[opts.provider] || '', revision: '1', dimensions: Number(opts.dimensions || (opts.provider === 'fixture' ? 3 : 768)), parameters: { task: 'code retrieval' } };
+    const available = discovery.capabilities.providers.find(item => item.id === opts.provider);
+    if (opts.provider !== 'none' && !available) throw new Error('autorag_provider_not_discovered');
+    const model = String(opts.model || '').trim();
+    const dimensions = Number(opts.dimensions);
+    if (opts.provider !== 'none' && (!model || !available.models?.includes(model) || !Number.isInteger(dimensions) || dimensions < 1)) {
+      throw new Error('autorag_explicit_provider_model_and_dimensions_required: select an advertised model and its real output dimension');
+    }
+    config.embedding = opts.provider === 'none' ? { provider: 'none', model: 'none', revision: '1', dimensions: 0, parameters: {} } : { provider: opts.provider, model, revision: '1', dimensions, parameters: { task: 'code retrieval' } };
   }
   if (opts.backend) config.lane.backend = opts.backend;
   if (opts.resource) config.lane.resource = opts.resource;
   return { recommendation, config };
 }
-async function interactiveOptions(discovery, opts) {
-  const prompt = createInterface({ input: process.stdin, output: process.stdout });
+/** Shared CLI and native-host workflow view: no indexing, network writes or implicit provider selection. */
+export async function inspectAutoRagWorkflow({ root, discovery, existing, runtime }) {
+  const effective = existing || generationConfig(root, null);
+  const store = effective && runtime.local_index.exists ? await openSqliteStore(localPath(root), { readOnly: true }) : null;
+  let active = null, historical = [], verification = null;
+  try {
+    if (store && effective) {
+      active = await store.active(scopeKey(effective));
+      historical = await store.historicalSummaries();
+      const proofs = await store.observations('autorag-verified:' + scopeKey(effective));
+      verification = active ? proofs.filter(row => row.generation_id === active.id && row.verified).at(-1) || null : null;
+    }
+  } finally { await store?.close(); }
+  const selection = existing?.lane || null;
+  const compatible = active && existing && fingerprint([active.config?.scope, active.config?.chunking]) === fingerprint([existing.scope, existing.chunking]);
+  let sourceFreshness = 'unknown';
+  if (active && compatible && active.receipt?.site_crawl_snapshot == null && active.receipt?.repository_crawl_snapshot == null) {
+    // Same hash construction as planIndex: source content changes invalidate stored proofs.
+    const now = inventory(root, existing.scope).map(file => {
+      const source = readSource(root, file);
+      return source ? [file, source.hash] : null;
+    }).filter(Boolean);
+    sourceFreshness = fingerprint(now) === active.source_hash ? 'current' : 'stale';
+  }
+  const detected = (runtime.lanes || []).filter(l => l.configured).map(l => ({
+    backend: l.backend, binding: l.binding || null, index: l.index || null,
+    locally_executable: Boolean(l.locally_executable), remotely_executable: Boolean(l.remotely_executable),
+    selected: Boolean(selection && selection.backend === l.backend && (!l.binding || selection.binding === l.binding)),
+  }));
+  const recommendation = recommendAutoRag({ discovery, include: existing?.scope?.include, purpose: existing?.scope?.name || 'code' });
+  const state = active ? (!compatible ? 'scope_changed' : sourceFreshness === 'stale' ? 'source_changed' : active.profile_id ? 'local_semantic_generation' : 'structural_generation') : historical.length ? 'historical_generation_only' : 'not_indexed';
+  return {
+    schema: 'agentsam.autorag.workflow.v1',
+    project: { name: discovery.repository.name, repository_id: discovery.repository.identity, root, branch: discovery.repository.branch },
+    status: state,
+    selected: existing ? { scope: existing.scope, embedding: existing.embedding, storage: existing.storage, lane: existing.lane } : null,
+    suggested: { scope: recommendation.scope, backend: 'local_exact', semantic: false, explanation: 'Non-paid local structural index; existing remote lanes are preserved until explicitly selected and verified.' },
+    resources: detected,
+    providers: discovery.capabilities.providers.map(p => ({ id: p.id, operational: Boolean(p.operational), models: p.models || [], credentials: p.credentials || null })),
+    generation: active ? { id: active.id, files: active.files?.length || 0, chunks: active.chunks?.length || 0, embedded: Boolean(active.profile_id), current: Boolean(compatible && sourceFreshness !== 'stale'), source_freshness: sourceFreshness, created_at: active.created_at } : null,
+    historical: historical.map(g => ({ ...g, selected_scope: effective ? g.scope_key === scopeKey(effective) : false })),
+    verified: Boolean(verification && compatible && sourceFreshness === 'current'), verification: verification && compatible && sourceFreshness === 'current' ? { generation_id: verification.generation_id, kind: verification.kind, query: verification.query, checked_at: verification.created_at } : null,
+    next: active && compatible && sourceFreshness === 'current' ? 'verify' : 'setup_or_index',
+  };
+}
+
+async function executeAutoRagWorkflow({ root, existing, opts }) {
+  if (!opts.yes) throw new Error('autorag_explicit_confirmation_required: review `agentsam autorag inspect`, then pass --yes');
+  if (!existing) throw new Error('autorag_configuration_required: run autorag setup first');
+  if (existing.lane.backend !== 'local_exact') throw new Error('autorag_selected_remote_lane_requires_authorized_host: do not silently index SQLite instead of the selected remote backend');
+  if (opts.semantic && !opts['allow-paid']) throw new Error('autorag_semantic_paid_approval_required: use --allow-paid after reviewing the provider');
+  const store = await storeFor(root, existing);
+  try {
+    const embed = Boolean(opts.semantic);
+    const plan = await planIndex({ root, config: existing, store, embed });
+    if (!plan.chunks.length) throw new Error('autorag_no_indexable_sources: check selected paths/exclusions');
+    const embedder = embed ? adapterFor(existing) : null;
+    const result = await runIndex({ root, config: existing, store, embed, embedder,
+      maxInputs: Number(opts['max-inputs'] || 100), maxCharacters: 200000 });
+    const evidence = plan.chunks[0];
+    const query = opts.query || evidence.symbol || evidence.path;
+    const retrieved = await retrieve({ store, config: existing, text: query, semantic: embed,
+      embedder, topK: 3, tokenBudget: 1200, generationId: result.generation_id });
+    if (!retrieved.hits?.length || !retrieved.hits.some(hit => hit.path)) throw new Error('autorag_verification_no_source_grounded_hits');
+    await store.observe('autorag-verified:' + scopeKey(existing), { id: randomUUID(), generation_id: result.generation_id, verified: true, created_at: new Date().toISOString(), kind: embed ? 'semantic' : 'structural', query });
+    return { schema: 'agentsam.autorag.execution.v1', ok: true, verified: true, backend: existing.lane.backend,
+      kind: embed ? 'semantic' : 'structural', generation_id: result.generation_id, files: result.files,
+      chunks: result.chunks, published: result.published, query, hits: retrieved.hits.slice(0, 3).map(hit => ({ path: hit.path, score: hit.score, lines: hit.lines || null })) };
+  } finally { await store?.close(); }
+}
+
+async function interactiveOptions(discovery, opts, suppliedPrompt = null) {
+  const prompt = suppliedPrompt || createInterface({ input: process.stdin, output: process.stdout });
   try {
     const kind = opts.kind || await prompt.question('What kind of knowledge? code, documents, schema, media, memory, mixed [code]: ') || 'code';
     const suggested = recommendAutoRag({ discovery, purpose: kind }).scope.join(',');
     const scope = opts.scope || await prompt.question(`Sources (literal paths, comma separated) [${suggested || '.'}]: `) || suggested || '.';
     const semantic = opts.semantic || (await prompt.question('Enable semantic embeddings for this setup? [no]: ')).toLowerCase() === 'yes';
-    const provider = opts.provider || (semantic ? await prompt.question('Provider: fixture, gemini, openai, workers-ai, ollama [fixture]: ') || 'fixture' : 'none');
-    return { ...opts, kind, scope, semantic, provider };
-  } finally { prompt.close(); }
+    const installed = discovery.capabilities.providers.filter(item => item.operational && item.id !== 'fixture');
+    if (semantic && !installed.length) throw new Error('autorag_semantic_provider_not_connected: configure a project provider first');
+    const provider = opts.provider || (semantic ? await prompt.question(`Connected providers (${installed.map(item => item.id).join(', ')}): `) : 'none');
+    if (semantic && !installed.some(item => item.id === provider)) throw new Error('autorag_selected_provider_not_connected');
+    let model = opts.model, dimensions = opts.dimensions;
+    if (semantic) {
+      const options = installed.find(item => item.id === provider)?.models || [];
+      if (!options.length) throw new Error('autorag_provider_has_no_discovered_models');
+      model ||= await prompt.question(`Advertised model (${options.join(', ')}): `);
+      dimensions ||= await prompt.question('Output dimensions (confirm from provider/index): ');
+    }
+    return { ...opts, kind, scope, semantic, provider, ...(model ? {model} : {}), ...(dimensions ? {dimensions} : {}) };
+  } finally { if (!suppliedPrompt) prompt.close(); }
 }
 export async function runAutoRag(argv) {
-  const { values: opts, positionals } = parse(argv); const command = positionals[0] || 'status';
-  if (opts.help || !['setup', 'status', 'doctor', 'lanes', 'configure', 'probe', 'providers', 'backends', 'scope', 'remote'].includes(command)) {
-    console.log('agentsam autorag setup|status|doctor|lanes|configure|probe|providers|backends|scope|remote [--cwd PATH] [--yes] [--kind code|documents|schema|media|memory|mixed] [--scope a,b] [--provider none|fixture|gemini|openai|workers-ai|ollama] [--backend local_exact|postgres_pgvector|supabase_pgvector|cloudflare_vectorize] [--semantic] [--resource ENDPOINT] [--account-id ID] [--query TEXT] [--allow-paid] [--publish] [--max-inputs N] [--session-auth --trusted-origin URL]'); return;
+  const { values: opts, positionals } = parse(argv); const command = positionals[0] || (opts.json || !process.stdin.isTTY ? 'inspect' : 'guide');
+  if (opts.help || !['setup', 'status', 'doctor', 'lanes', 'configure', 'probe', 'providers', 'backends', 'scope', 'remote', 'guide', 'inspect', 'execute'].includes(command)) {
+    console.log('agentsam autorag guide|inspect|execute|setup|status|doctor|lanes|configure|probe|providers|backends|scope|remote [--cwd PATH] [--yes] [--kind code|documents|schema|media|memory|mixed] [--scope a,b] [--provider none|fixture|gemini|openai|workers-ai|ollama] [--backend local_exact|postgres_pgvector|supabase_pgvector|cloudflare_vectorize] [--semantic] [--resource ENDPOINT] [--account-id ID] [--query TEXT] [--allow-paid] [--publish] [--max-inputs N] [--session-auth --trusted-origin URL]'); return;
   }
   const root = repositoryRoot(opts.cwd); const discovery = await discoverAutoRag({ root }); const existing = readExisting(root); const runtime = discoverKnowledgeRuntime(root, { knowledgeConfig: existing });
+  if (command === 'inspect') return show(await inspectAutoRagWorkflow({ root, discovery, existing, runtime }));
+  if (command === 'execute') return show(await executeAutoRagWorkflow({ root, existing, opts }));
+  if (command === 'guide') {
+    const view = await inspectAutoRagWorkflow({ root, discovery, existing, runtime });
+    console.log(`\n  AgentSam AutoRAG · ${view.project.name}`);
+    console.log(`  Repository   ${view.project.repository_id}`);
+    console.log(`  Knowledge    ${view.status.replaceAll('_', ' ')}`);
+    if (view.generation) console.log(`  Generation   ${view.generation.files} files / ${view.generation.chunks} chunks · ${view.generation.embedded ? 'embedded' : 'structural only'}`);
+    if (view.historical.length && !view.generation) console.log(`  History      ${view.historical.length} previous generation(s); none matches selected scope`);
+    for (const lane of view.resources) console.log(`  Discovered   ${lane.backend}${lane.binding ? ` (${lane.binding})` : ''} · ${lane.selected ? 'selected' : 'not selected'}`);
+    console.log('\n  Suggested setup');
+    console.log(`  Sources      ${view.selected?.scope.include.join(', ') || view.suggested.scope.join(', ')}`);
+    console.log(`  Execution    ${view.selected?.lane.backend || 'local_exact'} · ${view.selected?.embedding.provider || 'none'} embeddings`);
+    const prompt = createInterface({ input: process.stdin, output: process.stdout });
+    try {
+      const choice = (await prompt.question('\n  [1] Continue selected setup  [2] Edit sources/provider  [3] Inspect history  [4] Exit: ')).trim() || '1';
+      if (choice === '3') return show(view.historical);
+      if (choice === '4') return;
+      if (!['1', '2'].includes(choice)) throw new Error('autorag_invalid_choice');
+      if (choice === '2' || !existing) {
+        const selected = await interactiveOptions(discovery, {}, prompt);
+        const { config } = defaults(discovery, selected, existing, runtime);
+        console.log(`\n  Plan: ${config.scope.include.join(', ')} · ${config.lane.backend} · ${config.embedding.provider}`);
+        const approved = await prompt.question('  Save this setup? [y/N]: ');
+        if (!/^y(es)?$/i.test(approved.trim())) return;
+        writeConfig(root, config);
+        console.log('  Setup saved.');
+        if (config.lane.backend !== 'local_exact') { console.log('  Remote execution requires its authorized host. Run autorag doctor.'); return; }
+      }
+      const target = readExisting(root);
+      if (target.lane.backend !== 'local_exact') { console.log('  Selected remote lane requires its authorized host; no fallback or silent overwrite.'); return; }
+      const proceed = await prompt.question('  Index sources and verify retrieval now? [y/N]: ');
+      if (!/^y(es)?$/i.test(proceed.trim())) return;
+      const result = await executeAutoRagWorkflow({ root, existing: target, opts: { yes: true } });
+      console.log(`  Verified ${result.files} files / ${result.chunks} chunks · ${result.generation_id}`);
+      for (const hit of result.hits) console.log(`    → ${hit.path}`);
+    } finally { prompt.close(); }
+    return;
+  }
   if (command === 'providers') {
     const providers = await createProviderRegistry().capabilities();
     const workersAi = runtime.resources.workers_ai;

@@ -14,8 +14,26 @@ function portableRepositoryIdentity(remote, root) {
 }
 function git(root, args) { try { return execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || null; } catch { return null; } }
 function findScopes(root) {
-  const candidates = ['packages', 'src', 'services', 'apps', 'docs', 'README.md', 'schema', 'migrations'];
-  return candidates.filter(candidate => fs.existsSync(path.join(root, candidate)));
+  // Report the project's actual source roots, not a fixed list of repo names.
+  // Git respects the customer's own ignore policies, including untracked changes.
+  let paths = [];
+  try { paths = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], {
+    cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'],
+  }).split('\0').filter(Boolean); } catch { /* Plain directory without git. */ }
+  if (!paths.length) {
+    paths = fs.readdirSync(root, { withFileTypes: true }).filter(item => item.isDirectory() || item.isFile()).map(item => item.name);
+  }
+  const hiddenOrGenerated = /^(?:\.|node_modules$|dist$|build$|vendor$|coverage$|target$|__pycache__$)/i;
+  const rootFiles = /^(?:README(?:\.[a-z]+)?|AGENTS(?:\.[a-z]+)?|package\.json|Cargo\.toml)$/i;
+  return unique(paths.flatMap(file => {
+    const components = file.split('/');
+    const top = components[0];
+    if (!top || hiddenOrGenerated.test(top) || components.some(c => c === '..')) return [];
+    if (components.length > 1) return [top];
+    if (rootFiles.test(top)) return [top];
+    const entry = path.join(root, top);
+    try { return fs.statSync(entry).isDirectory() ? [top] : []; } catch { return []; }
+  })).sort();
 }
 export async function discoverAutoRag({ root = process.cwd(), env = process.env, companyAdapter = null, fetchImpl } = {}) {
   const isGit = Boolean(git(root, ['rev-parse', '--is-inside-work-tree']));
@@ -30,8 +48,9 @@ export async function discoverAutoRag({ root = process.cwd(), env = process.env,
   });
 }
 export function recommendAutoRag({ discovery, purpose = 'code', include, provider = 'none', backend = 'local_exact', semantic = false } = {}) {
-  const codeRoots = ['apps', 'src', 'packages', 'services'];
-  const scopes = include?.length ? unique(include) : purpose === 'code' ? codeRoots.filter(scope => discovery.scopes.includes(scope)).slice(0, 3) : discovery.scopes.filter(scope => /^(docs|README\.md|schema|migrations)$/.test(scope)).slice(0, 3);
+  const docs = name => /^(?:docs?|documentation|readme(?:\..*)?)$/i.test(name);
+  const inferred = purpose === 'code' ? discovery.scopes.filter(scope => !docs(scope)) : discovery.scopes.filter(docs);
+  const scopes = include?.length ? unique(include) : inferred.length ? inferred : discovery.scopes;
   return Object.freeze({ purpose, repositories: [discovery.repository.identity], scope: scopes.length ? scopes : ['.'], evidence: purpose === 'code' ? ['git', 'merkle', 'semantic-metadata', 'ast', 'lexical'] : ['git', 'merkle', 'lexical'], embedding: semantic ? provider : 'none', control_plane: 'local_sqlite', backend, probe: { max_files: 25, max_chunks: 100, max_semantic_queries: 1, paid_embeddings: false }, company_registration: 'disabled' });
 }
 export function safeAutoRagConfig({ existing = {}, recommendation, repositoryId, projectKey } = {}) {

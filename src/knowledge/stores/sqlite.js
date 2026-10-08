@@ -38,6 +38,7 @@ export async function openSqliteStore(filename, { readOnly = false } = {}) {
       } catch (e) { db.exec('ROLLBACK'); throw e; }
     },
     async history(scope) { return db.prepare('SELECT payload FROM knowledge_generations WHERE scope=? ORDER BY created_at,id').all(scope).map(decode); },
+    async historicalSummaries() { return db.prepare('SELECT scope, id, created_at, payload FROM knowledge_generations ORDER BY created_at DESC').all().map(row => { const g = decode(row); return { scope_key: row.scope, generation_id: row.id, created_at: row.created_at, files: g.files?.length || 0, chunks: g.chunks?.length || 0, provider: g.config?.embedding?.provider || 'none', model: g.config?.embedding?.model || null, embedded: Boolean(g.profile_id), source_scope: g.config?.scope || null, active: Boolean(db.prepare('SELECT 1 FROM knowledge_active WHERE scope=? AND id=?').get(row.scope, row.id)) }; }); },
     async observe(namespace, observation) { db.prepare('INSERT INTO knowledge_observations VALUES (?,?,?,?)').run(observation.id, namespace, observation.created_at, JSON.stringify(observation)); },
     async observations(namespace) { return db.prepare('SELECT payload FROM knowledge_observations WHERE namespace=? ORDER BY created_at,id').all(namespace).map(decode); },
     async close() { db.close(); },

@@ -11,3 +11,5 @@ pub mod native_capabilities;
 pub mod system;
 
 pub mod local_identity;
+
+pub mod autorag;
